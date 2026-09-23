@@ -11,6 +11,9 @@ const READ_ROLES={
   church_events:['senior_pastor','pastor','care_staff','staff','viewer'],
   church_attendance:['senior_pastor','pastor','care_staff','staff'],
   church_attendance_summary:['senior_pastor','pastor','care_staff','staff'],
+  church_groups:['senior_pastor','pastor','care_staff','staff'],
+  church_group_members:['senior_pastor','pastor','care_staff','staff'],
+  church_group_attendance:['senior_pastor','pastor','care_staff','staff'],
   church_donors:['senior_pastor','church_treasurer','church_finance'],
   church_offerings:['senior_pastor','church_treasurer','church_finance'],
   church_ledger_entries:['senior_pastor','church_treasurer','church_finance'],
@@ -22,6 +25,8 @@ const WRITE_ROLES={
   church_care_tasks:['senior_pastor','pastor','care_staff'],
   church_events:['senior_pastor','pastor','care_staff','staff'],
   church_attendance:['senior_pastor','pastor','staff'],
+  church_groups:['senior_pastor','pastor','staff'],
+  church_group_members:['senior_pastor','pastor','staff'],
   church_offerings:['senior_pastor','church_treasurer','church_finance'],
   church_ledger_entries:['senior_pastor','church_treasurer','church_finance'],
   church_receipt_requests:['senior_pastor','church_treasurer','church_finance'],
@@ -32,6 +37,8 @@ const WRITE_FIELDS={
   church_care_tasks:['member_id','subject_name','care_type','next_action','due_on','status'],
   church_events:['title','event_date','event_time','location','category','status'],
   church_attendance:['service_id','member_id','attendance_state','check_in_at','source','note'],
+  church_groups:['id','parent_group_id','name','group_type','description','active'],
+  church_group_members:['group_id','member_id','role','joined_on','left_on','active'],
   church_offerings:['member_id','donor_name','offering_type','amount','offered_on','method','reference_no','anonymous','note'],
   church_ledger_entries:['entry_date','direction','account_code','account_name','amount','counterparty','memo','evidence_ref','status'],
   church_receipt_requests:['id','status','note'],
@@ -92,6 +99,8 @@ function cleanPayload(table,input){
   if(table==='church_care_tasks'&&!body.subject_name)throw new Error('CARE_SUBJECT_REQUIRED');
   if(table==='church_events'&&(!body.event_date||!body.title))throw new Error('EVENT_REQUIRED');
   if(table==='church_attendance'&&(!uuidOrNull(body.service_id)||!uuidOrNull(body.member_id)||!['present','late','online','absent','excused'].includes(String(body.attendance_state||''))))throw new Error('ATTENDANCE_REQUIRED');
+  if(table==='church_groups'&&(!body.name||!['small_group','department','ministry_team','class','other'].includes(String(body.group_type||'small_group'))))throw new Error('GROUP_REQUIRED');
+  if(table==='church_group_members'&&(!uuidOrNull(body.group_id)||!uuidOrNull(body.member_id)||!['leader','member','teacher','volunteer','staff'].includes(String(body.role||'member'))))throw new Error('GROUP_MEMBER_REQUIRED');
   if(table==='church_offerings'&&(!body.offered_on||Number(body.amount)<=0))throw new Error('OFFERING_REQUIRED');
   if(table==='church_ledger_entries'&&(!body.entry_date||Number(body.amount)<=0||!body.account_name))throw new Error('LEDGER_REQUIRED');
   return body;
@@ -122,6 +131,9 @@ Deno.serve(async req=>{
     const financeTable=['church_donors','church_offerings','church_ledger_entries','church_receipt_requests'].includes(table);
     const attendanceTable=table==='church_attendance';
     const attendanceSummaryTable=table==='church_attendance_summary';
+    const groupTable=table==='church_groups';
+    const groupMemberTable=table==='church_group_members';
+    const groupAttendanceTable=table==='church_group_attendance';
     let upstream;
     try{
       upstream=financeTable
@@ -130,14 +142,20 @@ Deno.serve(async req=>{
           ?await rpc('church_attendance_list',{p_church_slug:CHURCH_SLUG,p_member_id:uuidOrNull(url.searchParams.get('member_id')),p_limit:Number(url.searchParams.get('limit')||250)})
           :attendanceSummaryTable
             ?await rpc('church_attendance_member_summaries',{p_church_slug:CHURCH_SLUG,p_year:yearOrCurrent(url.searchParams.get('year'))})
-            :await rpc('church_pastor_list',listArgs(table,url,staff,identity));
+            :groupTable
+              ?await rpc('church_group_list',{p_church_slug:CHURCH_SLUG,p_active_only:true})
+              :groupMemberTable
+                ?await rpc('church_group_member_list',{p_church_slug:CHURCH_SLUG,p_group_id:uuidOrNull(url.searchParams.get('group_id')),p_active_only:true})
+                :groupAttendanceTable
+                  ?await rpc('church_group_attendance_summaries',{p_church_slug:CHURCH_SLUG,p_year:yearOrCurrent(url.searchParams.get('year'))})
+                  :await rpc('church_pastor_list',listArgs(table,url,staff,identity));
     }catch(error){return json({error:String(error?.message||error)},503,origin);}
     if(!upstream.ok)return proxyResponse(upstream,origin);
     let rows=await upstream.json().catch(()=>[]);if(!Array.isArray(rows))rows=[];
     if(table==='church_staff'&&staff.role==='senior_pastor'){
       const requested=uuidOrNull(url.searchParams.get('user_id'));if(requested)rows=rows.filter(row=>String(row?.user_id||'')===requested);
     }
-    if(attendanceSummaryTable&&String(req.headers.get('prefer')||'').toLowerCase().includes('count=exact'))return jsonWithCount(rows,rows.length,origin);
+    if((attendanceSummaryTable||groupTable||groupMemberTable||groupAttendanceTable)&&String(req.headers.get('prefer')||'').toLowerCase().includes('count=exact'))return jsonWithCount(rows,rows.length,origin);
     if(String(req.headers.get('prefer')||'').toLowerCase().includes('count=exact')){
       let counted;
       try{
@@ -169,6 +187,16 @@ Deno.serve(async req=>{
     let attendance;try{attendance=await rpc('church_attendance_upsert',{p_church_slug:CHURCH_SLUG,p_payload:payload,p_actor:identity.id});}catch(error){return json({error:String(error?.message||error)},503,origin);}
     if(!attendance.ok)return proxyResponse(attendance,origin);
     const row=await attendance.json().catch(()=>null);return json(row?[row]:[],201,origin);
+  }
+  if(table==='church_groups'){
+    let group;try{group=await rpc('church_group_upsert',{p_church_slug:CHURCH_SLUG,p_payload:payload,p_actor:identity.id});}catch(error){return json({error:String(error?.message||error)},503,origin);}
+    if(!group.ok)return proxyResponse(group,origin);
+    const row=await group.json().catch(()=>null);return json(row?[row]:[],201,origin);
+  }
+  if(table==='church_group_members'){
+    let membership;try{membership=await rpc('church_group_membership_upsert',{p_church_slug:CHURCH_SLUG,p_payload:payload,p_actor:identity.id});}catch(error){return json({error:String(error?.message||error)},503,origin);}
+    if(!membership.ok)return proxyResponse(membership,origin);
+    const row=await membership.json().catch(()=>null);return json(row?[row]:[],201,origin);
   }
   const financeTable=['church_offerings','church_ledger_entries'].includes(table);
   let upstream;try{
