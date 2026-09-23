@@ -53,9 +53,15 @@ if (failures.length === 0) {
   expect(fabric.orchestration?.virtualizationOnly === false, 'execution fabric must not be virtualization-only');
   expect(fabric.orchestration?.virtualizedIsolationLaneRequiredForMutatingEngineeringWork === true, 'mutating engineering work must retain a virtualized isolation lane');
   expect(fabric.orchestration?.selection?.ekodiOwnedVirtualizationFirst === true, 'EKODI-owned virtualization must be selected first');
+  expect(fabric.orchestration?.selection?.virtualizationRoutingPolicy === 'config/virtualization-routing-policy.json', 'execution fabric must bind the native virtualization router');
+  expect(fabric.orchestration?.selection?.externalVirtualizationForbiddenWhenEligibleNativeHealthy === true, 'external virtualization must be forbidden while eligible native virtualization is healthy');
+  expect(fabric.orchestration?.selection?.externalVirtualizationRequiresAllEligibleNativeUnusable === true, 'external virtualization must require all eligible native routes to be unusable');
   expect(fabric.orchestration?.selection?.externalVirtualizationProviderRole === 'temporary-replaceable-fallback-only', 'external virtualization must remain a temporary fallback');
   expect(fabric.orchestration?.selection?.externalVirtualizationFallbackRequiresReasonAndAudit === true, 'external virtualization fallback must be auditable');
   expect(fabric.providers?.virtualization?.nativeFirst === true, 'virtualization provider policy must remain native-first');
+  expect(fabric.providers?.virtualization?.externalFallbackForbiddenWhenEligibleNativeHealthy === true, 'provider fallback must be forbidden while native virtualization is healthy');
+  expect(fabric.providers?.virtualization?.externalFallbackRequiresAllEligibleNativeUnusable === true, 'provider fallback must require all eligible native providers unusable');
+  expect(fabric.providers?.virtualization?.fallbackMustRetryNativeOnNextEligibleExecution === true, 'provider fallback must retry native virtualization on next eligible execution');
   expect(fabric.providers?.virtualization?.paidExternalAutoUpgradeForbidden === true, 'paid external virtualization auto-upgrade must remain forbidden');
   expect(fabric.providers?.virtualization?.fallbackMustPreserveOrIncreaseIsolation === true, 'virtualization fallback may not weaken isolation');
   const browserMethod=(fabric.orchestration?.methodCatalog||[]).find(item=>item.id==='browser-e2e')||{};
