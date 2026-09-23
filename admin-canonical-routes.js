@@ -105,8 +105,12 @@ function canonicalUrl(section,loc=window.location,detailSegments=[]){
   return `${url.pathname}${url.search}${url.hash}`;
 }
 function isCanonicalHost(loc=window.location){return String(loc.hostname||'').toLowerCase()==='ekodi.kr'}
-function navigationTarget(section,loc=window.location,detailSegments=[]){
-  return isCanonicalHost(loc)?canonicalUrl(section,loc,detailSegments):legacyHashFor(section);
+function navigationTarget(section,loc=window.location,detailSegments=null){
+  if(!isCanonicalHost(loc))return legacyHashFor(section);
+  const normalized=normalizeSection(section);
+  const current=detailSegments==null?routeFromPath(loc.pathname):null;
+  const detail=detailSegments==null&&current?.section===normalized?current.detailSegments:detailSegments;
+  return canonicalUrl(section,loc,detail||[]);
 }
 window.EKODIAdminRoutes=Object.freeze({
   version:'1.5.0',
