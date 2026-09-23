@@ -303,10 +303,18 @@ if(publicUserSurface.id!=='PUBLIC-USER-SURFACE-001'||publicUserSurface.defaultAc
 if(publicUserSurface.authenticationEffect!=='enhance-not-replace-public-experience') fail('authentication must enhance, not replace, public user surfaces');
 if(publicUserSurface.safePublicProjectionRequired!==true||publicUserSurface.canonicalPublicLoginWallForbidden!==true) fail('safe guest public projection must be mandatory');
 if(publicUserSurface.permissionFailureReplacesPublicPage!==false) fail('permission failures must not replace canonical public pages');
+const visualContinuity=publicUserSurface.visualContinuity||{};
+if(visualContinuity.id!=='PUBLIC-VISUAL-CONTINUITY-001'||visualContinuity.status!=='enforced') fail('public visual continuity policy must remain enforced');
+if(visualContinuity.firstPaintStateResolutionRequired!==true||visualContinuity.transientCharacterOrIllustrationFlashForbidden!==true||visualContinuity.unresolvedDecorativeState!=='hidden-until-resolved') fail('conditional user visuals must resolve before visible paint');
+if(visualContinuity.documentLoadVariation?.trigger!=='top-level-navigation-or-reload'||visualContinuity.documentLoadVariation?.stableForDocumentLifetime!==true||visualContinuity.documentLoadVariation?.approvedPaletteOnly!==true) fail('public ambient variation must be approved, load-scoped and document-stable');
+if(Number(visualContinuity.documentLoadVariation?.maxBackgroundMixPercent)>6||visualContinuity.documentLoadVariation?.timerDrivenMutationForbidden!==true) fail('public ambient variation exceeds the bounded continuity rule');
+if(visualContinuity.shellContract?.owner!=='shared-shell'||visualContinuity.shellContract?.seedScope!=='document-load') fail('shared Shell must own visual continuity');
 if(publicUserSurface.explicitPrivateException?.requiresExplicitClassification!==true||publicUserSurface.explicitPrivateException?.permissionErrorAsLandingForbidden!==true) fail('private surface exceptions must be explicit and may not degrade into permission-error landings');
 const workspacePublicDefault=workspace.publicUserSurfaceDefault||{};
 if(workspacePublicDefault.policyId!=='PUBLIC-USER-SURFACE-001'||workspacePublicDefault.defaultAccess!=='guest-open') fail('service/workspace public user surface default must be guest-open');
 if(workspacePublicDefault.loginEffect!=='enhance-not-replace'||workspacePublicDefault.canonicalPublicRootLoginWallForbidden!==true) fail('service/workspace login policy must enhance rather than replace public pages');
+if(workspacePublicDefault.visualContinuity?.policyId!=='PUBLIC-VISUAL-CONTINUITY-001'||workspacePublicDefault.visualContinuity?.inheritedByAllUserSurfaces!==true) fail('service/workspace user surfaces must inherit public visual continuity');
+if(workspacePublicDefault.visualContinuity?.backgroundVariation?.stableForDocumentLifetime!==true||Number(workspacePublicDefault.visualContinuity?.backgroundVariation?.maxBackgroundMixPercent)>6) fail('service/workspace ambient variation must stay subtle and document-stable');
 for(const visibility of workspace.visibilityPolicies||[]) if(visibility.id!=='guest_visible'&&visibility.mayReplaceCanonicalPublicRoot!==false) fail(`${visibility.id} may not replace a canonical public root`);
 if (workspace.customerWorkspaceRule?.preserveCustomerOwnership !== true) fail('customer workspace ownership must remain preserved');
 if (workspace.publicWorkspaceRouting?.canonicalHost !== 'ekodi.kr') fail('service workspace public canonical host must be ekodi.kr');
