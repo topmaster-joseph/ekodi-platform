@@ -68,7 +68,7 @@ jobs:
               && grep -Fq 'window.EKODIShell' /tmp/shell.js \
               && grep -Fq 'EKODI 서비스 전환' /tmp/shell.js \
               && grep -Fq 'ekodi:public-experience' /tmp/shell.js \
-              && grep -Fq '"rotation":"navigation-load-approved-variation"' /tmp/theme.json \
+              && grep -Fq '"rotation":"weekly-deterministic"' /tmp/theme.json \
               && grep -Fq '"timezone":"Asia/Seoul"' /tmp/theme.json; then
               exit 0
             fi
