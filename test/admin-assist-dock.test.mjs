@@ -160,7 +160,7 @@ test('command execution targets are explicit multi-select checks above the promp
     assert.match(dock,new RegExp(`id:'${value}'`));
   }
   assert.doesNotMatch(dock,/id="ekodiAssistExecutionTarget"|id="ekodiAssistBootstrapTarget"|value="multi"/);
-  assert.match(dock,/execute:\(targets,text\)=>\{setOpen\(true\);setTab\('ai',false\);return executeTargets\(targets,text\)\}/);
+  assert.match(dock,/execute:\(targets,text\)=>\{setOpen\(true\);setTab\('ai',false\);const picked=targets\|\|selectedExecutionTargets/);
   assert.match(dock,/function executeTargets\(targets,prompt\)/);
   assert.match(dock,/handoff:\(provider,text\)=>handoffCommand\(provider,text\)/);
   assert.match(dock,/EXTERNAL_SECRET_RE/);
