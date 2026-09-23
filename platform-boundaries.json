@@ -250,7 +250,7 @@
         "wrangler.community.toml"
       ],
       "domains": [
-        "community.ekodi.kr"
+        "ekodi.kr/community"
       ],
       "deployWorkflow": ".github/workflows/deploy-community.yml",
       "sharedDependencies": [
@@ -359,7 +359,7 @@
         "ekodi-shell",
         "Control API User AI service",
         "ekodi.kr/bible public handoff",
-        "community.ekodi.kr public handoff"
+        "ekodi.kr/community public handoff"
       ],
       "database": "Supabase life_* namespace with RLS; only user-explicit saved reflections are persisted",
       "note": "Today Question is the public brand and Life AI is the engine. Eight topic routes share one Life-to-Gospel core. Bible Conversation is a deeper Scripture handoff rather than a duplicate platform."
