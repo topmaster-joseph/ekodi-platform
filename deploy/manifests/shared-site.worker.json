@@ -1,5 +1,5 @@
 {
-  "version": 88,
+  "version": 89,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -1722,10 +1722,9 @@
         ],
         "redirect": "manual",
         "expect": [
+          "const __name=",
           "register_operator",
-          "start_transfer",
           "complete_transfer",
-          "canManageOperatingRights",
           "/api/local-operations/cheonggye/actions"
         ],
         "headerExpect": [
@@ -1843,6 +1842,74 @@
           "location: https://ekodi.kr/seonam-medi",
           "x-ekodi-route: seonam-medi-canonical",
           "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/local-region-admin-auth.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "const __name=",
+          "ekodi-region-admin-session",
+          "/api/local-access/"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/local-region-access-admin.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "const __name=",
+          "cheonggye-local",
+          "/api/local-access/"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/local-region-forest-admin.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "const __name=",
+          "data-forest-admin-root",
+          "/api/local-operations/cheonggye/projects/forest"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/local-region-forest-public.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "const __name=",
+          "data-forest-project-root",
+          "/api/local-operations/cheonggye/projects/forest"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
       }

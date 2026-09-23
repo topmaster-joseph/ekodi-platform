@@ -1,3 +1,5 @@
+import { serializeBrowserClient } from './browser-client-serializer.js';
+
 function clientMain(){
   const root=document.querySelector('[data-forest-project-root]');
   if(!root)return;
@@ -55,5 +57,5 @@ function clientMain(){
     .catch(error=>{history.replaceChildren(el('div','loading',error.message))});
 }
 export function localRegionForestPublicScript(){
-  return new Response('('+clientMain.toString()+')();',{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+  return new Response(serializeBrowserClient(clientMain),{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 }

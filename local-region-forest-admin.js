@@ -1,3 +1,5 @@
+import { serializeBrowserClient } from './browser-client-serializer.js';
+
 function clientMain(){
   const root=document.documentElement;
   const host=document.querySelector('[data-forest-admin-root]');
@@ -75,5 +77,5 @@ function clientMain(){
   document.addEventListener('ekodi:region-access-ready',ready,{once:true});if(root.__EKODI_REGION_ACCESS__)ready({detail:root.__EKODI_REGION_ACCESS__});
 }
 export function localRegionForestAdminScript(){
-  return new Response('('+clientMain.toString()+')();',{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+  return new Response(serializeBrowserClient(clientMain),{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 }
