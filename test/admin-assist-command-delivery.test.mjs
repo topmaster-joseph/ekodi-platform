@@ -25,7 +25,7 @@ test('bootstrap never silently drops a command while Assist is lazy-loading',asy
   const dock=await read('admin-assist-dock.js');
   assert.match(dock,/EKODIAdminAssist=Object\.freeze/);
   assert.match(dock,/submit:text=>\{setOpen\(true\);setTab\('ai',false\);return submitAi\(text\)\}/);
-  assert.match(dock,/execute:\(targets,text\)=>\{setOpen\(true\);setTab\('ai',false\);return executeTargets\(targets,text\)\}/);
+  assert.match(dock,/execute:\(targets,text\)=>\{setOpen\(true\);setTab\('ai',false\);const picked=targets\|\|selectedExecutionTargets/);
 });
 
 test('bootstrap explicitly awaits the dock listener runtime on demand and direct fallback paths',async()=>{
