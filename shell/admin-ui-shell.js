@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION=3;
+const VERSION=2;
 const STYLE_ID='ekodi-admin-ui-shell-style';
 const SURFACE='admin';
 const SIDEBAR_SELECTORS=['[data-ekodi-admin-sidebar]','[data-ekodi-sidebar]','#sidebar','.admin-sidebar','.sidebar'];
@@ -121,7 +121,7 @@ function accountControl(sidebar){
 
 function ensureModuleHealthEntry(footer){
   const host=String(location.hostname||'').toLowerCase();
-  const central=host==='admin.ekodi.kr'||(host==='ekodi.kr'&&location.pathname.startsWith('/admin'));
+  const central=host==='ekodi.kr'&&location.pathname.startsWith('/admin');
   if(!central)return null;
   let link=footer.querySelector('[data-ekodi-service-module-health]');
   if(!link){
