@@ -1,5 +1,21 @@
 (()=>{
 'use strict';
+const TRACKING_QUERY_KEYS=new Set(['gclid','dclid','fbclid','msclkid','ttclid','twclid','li_fat_id','srsltid','igshid','mc_cid','mc_eid','_ga','_gl','_hsenc','_hsmi']);
+function cleanTrackingQueryFromAddressBar(){
+  try{
+    const url=new URL(location.href);
+    let changed=false;
+    for(const key of [...url.searchParams.keys()]){
+      const normalized=String(key||'').trim().toLowerCase();
+      if(!normalized.startsWith('utm_')&&!TRACKING_QUERY_KEYS.has(normalized))continue;
+      url.searchParams.delete(key);
+      changed=true;
+    }
+    if(changed)history.replaceState(history.state,'',`${url.pathname}${url.search}${url.hash}`);
+  }catch{}
+}
+cleanTrackingQueryFromAddressBar();
+
 const script=document.currentScript;
 if(window.__EKODI_SHELL_BOOTED)return;
 window.__EKODI_SHELL_BOOTED=true;

@@ -54,7 +54,11 @@
       "fallbackReasonAndAuditRequired": true,
       "nativeCapabilityGapRecordRequired": true,
       "paidExternalAutoUpgradeForbidden": true,
-      "securityAndIsolationMayNotBeWeakened": true
+      "securityAndIsolationMayNotBeWeakened": true,
+      "routingPolicy": "config/virtualization-routing-policy.json",
+      "externalFallbackForbiddenWhenEligibleNativeHealthy": true,
+      "externalFallbackRequiresAllEligibleNativeUnusable": true,
+      "fallbackMustRetryNativeOnNextEligibleExecution": true
     }
   },
   "syntheticActors": [

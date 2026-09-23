@@ -2,55 +2,48 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from '../workspace-admin-page.js';
 
-test('workspace admin keeps the shared shell while all tenant menus navigate directly', async()=>{
-  const responses=[workspaceAdminPage(),workspaceAdminCss(),workspaceAdminScript()];
-  const [html,css,script]=await Promise.all(responses.map(response=>response.text()));
-
+test('workspace admin uses the seven-axis Admin UI v3 shell',async()=>{
+  const [html,css,script]=await Promise.all([
+    workspaceAdminPage().text(),
+    workspaceAdminCss().text(),
+    workspaceAdminScript().text(),
+  ]);
   assert.match(html,/data-ekodi-admin-layout="two-level"/);
-  assert.match(html,/data-ekodi-admin-theme="light"/);
-  assert.match(html,/data-ekodi-admin-nav-mode="primary"/);
-  assert.match(html,/id="sectionNav"[^>]*data-ekodi-admin-subnav/);
-  assert.match(css,/\.sidebar\{position:sticky;top:58px;height:calc\(100dvh - 58px\)[^}]*overflow:hidden/);
-  assert.match(css,/\.ekodi-admin-shell-nav\[data-ekodi-admin-nav-mode="primary"\][^{]*\{[^}]*overflow:hidden!important/);
-  assert.match(css,/main\{[^}]*max-width:none/);
-  assert.match(script,/const mallDirectSections=\[\['overview','대시보드'\],\['products','상품'\],\['sourcing','공급·제휴'\],\['channels','판매채널'\],\['growth','AI 영업'\],\['analytics','성과'\],\['confirmations','지급·수령'\],\['design','관리설정'\]\]/);
-  assert.match(script,/function renderSecondaryNav\(_groupId,_role=workspaceRole\)\{[^}]*h\.hidden=true/);
-  assert.match(script,/admin-nav-group-label/);
-  assert.match(script,/소통 · 홍보/);
-  assert.match(script,/마케팅 AI/);
-  assert.match(script,/채널·자동게시/);
-  assert.match(script,/로그인 후 채널·자동게시에서 여러 계정을 등록/);
-  assert.doesNotMatch(script,/로그인 후 채널 · 게시에서 여러 계정을 등록/);
-  assert.match(script,/publishing:\['SNS','채널','계정 연결','OAuth','쇼츠','자동게시','예약게시'\]/);
-  assert.match(script,/a\.href=sectionHref\(key\)/);
-  assert.match(script,/dataset\.adminSection=key/);
-  assert.doesNotMatch(script,/data\.adminGroup=group\.id/);
-  assert.doesNotMatch(script,/로그인 후 세부 메뉴가 표시됩니다/);
-  assert.match(script,/운영 데이터 비공개/);
-  assert.match(script,/에코디몰 관리자 로그인/);
-  assert.match(css,/\.mall-quick-actions/);
+  assert.match(html,/운영공간 확인 중/);
+  assert.doesNotMatch(html,/tenant-admin-command-home/);
+  assert.match(html,/관리자 인증과 운영공간 권한을 확인하고 있습니다/);
+  assert.match(css,/\.topbar\{display:none/);
+  assert.match(css,/\.sidebar\{position:sticky;top:0;height:100dvh/);
+  assert.match(css,/\.admin-subnav\{[^}]*justify-content:flex-start/);
+  for(const label of ['통합현황','서비스','사이트','사용자 · 권한','콘텐츠 · 운영','상태 · 배포','설정 · 기록'])assert.match(script,new RegExp(label));
+  assert.match(script,/a\.dataset\.adminGroup=group\.id/);
+  assert.match(script,/renderSecondaryNav\(activeGroup,role\)/);
+  assert.match(script,/AbortSignal\.timeout\(10000\)/);
 });
 
-test('Mall navigation is one level and routes directly to each operating screen', async()=>{
+test('Mission admin root stays on overview and applicant roster opens from its management entry',async()=>{
   const script=await (await workspaceAdminScript()).text();
-  assert.match(script,/mallDirectSections/);
-  assert.match(script,/\['overview','대시보드'\]/);
-  assert.match(script,/\['products','상품'\]/);
-  assert.match(script,/\['sourcing','공급·제휴'\]/);
-  assert.match(script,/\['channels','판매채널'\]/);
-  assert.match(script,/\['growth','AI 영업'\]/);
-  assert.match(script,/\['analytics','성과'\]/);
-  assert.match(script,/\['confirmations','지급·수령'\]/);
-  assert.match(script,/\['design','관리설정'\]/);
-  assert.match(script,/sectionHref=key=>key==='overview'\?\`\$\{adminBase\}\/overview\`:.*channel-settings/s);
-  assert.match(script,/a\.href=sectionHref\(key\)/);
-  assert.match(script,/key==='design'&&section==='languages'/);
-  assert.doesNotMatch(script,/label:'판매 · 마케팅'/);
+  assert.match(script,/MISSION_DEFAULT_ACTIVITY='260926-chuseok-open-table'/);
+  assert.match(script,/const defaultSection='overview'/);
+  assert.match(script,/activities\.some\(a=>a\.activity_key===MISSION_DEFAULT_ACTIVITY\)/);
+  assert.match(script,/href="\$\{adminBase\}\/activities">관리<\/a>/);
+  assert.match(script,/\['activities','행사 · 신청자'\]/);
+  assert.match(script,/\/ekodimission\/apply\/260926-open-table/);
+  assert.match(script,/activityCheckinFilter/);
+  assert.match(script,/data-checkin/);
+  assert.match(script,/공개 행사 보기/);
+  assert.match(script,/신청자 관리/);
+  assert.doesNotMatch(script,/mountCommandHome|EKODITenantCommandHome/);
 });
 
-test('workspace admin retains compatible secondary-nav styling but does not require it for navigation', async()=>{
-  const css=await (await workspaceAdminCss()).text();
-  assert.match(css,/\.admin-subnav\{[^}]*justify-content:flex-end/);
-  const script=await (await workspaceAdminScript()).text();
-  assert.match(script,/h\.hidden=true/);
+test('public-site design settings preview desktop tablet and mobile without changing Admin UI',async()=>{
+  const [css,script]=await Promise.all([(await workspaceAdminCss()).text(),(await workspaceAdminScript()).text()]);
+  assert.match(script,/디자인 적용 범위/);
+  assert.match(script,/공개 사용자 화면에만 적용/);
+  assert.match(script,/data-preview-device="desktop"/);
+  assert.match(script,/data-preview-device="tablet"/);
+  assert.match(script,/data-preview-device="mobile"/);
+  assert.match(script,/wireDesignPreview/);
+  assert.match(css,/\.design-live-preview/);
+  assert.match(css,/width:min\(390px,100%\)/);
 });

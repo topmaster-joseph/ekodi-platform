@@ -18,9 +18,9 @@ const surfaceVerification = json('config/surface-system-verification-policy.json
 const executionFabric = json('config/autonomous-execution-fabric-policy.json');
 const remoteComputer = json('config/remote-computer-execution-policy.json');
 
-if (constitution.version !== '1.20.0') fail('constitution version must be 1.20.0 with authentication return continuity, EKODI-owned virtualization sovereignty, and all prior approved amendments');
+if (constitution.version !== '1.22.0') fail('constitution version must be 1.22.0 with evidence-gated AI claims and all prior approved amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding','guest-open-public-user-surfaces','self-verifying-all-surface-system-evidence','ekodi-owned-virtualization-first','authentication-return-continuity']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding','guest-open-public-user-surfaces','self-verifying-all-surface-system-evidence','ekodi-owned-virtualization-first','authentication-return-continuity','canonical-human-url-without-tracking-query','evidence-gated-ai-claims']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
 
@@ -259,6 +259,19 @@ if (!String(coreData.rule || '').includes('must not directly reference EKODI Cor
 if (workspace.schemaVersion !== 7) fail('service workspace policy schemaVersion must be 7');
 if (workspace.identityAuthority !== 'ekodi') fail('service workspace identityAuthority must be ekodi');
 if (workspace.commonServiceUserAccessRule?.memberMinimumTier !== 'free') fail('common services must preserve free-member minimum access');
+const canonicalUrlQuery=constitution.canonicalUrlQueryPolicy||{};
+if(canonicalUrlQuery.id!=='CANONICAL-URL-QUERY-001'||canonicalUrlQuery.status!=='active') fail('canonical human URL query hygiene policy must remain active');
+if(canonicalUrlQuery.canonicalAddressRule!=='canonical-path-plus-functional-query-only'||canonicalUrlQuery.trackingQueryDisposition!=='remove-from-visible-url') fail('canonical human URLs must retain only canonical path plus functional query context');
+if(canonicalUrlQuery.functionalQueryMustBePreserved!==true) fail('functional query context must be preserved during tracking cleanup');
+if(canonicalUrlQuery.getAndHeadCanonicalization!=='308-redirect-before-human-surface-routing') fail('GET/HEAD human surfaces must canonicalize tracking queries before page routing');
+if(canonicalUrlQuery.browserFallback!=='history.replaceState-on-shared-shell') fail('shared Shell must keep a browser-side canonical URL fallback');
+for(const prefix of ['utm_']) if(!canonicalUrlQuery.trackingPrefixes?.includes(prefix)) fail(`canonical URL tracking prefix missing: ${prefix}`);
+for(const key of ['gclid','fbclid','msclkid','srsltid','_gl']) if(!canonicalUrlQuery.trackingKeys?.includes(key)) fail(`canonical URL tracking key missing: ${key}`);
+for(const key of ['return_to','code','state','page','q','filter']) if(!canonicalUrlQuery.functionalExamples?.includes(key)) fail(`canonical URL functional-query preservation example missing: ${key}`);
+for(const route of ['/api','/webhooks','/mcp','/health','static-assets']) if(!canonicalUrlQuery.excludedSystemRoutes?.includes(route)) fail(`canonical URL system-route exclusion missing: ${route}`);
+if(canonicalUrlQuery.trackingQueryMayNotDefineIdentityAuthorizationOrRouting!==true) fail('tracking query parameters must never define identity, authorization or routing');
+if(canonicalUrlQuery.appliesToLegacyHumanEntryAliases!==true) fail('canonical URL query hygiene must cover legacy human-entry aliases');
+
 const authReturn=constitution.authenticationReturnContinuityPolicy||{};
 if(authReturn.id!=='AUTH-RETURN-CONTINUITY-001'||authReturn.status!=='active') fail('authentication return continuity policy must remain active');
 if(authReturn.exactPreLoginReturnPreferred!==true||authReturn.initiatingSiteContextMustBePreserved!==true) fail('authentication must preserve the initiating site and exact trusted pre-login target');
@@ -315,6 +328,16 @@ if (alignment.legacyCanonicalStore !== storage.canonicalStore) fail('storage tra
 if (storage.principles?.externalModulesMayAccessDriveDirectly !== false) fail('external modules may not bypass storage gateway');
 if (storage.principles?.providerSecretsStayServerSide !== true) fail('provider secrets must remain server-side');
 
+const claimIntegrity=constitution.aiClaimIntegrityPolicy||{};
+if(claimIntegrity.id!=='AI-CLAIM-INTEGRITY-001'||claimIntegrity.status!=='active') fail('aiClaimIntegrityPolicy must remain active');
+if(claimIntegrity.operationalClaimsRequireAuthoritativeEvidence!==true) fail('operational AI claims must require authoritative evidence');
+if(claimIntegrity.currentStateRequiresFreshEvidence!==true||claimIntegrity.conversationMemoryMayNotSolelyProveCurrentState!==true) fail('current operational state must require fresh non-memory-only evidence');
+if(claimIntegrity.otherAgentOutputIsAssertionNotEvidence!==true) fail('other agent output must remain assertion rather than evidence');
+if(claimIntegrity.claimScopeMayNotExceedEvidenceScope!==true||claimIntegrity.singleSurfaceEvidenceMayNotProveAllSurfaces!==true) fail('AI claim scope may not exceed evidence scope');
+if(claimIntegrity.unknownOrContradictedStateCannotUseSuccessLanguage!==true) fail('unknown or contradicted AI state may not use success language');
+if(claimIntegrity.completionAndBroadScopeRequireIndependentVerifier!==true) fail('completion and broad-scope claims require an independent verifier');
+if(claimIntegrity.materialOperationalClaimReceiptRequired!==true||claimIntegrity.deterministicFinalResponseGuardRequired!==true) fail('material operational claims require receipts and deterministic final-response guard');
+
 const amendmentDir = path.join(root, 'governance/amendments');
 const amendments = fs.readdirSync(amendmentDir).filter(name => name.endsWith('.json')).map(name => json(`governance/amendments/${name}`));
 const activeAmendment = amendments.find(item => item.constitutionVersion === constitution.version && item.status === 'approved');
@@ -338,3 +361,4 @@ console.log('- Workspace is canonical; Space remains compatibility-only during m
 console.log('- service workspace routing policy aligned to immutable workspace_id');
 console.log('- Sovereign -> Autonomous -> Agentic -> Services operating hierarchy registered over Governance/OS/Core service boundaries');
 console.log('- data sovereignty, tenant authority, provider, storage and sustainable scaling rules checked');
+console.log('- canonical human URL query hygiene: tracking removed, functional query context preserved');

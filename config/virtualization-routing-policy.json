@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-VIRTUALIZATION-ROUTING-001",
+  "status": "enforced",
+  "owner": "ekodi-orchestrator",
+  "constitutionalPolicy": "VIRTUALIZATION-SOVEREIGNTY-001",
+  "rule": "use-ekodi-owned-virtualization-when-eligible-native-capability-is-healthy",
+  "taskClasses": {
+    "browser-ui-validation": [
+      "ekodi-background-browser-worker"
+    ],
+    "synthetic-surface-verification": [
+      "ekodi-background-browser-worker",
+      "autonomous-execution-fabric"
+    ],
+    "isolated-browser-execution": [
+      "ekodi-background-browser-worker"
+    ],
+    "isolated-desktop-execution": [
+      "ekodi-native-remote-computer"
+    ],
+    "computer-use-automation": [
+      "ekodi-native-remote-computer"
+    ],
+    "isolated-engineering-execution": [
+      "autonomous-execution-fabric"
+    ]
+  },
+  "nativeProviders": {
+    "ekodi-background-browser-worker": {
+      "ownership": "ekodi",
+      "stateSource": "config/background-browser-worker-policy.json",
+      "runtimeProven": true
+    },
+    "ekodi-native-remote-computer": {
+      "ownership": "ekodi",
+      "stateSource": "config/remote-computer-execution-policy.json",
+      "runtimeProven": false
+    },
+    "autonomous-execution-fabric": {
+      "ownership": "ekodi",
+      "stateSource": "config/autonomous-execution-fabric-policy.json",
+      "runtimeProven": true
+    }
+  },
+  "selection": {
+    "nativeFirst": true,
+    "externalForbiddenWhenEligibleNativeHealthy": true,
+    "externalFallbackRequiresAllEligibleNativeUnusable": true,
+    "failClosedWhenNoEligibleProvider": true,
+    "nativeHealthyDefinition": [
+      "ready-or-runtime-proven",
+      "healthy",
+      "capability-matches-task"
+    ],
+    "externalFallbackRole": "temporary-replaceable-fallback-only"
+  },
+  "externalFallback": {
+    "allowedReasons": [
+      "native-capability-not-production-ready",
+      "native-capability-unavailable",
+      "required-capability-not-yet-implemented",
+      "native-capacity-or-runtime-failure"
+    ],
+    "auditIdRequired": true,
+    "nativeCapabilityGapRecordRequired": true,
+    "allEligibleNativeFailureEvidenceRequired": true,
+    "securityEquivalentOrStrongerRequired": true,
+    "paidUpgradeForbidden": true,
+    "providerLockInForbidden": true,
+    "fallbackDecisionMustBeMachineReadable": true
+  },
+  "recovery": {
+    "successfulFallbackCreatesOrUpdatesNativeGap": true,
+    "correctableNativeGapMustNotInterruptUserWorkflow": true,
+    "nativeCapabilityMustBeRetriedOnNextEligibleExecution": true,
+    "fallbackMustNotBecomeDefaultByHistory": true
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "policyId": "AI-ORCHESTRATE-001",
   "status": "enforced",
   "controlPlane": "EKODI AI",
@@ -214,7 +214,9 @@
       "consultation-status",
       "consultation-detail-link",
       "exceptions",
-      "resolution-plan-when-unresolved"
+      "resolution-plan-when-unresolved",
+      "claim-integrity-verdict",
+      "claim-evidence-scope"
     ],
     "excludeByDefault": [
       "low-level-tool-steps",
@@ -287,5 +289,21 @@
       "ambiguous_side_effect",
       "all_registered_safe_lanes_exhausted"
     ]
+  },
+  "claimIntegrity": {
+    "policyId": "AI-CLAIM-INTEGRITY-001",
+    "status": "enforced",
+    "policyPath": "config/ai-claim-integrity-policy.json",
+    "runtimeGuard": "ai-claim-integrity.js",
+    "validator": "scripts/validate-ai-claim-integrity.mjs",
+    "aiStatementNeverCreatesSystemState": true,
+    "agentOutputIsAssertionNotEvidence": true,
+    "memoryCannotProveCurrentOperationalState": true,
+    "currentStateRequiresFreshEvidence": true,
+    "claimScopeMustMatchEvidenceScope": true,
+    "finalResponseGuardRequired": true,
+    "materialOperationalClaimReceiptRequired": true,
+    "broadScopeRequiresIndependentVerifier": true,
+    "unknownMustNotBecomeSuccess": true
   }
 }

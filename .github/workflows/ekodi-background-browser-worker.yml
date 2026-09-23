@@ -1,6 +1,18 @@
 name: EKODI Background Browser Worker
 
 on:
+  workflow_call:
+    inputs:
+      surface_path:
+        description: Canonical ekodi.kr path to inspect
+        required: false
+        type: string
+        default: /
+      device_profile:
+        description: Device profile
+        required: false
+        type: string
+        default: desktop
   workflow_dispatch:
     inputs:
       surface_path:
@@ -44,7 +56,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ekodi-background-browser-worker-${{ github.ref }}
+  group: ekodi-background-browser-worker-${{ github.ref }}-${{ inputs.device_profile || 'desktop' }}
   cancel-in-progress: true
 
 jobs:

@@ -45,10 +45,13 @@ function installStyle(){
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav[data-ekodi-admin-nav-mode="primary"]{flex:0 0 auto!important;overflow:hidden!important;overscroll-behavior:auto!important;scrollbar-gutter:auto!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main{height:100dvh!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-sidebar-footer{margin-top:auto!important;flex:0 0 auto!important;position:static!important}
-    html[data-ekodi-shell-surface="admin"] .ekodi-admin-header-account-hidden,
-    html[data-ekodi-shell-surface="admin"] .ekodi-admin-header-title-hidden{display:none!important}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-header-account-hidden{display:none!important}
     @media(min-width:761px){html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-topbar{display:none!important}}
-    @media(max-width:760px){html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-topbar{position:fixed!important;top:0!important;left:0!important;right:0!important;width:100%!important;z-index:2147481900!important;box-sizing:border-box!important;padding-top:env(safe-area-inset-top,0px)!important}}
+    @media(max-width:760px){
+      html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-topbar{position:sticky!important;top:0!important;left:auto!important;right:auto!important;width:auto!important;min-height:56px!important;z-index:1200!important;box-sizing:border-box!important;padding:max(8px,env(safe-area-inset-top,0px)) 12px 8px!important;background:#fff!important;color:var(--ekodi-admin-text)!important;border-bottom:1px solid var(--ekodi-admin-line)!important;box-shadow:none!important}
+      html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-topbar .menu{color:var(--ekodi-admin-text)!important;background:#fff!important;border:1px solid var(--ekodi-admin-line)!important;border-radius:12px!important;width:42px!important;height:42px!important}
+      html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-topbar #pageTitle{display:block!important;color:var(--ekodi-admin-text)!important;font-size:16px!important;line-height:1.3!important;margin:0!important}
+    }
   `;
   (document.head||document.documentElement).append(style);
 }
@@ -139,7 +142,10 @@ function hideDuplicateHeaderRegions(topbar){
     for(const node of topbar.querySelectorAll(selector))node.classList.add('ekodi-admin-header-account-hidden');
   }
   for(const selector of TITLE_SELECTORS){
-    for(const node of topbar.querySelectorAll(selector))node.classList.add('ekodi-admin-header-title-hidden');
+    for(const node of topbar.querySelectorAll(selector)){
+      node.classList.remove('ekodi-admin-header-title-hidden');
+      if(node.parentElement?.hidden)node.parentElement.hidden=false;
+    }
   }
 }
 

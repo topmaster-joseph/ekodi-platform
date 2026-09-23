@@ -25,6 +25,10 @@ if(policy.execution?.virtualizationRequiredWhenAvailable!==true||policy.executio
 const vp=policy.execution?.virtualizationProviderPolicy||{};
 if(policy.execution?.defaultHarness!=='ekodi-owned-isolated-browser-runtime'||vp.nativeFirst!==true) fail('surface verification must default to EKODI-owned virtualization');
 if(vp.externalProviderRole!=='temporary-replaceable-fallback-only'||vp.fallbackReasonAndAuditRequired!==true||vp.nativeCapabilityGapRecordRequired!==true) fail('external virtualization must remain an audited temporary fallback');
+if(vp.routingPolicy!=='config/virtualization-routing-policy.json') fail('surface verification must bind the native virtualization routing policy');
+if(vp.externalFallbackForbiddenWhenEligibleNativeHealthy!==true) fail('external virtualization must be blocked while eligible native virtualization is healthy');
+if(vp.externalFallbackRequiresAllEligibleNativeUnusable!==true) fail('external virtualization fallback must require all eligible native paths to be unusable');
+if(vp.fallbackMustRetryNativeOnNextEligibleExecution!==true) fail('external fallback must retry native virtualization on the next eligible execution');
 if(vp.paidExternalAutoUpgradeForbidden!==true||vp.securityAndIsolationMayNotBeWeakened!==true) fail('external virtualization fallback may not auto-upgrade or weaken security/isolation');
 for(const reason of ['native-capability-not-production-ready','native-capability-unavailable','required-capability-not-yet-implemented','native-capacity-or-runtime-failure']) if(!vp.fallbackAllowedOnlyWhen?.includes(reason)) fail(`virtualization fallback reason missing: ${reason}`);
 if(policy.execution?.nativeWorkerPolicy!=='config/background-browser-worker-policy.json'||policy.execution?.nativeWorkerId!=='ekodi-background-browser-worker') fail('surface verification must bind the EKODI background browser worker');

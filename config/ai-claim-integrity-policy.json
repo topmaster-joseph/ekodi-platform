@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "policyId": "AI-CLAIM-INTEGRITY-001",
+  "status": "enforced",
+  "purpose": "Prevent EKODI AI from presenting inferred, stale, agent-repeated, or scope-mismatched operational claims as verified fact.",
+  "scope": [
+    "user-facing-ai-responses",
+    "agent-to-agent-handoffs",
+    "completion-and-status-reporting",
+    "deployment-and-release-reporting",
+    "runtime-health-reporting",
+    "cross-surface-and-ecosystem-wide-claims"
+  ],
+  "authoritativeSourcePriority": [
+    "direct-runtime-observation",
+    "deployment-provider-record",
+    "authoritative-operational-database",
+    "git-default-branch",
+    "ekodi-authoritative-registry",
+    "approved-operational-document",
+    "task-evidence-ledger",
+    "conversation-memory",
+    "model-inference"
+  ],
+  "rules": {
+    "aiStatementNeverCreatesSystemState": true,
+    "otherAgentOutputIsAssertionNotEvidence": true,
+    "conversationMemoryMayNotSolelyProveCurrentOperationalState": true,
+    "currentOperationalStateRequiresFreshEvidence": true,
+    "completionClaimRequiresVerifiedEvidence": true,
+    "deploymentClaimRequiresDeploymentEvidence": true,
+    "runtimeWorkingClaimRequiresRuntimeVerification": true,
+    "scopeOfClaimMayNotExceedScopeOfEvidence": true,
+    "singleSurfaceEvidenceMayNotProveAllSurfaces": true,
+    "sampleEvidenceMayNotProveEcosystemWideState": true,
+    "contradictoryEvidenceBlocksPositiveClaim": true,
+    "unknownStateMustRemainUnknown": true,
+    "uncertaintyMustNotBeSilentlyFilledByInference": true,
+    "independentVerifierRequiredForCompletionAndBroadScopeClaims": true,
+    "claimReceiptRequiredForMaterialOperationalClaims": true,
+    "recoveryMayContinueWithoutHumanInterruptionWhenAuthorized": true,
+    "recoveryMustNotConvertUnknownIntoSuccess": true
+  },
+  "claimStates": [
+    "verified",
+    "supported",
+    "inferred",
+    "unknown",
+    "contradicted"
+  ],
+  "materialOperationalClaimTypes": [
+    "implemented",
+    "merged",
+    "deployed",
+    "production-live",
+    "runtime-working",
+    "verified",
+    "complete",
+    "all-surfaces-applied",
+    "ecosystem-wide-normal"
+  ],
+  "freshness": {
+    "runtimeAndDeploymentEvidenceMaxAgeSeconds": 900,
+    "memoryEvidenceMaxAgeSecondsForCurrentOperationalState": 0,
+    "staleEvidenceDisposition": "reverify-before-asserting-current-state"
+  },
+  "claimReceipt": {
+    "required": true,
+    "fields": [
+      "claim_id",
+      "task_id",
+      "claim_type",
+      "claim_scope",
+      "claim_text_hash",
+      "verdict",
+      "evidence_sources",
+      "observed_at",
+      "verified_at",
+      "verifier",
+      "freshness_seconds"
+    ],
+    "tamperEvident": true,
+    "appendOnlyPreferred": true
+  },
+  "userFacingReporting": {
+    "verifiedMayBeAssertedAsFact": true,
+    "supportedMustNameLimitationWhenOperationallyMaterial": true,
+    "inferredMayNotUseSuccessLanguage": true,
+    "unknownMustUseNonSuccessStatus": true,
+    "contradictedMustBlockSuccessLanguage": true,
+    "successTermsRequireVerifiedReceipt": [
+      "complete",
+      "completed",
+      "done",
+      "deployed",
+      "live",
+      "verified",
+      "working",
+      "완료",
+      "배포 완료",
+      "적용 완료",
+      "구축 완료",
+      "정상",
+      "검증 완료",
+      "전체 적용",
+      "모두 적용"
+    ]
+  },
+  "integration": {
+    "orchestrationPolicy": "AI-ORCHESTRATE-001",
+    "completionPolicy": "AI-COMPLETE-001",
+    "commandPlane": "ekodi-command-plane",
+    "originSynthesisMustObey": true,
+    "sentinelMustChallengeUnsupportedClaims": true,
+    "finalResponseGuardRequired": true
+  }
+}

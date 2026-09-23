@@ -1,0 +1,30 @@
+{
+  "id": "EKODI-CONSTITUTION-2026-09-23-NATIVE-VIRTUALIZATION-RUNTIME-ENFORCEMENT",
+  "date": "2026-09-23",
+  "status": "approved",
+  "constitutionVersion": "1.20.0",
+  "approvedBy": "topmaster-joseph",
+  "changeClass": "C2",
+  "title": "Native virtualization runtime enforcement",
+  "summary": "Operationally enforce the existing VIRTUALIZATION-SOVEREIGNTY-001 rule so an eligible healthy EKODI-owned virtualization provider must be used and external virtualization cannot be selected merely by convenience.",
+  "approvalBasis": "The platform owner explicitly instructed EKODI on 2026-09-23 to continue development and make it a mandatory rule that, when virtualization is needed, EKODI should use its own virtualization instead of external virtualization.",
+  "constitutionalInterpretation": "This amendment does not introduce a new constitutional principle or version. It hardens runtime enforcement of the already-approved EKODI-owned virtualization sovereignty principle in Constitution v1.20.0.",
+  "enforcementAdds": [
+    "EKODI-VIRTUALIZATION-ROUTING-001",
+    "executable native-first virtualization router",
+    "external fallback forbidden while an eligible native provider is healthy",
+    "all eligible native paths must be explicitly unusable before external fallback",
+    "audit id and native capability-gap record required for any external fallback",
+    "security/isolation equivalence or improvement required",
+    "paid external auto-upgrade forbidden",
+    "external fallback must retry native on the next eligible execution",
+    "dedicated virtualization routing CI guard"
+  ],
+  "allowedExternalFallbackReasons": [
+    "native-capability-not-production-ready",
+    "native-capability-unavailable",
+    "required-capability-not-yet-implemented",
+    "native-capacity-or-runtime-failure"
+  ],
+  "rollbackPlan": "Revert the runtime routing policy/router/validators as one guarded C2 change while retaining VIRTUALIZATION-SOVEREIGNTY-001. Never roll back to a state where external virtualization can silently become the default or bypass audit, native-gap tracking, or security equivalence."
+}

@@ -22,10 +22,11 @@ test('all administrator hostnames inherit the same official admin shell', () => 
   assert.ok(build.includes('admin-authenticated-shell.js'));
 });
 
-test('shared shell removes the desktop title strip and moves account above logout', () => {
+test('shared shell hides the desktop topbar while preserving mobile page context and account placement', () => {
   assert.match(shell, /document\.body\.classList\.add\('ekodi-admin-shell-v2'\)/);
   assert.match(shell, /sideBottom\.insertBefore\(profile,\s*logoutButton\s*\|\|\s*null\)/);
-  assert.match(shell, /pageTitle\.parentElement\.hidden\s*=\s*true/);
+  assert.match(shell, /pageTitle\.parentElement\.hidden\s*=\s*false/);
+  assert.doesNotMatch(shell, /pageTitle\.parentElement\.hidden\s*=\s*true/);
   assert.match(shell, /matchMedia\('\(max-width:760px\)'\)\.matches\s*\?\s*'flex'\s*:\s*'none'/);
 });
 

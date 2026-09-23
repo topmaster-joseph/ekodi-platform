@@ -4,7 +4,7 @@ import { chromium } from 'playwright';
 
 const origin = String(process.env.EKODI_PRODUCTION_ORIGIN || 'https://ekodi.kr').replace(/\/+$/,'');
 const activityKey = '260926-chuseok-open-table';
-const targetUrl = origin + '/ekodimission/admin/activities?activity=' + activityKey;
+const targetUrl = origin + '/ekodimission/admin';
 const artifactsDir = path.resolve('artifacts/ekodimission-admin-production-e2e');
 await fs.mkdir(artifactsDir,{recursive:true});
 
@@ -94,8 +94,8 @@ function captureWorkspaceAsset(list,response){
 const browser=await chromium.launch({headless:true});
 
 // First verify the real signed-out production surface builds a Mission-scoped
-// auth URL that returns to the exact participant-management route. This catches
-// regressions where a tenant admin login is accidentally routed through My EKODI.
+// auth URL that returns to the canonical Mission admin root. This catches
+// regressions where a tenant admin login is accidentally routed through My EKODI or a generic command home.
 const signedOutContext=await browser.newContext({viewport:{width:1440,height:1100}});
 const signedOutPage=await signedOutContext.newPage();
 signedOutPage.setDefaultTimeout(12_000);
@@ -117,7 +117,7 @@ try{
   }
   const returnTo=new URL(loginUrl.searchParams.get('return_to')||'');
   if(returnTo.origin!==expectedReturn.origin||returnTo.pathname!==expectedReturn.pathname||returnTo.search!==expectedReturn.search){
-    throw new Error('Mission admin return_to lost the participant-management route: '+loginUrl.href);
+    throw new Error('Mission admin return_to lost the canonical admin root: '+loginUrl.href);
   }
 }catch(error){
   await signedOutPage.screenshot({path:path.join(artifactsDir,'signed-out-failure.png'),fullPage:true}).catch(()=>{});
@@ -256,11 +256,20 @@ let fatal=null;
 const checks={authSiteMission:true,authReturnToExact:true};
 try{
   await page.goto(targetUrl,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.querySelector('#pageState')?.textContent?.includes('운영공간'));
+
+  checks.rootUrl=new URL(page.url()).pathname==='/ekodimission/admin';
+  checks.rootTitle=(await page.locator('#pageTitle').textContent())?.includes('운영 홈')||false;
+  const activityEntry=page.locator('#mainPanel a[href="/ekodimission/admin/activities"]').first();
+  await activityEntry.waitFor({state:'visible'});
+  checks.activityEntryVisible=await activityEntry.isVisible();
+  await activityEntry.click();
+  await page.waitForURL('**/ekodimission/admin/activities');
   await page.waitForSelector('#activityPicker');
-  await page.waitForFunction(()=>document.querySelector('#pageState')?.textContent?.includes('참가자 관리'));
+  await page.waitForFunction(()=>document.querySelector('#pageState')?.textContent?.includes('신청자 관리'));
 
   checks.url=new URL(page.url()).pathname==='/ekodimission/admin/activities';
-  checks.title=(await page.locator('#pageTitle').textContent())?.includes('활동 · 참가자')||false;
+  checks.title=(await page.locator('#pageTitle').textContent())?.includes('행사 · 신청자')||false;
   checks.activityPicker=await page.locator('#activityPicker').inputValue()===activityKey;
   checks.rowVisible=await page.getByText('운영검증 참가자',{exact:true}).isVisible();
   checks.relationshipSeparated=await page.getByText('단순 참가자',{exact:true}).isVisible();

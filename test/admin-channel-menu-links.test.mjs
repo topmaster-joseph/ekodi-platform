@@ -11,16 +11,18 @@ test('channel and autopost navigation is named consistently across administrator
   assert.equal(getAdminMenuLabel('social','ko'),'방송·채널·자동게시');
 
   const workspace = await (await workspaceAdminScript()).text();
-  assert.match(workspace,/소통 · 홍보/);
+  assert.match(workspace,/콘텐츠 · 운영/);
   assert.match(workspace,/마케팅 AI/);
   assert.match(workspace,/채널·자동게시/);
-  assert.match(workspace,/publishing:\['SNS','채널','계정 연결','OAuth','쇼츠','자동게시','예약게시'\]/);
+  assert.match(workspace,/\['publishing','채널·자동게시'\]/);
+  assert.doesNotMatch(workspace,/mountCommandHome|EKODITenantCommandHome/);
 
   const store = await (await storeAdminScript()).text();
   assert.match(store,/마케팅 · 채널/);
   assert.match(store,/마케팅 AI/);
   assert.match(store,/채널·자동게시/);
-  assert.match(store,/publishing:\['SNS','채널','계정 연결','OAuth','자동게시','예약게시','쇼츠'\]/);
+  assert.match(store,/\['publishing','채널·자동게시'\]/);
+  assert.doesNotMatch(store,/mountCommandHome|EKODITenantCommandHome/);
   assert.equal(storeAdminCanAccess('store_owner','publishing'),true);
   assert.equal(storeAdminCanAccess('marketing_manager','publishing'),true);
 });

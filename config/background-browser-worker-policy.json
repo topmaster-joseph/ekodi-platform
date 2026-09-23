@@ -65,6 +65,9 @@
     "runtime": "playwright-chromium",
     "orchestration": "ekodi-owned",
     "underlyingComputeReplaceable": true,
-    "externalBrowserServiceRequired": false
-  }
+    "externalBrowserServiceRequired": false,
+    "externalFallbackForThisWorker": "forbidden-while-runtime-healthy",
+    "mustIdentifyAsNativeInEvidence": true
+  },
+  "routingPolicy": "config/virtualization-routing-policy.json"
 }

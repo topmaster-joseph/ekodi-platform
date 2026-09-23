@@ -22,8 +22,6 @@ function tradeAdminClient(ADMIN_HUB){
   function card(label,value,small=''){return `<article class="card"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(small)}</small></article>`;}
   function sectionTitle(title,copy){$('pageTitle').textContent=title;$('pageCopy').textContent=copy;document.title=`${title} · 에코디비즈`;}
   function sectionHref(key){return key==='overview'?`${base}/overview`:`${base}/${key}`;}
-  function commandRoutes(){const routes=[{id:'overview',label:'운영 홈',path:base+'/overview',keywords:['대시보드','홈']},{id:'companies',label:'거래회사',path:base+'/companies',keywords:['회사','거래관리']}];if(access?.can_manage_access)routes.push({id:'access',label:'사용자 · 관리자',path:base+'/access',keywords:['관리자','권한','사용자']});return routes}
-  function mountCommandHome(){if(location.pathname.replace(/\/+$/,'')!==base)return false;window.EKODITenantCommandHome?.mount({rootPath:base,siteName:'에코디비즈 무역거래',publicPath:`/${workspaceUrlSlug}/trade`,routes:commandRoutes()});return true}
   function renderSecondaryNav(){
     const sub=$('sectionNav');if(!sub)return;sub.replaceChildren();sub.hidden=true;
   }
@@ -124,7 +122,7 @@ function tradeAdminClient(ADMIN_HUB){
       sb=mod.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{detectSessionInUrl:false,persistSession:true}});
       $('workspaceLogout')?.addEventListener('click',async()=>{try{await sb.auth.signOut();}finally{location.assign(base);}});
       await consumeHandoff();const session=await currentSession();if(!session){authRequired();return;}
-      await loadContext();renderAdminScopeSwitcher();if(mountCommandHome())return;await loadCompanies();if(section==='access')await loadAdmins();
+      await loadContext();renderAdminScopeSwitcher();await loadCompanies();if(section==='access')await loadAdmins();
       if(section==='companies')renderCompanies();else if(section==='access')renderAccess();else renderOverview();
     }catch(error){
       console.error('trade admin bootstrap',error);if(error.status===401||error.message==='login_required'){authRequired();return;}
