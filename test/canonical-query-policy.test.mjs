@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import siteWorker from '../site-worker.js';
 import {
   canonicalTrackingQueryRedirect,
   isHumanFacingCanonicalRoute,
@@ -48,4 +49,18 @@ test('shared browser shell contains address-bar fallback cleanup for shell-enabl
 test('tracking cleanup keeps the URL fragment while removing attribution keys',()=>{
   const {url}=stripTrackingQuery('https://ekodi.kr/ekodimission?utm_source=chatgpt.com&lang=ko#applications');
   assert.equal(url.toString(),'https://ekodi.kr/ekodimission?lang=ko#applications');
+});
+
+test('apex Admin entry applies canonical tracking cleanup before serving admin shell',async()=>{
+  const response=await siteWorker.fetch(new Request('https://ekodi.kr/admin/?utm_source=chatgpt.com&utm_campaign=test&tab=overview'),{});
+  assert.equal(response.status,308);
+  assert.equal(response.headers.get('location'),'https://ekodi.kr/admin/?tab=overview');
+  assert.equal(response.headers.get('x-ekodi-canonical-query'),'tracking-params-removed');
+  assert.match(response.headers.get('x-robots-tag')||'',/noindex/i);
+});
+
+test('shared site public entry also strips tracking query before asset routing',async()=>{
+  const response=await siteWorker.fetch(new Request('https://ekodi.kr/?utm_source=chatgpt.com&lang=ko'),{});
+  assert.equal(response.status,308);
+  assert.equal(response.headers.get('location'),'https://ekodi.kr/?lang=ko');
 });
