@@ -13,10 +13,13 @@ test('delegated admins use task-first navigation without changing authority',asy
     read('store-portfolio-admin-page.js'),
   ]);
 
-  assert.match(workspace,/label:'홈'/);
-  assert.match(workspace,/label:'소통 · 홍보'/);
-  assert.match(workspace,/label:'운영 · 재무'/);
-  assert.match(workspace,/label:'사이트 · 설정'/);
+  assert.match(workspace,/label:'통합현황'/);
+  assert.match(workspace,/label:'서비스'/);
+  assert.match(workspace,/label:'사이트'/);
+  assert.match(workspace,/label:'사용자 · 권한'/);
+  assert.match(workspace,/label:'콘텐츠 · 운영'/);
+  assert.match(workspace,/label:'상태 · 배포'/);
+  assert.match(workspace,/label:'설정 · 기록'/);
   assert.match(workspace,/mallDirectSections/);
 
   assert.match(store,/label:'주문 · 판매'/);
@@ -100,9 +103,10 @@ test('delegated admin navigation never requires a category click before reaching
     read('workspace-trade-admin-page.js'),
   ]);
 
-  assert.match(workspace,/admin-nav-group-label/);
+  assert.match(workspace,/a\.dataset\.adminGroup=group\.id/);
+  assert.match(workspace,/a\.href=sectionHref\(firstKey\)/);
   assert.match(workspace,/a\.href=sectionHref\(key\)/);
-  assert.doesNotMatch(workspace,/button\.dataset\.adminGroup=group\.id/);
+  assert.match(workspace,/renderSecondaryNav\(activeGroup,role\)/);
 
   assert.match(store,/admin-nav-group-label/);
   assert.ok(store.includes("a.href=key==='overview'?ADMIN_BASE+'/overview':ADMIN_BASE+'/'+key"));
