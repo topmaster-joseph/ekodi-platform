@@ -10,7 +10,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = '2.3.3'
+$AgentVersion = '2.3.4'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -31,6 +31,7 @@ $BrowserWorkerProfileRoot = Join-Path $env:ProgramData 'EKODI\BrowserWorker\Task
 $BrowserCanaryUrl = 'https://ekodi.kr/'
 $IsolatedDesktopCanaryStatePath = Join-Path $Root 'isolated-desktop-canary.json'
 $IsolatedDesktopGuestCanaryStatePath = Join-Path $Root 'isolated-desktop-guest-canary.json'
+$IsolatedDesktopUiCanaryStatePath = Join-Path $Root 'isolated-desktop-ui-canary.json'
 $IsolatedDesktopSessionRoot = Join-Path $env:ProgramData 'EKODI\IsolatedDesktop\Sessions'
 
 function Test-IsAdministrator {
@@ -1484,7 +1485,7 @@ function Write-EkodiGuestRuntimeTask([string]$VhdPath, $Task) {
     $Task | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $taskPath -Encoding UTF8
     if (-not (Test-Path -LiteralPath $taskPath)) { throw 'isolated_guest_task_stage_failed' }
     return @{
-      guestAgentVersionMarkerPresent = [bool]((Get-Content -LiteralPath $guestAgent -Raw -Encoding UTF8) -match "\$GuestAgentVersion\s*=\s*'1\.0\.0'")
+      guestAgentVersionMarkerPresent = [bool]((Get-Content -LiteralPath $guestAgent -Raw -Encoding UTF8) -match "\$GuestAgentVersion\s*=\s*'1\.1\.0'")
       taskStaged = $true
     }
   } finally {
@@ -1507,14 +1508,14 @@ function Read-EkodiGuestRuntimeReceipt([string]$VhdPath) {
 
 function Get-IsolatedDesktopGuestCanaryState {
   if (-not (Test-Path -LiteralPath $IsolatedDesktopGuestCanaryStatePath)) {
-    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion; guestAgentVersion = '1.0.0' }
+    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion; guestAgentVersion = '1.1.0' }
   }
   try {
     $state = Get-Content -LiteralPath $IsolatedDesktopGuestCanaryStatePath -Raw -Encoding UTF8 | ConvertFrom-Json
     $verified = (
       $state.ok -eq $true -and
       [string]$state.agentVersion -eq $AgentVersion -and
-      [string]$state.guestAgentVersion -eq '1.0.0' -and
+      [string]$state.guestAgentVersion -eq '1.1.0' -and
       [string]$state.mode -eq 'isolated-desktop-guest-runtime-canary' -and
       $state.executedAsSystem -eq $true -and
       $state.noNetworkAdapter -eq $true -and
@@ -1535,7 +1536,7 @@ function Get-IsolatedDesktopGuestCanaryState {
       receiptSha256 = [string]$state.receiptSha256
     }
   } catch {
-    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion; guestAgentVersion = '1.0.0'; error = 'isolated_guest_canary_state_invalid' }
+    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion; guestAgentVersion = '1.1.0'; error = 'isolated_guest_canary_state_invalid' }
   }
 }
 
@@ -1617,7 +1618,7 @@ function Invoke-IsolatedDesktopGuestRuntimeCanary {
     $receiptOk = (
       $receipt.ok -eq $true -and
       [string]$receipt.mode -eq 'ekodi-isolated-guest-runtime-canary' -and
-      [string]$receipt.guestAgentVersion -eq '1.0.0' -and
+      [string]$receipt.guestAgentVersion -eq '1.1.0' -and
       [string]$receipt.taskType -eq 'guest.runtime.probe' -and
       [string]$receipt.taskId -eq $taskId -and
       [string]$receipt.nonceSha256 -eq $expectedNonceSha -and
