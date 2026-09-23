@@ -23,6 +23,12 @@ test('public execution catalog and ranked services hide capability internals',()
   assert.doesNotMatch(serialized,/capabilityId|providerId|actionTier|maturity/);
   assert.ok(ranked.length>0);
   assert.ok(ranked.every(item=>item.launchUrl.startsWith('https://ekodi.kr/ai/')));
+  assert.ok(ranked.every(item=>['live','beta','integration-pending','read-only'].includes(item.availability)));
+  assert.ok(ranked.every(item=>['direct','bridge'].includes(item.deliveryMode)));
+  const services=catalog.categories.flatMap(category=>category.services);
+  assert.equal(services.find(item=>item.id==='everyone-interpreter')?.deliveryMode,'direct');
+  assert.equal(services.find(item=>item.id==='check-energy')?.availability,'read-only');
+  assert.equal(services.find(item=>item.id==='run-business')?.availability,'integration-pending');
 });
 
 test('public and member request projections hide orchestration internals while admin keeps them',()=>{
@@ -87,6 +93,9 @@ test('Commons page loads browser assets only through the Worker-owned API bounda
   assert.match(client,/item\.status==='shared'/);
   assert.match(client,/\/api\/commons\/match/);
   assert.match(client,/const FEATURED_PER_CATEGORY=3/);
+  assert.match(client,/function serviceStatusMeta\(service\)/);
+  assert.match(client,/availabilityLabel/);
+  assert.match(client,/deliveryLabel/);
   assert.match(client,/\.slice\(0,FEATURED_PER_CATEGORY\)/);
   assert.doesNotMatch(html,/\.\/commons\.js\?v=/);
   assert.doesNotMatch(html,/\.\/commons\.css\?v=/);
