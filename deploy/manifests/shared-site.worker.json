@@ -1,5 +1,5 @@
 {
-  "version": 85,
+  "version": 86,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -1786,6 +1786,66 @@
         "headerExpect": [
           "location: https://ekodi.kr/seonam-medi",
           "x-ekodi-route: seonam-medi-canonical",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/pgm",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "평공목",
+          "평생공부하는 목회자",
+          "매주 화요일 오전 10시"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: pgm-static",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/pgm/app.css",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          ".study-grid",
+          "@media(max-width:650px)"
+        ],
+        "headerExpect": [
+          "content-type: text/css",
+          "x-ekodi-route: pgm-static",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/pgm/admin",
+        "statuses": [
+          302
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/admin/sites/workspace?source=pgm",
+          "x-ekodi-route: pgm-admin-handoff",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/pyeonggongmok",
+        "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/pgm",
+          "x-ekodi-route: pgm-canonical",
           "cache-control: no-store"
         ],
         "rollbackVerify": false
