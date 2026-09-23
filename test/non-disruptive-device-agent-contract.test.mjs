@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [agent, policyRaw, admin] = await Promise.all([
+const [agent, policyRaw, admin, windowsWorkflow] = await Promise.all([
   readFile(new URL('../tools/ekodi-device-agent/windows/ekodi-device-agent.ps1', import.meta.url), 'utf8'),
   readFile(new URL('../config/remote-computer-execution-policy.json', import.meta.url), 'utf8'),
   readFile(new URL('../device-control-admin.js', import.meta.url), 'utf8'),
+  readFile(new URL('../.github/workflows/device-control-windows.yml', import.meta.url), 'utf8'),
 ]);
 const policy = JSON.parse(policyRaw);
 
@@ -57,4 +58,14 @@ test('background browser worker is canary-gated, ephemeral, headless and read-on
   assert.match(agent, /userInputInjection = \$false/);
   assert.match(agent, /profileRemoved = -not \(Test-Path -LiteralPath \$taskProfile\)/);
   assert.doesNotMatch(agent, /desktopInput = \$true/);
+});
+
+
+test('Windows CI executes the EKODI-native browser runtime proof', () => {
+  assert.match(windowsWorkflow, /Run native Background Browser Worker on Windows runner/);
+  assert.match(windowsWorkflow, /Invoke-BackgroundBrowserCanary/);
+  assert.match(windowsWorkflow, /Invoke-BackgroundBrowserWorker/);
+  assert.match(windowsWorkflow, /virtualizationProvider -ne 'ekodi-native-remote-computer'/);
+  assert.match(windowsWorkflow, /profileRemoved/);
+  assert.match(windowsWorkflow, /mutationMode -ne 'read-only-static-surface'/);
 });
