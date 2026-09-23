@@ -43,6 +43,8 @@ test('pastor admin exposes attendance with a dedicated capability',async()=>{
   const policy=await fs.promises.readFile(policyUrl,'utf8');
   assert.match(api,/church_attendance:\['senior_pastor','pastor','care_staff','staff'\]/);
   assert.match(api,/church_attendance_upsert/);
+  assert.match(api,/church_attendance_summary/);
+  assert.match(api,/church_attendance_member_summaries/);
   assert.match(admin,/개인별 출결현황/);
   assert.match(admin,/section==='attendance'/);
   assert.match(policy,/attendance:'tenant\.attendance\.manage'/);
