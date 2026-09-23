@@ -4,6 +4,7 @@ import { getSovereignAutonomySummary } from './sovereign-autonomy-runtime.js';
 import {AI_MISSION_RUNTIME,evaluateMissionAction} from './ai-governance-runtime.js';
 import {AI_ROUTER_SCORE_POLICY,providerCostClass,rankProviders,scoreProvider} from './ai-router-score.js';
 import {AI_COST_POLICY,evaluateAiCostEligibility} from './ai-cost-policy.js';
+import {buildKnowledgeEvidenceContext,normalizeKnowledgeEvidence,normalizeKnowledgeTaskInput} from './ai-knowledge-claim.js';
 
 export const AI_CONTROL_POLICY = Object.freeze({
   version: '0.8.0',
@@ -117,8 +118,10 @@ export function normalizeTaskInput(input = {}) {
   const needsCodeBranch = input.needsCodeBranch === true || /\b(code|coding|git|github|branch|deploy|worker|repository|repo)\b/i.test(prompt) || /코드|코딩|깃|브랜치|배포|저장소/.test(prompt);
   const origin=normalizeOrigin(input);
   const g = input.governance && typeof input.governance === 'object' ? input.governance : {};
+  const knowledge=normalizeKnowledgeTaskInput({...input,governance:g});
+  const knowledgeEvidence=normalizeKnowledgeEvidence(input.knowledgeEvidence||input.knowledge_evidence||[]);
   const governance = Object.freeze({agentId:clean(g.agentId||input.agentId||'chief')||'chief',area:clean(g.area||input.actionArea||(needsCodeBranch?'software_change':'general_assistance'))||'general_assistance',delegated:g.delegated===true,reversible:g.reversible===true,logged:g.logged===true,preflightVerified:g.preflightVerified===true,reducesUserRights:g.reducesUserRights===true,crossTenantPrivateData:g.crossTenantPrivateData===true,highImpact:g.highImpact===true,personId:clean(g.personId||g.person_id),workspaceId:clean(g.workspaceId||g.workspace_id),role:clean(g.role),capability:clean(g.capability),production:g.production===true,standingDelegation:g.standingDelegation===true,existingBoundary:g.existingBoundary===true,rollbackDefined:g.rollbackDefined===true,verificationDefined:g.verificationDefined===true,postVerificationRequired:g.postVerificationRequired===true,automaticRollback:g.automaticRollback===true,knownStableTarget:g.knownStableTarget===true,paidCommitment:g.paidCommitment===true,explicitDelegatedBudget:g.explicitDelegatedBudget===true,permissionExpansion:g.permissionExpansion===true,canonicalIdentityChange:g.canonicalIdentityChange===true,workspaceAuthorityChange:g.workspaceAuthorityChange===true,destructiveDataChange:g.destructiveDataChange===true,massDataChange:g.massDataChange===true,newDomainOwnership:g.newDomainOwnership===true,securityBoundaryChange:g.securityBoundaryChange===true,newIndependentDeployment:g.newIndependentDeployment===true,providerLockIn:g.providerLockIn===true,productionSecretChange:g.productionSecretChange===true,productionDnsChange:g.productionDnsChange===true,violates:unique(Array.isArray(g.violates)?g.violates.map(clean):[]),origin});
-  return Object.freeze({title,prompt,mode,requestedMode,requestedProviders,needsCodeBranch,origin,executionEnvironment:AI_CONTROL_POLICY.executionEnvironment,governance});
+  return Object.freeze({title,prompt,mode,requestedMode,requestedProviders,needsCodeBranch,origin,executionEnvironment:AI_CONTROL_POLICY.executionEnvironment,governance,knowledge,knowledgeEvidence});
 }
 
 export function evaluateTaskMissionPolicy(task = {}) {
@@ -241,7 +244,11 @@ export function buildOriginSynthesisPrompt(task, runs = []) {
     'Obey AI-CLAIM-INTEGRITY-001: collaborator/model text is an assertion, not proof of implementation, merge, deployment, runtime health, verification, completion, or broad-scope application.',
     'Use completion/deployment/normal/all-scope success wording only when the task carries a fresh verified claim receipt with evidence sources and matching scope. Memory, prior chat, plans, PR descriptions, or another AI statement never prove current operational state.',
     'If verified operational evidence is absent, stale, contradictory, or narrower than the claim, explicitly keep the status unverified/unknown rather than filling the gap by inference.',
+    'Obey AI-KNOWLEDGE-CLAIM-001: retrieval, RAG chunks, memory, prior model output and collaborator text are candidate evidence, not verified external facts.',
+    'For knowledge-gated tasks, never upgrade the deterministic Knowledge Claim Gate verdict. Current facts require freshness appropriate to volatility; credible contradictions must be disclosed; evidence scope must match claim scope; model-generated text cannot serve as a source.',
+    'When the Knowledge Claim Gate is verified, cite material external claims using the supplied [K#] source tokens. If it is not verified, do not state the disputed/current external fact as settled.',
     `Original request:\n${clip(task.prompt,6000)}`,
+    `Knowledge verification context:\n${buildKnowledgeEvidenceContext(task,task.knowledgeEvidence||[])}`,
     `Parallel collaborators (${successful.length}):\n${evidence||'No successful collaborator output.'}`,
   ].join('\n\n');
 }

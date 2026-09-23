@@ -1,0 +1,22 @@
+{
+  "id": "2026-09-23-ai-knowledge-claim-gate-v1.23.0",
+  "constitutionVersion": "1.23.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-23",
+  "changeClass": "C2",
+  "taskId": "knowledge-claim-gate-20260923",
+  "summary": "Require EKODI AI to treat search, RAG, connected-source research, memory and model output as candidate evidence rather than verified external fact, with source authority, freshness, contradiction, scope and citation gates before material factual assertions.",
+  "approvalBasis": "The EKODI Platform owner explicitly approved construction of the proposed Knowledge Claim Gate after the operational AI Claim Integrity rollout on 2026-09-23.",
+  "runtimeEnforcement": [
+    "ai-knowledge-claim.js classifies knowledge-sensitive tasks and evaluates source authority, freshness, scope, independence and contradictions",
+    "ai-control-core.js preserves normalized knowledge evidence and injects deterministic gate verdict/source tokens into origin synthesis",
+    "ai-control-provider-router.js applies Knowledge Claim Gate before the operational Claim Integrity Gate",
+    "config/knowledge-source-registry.json binds retrieval provenance to the claim gate",
+    "AGENTS.override.md and ORCHESTRATOR_PRODUCTION_CONTRACT.md make retrieval-is-not-verification provider-neutral",
+    "deploy-ai-control.yml validates and promotes the gate through the existing immutable guarded AI Control release"
+  ],
+  "rollback": "If the runtime gate creates a material regression, revert the runtime classification/router integration to the last known-good guarded release while retaining the constitutional rule. Repair classification or evidence projection, rerun knowledge-claim, constitution, orchestration and AI Control tests, then re-promote. Never roll back to treating retrieval or model output as self-verifying fact.",
+  "verification": "Run knowledge-claim unit/contract tests, constitution validation, orchestration validation, full repository regression tests, isolated AI Control staging deployment, guarded production promotion, and real production endpoint verification.",
+  "approvalEvidence": "Owner instruction in this conversation plus constitution-approved label on PR #2425 before this verification rerun."
+}
