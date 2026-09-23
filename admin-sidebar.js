@@ -389,6 +389,12 @@ function activateSection(nav, section) {
       return true;
     }
     nav.dataset.adminPendingSection = section;
+    for (const delay of [0, 60, 240]) window.setTimeout(() => {
+      const pending = String(nav.dataset.adminPendingSection || '').trim();
+      if (!pending || !window.EKODIAdminPanels?.activate) return;
+      delete nav.dataset.adminPendingSection;
+      window.EKODIAdminPanels.activate(pending);
+    }, delay);
     return true;
   }
   if (definition?.href && definition.adminHandoff !== true) {
@@ -545,17 +551,6 @@ export function mountAdminSidebar(root = document, options = {}) {
       sync();
     });
   };
-  const flushPendingSection = () => {
-    const section = String(nav.dataset.adminPendingSection || '').trim();
-    if (!section || !window.EKODIAdminPanels?.activate) return false;
-    delete nav.dataset.adminPendingSection;
-    window.EKODIAdminPanels.activate(section);
-    schedule();
-    return true;
-  };
-  const panelsReady = () => { flushPendingSection(); };
-  window.addEventListener('ekodi-admin-panels-ready', panelsReady);
-
   const observer = new MutationObserver(schedule);
   observer.observe(nav, { childList: true, subtree: false });
 
@@ -631,7 +626,6 @@ export function mountAdminSidebar(root = document, options = {}) {
       root.removeEventListener?.('click', contextClick, true);
       menuButton?.removeEventListener('click',toggleDrawer);
       window.removeEventListener('ekodi-admin-section-changed', sectionChanged);
-      window.removeEventListener('ekodi-admin-panels-ready', panelsReady);
       mounted.delete(nav);
     },
   });
