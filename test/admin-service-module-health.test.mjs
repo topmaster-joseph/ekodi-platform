@@ -16,7 +16,7 @@ test('module health route excludes core and selects common plus professional mod
   assert.match(registry, /'service-modules':'service-modules'/);
   assert.match(registry, /state\.category==='service-modules'.*item\.category==='common'\|\|item\.category==='professional'/);
   assert.match(registry, /function activationState\(service\)/);
-  assert.match(registry, /활성화 \$\{esc\(a\.label\)\} · 헬스 \$\{esc\(s\.label\)\}/);
+  assert.match(registry, /기능 \$\{esc\(a\.label\)\} · 런타임 \$\{esc\(s\.label\)\}/);
 });
 
 test('central admin sidebar footer links to the module health registry', () => {
@@ -29,4 +29,17 @@ test('central admin sidebar footer links to the module health registry', () => {
 test('nested canonical admin URLs load the admin shell directly on ekodi.kr', () => {
   const worker = read('site-worker.js');
   assert.match(worker, /PUBLIC_ADMIN_ALIASES\.has\(url\.pathname\) \|\| url\.pathname\.startsWith\('\/admin\/'\)/);
+});
+
+test('module health view separates activation, runtime scope, and last check time', () => {
+  const registry = read('common-services-admin.js');
+  const style = read('common-services-admin.css');
+  assert.match(registry, /공통·전문 모듈 점검/);
+  assert.match(registry, /function latestCheckedAt\(/);
+  assert.match(registry, /function runtimeScope\(/);
+  assert.match(registry, /Control 모니터링 미설정/);
+  assert.match(registry, /공유 API 런타임/);
+  assert.match(registry, /module-service-group/);
+  assert.match(style, /module-health-mode .*common-services-layout\{grid-template-columns:1fr\}/);
+  assert.match(style, /module-service-list\{display:grid;grid-template-columns:1fr/);
 });
