@@ -16,10 +16,12 @@
     })
   ]);
   const EXTERNAL_AI=Object.freeze([
-    Object.freeze({id:'chatgpt',label:'GPT',url:'https://chatgpt.com/'}),
+    Object.freeze({id:'chatgpt',label:'ChatGPT',url:'https://chatgpt.com/'}),
+    Object.freeze({id:'claude',label:'Claude',url:'https://claude.ai/'}),
     Object.freeze({id:'gemini',label:'Gemini',url:'https://gemini.google.com/app'}),
     Object.freeze({id:'qwen',label:'Qwen',url:'https://chat.qwen.ai/'}),
   ]);
+  const EXTERNAL_SECRET_RE=/(sk-[a-z0-9_-]{12,}|gh[pousr]_[a-z0-9]{20,}|akia[0-9a-z]{16}|-----begin [a-z ]+private key-----|\beyj[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}\b|(?:password|passwd|비밀번호)\s*[:=]\s*\S+)/i;
   const HIGH_RISK=[
     {re:/(계약|법적|위약|서명|contract)/i,area:'legal_commitment_or_contract_execution'},
     {re:/(고액|대금|지불|결제|환불|가격|요금|수수료|financial|payment|refund)/i,area:'high_value_or_exceptional_financial_commitment'},
@@ -113,10 +115,24 @@
     saveSessions();renderRail();
   }
 
+  function enhanceBootstrapExecution(){
+    const form=document.querySelector('.ekodi-assist-bootstrap-form');
+    if(!form||form.dataset.executionReady==='true')return;
+    const input=form.querySelector('input'),plus=form.querySelector('.ekodi-assist-bootstrap-plus'),send=form.querySelector('.ekodi-assist-bootstrap-send');
+    if(!input||!plus||!send)return;
+    const row=el('div','ekodi-assist-bootstrap-actions');
+    const label=el('label','ekodi-assist-bootstrap-target-label');
+    label.innerHTML='<span>실행</span><select id="ekodiAssistBootstrapTarget" class="ekodi-assist-bootstrap-target" aria-label="실행 대상"><option value="ekodi">EKODI</option><option value="chatgpt">ChatGPT</option><option value="claude">Claude</option><option value="gemini">Gemini</option><option value="qwen">Qwen</option><option value="multi">여러 AI</option></select>';
+    send.textContent='실행';send.setAttribute('aria-label','선택한 대상으로 실행');
+    form.prepend(input);row.append(plus,label,send);form.append(row);form.dataset.executionReady='true';
+  }
+
   function exposeBridge(){
+    enhanceBootstrapExecution();
     window.EKODIAdminAssist=Object.freeze({
       open:()=>{setOpen(true);setTab('ai',false);return true},
       submit:text=>{setOpen(true);setTab('ai',false);return submitAi(text)},
+      handoff:(provider,text)=>handoffCommand(provider,text),
       ready:()=>Boolean(root),
     });
     window.dispatchEvent(new CustomEvent('ekodi-admin-assist-ready'));
@@ -127,7 +143,7 @@
     if(existing){root=existing;exposeBridge();return}
     watchWorkbenchPosition();
     root=el('div','ekodi-assist');root.id='ekodiAssistDock';
-    root.innerHTML='<button type="button" class="ekodi-assist-launcher" id="ekodiAssistLauncher" aria-label="에코디와 대화 열기" aria-expanded="false">✦<span class="ekodi-assist-badge" id="ekodiAssistBadge" hidden></span></button><section class="ekodi-assist-panel" id="ekodiAssistPanel" hidden aria-label="에코디와 대화하기"><aside class="ekodi-assist-rail" id="ekodiAssistRail"><div class="ekodi-assist-rail-head"><strong id="ekodiAssistRailTitle">최근 대화</strong><button type="button" id="ekodiAssistNew" aria-label="새 대화">＋</button></div><div class="ekodi-assist-tabs" role="tablist"><button type="button" class="ekodi-assist-tab" data-assist-tab="ai">에코디와 대화</button><button type="button" class="ekodi-assist-tab" data-assist-tab="inbox">대화 · 문의</button></div><label class="ekodi-assist-search"><span>⌕</span><input id="ekodiAssistSearch" type="search" placeholder="최근 대화 검색" autocomplete="off"></label><div class="ekodi-assist-history" id="ekodiAssistHistory"></div><div class="ekodi-assist-rail-foot"><small id="ekodiAssistContext">현재 화면을 확인 중입니다.</small><a href="/operator" target="_blank" rel="noopener">운영자 전체 화면 ↗</a></div></aside><main class="ekodi-assist-main"><header class="ekodi-assist-head"><button type="button" class="ekodi-assist-rail-toggle" id="ekodiAssistRailToggle" aria-label="최근 대화 보기">☰</button><div class="ekodi-assist-title"><strong id="ekodiAssistTitle">새 대화</strong><small>에코디 헌법 · AI 협업 · 권한 경계를 지키며 실행합니다.</small></div><button type="button" class="ekodi-assist-close" id="ekodiAssistClose" aria-label="관리자 화면으로 돌아가기">×</button></header><div class="ekodi-assist-chat-scroll" id="ekodiAssistChat" aria-live="polite" data-ekodi-main-conversation="true"></div><footer class="ekodi-assist-composer-wrap" id="ekodiAssistComposer"><section class="ekodi-assist-proactive" id="ekodiAssistProactive" aria-label="에코디 선제 제안" hidden></section><form class="ekodi-assist-composer" id="ekodiAssistForm"><button type="button" class="ekodi-assist-plus" id="ekodiAssistComposerNew" aria-label="새 대화">＋</button><textarea class="ekodi-assist-command" id="ekodiAssistCommand" rows="1" maxlength="1800" placeholder="에코디와 대화하기"></textarea><button type="submit" class="ekodi-assist-send" aria-label="보내기">↑</button></form><small>Enter 전송 · Shift+Enter 줄바꿈 · 외부 AI로 보낼 때 민감정보를 먼저 확인하세요.</small></footer></main></section>';
+    root.innerHTML='<button type="button" class="ekodi-assist-launcher" id="ekodiAssistLauncher" aria-label="에코디와 대화 열기" aria-expanded="false">✦<span class="ekodi-assist-badge" id="ekodiAssistBadge" hidden></span></button><section class="ekodi-assist-panel" id="ekodiAssistPanel" hidden aria-label="에코디와 대화하기"><aside class="ekodi-assist-rail" id="ekodiAssistRail"><div class="ekodi-assist-rail-head"><strong id="ekodiAssistRailTitle">최근 대화</strong><button type="button" id="ekodiAssistNew" aria-label="새 대화">＋</button></div><div class="ekodi-assist-tabs" role="tablist"><button type="button" class="ekodi-assist-tab" data-assist-tab="ai">에코디와 대화</button><button type="button" class="ekodi-assist-tab" data-assist-tab="inbox">대화 · 문의</button></div><label class="ekodi-assist-search"><span>⌕</span><input id="ekodiAssistSearch" type="search" placeholder="최근 대화 검색" autocomplete="off"></label><div class="ekodi-assist-history" id="ekodiAssistHistory"></div><div class="ekodi-assist-rail-foot"><small id="ekodiAssistContext">현재 화면을 확인 중입니다.</small><a href="/operator" target="_blank" rel="noopener">운영자 전체 화면 ↗</a></div></aside><main class="ekodi-assist-main"><header class="ekodi-assist-head"><button type="button" class="ekodi-assist-rail-toggle" id="ekodiAssistRailToggle" aria-label="최근 대화 보기">☰</button><div class="ekodi-assist-title"><strong id="ekodiAssistTitle">새 대화</strong><small>에코디 헌법 · AI 협업 · 권한 경계를 지키며 실행합니다.</small></div><button type="button" class="ekodi-assist-close" id="ekodiAssistClose" aria-label="관리자 화면으로 돌아가기">×</button></header><div class="ekodi-assist-chat-scroll" id="ekodiAssistChat" aria-live="polite" data-ekodi-main-conversation="true"></div><footer class="ekodi-assist-composer-wrap" id="ekodiAssistComposer"><section class="ekodi-assist-proactive" id="ekodiAssistProactive" aria-label="에코디 선제 제안" hidden></section><form class="ekodi-assist-composer" id="ekodiAssistForm"><textarea class="ekodi-assist-command" id="ekodiAssistCommand" rows="2" maxlength="1800" placeholder="에코디와 대화하기"></textarea><div class="ekodi-assist-execution-row"><button type="button" class="ekodi-assist-plus" id="ekodiAssistComposerNew" aria-label="새 대화">＋</button><label class="ekodi-assist-target-label"><span>실행</span><select class="ekodi-assist-target" id="ekodiAssistExecutionTarget" aria-label="실행 대상"><option value="ekodi">EKODI</option><option value="chatgpt">ChatGPT</option><option value="claude">Claude</option><option value="gemini">Gemini</option><option value="qwen">Qwen</option><option value="multi">여러 AI</option></select></label><button type="submit" class="ekodi-assist-send" aria-label="선택한 대상으로 실행">실행</button></div></form><small>입력은 위 · 실행 대상은 아래 · 외부 AI 전송 시 민감정보는 차단합니다.</small></footer></main></section>';
     document.body.appendChild(root);document.body.classList.add('admin-command-history-ready');
     root.querySelector('#ekodiAssistLauncher').addEventListener('click',()=>setOpen(true));
     root.querySelector('#ekodiAssistClose').addEventListener('click',()=>setOpen(false));
@@ -137,7 +153,7 @@
     root.querySelectorAll('[data-assist-tab]').forEach(button=>button.addEventListener('click',()=>setTab(button.dataset.assistTab)));
     const search=root.querySelector('#ekodiAssistSearch');search.value=state.query||'';search.addEventListener('input',()=>{state.query=search.value;saveState();renderRail()});
     const form=root.querySelector('#ekodiAssistForm');const input=root.querySelector('#ekodiAssistCommand');
-    form.addEventListener('submit',event=>{event.preventDefault();const text=input.value.trim();if(!text)return;input.value='';resizeInput(input);submitAi(text)});
+    form.addEventListener('submit',async event=>{event.preventDefault();const text=input.value.trim();if(!text)return;const target=root.querySelector('#ekodiAssistExecutionTarget')?.value||'ekodi';if(target==='ekodi'){input.value='';resizeInput(input);submitAi(text);return}const handed=await handoffCommand(target,text);if(handed){input.value='';resizeInput(input)}});
     input.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();form.requestSubmit()}});
     input.addEventListener('input',()=>resizeInput(input));
     document.addEventListener('keydown',event=>{if(event.key==='Escape'&&state.open)setOpen(false)});
@@ -217,12 +233,34 @@
     if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(value);return}
     const area=el('textarea');area.value=value;area.setAttribute('readonly','');area.style.cssText='position:fixed;opacity:0;pointer-events:none';document.body.append(area);area.select();document.execCommand('copy');area.remove();
   }
-  async function handoffExternalAi(provider,prompt,button){
-    const popup=window.open(provider.url,'_blank','noopener,noreferrer');
-    try{await copyText(prompt);button.textContent='복사됨 ✓';showStatus(`${provider.label} 새 창을 열고 제안 내용을 복사했습니다. 입력창에 붙여넣어 확인 후 전송하세요.`)}catch{button.textContent='직접 복사';showStatus(`${provider.label} 새 창은 열렸지만 자동 복사는 차단되었습니다. 에코디 명령창에서 내용을 복사해 주세요.`,true)}
-    if(!popup)showStatus(`${provider.label} 새 창이 차단되었습니다. 브라우저의 팝업 허용 후 다시 눌러 주세요.`,true);
-    window.setTimeout(()=>{button.textContent=provider.label},1800);
+  function externalProvidersFor(target){
+    if(target==='multi')return EXTERNAL_AI;
+    const provider=EXTERNAL_AI.find(item=>item.id===target);
+    return provider?[provider]:[];
   }
+  async function handoffCommand(target,prompt,button){
+    const value=String(prompt||'').trim();if(!value)return false;
+    const providers=externalProvidersFor(target);if(!providers.length)throw new Error('지원하지 않는 외부 AI입니다.');
+    if(EXTERNAL_SECRET_RE.test(value)){showStatus('비밀번호·API 키·토큰처럼 보이는 값은 외부 AI로 보내지 않습니다. 민감정보를 제거한 뒤 다시 실행해 주세요.',true);return false}
+    const opened=providers.map(provider=>({provider,popup:window.open(provider.url,'_blank','noopener,noreferrer')}));
+    const blocked=opened.filter(item=>!item.popup).map(item=>item.provider.label);
+    try{
+      await copyText(value);
+      if(button)button.textContent='복사됨 ✓';
+      const names=providers.map(provider=>provider.label).join(' · ');
+      showStatus(`${names} 새 창을 열고 명령을 복사했습니다. 각 입력창에 붙여넣어 확인 후 전송하세요.`);
+    }catch{
+      if(button)button.textContent='직접 복사';
+      showStatus('외부 AI 새 창은 열었지만 자동 복사가 차단되었습니다. 명령어 입력창의 내용을 직접 복사해 주세요.',true);
+    }
+    if(blocked.length)showStatus(`${blocked.join(' · ')} 새 창이 차단되었습니다. 브라우저의 팝업 허용 후 다시 실행해 주세요.`,true);
+    if(button)window.setTimeout(()=>{button.textContent=providers.length===1?providers[0].label:'여러 AI'},1800);
+    return blocked.length<providers.length;
+  }
+  async function handoffExternalAi(provider,prompt,button){
+    return handoffCommand(provider.id,prompt,button);
+  }
+
   function renderAiActions(view,onlyApprovals){
     let container=view.querySelector('.ekodi-assist-ai-result');if(container)container.remove();
     const rows=(onlyApprovals?actions.filter(item=>item.status==='awaiting_human'):actions).slice(0,5);if(!rows.length)return;
