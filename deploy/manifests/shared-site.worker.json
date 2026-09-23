@@ -1,5 +1,5 @@
 {
-  "version": 86,
+  "version": 87,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -131,6 +131,22 @@
           "x-ekodi-canonical-surface: my"
         ],
         "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/@ekodi-public-probe",
+        "statuses": [
+          404
+        ],
+        "redirect": "manual",
+        "expect": [
+          "공개 개인페이지를 찾을 수 없습니다."
+        ],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: person-public-profile",
+          "x-ekodi-canonical-path: /",
+          "x-ekodi-surface-context: public-person-profile",
+          "x-robots-tag: noindex, nofollow, noarchive"
+        ]
       },
       {
         "url": "https://ekodi.kr/ekodimission/live",

@@ -52,6 +52,18 @@ test('canonical apex preserves /@handle while handing the public page to My serv
   assert.equal(response.headers.get('x-ekodi-canonical-path'),'/');
 });
 
+test('shared-site guarded release verifies public person route ownership before promotion',async()=>{
+  const manifest=JSON.parse(await read('deploy/manifests/shared-site.worker.json'));
+  const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/@ekodi-public-probe');
+  assert.deepEqual(probe?.statuses,[404]);
+  assert.equal(probe?.redirect,'manual');
+  assert.ok(probe?.expect?.includes('공개 개인페이지를 찾을 수 없습니다.'));
+  assert.ok(probe?.headerExpect?.includes('x-ekodi-canonical-surface: person-public-profile'));
+  assert.ok(probe?.headerExpect?.includes('x-ekodi-canonical-path: /'));
+  assert.ok(probe?.headerExpect?.includes('x-ekodi-surface-context: public-person-profile'));
+  assert.ok(probe?.headerExpect?.includes('x-robots-tag: noindex, nofollow, noarchive'));
+});
+
 test('invalid @ paths are not claimed by the person profile router',async()=>{
   const my=binding();
   const response=await routeCanonicalSurface(new Request('https://ekodi.kr/@x'),{MY:my});
