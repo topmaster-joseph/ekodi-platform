@@ -3,10 +3,12 @@
   const PANEL_ID = 'ekodiCapabilityCenterPanel';
   const REGISTRY_URL = '/capability-registry.json';
   const FOUNDRY_URL = '/capability-foundry.json';
+  const ECOSYSTEM_URL = '/api/control/capability-ecosystem';
   let registry = null;
   let foundry = null;
   let sampleRuntime = null;
   let lastSample = null;
+  let ecosystem = null;
   let query = '';
   let domain = 'all';
 
@@ -39,6 +41,14 @@
         </div>
         <div class="capability-sample-result" data-capability-sample-result hidden></div>
       </section>
+      <section class="capability-accumulation" data-capability-accumulation>
+        <div class="capability-accumulation-head">
+          <div><small>LEARNING → CAPABILITY · NO SERVICE AUTO-CREATION</small><h3>자동 능력 축적 큐</h3><p>검증된 반복 작업에서 재사용 가능한 Capability 후보만 만들고 Foundry 샌드박스로 보냅니다.</p></div>
+          <button type="button" data-capability-accumulation-run>축적 분석</button>
+        </div>
+        <div class="capability-accumulation-summary" data-capability-accumulation-summary><span>연결 확인 중</span></div>
+        <div class="capability-accumulation-list" data-capability-accumulation-list></div>
+      </section>
       <div class="capability-toolbar"><input type="search" data-capability-search placeholder="기능·서비스·도구 검색" aria-label="Capability 검색"><select data-capability-domain aria-label="도메인 필터"><option value="all">전체 도메인</option></select></div>
       <div class="capability-summary" data-capability-summary></div>
       <div class="capability-grid" data-capability-grid><p class="capability-empty">Capability Registry를 불러오는 중입니다.</p></div>`;
@@ -56,6 +66,7 @@
     });
     panel.querySelector('[data-capability-refresh]')?.addEventListener('click', () => load(panel, true));
     panel.querySelector('[data-capability-sample-run]')?.addEventListener('click', () => runSample(panel));
+    panel.querySelector('[data-capability-accumulation-run]')?.addEventListener('click', () => runAccumulationAnalysis(panel));
     panel.addEventListener('click', event => {
       const button = event.target.closest('[data-capability-use]');
       if (!button) return;
@@ -144,6 +155,61 @@
     }
   }
 
+
+  function renderAccumulation(panel) {
+    const root = panel.querySelector('[data-capability-accumulation]');
+    if (!root) return;
+    const summaryRoot = root.querySelector('[data-capability-accumulation-summary]');
+    const listRoot = root.querySelector('[data-capability-accumulation-list]');
+    const queue = ecosystem?.accumulation?.queue;
+    if (!queue) {
+      if (summaryRoot) summaryRoot.innerHTML = '<span>축적 엔진 연결 대기</span><span>서비스 자동생성 <b>0</b></span>';
+      if (listRoot) listRoot.innerHTML = '';
+      return;
+    }
+    const summary = queue.summary || {};
+    if (summaryRoot) summaryRoot.innerHTML =
+      `<span>전체 <b>${summary.total || 0}</b></span><span>기존능력 재사용 <b>${summary.reuseExisting || 0}</b></span><span>모듈후보 <b>${summary.moduleCandidates || 0}</b></span><span>관찰중 격차 <b>${summary.observedGaps || 0}</b></span><span>서비스 자동생성 <b>${summary.automaticServicesCreated || 0}</b></span>`;
+    const items = (queue.candidates || []).slice(0, 8);
+    if (listRoot) listRoot.innerHTML = items.length ? items.map(item => {
+      const title = item.proposedCapabilityId || item.reuse?.matches?.[0]?.name || item.sourcePattern || item.id;
+      const state = item.state === 'reuse_existing' ? '기존 Capability 재사용' : item.state === 'module_candidate' ? 'Foundry 후보' : '증거 축적 중';
+      return `<article><div><small>${esc(item.family || 'workflow')}</small><strong>${esc(title)}</strong></div><span>${esc(state)}</span><small>${Number(item.evidence?.verifiedCount || 0)}회 검증 · 성공률 ${Math.round(Number(item.evidence?.observedSuccessRate || 0) * 100)}%</small></article>`;
+    }).join('') : '<p>반복 검증된 Capability 격차가 아직 없습니다.</p>';
+  }
+
+  async function loadEcosystem() {
+    try {
+      const response = await fetch(ECOSYSTEM_URL, { cache:'no-store', credentials:'same-origin' });
+      if (!response.ok) throw new Error(`Capability ecosystem ${response.status}`);
+      ecosystem = await response.json();
+    } catch {
+      ecosystem = null;
+    }
+    return ecosystem;
+  }
+
+  async function runAccumulationAnalysis(panel) {
+    const button = panel.querySelector('[data-capability-accumulation-run]');
+    if (button) { button.disabled = true; button.textContent = '분석 중…'; }
+    try {
+      const response = await fetch(`${ECOSYSTEM_URL}/analyze`, {
+        method:'POST',
+        cache:'no-store',
+        credentials:'same-origin',
+        headers:{ 'content-type':'application/json' },
+        body:'{}',
+      });
+      if (!response.ok) throw new Error(`Capability analyze ${response.status}`);
+      ecosystem = await response.json();
+    } catch {
+      await loadEcosystem();
+    } finally {
+      renderAccumulation(panel);
+      if (button) { button.disabled = false; button.textContent = '축적 분석'; }
+    }
+  }
+
   function renderSummary(panel, capabilities, visible) {
     const target = panel.querySelector('[data-capability-summary]');
     if (!target) return;
@@ -173,6 +239,7 @@
     const capabilities = registry?.capabilities || [];
     const visible = capabilities.filter(matches);
     renderFoundry(panel);
+    renderAccumulation(panel);
     renderSummary(panel, capabilities, visible);
     const grid = panel.querySelector('[data-capability-grid]');
     if (!grid) return;
@@ -181,7 +248,7 @@
 
   async function load(panel, force = false) {
     const grid = panel.querySelector('[data-capability-grid]');
-    if (force) { registry = null; foundry = null; lastSample = null; }
+    if (force) { registry = null; foundry = null; lastSample = null; ecosystem = null; }
     if (!registry && grid) grid.innerHTML = '<p class="capability-empty">Capability Registry를 불러오는 중입니다.</p>';
     try {
       if (!registry || !foundry) {
@@ -198,6 +265,7 @@
           foundry = await foundryResponse.json();
         }
       }
+      if (!ecosystem) await loadEcosystem();
       syncDomains(panel, registry.capabilities || []);
       render(panel);
     } catch (error) {
@@ -207,5 +275,5 @@
 
   function mount() { if(!document.querySelector('link[data-capability-center-style]')){const link=document.createElement('link');link.rel='stylesheet';link.href='capability-center-admin.css';link.dataset.capabilityCenterStyle='true';document.head.append(link)} const panel = createPanel(); load(panel); }
   mount();
-  window.EKODICapabilityCenter = Object.freeze({ mount, reload: () => load(createPanel(), true), runSample: () => runSample(createPanel()), lastSample: () => lastSample });
+  window.EKODICapabilityCenter = Object.freeze({ mount, reload: () => load(createPanel(), true), runSample: () => runSample(createPanel()), runAccumulation: () => runAccumulationAnalysis(createPanel()), lastSample: () => lastSample, ecosystem: () => ecosystem });
 })();
