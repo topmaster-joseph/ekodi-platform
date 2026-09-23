@@ -48,8 +48,10 @@ for(const required of ['siteLayout','contentOrder','navigationPosition','buttonG
 
 if(theme.publicExperience?.enabled!==true)fail('public experience rotation must be enabled');
 if(theme.publicExperience?.timezone!=='Asia/Seoul')fail('public experience rotation timezone must remain Asia/Seoul');
-if(theme.publicExperience?.rotation!=='navigation-load-approved-variation'||theme.publicExperience?.documentStable!==true||theme.publicExperience?.approvedPaletteOnly!==true)fail('public experience variation must be approved, per-load and document-stable');
-if(Number(theme.publicExperience?.maxBackgroundMixPercent)>6)fail('public experience background variation must remain subtle');
+if(theme.publicExperience?.rotation!=='weekly-deterministic'||theme.publicExperience?.cycleDays!==7)fail('public experience rotation must remain weekly-deterministic');
+const loadAmbient=theme.publicExperience?.documentLoadAmbientVariation||{};
+if(loadAmbient.enabled!==true||loadAmbient.trigger!=='top-level-navigation-or-reload'||loadAmbient.stableForDocumentLifetime!==true||loadAmbient.approvedPaletteOnly!==true)fail('document-load ambient variation must be approved, per-load and document-stable');
+if(Number(loadAmbient.maxBackgroundMixPercent)>6)fail('document-load ambient background variation must remain subtle');
 if(!Array.isArray(theme.publicExperience?.variants)||theme.publicExperience.variants.length<3)fail('public experience needs at least three pre-approved variants');
 for(const motif of ['orbit','flow','grid','paper','signal','stage'])if(!Array.isArray(theme.publicExperience?.motifs?.[motif])||!theme.publicExperience.motifs[motif].length)fail(`public experience motif missing: ${motif}`);
 
