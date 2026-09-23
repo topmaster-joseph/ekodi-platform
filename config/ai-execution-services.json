@@ -46,7 +46,10 @@
       "capabilityId": "core.documents",
       "launchUrl": "https://ekodi.kr/ai/docs/",
       "availability": "live",
-      "deliveryMode": "bridge"
+      "deliveryMode": "bridge",
+      "targetUrl": "https://ekodi.kr/my/docs/",
+      "sourceKind": "common",
+      "membershipSite": "ai"
     },
     {
       "id": "find-support",
@@ -55,7 +58,11 @@
       "capabilityId": "support.benefit-radar",
       "launchUrl": "https://ekodi.kr/ai/support/",
       "availability": "live",
-      "deliveryMode": "bridge"
+      "deliveryMode": "bridge",
+      "targetUrl": "https://ekodi.kr/support/",
+      "sourceKind": "specialist",
+      "specialistServiceId": "support",
+      "membershipSite": "ai"
     },
     {
       "id": "write-content",
@@ -64,7 +71,11 @@
       "capabilityId": "creator.writing",
       "launchUrl": "https://ekodi.kr/ai/writing/",
       "availability": "live",
-      "deliveryMode": "bridge"
+      "deliveryMode": "bridge",
+      "targetUrl": "https://ekodi.kr/author/",
+      "sourceKind": "specialist",
+      "specialistServiceId": "author",
+      "membershipSite": "ai"
     },
     {
       "id": "make-marketing",
@@ -73,7 +84,12 @@
       "capabilityId": "business.marketing",
       "launchUrl": "https://ekodi.kr/ai/marketing/",
       "availability": "beta",
-      "deliveryMode": "bridge"
+      "deliveryMode": "bridge",
+      "targetUrl": "https://ekodi.kr/ekodibiz/marketing-ai",
+      "sourceKind": "specialist",
+      "specialistServiceId": "marketing",
+      "membershipSite": "marketing",
+      "paidAvailable": true
     },
     {
       "id": "run-business",
@@ -82,7 +98,10 @@
       "capabilityId": "business.operations",
       "launchUrl": "https://ekodi.kr/ai/business/",
       "availability": "integration-pending",
-      "deliveryMode": "bridge"
+      "deliveryMode": "bridge",
+      "targetUrl": "https://ekodi.kr/business",
+      "sourceKind": "common",
+      "membershipSite": "ai"
     },
     {
       "id": "everyone-interpreter",
@@ -91,7 +110,10 @@
       "capabilityId": "core.interpreter",
       "launchUrl": "https://ekodi.kr/ai/interpreter/",
       "availability": "live",
-      "deliveryMode": "direct"
+      "deliveryMode": "direct",
+      "targetUrl": "https://ekodi.kr/ai/interpreter/",
+      "sourceKind": "common",
+      "membershipSite": "ai"
     },
     {
       "id": "manage-community",
@@ -100,7 +122,10 @@
       "capabilityId": "community.membership",
       "launchUrl": "https://ekodi.kr/ai/community/",
       "availability": "live",
-      "deliveryMode": "bridge"
+      "deliveryMode": "bridge",
+      "targetUrl": "https://ekodi.kr/community",
+      "sourceKind": "common",
+      "membershipSite": "ai"
     },
     {
       "id": "prepare-insurance-claim",
@@ -109,7 +134,11 @@
       "capabilityId": "insurance.claims",
       "launchUrl": "https://ekodi.kr/ai/insurance/",
       "availability": "beta",
-      "deliveryMode": "bridge"
+      "deliveryMode": "bridge",
+      "targetUrl": "https://ekodi.kr/insurance/",
+      "sourceKind": "specialist",
+      "specialistServiceId": "insurance",
+      "membershipSite": "ai"
     },
     {
       "id": "check-energy",
@@ -118,7 +147,17 @@
       "capabilityId": "energy.manage",
       "launchUrl": "https://ekodi.kr/ai/energy/",
       "availability": "read-only",
-      "deliveryMode": "bridge"
+      "deliveryMode": "bridge",
+      "targetUrl": "https://ekodi.kr/energy/",
+      "sourceKind": "specialist",
+      "specialistServiceId": "energy",
+      "membershipSite": "ai"
     }
-  ]
+  ],
+  "accessPolicy": {
+    "basic": "free_or_free_member",
+    "advanced": "authenticated",
+    "paid": "service_specific_subscription",
+    "authority": "owning_service_server"
+  }
 }
