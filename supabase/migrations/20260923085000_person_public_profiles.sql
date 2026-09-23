@@ -169,7 +169,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = public
-as $$
+as $sync$
 begin
   if new.display_name is distinct from old.display_name then
     update public.person_public_profiles
@@ -179,7 +179,7 @@ begin
   end if;
   return new;
 end
-$;
+$sync$;
 
 revoke all on function public.sync_person_public_profile_display_name() from public, anon, authenticated;
 
