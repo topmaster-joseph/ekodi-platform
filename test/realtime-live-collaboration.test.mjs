@@ -127,3 +127,17 @@ test('studio layout is compact on desktop and mobile',async()=>{
   assert.match(css,/@media\(max-width:560px\)/);
   assert.match(css,/\.compact-controls\{grid-template-columns:repeat\(4/);
 });
+
+test('guarded production release verifies compact studio, QR camera, and language selectors',async()=>{
+  const manifest=JSON.parse(await read('deploy/manifests/shared-site.worker.json'));
+  const byUrl=new Map(manifest.worker.requests.map(item=>[item.url,item]));
+  const live=byUrl.get('https://ekodi.kr/mokdaehumun/live/');
+  assert.ok(live);
+  for(const marker of ['class="controls compact-controls"','id="openManagementCameraButton"','id="viewerListenLanguage"','id="participantSpeakLanguage"','QR을 찍고 승인합니다.']) assert.ok(live.expect.includes(marker),marker);
+  assert.ok(live.headerExpect.includes('cache-control: no-store'));
+  const camera=byUrl.get('https://ekodi.kr/live/c/testpaircode123');
+  assert.ok(camera);
+  for(const marker of ['data-camera-pair="testpaircode123"','EKODI 관리카메라','id="managementCameraConnect"']) assert.ok(camera.expect.includes(marker),marker);
+  assert.ok(camera.headerExpect.includes('x-robots-tag: noindex, nofollow, noarchive'));
+  assert.ok(camera.headerExpect.includes('referrer-policy: no-referrer'));
+});
