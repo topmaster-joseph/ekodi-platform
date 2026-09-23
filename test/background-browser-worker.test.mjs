@@ -53,6 +53,7 @@ test('shared-site guarded release invokes native browser verification after prod
   assert.match(workerWorkflow,/workflow_call:/);
   assert.match(workerWorkflow,/surface_path:/);
   assert.match(workerWorkflow,/device_profile:/);
+  assert.match(workerWorkflow,/group:\s*ekodi-background-browser-worker-\$\{\{ github\.ref \}\}-\$\{\{ inputs\.device_profile \|\| 'desktop' \}\}/);
   assert.match(sharedRelease,/native_surface_verification_desktop:/);
   assert.match(sharedRelease,/native_surface_verification_mobile:/);
   assert.match(sharedRelease,/uses:\s*\.\/\.github\/workflows\/ekodi-background-browser-worker\.yml/);
