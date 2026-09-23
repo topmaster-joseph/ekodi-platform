@@ -25,3 +25,8 @@ For deployment tasks, completion requires durable evidence of the release artifa
 ## External AI contract
 
 External AI clients submit intent and identity through an authorized EKODI entry adapter, receive `task_id`, and read authoritative status/results. They must not infer completion from a GitHub merge or workflow status alone.
+
+
+## Claim integrity
+
+`AI-CLAIM-INTEGRITY-001` is mandatory for every Orchestrator status/result. A worker or model report is an assertion, not authoritative state. The Orchestrator may publish material implementation, deployment, runtime, verification or completion claims only when a fresh claim receipt references authoritative evidence and the receipt scope covers the reported scope. Memory or a prior conversation cannot independently establish current operational state. Evidence for a single route or sample cannot be promoted into an ecosystem-wide claim. Unknown, contradictory, stale or scope-mismatched state remains non-success while authorized recovery and re-verification continue.

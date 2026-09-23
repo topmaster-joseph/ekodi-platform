@@ -1,5 +1,5 @@
 {
-  "version": "1.21.0",
+  "version": "1.22.0",
   "effectiveDate": "2026-09-23",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -38,7 +38,8 @@
     "self-verifying-all-surface-system-evidence",
     "ekodi-owned-virtualization-first",
     "authentication-return-continuity",
-    "canonical-human-url-without-tracking-query"
+    "canonical-human-url-without-tracking-query",
+    "evidence-gated-ai-claims"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -290,7 +291,11 @@
       "scripts/validate-sovereign-autonomous-operations.mjs",
       "SURFACE_SYSTEM_VERIFICATION_POLICY.md",
       "config/surface-system-verification-policy.json",
-      "scripts/validate-surface-system-verification-policy.mjs"
+      "scripts/validate-surface-system-verification-policy.mjs",
+      "AI_CLAIM_INTEGRITY_POLICY.md",
+      "config/ai-claim-integrity-policy.json",
+      "ai-claim-integrity.js",
+      "scripts/validate-ai-claim-integrity.mjs"
     ],
     "owner": "topmaster-joseph",
     "rule": "C2/C3 changes are proposed first and applied only after explicit owner confirmation."
@@ -898,5 +903,23 @@
       "test/canonical-query-policy.test.mjs",
       "system-verification"
     ]
+  },
+  "aiClaimIntegrityPolicy": {
+    "id": "AI-CLAIM-INTEGRITY-001",
+    "status": "active",
+    "coreRule": "ai-speech-never-creates-operational-truth",
+    "operationalClaimsRequireAuthoritativeEvidence": true,
+    "currentStateRequiresFreshEvidence": true,
+    "conversationMemoryMayNotSolelyProveCurrentState": true,
+    "otherAgentOutputIsAssertionNotEvidence": true,
+    "claimScopeMayNotExceedEvidenceScope": true,
+    "singleSurfaceEvidenceMayNotProveAllSurfaces": true,
+    "unknownOrContradictedStateCannotUseSuccessLanguage": true,
+    "completionAndBroadScopeRequireIndependentVerifier": true,
+    "materialOperationalClaimReceiptRequired": true,
+    "deterministicFinalResponseGuardRequired": true,
+    "policyPath": "config/ai-claim-integrity-policy.json",
+    "runtimeGuard": "ai-claim-integrity.js",
+    "validator": "scripts/validate-ai-claim-integrity.mjs"
   }
 }

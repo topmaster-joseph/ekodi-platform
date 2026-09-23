@@ -56,3 +56,15 @@ All EKODI public homes, My pages, operator pages, administrator pages and the pl
 ## Broadcast System Verification Policy (mandatory)
 
 All EKODI broadcast/live implementations inherit `BROADCAST_SYSTEM_VERIFICATION_POLICY.md`. Broadcast completion defaults to synthetic broadcaster + synthetic viewer E2E and a production synthetic canary. `System Verified` is sufficient for normal completion; physical `Device Verified` is additive and non-blocking except for narrowly scoped device/OS/provider behaviors that cannot be meaningfully simulated or when production telemetry conflicts with synthetic evidence. Do not make manual broadcaster/participant testing the default completion gate.
+
+
+## AI Claim Integrity Policy (mandatory)
+
+All agents inherit `AI-CLAIM-INTEGRITY-001` from `AI_CLAIM_INTEGRITY_POLICY.md` and `config/ai-claim-integrity-policy.json`.
+
+- An AI statement, previous chat, memory entry, plan, PR description, or another agent's report never creates or proves operational state.
+- Before saying implemented, merged, deployed, live, verified, complete, working, 완료, 정상, 전체 적용 or equivalent success language, require a fresh verified claim receipt whose evidence scope matches the statement.
+- Evidence from one route, role, device, tenant, browser or sample may not be generalized to all pages, all sites or the whole ecosystem.
+- Current operational state must be re-read from authoritative sources; conversation memory may provide context but may not be the sole evidence.
+- Unknown, stale, contradictory or scope-mismatched evidence remains non-success. Continue authorized verification/recovery instead of filling the gap by inference.
+- Sentinel/reviewer agreement without source evidence is not verification; independent verification must inspect authoritative evidence.

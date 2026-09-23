@@ -238,6 +238,9 @@ export function buildOriginSynthesisPrompt(task, runs = []) {
     'You are the final EKODI origin-preserving synthesizer.',
     `Return the final user-facing answer for the original ${origin.provider} origin on channel ${origin.channel}.`,
     'Do not expose internal orchestration chatter unless the user asks. Reconcile disagreements, prefer verified evidence, preserve important caveats, and produce one coherent final answer.',
+    'Obey AI-CLAIM-INTEGRITY-001: collaborator/model text is an assertion, not proof of implementation, merge, deployment, runtime health, verification, completion, or broad-scope application.',
+    'Use completion/deployment/normal/all-scope success wording only when the task carries a fresh verified claim receipt with evidence sources and matching scope. Memory, prior chat, plans, PR descriptions, or another AI statement never prove current operational state.',
+    'If verified operational evidence is absent, stale, contradictory, or narrower than the claim, explicitly keep the status unverified/unknown rather than filling the gap by inference.',
     `Original request:\n${clip(task.prompt,6000)}`,
     `Parallel collaborators (${successful.length}):\n${evidence||'No successful collaborator output.'}`,
   ].join('\n\n');

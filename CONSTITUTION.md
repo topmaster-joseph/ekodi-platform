@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.21.0
+# EKODI Platform Constitution v1.22.0
 
 Effective: 2026-09-23
 
@@ -187,6 +187,18 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Manual testing by the owner, administrator, operator, broadcaster, applicant, participant or ordinary user is additive evidence and is not the default completion gate. EKODI must not fall back to “ask the user to test it” when an equivalent automated verification path is available.
 - A manual/device exception is allowed only for a narrowly scoped device-, OS-, browser-security- or provider-specific behavior that cannot be meaningfully simulated, or when production telemetry conflicts with synthetic evidence. The exception is explicit, auditable and does not waive unrelated automated verification.
 - Machine-readable authority: `governance/constitution/constitution.json` -> `surfaceSystemVerificationPolicy`. Operational contract: `config/surface-system-verification-policy.json`. Human-readable contract: `SURFACE_SYSTEM_VERIFICATION_POLICY.md`.
+
+
+## 8B. AI Claim Integrity Constitution
+- Every AI-produced statement about implementation, merge, deployment, production availability, runtime health, verification, completion, or ecosystem-wide application is a **claim** until authoritative evidence proves it.
+- **AI speech never creates operational truth.** A model output, previous chat, memory entry, plan, pull-request description, worker report, Sentinel agreement or another AI statement cannot by itself create or prove current system state.
+- Current operational state requires fresh evidence from authoritative system sources. Conversation memory may supply context but may never be the sole basis for a current completion, deployment, runtime-health or broad-scope claim.
+- Claim scope may never exceed evidence scope. Verification of one route, service, role, browser, device, tenant or sample cannot be generalized into all pages, all sites, all users or the whole EKODI ecosystem unless evidence covers that broader scope.
+- Unknown remains unknown. Stale, missing, contradictory or scope-mismatched evidence cannot be silently filled by model inference or converted into success language.
+- Completion and broad-scope operational claims require independent evidence review. A verifier must inspect authoritative evidence rather than merely agree with the worker or model that produced the claim.
+- Material success wording such as implemented, merged, deployed, live, verified, complete, working, 완료, 배포 완료, 적용 완료, 정상, 전체 적용 and 모두 적용 requires a verified claim receipt containing the task, claim type and scope, statement hash, evidence sources, observation/verification time and verifier identity.
+- EKODI may continue authorized recovery and re-verification automatically when evidence is missing or contradictory, but recovery continuity never authorizes a false success report.
+- Machine-readable authority: `config/ai-claim-integrity-policy.json` (`AI-CLAIM-INTEGRITY-001`). Deterministic runtime guard: `ai-claim-integrity.js`. Enforcement: `scripts/validate-ai-claim-integrity.mjs`.
 
 ## 9. Change Constitution
 - **C0**: operational parameter change with no constitutional impact. Automated validation may apply it.

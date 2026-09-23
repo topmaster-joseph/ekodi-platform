@@ -21,7 +21,7 @@ function requireText(file, needles) {
 const policyFile = 'config/ai-development-completion-policy.json';
 const policy = readJson(policyFile);
 
-if (policy.schemaVersion !== 3) fail(policyFile, 'schemaVersion must be 3 with completion continuity');
+if (policy.schemaVersion !== 4) fail(policyFile, 'schemaVersion must be 4 with claim-integrity completion controls');
 
 if (policy.policyId !== 'AI-COMPLETE-001') fail(policyFile, 'policyId must be AI-COMPLETE-001');
 if (policy.status !== 'active') fail(policyFile, 'policy must remain active');
@@ -37,6 +37,12 @@ for (const key of [
   'completionReportBlockedUntilVerified',
   'productionCredentialsRemainOutsideAgentWorkspace',
   'guardedCentralReleasePathRequired',
+  'claimScopeMustMatchEvidenceScope',
+  'memoryCannotProveCurrentOperationalState',
+  'otherAgentReportCannotProveCompletion',
+  'currentOperationalClaimRequiresFreshEvidence',
+  'broadScopeCompletionRequiresIndependentVerifier',
+  'unknownOrContradictedStateCannotUseSuccessLanguage',
 ]) {
   if (policy.rules?.[key] !== true) fail(policyFile, `required rule must be true: ${key}`);
 }
@@ -51,6 +57,9 @@ for (const evidence of [
   'production_functional_checks',
   'observability_check',
   'verification_timestamp',
+  'claim_receipt',
+  'claim_scope',
+  'independent_verifier',
 ]) {
   if (!policy.requiredEvidenceForProductionChange?.includes(evidence)) {
     fail(policyFile, `missing required production evidence field: ${evidence}`);
@@ -63,6 +72,7 @@ for (const field of ['task_id','branch','current_commit_sha','completed_steps','
   if (!policy.requiredCheckpointForRecoverableInterruption?.includes(field)) fail(policyFile, `missing recoverable-interruption checkpoint field: ${field}`);
 }
 if (policy.reporting?.interruptionLabel !== 'recoverable-interruption-resume-required') fail(policyFile, 'interruption reporting label mismatch');
+if (policy.reporting?.claimIntegrityPolicy !== 'AI-CLAIM-INTEGRITY-001') fail(policyFile, 'claim-integrity reporting policy binding is required');
 
 if (!policy.exceptionPolicy?.allowed) fail(policyFile, 'bounded exceptions must remain explicitly modeled');
 for (const exceptionClass of ['read-only-analysis', 'documentation-only', 'non-production-experiment', 'human-gate-required', 'external-authority-blocked']) {
