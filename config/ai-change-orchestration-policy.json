@@ -287,5 +287,44 @@
       "ambiguous_side_effect",
       "all_registered_safe_lanes_exhausted"
     ]
+  },
+  "selfHealingDelivery": {
+    "policyId": "DELIVERY-SELF-HEAL-001",
+    "status": "enforced",
+    "objective": "Correct recoverable validation, conflict, staging, and release-lane failures automatically and continue delivery without weakening safety controls.",
+    "automaticRecovery": true,
+    "maxAttempts": 3,
+    "recoverable": [
+      "branch_naming",
+      "stale_base",
+      "non_destructive_merge_conflict",
+      "transient_ci",
+      "transient_staging",
+      "rate_limit",
+      "expired_auth_session",
+      "superseded_duplicate_pr"
+    ],
+    "nonRecoverable": [
+      "security_control_failure",
+      "credential_boundary_failure",
+      "destructive_data_change",
+      "ambiguous_side_effect",
+      "constitutional_violation",
+      "human_approval_required"
+    ],
+    "rules": {
+      "preserveOrchestrationGate": true,
+      "preserveRequiredTests": true,
+      "preserveSecurityControls": true,
+      "autoCreateCompliantBranch": true,
+      "autoRetireSupersededPr": true,
+      "autoRefreshFromMain": true,
+      "autoRetryTransientChecks": true,
+      "autoRerunStaging": true,
+      "continueAfterSuccessfulRecovery": true,
+      "productionRequiresGreenCanonicalValidation": true,
+      "neverBypassFailedSafetyGate": true,
+      "auditEveryRecovery": true
+    }
   }
 }
