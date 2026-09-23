@@ -4,7 +4,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$GuestAgentVersion = '1.0.0'
+$GuestAgentVersion = '1.1.0'
 $Root = Join-Path $env:ProgramData 'EKODI\GuestAgent'
 $AgentPath = Join-Path $Root 'ekodi-isolated-guest-agent.ps1'
 $TaskPath = Join-Path $Root 'task.json'
@@ -30,7 +30,8 @@ function Read-ValidatedTask {
   $raw = Get-Content -LiteralPath $TaskPath -Raw -Encoding UTF8
   $task = $raw | ConvertFrom-Json
   if ([int]$task.schemaVersion -ne 1) { throw 'guest_task_schema_invalid' }
-  if ([string]$task.type -ne 'guest.runtime.probe') { throw 'guest_task_type_forbidden' }
+  $allowedTypes = @('guest.runtime.probe','guest.ui.probe')
+  if ($allowedTypes -notcontains [string]$task.type) { throw 'guest_task_type_forbidden' }
   if ([string]$task.taskId -notmatch '^[a-f0-9]{32}$') { throw 'guest_task_id_invalid' }
   if ([string]$task.nonce -notmatch '^[a-f0-9]{64}$') { throw 'guest_task_nonce_invalid' }
   if ([string]$task.networkPolicy -ne 'none') { throw 'guest_task_network_policy_invalid' }
@@ -62,7 +63,7 @@ function Invoke-GuestRuntimeProbe($ValidatedTask) {
   $receipt = @{
     schemaVersion = 1
     ok = $true
-    mode = 'ekodi-isolated-guest-runtime-canary'
+    mode = 'ekodi-isolated-guest-task-failure'
     guestAgentVersion = $GuestAgentVersion
     taskType = [string]$task.type
     taskId = [string]$task.taskId
@@ -96,6 +97,133 @@ function Invoke-GuestRuntimeProbe($ValidatedTask) {
   return $receipt
 }
 
+function Invoke-GuestUiProbe($ValidatedTask) {
+  $task = $ValidatedTask.task
+  $network = Get-NetworkEvidence
+  if (-not $network.noNetworkAdapter -or -not $network.noActiveNetwork) {
+    throw 'guest_network_isolation_failed'
+  }
+  if (-not (Test-IsSystem)) { throw 'guest_agent_not_system' }
+
+  Add-Type -AssemblyName System.Windows.Forms
+  Add-Type -AssemblyName System.Drawing
+  Add-Type -AssemblyName UIAutomationClient
+  Add-Type -AssemblyName UIAutomationTypes
+
+  $form = New-Object System.Windows.Forms.Form
+  $form.Text = "EKODI_UI_$([string]$task.taskId)"
+  $form.Size = New-Object System.Drawing.Size(320,150)
+  $form.StartPosition = [System.Windows.Forms.FormStartPosition]::Manual
+  $form.Location = New-Object System.Drawing.Point(0,0)
+  $form.ShowInTaskbar = $false
+  $form.MinimizeBox = $false
+  $form.MaximizeBox = $false
+
+  $button = New-Object System.Windows.Forms.Button
+  $button.Text = 'Run'
+  $button.AccessibleName = 'EKODI_UI_ACTION'
+  $button.Location = New-Object System.Drawing.Point(18,22)
+  $button.Size = New-Object System.Drawing.Size(100,32)
+
+  $resultLabel = New-Object System.Windows.Forms.Label
+  $resultLabel.Text = 'PENDING'
+  $resultLabel.AccessibleName = 'EKODI_UI_RESULT'
+  $resultLabel.Location = New-Object System.Drawing.Point(18,70)
+  $resultLabel.AutoSize = $true
+
+  $button.Add_Click({ $resultLabel.Text = 'EKODI_UI_OK' })
+  [void]$form.Controls.Add($button)
+  [void]$form.Controls.Add($resultLabel)
+
+  $windowHandleObserved = $false
+  $windowFound = $false
+  $buttonFound = $false
+  $invokePatternAvailable = $false
+  $controlInvoked = $false
+  $windowClosed = $false
+  try {
+    [void]$form.Show()
+    [System.Windows.Forms.Application]::DoEvents()
+    $windowHandleObserved = ($form.Handle -ne [IntPtr]::Zero)
+
+    $root = [System.Windows.Automation.AutomationElement]::RootElement
+    $windowCondition = New-Object System.Windows.Automation.PropertyCondition(
+      [System.Windows.Automation.AutomationElement]::NameProperty,
+      $form.Text
+    )
+    $window = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $windowCondition)
+    $windowFound = ($null -ne $window)
+    if (-not $windowFound) { throw 'guest_ui_window_not_found' }
+
+    $buttonCondition = New-Object System.Windows.Automation.PropertyCondition(
+      [System.Windows.Automation.AutomationElement]::NameProperty,
+      'Run'
+    )
+    $buttonElement = $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $buttonCondition)
+    $buttonFound = ($null -ne $buttonElement)
+    if (-not $buttonFound) { throw 'guest_ui_button_not_found' }
+
+    $pattern = $buttonElement.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
+    $invokePatternAvailable = ($null -ne $pattern)
+    if (-not $invokePatternAvailable) { throw 'guest_ui_invoke_pattern_missing' }
+    ([System.Windows.Automation.InvokePattern]$pattern).Invoke()
+
+    $deadline = [DateTime]::UtcNow.AddSeconds(3)
+    do {
+      [System.Windows.Forms.Application]::DoEvents()
+      if ($resultLabel.Text -eq 'EKODI_UI_OK') { $controlInvoked = $true; break }
+      Start-Sleep -Milliseconds 100
+    } while ([DateTime]::UtcNow -lt $deadline)
+    if (-not $controlInvoked) { throw 'guest_ui_control_invoke_failed' }
+  } finally {
+    try { $form.Close() } catch { }
+    try { $form.Dispose() } catch { }
+    $windowClosed = $true
+  }
+
+  $receipt = @{
+    schemaVersion = 1
+    ok = $true
+    mode = 'ekodi-isolated-guest-ui-canary'
+    guestAgentVersion = $GuestAgentVersion
+    taskType = [string]$task.type
+    taskId = [string]$task.taskId
+    nonceSha256 = Get-Sha256String ([string]$task.nonce)
+    taskSha256 = Get-Sha256String ([string]$ValidatedTask.raw)
+    executedAsSystem = [bool](Test-IsSystem)
+    processId = $PID
+    sessionId = [Diagnostics.Process]::GetCurrentProcess().SessionId
+    networkAdapterCount = [int]$network.adapterCount
+    activeNetworkAdapterCount = [int]$network.upAdapterCount
+    noNetworkAdapter = [bool]$network.noNetworkAdapter
+    noActiveNetwork = [bool]$network.noActiveNetwork
+    guestUiSurfaceUsed = $true
+    hostInteractiveDesktopUsed = $false
+    sharedInteractiveDesktop = $false
+    semanticUiAutomation = $true
+    lowLevelInputInjection = $false
+    clipboardShared = $false
+    credentialCollection = $false
+    hostProfileMounted = $false
+    syntheticUiOnly = $true
+    windowHandleObserved = [bool]$windowHandleObserved
+    windowFound = [bool]$windowFound
+    buttonFound = [bool]$buttonFound
+    invokePatternAvailable = [bool]$invokePatternAvailable
+    controlInvoked = [bool]$controlInvoked
+    resultCode = [string]$resultLabel.Text
+    windowClosed = [bool]$windowClosed
+    mutationScope = 'ephemeral-guest-ui-only'
+    checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+  }
+
+  $temp = "$ReceiptPath.tmp"
+  $receipt | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $temp -Encoding UTF8
+  Move-Item -LiteralPath $temp -Destination $ReceiptPath -Force
+  Remove-Item -LiteralPath $TaskPath -Force -ErrorAction SilentlyContinue
+  return $receipt
+}
+
 function Install-GuestAgent {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
   $principal = [Security.Principal.WindowsPrincipal]::new($identity)
@@ -122,7 +250,13 @@ if ($Install) {
 if ($RunOnce) {
   try {
     $task = Read-ValidatedTask
-    if ($null -ne $task) { [void](Invoke-GuestRuntimeProbe $task) }
+    if ($null -ne $task) {
+      switch ([string]$task.task.type) {
+        'guest.runtime.probe' { [void](Invoke-GuestRuntimeProbe $task) }
+        'guest.ui.probe' { [void](Invoke-GuestUiProbe $task) }
+        default { throw 'guest_task_type_forbidden' }
+      }
+    }
     exit 0
   } catch {
     $failure = @{
