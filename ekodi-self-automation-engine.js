@@ -5,6 +5,7 @@ import {
   getCapabilityEcosystemSummary,
 } from './ekodi-capability-ecosystem.js';
 import { runCapabilitySandbox, sandboxSummary } from './ekodi-capability-sandbox.js';
+import { buildCapabilityAccumulationQueue, prepareFoundrySandboxBatch } from './ekodi-capability-accumulation.js';
 import {
   capabilityEcosystemStoreSummary,
   listAutomationCandidates,
@@ -49,6 +50,8 @@ export async function analyzeCapabilityEcosystem(db, options = {}) {
     sandboxStoreSummary(db),
     listSandboxRuns(db, { limit: 100 }),
   ]);
+  const accumulationQueue = buildCapabilityAccumulationQueue({ candidates: storedCandidates });
+  const foundryBatch = prepareFoundrySandboxBatch(accumulationQueue);
   return Object.freeze({
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
@@ -66,6 +69,11 @@ export async function analyzeCapabilityEcosystem(db, options = {}) {
     }),
     patterns,
     candidates: storedCandidates,
+    accumulation: Object.freeze({
+      queue: accumulationQueue,
+      foundrySandboxBatch: foundryBatch,
+      automaticServiceCreation: false,
+    }),
   });
 }
 export async function capabilityEcosystemSnapshot(db) {
@@ -76,6 +84,7 @@ export async function capabilityEcosystemSnapshot(db) {
     sandboxStoreSummary(db),
     listSandboxRuns(db, { limit: 100 }),
   ]);
+  const accumulationQueue = buildCapabilityAccumulationQueue({ candidates });
   return Object.freeze({
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
@@ -87,5 +96,10 @@ export async function capabilityEcosystemSnapshot(db) {
     store,
     sandbox: Object.freeze({ store: sandboxStore, summary: sandboxSummary(sandboxRuns), recentRuns: sandboxRuns }),
     candidates,
+    accumulation: Object.freeze({
+      queue: accumulationQueue,
+      foundrySandboxBatch: prepareFoundrySandboxBatch(accumulationQueue),
+      automaticServiceCreation: false,
+    }),
   });
 }
