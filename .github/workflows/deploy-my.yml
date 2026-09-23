@@ -36,6 +36,8 @@ on:
       - 'auth-site/auth-router.js'
       - 'supabase/migrations/*creator_*'
       - 'supabase/migrations/*my_personalization*.sql'
+      - 'supabase/migrations/*person_public_profiles*.sql'
+      - 'test/person-public-profile.test.mjs'
       - '.github/workflows/deploy-my.yml'
   push:
     branches: [main]
@@ -72,6 +74,8 @@ on:
       - 'auth-site/auth-router.js'
       - 'supabase/migrations/*creator_*'
       - 'supabase/migrations/*my_personalization*.sql'
+      - 'supabase/migrations/*person_public_profiles*.sql'
+      - 'test/person-public-profile.test.mjs'
       - '.github/workflows/deploy-my.yml'
 
 permissions:
@@ -101,6 +105,7 @@ jobs:
           set -euo pipefail
           node --check my-worker.js
           node --check my/app.js
+          node --check my/public-profile.js
           node --check my/docs/docs.js
           node --check my/approval-brief.js
           node --check my/approvals/app.js
@@ -121,7 +126,7 @@ jobs:
           node --check scripts/validate-universal-membership.mjs
           node scripts/validate-my.mjs
           node scripts/validate-universal-membership.mjs
-          node --test test/universal-membership-contract.test.mjs test/my-ekodi-contract.test.mjs test/my-private-workspace-routing.test.mjs test/my-manifest-services.test.mjs test/my-life-journey.test.mjs test/my-life-communication.test.mjs test/my-progressive-personalization.test.mjs test/my-docs-ai.test.mjs test/my-intent-os.test.mjs test/my-intent-execution-bridge.test.mjs
+          node --test test/universal-membership-contract.test.mjs test/my-ekodi-contract.test.mjs test/my-private-workspace-routing.test.mjs test/my-manifest-services.test.mjs test/my-life-journey.test.mjs test/my-life-communication.test.mjs test/my-progressive-personalization.test.mjs test/my-docs-ai.test.mjs test/my-intent-os.test.mjs test/my-intent-execution-bridge.test.mjs test/person-public-profile.test.mjs
           test -f deploy/manifests/my.worker.json
 
   staging:
@@ -292,6 +297,17 @@ jobs:
             exit 1
           fi
           echo 'Creator portfolio schema is reachable and RLS-protected.'
+      - name: Verify public person projection database contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/my-public-person-db.json -w '%{http_code}' --connect-timeout 5 --max-time 15             "$MY_SUPABASE_URL/rest/v1/person_public_profiles?select=handle,visibility&limit=1"             -H "apikey: $MY_SUPABASE_PUBLISHABLE_KEY" || true)
+          if [[ "$code" != '200' ]]; then
+            echo "Public person projection is not ready (HTTP $code)."
+            cat /tmp/my-public-person-db.json || true
+            exit 1
+          fi
+          echo 'Public person projection schema is reachable and RLS-protected.'
       - name: Bootstrap, migrate legacy page, or run guarded release
         shell: bash
         run: |
