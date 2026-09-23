@@ -147,11 +147,10 @@ test('Assist sidebar alignment survives early install before layout settles',asy
 });
 
 test('command execution target sits below the prompt and external handoff stays explicit',async()=>{
-  const [dock,bootstrap,dockCss,bootstrapCss,workbenchCss]=await Promise.all([
+  const [dock,bootstrap,dockCss,workbenchCss]=await Promise.all([
     read('admin-assist-dock.js'),
     read('admin-assist-bootstrap.js'),
     read('admin-assist-dock.css'),
-    read('admin-assist-bootstrap.css'),
     read('admin-conversation-workbench.css'),
   ]);
   assert.match(dock,/id="ekodiAssistCommand"[\s\S]*id="ekodiAssistExecutionTarget"/);
@@ -163,6 +162,6 @@ test('command execution target sits below the prompt and external handoff stays 
   assert.match(dock,/handoff:\(provider,text\)=>handoffCommand\(provider,text\)/);
   assert.match(dock,/EXTERNAL_SECRET_RE/);
   assert.match(dockCss,/EKODI external execution composer v1/);
-  assert.match(bootstrapCss,/EKODI command execution selector v1/);
+  assert.match(dockCss,/EKODI lazy bootstrap execution layout v1/);
   assert.match(workbenchCss,/EKODI stacked command authority v1/);
 });
