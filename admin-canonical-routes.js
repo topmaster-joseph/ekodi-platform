@@ -5,7 +5,7 @@ const SECTION_GROUP=Object.freeze({
   'engine-all':'services','engine-core':'services','engine-common':'services','engine-operations':'services','engine-professional':'services','engine-ai':'services','engine-integration':'services','engine-preview':'services',
   'sites-all':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',
   campus:'sites',clients:'sites','site-chrome':'sites',organization:'sites',workspace:'sites','cheonggye-members':'sites',
-  'common-services':'services',confirmations:'services','life-ai':'services','personal-finance':'services',invest:'services','marketing-ai':'services',affiliates:'services','supply-network':'services',insurance:'services',capabilities:'services',openai:'services',
+  'common-services':'services','service-modules':'services',confirmations:'services','life-ai':'services','personal-finance':'services',invest:'services','marketing-ai':'services',affiliates:'services','supply-network':'services',insurance:'services',capabilities:'services',openai:'services',
   'users-access':'people',security:'people',admins:'people','ai-membership':'people',
   work:'content',communication:'content',community:'content',books:'content',devotional:'content',social:'content',finance:'content',tax:'content',
   health:'status',deployments:'status',aiops:'status',devices:'status','api-cost':'status',architecture:'status',maturity:'status',services:'status',
@@ -25,7 +25,7 @@ const LEGACY_SECTION_GROUP=Object.freeze({
   community:'community','ai-membership':'community',
   books:'publishing',devotional:'publishing',
   'public-site-controls':'system','language-status':'system',architecture:'system',maturity:'system',security:'system',admins:'system','ai-module-spec':'system',storage:'system',capabilities:'system',aiops:'system','ai-settings':'system',openai:'system',devices:'system',health:'system','api-cost':'system',services:'system',deployments:'system',policies:'system',
-  'common-services':'common','life-ai':'professional','personal-finance':'professional',invest:'professional',social:'professional','marketing-ai':'professional',affiliates:'professional','supply-network':'professional',insurance:'professional',
+  'common-services':'common','service-modules':'common','life-ai':'professional','personal-finance':'professional',invest:'professional',social:'professional','marketing-ai':'professional',affiliates:'professional','supply-network':'professional',insurance:'professional',
 });
 const ALIASES=Object.freeze({
   'ai-ops':'aiops',storige:'storage',release:'deployments','mall-ai-sales':'affiliates',
@@ -113,7 +113,7 @@ function navigationTarget(section,loc=window.location,detailSegments=null){
   return canonicalUrl(section,loc,detail||[]);
 }
 window.EKODIAdminRoutes=Object.freeze({
-  version:'1.5.0',
+  version:'1.6.0',
   groups:Object.freeze({...GROUP_DEFAULT}),
   normalizeSection,
   normalizeDetailSegments,
