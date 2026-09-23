@@ -53,3 +53,9 @@ test('Community auth and CORS trust the canonical EKODI origin', () => {
   assert.match(connectApi, /const ORIGINS = new Set\(\["https:\/\/ekodi\.kr"/);
   assert.match(accessApi, /community:\["https:\/\/ekodi\.kr"\]/);
 });
+
+test('compact admin menu runtime has no self-initializing selector binding', () => {
+  const compact = read('admin-menu-layout.compact.js');
+  assert.doesNotMatch(compact, /const ([A-Za-z_$][A-Za-z0-9_$]*)=\\1;/);
+  assert.match(compact, /\\.nav\\[data-section\\],\\.nav\\[data-lazy-section\\],\\.nav\\[data-device-control-nav\\],a\\.nav\\[href\\]/);
+});
