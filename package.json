@@ -65,7 +65,7 @@
     "validate:virtualization-routing": "node --check virtualization-router.js && node scripts/validate-virtualization-routing.mjs && node --test test/virtualization-router.test.mjs",
     "validate:claim-integrity": "node scripts/validate-ai-claim-integrity.mjs && node --test test/ai-claim-integrity.test.mjs",
     "validate:knowledge-claim": "node scripts/validate-ai-knowledge-claim.mjs && node --test test/ai-knowledge-claim.test.mjs",
-    "validate:isolated-desktop-backend": "node scripts/validate-isolated-desktop-backend.mjs && node --test test/isolated-desktop-backend.test.mjs"
+    "validate:isolated-desktop-backend": "node scripts/validate-isolated-desktop-backend.mjs && node --test test/isolated-desktop-backend.test.mjs test/isolated-guest-agent.test.mjs"
   },
   "engines": {
     "node": ">=20"
