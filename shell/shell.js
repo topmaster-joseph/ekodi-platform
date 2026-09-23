@@ -92,6 +92,8 @@ let cycleTimer=null;
 let memberGateTimer=null;
 let memberGateRoot=null;
 const DOCUMENT_LOAD_SEED=(()=>{
+  const injected=String(document.documentElement.dataset.ekodiVisualSeed||'').trim();
+  if(injected)return hashText(injected);
   try{const values=new Uint32Array(1);crypto.getRandomValues(values);return values[0]>>>0;}
   catch{return (Date.now()^Math.floor((globalThis.performance?.timeOrigin||0))^hashText(location.href))>>>0;}
 })();
@@ -163,7 +165,7 @@ function publicVariant(){
   const backgroundMix=Math.min(maxBackgroundMix,Math.max(1,Number(variant.backgroundMix)||2));
   return {
     enabled:true,
-    mode:config.rotation||'weekly-deterministic',
+    mode:config.rotation||'navigation-load-approved-variation',
     timezone:config.timezone||'Asia/Seoul',
     dateKey:date.key,
     cycleKey:`load-${DOCUMENT_LOAD_SEED.toString(36)}`,
