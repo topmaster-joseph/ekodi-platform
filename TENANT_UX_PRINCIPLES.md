@@ -32,7 +32,7 @@ Middle managers, local managers, store operators, pastors, organization staff an
 - Church: Home / People & Care / Worship & Ministry / Records & AI / Site & Permissions.
 - Trade: Home / Counterparties / Channels & Publishing / Permissions.
 - EKODIMALL keeps its direct one-level operating menu.
-- CMPMYI shows only frequent cross-store entry actions; detailed tools live in the selected store's own admin.
+- CMPMYI is the aggregate navigation hub for Jadam Chicken, PizzaMaru and Yogurt Purple. It exposes each brand's administrator working-menu links, including delivery-platform administration, while all data reads and writes remain on the selected store's own canonical admin URL and capability boundary.
 
 ## Safety
 
