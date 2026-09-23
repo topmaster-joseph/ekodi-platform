@@ -48,7 +48,7 @@ test('pastor admin page is private-by-default', async () => {
   assert.match(html, /목회자 운영/);
   assert.match(html, /<h1 id="pageTitle">오늘의 교회<\/h1>/);
   assert.match(html, /오늘 일정·다음 예배·새가족·돌봄 후속/);
-  assert.match(html, /church-pastor-admin\.js\?v=20260923-attendance1/);
+  assert.match(html, /church-pastor-admin\\.js\\?v=20260923-attendance2/);
   assert.match(response.headers.get('content-security-policy') || '', /frame-ancestors 'none'/);
   assert.doesNotMatch(response.headers.get('content-security-policy') || '', /(?:api|workspace-api)\.ekodi\.kr/);
   assert.match(response.headers.get('cache-control') || '', /no-store/);
@@ -66,6 +66,9 @@ test('pastor admin client enforces church staff lookup before data modules', asy
   assert.match(source, /church_receipt_requests/);
   assert.match(source, /church_attendance/);
   assert.match(source, /개인별 출결현황/);
+  assert.match(source, /church_attendance_summary/);
+  assert.match(source, /current_streak/);
+  assert.match(source, /last_absence_date/);
   assert.match(source, /church_treasurer/);
   assert.match(source, /senior_pastor/);
   assert.match(source, /noRoleSpecificAdminPages/);
