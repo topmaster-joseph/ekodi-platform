@@ -73,6 +73,7 @@ const COMMAND_POLICIES = Object.freeze({
   'computer.system.read': { risk: 'observe' },
   'computer.process.list': { risk: 'observe' },
   'computer.agent.status': { risk: 'observe' },
+  'computer.desktop.probe': { risk: 'observe' },
   'network.diagnose': { risk: 'observe' },
   'printers.diagnose': { risk: 'observe' },
   'startup.scan': { risk: 'observe' },
@@ -104,6 +105,7 @@ const COMMAND_CAPABILITIES = Object.freeze({
   'computer.system.read': 'computerRead',
   'computer.process.list': 'processRead',
   'computer.agent.status': 'agentStatus',
+  'computer.desktop.probe': 'isolatedDesktopProbe',
   'computer.browser.execute': 'backgroundBrowser',
   'network.diagnose': 'networkDiagnostics',
   'printers.diagnose': 'printerDiagnostics',
@@ -490,6 +492,34 @@ function summarizeCommandResult(result = {}) {
     : (Number.isFinite(Number(value)) ? Number(value) : null);
   for (const key of ['message', 'freedMB', 'pendingCount', 'installedCount', 'failedCount', 'rebootRequired', 'profile']) {
     if (result[key] !== undefined) summary[key] = result[key];
+  }
+  if (result.desktopProbe && typeof result.desktopProbe === 'object') {
+    summary.desktopProbe = {
+      ok: result.desktopProbe.ok === true,
+      mode: safeText(result.desktopProbe.mode, 80),
+      provider: safeText(result.desktopProbe.provider, 100),
+      routingPolicy: safeText(result.desktopProbe.routingPolicy, 100),
+      backendPolicy: safeText(result.desktopProbe.backendPolicy, 120),
+      agentVersion: safeText(result.desktopProbe.agentVersion, 40),
+      virtualizationFirmwareEnabled: result.desktopProbe.virtualizationFirmwareEnabled === true,
+      hyperVState: safeText(result.desktopProbe.hyperVState, 40),
+      hyperVPowerShellAvailable: result.desktopProbe.hyperVPowerShellAvailable === true,
+      baseVmName: safeText(result.desktopProbe.baseVmName, 80),
+      baseVmPresent: result.desktopProbe.baseVmPresent === true,
+      windowsSandboxState: safeText(result.desktopProbe.windowsSandboxState, 40),
+      windowsSandboxPresent: result.desktopProbe.windowsSandboxPresent === true,
+      windowsSandboxForegroundOnly: result.desktopProbe.windowsSandboxForegroundOnly === true,
+      windowsSandboxAcceptedForActivation: result.desktopProbe.windowsSandboxAcceptedForActivation === true,
+      recommendedBackend: safeText(result.desktopProbe.recommendedBackend, 100),
+      headlessBackendReady: result.desktopProbe.headlessBackendReady === true,
+      isolatedDesktopActivationReady: result.desktopProbe.isolatedDesktopActivationReady === true,
+      sharedInteractiveDesktop: result.desktopProbe.sharedInteractiveDesktop === true,
+      userInputInjection: result.desktopProbe.userInputInjection === true,
+      clipboardShared: result.desktopProbe.clipboardShared === true,
+      credentialCollection: result.desktopProbe.credentialCollection === true,
+      gapReason: safeText(result.desktopProbe.gapReason, 100),
+      checkedAt: safeText(result.desktopProbe.checkedAt, 64),
+    };
   }
   if (result.browserWorker && typeof result.browserWorker === 'object') {
     summary.browserWorker = {
