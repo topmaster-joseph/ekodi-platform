@@ -35,7 +35,7 @@ test('PGM public site keeps the Drive-grounded lifelong-learning identity at the
   assert.match(manifest,/https:\/\/ekodi\.kr\/pgm/);
 });
 
-test('Shared Site router serves /pgm with CSS MIME, redirects the old URL, and hands admin to the canonical admin surface',async()=>{
+test('Shared Site router serves /pgm with CSS MIME, redirects the old URL, and serves the site-owned admin at the canonical /pgm/admin URL',async()=>{
   const env={ENVIRONMENT:'production',ASSETS:{fetch:async request=>{
     const path=new URL(request.url).pathname;
     return new Response(path,{status:200,headers:{'content-type':'application/octet-stream'}});
@@ -62,7 +62,9 @@ test('Shared Site router serves /pgm with CSS MIME, redirects the old URL, and h
   assert.equal(legacyAdmin.headers.get('location'),'https://ekodi.kr/pgm/admin');
 
   const admin=await platformRouter.fetch(new Request('https://ekodi.kr/pgm/admin'),env,{});
-  assert.equal(admin.status,302);
-  assert.equal(admin.headers.get('location'),'https://ekodi.kr/admin/sites/workspace?source=pgm');
-  assert.equal(admin.headers.get('x-ekodi-route'),'pgm-admin-handoff');
+  assert.equal(admin.status,200);
+  assert.equal(admin.headers.get('x-ekodi-route'),'workspace-admin');
+  const adminHtml=await admin.text();
+  assert.match(adminHtml,/EKODI Workspace Admin/);
+  assert.match(adminHtml,/workspace-admin\.js/);
 });
