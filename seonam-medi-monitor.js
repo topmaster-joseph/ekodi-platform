@@ -2,6 +2,9 @@ const API_PATH='/api/seonam-medi/monitor';
 const MAX_ITEMS_PER_QUERY=20;
 const RECENT_DAYS=7;
 const MEDIA_ENRICH_LIMIT=8;
+const RSS_MAX_ATTEMPTS=3;
+const RETRYABLE_STATUS=new Set([429,500,502,503,504]);
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const QUERIES=Object.freeze([
   {key:'seonam-national-medical',label:'서남권 국립의대',q:'"서남권" 국립의대'},
   {key:'mokpo-national-medical',label:'목포대 국립의대',q:'목포대 국립의대'},
@@ -15,6 +18,17 @@ const tag=(block,name)=>{const m=String(block||'').match(new RegExp('<'+name+'(?
 const sourceTag=block=>{const m=String(block||'').match(/<source(?:\s[^>]*)?>([\s\S]*?)<\/source>/i);return m?xmlText(m[1]):''};
 async function digest(value){const bytes=new TextEncoder().encode(String(value||''));const hash=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(hash)].map(v=>v.toString(16).padStart(2,'0')).join('')}
 function rssUrl(query){const q=encodeURIComponent(query);return 'https://news.google.com/rss/search?q='+q+'&hl=ko&gl=KR&ceid=KR:ko'}
+async function fetchRss(query){
+  let lastStatus=0;
+  for(let attempt=1;attempt<=RSS_MAX_ATTEMPTS;attempt+=1){
+    const response=await fetch(rssUrl(query),{headers:{'user-agent':'EKODI-SeonamMedi-Monitor/1.2','accept':'application/rss+xml,application/xml,text/xml;q=0.9,*/*;q=0.1'},cf:{cacheTtl:0,cacheEverything:false}});
+    if(response.ok)return response.text();
+    lastStatus=response.status;
+    if(!RETRYABLE_STATUS.has(response.status)||attempt===RSS_MAX_ATTEMPTS)break;
+    await wait(300*attempt);
+  }
+  throw new Error('HTTP '+lastStatus);
+}
 function parseRss(xml,key,label){
   const now=Date.now(),floor=now-RECENT_DAYS*86400000;
   return [...String(xml||'').matchAll(/<item>([\s\S]*?)<\/item>/gi)].slice(0,MAX_ITEMS_PER_QUERY).map(match=>{
@@ -81,9 +95,7 @@ export async function runSeonamMediDailyCheck(env,{scheduledAt=null,force=false}
   }catch(error){return {ok:false,error:'schema_unavailable',message:clean(error?.message,300)}}
   for(const query of QUERIES){
     try{
-      const response=await fetch(rssUrl(query.q),{headers:{'user-agent':'EKODI-SeonamMedi-Monitor/1.1'},cf:{cacheTtl:0,cacheEverything:false}});
-      if(!response.ok)throw new Error('HTTP '+response.status);
-      const items=parseRss(await response.text(),query.key,query.label);checked+=1;seen+=items.length;
+      const items=parseRss(await fetchRss(query.q),query.key,query.label);checked+=1;seen+=items.length;
       for(let item of items){
         if(mediaBudget>0){item=await enrichMedia(item);mediaBudget-=1;if(item.mediaState==='candidate')mediaCandidates+=1}
         if(await insertItem(env,item,startedAt))added+=1;

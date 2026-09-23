@@ -12,7 +12,7 @@
 <header class="site-header">
   <a class="brand" href="/seonam-medi/"><strong>서남권 국립의대 시민소통센터</strong><small>서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널</small></a>
   <nav aria-label="주요 메뉴">
-    <a href="#status">현재상황</a><a href="#timeline">활동이력</a><a href="#news">관련기사</a><a href="#voices">시민의목소리</a><a href="#finance">후원·회계</a>
+    <a href="#status">현재상황</a><a href="#committee">비상대책위원회</a><a href="#timeline">활동이력</a><a href="#news">관련기사</a><a href="#voices">시민의목소리</a><a href="#finance">후원·회계</a>
   </nav>
 </header>
 <main>
@@ -26,6 +26,13 @@
 <section id="status" class="section">
   <div class="section-head"><div><p class="eyebrow">CURRENT STATUS</p><h2>현재 진행상황</h2></div><span class="badge">출처 검증형</span></div>
   <div id="statusCards" class="grid"></div>
+</section>
+
+<section id="committee" class="section">
+  <div class="section-head"><div><p class="eyebrow">EMERGENCY COMMITTEE</p><h2>서남권 의대 비상대책위원회</h2><p class="note">공개 보도와 비대위 제공자료에서 확인되는 조직·주요 직책을 출처별로 표시합니다. 전체 조직명부가 공개되지 않은 경우 확인된 범위만 보여줍니다.</p></div><span class="badge">공개자료 기준</span></div>
+  <div id="committeeOverview" class="committee-overview"></div>
+  <div id="committeeRoles" class="committee-grid"></div>
+  <p class="muted committee-disclaimer">직책은 자료 작성·보도 시점을 기준으로 하며 변경될 수 있습니다. 비대위 공식자료와 언론 보도가 다를 경우 각각의 출처를 함께 표시합니다.</p>
 </section>
 
 <section id="monitor" class="section">
@@ -47,23 +54,30 @@
   <div id="sourceList" class="source-list"></div>
 </section>
 
-<section id="voices" class="section split">
-  <div>
-    <p class="eyebrow">CITIZEN VOICES</p><h2>시민의 목소리</h2>
-    <p>시민 의견·질문·제보·정책제안·의료경험을 수렴하고 관련 쟁점에 연결하는 구조로 운영합니다.</p>
+<section id="voices" class="section">
+  <div class="section-head voice-head">
+    <div>
+      <p class="eyebrow">CITIZEN VOICES</p><h2>시민의 목소리</h2>
+      <p class="note">시민 의견·질문·제보·정책제안·의료경험을 접수합니다. 공개 동의한 내용은 아래 접수목록에서 볼 수 있으며 시민 작성 의견은 비대위 공식입장과 구분됩니다.</p>
+    </div>
   </div>
-  <form id="voiceForm" class="panel voice-form">
-    <strong>의견·제보 접수</strong>
-    <label>유형<select name="category"><option value="question">질문</option><option value="proposal">정책제안</option><option value="experience">의료경험</option><option value="factcheck">사실확인 요청</option><option value="tip">자료제보</option><option value="other">기타</option></select></label>
-    <label>이름 또는 표시명<input name="name" maxlength="80" placeholder="익명 가능"></label>
-    <label>연락처 또는 이메일<input name="contact" maxlength="160" placeholder="답변이 필요한 경우 입력"></label>
-    <label>내용<textarea name="message" maxlength="3000" required></textarea></label>
+  <form id="voiceForm" class="panel voice-form voice-form-horizontal">
+    <div class="voice-field"><label>유형<select name="category"><option value="question">질문</option><option value="proposal">정책제안</option><option value="experience">의료경험</option><option value="factcheck">사실확인 요청</option><option value="tip">자료제보</option><option value="other">기타</option></select></label></div>
+    <div class="voice-field"><label>이름 또는 표시명<input name="name" maxlength="80" placeholder="익명 가능"></label></div>
+    <div class="voice-field voice-contact"><label>연락처 또는 이메일<input name="contact" maxlength="160" placeholder="답변이 필요한 경우 입력"></label></div>
+    <div class="voice-field voice-message"><label>내용<textarea name="message" maxlength="3000" required placeholder="의견·질문·제보 내용을 입력하세요."></textarea></label></div>
     <input class="honeypot" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
-    <label class="check"><input type="checkbox" name="publicConsent"> 검토 후 공개될 수 있음에 동의합니다.</label>
-    <label class="check"><input type="checkbox" name="privacyConsent" required> 접수·답변을 위한 개인정보 처리에 동의합니다.</label>
-    <div class="form-actions"><button type="submit">접수하기</button><span id="voiceStatus" role="status"></span></div>
-    <p class="muted">공개 동의가 없는 개인정보와 제보자 정보는 공개하지 않습니다.</p>
+    <div class="voice-submit"><button type="submit">접수하기</button><span id="voiceStatus" role="status"></span></div>
+    <div class="voice-consents">
+      <label class="check"><input type="checkbox" name="publicConsent"> 아래 접수목록 공개에 동의합니다.</label>
+      <label class="check"><input type="checkbox" name="privacyConsent" required> 접수·답변을 위한 개인정보 처리에 동의합니다.</label>
+      <p class="muted">연락처·이메일은 공개하지 않으며 공개목록에는 메시지 속 전화번호·이메일도 자동 가림 처리합니다.</p>
+    </div>
   </form>
+  <div class="voice-public">
+    <div class="voice-public-head"><div><strong>의견·제보 접수목록</strong><p>공개 동의한 시민 제출 내용입니다. 비대위 공식입장이 아닙니다.</p></div><span id="voicePublicCount" class="badge">0건</span></div>
+    <div id="voicePublicList" class="voice-list" aria-live="polite"><p class="muted">접수목록을 불러오는 중입니다.</p></div>
+  </div>
 </section>
 
 <section id="finance" class="section">

@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-21",
+  "updatedAt": "2026-09-22",
   "status": [
     {
       "title": "공식 기록",
@@ -235,6 +235,46 @@
         "상경",
         "공개서한"
       ]
+    },
+    {
+      "date": "2026.09.22",
+      "category": "법적절차·비대위 활동",
+      "title": "집행정지 첫 심문과 목포 시민행동",
+      "summary": "광주지방법원 행정1부가 목포대가 제기한 국립의대 후보대학 선정·추천 처분 집행정지 신청의 첫 심문을 진행했습니다. 같은 날 서남권 의대 비상대책위원회는 광주지방법원 앞 기자회견, 목포 도심 차량 행진, 교수진 가두행진과 평화광장 제4차 총궐기대회를 진행한 것으로 뉴시스와 LG헬로비전이 보도했습니다. 심사자료 공개·재검증 등 요구 내용은 비대위 측 주장·요구로 구분해 기록합니다.",
+      "evidence": "법원 절차 보도·비대위 활동 보도",
+      "links": [
+        {
+          "label": "집행정지 첫 심문·목포 차량행진 보도",
+          "source": "뉴시스",
+          "url": "https://www.newsis.com/view/NISX20260922_0003800353"
+        },
+        {
+          "label": "집행정지 첫 심문 보도",
+          "source": "뉴시스",
+          "url": "https://mobile.newsis.com/view_amp.html?ar_id=NISX20260922_0003800897"
+        },
+        {
+          "label": "서남권 총궐기 방송보도",
+          "source": "LG헬로비전",
+          "url": "https://news.lghellovision.net/news/articleView.html?idxno=556018"
+        }
+      ],
+      "media": [
+        {
+          "type": "photo",
+          "label": "차량 가두행진 사진이 포함된 현장 보도",
+          "source": "뉴시스",
+          "date": "2026-09-22",
+          "url": "https://www.newsis.com/view/NISX20260922_0003800353"
+        }
+      ],
+      "monitorKeywords": [
+        "집행정지",
+        "심문",
+        "차량",
+        "총궐기",
+        "광주지방법원"
+      ]
     }
   ],
   "sources": [
@@ -272,6 +312,20 @@
       "date": "2026-08-30",
       "kind": "경과 일지 보도",
       "url": "https://mobile.newsis.com/view/NISX20260830_0003768449"
+    },
+    {
+      "title": "'의대 선정 효력정지' 첫 심문…목포선 차량 가두행진·궐기대회",
+      "publisher": "뉴시스",
+      "date": "2026-09-22",
+      "kind": "법원절차·현장 보도",
+      "url": "https://www.newsis.com/view/NISX20260922_0003800353"
+    },
+    {
+      "title": "목포대 의대 추천 집행정지 첫 심문…서남권 '총궐기'",
+      "publisher": "LG헬로비전",
+      "date": "2026-09-22",
+      "kind": "방송보도",
+      "url": "https://news.lghellovision.net/news/articleView.html?idxno=556018"
     }
   ],
   "finance": {
@@ -287,5 +341,49 @@
       "video"
     ],
     "autoLinkRule": "최근 자동수집 자료 중 활동일과 핵심어가 일치하고 사진·영상 메타데이터가 확인된 경우 해당 활동 카드에 '근거자료 후보'로 자동 연결하며 원문 확인 상태를 표시한다."
+  },
+  "committee": {
+    "name": "서남권 의대 비상대책위원회",
+    "description": "전남권 국립의대 후보대학 선정 이후 서남권 지역의 시민사회·대학 관계자 등이 참여해 관련 절차와 지역 의료 현안에 대응하는 활동체로 공개자료에 나타납니다.",
+    "formed": "2026년 8월 말~9월 초 공개 활동 확인",
+    "composition": "시민사회·대학 관계자 등 참여",
+    "roles": [
+      {
+        "name": "손영득",
+        "role": "공동상임대표",
+        "sourceType": "언론보도",
+        "sourceLabel": "목포MBC",
+        "sourceUrl": "https://www.mpmbc.co.kr/NewsArticle/1537936"
+      },
+      {
+        "name": "하상복",
+        "role": "공동대표",
+        "sourceType": "언론보도",
+        "sourceLabel": "LG헬로비전",
+        "sourceUrl": "https://news.lghellovision.net/news/articleViewAmp.html?idxno=555728"
+      },
+      {
+        "name": "박성태",
+        "role": "공동상임대표",
+        "sourceType": "비대위 제공자료",
+        "sourceLabel": "9·21 참가자 자료집",
+        "sourceUrl": ""
+      },
+      {
+        "name": "정은채",
+        "role": "조직위원장",
+        "sourceType": "공개 게시물",
+        "sourceLabel": "조직위원장 공개 게시물",
+        "sourceUrl": "https://www.instagram.com/p/Dc7mZDeGIt9/"
+      },
+      {
+        "name": "여인두",
+        "role": "기획위원장",
+        "sourceType": "비대위 제공자료",
+        "sourceLabel": "9·21 참가자 자료집",
+        "sourceUrl": ""
+      }
+    ],
+    "sourceNote": "직책은 각 공개자료·비대위 제공자료 작성 시점 기준이며, 전체 임원 명부로 단정하지 않습니다."
   }
 }
