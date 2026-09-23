@@ -99,6 +99,9 @@ test('production workflows that validate PR provenance can read pull requests', 
     assert.match(source, /permissions:\s*\n\s*contents:\s*read\s*\n\s*pull-requests:\s*read/, `${name} must grant read-only PR provenance access`);
   }
 });
+test('shared-site production provenance gate receives the scoped GitHub token', () => {
+  assert.match(sharedDeploy, /name: EKODI AI Orchestration Gate[\s\S]*?GITHUB_TOKEN:\s*\$\{\{ github\.token \}\}[\s\S]*?validate-ekodi-ai-change-orchestration\.mjs" --release/);
+});
 test('main accepts verified PR provenance and still rejects a direct push', () => {
   const cwd = new URL('..', import.meta.url); const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).stdout.trim();
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ekodi-orchestration-')); const eventPath = path.join(dir, 'event.json'); const provenancePath = path.join(dir, 'pulls.json');

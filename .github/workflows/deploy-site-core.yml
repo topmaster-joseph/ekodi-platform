@@ -319,6 +319,8 @@ jobs:
           echo "Production release build timestamp pinned to source commit epoch: $source_date_epoch"
 
       - name: EKODI AI Orchestration Gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Enforce single production ownership before release
         run: |
