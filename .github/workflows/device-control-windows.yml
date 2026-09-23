@@ -126,13 +126,13 @@ jobs:
           $commands = @(
             'power.always_on','power.presentation','power.normal','power.restore','lock.resume_off','lock.resume_on','autologon.open',
             'diagnostics.collect','network.diagnose','printers.diagnose','startup.scan','startup.disable','startup.restore',
-            'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary','computer.browser.execute','computer.desktop.probe',
+            'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary','computer.browser.execute','computer.desktop.probe','computer.desktop.canary',
             'remote_desktop.recovery.enable','remote_desktop.recovery.disable','remote_desktop.recovery.run'
           )
           foreach ($command in $commands) {
             if (-not $content.Contains("'$command'")) { throw "Missing allowlisted command: $command" }
           }
-          foreach ($guard in @('arbitraryShell = $false','screenCapture = $false','credentialCollection = $false','backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified','isolatedDesktopProbe = $true','isolatedDesktop = $false')) {
+          foreach ($guard in @('arbitraryShell = $false','screenCapture = $false','credentialCollection = $false','backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified','isolatedDesktopProbe = $true','isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified','isolatedDesktop = $false')) {
             if (-not $content.Contains($guard)) { throw "Missing privacy guard: $guard" }
           }
           if ($content -match '(?i)Restart-Computer|GetAsyncKeyState|SetWindowsHookEx|CopyFromScreen|GetClipboard') { throw 'Forbidden remote-control behavior found.' }
@@ -192,6 +192,26 @@ jobs:
           if ($probe.headlessBackendReady -and $probe.recommendedBackend -ne 'hyper-v-ekodi-base') { throw 'A ready headless backend must resolve to the EKODI Hyper-V base.' }
           if (-not $probe.headlessBackendReady -and $probe.gapReason -notin @('native-capability-unavailable','native-capability-not-production-ready','required-capability-not-yet-implemented','native-capacity-or-runtime-failure')) { throw 'Missing allowed native capability gap classification.' }
           Write-Host "Isolated desktop probe OK: backend=$($probe.recommendedBackend) ready=$($probe.headlessBackendReady) gap=$($probe.gapReason)"
+      - name: Verify Hyper-V canary remains fail-closed until a real backend is ready
+        shell: pwsh
+        run: |
+          $path = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
+          $content = Get-Content $path -Raw
+          foreach ($required in @(
+            'function Invoke-IsolatedDesktopHyperVCanary',
+            'New-VHD -Path $sessionDisk -ParentPath $baseDiskPath -Differencing',
+            'New-VM -Name $sessionName',
+            'Remove-VMNetworkAdapter',
+            'Start-VM -Name $sessionName',
+            'Stop-VM -Name $sessionName -TurnOff -Force',
+            'Remove-VM -Name $sessionName -Force',
+            'sessionVmRemoved = -not [bool](Get-VM',
+            'sessionDiskRemoved = -not (Test-Path -LiteralPath $sessionDisk)',
+            'isolatedDesktop = $false'
+          )) {
+            if (-not $content.Contains($required)) { throw "Missing isolated desktop canary guard: $required" }
+          }
+          Write-Host 'Hyper-V canary contract is present and isolated desktop execution remains disabled.'
       - name: Verify power and lock command mapping without changing runner settings
         shell: pwsh
         run: |
