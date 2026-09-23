@@ -977,7 +977,7 @@
         "expect": [
           "통합 인증센터",
           "/auth/auth-bootstrap.js?v=20260923-return-continuity-1",
-          "/auth/auth-entry.js?v=20260923-return-continuity-1"
+          "/auth/auth-entry.js?v=20260923-space-admin-return-2"
         ],
         "headerExpect": [
           "x-ekodi-route: central-auth"
@@ -1010,7 +1010,7 @@
         "redirect": "manual",
         "expect": [
           "loadAuthRouter",
-          "./auth-router.js?v=20260923-return-continuity-1",
+          "./auth-router.js?v=20260923-space-admin-return-2",
           "authLoopBlocked"
         ],
         "headerExpect": [
@@ -1029,7 +1029,7 @@
         "expect": [
           "admin-auth.js?v=20260918-canonical-origin-2",
           "business-auth.js?v=20260826-free-fallback-1",
-          "client-auth.js?v=20260923-return-continuity-1",
+          "client-auth.js?v=20260923-space-admin-return-2",
           "isRegistryUserService",
           "manifestService"
         ],
