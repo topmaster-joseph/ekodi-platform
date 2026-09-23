@@ -53,7 +53,7 @@ async function loadMarketingAuth(){
   catch(error){console.warn('Versioned Marketing auth load failed; retrying canonical asset.',error);return await import('./marketing-auth-hotfix.js')}
 }
 async function loadClientAuth(){
-  try{return await import('./client-auth.js?v=20260923-return-continuity-1')}
+  try{return await import('./client-auth.js?v=20260923-space-admin-return-2')}
   catch(error){console.warn('Versioned universal identity auth load failed; retrying canonical asset.',error);return await import('./client-auth.js')}
 }
 

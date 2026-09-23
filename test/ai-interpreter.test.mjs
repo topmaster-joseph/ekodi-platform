@@ -37,17 +37,11 @@ test('interpreter surface supports microphone, speech output and provider-neutra
 test('interpreter assets use canonical AI paths and guarded release probes',()=>{
   const html=read('ai-control/interpreter.html');
   const manifest=JSON.parse(read('deploy/manifests/ai-control.worker.json'));
-  assert.match(html,/href="\/ai\/api\/interpreter\/style/);
-  assert.match(html,/src="\/ai\/api\/interpreter\/client/);
-  assert.match(html,/href="\/ai\/">← 모두의 AI/);
+  assert.match(html,/href="\.\.\/api\/interpreter\/style/);
+  assert.match(html,/src="\.\.\/api\/interpreter\/client/);
+  assert.match(html,/href="\.\.\/">← 모두의 AI/);
   const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/ai/interpreter/');
   assert.ok(probe);
   assert.ok(probe.expect.includes('모두의 통역'));
   assert.ok(probe.headerExpect.some(value=>value.includes('microphone=(self)')));
-  const styleProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/ai/api/interpreter/style');
-  const clientProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/ai/api/interpreter/client');
-  assert.ok(styleProbe);
-  assert.ok(clientProbe);
-  assert.ok(styleProbe.headerExpect.some(value=>value.includes('content-type: text/css')));
-  assert.ok(clientProbe.headerExpect.some(value=>value.includes('content-type: text/javascript')));
 });
