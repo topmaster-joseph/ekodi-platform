@@ -4,9 +4,9 @@ import { workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from '../
 
 test('workspace admin uses the seven-axis Admin UI v3 shell',async()=>{
   const [html,css,script]=await Promise.all([
-    workspaceAdminPage().then(r=>r.text()),
-    workspaceAdminCss().then(r=>r.text()),
-    workspaceAdminScript().then(r=>r.text()),
+    workspaceAdminPage().text(),
+    workspaceAdminCss().text(),
+    workspaceAdminScript().text(),
   ]);
   assert.match(html,/data-ekodi-admin-layout="two-level"/);
   assert.match(html,/운영공간 확인 중/);
