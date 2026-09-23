@@ -1,0 +1,32 @@
+{
+  "id": "2026-09-23-ai-claim-integrity-v1.22.0",
+  "constitutionVersion": "1.22.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-23",
+  "changeClass": "C2",
+  "taskId": "claim-integrity-20260923",
+  "summary": "Require every material EKODI AI operational claim to be evidence-gated, scope-matched, fresh, independently verifiable, and protected by a deterministic final-response guard so model speech cannot be mistaken for actual system state.",
+  "approvalBasis": "The EKODI Platform owner identified continuing hallucination risk, reviewed the proposed Evidence-First and anti-hallucination approach, and explicitly instructed EKODI to modify the platform accordingly on 2026-09-23.",
+  "runtimeEnforcement": [
+    "ai-claim-integrity.js detects material operational success language and blocks unsupported final responses",
+    "ai-control-provider-router.js applies the deterministic claim gate to origin-preserving final synthesis",
+    "ai-control-core.js instructs final synthesis that collaborator text, memory and prior chat are assertions rather than current-state proof",
+    "config/ai-change-orchestration-policy.json binds claim integrity to orchestration reporting",
+    "config/ai-development-completion-policy.json requires scope-matched claim receipts and independent verification",
+    "AGENTS.override.md and ORCHESTRATOR_PRODUCTION_CONTRACT.md make the rule provider-neutral and ecosystem-wide"
+  ],
+  "sourcePriority": [
+    "direct runtime observation",
+    "deployment provider record",
+    "authoritative operational database",
+    "Git default branch",
+    "EKODI authoritative registry",
+    "approved operational document",
+    "task evidence ledger",
+    "conversation memory",
+    "model inference"
+  ],
+  "rollback": "If the deterministic guard causes a material reporting regression, revert the runtime guard/router integration to the previous guarded release while retaining the constitutional rule, repair claim classification or evidence projection, run claim-integrity and orchestration tests, then re-promote through the guarded release pipeline. Never roll back to allowing memory or model assertions to prove current operational completion.",
+  "verification": "Run claim-integrity validator/unit tests, constitution validation, orchestration tests, provider-router regression tests, repository checks, guarded deployment, and real production verification of both supported and unsupported completion claims."
+}
