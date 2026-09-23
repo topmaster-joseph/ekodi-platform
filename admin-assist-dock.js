@@ -140,7 +140,7 @@
     root.querySelectorAll('[data-assist-tab]').forEach(button=>button.addEventListener('click',()=>setTab(button.dataset.assistTab)));
     const search=root.querySelector('#ekodiAssistSearch');search.value=state.query||'';search.addEventListener('input',()=>{state.query=search.value;saveState();renderRail()});
     const form=root.querySelector('#ekodiAssistForm');const input=root.querySelector('#ekodiAssistCommand');
-    form.addEventListener('submit',event=>{event.preventDefault();const text=input.value.trim();if(!text)return;const target=root.querySelector('#ekodiAssistExecutionTarget')?.value||'ekodi';input.value='';resizeInput(input);if(target==='ekodi')submitAi(text);else handoffCommand(target,text)});
+    form.addEventListener('submit',async event=>{event.preventDefault();const text=input.value.trim();if(!text)return;const target=root.querySelector('#ekodiAssistExecutionTarget')?.value||'ekodi';if(target==='ekodi'){input.value='';resizeInput(input);submitAi(text);return}const handed=await handoffCommand(target,text);if(handed){input.value='';resizeInput(input)}});
     input.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();form.requestSubmit()}});
     input.addEventListener('input',()=>resizeInput(input));
     document.addEventListener('keydown',event=>{if(event.key==='Escape'&&state.open)setOpen(false)});
