@@ -147,6 +147,8 @@
   }
 
   function pageLoadSeed() {
+    const injected = String(document.documentElement.dataset.ekodiVisualSeed || '').trim();
+    if (injected) return stableHash(injected);
     try {
       const values = new Uint32Array(1);
       crypto.getRandomValues(values);
