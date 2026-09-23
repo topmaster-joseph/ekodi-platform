@@ -66,7 +66,7 @@ test('production verification submits the real bottom command on canonical ekodi
   assert.doesNotMatch(probe,/api\.ekodi\.kr/);
   const dock=await read('admin-assist-dock.js');
   assert.match(dock,/const API='https:\/\/ekodi\.kr'/);
-  assert.match(probe,/#ekodiAssistBootstrap input/);
+  assert.match(probe,/#ekodiAssistBootstrap \\.ekodi-assist-bootstrap-prompt-row > input/);
   assert.match(probe,/postDataJSON/);
   assert.match(probe,/ekodi-admin-command-history-v1/);
   assert.match(probe,/#ekodiAssistPanel:not\(\[hidden\]\)/);
