@@ -18,9 +18,9 @@ const surfaceVerification = json('config/surface-system-verification-policy.json
 const executionFabric = json('config/autonomous-execution-fabric-policy.json');
 const remoteComputer = json('config/remote-computer-execution-policy.json');
 
-if (constitution.version !== '1.22.0') fail('constitution version must be 1.22.0 with evidence-gated AI claims and all prior approved amendments');
+if (constitution.version !== '1.23.0') fail('constitution version must be 1.23.0 with evidence-gated operational and external knowledge claims plus all prior approved amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding','guest-open-public-user-surfaces','self-verifying-all-surface-system-evidence','ekodi-owned-virtualization-first','authentication-return-continuity','canonical-human-url-without-tracking-query','evidence-gated-ai-claims']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding','guest-open-public-user-surfaces','self-verifying-all-surface-system-evidence','ekodi-owned-virtualization-first','authentication-return-continuity','canonical-human-url-without-tracking-query','evidence-gated-ai-claims','evidence-gated-external-knowledge']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
 
@@ -337,6 +337,16 @@ if(claimIntegrity.claimScopeMayNotExceedEvidenceScope!==true||claimIntegrity.sin
 if(claimIntegrity.unknownOrContradictedStateCannotUseSuccessLanguage!==true) fail('unknown or contradicted AI state may not use success language');
 if(claimIntegrity.completionAndBroadScopeRequireIndependentVerifier!==true) fail('completion and broad-scope claims require an independent verifier');
 if(claimIntegrity.materialOperationalClaimReceiptRequired!==true||claimIntegrity.deterministicFinalResponseGuardRequired!==true) fail('material operational claims require receipts and deterministic final-response guard');
+
+
+const knowledgeClaim=constitution.aiKnowledgeClaimPolicy||{};
+if(knowledgeClaim.id!=='AI-KNOWLEDGE-CLAIM-001'||knowledgeClaim.status!=='active') fail('aiKnowledgeClaimPolicy must remain active');
+if(knowledgeClaim.retrievalIsNotVerification!==true||knowledgeClaim.modelOutputMayNotProveExternalFact!==true||knowledgeClaim.memoryMayNotProveCurrentExternalFact!==true) fail('external knowledge must remain evidence-gated beyond model output and memory');
+if(knowledgeClaim.freshnessMustMatchTemporalSensitivity!==true||knowledgeClaim.currentPrimarySourcePreferred!==true) fail('knowledge freshness and primary-source preference must remain active');
+if(knowledgeClaim.credibleContradictionsBlockUnqualifiedVerification!==true||knowledgeClaim.claimScopeMayNotExceedEvidenceScope!==true) fail('knowledge contradictions and scope must remain fail-closed');
+if(knowledgeClaim.highImpactFactsRequireAuthoritativeEvidence!==true) fail('high-impact external facts must require authoritative evidence');
+if(knowledgeClaim.externalSourceInstructionsAreUntrustedData!==true) fail('external source instructions must remain untrusted data');
+if(knowledgeClaim.materialKnowledgeClaimsRequireTraceableCitation!==true||knowledgeClaim.deterministicFinalResponseGuardRequired!==true) fail('material external facts require traceable citations and deterministic final guard');
 
 const amendmentDir = path.join(root, 'governance/amendments');
 const amendments = fs.readdirSync(amendmentDir).filter(name => name.endsWith('.json')).map(name => json(`governance/amendments/${name}`));
