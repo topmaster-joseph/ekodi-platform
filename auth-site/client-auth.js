@@ -7,6 +7,7 @@ function fetchTimed(url,options={},ms=10000){const controller=new AbortControlle
 
 const realms={
   portal:{name:'EKODI',returnTo:'https://ekodi.kr/',open:true,kind:'portal'},
+  space:{name:'EKODI 운영공간',returnTo:'https://ekodi.kr/',origins:['https://ekodi.kr'],open:true,kind:'space'},
   'my':{name:'My EKODI',returnTo:'https://ekodi.kr/my/',open:true,kind:'my'},
   ai:{name:'EKODI AI',returnTo:'https://ekodi.kr/ai/',origins:['https://ekodi.kr'],open:true,kind:'ai'},
   community:{name:'Community',returnTo:'https://ekodi.kr/community/',open:true,kind:'community'},
@@ -148,8 +149,27 @@ function loadGoogleLibrary(){
     script.addEventListener('load',resolve,{once:true});script.addEventListener('error',()=>reject(new Error('google_library_failed')),{once:true});document.head.append(script);
   }),7000,'google_library_timeout');
 }
+function trustedSpaceAdminTarget(raw){
+  if(site!=='space'||!raw)return null;
+  try{
+    const target=new URL(raw);
+    if(target.protocol!=='https:'||target.username||target.password||target.origin!=='https://ekodi.kr')return null;
+    if(!/^\/[a-z0-9-]+\/admin(?:\/|$)/i.test(target.pathname))return null;
+    target.hash='';
+    return target;
+  }catch{return null}
+}
+function unwrapSpaceMyRelay(target){
+  if(site!=='space'||target.origin!=='https://ekodi.kr'||!(target.pathname==='/my'||target.pathname.startsWith('/my/')))return null;
+  if(String(target.searchParams.get('from')||'').toLowerCase()!=='space')return null;
+  return trustedSpaceAdminTarget(target.searchParams.get('return_to'));
+}
 function postLoginTarget(){
   const target=new URL(RETURN_TO);
+  const directSpaceAdmin=trustedSpaceAdminTarget(target.href);
+  if(directSpaceAdmin)return directSpaceAdmin;
+  const relayedSpaceAdmin=unwrapSpaceMyRelay(target);
+  if(relayedSpaceAdmin)return relayedSpaceAdmin;
   const isPlatformMy=target.origin==='https://ekodi.kr'&&(target.pathname==='/my'||target.pathname.startsWith('/my/'));
   if(isPlatformMy&&!['my','portal'].includes(site))return new URL(config.returnTo);
   return target;
