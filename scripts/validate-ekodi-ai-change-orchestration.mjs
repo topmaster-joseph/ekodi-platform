@@ -41,6 +41,7 @@ const constitutionalControlValidators = [
   'scripts/validate-security-baseline.mjs',
   'scripts/validate-deployment-guardrails.mjs',
   'scripts/validate-workflow-orchestration-gates.mjs',
+  'scripts/validate-ai-claim-integrity.mjs',
 ];
 function runConstitutionalControls() {
   for (const script of constitutionalControlValidators) {
@@ -59,11 +60,17 @@ function runConstitutionalControls() {
 
 if (!fs.existsSync(policyPath)) fail('orchestration policy is missing.');
 const policy = readJson(policyPath);
+if (policy.schemaVersion !== 8) fail('orchestration policy schemaVersion must be 8 with claim integrity.');
 if (policy.policyId !== 'AI-ORCHESTRATE-001' || policy.status !== 'enforced') fail('policy must remain enforced.');
 if (policy.controlPlane !== 'EKODI AI') fail('EKODI AI must remain the control plane.');
 if (policy.mutationBoundary?.breakGlassBypassEnabled !== false) fail('break-glass bypass must remain disabled.');
 if (policy.sourceControl?.directPushToMain !== false) fail('direct main pushes must remain forbidden.');
 if (policy.execution?.externalAiMayOwnProductionMutation !== false) fail('external AI cannot own production mutation.');
+const claimIntegrity = policy.claimIntegrity || {};
+if (claimIntegrity.policyId !== 'AI-CLAIM-INTEGRITY-001' || claimIntegrity.status !== 'enforced') fail('claim integrity policy binding must remain enforced.');
+for (const key of ['aiStatementNeverCreatesSystemState','agentOutputIsAssertionNotEvidence','memoryCannotProveCurrentOperationalState','currentStateRequiresFreshEvidence','claimScopeMustMatchEvidenceScope','finalResponseGuardRequired','materialOperationalClaimReceiptRequired','broadScopeRequiresIndependentVerifier','unknownMustNotBecomeSuccess']) {
+  if (claimIntegrity[key] !== true) fail(`claim integrity orchestration rule must remain true: ${key}`);
+}
 const executionFallback = policy.executionFallback || {};
 if (executionFallback.enabled !== true) fail('automatic execution fallback must remain enabled.');
 if (executionFallback.decisionOwner !== policy.orchestrator) fail('execution fallback decision owner must remain the EKODI orchestrator.');
@@ -263,6 +270,9 @@ if (staticPolicyMode) {
 const changedFiles = currentChangedFiles();
 const governanceFiles = new Set([
   'config/ai-change-orchestration-policy.json',
+  'config/ai-claim-integrity-policy.json',
+  'ai-claim-integrity.js',
+  'scripts/validate-ai-claim-integrity.mjs',
   'scripts/validate-ekodi-ai-change-orchestration.mjs',
   '.github/workflows/ekodi-ai-orchestration-gate.yml',
   'scripts/validate-deployment-guardrails.mjs',
