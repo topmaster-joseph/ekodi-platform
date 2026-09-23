@@ -48,6 +48,21 @@
       "status": "live"
     },
     {
+      "id": "pgm",
+      "name": "평공목",
+      "nameEn": "Pyeonggongmok",
+      "descriptionKo": "평생공부하는 목회자들의 성경·신학·설교·교육·목회 학습공동체",
+      "descriptionEn": "Lifelong learning community for pastors connecting theology, ministry, and practice",
+      "url": "https://ekodi.kr/pgm",
+      "label": "ekodi.kr/pgm",
+      "icon": "church",
+      "category": "community-ministry",
+      "order": 18,
+      "homepage": false,
+      "productionVerified": true,
+      "status": "live"
+    },
+    {
       "id": "community",
       "name": "커뮤니티",
       "nameEn": "Community",
