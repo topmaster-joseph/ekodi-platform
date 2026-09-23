@@ -114,6 +114,7 @@ export function evaluateBrowserCanary({ device, commandId, issuedAt, expectedVer
       commandCompletedAt:command.completedAt || null,
       canaryProjected:true,
       browserExecutionCapabilityProjected:true,
+      browserExecutionStillFailClosed:false,
       proof:{
         browser:String(proof.browser || ''),
         contentBytes:Number(proof.contentBytes || 0),
@@ -308,8 +309,10 @@ async function run() {
     backgroundBrowserCanary:{ commandType:BROWSER_CANARY, issuedAt:canaryCommand.issuedAt, verification:canaryVerification },
     backgroundBrowserWorker:{ commandType:BROWSER_EXECUTE, issuedAt:browserCommand.issuedAt, verification:browserVerification },
     cutover:{
+      preVerification:{browserWorkerActivated:false},
       browserWorkerActivated:true,
       nativeBrowserOperationServiceReady:true,
+      nativeServiceReady:false,
       nativeRemoteComputerFullyReady:false,
       isolatedDesktopReady:false,
       reason:'native-browser-runtime-verified-isolated-desktop-pending'
