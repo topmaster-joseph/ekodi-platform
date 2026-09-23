@@ -970,7 +970,7 @@ function Invoke-BackgroundBrowserWorker($Payload) {
 
   $proof = $null
   try {
-    $arguments = @(
+    $commonArguments = @(
       '--headless=new',
       '--disable-gpu',
       '--disable-extensions',
@@ -981,34 +981,51 @@ function Invoke-BackgroundBrowserWorker($Payload) {
       '--hide-scrollbars',
       '--blink-settings=scriptEnabled=false',
       "--window-size=$($viewport.width),$($viewport.height)",
-      "--user-data-dir=$taskProfile",
-      "--screenshot=$shotPath",
-      '--dump-dom',
-      "$target"
-    ) -join ' '
+      "--user-data-dir=$taskProfile"
+    )
 
-    $process = [Diagnostics.Process]::new()
-    $process.StartInfo = [Diagnostics.ProcessStartInfo]@{
+    $domProcess = [Diagnostics.Process]::new()
+    $domProcess.StartInfo = [Diagnostics.ProcessStartInfo]@{
       FileName = $browser
-      Arguments = $arguments
+      Arguments = (@($commonArguments + @('--dump-dom', "$target")) -join ' ')
       UseShellExecute = $false
       CreateNoWindow = $true
       RedirectStandardOutput = $true
       RedirectStandardError = $true
     }
-    [void]$process.Start()
-    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
-    $stderrTask = $process.StandardError.ReadToEndAsync()
-    if (-not $process.WaitForExit(35000)) {
-      try { $process.Kill() } catch { }
-      throw 'background_browser_worker_timeout'
+    [void]$domProcess.Start()
+    $stdoutTask = $domProcess.StandardOutput.ReadToEndAsync()
+    $domStderrTask = $domProcess.StandardError.ReadToEndAsync()
+    if (-not $domProcess.WaitForExit(35000)) {
+      try { $domProcess.Kill() } catch { }
+      throw 'background_browser_dom_timeout'
     }
     $stdout = $stdoutTask.GetAwaiter().GetResult()
-    $stderr = $stderrTask.GetAwaiter().GetResult()
-    $screenshotExists = Test-Path -LiteralPath $shotPath
-    $ok = ($process.ExitCode -eq 0 -and $stdout.Length -gt 0 -and $screenshotExists)
-    if (-not $ok) { throw 'background_browser_worker_failed' }
+    $domStderr = $domStderrTask.GetAwaiter().GetResult()
+    if ($domProcess.ExitCode -ne 0 -or $stdout.Length -le 0) { throw 'background_browser_dom_failed' }
 
+    $shotProcess = [Diagnostics.Process]::new()
+    $shotProcess.StartInfo = [Diagnostics.ProcessStartInfo]@{
+      FileName = $browser
+      Arguments = (@($commonArguments + @("--screenshot=$shotPath", "$target")) -join ' ')
+      UseShellExecute = $false
+      CreateNoWindow = $true
+      RedirectStandardOutput = $true
+      RedirectStandardError = $true
+    }
+    [void]$shotProcess.Start()
+    $shotStdoutTask = $shotProcess.StandardOutput.ReadToEndAsync()
+    $shotStderrTask = $shotProcess.StandardError.ReadToEndAsync()
+    if (-not $shotProcess.WaitForExit(35000)) {
+      try { $shotProcess.Kill() } catch { }
+      throw 'background_browser_screenshot_timeout'
+    }
+    [void]$shotStdoutTask.GetAwaiter().GetResult()
+    $shotStderr = $shotStderrTask.GetAwaiter().GetResult()
+    $screenshotExists = Test-Path -LiteralPath $shotPath
+    if ($shotProcess.ExitCode -ne 0 -or -not $screenshotExists) { throw 'background_browser_screenshot_failed' }
+
+    $stderr = @($domStderr, $shotStderr) -join ' | '
     $shot = Get-Item -LiteralPath $shotPath
     $proof = @{
       ok = $true
@@ -1022,7 +1039,9 @@ function Invoke-BackgroundBrowserWorker($Payload) {
       deviceProfile = $viewport.id
       viewportWidth = [int]$viewport.width
       viewportHeight = [int]$viewport.height
-      exitCode = $process.ExitCode
+      exitCode = 0
+      domExitCode = $domProcess.ExitCode
+      screenshotExitCode = $shotProcess.ExitCode
       contentBytes = [Text.Encoding]::UTF8.GetByteCount($stdout)
       contentSha256 = Get-Sha256String $stdout
       screenshotBytes = [long]$shot.Length
