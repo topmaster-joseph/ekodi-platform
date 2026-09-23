@@ -14,15 +14,17 @@ async function api(path,options={}){
   if(!response.ok)throw Object.assign(new Error(data.error||`http_${response.status}`),{status:response.status,data});return data;
 }
 function setSession(session){state.session=session||null;$('loginLink').hidden=Boolean(state.session);$('sessionState').textContent=state.session?'로그인됨':'로그인 없이 바로 사용'}
+function serviceStatusMeta(service){return [service.categoryLabel,service.availabilityLabel,service.deliveryLabel].filter(Boolean).join(' · ')||'운영 · 바로 실행'}
 function serviceButton(service){
   const link=document.createElement('a');link.className='service-button';link.href=service.launchUrl;
-  const title=document.createElement('strong');title.textContent=service.label;const meta=document.createElement('small');meta.textContent=service.categoryLabel||'바로 시작';link.append(title,meta);return link;
+  const title=document.createElement('strong');title.textContent=service.label;const meta=document.createElement('small');meta.textContent=serviceStatusMeta(service);link.append(title,meta);return link;
 }
 function serviceCard(service){
   const link=document.createElement('a');link.className='service-card';link.href=service.launchUrl;
   const copy=document.createElement('div');const title=document.createElement('strong');title.textContent=service.label;
-  const path=document.createElement('small');path.textContent='바로 시작';
-  copy.append(title,path);const arrow=document.createElement('b');arrow.textContent='›';link.append(copy,arrow);return link;
+  const meta=document.createElement('div');meta.className='service-meta';const status=document.createElement('span');status.className='service-state state-'+(service.availability||'live');status.textContent=service.availabilityLabel||'운영';
+  const path=document.createElement('small');path.textContent=service.deliveryLabel||'바로 실행';meta.append(status,path);
+  copy.append(title,meta);const arrow=document.createElement('b');arrow.textContent='›';link.append(copy,arrow);return link;
 }
 function renderActiveCategory(){
   const host=$('servicePanel');host.replaceChildren();
