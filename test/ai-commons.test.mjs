@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import registry from '../config/capability-registry.json' with {type:'json'};
-import {AI_COMMONS_POLICY,adminIdeaView,canFinalPublish,canPromoteIdeaStatus,executionCatalogSnapshot,memberIdeaView,normalizeAiIdeaInput,publicRequestView,rankCommonCapabilities,rankPublicExecutionServices,suggestedIdeaState,userIdeaStatus} from '../ai-commons.js';
+import {AI_COMMONS_POLICY,adminIdeaView,canFinalPublish,canPromoteIdeaStatus,executionCatalogSnapshot,listExecutionServices,memberIdeaView,normalizeAiIdeaInput,publicRequestView,rankCommonCapabilities,rankPublicExecutionServices,resolveExecutionServiceEntry,suggestedIdeaState,userIdeaStatus} from '../ai-commons.js';
 
 test('AI Commons policy keeps complete free first value',()=>{
   assert.equal(AI_COMMONS_POLICY.surface,'/ai');
@@ -16,19 +16,27 @@ test('natural language intent ranks reusable capabilities',()=>{
   assert.ok(results.length>0);
   assert.ok(results.every(item=>!('providerId' in item)));
 });
-test('public execution catalog and ranked services hide capability internals',()=>{
+test('public execution catalog projects common engines and specialist basics without internal authority data',()=>{
   const catalog=executionCatalogSnapshot(registry);
   const ranked=rankPublicExecutionServices('가게 마케팅 홍보 콘텐츠 만들기',registry,5);
   const serialized=JSON.stringify({catalog,ranked});
-  assert.doesNotMatch(serialized,/capabilityId|providerId|actionTier|maturity/);
+  assert.doesNotMatch(serialized,/capabilityId|providerId|actionTier|maturity|targetUrl|specialistServiceId|membershipSite/);
   assert.ok(ranked.length>0);
-  assert.ok(ranked.every(item=>item.launchUrl.startsWith('https://ekodi.kr/ai/')));
+  assert.ok(ranked.every(item=>item.usableNow&&item.launchUrl.startsWith('https://ekodi.kr/ai/')));
   assert.ok(ranked.every(item=>['live','beta','integration-pending','read-only'].includes(item.availability)));
   assert.ok(ranked.every(item=>['direct','bridge'].includes(item.deliveryMode)));
   const services=catalog.categories.flatMap(category=>category.services);
   assert.equal(services.find(item=>item.id==='everyone-interpreter')?.deliveryMode,'direct');
   assert.equal(services.find(item=>item.id==='check-energy')?.availability,'read-only');
   assert.equal(services.find(item=>item.id==='run-business')?.availability,'integration-pending');
+  assert.equal(services.find(item=>item.id==='common-core-project')?.status,'preview');
+  assert.equal(services.find(item=>item.id==='specialist-bible')?.status,'ready');
+  assert.equal(services.find(item=>item.id==='specialist-management')?.status,'preview');
+  assert.equal(services.find(item=>item.id==='specialist-management')?.launchUrl,'');
+  const marketing=services.find(item=>item.id==='make-marketing');
+  assert.equal(marketing?.access?.basic,'free');
+  assert.equal(marketing?.access?.advanced,'subscription');
+  assert.equal(marketing?.access?.paidAvailable,true);
 });
 
 test('public and member request projections hide orchestration internals while admin keeps them',()=>{
@@ -86,17 +94,19 @@ test('Commons page loads browser assets only through the Worker-owned API bounda
   assert.match(html,/\.\/api\/commons\/style\?v=/);
   assert.match(html,/실행 서비스/);
   assert.match(html,/serviceTabs/);
-  assert.match(html,/분야별 3개/);
+  assert.match(html,/기본 기능 전체/);
   assert.match(html,/무엇을 하고 싶으세요\?/);
   assert.match(html,/개발 요청/);
   assert.match(client,/releasedRequests/);
   assert.match(client,/item\.status==='shared'/);
   assert.match(client,/\/api\/commons\/match/);
-  assert.match(client,/const FEATURED_PER_CATEGORY=3/);
+  assert.doesNotMatch(client,/FEATURED_PER_CATEGORY/);
   assert.match(client,/function serviceStatusMeta\(service\)/);
   assert.match(client,/availabilityLabel/);
   assert.match(client,/deliveryLabel/);
-  assert.match(client,/\.slice\(0,FEATURED_PER_CATEGORY\)/);
+  assert.match(client,/function serviceAccessMeta\(service\)/);
+  assert.match(client,/service\.access\?\.paidAvailable/);
+  assert.match(client,/service\.sourceKind==='specialist'/);
   assert.doesNotMatch(html,/\.\/commons\.js\?v=/);
   assert.doesNotMatch(html,/\.\/commons\.css\?v=/);
   assert.doesNotMatch(html,/api\/commons\/client\.js/);
@@ -135,14 +145,21 @@ test('admin build publishes the AI Commons governance module',()=>{
 });
 
 
-test('all public execution services stay under /ai/ and route through the AI worker',()=>{
+test('all executable service entries stay under /ai/ and advanced access uses central auth',()=>{
   const catalog=JSON.parse(fs.readFileSync(new URL('../config/ai-execution-services.json',import.meta.url),'utf8'));
   const worker=fs.readFileSync(new URL('../ai-control-worker.js',import.meta.url),'utf8');
-  for(const service of catalog.services){
-    assert.match(service.launchUrl,/^https:\/\/ekodi\.kr\/ai\//);
-  }
-  for(const path of ['/docs','/writing','/marketing','/support','/business','/community','/insurance','/energy']){
-    assert.match(worker,new RegExp(`'\\${path}'`));
-  }
-  assert.match(worker,/aiServiceEntry\(request\)/);
+  for(const service of catalog.services)assert.match(service.launchUrl,/^https:\/\/ekodi\.kr\/ai\//);
+  assert.match(worker,/resolveExecutionServiceEntry\(url\.pathname,capabilityRegistry\)/);
+  assert.match(worker,/service\.deliveryMode==='direct'/);
+  assert.match(worker,/advanced\.searchParams\.set\('site',paid\?/);
+  assert.match(worker,/advanced\.searchParams\.set\('review','1'\)/);
+  assert.match(worker,/advanced\.searchParams\.set\('plan','plus'\)/);
+  const marketing=resolveExecutionServiceEntry('/ai/marketing/',registry);
+  assert.equal(marketing?.id,'make-marketing');
+  assert.equal(marketing?.access?.paidAvailable,true);
+  const projected=listExecutionServices(registry).flatMap(category=>category.services);
+  const bible=projected.find(item=>item.id==='specialist-bible');
+  assert.ok(bible?.launchUrl.endsWith('/ai/use/specialist-bible/'));
+  assert.equal(resolveExecutionServiceEntry('/ai/use/specialist-bible/',registry)?.id,'specialist-bible');
+  assert.equal(resolveExecutionServiceEntry('/ai/interpreter/',registry)?.deliveryMode,'direct');
 });
