@@ -39,7 +39,8 @@ test('public person pages are a public projection of My EKODI, not a second admi
   assert.match(migration,/grant select \(handle, display_name, headline, bio, links, visibility, updated_at\)/);
   assert.doesNotMatch(migration,/grant select \([^\n]*person_id/);
   assert.match(userHeader,/운영공간/);
-  assert.match(userHeader,/isIndividualSite\(\)\?\`\$\{base\} · 운영공간\`:base/);
+  assert.match(userHeader,/data-ekodi-operating-space-label/);
+  assert.match(userHeader,/badge\.textContent='운영공간'/);
 });
 
 test('canonical apex preserves /@handle while handing the public page to My service ownership',async()=>{
