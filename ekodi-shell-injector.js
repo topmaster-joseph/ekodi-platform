@@ -193,7 +193,7 @@ export function injectEkodiTenantReadability(response,options={}){
     headers.set('content-security-policy',next);
   }
   headers.set(TENANT_READABILITY_HEADER,TENANT_READABILITY_VERSION);
-  const operatingSpace=Boolean(options?.operatingSpace);
+  const operatingSpace=options?.operatingSpace!==false;
   if(operatingSpace)headers.set(OPERATING_SPACE_LABEL_HEADER,OPERATING_SPACE_LABEL_VERSION);
   if(typeof HTMLRewriter!=='function')return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
   const headerAdopter=new TenantReadabilityHeaderAdopter();
