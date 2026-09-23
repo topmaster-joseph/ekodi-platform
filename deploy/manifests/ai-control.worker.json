@@ -78,6 +78,76 @@
         "rollbackHeaderExpect": []
       },
       {
+        "url": "https://ekodi.kr/ai/api/interpreter/style",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          ":root{",
+          ".interpreter-shell",
+          ".translator"
+        ],
+        "headerExpect": [
+          "x-ekodi-ai-asset: interpreter-v1",
+          "content-type: text/css"
+        ],
+        "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/api/interpreter/style",
+        "candidateStatuses": [
+          200
+        ],
+        "candidateExpect": [
+          ":root{",
+          ".interpreter-shell",
+          ".translator"
+        ],
+        "candidateHeaderExpect": [
+          "x-ekodi-ai-asset: interpreter-v1",
+          "content-type: text/css"
+        ],
+        "candidateForbid": [],
+        "rollbackStatuses": [
+          200,
+          404
+        ],
+        "rollbackExpect": [],
+        "rollbackHeaderExpect": []
+      },
+      {
+        "url": "https://ekodi.kr/ai/api/interpreter/client",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "SpeechRecognition||window.webkitSpeechRecognition",
+          "speechSynthesis",
+          "/ai/api/commons/config"
+        ],
+        "headerExpect": [
+          "x-ekodi-ai-asset: interpreter-v1",
+          "content-type: text/javascript"
+        ],
+        "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/api/interpreter/client",
+        "candidateStatuses": [
+          200
+        ],
+        "candidateExpect": [
+          "SpeechRecognition||window.webkitSpeechRecognition",
+          "speechSynthesis",
+          "/ai/api/commons/config"
+        ],
+        "candidateHeaderExpect": [
+          "x-ekodi-ai-asset: interpreter-v1",
+          "content-type: text/javascript"
+        ],
+        "candidateForbid": [],
+        "rollbackStatuses": [
+          200,
+          404
+        ],
+        "rollbackExpect": [],
+        "rollbackHeaderExpect": []
+      },
+      {
         "url": "https://ekodi.kr/ai/api/commons/client",
         "statuses": [
           200
