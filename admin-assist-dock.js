@@ -115,10 +115,23 @@
     saveSessions();renderRail();
   }
 
+  function enhanceBootstrapExecution(){
+    const form=document.querySelector('.ekodi-assist-bootstrap-form');
+    if(!form||form.dataset.executionReady==='true')return;
+    const input=form.querySelector('input'),plus=form.querySelector('.ekodi-assist-bootstrap-plus'),send=form.querySelector('.ekodi-assist-bootstrap-send');
+    if(!input||!plus||!send)return;
+    const row=el('div','ekodi-assist-bootstrap-actions');
+    const label=el('label','ekodi-assist-bootstrap-target-label');
+    label.innerHTML='<span>실행</span><select id="ekodiAssistBootstrapTarget" class="ekodi-assist-bootstrap-target" aria-label="실행 대상"><option value="ekodi">EKODI</option><option value="chatgpt">ChatGPT</option><option value="claude">Claude</option><option value="gemini">Gemini</option><option value="qwen">Qwen</option><option value="multi">여러 AI</option></select>';
+    send.textContent='실행';send.setAttribute('aria-label','선택한 대상으로 실행');
+    form.prepend(input);row.append(plus,label,send);form.append(row);form.dataset.executionReady='true';
+  }
+
   function exposeBridge(){
+    enhanceBootstrapExecution();
     window.EKODIAdminAssist=Object.freeze({
       open:()=>{setOpen(true);setTab('ai',false);return true},
-      submit:text=>{setOpen(true);setTab('ai',false);return submitAi(text)},
+      submit:(text,target='ekodi')=>{if(target!=='ekodi')return handoffCommand(target,text);setOpen(true);setTab('ai',false);return submitAi(text)},
       handoff:(provider,text)=>handoffCommand(provider,text),
       ready:()=>Boolean(root),
     });
