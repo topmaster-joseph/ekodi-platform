@@ -61,9 +61,9 @@ using (
 );
 
 -- Explicitly document the intentional public SECURITY DEFINER exceptions.
-comment on function public.activity_submit_participation(text,text,text,text,text,integer,text,text,text,jsonb,text,text,text,text,boolean) is
+comment on function public.activity_submit_participation(text,text,text,text,text,integer,text,text,text,text,boolean,text,text,jsonb) is
   'Intentional public registration RPC. Validates published activity and privacy consent before resolving a participant.';
-comment on function public.mission_submit_event_application(text,text,text,text,text,integer,text,text,text,jsonb,text,text,text,text,boolean) is
+comment on function public.mission_submit_event_application(text,text,text,text,integer,text,text,text,boolean,boolean,text) is
   'Intentional public mission application RPC. Honeypot and privacy-consent checks precede the Activity submission.';
 comment on function public.current_ekodi_mcp_identity() is
   'Intentional SECURITY DEFINER exception: OAuth MCP access tokens execute as anon DB role but must pass EKODI client/audience claim checks.';
