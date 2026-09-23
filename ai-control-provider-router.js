@@ -1,3 +1,4 @@
+import {guardKnowledgeResponse} from './ai-knowledge-claim.js';
 import {guardOperationalResponse} from './ai-claim-integrity.js';
 import {buildExecutionPlan,buildOriginSynthesisPrompt,isOriginPreserved,resolveOriginResponseProvider,rolePrompt,summarizeRuns} from './ai-control-core.js';
 import {providerCostClass} from './ai-router-score.js';
@@ -148,10 +149,14 @@ export async function runExecutionPlan(env,task,onRun=async()=>{},nodeProviders=
   synthesisRun.finishedAt=new Date().toISOString();
   await onRun(synthesisRun,'finish');
   const allRuns=[...runs,{...synthesisRun,ok:synthesisRun.state==='completed'}];
+  const knowledgeIntegrity=guardKnowledgeResponse(synthesisRun.output||'',task,task?.knowledgeEvidence||task?.knowledge_evidence||[], {
+    safeStatus:'현재 확보된 출처만으로는 이 외부 사실을 검증된 정보로 단정할 수 없습니다. 최신·권위 있는 근거를 다시 확인해야 합니다.'
+  });
   const claimScope=clean(task?.claimScope||task?.target?.canonicalUrl||task?.target?.surface||task?.target?.service||'');
-  const claimIntegrity=guardOperationalResponse(synthesisRun.output||'',task?.claimEvidence||task?.evidence||{}, {
+  const claimIntegrity=guardOperationalResponse(knowledgeIntegrity.response,task?.claimEvidence||task?.evidence||{}, {
     claimScope,
     safeStatus:'현재 확인 가능한 실행 증거만으로는 완료·배포·정상 작동을 확정할 수 없습니다. EKODI가 권한 범위에서 실제 상태를 다시 검증해야 합니다.'
   });
-  return{runs:allRuns,summary:summarizeRuns(allRuns),finalResponse:claimIntegrity.response,responseProvider,originPreserved:isOriginPreserved(task,responseProvider),claimIntegrity,error:claimIntegrity.allowed?(synthesisRun.error||''):claimIntegrity.verdict};
+  const integrityAllowed=knowledgeIntegrity.allowed&&claimIntegrity.allowed;
+  return{runs:allRuns,summary:summarizeRuns(allRuns),finalResponse:claimIntegrity.response,responseProvider,originPreserved:isOriginPreserved(task,responseProvider),knowledgeIntegrity,claimIntegrity,error:integrityAllowed?(synthesisRun.error||''):(knowledgeIntegrity.allowed?claimIntegrity.verdict:knowledgeIntegrity.verdict)};
 }
