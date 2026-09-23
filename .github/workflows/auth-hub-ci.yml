@@ -43,9 +43,9 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq '/auth-bootstrap.js?v=20260923-return-continuity-1' auth-site/index.html
-          grep -Fq '/auth-entry.js?v=20260923-return-continuity-1' auth-site/index.html
+          grep -Fq '/auth-entry.js?v=20260923-space-admin-return-2' auth-site/index.html
           grep -Fq 'dataset.seamlessSso' auth-site/auth-bootstrap.js
-          grep -Fq "./auth-router.js?v=20260923-return-continuity-1" auth-site/auth-entry.js
+          grep -Fq "./auth-router.js?v=20260923-space-admin-return-2" auth-site/auth-entry.js
           if grep -Eq '<script( [^>]*)?>[^<[:space:]]' auth-site/index.html; then
             echo 'Central auth HTML must not contain inline executable JavaScript.'
             exit 1
@@ -55,7 +55,7 @@ jobs:
           grep -Fq 'isRegistryUserService' auth-site/auth-router.js
           grep -Fq "site==='portal'||isRegistryUserService" auth-site/auth-router.js
           grep -Fq "business-auth.js?v=20260826-free-fallback-1" auth-site/auth-router.js
-          grep -Fq "client-auth.js?v=20260923-return-continuity-1" auth-site/auth-router.js
+          grep -Fq "client-auth.js?v=20260923-space-admin-return-2" auth-site/auth-router.js
           grep -Fq 'targetableWorkspaceSites' auth-site/auth-router.js
           grep -Fq 'privateClientSites' auth-site/auth-router.js
 
