@@ -11,11 +11,12 @@ const [agent, policyRaw, admin, windowsWorkflow] = await Promise.all([
 const policy = JSON.parse(policyRaw);
 
 test('Windows Agent enables only the canary-gated background browser while isolated desktop stays disabled', () => {
-  assert.match(agent, /\$AgentVersion = '2\.3\.2'/);
+  assert.match(agent, /\$AgentVersion = '2\.3\.3'/);
   assert.match(agent, /backgroundBrowserCanary = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /backgroundBrowser = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktopProbe = \$true/);
   assert.match(agent, /isolatedDesktopCanary = \[bool\]\(Get-IsolatedDesktopCanaryState\)\.verified/);
+  assert.match(agent, /isolatedDesktopGuestCanary = \[bool\]\(Get-IsolatedDesktopGuestCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktop = \$false/);
   assert.match(agent, /desktopInput = \$false/);
 });
@@ -36,6 +37,7 @@ test('Agent status and admin UI expose non-disruptive readiness without enabling
   assert.match(agent, /backgroundBrowserReady = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktopProbeAvailable = \$true/);
   assert.match(agent, /isolatedDesktopCanaryVerified = \[bool\]\(Get-IsolatedDesktopCanaryState\)\.verified/);
+  assert.match(agent, /isolatedDesktopGuestCanaryVerified = \[bool\]\(Get-IsolatedDesktopGuestCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktopReady = \$false/);
   assert.match(agent, /minimizedWindowCountsAsIsolation = \$false/);
   assert.match(admin, /사용자 화면 보호가 기본입니다/);
@@ -99,5 +101,18 @@ test('headless Hyper-V canary never unlocks isolated desktop execution', () => {
   assert.match(agent, /userInputInjection = \$false/);
   assert.match(agent, /sessionVmRemoved = -not \[bool\]\(Get-VM/);
   assert.match(agent, /sessionDiskRemoved = -not \(Test-Path -LiteralPath \$sessionDisk\)/);
+  assert.doesNotMatch(agent, /isolatedDesktop = \$true/);
+});
+
+
+test('guest runtime proof remains networkless, credentialless and non-interactive', () => {
+  assert.match(agent, /computer\.desktop\.guest\.canary/);
+  assert.match(agent, /offline-differencing-vhdx-task-and-receipt|Write-EkodiGuestRuntimeTask/);
+  assert.match(agent, /guest\.runtime\.probe/);
+  assert.match(agent, /noNetworkAdapter/);
+  assert.match(agent, /noActiveNetwork/);
+  assert.match(agent, /interactiveDesktopUsed/);
+  assert.match(agent, /credentialCollection/);
+  assert.match(agent, /hostProfileMounted/);
   assert.doesNotMatch(agent, /isolatedDesktop = \$true/);
 });
