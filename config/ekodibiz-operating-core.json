@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "official_entity": {
+    "key": "ekodibiz",
+    "name_ko": "에코디비즈",
+    "name_en": "EKODIBIZ",
+    "role": "legal_and_operating_umbrella"
+  },
+  "principles": {
+    "stable_core": true,
+    "replaceable_ai": true,
+    "portable_data": true,
+    "ai_optional_for_core_operation": true,
+    "cloud_first": true,
+    "free_tier_first": true,
+    "production_changes_via_staging": true
+  },
+  "division_model": {
+    "add_on_demand": true,
+    "shared_identity": true,
+    "shared_data_core": true,
+    "shared_admin": true,
+    "separate_public_surfaces_allowed": true
+  },
+  "initial_divisions": [
+    {
+      "code": "BOOKS",
+      "name_ko": "에코디북스",
+      "name_en": "EKODI BOOKS",
+      "status": "active",
+      "domain_hint": "books.ekodi.kr"
+    },
+    {
+      "code": "LAB",
+      "name_ko": "에코디랩",
+      "name_en": "EKODI LAB",
+      "status": "active",
+      "domain_hint": "lab.ekodi.kr",
+      "note": "공식 기업부설연구소 인정 전에는 연구사업부/브랜드로 운영"
+    },
+    {
+      "code": "TRADE",
+      "name_ko": "에코디트레이드",
+      "name_en": "EKODI TRADE",
+      "status": "active",
+      "domain_hint": "trade.ekodi.kr"
+    },
+    {
+      "code": "MARKETING",
+      "name_ko": "에코디마케팅",
+      "name_en": "EKODI MARKETING",
+      "status": "active",
+      "domain_hint": "marketing.ekodi.kr"
+    },
+    {
+      "code": "AI",
+      "name_ko": "에코디AI",
+      "name_en": "EKODI AI",
+      "status": "planned",
+      "domain_hint": "ai.ekodi.kr"
+    }
+  ],
+  "record_taxonomy": [
+    "decision",
+    "activity",
+    "finance",
+    "document",
+    "contract",
+    "customer",
+    "partner",
+    "publication",
+    "trade",
+    "marketing",
+    "research",
+    "system"
+  ],
+  "ai_action_policy": {
+    "auto": ["classify", "summarize", "index", "health_check", "backup_manifest"],
+    "execute_then_report": ["internal_report", "draft", "data_cleanup", "internal_notification"],
+    "approval_required": ["payment", "contract_commitment", "external_send", "tax_filing", "public_release", "destructive_delete"]
+  }
+}
