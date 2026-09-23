@@ -126,13 +126,13 @@ jobs:
           $commands = @(
             'power.always_on','power.presentation','power.normal','power.restore','lock.resume_off','lock.resume_on','autologon.open',
             'diagnostics.collect','network.diagnose','printers.diagnose','startup.scan','startup.disable','startup.restore',
-            'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary','computer.browser.execute',
+            'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary','computer.browser.execute','computer.desktop.probe',
             'remote_desktop.recovery.enable','remote_desktop.recovery.disable','remote_desktop.recovery.run'
           )
           foreach ($command in $commands) {
             if (-not $content.Contains("'$command'")) { throw "Missing allowlisted command: $command" }
           }
-          foreach ($guard in @('arbitraryShell = $false','screenCapture = $false','credentialCollection = $false','backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified','isolatedDesktop = $false')) {
+          foreach ($guard in @('arbitraryShell = $false','screenCapture = $false','credentialCollection = $false','backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified','isolatedDesktopProbe = $true','isolatedDesktop = $false')) {
             if (-not $content.Contains($guard)) { throw "Missing privacy guard: $guard" }
           }
           if ($content -match '(?i)Restart-Computer|GetAsyncKeyState|SetWindowsHookEx|CopyFromScreen|GetClipboard') { throw 'Forbidden remote-control behavior found.' }
@@ -176,6 +176,22 @@ jobs:
             ('- User input injection: ' + $proof.userInputInjection),
             ('- Mutation mode: ' + $proof.mutationMode)
           ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+      - name: Probe EKODI isolated desktop backend without activation
+        shell: pwsh
+        run: |
+          $path = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
+          . $path
+          $probe = Get-IsolatedDesktopBackendProbe
+          if (-not $probe.ok) { throw 'Isolated desktop backend probe failed.' }
+          if ($probe.mode -ne 'isolated-desktop-backend-probe') { throw 'Unexpected desktop probe mode.' }
+          if ($probe.provider -ne 'ekodi-native-remote-computer') { throw 'Desktop probe provider must remain EKODI-native.' }
+          if ($probe.routingPolicy -ne 'EKODI-VIRTUALIZATION-ROUTING-001') { throw 'Desktop probe routing policy evidence missing.' }
+          if ($probe.backendPolicy -ne 'EKODI-ISOLATED-DESKTOP-BACKEND-001') { throw 'Desktop backend policy evidence missing.' }
+          if ($probe.windowsSandboxAcceptedForActivation) { throw 'Foreground Windows Sandbox must not activate non-disruptive desktop execution.' }
+          if ($probe.sharedInteractiveDesktop -or $probe.userInputInjection -or $probe.clipboardShared -or $probe.credentialCollection) { throw 'Desktop probe weakened foreground privacy boundary.' }
+          if ($probe.headlessBackendReady -and $probe.recommendedBackend -ne 'hyper-v-ekodi-base') { throw 'A ready headless backend must resolve to the EKODI Hyper-V base.' }
+          if (-not $probe.headlessBackendReady -and $probe.gapReason -notin @('native-capability-unavailable','native-capability-not-production-ready','required-capability-not-yet-implemented','native-capacity-or-runtime-failure')) { throw 'Missing allowed native capability gap classification.' }
+          Write-Host "Isolated desktop probe OK: backend=$($probe.recommendedBackend) ready=$($probe.headlessBackendReady) gap=$($probe.gapReason)"
       - name: Verify power and lock command mapping without changing runner settings
         shell: pwsh
         run: |

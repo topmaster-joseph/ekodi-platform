@@ -7,6 +7,7 @@ const DEVICES_PATH = '/api/control/devices';
 const SELF_UPDATE = 'agent.self_update';
 const BROWSER_CANARY = 'computer.browser.canary';
 const BROWSER_EXECUTE = 'computer.browser.execute';
+const DESKTOP_PROBE = 'computer.desktop.probe';
 const DEFAULT_TARGET_WAIT_MS = 120_000;
 const DEFAULT_COMMAND_WAIT_MS = 240_000;
 const DEFAULT_POLL_MS = 5_000;
@@ -208,6 +209,83 @@ export function evaluateBrowserWorker({ device, commandId, issuedAt, expectedVer
   };
 }
 
+export function evaluateDesktopProbe({ device, commandId, issuedAt, expectedVersion }) {
+  if (!device) return { done:false, reason:'device_missing' };
+  const command = commandFor(device, commandId);
+  if (!command) return { done:false, reason:'command_not_visible' };
+  if (['failed','cancelled'].includes(command.status)) {
+    return { done:true, ok:false, error:`Native isolated desktop probe failed: ${String(command.result?.message || command.status).slice(0, 500)}` };
+  }
+  if (command.status !== 'succeeded') return { done:false, reason:command.status || 'pending' };
+
+  const proof = command.result?.desktopProbe || {};
+  const allowedGap = new Set([
+    '',
+    'native-capability-unavailable',
+    'native-capability-not-production-ready',
+    'required-capability-not-yet-implemented',
+    'native-capacity-or-runtime-failure',
+  ]);
+  const proofOk = (
+    proof.ok === true &&
+    proof.mode === 'isolated-desktop-backend-probe' &&
+    proof.provider === 'ekodi-native-remote-computer' &&
+    proof.routingPolicy === 'EKODI-VIRTUALIZATION-ROUTING-001' &&
+    proof.backendPolicy === 'EKODI-ISOLATED-DESKTOP-BACKEND-001' &&
+    String(proof.agentVersion || '') === expectedVersion &&
+    proof.windowsSandboxAcceptedForActivation === false &&
+    proof.sharedInteractiveDesktop === false &&
+    proof.userInputInjection === false &&
+    proof.clipboardShared === false &&
+    proof.credentialCollection === false &&
+    allowedGap.has(String(proof.gapReason || ''))
+  );
+  if (!proofOk) return { done:true, ok:false, error:'Isolated desktop probe did not satisfy the native non-disruptive backend contract.' };
+  if (proof.headlessBackendReady === true && proof.recommendedBackend !== 'hyper-v-ekodi-base') {
+    return { done:true, ok:false, error:'Ready isolated desktop backend did not resolve to the EKODI Hyper-V base.' };
+  }
+  if (device.status !== 'online') return { done:false, reason:'device_not_online_yet' };
+  if (String(device.agentVersion || '') !== expectedVersion) return { done:false, reason:'agent_version_drift' };
+  if (device.capabilities?.isolatedDesktopProbe !== true) return { done:false, reason:'desktop_probe_capability_not_projected' };
+  if (device.capabilities?.isolatedDesktop === true) {
+    return { done:true, ok:false, error:'Isolated desktop execution became active before verified headless backend execution proof.' };
+  }
+  if (time(device.lastSeenAt) < Math.max(time(issuedAt), time(command.completedAt))) {
+    return { done:false, reason:'post_desktop_probe_heartbeat_not_fresh_yet' };
+  }
+
+  return {
+    done:true, ok:true,
+    summary:{
+      expectedVersion,
+      status:device.status,
+      lastSeenAt:device.lastSeenAt,
+      commandCompletedAt:command.completedAt || null,
+      probeProjected:true,
+      isolatedDesktopExecutionStillFailClosed:true,
+      proof:{
+        virtualizationFirmwareEnabled:proof.virtualizationFirmwareEnabled === true,
+        hyperVState:String(proof.hyperVState || ''),
+        hyperVPowerShellAvailable:proof.hyperVPowerShellAvailable === true,
+        baseVmPresent:proof.baseVmPresent === true,
+        windowsSandboxState:String(proof.windowsSandboxState || ''),
+        windowsSandboxPresent:proof.windowsSandboxPresent === true,
+        windowsSandboxForegroundOnly:true,
+        windowsSandboxAcceptedForActivation:false,
+        recommendedBackend:String(proof.recommendedBackend || ''),
+        headlessBackendReady:proof.headlessBackendReady === true,
+        isolatedDesktopActivationReady:proof.isolatedDesktopActivationReady === true,
+        gapReason:String(proof.gapReason || ''),
+        sharedInteractiveDesktop:false,
+        userInputInjection:false,
+        clipboardShared:false,
+        credentialCollection:false,
+        checkedAt:proof.checkedAt || null,
+      },
+    },
+  };
+}
+
 async function requestJson(token, pathname, init = {}) {
   const headers = new Headers(init.headers || {});
   headers.set('authorization', `Bearer ${token}`);
@@ -301,6 +379,12 @@ async function run() {
     device => evaluateBrowserWorker({device, commandId:browserCommand.id, issuedAt:browserCommand.issuedAt, expectedVersion}),
   );
 
+  const desktopProbeCommand = await issueCommand(token, target.id, DESKTOP_PROBE);
+  const desktopProbeVerification = await waitForEvaluation(
+    token, target.id, commandWaitMs, pollMs,
+    device => evaluateDesktopProbe({device, commandId:desktopProbeCommand.id, issuedAt:desktopProbeCommand.issuedAt, expectedVersion}),
+  );
+
   const summary = {
     ok:true,
     verifiedAt:new Date().toISOString(),
@@ -308,6 +392,7 @@ async function run() {
     update:{ commandType:SELF_UPDATE, issuedAt:updateCommand.issuedAt, verification:updateVerification },
     backgroundBrowserCanary:{ commandType:BROWSER_CANARY, issuedAt:canaryCommand.issuedAt, verification:canaryVerification },
     backgroundBrowserWorker:{ commandType:BROWSER_EXECUTE, issuedAt:browserCommand.issuedAt, verification:browserVerification },
+    isolatedDesktopProbe:{ commandType:DESKTOP_PROBE, issuedAt:desktopProbeCommand.issuedAt, verification:desktopProbeVerification },
     cutover:{
       preVerification:{browserWorkerActivated:false},
       browserWorkerActivated:true,

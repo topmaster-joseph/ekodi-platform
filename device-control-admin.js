@@ -102,7 +102,7 @@
       'startup.disable': '시작프로그램 해제', 'startup.restore': '시작프로그램 복원', 'maintenance.temp_cleanup': '임시파일 정리',
       'updates.scan': '업데이트 확인', 'updates.install': '업데이트 설치', 'profile.workstation.apply': 'EKODI 업무환경',
       'profile.workstation.restore': '업무환경 복원', 'agent.self_update': 'Agent 업데이트', 'computer.browser.canary': 'BG Browser Canary',
-      'computer.agent.status': 'Agent 상태', 'computer.system.read': '시스템 상태', 'computer.process.list': '프로세스 보기',
+      'computer.agent.status': 'Agent 상태', 'computer.system.read': '시스템 상태', 'computer.process.list': '프로세스 보기', 'computer.desktop.probe': '격리 데스크톱 점검',
     };
     return labels[type] || type;
   }
@@ -271,6 +271,7 @@
     actions.className = 'device-inline-actions device-remote-actions';
     actions.append(
       makeActionButton(device, 'computer.agent.status', 'Agent 상태', 'ghost', {}, !capability(device, 'agentStatus')),
+      makeActionButton(device, 'computer.desktop.probe', '격리 데스크톱 점검', 'ghost', {}, !capability(device, 'isolatedDesktopProbe')),
       makeActionButton(device, 'computer.system.read', '시스템 상태', 'ghost', {}, !capability(device, 'computerRead')),
       makeActionButton(device, 'computer.process.list', '프로세스 보기', 'secondary', {}, !capability(device, 'processRead')),
     );
@@ -286,7 +287,7 @@
 
     const agentCard = document.createElement('div');
     agentCard.className = 'device-remote-summary-card';
-    agentCard.innerHTML = `<small>Agent · 사용자 화면 보호</small><strong>${escapeHtml(agent?.version || device.agentVersion || '확인 전')}</strong><span>${agent ? `작업 ${escapeHtml(agent.taskState || 'unknown')} · Shell ${agent.persistentShell ? '열림' : '차단'} · BG Canary ${device.capabilities?.backgroundBrowserCanary ? '통과' : '대기'} · Browser Worker ${agent.backgroundBrowserReady ? '준비' : '대기'} · Isolated Desktop ${agent.isolatedDesktopReady ? '준비' : '대기'}` : '“Agent 상태”로 최신 상태를 확인하세요.'}</span>`;
+    agentCard.innerHTML = `<small>Agent · 사용자 화면 보호</small><strong>${escapeHtml(agent?.version || device.agentVersion || '확인 전')}</strong><span>${agent ? `작업 ${escapeHtml(agent.taskState || 'unknown')} · Shell ${agent.persistentShell ? '열림' : '차단'} · BG Canary ${device.capabilities?.backgroundBrowserCanary ? '통과' : '대기'} · Browser Worker ${agent.backgroundBrowserReady ? '준비' : '대기'} · Desktop Probe ${agent.isolatedDesktopProbeAvailable ? '가능' : '대기'} · Isolated Desktop ${agent.isolatedDesktopReady ? '준비' : '대기'}` : '“Agent 상태”로 최신 상태를 확인하세요.'}</span>`;
 
     const systemCard = document.createElement('div');
     systemCard.className = 'device-remote-summary-card';

@@ -49,6 +49,7 @@ jobs:
           node --test test/device-agent-production-verification.test.mjs test/non-disruptive-device-agent-contract.test.mjs test/background-browser-canary-contract.test.mjs
           grep -Fq "agent.self_update" scripts/verify-device-agent-production.mjs
           grep -Fq "computer.browser.canary" scripts/verify-device-agent-production.mjs
+          grep -Fq "computer.desktop.probe" scripts/verify-device-agent-production.mjs
           grep -Fq "browserWorkerActivated:false" scripts/verify-device-agent-production.mjs
           grep -Fq "nativeServiceReady:false" scripts/verify-device-agent-production.mjs
           grep -Fq "https://ekodi.kr" scripts/verify-device-agent-production.mjs
@@ -137,7 +138,7 @@ jobs:
           echo "E2E_AUTH_DB_ID=$auth_db" >> "$GITHUB_ENV"
           echo 'Short-lived production-authenticated Device Agent verification session issued.'
 
-      - name: Update one real Agent and run non-disruptive browser canary
+      - name: Update one real Agent, verify native browser, and probe isolated desktop
         env:
           DEVICE_TARGET_WAIT_MS: '120000'
           DEVICE_COMMAND_WAIT_MS: '300000'

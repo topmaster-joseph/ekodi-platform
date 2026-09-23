@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-ISOLATED-DESKTOP-BACKEND-001",
+  "status": "enforced-contract",
+  "owner": "ekodi-orchestrator",
+  "nativeProvider": "ekodi-native-remote-computer",
+  "routingPolicy": "config/virtualization-routing-policy.json",
+  "purpose": "Select and verify an EKODI-owned non-disruptive isolated desktop backend without using the user's interactive desktop.",
+  "requirements": {
+    "foregroundUserSessionProtected": true,
+    "sharedInteractiveDesktopForbidden": true,
+    "minimizedWindowIsIsolation": false,
+    "userInputInjectionForbidden": true,
+    "clipboardSharingForbidden": true,
+    "hostCredentialCollectionForbidden": true,
+    "headlessOrNonInteractiveBackendRequired": true,
+    "boundedLeaseRequired": true,
+    "ephemeralGuestStateRequired": true,
+    "machineReadableProofRequired": true
+  },
+  "backends": [
+    {
+      "id": "hyper-v-ekodi-base",
+      "kind": "vm",
+      "priority": 1,
+      "acceptedForActivation": true,
+      "requirements": [
+        "Microsoft-Hyper-V-All enabled",
+        "VirtualizationFirmwareEnabled",
+        "Hyper-V PowerShell module",
+        "EKODI-Isolated-Base VM present"
+      ],
+      "headless": true,
+      "notes": "Preferred Windows native isolated-desktop backend. The base VM must be EKODI-owned and separately verified before session execution is enabled."
+    },
+    {
+      "id": "windows-sandbox",
+      "kind": "sandbox",
+      "priority": 2,
+      "acceptedForActivation": false,
+      "requirements": [
+        "Containers-DisposableClientVM enabled",
+        "WindowsSandbox.exe present"
+      ],
+      "headless": false,
+      "notes": "May be detected for capability planning but is not accepted as the normal non-disruptive backend because launching Windows Sandbox opens a foreground UI."
+    }
+  ],
+  "activation": {
+    "isolatedDesktopCapabilityDefault": false,
+    "probeCommand": "computer.desktop.probe",
+    "executionCommand": "computer.desktop.session.execute",
+    "executionCommandMustRemainDisabledUntilVerifiedHeadlessBackend": true,
+    "externalFallbackForbiddenWhenVerifiedNativeBackendReady": true,
+    "externalFallbackRequiresRoutingPolicyEvidence": true
+  },
+  "gapClassification": {
+    "noVirtualizationFirmware": "native-capability-unavailable",
+    "hyperVDisabled": "native-capability-not-production-ready",
+    "baseVmMissing": "required-capability-not-yet-implemented",
+    "runtimeFailure": "native-capacity-or-runtime-failure"
+  }
+}

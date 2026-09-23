@@ -10,7 +10,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = '2.3.0'
+$AgentVersion = '2.3.1'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -1192,6 +1192,102 @@ function Invoke-BackgroundBrowserWorker($Payload) {
   return @{ message = 'EKODI 자체 Background Browser Worker가 사용자 화면과 분리된 읽기 전용 작업을 완료했습니다.'; browserWorker = $proof }
 }
 
+function Get-WindowsOptionalFeatureStateSafe([string]$Name) {
+  try {
+    $feature = Get-WindowsOptionalFeature -Online -FeatureName $Name -ErrorAction Stop
+    return [string]$feature.State
+  } catch {
+    return 'unknown'
+  }
+}
+
+function Get-IsolatedDesktopBackendProbe {
+  $virtualizationFirmwareEnabled = $false
+  try {
+    $processors = @(Get-CimInstance Win32_Processor -ErrorAction Stop)
+    if ($processors.Count -gt 0) {
+      $virtualizationFirmwareEnabled = (@($processors | Where-Object { $_.VirtualizationFirmwareEnabled -eq $true }).Count -gt 0)
+    }
+  } catch { }
+
+  $hyperVState = Get-WindowsOptionalFeatureStateSafe 'Microsoft-Hyper-V-All'
+  $sandboxState = Get-WindowsOptionalFeatureStateSafe 'Containers-DisposableClientVM'
+  $hyperVPowerShellAvailable = [bool](Get-Command Get-VM -ErrorAction SilentlyContinue)
+  $baseVmPresent = $false
+  if ($hyperVPowerShellAvailable) {
+    try {
+      $baseVm = Get-VM -Name 'EKODI-Isolated-Base' -ErrorAction Stop
+      $baseVmPresent = ($null -ne $baseVm)
+    } catch { }
+  }
+
+  $sandboxPath = Join-Path $env:WINDIR 'System32\WindowsSandbox.exe'
+  $windowsSandboxPresent = Test-Path -LiteralPath $sandboxPath
+  $hyperVEnabled = ($hyperVState -eq 'Enabled')
+  $sandboxEnabled = ($sandboxState -eq 'Enabled')
+  $headlessBackendReady = (
+    $virtualizationFirmwareEnabled -and
+    $hyperVEnabled -and
+    $hyperVPowerShellAvailable -and
+    $baseVmPresent
+  )
+
+  $recommendedBackend = 'none'
+  if ($headlessBackendReady) {
+    $recommendedBackend = 'hyper-v-ekodi-base'
+  } elseif ($sandboxEnabled -and $windowsSandboxPresent) {
+    $recommendedBackend = 'windows-sandbox-detected-not-activation-eligible'
+  }
+
+  $gapReason = ''
+  if (-not $headlessBackendReady) {
+    if (-not $virtualizationFirmwareEnabled) {
+      $gapReason = 'native-capability-unavailable'
+    } elseif (-not $hyperVEnabled -or -not $hyperVPowerShellAvailable) {
+      $gapReason = 'native-capability-not-production-ready'
+    } elseif (-not $baseVmPresent) {
+      $gapReason = 'required-capability-not-yet-implemented'
+    } else {
+      $gapReason = 'native-capacity-or-runtime-failure'
+    }
+  }
+
+  return @{
+    ok = $true
+    mode = 'isolated-desktop-backend-probe'
+    provider = 'ekodi-native-remote-computer'
+    routingPolicy = 'EKODI-VIRTUALIZATION-ROUTING-001'
+    backendPolicy = 'EKODI-ISOLATED-DESKTOP-BACKEND-001'
+    agentVersion = $AgentVersion
+    virtualizationFirmwareEnabled = [bool]$virtualizationFirmwareEnabled
+    hyperVState = $hyperVState
+    hyperVPowerShellAvailable = [bool]$hyperVPowerShellAvailable
+    baseVmName = 'EKODI-Isolated-Base'
+    baseVmPresent = [bool]$baseVmPresent
+    windowsSandboxState = $sandboxState
+    windowsSandboxPresent = [bool]$windowsSandboxPresent
+    windowsSandboxForegroundOnly = $true
+    windowsSandboxAcceptedForActivation = $false
+    recommendedBackend = $recommendedBackend
+    headlessBackendReady = [bool]$headlessBackendReady
+    isolatedDesktopActivationReady = [bool]$headlessBackendReady
+    sharedInteractiveDesktop = $false
+    userInputInjection = $false
+    clipboardShared = $false
+    credentialCollection = $false
+    gapReason = $gapReason
+    checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+  }
+}
+
+function Invoke-IsolatedDesktopBackendProbe {
+  $probe = Get-IsolatedDesktopBackendProbe
+  return @{
+    message = $(if ($probe.headlessBackendReady) { 'EKODI 자체 격리 데스크톱용 headless Hyper-V 백엔드가 준비되어 있습니다.' } else { 'EKODI 자체 격리 데스크톱 백엔드 상태를 확인했습니다. 실행 권한은 검증 전까지 비활성 상태입니다.' })
+    desktopProbe = $probe
+  }
+}
+
 function Get-RemoteAgentStatus {
   $taskState = 'unknown'
   try {
@@ -1210,6 +1306,7 @@ function Get-RemoteAgentStatus {
     foregroundUserSessionProtected = $true
     backgroundBrowserCanaryVerified = [bool](Get-BackgroundBrowserCanaryState).verified
     backgroundBrowserReady = [bool](Get-BackgroundBrowserCanaryState).verified
+    isolatedDesktopProbeAvailable = $true
     isolatedDesktopReady = $false
     minimizedWindowCountsAsIsolation = $false
   }
@@ -1281,6 +1378,7 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'computer.system.read' { return @{ message = '원격 컴퓨터 시스템 상태를 읽었습니다.'; system = Get-SystemSnapshot } }
     'computer.process.list' { return @{ message = '원격 컴퓨터 프로세스 목록을 읽었습니다.'; processes = Get-RemoteProcessList } }
     'computer.agent.status' { return @{ message = 'EKODI Native Remote Agent 상태를 읽었습니다.'; agent = Get-RemoteAgentStatus } }
+    'computer.desktop.probe' { return Invoke-IsolatedDesktopBackendProbe }
     'network.diagnose' { return @{ message = '네트워크 진단을 완료했습니다.'; network = Get-NetworkDiagnostic } }
     'printers.diagnose' { return @{ message = '프린터와 인쇄 대기열 진단을 완료했습니다.'; printers = Get-PrinterDiagnostic } }
     'startup.scan' { return @{ message = '시작 프로그램 목록을 확인했습니다.'; startup = Get-StartupDiagnostic } }
@@ -1381,7 +1479,7 @@ function Send-Heartbeat($Config) {
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
       networkDiagnostics = $true; printerDiagnostics = $true; workstationProfile = $true; protocolLaunch = $true
       computerRead = $true; processRead = $true; agentStatus = $true
-      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktop = $false
+      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktop = $false
       desktopCapture = $false; desktopInput = $false
       arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
     }
