@@ -1,0 +1,64 @@
+name: Deploy Community Legacy Alias
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'legacy-community-alias-worker.js'
+      - 'wrangler.community-alias.toml'
+      - 'config/retire-public-subdomains-wave1.json'
+      - '.github/workflows/deploy-community-alias.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-community-legacy-alias-production
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.127.1'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate alias-only boundary
+        run: |
+          set -euo pipefail
+          node --check legacy-community-alias-worker.js
+          grep -Fq 'community.ekodi.kr' wrangler.community-alias.toml
+          grep -Fq 'ekodi-community-legacy-alias' wrangler.community-alias.toml
+          grep -Fq "CANONICAL_PREFIX='/community'" legacy-community-alias-worker.js
+          ! grep -Fq '"label": "community"' config/retire-public-subdomains-wave1.json
+
+  production:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Deploy read-only compatibility alias
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.community-alias.toml
+      - name: Verify legacy hostname redirects to canonical Community
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -D /tmp/community-alias.headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://community.ekodi.kr/' || true)
+          [[ "$code" == '308' ]]
+          grep -Eiq '^location:[[:space:]]*https://ekodi\.kr/community/?[[:space:]]*$' /tmp/community-alias.headers
+          connect_code=$(curl -sS -D /tmp/community-alias-connect.headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://community.ekodi.kr/connect/' || true)
+          [[ "$connect_code" == '308' ]]
+          grep -Eiq '^location:[[:space:]]*https://ekodi\.kr/community/connect/?[[:space:]]*$' /tmp/community-alias-connect.headers
