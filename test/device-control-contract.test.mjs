@@ -80,7 +80,7 @@ test('autologon stays local and never sends a Windows password to EKODI', () => 
 });
 
 test('native remote computer provider exposes bounded observe-only host commands', () => {
-  for (const command of ['computer.system.read','computer.process.list','computer.agent.status']) {
+  for (const command of ['computer.system.read','computer.process.list','computer.agent.status','computer.desktop.probe']) {
     const escaped = command.replaceAll('.', '\\.');
     assert.match(api, new RegExp(`'${escaped}'[^\\n]*risk: 'observe'`));
     assert.match(agent, new RegExp(`'${escaped}'`));
@@ -91,6 +91,7 @@ test('native remote computer provider exposes bounded observe-only host commands
   assert.match(agent, /directHostMutation = \$false/);
   assert.match(agent, /backgroundBrowserCanary = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /backgroundBrowser = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
+  assert.match(agent, /isolatedDesktopProbe = \$true/);
   assert.match(agent, /isolatedDesktop = \$false/);
   assert.match(agent, /foregroundUserSessionProtected = \$true/);
   assert.match(agent, /minimizedWindowCountsAsIsolation = \$false/);
@@ -137,7 +138,7 @@ test('one-click device protocol is bounded to EKODI enrollment and official API'
 });
 
 test('existing registered devices upgrade transactionally and preserve registration', () => {
-  assert.match(agent, /\$AgentVersion = '2\.3\.0'/);
+  assert.match(agent, /\$AgentVersion = '2\.3\.1'/);
   assert.match(agent, /Invoke-AgentUpgradeTransaction/);
   assert.match(agent, /Assert-AgentCandidate/);
   assert.match(agent, /New-AgentUpgradeSnapshot/);
@@ -286,4 +287,14 @@ test('self-update completes the command before a safe Agent process restart', ()
   assert.match(agent, /if \(\$script:RestartAfterCommand\) \{ break \}/);
   assert.match(agent, /\$restart = \[bool\]\$script:RestartAfterCommand/);
   assert.match(agent, /if \(\$restart\)[\s\S]*Start-AgentProcess/);
+});
+
+
+test('native isolated desktop probe is observe-only and does not activate session execution', () => {
+  assert.match(api, /'computer\.desktop\.probe': \{ risk: 'observe' \}/);
+  assert.match(api, /'computer\.desktop\.probe': 'isolatedDesktopProbe'/);
+  assert.match(api, /summary\.desktopProbe/);
+  assert.match(agent, /'computer\.desktop\.probe' \{ return Invoke-IsolatedDesktopBackendProbe \}/);
+  assert.match(agent, /isolatedDesktop = \$false/);
+  assert.doesNotMatch(agent, /'computer\.desktop\.session\.execute'/);
 });
