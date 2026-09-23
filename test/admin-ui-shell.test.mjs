@@ -37,6 +37,10 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.equal(adminShell.includes('#ekodiAdminLocaleWrap'),true);
   assert.equal(adminShell.includes('#ekodiAdminLocale'),true);
   assert.equal(adminShell.includes('const VERSION=2'),true);
+  assert.match(adminShell,/position:sticky!important/);
+  assert.match(adminShell,/#pageTitle\{display:block!important/);
+  assert.doesNotMatch(adminShell,/ekodi-admin-header-title-hidden\{display:none/);
+  assert.match(adminShell,/parentElement\?\.hidden\)node\.parentElement\.hidden=false/);
 
   assert.equal(adminRuntime.includes('function removeLocaleControl()'),true);
   assert.equal(adminRuntime.includes('function installLocaleControl()'),false);
@@ -48,6 +52,9 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.equal(adminRegistry.includes("{ id: 'books', group: 'content'"),true);
   assert.equal(adminRegistry.includes("{ id: 'devotional', group: 'content'"),true);
   assert.equal(adminSidebar.includes("primary-sidebar-tabs-v3"),true);
+  assert.match(adminSidebar,/nav\[data-ekodi-admin-nav-mode="primary"\] > \.nav\{display:none!important\}/);
+  assert.match(adminSidebar,/const closeDrawer = \(\) =>/);
+  assert.match(adminSidebar,/menuButton\.addEventListener\('click',toggleDrawer\)/);
   assert.equal(adminSidebar.includes("display:flex!important;align-items:center;gap:14px"),true);
   assert.equal(adminSidebar.includes("globals.querySelector(`:scope>.${DETAILS_CLASS}`)?.remove()"),true);
   assert.equal(adminDesign.includes('background:#0b1f36!important'),true);
