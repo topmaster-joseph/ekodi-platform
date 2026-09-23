@@ -1,5 +1,5 @@
 {
-  "version": 86,
+  "version": 87,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -1827,13 +1827,18 @@
       {
         "url": "https://ekodi.kr/pgm/admin",
         "statuses": [
-          302
+          200
         ],
         "redirect": "manual",
         "headerExpect": [
-          "location: https://ekodi.kr/admin/sites/workspace?source=pgm",
-          "x-ekodi-route: pgm-admin-handoff",
-          "cache-control: no-store"
+          "x-ekodi-route: workspace-admin",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "expect": [
+          "EKODI Workspace Admin",
+          "workspace-admin.js",
+          "data-ekodi-admin-layout=\"two-level\""
         ],
         "rollbackVerify": false
       },
