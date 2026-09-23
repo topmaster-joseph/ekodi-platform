@@ -57,6 +57,14 @@ test('Shared Site router serves /pgm with CSS MIME, redirects the old URL, and s
   assert.equal(legacy.headers.get('location'),'https://ekodi.kr/pgm?x=1');
   assert.equal(legacy.headers.get('x-ekodi-route'),'pgm-canonical');
 
+  const slash=await platformRouter.fetch(new Request('https://ekodi.kr/pgm/'),env,{});
+  assert.equal(slash.status,308);
+  assert.equal(slash.headers.get('location'),'https://ekodi.kr/pgm');
+
+  const legacySlash=await platformRouter.fetch(new Request('https://ekodi.kr/pyeonggongmok/'),env,{});
+  assert.equal(legacySlash.status,308);
+  assert.equal(legacySlash.headers.get('location'),'https://ekodi.kr/pgm');
+
   const legacyAdmin=await platformRouter.fetch(new Request('https://ekodi.kr/pyeonggongmok/admin'),env,{});
   assert.equal(legacyAdmin.status,308);
   assert.equal(legacyAdmin.headers.get('location'),'https://ekodi.kr/pgm/admin');
