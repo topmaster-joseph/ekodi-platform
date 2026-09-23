@@ -131,7 +131,7 @@
     enhanceBootstrapExecution();
     window.EKODIAdminAssist=Object.freeze({
       open:()=>{setOpen(true);setTab('ai',false);return true},
-      submit:(text,target='ekodi')=>{if(target!=='ekodi')return handoffCommand(target,text);setOpen(true);setTab('ai',false);return submitAi(text)},
+      submit:text=>{setOpen(true);setTab('ai',false);return submitAi(text)},
       handoff:(provider,text)=>handoffCommand(provider,text),
       ready:()=>Boolean(root),
     });
