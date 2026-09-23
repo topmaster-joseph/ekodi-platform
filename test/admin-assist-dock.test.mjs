@@ -155,10 +155,10 @@ test('command execution target sits below the prompt and external handoff stays 
     read('admin-conversation-workbench.css'),
   ]);
   assert.match(dock,/id="ekodiAssistCommand"[\s\S]*id="ekodiAssistExecutionTarget"/);
-  assert.match(bootstrap,/placeholder="명령어를 입력하세요"[\s\S]*id="ekodiAssistBootstrapTarget"/);
+  assert.match(bootstrap,/placeholder="에코디와 대화하기"/);
+  assert.match(dock,/id="ekodiAssistBootstrapTarget"/);
   for(const value of ['ekodi','chatgpt','claude','gemini','qwen','multi']){
     assert.match(dock,new RegExp(`value="${value}"`));
-    assert.match(bootstrap,new RegExp(`value="${value}"`));
   }
   assert.match(dock,/handoff:\(provider,text\)=>handoffCommand\(provider,text\)/);
   assert.match(dock,/EXTERNAL_SECRET_RE/);
