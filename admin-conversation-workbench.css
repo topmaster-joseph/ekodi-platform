@@ -545,7 +545,7 @@ html body.admin-compact .ekodi-assist-bootstrap-form[data-execution-ready="true"
   gap:7px!important;
   min-height:94px!important;
   padding:9px 10px!important;
-  border-radius:20px!important;
+  border-radius:30px!important;
 }
 html body.admin-compact .ekodi-assist-bootstrap-form[data-execution-ready="true"]>input{
   width:100%!important;
