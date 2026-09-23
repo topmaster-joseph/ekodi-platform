@@ -351,6 +351,21 @@
         "scripts/**/*e2e*.mjs",
         "test/**"
       ]
+    },
+    {
+      "id": "CAPABILITY-001",
+      "area": "capability-service-creation",
+      "title": "Capability before new user-facing service",
+      "status": "active",
+      "sourcePointer": "/capabilityFirstServiceCreationPolicy",
+      "impactPaths": [
+        "ekodi-service-manifest.js",
+        "service-registry.json",
+        "config/capability-registry.json",
+        "config/capability-foundry.json",
+        "config/service-creation-evidence.json",
+        "scripts/validate-capability-first-service-creation.mjs"
+      ]
     }
   ]
 }

@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.23.0
+# EKODI Platform Constitution v1.24.0
 
 Effective: 2026-09-23
 
@@ -45,6 +45,17 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Production application mutation remains verified immutable promotion only. Agent task workspaces may prepare and verify candidates but may not directly mutate production.
 - Shared-before-dedicated, capability-first reuse and no-speculative-scale remain binding. v1.8 does not justify infrastructure expansion without measured demand, sustainable funding or a documented security/legal/reliability requirement.
 - Machine-readable authority is `governance/architecture/sovereign-autonomous-operations.v1.json`; cross-cutting surface policy is `config/sovereign-surface-policy.json`.
+
+## 1C. Capability Before Service Constitution
+- EKODI accumulates and verifies reusable capabilities before creating or registering a new user-facing service. A useful idea, learned pattern or discovered need does not by itself justify another service.
+- Every new user-facing service follows: **existing Capability search → Capability gap analysis → Foundry module creation when needed → synthetic Sample Service validation → repeated verification → real demand confirmation → Super Administrator packaging review → service registration**.
+- Existing Capability reuse is mandatory to evaluate first. When a Capability gap exists, the missing ability is built and verified in the Capability Foundry before it is packaged as a user service.
+- A new service requires at least **three distinct verified synthetic sample runs** before packaging review. Sample success proves technical composability only; it does not by itself prove that a service should exist.
+- Service demand must be supported by an explicit user request, measured recurring need, or a documented security/legal/reliability requirement. Speculative service creation is forbidden.
+- Automatic creation of a user-facing service by AI, Learning Loop, Discovery Engine, Foundry or Orchestrator is forbidden. Final packaging approval belongs to the EKODI Platform Super Administrator.
+- Services already registered at the adoption of v1.24.0 are grandfathered only as a fixed baseline. Expanding that grandfather list requires another constitutional amendment and may not be used to bypass the evidence gate.
+- A new service outside the grandfathered baseline without governed creation evidence is a CI failure. A new independent deployment boundary must additionally pass the sustainable boundary-creation gate.
+- Machine-readable authority: `governance/constitution/constitution.json` -> `capabilityFirstServiceCreationPolicy`. Evidence registry: `config/service-creation-evidence.json`. Enforcement: `scripts/validate-capability-first-service-creation.mjs`.
 
 ## 2. Domain Constitution
 - The apex `ekodi.kr` is the canonical public ecosystem entry point and canonical host for user-operated public spaces.
