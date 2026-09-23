@@ -18,7 +18,7 @@ test('critical central auth JavaScript cannot remain stale in the browser or edg
   }
   assert.match(authRouterWorker, /AUTH_CRITICAL_ASSETS\.has\(stripped\)\?'no-store':'public, max-age=300'/);
   assert.match(authIndex, /auth-bootstrap\.js\?v=20260923-return-continuity-1/);
-  assert.match(authIndex, /auth-entry\.js\?v=20260923-return-continuity-1/);
+  assert.match(authIndex, /auth-entry\.js\?v=20260923-space-admin-return-2/);
 });
 
 test('central auth entry stays executable under restrictive CSP without inline JavaScript', () => {
@@ -26,7 +26,7 @@ test('central auth entry stays executable under restrictive CSP without inline J
   assert.match(authBootstrap, /dataset\.identityManage/);
   assert.match(authBootstrap, /dataset\.seamlessSso/);
   assert.match(authBootstrap, /dataset\.adminDirectBridge/);
-  assert.match(authEntry, /import\('\.\/auth-router\.js\?v=20260923-return-continuity-1'\)/);
+  assert.match(authEntry, /import\('\.\/auth-router\.js\?v=20260923-space-admin-return-2'\)/);
   assert.match(authEntry, /dataset\.authLoopBlocked/);
   const authCsp = authRouterWorker.match(/const AUTH_CSP=\[[\s\S]*?\]\.join\('; '\);/)?.[0] || '';
   assert.ok(authCsp, 'AUTH_CSP block must remain present');
