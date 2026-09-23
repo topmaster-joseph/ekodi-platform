@@ -42,7 +42,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   const workspace=(standaloneMall?'ekodibiz':genericService?.[1]||root?.[1]||'ekodibiz').toLowerCase();
   const service=mall?'mall':(genericService?.[2]?.toLowerCase()||null);
   const MISSION_DEFAULT_ACTIVITY='260926-chuseok-open-table';
-  const defaultSection=workspace==='ekodimission'&&!service?'activities':'overview';
+  const defaultSection='overview';
   const rawSection=standaloneMall?.[1]||(genericService?.[3]||root?.[2]||defaultSection);
   const section=(rawSection==='channel-settings'?'channels':rawSection).toLowerCase();
   const CHANNEL_TARGETS=new Map((CHANNEL_CATALOG||[]).map(target=>[target.id,target]));

@@ -256,10 +256,19 @@ let fatal=null;
 const checks={authSiteMission:true,authReturnToExact:true};
 try{
   await page.goto(targetUrl,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.querySelector('#pageState')?.textContent?.includes('운영공간'));
+
+  checks.rootUrl=new URL(page.url()).pathname==='/ekodimission/admin';
+  checks.rootTitle=(await page.locator('#pageTitle').textContent())?.includes('운영 홈')||false;
+  const activityEntry=page.locator('#mainPanel a[href="/ekodimission/admin/activities"]').first();
+  await activityEntry.waitFor({state:'visible'});
+  checks.activityEntryVisible=await activityEntry.isVisible();
+  await activityEntry.click();
+  await page.waitForURL('**/ekodimission/admin/activities');
   await page.waitForSelector('#activityPicker');
   await page.waitForFunction(()=>document.querySelector('#pageState')?.textContent?.includes('신청자 관리'));
 
-  checks.url=new URL(page.url()).pathname==='/ekodimission/admin';
+  checks.url=new URL(page.url()).pathname==='/ekodimission/admin/activities';
   checks.title=(await page.locator('#pageTitle').textContent())?.includes('행사 · 신청자')||false;
   checks.activityPicker=await page.locator('#activityPicker').inputValue()===activityKey;
   checks.rowVisible=await page.getByText('운영검증 참가자',{exact:true}).isVisible();

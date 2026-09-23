@@ -11,6 +11,10 @@ test('Mission tenant-admin production E2E exercises the deployed Activity partic
   for(const marker of [
     "https://ekodi.kr",
     "/ekodimission/admin",
+    "/ekodimission/admin/activities",
+    "운영 홈",
+    "rootTitle",
+    "activityEntryVisible",
     "신청자 관리",
     "행사 · 신청자",
     "ekodi-workspace-admin-session",
