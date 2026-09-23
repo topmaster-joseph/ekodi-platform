@@ -42,6 +42,9 @@ const realms={
 const params=new URLSearchParams(location.search);
 const site=params.get('site')||'portal';
 const DIRECT_LOGIN=params.get('direct')==='1'&&params.get('manage')!=='1'&&params.get('review')!=='1';
+const PREOPENED_BRIDGE=DIRECT_LOGIN&&params.get('bridge')==='preopened';
+const GOOGLE_BRIDGE_ORIGIN=location.origin;
+if(PREOPENED_BRIDGE)document.documentElement.dataset.adminDirectBridge='1';
 const EXPECTED_ACCOUNT=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(params.get('expected_account')||'').trim())?String(params.get('expected_account')).trim().toLowerCase():'';
 const FORCE_ACCOUNT=params.get('force_account')==='1'&&Boolean(EXPECTED_ACCOUNT);
 const requestedWorkspaceRaw=String(params.get('workspace')||'').trim();
@@ -87,6 +90,46 @@ const RETURN_TO=safeReturn(params.get('return_to')||params.get('returnTo'));
 const $=id=>document.getElementById(id);
 const show=(id,on=true)=>$(id)?.classList.toggle('hide',!on);
 function notice(text,type=''){const el=$('authStatus');if(!el)return;el.textContent=text;el.className=`notice${type?` ${type}`:''}`;el.classList.remove('hide')}
+let preopenedBridgeWindow=null;
+let resolvePreopenedBridge=null;
+const preopenedBridgeReady=PREOPENED_BRIDGE?new Promise(resolve=>{resolvePreopenedBridge=resolve}):Promise.resolve(null);
+function newBridgeState(){return(crypto.randomUUID?.()||Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('')).replace(/[^a-zA-Z0-9._-]/g,'')}
+function waitForBridgeCredential(popup,challenge,state){
+  return new Promise((resolve,reject)=>{
+    let settled=false;
+    const finish=(error,data)=>{if(settled)return;settled=true;window.removeEventListener('message',onMessage);clearTimeout(timer);clearInterval(watch);try{if(!popup.closed)popup.close()}catch{};error?reject(error):resolve(data)};
+    const onMessage=event=>{if(event.origin!==GOOGLE_BRIDGE_ORIGIN||event.source!==popup)return;const data=event.data||{};if(data.type!=='ekodi-google-origin-bridge'||data.state!==state||data.nonce!==challenge.nonce||!data.credential)return;finish(null,data)};
+    window.addEventListener('message',onMessage);
+    const timer=setTimeout(()=>finish(Object.assign(new Error('google_bridge_timeout'),{code:'GOOGLE_BRIDGE_TIMEOUT'})),120000);
+    const watch=setInterval(()=>{try{if(popup.closed)finish(Object.assign(new Error('google_bridge_closed'),{code:'GOOGLE_BRIDGE_CLOSED'}))}catch{}},500);
+  })
+}
+async function waitForPreopenedBridge(timeoutMs=6000){
+  if(preopenedBridgeWindow)return preopenedBridgeWindow;
+  let timer=0;
+  try{return await Promise.race([preopenedBridgeReady,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Object.assign(new Error('google_preopened_bridge_not_ready'),{code:'GOOGLE_PREOPENED_BRIDGE_NOT_READY'})),timeoutMs)})])}
+  finally{if(timer)clearTimeout(timer)}
+}
+async function requestPreopenedGoogleCredential(challenge){
+  const popup=await waitForPreopenedBridge();
+  if(!popup)throw Object.assign(new Error('google_preopened_bridge_missing'),{code:'GOOGLE_PREOPENED_BRIDGE_NOT_READY'});
+  try{if(popup.closed)throw Object.assign(new Error('google_bridge_closed'),{code:'GOOGLE_BRIDGE_CLOSED'})}catch(error){if(error?.code)throw error}
+  const state=newBridgeState();
+  const pending=waitForBridgeCredential(popup,challenge,state);
+  popup.postMessage({type:'ekodi-google-origin-bridge-start',clientId:challenge.clientId,nonce:challenge.nonce,state},GOOGLE_BRIDGE_ORIGIN);
+  try{popup.focus()}catch{}
+  return pending
+}
+if(PREOPENED_BRIDGE){
+  window.addEventListener('message',event=>{
+    if(event.origin!==GOOGLE_BRIDGE_ORIGIN||!event.source)return;
+    const data=event.data||{};
+    if(data.type!=='ekodi-google-origin-bridge-ready')return;
+    preopenedBridgeWindow=event.source;
+    resolvePreopenedBridge?.(event.source);
+    resolvePreopenedBridge=null;
+  });
+}
 
 let createClient;
 try{
@@ -244,7 +287,19 @@ async function renderGoogle(){
   const host=$('googleButtonHost');host.replaceChildren();show('googleButtonHost',true);show('googleRetry',false);show('cancelSignedOut',false);
   $('serviceBadge').textContent='로그인';notice('Google 계정으로 계속해 주세요.');
   try{
-    const [challenge]=await Promise.all([identity('/challenge',{method:'POST'}),loadGoogleLibrary()]);
+    const challenge=await identity('/challenge',{method:'POST'});
+    if(PREOPENED_BRIDGE){
+      notice('Google 계정 선택창을 여는 중입니다.');
+      try{
+        const proof=await requestPreopenedGoogleCredential(challenge);
+        await handleCredential({credential:proof.credential},challenge);
+        return;
+      }catch(error){
+        console.warn('preopened Google bridge fallback',error);
+        document.documentElement.dataset.adminDirectBridge='fallback';
+      }
+    }
+    await loadGoogleLibrary();
     window.google.accounts.id.disableAutoSelect?.();
     window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_button:false,button_auto_select:false,ux_mode:'popup',context:'signin',...(EXPECTED_ACCOUNT?{login_hint:EXPECTED_ACCOUNT}:{}),callback:r=>void handleCredential(r,challenge)});
     window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340)),use_fedcm_for_button:true});
@@ -256,6 +311,7 @@ async function renderGoogle(){
     }else notice('처음 한 번만 Google 계정으로 본인을 확인합니다.');
   }catch(error){
     console.error('prepare central identity',error);
+    if(PREOPENED_BRIDGE)document.documentElement.dataset.adminDirectBridge='fallback';
     showRetry('Google 로그인을 준비하지 못했습니다. 다시 시도해 주세요.');
   }
 }
