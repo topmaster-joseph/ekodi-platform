@@ -11,9 +11,10 @@ const [agent, policyRaw, admin, windowsWorkflow] = await Promise.all([
 const policy = JSON.parse(policyRaw);
 
 test('Windows Agent enables only the canary-gated background browser while isolated desktop stays disabled', () => {
-  assert.match(agent, /\$AgentVersion = '2\.3\.0'/);
+  assert.match(agent, /\$AgentVersion = '2\.3\.1'/);
   assert.match(agent, /backgroundBrowserCanary = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /backgroundBrowser = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
+  assert.match(agent, /isolatedDesktopProbe = \$true/);
   assert.match(agent, /isolatedDesktop = \$false/);
   assert.match(agent, /desktopInput = \$false/);
 });
@@ -32,6 +33,7 @@ test('Agent status and admin UI expose non-disruptive readiness without enabling
   assert.match(agent, /foregroundUserSessionProtected = \$true/);
   assert.match(agent, /backgroundBrowserCanaryVerified = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /backgroundBrowserReady = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
+  assert.match(agent, /isolatedDesktopProbeAvailable = \$true/);
   assert.match(agent, /isolatedDesktopReady = \$false/);
   assert.match(agent, /minimizedWindowCountsAsIsolation = \$false/);
   assert.match(admin, /사용자 화면 보호가 기본입니다/);
@@ -68,4 +70,18 @@ test('Windows CI executes the EKODI-native browser runtime proof', () => {
   assert.match(windowsWorkflow, /virtualizationProvider -ne 'ekodi-native-remote-computer'/);
   assert.match(windowsWorkflow, /profileRemoved/);
   assert.match(windowsWorkflow, /mutationMode -ne 'read-only-static-surface'/);
+});
+
+
+test('isolated desktop backend probe keeps foreground Windows Sandbox out of activation', () => {
+  assert.match(agent, /computer\.desktop\.probe/);
+  assert.match(agent, /Microsoft-Hyper-V-All/);
+  assert.match(agent, /Containers-DisposableClientVM/);
+  assert.match(agent, /Get-VM -Name 'EKODI-Isolated-Base'/);
+  assert.match(agent, /windowsSandboxForegroundOnly = \$true/);
+  assert.match(agent, /windowsSandboxAcceptedForActivation = \$false/);
+  assert.match(agent, /isolatedDesktopActivationReady = \[bool\]\$headlessBackendReady/);
+  assert.equal(policy.nonDisruptiveExecution.isolatedDesktop.backendPolicy, 'config/isolated-desktop-backend-policy.json');
+  assert.equal(policy.nonDisruptiveExecution.isolatedDesktop.executionCapabilityDefault, false);
+  assert.equal(policy.nonDisruptiveExecution.isolatedDesktop.headlessBackendRequired, true);
 });
