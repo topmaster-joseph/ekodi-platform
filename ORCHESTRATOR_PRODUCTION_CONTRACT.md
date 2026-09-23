@@ -30,3 +30,8 @@ External AI clients submit intent and identity through an authorized EKODI entry
 ## Claim integrity
 
 `AI-CLAIM-INTEGRITY-001` is mandatory for every Orchestrator status/result. A worker or model report is an assertion, not authoritative state. The Orchestrator may publish material implementation, deployment, runtime, verification or completion claims only when a fresh claim receipt references authoritative evidence and the receipt scope covers the reported scope. Memory or a prior conversation cannot independently establish current operational state. Evidence for a single route or sample cannot be promoted into an ecosystem-wide claim. Unknown, contradictory, stale or scope-mismatched state remains non-success while authorized recovery and re-verification continue.
+
+
+## Knowledge claim integrity
+
+`AI-KNOWLEDGE-CLAIM-001` is mandatory for search, RAG, connected-source research and current external facts. Retrieval never equals verification. The Orchestrator must preserve provenance, temporal sensitivity, claim scope, contradiction state and citation tokens through final synthesis. Model output and conversation memory cannot independently prove an external fact. Stale, contradictory, low-authority or scope-mismatched evidence remains non-verified. High-impact facts require authoritative evidence, and material verified claims must remain traceable to the sources shown to the user.
