@@ -71,7 +71,7 @@ export async function resolveWorkspaceRoute(pathname,resolveBySlug){
 export function isWorkspaceAdminPathShape(pathname){
   const path=String(pathname||'');
   if(isForbiddenAdminAggregationPath(path))return false;
-  const match=/^\/([^/]+)\/(?:admin(?:\/[^/]+)?|[^/]+\/admin(?:\/[^/]+)?)\/?$/i.exec(path);
+  const match=/^\/([^/]+)\/(?:admin(?:\/[^/]+)*|[^/]+\/admin(?:\/[^/]+)*)\/?$/i.exec(path);
   if(match){const root=normalizeWorkspaceSlug(match[1]);if(isWorkspaceSlug(root)||SITE_OWNED_ADMIN_ROOTS.has(root))return true;}
   return false;
 }
