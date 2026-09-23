@@ -18,6 +18,7 @@ test('workspace admin uses the seven-axis Admin UI v3 shell',async()=>{
   for(const label of ['통합현황','서비스','사이트','사용자 · 권한','콘텐츠 · 운영','상태 · 배포','설정 · 기록'])assert.match(script,new RegExp(label));
   assert.match(script,/a\.dataset\.adminGroup=group\.id/);
   assert.match(script,/renderSecondaryNav\(activeGroup,role\)/);
+  assert.match(script,/if\(!role\)return group\.sections/);
   assert.match(script,/AbortSignal\.timeout\(10000\)/);
 });
 
@@ -33,6 +34,11 @@ test('Mission admin root stays on overview and applicant roster opens from its m
   assert.match(script,/data-checkin/);
   assert.match(script,/공개 행사 보기/);
   assert.match(script,/신청자 관리/);
+  assert.match(script,/WORKSPACE_RETURN_KEY='ekodi-workspace-admin-return'/);
+  assert.match(script,/rememberWorkspaceReturn/);
+  assert.match(script,/consumeWorkspaceReturn/);
+  assert.match(script,/workspaceLoginButton/);
+  assert.match(script,/location\.replace\(pendingReturn\)/);
   assert.doesNotMatch(script,/mountCommandHome|EKODITenantCommandHome/);
 });
 
