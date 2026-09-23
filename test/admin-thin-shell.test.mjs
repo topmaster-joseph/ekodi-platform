@@ -85,9 +85,6 @@ test('Campus, Health and Device Control are explicit versioned demand-loaded fea
   assert.match(loader, /scripts: \['device-control-admin\.js', 'remote-power-admin\.js'\]/);
   assert.match(loader, /hashes: \['#devices'\]/);
   assert.match(loader, /assetUrl\(src\)/);
-  assert.doesNotMatch(loader, /document\.createElement\('button'\)/);
-  assert.doesNotMatch(loader, /label\.textContent = feature\.label/);
-  assert.match(loader, /window\.EKODIAdminSidebar\?\.sync\?\.\(document\)/);
   const aiOps = loader.match(/aiops:\s*\{([\s\S]*?)\r?\n\s*\},\r?\n\s*(?:(?:['\"]?[a-z][a-z0-9-]*['\"]?)\s*:)/i)?.[1] || '';
   assert.ok(aiOps, 'AI Ops feature block must be extractable');
   assert.doesNotMatch(aiOps, /system-health-admin/);

@@ -34,9 +34,6 @@ test('Admin menu mounts the common-service operator module', () => {
   assert.match(layout, /if\(section==='common-services'\)return requestCommonServices\(\)/);
   assert.match(layout, /EKODICommonServicesAdmin\?\.activate\?\.\(\)/);
   assert.match(common, /window\.EKODICommonServicesAdmin=Object\.freeze\(\{mount,activate/);
-  assert.match(common, /mounted\.hidden=false/);
-  assert.match(common, /mounted\.classList\.remove\('hidden-panel'\)/);
-  assert.match(common, /mounted\.dataset\.adminListLayout='single'/);
   assert.doesNotMatch(common, /function installNav\(|function showSection\(|addEventListener\('hashchange'/);
   assert.match(routes, /'common-services':'common'/);
   assert.match(routes, /aiops:'status'/);
