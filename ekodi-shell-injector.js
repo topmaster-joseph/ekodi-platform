@@ -25,6 +25,7 @@ const TENANT_READABILITY_VERSION='v1';
 const SHELL_TENANT_READABILITY_STYLE=`${SHELL_ORIGIN}/user-ui-shell.css?tenant-readability=${TENANT_READABILITY_VERSION}`;
 const SHELL_MOBILE_HEADER_SCRIPT=`${SHELL_ORIGIN}/mobile-fixed-header.js?tenant-readability=${TENANT_READABILITY_VERSION}`;
 const ADMIN_BOOT_STYLE=`<style data-ekodi-admin-shell-boot>:where(.side-brand,.sidebar-brand,.admin-sidebar-brand,[data-ekodi-admin-sidebar-header],[data-ekodi-admin-brand]){display:none!important}</style>`;
+const ADMIN_DIRECT_GOOGLE_SCRIPT=`${SHELL_CSP_ORIGIN}/admin-direct-google.js?v=20260924-v1`;
 const SPECIAL_HOST_ALIASES=Object.freeze({
   'mall.ekodi.kr':'mall','mall.biz.ekodi.kr':'mall','trade.biz.ekodi.kr':'trade','pay.biz.ekodi.kr':'pay'
 });
@@ -100,9 +101,10 @@ class ShellHeadInjector{
     const surface=resolvedSurface(service,this.surface);
     const sharedStyle=INTERNAL_SURFACES.has(surface)?`<link rel="stylesheet" href="${SHELL_WORKSPACE_STYLE}" data-ekodi-workspace-style>`:'';
     const bootStyle=surfaceBootStyle(surface);
+    const adminDirectGoogle=surface==='admin'?`<script src="${ADMIN_DIRECT_GOOGLE_SCRIPT}" defer data-ekodi-admin-direct-google="v1"></script>`:'';
     const visualShellMode=isMyEkodi(service)?'':` data-ekodi-shell="off"`;
     const memberGate=this.memberGate==='service-owned'?'service-owned':'shared';
-    element.prepend(`${bootStyle}${sharedStyle}<script src="${SHELL_SCRIPT}" data-ekodi-service="${service}" data-ekodi-surface="${surface}" data-ekodi-member-gate="${memberGate}"${visualShellMode}></script>`,{html:true});
+    element.prepend(`${bootStyle}${sharedStyle}${adminDirectGoogle}<script src="${SHELL_SCRIPT}" data-ekodi-service="${service}" data-ekodi-surface="${surface}" data-ekodi-member-gate="${memberGate}"${visualShellMode}></script>`,{html:true});
   }
 }
 
