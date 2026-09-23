@@ -7,7 +7,7 @@ const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") || "";
 const OPENAI_MODEL = Deno.env.get("OPENAI_MODEL") || "";
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
-const allowedOrigins = new Set(["https://ekodi.kr", "https://community.ekodi.kr", "http://localhost:8788", "http://127.0.0.1:8788"]);
+const allowedOrigins = new Set(["https://ekodi.kr", "http://localhost:8788", "http://127.0.0.1:8788"]);
 
 const clip = (v: unknown, n: number) => String(v ?? "").trim().slice(0, n);
 const uniq = (values: unknown, max = 16) => [...new Set((Array.isArray(values) ? values : []).map(v => clip(v, 60)).filter(Boolean))].slice(0, max);
