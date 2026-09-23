@@ -74,6 +74,9 @@ test('global navigation remains synchronized to the active panel and opens an ax
 });
 
 test('global menu labels use readable contrast on the dark primary sidebar', () => {
+  assert.match(sidebar, /\.sidebar nav\[data-ekodi-admin-nav-mode="primary"\] > \.nav\{display:none!important\}/);
+  assert.match(sidebar, /\.sidebar nav\[data-ekodi-admin-nav-mode="primary"\] > \.admin-context-source\{display:none!important\}/);
+  assert.match(sidebar, /\.sidebar nav\[data-ekodi-admin-nav-mode="primary"\] > \.admin-global-navs\{display:grid!important\}/);
   assert.match(sidebar, /\.admin-global-nav\{[^}]*color:#dbe8f6!important/);
   assert.match(sidebar, /\.admin-global-nav\.active\{[^}]*background:#174b7b[^}]*color:#fff!important/);
   assert.match(sidebar, /\.admin-global-nav span\{color:inherit!important;opacity:1!important\}/);
