@@ -965,7 +965,7 @@ function Invoke-BackgroundBrowserWorker($Payload) {
   New-Item -ItemType Directory -Path $BrowserWorkerProfileRoot -Force | Out-Null
   $taskId = [guid]::NewGuid().ToString('N')
   $taskProfile = Join-Path $BrowserWorkerProfileRoot ("Task-" + $taskId)
-  $shotPath = Join-Path $taskProfile 'surface.png'
+  $shotPath = Join-Path $BrowserWorkerProfileRoot ("surface-" + $taskId + ".png")
   New-Item -ItemType Directory -Path $taskProfile -Force | Out-Null
 
   $proof = $null
@@ -1009,7 +1009,7 @@ function Invoke-BackgroundBrowserWorker($Payload) {
     [void]$shotStdoutTask.GetAwaiter().GetResult()
     $shotStderr = $shotStderrTask.GetAwaiter().GetResult()
     $screenshotExists = Test-Path -LiteralPath $shotPath
-    if ($shotProcess.ExitCode -ne 0 -or -not $screenshotExists) { throw 'background_browser_screenshot_failed' }
+    if ($shotProcess.ExitCode -ne 0 -or -not $screenshotExists) { $detail = if ($shotStderr) { $shotStderr.Substring(0, [Math]::Min(240, $shotStderr.Length)) } else { 'no-stderr' }; throw "background_browser_screenshot_failed:$($shotProcess.ExitCode):$detail" }
 
     $stderr = $shotStderr
     $shot = Get-Item -LiteralPath $shotPath
@@ -1046,13 +1046,18 @@ function Invoke-BackgroundBrowserWorker($Payload) {
       checkedAt = (Get-Date).ToUniversalTime().ToString('o')
       stderrSummary = $(if ($stderr) { $stderr.Substring(0, [Math]::Min(300, $stderr.Length)) } else { '' })
       profileRemoved = $false
+      screenshotArtifactRemoved = $false
     }
   } finally {
     Remove-Item -LiteralPath $taskProfile -Recurse -Force -ErrorAction SilentlyContinue
-    if ($proof) { $proof.profileRemoved = -not (Test-Path -LiteralPath $taskProfile) }
+    Remove-Item -LiteralPath $shotPath -Force -ErrorAction SilentlyContinue
+    if ($proof) {
+      $proof.profileRemoved = -not (Test-Path -LiteralPath $taskProfile)
+      $proof.screenshotArtifactRemoved = -not (Test-Path -LiteralPath $shotPath)
+    }
   }
 
-  if (-not $proof -or -not $proof.profileRemoved) { throw 'background_browser_profile_cleanup_failed' }
+  if (-not $proof -or -not $proof.profileRemoved -or -not $proof.screenshotArtifactRemoved) { throw 'background_browser_profile_cleanup_failed' }
   return @{ message = 'EKODI 자체 Background Browser Worker가 사용자 화면과 분리된 읽기 전용 작업을 완료했습니다.'; browserWorker = $proof }
 }
 
