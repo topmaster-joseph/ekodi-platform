@@ -254,7 +254,12 @@ const initialSection=explicitAdminSection();
 if(initialSection===COMMAND_HOME)activateCommandHome();
 else if(initialSection&&isInternal(initialSection))routeInternal();
 else if(initialSection==='sites')openSites();
-else if(initialSection)requestedSection=initialSection;
+else if(initialSection){
+  requestedSection=initialSection;
+  // This file is loaded post-auth and can mount after ekodi-admin-ready already fired.
+  // Restore the canonical direct URL immediately instead of depending on a one-shot event.
+  queueMicrotask(()=>{if(requestedSection!==initialSection)return;if(!activatePanel(initialSection))requestDemand(initialSection);});
+}
 else activateCommandHome();
 window.EKODIAdminPanels=Object.freeze({
   activate:section=>{
