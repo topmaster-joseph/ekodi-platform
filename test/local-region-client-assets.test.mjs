@@ -64,3 +64,12 @@ test('shared-site release ownership covers every local-region browser asset and 
     assert.ok(pkg.includes('node --check '+path),'static check missing '+path);
   }
 });
+
+
+test('regional admin HTML fails closed until authentication resolves',async()=>{
+  const page=await read('local-region-page.js');
+  assert.match(page,/data-region-auth-pending="1"/);
+  assert.match(page,/\[data-region-auth-pending="1"\] \.admin-header,\[data-region-auth-pending="1"\] main\{visibility:hidden\}/);
+  assert.match(page,/content:"관리자 로그인 확인 중"/);
+  assert.match(page,/data-region-capability/);
+});
