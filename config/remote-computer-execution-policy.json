@@ -81,7 +81,12 @@
         "sandbox"
       ],
       "sharedInteractiveDesktopForbidden": true,
-      "focusIsolationRequired": true
+      "focusIsolationRequired": true,
+      "backendPolicy": "config/isolated-desktop-backend-policy.json",
+      "probeCommand": "computer.desktop.probe",
+      "executionCapabilityDefault": false,
+      "headlessBackendRequired": true,
+      "windowsSandboxForegroundUiNotActivationEligible": true
     },
     "foregroundTakeover": {
       "automaticFallback": false,
@@ -134,7 +139,8 @@
     "allowedOperations": [
       "computer.agent.status",
       "computer.system.read",
-      "computer.process.list"
+      "computer.process.list",
+      "computer.desktop.probe"
     ],
     "processProjection": {
       "maximumItems": 20,
