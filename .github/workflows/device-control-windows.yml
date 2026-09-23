@@ -156,7 +156,27 @@ jobs:
           if ($proof.url -ne 'https://ekodi.kr/') { throw 'Native browser worker escaped canonical EKODI target.' }
           if ($proof.deviceProfile -ne 'desktop' -or $proof.viewportWidth -ne 1440 -or $proof.viewportHeight -ne 900) { throw 'Desktop viewport proof mismatch.' }
           if ($proof.contentBytes -le 0 -or $proof.screenshotBytes -le 0) { throw 'DOM or screenshot evidence missing.' }
-          if ($proof.contentSha256 -notmatch '^[a-f0-9]{64}      - name: Verify power and lock command mapping without changing runner settings
+          if ($proof.contentSha256.Length -ne 64 -or $proof.contentSha256 -match '[^a-f0-9]' -or $proof.screenshotSha256.Length -ne 64 -or $proof.screenshotSha256 -match '[^a-f0-9]') { throw 'Runtime evidence hashes are invalid.' }
+          if (-not $proof.dedicatedAutomationProfile -or -not $proof.ephemeralProfile -or -not $proof.profileRemoved) { throw 'Browser profile isolation proof failed.' }
+          if ($proof.activeUserProfileReused -or -not $proof.focusIsolated -or $proof.clipboardShared -or $proof.userInputInjection) { throw 'Foreground privacy isolation proof failed.' }
+          if ($proof.javascriptEnabled -or $proof.mutationMode -ne 'read-only-static-surface') { throw 'Initial Windows native browser lane must remain read-only.' }
+          @(
+            '## EKODI Windows Native Browser Runtime',
+            '',
+            ('- Provider: ' + $proof.virtualizationProvider),
+            ('- Mode: ' + $proof.mode),
+            ('- Browser: ' + $proof.browser),
+            ('- Target: ' + $proof.url),
+            ('- Viewport: ' + $proof.viewportWidth + 'x' + $proof.viewportHeight),
+            ('- DOM bytes: ' + $proof.contentBytes),
+            ('- Screenshot bytes: ' + $proof.screenshotBytes),
+            ('- Ephemeral profile removed: ' + $proof.profileRemoved),
+            ('- Foreground isolated: ' + $proof.focusIsolated),
+            ('- Clipboard shared: ' + $proof.clipboardShared),
+            ('- User input injection: ' + $proof.userInputInjection),
+            ('- Mutation mode: ' + $proof.mutationMode)
+          ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+      - name: Verify power and lock command mapping without changing runner settings
         shell: pwsh
         run: |
           $path = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
