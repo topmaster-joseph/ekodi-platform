@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.20.0
+# EKODI Platform Constitution v1.21.0
 
 Effective: 2026-09-23
 
@@ -98,6 +98,15 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Return targets are allowlisted trusted HTTPS EKODI/customer-owned destinations with credential-bearing URLs rejected. Authentication must preserve query context but never propagate reusable secrets in query parameters.
 - This rule applies to all current and future login adapters and is enforced by shared authentication routing tests and production system verification.
 - Machine-readable authority: `governance/constitution/constitution.json` -> `authenticationReturnContinuityPolicy` and `config/service-workspace-policy.json` -> `authenticationReturnPolicy`.
+
+## 3B. Canonical Human URL Query Hygiene Constitution
+- Every current and future EKODI human-facing public, user, authentication and administrator surface uses a canonical address consisting of the canonical path plus only query parameters required for the page's actual function.
+- Marketing and attribution parameters do not belong to the visible canonical address. On page navigation, EKODI removes `utm_*` and registered tracking keys such as `gclid`, `fbclid`, `msclkid`, `srsltid` and equivalent campaign identifiers.
+- Functional query context is preserved. Parameters such as `return_to`, OAuth `code`/`state`, search, filter, pagination and other route-required values must never be removed merely to make the URL look clean.
+- GET and HEAD human-surface requests are normalized at the shared edge before ordinary page routing. Shared Shell performs a browser-side `history.replaceState` cleanup as a fallback for compatible surfaces that bypass or predate the shared edge path.
+- API, webhook, MCP, health and static-asset routes are not rewritten by this human-surface rule. Tracking parameters never define EKODI identity, authorization, Workspace selection or permission state.
+- This rule applies equally to administrator and ordinary user pages, legacy human-entry aliases and all future EKODI human surfaces. Regression tests and production system verification must confirm both removal of tracking parameters and preservation of functional query context.
+- Machine-readable authority: `governance/constitution/constitution.json` -> `canonicalUrlQueryPolicy`.
 
 ## 4. Data and Storage Constitution
 - Structured core/operational truth lives in an EKODI-controlled database with tenant isolation and auditability.
