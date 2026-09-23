@@ -4,10 +4,12 @@ export const AI_CLAIM_INTEGRITY_POLICY = Object.freeze({
   id: 'AI-CLAIM-INTEGRITY-001',
   version: 1,
   verifiedVerdict: 'verified',
+  maxCurrentStateAgeSeconds: 900,
   materialOperationalTypes: Object.freeze([
     'implemented','merged','deployed','production-live','runtime-working',
     'verified','complete','all-surfaces-applied','ecosystem-wide-normal',
   ]),
+  broadScopeTypes: Object.freeze(['all-surfaces-applied','ecosystem-wide-normal']),
 });
 
 const KOREAN_SUCCESS_PATTERNS = Object.freeze([
@@ -22,12 +24,47 @@ const ENGLISH_SUCCESS_PATTERNS = Object.freeze([
   /\b(?:live\s+in\s+production|working\s+in\s+production|all\s+surfaces\s+(?:updated|applied|verified))\b/i,
 ]);
 
+const BROAD_SCOPE_PATTERNS = Object.freeze([
+  /(?:모든|전체|모두|전수)\s*(?:사용자|관리자|사이트|페이지|서비스|화면|경로|적용|반영|검증|정상)/i,
+  /\b(?:all|every)\s+(?:user|admin|site|page|service|surface|route)s?\b/i,
+  /\b(?:ecosystem[- ]wide|platform[- ]wide)\b/i,
+]);
+
 function text(value, max = 4000) {
   return String(value ?? '').trim().slice(0, max);
 }
 
 function list(value) {
   return Array.isArray(value) ? value : value ? [value] : [];
+}
+
+function epochMs(value) {
+  const parsed = Date.parse(text(value, 80));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function evidenceAgeSeconds(item, nowMs) {
+  const timestamp = epochMs(item.verifiedAt) ?? epochMs(item.observedAt);
+  if (timestamp === null) return Number.POSITIVE_INFINITY;
+  return Math.max(0, Math.floor((nowMs - timestamp) / 1000));
+}
+
+function isBroadScopeClaim(value = '') {
+  const input = text(value, 50000);
+  return BROAD_SCOPE_PATTERNS.some(pattern => pattern.test(input));
+}
+
+function broadScopeCovered(item = {}) {
+  if (AI_CLAIM_INTEGRITY_POLICY.broadScopeTypes.includes(item.claimType)) return true;
+  const scope = text(item.claimScope, 500).toLowerCase();
+  return ['all-surfaces','all-sites','ecosystem-wide','platform-wide','ekodi-ecosystem'].some(token => scope.includes(token));
+}
+
+function scopeMatches(item = {}, expectedScope = '') {
+  const expected = text(expectedScope, 500).toLowerCase();
+  if (!expected) return true;
+  const actual = text(item.claimScope, 500).toLowerCase();
+  return Boolean(actual) && actual === expected;
 }
 
 function sourceVerified(source = {}) {
@@ -57,15 +94,26 @@ export function normalizeClaimEvidence(value = {}) {
       evidenceSources: Object.freeze(list(item.evidence_sources || item.evidenceSources || item.sources || item.links).filter(Boolean)),
       observedAt: text(item.observed_at || item.observedAt, 80) || null,
       verifiedAt: text(item.verified_at || item.verifiedAt, 80) || null,
-      verifier: text(item.verifier, 160) || null,
+      verifier: text(item.verifier || item.independent_verifier || item.independentVerifier, 160) || null,
     })));
 }
 
-export function hasVerifiedOperationalEvidence(value = {}) {
-  return normalizeClaimEvidence(value).some(item =>
-    item.verified &&
-    (!item.claimType || AI_CLAIM_INTEGRITY_POLICY.materialOperationalTypes.includes(item.claimType))
-  );
+export function hasVerifiedOperationalEvidence(value = {}, options = {}) {
+  const nowMs = Number.isFinite(Number(options.nowMs)) ? Number(options.nowMs) : Date.now();
+  const expectedScope = text(options.claimScope, 500);
+  const broadScope = options.broadScope === true;
+  const evidence = normalizeClaimEvidence(value);
+
+  if (evidence.some(item => item.verdict === 'contradicted')) return false;
+
+  return evidence.some(item => {
+    if (!item.claimId || !item.verified || !item.verifier) return false;
+    if (item.claimType && !AI_CLAIM_INTEGRITY_POLICY.materialOperationalTypes.includes(item.claimType)) return false;
+    if (evidenceAgeSeconds(item, nowMs) > AI_CLAIM_INTEGRITY_POLICY.maxCurrentStateAgeSeconds) return false;
+    if (!scopeMatches(item, expectedScope)) return false;
+    if (broadScope && !broadScopeCovered(item)) return false;
+    return true;
+  });
 }
 
 export function buildClaimReceipt({
@@ -79,9 +127,14 @@ export function buildClaimReceipt({
   verifiedAt = '',
   verifier = '',
 } = {}) {
-  const now = new Date().toISOString();
+  const now = new Date();
+  const nowIso = now.toISOString();
   const normalizedSources = Object.freeze(list(evidenceSources).map(item => text(item, 1000)).filter(Boolean));
   const normalizedVerdict = text(verdict, 40).toLowerCase() || 'unknown';
+  const verifiedTimestamp = text(verifiedAt, 80) || (normalizedVerdict === 'verified' ? nowIso : null);
+  const observedTimestamp = text(observedAt, 80) || null;
+  const evidenceTimestampMs = epochMs(verifiedTimestamp) ?? epochMs(observedTimestamp);
+  const freshnessSeconds = evidenceTimestampMs === null ? null : Math.max(0, Math.floor((now.getTime() - evidenceTimestampMs) / 1000));
   return Object.freeze({
     schemaVersion: 1,
     policyId: AI_CLAIM_INTEGRITY_POLICY.id,
@@ -90,7 +143,7 @@ export function buildClaimReceipt({
       text(claimType, 80),
       text(claimScope, 500),
       text(claimText, 5000),
-      now,
+      nowIso,
     ].join('|')).digest('hex').slice(0, 24)}`,
     task_id: text(taskId, 160) || null,
     claim_type: text(claimType, 80).toLowerCase() || 'unknown',
@@ -98,17 +151,24 @@ export function buildClaimReceipt({
     claim_text_hash: crypto.createHash('sha256').update(text(claimText, 50000)).digest('hex'),
     verdict: normalizedVerdict,
     evidence_sources: normalizedSources,
-    observed_at: text(observedAt, 80) || null,
-    verified_at: text(verifiedAt, 80) || (normalizedVerdict === 'verified' ? now : null),
+    observed_at: observedTimestamp,
+    verified_at: verifiedTimestamp,
     verifier: text(verifier, 160) || null,
-    freshness_seconds: null,
+    freshness_seconds: freshnessSeconds,
   });
 }
 
 export function guardOperationalResponse(response = '', evidence = {}, options = {}) {
   const original = text(response, 50000);
   const operationalClaim = containsMaterialOperationalSuccessClaim(original);
-  const verified = hasVerifiedOperationalEvidence(evidence);
+  const broadScope = operationalClaim && isBroadScopeClaim(original);
+  const verified = operationalClaim
+    ? hasVerifiedOperationalEvidence(evidence, {
+        nowMs: options.nowMs,
+        claimScope: options.claimScope,
+        broadScope,
+      })
+    : false;
 
   if (!operationalClaim || verified) {
     return Object.freeze({
@@ -116,6 +176,7 @@ export function guardOperationalResponse(response = '', evidence = {}, options =
       verdict: operationalClaim ? 'verified' : 'not_material_operational_claim',
       response: original,
       operationalClaim,
+      broadScope,
       verifiedEvidence: verified,
     });
   }
@@ -125,9 +186,10 @@ export function guardOperationalResponse(response = '', evidence = {}, options =
 
   return Object.freeze({
     allowed: false,
-    verdict: 'unverified_operational_success_claim_blocked',
+    verdict: broadScope ? 'unverified_broad_scope_claim_blocked' : 'unverified_operational_success_claim_blocked',
     response: safeStatus,
     operationalClaim: true,
+    broadScope,
     verifiedEvidence: false,
   });
 }
