@@ -164,14 +164,17 @@ test('Personal users can enter personal-brand Marketing without a tenant or stor
   assert.match(worker,/mode=personal-brand/);
 });
 
-test('Production rollout preserves guarded My EKODI promotions',async()=>{
-  const workflow=await read('.github/workflows/deploy-my.yml');
+test('Production rollout preserves guarded My EKODI promotions and verifies the current return-routing contract',async()=>{
+  const [workflow,app]=await Promise.all([read('.github/workflows/deploy-my.yml'),read('my/app.js')]);
   assert.match(workflow,/has no deployments/);
   assert.match(workflow,/ekodi\.kr\/my\/health/);
   assert.match(workflow,/MY PLATFORMS/);
   assert.match(workflow,/one-time direct migration from staging-validated source/);
   assert.match(workflow,/Existing production .*satisfies.*My EKODI hub contract/);
   assert.match(workflow,/guarded-worker-release\.mjs/);
+  assert.match(app,/function misroutedServiceReturn\(\)/);
+  assert.equal((workflow.match(/misroutedServiceReturn/g)||[]).length,2);
+  assert.doesNotMatch(workflow,/misroutedWorkspaceAdminReturn/);
 });
 
 
