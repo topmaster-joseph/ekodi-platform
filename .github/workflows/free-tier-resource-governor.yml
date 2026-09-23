@@ -58,7 +58,7 @@ jobs:
           node --test test/free-tier-resource-governor.test.mjs test/free-tier-resource-collector.test.mjs test/free-tier-supabase-oidc-contract.test.mjs
 
   collect:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' || github.head_ref == 'ai/ekodi/free-tier-governor-first-proof-20260923'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
