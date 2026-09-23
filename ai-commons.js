@@ -1,4 +1,6 @@
 import executionCatalog from './config/ai-execution-services.json' with { type: 'json' };
+import ecosystemServices from './config/ecosystem-services.json' with { type: 'json' };
+import specialistPolicy from './config/specialist-ai-service-policy.json' with { type: 'json' };
 
 const LIMITS=Object.freeze({job:1200,problem:2000,outcome:1600,audience:600,currentWay:1200,request:1200});
 const normalize=value=>String(value??'').trim().toLocaleLowerCase('ko-KR');
@@ -6,7 +8,7 @@ const compact=value=>String(value??'').replace(/\s+/g,' ').trim();
 const tokenize=value=>[...new Set(normalize(value).split(/[^\p{L}\p{N}]+/u).filter(token=>token.length>=2))];
 
 export const AI_COMMONS_POLICY=Object.freeze({
-  version:'1.1.0',surface:'/ai',audience:'all-ekodi-users',freeMemberPrinciple:'complete-first-value',
+  version:'1.2.0',surface:'/ai',audience:'all-ekodi-users',freeMemberPrinciple:'complete-first-value',
   uxPrinciple:executionCatalog.principle,
   differentiation:'scale-speed-automation-advanced-capability',reuseFirst:true,directProductionPromotion:false,
   autoDevelopment:true,finalPublishAuthority:'super_admin',
@@ -51,28 +53,92 @@ const EXECUTION_DELIVERY_LABELS=Object.freeze({direct:'바로 실행',bridge:'�
 function executionAvailability(value){const key=String(value||'live');return EXECUTION_AVAILABILITY_LABELS[key]?key:'live';}
 function executionDeliveryMode(value){return String(value||'bridge')==='direct'?'direct':'bridge';}
 
+const DOMAIN_CATEGORY=Object.freeze({
+  core:'work',knowledge:'work',learning:'work',work:'work',support:'opportunity',creator:'creator',
+  business:'business',commerce:'business',trade:'business',finance:'life',insurance:'life',energy:'life',
+  device:'life',community:'community',ministry:'community',
+});
+const CAPABILITY_CATEGORY=Object.freeze({'core.interpreter':'communication','core.communication':'communication'});
+const SPECIALIST_CATEGORY=Object.freeze({bible:'community',life:'life',marketing:'business',energy:'life',author:'creator',support:'opportunity',delivery:'business',management:'business',publishing:'creator',edu:'work',money:'life',insurance:'life'});
+function safeServiceId(value=''){return String(value||'').trim().toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)}
+function aiLaunch(id){const key=safeServiceId(id);return key?`https://ekodi.kr/ai/use/${key}/`:''}
+function capabilityVisible(capability={}){const surfaces=Array.isArray(capability.surfaces)?capability.surfaces:[];return capability.actionTier!=='forbidden'&&(surfaces.includes('my')||surfaces.includes('showroom'))}
+function usableCapability(capability={}){return String(capability.maturity||'').startsWith('service-backed')||Boolean(capability.provider?.surface)}
+function categoryForCapability(capability={}){return CAPABILITY_CATEGORY[capability.id]||DOMAIN_CATEGORY[capability.domain]||'work'}
+function capabilityAvailability(capability={},usable=false){if(!usable)return'integration-pending';if(String(capability.maturity||'').includes('readonly'))return'read-only';return'live'}
+function specialistReady(service={}){return service.productionVerified===true&&['live','beta'].includes(String(service.status||''))}
+function specialistAvailability(service={},usable=false){if(!usable)return'integration-pending';return String(service.status||'')==='beta'?'beta':'live'}
+function serviceAccess(service={},usableNow=false){
+  if(!usableNow)return Object.freeze({basic:'preview',advanced:'unavailable',paidAvailable:false,loginRequiredForAdvanced:true});
+  const paidAvailable=service.paidAvailable===true;
+  return Object.freeze({basic:'free',advanced:paidAvailable?'subscription':'member',paidAvailable,loginRequiredForAdvanced:true});
+}
+function executionView(service={},extra={}){
+  const usableNow=extra.usableNow===true;
+  return Object.freeze({...service,...extra,usableNow,status:usableNow?'ready':'preview',access:serviceAccess({...service,...extra},usableNow)});
+}
+
 function serviceSearchText(service={},capability={}){
   return normalize([service.label,service.category,capability.name,capability.description,...(capability.tags||[])].join(' '));
 }
 export function listExecutionServices(registry={}){
   const capabilities=new Map((registry.capabilities||[]).map(item=>[item.id,item]));
+  const ecosystem=new Map((ecosystemServices.services||[]).map(item=>[item.id,item]));
   const categories=(executionCatalog.categories||[]).map(item=>({...item,services:[]}));const categoryMap=new Map(categories.map(item=>[item.id,item]));
-  for(const service of executionCatalog.services||[]){const capability=capabilities.get(service.capabilityId);if(!capability)continue;
-    const usable=String(capability.maturity||'').startsWith('service-backed')||Boolean(capability.provider?.surface);
-    if(!usable)continue;const view=Object.freeze({...service,description:String(capability.description||''),usableNow:true});categoryMap.get(service.category)?.services.push(view);}
-  return Object.freeze(categories.filter(item=>item.services.length).map(item=>Object.freeze({...item,services:Object.freeze(item.services)})));
+  const representedCapabilities=new Set();const representedSpecialists=new Set();
+  for(const service of executionCatalog.services||[]){
+    const capability=capabilities.get(service.capabilityId);if(!capability)continue;
+    representedCapabilities.add(service.capabilityId);if(service.specialistServiceId)representedSpecialists.add(service.specialistServiceId);
+    const usable=usableCapability(capability);const view=executionView(service,{
+      description:String(capability.description||''),usableNow:usable,sourceKind:service.sourceKind||'curated',
+      availability:service.availability||capabilityAvailability(capability,usable),deliveryMode:service.deliveryMode||'bridge',
+      targetUrl:String(service.targetUrl||canonicalLaunchUrl(capability)),
+    });categoryMap.get(service.category)?.services.push(view);
+  }
+  for(const capability of registry.capabilities||[]){
+    if(!capability||representedCapabilities.has(capability.id)||!capabilityVisible(capability))continue;
+    const id='common-'+safeServiceId(capability.id);const usable=usableCapability(capability);const category=categoryForCapability(capability);
+    const view=executionView({
+      id,category,label:String(capability.name||capability.id),capabilityId:capability.id,launchUrl:usable?aiLaunch(id):'',
+      targetUrl:canonicalLaunchUrl(capability),sourceKind:'common',membershipSite:'ai',availability:capabilityAvailability(capability,usable),deliveryMode:'bridge',
+    },{description:String(capability.description||''),usableNow:usable});
+    categoryMap.get(category)?.services.push(view);
+  }
+  for(const specialistId of specialistPolicy.coveredServiceIds||[]){
+    if(representedSpecialists.has(specialistId))continue;const specialist=ecosystem.get(specialistId);if(!specialist)continue;
+    const id='specialist-'+safeServiceId(specialistId);const category=SPECIALIST_CATEGORY[specialistId]||'work';const usable=specialistReady(specialist);
+    const view=executionView({
+      id,category,label:String(specialist.name||specialistId),launchUrl:usable?aiLaunch(id):'',targetUrl:String(specialist.url||''),
+      sourceKind:'specialist',specialistServiceId:specialistId,membershipSite:specialistId==='marketing'?'marketing':'ai',
+      paidAvailable:specialistId==='marketing',availability:specialistAvailability(specialist,usable),deliveryMode:'bridge',
+    },{description:String(specialist.descriptionKo||''),usableNow:usable});
+    categoryMap.get(category)?.services.push(view);
+  }
+  return Object.freeze(categories.filter(item=>item.services.length).map(item=>Object.freeze({...item,
+    services:Object.freeze(item.services.sort((a,b)=>Number(b.usableNow)-Number(a.usableNow)||a.label.localeCompare(b.label,'ko')))})));
 }
 export function rankExecutionServices(query,registry={},limit=5){
   const tokens=tokenize(query);const capabilities=new Map((registry.capabilities||[]).map(item=>[item.id,item]));const services=[];
-  for(const category of listExecutionServices(registry))for(const service of category.services){const capability=capabilities.get(service.capabilityId)||{};const haystack=serviceSearchText(service,capability);let score=0;
+  for(const category of listExecutionServices(registry))for(const service of category.services){if(!service.usableNow)continue;const capability=capabilities.get(service.capabilityId)||{};const haystack=serviceSearchText(service,capability);let score=0;
     for(const token of tokens){if(normalize(service.label).includes(token))score+=15;if(haystack.includes(token))score+=4;}if(score>0)services.push({...service,categoryLabel:category.label,score});}
   return services.sort((a,b)=>b.score-a.score||a.label.localeCompare(b.label,'ko')).slice(0,Math.max(1,Math.min(10,Number(limit)||5)));
 }
 export function publicExecutionServiceView(service={}){
   const availability=executionAvailability(service.availability);const deliveryMode=executionDeliveryMode(service.deliveryMode);
+  const access=service.access||serviceAccess(service,Boolean(service.usableNow));
   return Object.freeze({id:String(service.id||''),category:String(service.category||''),label:String(service.label||''),launchUrl:String(service.launchUrl||''),
-    description:String(service.description||''),usableNow:Boolean(service.usableNow),availability,availabilityLabel:EXECUTION_AVAILABILITY_LABELS[availability],
-    deliveryMode,deliveryLabel:EXECUTION_DELIVERY_LABELS[deliveryMode],...(service.categoryLabel?{categoryLabel:String(service.categoryLabel)}:{})});
+    description:String(service.description||''),usableNow:Boolean(service.usableNow),status:String(service.status||'preview'),sourceKind:String(service.sourceKind||'curated'),
+    availability,availabilityLabel:EXECUTION_AVAILABILITY_LABELS[availability],deliveryMode,deliveryLabel:EXECUTION_DELIVERY_LABELS[deliveryMode],
+    access:Object.freeze({basic:String(access.basic||'free'),advanced:String(access.advanced||'member'),paidAvailable:access.paidAvailable===true,loginRequiredForAdvanced:access.loginRequiredForAdvanced!==false}),
+    ...(service.categoryLabel?{categoryLabel:String(service.categoryLabel)}:{})});
+}
+export function resolveExecutionServiceEntry(pathname,registry={}){
+  const key=String(pathname||'/').replace(/^\/ai(?=\/|$)/,'').replace(/\/$/,'')||'/';
+  for(const category of listExecutionServices(registry))for(const service of category.services){
+    if(!service.launchUrl)continue;let candidate='';try{candidate=new URL(service.launchUrl).pathname.replace(/^\/ai(?=\/|$)/,'').replace(/\/$/,'')||'/';}catch{}
+    if(candidate===key)return service;
+  }
+  return null;
 }
 export function rankPublicExecutionServices(query,registry={},limit=5){
   return Object.freeze(rankExecutionServices(query,registry,limit).map(publicExecutionServiceView));
