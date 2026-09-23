@@ -9,6 +9,7 @@ const BROWSER_CANARY = 'computer.browser.canary';
 const BROWSER_EXECUTE = 'computer.browser.execute';
 const DESKTOP_PROBE = 'computer.desktop.probe';
 const DESKTOP_CANARY = 'computer.desktop.canary';
+const DESKTOP_GUEST_CANARY = 'computer.desktop.guest.canary';
 const DEFAULT_TARGET_WAIT_MS = 120_000;
 const DEFAULT_COMMAND_WAIT_MS = 240_000;
 const DEFAULT_POLL_MS = 5_000;
@@ -365,6 +366,95 @@ export function evaluateDesktopCanary({ device, commandId, issuedAt, expectedVer
   };
 }
 
+export function evaluateDesktopGuestCanary({ device, commandId, issuedAt, expectedVersion }) {
+  if (!device) return { done:false, reason:'device_missing' };
+  const command = commandFor(device, commandId);
+  if (!command) return { done:false, reason:'command_not_visible' };
+  if (['failed','cancelled'].includes(command.status)) {
+    return { done:true, ok:false, error:`Native isolated guest canary failed: ${String(command.result?.message || command.status).slice(0, 500)}` };
+  }
+  if (command.status !== 'succeeded') return { done:false, reason:command.status || 'pending' };
+
+  const proof = command.result?.desktopGuestCanary || {};
+  const hashOk = value => /^[a-f0-9]{64}$/.test(String(value || ''));
+  const proofOk = (
+    proof.ok === true &&
+    proof.mode === 'isolated-desktop-guest-runtime-canary' &&
+    proof.provider === 'ekodi-native-remote-computer' &&
+    proof.routingPolicy === 'EKODI-VIRTUALIZATION-ROUTING-001' &&
+    proof.backendPolicy === 'EKODI-ISOLATED-DESKTOP-BACKEND-001' &&
+    String(proof.agentVersion || '') === expectedVersion &&
+    String(proof.guestAgentVersion || '') === '1.0.0' &&
+    proof.backend === 'hyper-v-ekodi-base' &&
+    proof.sessionType === 'vm' &&
+    proof.taskType === 'guest.runtime.probe' &&
+    hashOk(proof.receiptSha256) &&
+    proof.executedAsSystem === true &&
+    proof.noNetworkAdapter === true &&
+    proof.noActiveNetwork === true &&
+    proof.interactiveDesktopUsed === false &&
+    proof.sharedInteractiveDesktop === false &&
+    proof.clipboardShared === false &&
+    proof.userInputInjection === false &&
+    proof.credentialCollection === false &&
+    proof.hostProfileMounted === false &&
+    proof.mutationScope === 'ephemeral-guest-only' &&
+    proof.vmReachedRunning === true &&
+    proof.heartbeatObserved === true &&
+    proof.networkAttached === false &&
+    proof.ephemeralDifferencingDisk === true &&
+    proof.baseDiskWriteForbidden === true &&
+    proof.sessionVmRemoved === true &&
+    proof.sessionDiskRemoved === true
+  );
+  if (!proofOk) return { done:true, ok:false, error:'Isolated guest canary did not satisfy the credentialless offline task/receipt proof contract.' };
+  if (device.status !== 'online') return { done:false, reason:'device_not_online_yet' };
+  if (String(device.agentVersion || '') !== expectedVersion) return { done:false, reason:'agent_version_drift' };
+  if (device.capabilities?.isolatedDesktopGuestCanary !== true) return { done:false, reason:'desktop_guest_canary_capability_not_projected' };
+  if (device.capabilities?.isolatedDesktop === true) {
+    return { done:true, ok:false, error:'Isolated desktop execution became active from guest canary proof alone; interactive guest execution proof is still required.' };
+  }
+  if (time(device.lastSeenAt) < Math.max(time(issuedAt), time(command.completedAt))) {
+    return { done:false, reason:'post_desktop_guest_canary_heartbeat_not_fresh_yet' };
+  }
+
+  return {
+    done:true, ok:true,
+    summary:{
+      expectedVersion,
+      status:device.status,
+      lastSeenAt:device.lastSeenAt,
+      commandCompletedAt:command.completedAt || null,
+      verified:true,
+      isolatedDesktopExecutionStillFailClosed:true,
+      proof:{
+        guestAgentVersion:String(proof.guestAgentVersion || ''),
+        taskType:String(proof.taskType || ''),
+        receiptSha256:String(proof.receiptSha256 || ''),
+        executedAsSystem:true,
+        guestSessionId:Number(proof.guestSessionId || 0),
+        noNetworkAdapter:true,
+        noActiveNetwork:true,
+        interactiveDesktopUsed:false,
+        sharedInteractiveDesktop:false,
+        clipboardShared:false,
+        userInputInjection:false,
+        credentialCollection:false,
+        hostProfileMounted:false,
+        mutationScope:'ephemeral-guest-only',
+        vmReachedRunning:true,
+        heartbeatObserved:true,
+        networkAttached:false,
+        ephemeralDifferencingDisk:true,
+        baseDiskWriteForbidden:true,
+        sessionVmRemoved:true,
+        sessionDiskRemoved:true,
+        checkedAt:proof.checkedAt || null,
+      },
+    },
+  };
+}
+
 async function requestJson(token, pathname, init = {}) {
   const headers = new Headers(init.headers || {});
   headers.set('authorization', `Bearer ${token}`);
@@ -478,6 +568,20 @@ async function run() {
     );
   }
 
+  let desktopGuestCanaryCommand = null;
+  let desktopGuestCanaryVerification = {
+    verified:false,
+    skipped:true,
+    reason:desktopCanaryVerification.verified === true ? 'guest-canary-not-run' : 'hyperv-canary-not-verified',
+  };
+  if (desktopCanaryVerification.verified === true) {
+    desktopGuestCanaryCommand = await issueCommand(token, target.id, DESKTOP_GUEST_CANARY);
+    desktopGuestCanaryVerification = await waitForEvaluation(
+      token, target.id, commandWaitMs, pollMs,
+      device => evaluateDesktopGuestCanary({device, commandId:desktopGuestCanaryCommand.id, issuedAt:desktopGuestCanaryCommand.issuedAt, expectedVersion}),
+    );
+  }
+
   const summary = {
     ok:true,
     verifiedAt:new Date().toISOString(),
@@ -487,6 +591,7 @@ async function run() {
     backgroundBrowserWorker:{ commandType:BROWSER_EXECUTE, issuedAt:browserCommand.issuedAt, verification:browserVerification },
     isolatedDesktopProbe:{ commandType:DESKTOP_PROBE, issuedAt:desktopProbeCommand.issuedAt, verification:desktopProbeVerification },
     isolatedDesktopCanary:{ commandType:DESKTOP_CANARY, issuedAt:desktopCanaryCommand?.issuedAt || null, verification:desktopCanaryVerification },
+    isolatedDesktopGuestCanary:{ commandType:DESKTOP_GUEST_CANARY, issuedAt:desktopGuestCanaryCommand?.issuedAt || null, verification:desktopGuestCanaryVerification },
     cutover:{
       preVerification:{browserWorkerActivated:false},
       browserWorkerActivated:true,
@@ -494,14 +599,17 @@ async function run() {
       nativeServiceReady:false,
       nativeRemoteComputerFullyReady:false,
       isolatedDesktopCanaryVerified:desktopCanaryVerification.verified === true,
+      isolatedDesktopGuestCanaryVerified:desktopGuestCanaryVerification.verified === true,
       isolatedDesktopReady:false,
-      reason:desktopCanaryVerification.verified === true ? 'native-hyperv-canary-verified-guest-execution-pending' : 'native-browser-runtime-verified-isolated-desktop-pending'
+      reason:desktopGuestCanaryVerification.verified === true
+        ? 'native-guest-runtime-verified-interactive-desktop-proof-pending'
+        : (desktopCanaryVerification.verified === true ? 'native-hyperv-canary-verified-guest-execution-pending' : 'native-browser-runtime-verified-isolated-desktop-pending')
     },
   };
   const artifactDir = path.join(repoRoot, 'artifacts');
   fs.mkdirSync(artifactDir, { recursive:true });
   fs.writeFileSync(path.join(artifactDir, 'device-agent-production-verification.json'), JSON.stringify(summary, null, 2));
-  console.log(`[EKODI] Real Device Agent ${expectedVersion} verification completed; native browser is verified and isolated desktop remains fail-closed until guest execution proof.`);
+  console.log(`[EKODI] Real Device Agent ${expectedVersion} verification completed; native browser and available isolated guest runtime stages were verified, while interactive isolated desktop execution remains fail-closed.`);
 }
 
 const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
