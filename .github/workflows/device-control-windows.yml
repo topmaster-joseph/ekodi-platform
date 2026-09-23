@@ -97,6 +97,8 @@ jobs:
             'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1',
             'tools/ekodi-device-agent/windows/ekodi-device-startup.ps1',
             'tools/ekodi-device-agent/windows/background-browser-canary.ps1',
+            'tools/ekodi-device-agent/windows/ekodi-isolated-guest-agent.ps1',
+            'tools/ekodi-device-agent/windows/install-isolated-guest-agent.ps1',
             'tools/ekodi-device-agent/windows/transactional-upgrade.test.ps1'
           )) {
             $path = Join-Path $PWD $relative
@@ -126,13 +128,13 @@ jobs:
           $commands = @(
             'power.always_on','power.presentation','power.normal','power.restore','lock.resume_off','lock.resume_on','autologon.open',
             'diagnostics.collect','network.diagnose','printers.diagnose','startup.scan','startup.disable','startup.restore',
-            'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary','computer.browser.execute','computer.desktop.probe','computer.desktop.canary',
+            'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary','computer.browser.execute','computer.desktop.probe','computer.desktop.canary','computer.desktop.guest.canary',
             'remote_desktop.recovery.enable','remote_desktop.recovery.disable','remote_desktop.recovery.run'
           )
           foreach ($command in $commands) {
             if (-not $content.Contains("'$command'")) { throw "Missing allowlisted command: $command" }
           }
-          foreach ($guard in @('arbitraryShell = $false','screenCapture = $false','credentialCollection = $false','backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified','isolatedDesktopProbe = $true','isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified','isolatedDesktop = $false')) {
+          foreach ($guard in @('arbitraryShell = $false','screenCapture = $false','credentialCollection = $false','backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified','isolatedDesktopProbe = $true','isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified','isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified','isolatedDesktop = $false')) {
             if (-not $content.Contains($guard)) { throw "Missing privacy guard: $guard" }
           }
           if ($content -match '(?i)Restart-Computer|GetAsyncKeyState|SetWindowsHookEx|CopyFromScreen|GetClipboard') { throw 'Forbidden remote-control behavior found.' }
@@ -212,6 +214,48 @@ jobs:
             if (-not $content.Contains($required)) { throw "Missing isolated desktop canary guard: $required" }
           }
           Write-Host 'Hyper-V canary contract is present and isolated desktop execution remains disabled.'
+      - name: Verify isolated Guest Agent offline task/receipt boundary
+        shell: pwsh
+        run: |
+          $hostPath = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
+          $guestPath = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-isolated-guest-agent.ps1'
+          $installerPath = Join-Path $PWD 'tools/ekodi-device-agent/windows/install-isolated-guest-agent.ps1'
+          $hostContent = Get-Content $hostPath -Raw
+          $guestContent = Get-Content $guestPath -Raw
+          $installerContent = Get-Content $installerPath -Raw
+          foreach ($required in @(
+            'function Invoke-IsolatedDesktopGuestRuntimeCanary',
+            'Write-EkodiGuestRuntimeTask',
+            'Read-EkodiGuestRuntimeReceipt',
+            "type = 'guest.runtime.probe'",
+            "networkPolicy = 'none'",
+            'Get-VMIntegrationService -VMName $sessionName -Name ''Heartbeat''',
+            'isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified',
+            'isolatedDesktop = $false'
+          )) {
+            if (-not $hostContent.Contains($required)) { throw "Missing host guest-canary guard: $required" }
+          }
+          foreach ($required in @(
+            "$GuestAgentVersion = '1.0.0'",
+            "guest.runtime.probe",
+            "guest_task_network_policy_invalid",
+            'executedAsSystem',
+            'noNetworkAdapter',
+            'noActiveNetwork',
+            'interactiveDesktopUsed = $false',
+            'clipboardShared = $false',
+            'userInputInjection = $false',
+            'credentialCollection = $false',
+            "mutationScope = 'ephemeral-guest-only'",
+            "New-ScheduledTaskPrincipal -UserId 'SYSTEM'"
+          )) {
+            if (-not $guestContent.Contains($required)) { throw "Missing isolated Guest Agent guard: $required" }
+          }
+          if ($guestContent -match '(?i)Invoke-WebRequest|Invoke-RestMethod|New-PSSession|Enter-PSSession|Invoke-Expression|\biex\b') {
+            throw 'Guest Agent must remain networkless and must not expose arbitrary execution.'
+          }
+          if (-not $installerContent.Contains('EKODI Isolated Guest Agent')) { throw 'Guest Agent installer contract missing.' }
+          Write-Host 'Isolated Guest Agent offline task/receipt contract is fail-closed and credentialless.'
       - name: Verify power and lock command mapping without changing runner settings
         shell: pwsh
         run: |
