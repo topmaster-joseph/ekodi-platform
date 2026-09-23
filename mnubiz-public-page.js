@@ -21,7 +21,7 @@ export function renderMnuBizPublicPage(){
 <article class="card"><small>CAREER & BUSINESS</small><h3>진로 · 사업 네트워크</h3><p>취업, 창업, 경영, 협업 등 동문이 가진 현장 경험을 필요한 사람과 연결하는 기반을 둡니다.</p></article>
 <article class="card"><small>ACTIVITY</small><h3>행사 · 소식 · 기록</h3><p>모임과 행사, 공지, 동문 소식을 축적하되 개인정보와 비공개 회원 정보는 공개 화면과 분리합니다.</p></article>
 </div></div></section>
-<section class="section" id="network"><div class="wrap"><div class="community"><div><h3>Community 엔진 연결</h3><p>동문 Circle, 회원 참여, 모임, 추천과 관계 기능은 EKODI Community를 Workspace 범위로 사용합니다. 다른 단체의 Community 데이터와 섞이지 않도록 <strong>mnubiz</strong> 공간 기준으로 분리합니다.</p><div class="actions"><a class="button primary" href="/mnubiz/community">Community 열기</a></div></div><div><h3>운영 원칙</h3><p>공개 페이지는 로그인 없이 열리고, 회원·관리자 기능은 역할과 권한을 확인한 뒤 추가됩니다.</p></div></div></div></section>
+<section class="section" id="network"><div class="wrap"><div class="community"><div><h3>Community 엔진 연결</h3><p>동문 Circle, 회원 참여, 모임, 추천과 관계 기능은 Community를 Workspace 범위로 사용합니다. 다른 단체의 Community 데이터와 섞이지 않도록 <strong>mnubiz</strong> 공간 기준으로 분리합니다.</p><div class="actions"><a class="button primary" href="/mnubiz/community">Community 열기</a></div></div><div><h3>운영 원칙</h3><p>공개 페이지는 로그인 없이 열리고, 회원·관리자 기능은 역할과 권한을 확인한 뒤 추가됩니다.</p></div></div></div></section>
 <section class="section" id="news"><div class="wrap"><div class="head"><div><h2>소식 · 행사</h2><p>검증된 동문회 공지와 일정만 공개합니다.</p></div></div><div class="empty">현재 공개된 동문회 공지·행사는 없습니다. 운영자가 확인한 내용부터 순서대로 표시됩니다.</div></div></section>
 </main><footer><div class="wrap foot"><span>${esc(name)} · EKODI Workspace</span><a class="admin" href="/mnubiz/admin">관리자 페이지</a></div></footer>
 </body></html>`;
