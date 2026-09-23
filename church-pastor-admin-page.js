@@ -10,7 +10,7 @@ export function churchPastorSectionsForRole(role){return [...ALLOWED_SECTIONS].f
 
 export function isChurchPastorAdminPath(pathname){
   const clean=String(pathname||'').replace(/\/+$/,'');
-  const match=clean.match(/^\/ekodichurch\/admin(?:\/([^/]+))?$/i);
+  const match=clean.match(/^\/ekodichurch\/admin(?:\/([^/]+)(?:\/[^/]+)*)?$/i);
   return Boolean(match&&ALLOWED_SECTIONS.has(String(match[1]||'overview').toLowerCase()));
 }
 
@@ -22,7 +22,7 @@ function pastorClient(POLICY){
   const CHURCH='ekodi-church';
   const SESSION_KEY='ekodi-church-pastor-session';
   const AUTH_URL='https://ekodi.kr/auth/';
-  const section=(location.pathname.replace(/\/+$/,'').match(/^\/ekodichurch\/admin(?:\/([^/]+))?$/i)?.[1]||'overview').toLowerCase();
+  const section=(location.pathname.replace(/\/+$/,'').match(/^\/ekodichurch\/admin(?:\/([^/]+)(?:\/[^/]+)*)?$/i)?.[1]||'overview').toLowerCase();
   const base='/ekodichurch/admin';
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
