@@ -970,6 +970,12 @@ function Invoke-BackgroundBrowserWorker($Payload) {
 
   $proof = $null
   try {
+    $response = Invoke-WebRequest -Uri $target -Method Get -UseBasicParsing -MaximumRedirection 0 -TimeoutSec 25 -ErrorAction Stop
+    $stdout = [string]$response.Content
+    if ($stdout.Length -le 0) { throw 'background_browser_dom_failed' }
+    $statusCode = [int]$response.StatusCode
+    if ($statusCode -lt 200 -or $statusCode -ge 300) { throw 'background_browser_http_status_failed' }
+
     $commonArguments = @(
       '--headless=new',
       '--disable-gpu',
@@ -983,26 +989,6 @@ function Invoke-BackgroundBrowserWorker($Payload) {
       "--window-size=$($viewport.width),$($viewport.height)",
       "--user-data-dir=$taskProfile"
     )
-
-    $domProcess = [Diagnostics.Process]::new()
-    $domProcess.StartInfo = [Diagnostics.ProcessStartInfo]@{
-      FileName = $browser
-      Arguments = (@($commonArguments + @('--dump-dom', "$target")) -join ' ')
-      UseShellExecute = $false
-      CreateNoWindow = $true
-      RedirectStandardOutput = $true
-      RedirectStandardError = $true
-    }
-    [void]$domProcess.Start()
-    $stdoutTask = $domProcess.StandardOutput.ReadToEndAsync()
-    $domStderrTask = $domProcess.StandardError.ReadToEndAsync()
-    if (-not $domProcess.WaitForExit(35000)) {
-      try { $domProcess.Kill() } catch { }
-      throw 'background_browser_dom_timeout'
-    }
-    $stdout = $stdoutTask.GetAwaiter().GetResult()
-    $domStderr = $domStderrTask.GetAwaiter().GetResult()
-    if ($domProcess.ExitCode -ne 0 -or $stdout.Length -le 0) { throw 'background_browser_dom_failed' }
 
     $shotProcess = [Diagnostics.Process]::new()
     $shotProcess.StartInfo = [Diagnostics.ProcessStartInfo]@{
@@ -1025,7 +1011,7 @@ function Invoke-BackgroundBrowserWorker($Payload) {
     $screenshotExists = Test-Path -LiteralPath $shotPath
     if ($shotProcess.ExitCode -ne 0 -or -not $screenshotExists) { throw 'background_browser_screenshot_failed' }
 
-    $stderr = @($domStderr, $shotStderr) -join ' | '
+    $stderr = $shotStderr
     $shot = Get-Item -LiteralPath $shotPath
     $proof = @{
       ok = $true
@@ -1040,7 +1026,9 @@ function Invoke-BackgroundBrowserWorker($Payload) {
       viewportWidth = [int]$viewport.width
       viewportHeight = [int]$viewport.height
       exitCode = 0
-      domExitCode = $domProcess.ExitCode
+      httpStatus = $statusCode
+      contentSource = 'canonical-http-get'
+      httpMethod = 'GET'
       screenshotExitCode = $shotProcess.ExitCode
       contentBytes = [Text.Encoding]::UTF8.GetByteCount($stdout)
       contentSha256 = Get-Sha256String $stdout
