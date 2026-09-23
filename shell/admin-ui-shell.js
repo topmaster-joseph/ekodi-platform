@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION=2;
+const VERSION=3;
 const STYLE_ID='ekodi-admin-ui-shell-style';
 const SURFACE='admin';
 const SIDEBAR_SELECTORS=['[data-ekodi-admin-sidebar]','[data-ekodi-sidebar]','#sidebar','.admin-sidebar','.sidebar'];
@@ -45,6 +45,8 @@ function installStyle(){
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav[data-ekodi-admin-nav-mode="primary"]{flex:0 0 auto!important;overflow:hidden!important;overscroll-behavior:auto!important;scrollbar-gutter:auto!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main{height:100dvh!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-sidebar-footer{margin-top:auto!important;flex:0 0 auto!important;position:static!important}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-module-health-link{display:flex!important;align-items:center!important;gap:8px!important;min-height:40px!important;margin:4px 8px 8px!important;padding:8px 10px!important;border:1px solid #294b6b!important;border-radius:9px!important;background:#102c49!important;color:#e6f2ff!important;text-decoration:none!important;font-size:13px!important;font-weight:800!important;line-height:1.3!important}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-module-health-link:hover{background:#174b7b!important;color:#fff!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-header-account-hidden{display:none!important}
     @media(min-width:761px){html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-topbar{display:none!important}}
     @media(max-width:760px){
@@ -117,6 +119,23 @@ function accountControl(sidebar){
   return null;
 }
 
+function ensureModuleHealthEntry(footer){
+  const host=String(location.hostname||'').toLowerCase();
+  const central=host==='admin.ekodi.kr'||(host==='ekodi.kr'&&location.pathname.startsWith('/admin'));
+  if(!central)return null;
+  let link=footer.querySelector('[data-ekodi-service-module-health]');
+  if(!link){
+    link=document.createElement('a');
+    link.className='ekodi-admin-module-health-link';
+    link.dataset.ekodiServiceModuleHealth='true';
+    link.href='https://ekodi.kr/admin/services/service-modules';
+    link.textContent='공통·전문 모듈 점검';
+    link.setAttribute('aria-label','공통·전문 서비스 모듈 활성화 및 정상 여부 점검');
+    footer.prepend(link);
+  }
+  return link;
+}
+
 function ensureFooter(sidebar){
   let footer=sidebar.querySelector('[data-ekodi-admin-sidebar-footer],.ekodi-admin-sidebar-footer,.side-bottom,.side-footer');
   if(!footer){
@@ -126,6 +145,7 @@ function ensureFooter(sidebar){
     sidebar.append(footer);
   }
   footer.classList.add('ekodi-admin-sidebar-footer');
+  ensureModuleHealthEntry(footer);
   const logout=logoutControl(sidebar);
   const account=accountControl(sidebar);
   if(account&&!footer.contains(account))footer.insertBefore(account,logout&&footer.contains(logout)?logout:null);
