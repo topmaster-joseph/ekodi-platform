@@ -31,5 +31,7 @@
     "test/service-workspace-separation.test.mjs",
     "test/homepage-ekodian-guide.test.mjs"
   ],
-  "rollback": "Revert constitution v1.25.0 and the PUBLIC-VISUAL-CONTINUITY-001 Shell/theme changes to v1.24.0 while preserving unrelated routing, identity, authentication and workspace policies."
+  "rollback": "Revert constitution v1.25.0 and the PUBLIC-VISUAL-CONTINUITY-001 Shell/theme changes to v1.24.0 while preserving unrelated routing, identity, authentication and workspace policies.",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph"
 }
