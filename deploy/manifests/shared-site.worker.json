@@ -1,5 +1,5 @@
 {
-  "version": 85,
+  "version": 86,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -151,6 +151,44 @@
           "x-ekodi-publication-status: published",
           "x-robots-tag: index, follow",
           "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/mokdaehumun/live/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "class=\"controls compact-controls\"",
+          "id=\"openManagementCameraButton\"",
+          "id=\"viewerListenLanguage\"",
+          "id=\"participantSpeakLanguage\"",
+          "QR을 찍고 승인합니다."
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/live/c/testpaircode123",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "data-camera-pair=\"testpaircode123\"",
+          "EKODI 관리카메라",
+          "id=\"managementCameraConnect\""
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff",
+          "x-robots-tag: noindex, nofollow, noarchive",
+          "referrer-policy: no-referrer"
         ],
         "rollbackVerify": false
       },
