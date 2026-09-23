@@ -156,7 +156,8 @@
           "const API_BASE=location.pathname.startsWith('/ai')?'/ai':'';",
           "function apiUrl(path)",
           "/api/commons/config",
-          "/api/commons/match"
+          "/api/commons/match",
+          "function serviceStatusMeta(service)"
         ],
         "forbid": [
           "/ai/ai/api/commons/"
@@ -173,7 +174,8 @@
           "const API_BASE=location.pathname.startsWith('/ai')?'/ai':'';",
           "function apiUrl(path)",
           "/api/commons/config",
-          "/api/commons/match"
+          "/api/commons/match",
+          "function serviceStatusMeta(service)"
         ],
         "candidateForbid": [
           "/ai/ai/api/commons/"
@@ -196,7 +198,8 @@
         ],
         "expect": [
           ".page",
-          "want-form"
+          "want-form",
+          ".service-state"
         ],
         "headerExpect": [
           "x-ekodi-ai-asset: worker-owned-v1",
@@ -208,7 +211,8 @@
         ],
         "candidateExpect": [
           ".page",
-          "want-form"
+          "want-form",
+          ".service-state"
         ],
         "candidateHeaderExpect": [
           "x-ekodi-ai-asset: worker-owned-v1",
@@ -264,7 +268,9 @@
         ],
         "expect": [
           "\"principle\"",
-          "\"categories\""
+          "\"categories\"",
+          "\"availability\"",
+          "\"deliveryMode\""
         ],
         "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/api/commons/services",
         "candidateStatuses": [
@@ -272,7 +278,9 @@
         ],
         "candidateExpect": [
           "\"principle\"",
-          "\"categories\""
+          "\"categories\"",
+          "\"availability\"",
+          "\"deliveryMode\""
         ],
         "candidateHeaderExpect": [],
         "rollbackStatuses": [
