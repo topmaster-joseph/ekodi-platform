@@ -74,7 +74,7 @@ function safeService(value){const id=String(value||'').trim().toLowerCase();retu
 function selectedFromUrl(){return safeService(new URLSearchParams(location.search).get(SERVICE_PARAM)||state.selected)}
 function categoryFromSection(section=window.EKODIAdminPanels?.current?.()){return ENGINE_SECTION_FILTER[String(section||'').trim()]||'all'}
 function visibleServices(){if(state.category==='all')return SERVICES;if(state.category==='service-modules')return SERVICES.filter(item=>item.category==='common'||item.category==='professional');return SERVICES.filter(item=>item.category===state.category)}
-function syncCategory(){state.category=categoryFromSection();const visible=visibleServices();if(!visible.some(item=>item.id===state.selected))state.selected=visible[0]?.id||state.selected}
+function syncCategory(section=window.EKODIAdminPanels?.current?.()){state.category=categoryFromSection(section);const visible=visibleServices();if(!visible.some(item=>item.id===state.selected))state.selected=visible[0]?.id||state.selected}
 function kindLabel(kind){return kind==='provider'?'외부 공급자 연동':kind==='service'?'독립 서비스':'공통 엔진'}
 async function jsonFetch(url,options={}){const headers={accept:'application/json',...authHeaders(),...(options.headers||{})};if(options.body&&!headers['content-type'])headers['content-type']='application/json';const response=await fetch(url,{...options,headers,cache:'no-store'});let data={};try{data=await response.json()}catch{}if(response.status===401||response.status===403){window.EKODIAdminCore?.showLogin?.('관리자 세션 만료 · 다시 로그인');throw new Error('admin_session_required')}if(!response.ok)throw new Error(data.error||`HTTP ${response.status}`);return data}
 const control=(path,options)=>jsonFetch(`${CONTROL}${path}`,options);
@@ -101,7 +101,7 @@ async function runAiTask(){const title=$('#commonAiTitle')?.value.trim()||'';con
 async function approveTask(id){try{await common(`ai/tasks/${encodeURIComponent(id)}/approve`,{method:'POST'});await refreshAi()}catch(error){alert(`승인 실패: ${error.message}`)}}
 async function pairNode(){const output=$('#commonAiPairCode');try{const data=await common('ai/nodes/pair',{method:'POST',body:'{}'});if(output)output.textContent=`연결코드 ${data.code} · ${new Date(data.expiresAt).toLocaleTimeString()} 만료`;await refreshAi()}catch(error){if(output)output.textContent=`연결코드 발급 실패: ${error.message}`}}
 function mount(){if(!installPanel())return null;state.selected=selectedFromUrl();render();return panel()}
-function activate(){const mounted=mount();if(!mounted)return null;mounted.hidden=false;mounted.classList.remove('hidden-panel');mounted.dataset.adminListLayout='single';state.selected=selectedFromUrl();syncCategory();render();if(!state.busy)void refresh();return mounted}
+function activate(section=window.EKODIAdminPanels?.current?.()){const mounted=mount();if(!mounted)return null;mounted.hidden=false;mounted.classList.remove('hidden-panel');mounted.dataset.adminListLayout='single';state.selected=selectedFromUrl();syncCategory(section);render();if(!state.busy)void refresh();return mounted}
 window.addEventListener('ekodi-admin-section-changed',event=>{const section=String(event.detail?.section||'');if(section===SECTION||ENGINE_SECTION_FILTER[section]){state.category=ENGINE_SECTION_FILTER[section]||'all';syncCategory();render()}});
 mount();
 window.EKODICommonServicesAdmin=Object.freeze({mount,activate,refresh:()=>refresh(true),category:()=>state.category});
