@@ -18,5 +18,5 @@
   ],
   "rollback": "If the runtime gate creates a material regression, revert the runtime classification/router integration to the last known-good guarded release while retaining the constitutional rule. Repair classification or evidence projection, rerun knowledge-claim, constitution, orchestration and AI Control tests, then re-promote. Never roll back to treating retrieval or model output as self-verifying fact.",
   "verification": "Run knowledge-claim unit/contract tests, constitution validation, orchestration validation, full repository regression tests, isolated AI Control staging deployment, guarded production promotion, and real production endpoint verification.",
-  "approvalEvidence": "Owner instruction in this conversation plus constitution-approved label on PR #2420 before this verification rerun."
+  "approvalEvidence": "Owner instruction in this conversation plus constitution-approved label on PR #2425 before this verification rerun."
 }
