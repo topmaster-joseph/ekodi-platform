@@ -73,4 +73,6 @@ test('pyeonggongmok is production-discoverable and deployment-owned',async()=>{
   assert.equal(theme.services.pyeonggongmok.identity,'pastoral-study-table');
   const wrangler=await readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
   assert.match(wrangler,/\"\/pyeonggongmok\\\*\"/);
+  const workerFirst=(wrangler.match(/run_worker_first = \[(.*?)\]/s)?.[1].match(/\"[^\"]+\"/g)||[]);
+  assert.ok(workerFirst.length<=100);
 });
