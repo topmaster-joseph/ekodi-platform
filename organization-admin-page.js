@@ -1,4 +1,4 @@
-const ORG_ADMIN=/^\/(hammu)\/admin(?:\/(officers|notices|finance|attendance))?\/?$/i;
+const ORG_ADMIN=/^\/(hammu)\/admin(?:\/(officers|notices|finance|attendance)(?:\/[^/]+)*)?\/?$/i;
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 function route(pathname){const m=ORG_ADMIN.exec(String(pathname||''));return m?{slug:m[1].toLowerCase(),section:(m[2]||'overview').toLowerCase()}:null;}

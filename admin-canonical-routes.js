@@ -38,25 +38,46 @@ function normalizeSection(value){
   const section=ALIASES[raw]||raw;
   return SECTION_SET.has(section)?section:'';
 }
-function pathFor(section){
+function normalizeDetailSegments(value){
+  const source=Array.isArray(value)?value:(value==null||value===''?[]:[value]);
+  const result=[];
+  for(const raw of source){
+    let decoded=String(raw??'').trim();
+    try{decoded=decodeURIComponent(decoded)}catch{}
+    if(!decoded||decoded==='.'||decoded==='..'||/[\\/]/.test(decoded))continue;
+    result.push(decoded);
+  }
+  return result;
+}
+function pathFor(section,detailSegments=[]){
   const normalized=normalizeSection(section);
   if(!normalized||normalized===COMMAND_HOME)return'/admin/';
-  return `/admin/${SECTION_GROUP[normalized]}/${normalized}`;
+  const base=`/admin/${SECTION_GROUP[normalized]}/${normalized}`;
+  const detail=normalizeDetailSegments(detailSegments);
+  return detail.length?`${base}/${detail.map(encodeURIComponent).join('/')}`:base;
+}
+function routeFromPath(pathname){
+  const parts=String(pathname||'').split('/').filter(Boolean);
+  if(parts[0]!=='admin')return null;
+  if(parts.length===1)return Object.freeze({section:COMMAND_HOME,group:'home',detailSegments:Object.freeze([])});
+  const group=String(parts[1]||'').toLowerCase();
+  if(parts.length===2){
+    const section=group==='home'?COMMAND_HOME:(GROUP_DEFAULT[group]||LEGACY_GROUP_DEFAULT[group]||'');
+    return section?Object.freeze({section,group,detailSegments:Object.freeze([])}):null;
+  }
+  const section=normalizeSection(parts[2]);
+  if(!section)return null;
+  const valid=SECTION_GROUP[section]===group
+    ||LEGACY_SECTION_GROUP[section]===group
+    ||(section==='campus'&&['home','system'].includes(group))
+    ||(group==='services'&&['community','ai-membership','books','devotional'].includes(section))
+    ||((group==='space'||group==='spaces')&&LEGACY_SECTION_GROUP[section]==='workspaces');
+  if(!valid)return null;
+  const detailSegments=normalizeDetailSegments(parts.slice(3));
+  return Object.freeze({section,group,detailSegments:Object.freeze(detailSegments)});
 }
 function sectionFromPath(pathname){
-  const parts=String(pathname||'').split('/').filter(Boolean);
-  if(parts[0]!=='admin')return'';
-  if(parts.length===1)return COMMAND_HOME;
-  const group=String(parts[1]||'').toLowerCase();
-  if(parts.length===2)return group==='home'?COMMAND_HOME:(GROUP_DEFAULT[group]||LEGACY_GROUP_DEFAULT[group]||'');
-  const section=normalizeSection(parts[2]);
-  if(!section)return'';
-  if(SECTION_GROUP[section]===group)return section;
-  if(LEGACY_SECTION_GROUP[section]===group)return section;
-  if(section==='campus'&&['home','system'].includes(group))return section;
-  if(group==='services'&&['community','ai-membership','books','devotional'].includes(section))return section;
-  if((group==='space'||group==='spaces')&&LEGACY_SECTION_GROUP[section]==='workspaces')return section;
-  return'';
+  return routeFromPath(pathname)?.section||'';
 }
 function sectionFromLocation(loc=window.location){
   const pathSection=sectionFromPath(loc.pathname);
@@ -76,21 +97,27 @@ function legacyHashFor(section){
   if(normalized==='affiliates')return'#mall-ai-sales';
   return `#${normalized}`;
 }
-function canonicalUrl(section,loc=window.location){
+function canonicalUrl(section,loc=window.location,detailSegments=[]){
   const url=new URL(loc.href);
-  url.pathname=pathFor(section);
+  url.pathname=pathFor(section,detailSegments);
   url.searchParams.delete('route');
   url.hash='';
   return `${url.pathname}${url.search}${url.hash}`;
 }
 function isCanonicalHost(loc=window.location){return String(loc.hostname||'').toLowerCase()==='ekodi.kr'}
-function navigationTarget(section,loc=window.location){
-  return isCanonicalHost(loc)?canonicalUrl(section,loc):legacyHashFor(section);
+function navigationTarget(section,loc=window.location,detailSegments=null){
+  if(!isCanonicalHost(loc))return legacyHashFor(section);
+  const normalized=normalizeSection(section);
+  const current=detailSegments==null?routeFromPath(loc.pathname):null;
+  const detail=detailSegments==null&&current?.section===normalized?current.detailSegments:detailSegments;
+  return canonicalUrl(section,loc,detail||[]);
 }
 window.EKODIAdminRoutes=Object.freeze({
-  version:'1.4.0',
+  version:'1.5.0',
   groups:Object.freeze({...GROUP_DEFAULT}),
   normalizeSection,
+  normalizeDetailSegments,
+  routeFromPath,
   sectionFromPath,
   sectionFromLocation,
   pathFor,

@@ -67,6 +67,12 @@ function ensureStyle() {
   style.id = 'ekodi-admin-workbench-tabs-style';
   style.textContent = `
 body.admin-compact{--admin-readable:#172033;--admin-secondary:#66768a;--admin-border:#d9e2ec;--admin-soft:#f4f7fb;--admin-active:#eaf3ff}
+/* Primary-nav safety is independent of the compact class so lazy feature hydration can never leak technical menu rows. */
+.sidebar nav[data-ekodi-admin-nav-mode="primary"]{display:flex!important;flex-direction:column!important;gap:4px!important;overflow-y:hidden!important;overflow-x:hidden!important;overscroll-behavior:none!important}
+.sidebar nav[data-ekodi-admin-nav-mode="primary"] > .nav{display:none!important}
+.sidebar nav[data-ekodi-admin-nav-mode="primary"] > .admin-context-source{display:none!important}
+.sidebar nav[data-ekodi-admin-nav-mode="primary"] > .admin-global-navs{display:grid!important}
+.sidebar nav[data-ekodi-admin-nav-mode="primary"] > .admin-command-entry{display:flex!important}
 body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:4px!important;overflow-y:hidden!important;overflow-x:hidden!important;overscroll-behavior:none!important}
 body.admin-compact .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .nav{display:none!important}
 body.admin-compact .${GLOBAL_CLASS}{display:grid;gap:5px;margin:6px 0 10px}
