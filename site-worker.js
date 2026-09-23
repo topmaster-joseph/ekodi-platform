@@ -709,7 +709,7 @@ export default {
         return response;
       }
       if (isMallPath(url.pathname)) return proxyMallService(request);
-      if (PUBLIC_ADMIN_ALIASES.has(url.pathname)) {
+      if (PUBLIC_ADMIN_ALIASES.has(url.pathname) || url.pathname.startsWith('/admin/')) {
         const response = await env.ASSETS.fetch(assetRequest(request, '/admin-shell'));
         const rewritten = rewriteAdminApexLogin(response);
         return withHostSecurity(rewritten, ADMIN_CSP, 'no-store', 'admin-fallback');
