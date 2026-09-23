@@ -17,13 +17,58 @@
   const money = value => Number.isFinite(Number(value))
     ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 4 }).format(Number(value)) : '—';
   const percent = value => Number.isFinite(Number(value)) ? `${Math.max(0, Number(value)).toFixed(1)}%` : '—';
+  const bytes = value => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '—';
+    if (n < 1024) return `${number(n)} B`;
+    if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} KB`;
+    if (n < 1024 ** 3) return `${(n / (1024 ** 2)).toFixed(1)} MB`;
+    return `${(n / (1024 ** 3)).toFixed(2)} GB`;
+  };
 
   function statusLabel(value) {
-    return ({ stable: '안정', attention: '주의', warning: '경고', limit: '한도 도달', unknown: '연결 필요' })[value] || '연결 필요';
+    return ({
+      stable: '안정', normal: '정상', attention: '주의', warning: '경고',
+      conserve: '절약', protect: '보호', survival: '핵심만',
+      circuit_breaker: '회로 차단', limit: '한도 도달', unknown: '연결 필요'
+    })[value] || '연결 필요';
   }
 
   function connectionLabel(value) {
-    return ({ metered: '실측', partial: '운영 추세', 'needs-connection': '연결 필요' })[value] || '연결 필요';
+    return ({
+      metered: '실측', measured: '실측', partial: '부분 실측',
+      missing: '측정 없음', 'policy-known': '정책 확인',
+      'needs-connection': '연결 필요'
+    })[value] || '연결 필요';
+  }
+
+  function visualState(value) {
+    if (['stable','normal'].includes(value)) return 'stable';
+    if (['attention','conserve'].includes(value)) return 'attention';
+    if (['warning','protect'].includes(value)) return 'warning';
+    if (['limit','survival','circuit_breaker'].includes(value)) return 'limit';
+    return 'unknown';
+  }
+
+  function providerMetrics(provider) {
+    const metrics = Array.isArray(provider.resourceGovernor?.metrics) ? provider.resourceGovernor.metrics : [];
+    if (provider.id === 'cloudflare-workers') return metrics.filter(item => item.metric?.startsWith('workers_'));
+    if (provider.id === 'cloudflare-d1') return metrics.filter(item => item.metric?.startsWith('d1_'));
+    if (provider.id === 'cloudflare-kv') return metrics.filter(item => item.metric?.startsWith('kv_'));
+    if (provider.id === 'cloudflare-r2') return metrics.filter(item => item.metric?.startsWith('r2_'));
+    return metrics;
+  }
+
+  function metricValue(metric) {
+    if (!metric?.measured) return '측정 없음';
+    const current = metric.unit === 'bytes' || metric.unit === 'byte-month'
+      ? bytes(metric.observedValue)
+      : number(metric.observedValue);
+    const limit = Number.isFinite(Number(metric.freeLimit))
+      ? (metric.unit === 'bytes' || metric.unit === 'byte-month' ? bytes(metric.freeLimit) : number(metric.freeLimit))
+      : null;
+    const ratio = Number.isFinite(Number(metric.usagePercent)) ? ` · ${percent(metric.usagePercent)}` : '';
+    return `${current}${limit ? ` / ${limit}` : ''}${ratio}${metric.stale ? ' · 오래된 측정' : ''}`;
   }
 
   const button = document.createElement('button');
@@ -73,7 +118,7 @@
   function renderProvider(provider) {
     const card = document.createElement('article');
     card.className = 'api-provider-card';
-    card.dataset.state = provider.status || 'unknown';
+    card.dataset.state = visualState(provider.status || provider.resourceGovernor?.state || 'unknown');
     const head = document.createElement('div');
     head.className = 'api-provider-head';
     const title = document.createElement('div');
@@ -82,7 +127,12 @@
     title.append(small, strong);
     const badge = document.createElement('span');
     badge.className = 'api-provider-badge';
-    badge.textContent = provider.connection === 'metered' ? statusLabel(provider.status) : connectionLabel(provider.connection);
+    const governor = provider.resourceGovernor || null;
+    badge.textContent = provider.connection === 'metered'
+      ? statusLabel(provider.status)
+      : governor
+        ? `${connectionLabel(provider.connection)} · ${statusLabel(governor.state)}`
+        : connectionLabel(provider.connection);
     head.append(title, badge);
     card.append(head);
 
@@ -100,6 +150,22 @@
       add('최근 Zone 요청', number(provider.usage.zoneRequests));
       add('기준 일자', provider.usage.day || '—');
       add('Workers Free 참고', `${number(provider.limit?.freeRequestsPerDay)} 요청/일`);
+    } else if (governor) {
+      const metrics = providerMetrics(provider);
+      if (metrics.length) {
+        for (const metric of metrics.slice(0, 6)) add(metric.label || metric.metric, metricValue(metric));
+      } else {
+        add('실측 상태', governor.telemetryStatus === 'missing' ? '측정 없음' : '측정값 대기');
+      }
+      if (governor.provisioningAllowed === false) {
+        add('신규 자원 생성', '차단 · 기존 서비스 유지');
+      } else if (provider.id === 'supabase') {
+        add('신규 자원 생성', '허용');
+      }
+      add('자동 유료 전환', governor.automaticPaidUpgrade === false ? '사용 안 함' : '확인 필요');
+      if (governor.persistedState?.observedAt) {
+        add('최근 관측', new Date(governor.persistedState.observedAt).toLocaleString('ko-KR'));
+      }
     } else {
       const limits = provider.limit && Object.keys(provider.limit).length
         ? Object.entries(provider.limit).map(([key, value]) => `${key}: ${typeof value === 'number' ? number(value) : value}`).join(' · ')
