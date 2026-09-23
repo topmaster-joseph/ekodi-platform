@@ -1430,8 +1430,13 @@ function Invoke-IsolatedDesktopHyperVCanary {
 
 function New-EkodiNonceHex([int]$Bytes = 32) {
   $buffer = New-Object byte[] $Bytes
-  [Security.Cryptography.RandomNumberGenerator]::Fill($buffer)
-  return ([BitConverter]::ToString($buffer)).Replace('-','').ToLowerInvariant()
+  $rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+  try {
+    $rng.GetBytes($buffer)
+    return ([BitConverter]::ToString($buffer)).Replace('-','').ToLowerInvariant()
+  } finally {
+    $rng.Dispose()
+  }
 }
 
 function Mount-EkodiGuestWindowsVolume([string]$VhdPath) {
