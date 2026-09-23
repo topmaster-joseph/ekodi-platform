@@ -646,6 +646,14 @@ function summarizeCommandResult(result = {}) {
       taskState: safeText(result.agent.taskState, 40),
       persistentShell: result.agent.persistentShell === true,
       directHostMutation: result.agent.directHostMutation === true,
+      foregroundUserSessionProtected: result.agent.foregroundUserSessionProtected === true,
+      backgroundBrowserCanaryVerified: result.agent.backgroundBrowserCanaryVerified === true,
+      backgroundBrowserReady: result.agent.backgroundBrowserReady === true,
+      isolatedDesktopProbeAvailable: result.agent.isolatedDesktopProbeAvailable === true,
+      isolatedDesktopCanaryVerified: result.agent.isolatedDesktopCanaryVerified === true,
+      isolatedDesktopGuestCanaryVerified: result.agent.isolatedDesktopGuestCanaryVerified === true,
+      isolatedDesktopReady: result.agent.isolatedDesktopReady === true,
+      minimizedWindowCountsAsIsolation: result.agent.minimizedWindowCountsAsIsolation === true,
     };
   }
   if (result.system && typeof result.system === 'object') {
