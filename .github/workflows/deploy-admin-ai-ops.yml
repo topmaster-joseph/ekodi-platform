@@ -99,7 +99,7 @@ jobs:
           grep -Fq "if (!button) return false;" dist/admin-demand-loader.js
           grep -Fq "window.EKODIAdminSidebar?.sync?.(document);" dist/admin-demand-loader.js
           ! grep -Fq "button = document.createElement('button')" dist/admin-demand-loader.js
-          grep -Fq "window.EKODICommonServicesAdmin?.activate?.()" dist/admin-menu-layout.js
+          grep -Fq "window.EKODICommonServicesAdmin?.activate?.(" dist/admin-menu-layout.js
           grep -Fq "convergeAdminRelease" dist/admin-release-convergence.js
           grep -Fq "fetch('/admin/',{cache:'no-store',credentials:'same-origin'})" dist/admin-release-convergence.js
           grep -Fq "h: ['#health']" dist/admin-demand-loader.js
@@ -194,7 +194,7 @@ jobs:
               && verify_asset 'admin-demand-loader.js' "scripts: ['system-health-admin.js']" \
               && verify_asset 'admin-demand-loader.js' "if (!button) return false;" \
               && verify_asset 'admin-demand-loader.js' "window.EKODIAdminSidebar?.sync?.(document);" \
-              && verify_asset 'admin-menu-layout.js' "window.EKODICommonServicesAdmin?.activate?.()" \
+              && verify_asset 'admin-menu-layout.js' "window.EKODICommonServicesAdmin?.activate?.(" \
               && verify_asset 'admin-release-convergence.js' "convergeAdminRelease" \
               && verify_asset 'system-health-admin.js' "navLabel.textContent = '\\uc2dc\\uc2a4\\ud15c \\uac74\\uac15'" \
               && verify_asset 'system-health-admin.js' "pageTitle.textContent = '\\uc2dc\\uc2a4\\ud15c \\uac74\\uac15'" \

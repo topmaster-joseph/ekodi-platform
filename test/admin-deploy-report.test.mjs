@@ -41,7 +41,7 @@ test('Admin production verification follows the content fingerprint and lazy AI 
   assert.match(workflow, /verify_asset 'system-health-admin\.css'/);
   assert.match(workflow, /verify_asset 'admin-demand-loader\.js' "if \(!button\) return false;"/);
   assert.match(workflow, /verify_asset 'admin-demand-loader\.js' "window\.EKODIAdminSidebar\?\.sync\?\.\(document\);"/);
-  assert.match(workflow, /verify_asset 'admin-menu-layout\.js' "window\.EKODICommonServicesAdmin\?\.activate\?\.\(\)"/);
+  assert.match(workflow, /verify_asset 'admin-menu-layout\.js' "window\.EKODICommonServicesAdmin\?\.activate\?\.\("/);
   assert.match(workflow, /verify_asset 'admin-release-convergence\.js' "convergeAdminRelease"/);
   assert.match(workflow, /missing immutable cache contract/);
   assert.match(workflow, /missing production marker/);

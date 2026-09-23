@@ -140,10 +140,16 @@ function requestDelegated(section,delegate){
     }
     if(requestedSection!==section)return;
     applyOrder();
-    if(!activatePanel(section))activatePanel(delegate);
     if(delegate==='common-services'){
-      window.EKODICommonServicesAdmin?.activate?.();
-      activatePanel(section)||activatePanel(delegate);
+      const mounted=window.EKODICommonServicesAdmin?.activate?.(section);
+      const shown=activatePanel(section)||activatePanel(delegate);
+      if(!shown&&mounted){
+        mounted.hidden=false;
+        mounted.classList.remove('hidden-panel');
+        mounted.dataset.adminListLayout='single';
+      }
+    }else if(!activatePanel(section)){
+      activatePanel(delegate);
     }
   })().catch(error=>console.error(`[EKODI Admin] delegated section activation failed: ${section} -> ${delegate}`,error))
     .finally(()=>demandLoading.delete(section));
