@@ -6,6 +6,7 @@ const API_BASE = 'https://ekodi.kr';
 const DEVICES_PATH = '/api/control/devices';
 const SELF_UPDATE = 'agent.self_update';
 const BROWSER_CANARY = 'computer.browser.canary';
+const BROWSER_EXECUTE = 'computer.browser.execute';
 const DEFAULT_TARGET_WAIT_MS = 120_000;
 const DEFAULT_COMMAND_WAIT_MS = 240_000;
 const DEFAULT_POLL_MS = 5_000;
@@ -99,9 +100,7 @@ export function evaluateBrowserCanary({ device, commandId, issuedAt, expectedVer
   if (device.status !== 'online') return { done:false, reason:'device_not_online_yet' };
   if (String(device.agentVersion || '') !== expectedVersion) return { done:false, reason:'agent_version_drift' };
   if (device.capabilities?.backgroundBrowserCanary !== true) return { done:false, reason:'canary_heartbeat_not_projected_yet' };
-  if (device.capabilities?.backgroundBrowser === true) {
-    return { done:true, ok:false, error:'Browser execution capability became active before the full Browser Worker was verified.' };
-  }
+  if (device.capabilities?.backgroundBrowser !== true) return { done:false, reason:'browser_worker_capability_not_projected_yet' };
   if (time(device.lastSeenAt) < Math.max(time(issuedAt), time(command.completedAt))) {
     return { done:false, reason:'post_canary_heartbeat_not_fresh_yet' };
   }
@@ -114,7 +113,8 @@ export function evaluateBrowserCanary({ device, commandId, issuedAt, expectedVer
       lastSeenAt:device.lastSeenAt,
       commandCompletedAt:command.completedAt || null,
       canaryProjected:true,
-      browserExecutionStillFailClosed:true,
+      browserExecutionCapabilityProjected:true,
+      browserExecutionStillFailClosed:false,
       proof:{
         browser:String(proof.browser || ''),
         contentBytes:Number(proof.contentBytes || 0),
@@ -123,6 +123,85 @@ export function evaluateBrowserCanary({ device, commandId, issuedAt, expectedVer
         focusIsolated:true,
         clipboardShared:false,
         userInputInjection:false,
+        checkedAt:proof.checkedAt || null,
+      },
+    },
+  };
+}
+
+export function evaluateBrowserWorker({ device, commandId, issuedAt, expectedVersion }) {
+  if (!device) return { done:false, reason:'device_missing' };
+  const command = commandFor(device, commandId);
+  if (!command) return { done:false, reason:'command_not_visible' };
+  if (['failed','cancelled'].includes(command.status)) {
+    return { done:true, ok:false, error:`Native Background Browser Worker failed: ${String(command.result?.message || command.status).slice(0, 500)}` };
+  }
+  if (command.status !== 'succeeded') return { done:false, reason:command.status || 'pending' };
+
+  const proof = command.result?.browserWorker || {};
+  const hashOk = value => /^[a-f0-9]{64}$/.test(String(value || ''));
+  const proofOk = (
+    proof.ok === true &&
+    proof.mode === 'background-browser-worker' &&
+    proof.virtualizationProvider === 'ekodi-native-remote-computer' &&
+    proof.routingPolicy === 'EKODI-VIRTUALIZATION-ROUTING-001' &&
+    String(proof.agentVersion || '') === expectedVersion &&
+    String(proof.url || '') === 'https://ekodi.kr/' &&
+    proof.deviceProfile === 'desktop' &&
+    Number(proof.viewportWidth) === 1440 &&
+    Number(proof.viewportHeight) === 900 &&
+    Number(proof.contentBytes) > 0 &&
+    Number(proof.screenshotBytes) > 0 &&
+    hashOk(proof.contentSha256) &&
+    hashOk(proof.screenshotSha256) &&
+    proof.dedicatedAutomationProfile === true &&
+    proof.ephemeralProfile === true &&
+    proof.profileRemoved === true &&
+    proof.activeUserProfileReused === false &&
+    proof.offscreenOrHeadless === true &&
+    proof.focusIsolated === true &&
+    proof.clipboardShared === false &&
+    proof.userInputInjection === false &&
+    proof.javascriptEnabled === false &&
+    proof.mutationMode === 'read-only-static-surface'
+  );
+  if (!proofOk) return { done:true, ok:false, error:'Native Browser Worker result did not satisfy the isolated read-only execution proof contract.' };
+  if (device.status !== 'online') return { done:false, reason:'device_not_online_yet' };
+  if (String(device.agentVersion || '') !== expectedVersion) return { done:false, reason:'agent_version_drift' };
+  if (device.capabilities?.backgroundBrowser !== true) return { done:false, reason:'browser_worker_capability_not_projected' };
+  if (time(device.lastSeenAt) < Math.max(time(issuedAt), time(command.completedAt))) {
+    return { done:false, reason:'post_worker_heartbeat_not_fresh_yet' };
+  }
+
+  return {
+    done:true, ok:true,
+    summary:{
+      expectedVersion,
+      status:device.status,
+      lastSeenAt:device.lastSeenAt,
+      commandCompletedAt:command.completedAt || null,
+      nativeBrowserOperationServiceReady:true,
+      proof:{
+        virtualizationProvider:proof.virtualizationProvider,
+        routingPolicy:proof.routingPolicy,
+        browser:String(proof.browser || ''),
+        contentBytes:Number(proof.contentBytes || 0),
+        contentSha256:String(proof.contentSha256 || ''),
+        screenshotBytes:Number(proof.screenshotBytes || 0),
+        screenshotSha256:String(proof.screenshotSha256 || ''),
+        deviceProfile:proof.deviceProfile,
+        viewportWidth:Number(proof.viewportWidth || 0),
+        viewportHeight:Number(proof.viewportHeight || 0),
+        dedicatedAutomationProfile:true,
+        ephemeralProfile:true,
+        profileRemoved:true,
+        activeUserProfileReused:false,
+        offscreenOrHeadless:true,
+        focusIsolated:true,
+        clipboardShared:false,
+        userInputInjection:false,
+        javascriptEnabled:false,
+        mutationMode:'read-only-static-surface',
         checkedAt:proof.checkedAt || null,
       },
     },
@@ -162,10 +241,10 @@ async function waitForTarget(token, timeoutMs, pollMs) {
   throw new Error(`No online enrolled Windows PC was available: ${JSON.stringify({total:last.length,statusCounts:counts})}`);
 }
 
-async function issueCommand(token, deviceId, type) {
+async function issueCommand(token, deviceId, type, payload = undefined) {
   const data = await requestJson(token, `${DEVICES_PATH}/${encodeURIComponent(deviceId)}/commands`, {
     method:'POST',
-    body:JSON.stringify({ type, confirmed:true }),
+    body:JSON.stringify({ type, confirmed:true, ...(payload ? { payload } : {}) }),
   });
   const command = data.command || {};
   if (!command.id || command.type !== type || command.status !== 'queued') {
@@ -216,18 +295,33 @@ async function run() {
     device => evaluateBrowserCanary({device, commandId:canaryCommand.id, issuedAt:canaryCommand.issuedAt, expectedVersion}),
   );
 
+  const browserCommand = await issueCommand(token, target.id, BROWSER_EXECUTE, { path:'/', deviceProfile:'desktop' });
+  const browserVerification = await waitForEvaluation(
+    token, target.id, commandWaitMs, pollMs,
+    device => evaluateBrowserWorker({device, commandId:browserCommand.id, issuedAt:browserCommand.issuedAt, expectedVersion}),
+  );
+
   const summary = {
     ok:true,
     verifiedAt:new Date().toISOString(),
     target:{ reference:'real-enrolled-windows-agent', initialLastSeenAt },
     update:{ commandType:SELF_UPDATE, issuedAt:updateCommand.issuedAt, verification:updateVerification },
     backgroundBrowserCanary:{ commandType:BROWSER_CANARY, issuedAt:canaryCommand.issuedAt, verification:canaryVerification },
-    cutover:{ browserWorkerActivated:false, nativeServiceReady:false, reason:'canary_only_full_browser_worker_not_yet_verified' },
+    backgroundBrowserWorker:{ commandType:BROWSER_EXECUTE, issuedAt:browserCommand.issuedAt, verification:browserVerification },
+    cutover:{
+      preVerification:{browserWorkerActivated:false},
+      browserWorkerActivated:true,
+      nativeBrowserOperationServiceReady:true,
+      nativeServiceReady:false,
+      nativeRemoteComputerFullyReady:false,
+      isolatedDesktopReady:false,
+      reason:'native-browser-runtime-verified-isolated-desktop-pending'
+    },
   };
   const artifactDir = path.join(repoRoot, 'artifacts');
   fs.mkdirSync(artifactDir, { recursive:true });
   fs.writeFileSync(path.join(artifactDir, 'device-agent-production-verification.json'), JSON.stringify(summary, null, 2));
-  console.log(`[EKODI] Real Device Agent ${expectedVersion} + background-browser canary verification passed; browser execution remains fail-closed.`);
+  console.log(`[EKODI] Real Device Agent ${expectedVersion} + EKODI-native Background Browser Worker production verification passed; isolated desktop remains gated.`);
 }
 
 const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
