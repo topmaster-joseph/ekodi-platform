@@ -5,7 +5,7 @@ import {AI_ROUTER_SCORE_POLICY} from './ai-router-score.js';
 import {loadAiCollaborationPolicy} from './ai-collaboration-settings.js';
 import { LOCAL_EXECUTION_POLICY, compareLocalExecutionCandidates, localExecutionPolicySnapshot, normalizeLocalResource } from './local-execution-policy.js';
 import capabilityRegistry from './config/capability-registry.json' with { type: 'json' };
-import {AI_COMMONS_POLICY,adminIdeaView,canFinalPublish,executionCatalogSnapshot,memberIdeaView,normalizeAiIdeaInput,publicRequestView,rankCommonCapabilities,rankPublicExecutionServices,requestSimilarity,suggestedIdeaState} from './ai-commons.js';
+import {AI_COMMONS_POLICY,adminIdeaView,canFinalPublish,executionCatalogSnapshot,memberIdeaView,normalizeAiIdeaInput,publicRequestView,rankCommonCapabilities,rankPublicExecutionServices,requestSimilarity,resolveExecutionServiceEntry,suggestedIdeaState} from './ai-commons.js';
 
 const clean=value=>String(value??'').trim();
 const now=()=>new Date().toISOString();
@@ -304,23 +304,19 @@ async function interpreterBrowserAsset(request,env,assetName,contentType){
   out.headers.set('content-type',contentType);out.headers.set('cache-control','no-store');out.headers.set('x-ekodi-ai-asset','interpreter-v1');return out;
 }
 
-const AI_SERVICE_ENTRIES=Object.freeze({
-  '/docs':{label:'문서 만들기',target:'https://ekodi.kr/my/docs/'},
-  '/writing':{label:'글·원고 쓰기',target:'https://ekodi.kr/author/'},
-  '/marketing':{label:'홍보 콘텐츠 만들기',target:'https://ekodi.kr/ekodibiz/marketing-ai'},
-  '/support':{label:'지원사업 찾기',target:'https://ekodi.kr/support/'},
-  '/business':{label:'사업 운영하기',target:'https://ekodi.kr/business'},
-  '/community':{label:'회원·공동체 관리하기',target:'https://ekodi.kr/community'},
-  '/insurance':{label:'보험청구 준비하기',target:'https://ekodi.kr/insurance/'},
-  '/energy':{label:'에너지 상태 확인하기',target:'https://ekodi.kr/energy/'}
-});
+function escapeHtml(value=''){return String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
 function aiServiceEntry(request){
-  const url=new URL(request.url);const key=url.pathname.replace(/\/$/,'');const service=AI_SERVICE_ENTRIES[key];if(!service)return null;
-  const html='<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>'+service.label+' | EKODI 모두의 AI</title><style>body{margin:0;background:#f7faf8;color:#16251b;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}main{width:min(680px,calc(100% - 32px));margin:10vh auto;padding:32px;border:1px solid #dfe8e2;border-radius:22px;background:#fff}a{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:12px;text-decoration:none;font-weight:800}h1{font-size:clamp(1.8rem,5vw,2.8rem);word-break:keep-all}.run{background:#167247;color:#fff}.back{margin-left:8px;border:1px solid #dfe8e2;color:#405047}</style></head><body><main><p>EKODI 모두의 AI</p><h1>'+service.label+'</h1><p>AI 서비스 진입 경로는 <strong>'+url.pathname+'</strong>로 통일했습니다.</p><a class="run" href="'+service.target+'">바로 실행</a><a class="back" href="/ai/">모두의 AI</a></main></body></html>';
+  const url=new URL(request.url);const service=resolveExecutionServiceEntry(url.pathname,capabilityRegistry);
+  if(!service||!service.usableNow||service.deliveryMode==='direct')return null;
+  const target=clean(service.targetUrl)||'https://ekodi.kr/my/#intent';const paid=service.access?.paidAvailable===true;
+  const advanced=new URL('https://ekodi.kr/auth/');advanced.searchParams.set('site',paid?(clean(service.membershipSite)||'marketing'):'ai');advanced.searchParams.set('return_to',target);
+  if(paid){advanced.searchParams.set('review','1');advanced.searchParams.set('plan','plus');}
+  const accessText=paid?'기본 기능은 바로 확인하고, 고급·자동화 기능은 로그인 후 해당 서비스 구독 상태를 확인해 사용합니다.':'기본 기능은 바로 확인하고, 개인화·저장·고급 기능은 로그인 후 사용합니다.';
+  const advancedLabel=paid?'로그인 · 구독':'로그인 후 고급 기능';
+  const html='<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>'+escapeHtml(service.label)+' | EKODI 모두의 AI</title><style>body{margin:0;background:#f7faf8;color:#16251b;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}main{width:min(720px,calc(100% - 32px));margin:8vh auto;padding:32px;border:1px solid #dfe8e2;border-radius:22px;background:#fff}a{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:12px;text-decoration:none;font-weight:800;margin:4px 8px 4px 0}h1{font-size:clamp(1.8rem,5vw,2.8rem);word-break:keep-all}.lead{color:#516159;line-height:1.7}.access{padding:14px 16px;background:#f3f8f5;border-radius:14px;margin:18px 0}.run{background:#167247;color:#fff}.advanced{border:1px solid #9fc9b4;color:#135d3d;background:#f3faf6}.back{border:1px solid #dfe8e2;color:#405047}</style></head><body><main><p>EKODI 모두의 AI · '+escapeHtml(service.sourceKind==='specialist'?'전문서비스':'공통기능')+'</p><h1>'+escapeHtml(service.label)+'</h1><p class="lead">'+escapeHtml(service.description||'필요한 기능을 바로 시작합니다.')+'</p><div class="access">'+escapeHtml(accessText)+'</div><a class="run" href="'+escapeHtml(target)+'">기본 기능 사용</a><a class="advanced" href="'+escapeHtml(advanced.toString())+'">'+escapeHtml(advancedLabel)+'</a><a class="back" href="/ai/">모두의 AI</a></main></body></html>';
   const out=new Response(request.method==='HEAD'?null:html,{status:200,headers:{'content-type':'text/html; charset=utf-8',...headers()}});
   out.headers.set('cache-control','no-store');out.headers.set('x-ekodi-ai-surface','service-entry');return out;
 }
-
 
 async function requireCommonsSuperAdmin(request,env){
   const central=await centralAdminSession(request,env,'ai:publish');
