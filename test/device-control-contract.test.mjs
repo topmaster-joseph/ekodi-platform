@@ -55,7 +55,7 @@ test('cloud operations use a fixed capability allowlist and never expose arbitra
 
 test('maintain and privileged actions require explicit admin confirmation', () => {
   assert.match(api, /DEVICE_COMMAND_CONFIRM_REQUIRED/);
-  for (const command of ['autologon.open','maintenance.temp_cleanup','updates.install','startup.disable','startup.restore','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary','computer.browser.execute']) {
+  for (const command of ['autologon.open','maintenance.temp_cleanup','updates.install','startup.disable','startup.restore','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary','computer.browser.execute','computer.desktop.canary']) {
     const escaped = command.replaceAll('.', '\\.');
     assert.match(api, new RegExp(`'${escaped}'[^\n]*confirm: true`));
   }
@@ -137,7 +137,7 @@ test('one-click device protocol is bounded to EKODI enrollment and official API'
 });
 
 test('existing registered devices upgrade transactionally and preserve registration', () => {
-  assert.match(agent, /\$AgentVersion = '2\.3\.0'/);
+  assert.match(agent, /\$AgentVersion = '2\.3\.1'/);
   assert.match(agent, /Invoke-AgentUpgradeTransaction/);
   assert.match(agent, /Assert-AgentCandidate/);
   assert.match(agent, /New-AgentUpgradeSnapshot/);
@@ -286,4 +286,15 @@ test('self-update completes the command before a safe Agent process restart', ()
   assert.match(agent, /if \(\$script:RestartAfterCommand\) \{ break \}/);
   assert.match(agent, /\$restart = \[bool\]\$script:RestartAfterCommand/);
   assert.match(agent, /if \(\$restart\)[\s\S]*Start-AgentProcess/);
+});
+
+
+test('isolated desktop canary is explicit, summarized, and does not enable desktop input', () => {
+  assert.match(api, /'computer\.desktop\.canary': \{ risk: 'maintain', confirm: true \}/);
+  assert.match(api, /summary\.isolatedDesktopCanary/);
+  assert.match(agent, /'computer\.desktop\.canary' \{ return Invoke-IsolatedDesktopCanary \}/);
+  assert.match(agent, /isolatedDesktopCanary = \[bool\]\(Get-IsolatedDesktopCanaryState\)\.verified/);
+  assert.match(agent, /isolatedDesktop = \$false/);
+  assert.match(agent, /desktopInput = \$false/);
+  assert.doesNotMatch(admin, /computer\.desktop\.session\.execute|computer\.desktop\.input/);
 });

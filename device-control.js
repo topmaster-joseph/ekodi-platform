@@ -86,6 +86,7 @@ const COMMAND_POLICIES = Object.freeze({
   'agent.self_update': { risk: 'maintain', confirm: true },
   'computer.browser.canary': { risk: 'maintain', confirm: true },
   'computer.browser.execute': { risk: 'maintain', confirm: true, payload: 'background-browser-task' },
+  'computer.desktop.canary': { risk: 'maintain', confirm: true },
   'remote_desktop.recovery.enable': { risk: 'maintain', confirm: true },
   'remote_desktop.recovery.disable': { risk: 'maintain', confirm: true },
   'remote_desktop.recovery.run': { risk: 'maintain', confirm: true },
@@ -520,6 +521,31 @@ function summarizeCommandResult(result = {}) {
       javascriptEnabled: result.browserWorker.javascriptEnabled === true,
       mutationMode: safeText(result.browserWorker.mutationMode, 80),
       checkedAt: safeText(result.browserWorker.checkedAt, 64),
+    };
+  }
+  if (result.isolatedDesktopCanary && typeof result.isolatedDesktopCanary === 'object') {
+    summary.isolatedDesktopCanary = {
+      ok: result.isolatedDesktopCanary.ok === true,
+      mode: safeText(result.isolatedDesktopCanary.mode, 80),
+      virtualizationProvider: safeText(result.isolatedDesktopCanary.virtualizationProvider, 100),
+      routingPolicy: safeText(result.isolatedDesktopCanary.routingPolicy, 100),
+      agentVersion: safeText(result.isolatedDesktopCanary.agentVersion, 40),
+      desktopName: safeText(result.isolatedDesktopCanary.desktopName, 120),
+      childDesktopName: safeText(result.isolatedDesktopCanary.childDesktopName, 120),
+      inputDesktopName: safeText(result.isolatedDesktopCanary.inputDesktopName, 120),
+      childProcessIdObserved: result.isolatedDesktopCanary.childProcessIdObserved === true,
+      childThreadIdObserved: result.isolatedDesktopCanary.childThreadIdObserved === true,
+      childProofWritten: result.isolatedDesktopCanary.childProofWritten === true,
+      createdDesktopIsInputDesktop: result.isolatedDesktopCanary.createdDesktopIsInputDesktop === true,
+      sharedInteractiveDesktop: result.isolatedDesktopCanary.sharedInteractiveDesktop === true,
+      switchDesktopCalled: result.isolatedDesktopCanary.switchDesktopCalled === true,
+      foregroundUserSessionProtected: result.isolatedDesktopCanary.foregroundUserSessionProtected === true,
+      userInputInjection: result.isolatedDesktopCanary.userInputInjection === true,
+      clipboardShared: result.isolatedDesktopCanary.clipboardShared === true,
+      screenCapture: result.isolatedDesktopCanary.screenCapture === true,
+      arbitraryShellFromCloud: result.isolatedDesktopCanary.arbitraryShellFromCloud === true,
+      desktopHandleClosed: result.isolatedDesktopCanary.desktopHandleClosed === true,
+      checkedAt: safeText(result.isolatedDesktopCanary.checkedAt, 64),
     };
   }
   if (result.browserCanary && typeof result.browserCanary === 'object') {
