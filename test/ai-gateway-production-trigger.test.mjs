@@ -25,7 +25,10 @@ test('AI Commons production verification matches the canonical public and member
   assert.match(workflow, /x-ekodi-canonical-surface: ai/);
   assert.match(workflow, /x-ekodi-canonical-path: \/ai/);
   assert.match(workflow, /surface.*runtime-and-commons/);
-  assert.match(workflow, /EKODI 모두의 AI 프로젝트/);
+  assert.match(workflow, /EKODI 모두의 AI/);
+  assert.match(workflow, /실행 서비스/);
+  assert.match(workflow, /availability/);
+  assert.match(workflow, /deliveryMode/);
 });
 
 test('manual AI Commons production verification remains available', () => {
