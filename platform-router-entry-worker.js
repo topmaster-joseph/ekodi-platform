@@ -262,7 +262,7 @@ async function routePlatform(request,env,ctx){
     if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/seonam-medi/')){const monitor=await handleSeonamMediMonitorApi(request,env);if(monitor)return monitor;const civic=await handleSeonamMediCivicApi(request,env);if(civic)return civic;}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isLegacySeonamMedPath(url.pathname))return redirectLegacySeonamMed(request);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isSeonamMediPath(url.pathname))return routeSeonamMediStatic(request,env);
-    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isPyeonggongmokPath(url.pathname))return routePyeonggongmokStatic(request,env);
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isPyeonggongmokPath(url.pathname)){const response=await routePyeonggongmokStatic(request,env);return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;}
     if(host===PUBLIC_HOST&&(url.pathname==='/api/finance'||url.pathname.startsWith('/api/finance/')))return routeTaxFinance(request,env,ctx);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){const adminTarget=legacyAdminAliasTarget(url.pathname);if(adminTarget){const target=new URL(request.url);target.pathname=adminTarget;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'admin-canonical-handoff'}})}}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
