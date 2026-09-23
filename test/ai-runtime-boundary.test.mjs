@@ -33,7 +33,10 @@ test('production verifier follows the AI Commons public/member boundary contract
   assert.match(workflow, /api\/commons\/services/);
   assert.match(workflow, /api\/commons\/requests/);
   assert.match(workflow, /api\/commons\/ideas/);
-  assert.match(workflow, /EKODI 모두의 AI 프로젝트/);
+  assert.match(workflow, /EKODI 모두의 AI/);
+  assert.match(workflow, /실행 서비스/);
+  assert.match(workflow, /availability/);
+  assert.match(workflow, /deliveryMode/);
   assert.doesNotMatch(workflow, /https:\/\/ai\.ekodi\.kr/);
 
   const requests = manifest.worker.requests;
