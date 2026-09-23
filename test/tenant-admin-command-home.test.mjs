@@ -29,10 +29,10 @@ test('tenant and service admin pages never load a command home',async()=>{
 
 test('tenant admin runtimes open real management screens instead of command homes',async()=>{
   const [workspace,church,store,trade]=await Promise.all([
-    workspaceAdminScript().then(r=>r.text()),
-    churchPastorAdminScript().then(r=>r.text()),
-    storeAdminScript().then(r=>r.text()),
-    workspaceTradeAdminScript().then(r=>r.text()),
+    workspaceAdminScript().text(),
+    churchPastorAdminScript().text(),
+    storeAdminScript().text(),
+    workspaceTradeAdminScript().text(),
   ]);
   for(const script of [workspace,church,store,trade])assert.doesNotMatch(script,commandRuntime);
   assert.match(workspace,/MISSION_DEFAULT_ACTIVITY='260926-chuseok-open-table'/);
