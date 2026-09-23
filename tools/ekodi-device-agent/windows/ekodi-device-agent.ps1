@@ -965,8 +965,10 @@ function Invoke-BackgroundBrowserWorker($Payload) {
   New-Item -ItemType Directory -Path $BrowserWorkerProfileRoot -Force | Out-Null
   $taskId = [guid]::NewGuid().ToString('N')
   $taskProfile = Join-Path $BrowserWorkerProfileRoot ("Task-" + $taskId)
-  $shotPath = Join-Path $BrowserWorkerProfileRoot ("surface-" + $taskId + ".png")
+  $shotDir = Join-Path $BrowserWorkerProfileRoot ("Artifact-" + $taskId)
+  $shotPath = Join-Path $shotDir 'surface.png'
   New-Item -ItemType Directory -Path $taskProfile -Force | Out-Null
+  New-Item -ItemType Directory -Path $shotDir -Force | Out-Null
 
   $proof = $null
   try {
@@ -993,7 +995,8 @@ function Invoke-BackgroundBrowserWorker($Payload) {
     $shotProcess = [Diagnostics.Process]::new()
     $shotProcess.StartInfo = [Diagnostics.ProcessStartInfo]@{
       FileName = $browser
-      Arguments = (@($commonArguments + @("--screenshot=$shotPath", "$target")) -join ' ')
+      Arguments = (@($commonArguments + @('--screenshot=surface.png', "$target")) -join ' ')
+      WorkingDirectory = $shotDir
       UseShellExecute = $false
       CreateNoWindow = $true
       RedirectStandardOutput = $true
@@ -1050,10 +1053,10 @@ function Invoke-BackgroundBrowserWorker($Payload) {
     }
   } finally {
     Remove-Item -LiteralPath $taskProfile -Recurse -Force -ErrorAction SilentlyContinue
-    Remove-Item -LiteralPath $shotPath -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $shotDir -Recurse -Force -ErrorAction SilentlyContinue
     if ($proof) {
       $proof.profileRemoved = -not (Test-Path -LiteralPath $taskProfile)
-      $proof.screenshotArtifactRemoved = -not (Test-Path -LiteralPath $shotPath)
+      $proof.screenshotArtifactRemoved = -not (Test-Path -LiteralPath $shotDir)
     }
   }
 
