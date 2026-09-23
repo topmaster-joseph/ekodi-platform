@@ -44,3 +44,8 @@ test('shared browser shell contains address-bar fallback cleanup for shell-enabl
   assert.match(shell,/utm_/);
   assert.match(shell,/return_to/);
 });
+
+test('tracking cleanup keeps the URL fragment while removing attribution keys',()=>{
+  const {url}=stripTrackingQuery('https://ekodi.kr/ekodimission?utm_source=chatgpt.com&lang=ko#applications');
+  assert.equal(url.toString(),'https://ekodi.kr/ekodimission?lang=ko#applications');
+});
