@@ -6,7 +6,7 @@ const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
 
-const ORIGINS = new Set(["https://community.ekodi.kr", "http://localhost:8788", "http://127.0.0.1:8788"]);
+const ORIGINS = new Set(["https://ekodi.kr", "http://localhost:8788", "http://127.0.0.1:8788"]);
 const INTENTS = new Set(["friend", "colleague", "mentor", "collaborator", "marriage"]);
 const REPORT_CATEGORIES = new Set(["spam", "harassment", "false_profile", "unsafe", "other"]);
 const CONSENT_VERSION = "2026-08-26-v1";
@@ -19,7 +19,7 @@ const pairFilter = (me: string, other: string) => `and(user_a_id.eq.${me},user_b
 const cors = (req: Request) => {
   const origin = req.headers.get("Origin") || "";
   return {
-    "Access-Control-Allow-Origin": ORIGINS.has(origin) ? origin : "https://community.ekodi.kr",
+    "Access-Control-Allow-Origin": ORIGINS.has(origin) ? origin : "https://ekodi.kr",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
     "Access-Control-Max-Age": "86400",
