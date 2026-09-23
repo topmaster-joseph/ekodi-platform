@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "EKODI-CAPABILITY-ACCUMULATION-001",
+  "version": "1.0.0",
+  "status": "active",
+  "principle": "learn_into_reusable_capabilities_before_services",
+  "inputLanes": [
+    "verified-task-experience",
+    "repeated-automation-pattern",
+    "knowledge-gap",
+    "operator-observation"
+  ],
+  "automaticStages": [
+    "observe",
+    "detect-gap",
+    "search-existing-capability",
+    "compose-candidate",
+    "assign-foundry-family",
+    "prepare-synthetic-sample",
+    "queue-for-sandbox"
+  ],
+  "prohibitedAutomaticStages": [
+    "register-user-service",
+    "create-independent-deployment-boundary",
+    "expand-authority",
+    "write-production-business-data",
+    "publish-unverified-module"
+  ],
+  "thresholds": {
+    "minimumOccurrences": 3,
+    "minimumVerifiedOccurrences": 3,
+    "minimumObservedSuccessRate": 0.8,
+    "functionalVerificationRequiredBeforeReadyForReuse": true
+  },
+  "promotion": {
+    "candidateToSandbox": "automatic_when_thresholds_met",
+    "sandboxToVerified": "evidence_required",
+    "verifiedToReadyForReuse": "human_or_guarded_pr_required",
+    "readyForReuseToUserService": "forbidden_without_CAPABILITY-BEFORE-SERVICE-001"
+  },
+  "dataSafety": {
+    "rawUserPromptStored": false,
+    "secretsStored": false,
+    "syntheticSampleOnly": true,
+    "externalInstructionsExecutable": false
+  }
+}
