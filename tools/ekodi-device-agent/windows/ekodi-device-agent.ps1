@@ -10,7 +10,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = '2.3.1'
+$AgentVersion = '2.3.2'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -29,6 +29,8 @@ $BrowserCanaryStatePath = Join-Path $Root 'background-browser-canary.json'
 $BrowserCanaryProfileRoot = Join-Path $env:ProgramData 'EKODI\BrowserWorker\CanaryProfile'
 $BrowserWorkerProfileRoot = Join-Path $env:ProgramData 'EKODI\BrowserWorker\Tasks'
 $BrowserCanaryUrl = 'https://ekodi.kr/'
+$IsolatedDesktopCanaryStatePath = Join-Path $Root 'isolated-desktop-canary.json'
+$IsolatedDesktopSessionRoot = Join-Path $env:ProgramData 'EKODI\IsolatedDesktop\Sessions'
 
 function Test-IsAdministrator {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -1288,6 +1290,143 @@ function Invoke-IsolatedDesktopBackendProbe {
   }
 }
 
+function Get-IsolatedDesktopCanaryState {
+  if (-not (Test-Path -LiteralPath $IsolatedDesktopCanaryStatePath)) {
+    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion }
+  }
+  try {
+    $state = Get-Content -LiteralPath $IsolatedDesktopCanaryStatePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $verified = (
+      $state.ok -eq $true -and
+      [string]$state.agentVersion -eq $AgentVersion -and
+      [string]$state.mode -eq 'isolated-desktop-hyperv-canary' -and
+      [string]$state.backend -eq 'hyper-v-ekodi-base' -and
+      $state.headless -eq $true -and
+      $state.networkAttached -eq $false -and
+      $state.sharedInteractiveDesktop -eq $false -and
+      $state.clipboardShared -eq $false -and
+      $state.userInputInjection -eq $false -and
+      $state.credentialCollection -eq $false -and
+      $state.ephemeralDifferencingDisk -eq $true -and
+      $state.sessionVmRemoved -eq $true -and
+      $state.sessionDiskRemoved -eq $true
+    )
+    return @{
+      verified = [bool]$verified
+      checkedAt = [string]$state.checkedAt
+      agentVersion = [string]$state.agentVersion
+      backend = [string]$state.backend
+      headless = [bool]$state.headless
+      networkAttached = [bool]$state.networkAttached
+      sessionVmRemoved = [bool]$state.sessionVmRemoved
+      sessionDiskRemoved = [bool]$state.sessionDiskRemoved
+    }
+  } catch {
+    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion; error = 'isolated_desktop_canary_state_invalid' }
+  }
+}
+
+function Invoke-IsolatedDesktopHyperVCanary {
+  Remove-Item -LiteralPath $IsolatedDesktopCanaryStatePath -Force -ErrorAction SilentlyContinue
+  $probe = Get-IsolatedDesktopBackendProbe
+  if (-not $probe.headlessBackendReady -or $probe.recommendedBackend -ne 'hyper-v-ekodi-base') {
+    throw "isolated_desktop_headless_backend_not_ready:$($probe.gapReason)"
+  }
+
+  $baseVmName = 'EKODI-Isolated-Base'
+  $baseVm = Get-VM -Name $baseVmName -ErrorAction Stop
+  if ([string]$baseVm.State -ne 'Off') { throw 'isolated_desktop_base_vm_must_be_off' }
+  $baseDisks = @(Get-VMHardDiskDrive -VMName $baseVmName -ErrorAction Stop)
+  if ($baseDisks.Count -ne 1) { throw 'isolated_desktop_base_vm_requires_single_disk' }
+  $baseDiskPath = [string]$baseDisks[0].Path
+  if (-not $baseDiskPath -or -not (Test-Path -LiteralPath $baseDiskPath)) { throw 'isolated_desktop_base_disk_missing' }
+
+  New-Item -ItemType Directory -Path $IsolatedDesktopSessionRoot -Force | Out-Null
+  $sessionId = [guid]::NewGuid().ToString('N')
+  $sessionName = "EKODI-Isolated-$sessionId"
+  $sessionDir = Join-Path $IsolatedDesktopSessionRoot $sessionId
+  $sessionDisk = Join-Path $sessionDir 'session.vhdx'
+  New-Item -ItemType Directory -Path $sessionDir -Force | Out-Null
+
+  $vmCreated = $false
+  $vmStarted = $false
+  $proof = $null
+  try {
+    New-VHD -Path $sessionDisk -ParentPath $baseDiskPath -Differencing -ErrorAction Stop | Out-Null
+    $memory = 2GB
+    $vm = New-VM -Name $sessionName -Generation ([int]$baseVm.Generation) -MemoryStartupBytes $memory -VHDPath $sessionDisk -ErrorAction Stop
+    $vmCreated = $true
+    Get-VMNetworkAdapter -VMName $sessionName -ErrorAction SilentlyContinue | Remove-VMNetworkAdapter -ErrorAction SilentlyContinue
+    Set-VM -Name $sessionName -AutomaticStartAction Nothing -AutomaticStopAction TurnOff -AutomaticCheckpointsEnabled $false -ErrorAction Stop
+    if ([int]$baseVm.Generation -eq 2) {
+      Set-VMFirmware -VMName $sessionName -EnableSecureBoot On -ErrorAction Stop
+    }
+
+    Start-VM -Name $sessionName -ErrorAction Stop | Out-Null
+    $deadline = [DateTime]::UtcNow.AddSeconds(30)
+    do {
+      Start-Sleep -Milliseconds 500
+      $state = [string](Get-VM -Name $sessionName -ErrorAction Stop).State
+      if ($state -eq 'Running') { $vmStarted = $true; break }
+    } while ([DateTime]::UtcNow -lt $deadline)
+    if (-not $vmStarted) { throw 'isolated_desktop_vm_start_timeout' }
+
+    $proof = @{
+      ok = $true
+      mode = 'isolated-desktop-hyperv-canary'
+      provider = 'ekodi-native-remote-computer'
+      routingPolicy = 'EKODI-VIRTUALIZATION-ROUTING-001'
+      backendPolicy = 'EKODI-ISOLATED-DESKTOP-BACKEND-001'
+      agentVersion = $AgentVersion
+      backend = 'hyper-v-ekodi-base'
+      sessionType = 'vm'
+      sessionId = $sessionId
+      baseVmName = $baseVmName
+      baseVmGeneration = [int]$baseVm.Generation
+      baseDiskPathSha256 = Get-Sha256String $baseDiskPath
+      headless = $true
+      networkAttached = $false
+      sharedInteractiveDesktop = $false
+      clipboardShared = $false
+      userInputInjection = $false
+      credentialCollection = $false
+      ephemeralDifferencingDisk = $true
+      baseDiskWriteForbidden = $true
+      secureBootRequested = ([int]$baseVm.Generation -eq 2)
+      vmReachedRunning = $true
+      boundedStartWaitSeconds = 30
+      sessionVmRemoved = $false
+      sessionDiskRemoved = $false
+      checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+    }
+  } finally {
+    if ($vmCreated) {
+      try {
+        $existing = Get-VM -Name $sessionName -ErrorAction SilentlyContinue
+        if ($existing -and [string]$existing.State -ne 'Off') {
+          Stop-VM -Name $sessionName -TurnOff -Force -ErrorAction SilentlyContinue
+        }
+      } catch { }
+      try { Remove-VM -Name $sessionName -Force -ErrorAction SilentlyContinue } catch { }
+    }
+    Remove-Item -LiteralPath $sessionDir -Recurse -Force -ErrorAction SilentlyContinue
+    if ($proof) {
+      $proof.sessionVmRemoved = -not [bool](Get-VM -Name $sessionName -ErrorAction SilentlyContinue)
+      $proof.sessionDiskRemoved = -not (Test-Path -LiteralPath $sessionDisk)
+    }
+  }
+
+  if (-not $proof -or -not $proof.sessionVmRemoved -or -not $proof.sessionDiskRemoved) {
+    throw 'isolated_desktop_canary_cleanup_failed'
+  }
+  New-Item -ItemType Directory -Path $Root -Force | Out-Null
+  $proof | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $IsolatedDesktopCanaryStatePath -Encoding UTF8
+  return @{
+    message = 'EKODI 자체 Hyper-V 격리 데스크톱 canary를 사용자 화면과 분리해 생성·부팅·폐기했습니다. 실제 데스크톱 작업 실행 권한은 아직 비활성입니다.'
+    desktopCanary = $proof
+  }
+}
+
 function Get-RemoteAgentStatus {
   $taskState = 'unknown'
   try {
@@ -1307,6 +1446,7 @@ function Get-RemoteAgentStatus {
     backgroundBrowserCanaryVerified = [bool](Get-BackgroundBrowserCanaryState).verified
     backgroundBrowserReady = [bool](Get-BackgroundBrowserCanaryState).verified
     isolatedDesktopProbeAvailable = $true
+    isolatedDesktopCanaryVerified = [bool](Get-IsolatedDesktopCanaryState).verified
     isolatedDesktopReady = $false
     minimizedWindowCountsAsIsolation = $false
   }
@@ -1379,6 +1519,7 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'computer.process.list' { return @{ message = '원격 컴퓨터 프로세스 목록을 읽었습니다.'; processes = Get-RemoteProcessList } }
     'computer.agent.status' { return @{ message = 'EKODI Native Remote Agent 상태를 읽었습니다.'; agent = Get-RemoteAgentStatus } }
     'computer.desktop.probe' { return Invoke-IsolatedDesktopBackendProbe }
+    'computer.desktop.canary' { return Invoke-IsolatedDesktopHyperVCanary }
     'network.diagnose' { return @{ message = '네트워크 진단을 완료했습니다.'; network = Get-NetworkDiagnostic } }
     'printers.diagnose' { return @{ message = '프린터와 인쇄 대기열 진단을 완료했습니다.'; printers = Get-PrinterDiagnostic } }
     'startup.scan' { return @{ message = '시작 프로그램 목록을 확인했습니다.'; startup = Get-StartupDiagnostic } }
@@ -1479,7 +1620,7 @@ function Send-Heartbeat($Config) {
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
       networkDiagnostics = $true; printerDiagnostics = $true; workstationProfile = $true; protocolLaunch = $true
       computerRead = $true; processRead = $true; agentStatus = $true
-      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktop = $false
+      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktop = $false
       desktopCapture = $false; desktopInput = $false
       arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
     }

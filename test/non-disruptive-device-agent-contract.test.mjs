@@ -11,10 +11,11 @@ const [agent, policyRaw, admin, windowsWorkflow] = await Promise.all([
 const policy = JSON.parse(policyRaw);
 
 test('Windows Agent enables only the canary-gated background browser while isolated desktop stays disabled', () => {
-  assert.match(agent, /\$AgentVersion = '2\.3\.1'/);
+  assert.match(agent, /\$AgentVersion = '2\.3\.2'/);
   assert.match(agent, /backgroundBrowserCanary = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /backgroundBrowser = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktopProbe = \$true/);
+  assert.match(agent, /isolatedDesktopCanary = \[bool\]\(Get-IsolatedDesktopCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktop = \$false/);
   assert.match(agent, /desktopInput = \$false/);
 });
@@ -34,6 +35,7 @@ test('Agent status and admin UI expose non-disruptive readiness without enabling
   assert.match(agent, /backgroundBrowserCanaryVerified = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /backgroundBrowserReady = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktopProbeAvailable = \$true/);
+  assert.match(agent, /isolatedDesktopCanaryVerified = \[bool\]\(Get-IsolatedDesktopCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktopReady = \$false/);
   assert.match(agent, /minimizedWindowCountsAsIsolation = \$false/);
   assert.match(admin, /사용자 화면 보호가 기본입니다/);
@@ -84,4 +86,18 @@ test('isolated desktop backend probe keeps foreground Windows Sandbox out of act
   assert.equal(policy.nonDisruptiveExecution.isolatedDesktop.backendPolicy, 'config/isolated-desktop-backend-policy.json');
   assert.equal(policy.nonDisruptiveExecution.isolatedDesktop.executionCapabilityDefault, false);
   assert.equal(policy.nonDisruptiveExecution.isolatedDesktop.headlessBackendRequired, true);
+});
+
+
+test('headless Hyper-V canary never unlocks isolated desktop execution', () => {
+  assert.match(agent, /computer\.desktop\.canary/);
+  assert.match(agent, /isolated_desktop_headless_backend_not_ready/);
+  assert.match(agent, /ephemeralDifferencingDisk = \$true/);
+  assert.match(agent, /networkAttached = \$false/);
+  assert.match(agent, /sharedInteractiveDesktop = \$false/);
+  assert.match(agent, /clipboardShared = \$false/);
+  assert.match(agent, /userInputInjection = \$false/);
+  assert.match(agent, /sessionVmRemoved = -not \[bool\]\(Get-VM/);
+  assert.match(agent, /sessionDiskRemoved = -not \(Test-Path -LiteralPath \$sessionDisk\)/);
+  assert.doesNotMatch(agent, /isolatedDesktop = \$true/);
 });

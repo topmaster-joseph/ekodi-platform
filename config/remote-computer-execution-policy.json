@@ -86,7 +86,10 @@
       "probeCommand": "computer.desktop.probe",
       "executionCapabilityDefault": false,
       "headlessBackendRequired": true,
-      "windowsSandboxForegroundUiNotActivationEligible": true
+      "windowsSandboxForegroundUiNotActivationEligible": true,
+      "canaryCommand": "computer.desktop.canary",
+      "canaryRequiredBeforeExecution": true,
+      "canaryDoesNotEnableExecution": true
     },
     "foregroundTakeover": {
       "automaticFallback": false,
