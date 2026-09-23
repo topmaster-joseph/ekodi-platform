@@ -74,6 +74,7 @@ const COMMAND_POLICIES = Object.freeze({
   'computer.process.list': { risk: 'observe' },
   'computer.agent.status': { risk: 'observe' },
   'computer.desktop.probe': { risk: 'observe' },
+  'computer.desktop.canary': { risk: 'maintain', confirm: true },
   'network.diagnose': { risk: 'observe' },
   'printers.diagnose': { risk: 'observe' },
   'startup.scan': { risk: 'observe' },
@@ -106,6 +107,7 @@ const COMMAND_CAPABILITIES = Object.freeze({
   'computer.process.list': 'processRead',
   'computer.agent.status': 'agentStatus',
   'computer.desktop.probe': 'isolatedDesktopProbe',
+  'computer.desktop.canary': 'isolatedDesktopProbe',
   'computer.browser.execute': 'backgroundBrowser',
   'network.diagnose': 'networkDiagnostics',
   'printers.diagnose': 'printerDiagnostics',
@@ -492,6 +494,36 @@ function summarizeCommandResult(result = {}) {
     : (Number.isFinite(Number(value)) ? Number(value) : null);
   for (const key of ['message', 'freedMB', 'pendingCount', 'installedCount', 'failedCount', 'rebootRequired', 'profile']) {
     if (result[key] !== undefined) summary[key] = result[key];
+  }
+  if (result.desktopCanary && typeof result.desktopCanary === 'object') {
+    summary.desktopCanary = {
+      ok: result.desktopCanary.ok === true,
+      mode: safeText(result.desktopCanary.mode, 80),
+      provider: safeText(result.desktopCanary.provider, 100),
+      routingPolicy: safeText(result.desktopCanary.routingPolicy, 100),
+      backendPolicy: safeText(result.desktopCanary.backendPolicy, 120),
+      agentVersion: safeText(result.desktopCanary.agentVersion, 40),
+      backend: safeText(result.desktopCanary.backend, 80),
+      sessionType: safeText(result.desktopCanary.sessionType, 40),
+      sessionId: safeText(result.desktopCanary.sessionId, 80),
+      baseVmName: safeText(result.desktopCanary.baseVmName, 80),
+      baseVmGeneration: finiteNumber(result.desktopCanary.baseVmGeneration),
+      baseDiskPathSha256: safeText(result.desktopCanary.baseDiskPathSha256, 80),
+      headless: result.desktopCanary.headless === true,
+      networkAttached: result.desktopCanary.networkAttached === true,
+      sharedInteractiveDesktop: result.desktopCanary.sharedInteractiveDesktop === true,
+      clipboardShared: result.desktopCanary.clipboardShared === true,
+      userInputInjection: result.desktopCanary.userInputInjection === true,
+      credentialCollection: result.desktopCanary.credentialCollection === true,
+      ephemeralDifferencingDisk: result.desktopCanary.ephemeralDifferencingDisk === true,
+      baseDiskWriteForbidden: result.desktopCanary.baseDiskWriteForbidden === true,
+      secureBootRequested: result.desktopCanary.secureBootRequested === true,
+      vmReachedRunning: result.desktopCanary.vmReachedRunning === true,
+      boundedStartWaitSeconds: finiteNumber(result.desktopCanary.boundedStartWaitSeconds),
+      sessionVmRemoved: result.desktopCanary.sessionVmRemoved === true,
+      sessionDiskRemoved: result.desktopCanary.sessionDiskRemoved === true,
+      checkedAt: safeText(result.desktopCanary.checkedAt, 64),
+    };
   }
   if (result.desktopProbe && typeof result.desktopProbe === 'object') {
     summary.desktopProbe = {

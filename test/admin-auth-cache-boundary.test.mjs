@@ -18,7 +18,7 @@ test('critical central auth JavaScript cannot remain stale in the browser or edg
   }
   assert.match(authRouterWorker, /AUTH_CRITICAL_ASSETS\.has\(stripped\)\?'no-store':'public, max-age=300'/);
   assert.match(authIndex, /auth-bootstrap\.js\?v=20260923-return-continuity-1/);
-  assert.match(authIndex, /auth-entry\.js\?v=20260923-return-continuity-1/);
+  assert.match(authIndex, /auth-entry\.js\?v=20260923-space-admin-return-2/);
 });
 
 test('central auth entry stays executable under restrictive CSP without inline JavaScript', () => {
@@ -26,7 +26,7 @@ test('central auth entry stays executable under restrictive CSP without inline J
   assert.match(authBootstrap, /dataset\.identityManage/);
   assert.match(authBootstrap, /dataset\.seamlessSso/);
   assert.match(authBootstrap, /dataset\.adminDirectBridge/);
-  assert.match(authEntry, /import\('\.\/auth-router\.js\?v=20260923-return-continuity-1'\)/);
+  assert.match(authEntry, /import\('\.\/auth-router\.js\?v=20260923-space-admin-return-2'\)/);
   assert.match(authEntry, /dataset\.authLoopBlocked/);
   const authCsp = authRouterWorker.match(/const AUTH_CSP=\[[\s\S]*?\]\.join\('; '\);/)?.[0] || '';
   assert.ok(authCsp, 'AUTH_CSP block must remain present');
@@ -46,12 +46,12 @@ test('guarded production release verifies current auth entry, bridge and workspa
   const bridgeScript = requests.find(item => item.url === 'https://ekodi.kr/auth/google-origin-bridge.js');
   for (const probe of [root, bootstrap, entry, router, client, workspaceTarget, admin, bridgeDoc, bridgeScript]) assert.ok(probe);
   assert.ok(root.expect.includes('/auth/auth-bootstrap.js?v=20260923-return-continuity-1'));
-  assert.ok(root.expect.includes('/auth/auth-entry.js?v=20260923-return-continuity-1'));
+  assert.ok(root.expect.includes('/auth/auth-entry.js?v=20260923-space-admin-return-2'));
   assert.ok(bootstrap.expect.includes('dataset.seamlessSso'));
-  assert.ok(entry.expect.includes("./auth-router.js?v=20260923-return-continuity-1"));
+  assert.ok(entry.expect.includes("./auth-router.js?v=20260923-space-admin-return-2"));
   assert.ok(router.expect.includes('admin-auth.js?v=20260918-canonical-origin-2'));
   assert.ok(router.expect.includes('business-auth.js?v=20260826-free-fallback-1'));
-  assert.ok(router.expect.includes('client-auth.js?v=20260923-return-continuity-1'));
+  assert.ok(router.expect.includes('client-auth.js?v=20260923-space-admin-return-2'));
   assert.ok(client.expect.includes('/session/handoff'));
   assert.ok(client.expect.includes('session_timeout'));
   assert.ok(workspaceTarget.expect.includes('workspace_key:requested'));

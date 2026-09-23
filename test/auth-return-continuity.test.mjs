@@ -30,6 +30,12 @@ test('constitution makes login-return continuity mandatory for every site',()=>{
 });
 
 test('central client auth returns directly to the initiating trusted URL',()=>{
+  assert.match(client,/space:\{name:'EKODI 운영공간',returnTo:'https:\/\/ekodi\.kr\/',origins:\['https:\/\/ekodi\.kr'\],open:true,kind:'space'\}/);
+  assert.match(client,/function trustedSpaceAdminTarget\(raw\)/);
+  assert.ok(client.includes("if(!/^\\/[a-z0-9-]+\\/admin(?:\\/|$)/i.test(target.pathname))return null;"));
+  assert.match(client,/function unwrapSpaceMyRelay\(target\)/);
+  assert.match(client,/target\.searchParams\.get\('from'\).*space/);
+  assert.match(client,/target\.searchParams\.get\('return_to'\)/);
   assert.match(client,/function postLoginTarget\(\)/);
   assert.match(client,/const target=new URL\(RETURN_TO\)/);
   assert.match(client,/const target=postLoginTarget\(\)/);
@@ -59,8 +65,8 @@ test('My EKODI is not a cross-service token landing page',()=>{
 });
 
 test('auth and store releases are cache-busted for return continuity',()=>{
-  assert.match(router,/client-auth\.js\?v=20260923-return-continuity-1/);
-  assert.match(entry,/auth-router\.js\?v=20260923-return-continuity-1/);
-  assert.match(store,/store-admin\.css\?v=20260923-auth-return-title-v1/);
-  assert.match(store,/20260923-auth-return-title-v1/);
+  assert.match(router,/client-auth\.js\?v=20260923-space-admin-return-2/);
+  assert.match(entry,/auth-router\.js\?v=20260923-space-admin-return-2/);
+  assert.match(store,/store-admin\.css\?v=20260923-auth-return-title-v2/);
+  assert.match(store,/20260923-auth-return-title-v2/);
 });

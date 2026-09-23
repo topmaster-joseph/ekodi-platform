@@ -50,6 +50,7 @@ jobs:
           grep -Fq "agent.self_update" scripts/verify-device-agent-production.mjs
           grep -Fq "computer.browser.canary" scripts/verify-device-agent-production.mjs
           grep -Fq "computer.desktop.probe" scripts/verify-device-agent-production.mjs
+          grep -Fq "computer.desktop.canary" scripts/verify-device-agent-production.mjs
           grep -Fq "browserWorkerActivated:false" scripts/verify-device-agent-production.mjs
           grep -Fq "nativeServiceReady:false" scripts/verify-device-agent-production.mjs
           grep -Fq "https://ekodi.kr" scripts/verify-device-agent-production.mjs

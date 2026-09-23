@@ -61,13 +61,13 @@ jobs:
           grep -Fq "identity('/google/link/exchange'" auth-site/marketing-auth-hotfix.js
           grep -Fq 'verifyOtp({token_hash:proof.tokenHash' auth-site/marketing-auth-hotfix.js
           grep -Fq '/auth-bootstrap.js?v=20260923-return-continuity-1' auth-site/index.html
-          grep -Fq '/auth-entry.js?v=20260923-return-continuity-1' auth-site/index.html
-          grep -Fq "./auth-router.js?v=20260923-return-continuity-1" auth-site/auth-entry.js
+          grep -Fq '/auth-entry.js?v=20260923-space-admin-return-2' auth-site/index.html
+          grep -Fq "./auth-router.js?v=20260923-space-admin-return-2" auth-site/auth-entry.js
           grep -Fq "admin-auth.js?v=20260918-canonical-origin-2" auth-site/auth-router.js
           grep -Fq "author-auth.js?v=20260816-author-ai-1" auth-site/auth-router.js
           grep -Fq "business-auth.js?v=20260826-free-fallback-1" auth-site/auth-router.js
           grep -Fq "marketing-auth-hotfix.js?v=20260824-return-origin-1" auth-site/auth-router.js
-          grep -Fq "client-auth.js?v=20260923-return-continuity-1" auth-site/auth-router.js
+          grep -Fq "client-auth.js?v=20260923-space-admin-return-2" auth-site/auth-router.js
           grep -Fq "auth.js?v=20260824-return-origin-1" auth-site/auth-router.js
           grep -Fq "marketing-onboarding.js?v=20260817-workspace-label-1" auth-site/auth-router.js
           grep -Fq "'author-auth.js'" scripts/build.mjs
