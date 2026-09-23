@@ -159,9 +159,7 @@ test('visible task navigation lazy-loads demand features before shared panel act
   assert.match(source, /visible navigation demand activation failed/);
   assert.match(source, /definition\?\.delegateSection[\s\S]*window\.EKODIAdminPanels\?\.activate/);
   assert.match(source, /nav\.dataset\.adminPendingSection = section/);
-  assert.match(sidebar, /ekodi-admin-panels-ready/);
-  assert.match(sidebar, /flushPendingSection/);
-  assert.match(layout, /function leaveCommandHome\(\)/);
-  assert.ok(layout.indexOf('leaveCommandHome();') < layout.indexOf('if(!hasPanel(section))return false;'), 'leaving command home must happen before lazy panel availability is checked');
-  assert.match(layout, /dispatchEvent\(new CustomEvent\('ekodi-admin-panels-ready'\)\)/);
+  assert.match(sidebar, /for \(const delay of \[0, 60, 240\]\)/);
+  assert.match(sidebar, /window\.setTimeout/);
+  assert.ok(layout.indexOf("classList.remove('admin-command-home','admin-command-active')") < layout.indexOf('if(!hasPanel(section))return false;'), 'command home must be released before lazy panel availability is checked');
 });
