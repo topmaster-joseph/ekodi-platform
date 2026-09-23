@@ -64,6 +64,9 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(worker,/x-ekodi-user-ui-footer/);
   assert.match(worker,/x-ekodi-user-language/);
   assert.match(legacyMobileHeader,/if\(window\.__EKODI_USER_UI_HEADER_BOOTED\)return/);
+  assert.match(legacyMobileHeader,/function isAdminSurface\(\)/);
+  assert.match(legacyMobileHeader,/isAdminSurface\(\)\)\{detach\(\);return;\}/);
+  assert.match(legacyMobileHeader,/attributeFilter:\['data-ekodi-shell-surface'\]/);
 
   assert.match(footerClient,/const VERSION=7/);
   assert.match(footerClient,/workspace-api\.ekodi\.kr\/v1\/site-chrome\/public/);
