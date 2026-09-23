@@ -10,8 +10,15 @@ test('cmpmyi admin is an aggregate hub that hands off to each store canonical ad
   assert.equal(response.status,200);
   assert.equal(response.headers.get('x-ekodi-route'),'cmpmyi-store-portfolio-admin');
   assert.deepEqual(CMPMYI_STORES.map(x=>x.slug),['jadam','pizzamaru','yogurt']);
-  assert.ok(CMPMYI_ADMIN_SECTIONS.some(([section])=>section==='reviews'));
-  for(const store of CMPMYI_STORES){assert.ok(html.includes(store.name));assert.ok(html.includes(`/${store.slug}/admin/menu`));}
+  for(const section of ['delivery','menu','orders','sales','inventory','customers','reviews','marketing','publishing','work','finance','connections','site','members']){
+    assert.ok(CMPMYI_ADMIN_SECTIONS.some(([key])=>key===section),`missing ${section}`);
+  }
+  for(const store of CMPMYI_STORES){
+    assert.ok(html.includes(store.name));
+    for(const section of ['delivery','menu','orders','connections'])assert.ok(html.includes(`/${store.slug}/admin/${section}`));
+  }
+  assert.match(html,/브랜드 관리자 전체 메뉴/);
+  assert.match(html,/배달플랫폼 관리는 각 브랜드의 배달플랫폼 메뉴에서 수행합니다/);
   assert.match(html,/점포별 재확인/);assert.match(html,/공통 Store Admin/);
 });
 
