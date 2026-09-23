@@ -17,14 +17,15 @@ test('bootstrap never silently drops a command while Assist is lazy-loading',asy
   assert.match(js,/setCustomValidity/);
   assert.match(js,/reportValidity/);
   assert.match(js,/window\.EKODIAdminAssist/);
-  assert.match(js,/bridge\?\.submit/);
-  assert.match(js,/bridge\.submit\(text\)/);
+  assert.match(js,/bridge\?\.execute/);
+  assert.match(js,/bridge\.execute\(0,text\)/);
   assert.match(js,/finally\{b\.disabled=0\}/);
   assert.doesNotMatch(js,/if\(!d\?\.loadStyle\|\|!d\?\.loadScript\)return/);
-  assert.ok(js.indexOf('await L')<js.indexOf('bridge.submit(text)'),'Assist runtime must resolve before direct command submission');
+  assert.ok(js.indexOf('await L')<js.indexOf('bridge.execute(0,text)'),'Assist runtime must resolve before checked-target command submission');
   const dock=await read('admin-assist-dock.js');
   assert.match(dock,/EKODIAdminAssist=Object\.freeze/);
   assert.match(dock,/submit:text=>\{setOpen\(true\);setTab\('ai',false\);return submitAi\(text\)\}/);
+  assert.match(dock,/execute:\(targets,text\)=>\{setOpen\(true\);setTab\('ai',false\);const picked=targets\|\|selectedExecutionTargets/);
 });
 
 test('bootstrap explicitly awaits the dock listener runtime on demand and direct fallback paths',async()=>{
@@ -65,7 +66,7 @@ test('production verification submits the real bottom command on canonical ekodi
   assert.doesNotMatch(probe,/api\.ekodi\.kr/);
   const dock=await read('admin-assist-dock.js');
   assert.match(dock,/const API='https:\/\/ekodi\.kr'/);
-  assert.match(probe,/#ekodiAssistBootstrap input/);
+  assert.match(probe,/#ekodiAssistBootstrap \.ekodi-assist-bootstrap-prompt-row > input/);
   assert.match(probe,/postDataJSON/);
   assert.match(probe,/ekodi-admin-command-history-v1/);
   assert.match(probe,/#ekodiAssistPanel:not\(\[hidden\]\)/);

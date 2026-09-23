@@ -157,5 +157,9 @@ test('visible task navigation lazy-loads demand features before shared panel act
   assert.match(source, /window\.EKODIAdminPanels\?\.activate/);
   assert.ok(source.indexOf('window.EKODIAdminDemand.activate(section)') < source.lastIndexOf('window.EKODIAdminPanels?.activate'), 'non-delegated demand feature must load before the shared panel controller activates it');
   assert.match(source, /visible navigation demand activation failed/);
-  assert.match(source, /definition\?\.delegateSection[\s\S]*window\.EKODIAdminPanels\?\.activate\?\.\(section\)/);
+  assert.match(source, /definition\?\.delegateSection[\s\S]*window\.EKODIAdminPanels\?\.activate/);
+  assert.match(source, /nav\.dataset\.adminPendingSection = section/);
+  assert.match(sidebar, /for \(const delay of \[0, 60, 240\]\)/);
+  assert.match(sidebar, /window\.setTimeout/);
+  assert.ok(layout.indexOf("classList.remove('admin-command-home','admin-command-active')") < layout.indexOf('if(!hasPanel(section))return false;'), 'command home must be released before lazy panel availability is checked');
 });

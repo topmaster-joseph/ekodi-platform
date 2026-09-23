@@ -79,8 +79,9 @@ function activateCommandHome(){
   return true;
 }
 function activatePanel(section){
-  if(!section||!hasPanel(section))return false;
+  if(!section)return false;
   document.body.classList.remove('admin-command-home','admin-command-active');
+  if(!hasPanel(section))return false;
   requestedSection=section;
   for(const panel of content.querySelectorAll('[data-panel]')){
     const visible=panelTargets(panel).includes(section);

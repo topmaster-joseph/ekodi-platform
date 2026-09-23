@@ -21,6 +21,10 @@
     Object.freeze({id:'gemini',label:'Gemini',url:'https://gemini.google.com/app'}),
     Object.freeze({id:'qwen',label:'Qwen',url:'https://chat.qwen.ai/'}),
   ]);
+  const EXECUTION_TARGETS=Object.freeze([
+    Object.freeze({id:'ekodi',label:'EKODI',checked:true}),
+    ...EXTERNAL_AI.map(item=>Object.freeze({id:item.id,label:item.label,checked:false})),
+  ]);
   const EXTERNAL_SECRET_RE=/(sk-[a-z0-9_-]{12,}|gh[pousr]_[a-z0-9]{20,}|akia[0-9a-z]{16}|-----begin [a-z ]+private key-----|\beyj[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}\b|(?:password|passwd|비밀번호)\s*[:=]\s*\S+)/i;
   const HIGH_RISK=[
     {re:/(계약|법적|위약|서명|contract)/i,area:'legal_commitment_or_contract_execution'},
@@ -59,12 +63,24 @@
     return {section,title,hash:location.hash||'',pathname:location.pathname};
   }
   async function api(path,options={}){
-    const response=await fetch(`${API}${path}`,{cache:'no-store',...options,headers:{...headers(Boolean(options.body)),...(options.headers||{})}});
-    let data={};try{data=await response.json()}catch{}
-    if(!response.ok)throw new Error(data.error||data.message||`요청 실패 (${response.status})`);
-    return data;
+    const timeoutMs=Number(options.timeoutMs)||15000;
+    const controller=typeof AbortController==='function'?new AbortController():null;
+    const timer=controller&&timeoutMs>0?window.setTimeout(()=>controller.abort(),timeoutMs):null;
+    const requestOptions={...options};delete requestOptions.timeoutMs;
+    if(controller&&!requestOptions.signal)requestOptions.signal=controller.signal;
+    try{
+      const response=await fetch(`${API}${path}`,{cache:'no-store',...requestOptions,headers:{...headers(Boolean(requestOptions.body)),...(requestOptions.headers||{})}});
+      let data={};try{data=await response.json()}catch{}
+      if(!response.ok)throw new Error(data.error||data.message||`요청 실패 (${response.status})`);
+      return data;
+    }catch(error){
+      if(controller?.signal?.aborted)throw new Error('에코디 AI 응답 시간이 초과되었습니다. 요청 내용은 대화에 보존했습니다. 다시 실행해 주세요.');
+      throw error;
+    }finally{if(timer)window.clearTimeout(timer)}
   }
   function el(tag,className,text){const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=esc(text);return node}
+  function executionTargetOptionsHtml(){return EXECUTION_TARGETS.map(item=>`<label class="ekodi-execution-target-option"><input type="checkbox" data-ekodi-execution-target value="${item.id}"${item.checked?' checked':''}><span>${item.label}</span></label>`).join('')}
+  function selectedExecutionTargets(scope){return [...(scope?.querySelectorAll?.('[data-ekodi-execution-target]:checked')||[])].map(node=>String(node.value||'').trim()).filter(Boolean)}
   function statusLabel(value){const map={waiting_human:'담당자 확인 대기',open:'AI 응답',resolved:'완료',archived:'보관',accepted:'담당자 응답 중',requested:'연결 대기',awaiting_human:'승인 대기',verified:'완료',ready_for_executor:'실행 대기',assist_only:'검토',blocked:'차단',failed:'실패',approved_pending_executor:'승인됨',queued:'실행 큐 등록',running:'실행 중',retry:'재시도 대기',degraded:'실행 경로 확인 필요',core_only:'핵심 경로 처리',human_gate:'승인 대기',ignored:'처리 제외'};return map[value]||value||'확인'}
   function priorityLabel(value){if(value==='urgent')return'긴급';if(value==='review')return'확인 필요';return'일반'}
   function positionWorkbench(){
@@ -120,11 +136,11 @@
     if(!form||form.dataset.executionReady==='true')return;
     const input=form.querySelector('input'),plus=form.querySelector('.ekodi-assist-bootstrap-plus'),send=form.querySelector('.ekodi-assist-bootstrap-send');
     if(!input||!plus||!send)return;
-    const row=el('div','ekodi-assist-bootstrap-actions');
-    const label=el('label','ekodi-assist-bootstrap-target-label');
-    label.innerHTML='<span>실행</span><select id="ekodiAssistBootstrapTarget" class="ekodi-assist-bootstrap-target" aria-label="실행 대상"><option value="ekodi">EKODI</option><option value="chatgpt">ChatGPT</option><option value="claude">Claude</option><option value="gemini">Gemini</option><option value="qwen">Qwen</option><option value="multi">여러 AI</option></select>';
+    const targets=el('div','ekodi-assist-bootstrap-targets');
+    targets.setAttribute('role','group');targets.setAttribute('aria-label','실행 대상');targets.innerHTML=executionTargetOptionsHtml();
+    const promptRow=el('div','ekodi-assist-bootstrap-prompt-row');
     send.textContent='실행';send.setAttribute('aria-label','선택한 대상으로 실행');
-    form.prepend(input);row.append(plus,label,send);form.append(row);form.dataset.executionReady='true';
+    promptRow.append(plus,input,send);form.replaceChildren(targets,promptRow);form.dataset.executionReady='true';
   }
 
   function exposeBridge(){
@@ -132,6 +148,7 @@
     window.EKODIAdminAssist=Object.freeze({
       open:()=>{setOpen(true);setTab('ai',false);return true},
       submit:text=>{setOpen(true);setTab('ai',false);return submitAi(text)},
+      execute:(targets,text)=>{setOpen(true);setTab('ai',false);const picked=targets||selectedExecutionTargets(document.querySelector('.ekodi-assist-bootstrap-form'));if(!picked.length){showStatus('실행 대상을 하나 이상 선택해 주세요.',true);return false}return executeTargets(picked,text)},
       handoff:(provider,text)=>handoffCommand(provider,text),
       ready:()=>Boolean(root),
     });
@@ -143,7 +160,7 @@
     if(existing){root=existing;exposeBridge();return}
     watchWorkbenchPosition();
     root=el('div','ekodi-assist');root.id='ekodiAssistDock';
-    root.innerHTML='<button type="button" class="ekodi-assist-launcher" id="ekodiAssistLauncher" aria-label="에코디와 대화 열기" aria-expanded="false">✦<span class="ekodi-assist-badge" id="ekodiAssistBadge" hidden></span></button><section class="ekodi-assist-panel" id="ekodiAssistPanel" hidden aria-label="에코디와 대화하기"><aside class="ekodi-assist-rail" id="ekodiAssistRail"><div class="ekodi-assist-rail-head"><strong id="ekodiAssistRailTitle">최근 대화</strong><button type="button" id="ekodiAssistNew" aria-label="새 대화">＋</button></div><div class="ekodi-assist-tabs" role="tablist"><button type="button" class="ekodi-assist-tab" data-assist-tab="ai">에코디와 대화</button><button type="button" class="ekodi-assist-tab" data-assist-tab="inbox">대화 · 문의</button></div><label class="ekodi-assist-search"><span>⌕</span><input id="ekodiAssistSearch" type="search" placeholder="최근 대화 검색" autocomplete="off"></label><div class="ekodi-assist-history" id="ekodiAssistHistory"></div><div class="ekodi-assist-rail-foot"><small id="ekodiAssistContext">현재 화면을 확인 중입니다.</small><a href="/operator" target="_blank" rel="noopener">운영자 전체 화면 ↗</a></div></aside><main class="ekodi-assist-main"><header class="ekodi-assist-head"><button type="button" class="ekodi-assist-rail-toggle" id="ekodiAssistRailToggle" aria-label="최근 대화 보기">☰</button><div class="ekodi-assist-title"><strong id="ekodiAssistTitle">새 대화</strong><small>에코디 헌법 · AI 협업 · 권한 경계를 지키며 실행합니다.</small></div><button type="button" class="ekodi-assist-close" id="ekodiAssistClose" aria-label="관리자 화면으로 돌아가기">×</button></header><div class="ekodi-assist-chat-scroll" id="ekodiAssistChat" aria-live="polite" data-ekodi-main-conversation="true"></div><footer class="ekodi-assist-composer-wrap" id="ekodiAssistComposer"><section class="ekodi-assist-proactive" id="ekodiAssistProactive" aria-label="에코디 선제 제안" hidden></section><form class="ekodi-assist-composer" id="ekodiAssistForm"><textarea class="ekodi-assist-command" id="ekodiAssistCommand" rows="2" maxlength="1800" placeholder="에코디와 대화하기"></textarea><div class="ekodi-assist-execution-row"><button type="button" class="ekodi-assist-plus" id="ekodiAssistComposerNew" aria-label="새 대화">＋</button><label class="ekodi-assist-target-label"><span>실행</span><select class="ekodi-assist-target" id="ekodiAssistExecutionTarget" aria-label="실행 대상"><option value="ekodi">EKODI</option><option value="chatgpt">ChatGPT</option><option value="claude">Claude</option><option value="gemini">Gemini</option><option value="qwen">Qwen</option><option value="multi">여러 AI</option></select></label><button type="submit" class="ekodi-assist-send" aria-label="선택한 대상으로 실행">실행</button></div></form><small>입력은 위 · 실행 대상은 아래 · 외부 AI 전송 시 민감정보는 차단합니다.</small></footer></main></section>';
+    root.innerHTML=`<button type="button" class="ekodi-assist-launcher" id="ekodiAssistLauncher" aria-label="에코디와 대화 열기" aria-expanded="false">✦<span class="ekodi-assist-badge" id="ekodiAssistBadge" hidden></span></button><section class="ekodi-assist-panel" id="ekodiAssistPanel" hidden aria-label="에코디와 대화하기"><aside class="ekodi-assist-rail" id="ekodiAssistRail"><div class="ekodi-assist-rail-head"><strong id="ekodiAssistRailTitle">최근 대화</strong><button type="button" id="ekodiAssistNew" aria-label="새 대화">＋</button></div><div class="ekodi-assist-tabs" role="tablist"><button type="button" class="ekodi-assist-tab" data-assist-tab="ai">에코디와 대화</button><button type="button" class="ekodi-assist-tab" data-assist-tab="inbox">대화 · 문의</button></div><label class="ekodi-assist-search"><span>⌕</span><input id="ekodiAssistSearch" type="search" placeholder="최근 대화 검색" autocomplete="off"></label><div class="ekodi-assist-history" id="ekodiAssistHistory"></div><div class="ekodi-assist-rail-foot"><small id="ekodiAssistContext">현재 화면을 확인 중입니다.</small><a href="/operator" target="_blank" rel="noopener">운영자 전체 화면 ↗</a></div></aside><main class="ekodi-assist-main"><header class="ekodi-assist-head"><button type="button" class="ekodi-assist-rail-toggle" id="ekodiAssistRailToggle" aria-label="최근 대화 보기">☰</button><div class="ekodi-assist-title"><strong id="ekodiAssistTitle">새 대화</strong><small>에코디 헌법 · AI 협업 · 권한 경계를 지키며 실행합니다.</small></div><button type="button" class="ekodi-assist-close" id="ekodiAssistClose" aria-label="관리자 화면으로 돌아가기">×</button></header><div class="ekodi-assist-chat-scroll" id="ekodiAssistChat" aria-live="polite" data-ekodi-main-conversation="true"></div><footer class="ekodi-assist-composer-wrap" id="ekodiAssistComposer"><section class="ekodi-assist-proactive" id="ekodiAssistProactive" aria-label="에코디 선제 제안" hidden></section><form class="ekodi-assist-composer" id="ekodiAssistForm"><div class="ekodi-assist-targets" role="group" aria-label="실행 대상">${executionTargetOptionsHtml()}</div><div class="ekodi-assist-prompt-row"><button type="button" class="ekodi-assist-plus" id="ekodiAssistComposerNew" aria-label="새 대화">＋</button><textarea class="ekodi-assist-command" id="ekodiAssistCommand" rows="2" maxlength="1800" placeholder="에코디와 대화하기"></textarea><button type="submit" class="ekodi-assist-send" aria-label="선택한 대상으로 실행">실행</button></div></form><small>실행 대상은 위 · 명령 입력은 아래 · 여러 AI를 동시에 선택할 수 있습니다.</small></footer></main></section>`;
     document.body.appendChild(root);document.body.classList.add('admin-command-history-ready');
     root.querySelector('#ekodiAssistLauncher').addEventListener('click',()=>setOpen(true));
     root.querySelector('#ekodiAssistClose').addEventListener('click',()=>setOpen(false));
@@ -153,7 +170,7 @@
     root.querySelectorAll('[data-assist-tab]').forEach(button=>button.addEventListener('click',()=>setTab(button.dataset.assistTab)));
     const search=root.querySelector('#ekodiAssistSearch');search.value=state.query||'';search.addEventListener('input',()=>{state.query=search.value;saveState();renderRail()});
     const form=root.querySelector('#ekodiAssistForm');const input=root.querySelector('#ekodiAssistCommand');
-    form.addEventListener('submit',async event=>{event.preventDefault();const text=input.value.trim();if(!text)return;const target=root.querySelector('#ekodiAssistExecutionTarget')?.value||'ekodi';if(target==='ekodi'){input.value='';resizeInput(input);submitAi(text);return}const handed=await handoffCommand(target,text);if(handed){input.value='';resizeInput(input)}});
+    form.addEventListener('submit',async event=>{event.preventDefault();const text=input.value.trim();if(!text)return;const targets=selectedExecutionTargets(form);if(!targets.length){showStatus('실행 대상을 하나 이상 선택해 주세요.',true);return}const send=form.querySelector('.ekodi-assist-send');if(send?.disabled)return;const label=send?.textContent||'실행';if(send){send.disabled=true;send.textContent='실행 중…';form.setAttribute('aria-busy','true')}try{const sent=await executeTargets(targets,text);if(sent!==false){input.value='';resizeInput(input)}}finally{if(send){send.disabled=false;send.textContent=label;form.removeAttribute('aria-busy')}}});
     input.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();form.requestSubmit()}});
     input.addEventListener('input',()=>resizeInput(input));
     document.addEventListener('keydown',event=>{if(event.key==='Escape'&&state.open)setOpen(false)});
@@ -234,9 +251,18 @@
     const area=el('textarea');area.value=value;area.setAttribute('readonly','');area.style.cssText='position:fixed;opacity:0;pointer-events:none';document.body.append(area);area.select();document.execCommand('copy');area.remove();
   }
   function externalProvidersFor(target){
-    if(target==='multi')return EXTERNAL_AI;
-    const provider=EXTERNAL_AI.find(item=>item.id===target);
-    return provider?[provider]:[];
+    const values=(Array.isArray(target)?target:[target]).map(value=>String(value||'').trim()).filter(Boolean);
+    if(values.includes('multi'))return EXTERNAL_AI;
+    return EXTERNAL_AI.filter(item=>values.includes(item.id));
+  }
+  async function executeTargets(targets,prompt){
+    const values=[...new Set((Array.isArray(targets)?targets:[targets]).map(value=>String(value||'').trim()).filter(Boolean))];
+    if(!values.length)return false;
+    const tasks=[];const external=values.filter(value=>value!=='ekodi');
+    if(external.length)tasks.push(Promise.resolve(handoffCommand(external,prompt)));
+    if(values.includes('ekodi'))tasks.push(Promise.resolve(submitAi(prompt)));
+    if(!tasks.length)return false;
+    const results=await Promise.all(tasks);return results.some(result=>result!==false);
   }
   async function handoffCommand(target,prompt,button){
     const value=String(prompt||'').trim();if(!value)return false;
@@ -318,15 +344,15 @@
           })});
           status=queued.task?.state||queued.execution?.results?.[0]?.state||'queued';
         }
-        result=await api('/api/control/ai/assist',{method:'POST',body:JSON.stringify({message:value,context:c,history})});
-        reply=String(result.reply||'응답을 받지 못했습니다.');provider=result.provider||null;mode=result.mode||'free_assist';rememberAi('assistant',reply);lastAiReply={text:reply,mode,provider,notice:result.notice||''};
+        result=await api('/api/control/ai/assist',{method:'POST',timeoutMs:12000,body:JSON.stringify({message:value,context:c,history})});
+        reply=String(result.reply||'').trim();if(!reply)throw new Error('에코디 AI가 응답 본문을 반환하지 않았습니다. 요청 내용은 보존했습니다. 다시 실행해 주세요.');provider=result.provider||null;mode=result.mode||'free_assist';rememberAi('assistant',reply);lastAiReply={text:reply,mode,provider,notice:result.notice||''};
         if(queued){const taskId=queued.task?.id||queued.execution?.results?.[0]?.taskId||'';reply=`${reply}\n\n${statusLabel(status)} · EKODI Command Plane${taskId?` #${taskId}`:''}에 기록하고 실행 경로를 확인했습니다.`;}
       }
       addSessionMessage('assistant',reply,{kind:risky||HEALTH_RE.test(value)||queued?'status':'message',status,provider,mode});
       const session=activeSession();if(session&&['verified','resolved'].includes(status))session.status='done';if(session&&status==='failed')session.status='failed';saveSessions();
-      await refreshSummary();renderAi();
+      await refreshSummary();renderAi();return true;
     }catch(error){
-      addSessionMessage('assistant',error.message,{kind:'status',status:'failed'});const session=activeSession();if(session)session.status='failed';saveSessions();renderAi()
+      addSessionMessage('assistant',error.message||'에코디 AI 응답을 받지 못했습니다.',{kind:'status',status:'failed'});const session=activeSession();if(session)session.status='failed';saveSessions();renderAi();return false
     }
   }
 

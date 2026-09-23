@@ -384,7 +384,17 @@ function activateSection(nav, section) {
   const definition = getAdminMenuItem(section);
   const fallback = [...navItems(nav)].find(item => adminSidebarSectionOf(item) === section);
   if (definition?.delegateSection) {
-    window.EKODIAdminPanels?.activate?.(section);
+    if (window.EKODIAdminPanels?.activate) {
+      window.EKODIAdminPanels.activate(section);
+      return true;
+    }
+    nav.dataset.adminPendingSection = section;
+    for (const delay of [0, 60, 240]) window.setTimeout(() => {
+      const pending = String(nav.dataset.adminPendingSection || '').trim();
+      if (!pending || !window.EKODIAdminPanels?.activate) return;
+      delete nav.dataset.adminPendingSection;
+      window.EKODIAdminPanels.activate(pending);
+    }, delay);
     return true;
   }
   if (definition?.href && definition.adminHandoff !== true) {
@@ -541,7 +551,6 @@ export function mountAdminSidebar(root = document, options = {}) {
       sync();
     });
   };
-
   const observer = new MutationObserver(schedule);
   observer.observe(nav, { childList: true, subtree: false });
 

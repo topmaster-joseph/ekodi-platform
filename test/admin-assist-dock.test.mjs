@@ -78,7 +78,7 @@ test('Assist first path is bottom command-entry-only and upgrades through existi
   assert.match(bootstrap,/ekodi-assist-bootstrap-form/);
   assert.match(bootstrap,/에코디와 대화하기/);
   assert.match(bootstrap,/window\.EKODIAdminAssist/);
-  assert.match(bootstrap,/bridge\.submit\(text\)/);
+  assert.match(bootstrap,/bridge\.execute\(0,text\)/);
   assert.match(bootstrap,/loadStyle\('ai-ops-admin\.css'\)/);
   assert.match(bootstrap,/loadScript\('admin-lazy-features\.js'\)/);
   assert.match(bootstrap,/ekodi-admin-section-changed',S/);
@@ -146,22 +146,27 @@ test('Assist sidebar alignment survives early install before layout settles',asy
   assert.match(js,/watchWorkbenchPosition\(\);/);
 });
 
-test('command execution target sits below the prompt and external handoff stays explicit',async()=>{
+test('command execution targets are explicit multi-select checks above the prompt',async()=>{
   const [dock,bootstrap,dockCss,workbenchCss]=await Promise.all([
     read('admin-assist-dock.js'),
     read('admin-assist-bootstrap.js'),
     read('admin-assist-dock.css'),
     read('admin-conversation-workbench.css'),
   ]);
-  assert.match(dock,/id="ekodiAssistCommand"[\s\S]*id="ekodiAssistExecutionTarget"/);
+  assert.ok(dock.indexOf('class="ekodi-assist-targets"') < dock.indexOf('id="ekodiAssistCommand"'));
   assert.match(bootstrap,/placeholder="에코디와 대화하기"/);
-  assert.match(dock,/id="ekodiAssistBootstrapTarget"/);
-  for(const value of ['ekodi','chatgpt','claude','gemini','qwen','multi']){
-    assert.match(dock,new RegExp(`value="${value}"`));
+  assert.match(dock,/data-ekodi-execution-target/);
+  for(const value of ['ekodi','chatgpt','claude','gemini','qwen']){
+    assert.match(dock,new RegExp(`id:'${value}'`));
   }
+  assert.doesNotMatch(dock,/id="ekodiAssistExecutionTarget"|id="ekodiAssistBootstrapTarget"|value="multi"/);
+  assert.match(dock,/execute:\(targets,text\)=>\{setOpen\(true\);setTab\('ai',false\);const picked=targets\|\|selectedExecutionTargets/);
+  assert.match(dock,/function executeTargets\(targets,prompt\)/);
   assert.match(dock,/handoff:\(provider,text\)=>handoffCommand\(provider,text\)/);
   assert.match(dock,/EXTERNAL_SECRET_RE/);
   assert.match(dockCss,/EKODI external execution composer v1/);
   assert.match(dockCss,/EKODI lazy bootstrap execution layout v1/);
   assert.match(workbenchCss,/EKODI stacked command authority v1/);
+  assert.match(workbenchCss,/EKODI multi-target command composer v2/);
+  assert.match(workbenchCss,/ekodi-execution-target-option input\[type="checkbox"\]/);
 });
