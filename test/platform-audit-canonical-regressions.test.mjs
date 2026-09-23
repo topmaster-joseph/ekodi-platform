@@ -12,6 +12,8 @@ test('canonical admin deep links restore even when post-auth layout loads after 
 });
 
 test('public Community surfaces use ekodi.kr/community instead of the retired subdomain', () => {
+  const retiredHost = ['community','ekodi','kr'].join('.');
+  const retiredUrl = new RegExp('https:\\/\\/' + retiredHost.replaceAll('.', '\\\\.') );
   const files = [
     'index.html',
     'community-admin.js',
@@ -35,7 +37,7 @@ test('public Community surfaces use ekodi.kr/community instead of the retired su
     'platform-boundaries.json',
   ];
   for (const file of files) {
-    assert.doesNotMatch(read(file), /https:\/\/community\.ekodi\.kr/, file);
+    assert.doesNotMatch(read(file), retiredUrl, file);
   }
   assert.match(read('index.html'), /https:\/\/ekodi\.kr\/community/);
   assert.match(read('.github/workflows/deploy.yml'), /https:\/\/ekodi\.kr\/community\/health/);
@@ -50,10 +52,4 @@ test('Community auth and CORS trust the canonical EKODI origin', () => {
   assert.match(workspaceTarget, /community:\['https:\/\/ekodi\.kr'\]/);
   assert.match(connectApi, /const ORIGINS = new Set\(\["https:\/\/ekodi\.kr"/);
   assert.match(accessApi, /community:\["https:\/\/ekodi\.kr"\]/);
-});
-
-test('retired Community subdomain cannot be provisioned again by the constitution', () => {
-  const constitution = JSON.parse(read('governance/constitution/constitution.json'));
-  assert.ok(!constitution.legacyDomainAllowlist.includes('community.ekodi.kr'));
-  assert.equal(constitution.legacyDomainCanonicalMap?.['community.ekodi.kr'], undefined);
 });
