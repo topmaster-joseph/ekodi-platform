@@ -9,6 +9,7 @@ const adminDirect = await readFile(`${root}admin-direct-google.js`, 'utf8');
 const adminShell = await readFile(`${root}admin-shell.html`, 'utf8');
 const shellInjector = await readFile(`${root}ekodi-shell-injector.js`, 'utf8');
 const build = await readFile(`${root}scripts/build.mjs`, 'utf8');
+const authBootstrap = await readFile(`${root}auth-site/auth-bootstrap.js`, 'utf8');
 const adminAuth = await readFile(`${root}auth-site/admin-auth.js`, 'utf8');
 const clientAuth = await readFile(`${root}auth-site/client-auth.js`, 'utf8');
 const bridge = await readFile(`${root}auth-site/google-origin-bridge.js`, 'utf8');
@@ -36,6 +37,8 @@ test('platform admin keeps canonical return_to while the direct helper owns the 
 });
 
 test('platform and tenant auth both consume a preopened Google bridge without showing the intermediate card', () => {
+  assert.match(authBootstrap, /preopenedAdminBridge/);
+  assert.match(authBootstrap, /dataset\.adminDirectBridge = directAdmin \|\| preopenedAdminBridge/);
   assert.match(adminAuth, /const preopenedRequested=directEntry&&params\.get\('bridge'\)==='preopened'/);
   assert.match(adminAuth, /dataset\.adminDirectBridge='1'/);
   assert.match(adminAuth, /ekodi-google-origin-bridge-start/);
