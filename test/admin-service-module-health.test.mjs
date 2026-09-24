@@ -43,3 +43,18 @@ test('module health view separates activation, runtime scope, and last check tim
   assert.match(style, /module-health-mode .*common-services-layout\{grid-template-columns:1fr\}/);
   assert.match(style, /module-service-list\{display:grid;grid-template-columns:1fr/);
 });
+
+test('module health view separates runtime health from non-mutating functional evidence', () => {
+  const registry = read('common-services-admin.js');
+  assert.match(registry, /verification:null/);
+  assert.match(registry, /function verificationState\(service\)/);
+  assert.match(registry, /\/api\/control\/module-verification/);
+  assert.match(registry, /실증됨/);
+  assert.match(registry, /부분실증/);
+  assert.match(registry, /실증실패/);
+  assert.match(registry, /기능 \$\{esc\(a\.label\)\} · 런타임 \$\{esc\(s\.label\)\} · 실증 \$\{esc\(v\.label\)\}/);
+  assert.match(registry, /운영 쓰기 없음/);
+  assert.match(registry, /state\.category!=='service-modules'/);
+  assert.match(registry, /module-evidence-list/);
+  assert.match(read('common-services-admin.css'), /module-evidence-row/);
+});
