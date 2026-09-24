@@ -1,12 +1,6 @@
 import authWorker from './auth-worker.js';
 
-const ALLOWED_ORIGINS = new Set([
-  'https://ekodi.kr/admin',
-  'https://ekodi.kr/ekodibiz/admin',
-  'https://ekodi.kr/ekodichurch/admin',
-  'https://ekodi.kr/ekodilab/admin',
-  'https://ekodi.kr/ekodibiz/trade/admin'
-]);
+const ALLOWED_ORIGINS = new Set(['https://ekodi.kr']);
 const PURPOSE_TYPES = new Set(['영수', '청구', '없음']);
 const TAX_TYPES = new Set(['과세', '영세', '면세']);
 const TOKEN_CACHE = new Map();

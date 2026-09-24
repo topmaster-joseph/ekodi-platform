@@ -14,7 +14,7 @@ test('common provider gateway exposes allowed-origin CORS contract',async()=>{
 });
 
 test('common provider gateway blocks unauthenticated generation before provider access',async()=>{
-  const response=await handleAiProviderControl(new Request('https://ekodi.kr/api/ai-modules/v1/providers/generate',{method:'POST',headers:{origin:'https://ekodi.kr','content-type':'application/json'},body:JSON.stringify({capability:'documents',input:'test'})}),{ALLOWED_ORIGINS:'https://ekodi.kr/my'});
+  const response=await handleAiProviderControl(new Request('https://ekodi.kr/api/ai-modules/v1/providers/generate',{method:'POST',headers:{origin:'https://ekodi.kr','content-type':'application/json'},body:JSON.stringify({capability:'documents',input:'test'})}),{ALLOWED_ORIGINS:'https://ekodi.kr'});
   assert.equal(response.status,401);
   assert.equal((await response.json()).error,'authentication_required');
 });

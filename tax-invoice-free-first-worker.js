@@ -1,13 +1,7 @@
 import authWorker from './auth-worker.js';
 import taxInvoiceWorker from './tax-invoice-worker.js';
 
-const ALLOWED_ORIGINS = new Set([
-  'https://ekodi.kr/admin',
-  'https://ekodi.kr/ekodibiz/admin',
-  'https://ekodi.kr/ekodichurch/admin',
-  'https://ekodi.kr/ekodilab/admin',
-  'https://ekodi.kr/ekodibiz/trade/admin'
-]);
+const ALLOWED_ORIGINS = new Set(['https://ekodi.kr']);
 
 function automationEnabled(env) {
   return String(env.TAX_INVOICE_AUTOMATION_ENABLED || '').toLowerCase() === 'true';
