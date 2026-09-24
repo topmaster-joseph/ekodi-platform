@@ -5,7 +5,7 @@ import vm from 'node:vm';
 
 const source=fs.readFileSync(new URL('../shell/user-ai-entry.js',import.meta.url),'utf8');
 
-function mountState(pathname,surface='public'){
+function mountState(pathname,surface='public',optIn=''){
   let createCount=0;
   let mountCount=0;
   const open={addEventListener(){},setAttribute(){}};
@@ -23,7 +23,7 @@ function mountState(pathname,surface='public'){
     },
   };
   const document={
-    documentElement:{dataset:{ekodiService:'ekodimall',ekodiUserSurface:surface}},
+    documentElement:{dataset:{ekodiService:'ekodimall',ekodiUserSurface:surface,...(optIn?{ekodiUserAiEntry:optIn}:{})}},
     currentScript:null,
     readyState:'complete',
     querySelector(){return null},
@@ -39,23 +39,28 @@ function mountState(pathname,surface='public'){
   return {createCount,mountCount};
 }
 
-test('shared User AI entry never mounts on admin path segments',()=>{
+test('shared User AI entry never mounts on admin path segments even when opted in',()=>{
   for(const path of ['/admin','/admin/','/admin/settings','/ekodimall/admin','/ekodimall/admin/','/ekodimall/admin/products','/tenant/admin/orders/history','/ekodimall//admin//products/','/ekodimall/ADMIN/products','/ekodimall/%61dmin/products']){
-    assert.equal(mountState(path).mountCount,0,path);
+    assert.equal(mountState(path,'public','on').mountCount,0,path);
   }
 });
 
 test('shared User AI entry never mounts on the central AI surface',()=>{
-  for(const path of ['/ai','/ai/','/ai/history'])assert.equal(mountState(path).mountCount,0,path);
+  for(const path of ['/ai','/ai/','/ai/history'])assert.equal(mountState(path,'public','on').mountCount,0,path);
 });
 
 
-test('admin guard does not over-block non-admin user paths',()=>{
+test('ordinary public and workspace pages do not mount the shared AI entry by default',()=>{
   for(const path of ['/','/ekodimall','/ekodimall/administrator','/tenant/myadmin','/tenant/administer/settings','/ai-tools']){
-    assert.equal(mountState(path).mountCount,1,path);
+    assert.equal(mountState(path).mountCount,0,path);
+  }
+});
+test('explicit opt-in enables the AI entry only on eligible user paths',()=>{
+  for(const path of ['/','/ekodimall','/tenant/myadmin','/ai-tools']){
+    assert.equal(mountState(path,'public','on').mountCount,1,path);
   }
 });
 
 test('admin surface remains blocked independently of pathname',()=>{
-  assert.equal(mountState('/ekodimall','admin').mountCount,0);
+  assert.equal(mountState('/ekodimall','admin','on').mountCount,0);
 });
