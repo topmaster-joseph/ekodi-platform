@@ -390,7 +390,7 @@ export function evaluateDesktopGuestCanary({ device, commandId, issuedAt, expect
     proof.routingPolicy === 'EKODI-VIRTUALIZATION-ROUTING-001' &&
     proof.backendPolicy === 'EKODI-ISOLATED-DESKTOP-BACKEND-001' &&
     String(proof.agentVersion || '') === expectedVersion &&
-    String(proof.guestAgentVersion || '') === '1.1.0' &&
+    String(proof.guestAgentVersion || '') === '1.2.0' &&
     proof.backend === 'hyper-v-ekodi-base' &&
     proof.sessionType === 'vm' &&
     proof.taskType === 'guest.runtime.probe' &&
@@ -479,7 +479,7 @@ export function evaluateDesktopUiCanary({ device, commandId, issuedAt, expectedV
     proof.routingPolicy === 'EKODI-VIRTUALIZATION-ROUTING-001' &&
     proof.backendPolicy === 'EKODI-ISOLATED-DESKTOP-BACKEND-001' &&
     String(proof.agentVersion || '') === expectedVersion &&
-    String(proof.guestAgentVersion || '') === '1.1.0' &&
+    String(proof.guestAgentVersion || '') === '1.2.0' &&
     proof.backend === 'hyper-v-ekodi-base' &&
     proof.sessionType === 'vm' &&
     proof.taskType === 'guest.ui.probe' &&
