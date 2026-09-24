@@ -378,7 +378,7 @@ async function routePlatform(request,env,ctx){
       if(url.pathname==='/invest-subject-ui.js')return investSubjectUiScript();
     }
     const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx);
-    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&legacyOperatingSpacePath(url.pathname))return injectEkodiTenantReadability(legacyResponse);
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&legacyOperatingSpacePath(url.pathname))return injectEkodiTenantReadability(legacyResponse,{forceOperatingSpace:true});
     return legacyResponse;
 }
 
