@@ -46,7 +46,7 @@ jobs:
           node --test test/ai-control-provider-router.test.mjs
           node --check site-worker.js
           node --test test/ai-runtime-boundary.test.mjs
-          ! grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.release.toml
+          ! grep -Fq 'custom_domain = true' wrangler.ai.release.toml
           grep -Fq 'binding = "AI"' wrangler.site.toml
           grep -Fq 'service = "ekodi-ai-control"' wrangler.site.toml
           grep -Fq '"/ai"' wrangler.site.toml

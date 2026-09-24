@@ -96,13 +96,13 @@ jobs:
             grep -Fq "$marker" "$file"
           }
           for attempt in $(seq 1 24); do
-            if verify 'https://marketing.ekodi.kr/church/' 'data-ekodi-church-marketing-ai' /tmp/church.html \
-              && verify 'https://marketing.ekodi.kr/church/app.js' 'ekodi-church-marketing-drafts-v1' /tmp/church-app.js \
+            if verify 'https://ekodi.kr/marketing/church/' 'data-ekodi-church-marketing-ai' /tmp/church.html \
+              && verify 'https://ekodi.kr/marketing/church/app.js' 'ekodi-church-marketing-drafts-v1' /tmp/church-app.js \
               && verify 'https://ekodi.kr/my/' 'church-marketing-ai.js?v=20260827-church-marketing-1' /tmp/my.html \
-              && verify 'https://marketing.ekodi.kr/' 'id="freeTrialForm"' /tmp/marketing.html \
-              && verify 'https://jadam.ekodi.kr/' 'id="googleCustomerAuth"' /tmp/jadam.html \
-              && verify 'https://pizzamaru.ekodi.kr/' 'id="googleCustomerAuth"' /tmp/pizza.html \
-              && verify 'https://yogurt.ekodi.kr/' 'id="googleCustomerAuth"' /tmp/yogurt.html; then
+              && verify 'https://ekodi.kr/marketing/' 'id="freeTrialForm"' /tmp/marketing.html \
+              && verify 'https://ekodi.kr/jadam/' 'id="googleCustomerAuth"' /tmp/jadam.html \
+              && verify 'https://ekodi.kr/pizzamaru/' 'id="googleCustomerAuth"' /tmp/pizza.html \
+              && verify 'https://ekodi.kr/yogurt/' 'id="googleCustomerAuth"' /tmp/yogurt.html; then
               grep -Fq '외부 자동게시 OFF' /tmp/church.html
               ! grep -Fq '061-453-8295' /tmp/church.html
               echo 'Church Marketing AI, My EKODI entry and existing Marketing AI surfaces verified in production.'

@@ -27,8 +27,8 @@ concurrency:
 env:
   WRANGLER_VERSION: '4.119.0'
   PROJECT: ekodi-cafe
-  PUBLIC_URL: https://cafe.ekodi.kr
-  PUBLIC_HOST: cafe.ekodi.kr
+  PUBLIC_URL: https://ekodi.kr/cafe
+  PUBLIC_HOST: ekodi.kr
 
 jobs:
   validate:
@@ -82,7 +82,7 @@ jobs:
           fi
       - name: Deploy exact Cafe artifact
         run: npx --yes wrangler@${WRANGLER_VERSION} pages deploy sites/ekodi-cafe --project-name="$PROJECT" --branch=main --commit-hash="$GITHUB_SHA" --commit-dirty=false
-      - name: Ensure cafe.ekodi.kr custom domain and DNS
+
         shell: bash
         run: |
           set -euo pipefail
