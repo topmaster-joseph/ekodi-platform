@@ -6,7 +6,7 @@ export const ADMIN_SERVICE_CATALOG = Object.freeze([
   { id:'trade', name:'에코디 트레이딩', basePath:'/ekodibiz/trade', group:'business', channelAdminSection:'publishing', channelSubjectKey:'ekoditrade' },
   { id:'invest', name:'에코디 투자', basePath:'/ekodibiz/invest', group:'business' },
   { id:'bible', name:'에코디 말씀대화', basePath:'/bible', group:'knowledge' },
-  { id:'books', name:'에코디서점', basePath:'/books', group:'knowledge' },
+  { id:'books', name:'에코디서점', basePath:'/ekodibooks', group:'knowledge' },
   { id:'publishing', name:'출판', basePath:'/publishing', group:'knowledge' },
   { id:'author', name:'크리에이터 AI', basePath:'/author', group:'knowledge' },
   { id:'journal', name:'에코디 저널', basePath:'/journal', group:'knowledge' },
