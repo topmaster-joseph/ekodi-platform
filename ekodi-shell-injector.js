@@ -22,7 +22,6 @@ const USER_LAYOUT_VERSION='centered-v1';
 const USER_CHROME_HEADER='x-ekodi-user-chrome';
 const TENANT_READABILITY_HEADER='x-ekodi-tenant-readability';
 const TENANT_READABILITY_VERSION='v1';
-const OPERATING_SPACE_LABEL_VERSION='v1';
 const SHELL_TENANT_READABILITY_STYLE=`${SHELL_ORIGIN}/user-ui-shell.css?tenant-readability=${TENANT_READABILITY_VERSION}`;
 const SHELL_MOBILE_HEADER_SCRIPT=`${SHELL_ORIGIN}/mobile-fixed-header.js?tenant-readability=${TENANT_READABILITY_VERSION}`;
 const ADMIN_BOOT_STYLE=`<style data-ekodi-admin-shell-boot>:where(.side-brand,.sidebar-brand,.admin-sidebar-brand,[data-ekodi-admin-sidebar-header],[data-ekodi-admin-brand]){display:none!important}</style>`;
@@ -168,10 +167,6 @@ class TenantReadabilityHtmlInjector{
 class TenantReadabilityHeadInjector{
   element(element){element.append(`<link rel="stylesheet" href="${SHELL_TENANT_READABILITY_STYLE}" data-ekodi-tenant-readability-style="${TENANT_READABILITY_VERSION}"><script src="${SHELL_MOBILE_HEADER_SCRIPT}" defer data-ekodi-tenant-mobile-header="${TENANT_READABILITY_VERSION}"></script>`,{html:true});}
 }
-  element(element){element.prepend(`<aside class="ekodi-operating-space-note" data-ekodi-operating-space-label="${OPERATING_SPACE_LABEL_VERSION}" role="note" aria-label="개별 운영공간"><span>운영공간</span></aside>`,{html:true});}
-}
-  element(element){element.remove();}
-}
 class TenantReadabilityHeaderAdopter{
   constructor(){this.seen=false;}
   element(element){
@@ -197,7 +192,6 @@ export function injectEkodiTenantReadability(response,options={}){
     headers.set('content-security-policy',next);
   }
   headers.set(TENANT_READABILITY_HEADER,TENANT_READABILITY_VERSION);
-  if(operatingSpace)headers.set(OPERATING_SPACE_LABEL_HEADER,OPERATING_SPACE_LABEL_VERSION);
   if(typeof HTMLRewriter!=='function')return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
   const headerAdopter=new TenantReadabilityHeaderAdopter();
   let rewriter=new HTMLRewriter()
