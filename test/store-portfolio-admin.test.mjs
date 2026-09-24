@@ -19,7 +19,7 @@ test('cmpmyi admin provides fixed common and brand navigation with a right works
     assert.ok(html.includes(`/cmpmyi/admin/panel/${view}`));
   }
   assert.match(html,/공통관리/);
-  assert.match(html,/브랜드별 관리/);
+  assert.match(html,/브랜드 관리자 전체 메뉴/);
   assert.match(html,/name="cmpmyi-panel"/);
   assert.match(html,/target="cmpmyi-panel"/);
   assert.match(html,/class="panel-frame"/);
