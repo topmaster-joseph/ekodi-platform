@@ -15,16 +15,41 @@ test('Hammu uses reusable organization workspace projection', async () => {
   assert.match(workerSource, /['space-storefront','space-organization']/);
 });
 
-test('organization admin is tenant-local and only enabled for Hammu path', async () => {
-  for (const path of ['/hammu/admin','/hammu/admin/officers','/hammu/admin/notices','/hammu/admin/finance','/hammu/admin/attendance']) assert.equal(isOrganizationAdminPath(path), true, path);
+test('BNS Love uses the reusable organization workspace projection', async () => {
+  assert.equal(isOrganizationWorkspaceSlug('bnslove'), true);
+  const response = await renderOrganizationPublicPage(new Request('https://ekodi.kr/bnslove'), {}, {}, 'bnslove');
+  const html = await response.text();
+  for (const marker of ['형제사랑회','BROTHERLY LOVE ASSOCIATION','공지사항','임원','회계보고','출석현황','/bnslove/admin']) assert.match(html, new RegExp(marker));
+  assert.doesNotMatch(html,/목포노회|대한예수교장로회/);
+  assert.doesNotMatch(html,/EKODI 운영공간/);
+});
+
+test('BNS Love migration registers only tenant-local administrator authority', () => {
+  const sql = fs.readFileSync(new URL('../supabase/migrations/20260925004500_bnslove_site.sql', import.meta.url), 'utf8');
+  for (const marker of ['bnslove','bnslove6510@gmail.com','tenant_admin','organization_engine','/bnslove/admin']) assert.match(sql,new RegExp(marker.replace(/[.*+?^$\{\}()|[\]\\]/g,'\\test('Hammu uses reusable organization workspace projection', async () => {
+  assert.equal(isOrganizationWorkspaceSlug('hammu'), true);
+  assert.equal(isOrganizationWorkspaceSlug('cgma'), false);
+  const response = await renderOrganizationPublicPage(new Request('https://ekodi.kr/hammu'), {}, {}, 'hammu');
+  const html = await response.text();
+  for (const marker of ['함무시찰회','공지사항','임원','회계보고','출석현황','/hammu/admin']) assert.match(html, new RegExp(marker));
+  assert.equal(response.headers.get('content-type'), 'text/html; charset=utf-8');
+  const workerSource = fs.readFileSync(new URL('../space-worker.js', import.meta.url), 'utf8');
+  assert.match(workerSource, /['space-storefront','space-organization']/);
+});
+')));
+  assert.doesNotMatch(sql,/platform_admin/);
+});
+
+test('organization admin is tenant-local for registered organization paths', async () => {
+  for (const path of ['/hammu/admin','/hammu/admin/officers','/hammu/admin/notices','/hammu/admin/finance','/hammu/admin/attendance','/bnslove/admin','/bnslove/admin/officers','/bnslove/admin/notices','/bnslove/admin/finance','/bnslove/admin/attendance']) assert.equal(isOrganizationAdminPath(path), true, path);
   assert.equal(isOrganizationAdminPath('/other/admin'), false);
   const response = organizationAdminPage('/hammu/admin/finance');
   const html = await response.text();
   assert.match(html,/data-ekodi-authority-scope="tenant"/);
   assert.match(html,/data-ekodi-organization-admin="true"/);
-  assert.match(html,/임원 승계/);
+  assert.match(html,/임원 관리/);
   assert.match(html,/회계보고/);
-  assert.match(html,/출석체크/);
+  assert.match(html,/모임·출석/);
   assert.equal(response.headers.get('x-ekodi-authority-scope'),'tenant');
 });
 
