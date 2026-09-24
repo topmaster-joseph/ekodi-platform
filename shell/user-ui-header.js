@@ -168,47 +168,6 @@ function pruneIndividualSiteGlobalLinks(header){
   for(const anchor of header.querySelectorAll('a[href]'))if(isGlobalPlatformHeaderLink(anchor))anchor.remove();
   header.dataset.ekodiHeaderScope='service-local';
 }
-const existing=document.querySelector(`[${OPERATING_SCOPE_ATTR}]`);
-  if(!isIndividualSite()){
-    if(existing)existing.remove();
-    return null;
-  }
-  if(existing)return existing;
-  const badge=document.createElement('span');
-  badge.className=OPERATING_SCOPE_CLASS;
-  badge.setAttribute(OPERATING_SCOPE_ATTR,`v${VERSION}`);
-  badge.textContent='운영공간';
-  badge.setAttribute('aria-label','개별 운영공간');
-  badge.setAttribute('title','개별 운영공간');
-  if(target&&target!==header){
-    target.append(badge);
-  }else{
-    badge.dataset.ekodiOperatingSpaceFloating='true';
-    header.append(badge);
-  }
-  header.dataset.ekodiOperatingSpace='true';
-  return badge;
-}
-function siteSubject(){const explicit=String(document.documentElement.dataset.ekodiSiteSubject||document.body?.dataset?.ekodiSiteSubject||'').trim().toLowerCase();if(explicit)return explicit;const service=serviceId();const owned={church:'ekodi-church',biz:'ekodi-biz',lab:'ekodi-lab',trade:'ekodi-trade',cafe:'ekodi-cafe'};if(owned[service])return owned[service];const first=location.pathname.split('/').filter(Boolean)[0]||'';const aliases={ekodibiz:'ekodi-biz',biz:'ekodi-biz',ekodichurch:'ekodi-church',church:'ekodi-church',ekodilab:'ekodi-lab',lab:'ekodi-lab',cheonggye:'cgma','cheonggye-merchants':'cgma','cheonggye-merchant-association':'cgma'};return aliases[first]||first}
-async function siteChrome(){const subject=siteSubject();if(!subject||['admin','auth','privacy','terms','api'].includes(subject))return null;if(!siteChromePromise)siteChromePromise=fetch(`${SITE_CHROME_URL}?subject_key=${encodeURIComponent(subject)}`,{credentials:'omit',cache:'no-store'}).then(async r=>r.ok?r.json():null).catch(()=>null);return siteChromePromise}
-function mode(){
-  const htmlMode=String(document.documentElement.dataset.ekodiUserHeader||'').toLowerCase();
-  const bodyMode=String(document.body?.dataset?.ekodiUserHeader||'').toLowerCase();
-  return bodyMode||htmlMode||'default';
-}
-function shouldEnable(){
-  if(!USER_SURFACES.has(surface()))return false;
-  if(DISABLED_MODES.has(mode()))return false;
-  return true;
-}
-function visible(element){
-  if(!element||!element.isConnected)return false;
-  if(element.closest('[data-ekodi-shell-root],[data-ekodi-header-ignore]'))return false;
-  const css=getComputedStyle(element);
-  if(css.display==='none'||css.visibility==='hidden')return false;
-  const rect=element.getBoundingClientRect();
-  return rect.width>0&&rect.height>0;
-}
 function findHeader(){
   for(const selector of HEADER_SELECTORS){
     for(const node of document.querySelectorAll(selector)){
@@ -289,7 +248,7 @@ function findHomeAnchor(header){
   for(const selector of selectors){const node=header?.querySelector(selector);if(node instanceof HTMLAnchorElement)return node;}
   return null;
 }
-function applySiteChromeHeader(header,chrome){const cfg=chrome?.header;if(!header||!cfg)return;const home=findHomeAnchor(header);if(home&&cfg.homeUrl)home.setAttribute('href',isIndividualSite()?serviceHomeUrl().toString():String(cfg.homeUrl));pruneIndividualSiteGlobalLinks(header);const fallback=header.hasAttribute(FALLBACK_ATTR);const siteNode=fallback?header.querySelector('.ekodi-user-ui-header-fallback__brand'):header.querySelector('[data-ekodi-header-site-name],[data-ekodi-site-name],.brand-title,.site-title');if(siteNode&&cfg.siteName)siteNode.textContent=String(cfg.siteName);const taglineNode=fallback?header.querySelector('.ekodi-user-ui-header-fallback__context'):header.querySelector('[data-ekodi-header-tagline]');if(taglineNode){const base=String(cfg.tagline||cfg.siteName||serviceLabel());taglineNode.textContent=base;header.dataset.ekodiSiteChrome='v1';window.dispatchEvent(new CustomEvent('ekodi:site-chrome',{detail:{subjectKey:chrome.subjectKey||siteSubject(),header:cfg}}))}
+function applySiteChromeHeader(header,chrome){const cfg=chrome?.header;if(!header||!cfg)return;const home=findHomeAnchor(header);if(home&&cfg.homeUrl)home.setAttribute('href',isIndividualSite()?serviceHomeUrl().toString():String(cfg.homeUrl));pruneIndividualSiteGlobalLinks(header);const fallback=header.hasAttribute(FALLBACK_ATTR);const siteNode=fallback?header.querySelector('.ekodi-user-ui-header-fallback__brand'):header.querySelector('[data-ekodi-header-site-name],[data-ekodi-site-name],.brand-title,.site-title');if(siteNode&&cfg.siteName)siteNode.textContent=String(cfg.siteName);const taglineNode=fallback?header.querySelector('.ekodi-user-ui-header-fallback__context'):header.querySelector('[data-ekodi-header-tagline]');if(taglineNode){const base=String(cfg.tagline||cfg.siteName||serviceLabel());taglineNode.textContent=base;}header.dataset.ekodiSiteChrome='v1';window.dispatchEvent(new CustomEvent('ekodi:site-chrome',{detail:{subjectKey:chrome.subjectKey||siteSubject(),header:cfg}}))}
 function bindHomeAnchor(header){
   const anchor=findHomeAnchor(header);if(!anchor)return;
   const localAnchor=serviceHomeAnchor();
@@ -345,7 +304,8 @@ function attach(header){
   if(!header||!shouldEnable())return;
   pruneIndividualSiteGlobalLinks(header);
   bindHomeAnchor(header);
-void siteChrome().then(chrome=>applySiteChromeHeader(header,chrome));
+  
+  void siteChrome().then(chrome=>applySiteChromeHeader(header,chrome));
   if(activeHeader===header&&spacer?.isConnected){
     const nextCenter=findCenter(header);
     if(nextCenter!==activeCenter){
