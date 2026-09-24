@@ -128,13 +128,13 @@ jobs:
           $commands = @(
             'power.always_on','power.presentation','power.normal','power.restore','lock.resume_off','lock.resume_on','autologon.open',
             'diagnostics.collect','network.diagnose','printers.diagnose','startup.scan','startup.disable','startup.restore',
-            'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary','computer.browser.execute','computer.desktop.probe','computer.desktop.canary','computer.desktop.guest.canary',
+            'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary','computer.browser.execute','computer.desktop.probe','computer.desktop.canary','computer.desktop.guest.canary','computer.desktop.ui.canary',
             'remote_desktop.recovery.enable','remote_desktop.recovery.disable','remote_desktop.recovery.run'
           )
           foreach ($command in $commands) {
             if (-not $content.Contains("'$command'")) { throw "Missing allowlisted command: $command" }
           }
-          foreach ($guard in @('arbitraryShell = $false','screenCapture = $false','credentialCollection = $false','backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified','isolatedDesktopProbe = $true','isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified','isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified','isolatedDesktop = $false')) {
+          foreach ($guard in @('arbitraryShell = $false','screenCapture = $false','credentialCollection = $false','backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified','isolatedDesktopProbe = $true','isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified','isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified','isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified','isolatedDesktop = $false')) {
             if (-not $content.Contains($guard)) { throw "Missing privacy guard: $guard" }
           }
           if ($content -match '(?i)Restart-Computer|GetAsyncKeyState|SetWindowsHookEx|CopyFromScreen|GetClipboard') { throw 'Forbidden remote-control behavior found.' }
@@ -256,6 +256,43 @@ jobs:
           }
           if (-not $installerContent.Contains('EKODI Isolated Guest Agent')) { throw 'Guest Agent installer contract missing.' }
           Write-Host 'Isolated Guest Agent offline task/receipt contract is fail-closed and credentialless.'
+      - name: Verify semantic isolated Guest UI canary boundary
+        shell: pwsh
+        run: |
+          $hostPath = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
+          $guestPath = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-isolated-guest-agent.ps1'
+          $hostContent = Get-Content $hostPath -Raw
+          $guestContent = Get-Content $guestPath -Raw
+          foreach ($required in @(
+            'function Invoke-IsolatedDesktopGuestUiCanary',
+            "type = 'guest.ui.probe'",
+            'isolated_guest_runtime_canary_required',
+            'semanticUiAutomation',
+            'lowLevelInputInjection',
+            'hostInteractiveDesktopUsed',
+            'syntheticUiOnly',
+            'isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified',
+            'isolatedDesktop = $false'
+          )) {
+            if (-not $hostContent.Contains($required)) { throw "Missing semantic UI host guard: $required" }
+          }
+          foreach ($required in @(
+            'function Invoke-GuestUiProbe',
+            "guest.ui.probe",
+            'System.Windows.Automation.AutomationElement',
+            'System.Windows.Automation.InvokePattern',
+            'semanticUiAutomation = $true',
+            'lowLevelInputInjection = $false',
+            'hostInteractiveDesktopUsed = $false',
+            'syntheticUiOnly = $true',
+            "mutationScope = 'ephemeral-guest-ui-only'"
+          )) {
+            if (-not $guestContent.Contains($required)) { throw "Missing semantic Guest UI guard: $required" }
+          }
+          if ($guestContent -match '(?i)SendKeys|mouse_event|keybd_event|SendInput|GetClipboard|SetClipboard') {
+            throw 'Semantic Guest UI canary must not use low-level input or clipboard APIs.'
+          }
+          Write-Host 'Semantic isolated Guest UI canary contract is present and host desktop remains protected.'
       - name: Verify power and lock command mapping without changing runner settings
         shell: pwsh
         run: |
