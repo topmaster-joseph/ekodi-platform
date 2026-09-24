@@ -1,0 +1,33 @@
+{
+  "id": "2026-09-21-retire-legacy-api-host-v1.16.0",
+  "constitutionVersion": "1.16.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-21",
+  "changeClass": "C1",
+  "taskId": "retire-legacy-api-host-20260921",
+  "summary": "Complete the apex API convergence by removing the legacy public API hostname from active Constitution, runtime references, Workers Custom Domains and exact Cloudflare DNS while keeping https://ekodi.kr/api as the only public API base.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly instructed EKODI to continue the https://ekodi.kr/api structure under EKODI orchestration.",
+  "constitutionalInterpretation": "This tightens the existing apex-path-only policy and does not expand authority. The Control Worker remains private behind CONTROL_API service binding; human sovereignty, guarded release, rollback and production verification remain unchanged.",
+  "implementedCapabilities": [
+    "Active Constitution no longer registers a public API subdomain",
+    "Runtime and admin references converge on https://ekodi.kr/api",
+    "Retired API hostname cannot be reintroduced outside immutable history",
+    "Production release detaches the retired Workers Custom Domain",
+    "Production release removes any exact retired DNS record",
+    "Post-retirement verification proves the old hostname no longer serves first-party traffic"
+  ],
+  "authorityImpact": "None. This removes a public exposure and preserves existing permissions and security boundaries.",
+  "generationImpact": {
+    "currentGenerationRemains": 10,
+    "automaticPromotion": false,
+    "evidenceDrivenFutureEvolution": true
+  },
+  "rollback": "If canonical apex verification fails before retirement, guarded release restores the prior Worker version. After successful canonical verification and hostname retirement, rollback restores service code through the apex path only; the retired hostname is not recreated.",
+  "approvalEvidence": {
+    "explicitOwnerInstruction": true,
+    "requiredPullRequestLabel": "constitution-approved",
+    "approvalLabel": "constitution-approved",
+    "pullRequest": 2180
+  }
+}

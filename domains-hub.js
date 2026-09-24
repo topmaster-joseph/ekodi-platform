@@ -219,7 +219,7 @@
     async function loadDomains() {
       refresh.disabled = true;
       stateMessage.textContent = '';
-      grid.replaceChildren(element('p', 'api.ekodi.kr에서 도메인 운영 상태를 확인하는 중입니다.', 'operations-loading'));
+      grid.replaceChildren(element('p', 'ekodi.kr/api에서 도메인 운영 상태를 확인하는 중입니다.', 'operations-loading'));
       try {
         const data = await api('/api/control/overview');
         servicesCache = data.services || [];

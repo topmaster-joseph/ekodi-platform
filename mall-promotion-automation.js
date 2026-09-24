@@ -251,8 +251,8 @@ export async function runMallPromotionAutomation(env,{reason='cron',force=false}
   }
   for(const {connection,learning} of selected){
     const keyValue=campaignKey(kst.date,connection.provider,product.id);
-    const linkUrl='https://marketing-connect-api.ekodi.kr/r/mall/'+encodeURIComponent(keyValue);
-    const imageUrl='https://api.ekodi.kr/api/affiliate/public/image/'+Number(product.id)+'?storefront='+STOREFRONT;
+    const linkUrl='https://marketing-connect-ekodi.kr/r/mall/'+encodeURIComponent(keyValue);
+    const imageUrl='https://ekodi.kr/api/affiliate/public/image/'+Number(product.id)+'?storefront='+STOREFRONT;
     const generated=await aiContent(env,product,connection.provider);
     const content={title:generated.title,caption:generated.caption,imageUrl,linkUrl,campaignKey:keyValue,productRowId:Number(product.id),productId:clean(product.product_id,100),weeklyTier:clean(product.tier||'A',10),weeklySlot:Number(product.slot||0),signalDirection:clean(product.signal_direction||'unknown',30),providerRank:Number(product.provider_rank||0),boardEvidence:product.boardEvidence||{},opportunityScore:Number(product.opportunity_score||0),recommendedAction:learning.action,baseRecommendedAction:clean(product.recommended_action,30),campaignAngle:clean(product.campaign_angle,160),policyScore:learning.policyScore,learningReason:learning.reason,expectedCommissionPerVisitKrw:learning.expectedCommissionPerVisit,confidenceScore:learning.confidenceScore};
     await upsertRun(env,{runDate:kst.date,productRowId:product.id,productId:product.product_id,provider:connection.provider,connectionId:connection.id,campaignKey:keyValue,status:'publishing',aiMode:generated.mode,aiModel:generated.model||'',content});

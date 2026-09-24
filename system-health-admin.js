@@ -80,7 +80,7 @@
     </div>
 
     <div class="core-health-grid" aria-label="EKODI Core 상태">
-      <article data-core-card="core" data-state="pending"><div><small>Core</small><b data-core-badge="core">확인 전</b></div><strong data-core-value="core">—</strong><span data-core-detail="core">api.ekodi.kr</span></article>
+      <article data-core-card="core" data-state="pending"><div><small>Core</small><b data-core-badge="core">확인 전</b></div><strong data-core-value="core">—</strong><span data-core-detail="core">ekodi.kr/api</span></article>
       <article data-core-card="database" data-state="pending"><div><small>DB</small><b data-core-badge="database">확인 전</b></div><strong data-core-value="database">Hybrid</strong><span data-core-detail="database">D1 · Supabase · Storage</span></article>
       <article data-core-card="backup" data-state="pending"><div><small>Backup</small><b data-core-badge="backup">확인 전</b></div><strong data-core-value="backup">—</strong><span data-core-detail="backup">독립 복원 검증</span></article>
       <article data-core-card="ai" data-state="pending"><div><small>AI Independence</small><b data-core-badge="ai">확인 전</b></div><strong data-core-value="ai">—</strong><span data-core-detail="ai">AI 공급자 없이도 Core 유지</span></article>
@@ -612,8 +612,8 @@
     const aiData = ai.data || coreData.ai || {};
 
     if (core.ok && coreData.ok) {
-      setFlowNode('core', 'ok', `${coreData.canonicalHosts?.api || 'api.ekodi.kr'} 정상`);
-      setCoreCard('core', 'ok', '정상', `v${coreData.apiVersion || '1.0.0'}`, `${coreData.canonicalHosts?.api || 'api.ekodi.kr'} · ${coreData.architecture || 'hybrid-cloud'}`);
+      setFlowNode('core', 'ok', `${coreData.canonicalApiBase || 'https://ekodi.kr/api'} 정상`);
+      setCoreCard('core', 'ok', '정상', `v${coreData.apiVersion || '1.0.0'}`, `${coreData.canonicalApiBase || 'https://ekodi.kr/api'} · ${coreData.architecture || 'hybrid-cloud'}`);
       get('[data-core-architecture]').textContent = coreData.architecture === 'hybrid-cloud' ? 'Hybrid Cloud · Provider Independent' : coreData.architecture || '—';
     } else {
       setFlowNode('core', 'error', 'Core API 확인 필요');

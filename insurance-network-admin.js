@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const API='https://api.ekodi.kr';
+  const API='https://ekodi.kr';
   const token=()=>{try{return sessionStorage.getItem('ekodi-auth-token')||''}catch{return''}};
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const uid=prefix=>`${prefix}_${crypto.randomUUID().replaceAll('-','')}`;
