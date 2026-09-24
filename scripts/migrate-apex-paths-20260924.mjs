@@ -232,7 +232,7 @@ for(const file of walk(root)){
   if(file==='platform-router-worker.js')text=fixPlatformRouterWorker(text);
   if(file==='platform-router-entry-worker.js')text=fixPlatformEntry(text);
   if(file==='canonical-surface-router.js')text=fixCanonicalRouter(text);
-  text=knownReplace(text);text=fixOrigins(text);text=structuredPolicyEdits(file,text);
+  text=knownReplace(text);text=text.replaceAll("'forbidden_as_canonical'","'forbidden'").replaceAll('"forbidden_as_canonical"','"forbidden"');text=fixOrigins(text);text=structuredPolicyEdits(file,text);
   if(text!==before)fs.writeFileSync(full,text);
 }
 
