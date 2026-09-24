@@ -148,7 +148,42 @@
     }));
   }
 
-  function renderAll() { renderExecutiveBrief(); renderDecisions(); renderTimeline(); renderCouncil(); }
+  function renderPlatformMissionControl() {
+    const host = $('#platformMissionControl');
+    if (!host) return;
+    const all = services();
+    const buckets = { healthy:0, attention:0, critical:0, standby:0 };
+    all.forEach(service => { const key = serviceStatus(service).key; buckets[key] = (buckets[key] || 0) + 1; });
+    const total = all.length;
+    const pct = value => total ? Math.round((value / total) * 100) : 0;
+    const latest = all.reduce((max, service) => Math.max(max, checkedAt(service)), 0);
+    const rows = all.slice().sort((a,b) => {
+      const order = { critical:0, attention:1, standby:2, healthy:3 };
+      return order[serviceStatus(a).key] - order[serviceStatus(b).key] || String(a.name || a.domain).localeCompare(String(b.name || b.domain));
+    }).slice(0,12);
+    host.innerHTML = `
+      <div class="platform-mission-head">
+        <div><small>PLATFORM MISSION CONTROL</small><h3>EKODI 전체 운영 현황</h3><span>Control API 실측 · 최신 신호 ${esc(relativeTime(latest))}</span></div>
+        <div class="platform-mission-totals">
+          <b>${total || '—'}<small>전체</small></b><b>${buckets.healthy}<small>정상</small></b><b>${buckets.attention}<small>주의</small></b><b>${buckets.critical}<small>장애</small></b><b>${buckets.standby}<small>미관측/대기</small></b>
+        </div>
+      </div>
+      <div class="platform-health-bar" role="img" aria-label="정상 ${pct(buckets.healthy)}%, 주의 ${pct(buckets.attention)}%, 장애 ${pct(buckets.critical)}%, 대기 ${pct(buckets.standby)}%">
+        <i class="healthy" style="width:${pct(buckets.healthy)}%"></i><i class="attention" style="width:${pct(buckets.attention)}%"></i><i class="critical" style="width:${pct(buckets.critical)}%"></i><i class="standby" style="width:${pct(buckets.standby)}%"></i>
+      </div>
+      <div class="platform-mission-table">
+        <div class="platform-mission-row head"><span>서비스</span><span>상태</span><span>응답</span><span>24시간</span><span>최근 확인</span></div>
+        ${rows.length ? rows.map(service => {
+          const state = serviceStatus(service);
+          const response = Number(service.latest?.responseTime ?? service.stats24h?.averageResponseTime ?? 0);
+          const availability = Number(service.stats24h?.availability ?? service.stats24h?.availabilityPercent ?? NaN);
+          return `<button type="button" class="platform-mission-row" data-mission-domain="${esc(service.domain || '')}"><span><strong>${esc(service.name || service.domain || 'Service')}</strong><small>${esc(service.domain || '')}</small></span><span class="mission-status ${esc(state.key)}">${esc(state.label)}</span><span>${response ? esc(Math.round(response) + 'ms') : '—'}</span><span>${Number.isFinite(availability) ? esc(availability.toFixed(1) + '%') : '—'}</span><span>${esc(relativeTime(checkedAt(service)))}</span></button>`;
+        }).join('') : '<div class="mission-empty"><strong>운영 집계 대기</strong><span>확인되지 않은 상태는 정상으로 추정하지 않습니다.</span></div>'}
+      </div>`;
+    host.querySelectorAll('[data-mission-domain]').forEach(button => button.addEventListener('click', () => openFocus('ecosystem', button.dataset.missionDomain || '')));
+  }
+
+  function renderAll() { renderPlatformMissionControl(); renderExecutiveBrief(); renderDecisions(); renderTimeline(); renderCouncil(); }
 
   function cockpitVisible() {
     const panel = $('#aiOpsPanel');
@@ -250,7 +285,7 @@
     const dashboard = document.createElement('div');
     dashboard.className = 'mission-dashboard';
     dashboard.innerHTML = `
-      <section class="mission-brief" id="missionExecutiveBrief"></section>
+      <section class="platform-mission-control" id="platformMissionControl"></section>\n      <section class="mission-brief" id="missionExecutiveBrief"></section>
       <section class="mission-decisions" id="missionDecisionBlock">
         <div class="mission-section-head"><div><small>DECISION QUEUE</small><h3>관리자가 결정할 것</h3></div><button type="button" id="missionDecisionChat">Chief AI Brief</button></div>
         <div id="missionDecisionList"></div>
