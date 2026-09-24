@@ -56,9 +56,9 @@ test('human-facing Admin menu has one canonical order inside seven EKODI areas',
   assert.ok(layout.includes('function applyOrder()'));
 });
 
-test('Admin sidebar menu uses readable seven-area spacing without shrinking labels', () => {
+test('Platform Admin sidebar uses readable seven-area spacing with role-projected task details', () => {
   for (const marker of ['ekodi-admin-workbench-tabs-style','gap:4px!important','min-height:48px','padding:10px 12px','font-size:15px']) assert.ok(sidebar.includes(marker));
-  assert.ok(sidebar.includes("primary-sidebar-tabs-v3"));
+  assert.ok(sidebar.includes("role-projected-sidebar-v4"));
 });
 
 test('administrator access waits for its runtime instead of recursively clicking the hidden source menu', () => {
