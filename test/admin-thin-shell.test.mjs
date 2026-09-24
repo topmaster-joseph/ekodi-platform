@@ -123,7 +123,7 @@ test('normal login opens EKODI command console without auto-opening Campus or in
   assert.match(menu, /window\.__EKODIAdminMenuLayoutReady=\(async\(\)=>\{/);
   assert.match(menu, /let requestedSection = ''/);
   assert.match(menu, /const initialSection\s*=\s*explicitAdminSection\(\)/);
-  assert.match(menu, /const explicitPathSection=\(\)=>adminRoutes\(\)\?\.sectionFromPath/);
+  assert.match(menu, /const explicitAdminSection=\(\)=>adminRoutes\(\)\?\.sectionFromLocation/);
   assert.match(menu, /else if\s*\(initialSection\)\s*\{[\s\S]*requestedSection\s*=\s*initialSection[\s\S]*queueMicrotask/);
   assert.match(menu, /if\(initialSection===COMMAND_HOME\)activateCommandHome\(\)/);
   assert.match(menu, /else activateCommandHome\(\)/);
