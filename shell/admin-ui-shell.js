@@ -69,12 +69,14 @@ function installStyle(){
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-module-health-link{display:flex!important;align-items:center!important;gap:8px!important;min-height:40px!important;margin:4px 8px 8px!important;padding:8px 10px!important;border:1px solid #294b6b!important;border-radius:9px!important;background:#102c49!important;color:#e6f2ff!important;text-decoration:none!important;font-size:13px!important;font-weight:800!important;line-height:1.3!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-module-health-link:hover{background:#174b7b!important;color:#fff!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-header-account-hidden{display:none!important}
-    @media(min-width:761px){html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-topbar{display:none!important}}
+    @media(min-width:761px){html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-topbar[data-ekodi-admin-topbar-mode="redundant"]{display:none!important}}
     @media(max-width:760px){
       html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-topbar{position:sticky!important;top:0!important;left:auto!important;right:auto!important;width:auto!important;min-height:56px!important;z-index:1200!important;box-sizing:border-box!important;padding:max(8px,env(safe-area-inset-top,0px)) 12px 8px!important;background:#fff!important;color:var(--ekodi-admin-text)!important;border-bottom:1px solid var(--ekodi-admin-line)!important;box-shadow:none!important}
       html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-topbar .menu{color:var(--ekodi-admin-text)!important;background:#fff!important;border:1px solid var(--ekodi-admin-line)!important;border-radius:12px!important;width:42px!important;height:42px!important}
       html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-topbar #pageTitle{display:block!important;color:var(--ekodi-admin-text)!important;font-size:16px!important;line-height:1.3!important;margin:0!important}
       html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main{height:auto!important;min-height:calc(100dvh - 56px)!important;overflow:visible!important}
+      html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar[data-ekodi-admin-legacy-sidebar="true"]{height:auto!important;max-height:none!important;overflow:visible!important}
+      html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar[data-ekodi-admin-legacy-sidebar="true"] .ekodi-admin-shell-nav{max-height:48dvh!important;overflow-y:auto!important}
       html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main>*{max-width:100%!important}
       html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-heading{flex-direction:column!important;gap:10px!important}
       html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main :is(button,.button,.mini,.oa-button,[role="button"]){min-height:44px}
@@ -191,10 +193,11 @@ function ensureFooter(sidebar){
   return footer;
 }
 
-function hideDuplicateHeaderRegions(topbar){
+function hideDuplicateHeaderRegions(topbar,hasSidebar=false){
   if(!topbar)return;
   topbar.classList.add('ekodi-admin-shell-topbar');
   topbar.setAttribute('data-ekodi-admin-topbar','');
+  topbar.dataset.ekodiAdminTopbarMode=hasSidebar?'redundant':'standalone';
   for(const selector of ACCOUNT_SELECTORS){
     for(const node of topbar.querySelectorAll(selector))node.classList.add('ekodi-admin-header-account-hidden');
   }
@@ -218,6 +221,7 @@ function normalize(){
   const sidebar=findSidebar();
   if(sidebar){
     sidebar.classList.add('ekodi-admin-shell-sidebar');
+    if(sidebar.matches('.oa-side')&&!sidebar.hasAttribute('data-ekodi-admin-sidebar'))sidebar.dataset.ekodiAdminLegacySidebar='true';
     sidebar.dataset.ekodiAdminRegion='navigation';
     removeSidebarBrand(sidebar);
     const nav=findNav(sidebar);
@@ -240,7 +244,7 @@ function normalize(){
     main.classList.add('ekodi-admin-shell-main');
     main.dataset.ekodiAdminRegion='workspace';
     normalizeMainRegions(main);
-    hideDuplicateHeaderRegions(findTopbar(main));
+    hideDuplicateHeaderRegions(findTopbar(main),Boolean(sidebar));
   }
 
   window.dispatchEvent(new CustomEvent('ekodi:admin-shell-ready',{detail:{version:VERSION,brandHeaderRemoved:Boolean(sidebar?.dataset.ekodiAdminBrandRemoved==='true')}}));
