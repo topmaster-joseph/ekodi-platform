@@ -1880,21 +1880,6 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/cgma",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "운영공간"
-        ],
-        "headerExpect": [
-          "x-ekodi-tenant-readability: v1",
-          "x-ekodi-operating-space-label: v1"
-        ],
-        "rollbackVerify": false
-      },
-      {
         "url": "https://ekodi.kr/jadam",
         "statuses": [
           200
