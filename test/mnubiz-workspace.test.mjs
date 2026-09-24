@@ -15,7 +15,7 @@ test('mnubiz public surface follows CSP-safe user-site UI contract', async()=>{
     'data-ekodi-header-actions',
     'data-ekodi-site-subject="mnubiz"',
     'mnubiz-character-zone',
-    'site.css?v=20260924-2'
+    'site.css?v=20260924-3'
   ]) assert.ok(html.includes(token), 'missing token: '+token);
   assert.doesNotMatch(html,/<style[\s>]/i);
   assert.doesNotMatch(html,/<footer[\s>]/i);
@@ -30,6 +30,8 @@ test('mnubiz public surface follows CSP-safe user-site UI contract', async()=>{
   assert.match(css,/background:#f7f3ea!important/);
   assert.match(css,/@media\(prefers-color-scheme:dark\)/);
   assert.match(css,/\.mnubiz-character-zone/);
+  assert.match(css,/body>main\.mnubiz-main\{width:100%!important/);
+  assert.match(css,/ekodi-main-ekodian-host\{position:absolute!important/);
   assert.match(css,/--ekodi-user-footer-background/);
   assert.match(css,/\.mnubiz-grid/);
   assert.match(css,/@media\(max-width:860px\)/);
