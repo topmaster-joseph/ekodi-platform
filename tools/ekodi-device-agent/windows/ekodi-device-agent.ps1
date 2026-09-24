@@ -478,7 +478,7 @@ function Apply-WorkstationProfile {
   $links = @(
     @{ name = 'EKODI Admin'; url = 'https://admin.ekodi.kr' },
     @{ name = 'My EKODI'; url = 'https://ekodi.kr/my/' },
-    @{ name = 'EKODI Community'; url = 'https://community.ekodi.kr' },
+    @{ name = 'EKODI Community'; url = 'https://ekodi.kr/community' },
     @{ name = 'Marketing AI'; url = 'https://ekodi.kr/ekodibiz/marketing-ai' },
     @{ name = 'EKODI Cloud'; url = 'https://cloud.ekodi.kr' }
   )
