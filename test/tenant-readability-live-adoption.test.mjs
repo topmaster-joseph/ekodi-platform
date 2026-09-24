@@ -17,9 +17,6 @@ test('tenant readability injector stays brand-neutral and idempotent',async()=>{
   assert.match(injector,/OPERATING_SPACE_LABEL_HEADER='x-ekodi-operating-space-label'/);
   assert.match(injector,/data-ekodi-operating-space-label/);
   assert.match(injector,/options\?\.operatingSpace!==false/);
-  assert.match(injector,/forceOperatingSpace=operatingSpace&&options\?\.forceOperatingSpace===true/);
-  assert.match(injector,/alreadyReadable&&!forceOperatingSpace/);
-  assert.match(injector,/TenantOperatingSpaceExistingMarkerRemover/);
   assert.match(injector,/운영공간/);
   assert.match(injector,/x-ekodi-shell/);
   assert.match(injector,/x-ekodi-user-ui/);
@@ -69,7 +66,11 @@ test('remaining canonical business, trade and lab surfaces inherit a readability
   ]);
   assert.match(router,/routeEkodiBizPublic[\s\S]*injectEkodiProgressiveHome\(injectEkodiTenantReadability\(rewritten\)\)/);
   assert.match(router,/LEGACY_OPERATING_SPACE_ROOTS=new Set\(\['ekodichurch','ekodimission'\]\)/);
-  assert.match(router,/legacyOperatingSpacePath\(url\.pathname\)\)return injectEkodiTenantReadability\(legacyResponse\)/);
+  assert.match(router,/async function ensureLegacyOperatingSpaceMarker/);
+  assert.match(router,/html\.includes\('data-ekodi-operating-space-label'\)/);
+  assert.match(router,/if\(!includeBody\)return new Response\(response\.body/);
+  assert.match(router,/headers\.delete\('content-length'\)/);
+  assert.match(router,/legacyOperatingSpacePath\(url\.pathname\)\)return ensureLegacyOperatingSpaceMarker\(injectEkodiTenantReadability\(legacyResponse\),request\.method==='GET'\)/);
   assert.match(router,/isTradePartnerPath\(url\.pathname\)\)return injectEkodiTenantReadability\(tradePartnerPage\(\)\)/);
   assert.match(canonical,/executionSurface\.id==='lab'\?injectEkodiTenantReadability\(response\):response/);
   assert.match(verifier,/requireReadability\(cgmaRoot,'cgma-root',errors\)/);
@@ -80,7 +81,7 @@ test('owned root services keep tenant readability after shared Shell injection',
   const siteShell=await read('site-shell-worker.js');
   assert.match(siteShell,/ownedCustomerSiteFor/);
   assert.match(siteShell,/const shelled=!progressiveHome&&serviceId[\s\S]*injectEkodiShell\(response,serviceId/);
-  assert.match(siteShell,/ownedCustomerSiteFor\(serviceId\)\?injectEkodiTenantReadability\(shelled,\{forceOperatingSpace:true\}\):shelled/);
+  assert.match(siteShell,/ownedCustomerSiteFor\(serviceId\)\?injectEkodiTenantReadability\(shelled\):shelled/);
 });
 
 test('guarded release requires the operating-space distinction on representative live sites',async()=>{
@@ -92,12 +93,10 @@ test('guarded release requires the operating-space distinction on representative
   assert.ok(churchCanonical.headerExpect?.includes('x-ekodi-route: church-path-canonical'));
   assert.equal(churchCanonical.rollbackVerify,false);
 
-  const cgmaSharedProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/cgma'||item.url==='https://ekodi.kr/cgma/');
-  assert.equal(cgmaSharedProbe,undefined,'CGMA root is independently owned by cgma-root-gateway and must not be evaluated as a Shared Site candidate');
-
   for(const url of [
     'https://ekodi.kr/ekodichurch/',
     'https://ekodi.kr/ekodibiz',
+    'https://ekodi.kr/cgma',
     'https://ekodi.kr/jadam',
     'https://ekodi.kr/pizzamaru',
     'https://ekodi.kr/yogurt',
