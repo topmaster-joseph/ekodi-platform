@@ -53,7 +53,7 @@ test('Hyper-V canary creates only an ephemeral differencing VM and cleans it up'
   assert.match(agent,/sessionVmRemoved = -not \[bool\]\(Get-VM/);
   assert.match(agent,/sessionDiskRemoved = -not \(Test-Path -LiteralPath \$sessionDisk\)/);
   assert.match(agent,/isolatedDesktopCanary = \[bool\]\(Get-IsolatedDesktopCanaryState\)\.verified/);
-  assert.match(agent,/isolatedDesktop = \$false/);
+  assert.match(agent,/isolatedDesktop = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
   assert.equal(policy.activation.canaryCommand,'computer.desktop.canary');
   assert.equal(policy.activation.canaryDoesNotEnableExecutionByItself,true);
   assert.equal(policy.canary.networkAttached,false);
@@ -70,7 +70,7 @@ test('guest runtime canary stages tasks offline and keeps full desktop execution
   assert.match(agent,/type = 'guest\.runtime\.probe'/);
   assert.match(agent,/networkPolicy = 'none'/);
   assert.match(agent,/isolatedDesktopGuestCanary = \[bool\]\(Get-IsolatedDesktopGuestCanaryState\)\.verified/);
-  assert.match(agent,/isolatedDesktop = \$false/);
+  assert.match(agent,/isolatedDesktop = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
   assert.equal(policy.activation.guestCanaryCommand,'computer.desktop.guest.canary');
   assert.equal(policy.activation.guestCanaryRequiredBeforeExecution,true);
   assert.equal(policy.activation.guestCanaryDoesNotEnableExecutionByItself,true);
@@ -88,7 +88,7 @@ test('semantic guest UI canary remains isolated and cannot unlock general deskto
   assert.match(agent,/lowLevelInputInjection/);
   assert.match(agent,/hostInteractiveDesktopUsed/);
   assert.match(agent,/isolatedDesktopUiCanary = \[bool\]\(Get-IsolatedDesktopUiCanaryState\)\.verified/);
-  assert.match(agent,/isolatedDesktop = \$false/);
+  assert.match(agent,/isolatedDesktop = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
   assert.equal(policy.activation.uiCanaryCommand,'computer.desktop.ui.canary');
   assert.equal(policy.uiCanary.expectedResultCode,'EKODI_UI_OK');
   assert.equal(policy.uiCanary.generalDesktopExecutionCapabilityAfterUiCanary,false);
