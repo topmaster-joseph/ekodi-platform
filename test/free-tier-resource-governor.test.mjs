@@ -63,3 +63,32 @@ test('verified catalog keeps public GitHub runners free and storage plan-aware',
   assert.equal(FREE_TIER_RESOURCE_CATALOG.github.facts.artifactStorage,'plan-dependent');
   assert.equal(FREE_TIER_RESOURCE_CATALOG.supabase.metrics.find(x=>x.metric==='active_projects').freeLimit,2);
 });
+
+
+test('Supabase telemetry stays partial until organization egress, MAU, functions and Realtime are measured',()=>{
+  const governor=buildFreeTierResourceGovernor({
+    now:NOW,
+    snapshots:[
+      {provider:'supabase',metric:'active_projects',observed_value:2,free_limit:2,source:'oidc',observed_at:'2026-09-20T07:30:00.000Z'},
+      {provider:'supabase',metric:'database_bytes:project-a',observed_value:23325843,free_limit:500*1024*1024,source:'oidc',observed_at:'2026-09-20T07:30:00.000Z'},
+      {provider:'supabase',metric:'storage_bytes_org:org-a',observed_value:33132,free_limit:1024*1024*1024,source:'oidc',observed_at:'2026-09-20T07:30:00.000Z'},
+    ]
+  });
+  const supabase=governor.providers.supabase;
+  assert.equal(supabase.telemetryStatus,'partial');
+  assert.equal(supabase.provisioningAllowed,false);
+  assert.ok(supabase.highestUsagePercent>4&&supabase.highestUsagePercent<5);
+});
+
+test('stale prefix telemetry counts as missing coverage instead of measured coverage',()=>{
+  const governor=buildFreeTierResourceGovernor({
+    now:NOW,
+    staleAfterHours:26,
+    snapshots:[
+      {provider:'supabase',metric:'active_projects',observed_value:1,free_limit:2,source:'test',observed_at:'2026-09-20T07:30:00.000Z'},
+      {provider:'supabase',metric:'database_bytes:project-a',observed_value:1000,free_limit:500*1024*1024,source:'test',observed_at:'2026-09-17T00:00:00.000Z'},
+    ]
+  });
+  assert.equal(governor.providers.supabase.telemetryStatus,'partial');
+  assert.equal(governor.providers.supabase.highestUsagePercent,null);
+});
