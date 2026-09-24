@@ -335,6 +335,7 @@
     refresh.addEventListener('click', () => load(true));
     if (location.hash === '#release') history.replaceState(null, '', '#deployments');
     if (location.hash === '#deployments') queueMicrotask(activate);
+    window.dispatchEvent(new CustomEvent('ekodi-feature-installed',{detail:{section:DEPLOYMENTS_SECTION}}));
   }
 
   async function syncDeploymentsAccess() {
