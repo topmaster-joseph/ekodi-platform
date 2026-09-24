@@ -38,3 +38,13 @@ test('evidence writers keep production credentials outside execution sandboxes',
   assert.match(workflow, /record-runtime-evidence:/);
   assert.doesNotMatch(workflow, /podman run[\s\S]{0,800}CLOUDFLARE_API_TOKEN/);
 });
+
+
+test('durable ledger evaluates activation from D1 evidence and publishes an auditable snapshot', () => {
+  assert.match(workflow, /evaluate-activation-evidence:/);
+  assert.match(workflow, /SELECT id,generation,outcome,payload_sha256,artifact_count,evidence_json,recorded_at FROM ai_generation10_evidence/);
+  assert.match(workflow, /SELECT id,generation,outcome,evidence_json,recorded_at FROM ai_production_evidence/);
+  assert.match(workflow, /evaluate-gen10-activation-evidence\.mjs/);
+  assert.match(workflow, /gen10-activation-evidence-/);
+  assert.doesNotMatch(workflow, /--require-ready true/);
+});
