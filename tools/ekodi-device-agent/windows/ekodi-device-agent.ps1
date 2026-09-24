@@ -10,7 +10,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = '2.4.0'
+$AgentVersion = '2.5.0'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -957,6 +957,36 @@ function Resolve-EkodiBrowserViewport([string]$Profile) {
   }
 }
 
+function Get-EkodiBackgroundAuthState([int]$StatusCode, [string]$Content) {
+  if ($StatusCode -eq 401 -or $StatusCode -eq 403) { return 'required' }
+  if (-not $Content) { return 'not-required' }
+  try {
+    $json = $Content | ConvertFrom-Json
+    if ($json.PSObject.Properties.Name -contains 'authenticated' -and $json.authenticated -eq $false) { return 'required' }
+    if ($json.PSObject.Properties.Name -contains 'code' -and [string]$json.code -match '(?i)AUTH_REQUIRED|LOGIN_REQUIRED|SESSION_REQUIRED') { return 'required' }
+  } catch { }
+  return 'not-required'
+}
+
+function Invoke-EkodiBackgroundHttpGet([string]$Target) {
+  $handler = [Net.Http.HttpClientHandler]::new()
+  $handler.AllowAutoRedirect = $false
+  $client = [Net.Http.HttpClient]::new($handler)
+  $client.Timeout = [TimeSpan]::FromSeconds(25)
+  try {
+    $response = $client.GetAsync($Target).GetAwaiter().GetResult()
+    try {
+      $content = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+      return @{ statusCode = [int]$response.StatusCode; content = [string]$content }
+    } finally {
+      $response.Dispose()
+    }
+  } finally {
+    $client.Dispose()
+    $handler.Dispose()
+  }
+}
+
 function Receive-EkodiCdpResponse($Socket, [int]$ExpectedId, [int]$TimeoutMs = 15000) {
   $buffer = New-Object byte[] 65536
   $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMs)
@@ -1120,6 +1150,12 @@ function Invoke-BackgroundBrowserWorker($Payload) {
   $canary = Get-BackgroundBrowserCanaryState
   if (-not $canary.verified) { throw 'background_browser_canary_required' }
 
+  if ([string]$Payload.executionMode -ne 'background-only') { throw 'background_browser_mode_must_be_background_only' }
+  if ($Payload.createUserBrowserTab -ne $false) { throw 'background_browser_user_tab_forbidden' }
+  if ($Payload.closeOwnedSurfaceOnComplete -ne $true) { throw 'background_browser_cleanup_required' }
+  if ($Payload.closeOwnedSurfaceOnAuthRequired -ne $true) { throw 'background_browser_auth_cleanup_required' }
+  if ($Payload.preserveUserOwnedSurfaces -ne $true) { throw 'background_browser_user_surface_protection_required' }
+
   $target = Resolve-EkodiBrowserTaskUrl ([string]$Payload.path)
   $profileName = if ($Payload.PSObject.Properties.Name -contains 'deviceProfile' -and $Payload.deviceProfile) { [string]$Payload.deviceProfile } else { 'desktop' }
   $viewport = Resolve-EkodiBrowserViewport $profileName
@@ -1136,13 +1172,38 @@ function Invoke-BackgroundBrowserWorker($Payload) {
 
   $proof = $null
   try {
-    $response = Invoke-WebRequest -Uri $target -Method Get -UseBasicParsing -MaximumRedirection 0 -TimeoutSec 25 -ErrorAction Stop
-    $stdout = [string]$response.Content
-    if ($stdout.Length -le 0) { throw 'background_browser_dom_failed' }
-    $statusCode = [int]$response.StatusCode
-    if ($statusCode -lt 200 -or $statusCode -ge 300) { throw 'background_browser_http_status_failed' }
+    $http = Invoke-EkodiBackgroundHttpGet $target
+    $stdout = [string]$http.content
+    $statusCode = [int]$http.statusCode
+    $authState = Get-EkodiBackgroundAuthState $statusCode $stdout
+    if ($authState -eq 'required') {
+      $proof = @{
+        ok = $false
+        outcome = 'auth-required'
+        code = 'AUTH_REQUIRED'
+        mode = 'background-browser-worker'
+        executionMode = 'background-only'
+        virtualizationProvider = 'ekodi-native-remote-computer'
+        routingPolicy = 'EKODI-VIRTUALIZATION-ROUTING-001'
+        agentVersion = $AgentVersion
+        taskId = $taskId
+        browser = [IO.Path]::GetFileName($browser)
+        url = $target
+        httpStatus = $statusCode
+        authRequired = $true
+        interactiveLoginOpened = $false
+        createUserBrowserTab = $false
+        ownedAutomationSurfaceAutoClosed = $true
+        userOwnedSurfacesPreserved = $true
+        temporaryProfileRemoved = $false
+        screenshotArtifactRemoved = $false
+        checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+      }
+    } else {
+      if ($stdout.Length -le 0) { throw 'background_browser_dom_failed' }
+      if ($statusCode -lt 200 -or $statusCode -ge 300) { throw 'background_browser_http_status_failed' }
 
-    $capture = Invoke-EkodiHeadlessScreenshot $browser $target $taskProfile $shotPath $viewport
+      $capture = Invoke-EkodiHeadlessScreenshot $browser $target $taskProfile $shotPath $viewport
     $screenshotExists = Test-Path -LiteralPath $shotPath
     if (-not $screenshotExists) { throw 'background_browser_screenshot_failed:cdp_no_file' }
     $stderr = ''
@@ -1183,18 +1244,29 @@ function Invoke-BackgroundBrowserWorker($Payload) {
       stderrSummary = $(if ($stderr) { $stderr.Substring(0, [Math]::Min(300, $stderr.Length)) } else { '' })
       profileRemoved = $false
       screenshotArtifactRemoved = $false
+      executionMode = 'background-only'
+      createUserBrowserTab = $false
+      ownedAutomationSurfaceAutoClosed = $true
+      userOwnedSurfacesPreserved = $true
+      authRequired = $false
+      interactiveLoginOpened = $false
+    }
     }
   } finally {
     Remove-Item -LiteralPath $taskProfile -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $shotDir -Recurse -Force -ErrorAction SilentlyContinue
     if ($proof) {
       $proof.profileRemoved = -not (Test-Path -LiteralPath $taskProfile)
+      $proof.temporaryProfileRemoved = $proof.profileRemoved
       $proof.screenshotArtifactRemoved = -not (Test-Path -LiteralPath $shotDir)
     }
   }
 
   if (-not $proof -or -not $proof.profileRemoved -or -not $proof.screenshotArtifactRemoved) { throw 'background_browser_profile_cleanup_failed' }
-  return @{ message = 'EKODI 자체 Background Browser Worker가 사용자 화면과 분리된 읽기 전용 작업을 완료했습니다.'; browserWorker = $proof }
+  if ($proof.authRequired -eq $true) {
+    return @{ message = '인증이 필요한 자동작업을 사용자 화면에 열지 않고 AUTH_REQUIRED로 기록한 뒤 백그라운드 세션을 종료했습니다.'; browserWorker = $proof }
+  }
+  return @{ message = 'EKODI 자체 Background Browser Worker가 사용자 화면과 분리된 작업을 완료하고 임시 브라우저 세션을 종료했습니다.'; browserWorker = $proof }
 }
 
 function Get-WindowsOptionalFeatureStateSafe([string]$Name) {

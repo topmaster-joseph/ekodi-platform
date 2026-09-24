@@ -374,7 +374,15 @@ function sanitizeCommandPayload(type, rawPayload) {
     let target;
     try { target=new URL(pathValue,'https://ekodi.kr/'); } catch { throw new Error('BROWSER_PATH_INVALID'); }
     if(target.protocol!=='https:'||target.hostname!=='ekodi.kr'||target.username||target.password||target.port) throw new Error('BROWSER_TARGET_INVALID');
-    return {path:target.pathname+target.search+target.hash,deviceProfile};
+    return {
+      path:target.pathname+target.search+target.hash,
+      deviceProfile,
+      executionMode:'background-only',
+      createUserBrowserTab:false,
+      closeOwnedSurfaceOnComplete:true,
+      closeOwnedSurfaceOnAuthRequired:true,
+      preserveUserOwnedSurfaces:true,
+    };
   }
   if (policy.payload === 'camera-stream') {
     const externalId=safeText(rawPayload?.externalId,100).toLowerCase();
@@ -767,6 +775,17 @@ function summarizeCommandResult(result = {}) {
       userInputInjection: result.browserWorker.userInputInjection === true,
       javascriptEnabled: result.browserWorker.javascriptEnabled === true,
       mutationMode: safeText(result.browserWorker.mutationMode, 80),
+      executionMode: safeText(result.browserWorker.executionMode, 40),
+      outcome: safeText(result.browserWorker.outcome, 60),
+      code: safeText(result.browserWorker.code, 60),
+      httpStatus: finiteNumber(result.browserWorker.httpStatus),
+      authRequired: result.browserWorker.authRequired === true,
+      interactiveLoginOpened: result.browserWorker.interactiveLoginOpened === true,
+      createUserBrowserTab: result.browserWorker.createUserBrowserTab === true,
+      ownedAutomationSurfaceAutoClosed: result.browserWorker.ownedAutomationSurfaceAutoClosed === true,
+      userOwnedSurfacesPreserved: result.browserWorker.userOwnedSurfacesPreserved === true,
+      temporaryProfileRemoved: result.browserWorker.temporaryProfileRemoved === true,
+      screenshotArtifactRemoved: result.browserWorker.screenshotArtifactRemoved === true,
       checkedAt: safeText(result.browserWorker.checkedAt, 64),
     };
   }

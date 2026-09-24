@@ -230,7 +230,15 @@ export function evaluateBrowserWorker({ device, commandId, issuedAt, expectedVer
     proof.clipboardShared === false &&
     proof.userInputInjection === false &&
     proof.javascriptEnabled === false &&
-    proof.mutationMode === 'read-only-static-surface'
+    proof.mutationMode === 'read-only-static-surface' &&
+    proof.executionMode === 'background-only' &&
+    proof.createUserBrowserTab === false &&
+    proof.ownedAutomationSurfaceAutoClosed === true &&
+    proof.userOwnedSurfacesPreserved === true &&
+    proof.temporaryProfileRemoved === true &&
+    proof.screenshotArtifactRemoved === true &&
+    proof.authRequired === false &&
+    proof.interactiveLoginOpened === false
   );
   if (!proofOk) return { done:true, ok:false, error:'Native Browser Worker result did not satisfy the isolated read-only execution proof contract.' };
   if (device.status !== 'online') return { done:false, reason:'device_not_online_yet' };
@@ -269,6 +277,14 @@ export function evaluateBrowserWorker({ device, commandId, issuedAt, expectedVer
         userInputInjection:false,
         javascriptEnabled:false,
         mutationMode:'read-only-static-surface',
+        executionMode:'background-only',
+        createUserBrowserTab:false,
+        ownedAutomationSurfaceAutoClosed:true,
+        userOwnedSurfacesPreserved:true,
+        temporaryProfileRemoved:true,
+        screenshotArtifactRemoved:true,
+        authRequired:false,
+        interactiveLoginOpened:false,
         checkedAt:proof.checkedAt || null,
       },
     },

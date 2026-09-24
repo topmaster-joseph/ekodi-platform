@@ -207,6 +207,14 @@ test('native background-browser worker requires production-isolated read-only pr
     userInputInjection:false,
     javascriptEnabled:false,
     mutationMode:'read-only-static-surface',
+    executionMode:'background-only',
+    createUserBrowserTab:false,
+    ownedAutomationSurfaceAutoClosed:true,
+    userOwnedSurfacesPreserved:true,
+    temporaryProfileRemoved:true,
+    screenshotArtifactRemoved:true,
+    authRequired:false,
+    interactiveLoginOpened:false,
     checkedAt:'2026-09-20T10:05:00Z',
   };
   const device={
@@ -230,6 +238,15 @@ test('native background-browser worker requires production-isolated read-only pr
   assert.equal(passed.ok,true);
   assert.equal(passed.summary.nativeBrowserOperationServiceReady,true);
   assert.equal(passed.summary.proof.profileRemoved,true);
+
+  const foregroundLifecycle=evaluateBrowserWorker({
+    device:{...device,recentCommands:[{...device.recentCommands[0],result:{browserWorker:{...proof,createUserBrowserTab:true}}}]},
+    commandId:'cmd_worker',
+    issuedAt:'2026-09-20T10:04:30Z',
+    expectedVersion:'2.4.0',
+  });
+  assert.equal(foregroundLifecycle.ok,false);
+  assert.match(foregroundLifecycle.error,/isolated read-only execution proof contract/);
 
   const reused=evaluateBrowserWorker({
     device:{...device,recentCommands:[{...device.recentCommands[0],result:{browserWorker:{...proof,activeUserProfileReused:true}}}]},
