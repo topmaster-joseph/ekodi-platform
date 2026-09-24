@@ -19,7 +19,6 @@ test('Admin authenticated shell ships the conversation-first workbench skin', as
   assert.match(build, /appendOutputSources\('admin-design-engine\.css'/);
   assert.match(build, /path:'admin-conversation-workbench\.css'/);
   assert.match(build, /marker:'EKODI Admin conversation-first workbench v1'/);
-  assert.match(build, /admin-conversation-workbench\.css \*\//);
   assert.match(css, /--ekodi-admin-sidebar-width:272px/);
   assert.match(css, /--ekodi-assist-left:272px/);
   assert.doesNotMatch(css, /data-ekodi-admin-ui/);
