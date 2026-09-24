@@ -33,3 +33,11 @@ test('deployment control describes guarded release models without exposing privi
   assert.match(admin, /prepared-for-split-token/);
   assert.doesNotMatch(admin, /CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID|TOSS_SECRET_KEY|GITHUB_TOKEN/);
 });
+
+test('Deployments announces panel installation so Admin navigation reconciles after async role resolution', async () => {
+  const admin = await read('release-control-admin.js');
+  assert.match(admin, /window\.dispatchEvent\(new CustomEvent\('ekodi-feature-installed',\{detail:\{section:DEPLOYMENTS_SECTION\}\}\)\)/);
+  const mount = admin.indexOf('content.append(section)');
+  const announce = admin.indexOf("new CustomEvent('ekodi-feature-installed'");
+  assert.ok(mount >= 0 && announce > mount, 'Deployments readiness event must fire only after #releaseControl is mounted');
+});
