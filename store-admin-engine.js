@@ -41,7 +41,7 @@ function clientMain(POLICY,CHANNEL_CATALOG){
   const SITE_CHROME_API='https://ekodi.kr/workspace-api/v1/site-chrome';
   const SESSION_KEY=IS_PORTFOLIO?'ekodi-cmpmyi-admin-session':'ekodi-store-admin-session:'+SLUG;
   const LEGACY_SESSION_KEYS={jadam:'ekodi-jadam-admin-session',pizzamaru:'ekodi-pizzamaru-admin-session',yogurt:'ekodi-yogurt-admin-session'};
-  const GROUPS=[{id:'home',label:'홈',items:[['overview','운영 홈']]},{id:'sales',label:'주문 · 배달',items:[['delivery','배달플랫폼'],['orders','주문 · 채널'],['sales','매출']]},{id:'catalog',label:'메뉴 · 재고',items:[['menu','메뉴 · 가격'],['inventory','재고']]},{id:'customers',label:'고객 · 리뷰',items:[['customers','고객'],['reviews','리뷰']]},{id:'growth',label:'홍보 · 채널',items:[['marketing','마케팅 AI'],['publishing','채널 · 자동게시']]},{id:'operations',label:'매장 관리',items:[['work','매장업무'],['site','사용자 사이트'],['connections','연결관리'],['finance','비용 · 정산'],['members','사용자 · 권한'],['chrome','헤더 · 푸터']]}];
+  const GROUPS=[{id:'home',label:'홈',items:[['overview','운영 홈']]},{id:'sales',label:'주문 · 배달',items:[['delivery','배달플랫폼'],['orders','주문 · 채널'],['sales','매출']]},{id:'catalog',label:'메뉴 · 재고',items:[['menu','메뉴 · 가격'],['inventory','재고']]},{id:'customers',label:'고객 · 리뷰',items:[['customers','고객'],['reviews','리뷰']]},{id:'growth',label:'홍보 · 채널',items:[['marketing','마케팅 AI'],['publishing','채널·자동게시']]},{id:'operations',label:'매장 관리',items:[['work','매장업무'],['site','사용자 사이트'],['connections','연결관리'],['finance','비용 · 정산'],['members','사용자 · 권한'],['chrome','헤더 · 푸터']]}];
 
   const NAV=GROUPS.flatMap(group=>group.items);
   const META={
