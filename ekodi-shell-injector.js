@@ -135,6 +135,20 @@ class UserHeaderAdopter{
     if(!element.getAttribute('role'))element.setAttribute('role','banner');
   }
 }
+class UserHeaderCommunityLinkPruner{
+  constructor(serviceId){this.serviceId=cleanServiceId(serviceId);}
+  element(element){
+    if(this.serviceId==='community')return;
+    const href=String(element.getAttribute('href')||'').trim();
+    if(!href)return;
+    try{
+      const url=new URL(href,'https://ekodi.kr');
+      const path=url.pathname.replace(/\/+$/,'').toLowerCase();
+      if(path==='/community'||/\/community$/.test(path))element.remove();
+    }catch{}
+  }
+}
+class UserInternalOperatingSpaceMarkerRemover{element(element){element.remove();}}
 class UserCanvasAdopter{
   constructor(){this.seen=false;}
   element(element){
@@ -166,7 +180,6 @@ class TenantReadabilityHtmlInjector{
 }
 class TenantReadabilityHeadInjector{
   element(element){element.append(`<link rel="stylesheet" href="${SHELL_TENANT_READABILITY_STYLE}" data-ekodi-tenant-readability-style="${TENANT_READABILITY_VERSION}"><script src="${SHELL_MOBILE_HEADER_SCRIPT}" defer data-ekodi-tenant-mobile-header="${TENANT_READABILITY_VERSION}"></script>`,{html:true});}
-}
 }
 class TenantReadabilityHeaderAdopter{
   constructor(){this.seen=false;}
@@ -208,7 +221,11 @@ export function injectEkodiTenantReadability(response,options={}){
     .on('.sf-header',headerAdopter)
     .on('.yp-top',headerAdopter)
     .on('.top',headerAdopter)
-    .on('[data-ekodi-fixed-header]',headerAdopter);
+    .on('[data-ekodi-fixed-header]',headerAdopter)
+    .on('header a[href]',new UserHeaderCommunityLinkPruner(serviceId))
+    .on('.site-header a[href]',new UserHeaderCommunityLinkPruner(serviceId))
+    .on('.topbar a[href]',new UserHeaderCommunityLinkPruner(serviceId))
+    .on('[data-ekodi-operating-space-label]',new UserInternalOperatingSpaceMarkerRemover());
   return rewriter.transform(new Response(response.body,{status:response.status,statusText:response.statusText,headers}));
 }
 
