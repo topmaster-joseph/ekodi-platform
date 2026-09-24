@@ -162,7 +162,7 @@ function structuredPolicyEdits(file,text){
   return text;
 }
 
-const textExt=new Set(['.js','.mjs','.cjs','.ts','.tsx','.jsx','.json','.md','.html','.css','.toml','.yml','.yaml','.txt','.sql','.sh','.cmd','.xml']);
+const textExt=new Set(['.js','.mjs','.cjs','.ts','.tsx','.jsx','.json','.md','.html','.css','.toml','.yml','.yaml','.txt','.sql','.sh','.cmd','.ps1','.xml']);
 function walk(dir,base=''){
   const out=[];
   for(const e of fs.readdirSync(dir,{withFileTypes:true})){
