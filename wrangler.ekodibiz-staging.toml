@@ -6,7 +6,7 @@ preview_urls = false
 
 [vars]
 EKODIBIZ_MODE = "isolated-staging"
-PAYMENT_CORE_URL = "https://pay.ekodi.kr"
+PAYMENT_CORE_URL = "https://ekodi.kr/pay"
 PAYMENT_GATEWAY_URL = "https://ekodi.kr/ekodibiz/pay"
 HIGH_IMPACT_APPROVAL = "required"
 AI_OPERATIONS_MODE = "rules-first"

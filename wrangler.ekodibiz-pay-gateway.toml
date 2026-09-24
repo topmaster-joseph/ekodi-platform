@@ -9,8 +9,8 @@ pattern = "ekodi.kr/ekodibiz/pay*"
 zone_name = "ekodi.kr"
 
 [vars]
-REVENUE_OS_URL = "https://biz.ekodi.kr"
-PAYMENT_CORE_URL = "https://pay.ekodi.kr"
+REVENUE_OS_URL = "https://ekodi.kr/ekodibiz"
+PAYMENT_CORE_URL = "https://ekodi.kr/pay"
 CANONICAL_GATEWAY_URL = "https://ekodi.kr/ekodibiz/pay"
 
 [observability.logs]

@@ -167,9 +167,9 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -o /tmp/creator.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://author.ekodi.kr/' || true)
-            health_code=$(curl -sS -o /tmp/creator-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://author.ekodi.kr/health' || true)
-            billing_js_code=$(curl -sS -o /tmp/creator-billing.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://author.ekodi.kr/billing.js' || true)
+            root_code=$(curl -L -sS -o /tmp/creator.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/author/' || true)
+            health_code=$(curl -sS -o /tmp/creator-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/author/health' || true)
+            billing_js_code=$(curl -sS -o /tmp/creator-billing.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/author/billing.js' || true)
             if [[ "$root_code" == '200' && "$health_code" == '200' && "$billing_js_code" == '200' ]] \
               && grep -Fq 'Creator AI' /tmp/creator.html \
               && grep -Fq 'CREATOR APPROVED' /tmp/creator.html \

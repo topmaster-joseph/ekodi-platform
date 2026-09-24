@@ -2,7 +2,7 @@
 
 ## Product role
 
-`energy.ekodi.kr` is the energy-management surface for the EKODI ecosystem. It combines household electricity, solar generation, ESS, EV charging and time-shiftable smart-home loads under one explainable AI manager.
+`ekodi.kr/energy` is the energy-management surface for the EKODI ecosystem. It combines household electricity, solar generation, ESS, EV charging and time-shiftable smart-home loads under one explainable AI manager.
 
 The first release is intentionally **staging-only and actuation-isolated**. It proves the user experience, safety policy and deployment boundary before any physical device integration.
 
@@ -74,6 +74,6 @@ Do not mark the service `homepage=true` or `productionVerified=true` until all o
 4. staging `/health` confirms telemetry and control are disabled for the MVP.
 5. a permanently blocked action remains blocked at the live staging hostname.
 6. production deployment exists as an independent Energy release unit.
-7. `https://energy.ekodi.kr` is verified after deployment.
+7. `https://ekodi.kr/energy` is verified after deployment.
 
 Only then should the root service registry surface Energy AI on `ekodi.kr`.

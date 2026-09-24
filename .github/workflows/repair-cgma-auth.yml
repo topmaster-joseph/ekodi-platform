@@ -40,7 +40,7 @@ jobs:
         run: |
           set -euo pipefail
           api="https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth"
-          payload='{"site_url":"https://ekodi.kr/cgma","uri_allow_list":"https://ekodi.kr/cgma/member,https://ekodi.kr/cgma/member/**,https://cgma.or.kr/member,https://cgma.or.kr/member/**,https://cgma.ekodi.kr/member,https://cgma.ekodi.kr/member/**,https://cheonggye-market.pages.dev/member,https://cheonggye-market.pages.dev/member/**"}'
+          payload='{"site_url":"https://ekodi.kr/cgma","uri_allow_list":"https://ekodi.kr/cgma/member,https://ekodi.kr/cgma/member/**,https://cgma.or.kr/member,https://cgma.or.kr/member/**,https://ekodi.kr/cgma/member,https://ekodi.kr/cgma/member/**,https://cheonggye-market.pages.dev/member,https://cheonggye-market.pages.dev/member/**"}'
           code=$(curl -sS -o /tmp/auth.json -w '%{http_code}' -X PATCH "$api" \
             -H "Authorization: Bearer $SUPABASE_MGMT_TOKEN" \
             -H 'Content-Type: application/json' \

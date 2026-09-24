@@ -2,7 +2,7 @@
 
 ## Product boundary
 
-EKODI Education is one specialist USER platform at `edu.ekodi.kr`.
+EKODI Education is one specialist USER platform at `ekodi.kr/education`.
 
 It contains two major workflow areas:
 
@@ -67,7 +67,7 @@ Future automation for these actions requires explicit product approval, official
 ## UI / Admin / Core alignment
 
 - USER UI: Education, Admission, Study
-- ADMIN UI: Education operations entry through `admin.ekodi.kr/education`
+- ADMIN UI: Education operations entry through `ekodi.kr/admin/education`
 - EKODI Core: identity, auth, person-space-role authorization contracts, governance and future shared APIs
 - EKODI Shell: common navigation/context surface
 

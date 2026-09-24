@@ -61,7 +61,7 @@ test('public presentation endpoint emits only eligible services and honors store
   const request = new Request('https://ekodi.kr/api/homepage/presentation', {
     headers: { origin: 'https://ekodi.kr' },
   });
-  const response = await handleHomepagePresentation(request, { DB, ALLOWED_ORIGINS: 'https://ekodi.kr,https://admin.ekodi.kr' });
+  const response = await handleHomepagePresentation(request, { DB, ALLOWED_ORIGINS: 'https://ekodi.kr' });
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('access-control-allow-origin'), 'https://ekodi.kr');
   const payload = await response.json();

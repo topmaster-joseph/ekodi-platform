@@ -10,8 +10,8 @@
     "architectureCapability": "finance",
     "publicExperience": "https://ekodi.kr/money",
     "personalEntry": "https://ekodi.kr/my/money",
-    "api": "https://personal-finance-api.ekodi.kr",
-    "adminHandoff": "https://admin.ekodi.kr/?route=finance",
+    "api": "https://ekodi.kr/personal-finance-api",
+    "adminHandoff": "https://ekodi.kr/admin/?route=finance",
     "deployment": "independently-guarded-worker",
     "failureIsolation": true,
     "extractable": true
@@ -165,7 +165,7 @@
   },
   "adjacentServices": {
     "lifeAiMoneyTopic": {
-      "route": "https://life.ekodi.kr/money",
+      "route": "https://ekodi.kr/life/money",
       "purpose": "life reflection and conversation about money",
       "privateFinanceDataAccess": false,
       "allowedFinanceInput": "user-authorized insight projection only"

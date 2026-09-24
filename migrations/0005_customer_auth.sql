@@ -81,7 +81,7 @@ CREATE INDEX IF NOT EXISTS idx_customer_login_attempts_time ON customer_login_at
 CREATE INDEX IF NOT EXISTS idx_customer_audit_tenant_time ON customer_audit_logs(tenant_id, created_at DESC);
 
 INSERT OR IGNORE INTO customer_tenants (slug, name, domain, status, created_at) VALUES
-  ('cgma', '청계면상인회', 'cgma.ekodi.kr', 'active', datetime('now')),
-  ('jadam', '자담치킨 목포대점', 'jadam.ekodi.kr', 'active', datetime('now')),
-  ('pizzamaru', '피자마루 목포대점', 'pizzamaru.ekodi.kr', 'active', datetime('now')),
-  ('yogurt', '요거트퍼플 목포대점', 'yogurt.ekodi.kr', 'active', datetime('now'));
+  ('cgma', '청계면상인회', 'ekodi.kr/cgma', 'active', datetime('now')),
+  ('jadam', '자담치킨 목포대점', 'ekodi.kr/jadam', 'active', datetime('now')),
+  ('pizzamaru', '피자마루 목포대점', 'ekodi.kr/pizzamaru', 'active', datetime('now')),
+  ('yogurt', '요거트퍼플 목포대점', 'ekodi.kr/yogurt', 'active', datetime('now'));

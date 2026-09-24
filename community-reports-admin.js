@@ -1,5 +1,5 @@
 (() => {
-  const API='https://api.ekodi.kr';
+  const API='https://ekodi.kr/api';
   const STATUS={DRAFT:'작성중',AI_DRAFT:'AI 초안',REVIEW:'검토중',APPROVED:'승인',SENT:'발송완료'};
   const SOURCE_STATUS={not_loaded:'미수집',ready:'수집완료',error:'수집오류'};
   let state=null,installed=false,loading=false,currentId='',sourceState=null,sourceLoading=false;
@@ -10,7 +10,7 @@
   function install(){if(installed)return true;const nav=document.querySelector('.sidebar nav'),content=document.querySelector('.content');if(!nav||!content)return false;installed=true;
     const button=document.createElement('button');button.type='button';button.className='nav';button.dataset.section='community';button.innerHTML='◌ <span>Community</span>';const books=nav.querySelector('[data-section="books"], [data-lazy-section="books"]');if(books)books.insertAdjacentElement('beforebegin',button);else nav.append(button);
     const section=document.createElement('section');section.id='communityAdminSection';section.className='section community-reports-admin hidden-panel';section.dataset.panel='community';section.innerHTML=`
-      <div class="community-head"><div><p class="community-kicker">COMMUNITY · MINISTRY OPERATIONS</p><h2>Ministry Reports</h2><p>2·4·6·8·10·12월 사역보고를 준비하고, Community 기록을 AI 원자료로 모아 검토·승인 후 본부 발송까지 관리합니다.</p></div><div><a class="secondary" href="https://community.ekodi.kr" target="_blank" rel="noopener">Community ↗</a> <button class="secondary" id="communityReportRefresh" type="button">↻ Refresh</button></div></div>
+      <div class="community-head"><div><p class="community-kicker">COMMUNITY · MINISTRY OPERATIONS</p><h2>Ministry Reports</h2><p>2·4·6·8·10·12월 사역보고를 준비하고, Community 기록을 AI 원자료로 모아 검토·승인 후 본부 발송까지 관리합니다.</p></div><div><a class="secondary" href="https://ekodi.kr/community" target="_blank" rel="noopener">Community ↗</a> <button class="secondary" id="communityReportRefresh" type="button">↻ Refresh</button></div></div>
       <p class="community-report-flash" id="communityReportFlash" role="status"></p>
       <div class="community-capabilities" id="communityReportCapabilities"></div>
       <div class="community-report-metrics" id="communityReportMetrics"></div>

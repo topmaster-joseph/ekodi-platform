@@ -1,12 +1,6 @@
 import authWorker from './auth-worker.js';
 
-const ALLOWED_ORIGINS = new Set([
-  'https://admin.ekodi.kr',
-  'https://admin.biz.ekodi.kr',
-  'https://admin.church.ekodi.kr',
-  'https://admin.lab.ekodi.kr',
-  'https://admin.trade.ekodi.kr'
-]);
+const ALLOWED_ORIGINS = new Set(['https://ekodi.kr']);
 
 function corsHeaders(origin) {
   const headers = new Headers({
@@ -74,13 +68,13 @@ async function routeForOrder(env, orderId) {
     FROM payment_orders WHERE order_id = ?`).bind(orderId).first();
   if (order) return order;
   if (/^CHURCH_/.test(String(orderId || ''))) {
-    return { organization_id: 'EKODICHURCH', business_unit_id: 'CHURCH', project_id: null, source_domain: 'church.ekodi.kr' };
+    return { organization_id: 'EKODICHURCH', business_unit_id: 'CHURCH', project_id: null, source_domain: 'ekodi.kr/ekodichurch' };
   }
   return {
     organization_id: 'EKODIBIZ',
     business_unit_id: 'PAY',
     project_id: null,
-    source_domain: 'pay.ekodi.kr'
+    source_domain: 'ekodi.kr/pay'
   };
 }
 
@@ -157,8 +151,8 @@ async function financeOverview(env) {
       tossSecretConfigured: Boolean(env.TOSS_SECRET_KEY),
       tossLiveKey: String(env.TOSS_SECRET_KEY || '').startsWith('live_'),
       tossMidConfigured: Boolean(env.TOSS_MID),
-      paymentDomain: 'https://pay.ekodi.kr',
-      webhookUrl: 'https://finance-api.ekodi.kr/webhooks/toss'
+      paymentDomain: 'https://ekodi.kr/pay',
+      webhookUrl: 'https://ekodi.kr/finance-api/webhooks/toss'
     }
   };
 }

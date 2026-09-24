@@ -2,7 +2,7 @@ const SECURITY_HEADERS={
   'x-content-type-options':'nosniff',
   'referrer-policy':'strict-origin-when-cross-origin',
   'permissions-policy':'camera=(), microphone=(), geolocation=()',
-  'content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://ekodi-insurance-api-staging.ekodi-development.workers.dev https://ekodi-insurance-api-green.topmaster-joseph.workers.dev https://insurance-api.ekodi.kr; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests",
+  'content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://ekodi-insurance-api-staging.ekodi-development.workers.dev https://ekodi-insurance-api-green.topmaster-joseph.workers.dev https://insurance-ekodi.kr/api; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests",
 };
 function isProduction(env){return String(env?.ENVIRONMENT||'staging').toLowerCase()==='production';}
 function withHeaders(response){
@@ -69,7 +69,7 @@ export default {
     }),{headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
     if(url.pathname==='/advisor'||url.pathname==='/advisor/')return secureAsset(await fetchAsset(request,env,'/advisor.html'),production);
     if(url.pathname==='/admin'||url.pathname==='/admin/'){
-      if(production)return Response.redirect('https://admin.ekodi.kr/',302);
+      if(production)return Response.redirect('https://ekodi.kr/admin/',302);
       return secureAsset(await fetchAsset(request,env,'/admin.html'),false);
     }
     return secureAsset(await fetchAsset(request,env),production);

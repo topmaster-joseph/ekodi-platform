@@ -31,7 +31,7 @@ let journeys = [];
 let groups = [];
 
 function authUrl() {
-  const url = new URL(cfg.authUrl || 'https://auth.ekodi.kr/?site=bible');
+  const url = new URL(cfg.authUrl || 'https://ekodi.kr/auth/?site=bible');
   url.searchParams.set('site', 'bible');
   url.searchParams.set('return_to', `${location.origin}${location.pathname}`);
   return url.href;

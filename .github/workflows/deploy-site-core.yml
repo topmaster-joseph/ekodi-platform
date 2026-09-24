@@ -378,7 +378,7 @@ jobs:
           test -f openai-workspace-admin.css
           grep -Fq "const API='/storage/api/control/storage/google'" storage-admin.js
           ! grep -Fq "const API='/api/control/storage/google'" storage-admin.js
-          ! grep -Fq 'drive.ekodi.kr/api/control/storage/google' storage-admin.js
+          ! grep -Fq 'ekodi.kr/storage/api/control/storage/google' storage-admin.js
           grep -Fq '/api/control/public-sites' admin-public-site-controls.js
           grep -Fq '/api/control/language-status' admin-language-status.js
           grep -Fq 'admin-public-site-controls.js' admin-authenticated-shell.js
@@ -396,7 +396,7 @@ jobs:
           test -f deploy/manifests/shared-site.worker.json
           grep -Fq '/auth-workspace-target.js' canonical-surface-router.js
           grep -Fq '/marketing-ai-admin.js' site-worker.js
-          grep -Fq "const LIVE = 'https://marketing.ekodi.kr/';" marketing-ai-admin.js
+          grep -Fq "const LIVE = 'https://ekodi.kr/marketing/';" marketing-ai-admin.js
           grep -Fq 'marketing-ai-user-link' marketing-ai-admin.js
           grep -Fq "styles: ['marketing-ai-admin.css']" admin-demand-loader.js
           grep -Fq "scripts: ['marketing-ai-admin.js']" admin-demand-loader.js
@@ -686,7 +686,7 @@ jobs:
             if(service.productionVerified!==true || !service.url) continue;
             try {
               const target=new URL(service.url);
-              if(target.hostname==='ekodi.kr' || !target.hostname.endsWith('.ekodi.kr')) urls.add(service.url);
+              urls.add(service.url);
             } catch {}
           }
           for(const match of shell.matchAll(/href=["'](https:\/\/ekodi\.kr\/[^"']*)["']/g)) urls.add(match[1]);

@@ -25,7 +25,7 @@ function validEmail(value) {
 }
 function contactOriginAllowed(request,env) {
   const origin=String(request.headers.get('origin')||'');
-  if(origin==='https://ekodi.kr'||origin==='https://mail.ekodi.kr') return true;
+  if(origin==='https://ekodi.kr'||origin==='https://ekodi.kr/mail') return true;
   return env.ENVIRONMENT!=='production' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
 }
 async function contactRateLimit(request,env) {

@@ -111,7 +111,7 @@
     const copy = el('div');
     copy.append(el('p','MULTI-CHANNEL CONTROL CENTER','kicker'), el('h2','사이트별 채널·자동게시'), el('p','각 사용자 사이트의 채널·자동게시 관리자 화면을 운영 원장으로 사용합니다. 최고관리자는 아래 사이트별 목록에서 같은 관리자 화면으로 이동해 상태와 설정을 확인하고, 중앙 영역은 플랫폼 연결 원장 점검과 명시적 개입에만 사용합니다. OAuth 비밀값은 암호화 Vault에만 보관됩니다.','operations-copy'));
     const actions = el('div','','social-admin-actions');
-    const open = el('a','Open Social ↗','secondary'); open.href='https://social.ekodi.kr'; open.target='_blank'; open.rel='noopener';
+    const open = el('a','Open Social ↗','secondary'); open.href='https://ekodi.kr/social'; open.target='_blank'; open.rel='noopener';
     const refresh = el('button','↻ Refresh','secondary'); refresh.type='button';
     const save = el('button','Save changes','primary'); save.type='button'; save.disabled=true;
     actions.append(open, refresh, save); head.append(copy, actions);

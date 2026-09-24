@@ -28,7 +28,7 @@ function cors(request, env) {
   if (!allowed) {
     try {
       const host = new URL(origin).hostname;
-      allowed = host === 'ekodi.kr' || host === 'admin.ekodi.kr' || host === 'marketing.ekodi.kr' || host === 'my.ekodi.kr' || /^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(host);
+      allowed = host === 'ekodi.kr';
     } catch {}
   }
   const headers = {
@@ -176,7 +176,7 @@ function safeReturnUrl(value) {
   if (!raw) return fallback;
   try {
     const url = new URL(raw);
-    if (url.protocol !== 'https:' || !(url.hostname === 'ekodi.kr' || url.hostname.endsWith('.ekodi.kr'))) return fallback;
+    if (url.protocol !== 'https:' || url.hostname !== 'ekodi.kr') return fallback;
     url.hash = '';
     return url.href;
   } catch { return fallback; }

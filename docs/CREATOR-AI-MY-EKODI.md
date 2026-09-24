@@ -2,7 +2,7 @@
 
 ## Decision
 
-`author.ekodi.kr` remains the compatibility service hostname and deployment boundary for now. The product shown to people becomes **EKODI Creator AI**. This avoids a risky DNS/service split while the existing Author AI data, paid-AI firewall, auth handoff and deployment guardrails continue to work.
+`ekodi.kr/author` remains the compatibility service hostname and deployment boundary for now. The product shown to people becomes **EKODI Creator AI**. This avoids a risky DNS/service split while the existing Author AI data, paid-AI firewall, auth handoff and deployment guardrails continue to work.
 
 The legacy `author_*` database/table/API names remain compatibility surfaces. New product behavior is expressed through `creator_mode`, Creator Memory, and a person-scoped My EKODI portfolio contract.
 
@@ -47,11 +47,11 @@ This separates **creation**, **personal portfolio**, and **public distribution**
 Current:
 - Product: EKODI Creator AI
 - Compatibility service key: `author`
-- Hostname: `author.ekodi.kr`
-- My hub: `my.ekodi.kr`
+- Hostname: `ekodi.kr/author`
+- My hub: `ekodi.kr/my`
 
 Possible future:
-- `creator.ekodi.kr` can become the canonical hostname only after staging, DNS, auth origin, CORS, worker route, admin registry and rollback paths are all validated.
-- If that move is made, keep `author.ekodi.kr` as a redirect/compatibility entry for existing links.
+- `ekodi.kr/creator` can become the canonical hostname only after staging, DNS, auth origin, CORS, worker route, admin registry and rollback paths are all validated.
+- If that move is made, keep `ekodi.kr/author` as a redirect/compatibility entry for existing links.
 
 Do not introduce a second source of truth for identity or creator ownership merely to rename the service.

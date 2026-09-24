@@ -34,9 +34,9 @@
       "runtime": "store_user_sites",
       "action": "retain_and_link",
       "legacyAliases": [
-        "https://jadam.ekodi.kr",
-        "https://marketing.jadam.ekodi.kr",
-        "https://jadam.ai.ekodi.kr"
+        "https://ekodi.kr/jadam",
+        "https://ekodi.kr/marketing/jadam",
+        "https://ekodi.kr/jadam/marketing"
       ]
     },
     {
@@ -49,9 +49,9 @@
       "runtime": "store_user_sites",
       "action": "retain_and_link",
       "legacyAliases": [
-        "https://pizzamaru.ekodi.kr",
-        "https://marketing.pizzamaru.ekodi.kr",
-        "https://pizzamaru.ai.ekodi.kr"
+        "https://ekodi.kr/pizzamaru",
+        "https://ekodi.kr/marketing/pizzamaru",
+        "https://ekodi.kr/pizzamaru/marketing"
       ]
     },
     {
@@ -65,9 +65,9 @@
       "action": "retain_and_link",
       "legacyAliases": [
         "https://ekodi.kr/yogurtpurple",
-        "https://yogurt.ekodi.kr",
-        "https://marketing.yogurt.ekodi.kr",
-        "https://yogurt.ai.ekodi.kr"
+        "https://ekodi.kr/yogurt",
+        "https://ekodi.kr/marketing/yogurt",
+        "https://ekodi.kr/yogurt/marketing"
       ]
     },
     {
@@ -96,9 +96,9 @@
       "runtime": "site_access_registry+public_site_controls",
       "action": "retain_and_link_custom_domain",
       "legacyAliases": [
-        "https://cgma.ekodi.kr",
-        "https://marketing.cheonggye.ekodi.kr",
-        "https://cgma.ai.ekodi.kr"
+        "https://ekodi.kr/cgma",
+        "https://ekodi.kr/cheonggye/marketing",
+        "https://ekodi.kr/cgma/marketing"
       ]
     },
     {
@@ -118,7 +118,7 @@
       "ownerKind": "business",
       "class": "workspace_user_site",
       "canonicalUrl": "https://ekodi.kr/ekodibiz",
-      "currentServiceUrl": "https://biz.ekodi.kr",
+      "currentServiceUrl": "https://ekodi.kr/ekodibiz",
       "migrationState": "retain_existing",
       "runtime": "tenant_customer_site",
       "action": "connect_core_preserve_public_surface"
@@ -139,7 +139,7 @@
       "name": "EKODI Global Trading",
       "ownerKind": "business",
       "class": "workspace_user_site",
-      "currentUrl": "https://trade.ekodi.kr",
+      "currentUrl": "https://ekodi.kr/ekodibiz/trade",
       "migrationState": "hold_existing_url_pending_canonical_decision",
       "runtime": "tenant_customer_site",
       "action": "connect_core_no_url_change"
@@ -149,7 +149,7 @@
       "name": "에코디 카페",
       "ownerKind": "business",
       "class": "workspace_user_site",
-      "currentUrl": "https://cafe.ekodi.kr",
+      "currentUrl": "https://ekodi.kr/cafe",
       "migrationState": "preparing_keep_existing",
       "runtime": "tenant_customer_site",
       "action": "connect_core_no_launch_claim"

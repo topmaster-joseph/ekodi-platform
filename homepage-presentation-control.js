@@ -9,7 +9,7 @@ const CATALOG = new Map(USER_SERVICES.map(service => [service.id, service]));
 function allowedOrigin(request, env, publicRead = false) {
   const origin = String(request.headers.get('origin') || '').trim();
   if (!origin) return '';
-  if (publicRead && ['https://ekodi.kr', 'https://www.ekodi.kr'].includes(origin)) return origin;
+  if (publicRead && ['https://ekodi.kr', 'https://ekodi.kr'].includes(origin)) return origin;
   const allowed = String(env.ALLOWED_ORIGINS || '').split(',').map(value => value.trim()).filter(Boolean);
   return allowed.includes(origin) ? origin : '';
 }

@@ -74,7 +74,7 @@ CREATE TABLE customer_tenants(id INTEGER PRIMARY KEY AUTOINCREMENT,slug TEXT UNI
 CREATE TABLE customer_access_grants(tenant_id INTEGER,email TEXT,role TEXT,enabled INTEGER,created_at TEXT,last_verified_at TEXT,UNIQUE(tenant_id,email));
 CREATE TABLE ai_agent_actions(id INTEGER PRIMARY KEY);`);
   for(const file of ['migrations/0016_membership_billing.sql','migrations/0018_marketing_store_workspaces.sql','migrations/0023_marketing_event_ledger.sql','migrations/0026_marketing_publication_queue.sql','migrations/0028_marketing_growth_connectors.sql','migrations/0055_channel_automation_core.sql','migrations/0064_marketing_channel_settings.sql']) db.exec(await read(file));
-  db.exec(`INSERT INTO customer_tenants(slug,name,domain,status,created_at) VALUES('ekodi-biz','에코디비즈','biz.ekodi.kr','active',datetime('now'));
+  db.exec(`INSERT INTO customer_tenants(slug,name,domain,status,created_at) VALUES('ekodi-biz','에코디비즈','ekodi.kr/ekodibiz','active',datetime('now'));
 INSERT INTO service_subscriptions(subject_type,subject_key,site,plan_id,status,monthly_fee,provider,created_at,updated_at) VALUES('tenant','ekodibiz','marketing','auto','active',0,'internal',datetime('now'),datetime('now'));
 INSERT INTO marketing_publish_policies(subject_type,subject_key,mode,max_daily_posts,allowed_providers_json,quiet_hours_json,created_at,updated_at) VALUES('tenant','ekodibiz','autonomous',3,'[]','{}',datetime('now'),datetime('now'));
 INSERT INTO marketing_oauth_connections(subject_type,subject_key,provider,resource_type,external_id,display_name,token_ciphertext,status,created_at,updated_at) VALUES('tenant','ekodibiz','youtube','channel','c1','Mall','cipher','active',datetime('now'),datetime('now'));

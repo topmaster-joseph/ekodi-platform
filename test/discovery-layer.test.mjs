@@ -47,7 +47,7 @@ test('llms discovery file identifies canonical public sources and purpose separa
   assert.match(llms, /Canonical site: https:\/\/ekodi\.kr\//);
   assert.match(llms, /preview-development/);
   assert.match(llms, /search permission does not imply training or agent permission/i);
-  assert.equal(llms.includes('https://admin.ekodi.kr'), false);
+  assert.equal(llms.includes('https://ekodi.kr/admin'), false);
 });
 
 test('page structured data links WebPage to stable WebSite and Organization entities', () => {

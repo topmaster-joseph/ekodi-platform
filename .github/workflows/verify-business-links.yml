@@ -49,11 +49,11 @@ jobs:
           node --check auth-site/business-auth.js
           node --check site-worker.js
 
-          grep -Fq 'https://ekodi.kr/auth/?site=business&amp;return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F' business/index.html
+          grep -Fq 'https://ekodi.kr/auth/?site=business&amp;return_to=https%3A%2F%2Fekodi.kr%2Fbusiness%2F' business/index.html
           grep -Fq "const AUTH_FALLBACK='https://ekodi.kr/auth/'" business/app.js
           grep -Fq "target.searchParams.set('site','business')" business/app.js
           grep -Fq "target.searchParams.set('return_to',canonicalBusinessUrl())" business/app.js
-          grep -Fq 'AUTH_URL = "https://ekodi.kr/auth/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F"' wrangler.business.toml
+          grep -Fq 'AUTH_URL = "https://ekodi.kr/auth/?site=business&return_to=https%3A%2F%2Fekodi.kr%2Fbusiness%2F"' wrangler.business.toml
           grep -Fq "business-auth.js?v=20260826-free-fallback-1" auth-site/auth-router.js
           grep -Fq "'/business-auth.js'" canonical-surface-router.js
           grep -Fq "'business-auth.js'" scripts/build.mjs
@@ -61,13 +61,13 @@ jobs:
           grep -Fq '/api/auth/exchange' business/app.js
           grep -Fq "history.replaceState(null,'',location.pathname+location.search)" business/app.js
           grep -Fq "sessionStorage.setItem(SESSION_KEY" business/app.js
-          grep -Fq 'const RETURN_TO="https://business.ekodi.kr/"' supabase/functions/business-handoff-api/index.ts
+          grep -Fq 'const RETURN_TO="https://ekodi.kr/business/"' supabase/functions/business-handoff-api/index.ts
           grep -Fq 'business_os_snapshot' supabase/functions/business-handoff-api/index.ts
 
           for url in \
             'https://ekodi.kr/ekodibiz' \
             'https://ekodi.kr/ekodibiz/marketing-ai' \
-            'https://work.ekodi.kr' \
+            'https://ekodi.kr/work' \
             'https://ekodi.kr/jadam/marketing'; do
             grep -Fq "$url" business-worker.js business/index.html business/app.js || { echo "Missing Business OS link contract: $url"; exit 1; }
           done
@@ -99,15 +99,15 @@ jobs:
             done
           }
 
-          probe business 'https://business.ekodi.kr/' 200
+          probe business 'https://ekodi.kr/business/' 200
           grep -Fq 'BUSINESS OS' /tmp/business.body
-          probe business_config 'https://business.ekodi.kr/config.js' 200
-          grep -Fq 'https://ekodi.kr/auth/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F' /tmp/business_config.body
-          probe business_workspaces 'https://business.ekodi.kr/api/workspaces' 200
+          probe business_config 'https://ekodi.kr/business/config.js' 200
+          grep -Fq 'https://ekodi.kr/auth/?site=business&return_to=https%3A%2F%2Fekodi.kr%2Fbusiness%2F' /tmp/business_config.body
+          probe business_workspaces 'https://ekodi.kr/business/api/workspaces' 200
           grep -Fq '"id":"ekodibiz"' /tmp/business_workspaces.body
           grep -Fq '"id":"jadam"' /tmp/business_workspaces.body
 
-          probe auth_business 'https://ekodi.kr/auth/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F' 200
+          probe auth_business 'https://ekodi.kr/auth/?site=business&return_to=https%3A%2F%2Fekodi.kr%2Fbusiness%2F' 200
           grep -Fq 'EKODI 로그인' /tmp/auth_business.body
           probe auth_router 'https://ekodi.kr/auth/auth-router.js?v=20260826-free-fallback-1' 200
           grep -Fq "site==='business'" /tmp/auth_router.body
@@ -123,7 +123,7 @@ jobs:
           for entry in \
             'EKODIBIZ|https://ekodi.kr/ekodibiz' \
             'MarketingAI|https://ekodi.kr/ekodibiz/marketing-ai' \
-            'Work|https://work.ekodi.kr/' \
+            'Work|https://ekodi.kr/work/' \
             'JadamMarketingAI|https://ekodi.kr/jadam/marketing'; do
             name=${entry%%|*}
             url=${entry#*|}
@@ -153,9 +153,9 @@ jobs:
         run: |
           set -u
           for entry in \
-            'Pay|https://pay.biz.ekodi.kr/' \
-            'Mail|https://mail.biz.ekodi.kr/' \
-            'Trade|https://trade.biz.ekodi.kr/'; do
+            'Pay|https://ekodi.kr/ekodibiz/pay/' \
+            'Mail|https://ekodi.kr/ekodibiz/mail/' \
+            'Trade|https://ekodi.kr/ekodibiz/trade/'; do
             name=${entry%%|*}
             url=${entry#*|}
             code=$(curl -L -sS -o /dev/null -w '%{http_code}' --connect-timeout 6 --max-time 20 "$url" || true)

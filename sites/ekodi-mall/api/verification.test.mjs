@@ -40,18 +40,18 @@ test('production launch gate stays fail-closed until commerce evidence is comple
 
 test('operator launch readiness endpoint executes against the full Mall D1 schema', async () => {
   const db=migratedDb();
-  try { const request=new Request('https://mall-api.ekodi.kr/api/internal/verification/launch-readiness',{headers:{'x-ekodi-mall-ops-token':'secret'}}); const result=await handleVerificationRequest(request,{DB:db,MALL_OPERATIONS_TOKEN:'secret',PAYMENTS_ENABLED:'false'}); assert.equal(result.status,200); assert.equal(result.body.launch.status,'blocked'); assert.equal(result.body.launch.counts.productCount,0); assert.ok(result.body.launch.activationBlockers.includes('no-checkout-eligible-product')); assert.ok(result.body.launch.liveBlockers.includes('payments-disabled')); } finally { db.close(); }
+  try { const request=new Request('https://mall-ekodi.kr/api/api/internal/verification/launch-readiness',{headers:{'x-ekodi-mall-ops-token':'secret'}}); const result=await handleVerificationRequest(request,{DB:db,MALL_OPERATIONS_TOKEN:'secret',PAYMENTS_ENABLED:'false'}); assert.equal(result.status,200); assert.equal(result.body.launch.status,'blocked'); assert.equal(result.body.launch.counts.productCount,0); assert.ok(result.body.launch.activationBlockers.includes('no-checkout-eligible-product')); assert.ok(result.body.launch.liveBlockers.includes('payments-disabled')); } finally { db.close(); }
 });
 
 test('verification operations accept allowlisted Google sessions and preserve service-token automation', async () => {
   const originalFetch = globalThis.fetch;
   try {
-    const service = await authorizeVerificationOperations(new Request('https://mall-api.ekodi.kr/api/internal/verification/queue', { headers: { 'x-ekodi-mall-ops-token':'secret' } }), { MALL_OPERATIONS_TOKEN:'secret' });
+    const service = await authorizeVerificationOperations(new Request('https://mall-ekodi.kr/api/api/internal/verification/queue', { headers: { 'x-ekodi-mall-ops-token':'secret' } }), { MALL_OPERATIONS_TOKEN:'secret' });
     assert.equal(service.ok, true);
     assert.equal(service.actor, 'mall-ops:service-token');
 
     globalThis.fetch = async () => new Response(JSON.stringify({ id:'u_ops', email:'ops@example.com' }), { status:200, headers:{ 'content-type':'application/json' } });
-    const request = new Request('https://mall-api.ekodi.kr/api/internal/verification/queue', { headers:{ authorization:'Bearer user-token' } });
+    const request = new Request('https://mall-ekodi.kr/api/api/internal/verification/queue', { headers:{ authorization:'Bearer user-token' } });
     const allowed = await authorizeVerificationOperations(request, { SUPABASE_URL:'https://example.supabase.co', SUPABASE_PUBLISHABLE_KEY:'public', MALL_OPERATIONS_EMAILS:'ops@example.com,other@example.com' });
     assert.equal(allowed.ok, true);
     assert.equal(allowed.actor, 'mall-ops:ops@example.com');
@@ -60,7 +60,7 @@ test('verification operations accept allowlisted Google sessions and preserve se
     assert.equal(denied.ok, false);
     assert.equal(denied.status, 403);
 
-    const unauthenticated = await authorizeVerificationOperations(new Request('https://mall-api.ekodi.kr/api/internal/verification/queue'), { MALL_OPERATIONS_EMAILS:'ops@example.com' });
+    const unauthenticated = await authorizeVerificationOperations(new Request('https://mall-ekodi.kr/api/api/internal/verification/queue'), { MALL_OPERATIONS_EMAILS:'ops@example.com' });
     assert.equal(unauthenticated.ok, false);
     assert.equal(unauthenticated.status, 401);
   } finally {

@@ -1,13 +1,6 @@
 import authWorker from './auth-worker.js';
 
-const ALLOWED_ORIGINS = new Set([
-  'https://ekodi.kr',
-  'https://admin.ekodi.kr',
-  'https://admin.biz.ekodi.kr',
-  'https://admin.church.ekodi.kr',
-  'https://admin.lab.ekodi.kr',
-  'https://admin.trade.ekodi.kr'
-]);
+const ALLOWED_ORIGINS = new Set(['https://ekodi.kr']);
 
 function corsHeaders(origin='') {
   const headers = new Headers({

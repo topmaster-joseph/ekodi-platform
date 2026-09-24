@@ -5,24 +5,24 @@
     "config": "wrangler.books.toml",
     "requests": [
       {
-        "url": "https://books.ekodi.kr/",
+        "url": "https://ekodi.kr/books/",
         "statuses": [200, 301, 302, 307, 308],
         "redirect": "follow",
         "expect": ["href=\"https://ekodi.kr/\"", "https://ekodi.kr/shell/shell.js"],
         "headerExpect": ["x-ekodi-shell: v2"]
       },
       {
-        "url": "https://books.ekodi.kr/publishing/",
+        "url": "https://ekodi.kr/books/publishing/",
         "statuses": [200, 301, 302, 307, 308],
         "redirect": "follow",
         "expect": ["id=\"consultationForm\"", "https://ekodi.kr/shell/shell.js"],
         "headerExpect": ["x-ekodi-shell: v2"]
       },
       {
-        "url": "https://books.ekodi.kr/admin",
+        "url": "https://ekodi.kr/books/admin",
         "statuses": [301, 302, 307, 308],
         "redirect": "manual",
-        "headerExpect": ["location: https://admin.ekodi.kr/books#books"]
+        "headerExpect": ["location: https://ekodi.kr/admin/books#books"]
       }
     ]
   }

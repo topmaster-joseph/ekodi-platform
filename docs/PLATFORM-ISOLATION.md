@@ -19,10 +19,10 @@ EKODI 생태계의 각 사이트와 서비스는 단순 페이지가 아니라 �
 ### 독립성이 높은 영역
 
 - EKODI Mall: Cloudflare Pages 전용 빌드/배포
-- EKODI Books: 전용 Worker와 `books.ekodi.kr`
-- EKODI Work: 전용 Worker와 `work.ekodi.kr`
-- EKODI Social: 전용 Worker와 `social.ekodi.kr`
-- EKODI Energy AI: 전용 Worker, 전용 `energy/**` 소스, `ekodi-energy-staging.topmaster-joseph.workers.dev` 스테이징. 운영 도메인은 검증 후 `energy.ekodi.kr`로 승격
+- EKODI Books: 전용 Worker와 `ekodi.kr/books`
+- EKODI Work: 전용 Worker와 `ekodi.kr/work`
+- EKODI Social: 전용 Worker와 `ekodi.kr/social`
+- EKODI Energy AI: 전용 Worker, 전용 `energy/**` 소스, `ekodi-energy-staging.topmaster-joseph.workers.dev` 스테이징. 운영 도메인은 검증 후 `ekodi.kr/energy`로 승격
 - Finance API: 전용 Worker와 `finance-ekodi.kr/api`
 - Control API: 전용 Worker와 `ekodi.kr/api`
 - Marketing AI 계열: 전용 동기화/고객 사이트 배포 흐름
@@ -32,10 +32,10 @@ EKODI 생태계의 각 사이트와 서비스는 단순 페이지가 아니라 �
 `site-worker.js`는 현재 다음과 같은 여러 도메인을 한 Worker에서 처리합니다.
 
 - `ekodi.kr`
-- `admin.ekodi.kr`
-- `auth.ekodi.kr`
-- `pay.ekodi.kr`
-- `trade.ekodi.kr`
+- `ekodi.kr/admin`
+- `ekodi.kr/auth`
+- `ekodi.kr/pay`
+- `ekodi.kr/ekodibiz/trade`
 - mail/live 계열 gateway
 
 따라서 이 Worker 자체를 수정하는 경우에는 이 도메인군이 동일한 배포 단위를 공유합니다. 이것은 Platform Isolation v2에서 역할별 Worker로 단계적으로 분리합니다.
@@ -78,9 +78,9 @@ Energy AI는 스테이징에서 `TELEMETRY_ENABLED=false`, `CONTROL_ENABLED=fals
 
 다음 순서로 shared runtime을 분해합니다.
 
-1. `admin.ekodi.kr` + `auth.ekodi.kr`을 Admin/Auth Worker로 분리
-2. `pay.ekodi.kr`을 Payment Gateway Worker로 분리
-3. `trade.ekodi.kr`을 Trading Worker 또는 독립 app으로 분리
+1. `ekodi.kr/admin` + `ekodi.kr/auth`을 Admin/Auth Worker로 분리
+2. `ekodi.kr/pay`을 Payment Gateway Worker로 분리
+3. `ekodi.kr/ekodibiz/trade`을 Trading Worker 또는 독립 app으로 분리
 4. `ekodi.kr`과 mail/live gateway만 Root/Gateway Worker에 유지
 5. `service-proxy`에서 독립 custom-domain ownership이 가능한 서비스는 직접 연결로 전환
 6. 각 플랫폼 별 health endpoint, release ID, audit log를 Control Center에 노출

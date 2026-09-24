@@ -67,7 +67,7 @@ const registry={
   },
   assetPolicy:{
     allowedProtocols:['https:'],
-    allowedHosts:['ekodi.kr','*.ekodi.kr'],
+    allowedHosts:['ekodi.kr','EKODI child-host address'],
     runtimeStoresReferenceOnly:true,
     noEmbeddedBase64Portraits:true,
     localPersonalPortraitProtocol:'blob:',

@@ -83,7 +83,7 @@ function renderReflections(){
 }
 async function loadReflections(){
   reflections=[];if(!sb||!session){renderReflections();return;}
-  try{const response=await fetch('https://life.ekodi.kr/api/journey',{headers:{authorization:`Bearer ${session.access_token}`},cache:'no-store'});const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload.error||`life_${response.status}`);reflections=Array.isArray(payload.reflections)?payload.reflections:[]}catch(error){console.error('life reflections contract',error);reflections=[]}renderReflections();
+  try{const response=await fetch('https://ekodi.kr/life/api/journey',{headers:{authorization:`Bearer ${session.access_token}`},cache:'no-store'});const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload.error||`life_${response.status}`);reflections=Array.isArray(payload.reflections)?payload.reflections:[]}catch(error){console.error('life reflections contract',error);reflections=[]}renderReflections();
 }
 async function refresh(){
   if(enabled&&sb){

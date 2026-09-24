@@ -20,7 +20,7 @@ begin
   end if;
 
   if nullif(v_jwt->>'client_id', '') is null
-     or coalesce(v_jwt->>'aud', '') <> 'https://api.ekodi.kr/mcp'
+     or coalesce(v_jwt->>'aud', '') <> 'https://ekodi.kr/api/mcp'
      or coalesce((v_jwt->>'ekodi_ai_client')::boolean, false) is not true then
     return jsonb_build_object('authenticated', true, 'authorized', false);
   end if;
@@ -90,17 +90,17 @@ begin
              from auth.oauth_authorizations oa
             where oa.client_id = c.client_id
               and oa.user_id = c.user_id
-              and oa.resource = 'https://api.ekodi.kr/mcp'
+              and oa.resource = 'https://ekodi.kr/api/mcp'
               and oa.status::text = 'approved'
          )
     ) into mcp_authorized;
   end if;
 
   if mcp_authorized then
-    claims := jsonb_set(claims, '{aud}', to_jsonb('https://api.ekodi.kr/mcp'::text), true);
+    claims := jsonb_set(claims, '{aud}', to_jsonb('https://ekodi.kr/api/mcp'::text), true);
     claims := jsonb_set(claims, '{ekodi_ai_client}', 'true'::jsonb, true);
   else
-    if claims->>'aud' = 'https://api.ekodi.kr/mcp' then
+    if claims->>'aud' = 'https://ekodi.kr/api/mcp' then
       claims := jsonb_set(claims, '{aud}', to_jsonb('authenticated'::text), true);
     end if;
     claims := claims - 'ekodi_ai_client';

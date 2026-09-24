@@ -1,17 +1,17 @@
 # EKODI Journal
 
 ## Purpose
-`journal.ekodi.kr` is the registered public boundary for EKODI's common journal and living-record service. It is not a tenant or workspace hostname. Person, organization, group and project journals remain canonical under their `ekodi.kr/{namespace}/{slug}` space when those surfaces are introduced.
+`ekodi.kr/journal` is the registered public boundary for EKODI's common journal and living-record service. It is not a tenant or workspace hostname. Person, organization, group and project journals remain canonical under their `ekodi.kr/{namespace}/{slug}` space when those surfaces are introduced.
 
 ## Public contract
-- Home: `https://journal.ekodi.kr/`
-- Article: `https://journal.ekodi.kr/p/{slug}`
+- Home: `https://ekodi.kr/journal/`
+- Article: `https://ekodi.kr/journal/p/{slug}`
 - JSON summaries: `GET /api/posts`
 - JSON article: `GET /api/posts/{slug}`
 - RSS: `GET /feed.xml`
 - Sitemap: `GET /sitemap.xml`
 - Health: `GET /health`
-- Editorial handoff: `/admin` -> `https://admin.ekodi.kr/journal`
+- Editorial handoff: `/admin` -> `https://ekodi.kr/admin/journal`
 
 ## Content model
 The first production release uses Git-versioned reviewed editorial content in `journal-content.js`.

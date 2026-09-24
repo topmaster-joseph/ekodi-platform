@@ -1,0 +1,13 @@
+{
+  "id": "2026-09-24-apex-path-only-v1.26.0",
+  "constitutionVersion": "1.26.0",
+  "effectiveDate": "2026-09-24",
+  "changeClass": "C3",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "summary": "Remove all EKODI-owned child-host addresses and make ekodi.kr path routing the only EKODI-owned address model.",
+  "ownerInstruction": "GitHub and Supabase must use current ekodi.kr path hierarchy; EKODI child-host addresses must be deleted rather than retained as redirects or aliases.",
+  "approvalBasis": "Explicit platform-owner instruction in the 2026-09-24 migration task.",
+  "migrationPolicy": "Delete EKODI-owned subdomain bindings, routes, DNS serving records and source references. Internal execution uses service bindings or private workers.",
+  "rollback": "Git revert restores source state. Recreating any EKODI-owned subdomain requires a new explicit C3 owner approval."
+}

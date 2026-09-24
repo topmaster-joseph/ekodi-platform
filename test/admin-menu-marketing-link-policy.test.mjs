@@ -9,12 +9,12 @@ test('admin shell exposes canonical root paths instead of retired business subdo
   for (const url of ['https://ekodi.kr/ekodibiz','https://ekodi.kr/ekodichurch','https://ekodi.kr/ekodilab','https://ekodi.kr/ekodibiz/marketing-ai']) {
     assert.ok(shell.includes(url), `missing ${url}`);
   }
-  for (const url of ['href="https://biz.ekodi.kr/','href="https://church.ekodi.kr/','href="https://lab.ekodi.kr/','href="https://marketing.ekodi.kr/']) {
+  for (const url of ['href="https://ekodi.kr/ekodibiz/','href="https://ekodi.kr/ekodichurch/','href="https://ekodi.kr/ekodilab/','href="https://ekodi.kr/marketing/']) {
     assert.ok(!shell.includes(url), `retired direct link survived: ${url}`);
   }
 });
 
 test('admin menu audit enforces the same canonical path contract', () => {
   for (const url of ['https://ekodi.kr/ekodibiz','https://ekodi.kr/ekodichurch','https://ekodi.kr/ekodilab','https://ekodi.kr/ekodibiz/marketing-ai']) assert.ok(audit.includes(url));
-  for (const url of ['href="https://biz.ekodi.kr/','href="https://church.ekodi.kr/','href="https://lab.ekodi.kr/','href="https://marketing.ekodi.kr/']) assert.ok(audit.includes(url));
+  for (const url of ['href="https://ekodi.kr/ekodibiz/','href="https://ekodi.kr/ekodichurch/','href="https://ekodi.kr/ekodilab/','href="https://ekodi.kr/marketing/']) assert.ok(audit.includes(url));
 });

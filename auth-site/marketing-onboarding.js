@@ -12,16 +12,16 @@ if(marketing&&!reviewMode){
 
   const freeTarget=()=>{
     try{
-      const fallback='https://marketing.ekodi.kr/';
+      const fallback='https://ekodi.kr/marketing/';
       const target=new URL(params.get('return_to')||fallback);
-      const allowed=['https://marketing.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurt.ekodi.kr'];
+      const allowed=['https://ekodi.kr/marketing','https://ekodi.kr/jadam','https://ekodi.kr/pizzamaru','https://ekodi.kr/yogurt'];
       const safe=target.protocol==='https:'&&allowed.includes(target.origin)?target:new URL(fallback);
-      if(safe.origin==='https://marketing.ekodi.kr'){
+      if(safe.origin==='https://ekodi.kr/marketing'){
         safe.searchParams.set('welcome','free');
         safe.hash='memberTrial';
       }
       return safe.href;
-    }catch{return 'https://marketing.ekodi.kr/?welcome=free#memberTrial'}
+    }catch{return 'https://ekodi.kr/marketing/?welcome=free#memberTrial'}
   };
 
   const goFree=()=>location.assign(freeTarget());

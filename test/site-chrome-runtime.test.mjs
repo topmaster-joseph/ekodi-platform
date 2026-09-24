@@ -28,7 +28,7 @@ test('CGMA aliases resolve to one 청계면상인회 identity',()=>{
 });
 
 test('public site chrome omits administrator identity and legacy domain metadata',async()=>{
-  const request=new Request('https://workspace-api.ekodi.kr/v1/site-chrome/public?subject_key=cheonggye');
+  const request=new Request('https://ekodi.kr/workspace-api/v1/site-chrome/public?subject_key=cheonggye');
   const response=await handleSiteChromeApi(request,{DB:publicDb()});
   assert.equal(response.status,200);
   const body=await response.json();
@@ -43,7 +43,7 @@ test('public site chrome omits administrator identity and legacy domain metadata
 });
 
 test('private site chrome endpoint requires authentication',async()=>{
-  const request=new Request('https://workspace-api.ekodi.kr/v1/site-chrome?subject_key=cgma');
+  const request=new Request('https://ekodi.kr/workspace-api/v1/site-chrome?subject_key=cgma');
   const response=await handleSiteChromeApi(request,{DB:publicDb()});
   assert.equal(response.status,401);
   assert.deepEqual(await response.json(),{error:'AUTH_REQUIRED'});

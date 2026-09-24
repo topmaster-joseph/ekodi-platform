@@ -31,7 +31,7 @@ jobs:
           set -euo pipefail
           api='https://api.cloudflare.com/client/v4'
           domains=$(curl -fsS "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4" -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
-          zone_id=$(echo "$domains" | jq -r '.result[] | select(.hostname == "ekodi.kr" or .hostname == "admin.ekodi.kr") | .zone_id' | head -n1)
+          zone_id=$(echo "$domains" | jq -r '.result[] | select(.hostname == "ekodi.kr") | .zone_id' | head -n1)
           test -n "$zone_id" && test "$zone_id" != null
           echo "ZONE_ID=$zone_id" >> "$GITHUB_ENV"
       - name: Inspect 429 policy layers and live response fingerprints

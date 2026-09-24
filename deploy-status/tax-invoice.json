@@ -13,8 +13,8 @@
   "ntsBusinessRegistry": true,
   "ntsBusinessConfigured": false,
   "paidAutomationEnabled": false,
-  "financeUrl": "https://finance-api.ekodi.kr/api/finance/tax-health",
+  "financeUrl": "https://ekodi.kr/finance-api/api/finance/tax-health",
   "taxUrl": "https://ekodi.kr/tax",
-  "adminMenuUrl": "https://admin.ekodi.kr/admin-menu-registry.js",
+  "adminMenuUrl": "https://ekodi.kr/admin/admin-menu-registry.js",
   "status": "verified"
 }

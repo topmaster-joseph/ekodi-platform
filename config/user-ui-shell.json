@@ -139,7 +139,7 @@
     "fallbackRequired": true,
     "statusResolver": {
       "provider": "youtube",
-      "endpoint": "https://social.ekodi.kr/api/media/youtube/status",
+      "endpoint": "https://ekodi.kr/social/api/media/youtube/status",
       "strategy": "official-api-when-configured + public-page fallback",
       "pollSeconds": 60,
       "failSafe": "retain localized fallback"

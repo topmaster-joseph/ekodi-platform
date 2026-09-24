@@ -1,7 +1,7 @@
 (() => {
   const STAGING_API = 'https://ekodi-insurance-api-staging.ekodi-development.workers.dev';
   const GREEN_API = 'https://ekodi-insurance-api-green.topmaster-joseph.workers.dev';
-  const PRODUCTION_API = 'https://insurance-api.ekodi.kr';
+  const PRODUCTION_API = 'https://insurance-ekodi.kr/api';
   const GREEN_HOST = 'ekodi-insurance-green.topmaster-joseph.workers.dev';
   const IS_CANONICAL_PRODUCTION_UI = location.hostname === 'ekodi.kr' && location.pathname.startsWith('/insurance');
   const IS_PRODUCTION_UI = IS_CANONICAL_PRODUCTION_UI || location.hostname === GREEN_HOST;
@@ -241,7 +241,7 @@
     });
     root.querySelectorAll?.('.admin-preview-link').forEach(link => {
       link.textContent = IS_PRODUCTION_UI ? '상담관리 →' : '스테이징 상담관리 보기 →';
-      if (IS_PRODUCTION_UI) link.href = 'https://admin.ekodi.kr/';
+      if (IS_PRODUCTION_UI) link.href = 'https://ekodi.kr/admin/';
     });
     renderWithdrawalPanel();
   }

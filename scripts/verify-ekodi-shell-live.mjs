@@ -129,7 +129,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
   ],failures);
   const legacyI18nOrigins=['api','i18n'].map(label=>`https://${label}.${'ekodi.kr'}/api/i18n/v1`);
   if(legacyI18nOrigins.some(origin=>shellResult.text.includes(origin)))failures.push('shell:legacy-i18n-origin-present');
-  if(shellResult.text.includes('https://social.ekodi.kr/api/media/youtube/status'))failures.push('shell:legacy-social-origin-present');
+  if(shellResult.text.includes('https://ekodi.kr/social/api/media/youtube/status'))failures.push('shell:legacy-social-origin-present');
   if(shellResult.headers?.get?.('x-ekodi-media-meeting')!=='v2')failures.push(`shell:media-meeting:${shellResult.headers?.get?.('x-ekodi-media-meeting')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-character-registry')!=='v3')failures.push(`shell:character-registry:${shellResult.headers?.get?.('x-ekodi-character-registry')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-character-identity')!=='v2')failures.push(`shell:character-identity:${shellResult.headers?.get?.('x-ekodi-character-identity')||'missing'}`);

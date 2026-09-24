@@ -50,9 +50,8 @@ jobs:
           npm run validate:boundaries
           npm run validate:ui-dna
           npm run validate:mission
-          grep -Fq 'pattern = "biz.ekodi.kr"' wrangler.ekodibiz.toml
-          ! grep -Fq 'pattern = "business.ekodi.kr"' wrangler.ekodibiz.toml
-          grep -Fq 'HIGH_IMPACT_APPROVAL = "required"' wrangler.ekodibiz.toml
+          ! grep -Fq 'custom_domain = true' wrangler.ekodibiz.toml
+                    grep -Fq 'HIGH_IMPACT_APPROVAL = "required"' wrangler.ekodibiz.toml
           grep -Fq '[exports.RevenueStore]' wrangler.ekodibiz.toml
           grep -Fq 'storage = "sqlite"' wrangler.ekodibiz.toml
       - name: Validate Cloudflare bundle
@@ -133,7 +132,7 @@ jobs:
           grep -Fq 'finance_gatekeeper' <<<"$ops"
           grep -Fq '"tasks":4' <<<"$ops"
           grep -Fq 'approval_required' <<<"$checkout"
-          grep -Fq 'https://pay.ekodi.kr' <<<"$checkout"
+          grep -Fq 'https://ekodi.kr/pay' <<<"$checkout"
           echo 'EKODIBIZ deployed to development and functional AI operations verified.'
 
   deploy-production:

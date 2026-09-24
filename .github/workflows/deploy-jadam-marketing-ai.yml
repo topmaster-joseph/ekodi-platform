@@ -70,7 +70,7 @@ jobs:
               exit 1
             fi
           done
-          if grep -R -Fq 'https://yogurtpurple.ekodi.kr/' dist/marketing-ai; then echo 'Legacy yogurtpurple domain detected in generated site'; exit 1; fi
+          if grep -R -Fq 'https://ekodi.kr/yogurt/' dist/marketing-ai; then echo 'Legacy yogurtpurple domain detected in generated site'; exit 1; fi
       - name: Verify guarded Pages release controller
         run: |
           node --check scripts/guarded-pages-release.mjs
@@ -106,13 +106,13 @@ jobs:
             ! grep -Fq '점주 Google 로그인' /tmp/customer.html
           }
           for attempt in $(seq 1 24); do
-            if verify_url 'https://marketing.ekodi.kr/' '마케팅AI' \
-              && verify_url 'https://marketing.ekodi.kr/' '&plan=plus' \
-              && verify_url 'https://marketing.ekodi.kr/qa/' '마케팅AI 검수센터' \
-              && verify_customer 'https://jadam.ai.ekodi.kr/' '자담치킨 목포대점' \
-              && verify_customer 'https://pizzamaru.ai.ekodi.kr/' '피자마루 목포대점' \
-              && verify_customer 'https://yogurt.ai.ekodi.kr/' '요거트퍼플 목포대점'; then
-              echo 'Guarded Marketing AI tenant release verified on canonical ai.ekodi.kr domains with shared fixed mobile headers.'
+            if verify_url 'https://ekodi.kr/marketing/' '마케팅AI' \
+              && verify_url 'https://ekodi.kr/marketing/' '&plan=plus' \
+              && verify_url 'https://ekodi.kr/marketing/qa/' '마케팅AI 검수센터' \
+              && verify_customer 'https://ekodi.kr/jadam/marketing/' '자담치킨 목포대점' \
+              && verify_customer 'https://ekodi.kr/pizzamaru/marketing/' '피자마루 목포대점' \
+              && verify_customer 'https://ekodi.kr/yogurt/marketing/' '요거트퍼플 목포대점'; then
+              echo 'Guarded Marketing AI tenant release verified on canonical ekodi.kr/ai domains with shared fixed mobile headers.'
               exit 0
             fi
             sleep 5

@@ -13,7 +13,7 @@ test('finance SQL is isolated from pre-existing application tables', () => {
 });
 
 test('finance API health is public and does not require D1', async () => {
-  const response = await worker.fetch(new Request('https://finance-api.ekodi.kr/health'), {});
+  const response = await worker.fetch(new Request('https://ekodi.kr/finance-api/health'), {});
   assert.equal(response.status, 200);
   const data = await response.json();
   assert.equal(data.ok, true);
@@ -22,7 +22,7 @@ test('finance API health is public and does not require D1', async () => {
 });
 
 test('finance API rejects untrusted browser origins', async () => {
-  const response = await worker.fetch(new Request('https://finance-api.ekodi.kr/api/finance/overview', {
+  const response = await worker.fetch(new Request('https://ekodi.kr/finance-api/api/finance/overview', {
     headers: { origin: 'https://example.com' }
   }), {});
   assert.equal(response.status, 403);
@@ -31,14 +31,14 @@ test('finance API rejects untrusted browser origins', async () => {
 });
 
 test('finance API fails closed without its D1 binding', async () => {
-  const response = await worker.fetch(new Request('https://finance-api.ekodi.kr/api/finance/overview'), {});
+  const response = await worker.fetch(new Request('https://ekodi.kr/finance-api/api/finance/overview'), {});
   assert.equal(response.status, 503);
   const data = await response.json();
   assert.match(data.error, /D1/);
 });
 
 test('Toss webhook fails closed until a server secret is configured', async () => {
-  const response = await worker.fetch(new Request('https://finance-api.ekodi.kr/webhooks/toss', {
+  const response = await worker.fetch(new Request('https://ekodi.kr/finance-api/webhooks/toss', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ eventType: 'PAYMENT_STATUS_CHANGED', data: { orderId: 'ORDER-1' } })
@@ -61,7 +61,7 @@ test('church giving orders are classified into the church finance boundary', asy
     currency: 'KRW', totalAmount: 10000, orderName: '에코디교회 십일조·주일헌금', approvedAt: new Date().toISOString(),
   }), { status: 200, headers: { 'content-type': 'application/json' } });
   try {
-    const response = await worker.fetch(new Request('https://finance-api.ekodi.kr/webhooks/toss', {
+    const response = await worker.fetch(new Request('https://ekodi.kr/finance-api/webhooks/toss', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ eventType: 'PAYMENT_STATUS_CHANGED', data: { paymentKey: 'pk_church_1', orderId: 'CHURCH_123_abc', status: 'DONE' } }),
     }), { DB, TOSS_SECRET_KEY: 'server-secret-for-test' });
@@ -69,6 +69,6 @@ test('church giving orders are classified into the church finance boundary', asy
     const paymentInsert = binds.find((entry) => /INSERT INTO payments/.test(entry.sql));
     assert.equal(paymentInsert.args[2], 'EKODICHURCH');
     assert.equal(paymentInsert.args[3], 'CHURCH');
-    assert.equal(paymentInsert.args[5], 'church.ekodi.kr');
+    assert.equal(paymentInsert.args[5], 'ekodi.kr/ekodichurch');
   } finally { globalThis.fetch = originalFetch; }
 });

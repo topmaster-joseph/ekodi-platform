@@ -7,7 +7,7 @@ create table if not exists public.life_reflections (
   scriptures text[] not null default '{}',
   next_question text not null default '',
   action_text text not null default '',
-  source text not null default 'life.ekodi.kr',
+  source text not null default 'ekodi.kr/life',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -42,7 +42,7 @@ drop policy if exists life_tenant_profiles_public_read on public.life_tenant_pro
 create policy life_tenant_profiles_public_read on public.life_tenant_profiles for select to anon,authenticated using (active=true);
 
 insert into public.life_tenant_profiles(host,brand_name,platform_name,tagline,community_label,active)
-values ('life.ekodi.kr','오늘의 질문','인생AI','당신의 삶을 함께 생각합니다','사람과 함께 나누기',true)
+values ('ekodi.kr/life','오늘의 질문','인생AI','당신의 삶을 함께 생각합니다','사람과 함께 나누기',true)
 on conflict (host) do update set brand_name=excluded.brand_name,platform_name=excluded.platform_name,tagline=excluded.tagline,community_label=excluded.community_label,active=true,updated_at=now();
 
 comment on table public.life_reflections is 'User-explicit saved reflections from EKODI Life AI. Conversation bodies are not auto-persisted.';

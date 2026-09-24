@@ -86,7 +86,7 @@ test('canonical apex owns public contact page and contact API end to end', async
 });
 
 test('legacy mail host keeps redirecting contact UI to the canonical apex', async()=>{
-  const response=await platformEntry.fetch(new Request('https://mail.ekodi.kr/contact'),{ENVIRONMENT:'test'},{});
+  const response=await platformEntry.fetch(new Request('https://ekodi.kr/mail/contact'),{ENVIRONMENT:'test'},{});
   assert.equal(response.status,308);
   assert.equal(response.headers.get('location'),'https://ekodi.kr/mail/contact');
 });

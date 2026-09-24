@@ -1,7 +1,7 @@
 import { canonicalDriveStatus, deleteCanonicalDriveFile, writeCanonicalDriveFile, writeCanonicalDriveStream } from './canonical-drive-writer.js';
 
 const STORAGE_PREFIX = '/api/storage/v1';
-const STORAGE_CONTROL_ORIGIN = 'https://drive.ekodi.kr';
+const STORAGE_CONTROL_ORIGIN = 'https://ekodi.kr/storage';
 const MAX_INLINE_BYTES = 8 * 1024 * 1024;
 const RETENTION_CLASSES = new Set(['temporary', 'operational', 'business_record', 'permanent']);
 const encoder = new TextEncoder();
@@ -214,7 +214,7 @@ export async function handleStorageGateway(request, env = {}) {
     return json({
       version: '1.0.0',
       canonicalStore: 'google_workspace_shared_drive',
-      canonicalControlPlane: 'drive.ekodi.kr',
+      canonicalControlPlane: 'ekodi.kr/storage',
       credentialsSource: 'encrypted_storage_connections',
       routeSource: 'storage_routes',
       operationalStore: 'd1_or_supabase',
@@ -270,7 +270,7 @@ export const STORAGE_GATEWAY_CONTRACT = Object.freeze({
   version: '1.0.0',
   prefix: STORAGE_PREFIX,
   canonicalStore: 'google_workspace_shared_drive',
-  canonicalControlPlane: 'drive.ekodi.kr',
+  canonicalControlPlane: 'ekodi.kr/storage',
   credentialsSource: 'encrypted_storage_connections',
   routeSource: 'storage_routes',
   driveName: 'EKODI',

@@ -30,7 +30,7 @@ const hardStop = setTimeout(() => {
 }, 240_000);
 hardStop.unref?.();
 
-const baseUrl = 'https://admin.ekodi.kr/';
+const baseUrl = 'https://ekodi.kr/admin/';
 const authenticatedEntryUrl = `${baseUrl}?route=finance#ekodi_admin_token=${token}`;
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
 await fs.mkdir(artifactsDir, { recursive: true });
@@ -61,7 +61,7 @@ page.on('console', message => {
 page.on('requestfailed', request => {
   try {
     const url = new URL(request.url());
-    if (url.hostname === 'admin.ekodi.kr' && /\.(?:js|css)(?:$|\?)/.test(url.pathname + url.search)) {
+    if (url.hostname === 'ekodi.kr' && /\.(?:js|css)(?:$|\?)/.test(url.pathname + url.search)) {
       failedAdminAssets.push(`${request.method()} ${request.url()} :: ${request.failure()?.errorText || 'failed'}`);
     }
   } catch {}
@@ -209,7 +209,7 @@ function storageExternalNavigationRequest() {
       const destination = new URL(request.url());
       return request.isNavigationRequest()
         && request.frame() === page.mainFrame()
-        && destination.hostname !== 'admin.ekodi.kr';
+        && destination.origin !== 'https://ekodi.kr';
     } catch {
       return false;
     }

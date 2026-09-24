@@ -109,7 +109,7 @@ jobs:
           grep -Fq '종량제' "$hub"
           grep -Fq '자동화 플랜' "$hub"
           grep -Fq 'Google로 무료 시작' "$hub"
-          grep -Fq 'https://auth.ekodi.kr/?site=marketing' "$hub"
+          grep -Fq 'https://ekodi.kr/auth/?site=marketing' "$hub"
           for plan in free flex plus pro auto; do
             grep -Fq "data-plan=\"$plan\"" "$hub"
           done
@@ -117,7 +117,7 @@ jobs:
             echo 'Public Marketing AI hub regressed to application-case directory'
             exit 1
           fi
-          if grep -Fq 'href="https://pay.ekodi.kr' "$hub"; then
+          if grep -Fq 'href="https://ekodi.kr/pay' "$hub"; then
             echo 'Live checkout must remain disabled during beta pricing QA'
             exit 1
           fi
@@ -126,7 +126,7 @@ jobs:
             file="dist/marketing-ai/$dir/index.html"
             test -f "$file"
             grep -Fq 'id="googleCustomerAuth"' "$file"
-            grep -Fq 'https://auth.ekodi.kr/?site=marketing' "$file"
+            grep -Fq 'https://ekodi.kr/auth/?site=marketing' "$file"
             grep -Fq 'Google로 무료 시작' "$file"
             if grep -Fq 'id="customerAuthOpen"' "$file" \
               || grep -Fq '/api/customer/login' "$file" \
@@ -136,11 +136,11 @@ jobs:
             fi
           done
 
-          if grep -R -Fq 'https://yogurtpurple.ekodi.kr/' dist/marketing-ai; then
+          if grep -R -Fq 'https://ekodi.kr/yogurt/' dist/marketing-ai; then
             echo 'Legacy yogurtpurple domain detected in generated site'
             exit 1
           fi
-          grep -Fq 'https://yogurt.ekodi.kr/' dist/marketing-ai/qa/index.html
+          grep -Fq 'https://ekodi.kr/yogurt/' dist/marketing-ai/qa/index.html
 
       - name: Preview gate, production promotion and smoke verification
         run: |
@@ -154,8 +154,8 @@ jobs:
         run: |
           set -euo pipefail
           verify_hub() {
-            code=$(curl -sS -L -o /tmp/hub.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://marketing.ekodi.kr/' || true)
-            echo "marketing.ekodi.kr -> $code"
+            code=$(curl -sS -L -o /tmp/hub.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/marketing/' || true)
+            echo "ekodi.kr/marketing -> $code"
             [ "$code" = '200' ]
             grep -Fq 'id="freeTrialForm"' /tmp/hub.html
             grep -Fq '무료회원 콘텐츠 실습실' /tmp/hub.html
@@ -196,10 +196,10 @@ jobs:
             grep -Fq '종량제' /tmp/hub.html
             grep -Fq '자동화 플랜' /tmp/hub.html
             grep -Fq 'Google로 무료 시작' /tmp/hub.html
-            grep -Fq 'https://auth.ekodi.kr/?site=marketing' /tmp/hub.html
+            grep -Fq 'https://ekodi.kr/auth/?site=marketing' /tmp/hub.html
             ! grep -Fq 'APPLICATION CASES' /tmp/hub.html
             ! grep -Fq 'class="case-list"' /tmp/hub.html
-            ! grep -Fq 'href="https://pay.ekodi.kr' /tmp/hub.html
+            ! grep -Fq 'href="https://ekodi.kr/pay' /tmp/hub.html
           }
           verify_customer() {
             domain="$1"
@@ -210,7 +210,7 @@ jobs:
             grep -Fq "$store" /tmp/customer.html
             grep -Fq 'id="googleCustomerAuth"' /tmp/customer.html
             grep -Fq 'Google로 무료 시작' /tmp/customer.html
-            grep -Fq 'https://auth.ekodi.kr/?site=marketing' /tmp/customer.html
+            grep -Fq 'https://ekodi.kr/auth/?site=marketing' /tmp/customer.html
             ! grep -Fq 'id="customerAuthOpen"' /tmp/customer.html
             ! grep -Fq '/api/customer/login' /tmp/customer.html
             ! grep -Fq '/api/customer/accept-invite' /tmp/customer.html
@@ -218,9 +218,9 @@ jobs:
 
           for attempt in $(seq 1 24); do
             if verify_hub \
-              && verify_customer 'jadam.ekodi.kr' '자담치킨 목포대점' \
-              && verify_customer 'pizzamaru.ekodi.kr' '피자마루 목포대점' \
-              && verify_customer 'yogurt.ekodi.kr' '요거트퍼플 목포대점'; then
+              && verify_customer 'ekodi.kr/jadam' '자담치킨 목포대점' \
+              && verify_customer 'ekodi.kr/pizzamaru' '피자마루 목포대점' \
+              && verify_customer 'ekodi.kr/yogurt' '요거트퍼플 목포대점'; then
               echo 'Marketing AI preview-gated release and central authentication verified in production.'
               exit 0
             fi

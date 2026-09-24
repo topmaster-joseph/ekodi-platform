@@ -49,7 +49,7 @@ Current canonical workspace identity is derived from immutable `workspace_id`. H
 
 Dedicated subdomains are reserved for justified system, security, protocol, common-service or core-service boundaries registered in constitutional governance. Historical customer, feature or AI subdomain examples are legacy or compatibility information unless the current constitution explicitly registers them as active boundaries.
 
-Marketing user surfaces are canonical paths: `ekodi.kr/ekodibiz/marketing-ai` for the EKODIBIZ product and `ekodi.kr/{slug}/marketing` for workspace use, including `ekodi.kr/jadam/marketing`, `ekodi.kr/pizzamaru/marketing`, `ekodi.kr/yogurt/marketing`, and `ekodi.kr/cgma/marketing`. `marketing.ekodi.kr` is an engine boundary and `ai.ekodi.kr` is the AI Gateway/Core; do not expose either as an ordinary customer entry.
+Marketing user surfaces are canonical paths: `ekodi.kr/ekodibiz/marketing-ai` for the EKODIBIZ product and `ekodi.kr/{slug}/marketing` for workspace use, including `ekodi.kr/jadam/marketing`, `ekodi.kr/pizzamaru/marketing`, `ekodi.kr/yogurt/marketing`, and `ekodi.kr/cgma/marketing`. `ekodi.kr/marketing` is an engine boundary and `ekodi.kr/ai` is the AI Gateway/Core; do not expose either as an ordinary customer entry.
 
 Customer-owned domains may map to a workspace public surface but never redefine EKODI internal identity or authorization.
 
@@ -108,7 +108,7 @@ For business-critical changes, “done” means all applicable items below are t
 4. Guarded deployment succeeds when deployment is part of the task.
 5. Real production hostname returns the expected status and content.
 6. Redirect behavior is verified when routing changes.
-7. `admin.ekodi.kr` or the appropriate control plane can observe resulting service state.
+7. `ekodi.kr/admin` or the appropriate control plane can observe resulting service state.
 8. Security, human agency and tenant boundaries remain intact.
 9. Failure is visible through monitoring or operational logs.
 

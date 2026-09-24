@@ -16,7 +16,7 @@ EKODI v8 treats AI providers as replaceable specialist compute under EKODI-owned
 
 ## URL migration safety
 
-The Command Plane does not treat `my.ekodi.kr`, `admin.ekodi.kr`, or any other user-facing hostname as identity or authority. It targets symbolic resources:
+The Command Plane does not treat `ekodi.kr/my`, `ekodi.kr/admin`, or any other user-facing hostname as identity or authority. It targets symbolic resources:
 
 - `workspaceId`
 - `workspaceSlug`

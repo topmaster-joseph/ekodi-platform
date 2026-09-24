@@ -1,7 +1,7 @@
 import { handleInsuranceNetwork, linkAdvisorConsultation, networkReady } from './network.js';
 import { linkConsultationAffiliation } from './practice.js';
 const DEFAULT_ORIGINS = [
-  'https://ins.ekodi.kr',
+  'https://ekodi.kr/ins',
   'https://ekodi-insurance-staging.ekodi-development.workers.dev'
 ];
 const VALID_STATUS = new Set(['new', 'reviewing', 'contacted', 'closed']);

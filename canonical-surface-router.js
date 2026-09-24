@@ -11,60 +11,37 @@ const PUBLIC_CONTROL_PREVIEW_CACHE='public, max-age=15, s-maxage=30, stale-while
 const PUBLIC_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'shell',prefix:'/shell',binding:'SHELL',basePathAware:true}),
   Object.freeze({id:'mission-application',prefix:'/ekodimission/api/activities/260926-chuseok-open-table/applications',binding:'SPACE',preservePrefix:true,basePathAware:true}),
-  Object.freeze({id:'ai',prefix:'/ai',binding:'AI',virtualHost:'ai.ekodi.kr'}),
-  Object.freeze({id:'author',prefix:'/author',binding:'AUTHOR',virtualHost:'author.ekodi.kr'}),
+  Object.freeze({id:'ai',prefix:'/ai',binding:'AI'}),
+  Object.freeze({id:'author',prefix:'/author',binding:'AUTHOR'}),
   Object.freeze({id:'bible',prefix:'/bible',binding:'BIBLE',basePathAware:true}),
-  Object.freeze({id:'books',prefix:'/books',binding:'BOOKS',virtualHost:'books.ekodi.kr'}),
-  Object.freeze({id:'business',prefix:'/business',binding:'BUSINESS',virtualHost:'business.ekodi.kr',host:'business.ekodi.kr'}),
-  Object.freeze({id:'community',prefix:'/community',binding:'COMMUNITY',virtualHost:'community.ekodi.kr'}),
-  Object.freeze({id:'education',prefix:'/education',binding:'EDUCATION',virtualHost:'edu.ekodi.kr'}),
-  Object.freeze({id:'energy',prefix:'/energy',binding:'ENERGY',virtualHost:'energy.ekodi.kr'}),
-  Object.freeze({id:'experience',prefix:'/experience',binding:'EXPERIENCE',virtualHost:'exp.ekodi.kr'}),
-  Object.freeze({id:'developer',prefix:'/developer',binding:'EXPERIENCE',virtualHost:'dev.ekodi.kr'}),
-  Object.freeze({id:'finance-api',prefix:'/finance-api',binding:'FINANCE',virtualHost:'finance-api.ekodi.kr',basePathAware:true}),
-  Object.freeze({id:'journal',prefix:'/journal',binding:'JOURNAL',virtualHost:'journal.ekodi.kr'}),
-  Object.freeze({id:'life',prefix:'/life',binding:'LIFE',virtualHost:'life.ekodi.kr'}),
-  Object.freeze({id:'management',prefix:'/management',binding:'MANAGEMENT',virtualHost:'management.ekodi.kr'}),
-  Object.freeze({id:'money',prefix:'/money',binding:'MONEY',virtualHost:'money.ekodi.kr'}),
-  Object.freeze({id:'personal-finance-api',prefix:'/personal-finance-api',binding:'PERSONAL_FINANCE',virtualHost:'personal-finance-api.ekodi.kr',basePathAware:true}),
-  Object.freeze({id:'publishing',prefix:'/publishing',binding:'PUBLISHING',virtualHost:'publishing.ekodi.kr'}),
-  Object.freeze({id:'social',prefix:'/social',binding:'SOCIAL',virtualHost:'social.ekodi.kr'}),
-  Object.freeze({id:'space',prefix:'/space',binding:'SPACE',virtualHost:'space.ekodi.kr'}),
-  Object.freeze({id:'storage',prefix:'/storage',binding:'STORAGE',virtualHost:'drive.ekodi.kr',basePathAware:true}),
+  Object.freeze({id:'books',prefix:'/books',binding:'BOOKS'}),
+  Object.freeze({id:'business',prefix:'/business',binding:'BUSINESS'}),
+  Object.freeze({id:'community',prefix:'/community',binding:'COMMUNITY'}),
+  Object.freeze({id:'education',prefix:'/education',binding:'EDUCATION'}),
+  Object.freeze({id:'energy',prefix:'/energy',binding:'ENERGY'}),
+  Object.freeze({id:'experience',prefix:'/experience',binding:'EXPERIENCE'}),
+  Object.freeze({id:'developer',prefix:'/developer',binding:'EXPERIENCE'}),
+  Object.freeze({id:'finance-api',prefix:'/finance-api',binding:'FINANCE',basePathAware:true}),
+  Object.freeze({id:'journal',prefix:'/journal',binding:'JOURNAL'}),
+  Object.freeze({id:'life',prefix:'/life',binding:'LIFE'}),
+  Object.freeze({id:'management',prefix:'/management',binding:'MANAGEMENT'}),
+  Object.freeze({id:'money',prefix:'/money',binding:'MONEY'}),
+  Object.freeze({id:'personal-finance-api',prefix:'/personal-finance-api',binding:'PERSONAL_FINANCE',basePathAware:true}),
+  Object.freeze({id:'publishing',prefix:'/publishing',binding:'PUBLISHING'}),
+  Object.freeze({id:'social',prefix:'/social',binding:'SOCIAL'}),
+  Object.freeze({id:'space',prefix:'/space',binding:'SPACE'}),
+  Object.freeze({id:'storage',prefix:'/storage',binding:'STORAGE',basePathAware:true}),
   Object.freeze({id:'support',prefix:'/support',binding:'SUPPORT',preservePrefix:true,basePathAware:true}),
-  Object.freeze({id:'work',prefix:'/work',binding:'WORK',virtualHost:'work.ekodi.kr'}),
-  Object.freeze({id:'workspace-api',prefix:'/workspace-api',binding:'WORKSPACE_PLATFORM',virtualHost:'workspace-api.ekodi.kr',basePathAware:true}),
-  Object.freeze({id:'marketing-api',prefix:'/marketing-api',binding:'MARKETING_DOMAIN',virtualHost:'marketing-api.ekodi.kr',basePathAware:true}),
-  Object.freeze({id:'marketing-connect-api',prefix:'/marketing-connect-api',binding:'MARKETING_GROWTH',virtualHost:'marketing-connect-api.ekodi.kr',basePathAware:true}),
-  Object.freeze({id:'marketing-publish-api',prefix:'/marketing-publish-api',binding:'MARKETING_PUBLISHING',virtualHost:'marketing-publish-api.ekodi.kr',basePathAware:true}),
-  Object.freeze({id:'pay',prefix:'/pay',legacyHost:'pay.ekodi.kr'}),
-  Object.freeze({id:'live',prefix:'/live',legacyHost:'live.ekodi.kr'}),
-  Object.freeze({id:'cloud',prefix:'/cloud',legacyHost:'cloud.ekodi.kr'}),
-  Object.freeze({id:'trade',prefix:'/trade',legacyHost:'trade.ekodi.kr'}),
-  Object.freeze({id:'lab',prefix:'/ekodilab',host:'ekodilab.pages.dev',canonicalHost:'lab.ekodi.kr'}),
-  Object.freeze({id:'cafe',prefix:'/cafe',host:'ekodi-cafe.pages.dev',canonicalHost:'cafe.ekodi.kr'}),
+  Object.freeze({id:'work',prefix:'/work',binding:'WORK'}),
+  Object.freeze({id:'workspace-api',prefix:'/workspace-api',binding:'WORKSPACE_PLATFORM',basePathAware:true}),
+  Object.freeze({id:'marketing-api',prefix:'/marketing-api',binding:'MARKETING_DOMAIN',basePathAware:true}),
+  Object.freeze({id:'marketing-connect-api',prefix:'/marketing-connect-api',binding:'MARKETING_GROWTH',basePathAware:true}),
+  Object.freeze({id:'marketing-publish-api',prefix:'/marketing-publish-api',binding:'MARKETING_PUBLISHING',basePathAware:true}),
+  Object.freeze({id:'lab',prefix:'/ekodilab',host:'ekodilab.pages.dev'}),
+  Object.freeze({id:'cafe',prefix:'/cafe',host:'ekodi-cafe.pages.dev'}),
 
 ]);
-const legacyEkodiHost=label=>`${label}.${CANONICAL_HOST}`;
-const CANONICAL_HOST_PATHS=Object.freeze({
-  [legacyEkodiHost('admin')]:'/admin',[legacyEkodiHost('my')]:'/my',
-  'ai.ekodi.kr':'/ai','author.ekodi.kr':'/author','bible.ekodi.kr':'/bible',
-  'books.ekodi.kr':'/books','business.ekodi.kr':'/business','community.ekodi.kr':'/community','edu.ekodi.kr':'/education',
-  'energy.ekodi.kr':'/energy','exp.ekodi.kr':'/experience','try.ekodi.kr':'/experience','dev.ekodi.kr':'/developer',
-  'finance-api.ekodi.kr':'/finance-api','journal.ekodi.kr':'/journal','life.ekodi.kr':'/life','management.ekodi.kr':'/management',
-  'money.ekodi.kr':'/money','personal-finance-api.ekodi.kr':'/personal-finance-api','publishing.ekodi.kr':'/publishing',
-  'social.ekodi.kr':'/social','space.ekodi.kr':'/space','drive.ekodi.kr':'/storage',
-  'work.ekodi.kr':'/work','workspace-api.ekodi.kr':'/workspace-api','marketing-api.ekodi.kr':'/marketing-api',
-  'marketing-connect-api.ekodi.kr':'/marketing-connect-api','marketing-publish-api.ekodi.kr':'/marketing-publish-api',
-  'pay.ekodi.kr':'/pay','pay.biz.ekodi.kr':'/ekodibiz/pay','live.ekodi.kr':'/live','live.biz.ekodi.kr':'/live/biz',
-  'live.church.ekodi.kr':'/live/church','live.lab.ekodi.kr':'/live/lab','cloud.ekodi.kr':'/cloud','trade.ekodi.kr':'/trade',
-  'trade.biz.ekodi.kr':'/ekodibiz/trade','biz.ekodi.kr':'/ekodibiz','church.ekodi.kr':'/ekodichurch','lab.ekodi.kr':'/ekodilab',
-  'mall.ekodi.kr':'/ekodibiz/mall','mall.biz.ekodi.kr':'/ekodibiz/mall','mail.ekodi.kr':'/mail','mail.biz.ekodi.kr':'/mail',
-  'mail.church.ekodi.kr':'/mail','mail.lab.ekodi.kr':'/mail','mail.books.ekodi.kr':'/mail','mail.trade.ekodi.kr':'/mail',
-  'messenger.ekodi.kr':'/messenger','invest.ekodi.kr':'/invest','tax.ekodi.kr':'/tax','cafe.ekodi.kr':'/cafe',
-  'marketing.ekodi.kr':'/ekodibiz/marketing-ai','cgma.ekodi.kr':'/cgma','jadam.ekodi.kr':'/jadam','pizzamaru.ekodi.kr':'/pizzamaru','yogurt.ekodi.kr':'/yogurt',
-  'jadam.ai.ekodi.kr':'/jadam/marketing','pizzamaru.ai.ekodi.kr':'/pizzamaru/marketing','yogurt.ai.ekodi.kr':'/yogurt/marketing','cgma.ai.ekodi.kr':'/cgma/marketing'
-});const ADMIN_RUNTIME_FILE=/\.(?:js|css|cmd|json|map|svg|png|webp|ico)$/i;
+const ADMIN_RUNTIME_FILE=/\.(?:js|css|cmd|json|map|svg|png|webp|ico)$/i;
 const AUTH_TOP_LEVEL_TEXT_ASSET=/\.(?:js|css|json|map)$/i;
 const AUTH_CSP=[
   "default-src 'self'",
@@ -81,10 +58,10 @@ const AUTH_CSP=[
 const AUTH_ASSETS=new Set(['/auth.js','/auth-bootstrap.js','/auth-entry.js','/auth.css','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/google-origin-bridge.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
 const AUTH_CRITICAL_ASSETS=new Set(['/auth.js','/auth-bootstrap.js','/auth-entry.js','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/google-origin-bridge.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
 
-function cloneRequest(request,url){
+function cloneRequest(request,url,headers=request.headers){
   return new Request(url.toString(),{
     method:request.method,
-    headers:request.headers,
+    headers,
     body:['GET','HEAD'].includes(request.method)?undefined:request.body,
     redirect:request.redirect,
   });
@@ -147,10 +124,8 @@ async function proxyPersonalFinanceAdminControl(request,env){
   response.headers.set('x-content-type-options','nosniff');
   return response;
 }
-async function proxyLegacySurface(request,legacyFetch,prefix,legacyHost,surface){
-  const upstreamUrl=new URL(request.url);
-  upstreamUrl.hostname=legacyHost;
-  upstreamUrl.pathname=stripPrefix(upstreamUrl.pathname,prefix);
+async function proxyCanonicalSurface(request,legacyFetch,prefix,surface){
+  const upstreamUrl=new URL(request.url);upstreamUrl.hostname=CANONICAL_HOST;
   const response=await legacyFetch(cloneRequest(request,upstreamUrl));
   const routed=new Response(response.body,response);
   routed.headers.set('x-ekodi-canonical-surface',surface);
@@ -173,18 +148,7 @@ function rewriteAdminHtml(html){
   return html.replace(/<head(\s[^>]*)?>/i,match=>`${match}<base href="/admin/">`);
 }
 function executionSurfaceForPath(pathname){return PUBLIC_EXECUTION_SURFACES.find(item=>item.exact?pathname===item.prefix:(pathname===item.prefix||pathname.startsWith(`${item.prefix}/`)))||null}
-function canonicalAbsoluteUrl(host,pathname='/',search='',hash=''){
-  const prefix=CANONICAL_HOST_PATHS[String(host||'').toLowerCase()];if(!prefix)return '';
-  const suffix=pathname==='/'?'':pathname;return `https://${CANONICAL_HOST}${prefix}${suffix}${search||''}${hash||''}`;
-}
-function rewriteAbsoluteEkodiOrigins(text){
-  let output=String(text||'');
-  for(const [host,prefix] of Object.entries(CANONICAL_HOST_PATHS)){
-    const from=`https://${host}`;const to=`https://${CANONICAL_HOST}${prefix}`;
-    output=output.replaceAll(from,to).replaceAll(encodeURIComponent(from),encodeURIComponent(to));
-  }
-  return output;
-}
+function rewriteAbsoluteEkodiOrigins(text){return String(text||'');}
 function prefixRootLiterals(text,prefix){
   if(!prefix||prefix==='/')return text;
   return String(text||'').replace(/(["'`])\/(?!\/)([^"'`\r\n]*)\1/g,(match,q,rest)=>{
@@ -214,8 +178,8 @@ function canonicalExecutionLocation(value,spec){
 }
 async function proxyAdminShell(request,legacyFetch){
   const upstreamUrl=new URL(request.url);
-  upstreamUrl.hostname='admin.ekodi.kr';
-  upstreamUrl.pathname='/';
+  upstreamUrl.hostname=CANONICAL_HOST;
+  upstreamUrl.pathname='/admin/';
   const response=await legacyFetch(cloneRequest(request,upstreamUrl));
   const routed=await rewriteHtmlResponse(response,rewriteAdminHtml);
   routed.headers.set('x-ekodi-canonical-surface','admin');
@@ -261,20 +225,19 @@ async function serveCanonicalAuth(request,env){
   return response;
 }
 async function proxyAdminRuntime(request,legacyFetch){
-  return proxyLegacySurface(request,legacyFetch,SURFACE_PREFIXES.admin,'admin.ekodi.kr','admin');
+  return proxyCanonicalSurface(request,legacyFetch,SURFACE_PREFIXES.admin,'admin');
 }
 async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch){
   const upstreamUrl=new URL(request.url);
   let response;
   if(spec.binding&&env?.[spec.binding]?.fetch){
     const binding=env[spec.binding];
-    upstreamUrl.hostname=spec.virtualHost||CANONICAL_HOST;
+    upstreamUrl.hostname=CANONICAL_HOST;
     upstreamUrl.pathname=spec.preservePrefix?upstreamUrl.pathname:stripPrefix(upstreamUrl.pathname,spec.prefix);
-    response=await binding.fetch(cloneRequest(request,upstreamUrl));
-  }else if(spec.legacyHost){
-    if(typeof legacyFetch!=='function')return serviceUnavailable(spec.id);
-    upstreamUrl.hostname=spec.legacyHost;upstreamUrl.pathname=stripPrefix(upstreamUrl.pathname,spec.prefix);
-    response=await legacyFetch(cloneRequest(request,upstreamUrl));
+    const routedHeaders=new Headers(request.headers);
+    routedHeaders.set('x-ekodi-canonical-surface',spec.id);
+    routedHeaders.set('x-ekodi-canonical-prefix',spec.prefix);
+    response=await binding.fetch(cloneRequest(request,upstreamUrl,routedHeaders));
   }else if(spec.assetPath){
     if(!env?.ASSETS?.fetch)return serviceUnavailable(spec.id);
     upstreamUrl.pathname=spec.assetPath;upstreamUrl.search='';

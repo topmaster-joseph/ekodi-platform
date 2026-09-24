@@ -57,24 +57,24 @@ test('checkSite treats an expected protected auth response as healthy', async ()
 
 test('monitor covers official services, shared infrastructure, Connect dependencies, Marketing AI tenants, private/public sites and legacy aliases', () => {
   const byId = new Map(SITE_DEFINITIONS.map(site => [site[0], site]));
-  assert.equal(byId.get('auth')?.[2], 'auth.ekodi.kr');
-  assert.equal(byId.get('auth-client-js')?.[3], 'https://auth.ekodi.kr/client-auth.js');
-  assert.equal(byId.get('auth-router-js')?.[3], 'https://auth.ekodi.kr/auth-router.js');
-  assert.equal(byId.get('ai-gateway')?.[2], 'ai.ekodi.kr');
+  assert.equal(byId.get('auth')?.[2], 'ekodi.kr/auth');
+  assert.equal(byId.get('auth-client-js')?.[3], 'https://ekodi.kr/auth/client-auth.js');
+  assert.equal(byId.get('auth-router-js')?.[3], 'https://ekodi.kr/auth/auth-router.js');
+  assert.equal(byId.get('ai-gateway')?.[2], 'ekodi.kr/ai');
   assert.equal(byId.get('shell-js')?.[3], 'https://ekodi.kr/shell/shell.js');
   assert.equal(byId.get('community-health')?.[3], 'https://ekodi.kr/community/health');
   assert.equal(byId.get('community-connect')?.[3], 'https://ekodi.kr/community/connect/');
   assert.equal(byId.get('community-connect-app')?.[3], 'https://ekodi.kr/community/connect/app.js');
   assert.deepEqual(byId.get('connect-api-auth-gate')?.[4], [401]);
-  assert.equal(byId.get('marketing-publish-api')?.[3], 'https://marketing-publish-api.ekodi.kr/health');
+  assert.equal(byId.get('marketing-publish-api')?.[3], 'https://ekodi.kr/marketing-publish-api/health');
   assert.equal(byId.get('publishing')?.[2], 'ekodi.kr');
   assert.equal(byId.get('books')?.[2], 'ekodi.kr');
   assert.equal(byId.get('publishing')?.[3], 'https://ekodi.kr/publishing');
   assert.equal(byId.get('books')?.[3], 'https://ekodi.kr/books');
-  assert.equal(byId.get('marketing-tenant-jadam')?.[2], 'jadam.ai.ekodi.kr');
-  assert.equal(byId.get('marketing-tenant-pizzamaru')?.[2], 'pizzamaru.ai.ekodi.kr');
-  assert.equal(byId.get('marketing-tenant-yogurt')?.[2], 'yogurt.ai.ekodi.kr');
-  assert.equal(byId.get('marketing-tenant-cgma')?.[3], 'https://cgma.ai.ekodi.kr/market-ai');
+  assert.equal(byId.get('marketing-tenant-jadam')?.[2], 'ekodi.kr/jadam/marketing');
+  assert.equal(byId.get('marketing-tenant-pizzamaru')?.[2], 'ekodi.kr/pizzamaru/marketing');
+  assert.equal(byId.get('marketing-tenant-yogurt')?.[2], 'ekodi.kr/yogurt/marketing');
+  assert.equal(byId.get('marketing-tenant-cgma')?.[3], 'https://ekodi.kr/cgma/marketing/market-ai');
   assert.equal(byId.has('marketing-private-cgma'), false);
   assert.equal(byId.get('marketing-public-cgma')?.[2], 'cgma.or.kr');
   assert.equal(byId.get('marketing-public-cgma')?.[3], 'https://cgma.or.kr/');

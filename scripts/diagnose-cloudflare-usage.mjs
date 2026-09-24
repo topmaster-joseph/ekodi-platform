@@ -90,13 +90,7 @@ async function workerUsage(account, window) {
   };
 }
 
-const SHARED_SITE_HOSTS=new Set([
-  'ekodi.kr','www.ekodi.kr','trade.ekodi.kr','trade.biz.ekodi.kr','pay.ekodi.kr','pay.biz.ekodi.kr',
-  'messenger.ekodi.kr','invest.ekodi.kr','ai.ekodi.kr','admin.ekodi.kr','admin.biz.ekodi.kr',
-  'admin.church.ekodi.kr','admin.lab.ekodi.kr','admin.trade.ekodi.kr','mail.ekodi.kr','mail.biz.ekodi.kr',
-  'mail.church.ekodi.kr','live.ekodi.kr','live.biz.ekodi.kr','live.church.ekodi.kr','live.lab.ekodi.kr',
-  'cloud.ekodi.kr','auth.ekodi.kr'
-]);
+const SHARED_SITE_HOSTS=new Set(['ekodi.kr']);
 const SHARED_SITE_WORKER_FIRST_EXACT=new Set([
   '/','/deployment-probe','/auth/start','/admin','/control-center','/control-center/','/control-center.html',
   '/workspace-admin.css','/workspace-admin.js','/workspace-trade-admin.js','/workspace-trade-portal.css','/workspace-trade-portal.js',
@@ -117,17 +111,17 @@ function routeFamily(hostValue,pathValue){
   const path=String(pathValue||'/').toLowerCase();
   if(/(?:^|\/)(health|healthz|ready|readiness|liveness)(?:\/|$)/.test(path))return 'health';
   if(/\.(?:css|js|mjs|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|map)$/.test(path))return 'static';
-  if(host.startsWith('admin.')||path==='/admin'||path.startsWith('/admin/')||path.startsWith('/control-center'))return 'admin';
-  if(host.startsWith('auth.')||path==='/auth'||path.startsWith('/auth/'))return 'auth';
-  if(host.startsWith('trade.'))return 'trade';
-  if(host.startsWith('invest.'))return 'invest';
-  if(host==='ai.ekodi.kr')return 'ai-hub';
-  if(host.startsWith('cloud.'))return 'cloud';
-  if(host.startsWith('messenger.'))return 'messenger';
-  if(host.startsWith('mail.'))return 'mail';
-  if(host.startsWith('live.'))return 'live';
-  if(host.startsWith('pay.')||path.startsWith('/pay'))return 'pay';
-  if(host.startsWith('tax.')||path.startsWith('/tax'))return 'tax';
+  if(path==='/admin'||path.startsWith('/admin/')||path.startsWith('/control-center'))return 'admin';
+  if(path==='/auth'||path.startsWith('/auth/'))return 'auth';
+  if(path==='/ekodibiz/trade'||path.startsWith('/ekodibiz/trade/'))return 'trade';
+  if(path==='/invest'||path.startsWith('/invest/'))return 'invest';
+  if(path==='/ai'||path.startsWith('/ai/'))return 'ai-hub';
+  if(path==='/cloud'||path.startsWith('/cloud/'))return 'cloud';
+  if(path==='/messenger'||path.startsWith('/messenger/'))return 'messenger';
+  if(path==='/mail'||path.startsWith('/mail/'))return 'mail';
+  if(path==='/live'||path.startsWith('/live/')||path.includes('/live'))return 'live';
+  if(path.startsWith('/pay')||path.includes('/pay'))return 'pay';
+  if(path.startsWith('/tax'))return 'tax';
   if(path.startsWith('/_ekodi/'))return 'internal-proxy';
   if(path==='/deployment-probe')return 'deployment';
   if(path==='/org/ekodibiz'||path.startsWith('/org/ekodibiz/'))return 'ekodibiz-org';

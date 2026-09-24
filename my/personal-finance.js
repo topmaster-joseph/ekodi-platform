@@ -1,5 +1,5 @@
 const cfg=window.EKODI_MY_CONFIG||{};
-const API_ROOT=String(cfg.personalFinanceApi||'https://personal-finance-api.ekodi.kr').replace(/\/$/,'');
+const API_ROOT=String(cfg.personalFinanceApi||'https://ekodi.kr/personal-finance-api').replace(/\/$/,'');
 const API=`${API_ROOT}/api/finance/personal`;
 const root=document.querySelector('#personalFinanceApp');
 const money=v=>`${Number(v||0).toLocaleString('ko-KR')}원`;

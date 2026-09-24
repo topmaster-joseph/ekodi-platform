@@ -1,19 +1,19 @@
 (() => {
   'use strict';
   const canonical = Object.freeze({
-    'admin.ekodi.kr': ['ekodi.kr/admin', 'https://ekodi.kr/admin/'],
-    'auth.ekodi.kr': ['ekodi.kr/auth', 'https://ekodi.kr/auth/'],
-    'my.ekodi.kr': ['ekodi.kr/my', 'https://ekodi.kr/my/'],
-    'church.ekodi.kr': ['ekodi.kr/ekodichurch', 'https://ekodi.kr/ekodichurch'],
-    'biz.ekodi.kr': ['ekodi.kr/ekodibiz', 'https://ekodi.kr/ekodibiz'],
-    'lab.ekodi.kr': ['ekodi.kr/ekodilab', 'https://ekodi.kr/ekodilab'],
-    'trade.ekodi.kr': ['ekodi.kr/ekodibiz/trade', 'https://ekodi.kr/ekodibiz/trade'],
-    'mall.ekodi.kr': ['ekodi.kr/ekodimall', 'https://ekodi.kr/ekodimall'],
-    'business.ekodi.kr': ['ekodi.kr/business', 'https://ekodi.kr/business'],
-    'cgma.ekodi.kr': ['ekodi.kr/cgma · cgma.or.kr', 'https://ekodi.kr/cgma'],
-    'jadam.ekodi.kr': ['ekodi.kr/jadam', 'https://ekodi.kr/jadam'],
-    'pizzamaru.ekodi.kr': ['ekodi.kr/pizzamaru', 'https://ekodi.kr/pizzamaru'],
-    'yogurt.ekodi.kr': ['ekodi.kr/yogurt', 'https://ekodi.kr/yogurt'],
+    'ekodi.kr/admin': ['ekodi.kr/admin', 'https://ekodi.kr/admin/'],
+    'ekodi.kr/auth': ['ekodi.kr/auth', 'https://ekodi.kr/auth/'],
+    'ekodi.kr/my': ['ekodi.kr/my', 'https://ekodi.kr/my/'],
+    'ekodi.kr/ekodichurch': ['ekodi.kr/ekodichurch', 'https://ekodi.kr/ekodichurch'],
+    'ekodi.kr/ekodibiz': ['ekodi.kr/ekodibiz', 'https://ekodi.kr/ekodibiz'],
+    'ekodi.kr/ekodilab': ['ekodi.kr/ekodilab', 'https://ekodi.kr/ekodilab'],
+    'ekodi.kr/ekodibiz/trade': ['ekodi.kr/ekodibiz/trade', 'https://ekodi.kr/ekodibiz/trade'],
+    'ekodi.kr/ekodimall': ['ekodi.kr/ekodimall', 'https://ekodi.kr/ekodimall'],
+    'ekodi.kr/business': ['ekodi.kr/business', 'https://ekodi.kr/business'],
+    'ekodi.kr/cgma': ['ekodi.kr/cgma · cgma.or.kr', 'https://ekodi.kr/cgma'],
+    'ekodi.kr/jadam': ['ekodi.kr/jadam', 'https://ekodi.kr/jadam'],
+    'ekodi.kr/pizzamaru': ['ekodi.kr/pizzamaru', 'https://ekodi.kr/pizzamaru'],
+    'ekodi.kr/yogurt': ['ekodi.kr/yogurt', 'https://ekodi.kr/yogurt'],
   });
   function hostOf(value) {
     const raw = String(value || '').trim();

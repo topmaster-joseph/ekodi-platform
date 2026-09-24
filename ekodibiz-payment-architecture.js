@@ -2,12 +2,12 @@ import revenueWorker, { RevenueStore } from './ekodibiz-worker.js';
 
 export { RevenueStore };
 
-const PAYMENT_CORE_URL = 'https://pay.ekodi.kr';
+const PAYMENT_CORE_URL = 'https://ekodi.kr/pay';
 const PAYMENT_GATEWAY_URL = 'https://ekodi.kr/ekodibiz/pay';
 
 function paymentSecurityHeaders(headers) {
   const next = new Headers(headers);
-  next.set('content-security-policy', "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://ekodi.kr https://pay.ekodi.kr");
+  next.set('content-security-policy', "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://ekodi.kr https://ekodi.kr/pay");
   return next;
 }
 
@@ -44,7 +44,7 @@ async function normalizePaymentContract(response, pathname) {
     body.checkoutUrl = null;
     body.approvalRequired = true;
     body.status = 'approval_required';
-    body.message = '에코디비즈 결제는 승인된 견적을 기준으로 ekodi.kr/ekodibiz/pay 계산대에서 시작하며, 실제 결제 처리는 공통 pay.ekodi.kr 결제코어가 담당합니다.';
+    body.message = '에코디비즈 결제는 승인된 견적을 기준으로 ekodi.kr/ekodibiz/pay 계산대에서 시작하며, 실제 결제 처리는 공통 ekodi.kr/pay 결제코어가 담당합니다.';
   }
 
   headers.set('content-type', 'application/json; charset=utf-8');

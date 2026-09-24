@@ -1,0 +1,164 @@
+name: Enforce EKODI Apex-Only Routing
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'config/domain-canonical-policy.json'
+      - 'governance/constitution/**'
+      - 'wrangler.site.toml'
+      - '.github/workflows/enforce-ekodi-apex-only.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-apex-only-domain-cleanup
+  cancel-in-progress: false
+
+jobs:
+  remove-ekodi-service-subdomains:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      ZONE_NAME: ekodi.kr
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify source policy
+        run: |
+          node scripts/zero-subdomain-guard.mjs
+      - name: Remove child-host serving boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CF_API_TOKEN"
+          test -n "$CF_ACCOUNT_ID"
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json')
+          cf_get(){ curl -fsS "${auth[@]}" "$1"; }
+          cf_delete(){ curl -fsS -X DELETE "${auth[@]}" "$1" >/dev/null; }
+          zone_json=$(cf_get "$api/zones?name=$ZONE_NAME&account.id=$CF_ACCOUNT_ID")
+          zone_id=$(printf '%s' "$zone_json" | python -c "import json,sys; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')")
+          test -n "$zone_id"
+
+          workers=$(cf_get "$api/accounts/$CF_ACCOUNT_ID/workers/domains")
+          printf '%s' "$workers" >/tmp/workers.json
+          python - /tmp/workers.json "$ZONE_NAME" >/tmp/workers.tsv <<'PY'
+          import json,sys
+          data=json.load(open(sys.argv[1])); apex=sys.argv[2].lower(); suffix='.'+apex
+          for row in data.get('result') or []:
+              host=(row.get('hostname') or '').rstrip('.').lower()
+              if host!=apex and host.endswith(suffix):
+                  print(row['id'],host,sep='\t')
+          PY
+          while IFS=$'\t' read -r id host; do
+            [ -n "${id:-}" ] || continue
+            echo "detach Worker child host: $host"
+            cf_delete "$api/accounts/$CF_ACCOUNT_ID/workers/domains/$id"
+          done </tmp/workers.tsv
+
+          projects=$(cf_get "$api/accounts/$CF_ACCOUNT_ID/pages/projects?per_page=100")
+          printf '%s' "$projects" | python -c "import json,sys; [print(x['name']) for x in (json.load(sys.stdin).get('result') or [])]" >/tmp/projects.txt
+          while IFS= read -r project; do
+            [ -n "$project" ] || continue
+            domains=$(cf_get "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains")
+            printf '%s' "$domains" >/tmp/pages.json
+            python - /tmp/pages.json "$ZONE_NAME" >/tmp/pages.txt <<'PY'
+          import json,sys
+          data=json.load(open(sys.argv[1])); apex=sys.argv[2].lower(); suffix='.'+apex
+          for row in data.get('result') or []:
+              host=(row.get('name') or '').rstrip('.').lower()
+              if host!=apex and host.endswith(suffix): print(host)
+          PY
+            while IFS= read -r host; do
+              [ -n "$host" ] || continue
+              echo "detach Pages child host: $project -> $host"
+              cf_delete "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains/$host"
+            done </tmp/pages.txt
+          done </tmp/projects.txt
+
+          routes=$(cf_get "$api/zones/$zone_id/workers/routes")
+          printf '%s' "$routes" >/tmp/routes.json
+          python - /tmp/routes.json "$ZONE_NAME" >/tmp/routes.tsv <<'PY'
+          import json,re,sys
+          data=json.load(open(sys.argv[1])); apex=sys.argv[2].lower(); suffix='.'+apex
+          for row in data.get('result') or []:
+              pattern=(row.get('pattern') or '').strip()
+              host=re.sub(r'^https?://','',pattern).split('/')[0].lstrip('*.').lower()
+              if host!=apex and host.endswith(suffix): print(row['id'],pattern,sep='\t')
+          PY
+          while IFS=$'\t' read -r id pattern; do
+            [ -n "${id:-}" ] || continue
+            echo "delete Worker child-host route: $pattern"
+            cf_delete "$api/zones/$zone_id/workers/routes/$id"
+          done </tmp/routes.tsv
+
+          : >/tmp/dns.tsv
+          page=1
+          while :; do
+            dns=$(cf_get "$api/zones/$zone_id/dns_records?per_page=100&page=$page")
+            printf '%s' "$dns" >/tmp/dns-page.json
+            python - /tmp/dns-page.json "$ZONE_NAME" >>/tmp/dns.tsv <<'PY'
+          import json,sys
+          data=json.load(open(sys.argv[1])); apex=sys.argv[2].lower(); suffix='.'+apex
+          serving={'A','AAAA','CNAME','HTTPS','SVCB'}
+          for row in data.get('result') or []:
+              host=(row.get('name') or '').rstrip('.').lower()
+              if row.get('type') in serving and host!=apex and host.endswith(suffix):
+                  print(row['id'],row.get('type',''),host,sep='\t')
+          PY
+            pages=$(python -c "import json; d=json.load(open('/tmp/dns-page.json')); print((d.get('result_info') or {}).get('total_pages',1))")
+            [ "$page" -ge "$pages" ] && break
+            page=$((page+1))
+          done
+          while IFS=$'\t' read -r id type host; do
+            [ -n "${id:-}" ] || continue
+            echo "delete serving DNS child host: $type $host"
+            cf_delete "$api/zones/$zone_id/dns_records/$id"
+          done </tmp/dns.tsv
+
+      - name: Verify zero child-host serving boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json')
+          zone_json=$(curl -fsS "${auth[@]}" "$api/zones?name=$ZONE_NAME&account.id=$CF_ACCOUNT_ID")
+          zone_id=$(printf '%s' "$zone_json" | python -c "import json,sys; d=json.load(sys.stdin); print(d['result'][0]['id'])")
+          workers=$(curl -fsS "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/workers/domains")
+          routes=$(curl -fsS "${auth[@]}" "$api/zones/$zone_id/workers/routes")
+          dns=$(curl -fsS "${auth[@]}" "$api/zones/$zone_id/dns_records?per_page=5000")
+          printf '%s' "$workers" >/tmp/v-workers.json
+          printf '%s' "$routes" >/tmp/v-routes.json
+          printf '%s' "$dns" >/tmp/v-dns.json
+          python - "$ZONE_NAME" <<'PY'
+          import json,re,sys
+          apex=sys.argv[1].lower(); suffix='.'+apex; bad=[]
+          for row in json.load(open('/tmp/v-workers.json')).get('result') or []:
+              host=(row.get('hostname') or '').rstrip('.').lower()
+              if host!=apex and host.endswith(suffix): bad.append('worker '+host)
+          for row in json.load(open('/tmp/v-routes.json')).get('result') or []:
+              p=(row.get('pattern') or '').strip(); host=re.sub(r'^https?://','',p).split('/')[0].lstrip('*.').lower()
+              if host!=apex and host.endswith(suffix): bad.append('route '+p)
+          serving={'A','AAAA','CNAME','HTTPS','SVCB'}
+          for row in json.load(open('/tmp/v-dns.json')).get('result') or []:
+              host=(row.get('name') or '').rstrip('.').lower()
+              if row.get('type') in serving and host!=apex and host.endswith(suffix): bad.append('dns '+row.get('type','')+' '+host)
+          if bad: raise SystemExit('child-host boundaries remain: '+', '.join(bad))
+          print('Cloudflare serving boundaries are apex-only.')
+          PY
+
+      - name: Verify canonical paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          failed=0
+          for p in / /admin/ /auth/ /api/health /my/ /ekodibiz /ekodichurch /ekodilab /books /community /work /education /life /energy /journal /marketing /ai; do
+            code=$(curl -L -sS -o /dev/null -w '%{http_code}' --connect-timeout 8 --max-time 25 "https://ekodi.kr$p" || true)
+            echo "https://ekodi.kr$p -> $code"
+            case "$code" in 2*|3*|401|403) ;; *) failed=1 ;; esac
+          done
+          exit "$failed"

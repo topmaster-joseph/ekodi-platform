@@ -1,8 +1,13 @@
 import sharedSiteWorker from './site-shell-worker.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 
-const PLATFORM_HOSTS=Object.freeze({'messenger.ekodi.kr':'messenger','invest.ekodi.kr':'invest'});
-function resolvedHost(request,env){const url=new URL(request.url);if(env?.ENVIRONMENT!=='staging')return url.hostname.toLowerCase();const simulated=String(request.headers.get('x-ekodi-staging-host')||'').trim().toLowerCase();return PLATFORM_HOSTS[simulated]?simulated:url.hostname.toLowerCase()}
+const PLATFORM_PATHS=Object.freeze({'/messenger':'messenger','/invest':'invest'});
+function platformRoute(pathname){
+  for(const [prefix,id] of Object.entries(PLATFORM_PATHS)){
+    if(pathname===prefix||pathname===prefix+'/'||pathname.startsWith(prefix+'/'))return {prefix,id};
+  }
+  return null;
+}
 
 function page(id){
   const messenger=id==='messenger';
@@ -24,4 +29,4 @@ function clientScript(){return `(()=>{\n'use strict';\nconst SUPABASE_URL='https
 function platformResponse(id){const response=new Response(page(id),{status:200,headers:{'content-type':'text/html; charset=utf-8','cache-control':'public, max-age=60','content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self' https://ekodi.kr https://renzehysxirjilvdxacv.supabase.co; img-src data:; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'",'strict-transport-security':'max-age=31536000; includeSubDomains','referrer-policy':'no-referrer','x-content-type-options':'nosniff','x-frame-options':'DENY','x-ekodi-route':`platform-${id}`}});return injectEkodiShell(response,id)}
 function scriptResponse(){return new Response(clientScript(),{status:200,headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff','cross-origin-resource-policy':'same-origin'}})}
 
-export default {async fetch(request,env,ctx){const host=resolvedHost(request,env),id=PLATFORM_HOSTS[host],url=new URL(request.url);if(id){if(url.pathname==='/'||url.pathname==='/index.html')return platformResponse(id);if(url.pathname==='/app.js')return scriptResponse();return new Response('Not Found',{status:404,headers:{'cache-control':'no-store'}})}return sharedSiteWorker.fetch(request,env,ctx)}};
+export default {async fetch(request,env,ctx){const url=new URL(request.url),route=platformRoute(url.pathname);if(route){const inner=url.pathname.slice(route.prefix.length)||'/';if(inner==='/'||inner==='/index.html')return platformResponse(route.id);if(inner==='/app.js')return scriptResponse();return new Response('Not Found',{status:404,headers:{'cache-control':'no-store'}})}return sharedSiteWorker.fetch(request,env,ctx)}};

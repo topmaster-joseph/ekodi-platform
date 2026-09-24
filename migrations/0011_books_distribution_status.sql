@@ -47,7 +47,7 @@ VALUES
   ('yes24', 'YES24 eBook', 'korea', '', 'https://www.yes24.com/company/faq.aspx', 'https://www.yes24.com/company/faq.aspx', 'unknown', 1, 40),
   ('aladin', '알라딘', 'korea', 'https://www.aladin.co.kr/supplier/wmain.aspx', 'https://www.aladin.co.kr/supplier/wfaq.aspx', 'https://www.aladin.co.kr/m/Supplier/mFaq.aspx', 'unknown', 1, 50),
   ('ridibooks', '리디', 'korea', 'https://cp.ridibooks.com/', 'https://ridihelp.ridibooks.com/support/solutions/folders/154000745770', 'https://ridihelp.ridibooks.com/support/solutions/articles/154000210043-%EC%BD%98%ED%85%90%EC%B8%A0-%EC%A0%9C%EA%B3%B5-%EB%B0%A9%EB%B2%95', 'unknown', 1, 60),
-  ('ekodi-direct', 'EKODI Direct', 'direct', 'https://books.ekodi.kr/', 'https://admin.ekodi.kr/books', 'https://books.ekodi.kr/publishing/', 'active', 1, 70)
+  ('ekodi-direct', 'EKODI Direct', 'direct', 'https://ekodi.kr/books/', 'https://ekodi.kr/admin/books', 'https://ekodi.kr/books/publishing/', 'active', 1, 70)
 ON CONFLICT(code) DO UPDATE SET
   name=excluded.name,
   scope=excluded.scope,

@@ -1,6 +1,6 @@
 {
   "apiBase": "https://ekodi.kr",
-  "publicBase": "https://tapo-bridge.example.ekodi.kr",
+  "publicBase": "https://ekodi.kr/example/tapo-bridge",
   "port": 8789,
   "ffmpegPath": "ffmpeg",
   "cameras": [

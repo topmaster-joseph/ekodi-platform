@@ -6,7 +6,7 @@ preview_urls = false
 
 [vars]
 DATA_MODE = "isolated-staging"
-AUTH_URL = "https://auth.ekodi.kr/?site=money"
+AUTH_URL = "https://ekodi.kr/auth/?site=money"
 ACCOUNTINFO_URL = "https://www.payinfo.or.kr/main/main.do"
 
 [assets]

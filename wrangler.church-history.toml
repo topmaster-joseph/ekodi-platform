@@ -7,7 +7,6 @@ preview_urls = false
 [vars]
 ENVIRONMENT = "production"
 ALLOWED_ORIGINS = "https://ekodi.kr"
-
 [[routes]]
 pattern = "ekodi.kr/ekodichurch/history*"
 zone_name = "ekodi.kr"

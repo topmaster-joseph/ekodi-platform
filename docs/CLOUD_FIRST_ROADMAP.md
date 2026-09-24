@@ -8,7 +8,7 @@ Move the entire EKODI ecosystem to a web/cloud-first operating model:
 - Codex Cloud is the primary development surface.
 - Cloudflare provides automated preview and production deployment.
 - `ekodi.kr` is the authenticated internal platform.
-- Public services are exposed as independent `*.ekodi.kr` subdomains.
+- Public services are exposed as independent `EKODI child-host address` subdomains.
 - Content-level edits should be possible from a web admin CMS without local tooling.
 
 ## Target domain map
@@ -16,20 +16,20 @@ Move the entire EKODI ecosystem to a web/cloud-first operating model:
 | Service | Domain | Access |
 | --- | --- | --- |
 | Platform | `ekodi.kr` | Login required |
-| Church | `church.ekodi.kr` | Public, EKCMS protected |
-| Mission | `mission.ekodi.kr` | Public |
-| Business hub | `biz.ekodi.kr` | Public |
-| Mall | `mall.ekodi.kr` | Public |
-| Trade | `trade.ekodi.kr` | Public, ERP protected |
-| Marketing AI | `marketing.ekodi.kr` | Public, admin protected |
-| Consulting | `consulting.ekodi.kr` | Public |
-| Media | `media.ekodi.kr` | Public |
-| Education | `education.ekodi.kr` | Public |
-| Publishing | `publishing.ekodi.kr` | Public |
-| Solutions | `solution.ekodi.kr` | Public |
-| ERP | `erp.ekodi.kr` | Login required |
-| Lab | `lab.ekodi.kr` | Public |
-| Community | `community.ekodi.kr` | Public |
+| Church | `ekodi.kr/ekodichurch` | Public, EKCMS protected |
+| Mission | `ekodi.kr/mission` | Public |
+| Business hub | `ekodi.kr/ekodibiz` | Public |
+| Mall | `ekodi.kr/ekodimall` | Public |
+| Trade | `ekodi.kr/ekodibiz/trade` | Public, ERP protected |
+| Marketing AI | `ekodi.kr/marketing` | Public, admin protected |
+| Consulting | `ekodi.kr/consulting` | Public |
+| Media | `ekodi.kr/media` | Public |
+| Education | `ekodi.kr/education` | Public |
+| Publishing | `ekodi.kr/publishing` | Public |
+| Solutions | `ekodi.kr/solution` | Public |
+| ERP | `ekodi.kr/erp` | Login required |
+| Lab | `ekodi.kr/ekodilab` | Public |
+| Community | `ekodi.kr/community` | Public |
 
 ## Migration principles
 

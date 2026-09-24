@@ -180,12 +180,12 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            root=$(curl -L -sS -D /tmp/edu-headers -o /tmp/edu.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/' || true)
-            admission=$(curl -L -sS -o /tmp/edu-admission.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/admission' || true)
-            study=$(curl -L -sS -o /tmp/edu-study.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/study' || true)
-            health=$(curl -sS -o /tmp/edu-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/health' || true)
-            config=$(curl -sS -o /tmp/edu-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/config.js' || true)
-            admin=$(curl -sS -o /dev/null -D /tmp/edu-admin-headers -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/admin' || true)
+            root=$(curl -L -sS -D /tmp/edu-headers -o /tmp/edu.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/education/' || true)
+            admission=$(curl -L -sS -o /tmp/edu-admission.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/education/admission' || true)
+            study=$(curl -L -sS -o /tmp/edu-study.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/education/study' || true)
+            health=$(curl -sS -o /tmp/edu-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/education/health' || true)
+            config=$(curl -sS -o /tmp/edu-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/education/config.js' || true)
+            admin=$(curl -sS -o /dev/null -D /tmp/edu-admin-headers -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/education/admin' || true)
             admin_redirect=false
             case "$admin" in 301|302|303|307|308) admin_redirect=true;; esac
             if [[ "$root" == '200' && "$admission" == '200' && "$study" == '200' && "$health" == '200' && "$config" == '200' && "$admin_redirect" == 'true' ]] \
