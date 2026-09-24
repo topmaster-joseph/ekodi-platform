@@ -1,5 +1,5 @@
 {
-  "version": "1.25.0",
+  "version": "1.26.0",
   "effectiveDate": "2026-09-24",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -41,7 +41,8 @@
     "authentication-return-continuity",
     "canonical-human-url-without-tracking-query",
     "evidence-gated-ai-claims",
-    "evidence-gated-external-knowledge"
+    "evidence-gated-external-knowledge",
+    "shared-admin-ui-baseline-enforced"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -303,7 +304,9 @@
       "ai-knowledge-claim.js",
       "scripts/validate-ai-knowledge-claim.mjs",
       "config/knowledge-source-registry.json",
-      "scripts/validate-capability-first-service-creation.mjs"
+      "scripts/validate-capability-first-service-creation.mjs",
+      "config/admin-ui-baseline-policy.json",
+      "scripts/validate-admin-ui-baseline.mjs"
     ],
     "owner": "topmaster-joseph",
     "rule": "C2/C3 changes are proposed first and applied only after explicit owner confirmation."
@@ -1081,5 +1084,51 @@
       "admin"
     ],
     "grandfatheredListExpansionRequiresConstitutionalAmendment": true
+  },
+  "adminUiBaselinePolicy": {
+    "id": "ADMIN-UI-BASELINE-001",
+    "status": "enforced",
+    "appliesToAllCurrentAndFutureAdminSurfaces": true,
+    "inheritedBy": [
+      "platform-super-admin",
+      "middle-admin",
+      "workspace-admin",
+      "service-admin",
+      "sub-admin"
+    ],
+    "sharedShellFirst": true,
+    "pageLocalTemporaryCompositionForbidden": true,
+    "workSpecificContentOnlyAfterBaseline": true,
+    "requiredStructure": [
+      "fixed-left-navigation",
+      "top-breadcrumb",
+      "large-title-and-single-line-description",
+      "core-kpi-cards",
+      "quick-actions",
+      "integrated-management-list",
+      "right-help-guide-panel"
+    ],
+    "settingsWorkflow": [
+      "status",
+      "configure",
+      "execute",
+      "result"
+    ],
+    "sameWorkspaceLifecycleRequired": true,
+    "scatteredSettingsForbidden": true,
+    "responsiveReflowRequired": true,
+    "rightHelpGuideResponsiveMode": "desktop-right-rail-narrow-inline-or-drawer",
+    "newAdminSurfaceMustConformBeforeMerge": true,
+    "existingSurfaceDriftRequiresSharedRemediation": true,
+    "exceptionRequiresConstitutionalAmendment": true,
+    "machinePolicy": "config/admin-ui-baseline-policy.json",
+    "humanPolicy": "ADMIN_UI_PRINCIPLES.md",
+    "enforcement": [
+      "validate:admin-ui-baseline",
+      "validate:design-engine",
+      "shared-admin-shell",
+      "central-pr-gate"
+    ],
+    "finalAuthority": "ekodi_platform_super_administrator"
   }
 }
