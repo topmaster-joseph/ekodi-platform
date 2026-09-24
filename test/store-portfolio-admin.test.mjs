@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { storePortfolioAdminPage, storePortfolioAdminPanelPage, CMPMYI_STORES, CMPMYI_ADMIN_SECTIONS, CMPMYI_COMMON_MENU } from '../store-portfolio-admin-page.js';
 import platformEntry from '../platform-router-entry-worker.js';
+import { storeAdminPage } from '../store-admin-engine.js';
 import { ADMIN_MENU_REGISTRY } from '../admin-menu-registry.js';
 
 test('cmpmyi admin provides fixed common and brand navigation with a right workspace',async()=>{
@@ -58,7 +59,7 @@ test('router serves cmpmyi common panels and same-origin embedded canonical stor
   assert.match(embedded.headers.get('content-security-policy')||'',/frame-ancestors 'self'/);
   assert.match(embeddedHtml,/data-ekodi-embedded-admin="true"/);
 
-  const direct=await platformEntry.fetch(new Request('https://ekodi.kr/jadam/admin/menu'),{},{});
+  const direct=storeAdminPage({slug:'jadam',name:'자담치킨 목포대점',id:'4b1e5933-b9ae-4cb9-9d31-dcbb0a5b25aa',mark:'JD',brand:'JADAM CHICKEN',pathname:'/jadam/admin/menu'});
   assert.equal(direct.status,200);
   assert.equal(direct.headers.get('x-frame-options'),'DENY');
   assert.equal(direct.headers.get('x-ekodi-embedded-admin'),'none');
