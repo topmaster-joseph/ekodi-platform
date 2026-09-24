@@ -47,3 +47,17 @@ EKODI never automatically upgrades a paid plan.
 - Workers Builds pressure may bypass the Builds product by retaining GitHub Actions + Wrangler when that path is healthy.
 - Workers runtime quota exhaustion may use an already registered static/cache degraded path only for non-security-critical traffic.
 - Security-critical auth/admin routes fail closed rather than bypassing a Worker security boundary.
+
+
+## Executable runtime decision
+
+The policy is not declaration-only. `scripts/resolve-deployment-four-layer.mjs` consumes the measured Production Cloudflare quota report and records the selected layer/action in GitHub Actions.
+
+For a normal code release:
+- `normal` / `warning`: Layer 2 Guarded Deploy proceeds with full verification.
+- `protect`: Layer 2 proceeds, but nonessential verification is reduced; essential security/admin verification remains.
+- `exhausted`: Layer 2 completes CI, staging and immutable release-artifact continuity, then enters `prepare-and-hold` before any production mutation or live Worker probe. The same verified source/artifact must be used when the measured quota resets.
+- Cloud Control is never used to bypass runtime quota or as a second Worker deployment lane.
+- Paid plan/limit changes remain Layer 4 Owner decisions only.
+
+This distinction matters because Workers Free runtime requests reset daily, while Workers Builds has a separate monthly build-minute/concurrency model. GitHub Actions + Wrangler remains the canonical release transport; it does not turn Cloudflare Workers Builds into a required dependency.
