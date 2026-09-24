@@ -312,7 +312,7 @@ jobs:
           fi
 
           failed_log="$(gh run view "$prior_id" --log-failed 2>&1 || true)"
-          if printf '%s' "$failed_log" | grep -Fq 'Cloudflare Workers quota exhausted; production promotion/probes stopped before any live Worker verification.'; then
+          if printf '%s' "$failed_log" | grep -Eq 'Cloudflare Workers quota exhausted; production promotion/probes stopped before any live Worker verification\.|Cloudflare Workers runtime quota is exhausted\. EKODI completed CI, staging and immutable artifact continuity'; then
             echo "proceed=true" >> "$GITHUB_OUTPUT"
             echo "reason=quota-reset-retry" >> "$GITHUB_OUTPUT"
             echo "Scheduled retry accepted: prior canonical release $prior_id stopped only because the daily Workers request quota circuit was open."
