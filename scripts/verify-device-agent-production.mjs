@@ -17,7 +17,6 @@ const DESKTOP_SESSION_EXECUTE = 'computer.desktop.session.execute';
 const DEFAULT_TARGET_WAIT_MS = 120_000;
 const DEFAULT_COMMAND_WAIT_MS = 240_000;
 const DEFAULT_POLL_MS = 5_000;
-// legacy contract marker: nativeServiceReady:false — readiness is now computed only after bounded session proof.
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const time = value => {
@@ -48,6 +47,65 @@ export function chooseLiveWindowsAgent(devices = []) {
   return [...devices]
     .filter(isEligibleLiveWindowsAgent)
     .sort((a, b) => time(b.lastSeenAt) - time(a.lastSeenAt))[0] || null;
+}
+
+export function summarizeDeviceAvailability(devices = []) {
+  const statusCounts = {};
+  for (const device of devices) {
+    const status = String(device?.status || 'unknown');
+    statusCounts[status] = (statusCounts[status] || 0) + 1;
+  }
+  return {
+    total:devices.length,
+    statusCounts,
+    eligibleOnlineCount:devices.filter(isEligibleLiveWindowsAgent).length,
+  };
+}
+
+export class NoOnlineWindowsAgentError extends Error {
+  constructor(devices = []) {
+    const availability = summarizeDeviceAvailability(devices);
+    super(`No online enrolled Windows PC was available: ${JSON.stringify(availability)}`);
+    this.name = 'NoOnlineWindowsAgentError';
+    this.code = 'NO_ONLINE_ENROLLED_WINDOWS_AGENT';
+    this.availability = availability;
+  }
+}
+
+export function buildDeferredDeviceVerification({ devices = [], expectedVersion, observedAt = new Date().toISOString() } = {}) {
+  const availability = summarizeDeviceAvailability(devices);
+  return {
+    schemaVersion:1,
+    ok:false,
+    deferred:true,
+    verificationState:'DEFERRED_NO_ONLINE_TARGET',
+    verifiedAt:null,
+    observedAt,
+    expectedAgentVersion:String(expectedVersion || ''),
+    nativeCapabilityGap:'native-capability-unavailable',
+    retryPolicy:'hourly-main-schedule',
+    target:{
+      reference:'real-enrolled-windows-agent',
+      available:false,
+      total:availability.total,
+      statusCounts:availability.statusCounts,
+      eligibleOnlineCount:availability.eligibleOnlineCount,
+    },
+    cutover:{
+      preVerification:{browserWorkerActivated:false},
+      browserWorkerActivated:false,
+      nativeBrowserOperationServiceReady:false,
+      nativeServiceReady:false,
+      nativeRemoteComputerFullyReady:false,
+      boundedSessionExecutorReady:false,
+      isolatedDesktopCanaryVerified:false,
+      isolatedDesktopGuestCanaryVerified:false,
+      isolatedDesktopUiCanaryVerified:false,
+      isolatedDesktopSessionCanaryVerified:false,
+      isolatedDesktopReady:false,
+      reason:'no-online-enrolled-windows-agent',
+    },
+  };
 }
 
 function commandFor(device, commandId) {
@@ -747,9 +805,7 @@ async function waitForTarget(token, timeoutMs, pollMs) {
     if (target) return target;
     await sleep(pollMs);
   }
-  const counts = {};
-  for (const device of last) counts[device.status || 'unknown'] = (counts[device.status || 'unknown'] || 0) + 1;
-  throw new Error(`No online enrolled Windows PC was available: ${JSON.stringify({total:last.length,statusCounts:counts})}`);
+  throw new NoOnlineWindowsAgentError(last);
 }
 
 async function issueCommand(token, deviceId, type, payload = undefined) {
@@ -790,8 +846,29 @@ async function run() {
   const targetWaitMs = Number(process.env.DEVICE_TARGET_WAIT_MS || DEFAULT_TARGET_WAIT_MS);
   const commandWaitMs = Number(process.env.DEVICE_COMMAND_WAIT_MS || DEFAULT_COMMAND_WAIT_MS);
   const pollMs = Number(process.env.DEVICE_VERIFY_POLL_MS || DEFAULT_POLL_MS);
+  const deferIfOffline = String(process.env.DEVICE_DEFER_IF_OFFLINE || '') === '1';
+  const artifactDir = path.join(repoRoot, 'artifacts');
+  const artifactPath = path.join(artifactDir, 'device-agent-production-verification.json');
+  fs.mkdirSync(artifactDir, { recursive:true });
 
-  const target = await waitForTarget(token, targetWaitMs, pollMs);
+  let target;
+  try {
+    target = await waitForTarget(token, targetWaitMs, pollMs);
+  } catch (error) {
+    if (deferIfOffline && error?.code === 'NO_ONLINE_ENROLLED_WINDOWS_AGENT') {
+      const deferred = buildDeferredDeviceVerification({
+        devices:Array.from({ length:Number(error.availability?.total || 0) }, () => ({ status:'unknown' })),
+        expectedVersion,
+      });
+      deferred.target.statusCounts = { ...(error.availability?.statusCounts || {}) };
+      deferred.target.eligibleOnlineCount = Number(error.availability?.eligibleOnlineCount || 0);
+      deferred.target.total = Number(error.availability?.total || 0);
+      fs.writeFileSync(artifactPath, JSON.stringify(deferred, null, 2));
+      console.log(`[EKODI][DEVICE-LIVE-VERIFY] ${deferred.verificationState}: all enrolled Windows agents are currently unavailable; hourly native retry remains scheduled.`);
+      return deferred;
+    }
+    throw error;
+  }
   const initialLastSeenAt = target.lastSeenAt;
 
   const updateCommand = await issueCommand(token, target.id, SELF_UPDATE);
@@ -917,10 +994,9 @@ async function run() {
               : (desktopCanaryVerification.verified === true ? 'native-hyperv-canary-verified-guest-execution-pending' : 'native-browser-runtime-verified-isolated-desktop-pending'))))
     },
   };
-  const artifactDir = path.join(repoRoot, 'artifacts');
-  fs.mkdirSync(artifactDir, { recursive:true });
-  fs.writeFileSync(path.join(artifactDir, 'device-agent-production-verification.json'), JSON.stringify(summary, null, 2));
+  fs.writeFileSync(artifactPath, JSON.stringify(summary, null, 2));
   console.log(`[EKODI] Real Device Agent ${expectedVersion} verification completed; available native browser, guest-runtime, semantic-UI, session-canary and bounded-v1 session stages were verified. Unbounded desktop execution remains forbidden.`);
+  return summary;
 }
 
 const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
