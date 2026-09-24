@@ -95,7 +95,12 @@
       "guestCanaryRequiredBeforeExecution": true,
       "guestCanaryDoesNotEnableExecution": true,
       "guestCredentialsForbidden": true,
-      "offlineTaskReceiptTransportRequired": true
+      "offlineTaskReceiptTransportRequired": true,
+      "uiCanaryCommand": "computer.desktop.ui.canary",
+      "uiCanaryRequiredBeforeExecution": true,
+      "uiCanaryDoesNotEnableGeneralExecution": true,
+      "semanticUiAutomationPreferredForCanary": true,
+      "lowLevelGuestInputInjectionForbiddenForCanary": true
     },
     "foregroundTakeover": {
       "automaticFallback": false,

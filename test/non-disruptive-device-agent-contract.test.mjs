@@ -11,12 +11,13 @@ const [agent, policyRaw, admin, windowsWorkflow] = await Promise.all([
 const policy = JSON.parse(policyRaw);
 
 test('Windows Agent enables only the canary-gated background browser while isolated desktop stays disabled', () => {
-  assert.match(agent, /\$AgentVersion = '2\.3\.3'/);
+  assert.match(agent, /\$AgentVersion = '2\.3\.4'/);
   assert.match(agent, /backgroundBrowserCanary = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /backgroundBrowser = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktopProbe = \$true/);
   assert.match(agent, /isolatedDesktopCanary = \[bool\]\(Get-IsolatedDesktopCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktopGuestCanary = \[bool\]\(Get-IsolatedDesktopGuestCanaryState\)\.verified/);
+  assert.match(agent, /isolatedDesktopUiCanary = \[bool\]\(Get-IsolatedDesktopUiCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktop = \$false/);
   assert.match(agent, /desktopInput = \$false/);
 });
@@ -38,6 +39,7 @@ test('Agent status and admin UI expose non-disruptive readiness without enabling
   assert.match(agent, /isolatedDesktopProbeAvailable = \$true/);
   assert.match(agent, /isolatedDesktopCanaryVerified = \[bool\]\(Get-IsolatedDesktopCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktopGuestCanaryVerified = \[bool\]\(Get-IsolatedDesktopGuestCanaryState\)\.verified/);
+  assert.match(agent, /isolatedDesktopUiCanaryVerified = \[bool\]\(Get-IsolatedDesktopUiCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktopReady = \$false/);
   assert.match(agent, /minimizedWindowCountsAsIsolation = \$false/);
   assert.match(admin, /사용자 화면 보호가 기본입니다/);
@@ -115,4 +117,20 @@ test('guest runtime proof remains networkless, credentialless and non-interactiv
   assert.match(agent, /credentialCollection/);
   assert.match(agent, /hostProfileMounted/);
   assert.doesNotMatch(agent, /isolatedDesktop = \$true/);
+});
+
+
+test('semantic isolated guest UI canary never touches the host interactive desktop', () => {
+  assert.match(agent, /computer\.desktop\.ui\.canary/);
+  assert.match(agent, /isolated_guest_runtime_canary_required/);
+  assert.match(agent, /guest\.ui\.probe/);
+  assert.match(agent, /semanticUiAutomation/);
+  assert.match(agent, /lowLevelInputInjection/);
+  assert.match(agent, /hostInteractiveDesktopUsed/);
+  assert.match(agent, /syntheticUiOnly/);
+  assert.match(agent, /isolatedDesktopUiCanary = \[bool\]\(Get-IsolatedDesktopUiCanaryState\)\.verified/);
+  assert.match(agent, /isolatedDesktop = \$false/);
+  assert.equal(policy.nonDisruptiveExecution.isolatedDesktop.uiCanaryCommand, 'computer.desktop.ui.canary');
+  assert.equal(policy.nonDisruptiveExecution.isolatedDesktop.uiCanaryRequiredBeforeExecution, true);
+  assert.equal(policy.nonDisruptiveExecution.isolatedDesktop.lowLevelGuestInputInjectionForbiddenForCanary, true);
 });

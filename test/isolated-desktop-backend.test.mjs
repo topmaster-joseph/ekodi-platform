@@ -7,7 +7,7 @@ const api=fs.readFileSync(new URL('../device-control.js',import.meta.url),'utf8'
 const policy=JSON.parse(fs.readFileSync(new URL('../config/isolated-desktop-backend-policy.json',import.meta.url),'utf8'));
 
 test('isolated desktop capability probe never silently activates desktop execution',()=>{
-  assert.match(agent,/\$AgentVersion = '2\.3\.3'/);
+  assert.match(agent,/\$AgentVersion = '2\.3\.4'/);
   assert.match(agent,/function Get-IsolatedDesktopBackendProbe/);
   assert.match(agent,/computer\.desktop\.probe/);
   assert.match(agent,/isolatedDesktopProbe = \$true/);
@@ -77,4 +77,19 @@ test('guest runtime canary stages tasks offline and keeps full desktop execution
   assert.equal(policy.guestAgent.guestCredentialsRequired,false);
   assert.equal(policy.guestAgent.transport,'offline-differencing-vhdx-task-and-receipt');
   assert.equal(policy.guestCanary.executionCapabilityAfterGuestCanary,false);
+});
+
+
+test('semantic guest UI canary remains isolated and cannot unlock general desktop execution',()=>{
+  assert.match(agent,/computer\.desktop\.ui\.canary/);
+  assert.match(agent,/function Invoke-IsolatedDesktopGuestUiCanary/);
+  assert.match(agent,/type = 'guest\.ui\.probe'/);
+  assert.match(agent,/semanticUiAutomation/);
+  assert.match(agent,/lowLevelInputInjection/);
+  assert.match(agent,/hostInteractiveDesktopUsed/);
+  assert.match(agent,/isolatedDesktopUiCanary = \[bool\]\(Get-IsolatedDesktopUiCanaryState\)\.verified/);
+  assert.match(agent,/isolatedDesktop = \$false/);
+  assert.equal(policy.activation.uiCanaryCommand,'computer.desktop.ui.canary');
+  assert.equal(policy.uiCanary.expectedResultCode,'EKODI_UI_OK');
+  assert.equal(policy.uiCanary.generalDesktopExecutionCapabilityAfterUiCanary,false);
 });
