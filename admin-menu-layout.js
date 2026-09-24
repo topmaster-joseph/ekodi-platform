@@ -210,8 +210,6 @@ nav.addEventListener('click',event=>{
   if(!item)return;
   if(isInternalNav(item)){event.preventDefault();event.stopImmediatePropagation();return routeInternal();}
   const section=sectionOf(item);if(!section)return;dc=false;
-  const definition=getAdminMenuItem(section);
-  if(definition?.href&&definition.adminHandoff===true)return;
   if(section==='sites'){event.preventDefault();event.stopImmediatePropagation();return openSites();}
   requestedSection=section;window.setTimeout(()=>{if(!activatePanel(section))requestDemand(section);},0);
 },true);
