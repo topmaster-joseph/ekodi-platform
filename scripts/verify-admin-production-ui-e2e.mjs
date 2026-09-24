@@ -1,3 +1,5 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { chromium } from 'playwright';
 import { adminMenuOrder, getAdminMenuGroupForSection, getAdminMenuItem } from '../admin-menu-registry.js';
 
@@ -7,6 +9,8 @@ const SYNTHETIC_EMAIL = 'production-ui-e2e@local.invalid';
 const menuIds = adminMenuOrder();
 const menus = menuIds.map(id => [id, getAdminMenuGroupForSection(id)]);
 const workAreas = [...new Set(menus.map(([, group]) => group))];
+const artifactsDir = path.resolve('artifacts/admin-production-ui-e2e');
+await fs.mkdir(artifactsDir, { recursive:true });
 
 if (menus.some(([id, group]) => !id || !group)) throw new Error('Admin menu registry contains an ungrouped visible menu');
 
@@ -135,6 +139,7 @@ if (!['auto','scroll'].includes(workbenchState.workspaceOverflowY) || workbenchS
 if (workbenchState.contextTabsPosition !== 'sticky' || workbenchState.sidebarTop !== 0) throw new Error(`Admin fixed workbench geometry failed: ${JSON.stringify(workbenchState)}`);
 if (!workbenchState.designEngine || workbenchState.designAudit === 'fail') throw new Error(`Admin Design Engine did not activate cleanly: ${JSON.stringify(workbenchState)}`);
 console.log(`ADMIN_WORKBENCH=${JSON.stringify(workbenchState)}`);
+await page.screenshot({ path:path.join(artifactsDir,'admin-workbench.png'), fullPage:false });
 
 const assetVersion = await page.locator('script[src*="admin-authenticated-shell.js?v="]').getAttribute('src').then(src => new URL(src, ADMIN_URL).searchParams.get('v'));
 if (!assetVersion) throw new Error('Production Admin fingerprint is missing');
@@ -259,6 +264,7 @@ for (const [id, group] of menus) {
     if (command.pathname !== '/admin/' || command.textLength < 1 || command.width < 1 || command.height < 1) throw new Error(`command-home did not render the root workbench: ${JSON.stringify(command)}`);
     results.push({ id, group, kind:'command-workbench', ok:true, detail:`ekodiAssistPanel:${command.textLength}` });
     console.log(`[PROD-E2E] ${id}: ok command-workbench:${command.textLength}`);
+    await page.screenshot({ path:path.join(artifactsDir,`menu-${id}.png`), fullPage:false });
     continue;
   }
 
@@ -289,6 +295,7 @@ for (const [id, group] of menus) {
   if (id === 'campus' && visiblePanel.id !== 'campusPanel') throw new Error(`Campus rendered unexpected panel: ${visiblePanel.id || '(no id)'}`);
   results.push({ id, group, kind: 'panel', ok: true, detail: `${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}` });
   console.log(`[PROD-E2E] ${id}: ok ${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}`);
+  await page.screenshot({ path:path.join(artifactsDir,`menu-${id}.png`), fullPage:false });
 
   // This verifier uses a synthetic UI-only token. Reload after each menu so a
   // backend 401 from one lazy module cannot hide the shell and poison later UI checks.
@@ -310,5 +317,6 @@ if (fatalErrors.length) {
   throw new Error('Production Admin emitted page errors during menu E2E');
 }
 if (activeCount !== menus.length) throw new Error(`Expected ${menus.length} verified menus, received ${activeCount}`);
+await page.screenshot({ path:path.join(artifactsDir,'admin-final.png'), fullPage:false });
 
 await browser.close();
