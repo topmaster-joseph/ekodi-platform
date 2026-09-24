@@ -1,0 +1,57 @@
+{
+  "amendmentId": "ADMIN-UI-BASELINE-20260924",
+  "constitutionVersion": "1.26.0",
+  "approvedAt": "2026-09-24",
+  "changeClass": "C2",
+  "taskId": "admin-ui-baseline-20260924",
+  "summary": "Make the shared EKODI administrator UI baseline mandatory across super, middle, workspace, service and sub-administrator surfaces, with one shared structure and a same-workspace status-to-result settings lifecycle.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly instructed that the administrator UI baseline be established as a mandatory constitutional and execution-layer rule after defining the required shared structure.",
+  "implementation": [
+    "ADMIN-UI-BASELINE-001 in governance/constitution/constitution.json",
+    "config/admin-ui-baseline-policy.json",
+    "config/design-engine.json admin baseline binding",
+    "ADMIN_UI_PRINCIPLES.md human-readable mandatory rule",
+    "AGENTS.override.md mandatory execution instruction",
+    "scripts/validate-admin-ui-baseline.mjs CI enforcement",
+    "package.json validation gates"
+  ],
+  "requiredStructure": [
+    "fixed-left-navigation",
+    "top-breadcrumb",
+    "large-title-and-single-line-description",
+    "core-kpi-cards",
+    "quick-actions",
+    "integrated-management-list",
+    "right-help-guide-panel"
+  ],
+  "validation": [
+    "npm run validate:admin-ui-baseline",
+    "npm run validate:design-engine",
+    "npm run validate:constitution",
+    "npm run check"
+  ],
+  "rollback": "Revert constitution v1.26.0 and ADMIN-UI-BASELINE-001 policy bindings to v1.25.0 while preserving unrelated administrator routing, authentication, verification and Design Engine improvements.",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalEvidence": {
+    "explicitOwnerInstruction": true,
+    "ownerInstructionDate": "2026-09-24",
+    "requiredPullRequestLabel": "constitution-approved",
+    "approvalLabel": "constitution-approved",
+    "pullRequest": 2529,
+    "constitutionApprovedLabelApplied": true,
+    "relatedChangeReview": {
+      "reviewedPullRequest": 2525,
+      "evidenceCommentId": 5806661101,
+      "currentPullRequest": 2529,
+      "integrationOrder": "2525-merged-first-then-2529-reconciled-on-current-main",
+      "labels": [
+        "integration-order-approved",
+        "related-change-review-complete"
+      ],
+      "plannedIntegrationOrder": "2529-first-then-2525-refresh-on-main",
+      "reconciliation": "Preserve PR #2525 Mall implementation and Section 26 operator-first rule; layer ADMIN-UI-BASELINE-001 above it as the constitutional/shared Design Engine authority.",
+      "reconciledMainCommit": "6e565469951ca6896af2ea679c0491c7d7a33447"
+    }
+  }
+}

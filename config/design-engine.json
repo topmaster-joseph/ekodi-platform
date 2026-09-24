@@ -243,13 +243,15 @@
       "nestedScroll": "tables-and-explicit-data-views-only"
     },
     "pageAnatomy": [
-      "left navigation: seven primary areas only",
-      "context tabs: authorized second-level functions for the active area",
-      "workspace header: title + purpose + status + primary actions",
-      "optional KPI/status summary",
-      "primary workbench",
-      "persistent bottom EKODI command composer",
-      "detail drawer or modal only when needed"
+      "fixed left navigation",
+      "top breadcrumb",
+      "context tabs when applicable",
+      "large title + single-line description",
+      "core KPI cards",
+      "quick actions",
+      "integrated management list/workbench",
+      "right help/guide panel",
+      "persistent bottom EKODI command composer"
     ],
     "densityProfiles": {
       "standard": "readable default",
@@ -277,6 +279,29 @@
       "contentOverlapForbidden": true,
       "humanPathRequired": true,
       "highRiskActions": "existing approval and audit boundaries remain authoritative"
+    },
+    "baselinePolicy": "config/admin-ui-baseline-policy.json",
+    "baselinePolicyId": "ADMIN-UI-BASELINE-001",
+    "baselineRequiredRegions": [
+      "fixed-left-navigation",
+      "top-breadcrumb",
+      "large-title-and-single-line-description",
+      "core-kpi-cards",
+      "quick-actions",
+      "integrated-management-list",
+      "right-help-guide-panel"
+    ],
+    "settingsWorkflow": [
+      "status",
+      "configure",
+      "execute",
+      "result"
+    ],
+    "settingsWorkflowSameWorkspaceByDefault": true,
+    "rightHelpGuidePanel": {
+      "required": true,
+      "desktop": "right-rail",
+      "narrow": "inline-or-drawer"
     }
   },
   "user": {
