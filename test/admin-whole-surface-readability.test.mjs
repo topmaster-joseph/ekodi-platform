@@ -36,6 +36,9 @@ test('shared Admin Shell v3 provides one readability and mobile contract for old
   assert.match(shell,/height:auto!important;min-height:calc\(100dvh - 56px\)!important;overflow:visible!important/);
   assert.match(shell,/min-height:44px/);
   assert.match(shell,/audit:auditState/);
+  assert.match(shell,/ekodiAdminTopbarMode=hasSidebar\?'redundant':'standalone'/);
+  assert.match(shell,/data-ekodi-admin-topbar-mode="redundant"/);
+  assert.match(shell,/data-ekodi-admin-legacy-sidebar="true"/);
 });
 
 test('representative administrator surfaces keep security and no command-home leakage',async()=>{
