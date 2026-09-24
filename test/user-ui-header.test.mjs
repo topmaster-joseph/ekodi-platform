@@ -47,7 +47,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.equal(EKODI_USER_FOOTER.contact.email,'ekodibiz@gmail.com');
   assert.match(EKODI_USER_FOOTER.precedenceNotice,/별도 정책이 표시된 경우 해당 정책이 우선 적용됩니다/);
   const renderedFooter=renderEkodiUserFooter();
-  assert.match(renderedFooter,/data-ekodi-user-footer="v3"/);
+  assert.match(renderedFooter,/data-ekodi-user-footer="v4"/);
   assert.match(renderedFooter,/data-ekodi-legal-footer="user-shell-v2"/);
   assert.match(renderedFooter,/ekodi-user-ui-footer__copy/);
   assert.match(renderedFooter,/data-ekodi-i18n="privacy"/);
