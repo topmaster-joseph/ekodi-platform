@@ -20,6 +20,7 @@ const recognizedHosts=new Set([
   ...(domainPolicy.legacyDomainAllowlist||[]),
   ...(domainPolicy.registeredCommonServiceBoundaries||[]),
   ...(domainPolicy.registeredCoreServiceBoundaries||[]),
+  ...Object.keys(domainPolicy.legacyDomainTargets||{}),
 ]);
 
 const seenIds=new Set(),seenPrefixes=new Set();
