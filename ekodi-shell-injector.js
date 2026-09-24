@@ -58,6 +58,7 @@ function shellCsp(csp){
   return next;
 }
 
+function visualLoadSeed(){try{const values=new Uint32Array(1);crypto.getRandomValues(values);return values[0].toString(36);}catch{return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,10)}`;}}
 function cleanSurface(value){const v=String(value||'').trim().toLowerCase();return /^[a-z-]{1,24}$/.test(v)?v:'';}
 function cleanServiceId(value){return String(value||'').trim().toLowerCase().replace(/[^a-z0-9-]/g,'');}
 function escapeHtml(value){return String(value||'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));}
@@ -111,7 +112,7 @@ class ShellHeadInjector{
 }
 
 class UserUiHtmlInjector{
-  constructor(serviceId,surface,uiSurface,progressiveHome=false){this.serviceId=serviceId;this.surface=surface;this.uiSurface=uiSurface;this.progressiveHome=progressiveHome;}
+  constructor(serviceId,surface,uiSurface,progressiveHome=false){this.serviceId=serviceId;this.surface=surface;this.uiSurface=uiSurface;this.progressiveHome=progressiveHome;this.visualSeed=visualLoadSeed();}
   element(element){
     const service=cleanServiceId(this.serviceId)||'ekodi';
     element.setAttribute('data-ekodi-user-ui',USER_UI_VERSION);
@@ -120,6 +121,8 @@ class UserUiHtmlInjector{
     element.setAttribute('data-ekodi-ui-surface',this.uiSurface||uiSurfaceFor(service,this.surface));
     if(this.progressiveHome)element.setAttribute('data-ekodi-home-focus-request','v1');
     element.setAttribute('data-ekodi-user-layout',USER_LAYOUT_VERSION);
+    element.setAttribute('data-ekodi-visual-state','pending');
+    element.setAttribute('data-ekodi-visual-seed',this.visualSeed);
     element.setAttribute('data-ekodi-ready-locales',readyLocalesForService(service));
     if(serviceOwnsFooter(service))element.setAttribute('data-ekodi-footer-mode','service');
   }

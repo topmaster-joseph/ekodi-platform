@@ -239,6 +239,25 @@
       "requiresExplicitClassification": true,
       "publicRootBehavior": "safe-public-landing-or-privacy-notice",
       "permissionErrorAsLandingForbidden": true
+    },
+    "visualContinuity": {
+      "policyId": "PUBLIC-VISUAL-CONTINUITY-001",
+      "inheritedByAllUserSurfaces": true,
+      "scope": [
+        "public",
+        "workspace"
+      ],
+      "transientConditionalVisualFlashForbidden": true,
+      "unresolvedDecorativeState": "hidden-until-resolved",
+      "backgroundVariation": {
+        "trigger": "top-level-navigation-or-reload",
+        "approvedPaletteOnly": true,
+        "stableForDocumentLifetime": true,
+        "maxBackgroundMixPercent": 6,
+        "timerDrivenMutationForbidden": true,
+        "preserveServiceVisualFamily": true
+      },
+      "implementationOwner": "shared-shell"
     }
   },
   "authenticationReturnPolicy": {

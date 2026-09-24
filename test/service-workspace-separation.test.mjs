@@ -43,4 +43,10 @@ test('canonical public user pages are guest-open and login only enhances capabil
   assert.equal(rule.permissionFailureBehavior, 'retain-safe-public-projection');
   assert.equal(rule.explicitPrivateException.requiresExplicitClassification, true);
   assert.equal(rule.explicitPrivateException.permissionErrorAsLandingForbidden, true);
+  assert.equal(rule.visualContinuity.policyId, 'PUBLIC-VISUAL-CONTINUITY-001');
+  assert.equal(rule.visualContinuity.inheritedByAllUserSurfaces, true);
+  assert.equal(rule.visualContinuity.transientConditionalVisualFlashForbidden, true);
+  assert.equal(rule.visualContinuity.backgroundVariation.trigger, 'top-level-navigation-or-reload');
+  assert.equal(rule.visualContinuity.backgroundVariation.stableForDocumentLifetime, true);
+  assert.ok(rule.visualContinuity.backgroundVariation.maxBackgroundMixPercent <= 6);
 });
