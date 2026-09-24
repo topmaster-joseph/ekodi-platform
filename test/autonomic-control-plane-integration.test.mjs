@@ -48,3 +48,13 @@ test('autonomic core cannot claim production authority', () => {
   assert.match(control, /humanSovereigntyFinal: true/);
   assert.match(control, /guardedReleaseRequired: true/);
 });
+
+
+test('authenticated command status exposes the autonomic twin read model', () => {
+  const source = read('ai-command-control.js');
+  assert.match(source, /collectPlatformRuntimeObservations/);
+  assert.match(source, /runRuntimeAutonomicControlPlane/);
+  assert.match(source, /const autonomic = Object\.freeze/);
+  assert.match(source, /serviceObservation: observations\.summary/);
+  assert.match(source, /\n\s+autonomic,\n/);
+});
