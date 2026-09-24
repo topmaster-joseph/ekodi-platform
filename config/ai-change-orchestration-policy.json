@@ -249,6 +249,33 @@
         "next-executable-step"
       ],
       "mustContinueResolvableWorkBeforeReporting": true
+    },
+    "dailyOperationalReport": {
+      "policyId": "EKODI-DAILY-REPORT-ROLE-001",
+      "sourceOfTruth": "ekodi-generated-operational-report",
+      "ekodiResponsibilities": [
+        "analyze-current-system-state",
+        "diagnose-root-cause",
+        "verify-material-operational-claims",
+        "execute-authorized-reversible-update-repair-recovery",
+        "reverify-after-action",
+        "produce-improvement-proposals",
+        "identify-human-authority-items",
+        "publish-official-report-result"
+      ],
+      "externalChatAssistantRole": "relay-and-summarize-only",
+      "externalChatAssistantMayIndependentlyReverify": false,
+      "externalChatAssistantMayOverrideEkodiVerdict": false,
+      "externalChatAssistantMayInventMissingOperationalFacts": false,
+      "missingEkodiReportDisposition": "state-ekodi-confirmation-unavailable",
+      "relayMustPreserve": [
+        "verified-status",
+        "actions-taken",
+        "unresolved-items-and-causes",
+        "ekodi-proposals",
+        "human-decision-required"
+      ],
+      "duplicateReportSuppression": true
     }
   },
   "executionFallback": {
