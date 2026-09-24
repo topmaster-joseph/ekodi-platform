@@ -968,6 +968,28 @@ function Get-EkodiBackgroundAuthState([int]$StatusCode, [string]$Content) {
   return 'not-required'
 }
 
+function Invoke-EkodiBackgroundHttpGet([string]$Target) {
+  try {
+    $response = Invoke-WebRequest -Uri $Target -Method Get -UseBasicParsing -MaximumRedirection 0 -TimeoutSec 25 -ErrorAction Stop
+    return @{ statusCode = [int]$response.StatusCode; content = [string]$response.Content }
+  } catch {
+    $webResponse = $_.Exception.Response
+    if (-not $webResponse) { throw }
+    $statusCode = [int]$webResponse.StatusCode
+    $content = ''
+    try {
+      $stream = $webResponse.GetResponseStream()
+      if ($stream) {
+        $reader = [IO.StreamReader]::new($stream)
+        try { $content = $reader.ReadToEnd() } finally { $reader.Dispose() }
+      }
+    } finally {
+      try { $webResponse.Dispose() } catch { }
+    }
+    return @{ statusCode = $statusCode; content = [string]$content }
+  }
+}
+
 function Receive-EkodiCdpResponse($Socket, [int]$ExpectedId, [int]$TimeoutMs = 15000) {
   $buffer = New-Object byte[] 65536
   $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMs)
@@ -1153,9 +1175,9 @@ function Invoke-BackgroundBrowserWorker($Payload) {
 
   $proof = $null
   try {
-    $response = Invoke-WebRequest -Uri $target -Method Get -UseBasicParsing -MaximumRedirection 0 -TimeoutSec 25 -SkipHttpErrorCheck
-    $stdout = [string]$response.Content
-    $statusCode = [int]$response.StatusCode
+    $http = Invoke-EkodiBackgroundHttpGet $target
+    $stdout = [string]$http.content
+    $statusCode = [int]$http.statusCode
     $authState = Get-EkodiBackgroundAuthState $statusCode $stdout
     if ($authState -eq 'required') {
       $proof = @{
