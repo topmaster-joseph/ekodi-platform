@@ -327,7 +327,7 @@ $$('[data-filter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.
 
 const discoveryButton=$('#discoverServicesButton');
 if(discoveryButton)discoveryButton.addEventListener('click',()=>{discoveryOpen=!discoveryOpen;platformUi()});
-$('[data-intent-service]').forEach(button=>button.addEventListener('click',()=>{const id=button.dataset.intentService||'';void personalize(id,'interest');location.hash='#platforms'}));
+$$('[data-intent-service]').forEach(button=>button.addEventListener('click',()=>{const id=button.dataset.intentService||'';void personalize(id,'interest');location.hash='#platforms'}));
 window.addEventListener('ekodi:personalization-signal',event=>{
  const raw=event?.detail||{},signal=normalizeSignal({...raw,created_at:raw.created_at||new Date().toISOString()});
  if(!session||!signal||!knownService(signal.service_id))return;
