@@ -3,6 +3,7 @@ import { loadAiCollaborationPolicy, recordAiCoreLearningEvent } from './ai-colla
 import { getEkodiAiProviderRegistryStatus } from './ekodi-ai-provider-registry.js';
 import { getLatestAutonomousHealthSnapshot, recordAutonomousHealthSnapshot } from './ekodi-autonomous-health-telemetry.js';
 import { runRuntimeAutonomicControlPlane } from './ekodi-autonomic-control-plane.js';
+import { collectPlatformRuntimeObservations } from './ekodi-platform-observer.js';
 import { attachEkodiConsultationReceipt } from './ekodi-consultation-ledger.js';
 import {
   buildRuntimeMaintenanceSignals,
@@ -264,9 +265,15 @@ export async function runEkodiPulseSchedule(env = {}, options = {}) {
 
   const readiness = await getEkodiProviderOperationalReadiness(env);
   const preQueueLedger = await getEkodiCommandLedgerStatus(env);
-  const observed = Object.freeze({ autonomousHealth, readiness, ledger: preQueueLedger });
-  const previousObserved = previousAutonomousHealth
-    ? Object.freeze({ autonomousHealth: previousAutonomousHealth, readiness, ledger: preQueueLedger })
+  const platformObservations = await collectPlatformRuntimeObservations(
+    env,
+    { autonomousHealth, readiness, ledger: preQueueLedger },
+    previousAutonomousHealth ? { autonomousHealth: previousAutonomousHealth, readiness, ledger: preQueueLedger } : {},
+    { now: autonomousHealth.observedAt },
+  );
+  const observed = Object.freeze(platformObservations.current);
+  const previousObserved = previousAutonomousHealth || platformObservations.summary.historicalServices
+    ? Object.freeze(platformObservations.previous)
     : null;
   const autonomicControl = runRuntimeAutonomicControlPlane({
     observed,
@@ -304,6 +311,7 @@ export async function runEkodiPulseSchedule(env = {}, options = {}) {
       humanGates: autonomicControl.humanGates,
       twin: Object.freeze({ health: autonomicControl.twin.health, summary: autonomicControl.twin.summary }),
       authority: autonomicControl.authority,
+      serviceObservation: platformObservations.summary,
     }),
     readiness,
     ledger,
@@ -312,10 +320,10 @@ export async function runEkodiPulseSchedule(env = {}, options = {}) {
 }
 
 export const EKODI_PULSE_RUNTIME = Object.freeze({
-  version: '2.3.0',
+  version: '2.4.0',
   schedule: 'existing-control-cron',
   autonomousBatchLimit: 1,
-  automaticTriggers: Object.freeze(['telemetry-snapshot', 'desired-state-drift', 'queued-command-task', 'degraded-system-health', 'maintenance-signal-evaluation']),
+  automaticTriggers: Object.freeze(['telemetry-snapshot', 'desired-state-drift','service-health-drift', 'queued-command-task', 'degraded-system-health', 'maintenance-signal-evaluation']),
   healthLoop: 'desired-state-observe-reconcile-route-act-verify-learn',
   autonomicControlPlane: 'EKODI-AUTONOMIC-CONTROL-PLANE-001',
   digitalTwinReadModel: true,
