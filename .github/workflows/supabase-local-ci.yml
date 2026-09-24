@@ -84,9 +84,9 @@ jobs:
           create sequence public.__ekodi_grant_probe_seq;
           create function public.__ekodi_grant_probe_fn() returns integer
           language sql
-          as $ select 1 $;
+          as $func$ select 1 $func$;
 
-          do $
+          do $block$
           declare
             role_name text;
           begin
@@ -106,7 +106,7 @@ jobs:
               end if;
             end loop;
           end
-          $;
+          $block$;
 
           drop function public.__ekodi_grant_probe_fn();
           drop sequence public.__ekodi_grant_probe_seq;
