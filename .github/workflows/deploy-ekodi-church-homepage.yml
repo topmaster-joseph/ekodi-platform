@@ -1,5 +1,5 @@
 name: Deploy EKODI Church Homepage
-# Release reconciliation marker: church-attendance-analytics-20260923
+# Release reconciliation marker: church-operating-space-marker-20260924
 
 on:
   workflow_dispatch:
@@ -61,6 +61,8 @@ jobs:
           for file in script.js live/live.js live/host-intent.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-online-status.js giving.js church-life-hub.js church-life-hub-i18n.js my/app.js my/giving/app.js my/attendance/app.js; do
             node --check "church/$file"
           done
+          grep -Fq 'data-ekodi-operating-space-label="v1"' church/index.html
+          grep -Fq '>운영공간</em>' church/index.html
           grep -Fq 'data-ekodi-life-hub' church/index.html
           grep -Fq 'church-life-hub.js' church/index.html
           grep -Fq 'church-life-hub.css' church/index.html
