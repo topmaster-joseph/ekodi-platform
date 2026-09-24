@@ -36,6 +36,6 @@ test('preview assets carry strict browser security headers', async () => {
   const script = await response('/preview/assets/preview.js');
   assert.equal(script.status, 200);
   assert.equal(script.headers.get('x-frame-options'), 'DENY');
-  assert.match(script.headers.get('content-security-policy') || '', /connect-src https:\/\/api\.ekodi\.kr/);
+  assert.match(script.headers.get('content-security-policy') || '', /connect-src https:\/\/ekodi\.kr/);
   assert.match(await script.text(), /api\/public\/preview\/map/);
 });
