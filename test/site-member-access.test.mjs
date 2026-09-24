@@ -67,8 +67,8 @@ test('workspace and store admin surfaces both expose the same user-access workfl
 });
 
 test('super-admin separates user settings from administrator settings while sharing site access registry',()=>{
-  assert.match(menu,/ko: '사용자설정'/);
-  assert.match(menu,/ko: '관리자설정'/);
+  assert.match(menu,/ko: '전체 사용자·접근'/);
+  assert.match(menu,/ko: '관리자 계정·권한'/);
   assert.match(central,/사용자설정/);
   assert.match(central,/USER_ROLE_OPTIONS/);
   assert.match(central,/\['member','회원'\]/);

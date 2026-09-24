@@ -6,8 +6,8 @@ const read=path=>fs.readFile(new URL('../'+path,import.meta.url),'utf8');
 
 test('super admin exposes separate administrator and user settings menus',async()=>{
   const registry=await read('admin-menu-registry.js');
-  assert.match(registry,/id: 'admins'.*ko: '관리자설정'/s);
-  assert.match(registry,/id: 'users-access'.*ko: '사용자설정'/s);
+  assert.match(registry,/id: 'admins'.*ko: '관리자 계정·권한'/s);
+  assert.match(registry,/id: 'users-access'.*ko: '전체 사용자·접근'/s);
 });
 
 test('administrator settings include platform and site-space administrator management',async()=>{

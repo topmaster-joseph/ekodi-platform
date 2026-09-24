@@ -29,7 +29,7 @@ const HIERARCHY_TO_CATALOG=Object.freeze({
 test('superadmin service handoff catalog preserves the canonical seven-area menu',()=>{
   assert.match(menuSource,/import '\.\/admin-service-handoffs\.js';/);
   const groupIds=[...menuSource.matchAll(/\{ id: '(summary|services|sites|people|content|status|settings-records)'/g)].map(match=>match[1]);
-  assert.deepEqual(groupIds.slice(0,7),['summary','services','sites','people','content','status','settings-records']);
+  assert.deepEqual(groupIds.slice(0,7),['summary','sites','people','services','content','status','settings-records']);
   assert.doesNotMatch(menuSource,/id: 'service-admins'/);
 });
 

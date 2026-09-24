@@ -30,13 +30,13 @@ test('shared shell hides the desktop topbar while preserving mobile page context
   assert.match(shell, /matchMedia\('\(max-width:760px\)'\)\.matches\s*\?\s*'flex'\s*:\s*'none'/);
 });
 
-test('workspace is the single vertical scroll owner and sidebar stays fixed', () => {
-  assert.match(shell, /nav\.style\.setProperty\('overflow-y',\s*'hidden',\s*'important'\)/);
-  assert.match(shell, /nav\.style\.setProperty\('flex',\s*'0 0 auto',\s*'important'\)/);
+test('workspace owns content scrolling while platform Admin navigation can scroll independently', () => {
+  assert.match(shell, /nav\.style\.setProperty\('overflow-y',\s*'auto',\s*'important'\)/);
+  assert.match(shell, /nav\.style\.setProperty\('flex',\s*'1 1 auto',\s*'important'\)/);
   assert.match(shell, /main\.style\.setProperty\('overflow-y',\s*'auto'\)/);
   assert.match(shell, /sideBottom\.style\.setProperty\('position',\s*'static',\s*'important'\)/);
-  assert.match(shell, /nav\.dataset\.ekodiIndependentScroll\s*=\s*'false'/);
+  assert.match(shell, /nav\.dataset\.ekodiIndependentScroll\s*=\s*'platform-admin'/);
   assert.match(shell, /content\.dataset\.ekodiIndependentScroll\s*=\s*'false'/);
   assert.match(shell, /main\.dataset\.ekodiScrollOwner\s*=\s*'workspace'/);
-  assert.doesNotMatch(shell, /nav\.style\.setProperty\('overflow-y',\s*'auto'/);
+  assert.doesNotMatch(shell, /nav\.style\.setProperty\('overflow-y',\s*'hidden'/);
 });
