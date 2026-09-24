@@ -7,6 +7,7 @@ const governor = fs.readFileSync('free-tier-resource-governor.js','utf8');
 const workflow = fs.readFileSync('.github/workflows/ekodi-ai-orchestration-gate.yml','utf8');
 const collectorWorkflow = fs.readFileSync('.github/workflows/free-tier-resource-governor.yml','utf8');
 const collector = fs.readFileSync('scripts/collect-free-tier-resource-usage.mjs','utf8');
+const supabaseCapacityGuard = fs.readFileSync('scripts/validate-supabase-free-project-capacity.mjs','utf8');
 const failures=[];
 const expect=(condition,message)=>{if(!condition)failures.push(message)};
 
@@ -72,6 +73,11 @@ expect(collector.includes('/database/query/read-only'),'Supabase database usage 
 expect(!/\/database\/query(?!\/read-only)/.test(collector),'collector must not fall back to the writable Management API query endpoint');
 expect(collector.includes('/actions/cache/usage'),'GitHub cache usage must come from the official repository usage endpoint');
 expect(collector.includes('/actions/artifacts?'),'GitHub artifact usage must come from the official repository artifact endpoint');
+expect(supabaseCapacityGuard.includes('management-api-project-create'),'Supabase capacity guard must detect Management API project creation');
+expect(supabaseCapacityGuard.includes('supabase-cli-project-create'),'Supabase capacity guard must detect CLI project creation');
+expect(workflow.includes('validate-supabase-free-project-capacity.mjs'),'orchestration gate must enforce Supabase Free project capacity');
+expect(collectorWorkflow.includes('validate-supabase-free-project-capacity.mjs'),'resource collector workflow must enforce Supabase Free project capacity');
+expect(collectorWorkflow.includes('supabase-free-project-capacity-guard.test.mjs'),'resource governor validation must test Supabase project capacity');
 expect(!/BEGIN TRANSACTION|SAVEPOINT|lines\.push\('COMMIT;'\)/.test(collector),'remote D1 collector must not emit explicit transaction statements');
 
 if(failures.length){
