@@ -66,7 +66,9 @@ test('remaining canonical business, trade and lab surfaces inherit a readability
   ]);
   assert.match(router,/routeEkodiBizPublic[\s\S]*injectEkodiProgressiveHome\(injectEkodiTenantReadability\(rewritten\)\)/);
   assert.match(router,/LEGACY_OPERATING_SPACE_ROOTS=new Set\(\['ekodichurch','ekodimission'\]\)/);
-  assert.match(router,/legacyOperatingSpacePath\(url\.pathname\)\)return injectEkodiTenantReadability\(legacyResponse\)/);
+  assert.match(router,/async function ensureLegacyOperatingSpaceMarker/);
+  assert.match(router,/html\.includes\('data-ekodi-operating-space-label'\)/);
+  assert.match(router,/legacyOperatingSpacePath\(url\.pathname\)\)return ensureLegacyOperatingSpaceMarker\(injectEkodiTenantReadability\(legacyResponse\)\)/);
   assert.match(router,/isTradePartnerPath\(url\.pathname\)\)return injectEkodiTenantReadability\(tradePartnerPage\(\)\)/);
   assert.match(canonical,/executionSurface\.id==='lab'\?injectEkodiTenantReadability\(response\):response/);
   assert.match(verifier,/requireReadability\(cgmaRoot,'cgma-root',errors\)/);
