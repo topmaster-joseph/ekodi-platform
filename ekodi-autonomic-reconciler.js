@@ -81,6 +81,7 @@ export function reconcileDesiredState(registry = {}, observed = {}, options = {}
     const item = freeze({
       ruleId: rule.id,
       entityId: rule.entityId,
+      scope: rule.scope,
       selector: rule.selector,
       status: 'drift',
       expected: rule.expected,
