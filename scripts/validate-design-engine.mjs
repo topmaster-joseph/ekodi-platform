@@ -74,11 +74,11 @@ if (policy?.admin?.scrollContract?.workspace !== 'single-vertical-scroll-owner')
 if (policy?.admin?.scrollContract?.primarySidebar !== 'independent-when-needed-on-platform-admin') errors.push('platform admin sidebar scroll contract drifted.');
 if (!Array.isArray(policy?.admin?.regions) || policy.admin.regions.length !== 4) errors.push('admin design policy must define exactly four shell regions.');
 if (!Array.isArray(policy?.admin?.navigationLevels) || policy.admin.navigationLevels.length !== 3) errors.push('admin design policy must define exactly three navigation levels.');
-if (!adminRuntime.includes("nav.style.setProperty('overflow-y', 'hidden', 'important')")) errors.push('admin design runtime must override vertical sidebar scrolling.');
-if (!adminRuntime.includes("nav.dataset.ekodiIndependentScroll = 'false'")) errors.push('admin design runtime must declare primary sidebar as non-independent scroll.');
+if (!adminRuntime.includes("nav.style.setProperty('overflow-y', 'auto', 'important')")) errors.push('admin design runtime must keep platform-admin direct-task navigation independently scrollable.');
+if (!adminRuntime.includes("nav.dataset.ekodiIndependentScroll = 'platform-admin'")) errors.push('admin design runtime must declare the platform-admin sidebar scroll owner.');
 if (!adminRuntime.includes("workspace must own vertical scrolling")) errors.push('admin design runtime must audit the workspace scroll owner.');
-if (!adminCss.includes('overflow-y:hidden!important')) errors.push('admin design CSS must keep the primary sidebar overflow hidden.');
-if (!adminCss.includes('overflow-y:auto!important')) errors.push('admin design CSS must keep the workspace as vertical scroll owner.');
+if (!adminCss.includes('.sidebar nav{') || !adminCss.includes('overflow-y:auto!important')) errors.push('admin design CSS must keep platform-admin sidebar task navigation scrollable.');
+if (!adminCss.includes('.app>main{') || !adminCss.includes('overflow-y:auto!important')) errors.push('admin design CSS must keep the workspace as vertical scroll owner.');
 for (const marker of ['Admin responsive content integrity','word-break:keep-all!important','overflow-wrap:break-word','overflow-wrap:anywhere!important','font-size:clamp(','padding-inline:clamp(']) {
   if (!adminCss.includes(marker)) errors.push(`admin responsive content guard lost marker: ${marker}`);
 }
@@ -88,8 +88,8 @@ for (const marker of ['Responsive Typography Standard v3','word-break:keep-all',
 for (const marker of ['문구 작성·개발 강제 체크','320, 390, 768, 1366, 1440px','완료 게이트','단어·어절']) {
   if (!responsiveStandard.includes(marker)) errors.push(`responsive standard document lost mandatory marker: ${marker}`);
 }
-if (sidebar.includes('overflow-y:auto!important')) errors.push('shared admin sidebar source must not reintroduce independent vertical scrolling.');
-if (!sidebar.includes('overflow-y:hidden!important')) errors.push('shared admin sidebar source must keep vertical overflow hidden.');
+if (!sidebar.includes('overflow-y:auto!important')) errors.push('shared admin sidebar source must preserve platform-admin independent task scrolling.');
+if (!sidebar.includes('overscroll-behavior:contain!important')) errors.push('shared admin sidebar source must contain platform-admin sidebar overscroll.');
 if (!authenticatedShell.includes("nav.dataset.ekodiIndependentScroll='platform-admin'") || !authenticatedShell.includes("nav.style.setProperty('overflow-y','auto','important')") || !authenticatedShell.includes("main.dataset.ekodiScrollOwner='workspace'")) errors.push('authenticated shell must declare the role-projected platform-admin scroll ownership contract.');
 if (!authenticatedShell.includes("'admin-design-engine.css'")) errors.push('authenticated shell must preload the canonical design surface before first visible admin paint.');
 for (const asset of ['admin-design-engine.js', 'admin-design-engine.css']) {
@@ -101,7 +101,7 @@ if (!/\['admin-menu-registry\.js', \[[^\]]*'admin-design-engine\.js'[^\]]*'platf
 if (!adminCss.includes('[data-ekodian-character]')) errors.push('admin design CSS must contain the EKODIAN character layer.');
 if (!adminCss.includes('@media(prefers-reduced-motion:reduce)')) errors.push('admin character layer must respect reduced-motion preferences.');
 
-for (const marker of ['8세대 공통 쉘은 ChatGPT형 좌측 내비게이션 + 우측 작업공간 + 하단 대화창으로 구성한다', '용이성 · 지역성·현장성 · 가독성 · 독창성 · 직관성 · 소통형 · 맞춤형', 'EKODI Design Engine 계층', '내비게이션은 최대 세 단계까지만 허용한다', '서비스 개성은 Shell 교체가 아니라 Theme Token으로 표현한다', '공통 UI의 소유권을 코드 수준에서 분리한다']) {
+for (const marker of ['관리자 쉘은 역할별 내비게이션 + 우측 작업공간 + 하단 대화창으로 구성한다', '용이성 · 지역성·현장성 · 가독성 · 독창성 · 직관성 · 소통형 · 맞춤형', 'EKODI Design Engine 계층', '내비게이션은 최대 세 단계까지만 허용한다', '서비스 개성은 Shell 교체가 아니라 Theme Token으로 표현한다', '공통 UI의 소유권을 코드 수준에서 분리한다']) {
   if (!adminPrinciples.includes(marker)) errors.push(`admin UI principles lost design-engine marker: ${marker}`);
 }
 
