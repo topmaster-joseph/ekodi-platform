@@ -11,7 +11,7 @@ const [agent, policyRaw, admin, windowsWorkflow] = await Promise.all([
 const policy = JSON.parse(policyRaw);
 
 test('Windows Agent exposes isolated desktop only through the verified bounded session canary', () => {
-  assert.match(agent, /\$AgentVersion = '2\.4\.0'/);
+  assert.match(agent, /\$AgentVersion = '2\.5\.0'/);
   assert.match(agent, /backgroundBrowserCanary = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /backgroundBrowser = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktopProbe = \$true/);
@@ -30,6 +30,14 @@ test('remote computer policy forbids minimized-window pseudo isolation and silen
   assert.equal(policy.nonDisruptiveExecution.isolatedDesktop.sharedInteractiveDesktopForbidden, true);
   assert.equal(policy.nonDisruptiveExecution.foregroundTakeover.automaticFallback, false);
   assert.equal(policy.nonDisruptiveExecution.foregroundTakeover.explicitLocalConsentRequired, true);
+  const lifecycle = policy.nonDisruptiveExecution.automaticExecutionLifecycle;
+  assert.equal(lifecycle.defaultMode, 'background-only');
+  assert.equal(lifecycle.foregroundWindowDefault, false);
+  assert.equal(lifecycle.userBrowserTabCreation, false);
+  assert.equal(lifecycle.ownedAutomationSurfaceAutoClose, true);
+  assert.equal(lifecycle.authRequiredDisposition, 'record-and-close');
+  assert.equal(lifecycle.authRequiredMustNotOpenInteractiveLogin, true);
+  assert.equal(lifecycle.preserveUserOwnedWindowsAndTabs, true);
 });
 
 
@@ -67,6 +75,14 @@ test('background browser worker is canary-gated, ephemeral, headless and read-on
   assert.match(agent, /clipboardShared = \$false/);
   assert.match(agent, /userInputInjection = \$false/);
   assert.match(agent, /profileRemoved = -not \(Test-Path -LiteralPath \$taskProfile\)/);
+  assert.match(agent, /executionMode -ne 'background-only'/);
+  assert.match(agent, /background_browser_user_tab_forbidden/);
+  assert.match(agent, /Get-EkodiBackgroundAuthState/);
+  assert.match(agent, /code = 'AUTH_REQUIRED'/);
+  assert.match(agent, /interactiveLoginOpened = \$false/);
+  assert.match(agent, /ownedAutomationSurfaceAutoClosed = \$true/);
+  assert.match(agent, /userOwnedSurfacesPreserved = \$true/);
+  assert.match(agent, /temporaryProfileRemoved = \$proof\.profileRemoved/);
   assert.doesNotMatch(agent, /desktopInput = \$true/);
 });
 

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   NON_DISRUPTIVE_EXECUTION_ORDER,
+  AUTOMATION_SURFACE_LIFECYCLE,
   planNonDisruptiveRemoteWork,
   validateBackgroundBrowserWorker,
   validateIsolatedDesktopSession,
@@ -25,6 +26,12 @@ test('execution order protects the user foreground by preferring API and backgro
   assert.equal(plan.mode, 'official-api');
   assert.equal(plan.requiresForeground, false);
   assert.equal(plan.userForegroundProtected, true);
+  assert.equal(plan.cleanupOwnedSurface, true);
+  assert.deepEqual(plan.automationSurfaceLifecycle, AUTOMATION_SURFACE_LIFECYCLE);
+  assert.equal(AUTOMATION_SURFACE_LIFECYCLE.defaultMode, 'background-only');
+  assert.equal(AUTOMATION_SURFACE_LIFECYCLE.createUserBrowserTab, false);
+  assert.equal(AUTOMATION_SURFACE_LIFECYCLE.closeOwnedSurfaceOnComplete, true);
+  assert.equal(AUTOMATION_SURFACE_LIFECYCLE.preserveUserOwnedSurfaces, true);
 });
 
 test('background browser must use a dedicated isolated profile', () => {
@@ -102,4 +109,21 @@ test('foreground takeover cannot become an automatic fallback', () => {
   assert.equal(consented.ok, false);
   assert.equal(consented.mode, 'foreground-takeover');
   assert.equal(consented.reason, 'explicit_takeover_requires_separate_privileged_gate');
+});
+
+
+test('API auth requirement is recorded and terminated without opening a user login tab', () => {
+  const plan = planNonDisruptiveRemoteWork({
+    api:{ available:true, authorized:false, authRequired:true, providerId:'control-api' },
+    native,
+    foregroundTakeoverRequested:false,
+  });
+  assert.equal(plan.ok, false);
+  assert.equal(plan.mode, 'blocked');
+  assert.equal(plan.code, 'AUTH_REQUIRED');
+  assert.equal(plan.reason, 'auth_required_background_terminated');
+  assert.equal(plan.requiresForeground, false);
+  assert.equal(plan.cleanupOwnedSurface, true);
+  assert.equal(plan.automationSurfaceLifecycle.closeOwnedSurfaceOnAuthRequired, true);
+  assert.equal(plan.automationSurfaceLifecycle.createUserBrowserTab, false);
 });
