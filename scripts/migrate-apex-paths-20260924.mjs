@@ -26,15 +26,6 @@ const HOST_PATH=new Map(Object.entries({
   'space.ekodi.kr':'/','user.ekodi.kr':'/'
 }));
 
-const removeWorkflows=new Set([
-  'activate-ekodi-pages-domains.yml','configure-ekodi-subdomains.yml','diagnose-biz-domain.yml','promote-biz-domain.yml',
-  'promote-service-domains.yml','retire-public-subdomains-wave1.yml','sync-worker-domains.yml','verify-ekodi-subdomains.yml'
-]);
-for(const name of removeWorkflows){
-  const file=path.join(root,'.github','workflows',name);
-  if(fs.existsSync(file))fs.rmSync(file);
-}
-
 function routeBlockCleanup(text){
   const lines=text.split(/\r?\n/),out=[];
   for(let i=0;i<lines.length;){
@@ -308,6 +299,7 @@ if(fs.existsSync(retiredValidator))fs.rmSync(retiredValidator);
 
 
 for(const file of walk(root)){
+  if(file.startsWith('.github/workflows/'))continue;
   if(file==='scripts/migrate-apex-paths-20260924.mjs'||file==='scripts/zero-subdomain-guard.mjs')continue;
   const full=path.join(root,file);let text='';
   try{text=fs.readFileSync(full,'utf8')}catch{continue}
