@@ -42,13 +42,14 @@ test('shell injector is isolated in Shadow DOM and applies shared style only to 
   assert.match(workspaceCss,/data-ekodi-document-surface/);
 });
 
-test('My, Community and shared service proxy all consume the same shell contract',async()=>{
-  const [my,community,proxy]=await Promise.all([read('my-worker.js'),read('community-worker.js'),read('service-proxy.js')]);
+test('My, Community and the EKODIBIZ apex hub consume the same shell contract',async()=>{
+  const [my,community,bizHub]=await Promise.all([read('my-worker.js'),read('community-worker.js'),read('service-proxy.js')]);
   assert.match(my,/injectEkodiShell\(response,'my'\)/);
   assert.match(my,/contextModel:'person-space-role'/);
   assert.match(community,/injectEkodiShell\(withHeaders\(await env\.ASSETS\.fetch\(request\)\),'community'\)/);
-  assert.match(proxy,/shellServiceForHost/);
-  assert.match(proxy,/injectEkodiShell\(businessHub\(\), 'biz'\)/);
+  assert.doesNotMatch(bizHub,/shellServiceForHost/);
+  assert.match(bizHub,/route==='\/ekodibiz'/);
+  assert.match(bizHub,/injectEkodiShell\(businessHub\(\),'biz'\)/);
 });
 
 test('remaining Worker services use thin shared Shell adapters without moving domain logic',async()=>{
@@ -62,8 +63,8 @@ test('remaining Worker services use thin shared Shell adapters without moving do
   assert.match(social,/socialWorker\.fetch/); assert.match(social,/,\s*'social'\)/);
   assert.match(energy,/energyWorker\.fetch/); assert.match(energy,/,\s*'energy'\)/);
   assert.match(site,/shellServiceForHost/);
-  assert.match(shellInjector,/manifestServiceForHost/); assert.match(shellInjector,/SPECIAL_HOST_ALIASES/); assert.match(shellInjector,/trade\.biz\.ekodi\.kr/); assert.match(shellInjector,/shellServiceForRootPath/);
-  assert.match(platform,/messenger\.ekodi\.kr/); assert.match(platform,/invest\.ekodi\.kr/); assert.match(platform,/injectEkodiShell/);
+  assert.match(shellInjector,/manifestServiceForHost/); assert.match(shellInjector,/SPECIAL_HOST_ALIASES/); assert.match(shellInjector,/ekodi\.kr\/ekodibiz\/trade/); assert.doesNotMatch(shellInjector,/trade\.biz\.ekodi\.kr/); assert.match(shellInjector,/shellServiceForRootPath/);
+  assert.match(platform,/['"]\/messenger['"]/); assert.match(platform,/['"]\/invest['"]/); assert.doesNotMatch(platform,/messenger\.ekodi\.kr|invest\.ekodi\.kr/); assert.match(platform,/injectEkodiShell/);
   assert.match(platformEntry,/legacyPlatformRouter\.fetch/); assert.match(platformEntry,/injectEkodiShell\(response,'messenger'\)/);
   assert.match(workToml,/main = "work-shell-worker\.js"/);
   assert.match(socialToml,/main = "social-shell-worker\.js"/);
