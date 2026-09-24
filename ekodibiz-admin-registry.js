@@ -20,6 +20,11 @@ const EKODIBIZ_ADMIN_SCOPE_DEFINITIONS = [
     adminHref: '/ekodibiz/invest/admin', publicHref: '/ekodibiz/invest', kind: 'module',
   },
   {
+    id: 'tax', label: '세금·증빙', shortLabel: '세금',
+    description: '에코디비즈 전자세금계산서·공급자·거래처·발행대장을 관리합니다.',
+    adminHref: '/tax', publicHref: '/tax', kind: 'service',
+  },
+  {
     id: 'books', label: '에코디서점', shortLabel: '서점',
     description: '출판물·상담·출판대행·가격·기능 노출을 관리합니다.',
     adminHref: '/admin/services/books?source=ekodibiz', publicHref: '/books', kind: 'service',
@@ -44,6 +49,7 @@ export function ekodiBizAdminScopeForPath(pathname = '') {
   if (/^\/ekodimall\/admin(?:\/|$)/i.test(path)) return 'mall';
   if (/^\/ekodibiz\/trade\/admin(?:\/|$)/i.test(path)) return 'trade';
   if (/^\/ekodibiz\/invest\/admin(?:\/|$)/i.test(path)) return 'invest';
+  if (/^\/tax(?:\/|$)/i.test(path)) return 'tax';
   if (/^\/admin\/services\/books(?:\/|$)/i.test(path)) return 'books';
   if (/^\/(?:ekodi-lab|ekodilab)\/admin(?:\/|$)/i.test(path)) return 'lab';
   if (/^\/ekodibiz\/admin(?:\/|$)/i.test(path)) return 'common';

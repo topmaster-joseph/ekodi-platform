@@ -27,7 +27,7 @@ test('tenant admin constitution keeps one page and projects authority by capabil
 
 test('workspace admin projects root and mall sections from tenant-local capabilities',async()=>{
   assert.deepEqual(workspaceAdminSectionsForRole('marketing_manager'),['overview','mall','publishing','marketing']);
-  assert.deepEqual(workspaceAdminSectionsForRole('accounting_manager'),['overview','mall','finance','confirmations']);
+  assert.deepEqual(workspaceAdminSectionsForRole('accounting_manager'),['overview','mall','finance','tax','confirmations']);
   assert.deepEqual(workspaceAdminSectionsForRole('client_viewer'),['overview','mall']);
   assert.deepEqual(workspaceAdminSectionsForRole('marketing_manager','mall'),['overview','sales','marketing','channels','automation','growth','analytics']);
   assert.deepEqual(workspaceAdminSectionsForRole('manager','mall'),['languages','overview','sales','products','sourcing','marketing','channels','automation','growth','analytics','confirmations']);
