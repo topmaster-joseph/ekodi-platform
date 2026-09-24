@@ -25,7 +25,7 @@ test('Deployments is bundled behind the secured admin runtime without a static m
 
 test('deployment control describes guarded release models without exposing privileged secrets', async () => {
   const admin = await read('release-control-admin.js');
-  for (const workflow of ['deploy-admin-site.yml','deploy-control-api.yml','deploy-finance.yml','sync-marketing-ai.yml','deploy-community.yml','deploy-books.yml','deploy-social.yml']) {
+  for (const workflow of ['deploy-site-core.yml','deploy-control-api.yml','deploy-finance.yml','sync-marketing-ai.yml','deploy-community.yml','deploy-books.yml','deploy-social.yml']) {
     assert.ok(admin.includes(workflow), `missing release unit ${workflow}`);
   }
   assert.match(admin, /automaticProductionBypass:\s*false/);
