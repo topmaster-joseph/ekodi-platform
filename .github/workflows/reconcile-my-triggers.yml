@@ -22,7 +22,7 @@ concurrency:
 
 env:
   WRANGLER_VERSION: '4.119.0'
-  LEGACY_MY_HOST: my.ekodi.kr
+  CANONICAL_MY_PATH: /my
   CANONICAL_ZONE: ekodi.kr
   CF_ZONE_ID: e39707f426b195d12c67a86f62b52ba7
 
@@ -42,11 +42,11 @@ jobs:
           set -euo pipefail
           grep -Eq '^workers_dev[[:space:]]*=[[:space:]]*true' wrangler.my.toml
           grep -Eq '^routes[[:space:]]*=[[:space:]]*\[\][[:space:]]*$' wrangler.my.toml
-          if grep -Fqi 'my.ekodi.kr' wrangler.my.toml; then
+          if grep -Fqi 'custom_domain = true' wrangler.my.toml; then
             echo 'Retired My EKODI subdomain must not appear in Wrangler routing configuration.'
             exit 1
           fi
-          test "$LEGACY_MY_HOST" = 'my.ekodi.kr'
+          test "$CANONICAL_MY_PATH" = '/my'
           test "$CANONICAL_ZONE" = 'ekodi.kr'
           test "$CF_ZONE_ID" = 'e39707f426b195d12c67a86f62b52ba7'
           npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --dry-run --config wrangler.my.toml
@@ -86,9 +86,9 @@ jobs:
             -H 'Content-Type: application/json' \
             "$endpoint")
           echo "$domains" | jq -e '.success == true' >/dev/null
-          domain_id=$(echo "$domains" | jq -r '.result[] | select(.hostname == env.LEGACY_MY_HOST) | .id' | head -n1)
+          domain_id=$(echo "$domains" | jq -r '.result[] | select(.hostname == env.CANONICAL_MY_PATH) | .id' | head -n1)
           if [[ -n "$domain_id" ]]; then
-            echo "Detaching retired Workers Custom Domain $LEGACY_MY_HOST."
+            echo "Detaching retired Workers Custom Domain $CANONICAL_MY_PATH."
             delete_http=$(curl -sS -o /tmp/my-domain-delete.out -w '%{http_code}' -X DELETE \
               -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
               -H 'Content-Type: application/json' \
@@ -99,7 +99,7 @@ jobs:
               exit 1
             fi
           else
-            echo "Retired Workers Custom Domain $LEGACY_MY_HOST is already detached."
+            echo "Retired Workers Custom Domain $CANONICAL_MY_PATH is already detached."
           fi
           for attempt in $(seq 1 12); do
             remaining=$(curl --fail-with-body -sS \
@@ -107,12 +107,12 @@ jobs:
               -H 'Content-Type: application/json' \
               "$endpoint")
             echo "$remaining" | jq -e '.success == true' >/dev/null
-            if ! echo "$remaining" | jq -e '.result[] | select(.hostname == env.LEGACY_MY_HOST)' >/dev/null; then
-              echo "Workers Custom Domain detached: $LEGACY_MY_HOST"
+            if ! echo "$remaining" | jq -e '.result[] | select(.hostname == env.CANONICAL_MY_PATH)' >/dev/null; then
+              echo "Workers Custom Domain detached: $CANONICAL_MY_PATH"
               break
             fi
             if [[ "$attempt" == '12' ]]; then
-              echo "$LEGACY_MY_HOST is still attached as a Workers Custom Domain."
+              echo "$CANONICAL_MY_PATH is still attached as a Workers Custom Domain."
               exit 1
             fi
             sleep 3
@@ -134,16 +134,16 @@ jobs:
           api='https://api.cloudflare.com/client/v4'
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
           lookup_http=$(curl -sS -o /tmp/my-dns-records.json -w '%{http_code}' "${auth[@]}" \
-            "$api/zones/$CF_ZONE_ID/dns_records?name=$LEGACY_MY_HOST&per_page=100")
+            "$api/zones/$CF_ZONE_ID/dns_records?name=$CANONICAL_MY_PATH&per_page=100")
           if [[ "$lookup_http" != '200' ]]; then
             echo "Exact DNS lookup failed with HTTP $lookup_http."
             jq '{success,errors,messages}' /tmp/my-dns-records.json 2>/dev/null || cat /tmp/my-dns-records.json
             exit 1
           fi
           jq -e '.success == true' /tmp/my-dns-records.json >/dev/null
-          mapfile -t record_ids < <(jq -r '.result[] | select(.name == env.LEGACY_MY_HOST) | .id' /tmp/my-dns-records.json)
+          mapfile -t record_ids < <(jq -r '.result[] | select(.name == env.CANONICAL_MY_PATH) | .id' /tmp/my-dns-records.json)
           if [[ "${#record_ids[@]}" == '0' ]]; then
-            echo "No residual DNS record exists for $LEGACY_MY_HOST."
+            echo "No residual DNS record exists for $CANONICAL_MY_PATH."
           fi
           for record_id in "${record_ids[@]}"; do
             delete_http=$(curl -sS -o /tmp/my-dns-delete.out -w '%{http_code}' -X DELETE "${auth[@]}" \
@@ -155,11 +155,11 @@ jobs:
             fi
           done
           remaining_http=$(curl -sS -o /tmp/my-dns-remaining.json -w '%{http_code}' "${auth[@]}" \
-            "$api/zones/$CF_ZONE_ID/dns_records?name=$LEGACY_MY_HOST&per_page=100")
+            "$api/zones/$CF_ZONE_ID/dns_records?name=$CANONICAL_MY_PATH&per_page=100")
           test "$remaining_http" = '200'
           jq -e '.success == true' /tmp/my-dns-remaining.json >/dev/null
-          test "$(jq '[.result[] | select(.name == env.LEGACY_MY_HOST)] | length' /tmp/my-dns-remaining.json)" = '0'
-          echo "Exact retired DNS hostname absent: $LEGACY_MY_HOST"
+          test "$(jq '[.result[] | select(.name == env.CANONICAL_MY_PATH)] | length' /tmp/my-dns-remaining.json)" = '0'
+          echo "Exact retired DNS hostname absent: $CANONICAL_MY_PATH"
       - name: Re-verify canonical My after retirement
         shell: bash
         run: |
@@ -173,7 +173,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 36); do
-            code=$(curl -sS -o /tmp/legacy-my.out -w '%{http_code}' --connect-timeout 5 --max-time 10 "https://$LEGACY_MY_HOST/" || true)
+            code=$(curl -sS -o /tmp/legacy-my.out -w '%{http_code}' --connect-timeout 5 --max-time 10 "https://$CANONICAL_MY_PATH/" || true)
             if [[ ! "$code" =~ ^[23] ]]; then
               echo "Retired hostname no longer serves first-party traffic (HTTP ${code:-000})."
               exit 0
@@ -181,5 +181,5 @@ jobs:
             echo "Legacy hostname still active (HTTP $code), waiting for retirement propagation: attempt $attempt/36"
             sleep 5
           done
-          echo "$LEGACY_MY_HOST still serves a 2xx/3xx response after retirement."
+          echo "$CANONICAL_MY_PATH still serves a 2xx/3xx response after retirement."
           exit 1
