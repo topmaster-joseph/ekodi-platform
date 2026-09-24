@@ -1,7 +1,7 @@
 export const PLATFORM_ROUTE_REGISTRY=Object.freeze({
   canonical:Object.freeze(['admin','my','auth','api','mcp','webhooks','health','connect']),
   platformServices:Object.freeze([
-    'ai','author','bible','books','business','cafe','cloud','community','cmpmyi','delivery','dev','developer','education','energy','ekodibiz','ekodilab','ekodimall','ekodimission','event','experience','finance-api','give','history','insurance','invest','journal','lab','life','live','local-commerce','login','logout','mail','mall','management','marketing','marketing-api','marketing-connect-api','marketing-publish-api','media','messenger','mission','money','pay','personal-finance-api','preview','privacy','publish','publishing','shell','social','status','storage','stores','support','tax','terms','trade','try','work','workspace-api','www'
+    'ai','author','bible','books','business','cafe','cloud','community','cmpmyi','delivery','dev','developer','education','energy','ekodilab','ekodimall','ekodimission','event','experience','finance-api','give','history','insurance','invest','journal','lab','life','live','local-commerce','login','logout','mail','mall','management','marketing','marketing-api','marketing-connect-api','marketing-publish-api','media','messenger','mission','money','pay','personal-finance-api','preview','privacy','publish','publishing','shell','social','status','storage','stores','support','tax','terms','trade','try','work','workspace-api','www'
   ]),
   retiredIdentityPrefixes:Object.freeze(['group','org','personal','project','space','user']),
 });
