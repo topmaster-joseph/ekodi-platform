@@ -62,6 +62,9 @@ test('server-rendered Store Admin headings match the requested route before Java
     ['/jadam/admin/menu','메뉴 · 가격','배달앱·POS에서 들어온 실제 메뉴와 가격 차이를 비교합니다.'],
     ['/jadam/admin/delivery','배달플랫폼','플랫폼별 매장·메뉴·주문·매출·정산·리뷰를 하나의 운영 흐름으로 관리합니다.'],
     ['/jadam/admin/connections','연결관리','POS·배달플랫폼·EKODI Orders 연결 상태를 관리합니다.'],
+    ['/jadam/admin/orders','주문 · 채널','오늘 주문과 채널별 매출 흐름을 집계값으로 확인합니다.'],
+    ['/jadam/admin/work','매장업무','점포 운영업무와 승인 필요 행동을 관리합니다.'],
+    ['/jadam/admin/members','사용자 · 권한','이 점포 사이트의 관리자와 사용자 권한을 같은 원장에서 관리합니다.'],
   ];
   for(const [pathname,title,copy] of cases){
     const html=await storeAdminPage({...profile,pathname}).text();
