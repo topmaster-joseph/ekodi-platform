@@ -45,6 +45,10 @@ test('every public admin subservice belongs to one canonical area', () => {
   assert.equal(getAdminMenuLabel('social', 'en'), 'Broadcast, Channels & Autopost');
   assert.equal(getAdminMenuGroupForSection('marketing-ai'), 'services');
   assert.equal(getAdminMenuGroupForSection('finance'), 'content');
+  assert.equal(ADMIN_MENU_REGISTRY.find(item => item.id === 'finance')?.internal, true);
+  assert.equal(ADMIN_MENU_REGISTRY.find(item => item.id === 'tax')?.internal, true);
+  assert.equal(adminMenuOrder().includes('finance'), false);
+  assert.equal(adminMenuOrder().includes('tax'), false);
   assert.equal(getAdminMenuGroupForSection('workspace'), 'sites');
   assert.equal(getAdminMenuGroupForSection('community'), 'content');
   assert.equal(getAdminMenuGroupForSection('ai-membership'), 'people');
