@@ -5,7 +5,7 @@ import vm from 'node:vm';
 
 const source=fs.readFileSync(new URL('../shell/user-ai-entry.js',import.meta.url),'utf8');
 
-function mountState(pathname,surface='public'){
+function mountState(pathname,surface='public',entry=''){
   let createCount=0;
   let mountCount=0;
   const open={addEventListener(){},setAttribute(){}};
@@ -23,7 +23,7 @@ function mountState(pathname,surface='public'){
     },
   };
   const document={
-    documentElement:{dataset:{ekodiService:'ekodimall',ekodiUserSurface:surface}},
+    documentElement:{dataset:{ekodiService:'ekodimall',ekodiUserSurface:surface,ekodiUserAiEntry:entry}},
     currentScript:null,
     readyState:'complete',
     querySelector(){return null},
@@ -58,4 +58,9 @@ test('admin guard does not over-block non-admin user paths',()=>{
 
 test('admin surface remains blocked independently of pathname',()=>{
   assert.equal(mountState('/ekodimall','admin').mountCount,0);
+});
+
+test('user page can explicitly disable the shared AI entry',()=>{
+  assert.equal(mountState('/mnubiz/','public','off').mountCount,0);
+  assert.equal(mountState('/mnubiz/','public','OFF').mountCount,0);
 });
