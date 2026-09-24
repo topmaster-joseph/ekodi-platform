@@ -143,6 +143,8 @@
           "배달의민족",
           "쿠팡이츠",
           "요기요",
+          "deliveryLiveState",
+          "deliveryPortfolioSummary",
           "자담치킨 목포대점",
           "피자마루 목포대점",
           "요거트퍼플 목포대점"
@@ -151,6 +153,19 @@
           "x-ekodi-route: cmpmyi-store-portfolio-panel",
           "cache-control: no-store",
           "x-frame-options: SAMEORIGIN"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cmpmyi/admin/panel.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "store_operating_space_snapshot",
+          "store_delivery_platform_admin_snapshot",
+          "5분 자동갱신"
         ],
         "rollbackVerify": false
       },
