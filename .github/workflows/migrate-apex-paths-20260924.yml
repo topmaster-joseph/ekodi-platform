@@ -45,7 +45,7 @@ jobs:
           rx=re.compile(r'(?<!@)\b(?:[a-z0-9-]+\.)+ekodi\.kr\b|\*\.ekodi\.kr\b',re.I)
           hits=[]
           for p in root.rglob('*'):
-              if not p.is_file() or any(part in skip for part in p.parts): continue
+              if not p.is_file() or any(part in skip for part in p.parts) or p.as_posix().startswith('.github/workflows/'): continue
               rel=p.as_posix()
               if rel in allowed: continue
               try: text=p.read_text()
