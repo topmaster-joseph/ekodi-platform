@@ -50,7 +50,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'work', group: 'content', icon: 'W', labels: { ko: '운영 중인 작업', en: 'Active Work' } },
   { id: 'communication', group: 'content', icon: '✉', labels: { ko: '일정·알림·소통', en: 'Schedules, Alerts & Communication' } },
   { id: 'community', group: 'content', icon: '◌', labels: { ko: '행사·신청·예약', en: 'Events, Applications & Reservations' } },
-  { id: 'books', group: 'content', icon: 'B', labels: { ko: '전체 게시물·미디어', en: 'Posts & Media' } },
+  { id: 'books', group: 'content', icon: 'B', labels: { ko: '에코디서점', en: 'EKODI Books' }, href: 'https://ekodi.kr/ekodibooks/admin', adminHandoff: true },
   { id: 'devotional', group: 'content', icon: 'V', labels: { ko: '다국어 게시·묵상', en: 'Multilingual Publishing & Devotional' } },
   { id: 'social', group: 'content', icon: '↗', labels: { ko: '방송·채널·자동게시', en: 'Broadcast, Channels & Autopost' } },
   { id: 'finance', group: 'content', icon: '₩', labels: { ko: '결제·회계 운영', en: 'Finance Operations' } },
