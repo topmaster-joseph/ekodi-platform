@@ -177,6 +177,8 @@ for (const [serviceId, service] of Object.entries(boundaries.platforms || {})) {
 
 `+text.slice(coreStart);
   }
+  text=text.replace(/console\.log\(\`- \$\{legacy\.size\} legacy domains registered with canonical migration targets\`\);?/g,
+    "console.log('- EKODI-owned child-host aliases: 0; apex-path-only routing enforced');");
   return text;
 }
 
