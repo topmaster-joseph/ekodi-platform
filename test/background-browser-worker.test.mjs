@@ -52,6 +52,10 @@ test('worker uses Playwright isolated context without arbitrary JS task executio
 test('shared-site guarded release invokes native browser verification after production deploy',()=>{
   assert.match(workerWorkflow,/workflow_call:/);
   assert.match(workerWorkflow,/surface_path:/);
+  assert.match(workerWorkflow,/surface_paths:/);
+  assert.match(workerWorkflow,/INPUT_PATHS/);
+  assert.match(workerWorkflow,/horizontalOverflow/);
+  assert.match(workerWorkflow,/\.pageErrors \| length == 0/);
   assert.match(workerWorkflow,/device_profile:/);
   assert.match(workerWorkflow,/group:\s*ekodi-background-browser-worker-\$\{\{ github\.ref \}\}-\$\{\{ inputs\.device_profile \|\| 'desktop' \}\}/);
   assert.match(sharedRelease,/native_surface_verification_desktop:/);
@@ -59,6 +63,9 @@ test('shared-site guarded release invokes native browser verification after prod
   assert.match(sharedRelease,/uses:\s*\.\/\.github\/workflows\/ekodi-background-browser-worker\.yml/);
   assert.match(sharedRelease,/device_profile:\s*desktop/);
   assert.match(sharedRelease,/device_profile:\s*mobile-portrait/);
+  assert.match(sharedRelease,/surface_paths:\s*\/,\/my\/,\/admin\//);
+  assert.match(sharedRelease,/authenticated_admin_surface_verification:/);
+  assert.match(sharedRelease,/verify-admin-production-ui-e2e\.yml/);
   const desktop=sharedRelease.match(/native_surface_verification_desktop:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
   const mobile=sharedRelease.match(/native_surface_verification_mobile:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
   assert.match(desktop,/needs:\s*deploy/);
