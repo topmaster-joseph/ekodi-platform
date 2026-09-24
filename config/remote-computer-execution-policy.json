@@ -114,6 +114,23 @@
       "automaticFallback": false,
       "explicitLocalConsentRequired": true,
       "privilegedGateRequired": true
+    },
+    "automaticExecutionLifecycle": {
+      "defaultMode": "background-only",
+      "foregroundWindowDefault": false,
+      "userBrowserTabCreation": false,
+      "ownedAutomationSurfaceAutoClose": true,
+      "authRequiredDisposition": "record-and-close",
+      "authRequiredMustNotOpenInteractiveLogin": true,
+      "preserveUserOwnedWindowsAndTabs": true,
+      "temporaryAutomationProfilesMustBeRemoved": true,
+      "backgroundApiPreferredOverBrowserForApiChecks": true,
+      "foregroundAllowedOnlyFor": [
+        "oauth-or-provider-consent",
+        "captcha-or-human-verification",
+        "hardware-backed-authentication",
+        "os-privileged-consent"
+      ]
     }
   },
   "isolatedExecution": {

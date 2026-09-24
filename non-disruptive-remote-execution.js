@@ -7,6 +7,15 @@ export const NON_DISRUPTIVE_EXECUTION_ORDER = Object.freeze([
   'foreground-takeover',
 ]);
 
+export const AUTOMATION_SURFACE_LIFECYCLE = Object.freeze({
+  defaultMode: 'background-only',
+  createUserBrowserTab: false,
+  closeOwnedSurfaceOnComplete: true,
+  closeOwnedSurfaceOnAuthRequired: true,
+  preserveUserOwnedSurfaces: true,
+  foregroundFallbackAutomatic: false,
+});
+
 const safeText = (value, max = 120) => String(value ?? '').trim().slice(0, max);
 
 export function validateBackgroundBrowserWorker(worker = {}) {
@@ -39,6 +48,7 @@ function frozenPlan(payload) {
   return Object.freeze({
     userForegroundProtected: true,
     sameBrowserProfileForbidden: true,
+    automationSurfaceLifecycle: AUTOMATION_SURFACE_LIFECYCLE,
     ...payload,
   });
 }
@@ -53,6 +63,17 @@ export function planNonDisruptiveRemoteWork({
   foregroundTakeoverRequested = false,
   localConsent = false,
 } = {}) {
+  if (api?.available === true && api?.authRequired === true) {
+    return frozenPlan({
+      ok: false,
+      mode: 'blocked',
+      reason: 'auth_required_background_terminated',
+      code: 'AUTH_REQUIRED',
+      requiresForeground: false,
+      cleanupOwnedSurface: true,
+    });
+  }
+
   if (api?.available === true && api?.authorized === true && api?.securityEquivalent !== false) {
     return frozenPlan({
       ok: true,
@@ -60,6 +81,7 @@ export function planNonDisruptiveRemoteWork({
       reason: 'api_preferred',
       requiresForeground: false,
       candidate: Object.freeze({ providerId: safeText(api.providerId || 'official-api'), kind: 'api' }),
+      cleanupOwnedSurface: true,
     });
   }
 
@@ -79,6 +101,7 @@ export function planNonDisruptiveRemoteWork({
           reason: 'dedicated_background_browser_ready',
           requiresForeground: false,
           candidate: browserPlan.candidates[0],
+          cleanupOwnedSurface: true,
         });
       }
     }
@@ -99,6 +122,7 @@ export function planNonDisruptiveRemoteWork({
         reason: 'isolated_desktop_ready',
         requiresForeground: false,
         candidate: desktopPlan.candidates[0],
+        cleanupOwnedSurface: true,
       });
     }
   }
