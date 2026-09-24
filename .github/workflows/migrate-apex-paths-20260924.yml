@@ -1,3 +1,4 @@
+# Apex-path migration is complete; this workflow now acts as the branch-wide routing validation gate.
 name: Migrate EKODI To Apex Paths
 
 on:
@@ -6,6 +7,13 @@ on:
       - ai/chatgpt/path-only-routing-20260924
     paths:
       - 'scripts/migrate-apex-paths-20260924.mjs'
+      - 'scripts/validate-apex-path-semantics.mjs'
+      - 'scripts/zero-subdomain-guard.mjs'
+      - 'canonical-surface-router.js'
+      - 'platform-router-entry-worker.js'
+      - 'site-worker.js'
+      - 'service-proxy.js'
+      - 'experience-worker.js'
       - '.github/workflows/migrate-apex-paths-20260924.yml'
   workflow_dispatch:
 
