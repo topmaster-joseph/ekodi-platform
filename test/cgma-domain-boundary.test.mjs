@@ -27,5 +27,9 @@ test('Shared Site domain repair enforces only the canonical apex custom domain',
 test('Shared Site candidate smoke excludes the independently routed CGMA public gateway', () => {
   const manifest = JSON.parse(manifestText);
   const urls = manifest.worker.requests.map(request => request.url);
-  assert.ok(!urls.includes('https://ekodi.kr/cgma/marketing'));
+  for (const url of [
+    'https://ekodi.kr/cgma',
+    'https://ekodi.kr/cgma/',
+    'https://ekodi.kr/cgma/marketing',
+  ]) assert.ok(!urls.includes(url), `independently routed CGMA URL leaked into Shared Site candidate smoke: ${url}`);
 });
