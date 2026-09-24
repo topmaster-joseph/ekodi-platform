@@ -96,6 +96,8 @@ body.admin-compact .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display
 body.admin-compact .admin-context-title{flex:0 0 auto;min-width:72px;color:#334b63;font-size:14px;font-weight:850;letter-spacing:-.01em;white-space:nowrap}
 body.admin-compact .${TABS_CLASS}{display:flex;align-items:center;gap:5px;min-width:0;overflow-x:auto;scrollbar-width:none}
 body.admin-compact .${TABS_CLASS}::-webkit-scrollbar{display:none}
+body.admin-compact .${TABS_SHELL_CLASS}[data-admin-single-context="true"] .${TABS_CLASS}{display:none!important}
+body.admin-compact .${TABS_SHELL_CLASS}[data-admin-single-context="true"] .admin-context-title{min-width:0;color:#172033;font-size:15px}
 body.admin-compact .admin-context-tab{flex:0 0 auto;min-height:40px;padding:0 13px;border:1px solid transparent;border-radius:10px;background:transparent;color:#52667b;font:inherit;font-size:14px;font-weight:760;line-height:1.35;white-space:nowrap;cursor:pointer;box-shadow:none!important;transition:background .12s ease,border-color .12s ease!important}
 body.admin-compact .admin-context-tab:hover{border-color:#d5e6ef;background:#f2f7fb;color:#173b57}
 body.admin-compact .admin-context-tab.active{border-color:#aecdec;background:#eaf3ff;color:#0b5cab;font-weight:850}
@@ -320,8 +322,12 @@ function renderContextTabs(nav, shell, group, section, locale) {
   const title = shell.querySelector('.admin-context-title');
   const tabs = shell.querySelector(`.${TABS_CLASS}`);
   if (!tabs) return;
-  if (title) title.textContent = getAdminMenuGroupLabel(group, locale);
+  const groupLabel = getAdminMenuGroupLabel(group, locale);
+  if (title) title.textContent = groupLabel;
   const ids = availableIds(nav, group);
+  const singleEquivalent = ids.length === 1 && getAdminMenuLabel(ids[0], locale) === groupLabel;
+  shell.dataset.adminSingleContext = singleEquivalent ? 'true' : 'false';
+  tabs.hidden = singleEquivalent;
   const signature = `${locale}|${group}|${ids.join(',')}`;
   if (tabs.dataset.renderSignature !== signature) {
     tabs.dataset.renderSignature = signature;

@@ -43,3 +43,19 @@ test('Functional Admin pages keep only the bottom EKODI composer until conversat
   assert.match(dockCss, /body:not\(\.admin-command-home\) \.ekodi-assist:not\(\.history-only\) \.ekodi-assist-rail\{display:none!important\}/);
   assert.match(principles, /왼쪽은 기능 선택, 오른쪽은 실행, 아래는 에코디와 대화/);
 });
+
+test('Integrated overview removes duplicate singleton tab and keeps health cards readable on the light admin shell', async () => {
+  const [sidebar, healthJs, healthCss] = await Promise.all([
+    read('admin-sidebar.js'),
+    read('system-health-admin.js'),
+    read('system-health-admin.css'),
+  ]);
+  assert.match(sidebar, /const singleEquivalent = ids\.length === 1/);
+  assert.match(sidebar, /shell\.dataset\.adminSingleContext = singleEquivalent \? 'true' : 'false'/);
+  assert.match(sidebar, /tabs\.hidden = singleEquivalent/);
+  assert.match(healthJs, /<h2>플랫폼 통합현황<\/h2>/);
+  assert.match(healthJs, /<span>운영 연결 상태<\/span>/);
+  assert.match(healthCss, /body\.admin-compact #ekodiSystemHealth\{--muted:#66768a;--health-surface:#fff/);
+  assert.match(healthCss, /\.core-health-grid article\[data-state="ok"\] b/);
+});
+
