@@ -3,6 +3,7 @@ const BLOCKED_METHODS = new Set(['TRACE','CONNECT']);
 const STANDARD_BODY_LIMIT = 8 * 1024 * 1024;
 const LARGE_MEDIA_BODY_LIMIT = 32 * 1024 * 1024;
 const MAX_QUERY_LENGTH = 8192;
+const PUBLIC_CACHEABLE_API_PATHS = new Set(['/api/public/preview/map']);
 const encoder = new TextEncoder();
 
 function classifyPath(pathname=''){
@@ -12,8 +13,9 @@ function classifyPath(pathname=''){
   const api=path==='/api'||path.startsWith('/api/')||path.includes('/api/');
   const live=path==='/live'||path.startsWith('/live/')||path.includes('/live/');
   const media=/\/(?:upload|uploads|media|recording|recordings)(?:\/|$)/.test(path);
+  const publicCacheableApi=api&&PUBLIC_CACHEABLE_API_PATHS.has(path);
   const sensitive=admin||auth||api;
-  return {admin,auth,api,live,media,sensitive,surface:admin?'admin':auth?'auth':api?'api':live?'live':'public'};
+  return {admin,auth,api,live,media,sensitive,publicCacheableApi,surface:admin?'admin':auth?'auth':api?'api':live?'live':'public'};
 }
 
 async function digest(value){
@@ -132,7 +134,8 @@ export function applyPlatformSecurityHeaders(response,request){
   if((info.admin||info.auth)&&!headers.has('Cross-Origin-Opener-Policy'))headers.set('Cross-Origin-Opener-Policy','same-origin-allow-popups');
   if(info.sensitive){
     headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
-    if(isDocumentResponse(secured))headers.set('Cache-Control','no-store');
+    const safePublicRead=info.publicCacheableApi&&['GET','HEAD'].includes(String(request.method||'GET').toUpperCase());
+    if(isDocumentResponse(secured)&&!safePublicRead)headers.set('Cache-Control','no-store');
   }
   headers.delete('X-Powered-By');
   headers.set('X-EKODI-Security-Policy','platform-edge-v2');
@@ -144,4 +147,5 @@ export const PLATFORM_SECURITY_CONSTANTS=Object.freeze({
   STANDARD_BODY_LIMIT,
   LARGE_MEDIA_BODY_LIMIT,
   MAX_QUERY_LENGTH,
+  PUBLIC_CACHEABLE_API_PATHS:Object.freeze([...PUBLIC_CACHEABLE_API_PATHS]),
 });
