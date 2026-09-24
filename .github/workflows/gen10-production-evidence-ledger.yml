@@ -217,11 +217,12 @@ jobs:
       - name: Verify runtime evidence roundtrip
         run: |
           set -euo pipefail
-          EVIDENCE_ID=$(node -e "const e=require('/tmp/runtime-evidence.json');process.stdout.write(e.evidenceId)")
+          SOURCE_RUN_ID=$(node -e "const e=require('/tmp/runtime-evidence.json');process.stdout.write(e.source.runId)")
+          SOURCE_RUN_ATTEMPT=$(node -e "const e=require('/tmp/runtime-evidence.json');process.stdout.write(e.source.runAttempt)")
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth \
             --remote \
             --config wrangler.api.toml \
-            --command "SELECT id,generation,outcome,payload_sha256,artifact_count FROM ai_generation10_evidence WHERE id='${EVIDENCE_ID}'" \
+            --command "SELECT id,generation,subject,outcome,payload_sha256,artifact_count,evidence_json FROM ai_generation10_evidence WHERE source_run_id='${SOURCE_RUN_ID}' AND source_run_attempt='${SOURCE_RUN_ATTEMPT}'" \
             --json > /tmp/runtime-evidence-roundtrip.json
           node - <<'NODE'
           const fs = require('node:fs');
@@ -236,12 +237,19 @@ jobs:
             }
           };
           walk(raw);
-          const row = rows.find(item => item.id === expected.evidenceId);
-          if (!row) throw new Error('runtime evidence row not found after insert');
-          if (Number(row.generation) !== 10) throw new Error('generation mismatch');
-          if (String(row.payload_sha256) !== expected.payloadSha256) throw new Error('payload digest mismatch');
-          if (Number(row.artifact_count) !== expected.evidence.artifactCount) throw new Error('artifact count mismatch');
-          console.log(`Runtime evidence roundtrip verified: ${row.id} outcome=${row.outcome}`);
+          const primary = rows.find(item => item.id === expected.evidenceId);
+          if (!primary) throw new Error('runtime evidence row not found after insert');
+          if (Number(primary.generation) !== 10) throw new Error('generation mismatch');
+          if (String(primary.payload_sha256) !== expected.payloadSha256) throw new Error('payload digest mismatch');
+          if (Number(primary.artifact_count) !== expected.evidence.artifactCount) throw new Error('artifact count mismatch');
+          for (const auxiliary of expected.auxiliaryEvidence || []) {
+            const row = rows.find(item => item.id === auxiliary.evidenceId);
+            if (!row) throw new Error('auxiliary runtime evidence row not found after insert: ' + auxiliary.subject);
+            const payload = JSON.parse(String(row.evidence_json || '{}'));
+            if (String(row.subject) !== auxiliary.subject) throw new Error('auxiliary subject mismatch: ' + auxiliary.subject);
+            if (payload.verified !== auxiliary.verified) throw new Error('auxiliary verification mismatch: ' + auxiliary.subject);
+          }
+          console.log(`Runtime evidence roundtrip verified: ${primary.id} + ${expected.auxiliaryEvidence.length} auxiliary rows`);
           NODE
 
       - name: Publish runtime evidence summary

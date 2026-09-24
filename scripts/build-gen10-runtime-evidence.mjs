@@ -11,6 +11,8 @@ const REQUIRED_ARTIFACTS = Object.freeze({
   rootlessSandbox: 'ekodi-gen10-rootless-sandbox-proof-',
   parallelConvergence: 'ekodi-gen10-parallel-convergence-proof-',
   supplyChain: 'ekodi-gen10-supply-chain-proof-',
+  redHumanGate: 'ekodi-gen10-red-human-gate-proof-',
+  multiProviderFailureDomain: 'ekodi-gen10-multi-provider-proof-',
 });
 
 function slug(value, fallback = 'unknown') {
@@ -102,6 +104,8 @@ export function buildRuntimeEvidence({
       rootlessSandboxProven: Boolean(required.rootlessSandbox),
       parallelConvergenceProven: Boolean(required.parallelConvergence),
       sbomProvenanceCostBundleProven: Boolean(required.supplyChain),
+      redHumanGateProven: Boolean(required.redHumanGate),
+      multiProviderFailureDomainProven: Boolean(required.multiProviderFailureDomain),
       productionSecretExposureClaimed: false,
       productionMutationPerformed: false,
       authorityExpanded: false,
@@ -109,6 +113,28 @@ export function buildRuntimeEvidence({
     }),
     payloadSha256,
     artifacts,
+    auxiliaryEvidence: Object.freeze([
+      Object.freeze({
+        evidenceId: `runtime_red-human-gate_${slug(runId)}_${slug(runAttempt)}`,
+        generation: 10,
+        kind: 'runtime_lifecycle_evidence',
+        subject: 'red-human-gate',
+        outcome: verified && Boolean(required.redHumanGate) ? 'verified' : 'incomplete_evidence',
+        verified: verified && Boolean(required.redHumanGate),
+        artifactName: required.redHumanGate?.name || null,
+        artifactDigest: required.redHumanGate?.digest || null,
+      }),
+      Object.freeze({
+        evidenceId: `runtime_multi-provider-failure-domain_${slug(runId)}_${slug(runAttempt)}`,
+        generation: 10,
+        kind: 'runtime_provider_evidence',
+        subject: 'multi-provider-failure-domain',
+        outcome: verified && Boolean(required.multiProviderFailureDomain) ? 'verified' : 'incomplete_evidence',
+        verified: verified && Boolean(required.multiProviderFailureDomain),
+        artifactName: required.multiProviderFailureDomain?.name || null,
+        artifactDigest: required.multiProviderFailureDomain?.digest || null,
+      }),
+    ]),
     recordedAt: clean(recordedAt, 80) || new Date().toISOString(),
   });
 }
@@ -176,6 +202,45 @@ INSERT OR IGNORE INTO ai_generation10_evidence (
   ${sqlQuote(evidence.recordedAt)}
 );
 `;
+  const auxiliarySql = (evidence.auxiliaryEvidence || []).map(auxiliary => {
+    const auxiliaryPayload = {
+      ...auxiliary,
+      source,
+      productionMutationPerformed: false,
+      authorityExpanded: false,
+    };
+    const auxiliaryJson = jsonHex(auxiliaryPayload);
+    const auxiliaryDigest = sha256(JSON.stringify({
+      sourceWorkflow: source.workflow,
+      sourceRunId: source.runId,
+      sourceRunAttempt: source.runAttempt,
+      subject: auxiliary.subject,
+      artifactDigest: auxiliary.artifactDigest,
+      verified: auxiliary.verified,
+    }));
+    return `INSERT OR IGNORE INTO ai_generation10_evidence (
+  id, generation, kind, subject, outcome,
+  source_workflow, source_run_id, source_run_attempt, source_conclusion, source_url,
+  head_sha, payload_sha256, artifact_count, evidence_json, recorded_at
+) VALUES (
+  ${sqlQuote(auxiliary.evidenceId)},
+  ${Number(auxiliary.generation || 10)},
+  ${sqlQuote(auxiliary.kind)},
+  ${sqlQuote(auxiliary.subject)},
+  ${sqlQuote(auxiliary.outcome)},
+  ${sqlQuote(source.workflow)},
+  ${sqlQuote(source.runId)},
+  ${sqlQuote(source.runAttempt)},
+  ${sqlQuote(source.conclusion)},
+  ${source.url ? sqlQuote(source.url) : 'NULL'},
+  ${source.headSha ? sqlQuote(source.headSha) : 'NULL'},
+  ${sqlQuote(auxiliaryDigest)},
+  ${auxiliary.artifactName ? 1 : 0},
+  CAST(X'${auxiliaryJson}' AS TEXT),
+  ${sqlQuote(evidence.recordedAt)}
+);`;
+  }).join('\n');
+  return primarySql + auxiliarySql + '\n';
 }
 
 function readArgs(argv) {
