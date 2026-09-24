@@ -171,7 +171,7 @@ test('admin menu governance uses seven platform control areas with role-projecte
   assert.match(sidebar, /TABS_SHELL_CLASS = 'admin-context-tabs-shell'/);
   assert.match(sidebar, /TABS_CLASS = 'admin-context-tabs'/);
   assert.match(sidebar, /data-admin-context-section/);
-    assert.match(sidebar, /data-admin-capability-shortcut/);
+  assert.doesNotMatch(sidebar, /shortcut\.textContent = locale === 'en' \? '⚡ Capabilities' : '⚡ 기능'/);
   assert.match(sidebar, /nav\.dataset\.adminMenuGovernance = 'role-projected-sidebar-v4'/);
   assert.match(sidebar, /item\.dataset\.adminMenuGroup = definition\.group/);
   assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: false \}\)/);
