@@ -10,7 +10,7 @@ test('Tax canonical surface is served from ekodi.kr/tax', async () => {
   const html=await response.text();
   assert.match(html,/EKODI Tax/);
   assert.match(html,/\/tax\/tax-portal\.js/);
-  assert.match(html,/\/ekodibiz\/admin\?source=ekodibiz/);
+  assert.match(html,/\/ekodibiz\/admin\/tax\?source=ekodibiz/);
   assert.match(html,/에코디비즈 관리자/);
 });
 
