@@ -129,11 +129,63 @@ async function rewriteHtmlResponse`);
   text=text.replace(/\s*const canonical=canonicalAbsoluteUrl\(target\.hostname,target\.pathname,target\.search,target\.hash\);if\(canonical\)return canonical;/,'');
   return text;
 }
+function fixConstitutionValidator(text){
+  text=text.replace("if (constitution.version !== '1.25.0') fail('constitution version must be 1.25.0 with Public Visual Continuity enforcement plus all prior approved amendments');",
+    "if (constitution.version !== '1.26.0') fail('constitution version must be 1.26.0 with apex-path-only routing plus all prior approved amendments');");
+  const start=text.indexOf('const systemDomains = new Set(');
+  const end=text.indexOf('const expectedNamespaces =',start);
+  if(start>=0&&end>start){
+    text=text.slice(0,start)+`const systemDomains = new Set(constitution.systemBoundaries?.production || []);
+const registeredCommon = new Set(constitution.registeredCommonServiceBoundaries || []);
+const registeredCommonPaths = new Set(constitution.registeredCommonServicePaths || []);
+const registeredCore = new Set(constitution.registeredCoreServiceBoundaries || []);
+const customerOwned = constitution.customerOwnedDomainMappings || {};
+if (JSON.stringify([...systemDomains]) !== JSON.stringify(['ekodi.kr'])) fail('production system host set must contain only ekodi.kr');
+if (constitution.domainPolicy?.newFeatureSubdomainsForbidden !== true) fail('new feature child hosts must be forbidden');
+if (constitution.domainPolicy?.newTenantSubdomainsForbidden !== true) fail('new tenant/workspace child hosts must be forbidden');
+if (constitution.domainPolicy?.allEkodiOwnedSubdomainsForbidden !== true) fail('all EKODI-owned child hosts must be forbidden');
+if ('legacyDomainAllowlist' in constitution || 'legacyDomainTargets' in constitution || 'legacyPathAliases' in constitution) fail('retired EKODI child-host alias registries must be absent');
+for (const p of ['/journal','/marketing','/developer','/experience']) if (!registeredCommon.has(p)) fail('registered common-service path missing: '+p);
+if (!registeredCommonPaths.has('/invest')) fail('registered common-service path missing: /invest');
+if (!registeredCore.has('/ai')) fail('registered core-service path missing: /ai');
+const portals=constitution.publicPortalPolicy||{};
+if (portals.developerPortal!=='https://ekodi.kr/developer' || portals.experiencePortal!=='https://ekodi.kr/experience') fail('public portal canonical path policy mismatch');
+if (portals.sharedRuntimeAllowedAtS0!==true) fail('public portal S0 shared-runtime policy missing');
+if (portals.experienceDataPolicy!=='synthetic-only' || portals.developerDataPolicy!=='public-contract-only') fail('public portal data projection policy mismatch');
+const separation=constitution.userSurfaceEngineSeparation||{};
+if (separation.canonicalMarketingProduct !== 'https://ekodi.kr/ekodibiz/marketing-ai') fail('Marketing product canonical drift');
+if (separation.canonicalWorkspaceMarketingPattern !== 'https://ekodi.kr/{slug}/marketing') fail('workspace Marketing canonical pattern drift');
+if (separation.marketingCore !== 'https://ekodi.kr/marketing') fail('Marketing Core path drift');
+if (separation.aiGateway !== 'https://ekodi.kr/ai') fail('AI Gateway/Core path drift');
+if (separation.customerAiSubdomains !== 'forbidden') fail('customer AI child hosts must remain forbidden');
+if (separation.providerTopologyVisibleToOrdinaryUsers !== false) fail('provider topology must stay hidden from ordinary users');
+if (customerOwned['cgma.or.kr'] !== 'https://ekodi.kr/cgma') fail('CGMA customer-owned domain mapping must target the canonical platform path');
+
+`+text.slice(end);
+  }
+  text=text.replace("if (constitution.workspaceRoutingPolicy?.legacySpaceIsCompatibilityOnly !== true) fail('Space must remain compatibility-only during migration');",
+    "if ('legacySpaceIsCompatibilityOnly' in (constitution.workspaceRoutingPolicy||{})) fail('retired Space compatibility classification must be absent');");
+  const legacyStart=text.indexOf('const legacyPathAliases = constitution.legacyPathAliases');
+  const coreStart=text.indexOf("if (!Array.isArray(coreData.protectedTables)",legacyStart);
+  if(legacyStart>=0&&coreStart>legacyStart){
+    text=text.slice(0,legacyStart)+`if ('legacyPathAliases' in constitution) fail('retired path aliases must be absent');
+for (const [serviceId, service] of Object.entries(boundaries.platforms || {})) {
+  for (const domain of service.domains || []) {
+    if (/^(?:[a-z0-9-]+\\.)+ekodi\\.kr$/i.test(String(domain||''))) fail(serviceId+': EKODI child host remains in platform boundaries: '+domain);
+  }
+}
+
+`+text.slice(coreStart);
+  }
+  return text;
+}
+
 function structuredPolicyEdits(file,text){
+  if(file==='scripts/validate-constitution.mjs')return fixConstitutionValidator(text);
   if(file==='governance/constitution/constitution.json'){
     const j=JSON.parse(text);j.version='1.26.0';j.effectiveDate='2026-09-24';
     j.systemBoundaries={production:['ekodi.kr'],development:[],rule:'All EKODI-owned human, admin, API, core and common-service surfaces use paths on ekodi.kr. EKODI-owned subdomains are forbidden.'};
-    delete j.legacyDomainAllowlist;delete j.legacyDomainTargets;
+    delete j.legacyDomainAllowlist;delete j.legacyDomainTargets;delete j.legacyPathAliases;if(j.workspaceRoutingPolicy)delete j.workspaceRoutingPolicy.legacySpaceIsCompatibilityOnly;
     j.domainPolicy={...(j.domainPolicy||{}),newFeatureSubdomainsForbidden:true,newTenantSubdomainsForbidden:true,allEkodiOwnedSubdomainsForbidden:true,commonOrCoreServiceSubdomainsRequireGovernanceRegistration:false,legacyAliasesMayRedirect:false,legacyAliasesMustBeRegistered:false,canonicalHumanAndManagementHost:'ekodi.kr',subdomainUserEntryForbidden:true};
     j.registeredCommonServiceBoundaries=['/journal','/marketing','/developer','/experience'];
     j.registeredCoreServiceBoundaries=['/ai'];
@@ -186,9 +238,9 @@ for(const file of walk(root)){
 
 const amendment={
   id:'2026-09-24-apex-path-only-v1.26.0',constitutionVersion:'1.26.0',effectiveDate:'2026-09-24',
-  changeClass:'C3',status:'approved-by-owner-instruction',
+  changeClass:'C3',status:'approved',approvedBy:'topmaster-joseph',
   summary:'Remove all EKODI-owned child-host addresses and make ekodi.kr path routing the only EKODI-owned address model.',
-  ownerInstruction:'GitHub and Supabase must use current ekodi.kr path hierarchy; do not keep EKODI subdomains as redirects or legacy aliases.',
+  ownerInstruction:'GitHub and Supabase must use current ekodi.kr path hierarchy; EKODI child-host addresses must be deleted rather than retained as redirects or aliases.',approvalBasis:'Explicit platform-owner instruction in the 2026-09-24 migration task.',
   migrationPolicy:'Delete EKODI-owned subdomain bindings, routes, DNS serving records and source references. Internal execution uses service bindings or private workers.',
   rollback:'Git revert restores source state. Recreating any EKODI-owned subdomain requires a new explicit C3 owner approval.'
 };
