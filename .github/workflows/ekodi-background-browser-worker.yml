@@ -100,7 +100,7 @@ jobs:
         shell: bash
         env:
           INPUT_PATH: ${{ inputs.surface_path || '/' }}
-          INPUT_PATHS: ${{ inputs.surface_paths || '' }}
+          INPUT_PATHS: ${{ inputs.surface_paths || (github.event_name == 'pull_request' && '/,/my/,/admin/' || '') }}
           INPUT_DEVICE: ${{ inputs.device_profile || 'desktop' }}
         run: |
           node - <<'NODE'
