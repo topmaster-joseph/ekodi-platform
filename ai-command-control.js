@@ -15,6 +15,9 @@ import {
 } from './ekodi-command-ledger.js';
 import { getEkodiConsultationHistory } from './ekodi-consultation-ledger.js';
 import { getEkodiProviderOperationalReadiness, runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
+import { getLatestAutonomousHealthSnapshot } from './ekodi-autonomous-health-telemetry.js';
+import { collectPlatformRuntimeObservations } from './ekodi-platform-observer.js';
+import { runRuntimeAutonomicControlPlane } from './ekodi-autonomic-control-plane.js';
 
 const PREFIX = '/api/control/ai/v8';
 const COLLABORATION_PATH = `${PREFIX}/collaboration-settings`;
@@ -149,12 +152,32 @@ export async function handleEkodiV8CommandControl(request, env) {
   }
 
   if (request.method === 'GET' && url.pathname === `${PREFIX}/status`) {
-    const [ledger, gateway, readiness, collaborationSettings] = await Promise.all([
+    const [ledger, gateway, readiness, collaborationSettings, latestAutonomousHealth] = await Promise.all([
       getEkodiCommandLedgerStatus(env),
       Promise.resolve(getCoreAiGatewayStatus(env, [])),
       getEkodiProviderOperationalReadiness(env),
       getAiCollaborationAdminSnapshot(env),
+      getLatestAutonomousHealthSnapshot(env).catch(() => null),
     ]);
+    const observations = await collectPlatformRuntimeObservations(
+      env,
+      { autonomousHealth: latestAutonomousHealth || {}, readiness, ledger },
+      {},
+      { now: latestAutonomousHealth?.observedAt || new Date().toISOString() },
+    );
+    const autonomicControl = runRuntimeAutonomicControlPlane({
+      observed: observations.current,
+      previousObserved: observations.summary.historicalServices ? observations.previous : null,
+      now: latestAutonomousHealth?.observedAt || new Date().toISOString(),
+    });
+    const autonomic = Object.freeze({
+      controlPlaneId: autonomicControl.controlPlaneId,
+      reconciliation: autonomicControl.reconciliation.summary,
+      twin: Object.freeze({ health: autonomicControl.twin.health, summary: autonomicControl.twin.summary }),
+      serviceObservation: observations.summary,
+      humanGates: autonomicControl.humanGates,
+      authority: autonomicControl.authority,
+    });
     return json(request, env, {
       ok: true,
       schemaVersion: 2,
@@ -172,6 +195,7 @@ export async function handleEkodiV8CommandControl(request, env) {
       gateway,
       collaboration: collaborationSettings,
       ledger,
+      autonomic,
     });
   }
 
@@ -234,7 +258,7 @@ export async function handleEkodiV8CommandControl(request, env) {
 }
 
 export const EKODI_V8_COMMAND_CONTROL = Object.freeze({
-  version: '1.2.0',
+  version: '1.3.0',
   prefix: PREFIX,
   surfaces: Object.freeze(['status', 'tasks', 'tasks/:taskId/consultation', 'pulse', 'drain', 'collaboration-settings', 'collaboration-settings/audit']),
 });
