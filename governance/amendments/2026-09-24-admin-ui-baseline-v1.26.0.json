@@ -38,6 +38,17 @@
     "ownerInstructionDate": "2026-09-24",
     "requiredPullRequestLabel": "constitution-approved",
     "approvalLabel": "constitution-approved",
-    "pullRequest": 2529
+    "pullRequest": 2529,
+    "constitutionApprovedLabelApplied": true,
+    "relatedChangeReview": {
+      "reviewedPullRequest": 2525,
+      "evidenceCommentId": 5806661101,
+      "currentPullRequest": 2529,
+      "integrationOrder": "2529-first-then-2525-refresh-on-main",
+      "labels": [
+        "integration-order-approved",
+        "related-change-review-complete"
+      ]
+    }
   }
 }
