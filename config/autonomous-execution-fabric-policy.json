@@ -294,6 +294,13 @@
         "Deploy EKODI Shared Site Core",
         "EKODI Autonomous Execution Fabric Runtime Proof"
       ]
+    },
+    "activationEvaluator": {
+      "script": "scripts/evaluate-gen10-activation-evidence.mjs",
+      "sourceOfTruth": "durable-ledger-runtime-and-production-evidence",
+      "failClosed": true,
+      "incompleteEvidenceMeansReady": false,
+      "multiProviderFailureDomainEvidenceRequired": true
     }
   }
 }
