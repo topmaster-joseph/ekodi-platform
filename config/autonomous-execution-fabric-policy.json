@@ -280,6 +280,20 @@
       "release_authorization",
       "production_result",
       "recovery_result"
-    ]
+    ],
+    "durableLedger": {
+      "workflow": ".github/workflows/gen10-production-evidence-ledger.yml",
+      "backend": "cloudflare-d1",
+      "database": "ekodi-auth",
+      "productionTable": "ai_production_evidence",
+      "runtimeTable": "ai_generation10_evidence",
+      "appendOnly": true,
+      "roundtripVerificationRequired": true,
+      "sourceWorkflows": [
+        "Deploy Control API",
+        "Deploy EKODI Shared Site Core",
+        "EKODI Autonomous Execution Fabric Runtime Proof"
+      ]
+    }
   }
 }
