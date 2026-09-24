@@ -10,15 +10,16 @@ const demand = await readFile(new URL('../admin-demand-loader.js', import.meta.u
 const postbuild = await readFile(new URL('../scripts/admin-thin-postbuild.mjs', import.meta.url), 'utf8');
 const registry = await readFile(new URL('../admin-menu-registry.js', import.meta.url), 'utf8');
 
-test('Campus first screen renders the full site catalog with direct operational actions', () => {
+test('Campus first screen renders the site catalog as direct administrator buttons', () => {
   assert.match(js, /사이트 관리 ·/);
   assert.match(js, /청계면상인회/);
   assert.match(js, /자담치킨 목포대점/);
   assert.match(js, /피자마루 목포대점/);
   assert.match(js, /요거트퍼플 목포대점/);
-  assert.match(js, /makeButton\('Manage'/);
-  assert.match(js, /makeButton\('Status'/);
-  assert.match(js, /link\.textContent = 'Open ↗'/);
+  assert.match(js, /function makeSiteAdminButton/);
+  assert.match(js, /dataset\.campusSiteButton = 'true'/);
+  assert.match(js, /item\.append\(makeSiteAdminButton\(site\)\)/);
+  assert.match(js, /버튼을 누르면 해당 관리자 메뉴로 이동합니다/);
 });
 
 test('Campus always keeps pre-open platforms visible and prevents dead planned links', () => {
@@ -54,7 +55,7 @@ test('Campus reconciles the canonical homepage registry so the two old lists can
   assert.match(js, /기타/);
 });
 
-test('Campus groups related services into a compact two-column layout', () => {
+test('Campus category results flatten into a site-name button directory', () => {
   for (const group of [
     '핵심·접근',
     '사업·상거래',
@@ -67,12 +68,11 @@ test('Campus groups related services into a compact two-column layout', () => {
   assert.match(js, /className = 'campus-groups-grid'/);
   assert.match(js, /SITE_SECTION_FILTER/);
   assert.match(js, /wrapper\.replaceChildren\(grid, empty\)/);
-  assert.doesNotMatch(js, /wrapper\.replaceChildren\(tabs, grid\)/);
-  assert.match(js, /className = 'campus-group-card'/);
-  assert.match(js, /className = 'campus-site-item'/);
-  assert.match(css, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
-  assert.match(css, /\.campus-group-card/);
-  assert.match(css, /\.campus-site-item/);
+  assert.match(js, /className = 'campus-site-admin-button'/);
+  assert.match(css, /grid-template-columns:repeat\(auto-fit,minmax\(210px,1fr\)\)/);
+  assert.match(css, /\.campus-group-card,[\s\S]*\.campus-group-list\{[\s\S]*display:contents!important/);
+  assert.match(css, /\.campus-group-head\{[\s\S]*display:none!important/);
+  assert.match(css, /\.campus-site-admin-button/);
 });
 
 test('Homepage controls share the same Campus row and remain responsive', () => {
