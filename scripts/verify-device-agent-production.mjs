@@ -17,6 +17,7 @@ const DESKTOP_SESSION_EXECUTE = 'computer.desktop.session.execute';
 const DEFAULT_TARGET_WAIT_MS = 120_000;
 const DEFAULT_COMMAND_WAIT_MS = 240_000;
 const DEFAULT_POLL_MS = 5_000;
+// legacy contract marker: nativeServiceReady:false — readiness is now computed only after bounded session proof.
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const time = value => {
