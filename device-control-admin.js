@@ -36,6 +36,7 @@
     'computer.browser.canary': '사용자 화면·입력·클립보드를 건드리지 않는 전용 headless 브라우저 canary를 실행할까요?',
     'computer.desktop.canary': 'EKODI 자체 Hyper-V에서 임시 격리 VM을 생성·부팅·폐기하는 canary를 실행할까요? 사용자 화면과 입력은 사용하지 않습니다.',
     'computer.desktop.guest.canary': '네트워크가 없는 임시 EKODI VM에서 Guest Agent가 실제 작업을 실행하고 결과 영수증을 반환하는 canary를 실행할까요? 실제 사용자 데스크톱에는 접근하지 않습니다.',
+    'computer.desktop.ui.canary': '임시 EKODI VM 내부의 독립 UI를 의미 기반 UI Automation으로 제어하는 canary를 실행할까요? 실제 사용자 화면·키보드·마우스는 사용하지 않습니다.',
     'startup.disable': '이 시작 프로그램을 비활성화할까요? EKODI가 복원 정보를 로컬에 보관합니다.',
     'startup.restore': '이 시작 프로그램을 다시 활성화할까요?',
   };
@@ -104,7 +105,7 @@
       'startup.disable': '시작프로그램 해제', 'startup.restore': '시작프로그램 복원', 'maintenance.temp_cleanup': '임시파일 정리',
       'updates.scan': '업데이트 확인', 'updates.install': '업데이트 설치', 'profile.workstation.apply': 'EKODI 업무환경',
       'profile.workstation.restore': '업무환경 복원', 'agent.self_update': 'Agent 업데이트', 'computer.browser.canary': 'BG Browser Canary',
-      'computer.agent.status': 'Agent 상태', 'computer.system.read': '시스템 상태', 'computer.process.list': '프로세스 보기', 'computer.desktop.probe': '격리 데스크톱 점검', 'computer.desktop.canary': '격리 VM Canary', 'computer.desktop.guest.canary': 'Guest 실행 Canary',
+      'computer.agent.status': 'Agent 상태', 'computer.system.read': '시스템 상태', 'computer.process.list': '프로세스 보기', 'computer.desktop.probe': '격리 데스크톱 점검', 'computer.desktop.canary': '격리 VM Canary', 'computer.desktop.guest.canary': 'Guest 실행 Canary', 'computer.desktop.ui.canary': 'Guest UI Canary',
     };
     return labels[type] || type;
   }
@@ -276,6 +277,7 @@
       makeActionButton(device, 'computer.desktop.probe', '격리 데스크톱 점검', 'ghost', {}, !capability(device, 'isolatedDesktopProbe')),
       makeActionButton(device, 'computer.desktop.canary', '격리 VM Canary', 'ghost', {}, !capability(device, 'isolatedDesktopProbe')),
       makeActionButton(device, 'computer.desktop.guest.canary', 'Guest 실행 Canary', 'ghost', {}, !capability(device, 'isolatedDesktopCanary')),
+      makeActionButton(device, 'computer.desktop.ui.canary', 'Guest UI Canary', 'ghost', {}, !capability(device, 'isolatedDesktopGuestCanary')),
       makeActionButton(device, 'computer.system.read', '시스템 상태', 'ghost', {}, !capability(device, 'computerRead')),
       makeActionButton(device, 'computer.process.list', '프로세스 보기', 'secondary', {}, !capability(device, 'processRead')),
     );
@@ -291,7 +293,7 @@
 
     const agentCard = document.createElement('div');
     agentCard.className = 'device-remote-summary-card';
-    agentCard.innerHTML = `<small>Agent · 사용자 화면 보호</small><strong>${escapeHtml(agent?.version || device.agentVersion || '확인 전')}</strong><span>${agent ? `작업 ${escapeHtml(agent.taskState || 'unknown')} · Shell ${agent.persistentShell ? '열림' : '차단'} · BG Canary ${device.capabilities?.backgroundBrowserCanary ? '통과' : '대기'} · Browser Worker ${agent.backgroundBrowserReady ? '준비' : '대기'} · Desktop Probe ${agent.isolatedDesktopProbeAvailable ? '가능' : '대기'} · VM Canary ${agent.isolatedDesktopCanaryVerified ? '통과' : '대기'} · Guest Canary ${agent.isolatedDesktopGuestCanaryVerified ? '통과' : '대기'} · Isolated Desktop ${agent.isolatedDesktopReady ? '준비' : '대기'}` : '“Agent 상태”로 최신 상태를 확인하세요.'}</span>`;
+    agentCard.innerHTML = `<small>Agent · 사용자 화면 보호</small><strong>${escapeHtml(agent?.version || device.agentVersion || '확인 전')}</strong><span>${agent ? `작업 ${escapeHtml(agent.taskState || 'unknown')} · Shell ${agent.persistentShell ? '열림' : '차단'} · BG Canary ${device.capabilities?.backgroundBrowserCanary ? '통과' : '대기'} · Browser Worker ${agent.backgroundBrowserReady ? '준비' : '대기'} · Desktop Probe ${agent.isolatedDesktopProbeAvailable ? '가능' : '대기'} · VM Canary ${agent.isolatedDesktopCanaryVerified ? '통과' : '대기'} · Guest Canary ${agent.isolatedDesktopGuestCanaryVerified ? '통과' : '대기'} · UI Canary ${agent.isolatedDesktopUiCanaryVerified ? '통과' : '대기'} · Isolated Desktop ${agent.isolatedDesktopReady ? '준비' : '대기'}` : '“Agent 상태”로 최신 상태를 확인하세요.'}</span>`;
 
     const systemCard = document.createElement('div');
     systemCard.className = 'device-remote-summary-card';
