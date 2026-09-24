@@ -80,8 +80,8 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.match(principles,/관리자 왼쪽 상단 헤더는 삭제가 기본 원칙/);
   assert.match(principles,/User Shell UI/);
   assert.match(principles,/Admin Shell UI/);
-  assert.match(principles,/2단 내비게이션/);
-  assert.match(principles,/좌측 1차 메뉴 고정·무스크롤/);
+  assert.match(principles,/역할별 2단 구조/);
+  assert.match(principles,/역할별 좌측 메뉴 고정·최고관리자 필요 시 독립스크롤/);
   assert.match(principles,/통합현황 \/ 서비스 \/ 사이트 \/ 사용자·권한 \/ 콘텐츠·운영 \/ 상태·배포 \/ 설정·기록/);
   assert.match(principles,/가독성·직관성 공통 기준/);
 });
