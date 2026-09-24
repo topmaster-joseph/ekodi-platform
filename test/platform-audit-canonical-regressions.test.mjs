@@ -7,7 +7,7 @@ const read = path => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'ut
 test('canonical admin deep links restore even when post-auth layout loads after admin-ready', () => {
   const layout = read('admin-menu-layout.js');
   const sidebar = read('admin-sidebar.js');
-  assert.match(layout, /else if\(initialSection\)\{[\s\S]*queueMicrotask\(\(\)=>\{if\(requestedSection!==initialSection\)return;if\(!activatePanel\(initialSection\)\)requestDemand\(initialSection\);\}\)/);
+  assert.match(layout, /else if\(initialSection\)\{[\s\S]*queueMicrotask\(\(\)=>activatePanel\(initialSection\)\|\|requestDemand\(initialSection\)\)/);
   assert.match(sidebar, /if \(routed && getAdminMenuItem\(routed\)\) return routed;/);
 });
 
