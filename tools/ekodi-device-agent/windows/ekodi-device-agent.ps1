@@ -1694,6 +1694,219 @@ function Invoke-IsolatedDesktopGuestRuntimeCanary {
   }
 }
 
+function Get-IsolatedDesktopUiCanaryState {
+  if (-not (Test-Path -LiteralPath $IsolatedDesktopUiCanaryStatePath)) {
+    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion; guestAgentVersion = '1.1.0' }
+  }
+  try {
+    $state = Get-Content -LiteralPath $IsolatedDesktopUiCanaryStatePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $verified = (
+      $state.ok -eq $true -and
+      [string]$state.agentVersion -eq $AgentVersion -and
+      [string]$state.guestAgentVersion -eq '1.1.0' -and
+      [string]$state.mode -eq 'isolated-desktop-guest-ui-canary' -and
+      $state.executedAsSystem -eq $true -and
+      $state.noNetworkAdapter -eq $true -and
+      $state.noActiveNetwork -eq $true -and
+      $state.guestUiSurfaceUsed -eq $true -and
+      $state.hostInteractiveDesktopUsed -eq $false -and
+      $state.sharedInteractiveDesktop -eq $false -and
+      $state.semanticUiAutomation -eq $true -and
+      $state.lowLevelInputInjection -eq $false -and
+      $state.clipboardShared -eq $false -and
+      $state.credentialCollection -eq $false -and
+      $state.syntheticUiOnly -eq $true -and
+      $state.windowFound -eq $true -and
+      $state.buttonFound -eq $true -and
+      $state.invokePatternAvailable -eq $true -and
+      $state.controlInvoked -eq $true -and
+      [string]$state.resultCode -eq 'EKODI_UI_OK' -and
+      $state.windowClosed -eq $true -and
+      $state.sessionVmRemoved -eq $true -and
+      $state.sessionDiskRemoved -eq $true
+    )
+    return @{
+      verified = [bool]$verified
+      checkedAt = [string]$state.checkedAt
+      agentVersion = [string]$state.agentVersion
+      guestAgentVersion = [string]$state.guestAgentVersion
+      receiptSha256 = [string]$state.receiptSha256
+      semanticUiAutomation = [bool]$state.semanticUiAutomation
+      controlInvoked = [bool]$state.controlInvoked
+    }
+  } catch {
+    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion; guestAgentVersion = '1.1.0'; error = 'isolated_ui_canary_state_invalid' }
+  }
+}
+
+function Invoke-IsolatedDesktopGuestUiCanary {
+  Remove-Item -LiteralPath $IsolatedDesktopUiCanaryStatePath -Force -ErrorAction SilentlyContinue
+  $runtimeCanary = Get-IsolatedDesktopGuestCanaryState
+  if (-not $runtimeCanary.verified) { throw 'isolated_guest_runtime_canary_required' }
+
+  $probe = Get-IsolatedDesktopBackendProbe
+  if (-not $probe.headlessBackendReady -or $probe.recommendedBackend -ne 'hyper-v-ekodi-base') {
+    throw "isolated_ui_backend_not_ready:$($probe.gapReason)"
+  }
+
+  $baseVmName = 'EKODI-Isolated-Base'
+  $baseVm = Get-VM -Name $baseVmName -ErrorAction Stop
+  if ([string]$baseVm.State -ne 'Off') { throw 'isolated_ui_base_vm_must_be_off' }
+  $baseDisks = @(Get-VMHardDiskDrive -VMName $baseVmName -ErrorAction Stop)
+  if ($baseDisks.Count -ne 1) { throw 'isolated_ui_base_vm_requires_single_disk' }
+  $baseDiskPath = [string]$baseDisks[0].Path
+  if (-not $baseDiskPath -or -not (Test-Path -LiteralPath $baseDiskPath)) { throw 'isolated_ui_base_disk_missing' }
+
+  New-Item -ItemType Directory -Path $IsolatedDesktopSessionRoot -Force | Out-Null
+  $sessionId = [guid]::NewGuid().ToString('N')
+  $sessionName = "EKODI-UI-$sessionId"
+  $sessionDir = Join-Path $IsolatedDesktopSessionRoot $sessionId
+  $sessionDisk = Join-Path $sessionDir 'ui-session.vhdx'
+  New-Item -ItemType Directory -Path $sessionDir -Force | Out-Null
+
+  $taskId = [guid]::NewGuid().ToString('N')
+  $nonce = New-EkodiNonceHex 32
+  $task = @{
+    schemaVersion = 1
+    type = 'guest.ui.probe'
+    taskId = $taskId
+    nonce = $nonce
+    networkPolicy = 'none'
+    expiresAt = [DateTime]::UtcNow.AddMinutes(10).ToString('o')
+  }
+  $expectedNonceSha = Get-Sha256String $nonce
+
+  $vmCreated = $false
+  $proof = $null
+  try {
+    New-VHD -Path $sessionDisk -ParentPath $baseDiskPath -Differencing -ErrorAction Stop | Out-Null
+    $staging = Write-EkodiGuestRuntimeTask $sessionDisk $task
+    if (-not $staging.taskStaged -or -not $staging.guestAgentVersionMarkerPresent) { throw 'isolated_ui_guest_agent_version_not_verified' }
+
+    $vm = New-VM -Name $sessionName -Generation ([int]$baseVm.Generation) -MemoryStartupBytes 2GB -VHDPath $sessionDisk -ErrorAction Stop
+    $vmCreated = $true
+    Get-VMNetworkAdapter -VMName $sessionName -ErrorAction SilentlyContinue | Remove-VMNetworkAdapter -ErrorAction SilentlyContinue
+    Set-VM -Name $sessionName -AutomaticStartAction Nothing -AutomaticStopAction TurnOff -AutomaticCheckpointsEnabled $false -ErrorAction Stop
+    if ([int]$baseVm.Generation -eq 2) { Set-VMFirmware -VMName $sessionName -EnableSecureBoot On -ErrorAction Stop }
+
+    Start-VM -Name $sessionName -ErrorAction Stop | Out-Null
+    $deadline = [DateTime]::UtcNow.AddSeconds(55)
+    $runningObserved = $false
+    $heartbeatObserved = $false
+    do {
+      Start-Sleep -Milliseconds 1000
+      $vmState = [string](Get-VM -Name $sessionName -ErrorAction Stop).State
+      if ($vmState -eq 'Running') { $runningObserved = $true }
+      try {
+        $heartbeat = Get-VMIntegrationService -VMName $sessionName -Name 'Heartbeat' -ErrorAction Stop
+        if ([string]$heartbeat.PrimaryStatusDescription -match '(?i)OK') { $heartbeatObserved = $true; break }
+      } catch { }
+    } while ([DateTime]::UtcNow -lt $deadline)
+    if (-not $runningObserved) { throw 'isolated_ui_vm_never_running' }
+    if (-not $heartbeatObserved) { throw 'isolated_ui_heartbeat_timeout' }
+
+    Start-Sleep -Seconds 10
+    Stop-VM -Name $sessionName -TurnOff -Force -ErrorAction Stop
+    $receiptEvidence = Read-EkodiGuestRuntimeReceipt $sessionDisk
+    $receipt = $receiptEvidence.receipt
+
+    $receiptOk = (
+      $receipt.ok -eq $true -and
+      [string]$receipt.mode -eq 'ekodi-isolated-guest-ui-canary' -and
+      [string]$receipt.guestAgentVersion -eq '1.1.0' -and
+      [string]$receipt.taskType -eq 'guest.ui.probe' -and
+      [string]$receipt.taskId -eq $taskId -and
+      [string]$receipt.nonceSha256 -eq $expectedNonceSha -and
+      $receipt.executedAsSystem -eq $true -and
+      $receipt.noNetworkAdapter -eq $true -and
+      $receipt.noActiveNetwork -eq $true -and
+      $receipt.guestUiSurfaceUsed -eq $true -and
+      $receipt.hostInteractiveDesktopUsed -eq $false -and
+      $receipt.sharedInteractiveDesktop -eq $false -and
+      $receipt.semanticUiAutomation -eq $true -and
+      $receipt.lowLevelInputInjection -eq $false -and
+      $receipt.clipboardShared -eq $false -and
+      $receipt.credentialCollection -eq $false -and
+      $receipt.hostProfileMounted -eq $false -and
+      $receipt.syntheticUiOnly -eq $true -and
+      $receipt.windowHandleObserved -eq $true -and
+      $receipt.windowFound -eq $true -and
+      $receipt.buttonFound -eq $true -and
+      $receipt.invokePatternAvailable -eq $true -and
+      $receipt.controlInvoked -eq $true -and
+      [string]$receipt.resultCode -eq 'EKODI_UI_OK' -and
+      $receipt.windowClosed -eq $true -and
+      [string]$receipt.mutationScope -eq 'ephemeral-guest-ui-only'
+    )
+    if (-not $receiptOk) { throw 'isolated_ui_receipt_contract_failed' }
+
+    $proof = @{
+      ok = $true
+      mode = 'isolated-desktop-guest-ui-canary'
+      provider = 'ekodi-native-remote-computer'
+      routingPolicy = 'EKODI-VIRTUALIZATION-ROUTING-001'
+      backendPolicy = 'EKODI-ISOLATED-DESKTOP-BACKEND-001'
+      agentVersion = $AgentVersion
+      guestAgentVersion = [string]$receipt.guestAgentVersion
+      backend = 'hyper-v-ekodi-base'
+      sessionType = 'vm'
+      sessionId = $sessionId
+      taskId = $taskId
+      taskType = 'guest.ui.probe'
+      receiptSha256 = Get-Sha256String ([string]$receiptEvidence.raw)
+      executedAsSystem = [bool]$receipt.executedAsSystem
+      noNetworkAdapter = [bool]$receipt.noNetworkAdapter
+      noActiveNetwork = [bool]$receipt.noActiveNetwork
+      guestUiSurfaceUsed = [bool]$receipt.guestUiSurfaceUsed
+      hostInteractiveDesktopUsed = [bool]$receipt.hostInteractiveDesktopUsed
+      sharedInteractiveDesktop = [bool]$receipt.sharedInteractiveDesktop
+      semanticUiAutomation = [bool]$receipt.semanticUiAutomation
+      lowLevelInputInjection = [bool]$receipt.lowLevelInputInjection
+      clipboardShared = [bool]$receipt.clipboardShared
+      credentialCollection = [bool]$receipt.credentialCollection
+      hostProfileMounted = [bool]$receipt.hostProfileMounted
+      syntheticUiOnly = [bool]$receipt.syntheticUiOnly
+      windowHandleObserved = [bool]$receipt.windowHandleObserved
+      windowFound = [bool]$receipt.windowFound
+      buttonFound = [bool]$receipt.buttonFound
+      invokePatternAvailable = [bool]$receipt.invokePatternAvailable
+      controlInvoked = [bool]$receipt.controlInvoked
+      resultCode = [string]$receipt.resultCode
+      windowClosed = [bool]$receipt.windowClosed
+      mutationScope = [string]$receipt.mutationScope
+      vmReachedRunning = [bool]$runningObserved
+      heartbeatObserved = [bool]$heartbeatObserved
+      networkAttached = $false
+      ephemeralDifferencingDisk = $true
+      baseDiskWriteForbidden = $true
+      sessionVmRemoved = $false
+      sessionDiskRemoved = $false
+      checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+    }
+  } finally {
+    if ($vmCreated) {
+      try {
+        $existing = Get-VM -Name $sessionName -ErrorAction SilentlyContinue
+        if ($existing -and [string]$existing.State -ne 'Off') { Stop-VM -Name $sessionName -TurnOff -Force -ErrorAction SilentlyContinue }
+      } catch { }
+      try { Remove-VM -Name $sessionName -Force -ErrorAction SilentlyContinue } catch { }
+    }
+    Remove-Item -LiteralPath $sessionDir -Recurse -Force -ErrorAction SilentlyContinue
+    if ($proof) {
+      $proof.sessionVmRemoved = -not [bool](Get-VM -Name $sessionName -ErrorAction SilentlyContinue)
+      $proof.sessionDiskRemoved = -not (Test-Path -LiteralPath $sessionDisk)
+    }
+  }
+
+  if (-not $proof -or -not $proof.sessionVmRemoved -or -not $proof.sessionDiskRemoved) { throw 'isolated_ui_canary_cleanup_failed' }
+  New-Item -ItemType Directory -Path $Root -Force | Out-Null
+  $proof | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $IsolatedDesktopUiCanaryStatePath -Encoding UTF8
+  return @{
+    message = 'EKODI 자체 임시 Hyper-V Guest에서 의미 기반 UI Automation으로 독립 GUI 제어 canary를 완료했습니다. 실제 사용자 데스크톱에는 접근하지 않았습니다.'
+    desktopUiCanary = $proof
+  }
+}
+
 function Get-RemoteAgentStatus {
   $taskState = 'unknown'
   try {
@@ -1715,6 +1928,7 @@ function Get-RemoteAgentStatus {
     isolatedDesktopProbeAvailable = $true
     isolatedDesktopCanaryVerified = [bool](Get-IsolatedDesktopCanaryState).verified
     isolatedDesktopGuestCanaryVerified = [bool](Get-IsolatedDesktopGuestCanaryState).verified
+    isolatedDesktopUiCanaryVerified = [bool](Get-IsolatedDesktopUiCanaryState).verified
     isolatedDesktopReady = $false
     minimizedWindowCountsAsIsolation = $false
   }
@@ -1789,6 +2003,7 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'computer.desktop.probe' { return Invoke-IsolatedDesktopBackendProbe }
     'computer.desktop.canary' { return Invoke-IsolatedDesktopHyperVCanary }
     'computer.desktop.guest.canary' { return Invoke-IsolatedDesktopGuestRuntimeCanary }
+    'computer.desktop.ui.canary' { return Invoke-IsolatedDesktopGuestUiCanary }
     'network.diagnose' { return @{ message = '네트워크 진단을 완료했습니다.'; network = Get-NetworkDiagnostic } }
     'printers.diagnose' { return @{ message = '프린터와 인쇄 대기열 진단을 완료했습니다.'; printers = Get-PrinterDiagnostic } }
     'startup.scan' { return @{ message = '시작 프로그램 목록을 확인했습니다.'; startup = Get-StartupDiagnostic } }
@@ -1889,7 +2104,7 @@ function Send-Heartbeat($Config) {
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
       networkDiagnostics = $true; printerDiagnostics = $true; workstationProfile = $true; protocolLaunch = $true
       computerRead = $true; processRead = $true; agentStatus = $true
-      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified; isolatedDesktop = $false
+      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified; isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified; isolatedDesktop = $false
       desktopCapture = $false; desktopInput = $false
       arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
     }
