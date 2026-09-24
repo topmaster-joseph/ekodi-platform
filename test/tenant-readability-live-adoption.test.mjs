@@ -17,6 +17,9 @@ test('tenant readability injector stays brand-neutral and idempotent',async()=>{
   assert.match(injector,/OPERATING_SPACE_LABEL_HEADER='x-ekodi-operating-space-label'/);
   assert.match(injector,/data-ekodi-operating-space-label/);
   assert.match(injector,/options\?\.operatingSpace!==false/);
+  assert.match(injector,/forceOperatingSpace=operatingSpace&&options\?\.forceOperatingSpace===true/);
+  assert.match(injector,/alreadyReadable&&!forceOperatingSpace/);
+  assert.match(injector,/TenantOperatingSpaceExistingMarkerRemover/);
   assert.match(injector,/운영공간/);
   assert.match(injector,/x-ekodi-shell/);
   assert.match(injector,/x-ekodi-user-ui/);
@@ -77,7 +80,7 @@ test('owned root services keep tenant readability after shared Shell injection',
   const siteShell=await read('site-shell-worker.js');
   assert.match(siteShell,/ownedCustomerSiteFor/);
   assert.match(siteShell,/const shelled=!progressiveHome&&serviceId[\s\S]*injectEkodiShell\(response,serviceId/);
-  assert.match(siteShell,/ownedCustomerSiteFor\(serviceId\)\?injectEkodiTenantReadability\(shelled\):shelled/);
+  assert.match(siteShell,/ownedCustomerSiteFor\(serviceId\)\?injectEkodiTenantReadability\(shelled,\{forceOperatingSpace:true\}\):shelled/);
 });
 
 test('guarded release requires the operating-space distinction on representative live sites',async()=>{
