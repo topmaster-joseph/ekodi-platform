@@ -33,6 +33,7 @@ const CSS=`
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;background:#f7f3ea!important}
 html[data-ekodi-site-subject="mnubiz"][data-ekodi-user-ui]{--ekodi-user-chrome-bg:#fbf8f1!important;--ekodi-user-chrome-text:#10233b!important;--ekodi-user-chrome-muted:#5e6b7b!important;--ekodi-user-chrome-link:#173d63!important;--ekodi-user-chrome-line:rgba(16,35,59,.16)!important;--ekodi-service-paper:#f7f3ea!important;--ekodi-service-ink:#10233b!important}
+html[data-ekodi-site-subject="mnubiz"][data-ekodi-user-ui] body>main.mnubiz-main{width:100%!important;max-width:none!important;margin-inline:0!important}
 body{margin:0;background:#f7f3ea!important;color:#10233b!important}
 a{color:inherit}
 .mnubiz-shell{width:min(1180px,calc(100% - 40px));margin-inline:auto}
@@ -86,8 +87,8 @@ a{color:inherit}
 .mnubiz-empty strong{display:block;font-size:16px;color:var(--mnubiz-navy)}
 .mnubiz-empty p{margin:7px 0 0;color:var(--mnubiz-ink-soft);font-size:14px;line-height:1.65}
 .mnubiz-service-note{padding:18px 0 8px;text-align:center;color:#526276!important;font-size:12px;line-height:1.6;background:#f7f3ea!important}
-.mnubiz-character-zone{position:absolute;right:max(24px,calc((100vw - 1180px)/2));bottom:42px;width:170px;height:190px;z-index:2;pointer-events:none}
-.mnubiz-character-zone .ekodi-main-ekodian{inset:auto 0 0 auto!important;transform:none!important}
+.mnubiz-character-zone,.mnubiz-character-zone.ekodi-main-ekodian-host{position:absolute!important;right:max(24px,calc((100vw - 1180px)/2));left:auto!important;bottom:34px;top:auto!important;width:142px;height:154px;z-index:2;pointer-events:none}
+.mnubiz-character-zone .ekodi-main-ekodian{inset:auto 0 0 auto!important;transform:none!important;--ekodi-character-width:108px!important;opacity:.72!important}
 .mnubiz-hero>.mnubiz-shell{position:relative;z-index:2;padding-right:200px}
 @media(prefers-color-scheme:dark){
   html[data-ekodi-site-subject="mnubiz"],html[data-ekodi-site-subject="mnubiz"] body,html[data-ekodi-site-subject="mnubiz"] .mnubiz-main{background:#f7f3ea!important;color:#10233b!important}
@@ -131,7 +132,7 @@ export function renderMnuBizPublicPage(){
 <title>${esc(name)} · EKODI</title>
 <meta name="description" content="국립목포대학교 경영 동문을 연결하고 소식·행사·진로·사업 경험을 나누는 동문 네트워크 운영공간">
 <meta name="robots" content="index,follow">
-<link rel="stylesheet" href="/mnubiz/assets/site.css?v=20260924-2">
+<link rel="stylesheet" href="/mnubiz/assets/site.css?v=20260924-3">
 </head><body>
 <header class="site-header mnubiz-header" role="banner">
   <div class="mnubiz-shell mnubiz-header__inner">
