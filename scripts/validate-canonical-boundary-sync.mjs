@@ -44,7 +44,7 @@ for(const [host,target] of Object.entries(domainPolicy.legacyDomainTargets||{}))
 
 for(const [id,boundary] of Object.entries(boundaries.platforms||{})){
   for(const domain of boundary.domains||[]){
-    if(domain===PLATFORM_CANONICAL_HOST) continue;
+    if(domain===PLATFORM_CANONICAL_HOST||domain===`www.${PLATFORM_CANONICAL_HOST}`) continue;
     if(domain.includes('*')) continue;
     if(!domain.endsWith('.ekodi.kr')) continue;
     if(!recognizedHosts.has(domain)) fail(`${id}: unclassified ekodi.kr runtime/legacy domain: ${domain}`);
