@@ -42,10 +42,18 @@ test('cmpmyi common panel stays same-origin frameable and exposes brand handoffs
   assert.equal(response.headers.get('x-frame-options'),'SAMEORIGIN');
   assert.match(response.headers.get('content-security-policy')||'',/frame-ancestors 'self'/);
   assert.match(html,/배달플랫폼 통합관리/);
+  assert.match(html,/data-cmpmyi-delivery-control="brand-handoff"/);
+  for(const platform of ['배달의민족','쿠팡이츠','요기요','땡겨요','먹깨비','당근 주문','네이버 주문'])assert.match(html,new RegExp(platform));
   for(const store of CMPMYI_STORES){
     assert.ok(html.includes(store.name));
-    assert.ok(html.includes(`/${store.slug}/admin/delivery?embed=cmpmyi`));
+    for(const section of ['delivery','menu','orders','inventory','reviews','finance','connections']){
+      assert.ok(html.includes(`/${store.slug}/admin/${section}?embed=cmpmyi`));
+    }
+    assert.ok(html.includes(`data-delivery-brand="${store.slug}"`));
   }
+  assert.match(html,/사람 승인/);
+  assert.match(html,/공식 Adapter/);
+  assert.match(html,/브랜드 간 데이터를 합쳐 쓰지 않습니다/);
 });
 
 test('router serves cmpmyi common panels and same-origin embedded canonical store admins',async()=>{
