@@ -109,7 +109,7 @@ function fixCanonicalRouter(text){
   const ca=text.indexOf("function canonicalAbsoluteUrl(");
   const pr=text.indexOf("function prefixRootLiterals(",ca);
   if(ca>=0&&pr>ca)text=text.slice(0,ca)+"function rewriteAbsoluteEkodiOrigins(text){return String(text||'');}\n"+text.slice(pr);
-  text=text.replace("  upstreamUrl.hostname='ekodi.kr/admin';\n  upstreamUrl.pathname='/';",
+  text=text.replace("  upstreamUrl.hostname='admin.ekodi.kr';\n  upstreamUrl.pathname='/';",
                     "  upstreamUrl.hostname=CANONICAL_HOST;\n  upstreamUrl.pathname='/admin/';");
   text=text.replace(/async function proxyLegacySurface\(request,legacyFetch,prefix,legacyHost,surface\)\{[\s\S]*?\n}\nasync function rewriteHtmlResponse/,
 `async function proxyCanonicalSurface(request,legacyFetch,prefix,surface){
@@ -121,7 +121,7 @@ function fixCanonicalRouter(text){
   return routed;
 }
 async function rewriteHtmlResponse`);
-  text=text.replace(/return proxyLegacySurface\(request,legacyFetch,SURFACE_PREFIXES\.admin,'ekodi\.kr\/admin','admin'\);/,
+  text=text.replace(/return proxyLegacySurface\(request,legacyFetch,SURFACE_PREFIXES\.admin,'admin\.ekodi\.kr','admin'\);/,
     "return proxyCanonicalSurface(request,legacyFetch,SURFACE_PREFIXES.admin,'admin');");
   text=text.replace(/upstreamUrl\.hostname=spec\.virtualHost\|\|CANONICAL_HOST;/g,'upstreamUrl.hostname=CANONICAL_HOST;');
   text=text.replace(/\}else if\(spec\.legacyHost\)\{[\s\S]*?\}else if\(spec\.assetPath\)\{/,
