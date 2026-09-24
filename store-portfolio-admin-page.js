@@ -101,7 +101,7 @@ a{color:inherit}.top{
   padding:9px 12px;text-decoration:none;color:#35453a;font-size:12px;font-weight:800
 }
 .app{display:grid;grid-template-columns:310px minmax(0,1fr);min-height:calc(100vh - 70px)}
-.sidebar{
+.portfolio-sidebar{
   height:calc(100vh - 70px);position:sticky;top:70px;overflow:auto;background:#fff;
   border-right:1px solid var(--line);padding:14px 12px 22px
 }
@@ -126,7 +126,7 @@ a{color:inherit}.top{
 }
 .brand-links a:hover,.brand-links a:focus{background:#eef6f0;border-color:#cbdccd;color:#17492b;outline:none}
 .brand-links a:first-child{grid-column:1/-1;background:#f3f8f4;color:#17492b;border-color:#d5e4d8;font-weight:900}
-.sidebar-note{margin:14px 5px 0;padding-top:11px;border-top:1px solid #edf1ec;color:#8a948c;font-size:9.5px;line-height:1.55}
+.portfolio-sidebar-note{margin:14px 5px 0;padding-top:11px;border-top:1px solid #edf1ec;color:#8a948c;font-size:9.5px;line-height:1.55}
 .workspace{min-width:0;background:#f3f6f3;padding:12px}
 .panel-frame{
   width:100%;height:calc(100vh - 94px);min-height:620px;border:1px solid #dbe3da;border-radius:15px;
@@ -134,13 +134,13 @@ a{color:inherit}.top{
 }
 @media(max-width:980px){
   .app{grid-template-columns:250px minmax(0,1fr)}
-  .sidebar{padding-left:9px;padding-right:9px}
+  .portfolio-sidebar{padding-left:9px;padding-right:9px}
   .brand-links{grid-template-columns:1fr}
   .brand-links a:first-child{grid-column:auto}
 }
 @media(max-width:760px){
   .top{height:64px;padding:0 14px}.brand small{display:none}.top-actions a{font-size:11px;padding:8px 9px}
-  .app{display:block}.sidebar{position:relative;top:auto;width:100%;height:auto;max-height:none;border-right:0;border-bottom:1px solid var(--line)}
+  .app{display:block}.portfolio-sidebar{position:relative;top:auto;width:100%;height:auto;max-height:none;border-right:0;border-bottom:1px solid var(--line)}
   .common-nav{grid-template-columns:repeat(2,minmax(0,1fr))}
   .brand-links{grid-template-columns:repeat(2,minmax(0,1fr))}
   .workspace{padding:10px}.panel-frame{height:72vh;min-height:520px}
@@ -199,13 +199,13 @@ export function storePortfolioAdminPage(){
       <div class="top-actions"><a href="/cmpmyi" target="_blank" rel="noopener">통합 사용자페이지</a></div>
     </header>
     <div class="app">
-      <aside class="sidebar" aria-label="통합 매장 관리자 메뉴">
+      <aside class="portfolio-sidebar" aria-label="통합 매장 관리자 메뉴" data-cmpmyi-navigation="left-fixed">
         <div class="side-intro"><small>3 BRAND ADMIN</small><strong>통합 관리자</strong><span>공통 업무와 브랜드별 메뉴를 왼쪽에서 바로 선택합니다.</span></div>
         <div class="menu-title"><strong>공통관리</strong><small>3개 브랜드</small></div>
         <nav class="common-nav">${COMMON_MENU.map(([view,label])=>`<a href="${commonHref(view)}" target="cmpmyi-panel">${label}</a>`).join('')}</nav>
         <div class="menu-title"><strong>브랜드 관리자 전체 메뉴</strong><small>직접 이동</small></div>
         ${STORES.map(brandMenu).join('')}
-        <p class="sidebar-note">각 브랜드의 데이터와 권한은 독립적으로 유지됩니다. 통합 화면은 해당 브랜드의 정식 관리자 화면을 오른쪽 작업영역에 표시합니다.</p>
+        <p class="portfolio-sidebar-note">각 브랜드의 데이터와 권한은 독립적으로 유지됩니다. 통합 화면은 해당 브랜드의 정식 관리자 화면을 오른쪽 작업영역에 표시합니다.</p>
       </aside>
       <main class="workspace">
         <iframe class="panel-frame" name="cmpmyi-panel" title="통합 매장 관리자 작업영역" src="${commonHref('overview')}"></iframe>
