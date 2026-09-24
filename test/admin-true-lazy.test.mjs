@@ -106,7 +106,7 @@ test('shared admin navigation exposes seven canonical areas with top contextual 
   assert.match(sidebar, /admin-context-tabs-shell/);
   assert.match(sidebar, /admin-context-tabs/);
   assert.match(sidebar, /data-admin-context-section/);
-    assert.match(sidebar, /data-admin-capability-shortcut/);
+  assert.doesNotMatch(sidebar, /shortcut\.textContent = locale === 'en' \? '⚡ Capabilities' : '⚡ 기능'/);
   assert.match(sidebar, /admin-context-source/);
   assert.match(sidebar, /adminMenuGovernance = 'role-projected-sidebar-v4'/);
   assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: false \}\)/);
