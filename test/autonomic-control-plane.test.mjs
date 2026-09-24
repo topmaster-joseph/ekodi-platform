@@ -129,3 +129,22 @@ test('runtime control plane emits a service-health pulse only for a new unhealth
   const persistent = runRuntimeAutonomicControlPlane({ observed, previousObserved:observed, now:'2026-09-25T00:13:00Z', eventOccurrenceKey:'service-check-43' });
   assert.equal(persistent.events.filter(event => event.ruleId === 'runtime.service.community.health').length, 0);
 });
+
+
+test('platform observer detects a fresh-to-stale transition even when the service check itself has not changed', () => {
+  const rows = [{ service_id:'root', status:'online', http_status:200, response_ms:80, checked_at:'2026-09-25T00:00:00Z' }];
+  const observed = buildPlatformServiceObservations(rows, rows, {
+    previousNow:'2026-09-25T00:10:00Z',
+    now:'2026-09-25T00:20:00Z',
+    maxAgeMs:15 * 60_000,
+  });
+  assert.equal(observed.previous.services.root.fresh, true);
+  assert.equal(observed.current.services.root.fresh, false);
+  const base = { autonomousHealth:{state:'HEALTHY',transparency:{directProductionMutation:false}}, ledger:{durable:true,evidenceLedger:'append-only-d1'} };
+  const control = runRuntimeAutonomicControlPlane({
+    observed:{...base,...observed.current},
+    previousObserved:{...base,...observed.previous},
+    eventOccurrenceKey:'pulse-stale-1',
+  });
+  assert.equal(control.events.some(event => event.ruleId === 'runtime.service.root.freshness'), true);
+});
