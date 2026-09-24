@@ -126,6 +126,11 @@ jobs:
             for attempt in $(seq 1 18); do
               code=$(curl -sS -L --max-redirs 6 -D /tmp/cgma.headers -o /tmp/cgma.body -w '%{http_code}' --max-time 20 "https://ekodi.kr${path}?edge_release=${GITHUB_SHA}" || true)
               if [[ "$code" == '200' ]] && grep -Fq "$needle" /tmp/cgma.body && grep -Fiq "x-ekodi-route: ${route}" /tmp/cgma.headers; then
+                if [[ "$path" == '/cgma' || "$path" == '/cgma/' ]]; then
+                  grep -Fiq 'x-ekodi-tenant-readability: v1' /tmp/cgma.headers || { echo "CGMA root missing tenant readability header"; sleep 4; continue; }
+                  grep -Fq 'data-ekodi-tenant-readability="v1"' /tmp/cgma.body || { echo "CGMA root missing tenant readability marker"; sleep 4; continue; }
+                  grep -Fq 'data-ekodi-fixed-header="v1"' /tmp/cgma.body || { echo "CGMA root missing fixed-header marker"; sleep 4; continue; }
+                fi
                 echo "CGMA edge verified: ${path} route=${route}"
                 return 0
               fi
