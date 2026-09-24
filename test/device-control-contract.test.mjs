@@ -142,7 +142,7 @@ test('one-click device protocol is bounded to EKODI enrollment and official API'
 });
 
 test('existing registered devices upgrade transactionally and preserve registration', () => {
-  assert.match(agent, /\$AgentVersion = '2\.4\.0'/);
+  assert.match(agent, /\$AgentVersion = '2\.5\.0'/);
   assert.match(agent, /Invoke-AgentUpgradeTransaction/);
   assert.match(agent, /Assert-AgentCandidate/);
   assert.match(agent, /New-AgentUpgradeSnapshot/);
@@ -273,6 +273,11 @@ test('native browser execution is bounded, capability-gated and summarized witho
   assert.match(api, /'computer\.browser\.execute': 'backgroundBrowser'/);
   assert.match(api, /policy\.payload === 'background-browser-task'/);
   assert.match(api, /target\.hostname!=='ekodi\.kr'/);
+  assert.match(api, /executionMode:'background-only'/);
+  assert.match(api, /createUserBrowserTab:false/);
+  assert.match(api, /closeOwnedSurfaceOnComplete:true/);
+  assert.match(api, /closeOwnedSurfaceOnAuthRequired:true/);
+  assert.match(api, /preserveUserOwnedSurfaces:true/);
   assert.match(api, /summary\.browserCanary/);
   assert.match(api, /summary\.browserWorker/);
   assert.match(admin, /'computer\.browser\.canary': 'BG Browser Canary'/);
