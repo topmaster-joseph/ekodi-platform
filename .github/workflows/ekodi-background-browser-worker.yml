@@ -151,6 +151,7 @@ jobs:
           jq -e '.ok == true and .mode == "ekodi-owned-background-browser" and .canonicalOrigin == "https://ekodi.kr" and .headless == true and .ephemeralContext == true and .activeUserProfileReused == false and .hostInputInjection == false' "$result" >/dev/null
           jq -e '.allowMutation == false' "$result" >/dev/null
           jq -e '[.results[] | select(.type == "snapshot" and .horizontalOverflow == true)] | length == 0' "$result" >/dev/null
+          jq -e '[.results[] | select(.type == "snapshot" and (.url | test("/admin(?:/|$)"; "i")) and ((.userAiEntryCount // 0) > 0))] | length == 0' "$result" >/dev/null
           jq -e '.pageErrors | length == 0' "$result" >/dev/null
           jq -e '.screenshots | length >= 1' "$result" >/dev/null
           echo '## EKODI Background Browser Worker' >> "$GITHUB_STEP_SUMMARY"
