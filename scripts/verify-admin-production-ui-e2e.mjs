@@ -19,6 +19,21 @@ const context = await browser.newContext({ viewport: { width: 1440, height: 1000
 await context.addInitScript(({ token, email }) => {
   sessionStorage.setItem('ekodi-auth-token', token);
   sessionStorage.setItem('ekodi-admin-email', email);
+  window.__EKODI_LEGACY_CORE_API_CALLS__ = [];
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = (input, init) => {
+    const raw = typeof input === 'string' ? input : input?.url || String(input || '');
+    try {
+      const target = new URL(raw, location.href);
+      if (target.hostname === 'api.ekodi.kr') {
+        window.__EKODI_LEGACY_CORE_API_CALLS__.push({
+          url: target.href,
+          stack: String(new Error('legacy-core-api-call').stack || ''),
+        });
+      }
+    } catch {}
+    return originalFetch(input, init);
+  };
 }, { token: SYNTHETIC_TOKEN, email: SYNTHETIC_EMAIL });
 
 const page = await context.newPage();
@@ -305,6 +320,16 @@ for (const [id, group] of menus) {
   await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
   await waitForAdminShell();
   selectedWorkArea = null;
+}
+
+const legacyCoreApiCalls = await page.evaluate(() => Array.isArray(window.__EKODI_LEGACY_CORE_API_CALLS__) ? window.__EKODI_LEGACY_CORE_API_CALLS__ : []);
+if (legacyCoreApiCalls.length) {
+  console.log(`LEGACY_CORE_API_CALLS=${legacyCoreApiCalls.length}`);
+  for (const call of legacyCoreApiCalls) {
+    console.log(`LEGACY_CORE_API_CALL ${call.url}`);
+    console.log(call.stack);
+  }
+  throw new Error('Production Admin attempted to call retired api.ekodi.kr instead of the canonical ekodi.kr/api surface');
 }
 
 const activeCount = results.filter(result => result.ok).length;
