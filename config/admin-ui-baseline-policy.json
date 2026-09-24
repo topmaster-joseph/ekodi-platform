@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "policyId": "ADMIN-UI-BASELINE-001",
+  "status": "enforced",
+  "authority": "governance/constitution/constitution.json#adminUiBaselinePolicy",
+  "owner": "ekodi-platform-super-administrator",
+  "scope": {
+    "appliesToAllCurrentAndFutureAdminSurfaces": true,
+    "administratorClasses": [
+      "platform-super-admin",
+      "middle-admin",
+      "workspace-admin",
+      "service-admin",
+      "sub-admin"
+    ],
+    "newSurfaceCreationMustUseSharedBaseline": true,
+    "existingSurfaceDriftAction": "remediate-through-shared-shell-and-design-engine"
+  },
+  "composition": {
+    "sharedShellFirst": true,
+    "pageLocalTemporaryShellForbidden": true,
+    "workSpecificContentOnlyAfterBaseline": true,
+    "requiredRegions": [
+      "fixed-left-navigation",
+      "top-breadcrumb",
+      "large-title-and-single-line-description",
+      "core-kpi-cards",
+      "quick-actions",
+      "integrated-management-list",
+      "right-help-guide-panel"
+    ]
+  },
+  "settingsExperience": {
+    "scatteredSettingsForbidden": true,
+    "lifecycle": [
+      "status",
+      "configure",
+      "execute",
+      "result"
+    ],
+    "sameWorkspaceByDefault": true,
+    "separateRouteException": "security-legal-destructive-or-complex-workflow-only",
+    "resultMustBeVisibleAfterExecution": true
+  },
+  "responsiveBehavior": {
+    "leftNavigationDesktop": "fixed",
+    "rightHelpGuideDesktop": "right-rail",
+    "rightHelpGuideNarrow": "inline-or-drawer",
+    "requiredRegionsMayReflowButNotDisappear": true
+  },
+  "enforcement": {
+    "designEnginePolicy": "config/design-engine.json",
+    "humanPolicy": "ADMIN_UI_PRINCIPLES.md",
+    "agentInstruction": "AGENTS.override.md",
+    "validator": "scripts/validate-admin-ui-baseline.mjs",
+    "validationCommand": "npm run validate:admin-ui-baseline",
+    "pageLocalOverrideForbidden": true,
+    "exceptionRequiresConstitutionalAmendment": true
+  }
+}
