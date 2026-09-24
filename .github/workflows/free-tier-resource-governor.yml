@@ -19,6 +19,7 @@ on:
       - 'test/supabase-free-project-capacity-guard.test.mjs'
       - 'migrations/0099_free_tier_provider_quota.sql'
       - '.github/workflows/free-tier-resource-governor.yml'
+      - '.github/workflows/verify-admin-production-ui-e2e.yml'
   pull_request:
     paths:
       - 'free-tier-quota-guard.js'
@@ -31,6 +32,7 @@ on:
       - 'test/supabase-free-project-capacity-guard.test.mjs'
       - 'migrations/0099_free_tier_provider_quota.sql'
       - '.github/workflows/free-tier-resource-governor.yml'
+      - '.github/workflows/verify-admin-production-ui-e2e.yml'
 
 permissions:
   contents: read
