@@ -22,6 +22,10 @@
     Object.freeze({id:'qwen',label:'Qwen',url:'https://chat.qwen.ai/'}),
   ]);
   const EXTERNAL_SECRET_RE=/(sk-[a-z0-9_-]{12,}|gh[pousr]_[a-z0-9]{20,}|akia[0-9a-z]{16}|-----begin [a-z ]+private key-----|\beyj[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}\b|(?:password|passwd|비밀번호)\s*[:=]\s*\S+)/i;
+  const EXTERNAL_BRIDGE_READY_EVENT='ekodi-external-ai-bridge-ready';
+  const EXTERNAL_BRIDGE_HANDOFF_EVENT='ekodi-external-ai-handoff';
+  const EXTERNAL_BRIDGE_ACCEPTED_EVENT='ekodi-external-ai-bridge-accepted';
+  const EXTERNAL_BRIDGE_RESULT_EVENT='ekodi-external-ai-result';
   const HIGH_RISK=[
     {re:/(계약|법적|위약|서명|contract)/i,area:'legal_commitment_or_contract_execution'},
     {re:/(고액|대금|지불|결제|환불|가격|요금|수수료|financial|payment|refund)/i,area:'high_value_or_exceptional_financial_commitment'},
@@ -163,6 +167,7 @@
     window.addEventListener('hashchange',updateContext);
     window.addEventListener('ekodi-admin-capability-requested',event=>{const capability=event.detail?.capability;if(!capability)return;setOpen(true);setTab('ai');submitAi(`${capability.name} (${capability.id}) Capability를 현재 관리자 화면 맥락에서 사용해줘. ${capability.description||''}`)});
     window.addEventListener('ekodi-admin-assist-request',event=>{const text=String(event.detail?.text||'').trim();setOpen(true);setTab('ai');if(text)submitAi(text)});
+    bindExternalBridgeStatus();
     window.addEventListener('focus',()=>{if(document.visibilityState==='visible')refreshSummary()});
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshSummary()});
     exposeBridge();
@@ -238,20 +243,63 @@
     const provider=EXTERNAL_AI.find(item=>item.id===target);
     return provider?[provider]:[];
   }
+  function externalBridgeAvailable(){
+    return document.documentElement.dataset.ekodiExternalAiBridge==='1';
+  }
+  function requestExternalBridge(providers,prompt){
+    return new Promise(resolve=>{
+      if(!externalBridgeAvailable()){resolve(false);return}
+      const requestId=`ext-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+      let settled=false;
+      const finish=value=>{if(settled)return;settled=true;window.removeEventListener(EXTERNAL_BRIDGE_ACCEPTED_EVENT,onAccepted);resolve(value)};
+      const onAccepted=event=>{
+        let detail=null;try{detail=JSON.parse(String(event.detail||''))}catch{}
+        if(detail?.requestId!==requestId)return;
+        clearTimeout(timer);finish(detail.ok===true);
+      };
+      const timer=window.setTimeout(()=>finish(false),800);
+      window.addEventListener(EXTERNAL_BRIDGE_ACCEPTED_EVENT,onAccepted);
+      window.dispatchEvent(new CustomEvent(EXTERNAL_BRIDGE_HANDOFF_EVENT,{detail:JSON.stringify({
+        requestId,
+        providers:providers.map(provider=>provider.id),
+        prompt
+      })}));
+    });
+  }
+  function bindExternalBridgeStatus(){
+    if(window.__ekodiExternalAiBridgeStatusBound)return;
+    window.__ekodiExternalAiBridgeStatusBound=true;
+    window.addEventListener(EXTERNAL_BRIDGE_READY_EVENT,()=>{document.documentElement.dataset.ekodiExternalAiBridge='1'});
+    window.addEventListener(EXTERNAL_BRIDGE_RESULT_EVENT,event=>{
+      let detail=null;try{detail=JSON.parse(String(event.detail||''))}catch{}
+      if(!detail)return;
+      const provider=EXTERNAL_AI.find(item=>item.id===detail.provider);
+      const label=provider?.label||detail.provider||'외부 AI';
+      if(detail.status==='filled')showStatus(`${label} 입력창에 명령을 채웠습니다. 내용을 확인한 뒤 직접 전송하세요.`);
+      else showStatus(`${label} 자동 입력을 완료하지 못했습니다. 새 탭은 유지했고 명령은 복사 폴백으로 사용할 수 있습니다.`,true);
+    });
+  }
   async function handoffCommand(target,prompt,button){
     const value=String(prompt||'').trim();if(!value)return false;
     const providers=externalProvidersFor(target);if(!providers.length)throw new Error('지원하지 않는 외부 AI입니다.');
     if(EXTERNAL_SECRET_RE.test(value)){showStatus('비밀번호·API 키·토큰처럼 보이는 값은 외부 AI로 보내지 않습니다. 민감정보를 제거한 뒤 다시 실행해 주세요.',true);return false}
+    const names=providers.map(provider=>provider.label).join(' · ');
+    if(await requestExternalBridge(providers,value)){
+      let copied=false;try{await copyText(value);copied=true}catch{}
+      if(button)button.textContent='자동 입력 중';
+      showStatus(`${names} 새 탭을 열어 입력창 자동 채우기를 요청했습니다. 자동 전송은 하지 않습니다.${copied?' 실패에 대비해 명령도 복사했습니다.':''}`);
+      if(button)window.setTimeout(()=>{button.textContent=providers.length===1?providers[0].label:'여러 AI'},1800);
+      return true;
+    }
     const opened=providers.map(provider=>({provider,popup:window.open(provider.url,'_blank','noopener,noreferrer')}));
     const blocked=opened.filter(item=>!item.popup).map(item=>item.provider.label);
     try{
       await copyText(value);
       if(button)button.textContent='복사됨 ✓';
-      const names=providers.map(provider=>provider.label).join(' · ');
       showStatus(`${names} 새 창을 열고 명령을 복사했습니다. 각 입력창에 붙여넣어 확인 후 전송하세요.`);
     }catch{
       if(button)button.textContent='직접 복사';
-      showStatus('외부 AI 새 창은 열었지만 자동 복사가 차단되었습니다. 명령어 입력창의 내용을 직접 복사해 주세요.',true);
+      showStatus('외부 AI 새 창은 열렸지만 자동 복사가 차단되었습니다. 명령어 입력창의 내용을 직접 복사해 주세요.',true);
     }
     if(blocked.length)showStatus(`${blocked.join(' · ')} 새 창이 차단되었습니다. 브라우저의 팝업 허용 후 다시 실행해 주세요.`,true);
     if(button)window.setTimeout(()=>{button.textContent=providers.length===1?providers[0].label:'여러 AI'},1800);

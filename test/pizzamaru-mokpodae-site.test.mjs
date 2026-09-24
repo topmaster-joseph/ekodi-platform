@@ -46,5 +46,5 @@ test('Pizza Maru branch route owns its branded chrome in production routing', as
   ]);
   assert.match(shellWorker, /standaloneBrandPlacePath/);
   assert.match(shellWorker, /pizzamaru\/mokpodae/);
-  assert.match(wrangler, /\/pizzamaru\/mokpodae\*/);
+  assert.match(wrangler, /\/pizzamaru\*/);
 });
