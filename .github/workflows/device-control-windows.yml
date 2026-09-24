@@ -236,7 +236,7 @@ jobs:
             if (-not $hostContent.Contains($required)) { throw "Missing host guest-canary guard: $required" }
           }
           foreach ($required in @(
-            "GuestAgentVersion = '1.0.0'",
+            "GuestAgentVersion = '1.1.0'",
             "guest.runtime.probe",
             "guest_task_network_policy_invalid",
             'executedAsSystem',
