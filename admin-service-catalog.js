@@ -1,9 +1,9 @@
 export const ADMIN_SERVICE_CATALOG = Object.freeze([
   { id:'church', name:'에코디교회', basePath:'/ekodichurch', group:'community' },
-  { id:'biz', name:'에코디비즈', basePath:'/ekodibiz', group:'business', channelAdminSection:'publishing' },
-  { id:'mall', name:'에코디몰', basePath:'/ekodimall', group:'sites', kind:'site', siteRelation:'user', channelAdminSection:'channel-settings' },
+  { id:'biz', name:'에코디비즈', basePath:'/ekodibiz', group:'business', channelAdminSection:'publishing', channelSubjectKey:'ekodi-biz' },
+  { id:'mall', name:'에코디몰', basePath:'/ekodimall', group:'sites', kind:'site', siteRelation:'user', channelAdminSection:'channel-settings', channelSubjectKey:'ekodimall' },
   { id:'marketing', name:'마케팅 AI', basePath:'/ekodibiz/marketing-ai', group:'business' },
-  { id:'trade', name:'에코디 트레이딩', basePath:'/ekodibiz/trade', group:'business', channelAdminSection:'publishing' },
+  { id:'trade', name:'에코디 트레이딩', basePath:'/ekodibiz/trade', group:'business', channelAdminSection:'publishing', channelSubjectKey:'ekoditrade' },
   { id:'invest', name:'에코디 투자', basePath:'/ekodibiz/invest', group:'business' },
   { id:'bible', name:'에코디 말씀대화', basePath:'/bible', group:'knowledge' },
   { id:'books', name:'에코디서점', basePath:'/books', group:'knowledge' },
