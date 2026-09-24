@@ -5,7 +5,7 @@ const HTML = `<!doctype html>
 <title>EKODI Tax · 세금 · 증빙</title><link rel="stylesheet" href="/tax/tax-portal.css">
 </head>
 <body>
-<header class="top"><a class="brand" href="/"><span>EKODI</span><strong>Tax</strong></a><div class="top-actions"><span class="badge">FREE-FIRST</span><a class="btn ghost" href="https://ekodi.kr/admin/?route=finance">관리자</a><button class="btn ghost" id="logout">로그아웃</button></div></header>
+<header class="top"><a class="brand" href="/ekodibiz"><span>EKODIBIZ</span><strong>Tax</strong></a><div class="top-actions"><span class="badge">FREE-FIRST</span><a class="btn ghost" href="/ekodibiz/admin/tax?source=ekodibiz">에코디비즈 관리자</a><button class="btn ghost" id="logout">로그아웃</button></div></header>
 <main class="shell">
 <section class="hero"><div><p class="eyebrow">EKODI PROFESSIONAL SERVICE</p><h1>세금 · 증빙</h1><p>여러 공급자의 전자세금계산서를 한 원장에서 작성하고, 홈택스 무료 발행 결과까지 기록합니다.</p></div><div class="policy"><strong>기본 비용 0원 경로</strong><span>작성 → 검토 → 승인 → 홈택스 발행 → 완료기록</span></div></section>
 <nav class="tabs"><button class="active" data-tab="home">홈</button><button data-tab="invoices">세금계산서</button><button data-tab="suppliers">공급자</button><button data-tab="customers">거래처</button><button data-tab="ledger">발행대장</button></nav>
