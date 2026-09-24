@@ -24,6 +24,11 @@ export function parseGuardedReleaseLog(input = '') {
   const rollbackAttempted = boolMatch(log, /Rolling back .* to .* at 100%/i);
   const rollbackVerified = boolMatch(log, /Automatic rollback verified against the stable rollback contract/i);
   const rollbackVerificationFailed = boolMatch(log, /Automatic rollback verification failed:/i);
+  const stagingArtifactDigest = matchValue(log, /Shared-site immutable release artifact:\s*(sha256:[0-9a-f]{64})/i);
+  const rebuiltArtifactDigest = matchValue(log, /Independent rebuild preserved exact release artifact:\s*(sha256:[0-9a-f]{64})/i);
+  const productionArtifactDigest = matchValue(log, /Production release artifact matches verified staging digest:\s*(sha256:[0-9a-f]{64})/i);
+  const stagingArtifactReproducible = Boolean(stagingArtifactDigest && rebuiltArtifactDigest && stagingArtifactDigest === rebuiltArtifactDigest);
+  const artifactContinuityVerified = Boolean(stagingArtifactDigest && productionArtifactDigest && stagingArtifactDigest === productionArtifactDigest);
   const productionVerified = releaseComplete || firstDeploy;
   const releaseReached = Boolean(previousVersion || candidateVersion || firstDeploy || releaseFailed || releaseComplete);
   const error = matchValue(log, /Guarded Worker release failed:\s*([^\n\r]+)/i)
@@ -40,6 +45,11 @@ export function parseGuardedReleaseLog(input = '') {
     rollbackAttempted,
     rollbackVerified,
     rollbackVerificationFailed,
+    stagingArtifactDigest,
+    rebuiltArtifactDigest,
+    productionArtifactDigest,
+    stagingArtifactReproducible,
+    artifactContinuityVerified,
     releaseComplete,
     releaseFailed,
     error,

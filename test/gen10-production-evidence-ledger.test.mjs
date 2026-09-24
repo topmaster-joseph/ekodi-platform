@@ -75,3 +75,33 @@ test('generated D1 SQL is append-only and idempotent', () => {
   assert.match(sql, /append-only/);
   assert.match(sql, /prod_control-api_1433_1/);
 });
+
+
+test('captures exact shared-site artifact continuity from staging through production', () => {
+  const digest = 'sha256:' + 'a'.repeat(64);
+  const log = `
+Shared-site immutable release artifact: ${digest}
+Independent rebuild preserved exact release artifact: ${digest}
+Production release artifact matches verified staging digest: ${digest}
+Stable production version: ${STABLE}
+Candidate version: ${CANDIDATE}
+Phase 3/3: candidate passed, promote it to 100% and verify production without overrides.
+✅ Guarded Worker release complete.
+`;
+  const evidence = buildProductionEvidence({
+    log,
+    sourceRunId: '35991794039',
+    sourceRunAttempt: '1',
+    sourceWorkflow: 'Deploy EKODI Shared Site Core',
+    sourceConclusion: 'success',
+    service: 'shared-site',
+    worker: 'shy-thunder-39a4',
+  });
+  assert.equal(evidence.release.stagingArtifactDigest, digest);
+  assert.equal(evidence.release.rebuiltArtifactDigest, digest);
+  assert.equal(evidence.release.productionArtifactDigest, digest);
+  assert.equal(evidence.release.stagingArtifactReproducible, true);
+  assert.equal(evidence.release.artifactContinuityVerified, true);
+  assert.equal(evidence.outcome, 'verified');
+  assert.equal(evidence.evidenceId, 'prod_shared-site_35991794039_1');
+});
