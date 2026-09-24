@@ -15,7 +15,7 @@
         <h2>커뮤니티 서비스 관리</h2>
         <p>외부 사용자에게 제공되는 Community 서비스의 운영 원장은 이 서비스 관리자 화면입니다. 플랫폼 최고관리자는 여기에서 서비스 상태를 관찰하고, 필요한 경우에만 명시적인 플랫폼 권한으로 개입합니다.</p>
       </div>
-      <a class="community-admin-link" href="https://community.ekodi.kr/" target="_blank" rel="noopener">Community 사용자 화면</a>
+      <a class="community-admin-link" href="https://ekodi.kr/community/" target="_blank" rel="noopener">Community 사용자 화면</a>
     </div>
     <div class="community-admin-grid">
       <article><small>PUBLIC PROVIDER</small><strong>Community</strong><span>사람 · 모임 · 참여 · 대화를 연결하는 외부 제공 주체</span></article>
