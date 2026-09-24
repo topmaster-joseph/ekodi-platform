@@ -3,7 +3,7 @@
 if(window.__EKODI_USER_UI_HEADER_BOOTED)return;
 window.__EKODI_USER_UI_HEADER_BOOTED=true;
 
-const VERSION=7;
+const VERSION=8;
 const SITE_CHROME_URL='https://workspace-api.ekodi.kr/v1/site-chrome/public';
 const STYLE_ID='ekodi-user-ui-header-style';
 const USER_SURFACES=new Set(['public','workspace']);
@@ -14,8 +14,6 @@ const FALLBACK_CLASS='ekodi-user-ui-header-fallback';
 const SPACER_ATTR='data-ekodi-user-header-spacer';
 const FALLBACK_ATTR='data-ekodi-user-header-fallback';
 const HOME_ATTR='data-ekodi-header-home';
-const OPERATING_SCOPE_ATTR='data-ekodi-operating-space-label';
-const OPERATING_SCOPE_CLASS='ekodi-user-ui-header-scope';
 const HEADER_SELECTORS=[
   'header[data-ekodi-user-header-root]',
   'header[data-ekodi-fixed-header]',
@@ -103,8 +101,6 @@ function installStyle(){
     .${FALLBACK_CLASS} .ekodi-user-ui-header-fallback__inner{width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 32px));min-height:64px;margin:0 auto;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:16px}
     .${FALLBACK_CLASS} a{color:inherit;text-decoration:none}.${FALLBACK_CLASS} a:focus-visible{outline:2px solid currentColor;outline-offset:4px;border-radius:4px}
     .${FALLBACK_CLASS} .ekodi-user-ui-header-fallback__brand{font-weight:850;letter-spacing:.12em}.ekodi-user-ui-header-fallback__context{text-align:center;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ekodi-user-ui-header-fallback__my{color:var(--ekodi-shell-focus,#315d48)!important;font-weight:650}
-    .${OPERATING_SCOPE_CLASS}{display:inline-flex!important;align-items:center!important;justify-content:center!important;margin-left:8px!important;padding:2px 7px!important;border:1px solid color-mix(in srgb,currentColor 26%,transparent)!important;border-radius:999px!important;background:color-mix(in srgb,var(--ekodi-shell-surface,#fafaf7) 82%,transparent)!important;color:inherit!important;font:750 10px/1.2 system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif!important;letter-spacing:.02em!important;white-space:nowrap!important;vertical-align:middle!important;opacity:.74!important}
-    .${OPERATING_SCOPE_CLASS}[data-ekodi-operating-space-floating="true"]{position:absolute!important;left:50%!important;bottom:4px!important;transform:translateX(-50%)!important;margin-left:0!important;pointer-events:none!important}
     [${SPACER_ATTR}]{
       display:block!important;
       width:100%!important;
@@ -121,7 +117,6 @@ function installStyle(){
     @media(max-width:480px){
       .${ROOT_CLASS} .${CENTER_CLASS}{max-width:48vw!important}
       .${FALLBACK_CLASS} .ekodi-user-ui-header-fallback__inner{width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 20px));gap:10px;font-size:12px}
-      .${OPERATING_SCOPE_CLASS}{margin-left:5px!important;padding:2px 5px!important;font-size:9px!important}
     }
   `;
   (document.head||document.documentElement).append(style);
@@ -173,13 +168,7 @@ function pruneIndividualSiteGlobalLinks(header){
   for(const anchor of header.querySelectorAll('a[href]'))if(isGlobalPlatformHeaderLink(anchor))anchor.remove();
   header.dataset.ekodiHeaderScope='service-local';
 }
-function operatingSpaceTarget(header){
-  if(!header)return null;
-  return header.querySelector('[data-ekodi-header-site-name],[data-ekodi-site-name],.brand-title,.site-title,[data-ekodi-header-title],.header-title')||findHomeAnchor(header)||findCenter(header)||null;
-}
-function ensureOperatingSpaceLabel(header,target=operatingSpaceTarget(header)){
-  if(!header)return null;
-  const existing=document.querySelector(`[${OPERATING_SCOPE_ATTR}]`);
+const existing=document.querySelector(`[${OPERATING_SCOPE_ATTR}]`);
   if(!isIndividualSite()){
     if(existing)existing.remove();
     return null;
@@ -300,7 +289,7 @@ function findHomeAnchor(header){
   for(const selector of selectors){const node=header?.querySelector(selector);if(node instanceof HTMLAnchorElement)return node;}
   return null;
 }
-function applySiteChromeHeader(header,chrome){const cfg=chrome?.header;if(!header||!cfg)return;const home=findHomeAnchor(header);if(home&&cfg.homeUrl)home.setAttribute('href',isIndividualSite()?serviceHomeUrl().toString():String(cfg.homeUrl));pruneIndividualSiteGlobalLinks(header);const fallback=header.hasAttribute(FALLBACK_ATTR);const siteNode=fallback?header.querySelector('.ekodi-user-ui-header-fallback__brand'):header.querySelector('[data-ekodi-header-site-name],[data-ekodi-site-name],.brand-title,.site-title');if(siteNode&&cfg.siteName)siteNode.textContent=String(cfg.siteName);const taglineNode=fallback?header.querySelector('.ekodi-user-ui-header-fallback__context'):header.querySelector('[data-ekodi-header-tagline]');if(taglineNode){const base=String(cfg.tagline||cfg.siteName||serviceLabel());taglineNode.textContent=base;}ensureOperatingSpaceLabel(header,siteNode||operatingSpaceTarget(header));header.dataset.ekodiSiteChrome='v1';window.dispatchEvent(new CustomEvent('ekodi:site-chrome',{detail:{subjectKey:chrome.subjectKey||siteSubject(),header:cfg}}))}
+function applySiteChromeHeader(header,chrome){const cfg=chrome?.header;if(!header||!cfg)return;const home=findHomeAnchor(header);if(home&&cfg.homeUrl)home.setAttribute('href',isIndividualSite()?serviceHomeUrl().toString():String(cfg.homeUrl));pruneIndividualSiteGlobalLinks(header);const fallback=header.hasAttribute(FALLBACK_ATTR);const siteNode=fallback?header.querySelector('.ekodi-user-ui-header-fallback__brand'):header.querySelector('[data-ekodi-header-site-name],[data-ekodi-site-name],.brand-title,.site-title');if(siteNode&&cfg.siteName)siteNode.textContent=String(cfg.siteName);const taglineNode=fallback?header.querySelector('.ekodi-user-ui-header-fallback__context'):header.querySelector('[data-ekodi-header-tagline]');if(taglineNode){const base=String(cfg.tagline||cfg.siteName||serviceLabel());taglineNode.textContent=base;header.dataset.ekodiSiteChrome='v1';window.dispatchEvent(new CustomEvent('ekodi:site-chrome',{detail:{subjectKey:chrome.subjectKey||siteSubject(),header:cfg}}))}
 function bindHomeAnchor(header){
   const anchor=findHomeAnchor(header);if(!anchor)return;
   const localAnchor=serviceHomeAnchor();
@@ -356,8 +345,7 @@ function attach(header){
   if(!header||!shouldEnable())return;
   pruneIndividualSiteGlobalLinks(header);
   bindHomeAnchor(header);
-  ensureOperatingSpaceLabel(header);
-  void siteChrome().then(chrome=>applySiteChromeHeader(header,chrome));
+void siteChrome().then(chrome=>applySiteChromeHeader(header,chrome));
   if(activeHeader===header&&spacer?.isConnected){
     const nextCenter=findCenter(header);
     if(nextCenter!==activeCenter){
