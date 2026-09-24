@@ -168,7 +168,7 @@ function walk(dir,base=''){
   for(const e of fs.readdirSync(dir,{withFileTypes:true})){
     if(['.git','node_modules','dist'].includes(e.name))continue;
     const rel=path.join(base,e.name),full=path.join(dir,e.name);
-    if(e.isDirectory())out.push(...walk(full,rel));else if(textExt.has(path.extname(e.name).toLowerCase())||e.name.startsWith('.'))out.push(rel.replaceAll('\\','/'));
+    if(e.isDirectory())out.push(...walk(full,rel));else if(textExt.has(path.extname(e.name).toLowerCase())||e.name.startsWith('.')||['_headers','_redirects'].includes(e.name))out.push(rel.replaceAll('\\','/'));
   }
   return out;
 }
