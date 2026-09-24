@@ -7,14 +7,14 @@ import { createEkodiAiProviderRegistry } from '../ekodi-ai-provider-registry.js'
 const read=path=>readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 
 test('common provider gateway exposes allowed-origin CORS contract',async()=>{
-  const response=await handleAiProviderControl(new Request('https://ekodi.kr/api/ai-modules/v1/providers/generate',{method:'OPTIONS',headers:{origin:'https://ekodi.kr/my'}}),{ALLOWED_ORIGINS:'https://ekodi.kr/my,https://ekodi.kr/admin'});
+  const response=await handleAiProviderControl(new Request('https://ekodi.kr/api/ai-modules/v1/providers/generate',{method:'OPTIONS',headers:{origin:'https://ekodi.kr'}}),{ALLOWED_ORIGINS:'https://ekodi.kr'});
   assert.equal(response.status,204);
   assert.equal(response.headers.get('access-control-allow-origin'),'https://ekodi.kr/my');
   assert.equal(response.headers.get('x-ekodi-ai-provider-contract'),'ekodi.ai-provider.v1');
 });
 
 test('common provider gateway blocks unauthenticated generation before provider access',async()=>{
-  const response=await handleAiProviderControl(new Request('https://ekodi.kr/api/ai-modules/v1/providers/generate',{method:'POST',headers:{origin:'https://ekodi.kr/my','content-type':'application/json'},body:JSON.stringify({capability:'documents',input:'test'})}),{ALLOWED_ORIGINS:'https://ekodi.kr/my'});
+  const response=await handleAiProviderControl(new Request('https://ekodi.kr/api/ai-modules/v1/providers/generate',{method:'POST',headers:{origin:'https://ekodi.kr','content-type':'application/json'},body:JSON.stringify({capability:'documents',input:'test'})}),{ALLOWED_ORIGINS:'https://ekodi.kr/my'});
   assert.equal(response.status,401);
   assert.equal((await response.json()).error,'authentication_required');
 });

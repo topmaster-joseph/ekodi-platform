@@ -1,39 +1,4 @@
-import { injectEkodiShell, shellServiceForHost } from './ekodi-shell-injector.js';
-
-const ORIGINS = Object.freeze({});
-
-const MAIL_CANONICAL = 'https://ekodi.kr/mail';
-const MALL_CANONICAL = 'https://ekodi.kr/ekodimall';
-const CANONICAL_REDIRECTS = Object.freeze({
-  'ekodi.kr/ekodimall': MALL_CANONICAL,
-  'ekodi.kr/ekodimall': MALL_CANONICAL,
-  'ekodi.kr/ekodibiz/mail': MAIL_CANONICAL,
-  'ekodi.kr/ekodichurch/mail': MAIL_CANONICAL,
-  'ekodi.kr/ekodilab/mail': MAIL_CANONICAL,
-  'ekodi.kr/books/mail': MAIL_CANONICAL,
-  'ekodi.kr/ekodibiz/trade/mail': MAIL_CANONICAL
-});
-
-const REDIRECTS = Object.freeze({
-  'ekodi.kr/ekodichurch/live': 'https://www.youtube.com/@ekodichurch/live'
-});
-
-const BIZ_CSP = [
-  "default-src 'none'",
-  "style-src 'unsafe-inline'",
-  "img-src data:",
-  "frame-ancestors 'none'",
-  "base-uri 'none'",
-  "form-action 'none'",
-  "object-src 'none'"
-].join('; ');
-
-const STAGING_HOSTS = new Set(['ekodi.kr/ekodibiz', ...Object.keys(ORIGINS), ...Object.keys(REDIRECTS), ...Object.keys(CANONICAL_REDIRECTS)]);
-function requestHost(request, env, incoming) {
-  if (env?.ENVIRONMENT !== 'staging') return incoming.hostname;
-  const requested = String(request.headers.get('x-ekodi-staging-host') || '').trim().toLowerCase();
-  return STAGING_HOSTS.has(requested) ? requested : incoming.hostname;
-}
+import { injectEkodiShell } from './ekodi-shell-injector.js';
 
 function businessHub() {
   const html = `<!doctype html>
@@ -74,66 +39,14 @@ function businessHub() {
   });
 }
 
+
 export default {
-  async fetch(request, env = {}) {
-    const incoming = new URL(request.url);
-    const host = requestHost(request, env, incoming);
-
-    const canonicalBase = CANONICAL_REDIRECTS[host];
-    if (canonicalBase) {
-      const target = new URL(canonicalBase);
-      const suffix = incoming.pathname === '/' ? '' : incoming.pathname;
-      target.pathname = `${target.pathname.replace(/\/$/, '')}${suffix}`;
-      target.search = incoming.search;
-      return Response.redirect(target.toString(), 308);
-    }
-
-    if (incoming.pathname === '/admin' || incoming.pathname === '/admin/') {
-      const target = new URL('https://ekodi.kr/admin/');
-      target.searchParams.set('source', host);
-      return Response.redirect(target.toString(), 307);
-    }
-
-    if (host === 'ekodi.kr/ekodibiz' && (incoming.pathname === '/' || incoming.pathname === '/index.html')) {
-      return injectEkodiShell(businessHub(), 'biz');
-    }
-
-    const redirectTarget = REDIRECTS[host];
-    if (redirectTarget) return Response.redirect(redirectTarget, 302);
-
-    const originHost = ORIGINS[host];
-    if (!originHost) return new Response('Not found', { status: 404 });
-
-    const upstreamUrl = new URL(incoming);
-    upstreamUrl.protocol = 'https:';
-    upstreamUrl.hostname = originHost;
-    upstreamUrl.port = '';
-
-    const upstreamRequest = new Request(upstreamUrl, request);
-    upstreamRequest.headers.delete('x-ekodi-staging-host');
-    const upstreamResponse = await fetch(upstreamRequest);
-    const headers = new Headers(upstreamResponse.headers);
-
-    const location = headers.get('location');
-    if (location) {
-      try {
-        const redirect = new URL(location, upstreamUrl);
-        if (redirect.hostname === originHost) {
-          redirect.hostname = host;
-          redirect.protocol = 'https:';
-          headers.set('location', redirect.toString());
-        }
-      } catch {
-        // Preserve non-URL Location headers unchanged.
-      }
-    }
-
-    headers.set('x-ekodi-edge', 'service-proxy');
-    const response=new Response(upstreamResponse.body, {
-      status: upstreamResponse.status,
-      statusText: upstreamResponse.statusText,
-      headers
-    });
-    return injectEkodiShell(response,shellServiceForHost(host));
+  async fetch(request) {
+    const incoming=new URL(request.url);
+    const route=incoming.pathname.replace(/\/+$/,'')||'/';
+    if(route==='/admin')return Response.redirect('https://ekodi.kr/admin/',307);
+    if(route==='/ekodibiz')return injectEkodiShell(businessHub(),'biz');
+    if(route==='/ekodichurch/live')return Response.redirect('https://www.youtube.com/@ekodichurch/live',302);
+    return new Response('Not found',{status:404,headers:{'cache-control':'no-store'}});
   }
 };

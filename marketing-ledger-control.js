@@ -34,7 +34,7 @@ function originAllowed(origin, env = {}) {
   if (configured.has(origin)) return true;
   try {
     const url = new URL(origin);
-    return url.protocol === 'https:' && (/^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(url.hostname) || url.hostname === 'ekodi.kr/business');
+    return url.protocol === 'https:' && url.hostname === 'ekodi.kr';
   } catch { return false; }
 }
 function cors(origin, allowed) {
