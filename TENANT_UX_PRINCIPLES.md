@@ -38,7 +38,7 @@ EKODI does not give every administrator a smaller copy of the platform-super-adm
 ## Current task-oriented projections
 
 - Workspace: group labels Home / Communication & Promotion / Operations & Finance / Site & Settings, with each permitted task shown as a direct link.
-- Store: group labels Home / Orders & Sales / Menu & Inventory / Customers & Reviews / Promotion & Channels / Operations & Settings, with each permitted task shown as a direct link.
+- Store: Jadam Chicken, PizzaMaru and Yogurt Purple use the same delegated-manager task order and direct-link menu: Store Home / Sales Management / Customers & Marketing / Store Operations / Settlement / Connections & Permissions. Local/lower managers and viewers continue to receive smaller role-projected menus from the same canonical URLs and capability policy. Brand name, tenant data and accent identity remain separated.
 - Church: Home / People & Care / Worship & Ministry / Records & AI / Site & Permissions.
 - Trade: Home / Counterparties / Channels & Publishing / Permissions.
 - EKODIMALL keeps its direct one-level operating menu.
