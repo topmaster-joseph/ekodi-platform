@@ -41,6 +41,9 @@ test('shared tenant live UI exposes movable chat, extra cameras, and participant
   assert.match(page,/id=\"managementCameraQr\"/);
   assert.match(page,/id=\"studioChatMessages\"/);
   assert.match(page,/id=\"viewerChatMessages\"/);
+  assert.match(page,/class=\"studio-status-strip\"/);
+  assert.match(page,/id=\"participantRequestState\"/);
+  assert.match(page,/class=\"danger hidden\" id=\"endLiveButton\"/);
   assert.match(live,/function beginOverlayDrag\(event\)/);
   assert.match(live,/function moveOverlayDrag\(event\)/);
   assert.match(live,/function removeOverlay\(id\)/);
@@ -122,7 +125,9 @@ test('studio layout is compact on desktop and mobile',async()=>{
   const [page,css]=await Promise.all([read('tenant-live-page.js'),read('tenant-live.css')]);
   assert.match(page,/class="controls compact-controls"/);
   assert.match(page,/<details class="compact-settings">/);
-  assert.match(css,/grid-template-columns:minmax\(0,820px\) 300px/);
+  assert.match(css,/grid-template-columns:minmax\(0,1fr\) 410px/);
+  assert.match(css,/max-height:calc\(100vh - 92px\)/);
+  assert.match(css,/\.studio-status-strip/);
   assert.match(css,/\.compact-controls\{grid-template-columns:repeat\(4/);
   assert.match(css,/@media\(max-width:560px\)/);
   assert.match(css,/\.compact-controls\{grid-template-columns:repeat\(4/);
@@ -133,7 +138,7 @@ test('guarded production release verifies compact studio, QR camera, and languag
   const byUrl=new Map(manifest.worker.requests.map(item=>[item.url,item]));
   const live=byUrl.get('https://ekodi.kr/mokdaehumun/live/');
   assert.ok(live);
-  for(const marker of ['class="controls compact-controls"','id="openManagementCameraButton"','id="viewerListenLanguage"','id="participantSpeakLanguage"','QR을 찍고 승인합니다.']) assert.ok(live.expect.includes(marker),marker);
+  for(const marker of ['class="controls compact-controls"','class="studio-status-strip"','id="participantRequestState"','id="openManagementCameraButton"','id="viewerListenLanguage"','id="participantSpeakLanguage"','QR을 찍고 승인합니다.']) assert.ok(live.expect.includes(marker),marker);
   assert.ok(live.headerExpect.includes('cache-control: no-store'));
   const camera=byUrl.get('https://ekodi.kr/live/c/testpaircode123');
   assert.ok(camera);

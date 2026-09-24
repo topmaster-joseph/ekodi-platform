@@ -1,5 +1,5 @@
 {
-  "version": 91,
+  "version": 92,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -197,7 +197,10 @@
           "class=\"mission-site-header\"",
           "data-mission-nav",
           "/ekodimission/assets/shell.css",
-          "/ekodimission/assets/shell.js"
+          "/ekodimission/assets/shell.js",
+          "class=\"studio-status-strip\"",
+          "id=\"participantRequestState\"",
+          "class=\"danger hidden\" id=\"endLiveButton\""
         ],
         "headerExpect": [
           "x-ekodi-route: ekodimission-public",
@@ -219,7 +222,10 @@
           "id=\"openManagementCameraButton\"",
           "id=\"viewerListenLanguage\"",
           "id=\"participantSpeakLanguage\"",
-          "QR을 찍고 승인합니다."
+          "QR을 찍고 승인합니다.",
+          "class=\"studio-status-strip\"",
+          "id=\"participantRequestState\"",
+          "class=\"danger hidden\" id=\"endLiveButton\""
         ],
         "headerExpect": [
           "cache-control: no-store",
