@@ -1,6 +1,8 @@
 name: Deploy EKODI Shared Site Core
 
 on:
+  schedule:
+    - cron: '7 0 * * *'
   workflow_dispatch:
     inputs:
       sync_domains:
@@ -271,6 +273,7 @@ on:
       - '.github/workflows/redeploy-shared-site-on-user-ui-shell.yml'
 
 permissions:
+  actions: read
   contents: read
   pull-requests: read
 
@@ -279,7 +282,98 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  scheduled_release_gate:
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.gate.outputs.proceed }}
+      reason: ${{ steps.gate.outputs.reason }}
+      prior_sha: ${{ steps.gate.outputs.prior_sha }}
+      mode: ${{ steps.gate.outputs.mode }}
+    steps:
+      - name: Decide whether scheduled quota-reset release should run
+        id: gate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" != "schedule" ]; then
+            {
+              echo "proceed=true"
+              echo "reason=normal-trigger"
+              echo "prior_sha="
+              echo "mode=normal"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          runs="$(gh run list --workflow deploy-site-core.yml --branch main --limit 30 --json databaseId,status,conclusion,headSha,event,createdAt)"
+          prior="$(printf '%s' "$runs" | jq -c --arg current "$GITHUB_RUN_ID" '[.[] | select((.databaseId|tostring) != $current and .status == "completed")][0] // empty')"
+          if [ -z "$prior" ]; then
+            {
+              echo "proceed=false"
+              echo "reason=no-prior-completed-release"
+              echo "prior_sha="
+              echo "mode=hold"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          prior_id="$(printf '%s' "$prior" | jq -r '.databaseId')"
+          prior_sha="$(printf '%s' "$prior" | jq -r '.headSha // ""')"
+          prior_conclusion="$(printf '%s' "$prior" | jq -r '.conclusion // ""')"
+          if [ "$prior_conclusion" != "failure" ]; then
+            {
+              echo "proceed=false"
+              echo "reason=latest-release-not-failed"
+              echo "prior_sha=$prior_sha"
+              echo "mode=hold"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          failed_log="$(gh run view "$prior_id" --log-failed 2>&1 || true)"
+          if ! printf '%s' "$failed_log" | grep -Fq 'Cloudflare Workers runtime quota is exhausted. EKODI completed CI, staging and immutable artifact continuity'; then
+            {
+              echo "proceed=false"
+              echo "reason=non-quota-failure-requires-review"
+              echo "prior_sha=$prior_sha"
+              echo "mode=hold"
+            } >> "$GITHUB_OUTPUT"
+            echo "Scheduled retry skipped: prior canonical release failed for a non-quota reason."
+            exit 0
+          fi
+
+          if [ "$prior_sha" = "$GITHUB_SHA" ]; then
+            mode='same-sha-revalidation'
+            reason='quota-reset-resume-same-sha'
+          else
+            mode='fresh-current-main-revalidation'
+            reason='quota-reset-revalidate-current-main'
+          fi
+          {
+            echo "proceed=true"
+            echo "reason=$reason"
+            echo "prior_sha=$prior_sha"
+            echo "mode=$mode"
+          } >> "$GITHUB_OUTPUT"
+          echo "Scheduled quota-reset recovery accepted. No held artifact is promoted directly; this run repeats staging and immutable artifact continuity before production mutation."
+
+      - name: Record scheduled release decision
+        shell: bash
+        run: |
+          {
+            echo "### Shared Site scheduled quota-reset gate"
+            echo "- proceed: `${{ steps.gate.outputs.proceed }}`"
+            echo "- reason: `${{ steps.gate.outputs.reason }}`"
+            echo "- prior SHA: `${{ steps.gate.outputs.prior_sha }}`"
+            echo "- mode: `${{ steps.gate.outputs.mode }}`"
+            echo "- current SHA: `$GITHUB_SHA`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   staging_gate:
+    needs: scheduled_release_gate
+    if: needs.scheduled_release_gate.outputs.proceed == 'true'
     uses: ./.github/workflows/stage-shared-site-shell.yml
     secrets: inherit
 
