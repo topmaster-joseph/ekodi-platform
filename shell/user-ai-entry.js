@@ -12,6 +12,8 @@ function context(){
   return {service:service||'ekodi',surface:surface||'public'};
 }
 function eligible(){
+  const html=document.documentElement;
+  if(String(html?.dataset?.ekodiUserAiEntry||'').trim().toLowerCase()==='off')return false;
   const {service,surface}=context();
   let path=location.pathname;
   try{path=decodeURIComponent(path)}catch{}
