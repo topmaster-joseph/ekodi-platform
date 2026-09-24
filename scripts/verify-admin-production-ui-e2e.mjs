@@ -151,8 +151,8 @@ const workbenchState = await page.evaluate(() => {
 });
 if (workbenchState.topOffset > 0.5) throw new Error(`Admin top offset leaked into production: ${JSON.stringify(workbenchState)}`);
 if (workbenchState.bodyOverflowY !== 'hidden' || workbenchState.appOverflowY !== 'hidden') throw new Error(`Admin frame must be scroll-locked: ${JSON.stringify(workbenchState)}`);
-if (workbenchState.sidebarOverflowY !== 'hidden' || workbenchState.navOverflowY !== 'hidden' || workbenchState.navIndependentScroll !== 'false') throw new Error(`Admin primary sidebar scroll contract failed: ${JSON.stringify(workbenchState)}`);
-if (!['auto','scroll'].includes(workbenchState.workspaceOverflowY) || workbenchState.workspaceScrollOwner !== 'workspace') throw new Error(`Admin workspace must be the single vertical scroll owner: ${JSON.stringify(workbenchState)}`);
+if (workbenchState.sidebarOverflowY !== 'hidden' || !['auto','scroll'].includes(workbenchState.navOverflowY) || workbenchState.navIndependentScroll !== 'platform-admin') throw new Error(`Admin role-projected sidebar scroll contract failed: ${JSON.stringify(workbenchState)}`);
+if (!['auto','scroll'].includes(workbenchState.workspaceOverflowY) || workbenchState.workspaceScrollOwner !== 'workspace') throw new Error(`Admin workspace content scroll contract failed: ${JSON.stringify(workbenchState)}`);
 if (workbenchState.contextTabsPosition !== 'sticky' || workbenchState.sidebarTop !== 0) throw new Error(`Admin fixed workbench geometry failed: ${JSON.stringify(workbenchState)}`);
 if (!workbenchState.designEngine || workbenchState.designAudit === 'fail') throw new Error(`Admin Design Engine did not activate cleanly: ${JSON.stringify(workbenchState)}`);
 console.log(`ADMIN_WORKBENCH=${JSON.stringify(workbenchState)}`);
