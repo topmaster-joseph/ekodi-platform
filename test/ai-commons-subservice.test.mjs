@@ -10,12 +10,15 @@ test('subservice source id is normalized without changing request identity',()=>
   assert.equal(idea.outcome,'홍보 글 만들어줘');
 });
 
-test('shared user shell bundles the common AI entry for user surfaces',()=>{
+test('shared user shell keeps the optional AI entry explicit-opt-in only',()=>{
   const worker=read('ekodi-shell-worker.js');
   const entry=read('shell/user-ai-entry.js');
   assert.match(worker,/user-ai-entry\.js/);
   assert.match(worker,/x-ekodi-user-ai-entry/);
   assert.match(entry,/AI로 하기/);
+  assert.match(entry,/explicitOptIn/);
+  assert.match(entry,/if\(!explicitOptIn\(\)\)return false/);
+  assert.match(entry,/function cleanup\(\)/);
   assert.match(entry,/blocked=new Set\(\['admin','form','document','data'\]\)/);
   assert.match(entry,/searchParams\.set\('source',service\)/);
 });

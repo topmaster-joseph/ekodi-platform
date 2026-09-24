@@ -33,6 +33,7 @@ const CSS=`
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;background:#f7f3ea!important}
 html[data-ekodi-site-subject="mnubiz"][data-ekodi-user-ui]{--ekodi-user-chrome-bg:#fbf8f1!important;--ekodi-user-chrome-text:#10233b!important;--ekodi-user-chrome-muted:#5e6b7b!important;--ekodi-user-chrome-link:#173d63!important;--ekodi-user-chrome-line:rgba(16,35,59,.16)!important;--ekodi-service-paper:#f7f3ea!important;--ekodi-service-ink:#10233b!important}
+html[data-ekodi-site-subject="mnubiz"][data-ekodi-user-ui] body>main.mnubiz-main{width:100%!important;max-width:none!important;margin-inline:0!important}
 body{margin:0;background:#f7f3ea!important;color:#10233b!important}
 a{color:inherit}
 .mnubiz-shell{width:min(1180px,calc(100% - 40px));margin-inline:auto}
@@ -46,7 +47,6 @@ a{color:inherit}
 .mnubiz-nav{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
 .mnubiz-nav a{padding:9px 10px;text-decoration:none;font-size:13px;font-weight:700;color:var(--mnubiz-ink-soft);border-bottom:2px solid transparent}
 .mnubiz-nav a:hover,.mnubiz-nav a:focus-visible{color:var(--mnubiz-navy);border-bottom-color:var(--mnubiz-brass);outline:none}
-.mnubiz-nav__community{border:1px solid var(--mnubiz-line)!important;border-bottom-width:1px!important;background:var(--mnubiz-paper-2);color:var(--mnubiz-navy)!important}
 .mnubiz-main{width:100%;min-width:0;background:#f7f3ea!important;color:#10233b!important}
 .mnubiz-hero{position:relative;overflow:hidden;padding:clamp(72px,10vw,132px) 0 clamp(64px,8vw,96px);border-bottom:1px solid #d9d1c2!important;background:linear-gradient(135deg,#fffdf8 0%,#f7f3ea 58%,#f0e7d8 100%)!important;color:#10233b!important}
 .mnubiz-hero:after{content:"";position:absolute;width:min(520px,54vw);aspect-ratio:1;right:max(-170px,calc((100vw - 1180px)/2 - 120px));top:-190px;border:1px solid rgba(167,122,53,.2);border-radius:50%;box-shadow:0 0 0 54px rgba(167,122,53,.045),0 0 0 108px rgba(13,44,74,.025);pointer-events:none}
@@ -86,8 +86,8 @@ a{color:inherit}
 .mnubiz-empty strong{display:block;font-size:16px;color:var(--mnubiz-navy)}
 .mnubiz-empty p{margin:7px 0 0;color:var(--mnubiz-ink-soft);font-size:14px;line-height:1.65}
 .mnubiz-service-note{padding:18px 0 8px;text-align:center;color:#526276!important;font-size:12px;line-height:1.6;background:#f7f3ea!important}
-.mnubiz-character-zone{position:absolute;right:max(24px,calc((100vw - 1180px)/2));bottom:42px;width:170px;height:190px;z-index:2;pointer-events:none}
-.mnubiz-character-zone .ekodi-main-ekodian{inset:auto 0 0 auto!important;transform:none!important}
+.mnubiz-character-zone,.mnubiz-character-zone.ekodi-main-ekodian-host{position:absolute!important;right:max(24px,calc((100vw - 1180px)/2));left:auto!important;bottom:34px;top:auto!important;width:142px;height:154px;z-index:2;pointer-events:none}
+.mnubiz-character-zone .ekodi-main-ekodian{inset:auto 0 0 auto!important;transform:none!important;--ekodi-character-width:108px!important;opacity:.72!important}
 .mnubiz-hero>.mnubiz-shell{position:relative;z-index:2;padding-right:200px}
 @media(prefers-color-scheme:dark){
   html[data-ekodi-site-subject="mnubiz"],html[data-ekodi-site-subject="mnubiz"] body,html[data-ekodi-site-subject="mnubiz"] .mnubiz-main{background:#f7f3ea!important;color:#10233b!important}
@@ -129,9 +129,9 @@ export function renderMnuBizPublicPage(){
   const html=`<!doctype html><html lang="ko" data-ekodi-ui-surface="user-public" data-ekodi-site-subject="mnubiz" data-ekodi-user-header="default"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>${esc(name)} · EKODI</title>
-<meta name="description" content="국립목포대학교 경영 동문을 연결하고 소식·행사·진로·사업 경험을 나누는 동문 네트워크 운영공간">
+<meta name="description" content="국립목포대학교 경영 동문을 연결하고 소식·행사·진로·사업 경험을 나누는 동문 네트워크">
 <meta name="robots" content="index,follow">
-<link rel="stylesheet" href="/mnubiz/assets/site.css?v=20260924-2">
+<link rel="stylesheet" href="/mnubiz/assets/site.css?v=20260924-3">
 </head><body>
 <header class="site-header mnubiz-header" role="banner">
   <div class="mnubiz-shell mnubiz-header__inner">
@@ -140,7 +140,7 @@ export function renderMnuBizPublicPage(){
       <span class="mnubiz-brand__text"><strong class="mnubiz-brand__name" data-ekodi-header-site-name>${esc(name)}</strong><span class="mnubiz-brand__sub">BUSINESS ALUMNI</span></span>
     </a>
     <nav class="mnubiz-nav" data-ekodi-header-actions aria-label="동문회 주요 메뉴">
-      <a href="#about">소개</a><a href="#network">동문 네트워크</a><a href="#news">소식 · 행사</a><a class="mnubiz-nav__community" href="/mnubiz/community">Community</a>
+      <a href="#about">소개</a><a href="#network">동문 네트워크</a><a href="#news">소식 · 행사</a>
     </nav>
   </div>
 </header>
@@ -162,7 +162,7 @@ export function renderMnuBizPublicPage(){
 
   <section class="mnubiz-section" id="about">
     <div class="mnubiz-shell">
-      <div class="mnubiz-section__head"><div><p class="mnubiz-section__eyebrow">ABOUT</p><h2>경영동문회 운영공간</h2></div><p class="mnubiz-section__desc">단순한 소개 홈페이지가 아니라 동문 소식, 관계, 진로와 사업 경험을 축적하고 연결하는 운영공간을 지향합니다.</p></div>
+      <div class="mnubiz-section__head"><div><p class="mnubiz-section__eyebrow">ABOUT</p><h2>경영동문회</h2></div><p class="mnubiz-section__desc">단순한 소개 홈페이지를 넘어 동문 소식, 관계, 진로와 사업 경험을 축적하고 연결합니다.</p></div>
       <div class="mnubiz-grid">
         <article class="mnubiz-card"><span class="mnubiz-card__index">01 · CONNECT</span><h3>동문 연결</h3><p>졸업생과 재학생, 선후배가 필요한 관계를 찾고 서로의 경험을 나눌 수 있도록 연결합니다.</p></article>
         <article class="mnubiz-card"><span class="mnubiz-card__index">02 · CAREER</span><h3>진로 · 사업 네트워크</h3><p>취업, 창업, 경영, 협업 등 동문이 가진 현장 경험을 필요한 사람과 연결하는 기반을 만듭니다.</p></article>
@@ -183,11 +183,11 @@ export function renderMnuBizPublicPage(){
 
   <section class="mnubiz-section" id="news">
     <div class="mnubiz-shell">
-      <div class="mnubiz-section__head"><div><p class="mnubiz-section__eyebrow">NEWS & EVENTS</p><h2>소식 · 행사</h2></div><p class="mnubiz-section__desc">동문회에서 확인한 공지와 일정만 공개하며, 추후 행사 신청과 참여 기록도 같은 운영공간에서 연결합니다.</p></div>
+      <div class="mnubiz-section__head"><div><p class="mnubiz-section__eyebrow">NEWS & EVENTS</p><h2>소식 · 행사</h2></div><p class="mnubiz-section__desc">동문회에서 확인한 공지와 일정만 공개하며, 추후 행사 신청과 참여 기록도 같은 사이트에서 연결합니다.</p></div>
       <div class="mnubiz-empty"><span class="mnubiz-empty__date">READY</span><div><strong>공개된 동문회 공지·행사를 준비하고 있습니다.</strong><p>운영자가 확인한 내용부터 순서대로 표시됩니다.</p></div></div>
     </div>
   </section>
-  <div class="mnubiz-shell mnubiz-service-note">국립목포대학교 경영동문회 운영공간 · 회원 정보와 공개 정보는 분리하여 관리합니다.</div>
+  <div class="mnubiz-shell mnubiz-service-note">국립목포대학교 경영동문회 · 회원 정보와 공개 정보는 분리하여 관리합니다.</div>
 </main>
 </body></html>`;
   return new Response(html,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-workspace':'mnubiz','x-ekodi-community-scope':'workspace','x-ekodi-site-subject':'mnubiz'}});

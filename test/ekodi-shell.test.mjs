@@ -105,7 +105,7 @@ test('canonical root services win before generic workspace slug classification',
   const workspace=site.indexOf('const workspaceSlug=workspaceSlugForPath(pathname);');
   assert.ok(service>=0&&workspace>=0&&service<workspace);
   assert.match(site,/if\(serviceId\)return injectRootServiceShell\(response,serviceId,isUserHomePath\(pathname,serviceId\)\)/);
-  assert.match(site,/ownedCustomerSiteFor\(serviceId\)\?injectEkodiTenantReadability\(shelled,\{forceOperatingSpace:true\}\):shelled/);
+  assert.match(site,/ownedCustomerSiteFor\(serviceId\)\?injectEkodiTenantReadability\(shelled\):shelled/);
 });
 
 test('Shell-enabled asset Workers keep dynamic roots and APIs behind their wrapper',async()=>{

@@ -1,5 +1,5 @@
 {
-  "version": 14,
+  "version": 15,
   "name": "EKODI User UI Shell",
   "parentPolicy": "config/user-ui-dna.json",
   "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family, with persistent common chrome limited to one shared header and one shared footer.",
@@ -36,7 +36,11 @@
     "individualSiteHeaderStaysLocal": true,
     "firstPaintVisualContinuity": true,
     "documentLoadAmbientVariation": true,
-    "transientCharacterFlashForbidden": true
+    "transientCharacterFlashForbidden": true,
+    "userFacingInternalTermsHidden": true,
+    "operatingSpaceLabelForbiddenOnUserSurfaces": true,
+    "genericCommunityHeaderTabForbidden": true,
+    "userAiEntryExplicitOptInOnly": true
   },
   "header": {
     "owner": "shared-shell",
@@ -72,7 +76,10 @@
       "admin navigation mixed into user header",
       "global MR or background-music playback control",
       "global workspace or space-selection control",
-      "global EKODI root or My EKODI links in individual-site headers"
+      "global EKODI root or My EKODI links in individual-site headers",
+      "internal operating-space labels or badges on user pages",
+      "generic Community or 커뮤니티 tabs in individual-site headers",
+      "generic AI conversation entry on ordinary user pages"
     ],
     "alignment": "centered-canvas",
     "geometry": "service-token-driven",
@@ -82,8 +89,8 @@
     "owner": "shared-shell",
     "strategy": "shell-supplied",
     "contentSource": "config/user-footer.js",
-    "layout": "centered single-column operator copy and legal links; wrap naturally on narrow screens",
-    "alignment": "center",
+    "layout": "compact two-zone desktop layout with operator/site copy and legal links; single-column centered stack on narrow screens",
+    "alignment": "responsive-start-desktop-center-mobile",
     "themePolicy": "inherit each service typography, palette and visual mood; optional --ekodi-user-footer-* tokens may refine it",
     "serviceExtension": "append-only",
     "separatePolicyPrecedence": true,
@@ -253,5 +260,21 @@
       "unbounded random colors",
       "layout or contrast mutation caused by ambient variation"
     ]
+  },
+  "aiEntry": {
+    "owner": "shared-shell",
+    "runtime": "shell/user-ai-entry.js",
+    "default": "hidden",
+    "strategy": "explicit-opt-in-only",
+    "optInAttribute": "data-ekodi-user-ai-entry",
+    "allowedValues": [
+      "on",
+      "true",
+      "enabled",
+      "service"
+    ],
+    "adminExcluded": true,
+    "centralAiSurfaceExcluded": true,
+    "ordinaryPublicAndWorkspacePages": "forbidden"
   }
 }

@@ -3,7 +3,7 @@
 if(window.__EKODI_USER_UI_FOOTER_BOOTED)return;
 window.__EKODI_USER_UI_FOOTER_BOOTED=true;
 
-const VERSION=7;
+const VERSION=8;
 const STYLE_ID='ekodi-user-ui-footer-style';
 const CONFIG_URL='https://ekodi.kr/shell/user-footer.json';
 const SITE_CHROME_URL='https://workspace-api.ekodi.kr/v1/site-chrome/public';
@@ -62,14 +62,14 @@ function installStyle(){
   const style=document.createElement('style');
   style.id=STYLE_ID;
   style.textContent=`
-    .ekodi-user-ui-footer{position:relative!important;z-index:2!important;width:100%!important;box-sizing:border-box!important;margin-top:32px!important;border-top:1px solid var(--ekodi-user-footer-border,color-mix(in srgb,var(--ekodi-service-accent,currentColor) 18%,transparent))!important;background:var(--ekodi-user-footer-background,color-mix(in srgb,var(--ekodi-service-paper,transparent) 92%,var(--ekodi-service-accent,transparent) 8%))!important;color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important;font-family:system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif!important;font-size:14px!important;line-height:1.75!important;text-align:center!important;text-shadow:none!important}
-    .ekodi-user-ui-footer__inner{width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 40px))!important;margin:0 auto!important;padding:28px 0 30px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:14px!important}
-    .ekodi-user-ui-footer__copy{min-width:0!important;width:100%!important;display:grid!important;justify-items:center!important;gap:7px!important}.ekodi-user-ui-footer__service{font-size:12px!important;font-weight:750!important;letter-spacing:.04em!important;color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important}.ekodi-user-ui-footer__brand{font-size:14px!important;font-weight:850!important;letter-spacing:.13em!important;color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important}
-    .ekodi-user-ui-footer__business,.ekodi-user-ui-footer__address{width:100%!important;display:flex!important;align-items:baseline!important;justify-content:center!important;gap:5px 16px!important;flex-wrap:wrap!important;color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important}.ekodi-user-ui-footer__address{word-break:keep-all!important}.ekodi-user-ui-footer__separator{color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;opacity:.9!important}
-    .ekodi-user-ui-footer__links{display:flex!important;justify-content:center!important;align-items:center!important;gap:7px 18px!important;flex-wrap:wrap!important;white-space:normal!important}.ekodi-user-ui-footer a{color:var(--ekodi-user-footer-safe-link,#fff)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-link,#fff)!important;font-weight:700!important;text-decoration:none!important;text-underline-offset:3px!important}.ekodi-user-ui-footer a:hover,.ekodi-user-ui-footer a:focus-visible{text-decoration:underline!important}.ekodi-user-ui-footer a:focus-visible{outline:2px solid currentColor!important;outline-offset:3px!important}
+    .ekodi-user-ui-footer{position:relative!important;z-index:2!important;width:100%!important;box-sizing:border-box!important;margin-top:32px!important;border-top:1px solid var(--ekodi-user-footer-border,color-mix(in srgb,var(--ekodi-service-accent,currentColor) 18%,transparent))!important;background:var(--ekodi-user-footer-background,color-mix(in srgb,var(--ekodi-service-paper,transparent) 92%,var(--ekodi-service-accent,transparent) 8%))!important;color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important;font-family:system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif!important;font-size:13px!important;line-height:1.65!important;text-align:left!important;text-shadow:none!important}
+    .ekodi-user-ui-footer__inner{width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 40px))!important;margin:0 auto!important;padding:22px 0 24px!important;display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:start!important;gap:16px 32px!important}
+    .ekodi-user-ui-footer__copy{min-width:0!important;width:100%!important;display:grid!important;justify-items:start!important;gap:5px!important}.ekodi-user-ui-footer__service{font-size:12px!important;font-weight:750!important;letter-spacing:.04em!important;color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important}.ekodi-user-ui-footer__brand{font-size:14px!important;font-weight:850!important;letter-spacing:.13em!important;color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important}
+    .ekodi-user-ui-footer__business,.ekodi-user-ui-footer__address{width:100%!important;display:flex!important;align-items:baseline!important;justify-content:flex-start!important;gap:4px 14px!important;flex-wrap:wrap!important;color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important}.ekodi-user-ui-footer__address{word-break:keep-all!important}.ekodi-user-ui-footer__separator{color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;opacity:.9!important}
+    .ekodi-user-ui-footer__links{display:flex!important;justify-content:flex-end!important;align-items:center!important;gap:7px 16px!important;flex-wrap:wrap!important;white-space:normal!important;padding-top:2px!important}.ekodi-user-ui-footer a{color:var(--ekodi-user-footer-safe-link,#fff)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-link,#fff)!important;font-weight:700!important;text-decoration:none!important;text-underline-offset:3px!important}.ekodi-user-ui-footer a:hover,.ekodi-user-ui-footer a:focus-visible{text-decoration:underline!important}.ekodi-user-ui-footer a:focus-visible{outline:2px solid currentColor!important;outline-offset:3px!important}
     .ekodi-user-ui-footer__copyright,.ekodi-user-ui-footer__scope{color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;opacity:1!important}.ekodi-user-ui-footer__scope{max-width:800px!important;font-size:13px!important;line-height:1.7!important}
     [data-ekodi-legal-footer]:not(.ekodi-user-ui-footer),[data-ekodi-legacy-common-footer-hidden]{display:none!important}
-    @media(max-width:720px){.ekodi-user-ui-footer{font-size:13px!important}.ekodi-user-ui-footer__inner{width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 28px))!important;padding:24px 0 26px!important;gap:12px!important}.ekodi-user-ui-footer__business,.ekodi-user-ui-footer__address{gap:4px 11px!important}.ekodi-user-ui-footer__scope{font-size:12.5px!important}}
+    @media(max-width:720px){.ekodi-user-ui-footer{font-size:12.5px!important;text-align:center!important}.ekodi-user-ui-footer__inner{width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 28px))!important;padding:20px 0 22px!important;grid-template-columns:1fr!important;justify-items:center!important;gap:12px!important}.ekodi-user-ui-footer__copy{justify-items:center!important}.ekodi-user-ui-footer__business,.ekodi-user-ui-footer__address{justify-content:center!important;gap:4px 11px!important}.ekodi-user-ui-footer__links{justify-content:center!important;padding-top:0!important}.ekodi-user-ui-footer__scope{font-size:12px!important}}
   `;
   (document.head||document.documentElement).append(style);
 }
@@ -121,7 +121,7 @@ function applyServiceContext(footer){
   }
   context.textContent=label;
 }
-function validConfig(value){return Boolean(value&&typeof value==='object'&&Number(value.version)>=3&&value.operator&&value.contact&&Array.isArray(value.legalLinks));}
+function validConfig(value){return Boolean(value&&typeof value==='object'&&Number(value.version)>=4&&value.operator&&value.contact&&Array.isArray(value.legalLinks));}
 async function loadSiteConfig(){
   const subject=siteSubject();
   if(!subject||['admin','auth','privacy','terms','api'].includes(subject))return null;
@@ -142,7 +142,7 @@ function createFooter(config){
   footer.className='ekodi-user-ui-footer';
   footer.setAttribute(FOOTER_ATTR,`v${VERSION}`);
   footer.setAttribute('data-ekodi-legal-footer','user-shell-v2');
-  footer.setAttribute('aria-label',String(config.ariaLabel||'EKODI 운영 및 법적 고지'));
+  footer.setAttribute('aria-label',String(config.ariaLabel||'사이트 정보 및 법적 고지'));
   const inner=appendText(footer,'div','','ekodi-user-ui-footer__inner');
   const copy=appendText(inner,'div','','ekodi-user-ui-footer__copy');
   appendText(copy,'strong',config.brand,'ekodi-user-ui-footer__brand');

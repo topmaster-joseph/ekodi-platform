@@ -348,20 +348,19 @@ html[data-ekodi-service="community"] .language-menu {
 .ekodi-user-ui-footer__inner {
   width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 32px));
   margin: 0 auto;
-  padding: 24px 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
+  padding: 22px 0 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px 32px;
 }
 
 .ekodi-user-ui-footer__copy {
   min-width: 0;
   width: 100%;
   display: grid;
-  justify-items: center;
-  gap: 6px;
+  justify-items: start;
+  gap: 5px;
 }
 
 .ekodi-user-ui-footer__brand {
@@ -375,7 +374,7 @@ html[data-ekodi-service="community"] .language-menu {
   width: 100%;
   display: flex;
   align-items: baseline;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 4px 14px;
   flex-wrap: wrap;
 }
@@ -390,11 +389,12 @@ html[data-ekodi-service="community"] .language-menu {
 
 .ekodi-user-ui-footer__links {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
   gap: 6px 16px;
   flex-wrap: wrap;
   white-space: normal;
+  padding-top: 2px;
 }
 
 .ekodi-user-ui-footer a {
@@ -450,13 +450,21 @@ body > [data-ekodi-user-footer] ~ [data-ekodi-user-footer] {
 
   .ekodi-user-ui-footer__inner {
     width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 24px));
-    padding: 20px 0;
+    padding: 20px 0 22px;
+    grid-template-columns: 1fr;
+    justify-items: center;
     gap: 10px;
   }
 
+  .ekodi-user-ui-footer__copy { justify-items: center; }
   .ekodi-user-ui-footer__business,
   .ekodi-user-ui-footer__address {
+    justify-content: center;
     gap: 3px 10px;
+  }
+  .ekodi-user-ui-footer__links {
+    justify-content: center;
+    padding-top: 0;
   }
 }
 
@@ -596,44 +604,6 @@ html[data-ekodi-user-ui] :where(.table-wrap,[data-ekodi-table-scroll]){
   html[data-ekodi-user-ui] :where(.ekodi-user-ui-fallback-header__inner,.ekodi-user-ui-header-fallback__inner){
     gap:10px;
   }
-}
-
-/* Compact scope marker for independent operating sites.
- * Server-rendered so the distinction remains visible even if client JS is delayed.
- */
-.ekodi-operating-space-note[data-ekodi-operating-space-label]{
-  position:fixed;
-  top:max(8px,env(safe-area-inset-top,0px));
-  left:max(10px,env(safe-area-inset-left,0px));
-  z-index:2147481500;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  box-sizing:border-box;
-  min-height:24px;
-  padding:3px 8px;
-  border:1px solid color-mix(in srgb,currentColor 22%,transparent);
-  border-radius:999px;
-  background:color-mix(in srgb,Canvas 90%,transparent);
-  color:CanvasText;
-  box-shadow:0 4px 16px rgba(0,0,0,.08);
-  font:750 10px/1.2 system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif;
-  letter-spacing:.02em;
-  white-space:nowrap;
-  pointer-events:none;
-  opacity:.78;
-}
-@media(max-width:640px){
-  .ekodi-operating-space-note[data-ekodi-operating-space-label]{
-    top:max(6px,env(safe-area-inset-top,0px));
-    left:max(7px,env(safe-area-inset-left,0px));
-    min-height:22px;
-    padding:2px 6px;
-    font-size:9px;
-  }
-}
-@media(prefers-reduced-motion:reduce){
-  .ekodi-operating-space-note[data-ekodi-operating-space-label]{transition:none!important}
 }
 
 /* Brand-neutral tenant readability v1.

@@ -8,7 +8,7 @@ import { EKODI_LANGUAGE_REGISTRY } from '../config/language-registry.js';
 const readJson = async (path) => JSON.parse(await readFile(new URL(`../${path}`, import.meta.url), 'utf8'));
 const readText = async (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-const [registry,dna,shell,messageUI,injectorSource,userUiStyle,responsiveTypographySource,siteShellSource,shellWorkerSource,clientFooterSource,userLanguageSource,designInheritanceSource,ccmMrSource] = await Promise.all([
+const [registry,dna,shell,messageUI,injectorSource,userUiStyle,responsiveTypographySource,siteShellSource,shellWorkerSource,clientFooterSource,userLanguageSource,designInheritanceSource,ccmMrSource,userAiEntrySource,userHeaderSource] = await Promise.all([
   readJson('config/ecosystem-services.json'),
   readJson('config/user-ui-dna.json'),
   readJson('config/user-ui-shell.json'),
@@ -22,6 +22,8 @@ const [registry,dna,shell,messageUI,injectorSource,userUiStyle,responsiveTypogra
   readText('shell/user-language.js'),
   readText('shell/service-design-inheritance.js'),
   readText('shell/ccm-mr-player.js'),
+  readText('shell/user-ai-entry.js'),
+  readText('shell/user-ui-header.js'),
 ]);
 
 const errors = [];
@@ -94,6 +96,22 @@ if (shell?.geometry?.strategy !== 'selective-by-semantic-role-and-service-profil
 if (shell?.experienceProfiles?.source !== 'config/user-ui-experience-profiles.js' || shell?.experienceProfiles?.strategy !== 'service-opt-in') {
   errors.push('User UI Shell must use the central experience-profile registry with service opt-in.');
 }
+if(shell?.principles?.operatingSpaceLabelForbiddenOnUserSurfaces!==true||shell?.principles?.genericCommunityHeaderTabForbidden!==true||shell?.principles?.userAiEntryExplicitOptInOnly!==true){
+  errors.push('User UI Shell must hide internal operating-space labels, generic Community header tabs and default AI entry.');
+}
+if(shell?.aiEntry?.default!=='hidden'||shell?.aiEntry?.strategy!=='explicit-opt-in-only'||shell?.aiEntry?.optInAttribute!=='data-ekodi-user-ai-entry'){
+  errors.push('User AI entry must remain hidden by default and require explicit opt-in.');
+}
+for(const marker of ['explicitOptIn','if(!explicitOptIn())return false','function cleanup()','data-ekodi-user-ai-entry']){
+  if(!userAiEntrySource.includes(marker))errors.push(`Shared user AI entry lost explicit opt-in marker: ${marker}`);
+}
+for(const marker of ['stripOperatingSpaceLabels','stripInternalSiteTerms','isCommunityHeaderLink']){
+  if(!userHeaderSource.includes(marker))errors.push(`Shared user header lost public-cleanup marker: ${marker}`);
+}
+if(userHeaderSource.includes("badge.textContent='운영공간'")||injectorSource.includes('x-ekodi-operating-space-label')||injectorSource.includes('TenantOperatingSpaceBodyInjector')){
+  errors.push('Public user chrome must not inject the retired operating-space label.');
+}
+
 const experienceProfiles=EKODI_USER_EXPERIENCE_PROFILES.profiles||{};
 const serviceProfiles=EKODI_USER_EXPERIENCE_PROFILES.serviceProfiles||{};
 for(const [id,profile] of Object.entries(services)){
@@ -129,8 +147,8 @@ if (shell?.footer?.strategy !== 'shell-supplied' || shell?.footer?.owner !== 'sh
 if (shell?.footer?.contentSource !== 'config/user-footer.js') {
   errors.push('User footer text and links must have one central source: config/user-footer.js.');
 }
-if (shell?.footer?.alignment !== 'center' || !String(shell?.footer?.layout||'').includes('centered')) {
-  errors.push('User footer must remain center-aligned across desktop and mobile.');
+if (shell?.footer?.alignment !== 'responsive-start-desktop-center-mobile' || !String(shell?.footer?.layout||'').includes('compact two-zone desktop')) {
+  errors.push('User footer must use the compact desktop two-zone layout and mobile centered stack.');
 }
 if (!String(shell?.footer?.themePolicy||'').includes('inherit each service')) {
   errors.push('User footer theme policy must preserve each service visual family.');
@@ -145,8 +163,8 @@ if (footerLinks.get('문의') !== 'mailto:ekodibiz@gmail.com' || EKODI_USER_FOOT
 if (EKODI_USER_FOOTER.operator?.businessRegistrationNumber !== '213-13-01959') {
   errors.push('Central user footer operator registration number must match the public EKODI operator record.');
 }
-if (Number(EKODI_USER_FOOTER.version) < 3 || !renderedFooter.includes('user-shell-v2') || !renderedFooter.includes('ekodi-user-ui-footer__copy')) {
-  errors.push('Central user footer renderer must expose the locale-aware centered v3 structure.');
+if (Number(EKODI_USER_FOOTER.version) < 4 || !renderedFooter.includes('user-shell-v2') || !renderedFooter.includes('ekodi-user-ui-footer__copy')) {
+  errors.push('Central user footer renderer must expose the compact locale-aware v4 structure.');
 }
 for(const marker of ['data-ekodi-i18n="privacy"','data-ekodi-i18n="terms"','data-ekodi-i18n="contact"']){
   if(!renderedFooter.includes(marker))errors.push(`Central user footer lost locale marker: ${marker}`);
@@ -204,7 +222,7 @@ for (const marker of ['Responsive Typography Standard v3','word-break:keep-all',
 for (const marker of ['EKODI_USER_FOOTER','USER_FOOTER_BOOTSTRAP','USER_EXPERIENCE_PROFILES_BOOTSTRAP','x-ekodi-user-experience-profiles','/user-footer.json','x-ekodi-user-ui-footer','userLanguageUrl','x-ekodi-user-language','LANGUAGE_REGISTRY_BOOTSTRAP','/language-registry.json']) {
   if (!shellWorkerSource.includes(marker)) errors.push(`Shared Shell worker lost central user chrome marker: ${marker}`);
 }
-for (const marker of ['__EKODI_USER_FOOTER_CONFIG__','user-footer.json','VERSION=7','ekodi-user-ui-footer__copy','--ekodi-user-content-inline-size','--ekodi-user-canvas-max,1240px','applyReadableFooter','--ekodi-user-footer-safe-text','data-ekodi-i18n','data-ekodi-legacy-common-footer-hidden','suppressLegacyCommonFooters','dedupeSharedFooters','observeFooterChanges']) {
+for (const marker of ['__EKODI_USER_FOOTER_CONFIG__','user-footer.json','VERSION=8','ekodi-user-ui-footer__copy','--ekodi-user-content-inline-size','--ekodi-user-canvas-max,1240px','applyReadableFooter','--ekodi-user-footer-safe-text','data-ekodi-i18n','data-ekodi-legacy-common-footer-hidden','suppressLegacyCommonFooters','dedupeSharedFooters','observeFooterChanges']) {
   if (!clientFooterSource.includes(marker)) errors.push(`Shared client footer lost central-config marker: ${marker}`);
 }
 for (const duplicatedText of ['213-13-01959','백련동1길 17-4','© 2026 EKODI · EKODIBIZ']) {

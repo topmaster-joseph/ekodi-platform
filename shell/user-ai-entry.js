@@ -4,6 +4,7 @@ if(window.__EKODI_USER_AI_ENTRY__)return;
 window.__EKODI_USER_AI_ENTRY__=true;
 const AI_URL='https://ekodi.kr/ai/';
 const blocked=new Set(['admin','form','document','data']);
+const enabledModes=new Set(['on','true','enabled','service']);
 const clean=v=>String(v||'').trim();
 function context(){
   const html=document.documentElement;
@@ -11,8 +12,18 @@ function context(){
   const surface=clean(html.dataset.ekodiUserSurface||document.currentScript?.dataset?.ekodiSurface).toLowerCase();
   return {service:service||'ekodi',surface:surface||'public'};
 }
+function explicitOptIn(){
+  const html=clean(document.documentElement?.dataset?.ekodiUserAiEntry).toLowerCase();
+  const body=clean(document.body?.dataset?.ekodiUserAiEntry).toLowerCase();
+  const script=clean(document.currentScript?.dataset?.ekodiUserAiEntry).toLowerCase();
+  return enabledModes.has(body||html||script);
+}
+function cleanup(){
+  for(const node of document.querySelectorAll?.('[data-ekodi-user-ai-entry],[data-ekodi-user-ai-entry-style]')||[])node.remove?.();
+}
 function eligible(){
   const {service,surface}=context();
+  if(!explicitOptIn())return false;
   let path=location.pathname;
   try{path=decodeURIComponent(path)}catch{}
   path=(path.replace(/\/+/g,'/').replace(/\/+$/,'')||'/').toLowerCase();
@@ -27,7 +38,8 @@ function style(){
   document.head.append(el);
 }
 function mount(){
-  if(!eligible()||document.querySelector('[data-ekodi-user-ai-entry]'))return;
+  if(!eligible()){cleanup();return;}
+  if(document.querySelector('[data-ekodi-user-ai-entry]'))return;
   style();const {service}=context();
   const root=document.createElement('aside');root.className='ekodi-user-ai-entry';root.dataset.ekodiUserAiEntry='v1';
   root.innerHTML='<div class="ekodi-user-ai-entry__panel"><strong>무엇을 원하세요?</strong><form class="ekodi-user-ai-entry__form"><input name="request" maxlength="600" placeholder="예: 홍보 게시물 만들어줘" autocomplete="off"><button type="submit">해줘</button></form></div><button type="button" class="ekodi-user-ai-entry__open" aria-expanded="false">AI로 하기</button>';
@@ -38,5 +50,6 @@ function mount(){
   });
   const footer=document.querySelector('footer');if(footer?.parentNode)footer.parentNode.insertBefore(root,footer);else document.body.append(root);
 }
+window.EKODIUserAIEntry=Object.freeze({refresh:mount,enabled:eligible});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();

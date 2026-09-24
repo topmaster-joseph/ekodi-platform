@@ -283,13 +283,11 @@
         "redirect": "manual",
         "expect": [
           "EKODIBIZ",
-          "WHAT WE DO",
-          "운영공간"
+          "WHAT WE DO"
         ],
         "headerExpect": [
           "x-ekodi-workspace-gateway: ekodibiz-service-binding",
-          "x-ekodi-tenant-readability: v1",
-          "x-ekodi-operating-space-label: v1"
+          "x-ekodi-tenant-readability: v1"
         ],
         "rollbackVerify": false
       },
@@ -1936,13 +1934,11 @@
         "redirect": "manual",
         "expect": [
           "WELCOME TO EKODI CHURCH",
-          "에코디교회",
-          "운영공간"
+          "에코디교회"
         ],
         "headerExpect": [
           "x-ekodi-route: church-public-path",
-          "x-ekodi-tenant-readability: v1",
-          "x-ekodi-operating-space-label: v1"
+          "x-ekodi-tenant-readability: v1"
         ],
         "rollbackVerify": false
       },
@@ -1952,12 +1948,8 @@
           200
         ],
         "redirect": "manual",
-        "expect": [
-          "운영공간"
-        ],
         "headerExpect": [
-          "x-ekodi-tenant-readability: v1",
-          "x-ekodi-operating-space-label: v1"
+          "x-ekodi-tenant-readability: v1"
         ],
         "rollbackVerify": false
       },
@@ -1967,12 +1959,8 @@
           200
         ],
         "redirect": "manual",
-        "expect": [
-          "운영공간"
-        ],
         "headerExpect": [
-          "x-ekodi-tenant-readability: v1",
-          "x-ekodi-operating-space-label: v1"
+          "x-ekodi-tenant-readability: v1"
         ],
         "rollbackVerify": false
       },
@@ -1982,12 +1970,8 @@
           200
         ],
         "redirect": "manual",
-        "expect": [
-          "운영공간"
-        ],
         "headerExpect": [
-          "x-ekodi-tenant-readability: v1",
-          "x-ekodi-operating-space-label: v1"
+          "x-ekodi-tenant-readability: v1"
         ],
         "rollbackVerify": false
       }
