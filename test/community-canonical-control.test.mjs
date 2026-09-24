@@ -42,7 +42,7 @@ test('Community Admin has its own service surface after ministry reports moved t
   assert.match(loader, /community:\s*\{[\s\S]*community-admin\.css[\s\S]*community-admin\.js[\s\S]*data-section=\"community\"/);
   assert.doesNotMatch(loader, /community-reports-admin\.js/);
   assert.match(panel, /dataset\.panel = 'community'/);
-  assert.match(panel, /community\.ekodi\.kr/);
+  assert.match(panel, /https:\/\/ekodi\.kr\/community/);
   assert.match(panel, /교회 사역보고는 교회 목회자 관리자/);
   assert.match(build, /community-admin\.css/);
   assert.match(build, /community-admin\.js/);

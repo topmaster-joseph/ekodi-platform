@@ -14,7 +14,7 @@ const LEGACY_DOMAIN_IDS=Object.freeze({
   'author.ekodi.kr':'author',
   'lab.ekodi.kr':'lab',
   'edu.ekodi.kr':'education',
-  'community.ekodi.kr':'community',
+  'ekodi.kr/community':'community',
   'social.ekodi.kr':'social',
   'ekodi.kr/ekodimall':'mall',
   'marketing.ekodi.kr':'marketing',
