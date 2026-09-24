@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "policyId": "ADMIN-ROLE-NAV-001",
+  "authorityModel": "Person + Workspace + Role + Capability",
+  "principles": [
+    "Administrator navigation is role-specific, not a progressively hidden copy of the platform-super-admin menu.",
+    "Every visible working item is a direct route to the requested screen; category labels may group items but do not add an extra click.",
+    "Menu projection never widens authorization. Capability checks remain authoritative.",
+    "Platform control-plane capabilities never leak into delegated or local operator navigation."
+  ],
+  "profiles": {
+    "platform-super-admin": {
+      "surface": "/admin",
+      "navigationMode": "seven-control-areas-with-active-left-details",
+      "groups": [
+        {"id":"summary","labelKo":"플랫폼 전체현황","purpose":"전체 상태, 우선 작업, 승인과 핵심 지표"},
+        {"id":"sites","labelKo":"사이트·브랜드","purpose":"전체 사이트, 브랜드, 고객·협력, 준비 사이트"},
+        {"id":"people","labelKo":"사용자·관리자·권한","purpose":"사용자, 관리자, 역할, 승인, 인증"},
+        {"id":"services","labelKo":"서비스·AI","purpose":"핵심·공통·운영·전문·AI·연동 엔진"},
+        {"id":"content","labelKo":"콘텐츠·행사·소통","purpose":"작업, 일정, 행사, 게시, 방송·채널"},
+        {"id":"status","labelKo":"운영·배포·장애","purpose":"상태, 배포, 장애, 실행 인프라, 비용"},
+        {"id":"settings-records","labelKo":"설정·보안·감사","purpose":"공통설정, 언어, 자동화, 저장, API, 감사"}
+      ],
+      "leftDetailRule": "Show the active group's high-frequency direct task routes directly under the selected control area.",
+      "maySeeControlPlane": true,
+      "mayAggregateChildStatus": true
+    },
+    "delegated-manager": {
+      "surfacePattern": "/{site-or-workspace}/admin",
+      "navigationMode": "task-groups-with-direct-links",
+      "menuIntent": ["현황","핵심 운영","콘텐츠·고객","정산·보고","사이트·권한"],
+      "mustNotShow": ["platform control plane","global deployment","global AI policy","platform-wide administrators","cross-tenant secrets"],
+      "maySeeControlPlane": false,
+      "mayAggregateChildStatus": "only-with-explicit-parent-capability"
+    },
+    "local-operator": {
+      "surfacePattern": "/{site-or-workspace}/admin",
+      "navigationMode": "high-frequency-direct-actions-only",
+      "menuIntent": ["오늘 할 일","현장 운영","고객·문의","콘텐츠·채널"],
+      "mustNotShow": ["platform settings","administrator management","security policy","deployment controls","cross-tenant data"],
+      "maySeeControlPlane": false,
+      "configurationLast": true
+    }
+  },
+  "domainProjections": {
+    "workspace": {
+      "delegated-manager": ["홈","소통·홍보","운영·재무","사이트·권한"],
+      "local-operator": ["오늘 할 일","소통·콘텐츠","업무처리"]
+    },
+    "store": {
+      "delegated-manager": ["현황","주문·매출","메뉴·재고","고객·리뷰","홍보·채널","운영·설정"],
+      "local-operator": ["오늘 주문","메뉴·품절","고객·리뷰","홍보·채널"]
+    },
+    "church": {
+      "delegated-manager": ["현황","교인·돌봄","예배·사역","기록·AI","사이트·권한"],
+      "local-operator": ["오늘 일정","출석·교인","예배·사역","신청·연락"]
+    },
+    "trade": {
+      "delegated-manager": ["현황","거래처","채널·게시","권한"],
+      "local-operator": ["거래처","게시·문의"]
+    }
+  }
+}
