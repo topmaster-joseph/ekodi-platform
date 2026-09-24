@@ -14,6 +14,9 @@ alter default privileges for role postgres in schema public
   revoke usage, select on sequences
   from anon, authenticated, service_role;
 
-alter default privileges for role postgres in schema public
+-- PostgreSQL grants EXECUTE on new functions to PUBLIC at the global default level.
+-- A per-schema REVOKE cannot remove a privilege granted globally, so this one
+-- intentionally has no IN SCHEMA clause. Public functions must grant EXECUTE back explicitly.
+alter default privileges for role postgres
   revoke execute on functions
   from public;
