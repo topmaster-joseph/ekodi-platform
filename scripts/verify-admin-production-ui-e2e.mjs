@@ -237,7 +237,20 @@ for (const [id, group] of menus) {
 
   if (id !== 'command-home') {
     const trigger = await resolveMenuTrigger(id, group);
-    const alreadyActive = await contextTab.evaluate(node => node.getAttribute('aria-selected') === 'true' || node.classList.contains('active'));
+    let alreadyActive = await contextTab.evaluate(node => node.getAttribute('aria-selected') === 'true' || node.classList.contains('active'));
+    if (alreadyActive) {
+      alreadyActive = await page.evaluate(section => {
+        const panel = [...document.querySelectorAll('.content [data-panel]')].find(node => {
+          const targets = String(node.dataset.panel || '').split(/\s+/).filter(Boolean);
+          if (!targets.includes(section) || node.hidden || node.classList.contains('hidden-panel')) return false;
+          const style = getComputedStyle(node);
+          const rect = node.getBoundingClientRect();
+          const text = String(node.innerText || node.textContent || '').replace(/\s+/g, ' ').trim();
+          return text.length > 0 && style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+        });
+        return Boolean(panel);
+      }, id);
+    }
     if (!alreadyActive) await dispatchClick(trigger);
   }
   await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 12000 });
