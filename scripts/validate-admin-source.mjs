@@ -60,8 +60,8 @@ for (const marker of ['공개 사이트의 고정 헤더용 body 상단 여백',
 }
 const adminDesignCss = readFileSync(join(root, 'admin-design-engine.css'), 'utf8');
 const authenticatedShell = readFileSync(join(root, 'admin-authenticated-shell.js'), 'utf8');
-for (const marker of ['padding-top:0!important', 'height:100dvh!important', 'overflow-y:hidden!important', 'overflow-y:auto!important']) {
-  if (!adminDesignCss.includes(marker)) violations.push(`admin-design-engine.css: missing 8th-gen viewport contract marker: ${marker}`);
+for (const marker of ['padding-top:0!important', 'height:100dvh!important', 'overflow:hidden!important', 'overflow-y:auto!important', 'overscroll-behavior:contain!important']) {
+  if (!adminDesignCss.includes(marker)) violations.push(`admin-design-engine.css: missing role-projected viewport contract marker: ${marker}`);
 }
 for (const marker of ["nav.dataset.ekodiIndependentScroll='platform-admin'", "main.dataset.ekodiScrollOwner='workspace'", "nav.style.setProperty('overflow-y','auto','important')"]) {
   if (!authenticatedShell.includes(marker)) violations.push(`admin-authenticated-shell.js: missing role-projected scroll ownership marker: ${marker}`);
