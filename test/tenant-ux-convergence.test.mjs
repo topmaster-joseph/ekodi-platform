@@ -105,10 +105,11 @@ test('delegated admin navigation never requires a category click before reaching
     read('workspace-trade-admin-page.js'),
   ]);
 
-  assert.match(workspace,/a\.dataset\.adminGroup=group\.id/);
-  assert.match(workspace,/a\.href=sectionHref\(firstKey\)/);
+  assert.match(workspace,/visibleDirectSections\(role\)/);
+  assert.match(workspace,/a\.dataset\.adminSection=key/);
   assert.match(workspace,/a\.href=sectionHref\(key\)/);
-  assert.match(workspace,/renderSecondaryNav\(activeGroup,role\)/);
+  assert.doesNotMatch(workspace,/a\.dataset\.adminGroup=group\.id/);
+  assert.doesNotMatch(workspace,/renderSecondaryNav\(activeGroup,role\)/);
 
   assert.match(store,/admin-nav-group-label/);
   assert.ok(store.includes("a.href=key==='overview'?ADMIN_BASE+'/overview':ADMIN_BASE+'/'+key"));
