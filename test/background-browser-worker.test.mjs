@@ -81,8 +81,7 @@ test('shared-site guarded release invokes native browser verification after prod
     '.github/workflows/ekodi-background-browser-worker.yml',
     '.github/workflows/verify-admin-production-ui-e2e.yml',
   ]) {
-    assert.match(sharedRelease, new RegExp(`- ['"]${verifierPath.replace(/[.*+?^\${}()|[\]\\]/g,'\\  assert.match(sharedRelease,/authenticated_admin_surface_verification:/);
-  assert.match(sharedRelease,/verify-admin-production-ui-e2e\.yml/);')}['"]`), `shared-site push trigger missing verifier: ${verifierPath}`);
+    assert.ok(sharedRelease.includes(`      - '${verifierPath}'`), `shared-site push trigger missing verifier: ${verifierPath}`);
   }
   const desktop=sharedRelease.match(/native_surface_verification_desktop:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
   const mobile=sharedRelease.match(/native_surface_verification_mobile:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
