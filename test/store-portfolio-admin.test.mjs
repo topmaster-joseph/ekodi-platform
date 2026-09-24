@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { storePortfolioAdminPage, CMPMYI_STORES, CMPMYI_ADMIN_SECTIONS } from '../store-portfolio-admin-page.js';
+import { storePortfolioAdminPage, storePortfolioAdminPanelPage, CMPMYI_STORES, CMPMYI_ADMIN_SECTIONS, CMPMYI_COMMON_MENU } from '../store-portfolio-admin-page.js';
 import platformEntry from '../platform-router-entry-worker.js';
 import { ADMIN_MENU_REGISTRY } from '../admin-menu-registry.js';
 
-test('cmpmyi admin is an aggregate hub that hands off to each store canonical admin',async()=>{
+test('cmpmyi admin provides fixed common and brand navigation with a right workspace',async()=>{
   const response=storePortfolioAdminPage();const html=await response.text();
   assert.equal(response.status,200);
   assert.equal(response.headers.get('x-ekodi-route'),'cmpmyi-store-portfolio-admin');
@@ -13,16 +13,58 @@ test('cmpmyi admin is an aggregate hub that hands off to each store canonical ad
   for(const section of ['delivery','menu','orders','sales','inventory','customers','reviews','marketing','publishing','work','finance','connections','site','members']){
     assert.ok(CMPMYI_ADMIN_SECTIONS.some(([key])=>key===section),`missing ${section}`);
   }
+  for(const view of ['overview','delivery','menu','orders','sales','customer','marketing','operations','connections']){
+    assert.ok(CMPMYI_COMMON_MENU.some(([key])=>key===view),`missing common view ${view}`);
+    assert.ok(html.includes(`/cmpmyi/admin/panel/${view}`));
+  }
+  assert.match(html,/공통관리/);
+  assert.match(html,/브랜드별 관리/);
+  assert.match(html,/name="cmpmyi-panel"/);
+  assert.match(html,/target="cmpmyi-panel"/);
+  assert.match(html,/class="panel-frame"/);
   for(const store of CMPMYI_STORES){
     assert.ok(html.includes(store.name));
-    for(const section of ['delivery','menu','orders','connections'])assert.ok(html.includes(`/${store.slug}/admin/${section}`));
+    assert.ok(html.includes(`/${store.slug}/admin?embed=cmpmyi`));
+    for(const section of ['delivery','menu','orders','connections']){
+      assert.ok(html.includes(`/${store.slug}/admin/${section}?embed=cmpmyi`));
+    }
   }
-  assert.match(html,/브랜드 관리자 전체 메뉴/);
-  assert.match(html,/배달플랫폼 관리는 각 브랜드의 배달플랫폼 메뉴에서 수행합니다/);
-  assert.match(html,/점포별 재확인/);assert.match(html,/공통 Store Admin/);
 });
 
-test('aggregate store child URLs never render child admin and redirect to store-owned admins',async()=>{
+test('cmpmyi common panel stays same-origin frameable and exposes brand handoffs',async()=>{
+  const response=storePortfolioAdminPanelPage('delivery');const html=await response.text();
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get('x-ekodi-route'),'cmpmyi-store-portfolio-panel');
+  assert.equal(response.headers.get('x-frame-options'),'SAMEORIGIN');
+  assert.match(response.headers.get('content-security-policy')||'',/frame-ancestors 'self'/);
+  assert.match(html,/배달플랫폼 통합관리/);
+  for(const store of CMPMYI_STORES){
+    assert.ok(html.includes(store.name));
+    assert.ok(html.includes(`/${store.slug}/admin/delivery?embed=cmpmyi`));
+  }
+});
+
+test('router serves cmpmyi common panels and same-origin embedded canonical store admins',async()=>{
+  const panel=await platformEntry.fetch(new Request('https://ekodi.kr/cmpmyi/admin/panel/customer'),{},{});
+  assert.equal(panel.status,200);
+  assert.equal(panel.headers.get('x-ekodi-route'),'cmpmyi-store-portfolio-panel');
+
+  const embedded=await platformEntry.fetch(new Request('https://ekodi.kr/jadam/admin/menu?embed=cmpmyi'),{},{});
+  const embeddedHtml=await embedded.text();
+  assert.equal(embedded.status,200);
+  assert.equal(embedded.headers.get('x-ekodi-route'),'jadam-store-admin');
+  assert.equal(embedded.headers.get('x-frame-options'),'SAMEORIGIN');
+  assert.equal(embedded.headers.get('x-ekodi-embedded-admin'),'cmpmyi');
+  assert.match(embedded.headers.get('content-security-policy')||'',/frame-ancestors 'self'/);
+  assert.match(embeddedHtml,/data-ekodi-embedded-admin="true"/);
+
+  const direct=await platformEntry.fetch(new Request('https://ekodi.kr/jadam/admin/menu'),{},{});
+  assert.equal(direct.status,200);
+  assert.equal(direct.headers.get('x-frame-options'),'DENY');
+  assert.equal(direct.headers.get('x-ekodi-embedded-admin'),'none');
+});
+
+test('aggregate store child URLs remain redirect-only aliases to store-owned admins',async()=>{
   for(const [slug,section] of [['jadam',''],['pizzamaru','/reviews'],['yogurt','/menu']]){
     const response=await platformEntry.fetch(new Request(`https://ekodi.kr/cmpmyi/admin/${slug}${section}`),{},{});
     assert.equal(response.status,308);
@@ -30,12 +72,14 @@ test('aggregate store child URLs never render child admin and redirect to store-
     assert.equal(response.headers.get('x-ekodi-route'),'admin-canonical-handoff');
   }
 });
+
 test('super administrator navigation keeps only the cmpmyi hub as the aggregate entry',()=>{
   const item=ADMIN_MENU_REGISTRY.find(row=>row.id==='cmpmyi');
   assert.ok(item);assert.equal(item.group,'sites');assert.equal(item.superAdminOnly,true);assert.equal(item.internal,true);
   assert.equal(item.href,'https://ekodi.kr/cmpmyi/admin');
   const router=readFileSync(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
   assert.match(router,/storePortfolioAdminPage/);
+  assert.match(router,/storePortfolioAdminPanelPage/);
   assert.doesNotMatch(router,/resolveIntegratedStoreAdminRoute/);
 });
 
