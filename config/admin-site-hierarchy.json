@@ -89,6 +89,13 @@
       "adminPath": "/yogurt/admin",
       "parentId": "cmpmyi",
       "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "bnslove",
+      "publicPath": "/bnslove",
+      "adminPath": "/bnslove/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
     }
   ],
   "forbiddenAggregationAliases": [

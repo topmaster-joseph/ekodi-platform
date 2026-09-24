@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { isOrganizationWorkspaceSlug, renderOrganizationPublicPage } from '../organization-public-page.js';
 import { isOrganizationAdminPath, organizationAdminPage, organizationAdminScript } from '../organization-admin-page.js';
+import { isWorkspaceAdminPathShape } from '../workspace-route-policy.js';
 
 test('Hammu uses reusable organization workspace projection', async () => {
   assert.equal(isOrganizationWorkspaceSlug('hammu'), true);
@@ -15,8 +16,25 @@ test('Hammu uses reusable organization workspace projection', async () => {
   assert.match(workerSource, /['space-storefront','space-organization']/);
 });
 
+test('BNS Love uses the reusable organization workspace projection', async () => {
+  assert.equal(isOrganizationWorkspaceSlug('bnslove'), true);
+  const response = await renderOrganizationPublicPage(new Request('https://ekodi.kr/bnslove'), {}, {}, 'bnslove');
+  const html = await response.text();
+  for (const marker of ['형제사랑회','BROTHERLY LOVE ASSOCIATION','형제사랑회의 주요 소식과 공지를 확인합니다.','공지사항','임원','회계보고','출석현황','/bnslove/admin']) assert.match(html, new RegExp(marker));
+  assert.doesNotMatch(html,/시찰회|목포노회|대한예수교장로회/);
+  assert.doesNotMatch(html,/EKODI 운영공간/);
+});
+
+test('BNS Love migration registers only tenant-local administrator authority', () => {
+  const sql = fs.readFileSync(new URL('../supabase/migrations/20260925004500_bnslove_site.sql', import.meta.url), 'utf8');
+  for (const marker of ['bnslove','bnslove6510@gmail.com','tenant_admin','/bnslove/admin']) assert.ok(sql.includes(marker), marker);
+  assert.doesNotMatch(sql,/platform_admin/);
+});
+
 test('organization admin is tenant-local and only enabled for Hammu path', async () => {
   for (const path of ['/hammu/admin','/hammu/admin/officers','/hammu/admin/notices','/hammu/admin/finance','/hammu/admin/attendance']) assert.equal(isOrganizationAdminPath(path), true, path);
+  assert.equal(isOrganizationAdminPath('/bnslove/admin'), false);
+  assert.equal(isWorkspaceAdminPathShape('/bnslove/admin'), true);
   assert.equal(isOrganizationAdminPath('/other/admin'), false);
   const response = organizationAdminPage('/hammu/admin/finance');
   const html = await response.text();
