@@ -38,7 +38,7 @@ test('central admin exposes site-by-site channel handoffs plus the platform conn
   assert.match(admin, /사용자 사이트별 채널관리/);
   assert.match(admin, /loadChannelAdminDirectory/);
   assert.match(admin, /canonicalServiceChannelAdminUrl/);
-  assert.match(admin, /data\.siteChannelAdmin=site\.id/);
+  assert.match(admin, /dataset\.siteChannelAdmin=site\.id/);
   assert.match(admin, /채널·자동게시 관리 ↗/);
   assert.match(admin, /플랫폼 연결 원장 점검/);
   assert.match(admin, /YouTube 계정·채널 추가/);
