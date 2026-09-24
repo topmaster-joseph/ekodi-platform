@@ -72,8 +72,8 @@ export class NoOnlineWindowsAgentError extends Error {
   }
 }
 
-export function buildDeferredDeviceVerification({ devices = [], expectedVersion, observedAt = new Date().toISOString() } = {}) {
-  const availability = summarizeDeviceAvailability(devices);
+export function buildDeferredDeviceVerification({ devices = [], availability = null, expectedVersion, observedAt = new Date().toISOString() } = {}) {
+  const snapshot = availability || summarizeDeviceAvailability(devices);
   return {
     schemaVersion:1,
     ok:false,
@@ -87,9 +87,9 @@ export function buildDeferredDeviceVerification({ devices = [], expectedVersion,
     target:{
       reference:'real-enrolled-windows-agent',
       available:false,
-      total:availability.total,
-      statusCounts:availability.statusCounts,
-      eligibleOnlineCount:availability.eligibleOnlineCount,
+      total:Number(snapshot.total || 0),
+      statusCounts:{ ...(snapshot.statusCounts || {}) },
+      eligibleOnlineCount:Number(snapshot.eligibleOnlineCount || 0),
     },
     cutover:{
       preVerification:{browserWorkerActivated:false},
@@ -857,12 +857,9 @@ async function run() {
   } catch (error) {
     if (deferIfOffline && error?.code === 'NO_ONLINE_ENROLLED_WINDOWS_AGENT') {
       const deferred = buildDeferredDeviceVerification({
-        devices:Array.from({ length:Number(error.availability?.total || 0) }, () => ({ status:'unknown' })),
+        availability:error.availability,
         expectedVersion,
       });
-      deferred.target.statusCounts = { ...(error.availability?.statusCounts || {}) };
-      deferred.target.eligibleOnlineCount = Number(error.availability?.eligibleOnlineCount || 0);
-      deferred.target.total = Number(error.availability?.total || 0);
       fs.writeFileSync(artifactPath, JSON.stringify(deferred, null, 2));
       console.log(`[EKODI][DEVICE-LIVE-VERIFY] ${deferred.verificationState}: all enrolled Windows agents are currently unavailable; hourly native retry remains scheduled.`);
       return deferred;
