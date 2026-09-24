@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const API='https://api.ekodi.kr/api/control/devotional';
+const API='https://ekodi.kr/api/control/devotional';
 const TOKEN_KEY='ekodi-auth-token';
 const content=document.querySelector('.content');
 const nav=document.querySelector('.sidebar nav');
