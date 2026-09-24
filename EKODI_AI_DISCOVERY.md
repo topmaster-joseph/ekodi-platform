@@ -21,3 +21,18 @@ External AI clients should treat recognition and authorization separately. Publi
 6. Mutations remain subject to tenant scopes, capability policy, risk gates, audit logging, and human confirmation where required.
 
 Provider directory approval or name-only automatic connector discovery is controlled by each AI provider and is not an authorization mechanism. EKODI must never silently grant access merely because a client recognized the brand name.
+
+## Current-state verification rule
+
+External AI must not treat conversation memory, prior model output, copied historical notes, or name recognition as proof of current EKODI state.
+
+For claims about current EKODI structure, policy, deployment, routing, capability, or runtime status:
+
+1. Prefer a fresh EKODI MCP/OAuth read or another current authoritative EKODI source.
+2. Preserve the evidence scope and timestamp.
+3. If the provider cannot reach EKODI verification, report the current EKODI fact as unverified instead of inferring it from memory.
+4. External-AI handoff from the EKODI administrator command surface must pass the EKODI handoff gate first and carry the gate packet with the user request.
+5. A handoff-gate receipt proves only that the handoff policy/audit gate ran; it does not by itself prove the requested operational fact.
+
+AI providers may require explicit user/admin app or MCP setup before the remote MCP is available in a chat. Public discovery never bypasses that provider-side connection requirement.
+

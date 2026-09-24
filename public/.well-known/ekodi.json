@@ -1,7 +1,10 @@
 {
   "schema_version": "1.0",
   "name": "EKODI",
-  "aliases": ["EKODI", "에코디"],
+  "aliases": [
+    "EKODI",
+    "에코디"
+  ],
   "canonical_origin": "https://ekodi.kr",
   "description": "EKODI is a provider-independent service and AI orchestration platform.",
   "discovery": {
@@ -20,5 +23,13 @@
     "require_oauth_for_private_capabilities": true,
     "least_privilege": true,
     "orchestrator_is_execution_authority": true
+  },
+  "verification": {
+    "current_state_requires_fresh_authoritative_evidence": true,
+    "memory_is_not_verification": true,
+    "prior_model_output_is_not_verification": true,
+    "mcp_preferred_for_external_ai": true,
+    "mcp_unavailable_behavior": "report_unverified",
+    "external_handoff_requires_ekodi_gate": true
   }
 }

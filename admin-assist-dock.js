@@ -21,6 +21,8 @@
     Object.freeze({id:'gemini',label:'Gemini',url:'https://gemini.google.com/app'}),
     Object.freeze({id:'qwen',label:'Qwen',url:'https://chat.qwen.ai/'}),
   ]);
+  const EKODI_MCP_URL='https://ekodi.kr/mcp';
+  const EKODI_DISCOVERY_URL='https://ekodi.kr/.well-known/ekodi.json';
   const EXTERNAL_SECRET_RE=/(sk-[a-z0-9_-]{12,}|gh[pousr]_[a-z0-9]{20,}|akia[0-9a-z]{16}|-----begin [a-z ]+private key-----|\beyj[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}\b|(?:password|passwd|비밀번호)\s*[:=]\s*\S+)/i;
   const EXTERNAL_BRIDGE_READY_EVENT='ekodi-external-ai-bridge-ready';
   const EXTERNAL_BRIDGE_HANDOFF_EVENT='ekodi-external-ai-handoff';
@@ -279,27 +281,69 @@
       else showStatus(`${label} 자동 입력을 완료하지 못했습니다. 새 탭은 유지했고 명령은 복사 폴백으로 사용할 수 있습니다.`,true);
     });
   }
+  async function buildExternalAiHandoffPacket(providers,value){
+    const c=context();
+    const governance=await api('/api/control/ai/governance');
+    if(!governance?.ok)throw new Error('EKODI_GOVERNANCE_UNVERIFIED');
+    const review=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({
+      agentId:'chief',
+      actionType:'external_ai.handoff',
+      area:'read_only_audits',
+      target:providers.map(item=>item.id).join(','),
+      rationale:value,
+      payload:{source:'admin-assist-dock',context:c,providers:providers.map(item=>item.id),verificationScope:'handoff-policy-only'},
+      reversible:true,
+      delegated:true,
+      preflightVerified:true
+    })});
+    if(!review?.ok||!review?.id)throw new Error('EKODI_HANDOFF_REVIEW_UNVERIFIED');
+    return [
+      '[EKODI HANDOFF GATE]',
+      `handoff_audit_id: ${review.id}`,
+      `handoff_status: ${review.status||'reviewed'}`,
+      `policy_version: ${governance.policyVersion||'unknown'}`,
+      `authority_model: ${governance.authorityModel||'EKODI Orchestrator'}`,
+      `generated_at: ${now()}`,
+      `current_surface: ${c.pathname||''}${c.hash||''}`,
+      `ekodi_discovery: ${EKODI_DISCOVERY_URL}`,
+      `ekodi_mcp: ${EKODI_MCP_URL}`,
+      'verification_scope: handoff-policy-only; current operational facts require separate fresh EKODI verification.',
+      '',
+      'MANDATORY RULES FOR EXTERNAL AI:',
+      '- Treat EKODI conversation memory, prior model output, and copied historical notes as candidate context, not proof of current EKODI state.',
+      '- Before asserting a current EKODI structure, status, policy, deployment, route, or capability, verify it through EKODI MCP or fresh authoritative EKODI evidence.',
+      '- If fresh EKODI verification is unavailable, say that the current EKODI fact is unverified; do not infer it from memory.',
+      '- External AI is an entry/reporting surface. EKODI Orchestrator remains the execution authority.',
+      '',
+      '[USER REQUEST]',
+      value
+    ].join('\n');
+  }
   async function handoffCommand(target,prompt,button){
     const value=String(prompt||'').trim();if(!value)return false;
     const providers=externalProvidersFor(target);if(!providers.length)throw new Error('지원하지 않는 외부 AI입니다.');
     if(EXTERNAL_SECRET_RE.test(value)){showStatus('비밀번호·API 키·토큰처럼 보이는 값은 외부 AI로 보내지 않습니다. 민감정보를 제거한 뒤 다시 실행해 주세요.',true);return false}
     const names=providers.map(provider=>provider.label).join(' · ');
-    if(await requestExternalBridge(providers,value)){
-      let copied=false;try{await copyText(value);copied=true}catch{}
-      if(button)button.textContent='자동 입력 중';
-      showStatus(`${names} 새 탭을 열어 입력창 자동 채우기를 요청했습니다. 자동 전송은 하지 않습니다.${copied?' 실패에 대비해 명령도 복사했습니다.':''}`);
+    showStatus('EKODI 검증 게이트를 확인하고 외부 AI 전달 기록을 남기는 중입니다.');
+    let handoff='';
+    try{handoff=await buildExternalAiHandoffPacket(providers,value)}
+    catch(error){showStatus('EKODI 검증 게이트를 통과하지 못해 외부 AI로 전송하지 않았습니다. EKODI 연결 상태를 확인한 뒤 다시 실행해 주세요.',true);return false}
+    if(await requestExternalBridge(providers,handoff)){
+      let copied=false;try{await copyText(handoff);copied=true}catch{}
+      if(button)button.textContent='검증·자동 입력 중';
+      showStatus(`${names} 새 탭에 EKODI 검증 패킷과 명령 자동 채우기를 요청했습니다. 자동 전송은 하지 않습니다.${copied?' 실패에 대비해 검증 패킷도 복사했습니다.':''}`);
       if(button)window.setTimeout(()=>{button.textContent=providers.length===1?providers[0].label:'여러 AI'},1800);
       return true;
     }
     const opened=providers.map(provider=>({provider,popup:window.open(provider.url,'_blank','noopener,noreferrer')}));
     const blocked=opened.filter(item=>!item.popup).map(item=>item.provider.label);
     try{
-      await copyText(value);
-      if(button)button.textContent='복사됨 ✓';
-      showStatus(`${names} 새 창을 열고 명령을 복사했습니다. 각 입력창에 붙여넣어 확인 후 전송하세요.`);
+      await copyText(handoff);
+      if(button)button.textContent='검증·복사됨 ✓';
+      showStatus(`${names} 새 창을 열고 EKODI 검증 패킷과 명령을 함께 복사했습니다. 각 입력창에 붙여넣어 확인 후 전송하세요.`);
     }catch{
       if(button)button.textContent='직접 복사';
-      showStatus('외부 AI 새 창은 열렸지만 자동 복사가 차단되었습니다. 명령어 입력창의 내용을 직접 복사해 주세요.',true);
+      showStatus('EKODI 검증은 통과했지만 자동 복사가 차단되었습니다. 명령어 입력창에서 다시 실행해 주세요.',true);
     }
     if(blocked.length)showStatus(`${blocked.join(' · ')} 새 창이 차단되었습니다. 브라우저의 팝업 허용 후 다시 실행해 주세요.`,true);
     if(button)window.setTimeout(()=>{button.textContent=providers.length===1?providers[0].label:'여러 AI'},1800);
