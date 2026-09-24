@@ -92,17 +92,18 @@ body.admin-compact .${MORE_CLASS}{display:flex;align-items:center;justify-conten
 body.admin-compact .${MORE_CLASS}:hover{background:#f2f7fb;color:#173b57}
 body.admin-compact .${MORE_CLASS} b{font-size:11px;font-weight:800}
 body.admin-compact .${SOURCE_CLASS}{display:none!important}
-body.admin-compact .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display:flex!important;align-items:center;gap:14px;min-height:62px;padding:10px 22px;border-bottom:1px solid var(--admin-border);background:rgba(255,255,255,.98);color:#172033;box-shadow:0 5px 18px rgba(38,58,78,.04)!important;backdrop-filter:blur(12px)!important}
-body.admin-compact .admin-context-title{flex:0 0 auto;min-width:72px;color:#334b63;font-size:14px;font-weight:850;letter-spacing:-.01em;white-space:nowrap}
+/* Keep the compact context row only when it carries actual multi-context navigation. */
+body.admin-compact .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display:flex!important;align-items:center;gap:8px;min-height:50px;padding:4px 14px;border-bottom:1px solid var(--admin-border);background:rgba(255,255,255,.98);color:#172033;box-shadow:0 3px 12px rgba(38,58,78,.035)!important;backdrop-filter:blur(12px)!important}
+body.admin-compact .admin-context-title{display:none!important}
 body.admin-compact .${TABS_CLASS}{display:flex;align-items:center;gap:5px;min-width:0;overflow-x:auto;scrollbar-width:none}
 body.admin-compact .${TABS_CLASS}::-webkit-scrollbar{display:none}
+body.admin-compact .${TABS_SHELL_CLASS}[data-admin-single-context="true"]{display:none!important}
 body.admin-compact .${TABS_SHELL_CLASS}[data-admin-single-context="true"] .${TABS_CLASS}{display:none!important}
-body.admin-compact .${TABS_SHELL_CLASS}[data-admin-single-context="true"] .admin-context-title{min-width:0;color:#172033;font-size:15px}
 body.admin-compact .admin-context-tab{flex:0 0 auto;min-height:40px;padding:0 13px;border:1px solid transparent;border-radius:10px;background:transparent;color:#52667b;font:inherit;font-size:14px;font-weight:760;line-height:1.35;white-space:nowrap;cursor:pointer;box-shadow:none!important;transition:background .12s ease,border-color .12s ease!important}
 body.admin-compact .admin-context-tab:hover{border-color:#d5e6ef;background:#f2f7fb;color:#173b57}
 body.admin-compact .admin-context-tab.active{border-color:#aecdec;background:#eaf3ff;color:#0b5cab;font-weight:850}
-body.admin-compact .admin-capability-shortcut{margin-left:auto;flex:0 0 auto;min-height:40px;padding:0 12px;border:1px solid #bfd5ee;border-radius:9px;background:#f3f8ff;color:#0b5cab;font:inherit;font-size:14px;font-weight:800;cursor:pointer}
-body.admin-compact .content{padding:22px 24px 42px!important;max-width:1680px!important;margin:0 auto!important}
+body.admin-compact .admin-capability-shortcut{display:none!important}
+body.admin-compact .content{padding:12px 16px 28px!important;max-width:1680px!important;margin:0 auto!important}
 body.admin-compact .content .hero{margin-bottom:12px!important;padding:14px 16px!important;box-shadow:none!important;backdrop-filter:none!important}
 body.admin-compact .content .section,body.admin-compact .content .module,body.admin-compact .content .architecture,body.admin-compact .content .arch-zone{box-shadow:none!important;backdrop-filter:none!important}
 body.admin-compact .content button,body.admin-compact .content .btn{box-shadow:none!important;transition:none!important}
@@ -138,7 +139,7 @@ body.admin-compact #campusPanel .campus-homepage-notice{margin-bottom:9px!import
 body.admin-compact #campusPanel .campus-homepage-notice>span{width:30px!important;height:30px!important;flex-basis:30px!important;font-size:14px!important}
 body.admin-compact #campusPanel .campus-homepage-notice strong{font-size:13px!important}body.admin-compact #campusPanel .campus-homepage-notice small{font-size:12px!important;line-height:1.45!important}
 @media(max-width:1480px){body.admin-compact #campusSiteGroups .campus-groups-grid{grid-template-columns:minmax(0,1fr)!important}}
-@media(max-width:760px){body.admin-compact .admin-global-navs{gap:3px;margin:4px 0 8px}body.admin-compact .admin-command-entry{min-height:42px!important;padding:8px 10px!important;margin-bottom:6px!important}body.admin-compact .admin-global-nav{min-height:42px;padding:8px 10px;font-size:14px}body.admin-compact .${TABS_SHELL_CLASS}{top:0;min-height:52px;padding:6px 10px;gap:7px}body.admin-compact .admin-context-title{display:none}body.admin-compact .admin-context-tab{min-height:42px;padding:0 10px;font-size:15px}body.admin-compact .admin-capability-shortcut{min-height:42px;font-size:15px}body.admin-compact .content{padding:10px 10px 24px!important}body.admin-compact #campusPanel .campus-toolbar{padding:13px!important}body.admin-compact #campusSiteGroups .campus-site-item{padding:11px!important}body.admin-compact #campusSiteGroups .campus-row-action{min-height:44px!important;font-size:14px!important}}
+@media(max-width:760px){body.admin-compact .admin-global-navs{gap:3px;margin:4px 0 8px}body.admin-compact .admin-command-entry{min-height:42px!important;padding:8px 10px!important;margin-bottom:6px!important}body.admin-compact .admin-global-nav{min-height:42px;padding:8px 10px;font-size:14px}body.admin-compact .${TABS_SHELL_CLASS}{top:0;min-height:46px;padding:3px 8px;gap:5px}body.admin-compact .admin-context-title{display:none!important}body.admin-compact .admin-context-tab{min-height:42px;padding:0 10px;font-size:15px}body.admin-compact .admin-capability-shortcut{display:none!important}body.admin-compact .content{padding:8px 8px 20px!important}body.admin-compact #campusPanel .campus-toolbar{padding:13px!important}body.admin-compact #campusSiteGroups .campus-site-item{padding:11px!important}body.admin-compact #campusSiteGroups .campus-row-action{min-height:44px!important;font-size:14px!important}}
 `;
   document.head.append(style);
 }
@@ -359,15 +360,7 @@ function syncWorkbenchState(nav, locale, preferredSection = '') {
     if (label && label.textContent !== text) label.textContent = text;
     commandEntry.setAttribute('aria-label', locale === 'en' ? 'Start a new EKODI task' : '에코디 새 작업 시작');
   }
-  if (shell && !shell.querySelector('[data-admin-capability-shortcut]')) {
-    const shortcut = document.createElement('button');
-    shortcut.type = 'button';
-    shortcut.className = 'admin-capability-shortcut';
-    shortcut.dataset.adminCapabilityShortcut = 'true';
-    shortcut.textContent = locale === 'en' ? '⚡ Capabilities' : '⚡ 기능';
-    shortcut.addEventListener('click', () => activateSection(nav, 'capabilities'));
-    shell.append(shortcut);
-  }
+  if (shell) shell.querySelector('[data-admin-capability-shortcut]')?.remove();
   const section = preferredSection || activeSection(nav);
   const activeGroup = getAdminMenuGroupForSection(section);
   const focusedGroup = String(nav.dataset.adminFocusedGroup || '').trim();
