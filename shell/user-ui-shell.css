@@ -348,20 +348,19 @@ html[data-ekodi-service="community"] .language-menu {
 .ekodi-user-ui-footer__inner {
   width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 32px));
   margin: 0 auto;
-  padding: 24px 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
+  padding: 22px 0 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px 32px;
 }
 
 .ekodi-user-ui-footer__copy {
   min-width: 0;
   width: 100%;
   display: grid;
-  justify-items: center;
-  gap: 6px;
+  justify-items: start;
+  gap: 5px;
 }
 
 .ekodi-user-ui-footer__brand {
@@ -375,7 +374,7 @@ html[data-ekodi-service="community"] .language-menu {
   width: 100%;
   display: flex;
   align-items: baseline;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 4px 14px;
   flex-wrap: wrap;
 }
@@ -390,11 +389,12 @@ html[data-ekodi-service="community"] .language-menu {
 
 .ekodi-user-ui-footer__links {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
   gap: 6px 16px;
   flex-wrap: wrap;
   white-space: normal;
+  padding-top: 2px;
 }
 
 .ekodi-user-ui-footer a {
@@ -450,13 +450,21 @@ body > [data-ekodi-user-footer] ~ [data-ekodi-user-footer] {
 
   .ekodi-user-ui-footer__inner {
     width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 24px));
-    padding: 20px 0;
+    padding: 20px 0 22px;
+    grid-template-columns: 1fr;
+    justify-items: center;
     gap: 10px;
   }
 
+  .ekodi-user-ui-footer__copy { justify-items: center; }
   .ekodi-user-ui-footer__business,
   .ekodi-user-ui-footer__address {
+    justify-content: center;
     gap: 3px 10px;
+  }
+  .ekodi-user-ui-footer__links {
+    justify-content: center;
+    padding-top: 0;
   }
 }
 
