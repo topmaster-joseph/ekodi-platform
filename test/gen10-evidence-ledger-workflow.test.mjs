@@ -30,6 +30,8 @@ test('execution-fabric proof persists required artifact digests into append-only
   assert.match(workflow, /successful execution-fabric workflow lacks the complete required runtime evidence set/);
   assert.match(workflow, /payload digest mismatch/);
   assert.match(workflow, /artifact count mismatch/);
+  assert.match(workflow, /auxiliary runtime evidence row not found after insert/);
+  assert.match(workflow, /auxiliary verification mismatch/);
 });
 
 test('evidence writers keep production credentials outside execution sandboxes', () => {
