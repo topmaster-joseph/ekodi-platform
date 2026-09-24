@@ -55,7 +55,7 @@ test('production verification is consolidated into one post-deploy canary', asyn
   assert.doesNotMatch(reliability, /workflow_run:/);
 });
 
-test('production probe loops fail fast on quota circuit and deep E2E stays explicit-only', async () => {
+test('production probe loops fail fast on quota circuit and deep E2E remains push-disabled', async () => {
   const [shellVerify, churchOwnership, adminRetry, adminAuthenticated, adminUi, adminAuthenticatedUi, productionGate] = await Promise.all([
     readFile(new URL('../scripts/verify-ekodi-shell-live.mjs', import.meta.url), 'utf8'),
     readFile(new URL('../scripts/ensure-church-route-ownership.mjs', import.meta.url), 'utf8'),
@@ -74,10 +74,12 @@ test('production probe loops fail fast on quota circuit and deep E2E stays expli
   assert.match(adminRetry, /throwIfQuotaCircuit/);
   assert.match(adminRetry, /CF-QUOTA-001 circuit open/);
 
-  for (const workflow of [adminAuthenticated, adminUi, adminAuthenticatedUi]) {
+  for (const workflow of [adminAuthenticated, adminAuthenticatedUi]) {
     assert.match(workflow, /on:\n  workflow_dispatch:/);
     assert.doesNotMatch(workflow, /\n  push:/);
   }
+  assert.match(adminUi, /on:\n  workflow_call:\n  workflow_dispatch:/);
+  assert.doesNotMatch(adminUi, /\n  push:/);
   for (const workflow of [adminAuthenticated, adminAuthenticatedUi]) {
     assert.match(workflow, /https:\/\/ekodi\.kr\/api\/session/);
     assert.doesNotMatch(workflow, /curl[^\n]*--retry[^\n]*api\/session/);
