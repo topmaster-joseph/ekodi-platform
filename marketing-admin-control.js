@@ -3,7 +3,7 @@ import { readMarketingPublicationOverview } from './marketing-admin-publications
 
 const PAID_PLANS = new Set(['plus','pro','auto','enterprise']);
 const MARKETING_ACTION_RE = /(marketing|campaign|social|channel|crm|review|advert|promotion)/i;
-const MARKETING_TARGET_RE = /(marketing\.ekodi\.kr|\.ai\.ekodi\.kr|ekodibiz|jadam|pizzamaru|yogurt|cgma)/i;
+const MARKETING_TARGET_RE = /(ekodi\.kr\/marketing(?:\/|$)|\/marketing(?:\/|$)|ekodibiz|jadam|pizzamaru|yogurt|cgma)/i;
 
 function cors(origin, env = {}) {
   const headers = {
