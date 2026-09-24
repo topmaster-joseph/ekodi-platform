@@ -369,7 +369,7 @@ function syncWorkbenchState(nav, locale, preferredSection = '') {
     commandEntry.setAttribute('aria-current', selected ? 'page' : 'false');
   }
   for (const button of globals.querySelectorAll('[data-admin-global-group]')) {
-    const selected = button.dataset.adminGlobalGroup === group;
+    const selected = section !== 'command-home' && button.dataset.adminGlobalGroup === group;
     button.classList.toggle('active', selected);
     button.setAttribute('aria-current', selected ? 'page' : 'false');
     button.setAttribute('aria-expanded', selected ? 'true' : 'false');
@@ -578,7 +578,8 @@ export function mountAdminSidebar(root = document, options = {}) {
     event.preventDefault();
     const group = global.dataset.adminGlobalGroup || '';
     nav.dataset.adminFocusedGroup = group;
-    if (getAdminMenuGroupForSection(activeSection(nav)) !== group) {
+    const currentSection = activeSection(nav);
+    if (currentSection === 'command-home' || getAdminMenuGroupForSection(currentSection) !== group) {
       activateSection(nav, getAdminMenuGroupDefault(group));
       delete nav.dataset.adminFocusedGroup;
     }

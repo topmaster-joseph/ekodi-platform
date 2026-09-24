@@ -69,7 +69,10 @@ test('global navigation remains synchronized to the active panel and opens an ax
   assert.doesNotMatch(activateSource, /syncWorkbenchState/);
   assert.match(sidebar, /const group = global\.dataset\.adminGlobalGroup \|\| ''/);
   assert.match(sidebar, /nav\.dataset\.adminFocusedGroup = group/);
+  assert.match(sidebar, /const currentSection = activeSection\(nav\)/);
+  assert.match(sidebar, /currentSection === 'command-home' \|\| getAdminMenuGroupForSection\(currentSection\) !== group/);
   assert.match(sidebar, /activateSection\(nav, getAdminMenuGroupDefault\(group\)\)/);
+  assert.match(sidebar, /const selected = section !== 'command-home' && button\.dataset\.adminGlobalGroup === group/);
   assert.match(sidebar, /const displayedSection = group === activeGroup \? section : ''/);
 });
 
