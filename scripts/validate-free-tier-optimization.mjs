@@ -8,6 +8,7 @@ const workflow = fs.readFileSync('.github/workflows/ekodi-ai-orchestration-gate.
 const collectorWorkflow = fs.readFileSync('.github/workflows/free-tier-resource-governor.yml','utf8');
 const collector = fs.readFileSync('scripts/collect-free-tier-resource-usage.mjs','utf8');
 const supabaseCapacityGuard = fs.readFileSync('scripts/validate-supabase-free-project-capacity.mjs','utf8');
+const adminVisualWorkflow = fs.readFileSync('.github/workflows/verify-admin-production-ui-e2e.yml','utf8');
 const failures=[];
 const expect=(condition,message)=>{if(!condition)failures.push(message)};
 
@@ -19,6 +20,8 @@ expect(policy.resourceGovernor?.mode==='measured-telemetry-only','resource gover
 expect(policy.resourceGovernor?.capacityAndConsumptionSeparated===true,'capacity and consumption must remain separated');
 expect(policy.resourceGovernor?.capacityRules?.['supabase.active_projects']?.action==='block-new-project-only','Supabase project capacity must block only new projects');
 expect(policy.resourceGovernor?.projectCreationPolicy?.automaticPaidProjectCreation===false,'automatic paid Supabase project creation must stay disabled');
+expect(policy.resourceGovernor?.githubArtifactPolicy?.adminProductionUiEvidenceMaxDays===7,'large Admin visual evidence retention must remain capped at seven days');
+expect(policy.resourceGovernor?.githubArtifactPolicy?.automaticArtifactDeletion===false,'artifact optimization must not destructively delete evidence automatically');
 expect(JSON.stringify(policy.thresholds)===JSON.stringify({warning:70,conserve:85,protect:90,survival:95,circuitBreaker:100}),'quota thresholds must remain 70/85/90/95/100');
 expect(policy.providerRoles?.cloudflare?.prefer?.includes('static-assets-before-worker'),'Cloudflare must prefer static assets before Worker invocation');
 expect(policy.providerRoles?.supabase?.role==='authoritative-relational-data-auth-and-rls','Supabase authoritative role drifted');
@@ -78,6 +81,9 @@ expect(supabaseCapacityGuard.includes('supabase-cli-project-create'),'Supabase c
 expect(workflow.includes('validate-supabase-free-project-capacity.mjs'),'orchestration gate must enforce Supabase Free project capacity');
 expect(collectorWorkflow.includes('validate-supabase-free-project-capacity.mjs'),'resource collector workflow must enforce Supabase Free project capacity');
 expect(collectorWorkflow.includes('supabase-free-project-capacity-guard.test.mjs'),'resource governor validation must test Supabase project capacity');
+expect(adminVisualWorkflow.includes('name: admin-production-ui-e2e-${{ github.run_id }}-${{ github.run_attempt }}'),'Admin UI evidence artifact contract missing');
+expect(adminVisualWorkflow.includes('retention-days: 7'),'large Admin UI visual evidence must expire after seven days');
+expect(!adminVisualWorkflow.includes('retention-days: 30'),'large Admin UI visual evidence must not retain the old 30-day window');
 expect(!/BEGIN TRANSACTION|SAVEPOINT|lines\.push\('COMMIT;'\)/.test(collector),'remote D1 collector must not emit explicit transaction statements');
 
 if(failures.length){
