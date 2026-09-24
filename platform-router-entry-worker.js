@@ -10,7 +10,7 @@ import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
 import { investUserPage, investUiScript } from './invest-user-page.js';
 import { investSubjectUiScript } from './invest-subject-ui.js';
 import { routeInvestSite } from './invest-site-system.js';
-import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
+import { mailUserPage, handleMailApi } from './mail-user-page.js';
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
 import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
@@ -357,16 +357,6 @@ async function routePlatform(request,env,ctx){
       if(['GET','HEAD'].includes(request.method)&&url.pathname==='/auth/start'){
         const auth=workspaceAuthRedirect(request);if(auth)return auth;
       }
-    }
-
-    if(host===MAIL_HOST){
-      const contactResponse=await handleMailContactApi(request,env);
-      if(contactResponse)return contactResponse;
-      const apiResponse=await handleMailApi(request,env);
-      if(apiResponse)return apiResponse;
-      if(request.method==='GET'&&url.pathname==='/contact'){const target=new URL('https://ekodi.kr/mail/contact');target.search=url.search;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-legacy-surface':'ekodi.kr/mail'}});}
-      if(request.method==='GET'&&url.pathname==='/admin')return injectEkodiShell(mailAdminPage(),'mail','admin');
-      if(request.method==='GET'&&(url.pathname==='/'||url.pathname===''))return injectEkodiShell(mailUserPage(),'mail');
     }
 
     if(host===MESSENGER_HOST&&request.method==='GET'){

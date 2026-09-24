@@ -1,7 +1,6 @@
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const DEFAULT_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const GMAIL_READ_SCOPE='https://www.googleapis.com/auth/gmail.readonly';
-export const MAIL_HOST='ekodi.kr/mail';
 
 const tokenCache=new Map();
 const encoder=new TextEncoder();

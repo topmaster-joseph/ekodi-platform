@@ -1,7 +1,7 @@
 import authWorker from './auth-worker.js';
 
 const PREFIX='/api/mall/admin';
-const ALLOWED_ORIGINS=new Set(['https://ekodi.kr','https://ekodi.kr/admin']);
+const ALLOWED_ORIGINS=new Set(['https://ekodi.kr']);
 const STATUSES=new Set(['draft','review','approved','archived']);
 const BUDGET_TIERS=new Set(['','light','standard','premium','luxury']);
 const RELATIONSHIP_LEVELS=new Set([1,2,3,4,5]);

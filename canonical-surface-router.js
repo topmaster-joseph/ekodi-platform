@@ -15,7 +15,7 @@ const PUBLIC_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'author',prefix:'/author',binding:'AUTHOR'}),
   Object.freeze({id:'bible',prefix:'/bible',binding:'BIBLE',basePathAware:true}),
   Object.freeze({id:'books',prefix:'/books',binding:'BOOKS'}),
-  Object.freeze({id:'business',prefix:'/business',binding:'BUSINESS',host:'ekodi.kr/business'}),
+  Object.freeze({id:'business',prefix:'/business',binding:'BUSINESS'}),
   Object.freeze({id:'community',prefix:'/community',binding:'COMMUNITY'}),
   Object.freeze({id:'education',prefix:'/education',binding:'EDUCATION'}),
   Object.freeze({id:'energy',prefix:'/energy',binding:'ENERGY'}),
@@ -58,10 +58,10 @@ const AUTH_CSP=[
 const AUTH_ASSETS=new Set(['/auth.js','/auth-bootstrap.js','/auth-entry.js','/auth.css','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/google-origin-bridge.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
 const AUTH_CRITICAL_ASSETS=new Set(['/auth.js','/auth-bootstrap.js','/auth-entry.js','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/google-origin-bridge.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
 
-function cloneRequest(request,url){
+function cloneRequest(request,url,headers=request.headers){
   return new Request(url.toString(),{
     method:request.method,
-    headers:request.headers,
+    headers,
     body:['GET','HEAD'].includes(request.method)?undefined:request.body,
     redirect:request.redirect,
   });
@@ -234,7 +234,10 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     const binding=env[spec.binding];
     upstreamUrl.hostname=CANONICAL_HOST;
     upstreamUrl.pathname=spec.preservePrefix?upstreamUrl.pathname:stripPrefix(upstreamUrl.pathname,spec.prefix);
-    response=await binding.fetch(cloneRequest(request,upstreamUrl));
+    const routedHeaders=new Headers(request.headers);
+    routedHeaders.set('x-ekodi-canonical-surface',spec.id);
+    routedHeaders.set('x-ekodi-canonical-prefix',spec.prefix);
+    response=await binding.fetch(cloneRequest(request,upstreamUrl,routedHeaders));
   }else if(spec.assetPath){
     if(!env?.ASSETS?.fetch)return serviceUnavailable(spec.id);
     upstreamUrl.pathname=spec.assetPath;upstreamUrl.search='';

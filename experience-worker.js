@@ -3,9 +3,6 @@ import { projectValue } from './secure-projection.js';
 import { EXPERIENCE_META, getExperienceCatalog } from './experience-catalog.js';
 import { DEVELOPER_PORTAL_META, PUBLIC_CONFORMANCE_CONTRACT } from './developer-public-contract.js';
 
-const EXPERIENCE_HOST='ekodi.kr/experience';
-const LEGACY_EXPERIENCE_HOST='ekodi.kr/experience';
-const DEVELOPER_HOST='ekodi.kr/developer';
 const SECURITY_HEADERS={
   'x-content-type-options':'nosniff',
   'referrer-policy':'strict-origin-when-cross-origin',
@@ -23,16 +20,6 @@ function withHeaders(response,cache=null){
   for(const [key,value] of Object.entries(SECURITY_HEADERS))headers.set(key,value);
   if(cache)headers.set('cache-control',cache);
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
-}
-function resolvedHost(request){
-  const url=new URL(request.url);const host=url.hostname.toLowerCase();
-  if(!host.endsWith('.workers.dev')&&!['127.0.0.1','localhost'].includes(host))return host;
-  return String(request.headers.get('x-ekodi-staging-host')||host).trim().toLowerCase();
-}
-function canonicalExperienceRedirect(request){
-  const source=new URL(request.url);const target=new URL(source.toString());
-  target.protocol='https:';target.hostname=EXPERIENCE_HOST;target.port='';
-  return withHeaders(new Response(null,{status:308,headers:{location:target.toString()}}),'no-store');
 }
 function projectedCatalog(){return projectValue(getExperienceCatalog(),{profile:'experience_public',purpose:'experience-public-catalog'});}
 async function htmlAsset(env,request,path,serviceId){
@@ -60,11 +47,9 @@ function developerHealth(){return {
 };}
 export default {
   async fetch(request,env){
-    const url=new URL(request.url);const host=resolvedHost(request);const path=url.pathname.replace(/\/+$/,'')||'/';
+    const url=new URL(request.url);const surface=String(request.headers.get('x-ekodi-canonical-surface')||'experience').toLowerCase();const path=url.pathname.replace(/\/+$/,'')||'/';
     if(request.method!=='GET'&&request.method!=='HEAD')return json({error:'read_only_public_surface'},405);
-    if(host===LEGACY_EXPERIENCE_HOST)return canonicalExperienceRedirect(request);
-
-    if(host===DEVELOPER_HOST){
+    if(surface==='developer'){
       if(path==='/health')return json(developerHealth(),200,PUBLIC_CACHE);
       if(path==='/api/contract')return json(PUBLIC_CONFORMANCE_CONTRACT,200,PUBLIC_CACHE);
       if(path==='/admin')return adminRedirect();

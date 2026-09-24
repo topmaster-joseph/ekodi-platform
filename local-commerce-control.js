@@ -4,7 +4,7 @@ const ACCOUNT_ROLES = new Set(['accountant','accounting','finance','treasurer'])
 const ALLOWED_ISSUER_TYPES = new Set(['merchant_association','autonomous_district','institution','organization','school_youth','festival','project']);
 const ORGANIZATION_ISSUER_CATEGORIES = new Set(['church','nonprofit','enterprise','public_agency','community','organization']);
 const ALLOWED_PROGRAM_TYPES = new Set(['voucher','coupon','points','stamp']);
-const ALLOWED_ORIGINS = new Set(['https://ekodi.kr','https://ekodi.kr','https://cgma.or.kr','https://ekodi.kr/admin']);
+const ALLOWED_ORIGINS = new Set(['https://ekodi.kr','https://cgma.or.kr']);
 
 function clean(value, max=200){return String(value??'').trim().slice(0,max)}
 function slug(value){const v=clean(value,63).toLowerCase();return /^[a-z0-9][a-z0-9-]{0,62}$/.test(v)?v:''}

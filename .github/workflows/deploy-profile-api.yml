@@ -91,7 +91,4 @@ jobs:
           [[ "$canonical_code" =~ ^(200|204)$ ]]
           grep -Eiq '^access-control-allow-origin:[[:space:]]*https://ekodi\.kr[[:space:]]*$' /tmp/profile-character-canonical.headers
           grep -Eiq '^access-control-allow-methods:.*DELETE' /tmp/profile-character-canonical.headers
-          legacy_code=$(curl -sS -D /tmp/profile-character-legacy.headers -o /dev/null -w '%{http_code}' -X OPTIONS "$endpoint" -H 'Origin: https://ekodi.kr/my' -H 'Access-Control-Request-Method: PATCH' -H 'Access-Control-Request-Headers: authorization,apikey,content-type' || true)
-          [[ "$legacy_code" =~ ^(200|204)$ ]]
-          ! grep -Eiq '^access-control-allow-origin:[[:space:]]*https://my\.ekodi\.kr[[:space:]]*$' /tmp/profile-character-legacy.headers
           echo 'Central Profile API canonical CORS contract is live.'
