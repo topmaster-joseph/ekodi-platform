@@ -66,6 +66,15 @@ if (policy.controlPlane !== 'EKODI AI') fail('EKODI AI must remain the control p
 if (policy.mutationBoundary?.breakGlassBypassEnabled !== false) fail('break-glass bypass must remain disabled.');
 if (policy.sourceControl?.directPushToMain !== false) fail('direct main pushes must remain forbidden.');
 if (policy.execution?.externalAiMayOwnProductionMutation !== false) fail('external AI cannot own production mutation.');
+const dailyOperationalReport = policy.reporting?.dailyOperationalReport || {};
+if (dailyOperationalReport.policyId !== 'EKODI-DAILY-REPORT-ROLE-001') fail('daily operational report role policy must remain registered.');
+if (dailyOperationalReport.sourceOfTruth !== 'ekodi-generated-operational-report') fail('EKODI-generated operational report must remain the daily report source of truth.');
+if (dailyOperationalReport.externalChatAssistantRole !== 'relay-and-summarize-only') fail('external chat assistants must remain relay-and-summary only for EKODI daily reports.');
+for (const key of ['externalChatAssistantMayIndependentlyReverify','externalChatAssistantMayOverrideEkodiVerdict','externalChatAssistantMayInventMissingOperationalFacts']) {
+  if (dailyOperationalReport[key] !== false) fail(`daily operational report boundary must remain false: ${key}`);
+}
+if (dailyOperationalReport.missingEkodiReportDisposition !== 'state-ekodi-confirmation-unavailable') fail('missing EKODI report evidence must remain explicitly unavailable, never inferred.');
+if (dailyOperationalReport.duplicateReportSuppression !== true) fail('duplicate daily operational reports must remain suppressed.');
 const claimIntegrity = policy.claimIntegrity || {};
 if (claimIntegrity.policyId !== 'AI-CLAIM-INTEGRITY-001' || claimIntegrity.status !== 'enforced') fail('claim integrity policy binding must remain enforced.');
 for (const key of ['aiStatementNeverCreatesSystemState','agentOutputIsAssertionNotEvidence','memoryCannotProveCurrentOperationalState','currentStateRequiresFreshEvidence','claimScopeMustMatchEvidenceScope','finalResponseGuardRequired','materialOperationalClaimReceiptRequired','broadScopeRequiresIndependentVerifier','unknownMustNotBecomeSuccess']) {
