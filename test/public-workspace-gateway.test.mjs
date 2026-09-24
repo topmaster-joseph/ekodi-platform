@@ -44,7 +44,7 @@ test('canonical public workspace paths use the isolated Space service binding',a
   const genericWorkspaceRoute=router.indexOf('isPublicWorkspacePath(url.pathname)&&!isEkodiBizOwnedPath(url.pathname)');
   const finalLegacyRouter=router.lastIndexOf('const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx)');
   assert.ok(genericWorkspaceRoute>0&&finalLegacyRouter>genericWorkspaceRoute,'EKODIBIZ-owned child services must fall through to the dedicated site router');
-  assert.match(router,/legacyOperatingSpacePath\(url\.pathname\)\)return ensureLegacyOperatingSpaceMarker\(injectEkodiTenantReadability\(legacyResponse\)\)/);
+  assert.match(router,/legacyOperatingSpacePath\(url\.pathname\)\)return ensureLegacyOperatingSpaceMarker\(injectEkodiTenantReadability\(legacyResponse\),request\.method==='GET'\)/);
   assert.match(wrangler,/binding = "SPACE"[\s\S]*service = "ekodi-space"/);
   for(const route of ['/deployment-probe','/_ekodi/space/*']){
     assert.ok(wrangler.includes(`"${route}"`),route);
