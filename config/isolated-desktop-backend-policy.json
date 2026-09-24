@@ -62,7 +62,11 @@
     "guestCanaryDoesNotEnableExecutionByItself": true,
     "uiCanaryCommand": "computer.desktop.ui.canary",
     "uiCanaryRequiredBeforeExecution": true,
-    "uiCanaryDoesNotEnableGeneralDesktopExecutionByItself": true
+    "uiCanaryDoesNotEnableGeneralDesktopExecutionByItself": true,
+    "sessionCanaryCommand": "computer.desktop.session.canary",
+    "sessionCanaryRequiredBeforeExecution": true,
+    "sessionCanaryEnablesBoundedExecutionCapability": true,
+    "generalUnboundedDesktopExecutionAfterSessionCanary": false
   },
   "gapClassification": {
     "noVirtualizationFirmware": "native-capability-unavailable",
@@ -87,7 +91,7 @@
   },
   "guestAgent": {
     "id": "ekodi-isolated-guest-agent",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "installScript": "tools/ekodi-device-agent/windows/install-isolated-guest-agent.ps1",
     "runtimeScript": "tools/ekodi-device-agent/windows/ekodi-isolated-guest-agent.ps1",
     "baseVmProvisioningRequired": true,
@@ -107,7 +111,8 @@
     "mutationScope": "ephemeral-guest-only",
     "allowedTaskTypes": [
       "guest.runtime.probe",
-      "guest.ui.probe"
+      "guest.ui.probe",
+      "guest.session.execute"
     ]
   },
   "guestCanary": {
@@ -141,5 +146,41 @@
     "sessionVmCleanupRequired": true,
     "sessionDiskCleanupRequired": true,
     "generalDesktopExecutionCapabilityAfterUiCanary": false
+  },
+  "sessionExecutor": {
+    "id": "ekodi-isolated-session-bounded-v1",
+    "version": "bounded-v1",
+    "command": "computer.desktop.session.execute",
+    "taskType": "guest.session.execute",
+    "allowedOperations": [
+      "ui.text.roundtrip"
+    ],
+    "textPattern": "^EKODI_SESSION_[A-Z0-9_-]{8,64}$",
+    "rawInputReturnedInCloudResult": false,
+    "inputOutputHashesRequired": true,
+    "networkAttached": false,
+    "hostInteractiveDesktopUsed": false,
+    "sharedInteractiveDesktop": false,
+    "semanticUiAutomation": true,
+    "lowLevelInputInjection": false,
+    "clipboardShared": false,
+    "credentialCollection": false,
+    "hostProfileMounted": false,
+    "ephemeralDifferencingDisk": true,
+    "sessionVmCleanupRequired": true,
+    "sessionDiskCleanupRequired": true,
+    "boundedLease": true,
+    "generalPurposeShell": false,
+    "arbitraryFilesystemAccess": false,
+    "externalNetworkAccess": false
+  },
+  "sessionCanary": {
+    "requiresUiCanary": true,
+    "executor": "ekodi-isolated-session-bounded-v1",
+    "operation": "ui.text.roundtrip",
+    "expectedResultCode": "EKODI_SESSION_OK",
+    "roundTripMatchRequired": true,
+    "hashesMustMatch": true,
+    "cleanupRequired": true
   }
 }
