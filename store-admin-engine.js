@@ -98,7 +98,7 @@ function clientMain(POLICY,CHANNEL_CATALOG){
   const section=(IS_PORTFOLIO?PATH_PARTS[3]:PATH_PARTS[2])||'overview';
   const page=META[section]||META.overview;
   const state={session:null,snapshot:null,menu:null,connector:null,site:null,delivery:null,commerce:null,smsOrders:null,role:''};
-  const SECTION_CAPABILITY={overview:POLICY.capabilities.dashboard,site:POLICY.capabilities.site,delivery:POLICY.capabilities.orders,menu:POLICY.capabilities.catalog,orders:POLICY.capabilities.orders,customers:POLICY.capabilities.customers,reviews:POLICY.capabilities.reviews,sales:POLICY.capabilities.sales,inventory:POLICY.capabilities.inventory,marketing:POLICY.capabilities.marketing,publishing:POLICY.capabilities.marketing,work:POLICY.capabilities.operations,finance:POLICY.capabilities.finance,connections:POLICY.capabilities.connections,members:POLICY.capabilities.access};
+  const SECTION_CAPABILITY={overview:POLICY.capabilities.dashboard,site:POLICY.capabilities.site,chrome:POLICY.capabilities.site,delivery:POLICY.capabilities.orders,menu:POLICY.capabilities.catalog,orders:POLICY.capabilities.orders,customers:POLICY.capabilities.customers,reviews:POLICY.capabilities.reviews,sales:POLICY.capabilities.sales,inventory:POLICY.capabilities.inventory,marketing:POLICY.capabilities.marketing,publishing:POLICY.capabilities.marketing,work:POLICY.capabilities.operations,finance:POLICY.capabilities.finance,connections:POLICY.capabilities.connections,members:POLICY.capabilities.access};
 
   function card(label,value,small=''){return `<article class="card"><small>${esc(label)}</small><strong>${esc(value)}</strong><span>${esc(small)}</span></article>`}
   function setState(text,kind=''){const el=$('pageState');el.textContent=text;el.className=`state ${kind}`.trim()}
