@@ -13,6 +13,15 @@ EKODI Cloud Control is the break-glass operating layer for infrastructure change
 
 Cloud Control must not become a second deployment lane. Service deployment remains owned by the existing service-specific GitHub Actions + Wrangler guarded release workflows.
 
+The enforced continuity order is defined by `EKODI-DEPLOYMENT-FOUR-LAYER-001`:
+
+1. Runtime — avoid deployment when an existing canonical runtime/config/data path can safely satisfy the change.
+2. Deploy — service-specific GitHub Actions + Wrangler guarded release.
+3. Cloud Control — break-glass infrastructure repair only, then return to Deploy.
+4. Owner — account/billing/identity/root-security/paid-plan authority; never routine automation.
+
+See `docs/operations/deployment-four-layer.md`.
+
 ## Cloudflare Workers Builds operation
 
 The first Cloud Control operation is intentionally narrow: disconnect the legacy Workers Builds trigger attached to Worker `ekodi-platform`.

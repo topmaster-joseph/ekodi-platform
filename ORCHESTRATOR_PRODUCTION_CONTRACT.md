@@ -18,6 +18,8 @@ A Super Administrator instruction to implement and complete a specific requested
 
 Fresh approval remains mandatory for authority expansion, security-boundary changes, destructive/irreversible operations, new paid commitments, credential disclosure or provider-required login/consent/MFA. A missing optional adapter, connector quota, or unavailable workflow-dispatch UI is not an approval boundary; the Orchestrator must fail over to another authorized path.
 
+Deployment-path selection follows `EKODI-DEPLOYMENT-FOUR-LAYER-001`: Runtime first when no code release is required; guarded GitHub Actions + Wrangler Deploy for code changes; Cloud Control only for allowlisted break-glass infrastructure repair and never as a second deployment lane; Owner for account, billing, paid plan/limit, identity ownership or root-security authority. Cloud Control repair returns to the guarded Deploy lane.
+
 ## Completion evidence
 
 For deployment tasks, completion requires durable evidence of the release artifact/ref, required gates, production endpoint/health verification, and post-deployment regression/security verification. Workers report evidence; only the Orchestrator settles the authoritative state.
