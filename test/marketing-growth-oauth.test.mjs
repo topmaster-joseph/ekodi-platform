@@ -9,6 +9,10 @@ test('EKODI central social connector exposes login-only YouTube OAuth and vault 
     read('marketing-ai-channel-manager.js'), read('wrangler.marketing-growth.toml'),
   ]);
   assert.match(growth,/startYouTubeOAuth/);
+  assert.match(growth,/GOOGLE_BROKER_REDIRECT_URI = 'https:\/\/ekodi\.kr\/storage\/api\/control\/storage\/google\/callback'/);
+  assert.match(growth,/GOOGLE_OAUTH_BROKER_REDIRECT_DRIFT/);
+  assert.match(growth,/authorization\.searchParams\.get\('redirect_uri'\) !== GOOGLE_BROKER_REDIRECT_URI/);
+  assert.match(growth,/authorization\.searchParams\.get\('client_id'\) !== String\(env\.GOOGLE_CLIENT_ID\)/);
   assert.match(growth,/consumeYouTubeTicket/);
   assert.match(growth,/oauth\/youtube\/callback/);
   assert.match(growth,/GOOGLE_OAUTH_BROKER/);

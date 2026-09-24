@@ -256,11 +256,11 @@ export async function refreshGoogleAccessToken(env,{refreshToken}={}) {
 export async function startMarketingYouTubeOAuth(env,{state,accountHint}={}) {
   if(!ready(env)) throw Object.assign(new Error('GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'),{code:'GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'});
   await ensureSchema(env.DB); const marketingState=String(state||'').trim(); if(!marketingState) throw new Error('MARKETING_STATE_REQUIRED');
-  const redirectUri=googleOAuthRedirectUri(env);
+  const redirectUri=CANONICAL_REDIRECT_URI;
   const signed=await signState(env,{purpose:'marketing_youtube',marketingState,targetAccount:String(accountHint||'').trim().toLowerCase(),redirectUri,exp:Date.now()+10*60*1000});
   const params=new URLSearchParams({client_id:googleClientId(env),redirect_uri:redirectUri,response_type:'code',access_type:'offline',prompt:'consent select_account',include_granted_scopes:'true',scope:YOUTUBE_SCOPES.join(' '),state:signed});
   const hint=String(accountHint||'').trim(); if(hint) params.set('login_hint',hint);
-  return {authorizationUrl:`${AUTH_URL}?${params}`};
+  return {authorizationUrl:`${AUTH_URL}?${params}`,redirectUri};
 }
 export async function consumeMarketingYouTubeTicket(env,{ticket}={}) {
   await ensureSchema(env.DB); const raw=String(ticket||'').trim(); if(!raw) throw new Error('GOOGLE_OAUTH_TICKET_REQUIRED');
