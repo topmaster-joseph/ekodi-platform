@@ -46,6 +46,7 @@ test('existing first stores are compatibility profiles on one Store Admin Engine
   assert.match(script,/noRoleSpecificAdminPages/);assert.match(script,/tenant\.marketing\.manage/);
   assert.doesNotMatch(script,/\['store_owner','tenant_admin','platform_admin'\]/);
   assert.match(script,/state\.menu\?\.menu/);assert.match(script,/const JADAM_GROUPS=\[/);assert.match(script,/const GROUPS=SLUG==='jadam'/);assert.match(script,/오늘 운영/);assert.match(script,/배달앱 통합관리/);assert.match(script,/주문 현황/);assert.match(script,/품절 · 재고/);assert.match(script,/매출 · 정산/);assert.match(script,/리뷰 관리/);assert.match(script,/SNS · 자동게시/);assert.match(script,/배달앱 · POS 연결/);assert.match(script,/관리자 · 직원 권한/);assert.match(script,/홍보 · 채널/);assert.match(script,/매장 관리/);assert.match(script,/채널·자동게시/);assert.doesNotMatch(script,/mountCommandHome|EKODITenantCommandHome/);assert.match(script,/admin-nav-group-label/);assert.ok(script.includes("a.href=key==='overview'?ADMIN_BASE+'/overview':ADMIN_BASE+'/'+key"));assert.match(script,/root\.hidden=true/);assert.doesNotMatch(script,/a\.dataset\.group=group\.id/);assert.doesNotMatch(script,/state\.menu\?\.items/);
+  assert.match(script,/chrome:POLICY\.capabilities\.site/);
   assert.match(script,/https:\/\/ekodi\.kr\/workspace-api/);
   assert.match(script,/\/v1\/store-sms\/orders/);
   assert.match(script,/data-sms-action/);
