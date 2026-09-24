@@ -30,8 +30,8 @@ const COMMON_VIEWS=Object.freeze({
   },
   delivery:{
     label:'배달플랫폼 통합관리',
-    description:'브랜드별 배달플랫폼 관리 화면으로 바로 이동합니다.',
-    sections:[['delivery','배달플랫폼'],['menu','메뉴 · 가격'],['orders','주문 · 채널']],
+    description:'세 브랜드의 배달앱 업무를 한 화면에서 찾고, 실제 변경은 각 브랜드의 정식 관리자에서 안전하게 실행합니다.',
+    sections:[['delivery','배달앱 통합관리'],['menu','메뉴 · 가격'],['orders','주문 · 채널'],['inventory','품절 · 재고'],['reviews','리뷰'],['finance','비용 · 정산'],['connections','배달앱 · POS 연결']],
   },
   menu:{
     label:'메뉴 · 가격 통합관리',
@@ -81,6 +81,8 @@ const COMMON_MENU=Object.freeze([
   ['operations','매장 운영'],
   ['connections','연결 · 권한'],
 ]);
+
+const DELIVERY_PLATFORMS=Object.freeze(['배달의민족','쿠팡이츠','요기요','땡겨요','먹깨비','당근 주문','네이버 주문']);
 
 const SHELL_STYLE=`:root{
   font-family:Inter,Pretendard,"Noto Sans KR",system-ui,sans-serif;
@@ -166,7 +168,8 @@ h1{margin:0 0 7px;font-size:28px;letter-spacing:-.04em;line-height:1.2}p{margin:
 .actions{display:grid;gap:6px}.actions a{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border:1px solid #e0e6df;border-radius:8px;background:#fff;text-decoration:none;color:#405047;font-size:11px;font-weight:780}
 .actions a:hover{background:#eff6f0;color:#17492b;border-color:#cddfd1}.actions a:first-child{background:#1f5b36;color:#fff;border-color:#1f5b36}
 .help{margin-top:14px;padding:13px 14px;background:#fff;border:1px solid var(--line);border-radius:12px;color:#768279;font-size:10px;line-height:1.6}
-@media(max-width:900px){.grid{grid-template-columns:1fr}.head{display:block}.badge{display:inline-block;margin-top:10px}}
+.delivery-overview{margin-bottom:14px;padding:14px 15px;border:1px solid #d7e3d8;border-radius:13px;background:#f8fbf8}.delivery-overview strong{display:block;font-size:13px;margin-bottom:5px}.delivery-overview p{font-size:11px}.delivery-platforms{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.delivery-platform{display:inline-flex;align-items:center;padding:6px 8px;border:1px solid #dfe7df;border-radius:999px;background:#fff;color:#4b5b50;font-size:9.5px;font-weight:800}.delivery-card-note{margin:-3px 0 10px;padding:8px 9px;border-radius:8px;background:#f5f8f5;color:#758078;font-size:9.5px;line-height:1.5}.delivery-card .actions{grid-template-columns:repeat(2,minmax(0,1fr))}.delivery-card .actions a:first-child{grid-column:1/-1}.delivery-card .actions a:nth-child(2){background:#eef6f0;color:#17492b;border-color:#cddfd1}.delivery-safety{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}.delivery-safety div{padding:10px;border:1px solid #e1e7df;border-radius:9px;background:#fff}.delivery-safety b{display:block;font-size:10px;margin-bottom:3px}.delivery-safety span{display:block;color:#7a867e;font-size:9px;line-height:1.45}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.head{display:block}.badge{display:inline-block;margin-top:10px}.delivery-safety{grid-template-columns:1fr}}
 @media(max-width:390px){body{padding:16px}h1{font-size:24px}}`;
 
 function adminHref(store,section='',embedded=true){
@@ -188,6 +191,15 @@ function brandMenu(store){
 function panelCard(store,view){
   const actions=view.sections.map(([section,label])=>`<a href="${adminHref(store,section)}"><span>${label}</span><b>→</b></a>`).join('');
   return `<article class="card"><div class="card-head"><span class="mark">${store.mark}</span><div><h2>${store.name}</h2><small>${store.short} 관리자</small></div></div><div class="actions">${actions}</div></article>`;
+}
+
+function deliveryPanelCard(store,view){
+  const actions=view.sections.map(([section,label])=>`<a href="${adminHref(store,section)}"><span>${label}</span><b>→</b></a>`).join('');
+  return `<article class="card delivery-card" data-delivery-brand="${store.slug}"><div class="card-head"><span class="mark">${store.mark}</span><div><h2>${store.name}</h2><small>${store.short} · 배달 운영</small></div></div><p class="delivery-card-note">연결상태·주문·매출·정산·리뷰는 이 브랜드의 실제 관리자 원장에서 확인합니다. 다른 브랜드 데이터는 함께 수정되지 않습니다.</p><div class="actions">${actions}</div></article>`;
+}
+
+function deliveryOverview(){
+  return `<section class="delivery-overview" data-cmpmyi-delivery-control="brand-handoff"><strong>3개 브랜드 · 7개 배달/주문 채널을 한곳에서 관리</strong><p>여기서는 브랜드와 업무를 빠르게 선택합니다. 가격·품절·게시·주문 변경은 선택한 브랜드 관리자에서 권한을 다시 확인하고 사람 승인과 공식 Adapter를 거쳐 실행합니다.</p><div class="delivery-platforms">${DELIVERY_PLATFORMS.map(label=>`<span class="delivery-platform">${label}</span>`).join('')}</div><div class="delivery-safety"><div><b>1 · 상태 확인</b><span>브랜드별 연결·동기화·가격차이·주문·정산·리뷰를 확인합니다.</span></div><div><b>2 · 변경 선택</b><span>메뉴·가격·품절 등 변경할 업무와 배달앱을 선택합니다.</span></div><div><b>3 · 승인 후 실행</b><span>브랜드 권한과 Human Gate를 확인한 뒤 연결된 공식 Adapter만 실행합니다.</span></div></div></section>`;
 }
 
 export function storePortfolioAdminPage(){
@@ -230,9 +242,10 @@ export function storePortfolioAdminPanelPage(viewName='overview'){
   const html=`<!doctype html><html lang="ko" data-ekodi-store-portfolio-panel="${key}">
   <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>${view.label} · 통합 매장 운영</title><style>${PANEL_STYLE}</style></head>
   <body>
-    <section class="head"><div><p class="eyebrow">CMPMYI · COMMON MANAGEMENT</p><h1>${view.label}</h1><p>${view.description}</p></div><span class="badge">브랜드 선택 → 오른쪽에서 계속 관리</span></section>
-    <section class="grid" aria-label="${view.label} 브랜드 선택">${STORES.map(store=>panelCard(store,view)).join('')}</section>
-    <div class="help">통합관리 메뉴는 세 브랜드의 동일 업무를 빠르게 찾는 공통 진입점입니다. 실제 수정·저장·권한 검사는 각 브랜드 관리자 범위에서 수행됩니다.</div>
+    <section class="head"><div><p class="eyebrow">CMPMYI · COMMON MANAGEMENT</p><h1>${view.label}</h1><p>${view.description}</p></div><span class="badge">${key==='delivery'?'통합 확인 → 브랜드별 안전 실행':'브랜드 선택 → 오른쪽에서 계속 관리'}</span></section>
+    ${key==='delivery'?deliveryOverview():''}
+    <section class="grid" aria-label="${view.label} 브랜드 선택">${STORES.map(store=>key==='delivery'?deliveryPanelCard(store,view):panelCard(store,view)).join('')}</section>
+    <div class="help">${key==='delivery'?'통합화면은 브랜드 간 데이터를 합쳐 쓰지 않습니다. 변경 요청은 반드시 선택한 브랜드의 고유 관리자 URL에서 수행하고, 연결되지 않은 플랫폼은 실행 대상에서 제외합니다.':'통합관리 메뉴는 세 브랜드의 동일 업무를 빠르게 찾는 공통 진입점입니다. 실제 수정·저장·권한 검사는 각 브랜드 관리자 범위에서 수행됩니다.'}</div>
   </body></html>`;
   return new Response(html,{headers:{
     'content-type':'text/html; charset=utf-8',
