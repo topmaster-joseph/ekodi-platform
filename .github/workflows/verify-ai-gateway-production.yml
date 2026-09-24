@@ -40,6 +40,7 @@ jobs:
             health_code=$(curl -sS -o /tmp/ai-health -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/__health' || true)
             services_code=$(curl -sS -o /tmp/ai-services -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/services' || true)
             client_code=$(curl -sS -D /tmp/ai-client-headers -o /tmp/ai-client -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/client' || true)
+            style_code=$(curl -sS -D /tmp/ai-style-headers -o /tmp/ai-style -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/style' || true)
             capabilities_code=$(curl -sS -o /tmp/ai-capabilities -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/capabilities' || true)
             requests_code=$(curl -sS -o /tmp/ai-requests -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/requests' || true)
             ideas_code=$(curl -sS -o /tmp/ai-ideas -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/ideas' || true)
@@ -48,6 +49,7 @@ jobs:
               && [ "$health_code" = '200' ] \
               && [ "$services_code" = '200' ] \
               && [ "$client_code" = '200' ] \
+              && [ "$style_code" = '200' ] \
               && [ "$capabilities_code" = '410' ] \
               && [ "$requests_code" = '200' ] \
               && [ "$ideas_code" = '401' ] \
@@ -68,6 +70,11 @@ jobs:
               && ! grep -Fq '"capabilityId"' /tmp/ai-services \
               && grep -Fiq 'x-ekodi-ai-asset: worker-owned-v1' /tmp/ai-client-headers \
               && grep -Fiq 'content-type: text/javascript' /tmp/ai-client-headers \
+              && grep -Fiq 'x-ekodi-ai-asset: worker-owned-v1' /tmp/ai-style-headers \
+              && grep -Fiq 'content-type: text/css' /tmp/ai-style-headers \
+              && grep -Fq '.page' /tmp/ai-style \
+              && grep -Fq 'want-form' /tmp/ai-style \
+              && grep -Fq '.service-state' /tmp/ai-style \
               && grep -Fq "const API_BASE=location.pathname.startsWith('/ai')?'/ai':'';" /tmp/ai-client \
               && grep -Fq 'function apiUrl(path)' /tmp/ai-client \
               && grep -Fq 'function serviceStatusMeta(service)' /tmp/ai-client \
@@ -81,7 +88,7 @@ jobs:
               passed='true'
               break
             fi
-            echo "AI Commons verification pending (attempt $attempt/8 canonical=$canonical_code root=$root_code health=$health_code services=$services_code client=$client_code capabilities=$capabilities_code requests=$requests_code ideas=$ideas_code)"
+            echo "AI Commons verification pending (attempt $attempt/8 canonical=$canonical_code root=$root_code health=$health_code services=$services_code client=$client_code style=$style_code capabilities=$capabilities_code requests=$requests_code ideas=$ideas_code)"
             sleep 8
           done
           test "$passed" = 'true' || (echo 'AI Commons production verification failed within bounded retries.' && exit 1)
