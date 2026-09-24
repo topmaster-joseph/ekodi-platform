@@ -30,9 +30,18 @@ for(const file of walk(root)){
       add(file,n,'HTTP Origin header contains a path',line);
     if(/access-control-allow-origin:\s*https:\/\/ekodi\.kr\//i.test(line))
       add(file,n,'CORS allow-origin contains a path',line);
-    if(/\bALLOWED_ORIGINS?\b[^\n]*https:\/\/ekodi\.kr\//i.test(line))
-      add(file,n,'CORS origin list contains a path',line);
+    if(/\bALLOWED_ORIGINS?\b\s*[:=]\s*["'`][^"'`]*https:\/\/ekodi\.kr\//i.test(line))
+      add(file,n,'CORS origin string contains a path',line);
   });
+  for(const m of text.matchAll(/\bALLOWED_ORIGINS?\b\s*=\s*new Set\(\[([\s\S]*?)\]\)/gi)){
+    const values=[...m[1].matchAll(/['"`]([^'"`]+)['"`]/g)].map(x=>x[1]);
+    for(const value of values){
+      if(/^https:\/\/ekodi\.kr\//i.test(value)){
+        const before=text.slice(0,m.index).split(/\r?\n/).length;
+        add(file,before,'CORS origin Set contains a path',value);
+      }
+    }
+  }
   for(const m of text.matchAll(/\b(?:const|let|var)\s+([A-Z0-9_]*HOSTS?[A-Z0-9_]*)\s*=\s*new Set\(\[([\s\S]*?)\]\)/gi)){
     const values=[...m[2].matchAll(/['"`]([^'"`]+)['"`]/g)].map(x=>x[1]);
     for(const value of values){
