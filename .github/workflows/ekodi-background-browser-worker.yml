@@ -100,7 +100,8 @@ jobs:
         shell: bash
         env:
           INPUT_PATH: ${{ inputs.surface_path || '/' }}
-          INPUT_PATHS: ${{ inputs.surface_paths || '' }}
+          # PR smoke exercises representative public, personal, and admin surfaces so shared runtime errors are attributable before merge.
+          INPUT_PATHS: ${{ inputs.surface_paths || (github.event_name == 'pull_request' && '/,/my/,/admin/' || '') }}
           INPUT_DEVICE: ${{ inputs.device_profile || 'desktop' }}
         run: |
           node - <<'NODE'

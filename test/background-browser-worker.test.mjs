@@ -61,6 +61,8 @@ test('shared-site guarded release invokes native browser verification after prod
   assert.match(workerWorkflow,/userAiEntryCount/);
   assert.match(workerWorkflow,/test\("\/admin\(\?:\/\|\$\)"/);
   assert.match(workerWorkflow,/\.pageErrors \| length == 0/);
+  assert.match(source,/url:clean\(page\.url\(\),500\)/);
+  assert.match(workerWorkflow,/github\.event_name == 'pull_request'[\s\S]*'\/,\/my\/,\/admin\/'/);
   assert.match(workerWorkflow,/uses:\s*actions\/upload-artifact@v4\n\s*if:\s*always\(\)/);
   assert.match(workerWorkflow,/device_profile:/);
   assert.match(workerWorkflow,/group:\s*ekodi-background-browser-worker-\$\{\{ github\.ref \}\}-\$\{\{ inputs\.device_profile \|\| 'desktop' \}\}/);

@@ -100,6 +100,7 @@ export async function runTask(rawTask, options={}){
     name:clean(err?.name||'Error',120),
     message:clean(err?.message||err,500),
     stack:clean(err?.stack||'',2400),
+    url:clean(page.url(),500),
   }));
   page.on('requestfailed',req=>requestFailures.push({url:clean(req.url(),500),failure:clean(req.failure()?.errorText,200)}));
 
