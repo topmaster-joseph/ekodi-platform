@@ -21,6 +21,9 @@ if (policy.guestAccess?.minimumTierForContent !== 'guest' || policy.guestAccess?
 if (policy.guestAccess?.publicPageDefault !== 'guest-open' || policy.guestAccess?.authenticationEffect !== 'enhance-not-replace') fail('public user pages must be guest-open and authentication must enhance rather than replace them');
 if (policy.guestAccess?.permissionFailureBehavior !== 'retain-safe-public-projection' || policy.guestAccess?.canonicalPublicLoginWallForbidden !== true) fail('permission failures may not replace canonical public user pages');
 if (policy.paidPlans?.scope !== 'service_specific' || policy.paidPlans?.upgradeIndependently !== true) fail('paid plans must remain service-specific');
+if (policy.myEkodi?.canonicalUrl !== 'https://ekodi.kr/my/' || policy.myEkodi?.centralAiEntitlementManagement !== true) fail('My EKODI must be the canonical AI entitlement manager');
+if (policy.capabilityEntitlements?.sameCapabilitySameSubjectAcrossSurfaces !== true || policy.capabilityEntitlements?.duplicatePurchaseForSameCapabilityForbidden !== true) fail('same-subject capability sharing rule missing');
+if (policy.capabilityEntitlements?.siteAddonsRemainSiteScoped !== true || policy.capabilityEntitlements?.manager !== 'https://ekodi.kr/my/') fail('site add-on or manager boundary changed');
 if (policy.automaticInheritance?.enabledForFutureRegistryServices !== true) fail('future service inheritance must stay enabled');
 
 for (const id of expectedIds) {
@@ -40,11 +43,18 @@ const runtime = read('universal-membership.js');
 const missionEntry = read('mission-control-entry-worker.js');
 const myIndex = read('my/index.html');
 const mySummary = read('my/membership-summary.js');
+const entitlementEngine = read('ai-entitlement-engine.js');
+const entitlementPolicy = JSON.parse(read('config/ai-entitlement-policy.json'));
 if (!runtime.includes('/api/membership/portfolio')) fail('portfolio endpoint missing');
+if (!runtime.includes('/api/membership/entitlements')) fail('central AI entitlement endpoint missing');
+if (!runtime.includes('customer_access_grants') || !runtime.includes("workspace:")) fail('subject-aware workspace entitlement resolution missing');
 if (!runtime.includes('inherited: true')) fail('lazy inherited FREE projection missing');
 if (!runtime.includes('USER_SERVICE_ORIGINS')) fail('registry-driven CORS missing');
 if (!missionEntry.includes("path.startsWith('/api/membership/')") || !missionEntry.includes('handleUniversalMembership')) fail('Control API does not route membership through universal layer');
 if (!myIndex.includes('/membership-summary.js') || !myIndex.includes('/membership-summary.css')) fail('My EKODI membership summary assets missing');
 if (!mySummary.includes("https://ekodi.kr/api/membership/portfolio")) fail('My EKODI is not connected to portfolio endpoint');
+if (!mySummary.includes("https://ekodi.kr/api/membership/entitlements")) fail('My EKODI is not connected to central AI entitlements');
+if (!mySummary.includes('aiEntitlementSubject')) fail('My EKODI subject switcher missing');
+if (entitlementPolicy.managerUrl !== 'https://ekodi.kr/my/' || !entitlementEngine.includes('sameCapabilitySameSubjectAcrossSurfaces')) fail('AI entitlement manager contract missing');
 
-console.log(`Universal membership contract OK: ${expectedIds.length} user services inherit FREE; paid tiers remain service-specific.`);
+console.log(`Universal membership contract OK: ${expectedIds.length} user services inherit FREE; paid tiers stay service-specific while exact AI capabilities are shared per subject across surfaces.`);
