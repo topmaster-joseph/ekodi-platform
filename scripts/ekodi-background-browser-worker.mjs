@@ -96,7 +96,11 @@ export async function runTask(rawTask, options={}){
   const page=await context.newPage();
   const consoleErrors=[],pageErrors=[],requestFailures=[],blockedMutations=[];
   page.on('console',msg=>{ if(msg.type()==='error') consoleErrors.push(clean(msg.text(),500)); });
-  page.on('pageerror',err=>pageErrors.push(clean(err?.message||err,500)));
+  page.on('pageerror',err=>pageErrors.push({
+    name:clean(err?.name||'Error',120),
+    message:clean(err?.message||err,500),
+    stack:clean(err?.stack||'',2400),
+  }));
   page.on('requestfailed',req=>requestFailures.push({url:clean(req.url(),500),failure:clean(req.failure()?.errorText,200)}));
 
   await page.route('**/*',async route=>{
