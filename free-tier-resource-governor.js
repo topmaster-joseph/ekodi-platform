@@ -6,7 +6,13 @@ const STATE_RANK=Object.freeze({normal:0,warning:1,conserve:2,protect:3,survival
 
 export const FREE_TIER_RESOURCE_CATALOG=Object.freeze({
   cloudflare:Object.freeze({
-    referenceDate:'2026-09-20',
+    referenceDate:'2026-09-25',
+    facts:Object.freeze({
+      workersBuildMinutesPerMonthFree:3000,
+      workersBuildConcurrencyFree:1,
+      workersBuildTimeoutMinutes:20,
+      workersRequestsPerDayFree:100000,
+    }),
     metrics:Object.freeze([
       {metric:'workers_requests_daily',label:'Workers requests / day',freeLimit:100000,unit:'requests',scope:'consumption'},
       {metric:'d1_rows_read_daily',label:'D1 rows read / day',freeLimit:5000000,unit:'rows',scope:'consumption'},
