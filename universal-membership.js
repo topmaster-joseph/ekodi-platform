@@ -2,6 +2,7 @@ import { handleMembershipBilling as handleLegacyMembershipBilling, runMembership
 import { isAllowedOrigin } from './auth-worker.js';
 import { USER_SERVICES, USER_SERVICE_IDS } from './generated/user-services.js';
 import { canonicalAiSubject, legacyAiSubject, resolveCanonicalEkodiIdentity } from './personal-ai-bridge.js';
+import { AI_ENTITLEMENT_POLICY, buildAiEntitlementSnapshot } from './ai-entitlement-engine.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -127,6 +128,103 @@ function subscriptionSubjects(identity) {
   return [...new Set([canonicalAiSubject(identity), identity.personId, legacyAiSubject(identity)].filter(Boolean).map(String))];
 }
 
+function planManagerRole(role) {
+  return new Set(AI_ENTITLEMENT_POLICY.managementRoles || []).has(String(role || '').trim().toLowerCase());
+}
+
+async function entitlementSubjects(env, identity) {
+  const subjects = [{
+    id: 'person',
+    type: 'person',
+    name: '개인',
+    role: 'owner',
+    canManage: true,
+    storageType: 'person',
+    storageKey: canonicalAiSubject(identity),
+  }];
+  try {
+    const rows = await env.DB.prepare(`SELECT t.slug,t.name,g.role
+      FROM customer_tenants t
+      JOIN customer_access_grants g ON g.tenant_id=t.id
+      WHERE t.status='active' AND g.enabled=1 AND lower(g.email)=?
+      ORDER BY t.name,t.slug`).bind(String(identity.email || '').toLowerCase()).all();
+    for (const row of rows.results || []) {
+      const slug = String(row.slug || '').trim().toLowerCase();
+      if (!slug) continue;
+      subjects.push({
+        id: `workspace:${slug}`,
+        type: 'workspace',
+        name: String(row.name || slug),
+        role: String(row.role || 'member'),
+        canManage: planManagerRole(row.role),
+        storageType: 'tenant',
+        storageKey: slug,
+      });
+    }
+  } catch (error) {
+    console.warn('entitlement subjects unavailable', error?.message || error);
+  }
+  return subjects;
+}
+
+function publicEntitlementSubject(subject = {}) {
+  return {
+    id: String(subject.id || 'person'),
+    type: String(subject.type || 'person'),
+    name: String(subject.name || '개인'),
+    role: String(subject.role || 'member'),
+    canManage: subject.canManage === true,
+  };
+}
+
+function requestedEntitlementSubject(url, subjects = []) {
+  const requested = String(url.searchParams.get('subject') || 'person').trim().toLowerCase();
+  return subjects.find((subject) => String(subject.id).toLowerCase() === requested) || subjects.find((subject) => subject.id === 'person') || subjects[0] || null;
+}
+
+async function subscriptionMapForSubject(env, identity, subject) {
+  const bySite = new Map();
+  if (!subject) return bySite;
+  if (subject.storageType === 'person') {
+    for (const key of subscriptionSubjects(identity)) {
+      const rows = await env.DB.prepare(`SELECT site,plan_id,status,monthly_fee,current_period_end,next_billing_at,cancel_at_period_end
+        FROM service_subscriptions WHERE subject_type='person' AND subject_key=?`).bind(key).all();
+      for (const row of rows.results || []) if (!bySite.has(String(row.site))) bySite.set(String(row.site), row);
+    }
+    return bySite;
+  }
+  const rows = await env.DB.prepare(`SELECT site,plan_id,status,monthly_fee,current_period_end,next_billing_at,cancel_at_period_end
+    FROM service_subscriptions WHERE subject_type=? AND subject_key=?`)
+    .bind(subject.storageType, subject.storageKey).all();
+  for (const row of rows.results || []) bySite.set(String(row.site), row);
+  return bySite;
+}
+
+export async function aiEntitlementSnapshotForIdentity(request, env, identity) {
+  if (!env?.DB || !identity?.canonical) return json({ error:'EKODI ID가 필요합니다.', code:'MEMBERSHIP_CANONICAL_ID_REQUIRED' }, 403, request, env || {});
+  await ensureFreeSchema(env.DB);
+  const url = new URL(request.url);
+  const subjects = await entitlementSubjects(env, identity);
+  const selected = requestedEntitlementSubject(url, subjects);
+  if (!selected) return json({ error:'이용 주체를 확인할 수 없습니다.', code:'ENTITLEMENT_SUBJECT_REQUIRED' }, 409, request, env);
+  const subscriptions = await subscriptionMapForSubject(env, identity, selected);
+  const snapshot = buildAiEntitlementSnapshot({
+    subject: publicEntitlementSubject(selected),
+    subscriptions,
+    authenticated: true,
+  });
+  return json({
+    ...snapshot,
+    subjects: subjects.map(publicEntitlementSubject),
+  }, 200, request, env);
+}
+
+async function entitlementSnapshot(request, env) {
+  const identity = await userIdentity(request);
+  if (!identity) return json({ error:'EKODI 로그인 세션을 확인해 주세요.' }, 401, request, env);
+  return aiEntitlementSnapshotForIdentity(request, env, identity);
+}
+
 async function materializeFree(db, identity, site) {
   const subject = canonicalAiSubject(identity);
   const now = new Date().toISOString();
@@ -227,6 +325,7 @@ export async function handleUniversalMembership(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
   if (request.method === 'GET' && path === '/api/membership/portfolio') return portfolio(request, env);
+  if (request.method === 'GET' && path === '/api/membership/entitlements') return entitlementSnapshot(request, env);
 
   const querySite = normalizeRegistrySite(url.searchParams.get('site'));
   if (querySite && !LEGACY_MEMBERSHIP_SITES.has(querySite)) {
