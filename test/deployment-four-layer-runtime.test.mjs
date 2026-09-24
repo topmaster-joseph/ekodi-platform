@@ -92,3 +92,16 @@ test('hold happens before infrastructure repair and guarded candidate mutation',
   assert.ok(hold>=0&&hold<domainRepair);
   assert.ok(domainRepair<candidate);
 });
+
+
+test('scheduled recovery runs only after a quota-specific hold and never promotes stale artifacts directly',async()=>{
+  const workflow=await readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
+  assert.match(workflow,/cron: '7 0 \* \* \*'/);
+  assert.match(workflow,/prior_conclusion/);
+  assert.match(workflow,/non-quota-failure-requires-review/);
+  assert.match(workflow,/Cloudflare Workers runtime quota is exhausted\. EKODI completed CI, staging and immutable artifact continuity/);
+  assert.match(workflow,/quota-reset-resume-same-sha/);
+  assert.match(workflow,/quota-reset-revalidate-current-main/);
+  assert.match(workflow,/fresh-current-main-revalidation/);
+  assert.match(workflow,/No held artifact is promoted directly/);
+});
