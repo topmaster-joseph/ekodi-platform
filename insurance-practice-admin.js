@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const API='https://ekodi.kr/api',KEY='ekodi-insurance-affiliation-v1';
+  const API='https://ekodi.kr',KEY='ekodi-insurance-affiliation-v1';
   const state={practice:null,affiliations:[],connectors:[],summary:[],active:''};
   const token=()=>{try{return sessionStorage.getItem('ekodi-auth-token')||''}catch{return''}};
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
