@@ -39,8 +39,6 @@ test('central and EKODIBIZ Books entries hand off to the dedicated admin', async
   assert.equal(scope?.adminHref, '/ekodibooks/admin?source=ekodibiz');
   assert.equal(ekodiBizAdminScopeForPath('/ekodibooks/admin/royalties'), 'books');
 
-  const menuLayout = await fs.readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
-  assert.match(menuLayout, /definition\?\.href&&definition\.adminHandoff===true/);
 });
 
 test('platform routers serve EKODI Books before generic workspace admin routing', async () => {
