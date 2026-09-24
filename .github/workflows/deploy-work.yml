@@ -70,11 +70,11 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 24); do
-            code=$(curl -sS -o /tmp/work-client-auth.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/client-auth.js' || true)
-            router=$(curl -sS -o /tmp/work-auth-router.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/auth-router.js' || true)
+            code=$(curl -sS -o /tmp/work-client-auth.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/auth/client-auth.js' || true)
+            router=$(curl -sS -o /tmp/work-auth-router.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/auth/auth-router.js' || true)
             if [[ "$code" == "200" ]] && [[ "$router" == "200" ]] \
               && grep -Fq "work:{name:'EKODI Work'" /tmp/work-client-auth.js \
-              && grep -Fq "returnTo:'https://work.ekodi.kr/'" /tmp/work-client-auth.js \
+              && grep -Fq "returnTo:'https://ekodi.kr/work/'" /tmp/work-client-auth.js \
               && grep -Fq "isRegistryUserService||trustedEkodiReturn" /tmp/work-auth-router.js; then
               echo 'Central Work auth realm is live.'
               break
@@ -118,11 +118,11 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -o /tmp/work.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://work.ekodi.kr/' || true)
-            config_code=$(curl -sS -o /tmp/work-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://work.ekodi.kr/config.js' || true)
-            health_code=$(curl -sS -o /tmp/work-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://work.ekodi.kr/health' || true)
-            feed_code=$(curl -sS -o /tmp/work-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://work.ekodi.kr/api/opportunities?limit=4' || true)
-            os_code=$(curl -sS -o /tmp/work-os.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://work.ekodi.kr/workforce-os.js' || true)
+            root_code=$(curl -L -sS -o /tmp/work.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/work/' || true)
+            config_code=$(curl -sS -o /tmp/work-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/work/config.js' || true)
+            health_code=$(curl -sS -o /tmp/work-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/work/health' || true)
+            feed_code=$(curl -sS -o /tmp/work-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/work/api/opportunities?limit=4' || true)
+            os_code=$(curl -sS -o /tmp/work-os.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/work/workforce-os.js' || true)
             if [[ "$root_code" == "200" ]] && [[ "$config_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$feed_code" == "200" ]] && [[ "$os_code" == "200" ]] \
               && grep -Fq 'EKODI Work' /tmp/work.html \
               && grep -Fq 'LOCAL WORKFORCE OS' /tmp/work.html \

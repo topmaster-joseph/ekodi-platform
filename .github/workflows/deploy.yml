@@ -41,14 +41,14 @@ jobs:
           verify_html() { url="$1"; needle="$2"; code=$(curl -L -sS -o /tmp/verify-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true); echo "$url -> $code"; [[ "$code" =~ ^[23] ]] && grep -Fq "$needle" /tmp/verify-body; }
           for attempt in $(seq 1 12); do
             api=$(curl -fsS --connect-timeout 5 --max-time 12 'https://ekodi.kr/api/health' || true)
-            finance=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/health' || true)
+            finance=$(curl -fsS --connect-timeout 5 --max-time 12 'https://ekodi.kr/finance-api/health' || true)
             community=$(curl -fsS --connect-timeout 5 --max-time 12 'https://ekodi.kr/community/health' || true)
-            social=$(curl -fsS --connect-timeout 5 --max-time 12 'https://social.ekodi.kr/health' || true)
+            social=$(curl -fsS --connect-timeout 5 --max-time 12 'https://ekodi.kr/social/health' || true)
             if verify_html 'https://ekodi.kr/' 'CONNECTED ECOSYSTEM' \
-              && verify_html 'https://admin.ekodi.kr/' '<title>EKODI Admin</title>' \
-              && verify_html 'https://auth.ekodi.kr/' 'EKODI 로그인' \
-              && verify_html 'https://marketing.ekodi.kr/' '마케팅AI' \
-              && verify_html 'https://books.ekodi.kr/' 'EKODI' \
+              && verify_html 'https://ekodi.kr/admin/' '<title>EKODI Admin</title>' \
+              && verify_html 'https://ekodi.kr/auth/' 'EKODI 로그인' \
+              && verify_html 'https://ekodi.kr/marketing/' '마케팅AI' \
+              && verify_html 'https://ekodi.kr/books/' 'EKODI' \
               && printf '%s' "$api" | grep -q '"ok":true' \
               && printf '%s' "$finance" | grep -q '"ok":true' \
               && printf '%s' "$community" | grep -q '"ok":true' \

@@ -198,16 +198,16 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 24); do
-            root=$(curl -L -sS -D /tmp/life-h -o /tmp/life.html -w '%{http_code}' --max-time 15 'https://life.ekodi.kr/' || true)
-            health=$(curl -sS -o /tmp/life-health.json -w '%{http_code}' --max-time 15 'https://life.ekodi.kr/health' || true)
-            config=$(curl -sS -o /tmp/life-config.js -w '%{http_code}' --max-time 15 'https://life.ekodi.kr/config.js' || true)
-            today=$(curl -sS -o /tmp/life-today.json -w '%{http_code}' --max-time 15 'https://life.ekodi.kr/api/today' || true)
-            guest=$(curl -sS -o /tmp/life-guest.json -w '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{"message":"요즘 장사가 힘들어요","topic":"money"}' 'https://life.ekodi.kr/api/reflect' || true)
-            admin=$(curl -sS -o /dev/null -D /tmp/life-admin-h -w '%{http_code}' --max-time 15 'https://life.ekodi.kr/admin' || true)
-            my=$(curl -sS -o /dev/null -D /tmp/life-my-h -w '%{http_code}' --max-time 15 'https://life.ekodi.kr/my' || true)
+            root=$(curl -L -sS -D /tmp/life-h -o /tmp/life.html -w '%{http_code}' --max-time 15 'https://ekodi.kr/life/' || true)
+            health=$(curl -sS -o /tmp/life-health.json -w '%{http_code}' --max-time 15 'https://ekodi.kr/life/health' || true)
+            config=$(curl -sS -o /tmp/life-config.js -w '%{http_code}' --max-time 15 'https://ekodi.kr/life/config.js' || true)
+            today=$(curl -sS -o /tmp/life-today.json -w '%{http_code}' --max-time 15 'https://ekodi.kr/life/api/today' || true)
+            guest=$(curl -sS -o /tmp/life-guest.json -w '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{"message":"요즘 장사가 힘들어요","topic":"money"}' 'https://ekodi.kr/life/api/reflect' || true)
+            admin=$(curl -sS -o /dev/null -D /tmp/life-admin-h -w '%{http_code}' --max-time 15 'https://ekodi.kr/life/admin' || true)
+            my=$(curl -sS -o /dev/null -D /tmp/life-my-h -w '%{http_code}' --max-time 15 'https://ekodi.kr/life/my' || true)
             topics_ok=true
             for path in relationship money work family heart future faith meaning; do
-              code=$(curl -L -sS -o "/tmp/life-${path}.html" -w '%{http_code}' --max-time 15 "https://life.ekodi.kr/$path" || true)
+              code=$(curl -L -sS -o "/tmp/life-${path}.html" -w '%{http_code}' --max-time 15 "https://ekodi.kr/life/$path" || true)
               [[ "$code" == '200' ]] || topics_ok=false
               grep -Fq '오늘의 질문' "/tmp/life-${path}.html" || topics_ok=false
             done
