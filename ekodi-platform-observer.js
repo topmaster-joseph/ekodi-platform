@@ -31,6 +31,8 @@ function project(row = {}, nowMs, maxAgeMs) {
 export function buildPlatformServiceObservations(latestRows = [], historyRows = [], options = {}) {
   const nowMs = Date.parse(String(options.now || '')) || Date.now();
   const maxAgeMs = Math.max(60_000, Number(options.maxAgeMs) || 15 * 60_000);
+  const previousNowMs = Date.parse(String(options.previousNow || ''));
+  const hasPreviousCycleTime = Number.isFinite(previousNowMs);
   const current = {};
   const previous = {};
   const latestTime = new Map();
@@ -45,8 +47,15 @@ export function buildPlatformServiceObservations(latestRows = [], historyRows = 
   for (const row of Array.isArray(historyRows) ? historyRows : []) {
     const id = text(row?.service_id, 100);
     if (!id || previous[id]) continue;
+    const checkedAt = String(row.checked_at || '');
+    if (hasPreviousCycleTime) {
+      const checkedMs = Date.parse(checkedAt);
+      if (!Number.isFinite(checkedMs) || checkedMs > previousNowMs) continue;
+      previous[id] = project(row, previousNowMs, maxAgeMs);
+      continue;
+    }
     const newest = latestTime.get(id);
-    if (newest && String(row.checked_at || '') >= newest) continue;
+    if (newest && checkedAt >= newest) continue;
     previous[id] = project(row, nowMs, maxAgeMs);
   }
 
