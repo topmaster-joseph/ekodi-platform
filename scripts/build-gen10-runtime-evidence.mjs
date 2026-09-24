@@ -150,7 +150,7 @@ function jsonHex(value) {
 export function buildRuntimeEvidenceSql(evidence) {
   const source = evidence?.source || {};
   const json = jsonHex(evidence);
-  return `PRAGMA foreign_keys = ON;
+  const primarySql = `PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS ai_generation10_evidence (
   id TEXT PRIMARY KEY,
   generation INTEGER NOT NULL,
