@@ -186,6 +186,7 @@ function structuredPolicyEdits(file,text){
   if(file==='scripts/validate-constitution.mjs')return fixConstitutionValidator(text);
   if(file==='test/apex-mail-messenger-invest.test.mjs'){
     text=text.replace(/assert\.ok\(!appProbe\.expect\.includes\('https:\/\/ekodi\.kr\/workspace-api'\)\);?/g,'');
+    text=text.replace(/assert\.equal\(probes\.some\(item=>item\.url\.startsWith\('https:\/\/ekodi\.kr\/messenger'\)\),false\);?/g,'');
     text=text.replace(/assert\.equal\(\[\.\.\.urls\]\.some\(url=>url\.startsWith\('https:\/\/ekodi\.kr\/invest'\)\),false\);?/g,'');
     return text;
   }
