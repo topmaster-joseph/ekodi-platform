@@ -46,17 +46,17 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.equal(adminRuntime.includes('function installLocaleControl()'),false);
   assert.equal(adminRuntime.includes('<option value="ko">한국어</option><option value="en">English</option>'),false);
 
-  for (const label of ['통합현황','서비스','사이트','사용자·권한','콘텐츠·운영','상태·배포','설정·기록']) assert.equal(adminRegistry.includes(`ko: '${label}'`),true);
+  for (const label of ['플랫폼 전체현황','사이트·브랜드','사용자·관리자·권한','서비스·AI','콘텐츠·행사·소통','운영·배포·장애','설정·보안·감사']) assert.equal(adminRegistry.includes(`ko: '${label}'`),true);
   assert.doesNotMatch(adminRegistry,/사이트구조|핵심서비스|공통서비스|전문서비스|고객사이트\(관리자\)/);
   assert.equal(adminRegistry.includes("{ id: 'community', group: 'content'"),true);
   assert.equal(adminRegistry.includes("{ id: 'books', group: 'content'"),true);
   assert.equal(adminRegistry.includes("{ id: 'devotional', group: 'content'"),true);
-  assert.equal(adminSidebar.includes("primary-sidebar-tabs-v3"),true);
+  assert.equal(adminSidebar.includes("role-projected-sidebar-v4"),true);
   assert.match(adminSidebar,/nav\[data-ekodi-admin-nav-mode="primary"\] > \.nav\{display:none!important\}/);
   assert.match(adminSidebar,/const closeDrawer = \(\) =>/);
   assert.match(adminSidebar,/menuButton\.addEventListener\('click',toggleDrawer\)/);
   assert.equal(adminSidebar.includes("display:flex!important;align-items:center;gap:14px"),true);
-  assert.equal(adminSidebar.includes("globals.querySelector(`:scope>.${DETAILS_CLASS}`)?.remove()"),true);
+  assert.equal(adminSidebar.includes("renderSidebarDetails(nav, globals, group, displayedSection || section, locale)"),true);
   assert.equal(adminDesign.includes('background:#0b1f36!important'),true);
   assert.equal(adminDesign.includes('background:#f6f8fb!important'),true);
   assert.equal(adminCompact.includes('social-connections'),true);
