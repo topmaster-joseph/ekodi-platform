@@ -36,16 +36,16 @@ test('existing first stores are compatibility profiles on one Store Admin Engine
     assert.equal(response.headers.get('x-ekodi-route'),`${store.slug}-store-admin`);
     assert.equal(response.headers.get('x-ekodi-store-scope'),store.id);
     assert.equal(response.headers.get('cache-control'),'no-store');
-    assert.match(html,new RegExp(store.brand));assert.match(html,/\/store-admin\.js\?v=20260924-cmpmyi-sidebar-v1/);assert.match(html,/data-ekodi-admin-sidebar/);assert.match(html,/data-ekodi-authority-scope="tenant"/);assert.match(html,/data-ekodi-admin-layout="two-level"/);assert.match(html,/id="sectionNav"[^>]*data-ekodi-admin-subnav[^>]*hidden/);assert.doesNotMatch(html,/로그인 후 세부 메뉴가 표시됩니다/);assert.match(html,/class="portfolio-entry" href="\/cmpmyi\/admin"/);assert.match(html,/통합관리 · 3개 브랜드/);assert.match(html,/data-ekodi-admin-nav-mode="primary"/);assert.match(html,/data-ekodi-admin-page-heading/);
+    assert.match(html,new RegExp(store.brand));assert.match(html,/\/store-admin\.js\?v=20260924-store-nav-v2/);assert.match(html,/data-ekodi-admin-sidebar/);assert.match(html,/data-ekodi-authority-scope="tenant"/);assert.match(html,/data-ekodi-admin-layout="two-level"/);assert.match(html,/id="sectionNav"[^>]*data-ekodi-admin-subnav[^>]*hidden/);assert.doesNotMatch(html,/로그인 후 세부 메뉴가 표시됩니다/);assert.match(html,/class="portfolio-entry" href="\/cmpmyi\/admin"/);assert.match(html,/3개 브랜드 통합관리/);assert.match(html,/data-ekodi-admin-nav-mode="primary"/);assert.match(html,/data-ekodi-admin-page-heading/);
   }
   assert.match(router,/storeAdminPage\(\{\.\.\.storeRoute,pathname:url\.pathname\}\)/);
-  const css=await storeAdminCss().text();assert.match(css,/word-break:keep-all/);assert.match(css,/\.section-nav\{display:none!important\}/);assert.match(css,/\.portfolio-entry\{/);assert.match(css,/\.scope strong\{[\s\S]*color:#172018!important/);assert.match(css,/\.heading h1\{[\s\S]*font-size:30px!important[\s\S]*line-height:1\.25!important[\s\S]*min-height:35px!important/);assert.match(css,/\.heading:before\{[\s\S]*background:#1f5b36/);
+  const css=await storeAdminCss().text();assert.match(css,/word-break:keep-all/);assert.match(css,/\.section-nav\{display:none!important\}/);assert.match(css,/\.portfolio-entry\{/);assert.match(css,/grid-template-columns:244px minmax\(0,1fr\)/);assert.match(css,/overflow-y:auto!important/);assert.match(css,/box-shadow:inset 3px 0 #1f5b36/);assert.match(css,/\.scope strong\{[\s\S]*color:#172018!important/);assert.match(css,/\.heading h1\{[\s\S]*font-size:30px!important[\s\S]*line-height:1\.25!important[\s\S]*min-height:35px!important/);assert.match(css,/\.heading:before\{[\s\S]*background:#1f5b36/);
   const script=await storeAdminScript().text();
   assert.match(script,/business_os_store_admin_snapshot/);assert.match(script,/store_operating_space_snapshot/);
   assert.match(script,/운영 데이터 비공개/);assert.match(script,/관리 영역/);
   assert.match(script,/noRoleSpecificAdminPages/);assert.match(script,/tenant\.marketing\.manage/);
   assert.doesNotMatch(script,/\['store_owner','tenant_admin','platform_admin'\]/);
-  assert.match(script,/state\.menu\?\.menu/);assert.match(script,/const GROUPS=\[/);assert.match(script,/마케팅 · 채널/);assert.match(script,/채널·자동게시/);assert.match(script,/\['publishing','채널·자동게시'\]/);assert.doesNotMatch(script,/mountCommandHome|EKODITenantCommandHome/);assert.match(script,/admin-nav-group-label/);assert.ok(script.includes("a.href=key==='overview'?ADMIN_BASE+'/overview':ADMIN_BASE+'/'+key"));assert.match(script,/root\.hidden=true/);assert.doesNotMatch(script,/a\.dataset\.group=group\.id/);assert.doesNotMatch(script,/state\.menu\?\.items/);
+  assert.match(script,/state\.menu\?\.menu/);assert.match(script,/const GROUPS=\[/);assert.match(script,/주문 · 배달/);assert.match(script,/홍보 · 채널/);assert.match(script,/매장 관리/);assert.match(script,/채널·자동게시/);assert.match(script,/\['publishing','채널·자동게시'\]/);assert.doesNotMatch(script,/mountCommandHome|EKODITenantCommandHome/);assert.match(script,/admin-nav-group-label/);assert.ok(script.includes("a.href=key==='overview'?ADMIN_BASE+'/overview':ADMIN_BASE+'/'+key"));assert.match(script,/root\.hidden=true/);assert.doesNotMatch(script,/a\.dataset\.group=group\.id/);assert.doesNotMatch(script,/state\.menu\?\.items/);
   assert.match(script,/https:\/\/ekodi\.kr\/workspace-api/);
   assert.match(script,/\/v1\/store-sms\/orders/);
   assert.match(script,/data-sms-action/);
@@ -62,6 +62,9 @@ test('server-rendered Store Admin headings match the requested route before Java
     ['/jadam/admin/menu','메뉴 · 가격','배달앱·POS에서 들어온 실제 메뉴와 가격 차이를 비교합니다.'],
     ['/jadam/admin/delivery','배달플랫폼','플랫폼별 매장·메뉴·주문·매출·정산·리뷰를 하나의 운영 흐름으로 관리합니다.'],
     ['/jadam/admin/connections','연결관리','POS·배달플랫폼·EKODI Orders 연결 상태를 관리합니다.'],
+    ['/jadam/admin/orders','주문 · 채널','오늘 주문과 채널별 매출 흐름을 집계값으로 확인합니다.'],
+    ['/jadam/admin/work','매장업무','점포 운영업무와 승인 필요 행동을 관리합니다.'],
+    ['/jadam/admin/members','사용자 · 권한','이 점포 사이트의 관리자와 사용자 권한을 같은 원장에서 관리합니다.'],
   ];
   for(const [pathname,title,copy] of cases){
     const html=await storeAdminPage({...profile,pathname}).text();
