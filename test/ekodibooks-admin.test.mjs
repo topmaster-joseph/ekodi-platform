@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import { legacyAdminAliasTarget } from '../admin-address-policy.js';
 import { isEkodiBooksAdminPath, ekodiBooksAdminPage, ekodiBooksAdminShellScript } from '../ekodibooks-admin-page.js';
 import { getAdminMenuItem } from '../admin-menu-registry.js';
+import { ADMIN_SERVICE_CATALOG, canonicalServiceAdminPath } from '../admin-service-catalog.js';
 import { ekodiBizAdminScopeForPath, EKODIBIZ_ADMIN_SCOPES } from '../ekodibiz-admin-registry.js';
 
 test('EKODI Books has a dedicated canonical admin surface and task menu', async () => {
@@ -33,6 +34,8 @@ test('central and EKODIBIZ Books entries hand off to the dedicated admin', async
 
   const books = getAdminMenuItem('books');
   assert.equal(books?.href, 'https://ekodi.kr/ekodibooks/admin');
+  const catalogBooks = ADMIN_SERVICE_CATALOG.find(item => item.id === 'books');
+  assert.equal(canonicalServiceAdminPath(catalogBooks?.basePath), '/ekodibooks/admin');
   assert.equal(books?.adminHandoff, true);
   assert.equal(books?.labels?.ko, '에코디서점');
 
