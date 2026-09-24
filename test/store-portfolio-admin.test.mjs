@@ -23,6 +23,9 @@ test('cmpmyi admin provides fixed common and brand navigation with a right works
   assert.match(html,/name="cmpmyi-panel"/);
   assert.match(html,/target="cmpmyi-panel"/);
   assert.match(html,/class="panel-frame"/);
+  assert.match(html,/class="portfolio-sidebar"/);
+  assert.match(html,/data-cmpmyi-navigation="left-fixed"/);
+  assert.doesNotMatch(html,/class="sidebar"/);
   for(const store of CMPMYI_STORES){
     assert.ok(html.includes(store.name));
     assert.ok(html.includes(`/${store.slug}/admin?embed=cmpmyi`));
