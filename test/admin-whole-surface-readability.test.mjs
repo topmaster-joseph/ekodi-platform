@@ -61,7 +61,7 @@ test('all major shared administrator routes receive the Admin Shell, including t
     /injectEkodiShell\(organizationAdminPage\(url\.pathname\),'space','admin'\)/,
     /injectEkodiShell\(churchPastorAdminPage\(\),'church','admin'\)/,
     /injectEkodiShell\(workspaceAdminPage\(\),'space','admin'\)/,
-    /injectEkodiShell\(tenantLiveAdminPage\(liveAdminTenant\),'live','admin'\)/,
+    /liveShell\(tenantLiveAdminPage\(liveAdminTenant\),'admin'\)/,
   ]) assert.match(router,pattern);
   assert.match(site,/injectEkodiShell\(secured, 'biz', 'admin'\)/);
 });
