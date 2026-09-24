@@ -20,7 +20,7 @@ test('AI Commons has one canonical public path and a private runtime owner', () 
   assert.match(site, /url\.pathname === '\/ai'/);
   assert.match(site, /url\.pathname\.startsWith\('\/ai\/'\)/);
   assert.match(site, /env\.AI\.fetch/);
-  assert.match(routes, /id:'ai',prefix:'\\/ai',binding:'AI'/);
+  assert.ok(routes.includes("id:'ai',prefix:'/ai',binding:'AI'"));
   assert.match(worker, /surface:'runtime-and-commons'/);
   assert.match(worker, /commons:true/);
   assert.doesNotMatch(read('platform-router-entry-worker.js'), /AI_GATEWAY_HOST|ai-gateway-page\.js/);
