@@ -25,6 +25,14 @@ A background browser is eligible only when all of the following are true:
 
 The user's active Chrome/Edge/Opera profile must never be concurrently controlled by EKODI automation.
 
+### Automatic execution lifecycle
+
+Unattended EKODI work is **background-only by default**. API checks run as background HTTP/API requests whenever a browser is unnecessary. Browser rendering uses an EKODI-owned headless process with a task-scoped profile. EKODI-created browser processes, temporary profiles and temporary artifacts are closed or deleted when the task finishes.
+
+If a background check returns HTTP 401/403, `authenticated:false`, or a recognized authentication-required code, the worker records `AUTH_REQUIRED` and closes its own automation surface. It must not open an interactive login tab automatically. The user's existing browser windows and tabs are never closed by this cleanup rule.
+
+Only OAuth/provider consent, CAPTCHA/human verification, hardware-backed authentication, or OS privileged consent may request a foreground interaction, and those remain separately gated by explicit local consent.
+
 ## Isolated desktop contract
 
 A GUI task that cannot run in a background browser may use only a verified secondary Windows session, VM or sandbox. A window that is merely minimized on the same interactive desktop is not isolation and is not sufficient.
