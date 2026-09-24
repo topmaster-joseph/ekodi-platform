@@ -34,6 +34,14 @@ export const EKODI_AI_DISCOVERY = Object.freeze({
     orchestrator_is_execution_authority: true,
     external_ai_is_execution_authority: false,
   }),
+  verification: Object.freeze({
+    current_state_requires_fresh_authoritative_evidence: true,
+    memory_is_not_verification: true,
+    prior_model_output_is_not_verification: true,
+    mcp_preferred_for_external_ai: true,
+    mcp_unavailable_behavior: 'report_unverified',
+    external_handoff_requires_ekodi_gate: true,
+  }),
 });
 
 function replaceOrInsert(html, pattern, replacement) {
@@ -94,6 +102,7 @@ export async function emitDiscoveryAssets() {
   if (!aiDiscovery.aliases?.includes('EKODI') || !aiDiscovery.aliases?.includes('에코디')) throw new Error('EKODI AI discovery aliases missing');
   if (aiDiscovery.ai?.mcp !== 'https://ekodi.kr/mcp') throw new Error('EKODI canonical MCP discovery endpoint missing');
   if (aiDiscovery.security?.orchestrator_is_execution_authority !== true || aiDiscovery.discovery?.name_recognition_is_authorization !== false) throw new Error('EKODI AI discovery security boundary invalid');
+  if (aiDiscovery.verification?.memory_is_not_verification !== true || aiDiscovery.verification?.current_state_requires_fresh_authoritative_evidence !== true || aiDiscovery.verification?.mcp_unavailable_behavior !== 'report_unverified') throw new Error('EKODI AI verification discovery contract invalid');
   for (const route of DISCOVERY_PUBLIC_ROUTES.filter(item => item.asset)) {
     const html = await readFile(`${output}${route.asset}`, 'utf8'); const canonical = canonicalUrl(route.path);
     if (!html.includes(`<link rel="canonical" href="${canonical}">`)) throw new Error(`Canonical marker missing: ${route.path}`);
