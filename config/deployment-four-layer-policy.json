@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-DEPLOYMENT-FOUR-LAYER-001",
+  "status": "enforced",
+  "effectiveDate": "2026-09-25",
+  "principle": "avoid-deploy-before-deploy, guarded-deploy-before-cloud-control, owner-only-for-account-authority",
+  "automaticPaidUpgrade": false,
+  "priority": [
+    {
+      "rank": 1,
+      "id": "runtime",
+      "label": "Runtime",
+      "purpose": "Apply changes without a production code deployment when the canonical runtime/data/config path already supports the change.",
+      "allowed": [
+        "read-only-health-and-diagnostics",
+        "data-driven-content",
+        "existing-feature-flags",
+        "existing-runtime-configuration",
+        "cache-and-static-asset-preference",
+        "safe-degraded-static-path"
+      ],
+      "forbidden": [
+        "source-code-change-disguised-as-runtime-config",
+        "security-boundary-bypass",
+        "credential-mutation",
+        "new-infrastructure"
+      ]
+    },
+    {
+      "rank": 2,
+      "id": "guarded-deploy",
+      "label": "Deploy",
+      "purpose": "Default code release through service-specific GitHub Actions plus Wrangler guarded release.",
+      "transport": "github-actions-wrangler-direct",
+      "cloudflareWorkersBuildsRequired": false,
+      "requiredLifecycle": [
+        "CI",
+        "Staging",
+        "0%-candidate",
+        "production-smoke",
+        "promotion",
+        "post-deploy-verification"
+      ],
+      "forbidden": [
+        "direct-agent-production-deploy",
+        "skip-guarded-release",
+        "automatic-paid-upgrade"
+      ]
+    },
+    {
+      "rank": 3,
+      "id": "cloud-control",
+      "label": "Cloud Control",
+      "purpose": "Break-glass infrastructure repair or configuration mutation when the normal guarded release path cannot proceed because infrastructure state is wrong.",
+      "defaultAutomation": "deny",
+      "temporaryScopedCredentialRequired": true,
+      "allowlistedOperationRequired": true,
+      "serviceDeploymentLane": false,
+      "returnsTo": "guarded-deploy",
+      "forbidden": [
+        "routine-service-deployment",
+        "worker-version-deploy",
+        "billing-change",
+        "account-ownership-change",
+        "broad-permanent-token"
+      ]
+    },
+    {
+      "rank": 4,
+      "id": "owner",
+      "label": "Owner",
+      "purpose": "Account, billing, identity ownership, root security, paid commitment, provider plan or limit-increase decisions.",
+      "automation": "never",
+      "freshHumanApprovalRequired": true,
+      "allowed": [
+        "provider-plan-change",
+        "paid-cost-commitment",
+        "limit-increase-request",
+        "account-or-billing-change",
+        "identity-ownership-change",
+        "root-security-change"
+      ]
+    }
+  ],
+  "cloudflareReference": {
+    "verifiedDate": "2026-09-25",
+    "workersBuildsFree": {
+      "buildMinutesPerMonth": 3000,
+      "concurrentBuilds": 1,
+      "buildTimeoutMinutes": 20
+    },
+    "workersFree": {
+      "requestsPerDay": 100000,
+      "dailyReset": "00:00 UTC"
+    }
+  },
+  "selectionRules": {
+    "runtimeFirst": true,
+    "guardedDeployIsDefaultCodeRelease": true,
+    "cloudControlIsNotSecondDeployLane": true,
+    "ownerNeverAutomated": true,
+    "unknownQuotaStateIsNotExhausted": true,
+    "cloudflareBuildsExhaustionDoesNotBlockGithubActionsWrangler": true,
+    "runtimeQuotaExhaustionNeverWeakensSecurityCriticalRoutes": true
+  }
+}

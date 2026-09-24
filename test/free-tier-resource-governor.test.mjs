@@ -61,5 +61,8 @@ test('runtime quota pressure blocks nonessential work while capacity remains a s
 test('verified catalog keeps public GitHub runners free and storage plan-aware',()=>{
   assert.equal(FREE_TIER_RESOURCE_CATALOG.github.facts.publicRepositoryStandardHostedRunners,'free');
   assert.equal(FREE_TIER_RESOURCE_CATALOG.github.facts.artifactStorage,'plan-dependent');
+  assert.equal(FREE_TIER_RESOURCE_CATALOG.cloudflare.facts.workersBuildMinutesPerMonthFree,3000);
+  assert.equal(FREE_TIER_RESOURCE_CATALOG.cloudflare.facts.workersBuildConcurrencyFree,1);
+  assert.equal(FREE_TIER_RESOURCE_CATALOG.cloudflare.facts.workersRequestsPerDayFree,100000);
   assert.equal(FREE_TIER_RESOURCE_CATALOG.supabase.metrics.find(x=>x.metric==='active_projects').freeLimit,2);
 });

@@ -229,9 +229,19 @@ jobs:
           grep -Fq 'site-header mnubiz-header' /tmp/mnubiz.html
           grep -Fq 'data-ekodi-user-footer=' /tmp/mnubiz.html
           grep -Fq 'data-ekodi-user-header-root=' /tmp/mnubiz.html
-          grep -Fq '/mnubiz/community' /tmp/mnubiz.html
+          grep -Fq 'data-ekodi-user-ai-entry="off"' /tmp/mnubiz.html
+          grep -Fq '국립목포대학교 경영동문회' /tmp/mnubiz.html
           grep -Fq '.mnubiz-hero' /tmp/mnubiz.css
+          grep -Fq 'body>main.mnubiz-main' /tmp/mnubiz.css
           grep -Fq -- '--ekodi-user-footer-background' /tmp/mnubiz.css
+          if grep -Fq '/mnubiz/community' /tmp/mnubiz.html; then
+            echo 'mnubiz public UI must not expose the legacy Community route'
+            exit 1
+          fi
+          if grep -Fq '운영공간' /tmp/mnubiz.html || grep -Fq 'Workspace' /tmp/mnubiz.html; then
+            echo 'mnubiz public UI must not expose legacy operating-space copy'
+            exit 1
+          fi
           if grep -Eq '<style[[:space:]>]' /tmp/mnubiz.html; then
             echo 'mnubiz must not depend on blocked inline CSS'
             exit 1

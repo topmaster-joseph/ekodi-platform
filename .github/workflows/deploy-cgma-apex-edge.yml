@@ -21,7 +21,7 @@ concurrency:
 env:
   WRANGLER_VERSION: '4.119.0'
   CGMA_SOURCE_REPO: topmaster-joseph/cheonggye-market
-  CGMA_SOURCE_REF: 'e092c20ce9a8811a282979512d3823a141daa8a3'
+  CGMA_SOURCE_REF: '6aa5716dfdea250b3a34c549f5dffaeba7d45bfb'
 
 jobs:
   validate:

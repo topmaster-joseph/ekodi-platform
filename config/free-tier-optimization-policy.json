@@ -1,9 +1,9 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "policyId": "EKODI-FREE-TIER-001",
   "status": "enforced",
   "effectiveDate": "2026-09-20",
-  "referenceDate": "2026-09-20",
+  "referenceDate": "2026-09-25",
   "principle": "maximize-zero-marginal-cost-without-weakening-security-or-source-of-truth",
   "automaticPaidUpgrade": false,
   "requireMeasuredTelemetryBeforeUsagePercentClaims": true,
@@ -165,7 +165,7 @@
       "supabase": "Management API or direct project measurement; unknown values stay unknown",
       "github": "repository/action metadata; public standard hosted runner minutes are free, storage remains plan-aware"
     },
-    "verifiedFreeLimitsReferenceDate": "2026-09-20",
+    "verifiedFreeLimitsReferenceDate": "2026-09-25",
     "projectCreationPolicy": {
       "supabase": "reuse-existing-projects-before-new-project",
       "automaticPaidProjectCreation": false
@@ -177,5 +177,25 @@
       "automaticArtifactDeletion": false,
       "usagePercentRequiresKnownPlanLimit": true
     }
+  },
+  "deploymentContinuity": {
+    "policyId": "EKODI-DEPLOYMENT-FOUR-LAYER-001",
+    "priority": [
+      "runtime",
+      "guarded-deploy",
+      "cloud-control",
+      "owner"
+    ],
+    "guardedDeployTransport": "github-actions-wrangler-direct",
+    "cloudflareWorkersBuildsRequiredForGuardedDeploy": false,
+    "cloudControlIsSecondDeployLane": false,
+    "automaticPaidUpgrade": false,
+    "ownerApprovalRequiredFor": [
+      "provider-plan-change",
+      "paid-cost-commitment",
+      "limit-increase-request",
+      "account-or-billing-change",
+      "root-security-change"
+    ]
   }
 }
