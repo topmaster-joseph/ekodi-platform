@@ -7,6 +7,10 @@ const SURFACE_PREFIXES=PLATFORM_SURFACE_PREFIXES;
 const SYSTEM_PATHS=PLATFORM_SYSTEM_PATHS;
 const PUBLIC_EXECUTION_SURFACES=PLATFORM_EXECUTION_SURFACES;
 const CANONICAL_HOST_PATHS=PLATFORM_LEGACY_HOST_PATHS;
+const PUBLIC_PERSON_PATH_RE=/^\/@[a-z0-9][a-z0-9._-]{2,39}\/?$/;
+const PERSONAL_FINANCE_CONTROL_PATH='/api/control/personal-finance';
+const PUBLIC_CONTROL_PREVIEW_PATH='/api/public/preview/map';
+const PUBLIC_CONTROL_PREVIEW_CACHE='public, max-age=15, s-maxage=30, stale-while-revalidate=60';
 const ADMIN_RUNTIME_FILE=/\.(?:js|css|cmd|json|map|svg|png|webp|ico)$/i;
 const AUTH_TOP_LEVEL_TEXT_ASSET=/\.(?:js|css|json|map)$/i;
 const AUTH_CSP=[
