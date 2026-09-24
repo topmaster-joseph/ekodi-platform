@@ -97,7 +97,9 @@ test('Shared Site release and Mission E2E obey the same production quota budget 
   assert.doesNotMatch(shared, /\n\s*admin-authenticated-e2e:\s*\n/);
   assert.match(shared, /Read Production Cloudflare quota Source of Truth/);
   assert.match(shared, /cloudflare-production-budget\.mjs/);
-  assert.match(shared, /steps\.quota\.outputs\.state == 'exhausted'/);
+  assert.match(shared, /Resolve four-layer deployment continuity/);
+  assert.match(shared, /steps\.continuity\.outputs\.release_action == 'prepare-and-hold'/);
+  assert.match(shared, /Cloudflare Workers runtime quota is exhausted/);
   assert.match(shared, /steps\.quota\.outputs\.skip_nonessential != 'true'/);
   assert.doesNotMatch(mission, /schedule:/);
   assert.match(mission, /workflow_run:/);

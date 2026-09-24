@@ -1,46 +1,15 @@
+import { PLATFORM_CANONICAL_HOST, PLATFORM_SURFACE_PREFIXES, PLATFORM_SYSTEM_PATHS, PLATFORM_EXECUTION_SURFACES, platformExecutionSurfaceForPath } from './platform-route-registry.js';
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
 import { injectEkodiShell, injectEkodiTenantReadability } from './ekodi-shell-injector.js';
 
-const CANONICAL_HOST='ekodi.kr';
-const SURFACE_PREFIXES=Object.freeze({my:'/my',admin:'/admin',auth:'/auth'});
+const CANONICAL_HOST=PLATFORM_CANONICAL_HOST;
+const SURFACE_PREFIXES=PLATFORM_SURFACE_PREFIXES;
 const PUBLIC_PERSON_PATH_RE=/^\/@[a-z0-9][a-z0-9._-]{2,39}\/?$/;
-const SYSTEM_PATHS=Object.freeze(['/api','/mcp','/webhooks','/health','/connect']);
+const SYSTEM_PATHS=PLATFORM_SYSTEM_PATHS;
 const PERSONAL_FINANCE_CONTROL_PATH='/api/control/personal-finance';
 const PUBLIC_CONTROL_PREVIEW_PATH='/api/public/preview/map';
 const PUBLIC_CONTROL_PREVIEW_CACHE='public, max-age=15, s-maxage=30, stale-while-revalidate=60';
-const PUBLIC_EXECUTION_SURFACES=Object.freeze([
-  Object.freeze({id:'shell',prefix:'/shell',binding:'SHELL',basePathAware:true}),
-  Object.freeze({id:'mission-application',prefix:'/ekodimission/api/activities/260926-chuseok-open-table/applications',binding:'SPACE',preservePrefix:true,basePathAware:true}),
-  Object.freeze({id:'ai',prefix:'/ai',binding:'AI'}),
-  Object.freeze({id:'author',prefix:'/author',binding:'AUTHOR'}),
-  Object.freeze({id:'bible',prefix:'/bible',binding:'BIBLE',basePathAware:true}),
-  Object.freeze({id:'books',prefix:'/books',binding:'BOOKS'}),
-  Object.freeze({id:'business',prefix:'/business',binding:'BUSINESS'}),
-  Object.freeze({id:'community',prefix:'/community',binding:'COMMUNITY'}),
-  Object.freeze({id:'education',prefix:'/education',binding:'EDUCATION'}),
-  Object.freeze({id:'energy',prefix:'/energy',binding:'ENERGY'}),
-  Object.freeze({id:'experience',prefix:'/experience',binding:'EXPERIENCE'}),
-  Object.freeze({id:'developer',prefix:'/developer',binding:'EXPERIENCE'}),
-  Object.freeze({id:'finance-api',prefix:'/finance-api',binding:'FINANCE',basePathAware:true}),
-  Object.freeze({id:'journal',prefix:'/journal',binding:'JOURNAL'}),
-  Object.freeze({id:'life',prefix:'/life',binding:'LIFE'}),
-  Object.freeze({id:'management',prefix:'/management',binding:'MANAGEMENT'}),
-  Object.freeze({id:'money',prefix:'/money',binding:'MONEY'}),
-  Object.freeze({id:'personal-finance-api',prefix:'/personal-finance-api',binding:'PERSONAL_FINANCE',basePathAware:true}),
-  Object.freeze({id:'publishing',prefix:'/publishing',binding:'PUBLISHING'}),
-  Object.freeze({id:'social',prefix:'/social',binding:'SOCIAL'}),
-  Object.freeze({id:'space',prefix:'/space',binding:'SPACE'}),
-  Object.freeze({id:'storage',prefix:'/storage',binding:'STORAGE',basePathAware:true}),
-  Object.freeze({id:'support',prefix:'/support',binding:'SUPPORT',preservePrefix:true,basePathAware:true}),
-  Object.freeze({id:'work',prefix:'/work',binding:'WORK'}),
-  Object.freeze({id:'workspace-api',prefix:'/workspace-api',binding:'WORKSPACE_PLATFORM',basePathAware:true}),
-  Object.freeze({id:'marketing-api',prefix:'/marketing-api',binding:'MARKETING_DOMAIN',basePathAware:true}),
-  Object.freeze({id:'marketing-connect-api',prefix:'/marketing-connect-api',binding:'MARKETING_GROWTH',basePathAware:true}),
-  Object.freeze({id:'marketing-publish-api',prefix:'/marketing-publish-api',binding:'MARKETING_PUBLISHING',basePathAware:true}),
-  Object.freeze({id:'lab',prefix:'/ekodilab',host:'ekodilab.pages.dev'}),
-  Object.freeze({id:'cafe',prefix:'/cafe',host:'ekodi-cafe.pages.dev'}),
-
-]);
+const PUBLIC_EXECUTION_SURFACES=PLATFORM_EXECUTION_SURFACES;
 const ADMIN_RUNTIME_FILE=/\.(?:js|css|cmd|json|map|svg|png|webp|ico)$/i;
 const AUTH_TOP_LEVEL_TEXT_ASSET=/\.(?:js|css|json|map)$/i;
 const AUTH_CSP=[
@@ -147,7 +116,7 @@ function rewriteAdminHtml(html){
   if(/<base\s/i.test(html))return html;
   return html.replace(/<head(\s[^>]*)?>/i,match=>`${match}<base href="/admin/">`);
 }
-function executionSurfaceForPath(pathname){return PUBLIC_EXECUTION_SURFACES.find(item=>item.exact?pathname===item.prefix:(pathname===item.prefix||pathname.startsWith(`${item.prefix}/`)))||null}
+function executionSurfaceForPath(pathname){return platformExecutionSurfaceForPath(pathname)}
 function rewriteAbsoluteEkodiOrigins(text){return String(text||'');}
 function prefixRootLiterals(text,prefix){
   if(!prefix||prefix==='/')return text;

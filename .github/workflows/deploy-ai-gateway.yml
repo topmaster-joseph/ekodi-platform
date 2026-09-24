@@ -57,7 +57,7 @@ jobs:
           grep -Fq "url.pathname === '/ai'" site-worker.js
           grep -Fq "url.pathname.startsWith('/ai/')" site-worker.js
           grep -Fq 'env.AI.fetch' site-worker.js
-          grep -Fq "'ai','bible'" platform-route-registry.js
+          grep -Fq "id:'ai',prefix:'/ai',binding:'AI'" platform-route-registry.js
           test ! -e ai-gateway-page.js
       - name: Verify deployment ownership guardrails
         run: node scripts/validate-deployment-guardrails.mjs

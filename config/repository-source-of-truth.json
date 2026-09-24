@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "policyId": "REPOSITORY-SOT-001",
+  "status": "enforced",
+  "canonicalPlatformRepository": "topmaster-joseph/ekodi-platform",
+  "rules": {
+    "platformCoreChangesDefaultToCanonicalRepository": true,
+    "satelliteRepositoryMutationRequiresExplicitOwnedScope": true,
+    "duplicateImplementationRequiresCrossRepositoryReview": true,
+    "unclassifiedRepositoryWriteForbidden": true,
+    "repositoryRoleDoesNotOverrideRuntimeEvidence": true
+  },
+  "repositories": [
+    {
+      "name": "topmaster-joseph/ekodi-platform",
+      "role": "canonical-platform",
+      "mutationMode": "guarded-pr",
+      "owns": ["platform-core", "governance", "shared-edge", "embedded-services"]
+    },
+    {
+      "name": "topmaster-joseph/ekodi-site",
+      "role": "unclassified-satellite",
+      "mutationMode": "blocked-pending-scope-verification",
+      "relationship": "historical standalone site repository; verify ownership before any new change"
+    },
+    {
+      "name": "topmaster-joseph/ekodi-mall",
+      "role": "active-satellite",
+      "mutationMode": "scope-specific-guarded-pr",
+      "relationship": "cross-repository review required against ekodi-platform/sites/ekodi-mall"
+    },
+    {
+      "name": "topmaster-joseph/ekodi-church",
+      "role": "active-satellite",
+      "mutationMode": "scope-specific-guarded-pr",
+      "relationship": "church-owned implementation; canonical public routing is governed by the platform"
+    },
+    {
+      "name": "topmaster-joseph/jadam-maru",
+      "role": "active-customer-site",
+      "mutationMode": "scope-specific-guarded-pr",
+      "relationship": "customer/site scope only; shared platform contracts remain platform-owned"
+    },
+    {
+      "name": "topmaster-joseph/cheonggye-market",
+      "role": "active-community-site",
+      "mutationMode": "scope-specific-guarded-pr",
+      "relationship": "community/site scope only; shared auth and canonical routing remain platform-owned"
+    },
+    {
+      "name": "topmaster-joseph/cheonggye-merchants-site",
+      "role": "active-project-site",
+      "mutationMode": "scope-specific-guarded-pr",
+      "relationship": "project/site scope only; shared platform contracts remain platform-owned"
+    }
+  ]
+}

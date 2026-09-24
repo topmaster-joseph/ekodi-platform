@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const registry=JSON.parse(await readFile(new URL('../config/ecosystem-services.json',import.meta.url),'utf8'));
 const router=await readFile(new URL('../canonical-surface-router.js',import.meta.url),'utf8');
+const routes=await readFile(new URL('../platform-route-registry.js',import.meta.url),'utf8');
 const wrangler=await readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
 
 test('public homepage live services use canonical ekodi.kr paths',()=>{
@@ -13,6 +14,7 @@ test('public homepage live services use canonical ekodi.kr paths',()=>{
     assert.equal(url.hostname,'ekodi.kr',`${service.id} must use the canonical apex host`);
     assert.match(service.label,/^ekodi\.kr(?:\/|$)/,`${service.id} label must show the canonical apex path`);
   }
+  assert.match(router,/PLATFORM_EXECUTION_SURFACES/);
 });
 
 test('migrated homepage services are direct service-binding surfaces, not redirects',()=>{
@@ -26,7 +28,7 @@ test('migrated homepage services are direct service-binding surfaces, not redire
     ['work','/work','WORK'],
   ];
   for(const [id,prefix,binding] of specs){
-    assert.match(router,new RegExp(`id:'${id}',prefix:'${prefix}',binding:'${binding}'`));
+    assert.match(routes,new RegExp(`id:'${id}',prefix:'${prefix}',binding:'${binding}'`));
     assert.match(wrangler,new RegExp(`binding = "${binding}"[\\s\\S]*?service = `));
   }
 });
