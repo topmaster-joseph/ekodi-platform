@@ -35,6 +35,7 @@ await page.route('https://ekodi.kr/api/session', async route => {
     contentType: 'application/json; charset=utf-8',
     body: JSON.stringify({
       ok: true,
+      authenticated: true,
       email: SYNTHETIC_EMAIL,
       role: 'super_admin',
       roles: ['super_admin'],
