@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "principle": "A platform change deploys only that platform unless a declared shared dependency changes.",
   "platforms": {
     "ekodi-shell": {
@@ -81,13 +81,9 @@
         "ekodi-mall.pages.dev"
       ],
       "publicEntry": "https://ekodi.kr/ekodimall",
-      "legacyRedirectDomains": [
-        "ekodi.kr/ekodimall",
-        "ekodi.kr/ekodimall"
-      ],
       "deployWorkflow": ".github/workflows/deploy-ekodi-mall.yml",
       "sharedDependencies": [
-        "service-proxy",
+        "site-core",
         "ekodi-shell"
       ],
       "database": "none"
@@ -733,39 +729,17 @@
         "script.js",
         "responsive.css",
         "scripts/build.mjs",
-        "wrangler.site.toml"
+        "wrangler.site.toml",
+        "canonical-surface-router.js",
+        "platform-router-entry-worker.js"
       ],
       "domains": [
-        "ekodi.kr",
-        "ekodi.kr",
-        "ekodi.kr/pay",
-        "ekodi.kr/ekodibiz/trade",
-        "ekodi.kr/mail",
-        "ekodi.kr/live"
+        "ekodi.kr"
       ],
       "deployWorkflow": ".github/workflows/deploy-site-core.yml",
       "sharedDependencies": [],
       "database": "none",
-      "note": "Temporary shared Worker. Split by domain family in isolation v2."
-    },
-    "service-proxy": {
-      "kind": "shared-edge-proxy",
-      "source": [
-        "service-proxy.js",
-        "wrangler.service-proxy.toml"
-      ],
-      "domains": [
-        "ekodi.kr/ekodibiz",
-        "ekodi.kr/ekodimall",
-        "mail.EKODI child-host address"
-      ],
-      "deployWorkflow": ".github/workflows/deploy-service-proxy.yml",
-      "sharedDependencies": [
-        "mall Pages",
-        "ekodi-shell"
-      ],
-      "database": "none",
-      "note": "Proxy changes are shared-edge changes and require regression verification of every routed domain. Church and Lab public surfaces are apex-path only."
+      "note": "Canonical apex-path edge runtime. Public, admin and shared service entrypoints are routed by pathname on ekodi.kr; internal services use bindings or private workers."
     },
     "marketing-ai": {
       "kind": "independent-platform-family",
