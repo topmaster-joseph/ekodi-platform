@@ -140,11 +140,11 @@ test('normal login opens EKODI command console without auto-opening Campus or in
   assert.doesNotMatch(menu, /setInterval\(/);
 });
 
-test('admin menu governance uses seven canonical EKODI areas with contextual top tabs', async () => {
+test('admin menu governance uses seven platform control areas with role-projected direct tasks', async () => {
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   assert.match(registry, /ADMIN_MENU_GROUPS/);
-  for (const group of ['summary', 'services', 'sites', 'people', 'content', 'status', 'settings-records']) {
+  for (const group of ['summary', 'sites', 'people', 'services', 'content', 'status', 'settings-records']) {
     assert.match(registry, new RegExp(`id: '${group}'`));
   }
   for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'ai', 'business', 'data', 'site-management', 'access', 'security-audit', 'settings']) {
@@ -170,9 +170,8 @@ test('admin menu governance uses seven canonical EKODI areas with contextual top
   assert.match(sidebar, /TABS_SHELL_CLASS = 'admin-context-tabs-shell'/);
   assert.match(sidebar, /TABS_CLASS = 'admin-context-tabs'/);
   assert.match(sidebar, /data-admin-context-section/);
-  assert.match(sidebar, /globals\.querySelector\(`:scope>\.\$\{DETAILS_CLASS\}`\)\?\.remove\(\)/);
-  assert.match(sidebar, /data-admin-capability-shortcut/);
-  assert.match(sidebar, /nav\.dataset\.adminMenuGovernance = 'primary-sidebar-tabs-v3'/);
+    assert.match(sidebar, /data-admin-capability-shortcut/);
+  assert.match(sidebar, /nav\.dataset\.adminMenuGovernance = 'role-projected-sidebar-v4'/);
   assert.match(sidebar, /item\.dataset\.adminMenuGroup = definition\.group/);
   assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: false \}\)/);
   assert.doesNotMatch(sidebar, /subtree: true/);
