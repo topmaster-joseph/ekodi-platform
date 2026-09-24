@@ -20,6 +20,9 @@ test('tenant readability injector stays brand-neutral and idempotent',async()=>{
   assert.match(injector,/운영공간/);
   assert.match(injector,/x-ekodi-shell/);
   assert.match(injector,/x-ekodi-user-ui/);
+  assert.match(injector,/sharedUiAlreadyPresent/);
+  assert.doesNotMatch(injector,/sharedUiAlreadyPresent[^\n]*return response/);
+  assert.match(injector,/if\(!sharedUiAlreadyPresent\)rewriter=rewriter\.on\('head',new TenantReadabilityHeadInjector\(\)\)/);
   assert.doesNotMatch(injector,/function injectEkodiTenantReadability[\s\S]*fallbackHeader\(/);
   assert.match(injector,/typeof HTMLRewriter!==['"]function['"]/);
   assert.match(css,/Brand-neutral tenant readability v1/);
