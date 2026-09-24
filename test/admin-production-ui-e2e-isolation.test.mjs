@@ -63,3 +63,12 @@ test('synthetic production Admin UI verifier allows an already-active group defa
   assert.match(text, /if \(!alreadyActive\) \{\s*const trigger = await resolveMenuTrigger\(id, group\);\s*await dispatchClick\(trigger\);\s*\}/);
   assert.doesNotMatch(text, /contextTab\.waitFor\(\{ state: 'visible'/);
 });
+
+
+test('production Admin verifier fails closed on retired api.ekodi.kr browser calls and prints call stacks', async () => {
+  const text = await source();
+  assert.match(text, /target\.hostname === 'api\.ekodi\.kr'/);
+  assert.match(text, /__EKODI_LEGACY_CORE_API_CALLS__/);
+  assert.match(text, /LEGACY_CORE_API_CALL/);
+  assert.match(text, /retired api\.ekodi\.kr instead of the canonical ekodi\.kr\/api surface/);
+});
