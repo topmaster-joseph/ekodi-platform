@@ -79,15 +79,16 @@ test('Creator Billing belongs to Books and is not loaded by Finance', async () =
   assert.match(booksBinding, /author-billing-admin\.js/);
 });
 
-test('Admin registry exposes Tax as an external professional service', async () => {
+test('Tax belongs to the EKODIBIZ dedicated admin menu, not global navigation', async () => {
   const registry = await read('admin-menu-registry.js');
-  const runtime = await read('admin-menu-runtime.js');
+  const bizRegistry = await read('ekodibiz-admin-registry.js');
+  const portal = await read('tax-portal-worker.js');
   assert.match(registry, /id: 'tax'/);
-  assert.match(registry, /https:\/\/ekodi\.kr\/tax/);
-  assert.match(registry, /세금·증빙/);
-  assert.match(registry, /id: 'tax'[^\n]*group: 'content'/);
-  assert.match(registry, /id: 'tax'[^\n]*adminHandoff: true/);
-  assert.match(runtime, /ensureExternalMenuItems/);
+  assert.match(registry, /id: 'tax'[^\n]*internal: true/);
+  assert.match(bizRegistry, /id: 'tax'/);
+  assert.match(bizRegistry, /adminHref: '\/tax'/);
+  assert.match(bizRegistry, /\^\\\/tax/);
+  assert.match(portal, /href="\/ekodibiz\/admin\/tax\?source=ekodibiz">에코디비즈 관리자/);
 });
 
 test('shared deployment manifest verifies Tax portal', async () => {
@@ -98,7 +99,7 @@ test('shared deployment manifest verifies Tax portal', async () => {
 });
 
 test('changed JavaScript sources pass syntax checks', async () => {
-  for (const file of ['tax-service-worker.js','tax-portal-worker.js','finance-entry-worker.js','finance-monitor.js','platform-router-entry-worker.js','author-billing-admin.js','admin-demand-loader.js','admin-menu-registry.js','admin-menu-runtime.js','auth-site/admin-auth.js']) {
+  for (const file of ['tax-service-worker.js','tax-portal-worker.js','finance-entry-worker.js','finance-monitor.js','platform-router-entry-worker.js','author-billing-admin.js','admin-demand-loader.js','admin-menu-registry.js','admin-menu-runtime.js','ekodibiz-admin-registry.js','auth-site/admin-auth.js']) {
     execFileSync(process.execPath, ['--check', file], { cwd:new URL('..', import.meta.url), stdio:'pipe' });
   }
 });
