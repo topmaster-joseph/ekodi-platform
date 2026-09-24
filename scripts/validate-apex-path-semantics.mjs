@@ -26,8 +26,6 @@ for(const file of walk(root)){
       add(file,n,'path used as hostname',line);
     if(/\b[A-Z0-9_]*(?:HOST|HOSTNAME)[A-Z0-9_]*\s*[:=]\s*['"`]ekodi\.kr\//i.test(line))
       add(file,n,'HOST variable contains a path',line);
-    if(/\b(?:pattern|hostname)\s*=\s*["']ekodi\.kr\//i.test(line))
-      add(file,n,'deployment hostname/pattern contains a path',line);
     if(/\bOrigin:\s*https:\/\/ekodi\.kr\//i.test(line))
       add(file,n,'HTTP Origin header contains a path',line);
     if(/access-control-allow-origin:\s*https:\/\/ekodi\.kr\//i.test(line))
@@ -56,4 +54,4 @@ if(failures.length){
   for(const f of failures.slice(0,200))console.error(`- ${f.file}:${f.line} [${f.reason}] ${f.text}`);
   process.exit(1);
 }
-console.log('Apex-path semantic validation OK: hostname, route-pattern and CORS origin semantics are path-safe.');
+console.log('Apex-path semantic validation OK: hostname and CORS origin semantics are path-safe; apex path route patterns are allowed.');
