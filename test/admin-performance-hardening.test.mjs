@@ -132,6 +132,16 @@ test('postbuild removes retired first-path assets, versions the current graph an
   }
 });
 
+test('generated Admin menu rejects self-initializing TDZ bindings before release', async () => {
+  const [postbuild, compact] = await Promise.all([
+    read('scripts/admin-performance-postbuild.mjs'),
+    read('admin-menu-layout.compact.js'),
+  ]);
+  assert.match(postbuild, /menuSelfInitializingIdentifier/);
+  assert.match(postbuild, /Admin menu compact runtime contains TDZ self-initialization/);
+  assert.doesNotMatch(compact, /\b(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*\1\b/);
+});
+
 test('admin readability is first-path without consuming the compact CSS budget, while AI command styling stays lazy', async () => {
   const readable = await read('scripts/admin-readable-command-postbuild.mjs');
   assert.match(readable, /admin-readability-base\.css/);
