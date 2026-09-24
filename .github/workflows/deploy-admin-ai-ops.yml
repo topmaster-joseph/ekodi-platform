@@ -44,7 +44,9 @@ permissions:
   issues: write
 
 concurrency:
-  group: ekodi-admin-production-verification
+  # PR verification must not be cancelled by independent production verification.
+  # Production/manual runs still share the latest-wins production group.
+  group: ${{ github.event_name == 'pull_request' && format('ekodi-admin-pr-{0}', github.event.pull_request.number) || 'ekodi-admin-production-verification' }}
   cancel-in-progress: true
 
 jobs:

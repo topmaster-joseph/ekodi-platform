@@ -8,6 +8,21 @@ const assets = [
   'index.html','privacy.html','terms.html','history.html','cgmurrc.html','mall.html','mall.css','mall.js','tenant-live.css','tenant-live.js','homepage-ambient.css','homepage-ambient.js','admin-shell.html','admin-shell.css','admin-finance.css','admin-direct-google.js','admin-canonical-routes.js','admin-surface-labels.js','admin-central-handoff.js','admin-authenticated-shell.js','admin-release-convergence.js','external-account-admin.js','admin-public-site-controls.js','admin-site-chrome.js','admin-demand-loader.js','admin-menu-layout.js','admin-menu-registry.js','admin-context-shell-recovery.js','admin-service-handoffs.js','admin-service-catalog.js','admin-sidebar.js','admin-menu-runtime.js','ekodibiz-admin-registry.js','admin-design-engine.js','admin-design-engine.css','platform-maturity-admin.js','ai-operations-center-admin.js','device-control-admin.css','device-control-admin.js','tapo-device-admin.css','tapo-device-admin.js','storage-admin.css','storage-admin.js','homepage-admin.js','admin-secret-generator.css','admin-secret-generator.js','finance-monitor.js','client-access.css','client-access.js','community-admin.css','community-admin.js','marketing-funnel-admin.css','marketing-funnel-admin.js','supply-network-admin.css','supply-network-admin.js','cgma-member-admin.css','cgma-member-admin.js','insurance-admin.css','insurance-admin.js','insurance-network-admin.css','insurance-network-admin.js','insurance-advisor-admin.css','insurance-advisor-admin.js','insurance-practice-admin.css','insurance-practice-admin.js','marketing-ai-admin.css','marketing-ai-admin.js','google-admin-auth.css','google-admin-auth.js','ekodi-message-ui.js','domains-hub.css','domains-hub.js','social-admin.css','social-admin.js','release-control-admin.css','release-control-admin.js','church-reports-admin.css','church-reports-admin.js','books-admin.css','books-admin.js','books-finance-admin.css','books-finance-admin.js','admin-compact.css','admin-readable-command.css','admin-readable-command.js','campus-actions.css','campus-actions.js','ai-ops-admin.css','ai-ops-admin.js','ai-management-admin.css','ai-management-admin.js','common-services-admin.css','common-services-admin.js','confirmation-admin.css','confirmation-admin.js','ai-commons-admin.js','capability-center-admin.css','capability-center-admin.js','capability-sample-runtime.js','openai-workspace-admin.css','openai-workspace-admin.js','devotional-admin.css','devotional-admin.js','ai-module-spec-admin.css','ai-module-spec-admin.js','life-ai-admin.css','life-ai-admin.js','personal-finance-admin.css','personal-finance-admin.js','invest-admin.css','invest-admin.js','mission-control-admin.css','mission-control-admin.js','work-admin.css','work-admin.js','communication-admin.css','communication-admin.js','admin-lazy-features.js','author-billing-admin.css','author-billing-admin.js','system-health-admin.css','system-health-admin.js','api-cost-admin.css','api-cost-admin.js','device-browser-diagnostics.css','device-browser-diagnostics.js','ekodi-device-bootstrap.cmd','hub.html','trade.html','styles.css','script.js','monitor-status.json','_headers','admin-language-status.js',
 ];
 
+async function appendOutputSources(targetAsset, sourceSpecs, { targetMarker = '' } = {}) {
+  const targetPath=`${output}${targetAsset}`;
+  const base=await readFile(targetPath,'utf8');
+  if(targetMarker&&!base.includes(targetMarker)) throw new Error(`${targetAsset} marker missing: ${targetMarker}`);
+  const chunks=[];
+  for(const spec of sourceSpecs){
+    const normalized=typeof spec==='string'?{path:spec}:spec;
+    const text=await readFile(`${root}${normalized.path}`,'utf8');
+    if(normalized.marker&&!text.includes(normalized.marker)) throw new Error(`${normalized.path} marker missing: ${normalized.marker}`);
+    chunks.push(text);
+  }
+  await writeFile(targetPath,[base,...chunks].join('\n'));
+  return chunks;
+}
+
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)));
@@ -23,20 +38,13 @@ await cp(`${root}sites/pyeonggongmok/public`, `${output}pyeonggongmok`, { recurs
 await cp(`${root}config/capability-registry.json`, `${output}capability-registry.json`);
 await cp(`${root}config/capability-foundry.json`, `${output}capability-foundry.json`);
 
-const [adminDesignEngineBaseCss, adminConversationWorkbenchCss] = await Promise.all([
-  readFile(`${output}admin-design-engine.css`, 'utf8'),
-  readFile(`${root}admin-conversation-workbench.css`, 'utf8'),
+await appendOutputSources('admin-design-engine.css', [
+  { path:'admin-conversation-workbench.css', marker:'EKODI Admin conversation-first workbench v1' },
 ]);
-if (!adminConversationWorkbenchCss.includes('EKODI Admin conversation-first workbench v1')) throw new Error('Admin conversation workbench marker missing');
-await writeFile(`${output}admin-design-engine.css`, `${adminDesignEngineBaseCss}\n/* admin-conversation-workbench.css */\n${adminConversationWorkbenchCss}\n`);
 
-const [browserDiagnosticsBaseJs, deviceWakeAdminJs] = await Promise.all([
-  readFile(`${output}device-browser-diagnostics.js`, 'utf8'),
-  readFile(`${root}device-wake-admin.js`, 'utf8'),
-]);
-if (!browserDiagnosticsBaseJs.includes('서버로 업로드하지 않습니다')) throw new Error('Browser diagnostics local-only marker missing');
-if (!deviceWakeAdminJs.includes('원격 전원 · 작업 자동복귀')) throw new Error('Device Wake admin marker missing');
-await writeFile(`${output}device-browser-diagnostics.js`, `${browserDiagnosticsBaseJs}\n${deviceWakeAdminJs}\n`);
+await appendOutputSources('device-browser-diagnostics.js', [
+  { path:'device-wake-admin.js', marker:'원격 전원 · 작업 자동복귀' },
+], { targetMarker:'서버로 업로드하지 않습니다' });
 
 const [aiOpsBaseJs, userAiTierPanelJs] = await Promise.all([
   readFile(`${output}ai-ops-admin.js`, 'utf8'),
@@ -63,12 +71,10 @@ await Promise.all([
   writeFile(`${output}admin-secret-generator.js`, `${secretGeneratorBaseJs}\n${adminAiGovernorJs}\n${adminProviderControlJs}\n${adminAiControlPlaneJs}\n`),
 ]);
 
-const [financeBaseCss, financeBaseJs, taxInvoiceCss, taxInvoiceJs] = await Promise.all([
-  readFile(`${output}admin-finance.css`, 'utf8'), readFile(`${output}finance-monitor.js`, 'utf8'),
-  readFile(`${root}tax-invoice-admin.css`, 'utf8'), readFile(`${root}tax-invoice-admin.js`, 'utf8'),
+await Promise.all([
+  appendOutputSources('admin-finance.css', ['tax-invoice-admin.css']),
+  appendOutputSources('finance-monitor.js', ['tax-invoice-admin.js']),
 ]);
-await writeFile(`${output}admin-finance.css`, `${financeBaseCss}\n${taxInvoiceCss}\n`);
-await writeFile(`${output}finance-monitor.js`, `${financeBaseJs}\n${taxInvoiceJs}\n`);
 
 const [marketingAdminCss, marketingAdminJs, marketingLiveCss, marketingLiveJs, marketingPostingStatusJs, marketingChannelManagerJs] = await Promise.all([
   readFile(`${output}marketing-ai-admin.css`, 'utf8'), readFile(`${output}marketing-ai-admin.js`, 'utf8'),
@@ -90,12 +96,10 @@ const lazyOnDemandJs = lazyJs
   .replace(/  const observer = new MutationObserver\(\(\) => \{\n    if \(document\.querySelector\('#aiOpsPanel'\)\) installChiefChat\(\);\n  \}\);\n  observer\.observe\(document\.documentElement, \{ childList:true, subtree:true \}\);\n\n/, '');
 await writeFile(`${output}admin-lazy-features.js`, lazyOnDemandJs);
 
-const [financeCss, distributionCss, pipelineCss, royaltyCss, financeJs, distributionJs, pipelineJs, pipelineBridgeJs, royaltyJs] = await Promise.all([
-  readFile(`${output}books-finance-admin.css`, 'utf8'), readFile(`${root}books-distribution-admin.css`, 'utf8'), readFile(`${root}books-pipeline-admin.css`, 'utf8'), readFile(`${root}books-royalty-admin.css`, 'utf8'),
-  readFile(`${output}books-finance-admin.js`, 'utf8'), readFile(`${root}books-distribution-admin.js`, 'utf8'), readFile(`${root}books-pipeline-admin.js`, 'utf8'), readFile(`${root}books-pipeline-bridge.js`, 'utf8'), readFile(`${root}books-royalty-admin.js`, 'utf8'),
+await Promise.all([
+  appendOutputSources('books-finance-admin.css', ['books-distribution-admin.css','books-pipeline-admin.css','books-royalty-admin.css']),
+  appendOutputSources('books-finance-admin.js', ['books-distribution-admin.js','books-pipeline-admin.js','books-pipeline-bridge.js','books-royalty-admin.js']),
 ]);
-await writeFile(`${output}books-finance-admin.css`, `${financeCss}\n${distributionCss}\n${pipelineCss}\n${royaltyCss}\n`);
-await writeFile(`${output}books-finance-admin.js`, `${financeJs}\n${distributionJs}\n${pipelineJs}\n${pipelineBridgeJs}\n${royaltyJs}\n`);
 
 await cp(`${root}auth-site/index.html`, `${output}auth-center.html`);
 await cp(`${root}auth-site/oauth-consent.html`, `${output}oauth-consent.html`);
