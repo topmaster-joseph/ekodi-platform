@@ -38,11 +38,11 @@ function lockSidebarToViewport() {
 
   body.classList.add('ekodi-admin-design-engine');
   sidebar.dataset.ekodiDesignEngineRegion = 'primary-navigation';
-  nav.dataset.ekodiIndependentScroll = 'false';
+  nav.dataset.ekodiIndependentScroll = 'platform-admin';
   nav.dataset.ekodiPrimaryAxes = EXPECTED_GROUPS.join(',');
-  nav.style.setProperty('overflow-y', 'hidden', 'important');
+  nav.style.setProperty('overflow-y', 'auto', 'important');
   nav.style.setProperty('overflow-x', 'hidden', 'important');
-  nav.style.setProperty('overscroll-behavior', 'none', 'important');
+  nav.style.setProperty('overscroll-behavior', 'contain', 'important');
 }
 
 function guardCharacterLayer() {
@@ -70,8 +70,8 @@ function audit() {
   }
 
   const overflowY = getComputedStyle(nav).overflowY;
-  if (overflowY === 'auto' || overflowY === 'scroll') violations.push(`primary sidebar must not scroll vertically; overflow-y=${overflowY}`);
-  if (nav.dataset.ekodiIndependentScroll === 'true') violations.push('primary sidebar must never declare itself as an independent scroll owner');
+  if (!['auto','scroll'].includes(overflowY)) violations.push(`platform admin sidebar must remain independently scrollable; overflow-y=${overflowY}`);
+  if (nav.dataset.ekodiIndependentScroll !== 'platform-admin') violations.push('platform admin sidebar scroll-owner marker is missing');
 
   const topOffset = parseFloat(getComputedStyle(document.body).paddingTop || '0');
   if (matchMedia('(min-width:761px)').matches && topOffset > 0.5) violations.push(`admin shell top offset must be zero; padding-top=${topOffset}px`);
