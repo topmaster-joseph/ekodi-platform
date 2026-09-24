@@ -330,9 +330,8 @@ async function routePlatform(request,env,ctx){
         if(isStoreAdminPathShape(url.pathname)){
           const storeRoute=await resolveStoreAdminRoute(url.pathname);
           if(storeRoute){
-            const embedded=url.searchParams.get('embed')==='cmpmyi';
-            const page=storeAdminPage({...storeRoute,pathname:url.pathname,embed:embedded});
-            return embedded?page:injectEkodiShell(page,'business','admin');
+            if(url.searchParams.get('embed')==='cmpmyi')return storeAdminPage({...storeRoute,pathname:url.pathname,embed:true});
+            return injectEkodiShell(storeAdminPage({...storeRoute,pathname:url.pathname}),'business','admin');
           }
         }
         if(url.pathname==='/organization-admin.css')return organizationAdminCss();
