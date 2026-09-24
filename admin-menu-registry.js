@@ -136,7 +136,14 @@ export function adminMenuCategoryOrder(group) { const order = ADMIN_MENU_CATEGOR
 export function getAdminMenuGroupForSection(section) { return getAdminMenuItem(section)?.group || 'home'; }
 export function getAdminMenuGroupDefault(id) { const group = getAdminMenuGroup(id); if (!group) return 'campus'; const explicit = ADMIN_MENU_REGISTRY.find(item => item.id === group.defaultSection && item.group === group.id && !item.internal && !item.superAdminOnly); if (explicit) return explicit.id; const firstVisibleChild = ADMIN_MENU_REGISTRY.find(item => item.group === group.id && !item.internal && !item.superAdminOnly); return firstVisibleChild?.id || 'campus'; }
 export function adminMenuGroups() { return ADMIN_MENU_GROUPS.map(group => group.id); }
-export function adminMenuOrder() { return ADMIN_MENU_REGISTRY.filter(item => !item.internal).map(item => item.id); }
+export function adminMenuOrder() {
+  const groupRank = new Map(ADMIN_MENU_GROUPS.map((group, index) => [group.id, index]));
+  return ADMIN_MENU_REGISTRY
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => !item.internal)
+    .sort((a, b) => (groupRank.get(a.item.group) ?? 999) - (groupRank.get(b.item.group) ?? 999) || a.index - b.index)
+    .map(({ item }) => item.id);
+}
 
 if (typeof document !== 'undefined') {
   import('./admin-design-engine.js').catch(error => console.warn('[EKODI Admin] design engine bootstrap failed', error));
