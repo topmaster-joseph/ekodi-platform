@@ -110,17 +110,19 @@ export async function ingestEkodiPulse(input, payload = {}) {
   const risk = text(payload.risk || eventInput.risk || 'normal', 20).toLowerCase() || 'normal';
   const actionable = eventInput.actionable !== false;
   const requiresHuman = eventInput.requiresHumanDecision === true;
+  const createTask = actionable || requiresHuman;
+  const initialTaskState = requiresHuman ? 'human_gate' : 'queued';
 
   await db.prepare(`INSERT OR IGNORE INTO ai_pulse_events
     (id, kind, source, summary, change_class, risk, actionable, requires_human, event_json, state, task_id, observed_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'observed', ?, ?)`)
     .bind(eventId, kind, source, summary, changeClass, risk, actionable ? 1 : 0, requiresHuman ? 1 : 0, safeJson(eventInput), taskId, now).run();
 
-  if (actionable) {
+  if (createTask) {
     const maxAttempts = Math.min(Math.max(Number(payload.maxAttempts) || 2, 1), 3);
     await db.prepare(`INSERT OR IGNORE INTO ai_command_tasks
       (id, pulse_event_id, goal, risk, target_json, delegation_json, context_json, state, attempt_count, max_attempts, next_attempt_at, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', 0, ?, ?, ?, ?)`)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`)
       .bind(
         taskId,
         eventId,
@@ -129,11 +131,15 @@ export async function ingestEkodiPulse(input, payload = {}) {
         safeJson(payload.target || {}),
         safeJson(payload.delegation || {}),
         safeJson(payload.context || {}),
+        initialTaskState,
         maxAttempts,
         now,
         now,
         now,
       ).run();
+    if (requiresHuman) {
+      await db.prepare("UPDATE ai_pulse_events SET state = 'human_gate', processed_at = ? WHERE id = ?").bind(now, eventId).run();
+    }
   } else {
     await db.prepare("UPDATE ai_pulse_events SET state = 'ignored', processed_at = ? WHERE id = ?").bind(now, eventId).run();
   }
