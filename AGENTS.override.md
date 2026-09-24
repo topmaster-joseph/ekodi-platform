@@ -49,6 +49,17 @@ For ChatGPT/GPT, Codex, and any agent that reads AGENTS instructions:
 The 21 Supreme Attributes are binding across current and future generations. Agent speed, novelty, local optimization or provider convenience never overrides them.
 
 
+## Admin UI Baseline Policy (mandatory)
+
+All administrator UI work inherits `ADMIN-UI-BASELINE-001` from `config/admin-ui-baseline-policy.json` before page-specific composition.
+
+- Use the shared baseline first for platform super-admin, middle-admin, workspace-admin, service-admin and sub-admin surfaces; do not start from a page-local temporary shell.
+- The mandatory shared baseline is: fixed left navigation → top breadcrumb → large title with one-line description → core KPI cards → quick actions → integrated management list/workbench → right help/guide panel.
+- Settings and operational control screens default to one workspace lifecycle: **status → configure → execute → result**. Do not scatter these stages across unrelated pages when the same workspace can safely contain them.
+- Narrow layouts may reflow the right guide panel into inline or drawer presentation, but may not silently remove required baseline functions.
+- New administrator surfaces must pass `npm run validate:admin-ui-baseline` before merge. Existing drift is repaired centrally through the shared Admin Shell and Design Engine rather than by multiplying one-off layouts.
+- Exceptions require the constitutional amendment path; provider convenience or local page preference is not an exception.
+
 ## Universal Surface System Verification Policy (mandatory)
 
 All EKODI public homes, My pages, operator pages, administrator pages and the platform-wide `/my` surface inherit `SURFACE_SYSTEM_VERIFICATION_POLICY.md`. Completion defaults to synthetic role/device/browser E2E plus a real canonical production canary. `SYSTEM_VERIFIED` is sufficient for normal completion; manual owner/operator/user testing is additive and non-blocking except for narrowly scoped behaviors that cannot be meaningfully simulated or when production telemetry conflicts with synthetic evidence. Do not report completion from build/merge/deploy/HTTP success alone, and do not make “ask the user to test it” the default fallback.
