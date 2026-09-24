@@ -45,7 +45,7 @@ jobs:
           rx=re.compile(r'(?<!@)\b(?:[a-z0-9-]+\.)+ekodi\.kr\b|\*\.ekodi\.kr\b',re.I)
           hits=[]
           for p in root.rglob('*'):
-              if not p.is_file() or any(part in skip for part in p.parts) or p.as_posix().startswith('.github/workflows/'): continue
+              if not p.is_file() or any(part in skip for part in p.parts): continue
               rel=p.as_posix()
               if rel in allowed: continue
               try: text=p.read_text()
@@ -63,6 +63,7 @@ jobs:
           node --check platform-router-worker.js
           node --check platform-router-entry-worker.js
           node scripts/zero-subdomain-guard.mjs
+          node scripts/validate-apex-path-semantics.mjs
           npm run validate:constitution
           npm run validate:boundaries
           npm run validate:admin-routes
