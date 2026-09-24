@@ -56,6 +56,12 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'finance', group: 'content', icon: '₩', labels: { ko: '결제·회계 운영', en: 'Finance Operations' } },
   { id: 'tax', group: 'content', icon: 'T', labels: { ko: '세금·증빙', en: 'Tax & Evidence' }, href: 'https://ekodi.kr/tax', adminHandoff: true },
 
+  { id: 'executor-registry', group: 'status', icon: '▶', delegateSection: 'devices', labels: { ko: '실행기', en: 'Executors' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
+  { id: 'executor-infrastructure', group: 'status', icon: 'D', delegateSection: 'devices', labels: { ko: '실행 인프라', en: 'Execution Infrastructure' } },
+  { id: 'executor-jobs', group: 'status', icon: 'W', delegateSection: 'work', labels: { ko: '실행 작업', en: 'Execution Jobs' } },
+  { id: 'executor-verification', group: 'status', icon: '✓', delegateSection: 'aiops', labels: { ko: '검증·증거', en: 'Verification & Evidence' } },
+  { id: 'executor-policies', group: 'status', icon: '⚙', delegateSection: 'ai-settings', labels: { ko: '배정·대체 정책', en: 'Routing & Fallback Policies' }, superAdminOnly: true },
+
   { id: 'health', group: 'status', icon: '◉', labels: { ko: '플랫폼·사이트·엔진 상태', en: 'Platform, Site & Engine Health' } },
   { id: 'deployments', group: 'status', icon: '↑', labels: { ko: '배포 현황·작업 대기열', en: 'Deployments & Queue' } },
   { id: 'aiops', group: 'status', icon: 'AI', labels: { ko: '장애·오류·경고', en: 'Incidents, Errors & Warnings' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
@@ -117,6 +123,7 @@ const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   'sites-all':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',campus:'sites',clients:'sites','site-chrome':'sites',cmpmyi:'sites',organization:'sites',workspace:'sites',
   'users-access':'access',security:'access',admins:'access','ai-membership':'access',
   work:'content',communication:'content',community:'content',books:'content',devotional:'content',social:'content',finance:'content',tax:'content',
+  'executor-registry':'status','executor-infrastructure':'status','executor-jobs':'status','executor-verification':'status','executor-policies':'status',
   health:'status',deployments:'status',aiops:'status',devices:'status','api-cost':'status',architecture:'status',maturity:'status',services:'status',
   'public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'settings','audit-records':'settings',policies:'settings',
   'common-services':'catalog',confirmations:'catalog','life-ai':'catalog','personal-finance':'catalog',invest:'catalog','marketing-ai':'catalog','supply-network':'catalog',insurance:'catalog',capabilities:'catalog',openai:'catalog',
