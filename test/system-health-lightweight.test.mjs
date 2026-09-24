@@ -18,6 +18,14 @@ test('System Health persists aggregate rows only and never raw request identity'
   assert.doesNotMatch(migration, /client_ip|request_path|user_agent|raw_log/i);
 });
 
+test('System Health resolves Cloudflare analytics from the canonical apex host', async () => {
+  const collector = await readFile('scripts/collect-system-health.mjs', 'utf8');
+  assert.ok(collector.includes("process.env.EKODI_CANONICAL_HOST || 'ekodi.kr'"));
+  const retiredAdminHost = ['admin','ekodi','kr'].join('.');
+  assert.ok(!collector.includes(`process.env.EKODI_CANONICAL_HOST || '${retiredAdminHost}'`));
+  assert.match(collector, /workers\/domains\?service=/);
+});
+
 test('System Health collection runs outside the public request path', async () => {
   const workflow = await readFile('.github/workflows/system-health-analytics.yml', 'utf8');
   const entry = await readFile('mission-control-entry-worker.js', 'utf8');

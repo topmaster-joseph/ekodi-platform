@@ -4,7 +4,7 @@ const outputPath = process.argv[2] || '/tmp/ekodi-system-health.sql';
 const apiToken = String(process.env.CLOUDFLARE_API_TOKEN || '').trim();
 const accountId = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
 const serviceName = String(process.env.EKODI_SITE_WORKER_SERVICE || 'shy-thunder-39a4').trim();
-const canonicalHost = String(process.env.EKODI_CANONICAL_HOST || 'admin.ekodi.kr').trim();
+const canonicalHost = String(process.env.EKODI_CANONICAL_HOST || 'ekodi.kr').trim();
 const cfApi = 'https://api.cloudflare.com/client/v4';
 const now = new Date();
 
