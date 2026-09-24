@@ -39,7 +39,8 @@ function run(registry, input = {}) {
 }
 
 export function runRuntimeAutonomicControlPlane(input = {}) {
-  return run(buildRuntimeDesiredStateRegistry({ generation: input.generation || 10 }), input);
+  const serviceIds = Object.keys(input.observed?.services || {});
+  return run(buildRuntimeDesiredStateRegistry({ generation: input.generation || 10, serviceIds }), input);
 }
 
 export function runPlatformAutonomicControlPlane(input = {}) {
