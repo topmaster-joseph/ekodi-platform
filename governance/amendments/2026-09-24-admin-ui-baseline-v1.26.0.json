@@ -37,6 +37,7 @@
     "explicitOwnerInstruction": true,
     "ownerInstructionDate": "2026-09-24",
     "requiredPullRequestLabel": "constitution-approved",
-    "approvalLabel": "constitution-approved"
+    "approvalLabel": "constitution-approved",
+    "pullRequest": 2529
   }
 }
