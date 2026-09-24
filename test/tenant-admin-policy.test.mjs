@@ -1,7 +1,7 @@
 ﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { tenantAdminCan, tenantAdminPolicySnapshot } from '../tenant-admin-policy.js';
+import { tenantAdminCan, tenantAdminNavigationProfile, tenantAdminPolicySnapshot } from '../tenant-admin-policy.js';
 import { storeAdminPage } from '../store-admin-engine.js';
 import { churchPastorAdminPage } from '../church-pastor-admin-page.js';
 import { workspaceAdminPage, workspaceAdminScript, workspaceAdminCanAccess, workspaceAdminSectionsForRole } from '../workspace-admin-page.js';
@@ -16,6 +16,13 @@ test('tenant admin constitution keeps one page and projects authority by capabil
   assert.equal(tenantAdminCan('pastor',policy.capabilities.care),true);
   assert.equal(tenantAdminCan('pastor',policy.capabilities.access),false);
   assert.equal(tenantAdminCan('viewer',policy.capabilities.care),false);
+  assert.equal(policy.version,5);
+  assert.equal(tenantAdminNavigationProfile('store_owner'),'delegated-manager');
+  assert.equal(tenantAdminNavigationProfile('manager'),'delegated-manager');
+  assert.equal(tenantAdminNavigationProfile('store_staff'),'local-operator');
+  assert.equal(tenantAdminNavigationProfile('care_staff'),'local-operator');
+  assert.equal(tenantAdminNavigationProfile('viewer'),'viewer');
+  assert.equal(tenantAdminNavigationProfile('external_developer'),'external-specialist');
   for(const response of [storeAdminPage({slug:'demo',name:'Demo'}),churchPastorAdminPage(),workspaceAdminPage()]){
     const html=await response.text();
     assert.match(html,/data-ekodi-authority-scope="tenant"/);

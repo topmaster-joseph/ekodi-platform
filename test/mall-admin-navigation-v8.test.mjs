@@ -7,8 +7,10 @@ const source = await readFile(new URL('../workspace-admin-page.js', import.meta.
 test('Mall admin exposes operator-first direct navigation', () => {
   const direct = "const mallDirectSections=[['overview','홈'],['products','상품'],['sourcing','공급·제휴'],['analytics','주문·매출'],['channels','채널'],['growth','AI 영업'],['confirmations','지급·수령'],['design','설정']]";
   assert.ok(source.includes(direct));
-  assert.ok(source.includes("const mallGroups=mallDirectSections.map(([id,label])=>({id,label,sections:[[id,label]]}))"));
-  assert.ok(source.includes("const navGroups=service==='mall'?mallGroups:rootGroups"));
+  assert.ok(source.includes("const mallDelegatedGroups=["));
+  assert.ok(source.includes("const mallLocalGroups=["));
+  assert.ok(source.includes("function groupsForRole(role=workspaceRole)"));
+  assert.ok(source.includes("if(service==='mall')"));
   assert.ok(source.includes("adminBase=standaloneMall?'/ekodimall/admin':service==='mall'?'/ekodimall/admin'"));
   assert.equal(direct.includes("['sales','영업장부']"), false);
   assert.equal(direct.includes("['automation','자동화']"), false);

@@ -56,9 +56,27 @@ function clientMain(POLICY,CHANNEL_CATALOG){
     {id:'growth',label:'홍보',items:[['marketing','마케팅 AI'],['publishing','SNS · 자동게시']]},
     {id:'operations',label:'매장 설정',items:[['work','매장 업무'],['connections','배달앱 · POS 연결'],['site','사용자 사이트'],['members','관리자 · 직원 권한'],['chrome','헤더 · 푸터']]}
   ];
-  const GROUPS=SLUG==='jadam'&&!IS_PORTFOLIO?JADAM_GROUPS:DEFAULT_GROUPS;
+  const DELEGATED_GROUPS=SLUG==='jadam'&&!IS_PORTFOLIO?JADAM_GROUPS:DEFAULT_GROUPS;
+  const LOCAL_GROUPS=[
+    {id:'today',label:'오늘 주문',items:[['overview','오늘 운영'],['orders','주문 현황'],['delivery','배달앱'],['sales','매출 현황'],['work','매장 업무']]},
+    {id:'catalog',label:'메뉴 · 품절',items:[['menu','메뉴 · 가격'],['inventory','품절 · 재고']]},
+    {id:'customers',label:'고객 · 리뷰',items:[['reviews','리뷰 관리'],['customers','고객 흐름']]},
+    {id:'growth',label:'홍보 · 채널',items:[['marketing','마케팅'],['publishing','SNS · 자동게시']]},
+    {id:'finance',label:'정산 · 회계',items:[['finance','비용 · 정산']]}
+  ];
+  const VIEWER_GROUPS=[
+    {id:'today',label:'조회',items:[['overview','운영 현황'],['sales','매출 현황']]}
+  ];
+  function navigationProfile(role=state?.role){return POLICY.roleNavigationProfiles?.[String(role||'').trim().toLowerCase()]||'local-operator'}
+  function groupsForRole(role=state?.role){
+    const profile=navigationProfile(role);
+    if(profile==='delegated-manager')return DELEGATED_GROUPS;
+    if(profile==='viewer')return VIEWER_GROUPS;
+    if(profile==='external-specialist')return VIEWER_GROUPS;
+    return LOCAL_GROUPS;
+  }
 
-  const NAV=GROUPS.flatMap(group=>group.items);
+  const NAV=DELEGATED_GROUPS.flatMap(group=>group.items);
   const META={
     site:['사용자 사이트','이 점포의 사용자 사이트 생성 상태·주소·표현·별칭을 관리합니다.'],
     chrome:['헤더 · 푸터','이 매장 사이트의 헤더와 푸터를 관리합니다. 저장한 값은 이 사이트에만 반영됩니다.'],
@@ -110,9 +128,9 @@ function clientMain(POLICY,CHANNEL_CATALOG){
   function authUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','space');u.searchParams.set('return_to',location.origin+location.pathname+location.search);return u.href}
   function roleCapabilities(role=state.role){return POLICY.roleCapabilities[String(role||'').trim().toLowerCase()]||[]}
   function canSection(key,role=state.role){const capability=SECTION_CAPABILITY[key];const allowed=roleCapabilities(role);return Boolean(capability&&(allowed.includes('*')||allowed.includes(capability)))}
-  function activeGroup(){return GROUPS.find(group=>group.items.some(([key])=>key===section))||GROUPS[0]}
+  function activeGroup(){const groups=groupsForRole();return groups.find(group=>group.items.some(([key])=>key===section))||groups[0]}
   function renderSecondaryNav(){const root=$('sectionNav');if(!root)return;root.replaceChildren();root.hidden=true}
-  function renderNav(){const root=$('adminNav');root.replaceChildren();for(const group of GROUPS){const items=group.items.filter(([key])=>canSection(key));if(!items.length)continue;const label=document.createElement('span');label.className='admin-nav-group-label';label.textContent=group.label;root.append(label);for(const [key,itemLabel] of items){const a=document.createElement('a');a.href=key==='overview'?ADMIN_BASE+'/overview':ADMIN_BASE+'/'+key;a.textContent=itemLabel;a.title=META[key]?.[1]||itemLabel;a.setAttribute('aria-label',group.label+' · '+itemLabel);a.dataset.adminSection=key;if(key===section){a.classList.add('active');a.setAttribute('aria-current','page')}root.append(a)}}renderSecondaryNav()}
+  function renderNav(){const root=$('adminNav');root.replaceChildren();const groups=groupsForRole();document.documentElement.dataset.ekodiAdminNavigationProfile=navigationProfile();for(const group of groups){const items=group.items.filter(([key])=>canSection(key));if(!items.length)continue;const label=document.createElement('span');label.className='admin-nav-group-label';label.textContent=group.label;root.append(label);for(const [key,itemLabel] of items){const a=document.createElement('a');a.href=key==='overview'?ADMIN_BASE+'/overview':ADMIN_BASE+'/'+key;a.textContent=itemLabel;a.title=META[key]?.[1]||itemLabel;a.setAttribute('aria-label',group.label+' · '+itemLabel);a.dataset.adminSection=key;if(key===section){a.classList.add('active');a.setAttribute('aria-current','page')}root.append(a)}}renderSecondaryNav()}
   function publishTenantContext(role=state.role){document.documentElement.dataset.ekodiTenant=SLUG;document.documentElement.dataset.ekodiTenantRole=role||'none';document.documentElement.dataset.ekodiAuthorityScope='tenant';document.documentElement.dataset.ekodiAdminSection=section;const detail={tenantId:SLUG,workspaceKey:STORE_ID?'store:'+STORE_ID:'store:'+SLUG,workspaceName:STORE_NAME,role:role||'',authorityScope:'tenant',surface:'admin'};window.dispatchEvent(new CustomEvent('ekodi:context-change',{detail}));window.EKODIAdminUIShell?.refresh?.()}
   function setAuthChrome(signedIn){const footer=document.querySelector('[data-ekodi-admin-sidebar-footer]');const logout=$('logout');const role=$('roleStatus');if(footer)footer.dataset.authState=signedIn?'signed-in':'signed-out';if(logout)logout.hidden=!signedIn;if(role&&!signedIn)role.textContent='로그인 전'}
   function applyRole(role){state.role=String(role||'').trim().toLowerCase();setAuthChrome(Boolean(state.role));const el=$('roleStatus');if(el)el.textContent='\uAD8C\uD55C \u00B7 '+(state.role||'\uD655\uC778 \uC911');renderNav();publishTenantContext()}

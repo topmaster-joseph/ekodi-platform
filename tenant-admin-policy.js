@@ -22,7 +22,15 @@ export const TENANT_ADMIN_ROLE_CAPABILITIES=Object.freeze({
   external_vendor:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.preview,TENANT_ADMIN_CAPABILITIES.logs,TENANT_ADMIN_CAPABILITIES.integrationInspect,TENANT_ADMIN_CAPABILITIES.integrationTest]),
   external_developer:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.developerInspect,TENANT_ADMIN_CAPABILITIES.preview,TENANT_ADMIN_CAPABILITIES.logs,TENANT_ADMIN_CAPABILITIES.tests,TENANT_ADMIN_CAPABILITIES.pr,TENANT_ADMIN_CAPABILITIES.integrationInspect,TENANT_ADMIN_CAPABILITIES.integrationTest]),
 });
+const TENANT_ADMIN_NAVIGATION_PROFILE_BY_ROLE=Object.freeze({
+  platform_admin:'delegated-manager',tenant_admin:'delegated-manager',store_owner:'delegated-manager',owner:'delegated-manager',admin:'delegated-manager',client_admin:'delegated-manager',senior_pastor:'delegated-manager',workspace_admin:'delegated-manager',
+  hq_manager:'delegated-manager',manager:'delegated-manager',pastor:'delegated-manager',church_treasurer:'delegated-manager',church_finance:'delegated-manager',marketing_manager:'delegated-manager',accounting_manager:'delegated-manager',
+  care_staff:'local-operator',marketer:'local-operator',client_editor:'local-operator',accountant:'local-operator',store_staff:'local-operator',staff:'local-operator',
+  client_viewer:'viewer',viewer:'viewer',member:'viewer',
+  external_vendor:'external-specialist',external_developer:'external-specialist',
+});
 export function normalizeTenantAdminRole(role){return String(role||'').trim().toLowerCase();}
+export function tenantAdminNavigationProfile(role){return TENANT_ADMIN_NAVIGATION_PROFILE_BY_ROLE[normalizeTenantAdminRole(role)]||'local-operator';}
 export function tenantAdminCapabilitiesForRole(role){const key=normalizeTenantAdminRole(role);return TENANT_ADMIN_ROLE_CAPABILITIES[key]||Object.freeze([]);}
 export function tenantAdminCan(role,capability){const allowed=tenantAdminCapabilitiesForRole(role);return allowed.includes('*')||allowed.includes(String(capability||''));}
-export function tenantAdminPolicySnapshot(){return{version:4,authorityScope:'tenant',noRoleSpecificAdminPages:true,platformAdminRequiresExplicitTenantContext:true,externalDeveloperCannotManageAccess:true,externalDeveloperCannotDeployProduction:true,capabilities:TENANT_ADMIN_CAPABILITIES,roleCapabilities:TENANT_ADMIN_ROLE_CAPABILITIES};}
+export function tenantAdminPolicySnapshot(){return{version:5,authorityScope:'tenant',noRoleSpecificAdminPages:true,platformAdminRequiresExplicitTenantContext:true,externalDeveloperCannotManageAccess:true,externalDeveloperCannotDeployProduction:true,capabilities:TENANT_ADMIN_CAPABILITIES,roleCapabilities:TENANT_ADMIN_ROLE_CAPABILITIES,roleNavigationProfiles:TENANT_ADMIN_NAVIGATION_PROFILE_BY_ROLE};}

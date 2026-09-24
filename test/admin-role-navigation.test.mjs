@@ -5,6 +5,9 @@ import { readFile } from 'node:fs/promises';
 const policy = JSON.parse(await readFile(new URL('../config/admin-role-navigation.json', import.meta.url), 'utf8'));
 const registry = await readFile(new URL('../admin-menu-registry.js', import.meta.url), 'utf8');
 const sidebar = await readFile(new URL('../admin-sidebar.js', import.meta.url), 'utf8');
+const storeAdmin = await readFile(new URL('../store-admin-engine.js', import.meta.url), 'utf8');
+const churchAdmin = await readFile(new URL('../church-pastor-admin-page.js', import.meta.url), 'utf8');
+const workspaceAdmin = await readFile(new URL('../workspace-admin-page.js', import.meta.url), 'utf8');
 
 test('platform super admin owns explicit platform control navigation', () => {
   const profile = policy.profiles['platform-super-admin'];
@@ -47,4 +50,29 @@ test('local operators see only high-frequency domain tasks', () => {
 test('role projection never changes authority source of truth', () => {
   assert.equal(policy.authorityModel, 'Person + Workspace + Role + Capability');
   assert.match(policy.principles.join(' '), /never widens authorization/i);
+});
+
+
+test('tenant admin implementations render distinct delegated and local navigation groups', () => {
+  assert.match(storeAdmin, /const DELEGATED_GROUPS=/);
+  assert.match(storeAdmin, /const LOCAL_GROUPS=/);
+  assert.match(storeAdmin, /groupsForRole/);
+  assert.match(storeAdmin, /오늘 주문/);
+  assert.match(storeAdmin, /메뉴 · 품절/);
+  assert.match(churchAdmin, /const DELEGATED_GROUPS=/);
+  assert.match(churchAdmin, /const LOCAL_GROUPS=/);
+  assert.match(churchAdmin, /오늘 일정/);
+  assert.match(churchAdmin, /출석 · 교인/);
+  assert.match(workspaceAdmin, /const standardRootGroups=/);
+  assert.match(workspaceAdmin, /const localRootGroups=/);
+  assert.match(workspaceAdmin, /소통 · 홍보/);
+  assert.match(workspaceAdmin, /운영 · 재무/);
+  assert.match(workspaceAdmin, /사이트 · 권한/);
+  assert.match(workspaceAdmin, /오늘 할 일/);
+  assert.match(workspaceAdmin, /소통 · 콘텐츠/);
+  assert.match(workspaceAdmin, /업무 처리/);
+  for (const source of [storeAdmin, churchAdmin, workspaceAdmin]) {
+    assert.match(source, /roleNavigationProfiles/);
+    assert.match(source, /ekodiAdminNavigationProfile/);
+  }
 });
