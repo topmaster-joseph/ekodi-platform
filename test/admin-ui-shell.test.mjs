@@ -41,7 +41,7 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.match(adminShell,/#pageTitle\{display:block!important/);
   assert.doesNotMatch(adminShell,/ekodi-admin-header-title-hidden\{display:none/);
   assert.match(adminShell,/parentElement\?\.hidden\)node\.parentElement\.hidden=false/);
-  assert.match(adminShell,/data-ekodi-admin-surface-contract/);
+  assert.match(adminShell,/ekodiAdminSurfaceContract/);
   assert.match(adminShell,/readable-direct-v1/);
   assert.match(adminShell,/normalizeMainRegions/);
   assert.match(adminShell,/ekodi-admin-shell-heading/);
