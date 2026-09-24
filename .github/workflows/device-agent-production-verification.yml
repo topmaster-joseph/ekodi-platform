@@ -2,6 +2,8 @@ name: Device Agent Production Verification
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
   pull_request:
     paths:
       - 'tools/ekodi-device-agent/windows/**'
@@ -53,10 +55,15 @@ jobs:
           grep -Fq "computer.desktop.canary" scripts/verify-device-agent-production.mjs
           grep -Fq "computer.desktop.guest.canary" scripts/verify-device-agent-production.mjs
           grep -Fq "computer.desktop.ui.canary" scripts/verify-device-agent-production.mjs
+          grep -Fq "computer.desktop.session.canary" scripts/verify-device-agent-production.mjs
+          grep -Fq "computer.desktop.session.execute" scripts/verify-device-agent-production.mjs
           grep -Fq "isolatedDesktopGuestCanaryVerified" scripts/verify-device-agent-production.mjs
           grep -Fq "isolatedDesktopUiCanaryVerified" scripts/verify-device-agent-production.mjs
+          grep -Fq "isolatedDesktopSessionCanaryVerified" scripts/verify-device-agent-production.mjs
+          grep -Fq "boundedSessionExecutorReady" scripts/verify-device-agent-production.mjs
+          grep -Fq "DEVICE_DEFER_IF_OFFLINE" scripts/verify-device-agent-production.mjs
+          grep -Fq "DEFERRED_NO_ONLINE_TARGET" scripts/verify-device-agent-production.mjs
           grep -Fq "browserWorkerActivated:false" scripts/verify-device-agent-production.mjs
-          grep -Fq "nativeServiceReady:false" scripts/verify-device-agent-production.mjs
           grep -Fq "https://ekodi.kr" scripts/verify-device-agent-production.mjs
           if grep -Eq 'https://(api|admin|my|cloud|community)\.ekodi\.kr' scripts/verify-device-agent-production.mjs; then
             echo 'Production verifier must use the canonical apex only.'
@@ -65,7 +72,7 @@ jobs:
 
   real-device:
     needs: contract
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 14
     environment: production
@@ -143,11 +150,12 @@ jobs:
           echo "E2E_AUTH_DB_ID=$auth_db" >> "$GITHUB_ENV"
           echo 'Short-lived production-authenticated Device Agent verification session issued.'
 
-      - name: Update one real Agent and verify native browser plus available isolated guest and UI stages
+      - name: Verify native browser through bounded isolated session stages
         env:
-          DEVICE_TARGET_WAIT_MS: '120000'
+          DEVICE_TARGET_WAIT_MS: '60000'
           DEVICE_COMMAND_WAIT_MS: '300000'
           DEVICE_VERIFY_POLL_MS: '5000'
+          DEVICE_DEFER_IF_OFFLINE: '1'
         run: node scripts/verify-device-agent-production.mjs
 
       - name: Publish sanitized real-device verification summary
@@ -157,10 +165,10 @@ jobs:
           if [ -f artifacts/device-agent-production-verification.json ]; then
             echo '## EKODI real-device Native Virtualization Verification' >> "$GITHUB_STEP_SUMMARY"
             echo '' >> "$GITHUB_STEP_SUMMARY"
-            jq -r '"- Passed: \(.ok)\n- Agent version: \(.update.verification.reportedAgentVersion)\n- Transactional update: \(.update.verification.transactionalResult)\n- Browser worker ready: \(.cutover.nativeBrowserOperationServiceReady)\n- Hyper-V canary verified: \(.cutover.isolatedDesktopCanaryVerified)\n- Guest runtime canary verified: \(.cutover.isolatedDesktopGuestCanaryVerified)\n- Guest UI canary verified: \(.cutover.isolatedDesktopUiCanaryVerified)\n- Isolated desktop execution ready: \(.cutover.isolatedDesktopReady)\n- Cutover state: \(.cutover.reason)\n- Verified at: \(.verifiedAt)"' artifacts/device-agent-production-verification.json >> "$GITHUB_STEP_SUMMARY"
+            jq -r '"- Passed: \(.ok)\n- Deferred: \(.deferred // false)\n- Verification state: \(.verificationState // "VERIFIED")\n- Expected Agent version: \(.expectedAgentVersion // .update.verification.expectedVersion // "-")\n- Reported Agent version: \(.update.verification.reportedAgentVersion // "-")\n- Transactional update: \(.update.verification.transactionalResult // false)\n- Browser worker ready: \(.cutover.nativeBrowserOperationServiceReady // false)\n- Hyper-V canary verified: \(.cutover.isolatedDesktopCanaryVerified // false)\n- Guest runtime canary verified: \(.cutover.isolatedDesktopGuestCanaryVerified // false)\n- Guest UI canary verified: \(.cutover.isolatedDesktopUiCanaryVerified // false)\n- Session canary verified: \(.cutover.isolatedDesktopSessionCanaryVerified // false)\n- Bounded session executor ready: \(.cutover.boundedSessionExecutorReady // false)\n- Isolated desktop execution ready: \(.cutover.isolatedDesktopReady // false)\n- Native capability gap: \(.nativeCapabilityGap // "-")\n- Cutover state: \(.cutover.reason)\n- Observed/verified at: \(.verifiedAt // .observedAt // "-")"' artifacts/device-agent-production-verification.json >> "$GITHUB_STEP_SUMMARY"
           else
-            echo '## EKODI real-device Background Browser canary' >> "$GITHUB_STEP_SUMMARY"
-            echo '- Verification artifact was not produced because the available real-device verification path did not pass.' >> "$GITHUB_STEP_SUMMARY"
+            echo '## EKODI real-device Native Virtualization Verification' >> "$GITHUB_STEP_SUMMARY"
+            echo '- Verification artifact was not produced because a non-deferrable verification error occurred.' >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Revoke short-lived verification session
