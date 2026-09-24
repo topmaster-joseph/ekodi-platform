@@ -55,7 +55,7 @@ test('authenticated ADMIN UI declares the official 8th-gen workbench surface and
   assert.match(shell, /nav\.dataset\.ekodiIndependentScroll='platform-admin'/);
   assert.match(shell, /main\.dataset\.ekodiScrollOwner='workspace'/);
   assert.match(shell, /nav\.style\.setProperty\('overflow-y','auto','important'\)/);
-  assert.match(shell, /nav\.style\.setProperty\('overflow-y','hidden','important'\)/);
+  assert.doesNotMatch(shell, /nav\.style\.setProperty\('overflow-y','hidden','important'\)/);
   assert.match(shell, /main\.style\.setProperty\('overflow-y','auto'\)/);
   assert.match(shell, /applyOfficialAdminSurface\(\);/);
   assert.match(shell, /pageTitle\.parentElement\.hidden=false/);
