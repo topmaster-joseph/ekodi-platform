@@ -203,7 +203,7 @@ export function storePortfolioAdminPage(){
         <div class="side-intro"><small>3 BRAND ADMIN</small><strong>통합 관리자</strong><span>공통 업무와 브랜드별 메뉴를 왼쪽에서 바로 선택합니다.</span></div>
         <div class="menu-title"><strong>공통관리</strong><small>3개 브랜드</small></div>
         <nav class="common-nav">${COMMON_MENU.map(([view,label])=>`<a href="${commonHref(view)}" target="cmpmyi-panel">${label}</a>`).join('')}</nav>
-        <div class="menu-title"><strong>브랜드별 관리</strong><small>직접 이동</small></div>
+        <div class="menu-title"><strong>브랜드 관리자 전체 메뉴</strong><small>직접 이동</small></div>
         ${STORES.map(brandMenu).join('')}
         <p class="sidebar-note">각 브랜드의 데이터와 권한은 독립적으로 유지됩니다. 통합 화면은 해당 브랜드의 정식 관리자 화면을 오른쪽 작업영역에 표시합니다.</p>
       </aside>
