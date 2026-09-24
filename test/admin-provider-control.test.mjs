@@ -11,6 +11,14 @@ test('provider control covers Cloudflare GitHub and Supabase', () => {
   assert.ok(source.includes("VERSION:'1.1.0'"));
 });
 
+test('provider control uses the apex origin without duplicating the /api path prefix', () => {
+  assert.ok(source.includes("const API='https://ekodi.kr'"));
+  assert.equal(source.includes("const API='https://ekodi.kr/api'"), false);
+  assert.equal(source.includes("https://api.ekodi.kr"), false);
+  assert.ok(source.includes("api('/api/control/secrets/providers')"));
+  assert.ok(source.includes("const AI_ADMIN='/api/ai-modules/v1/providers/admin'"));
+});
+
 test('provider control reports the canonical production Supabase identity', () => {
   assert.ok(source.includes("project:'ekodi-platform',ref:'renzehysxirjilvdxacv'"));
   assert.equal(source.includes("project:'cheonggye-market',ref:'renzehysxirjilvdxacv'"), false);
