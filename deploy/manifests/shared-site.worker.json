@@ -1,5 +1,5 @@
 {
-  "version": 89,
+  "version": 90,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -1868,7 +1868,8 @@
         ],
         "redirect": "manual",
         "expect": [
-          "운영공간"
+          "WELCOME TO EKODI CHURCH",
+          "에코디교회"
         ],
         "headerExpect": [
           "x-ekodi-route: church-public-path",
