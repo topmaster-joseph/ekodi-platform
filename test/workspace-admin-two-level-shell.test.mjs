@@ -39,6 +39,11 @@ test('Mission admin root stays on overview and applicant roster opens from its m
   assert.match(script,/data-checkin/);
   assert.match(script,/공개 행사 보기/);
   assert.match(script,/신청자 관리/);
+  assert.match(script,/activity-summary/);
+  assert.match(script,/activity-toolbar/);
+  assert.match(script,/상세 관리/);
+  assert.match(script,/\+ 참가자 직접 추가/);
+  assert.match(script,/<th>신청자<\/th><th>상태<\/th><th>인원<\/th><th>관리<\/th><th>조치<\/th>/);
   assert.doesNotMatch(script,/mountCommandHome|EKODITenantCommandHome/);
 });
 
