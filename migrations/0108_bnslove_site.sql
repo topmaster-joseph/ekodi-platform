@@ -8,15 +8,14 @@ WHERE slug='bnslove';
 
 INSERT INTO customer_access_grants
   (tenant_id,email,role,enabled,created_at,created_by,last_verified_at,principal_type,github_username,
-   capabilities_json,denied_capabilities_json,expires_at,note,visibility,updated_at,updated_by)
+   capabilities_json,denied_capabilities_json,expires_at,note,updated_at,updated_by)
 SELECT id,'bnslove6510@gmail.com','admin',1,datetime('now'),NULL,NULL,'member','','[]','[]',NULL,
-       'display-name:형제사랑회 관리자','private',datetime('now'),NULL
+       'display-name:형제사랑회 관리자',datetime('now'),NULL
 FROM customer_tenants WHERE slug='bnslove'
 ON CONFLICT(tenant_id,email) DO UPDATE SET
   role='admin',
   enabled=1,
   note='display-name:형제사랑회 관리자',
-  visibility='private',
   updated_at=datetime('now');
 
 INSERT INTO site_chrome_settings (
