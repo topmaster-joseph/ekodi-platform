@@ -15,7 +15,7 @@ const applicationApi='/ekodimission/api/activities/260926-chuseok-open-table/app
 const standaloneApplyPath=eventPath;
 const pageCases=[
   ['/ekodimission','에코디선교회'],['/ekodimission/activities','MISSION ACTIVITIES'],
-  [eventPath,'Chuseok Open Table & Sharing Market'],['/ekodimission/participate','PARTICIPATE'],
+  [eventPath,'한가위 열린식탁 & 나눔마켓'],['/ekodimission/participate','PARTICIPATE'],
   ['/ekodimission/partners','PARTNERSHIP'],['/ekodimission/stories','STORIES & NEWS'],['/ekodimission/give','GIVE & SHARE'],
 ];
 test('EKODI Mission pages are routed as branded published public surfaces',async()=>{
@@ -51,11 +51,11 @@ test('legacy Open Table URLs permanently redirect to the corrected dated activit
   }
 });
 
-test('standalone Open Table application link is bilingual, compact, and writes to the existing event application API',async()=>{
+test('standalone Open Table application link is action-first, compact, and writes to the existing event application API',async()=>{
   const response=await spaceWorker.fetch(new Request(`https://ekodi.kr${standaloneApplyPath}`),env);
   assert.equal(response.status,200);assert.equal(response.headers.get('x-ekodi-route'),'ekodimission-public');
   const body=await response.text();
-  assert.match(body,/한가위 열린식탁 & 나눔마켓/);assert.match(body,/Chuseok Open Table & Sharing Market/);assert.match(body,/16:00–18:00/);assert.match(body,/자담치킨 \| Jadam Chicken/);assert.match(body,/무료 \| Free/);assert.match(body,/팟럭 \| Potluck/);assert.match(body,/나눔마켓 \| Sharing Market/);assert.match(body,/기타 하고 싶은 말/);assert.match(body,/name="name"/);assert.match(body,/name="phone"/);assert.match(body,/name="note"/);assert.match(body,/name="partySize" value="1"/);assert.doesNotMatch(body,/참여 인원 \| Party size/);assert.doesNotMatch(body,/이메일 \| Email/);assert.match(body,/신청하기 \| Register/);assert.match(body,/data-event-application/);assert.match(body,/260926-chuseok-open-table/);assert.doesNotMatch(body,/activities\/2026-chuseok-open-table#apply/);
+  assert.match(body,/class="open-table-hero"/);assert.match(body,/한가위 열린식탁 & 나눔마켓/);assert.match(body,/먹고, 나누고, 빈자리를 채웁니다/);assert.match(body,/9월 26일 토요일/);assert.match(body,/16:00–18:00/);assert.match(body,/자담치킨 목포대점/);assert.match(body,/참가비<\/dt><dd>무료/);assert.match(body,/href="#apply"/);assert.match(body,/오시는 길/);assert.match(body,/열린식탁/);assert.match(body,/나눔마켓/);assert.match(body,/기타 하고 싶은 말/);assert.match(body,/name="name"/);assert.match(body,/name="phone"/);assert.match(body,/name="note"/);assert.match(body,/name="partySize" value="1"/);assert.doesNotMatch(body,/참여 인원 \| Party size/);assert.doesNotMatch(body,/이메일 \| Email/);assert.match(body,/>신청하기<\/button>/);assert.match(body,/data-event-application/);assert.match(body,/260926-chuseok-open-table/);assert.match(body,/class="mobile-apply-cta"/);assert.doesNotMatch(body,/자담치킨 \| Jadam Chicken|무료 \| Free|팟럭 \| Potluck|나눔마켓 \| Sharing Market|신청하기 \| Register/);assert.doesNotMatch(body,/activities\/2026-chuseok-open-table#apply/);
 });
 
 test('EKODI Mission shared assets and unknown child routes are guarded',async()=>{
@@ -65,9 +65,9 @@ test('EKODI Mission shared assets and unknown child routes are guarded',async()=
 
 test('Open Table is first-party EKODI application UI with corrected Sep 26 schedule',async()=>{
   const [event,activities,script,css,admin]=await Promise.all([readFile(new URL('../space/ekodimission-open-table-apply.page',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission-activities.page',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission.js',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission.css',import.meta.url),'utf8'),readFile(new URL('../workspace-admin-page.js',import.meta.url),'utf8')]);
-  assert.match(event,/260926-chuseok-open-table/);assert.match(event,/9\.26 토 \| Sat/);assert.match(event,/16:00–18:00/);assert.match(event,/Jadam Chicken/);assert.match(event,/id="apply"/);assert.match(event,/data-event-application/);assert.doesNotMatch(event,/docs\.google\.com|forms\/d\//i);
+  assert.match(event,/260926-chuseok-open-table/);assert.match(event,/9월 26일 토요일/);assert.match(event,/16:00–18:00/);assert.match(event,/자담치킨 목포대점/);assert.match(event,/id="apply"/);assert.match(event,/data-event-application/);assert.doesNotMatch(event,/docs\.google\.com|forms\/d\//i);
   assert.match(activities,/\/ekodimission\/apply\/260926-open-table/);assert.match(activities,/9월 26일 토요일 16:00–18:00/);const home=await readFile(new URL('../space/ekodimission.page',import.meta.url),'utf8');assert.match(home,/09\.26/);assert.match(home,/SAT · 2026/);assert.match(home,/2026년 9월 26일\(토\) 16:00–18:00/);assert.doesNotMatch(home,/09\.25|15:00–17:00/);assert.match(home,/\/ekodimission\/apply\/260926-open-table/);assert.doesNotMatch(script,/docs\.google\.com|forms\/d\//i);assert.match(script,/ekodimission\/apply\/260926-open-table/);assert.match(script,/2026년 9월 26일 토요일 오후 4시/);
-  assert.match(script,/applications/);assert.match(css,/word-break:keep-all/);assert.match(css,/overflow-wrap:break-word/);assert.match(css,/hyphens:none/);
+  assert.match(script,/applications/);assert.match(css,/word-break:keep-all/);assert.match(css,/overflow-wrap:break-word/);assert.match(css,/hyphens:none/);assert.match(css,/\.open-table-hero\{/);assert.match(css,/\.mobile-apply-cta\{/);
   assert.match(admin,/'ekodimission':'에코디선교회'/);assert.match(admin,/'ekodimission':'mission'/);
 });
 
