@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "policyId": "EKODI-DEPLOYMENT-FOUR-LAYER-001",
   "status": "enforced",
   "effectiveDate": "2026-09-25",
@@ -101,6 +101,10 @@
     "ownerNeverAutomated": true,
     "unknownQuotaStateIsNotExhausted": true,
     "cloudflareBuildsExhaustionDoesNotBlockGithubActionsWrangler": true,
-    "runtimeQuotaExhaustionNeverWeakensSecurityCriticalRoutes": true
+    "runtimeQuotaExhaustionNeverWeakensSecurityCriticalRoutes": true,
+    "runtimeQuotaExhaustedCodeReleaseAction": "prepare-and-hold-before-production-mutation",
+    "runtimeQuotaProtectVerification": "essential-only",
+    "deferredPromotionRequiresSameVerifiedArtifact": true,
+    "deferredPromotionNeverUsesCloudControlAsDeployLane": true
   }
 }

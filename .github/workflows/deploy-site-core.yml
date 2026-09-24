@@ -247,6 +247,12 @@ on:
       - 'scripts/guarded-worker-release.mjs'
       - 'scripts/cloudflare-production-budget.mjs'
       - 'scripts/cloudflare-quota-guard-lib.mjs'
+      - 'scripts/resolve-deployment-four-layer.mjs'
+      - 'scripts/validate-deployment-four-layer.mjs'
+      - 'deployment-layer-router.js'
+      - 'config/deployment-four-layer-policy.json'
+      - 'test/deployment-four-layer.test.mjs'
+      - 'test/deployment-four-layer-runtime.test.mjs'
       - 'config/cloudflare-production-quota-guard.json'
       - 'test/cloudflare-quota-guard.test.mjs'
       - 'scripts/ensure-church-route-ownership.mjs'
@@ -425,11 +431,16 @@ jobs:
         id: quota
         run: node scripts/cloudflare-production-budget.mjs --output=cloudflare-production-quota.json
 
-      - name: Open quota circuit before production probes when exhausted
-        if: steps.quota.outputs.state == 'exhausted'
+      - name: Resolve four-layer deployment continuity
+        id: continuity
         run: |
-          echo "::error::Cloudflare Workers quota exhausted; production promotion/probes stopped before any live Worker verification."
-          exit 78
+          node scripts/resolve-deployment-four-layer.mjs \
+            --intent=code_release \
+            --code-change=true \
+            --guarded-deploy-available=true \
+            --github-actions-wrangler-available=true \
+            --quota-report=cloudflare-production-quota.json \
+            --output=artifacts/deployment-four-layer-decision.json
 
       - name: Build shared site assets
         run: |
@@ -534,9 +545,18 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: shared-site-production-release-evidence-${{ github.run_id }}-${{ github.run_attempt }}
-          path: artifacts/shared-site-release-artifact-production.json
+          path: |
+            artifacts/shared-site-release-artifact-production.json
+            artifacts/deployment-four-layer-decision.json
           if-no-files-found: warn
           retention-days: 90
+
+      - name: Hold production promotion after artifact preparation
+        if: steps.continuity.outputs.release_action == 'prepare-and-hold'
+        run: |
+          echo "::warning::Cloudflare Workers runtime quota is exhausted. EKODI completed CI, staging and immutable artifact continuity, but production mutation and live probes are intentionally deferred."
+          echo "::warning::Resume only after the measured runtime quota resets; Cloud Control is not used as a second deploy lane and no paid upgrade is automatic."
+          exit 78
 
       - name: Verify and repair Cloudflare custom-domain attachments
         if: steps.quota.outputs.skip_nonessential != 'true'

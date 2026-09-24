@@ -123,10 +123,11 @@ jobs:
           node --check scripts/validate-supabase-free-project-capacity.mjs
           node --check deployment-layer-router.js
           node --check scripts/validate-deployment-four-layer.mjs
+          node --check scripts/resolve-deployment-four-layer.mjs
           node scripts/validate-free-tier-optimization.mjs
           node scripts/validate-supabase-free-project-capacity.mjs
           node scripts/validate-deployment-four-layer.mjs
-          node --test test/free-tier-quota-guard.test.mjs test/free-tier-resource-governor.test.mjs test/free-tier-resource-collector.test.mjs test/free-tier-supabase-oidc-contract.test.mjs test/supabase-free-project-capacity-guard.test.mjs test/deployment-four-layer.test.mjs
+          node --test test/free-tier-quota-guard.test.mjs test/free-tier-resource-governor.test.mjs test/free-tier-resource-collector.test.mjs test/free-tier-supabase-oidc-contract.test.mjs test/supabase-free-project-capacity-guard.test.mjs test/deployment-four-layer.test.mjs test/deployment-four-layer-runtime.test.mjs
       - name: Route change intent through EKODI AI
         id: ekodi_ai
         env:
