@@ -4,6 +4,7 @@ import {
   PLATFORM_EXECUTION_SURFACES,
   PLATFORM_LEGACY_HOST_PATHS,
   canonicalPathForLegacyHost,
+  platformHost,
   isReservedPlatformRoot,
   platformExecutionSurfaceForPath,
 } from '../platform-route-registry.js';
@@ -23,8 +24,8 @@ test('execution surface roots cannot fall through to generic workspace routing',
 });
 
 test('legacy execution hosts project onto apex canonical paths',()=>{
-  assert.equal(canonicalPathForLegacyHost('management.ekodi.kr'),'/management');
-  assert.equal(canonicalPathForLegacyHost('books.ekodi.kr'),'/books');
-  assert.equal(canonicalPathForLegacyHost('CGMA.AI.EKODI.KR'),'/cgma/marketing');
-  assert.equal(PLATFORM_LEGACY_HOST_PATHS['mail.ekodi.kr'],'/mail');
+  assert.equal(canonicalPathForLegacyHost(platformHost('management')),'/management');
+  assert.equal(canonicalPathForLegacyHost(platformHost('books')),'/books');
+  assert.equal(canonicalPathForLegacyHost(platformHost('cgma.ai').toUpperCase()),'/cgma/marketing');
+  assert.equal(PLATFORM_LEGACY_HOST_PATHS[platformHost('mail')],'/mail');
 });
