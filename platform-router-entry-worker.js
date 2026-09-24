@@ -28,7 +28,7 @@ import { marketingProjectionForPath, proxyCanonicalMarketing } from './marketing
 import { routeCanonicalSurface } from './canonical-surface-router.js';
 import { handlePreviewRequest } from './preview-page.js';
 import { storeGatewayPage } from './store-gateway-page.js';
-import { storePortfolioAdminPage } from './store-portfolio-admin-page.js';
+import { storePortfolioAdminPage, storePortfolioAdminPanelPage } from './store-portfolio-admin-page.js';
 import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { isLearningPath, learningPage, learningScript, learningStyles } from './learning-page.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
@@ -323,9 +323,17 @@ async function routePlatform(request,env,ctx){
         if(url.pathname==='/tenant-admin-command-home.js')return tenantAdminCommandHomeScript();
         if(['/store-admin.css','/jadam-admin.css','/pizzamaru-admin.css','/yogurt-admin.css'].includes(url.pathname))return storeAdminCss();
         if(['/store-admin.js','/jadam-admin.js','/pizzamaru-admin.js','/yogurt-admin.js'].includes(url.pathname))return storeAdminScript();
+        const cmpmyiPanel=url.pathname.match(/^\/cmpmyi\/admin\/panel\/([a-z-]+)\/?$/i);
+        if(cmpmyiPanel)return storePortfolioAdminPanelPage(cmpmyiPanel[1]);
         if(url.pathname==='/cmpmyi/admin'||url.pathname==='/cmpmyi/admin/')return injectEkodiShell(storePortfolioAdminPage(),'business','admin');
         if(url.pathname==='/cmpmyi/admin/overview'||url.pathname==='/cmpmyi/admin/overview/')return injectEkodiShell(storePortfolioAdminPage(),'business','admin');
-        if(isStoreAdminPathShape(url.pathname)){const storeRoute=await resolveStoreAdminRoute(url.pathname);if(storeRoute)return injectEkodiShell(storeAdminPage({...storeRoute,pathname:url.pathname}),'business','admin');}
+        if(isStoreAdminPathShape(url.pathname)){
+          const storeRoute=await resolveStoreAdminRoute(url.pathname);
+          if(storeRoute){
+            if(url.searchParams.get('embed')==='cmpmyi')return storeAdminPage({...storeRoute,pathname:url.pathname,embed:true});
+            return injectEkodiShell(storeAdminPage({...storeRoute,pathname:url.pathname}),'business','admin');
+          }
+        }
         if(url.pathname==='/organization-admin.css')return organizationAdminCss();
         if(url.pathname==='/organization-admin.js')return organizationAdminScript();
         if(isOrganizationAdminPath(url.pathname))return injectEkodiShell(organizationAdminPage(url.pathname),'space','admin');

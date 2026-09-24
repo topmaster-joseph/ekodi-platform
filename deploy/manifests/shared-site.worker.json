@@ -94,6 +94,44 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/jadam/admin/menu?embed=cmpmyi",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "자담치킨 목포대점",
+          "data-ekodi-embedded-admin=\"true\"",
+          "메뉴 · 가격"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: jadam-store-admin",
+          "cache-control: no-store",
+          "x-frame-options: SAMEORIGIN",
+          "x-ekodi-embedded-admin: cmpmyi"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cmpmyi/admin/panel/overview",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "통합 대시보드",
+          "자담치킨 목포대점",
+          "피자마루 목포대점",
+          "요거트퍼플 목포대점"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: cmpmyi-store-portfolio-panel",
+          "cache-control: no-store",
+          "x-frame-options: SAMEORIGIN"
+        ],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/",
         "statuses": [
           200
