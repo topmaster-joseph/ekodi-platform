@@ -22,7 +22,7 @@ const EKODIBIZ_ADMIN_SCOPE_DEFINITIONS = [
   {
     id: 'books', label: '에코디서점', shortLabel: '서점',
     description: '출판물·상담·출판대행·가격·기능 노출을 관리합니다.',
-    adminHref: '/admin/services/books?source=ekodibiz', publicHref: '/books', kind: 'service',
+    adminHref: '/ekodibooks/admin?source=ekodibiz', publicHref: '/books', kind: 'service',
   },
   {
     id: 'lab', label: '에코디연구소', shortLabel: '연구소',
@@ -44,7 +44,7 @@ export function ekodiBizAdminScopeForPath(pathname = '') {
   if (/^\/ekodimall\/admin(?:\/|$)/i.test(path)) return 'mall';
   if (/^\/ekodibiz\/trade\/admin(?:\/|$)/i.test(path)) return 'trade';
   if (/^\/ekodibiz\/invest\/admin(?:\/|$)/i.test(path)) return 'invest';
-  if (/^\/admin\/services\/books(?:\/|$)/i.test(path)) return 'books';
+  if (/^\/ekodibooks\/admin(?:\/|$)/i.test(path) || /^\/admin\/(?:content|services)\/books(?:\/|$)/i.test(path)) return 'books';
   if (/^\/(?:ekodi-lab|ekodilab)\/admin(?:\/|$)/i.test(path)) return 'lab';
   if (/^\/ekodibiz\/admin(?:\/|$)/i.test(path)) return 'common';
   return '';
