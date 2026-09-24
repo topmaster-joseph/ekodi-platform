@@ -28,10 +28,22 @@ grant execute on function public.activity_resolve_person(text,text,text,text) to
 
 -- These Community tables intentionally have RLS with no direct-client policies.
 -- Remove legacy table grants as defense in depth; Community API continues via service role.
-revoke all on table public.community_activity from anon, authenticated;
-revoke all on table public.community_circle_members from anon, authenticated;
-revoke all on table public.community_circles from anon, authenticated;
-revoke all on table public.community_profiles from anon, authenticated;
+do $
+begin
+  if to_regclass('public.community_activity') is not null then
+    execute 'revoke all on table public.community_activity from anon, authenticated';
+  end if;
+  if to_regclass('public.community_circle_members') is not null then
+    execute 'revoke all on table public.community_circle_members from anon, authenticated';
+  end if;
+  if to_regclass('public.community_circles') is not null then
+    execute 'revoke all on table public.community_circles from anon, authenticated';
+  end if;
+  if to_regclass('public.community_profiles') is not null then
+    execute 'revoke all on table public.community_profiles from anon, authenticated';
+  end if;
+end
+$;
 
 -- Remove an exact duplicate index reported by the production advisor.
 -- store_platform_reviews_store_reply_idx is the canonical migration-owned copy.
