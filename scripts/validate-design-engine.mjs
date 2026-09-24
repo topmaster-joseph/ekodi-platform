@@ -26,8 +26,8 @@ const [responsiveCss, responsiveStandard] = await Promise.all([
 ]);
 
 const errors = [];
-const expectedAxes = ['summary', 'services', 'sites', 'people', 'content', 'status', 'settings-records'];
-const expectedLabels = ['통합현황', '서비스', '사이트', '사용자·권한', '콘텐츠·운영', '상태·배포', '설정·기록'];
+const expectedAxes = ['summary', 'sites', 'people', 'services', 'content', 'status', 'settings-records'];
+const expectedLabels = ['플랫폼 전체현황', '사이트·브랜드', '사용자·관리자·권한', '서비스·AI', '콘텐츠·행사·소통', '운영·배포·장애', '설정·보안·감사'];
 const actualAxes = ADMIN_MENU_GROUPS.map(group => group.id);
 const actualLabels = ADMIN_MENU_GROUPS.map(group => group.labels?.ko);
 
