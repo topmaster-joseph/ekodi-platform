@@ -55,3 +55,33 @@ test('admin and API documents are no-store and non-indexable',()=>{
   assert.match(response.headers.get('x-robots-tag')||'',/noindex/);
   assert.equal(response.headers.get('cross-origin-opener-policy'),'same-origin-allow-popups');
 });
+
+
+test('safe public preview API keeps explicit public cache while retaining API security headers',()=>{
+  const request=new Request('https://ekodi.kr/api/public/preview/map?scope=ekodi&mode=platform',{method:'GET'});
+  const response=applyPlatformSecurityHeaders(new Response('{"schemaVersion":1}',{headers:{
+    'content-type':'application/json; charset=utf-8',
+    'cache-control':'public, max-age=15, s-maxage=30, stale-while-revalidate=60',
+    'x-ekodi-cache-policy':'control-public-preview-v1',
+  }}),request);
+  assert.match(response.headers.get('cache-control')||'',/^public, max-age=15/);
+  assert.equal(response.headers.get('x-ekodi-cache-policy'),'control-public-preview-v1');
+  assert.equal(response.headers.get('x-content-type-options'),'nosniff');
+  assert.equal(response.headers.get('x-ekodi-security-policy'),'platform-edge-v2');
+  assert.equal(response.headers.get('x-ekodi-security-surface'),'api');
+  assert.match(response.headers.get('x-robots-tag')||'',/noindex/);
+});
+
+test('public preview cache exception does not weaken API write protection or other API caching',async()=>{
+  const mutation=new Request('https://ekodi.kr/api/public/preview/map',{method:'POST',headers:{'cf-connecting-ip':'203.0.113.11'},body:'{}'});
+  const blocked=await enforcePlatformRequestSecurity(mutation,{ENVIRONMENT:'production',PLATFORM_SENSITIVE_RATE_LIMITER:limiter(false)});
+  assert.equal(blocked.status,429);
+  assert.equal((await blocked.json()).code,'PLATFORM_SENSITIVE_RATE_LIMITED');
+
+  const otherRequest=new Request('https://ekodi.kr/api/status');
+  const otherResponse=applyPlatformSecurityHeaders(new Response('{"ok":true}',{headers:{
+    'content-type':'application/json; charset=utf-8',
+    'cache-control':'public, max-age=60',
+  }}),otherRequest);
+  assert.equal(otherResponse.headers.get('cache-control'),'no-store');
+});
