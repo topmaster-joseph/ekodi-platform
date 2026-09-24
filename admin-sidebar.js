@@ -92,6 +92,7 @@ body.admin-compact .${MORE_CLASS}{display:flex;align-items:center;justify-conten
 body.admin-compact .${MORE_CLASS}:hover{background:#f2f7fb;color:#173b57}
 body.admin-compact .${MORE_CLASS} b{font-size:11px;font-weight:800}
 body.admin-compact .${SOURCE_CLASS}{display:none!important}
+/* Keep the compact context row only when it carries actual multi-context navigation. */
 body.admin-compact .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display:flex!important;align-items:center;gap:8px;min-height:50px;padding:4px 14px;border-bottom:1px solid var(--admin-border);background:rgba(255,255,255,.98);color:#172033;box-shadow:0 3px 12px rgba(38,58,78,.035)!important;backdrop-filter:blur(12px)!important}
 body.admin-compact .admin-context-title{display:none!important}
 body.admin-compact .${TABS_CLASS}{display:flex;align-items:center;gap:5px;min-width:0;overflow-x:auto;scrollbar-width:none}
