@@ -96,7 +96,10 @@ test('static policy validation cannot replace live PR provenance enforcement', (
 
 test('production workflows that validate PR provenance can read pull requests', () => {
   for (const [name, source] of [['shared deploy', sharedDeploy], ['shared staging', sharedStage], ['admin control', adminControl], ['main CI', ciWorkflow]]) {
-    assert.match(source, /permissions:\s*\n\s*contents:\s*read\s*\n\s*pull-requests:\s*read/, `${name} must grant read-only PR provenance access`);
+    const permissions = source.match(/permissions:\s*\n((?:\s+[a-z-]+:\s*(?:read|none)\s*\n)+)/)?.[1] || '';
+    assert.match(permissions, /^\s*contents:\s*read\s*$/m, `${name} must keep repository contents read-only`);
+    assert.match(permissions, /^\s*pull-requests:\s*read\s*$/m, `${name} must grant read-only PR provenance access`);
+    assert.doesNotMatch(permissions, /:\s*write\s*$/m, `${name} must not gain write permission while reading PR provenance`);
   }
 });
 test('shared-site production provenance gate receives the scoped GitHub token', () => {
