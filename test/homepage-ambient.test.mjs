@@ -7,16 +7,18 @@ const js = await readFile(new URL('../homepage-ambient.js', import.meta.url), 'u
 const build = await readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
 const deploySiteCore = await readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8');
 
-test('homepage keeps a translucent daily Seoul-date ambient scene', () => {
+test('homepage keeps a translucent per-load approved ambient scene', () => {
   assert.match(css, /body::before/);
   assert.match(css, /backdrop-filter:blur/);
   assert.match(css, /ekodiAmbientDrift/);
   assert.match(js, /const palettes = \[/);
   assert.match(js, /Asia\/Seoul/);
-  assert.match(js, /function dailySeed/);
-  assert.match(js, /dataset\.dailyDate/);
+  assert.match(js, /function stableHash/);
+  assert.match(js, /function pageLoadSeed/);
+  assert.match(js, /dataset\.ekodiVisualSeed/);
+  assert.match(js, /dataset\.ambientLoad/);
   assert.match(js, /--ambient-a/);
-  assert.doesNotMatch(js, /crypto\.getRandomValues\(/);
+  assert.match(js, /crypto\.getRandomValues\(/);
   assert.doesNotMatch(js, /Math\.random\(/);
   assert.match(deploySiteCore, /'homepage-ambient\.js'/);
   assert.match(deploySiteCore, /'homepage-ambient\.css'/);

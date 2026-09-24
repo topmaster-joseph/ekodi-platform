@@ -36,7 +36,7 @@ const handedTenant=fragment.get('ekodi_tenant')||'';
 const handedStore=fragment.get('ekodi_store')||'';
 
 const FALLBACK_THEME={
-  version:5,
+  version:6,
   workspace:{background:'#071522',surface:'#0B1D2E',surfaceRaised:'#10263A',border:'#24425E',text:'#F4F7FB',muted:'#9FB1C3',focus:'#8EC8FF',radius:'16px'},
   rules:{
     stableSurfaces:['workspace','admin','form','document','data'],
@@ -66,6 +66,20 @@ const FALLBACK_THEME={
       {id:'clear',selectorMix:14,railOpacity:.78},
       {id:'bright',selectorMix:18,railOpacity:.86}
     ],
+    documentLoadAmbientVariation:{
+      enabled:true,
+      trigger:'top-level-navigation-or-reload',
+      stableForDocumentLifetime:true,
+      approvedPaletteOnly:true,
+      maxBackgroundMixPercent:6,
+      variants:[
+        {id:'mist-1',backgroundMix:2},
+        {id:'mist-2',backgroundMix:3},
+        {id:'mist-3',backgroundMix:4},
+        {id:'mist-4',backgroundMix:5},
+        {id:'mist-5',backgroundMix:6}
+      ]
+    },
     seasonOffsets:{winter:0,spring:1,summer:2,autumn:3},
     motifs:{
       orbit:['linear-gradient(90deg,var(--accent),var(--companion),var(--accent))'],
@@ -88,6 +102,12 @@ let surface=requestedSurface;
 let cycleTimer=null;
 let memberGateTimer=null;
 let memberGateRoot=null;
+const DOCUMENT_LOAD_SEED=(()=>{
+  const injected=String(document.documentElement.dataset.ekodiVisualSeed||'').trim();
+  if(injected)return hashText(injected);
+  try{const values=new Uint32Array(1);crypto.getRandomValues(values);return values[0]>>>0;}
+  catch{return (Date.now()^Math.floor((globalThis.performance?.timeOrigin||0))^hashText(location.href))>>>0;}
+})();
 let memberGateOwnedInert=false;
 let state={workspaceKey:'',workspaceName:'',role:'',personName:'',tenantId:'',storeId:''};
 
@@ -150,22 +170,31 @@ function publicVariant(){
   const seed=hashText(`${service?.id||explicitService||'ekodi'}:${motif}`);
   const seasonOffset=Number(config.seasonOffsets?.[season]||0);
   const variants=config.variants||[];
-  const variant=variants.length?variants[(cycleIndex+seed+seasonOffset)%variants.length]:{id:'quiet',selectorMix:10,railOpacity:.72};
+  const variant=variants.length?variants[(cycleIndex+seed+seasonOffset)%variants.length]:{id:'quiet',selectorMix:10,railOpacity:.68};
   const motifVariants=config.motifs?.[motif]||config.motifs?.orbit||[];
   const rail=motifVariants.length?motifVariants[(cycleIndex+(seed>>>5)+seasonOffset)%motifVariants.length]:'linear-gradient(90deg,var(--accent),var(--companion))';
   const mix=Math.min(24,Math.max(6,Number(variant.selectorMix)||10));
+  const ambient=config.documentLoadAmbientVariation||FALLBACK_THEME.publicExperience.documentLoadAmbientVariation||{};
+  const ambientVariants=ambient.variants||[];
+  const ambientVariant=ambientVariants.length?ambientVariants[(DOCUMENT_LOAD_SEED+seed+seasonOffset)%ambientVariants.length]:{id:'mist-1',backgroundMix:2};
+  const maxBackgroundMix=Math.min(6,Math.max(1,Number(ambient.maxBackgroundMixPercent)||6));
+  const backgroundMix=Math.min(maxBackgroundMix,Math.max(1,Number(ambientVariant.backgroundMix)||2));
   return {
     enabled:true,
     mode:config.rotation||'weekly-deterministic',
     timezone:config.timezone||'Asia/Seoul',
     dateKey:date.key,
     cycleKey:`${date.year}-w${cycleIndex}`,
+    ambientCycleKey:`load-${DOCUMENT_LOAD_SEED.toString(36)}`,
     season,
     motif,
     companion,
     variant:variant.id||'quiet',
+    ambientVariant:ambientVariant.id||'mist-1',
     rail,
     railOpacity:Math.min(1,Math.max(.45,Number(variant.railOpacity)||.72)),
+    backgroundMix,
+    backgroundTint:'color-mix(in srgb,var(--ekodi-public-accent) 55%,var(--ekodi-public-companion))',
     selectorBackground:`linear-gradient(145deg,color-mix(in srgb,var(--accent) ${mix}%,#071522),rgba(7,21,34,.96))`,
     selectorBorder:`color-mix(in srgb,var(--accent) ${Math.min(42,mix+18)}%,#24425e)`,
     selectorShadow:`0 10px 30px rgba(0,0,0,.28),0 0 24px color-mix(in srgb,var(--accent) ${Math.min(28,mix+6)}%,transparent)`
@@ -213,13 +242,18 @@ function applyHostTokens(){
     html.dataset.ekodiShellPublicCycle=value.publicExperience.cycleKey;
     html.dataset.ekodiShellPublicMotif=value.publicExperience.motif;
     html.style.setProperty('--ekodi-public-rail',value.publicExperience.rail);
+    html.style.setProperty('--ekodi-public-background-tint',value.publicExperience.backgroundTint);
+    html.style.setProperty('--ekodi-public-background-mix',String(value.publicExperience.backgroundMix));
     window.dispatchEvent(new CustomEvent('ekodi:public-experience',{detail:{...value.publicExperience,serviceId:value.serviceId,accent:value.accent}}));
   }else{
     delete html.dataset.ekodiShellSeason;
     delete html.dataset.ekodiShellPublicCycle;
     delete html.dataset.ekodiShellPublicMotif;
     html.style.removeProperty('--ekodi-public-rail');
+    html.style.removeProperty('--ekodi-public-background-tint');
+    html.style.removeProperty('--ekodi-public-background-mix');
   }
+  html.dataset.ekodiVisualState='ready';
   window.dispatchEvent(new CustomEvent('ekodi:shell-theme',{detail:value}));
   return value;
 }
@@ -369,7 +403,7 @@ function buildUi(){
 function refreshThemeCycle(){if(!service)return;applyHostTokens();render();}
 
 function applyProgressiveHomeFocus(){
-  if(!service)return;
+  if(!service){document.documentElement.dataset.ekodiVisualState='ready';return;}
   const requested=document.documentElement.dataset.ekodiHomeFocusRequest==='v1';
   if(!requested&&(surface!=='public'||['church','ekodi'].includes(service.id)))return;
   if(requested&&(service.id==='church'||!['public','workspace'].includes(surface)))return;
@@ -418,7 +452,7 @@ function startCycleRefresh(){
 }
 async function fetchJson(url){const response=await fetch(url,{cache:'no-store',mode:'cors'});if(!response.ok)throw new Error(`${new URL(url).pathname}_${response.status}`);return response.json();}
 async function boot(){
-  try{manifest=await fetchJson(MANIFEST_URL);}catch(error){console.warn('EKODI Shell manifest unavailable',error);return;}
+  try{manifest=await fetchJson(MANIFEST_URL);}catch(error){console.warn('EKODI Shell manifest unavailable',error);document.documentElement.dataset.ekodiVisualState='ready';return;}
   try{
     const remoteTheme=await fetchJson(THEME_URL);
     if(remoteTheme&&typeof remoteTheme==='object')theme={...FALLBACK_THEME,...remoteTheme,workspace:{...FALLBACK_THEME.workspace,...remoteTheme.workspace},rules:{...FALLBACK_THEME.rules,...remoteTheme.rules},publicExperience:{...FALLBACK_THEME.publicExperience,...remoteTheme.publicExperience,motifs:{...FALLBACK_THEME.publicExperience.motifs,...remoteTheme.publicExperience?.motifs}},services:{...FALLBACK_THEME.services,...remoteTheme.services}};

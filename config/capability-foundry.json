@@ -30,7 +30,7 @@
     "serviceCreationAutomatic": false,
     "humanReviewRequired": true,
     "policyId": "CAPABILITY-BEFORE-SERVICE-001",
-    "constitutionVersion": "1.24.0",
+    "constitutionVersion": "1.25.0",
     "newUserServiceRegistrationRequiresEvidence": true,
     "evidenceRegistry": "config/service-creation-evidence.json",
     "grandfatherBaselineOwnedBy": "governance/constitution/constitution.json",
