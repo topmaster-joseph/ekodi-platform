@@ -77,7 +77,7 @@ AI billing and AI capability access are related but not identical.
 
 - The service subscription remains owned by the service that sells it.
 - The central entitlement engine derives the effective AI capability level for the selected subject.
-- The canonical management surface is `https://ekodi.kr/my/`; `my.ekodi.kr` is not the canonical My EKODI address.
+- The canonical management surface is `https://ekodi.kr/my/`; legacy alternate My hostnames are compatibility-only and are not the canonical user address.
 - The same person can act as a personal subject or as an authorized organization/workspace subject.
 - If the same capability identifier is exposed in both 모두의 AI and an owning site, the selected subject uses one entitlement. The UI must not ask the same subject to buy that capability again merely because the surface changed.
 - Site-specific add-ons remain scoped to that site and do not become ecosystem-wide rights.
