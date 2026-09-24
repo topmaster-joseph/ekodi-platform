@@ -153,6 +153,10 @@ test('mission stays off the EKODI root catalog until homepage exposure is separa
 
 test('mission production smoke covers every published subservice route',async()=>{
   const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/space.worker.json',import.meta.url),'utf8'));const urls=new Set(manifest.worker.requests.map(item=>item.url));for(const [path] of pageCases)assert.ok(urls.has(`https://ekodi.kr${path}`),path);const missionRequests=manifest.worker.requests.filter(item=>item.url.startsWith('https://ekodi.kr/ekodimission'));assert.ok(missionRequests.length>=pageCases.length);for(const item of missionRequests)assert.equal(item.rollbackVerify,false,item.url);
+  const eventPage=await readFile(new URL('../space/ekodimission-open-table-apply.page',import.meta.url),'utf8');
+  const eventProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/ekodimission/apply/260926-open-table');
+  assert.ok(eventProbe,'missing Open Table production probe');
+  for(const marker of eventProbe.expect||[])assert.ok(eventPage.includes(marker),`Open Table probe marker drifted from page source: ${marker}`);
 });
 
 test('mission authentication and service registry use only the canonical ekodi.kr path',async()=>{
