@@ -1990,6 +1990,40 @@
           "x-ekodi-operating-space-label: v1"
         ],
         "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibooks/admin/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "x-ekodi-route: ekodibooks-admin",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false,
+        "expect": [
+          "에코디서점 관리",
+          "출판 파이프라인",
+          "매출 · 비용",
+          "인세 · 지급",
+          "배포 · 채널",
+          "/ekodibooks/admin/_shell.js"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/admin/content/books",
+        "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/ekodibooks/admin",
+          "cache-control: no-store",
+          "x-ekodi-route: admin-canonical-handoff"
+        ],
+        "rollbackVerify": false
       }
     ]
   }
