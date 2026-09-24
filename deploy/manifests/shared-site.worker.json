@@ -132,6 +132,29 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/cmpmyi/admin/panel/delivery",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "배달플랫폼 통합관리",
+          "3개 브랜드 · 7개 배달/주문 채널",
+          "배달의민족",
+          "쿠팡이츠",
+          "요기요",
+          "자담치킨 목포대점",
+          "피자마루 목포대점",
+          "요거트퍼플 목포대점"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: cmpmyi-store-portfolio-panel",
+          "cache-control: no-store",
+          "x-frame-options: SAMEORIGIN"
+        ],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/",
         "statuses": [
           200
