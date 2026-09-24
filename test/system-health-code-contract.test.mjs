@@ -15,7 +15,7 @@ test('System Health exposes code and architecture health without autonomous repa
   ]);
 
   assert.match(menu, /id: 'health'[^\n]*group: 'status'[^\n]*ko: '플랫폼·사이트·엔진 상태'/);
-  assert.match(admin, /CODE & ARCHITECTURE HEALTH/);
+  assert.match(admin, /<span>코드 · 구조 건강<\\/span>/);
   assert.match(admin, /data-code-health-score/);
   assert.match(admin, /api\/control\/system-health\/code/);
   assert.match(control, /system-health-data\/system-health-code-report\.json/);
