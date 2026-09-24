@@ -969,24 +969,21 @@ function Get-EkodiBackgroundAuthState([int]$StatusCode, [string]$Content) {
 }
 
 function Invoke-EkodiBackgroundHttpGet([string]$Target) {
+  $handler = [Net.Http.HttpClientHandler]::new()
+  $handler.AllowAutoRedirect = $false
+  $client = [Net.Http.HttpClient]::new($handler)
+  $client.Timeout = [TimeSpan]::FromSeconds(25)
   try {
-    $response = Invoke-WebRequest -Uri $Target -Method Get -UseBasicParsing -MaximumRedirection 0 -TimeoutSec 25 -ErrorAction Stop
-    return @{ statusCode = [int]$response.StatusCode; content = [string]$response.Content }
-  } catch {
-    $webResponse = $_.Exception.Response
-    if (-not $webResponse) { throw }
-    $statusCode = [int]$webResponse.StatusCode
-    $content = ''
+    $response = $client.GetAsync($Target).GetAwaiter().GetResult()
     try {
-      $stream = $webResponse.GetResponseStream()
-      if ($stream) {
-        $reader = [IO.StreamReader]::new($stream)
-        try { $content = $reader.ReadToEnd() } finally { $reader.Dispose() }
-      }
+      $content = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+      return @{ statusCode = [int]$response.StatusCode; content = [string]$content }
     } finally {
-      try { $webResponse.Dispose() } catch { }
+      $response.Dispose()
     }
-    return @{ statusCode = $statusCode; content = [string]$content }
+  } finally {
+    $client.Dispose()
+    $handler.Dispose()
   }
 }
 
