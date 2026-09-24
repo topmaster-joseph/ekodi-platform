@@ -6,6 +6,7 @@ on:
     paths:
       - 'space/**'
       - 'space-worker.js'
+      - 'mnubiz-public-page.js'
       - 'realtime-tenant-registry.js'
       - 'tenant-live-page.js'
       - 'storefront-page.js'
@@ -39,6 +40,7 @@ on:
     paths:
       - 'space/**'
       - 'space-worker.js'
+      - 'mnubiz-public-page.js'
       - 'realtime-tenant-registry.js'
       - 'tenant-live-page.js'
       - 'storefront-page.js'

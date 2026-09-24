@@ -1,0 +1,76 @@
+name: Deploy Community API
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/functions/community-api/index.ts'
+      - 'supabase/migrations/20260923224500_community_workspace_scope.sql'
+      - '.github/workflows/deploy-community-api.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/community-api/index.ts'
+      - 'supabase/migrations/20260923224500_community_workspace_scope.sql'
+      - '.github/workflows/deploy-community-api.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate Community API workspace contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f supabase/functions/community-api/index.ts
+          test -f supabase/migrations/20260923224500_community_workspace_scope.sql
+          grep -Fq '"https://ekodi.kr"' supabase/functions/community-api/index.ts
+          grep -Fq 'workspace_tenant_id' supabase/functions/community-api/index.ts
+          grep -Fq 'x-ekodi-workspace' supabase/functions/community-api/index.ts
+          grep -Fq 'community_circles_workspace_tenant_idx' supabase/migrations/20260923224500_community_workspace_scope.sql
+
+  production:
+    if: github.event_name == 'push'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+      PROJECT_REF: renzehysxirjilvdxacv
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Select Supabase deployment credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-}"
+          [ -n "$token" ] || token="${TOKEN_B:-}"
+          [ -n "$token" ] || token="${TOKEN_C:-}"
+          [ -n "$token" ] || token="${TOKEN_D:-}"
+          if [ -z "$token" ]; then
+            echo 'Community API deployment credential is not configured.'
+            exit 2
+          fi
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Deploy Community API
+        run: npx --yes supabase@2.116.0 functions deploy community-api --project-ref "$PROJECT_REF"
+      - name: Verify canonical Community API CORS
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://$PROJECT_REF.supabase.co/functions/v1/community-api/profile"
+          code=$(curl -sS -D /tmp/community-api-cors.headers -o /dev/null -w '%{http_code}' -X OPTIONS "$endpoint" -H 'Origin: https://ekodi.kr' -H 'Access-Control-Request-Method: GET' -H 'Access-Control-Request-Headers: authorization,apikey,content-type,x-ekodi-workspace' || true)
+          [[ "$code" =~ ^(200|204)$ ]]
+          grep -Eiq '^access-control-allow-origin:[[:space:]]*https://ekodi\.kr[[:space:]]*$' /tmp/community-api-cors.headers
+          grep -Eiq '^access-control-allow-headers:.*x-ekodi-workspace' /tmp/community-api-cors.headers

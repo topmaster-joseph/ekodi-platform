@@ -1,5 +1,5 @@
 {
-  "version": 86,
+  "version": 90,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -133,6 +133,22 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/@ekodi-public-probe",
+        "statuses": [
+          404
+        ],
+        "redirect": "manual",
+        "expect": [
+          "공개 개인페이지를 찾을 수 없습니다."
+        ],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: person-public-profile",
+          "x-ekodi-canonical-path: /",
+          "x-ekodi-surface-context: public-person-profile",
+          "x-robots-tag: noindex, nofollow, noarchive"
+        ]
+      },
+      {
         "url": "https://ekodi.kr/ekodimission/live",
         "statuses": [
           200
@@ -200,10 +216,13 @@
         "redirect": "manual",
         "expect": [
           "EKODIBIZ",
-          "WHAT WE DO"
+          "WHAT WE DO",
+          "운영공간"
         ],
         "headerExpect": [
-          "x-ekodi-workspace-gateway: ekodibiz-service-binding"
+          "x-ekodi-workspace-gateway: ekodibiz-service-binding",
+          "x-ekodi-tenant-readability: v1",
+          "x-ekodi-operating-space-label: v1"
         ],
         "rollbackVerify": false
       },
@@ -639,6 +658,7 @@
         "expect": [
           "EKODI Workspace Admin",
           "workspace-admin.js",
+          "admin-direct-google.js?v=20260924-v1",
           "data-ekodi-admin-layout=\"two-level\"",
           "data-ekodi-admin-nav-mode=\"primary\"",
           "data-ekodi-admin-subnav"
@@ -705,6 +725,7 @@
           "EKODI Admin",
           "return_to=https%3A%2F%2Fekodi.kr%2Fadmin",
           "admin-authenticated-shell.js?v=",
+          "admin-direct-google.js?v=20260924-v1",
           "admin-compact.js admin-menu-layout.js admin-demand-loader.js",
           "https://ekodi.kr/auth/?site=admin"
         ],
@@ -1825,6 +1846,95 @@
           "location: https://ekodi.kr/seonam-medi",
           "x-ekodi-route: seonam-medi-canonical",
           "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodichurch",
+        "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/ekodichurch/",
+          "x-ekodi-route: church-path-canonical"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodichurch/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "WELCOME TO EKODI CHURCH",
+          "에코디교회"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: church-public-path",
+          "x-ekodi-tenant-readability: v1",
+          "x-ekodi-operating-space-label: v1"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cgma",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "운영공간"
+        ],
+        "headerExpect": [
+          "x-ekodi-tenant-readability: v1",
+          "x-ekodi-operating-space-label: v1"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/jadam",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "운영공간"
+        ],
+        "headerExpect": [
+          "x-ekodi-tenant-readability: v1",
+          "x-ekodi-operating-space-label: v1"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/pizzamaru",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "운영공간"
+        ],
+        "headerExpect": [
+          "x-ekodi-tenant-readability: v1",
+          "x-ekodi-operating-space-label: v1"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/yogurt",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "운영공간"
+        ],
+        "headerExpect": [
+          "x-ekodi-tenant-readability: v1",
+          "x-ekodi-operating-space-label: v1"
         ],
         "rollbackVerify": false
       }

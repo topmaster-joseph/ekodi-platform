@@ -5,6 +5,7 @@ import { renderStorefrontPage, storefrontCss } from './storefront-page.js';
 import { renderJadamStorefrontPage, jadamStorefrontCss } from './jadam-storefront.js';
 import { renderRestaurantStorefrontPage, restaurantStorefrontCss } from './restaurant-storefront.js';
 import { isOrganizationWorkspaceSlug, renderOrganizationPublicPage } from './organization-public-page.js';
+import { isMnuBizWorkspaceSlug, renderMnuBizPublicPage } from './mnubiz-public-page.js';
 
 const EKODIMISSION_PREFIX='/ekodimission';
 const EKODIMISSION_PUBLIC_ROUTE='ekodimission-public';
@@ -205,6 +206,13 @@ export default{
         return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-alias':`${requested}->${resolved.canonicalSlug}`}});
       }
       if(resolved.status==='paused')return withHeaders(env,new Response('<!doctype html><html lang="ko"><meta charset="utf-8"><title>사용자 사이트 일시중지 · EKODI</title><body><main><h1>사용자 사이트가 일시중지되었습니다.</h1><p>운영공간 관리자 설정에서 다시 활성화할 수 있습니다.</p></main></body></html>',{status:404,headers:{'content-type':'text/html; charset=utf-8'}}),'space-paused');
+      if(isMnuBizWorkspaceSlug(requested)&&workspaceRoute?.service==='community'){
+        const target=new URL('/community/', 'https://ekodi.kr');target.searchParams.set('workspace','mnubiz');
+        return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-service':'mnubiz/community'}});
+      }
+      if(isMnuBizWorkspaceSlug(requested)&&!workspaceRoute?.service){
+        return withHeaders(env,renderMnuBizPublicPage(),'space-organization');
+      }
       if(isOrganizationWorkspaceSlug(requested)&&!workspaceRoute?.service){
         return withHeaders(env,await renderOrganizationPublicPage(request,env,resolved,requested),'space-organization');
       }

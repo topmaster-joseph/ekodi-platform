@@ -11,6 +11,7 @@ const params=new URLSearchParams(location.search);
 const directEntry=params.get('direct')==='1';
 const preopenedRequested=directEntry&&params.get('bridge')==='preopened';
 const directBridgeRoot=document.documentElement;
+if(preopenedRequested)directBridgeRoot.dataset.adminDirectBridge='1';
 const CANONICAL_AUTH_ORIGIN=runtime.authOrigin;
 const GOOGLE_BRIDGE_ORIGIN=runtime.authOrigin;
 const defaultReturn=runtime.environment==='production'?'https://ekodi.kr/admin/':runtime.authOrigin?runtime.authOrigin+'/admin/':'https://ekodi.kr/admin/';

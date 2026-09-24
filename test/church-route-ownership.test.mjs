@@ -43,3 +43,19 @@ test('Church Live canonical navigation never points at the retired /live/church 
   }
   assert.match(tenants,/path:'\/ekodichurch\/live\/'/);
 });
+
+test('Shared Site release probes stay aligned with the canonical Church public URL',async()=>{
+  const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const canonical=manifest.worker.requests.find(item=>item.url===CHURCH_ROUTE_CONTRACT.publicUrl);
+  assert.ok(canonical,'canonical Church public probe missing from guarded release');
+  assert.deepEqual(canonical.statuses,[200]);
+  assert.ok(canonical.headerExpect?.includes('x-ekodi-route: '+CHURCH_ROUTE_CONTRACT.publicRoute));
+  assert.deepEqual(canonical.expect,['WELCOME TO EKODI CHURCH','에코디교회']);
+  assert.ok(canonical.headerExpect?.includes('x-ekodi-tenant-readability: v1'));
+  assert.ok(canonical.headerExpect?.includes('x-ekodi-operating-space-label: v1'));
+  const noSlash=manifest.worker.requests.find(item=>item.url===CHURCH_ROUTE_CONTRACT.publicUrl.replace(/\/$/,''));
+  assert.ok(noSlash,'Church no-slash canonical redirect probe missing');
+  assert.deepEqual(noSlash.statuses,[308]);
+  assert.ok(noSlash.headerExpect?.includes('location: '+CHURCH_ROUTE_CONTRACT.publicUrl));
+});
+
