@@ -1,9 +1,9 @@
 export const ADMIN_SERVICE_CATALOG = Object.freeze([
   { id:'church', name:'에코디교회', basePath:'/ekodichurch', group:'community' },
-  { id:'biz', name:'에코디비즈', basePath:'/ekodibiz', group:'business' },
-  { id:'mall', name:'에코디몰', basePath:'/ekodimall', group:'sites', kind:'site', siteRelation:'user' },
+  { id:'biz', name:'에코디비즈', basePath:'/ekodibiz', group:'business', channelAdminSection:'publishing', channelSubjectKey:'ekodi-biz' },
+  { id:'mall', name:'에코디몰', basePath:'/ekodimall', group:'sites', kind:'site', siteRelation:'user', channelAdminSection:'channel-settings', channelSubjectKey:'ekodimall' },
   { id:'marketing', name:'마케팅 AI', basePath:'/ekodibiz/marketing-ai', group:'business' },
-  { id:'trade', name:'에코디 트레이딩', basePath:'/ekodibiz/trade', group:'business' },
+  { id:'trade', name:'에코디 트레이딩', basePath:'/ekodibiz/trade', group:'business', channelAdminSection:'publishing', channelSubjectKey:'ekoditrade' },
   { id:'invest', name:'에코디 투자', basePath:'/ekodibiz/invest', group:'business' },
   { id:'bible', name:'에코디 말씀대화', basePath:'/bible', group:'knowledge' },
   { id:'books', name:'에코디서점', basePath:'/books', group:'knowledge' },
@@ -31,10 +31,10 @@ export const ADMIN_SERVICE_CATALOG = Object.freeze([
   { id:'developer', name:'개발자 서비스', basePath:'/developer', group:'professional' },
   { id:'tax', name:'세금·증빙', basePath:'/tax', group:'professional' },
   { id:'cheonggye-local', name:'청계잇다', basePath:'/cheonggye', group:'sites', kind:'site', siteRelation:'user' },
-  { id:'cgma', name:'청계면상인회', basePath:'/cgma', group:'sites', kind:'site', siteRelation:'customer-partner' },
-  { id:'jadam', name:'자담치킨 목포대점', basePath:'/jadam', group:'sites', kind:'site', siteRelation:'customer-partner' },
-  { id:'pizzamaru', name:'피자마루 목포대점', basePath:'/pizzamaru', group:'sites', kind:'site', siteRelation:'customer-partner' },
-  { id:'yogurt', name:'요거트퍼플 목포대점', basePath:'/yogurt', group:'sites', kind:'site', siteRelation:'customer-partner' },
+  { id:'cgma', name:'청계면상인회', basePath:'/cgma', group:'sites', kind:'site', siteRelation:'customer-partner', channelAdminSection:'publishing' },
+  { id:'jadam', name:'자담치킨 목포대점', basePath:'/jadam', group:'sites', kind:'site', siteRelation:'customer-partner', channelAdminSection:'publishing' },
+  { id:'pizzamaru', name:'피자마루 목포대점', basePath:'/pizzamaru', group:'sites', kind:'site', siteRelation:'customer-partner', channelAdminSection:'publishing' },
+  { id:'yogurt', name:'요거트퍼플 목포대점', basePath:'/yogurt', group:'sites', kind:'site', siteRelation:'customer-partner', channelAdminSection:'publishing' },
 ]);
 
 export const ADMIN_SERVICE_GROUPS = Object.freeze([
@@ -64,6 +64,21 @@ export function canonicalServiceUrl(basePath){
 
 export function canonicalServiceAdminUrl(basePath){
   return `https://ekodi.kr${canonicalServiceAdminPath(basePath)}`;
+}
+
+export function channelAdminServices(){
+  return ADMIN_SERVICE_CATALOG.filter(item=>Boolean(item.channelAdminSection));
+}
+
+export function canonicalServiceChannelAdminPath(service){
+  const item=typeof service==='string'?getAdminService(service):service;
+  if(!item?.channelAdminSection)return '';
+  return `${canonicalServiceAdminPath(item.basePath)}/${String(item.channelAdminSection).replace(/^\/+|\/+$/g,'')}`;
+}
+
+export function canonicalServiceChannelAdminUrl(service){
+  const path=canonicalServiceChannelAdminPath(service);
+  return path?`https://ekodi.kr${path}`:'';
 }
 
 const BY_ID=new Map(ADMIN_SERVICE_CATALOG.map(item=>[item.id,item]));
