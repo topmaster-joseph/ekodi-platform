@@ -157,6 +157,7 @@ jobs:
           echo '## EKODI Background Browser Worker' >> "$GITHUB_STEP_SUMMARY"
           jq -r '"- Result: \(.ok)\n- Final URL: \(.finalUrl)\n- Device: \(.deviceProfile) \(.viewport.width)x\(.viewport.height)\n- Headless/ephemeral: \(.headless)/\(.ephemeralContext)\n- Blocked mutations: \(.blockedMutations|length)\n- Page errors: \(.pageErrors|length)\n- Horizontal overflow snapshots: \([.results[] | select(.type == "snapshot" and .horizontalOverflow == true)] | length)\n- Screenshots: \(.screenshots|length)"' "$result" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: ekodi-background-browser-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/background-browser-worker
