@@ -41,6 +41,15 @@ expect(resolver.includes("state==='protect'")&&resolver.includes("'essential-onl
 expect(sharedDeploy.includes('Resolve four-layer deployment continuity'),'Shared Site deploy must resolve the four-layer runtime decision');
 expect(sharedDeploy.includes('Hold production promotion after artifact preparation'),'Shared Site deploy must hold only after artifact continuity evidence exists');
 expect(sharedDeploy.includes("steps.continuity.outputs.release_action == 'prepare-and-hold'"),'Shared Site hold must be driven by continuity output');
+expect(policy.selectionRules?.quotaResetScheduledRecovery===true,'quota reset recovery must be scheduled');
+expect(policy.selectionRules?.quotaResetRecoveryCronUTC==='00:07','quota reset recovery must run after the 00:00 UTC reset boundary');
+expect(policy.selectionRules?.staleHeldArtifactDirectPromotionForbidden===true,'stale held artifacts must never be promoted directly');
+expect(policy.selectionRules?.mainAdvanceRequiresFreshGuardedRelease===true,'advanced main must require a fresh guarded release');
+expect(sharedDeploy.includes("cron: '7 0 * * *'"),'Shared Site deploy must schedule quota-reset recovery at 00:07 UTC');
+expect(sharedDeploy.includes('scheduled_release_gate:'),'Shared Site deploy must have one scheduled recovery gate');
+expect(sharedDeploy.includes("reason='quota-reset-resume-same-sha'"),'scheduled recovery must identify same-SHA recovery');
+expect(sharedDeploy.includes("reason='quota-reset-revalidate-current-main'"),'scheduled recovery must revalidate current main when SHA advanced');
+expect(sharedDeploy.includes('No held artifact is promoted directly'),'scheduled recovery must never directly promote a stale held artifact');
 
 if(failures.length){
   for(const failure of failures)console.error('[EKODI-DEPLOYMENT-FOUR-LAYER-001] '+failure);
