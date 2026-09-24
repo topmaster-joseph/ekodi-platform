@@ -61,3 +61,15 @@ For a normal code release:
 - Paid plan/limit changes remain Layer 4 Owner decisions only.
 
 This distinction matters because Workers Free runtime requests reset daily, while Workers Builds has a separate monthly build-minute/concurrency model. GitHub Actions + Wrangler remains the canonical release transport; it does not turn Cloudflare Workers Builds into a required dependency.
+
+
+## Automatic daily reset recovery
+
+The canonical Shared Site release workflow performs one scheduled recovery check at **00:07 UTC**, after the Workers Free daily request reset boundary.
+
+The schedule is not a second deployment lane. It proceeds only when the latest completed canonical Shared Site release failed specifically at the quota-aware `prepare-and-hold` boundary.
+
+- If the held release SHA is still current main, the same source is revalidated from staging through immutable artifact continuity before production mutation.
+- If main has advanced, the old held artifact is never promoted. The scheduled run treats current main as a fresh Guarded Deploy and repeats the full staging/artifact continuity path.
+- Any non-quota failure remains stopped for review.
+- Cloud Control, paid upgrade and Owner authority are never used as automatic quota bypasses.
