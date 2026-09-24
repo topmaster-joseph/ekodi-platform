@@ -41,3 +41,9 @@ test('Deployments announces panel installation so Admin navigation reconciles af
   const announce = admin.indexOf("new CustomEvent('ekodi-feature-installed'");
   assert.ok(mount >= 0 && announce > mount, 'Deployments readiness event must fire only after #releaseControl is mounted');
 });
+
+
+test('Shared Site release watches the Deployments control surface', async () => {
+  const workflow = await read('.github/workflows/deploy-site-core.yml');
+  assert.match(workflow, /- 'release-control-admin\.js'/);
+});
