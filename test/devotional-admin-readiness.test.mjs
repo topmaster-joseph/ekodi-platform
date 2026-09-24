@@ -17,3 +17,9 @@ test('Devotional admin renders immediately and refreshes without blocking naviga
   assert.match(deploy, /ai-ops-admin\.js devotional-admin\.js/);
   assert.match(deploy, /dist\/ai-ops-admin\.css dist\/devotional-admin\.js dist\/devotional-admin\.css/);
 });
+
+test('Devotional admin uses the canonical apex control path', async () => {
+  const admin = await readFile(new URL('../devotional-admin.js', import.meta.url), 'utf8');
+  assert.match(admin, /https:\/\/ekodi\.kr\/api\/control\/devotional/);
+  assert.doesNotMatch(admin, /https:\/\/api\.ekodi\.kr/);
+});
