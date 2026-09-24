@@ -184,7 +184,7 @@ export function injectEkodiTenantReadability(response,options={}){
   const contentType=String(response.headers.get('content-type')||'').toLowerCase();
   if(!contentType.includes('text/html'))return response;
   if(String(response.headers.get(TENANT_READABILITY_HEADER)||'').trim()===TENANT_READABILITY_VERSION)return response;
-  if(String(response.headers.get('x-ekodi-shell')||'').trim()==='v2'||String(response.headers.get('x-ekodi-user-ui')||'').trim()===USER_UI_VERSION)return response;
+  const sharedUiAlreadyPresent=String(response.headers.get('x-ekodi-shell')||'').trim()==='v2'||String(response.headers.get('x-ekodi-user-ui')||'').trim()===USER_UI_VERSION;
   const headers=new Headers(response.headers);
   const csp=headers.get('content-security-policy');
   if(csp){
@@ -198,8 +198,9 @@ export function injectEkodiTenantReadability(response,options={}){
   if(typeof HTMLRewriter!=='function')return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
   const headerAdopter=new TenantReadabilityHeaderAdopter();
   let rewriter=new HTMLRewriter()
-    .on('html',new TenantReadabilityHtmlInjector())
-    .on('head',new TenantReadabilityHeadInjector())
+    .on('html',new TenantReadabilityHtmlInjector());
+  if(!sharedUiAlreadyPresent)rewriter=rewriter.on('head',new TenantReadabilityHeadInjector());
+  rewriter=rewriter
     .on('header',headerAdopter)
     .on('.site-header',headerAdopter)
     .on('.topbar',headerAdopter)
