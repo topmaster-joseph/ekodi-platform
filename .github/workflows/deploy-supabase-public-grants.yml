@@ -1,0 +1,140 @@
+name: Deploy Supabase Explicit Public Grants
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20260924150000_supabase_public_explicit_grants.sql'
+      - 'scripts/validate-supabase-public-grants.mjs'
+      - 'test/supabase-public-grants-policy.test.mjs'
+      - '.github/workflows/deploy-supabase-public-grants.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/20260924150000_supabase_public_explicit_grants.sql'
+      - 'scripts/validate-supabase-public-grants.mjs'
+      - 'test/supabase-public-grants-policy.test.mjs'
+      - '.github/workflows/deploy-supabase-public-grants.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-public-grants-${{ github.event_name == 'pull_request' && format('validate-pr-{0}', github.event.pull_request.number) || 'production' }}
+  cancel-in-progress: false
+
+env:
+  PROJECT_REF: renzehysxirjilvdxacv
+  MIGRATION: supabase/migrations/20260924150000_supabase_public_explicit_grants.sql
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate explicit-grant policy
+        run: |
+          set -euo pipefail
+          node scripts/validate-supabase-public-grants.mjs
+          node --test test/supabase-public-grants-policy.test.mjs
+          grep -Fq 'revoke select, insert, update, delete on tables' "$MIGRATION"
+          grep -Fq 'revoke execute on functions' "$MIGRATION"
+          grep -Fq 'revoke usage, select on sequences' "$MIGRATION"
+
+  production:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: production
+    env:
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Select Supabase deployment credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-}"
+          [ -n "$token" ] || token="${TOKEN_B:-}"
+          [ -n "$token" ] || token="${TOKEN_C:-}"
+          [ -n "$token" ] || token="${TOKEN_D:-}"
+          if [ -z "$token" ]; then
+            echo 'No Supabase production deployment credential is configured.'
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+
+      - name: Apply explicit public-grant defaults
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -Rs '{query:.,read_only:false}' "$MIGRATION" > /tmp/grant-defaults.json
+          code=$(curl -sS -o /tmp/grant-defaults-result.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/grant-defaults.json)
+          if [[ "$code" != '201' ]]; then
+            echo "Supabase grant-default migration failed with HTTP $code."
+            cat /tmp/grant-defaults-result.json
+            exit 1
+          fi
+
+      - name: Verify production default privileges
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/grant-proof.sql <<'SQL'
+          create table public.__ekodi_grant_probe(id bigint primary key);
+          create sequence public.__ekodi_grant_probe_seq;
+          create function public.__ekodi_grant_probe_fn() returns integer
+          language sql
+          as $func$ select 1 $func$;
+
+          do $block$
+          declare
+            role_name text;
+          begin
+            foreach role_name in array array['anon','authenticated','service_role'] loop
+              if has_table_privilege(role_name,'public.__ekodi_grant_probe','select')
+                 or has_table_privilege(role_name,'public.__ekodi_grant_probe','insert')
+                 or has_table_privilege(role_name,'public.__ekodi_grant_probe','update')
+                 or has_table_privilege(role_name,'public.__ekodi_grant_probe','delete') then
+                raise exception 'unexpected table privilege for %', role_name;
+              end if;
+              if has_sequence_privilege(role_name,'public.__ekodi_grant_probe_seq','usage')
+                 or has_sequence_privilege(role_name,'public.__ekodi_grant_probe_seq','select') then
+                raise exception 'unexpected sequence privilege for %', role_name;
+              end if;
+              if has_function_privilege(role_name,'public.__ekodi_grant_probe_fn()','execute') then
+                raise exception 'unexpected function privilege for %', role_name;
+              end if;
+            end loop;
+          end
+          $block$;
+
+          drop function public.__ekodi_grant_probe_fn();
+          drop sequence public.__ekodi_grant_probe_seq;
+          drop table public.__ekodi_grant_probe;
+          SQL
+          jq -Rs '{query:.,read_only:false}' /tmp/grant-proof.sql > /tmp/grant-proof.json
+          code=$(curl -sS -o /tmp/grant-proof-result.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/grant-proof.json)
+          if [[ "$code" != '201' ]]; then
+            echo "Supabase production grant proof failed with HTTP $code."
+            cat /tmp/grant-proof-result.json
+            exit 1
+          fi
+          echo 'Supabase public default privileges verified.'
