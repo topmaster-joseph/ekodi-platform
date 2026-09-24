@@ -4,6 +4,9 @@ import { createHash } from 'node:crypto';
 import {
   parseAgentVersion,
   chooseLiveWindowsAgent,
+  summarizeDeviceAvailability,
+  buildDeferredDeviceVerification,
+  NoOnlineWindowsAgentError,
   evaluateSelfUpdate,
   evaluateBrowserCanary,
   evaluateBrowserWorker,
@@ -29,6 +32,63 @@ test('selects only the freshest online enrolled Windows PC', () => {
     { id:'newer', status:'online', platform:'Windows 11', lastSeenAt:'2026-09-20T10:02:00Z', management:{ source:'agent', type:'pc' } },
   ];
   assert.equal(chooseLiveWindowsAgent(devices)?.id, 'newer');
+});
+
+test('offline-only device inventory creates explicit deferred evidence without claiming readiness', () => {
+  const devices = [
+    { id:'one', status:'offline', platform:'Windows 11', lastSeenAt:'2026-09-24T01:00:00Z', management:{ source:'agent', type:'pc' } },
+    { id:'two', status:'offline', platform:'Windows 11', lastSeenAt:'2026-09-24T01:01:00Z', management:{ source:'agent', type:'pc' } },
+    { id:'three', status:'stale', platform:'Windows 10', lastSeenAt:'2026-09-24T01:02:00Z', management:{ source:'agent', type:'pc' } },
+  ];
+  const availability = summarizeDeviceAvailability(devices);
+  assert.deepEqual(availability, {
+    total:3,
+    statusCounts:{ offline:2, stale:1 },
+    eligibleOnlineCount:0,
+  });
+
+  const deferred = buildDeferredDeviceVerification({
+    availability,
+    expectedVersion:'2.4.0',
+    observedAt:'2026-09-24T02:40:00Z',
+  });
+  assert.equal(deferred.ok, false);
+  assert.equal(deferred.deferred, true);
+  assert.equal(deferred.verificationState, 'DEFERRED_NO_ONLINE_TARGET');
+  assert.equal(deferred.verifiedAt, null);
+  assert.equal(deferred.nativeCapabilityGap, 'native-capability-unavailable');
+  assert.equal(deferred.retryPolicy, 'hourly-main-schedule');
+  assert.equal(deferred.target.available, false);
+  assert.deepEqual(deferred.target.statusCounts, { offline:2, stale:1 });
+  assert.equal(deferred.cutover.nativeServiceReady, false);
+  assert.equal(deferred.cutover.boundedSessionExecutorReady, false);
+  assert.equal(deferred.cutover.isolatedDesktopReady, false);
+  assert.equal(deferred.cutover.reason, 'no-online-enrolled-windows-agent');
+});
+
+test('online eligible Windows agent prevents deferred target classification', () => {
+  const devices = [
+    { id:'offline', status:'offline', platform:'Windows 11', lastSeenAt:'2026-09-24T01:00:00Z', management:{ source:'agent', type:'pc' } },
+    { id:'online', status:'online', platform:'Windows 11', lastSeenAt:'2026-09-24T02:00:00Z', management:{ source:'agent', type:'pc' } },
+  ];
+  const availability = summarizeDeviceAvailability(devices);
+  assert.equal(availability.eligibleOnlineCount, 1);
+  assert.equal(chooseLiveWindowsAgent(devices)?.id, 'online');
+});
+
+test('no-online error carries only the typed availability condition used for safe deferral', () => {
+  const error = new NoOnlineWindowsAgentError([
+    { status:'offline' },
+    { status:'offline' },
+    { status:'stale' },
+  ]);
+  assert.equal(error.code, 'NO_ONLINE_ENROLLED_WINDOWS_AGENT');
+  assert.equal(error.name, 'NoOnlineWindowsAgentError');
+  assert.deepEqual(error.availability, {
+    total:3,
+    statusCounts:{ offline:2, stale:1 },
+    eligibleOnlineCount:0,
+  });
 });
 
 test('self-update requires the new process version plus a fresh heartbeat', () => {
