@@ -92,10 +92,12 @@ test('guarded release requires the operating-space distinction on representative
   assert.ok(churchCanonical.headerExpect?.includes('x-ekodi-route: church-path-canonical'));
   assert.equal(churchCanonical.rollbackVerify,false);
 
+  const cgmaSharedProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/cgma'||item.url==='https://ekodi.kr/cgma/');
+  assert.equal(cgmaSharedProbe,undefined,'CGMA root is independently owned by cgma-root-gateway and must not be evaluated as a Shared Site candidate');
+
   for(const url of [
     'https://ekodi.kr/ekodichurch/',
     'https://ekodi.kr/ekodibiz',
-    'https://ekodi.kr/cgma',
     'https://ekodi.kr/jadam',
     'https://ekodi.kr/pizzamaru',
     'https://ekodi.kr/yogurt',
