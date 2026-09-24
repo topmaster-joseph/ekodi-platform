@@ -126,7 +126,10 @@ const menuReadableHash = createHash('sha256').update(menuReadableSource.replace(
 const menuCompactSource = await readFile(`${root}admin-menu-layout.compact.js`, 'utf8');
 const menuCompactHeader = menuCompactSource.match(/^\/\/ source-sha256:([a-f0-9]{64})\r?\n/);
 if (!menuCompactHeader || menuCompactHeader[1] !== menuReadableHash) throw new Error('Admin menu compact runtime is stale; regenerate it from admin-menu-layout.js');
-await writeFile(menuRuntimePath, menuCompactSource.slice(menuCompactHeader[0].length));
+const menuRuntimeSource = menuCompactSource.slice(menuCompactHeader[0].length);
+const menuSelfInitializingIdentifier = menuRuntimeSource.match(/\b(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*\1\b/);
+if (menuSelfInitializingIdentifier) throw new Error(`Admin menu compact runtime contains TDZ self-initialization: ${menuSelfInitializingIdentifier[0]}`);
+await writeFile(menuRuntimePath, menuRuntimeSource);
 
 // Fingerprint the complete admin runtime. HTML is no-store, while every referenced versioned
 // asset can then be cached immutably without ever mixing two releases in one browser session.
