@@ -1,5 +1,6 @@
 import siteWorker from './site-worker.js';
 import { serviceForId } from './ekodi-service-manifest.js';
+import { ownedCustomerSiteFor } from './ekodi-site-policy.js';
 import { injectEkodiShell, injectEkodiTenantReadability, shellServiceForHost, shellServiceForRootPath } from './ekodi-shell-injector.js';
 import { isWorkspaceAdminPathShape, isWorkspaceSlug } from './workspace-route-policy.js';
 import { resolveWorkspaceVisualDNA, workspaceVisualCssVariables } from './workspace-visual-dna.js';
@@ -63,10 +64,10 @@ export function isUserHomePath(pathname,serviceId='',workspaceSlug=''){
 }
 
 function injectRootServiceShell(response,serviceId,progressiveHome=false){
-  if(!progressiveHome){
-    if(serviceId)return injectEkodiShell(response,serviceId);
-  }
-  return injectEkodiShell(response,serviceId,'',{progressiveHome:true});
+  const shelled=!progressiveHome&&serviceId
+    ? injectEkodiShell(response,serviceId)
+    : injectEkodiShell(response,serviceId,'',{progressiveHome:true});
+  return ownedCustomerSiteFor(serviceId)?injectEkodiTenantReadability(shelled):shelled;
 }
 
 function workspaceVisualStyle(dna){
