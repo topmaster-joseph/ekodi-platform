@@ -10,7 +10,7 @@ const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url
 const postbuild = await readFile(new URL('../scripts/admin-performance-postbuild.mjs', import.meta.url), 'utf8');
 
 test('seven canonical areas replace the former many-group admin taxonomy', () => {
-  for (const id of ['summary', 'services', 'sites', 'people', 'content', 'status', 'settings-records']) {
+  for (const id of ['summary', 'sites', 'people', 'services', 'content', 'status', 'settings-records']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
   }
   for (const retired of ['site-management', 'security-audit', 'settings', 'access']) {
@@ -142,13 +142,15 @@ test('shared menu ES modules are published and cache-busted with the admin relea
 });
 
 
-test('left sidebar contains primary areas only and removes nested detail navigation', () => {
+test('platform-super-admin sidebar expands only the active area with direct task links', () => {
   assert.ok(sidebar.includes("DETAILS_CLASS = 'admin-global-details'"));
-  assert.ok(sidebar.includes("display:none!important"));
-  assert.ok(sidebar.includes("globals.querySelector(`:scope>.${DETAILS_CLASS}`)?.remove()"));
+  assert.ok(sidebar.includes("function isPlatformSuperAdminSurface()"));
+  assert.ok(sidebar.includes("renderSidebarDetails(nav, globals, group, displayedSection || section, locale)"));
+  assert.ok(sidebar.includes("else globals.querySelector(`:scope>.${DETAILS_CLASS}`)?.remove()"));
   assert.ok(sidebar.includes("TABS_SHELL_CLASS = 'admin-context-tabs-shell'"));
   assert.ok(sidebar.includes("data-admin-context-section"));
-  assert.ok(sidebar.includes("primary-sidebar-tabs-v3"));
+  assert.ok(sidebar.includes("role-projected-sidebar-v4"));
+  assert.ok(sidebar.includes("overflow-y:auto!important"));
 });
 test('visible task navigation lazy-loads demand features before shared panel activation', () => {
   const activateStart = sidebar.indexOf('function activateSection');
