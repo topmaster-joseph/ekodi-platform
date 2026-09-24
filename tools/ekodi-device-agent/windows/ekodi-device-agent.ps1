@@ -10,7 +10,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = '2.3.4'
+$AgentVersion = '2.4.0'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -32,6 +32,7 @@ $BrowserCanaryUrl = 'https://ekodi.kr/'
 $IsolatedDesktopCanaryStatePath = Join-Path $Root 'isolated-desktop-canary.json'
 $IsolatedDesktopGuestCanaryStatePath = Join-Path $Root 'isolated-desktop-guest-canary.json'
 $IsolatedDesktopUiCanaryStatePath = Join-Path $Root 'isolated-desktop-ui-canary.json'
+$IsolatedDesktopSessionCanaryStatePath = Join-Path $Root 'isolated-desktop-session-canary.json'
 $IsolatedDesktopSessionRoot = Join-Path $env:ProgramData 'EKODI\IsolatedDesktop\Sessions'
 
 function Test-IsAdministrator {
@@ -1485,7 +1486,7 @@ function Write-EkodiGuestRuntimeTask([string]$VhdPath, $Task) {
     $Task | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $taskPath -Encoding UTF8
     if (-not (Test-Path -LiteralPath $taskPath)) { throw 'isolated_guest_task_stage_failed' }
     return @{
-      guestAgentVersionMarkerPresent = [bool]((Get-Content -LiteralPath $guestAgent -Raw -Encoding UTF8) -match "\$GuestAgentVersion\s*=\s*'1\.1\.0'")
+      guestAgentVersionMarkerPresent = [bool]((Get-Content -LiteralPath $guestAgent -Raw -Encoding UTF8) -match "\$GuestAgentVersion\s*=\s*'1\.2\.0'")
       taskStaged = $true
     }
   } finally {
@@ -1508,14 +1509,14 @@ function Read-EkodiGuestRuntimeReceipt([string]$VhdPath) {
 
 function Get-IsolatedDesktopGuestCanaryState {
   if (-not (Test-Path -LiteralPath $IsolatedDesktopGuestCanaryStatePath)) {
-    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion; guestAgentVersion = '1.1.0' }
+    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion; guestAgentVersion = '1.2.0' }
   }
   try {
     $state = Get-Content -LiteralPath $IsolatedDesktopGuestCanaryStatePath -Raw -Encoding UTF8 | ConvertFrom-Json
     $verified = (
       $state.ok -eq $true -and
       [string]$state.agentVersion -eq $AgentVersion -and
-      [string]$state.guestAgentVersion -eq '1.1.0' -and
+      [string]$state.guestAgentVersion -eq '1.2.0' -and
       [string]$state.mode -eq 'isolated-desktop-guest-runtime-canary' -and
       $state.executedAsSystem -eq $true -and
       $state.noNetworkAdapter -eq $true -and
@@ -1536,7 +1537,7 @@ function Get-IsolatedDesktopGuestCanaryState {
       receiptSha256 = [string]$state.receiptSha256
     }
   } catch {
-    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion; guestAgentVersion = '1.1.0'; error = 'isolated_guest_canary_state_invalid' }
+    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion; guestAgentVersion = '1.2.0'; error = 'isolated_guest_canary_state_invalid' }
   }
 }
 
@@ -1618,7 +1619,7 @@ function Invoke-IsolatedDesktopGuestRuntimeCanary {
     $receiptOk = (
       $receipt.ok -eq $true -and
       [string]$receipt.mode -eq 'ekodi-isolated-guest-runtime-canary' -and
-      [string]$receipt.guestAgentVersion -eq '1.1.0' -and
+      [string]$receipt.guestAgentVersion -eq '1.2.0' -and
       [string]$receipt.taskType -eq 'guest.runtime.probe' -and
       [string]$receipt.taskId -eq $taskId -and
       [string]$receipt.nonceSha256 -eq $expectedNonceSha -and
@@ -1696,14 +1697,14 @@ function Invoke-IsolatedDesktopGuestRuntimeCanary {
 
 function Get-IsolatedDesktopUiCanaryState {
   if (-not (Test-Path -LiteralPath $IsolatedDesktopUiCanaryStatePath)) {
-    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion; guestAgentVersion = '1.1.0' }
+    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion; guestAgentVersion = '1.2.0' }
   }
   try {
     $state = Get-Content -LiteralPath $IsolatedDesktopUiCanaryStatePath -Raw -Encoding UTF8 | ConvertFrom-Json
     $verified = (
       $state.ok -eq $true -and
       [string]$state.agentVersion -eq $AgentVersion -and
-      [string]$state.guestAgentVersion -eq '1.1.0' -and
+      [string]$state.guestAgentVersion -eq '1.2.0' -and
       [string]$state.mode -eq 'isolated-desktop-guest-ui-canary' -and
       $state.executedAsSystem -eq $true -and
       $state.noNetworkAdapter -eq $true -and
@@ -1735,7 +1736,7 @@ function Get-IsolatedDesktopUiCanaryState {
       controlInvoked = [bool]$state.controlInvoked
     }
   } catch {
-    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion; guestAgentVersion = '1.1.0'; error = 'isolated_ui_canary_state_invalid' }
+    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion; guestAgentVersion = '1.2.0'; error = 'isolated_ui_canary_state_invalid' }
   }
 }
 
@@ -1813,7 +1814,7 @@ function Invoke-IsolatedDesktopGuestUiCanary {
     $receiptOk = (
       $receipt.ok -eq $true -and
       [string]$receipt.mode -eq 'ekodi-isolated-guest-ui-canary' -and
-      [string]$receipt.guestAgentVersion -eq '1.1.0' -and
+      [string]$receipt.guestAgentVersion -eq '1.2.0' -and
       [string]$receipt.taskType -eq 'guest.ui.probe' -and
       [string]$receipt.taskId -eq $taskId -and
       [string]$receipt.nonceSha256 -eq $expectedNonceSha -and
@@ -1904,6 +1905,672 @@ function Invoke-IsolatedDesktopGuestUiCanary {
   return @{
     message = 'EKODI 자체 임시 Hyper-V Guest에서 의미 기반 UI Automation으로 독립 GUI 제어 canary를 완료했습니다. 실제 사용자 데스크톱에는 접근하지 않았습니다.'
     desktopUiCanary = $proof
+  }
+}
+
+function Get-IsolatedDesktopSessionCanaryState {
+  if (-not (Test-Path -LiteralPath $IsolatedDesktopSessionCanaryStatePath)) {
+    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion; guestAgentVersion = '1.2.0' }
+  }
+  try {
+    $state = Get-Content -LiteralPath $IsolatedDesktopSessionCanaryStatePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $verified = (
+      $state.ok -eq $true -and
+      [string]$state.agentVersion -eq $AgentVersion -and
+      [string]$state.guestAgentVersion -eq '1.2.0' -and
+      [string]$state.mode -eq 'isolated-desktop-session-canary' -and
+      [string]$state.operation -eq 'ui.text.roundtrip' -and
+      $state.executedAsSystem -eq $true -and
+      $state.noNetworkAdapter -eq $true -and
+      $state.noActiveNetwork -eq $true -and
+      $state.hostInteractiveDesktopUsed -eq $false -and
+      $state.sharedInteractiveDesktop -eq $false -and
+      $state.semanticUiAutomation -eq $true -and
+      $state.lowLevelInputInjection -eq $false -and
+      $state.clipboardShared -eq $false -and
+      $state.credentialCollection -eq $false -and
+      $state.hostProfileMounted -eq $false -and
+      $state.valuePatternAvailable -eq $true -and
+      $state.invokePatternAvailable -eq $true -and
+      $state.valueSet -eq $true -and
+      $state.controlInvoked -eq $true -and
+      $state.roundTripMatched -eq $true -and
+      [string]$state.resultCode -eq 'EKODI_SESSION_OK' -and
+      $state.windowClosed -eq $true -and
+      $state.sessionVmRemoved -eq $true -and
+      $state.sessionDiskRemoved -eq $true
+    )
+    return @{
+      verified = [bool]$verified
+      checkedAt = [string]$state.checkedAt
+      agentVersion = [string]$state.agentVersion
+      guestAgentVersion = [string]$state.guestAgentVersion
+      receiptSha256 = [string]$state.receiptSha256
+      operation = [string]$state.operation
+      roundTripMatched = [bool]$state.roundTripMatched
+    }
+  } catch {
+    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion; guestAgentVersion = '1.2.0'; error = 'isolated_session_canary_state_invalid' }
+  }
+}
+
+function Test-EkodiBoundedSessionText([string]$Text) {
+  return [bool]($Text -match '^EKODI_SESSION_[A-Z0-9_-]{8,64}
+  $taskState = 'unknown'
+  try {
+    $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+    $taskState = [string]$task.State
+  } catch { }
+  return @{
+    checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+    version = $AgentVersion
+    hostname = $env:COMPUTERNAME
+    processId = $PID
+    taskName = $TaskName
+    taskState = $taskState
+    persistentShell = $false
+    directHostMutation = $false
+    foregroundUserSessionProtected = $true
+    backgroundBrowserCanaryVerified = [bool](Get-BackgroundBrowserCanaryState).verified
+    backgroundBrowserReady = [bool](Get-BackgroundBrowserCanaryState).verified
+    isolatedDesktopProbeAvailable = $true
+    isolatedDesktopCanaryVerified = [bool](Get-IsolatedDesktopCanaryState).verified
+    isolatedDesktopGuestCanaryVerified = [bool](Get-IsolatedDesktopGuestCanaryState).verified
+    isolatedDesktopUiCanaryVerified = [bool](Get-IsolatedDesktopUiCanaryState).verified
+    isolatedDesktopSessionCanaryVerified = [bool](Get-IsolatedDesktopSessionCanaryState).verified
+    isolatedDesktopReady = [bool](Get-IsolatedDesktopSessionCanaryState).verified
+    minimizedWindowCountsAsIsolation = $false
+  }
+}
+
+function Get-FullDiagnostic {
+  return @{
+    generatedAt = (Get-Date).ToUniversalTime().ToString('o')
+    system = Get-SystemSnapshot
+    storage = Get-StorageSnapshot
+    network = Get-NetworkDiagnostic
+    printers = Get-PrinterDiagnostic
+    startup = Get-StartupDiagnostic
+    updates = Get-WindowsUpdateDiagnostic
+  }
+}
+
+function Invoke-DeviceCommand([pscustomobject]$Command) {
+  $type = [string]$Command.type
+  $payload = if ($Command.PSObject.Properties.Name -contains 'payload' -and $Command.payload) { $Command.payload } else { [pscustomobject]@{} }
+  switch ($type) {
+    'power.always_on' {
+      Save-PowerBackup
+      Invoke-PowerCfg @('/change', 'standby-timeout-ac', '0') | Out-Null
+      Invoke-PowerCfg @('/change', 'standby-timeout-dc', '0') | Out-Null
+      Invoke-PowerCfg @('/change', 'hibernate-timeout-ac', '0') | Out-Null
+      Invoke-PowerCfg @('/change', 'hibernate-timeout-dc', '0') | Out-Null
+      Invoke-PowerCfg @('/change', 'monitor-timeout-ac', '30') | Out-Null
+      Invoke-PowerCfg @('/change', 'monitor-timeout-dc', '15') | Out-Null
+      return @{ message = '항상 켜짐 프로필을 적용했습니다.'; settings = Get-AgentSettings }
+    }
+    'power.presentation' {
+      Save-PowerBackup
+      Invoke-PowerCfg @('/change', 'standby-timeout-ac', '0') | Out-Null
+      Invoke-PowerCfg @('/change', 'standby-timeout-dc', '0') | Out-Null
+      Invoke-PowerCfg @('/change', 'hibernate-timeout-ac', '0') | Out-Null
+      Invoke-PowerCfg @('/change', 'hibernate-timeout-dc', '0') | Out-Null
+      Invoke-PowerCfg @('/change', 'monitor-timeout-ac', '0') | Out-Null
+      Invoke-PowerCfg @('/change', 'monitor-timeout-dc', '0') | Out-Null
+      return @{ message = '프레젠테이션 프로필을 적용했습니다.'; settings = Get-AgentSettings }
+    }
+    'power.normal' {
+      Save-PowerBackup
+      Invoke-PowerCfg @('/change', 'monitor-timeout-ac', '15') | Out-Null
+      Invoke-PowerCfg @('/change', 'monitor-timeout-dc', '5') | Out-Null
+      Invoke-PowerCfg @('/change', 'standby-timeout-ac', '30') | Out-Null
+      Invoke-PowerCfg @('/change', 'standby-timeout-dc', '15') | Out-Null
+      Invoke-PowerCfg @('/change', 'hibernate-timeout-ac', '0') | Out-Null
+      Invoke-PowerCfg @('/change', 'hibernate-timeout-dc', '180') | Out-Null
+      return @{ message = '일반 전원 프로필을 적용했습니다.'; settings = Get-AgentSettings }
+    }
+    'power.restore' { $guid = Restore-PowerBackup; return @{ message = 'EKODI 적용 전 전원 계획으로 복원했습니다.'; restoredScheme = $guid; settings = Get-AgentSettings } }
+    'lock.resume_off' {
+      Save-PowerBackup
+      Invoke-PowerCfg @('/SETACVALUEINDEX', 'SCHEME_CURRENT', 'SUB_NONE', 'CONSOLELOCK', '0') | Out-Null
+      Invoke-PowerCfg @('/SETDCVALUEINDEX', 'SCHEME_CURRENT', 'SUB_NONE', 'CONSOLELOCK', '0') | Out-Null
+      Invoke-PowerCfg @('/SETACTIVE', 'SCHEME_CURRENT') | Out-Null
+      return @{ message = '절전 복귀 시 로그인 요구를 해제했습니다.'; settings = Get-AgentSettings }
+    }
+    'lock.resume_on' {
+      Save-PowerBackup
+      Invoke-PowerCfg @('/SETACVALUEINDEX', 'SCHEME_CURRENT', 'SUB_NONE', 'CONSOLELOCK', '1') | Out-Null
+      Invoke-PowerCfg @('/SETDCVALUEINDEX', 'SCHEME_CURRENT', 'SUB_NONE', 'CONSOLELOCK', '1') | Out-Null
+      Invoke-PowerCfg @('/SETACTIVE', 'SCHEME_CURRENT') | Out-Null
+      return @{ message = '절전 복귀 시 로그인을 다시 요구하도록 설정했습니다.'; settings = Get-AgentSettings }
+    }
+    'autologon.open' { return @{ message = Open-AutologonManager; settings = Get-AgentSettings } }
+    'diagnostics.collect' { return @{ message = '시스템·저장공간·네트워크·프린터·시작프로그램·업데이트 진단을 완료했습니다.'; diagnostics = Get-FullDiagnostic; settings = Get-AgentSettings } }
+    'computer.system.read' { return @{ message = '원격 컴퓨터 시스템 상태를 읽었습니다.'; system = Get-SystemSnapshot } }
+    'computer.process.list' { return @{ message = '원격 컴퓨터 프로세스 목록을 읽었습니다.'; processes = Get-RemoteProcessList } }
+    'computer.agent.status' { return @{ message = 'EKODI Native Remote Agent 상태를 읽었습니다.'; agent = Get-RemoteAgentStatus } }
+    'computer.desktop.probe' { return Invoke-IsolatedDesktopBackendProbe }
+    'computer.desktop.canary' { return Invoke-IsolatedDesktopHyperVCanary }
+    'computer.desktop.guest.canary' { return Invoke-IsolatedDesktopGuestRuntimeCanary }
+    'computer.desktop.ui.canary' { return Invoke-IsolatedDesktopGuestUiCanary }
+    'computer.desktop.session.canary' { return Invoke-IsolatedDesktopSessionCanary }
+    'computer.desktop.session.execute' { return Invoke-IsolatedDesktopSessionExecute $payload }
+    'network.diagnose' { return @{ message = '네트워크 진단을 완료했습니다.'; network = Get-NetworkDiagnostic } }
+    'printers.diagnose' { return @{ message = '프린터와 인쇄 대기열 진단을 완료했습니다.'; printers = Get-PrinterDiagnostic } }
+    'startup.scan' { return @{ message = '시작 프로그램 목록을 확인했습니다.'; startup = Get-StartupDiagnostic } }
+    'startup.disable' { return Disable-StartupItem ([string]$payload.itemId) }
+    'startup.restore' { return Restore-StartupItem ([string]$payload.itemId) }
+    'maintenance.temp_cleanup' { return Clear-SafeTempFiles }
+    'updates.scan' { $updates = Get-WindowsUpdateDiagnostic; return @{ message = 'Windows 업데이트 상태를 확인했습니다.'; pendingCount = $updates.pendingCount; rebootRequired = $updates.rebootPending; updates = $updates } }
+    'updates.install' { return Install-WindowsUpdates }
+    'profile.workstation.apply' { return Apply-WorkstationProfile }
+    'profile.workstation.restore' { return Restore-WorkstationProfile }
+    'agent.self_update' { return Update-AgentFromOfficialSource }
+    'computer.browser.canary' { return Invoke-BackgroundBrowserCanary }
+    'computer.browser.execute' { return Invoke-BackgroundBrowserWorker $payload }
+    'remote_desktop.recovery.enable' { return Set-DesktopCommanderRecovery $true }
+    'remote_desktop.recovery.disable' { return Set-DesktopCommanderRecovery $false }
+    'remote_desktop.recovery.run' { return Ensure-DesktopCommanderRunning $true }
+    default { throw "허용되지 않은 명령입니다: $type" }
+  }
+}
+
+
+$script:DesktopRecoveryStatePath = Join-Path $PSScriptRoot 'managed-apps.json'
+$script:LastDesktopRecoveryAttempt = [datetime]::MinValue
+
+function Get-RemoteDesktopRecoveryConfig {
+  if (!(Test-Path $script:DesktopRecoveryStatePath)) { return @{ enabled = $false } }
+  try {
+    $value = Get-Content $script:DesktopRecoveryStatePath -Raw | ConvertFrom-Json
+    return @{ enabled = [bool]$value.desktopCommanderAutoRecovery }
+  } catch { return @{ enabled = $false } }
+}
+
+function Set-RemoteDesktopRecoveryConfig([bool]$Enabled) {
+  @{ desktopCommanderAutoRecovery = $Enabled; updatedAt = (Get-Date).ToUniversalTime().ToString('o') } |
+    ConvertTo-Json | Set-Content -Path $script:DesktopRecoveryStatePath -Encoding UTF8
+  return Get-RemoteDesktopRecoveryConfig
+}
+
+function Resolve-DesktopCommanderExecutable {
+  $running = Get-Process -Name 'DesktopCommander' -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($running -and $running.Path) { return $running.Path }
+  $candidates = @(
+    "$env:LOCALAPPDATA\Programs\Desktop Commander\DesktopCommander.exe",
+    "$env:LOCALAPPDATA\Programs\DesktopCommander\DesktopCommander.exe",
+    "$env:ProgramFiles\Desktop Commander\DesktopCommander.exe",
+    "$env:ProgramFiles(x86)\Desktop Commander\DesktopCommander.exe"
+  )
+  return ($candidates | Where-Object { Test-Path $_ } | Select-Object -First 1)
+}
+
+function Ensure-DesktopCommanderRunning([bool]$Force = $false) {
+  $running = Get-Process -Name 'DesktopCommander' -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($running) { return @{ message = 'Remote Desktop Commander가 실행 중입니다.'; running = $true; recovered = $false } }
+  if (!$Force -and ((Get-Date) - $script:LastDesktopRecoveryAttempt).TotalSeconds -lt 120) {
+    return @{ message = 'Remote Desktop Commander 복구 재시도 대기 중입니다.'; running = $false; recovered = $false }
+  }
+  $script:LastDesktopRecoveryAttempt = Get-Date
+  $exe = Resolve-DesktopCommanderExecutable
+  if (!$exe) { return @{ message = 'Remote Desktop Commander 실행파일을 찾지 못했습니다.'; running = $false; recovered = $false } }
+  Start-Process -FilePath $exe | Out-Null
+  Start-Sleep -Milliseconds 700
+  $started = [bool](Get-Process -Name 'DesktopCommander' -ErrorAction SilentlyContinue | Select-Object -First 1)
+  return @{ message = $(if ($started) { 'Remote Desktop Commander를 자동 복구했습니다.' } else { 'Remote Desktop Commander 실행을 요청했지만 프로세스를 확인하지 못했습니다.' }); running = $started; recovered = $started }
+}
+
+function Set-DesktopCommanderRecovery([bool]$Enabled) {
+  $config = Set-RemoteDesktopRecoveryConfig $Enabled
+  if ($Enabled) {
+    $result = Ensure-DesktopCommanderRunning $true
+    return @{ message = "Remote Desktop Commander 자가복구를 활성화했습니다. $($result.message)"; enabled = $true; running = $result.running }
+  }
+  return @{ message = 'Remote Desktop Commander 자가복구를 비활성화했습니다.'; enabled = $false }
+}
+
+function Reconcile-DesktopCommanderRecovery {
+  $config = Get-RemoteDesktopRecoveryConfig
+  if ($config.enabled) { Ensure-DesktopCommanderRunning | Out-Null }
+}
+
+function Load-Config {
+  if (-not (Test-Path $ConfigPath)) { throw 'EKODI Device Agent 설정 파일이 없습니다. 다시 등록해 주세요.' }
+  return Get-Content $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
+}
+
+function Get-AgentHeaders($Config) {
+  return @{ Authorization = "Bearer $(Unprotect-LocalSecret $Config.protectedToken)"; 'X-EKODI-Device-ID' = [string]$Config.deviceId }
+}
+
+function Send-Heartbeat($Config) {
+  $settings = Get-AgentSettings
+  $body = @{
+    hostname = $env:COMPUTERNAME
+    osVersion = Get-OsVersion
+    agentVersion = $AgentVersion
+    profileName = $settings.workstationProfile
+    capabilities = @{
+      powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
+      diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
+      networkDiagnostics = $true; printerDiagnostics = $true; workstationProfile = $true; protocolLaunch = $true
+      computerRead = $true; processRead = $true; agentStatus = $true
+      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified; isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified; isolatedDesktopSessionCanary = [bool](Get-IsolatedDesktopSessionCanaryState).verified; isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified
+      desktopCapture = $false; desktopInput = $false
+      arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
+    }
+    settings = $settings
+  } | ConvertTo-Json -Depth 10
+  Invoke-RestMethod -Method Post -Uri "$($Config.apiBase)/api/device-agent/heartbeat" -Headers (Get-AgentHeaders $Config) -ContentType 'application/json' -Body $body | Out-Null
+}
+
+function Complete-Command($Config, [string]$CommandId, [bool]$Success, $Result) {
+  $body = @{ success = $Success; result = $Result } | ConvertTo-Json -Depth 12
+  Invoke-RestMethod -Method Post -Uri "$($Config.apiBase)/api/device-agent/commands/$CommandId/result" -Headers (Get-AgentHeaders $Config) -ContentType 'application/json' -Body $body | Out-Null
+}
+
+function Poll-Command($Config) {
+  $response = Invoke-RestMethod -Method Get -Uri "$($Config.apiBase)/api/device-agent/commands/next" -Headers (Get-AgentHeaders $Config)
+  if (-not $response.command) { return }
+  try {
+    $result = Invoke-DeviceCommand $response.command
+    Complete-Command $Config ([string]$response.command.id) $true $result
+    if ([string]$response.command.type -eq 'agent.self_update' -and $result.restartRequired -eq $true) {
+      $script:RestartAfterCommand = $true
+    }
+  } catch {
+    Complete-Command $Config ([string]$response.command.id) $false @{ message = $_.Exception.Message }
+  }
+}
+
+function Stop-ExistingAgentProcesses {
+  try { Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue } catch { }
+  try {
+    foreach ($process in @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)) {
+      if ([int]$process.ProcessId -eq $PID) { continue }
+      if ([string]$process.Name -notin @('powershell.exe', 'pwsh.exe')) { continue }
+      $line = [string]$process.CommandLine
+      if (-not $line) { continue }
+      if ($line.Contains($AgentPath) -and $line -match '(?i)(?:^|\s|\")-Run(?:\s|\"|$)') {
+        Stop-Process -Id ([int]$process.ProcessId) -Force -ErrorAction SilentlyContinue
+      }
+    }
+  } catch { }
+  Start-Sleep -Milliseconds 350
+}
+
+function Ensure-AgentTask {
+  $userId = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+  $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$AgentPath`" -Run"
+  $trigger = New-ScheduledTaskTrigger -AtLogOn -User $userId
+  $principal = New-ScheduledTaskPrincipal -UserId $userId -LogonType Interactive -RunLevel Highest
+  Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Force | Out-Null
+}
+
+function Copy-SelfToAgentPath {
+  New-Item -ItemType Directory -Path $Root -Force | Out-Null
+  $source = [IO.Path]::GetFullPath($PSCommandPath)
+  $destination = [IO.Path]::GetFullPath($AgentPath)
+  if ($source -ne $destination) { Copy-Item -LiteralPath $PSCommandPath -Destination $AgentPath -Force }
+}
+
+function Start-CurrentAgent {
+  Ensure-AgentTask
+  Start-AgentProcess
+}
+
+function Install-Agent {
+  if (-not $EnrollmentCode) { Throw-AgentStageError 'EKA-200' 'enrollment' '-EnrollmentCode가 필요합니다.' }
+  if ($ApiBase.TrimEnd('/') -ne $AllowedApiBase) { Throw-AgentStageError 'EKA-201' 'enrollment' '허용되지 않은 EKODI API 주소입니다.' }
+  if (-not (Test-IsAdministrator)) {
+    $args = @('-Install','-EnrollmentCode',"`"$EnrollmentCode`"",'-ApiBase',"`"$AllowedApiBase`"")
+    if ($Label) { $args += @('-Label', "`"$Label`"") }
+    [void](Invoke-ElevatedSelf $args)
+    return
+  }
+
+  [void](Assert-AgentCandidate $PSCommandPath)
+  $hadConfig = Test-Path $ConfigPath
+  if ($hadConfig) {
+    $result = Invoke-AgentUpgradeTransaction -CandidatePath $PSCommandPath
+    Write-Host "기존 EKODI 기기 등록과 토큰을 유지하고 Agent $($result.version) 업그레이드·heartbeat 검증을 완료했습니다." -ForegroundColor Green
+    return
+  }
+
+  $snapshot = $null
+  $stage = 'snapshot'
+  try {
+    $snapshot = New-AgentUpgradeSnapshot
+    $stage = 'replace_agent'
+    Replace-AgentFileAtomically $PSCommandPath $snapshot
+    $stage = 'register_protocol'
+    Register-EkodiProtocol
+    $stage = 'enrollment'
+    $enrollmentBody = @{
+      enrollmentCode = $EnrollmentCode
+      platform = 'windows'
+      hostname = $env:COMPUTERNAME
+      label = $(if ($Label) { $Label } else { $env:COMPUTERNAME })
+      osVersion = Get-OsVersion
+      agentVersion = $AgentVersion
+      capabilities = @{
+        powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
+        diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
+        networkDiagnostics = $true; printerDiagnostics = $true; workstationProfile = $true; protocolLaunch = $true
+        arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
+      }
+    } | ConvertTo-Json -Depth 8
+    $enrollment = Invoke-RestMethod -Method Post -Uri "$AllowedApiBase/api/device-agent/enroll" -ContentType 'application/json' -Body $enrollmentBody
+    @{
+      deviceId = [string]$enrollment.deviceId
+      apiBase = $AllowedApiBase
+      protectedToken = Protect-LocalSecret ([string]$enrollment.deviceToken)
+      installedAt = (Get-Date).ToUniversalTime().ToString('o')
+    } | ConvertTo-Json | Set-Content -Path $ConfigPath -Encoding UTF8
+    $stage = 'register_task'
+    Ensure-AgentTask
+    $stage = 'start_agent'
+    Start-AgentProcess
+    Start-Sleep -Milliseconds 700
+    if (-not (Test-AgentRunProcess)) { throw '신규 Agent 실행 프로세스를 확인하지 못했습니다.' }
+    $stage = 'heartbeat_verify'
+    if (-not (Test-AgentHeartbeatResume)) { throw '신규 Agent heartbeat를 확인하지 못했습니다.' }
+    Remove-AgentUpgradeSnapshot $snapshot
+    Write-Host "EKODI Device Agent 등록 및 heartbeat 검증 완료: $($enrollment.deviceId)" -ForegroundColor Green
+  } catch {
+    $failure = $_
+    if ($snapshot) {
+      try { Restore-AgentUpgradeSnapshot $snapshot; Remove-AgentUpgradeSnapshot $snapshot } catch {
+        Throw-AgentStageError 'EKA-290' 'rollback' "신규 설치 실패 후 롤백에도 실패했습니다. 원래 단계=$stage; 원래 오류=$($failure.Exception.Message)" $_
+      }
+    }
+    Throw-AgentStageError 'EKA-299' $stage '신규 Device Agent 설치를 중단하고 로컬 상태를 롤백했습니다.' $failure
+  }
+}
+
+function Register-ProtocolOnly {
+  if (-not (Test-IsAdministrator)) {
+    [void](Invoke-ElevatedSelf @('-RegisterProtocol'))
+    return
+  }
+  [void](Assert-AgentCandidate $PSCommandPath)
+  $hadConfig = Test-Path $ConfigPath
+  if ($hadConfig) {
+    $result = Invoke-AgentUpgradeTransaction -CandidatePath $PSCommandPath
+    Write-Host "기존 등록을 유지한 채 Agent $($result.version) 업그레이드·프로토콜·heartbeat 검증을 완료했습니다." -ForegroundColor Green
+  } else {
+    $snapshot = New-AgentUpgradeSnapshot
+    try {
+      Replace-AgentFileAtomically $PSCommandPath $snapshot
+      Register-EkodiProtocol
+      Remove-AgentUpgradeSnapshot $snapshot
+      Write-Host 'EKODI 원클릭 PC 연결 프로그램을 설치했습니다. 관리자 사이트에서 “이 PC 연결 계속”을 누르세요.' -ForegroundColor Green
+    } catch {
+      $failure = $_
+      try { Restore-AgentUpgradeSnapshot $snapshot; Remove-AgentUpgradeSnapshot $snapshot } catch {
+        Throw-AgentStageError 'EKA-390' 'rollback' '원클릭 연결 프로그램 설치 실패 후 롤백에도 실패했습니다.' $_
+      }
+      Throw-AgentStageError 'EKA-399' 'protocol_install' '원클릭 연결 프로그램 설치를 롤백했습니다.' $failure
+    }
+  }
+}
+
+function Handle-ProtocolUrl([string]$Url) {
+  $request = Parse-ProtocolEnrollment $Url
+  $script:EnrollmentCode = [string]$request.enrollmentCode
+  $script:ApiBase = $AllowedApiBase
+  $script:Label = [string]$request.label
+  Install-Agent
+}
+
+function Run-Agent {
+  $mutex = [Threading.Mutex]::new($false, 'Global\EKODI_Device_Agent_V2')
+  if (-not $mutex.WaitOne(0, $false)) { return }
+  try {
+    $config = Load-Config
+    $lastHeartbeat = [datetime]::MinValue
+    while ($true) {
+      try {
+        if (((Get-Date) - $lastHeartbeat).TotalSeconds -ge 60) { Send-Heartbeat $config; $lastHeartbeat = Get-Date }
+        Reconcile-DesktopCommanderRecovery
+        Poll-Command $config
+        if ($script:RestartAfterCommand) { break }
+      } catch {
+        # 네트워크 중단은 다음 주기에 자동 복구합니다. 임의 명령 실행으로 우회하지 않습니다.
+      }
+      Start-Sleep -Seconds 10
+    }
+  } finally {
+    $restart = [bool]$script:RestartAfterCommand
+    try { $mutex.ReleaseMutex() } catch { }
+    $mutex.Dispose()
+    if ($restart) {
+      Start-Sleep -Milliseconds 500
+      Start-AgentProcess
+    }
+  }
+}
+
+try {
+  if ($ProtocolUrl) { Handle-ProtocolUrl $ProtocolUrl; exit }
+  if ($RegisterProtocol) { Register-ProtocolOnly; exit }
+  if ($Install) { Install-Agent; exit }
+  if ($Run) { Run-Agent; exit }
+
+  Write-Host "EKODI Device Agent $AgentVersion" -ForegroundColor Cyan
+  Write-Host '등록: -Install -EnrollmentCode <코드>'
+  Write-Host '원클릭 연결 등록: -RegisterProtocol'
+  Write-Host '실행: -Run'
+} catch {
+  Write-ElevationFailureRecord $ElevationResultPath $_.Exception.Message
+  throw
+}
+)
+}
+
+function Invoke-IsolatedDesktopBoundedSessionTask($Payload, [bool]$IsCanary = $false) {
+  $uiCanary = Get-IsolatedDesktopUiCanaryState
+  if (-not $uiCanary.verified) { throw 'isolated_ui_canary_required' }
+  if (-not $IsCanary) {
+    $sessionCanary = Get-IsolatedDesktopSessionCanaryState
+    if (-not $sessionCanary.verified) { throw 'isolated_session_canary_required' }
+  }
+
+  $operation = 'ui.text.roundtrip'
+  $sessionText = ''
+  if ($IsCanary) {
+    $sessionText = "EKODI_SESSION_CANARY_$(([guid]::NewGuid().ToString('N').Substring(0,16)).ToUpperInvariant())"
+  } else {
+    $operation = [string]$Payload.operation
+    $sessionText = [string]$Payload.text
+  }
+  if ($operation -ne 'ui.text.roundtrip') { throw 'isolated_session_operation_forbidden' }
+  if (-not (Test-EkodiBoundedSessionText $sessionText)) { throw 'isolated_session_text_invalid' }
+
+  $probe = Get-IsolatedDesktopBackendProbe
+  if (-not $probe.headlessBackendReady -or $probe.recommendedBackend -ne 'hyper-v-ekodi-base') {
+    throw "isolated_session_backend_not_ready:$($probe.gapReason)"
+  }
+
+  $baseVmName = 'EKODI-Isolated-Base'
+  $baseVm = Get-VM -Name $baseVmName -ErrorAction Stop
+  if ([string]$baseVm.State -ne 'Off') { throw 'isolated_session_base_vm_must_be_off' }
+  $baseDisks = @(Get-VMHardDiskDrive -VMName $baseVmName -ErrorAction Stop)
+  if ($baseDisks.Count -ne 1) { throw 'isolated_session_base_vm_requires_single_disk' }
+  $baseDiskPath = [string]$baseDisks[0].Path
+  if (-not $baseDiskPath -or -not (Test-Path -LiteralPath $baseDiskPath)) { throw 'isolated_session_base_disk_missing' }
+
+  New-Item -ItemType Directory -Path $IsolatedDesktopSessionRoot -Force | Out-Null
+  $sessionId = [guid]::NewGuid().ToString('N')
+  $sessionName = "EKODI-Session-$sessionId"
+  $sessionDir = Join-Path $IsolatedDesktopSessionRoot $sessionId
+  $sessionDisk = Join-Path $sessionDir 'bounded-session.vhdx'
+  New-Item -ItemType Directory -Path $sessionDir -Force | Out-Null
+
+  $taskId = [guid]::NewGuid().ToString('N')
+  $nonce = New-EkodiNonceHex 32
+  $task = @{
+    schemaVersion = 1
+    type = 'guest.session.execute'
+    taskId = $taskId
+    nonce = $nonce
+    networkPolicy = 'none'
+    operation = $operation
+    text = $sessionText
+    expiresAt = [DateTime]::UtcNow.AddMinutes(10).ToString('o')
+  }
+  $expectedNonceSha = Get-Sha256String $nonce
+  $expectedTextSha = Get-Sha256String $sessionText
+
+  $vmCreated = $false
+  $proof = $null
+  try {
+    New-VHD -Path $sessionDisk -ParentPath $baseDiskPath -Differencing -ErrorAction Stop | Out-Null
+    $staging = Write-EkodiGuestRuntimeTask $sessionDisk $task
+    if (-not $staging.taskStaged -or -not $staging.guestAgentVersionMarkerPresent) { throw 'isolated_session_guest_agent_version_not_verified' }
+
+    $vm = New-VM -Name $sessionName -Generation ([int]$baseVm.Generation) -MemoryStartupBytes 2GB -VHDPath $sessionDisk -ErrorAction Stop
+    $vmCreated = $true
+    Get-VMNetworkAdapter -VMName $sessionName -ErrorAction SilentlyContinue | Remove-VMNetworkAdapter -ErrorAction SilentlyContinue
+    Set-VM -Name $sessionName -AutomaticStartAction Nothing -AutomaticStopAction TurnOff -AutomaticCheckpointsEnabled $false -ErrorAction Stop
+    if ([int]$baseVm.Generation -eq 2) { Set-VMFirmware -VMName $sessionName -EnableSecureBoot On -ErrorAction Stop }
+
+    Start-VM -Name $sessionName -ErrorAction Stop | Out-Null
+    $deadline = [DateTime]::UtcNow.AddSeconds(55)
+    $runningObserved = $false
+    $heartbeatObserved = $false
+    do {
+      Start-Sleep -Milliseconds 1000
+      $vmState = [string](Get-VM -Name $sessionName -ErrorAction Stop).State
+      if ($vmState -eq 'Running') { $runningObserved = $true }
+      try {
+        $heartbeat = Get-VMIntegrationService -VMName $sessionName -Name 'Heartbeat' -ErrorAction Stop
+        if ([string]$heartbeat.PrimaryStatusDescription -match '(?i)OK') { $heartbeatObserved = $true; break }
+      } catch { }
+    } while ([DateTime]::UtcNow -lt $deadline)
+    if (-not $runningObserved) { throw 'isolated_session_vm_never_running' }
+    if (-not $heartbeatObserved) { throw 'isolated_session_heartbeat_timeout' }
+
+    Start-Sleep -Seconds 10
+    Stop-VM -Name $sessionName -TurnOff -Force -ErrorAction Stop
+    $receiptEvidence = Read-EkodiGuestRuntimeReceipt $sessionDisk
+    $receipt = $receiptEvidence.receipt
+
+    $receiptOk = (
+      $receipt.ok -eq $true -and
+      [string]$receipt.mode -eq 'ekodi-isolated-guest-session-execution' -and
+      [string]$receipt.guestAgentVersion -eq '1.2.0' -and
+      [string]$receipt.taskType -eq 'guest.session.execute' -and
+      [string]$receipt.taskId -eq $taskId -and
+      [string]$receipt.operation -eq $operation -and
+      [string]$receipt.nonceSha256 -eq $expectedNonceSha -and
+      $receipt.executedAsSystem -eq $true -and
+      $receipt.noNetworkAdapter -eq $true -and
+      $receipt.noActiveNetwork -eq $true -and
+      $receipt.guestUiSurfaceUsed -eq $true -and
+      $receipt.hostInteractiveDesktopUsed -eq $false -and
+      $receipt.sharedInteractiveDesktop -eq $false -and
+      $receipt.semanticUiAutomation -eq $true -and
+      $receipt.lowLevelInputInjection -eq $false -and
+      $receipt.clipboardShared -eq $false -and
+      $receipt.credentialCollection -eq $false -and
+      $receipt.hostProfileMounted -eq $false -and
+      $receipt.valuePatternAvailable -eq $true -and
+      $receipt.invokePatternAvailable -eq $true -and
+      $receipt.valueSet -eq $true -and
+      $receipt.controlInvoked -eq $true -and
+      $receipt.roundTripMatched -eq $true -and
+      [string]$receipt.inputSha256 -eq $expectedTextSha -and
+      [string]$receipt.outputSha256 -eq $expectedTextSha -and
+      [int]$receipt.textLength -eq $sessionText.Length -and
+      [string]$receipt.resultCode -eq 'EKODI_SESSION_OK' -and
+      $receipt.windowClosed -eq $true -and
+      [string]$receipt.mutationScope -eq 'ephemeral-guest-session-only'
+    )
+    if (-not $receiptOk) { throw 'isolated_session_receipt_contract_failed' }
+
+    $proof = @{
+      ok = $true
+      mode = $(if ($IsCanary) { 'isolated-desktop-session-canary' } else { 'isolated-desktop-session-execution' })
+      provider = 'ekodi-native-remote-computer'
+      routingPolicy = 'EKODI-VIRTUALIZATION-ROUTING-001'
+      backendPolicy = 'EKODI-ISOLATED-DESKTOP-BACKEND-001'
+      agentVersion = $AgentVersion
+      guestAgentVersion = [string]$receipt.guestAgentVersion
+      executorVersion = 'bounded-v1'
+      backend = 'hyper-v-ekodi-base'
+      sessionType = 'vm'
+      sessionId = $sessionId
+      taskId = $taskId
+      taskType = 'guest.session.execute'
+      operation = $operation
+      receiptSha256 = Get-Sha256String ([string]$receiptEvidence.raw)
+      inputSha256 = [string]$receipt.inputSha256
+      outputSha256 = [string]$receipt.outputSha256
+      textLength = [int]$receipt.textLength
+      executedAsSystem = [bool]$receipt.executedAsSystem
+      noNetworkAdapter = [bool]$receipt.noNetworkAdapter
+      noActiveNetwork = [bool]$receipt.noActiveNetwork
+      guestUiSurfaceUsed = [bool]$receipt.guestUiSurfaceUsed
+      hostInteractiveDesktopUsed = [bool]$receipt.hostInteractiveDesktopUsed
+      sharedInteractiveDesktop = [bool]$receipt.sharedInteractiveDesktop
+      semanticUiAutomation = [bool]$receipt.semanticUiAutomation
+      lowLevelInputInjection = [bool]$receipt.lowLevelInputInjection
+      clipboardShared = [bool]$receipt.clipboardShared
+      credentialCollection = [bool]$receipt.credentialCollection
+      hostProfileMounted = [bool]$receipt.hostProfileMounted
+      valuePatternAvailable = [bool]$receipt.valuePatternAvailable
+      invokePatternAvailable = [bool]$receipt.invokePatternAvailable
+      valueSet = [bool]$receipt.valueSet
+      controlInvoked = [bool]$receipt.controlInvoked
+      roundTripMatched = [bool]$receipt.roundTripMatched
+      resultCode = [string]$receipt.resultCode
+      windowClosed = [bool]$receipt.windowClosed
+      mutationScope = [string]$receipt.mutationScope
+      vmReachedRunning = [bool]$runningObserved
+      heartbeatObserved = [bool]$heartbeatObserved
+      networkAttached = $false
+      ephemeralDifferencingDisk = $true
+      baseDiskWriteForbidden = $true
+      sessionVmRemoved = $false
+      sessionDiskRemoved = $false
+      checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+    }
+  } finally {
+    if ($vmCreated) {
+      try {
+        $existing = Get-VM -Name $sessionName -ErrorAction SilentlyContinue
+        if ($existing -and [string]$existing.State -ne 'Off') { Stop-VM -Name $sessionName -TurnOff -Force -ErrorAction SilentlyContinue }
+      } catch { }
+      try { Remove-VM -Name $sessionName -Force -ErrorAction SilentlyContinue } catch { }
+    }
+    Remove-Item -LiteralPath $sessionDir -Recurse -Force -ErrorAction SilentlyContinue
+    if ($proof) {
+      $proof.sessionVmRemoved = -not [bool](Get-VM -Name $sessionName -ErrorAction SilentlyContinue)
+      $proof.sessionDiskRemoved = -not (Test-Path -LiteralPath $sessionDisk)
+    }
+  }
+
+  if (-not $proof -or -not $proof.sessionVmRemoved -or -not $proof.sessionDiskRemoved) { throw 'isolated_session_cleanup_failed' }
+  return $proof
+}
+
+function Invoke-IsolatedDesktopSessionCanary {
+  Remove-Item -LiteralPath $IsolatedDesktopSessionCanaryStatePath -Force -ErrorAction SilentlyContinue
+  $proof = Invoke-IsolatedDesktopBoundedSessionTask $null $true
+  New-Item -ItemType Directory -Path $Root -Force | Out-Null
+  $proof | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $IsolatedDesktopSessionCanaryStatePath -Encoding UTF8
+  return @{
+    message = 'EKODI 자체 격리 Guest의 bounded-v1 세션 executor canary를 완료했습니다. 이후에도 허용된 작업 스키마만 실행합니다.'
+    desktopSessionCanary = $proof
+  }
+}
+
+function Invoke-IsolatedDesktopSessionExecute($Payload) {
+  $proof = Invoke-IsolatedDesktopBoundedSessionTask $Payload $false
+  return @{
+    message = 'EKODI 자체 격리 Guest에서 bounded-v1 세션 작업을 완료했습니다. 원문 입력은 클라우드 결과에 반환하지 않습니다.'
+    desktopSession = $proof
   }
 }
 
