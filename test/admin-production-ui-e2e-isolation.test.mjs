@@ -26,6 +26,17 @@ test('synthetic production Admin UI verifier stubs the canonical apex session ro
 });
 
 
+
+test('synthetic production Admin UI verifier accepts the role-projected platform-admin scroll contract', async () => {
+  const text = await source();
+  assert.match(text, /sidebarOverflowY !== 'hidden'/);
+  assert.match(text, /!\['auto','scroll'\]\.includes\(workbenchState\.navOverflowY\)/);
+  assert.match(text, /navIndependentScroll !== 'platform-admin'/);
+  assert.match(text, /role-projected sidebar scroll contract failed/);
+  assert.doesNotMatch(text, /navOverflowY !== 'hidden'/);
+  assert.doesNotMatch(text, /navIndependentScroll !== 'false'/);
+});
+
 test('synthetic production Admin UI verifier targets the canonical apex Admin path', async () => {
   const text = await source();
   assert.match(text, /const ADMIN_URL = process\.env\.ADMIN_URL \|\| 'https:\/\/ekodi\.kr\/admin\/'/);
