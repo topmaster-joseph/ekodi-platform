@@ -10,6 +10,7 @@ on:
       - 'supabase/**'
       - 'auth-site/**'
       - 'test/**'
+      - 'scripts/validate-supabase-public-grants.mjs'
       - '.github/workflows/supabase-local-ci.yml'
 
 permissions:
@@ -33,6 +34,11 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+
+      - name: Validate explicit Supabase public-object access policy
+        run: |
+          node scripts/validate-supabase-public-grants.mjs
+          node --test test/supabase-public-grants-policy.test.mjs
 
       - name: Initialize ephemeral Supabase config
         run: npx --yes supabase@$SUPABASE_CLI_VERSION init --force
@@ -66,6 +72,46 @@ jobs:
             echo "Applying $migration"
             docker exec -i "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$migration"
           done
+
+      - name: Prove secure defaults for new public objects
+        shell: bash
+        run: |
+          set -euo pipefail
+          db_container="$(docker ps --filter 'name=supabase_db_' --format '{{.ID}}' | head -n1)"
+          test -n "$db_container"
+          docker exec -i "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          create table public.__ekodi_grant_probe(id bigint primary key);
+          create sequence public.__ekodi_grant_probe_seq;
+          create function public.__ekodi_grant_probe_fn() returns integer
+          language sql
+          as $func$ select 1 $func$;
+
+          do $block$
+          declare
+            role_name text;
+          begin
+            foreach role_name in array array['anon','authenticated','service_role'] loop
+              if has_table_privilege(role_name,'public.__ekodi_grant_probe','select')
+                 or has_table_privilege(role_name,'public.__ekodi_grant_probe','insert')
+                 or has_table_privilege(role_name,'public.__ekodi_grant_probe','update')
+                 or has_table_privilege(role_name,'public.__ekodi_grant_probe','delete') then
+                raise exception 'unexpected table privilege for %', role_name;
+              end if;
+              if has_sequence_privilege(role_name,'public.__ekodi_grant_probe_seq','usage')
+                 or has_sequence_privilege(role_name,'public.__ekodi_grant_probe_seq','select') then
+                raise exception 'unexpected sequence privilege for %', role_name;
+              end if;
+              if has_function_privilege(role_name,'public.__ekodi_grant_probe_fn()','execute') then
+                raise exception 'unexpected function privilege for %', role_name;
+              end if;
+            end loop;
+          end
+          $block$;
+
+          drop function public.__ekodi_grant_probe_fn();
+          drop sequence public.__ekodi_grant_probe_seq;
+          drop table public.__ekodi_grant_probe;
+          SQL
 
       - name: Lint Postgres functions
         run: >-
