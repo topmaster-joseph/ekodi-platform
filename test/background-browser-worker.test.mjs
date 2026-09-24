@@ -44,6 +44,8 @@ test('worker uses Playwright isolated context without arbitrary JS task executio
   assert.match(source,/virtualizationProviderType:'native'/);
   assert.match(source,/acceptDownloads:false/);
   assert.match(source,/userAiEntryCount:document\.querySelectorAll/);
+  assert.match(source,/pageErrors\.push\(\{/);
+  assert.match(source,/stack:clean\(err\?\.stack/);
   assert.match(source,/block-non-idempotent-http|blockedMutations/);
   assert.doesNotMatch(source,/child_process|exec\(|spawn\(|powershell|cmd\.exe|SendKeys|SetCursorPos/);
   assert.doesNotMatch(source,/item\.code|action\.code|rawJavascript/);
@@ -59,6 +61,7 @@ test('shared-site guarded release invokes native browser verification after prod
   assert.match(workerWorkflow,/userAiEntryCount/);
   assert.match(workerWorkflow,/test\("\/admin\(\?:\/\|\$\)"/);
   assert.match(workerWorkflow,/\.pageErrors \| length == 0/);
+  assert.match(workerWorkflow,/uses:\s*actions\/upload-artifact@v4\n\s*if:\s*always\(\)/);
   assert.match(workerWorkflow,/device_profile:/);
   assert.match(workerWorkflow,/group:\s*ekodi-background-browser-worker-\$\{\{ github\.ref \}\}-\$\{\{ inputs\.device_profile \|\| 'desktop' \}\}/);
   assert.match(sharedRelease,/native_surface_verification_desktop:/);
