@@ -53,13 +53,12 @@ test('synthetic production Admin UI verifier follows direct registry href menus 
 });
 
 
-test('synthetic production Admin UI verifier uses visible sidebar navigation while context tabs remain state-only', async () => {
+test('synthetic production Admin UI verifier accepts a work-area button that already activated its single default section', async () => {
   const text = await source();
   assert.match(text, /async function resolveMenuTrigger\(id, group\)/);
-  assert.match(text, /admin-detail-item\[data-admin-detail-section=/);
-  assert.match(text, /data-admin-detail-more=/);
   assert.match(text, /contextTab\.waitFor\(\{ state: 'attached', timeout: 10000 \}\)/);
-  assert.match(text, /no visible sidebar navigation trigger after selecting work area/);
-  assert.doesNotMatch(text, /contextTab\.waitFor\(\{ state: 'visible'/);
+  assert.match(text, /sectionAlreadyActive = await page\.evaluate\(section => window\.EKODIAdminPanels\?\.current\?\.\(\) === section, id\)/);
+  assert.match(text, /if \(!sectionAlreadyActive\) \{/);
   assert.match(text, /const trigger = await resolveMenuTrigger\(id, group\)/);
+  assert.doesNotMatch(text, /contextTab\.waitFor\(\{ state: 'visible'/);
 });
