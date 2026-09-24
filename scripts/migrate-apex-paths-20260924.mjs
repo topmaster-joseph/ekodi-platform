@@ -190,6 +190,13 @@ function structuredPolicyEdits(file,text){
     text=text.replace(/assert\.equal\(\[\.\.\.urls\]\.some\(url=>url\.startsWith\('https:\/\/ekodi\.kr\/invest'\)\),false\);?/g,'');
     return text;
   }
+  if(file==='site-chrome-runtime.js'){
+    text=text.replace(
+      "const url=new URL(request.url);const path=url.pathname.replace(/\\/+$/,'');if(!path.startsWith('/v1/site-chrome'))return null;",
+      "const url=new URL(request.url);let path=url.pathname.replace(/\\/+$/,'');if(path.startsWith('/workspace-api/'))path=path.slice('/workspace-api'.length);if(!path.startsWith('/v1/site-chrome'))return null;"
+    );
+    return text;
+  }
   if(file==='governance/constitution/constitution.json'){
     const j=JSON.parse(text);j.version='1.26.0';j.effectiveDate='2026-09-24';
     j.systemBoundaries={production:['ekodi.kr'],development:[],rule:'All EKODI-owned human, admin, API, core and common-service surfaces use paths on ekodi.kr. EKODI-owned subdomains are forbidden.'};
