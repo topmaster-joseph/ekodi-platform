@@ -234,17 +234,32 @@
     return actions;
   }
 
+  function makeSiteAdminButton(site) {
+    const button = makeButton(site.name, 'campus-site-admin-button', 'manage', site);
+    button.dataset.campusSiteButton = 'true';
+    button.dataset.campusSiteName = site.name;
+    const stageText = stageLabel(site.lifecycle);
+    if (stageText) {
+      const stage = document.createElement('span');
+      stage.className = 'campus-site-button-stage';
+      stage.textContent = stageText;
+      button.append(stage);
+    }
+    return button;
+  }
+
   function renderSiteItem(site) {
     const item = document.createElement('article');
     item.className = 'campus-site-item';
     item.dataset.siteDomain = site.domain;
     item.dataset.siteLifecycle = site.lifecycle || 'live';
     item.dataset.siteRelation = site.relation || siteRelation(site);
+    item.dataset.siteName = site.name;
     if (site.id) item.dataset.siteId = site.id;
     if (site.lifecycle === 'planned') item.classList.add('is-planned');
     if (site.lifecycle === 'preparing') item.classList.add('is-preparing');
     if (site.lifecycle === 'beta') item.classList.add('is-beta');
-    item.append(makeIdentity(site), makeDomainControl(site), makeOperationalActions(site));
+    item.append(makeSiteAdminButton(site));
     return item;
   }
 
@@ -254,25 +269,10 @@
     card.className = 'campus-group-card';
     card.dataset.campusGroup = group.key;
 
-    const header = document.createElement('header');
-    header.className = 'campus-group-head';
-    const copy = document.createElement('div');
-    const title = document.createElement('h3');
-    title.textContent = group.title;
-    const description = document.createElement('p');
-    description.textContent = group.description;
-    copy.append(title, description);
-
-    const count = document.createElement('span');
-    count.className = 'campus-group-count';
-    count.textContent = String(sites.length);
-    count.setAttribute('aria-label', `${sites.length}개 사이트`);
-    header.append(copy, count);
-
     const list = document.createElement('div');
     list.className = 'campus-group-list';
     list.append(...sites.map(renderSiteItem));
-    card.append(header, list);
+    card.append(list);
     if (!sites.length) card.hidden = true;
     return card;
   }
@@ -334,12 +334,9 @@
     item.classList.toggle('is-preparing', site.lifecycle === 'preparing');
     item.classList.toggle('is-beta', site.lifecycle === 'beta');
 
-    const identity = item.querySelector('.campus-site-identity');
-    if (identity) identity.replaceWith(makeIdentity(site));
-    const domain = item.querySelector('.campus-site-domain');
-    if (domain) domain.replaceWith(makeDomainControl(site));
-    const actions = item.querySelector('.campus-row-actions');
-    if (actions) actions.replaceWith(makeOperationalActions(site));
+    item.dataset.siteName = site.name;
+    const button = item.querySelector('.campus-site-admin-button');
+    if (button) button.replaceWith(makeSiteAdminButton(site));
   }
 
   function matchesSiteRelation(item) {
@@ -473,12 +470,12 @@
     }
 
     const copy = panel.querySelector('.campus-toolbar > div > p:not(.kicker)');
-    if (copy) copy.textContent = '에코디 생태계의 전체 사이트와 EKODI.KR 첫화면 공개 설정을 한 목록에서 관리합니다.';
+    if (copy) copy.textContent = '에코디 생태계의 전체 사이트와 EKODI.KR 첫화면 공개 설정을 한 목록에서 관리합니다. 위 분류를 선택하면 중앙에는 사이트명 버튼만 표시되고, 버튼을 누르면 해당 관리자 메뉴로 이동합니다.';
 
     const grid = document.createElement('div');
     grid.id = 'campusSiteGroups';
     grid.className = 'campus-groups-grid';
-    grid.setAttribute('aria-label', 'EKODI 전체 사이트, 운영 상태 및 첫화면 공개 설정');
+    grid.setAttribute('aria-label', 'EKODI 사이트 관리자 바로가기');
     grid.append(...SITE_GROUPS.map(renderGroup));
 
     const empty = document.createElement('div');
