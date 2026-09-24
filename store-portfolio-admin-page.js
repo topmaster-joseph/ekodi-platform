@@ -92,60 +92,64 @@ const SHELL_STYLE=`:root{
 }
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#f3f6f3;color:var(--ink)}
 a{color:inherit}.top{
-  height:70px;display:flex;align-items:center;gap:14px;padding:0 22px;background:#fff;
+  height:56px;display:flex;align-items:center;gap:10px;padding:0 14px;background:#fff;
   border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30
 }
-.brand{display:flex;align-items:center;gap:11px;text-decoration:none;min-width:0}
-.mark{width:38px;height:38px;border-radius:12px;background:#173f2b;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:900}
-.brand strong{display:block;font-size:15px}.brand small{display:block;margin-top:3px;color:#758179;font-size:11px}
+.brand{display:flex;align-items:center;gap:9px;text-decoration:none;min-width:0}
+.mark{width:34px;height:34px;border-radius:10px;background:#173f2b;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:900}
+.brand strong{display:block;font-size:14px}.brand small{display:block;margin-top:1px;color:#758179;font-size:10px}
 .top-actions{margin-left:auto}.top-actions a{
-  display:inline-flex;align-items:center;border:1px solid #d7e0d8;border-radius:10px;background:#fff;
-  padding:9px 12px;text-decoration:none;color:#35453a;font-size:12px;font-weight:800
+  display:inline-flex;align-items:center;border:1px solid #d7e0d8;border-radius:8px;background:#fff;
+  padding:7px 10px;text-decoration:none;color:#35453a;font-size:11px;font-weight:800
 }
-.app{display:grid;grid-template-columns:310px minmax(0,1fr);min-height:calc(100vh - 70px)}
+.app{display:grid;grid-template-columns:276px minmax(0,1fr);min-height:calc(100vh - 56px)}
 .portfolio-sidebar{
-  height:calc(100vh - 70px);position:sticky;top:70px;overflow:auto;background:#fff;
-  border-right:1px solid var(--line);padding:14px 12px 22px
+  height:calc(100vh - 56px);position:sticky;top:56px;overflow:auto;background:#fff;
+  border-right:1px solid var(--line);padding:9px 8px 14px
 }
-.side-intro{padding:4px 8px 12px;border-bottom:1px solid #e8ede7;margin-bottom:10px}
-.side-intro small{display:block;color:#758179;font-size:10px;font-weight:850;letter-spacing:.06em}
-.side-intro strong{display:block;margin-top:4px;font-size:15px}.side-intro span{display:block;margin-top:4px;color:#879189;font-size:10px;line-height:1.5}
-.menu-title{display:flex;align-items:center;justify-content:space-between;padding:8px 8px 6px}
-.menu-title strong{font-size:12px;color:#324339}.menu-title small{font-size:9px;color:#879189}
-.common-nav{display:grid;gap:3px;margin-bottom:12px}.common-nav a{
-  padding:9px 10px;border-radius:8px;text-decoration:none;color:#405047;font-size:12px;font-weight:760
+.side-intro{padding:2px 6px 8px;border-bottom:1px solid #e8ede7;margin-bottom:6px}
+.side-intro small{display:block;color:#758179;font-size:9px;font-weight:850;letter-spacing:.06em}
+.side-intro strong{display:block;margin-top:2px;font-size:14px}.side-intro span{display:block;margin-top:2px;color:#879189;font-size:9px;line-height:1.4}
+.menu-title{display:flex;align-items:center;justify-content:space-between;padding:6px 6px 4px}
+.menu-title strong{font-size:11px;color:#324339}.menu-title small{font-size:8.5px;color:#879189}
+.common-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;margin-bottom:7px}.common-nav a{
+  min-width:0;padding:7px 8px;border:1px solid #e6ebe5;border-radius:7px;background:#fff;text-decoration:none;color:#405047;font-size:10.5px;font-weight:760;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap
 }
-.common-nav a:hover,.common-nav a:focus{background:#f1f6f2;color:#17492b;outline:none}
-.common-nav a:first-child{background:var(--green);color:#fff}
-.brand-group{border-top:1px solid #edf1ec;padding:10px 4px 0;margin-top:8px}
-.brand-head{display:flex;align-items:center;gap:8px;margin-bottom:7px;padding:0 4px}
-.brand-mark{width:27px;height:27px;border-radius:9px;background:#edf4ef;color:#31543e;display:grid;place-items:center;font-size:9px;font-weight:900}
-.brand-head strong{font-size:12px}.brand-head span{display:block;color:#879189;font-size:9px;margin-top:1px}
-.brand-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+.common-nav a:hover,.common-nav a:focus{background:#eef6f0;border-color:#cbdccd;color:#17492b;outline:none}
+.common-nav a:first-child{grid-column:1/-1;background:var(--green);border-color:var(--green);color:#fff}
+.brand-group{border-top:1px solid #edf1ec;padding:5px 3px 0;margin-top:4px}
+.brand-group>summary{list-style:none;cursor:pointer}.brand-group>summary::-webkit-details-marker{display:none}
+.brand-head{display:flex;align-items:center;gap:7px;margin:0;padding:5px 4px;border-radius:7px}
+.brand-head:hover,.brand-head:focus{background:#f5f8f5;outline:none}
+.brand-mark{width:25px;height:25px;border-radius:8px;background:#edf4ef;color:#31543e;display:grid;place-items:center;font-size:8.5px;font-weight:900;flex:0 0 auto}
+.brand-head>div{min-width:0;flex:1}.brand-head strong{display:block;font-size:11px}.brand-head span{display:block;color:#879189;font-size:8.5px;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brand-caret{margin-left:auto;color:#748178;font-size:15px;line-height:1;transform:rotate(0deg);transition:transform .15s ease}.brand-group[open] .brand-caret{transform:rotate(90deg)}
+.brand-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;padding:4px 0 2px}
 .brand-links a{
-  min-width:0;padding:7px 8px;border:1px solid #e4e9e3;border-radius:7px;background:#fff;
-  color:#48584e;text-decoration:none;font-size:10.5px;font-weight:730;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+  min-width:0;padding:6px 7px;border:1px solid #e4e9e3;border-radius:7px;background:#fff;
+  color:#48584e;text-decoration:none;font-size:9.5px;font-weight:730;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
 }
 .brand-links a:hover,.brand-links a:focus{background:#eef6f0;border-color:#cbdccd;color:#17492b;outline:none}
 .brand-links a:first-child{grid-column:1/-1;background:#f3f8f4;color:#17492b;border-color:#d5e4d8;font-weight:900}
-.portfolio-sidebar-note{margin:14px 5px 0;padding-top:11px;border-top:1px solid #edf1ec;color:#8a948c;font-size:9.5px;line-height:1.55}
-.workspace{min-width:0;background:#f3f6f3;padding:12px}
+.portfolio-sidebar-note{margin:9px 4px 0;padding-top:8px;border-top:1px solid #edf1ec;color:#8a948c;font-size:8.5px;line-height:1.45}
+.workspace{min-width:0;background:#f3f6f3;padding:7px}
 .panel-frame{
-  width:100%;height:calc(100vh - 94px);min-height:620px;border:1px solid #dbe3da;border-radius:15px;
-  background:#fff;display:block;box-shadow:0 2px 12px rgba(28,67,42,.05)
+  width:100%;height:calc(100vh - 70px);min-height:520px;border:1px solid #dbe3da;border-radius:11px;
+  background:#fff;display:block;box-shadow:0 1px 8px rgba(28,67,42,.04)
 }
 @media(max-width:980px){
-  .app{grid-template-columns:250px minmax(0,1fr)}
-  .portfolio-sidebar{padding-left:9px;padding-right:9px}
+  .app{grid-template-columns:244px minmax(0,1fr)}
+  .portfolio-sidebar{padding-left:7px;padding-right:7px}
   .brand-links{grid-template-columns:1fr}
   .brand-links a:first-child{grid-column:auto}
 }
 @media(max-width:760px){
-  .top{height:64px;padding:0 14px}.brand small{display:none}.top-actions a{font-size:11px;padding:8px 9px}
+  .top{height:54px;padding:0 10px}.brand small{display:none}.top-actions a{font-size:10px;padding:7px 8px}
   .app{display:block}.portfolio-sidebar{position:relative;top:auto;width:100%;height:auto;max-height:none;border-right:0;border-bottom:1px solid var(--line)}
   .common-nav{grid-template-columns:repeat(2,minmax(0,1fr))}
   .brand-links{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .workspace{padding:10px}.panel-frame{height:72vh;min-height:520px}
+  .workspace{padding:6px}.panel-frame{height:74vh;min-height:480px}
 }
 @media(max-width:390px){
   .common-nav,.brand-links{grid-template-columns:1fr}
@@ -181,11 +185,11 @@ function commonHref(view){
   return `/cmpmyi/admin/panel/${view}`;
 }
 
-function brandMenu(store){
-  return `<section class="brand-group" aria-label="${store.short} 관리자 메뉴">
-    <div class="brand-head"><span class="brand-mark">${store.mark}</span><div><strong>${store.short}</strong><span>${store.name}</span></div></div>
+function brandMenu(store,index=0){
+  return `<details class="brand-group" aria-label="${store.short} 관리자 메뉴" ${index===0?'open':''}>
+    <summary class="brand-head"><span class="brand-mark">${store.mark}</span><div><strong>${store.short}</strong><span>${store.name}</span></div><span class="brand-caret" aria-hidden="true">›</span></summary>
     <nav class="brand-links">${SECTIONS.map(([section,label])=>`<a href="${adminHref(store,section)}" target="cmpmyi-panel">${label}</a>`).join('')}</nav>
-  </section>`;
+  </details>`;
 }
 
 function panelCard(store,view){
@@ -363,7 +367,7 @@ export function storePortfolioAdminPage(){
         <div class="menu-title"><strong>공통관리</strong><small>3개 브랜드</small></div>
         <nav class="common-nav">${COMMON_MENU.map(([view,label])=>`<a href="${commonHref(view)}" target="cmpmyi-panel">${label}</a>`).join('')}</nav>
         <div class="menu-title"><strong>브랜드 관리자 전체 메뉴</strong><small>직접 이동</small></div>
-        ${STORES.map(brandMenu).join('')}
+        ${STORES.map((store,index)=>brandMenu(store,index)).join('')}
         <p class="portfolio-sidebar-note">각 브랜드의 데이터와 권한은 독립적으로 유지됩니다. 통합 화면은 해당 브랜드의 정식 관리자 화면을 오른쪽 작업영역에 표시합니다.</p>
       </aside>
       <main class="workspace">
