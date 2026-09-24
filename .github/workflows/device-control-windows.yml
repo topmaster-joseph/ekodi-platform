@@ -128,13 +128,13 @@ jobs:
           $commands = @(
             'power.always_on','power.presentation','power.normal','power.restore','lock.resume_off','lock.resume_on','autologon.open',
             'diagnostics.collect','network.diagnose','printers.diagnose','startup.scan','startup.disable','startup.restore',
-            'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary','computer.browser.execute','computer.desktop.probe','computer.desktop.canary','computer.desktop.guest.canary','computer.desktop.ui.canary',
+            'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary','computer.browser.execute','computer.desktop.probe','computer.desktop.canary','computer.desktop.guest.canary','computer.desktop.ui.canary','computer.desktop.session.canary','computer.desktop.session.execute',
             'remote_desktop.recovery.enable','remote_desktop.recovery.disable','remote_desktop.recovery.run'
           )
           foreach ($command in $commands) {
             if (-not $content.Contains("'$command'")) { throw "Missing allowlisted command: $command" }
           }
-          foreach ($guard in @('arbitraryShell = $false','screenCapture = $false','credentialCollection = $false','backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified','isolatedDesktopProbe = $true','isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified','isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified','isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified','isolatedDesktop = $false')) {
+          foreach ($guard in @('arbitraryShell = $false','screenCapture = $false','credentialCollection = $false','backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified','isolatedDesktopProbe = $true','isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified','isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified','isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified','isolatedDesktopSessionCanary = [bool](Get-IsolatedDesktopSessionCanaryState).verified','isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified')) {
             if (-not $content.Contains($guard)) { throw "Missing privacy guard: $guard" }
           }
           if ($content -match '(?i)Restart-Computer|GetAsyncKeyState|SetWindowsHookEx|CopyFromScreen|GetClipboard') { throw 'Forbidden remote-control behavior found.' }
@@ -209,7 +209,7 @@ jobs:
             'Remove-VM -Name $sessionName -Force',
             'sessionVmRemoved = -not [bool](Get-VM',
             'sessionDiskRemoved = -not (Test-Path -LiteralPath $sessionDisk)',
-            'isolatedDesktop = $false'
+            'isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified'
           )) {
             if (-not $content.Contains($required)) { throw "Missing isolated desktop canary guard: $required" }
           }
@@ -231,12 +231,12 @@ jobs:
             "networkPolicy = 'none'",
             'Get-VMIntegrationService -VMName $sessionName -Name ''Heartbeat''',
             'isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified',
-            'isolatedDesktop = $false'
+            'isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified'
           )) {
             if (-not $hostContent.Contains($required)) { throw "Missing host guest-canary guard: $required" }
           }
           foreach ($required in @(
-            "GuestAgentVersion = '1.1.0'",
+            "GuestAgentVersion = '1.2.0'",
             "guest.runtime.probe",
             "guest_task_network_policy_invalid",
             'executedAsSystem',
@@ -272,7 +272,7 @@ jobs:
             'hostInteractiveDesktopUsed',
             'syntheticUiOnly',
             'isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified',
-            'isolatedDesktop = $false'
+            'isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified'
           )) {
             if (-not $hostContent.Contains($required)) { throw "Missing semantic UI host guard: $required" }
           }
@@ -293,6 +293,56 @@ jobs:
             throw 'Semantic Guest UI canary must not use low-level input or clipboard APIs.'
           }
           Write-Host 'Semantic isolated Guest UI canary contract is present and host desktop remains protected.'
+      - name: Verify bounded isolated session executor boundary
+        shell: pwsh
+        run: |
+          $hostPath = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
+          $guestPath = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-isolated-guest-agent.ps1'
+          $apiPath = Join-Path $PWD 'device-control.js'
+          $hostContent = Get-Content $hostPath -Raw
+          $guestContent = Get-Content $guestPath -Raw
+          $apiContent = Get-Content $apiPath -Raw
+          foreach ($required in @(
+            'function Invoke-IsolatedDesktopSessionCanary',
+            'function Invoke-IsolatedDesktopSessionExecute',
+            'function Invoke-IsolatedDesktopBoundedSessionTask',
+            "type = 'guest.session.execute'",
+            "operation = 'ui.text.roundtrip'",
+            'isolated_session_canary_required',
+            'inputSha256',
+            'outputSha256',
+            'roundTripMatched',
+            'isolatedDesktopSessionCanary = [bool](Get-IsolatedDesktopSessionCanaryState).verified',
+            'isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified'
+          )) {
+            if (-not $hostContent.Contains($required)) { throw "Missing bounded session host guard: $required" }
+          }
+          foreach ($required in @(
+            'function Invoke-GuestSessionExecute',
+            "guest.session.execute",
+            "ui.text.roundtrip",
+            'System.Windows.Automation.ValuePattern',
+            'System.Windows.Automation.InvokePattern',
+            'hostInteractiveDesktopUsed = $false',
+            'lowLevelInputInjection = $false',
+            'clipboardShared = $false',
+            "mutationScope = 'ephemeral-guest-session-only'"
+          )) {
+            if (-not $guestContent.Contains($required)) { throw "Missing bounded session Guest Agent guard: $required" }
+          }
+          foreach ($required in @(
+            "'computer.desktop.session.canary': { risk: 'maintain', confirm: true }",
+            "'computer.desktop.session.execute': { risk: 'privileged', confirm: true, payload: 'isolated-desktop-task' }",
+            "policy.payload === 'isolated-desktop-task'",
+            "operation!=='ui.text.roundtrip'",
+            "ISOLATED_DESKTOP_TEXT_INVALID"
+          )) {
+            if (-not $apiContent.Contains($required)) { throw "Missing bounded session API guard: $required" }
+          }
+          if ($guestContent -match '(?i)SendKeys|mouse_event|keybd_event|SendInput|GetClipboard|SetClipboard|Invoke-Expression|\biex\b') {
+            throw 'Bounded Guest session must not expose low-level input, clipboard, or arbitrary execution.'
+          }
+          Write-Host 'Bounded isolated session executor contract is capability-gated, semantic, networkless and non-interactive on the host.'
       - name: Verify power and lock command mapping without changing runner settings
         shell: pwsh
         run: |

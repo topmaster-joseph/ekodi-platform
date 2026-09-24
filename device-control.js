@@ -77,6 +77,8 @@ const COMMAND_POLICIES = Object.freeze({
   'computer.desktop.canary': { risk: 'maintain', confirm: true },
   'computer.desktop.guest.canary': { risk: 'maintain', confirm: true },
   'computer.desktop.ui.canary': { risk: 'maintain', confirm: true },
+  'computer.desktop.session.canary': { risk: 'maintain', confirm: true },
+  'computer.desktop.session.execute': { risk: 'privileged', confirm: true, payload: 'isolated-desktop-task' },
   'network.diagnose': { risk: 'observe' },
   'printers.diagnose': { risk: 'observe' },
   'startup.scan': { risk: 'observe' },
@@ -112,6 +114,8 @@ const COMMAND_CAPABILITIES = Object.freeze({
   'computer.desktop.canary': 'isolatedDesktopProbe',
   'computer.desktop.guest.canary': 'isolatedDesktopCanary',
   'computer.desktop.ui.canary': 'isolatedDesktopGuestCanary',
+  'computer.desktop.session.canary': 'isolatedDesktopUiCanary',
+  'computer.desktop.session.execute': 'isolatedDesktop',
   'computer.browser.execute': 'backgroundBrowser',
   'network.diagnose': 'networkDiagnostics',
   'printers.diagnose': 'printerDiagnostics',
@@ -355,6 +359,13 @@ function sanitizeCommandPayload(type, rawPayload) {
     if (!/^[a-f0-9]{64}$/.test(itemId)) throw new Error('STARTUP_ITEM_INVALID');
     return { itemId };
   }
+  if (policy.payload === 'isolated-desktop-task') {
+    const operation=safeText(rawPayload?.operation || '',80);
+    const text=safeText(rawPayload?.text || '',80);
+    if(operation!=='ui.text.roundtrip') throw new Error('ISOLATED_DESKTOP_OPERATION_INVALID');
+    if(!/^EKODI_SESSION_[A-Z0-9_-]{8,64}$/.test(text)) throw new Error('ISOLATED_DESKTOP_TEXT_INVALID');
+    return {operation,text};
+  }
   if (policy.payload === 'background-browser-task') {
     const pathValue=safeText(rawPayload?.path || '/',600);
     const deviceProfile=safeText(rawPayload?.deviceProfile || 'desktop',40);
@@ -498,6 +509,96 @@ function summarizeCommandResult(result = {}) {
     : (Number.isFinite(Number(value)) ? Number(value) : null);
   for (const key of ['message', 'freedMB', 'pendingCount', 'installedCount', 'failedCount', 'rebootRequired', 'profile']) {
     if (result[key] !== undefined) summary[key] = result[key];
+  }
+  if (result.desktopSessionCanary && typeof result.desktopSessionCanary === 'object') {
+    summary.desktopSessionCanary = {
+      ok: result.desktopSessionCanary.ok === true,
+      mode: safeText(result.desktopSessionCanary.mode, 100),
+      provider: safeText(result.desktopSessionCanary.provider, 100),
+      routingPolicy: safeText(result.desktopSessionCanary.routingPolicy, 100),
+      backendPolicy: safeText(result.desktopSessionCanary.backendPolicy, 120),
+      agentVersion: safeText(result.desktopSessionCanary.agentVersion, 40),
+      guestAgentVersion: safeText(result.desktopSessionCanary.guestAgentVersion, 40),
+      executorVersion: safeText(result.desktopSessionCanary.executorVersion, 40),
+      backend: safeText(result.desktopSessionCanary.backend, 80),
+      sessionType: safeText(result.desktopSessionCanary.sessionType, 40),
+      operation: safeText(result.desktopSessionCanary.operation, 80),
+      receiptSha256: safeText(result.desktopSessionCanary.receiptSha256, 80),
+      inputSha256: safeText(result.desktopSessionCanary.inputSha256, 80),
+      outputSha256: safeText(result.desktopSessionCanary.outputSha256, 80),
+      textLength: finiteNumber(result.desktopSessionCanary.textLength),
+      executedAsSystem: result.desktopSessionCanary.executedAsSystem === true,
+      noNetworkAdapter: result.desktopSessionCanary.noNetworkAdapter === true,
+      noActiveNetwork: result.desktopSessionCanary.noActiveNetwork === true,
+      hostInteractiveDesktopUsed: result.desktopSessionCanary.hostInteractiveDesktopUsed === true,
+      sharedInteractiveDesktop: result.desktopSessionCanary.sharedInteractiveDesktop === true,
+      semanticUiAutomation: result.desktopSessionCanary.semanticUiAutomation === true,
+      lowLevelInputInjection: result.desktopSessionCanary.lowLevelInputInjection === true,
+      clipboardShared: result.desktopSessionCanary.clipboardShared === true,
+      credentialCollection: result.desktopSessionCanary.credentialCollection === true,
+      hostProfileMounted: result.desktopSessionCanary.hostProfileMounted === true,
+      valuePatternAvailable: result.desktopSessionCanary.valuePatternAvailable === true,
+      invokePatternAvailable: result.desktopSessionCanary.invokePatternAvailable === true,
+      valueSet: result.desktopSessionCanary.valueSet === true,
+      controlInvoked: result.desktopSessionCanary.controlInvoked === true,
+      roundTripMatched: result.desktopSessionCanary.roundTripMatched === true,
+      resultCode: safeText(result.desktopSessionCanary.resultCode, 80),
+      windowClosed: result.desktopSessionCanary.windowClosed === true,
+      mutationScope: safeText(result.desktopSessionCanary.mutationScope, 80),
+      vmReachedRunning: result.desktopSessionCanary.vmReachedRunning === true,
+      heartbeatObserved: result.desktopSessionCanary.heartbeatObserved === true,
+      networkAttached: result.desktopSessionCanary.networkAttached === true,
+      ephemeralDifferencingDisk: result.desktopSessionCanary.ephemeralDifferencingDisk === true,
+      baseDiskWriteForbidden: result.desktopSessionCanary.baseDiskWriteForbidden === true,
+      sessionVmRemoved: result.desktopSessionCanary.sessionVmRemoved === true,
+      sessionDiskRemoved: result.desktopSessionCanary.sessionDiskRemoved === true,
+      checkedAt: safeText(result.desktopSessionCanary.checkedAt, 64),
+    };
+  }
+  if (result.desktopSession && typeof result.desktopSession === 'object') {
+    summary.desktopSession = {
+      ok: result.desktopSession.ok === true,
+      mode: safeText(result.desktopSession.mode, 100),
+      provider: safeText(result.desktopSession.provider, 100),
+      routingPolicy: safeText(result.desktopSession.routingPolicy, 100),
+      backendPolicy: safeText(result.desktopSession.backendPolicy, 120),
+      agentVersion: safeText(result.desktopSession.agentVersion, 40),
+      guestAgentVersion: safeText(result.desktopSession.guestAgentVersion, 40),
+      executorVersion: safeText(result.desktopSession.executorVersion, 40),
+      backend: safeText(result.desktopSession.backend, 80),
+      sessionType: safeText(result.desktopSession.sessionType, 40),
+      operation: safeText(result.desktopSession.operation, 80),
+      receiptSha256: safeText(result.desktopSession.receiptSha256, 80),
+      inputSha256: safeText(result.desktopSession.inputSha256, 80),
+      outputSha256: safeText(result.desktopSession.outputSha256, 80),
+      textLength: finiteNumber(result.desktopSession.textLength),
+      executedAsSystem: result.desktopSession.executedAsSystem === true,
+      noNetworkAdapter: result.desktopSession.noNetworkAdapter === true,
+      noActiveNetwork: result.desktopSession.noActiveNetwork === true,
+      hostInteractiveDesktopUsed: result.desktopSession.hostInteractiveDesktopUsed === true,
+      sharedInteractiveDesktop: result.desktopSession.sharedInteractiveDesktop === true,
+      semanticUiAutomation: result.desktopSession.semanticUiAutomation === true,
+      lowLevelInputInjection: result.desktopSession.lowLevelInputInjection === true,
+      clipboardShared: result.desktopSession.clipboardShared === true,
+      credentialCollection: result.desktopSession.credentialCollection === true,
+      hostProfileMounted: result.desktopSession.hostProfileMounted === true,
+      valuePatternAvailable: result.desktopSession.valuePatternAvailable === true,
+      invokePatternAvailable: result.desktopSession.invokePatternAvailable === true,
+      valueSet: result.desktopSession.valueSet === true,
+      controlInvoked: result.desktopSession.controlInvoked === true,
+      roundTripMatched: result.desktopSession.roundTripMatched === true,
+      resultCode: safeText(result.desktopSession.resultCode, 80),
+      windowClosed: result.desktopSession.windowClosed === true,
+      mutationScope: safeText(result.desktopSession.mutationScope, 80),
+      vmReachedRunning: result.desktopSession.vmReachedRunning === true,
+      heartbeatObserved: result.desktopSession.heartbeatObserved === true,
+      networkAttached: result.desktopSession.networkAttached === true,
+      ephemeralDifferencingDisk: result.desktopSession.ephemeralDifferencingDisk === true,
+      baseDiskWriteForbidden: result.desktopSession.baseDiskWriteForbidden === true,
+      sessionVmRemoved: result.desktopSession.sessionVmRemoved === true,
+      sessionDiskRemoved: result.desktopSession.sessionDiskRemoved === true,
+      checkedAt: safeText(result.desktopSession.checkedAt, 64),
+    };
   }
   if (result.desktopUiCanary && typeof result.desktopUiCanary === 'object') {
     summary.desktopUiCanary = {
@@ -700,6 +801,7 @@ function summarizeCommandResult(result = {}) {
       isolatedDesktopCanaryVerified: result.agent.isolatedDesktopCanaryVerified === true,
       isolatedDesktopGuestCanaryVerified: result.agent.isolatedDesktopGuestCanaryVerified === true,
       isolatedDesktopUiCanaryVerified: result.agent.isolatedDesktopUiCanaryVerified === true,
+      isolatedDesktopSessionCanaryVerified: result.agent.isolatedDesktopSessionCanaryVerified === true,
       isolatedDesktopReady: result.agent.isolatedDesktopReady === true,
       minimizedWindowCountsAsIsolation: result.agent.minimizedWindowCountsAsIsolation === true,
     };

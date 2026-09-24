@@ -55,7 +55,7 @@ test('cloud operations use a fixed capability allowlist and never expose arbitra
 
 test('maintain and privileged actions require explicit admin confirmation', () => {
   assert.match(api, /DEVICE_COMMAND_CONFIRM_REQUIRED/);
-  for (const command of ['autologon.open','maintenance.temp_cleanup','updates.install','startup.disable','startup.restore','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary','computer.browser.execute','computer.desktop.canary','computer.desktop.guest.canary','computer.desktop.ui.canary']) {
+  for (const command of ['autologon.open','maintenance.temp_cleanup','updates.install','startup.disable','startup.restore','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary','computer.browser.execute','computer.desktop.canary','computer.desktop.guest.canary','computer.desktop.ui.canary','computer.desktop.session.canary','computer.desktop.session.execute']) {
     const escaped = command.replaceAll('.', '\\.');
     assert.match(api, new RegExp(`'${escaped}'[^\n]*confirm: true`));
   }
@@ -95,7 +95,8 @@ test('native remote computer provider exposes bounded observe-only host commands
   assert.match(agent, /isolatedDesktopCanary = \[bool\]\(Get-IsolatedDesktopCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktopGuestCanary = \[bool\]\(Get-IsolatedDesktopGuestCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktopUiCanary = \[bool\]\(Get-IsolatedDesktopUiCanaryState\)\.verified/);
-  assert.match(agent, /isolatedDesktop = \$false/);
+  assert.match(agent, /isolatedDesktopSessionCanary = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
+  assert.match(agent, /isolatedDesktop = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
   assert.match(agent, /foregroundUserSessionProtected = \$true/);
   assert.match(agent, /minimizedWindowCountsAsIsolation = \$false/);
 });
@@ -141,7 +142,7 @@ test('one-click device protocol is bounded to EKODI enrollment and official API'
 });
 
 test('existing registered devices upgrade transactionally and preserve registration', () => {
-  assert.match(agent, /\$AgentVersion = '2\.3\.4'/);
+  assert.match(agent, /\$AgentVersion = '2\.4\.0'/);
   assert.match(agent, /Invoke-AgentUpgradeTransaction/);
   assert.match(agent, /Assert-AgentCandidate/);
   assert.match(agent, /New-AgentUpgradeSnapshot/);
@@ -298,8 +299,8 @@ test('native isolated desktop probe is observe-only and does not activate sessio
   assert.match(api, /'computer\.desktop\.probe': 'isolatedDesktopProbe'/);
   assert.match(api, /summary\.desktopProbe/);
   assert.match(agent, /'computer\.desktop\.probe' \{ return Invoke-IsolatedDesktopBackendProbe \}/);
-  assert.match(agent, /isolatedDesktop = \$false/);
-  assert.doesNotMatch(agent, /'computer\.desktop\.session\.execute'/);
+  assert.match(agent, /isolatedDesktop = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
+  assert.doesNotMatch(agent, /isolatedDesktop = \$true/);
 });
 
 
@@ -309,8 +310,8 @@ test('native isolated desktop canary is confirm-gated and cannot activate sessio
   assert.match(api, /summary\.desktopCanary/);
   assert.match(agent, /'computer\.desktop\.canary' \{ return Invoke-IsolatedDesktopHyperVCanary \}/);
   assert.match(agent, /isolatedDesktopCanary = \[bool\]\(Get-IsolatedDesktopCanaryState\)\.verified/);
-  assert.match(agent, /isolatedDesktop = \$false/);
-  assert.doesNotMatch(agent, /'computer\.desktop\.session\.execute'/);
+  assert.match(agent, /isolatedDesktop = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
+  assert.doesNotMatch(agent, /isolatedDesktop = \$true/);
 });
 
 
@@ -320,8 +321,8 @@ test('guest canary is confirm-gated behind the Hyper-V canary capability', () =>
   assert.match(api, /summary\.desktopGuestCanary/);
   assert.match(agent, /'computer\.desktop\.guest\.canary' \{ return Invoke-IsolatedDesktopGuestRuntimeCanary \}/);
   assert.match(agent, /isolatedDesktopGuestCanary = \[bool\]\(Get-IsolatedDesktopGuestCanaryState\)\.verified/);
-  assert.match(agent, /isolatedDesktop = \$false/);
-  assert.doesNotMatch(agent, /'computer\.desktop\.session\.execute'/);
+  assert.match(agent, /isolatedDesktop = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
+  assert.doesNotMatch(agent, /isolatedDesktop = \$true/);
 });
 
 
@@ -331,6 +332,26 @@ test('semantic UI canary is confirm-gated behind guest runtime proof', () => {
   assert.match(api, /summary\.desktopUiCanary/);
   assert.match(agent, /'computer\.desktop\.ui\.canary' \{ return Invoke-IsolatedDesktopGuestUiCanary \}/);
   assert.match(agent, /isolatedDesktopUiCanary = \[bool\]\(Get-IsolatedDesktopUiCanaryState\)\.verified/);
-  assert.match(agent, /isolatedDesktop = \$false/);
-  assert.doesNotMatch(agent, /'computer\.desktop\.session\.execute'/);
+  assert.match(agent, /isolatedDesktop = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
+  assert.doesNotMatch(agent, /isolatedDesktop = \$true/);
+});
+
+
+test('bounded isolated desktop session is payload-sanitized and capability-gated', () => {
+  assert.match(api, /'computer\.desktop\.session\.canary': \{ risk: 'maintain', confirm: true \}/);
+  assert.match(api, /'computer\.desktop\.session\.execute': \{ risk: 'privileged', confirm: true, payload: 'isolated-desktop-task' \}/);
+  assert.match(api, /'computer\.desktop\.session\.canary': 'isolatedDesktopUiCanary'/);
+  assert.match(api, /'computer\.desktop\.session\.execute': 'isolatedDesktop'/);
+  assert.match(api, /policy\.payload === 'isolated-desktop-task'/);
+  assert.match(api, /operation!=='ui\.text\.roundtrip'/);
+  assert.match(api, /\^EKODI_SESSION_\[A-Z0-9_-\]\{8,64\}\$/);
+  assert.match(api, /summary\.desktopSessionCanary/);
+  assert.match(api, /summary\.desktopSession/);
+  assert.match(api, /inputSha256/);
+  assert.match(api, /outputSha256/);
+  assert.match(agent, /'computer\.desktop\.session\.canary' \{ return Invoke-IsolatedDesktopSessionCanary \}/);
+  assert.match(agent, /'computer\.desktop\.session\.execute' \{ return Invoke-IsolatedDesktopSessionExecute \$payload \}/);
+  assert.match(agent, /isolatedDesktopSessionCanary = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
+  assert.match(agent, /isolatedDesktop = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
+  assert.doesNotMatch(agent, /isolatedDesktop = \$true/);
 });

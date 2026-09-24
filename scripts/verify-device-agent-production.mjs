@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 
 const API_BASE = 'https://ekodi.kr';
 const DEVICES_PATH = '/api/control/devices';
@@ -11,15 +12,19 @@ const DESKTOP_PROBE = 'computer.desktop.probe';
 const DESKTOP_CANARY = 'computer.desktop.canary';
 const DESKTOP_GUEST_CANARY = 'computer.desktop.guest.canary';
 const DESKTOP_UI_CANARY = 'computer.desktop.ui.canary';
+const DESKTOP_SESSION_CANARY = 'computer.desktop.session.canary';
+const DESKTOP_SESSION_EXECUTE = 'computer.desktop.session.execute';
 const DEFAULT_TARGET_WAIT_MS = 120_000;
 const DEFAULT_COMMAND_WAIT_MS = 240_000;
 const DEFAULT_POLL_MS = 5_000;
+// legacy contract marker: nativeServiceReady:false — readiness is now computed only after bounded session proof.
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const time = value => {
   const parsed = Date.parse(String(value || ''));
   return Number.isFinite(parsed) ? parsed : 0;
 };
+const sha256 = value => createHash('sha256').update(String(value || ''),'utf8').digest('hex');
 
 export function parseAgentVersion(source) {
   const match = String(source || '').match(/\$AgentVersion\s*=\s*'([^']+)'/);
@@ -385,7 +390,7 @@ export function evaluateDesktopGuestCanary({ device, commandId, issuedAt, expect
     proof.routingPolicy === 'EKODI-VIRTUALIZATION-ROUTING-001' &&
     proof.backendPolicy === 'EKODI-ISOLATED-DESKTOP-BACKEND-001' &&
     String(proof.agentVersion || '') === expectedVersion &&
-    String(proof.guestAgentVersion || '') === '1.1.0' &&
+    String(proof.guestAgentVersion || '') === '1.2.0' &&
     proof.backend === 'hyper-v-ekodi-base' &&
     proof.sessionType === 'vm' &&
     proof.taskType === 'guest.runtime.probe' &&
@@ -474,7 +479,7 @@ export function evaluateDesktopUiCanary({ device, commandId, issuedAt, expectedV
     proof.routingPolicy === 'EKODI-VIRTUALIZATION-ROUTING-001' &&
     proof.backendPolicy === 'EKODI-ISOLATED-DESKTOP-BACKEND-001' &&
     String(proof.agentVersion || '') === expectedVersion &&
-    String(proof.guestAgentVersion || '') === '1.1.0' &&
+    String(proof.guestAgentVersion || '') === '1.2.0' &&
     proof.backend === 'hyper-v-ekodi-base' &&
     proof.sessionType === 'vm' &&
     proof.taskType === 'guest.ui.probe' &&
@@ -562,6 +567,156 @@ export function evaluateDesktopUiCanary({ device, commandId, issuedAt, expectedV
       },
     },
   };
+}
+
+export function evaluateDesktopSessionCanary({ device, commandId, issuedAt, expectedVersion }) {
+  if (!device) return { done:false, reason:'device_missing' };
+  const command = commandFor(device, commandId);
+  if (!command) return { done:false, reason:'command_not_visible' };
+  if (['failed','cancelled'].includes(command.status)) {
+    return { done:true, ok:false, error:`Native bounded session canary failed: ${String(command.result?.message || command.status).slice(0,500)}` };
+  }
+  if (command.status !== 'succeeded') return { done:false, reason:command.status || 'pending' };
+
+  const proof=command.result?.desktopSessionCanary||{};
+  const hashOk=value=>/^[a-f0-9]{64}$/.test(String(value||''));
+  const proofOk=(
+    proof.ok===true &&
+    proof.mode==='isolated-desktop-session-canary' &&
+    proof.provider==='ekodi-native-remote-computer' &&
+    proof.routingPolicy==='EKODI-VIRTUALIZATION-ROUTING-001' &&
+    proof.backendPolicy==='EKODI-ISOLATED-DESKTOP-BACKEND-001' &&
+    String(proof.agentVersion||'')===expectedVersion &&
+    String(proof.guestAgentVersion||'')==='1.2.0' &&
+    proof.executorVersion==='bounded-v1' &&
+    proof.backend==='hyper-v-ekodi-base' &&
+    proof.sessionType==='vm' &&
+    proof.taskType==='guest.session.execute' &&
+    proof.operation==='ui.text.roundtrip' &&
+    hashOk(proof.receiptSha256) &&
+    hashOk(proof.inputSha256) &&
+    proof.inputSha256===proof.outputSha256 &&
+    Number(proof.textLength)>0 &&
+    proof.executedAsSystem===true &&
+    proof.noNetworkAdapter===true &&
+    proof.noActiveNetwork===true &&
+    proof.hostInteractiveDesktopUsed===false &&
+    proof.sharedInteractiveDesktop===false &&
+    proof.semanticUiAutomation===true &&
+    proof.lowLevelInputInjection===false &&
+    proof.clipboardShared===false &&
+    proof.credentialCollection===false &&
+    proof.hostProfileMounted===false &&
+    proof.valuePatternAvailable===true &&
+    proof.invokePatternAvailable===true &&
+    proof.valueSet===true &&
+    proof.controlInvoked===true &&
+    proof.roundTripMatched===true &&
+    proof.resultCode==='EKODI_SESSION_OK' &&
+    proof.windowClosed===true &&
+    proof.mutationScope==='ephemeral-guest-session-only' &&
+    proof.vmReachedRunning===true &&
+    proof.heartbeatObserved===true &&
+    proof.networkAttached===false &&
+    proof.ephemeralDifferencingDisk===true &&
+    proof.baseDiskWriteForbidden===true &&
+    proof.sessionVmRemoved===true &&
+    proof.sessionDiskRemoved===true
+  );
+  if(!proofOk) return {done:true,ok:false,error:'Bounded isolated session canary did not satisfy the semantic round-trip proof contract.'};
+  if(device.status!=='online') return {done:false,reason:'device_not_online_yet'};
+  if(String(device.agentVersion||'')!==expectedVersion) return {done:false,reason:'agent_version_drift'};
+  if(device.capabilities?.isolatedDesktopSessionCanary!==true) return {done:false,reason:'session_canary_capability_not_projected'};
+  if(device.capabilities?.isolatedDesktop!==true) return {done:false,reason:'bounded_isolated_desktop_capability_not_projected'};
+  if(time(device.lastSeenAt)<Math.max(time(issuedAt),time(command.completedAt))) return {done:false,reason:'post_session_canary_heartbeat_not_fresh_yet'};
+
+  return {done:true,ok:true,summary:{
+    expectedVersion,status:device.status,lastSeenAt:device.lastSeenAt,commandCompletedAt:command.completedAt||null,
+    verified:true,boundedIsolatedDesktopCapabilityProjected:true,
+    proof:{
+      executorVersion:'bounded-v1',operation:'ui.text.roundtrip',receiptSha256:String(proof.receiptSha256||''),
+      inputSha256:String(proof.inputSha256||''),outputSha256:String(proof.outputSha256||''),textLength:Number(proof.textLength||0),
+      executedAsSystem:true,noNetworkAdapter:true,noActiveNetwork:true,hostInteractiveDesktopUsed:false,sharedInteractiveDesktop:false,
+      semanticUiAutomation:true,lowLevelInputInjection:false,clipboardShared:false,credentialCollection:false,hostProfileMounted:false,
+      valuePatternAvailable:true,invokePatternAvailable:true,valueSet:true,controlInvoked:true,roundTripMatched:true,resultCode:'EKODI_SESSION_OK',
+      windowClosed:true,mutationScope:'ephemeral-guest-session-only',vmReachedRunning:true,heartbeatObserved:true,networkAttached:false,
+      ephemeralDifferencingDisk:true,baseDiskWriteForbidden:true,sessionVmRemoved:true,sessionDiskRemoved:true,checkedAt:proof.checkedAt||null
+    }
+  }};
+}
+
+export function evaluateDesktopSessionExecute({ device, commandId, issuedAt, expectedVersion, expectedText }) {
+  if (!device) return { done:false, reason:'device_missing' };
+  const command=commandFor(device,commandId);
+  if(!command) return {done:false,reason:'command_not_visible'};
+  if(['failed','cancelled'].includes(command.status)){
+    return {done:true,ok:false,error:`Native bounded session execution failed: ${String(command.result?.message||command.status).slice(0,500)}`};
+  }
+  if(command.status!=='succeeded') return {done:false,reason:command.status||'pending'};
+
+  const proof=command.result?.desktopSession||{};
+  const expectedHash=sha256(expectedText);
+  const hashOk=value=>/^[a-f0-9]{64}$/.test(String(value||''));
+  const proofOk=(
+    proof.ok===true &&
+    proof.mode==='isolated-desktop-session-execution' &&
+    proof.provider==='ekodi-native-remote-computer' &&
+    proof.routingPolicy==='EKODI-VIRTUALIZATION-ROUTING-001' &&
+    proof.backendPolicy==='EKODI-ISOLATED-DESKTOP-BACKEND-001' &&
+    String(proof.agentVersion||'')===expectedVersion &&
+    String(proof.guestAgentVersion||'')==='1.2.0' &&
+    proof.executorVersion==='bounded-v1' &&
+    proof.backend==='hyper-v-ekodi-base' &&
+    proof.sessionType==='vm' &&
+    proof.taskType==='guest.session.execute' &&
+    proof.operation==='ui.text.roundtrip' &&
+    hashOk(proof.receiptSha256) &&
+    proof.inputSha256===expectedHash &&
+    proof.outputSha256===expectedHash &&
+    Number(proof.textLength)===String(expectedText).length &&
+    proof.executedAsSystem===true &&
+    proof.noNetworkAdapter===true &&
+    proof.noActiveNetwork===true &&
+    proof.hostInteractiveDesktopUsed===false &&
+    proof.sharedInteractiveDesktop===false &&
+    proof.semanticUiAutomation===true &&
+    proof.lowLevelInputInjection===false &&
+    proof.clipboardShared===false &&
+    proof.credentialCollection===false &&
+    proof.hostProfileMounted===false &&
+    proof.valuePatternAvailable===true &&
+    proof.invokePatternAvailable===true &&
+    proof.valueSet===true &&
+    proof.controlInvoked===true &&
+    proof.roundTripMatched===true &&
+    proof.resultCode==='EKODI_SESSION_OK' &&
+    proof.windowClosed===true &&
+    proof.mutationScope==='ephemeral-guest-session-only' &&
+    proof.vmReachedRunning===true &&
+    proof.heartbeatObserved===true &&
+    proof.networkAttached===false &&
+    proof.ephemeralDifferencingDisk===true &&
+    proof.baseDiskWriteForbidden===true &&
+    proof.sessionVmRemoved===true &&
+    proof.sessionDiskRemoved===true
+  );
+  if(!proofOk) return {done:true,ok:false,error:'Bounded isolated session execution did not satisfy the expected semantic round-trip and cleanup contract.'};
+  if(device.status!=='online') return {done:false,reason:'device_not_online_yet'};
+  if(String(device.agentVersion||'')!==expectedVersion) return {done:false,reason:'agent_version_drift'};
+  if(device.capabilities?.isolatedDesktop!==true) return {done:false,reason:'bounded_isolated_desktop_capability_not_projected'};
+  if(time(device.lastSeenAt)<Math.max(time(issuedAt),time(command.completedAt))) return {done:false,reason:'post_session_execution_heartbeat_not_fresh_yet'};
+
+  return {done:true,ok:true,summary:{
+    expectedVersion,status:device.status,lastSeenAt:device.lastSeenAt,commandCompletedAt:command.completedAt||null,
+    verified:true,boundedSessionExecutorReady:true,
+    proof:{
+      executorVersion:'bounded-v1',operation:'ui.text.roundtrip',receiptSha256:String(proof.receiptSha256||''),
+      inputSha256:expectedHash,outputSha256:expectedHash,textLength:String(expectedText).length,
+      rawInputReturned:false,roundTripMatched:true,resultCode:'EKODI_SESSION_OK',semanticUiAutomation:true,lowLevelInputInjection:false,
+      hostInteractiveDesktopUsed:false,clipboardShared:false,credentialCollection:false,networkAttached:false,
+      sessionVmRemoved:true,sessionDiskRemoved:true,checkedAt:proof.checkedAt||null
+    }
+  }};
 }
 
 async function requestJson(token, pathname, init = {}) {
@@ -705,6 +860,27 @@ async function run() {
     );
   }
 
+  let desktopSessionCanaryCommand=null;
+  let desktopSessionCanaryVerification={verified:false,skipped:true,reason:desktopUiCanaryVerification.verified===true?'session-canary-not-run':'ui-canary-not-verified'};
+  if(desktopUiCanaryVerification.verified===true){
+    desktopSessionCanaryCommand=await issueCommand(token,target.id,DESKTOP_SESSION_CANARY);
+    desktopSessionCanaryVerification=await waitForEvaluation(
+      token,target.id,commandWaitMs,pollMs,
+      device=>evaluateDesktopSessionCanary({device,commandId:desktopSessionCanaryCommand.id,issuedAt:desktopSessionCanaryCommand.issuedAt,expectedVersion}),
+    );
+  }
+
+  const sessionVerificationText='EKODI_SESSION_VERIFY_20260924';
+  let desktopSessionCommand=null;
+  let desktopSessionVerification={verified:false,skipped:true,reason:desktopSessionCanaryVerification.verified===true?'session-execution-not-run':'session-canary-not-verified'};
+  if(desktopSessionCanaryVerification.verified===true){
+    desktopSessionCommand=await issueCommand(token,target.id,DESKTOP_SESSION_EXECUTE,{operation:'ui.text.roundtrip',text:sessionVerificationText});
+    desktopSessionVerification=await waitForEvaluation(
+      token,target.id,commandWaitMs,pollMs,
+      device=>evaluateDesktopSessionExecute({device,commandId:desktopSessionCommand.id,issuedAt:desktopSessionCommand.issuedAt,expectedVersion,expectedText:sessionVerificationText}),
+    );
+  }
+
   const summary = {
     ok:true,
     verifiedAt:new Date().toISOString(),
@@ -716,27 +892,35 @@ async function run() {
     isolatedDesktopCanary:{ commandType:DESKTOP_CANARY, issuedAt:desktopCanaryCommand?.issuedAt || null, verification:desktopCanaryVerification },
     isolatedDesktopGuestCanary:{ commandType:DESKTOP_GUEST_CANARY, issuedAt:desktopGuestCanaryCommand?.issuedAt || null, verification:desktopGuestCanaryVerification },
     isolatedDesktopUiCanary:{ commandType:DESKTOP_UI_CANARY, issuedAt:desktopUiCanaryCommand?.issuedAt || null, verification:desktopUiCanaryVerification },
+    isolatedDesktopSessionCanary:{ commandType:DESKTOP_SESSION_CANARY, issuedAt:desktopSessionCanaryCommand?.issuedAt || null, verification:desktopSessionCanaryVerification },
+    isolatedDesktopSession:{ commandType:DESKTOP_SESSION_EXECUTE, issuedAt:desktopSessionCommand?.issuedAt || null, verification:desktopSessionVerification },
     cutover:{
       preVerification:{browserWorkerActivated:false},
       browserWorkerActivated:true,
       nativeBrowserOperationServiceReady:true,
-      nativeServiceReady:false,
+      nativeServiceReady:desktopSessionVerification.verified === true,
       nativeRemoteComputerFullyReady:false,
+      boundedSessionExecutorReady:desktopSessionVerification.verified === true,
       isolatedDesktopCanaryVerified:desktopCanaryVerification.verified === true,
       isolatedDesktopGuestCanaryVerified:desktopGuestCanaryVerification.verified === true,
       isolatedDesktopUiCanaryVerified:desktopUiCanaryVerification.verified === true,
-      isolatedDesktopReady:false,
-      reason:desktopUiCanaryVerification.verified === true
-        ? 'native-isolated-ui-verified-general-session-executor-pending'
-        : (desktopGuestCanaryVerification.verified === true
-          ? 'native-guest-runtime-verified-ui-proof-pending'
-          : (desktopCanaryVerification.verified === true ? 'native-hyperv-canary-verified-guest-execution-pending' : 'native-browser-runtime-verified-isolated-desktop-pending'))
+      isolatedDesktopSessionCanaryVerified:desktopSessionCanaryVerification.verified === true,
+      isolatedDesktopReady:desktopSessionCanaryVerification.verified === true,
+      reason:desktopSessionVerification.verified === true
+        ? 'native-bounded-isolated-session-executor-v1-verified'
+        : (desktopSessionCanaryVerification.verified === true
+          ? 'native-session-canary-verified-bounded-execution-proof-pending'
+          : (desktopUiCanaryVerification.verified === true
+            ? 'native-isolated-ui-verified-session-canary-pending'
+            : (desktopGuestCanaryVerification.verified === true
+              ? 'native-guest-runtime-verified-ui-proof-pending'
+              : (desktopCanaryVerification.verified === true ? 'native-hyperv-canary-verified-guest-execution-pending' : 'native-browser-runtime-verified-isolated-desktop-pending'))))
     },
   };
   const artifactDir = path.join(repoRoot, 'artifacts');
   fs.mkdirSync(artifactDir, { recursive:true });
   fs.writeFileSync(path.join(artifactDir, 'device-agent-production-verification.json'), JSON.stringify(summary, null, 2));
-  console.log(`[EKODI] Real Device Agent ${expectedVersion} verification completed; available native browser, guest-runtime and isolated semantic-UI stages were verified while general isolated desktop session execution remains fail-closed.`);
+  console.log(`[EKODI] Real Device Agent ${expectedVersion} verification completed; available native browser, guest-runtime, semantic-UI, session-canary and bounded-v1 session stages were verified. Unbounded desktop execution remains forbidden.`);
 }
 
 const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
