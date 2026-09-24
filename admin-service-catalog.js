@@ -32,6 +32,7 @@ export const ADMIN_SERVICE_CATALOG = Object.freeze([
   { id:'tax', name:'세금·증빙', basePath:'/tax', group:'professional' },
   { id:'cheonggye-local', name:'청계잇다', basePath:'/cheonggye', group:'sites', kind:'site', siteRelation:'user' },
   { id:'cgma', name:'청계면상인회', basePath:'/cgma', group:'sites', kind:'site', siteRelation:'customer-partner', channelAdminSection:'publishing' },
+  { id:'bnslove', name:'형제사랑회', basePath:'/bnslove', group:'sites', kind:'site', siteRelation:'customer-partner' },
   { id:'jadam', name:'자담치킨 목포대점', basePath:'/jadam', group:'sites', kind:'site', siteRelation:'customer-partner', channelAdminSection:'publishing' },
   { id:'pizzamaru', name:'피자마루 목포대점', basePath:'/pizzamaru', group:'sites', kind:'site', siteRelation:'customer-partner', channelAdminSection:'publishing' },
   { id:'yogurt', name:'요거트퍼플 목포대점', basePath:'/yogurt', group:'sites', kind:'site', siteRelation:'customer-partner', channelAdminSection:'publishing' },
