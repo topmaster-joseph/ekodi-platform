@@ -16,7 +16,7 @@ const standaloneApplyPath=eventPath;
 const pageCases=[
   ['/ekodimission','에코디선교회'],['/ekodimission/activities','MISSION ACTIVITIES'],
   [eventPath,'Chuseok Open Table & Sharing Market'],['/ekodimission/participate','PARTICIPATE'],
-  ['/ekodimission/partners','PARTNERSHIP'],['/ekodimission/stories','STORIES & NEWS'],['/ekodimission/give','GIVE & SHARE'],
+  ['/ekodimission/partners','PARTNERSHIP'],['/ekodimission/stories','STORIES & NEWS'],['/ekodimission/newsletter','LETTER FROM MUAN'],['/ekodimission/give','GIVE & SHARE'],
 ];
 test('EKODI Mission pages are routed as branded published public surfaces',async()=>{
   for(const [path,marker] of pageCases){
@@ -88,7 +88,7 @@ test('every EKODI Mission page consumes one shared shell with published-only lan
   const pageFiles=[
     'ekodimission.page','ekodimission-activities.page','ekodimission-activity.page','ekodimission-open-table-apply.page','ekodimission-contact.page',
     'ekodimission-give.page','ekodimission-participate.page','ekodimission-partners.page','ekodimission-prayer.page',
-    'ekodimission-stories.page','ekodimission-transparency.page','ekodimission-vision.page'
+    'ekodimission-stories.page','ekodimission-newsletter.page','ekodimission-transparency.page','ekodimission-vision.page'
   ];
   for(const file of pageFiles){
     const source=await readFile(new URL('../space/'+file,import.meta.url),'utf8');
