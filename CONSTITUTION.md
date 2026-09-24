@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.25.0
+# EKODI Platform Constitution v1.26.0
 
 Effective: 2026-09-24
 
@@ -182,6 +182,15 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Before escalating a recoverable interruption, EKODI attempts an available authorized alternative path under Cloud First and existing provider-independent fallback rules.
 - Continuity never expands authority, bypasses credentials, weakens safety gates or permits direct production mutation. A genuine blocked state is reserved for an authority, safety, credential, human-approval or external dependency that cannot be resolved within delegated authority.
 - Commit, PR, merge, deployment, session termination or tool termination never substitutes for required production verification evidence.
+
+## 8A.1 Administrator UI Baseline Constitution
+- Every current and future EKODI administrator surface—Platform Super Administrator, middle administrator, workspace administrator, service administrator and sub-administrator—must inherit one shared administrator UI baseline before adding business-specific content.
+- The mandatory baseline structure is: **fixed left navigation → top breadcrumb → large title and one-line description → core KPI cards → quick actions → integrated management list/workbench → right help/guide panel**.
+- A new administrator page may not begin as an isolated or temporary page-specific shell. Shared Admin Shell, Design Engine and Registry contracts are applied first; the page owns only its task-specific content and controls.
+- Settings and control workflows default to the same workspace sequence **status → configure → execute → result**. Settings may not be scattered across unrelated screens when a safe same-workspace flow is possible.
+- Responsive layout may reflow required regions, including moving the right help/guide rail into inline or drawer presentation on narrow screens, but may not silently remove required functions.
+- Existing administrator surfaces that drift from the baseline are repaired through shared modules and guardrails rather than preserving page-local exceptions. Any exception to the baseline requires a constitutional C2/C3 amendment.
+- Machine-readable authority: `governance/constitution/constitution.json` -> `adminUiBaselinePolicy`. Operational policy: `config/admin-ui-baseline-policy.json`. Human UI contract: `ADMIN_UI_PRINCIPLES.md`. CI enforcement: `npm run validate:admin-ui-baseline`.
 
 ## 8B. Universal Surface System Verification Constitution
 - Every current and future EKODI surface that a guest, signed-in user, member, operator, administrator or super administrator can use inherits one verification contract. This includes every public home, workspace/service My page, operator page, workspace/service administrator page, the platform Super Administrator surface, and the canonical EKODI personal home at `ekodi.kr/my`.
