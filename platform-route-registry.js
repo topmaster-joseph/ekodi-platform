@@ -49,7 +49,7 @@ export const PLATFORM_EXECUTION_SURFACES=Object.freeze([
 ]);
 
 export const PLATFORM_LEGACY_HOST_PATHS=Object.freeze({
-  [platformHost('admin')]:'/admin',[platformHost('my')]:'/my',
+  [platformHost('admin')]:'/admin',[platformHost('my')]:'/my',[platformHost('auth')]:'/auth',
   [platformHost('ai')]:'/ai',[platformHost('author')]:'/author',[platformHost('bible')]:'/bible',
   [platformHost('books')]:'/books',[platformHost('business')]:'/business',[platformHost('community')]:'/community',[platformHost('edu')]:'/education',
   [platformHost('energy')]:'/energy',[platformHost('exp')]:'/experience',[platformHost('try')]:'/experience',[platformHost('dev')]:'/developer',
