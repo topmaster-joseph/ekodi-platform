@@ -6,7 +6,8 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('service modules production E2E verifies direct route and reload on desktop/mobile', async () => {
   const source = await read('scripts/admin-service-modules-production-e2e.mjs');
-  assert.match(source, /https:\/\/ekodi\.kr\/admin\/services\/service-modules/);
+  assert.match(source, /const adminOrigin = 'https:\/\/ekodi\.kr'/);
+  assert.match(source, /admin\/services\/service-modules/);
   assert.match(source, /id:'desktop'.*width:1440.*height:1100/s);
   assert.match(source, /id:'mobile'.*width:390.*height:844/s);
   assert.match(source, /currentSection !== 'service-modules'/);
