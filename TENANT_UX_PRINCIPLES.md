@@ -28,7 +28,7 @@ Middle managers, local managers, store operators, pastors, organization staff an
 ## Current task-oriented projections
 
 - Workspace: group labels Home / Communication & Promotion / Operations & Finance / Site & Settings, with each permitted task shown as a direct link.
-- Store: group labels Home / Orders & Sales / Menu & Inventory / Customers & Reviews / Promotion & Channels / Operations & Settings, with each permitted task shown as a direct link.
+- Store: Jadam Chicken, PizzaMaru and Yogurt Purple use the same task order and direct-link menu: Store Home / Sales Management / Customers & Marketing / Store Operations / Settlement / Connections & Permissions. The working items remain Delivery Platforms, Menu & Price, Orders & Channels, Sales, Customers, Reviews, Marketing AI, Channel Automation, Inventory, Store Tasks, Cost & Settlement, Connections, User Site, Permissions & Members, and Header & Footer. Brand name, tenant data and accent identity stay separated.
 - Church: Home / People & Care / Worship & Ministry / Records & AI / Site & Permissions.
 - Trade: Home / Counterparties / Channels & Publishing / Permissions.
 - EKODIMALL keeps its direct one-level operating menu.
