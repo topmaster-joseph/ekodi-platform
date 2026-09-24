@@ -60,33 +60,58 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   const peopleSections=workspace==='cgma'?[['member','정회원'],['members','관리자 · 권한']]:[['members','사용자 · 권한']];
   const contentSections=[...(workspace==='ekodimission'?[['activities','행사 · 신청자']]:[]),['publishing','채널·자동게시'],['marketing','마케팅 AI']];
   const standardRootGroups=[
-    {id:'summary',label:'통합현황',sections:[['overview','운영 홈']]},
-    {id:'services',label:'서비스',sections:serviceSections},
-    {id:'sites',label:'사이트',sections:[['chrome','헤더 · 푸터'],['design','디자인'],['languages','다국어 번역 · 게시']]},
-    {id:'people',label:'사용자 · 권한',sections:peopleSections},
-    {id:'content',label:'콘텐츠 · 운영',sections:contentSections},
-    {id:'status',label:'상태 · 배포',sections:[['status','운영 상태']]},
-    {id:'records',label:'설정 · 기록',sections:[['records','변경 · 감사 기록']]}
+    {id:'home',label:'홈',sections:[['overview','운영 홈']]},
+    {id:'communication',label:'소통 · 홍보',sections:[...(workspace==='ekodimission'?[['activities','행사 · 신청자']]:[]),['publishing','채널·자동게시'],['marketing','마케팅 AI'],['mail','메일']]},
+    {id:'operations',label:'운영 · 재무',sections:[['work','업무'],['finance','재무'],...(isBizWorkspace?[['tax','세금 · 증빙'],['mall','에코디몰']]:[]),['confirmations','지급·수령 확인']]},
+    {id:'site-access',label:'사이트 · 권한',sections:[['chrome','헤더 · 푸터'],['design','사이트 디자인'],['languages','다국어 번역 · 게시'],...peopleSections,['status','운영 상태'],['records','변경 · 감사 기록']]}
   ];
-  const rootGroups=standardRootGroups;
+  const localRootGroups=[
+    {id:'today',label:'오늘 할 일',sections:[['overview','운영 홈'],...(workspace==='ekodimission'?[['activities','행사 · 신청자']]:[])]},
+    {id:'communication',label:'소통 · 콘텐츠',sections:[['publishing','채널 · 자동게시'],['marketing','마케팅 AI'],['mail','메일']]},
+    {id:'work',label:'업무 처리',sections:[['work','업무'],['confirmations','지급 · 수령 확인'],['finance','재무']]}
+  ];
+  const viewerRootGroups=[{id:'view',label:'조회',sections:[['overview','운영 홈'],['finance','재무'],['status','운영 상태']]}];
+  const specialistRootGroups=[{id:'specialist',label:'외부 전문작업',sections:[['overview','운영 홈'],['status','운영 상태']]}];
   const adminHubScopes=Array.isArray(ADMIN_HUB?.scopes)?ADMIN_HUB.scopes:[];
   const adminHubSource=new URLSearchParams(location.search).get('source')||'';
   const mallDirectSections=[['overview','홈'],['products','상품'],['sourcing','공급·제휴'],['analytics','주문·매출'],['channels','채널'],['growth','AI 영업'],['confirmations','지급·수령'],['design','설정']];
-  const mallGroups=mallDirectSections.map(([id,label])=>({id,label,sections:[[id,label]]}));
-  const navGroups=service==='mall'?mallGroups:rootGroups;
+  const mallDelegatedGroups=[
+    {id:'home',label:'홈',sections:[['overview','운영 홈']]},
+    {id:'catalog',label:'상품 관리',sections:[['products','상품'],['sourcing','공급·제휴']]},
+    {id:'sales',label:'판매 · 채널',sections:[['analytics','주문·매출'],['channels','채널'],['confirmations','지급·수령']]},
+    {id:'growth',label:'홍보 · 자동영업',sections:[['growth','AI 영업']]},
+    {id:'settings',label:'설정',sections:[['design','사이트 설정']]}
+  ];
+  const mallLocalGroups=[
+    {id:'today',label:'오늘 판매',sections:[['overview','운영 홈'],['analytics','주문 · 매출']]},
+    {id:'catalog',label:'상품 처리',sections:[['products','상품']]},
+    {id:'growth',label:'홍보 · 채널',sections:[['channels','채널'],['growth','AI 영업']]},
+    {id:'settlement',label:'지급 · 수령',sections:[['confirmations','지급 · 수령']]}
+  ];
 
   let workspaceContext=null;
   let workspaceRole='';
   const SECTION_CAPABILITY=service==='mall'?{design:POLICY.capabilities.site,languages:POLICY.capabilities.language,overview:POLICY.capabilities.dashboard,sales:POLICY.capabilities.sales,products:POLICY.capabilities.catalog,sourcing:POLICY.capabilities.supplyNetwork,marketing:POLICY.capabilities.marketing,channels:POLICY.capabilities.marketing,automation:POLICY.capabilities.marketing,growth:POLICY.capabilities.marketing,analytics:POLICY.capabilities.sales,confirmations:POLICY.capabilities.confirmations}:{chrome:POLICY.capabilities.site,design:POLICY.capabilities.site,languages:POLICY.capabilities.language,overview:POLICY.capabilities.dashboard,activities:POLICY.capabilities.activities,mall:POLICY.capabilities.dashboard,mail:POLICY.capabilities.connections,publishing:POLICY.capabilities.marketing,marketing:POLICY.capabilities.marketing,work:POLICY.capabilities.operations,finance:POLICY.capabilities.finance,tax:POLICY.capabilities.finance,confirmations:POLICY.capabilities.confirmations,members:POLICY.capabilities.access,member:POLICY.capabilities.memberRoster,status:POLICY.capabilities.logs,records:POLICY.capabilities.reports};
   const roleCapabilities=role=>POLICY.roleCapabilities[String(role||'').trim().toLowerCase()]||[];
+  const navigationProfile=role=>POLICY.roleNavigationProfiles?.[String(role||'').trim().toLowerCase()]||'local-operator';
   const hasFullWorkspaceAdminScope=role=>roleCapabilities(role).includes('*');
   function renderAdminScopeSwitcher(role=workspaceRole){const host=$('adminScopeSwitcher');if(!host)return;host.replaceChildren();if(!(isBizWorkspace||adminHubSource==='ekodibiz')||!hasFullWorkspaceAdminScope(role)||!adminHubScopes.length){host.hidden=true;return}host.hidden=false;const label=document.createElement('span');label.className='admin-scope-label';label.textContent='관리 영역';host.append(label);const current=service==='mall'?'mall':workspace==='ekodi-lab'?'lab':'common';for(const scope of adminHubScopes){const a=document.createElement('a');a.href=scope.adminHref;a.textContent=scope.label;a.dataset.adminScope=scope.id;a.title=scope.description||scope.label;if(scope.id===current){a.classList.add('active');a.setAttribute('aria-current','page')}host.append(a)}}
   const canSection=(key,role=workspaceRole)=>{if(key==='tax'&&!isBizWorkspace)return false;const capability=SECTION_CAPABILITY[key];const allowed=roleCapabilities(role);return Boolean(capability&&(allowed.includes('*')||allowed.includes(capability)));};
-  // Delegated admins select real task routes directly; category-first navigation is intentionally omitted.
-  function visibleDirectSections(role=workspaceRole){const seen=new Set(),sections=[];for(const group of navGroups){for(const [key,label] of group.sections){if(seen.has(key))continue;if(!role?key!=='overview':!canSection(key,role))continue;seen.add(key);sections.push([key,label])}}return sections}
+  function groupsForRole(role=workspaceRole){
+    const profile=navigationProfile(role);
+    if(service==='mall'){
+      if(profile==='delegated-manager')return mallDelegatedGroups;
+      if(profile==='viewer'||profile==='external-specialist')return [{id:'view',label:'조회',sections:[['overview','운영 홈'],['analytics','주문 · 매출']]}];
+      return mallLocalGroups;
+    }
+    if(profile==='delegated-manager')return standardRootGroups;
+    if(profile==='viewer')return viewerRootGroups;
+    if(profile==='external-specialist')return specialistRootGroups;
+    return localRootGroups;
+  }
   function renderSecondaryNav(){const h=$('sectionNav');if(!h)return;h.replaceChildren();h.hidden=true}
-  function renderNav(role=workspaceRole){const h=$('adminNav');h.replaceChildren();const sections=service==='mall'?mallDirectSections.filter(([id])=>!role||canSection(id,role)):visibleDirectSections(role);for(const [key,label] of sections){const a=document.createElement('a');a.href=sectionHref(key);a.textContent=label;a.dataset.adminSection=key;if(key===section||(service==='mall'&&key==='design'&&section==='languages')){a.classList.add('active');a.setAttribute('aria-current','page')}h.append(a)}renderSecondaryNav()}
-  function publishTenantContext(){if(!workspaceContext)return;document.documentElement.dataset.ekodiTenant=workspaceContext.slug;document.documentElement.dataset.ekodiTenantRole=workspaceRole;document.documentElement.dataset.ekodiAuthorityScope='tenant';document.documentElement.dataset.ekodiAdminSection=section;const detail={tenantId:workspaceContext.tenantId,workspaceKey:workspaceContext.workspaceKey||`tenant:${workspaceContext.tenantId}`,workspaceName:workspaceContext.name||workspaceLabel(),role:workspaceRole,authorityScope:'tenant',surface:'admin',service:service||'space',capabilities:roleCapabilities(workspaceRole)};window.dispatchEvent(new CustomEvent('ekodi:tenant-context',{detail}));window.dispatchEvent(new CustomEvent('ekodi:context-change',{detail}));window.EKODIAdminUIShell?.refresh?.()}
+  function renderNav(role=workspaceRole){const h=$('adminNav');h.replaceChildren();const groups=groupsForRole(role);document.documentElement.dataset.ekodiAdminNavigationProfile=navigationProfile(role);for(const group of groups){const items=group.sections.filter(([key])=>!role?key==='overview':canSection(key,role));if(!items.length)continue;const groupLabel=document.createElement('span');groupLabel.className='admin-nav-group-label';groupLabel.textContent=group.label;h.append(groupLabel);for(const [key,label] of items){const a=document.createElement('a');a.href=sectionHref(key);a.textContent=label;a.dataset.adminSection=key;if(key===section||(service==='mall'&&key==='design'&&section==='languages')){a.classList.add('active');a.setAttribute('aria-current','page')}h.append(a)}}renderSecondaryNav()}
+  function publishTenantContext(){if(!workspaceContext)return;document.documentElement.dataset.ekodiTenant=workspaceContext.slug;document.documentElement.dataset.ekodiTenantRole=workspaceRole;document.documentElement.dataset.ekodiAuthorityScope='tenant';document.documentElement.dataset.ekodiAdminSection=section;document.documentElement.dataset.ekodiAdminNavigationProfile=navigationProfile(workspaceRole);const detail={tenantId:workspaceContext.tenantId,workspaceKey:workspaceContext.workspaceKey||`tenant:${workspaceContext.tenantId}`,workspaceName:workspaceContext.name||workspaceLabel(),role:workspaceRole,authorityScope:'tenant',surface:'admin',service:service||'space',capabilities:roleCapabilities(workspaceRole)};window.dispatchEvent(new CustomEvent('ekodi:tenant-context',{detail}));window.dispatchEvent(new CustomEvent('ekodi:context-change',{detail}));window.EKODIAdminUIShell?.refresh?.()}
   function applyWorkspaceContext(context){workspaceContext=context;workspaceRole=String(context?.role||'').trim().toLowerCase();renderNav(workspaceRole);renderAdminScopeSwitcher(workspaceRole);publishTenantContext()}
   function canonicalSubjectKey(){if(service==='mall')return 'ekodimall';return String(workspaceContext?.slug||(workspace==='ekodibiz'?'ekodi-biz':workspace==='ekodi-trade'?'ekoditrade':workspace)).trim().toLowerCase()}
 

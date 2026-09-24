@@ -13,13 +13,13 @@ test('delegated admins use task-first navigation without changing authority',asy
     read('store-portfolio-admin-page.js'),
   ]);
 
-  assert.match(workspace,/label:'통합현황'/);
-  assert.match(workspace,/label:'서비스'/);
-  assert.match(workspace,/label:'사이트'/);
-  assert.match(workspace,/label:'사용자 · 권한'/);
-  assert.match(workspace,/label:'콘텐츠 · 운영'/);
-  assert.match(workspace,/label:'상태 · 배포'/);
-  assert.match(workspace,/label:'설정 · 기록'/);
+  assert.match(workspace,/label:'홈'/);
+  assert.match(workspace,/label:'소통 · 홍보'/);
+  assert.match(workspace,/label:'운영 · 재무'/);
+  assert.match(workspace,/label:'사이트 · 권한'/);
+  assert.match(workspace,/label:'오늘 할 일'/);
+  assert.match(workspace,/label:'소통 · 콘텐츠'/);
+  assert.match(workspace,/label:'업무 처리'/);
   assert.match(workspace,/mallDirectSections/);
 
   assert.match(store,/label:'주문 · 배달'/);
@@ -31,7 +31,7 @@ test('delegated admins use task-first navigation without changing authority',asy
   assert.match(store,/dataset\.adminSection=key/);
   assert.match(store,/root\.hidden=true/);
 
-  assert.match(church,/label:'사람 · 돌봄'/);
+  assert.match(church,/label:'교인 · 돌봄'/);
   assert.match(church,/label:'예배 · 사역'/);
   assert.match(church,/label:'기록 · AI'/);
   assert.match(church,/label:'사이트 · 권한'/);
@@ -105,7 +105,7 @@ test('delegated admin navigation never requires a category click before reaching
     read('workspace-trade-admin-page.js'),
   ]);
 
-  assert.match(workspace,/visibleDirectSections\(role\)/);
+  assert.match(workspace,/groupsForRole\(role=workspaceRole\)/);
   assert.match(workspace,/a\.dataset\.adminSection=key/);
   assert.match(workspace,/a\.href=sectionHref\(key\)/);
   assert.doesNotMatch(workspace,/a\.dataset\.adminGroup=group\.id/);

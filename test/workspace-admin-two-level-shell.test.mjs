@@ -19,7 +19,9 @@ test('workspace admin uses direct left navigation and opens leaf sections in the
   assert.match(css,/\.sidebar nav\{[^}]*overflow-y:auto[^}]*flex:1 1 auto/);
   assert.match(css,/\.admin-subnav\{display:none!important\}/);
   for(const label of ['운영 홈','메일','지급·수령 확인','업무','재무','헤더 · 푸터','디자인','다국어 번역 · 게시','사용자 · 권한','행사 · 신청자','채널·자동게시','마케팅 AI','운영 상태','변경 · 감사 기록'])assert.match(script,new RegExp(label));
-  assert.match(script,/visibleDirectSections\(role\)/);
+  assert.match(script,/groupsForRole\(role=workspaceRole\)/);
+  assert.match(script,/admin-nav-group-label/);
+  assert.match(script,/ekodiAdminNavigationProfile/);
   assert.match(script,/a\.dataset\.adminSection=key/);
   assert.match(script,/a\.href=sectionHref\(key\)/);
   assert.doesNotMatch(script,/a\.dataset\.adminGroup=group\.id/);
