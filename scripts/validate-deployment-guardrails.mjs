@@ -133,8 +133,7 @@ const full = requireText('.github/workflows/deploy.yml', ['verification-only-no-
 for (const needle of ['wrangler@', 'npm run deploy:', 'd1 migrations apply', 'secret put']) if (full.includes(needle)) fail('.github/workflows/deploy.yml', `full-ecosystem workflow must remain verification-only: ${needle}`);
 
 for (const file of ['.github/workflows/deploy-service-proxy.yml','.github/workflows/deploy-biz-legacy.yml','.github/workflows/deploy-legacy-redirects.yml']) {
-  const text = requireText(file, ['topology-workflow-manual-only', 'workflow_dispatch:']);
-  if (/\n\s*push\s*:/.test(text)) fail(file, 'domain-topology mutation workflow must not run automatically on push');
+  if (fs.existsSync(path.join(root,file))) fail(file, 'retired subdomain/topology workflow must remain deleted under apex-path-only routing');
 }
 
 const accessFile = 'config/cloudflare-access-profiles.json';
