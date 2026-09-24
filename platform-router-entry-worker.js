@@ -245,13 +245,15 @@ async function withInvestSubjectScript(response){
 
 const LEGACY_OPERATING_SPACE_ROOTS=new Set(['ekodichurch','ekodimission']);
 function legacyOperatingSpacePath(pathname){const first=String(pathname||'').split('/').filter(Boolean)[0]?.toLowerCase()||'';return LEGACY_OPERATING_SPACE_ROOTS.has(first);}
-async function ensureLegacyOperatingSpaceMarker(response){
+async function ensureLegacyOperatingSpaceMarker(response,includeBody=true){
   if(!response)return response;
   const contentType=String(response.headers.get('content-type')||'').toLowerCase();
   if(!contentType.includes('text/html'))return response;
   const headers=new Headers(response.headers);
   headers.set('x-ekodi-operating-space-label','v1');
+  if(!includeBody)return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
   const html=await response.text();
+  headers.delete('content-length');
   if(html.includes('data-ekodi-operating-space-label'))return new Response(html,{status:response.status,statusText:response.statusText,headers});
   const note='<aside class="ekodi-operating-space-note" data-ekodi-operating-space-label="v1" role="note" aria-label="개별 운영공간"><span>운영공간</span></aside>';
   const patched=/<body\b[^>]*>/i.test(html)?html.replace(/(<body\b[^>]*>)/i,'$1'+note):note+html;
@@ -390,7 +392,7 @@ async function routePlatform(request,env,ctx){
       if(url.pathname==='/invest-subject-ui.js')return investSubjectUiScript();
     }
     const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx);
-    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&legacyOperatingSpacePath(url.pathname))return ensureLegacyOperatingSpaceMarker(injectEkodiTenantReadability(legacyResponse));
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&legacyOperatingSpacePath(url.pathname))return ensureLegacyOperatingSpaceMarker(injectEkodiTenantReadability(legacyResponse),request.method==='GET');
     return legacyResponse;
 }
 
