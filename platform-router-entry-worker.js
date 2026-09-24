@@ -323,7 +323,7 @@ async function routePlatform(request,env,ctx){
         if(url.pathname==='/tenant-admin-command-home.js')return tenantAdminCommandHomeScript();
         if(['/store-admin.css','/jadam-admin.css','/pizzamaru-admin.css','/yogurt-admin.css'].includes(url.pathname))return storeAdminCss();
         if(['/store-admin.js','/jadam-admin.js','/pizzamaru-admin.js','/yogurt-admin.js'].includes(url.pathname))return storeAdminScript();
-        const cmpmyiPanel=url.pathname.match(/^\\/cmpmyi\\/admin\\/panel\\/([a-z-]+)\\/?$/i);
+        const cmpmyiPanel=url.pathname.match(/^\/cmpmyi\/admin\/panel\/([a-z-]+)\/?$/i);
         if(cmpmyiPanel)return storePortfolioAdminPanelPage(cmpmyiPanel[1]);
         if(url.pathname==='/cmpmyi/admin'||url.pathname==='/cmpmyi/admin/')return injectEkodiShell(storePortfolioAdminPage(),'business','admin');
         if(url.pathname==='/cmpmyi/admin/overview'||url.pathname==='/cmpmyi/admin/overview/')return injectEkodiShell(storePortfolioAdminPage(),'business','admin');
