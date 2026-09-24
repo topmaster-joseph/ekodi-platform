@@ -40,3 +40,25 @@ main{padding:0 1.25rem 3rem}
 .site-footer{padding:1.6rem 1.25rem 2rem}
 @media(max-width:900px){.site-header{align-items:flex-start}.site-header nav{flex-wrap:wrap;justify-content:flex-end}.hero-split,.event-intro,.apply-section{grid-template-columns:1fr}.hero-visual{aspect-ratio:16/9}.event-visual{aspect-ratio:1200/650}}
 @media(max-width:620px){.site-header{padding:.8rem 1rem}.site-header nav{gap:.58rem}.site-header nav a{font-size:.76rem}.mission-language select{min-width:78px;max-width:108px;font-size:.74rem}main{padding-left:1rem;padding-right:1rem}.hero{padding:1.7rem 0 2rem}.hero h1{font-size:clamp(2.55rem,13vw,4rem)}.values{grid-template-columns:1fr 1fr}.event-three{grid-template-columns:1fr}.field-grid{grid-template-columns:1fr}.field-wide{grid-column:auto}}
+
+
+/* Open Table registration UX: compact hero, action-first hierarchy, mobile sticky CTA */
+.open-table-hero{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,.65fr);gap:2.25rem;align-items:stretch;padding:2.7rem 0 3rem;border-bottom:1px solid var(--line)}
+.open-table-copy{min-width:0;display:flex;flex-direction:column;justify-content:center}
+.open-table-copy h1{max-width:790px;margin:.4rem 0 1rem;font-family:Georgia,serif;font-size:clamp(3.1rem,6vw,5.5rem);line-height:.96;letter-spacing:-.055em}
+.open-table-slogan{margin:.15rem 0 .55rem;font-family:Georgia,serif;font-size:clamp(1.55rem,2.8vw,2.35rem);line-height:1.12;color:var(--accent);font-weight:700}
+.open-table-welcome{max-width:690px;margin:.25rem 0;color:var(--muted);font-size:1rem}
+.open-table-actions{display:flex;gap:.65rem;flex-wrap:wrap;margin-top:1.35rem}
+.open-table-info-card{align-self:stretch;padding:1.5rem;border:1px solid var(--line);border-radius:1.35rem;background:rgba(255,253,248,.9);box-shadow:0 18px 52px rgba(51,63,54,.08)}
+.open-table-card-kicker{margin:0 0 .75rem;color:var(--accent);font-size:.76rem;font-weight:900;letter-spacing:.08em}
+.open-table-info-card dl{margin:0}.open-table-info-card dl>div{display:grid;grid-template-columns:70px 1fr;gap:.75rem;padding:.72rem 0;border-top:1px solid var(--line)}
+.open-table-info-card dt{color:var(--muted);font-size:.76rem;font-weight:800}.open-table-info-card dd{margin:0;color:var(--ink);font-weight:850}
+.open-table-card-cta{display:flex;align-items:center;justify-content:center;min-height:46px;margin-top:1rem;border-radius:999px;background:var(--ink);color:#fff;text-decoration:none;font-weight:900}
+.open-table-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem;padding:1.35rem 0 2rem}
+.open-table-summary article{display:grid;grid-template-columns:auto 1fr;gap:.9rem;padding:1.05rem 1.1rem;border:1px solid var(--line);border-radius:1rem;background:rgba(255,253,248,.68)}
+.open-table-summary-number{display:grid;place-items:center;width:2.1rem;height:2.1rem;border-radius:50%;background:var(--accent);color:#fff;font-size:.72rem;font-weight:900}
+.open-table-summary h2{margin:.05rem 0 .3rem;font-size:1.05rem}.open-table-summary p{margin:0;color:var(--muted);font-size:.88rem}
+.open-table-apply-page .services{padding-top:2.4rem}
+.mobile-apply-cta{display:none}
+@media(max-width:900px){.open-table-hero{grid-template-columns:1fr;gap:1.1rem;padding-top:2rem}.open-table-copy h1{font-size:clamp(2.8rem,10vw,4.7rem)}.open-table-info-card{max-width:none}}
+@media(max-width:620px){.open-table-hero{padding:1.4rem 0 1.7rem}.open-table-copy h1{font-size:clamp(2.55rem,13vw,4rem);margin-bottom:.8rem}.open-table-slogan{font-size:clamp(1.4rem,7vw,1.9rem)}.open-table-actions .button{flex:1 1 calc(50% - .35rem)}.open-table-summary{grid-template-columns:1fr;padding:.9rem 0 1.4rem}.open-table-info-card{padding:1.05rem}.open-table-info-card dl>div{grid-template-columns:62px 1fr;padding:.58rem 0}.mobile-apply-cta{position:fixed;left:1rem;right:1rem;bottom:max(1rem,env(safe-area-inset-bottom));z-index:50;display:flex;align-items:center;justify-content:center;min-height:50px;border-radius:999px;background:var(--ink);color:#fff;text-decoration:none;font-weight:900;box-shadow:0 14px 36px rgba(23,32,25,.24)}.event-page{padding-bottom:5.5rem}}
