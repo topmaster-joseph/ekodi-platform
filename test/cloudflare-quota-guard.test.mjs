@@ -101,6 +101,14 @@ test('Shared Site release and Mission E2E obey the same production quota budget 
   assert.match(shared, /steps\.continuity\.outputs\.release_action == 'prepare-and-hold'/);
   assert.match(shared, /Cloudflare Workers runtime quota is exhausted/);
   assert.match(shared, /steps\.quota\.outputs\.skip_nonessential != 'true'/);
+  assert.match(shared, /schedule:\s*\n\s*- cron: '7 0 \* \* \*'/);
+  assert.match(shared, /scheduled_release_gate:/);
+  assert.match(shared, /gh run list --workflow deploy-site-core\.yml --branch main/);
+  assert.match(shared, /gh run view "\$prior_id" --log-failed/);
+  assert.match(shared, /reason='quota-reset-resume-same-sha'/);
+  assert.match(shared, /reason='quota-reset-revalidate-current-main'/);
+  assert.match(shared, /No held artifact is promoted directly/);
+  assert.match(shared, /if: needs\.scheduled_release_gate\.outputs\.proceed == 'true'/);
   assert.doesNotMatch(mission, /schedule:/);
   assert.match(mission, /workflow_run:/);
   assert.match(mission, /cloudflare-production-budget\.mjs/);
