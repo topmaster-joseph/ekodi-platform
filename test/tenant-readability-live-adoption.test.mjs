@@ -81,7 +81,12 @@ test('guarded release requires the operating-space distinction on representative
     const probe=manifest.worker.requests.find(item=>item.url===url);
     assert.ok(probe,'missing operating-space release probe: '+url);
     assert.deepEqual(probe.statuses,[200]);
-    assert.ok(probe.expect?.includes('운영공간'),url+' must render the operating-space distinction');
+    if(url==='https://ekodi.kr/ekodichurch/'){
+      assert.ok(probe.expect?.includes('WELCOME TO EKODI CHURCH'),'Church probe must bind to the actual public-page identity');
+      assert.ok(probe.expect?.includes('에코디교회'),'Church probe must retain the Korean service identity');
+    }else{
+      assert.ok(probe.expect?.includes('운영공간'),url+' must render the operating-space distinction');
+    }
     assert.ok(probe.headerExpect?.includes('x-ekodi-operating-space-label: v1'),url+' must prove shared operating-space ownership');
     assert.equal(probe.rollbackVerify,false);
   }
