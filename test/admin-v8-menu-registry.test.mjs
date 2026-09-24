@@ -8,7 +8,7 @@ import {
 
 test('v8 admin exposes the final seven EKODI management areas', () => {
   assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.id), [
-    'summary', 'services', 'sites', 'people', 'content', 'status', 'settings-records',
+    'summary', 'sites', 'people', 'services', 'content', 'status', 'settings-records',
   ]);
   assert.equal(ADMIN_MENU_GROUPS.length, 7);
   assert.equal(getAdminMenuGroupDefault('summary'), 'platform-overview');
