@@ -217,7 +217,6 @@
       "marketing-publishing-api",
       "admin-auth",
       "site-core",
-      "service-proxy",
       "marketing-ai"
     ],
     "approvedExpansionExceptions": [
