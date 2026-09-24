@@ -24,7 +24,7 @@ async function pageContract(response,name){
 test('shared Admin Shell v3 provides one readability and mobile contract for old and new admin pages',async()=>{
   const shell=await read('shell/admin-ui-shell.js');
   assert.match(shell,/const VERSION=3/);
-  assert.match(shell,/data-ekodi-admin-surface-contract/);
+  assert.match(shell,/ekodiAdminSurfaceContract/);
   assert.match(shell,/readable-direct-v1/);
   assert.match(shell,/normalizeMainRegions/);
   assert.match(shell,/HEADING_SELECTORS/);
