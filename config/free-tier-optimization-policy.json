@@ -168,7 +168,9 @@
     "verifiedFreeLimitsReferenceDate": "2026-09-20",
     "projectCreationPolicy": {
       "supabase": "reuse-existing-projects-before-new-project",
-      "automaticPaidProjectCreation": false
+      "automaticPaidProjectCreation": false,
+      "ungovernedManagementApiCreate": "forbidden",
+      "governedAdapterRequired": true
     }
   }
 }
