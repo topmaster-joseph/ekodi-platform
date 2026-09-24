@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { createHash } from 'node:crypto';
 import {
   parseAgentVersion,
   chooseLiveWindowsAgent,
@@ -591,7 +592,6 @@ test('bounded isolated session execution verifies expected hash without returnin
     checkedAt:'2026-09-24T02:10:00Z',
   };
   // Replace placeholder hash with the verifier's expected SHA-256 without duplicating production logic.
-  const createHash=(await import('node:crypto')).createHash;
   const expectedHash=createHash('sha256').update(expectedText,'utf8').digest('hex');
   proof.inputSha256=expectedHash;
   proof.outputSha256=expectedHash;
