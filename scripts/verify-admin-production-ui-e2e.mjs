@@ -236,9 +236,11 @@ for (const [id, group] of menus) {
   }
 
   if (id !== 'command-home') {
-    const trigger = await resolveMenuTrigger(id, group);
     const alreadyActive = await contextTab.evaluate(node => node.getAttribute('aria-selected') === 'true' || node.classList.contains('active'));
-    if (!alreadyActive) await dispatchClick(trigger);
+    if (!alreadyActive) {
+      const trigger = await resolveMenuTrigger(id, group);
+      await dispatchClick(trigger);
+    }
   }
   await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 12000 });
 
