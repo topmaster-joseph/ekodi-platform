@@ -44,11 +44,14 @@
       "reviewedPullRequest": 2525,
       "evidenceCommentId": 5806661101,
       "currentPullRequest": 2529,
-      "integrationOrder": "2529-first-then-2525-refresh-on-main",
+      "integrationOrder": "2525-merged-first-then-2529-reconciled-on-current-main",
       "labels": [
         "integration-order-approved",
         "related-change-review-complete"
-      ]
+      ],
+      "plannedIntegrationOrder": "2529-first-then-2525-refresh-on-main",
+      "reconciliation": "Preserve PR #2525 Mall implementation and Section 26 operator-first rule; layer ADMIN-UI-BASELINE-001 above it as the constitutional/shared Design Engine authority.",
+      "reconciledMainCommit": "6e565469951ca6896af2ea679c0491c7d7a33447"
     }
   }
 }
