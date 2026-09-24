@@ -73,6 +73,13 @@ test('remaining canonical business, trade and lab surfaces inherit a readability
   assert.doesNotMatch(verifier,/need\(cgmaRoot,'cgma-root','data-ekodi-tenant-readability/);
 });
 
+test('owned root services keep tenant readability after shared Shell injection',async()=>{
+  const siteShell=await read('site-shell-worker.js');
+  assert.match(siteShell,/ownedCustomerSiteFor/);
+  assert.match(siteShell,/const shelled=!progressiveHome&&serviceId[\s\S]*injectEkodiShell\(response,serviceId/);
+  assert.match(siteShell,/ownedCustomerSiteFor\(serviceId\)\?injectEkodiTenantReadability\(shelled\):shelled/);
+});
+
 test('guarded release requires the operating-space distinction on representative live sites',async()=>{
   const manifest=JSON.parse(await read('deploy/manifests/shared-site.worker.json'));
   const churchCanonical=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/ekodichurch');
