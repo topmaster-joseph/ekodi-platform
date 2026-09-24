@@ -69,8 +69,9 @@ for (const group of ADMIN_MENU_GROUPS) {
 }
 
 if (Number(policy?.version) < 6 || Number(policy?.admin?.generation) !== 8) errors.push('design policy v6+ and the 8th-generation admin contract are required.');
-if (policy?.admin?.desktopPrimarySidebarScroll !== false) errors.push('desktop primary sidebar scrolling must remain disabled.');
-if (policy?.admin?.scrollContract?.workspace !== 'single-vertical-scroll-owner') errors.push('workspace must be the single vertical scroll owner in policy.');
+if (policy?.admin?.desktopPrimarySidebarScroll !== true) errors.push('platform admin sidebar scrolling must remain available for active direct-task navigation.');
+if (policy?.admin?.scrollContract?.workspace !== 'single-vertical-scroll-owner') errors.push('workspace must remain the primary content scroll owner in policy.');
+if (policy?.admin?.scrollContract?.primarySidebar !== 'independent-when-needed-on-platform-admin') errors.push('platform admin sidebar scroll contract drifted.');
 if (!Array.isArray(policy?.admin?.regions) || policy.admin.regions.length !== 4) errors.push('admin design policy must define exactly four shell regions.');
 if (!Array.isArray(policy?.admin?.navigationLevels) || policy.admin.navigationLevels.length !== 3) errors.push('admin design policy must define exactly three navigation levels.');
 if (!adminRuntime.includes("nav.style.setProperty('overflow-y', 'hidden', 'important')")) errors.push('admin design runtime must override vertical sidebar scrolling.');
