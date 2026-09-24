@@ -19,6 +19,14 @@ test('Mall channel console unifies connection policy AI allocation and job recov
   assert.match(ui,/publishWindowStart/);
   assert.match(ui,/maxAttempts/);
   assert.match(ui,/data-job-action/);
+  assert.match(ui,/MALL_CHANNEL_CSS/);
+  assert.match(ui,/channel-quickbar/);
+  assert.match(ui,/빠른 시작/);
+  assert.match(ui,/channel-main-grid/);
+  assert.match(ui,/channel-help/);
+  assert.match(ui,/data-channel-quick/);
+  assert.match(ui,/data-channel-panel/);
+  assert.match(ui,/채널 설정/);
 
 });
 
