@@ -8,8 +8,8 @@ const host=fs.readFileSync(new URL('../tools/ekodi-device-agent/windows/ekodi-de
 const policy=JSON.parse(fs.readFileSync(new URL('../config/isolated-desktop-backend-policy.json',import.meta.url),'utf8'));
 
 test('isolated guest agent is single-purpose, SYSTEM-run and networkless by contract',()=>{
-  assert.match(guest,/\$GuestAgentVersion = '1\.1\.0'/);
-  assert.match(guest,/\$allowedTypes = @\('guest\.runtime\.probe','guest\.ui\.probe'\)/);
+  assert.match(guest,/\$GuestAgentVersion = '1\.2\.0'/);
+  assert.match(guest,/\$allowedTypes = @\('guest\.runtime\.probe','guest\.ui\.probe','guest\.session\.execute'\)/);
   assert.match(guest,/\[string\]\$task\.networkPolicy -ne 'none'/);
   assert.match(guest,/executedAsSystem/);
   assert.match(guest,/noNetworkAdapter/);
@@ -74,4 +74,28 @@ test('semantic UI canary drives only an isolated synthetic guest surface',()=>{
   assert.equal(policy.uiCanary.semanticUiAutomation,true);
   assert.equal(policy.uiCanary.lowLevelInputInjection,false);
   assert.equal(policy.uiCanary.generalDesktopExecutionCapabilityAfterUiCanary,false);
+});
+
+
+test('bounded session executor performs semantic text round-trip without arbitrary control',()=>{
+  assert.match(guest,/function Invoke-GuestSessionExecute/);
+  assert.match(guest,/guest\.session\.execute/);
+  assert.match(guest,/ui\.text\.roundtrip/);
+  assert.match(guest,/\^EKODI_SESSION_\[A-Z0-9_-\]\{8,64\}\$/);
+  assert.match(guest,/System\.Windows\.Automation\.ValuePattern/);
+  assert.match(guest,/System\.Windows\.Automation\.InvokePattern/);
+  assert.match(guest,/roundTripMatched/);
+  assert.match(guest,/inputSha256 = Get-Sha256String \$expectedText/);
+  assert.match(guest,/outputSha256 = Get-Sha256String/);
+  assert.match(guest,/mutationScope = 'ephemeral-guest-session-only'/);
+  assert.match(guest,/hostInteractiveDesktopUsed = \$false/);
+  assert.match(guest,/lowLevelInputInjection = \$false/);
+  assert.match(guest,/clipboardShared = \$false/);
+  assert.doesNotMatch(guest,/Invoke-Expression|\biex\b|Start-BitsTransfer|Invoke-WebRequest|Invoke-RestMethod|New-PSSession|Enter-PSSession|SendKeys|mouse_event|keybd_event|SendInput/i);
+  assert.equal(policy.guestAgent.version,'1.2.0');
+  assert.deepEqual(policy.guestAgent.allowedTaskTypes,['guest.runtime.probe','guest.ui.probe','guest.session.execute']);
+  assert.deepEqual(policy.sessionExecutor.allowedOperations,['ui.text.roundtrip']);
+  assert.equal(policy.sessionExecutor.generalPurposeShell,false);
+  assert.equal(policy.sessionExecutor.arbitraryFilesystemAccess,false);
+  assert.equal(policy.sessionExecutor.externalNetworkAccess,false);
 });
