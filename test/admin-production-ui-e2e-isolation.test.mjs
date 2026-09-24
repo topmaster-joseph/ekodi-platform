@@ -17,9 +17,11 @@ test('synthetic production Admin UI verifier isolates backend auth side effects 
   assert.match(text, /await page\.goto\(ADMIN_URL, \{ waitUntil: 'domcontentloaded', timeout: 45000 \}\);\s*await waitForAdminShell\(\);\s*selectedWorkArea = null;/);
 });
 
-test('synthetic production Admin UI verifier stubs the canonical apex session route', async () => {
+test('synthetic production Admin UI verifier stubs the canonical apex session route with a fully authenticated super-admin contract', async () => {
   const text = await source();
   assert.match(text, /page\.route\('https:\/\/ekodi\.kr\/api\/session'/);
+  assert.match(text, /authenticated:\s*true/);
+  assert.match(text, /role:\s*'super_admin'/);
   assert.doesNotMatch(text, /page\.route\('https:\/\/api\.ekodi\.kr\/api\/session'/);
 });
 
