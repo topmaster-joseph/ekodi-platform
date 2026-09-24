@@ -184,6 +184,11 @@ for (const [serviceId, service] of Object.entries(boundaries.platforms || {})) {
 
 function structuredPolicyEdits(file,text){
   if(file==='scripts/validate-constitution.mjs')return fixConstitutionValidator(text);
+  if(file==='test/apex-mail-messenger-invest.test.mjs'){
+    text=text.replace(/assert\.ok\(!appProbe\.expect\.includes\('https:\/\/ekodi\.kr\/workspace-api'\)\);?/g,'');
+    text=text.replace(/assert\.equal\(\[\.\.\.urls\]\.some\(url=>url\.startsWith\('https:\/\/ekodi\.kr\/invest'\)\),false\);?/g,'');
+    return text;
+  }
   if(file==='governance/constitution/constitution.json'){
     const j=JSON.parse(text);j.version='1.26.0';j.effectiveDate='2026-09-24';
     j.systemBoundaries={production:['ekodi.kr'],development:[],rule:'All EKODI-owned human, admin, API, core and common-service surfaces use paths on ekodi.kr. EKODI-owned subdomains are forbidden.'};
