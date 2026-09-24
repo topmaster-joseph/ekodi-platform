@@ -75,6 +75,22 @@ await page.route('https://ekodi.kr/api/control/common-services/ai/tasks', async 
 await page.route('https://ekodi.kr/api/control/common-services/ai/nodes', async route => {
   await route.fulfill(syntheticJson({ nodes:[] }));
 });
+await page.route('https://ekodi.kr/api/control/messenger/inbox', async route => {
+  await route.fulfill(syntheticJson({ inbox:[] }));
+});
+await page.route('https://ekodi.kr/api/control/ai/actions?limit=20', async route => {
+  await route.fulfill(syntheticJson({ actions:[] }));
+});
+await page.route('https://ekodi.kr/api/control/ai/assist', async route => {
+  if (route.request().method() !== 'POST') return route.fulfill(syntheticJson({ reply:'', mode:'free_assist' }));
+  const body = route.request().postDataJSON();
+  if (String(body?.message || '') !== '관리자 명령창 연결 확인') throw new Error(`Unexpected synthetic Assist message: ${String(body?.message || '')}`);
+  await route.fulfill(syntheticJson({
+    reply:'관리자 명령창 연결 정상',
+    mode:'free_assist',
+    provider:'production-e2e',
+  }));
+});
 
 async function waitForAdminShell() {
   await page.waitForFunction(() => document.documentElement.dataset.ekodiAdminReady === 'true', null, { timeout: 30000 });
@@ -179,6 +195,46 @@ async function resolveMenuTrigger(id, group) {
 }
 
 const results = [];
+
+async function verifyCommandConsoleRoundTrip() {
+  console.log('[PROD-E2E] command-home: begin');
+  await page.waitForFunction(() => window.EKODIAdminPanels?.current?.() === 'command-home', null, { timeout: 12000 });
+  const input = page.locator('#ekodiAssistBootstrap input').first();
+  const send = page.locator('#ekodiAssistBootstrap .ekodi-assist-bootstrap-send').first();
+  await input.waitFor({ state:'visible', timeout:12000 });
+  await send.waitFor({ state:'visible', timeout:12000 });
+  await input.fill('관리자 명령창 연결 확인');
+  await send.click({ timeout:10000 });
+  await page.waitForFunction(() => {
+    const body=document.body;
+    const panel=document.querySelector('#ekodiAssistPanel');
+    const assistant=[...document.querySelectorAll('.ekodi-assist-turn.assistant .ekodi-assist-bubble')].find(node=>String(node.textContent||'').includes('관리자 명령창 연결 정상'));
+    const user=[...document.querySelectorAll('.ekodi-assist-turn.user .ekodi-assist-bubble')].find(node=>String(node.textContent||'').includes('관리자 명령창 연결 확인'));
+    const bootstrap=document.querySelector('#ekodiAssistBootstrap input');
+    if(!body?.classList.contains('admin-command-home')||!body.classList.contains('admin-command-active'))return false;
+    if(!panel||panel.hidden||!assistant||!user)return false;
+    return String(bootstrap?.value||'')==='';
+  }, null, { timeout:12000 });
+  const state=await page.evaluate(() => {
+    const panel=document.querySelector('#ekodiAssistPanel');
+    const rect=panel?.getBoundingClientRect();
+    return {
+      current:window.EKODIAdminPanels?.current?.()||'',
+      panelVisible:Boolean(panel&&!panel.hidden&&rect&&rect.width>0&&rect.height>0),
+      bootstrapCleared:String(document.querySelector('#ekodiAssistBootstrap input')?.value||'')==='',
+      userTurn:Boolean([...document.querySelectorAll('.ekodi-assist-turn.user .ekodi-assist-bubble')].find(node=>String(node.textContent||'').includes('관리자 명령창 연결 확인'))),
+      assistantTurn:Boolean([...document.querySelectorAll('.ekodi-assist-turn.assistant .ekodi-assist-bubble')].find(node=>String(node.textContent||'').includes('관리자 명령창 연결 정상'))),
+    };
+  });
+  if(state.current!=='command-home'||!state.panelVisible||!state.bootstrapCleared||!state.userTurn||!state.assistantTurn){
+    throw new Error(`command-home round-trip failed: ${JSON.stringify(state)}`);
+  }
+  results.push({ id:'command-home', group:'summary', kind:'command-roundtrip', ok:true, detail:'bootstrap->assist->assistant' });
+  console.log('[PROD-E2E] command-home: ok command-roundtrip bootstrap->assist->assistant');
+}
+
+await verifyCommandConsoleRoundTrip();
+
 let selectedWorkArea = null;
 for (const [id, group] of menus) {
   console.log(`[PROD-E2E] ${id}: begin`);
@@ -308,7 +364,8 @@ for (const [id, group] of menus) {
 }
 
 const activeCount = results.filter(result => result.ok).length;
-console.log(`ADMIN_PRODUCTION_UI_E2E=${activeCount}/${menus.length}`);
+const expectedCount = menus.length + 1;
+console.log(`ADMIN_PRODUCTION_UI_E2E=${activeCount}/${expectedCount}`);
 console.log(`ADMIN_WORK_AREAS=${workAreas.join(',')}`);
 console.log(`ADMIN_FINGERPRINT=${assetVersion}`);
 for (const result of results) console.log(`PASS ${result.id} ${result.group} ${result.kind} ${result.detail}`);
@@ -319,7 +376,7 @@ if (fatalErrors.length) {
   for (const error of fatalErrors) console.log(`PAGEERROR ${error}`);
   throw new Error('Production Admin emitted page errors during menu E2E');
 }
-if (activeCount !== menus.length) throw new Error(`Expected ${menus.length} verified menus, received ${activeCount}`);
+if (activeCount !== expectedCount) throw new Error(`Expected ${expectedCount} verified Admin interactions including command-home, received ${activeCount}`);
 await page.screenshot({ path:path.join(artifactsDir,'admin-final.png'), fullPage:false });
 
 await browser.close();

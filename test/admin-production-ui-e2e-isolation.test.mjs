@@ -63,3 +63,17 @@ test('synthetic production Admin UI verifier allows an already-active group defa
   assert.match(text, /if \(!alreadyActive\) \{\s*const trigger = await resolveMenuTrigger\(id, group\);\s*await dispatchClick\(trigger\);\s*\}/);
   assert.doesNotMatch(text, /contextTab\.waitFor\(\{ state: 'visible'/);
 });
+
+
+test('synthetic production Admin UI verifier exercises the real bottom command console without backend mutation', async () => {
+  const text = await source();
+  assert.match(text, /page\.route\('https:\/\/ekodi\.kr\/api\/control\/ai\/assist'/);
+  assert.match(text, /관리자 명령창 연결 확인/);
+  assert.match(text, /관리자 명령창 연결 정상/);
+  assert.match(text, /#ekodiAssistBootstrap input/);
+  assert.match(text, /#ekodiAssistBootstrap \.ekodi-assist-bootstrap-send/);
+  assert.match(text, /admin-command-home/);
+  assert.match(text, /admin-command-active/);
+  assert.match(text, /command-roundtrip/);
+  assert.match(text, /expectedCount = menus\.length \+ 1/);
+});
