@@ -165,11 +165,6 @@ async function appShell(request,env,route='space-home',profile=DEFAULT_PAGE_PROF
 export default{
   async fetch(request,env){
     const url=new URL(request.url);
-    const legacyAlias=url.hostname.toLowerCase()==='ekodi.kr';
-    const canonicalRedirect=()=>{
-      const target=new URL(url.pathname+url.search,'https://ekodi.kr');
-      return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-alias':'ekodi.kr'}});
-    };
     if(normalizedMissionPath(url.pathname)===MISSION_EVENT_APPLICATION_API)return submitMissionEventApplication(request,env);
     if(['GET','HEAD'].includes(request.method)&&(normalizedMissionPath(url.pathname)===EKODIMISSION_PREFIX||normalizedMissionPath(url.pathname).startsWith(EKODIMISSION_PREFIX+'/')))return routeEkodiMission(request,env);
     if(url.pathname==='/health')return json(env,{ok:true,service:'ekodi-space',product:'operating-space',identity:'ekodi-id',workspaceIdentity:'workspace-id',routeModel:['root-slug','workspace-service'],memberNamespaceRequired:false,dataEnabled:runtimeConfig(env).dataEnabled,dataMode:runtimeConfig(env).dataMode});
@@ -196,11 +191,9 @@ export default{
     if(url.pathname==='/yogurtpurple'||url.pathname==='/yogurtpurple/'){
       return withHeaders(env,new Response('<!doctype html><html lang="ko"><meta charset="utf-8"><title>삭제된 주소</title><body><main><h1>삭제된 주소입니다.</h1></main></body></html>',{status:410,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}}),'space-gone');
     }
-    if(legacyAlias&&(url.pathname==='/'||url.pathname===''||url.pathname==='/index.html'))return new Response(null,{status:308,headers:{location:'https://ekodi.kr/my/','cache-control':'no-store','x-ekodi-legacy-alias':'ekodi.kr'}});
     if(url.pathname==='/'||url.pathname===''||url.pathname==='/index.html')return appShell(request,env,'space-home');
     if(isPublicWorkspacePath(url.pathname)){
       const workspaceRoute=workspaceRouteFromPublicPath(url.pathname);
-      if(legacyAlias&&url.pathname!=='/deployment-probe')return canonicalRedirect();
       const resolved=await pageProfile(url.pathname,env);
       const requested=workspaceRoute?.slug||workspaceSlugFromPublicPath(url.pathname);
       if(resolved.canonicalSlug&&requested&&resolved.canonicalSlug!==requested){
