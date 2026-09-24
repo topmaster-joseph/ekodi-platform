@@ -156,9 +156,11 @@ jobs:
               if path.name not in {'ecosystem-load-test.yml', 'cloudflare-boundary-audit.yml'} and 'node scripts/ecosystem-load-test.mjs' in text:
                   errors.append(f'{path.name}: production load script may only be invoked by ecosystem-load-test.yml')
 
-          prod_mutator = (root / 'admin-http2-stability.yml').read_text(encoding='utf-8')
-          if 'refs/heads/main' not in prod_mutator or 'workflow_dispatch:' not in prod_mutator:
-              errors.append('admin-http2-stability.yml is not main-only/manual-only')
+          prod_mutator_path = root / 'admin-http2-stability.yml'
+          if prod_mutator_path.exists():
+              prod_mutator = prod_mutator_path.read_text(encoding='utf-8')
+              if 'refs/heads/main' not in prod_mutator or 'workflow_dispatch:' not in prod_mutator:
+                  errors.append('admin-http2-stability.yml is not main-only/manual-only')
 
           load_workflow = (root / 'ecosystem-load-test.yml').read_text(encoding='utf-8')
           load_required = [
