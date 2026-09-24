@@ -100,7 +100,15 @@
       "uiCanaryRequiredBeforeExecution": true,
       "uiCanaryDoesNotEnableGeneralExecution": true,
       "semanticUiAutomationPreferredForCanary": true,
-      "lowLevelGuestInputInjectionForbiddenForCanary": true
+      "lowLevelGuestInputInjectionForbiddenForCanary": true,
+      "sessionCanaryCommand": "computer.desktop.session.canary",
+      "sessionCanaryRequiredBeforeExecution": true,
+      "sessionExecutorCommand": "computer.desktop.session.execute",
+      "sessionExecutorScope": "bounded-v1",
+      "boundedSessionExecutorPolicy": "config/isolated-desktop-backend-policy.json#sessionExecutor",
+      "sessionCanaryMayEnableBoundedCapability": true,
+      "unboundedDesktopExecutionRemainsForbidden": true,
+      "rawSessionInputReturnedInCloudResult": false
     },
     "foregroundTakeover": {
       "automaticFallback": false,
