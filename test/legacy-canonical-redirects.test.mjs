@@ -7,7 +7,7 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('legacy EKODIBIZ and child-admin aliases are sent through the shared worker', async () => {
   const wrangler = await read('wrangler.site.toml');
-  for(const route of ['"/mall*"','"/ekodibiz*"','"/jadam/admin*"','"/pizzamaru/admin*"','"/yogurt/admin*"']) assert.ok(wrangler.includes(route),route);
+  for(const route of ['"/mall*"','"/ekodibiz*"','"/jadam*"','"/pizzamaru*"','"/yogurt*"']) assert.ok(wrangler.includes(route),route);
 });
 
 test('guarded release defers nested Mall admin redirects until promoted routing is active', async () => {

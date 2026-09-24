@@ -50,6 +50,10 @@ test('user character binds identity only through explicit governed profile refer
   assert.match(source,/renderPreview/);
   assert.match(source,/setIdentity/);
   assert.match(source,/ekodi:character-identity-registry-ready/);
+  assert.match(source,/function visualReady\(\)/);
+  assert.match(source,/ekodiVisualState\|\|'ready'/);
+  assert.match(source,/ekodi:shell-theme/);
+  assert.match(source,/ekodi:public-experience/);
   assert.doesNotMatch(source,/infer.*email/i);
 });
 

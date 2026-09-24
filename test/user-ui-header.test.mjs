@@ -23,7 +23,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
     read('config/user-ui-shell.json')
   ]);
 
-  assert.match(header,/const VERSION=6/);
+  assert.match(header,/const VERSION=7/);
   assert.match(header,/workspace-api\.ekodi\.kr\/v1\/site-chrome\/public/);
   assert.match(header,/async function siteChrome\(\)/);
   assert.match(header,/USER_SURFACES=new Set\(\['public','workspace'\]\)/);
@@ -110,6 +110,13 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(header,/pruneIndividualSiteGlobalLinks/);
   assert.match(header,/isIndividualSite\(\)\?serviceHomeUrl\(\)\.toString\(\):String\(cfg\.homeUrl\)/);
   assert.match(header,/dataset\.ekodiHeaderScope='service-local'/);
+  assert.match(header,/data-ekodi-operating-space-label/);
+  assert.match(header,/ensureOperatingSpaceLabel/);
+  assert.match(header,/badge\.textContent='운영공간'/);
+  assert.match(header,/ensureOperatingSpaceLabel\(header\)/);
+  assert.match(header,/ensureOperatingSpaceLabel\(header,siteNode\|\|operatingSpaceTarget\(header\)\)/);
+  assert.match(header,/ekodi-user-ui-header-scope/);
+
   assert.match(header,/bindHomeAnchor\(header\)/);
   assert.match(header,/serviceHomeAnchor/);
   assert.match(header,/dataset\.ekodiHomeAnchor/);

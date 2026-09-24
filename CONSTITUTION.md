@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.24.0
+# EKODI Platform Constitution v1.25.0
 
-Effective: 2026-09-23
+Effective: 2026-09-24
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 
@@ -90,6 +90,10 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - `guest_hidden` and equivalent visibility controls may hide discovery or explicitly private content, but they may not gate or replace the canonical public user-page shell.
 - `/my`, administrator surfaces, authentication flows, private workspace tools and other explicitly protected routes may require authentication before rendering their private experience.
 - Public routing, shared Shell, service UI and Workspace UI must enforce this rule consistently. Login state changes the projection and available capabilities, not the existence of the public page.
+- **Public Visual Continuity is mandatory on every current and future user surface** (`public` and `workspace`; administrator and authentication control surfaces are excluded). Before first paint, decorative characters, illustrations, ambient scenes and other conditional visuals must resolve their intended visibility. An unresolved visual must remain hidden until its state is resolved; rendering it visibly and then removing it is a verification failure.
+- Each top-level site entry or browser reload may select one **pre-approved, subtle background/ambient variation** within the active site's existing visual family. The selection is document-load scoped: it remains stable for the lifetime of that document and must not change again because of timers, ordinary clicks, scrolling, client-side interaction or authentication hydration.
+- Per-load variation may change only low-impact ambient color tokens. It must not change service identity, information architecture, content order, navigation position, control geometry, font scale, contrast floor, authorization meaning or functional state. Random hues outside the approved site palette are forbidden; shared variation strength is capped by the machine policy and accessibility contrast remains mandatory.
+- The shared Shell owns the provider-independent document-load seed, common ambient tokens and visual-ready signal. Services and subordinate user pages inherit the same contract rather than implementing independent randomizers. Reduced-motion/accessibility preferences and a safe fixed fallback remain mandatory.
 - Machine-readable authority: `governance/constitution/constitution.json` -> `publicUserSurfacePolicy` and `config/service-workspace-policy.json` -> `publicUserSurfaceDefault`.
 
 ## 3. Identity and Tenant Constitution

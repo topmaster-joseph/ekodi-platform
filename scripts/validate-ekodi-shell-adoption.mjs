@@ -49,15 +49,18 @@ for(const required of ['siteLayout','contentOrder','navigationPosition','buttonG
 if(theme.publicExperience?.enabled!==true)fail('public experience rotation must be enabled');
 if(theme.publicExperience?.timezone!=='Asia/Seoul')fail('public experience rotation timezone must remain Asia/Seoul');
 if(theme.publicExperience?.rotation!=='weekly-deterministic'||theme.publicExperience?.cycleDays!==7)fail('public experience rotation must remain weekly-deterministic');
+const loadAmbient=theme.publicExperience?.documentLoadAmbientVariation||{};
+if(loadAmbient.enabled!==true||loadAmbient.trigger!=='top-level-navigation-or-reload'||loadAmbient.stableForDocumentLifetime!==true||loadAmbient.approvedPaletteOnly!==true)fail('document-load ambient variation must be approved, per-load and document-stable');
+if(Number(loadAmbient.maxBackgroundMixPercent)>6)fail('document-load ambient background variation must remain subtle');
 if(!Array.isArray(theme.publicExperience?.variants)||theme.publicExperience.variants.length<3)fail('public experience needs at least three pre-approved variants');
 for(const motif of ['orbit','flow','grid','paper','signal','stage'])if(!Array.isArray(theme.publicExperience?.motifs?.[motif])||!theme.publicExperience.motifs[motif].length)fail(`public experience motif missing: ${motif}`);
 
-for(const required of ['setSurface','ekodi:shell-theme','ekodi:public-experience','EKODI 다음 행동','suggestedServices','모든 서비스 보기','public-rail','Asia/Seoul'])if(!shellSource.includes(required))fail(`Shell browser source lost public experience marker: ${required}`);
+for(const required of ['setSurface','ekodi:shell-theme','ekodi:public-experience','EKODI 다음 행동','suggestedServices','모든 서비스 보기','public-rail','Asia/Seoul','DOCUMENT_LOAD_SEED','--ekodi-public-background-tint','ekodiVisualState'])if(!shellSource.includes(required))fail(`Shell browser source lost public experience marker: ${required}`);
 for(const required of ['memberGateApplies','localMemberSession','guide-only','Google로 무료 시작','ekodiMemberAccess'])if(!shellSource.includes(required))fail(`Shell browser source lost common-service member gate marker: ${required}`);
 if(shellSource.includes("surface===\'public\'||surface===\'workspace\'"))fail("public user pages must never be covered by the member gate");
 if(!shellSource.includes("surface===\'workspace\'&&explicitWorkspace"))fail("member gate must be limited to explicit private workspace context");
 for(const forbidden of ['fetchPublicThemeFromAI','OPENAI_API_KEY','ANTHROPIC_API_KEY'])if(shellSource.includes(forbidden))fail(`Shell public rotation must remain provider-independent: ${forbidden}`);
-for(const required of ['SHELL_WORKSPACE_STYLE','SHELL_USER_UI_STYLE','INTERNAL_SURFACES','defaultSurface(serviceId)','data-ekodi-workspace-style','data-ekodi-user-ui-style'])if(!injectorSource.includes(required))fail(`Worker injection lost shared UI contract: ${required}`);
+for(const required of ['SHELL_WORKSPACE_STYLE','SHELL_USER_UI_STYLE','INTERNAL_SURFACES','defaultSurface(serviceId)','data-ekodi-workspace-style','data-ekodi-user-ui-style','data-ekodi-visual-state','data-ekodi-visual-seed'])if(!injectorSource.includes(required))fail(`Worker injection lost shared UI contract: ${required}`);
 if(!injectorSource.includes("headers.set('x-ekodi-shell','v2')"))fail('Worker injection must advertise Shell v2');
 if(!injectorSource.includes("headers.set('x-ekodi-surface'"))fail('Worker injection must advertise the resolved surface');
 if(!workspaceStyle.includes('data-ekodi-shell-surface="workspace"'))fail('shared workspace stylesheet must be scoped to internal surfaces');
