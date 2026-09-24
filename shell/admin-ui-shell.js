@@ -4,11 +4,11 @@
 const VERSION=3;
 const STYLE_ID='ekodi-admin-ui-shell-style';
 const SURFACE='admin';
-const SIDEBAR_SELECTORS=['[data-ekodi-admin-sidebar]','[data-ekodi-sidebar]','#sidebar','.admin-sidebar','.sidebar'];
+const SIDEBAR_SELECTORS=['[data-ekodi-admin-sidebar]','[data-ekodi-sidebar]','#sidebar','.admin-sidebar','.sidebar','.oa-side'];
 const BRAND_SELECTORS=['[data-ekodi-admin-sidebar-header]','[data-ekodi-admin-brand]','.side-brand','.sidebar-brand','.admin-sidebar-brand'];
 const NAV_SELECTORS=['[data-ekodi-admin-nav]','nav','.side-nav','.sidebar-nav'];
 const MAIN_SELECTORS=['[data-ekodi-admin-main]','main','.admin-main','.main'];
-const TOPBAR_SELECTORS=['[data-ekodi-admin-topbar]','.topbar','.admin-topbar','.app-header'];
+const TOPBAR_SELECTORS=['[data-ekodi-admin-topbar]','.topbar','.admin-topbar','.app-header','header.top','.oa-top'];
 const ACCOUNT_SELECTORS=['[data-ekodi-account]','[data-ekodi-profile]','.profile','.profile-card','.account-card','.user-profile','.user-card','.sidebar-profile'];
 const LOGOUT_SELECTORS=['[data-ekodi-logout]','#logoutButton','[data-action="logout"]','a[href*="logout"]','button[name="logout"]'];
 const TITLE_SELECTORS=['[data-ekodi-page-title]','[data-ekodi-header-title]','#pageTitle','.page-title','.topbar-title','.header-title'];
