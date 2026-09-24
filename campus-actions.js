@@ -335,6 +335,7 @@
     item.classList.toggle('is-beta', site.lifecycle === 'beta');
 
     item.dataset.siteName = site.name;
+    delete item.dataset.serviceAdminHandoff;
     const button = item.querySelector('.campus-site-admin-button');
     if (button) button.replaceWith(makeSiteAdminButton(site));
   }
