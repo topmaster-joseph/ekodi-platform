@@ -269,7 +269,7 @@ export async function runEkodiPulseSchedule(env = {}, options = {}) {
     env,
     { autonomousHealth, readiness, ledger: preQueueLedger },
     previousAutonomousHealth ? { autonomousHealth: previousAutonomousHealth, readiness, ledger: preQueueLedger } : {},
-    { now: autonomousHealth.observedAt },
+    { now: autonomousHealth.observedAt, previousNow: previousAutonomousHealth?.observedAt },
   );
   const observed = Object.freeze(platformObservations.current);
   const previousObserved = previousAutonomousHealth || platformObservations.summary.historicalServices
