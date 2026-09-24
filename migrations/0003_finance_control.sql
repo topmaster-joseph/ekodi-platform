@@ -129,12 +129,12 @@ INSERT OR IGNORE INTO finance_organizations (id,name,legal_name,kind,active,crea
 ('CGMA','청계면상인회','청계면상인회','association',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
 
 INSERT OR IGNORE INTO finance_business_units (id,organization_id,name,source_domain,kind,active,created_at,updated_at) VALUES
-('BIZ','EKODIBIZ','에코디비즈 본부','biz.ekodi.kr','business',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
-('PAY','EKODIBIZ','결제 허브','pay.ekodi.kr','payment',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
-('MALL','EKODIBIZ','에코디몰','mall.ekodi.kr','commerce',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
-('TRADE','EKODIBIZ','글로벌 무역','trade.ekodi.kr','trade',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
-('BOOKS','EKODIBIZ','에코디북스','books.ekodi.kr','publishing',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
-('MARKETING','EKODIBIZ','마케팅 AI','marketing.ekodi.kr','marketing',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
-('CHURCH','EKODICHURCH','교회 사역','church.ekodi.kr','ministry',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
-('LAB','EKODILAB','연구·교육','lab.ekodi.kr','research',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
-('CGMA','CGMA','상권 운영','cgma.ekodi.kr','community',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+('BIZ','EKODIBIZ','에코디비즈 본부','ekodi.kr/ekodibiz','business',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
+('PAY','EKODIBIZ','결제 허브','ekodi.kr/pay','payment',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
+('MALL','EKODIBIZ','에코디몰','ekodi.kr/ekodimall','commerce',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
+('TRADE','EKODIBIZ','글로벌 무역','ekodi.kr/ekodibiz/trade','trade',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
+('BOOKS','EKODIBIZ','에코디북스','ekodi.kr/books','publishing',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
+('MARKETING','EKODIBIZ','마케팅 AI','ekodi.kr/marketing','marketing',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
+('CHURCH','EKODICHURCH','교회 사역','ekodi.kr/ekodichurch','ministry',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
+('LAB','EKODILAB','연구·교육','ekodi.kr/ekodilab','research',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
+('CGMA','CGMA','상권 운영','ekodi.kr/cgma','community',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);

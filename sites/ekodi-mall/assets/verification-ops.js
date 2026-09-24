@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://mall-api.ekodi.kr';
+  const API = 'https://mall-ekodi.kr/api';
   const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
   const PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   if (!window.supabase) return;
@@ -15,7 +15,7 @@
   async function accessToken() { return (await sb.auth.getSession()).data.session?.access_token || ''; }
   async function api(path, options={}) { const token=await accessToken(); if(!token) throw new Error('운영자 Google 로그인이 필요합니다.'); const headers=new Headers(options.headers||{}); headers.set('authorization', `Bearer ${token}`); if(options.body&&!headers.has('content-type')) headers.set('content-type','application/json'); const response=await fetch(`${API}${path}`,{...options,headers}); const body=await response.json().catch(()=>({})); if(!response.ok) throw new Error(body.error||`Mall API ${response.status}`); return body; }
   async function exchangeCentralToken() { const params=new URLSearchParams(location.hash.slice(1)); const token=params.get('ekodi_token'); if(!token)return; const type=params.get('ekodi_type')||'email'; const {error}=await sb.auth.verifyOtp({token_hash:token,type}); if(error)throw error; history.replaceState(null,'',location.pathname+location.search); }
-  function login() { const auth=new URL('https://auth.ekodi.kr/'); auth.searchParams.set('site','mall-seller'); auth.searchParams.set('return_to',location.href.split('#')[0]); location.assign(auth.href); }
+  function login() { const auth=new URL('https://ekodi.kr/auth/'); auth.searchParams.set('site','mall-seller'); auth.searchParams.set('return_to',location.href.split('#')[0]); location.assign(auth.href); }
   function syncUi() { const signed=Boolean(session); ui.login.hidden=signed; ui.logout.hidden=!signed; ui.reload.disabled=!signed; ui.queueStatus.disabled=!signed; if(!signed){ ui.actor.textContent='SIGNED OUT'; if(ui.launchState)ui.launchState.textContent='SIGNED OUT'; if(ui.launch)ui.launch.replaceChildren(text('p','운영자 로그인 후 production 준비상태를 판정합니다.','empty')); if(ui.commerceState)ui.commerceState.textContent='SIGNED OUT'; if(ui.cockpit)ui.cockpit.replaceChildren(text('p','운영자 로그인 후 주문·결제·정산 예외와 AI 실행경계를 한눈에 봅니다.','empty')); ui.approve.disabled=true; ui.reject.disabled=true; } }
   function renderLaunch(data={}) {
     if(!ui.launch)return; const counts=data.counts||{}, global=data.global||{}, payment=global.paymentProvider||{}, blockers=data.activationBlockers||[];

@@ -6,15 +6,15 @@
   "approvedAt": "2026-09-06",
   "changeClass": "C2",
   "taskId": "ekodi-public-dev-exp-portals-20260906",
-  "summary": "Establish dev.ekodi.kr as the public EKODI Developer and Conformance portal and exp.ekodi.kr as the canonical EKODI Experience portal, while retaining try.ekodi.kr as a permanent compatibility redirect.",
-  "approvalBasis": "The platform owner explicitly instructed that the developer public site be built around dev.ekodi.kr under the EKODI Constitution and proposed exp.ekodi.kr for the experience surface, then instructed the build to proceed.",
-  "registeredBoundaries": ["dev.ekodi.kr", "exp.ekodi.kr"],
-  "legacyAlias": {"from": "try.ekodi.kr", "to": "https://exp.ekodi.kr", "status": 308},
-  "developmentBoundaryAdjustment": "The root dev.ekodi.kr becomes the public Developer portal. Development mirrors remain on nested hosts such as my.dev.ekodi.kr, admin.dev.ekodi.kr, auth.dev.ekodi.kr and api.dev.ekodi.kr.",
+  "summary": "Establish ekodi.kr/developer as the public EKODI Developer and Conformance portal and ekodi.kr/experience as the canonical EKODI Experience portal, while retaining ekodi.kr/experience as a permanent compatibility redirect.",
+  "approvalBasis": "The platform owner explicitly instructed that the developer public site be built around ekodi.kr/developer under the EKODI Constitution and proposed ekodi.kr/experience for the experience surface, then instructed the build to proceed.",
+  "registeredBoundaries": ["ekodi.kr/developer", "ekodi.kr/experience"],
+  "legacyAlias": {"from": "ekodi.kr/experience", "to": "https://ekodi.kr/experience", "status": 308},
+  "developmentBoundaryAdjustment": "The root ekodi.kr/developer becomes the public Developer portal. Development mirrors remain on nested hosts such as ekodi.kr/my/developer, ekodi.kr/admin/developer, ekodi.kr/auth/developer and ekodi.kr/api/developer.",
   "runtimePolicy": "At S0, Developer and Experience may share the existing ekodi-experience runtime while retaining separate public contracts and routes. A new independent deployment requires measured evidence.",
   "developerDataRule": "Public contracts, examples and browser-local preflight only. No production customer data, reusable secrets, private repository structure or internal provider topology.",
   "experienceDataRule": "Synthetic-only by default with Secure Projection and no production writes.",
   "authorityRule": "Public preflight never grants production authority. Existing EKODI CI contract, security, tenant/data-boundary, staging, certification and guarded promotion gates remain authoritative.",
   "verificationPolicy": "Constitution, platform boundary, public contract drift, Secure Projection, staging host simulation, guarded production release, dev/exp real-host verification and try redirect verification must pass.",
-  "rollback": "Remove dev.ekodi.kr from the shared public runtime, restore try.ekodi.kr as the Experience canonical host and reverse the domain registrations through the guarded pipeline. No production customer data migration or rollback is required."
+  "rollback": "Remove ekodi.kr/developer from the shared public runtime, restore ekodi.kr/experience as the Experience canonical host and reverse the domain registrations through the guarded pipeline. No production customer data migration or rollback is required."
 }

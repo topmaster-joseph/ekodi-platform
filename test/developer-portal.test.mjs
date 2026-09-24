@@ -48,17 +48,17 @@ test('public preflight provides actionable remediation without changing authorit
   assert.match(js,/suggested/);
 });
 
-test('developer portal is public, read-only and canonical at dev.ekodi.kr',async()=>{
-  assert.equal(DEVELOPER_PORTAL_META.canonicalOrigin,'https://dev.ekodi.kr');
-  const health=await worker.fetch(new Request('https://dev.ekodi.kr/health'),{});
+test('developer portal is public, read-only and canonical at ekodi.kr/developer',async()=>{
+  assert.equal(DEVELOPER_PORTAL_META.canonicalOrigin,'https://ekodi.kr/developer');
+  const health=await worker.fetch(new Request('https://ekodi.kr/developer/health'),{});
   assert.equal(health.status,200);
   const healthJson=await health.json();
   assert.equal(healthJson.service,'ekodi-developer-portal');
   assert.equal(healthJson.dataPolicy,'public-contract-only');
-  const contract=await worker.fetch(new Request('https://dev.ekodi.kr/api/contract'),{});
+  const contract=await worker.fetch(new Request('https://ekodi.kr/developer/api/contract'),{});
   assert.equal(contract.status,200);
   assert.equal((await contract.json()).id,'ekodi.responsible-service.v1');
-  const post=await worker.fetch(new Request('https://dev.ekodi.kr/api/contract',{method:'POST'}),{});
+  const post=await worker.fetch(new Request('https://ekodi.kr/developer/api/contract',{method:'POST'}),{});
   assert.equal(post.status,405);
 });
 
@@ -84,10 +84,10 @@ test('Experience links directly to the canonical Developer portal',()=>{
   assert.match(html,/실제 규격 검사는 dev\.ekodi\.kr에서 이어집니다/);
 });
 
-test('legacy try.ekodi.kr permanently redirects to canonical exp.ekodi.kr',async()=>{
-  const response=await worker.fetch(new Request('https://try.ekodi.kr/developer?mode=user'),{});
+test('legacy ekodi.kr/experience permanently redirects to canonical ekodi.kr/experience',async()=>{
+  const response=await worker.fetch(new Request('https://ekodi.kr/experience/developer?mode=user'),{});
   assert.equal(response.status,308);
-  assert.equal(response.headers.get('location'),'https://exp.ekodi.kr/developer?mode=user');
+  assert.equal(response.headers.get('location'),'https://ekodi.kr/experience/developer?mode=user');
 });
 
 test('developer and experience use service-specific EKODI user characters',()=>{

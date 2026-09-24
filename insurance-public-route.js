@@ -9,7 +9,7 @@ const SECURITY_HEADERS=Object.freeze({
   'x-content-type-options':'nosniff',
   'referrer-policy':'strict-origin-when-cross-origin',
   'permissions-policy':'camera=(), microphone=(), geolocation=()',
-  'content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://insurance-api.ekodi.kr; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests",
+  'content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://insurance-ekodi.kr/api; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests",
 });
 
 export function isInsurancePublicPath(pathname){

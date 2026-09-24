@@ -2,20 +2,20 @@ import { injectEkodiShell, shellServiceForHost } from './ekodi-shell-injector.js
 
 const ORIGINS = Object.freeze({});
 
-const MAIL_CANONICAL = 'https://mail.ekodi.kr';
+const MAIL_CANONICAL = 'https://ekodi.kr/mail';
 const MALL_CANONICAL = 'https://ekodi.kr/ekodimall';
 const CANONICAL_REDIRECTS = Object.freeze({
-  'mall.ekodi.kr': MALL_CANONICAL,
-  'mall.biz.ekodi.kr': MALL_CANONICAL,
-  'mail.biz.ekodi.kr': MAIL_CANONICAL,
-  'mail.church.ekodi.kr': MAIL_CANONICAL,
-  'mail.lab.ekodi.kr': MAIL_CANONICAL,
-  'mail.books.ekodi.kr': MAIL_CANONICAL,
-  'mail.trade.ekodi.kr': MAIL_CANONICAL
+  'ekodi.kr/ekodimall': MALL_CANONICAL,
+  'ekodi.kr/ekodimall': MALL_CANONICAL,
+  'ekodi.kr/ekodibiz/mail': MAIL_CANONICAL,
+  'ekodi.kr/ekodichurch/mail': MAIL_CANONICAL,
+  'ekodi.kr/ekodilab/mail': MAIL_CANONICAL,
+  'ekodi.kr/books/mail': MAIL_CANONICAL,
+  'ekodi.kr/ekodibiz/trade/mail': MAIL_CANONICAL
 });
 
 const REDIRECTS = Object.freeze({
-  'live.church.ekodi.kr': 'https://www.youtube.com/@ekodichurch/live'
+  'ekodi.kr/ekodichurch/live': 'https://www.youtube.com/@ekodichurch/live'
 });
 
 const BIZ_CSP = [
@@ -28,7 +28,7 @@ const BIZ_CSP = [
   "object-src 'none'"
 ].join('; ');
 
-const STAGING_HOSTS = new Set(['biz.ekodi.kr', ...Object.keys(ORIGINS), ...Object.keys(REDIRECTS), ...Object.keys(CANONICAL_REDIRECTS)]);
+const STAGING_HOSTS = new Set(['ekodi.kr/ekodibiz', ...Object.keys(ORIGINS), ...Object.keys(REDIRECTS), ...Object.keys(CANONICAL_REDIRECTS)]);
 function requestHost(request, env, incoming) {
   if (env?.ENVIRONMENT !== 'staging') return incoming.hostname;
   const requested = String(request.headers.get('x-ekodi-staging-host') || '').trim().toLowerCase();
@@ -50,15 +50,15 @@ function businessHub() {
 <body>
 <main class="shell">
 <header class="top"><a class="brand" href="https://ekodi.kr/ekodibiz"><span class="mark">B</span><span>EKODI BIZ</span></a><a class="root" href="https://ekodi.kr">EKODI ↗</a></header>
-<section class="hero"><div class="eyebrow">BUSINESS LOBBY</div><h1>EKODI BIZ</h1><p>에코디비즈의 사업 서비스를 한곳에서 연결하는 독립 비즈니스 로비입니다. 무역, 쇼핑, 결제, 메일, 라이브를 하나의 계층형 도메인 체계로 운영합니다.</p><span class="context">biz.ekodi.kr · EKODI → BIZ → SERVICE</span></section>
+<section class="hero"><div class="eyebrow">BUSINESS LOBBY</div><h1>EKODI BIZ</h1><p>에코디비즈의 사업 서비스를 한곳에서 연결하는 독립 비즈니스 로비입니다. 무역, 쇼핑, 결제, 메일, 라이브를 하나의 계층형 도메인 체계로 운영합니다.</p><span class="context">ekodi.kr/ekodibiz · EKODI → BIZ → SERVICE</span></section>
 <section class="grid" aria-label="EKODI BIZ 서비스">
 <a class="card" href="https://ekodi.kr/ekodibiz/trade"><div><span class="icon">T</span><strong>Global Trading</strong><small>글로벌 B2B 무역 · GPU · AI Server · Components</small></div><span class="arrow">↗</span></a>
 <a class="card" href="https://ekodi.kr/ekodimall"><div><span class="icon">M</span><strong>EKODI Mall</strong><small>상품과 서비스의 비즈니스 커머스 허브</small></div><span class="arrow">↗</span></a>
-<a class="card" href="https://pay.biz.ekodi.kr"><div><span class="icon">P</span><strong>EKODI Pay</strong><small>결제와 사업부별 회계 관제 진입점</small></div><span class="arrow">↗</span></a>
-<a class="card" href="https://mail.ekodi.kr"><div><span class="icon">@</span><strong>Business Mail</strong><small>EKODI 공통 Mail 서비스</small></div><span class="arrow">↗</span></a>
-<a class="card" href="https://live.biz.ekodi.kr"><div><span class="icon">▶</span><strong>Business Live</strong><small>비즈니스 방송과 라이브 콘텐츠 로비</small></div><span class="arrow">↗</span></a>
+<a class="card" href="https://ekodi.kr/ekodibiz/pay"><div><span class="icon">P</span><strong>EKODI Pay</strong><small>결제와 사업부별 회계 관제 진입점</small></div><span class="arrow">↗</span></a>
+<a class="card" href="https://ekodi.kr/mail"><div><span class="icon">@</span><strong>Business Mail</strong><small>EKODI 공통 Mail 서비스</small></div><span class="arrow">↗</span></a>
+<a class="card" href="https://ekodi.kr/ekodibiz/live"><div><span class="icon">▶</span><strong>Business Live</strong><small>비즈니스 방송과 라이브 콘텐츠 로비</small></div><span class="arrow">↗</span></a>
 </section>
-<div class="note">공식 운영 주소는 <strong>biz.ekodi.kr</strong>입니다. 기존 <strong>ekodibiz.kr</strong>은 브랜드 보호·전환 주소로 유지하고 이 로비로 영구 연결합니다.</div>
+<div class="note">공식 운영 주소는 <strong>ekodi.kr/ekodibiz</strong>입니다. 기존 <strong>ekodibiz.kr</strong>은 브랜드 보호·전환 주소로 유지하고 이 로비로 영구 연결합니다.</div>
 <footer class="footer"><strong>EKODIBIZ · One business hub, many doors.</strong><span>Managed in the EKODI ecosystem</span></footer>
 </main>
 </body>
@@ -94,7 +94,7 @@ export default {
       return Response.redirect(target.toString(), 307);
     }
 
-    if (host === 'biz.ekodi.kr' && (incoming.pathname === '/' || incoming.pathname === '/index.html')) {
+    if (host === 'ekodi.kr/ekodibiz' && (incoming.pathname === '/' || incoming.pathname === '/index.html')) {
       return injectEkodiShell(businessHub(), 'biz');
     }
 

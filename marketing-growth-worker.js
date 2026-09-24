@@ -28,7 +28,7 @@ function cors(request, env) {
   if (!allowed) {
     try {
       const host = new URL(origin).hostname;
-      allowed = host === 'ekodi.kr' || host === 'admin.ekodi.kr' || host === 'marketing.ekodi.kr' || host === 'my.ekodi.kr' || /^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(host);
+      allowed = host === 'ekodi.kr' || host === 'ekodi.kr/admin' || host === 'ekodi.kr/marketing' || host === 'ekodi.kr/my' || /^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(host);
     } catch {}
   }
   const headers = {

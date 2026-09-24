@@ -15,9 +15,9 @@ Workspace identity remains the immutable `workspace_id`. The slug and URL are ro
 
 ## Engine boundaries
 
-- `marketing.ekodi.kr` = EKODI Marketing Core common-service engine boundary.
-- `ai.ekodi.kr` = provider-independent EKODI AI Gateway/Core boundary.
-- `<tenant>.ai.ekodi.kr` = compatibility execution alias only, never a canonical customer URL.
+- `ekodi.kr/marketing` = EKODI Marketing Core common-service engine boundary.
+- `ekodi.kr/ai` = provider-independent EKODI AI Gateway/Core boundary.
+- `<tenant>.ekodi.kr/ai` = compatibility execution alias only, never a canonical customer URL.
 
 Ordinary user surfaces must not expose provider, model, orchestration or internal execution topology. Internal admin, API, observability and deployment systems may reference engine addresses when operationally required.
 
@@ -31,10 +31,10 @@ CGMA keeps `cgma.or.kr` as its customer-owned public domain and `https://ekodi.k
 
 The current execution aliases remain registered so existing deployments and bookmarks do not break:
 
-- `jadam.ai.ekodi.kr`
-- `pizzamaru.ai.ekodi.kr`
-- `yogurt.ai.ekodi.kr`
-- `cgma.ai.ekodi.kr`
+- `ekodi.kr/jadam/marketing`
+- `ekodi.kr/pizzamaru/marketing`
+- `ekodi.kr/yogurt/marketing`
+- `ekodi.kr/cgma/marketing`
 
 These aliases may proxy or redirect to the same authorized service, but new customer-facing links must use the canonical `ekodi.kr/{public_namespace}/marketing` path.
 
@@ -46,4 +46,4 @@ The commercial/domain source of truth is `config/marketing-tenants.json`. Runtim
 
 ## Release rule
 
-A release fails when an ordinary user surface reintroduces `marketing.ekodi.kr` as the product/customer entry or a customer-specific `*.ai.ekodi.kr` address as canonical. `npm run validate:user-surfaces` enforces this contract together with the constitutional validator.
+A release fails when an ordinary user surface reintroduces `ekodi.kr/marketing` as the product/customer entry or a customer-specific `EKODI child-host address/ai` address as canonical. `npm run validate:user-surfaces` enforces this contract together with the constitutional validator.

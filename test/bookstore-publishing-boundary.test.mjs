@@ -28,7 +28,7 @@ test('publishing is declared as an independent platform',()=>{
   const publishing=boundaries.platforms?.publishing;
   assert.ok(publishing,'platform-boundaries.json must declare publishing');
   assert.equal(publishing.kind,'independent-platform');
-  assert.ok(publishing.domains.includes('publishing.ekodi.kr'));
+  assert.ok(publishing.domains.includes('ekodi.kr/publishing'));
   assert.ok(publishing.sharedDependencies.some(value=>value.includes('books public catalog contract')));
 });
 

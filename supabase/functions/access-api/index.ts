@@ -14,12 +14,12 @@ import {
 } from "../_shared/trust.ts";
 
 const allowedOrigin=(origin:string|null)=>{
-  if(!origin) return "https://auth.ekodi.kr";
+  if(!origin) return "https://ekodi.kr/auth";
   try{
     const u=new URL(origin);
     if(u.protocol==="https:"&&(u.hostname==="ekodi.kr"||u.hostname.endsWith(".ekodi.kr")||u.hostname==="ekodibiz.kr"||u.hostname.endsWith(".ekodibiz.kr")||u.hostname==="cgma.or.kr"||u.hostname==="www.cgma.or.kr"||u.hostname==="cheonggye-market.pages.dev"))return origin;
   }catch{}
-  return "https://auth.ekodi.kr";
+  return "https://ekodi.kr/auth";
 };
 const cors=(req:Request)=>({
   "Access-Control-Allow-Origin":allowedOrigin(req.headers.get("Origin")),
@@ -164,7 +164,7 @@ async function observeAccessTrustShadow(input:{
   }
 }
 function validMarketingOrigin(origin:string){
-  const fixed=["https://marketing.ekodi.kr","https://jadam.ekodi.kr","https://pizzamaru.ekodi.kr","https://yogurt.ekodi.kr","https://yogurtpurple.ekodi.kr"];
+  const fixed=["https://ekodi.kr/marketing","https://ekodi.kr/jadam","https://ekodi.kr/pizzamaru","https://ekodi.kr/yogurt","https://ekodi.kr/yogurtpurple"];
   if(fixed.includes(origin))return true;
   try{
     const target=new URL(origin);
@@ -173,20 +173,20 @@ function validMarketingOrigin(origin:string){
 }
 function validHandoff(site:string,raw:string){
   const origins:Record<string,string[]>={
-    cgma:["https://ekodi.kr","https://cgma.or.kr","https://cgma.ekodi.kr"],
-    marketing:["https://marketing.ekodi.kr","https://jadam.ekodi.kr","https://pizzamaru.ekodi.kr","https://yogurt.ekodi.kr","https://yogurtpurple.ekodi.kr"],
-    biz:["https://biz.ekodi.kr"],
-    trade:["https://ekodi.kr","https://trade.biz.ekodi.kr","https://trade.ekodi.kr"],
+    cgma:["https://ekodi.kr","https://cgma.or.kr","https://ekodi.kr/cgma"],
+    marketing:["https://ekodi.kr/marketing","https://ekodi.kr/jadam","https://ekodi.kr/pizzamaru","https://ekodi.kr/yogurt","https://ekodi.kr/yogurtpurple"],
+    biz:["https://ekodi.kr/ekodibiz"],
+    trade:["https://ekodi.kr","https://ekodi.kr/ekodibiz/trade","https://ekodi.kr/ekodibiz/trade"],
     mall:["https://ekodi.kr"],
-    pay:["https://pay.ekodi.kr"],
-    books:["https://books.ekodi.kr"],
-    church:["https://church.ekodi.kr"],
-    lab:["https://lab.ekodi.kr"],
+    pay:["https://ekodi.kr/pay"],
+    books:["https://ekodi.kr/books"],
+    church:["https://ekodi.kr/ekodichurch"],
+    lab:["https://ekodi.kr/ekodilab"],
     mission:["https://ekodi.kr"],
     community:["https://ekodi.kr"],
-    edu:["https://edu.ekodi.kr"],
-    media:["https://media.ekodi.kr"],
-    admin:["https://admin.ekodi.kr"],
+    edu:["https://ekodi.kr/education"],
+    media:["https://ekodi.kr/media"],
+    admin:["https://ekodi.kr/admin"],
     portal:["https://ekodi.kr"]
   };
   try{

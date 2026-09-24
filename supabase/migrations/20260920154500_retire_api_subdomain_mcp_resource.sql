@@ -1,9 +1,9 @@
--- Retire the legacy api.ekodi.kr MCP resource after apex-path canonicalization.
+-- Retire the legacy ekodi.kr/api MCP resource after apex-path canonicalization.
 -- Historical migrations remain immutable; this migration promotes only https://ekodi.kr/mcp.
 
 update auth.oauth_authorizations
    set resource = 'https://ekodi.kr/mcp'
- where resource = 'https://api.ekodi.kr/mcp';
+ where resource = 'https://ekodi.kr/api/mcp';
 
 create or replace function public.current_ekodi_mcp_identity()
 returns jsonb
@@ -116,4 +116,4 @@ grant execute on function public.ekodi_mcp_access_token_hook(jsonb) to supabase_
 revoke execute on function public.ekodi_mcp_access_token_hook(jsonb) from authenticated, anon, public;
 
 comment on function public.ekodi_mcp_access_token_hook(jsonb) is
-  'Issues only the canonical https://ekodi.kr/mcp audience; api.ekodi.kr is retired.';
+  'Issues only the canonical https://ekodi.kr/mcp audience; ekodi.kr/api is retired.';

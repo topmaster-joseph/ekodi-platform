@@ -22,42 +22,42 @@
 
   const SITE_META = [
     { domain:'ekodi.kr', name:'EKODI Home', group:'Core & Access', role:'생태계 정문·서비스 레지스트리', aliases:['에코디 홈','에코디','홈','root','home'] },
-    { domain:'admin.ekodi.kr', name:'Control Center', group:'Core & Access', role:'통합운영·권한·감사', aliases:['관리자','관리자페이지','컨트롤센터','control center','admin'] },
-    { domain:'auth.ekodi.kr', name:'EKODI Auth', group:'Core & Access', role:'통합인증·계정·SSO', aliases:['인증센터','통합인증','인증','auth','로그인'] },
-    { domain:'life.ekodi.kr', name:'오늘의 질문', group:'Life & Community', role:'삶의 질문·성찰·말씀 연결·실천', aliases:['오늘의 질문','인생ai','인생 ai','life ai','life'] },
-    { domain:'church.ekodi.kr', name:'에코디교회', group:'Community', role:'예배·사역·공동체 운영', aliases:['에코디교회','교회','church'] },
+    { domain:'ekodi.kr/admin', name:'Control Center', group:'Core & Access', role:'통합운영·권한·감사', aliases:['관리자','관리자페이지','컨트롤센터','control center','admin'] },
+    { domain:'ekodi.kr/auth', name:'EKODI Auth', group:'Core & Access', role:'통합인증·계정·SSO', aliases:['인증센터','통합인증','인증','auth','로그인'] },
+    { domain:'ekodi.kr/life', name:'오늘의 질문', group:'Life & Community', role:'삶의 질문·성찰·말씀 연결·실천', aliases:['오늘의 질문','인생ai','인생 ai','life ai','life'] },
+    { domain:'ekodi.kr/ekodichurch', name:'에코디교회', group:'Community', role:'예배·사역·공동체 운영', aliases:['에코디교회','교회','church'] },
     { domain:'ekodi.kr/community', name:'커뮤니티', group:'Community', role:'관계·그룹·참여·소통', aliases:['커뮤니티','커뮤니티','community'] },
-    { domain:'social.ekodi.kr', name:'에코디 소셜', group:'Community', role:'소셜채널·미디어 연동', aliases:['에코디소셜','소셜','social'] },
-    { domain:'biz.ekodi.kr', name:'에코디비즈', group:'Business & Commerce', role:'사업·고객·서비스 운영', aliases:['에코디비즈','비즈','biz'] },
-    { domain:'mall.ekodi.kr', name:'에코디몰', group:'Business & Commerce', role:'상품·판매·셀러 운영', aliases:['에코디몰','몰','mall'] },
-    { domain:'marketing.ekodi.kr', name:'마케팅 AI', group:'Business & Commerce', role:'마케팅·자동화·Workspace', aliases:['마케팅ai','마케팅 ai','마케팅','marketing ai','marketing'] },
-    { domain:'trade.ekodi.kr', name:'에코디 트레이딩', group:'Business & Commerce', role:'무역·견적·계약·거래', aliases:['트레이딩','무역','trading','trade'] },
-    { domain:'pay.ekodi.kr', name:'에코디 페이', group:'Business & Commerce', role:'결제·정산·귀속', aliases:['에코디페이','결제','pay'] },
-    { domain:'books.ekodi.kr', name:'에코디서점', group:'Knowledge & Content', role:'출판·배포·인세·콘텐츠', aliases:['에코디북스','북스','출판','books','book'] },
-    { domain:'lab.ekodi.kr', name:'에코디연구소', group:'Knowledge & Content', role:'연구·교육·프로젝트', aliases:['에코디연구소','연구소','lab'] },
-    { domain:'mail.ekodi.kr', name:'에코디 메일', group:'Communication & Cloud', role:'메일 허브·조직 연결', aliases:['에코디메일','메일','mail'] },
-    { domain:'live.ekodi.kr', name:'에코디 라이브', group:'Communication & Cloud', role:'라이브·방송·송출', aliases:['에코디라이브','라이브','live'] },
-    { domain:'cloud.ekodi.kr', name:'에코디 클라우드', group:'Communication & Cloud', role:'파일·문서·협업 자료', aliases:['에코디클라우드','클라우드','cloud'] },
-    { domain:'cgma.ekodi.kr', url:'https://ekodi.kr/cgma/', label:'ekodi.kr/cgma · cgma.or.kr', name:'청계면상인회', group:'Client Sites', role:'상권·회원·고객 운영', aliases:['청계면상인회','청계상권','상인회','cgma'] },
-    { domain:'jadam.ekodi.kr', name:'자담치킨 목포대점', group:'Client Sites', role:'점포·CRM·마케팅 운영', aliases:['자담치킨','자담','jadam'] },
-    { domain:'pizzamaru.ekodi.kr', name:'피자마루 목포대점', group:'Client Sites', role:'점포·CRM·마케팅 운영', aliases:['피자마루','pizzamaru'] },
-    { domain:'yogurt.ekodi.kr', name:'요거트퍼플 목포대점', group:'Client Sites', role:'점포·CRM·마케팅 운영', aliases:['요거트퍼플','요거트','yogurt'] },
-    { domain:'bible.ekodi.kr', name:'에코디 말씀대화', group:'Community', role:'말씀·묵상·실천 대화', aliases:['말씀대화','성경대화','bible'] },
-    { domain:'cafe.ekodi.kr', name:'에코디 카페', group:'Community', role:'카페·모임·커뮤니티 준비 공간', aliases:['카페','cafe'] },
-    { domain:'business.ekodi.kr', name:'비즈니스 OS', group:'Business & Commerce', role:'AI 기반 공통 사업 운영', aliases:['비즈니스 os','business os','business'] },
-    { domain:'management.ekodi.kr', name:'경영플랫폼', group:'Business & Commerce', role:'전문 경영AI 선택·연결', aliases:['경영플랫폼','경영 플랫폼','management'] },
-    { domain:'shop.ekodi.kr', name:'쇼핑플랫폼', group:'Business & Commerce', role:'독립 쇼핑몰 생성·운영', aliases:['쇼핑플랫폼','쇼핑 플랫폼','shop'] },
-    { domain:'invest.ekodi.kr', name:'에코디 투자', group:'Business & Commerce', role:'투자 검토·실사·연결', aliases:['투자','invest'] },
+    { domain:'ekodi.kr/social', name:'에코디 소셜', group:'Community', role:'소셜채널·미디어 연동', aliases:['에코디소셜','소셜','social'] },
+    { domain:'ekodi.kr/ekodibiz', name:'에코디비즈', group:'Business & Commerce', role:'사업·고객·서비스 운영', aliases:['에코디비즈','비즈','biz'] },
+    { domain:'ekodi.kr/ekodimall', name:'에코디몰', group:'Business & Commerce', role:'상품·판매·셀러 운영', aliases:['에코디몰','몰','mall'] },
+    { domain:'ekodi.kr/marketing', name:'마케팅 AI', group:'Business & Commerce', role:'마케팅·자동화·Workspace', aliases:['마케팅ai','마케팅 ai','마케팅','marketing ai','marketing'] },
+    { domain:'ekodi.kr/ekodibiz/trade', name:'에코디 트레이딩', group:'Business & Commerce', role:'무역·견적·계약·거래', aliases:['트레이딩','무역','trading','trade'] },
+    { domain:'ekodi.kr/pay', name:'에코디 페이', group:'Business & Commerce', role:'결제·정산·귀속', aliases:['에코디페이','결제','pay'] },
+    { domain:'ekodi.kr/books', name:'에코디서점', group:'Knowledge & Content', role:'출판·배포·인세·콘텐츠', aliases:['에코디북스','북스','출판','books','book'] },
+    { domain:'ekodi.kr/ekodilab', name:'에코디연구소', group:'Knowledge & Content', role:'연구·교육·프로젝트', aliases:['에코디연구소','연구소','lab'] },
+    { domain:'ekodi.kr/mail', name:'에코디 메일', group:'Communication & Cloud', role:'메일 허브·조직 연결', aliases:['에코디메일','메일','mail'] },
+    { domain:'ekodi.kr/live', name:'에코디 라이브', group:'Communication & Cloud', role:'라이브·방송·송출', aliases:['에코디라이브','라이브','live'] },
+    { domain:'ekodi.kr/cloud', name:'에코디 클라우드', group:'Communication & Cloud', role:'파일·문서·협업 자료', aliases:['에코디클라우드','클라우드','cloud'] },
+    { domain:'ekodi.kr/cgma', url:'https://ekodi.kr/cgma/', label:'ekodi.kr/cgma · cgma.or.kr', name:'청계면상인회', group:'Client Sites', role:'상권·회원·고객 운영', aliases:['청계면상인회','청계상권','상인회','cgma'] },
+    { domain:'ekodi.kr/jadam', name:'자담치킨 목포대점', group:'Client Sites', role:'점포·CRM·마케팅 운영', aliases:['자담치킨','자담','jadam'] },
+    { domain:'ekodi.kr/pizzamaru', name:'피자마루 목포대점', group:'Client Sites', role:'점포·CRM·마케팅 운영', aliases:['피자마루','pizzamaru'] },
+    { domain:'ekodi.kr/yogurt', name:'요거트퍼플 목포대점', group:'Client Sites', role:'점포·CRM·마케팅 운영', aliases:['요거트퍼플','요거트','yogurt'] },
+    { domain:'ekodi.kr/bible', name:'에코디 말씀대화', group:'Community', role:'말씀·묵상·실천 대화', aliases:['말씀대화','성경대화','bible'] },
+    { domain:'ekodi.kr/cafe', name:'에코디 카페', group:'Community', role:'카페·모임·커뮤니티 준비 공간', aliases:['카페','cafe'] },
+    { domain:'ekodi.kr/business', name:'비즈니스 OS', group:'Business & Commerce', role:'AI 기반 공통 사업 운영', aliases:['비즈니스 os','business os','business'] },
+    { domain:'ekodi.kr/management', name:'경영플랫폼', group:'Business & Commerce', role:'전문 경영AI 선택·연결', aliases:['경영플랫폼','경영 플랫폼','management'] },
+    { domain:'ekodi.kr/shop', name:'쇼핑플랫폼', group:'Business & Commerce', role:'독립 쇼핑몰 생성·운영', aliases:['쇼핑플랫폼','쇼핑 플랫폼','shop'] },
+    { domain:'ekodi.kr/invest', name:'에코디 투자', group:'Business & Commerce', role:'투자 검토·실사·연결', aliases:['투자','invest'] },
     { domain:'ekodi.kr/support', name:'지원사업 AI', group:'Business & Commerce', role:'지원사업 탐색·신청·정산', aliases:['지원사업 ai','지원사업','support'] },
-    { domain:'money.ekodi.kr', name:'에코디 머니', group:'Business & Commerce', role:'계좌·자동이체 금융정리 안내', aliases:['머니','money'] },
-    { domain:'publishing.ekodi.kr', name:'출판', group:'Knowledge & Content', role:'출판상담·제작·대행·유통', aliases:['출판','publishing'] },
-    { domain:'author.ekodi.kr', name:'크리에이터 AI', group:'Knowledge & Content', role:'글·창작 전반 AI 지원', aliases:['크리에이터 ai','작가ai','creator ai','author'] },
-    { domain:'my.ekodi.kr', name:'마이 에코디', group:'Work & Life', role:'개인 활동·서비스 허브', aliases:['마이 에코디','my ekodi','my'] },
-    { domain:'work.ekodi.kr', name:'에코디 워크', group:'Work & Life', role:'업무·프로젝트 실행 공간', aliases:['워크','업무','work'] },
-    { domain:'energy.ekodi.kr', name:'에너지 AI', group:'Work & Life', role:'전기·에너지 상태 분석·제안', aliases:['에너지 ai','에너지','energy'] },
+    { domain:'ekodi.kr/money', name:'에코디 머니', group:'Business & Commerce', role:'계좌·자동이체 금융정리 안내', aliases:['머니','money'] },
+    { domain:'ekodi.kr/publishing', name:'출판', group:'Knowledge & Content', role:'출판상담·제작·대행·유통', aliases:['출판','publishing'] },
+    { domain:'ekodi.kr/author', name:'크리에이터 AI', group:'Knowledge & Content', role:'글·창작 전반 AI 지원', aliases:['크리에이터 ai','작가ai','creator ai','author'] },
+    { domain:'ekodi.kr/my', name:'마이 에코디', group:'Work & Life', role:'개인 활동·서비스 허브', aliases:['마이 에코디','my ekodi','my'] },
+    { domain:'ekodi.kr/work', name:'에코디 워크', group:'Work & Life', role:'업무·프로젝트 실행 공간', aliases:['워크','업무','work'] },
+    { domain:'ekodi.kr/energy', name:'에너지 AI', group:'Work & Life', role:'전기·에너지 상태 분석·제안', aliases:['에너지 ai','에너지','energy'] },
     { domain:'ekodi.kr/insurance', url:'https://ekodi.kr/insurance', name:'에코디보험', group:'Work & Life', role:'보험 진단·관리·청구 허브', aliases:['보험','insurance','ins'] },
-    { domain:'messenger.ekodi.kr', name:'에코디 메신저', group:'Communication & Cloud', role:'사람·AI·공간 대화 연결', aliases:['메신저','messenger'] },
-    { domain:'media.ekodi.kr', name:'에코디미디어', group:'Communication & Cloud', role:'영상·미디어 콘텐츠 연결', aliases:['미디어','media'] },
+    { domain:'ekodi.kr/messenger', name:'에코디 메신저', group:'Communication & Cloud', role:'사람·AI·공간 대화 연결', aliases:['메신저','messenger'] },
+    { domain:'ekodi.kr/media', name:'에코디미디어', group:'Communication & Cloud', role:'영상·미디어 콘텐츠 연결', aliases:['미디어','media'] },
   ];
 
   const DECISION_RULES = [
@@ -356,8 +356,8 @@
     } else {
       items.push({ name:'Chief AI', conclusion:'전체 Site AI 상태를 모아 우선순위와 영향범위를 판단합니다.' });
     }
-    if (/(로그인|인증|권한|보안|token|토큰|auth)/i.test(text) || site?.domain === 'auth.ekodi.kr') items.push({ name:'Security AI', conclusion:'인증·권한·토큰 노출 여부를 우선 확인하고 비밀정보를 브라우저에 남기지 않는 경계를 적용합니다.' });
-    if (/(결제|요금|가격|정산|회계|pay|finance)/i.test(text) || site?.domain === 'pay.ekodi.kr') items.push({ name:'Finance AI', conclusion:'결제·정산·비용 영향은 별도 검토하며 정책 변경은 Decision Gate를 거칩니다.' });
+    if (/(로그인|인증|권한|보안|token|토큰|auth)/i.test(text) || site?.domain === 'ekodi.kr/auth') items.push({ name:'Security AI', conclusion:'인증·권한·토큰 노출 여부를 우선 확인하고 비밀정보를 브라우저에 남기지 않는 경계를 적용합니다.' });
+    if (/(결제|요금|가격|정산|회계|pay|finance)/i.test(text) || site?.domain === 'ekodi.kr/pay') items.push({ name:'Finance AI', conclusion:'결제·정산·비용 영향은 별도 검토하며 정책 변경은 Decision Gate를 거칩니다.' });
     if (classification !== 'INFO' || status?.key === 'critical' || /(배포|수정|고쳐|복구|장애|오류)/i.test(text)) items.push({ name:'Release AI', conclusion:'수정이 필요하면 staging → CI → guarded release → 실제 도메인 검증 순서를 유지합니다.' });
     items.push({ name:'Platform AI', conclusion:'API·네트워크·공통 인프라와 서비스 상태를 함께 비교합니다.' });
     return items.slice(0, 4);
@@ -426,7 +426,7 @@
       let overview = latestOverview;
       try { overview = await fetchOverview(false); } catch {}
       const issues = overviewIssues(overview);
-      const critical = issues.filter(item => ['admin.ekodi.kr','auth.ekodi.kr','pay.ekodi.kr','api.ekodi.kr'].includes(item.domain));
+      const critical = issues.filter(item => ['ekodi.kr/admin','ekodi.kr/auth','ekodi.kr/pay','ekodi.kr/api'].includes(item.domain));
       return {
         role:'assistant', classification:critical.length ? 'DECISION' : 'INFO',
         content:critical.length
@@ -476,10 +476,10 @@
         if (service?.stats24h) content += `\n24시간 가용률: ${service.stats24h.availabilityPercent ?? '—'}% · 평균응답 ${service.stats24h.averageResponseTime ?? '—'}ms`;
         if (!service) content += '\n\n이 사이트는 AI Ops에는 등록되어 있지만 Control API 실시간 점검 레지스트리에는 아직 직접 연결되지 않았습니다. 상태판에서는 “연결 대기”로 표시합니다.';
         return {
-          role:'assistant', classification:status?.key === 'critical' && ['admin.ekodi.kr','auth.ekodi.kr','pay.ekodi.kr'].includes(site.domain) ? 'DECISION' : status?.key === 'critical' || status?.key === 'attention' ? 'REPORT' : 'INFO',
+          role:'assistant', classification:status?.key === 'critical' && ['ekodi.kr/admin','ekodi.kr/auth','ekodi.kr/pay'].includes(site.domain) ? 'DECISION' : status?.key === 'critical' || status?.key === 'attention' ? 'REPORT' : 'INFO',
           content,
           council:councilFor(site, status, input, status?.key === 'healthy' ? 'INFO' : 'REPORT'),
-          actions:actionSet(site, { includeReview:!force, includeDecision:status?.key === 'critical' && ['admin.ekodi.kr','auth.ekodi.kr','pay.ekodi.kr'].includes(site.domain) }),
+          actions:actionSet(site, { includeReview:!force, includeDecision:status?.key === 'critical' && ['ekodi.kr/admin','ekodi.kr/auth','ekodi.kr/pay'].includes(site.domain) }),
         };
       }
       const issues = overviewIssues(overview);

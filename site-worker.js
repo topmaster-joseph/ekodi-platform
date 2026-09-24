@@ -14,7 +14,7 @@ import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from '
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
 const PUBLIC_HOST = 'ekodi.kr';
-const PUBLIC_ALIAS_HOSTS = new Set(['www.ekodi.kr']);
+const PUBLIC_ALIAS_HOSTS = new Set(['ekodi.kr']);
 const MALL_PREFIX = '/ekodimall';
 const MALL_ROOT_ALIAS_PREFIX = '/ekodibiz/ekodimall';
 const FORMER_MALL_PREFIX = '/ekodibiz/mall';
@@ -40,11 +40,11 @@ const WORKSPACE_ADMIN_ASSET_ALIASES = new Map([
 ]);
 
 const ADMIN_HOSTS = new Set([
-  'admin.ekodi.kr',
-  'admin.biz.ekodi.kr',
-  'admin.church.ekodi.kr',
-  'admin.lab.ekodi.kr',
-  'admin.trade.ekodi.kr',
+  'ekodi.kr/admin',
+  'ekodi.kr/ekodibiz/admin',
+  'ekodi.kr/ekodichurch/admin',
+  'ekodi.kr/ekodilab/admin',
+  'ekodi.kr/ekodibiz/trade/admin',
 ]);
 const ADMIN_STORAGE_PREFIX = '/api/control/storage/';
 const ADMIN_PERSONAL_FINANCE_PATH = '/api/control/personal-finance';
@@ -52,20 +52,20 @@ const ADMIN_MARKETING_PUBLISHING_PREFIX = '/api/control/marketing-publishing';
 const ADMIN_COMMON_SERVICE_AI_PREFIX = '/api/control/common-services/ai/';
 
 const HUB_HOSTS = new Set([
-  'pay.ekodi.kr',
-  'pay.biz.ekodi.kr',
-  'mail.ekodi.kr',
-  'mail.biz.ekodi.kr',
-  'mail.church.ekodi.kr',
-  'live.ekodi.kr',
-  'live.biz.ekodi.kr',
-  'live.church.ekodi.kr',
-  'live.lab.ekodi.kr',
-  'cloud.ekodi.kr',
+  'ekodi.kr/pay',
+  'ekodi.kr/ekodibiz/pay',
+  'ekodi.kr/mail',
+  'ekodi.kr/ekodibiz/mail',
+  'ekodi.kr/ekodichurch/mail',
+  'ekodi.kr/live',
+  'ekodi.kr/ekodibiz/live',
+  'ekodi.kr/ekodichurch/live',
+  'ekodi.kr/ekodilab/live',
+  'ekodi.kr/cloud',
 ]);
 
-const TRADE_CANONICAL_HOST = 'trade.biz.ekodi.kr';
-const TRADE_LEGACY_HOSTS = new Set(['trade.ekodi.kr']);
+const TRADE_CANONICAL_HOST = 'ekodi.kr/ekodibiz/trade';
+const TRADE_LEGACY_HOSTS = new Set(['ekodi.kr/ekodibiz/trade']);
 
 const ADMIN_ALIASES = new Set([
   '/',
@@ -211,7 +211,7 @@ const MALL_CSP = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.tosspayments.com",
-  "connect-src 'self' https://ekodi.kr https://mall-api.ekodi.kr https://mall-api-staging.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://*.tosspayments.com",
+  "connect-src 'self' https://ekodi.kr https://mall-ekodi.kr/api https://ekodi.kr/mall-api-staging https://renzehysxirjilvdxacv.supabase.co https://*.tosspayments.com",
   "frame-src https://*.tosspayments.com",
   "img-src 'self' data: blob: https:",
   "frame-ancestors 'none'",
@@ -220,7 +220,7 @@ const MALL_CSP = [
   "object-src 'none'",
 ].join('; ');
 
-const MALL_ADMIN_EMBED_CSP = MALL_CSP.replace("frame-ancestors 'none'", 'frame-ancestors https://admin.ekodi.kr');
+const MALL_ADMIN_EMBED_CSP = MALL_CSP.replace("frame-ancestors 'none'", 'frame-ancestors https://ekodi.kr/admin');
 
 const ADMIN_CSP = [
   "default-src 'self'",

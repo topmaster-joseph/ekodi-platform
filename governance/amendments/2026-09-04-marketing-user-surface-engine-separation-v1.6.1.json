@@ -14,8 +14,8 @@
   "canonical": {
     "product": "https://ekodi.kr/ekodibiz/marketing-ai",
     "workspacePattern": "https://ekodi.kr/{slug}/marketing",
-    "marketingCore": "https://marketing.ekodi.kr",
-    "aiGateway": "https://ai.ekodi.kr"
+    "marketingCore": "https://ekodi.kr/marketing",
+    "aiGateway": "https://ekodi.kr/ai"
   },
   "legacy": {
     "customerAiSubdomains": "compatibility execution aliases only"

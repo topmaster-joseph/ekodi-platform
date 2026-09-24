@@ -1,11 +1,11 @@
-const HIDDEN_UI_ORIGINS=Object.freeze(['https://marketing.ekodi.kr','https://jadam.ai.ekodi.kr','https://pizzamaru.ai.ekodi.kr','https://yogurt.ai.ekodi.kr','https://cgma.ai.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurt.ekodi.kr','https://marketing.jadam.ekodi.kr','https://marketing.pizzamaru.ekodi.kr','https://marketing.yogurt.ekodi.kr','https://marketing.cheonggye.ekodi.kr']);
+const HIDDEN_UI_ORIGINS=Object.freeze(['https://ekodi.kr/marketing','https://ekodi.kr/jadam/marketing','https://ekodi.kr/pizzamaru/marketing','https://ekodi.kr/yogurt/marketing','https://ekodi.kr/cgma/marketing','https://ekodi.kr/jadam','https://ekodi.kr/pizzamaru','https://ekodi.kr/yogurt','https://ekodi.kr/marketing/jadam','https://ekodi.kr/marketing/pizzamaru','https://ekodi.kr/marketing/yogurt','https://ekodi.kr/cheonggye/marketing']);
 
 const PROJECTIONS = [
-  { prefix:'/ekodibiz/marketing-ai', sourceOrigin:'https://marketing.ekodi.kr', entryPath:'/', tenant:null, hiddenOrigins:HIDDEN_UI_ORIGINS },
-  { prefix:'/jadam/marketing', sourceOrigin:'https://jadam.ai.ekodi.kr', entryPath:'/', tenant:'jadam', hiddenOrigins:HIDDEN_UI_ORIGINS },
-  { prefix:'/pizzamaru/marketing', sourceOrigin:'https://pizzamaru.ai.ekodi.kr', entryPath:'/', tenant:'pizzamaru', hiddenOrigins:HIDDEN_UI_ORIGINS },
-  { prefix:'/yogurt/marketing', sourceOrigin:'https://yogurt.ai.ekodi.kr', entryPath:'/', tenant:'yogurt', hiddenOrigins:HIDDEN_UI_ORIGINS },
-  { prefix:'/cgma/marketing', sourceOrigin:'https://cgma.ai.ekodi.kr', entryPath:'/market-ai', tenant:'cgma', hiddenOrigins:HIDDEN_UI_ORIGINS },
+  { prefix:'/ekodibiz/marketing-ai', sourceOrigin:'https://ekodi.kr/marketing', entryPath:'/', tenant:null, hiddenOrigins:HIDDEN_UI_ORIGINS },
+  { prefix:'/jadam/marketing', sourceOrigin:'https://ekodi.kr/jadam/marketing', entryPath:'/', tenant:'jadam', hiddenOrigins:HIDDEN_UI_ORIGINS },
+  { prefix:'/pizzamaru/marketing', sourceOrigin:'https://ekodi.kr/pizzamaru/marketing', entryPath:'/', tenant:'pizzamaru', hiddenOrigins:HIDDEN_UI_ORIGINS },
+  { prefix:'/yogurt/marketing', sourceOrigin:'https://ekodi.kr/yogurt/marketing', entryPath:'/', tenant:'yogurt', hiddenOrigins:HIDDEN_UI_ORIGINS },
+  { prefix:'/cgma/marketing', sourceOrigin:'https://ekodi.kr/cgma/marketing', entryPath:'/market-ai', tenant:'cgma', hiddenOrigins:HIDDEN_UI_ORIGINS },
 ];
 
 export const MARKETING_CANONICAL_PROJECTIONS = Object.freeze(PROJECTIONS.map(item=>Object.freeze({...item,hiddenOrigins:Object.freeze([...item.hiddenOrigins])})));

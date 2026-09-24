@@ -14,7 +14,7 @@ D1/Supabase and R2 are not authoritative replacements for a durable record that 
 
 ## Existing canonical control plane
 
-The existing `drive.ekodi.kr` Storage Worker remains the only Google-storage control plane.
+The existing `ekodi.kr/storage` Storage Worker remains the only Google-storage control plane.
 
 - Primary Google account is restricted to the `ekodi.kr` organization.
 - The canonical Shared Drive ID and name are configured in `wrangler.storage.toml`.
@@ -37,7 +37,7 @@ ekodi.kr/api
 EKODI Storage Gateway
           |
           v
-drive.ekodi.kr
+ekodi.kr/storage
           |
           v
 encrypted primary OAuth connection + storage_routes
@@ -46,13 +46,13 @@ encrypted primary OAuth connection + storage_routes
 Google Workspace Shared Drive: EKODI
 ```
 
-Google OAuth credentials stay inside the `drive.ekodi.kr` Worker. External modules and ordinary browser clients never receive them.
+Google OAuth credentials stay inside the `ekodi.kr/storage` Worker. External modules and ordinary browser clients never receive them.
 
 ## API
 
 Canonical facade: `https://ekodi.kr/api/storage/v1`
 
-Storage-control implementation: `https://drive.ekodi.kr/api/storage/v1`
+Storage-control implementation: `https://ekodi.kr/storage/api/storage/v1`
 
 - `GET /health` — non-secret canonical Drive and route readiness.
 - `GET /policy` — authenticated storage policy summary.
@@ -111,7 +111,7 @@ external AI -> privileged R2 credentials
 second/parallel Google credential system -> canonical Drive
 ```
 
-The permitted durable write pattern is contract-based access through `ekodi.kr/api`, with Google access terminating inside `drive.ekodi.kr`.
+The permitted durable write pattern is contract-based access through `ekodi.kr/api`, with Google access terminating inside `ekodi.kr/storage`.
 
 ## Definition of done
 

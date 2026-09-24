@@ -10,7 +10,7 @@ const CSP = [
   "frame-src https://*.tosspayments.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
-  "form-action 'self' https://auth.ekodi.kr https://*.tosspayments.com",
+  "form-action 'self' https://ekodi.kr/auth https://*.tosspayments.com",
   "object-src 'none'",
 ].join('; ');
 
@@ -64,8 +64,8 @@ export default {
         },
       });
     }
-    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?route=books&source=author.ekodi.kr', 307);
-    if (url.pathname === '/books' || url.pathname === '/books/') return Response.redirect('https://books.ekodi.kr/', 307);
+    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://ekodi.kr/admin/?route=books&source=ekodi.kr/author', 307);
+    if (url.pathname === '/books' || url.pathname === '/books/') return Response.redirect('https://ekodi.kr/books/', 307);
     if (url.pathname === '/my' || url.pathname === '/my/') return Response.redirect('https://ekodi.kr/my/', 307);
     if (url.pathname === '/community' || url.pathname === '/community/') return Response.redirect('https://ekodi.kr/community/', 307);
     const response = await env.ASSETS.fetch(request);

@@ -1,5 +1,5 @@
 ﻿const PREFIX='/api/insurance/admin';
-const APPROVED_BACKENDS=new Set(['https://ekodi-insurance-api-staging.ekodi-development.workers.dev','https://insurance-api.ekodi.kr']);
+const APPROVED_BACKENDS=new Set(['https://ekodi-insurance-api-staging.ekodi-development.workers.dev','https://insurance-ekodi.kr/api']);
 
 function json(data,status=200,sourceHeaders=null){
   const headers=new Headers({'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});

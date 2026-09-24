@@ -17,7 +17,7 @@
 ## 관리자 진입 원칙
 
 - canonical 소유 관리자 경로는 `https://ekodi.kr/cgma/admin/member`이다.
-- 기존 `https://admin.ekodi.kr/#cheonggye-members`는 전환 기간 호환 진입으로만 유지하며 중앙 기본 메뉴에는 노출하지 않는다.
+- 기존 `https://ekodi.kr/admin/#cheonggye-members`는 전환 기간 호환 진입으로만 유지하며 중앙 기본 메뉴에는 노출하지 않는다.
 - 일반 회원 로그인·정회원 신청 주소 `https://ekodi.kr/cgma/member`는 별도 사용자 화면으로 유지한다.
 
 ## 시스템 적용 원칙

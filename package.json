@@ -32,7 +32,7 @@
     "validate:internal-ui": "node scripts/validate-internal-ui-rollout.mjs",
     "validate:core-completion": "node scripts/validate-ekodi-core-completion.mjs",
     "validate:admin-source": "node scripts/validate-admin-source.mjs",
-    "validate:admin-routes": "node scripts/validate-admin-routing-policy.mjs && node --test test/admin-route-addressability.test.mjs && node scripts/validate-admin-subdomain-routes.mjs",
+    "validate:admin-routes": "node scripts/validate-admin-routing-policy.mjs && node --test test/admin-route-addressability.test.mjs && node scripts/validate-admin-apex-routes.mjs",
     "validate:membership": "node scripts/validate-universal-membership.mjs",
     "verify:core-production": "node scripts/verify-ekodi-core-production.mjs",
     "test:ai-none": "node --test test/ai-provider-none.test.mjs",

@@ -2,7 +2,7 @@ import { DurableObject } from 'cloudflare:workers';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
 const MAX_GOAL_LENGTH = 4000;
-const PAYMENT_URL = 'https://pay.ekodi.kr';
+const PAYMENT_URL = 'https://ekodi.kr/pay';
 const STORE_NAME = 'ekodibiz-global';
 
 const CATALOG = [
@@ -82,7 +82,7 @@ function securityHeaders() {
     'x-frame-options': 'DENY',
     'referrer-policy': 'strict-origin-when-cross-origin',
     'permissions-policy': 'camera=(), microphone=(), geolocation=()',
-    'content-security-policy': "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://pay.ekodi.kr"
+    'content-security-policy': "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://ekodi.kr/pay"
   };
 }
 
@@ -244,7 +244,7 @@ async function persistLead(env, goal, insight) {
     intent: insight.intent,
     recommendedOfferId: insight.suggestedOffers[0]?.id || null,
     status: 'qualified',
-    source: 'biz.ekodi.kr',
+    source: 'ekodi.kr/ekodibiz',
     containsContactData: false,
     createdAt: new Date().toISOString()
   };
@@ -400,7 +400,7 @@ export class RevenueStore extends DurableObject {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?route=organization&source=biz.ekodi.kr', 307);
+    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://ekodi.kr/admin/?route=organization&source=ekodi.kr/ekodibiz', 307);
     if (url.pathname.startsWith('/api/')) return handleApi(request, url, env, ctx);
     if (request.method !== 'GET' && request.method !== 'HEAD') return json({ error: 'method_not_allowed' }, 405);
     if (!env.ASSETS) return new Response('EKODIBIZ assets unavailable', { status: 503, headers: securityHeaders() });

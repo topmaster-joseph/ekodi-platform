@@ -59,12 +59,12 @@ const canonicalRouter = fs.readFileSync(path.join(root, 'canonical-surface-route
 const boundaries = JSON.parse(fs.readFileSync(path.join(root, 'platform-boundaries.json'), 'utf8'));
 const constitution = JSON.parse(fs.readFileSync(path.join(root, 'governance/constitution/constitution.json'), 'utf8'));
 const serviceManifest = fs.readFileSync(path.join(root, 'ekodi-service-manifest.js'), 'utf8');
-if (constitution.legacyDomainTargets?.['bible.ekodi.kr'] !== 'https://ekodi.kr/bible') fail('constitutional Bible legacy target drift');
-if (wrangler.includes('pattern = "ekodi.kr/bible*"') || !wrangler.includes('pattern = "bible.ekodi.kr"')) fail('Bible Worker must own only the legacy compatibility host');
+if (constitution.legacyDomainTargets?.['ekodi.kr/bible'] !== 'https://ekodi.kr/bible') fail('constitutional Bible legacy target drift');
+if (wrangler.includes('pattern = "ekodi.kr/bible*"') || !wrangler.includes('pattern = "ekodi.kr/bible"')) fail('Bible Worker must own only the legacy compatibility host');
 if (!siteWrangler.includes('binding = "BIBLE"') || !siteWrangler.includes('service = "ekodi-bible-conversation"') || !siteWrangler.includes('"/bible*"')) fail('apex gateway must own /bible through the Bible service binding');
 if (!canonicalRouter.includes("id:'bible',prefix:'/bible',binding:'BIBLE',basePathAware:true")) fail('canonical surface router must bind /bible without double-prefix rewriting');
 const bibleBoundary = boundaries.platforms?.['bible-conversation'];
-if (bibleBoundary?.canonicalPath !== 'https://ekodi.kr/bible' || !bibleBoundary?.legacyRedirectDomains?.includes('bible.ekodi.kr')) fail('Bible platform boundary must expose canonical path and legacy redirect');
+if (bibleBoundary?.canonicalPath !== 'https://ekodi.kr/bible' || !bibleBoundary?.legacyRedirectDomains?.includes('ekodi.kr/bible')) fail('Bible platform boundary must expose canonical path and legacy redirect');
 if (!serviceManifest.includes("id:'bible'") || !serviceManifest.includes("url:'https://ekodi.kr/bible'")) fail('Bible user service manifest must use canonical path');
 for (const marker of ['/api/bible/providers', '/api/bible/passage', '/api/bible/search', 'scripture: scripture?.ok', '제공된 본문은 KRV1961 원문이며 수정·교정·의역' ]) {
   if (!worker.includes(marker)) fail(`worker marker missing: ${marker}`);

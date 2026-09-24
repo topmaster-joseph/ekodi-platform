@@ -4,9 +4,9 @@
   "class": "C2",
   "status": "approved",
   "approvedBy": "topmaster-joseph",
-  "approvalSource": "Explicit EKODI Platform Super Administrator instruction in the ChatGPT conversation to build, deploy and operate EKODI Invest with ekodi.kr/ekodibiz/invest and its site-local /admin surface while keeping invest.ekodi.kr independent.",
+  "approvalSource": "Explicit EKODI Platform Super Administrator instruction in the ChatGPT conversation to build, deploy and operate EKODI Invest with ekodi.kr/ekodibiz/invest and its site-local /admin surface while keeping ekodi.kr/invest independent.",
   "constitutionVersion": "1.5.1",
-  "summary": "Register invest.ekodi.kr as the reusable common Invest Core while EKODIBIZ-specific investment business and administration remain under ekodi.kr/ekodibiz/invest and /admin.",
+  "summary": "Register ekodi.kr/invest as the reusable common Invest Core while EKODIBIZ-specific investment business and administration remain under ekodi.kr/ekodibiz/invest and /admin.",
   "affectedAreas": [
     "common-service-boundaries",
     "workspace-child-services",

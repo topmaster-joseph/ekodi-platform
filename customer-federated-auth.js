@@ -8,10 +8,10 @@ const ITERATIONS = 310000;
 const encoder = new TextEncoder();
 
 const TENANTS = Object.freeze([
-  { slug: 'cgma', name: '청계면상인회', domain: 'cgma.ekodi.kr' },
-  { slug: 'jadam', name: '자담치킨 목포대점', domain: 'jadam.ekodi.kr' },
-  { slug: 'pizzamaru', name: '피자마루 목포대점', domain: 'pizzamaru.ekodi.kr' },
-  { slug: 'yogurt', name: '요거트퍼플 목포대점', domain: 'yogurt.ekodi.kr' },
+  { slug: 'cgma', name: '청계면상인회', domain: 'ekodi.kr/cgma' },
+  { slug: 'jadam', name: '자담치킨 목포대점', domain: 'ekodi.kr/jadam' },
+  { slug: 'pizzamaru', name: '피자마루 목포대점', domain: 'ekodi.kr/pizzamaru' },
+  { slug: 'yogurt', name: '요거트퍼플 목포대점', domain: 'ekodi.kr/yogurt' },
 ]);
 const TENANT_SET = new Set(TENANTS.map(item => item.slug));
 
@@ -139,7 +139,7 @@ async function ensureSchema(db) {
   const seed = db.prepare(`INSERT OR IGNORE INTO customer_tenants (slug, name, domain, status, created_at)
     VALUES (?, ?, ?, 'active', ?)`);
   await db.batch(TENANTS.map(tenant => seed.bind(tenant.slug, tenant.name, tenant.domain, now)));
-  await db.prepare("UPDATE customer_tenants SET domain = 'yogurt.ekodi.kr' WHERE slug = 'yogurt' AND domain <> 'yogurt.ekodi.kr'").run();
+  await db.prepare("UPDATE customer_tenants SET domain = 'ekodi.kr/yogurt' WHERE slug = 'yogurt' AND domain <> 'ekodi.kr/yogurt'").run();
 }
 
 async function issueSession(db, userId, tenantId, maxExpiresAt = '') {

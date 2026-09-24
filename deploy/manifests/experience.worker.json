@@ -5,54 +5,54 @@
     "config": "wrangler.experience.toml",
     "requests": [
       {
-        "url": "https://exp.ekodi.kr/",
+        "url": "https://ekodi.kr/experience/",
         "statuses": [200],
         "redirect": "follow",
         "expect": ["사용자모드", "개발자모드"],
         "headerExpect": ["x-ekodi-shell: v2"]
       },
       {
-        "url": "https://exp.ekodi.kr/health",
+        "url": "https://ekodi.kr/experience/health",
         "statuses": [200],
         "redirect": "follow",
-        "expect": ["ekodi-experience", "synthetic-only", "experience_public", "https://exp.ekodi.kr"]
+        "expect": ["ekodi-experience", "synthetic-only", "experience_public", "https://ekodi.kr/experience"]
       },
       {
-        "url": "https://exp.ekodi.kr/api/catalog",
+        "url": "https://ekodi.kr/experience/api/catalog",
         "statuses": [200],
         "redirect": "follow",
         "expect": ["curated-public-projection", "syntheticDataOnly", "internalTopologyVisible"]
       },
       {
-        "url": "https://exp.ekodi.kr/admin",
+        "url": "https://ekodi.kr/experience/admin",
         "statuses": [301, 302, 307, 308],
         "redirect": "manual",
-        "headerExpect": ["location: https://admin.ekodi.kr/experience"]
+        "headerExpect": ["location: https://ekodi.kr/admin/experience"]
       },
       {
-        "url": "https://dev.ekodi.kr/",
+        "url": "https://ekodi.kr/developer/",
         "statuses": [200],
         "redirect": "follow",
         "expect": ["EKODI DEVELOPER", "CONFORMANCE PREFLIGHT", "Certification"],
         "headerExpect": ["x-ekodi-shell: v2"]
       },
       {
-        "url": "https://dev.ekodi.kr/health",
+        "url": "https://ekodi.kr/developer/health",
         "statuses": [200],
         "redirect": "follow",
         "expect": ["ekodi-developer-portal", "public-contract-only", "public-preflight"]
       },
       {
-        "url": "https://dev.ekodi.kr/api/contract",
+        "url": "https://ekodi.kr/developer/api/contract",
         "statuses": [200],
         "redirect": "follow",
         "expect": ["ekodi.responsible-service.v1", "serviceBoundary.failureIsolation", "providerStrategy.externalProviderPrivateDbAccess"]
       },
       {
-        "url": "https://try.ekodi.kr/",
+        "url": "https://ekodi.kr/experience/",
         "statuses": [308],
         "redirect": "manual",
-        "headerExpect": ["location: https://exp.ekodi.kr/"]
+        "headerExpect": ["location: https://ekodi.kr/experience/"]
       }
     ],
     "allowFirstDeploy": true

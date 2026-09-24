@@ -8,23 +8,23 @@ Use a first-level subdomain when the service is an ecosystem-wide brand, platfor
 
 | Purpose | Canonical address |
 |---|---|
-| Business | `biz.ekodi.kr` |
-| Trading | `trade.ekodi.kr` |
-| Mall | `mall.ekodi.kr` |
-| Payments | `pay.ekodi.kr` |
-| Books | `books.ekodi.kr` |
-| Lab | `lab.ekodi.kr` |
-| Church | `church.ekodi.kr` |
-| Mission | `mission.ekodi.kr` |
-| Community | `community.ekodi.kr` |
-| Insurance | `ins.ekodi.kr` |
-| Education | `edu.ekodi.kr` |
-| Media | `media.ekodi.kr` |
-| Events | `event.ekodi.kr` |
-| Giving | `give.ekodi.kr` |
-| Administration | `admin.ekodi.kr` |
+| Business | `ekodi.kr/ekodibiz` |
+| Trading | `ekodi.kr/ekodibiz/trade` |
+| Mall | `ekodi.kr/ekodimall` |
+| Payments | `ekodi.kr/pay` |
+| Books | `ekodi.kr/books` |
+| Lab | `ekodi.kr/ekodilab` |
+| Church | `ekodi.kr/ekodichurch` |
+| Mission | `ekodi.kr/mission` |
+| Community | `ekodi.kr/community` |
+| Insurance | `ekodi.kr/ins` |
+| Education | `ekodi.kr/education` |
+| Media | `ekodi.kr/media` |
+| Events | `ekodi.kr/event` |
+| Giving | `ekodi.kr/give` |
+| Administration | `ekodi.kr/admin` |
 | Shared API | `ekodi.kr/api` |
-| Shared webmail entry | `mail.ekodi.kr` |
+| Shared webmail entry | `ekodi.kr/mail` |
 
 ## 2. Nested functional domains
 
@@ -34,14 +34,14 @@ When the same function can exist independently inside multiple EKODI units, use:
 
 Examples:
 
-- Church live broadcast: `live.church.ekodi.kr`
-- Business live broadcast: `live.biz.ekodi.kr`
-- Church webmail entry: `mail.church.ekodi.kr`
-- Business webmail entry: `mail.biz.ekodi.kr`
-- Church administration: `admin.church.ekodi.kr`
-- Business administration: `admin.biz.ekodi.kr`
-- Business API: `api.biz.ekodi.kr`
-- Trading API: `api.trade.ekodi.kr`
+- Church live broadcast: `ekodi.kr/ekodichurch/live`
+- Business live broadcast: `ekodi.kr/ekodibiz/live`
+- Church webmail entry: `ekodi.kr/ekodichurch/mail`
+- Business webmail entry: `ekodi.kr/ekodibiz/mail`
+- Church administration: `ekodi.kr/ekodichurch/admin`
+- Business administration: `ekodi.kr/ekodibiz/admin`
+- Business API: `ekodi.kr/api/ekodibiz`
+- Trading API: `ekodi.kr/api/ekodibiz/trade`
 
 This allows identical functions such as `live`, `mail`, `admin`, and `api` to be operated independently while remaining under one `ekodi.kr` zone.
 
@@ -53,23 +53,23 @@ Webmail entry hostnames and email-address domains are intentionally separate.
 
 The following hostnames are stable browser entry points and currently redirect to Google Gmail. They can later be retargeted without changing the public address.
 
-- `mail.ekodi.kr` — shared EKODI mail entry
-- `mail.biz.ekodi.kr` — EKODI Biz mail entry
-- `mail.church.ekodi.kr` — EKODI Church mail entry
-- `mail.lab.ekodi.kr` — EKODI Lab mail entry
-- `mail.books.ekodi.kr` — EKODI Books mail entry
-- `mail.trade.ekodi.kr` — EKODI Trading mail entry
+- `ekodi.kr/mail` — shared EKODI mail entry
+- `ekodi.kr/ekodibiz/mail` — EKODI Biz mail entry
+- `ekodi.kr/ekodichurch/mail` — EKODI Church mail entry
+- `ekodi.kr/ekodilab/mail` — EKODI Lab mail entry
+- `ekodi.kr/books/mail` — EKODI Books mail entry
+- `ekodi.kr/ekodibiz/trade/mail` — EKODI Trading mail entry
 
 ### Email-address domains
 
-Do not create user addresses such as `user@mail.biz.ekodi.kr` unless there is a specific technical reason. The preferred address pattern is:
+Do not create user addresses such as `user@ekodi.kr/ekodibiz/mail` unless there is a specific technical reason. The preferred address pattern is:
 
 - EKODI root identity: `user@ekodi.kr`
-- Business: `user@biz.ekodi.kr`
-- Church: `user@church.ekodi.kr`
-- Lab: `user@lab.ekodi.kr`
-- Books: `user@books.ekodi.kr`
-- Trading: `user@trade.ekodi.kr`
+- Business: `user@ekodi.kr/ekodibiz`
+- Church: `user@ekodi.kr/ekodichurch`
+- Lab: `user@ekodi.kr/ekodilab`
+- Books: `user@ekodi.kr/books`
+- Trading: `user@ekodi.kr/ekodibiz/trade`
 
 Each address domain can be added to Google Workspace as a secondary domain or domain alias according to the organizational requirement. Incoming mail requires MX records on the email-address domain itself, not on the `mail.*` browser-entry hostname.
 
@@ -78,25 +78,25 @@ For Google Workspace, keep SPF, DKIM, and DMARC aligned with every domain that i
 ### Recommended rollout
 
 1. Keep the currently operating `@ekodibiz.kr` Workspace mail unchanged during migration.
-2. Add `biz.ekodi.kr` to Google Workspace and verify domain ownership before enabling mail on it.
-3. Add the required MX and authentication records for `biz.ekodi.kr`.
+2. Add `ekodi.kr/ekodibiz` to Google Workspace and verify domain ownership before enabling mail on it.
+3. Add the required MX and authentication records for `ekodi.kr/ekodibiz`.
 4. Test sending and receiving before making new addresses public.
-5. Repeat for `church.ekodi.kr`, `lab.ekodi.kr`, `books.ekodi.kr`, and `trade.ekodi.kr` only when each unit actually needs its own mail identity.
+5. Repeat for `ekodi.kr/ekodichurch`, `ekodi.kr/ekodilab`, `ekodi.kr/books`, and `ekodi.kr/ekodibiz/trade` only when each unit actually needs its own mail identity.
 6. Keep `mail.*` URLs as stable browser gateways independent of the underlying mail provider.
 
 ## 4. Shared vs unit-specific rule
 
 Use a first-level domain when one service is shared across the whole ecosystem.
 
-- Shared payments: `pay.ekodi.kr`
-- Shared identity/admin: `admin.ekodi.kr`
+- Shared payments: `ekodi.kr/pay`
+- Shared identity/admin: `ekodi.kr/admin`
 - Shared API gateway: `ekodi.kr/api`
-- Shared webmail entry: `mail.ekodi.kr`
+- Shared webmail entry: `ekodi.kr/mail`
 
 Use a nested domain when a unit needs its own independent instance.
 
-- `mail.biz.ekodi.kr` and `mail.church.ekodi.kr`
-- `live.biz.ekodi.kr` and `live.church.ekodi.kr`
+- `ekodi.kr/ekodibiz/mail` and `ekodi.kr/ekodichurch/mail`
+- `ekodi.kr/ekodibiz/live` and `ekodi.kr/ekodichurch/live`
 
 ## 5. Infrastructure rule
 
@@ -111,47 +111,47 @@ Use a nested domain when a unit needs its own independent instance.
 
 Existing standalone EKODI domains are retained for brand protection and transition.
 
-After the corresponding `*.ekodi.kr` service is verified in production, the standalone domain should normally become a permanent redirect to the canonical EKODI address when its DNS zone is under EKODI Cloudflare management.
+After the corresponding `EKODI child-host address` service is verified in production, the standalone domain should normally become a permanent redirect to the canonical EKODI address when its DNS zone is under EKODI Cloudflare management.
 
 Examples:
 
-- `ekodichurch.kr` → `church.ekodi.kr`
-- `ekodilab.kr` → `lab.ekodi.kr`
-- `ekodimall.kr` → `mall.ekodi.kr`
-- `ekodibook.kr` → `books.ekodi.kr`
-- `ekodibiz.kr` → `biz.ekodi.kr` after the legacy domain is moved under the managed Cloudflare zone
+- `ekodichurch.kr` → `ekodi.kr/ekodichurch`
+- `ekodilab.kr` → `ekodi.kr/ekodilab`
+- `ekodimall.kr` → `ekodi.kr/ekodimall`
+- `ekodibook.kr` → `ekodi.kr/books`
+- `ekodibiz.kr` → `ekodi.kr/ekodibiz` after the legacy domain is moved under the managed Cloudflare zone
 
 ## 7. Current activation status
 
 Production service domains:
 
-- `books.ekodi.kr`
-- `biz.ekodi.kr`
-- `church.ekodi.kr`
-- `lab.ekodi.kr`
-- `mall.ekodi.kr`
+- `ekodi.kr/books`
+- `ekodi.kr/ekodibiz`
+- `ekodi.kr/ekodichurch`
+- `ekodi.kr/ekodilab`
+- `ekodi.kr/ekodimall`
 
 Broadcast gateway:
 
-- `live.church.ekodi.kr` → EKODI Church YouTube live page
+- `ekodi.kr/ekodichurch/live` → EKODI Church YouTube live page
 
 Mail browser gateways:
 
-- `mail.ekodi.kr` → Gmail
-- `mail.biz.ekodi.kr` → Gmail
-- `mail.church.ekodi.kr` → Gmail
-- `mail.lab.ekodi.kr` → Gmail
-- `mail.books.ekodi.kr` → Gmail
-- `mail.trade.ekodi.kr` → Gmail
+- `ekodi.kr/mail` → Gmail
+- `ekodi.kr/ekodibiz/mail` → Gmail
+- `ekodi.kr/ekodichurch/mail` → Gmail
+- `ekodi.kr/ekodilab/mail` → Gmail
+- `ekodi.kr/books/mail` → Gmail
+- `ekodi.kr/ekodibiz/trade/mail` → Gmail
 
 Reserved for future service deployment:
 
-- `trade.ekodi.kr`
-- `pay.ekodi.kr`
-- `ins.ekodi.kr`
-- `mission.ekodi.kr`
-- `community.ekodi.kr`
-- `live.biz.ekodi.kr`
+- `ekodi.kr/ekodibiz/trade`
+- `ekodi.kr/pay`
+- `ekodi.kr/ins`
+- `ekodi.kr/mission`
+- `ekodi.kr/community`
+- `ekodi.kr/ekodibiz/live`
 
 ## 8. Google Drive mirror rule
 
@@ -160,41 +160,41 @@ The Google Drive information architecture must mirror the EKODI domain architect
 - The canonical Drive root folder is `ekodi.kr`.
 - Every first-level service domain gets a same-named folder directly under the `ekodi.kr` Drive root.
 - Every nested functional domain gets a same-named folder inside its owning service folder.
-- Examples: `church.ekodi.kr/live.church.ekodi.kr`, `church.ekodi.kr/mail.church.ekodi.kr`, `biz.ekodi.kr/mail.biz.ekodi.kr`.
+- Examples: `ekodi.kr/ekodichurch/ekodi.kr/ekodichurch/live`, `ekodi.kr/ekodichurch/ekodi.kr/ekodichurch/mail`, `ekodi.kr/ekodibiz/ekodi.kr/ekodibiz/mail`.
 - When a new EKODI subdomain is activated, its matching Drive folder is created in the same change set.
 - Documents, reports, schedules, media, accounting files, and project outputs should be stored by resolving the canonical service domain first and then saving under the matching Drive branch.
 - Existing shared folders are not force-moved when that could break inherited access or collaborator workflows. They remain in place and are referenced from the canonical Drive structure until a safe migration is possible.
 - User-owned folders with no collaboration dependency may be moved into the canonical branch while preserving their Drive file/folder IDs.
-- Domain aliases and legacy standalone domains do not create separate primary Drive trees. Their content belongs under the canonical `*.ekodi.kr` folder.
+- Domain aliases and legacy standalone domains do not create separate primary Drive trees. Their content belongs under the canonical `EKODI child-host address` folder.
 
 This keeps DNS, web services, mail entry points, Google Drive, and operational naming aligned as one EKODI information architecture.
 
 ## 9. Customer AI workspace namespace
 
-`ai.ekodi.kr` is reserved as the namespace for dedicated customer AI workspaces. It is intentionally separate from the shared Marketing AI product hub `marketing.ekodi.kr`.
+`ekodi.kr/ai` is reserved as the namespace for dedicated customer AI workspaces. It is intentionally separate from the shared Marketing AI product hub `ekodi.kr/marketing`.
 
 Use the pattern:
 
-`<customer>.ai.ekodi.kr`
+`<customer>.ekodi.kr/ai`
 
 Examples:
 
 - 청계면상인회 official site: `cgma.or.kr` (EKODI route: `https://ekodi.kr/cgma`)
-- 청계면상인회 AI workspace: `cgma.ai.ekodi.kr`
-- Store Plus/Pro workspace: `jadam.ai.ekodi.kr`
+- 청계면상인회 AI workspace: `ekodi.kr/cgma/marketing`
+- Store Plus/Pro workspace: `ekodi.kr/jadam/marketing`
 
 The public website and AI workspace must be treated as separate addresses even when they belong to the same customer. This prevents a customer's public brand site from becoming technically coupled to its AI subscription.
 
 ### AI domain entitlement
 
-- Organization/site customer workspace: dedicated `<organization>.ai.ekodi.kr`.
+- Organization/site customer workspace: dedicated `<organization>.ekodi.kr/ai`.
 - Store Basic, including a store receiving Basic as an organization-member benefit: no dedicated store subdomain.
-- Store Plus: dedicated `<store>.ai.ekodi.kr`.
-- Store Pro: dedicated `<store>.ai.ekodi.kr` plus one customer-owned custom hostname mapping by default.
+- Store Plus: dedicated `<store>.ekodi.kr/ai`.
+- Store Pro: dedicated `<store>.ekodi.kr/ai` plus one customer-owned custom hostname mapping by default.
 - Enterprise: custom hostname quantity and routing are contract-based.
 
 ### Customer-owned custom domain
 
 A Pro custom domain is a hostname the customer already owns or controls, such as `ai.customer.com` or `marketing.customer.com`, mapped to the same EKODI AI workspace. EKODI does not acquire ownership of the customer's domain and domain registration/renewal is not included by default. The mapping is a branded entrance to the EKODI-hosted service, not a transfer of the underlying platform.
 
-The customer keeps registrar and DNS ownership. EKODI manages the application-side mapping, tenant routing and HTTPS configuration required to serve the workspace through that hostname. The canonical `*.ai.ekodi.kr` hostname remains the platform identity while the plan entitlement is active.
+The customer keeps registrar and DNS ownership. EKODI manages the application-side mapping, tenant routing and HTTPS configuration required to serve the workspace through that hostname. The canonical `EKODI child-host address/ai` hostname remains the platform identity while the plan entitlement is active.

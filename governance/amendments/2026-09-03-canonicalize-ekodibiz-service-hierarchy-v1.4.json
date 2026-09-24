@@ -19,7 +19,7 @@
   "diff": [
     {
       "path": "governance/constitution/constitution.json",
-      "summary": "Change legacy domain targets for mall.ekodi.kr and mall.biz.ekodi.kr from https://ekodi.kr/mall to https://ekodi.kr/ekodibiz/mall, preserving the legacy domains only as compatibility entry points."
+      "summary": "Change legacy domain targets for ekodi.kr/ekodimall and ekodi.kr/ekodimall from https://ekodi.kr/mall to https://ekodi.kr/ekodibiz/mall, preserving the legacy domains only as compatibility entry points."
     }
   ],
   "risks": [

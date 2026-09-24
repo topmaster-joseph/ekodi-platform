@@ -4,9 +4,9 @@
   "class": "C2",
   "status": "approved",
   "approvedBy": "topmaster-joseph",
-  "approvalSource": "explicit super-administrator instruction in conversation to use try.ekodi.kr as the EKODI Experience address and build it",
+  "approvalSource": "explicit super-administrator instruction in conversation to use ekodi.kr/experience as the EKODI Experience address and build it",
   "constitutionVersion": "1.4.0",
-  "summary": "Register try.ekodi.kr as the independently deployed EKODI Experience common-service boundary for safe user and developer experience projections.",
+  "summary": "Register ekodi.kr/experience as the independently deployed EKODI Experience common-service boundary for safe user and developer experience projections.",
   "affectedAreas": [
     "domain",
     "common-service",
@@ -15,11 +15,11 @@
     "governance",
     "deployment"
   ],
-  "registeredBoundary": "try.ekodi.kr",
+  "registeredBoundary": "ekodi.kr/experience",
   "boundaryReason": "independently operated public experience surface with synthetic data, Secure Projection and isolated release lifecycle; it does not identify a person, tenant or workspace",
   "dataRule": "synthetic-only by default; no production customer data, secrets, source code or internal topology may be exposed",
   "developerModeRule": "developer mode presents only abstract roles and relationships suitable for public disclosure, never implementation topology",
   "workspaceRule": "workspace authority remains defined by immutable workspace_id and canonical ekodi.kr workspace paths",
-  "verificationPolicy": "constitution, boundary, Secure Projection, isolated staging, guarded production deployment and real try.ekodi.kr verification must pass",
+  "verificationPolicy": "constitution, boundary, Secure Projection, isolated staging, guarded production deployment and real ekodi.kr/experience verification must pass",
   "rollbackPlan": "remove the Experience Worker custom domain and service registration through the guarded pipeline; no canonical production data requires rollback because the service persists none"
 }

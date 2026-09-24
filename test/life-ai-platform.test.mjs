@@ -61,7 +61,7 @@ test('guest-facing copy stays guide-first while member actions remain explicit',
 test('production release guard only requires markers present in static Life HTML',()=>{
   const html=fs.readFileSync(new URL('../life/index.html',import.meta.url),'utf8');
   const release=JSON.parse(fs.readFileSync(new URL('../deploy/manifests/life.worker.json',import.meta.url),'utf8'));
-  const root=release.worker.requests.find(request=>request.url==='https://life.ekodi.kr/');
+  const root=release.worker.requests.find(request=>request.url==='https://ekodi.kr/life/');
   assert.ok(root);
   for(const marker of root.expect||[])assert.ok(html.includes(marker),`static Life HTML is missing release marker: ${marker}`);
 });
@@ -69,9 +69,9 @@ test('production release guard only requires markers present in static Life HTML
 test('Life AI canonical handoffs and apex CORS stay valid',async()=>{
   const {default:worker}=await import('../life-worker.js');
   const env={ASSETS:{fetch:async()=>new Response('ok')}};
-  const admin=await worker.fetch(new Request('https://life.ekodi.kr/admin'),env);
-  const my=await worker.fetch(new Request('https://life.ekodi.kr/my'),env);
-  const cors=await worker.fetch(new Request('https://life.ekodi.kr/api/today',{headers:{origin:'https://ekodi.kr'}}),env);
+  const admin=await worker.fetch(new Request('https://ekodi.kr/life/admin'),env);
+  const my=await worker.fetch(new Request('https://ekodi.kr/life/my'),env);
+  const cors=await worker.fetch(new Request('https://ekodi.kr/life/api/today',{headers:{origin:'https://ekodi.kr'}}),env);
   assert.equal(admin.status,307);
   assert.equal(admin.headers.get('location'),'https://ekodi.kr/admin/#life-ai');
   assert.equal(my.status,307);
@@ -83,7 +83,7 @@ test('Life AI upstream outage falls back to provider-independent core response',
   const {default:worker}=await import('../life-worker.js');
   const priorFetch=globalThis.fetch; globalThis.fetch=async()=>{throw new Error('core unavailable')};
   try{
-    const request=new Request('https://life.ekodi.kr/api/ai',{method:'POST',headers:{authorization:'Bearer test-token','content-type':'application/json'},body:JSON.stringify({message:'앞으로가 걱정돼요',topic:'future'})});
+    const request=new Request('https://ekodi.kr/life/api/ai',{method:'POST',headers:{authorization:'Bearer test-token','content-type':'application/json'},body:JSON.stringify({message:'앞으로가 걱정돼요',topic:'future'})});
     const response=await worker.fetch(request,{}); const data=await response.json();
     assert.equal(response.status,200); assert.equal(data.mode,'core-only'); assert.equal(data.ok,false); assert.ok(data.reply);
   } finally { globalThis.fetch=priorFetch; }
@@ -94,7 +94,7 @@ test('Life AI journey network outage is retryable instead of a Worker exception'
   const priorFetch=globalThis.fetch; globalThis.fetch=async()=>{throw new Error('supabase unavailable')};
   try{
     const env={DATA_ENABLED:'true',SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'public-key'};
-    const response=await worker.fetch(new Request('https://life.ekodi.kr/api/journey',{headers:{authorization:'Bearer test-token'}}),env);
+    const response=await worker.fetch(new Request('https://ekodi.kr/life/api/journey',{headers:{authorization:'Bearer test-token'}}),env);
     const data=await response.json(); assert.equal(response.status,503); assert.equal(data.code,'LIFE_JOURNEY_UNAVAILABLE');
   } finally { globalThis.fetch=priorFetch; }
 });
@@ -102,6 +102,6 @@ test('Life AI journey network outage is retryable instead of a Worker exception'
 test('Life AI static asset failure becomes controlled 503',async()=>{
   const {default:worker}=await import('../life-worker.js');
   const env={ASSETS:{fetch:async()=>{throw new Error('asset unavailable')}}};
-  const response=await worker.fetch(new Request('https://life.ekodi.kr/app.js'),env);
+  const response=await worker.fetch(new Request('https://ekodi.kr/life/app.js'),env);
   assert.equal(response.status,503); assert.equal(response.headers.get('x-ekodi-life-asset-error'),'fetch_failed');
 });

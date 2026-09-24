@@ -9,7 +9,7 @@ const refreshInsight=document.getElementById('refreshInsight');
 const memberNav=[...document.querySelectorAll('[data-view="devices"],[data-view="manager"]')];
 
 function loginHref(){
-  const target=new URL('https://auth.ekodi.kr/');
+  const target=new URL('https://ekodi.kr/auth/');
   target.searchParams.set('site','energy');
   target.searchParams.set('return_to',location.href.split('#')[0]);
   return target.href;

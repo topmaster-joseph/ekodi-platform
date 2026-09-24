@@ -10,11 +10,11 @@ const [shell, worker, build] = await Promise.all([
 
 test('all administrator hostnames inherit the same official admin shell', () => {
   for (const host of [
-    'admin.ekodi.kr',
-    'admin.biz.ekodi.kr',
-    'admin.church.ekodi.kr',
-    'admin.lab.ekodi.kr',
-    'admin.trade.ekodi.kr',
+    'ekodi.kr/admin',
+    'ekodi.kr/ekodibiz/admin',
+    'ekodi.kr/ekodichurch/admin',
+    'ekodi.kr/ekodilab/admin',
+    'ekodi.kr/ekodibiz/trade/admin',
   ]) {
     assert.ok(worker.includes(`'${host}'`), `${host} must stay in ADMIN_HOSTS`);
   }

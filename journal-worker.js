@@ -129,7 +129,7 @@ export default {
     }
 
     if (path === '/admin' || path === '/editorial') {
-      return Response.redirect('https://admin.ekodi.kr/journal', 307);
+      return Response.redirect('https://ekodi.kr/admin/journal', 307);
     }
 
     if (path === '/' || /^\/p\/[^/]+$/.test(path)) return shellHtml(env, request);

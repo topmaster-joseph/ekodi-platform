@@ -16,7 +16,7 @@
 배포 후 아래를 확인한다.
 
 1. `https://cgma.or.kr/` 접속 시 `현재 사이트 개발중입니다`가 표시되는지 확인
-2. `https://admin.ekodi.kr/#public-site-controls` 접속 후 로그인
+2. `https://ekodi.kr/admin/#public-site-controls` 접속 후 로그인
 3. 좌측 메뉴에 `공개상태` 항목 표시 확인
 4. `CGMA / cgma.or.kr` 설정 카드 표시 확인
 5. 공개 상태를 `임시페이지`로 저장 후 사이트 확인

@@ -83,7 +83,7 @@ test('platform health analysis turns threshold breaches into evidence-bound prop
   const result = analyzePlatformHealth({
     id: 'marketing',
     observedAt: VERIFIED_AT,
-    sourceUrl: 'https://admin.ekodi.kr/#ai-ops',
+    sourceUrl: 'https://ekodi.kr/admin/#ai-ops',
     metrics: { latencyP95Ms: 2600, aiCostGrowthPct: 44, criticalSecurityEvents: 0 },
   });
   assert.equal(result.recommendations.length, 2);
@@ -104,7 +104,7 @@ test('service fleet adapter creates ranked recommendations from existing Control
         offline: 0,
       },
     }],
-  }, { sourceUrl: 'https://admin.ekodi.kr/#ai-ops' });
+  }, { sourceUrl: 'https://ekodi.kr/admin/#ai-ops' });
   assert.equal(result.recommendationCount, 2);
   assert.equal(result.publishableCount, 2);
   assert.ok(result.recommendations[0].score >= result.recommendations[1].score);

@@ -8,7 +8,7 @@ function storedSession(){try{const value=JSON.parse(sessionStorage.getItem(SESSI
 function saveSession(value){state.session=value;sessionStorage.setItem(SESSION_KEY,JSON.stringify(value));renderIdentity()}
 function clearSession(){state.session=null;sessionStorage.removeItem(SESSION_KEY);renderIdentity()}
 function storedSelection(){try{return JSON.parse(localStorage.getItem(SELECTION_KEY)||'null')||{workspaceKind:'person',modules:['chief','marketing']}}catch{return{workspaceKind:'person',modules:['chief','marketing']}}}
-function authUrl(){return cfg.authUrl||'https://auth.ekodi.kr/?site=management&return_to=https%3A%2F%2Fmanagement.ekodi.kr%2F'}
+function authUrl(){return cfg.authUrl||'https://ekodi.kr/auth/?site=management&return_to=https%3A%2F%2Fekodi.kr/management%2F'}
 function renderIdentity(){
   const member=Boolean(state.session?.accessToken);document.body.dataset.member=member?'1':'0';$('memberApp').hidden=!member;
   const auth=$('authLink');auth.href=member?'#logout':authUrl();auth.textContent=member?'로그아웃':'Google 로그인';

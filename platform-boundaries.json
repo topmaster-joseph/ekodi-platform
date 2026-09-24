@@ -35,7 +35,7 @@
         "wrangler.my.staging.toml"
       ],
       "domains": [
-        "my.ekodi.kr",
+        "ekodi.kr/my",
         "ekodi-my-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-my.yml",
@@ -58,7 +58,7 @@
         "deploy/manifests/management.worker.json"
       ],
       "domains": [
-        "management.ekodi.kr",
+        "ekodi.kr/management",
         "ekodi-management-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-management.yml",
@@ -82,8 +82,8 @@
       ],
       "publicEntry": "https://ekodi.kr/ekodimall",
       "legacyRedirectDomains": [
-        "mall.ekodi.kr",
-        "mall.biz.ekodi.kr"
+        "ekodi.kr/ekodimall",
+        "ekodi.kr/ekodimall"
       ],
       "deployWorkflow": ".github/workflows/deploy-ekodi-mall.yml",
       "sharedDependencies": [
@@ -98,7 +98,7 @@
         "sites/ekodi-cafe/**"
       ],
       "domains": [
-        "cafe.ekodi.kr",
+        "ekodi.kr/cafe",
         "ekodi-cafe.pages.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-ekodi-cafe.yml",
@@ -117,7 +117,7 @@
         "wrangler.books.toml"
       ],
       "domains": [
-        "books.ekodi.kr"
+        "ekodi.kr/books"
       ],
       "deployWorkflow": ".github/workflows/deploy-books.yml",
       "sharedDependencies": [
@@ -138,7 +138,7 @@
         "deploy/manifests/publishing.worker.json"
       ],
       "domains": [
-        "publishing.ekodi.kr",
+        "ekodi.kr/publishing",
         "ekodi-publishing-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-publishing.yml",
@@ -163,7 +163,7 @@
         "deploy/manifests/journal.worker.json"
       ],
       "domains": [
-        "journal.ekodi.kr",
+        "ekodi.kr/journal",
         "ekodi-journal-staging.ekodi-development.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-journal.yml",
@@ -190,9 +190,9 @@
         "deploy/manifests/experience.worker.json"
       ],
       "domains": [
-        "exp.ekodi.kr",
-        "dev.ekodi.kr",
-        "try.ekodi.kr",
+        "ekodi.kr/experience",
+        "ekodi.kr/developer",
+        "ekodi.kr/experience",
         "ekodi-experience-staging.ekodi-development.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-experience.yml",
@@ -202,7 +202,7 @@
         "Responsible Independent Service public contract projection"
       ],
       "database": "none; synthetic and curated public projection only",
-      "note": "Shared S0 public runtime with two logical surfaces: exp.ekodi.kr is the canonical synthetic-only Experience portal; dev.ekodi.kr is the public Developer/Conformance portal exposing sanitized contracts only. try.ekodi.kr is a legacy 308 alias to exp. Neither portal carries workspace identity or production customer data."
+      "note": "Shared S0 public runtime with two logical surfaces: ekodi.kr/experience is the canonical synthetic-only Experience portal; ekodi.kr/developer is the public Developer/Conformance portal exposing sanitized contracts only. ekodi.kr/experience is a legacy 308 alias to exp. Neither portal carries workspace identity or production customer data."
     },
     "invest": {
       "kind": "common-service-platform",
@@ -234,7 +234,7 @@
       ],
       "deployWorkflow": ".github/workflows/release-invest-personalization.yml",
       "sharedDependencies": [
-        "workspace-api.ekodi.kr",
+        "ekodi.kr/workspace-api",
         "central auth hub",
         "ekodi-shell",
         "official data adapters through reviewed credentials and licensed partners"
@@ -250,7 +250,7 @@
         "wrangler.community.toml"
       ],
       "domains": [
-        "community.ekodi.kr"
+        "ekodi.kr/community"
       ],
       "deployWorkflow": ".github/workflows/deploy-community.yml",
       "sharedDependencies": [
@@ -271,7 +271,7 @@
         "tests/work-db-integration.sql"
       ],
       "domains": [
-        "work.ekodi.kr",
+        "ekodi.kr/work",
         "ekodi-work-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-work.yml",
@@ -292,7 +292,7 @@
         "deploy/manifests/education.worker.json"
       ],
       "domains": [
-        "edu.ekodi.kr",
+        "ekodi.kr/education",
         "ekodi-education-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-education.yml",
@@ -322,7 +322,7 @@
         "ekodi-bible-conversation-staging.ekodi-development.workers.dev"
       ],
       "legacyRedirectDomains": [
-        "bible.ekodi.kr"
+        "ekodi.kr/bible"
       ],
       "deployWorkflow": ".github/workflows/deploy-bible.yml",
       "sharedDependencies": [
@@ -332,7 +332,7 @@
         "Control API User AI service"
       ],
       "database": "Supabase bible_* namespace with RLS; private-by-default personal Journey, follow-up and explicit group sharing",
-      "note": "Canonical user entry is ekodi.kr/bible; bible.ekodi.kr is a permanent compatibility redirect. Today, Conversation, Journey and Together are workflow areas inside one Bible Conversation service boundary. Authenticated AI is routed through the provider-independent central User AI service; anonymous and AI-unavailable states retain a local non-AI Scripture conversation fallback. Pastoral authority is never delegated to AI."
+      "note": "Canonical user entry is ekodi.kr/bible; ekodi.kr/bible is a permanent compatibility redirect. Today, Conversation, Journey and Together are workflow areas inside one Bible Conversation service boundary. Authenticated AI is routed through the provider-independent central User AI service; anonymous and AI-unavailable states retain a local non-AI Scripture conversation fallback. Pastoral authority is never delegated to AI."
     },
     "life": {
       "kind": "independent-platform",
@@ -349,7 +349,7 @@
         "supabase/migrations/20260828163100_life_tenant_owner_index.sql"
       ],
       "domains": [
-        "life.ekodi.kr",
+        "ekodi.kr/life",
         "ekodi-life-ai-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-life-ai.yml",
@@ -359,7 +359,7 @@
         "ekodi-shell",
         "Control API User AI service",
         "ekodi.kr/bible public handoff",
-        "community.ekodi.kr public handoff"
+        "ekodi.kr/community public handoff"
       ],
       "database": "Supabase life_* namespace with RLS; only user-explicit saved reflections are persisted",
       "note": "Today Question is the public brand and Life AI is the engine. Eight topic routes share one Life-to-Gospel core. Bible Conversation is a deeper Scripture handoff rather than a duplicate platform."
@@ -401,7 +401,7 @@
         "docs/MONEY-FINANCIAL-CLEANUP.md"
       ],
       "domains": [
-        "money.ekodi.kr",
+        "ekodi.kr/money",
         "ekodi-money-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-money.yml",
@@ -423,7 +423,7 @@
         "wrangler.social.staging.toml"
       ],
       "domains": [
-        "social.ekodi.kr"
+        "ekodi.kr/social"
       ],
       "deployWorkflow": ".github/workflows/deploy-social.yml",
       "sharedDependencies": [
@@ -443,7 +443,7 @@
         "deploy/manifests/energy.worker.json"
       ],
       "domains": [
-        "energy.ekodi.kr",
+        "ekodi.kr/energy",
         "ekodi-energy-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-energy.yml",
@@ -516,7 +516,7 @@
         "deploy/manifests/business.worker.json"
       ],
       "domains": [
-        "business.ekodi.kr",
+        "ekodi.kr/business",
         "ekodi-business-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-business.yml",
@@ -537,7 +537,7 @@
         "wrangler.finance.toml"
       ],
       "domains": [
-        "finance-api.ekodi.kr"
+        "ekodi.kr/finance-api"
       ],
       "deployWorkflow": ".github/workflows/deploy-finance.yml",
       "sharedDependencies": [
@@ -600,7 +600,7 @@
         "test/mail-control.test.mjs"
       ],
       "domains": [
-        "mail.ekodi.kr"
+        "ekodi.kr/mail"
       ],
       "deployWorkflow": ".github/workflows/deploy-site-core.yml",
       "sharedDependencies": [
@@ -610,7 +610,7 @@
         "Cloudflare Worker secrets and ekodi-auth D1"
       ],
       "database": "ekodi-auth D1 mail_* metadata and encrypted credential ciphertext only; mailbox content remains at source providers by default",
-      "note": "mail.ekodi.kr is the common Mail Engine and UI, while each institution retains ownership and authority under its immutable workspace_id. mail.ekodi.kr/admin is a projection of existing personal/workspace authority, not a source of tenant authority. Read, send and manage permissions are independent."
+      "note": "ekodi.kr/mail is the common Mail Engine and UI, while each institution retains ownership and authority under its immutable workspace_id. ekodi.kr/mail/admin is a projection of existing personal/workspace authority, not a source of tenant authority. Read, send and manage permissions are independent."
     },
     "storage-control": {
       "kind": "external-storage-control-plane",
@@ -625,7 +625,7 @@
         "docs/google-drive-storage.md"
       ],
       "domains": [
-        "drive.ekodi.kr"
+        "ekodi.kr/storage"
       ],
       "deployWorkflow": ".github/workflows/deploy-storage.yml",
       "sharedDependencies": [
@@ -649,7 +649,7 @@
         "deploy/manifests/marketing-domain-api.worker.json"
       ],
       "domains": [
-        "marketing-api.ekodi.kr"
+        "ekodi.kr/marketing-api"
       ],
       "deployWorkflow": ".github/workflows/deploy-marketing-domain-api.yml",
       "sharedDependencies": [
@@ -681,7 +681,7 @@
         "deploy/manifests/marketing-publishing.worker.json"
       ],
       "domains": [
-        "marketing-publish-api.ekodi.kr",
+        "ekodi.kr/marketing-publish-api",
         "ekodi-marketing-publishing-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-marketing-publishing.yml",
@@ -709,8 +709,8 @@
         "storage-admin*"
       ],
       "domains": [
-        "admin.ekodi.kr",
-        "auth.ekodi.kr"
+        "ekodi.kr/admin",
+        "ekodi.kr/auth"
       ],
       "deployWorkflow": ".github/workflows/deploy-admin-site.yml",
       "sharedDependencies": [
@@ -737,11 +737,11 @@
       ],
       "domains": [
         "ekodi.kr",
-        "www.ekodi.kr",
-        "pay.ekodi.kr",
-        "trade.ekodi.kr",
-        "mail.ekodi.kr",
-        "live.ekodi.kr"
+        "ekodi.kr",
+        "ekodi.kr/pay",
+        "ekodi.kr/ekodibiz/trade",
+        "ekodi.kr/mail",
+        "ekodi.kr/live"
       ],
       "deployWorkflow": ".github/workflows/deploy-site-core.yml",
       "sharedDependencies": [],
@@ -755,9 +755,9 @@
         "wrangler.service-proxy.toml"
       ],
       "domains": [
-        "biz.ekodi.kr",
-        "mall.ekodi.kr",
-        "mail.*.ekodi.kr"
+        "ekodi.kr/ekodibiz",
+        "ekodi.kr/ekodimall",
+        "mail.EKODI child-host address"
       ],
       "deployWorkflow": ".github/workflows/deploy-service-proxy.yml",
       "sharedDependencies": [
@@ -776,13 +776,13 @@
         "client-*"
       ],
       "domains": [
-        "marketing.ekodi.kr",
+        "ekodi.kr/marketing",
         "cgma.or.kr",
-        "cgma.ekodi.kr",
-        "cgma.ai.ekodi.kr",
-        "jadam.ai.ekodi.kr",
-        "pizzamaru.ai.ekodi.kr",
-        "yogurt.ai.ekodi.kr"
+        "ekodi.kr/cgma",
+        "ekodi.kr/cgma/marketing",
+        "ekodi.kr/jadam/marketing",
+        "ekodi.kr/pizzamaru/marketing",
+        "ekodi.kr/yogurt/marketing"
       ],
       "deployWorkflow": ".github/workflows/sync-marketing-ai.yml",
       "sharedDependencies": [

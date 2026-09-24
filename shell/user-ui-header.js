@@ -4,7 +4,7 @@ if(window.__EKODI_USER_UI_HEADER_BOOTED)return;
 window.__EKODI_USER_UI_HEADER_BOOTED=true;
 
 const VERSION=7;
-const SITE_CHROME_URL='https://workspace-api.ekodi.kr/v1/site-chrome/public';
+const SITE_CHROME_URL='https://ekodi.kr/workspace-api/v1/site-chrome/public';
 const STYLE_ID='ekodi-user-ui-header-style';
 const USER_SURFACES=new Set(['public','workspace']);
 const DISABLED_MODES=new Set(['off','hidden','immersive']);
@@ -284,7 +284,7 @@ function serviceHomeUrl(){
   if(explicit){try{return new URL(explicit,location.href)}catch{}}
   const url=new URL(location.href);
   url.search='';url.hash='';
-  if(url.hostname==='ekodi.kr'||url.hostname==='www.ekodi.kr'){
+  if(url.hostname==='ekodi.kr'||url.hostname==='ekodi.kr'){
     const segment=url.pathname.split('/').filter(Boolean)[0]||'';
     const globalRoots=new Set(['privacy','terms','admin']);
     url.pathname=segment&&!globalRoots.has(segment)?`/${segment}/`:'/';

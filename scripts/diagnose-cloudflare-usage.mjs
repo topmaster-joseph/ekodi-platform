@@ -91,11 +91,11 @@ async function workerUsage(account, window) {
 }
 
 const SHARED_SITE_HOSTS=new Set([
-  'ekodi.kr','www.ekodi.kr','trade.ekodi.kr','trade.biz.ekodi.kr','pay.ekodi.kr','pay.biz.ekodi.kr',
-  'messenger.ekodi.kr','invest.ekodi.kr','ai.ekodi.kr','admin.ekodi.kr','admin.biz.ekodi.kr',
-  'admin.church.ekodi.kr','admin.lab.ekodi.kr','admin.trade.ekodi.kr','mail.ekodi.kr','mail.biz.ekodi.kr',
-  'mail.church.ekodi.kr','live.ekodi.kr','live.biz.ekodi.kr','live.church.ekodi.kr','live.lab.ekodi.kr',
-  'cloud.ekodi.kr','auth.ekodi.kr'
+  'ekodi.kr','ekodi.kr','ekodi.kr/ekodibiz/trade','ekodi.kr/ekodibiz/trade','ekodi.kr/pay','ekodi.kr/ekodibiz/pay',
+  'ekodi.kr/messenger','ekodi.kr/invest','ekodi.kr/ai','ekodi.kr/admin','ekodi.kr/ekodibiz/admin',
+  'ekodi.kr/ekodichurch/admin','ekodi.kr/ekodilab/admin','ekodi.kr/ekodibiz/trade/admin','ekodi.kr/mail','ekodi.kr/ekodibiz/mail',
+  'ekodi.kr/ekodichurch/mail','ekodi.kr/live','ekodi.kr/ekodibiz/live','ekodi.kr/ekodichurch/live','ekodi.kr/ekodilab/live',
+  'ekodi.kr/cloud','ekodi.kr/auth'
 ]);
 const SHARED_SITE_WORKER_FIRST_EXACT=new Set([
   '/','/deployment-probe','/auth/start','/admin','/control-center','/control-center/','/control-center.html',
@@ -121,7 +121,7 @@ function routeFamily(hostValue,pathValue){
   if(host.startsWith('auth.')||path==='/auth'||path.startsWith('/auth/'))return 'auth';
   if(host.startsWith('trade.'))return 'trade';
   if(host.startsWith('invest.'))return 'invest';
-  if(host==='ai.ekodi.kr')return 'ai-hub';
+  if(host==='ekodi.kr/ai')return 'ai-hub';
   if(host.startsWith('cloud.'))return 'cloud';
   if(host.startsWith('messenger.'))return 'messenger';
   if(host.startsWith('mail.'))return 'mail';

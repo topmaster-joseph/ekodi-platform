@@ -16,7 +16,7 @@ The service keeps its own finance-domain data boundary and can be deployed, repl
 The user experience is intentionally composed from two separate boundaries:
 
 - `EKODI Money` is the public discovery, cleanup-guidance, consent-preview and official-provider handoff surface.
-- `personal-finance-api.ekodi.kr` is the private person-scoped financial ledger, evidence and insight API.
+- `ekodi.kr/personal-finance-api` is the private person-scoped financial ledger, evidence and insight API.
 - `My EKODI` is the authenticated personal control surface that may consume the private API.
 
 The public Money surface never receives private ledger access merely because it shares the same product experience.
@@ -57,7 +57,7 @@ Provider replacement must not change EKODI canonical person identity or the fina
 
 ## Boundary with Life AI
 
-`life.ekodi.kr/money` remains a Life AI conversation topic about values, choices and the meaning of money.
+`ekodi.kr/life/money` remains a Life AI conversation topic about values, choices and the meaning of money.
 It is not a financial ledger surface and has no direct access to private Personal Finance data.
 When useful, it may receive a user-authorized, minimum finance insight projection such as a budget range or trend.
 ## Reference-service rule

@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import worker from '../site-worker.js';
 
 const siteOwnedHosts = [
-  'auth.ekodi.kr',
-  'cloud.ekodi.kr',
-  'live.ekodi.kr',
-  'pay.ekodi.kr',
-  'trade.ekodi.kr',
-  'messenger.ekodi.kr',
-  'invest.ekodi.kr',
+  'ekodi.kr/auth',
+  'ekodi.kr/cloud',
+  'ekodi.kr/live',
+  'ekodi.kr/pay',
+  'ekodi.kr/ekodibiz/trade',
+  'ekodi.kr/messenger',
+  'ekodi.kr/invest',
 ];
 
 for (const host of siteOwnedHosts) {

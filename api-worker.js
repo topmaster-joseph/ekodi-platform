@@ -18,21 +18,21 @@ import { handleAdminConfirmations, handleConfirmationPublic, handleWorkspaceConf
 // customer tenants/workspaces through the customer directory, never as EKODI services.
 const SERVICE_CATALOG = [
   { id: 'root', name: 'EKODI Root', domain: 'ekodi.kr', url: 'https://ekodi.kr', group: 'platform', defaultState: 'active', defaultMonitor: true },
-  { id: 'admin', name: 'EKODI Control Center', domain: 'admin.ekodi.kr', url: 'https://admin.ekodi.kr', group: 'platform', defaultState: 'active', defaultMonitor: true },
+  { id: 'admin', name: 'EKODI Control Center', domain: 'ekodi.kr/admin', url: 'https://ekodi.kr/admin', group: 'platform', defaultState: 'active', defaultMonitor: true },
   { id: 'api', name: 'EKODI API', domain: 'ekodi.kr', url: 'https://ekodi.kr/api/health', group: 'platform', defaultState: 'active', defaultMonitor: false },
-  { id: 'biz', name: '에코디비즈', domain: 'biz.ekodi.kr', url: 'https://biz.ekodi.kr', group: 'business', defaultState: 'planned', defaultMonitor: false },
-  { id: 'trade', name: 'EKODI Global Trading', domain: 'trade.ekodi.kr', url: 'https://trade.ekodi.kr', group: 'business', defaultState: 'planned', defaultMonitor: false },
+  { id: 'biz', name: '에코디비즈', domain: 'ekodi.kr/ekodibiz', url: 'https://ekodi.kr/ekodibiz', group: 'business', defaultState: 'planned', defaultMonitor: false },
+  { id: 'trade', name: 'EKODI Global Trading', domain: 'ekodi.kr/ekodibiz/trade', url: 'https://ekodi.kr/ekodibiz/trade', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'mall', name: '에코디몰', domain: 'ekodi.kr/ekodimall', url: 'https://ekodi.kr/ekodimall', group: 'business', defaultState: 'active', defaultMonitor: true },
-  { id: 'pay', name: '에코디결제', domain: 'pay.ekodi.kr', url: 'https://pay.ekodi.kr', group: 'business', defaultState: 'planned', defaultMonitor: false },
+  { id: 'pay', name: '에코디결제', domain: 'ekodi.kr/pay', url: 'https://ekodi.kr/pay', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'insurance', name: '에코디보험', domain: 'ekodi.kr/insurance', url: 'https://ekodi.kr/insurance', group: 'business', defaultState: 'planned', defaultMonitor: false },
-  { id: 'books', name: '에코디북스', domain: 'books.ekodi.kr', url: 'https://books.ekodi.kr', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
-  { id: 'lab', name: '에코디연구소', domain: 'lab.ekodi.kr', url: 'https://lab.ekodi.kr', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
-  { id: 'edu', name: 'EKODI Education', domain: 'edu.ekodi.kr', url: 'https://edu.ekodi.kr', group: 'knowledge', defaultState: 'planned', defaultMonitor: false },
+  { id: 'books', name: '에코디북스', domain: 'ekodi.kr/books', url: 'https://ekodi.kr/books', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
+  { id: 'lab', name: '에코디연구소', domain: 'ekodi.kr/ekodilab', url: 'https://ekodi.kr/ekodilab', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
+  { id: 'edu', name: 'EKODI Education', domain: 'ekodi.kr/education', url: 'https://ekodi.kr/education', group: 'knowledge', defaultState: 'planned', defaultMonitor: false },
   { id: 'learn', name: 'EKODI Learning Fabric', domain: 'ekodi.kr/learn', url: 'https://ekodi.kr/learn', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
-  { id: 'media', name: '에코디미디어', domain: 'media.ekodi.kr', url: 'https://media.ekodi.kr', group: 'knowledge', defaultState: 'planned', defaultMonitor: false },
-  { id: 'church', name: '에코디교회', domain: 'church.ekodi.kr', url: 'https://church.ekodi.kr', group: 'ministry', defaultState: 'active', defaultMonitor: true },
+  { id: 'media', name: '에코디미디어', domain: 'ekodi.kr/media', url: 'https://ekodi.kr/media', group: 'knowledge', defaultState: 'planned', defaultMonitor: false },
+  { id: 'church', name: '에코디교회', domain: 'ekodi.kr/ekodichurch', url: 'https://ekodi.kr/ekodichurch', group: 'ministry', defaultState: 'active', defaultMonitor: true },
   { id: 'community', name: '커뮤니티', domain: 'ekodi.kr/community', url: 'https://ekodi.kr/community', group: 'ministry', defaultState: 'active', defaultMonitor: true },
-  { id: 'social', name: 'EKODI Social', domain: 'social.ekodi.kr', url: 'https://social.ekodi.kr/health', group: 'platform', defaultState: 'active', defaultMonitor: true }
+  { id: 'social', name: 'EKODI Social', domain: 'ekodi.kr/social', url: 'https://ekodi.kr/social/health', group: 'platform', defaultState: 'active', defaultMonitor: true }
 ];
 
 const LIVE_PUBLIC_SITE_CATALOG = realtimeTenantList().map(tenant => ({
@@ -560,7 +560,7 @@ async function publicPreviewSnapshot(env) {
 }
 
 const PUBLIC_PREVIEW_PATH = '/api/public/preview/map';
-const PUBLIC_PREVIEW_ORIGINS = new Set(['https://ekodi.kr', 'https://www.ekodi.kr']);
+const PUBLIC_PREVIEW_ORIGINS = new Set(['https://ekodi.kr', 'https://ekodi.kr']);
 
 function publicPreviewHeaders(request) {
   const headers = new Headers({
@@ -603,7 +603,7 @@ async function evolutionSnapshot(env, force = false) {
   if (force) await runChecks(env);
   const controlOverview = await overview(env);
   const live = analyzeServiceFleet(controlOverview, {
-    sourceUrl: 'https://admin.ekodi.kr/#ai-ops'
+    sourceUrl: 'https://ekodi.kr/admin/#ai-ops'
   });
   await persistEvolutionReport(env.DB, live);
   const [recommendations, store] = await Promise.all([

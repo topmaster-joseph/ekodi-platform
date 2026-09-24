@@ -17,7 +17,7 @@ function client(){
     const {error}=await sb.auth.verifyOtp({token_hash:token,type:params.get('ekodi_type')||'email'});if(error)throw error;
     history.replaceState({},document.title,location.pathname+location.search);
   }
-  function login(){const url=new URL('https://auth.ekodi.kr/');url.searchParams.set('site','trade');url.searchParams.set('return_to',location.origin+location.pathname);location.assign(url.href);}
+  function login(){const url=new URL('https://ekodi.kr/auth/');url.searchParams.set('site','trade');url.searchParams.set('return_to',location.origin+location.pathname);location.assign(url.href);}
   function signedOut(){
     $('accountEmail').textContent='관계자 전용';$('logout').classList.add('hidden');$('companyPanel').classList.add('hidden');$('workPanel').classList.add('hidden');$('introPanel').classList.remove('hidden');
     $('introPanel').innerHTML='<h2>거래 관계자 로그인</h2><p class="empty">에코디비즈 관계자와 사전에 등록된 상대회사 관계자만 이용할 수 있습니다. 처음에는 Google 로그인으로 EKODI ID를 연결합니다.</p><div class="actions"><button class="button primary" id="loginButton" type="button">Google로 로그인</button></div>';

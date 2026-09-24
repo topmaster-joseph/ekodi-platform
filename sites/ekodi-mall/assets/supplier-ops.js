@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://mall-api.ekodi.kr';
+  const API = 'https://mall-ekodi.kr/api';
   const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
   const PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   if (!window.supabase) return;
@@ -98,7 +98,7 @@
   $('#skuForm')?.addEventListener('submit', async (e)=>{e.preventDefault();if(!selectedPartnerId)return setStatus('Partner를 선택해 주세요.',true);const f=e.currentTarget.elements;try{await post(`/api/internal/supplier-partners/${selectedPartnerId}/skus`,{sourceId:f.sourceId.value,skuCode:f.skuCode.value,displayName:f.displayName.value,costAmount:f.costAmount.value,shippingAmount:f.shippingAmount.value,stockState:f.stockState.value});e.currentTarget.reset();if(e.currentTarget.elements.shippingAmount)e.currentTarget.elements.shippingAmount.value='0';await loadContext();setStatus('Supplier SKU를 등록하고 source 원가를 동기화했습니다.');}catch(err){setStatus(err.message,true);}});
   $('#mappingForm')?.addEventListener('submit', async (e)=>{e.preventDefault();const f=e.currentTarget.elements;if(!f.skuId.value||!f.productId.value)return setStatus('SKU와 동일 판매자 상품을 선택해 주세요.',true);try{await post(`/api/internal/supplier-skus/${f.skuId.value}/products`,{productId:f.productId.value,priority:f.priority.value,minMarginAmount:f.minMarginAmount.value,minMarginPercent:f.minMarginPercent.value});await loadContext();setStatus('SKU→상품 Pilot 매핑을 저장했습니다.');}catch(err){setStatus(err.message,true);}});
   partnerSelect?.addEventListener('change',()=>{selectedPartnerId=partnerSelect.value;renderPartnerDetail();}); skuSelect?.addEventListener('change',renderProductsForSku);
-  login?.addEventListener('click',()=>{location.href='https://auth.ekodi.kr/?site=mall-seller&returnTo=https%3A%2F%2Fmall.ekodi.kr%2Fsupplier-ops';});
+  login?.addEventListener('click',()=>{location.href='https://ekodi.kr/auth/?site=mall-seller&returnTo=https%3A%2F%2Fekodi.kr/ekodimall%2Fsupplier-ops';});
   logout?.addEventListener('click',async()=>{await sb.auth.signOut();session=null;syncUi();setStatus('로그아웃했습니다.');}); reload?.addEventListener('click',()=>loadContext().catch((e)=>setStatus(e.message,true)));
   function syncUi(){const signed=Boolean(session);if(login)login.hidden=signed;if(logout)logout.hidden=!signed;document.querySelectorAll('.ops-panel input,.ops-panel select,.ops-panel textarea,.ops-panel button').forEach((el)=>{el.disabled=!signed;});if(reload)reload.disabled=!signed;}
   exchangeCentralToken().catch((e)=>setStatus(`인증 연결 실패: ${e.message}`,true)).finally(async()=>{session=(await sb.auth.getSession()).data.session;syncUi();if(session)loadContext().catch((e)=>setStatus(e.message,true));});

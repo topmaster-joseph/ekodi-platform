@@ -13,7 +13,7 @@
       "channels": [
         {"id":"community-youtube","provider":"youtube","label":"YouTube","handle":"@ekodicommunity","channelId":"UCm1PFvzN0PRnyiF8Xx_mYTw","uploadsPlaylist":"UUm1PFvzN0PRnyiF8Xx_mYTw","url":"https://www.youtube.com/@ekodicommunity","description":"말씀 · 공동체 · 선교 · 현장","isActive":true,"order":10},
         {"id":"community-instagram","provider":"instagram","label":"Instagram","url":"https://www.instagram.com/ekodicommunity","description":"사진 · 현장 · 짧은 이야기","isActive":true,"order":20},
-        {"id":"community-live","provider":"live","label":"EKODI Live","url":"https://live.ekodi.kr","description":"라이브 방송 허브","isActive":true,"order":30}
+        {"id":"community-live","provider":"live","label":"EKODI Live","url":"https://ekodi.kr/live","description":"라이브 방송 허브","isActive":true,"order":30}
       ]
     },
     {
@@ -27,7 +27,7 @@
       "socialPolicy": "inherit_org",
       "channels": [
         {"id":"church-youtube","provider":"youtube","label":"YouTube","handle":"@ekodichurch","channelId":"UCnp_LXmJBcJRX7CgJT9FF7w","uploadsPlaylist":"UUnp_LXmJBcJRX7CgJT9FF7w","url":"https://www.youtube.com/@ekodichurch","description":"예배 · 말씀 · Shorts","isActive":true,"order":10},
-        {"id":"church-live","provider":"live","label":"EKODI Live","url":"https://live.ekodi.kr","description":"예배 및 현장 라이브","isActive":true,"order":20}
+        {"id":"church-live","provider":"live","label":"EKODI Live","url":"https://ekodi.kr/live","description":"예배 및 현장 라이브","isActive":true,"order":20}
       ]
     },
     {
@@ -57,7 +57,7 @@
       "name": "에코디북스",
       "shortName": "Books",
       "description": "출판, 전자책, 연구와 저자 콘텐츠를 연결합니다.",
-      "website": "https://books.ekodi.kr",
+      "website": "https://ekodi.kr/books",
       "isActive": true,
       "order": 50,
       "socialPolicy": "inherit_org",
@@ -68,7 +68,7 @@
       "name": "EKODI Trading",
       "shortName": "Trading",
       "description": "글로벌 무역, 제품, 바이어와 공급망 관련 소식과 콘텐츠를 연결합니다.",
-      "website": "https://trade.ekodi.kr",
+      "website": "https://ekodi.kr/ekodibiz/trade",
       "isActive": true,
       "order": 60,
       "socialPolicy": "inherit_org",
@@ -79,7 +79,7 @@
       "name": "에코디교육",
       "shortName": "Education",
       "description": "교육, 강의, 학습 프로그램과 성장 콘텐츠를 연결합니다.",
-      "website": "https://edu.ekodi.kr",
+      "website": "https://ekodi.kr/education",
       "isActive": true,
       "order": 70,
       "socialPolicy": "inherit_org",
@@ -90,7 +90,7 @@
       "name": "에코디미디어",
       "shortName": "Media",
       "description": "영상, 라이브, 콘텐츠 제작과 미디어 아카이브를 연결합니다.",
-      "website": "https://media.ekodi.kr",
+      "website": "https://ekodi.kr/media",
       "isActive": true,
       "order": 80,
       "socialPolicy": "inherit_org",

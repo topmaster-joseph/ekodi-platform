@@ -4,17 +4,12 @@ compatibility_date = "2026-08-16"
 workers_dev = true
 preview_urls = false
 
-[[routes]]
-pattern = "business.ekodi.kr"
-zone_name = "ekodi.kr"
-custom_domain = true
-
 [vars]
 BUSINESS_MODE = "production-readonly-mvp"
 INTEGRATIONS_ENABLED = "true"
 EXECUTION_ENABLED = "false"
 READINESS = "78"
-AUTH_URL = "https://ekodi.kr/auth/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F"
+AUTH_URL = "https://ekodi.kr/auth/?site=business&return_to=https%3A%2F%2Fekodi.kr/business%2F"
 SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 

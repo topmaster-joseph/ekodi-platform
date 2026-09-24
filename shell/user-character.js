@@ -132,7 +132,7 @@ function renderPreview(options={}){
 function profiles(){return registry()?.services||FALLBACK_PROFILES;}
 function isLanding(){
   const parts=location.pathname.split('/').filter(Boolean);
-  if(location.hostname==='ekodi.kr'||location.hostname==='www.ekodi.kr')return parts.length<=1;
+  if(location.hostname==='ekodi.kr'||location.hostname==='ekodi.kr')return parts.length<=1;
   return parts.length===0;
 }
 function profile(){return profiles()[serviceId()]||FALLBACK_PROFILES[serviceId()]||{pose:'welcome',prop:'heart',label:'함께하는 에코디언'};}

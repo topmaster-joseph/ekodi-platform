@@ -1,6 +1,6 @@
 # EKODI Cognitive Control Plane
 
-Proposed production hostname: `ai.ekodi.kr`. Production activation remains blocked until this core-service boundary is explicitly registered through EKODI Constitution change control.
+Proposed production hostname: `ekodi.kr/ai`. Production activation remains blocked until this core-service boundary is explicitly registered through EKODI Constitution change control.
 
 ## Architecture
 
@@ -47,7 +47,7 @@ Every mutation path is expected to leave durable decision evidence: request, act
 
 ## Connection classes and free-first execution
 
-The provider-neutral worker layer distinguishes four connection classes. Gemini official API is the preferred direct cloud path when a free-tier `GEMINI_API_KEY` is configured. User-authorized account nodes keep provider authentication on the node itself and poll `ai.ekodi.kr` outbound. Optional paid OpenAI and Anthropic APIs remain fallback adapters, while `AI_WORKER_URL/TOKEN` is the provider-neutral extension point.
+The provider-neutral worker layer distinguishes four connection classes. Gemini official API is the preferred direct cloud path when a free-tier `GEMINI_API_KEY` is configured. User-authorized account nodes keep provider authentication on the node itself and poll `ekodi.kr/ai` outbound. Optional paid OpenAI and Anthropic APIs remain fallback adapters, while `AI_WORKER_URL/TOKEN` is the provider-neutral extension point.
 
 The default cost-aware order is Gemini free API, a ChatGPT-plan Codex node, a Gemini CLI node, an explicitly enabled Claude Code node, then optional paid APIs or approved external adapters. Availability and an explicit task provider choice may narrow this plan.
 

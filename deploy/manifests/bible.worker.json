@@ -13,8 +13,8 @@
       {"url":"https://ekodi.kr/bible/api/bible/providers","statuses":[200],"expect":["\"defaultProvider\":\"KRV1961\"","\"id\":\"KRV1961\"","\"mode\":\"embedded-verbatim\"","\"id\":\"NKRV\"","\"mode\":\"official-link-only\""]},
       {"url":"https://ekodi.kr/bible/api/bible/passage?reference=%EC%B0%BD%EC%84%B8%EA%B8%B0%201%3A1&provider=KRV1961","statuses":[200],"expect":["\"integrity\":\"verbatim\"","태초에 하나님이 천지를 창조하시니라","대한성서공회"]},
       {"url":"https://ekodi.kr/bible/api/bible/passage?reference=%EC%8B%A0%EB%AA%85%EA%B8%B0%2017%3A14-20&provider=NKRV","statuses":[200],"expect":["\"mode\":\"official-link-only\"","\"verses\":[]","bible.bskorea.or.kr"]},
-      {"url":"https://bible.ekodi.kr/reader?provider=KRV1961","statuses":[308],"redirect":"manual","headerExpect":["location: https://ekodi.kr/bible/reader?provider=KRV1961"]},
-      {"url":"https://ekodi.kr/bible/health","statuses":[200],"expect":["ekodi-bible-conversation","\"privacyDefault\":\"private\"","\"explicitSharing\":true","\"providerIndependent\":true","\"centralUserAi\":true","\"defaultProvider\":\"KRV1961\"","\"aiMayAlterScripture\":false","\"canonicalPath\":\"/bible\"","\"legacyAlias\":\"bible.ekodi.kr\"","\"ekodiShell\":true"]}
+      {"url":"https://ekodi.kr/bible/reader?provider=KRV1961","statuses":[308],"redirect":"manual","headerExpect":["location: https://ekodi.kr/bible/reader?provider=KRV1961"]},
+      {"url":"https://ekodi.kr/bible/health","statuses":[200],"expect":["ekodi-bible-conversation","\"privacyDefault\":\"private\"","\"explicitSharing\":true","\"providerIndependent\":true","\"centralUserAi\":true","\"defaultProvider\":\"KRV1961\"","\"aiMayAlterScripture\":false","\"canonicalPath\":\"/bible\"","\"legacyAlias\":\"ekodi.kr/bible\"","\"ekodiShell\":true"]}
     ]
   }
 }

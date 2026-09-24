@@ -97,7 +97,7 @@ function storeRow(row) {
   return {
     id: Number(row.id), slug: row.slug, name: row.name, description: row.description,
     logoUrl: row.logo_url, theme: row.theme, status: row.status,
-    url: `https://books.ekodi.kr/store/${encodeURIComponent(row.slug)}`,
+    url: `https://ekodi.kr/books/store/${encodeURIComponent(row.slug)}`,
     createdAt: row.created_at, updatedAt: row.updated_at,
   };
 }

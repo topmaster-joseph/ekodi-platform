@@ -32,7 +32,7 @@ export function trafficSiteIdForHost(value) {
   const host = normalizeTrafficHost(value);
   if (!host) return '';
   if (LEGACY_SITE_ALIASES[host]) return LEGACY_SITE_ALIASES[host];
-  if (host === 'ekodi.kr' || host === 'www.ekodi.kr') return 'root';
+  if (host === 'ekodi.kr' || host === 'ekodi.kr') return 'root';
   if (host.endsWith('.ekodi.kr')) {
     const label = host.slice(0, -'.ekodi.kr'.length).split('.')[0];
     return /^[a-z0-9-]{1,64}$/.test(label) ? label : 'ekodi';

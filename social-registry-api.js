@@ -12,7 +12,7 @@ const DEFAULT_REGISTRY = {
       channels: [
         { id:'community-youtube', provider:'youtube', label:'YouTube', handle:'@ekodicommunity', channelId:'UCm1PFvzN0PRnyiF8Xx_mYTw', uploadsPlaylist:'UUm1PFvzN0PRnyiF8Xx_mYTw', url:'https://www.youtube.com/@ekodicommunity', description:'말씀 · 공동체 · 선교 · 현장', isActive:true, order:10 },
         { id:'community-instagram', provider:'instagram', label:'Instagram', url:'https://www.instagram.com/ekodicommunity', description:'사진 · 현장 · 짧은 이야기', isActive:true, order:20 },
-        { id:'community-live', provider:'live', label:'EKODI Live', url:'https://live.ekodi.kr', description:'라이브 방송 허브', isActive:true, order:30 }
+        { id:'community-live', provider:'live', label:'EKODI Live', url:'https://ekodi.kr/live', description:'라이브 방송 허브', isActive:true, order:30 }
       ]
     },
     {
@@ -21,11 +21,11 @@ const DEFAULT_REGISTRY = {
       website:'https://ekodi.kr/ekodichurch', isActive:true, order:20, socialPolicy:'inherit_org',
       channels:[
         { id:'church-youtube', provider:'youtube', label:'YouTube', handle:'@ekodichurch', channelId:'UCnp_LXmJBcJRX7CgJT9FF7w', uploadsPlaylist:'UUnp_LXmJBcJRX7CgJT9FF7w', url:'https://www.youtube.com/@ekodichurch', description:'예배 · 말씀 · Shorts', isActive:true, order:10 },
-        { id:'church-live', provider:'live', label:'EKODI Live', url:'https://live.ekodi.kr', description:'예배 및 현장 라이브', isActive:true, order:20 }
+        { id:'church-live', provider:'live', label:'EKODI Live', url:'https://ekodi.kr/live', description:'예배 및 현장 라이브', isActive:true, order:20 }
       ]
     },
     { id:'biz', name:'에코디비즈', shortName:'Biz', description:'비즈니스, 소상공인, 마케팅 AI와 지역경제 콘텐츠를 모읍니다.', website:'https://ekodi.kr/ekodibiz', isActive:true, order:30, socialPolicy:'inherit_org', channels:[] },
-    { id:'books', name:'출판', shortName:'Books', description:'출판, 전자책, 연구와 저자 콘텐츠를 연결합니다.', website:'https://books.ekodi.kr', isActive:true, order:40, socialPolicy:'inherit_org', channels:[] }
+    { id:'books', name:'출판', shortName:'Books', description:'출판, 전자책, 연구와 저자 콘텐츠를 연결합니다.', website:'https://ekodi.kr/books', isActive:true, order:40, socialPolicy:'inherit_org', channels:[] }
   ]
 };
 

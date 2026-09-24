@@ -1,17 +1,17 @@
 (() => {
   const API = 'https://ekodi.kr';
-  const LIVE = 'https://marketing.ekodi.kr/';
-  const REVIEW = 'https://auth.ekodi.kr/?site=marketing&review=1&return_to=https%3A%2F%2Fmarketing.ekodi.kr%2F';
+  const LIVE = 'https://ekodi.kr/marketing/';
+  const REVIEW = 'https://ekodi.kr/auth/?site=marketing&review=1&return_to=https%3A%2F%2Fekodi.kr/marketing%2F';
   const token = () => sessionStorage.getItem('ekodi-auth-token') || '';
   const TABS = [
     ['overview','Overview'],['customers','Customers'],['workspaces','Workspaces'],['campaigns','Campaigns'],['crm','CRM'],
     ['channels','Channels'],['automation','Automation'],['approvals','Approvals'],['billing','Billing'],['reports','Reports'],
   ];
   const WORKSPACE_LABELS = {
-    'jadam.ai.ekodi.kr':'자담치킨 목포대점',
-    'pizzamaru.ai.ekodi.kr':'피자마루 목포대점',
-    'yogurt.ai.ekodi.kr':'요거트퍼플 목포대점',
-    'cgma.ai.ekodi.kr':'청계면상인회',
+    'ekodi.kr/jadam/marketing':'자담치킨 목포대점',
+    'ekodi.kr/pizzamaru/marketing':'피자마루 목포대점',
+    'ekodi.kr/yogurt/marketing':'요거트퍼플 목포대점',
+    'ekodi.kr/cgma/marketing':'청계면상인회',
   };
   const CONTRACT_COPY = {
     campaigns:['캠페인 운영','캠페인 원장을 연결하면 생성·검수·예약·게시·완료 상태와 채널별 성과를 이곳에서 관리합니다.'],

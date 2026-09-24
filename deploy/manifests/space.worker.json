@@ -5,24 +5,24 @@
     "config": "wrangler.space.toml",
     "requests": [
       {
-        "url": "https://space.ekodi.kr/",
+        "url": "https://ekodi.kr/",
         "statuses": [308],
         "redirect": "manual",
         "headerExpect": [
           "location: https://ekodi.kr/my/",
           "cache-control: no-store",
-          "x-ekodi-legacy-alias: space.ekodi.kr"
+          "x-ekodi-legacy-alias: ekodi.kr"
         ]
       },
       {
-        "url": "https://space.ekodi.kr/health",
+        "url": "https://ekodi.kr/health",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["ekodi-space","operating-space","workspace-id","root-slug"],
         "headerExpect": ["x-ekodi-service: space","cache-control: no-store"]
       },
       {
-        "url": "https://space.ekodi.kr/deployment-probe",
+        "url": "https://ekodi.kr/deployment-probe",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["OPERATING SPACE","STORE MASTER","MENU MASTER"],

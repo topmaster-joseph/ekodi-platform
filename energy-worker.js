@@ -2,7 +2,7 @@ function securityHeaders(){return{'x-content-type-options':'nosniff','referrer-p
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...securityHeaders()}})}
 function withHeaders(response){const headers=new Headers(response.headers);for(const [key,value]of Object.entries(securityHeaders()))headers.set(key,value);if(!headers.has('cache-control'))headers.set('cache-control',response.headers.get('content-type')?.includes('text/html')?'no-cache':'public, max-age=300');return new Response(response.body,{status:response.status,statusText:response.statusText,headers})}
 function boundedNumber(value,min,max,fallback=0){const n=Number(value);return Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback}
-function runtimeConfig(env={}){return{telemetryEnabled:env.TELEMETRY_ENABLED==='true',telemetryMode:env.TELEMETRY_MODE||'isolated-staging',controlEnabled:env.CONTROL_ENABLED==='true',controlPolicy:'observe-suggest-approve-bounded',authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=energy'}}
+function runtimeConfig(env={}){return{telemetryEnabled:env.TELEMETRY_ENABLED==='true',telemetryMode:env.TELEMETRY_MODE||'isolated-staging',controlEnabled:env.CONTROL_ENABLED==='true',controlPolicy:'observe-suggest-approve-bounded',authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=energy'}}
 
 const PILOT_SITES={
   'pizzamaru-mokpo-01':{
@@ -51,7 +51,7 @@ export default{async fetch(request,env){
   const url=new URL(request.url);const cfg=runtimeConfig(env);
   if(url.pathname==='/config.js')return new Response(`window.EKODI_ENERGY_CONFIG=${JSON.stringify(cfg)};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...securityHeaders()}});
   if(url.pathname==='/health')return json({ok:true,service:'ekodi-energy-ai',apiVersion:'v1',stage:cfg.telemetryMode,telemetryEnabled:cfg.telemetryEnabled,controlEnabled:cfg.controlEnabled,safetyPolicy:cfg.controlPolicy,pilot:'pizzamaru-mokpo-01'});
-  if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/energy',307);
+  if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/energy',307);
   if(request.method==='GET'&&(url.pathname==='/pizzamaru'||url.pathname==='/pizzamaru/')){const assetUrl=new URL(request.url);assetUrl.pathname='/';assetUrl.search='';return withHeaders(await env.ASSETS.fetch(new Request(assetUrl.toString(),request)))}
   if(request.method==='GET'&&url.pathname==='/api/pilot/pizzamaru-mokpo-01')return json(pilotSite('pizzamaru-mokpo-01'));
   if(request.method==='GET'&&url.pathname==='/api/energy/v1/pilots/pizzamaru-mokpo-01')return json(pilotSite('pizzamaru-mokpo-01'));

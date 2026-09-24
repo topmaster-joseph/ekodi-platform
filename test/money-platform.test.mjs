@@ -43,9 +43,9 @@ test('official accountinfo handoff remains available without live API access',()
 });
 
 test('open banking remains disabled until contract and oauth state infrastructure are ready',()=>{
-  const readiness=buildIntegrationReadiness({KFTC_OPENBANKING_ENABLED:'true',KFTC_OPENBANKING_CLIENT_ID:'client',KFTC_OPENBANKING_REDIRECT_URI:'https://money.ekodi.kr/callback'});
+  const readiness=buildIntegrationReadiness({KFTC_OPENBANKING_ENABLED:'true',KFTC_OPENBANKING_CLIENT_ID:'client',KFTC_OPENBANKING_REDIRECT_URI:'https://ekodi.kr/money/callback'});
   assert.equal(readiness.openBankingConfigured,false);
-  const configured=buildIntegrationReadiness({KFTC_OPENBANKING_ENABLED:'true',KFTC_OPENBANKING_CLIENT_ID:'client',KFTC_OPENBANKING_REDIRECT_URI:'https://money.ekodi.kr/callback',OAUTH_STATE_STORE_READY:'true'});
+  const configured=buildIntegrationReadiness({KFTC_OPENBANKING_ENABLED:'true',KFTC_OPENBANKING_CLIENT_ID:'client',KFTC_OPENBANKING_REDIRECT_URI:'https://ekodi.kr/money/callback',OAUTH_STATE_STORE_READY:'true'});
   assert.equal(configured.openBankingConfigured,true);
   assert.equal(configured.financialExecution,false);
 });

@@ -2,7 +2,7 @@ const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
 const HANDOFF=`${SUPABASE_URL}/functions/v1/business-handoff-api`;
-const BUSINESS_HOME='https://business.ekodi.kr/';
+const BUSINESS_HOME='https://ekodi.kr/business/';
 const BUSINESS_WORKSPACES=new Set(['ekodibiz','jadam']);
 const params=new URLSearchParams(location.search);
 const $=id=>document.getElementById(id);
@@ -14,7 +14,7 @@ function safeReturn(raw){
   if(!raw)return BUSINESS_HOME;
   try{
     const target=new URL(raw);
-    if(target.protocol!=='https:'||target.username||target.password||target.origin!=='https://business.ekodi.kr')return BUSINESS_HOME;
+    if(target.protocol!=='https:'||target.username||target.password||target.origin!=='https://ekodi.kr/business')return BUSINESS_HOME;
     target.hash='';target.searchParams.delete('problem');
     return target.href;
   }catch{return BUSINESS_HOME}

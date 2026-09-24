@@ -242,7 +242,7 @@
   "links": {
     "inquiry": "https://ekodibiz.kr",
     "biz": "https://ekodibiz.kr",
-    "paymentGateway": "https://pay.ekodi.kr"
+    "paymentGateway": "https://ekodi.kr/pay"
   },
   "commerce": {
     "paymentsEnabled": false,

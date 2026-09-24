@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { LOCAL_EXECUTION_POLICY } from '../local-execution-policy.js';
 
-const CONTROL=(process.env.EKODI_AI_CONTROL_URL||'https://ai.ekodi.kr').replace(/\/+$/,'');
+const CONTROL=(process.env.EKODI_AI_CONTROL_URL||'https://ekodi.kr/ai').replace(/\/+$/,'');
 const ROOT=path.join(homedir(),'.ekodi-ai');
 const CONFIG_PATH=path.join(ROOT,'node.json');
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -111,4 +111,4 @@ async function loop(config){
   console.log(`EKODI AI account node ${config.nodeId} connected to ${CONTROL}`);for(;;){try{const providers=await detectProviders();const leased=await api('/api/node/lease',{token:config.nodeToken,node:config.nodeId,body:{providers,system:await systemSnapshot(),maxConcurrency:boundedConcurrency()}});if(!leased.job){await sleep(5000);continue}console.log(`leased ${leased.job.id} ${leased.job.providerId}`);const result=await executeJob(leased.job);await api(`/api/node/jobs/${encodeURIComponent(leased.job.id)}/complete`,{token:config.nodeToken,node:config.nodeId,body:result});console.log(`${leased.job.id} ${result.ok?'completed':'failed'}`)}catch(error){console.error(new Date().toISOString(),clean(error?.message||error));await sleep(10000)}}
 }
 
-await mkdir(ROOT,{recursive:true});const pairCode=arg('--pair');let config=pairCode?await enroll(pairCode):await loadConfig();if(!config?.nodeToken){console.error('Node is not paired. Generate a pairing code in ai.ekodi.kr and run: node scripts/ai-account-node.mjs --pair CODE');process.exit(2)}if(pairCode&&hasArg('--pair-only')){console.log(`EKODI AI account node ${config.nodeId} paired with ${config.providers.join(', ')}`);process.exit(0)}await loop(config);
+await mkdir(ROOT,{recursive:true});const pairCode=arg('--pair');let config=pairCode?await enroll(pairCode):await loadConfig();if(!config?.nodeToken){console.error('Node is not paired. Generate a pairing code in ekodi.kr/ai and run: node scripts/ai-account-node.mjs --pair CODE');process.exit(2)}if(pairCode&&hasArg('--pair-only')){console.log(`EKODI AI account node ${config.nodeId} paired with ${config.providers.join(', ')}`);process.exit(0)}await loop(config);

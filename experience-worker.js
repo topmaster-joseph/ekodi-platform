@@ -3,9 +3,9 @@ import { projectValue } from './secure-projection.js';
 import { EXPERIENCE_META, getExperienceCatalog } from './experience-catalog.js';
 import { DEVELOPER_PORTAL_META, PUBLIC_CONFORMANCE_CONTRACT } from './developer-public-contract.js';
 
-const EXPERIENCE_HOST='exp.ekodi.kr';
-const LEGACY_EXPERIENCE_HOST='try.ekodi.kr';
-const DEVELOPER_HOST='dev.ekodi.kr';
+const EXPERIENCE_HOST='ekodi.kr/experience';
+const LEGACY_EXPERIENCE_HOST='ekodi.kr/experience';
+const DEVELOPER_HOST='ekodi.kr/developer';
 const SECURITY_HEADERS={
   'x-content-type-options':'nosniff',
   'referrer-policy':'strict-origin-when-cross-origin',
@@ -45,7 +45,7 @@ async function staticAsset(env,request,path){
   const response=await env.ASSETS.fetch(new Request(assetUrl,request));
   return withHeaders(response,STATIC_CACHE);
 }
-function adminRedirect(){return withHeaders(Response.redirect('https://admin.ekodi.kr/experience',307),'no-store');}
+function adminRedirect(){return withHeaders(Response.redirect('https://ekodi.kr/admin/experience',307),'no-store');}
 function experienceHealth(){return {
   ok:true,service:'ekodi-experience',publicName:EXPERIENCE_META.publicName,
   boundary:'registered-common-service',canonical:EXPERIENCE_META.canonicalOrigin,
@@ -68,7 +68,7 @@ export default {
       if(path==='/health')return json(developerHealth(),200,PUBLIC_CACHE);
       if(path==='/api/contract')return json(PUBLIC_CONFORMANCE_CONTRACT,200,PUBLIC_CACHE);
       if(path==='/admin')return adminRedirect();
-      if(path==='/experience')return withHeaders(Response.redirect('https://exp.ekodi.kr/',307),'no-store');
+      if(path==='/experience')return withHeaders(Response.redirect('https://ekodi.kr/experience/',307),'no-store');
       if(['/','/standard','/standards','/contract','/validate','/sdk','/sandbox','/certify','/certification'].includes(path))return htmlAsset(env,request,'/developer','developer');
       if(path==='/developer.css'||path==='/developer.js')return staticAsset(env,request,path);
       return json({error:'not_found'},404,PUBLIC_CACHE);
