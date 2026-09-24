@@ -49,6 +49,15 @@ test('live mobile verifier checks canonical apex tenant paths only',async()=>{
   assert.match(verifier,/live-readability-not-observed/);
 });
 
+test('tenant roots stay Worker-first without exceeding Cloudflare route capacity',async()=>{
+  const wrangler=await read('wrangler.site.toml');
+  const line=wrangler.match(/run_worker_first = \[(.*?)\]/s)?.[1]||'';
+  const routes=[...line.matchAll(/"([^"]+)"/g)].map(match=>match[1]);
+  assert.ok(routes.length<=100,'run_worker_first must stay within the Cloudflare route-entry limit');
+  for(const route of ['/jadam*','/pizzamaru*','/yogurt*','/cgma*'])assert.ok(routes.includes(route),'missing consolidated tenant Worker-first route: '+route);
+  for(const retired of ['/jadam/admin*','/jadam/marketing*','/pizzamaru/admin*','/pizzamaru/marketing*','/pizzamaru/mokpodae*','/yogurt/admin*','/yogurt/marketing*','/cgma/marketing*'])assert.ok(!routes.includes(retired),'redundant tenant route should be consolidated: '+retired);
+});
+
 test('remaining canonical business, trade and lab surfaces inherit a readability contract',async()=>{
   const [router,canonical,verifier]=await Promise.all([
     read('platform-router-entry-worker.js'),
@@ -87,9 +96,8 @@ test('guarded release requires the operating-space distinction on representative
     if(url==='https://ekodi.kr/ekodichurch/'){
       assert.ok(probe.expect?.includes('WELCOME TO EKODI CHURCH'),'Church probe must bind to the actual public-page identity');
       assert.ok(probe.expect?.includes('에코디교회'),'Church probe must retain the Korean service identity');
-    }else{
-      assert.ok(probe.expect?.includes('운영공간'),url+' must render the operating-space distinction');
     }
+    assert.ok(probe.expect?.includes('운영공간'),url+' must render the operating-space distinction');
     assert.ok(probe.headerExpect?.includes('x-ekodi-operating-space-label: v1'),url+' must prove shared operating-space ownership');
     assert.equal(probe.rollbackVerify,false);
   }
