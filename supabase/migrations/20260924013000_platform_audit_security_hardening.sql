@@ -45,6 +45,7 @@ on public.church_worship_materials for select
 to anon
 using (is_published = true);
 
+drop policy if exists "authenticated worship access" on public.church_worship_materials;
 drop policy if exists "church tenant admin can read all worship" on public.church_worship_materials;
 create policy "church tenant admin can read all worship"
 on public.church_worship_materials for select
