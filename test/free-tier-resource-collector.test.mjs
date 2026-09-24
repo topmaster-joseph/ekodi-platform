@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { collectSupabase, collectSupabaseOidc, collectGitHub, snapshotsToSql } from '../scripts/collect-free-tier-resource-usage.mjs';
+import { collectSupabase, collectSupabaseOidc, collectCloudflare, collectGitHub, snapshotsToSql } from '../scripts/collect-free-tier-resource-usage.mjs';
 
 const observedAt='2026-09-20T08:30:00.000Z';
 
@@ -42,6 +42,58 @@ test('Supabase collector reports missing telemetry when no management credential
   assert.equal(result.reason,'credential_missing');
   assert.deepEqual(result.snapshots,[]);
   assert.equal(called,false);
+});
+
+test('Cloudflare collector reuses production account boundary and records Workers requests only',async()=>{
+  const calls=[];
+  const config={
+    dailyRequestLimit:100000,
+    knownDevelopmentAccountIds:['dev-account'],
+  };
+  const fetchJson=async(url,options={})=>{
+    calls.push({url,options});
+    assert.equal(url,'https://api.cloudflare.com/client/v4/graphql');
+    assert.equal(options.method,'POST');
+    assert.equal(options.body.variables.accountTag,'prod-account');
+    assert.match(options.body.query,/workersInvocationsAdaptive/);
+    return {data:{viewer:{accounts:[{workersInvocationsAdaptive:[
+      {sum:{requests:42000}},
+      {sum:{requests:1234}},
+    ]}]}}};
+  };
+  const result=await collectCloudflare({
+    token:'cf-token',
+    accountId:'prod-account',
+    developmentAccountId:'dev-account-2',
+    config,
+    fetchJson,
+    observedAt,
+  });
+  assert.equal(result.available,true);
+  assert.equal(result.snapshots.length,1);
+  assert.deepEqual(result.snapshots[0],{
+    provider:'cloudflare',
+    metric:'workers_requests_daily',
+    periodStart:'2026-09-20',
+    observedValue:43234,
+    freeLimit:100000,
+    source:'cloudflare-workers-analytics',
+    observedAt,
+  });
+  assert.equal(calls.length,1);
+});
+
+test('Cloudflare collector fails closed if Production resolves to a known Development account',async()=>{
+  await assert.rejects(
+    collectCloudflare({
+      token:'cf-token',
+      accountId:'dev-account',
+      config:{dailyRequestLimit:100000,knownDevelopmentAccountIds:['dev-account']},
+      fetchJson:async()=>{throw new Error('must not fetch');},
+      observedAt,
+    }),
+    /known Development account/
+  );
 });
 
 test('GitHub collector records public repository cache and artifact storage only',async()=>{

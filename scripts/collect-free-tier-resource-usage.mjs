@@ -1,9 +1,12 @@
 import fs from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
+import { assertProductionAccountBoundary } from './cloudflare-quota-guard-lib.mjs';
 
 const SUPABASE_API='https://api.supabase.com/v1';
 const GITHUB_API='https://api.github.com';
 const DEFAULT_SUPABASE_OIDC_CONFIG='config/free-tier-supabase-oidc.json';
+const DEFAULT_CLOUDFLARE_QUOTA_CONFIG='config/cloudflare-production-quota-guard.json';
+const CLOUDFLARE_GRAPHQL='https://api.cloudflare.com/client/v4/graphql';
 const GB=1024*1024*1024;
 
 function sqlString(value){return `'${String(value??'').replaceAll("'","''")}'`}
@@ -177,6 +180,63 @@ export async function collectSupabaseOidc({token,config,fetchJson=jsonFetch,obse
   };
 }
 
+export async function loadCloudflareQuotaConfig(path=DEFAULT_CLOUDFLARE_QUOTA_CONFIG){
+  const raw=await fs.readFile(path,'utf8');
+  const parsed=JSON.parse(raw);
+  if(!parsed||!Number.isFinite(Number(parsed.dailyRequestLimit))||Number(parsed.dailyRequestLimit)<=0)throw new Error('CLOUDFLARE_QUOTA_CONFIG_INVALID');
+  return parsed;
+}
+
+export async function collectCloudflare({token,accountId,developmentAccountId='',config,fetchJson=jsonFetch,observedAt=nowIso()}={}){
+  if(!token)return {available:false,reason:'credential_missing',snapshots:[]};
+  if(!accountId)return {available:false,reason:'account_missing',snapshots:[]};
+  if(!config)throw new Error('CLOUDFLARE_QUOTA_CONFIG_REQUIRED');
+  assertProductionAccountBoundary({
+    productionAccountId:accountId,
+    developmentAccountId,
+    knownDevelopmentAccountIds:config.knownDevelopmentAccountIds||[],
+  });
+  const end=new Date(observedAt);
+  if(!Number.isFinite(end.getTime()))throw new Error('CLOUDFLARE_OBSERVED_AT_INVALID');
+  const start=new Date(end);
+  start.setUTCHours(0,0,0,0);
+  const query=`query Usage($accountTag: string, $start: string, $end: string) {
+    viewer {
+      accounts(filter:{accountTag:$accountTag}) {
+        workersInvocationsAdaptive(limit:10000, filter:{datetime_geq:$start, datetime_leq:$end}) {
+          sum { requests }
+        }
+      }
+    }
+  }`;
+  const payload=await fetchJson(CLOUDFLARE_GRAPHQL,{
+    token,
+    method:'POST',
+    body:{query,variables:{accountTag:accountId,start:start.toISOString(),end:end.toISOString()}},
+  });
+  if(Array.isArray(payload?.errors)&&payload.errors.length){
+    throw new Error(`CLOUDFLARE_GRAPHQL_ERROR:${String(payload.errors[0]?.message||'unknown')}`);
+  }
+  const rows=payload?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive||[];
+  const requests=rows.reduce((sum,row)=>sum+Number(row?.sum?.requests||0),0);
+  if(!Number.isFinite(requests)||requests<0)throw new Error('CLOUDFLARE_REQUESTS_INVALID');
+  const freeLimit=Number(config.dailyRequestLimit);
+  return {
+    available:true,
+    reason:null,
+    snapshots:[{
+      provider:'cloudflare',
+      metric:'workers_requests_daily',
+      periodStart:periodDay(observedAt),
+      observedValue:requests,
+      freeLimit,
+      source:'cloudflare-workers-analytics',
+      observedAt,
+    }],
+    window:{start:start.toISOString(),end:end.toISOString()},
+  };
+}
+
 export async function collectGitHub({repository,token='',fetchJson=jsonFetch,observedAt=nowIso()}={}){
   if(!repository||!repository.includes('/'))throw new Error('GITHUB_REPOSITORY_REQUIRED');
   const headers={'x-github-api-version':'2026-03-10','accept':'application/vnd.github+json'};
@@ -217,6 +277,16 @@ ON CONFLICT(provider,metric,period_start) DO UPDATE SET observed_value=excluded.
 export async function collectAll(env=process.env){
   const observedAt=nowIso();
   const githubPromise=collectGitHub({repository:env.GITHUB_REPOSITORY,token:env.GITHUB_TOKEN||'',observedAt});
+  const cloudflarePromise=(env.CLOUDFLARE_API_TOKEN&&env.CLOUDFLARE_ACCOUNT_ID)
+    ? loadCloudflareQuotaConfig(env.CLOUDFLARE_QUOTA_CONFIG||DEFAULT_CLOUDFLARE_QUOTA_CONFIG)
+        .then(config=>collectCloudflare({
+          token:env.CLOUDFLARE_API_TOKEN,
+          accountId:env.CLOUDFLARE_ACCOUNT_ID,
+          developmentAccountId:env.CLOUDFLARE_DEVELOPMENT_ACCOUNT_ID||'',
+          config,
+          observedAt,
+        }))
+    : Promise.resolve({available:false,reason:'credential_missing',snapshots:[]});
   let supabasePromise;
   if(env.SUPABASE_ACCESS_TOKEN){
     supabasePromise=collectSupabase({token:env.SUPABASE_ACCESS_TOKEN,observedAt}).then(result=>({...result,mode:'management_api'}));
@@ -226,8 +296,8 @@ export async function collectAll(env=process.env){
   }else{
     supabasePromise=Promise.resolve({available:false,reason:'credential_missing',mode:'none',snapshots:[],freeOrganizations:[],activeProjects:[],projects:[],errors:[]});
   }
-  const [supabase,github]=await Promise.all([supabasePromise,githubPromise]);
-  return {observedAt,supabase,github,snapshots:[...supabase.snapshots,...github.snapshots]};
+  const [supabase,github,cloudflare]=await Promise.all([supabasePromise,githubPromise,cloudflarePromise]);
+  return {observedAt,supabase,github,cloudflare,snapshots:[...cloudflare.snapshots,...supabase.snapshots,...github.snapshots]};
 }
 
 async function main(){
@@ -238,6 +308,7 @@ async function main(){
   process.stdout.write(JSON.stringify({
     observedAt:result.observedAt,
     supabase:{available:result.supabase.available,reason:result.supabase.reason,mode:result.supabase.mode||'management_api',freeOrganizations:(result.supabase.freeOrganizations||[]).length,activeProjects:(result.supabase.activeProjects||[]).length,projects:(result.supabase.projects||[]).length,snapshots:result.supabase.snapshots.length},
+    cloudflare:{available:result.cloudflare.available,reason:result.cloudflare.reason,snapshots:result.cloudflare.snapshots.length},
     github:{repository:result.github.repository,snapshots:result.github.snapshots.length},
   })+'\n');
 }
