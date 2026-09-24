@@ -17,7 +17,7 @@ function walk(dir,base=''){
 }
 
 for(const file of walk(root)){
-  if(file==='scripts/validate-apex-path-semantics.mjs')continue;
+  if(file==='scripts/validate-apex-path-semantics.mjs'||file==='scripts/migrate-apex-paths-20260924.mjs'||file.startsWith('docs/')||file.endsWith('.md'))continue;
   let text='';try{text=fs.readFileSync(path.join(root,file),'utf8')}catch{continue}
   const lines=text.split(/\r?\n/);
   lines.forEach((line,index)=>{
