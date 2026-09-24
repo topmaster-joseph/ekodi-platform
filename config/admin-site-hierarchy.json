@@ -6,75 +6,89 @@
     "adminPath": "/admin",
     "role": "platform-super-admin",
     "ownRouteGroups": [
-      "home",
-      "operations",
-      "workspaces",
+      "summary",
+      "sites",
+      "people",
       "services",
-      "system"
+      "content",
+      "status",
+      "settings-records"
     ],
     "mayAggregateStatus": true,
-    "mayCreateChildAdminAlias": false
+    "mayCreateChildAdminAlias": false,
+    "navigationPolicy": "ADMIN-ROLE-NAV-001",
+    "navigationProfile": "platform-super-admin"
   },
   "sites": [
     {
       "id": "ekodibiz",
       "publicPath": "/ekodibiz",
       "adminPath": "/ekodibiz/admin",
-      "parentId": "platform"
+      "parentId": "platform",
+      "navigationProfile": "delegated-manager"
     },
     {
       "id": "ekodimall",
       "publicPath": "/ekodimall",
       "adminPath": "/ekodimall/admin",
-      "parentId": "ekodibiz"
+      "parentId": "ekodibiz",
+      "navigationProfile": "delegated-manager"
     },
     {
       "id": "ekodibiz-trade",
       "publicPath": "/ekodibiz/trade",
       "adminPath": "/ekodibiz/trade/admin",
-      "parentId": "ekodibiz"
+      "parentId": "ekodibiz",
+      "navigationProfile": "delegated-manager"
     },
     {
       "id": "ekodichurch",
       "publicPath": "/ekodichurch",
       "adminPath": "/ekodichurch/admin",
-      "parentId": "platform"
+      "parentId": "platform",
+      "navigationProfile": "delegated-manager"
     },
     {
       "id": "cheonggye-local",
       "publicPath": "/cheonggye",
       "adminPath": "/cheonggye/admin",
-      "parentId": "platform"
+      "parentId": "platform",
+      "navigationProfile": "delegated-manager"
     },
     {
       "id": "cgma",
       "publicPath": "/cgma",
       "adminPath": "/cgma/admin",
-      "parentId": "platform"
+      "parentId": "platform",
+      "navigationProfile": "delegated-manager"
     },
     {
       "id": "cmpmyi",
       "publicPath": "/cmpmyi",
       "adminPath": "/cmpmyi/admin",
-      "parentId": "platform"
+      "parentId": "platform",
+      "navigationProfile": "delegated-manager"
     },
     {
       "id": "jadam",
       "publicPath": "/jadam",
       "adminPath": "/jadam/admin",
-      "parentId": "cmpmyi"
+      "parentId": "cmpmyi",
+      "navigationProfile": "delegated-manager"
     },
     {
       "id": "pizzamaru",
       "publicPath": "/pizzamaru",
       "adminPath": "/pizzamaru/admin",
-      "parentId": "cmpmyi"
+      "parentId": "cmpmyi",
+      "navigationProfile": "delegated-manager"
     },
     {
       "id": "yogurt",
       "publicPath": "/yogurt",
       "adminPath": "/yogurt/admin",
-      "parentId": "cmpmyi"
+      "parentId": "cmpmyi",
+      "navigationProfile": "delegated-manager"
     }
   ],
   "forbiddenAggregationAliases": [
