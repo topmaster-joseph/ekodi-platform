@@ -82,6 +82,6 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.match(principles,/Admin Shell UI/);
   assert.match(principles,/역할별 2단 구조/);
   assert.match(principles,/역할별 좌측 메뉴 고정·최고관리자 필요 시 독립스크롤/);
-  assert.match(principles,/통합현황 \/ 서비스 \/ 사이트 \/ 사용자·권한 \/ 콘텐츠·운영 \/ 상태·배포 \/ 설정·기록/);
+  assert.match(principles,/플랫폼 전체현황 \/ 사이트·브랜드 \/ 사용자·관리자·권한 \/ 서비스·AI \/ 콘텐츠·행사·소통 \/ 운영·배포·장애 \/ 설정·보안·감사/);
   assert.match(principles,/가독성·직관성 공통 기준/);
 });
