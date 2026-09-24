@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { storePortfolioAdminPage, storePortfolioAdminPanelPage, CMPMYI_STORES, CMPMYI_ADMIN_SECTIONS, CMPMYI_COMMON_MENU } from '../store-portfolio-admin-page.js';
+import { storePortfolioAdminPage, storePortfolioAdminPanelPage, storePortfolioAdminPanelScript, CMPMYI_STORES, CMPMYI_ADMIN_SECTIONS, CMPMYI_COMMON_MENU } from '../store-portfolio-admin-page.js';
 import platformEntry from '../platform-router-entry-worker.js';
 import { storeAdminPage } from '../store-admin-engine.js';
 import { ADMIN_MENU_REGISTRY } from '../admin-menu-registry.js';
@@ -54,12 +54,33 @@ test('cmpmyi common panel stays same-origin frameable and exposes brand handoffs
   assert.match(html,/사람 승인/);
   assert.match(html,/공식 Adapter/);
   assert.match(html,/브랜드 간 데이터를 합쳐 쓰지 않습니다/);
+  assert.match(html,/id="deliveryLiveState"/);
+  assert.match(html,/id="deliveryPortfolioSummary"/);
+  assert.match(html,/data-delivery-live="jadam"/);
+  assert.match(html,/\/cmpmyi\/admin\/panel\.js/);
+});
+
+test('cmpmyi delivery runtime reads existing store ledgers without adding cross-brand writes',async()=>{
+  const response=storePortfolioAdminPanelScript();const script=await response.text();
+  assert.equal(response.status,200);
+  assert.match(response.headers.get('content-type')||'',/text\/javascript/);
+  assert.match(script,/store_operating_space_snapshot/);
+  assert.match(script,/store_delivery_platform_admin_snapshot/);
+  assert.match(script,/p_days:30/);
+  assert.match(script,/ekodi-store-admin-session:jadam/);
+  assert.match(script,/data-delivery-live/);
+  assert.match(script,/5분 자동갱신/);
+  assert.doesNotMatch(script,/store_platform_sync_queue|store_platform_review_queue_reply|menu_price_update|menu_availability_update/);
 });
 
 test('router serves cmpmyi common panels and same-origin embedded canonical store admins',async()=>{
   const panel=await platformEntry.fetch(new Request('https://ekodi.kr/cmpmyi/admin/panel/customer'),{},{});
   assert.equal(panel.status,200);
   assert.equal(panel.headers.get('x-ekodi-route'),'cmpmyi-store-portfolio-panel');
+  const panelScript=await platformEntry.fetch(new Request('https://ekodi.kr/cmpmyi/admin/panel.js'),{},{});
+  assert.equal(panelScript.status,200);
+  assert.match(panelScript.headers.get('content-type')||'',/text\/javascript/);
+  assert.match(await panelScript.text(),/store_delivery_platform_admin_snapshot/);
 
   const embedded=await platformEntry.fetch(new Request('https://ekodi.kr/jadam/admin/menu?embed=cmpmyi'),{},{});
   const embeddedHtml=await embedded.text();
