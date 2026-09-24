@@ -374,7 +374,15 @@ function sanitizeCommandPayload(type, rawPayload) {
     let target;
     try { target=new URL(pathValue,'https://ekodi.kr/'); } catch { throw new Error('BROWSER_PATH_INVALID'); }
     if(target.protocol!=='https:'||target.hostname!=='ekodi.kr'||target.username||target.password||target.port) throw new Error('BROWSER_TARGET_INVALID');
-    return {path:target.pathname+target.search+target.hash,deviceProfile};
+    return {
+      path:target.pathname+target.search+target.hash,
+      deviceProfile,
+      executionMode:'background-only',
+      createUserBrowserTab:false,
+      closeOwnedSurfaceOnComplete:true,
+      closeOwnedSurfaceOnAuthRequired:true,
+      preserveUserOwnedSurfaces:true,
+    };
   }
   if (policy.payload === 'camera-stream') {
     const externalId=safeText(rawPayload?.externalId,100).toLowerCase();
