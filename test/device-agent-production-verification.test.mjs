@@ -9,10 +9,11 @@ import {
   evaluateDesktopProbe,
   evaluateDesktopCanary,
   evaluateDesktopGuestCanary,
+  evaluateDesktopUiCanary,
 } from '../scripts/verify-device-agent-production.mjs';
 
 test('parses the canonical Device Agent version marker', () => {
-  assert.equal(parseAgentVersion("$AgentVersion = '2.3.3'"), '2.3.3');
+  assert.equal(parseAgentVersion("$AgentVersion = '2.3.4'"), '2.3.4');
   assert.throws(() => parseAgentVersion('Write-Host missing'));
 });
 
@@ -31,28 +32,28 @@ test('self-update requires the new process version plus a fresh heartbeat', () =
   const device = {
     status:'online',
     lastSeenAt:'2026-09-20T10:02:30Z',
-    agentVersion:'2.3.3',
+    agentVersion:'2.3.4',
     recentCommands:[{
       id:'cmd_update',
       status:'succeeded',
       completedAt:'2026-09-20T10:02:20Z',
-      result:{ message:'EKODI Device Agent를 트랜잭션 방식으로 2.3.3 버전으로 업데이트했습니다. 명령 결과 전송 후 Agent를 안전 재시작합니다.' },
+      result:{ message:'EKODI Device Agent를 트랜잭션 방식으로 2.3.4 버전으로 업데이트했습니다. 명령 결과 전송 후 Agent를 안전 재시작합니다.' },
     }],
   };
   const passed = evaluateSelfUpdate({
     device,
     commandId:'cmd_update',
     issuedAt:'2026-09-20T10:02:00Z',
-    expectedVersion:'2.3.3',
+    expectedVersion:'2.3.4',
   });
   assert.equal(passed.ok, true);
   assert.equal(passed.summary.restartedIntoCandidate, true);
 
   const oldProcess = evaluateSelfUpdate({
-    device:{ ...device, agentVersion:'2.3.2' },
+    device:{ ...device, agentVersion:'2.3.3' },
     commandId:'cmd_update',
     issuedAt:'2026-09-20T10:02:00Z',
-    expectedVersion:'2.3.3',
+    expectedVersion:'2.3.4',
   });
   assert.equal(oldProcess.done, false);
   assert.equal(oldProcess.reason, 'new_agent_not_running_yet');
@@ -67,7 +68,7 @@ test('background-browser canary requires isolated proof and projects the gated w
       browserCanary:{
         ok:true,
         mode:'background-browser-canary',
-        agentVersion:'2.3.3',
+        agentVersion:'2.3.4',
         browser:'msedge.exe',
         url:'https://ekodi.kr/',
         contentBytes:1024,
@@ -83,7 +84,7 @@ test('background-browser canary requires isolated proof and projects the gated w
   const device = {
     status:'online',
     lastSeenAt:'2026-09-20T10:04:30Z',
-    agentVersion:'2.3.3',
+    agentVersion:'2.3.4',
     capabilities:{ backgroundBrowserCanary:true, backgroundBrowser:true },
     recentCommands:[command],
   };
@@ -91,7 +92,7 @@ test('background-browser canary requires isolated proof and projects the gated w
     device,
     commandId:'cmd_canary',
     issuedAt:'2026-09-20T10:03:30Z',
-    expectedVersion:'2.3.3',
+    expectedVersion:'2.3.4',
   });
   assert.equal(passed.ok, true);
   assert.equal(passed.summary.canaryProjected, true);
@@ -101,7 +102,7 @@ test('background-browser canary requires isolated proof and projects the gated w
     device:{ ...device, capabilities:{ backgroundBrowserCanary:true, backgroundBrowser:false } },
     commandId:'cmd_canary',
     issuedAt:'2026-09-20T10:03:30Z',
-    expectedVersion:'2.3.3',
+    expectedVersion:'2.3.4',
   });
   assert.equal(notProjected.done, false);
   assert.equal(notProjected.reason, 'browser_worker_capability_not_projected_yet');
@@ -110,7 +111,7 @@ test('background-browser canary requires isolated proof and projects the gated w
     device:{ ...device, recentCommands:[{ ...command, result:{ browserCanary:{ ...command.result.browserCanary, focusIsolated:false } } }] },
     commandId:'cmd_canary',
     issuedAt:'2026-09-20T10:03:30Z',
-    expectedVersion:'2.3.3',
+    expectedVersion:'2.3.4',
   });
   assert.equal(foregroundProof.ok, false);
   assert.match(foregroundProof.error, /non-disruptive proof contract/);
@@ -123,7 +124,7 @@ test('native background-browser worker requires production-isolated read-only pr
     mode:'background-browser-worker',
     virtualizationProvider:'ekodi-native-remote-computer',
     routingPolicy:'EKODI-VIRTUALIZATION-ROUTING-001',
-    agentVersion:'2.3.3',
+    agentVersion:'2.3.4',
     browser:'msedge.exe',
     url:'https://ekodi.kr/',
     deviceProfile:'desktop',
@@ -148,7 +149,7 @@ test('native background-browser worker requires production-isolated read-only pr
   const device={
     status:'online',
     lastSeenAt:'2026-09-20T10:05:30Z',
-    agentVersion:'2.3.3',
+    agentVersion:'2.3.4',
     capabilities:{backgroundBrowser:true},
     recentCommands:[{
       id:'cmd_worker',
@@ -161,7 +162,7 @@ test('native background-browser worker requires production-isolated read-only pr
     device,
     commandId:'cmd_worker',
     issuedAt:'2026-09-20T10:04:30Z',
-    expectedVersion:'2.3.3',
+    expectedVersion:'2.3.4',
   });
   assert.equal(passed.ok,true);
   assert.equal(passed.summary.nativeBrowserOperationServiceReady,true);
@@ -171,7 +172,7 @@ test('native background-browser worker requires production-isolated read-only pr
     device:{...device,recentCommands:[{...device.recentCommands[0],result:{browserWorker:{...proof,activeUserProfileReused:true}}}]},
     commandId:'cmd_worker',
     issuedAt:'2026-09-20T10:04:30Z',
-    expectedVersion:'2.3.3',
+    expectedVersion:'2.3.4',
   });
   assert.equal(reused.ok,false);
   assert.match(reused.error,/isolated read-only execution proof contract/);
@@ -185,7 +186,7 @@ test('isolated desktop probe classifies the native backend gap without enabling 
     provider:'ekodi-native-remote-computer',
     routingPolicy:'EKODI-VIRTUALIZATION-ROUTING-001',
     backendPolicy:'EKODI-ISOLATED-DESKTOP-BACKEND-001',
-    agentVersion:'2.3.3',
+    agentVersion:'2.3.4',
     virtualizationFirmwareEnabled:true,
     hyperVState:'Disabled',
     hyperVPowerShellAvailable:false,
@@ -207,7 +208,7 @@ test('isolated desktop probe classifies the native backend gap without enabling 
   const device={
     status:'online',
     lastSeenAt:'2026-09-23T13:10:30Z',
-    agentVersion:'2.3.3',
+    agentVersion:'2.3.4',
     capabilities:{isolatedDesktopProbe:true,isolatedDesktop:false},
     recentCommands:[{
       id:'cmd_desktop_probe',
@@ -220,7 +221,7 @@ test('isolated desktop probe classifies the native backend gap without enabling 
     device,
     commandId:'cmd_desktop_probe',
     issuedAt:'2026-09-23T13:09:30Z',
-    expectedVersion:'2.3.3',
+    expectedVersion:'2.3.4',
   });
   assert.equal(passed.ok,true);
   assert.equal(passed.summary.probeProjected,true);
@@ -231,7 +232,7 @@ test('isolated desktop probe classifies the native backend gap without enabling 
     device:{...device,capabilities:{isolatedDesktopProbe:true,isolatedDesktop:true}},
     commandId:'cmd_desktop_probe',
     issuedAt:'2026-09-23T13:09:30Z',
-    expectedVersion:'2.3.3',
+    expectedVersion:'2.3.4',
   });
   assert.equal(prematurelyEnabled.ok,false);
   assert.match(prematurelyEnabled.error,/before verified headless backend execution proof/);
@@ -245,7 +246,7 @@ test('headless Hyper-V desktop canary proves ephemeral VM lifecycle but keeps ex
     provider:'ekodi-native-remote-computer',
     routingPolicy:'EKODI-VIRTUALIZATION-ROUTING-001',
     backendPolicy:'EKODI-ISOLATED-DESKTOP-BACKEND-001',
-    agentVersion:'2.3.3',
+    agentVersion:'2.3.4',
     backend:'hyper-v-ekodi-base',
     sessionType:'vm',
     baseVmGeneration:2,
@@ -268,7 +269,7 @@ test('headless Hyper-V desktop canary proves ephemeral VM lifecycle but keeps ex
   const device={
     status:'online',
     lastSeenAt:'2026-09-23T13:20:30Z',
-    agentVersion:'2.3.3',
+    agentVersion:'2.3.4',
     capabilities:{isolatedDesktopCanary:true,isolatedDesktop:false},
     recentCommands:[{
       id:'cmd_desktop_canary',
@@ -281,7 +282,7 @@ test('headless Hyper-V desktop canary proves ephemeral VM lifecycle but keeps ex
     device,
     commandId:'cmd_desktop_canary',
     issuedAt:'2026-09-23T13:19:30Z',
-    expectedVersion:'2.3.3',
+    expectedVersion:'2.3.4',
   });
   assert.equal(passed.ok,true);
   assert.equal(passed.summary.verified,true);
@@ -293,7 +294,7 @@ test('headless Hyper-V desktop canary proves ephemeral VM lifecycle but keeps ex
     device:{...device,capabilities:{isolatedDesktopCanary:true,isolatedDesktop:true}},
     commandId:'cmd_desktop_canary',
     issuedAt:'2026-09-23T13:19:30Z',
-    expectedVersion:'2.3.3',
+    expectedVersion:'2.3.4',
   });
   assert.equal(prematurelyEnabled.ok,false);
   assert.match(prematurelyEnabled.error,/canary proof alone/);
@@ -307,8 +308,8 @@ test('isolated guest runtime canary proves credentialless offline execution and 
     provider:'ekodi-native-remote-computer',
     routingPolicy:'EKODI-VIRTUALIZATION-ROUTING-001',
     backendPolicy:'EKODI-ISOLATED-DESKTOP-BACKEND-001',
-    agentVersion:'2.3.3',
-    guestAgentVersion:'1.0.0',
+    agentVersion:'2.3.4',
+    guestAgentVersion:'1.1.0',
     backend:'hyper-v-ekodi-base',
     sessionType:'vm',
     taskType:'guest.runtime.probe',
@@ -336,7 +337,7 @@ test('isolated guest runtime canary proves credentialless offline execution and 
   const device={
     status:'online',
     lastSeenAt:'2026-09-24T00:10:30Z',
-    agentVersion:'2.3.3',
+    agentVersion:'2.3.4',
     capabilities:{isolatedDesktopGuestCanary:true,isolatedDesktop:false},
     recentCommands:[{
       id:'cmd_guest_canary',
@@ -349,7 +350,7 @@ test('isolated guest runtime canary proves credentialless offline execution and 
     device,
     commandId:'cmd_guest_canary',
     issuedAt:'2026-09-24T00:09:30Z',
-    expectedVersion:'2.3.3',
+    expectedVersion:'2.3.4',
   });
   assert.equal(passed.ok,true);
   assert.equal(passed.summary.verified,true);
@@ -361,7 +362,7 @@ test('isolated guest runtime canary proves credentialless offline execution and 
     device:{...device,recentCommands:[{...device.recentCommands[0],result:{desktopGuestCanary:{...proof,interactiveDesktopUsed:true}}}]},
     commandId:'cmd_guest_canary',
     issuedAt:'2026-09-24T00:09:30Z',
-    expectedVersion:'2.3.3',
+    expectedVersion:'2.3.4',
   });
   assert.equal(interactiveLeak.ok,false);
   assert.match(interactiveLeak.error,/credentialless offline task\/receipt proof contract/);
@@ -370,8 +371,94 @@ test('isolated guest runtime canary proves credentialless offline execution and 
     device:{...device,capabilities:{isolatedDesktopGuestCanary:true,isolatedDesktop:true}},
     commandId:'cmd_guest_canary',
     issuedAt:'2026-09-24T00:09:30Z',
-    expectedVersion:'2.3.3',
+    expectedVersion:'2.3.4',
   });
   assert.equal(prematurelyEnabled.ok,false);
   assert.match(prematurelyEnabled.error,/guest canary proof alone/);
+});
+
+
+test('isolated semantic UI canary proves guest-only UI automation and keeps general execution disabled', () => {
+  const proof={
+    ok:true,
+    mode:'isolated-desktop-guest-ui-canary',
+    provider:'ekodi-native-remote-computer',
+    routingPolicy:'EKODI-VIRTUALIZATION-ROUTING-001',
+    backendPolicy:'EKODI-ISOLATED-DESKTOP-BACKEND-001',
+    agentVersion:'2.3.4',
+    guestAgentVersion:'1.1.0',
+    backend:'hyper-v-ekodi-base',
+    sessionType:'vm',
+    taskType:'guest.ui.probe',
+    receiptSha256:'e'.repeat(64),
+    executedAsSystem:true,
+    noNetworkAdapter:true,
+    noActiveNetwork:true,
+    guestUiSurfaceUsed:true,
+    hostInteractiveDesktopUsed:false,
+    sharedInteractiveDesktop:false,
+    semanticUiAutomation:true,
+    lowLevelInputInjection:false,
+    clipboardShared:false,
+    credentialCollection:false,
+    hostProfileMounted:false,
+    syntheticUiOnly:true,
+    windowHandleObserved:true,
+    windowFound:true,
+    buttonFound:true,
+    invokePatternAvailable:true,
+    controlInvoked:true,
+    resultCode:'EKODI_UI_OK',
+    windowClosed:true,
+    mutationScope:'ephemeral-guest-ui-only',
+    vmReachedRunning:true,
+    heartbeatObserved:true,
+    networkAttached:false,
+    ephemeralDifferencingDisk:true,
+    baseDiskWriteForbidden:true,
+    sessionVmRemoved:true,
+    sessionDiskRemoved:true,
+    checkedAt:'2026-09-24T01:00:00Z',
+  };
+  const device={
+    status:'online',
+    lastSeenAt:'2026-09-24T01:00:30Z',
+    agentVersion:'2.3.4',
+    capabilities:{isolatedDesktopUiCanary:true,isolatedDesktop:false},
+    recentCommands:[{
+      id:'cmd_ui_canary',
+      status:'succeeded',
+      completedAt:'2026-09-24T01:00:10Z',
+      result:{desktopUiCanary:proof},
+    }],
+  };
+  const passed=evaluateDesktopUiCanary({
+    device,
+    commandId:'cmd_ui_canary',
+    issuedAt:'2026-09-24T00:59:30Z',
+    expectedVersion:'2.3.4',
+  });
+  assert.equal(passed.ok,true);
+  assert.equal(passed.summary.verified,true);
+  assert.equal(passed.summary.generalDesktopExecutionStillFailClosed,true);
+  assert.equal(passed.summary.proof.semanticUiAutomation,true);
+  assert.equal(passed.summary.proof.hostInteractiveDesktopUsed,false);
+
+  const lowLevelLeak=evaluateDesktopUiCanary({
+    device:{...device,recentCommands:[{...device.recentCommands[0],result:{desktopUiCanary:{...proof,lowLevelInputInjection:true}}}]},
+    commandId:'cmd_ui_canary',
+    issuedAt:'2026-09-24T00:59:30Z',
+    expectedVersion:'2.3.4',
+  });
+  assert.equal(lowLevelLeak.ok,false);
+  assert.match(lowLevelLeak.error,/semantic, networkless, host-independent UI proof contract/);
+
+  const prematurelyEnabled=evaluateDesktopUiCanary({
+    device:{...device,capabilities:{isolatedDesktopUiCanary:true,isolatedDesktop:true}},
+    commandId:'cmd_ui_canary',
+    issuedAt:'2026-09-24T00:59:30Z',
+    expectedVersion:'2.3.4',
+  });
+  assert.equal(prematurelyEnabled.ok,false);
+  assert.match(prematurelyEnabled.error,/General isolated desktop execution became active/);
 });
