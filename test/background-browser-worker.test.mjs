@@ -72,6 +72,18 @@ test('shared-site guarded release invokes native browser verification after prod
   assert.match(sharedRelease,/surface_paths:\s*\/,\/my\/,\/admin\/,\/ekodimall\/admin/);
   assert.match(sharedRelease,/authenticated_admin_surface_verification:/);
   assert.match(sharedRelease,/verify-admin-production-ui-e2e\.yml/);
+  for (const verifierPath of [
+    'scripts/verify-admin-production-ui-e2e.mjs',
+    'scripts/ekodi-background-browser-worker.mjs',
+    'scripts/validate-background-browser-worker.mjs',
+    'config/background-browser-worker-policy.json',
+    'config/surface-system-verification-policy.json',
+    '.github/workflows/ekodi-background-browser-worker.yml',
+    '.github/workflows/verify-admin-production-ui-e2e.yml',
+  ]) {
+    assert.match(sharedRelease, new RegExp(`- ['"]${verifierPath.replace(/[.*+?^\${}()|[\]\\]/g,'\\  assert.match(sharedRelease,/authenticated_admin_surface_verification:/);
+  assert.match(sharedRelease,/verify-admin-production-ui-e2e\.yml/);')}['"]`), `shared-site push trigger missing verifier: ${verifierPath}`);
+  }
   const desktop=sharedRelease.match(/native_surface_verification_desktop:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
   const mobile=sharedRelease.match(/native_surface_verification_mobile:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
   assert.match(desktop,/needs:\s*deploy/);
