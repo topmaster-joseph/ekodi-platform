@@ -97,6 +97,10 @@ jobs:
         shell: bash
         run: node scripts/admin-authenticated-e2e-retry.mjs
 
+      - name: Verify direct common/professional module health route
+        shell: bash
+        run: node scripts/admin-service-modules-production-e2e.mjs
+
       - name: Publish E2E summary
         if: always()
         shell: bash
@@ -107,6 +111,23 @@ jobs:
             jq -r '"- Passed: \(.passed)\n- Menus checked: \(.checkedMenuCount)/\(.expectedMenuCount)\n- Page errors: \(.diagnostics.pageErrors|length)\n- Admin asset failures: \(.diagnostics.failedAdminAssets|length)"' artifacts/admin-authenticated-e2e/report.json >> "$GITHUB_STEP_SUMMARY"
             jq -r '.results[] | select(.id == "tax") | "- Tax authenticated handoff: \(.tokenHandoffVerified)\n- Tax supplier save: \(.supplierSaveVerification)\n- Tax PUT status: \(.writeStatus // "n/a")\n- Tax persistence readback: \(.persistenceReadbackStatus // "n/a")\n- Tax persistence verified: \(.persistenceVerified // false)\n- Tax compared fields: \(.comparedFieldCount // 0)"' artifacts/admin-authenticated-e2e/report.json >> "$GITHUB_STEP_SUMMARY"
           fi
+          if [ -f artifacts/admin-authenticated-e2e/service-modules-direct-route.json ]; then
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '### Common / Professional module direct route' >> "$GITHUB_STEP_SUMMARY"
+            jq -r '"- Passed: \(.passed)\n- Profiles checked: \(.checkedProfiles)/\(.expectedProfiles)\n- Target: \(.targetUrl)"' artifacts/admin-authenticated-e2e/service-modules-direct-route.json >> "$GITHUB_STEP_SUMMARY"
+            jq -r '.results[] | "- \(.profile): direct=\(.direct.currentSection) reload=\(.reload.currentSection) cards=\(.direct.cardCount) common=\(.direct.commonCount) professional=\(.direct.professionalCount)"' artifacts/admin-authenticated-e2e/service-modules-direct-route.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload service modules E2E evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-service-modules-production-${{ github.run_id }}
+          path: |
+            artifacts/admin-authenticated-e2e/service-modules-direct-route.json
+            artifacts/admin-authenticated-e2e/service-modules-*.png
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Revoke short-lived E2E session
         if: always() && env.E2E_TOKEN_HASH != '' && env.E2E_AUTH_DB_ID != ''
