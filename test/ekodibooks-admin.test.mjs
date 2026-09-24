@@ -1,3 +1,4 @@
+// Dedicated EKODI Books admin release guard.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
