@@ -55,6 +55,6 @@ if (!myIndex.includes('/membership-summary.js') || !myIndex.includes('/membershi
 if (!mySummary.includes("https://ekodi.kr/api/membership/portfolio")) fail('My EKODI is not connected to portfolio endpoint');
 if (!mySummary.includes("https://ekodi.kr/api/membership/entitlements")) fail('My EKODI is not connected to central AI entitlements');
 if (!mySummary.includes('aiEntitlementSubject')) fail('My EKODI subject switcher missing');
-if (entitlementPolicy.managerUrl !== 'https://ekodi.kr/my/' || !entitlementEngine.includes('sameCapabilitySameSubjectAcrossSurfaces')) fail('AI entitlement manager contract missing');
+if (entitlementPolicy.managerUrl !== 'https://ekodi.kr/my/' || !entitlementEngine.includes('buildAiEntitlementSnapshot') || !entitlementEngine.includes('authorizeAiCapability')) fail('AI entitlement manager contract missing');
 
 console.log(`Universal membership contract OK: ${expectedIds.length} user services inherit FREE; paid tiers stay service-specific while exact AI capabilities are shared per subject across surfaces.`);
