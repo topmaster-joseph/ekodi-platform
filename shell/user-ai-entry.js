@@ -19,7 +19,7 @@ function explicitOptIn(){
   return enabledModes.has(body||html||script);
 }
 function cleanup(){
-  document.querySelectorAll('[data-ekodi-user-ai-entry],[data-ekodi-user-ai-entry-style]').forEach(node=>node.remove?.());
+  for(const node of document.querySelectorAll?.('[data-ekodi-user-ai-entry],[data-ekodi-user-ai-entry-style]')||[])node.remove?.();
 }
 function eligible(){
   const {service,surface}=context();
