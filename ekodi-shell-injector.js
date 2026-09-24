@@ -23,7 +23,6 @@ const USER_CHROME_HEADER='x-ekodi-user-chrome';
 const TENANT_READABILITY_HEADER='x-ekodi-tenant-readability';
 const TENANT_READABILITY_VERSION='v1';
 const OPERATING_SPACE_LABEL_VERSION='v1';
-const OPERATING_SPACE_LABEL_HEADER='x-ekodi-operating-space-label';
 const SHELL_TENANT_READABILITY_STYLE=`${SHELL_ORIGIN}/user-ui-shell.css?tenant-readability=${TENANT_READABILITY_VERSION}`;
 const SHELL_MOBILE_HEADER_SCRIPT=`${SHELL_ORIGIN}/mobile-fixed-header.js?tenant-readability=${TENANT_READABILITY_VERSION}`;
 const ADMIN_BOOT_STYLE=`<style data-ekodi-admin-shell-boot>:where(.side-brand,.sidebar-brand,.admin-sidebar-brand,[data-ekodi-admin-sidebar-header],[data-ekodi-admin-brand]){display:none!important}</style>`;
@@ -169,10 +168,8 @@ class TenantReadabilityHtmlInjector{
 class TenantReadabilityHeadInjector{
   element(element){element.append(`<link rel="stylesheet" href="${SHELL_TENANT_READABILITY_STYLE}" data-ekodi-tenant-readability-style="${TENANT_READABILITY_VERSION}"><script src="${SHELL_MOBILE_HEADER_SCRIPT}" defer data-ekodi-tenant-mobile-header="${TENANT_READABILITY_VERSION}"></script>`,{html:true});}
 }
-class TenantOperatingSpaceBodyInjector{
   element(element){element.prepend(`<aside class="ekodi-operating-space-note" data-ekodi-operating-space-label="${OPERATING_SPACE_LABEL_VERSION}" role="note" aria-label="개별 운영공간"><span>운영공간</span></aside>`,{html:true});}
 }
-class TenantOperatingSpaceExistingMarkerRemover{
   element(element){element.remove();}
 }
 class TenantReadabilityHeaderAdopter{
@@ -190,9 +187,7 @@ export function injectEkodiTenantReadability(response,options={}){
   const contentType=String(response.headers.get('content-type')||'').toLowerCase();
   if(!contentType.includes('text/html'))return response;
   const operatingSpace=options?.operatingSpace!==false;
-  const forceOperatingSpace=operatingSpace&&options?.forceOperatingSpace===true;
   const alreadyReadable=String(response.headers.get(TENANT_READABILITY_HEADER)||'').trim()===TENANT_READABILITY_VERSION;
-  if(alreadyReadable&&!forceOperatingSpace)return response;
   const sharedUiAlreadyPresent=String(response.headers.get('x-ekodi-shell')||'').trim()==='v2'||String(response.headers.get('x-ekodi-user-ui')||'').trim()===USER_UI_VERSION;
   const headers=new Headers(response.headers);
   const csp=headers.get('content-security-policy');
@@ -220,8 +215,6 @@ export function injectEkodiTenantReadability(response,options={}){
     .on('.top',headerAdopter)
     .on('[data-ekodi-fixed-header]',headerAdopter);
   if(operatingSpace){
-    if(forceOperatingSpace)rewriter=rewriter.on('.ekodi-operating-space-note[data-ekodi-operating-space-label]',new TenantOperatingSpaceExistingMarkerRemover());
-    rewriter=rewriter.on('body',new TenantOperatingSpaceBodyInjector());
   }
   return rewriter.transform(new Response(response.body,{status:response.status,statusText:response.statusText,headers}));
 }
