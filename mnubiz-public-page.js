@@ -183,7 +183,7 @@ export function renderMnuBizPublicPage(){
 
   <section class="mnubiz-section" id="news">
     <div class="mnubiz-shell">
-      <div class="mnubiz-section__head"><div><p class="mnubiz-section__eyebrow">NEWS & EVENTS</p><h2>소식 · 행사</h2></div><p class="mnubiz-section__desc">동문회에서 확인한 공지와 일정만 공개하며, 추후 행사 신청과 참여 기록도 같은 운영공간에서 연결합니다.</p></div>
+      <div class="mnubiz-section__head"><div><p class="mnubiz-section__eyebrow">NEWS & EVENTS</p><h2>소식 · 행사</h2></div><p class="mnubiz-section__desc">동문회에서 확인한 공지와 일정만 공개하며, 추후 행사 신청과 참여 기록도 같은 사이트에서 연결합니다.</p></div>
       <div class="mnubiz-empty"><span class="mnubiz-empty__date">READY</span><div><strong>공개된 동문회 공지·행사를 준비하고 있습니다.</strong><p>운영자가 확인한 내용부터 순서대로 표시됩니다.</p></div></div>
     </div>
   </section>
