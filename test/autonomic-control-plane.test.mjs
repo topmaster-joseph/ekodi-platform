@@ -125,6 +125,8 @@ test('runtime control plane emits a service-health pulse only for a new unhealth
   const serviceEvents = control.events.filter(event => event.ruleId === 'runtime.service.community.health');
   assert.equal(serviceEvents.length, 1);
   assert.equal(serviceEvents[0].route, 'command_ledger');
+  assert.equal(serviceEvents[0].kind, 'service_health');
+  assert.equal(control.pulseCandidates.find(item => item.event.id === serviceEvents[0].id)?.target.service, 'community');
   assert.equal(control.twin.health, 'drift');
   const persistent = runRuntimeAutonomicControlPlane({ observed, previousObserved:observed, now:'2026-09-25T00:13:00Z', eventOccurrenceKey:'service-check-43' });
   assert.equal(persistent.events.filter(event => event.ruleId === 'runtime.service.community.health').length, 0);
