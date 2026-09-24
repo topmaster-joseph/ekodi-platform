@@ -4,6 +4,7 @@ import { buildPlatformDesiredStateRegistry, buildRuntimeDesiredStateRegistry } f
 import { reconcileDesiredState } from '../ekodi-autonomic-reconciler.js';
 import { eventsFromReconciliation, autonomicEventToPulse } from '../ekodi-event-nervous-system.js';
 import { buildPlatformDigitalTwin } from '../ekodi-platform-digital-twin.js';
+import { buildPlatformServiceObservations } from '../ekodi-platform-observer.js';
 import { runRuntimeAutonomicControlPlane, runPlatformAutonomicControlPlane } from '../ekodi-autonomic-control-plane.js';
 
 const sourceOfTruth = {
@@ -62,6 +63,9 @@ test('event nervous system routes reversible drift to command ledger and red dri
   assert.equal(autonomicEventToPulse(event).delegation.directProductionMutation, false);
   assert.equal(gated.route, 'human_gate');
   assert.equal(gated.actionable, false);
+  const gatedPulse = autonomicEventToPulse(gated);
+  assert.equal(gatedPulse.event.requiresHumanDecision, true);
+  assert.equal(gatedPulse.delegation.allowed, false);
 });
 
 test('digital twin is a read model and exposes convergence/drift graph', () => {
@@ -97,4 +101,31 @@ test('platform control plane consumes current canonical sources without becoming
   assert.equal(control.reconciliation.summary.drift, 0);
   assert.equal(control.registry.generation, 10);
   assert.equal(control.twin.authority.providerOwnsAuthority, false);
+});
+
+
+test('platform observer reuses latest and historical service checks for transition-aware state', () => {
+  const latest = [{ service_id:'community', status:'offline', http_status:503, response_ms:950, checked_at:'2026-09-25T00:10:00Z' }];
+  const history = [
+    { service_id:'community', status:'offline', http_status:503, response_ms:950, checked_at:'2026-09-25T00:10:00Z' },
+    { service_id:'community', status:'online', http_status:200, response_ms:120, checked_at:'2026-09-25T00:05:00Z' },
+  ];
+  const observed = buildPlatformServiceObservations(latest, history, { now:'2026-09-25T00:12:00Z' });
+  assert.equal(observed.current.services.community.status, 'offline');
+  assert.equal(observed.current.services.community.fresh, true);
+  assert.equal(observed.previous.services.community.status, 'online');
+  assert.equal(observed.summary.offline, 1);
+});
+
+test('runtime control plane emits a service-health pulse only for a new unhealthy transition', () => {
+  const base = { autonomousHealth:{state:'HEALTHY',transparency:{directProductionMutation:false}}, ledger:{durable:true,evidenceLedger:'append-only-d1'} };
+  const observed = { ...base, services:{community:{status:'offline',fresh:true}} };
+  const previousObserved = { ...base, services:{community:{status:'online',fresh:true}} };
+  const control = runRuntimeAutonomicControlPlane({ observed, previousObserved, now:'2026-09-25T00:12:00Z', eventOccurrenceKey:'service-check-42' });
+  const serviceEvents = control.events.filter(event => event.ruleId === 'runtime.service.community.health');
+  assert.equal(serviceEvents.length, 1);
+  assert.equal(serviceEvents[0].route, 'command_ledger');
+  assert.equal(control.twin.health, 'drift');
+  const persistent = runRuntimeAutonomicControlPlane({ observed, previousObserved:observed, now:'2026-09-25T00:13:00Z', eventOccurrenceKey:'service-check-43' });
+  assert.equal(persistent.events.filter(event => event.ruleId === 'runtime.service.community.health').length, 0);
 });
