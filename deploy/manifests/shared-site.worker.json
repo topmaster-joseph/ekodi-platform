@@ -524,7 +524,7 @@
         "expect": [
           "EKODI Workspace Admin",
           "data-ekodi-authority-scope=\"tenant\"",
-          "data-ekodi-admin-layout=\"two-level\""
+          "data-ekodi-admin-layout=\"direct-left\""
         ],
         "headerExpect": [
           "x-ekodi-route: workspace-admin",
@@ -726,8 +726,8 @@
           "EKODI Workspace Admin",
           "workspace-admin.js",
           "admin-direct-google.js?v=20260924-v1",
-          "data-ekodi-admin-layout=\"two-level\"",
-          "data-ekodi-admin-nav-mode=\"primary\"",
+          "data-ekodi-admin-layout=\"direct-left\"",
+          "data-ekodi-admin-nav-mode=\"direct\"",
           "data-ekodi-admin-subnav"
         ]
       },
@@ -762,8 +762,8 @@
         "expect": [
           "EKODI Workspace Admin",
           "workspace-admin.js",
-          "data-ekodi-admin-layout=\"two-level\"",
-          "data-ekodi-admin-nav-mode=\"primary\"",
+          "data-ekodi-admin-layout=\"direct-left\"",
+          "data-ekodi-admin-nav-mode=\"direct\"",
           "data-ekodi-admin-subnav"
         ]
       },
