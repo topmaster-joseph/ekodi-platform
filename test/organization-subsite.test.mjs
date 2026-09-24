@@ -20,8 +20,8 @@ test('BNS Love uses the reusable organization workspace projection', async () =>
   assert.equal(isOrganizationWorkspaceSlug('bnslove'), true);
   const response = await renderOrganizationPublicPage(new Request('https://ekodi.kr/bnslove'), {}, {}, 'bnslove');
   const html = await response.text();
-  for (const marker of ['형제사랑회','BROTHERLY LOVE ASSOCIATION','공지사항','임원','회계보고','출석현황','/bnslove/admin']) assert.match(html, new RegExp(marker));
-  assert.doesNotMatch(html,/목포노회|대한예수교장로회/);
+  for (const marker of ['형제사랑회','BROTHERLY LOVE ASSOCIATION','형제사랑회의 주요 소식과 공지를 확인합니다.','공지사항','임원','회계보고','출석현황','/bnslove/admin']) assert.match(html, new RegExp(marker));
+  assert.doesNotMatch(html,/시찰회|목포노회|대한예수교장로회/);
   assert.doesNotMatch(html,/EKODI 운영공간/);
 });
 
