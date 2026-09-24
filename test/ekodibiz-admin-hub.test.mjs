@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { EKODIBIZ_ADMIN_SCOPES, ekodiBizAdminScopeForPath } from '../ekodibiz-admin-registry.js';
 import { workspaceAdminPage, workspaceAdminScript } from '../workspace-admin-page.js';
 import { workspaceTradeAdminScript } from '../workspace-trade-admin-page.js';
@@ -27,4 +28,18 @@ test('workspace and trade admins expose scope handoff only through full authorit
   assert.match(rootScript,/roleCapabilities\(role\)\.includes\('\*'\)/);
   assert.match(tradeScript,/access\?\.role!=='workspace_admin'/);
   assert.match(tradeScript,/scope\.id==='trade'/);
+});
+
+test('EKODIBIZ owns finance and tax administration while central Admin keeps only internal compatibility routes',async()=>{
+  const rootScript=await workspaceAdminScript().text();
+  const financeEntry=await readFile(new URL('../finance-entry-worker.js',import.meta.url),'utf8');
+  const hub=await readFile(new URL('../hub.html',import.meta.url),'utf8');
+  assert.match(rootScript,/\['finance','결제 · 회계'\]/);
+  assert.match(rootScript,/\['tax','세금 · 증빙'\]/);
+  assert.match(rootScript,/financeApi\('\/overview'\)/);
+  assert.match(rootScript,/isBizWorkspace&&section==='finance'/);
+  assert.match(rootScript,/isBizWorkspace&&section==='tax'/);
+  assert.match(rootScript,/platformAdminAuthUrl\(\)/);
+  assert.match(financeEntry,/https:\/\/ekodi\.kr\/ekodibiz\/admin\/finance/);
+  assert.match(hub,/https:\/\/ekodi\.kr\/ekodibiz\/admin\/finance/);
 });
