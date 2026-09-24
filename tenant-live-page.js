@@ -19,19 +19,25 @@ ${header}
 <section id="studioView" class="studio hidden">
   <div class="stage" id="programStage"><video id="mainVideo" autoplay playsinline muted></video><video id="cameraSource" class="source-video" autoplay playsinline muted aria-hidden="true"></video><video id="screenSource" class="source-video" autoplay playsinline muted aria-hidden="true"></video><div id="programOverlayLayer" class="program-overlay-layer" aria-label="방송 화면 추가 소스"></div><div id="programPlaceholder" class="placeholder">카메라를 켜 주세요.</div><span id="programBadge">대기</span></div>
   <aside class="panel compact-panel">
-    <div class="studio-title"><div><small>LIVE STUDIO</small><h2 id="roomTitle">${title}</h2></div><span id="connectionState">대기</span></div>
-    <div class="controls compact-controls"><button id="cameraButton">카메라</button><button id="micButton">마이크</button><button id="screenButton">화면공유</button><button id="openManagementCameraButton">QR카메라</button></div>
+    <div class="studio-title"><div><small>LIVE STUDIO</small><h2 id="roomTitle">${title}</h2></div><div class="studio-live-meta"><span id="connectionState">대기</span><span id="liveElapsed" class="live-elapsed">00:00</span></div></div>
+    <div class="studio-status-strip" aria-label="장비 상태"><span id="cameraControlState">카메라 꺼짐</span><span id="micControlState">마이크 꺼짐</span><span id="screenControlState">화면공유 꺼짐</span></div>
+    <div id="roomLinks" class="hidden compact-links studio-share-links"><label>참여 링크<input id="shareLink" readonly></label><div><button id="openViewerButton" type="button">시청 화면</button><button id="copyLinkButton" type="button">링크 복사</button></div></div>
+    <div class="controls compact-controls"><button id="cameraButton" type="button" aria-pressed="false">카메라</button><button id="micButton" type="button" aria-pressed="false">마이크</button><button id="screenButton" type="button" aria-pressed="false">화면공유</button><button id="openManagementCameraButton" type="button">QR카메라</button></div>
 
     <details class="compact-settings"><summary>화면 설정</summary><div class="video-layout-controls" aria-label="방송 화면 설정"><div class="layout-buttons"><button id="landscapeButton" type="button" class="active" aria-pressed="true">16:9</button><button id="portraitButton" type="button" aria-pressed="false">9:16</button></div><label>카메라<select id="cameraFitSelect"><option value="contain" selected>맞춤</option><option value="cover">채우기</option></select></label></div></details>
 
-    <details class="source-manager compact-section" open><summary>소스</summary>
+    <details class="source-manager compact-section" open><summary>장면 · 소스</summary>
+      <div class="source-subhead"><strong>방송 화면</strong><span>클릭하거나 미리보기에 끌어놓기</span></div>
       <button id="presenterOverlaySource" class="source-card" type="button" draggable="true"><b>발표자</b><span>화면에 추가</span></button>
       <button id="chatOverlaySource" class="source-card" type="button" draggable="true"><b>채팅</b><span>화면에 추가</span></button>
       <div class="camera-connect"><select id="extraCameraSelect" aria-label="이 기기 추가 카메라"><option value="">이 기기 카메라</option></select><button id="connectExtraCameraButton" type="button">연결</button></div>
       <div id="extraCameraSources" class="source-list"></div>
+    </details>
+
+    <details class="participant-manager compact-section" open><summary>참여자 · 원격 카메라</summary>
       <div class="source-head participant-head"><strong>QR 관리카메라</strong><span id="managementCameraState">대기</span></div>
       <div id="managementCameraSources" class="source-list"></div>
-      <div class="source-head participant-head"><strong>참여자</strong><button id="refreshParticipantSourcesButton" type="button">새로고침</button></div>
+      <div class="source-head participant-head"><strong>참여 카메라 요청</strong><div class="source-head-actions"><span id="participantRequestState">0건 대기</span><button id="refreshParticipantSourcesButton" type="button">새로고침</button></div></div>
       <div id="participantRequests" class="participant-requests"></div><div id="participantSources" class="source-list"></div>
     </details>
 
@@ -41,9 +47,8 @@ ${header}
 
     <details class="delivery-settings compact-section"><summary>송출·저장</summary><div class="delivery-fixed"><span class="delivery-check" aria-hidden="true">✓</span><div><strong>EKODI · 자동 저장</strong></div><span class="delivery-default">기본</span></div><div class="external-head"><strong>외부 동시방송</strong><button id="refreshDestinationsButton" type="button">확인</button></div><div id="externalDestinations" class="destination-options"><small>로그인 후 확인</small></div></details>
 
-    <div class="broadcast-actions"><button class="primary" id="goLiveButton">방송 시작</button><button class="danger" id="endLiveButton" disabled>종료</button></div>
-    <div id="statusLog" class="status">준비</div>
-    <div id="roomLinks" class="hidden compact-links"><label>참여 링크<input id="shareLink" readonly></label><div><button id="openViewerButton" type="button">시청 화면</button><button id="copyLinkButton" type="button">링크 복사</button></div></div>
+    <div class="broadcast-actions"><button class="primary" id="goLiveButton">방송 시작</button><button class="danger hidden" id="endLiveButton" disabled>방송 종료</button></div>
+    <div id="statusLog" class="status" aria-live="polite">준비</div>
   </aside>
 </section>
 

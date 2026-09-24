@@ -4,6 +4,8 @@ import { USER_SERVICES } from './user-services.js';
 const cfg = window.EKODI_MY_CONFIG || {};
 const enabled = Boolean(cfg.dataEnabled && cfg.supabaseUrl && cfg.supabasePublishableKey);
 const hostSection = document.querySelector('#platforms');
+const ENTITLEMENT_SUBJECT_KEY = 'ekodi_my_entitlement_subject';
+let entitlementSession = null;
 
 function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -78,7 +80,8 @@ function renderGuest() {
       <div><small>EKODI UNIVERSAL MEMBERSHIP</small><strong>Google 인증 하나로 전체 FREE 기본 자격</strong></div>
       <span class="membership-badge">Guest</span>
     </div>
-    <p>로그인하면 운영 중인 EKODI 사용자 서비스를 FREE 수준부터 이용하고 서비스별 구독 상태를 한곳에서 확인합니다.</p>`;
+    <p>로그인하면 운영 중인 EKODI 사용자 서비스를 FREE 수준부터 이용하고 서비스별 구독 상태를 한곳에서 확인합니다.</p>
+    <div id="aiEntitlementManager" class="ai-entitlement-manager"><p class="ai-entitlement-empty">AI 고급기능 이용권은 로그인 후 개인·기관·단체별로 확인합니다.</p></div>`;
 }
 
 function renderPortfolio(data, { degraded = false } = {}) {
@@ -103,7 +106,109 @@ function renderPortfolio(data, { degraded = false } = {}) {
       <div class="membership-grid">
         ${rows.map(serviceMarkup).join('')}
       </div>
-    </details>`;
+    </details>
+    <div id="aiEntitlementManager" class="ai-entitlement-manager"><p class="ai-entitlement-empty">AI 기능 이용권을 확인하고 있습니다.</p></div>`;
+}
+
+function storedEntitlementSubject() {
+  try { return localStorage.getItem(ENTITLEMENT_SUBJECT_KEY) || 'person'; } catch { return 'person'; }
+}
+function rememberEntitlementSubject(value) {
+  try { if (value) localStorage.setItem(ENTITLEMENT_SUBJECT_KEY, value); } catch {}
+}
+function entitlementLevelClass(level) {
+  return ['basic','additional','advanced','automation'].includes(String(level || '')) ? String(level) : 'basic';
+}
+function entitlementSourceLabel(value) {
+  return ({
+    'universal-free':'공통 기본',
+    'authenticated-member':'로그인 회원',
+    'service-subscription':'서비스 구독',
+    'service-preview':'연동 준비',
+  })[String(value || '')] || '서비스 기준';
+}
+function entitlementCapabilityMarkup(item) {
+  const level = entitlementLevelClass(item?.access?.level);
+  const state = item?.usableNow ? esc(item?.access?.label || '기본') : '준비중';
+  const source = item?.sourceKind === 'specialist' ? '전문서비스' : '공통기능';
+  return `<article class="ai-entitlement-capability${item?.usableNow ? '' : ' is-preview'}">
+    <div><strong>${esc(item?.name || 'AI 기능')}</strong><small>${esc(item?.categoryLabel || '')} · ${esc(source)}</small></div>
+    <span class="ai-entitlement-level level-${esc(level)}">${esc(state)}</span>
+    <small class="ai-entitlement-source">${esc(entitlementSourceLabel(item?.access?.source))}</small>
+  </article>`;
+}
+function renderEntitlementManager(data, { degraded = false } = {}) {
+  const host = document.querySelector('#aiEntitlementManager');
+  if (!host) return;
+  if (!data || !Array.isArray(data.capabilities)) {
+    host.innerHTML = `<p class="ai-entitlement-empty">${degraded ? 'AI 이용권 상태 확인이 지연되고 있습니다.' : 'AI 이용권을 불러오지 못했습니다.'}</p>`;
+    return;
+  }
+  const subjects = Array.isArray(data.subjects) ? data.subjects : [];
+  const selected = data.subject || subjects[0] || { id:'person', name:'개인', type:'person', role:'owner', canManage:true };
+  rememberEntitlementSubject(selected.id || 'person');
+  const ready = data.capabilities.filter((item) => item.usableNow);
+  const preview = data.capabilities.filter((item) => !item.usableNow);
+  const levelCounts = ready.reduce((acc, item) => {
+    const level = entitlementLevelClass(item?.access?.level);
+    acc[level] = (acc[level] || 0) + 1;
+    return acc;
+  }, {});
+  const options = subjects.map((subject) => `<option value="${esc(subject.id)}"${subject.id === selected.id ? ' selected' : ''}>${esc(subject.name)} · ${subject.type === 'person' ? '개인' : '기관·단체'}</option>`).join('');
+  const management = selected.canManage
+    ? '이 주체의 구독·추가기능 변경 권한이 있습니다.'
+    : '이 주체의 기능은 사용할 수 있지만 구독 변경은 권한 있는 담당자가 관리합니다.';
+  host.innerHTML = `
+    <div class="ai-entitlement-head">
+      <div><small>EKODI AI ENTITLEMENT</small><strong>AI 기능 이용권 · 개인과 기관을 구분해 한곳에서 관리</strong></div>
+      <a href="https://ekodi.kr/ai/">모두의 AI →</a>
+    </div>
+    <div class="ai-entitlement-subject-row">
+      <label for="aiEntitlementSubject">이용 주체</label>
+      <select id="aiEntitlementSubject">${options}</select>
+      <span>${esc(selected.role || 'member')}</span>
+    </div>
+    <p class="ai-entitlement-rule">같은 주체가 같은 AI 기능을 모두의 AI와 전문·개별 사이트에서 사용하면 이용권을 공유합니다. 사이트 고유 추가기능은 해당 사이트 범위로만 관리합니다.</p>
+    <div class="ai-entitlement-counts">
+      <span>기본 ${Number(levelCounts.basic || 0)}</span>
+      <span>추가 ${Number(levelCounts.additional || 0)}</span>
+      <span>고급 ${Number(levelCounts.advanced || 0)}</span>
+      <span>자동화 ${Number(levelCounts.automation || 0)}</span>
+    </div>
+    <p class="ai-entitlement-management">${esc(management)}</p>
+    <details class="ai-entitlement-details">
+      <summary>사용 가능한 AI 기능 보기 · ${ready.length}개</summary>
+      <div class="ai-entitlement-grid">${ready.map(entitlementCapabilityMarkup).join('')}</div>
+    </details>
+    ${preview.length ? `<details class="ai-entitlement-details preview-details"><summary>연동 준비 기능 · ${preview.length}개</summary><div class="ai-entitlement-grid">${preview.map(entitlementCapabilityMarkup).join('')}</div></details>` : ''}
+    ${degraded ? '<p class="membership-summary-warning"><strong>상태 확인 지연</strong> 일부 구독 상태가 최신이 아닐 수 있습니다.</p>' : ''}`;
+  const select = host.querySelector('#aiEntitlementSubject');
+  if (select) select.addEventListener('change', () => {
+    rememberEntitlementSubject(select.value);
+    void loadEntitlements(entitlementSession, select.value);
+  });
+}
+
+async function loadEntitlements(session, subject = storedEntitlementSubject()) {
+  entitlementSession = session || null;
+  if (!session?.access_token) {
+    renderEntitlementManager(null);
+    return;
+  }
+  try {
+    const url = new URL('https://ekodi.kr/api/membership/entitlements');
+    if (subject) url.searchParams.set('subject', subject);
+    const response = await fetch(url, {
+      cache:'no-store',
+      headers:{ authorization:`Bearer ${session.access_token}` },
+    });
+    if (response.status === 401) return renderEntitlementManager(null);
+    if (!response.ok) throw new Error(`ai_entitlements_${response.status}`);
+    renderEntitlementManager(await response.json());
+  } catch (error) {
+    console.warn('AI entitlement portfolio', error);
+    renderEntitlementManager(null, { degraded:true });
+  }
 }
 
 async function loadPortfolio(session) {
@@ -122,9 +227,11 @@ async function loadPortfolio(session) {
     }
     if (!response.ok) throw new Error(`membership_portfolio_${response.status}`);
     renderPortfolio(await response.json());
+    await loadEntitlements(session);
   } catch (error) {
     console.warn('universal membership portfolio', error);
     renderPortfolio(null, { degraded: true });
+    await loadEntitlements(session);
   }
 }
 

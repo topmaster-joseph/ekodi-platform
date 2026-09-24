@@ -34,9 +34,13 @@ test('public execution catalog projects common engines and specialist basics wit
   assert.equal(services.find(item=>item.id==='specialist-management')?.status,'preview');
   assert.equal(services.find(item=>item.id==='specialist-management')?.launchUrl,'');
   const marketing=services.find(item=>item.id==='make-marketing');
-  assert.equal(marketing?.access?.basic,'free');
+  assert.equal(marketing?.access?.basic,'public');
   assert.equal(marketing?.access?.advanced,'subscription');
   assert.equal(marketing?.access?.paidAvailable,true);
+  assert.ok(services.filter(item=>item.usableNow).every(item=>item.description.length<=44));
+  const device=services.find(item=>item.id==='common-device-observe');
+  assert.equal(device?.status,'preview');
+  assert.equal(device?.launchUrl,'');
 });
 
 test('public and member request projections hide orchestration internals while admin keeps them',()=>{
@@ -106,7 +110,9 @@ test('Commons page loads browser assets only through the Worker-owned API bounda
   assert.match(client,/deliveryLabel/);
   assert.match(client,/function serviceAccessMeta\(service\)/);
   assert.match(client,/service\.access\?\.paidAvailable/);
-  assert.match(client,/service\.sourceKind==='specialist'/);
+  assert.match(client,/기본 무료 · 고급 구독/);
+  assert.match(client,/기본 무료/);
+  assert.doesNotMatch(client,/전문서비스 연결/);
   assert.doesNotMatch(html,/\.\/commons\.js\?v=/);
   assert.doesNotMatch(html,/\.\/commons\.css\?v=/);
   assert.doesNotMatch(html,/api\/commons\/client\.js/);
@@ -151,9 +157,11 @@ test('all executable service entries stay under /ai/ and advanced access uses ce
   for(const service of catalog.services)assert.match(service.launchUrl,/^https:\/\/ekodi\.kr\/ai\//);
   assert.match(worker,/resolveExecutionServiceEntry\(url\.pathname,capabilityRegistry\)/);
   assert.match(worker,/service\.deliveryMode==='direct'/);
-  assert.match(worker,/advanced\.searchParams\.set\('site',paid\?/);
+  assert.match(worker,/if\(paid\)\{advanced=new URL\('https:\/\/ekodi\.kr\/auth\/'\)/);
   assert.match(worker,/advanced\.searchParams\.set\('review','1'\)/);
   assert.match(worker,/advanced\.searchParams\.set\('plan','plus'\)/);
+  assert.match(worker,/기본 기능 바로 사용/);
+  assert.match(worker,/유료 고급 기능을 선택할 때 로그인 후 구독·결제를 안내합니다/);
   const marketing=resolveExecutionServiceEntry('/ai/marketing/',registry);
   assert.equal(marketing?.id,'make-marketing');
   assert.equal(marketing?.access?.paidAvailable,true);
@@ -162,4 +170,6 @@ test('all executable service entries stay under /ai/ and advanced access uses ce
   assert.ok(bible?.launchUrl.endsWith('/ai/use/specialist-bible/'));
   assert.equal(resolveExecutionServiceEntry('/ai/use/specialist-bible/',registry)?.id,'specialist-bible');
   assert.equal(resolveExecutionServiceEntry('/ai/interpreter/',registry)?.deliveryMode,'direct');
+  assert.equal(resolveExecutionServiceEntry('/ai/use/common-device-observe/',registry),null);
+  assert.ok(projected.filter(item=>item.usableNow).every(item=>item.targetUrl));
 });

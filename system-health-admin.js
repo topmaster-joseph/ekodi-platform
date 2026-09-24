@@ -62,9 +62,9 @@
   section.innerHTML = `
     <div class="section-head system-health-head">
       <div>
-        <p class="kicker">EKODI CORE & SYSTEM HEALTH</p>
-        <h2>EKODI Core & System Health</h2>
-        <p class="operations-copy">Core · DB · Backup · AI 독립성 · 주요 사이트와 트래픽을 한 화면에서 확인합니다. 평상시에는 데이터를 읽지 않습니다.</p>
+        <p class="kicker">PLATFORM OVERVIEW</p>
+        <h2>플랫폼 통합현황</h2>
+        <p class="operations-copy">핵심 상태를 먼저 확인하고, 필요한 경우 아래에서 사이트·백업·코드·트래픽 세부 진단을 이어서 봅니다.</p>
       </div>
       <div class="system-health-actions" aria-label="System Health 기간 선택">
         <button class="ghost compact is-active" type="button" data-health-days="7">7일</button>
@@ -75,18 +75,18 @@
 
     <div class="core-health-overall" data-core-overall data-state="pending">
       <span class="system-health-dot" aria-hidden="true"></span>
-      <div><small>EKODI Core</small><strong data-core-overall-label>확인 전</strong><span data-core-status>Health 메뉴를 열면 Core 운영 상태를 확인합니다.</span></div>
+      <div><small>플랫폼 핵심 상태</small><strong data-core-overall-label>확인 전</strong><span data-core-status>통합현황을 열면 핵심 운영 상태를 확인합니다.</span></div>
       <time data-core-checked-at>—</time>
     </div>
 
     <div class="core-health-grid" aria-label="EKODI Core 상태">
-      <article data-core-card="core" data-state="pending"><div><small>Core</small><b data-core-badge="core">확인 전</b></div><strong data-core-value="core">—</strong><span data-core-detail="core">api.ekodi.kr</span></article>
-      <article data-core-card="database" data-state="pending"><div><small>DB</small><b data-core-badge="database">확인 전</b></div><strong data-core-value="database">Hybrid</strong><span data-core-detail="database">D1 · Supabase · Storage</span></article>
-      <article data-core-card="backup" data-state="pending"><div><small>Backup</small><b data-core-badge="backup">확인 전</b></div><strong data-core-value="backup">—</strong><span data-core-detail="backup">독립 복원 검증</span></article>
-      <article data-core-card="ai" data-state="pending"><div><small>AI Independence</small><b data-core-badge="ai">확인 전</b></div><strong data-core-value="ai">—</strong><span data-core-detail="ai">AI 공급자 없이도 Core 유지</span></article>
+      <article data-core-card="core" data-state="pending"><div><small>코어 API</small><b data-core-badge="core">확인 전</b></div><strong data-core-value="core">—</strong><span data-core-detail="core">api.ekodi.kr</span></article>
+      <article data-core-card="database" data-state="pending"><div><small>데이터</small><b data-core-badge="database">확인 전</b></div><strong data-core-value="database">Hybrid</strong><span data-core-detail="database">D1 · Supabase · Storage</span></article>
+      <article data-core-card="backup" data-state="pending"><div><small>백업</small><b data-core-badge="backup">확인 전</b></div><strong data-core-value="backup">—</strong><span data-core-detail="backup">독립 복원 검증</span></article>
+      <article data-core-card="ai" data-state="pending"><div><small>AI 독립성</small><b data-core-badge="ai">확인 전</b></div><strong data-core-value="ai">—</strong><span data-core-detail="ai">외부 AI 장애와 Core 운영 분리</span></article>
     </div>
 
-    <div class="system-health-divider"><span>SYSTEM MAP</span></div>
+    <div class="system-health-divider"><span>운영 연결 상태</span></div>
     <div class="health-diagram-grid" aria-label="시스템 흐름 및 병목 다이어그램">
       <article class="health-diagram-card health-path-card">
         <div class="health-diagram-head"><div><small>REQUEST PATH</small><strong>서비스 연결 흐름</strong></div><span>현재 상태</span></div>
@@ -128,7 +128,7 @@
       </div>
     </div>
 
-    <div class="system-health-divider"><span>CODE & ARCHITECTURE HEALTH</span></div>
+    <div class="system-health-divider"><span>코드 · 구조 건강</span></div>
     <div class="code-health-overall" data-code-health-overall data-state="pending">
       <div class="code-health-score"><small>건강점수</small><strong data-code-health-score>—</strong><span>/ 100</span></div>
       <div class="code-health-summary"><small>코드 · 구조 · 배포 · 보안 · 문서</small><strong data-code-health-label>확인 전</strong><span data-code-health-detail>정기 건강검사 스냅샷을 불러옵니다.</span></div>
@@ -141,7 +141,7 @@
       <p class="code-health-policy">자동 수정하지 않습니다. 관찰 → 원인분석 → 수정안 → 테스트·영향검증 → 관리자 승인 → 가역적 적용 → 운영 재검증 순서를 지킵니다.</p>
     </div>
 
-    <div class="system-health-divider"><span>TRAFFIC INTELLIGENCE</span></div>
+    <div class="system-health-divider"><span>트래픽 분류</span></div>
     <div class="traffic-intelligence-toolbar">
       <div><strong>실사용 · 검색 · 내부자동화 · 기타봇 분리</strong><small data-traffic-intelligence-status>분류 집계를 확인합니다.</small></div>
       <label>사이트 <select data-traffic-site><option value="">전체 사이트</option></select></label>
@@ -168,7 +168,7 @@
       </article>
     </div>
 
-    <div class="system-health-divider"><span>TRAFFIC HEALTH</span></div>
+    <div class="system-health-divider"><span>트래픽 상태</span></div>
     <div class="system-health-overall" data-health-overall data-state="pending">
       <span class="system-health-dot" aria-hidden="true"></span>
       <div><small>트래픽 상태</small><strong data-health-overall-label>확인 전</strong><span data-health-status>Health 메뉴를 열면 최근 집계를 확인합니다.</span></div>

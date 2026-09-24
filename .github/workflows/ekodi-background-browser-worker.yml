@@ -4,10 +4,15 @@ on:
   workflow_call:
     inputs:
       surface_path:
-        description: Canonical ekodi.kr path to inspect
+        description: Canonical ekodi.kr path to inspect (single-path compatibility input)
         required: false
         type: string
         default: /
+      surface_paths:
+        description: Comma-separated canonical ekodi.kr paths to inspect in one isolated browser run
+        required: false
+        type: string
+        default: ''
       device_profile:
         description: Device profile
         required: false
@@ -16,9 +21,13 @@ on:
   workflow_dispatch:
     inputs:
       surface_path:
-        description: Canonical ekodi.kr path to inspect
+        description: Canonical ekodi.kr path to inspect (single-path compatibility input)
         required: false
         default: /
+      surface_paths:
+        description: Comma-separated canonical ekodi.kr paths to inspect in one isolated browser run
+        required: false
+        default: ''
       device_profile:
         description: Device profile
         required: false
@@ -91,25 +100,42 @@ jobs:
         shell: bash
         env:
           INPUT_PATH: ${{ inputs.surface_path || '/' }}
+          # PR smoke exercises representative public, personal, and admin surfaces so shared runtime errors are attributable before merge.
+          INPUT_PATHS: ${{ inputs.surface_paths || (github.event_name == 'pull_request' && '/,/my/,/admin/' || '') }}
           INPUT_DEVICE: ${{ inputs.device_profile || 'desktop' }}
         run: |
           node - <<'NODE'
           const fs=require('fs');
-          const raw=String(process.env.INPUT_PATH||'/').trim();
-          if(!raw.startsWith('/')||raw.startsWith('//')) throw new Error('surface_path must be a canonical root-relative path');
+          const fallback=String(process.env.INPUT_PATH||'/').trim();
+          const requested=String(process.env.INPUT_PATHS||'').split(',').map(v=>v.trim()).filter(Boolean);
+          const paths=[...new Set(requested.length?requested:[fallback])];
+          if(paths.length>12) throw new Error('surface_paths supports at most 12 canonical paths per run');
+          for(const p of paths){
+            if(!p.startsWith('/')||p.startsWith('//')) throw new Error('surface path must be a canonical root-relative path');
+            const u=new URL(p,'https://ekodi.kr');
+            if(u.origin!=='https://ekodi.kr') throw new Error('surface path must stay on canonical ekodi.kr');
+          }
           const device=String(process.env.INPUT_DEVICE||'desktop');
           const allowed=new Set(['compact-mobile','mobile-portrait','mobile-landscape','tablet','desktop']);
           if(!allowed.has(device)) throw new Error('invalid device profile');
+          const shotName=(p,index)=>{
+            const clean=p.split(/[?#]/)[0].replace(/^\/+|\/+$/g,'').replace(/[^a-zA-Z0-9._-]+/g,'-');
+            return clean||('root-'+(index+1));
+          };
+          const actions=[];
+          paths.forEach((p,index)=>{
+            if(index>0) actions.push({type:'goto',path:p});
+            actions.push({type:'snapshot'});
+            actions.push({type:'screenshot',name:'surface-'+shotName(p,index),fullPage:true});
+          });
           fs.mkdirSync('artifacts',{recursive:true});
           fs.writeFileSync('artifacts/browser-task.json',JSON.stringify({
-            taskId:'gha-'+process.env.GITHUB_RUN_ID+'-'+process.env.GITHUB_RUN_ATTEMPT,
-            path:raw,
+            taskId:'gha-'+process.env.GITHUB_RUN_ID+'-'+process.env.GITHUB_RUN_ATTEMPT+'-'+device,
+            path:paths[0],
             deviceProfile:device,
             allowMutation:false,
-            actions:[
-              {type:'snapshot'},
-              {type:'screenshot',name:'canonical-surface',fullPage:true}
-            ]
+            timeoutMs:120000,
+            actions
           },null,2));
           NODE
       - name: Run EKODI-owned isolated browser
@@ -125,9 +151,14 @@ jobs:
           test -n "$result"
           jq -e '.ok == true and .mode == "ekodi-owned-background-browser" and .canonicalOrigin == "https://ekodi.kr" and .headless == true and .ephemeralContext == true and .activeUserProfileReused == false and .hostInputInjection == false' "$result" >/dev/null
           jq -e '.allowMutation == false' "$result" >/dev/null
+          jq -e '[.results[] | select(.type == "snapshot" and .horizontalOverflow == true)] | length == 0' "$result" >/dev/null
+          jq -e '[.results[] | select(.type == "snapshot" and (.url | test("/admin(?:/|$)"; "i")) and ((.userAiEntryCount // 0) > 0))] | length == 0' "$result" >/dev/null
+          jq -e '.pageErrors | length == 0' "$result" >/dev/null
+          jq -e '.screenshots | length >= 1' "$result" >/dev/null
           echo '## EKODI Background Browser Worker' >> "$GITHUB_STEP_SUMMARY"
-          jq -r '"- Result: (.ok)\n- Final URL: (.finalUrl)\n- Device: (.deviceProfile) (.viewport.width)x(.viewport.height)\n- Headless/ephemeral: (.headless)/(.ephemeralContext)\n- Blocked mutations: (.blockedMutations|length)\n- Screenshots: (.screenshots|length)"' "$result" >> "$GITHUB_STEP_SUMMARY"
+          jq -r '"- Result: \(.ok)\n- Final URL: \(.finalUrl)\n- Device: \(.deviceProfile) \(.viewport.width)x\(.viewport.height)\n- Headless/ephemeral: \(.headless)/\(.ephemeralContext)\n- Blocked mutations: \(.blockedMutations|length)\n- Page errors: \(.pageErrors|length)\n- Horizontal overflow snapshots: \([.results[] | select(.type == "snapshot" and .horizontalOverflow == true)] | length)\n- Screenshots: \(.screenshots|length)"' "$result" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: ekodi-background-browser-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/background-browser-worker

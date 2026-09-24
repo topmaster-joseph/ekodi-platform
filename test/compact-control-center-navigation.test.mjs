@@ -6,8 +6,8 @@ const registry = await readFile(new URL('../admin-menu-registry.js', import.meta
 
 test('current Admin navigation exposes the canonical English work-area labels', () => {
   for (const label of [
-    'Integrated Overview','Services','Sites','Users & Access','Content & Operations','Status & Releases','Settings & Records',
-    'All Sites','Administrator Settings','Access & Identity Records','Incidents, Errors & Warnings','Execution Infrastructure','Platform, Site & Engine Health',
+    'Platform Overview','Sites & Brands','Users, Admins & Access','Services & AI','Content, Events & Communication','Operations, Releases & Incidents','Settings, Security & Audit',
+    'All Sites','Administrator Accounts & Access','Security & Identity Records','Incidents, Errors & Warnings','Execution Infrastructure','Overall Operational Health',
   ]) assert.ok(registry.includes(label), `missing current navigation label: ${label}`);
   assert.doesNotMatch(registry, /Domains & DNS|Activity Logs/);
 });

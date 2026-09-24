@@ -1,5 +1,5 @@
 {
-  "version": 90,
+  "version": 92,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -94,6 +94,67 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/jadam/admin/menu?embed=cmpmyi",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "자담치킨 목포대점",
+          "data-ekodi-embedded-admin=\"true\"",
+          "메뉴 · 가격"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: jadam-store-admin",
+          "cache-control: no-store",
+          "x-frame-options: SAMEORIGIN",
+          "x-ekodi-embedded-admin: cmpmyi"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cmpmyi/admin/panel/overview",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "통합 대시보드",
+          "자담치킨 목포대점",
+          "피자마루 목포대점",
+          "요거트퍼플 목포대점"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: cmpmyi-store-portfolio-panel",
+          "cache-control: no-store",
+          "x-frame-options: SAMEORIGIN"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cmpmyi/admin/panel/delivery",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "배달플랫폼 통합관리",
+          "3개 브랜드 · 7개 배달/주문 채널",
+          "배달의민족",
+          "쿠팡이츠",
+          "요기요",
+          "자담치킨 목포대점",
+          "피자마루 목포대점",
+          "요거트퍼플 목포대점"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: cmpmyi-store-portfolio-panel",
+          "cache-control: no-store",
+          "x-frame-options: SAMEORIGIN"
+        ],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/",
         "statuses": [
           200
@@ -159,7 +220,10 @@
           "class=\"mission-site-header\"",
           "data-mission-nav",
           "/ekodimission/assets/shell.css",
-          "/ekodimission/assets/shell.js"
+          "/ekodimission/assets/shell.js",
+          "class=\"studio-status-strip\"",
+          "id=\"participantRequestState\"",
+          "class=\"danger hidden\" id=\"endLiveButton\""
         ],
         "headerExpect": [
           "x-ekodi-route: ekodimission-public",
@@ -181,7 +245,10 @@
           "id=\"openManagementCameraButton\"",
           "id=\"viewerListenLanguage\"",
           "id=\"participantSpeakLanguage\"",
-          "QR을 찍고 승인합니다."
+          "QR을 찍고 승인합니다.",
+          "class=\"studio-status-strip\"",
+          "id=\"participantRequestState\"",
+          "class=\"danger hidden\" id=\"endLiveButton\""
         ],
         "headerExpect": [
           "cache-control: no-store",
@@ -457,7 +524,7 @@
         "expect": [
           "EKODI Workspace Admin",
           "data-ekodi-authority-scope=\"tenant\"",
-          "data-ekodi-admin-layout=\"two-level\""
+          "data-ekodi-admin-layout=\"direct-left\""
         ],
         "headerExpect": [
           "x-ekodi-route: workspace-admin",
@@ -659,8 +726,8 @@
           "EKODI Workspace Admin",
           "workspace-admin.js",
           "admin-direct-google.js?v=20260924-v1",
-          "data-ekodi-admin-layout=\"two-level\"",
-          "data-ekodi-admin-nav-mode=\"primary\"",
+          "data-ekodi-admin-layout=\"direct-left\"",
+          "data-ekodi-admin-nav-mode=\"direct\"",
           "data-ekodi-admin-subnav"
         ]
       },
@@ -695,8 +762,8 @@
         "expect": [
           "EKODI Workspace Admin",
           "workspace-admin.js",
-          "data-ekodi-admin-layout=\"two-level\"",
-          "data-ekodi-admin-nav-mode=\"primary\"",
+          "data-ekodi-admin-layout=\"direct-left\"",
+          "data-ekodi-admin-nav-mode=\"direct\"",
           "data-ekodi-admin-subnav"
         ]
       },
@@ -1869,25 +1936,11 @@
         "redirect": "manual",
         "expect": [
           "WELCOME TO EKODI CHURCH",
-          "에코디교회"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: church-public-path",
-          "x-ekodi-tenant-readability: v1",
-          "x-ekodi-operating-space-label: v1"
-        ],
-        "rollbackVerify": false
-      },
-      {
-        "url": "https://ekodi.kr/cgma",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
+          "에코디교회",
           "운영공간"
         ],
         "headerExpect": [
+          "x-ekodi-route: church-public-path",
           "x-ekodi-tenant-readability: v1",
           "x-ekodi-operating-space-label: v1"
         ],

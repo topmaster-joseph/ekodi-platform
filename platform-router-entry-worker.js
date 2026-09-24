@@ -28,7 +28,7 @@ import { marketingProjectionForPath, proxyCanonicalMarketing } from './marketing
 import { routeCanonicalSurface } from './canonical-surface-router.js';
 import { handlePreviewRequest } from './preview-page.js';
 import { storeGatewayPage } from './store-gateway-page.js';
-import { storePortfolioAdminPage } from './store-portfolio-admin-page.js';
+import { storePortfolioAdminPage, storePortfolioAdminPanelPage } from './store-portfolio-admin-page.js';
 import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { isLearningPath, learningPage, learningScript, learningStyles } from './learning-page.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
@@ -245,6 +245,20 @@ async function withInvestSubjectScript(response){
 
 const LEGACY_OPERATING_SPACE_ROOTS=new Set(['ekodichurch','ekodimission']);
 function legacyOperatingSpacePath(pathname){const first=String(pathname||'').split('/').filter(Boolean)[0]?.toLowerCase()||'';return LEGACY_OPERATING_SPACE_ROOTS.has(first);}
+async function ensureLegacyOperatingSpaceMarker(response,includeBody=true){
+  if(!response)return response;
+  const contentType=String(response.headers.get('content-type')||'').toLowerCase();
+  if(!contentType.includes('text/html'))return response;
+  const headers=new Headers(response.headers);
+  headers.set('x-ekodi-operating-space-label','v1');
+  if(!includeBody)return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+  const html=await response.text();
+  headers.delete('content-length');
+  if(html.includes('data-ekodi-operating-space-label'))return new Response(html,{status:response.status,statusText:response.statusText,headers});
+  const note='<aside class="ekodi-operating-space-note" data-ekodi-operating-space-label="v1" role="note" aria-label="개별 운영공간"><span>운영공간</span></aside>';
+  const patched=/<body\b[^>]*>/i.test(html)?html.replace(/(<body\b[^>]*>)/i,'$1'+note):note+html;
+  return new Response(patched,{status:response.status,statusText:response.statusText,headers});
+}
 
 const LEGACY_ADMIN_HOSTS=new Set(['admin.ekodi.kr','admin.biz.ekodi.kr','admin.church.ekodi.kr','admin.lab.ekodi.kr','admin.trade.ekodi.kr']);
 const LEGACY_ADMIN_PATHS=Object.freeze({books:'books',community:'community',work:'work',business:'organization',publishing:'books',energy:'life-ai',journal:'common-services',experience:'campus'});
@@ -309,9 +323,17 @@ async function routePlatform(request,env,ctx){
         if(url.pathname==='/tenant-admin-command-home.js')return tenantAdminCommandHomeScript();
         if(['/store-admin.css','/jadam-admin.css','/pizzamaru-admin.css','/yogurt-admin.css'].includes(url.pathname))return storeAdminCss();
         if(['/store-admin.js','/jadam-admin.js','/pizzamaru-admin.js','/yogurt-admin.js'].includes(url.pathname))return storeAdminScript();
+        const cmpmyiPanel=url.pathname.match(/^\/cmpmyi\/admin\/panel\/([a-z-]+)\/?$/i);
+        if(cmpmyiPanel)return storePortfolioAdminPanelPage(cmpmyiPanel[1]);
         if(url.pathname==='/cmpmyi/admin'||url.pathname==='/cmpmyi/admin/')return injectEkodiShell(storePortfolioAdminPage(),'business','admin');
         if(url.pathname==='/cmpmyi/admin/overview'||url.pathname==='/cmpmyi/admin/overview/')return injectEkodiShell(storePortfolioAdminPage(),'business','admin');
-        if(isStoreAdminPathShape(url.pathname)){const storeRoute=await resolveStoreAdminRoute(url.pathname);if(storeRoute)return injectEkodiShell(storeAdminPage({...storeRoute,pathname:url.pathname}),'business','admin');}
+        if(isStoreAdminPathShape(url.pathname)){
+          const storeRoute=await resolveStoreAdminRoute(url.pathname);
+          if(storeRoute){
+            if(url.searchParams.get('embed')==='cmpmyi')return storeAdminPage({...storeRoute,pathname:url.pathname,embed:true});
+            return injectEkodiShell(storeAdminPage({...storeRoute,pathname:url.pathname}),'business','admin');
+          }
+        }
         if(url.pathname==='/organization-admin.css')return organizationAdminCss();
         if(url.pathname==='/organization-admin.js')return organizationAdminScript();
         if(isOrganizationAdminPath(url.pathname))return injectEkodiShell(organizationAdminPage(url.pathname),'space','admin');
@@ -378,7 +400,7 @@ async function routePlatform(request,env,ctx){
       if(url.pathname==='/invest-subject-ui.js')return investSubjectUiScript();
     }
     const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx);
-    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&legacyOperatingSpacePath(url.pathname))return injectEkodiTenantReadability(legacyResponse);
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&legacyOperatingSpacePath(url.pathname))return ensureLegacyOperatingSpaceMarker(injectEkodiTenantReadability(legacyResponse),request.method==='GET');
     return legacyResponse;
 }
 

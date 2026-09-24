@@ -183,7 +183,7 @@ function validHandoff(site:string,raw:string){
     church:["https://church.ekodi.kr"],
     lab:["https://lab.ekodi.kr"],
     mission:["https://ekodi.kr"],
-    community:["https://community.ekodi.kr"],
+    community:["https://ekodi.kr"],
     edu:["https://edu.ekodi.kr"],
     media:["https://media.ekodi.kr"],
     admin:["https://admin.ekodi.kr"],

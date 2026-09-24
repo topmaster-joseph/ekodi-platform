@@ -169,6 +169,13 @@
     "projectCreationPolicy": {
       "supabase": "reuse-existing-projects-before-new-project",
       "automaticPaidProjectCreation": false
+    },
+    "githubArtifactPolicy": {
+      "largeVisualEvidenceRetentionDays": 7,
+      "adminProductionUiEvidenceMaxDays": 7,
+      "durableReleaseEvidenceMayRemainLonger": true,
+      "automaticArtifactDeletion": false,
+      "usagePercentRequiresKnownPlanLimit": true
     }
   }
 }

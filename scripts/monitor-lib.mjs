@@ -20,9 +20,9 @@ const INFRA_SITES = [
 ];
 
 const COMMUNITY_CONNECT_SITES = [
-  ['community-health', 'Community Health', 'community.ekodi.kr', 'https://community.ekodi.kr/health'],
-  ['community-connect', 'EKODI Connect', 'community.ekodi.kr', 'https://community.ekodi.kr/connect/'],
-  ['community-connect-app', 'EKODI Connect App', 'community.ekodi.kr', 'https://community.ekodi.kr/connect/app.js'],
+  ['community-health', 'Community Health', 'ekodi.kr/community', 'https://ekodi.kr/community/health'],
+  ['community-connect', 'EKODI Connect', 'ekodi.kr/community', 'https://ekodi.kr/community/connect/'],
+  ['community-connect-app', 'EKODI Connect App', 'ekodi.kr/community', 'https://ekodi.kr/community/connect/app.js'],
   [
     'connect-api-auth-gate',
     'EKODI Connect API Auth Gate',

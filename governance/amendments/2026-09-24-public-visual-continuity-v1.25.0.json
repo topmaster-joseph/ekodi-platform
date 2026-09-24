@@ -1,0 +1,44 @@
+{
+  "amendmentId": "PUBLIC-VISUAL-CONTINUITY-20260924",
+  "constitutionVersion": "1.25.0",
+  "approvedAt": "2026-09-24",
+  "changeClass": "C2",
+  "taskId": "public-visual-continuity-20260924",
+  "summary": "Require all EKODI public/workspace user surfaces to resolve conditional visuals before first paint and use only subtle approved per-document-load ambient variation that stays stable for the document lifetime.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly directed that the anti-flash visual rule and subtle per-refresh/page-entry background variation become a mandatory rule for all user pages and asked EKODI to continue under its governance.",
+  "implementation": [
+    "PUBLIC-VISUAL-CONTINUITY-001 in governance/constitution/constitution.json",
+    "service/workspace inheritance in config/service-workspace-policy.json",
+    "Shared Shell document-load seed and ambient tokens",
+    "Shared Shell pending/ready first-paint visual state",
+    "homepage immediate per-load approved ambient migration"
+  ],
+  "protectedProperties": [
+    "service identity",
+    "layout",
+    "content order",
+    "navigation position",
+    "control geometry",
+    "font scale",
+    "contrast floor",
+    "authorization meaning",
+    "functional state"
+  ],
+  "validation": [
+    "scripts/validate-constitution.mjs",
+    "scripts/validate-ekodi-shell-adoption.mjs",
+    "scripts/verify-ekodi-shell-live.mjs",
+    "test/service-workspace-separation.test.mjs",
+    "test/homepage-ekodian-guide.test.mjs"
+  ],
+  "rollback": "Revert constitution v1.25.0 and the PUBLIC-VISUAL-CONTINUITY-001 Shell/theme changes to v1.24.0 while preserving unrelated routing, identity, authentication and workspace policies.",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalEvidence": {
+    "explicitOwnerInstruction": true,
+    "ownerInstructionDate": "2026-09-24",
+    "pullRequest": 2468,
+    "requiredPullRequestLabel": "constitution-approved",
+    "approvalLabel": "constitution-approved"
+  }
+}

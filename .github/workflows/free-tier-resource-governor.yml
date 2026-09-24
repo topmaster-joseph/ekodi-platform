@@ -13,20 +13,26 @@ on:
       - 'free-tier-resource-governor.js'
       - 'config/free-tier-optimization-policy.json'
       - 'scripts/collect-free-tier-resource-usage.mjs'
+      - 'scripts/validate-supabase-free-project-capacity.mjs'
       - 'test/free-tier-resource-governor.test.mjs'
       - 'test/free-tier-resource-collector.test.mjs'
+      - 'test/supabase-free-project-capacity-guard.test.mjs'
       - 'migrations/0099_free_tier_provider_quota.sql'
       - '.github/workflows/free-tier-resource-governor.yml'
+      - '.github/workflows/verify-admin-production-ui-e2e.yml'
   pull_request:
     paths:
       - 'free-tier-quota-guard.js'
       - 'free-tier-resource-governor.js'
       - 'config/free-tier-optimization-policy.json'
       - 'scripts/collect-free-tier-resource-usage.mjs'
+      - 'scripts/validate-supabase-free-project-capacity.mjs'
       - 'test/free-tier-resource-governor.test.mjs'
       - 'test/free-tier-resource-collector.test.mjs'
+      - 'test/supabase-free-project-capacity-guard.test.mjs'
       - 'migrations/0099_free_tier_provider_quota.sql'
       - '.github/workflows/free-tier-resource-governor.yml'
+      - '.github/workflows/verify-admin-production-ui-e2e.yml'
 
 permissions:
   contents: read
@@ -53,8 +59,10 @@ jobs:
           node --check free-tier-resource-governor.js
           node --check scripts/collect-free-tier-resource-usage.mjs
           node --check scripts/validate-free-tier-optimization.mjs
+          node --check scripts/validate-supabase-free-project-capacity.mjs
           node scripts/validate-free-tier-optimization.mjs
-          node --test test/free-tier-resource-governor.test.mjs test/free-tier-resource-collector.test.mjs test/free-tier-supabase-oidc-contract.test.mjs
+          node scripts/validate-supabase-free-project-capacity.mjs
+          node --test test/free-tier-resource-governor.test.mjs test/free-tier-resource-collector.test.mjs test/free-tier-supabase-oidc-contract.test.mjs test/supabase-free-project-capacity-guard.test.mjs
 
   collect:
     if: github.event_name != 'pull_request'
@@ -104,6 +112,11 @@ jobs:
           echo "SUPABASE_OIDC_TOKEN=$token" >> "$GITHUB_ENV"
           echo "SUPABASE_OIDC_CONFIG=config/free-tier-supabase-oidc.json" >> "$GITHUB_ENV"
           echo "SUPABASE_OIDC_AVAILABLE=true" >> "$GITHUB_ENV"
+
+      - name: Enforce Supabase Free project capacity
+        run: |
+          set -euo pipefail
+          node scripts/validate-supabase-free-project-capacity.mjs
 
       - name: Collect measured free-tier resource telemetry
         shell: bash

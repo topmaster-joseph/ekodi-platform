@@ -241,8 +241,8 @@
     {
       "id": "community",
       "name": "커뮤니티",
-      "domain": "community.ekodi.kr",
-      "url": "https://community.ekodi.kr/",
+      "domain": "ekodi.kr/community",
+      "url": "https://ekodi.kr/community",
       "status": "offline",
       "httpStatus": 429,
       "responseTime": 148,

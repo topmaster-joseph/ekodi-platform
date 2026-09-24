@@ -13,8 +13,10 @@ function context(){
 }
 function eligible(){
   const {service,surface}=context();
-  const path=location.pathname.replace(/\/+$/,'')||'/';
-  const adminPath=path==='/admin'||path.includes('/admin/')||path.endsWith('/admin');
+  let path=location.pathname;
+  try{path=decodeURIComponent(path)}catch{}
+  path=(path.replace(/\/+/g,'/').replace(/\/+$/,'')||'/').toLowerCase();
+  const adminPath=/(?:^|\/)admin(?:\/|$)/.test(path);
   if(blocked.has(surface)||adminPath||path==='/ai'||path.startsWith('/ai/'))return false;
   return Boolean(service)&&['public','workspace'].includes(surface);
 }

@@ -10,7 +10,7 @@
     { type: '작가AI', name: '크리에이터 AI', domain: 'author.ekodi.kr', section: 'books', fallback: 'services', group: 'knowledge' },
     { type: '연구소', name: '에코디연구소', domain: 'lab.ekodi.kr', section: 'services', group: 'knowledge' },
     { type: '교육', name: '에코디교육', domain: 'edu.ekodi.kr', section: 'services', group: 'knowledge' },
-    { type: '커뮤니티', name: '커뮤니티', domain: 'community.ekodi.kr', section: 'community', fallback: 'services', group: 'community' },
+    { type: '커뮤니티', name: '커뮤니티', domain: 'ekodi.kr/community', section: 'community', fallback: 'services', group: 'community' },
     { type: '소셜', name: '에코디 소셜', domain: 'social.ekodi.kr', section: 'social', fallback: 'services', group: 'community' },
     { type: '몰', name: '에코디몰', domain: 'ekodi.kr/ekodimall', section: 'services', group: 'business' },
     { type: '마케팅', name: '마케팅 AI', domain: 'marketing.ekodi.kr', section: 'services', group: 'business' },

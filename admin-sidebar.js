@@ -21,12 +21,12 @@ const DETAILS_CLASS = 'admin-global-details';
 const MORE_CLASS = 'admin-detail-more';
 const PRIMARY_SECTIONS = Object.freeze({
   summary: ['platform-overview'],
-  services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'],
-  sites: ['sites-all', 'sites-core', 'sites-business', 'sites-community', 'sites-clients', 'sites-knowledge', 'sites-communication', 'sites-worklife', 'sites-other', 'sites-preparing'],
-  people: ['users-access', 'admins', 'security', 'ai-membership'],
+  sites: ['sites-all', 'sites-business', 'sites-clients', 'sites-community', 'sites-core', 'sites-preparing'],
+  people: ['users-access', 'admins', 'ai-membership', 'security'],
+  services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration'],
   content: ['work', 'communication', 'community', 'books', 'social'],
   status: ['health', 'deployments', 'aiops', 'devices', 'api-cost'],
-  'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'audit-records', 'ai-module-spec'],
+  'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'ai-module-spec', 'audit-records'],
 });
 
 export function adminSidebarSectionOf(item) {
@@ -68,12 +68,12 @@ function ensureStyle() {
   style.textContent = `
 body.admin-compact{--admin-readable:#172033;--admin-secondary:#66768a;--admin-border:#d9e2ec;--admin-soft:#f4f7fb;--admin-active:#eaf3ff}
 /* Primary-nav safety is independent of the compact class so lazy feature hydration can never leak technical menu rows. */
-.sidebar nav[data-ekodi-admin-nav-mode="primary"]{display:flex!important;flex-direction:column!important;gap:4px!important;overflow-y:hidden!important;overflow-x:hidden!important;overscroll-behavior:none!important}
+.sidebar nav[data-ekodi-admin-nav-mode="primary"]{display:flex!important;flex-direction:column!important;gap:4px!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-width:thin}
 .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .nav{display:none!important}
 .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .admin-context-source{display:none!important}
 .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .admin-global-navs{display:grid!important}
 .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .admin-command-entry{display:flex!important}
-body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:4px!important;overflow-y:hidden!important;overflow-x:hidden!important;overscroll-behavior:none!important}
+body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:4px!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-width:thin}
 body.admin-compact .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .nav{display:none!important}
 body.admin-compact .${GLOBAL_CLASS}{display:grid;gap:5px;margin:6px 0 10px}
 body.admin-compact .admin-global-nav{display:flex;align-items:center;gap:11px;width:100%;min-height:48px;padding:10px 12px;border:1px solid transparent;border-radius:11px;background:transparent;color:#dbe8f6!important;font:inherit;font-size:15px;font-weight:780;line-height:1.25;text-align:left;cursor:pointer;box-shadow:none!important;transition:background .12s ease,border-color .12s ease!important;opacity:1!important}
@@ -82,7 +82,7 @@ body.admin-compact .admin-global-nav:hover{border-color:#274d73;background:#102c
 body.admin-compact .admin-global-nav.active{border-color:#2d6fac;background:#174b7b;color:#fff!important}
 body.admin-compact .admin-global-nav b{display:inline-grid;place-items:center;min-width:24px;color:#8fb5d6!important;font-size:14px;font-weight:850;letter-spacing:-.03em;opacity:1!important}
 body.admin-compact .admin-global-nav.active b{color:#d9ecff!important}
-body.admin-compact .${DETAILS_CLASS}{display:none!important}
+body.admin-compact .${DETAILS_CLASS}{display:grid!important;gap:3px;margin:-1px 4px 7px 32px;padding:4px 0 6px 8px;border-left:1px solid #294b6b}
 body.admin-compact .admin-detail-item{display:flex;align-items:center;gap:8px;width:100%;min-height:34px;margin:0;padding:6px 8px;border:1px solid transparent;border-radius:8px;background:transparent;color:#506174;font:inherit;font-size:13px;font-weight:700;text-align:left;cursor:pointer}
 body.admin-compact .admin-detail-item:hover{border-color:#dbe7ef;background:#f2f7fb;color:#173b57}
 body.admin-compact .admin-detail-item.active{border-color:#bfd5ee;background:#edf4ff;color:#0b5cab}
@@ -96,6 +96,8 @@ body.admin-compact .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display
 body.admin-compact .admin-context-title{flex:0 0 auto;min-width:72px;color:#334b63;font-size:14px;font-weight:850;letter-spacing:-.01em;white-space:nowrap}
 body.admin-compact .${TABS_CLASS}{display:flex;align-items:center;gap:5px;min-width:0;overflow-x:auto;scrollbar-width:none}
 body.admin-compact .${TABS_CLASS}::-webkit-scrollbar{display:none}
+body.admin-compact .${TABS_SHELL_CLASS}[data-admin-single-context="true"] .${TABS_CLASS}{display:none!important}
+body.admin-compact .${TABS_SHELL_CLASS}[data-admin-single-context="true"] .admin-context-title{min-width:0;color:#172033;font-size:15px}
 body.admin-compact .admin-context-tab{flex:0 0 auto;min-height:40px;padding:0 13px;border:1px solid transparent;border-radius:10px;background:transparent;color:#52667b;font:inherit;font-size:14px;font-weight:760;line-height:1.35;white-space:nowrap;cursor:pointer;box-shadow:none!important;transition:background .12s ease,border-color .12s ease!important}
 body.admin-compact .admin-context-tab:hover{border-color:#d5e6ef;background:#f2f7fb;color:#173b57}
 body.admin-compact .admin-context-tab.active{border-color:#aecdec;background:#eaf3ff;color:#0b5cab;font-weight:850}
@@ -216,6 +218,10 @@ function ensureContainers(nav, root = document) {
   return { globals, source, shell, commandEntry };
 }
 
+function isPlatformSuperAdminSurface(){
+  return /^\/admin(?:\/|$)/.test(String(window.location?.pathname||''));
+}
+
 function globalButtons(globals, locale) {
   const existing = new Map([...globals.querySelectorAll('[data-admin-global-group]')].map(node => [node.dataset.adminGlobalGroup, node]));
   for (const group of ADMIN_MENU_GROUPS) {
@@ -296,7 +302,7 @@ function activeSection(nav) {
   const panelSection = window.EKODIAdminPanels?.current?.();
   if (panelSection === 'command-home') return 'command-home';
   const routed = window.EKODIAdminRoutes?.sectionFromLocation?.(window.location);
-  if (routed === 'command-home') return 'command-home';
+  if (routed && getAdminMenuItem(routed)) return routed;
   const active = [...navItems(nav)].find(item => item.classList.contains('active'));
   const activeId = adminSidebarSectionOf(active);
   if (activeId && getAdminMenuItem(activeId)) return activeId;
@@ -320,8 +326,12 @@ function renderContextTabs(nav, shell, group, section, locale) {
   const title = shell.querySelector('.admin-context-title');
   const tabs = shell.querySelector(`.${TABS_CLASS}`);
   if (!tabs) return;
-  if (title) title.textContent = getAdminMenuGroupLabel(group, locale);
+  const groupLabel = getAdminMenuGroupLabel(group, locale);
+  if (title) title.textContent = groupLabel;
   const ids = availableIds(nav, group);
+  const singleEquivalent = ids.length === 1 && getAdminMenuLabel(ids[0], locale) === groupLabel;
+  shell.dataset.adminSingleContext = singleEquivalent ? 'true' : 'false';
+  tabs.hidden = singleEquivalent;
   const signature = `${locale}|${group}|${ids.join(',')}`;
   if (tabs.dataset.renderSignature !== signature) {
     tabs.dataset.renderSignature = signature;
@@ -369,14 +379,16 @@ function syncWorkbenchState(nav, locale, preferredSection = '') {
     commandEntry.setAttribute('aria-current', selected ? 'page' : 'false');
   }
   for (const button of globals.querySelectorAll('[data-admin-global-group]')) {
-    const selected = button.dataset.adminGlobalGroup === group;
+    const selected = section !== 'command-home' && button.dataset.adminGlobalGroup === group;
     button.classList.toggle('active', selected);
     button.setAttribute('aria-current', selected ? 'page' : 'false');
     button.setAttribute('aria-expanded', selected ? 'true' : 'false');
   }
   renderContextTabs(nav, shell, group, displayedSection, locale);
-  globals.querySelector(`:scope>.${DETAILS_CLASS}`)?.remove();
+  if (isPlatformSuperAdminSurface()) renderSidebarDetails(nav, globals, group, displayedSection || section, locale);
+  else globals.querySelector(`:scope>.${DETAILS_CLASS}`)?.remove();
   nav.dataset.adminGlobalGroup = group;
+  nav.dataset.adminRoleNavigation = isPlatformSuperAdminSurface() ? 'platform-super-admin' : 'delegated-manager';
 }
 
 function activateSection(nav, section) {
@@ -450,7 +462,7 @@ export function renderAdminSidebar(nav, { locale = readAdminSidebarLocale(), ids
     const items = ids.map(id => createAdminSidebarItem(id, locale)).filter(Boolean);
     nav.replaceChildren(...items);
     nav.dataset.adminSidebarShared = 'true';
-    nav.dataset.adminMenuGovernance = 'primary-sidebar-tabs-v3';
+    nav.dataset.adminMenuGovernance = 'role-projected-sidebar-v4';
     nav.dataset.ekodiAdminNavMode = 'primary';
     syncAdminSidebar(nav.ownerDocument || document, { locale });
     return items;
@@ -488,7 +500,7 @@ export function syncAdminSidebar(root = document, options = {}) {
   syncWorkbenchState(nav, locale);
   nav.dataset.adminSidebarShared = 'true';
   nav.dataset.adminSidebarLocale = locale;
-  nav.dataset.adminMenuGovernance = 'primary-sidebar-tabs-v3';
+  nav.dataset.adminMenuGovernance = 'role-projected-sidebar-v4';
   nav.dataset.ekodiAdminNavMode = 'primary';
 
   const id = activeSection(nav);
@@ -578,7 +590,8 @@ export function mountAdminSidebar(root = document, options = {}) {
     event.preventDefault();
     const group = global.dataset.adminGlobalGroup || '';
     nav.dataset.adminFocusedGroup = group;
-    if (getAdminMenuGroupForSection(activeSection(nav)) !== group) {
+    const currentSection = activeSection(nav);
+    if (currentSection === 'command-home' || getAdminMenuGroupForSection(currentSection) !== group) {
       activateSection(nav, getAdminMenuGroupDefault(group));
       delete nav.dataset.adminFocusedGroup;
     }

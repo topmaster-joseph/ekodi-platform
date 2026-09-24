@@ -47,7 +47,7 @@ test('Health is the read-only EKODI Core operations dashboard', async () => {
     read('system-health-admin.js'),
     read('system-health-admin.css'),
   ]);
-  assert.match(health, /EKODI Core & System Health/);
+  assert.ok(health.includes('<h2>플랫폼 통합현황</h2>'));
   assert.match(health, /data-core-card="core"/);
   assert.match(health, /data-core-card="database"/);
   assert.match(health, /data-core-card="backup"/);

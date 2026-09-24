@@ -22,12 +22,12 @@ test('delegated admins use task-first navigation without changing authority',asy
   assert.match(workspace,/label:'설정 · 기록'/);
   assert.match(workspace,/mallDirectSections/);
 
-  assert.match(store,/label:'주문 · 판매'/);
+  assert.match(store,/label:'주문 · 배달'/);
   assert.match(store,/label:'메뉴 · 재고'/);
   assert.match(store,/label:'고객 · 리뷰'/);
-  assert.match(store,/label:'마케팅 · 채널'/);
-  assert.match(store,/label:'운영 · 설정'/);
-  assert.match(store,/admin-nav-group-label/);
+  assert.match(store,/label:'홍보 · 채널'/);
+  assert.match(store,/label:'매장 관리'/);
+  assert.match(store,/admin-nav-group-label/);assert.match(store,/admin-nav-head/);assert.match(store,/overflow-y:auto!important/);
   assert.match(store,/dataset\.adminSection=key/);
   assert.match(store,/root\.hidden=true/);
 
@@ -105,10 +105,11 @@ test('delegated admin navigation never requires a category click before reaching
     read('workspace-trade-admin-page.js'),
   ]);
 
-  assert.match(workspace,/a\.dataset\.adminGroup=group\.id/);
-  assert.match(workspace,/a\.href=sectionHref\(firstKey\)/);
+  assert.match(workspace,/visibleDirectSections\(role\)/);
+  assert.match(workspace,/a\.dataset\.adminSection=key/);
   assert.match(workspace,/a\.href=sectionHref\(key\)/);
-  assert.match(workspace,/renderSecondaryNav\(activeGroup,role\)/);
+  assert.doesNotMatch(workspace,/a\.dataset\.adminGroup=group\.id/);
+  assert.doesNotMatch(workspace,/renderSecondaryNav\(activeGroup,role\)/);
 
   assert.match(store,/admin-nav-group-label/);
   assert.ok(store.includes("a.href=key==='overview'?ADMIN_BASE+'/overview':ADMIN_BASE+'/'+key"));

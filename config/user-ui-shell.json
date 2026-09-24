@@ -1,5 +1,5 @@
 {
-  "version": 13,
+  "version": 14,
   "name": "EKODI User UI Shell",
   "parentPolicy": "config/user-ui-dna.json",
   "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family, with persistent common chrome limited to one shared header and one shared footer.",
@@ -33,7 +33,10 @@
     "progressiveHomeDisclosure": true,
     "languageChoiceInHeaderOnly": true,
     "footerLanguageChoiceForbidden": true,
-    "individualSiteHeaderStaysLocal": true
+    "individualSiteHeaderStaysLocal": true,
+    "firstPaintVisualContinuity": true,
+    "documentLoadAmbientVariation": true,
+    "transientCharacterFlashForbidden": true
   },
   "header": {
     "owner": "shared-shell",
@@ -214,5 +217,41 @@
     "backgrounds": "header-and-footer-shells-remain-full-bleed",
     "responsive": "follow-adopted-main-resize",
     "subserviceInheritance": true
+  },
+  "visualContinuity": {
+    "owner": "shared-shell",
+    "policyId": "PUBLIC-VISUAL-CONTINUITY-001",
+    "scope": [
+      "public",
+      "workspace"
+    ],
+    "prepaint": {
+      "stateAttribute": "data-ekodi-visual-state",
+      "initialState": "pending",
+      "resolvedState": "ready",
+      "hideWhilePendingSelectors": [
+        "[data-ekodi-character-village]",
+        "[data-ekodi-dynamic-visual]",
+        "[data-ekodi-decorative-visual]"
+      ]
+    },
+    "ambientVariation": {
+      "trigger": "top-level-navigation-or-reload",
+      "seedScope": "document-load",
+      "stableForDocumentLifetime": true,
+      "providerIndependent": true,
+      "approvedPaletteOnly": true,
+      "maxBackgroundMixPercent": 6,
+      "tokens": [
+        "--ekodi-public-background-tint",
+        "--ekodi-public-background-mix"
+      ]
+    },
+    "forbidden": [
+      "visible-then-hidden character/illustration hydration",
+      "timer-driven public background mutation",
+      "unbounded random colors",
+      "layout or contrast mutation caused by ambient variation"
+    ]
   }
 }

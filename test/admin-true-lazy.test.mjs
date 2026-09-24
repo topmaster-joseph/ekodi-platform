@@ -89,7 +89,7 @@ test('shared admin navigation exposes seven canonical areas with top contextual 
   const sidebar = await read('admin-sidebar.js');
   const postbuild = await read('scripts/admin-performance-postbuild.mjs');
   assert.doesNotMatch(registry, /id: 'overview'/);
-  for (const area of ['summary', 'services', 'sites', 'people', 'content', 'status', 'settings-records']) assert.match(registry, new RegExp(`id: '${area}'`));
+  for (const area of ['summary', 'sites', 'people', 'services', 'content', 'status', 'settings-records']) assert.match(registry, new RegExp(`id: '${area}'`));
   for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'ai', 'business', 'data', 'site-management', 'security-audit', 'settings', 'access']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
   assert.match(registry, /id: 'campus', group: 'sites'/);
   assert.match(registry, /id: 'work', group: 'content'/);
@@ -106,10 +106,9 @@ test('shared admin navigation exposes seven canonical areas with top contextual 
   assert.match(sidebar, /admin-context-tabs-shell/);
   assert.match(sidebar, /admin-context-tabs/);
   assert.match(sidebar, /data-admin-context-section/);
-  assert.match(sidebar, /globals\.querySelector\(`:scope>\.\$\{DETAILS_CLASS\}`\)\?\.remove\(\)/);
-  assert.match(sidebar, /data-admin-capability-shortcut/);
+    assert.match(sidebar, /data-admin-capability-shortcut/);
   assert.match(sidebar, /admin-context-source/);
-  assert.match(sidebar, /adminMenuGovernance = 'primary-sidebar-tabs-v3'/);
+  assert.match(sidebar, /adminMenuGovernance = 'role-projected-sidebar-v4'/);
   assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: false \}\)/);
   assert.doesNotMatch(sidebar, /subtree: true/);
   assert.doesNotMatch(sidebar, /ekodi-admin-recent-sections|ekodi-admin-favorite-sections/);

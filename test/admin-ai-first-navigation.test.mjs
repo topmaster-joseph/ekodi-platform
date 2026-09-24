@@ -41,13 +41,13 @@ test('Campus shortcuts cannot reopen hidden technical panels', () => {
 });
 
 test('human-facing Admin menu has one canonical order inside seven EKODI areas', () => {
-  assert.deepEqual(adminMenuGroups(), ['summary','services','sites','people','content','status','settings-records']);
+  assert.deepEqual(adminMenuGroups(), ['summary','sites','people','services','content','status','settings-records']);
   assert.deepEqual(adminMenuOrder(), [
     'platform-overview',
-    'engine-all','engine-core','engine-common','engine-operations','engine-professional','engine-ai','engine-integration','engine-preview',
     'sites-all','sites-core','sites-business','sites-community','sites-clients','sites-knowledge','sites-communication','sites-worklife','sites-other','sites-preparing',
     'users-access','security','admins','ai-membership',
-    'work','communication','community','books','devotional','social','finance','tax',
+    'engine-all','engine-core','engine-common','engine-operations','engine-professional','engine-ai','engine-integration','engine-preview',
+    'work','communication','community','books','devotional','social','finance',
     'health','deployments','aiops','devices','api-cost','architecture','maturity',
     'public-site-controls','language-status','ai-module-spec','storage','ai-settings','audit-records',
   ]);
@@ -56,9 +56,9 @@ test('human-facing Admin menu has one canonical order inside seven EKODI areas',
   assert.ok(layout.includes('function applyOrder()'));
 });
 
-test('Admin sidebar menu uses readable seven-area spacing without shrinking labels', () => {
+test('Platform Admin sidebar uses readable seven-area spacing with role-projected task details', () => {
   for (const marker of ['ekodi-admin-workbench-tabs-style','gap:4px!important','min-height:48px','padding:10px 12px','font-size:15px']) assert.ok(sidebar.includes(marker));
-  assert.ok(sidebar.includes("primary-sidebar-tabs-v3"));
+  assert.ok(sidebar.includes("role-projected-sidebar-v4"));
 });
 
 test('administrator access waits for its runtime instead of recursively clicking the hidden source menu', () => {

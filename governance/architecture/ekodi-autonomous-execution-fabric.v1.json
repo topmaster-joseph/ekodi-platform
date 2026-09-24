@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "architectureVersion": "1.2.0",
+  "architectureVersion": "1.2.2",
   "status": "active-nonproduction",
   "name": "EKODI Autonomous Execution Fabric",
   "generation": 10,
@@ -268,7 +268,18 @@
     "parallelMultiMethodRuntimeProofRequired": true,
     "autonomousProductionReadinessProven": false,
     "nativeBackgroundBrowserInitialProof": "evidence/runtime/background-browser-worker/2026-09-22-initial-proof.json",
-    "nativeBackgroundBrowserRuntimeProven": true
+    "nativeBackgroundBrowserRuntimeProven": true,
+    "durableEvidenceLedgerRegistered": true,
+    "durableEvidenceLedgerWorkflow": ".github/workflows/gen10-production-evidence-ledger.yml",
+    "durableEvidenceBackend": "cloudflare-d1",
+    "durableRuntimeEvidenceTable": "ai_generation10_evidence",
+    "durableProductionEvidenceTable": "ai_production_evidence",
+    "durableEvidenceAppendOnly": true,
+    "durableEvidenceRoundtripRequired": true,
+    "activationEvaluator": "scripts/evaluate-gen10-activation-evidence.mjs",
+    "activationEvidenceSource": "durable-ledger",
+    "activationEvaluationFailClosed": true,
+    "activationReadyRequiresNoBlockers": true
   },
   "evidenceRequiredBeforeActivation": [
     "sandbox_isolation_test",

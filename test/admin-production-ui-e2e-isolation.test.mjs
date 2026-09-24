@@ -17,12 +17,25 @@ test('synthetic production Admin UI verifier isolates backend auth side effects 
   assert.match(text, /await page\.goto\(ADMIN_URL, \{ waitUntil: 'domcontentloaded', timeout: 45000 \}\);\s*await waitForAdminShell\(\);\s*selectedWorkArea = null;/);
 });
 
-test('synthetic production Admin UI verifier stubs the canonical apex session route', async () => {
+test('synthetic production Admin UI verifier stubs the canonical apex session route with a fully authenticated super-admin contract', async () => {
   const text = await source();
   assert.match(text, /page\.route\('https:\/\/ekodi\.kr\/api\/session'/);
+  assert.match(text, /authenticated:\s*true/);
+  assert.match(text, /role:\s*'super_admin'/);
   assert.doesNotMatch(text, /page\.route\('https:\/\/api\.ekodi\.kr\/api\/session'/);
 });
 
+
+
+test('synthetic production Admin UI verifier accepts the role-projected platform-admin scroll contract', async () => {
+  const text = await source();
+  assert.match(text, /sidebarOverflowY !== 'hidden'/);
+  assert.match(text, /!\['auto','scroll'\]\.includes\(workbenchState\.navOverflowY\)/);
+  assert.match(text, /navIndependentScroll !== 'platform-admin'/);
+  assert.match(text, /role-projected sidebar scroll contract failed/);
+  assert.doesNotMatch(text, /navOverflowY !== 'hidden'/);
+  assert.doesNotMatch(text, /navIndependentScroll !== 'false'/);
+});
 
 test('synthetic production Admin UI verifier targets the canonical apex Admin path', async () => {
   const text = await source();
@@ -51,13 +64,27 @@ test('synthetic production Admin UI verifier follows direct registry href menus 
 });
 
 
-test('synthetic production Admin UI verifier uses visible sidebar navigation while context tabs remain state-only', async () => {
+test('synthetic production Admin UI verifier allows an already-active group default without a visible submenu trigger', async () => {
   const text = await source();
   assert.match(text, /async function resolveMenuTrigger\(id, group\)/);
   assert.match(text, /admin-detail-item\[data-admin-detail-section=/);
   assert.match(text, /data-admin-detail-more=/);
   assert.match(text, /contextTab\.waitFor\(\{ state: 'attached', timeout: 10000 \}\)/);
-  assert.match(text, /no visible sidebar navigation trigger after selecting work area/);
+  assert.match(text, /const alreadyActive = await contextTab\.evaluate/);
+  assert.match(text, /if \(!alreadyActive\) \{\s*const trigger = await resolveMenuTrigger\(id, group\);\s*await dispatchClick\(trigger\);\s*\}/);
   assert.doesNotMatch(text, /contextTab\.waitFor\(\{ state: 'visible'/);
-  assert.match(text, /const trigger = await resolveMenuTrigger\(id, group\)/);
+});
+
+
+test('synthetic production Admin UI verifier exercises the real bottom command console without backend mutation', async () => {
+  const text = await source();
+  assert.match(text, /page\.route\('https:\/\/ekodi\.kr\/api\/control\/ai\/assist'/);
+  assert.match(text, /관리자 명령창 연결 확인/);
+  assert.match(text, /관리자 명령창 연결 정상/);
+  assert.match(text, /#ekodiAssistBootstrap input/);
+  assert.match(text, /#ekodiAssistBootstrap \.ekodi-assist-bootstrap-send/);
+  assert.match(text, /admin-command-home/);
+  assert.match(text, /admin-command-active/);
+  assert.match(text, /command-roundtrip/);
+  assert.match(text, /expectedCount = menus\.length \+ 1/);
 });

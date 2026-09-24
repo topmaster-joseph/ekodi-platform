@@ -121,7 +121,8 @@ jobs:
           grep -Fq 'https://ekodi.kr/ekodimall/admin/sourcing' dist/admin-menu-layout.js
           grep -Fq "id: 'supply-network'" dist/admin-menu-registry.js
           grep -Eq "admin-design-engine\\.js\\?v=[a-f0-9]{16}" dist/admin-menu-registry.js
-          grep -Fq 'overflow-y:hidden!important' dist/admin-design-engine.css
+          grep -Fq 'overflow-y:auto!important' dist/admin-design-engine.css
+          grep -Fq "nav.dataset.ekodiIndependentScroll='platform-admin'" dist/admin-authenticated-shell.js
           grep -Fq 'mall_sales_events' dist/marketing-funnel-admin.js
           grep -Fq "test: 'eq.false'" dist/marketing-funnel-admin.js
           grep -Fq 'https://ekodi.kr/ekodimall' dist/marketing-funnel-admin.js

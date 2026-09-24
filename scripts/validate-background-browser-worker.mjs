@@ -34,11 +34,14 @@ const browserMethod=(fabric.orchestration?.methodCatalog||[]).find(x=>x.id==='br
 if(browserMethod.ownership!=='ekodi'||browserMethod.defaultProvider!=='ekodi-background-browser-worker') fail('execution fabric browser-e2e method must use EKODI background browser worker');
 if(browserMethod.state!=='runtime-proven'||browserMethod.evidence!=='evidence/runtime/background-browser-worker/2026-09-22-initial-proof.json') fail('execution fabric browser-e2e lane must retain runtime proof');
 if(constitution.virtualizationSovereigntyPolicy?.ekodiOwnedVirtualizationFirst!==true) fail('constitutional virtualization sovereignty must remain native-first');
-if(!/workflow_call:\s*[\s\S]*?surface_path:/m.test(workerWorkflow)||!/workflow_call:\s*[\s\S]*?device_profile:/m.test(workerWorkflow)) fail('background browser workflow must remain reusable through workflow_call');
+if(!/workflow_call:\s*[\s\S]*?surface_path:/m.test(workerWorkflow)||!/workflow_call:\s*[\s\S]*?surface_paths:/m.test(workerWorkflow)||!/workflow_call:\s*[\s\S]*?device_profile:/m.test(workerWorkflow)) fail('background browser workflow must remain reusable through workflow_call with single and multi-surface inputs');
+if(!workerWorkflow.includes('INPUT_PATHS')||!workerWorkflow.includes('horizontalOverflow')||!workerWorkflow.includes('.pageErrors | length == 0')) fail('background browser workflow must enforce multi-surface visual/runtime evidence');
 if(!sharedRelease.includes('native_surface_verification_desktop:')||!sharedRelease.includes('native_surface_verification_mobile:')) fail('shared-site production release must invoke the EKODI browser worker for desktop and mobile');
 if((sharedRelease.match(/uses:\s*\.\/\.github\/workflows\/ekodi-background-browser-worker\.yml/g)||[]).length<2) fail('shared-site production release must retain both native browser verification lanes');
 if(!sharedRelease.includes('needs: deploy')) fail('native browser verification must run after guarded production deploy');
 if(!sharedRelease.includes('device_profile: desktop')||!sharedRelease.includes('device_profile: mobile-portrait')) fail('release browser verification must cover desktop and mobile portrait');
+if(!sharedRelease.includes('surface_paths: /,/my/,/admin/')) fail('shared-site production release must verify root, My and Admin canonical surfaces');
+if(!sharedRelease.includes('authenticated_admin_surface_verification:')||!sharedRelease.includes('verify-admin-production-ui-e2e.yml')) fail('shared-site production release must run authenticated Admin UI verification after deploy');
 
 if(failures.length){
   console.error(`EKODI Background Browser Worker validation failed (${failures.length})`);
@@ -51,4 +54,5 @@ console.log('- ephemeral headless Playwright context, no active user profile reu
 console.log('- read-only network by default; mutation requires an explicit task grant');
 console.log('- external browser service dependency: none');
 console.log('- isolated browser runtime proof: registered');
-console.log('- shared-site guarded release: desktop + mobile native browser verification required');
+console.log('- shared-site guarded release: root + My + Admin on desktop/mobile native browser verification required');
+console.log('- authenticated Admin menu E2E is a required post-deploy verification lane');

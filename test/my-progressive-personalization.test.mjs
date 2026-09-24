@@ -91,6 +91,8 @@ test('My EKODI UI exposes progressive discovery while keeping optional surfaces 
   assert.match(app,/buildPersonalizedServiceView/);
   assert.match(app,/set_my_personalization_preference/);
   assert.match(app,/ekodi:personalization-signal/);
+  assert.match(app,/\$\$\('\[data-intent-service\]'\)\.forEach/);
+  assert.doesNotMatch(app,/(?<!\$)\$\('\[data-intent-service\]'\)\.forEach/);
   assert.match(userAi,/personalizationSuggestion/);
   assert.doesNotMatch(userAi,/investSuggestion/);
 });

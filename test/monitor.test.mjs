@@ -62,9 +62,9 @@ test('monitor covers official services, shared infrastructure, Connect dependenc
   assert.equal(byId.get('auth-router-js')?.[3], 'https://auth.ekodi.kr/auth-router.js');
   assert.equal(byId.get('ai-gateway')?.[2], 'ai.ekodi.kr');
   assert.equal(byId.get('shell-js')?.[3], 'https://ekodi.kr/shell/shell.js');
-  assert.equal(byId.get('community-health')?.[3], 'https://community.ekodi.kr/health');
-  assert.equal(byId.get('community-connect')?.[3], 'https://community.ekodi.kr/connect/');
-  assert.equal(byId.get('community-connect-app')?.[3], 'https://community.ekodi.kr/connect/app.js');
+  assert.equal(byId.get('community-health')?.[3], 'https://ekodi.kr/community/health');
+  assert.equal(byId.get('community-connect')?.[3], 'https://ekodi.kr/community/connect/');
+  assert.equal(byId.get('community-connect-app')?.[3], 'https://ekodi.kr/community/connect/app.js');
   assert.deepEqual(byId.get('connect-api-auth-gate')?.[4], [401]);
   assert.equal(byId.get('marketing-publish-api')?.[3], 'https://marketing-publish-api.ekodi.kr/health');
   assert.equal(byId.get('publishing')?.[2], 'ekodi.kr');

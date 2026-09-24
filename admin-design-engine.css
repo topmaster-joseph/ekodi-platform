@@ -30,12 +30,12 @@ body.admin-compact.ekodi-admin-design-engine .sidebar{
   overflow:hidden!important;
 }
 body.admin-compact.ekodi-admin-design-engine .sidebar nav{
-  overflow-y:hidden!important;
+  overflow-y:auto!important;
   overflow-x:hidden!important;
-  overscroll-behavior:none!important;
-  scrollbar-width:none!important;
+  overscroll-behavior:contain!important;
+  scrollbar-width:thin!important;
 }
-body.admin-compact.ekodi-admin-design-engine .sidebar nav::-webkit-scrollbar{display:none!important}
+body.admin-compact.ekodi-admin-design-engine .sidebar nav::-webkit-scrollbar{width:8px}
 body.admin-compact.ekodi-admin-design-engine .admin-global-nav{
   min-height:48px!important;
   border-radius:11px!important;

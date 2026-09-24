@@ -43,6 +43,17 @@ expect(doc.safety?.executorSelfPromotionForbidden === true, 'executors must not 
 expect(doc.safety?.singleExecutorControlAuthorityForbidden === true, 'a single executor must not become control authority');
 expect(doc.runtimeEvidence?.nonProductionIsolatedExecutionProven === true, 'non-production isolated runtime proof must be recorded');
 expect(doc.runtimeEvidence?.parallelMultiMethodRuntimeProofRequired === true, 'parallel multi-method runtime proof must be required');
+expect(doc.runtimeEvidence?.durableEvidenceLedgerRegistered === true, 'durable Generation 10 evidence ledger must be registered');
+expect(doc.runtimeEvidence?.durableEvidenceLedgerWorkflow === '.github/workflows/gen10-production-evidence-ledger.yml', 'durable evidence ledger workflow mismatch');
+expect(doc.runtimeEvidence?.durableEvidenceBackend === 'cloudflare-d1', 'durable evidence backend must remain the governed D1 ledger');
+expect(doc.runtimeEvidence?.durableRuntimeEvidenceTable === 'ai_generation10_evidence', 'runtime evidence table mismatch');
+expect(doc.runtimeEvidence?.durableProductionEvidenceTable === 'ai_production_evidence', 'production evidence table mismatch');
+expect(doc.runtimeEvidence?.durableEvidenceAppendOnly === true, 'durable evidence ledger must remain append-only');
+expect(doc.runtimeEvidence?.durableEvidenceRoundtripRequired === true, 'durable evidence writes must require roundtrip verification');
+expect(doc.runtimeEvidence?.activationEvaluator === 'scripts/evaluate-gen10-activation-evidence.mjs', 'activation evaluator must consume durable evidence');
+expect(doc.runtimeEvidence?.activationEvidenceSource === 'durable-ledger', 'activation evidence source must remain the durable ledger');
+expect(doc.runtimeEvidence?.activationEvaluationFailClosed === true, 'activation evaluation must fail closed on missing evidence');
+expect(doc.runtimeEvidence?.activationReadyRequiresNoBlockers === true, 'activation readiness must require zero blockers');
 expect(doc.runtimeEvidence?.autonomousProductionReadinessProven === false, 'production readiness must remain unclaimed until complete evidence exists');
 expect(doc.activation?.currentState === 'nonproduction_runtime_proven_activation_incomplete', 'activation state must remain partial until full runtime proof exists');
 expect(Array.isArray(doc.evidenceRequiredBeforeActivation) && doc.evidenceRequiredBeforeActivation.length >= 10, 'activation evidence set is incomplete');

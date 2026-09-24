@@ -7,12 +7,12 @@ const api=fs.readFileSync(new URL('../device-control.js',import.meta.url),'utf8'
 const policy=JSON.parse(fs.readFileSync(new URL('../config/isolated-desktop-backend-policy.json',import.meta.url),'utf8'));
 
 test('isolated desktop capability probe never silently activates desktop execution',()=>{
-  assert.match(agent,/\$AgentVersion = '2\.3\.3'/);
+  assert.match(agent,/\$AgentVersion = '2\.4\.0'/);
   assert.match(agent,/function Get-IsolatedDesktopBackendProbe/);
   assert.match(agent,/computer\.desktop\.probe/);
   assert.match(agent,/isolatedDesktopProbe = \$true/);
-  assert.match(agent,/isolatedDesktop = \$false/);
-  assert.match(agent,/isolatedDesktopReady = \$false/);
+  assert.match(agent,/isolatedDesktop = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
+  assert.match(agent,/isolatedDesktopReady = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
   assert.doesNotMatch(agent,/isolatedDesktop = \$true/);
 });
 
@@ -53,7 +53,7 @@ test('Hyper-V canary creates only an ephemeral differencing VM and cleans it up'
   assert.match(agent,/sessionVmRemoved = -not \[bool\]\(Get-VM/);
   assert.match(agent,/sessionDiskRemoved = -not \(Test-Path -LiteralPath \$sessionDisk\)/);
   assert.match(agent,/isolatedDesktopCanary = \[bool\]\(Get-IsolatedDesktopCanaryState\)\.verified/);
-  assert.match(agent,/isolatedDesktop = \$false/);
+  assert.match(agent,/isolatedDesktop = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
   assert.equal(policy.activation.canaryCommand,'computer.desktop.canary');
   assert.equal(policy.activation.canaryDoesNotEnableExecutionByItself,true);
   assert.equal(policy.canary.networkAttached,false);
@@ -70,11 +70,48 @@ test('guest runtime canary stages tasks offline and keeps full desktop execution
   assert.match(agent,/type = 'guest\.runtime\.probe'/);
   assert.match(agent,/networkPolicy = 'none'/);
   assert.match(agent,/isolatedDesktopGuestCanary = \[bool\]\(Get-IsolatedDesktopGuestCanaryState\)\.verified/);
-  assert.match(agent,/isolatedDesktop = \$false/);
+  assert.match(agent,/isolatedDesktop = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
   assert.equal(policy.activation.guestCanaryCommand,'computer.desktop.guest.canary');
   assert.equal(policy.activation.guestCanaryRequiredBeforeExecution,true);
   assert.equal(policy.activation.guestCanaryDoesNotEnableExecutionByItself,true);
   assert.equal(policy.guestAgent.guestCredentialsRequired,false);
   assert.equal(policy.guestAgent.transport,'offline-differencing-vhdx-task-and-receipt');
   assert.equal(policy.guestCanary.executionCapabilityAfterGuestCanary,false);
+});
+
+
+test('semantic guest UI canary remains isolated and cannot unlock general desktop execution',()=>{
+  assert.match(agent,/computer\.desktop\.ui\.canary/);
+  assert.match(agent,/function Invoke-IsolatedDesktopGuestUiCanary/);
+  assert.match(agent,/type = 'guest\.ui\.probe'/);
+  assert.match(agent,/semanticUiAutomation/);
+  assert.match(agent,/lowLevelInputInjection/);
+  assert.match(agent,/hostInteractiveDesktopUsed/);
+  assert.match(agent,/isolatedDesktopUiCanary = \[bool\]\(Get-IsolatedDesktopUiCanaryState\)\.verified/);
+  assert.match(agent,/isolatedDesktop = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
+  assert.equal(policy.activation.uiCanaryCommand,'computer.desktop.ui.canary');
+  assert.equal(policy.uiCanary.expectedResultCode,'EKODI_UI_OK');
+  assert.equal(policy.uiCanary.generalDesktopExecutionCapabilityAfterUiCanary,false);
+});
+
+
+test('bounded session canary is the only gate that may project isolatedDesktop capability',()=>{
+  assert.match(agent,/computer\.desktop\.session\.canary/);
+  assert.match(agent,/computer\.desktop\.session\.execute/);
+  assert.match(agent,/function Invoke-IsolatedDesktopSessionCanary/);
+  assert.match(agent,/function Invoke-IsolatedDesktopSessionExecute/);
+  assert.match(agent,/function Invoke-IsolatedDesktopBoundedSessionTask/);
+  assert.match(agent,/guest\.session\.execute/);
+  assert.match(agent,/ui\.text\.roundtrip/);
+  assert.match(agent,/isolatedDesktopSessionCanary = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
+  assert.match(agent,/isolatedDesktop = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
+  assert.doesNotMatch(agent,/isolatedDesktop = \$true/);
+  assert.equal(policy.activation.sessionCanaryCommand,'computer.desktop.session.canary');
+  assert.equal(policy.activation.sessionCanaryRequiredBeforeExecution,true);
+  assert.equal(policy.activation.sessionCanaryEnablesBoundedExecutionCapability,true);
+  assert.equal(policy.activation.generalUnboundedDesktopExecutionAfterSessionCanary,false);
+  assert.equal(policy.sessionExecutor.version,'bounded-v1');
+  assert.deepEqual(policy.sessionExecutor.allowedOperations,['ui.text.roundtrip']);
+  assert.equal(policy.sessionExecutor.rawInputReturnedInCloudResult,false);
+  assert.equal(policy.sessionExecutor.generalPurposeShell,false);
 });

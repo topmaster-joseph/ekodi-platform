@@ -1,7 +1,13 @@
 name: Verify Admin Production UI E2E
 
 on:
+  workflow_call:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/verify-admin-production-ui-e2e.mjs'
+      - 'test/admin-production-ui-e2e-isolation.test.mjs'
+      - '.github/workflows/verify-admin-production-ui-e2e.yml'
 permissions:
   contents: read
 
@@ -31,3 +37,11 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/verify-admin-production-ui-e2e.mjs
+      - name: Upload authenticated Admin visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-production-ui-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/admin-production-ui-e2e
+          if-no-files-found: warn
+          retention-days: 7

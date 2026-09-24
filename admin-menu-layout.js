@@ -184,8 +184,7 @@ function requestDemand(section){
 }
 function routeInternal(){dc=false;requestedSection='aiops';replaceSectionUrl('aiops');requestDemand('aiops');}
 const explicitHashSection=()=>HASH.get(location.hash.toLowerCase())||'';
-const explicitPathSection=()=>adminRoutes()?.sectionFromPath?.(location.pathname)||'';
-const explicitAdminSection=()=>adminRoutes()?.sectionFromLocation?.(location)||explicitPathSection()||explicitHashSection();
+const explicitAdminSection=()=>adminRoutes()?.sectionFromLocation?.(location)||explicitHashSection();
 const LEGACY_MALL_AFFILIATE_HASHES=new Set(['#affiliates','#mall-ai-sales']);
 const MALL_SUPPLY_ADMIN='https://ekodi.kr/ekodimall/admin/sourcing';
 const LEGACY_CGMA_MEMBER_HASH='#cheonggye-members';
@@ -254,7 +253,10 @@ const initialSection=explicitAdminSection();
 if(initialSection===COMMAND_HOME)activateCommandHome();
 else if(initialSection&&isInternal(initialSection))routeInternal();
 else if(initialSection==='sites')openSites();
-else if(initialSection)requestedSection=initialSection;
+else if(initialSection){
+  requestedSection=initialSection;
+  queueMicrotask(()=>activatePanel(initialSection)||requestDemand(initialSection));
+}
 else activateCommandHome();
 window.EKODIAdminPanels=Object.freeze({
   activate:section=>{
