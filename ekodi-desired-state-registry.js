@@ -218,6 +218,36 @@ export function buildRuntimeDesiredStateRegistry(input = {}) {
       description: 'Command evidence must remain append-only and durable.',
     }),
   ];
+  const serviceIds = Array.isArray(input.serviceIds) ? [...new Set(input.serviceIds.map(value => text(value, 100)).filter(Boolean))].sort() : [];
+  for (const id of serviceIds) {
+    rules.push(rule({
+      id: `runtime.service.${id}.health`,
+      entityId: `service:${id}`,
+      scope: 'service',
+      selector: `services.${id}.status`,
+      expected: 'online',
+      severity: 'high',
+      changeClass: 'green',
+      autoRepairPolicy: 'bounded_reversible',
+      eventEnabled: true,
+      source: 'service_check_latest',
+      description: `${id} runtime health should remain online.`,
+    }));
+    rules.push(rule({
+      id: `runtime.service.${id}.freshness`,
+      entityId: `service:${id}`,
+      scope: 'service',
+      selector: `services.${id}.fresh`,
+      expected: true,
+      severity: 'high',
+      changeClass: 'green',
+      autoRepairPolicy: 'bounded_reversible',
+      eventEnabled: true,
+      source: 'service_check_latest',
+      description: `${id} runtime health observation must remain fresh.`,
+    }));
+  }
+
   return freeze({
     schemaVersion: 1,
     registryId: 'EKODI-RUNTIME-DESIRED-STATE-001',
@@ -226,7 +256,7 @@ export function buildRuntimeDesiredStateRegistry(input = {}) {
     deterministicFirst: true,
     directMutation: false,
     rules,
-    sources: ['ekodi-autonomous-health-telemetry.js','ekodi-command-ledger.js'],
+    sources: ['ekodi-autonomous-health-telemetry.js','ekodi-command-ledger.js','service_check_latest','service_checks'],
   });
 }
 
