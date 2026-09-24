@@ -17,6 +17,7 @@ test('Campus first screen renders the site catalog as direct administrator butto
   assert.match(js, /피자마루 목포대점/);
   assert.match(js, /요거트퍼플 목포대점/);
   assert.match(js, /function makeSiteAdminButton/);
+  assert.match(js, /makeButton\(site\.name, 'campus-site-admin-button', 'manage', site\)/);
   assert.match(js, /dataset\.campusSiteButton = 'true'/);
   assert.match(js, /item\.append\(makeSiteAdminButton\(site\)\)/);
   assert.match(js, /버튼을 누르면 해당 관리자 메뉴로 이동합니다/);
