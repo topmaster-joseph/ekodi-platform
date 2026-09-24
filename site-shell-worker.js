@@ -67,7 +67,7 @@ function injectRootServiceShell(response,serviceId,progressiveHome=false){
   const shelled=!progressiveHome&&serviceId
     ? injectEkodiShell(response,serviceId)
     : injectEkodiShell(response,serviceId,'',{progressiveHome:true});
-  return ownedCustomerSiteFor(serviceId)?injectEkodiTenantReadability(shelled):shelled;
+  return ownedCustomerSiteFor(serviceId)?injectEkodiTenantReadability(shelled,{forceOperatingSpace:true}):shelled;
 }
 
 function workspaceVisualStyle(dna){
