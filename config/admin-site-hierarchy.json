@@ -25,70 +25,70 @@
       "publicPath": "/ekodibiz",
       "adminPath": "/ekodibiz/admin",
       "parentId": "platform",
-      "navigationProfile": "delegated-manager"
+      "navigationProfile": "role-projected-site-admin"
     },
     {
       "id": "ekodimall",
       "publicPath": "/ekodimall",
       "adminPath": "/ekodimall/admin",
       "parentId": "ekodibiz",
-      "navigationProfile": "delegated-manager"
+      "navigationProfile": "role-projected-site-admin"
     },
     {
       "id": "ekodibiz-trade",
       "publicPath": "/ekodibiz/trade",
       "adminPath": "/ekodibiz/trade/admin",
       "parentId": "ekodibiz",
-      "navigationProfile": "delegated-manager"
+      "navigationProfile": "role-projected-site-admin"
     },
     {
       "id": "ekodichurch",
       "publicPath": "/ekodichurch",
       "adminPath": "/ekodichurch/admin",
       "parentId": "platform",
-      "navigationProfile": "delegated-manager"
+      "navigationProfile": "role-projected-site-admin"
     },
     {
       "id": "cheonggye-local",
       "publicPath": "/cheonggye",
       "adminPath": "/cheonggye/admin",
       "parentId": "platform",
-      "navigationProfile": "delegated-manager"
+      "navigationProfile": "role-projected-site-admin"
     },
     {
       "id": "cgma",
       "publicPath": "/cgma",
       "adminPath": "/cgma/admin",
       "parentId": "platform",
-      "navigationProfile": "delegated-manager"
+      "navigationProfile": "role-projected-site-admin"
     },
     {
       "id": "cmpmyi",
       "publicPath": "/cmpmyi",
       "adminPath": "/cmpmyi/admin",
       "parentId": "platform",
-      "navigationProfile": "delegated-manager"
+      "navigationProfile": "role-projected-site-admin"
     },
     {
       "id": "jadam",
       "publicPath": "/jadam",
       "adminPath": "/jadam/admin",
       "parentId": "cmpmyi",
-      "navigationProfile": "delegated-manager"
+      "navigationProfile": "role-projected-site-admin"
     },
     {
       "id": "pizzamaru",
       "publicPath": "/pizzamaru",
       "adminPath": "/pizzamaru/admin",
       "parentId": "cmpmyi",
-      "navigationProfile": "delegated-manager"
+      "navigationProfile": "role-projected-site-admin"
     },
     {
       "id": "yogurt",
       "publicPath": "/yogurt",
       "adminPath": "/yogurt/admin",
       "parentId": "cmpmyi",
-      "navigationProfile": "delegated-manager"
+      "navigationProfile": "role-projected-site-admin"
     }
   ],
   "forbiddenAggregationAliases": [
