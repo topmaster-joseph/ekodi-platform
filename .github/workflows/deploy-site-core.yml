@@ -747,7 +747,7 @@ jobs:
     needs: deploy
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
-      surface_paths: /,/my/,/admin/
+      surface_paths: /,/my/,/admin/,/ekodimall/admin
       device_profile: desktop
 
   native_surface_verification_mobile:
@@ -755,7 +755,7 @@ jobs:
     needs: deploy
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
-      surface_paths: /,/my/,/admin/
+      surface_paths: /,/my/,/admin/,/ekodimall/admin
       device_profile: mobile-portrait
 
   authenticated_admin_surface_verification:
