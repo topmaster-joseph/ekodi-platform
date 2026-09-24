@@ -133,6 +133,8 @@ must('worker',"privacy:'private-first'");
 must('worker','ACCESS_CONTEXT_TAG');
 must('worker','/access-context.js');
 must('worker','accessContextGuidance:true');
+must('worker','centralAiEntitlements:true');
+must('worker',"aiEntitlementManager:'/my/'");
 mustNot('prod','my.ekodi.kr');
 must('prod','workers_dev = true');
 must('manifest','https://ekodi-my.topmaster-joseph.workers.dev/');
