@@ -15,11 +15,11 @@ import {
   normalizeAdminLocale,
 } from '../admin-menu-registry.js';
 
-const WORK_AREAS = ['summary', 'services', 'sites', 'people', 'content', 'status', 'settings-records'];
+const WORK_AREAS = ['summary', 'sites', 'people', 'services', 'content', 'status', 'settings-records'];
 
 test('admin navigation has exactly seven canonical EKODI areas', () => {
   assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.id), WORK_AREAS);
-  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.labels.en), ['Integrated Overview','Services','Sites','Users & Access','Content & Operations','Status & Releases','Settings & Records']);
+  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.labels.en), ['Platform Overview','Sites & Brands','Users, Admins & Access','Services & AI','Content, Events & Communication','Operations, Releases & Incidents','Settings, Security & Audit']);
   for (const group of ADMIN_MENU_GROUPS) {
     assert.ok(group.defaultSection, `${group.id} missing defaultSection`);
     assert.equal(getAdminMenuGroupForSection(group.defaultSection), group.id);
@@ -35,8 +35,8 @@ test('every public admin subservice belongs to one canonical area', () => {
     assert.ok(item.labels?.en, `${item.id} missing English label`);
     assert.ok(WORK_AREAS.includes(item.group), `${item.id} is outside workbench navigation`);
   }
-  assert.equal(getAdminMenuLabel('admins', 'ko'), '관리자설정');
-  assert.equal(getAdminMenuLabel('admins', 'en'), 'Administrator Settings');
+  assert.equal(getAdminMenuLabel('admins', 'ko'), '관리자 계정·권한');
+  assert.equal(getAdminMenuLabel('admins', 'en'), 'Administrator Accounts & Access');
   assert.equal(getAdminMenuLabel('engine-common', 'ko'), '공통 엔진');
   assert.equal(getAdminMenuGroupForSection('engine-common'), 'services');
   assert.ok(adminMenuOrder().includes('security'));
