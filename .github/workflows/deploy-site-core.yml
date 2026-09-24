@@ -184,6 +184,7 @@ on:
       - 'admin-menu-runtime.js'
       - 'admin-design-engine.js'
       - 'admin-design-engine.css'
+      - 'release-control-admin.js'
       - 'config/design-engine.json'
       - 'scripts/validate-design-engine.mjs'
       - 'ADMIN_UI_PRINCIPLES.md'
