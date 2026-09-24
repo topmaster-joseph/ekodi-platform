@@ -14,6 +14,7 @@ import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
 import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
+import { isEkodiBooksAdminPath, ekodiBooksAdminPage, ekodiBooksAdminShellScript } from './ekodibooks-admin-page.js';
 import { isOrganizationAdminPath, organizationAdminPage, organizationAdminCss, organizationAdminScript } from './organization-admin-page.js';
 import { legacyAdminAliasTarget } from './admin-address-policy.js';
 import { isStoreAdminPathShape, resolveStoreAdminRoute, storeAdminPage, storeAdminCss, storeAdminScript } from './store-admin-engine.js';
@@ -295,6 +296,10 @@ async function routePlatform(request,env,ctx){
         if(await livePublicStatus(env,liveTenant)==='maintenance')return liveShell(liveServiceMaintenancePage(liveTenant));
         if(!liveTenant.dedicated)return tenantLivePage(liveTenant);
       }
+    }
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
+      if(url.pathname==='/ekodibooks/admin/_shell.js')return ekodiBooksAdminShellScript();
+      if(isEkodiBooksAdminPath(url.pathname))return injectEkodiShell(ekodiBooksAdminPage(),'books','admin',{contextKind:'workspace'});
     }
     const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
     if(canonical)return canonical;
