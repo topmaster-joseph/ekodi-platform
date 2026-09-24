@@ -63,8 +63,15 @@ test('remaining canonical business, trade and lab surfaces inherit a readability
 
 test('guarded release requires the operating-space distinction on representative live sites',async()=>{
   const manifest=JSON.parse(await read('deploy/manifests/shared-site.worker.json'));
+  const churchCanonical=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/ekodichurch');
+  assert.ok(churchCanonical,'missing Church canonical slash redirect probe');
+  assert.deepEqual(churchCanonical.statuses,[308]);
+  assert.ok(churchCanonical.headerExpect?.includes('location: https://ekodi.kr/ekodichurch/'));
+  assert.ok(churchCanonical.headerExpect?.includes('x-ekodi-route: church-path-canonical'));
+  assert.equal(churchCanonical.rollbackVerify,false);
+
   for(const url of [
-    'https://ekodi.kr/ekodichurch',
+    'https://ekodi.kr/ekodichurch/',
     'https://ekodi.kr/ekodibiz',
     'https://ekodi.kr/cgma',
     'https://ekodi.kr/jadam',

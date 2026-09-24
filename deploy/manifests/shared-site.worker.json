@@ -1852,6 +1852,18 @@
       {
         "url": "https://ekodi.kr/ekodichurch",
         "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/ekodichurch/",
+          "x-ekodi-route: church-path-canonical"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodichurch/",
+        "statuses": [
           200
         ],
         "redirect": "manual",
@@ -1859,6 +1871,7 @@
           "운영공간"
         ],
         "headerExpect": [
+          "x-ekodi-route: church-public-path",
           "x-ekodi-tenant-readability: v1",
           "x-ekodi-operating-space-label: v1"
         ],
