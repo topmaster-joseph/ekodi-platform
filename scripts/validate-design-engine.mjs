@@ -90,8 +90,7 @@ for (const marker of ['문구 작성·개발 강제 체크','320, 390, 768, 1366
 }
 if (sidebar.includes('overflow-y:auto!important')) errors.push('shared admin sidebar source must not reintroduce independent vertical scrolling.');
 if (!sidebar.includes('overflow-y:hidden!important')) errors.push('shared admin sidebar source must keep vertical overflow hidden.');
-if (authenticatedShell.includes("nav.dataset.ekodiIndependentScroll = 'true'") || authenticatedShell.includes("nav.style.setProperty('overflow-y', 'auto'")) errors.push('authenticated shell must not reintroduce sidebar scrolling.');
-if (!authenticatedShell.includes("nav.dataset.ekodiIndependentScroll='false'") || !authenticatedShell.includes("main.dataset.ekodiScrollOwner='workspace'")) errors.push('authenticated shell must declare the canonical scroll ownership contract.');
+if (!authenticatedShell.includes("nav.dataset.ekodiIndependentScroll='platform-admin'") || !authenticatedShell.includes("nav.style.setProperty('overflow-y','auto','important')") || !authenticatedShell.includes("main.dataset.ekodiScrollOwner='workspace'")) errors.push('authenticated shell must declare the role-projected platform-admin scroll ownership contract.');
 if (!authenticatedShell.includes("'admin-design-engine.css'")) errors.push('authenticated shell must preload the canonical design surface before first visible admin paint.');
 for (const asset of ['admin-design-engine.js', 'admin-design-engine.css']) {
   if (!build.includes(`'${asset}'`)) errors.push(`production build must publish ${asset}.`);
