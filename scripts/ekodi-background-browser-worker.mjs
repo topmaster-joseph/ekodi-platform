@@ -159,6 +159,7 @@ export async function runTask(rawTask, options={}){
           url:location.href,
           readyState:document.readyState,
           bodyText:(document.body?.innerText||'').slice(0,4000),
+          userAiEntryCount:document.querySelectorAll('[data-ekodi-user-ai-entry]').length,
           scrollWidth:document.documentElement.scrollWidth,
           clientWidth:document.documentElement.clientWidth,
           scrollHeight:document.documentElement.scrollHeight,
