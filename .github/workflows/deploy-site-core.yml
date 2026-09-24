@@ -1,6 +1,8 @@
 name: Deploy EKODI Shared Site Core
 
 on:
+  schedule:
+    - cron: '7 0 * * *'
   workflow_dispatch:
     inputs:
       sync_domains:
@@ -265,6 +267,7 @@ on:
       - '.github/workflows/redeploy-shared-site-on-user-ui-shell.yml'
 
 permissions:
+  actions: read
   contents: read
   pull-requests: read
 
@@ -273,7 +276,65 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  scheduled_release_gate:
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.gate.outputs.proceed }}
+      reason: ${{ steps.gate.outputs.reason }}
+    steps:
+      - name: Decide whether scheduled quota-reset release should run
+        id: gate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" != "schedule" ]; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+            echo "reason=normal-trigger" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          runs="$(gh run list --workflow deploy-site-core.yml --branch main --limit 25 --json databaseId,status,conclusion,headSha,event,createdAt)"
+          prior="$(printf '%s' "$runs" | jq -c --arg current "$GITHUB_RUN_ID" '[.[] | select((.databaseId|tostring) != $current and .status == "completed")][0] // empty')"
+          if [ -z "$prior" ]; then
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "reason=no-prior-completed-release" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          prior_id="$(printf '%s' "$prior" | jq -r '.databaseId')"
+          prior_conclusion="$(printf '%s' "$prior" | jq -r '.conclusion // ""')"
+          if [ "$prior_conclusion" != "failure" ]; then
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "reason=latest-release-not-failed" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          failed_log="$(gh run view "$prior_id" --log-failed 2>&1 || true)"
+          if printf '%s' "$failed_log" | grep -Fq 'Cloudflare Workers quota exhausted; production promotion/probes stopped before any live Worker verification.'; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+            echo "reason=quota-reset-retry" >> "$GITHUB_OUTPUT"
+            echo "Scheduled retry accepted: prior canonical release $prior_id stopped only because the daily Workers request quota circuit was open."
+          else
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "reason=non-quota-failure-requires-review" >> "$GITHUB_OUTPUT"
+            echo "Scheduled retry skipped: prior canonical release failed for a reason other than the quota circuit."
+          fi
+
+      - name: Record scheduled release decision
+        shell: bash
+        run: |
+          {
+            echo "### Shared Site scheduled release gate"
+            echo "- proceed: \`${{ steps.gate.outputs.proceed }}\`"
+            echo "- reason: \`${{ steps.gate.outputs.reason }}\`"
+            echo "- event: \`${GITHUB_EVENT_NAME}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   staging_gate:
+    needs: scheduled_release_gate
+    if: needs.scheduled_release_gate.outputs.proceed == 'true'
     uses: ./.github/workflows/stage-shared-site-shell.yml
     secrets: inherit
 
