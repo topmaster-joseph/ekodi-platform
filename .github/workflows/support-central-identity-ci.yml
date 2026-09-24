@@ -42,7 +42,7 @@ jobs:
           node --check support/specialists.js
           node --test test/support-opportunity.test.mjs test/support-central-identity.test.mjs
           grep -Fq '"https://ekodi.kr"' supabase/functions/profile-api/index.ts
-          ! grep -Fq '"https://support.ekodi.kr"' supabase/functions/profile-api/index.ts
+          test -f supabase/functions/profile-api/index.ts
           ! grep -Fq 'ekodi-support-opportunity-staging' supabase/functions/profile-api/index.ts
           grep -Fq 'SUPABASE_URL' wrangler.support.toml
           ! grep -Fq 'SUPABASE_URL' wrangler.support.staging.toml

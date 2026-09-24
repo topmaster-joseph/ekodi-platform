@@ -148,7 +148,7 @@ jobs:
           grep -Eiq "^x-ekodi-docs-release:[[:space:]]*$DOCS_AI_RELEASE" /tmp/docs-ai-canonical.headers
 
           legacy_options_code=$(curl -sS -D /tmp/docs-ai-legacy.headers -o /dev/null -w '%{http_code}' -X OPTIONS "$endpoint" \
-            -H 'Origin: https://my.ekodi.kr' \
+            -H 'Origin: https://ekodi.kr' \
             -H 'Access-Control-Request-Method: POST' \
             -H 'Access-Control-Request-Headers: authorization,apikey,content-type' || true)
           [[ "$legacy_options_code" =~ ^(200|204)$ ]]
