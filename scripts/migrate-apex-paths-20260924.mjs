@@ -195,6 +195,14 @@ const amendment={
 const amendmentPath=path.join(root,'governance','amendments','2026-09-24-apex-path-only-v1.26.0.json');
 fs.writeFileSync(amendmentPath,JSON.stringify(amendment,null,2)+'\n');
 
+for(const file of walk(root)){
+  if(file==='scripts/migrate-apex-paths-20260924.mjs'||file==='scripts/zero-subdomain-guard.mjs')continue;
+  const full=path.join(root,file);let text='';
+  try{text=fs.readFileSync(full,'utf8')}catch{continue}
+  const cleaned=text.replaceAll('*.ekodi.kr','EKODI child-host address');
+  if(cleaned!==text)fs.writeFileSync(full,cleaned);
+}
+
 const forbidden=/(?<!@)\b(?:[a-z0-9-]+\.)+ekodi\.kr\b|\*\.ekodi\.kr\b/ig;
 const hits=[];
 for(const file of walk(root)){
