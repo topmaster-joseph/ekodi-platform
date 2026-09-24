@@ -24,7 +24,11 @@ function escapeRegExp(value) {
 
 function objectStatements(parts, kind, name) {
   const ref = new RegExp('\\bpublic\\.["]?' + escapeRegExp(name) + '["]?\\b', 'i');
-  const objectKind = new RegExp('\\bon\\s+' + kind + '\\b', 'i');
+  const objectKind = kind === 'function'
+    ? /\\bon\\s+function\\b/i
+    : kind === 'sequence'
+      ? /\\bon\\s+(?:sequence\\s+)?/i
+      : /\\bon\\s+(?:table\\s+)?/i;
   return parts.filter(statement =>
     /^(?:grant|revoke)\b/i.test(statement) &&
     objectKind.test(statement) &&
