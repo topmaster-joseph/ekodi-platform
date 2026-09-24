@@ -5,7 +5,8 @@ import { renderStorefrontPage, storefrontCss } from './storefront-page.js';
 import { renderJadamStorefrontPage, jadamStorefrontCss } from './jadam-storefront.js';
 import { renderRestaurantStorefrontPage, restaurantStorefrontCss } from './restaurant-storefront.js';
 import { isOrganizationWorkspaceSlug, renderOrganizationPublicPage } from './organization-public-page.js';
-import { isMnuBizWorkspaceSlug, renderMnuBizPublicPage } from './mnubiz-public-page.js';
+import { isMnuBizWorkspaceSlug, renderMnuBizPublicPage, mnubizPublicCss } from './mnubiz-public-page.js';
+import { injectEkodiShell } from './ekodi-shell-injector.js';
 
 const EKODIMISSION_PREFIX='/ekodimission';
 const EKODIMISSION_PUBLIC_ROUTE='ekodimission-public';
@@ -182,6 +183,7 @@ export default{
     if(url.pathname==='/storefront.css'||url.pathname==='/_ekodi/space/storefront.css')return withHeaders(env,restaurantStorefrontCss(),'storefront-asset');
     if(url.pathname==='/jadam-storefront.css'||url.pathname==='/_ekodi/space/jadam-storefront.css')return withHeaders(env,jadamStorefrontCss(),'storefront-asset');
     if(url.pathname==='/restaurant-storefront.css'||url.pathname==='/_ekodi/space/restaurant-storefront.css')return withHeaders(env,restaurantStorefrontCss(),'storefront-asset');
+    if(url.pathname==='/mnubiz/assets/site.css')return withHeaders(env,mnubizPublicCss(),'mnubiz-asset');
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?route=workspace&source=space.ekodi.kr',307);
     if(url.pathname==='/auth/start'){
       if(!['GET','HEAD'].includes(request.method))return json(env,{error:'method_not_allowed'},405);
@@ -211,7 +213,8 @@ export default{
         return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-service':'mnubiz/community'}});
       }
       if(isMnuBizWorkspaceSlug(requested)&&!workspaceRoute?.service){
-        return withHeaders(env,renderMnuBizPublicPage(),'space-organization');
+        const page=withHeaders(env,renderMnuBizPublicPage(),'space-organization');
+        return injectEkodiShell(page,'community','public');
       }
       if(isOrganizationWorkspaceSlug(requested)&&!workspaceRoute?.service){
         return withHeaders(env,await renderOrganizationPublicPage(request,env,resolved,requested),'space-organization');
