@@ -67,6 +67,6 @@ test('My EKODI is not a cross-service token landing page',()=>{
 test('auth and store releases are cache-busted for return continuity',()=>{
   assert.match(router,/client-auth\.js\?v=20260923-space-admin-return-2/);
   assert.match(entry,/auth-router\.js\?v=20260923-space-admin-return-2/);
-  assert.match(store,/store-admin\.css\?v=20260924-store-nav-v2/);
-  assert.match(store,/20260924-store-nav-v2/);
+  assert.match(store,/store-admin\.css\?v=20260924-store-nav-v3/);
+  assert.match(store,/20260924-store-nav-v3/);
 });
