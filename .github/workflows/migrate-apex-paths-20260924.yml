@@ -1,0 +1,91 @@
+# Apex-path migration is complete; this workflow now acts as the branch-wide routing validation gate.
+name: Migrate EKODI To Apex Paths
+
+on:
+  push:
+    branches:
+      - ai/chatgpt/path-only-routing-sync-20260925
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ekodi-apex-path-migration-sync-20260925
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ai/chatgpt/path-only-routing-sync-20260925
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Apply repository-wide apex-path migration
+        run: node scripts/migrate-apex-paths-20260924.mjs
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify zero EKODI child-host references
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import pathlib,re
+          root=pathlib.Path('.')
+          skip={'.git','node_modules','dist'}
+          allowed={'scripts/zero-subdomain-guard.mjs','scripts/migrate-apex-paths-20260924.mjs'}
+          rx=re.compile(r'(?<!@)\b(?:[a-z0-9-]+\.)+ekodi\.kr\b|\*\.ekodi\.kr\b',re.I)
+          hits=[]
+          for p in root.rglob('*'):
+              if not p.is_file() or any(part in skip for part in p.parts): continue
+              rel=p.as_posix()
+              if rel in allowed: continue
+              try: text=p.read_text()
+              except Exception: continue
+              found=sorted(set(rx.findall(text)))
+              if found: hits.append((rel,found))
+          if hits:
+              for rel,found in hits[:100]: print(rel,found)
+              raise SystemExit('EKODI child-host references remain')
+          print('source scan: zero EKODI child-host references')
+          PY
+      - name: Validate syntax and core domain contracts
+        run: |
+          node --check canonical-surface-router.js
+          node --check platform-router-worker.js
+          node --check platform-router-entry-worker.js
+          node scripts/zero-subdomain-guard.mjs
+          node scripts/validate-apex-path-semantics.mjs
+          npm run validate:constitution
+          npm run validate:boundaries
+          npm run validate:admin-routes
+      - name: Run route-focused tests
+        run: |
+          node --test test/apex-mail-messenger-invest.test.mjs
+          node --test test/site-chrome-runtime.test.mjs
+          node --test test/workspace-routing-10g.test.mjs
+      - name: Commit verified migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'EKODI Orchestrator'
+          git config user.email 'actions@users.noreply.github.com'
+          git restore --source=HEAD --staged --worktree .github/workflows
+          git add -A
+          if git diff --cached --name-only | grep -q '^.github/workflows/'; then
+            echo 'Workflow mutation leaked into migration commit.' >&2
+            git diff --cached --name-only | grep '^.github/workflows/' >&2
+            exit 1
+          fi
+          if git diff --cached --quiet; then
+            echo 'No migration changes to commit.'
+            exit 0
+          fi
+          git commit -m 'refactor: make ekodi.kr paths the only EKODI address model'
+          git push origin HEAD:ai/chatgpt/path-only-routing-sync-20260925
