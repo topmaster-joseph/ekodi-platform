@@ -8,8 +8,8 @@ const host=fs.readFileSync(new URL('../tools/ekodi-device-agent/windows/ekodi-de
 const policy=JSON.parse(fs.readFileSync(new URL('../config/isolated-desktop-backend-policy.json',import.meta.url),'utf8'));
 
 test('isolated guest agent is single-purpose, SYSTEM-run and networkless by contract',()=>{
-  assert.match(guest,/\$GuestAgentVersion = '1\.0\.0'/);
-  assert.match(guest,/\[string\]\$task\.type -ne 'guest\.runtime\.probe'/);
+  assert.match(guest,/\$GuestAgentVersion = '1\.1\.0'/);
+  assert.match(guest,/\$allowedTypes = @\('guest\.runtime\.probe','guest\.ui\.probe'\)/);
   assert.match(guest,/\[string\]\$task\.networkPolicy -ne 'none'/);
   assert.match(guest,/executedAsSystem/);
   assert.match(guest,/noNetworkAdapter/);
@@ -53,4 +53,25 @@ test('policy keeps guest proof as a gate, never as automatic desktop activation'
   assert.equal(policy.activation.guestCanaryRequiredBeforeExecution,true);
   assert.equal(policy.activation.guestCanaryDoesNotEnableExecutionByItself,true);
   assert.equal(policy.guestCanary.executionCapabilityAfterGuestCanary,false);
+});
+
+
+test('semantic UI canary drives only an isolated synthetic guest surface',()=>{
+  assert.match(guest,/function Invoke-GuestUiProbe/);
+  assert.match(guest,/guest\.ui\.probe/);
+  assert.match(guest,/System\.Windows\.Automation\.AutomationElement/);
+  assert.match(guest,/System\.Windows\.Automation\.InvokePattern/);
+  assert.match(guest,/semanticUiAutomation = \$true/);
+  assert.match(guest,/lowLevelInputInjection = \$false/);
+  assert.match(guest,/hostInteractiveDesktopUsed = \$false/);
+  assert.match(guest,/syntheticUiOnly = \$true/);
+  assert.match(guest,/resultCode = \[string\]\$resultLabel\.Text/);
+  assert.match(guest,/mutationScope = 'ephemeral-guest-ui-only'/);
+  assert.doesNotMatch(guest,/SendKeys|mouse_event|keybd_event|SendInput|GetClipboard|SetClipboard/i);
+  assert.equal(policy.activation.uiCanaryCommand,'computer.desktop.ui.canary');
+  assert.equal(policy.activation.uiCanaryRequiredBeforeExecution,true);
+  assert.equal(policy.activation.uiCanaryDoesNotEnableGeneralDesktopExecutionByItself,true);
+  assert.equal(policy.uiCanary.semanticUiAutomation,true);
+  assert.equal(policy.uiCanary.lowLevelInputInjection,false);
+  assert.equal(policy.uiCanary.generalDesktopExecutionCapabilityAfterUiCanary,false);
 });
