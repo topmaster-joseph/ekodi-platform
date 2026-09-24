@@ -5,7 +5,7 @@ export function isMnuBizWorkspaceSlug(value){return String(value||'').trim().toL
 
 const CSS=`
 :root{
-  color-scheme:light;
+  color-scheme:only light;
   --mnubiz-ink:#10233b;
   --mnubiz-ink-soft:#42546a;
   --mnubiz-paper:#f7f3ea;
@@ -21,32 +21,38 @@ const CSS=`
   --ekodi-user-footer-border:rgba(255,255,255,.16);
   --ekodi-user-footer-safe-text:#fffdf8;
   --ekodi-user-footer-safe-muted:#d8d3c9;
+  --ekodi-user-chrome-bg:#fbf8f1;
+  --ekodi-user-chrome-text:#10233b;
+  --ekodi-user-chrome-muted:#5e6b7b;
+  --ekodi-user-chrome-link:#173d63;
+  --ekodi-user-chrome-line:rgba(16,35,59,.16);
   font-family:Inter,Pretendard,"Noto Sans KR","Malgun Gothic",system-ui,sans-serif;
   background:var(--mnubiz-paper);
   color:var(--mnubiz-ink);
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth;background:var(--mnubiz-paper)}
-body{margin:0;background:linear-gradient(180deg,#fbf8f1 0%,#f7f3ea 52%,#f3eee4 100%);color:var(--mnubiz-ink)}
+html{scroll-behavior:smooth;background:#f7f3ea!important}
+html[data-ekodi-site-subject="mnubiz"][data-ekodi-user-ui]{--ekodi-user-chrome-bg:#fbf8f1!important;--ekodi-user-chrome-text:#10233b!important;--ekodi-user-chrome-muted:#5e6b7b!important;--ekodi-user-chrome-link:#173d63!important;--ekodi-user-chrome-line:rgba(16,35,59,.16)!important;--ekodi-service-paper:#f7f3ea!important;--ekodi-service-ink:#10233b!important}
+body{margin:0;background:#f7f3ea!important;color:#10233b!important}
 a{color:inherit}
 .mnubiz-shell{width:min(1180px,calc(100% - 40px));margin-inline:auto}
-.site-header.mnubiz-header{position:relative;z-index:20;border-bottom:1px solid rgba(16,35,59,.1);background:rgba(251,248,241,.94);backdrop-filter:blur(16px)}
+.site-header.mnubiz-header{position:relative;z-index:20;border-bottom:1px solid rgba(16,35,59,.14)!important;background:rgba(251,248,241,.97)!important;backdrop-filter:blur(16px);color:#10233b!important}
 .mnubiz-header__inner{min-height:72px;display:grid;grid-template-columns:minmax(240px,1fr) auto;gap:24px;align-items:center}
-.mnubiz-brand{text-decoration:none;display:flex;align-items:center;gap:12px;min-width:0}
+.mnubiz-brand{text-decoration:none;display:flex;align-items:center;gap:12px;min-width:0;color:#10233b!important}
 .mnubiz-brand__mark{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--mnubiz-brass);background:var(--mnubiz-paper-2);font-weight:900;font-size:11px;letter-spacing:.06em;color:var(--mnubiz-navy)}
 .mnubiz-brand__text{display:grid;gap:2px;min-width:0}
-.mnubiz-brand__name{font-size:15px;font-weight:850;letter-spacing:-.025em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mnubiz-brand__name{font-size:15px;font-weight:850;letter-spacing:-.025em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#10233b!important}
 .mnubiz-brand__sub{font-size:10px;font-weight:750;letter-spacing:.12em;color:var(--mnubiz-brass);white-space:nowrap}
 .mnubiz-nav{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
 .mnubiz-nav a{padding:9px 10px;text-decoration:none;font-size:13px;font-weight:700;color:var(--mnubiz-ink-soft);border-bottom:2px solid transparent}
 .mnubiz-nav a:hover,.mnubiz-nav a:focus-visible{color:var(--mnubiz-navy);border-bottom-color:var(--mnubiz-brass);outline:none}
 .mnubiz-nav__community{border:1px solid var(--mnubiz-line)!important;border-bottom-width:1px!important;background:var(--mnubiz-paper-2);color:var(--mnubiz-navy)!important}
-.mnubiz-main{width:100%;min-width:0}
-.mnubiz-hero{position:relative;overflow:hidden;padding:clamp(72px,10vw,132px) 0 clamp(64px,8vw,96px);border-bottom:1px solid var(--mnubiz-line)}
+.mnubiz-main{width:100%;min-width:0;background:#f7f3ea!important;color:#10233b!important}
+.mnubiz-hero{position:relative;overflow:hidden;padding:clamp(72px,10vw,132px) 0 clamp(64px,8vw,96px);border-bottom:1px solid #d9d1c2!important;background:linear-gradient(135deg,#fffdf8 0%,#f7f3ea 58%,#f0e7d8 100%)!important;color:#10233b!important}
 .mnubiz-hero:after{content:"";position:absolute;width:min(520px,54vw);aspect-ratio:1;right:max(-170px,calc((100vw - 1180px)/2 - 120px));top:-190px;border:1px solid rgba(167,122,53,.2);border-radius:50%;box-shadow:0 0 0 54px rgba(167,122,53,.045),0 0 0 108px rgba(13,44,74,.025);pointer-events:none}
 .mnubiz-kicker{margin:0 0 18px;font-size:11px;line-height:1.4;font-weight:900;letter-spacing:.16em;color:var(--mnubiz-brass)}
-.mnubiz-hero h1{max-width:850px;margin:0;font-size:clamp(42px,7vw,78px);line-height:1.02;letter-spacing:-.055em;color:var(--mnubiz-navy);word-break:keep-all}
-.mnubiz-lead{max-width:760px;margin:26px 0 0;font-size:clamp(17px,2vw,22px);line-height:1.72;color:var(--mnubiz-ink-soft);word-break:keep-all}
+.mnubiz-hero h1{max-width:850px;margin:0;font-size:clamp(42px,7vw,78px);line-height:1.02;letter-spacing:-.055em;color:#0d2c4a!important;word-break:keep-all}
+.mnubiz-lead{max-width:760px;margin:26px 0 0;font-size:clamp(17px,2vw,22px);line-height:1.72;color:#42546a!important;word-break:keep-all}
 .mnubiz-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:32px}
 .mnubiz-button{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 17px;border:1px solid var(--mnubiz-line);background:var(--mnubiz-paper-2);text-decoration:none;font-size:14px;font-weight:800;letter-spacing:-.01em}
 .mnubiz-button--primary{border-color:var(--mnubiz-navy);background:var(--mnubiz-navy);color:#fff}
@@ -54,38 +60,50 @@ a{color:inherit}
 .mnubiz-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:46px;border-top:1px solid var(--mnubiz-line);border-bottom:1px solid var(--mnubiz-line)}
 .mnubiz-meta>div{padding:18px 18px 18px 0}
 .mnubiz-meta>div+div{padding-left:18px;border-left:1px solid var(--mnubiz-line)}
-.mnubiz-meta strong{display:block;font-size:12px;letter-spacing:.05em;color:var(--mnubiz-navy)}
-.mnubiz-meta span{display:block;margin-top:6px;font-size:13px;line-height:1.5;color:var(--mnubiz-ink-soft)}
-.mnubiz-section{padding:clamp(54px,7vw,88px) 0;border-bottom:1px solid var(--mnubiz-line)}
+.mnubiz-meta strong{display:block;font-size:12px;letter-spacing:.05em;color:#173d63!important}
+.mnubiz-meta span{display:block;margin-top:6px;font-size:13px;line-height:1.5;color:#526276!important}
+.mnubiz-section{padding:clamp(54px,7vw,88px) 0;border-bottom:1px solid #d9d1c2!important;background:#f7f3ea!important;color:#10233b!important}
 .mnubiz-section__head{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,420px);gap:32px;align-items:end;margin-bottom:30px}
 .mnubiz-section__eyebrow{margin:0 0 8px;font-size:10px;font-weight:900;letter-spacing:.16em;color:var(--mnubiz-brass)}
-.mnubiz-section h2{margin:0;font-size:clamp(28px,4vw,44px);letter-spacing:-.045em;line-height:1.12;color:var(--mnubiz-navy)}
-.mnubiz-section__desc{margin:0;color:var(--mnubiz-ink-soft);font-size:14px;line-height:1.7;word-break:keep-all}
+.mnubiz-section h2{margin:0;font-size:clamp(28px,4vw,44px);letter-spacing:-.045em;line-height:1.12;color:#0d2c4a!important}
+.mnubiz-section__desc{margin:0;color:#526276!important;font-size:14px;line-height:1.7;word-break:keep-all}
 .mnubiz-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--mnubiz-line);border-left:1px solid var(--mnubiz-line)}
-.mnubiz-card{min-height:225px;padding:28px;border-right:1px solid var(--mnubiz-line);border-bottom:1px solid var(--mnubiz-line);background:rgba(255,253,248,.66)}
+.mnubiz-card{min-height:225px;padding:28px;border-right:1px solid #d9d1c2!important;border-bottom:1px solid #d9d1c2!important;background:#fffdf8!important;color:#10233b!important}
 .mnubiz-card__index{font:800 11px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.1em;color:var(--mnubiz-brass)}
-.mnubiz-card h3{margin:36px 0 10px;font-size:21px;letter-spacing:-.03em;color:var(--mnubiz-navy)}
-.mnubiz-card p{margin:0;color:var(--mnubiz-ink-soft);font-size:14px;line-height:1.7;word-break:keep-all}
+.mnubiz-card h3{margin:36px 0 10px;font-size:21px;letter-spacing:-.03em;color:#0d2c4a!important}
+.mnubiz-card p{margin:0;color:#526276!important;font-size:14px;line-height:1.7;word-break:keep-all}
 .mnubiz-network{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(280px,.55fr);gap:16px}
-.mnubiz-network__primary,.mnubiz-network__aside{padding:clamp(28px,4vw,44px);border:1px solid var(--mnubiz-line);background:var(--mnubiz-paper-2)}
-.mnubiz-network__primary{background:linear-gradient(135deg,var(--mnubiz-navy),var(--mnubiz-navy-2));color:#fff}
+.mnubiz-network__primary,.mnubiz-network__aside{padding:clamp(28px,4vw,44px);border:1px solid #d9d1c2!important;background:#fffdf8!important}
+.mnubiz-network__primary{background:linear-gradient(135deg,#0d2c4a,#173d63)!important;color:#fff!important}
 .mnubiz-network__primary .mnubiz-section__eyebrow{color:#d9b97c}
 .mnubiz-network__primary h3{margin:0;font-size:clamp(27px,4vw,42px);line-height:1.12;letter-spacing:-.04em}
 .mnubiz-network__primary p{max-width:680px;margin:16px 0 0;color:#dce6ef;line-height:1.75;word-break:keep-all}
 .mnubiz-network__primary .mnubiz-button{margin-top:26px;border-color:#fff;background:#fff;color:var(--mnubiz-navy)}
-.mnubiz-network__aside h3{margin:0 0 12px;font-size:20px;color:var(--mnubiz-navy)}
-.mnubiz-network__aside p{margin:0;color:var(--mnubiz-ink-soft);font-size:14px;line-height:1.7;word-break:keep-all}
+.mnubiz-network__aside h3{margin:0 0 12px;font-size:20px;color:#0d2c4a!important}
+.mnubiz-network__aside p{margin:0;color:#526276!important;font-size:14px;line-height:1.7;word-break:keep-all}
 .mnubiz-empty{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:start;padding:26px 0;border-top:1px solid var(--mnubiz-line);border-bottom:1px solid var(--mnubiz-line)}
 .mnubiz-empty__date{font:800 11px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--mnubiz-brass);letter-spacing:.08em}
 .mnubiz-empty strong{display:block;font-size:16px;color:var(--mnubiz-navy)}
 .mnubiz-empty p{margin:7px 0 0;color:var(--mnubiz-ink-soft);font-size:14px;line-height:1.65}
-.mnubiz-service-note{padding:18px 0 8px;text-align:center;color:var(--mnubiz-ink-soft);font-size:12px;line-height:1.6}
+.mnubiz-service-note{padding:18px 0 8px;text-align:center;color:#526276!important;font-size:12px;line-height:1.6;background:#f7f3ea!important}
+.mnubiz-character-zone{position:absolute;right:max(24px,calc((100vw - 1180px)/2));bottom:42px;width:170px;height:190px;z-index:2;pointer-events:none}
+.mnubiz-character-zone .ekodi-main-ekodian{inset:auto 0 0 auto!important;transform:none!important}
+.mnubiz-hero>.mnubiz-shell{position:relative;z-index:2;padding-right:200px}
+@media(prefers-color-scheme:dark){
+  html[data-ekodi-site-subject="mnubiz"],html[data-ekodi-site-subject="mnubiz"] body,html[data-ekodi-site-subject="mnubiz"] .mnubiz-main{background:#f7f3ea!important;color:#10233b!important}
+  html[data-ekodi-site-subject="mnubiz"] .mnubiz-header{background:rgba(251,248,241,.98)!important;color:#10233b!important}
+  html[data-ekodi-site-subject="mnubiz"] .mnubiz-hero{background:linear-gradient(135deg,#fffdf8 0%,#f7f3ea 58%,#f0e7d8 100%)!important;color:#10233b!important}
+  html[data-ekodi-site-subject="mnubiz"] .mnubiz-section{background:#f7f3ea!important;color:#10233b!important}
+  html[data-ekodi-site-subject="mnubiz"] .mnubiz-card,html[data-ekodi-site-subject="mnubiz"] .mnubiz-network__aside{background:#fffdf8!important;color:#10233b!important}
+}
 @media(max-width:860px){
   .mnubiz-shell{width:min(100% - 28px,1180px)}
   .mnubiz-header__inner{grid-template-columns:1fr;gap:10px;padding:12px 0}
   .mnubiz-nav{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px}
   .mnubiz-nav a{white-space:nowrap}
   .mnubiz-section__head,.mnubiz-network{grid-template-columns:1fr}
+  .mnubiz-hero>.mnubiz-shell{padding-right:0}
+  .mnubiz-character-zone{display:none}
   .mnubiz-grid{grid-template-columns:1fr}
   .mnubiz-meta{grid-template-columns:1fr}
   .mnubiz-meta>div{padding:14px 0!important;border-left:0!important}
@@ -113,7 +131,7 @@ export function renderMnuBizPublicPage(){
 <title>${esc(name)} · EKODI</title>
 <meta name="description" content="국립목포대학교 경영 동문을 연결하고 소식·행사·진로·사업 경험을 나누는 동문 네트워크 운영공간">
 <meta name="robots" content="index,follow">
-<link rel="stylesheet" href="/mnubiz/assets/site.css?v=20260924-1">
+<link rel="stylesheet" href="/mnubiz/assets/site.css?v=20260924-2">
 </head><body>
 <header class="site-header mnubiz-header" role="banner">
   <div class="mnubiz-shell mnubiz-header__inner">
@@ -139,6 +157,7 @@ export function renderMnuBizPublicPage(){
         <div><strong>MEMBER SPACE</strong><span>회원 활동은 Workspace 범위로 분리</span></div>
       </div>
     </div>
+    <div class="mnubiz-character-zone" data-ekodi-character-host aria-hidden="true"></div>
   </section>
 
   <section class="mnubiz-section" id="about">
