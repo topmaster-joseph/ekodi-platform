@@ -8,7 +8,7 @@ const compact=value=>String(value??'').replace(/\s+/g,' ').trim();
 const tokenize=value=>[...new Set(normalize(value).split(/[^\p{L}\p{N}]+/u).filter(token=>token.length>=2))];
 
 export const AI_COMMONS_POLICY=Object.freeze({
-  version:'1.2.0',surface:'/ai',audience:'all-ekodi-users',freeMemberPrinciple:'complete-first-value',
+  version:'1.3.0',surface:'/ai',audience:'all-ekodi-users',freeMemberPrinciple:'complete-first-value',
   uxPrinciple:executionCatalog.principle,
   differentiation:'scale-speed-automation-advanced-capability',reuseFirst:true,directProductionPromotion:false,
   autoDevelopment:true,finalPublishAuthority:'super_admin',
@@ -27,7 +27,7 @@ export function scoreCommonCapability(query,capability={}){
 }function canonicalLaunchUrl(capability={}){
   const provider=String(capability.provider?.surface||'').trim();if(provider)return provider;
   const service=String(capability.showroom?.serviceId||'').trim();if(service)return `https://ekodi.kr/${encodeURIComponent(service)}/`;
-  return 'https://ekodi.kr/my/#intent';
+  return '';
 }
 
 export function commonCapabilityView(capability={}){
@@ -71,7 +71,7 @@ function specialistAvailability(service={},usable=false){if(!usable)return'integ
 function serviceAccess(service={},usableNow=false){
   if(!usableNow)return Object.freeze({basic:'preview',advanced:'unavailable',paidAvailable:false,loginRequiredForAdvanced:true});
   const paidAvailable=service.paidAvailable===true;
-  return Object.freeze({basic:'free',advanced:paidAvailable?'subscription':'member',paidAvailable,loginRequiredForAdvanced:true});
+  return Object.freeze({basic:'public',advanced:paidAvailable?'subscription':'member',paidAvailable,loginRequiredForAdvanced:true});
 }
 function executionView(service={},extra={}){
   const usableNow=extra.usableNow===true;
@@ -97,10 +97,10 @@ export function listExecutionServices(registry={}){
   }
   for(const capability of registry.capabilities||[]){
     if(!capability||representedCapabilities.has(capability.id)||!capabilityVisible(capability))continue;
-    const id='common-'+safeServiceId(capability.id);const usable=usableCapability(capability);const category=categoryForCapability(capability);
+    const id='common-'+safeServiceId(capability.id);const target=canonicalLaunchUrl(capability);const usable=usableCapability(capability)&&Boolean(target);const category=categoryForCapability(capability);
     const view=executionView({
       id,category,label:String(capability.name||capability.id),capabilityId:capability.id,launchUrl:usable?aiLaunch(id):'',
-      targetUrl:canonicalLaunchUrl(capability),sourceKind:'common',membershipSite:'ai',availability:capabilityAvailability(capability,usable),deliveryMode:'bridge',
+      targetUrl:target,sourceKind:'common',membershipSite:'ai',availability:capabilityAvailability(capability,usable),deliveryMode:'bridge',
     },{description:String(capability.description||''),usableNow:usable});
     categoryMap.get(category)?.services.push(view);
   }
@@ -123,13 +123,39 @@ export function rankExecutionServices(query,registry={},limit=5){
     for(const token of tokens){if(normalize(service.label).includes(token))score+=15;if(haystack.includes(token))score+=4;}if(score>0)services.push({...service,categoryLabel:category.label,score});}
   return services.sort((a,b)=>b.score-a.score||a.label.localeCompare(b.label,'ko')).slice(0,Math.max(1,Math.min(10,Number(limit)||5)));
 }
+const PUBLIC_SERVICE_SUMMARIES=Object.freeze({
+  'make-documents':'문서 작성·편집을 바로 돕습니다.',
+  'find-support':'지원사업을 찾고 준비를 돕습니다.',
+  'write-content':'글·대본·원고 작성을 돕습니다.',
+  'make-marketing':'홍보 콘텐츠 제작을 돕습니다.',
+  'run-business':'사업 운영 업무를 정리합니다.',
+  'everyone-interpreter':'여러 언어를 실시간으로 통역합니다.',
+  'manage-community':'회원과 공동체 운영을 돕습니다.',
+  'prepare-insurance-claim':'보험청구 준비를 돕습니다.',
+  'check-energy':'전기·에너지 상태를 확인합니다.',
+  'common-device-observe':'기기·IoT 상태를 확인합니다.',
+  'specialist-bible':'삶의 질문을 말씀과 연결합니다.',
+  'specialist-life':'삶의 질문을 함께 정리합니다.',
+  'specialist-marketing':'소상공인 마케팅을 돕습니다.',
+  'specialist-energy':'에너지 상태를 읽고 제안합니다.',
+  'specialist-author':'글·창작 전반을 돕습니다.',
+  'specialist-support':'지원사업 준비와 관리를 돕습니다.',
+  'specialist-publishing':'출판 준비와 진행을 돕습니다.',
+});
+function publicServiceDescription(service={}){
+  const fixed=compact(service.publicSummary||PUBLIC_SERVICE_SUMMARIES[service.id]||'');if(fixed)return fixed;
+  const raw=compact(service.description||'').replace(/Provider-neutral Edge Bridge/gi,'안전한 연결').replace(/DOCX·HWPX 등\s*/g,'');
+  if(!raw)return '기본 기능을 바로 사용할 수 있습니다.';
+  const first=(raw.split(/[.!?。]/)[0]||raw).trim();if(first.length<=44)return first+(first.endsWith('다')?'.':'');
+  const clipped=first.slice(0,41).replace(/\s+\S*$/u,'').trim();return (clipped||first.slice(0,41)).trim()+'…';
+}
 export function publicExecutionServiceView(service={}){
   const availability=executionAvailability(service.availability);const deliveryMode=executionDeliveryMode(service.deliveryMode);
   const access=service.access||serviceAccess(service,Boolean(service.usableNow));
   return Object.freeze({id:String(service.id||''),category:String(service.category||''),label:String(service.label||''),launchUrl:String(service.launchUrl||''),
-    description:String(service.description||''),usableNow:Boolean(service.usableNow),status:String(service.status||'preview'),sourceKind:String(service.sourceKind||'curated'),
+    description:publicServiceDescription(service),usableNow:Boolean(service.usableNow),status:String(service.status||'preview'),sourceKind:String(service.sourceKind||'curated'),
     availability,availabilityLabel:EXECUTION_AVAILABILITY_LABELS[availability],deliveryMode,deliveryLabel:EXECUTION_DELIVERY_LABELS[deliveryMode],
-    access:Object.freeze({basic:String(access.basic||'free'),advanced:String(access.advanced||'member'),paidAvailable:access.paidAvailable===true,loginRequiredForAdvanced:access.loginRequiredForAdvanced!==false}),
+    access:Object.freeze({basic:String(access.basic||'public'),advanced:String(access.advanced||'member'),paidAvailable:access.paidAvailable===true,loginRequiredForAdvanced:access.loginRequiredForAdvanced!==false}),
     ...(service.categoryLabel?{categoryLabel:String(service.categoryLabel)}:{})});
 }
 export function resolveExecutionServiceEntry(pathname,registry={}){

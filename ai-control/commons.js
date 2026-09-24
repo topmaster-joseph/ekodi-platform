@@ -20,20 +20,18 @@ function serviceButton(service){
 }
 function serviceAccessMeta(service){
   if(!service.usableNow)return '준비 중';
-  return service.access?.paidAvailable?'기본 제공 · 고급 구독':'기본 제공 · 고급 로그인';
+  return service.access?.paidAvailable?'기본 무료 · 고급 구독':'기본 무료';
 }
 function serviceCard(service){
   const card=document.createElement(service.usableNow&&service.launchUrl?'a':'article');card.className='service-card';
   if(card.tagName==='A')card.href=service.launchUrl;else{card.classList.add('preview');card.setAttribute('aria-disabled','true')}
   const copy=document.createElement('div');const title=document.createElement('strong');title.textContent=service.label;
-  const description=document.createElement('p');description.className='service-description';description.textContent=service.description||'기본 기능을 제공합니다.';
+  const description=document.createElement('p');description.className='service-description';description.textContent=service.description||'기본 기능을 바로 사용할 수 있습니다.';
   const meta=document.createElement('div');meta.className='service-meta';
-  const status=document.createElement('span');status.className='service-state state-'+(service.availability||'live');status.textContent=service.availabilityLabel||'운영';
-  const delivery=document.createElement('small');delivery.textContent=service.deliveryLabel||'전문서비스 연결';meta.append(status,delivery);
-  const access=document.createElement('div');access.className='service-access';
-  const kind=document.createElement('span');kind.textContent=service.sourceKind==='specialist'?'전문서비스':'공통기능';
-  const gate=document.createElement('span');gate.textContent=serviceAccessMeta(service);access.append(kind,gate);
-  copy.append(title,description,meta,access);const arrow=document.createElement('b');arrow.textContent=service.usableNow?'›':'·';card.append(copy,arrow);return card;
+  const access=document.createElement('span');access.className='service-state state-'+(service.availability||'live');access.textContent=serviceAccessMeta(service);
+  const status=document.createElement('small');status.textContent=service.usableNow&&service.availability!=='live'?(service.availabilityLabel||'운영'):'';
+  meta.append(access);if(status.textContent)meta.append(status);
+  copy.append(title,description,meta);const arrow=document.createElement('b');arrow.textContent=service.usableNow?'›':'·';card.append(copy,arrow);return card;
 }
 function renderActiveCategory(){
   const host=$('servicePanel');host.replaceChildren();

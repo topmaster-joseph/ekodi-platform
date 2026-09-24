@@ -155,9 +155,10 @@
     }
   ],
   "accessPolicy": {
-    "basic": "free_or_free_member",
-    "advanced": "authenticated",
+    "basic": "public",
+    "advanced": "authenticated_when_account_features_are_needed",
     "paid": "service_specific_subscription",
+    "paidGate": "login_then_subscription_checkout",
     "authority": "owning_service_server"
   }
 }
