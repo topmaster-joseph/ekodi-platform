@@ -63,3 +63,13 @@ test('synthetic production Admin UI verifier uses visible sidebar navigation whi
   assert.doesNotMatch(text, /contextTab\.waitFor\(\{ state: 'visible'/);
   assert.match(text, /const trigger = await resolveMenuTrigger\(id, group\)/);
 });
+
+
+test('synthetic production Admin UI verifier does not trust selected lazy tabs without a visible panel', async () => {
+  const text = await source();
+  assert.match(text, /let alreadyActive = await contextTab\.evaluate/);
+  assert.match(text, /if \(alreadyActive\) \{[\s\S]*document\.querySelectorAll\('\.content \[data-panel\]'\)/);
+  assert.match(text, /targets\.includes\(section\)/);
+  assert.match(text, /return Boolean\(panel\)/);
+  assert.match(text, /if \(!alreadyActive\) await dispatchClick\(trigger\)/);
+});
