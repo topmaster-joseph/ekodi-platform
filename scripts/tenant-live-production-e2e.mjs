@@ -84,6 +84,7 @@ try{
   await hostContext.addInitScript(value=>sessionStorage.setItem('ekodi-auth-token',value),token);
   host=await hostContext.newPage();
   observePage(host,'host');
+  host.on('dialog',dialog=>dialog.accept().catch(()=>{}));
   await host.goto(`${liveUrl}?mode=studio&title=${encodeURIComponent(`${label} Production E2E`)}`,{waitUntil:'domcontentloaded',timeout:30000});
   try{
     await host.waitForFunction(()=>{
