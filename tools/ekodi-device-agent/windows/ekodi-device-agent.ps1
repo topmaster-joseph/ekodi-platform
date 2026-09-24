@@ -2771,7 +2771,7 @@ function Send-Heartbeat($Config) {
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
       networkDiagnostics = $true; printerDiagnostics = $true; workstationProfile = $true; protocolLaunch = $true
       computerRead = $true; processRead = $true; agentStatus = $true
-      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified; isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified; isolatedDesktop = $false
+      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified; isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified; isolatedDesktopSessionCanary = [bool](Get-IsolatedDesktopSessionCanaryState).verified; isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified
       desktopCapture = $false; desktopInput = $false
       arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
     }
