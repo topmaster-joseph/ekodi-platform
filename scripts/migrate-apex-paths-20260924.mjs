@@ -50,7 +50,7 @@ function routeBlockCleanup(text){
   return out.join('\n');
 }
 function knownReplace(text){
-  let out=text;
+  let out=text.replaceAll('*.ekodi.kr','EKODI child-host address');
   const sorted=[...HOST_PATH.entries()].sort((a,b)=>b[0].length-a[0].length);
   for(const [host,prefix] of sorted){
     const suffix=prefix==='/'?'':prefix;
