@@ -27,8 +27,8 @@ test('Admin uses a seven-area primary sidebar with contextual top navigation', a
   assert.match(sidebar, /admin-command-entry/);
   assert.match(sidebar, /dataset\.adminCommandHome = 'true'/);
   assert.match(sidebar, /activateSection\(nav, 'command-home'\)/);
-  assert.match(sidebar, /globals\.querySelector\(`:scope>\.\$\{DETAILS_CLASS\}`\)\?\.remove\(\)/);
-  assert.match(sidebar, /primary-sidebar-tabs-v3/);
+    assert.match(sidebar, /role-projected-sidebar-v4/);
+  assert.match(sidebar, /renderSidebarDetails\(nav, globals, group, displayedSection \|\| section, locale\)/);
 });
 test('Functional Admin pages keep only the bottom EKODI composer until conversation is opened', async () => {
   const [bootstrapCss, dockCss, principles] = await Promise.all([
