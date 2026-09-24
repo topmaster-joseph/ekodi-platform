@@ -44,4 +44,4 @@ jobs:
           name: admin-production-ui-e2e-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/admin-production-ui-e2e
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 7
