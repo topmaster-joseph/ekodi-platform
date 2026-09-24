@@ -59,7 +59,10 @@
     "canaryDoesNotEnableExecutionByItself": true,
     "guestCanaryCommand": "computer.desktop.guest.canary",
     "guestCanaryRequiredBeforeExecution": true,
-    "guestCanaryDoesNotEnableExecutionByItself": true
+    "guestCanaryDoesNotEnableExecutionByItself": true,
+    "uiCanaryCommand": "computer.desktop.ui.canary",
+    "uiCanaryRequiredBeforeExecution": true,
+    "uiCanaryDoesNotEnableGeneralDesktopExecutionByItself": true
   },
   "gapClassification": {
     "noVirtualizationFirmware": "native-capability-unavailable",
@@ -84,7 +87,7 @@
   },
   "guestAgent": {
     "id": "ekodi-isolated-guest-agent",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "installScript": "tools/ekodi-device-agent/windows/install-isolated-guest-agent.ps1",
     "runtimeScript": "tools/ekodi-device-agent/windows/ekodi-isolated-guest-agent.ps1",
     "baseVmProvisioningRequired": true,
@@ -101,7 +104,11 @@
     "userInputInjection": false,
     "credentialCollection": false,
     "hostProfileMounted": false,
-    "mutationScope": "ephemeral-guest-only"
+    "mutationScope": "ephemeral-guest-only",
+    "allowedTaskTypes": [
+      "guest.runtime.probe",
+      "guest.ui.probe"
+    ]
   },
   "guestCanary": {
     "requiresHyperVCanary": true,
@@ -116,5 +123,23 @@
     "sessionVmCleanupRequired": true,
     "sessionDiskCleanupRequired": true,
     "executionCapabilityAfterGuestCanary": false
+  },
+  "uiCanary": {
+    "requiresGuestRuntimeCanary": true,
+    "backend": "hyper-v-ekodi-base",
+    "taskType": "guest.ui.probe",
+    "networkAttached": false,
+    "hostInteractiveDesktopUsed": false,
+    "sharedInteractiveDesktop": false,
+    "semanticUiAutomation": true,
+    "lowLevelInputInjection": false,
+    "clipboardShared": false,
+    "credentialCollection": false,
+    "hostProfileMounted": false,
+    "syntheticUiOnly": true,
+    "expectedResultCode": "EKODI_UI_OK",
+    "sessionVmCleanupRequired": true,
+    "sessionDiskCleanupRequired": true,
+    "generalDesktopExecutionCapabilityAfterUiCanary": false
   }
 }
