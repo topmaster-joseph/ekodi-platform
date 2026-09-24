@@ -48,7 +48,7 @@ export function eventsFromReconciliation(reconciliation = {}, options = {}) {
       id: `autonomic_${hash(`${correlationKey}|${drift.transition || 'new'}|${occurrenceKey}`)}`,
       occurrenceKey,
       correlationKey,
-      kind: 'desired_state_drift',
+      kind: drift.scope === 'service' ? 'service_health' : 'system_event',
       source: 'ekodi-autonomic-control-plane',
       summary: `Desired-state drift: ${drift.ruleId} (${text(drift.observed, 120)} -> ${text(drift.expected, 120)})`,
       ruleId: drift.ruleId,
@@ -80,7 +80,7 @@ export function autonomicEventToPulse(event = {}) {
       ? `Diagnose and reconcile ${event.ruleId} using existing EKODI capabilities. Apply only delegated reversible actions, verify the result, and use the guarded release path for any production-bound change.`
       : `Assess ${event.ruleId} and prepare evidence for the required authority without mutating production.`,
     risk: event.risk || 'normal',
-    target: { service: 'core', capability: 'desired_state_reconciliation', surface: 'autonomic-control-plane', entityId: event.entityId || null },
+    target: { service: String(event.entityId || '').startsWith('service:') ? String(event.entityId).slice(8) : 'core', capability: 'desired_state_reconciliation', surface: 'autonomic-control-plane', entityId: event.entityId || null },
     delegation: {
       allowed,
       reversible: allowed,
@@ -100,7 +100,7 @@ export function autonomicEventToPulse(event = {}) {
     },
     event: {
       id: event.id,
-      kind: event.kind || 'desired_state_drift',
+      kind: event.kind || 'system_event',
       source: event.source || 'ekodi-autonomic-control-plane',
       summary: event.summary,
       changeClass: event.changeClass || 'yellow',
