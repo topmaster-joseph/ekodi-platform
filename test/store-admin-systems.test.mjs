@@ -12,6 +12,7 @@ import {
 } from '../store-admin-engine.js';
 
 const router=readFileSync(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
+const staticAssets=readFileSync(new URL('../platform-router-static-assets.js',import.meta.url),'utf8');
 const engine=readFileSync(new URL('../store-admin-engine.js',import.meta.url),'utf8');
 const canonicalMenu=readFileSync(new URL('../supabase/migrations/20260906001000_store_operating_spaces.sql',import.meta.url),'utf8');
 const snapshotMigration=readFileSync(new URL('../supabase/migrations/20260906004000_store_admin_snapshot.sql',import.meta.url),'utf8');
@@ -104,7 +105,8 @@ test('router classifies store admin before generic workspace admin and keeps leg
   const generic=router.indexOf('if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))');
   assert.ok(dynamic>=0);assert.ok(generic>dynamic);
   assert.match(router,/resolveStoreAdminRoute\(url\.pathname\)/);
-  assert.match(router,/\/store-admin\.js/);assert.match(router,/\/jadam-admin\.js/);
+  assert.match(router,/routePlatformStaticAsset\(url\.pathname\)/);
+  assert.match(staticAssets,/\/store-admin\.js/);assert.match(staticAssets,/\/jadam-admin\.js/);
   assert.doesNotMatch(router,/jadam-admin-page\.js|pizzamaru-admin-page\.js|yogurt-admin-page\.js/);
 });
 
