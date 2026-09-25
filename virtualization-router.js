@@ -14,6 +14,21 @@ export const VIRTUALIZATION_FALLBACK_REASONS = Object.freeze([
   'native-capacity-or-runtime-failure',
 ]);
 
+const BACKGROUND_BROWSER_TASK_CLASSES = new Set([
+  'browser-ui-validation',
+  'synthetic-surface-verification',
+  'isolated-browser-execution',
+]);
+
+export const BACKGROUND_BROWSER_SURFACE_CONTRACT = Object.freeze({
+  executionMode:'background-only',
+  foregroundAllowed:false,
+  userBrowserTabCreation:false,
+  ownedSurfaceAutoClose:true,
+  preserveUserOwnedSurfaces:true,
+  interactiveLoginAllowed:false,
+});
+
 const text=(value,max=200)=>String(value??'').trim().slice(0,max);
 const asArray=value=>Array.isArray(value)?value:[];
 
@@ -52,6 +67,7 @@ export function selectVirtualizationProvider(input={}){
       taskClass,
       reason:'eligible-native-healthy',
       fallback:false,
+      surfaceContract:BACKGROUND_BROWSER_TASK_CLASSES.has(taskClass)?BACKGROUND_BROWSER_SURFACE_CONTRACT:null,
       constitutionalPolicy:'VIRTUALIZATION-SOVEREIGNTY-001',
       routingPolicy:'EKODI-VIRTUALIZATION-ROUTING-001'
     };
@@ -99,6 +115,14 @@ export function selectVirtualizationProvider(input={}){
   const selected=externalCandidates.find(item=>{
     if(item.paidUpgradeRequired===true) return false;
     if(item.securityEquivalentOrStronger!==true) return false;
+    if(BACKGROUND_BROWSER_TASK_CLASSES.has(taskClass)){
+      if(item.executionMode!=='background-only') return false;
+      if(item.headlessOrOffscreen!==true) return false;
+      if(item.userBrowserTabCreation!==false) return false;
+      if(item.ownedSurfaceAutoClose!==true) return false;
+      if(item.preserveUserOwnedSurfaces!==true) return false;
+      if(item.interactiveLoginAllowed===true) return false;
+    }
     return true;
   });
   if(!selected){
@@ -116,6 +140,7 @@ export function selectVirtualizationProvider(input={}){
     nativeCapabilityGapRecord:nativeGapRecord,
     nativeFailures:eligibleIds.map(id=>({id,reason:text(failures.get(id)?.reason,120)})),
     retryNativeNextExecution:true,
+    surfaceContract:BACKGROUND_BROWSER_TASK_CLASSES.has(taskClass)?BACKGROUND_BROWSER_SURFACE_CONTRACT:null,
     constitutionalPolicy:'VIRTUALIZATION-SOVEREIGNTY-001',
     routingPolicy:'EKODI-VIRTUALIZATION-ROUTING-001'
   };

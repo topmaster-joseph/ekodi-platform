@@ -22,6 +22,10 @@ test('native remote computer provider is native-first, transition-gated and non-
   assert.equal(descriptor.nonDisruptiveDefault, true);
   assert.equal(descriptor.foregroundUserSessionOwnedByUser, true);
   assert.equal(descriptor.minimizedWindowCountsAsIsolation, false);
+  assert.equal(descriptor.automaticBrowserExecutionMode, 'background-only');
+  assert.equal(descriptor.automaticUserBrowserTabCreation, false);
+  assert.equal(descriptor.ownedAutomationSurfaceAutoClose, true);
+  assert.equal(descriptor.preserveUserOwnedSurfaces, true);
   assert.equal(descriptor.persistentAgentShell, false);
   assert.equal(descriptor.directHostMutation, false);
   assert.equal(REMOTE_COMPUTER_TRANSITION_POLICY.targetCostModel, 'self-hosted-no-third-party-per-call-fee');
@@ -108,6 +112,11 @@ test('isolated operations require service readiness and a verified isolated exec
   });
   assert.equal(allowed.ok, true);
   assert.equal(allowed.nativePreferred, true);
+  assert.equal(allowed.candidates[0].executionMode, 'background-only');
+  assert.equal(allowed.candidates[0].foregroundAllowed, false);
+  assert.equal(allowed.candidates[0].userBrowserTabCreation, false);
+  assert.equal(allowed.candidates[0].ownedSurfaceAutoClose, true);
+  assert.equal(allowed.candidates[0].preserveUserOwnedSurfaces, true);
 });
 
 test('external failover requires equivalent security', () => {
@@ -136,4 +145,57 @@ test('receipts fail closed on authority, credential, production or foreground vi
     requestId:'r3', deviceId:'d1', operation:'computer.browser.execute', status:'ok',
     activeUserBrowserProfileReused:true,
   }).ok, false);
+});
+
+
+test('browser fallback providers must prove background-only non-interactive execution', () => {
+  const common={
+    operation:'computer.browser.execute',
+    native:{ state:'offline', serviceReady:false, capabilities:{ backgroundBrowser:false } },
+    isolatedExecutorVerified:true,
+  };
+  const foreground=planRemoteComputerExecution({
+    ...common,
+    externalProviders:[{
+      id:'remote-desktop-commander',state:'online',securityEquivalent:true,
+      operations:['computer.browser.execute'],quotaAvailable:true,
+      executionMode:'foreground',headlessOrOffscreen:false,userBrowserTabCreation:true,
+      ownedSurfaceAutoClose:false,preserveUserOwnedSurfaces:false,
+    }],
+  });
+  assert.equal(foreground.ok,false);
+
+  const background=planRemoteComputerExecution({
+    ...common,
+    externalProviders:[{
+      id:'isolated-browser-bridge',state:'online',securityEquivalent:true,
+      operations:['computer.browser.execute'],quotaAvailable:true,
+      executionMode:'background-only',headlessOrOffscreen:true,userBrowserTabCreation:false,
+      ownedSurfaceAutoClose:true,preserveUserOwnedSurfaces:true,interactiveLoginAllowed:false,
+    }],
+  });
+  assert.equal(background.ok,true);
+  assert.equal(background.candidates[0].executionMode,'background-only');
+  assert.equal(background.candidates[0].foregroundAllowed,false);
+});
+
+test('browser receipts fail closed unless owned surfaces are closed and user surfaces are preserved', () => {
+  const good=validateRemoteComputerReceipt({
+    requestId:'browser-ok',deviceId:'d1',operation:'computer.browser.execute',status:'ok',
+    executionMode:'background-only',userBrowserTabCreated:false,ownedSurfaceClosed:true,
+    userOwnedSurfacesPreserved:true,interactiveLoginOpened:false,
+  });
+  assert.equal(good.ok,true);
+
+  const bad=validateRemoteComputerReceipt({
+    requestId:'browser-bad',deviceId:'d1',operation:'computer.browser.execute',status:'ok',
+    executionMode:'foreground',userBrowserTabCreated:true,ownedSurfaceClosed:false,
+    userOwnedSurfacesPreserved:false,interactiveLoginOpened:true,
+  });
+  assert.equal(bad.ok,false);
+  assert.ok(bad.errors.includes('browser_background_only_required'));
+  assert.ok(bad.errors.includes('browser_user_tab_creation_forbidden'));
+  assert.ok(bad.errors.includes('browser_owned_surface_cleanup_required'));
+  assert.ok(bad.errors.includes('browser_user_surface_preservation_required'));
+  assert.ok(bad.errors.includes('browser_interactive_login_forbidden'));
 });
