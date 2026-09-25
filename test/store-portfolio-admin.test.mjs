@@ -133,7 +133,8 @@ test('guarded release probes canonical store admins and redirect-only aggregate 
   assert.ok(liveRuntime?.expect.includes('store_operating_space_snapshot'));
   assert.ok(liveRuntime?.expect.includes('store_delivery_platform_admin_snapshot'));
   assert.ok(liveRuntime?.expect.includes('setInterval'));
-  assert.ok(liveRuntime?.expect.includes('300000'));
+  assert.ok(liveRuntime?.expect.includes('visibilityState'));
+  assert.ok(!liveRuntime?.expect.includes('300000'));
   assert.ok(!liveRuntime?.expect.some(marker=>/[^\x00-\x7F]/.test(marker)));
   assert.deepEqual(byUrl.get('https://ekodi.kr/jadam/admin/menu?embed=cmpmyi')?.statuses,[200]);
   assert.ok(byUrl.get('https://ekodi.kr/jadam/admin/menu?embed=cmpmyi')?.headerExpect.includes('x-ekodi-embedded-admin: cmpmyi'));
