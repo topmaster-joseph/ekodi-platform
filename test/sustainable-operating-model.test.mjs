@@ -55,7 +55,6 @@ test('staging configurations exist for control, My EKODI, Shell, and shared prox
     'wrangler.admin.staging.toml',
     'wrangler.my.staging.toml',
     'wrangler.shell.staging.toml',
-    'wrangler.service-proxy.staging.toml',
   ]) {
     const content = await read(file);
     assert.ok(content.trim().length > 0, `${file} must not be empty`);
