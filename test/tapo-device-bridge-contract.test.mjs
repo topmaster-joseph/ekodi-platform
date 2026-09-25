@@ -29,6 +29,13 @@ test('gateway authority is observe-only and stream bounded',()=>{
   assert.match(control,/edge-bridge/);
 });
 
+test('edge bridge composes device endpoints from the canonical apex origin',()=>{
+  assert.match(bridge,/const API_DEFAULT = 'https:\/\/ekodi\.kr';/);
+  assert.match(bridge,/\/api\/device-agent\/enroll/);
+  assert.doesNotMatch(bridge,/https:\/\/api\.ekodi\.kr/);
+  assert.doesNotMatch(bridge,/https:\/\/ekodi\.kr\/api['"]/);
+});
+
 test('edge bridge keeps RTSP local and has executable synthetic media proof',()=>{
   assert.match(bridge,/rtspUrl/);
   assert.match(bridge,/127\.0\.0\.1/);
