@@ -72,6 +72,8 @@ test('cmpmyi delivery runtime reads existing store ledgers without adding cross-
   assert.match(script,/p_days:30/);
   assert.match(script,/ekodi-store-admin-session:jadam/);
   assert.match(script,/data-delivery-live/);
+  assert.match(script,/ekodiDeliveryRefreshInterval/);
+  assert.match(script,/300000/);
   assert.match(script,/5분 자동갱신/);
   assert.doesNotMatch(script,/store_platform_sync_queue|store_platform_review_queue_reply|menu_price_update|menu_availability_update/);
 });
