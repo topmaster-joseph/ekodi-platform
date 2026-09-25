@@ -13,6 +13,7 @@ import { handleLearningControl } from './learning-control.js';
 import { buildEkodiOwnerReport, latestEkodiOwnerReport, listEkodiOwnerReports, persistEkodiOwnerReport } from './ekodi-owner-report.js';
 import { realtimeTenantList } from './realtime-tenant-registry.js';
 import { handleAdminConfirmations, handleConfirmationPublic, handleWorkspaceConfirmations } from './payment-receipt-confirmation-control.js';
+import { runServiceModuleFunctionalVerification } from './service-module-verification.js';
 
 // Provider service registry only. Customer organizations and their sites are managed as
 // customer tenants/workspaces through the customer directory, never as EKODI services.
@@ -665,6 +666,20 @@ async function handleControl(request, env) {
 
   if (request.method === 'GET' && path === `${CONTROL_PREFIX}/overview`) {
     return controlJson(await overview(env), 200, auth.response.headers);
+  }
+
+  if (request.method === 'GET' && path === `${CONTROL_PREFIX}/module-verification`) {
+    const fetchImpl = async (input, init = {}) => {
+      const target = new URL(typeof input === 'string' ? input : input.url);
+      if (target.origin === 'https://ekodi.kr' && target.pathname === `${CONTROL_PREFIX}/confirmations/workspaces`) {
+        const headers = new Headers(init.headers || {});
+        const internalRequest = new Request(target.toString(), { method:init.method || 'GET', headers });
+        return handleAdminConfirmations(internalRequest, env, auth.session);
+      }
+      return fetch(input, init);
+    };
+    const verification = await runServiceModuleFunctionalVerification(request, { fetchImpl });
+    return controlJson(verification, 200, auth.response.headers);
   }
 
   if (path === `${CONTROL_PREFIX}/site-chrome`) {
