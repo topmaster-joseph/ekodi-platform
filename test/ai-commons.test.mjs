@@ -124,10 +124,18 @@ test('Commons page loads browser assets only through the Worker-owned API bounda
   assert.match(client,/fetch\(apiUrl\(path\)/);
   assert.match(canonical,/spec\.basePathAware\|\|spec\.id==='ai'/);
   assert.match(verifier,/ai\/api\/commons\/client/);
+  assert.match(verifier,/ai\/api\/commons\/style/);
+  assert.match(verifier,/content-type: text\/css/);
   assert.doesNotMatch(verifier,/ai\/api\/commons\/client\.js/);
   assert.match(verifier,/capabilityId/);
   assert.match(verifier,/function apiUrl\(path\)/);
   assert.match(verifier,/ai\/ai\/api\/commons/);
+  const styleProbe=release.worker.requests.find(item=>item.url.endsWith('/ai/api/commons/style'));
+  assert.ok(styleProbe);
+  assert.ok(styleProbe.expect.includes('.page'));
+  assert.ok(styleProbe.expect.includes('want-form'));
+  assert.ok(styleProbe.expect.includes('.service-state'));
+  assert.ok(styleProbe.headerExpect.includes('content-type: text/css'));
   const clientProbe=release.worker.requests.find(item=>item.url.endsWith('/ai/api/commons/client'));
   assert.ok(clientProbe);
   assert.ok(clientProbe.expect.includes('function apiUrl(path)'));
