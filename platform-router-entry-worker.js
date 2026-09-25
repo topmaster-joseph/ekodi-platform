@@ -13,14 +13,13 @@ import { routeInvestSite } from './invest-site-system.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
 import { mailAdminPage } from './mail-admin-page.js';
-import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
-import { isOrganizationAdminPath, organizationAdminPage, organizationAdminCss, organizationAdminScript } from './organization-admin-page.js';
+import { isWorkspaceAdminPath, workspaceAdminPage } from './workspace-admin-page.js';
+import { isOrganizationAdminPath, organizationAdminPage } from './organization-admin-page.js';
 import { legacyAdminAliasTarget } from './admin-address-policy.js';
-import { isStoreAdminPathShape, resolveStoreAdminRoute, storeAdminPage, storeAdminCss, storeAdminScript } from './store-admin-engine.js';
-import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
+import { isStoreAdminPathShape, resolveStoreAdminRoute, storeAdminPage } from './store-admin-engine.js';
+import { churchPastorAdminPage, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
-import { workspaceTradeAdminScript } from './workspace-trade-admin-page.js';
-import { isTradePartnerPath, tradePartnerPage, tradePartnerCss, tradePartnerScript } from './workspace-trade-portal.js';
+import { isTradePartnerPath, tradePartnerPage } from './workspace-trade-portal.js';
 import { isPublicWorkspacePath } from './workspace-route-policy.js';
 import { workspaceRouteFromPublicPath } from './workspace-route-policy.js';
 import { isInsurancePublicPath, routeInsurancePublic } from './insurance-public-route.js';
@@ -29,7 +28,6 @@ import { routeCanonicalSurface } from './canonical-surface-router.js';
 import { handlePreviewRequest } from './preview-page.js';
 import { storeGatewayPage } from './store-gateway-page.js';
 import { storePortfolioAdminPage, storePortfolioAdminPanelPage, storePortfolioAdminPanelScript } from './store-portfolio-admin-page.js';
-import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { isLearningPath, learningPage, learningScript, learningStyles } from './learning-page.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
 import { realtimeTenantAdminFromPath, realtimeTenantFromPath } from './realtime-tenant-registry.js';
@@ -39,16 +37,12 @@ import { liveServiceAdminPage, liveServiceMaintenancePage, liveServicePage } fro
 import { localRegionFromPath } from './local-region-registry.js';
 import { localRegionPublicPage, localRegionAdminPage, localRegionAccessAdminPage } from './local-region-page.js';
 import { localRegionForestPublicPage, localRegionForestAdminPage } from './local-region-forest-page.js';
-import { localRegionForestPublicScript } from './local-region-forest-public.js';
-import { localRegionForestAdminScript } from './local-region-forest-admin.js';
-import { localRegionAdminAuthScript } from './local-region-admin-auth.js';
-import { localRegionAccessAdminScript } from './local-region-access-admin.js';
-import { localRegionOperationsAdminScript } from './local-region-operations-admin.js';
 import { regionalCommerceProgramFromLocalRoute } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
 import { handleSeonamMediCivicApi } from './seonam-medi-civic-control.js';
 import { handleSeonamMediMonitorApi } from './seonam-medi-monitor.js';
+import { routePlatformStaticAsset } from './platform-router-static-assets.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const CGMA_HOSTS=new Set(['cgma.or.kr','www.cgma.or.kr']);
@@ -314,15 +308,7 @@ async function routePlatform(request,env,ctx){
       const previewResponse=handlePreviewRequest(request);if(previewResponse)return previewResponse;
       if(['GET','HEAD'].includes(request.method)&&isInsurancePublicPath(url.pathname))return routeInsurancePublic(request,env);
       if(request.method==='GET'){
-        if(url.pathname==='/cheonggye/local-region-admin-auth.js')return localRegionAdminAuthScript();
-        if(url.pathname==='/cheonggye/local-region-access-admin.js')return localRegionAccessAdminScript();
-        if(url.pathname==='/cheonggye/local-region-operations-admin.js')return localRegionOperationsAdminScript();
-        if(url.pathname==='/cheonggye/local-region-forest-public.js')return localRegionForestPublicScript();
-        if(url.pathname==='/cheonggye/local-region-forest-admin.js')return localRegionForestAdminScript();
-        if(url.pathname==='/tenant-admin-command-home.css')return tenantAdminCommandHomeCss();
-        if(url.pathname==='/tenant-admin-command-home.js')return tenantAdminCommandHomeScript();
-        if(['/store-admin.css','/jadam-admin.css','/pizzamaru-admin.css','/yogurt-admin.css'].includes(url.pathname))return storeAdminCss();
-        if(['/store-admin.js','/jadam-admin.js','/pizzamaru-admin.js','/yogurt-admin.js'].includes(url.pathname))return storeAdminScript();
+        const staticAsset=routePlatformStaticAsset(url.pathname);if(staticAsset)return staticAsset;
         if(url.pathname==='/cmpmyi/admin/panel.js')return storePortfolioAdminPanelScript();
         const cmpmyiPanel=url.pathname.match(/^\/cmpmyi\/admin\/panel\/([a-z-]+)\/?$/i);
         if(cmpmyiPanel)return storePortfolioAdminPanelPage(cmpmyiPanel[1]);
@@ -335,15 +321,7 @@ async function routePlatform(request,env,ctx){
             return injectEkodiShell(storeAdminPage({...storeRoute,pathname:url.pathname}),'business','admin');
           }
         }
-        if(url.pathname==='/organization-admin.css')return organizationAdminCss();
-        if(url.pathname==='/organization-admin.js')return organizationAdminScript();
         if(isOrganizationAdminPath(url.pathname))return injectEkodiShell(organizationAdminPage(url.pathname),'space','admin');
-        if(url.pathname==='/workspace-admin.css')return workspaceAdminCss();
-        if(url.pathname==='/workspace-admin.js')return workspaceAdminScript();
-        if(url.pathname==='/workspace-trade-admin.js')return workspaceTradeAdminScript();
-        if(url.pathname==='/church-pastor-admin.js')return churchPastorAdminScript();
-        if(url.pathname==='/workspace-trade-portal.css')return tradePartnerCss();
-        if(url.pathname==='/workspace-trade-portal.js')return tradePartnerScript();
         if(isTradePartnerPath(url.pathname))return injectEkodiTenantReadability(tradePartnerPage());
         if(url.pathname==='/ekodi-church'||url.pathname.startsWith('/ekodi-church/')){const target=new URL(request.url);target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});}
         if(isChurchPastorAdminPath(url.pathname))return injectEkodiShell(churchPastorAdminPage(),'church','admin');
