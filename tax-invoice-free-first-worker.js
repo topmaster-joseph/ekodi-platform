@@ -2,11 +2,11 @@ import authWorker from './auth-worker.js';
 import taxInvoiceWorker from './tax-invoice-worker.js';
 
 const ALLOWED_ORIGINS = new Set([
-  'https://ekodi.kr/admin',
-  'https://ekodi.kr/ekodibiz/admin',
-  'https://ekodi.kr/ekodichurch/admin',
-  'https://ekodi.kr/ekodilab/admin',
-  'https://ekodi.kr/ekodibiz/trade/admin'
+  'https://ekodi.kr',
+  'https://ekodi.kr',
+  'https://ekodi.kr',
+  'https://ekodi.kr',
+  'https://ekodi.kr'
 ]);
 
 function automationEnabled(env) {
