@@ -302,7 +302,7 @@ function draft() {
     visibility: effectiveVisibility(row),
     order: Math.max(0, Math.min(9999, Math.trunc(Number(row.dataset.homepageOrder || 9999)))),
     eligible: row.dataset.eligible === 'true',
-    name: row.querySelector('.campus-site-identity strong')?.textContent || row.dataset.homepageService,
+    name: row.dataset.siteName || row.querySelector('.campus-site-admin-button')?.textContent?.trim() || row.dataset.homepageService,
   }));
 }
 
