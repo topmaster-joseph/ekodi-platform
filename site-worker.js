@@ -14,7 +14,6 @@ import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from '
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
 const PUBLIC_HOST = 'ekodi.kr';
-const PUBLIC_ALIAS_HOSTS = new Set(['ekodi.kr']);
 const MALL_PREFIX = '/ekodimall';
 const MALL_ROOT_ALIAS_PREFIX = '/ekodibiz/ekodimall';
 const FORMER_MALL_PREFIX = '/ekodibiz/mall';
@@ -39,33 +38,12 @@ const WORKSPACE_ADMIN_ASSET_ALIASES = new Map([
   ['/cgma/admin/assets/cgma-member-admin.css','/cgma-member-admin.css'],
 ]);
 
-const ADMIN_HOSTS = new Set([
-  'ekodi.kr/admin',
-  'ekodi.kr/ekodibiz/admin',
-  'ekodi.kr/ekodichurch/admin',
-  'ekodi.kr/ekodilab/admin',
-  'ekodi.kr/ekodibiz/trade/admin',
-]);
 const ADMIN_STORAGE_PREFIX = '/api/control/storage/';
 const ADMIN_PERSONAL_FINANCE_PATH = '/api/control/personal-finance';
 const ADMIN_MARKETING_PUBLISHING_PREFIX = '/api/control/marketing-publishing';
 const ADMIN_COMMON_SERVICE_AI_PREFIX = '/api/control/common-services/ai/';
 
-const HUB_HOSTS = new Set([
-  'ekodi.kr/pay',
-  'ekodi.kr/ekodibiz/pay',
-  'ekodi.kr/mail',
-  'ekodi.kr/ekodibiz/mail',
-  'ekodi.kr/ekodichurch/mail',
-  'ekodi.kr/live',
-  'ekodi.kr/ekodibiz/live',
-  'ekodi.kr/ekodichurch/live',
-  'ekodi.kr/ekodilab/live',
-  'ekodi.kr/cloud',
-]);
 
-const TRADE_CANONICAL_HOST = 'ekodi.kr/ekodibiz/trade';
-const TRADE_LEGACY_HOSTS = new Set(['ekodi.kr/ekodibiz/trade']);
 
 const ADMIN_ALIASES = new Set([
   '/',
@@ -446,26 +424,6 @@ function adminAssetCacheControl(url) {
     : 'no-store';
 }
 
-function redirectToPublicCanonical(url) {
-  const next = new URL(url);
-  next.protocol = 'https:';
-  next.hostname = PUBLIC_HOST;
-  const response = Response.redirect(next.toString(), 308);
-  const secured = new Response(response.body, response);
-  applyBaseSecurityHeaders(secured.headers);
-  return secured;
-}
-
-function redirectToTradeCanonical(url) {
-  const next = new URL(url);
-  next.protocol = 'https:';
-  next.hostname = TRADE_CANONICAL_HOST;
-  const response = Response.redirect(next.toString(), 308);
-  const secured = new Response(response.body, response);
-  applyBaseSecurityHeaders(secured.headers);
-  return secured;
-}
-
 function safeAdminReturnPath(value) {
   const candidate = String(value || '/');
   return ADMIN_ALIASES.has(candidate) ? candidate : '/';
@@ -615,7 +573,6 @@ export default {
       return canonicalQueryRedirect;
     }
 
-    if (PUBLIC_ALIAS_HOSTS.has(host)) return redirectToPublicCanonical(url);
 
     if ((url.pathname === '/admin' || url.pathname === '/admin/') && host !== PUBLIC_HOST && !ADMIN_HOSTS.has(host)) {
       const target = new URL('https://ekodi.kr/admin/');
@@ -709,6 +666,10 @@ export default {
         return response;
       }
       if (isMallPath(url.pathname)) return proxyMallService(request);
+      if (['GET','HEAD'].includes(request.method) && (url.pathname === '/ekodibiz/trade' || url.pathname === '/ekodibiz/trade/')) {
+        const response = await env.ASSETS.fetch(assetRequest(request, '/trade'));
+        return withHostSecurity(response, HUB_CSP, 'public, max-age=300', 'trade');
+      }
       if (PUBLIC_ADMIN_ALIASES.has(url.pathname) || url.pathname.startsWith('/admin/')) {
         const response = await env.ASSETS.fetch(assetRequest(request, '/admin-shell'));
         const rewritten = rewriteAdminApexLogin(response);
@@ -724,41 +685,6 @@ export default {
       }
     }
 
-    if (TRADE_LEGACY_HOSTS.has(host)) return redirectToTradeCanonical(url);
-
-    if (host === TRADE_CANONICAL_HOST && (url.pathname === '/' || url.pathname === '/index.html')) {
-      const response = await env.ASSETS.fetch(assetRequest(request, '/trade'));
-      return withHostSecurity(response, HUB_CSP, 'public, max-age=300', 'trade');
-    }
-
-    if (ADMIN_HOSTS.has(host)) {
-      if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
-      if (url.pathname.startsWith(ADMIN_STORAGE_PREFIX)) return proxyAdminStorage(request, env);
-      if (url.pathname === ADMIN_PERSONAL_FINANCE_PATH) return proxyAdminPersonalFinance(request, env);
-      if (url.pathname.startsWith(ADMIN_MARKETING_PUBLISHING_PREFIX)) return proxyAdminMarketingPublishing(request, env);
-      if (url.pathname.startsWith(ADMIN_COMMON_SERVICE_AI_PREFIX)) return proxyAdminCommonServiceAi(request, env);
-      if (url.pathname === '/auth/start') {
-        if (!['GET', 'HEAD'].includes(request.method)) {
-          const response = new Response('Method Not Allowed', { status: 405, headers: { 'Allow': 'GET, HEAD' } });
-          applyBaseSecurityHeaders(response.headers);
-          return response;
-        }
-        return adminAuthRedirect(url.searchParams.get('return_to'));
-      }
-      if (ADMIN_ALIASES.has(url.pathname)) {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/admin-shell'));
-        return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-shell');
-      }
-      if (ADMIN_ASSETS.has(url.pathname)) {
-        const response = await env.ASSETS.fetch(request);
-        return withHostSecurity(response, ADMIN_CSP, adminAssetCacheControl(url), 'admin-asset');
-      }
-    }
-
-    if (HUB_HOSTS.has(host) && (url.pathname === '/' || url.pathname === '/index.html')) {
-      const response = await env.ASSETS.fetch(assetRequest(request, '/hub'));
-      return withHostSecurity(response, HUB_CSP, 'public, max-age=300', 'hub');
-    }
 
     return env.ASSETS.fetch(request);
   },
