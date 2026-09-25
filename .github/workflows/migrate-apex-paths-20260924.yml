@@ -61,6 +61,7 @@ jobs:
           node --check platform-router-worker.js
           node --check platform-router-entry-worker.js
           node scripts/zero-subdomain-guard.mjs
+          node scripts/validate-apex-path-semantics.mjs
           npm run validate:constitution
           npm run validate:boundaries
           npm run validate:admin-routes
