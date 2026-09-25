@@ -308,7 +308,7 @@ export function injectEkodiShell(response,serviceId,surface='',options={}){
 
 export function shellServiceForHost(hostname){
   const host=String(hostname||'').trim().toLowerCase();
-  if(!host||host==='ekodi.kr'||host==='ekodi.kr'||host==='ekodi.kr/admin')return '';
+  if(!host||host==='ekodi.kr')return '';
   const alias=SPECIAL_HOST_ALIASES[host];
   if(alias&&userSurfaceForService(alias))return alias;
   const service=manifestServiceForHost(host);
