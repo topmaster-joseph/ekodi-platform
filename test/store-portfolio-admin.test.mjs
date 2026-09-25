@@ -25,6 +25,9 @@ test('cmpmyi admin provides fixed common and brand navigation with a right works
   assert.match(html,/class="panel-frame"/);
   assert.match(html,/class="portfolio-sidebar"/);
   assert.match(html,/data-cmpmyi-navigation="left-fixed"/);
+  assert.match(html,/<details class="brand-group"/);
+  assert.match(html,/class="brand-caret"/);
+  assert.match(html,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.doesNotMatch(html,/class="sidebar"/);
   for(const store of CMPMYI_STORES){
     assert.ok(html.includes(store.name));
@@ -90,6 +93,9 @@ test('router serves cmpmyi common panels and same-origin embedded canonical stor
   assert.equal(embedded.headers.get('x-ekodi-embedded-admin'),'cmpmyi');
   assert.match(embedded.headers.get('content-security-policy')||'',/frame-ancestors 'self'/);
   assert.match(embeddedHtml,/data-ekodi-embedded-admin="true"/);
+  const css=await (await platformEntry.fetch(new Request('https://ekodi.kr/store-admin.css'),{},{})).text();
+  assert.match(css,/\[data-ekodi-embedded-admin="true"\] main\{max-width:none;padding:8px 10px 16px\}/);
+  assert.match(css,/\[data-ekodi-embedded-admin="true"\] \.panel\{padding:10px;min-height:120px/);
 
   const direct=storeAdminPage({slug:'jadam',name:'자담치킨 목포대점',id:'4b1e5933-b9ae-4cb9-9d31-dcbb0a5b25aa',mark:'JD',brand:'JADAM CHICKEN',pathname:'/jadam/admin/menu'});
   assert.equal(direct.status,200);
