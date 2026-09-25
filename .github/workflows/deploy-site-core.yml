@@ -307,7 +307,8 @@ jobs:
           prior_deploy_conclusion=''
           while IFS= read -r candidate_id; do
             [ -n "$candidate_id" ] || continue
-            details="$(gh run view "$candidate_id" -R "$GITHUB_REPOSITORY" --json jobs)"
+            details="$(gh run view "$candidate_id" -R "$GITHUB_REPOSITORY" --json jobs 2>/dev/null || true)"
+            [ -n "$details" ] || continue
             deploy_conclusion="$(printf '%s' "$details" | jq -r '[.jobs[]? | select(.name == "deploy")][0].conclusion // ""')"
             if [ "$deploy_conclusion" = "success" ] || [ "$deploy_conclusion" = "failure" ]; then
               prior_id="$candidate_id"
