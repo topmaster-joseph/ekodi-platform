@@ -7,11 +7,11 @@ if (!SUPABASE_URL || !SERVICE_ROLE) throw new Error("supabase_admin_environment_
 const SESSION_URL = "https://ekodi.kr/api/session";
 const WORK_HEALTH_URL = "https://ekodi.kr/work/health";
 const ALLOWED_ORIGINS = new Set([
-  "https://ekodi.kr/admin",
-  "https://ekodi.kr/ekodibiz/admin",
-  "https://ekodi.kr/ekodichurch/admin",
-  "https://ekodi.kr/ekodilab/admin",
-  "https://ekodi.kr/ekodibiz/trade/admin",
+  "https://ekodi.kr",
+  "https://ekodi.kr",
+  "https://ekodi.kr",
+  "https://ekodi.kr",
+  "https://ekodi.kr",
 ]);
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false, autoRefreshToken: false } });
 
@@ -48,7 +48,7 @@ async function verifyEkodiAdmin(req) {
     method: "GET",
     headers: {
       authorization,
-      origin: "https://ekodi.kr/admin",
+      origin: "https://ekodi.kr",
       accept: "application/json",
     },
     cache: "no-store",
