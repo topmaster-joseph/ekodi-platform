@@ -54,7 +54,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          live_code=$(curl -L -sS -o /tmp/publishing-before.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://publishing.ekodi.kr/' || true)
+          live_code=$(curl -L -sS -o /tmp/publishing-before.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/publishing/' || true)
           if [[ "$live_code" =~ ^[23] ]] && grep -Fq 'EKODI PROFESSIONAL PUBLISHING SERVICE' /tmp/publishing-before.html; then
             echo 'Stable Publishing production is reachable; using guarded candidate release.'
             node scripts/guarded-worker-release.mjs --manifest deploy/manifests/publishing.worker.json
@@ -67,15 +67,15 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 24); do
-            root_code=$(curl -L -sS -D /tmp/root-h -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://publishing.ekodi.kr/' || true)
-            studio_code=$(curl -L -sS -o /tmp/studio.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://publishing.ekodi.kr/studio/' || true)
-            admin_code=$(curl -sS --max-redirs 0 -D /tmp/admin-h -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://publishing.ekodi.kr/admin' || true)
+            root_code=$(curl -L -sS -D /tmp/root-h -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/publishing/' || true)
+            studio_code=$(curl -L -sS -o /tmp/studio.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/publishing/studio/' || true)
+            admin_code=$(curl -sS --max-redirs 0 -D /tmp/admin-h -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/publishing/admin' || true)
             echo "attempt=$attempt root=$root_code studio=$studio_code admin=$admin_code"
             if [[ "$root_code" =~ ^[23] ]] && [[ "$studio_code" =~ ^[23] ]] && [[ "$admin_code" =~ ^30[1278]$ ]] \
               && grep -Fq 'EKODI PROFESSIONAL PUBLISHING SERVICE' /tmp/root.html \
               && grep -Fq 'PUBLISHING STUDIO' /tmp/studio.html \
               && grep -Fiq 'x-ekodi-shell: v2' /tmp/root-h \
-              && grep -Fiq 'location: https://admin.ekodi.kr/publishing#publishing' /tmp/admin-h; then
+              && grep -Fiq 'location: https://ekodi.kr/publishing/admin' /tmp/admin-h; then
               echo 'Publishing production verified.'
               exit 0
             fi
@@ -88,9 +88,9 @@ jobs:
         run: |
           set +e
           mkdir -p ops/deploy-status
-          root_meta=$(curl -L -sS -o /tmp/probe-root.html -w '%{http_code}|%{remote_ip}|%{errormsg}' --connect-timeout 5 --max-time 15 'https://publishing.ekodi.kr/' 2>/tmp/probe-root.err)
-          studio_meta=$(curl -L -sS -o /tmp/probe-studio.html -w '%{http_code}|%{remote_ip}|%{errormsg}' --connect-timeout 5 --max-time 15 'https://publishing.ekodi.kr/studio/' 2>/tmp/probe-studio.err)
-          admin_meta=$(curl -sS --max-redirs 0 -o /dev/null -w '%{http_code}|%{remote_ip}|%{errormsg}' --connect-timeout 5 --max-time 15 'https://publishing.ekodi.kr/admin' 2>/tmp/probe-admin.err)
+          root_meta=$(curl -L -sS -o /tmp/probe-root.html -w '%{http_code}|%{remote_ip}|%{errormsg}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/publishing/' 2>/tmp/probe-root.err)
+          studio_meta=$(curl -L -sS -o /tmp/probe-studio.html -w '%{http_code}|%{remote_ip}|%{errormsg}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/publishing/studio/' 2>/tmp/probe-studio.err)
+          admin_meta=$(curl -sS --max-redirs 0 -o /dev/null -w '%{http_code}|%{remote_ip}|%{errormsg}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/publishing/admin' 2>/tmp/probe-admin.err)
           ROOT_META="$root_meta" STUDIO_META="$studio_meta" ADMIN_META="$admin_meta" python - <<'PY'
           import json, os
           from datetime import datetime, timezone
