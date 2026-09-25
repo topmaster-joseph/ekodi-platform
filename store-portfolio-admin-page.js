@@ -210,6 +210,7 @@ function deliveryOverview(){
 function portfolioPanelClient(){
   const root=document.documentElement;
   if(root.dataset.ekodiStorePortfolioPanel!=='delivery')return;
+  root.dataset.ekodiDeliveryRefreshInterval='300000';
   const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
   const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   const STORES=[{slug:'jadam',name:'자담치킨 목포대점'},{slug:'pizzamaru',name:'피자마루 목포대점'},{slug:'yogurt',name:'요거트퍼플 목포대점'}];
