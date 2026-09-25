@@ -147,3 +147,71 @@ body.admin-compact .campus-empty-state[hidden]{display:none!important}
   body.admin-compact .campus-homepage-notice{align-items:flex-start!important}
   body.admin-compact .campus-homepage-preview{overflow-wrap:anywhere!important}
 }
+
+
+/* Category-first site launcher mode: top classification -> site-name buttons -> admin menu. */
+body.admin-compact #campusSiteGroups.campus-groups-grid{
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr))!important;
+  gap:10px!important;
+  padding:2px!important;
+}
+body.admin-compact #campusSiteGroups .campus-group-card{
+  display:contents!important;
+  border:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+}
+body.admin-compact #campusSiteGroups .campus-group-card[hidden],
+body.admin-compact #campusSiteGroups .campus-site-item[hidden]{display:none!important}
+body.admin-compact #campusSiteGroups .campus-group-head{display:none!important}
+body.admin-compact #campusSiteGroups .campus-group-list{display:contents!important}
+body.admin-compact #campusSiteGroups .campus-site-item{
+  display:contents!important;
+  min-height:0!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+}
+body.admin-compact #campusSiteGroups .campus-site-launcher{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:54px!important;
+  padding:13px 16px!important;
+  border:1px solid #d3dfeb!important;
+  border-radius:12px!important;
+  background:#fff!important;
+  color:#1f3851!important;
+  font:inherit!important;
+  font-size:14px!important;
+  font-weight:800!important;
+  line-height:1.35!important;
+  text-align:left!important;
+  cursor:pointer!important;
+  box-shadow:none!important;
+}
+body.admin-compact #campusSiteGroups .campus-site-launcher:hover{
+  border-color:#9fc1de!important;
+  background:#f2f7fd!important;
+  color:#0b5cab!important;
+}
+body.admin-compact #campusSiteGroups .campus-site-launcher:focus-visible{
+  outline:3px solid #b7daf8!important;
+  outline-offset:2px!important;
+}
+body.admin-compact #campusSiteGroups .campus-site-launcher-name{
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+body.admin-compact #campusSiteGroups .campus-homepage-controls{display:none!important}
+@media (max-width:760px){
+  body.admin-compact #campusSiteGroups.campus-groups-grid{grid-template-columns:1fr 1fr!important;gap:8px!important}
+  body.admin-compact #campusSiteGroups .campus-site-launcher{min-height:50px!important;padding:12px!important;font-size:14px!important}
+}
+@media (max-width:480px){
+  body.admin-compact #campusSiteGroups.campus-groups-grid{grid-template-columns:1fr!important}
+}
