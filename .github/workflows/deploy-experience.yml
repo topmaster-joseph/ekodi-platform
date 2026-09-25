@@ -54,9 +54,7 @@ jobs:
           npm run validate:boundaries
           npm run validate:security
           npm run validate:deployments
-          grep -Fq 'exp.ekodi.kr' wrangler.experience.toml
-          grep -Fq 'dev.ekodi.kr' wrangler.experience.toml
-          grep -Fq 'try.ekodi.kr' wrangler.experience.toml
+          ! grep -Fq 'custom_domain = true' wrangler.experience.toml
           grep -Fq 'ekodi-experience-staging' wrangler.experience.staging.toml
 
   deploy-staging:
@@ -113,7 +111,7 @@ jobs:
           health_code=$(curl -sS -o /tmp/experience-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/health" || true)
           catalog_code=$(curl -sS -o /tmp/experience-catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/api/catalog" || true)
           admin_code=$(curl -sS --max-redirs 0 -D /tmp/experience-admin.headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/admin" || true)
-          dev_root_code=$(curl -sS -H 'x-ekodi-staging-host: dev.ekodi.kr' -D /tmp/developer-root.headers -o /tmp/developer-root.html -w '%{http_code}' "$verify_base/" || true)
+          dev_root_code=$(curl -sS -D /tmp/developer-root.headers -o /tmp/developer-root.html -w '%{http_code}' "$verify_base/developer" || true)
           dev_contract_code=$(curl -sS -H 'x-ekodi-staging-host: dev.ekodi.kr' -o /tmp/developer-contract.json -w '%{http_code}' "$verify_base/api/contract" || true)
           [[ "$root_code" == '200' ]]
           [[ "$health_code" == '200' ]]
@@ -126,7 +124,7 @@ jobs:
           grep -Fq 'synthetic-only' /tmp/experience-health.json
           grep -Fq 'productionWrites' /tmp/experience-catalog.json
           grep -Fiq 'x-ekodi-shell: v2' /tmp/experience-root.headers
-          grep -Fiq 'location: https://admin.ekodi.kr/experience' /tmp/experience-admin.headers
+          grep -Fiq 'location: https://ekodi.kr/experience/admin' /tmp/experience-admin.headers
           grep -Fq 'CONFORMANCE PREFLIGHT' /tmp/developer-root.html
           grep -Fq 'ekodi.responsible-service.v1' /tmp/developer-contract.json
           grep -Fiq 'x-ekodi-shell: v2' /tmp/developer-root.headers
@@ -156,14 +154,13 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 24); do
-            root_code=$(curl -L -sS -D /tmp/root.headers -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://exp.ekodi.kr/' || true)
-            health_code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://exp.ekodi.kr/health' || true)
-            catalog_code=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://exp.ekodi.kr/api/catalog' || true)
-            admin_code=$(curl -sS --max-redirs 0 -D /tmp/admin.headers -o /dev/null -w '%{http_code}' 'https://exp.ekodi.kr/admin' || true)
-            dev_root_code=$(curl -sS -D /tmp/dev.headers -o /tmp/dev.html -w '%{http_code}' 'https://dev.ekodi.kr/' || true)
-            dev_health_code=$(curl -sS -o /tmp/dev-health.json -w '%{http_code}' 'https://dev.ekodi.kr/health' || true)
-            dev_contract_code=$(curl -sS -o /tmp/dev-contract.json -w '%{http_code}' 'https://dev.ekodi.kr/api/contract' || true)
-            try_code=$(curl -sS --max-redirs 0 -D /tmp/try.headers -o /dev/null -w '%{http_code}' 'https://try.ekodi.kr/' || true)
+            root_code=$(curl -L -sS -D /tmp/root.headers -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/experience/' || true)
+            health_code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/experience/health' || true)
+            catalog_code=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/experience/api/catalog' || true)
+            admin_code=$(curl -sS --max-redirs 0 -D /tmp/admin.headers -o /dev/null -w '%{http_code}' 'https://ekodi.kr/experience/admin' || true)
+            dev_root_code=$(curl -sS -D /tmp/dev.headers -o /tmp/dev.html -w '%{http_code}' 'https://ekodi.kr/developer/' || true)
+            dev_health_code=$(curl -sS -o /tmp/dev-health.json -w '%{http_code}' 'https://ekodi.kr/developer/health' || true)
+            dev_contract_code=$(curl -sS -o /tmp/dev-contract.json -w '%{http_code}' 'https://ekodi.kr/developer/api/contract' || true)
             if [[ "$root_code" == '200' ]] && [[ "$health_code" == '200' ]] && [[ "$catalog_code" == '200' ]] && [[ "$admin_code" =~ ^30[1278]$ ]] && [[ "$dev_root_code" == '200' ]] && [[ "$dev_health_code" == '200' ]] && [[ "$dev_contract_code" == '200' ]] && [[ "$try_code" == '308' ]] \
               && grep -Fq '사용자모드' /tmp/root.html \
               && grep -Fq 'synthetic-only' /tmp/health.json \
@@ -174,8 +171,8 @@ jobs:
               && grep -Fq 'public-contract-only' /tmp/dev-health.json \
               && grep -Fq 'ekodi.responsible-service.v1' /tmp/dev-contract.json \
               && grep -Fiq 'x-ekodi-shell: v2' /tmp/dev.headers \
-              && grep -Fiq 'location: https://admin.ekodi.kr/experience' /tmp/admin.headers \
-              && grep -Fiq 'location: https://exp.ekodi.kr/' /tmp/try.headers; then
+              && grep -Fiq 'location: https://ekodi.kr/experience/admin' /tmp/admin.headers \
+              && grep -Fiq 'location: https://ekodi.kr/experience/' /tmp/try.headers; then
               echo 'EKODI Developer + Experience production verified.'
               exit 0
             fi
