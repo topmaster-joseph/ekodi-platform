@@ -45,3 +45,14 @@ test('interpreter assets use canonical AI paths and guarded release probes',()=>
   assert.ok(probe.expect.includes('모두의 통역'));
   assert.ok(probe.headerExpect.some(value=>value.includes('microphone=(self)')));
 });
+
+test('interpreter mobile surface stays compact and direct-use',()=>{
+  const html=read('ai-control/interpreter.html');
+  const css=read('ai-control/interpreter.css');
+  assert.doesNotMatch(html,/REAL-TIME INTERPRETER/);
+  assert.doesNotMatch(html,/>준비 중</);
+  assert.match(html,/id="micButton"/);
+  assert.match(html,/class="language-label"/);
+  assert.match(css,/@media\(max-width:390px\)/);
+  assert.match(css,/\.mic\{min-height:58px/);
+});
