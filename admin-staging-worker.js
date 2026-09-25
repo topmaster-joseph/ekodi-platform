@@ -22,7 +22,8 @@ export default{
     // deployment on a workers.dev staging hostname with no production custom domains.
     const adminUrl=new URL(request.url);
     adminUrl.protocol='https:';
-    adminUrl.hostname='ekodi.kr/admin';
+    adminUrl.hostname='ekodi.kr';
+    adminUrl.pathname=adminUrl.pathname==='/'?'/admin/':(adminUrl.pathname.startsWith('/admin')?adminUrl.pathname:`/admin${adminUrl.pathname.startsWith('/')?'':'/'}${adminUrl.pathname}`);
     adminUrl.port='';
     const stagedRequest=new Request(adminUrl,request);
     const response=await siteWorker.fetch(stagedRequest,env);
