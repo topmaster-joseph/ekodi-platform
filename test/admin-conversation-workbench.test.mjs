@@ -5,9 +5,9 @@ import { readFile } from 'node:fs/promises';
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('Admin authenticated shell ships the conversation-first workbench skin', async () => {
-  const [shell, build, css, dock, bootstrap, thinPostbuild, menuLayout] = await Promise.all([
+  const [shell, manifestText, css, dock, bootstrap, thinPostbuild, menuLayout] = await Promise.all([
     read('admin-authenticated-shell.js'),
-    read('scripts/build.mjs'),
+    read('config/admin-build-composition.json'),
     read('admin-conversation-workbench.css'),
     read('admin-assist-dock.js'),
     read('admin-assist-bootstrap.js'),
@@ -16,9 +16,10 @@ test('Admin authenticated shell ships the conversation-first workbench skin', as
   ]);
 
   assert.doesNotMatch(shell, /admin-conversation-workbench\.css/);
-  assert.match(build, /appendOutputSources\('admin-design-engine\.css'/);
-  assert.match(build, /path:'admin-conversation-workbench\.css'/);
-  assert.match(build, /marker:'EKODI Admin conversation-first workbench v1'/);
+  const manifest=JSON.parse(manifestText);
+  const composition=manifest.compositions.find(item=>item.target==='admin-design-engine.css');
+  assert.ok(composition);
+  assert.ok(composition.sources.some(item=>item.path==='admin-conversation-workbench.css'&&item.marker==='EKODI Admin conversation-first workbench v1'));
   assert.match(css, /--ekodi-admin-sidebar-width:272px/);
   assert.match(css, /--ekodi-assist-left:272px/);
   assert.doesNotMatch(css, /data-ekodi-admin-ui/);
