@@ -23,6 +23,7 @@ test('public health document exposes deployment evidence and Cloud First policy 
   assert.equal(document.status, 'ok');
   assert.equal(document.deploy.commit_sha, 'abc123');
   assert.equal(document.deploy.workflow_url, 'https://github.com/topmaster-joseph/ekodi-platform/actions/runs/98765');
+  assert.equal(Object.hasOwn(document.deploy,'run_attempt'), false);
   assert.equal(document.cloud_first.strategy, 'cloud_first_provider_independent');
   assert.equal(document.cloud_first.automatic_failover, true);
   assert.equal(document.cloud_first.usage_aware_failover, true);
@@ -69,4 +70,18 @@ test('restricted crawlers can retrieve only the public health exception while re
   }
   assert.ok(robots.includes(`User-agent: ChatGPT-User\nAllow: ${OPS_HEALTH_PATH}\nDisallow: /`));
   assert.equal(OPS_HEALTH_PATH, '/ops/health.json');
+});
+
+test('public health artifact is deterministic across GitHub rerun attempts', () => {
+  const base = {
+    GITHUB_REPOSITORY: 'topmaster-joseph/ekodi-platform',
+    GITHUB_SHA: 'abc123',
+    GITHUB_REF_NAME: 'main',
+    GITHUB_WORKFLOW: 'Deploy EKODI Shared Site Core',
+    GITHUB_RUN_ID: '98765',
+    SOURCE_DATE_EPOCH: '1790181367',
+  };
+  const first = buildOpsHealthDocument({ ...base, GITHUB_RUN_ATTEMPT: '1' });
+  const retry = buildOpsHealthDocument({ ...base, GITHUB_RUN_ATTEMPT: '2' });
+  assert.deepEqual(retry, first);
 });
