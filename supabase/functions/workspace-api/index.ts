@@ -5,10 +5,10 @@ const SUPABASE_URL=Deno.env.get("SUPABASE_URL")!;
 const ANON_KEY=Deno.env.get("SUPABASE_ANON_KEY")!;
 const IDENTITY_API=`${SUPABASE_URL}/functions/v1/identity-api`;
 const AUTH_ORIGIN="https://ekodi.kr";
-const OPEN_SSO_ORIGINS:Record<string,string[]>={
-  social:["https://ekodi.kr/social"],
-  energy:["https://ekodi.kr/energy"],
-  space:["https://ekodi.kr"],
+const OPEN_SSO_PATHS:Record<string,string[]>={
+  social:["/social"],
+  energy:["/energy"],
+  space:["/"],
 };
 const PERSON_WORKSPACE_SITES=["church","biz","books","author","lab","community","work","business","mall","marketing"];
 const ACTIVE_STATUSES=new Set(["active","pre_registered"]);
@@ -29,10 +29,12 @@ function json(req:Request,body:unknown,status=200){
 }
 function clip(value:unknown,max:number){return String(value??"").trim().slice(0,max)}
 function safeReturn(site:string,raw:string){
-  const origins=OPEN_SSO_ORIGINS[site]||[];
+  const paths=OPEN_SSO_PATHS[site]||[];
   try{
-    const target=new URL(raw||origins[0]);
-    return target.protocol==="https:"&&origins.includes(target.origin)?target.href:null;
+    const target=new URL(raw||"https://ekodi.kr/");
+    if(target.protocol!=="https:"||target.hostname!=="ekodi.kr"||target.username||target.password)return null;
+    const allowed=paths.some(prefix=>prefix==="/"||target.pathname===prefix||target.pathname.startsWith(prefix+"/"));
+    return allowed?target.href:null;
   }catch{return null}
 }
 async function authenticatedClient(req:Request){
