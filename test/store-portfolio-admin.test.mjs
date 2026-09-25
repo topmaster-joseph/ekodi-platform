@@ -73,6 +73,7 @@ test('cmpmyi delivery runtime reads existing store ledgers without adding cross-
   assert.match(script,/ekodi-store-admin-session:jadam/);
   assert.match(script,/data-delivery-live/);
   assert.match(script,/5분 자동갱신/);
+  assert.match(script,/setInterval\(\(\)=>\{if\(document\.visibilityState==='visible'\)load\(\)\},300000\)/);
   assert.doesNotMatch(script,/store_platform_sync_queue|store_platform_review_queue_reply|menu_price_update|menu_availability_update/);
 });
 
@@ -133,7 +134,8 @@ test('guarded release probes canonical store admins and redirect-only aggregate 
   assert.ok(liveRuntime?.expect.includes('store_operating_space_snapshot'));
   assert.ok(liveRuntime?.expect.includes('store_delivery_platform_admin_snapshot'));
   assert.ok(liveRuntime?.expect.includes('setInterval'));
-  assert.ok(liveRuntime?.expect.includes('300000'));
+  assert.ok(liveRuntime?.expect.includes('visibilityState'));
+  assert.ok(!liveRuntime?.expect.includes('300000'));
   assert.ok(!liveRuntime?.expect.some(marker=>/[^\x00-\x7F]/.test(marker)));
   assert.deepEqual(byUrl.get('https://ekodi.kr/jadam/admin/menu?embed=cmpmyi')?.statuses,[200]);
   assert.ok(byUrl.get('https://ekodi.kr/jadam/admin/menu?embed=cmpmyi')?.headerExpect.includes('x-ekodi-embedded-admin: cmpmyi'));
