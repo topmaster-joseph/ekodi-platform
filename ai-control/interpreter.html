@@ -12,21 +12,20 @@
     <header class="topbar">
       <a class="back" href="../">← 모두의 AI</a>
       <div class="brand"><span>EKODI</span><strong>모두의 통역</strong></div>
-      <span id="sessionState" class="session-state">준비 중</span>
+      <span id="sessionState" class="session-state">바로 사용</span>
     </header>
 
     <section class="hero">
-      <p class="eyebrow">REAL-TIME INTERPRETER</p>
       <h1>말하면 바로 통역합니다.</h1>
-      <p>언어를 고르고 마이크를 누르세요. 번역문을 화면에 보여주고 선택한 언어로 읽어줍니다.</p>
+      <p>언어를 선택하고 마이크를 누르면 바로 통역하고 읽어줍니다.</p>
     </section>
 
     <section class="translator" aria-labelledby="translatorTitle">
       <h2 id="translatorTitle" class="sr-only">실시간 통역</h2>
       <div class="language-row">
-        <label>말하는 언어<select id="sourceLanguage"></select></label>
+        <label><span class="language-label">말하는 언어</span><select id="sourceLanguage" aria-label="말하는 언어"></select></label>
         <button id="swapLanguages" class="swap" type="button" aria-label="언어 바꾸기">⇄</button>
-        <label>통역 언어<select id="targetLanguage"></select></label>
+        <label><span class="language-label">통역 언어</span><select id="targetLanguage" aria-label="통역 언어"></select></label>
       </div>
       <div class="presets" aria-label="빠른 언어 선택">
         <button type="button" data-preset="ko:ja">한국어 → 日本語</button>
@@ -41,7 +40,7 @@
           <p id="interimText" class="interim" aria-live="polite"></p>
         </article>
         <article class="speech-card target-card">
-          <div class="card-head"><span>통역</span><small id="engineState">준비</small></div>
+          <div class="card-head"><span>통역 결과</span><small id="engineState">준비</small></div>
           <p id="targetText" class="speech-text" aria-live="polite">통역 결과가 여기에 표시됩니다.</p>
         </article>
       </div>
