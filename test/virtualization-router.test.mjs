@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {
   selectVirtualizationProvider,
   nativeVirtualizationRequired,
-  eligibleNativeVirtualizationProviders
+  eligibleNativeVirtualizationProviders,
+  BACKGROUND_BROWSER_SURFACE_CONTRACT
 } from '../virtualization-router.js';
 
 test('healthy EKODI browser worker always wins over external providers',()=>{
@@ -22,6 +23,9 @@ test('healthy EKODI browser worker always wins over external providers',()=>{
   assert.equal(result.providerType,'native');
   assert.equal(result.providerId,'ekodi-background-browser-worker');
   assert.equal(result.fallback,false);
+  assert.deepEqual(result.surfaceContract, BACKGROUND_BROWSER_SURFACE_CONTRACT);
+  assert.equal(result.surfaceContract.executionMode,'background-only');
+  assert.equal(result.surfaceContract.userBrowserTabCreation,false);
 });
 
 test('external fallback is rejected when native failure evidence is incomplete',()=>{
@@ -111,4 +115,44 @@ test('known task classes expose native EKODI ownership paths',()=>{
   assert.equal(nativeVirtualizationRequired('browser-ui-validation'),true);
   assert.deepEqual(eligibleNativeVirtualizationProviders('browser-ui-validation'),['ekodi-background-browser-worker']);
   assert.deepEqual(eligibleNativeVirtualizationProviders('computer-use-automation'),['ekodi-native-remote-computer']);
+});
+
+
+test('browser external fallback is rejected unless it proves background-only surface isolation',()=>{
+  const common={
+    taskClass:'browser-ui-validation',
+    nativeProviders:[{id:'ekodi-background-browser-worker',state:'unavailable',healthy:false,ownership:'ekodi'}],
+    externalFallback:{
+      reason:'native-capability-unavailable',
+      auditId:'audit-bg',
+      nativeCapabilityGapRecord:'gap-bg',
+      securityEquivalentOrStronger:true,
+      paidUpgrade:false,
+      nativeFailures:[{id:'ekodi-background-browser-worker',reason:'native-capability-unavailable'}],
+    },
+  };
+  const foreground=selectVirtualizationProvider({
+    ...common,
+    externalProviders:[{
+      id:'foreground-browser',
+      enabled:true,approved:true,securityEquivalentOrStronger:true,
+      executionMode:'foreground',headlessOrOffscreen:false,userBrowserTabCreation:true,
+      ownedSurfaceAutoClose:false,preserveUserOwnedSurfaces:false,
+    }],
+  });
+  assert.equal(foreground.ok,false);
+  assert.equal(foreground.code,'EXTERNAL_FALLBACK_PROVIDER_UNAVAILABLE');
+
+  const background=selectVirtualizationProvider({
+    ...common,
+    externalProviders:[{
+      id:'isolated-browser',
+      enabled:true,approved:true,securityEquivalentOrStronger:true,
+      executionMode:'background-only',headlessOrOffscreen:true,userBrowserTabCreation:false,
+      ownedSurfaceAutoClose:true,preserveUserOwnedSurfaces:true,interactiveLoginAllowed:false,
+    }],
+  });
+  assert.equal(background.ok,true);
+  assert.equal(background.providerId,'isolated-browser');
+  assert.deepEqual(background.surfaceContract,BACKGROUND_BROWSER_SURFACE_CONTRACT);
 });

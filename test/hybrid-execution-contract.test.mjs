@@ -2,13 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [hybrid, mission, migration, fabricMigration, admin, thinPostbuild] = await Promise.all([
+const [hybrid, mission, migration, fabricMigration, admin, thinPostbuild, controlDeploy] = await Promise.all([
   readFile(new URL('../hybrid-execution.js', import.meta.url), 'utf8'),
   readFile(new URL('../mission-control-entry-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../migrations/0040_hybrid_execution.sql', import.meta.url), 'utf8'),
   readFile(new URL('../migrations/0058_execution_fabric_settings.sql', import.meta.url), 'utf8'),
   readFile(new URL('../hybrid-execution-admin.js', import.meta.url), 'utf8'),
   readFile(new URL('../scripts/admin-thin-postbuild.mjs', import.meta.url), 'utf8'),
+  readFile(new URL('../.github/workflows/deploy-control-api.yml', import.meta.url), 'utf8'),
 ]);
 
 test('hybrid queue is cloud-owned and new nodes default to auto execution off', () => {
@@ -92,4 +93,53 @@ test('migration creates durable node, job and event ledgers with queue indexes',
   assert.match(migration, /idx_hybrid_jobs_queue/);
   assert.match(migration, /idx_hybrid_jobs_device/);
   assert.match(migration, /idx_hybrid_events_job/);
+});
+
+test('automatic browser jobs are hard-routed to background-only execution and never open user tabs', () => {
+  assert.match(hybrid, /'computer\.browser\.execute': \{ capability:'backgroundBrowser', risk:'maintain', confirm:true, payload:'background-browser-task', executionMode:'background-only' \}/);
+  assert.match(hybrid, /policy\.payload === 'background-browser-task'/);
+  assert.match(hybrid, /executionMode:'background-only'/);
+  assert.match(hybrid, /createUserBrowserTab:false/);
+  assert.match(hybrid, /closeOwnedSurfaceOnComplete:true/);
+  assert.match(hybrid, /closeOwnedSurfaceOnAuthRequired:true/);
+  assert.match(hybrid, /preserveUserOwnedSurfaces:true/);
+  assert.match(hybrid, /claimedPayload=sanitizePayload\(job\.task_type/);
+  assert.match(hybrid, /stored_payload_invalid/);
+});
+
+test('background authentication requirements terminate without retry or interactive login', () => {
+  assert.match(hybrid, /SET status='completed', result_json=\?, last_error='AUTH_REQUIRED'/);
+  assert.match(hybrid, /status:row\.last_error === 'AUTH_REQUIRED' \? 'auth_required' : row\.status/);
+  assert.match(hybrid, /last_error='AUTH_REQUIRED'/);
+  assert.match(hybrid, /retrying:false/);
+  assert.match(hybrid, /interactiveLoginOpened:false/);
+  assert.match(hybrid, /userBrowserTabCreated:false/);
+  assert.match(hybrid, /authRequiredJobs:jobs\.filter\(job => job\.status === 'auth_required'\)\.length/);
+});
+
+test('hybrid policy publishes the background-only browser invariant', () => {
+  assert.match(hybrid, /automaticBrowserExecution:'background-only'/);
+  assert.match(hybrid, /userBrowserTabCreation:false/);
+  assert.match(hybrid, /authRequiredDisposition:'record-and-close'/);
+  assert.match(hybrid, /preserveUserOwnedSurfaces:true/);
+  assert.match(admin, /auth_required:'인증 필요'/);
+  assert.match(admin, /<option value="auth_required">인증 필요<\/option>/);
+  assert.match(admin, /id="hybridAuthRequiredJobs"/);
+});
+
+
+test('auth-required projection remains compatible with the existing durable D1 status constraint', () => {
+  assert.match(migration, /CHECK \(status IN \('pending','assigned','leased','completed','failed','cancelled'\)\)/);
+  assert.doesNotMatch(migration, /auth_required/);
+  assert.match(hybrid, /last_error='AUTH_REQUIRED'/);
+  assert.match(hybrid, /status:row\.last_error === 'AUTH_REQUIRED' \? 'auth_required' : row\.status/);
+});
+
+
+test('hybrid runtime changes trigger the guarded Control API release path', () => {
+  const triggerCount = controlDeploy.split("- 'hybrid-execution.js'").length - 1;
+  assert.equal(triggerCount, 2, 'hybrid-execution.js must trigger both pull-request staging and main production release');
+  assert.match(controlDeploy, /push:[\s\S]*branches: \[main\][\s\S]*hybrid-execution\.js/);
+  assert.match(controlDeploy, /pull_request:[\s\S]*hybrid-execution\.js/);
+  assert.doesNotMatch(controlDeploy, /pull_request_target:/);
 });

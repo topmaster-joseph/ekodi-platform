@@ -21,6 +21,7 @@ const TASK_POLICIES = Object.freeze({
   'computer.system.read': { capability:'computerRead', risk:'observe' },
   'computer.process.list': { capability:'processRead', risk:'observe' },
   'computer.agent.status': { capability:'agentStatus', risk:'observe' },
+  'computer.browser.execute': { capability:'backgroundBrowser', risk:'maintain', confirm:true, payload:'background-browser-task', executionMode:'background-only' },
   'network.diagnose': { capability:'networkDiagnostics', risk:'observe' },
   'printers.diagnose': { capability:'printerDiagnostics', risk:'observe' },
   'startup.scan': { capability:'startupManagement', risk:'observe' },
@@ -82,6 +83,24 @@ function sanitizePayload(type, rawPayload) {
     const itemId = safeText(rawPayload?.itemId, 80).toLowerCase();
     if (!/^[a-f0-9]{64}$/.test(itemId)) throw new Error('PAYLOAD_INVALID');
     return { itemId };
+  }
+  if (policy.payload === 'background-browser-task') {
+    const pathValue=safeText(rawPayload?.path || '/',600);
+    const deviceProfile=safeText(rawPayload?.deviceProfile || 'desktop',40);
+    if(!pathValue.startsWith('/')||pathValue.startsWith('//')||/[\u0000-\u001f]/.test(pathValue)) throw new Error('PAYLOAD_INVALID');
+    if(!['compact-mobile','mobile-portrait','mobile-landscape','tablet','desktop'].includes(deviceProfile)) throw new Error('PAYLOAD_INVALID');
+    let target;
+    try { target=new URL(pathValue,'https://ekodi.kr/'); } catch { throw new Error('PAYLOAD_INVALID'); }
+    if(target.protocol!=='https:'||target.hostname!=='ekodi.kr'||target.username||target.password||target.port) throw new Error('PAYLOAD_INVALID');
+    return {
+      path:target.pathname+target.search+target.hash,
+      deviceProfile,
+      executionMode:'background-only',
+      createUserBrowserTab:false,
+      closeOwnedSurfaceOnComplete:true,
+      closeOwnedSurfaceOnAuthRequired:true,
+      preserveUserOwnedSurfaces:true,
+    };
   }
   return {};
 }
@@ -367,10 +386,19 @@ async function claimAssigned(env, deviceId) {
     .bind(leaseExpiresAt, now, job.id, deviceId).run();
   if (!claim.meta?.changes) return null;
   await event(env, job.id, deviceId, 'leased', { leaseExpiresAt, attempt:Number(job.attempt_count) + 1 });
+  let claimedPayload;
+  try { claimedPayload=sanitizePayload(job.task_type, parseJson(job.payload_json, {})); }
+  catch {
+    await env.DB.prepare(`UPDATE hybrid_execution_jobs
+      SET status='failed', last_error='stored_payload_invalid', completed_at=?, updated_at=?
+      WHERE id=? AND assigned_device_id=? AND status='leased'`).bind(now, now, job.id, deviceId).run();
+    await event(env, job.id, deviceId, 'failed', { reason:'stored_payload_invalid', terminal:true });
+    return null;
+  }
   return {
     id:job.id,
     type:job.task_type,
-    payload:parseJson(job.payload_json, {}),
+    payload:claimedPayload,
     issuedAt:job.created_at,
     claimedAt:now,
   };
@@ -406,6 +434,22 @@ export async function handleHybridAgentResult(request, env, commandId) {
     ? parseJson(safeJson(body.result, 24000), {})
     : { message:safeText(body.message, 300) };
   const now = new Date().toISOString();
+
+  if (job.task_type === 'computer.browser.execute' && result.browserWorker?.authRequired === true) {
+    const update = await env.DB.prepare(`UPDATE hybrid_execution_jobs
+      SET status='completed', result_json=?, last_error='AUTH_REQUIRED', lease_expires_at=NULL,
+          updated_at=?, completed_at=?
+      WHERE id=? AND assigned_device_id=? AND status='leased'`)
+      .bind(safeJson(result, 24000), now, now, commandId, device.id).run();
+    if (!update.meta?.changes) return json({ error:'작업 상태가 이미 변경되었습니다.' }, 409);
+    await event(env, commandId, device.id, 'auth_required', {
+      code:'AUTH_REQUIRED',
+      retrying:false,
+      interactiveLoginOpened:false,
+      userBrowserTabCreated:false,
+    });
+    return json({ ok:true, commandId, status:'auth_required', code:'AUTH_REQUIRED', retrying:false, completedAt:now }, 200);
+  }
 
   if (success) {
     const update = await env.DB.prepare(`UPDATE hybrid_execution_jobs
@@ -482,7 +526,7 @@ async function listDashboard(env) {
   const jobs = (jobRows.results || []).map(row => ({
     id:row.id,
     taskType:row.task_type,
-    status:row.status,
+    status:row.last_error === 'AUTH_REQUIRED' ? 'auth_required' : row.status,
     priority:Number(row.priority) || 0,
     deviceGroup:row.device_group,
     requiredCapabilities:parseJson(row.required_capabilities_json, []),
@@ -508,6 +552,7 @@ async function listDashboard(env) {
       autoNodes:nodes.filter(node => node.online && node.enabled && node.autoExecute).length,
       pendingJobs:jobs.filter(job => job.status === 'pending').length,
       activeJobs:jobs.filter(job => ['assigned','leased'].includes(job.status)).length,
+      authRequiredJobs:jobs.filter(job => job.status === 'auth_required').length,
       failedJobs:jobs.filter(job => job.status === 'failed').length,
     },
     generatedAt:new Date().toISOString(),
@@ -669,6 +714,10 @@ export const HYBRID_EXECUTION_POLICY = Object.freeze({
   globalExecutionGate:true,
   pauseKeepsLeasedJobsRunning:true,
   arbitraryShell:false,
+  automaticBrowserExecution:'background-only',
+  userBrowserTabCreation:false,
+  authRequiredDisposition:'record-and-close',
+  preserveUserOwnedSurfaces:true,
   scheduler:localExecutionPolicySnapshot(),
   taskTypes:Object.keys(TASK_POLICIES),
 });

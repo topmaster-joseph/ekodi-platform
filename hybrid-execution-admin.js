@@ -45,7 +45,7 @@
   function statusLabel(status) {
     return ({
       pending:'대기', assigned:'배정', leased:'실행 중', completed:'완료',
-      failed:'실패', cancelled:'취소',
+      auth_required:'인증 필요', failed:'실패', cancelled:'취소',
     })[status] || status;
   }
 
@@ -60,7 +60,7 @@
   function eventLabel(type) {
     return ({
       created:'작업 생성', assigned:'기기 배정', leased:'실행 시작', completed:'실행 완료',
-      requeued:'재배정 대기', failed:'실행 실패', cancelled:'관리자 취소',
+      auth_required:'인증 필요 · 자동종료', requeued:'재배정 대기', failed:'실행 실패', cancelled:'관리자 취소',
     })[type] || type;
   }
 
@@ -115,7 +115,7 @@
       .hybrid-incident[data-severity="critical"]{border-color:rgba(180,35,35,.4)}
       .hybrid-incident small{display:block;opacity:.72;margin-top:3px}
       .hybrid-monitor-note{margin-top:8px;font-size:.8rem;opacity:.7}
-      .hybrid-metrics{display:grid;grid-template-columns:repeat(5,minmax(100px,1fr));gap:10px;margin:14px 0}
+      .hybrid-metrics{display:grid;grid-template-columns:repeat(6,minmax(100px,1fr));gap:10px;margin:14px 0}
       .hybrid-metrics article{padding:12px;border:1px solid var(--line,#e0e4eb);border-radius:14px}
       .hybrid-metrics small,.hybrid-node small,.hybrid-job small,.hybrid-event small{display:block;opacity:.72}.hybrid-metrics strong{font-size:1.45rem}
       .hybrid-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
@@ -166,11 +166,12 @@
         <article><small>자동실행 가능</small><strong id="hybridAutoNodes">0</strong></article>
         <article><small>대기 작업</small><strong id="hybridPendingJobs">0</strong></article>
         <article><small>실행 중</small><strong id="hybridActiveJobs">0</strong></article>
+        <article><small>인증 필요</small><strong id="hybridAuthRequiredJobs">0</strong></article>
         <article><small>실패 기록</small><strong id="hybridFailedJobs">0</strong></article>
       </div>
       <div class="hybrid-grid">
         <section class="hybrid-box"><div class="hybrid-box-head"><strong>실행 노드</strong><small>OFF → 관리자 승인 후 ON</small></div><div class="hybrid-list" id="hybridNodeList"></div></section>
-        <section class="hybrid-box"><div class="hybrid-box-head"><strong>실행 기록</strong><div class="hybrid-filter"><select id="hybridStatusFilter" aria-label="실행 상태 필터"><option value="">전체 상태</option><option value="pending">대기</option><option value="assigned">배정</option><option value="leased">실행 중</option><option value="completed">완료</option><option value="failed">실패</option><option value="cancelled">취소</option></select><input id="hybridJobSearch" type="search" placeholder="작업·기기·ID 검색" aria-label="실행 기록 검색"></div></div><div class="hybrid-list" id="hybridJobList"></div></section>
+        <section class="hybrid-box"><div class="hybrid-box-head"><strong>실행 기록</strong><div class="hybrid-filter"><select id="hybridStatusFilter" aria-label="실행 상태 필터"><option value="">전체 상태</option><option value="pending">대기</option><option value="assigned">배정</option><option value="leased">실행 중</option><option value="completed">완료</option><option value="auth_required">인증 필요</option><option value="failed">실패</option><option value="cancelled">취소</option></select><input id="hybridJobSearch" type="search" placeholder="작업·기기·ID 검색" aria-label="실행 기록 검색"></div></div><div class="hybrid-list" id="hybridJobList"></div></section>
         <section class="hybrid-box hybrid-ledger"><div class="hybrid-box-head"><strong>감사 이벤트</strong><small>생성 → 배정 → 실행 → 완료/실패 흐름</small></div><div class="hybrid-list" id="hybridEventList"></div></section>
       </div>
       <p class="hybrid-privacy">보안 원칙: 실행 기록에는 작업 상태와 기기·프로세스 수준의 진단 메타데이터만 사용하며, 입력한 문자·비밀번호·메시지 내용은 수집하지 않습니다.</p>`;
@@ -366,6 +367,7 @@
       panel.querySelector('#hybridAutoNodes').textContent = String(summary.autoNodes ?? 0);
       panel.querySelector('#hybridPendingJobs').textContent = String(summary.pendingJobs ?? 0);
       panel.querySelector('#hybridActiveJobs').textContent = String(summary.activeJobs ?? 0);
+      panel.querySelector('#hybridAuthRequiredJobs').textContent = String(summary.authRequiredJobs ?? 0);
       panel.querySelector('#hybridFailedJobs').textContent = String(summary.failedJobs ?? 0);
       panel.querySelector('#hybridGeneratedAt').textContent = `최근 갱신 ${timeLabel(data.generatedAt)}`;
       const nodes = panel.querySelector('#hybridNodeList');
