@@ -104,7 +104,7 @@ jobs:
           node --test test/workspace-routing-10g.test.mjs test/store-operating-space.test.mjs test/store-user-site-admin.test.mjs test/storefront-public.test.mjs test/pizzamaru-full-menu-social.test.mjs test/jadam-storefront-brand.test.mjs test/ekodimission-site.test.mjs test/organization-subsite.test.mjs test/mnubiz-workspace.test.mjs
           node scripts/validate-ekodimission-shell-contract.mjs
           node --test test/ekodimission-shell-contract.test.mjs
-          grep -Fq "pattern = \"space.ekodi.kr\"" wrangler.space.toml
+          ! grep -Fq 'custom_domain = true' wrangler.space.toml
           grep -Fq 'DATA_ENABLED = "false"' wrangler.space.staging.toml
           grep -Fq 'DATA_MODE = "isolated-staging"' wrangler.space.staging.toml
           grep -Fq 'path -> slug(locator) -> workspace_id -> relationship/policy -> role -> capability' space-worker.js
@@ -113,7 +113,7 @@ jobs:
           grep -Fq 'store_members+RLS' supabase/functions/workspace-api/index.ts
           grep -Fq 'current_store_operating_spaces' supabase/functions/workspace-api/index.ts
           grep -Fq '/spaces/store-dashboard' supabase/functions/workspace-api/index.ts
-          grep -Fq 'space:["https://space.ekodi.kr"]' supabase/functions/workspace-api/index.ts
+          grep -Fq 'space:["https://ekodi.kr"]' supabase/functions/workspace-api/index.ts
           grep -Fq '/spaces/resolve' space/app.js
           grep -Fq "routeModel:['/{slug}','/{slug}/{service}']" space-worker.js
           grep -Fq 'memberNamespaceRequired:false' space-worker.js
@@ -203,10 +203,10 @@ jobs:
             if ! grep -Eq 'has no deployments|does not exist|code: 10007' /tmp/space-prod-deployments.json; then cat /tmp/space-prod-deployments.json; exit 1; fi
             npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.space.toml
             for attempt in $(seq 1 18); do
-              root=$(curl -sS -o /tmp/space-live.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/' || true)
-              health=$(curl -sS -o /tmp/space-live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/health' || true)
-              route=$(curl -sS -D /tmp/space-live-route.headers -o /tmp/space-live-route.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/deployment-probe' || true)
-              root_location=$(curl -sSI --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/' | awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/,""); gsub(/\r/,""); print}' | tail -1)
+              root=$(curl -sS -o /tmp/space-live.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/space/' || true)
+              health=$(curl -sS -o /tmp/space-live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/space/health' || true)
+              route=$(curl -sS -D /tmp/space-live-route.headers -o /tmp/space-live-route.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/space/deployment-probe' || true)
+              root_location=$(curl -sSI --connect-timeout 5 --max-time 15 'https://ekodi.kr/space/' | awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/,""); gsub(/\r/,""); print}' | tail -1)
               if [[ "$root" == '308' && "$root_location" == 'https://ekodi.kr/my/' && "$health" == '200' && "$route" == '200' ]] && grep -Fq '"service":"ekodi-space"' /tmp/space-live-health.json && grep -Eiq '^x-ekodi-route:[[:space:]]*space-workspace' /tmp/space-live-route.headers; then
                 echo 'Operating Space production bootstrap verified.'
                 exit 0
