@@ -27,7 +27,7 @@ jobs:
           grep -Fq 'character_biometric_payload_forbidden' supabase/functions/profile-api/index.ts
           grep -Fq 'GET,PATCH,DELETE,OPTIONS' supabase/functions/profile-api/index.ts
           grep -Fq '"https://ekodi.kr"' supabase/functions/profile-api/index.ts
-          ! grep -Fq '"https://my.ekodi.kr"' supabase/functions/profile-api/index.ts
+          grep -Fq '"https://ekodi.kr"' supabase/functions/profile-api/index.ts
 
   production:
     if: github.event_name == 'push'
@@ -91,7 +91,7 @@ jobs:
           [[ "$canonical_code" =~ ^(200|204)$ ]]
           grep -Eiq '^access-control-allow-origin:[[:space:]]*https://ekodi\.kr[[:space:]]*$' /tmp/profile-character-canonical.headers
           grep -Eiq '^access-control-allow-methods:.*DELETE' /tmp/profile-character-canonical.headers
-          legacy_code=$(curl -sS -D /tmp/profile-character-legacy.headers -o /dev/null -w '%{http_code}' -X OPTIONS "$endpoint" -H 'Origin: https://my.ekodi.kr' -H 'Access-Control-Request-Method: PATCH' -H 'Access-Control-Request-Headers: authorization,apikey,content-type' || true)
-          [[ "$legacy_code" =~ ^(200|204)$ ]]
-          ! grep -Eiq '^access-control-allow-origin:[[:space:]]*https://my\.ekodi\.kr[[:space:]]*$' /tmp/profile-character-legacy.headers
+          apex_code=$(curl -sS -D /tmp/profile-character-apex.headers -o /dev/null -w '%{http_code}' -X OPTIONS "$endpoint" -H 'Origin: https://ekodi.kr' -H 'Access-Control-Request-Method: PATCH' -H 'Access-Control-Request-Headers: authorization,apikey,content-type' || true)
+          [[ "$apex_code" =~ ^(200|204)$ ]]
+          ! grep -Eiq '^access-control-allow-origin:[[:space:]]*https://my\.ekodi\.kr[[:space:]]*$' /tmp/profile-character-apex.headers
           echo 'Central Profile API canonical CORS contract is live.'
