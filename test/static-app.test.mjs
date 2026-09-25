@@ -7,7 +7,7 @@ const [portal, adminShell, handoff, authShell, demandLoader, financeJs, hub, reg
   read('../index.html'), read('../admin-shell.html'), read('../admin-central-handoff.js'), read('../admin-authenticated-shell.js'), read('../admin-demand-loader.js'),
   read('../finance-monitor.js'), read('../hub.html'), read('../service-registry.json'), read('../config/ecosystem-services.json'), read('../_headers'),
   read('../scripts/build.mjs'), read('../wrangler.site.toml'), read('../site-worker.js'), read('../wrangler.finance.toml'), read('../platform-router-entry-worker.js'),
-  read('../service-proxy.js'), read('../wrangler.service-proxy.toml'), read('../biz-legacy-redirect.js'), read('../wrangler.biz-legacy.toml')
+  read('../biz-legacy-redirect.js'), read('../wrangler.biz-legacy.toml')
 ]);
 
 function uniqueIds(html, label) {
