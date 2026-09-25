@@ -6,15 +6,16 @@ const url=Deno.env.get("SUPABASE_URL")!;
 const anon=Deno.env.get("SUPABASE_ANON_KEY")!;
 const service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin=createClient(url,service,{auth:{persistSession:false}});
-const AUTHOR_ORIGIN="https://ekodi.kr/author";
-const AUTH_ORIGIN="https://ekodi.kr/auth";
+const PLATFORM_ORIGIN="https://ekodi.kr";
+const AUTHOR_PREFIX="/author";
+const AUTH_ORIGIN="https://ekodi.kr";
 const MY_EKODI_URL="https://ekodi.kr/my/";
 
-function cors(req:Request){const origin=req.headers.get("Origin")||"";const allowed=origin===AUTHOR_ORIGIN||origin===AUTH_ORIGIN?origin:AUTH_ORIGIN;return {"Access-Control-Allow-Origin":allowed,"Vary":"Origin","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"GET,POST,OPTIONS"};}
+function cors(req:Request){const origin=req.headers.get("Origin")||"";const allowed=origin===PLATFORM_ORIGIN?origin:PLATFORM_ORIGIN;return {"Access-Control-Allow-Origin":allowed,"Vary":"Origin","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"GET,POST,OPTIONS"};}
 function json(req:Request,body:unknown,status=200){return new Response(JSON.stringify(body),{status,headers:{...cors(req),"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff"}})}
 async function authenticated(req:Request){const authorization=req.headers.get("Authorization");if(!authorization)return null;const db=createClient(url,anon,{global:{headers:{Authorization:authorization}},auth:{persistSession:false}});const {data,error}=await db.auth.getUser();return error||!data.user?null:{db,user:data.user};}
 async function personKey(userId:string){const {data}=await admin.from("login_identities").select("person_id").eq("auth_user_id",userId).eq("status","active").maybeSingle();return `personal:${data?.person_id||userId}`;}
-function validReturn(raw:unknown){try{const target=new URL(String(raw||AUTHOR_ORIGIN+"/"));return target.protocol==="https:"&&target.origin===AUTHOR_ORIGIN?target.href:null}catch{return null}}
+function validReturn(raw:unknown){try{const target=new URL(String(raw||"https://ekodi.kr/author/"));return target.protocol==="https:"&&target.hostname==="ekodi.kr"&&(target.pathname===AUTHOR_PREFIX||target.pathname.startsWith(AUTHOR_PREFIX+"/"))?target.href:null}catch{return null}}
 async function membership(userId:string){
   await admin.rpc("ensure_author_free_membership",{p_user_id:userId});
   const {data:row,error}=await admin.from("author_memberships").select("plan_code,status,billable_ai_enabled,paid_until,billing_provider,updated_at").eq("user_id",userId).maybeSingle();if(error)throw error;
