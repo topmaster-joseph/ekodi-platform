@@ -10,7 +10,7 @@ import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
 import { investUserPage, investUiScript } from './invest-user-page.js';
 import { investSubjectUiScript } from './invest-subject-ui.js';
 import { routeInvestSite } from './invest-site-system.js';
-import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
+import { mailUserPage, handleMailApi } from './mail-user-page.js';
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
 import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
@@ -267,6 +267,7 @@ async function routePlatform(request,env,ctx){
     const url=new URL(request.url);
     const host=resolvedHost(request,env);
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
+    if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/mail/')){const mailApi=await handleMailApi(request,env);if(mailApi)return mailApi;}
     if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/seonam-medi/')){const monitor=await handleSeonamMediMonitorApi(request,env);if(monitor)return monitor;const civic=await handleSeonamMediCivicApi(request,env);if(civic)return civic;}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isLegacySeonamMedPath(url.pathname))return redirectLegacySeonamMed(request);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isSeonamMediPath(url.pathname))return routeSeonamMediStatic(request,env);
@@ -366,30 +367,6 @@ async function routePlatform(request,env,ctx){
       if(['GET','HEAD'].includes(request.method)&&url.pathname==='/auth/start'){
         const auth=workspaceAuthRedirect(request);if(auth)return auth;
       }
-    }
-
-    if(host===MAIL_HOST){
-      const contactResponse=await handleMailContactApi(request,env);
-      if(contactResponse)return contactResponse;
-      const apiResponse=await handleMailApi(request,env);
-      if(apiResponse)return apiResponse;
-      if(request.method==='GET'&&url.pathname==='/contact'){const target=new URL('https://ekodi.kr/mail/contact');target.search=url.search;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-legacy-surface':'ekodi.kr/mail'}});}
-      if(request.method==='GET'&&url.pathname==='/admin')return injectEkodiShell(mailAdminPage(),'mail','admin');
-      if(request.method==='GET'&&(url.pathname==='/'||url.pathname===''))return injectEkodiShell(mailUserPage(),'mail');
-    }
-
-    if(host===MESSENGER_HOST&&request.method==='GET'){
-      if(url.pathname==='/'||url.pathname===''){
-        const response=await withReleaseMarker(messengerUserPage());
-        return injectEkodiShell(response,'messenger');
-      }
-      if(url.pathname==='/messenger-ui.js')return messengerUiScript();
-    }
-
-    if(host===INVEST_HOST&&request.method==='GET'){
-      if(url.pathname==='/'||url.pathname==='')return injectEkodiShell(await withInvestSubjectScript(investUserPage()),'invest');
-      if(url.pathname==='/invest-ui.js')return investUiScript();
-      if(url.pathname==='/invest-subject-ui.js')return investSubjectUiScript();
     }
     const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&legacyOperatingSpacePath(url.pathname))return ensureLegacyOperatingSpaceMarker(injectEkodiTenantReadability(legacyResponse),request.method==='GET');
