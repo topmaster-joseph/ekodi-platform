@@ -110,12 +110,10 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(header,/pruneIndividualSiteGlobalLinks/);
   assert.match(header,/isIndividualSite\(\)\?serviceHomeUrl\(\)\.toString\(\):String\(cfg\.homeUrl\)/);
   assert.match(header,/dataset\.ekodiHeaderScope='service-local'/);
-  assert.match(header,/data-ekodi-operating-space-label/);
-  assert.match(header,/ensureOperatingSpaceLabel/);
-  assert.match(header,/badge\.textContent='운영공간'/);
-  assert.match(header,/ensureOperatingSpaceLabel\(header\)/);
-  assert.match(header,/ensureOperatingSpaceLabel\(header,siteNode\|\|operatingSpaceTarget\(header\)\)/);
-  assert.match(header,/ekodi-user-ui-header-scope/);
+  assert.doesNotMatch(header,/data-ekodi-operating-space-label/);
+  assert.doesNotMatch(header,/ensureOperatingSpaceLabel/);
+  assert.doesNotMatch(header,/운영공간/);
+  assert.doesNotMatch(header,/ekodi-user-ui-header-scope/);
 
   assert.match(header,/bindHomeAnchor\(header\)/);
   assert.match(header,/serviceHomeAnchor/);
