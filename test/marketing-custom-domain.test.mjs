@@ -11,7 +11,7 @@ test('customer-owned hostname rejects apex-like, wildcard, URL and EKODI/provide
   assert.equal(normalizeCustomerHostname('example.com'), '');
   assert.equal(normalizeCustomerHostname('*.example.com'), '');
   assert.equal(normalizeCustomerHostname('https://ai.example.com/path'), '');
-  assert.equal(normalizeCustomerHostname('shop.ai.ekodi.kr'), '');
+  assert.equal(normalizeCustomerHostname('ekodi.kr/shop/ai'), '');
   assert.equal(normalizeCustomerHostname('foo.pages.dev'), '');
   assert.equal(normalizeCustomerHostname('foo.workers.dev'), '');
 });

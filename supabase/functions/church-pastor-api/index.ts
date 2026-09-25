@@ -1,7 +1,7 @@
 const CENTRAL_SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const CENTRAL_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const CHURCH_SLUG='ekodi-church';
-const ALLOWED_ORIGINS=new Set(['https://ekodi.kr','https://www.ekodi.kr']);
+const ALLOWED_ORIGINS=new Set(['https://ekodi.kr','https://ekodi.kr']);
 
 const READ_ROLES={
   church_staff:['senior_pastor','pastor','care_staff','staff','viewer'],

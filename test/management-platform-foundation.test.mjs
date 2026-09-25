@@ -18,7 +18,7 @@ test('management platform preserves EKODI guest and Google-free-entry policy',()
   assert.equal(MANAGEMENT_ACCESS_POLICY.guestMode,'guide-only');
   assert.equal(MANAGEMENT_ACCESS_POLICY.identityProvider,'google');
   assert.equal(MANAGEMENT_ACCESS_POLICY.minimumTier,'free');
-  assert.equal(policy.platform.authHub,'https://auth.ekodi.kr/');
+  assert.equal(policy.platform.authHub,'https://ekodi.kr/auth/');
   assert.equal(policy.platform.shellRequired,true);
 });
 

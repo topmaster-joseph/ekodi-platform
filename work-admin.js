@@ -1,8 +1,8 @@
 (() => {
   // Build contract marker: data-section = 'work' is the dedicated left sidebar entry.
   const TOKEN_KEY = 'ekodi-auth-token';
-  const WORK_URL = 'https://work.ekodi.kr';
-  const AUTH_URL = 'https://auth.ekodi.kr/?site=work';
+  const WORK_URL = 'https://ekodi.kr/work';
+  const AUTH_URL = 'https://ekodi.kr/auth/?site=work';
   const ADMIN_API = 'https://renzehysxirjilvdxacv.supabase.co/functions/v1/work-admin-api';
 
   const text = value => String(value ?? '');
@@ -213,7 +213,7 @@
     });
     rail.append(railNav);
     const railFooter = el('div', '', 'work-admin-rail-footer');
-    railFooter.append(el('small', 'PUBLIC'), actionLink('work.ekodi.kr ↗', WORK_URL, 'work-admin-public-link'));
+    railFooter.append(el('small', 'PUBLIC'), actionLink('ekodi.kr/work ↗', WORK_URL, 'work-admin-public-link'));
     rail.append(railFooter);
 
     let activeView = 'overview';
@@ -378,7 +378,7 @@
         const health = data.serviceHealth || {};
         const cards = [
           ['ADMIN API', data.adminApi === 'authenticated' ? 'Authenticated' : 'Check', 'EKODI 관리자 세션 재검증'],
-          ['WORK SERVICE', health.ok === false ? 'Check' : (health.service || health.status || 'Online'), health.environment || health.dataMode || 'work.ekodi.kr/health'],
+          ['WORK SERVICE', health.ok === false ? 'Check' : (health.service || health.status || 'Online'), health.environment || health.dataMode || 'ekodi.kr/work/health'],
           ['DATABASE', (data.database || []).every(item => item.reachable) ? 'Reachable' : 'Check', `${(data.database || []).filter(item => item.reachable).length}/${(data.database || []).length} Work tables`],
           ['RLS CONTRACT', data.policyContract === 'repository-validated' ? 'CI Verified' : 'Check', '스키마·권한 계약 검증'],
         ];
@@ -439,7 +439,7 @@
     layout.append(main, rail);
     section.append(layout);
     content.append(section);
-    const campusWorkButton = document.querySelector('[data-campus-service="work.ekodi.kr"]');
+    const campusWorkButton = document.querySelector('[data-campus-service="ekodi.kr/work"]');
     if (campusWorkButton) campusWorkButton.dataset.campusSection = 'work';
     window.dispatchEvent(new CustomEvent('ekodi-feature-installed'));
     if (location.pathname === '/work' || location.pathname === '/work/' || location.hash === '#work') activate();

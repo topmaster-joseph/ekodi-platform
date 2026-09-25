@@ -144,7 +144,7 @@ function initialLocale(){return normalizeLocale(cookieLocale()||localStorage.get
 let locale=initialLocale();
 function text(){return TEXT[locale]||TEXT['ko-KR']}
 function gmailHref(subject){return `https://mail.google.com/mail/?view=cm&fs=1&to=ekodibiz%40gmail.com&su=${encodeURIComponent(subject)}`}
-function commonLogin(slug){return `https://auth.ekodi.kr/?site=biz&return_to=${encodeURIComponent(`https://biz.ekodi.kr/#business/${slug}`)}`}
+function commonLogin(slug){return `https://ekodi.kr/auth/?site=biz&return_to=${encodeURIComponent(`https://ekodi.kr/ekodibiz/#business/${slug}`)}`}
 function partnerHref(slug){
   const type=BUSINESS[slug]?.login;
   if(type==='trade')return 'https://ekodi.kr/ekodibiz/trade';

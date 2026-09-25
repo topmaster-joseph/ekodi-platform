@@ -3,7 +3,7 @@
 if(window.__EKODI_MEDIA_MEETING_ADAPTER_BOOTED)return;
 window.__EKODI_MEDIA_MEETING_ADAPTER_BOOTED=true;
 const VERSION=3;
-const RESOLVER_DEFAULT='https://social.ekodi.kr/api/media/youtube/status';
+const RESOLVER_DEFAULT='https://ekodi.kr/social/api/media/youtube/status';
 const POLL_MS=60_000;
 const JITSI_LANGUAGE=Object.freeze({'ko-KR':'ko',ko:'ko',en:'en','zh-CN':'zhCN',ja:'ja',vi:'vi',ne:'en'});
 const COPY=Object.freeze({

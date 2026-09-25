@@ -3,27 +3,27 @@ import path from 'node:path';
 
 const root=process.cwd();
 const HOST_PATH=new Map(Object.entries({
-  'admin.ekodi.kr':'/admin','my.ekodi.kr':'/my','auth.ekodi.kr':'/auth','api.ekodi.kr':'/api',
-  'status.ekodi.kr':'/status','ai.ekodi.kr':'/ai','dev.ekodi.kr':'/developer','exp.ekodi.kr':'/experience','try.ekodi.kr':'/experience',
-  'journal.ekodi.kr':'/journal','marketing.ekodi.kr':'/marketing','management.ekodi.kr':'/management','author.ekodi.kr':'/author',
-  'books.ekodi.kr':'/books','publishing.ekodi.kr':'/publishing','community.ekodi.kr':'/community','work.ekodi.kr':'/work',
-  'edu.ekodi.kr':'/education','energy.ekodi.kr':'/energy','life.ekodi.kr':'/life','money.ekodi.kr':'/money','social.ekodi.kr':'/social',
-  'pay.ekodi.kr':'/pay','trade.ekodi.kr':'/ekodibiz/trade','mail.ekodi.kr':'/mail','live.ekodi.kr':'/live','cloud.ekodi.kr':'/cloud',
-  'messenger.ekodi.kr':'/messenger','invest.ekodi.kr':'/invest','tax.ekodi.kr':'/tax','cafe.ekodi.kr':'/cafe','shop.ekodi.kr':'/shop',
-  'media.ekodi.kr':'/media','business.ekodi.kr':'/business','finance-api.ekodi.kr':'/finance-api','drive.ekodi.kr':'/storage',
-  'workspace-api.ekodi.kr':'/workspace-api','marketing-api.ekodi.kr':'/marketing-api',
-  'marketing-connect-api.ekodi.kr':'/marketing-connect-api','marketing-publish-api.ekodi.kr':'/marketing-publish-api',
-  'personal-finance-api.ekodi.kr':'/personal-finance-api','biz.ekodi.kr':'/ekodibiz','church.ekodi.kr':'/ekodichurch',
-  'lab.ekodi.kr':'/ekodilab','mall.ekodi.kr':'/ekodimall','www.ekodi.kr':'/',
-  'admin.biz.ekodi.kr':'/ekodibiz/admin','admin.church.ekodi.kr':'/ekodichurch/admin','admin.lab.ekodi.kr':'/ekodilab/admin',
-  'admin.trade.ekodi.kr':'/ekodibiz/trade/admin','trade.biz.ekodi.kr':'/ekodibiz/trade','mall.biz.ekodi.kr':'/ekodimall',
-  'pay.biz.ekodi.kr':'/ekodibiz/pay','mail.biz.ekodi.kr':'/ekodibiz/mail','mail.church.ekodi.kr':'/ekodichurch/mail',
-  'mail.lab.ekodi.kr':'/ekodilab/mail','mail.books.ekodi.kr':'/books/mail','mail.trade.ekodi.kr':'/ekodibiz/trade/mail',
-  'live.biz.ekodi.kr':'/ekodibiz/live','live.church.ekodi.kr':'/ekodichurch/live','live.lab.ekodi.kr':'/ekodilab/live',
-  'cgma.ekodi.kr':'/cgma','jadam.ekodi.kr':'/jadam','pizzamaru.ekodi.kr':'/pizzamaru','yogurt.ekodi.kr':'/yogurt',
-  'cgma.ai.ekodi.kr':'/cgma/marketing','jadam.ai.ekodi.kr':'/jadam/marketing',
-  'pizzamaru.ai.ekodi.kr':'/pizzamaru/marketing','yogurt.ai.ekodi.kr':'/yogurt/marketing',
-  'space.ekodi.kr':'/','user.ekodi.kr':'/'
+  'ekodi.kr/admin':'/admin','ekodi.kr/my':'/my','ekodi.kr/auth':'/auth','ekodi.kr/api':'/api',
+  'ekodi.kr/status':'/status','ekodi.kr/ai':'/ai','ekodi.kr/developer':'/developer','ekodi.kr/experience':'/experience','ekodi.kr/experience':'/experience',
+  'ekodi.kr/journal':'/journal','ekodi.kr/marketing':'/marketing','ekodi.kr/management':'/management','ekodi.kr/author':'/author',
+  'ekodi.kr/books':'/books','ekodi.kr/publishing':'/publishing','ekodi.kr/community':'/community','ekodi.kr/work':'/work',
+  'ekodi.kr/education':'/education','ekodi.kr/energy':'/energy','ekodi.kr/life':'/life','ekodi.kr/money':'/money','ekodi.kr/social':'/social',
+  'ekodi.kr/pay':'/pay','ekodi.kr/ekodibiz/trade':'/ekodibiz/trade','ekodi.kr/mail':'/mail','ekodi.kr/live':'/live','ekodi.kr/cloud':'/cloud',
+  'ekodi.kr/messenger':'/messenger','ekodi.kr/invest':'/invest','ekodi.kr/tax':'/tax','ekodi.kr/cafe':'/cafe','ekodi.kr/shop':'/shop',
+  'ekodi.kr/media':'/media','ekodi.kr/business':'/business','ekodi.kr/finance-api':'/finance-api','ekodi.kr/storage':'/storage',
+  'ekodi.kr/workspace-api':'/workspace-api','ekodi.kr/marketing-api':'/marketing-api',
+  'ekodi.kr/marketing-connect-api':'/marketing-connect-api','ekodi.kr/marketing-publish-api':'/marketing-publish-api',
+  'ekodi.kr/personal-finance-api':'/personal-finance-api','ekodi.kr/ekodibiz':'/ekodibiz','ekodi.kr/ekodichurch':'/ekodichurch',
+  'ekodi.kr/ekodilab':'/ekodilab','ekodi.kr/ekodimall':'/ekodimall','ekodi.kr':'/',
+  'ekodi.kr/ekodibiz/admin':'/ekodibiz/admin','ekodi.kr/ekodichurch/admin':'/ekodichurch/admin','ekodi.kr/ekodilab/admin':'/ekodilab/admin',
+  'ekodi.kr/ekodibiz/trade/admin':'/ekodibiz/trade/admin','ekodi.kr/ekodibiz/trade':'/ekodibiz/trade','ekodi.kr/ekodimall':'/ekodimall',
+  'ekodi.kr/ekodibiz/pay':'/ekodibiz/pay','ekodi.kr/ekodibiz/mail':'/ekodibiz/mail','ekodi.kr/ekodichurch/mail':'/ekodichurch/mail',
+  'ekodi.kr/ekodilab/mail':'/ekodilab/mail','ekodi.kr/books/mail':'/books/mail','ekodi.kr/ekodibiz/trade/mail':'/ekodibiz/trade/mail',
+  'ekodi.kr/ekodibiz/live':'/ekodibiz/live','ekodi.kr/ekodichurch/live':'/ekodichurch/live','ekodi.kr/ekodilab/live':'/ekodilab/live',
+  'ekodi.kr/cgma':'/cgma','ekodi.kr/jadam':'/jadam','ekodi.kr/pizzamaru':'/pizzamaru','ekodi.kr/yogurt':'/yogurt',
+  'ekodi.kr/cgma/marketing':'/cgma/marketing','ekodi.kr/jadam/marketing':'/jadam/marketing',
+  'ekodi.kr/pizzamaru/marketing':'/pizzamaru/marketing','ekodi.kr/yogurt/marketing':'/yogurt/marketing',
+  'ekodi.kr':'/','ekodi.kr':'/'
 }));
 
 function routeBlockCleanup(text){
@@ -41,7 +41,7 @@ function routeBlockCleanup(text){
   return out.join('\n');
 }
 function knownReplace(text){
-  let out=text.replaceAll('*.ekodi.kr','EKODI child-host address');
+  let out=text.replaceAll('EKODI child-host address','EKODI child-host address');
   const sorted=[...HOST_PATH.entries()].sort((a,b)=>b[0].length-a[0].length);
   for(const [host,prefix] of sorted){
     const suffix=prefix==='/'?'':prefix;
@@ -100,7 +100,7 @@ function fixCanonicalRouter(text){
   const ca=text.indexOf("function canonicalAbsoluteUrl(");
   const pr=text.indexOf("function prefixRootLiterals(",ca);
   if(ca>=0&&pr>ca)text=text.slice(0,ca)+"function rewriteAbsoluteEkodiOrigins(text){return String(text||'');}\n"+text.slice(pr);
-  text=text.replace("  upstreamUrl.hostname='admin.ekodi.kr';\n  upstreamUrl.pathname='/';",
+  text=text.replace("  upstreamUrl.hostname='ekodi.kr/admin';\n  upstreamUrl.pathname='/';",
                     "  upstreamUrl.hostname=CANONICAL_HOST;\n  upstreamUrl.pathname='/admin/';");
   text=text.replace(/async function proxyLegacySurface\(request,legacyFetch,prefix,legacyHost,surface\)\{[\s\S]*?\n}\nasync function rewriteHtmlResponse/,
 `async function proxyCanonicalSurface(request,legacyFetch,prefix,surface){
@@ -240,11 +240,11 @@ for(const file of walk(root)){
   if(file==='platform-router-entry-worker.js')text=fixPlatformEntry(text);
   if(file==='canonical-surface-router.js')text=fixCanonicalRouter(text);
   text=knownReplace(text);
-  text=text.replaceAll("validate-admin-subdomain-routes.mjs","validate-admin-apex-routes.mjs");
+  text=text.replaceAll("validate-admin-apex-routes.mjs","validate-admin-apex-routes.mjs");
   if(file.endsWith('/_redirects')||file==='_redirects'){
     text=text.split(/\r?\n/).filter(line=>!/^\/admin\/?\s+https:\/\//i.test(line.trim())).join('\n');
   }
-  text=text.replaceAll("'forbidden_as_canonical'","'forbidden'").replaceAll('"forbidden_as_canonical"','"forbidden"');
+  text=text.replaceAll("'forbidden'","'forbidden'").replaceAll('"forbidden"','"forbidden"');
   text=fixOrigins(text);text=structuredPolicyEdits(file,text);
   if(text!==before)fs.writeFileSync(full,text);
 }
@@ -295,7 +295,7 @@ if(failures.length){
 console.log('EKODI apex-path admin route contract OK: platform and site admins remain path-owned on ekodi.kr');
 `;
 fs.writeFileSync(path.join(root,'scripts','validate-admin-apex-routes.mjs'),apexAdminValidator);
-const retiredValidator=path.join(root,'scripts','validate-admin-subdomain-routes.mjs');
+const retiredValidator=path.join(root,'scripts','validate-admin-apex-routes.mjs');
 if(fs.existsSync(retiredValidator))fs.rmSync(retiredValidator);
 
 
@@ -304,7 +304,7 @@ for(const file of walk(root)){
   if(file==='scripts/migrate-apex-paths-20260924.mjs'||file==='scripts/zero-subdomain-guard.mjs')continue;
   const full=path.join(root,file);let text='';
   try{text=fs.readFileSync(full,'utf8')}catch{continue}
-  const cleaned=text.replaceAll('*.ekodi.kr','EKODI child-host address');
+  const cleaned=text.replaceAll('EKODI child-host address','EKODI child-host address');
   if(cleaned!==text)fs.writeFileSync(full,cleaned);
 }
 

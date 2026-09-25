@@ -2,7 +2,7 @@ import './ai-commons-admin.js';
 (() => {
 'use strict';
 const SECTION='common-services';
-const CONTROL='https://api.ekodi.kr';
+const CONTROL='https://ekodi.kr/api';
 const TOKEN_KEY='ekodi-auth-token';
 const SERVICE_PARAM='service';
 const ENGINE_SECTION_FILTER=Object.freeze({

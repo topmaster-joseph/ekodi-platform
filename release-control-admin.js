@@ -9,11 +9,11 @@
   const RELEASE_UNITS = [
     { id:'shared-site', name:'Shared Site · Admin/Auth', workflow:'deploy-site-core.yml', model:'Staging → traffic gate → Candidate 0% → verify → 100%', risk:'high', domains:['ekodi.kr','ekodi.kr/admin','ekodi.kr/auth'] },
     { id:'control-api', name:'Control API', workflow:'deploy-control-api.yml', model:'Staging D1 → recovery bookmark → Candidate 0%', risk:'critical', domains:['ekodi.kr/api'] },
-    { id:'finance-api', name:'Finance API', workflow:'deploy-finance.yml', model:'Staging D1 → recovery bookmark → secret-safe Candidate 0%', risk:'critical', domains:['finance-api.ekodi.kr'] },
-    { id:'marketing-ai', name:'마케팅 AI', workflow:'sync-marketing-ai.yml', alternates:['deploy-jadam-marketing-ai.yml'], model:'Pages preview → verify all → production', risk:'high', domains:['marketing.ekodi.kr','jadam.ekodi.kr','pizzamaru.ekodi.kr','yogurt.ekodi.kr'] },
+    { id:'finance-api', name:'Finance API', workflow:'deploy-finance.yml', model:'Staging D1 → recovery bookmark → secret-safe Candidate 0%', risk:'critical', domains:['ekodi.kr/finance-api'] },
+    { id:'marketing-ai', name:'마케팅 AI', workflow:'sync-marketing-ai.yml', alternates:['deploy-jadam-marketing-ai.yml'], model:'Pages preview → verify all → production', risk:'high', domains:['ekodi.kr/marketing','ekodi.kr/jadam','ekodi.kr/pizzamaru','ekodi.kr/yogurt'] },
     { id:'community', name:'Community', workflow:'deploy-community.yml', model:'Candidate 0% → verify → 100%', risk:'medium', domains:['ekodi.kr/community'] },
-    { id:'books', name:'Books', workflow:'deploy-books.yml', model:'Candidate 0% → verify → 100%', risk:'medium', domains:['books.ekodi.kr'] },
-    { id:'social', name:'Social', workflow:'deploy-social.yml', model:'Candidate 0% → verify → 100%', risk:'medium', domains:['social.ekodi.kr'] },
+    { id:'books', name:'Books', workflow:'deploy-books.yml', model:'Candidate 0% → verify → 100%', risk:'medium', domains:['ekodi.kr/books'] },
+    { id:'social', name:'Social', workflow:'deploy-social.yml', model:'Candidate 0% → verify → 100%', risk:'medium', domains:['ekodi.kr/social'] },
   ];
   const POLICY = {
     sourceOfTruth: 'GitHub Actions + guarded release manifests',
@@ -138,7 +138,7 @@
       actions.append(refresh, external);
       head.append(copy, actions);
 
-      const note = el('div', 'Free Ops만 admin.ekodi.kr 내부 표시를 허용합니다. 다른 Mall 페이지의 iframe 차단 정책은 그대로 유지됩니다.', 'mall-free-ops-note');
+      const note = el('div', 'Free Ops만 ekodi.kr/admin 내부 표시를 허용합니다. 다른 Mall 페이지의 iframe 차단 정책은 그대로 유지됩니다.', 'mall-free-ops-note');
       const frameWrap = el('div', '', 'mall-free-ops-frame-wrap');
       const frame = document.createElement('iframe');
       frame.title = 'EKODI Mall Free Ops';

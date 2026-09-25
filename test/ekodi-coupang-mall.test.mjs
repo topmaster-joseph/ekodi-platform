@@ -31,7 +31,7 @@ test('EKODI Mall remains a root storefront separate from shared Shop platform', 
   const shop = registry.services.find(service => service.id === 'shop');
   assert.equal(mall.url, 'https://ekodi.kr/ekodimall');
   assert.equal(mall.status, 'live');
-  assert.equal(shop.url, 'https://shop.ekodi.kr');
+  assert.equal(shop.url, 'https://ekodi.kr/shop');
   assert.equal(shop.status, 'planned');
   assert.equal(shop.homepage, false);
 });

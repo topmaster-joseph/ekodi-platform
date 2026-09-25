@@ -28,7 +28,7 @@ export const MANAGEMENT_MODULES=Object.freeze(MODULES.map(item=>Object.freeze({.
 export const MANAGEMENT_MODULE_BY_ID=new Map(MANAGEMENT_MODULES.map(item=>[item.id,item]));
 
 export const MANAGEMENT_ACCESS_POLICY=Object.freeze({
-  guestMode:'guide-only',identityProvider:'google',authHub:'https://auth.ekodi.kr/',minimumTier:'free',tierAndModulesIndependent:true,moduleSelectionAtEveryTier:true,providerIndependentCore:true,sharedShellRequired:true,highImpactActionsRequireHumanApproval:true
+  guestMode:'guide-only',identityProvider:'google',authHub:'https://ekodi.kr/auth/',minimumTier:'free',tierAndModulesIndependent:true,moduleSelectionAtEveryTier:true,providerIndependentCore:true,sharedShellRequired:true,highImpactActionsRequireHumanApproval:true
 });
 
 export function workspaceType(value){

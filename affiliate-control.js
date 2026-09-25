@@ -80,7 +80,7 @@ async function workspaceActor(request, env) {
 function publicHeaders(request) {
   const headers = new Headers();
   const origin = request.headers.get('origin') || '';
-  const allowed = new Set(['https://ekodi.kr', 'https://www.ekodi.kr', 'https://shop.ekodi.kr']);
+  const allowed = new Set(['https://ekodi.kr', 'https://ekodi.kr', 'https://ekodi.kr/shop']);
   if (allowed.has(origin)) {
     headers.set('access-control-allow-origin', origin);
     headers.set('access-control-allow-headers', 'authorization,content-type');

@@ -194,7 +194,7 @@ async function detachCanonical(env, hostname) {
 
 async function slugAvailable(env, slug, storeId) {
   const row = await env.DB.prepare(`SELECT store_id FROM marketing_store_workspaces
-    WHERE workspace_slug=? OR canonical_domain=? LIMIT 1`).bind(slug, `${slug}.ai.ekodi.kr`).first();
+    WHERE workspace_slug=? OR canonical_domain=? LIMIT 1`).bind(slug, `${slug}.ekodi.kr/ai`).first();
   return !row || row.store_id === storeId;
 }
 async function chooseSlug(env, store, requested='') {
@@ -261,7 +261,7 @@ async function provisionStoreWorkspace(request, env, allowed) {
   if (workspace?.status === 'active') return json({ ok:true, created:false, workspace:publicWorkspace(workspace, subscription, store) }, 200, request, allowed);
 
   const slug = workspace?.workspace_slug || await chooseSlug(env, store, body?.slug);
-  const hostname = workspace?.canonical_domain || `${slug}.ai.ekodi.kr`;
+  const hostname = workspace?.canonical_domain || `${slug}.ekodi.kr/ai`;
   let provider;
   try {
     provider = await attachCanonical(env, hostname);

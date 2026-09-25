@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const API='https://api.ekodi.kr';
+const API='https://ekodi.kr/api';
 const MAIL_CONTROL='/api/mail/control';
 const sessionKey='ekodi-auth-token';
 const auth=()=>{try{return sessionStorage.getItem(sessionKey)||''}catch{return''}};

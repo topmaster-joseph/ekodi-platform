@@ -6,7 +6,7 @@ const MAX_HISTORY = 8;
 const USER_AI_URL = 'https://ekodi.kr/api/user-ai/assist';
 const CANONICAL_HOST = 'ekodi.kr';
 const CANONICAL_PREFIX = '/bible';
-const LEGACY_HOST = 'bible.ekodi.kr';
+const LEGACY_HOST = 'ekodi.kr/bible';
 
 const TOPICS = {
   관계: ['골로새서 3:12-14', '지금 그 관계에서 가장 지키고 싶은 것은 무엇인가요?'],
@@ -49,7 +49,7 @@ function runtimeConfig(env) {
     authUrl: env.AUTH_URL || 'https://ekodi.kr/auth/?site=bible',
     tenantSlug: env.TENANT_SLUG || 'ekodi-church',
     canonicalUrl: 'https://ekodi.kr/bible',
-    legacyAlias: 'https://bible.ekodi.kr',
+    legacyAlias: 'https://ekodi.kr/bible',
   };
 }
 

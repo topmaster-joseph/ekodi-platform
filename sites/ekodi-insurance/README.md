@@ -1,6 +1,6 @@
 # EKODI Insurance MVP
 
-`ins.ekodi.kr`을 위한 간단하고 지속가능한 보험관리·AI상담 플랫폼입니다.
+`ekodi.kr/ins`을 위한 간단하고 지속가능한 보험관리·AI상담 플랫폼입니다.
 
 ## 운영 원칙
 
@@ -71,7 +71,7 @@ D1에는 고객의 전체 보험계약 원장, 보험증권 이미지, 상세 �
 ## Staging
 
 - UI: `https://ekodi-insurance-staging.topmaster-joseph.workers.dev`
-- API: `https://insurance-api-staging.ekodi.kr`
+- API: `https://ekodi.kr/insurance-api-staging`
 - D1: `ekodi-insurance-staging`
 
 staging은 합성 테스트데이터만 사용합니다. staging 암호화키는 배포 시 교체될 수 있으므로 실제 고객 개인정보를 넣지 않습니다.
@@ -86,7 +86,7 @@ staging은 합성 테스트데이터만 사용합니다. staging 암호화키는
 6. 합성 테스트데이터 삭제
 7. 보험·개인정보 문구 검토
 8. 운영 D1/Worker를 Green으로 준비
-9. smoke test 후 `ins.ekodi.kr` 단계 전환
+9. smoke test 후 `ekodi.kr/ins` 단계 전환
 10. 이상 시 이전 route로 rollback
 
 자세한 법적·업무 경계는 `COMPLIANCE_GUARDRAILS.md`를 따릅니다.

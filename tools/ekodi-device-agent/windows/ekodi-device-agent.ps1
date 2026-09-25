@@ -477,11 +477,11 @@ function Apply-WorkstationProfile {
   New-Item -ItemType Directory -Path $desktopFolder -Force | Out-Null
   New-Item -ItemType Directory -Path $startMenu -Force | Out-Null
   $links = @(
-    @{ name = 'EKODI Admin'; url = 'https://admin.ekodi.kr' },
+    @{ name = 'EKODI Admin'; url = 'https://ekodi.kr/admin' },
     @{ name = 'My EKODI'; url = 'https://ekodi.kr/my/' },
     @{ name = 'EKODI Community'; url = 'https://ekodi.kr/community' },
     @{ name = 'Marketing AI'; url = 'https://ekodi.kr/ekodibiz/marketing-ai' },
-    @{ name = 'EKODI Cloud'; url = 'https://cloud.ekodi.kr' }
+    @{ name = 'EKODI Cloud'; url = 'https://ekodi.kr/cloud' }
   )
   $created = @()
   foreach ($link in $links) {

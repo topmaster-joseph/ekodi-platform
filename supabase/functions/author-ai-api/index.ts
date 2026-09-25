@@ -8,12 +8,12 @@ const SUPABASE_SERVICE_ROLE_KEY=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const OPENAI_API_KEY=Deno.env.get("OPENAI_API_KEY")||"";
 const OPENAI_MODEL=Deno.env.get("OPENAI_MODEL")||"gpt-5-mini";
 const admin=createClient(SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}});
-const ALLOWED_ORIGINS=new Set(["https://author.ekodi.kr","https://auth.ekodi.kr"]);
+const ALLOWED_ORIGINS=new Set(["https://ekodi.kr/author","https://ekodi.kr/auth"]);
 const OPERATIONS:Record<string,{units:number,label:string,maxOutput:number}>={draft:{units:1,label:"Creator AI 초안",maxOutput:4200},rewrite:{units:1,label:"Creator AI 재작성",maxOutput:4200},edit:{units:1,label:"Editor AI 편집",maxOutput:3200},research:{units:2,label:"Research AI 검토",maxOutput:3200},chief:{units:1,label:"Chief AI 품질검토",maxOutput:2400}};
 const MODE_LABELS:Record<string,string>={writer:"글·책",video:"영상·쇼츠",podcast:"오디오·팟캐스트",lecture:"강의·교육",research:"연구·전문지식",visual:"비주얼·디자인",mission:"설교·선교·공동체",ai:"AI 협업형 창작"};
 const PROVIDER_FALLBACK_MESSAGE="기본 모드로 계속 이용할 수 있습니다. AI 고급 기능은 잠시 사용할 수 없습니다.";
 
-function cors(req:Request){const origin=req.headers.get("Origin")||"";const allowed=ALLOWED_ORIGINS.has(origin)?origin:"https://author.ekodi.kr";return {"Access-Control-Allow-Origin":allowed,"Vary":"Origin","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST,OPTIONS"};}
+function cors(req:Request){const origin=req.headers.get("Origin")||"";const allowed=ALLOWED_ORIGINS.has(origin)?origin:"https://ekodi.kr/author";return {"Access-Control-Allow-Origin":allowed,"Vary":"Origin","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST,OPTIONS"};}
 function json(req:Request,body:unknown,status=200){return new Response(JSON.stringify(body),{status,headers:{...cors(req),"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff"}})}
 async function authenticated(req:Request){const authorization=req.headers.get("Authorization");if(!authorization)return null;const client=createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{global:{headers:{Authorization:authorization}},auth:{persistSession:false}});const {data,error}=await client.auth.getUser();return error?null:data.user;}
 function compact(value:unknown,max=12000){return String(value??"").replace(/\u0000/g,"").slice(0,max)}

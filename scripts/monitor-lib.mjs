@@ -7,14 +7,14 @@ const marketingTenants = JSON.parse(
 
 const INFRA_SITES = [
   ['root', 'EKODI Root', 'ekodi.kr'],
-  ['admin', 'EKODI Admin', 'admin.ekodi.kr'],
-  ['auth', 'EKODI Auth', 'auth.ekodi.kr'],
-  ['auth-client-js', 'EKODI Auth Client', 'auth.ekodi.kr', 'https://auth.ekodi.kr/client-auth.js'],
-  ['auth-router-js', 'EKODI Auth Router', 'auth.ekodi.kr', 'https://auth.ekodi.kr/auth-router.js'],
-  ['ai-gateway', 'EKODI AI Gateway', 'ai.ekodi.kr'],
+  ['admin', 'EKODI Admin', 'ekodi.kr/admin'],
+  ['auth', 'EKODI Auth', 'ekodi.kr/auth'],
+  ['auth-client-js', 'EKODI Auth Client', 'ekodi.kr/auth', 'https://ekodi.kr/auth/client-auth.js'],
+  ['auth-router-js', 'EKODI Auth Router', 'ekodi.kr/auth', 'https://ekodi.kr/auth/auth-router.js'],
+  ['ai-gateway', 'EKODI AI Gateway', 'ekodi.kr/ai'],
   ['api', 'EKODI API', 'ekodi.kr', 'https://ekodi.kr/api/health'],
-  ['finance', 'EKODI Finance API', 'finance-api.ekodi.kr', 'https://finance-api.ekodi.kr/health'],
-  ['marketing-publish-api', 'Marketing Publishing API', 'marketing-publish-api.ekodi.kr', 'https://marketing-publish-api.ekodi.kr/health'],
+  ['finance', 'EKODI Finance API', 'ekodi.kr/finance-api', 'https://ekodi.kr/finance-api/health'],
+  ['marketing-publish-api', 'Marketing Publishing API', 'ekodi.kr/marketing-publish-api', 'https://ekodi.kr/marketing-publish-api/health'],
   ['shell-js', 'EKODI Shell JS', 'ekodi.kr', 'https://ekodi.kr/shell/shell.js'],
   ['shell-workspace', 'EKODI Workspace CSS', 'ekodi.kr', 'https://ekodi.kr/shell/workspace.css']
 ];
@@ -33,15 +33,15 @@ const COMMUNITY_CONNECT_SITES = [
 ];
 
 const BUSINESS_CHAIN_SITES = [
-  ['business-health', 'Business OS Health', 'business.ekodi.kr', 'https://business.ekodi.kr/health'],
-  ['business-config', 'Business OS Runtime Config', 'business.ekodi.kr', 'https://business.ekodi.kr/config.js'],
-  ['business-workspaces', 'Business OS Workspaces', 'business.ekodi.kr', 'https://business.ekodi.kr/api/workspaces'],
-  ['business-auth-entry', 'Business OS Auth Entry', 'ekodi.kr', 'https://ekodi.kr/auth/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F'],
+  ['business-health', 'Business OS Health', 'ekodi.kr/business', 'https://ekodi.kr/business/health'],
+  ['business-config', 'Business OS Runtime Config', 'ekodi.kr/business', 'https://ekodi.kr/business/config.js'],
+  ['business-workspaces', 'Business OS Workspaces', 'ekodi.kr/business', 'https://ekodi.kr/business/api/workspaces'],
+  ['business-auth-entry', 'Business OS Auth Entry', 'ekodi.kr', 'https://ekodi.kr/auth/?site=business&return_to=https%3A%2F%2Fekodi.kr/business%2F'],
   ['business-auth-module', 'Business OS Auth Module', 'ekodi.kr', 'https://ekodi.kr/auth/business-auth.js?v=20260826-free-fallback-1'],
-  ['business-biz', 'EKODIBIZ Business Hub', 'biz.ekodi.kr', 'https://biz.ekodi.kr/'],
-  ['business-pay', 'EKODI Business Pay', 'pay.biz.ekodi.kr', 'https://pay.biz.ekodi.kr/'],
-  ['business-mail', 'EKODI Business Mail', 'mail.biz.ekodi.kr', 'https://mail.biz.ekodi.kr/'],
-  ['business-trade', 'EKODI Business Trade', 'trade.biz.ekodi.kr', 'https://trade.biz.ekodi.kr/'],
+  ['business-biz', 'EKODIBIZ Business Hub', 'ekodi.kr/ekodibiz', 'https://ekodi.kr/ekodibiz/'],
+  ['business-pay', 'EKODI Business Pay', 'ekodi.kr/ekodibiz/pay', 'https://ekodi.kr/ekodibiz/pay/'],
+  ['business-mail', 'EKODI Business Mail', 'ekodi.kr/ekodibiz/mail', 'https://ekodi.kr/ekodibiz/mail/'],
+  ['business-trade', 'EKODI Business Trade', 'ekodi.kr/ekodibiz/trade', 'https://ekodi.kr/ekodibiz/trade/'],
   ['business-ekodibiz-invest', 'EKODIBIZ Invest Business', 'ekodi.kr', 'https://ekodi.kr/ekodibiz/invest']
 ];
 

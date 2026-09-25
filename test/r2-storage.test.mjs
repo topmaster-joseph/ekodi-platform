@@ -25,12 +25,12 @@ class MemoryR2Bucket {
 function request(path,init={}){
   const headers=new Headers(init.headers||{});
   headers.set('cf-access-jwt-assertion','test-access-assertion');
-  return new Request(`https://drive.ekodi.kr${path}`,{...init,headers});
+  return new Request(`https://ekodi.kr/storage${path}`,{...init,headers});
 }
 
 test('R2 status requires Cloudflare Access context',async()=>{
   const env={R2_BUCKET:new MemoryR2Bucket()};
-  const response=await handleR2StorageControl(new Request('https://drive.ekodi.kr/api/control/storage/r2/status'),env);
+  const response=await handleR2StorageControl(new Request('https://ekodi.kr/storage/api/control/storage/r2/status'),env);
   assert.equal(response.status,401);
   assert.equal((await response.json()).code,'ACCESS_REQUIRED');
 });

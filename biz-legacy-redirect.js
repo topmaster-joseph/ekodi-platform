@@ -1,4 +1,4 @@
-const TARGET = 'https://biz.ekodi.kr';
+const TARGET = 'https://ekodi.kr/ekodibiz';
 const ALLOWED_HOSTS = new Set(['ekodibiz.kr', 'www.ekodibiz.kr']);
 
 export default {

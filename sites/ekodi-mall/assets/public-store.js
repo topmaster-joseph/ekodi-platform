@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://mall-api.ekodi.kr';
+  const API = 'https://mall-ekodi.kr/api';
   const main = document.querySelector('#publicStore');
   const status = document.querySelector('#storeStatus');
   const slug = (() => {

@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://mall-api.ekodi.kr';
+  const API = 'https://mall-ekodi.kr/api';
   const VISITOR_KEY = 'ekodiMallAnonymousVisitorV1';
   const ATTR_PREFIX = 'ekodiMallAttributionV3:';
   const code = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop() || '');

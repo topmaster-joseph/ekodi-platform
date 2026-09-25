@@ -347,7 +347,7 @@
   }
 
   function login() {
-    const auth = new URL('https://auth.ekodi.kr/');
+    const auth = new URL('https://ekodi.kr/auth/');
     auth.searchParams.set('site', 'mall-seller');
     auth.searchParams.set('return_to', location.href.split('#')[0]);
     location.assign(auth.href);

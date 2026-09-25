@@ -71,8 +71,8 @@ must('ai', 'store:false');
 must('ai', 'https://api.openai.com/v1/responses');
 must('ai', 'Creator AI');
 must('ai', 'creator_mode');
-must('production', 'author.ekodi.kr');
-mustNot('staging', 'author.ekodi.kr');
+must('production', 'ekodi.kr/author');
+mustNot('staging', 'ekodi.kr/author');
 must('manifest', 'author-events-v1');
 
 const combined = Object.values(content).join('\n');

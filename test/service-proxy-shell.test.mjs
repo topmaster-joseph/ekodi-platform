@@ -8,7 +8,7 @@ test('service proxy uses the shared Shell for user-facing proxied domains',async
   const source=await read('service-proxy.js');
   assert.match(source,/injectEkodiShell/);
   assert.match(source,/shellServiceForHost/);
-  for(const host of ['church.ekodi.kr','lab.ekodi.kr'])assert.match(source,new RegExp(host.replaceAll('.','\\.')));
+  for(const host of ['ekodi.kr/ekodichurch','ekodi.kr/ekodilab'])assert.match(source,new RegExp(host.replaceAll('.','\\.')));
   assert.match(source,/injectEkodiShell\(businessHub\(\), 'biz'\)/);
   const [proxyConfig,boundaries]=await Promise.all([read('wrangler.service-proxy.toml'),read('platform-boundaries.json')]);
   assert.doesNotMatch(proxyConfig,/pattern = \"church\.ekodi\.kr\"/);
@@ -64,7 +64,7 @@ test('Mail aliases remain compatibility-only and converge on the constitutional 
   ]);
   assert.match(source,/const MAIL_CANONICAL = 'https:\/\/mail\.ekodi\.kr'/);
   assert.doesNotMatch(source,/mail\.google\.com/);
-  for(const alias of ['mail.biz.ekodi.kr','mail.church.ekodi.kr','mail.lab.ekodi.kr','mail.books.ekodi.kr','mail.trade.ekodi.kr']){
+  for(const alias of ['ekodi.kr/ekodibiz/mail','ekodi.kr/ekodichurch/mail','ekodi.kr/ekodilab/mail','ekodi.kr/books/mail','ekodi.kr/ekodibiz/trade/mail']){
     assert.match(source,new RegExp(`'${alias.replaceAll('.','\\.')}': MAIL_CANONICAL`));
     assert.match(proxyConfig,new RegExp(`pattern = "${alias.replaceAll('.','\\.')}"`));
     assert.doesNotMatch(siteConfig,new RegExp(`pattern = "${alias.replaceAll('.','\\.')}"`));

@@ -159,7 +159,7 @@
   }
 
   async function safeOptimize(host) {
-    if (!window.confirm('admin.ekodi.kr의 EKODI 전용 캐시와 Service Worker 업데이트만 진행합니다. 로그인 정보, 다른 사이트 데이터, 개인 파일은 건드리지 않습니다. 계속할까요?')) return;
+    if (!window.confirm('ekodi.kr/admin의 EKODI 전용 캐시와 Service Worker 업데이트만 진행합니다. 로그인 정보, 다른 사이트 데이터, 개인 파일은 건드리지 않습니다. 계속할까요?')) return;
     const button = host.querySelector('[data-browser-safe-optimize]');
     button.disabled = true;
     const messages = [];
@@ -194,7 +194,7 @@
     section.className = 'admin-browser-diagnostic';
     section.innerHTML = `
       <div class="admin-browser-diagnostic-head">
-        <div><p class="kicker">CURRENT ADMIN BROWSER</p><h3>현재 관리자 브라우저 진단</h3><p>이 브라우저와 admin.ekodi.kr 웹 환경만 확인합니다. Windows 설정, 다른 사이트 데이터, 개인 파일에는 접근하지 않습니다.</p></div>
+        <div><p class="kicker">CURRENT ADMIN BROWSER</p><h3>현재 관리자 브라우저 진단</h3><p>이 브라우저와 ekodi.kr/admin 웹 환경만 확인합니다. Windows 설정, 다른 사이트 데이터, 개인 파일에는 접근하지 않습니다.</p></div>
         <span data-browser-diagnostic-stamp>아직 진단하지 않음</span>
       </div>
       <div class="admin-browser-diagnostic-actions">

@@ -19,8 +19,8 @@ test('Shared Drive EKODI is canonical while D1/Supabase and R2 remain supporting
   assert.equal(storagePolicy.tiers.delivery.systemOfRecord, false);
 });
 
-test('Storage Gateway reuses the existing drive.ekodi.kr encrypted OAuth control plane', () => {
-  assert.equal(storagePolicy.controlPlane, 'drive.ekodi.kr');
+test('Storage Gateway reuses the existing ekodi.kr/storage encrypted OAuth control plane', () => {
+  assert.equal(storagePolicy.controlPlane, 'ekodi.kr/storage');
   assert.match(storageGateway, /https:\/\/drive\.ekodi\.kr/);
   assert.match(writer, /storage_connections/);
   assert.match(writer, /storage_routes/);

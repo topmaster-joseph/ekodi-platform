@@ -8,13 +8,13 @@ test('journal is an isolated registered service surface', () => {
   const boundary = JSON.parse(read('platform-boundaries.json'));
   const journal = boundary.platforms.journal;
   assert.equal(journal.kind, 'common-service-platform');
-  assert.ok(journal.domains.includes('journal.ekodi.kr'));
+  assert.ok(journal.domains.includes('ekodi.kr/journal'));
   assert.equal(journal.deployWorkflow, '.github/workflows/deploy-journal.yml');
 });
 
 test('journal worker exposes health, feed, api and admin handoff', () => {
   const worker = read('journal-worker.js');
-  for (const marker of ['/health', '/feed.xml', '/api/posts', 'https://admin.ekodi.kr/journal']) {
+  for (const marker of ['/health', '/feed.xml', '/api/posts', 'https://ekodi.kr/admin/journal']) {
     assert.ok(worker.includes(marker), `missing ${marker}`);
   }
 });

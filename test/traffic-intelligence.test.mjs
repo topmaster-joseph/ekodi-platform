@@ -20,15 +20,15 @@ test('EKODI automation is separated from public crawlers and unknown browsers', 
 });
 
 test('site mapping handles EKODI and legacy managed domains', () => {
-  assert.equal(trafficSiteIdForHost('church.ekodi.kr'), 'church');
+  assert.equal(trafficSiteIdForHost('ekodi.kr/ekodichurch'), 'church');
   assert.equal(trafficSiteIdForHost('ekodichurch.kr'), 'church');
   assert.equal(trafficSiteIdForHost('cgma.or.kr'), 'cgma');
   assert.equal(trafficSiteIdForHost('ekodi.kr'), 'root');
 });
 test('telemetry origin policy allows managed HTTPS surfaces only', () => {
-  assert.equal(isAllowedTelemetryOrigin('https://church.ekodi.kr'), true);
+  assert.equal(isAllowedTelemetryOrigin('https://ekodi.kr/ekodichurch'), true);
   assert.equal(isAllowedTelemetryOrigin('https://ekodichurch.kr'), true);
-  assert.equal(isAllowedTelemetryOrigin('http://church.ekodi.kr'), false);
+  assert.equal(isAllowedTelemetryOrigin('https://ekodi.kr/ekodichurch'), false);
   assert.equal(isAllowedTelemetryOrigin('https://evil.example'), false);
   assert.equal(isAllowedTelemetryOrigin('https://customer.example', 'https://customer.example'), true);
 });

@@ -167,8 +167,8 @@ test('resource targets are symbolic identities, not hard-coded user or admin hos
     capability: 'mall.catalog.update',
     surface: 'workspace_admin',
   });
-  assert.equal(JSON.stringify(target).includes('admin.ekodi.kr'), false);
-  assert.equal(JSON.stringify(target).includes('my.ekodi.kr'), false);
+  assert.equal(JSON.stringify(target).includes('ekodi.kr/admin'), false);
+  assert.equal(JSON.stringify(target).includes('ekodi.kr/my'), false);
 });
 
 test('AI_PROVIDER=NONE leaves the Command Plane in Core-only degraded mode without invoking providers', async () => {

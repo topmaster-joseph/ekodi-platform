@@ -1,6 +1,6 @@
 (() => {
   import('/my/revenue-opportunity.js?v=20260911-revenue-engine-1').catch(error=>console.warn('EKODI Revenue opportunity entry',error));
-  const API='https://marketing-publish-api.ekodi.kr';
+  const API='https://ekodi.kr/marketing-publish-api';
   const section=document.querySelector('#personal-brand');
   if(!section)return;
   const host=document.createElement('div');
@@ -27,7 +27,7 @@
       return `<div style="margin:10px 0;padding:10px;border:1px solid #e7e9ee;border-radius:10px"><strong>${esc(c.displayName||'YouTube 연결')}</strong><p>${esc(c.status)}</p>${c.status==='selection_required'?choices:''}${c.status==='active'?`<button class="secondary" type="button" data-disconnect="${esc(c.id)}">연결 해제</button>`:''}</div>`;
     }).join('');
     const channelRows=channels.map(c=>`<li>${esc(channelLabel(c))} · ${esc(c.status)}</li>`).join('');
-    const capability=e.maxChannels>0?`<button class="primary" type="button" data-connect>Google/YouTube 연결</button>`:'<a class="text-link" href="https://marketing.ekodi.kr/">FLEX 이상에서 채널 자동 게시 사용 →</a>';
+    const capability=e.maxChannels>0?`<button class="primary" type="button" data-connect>Google/YouTube 연결</button>`:'<a class="text-link" href="https://ekodi.kr/marketing/">FLEX 이상에서 채널 자동 게시 사용 →</a>';
     body.innerHTML=`<p><strong>${planLabel(e.plan)}</strong> ${e.immediate?'즉시게시':''} ${e.scheduled?'· 예약':''} ${e.repeating?'· 반복':''} ${e.autonomous?'· AI 자동':''}</p>${capability}${channelRows?`<ul>${channelRows}</ul>`:''}${connectionRows}`;
     bind();
   }

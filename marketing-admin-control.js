@@ -63,7 +63,7 @@ function publicInternalWorkspace(template) {
   return {
     id:`tenant:${template.workspace_key}`,workspaceType:'tenant',workspaceKey:String(template.workspace_key || ''),
     internal:true,dedicatedDomain:false,storeId:'',tenantSlug:String(template.tenant_slug || ''),slug:String(template.workspace_key || ''),
-    canonicalDomain:'marketing.ekodi.kr',canonicalUrl:'https://marketing.ekodi.kr/',status:'active',planId:'internal',subscriptionStatus:'internal',monthlyFee:0,
+    canonicalDomain:'ekodi.kr/marketing',canonicalUrl:'https://ekodi.kr/marketing/',status:'active',planId:'internal',subscriptionStatus:'internal',monthlyFee:0,
     cancelAtPeriodEnd:false,currentPeriodEnd:null,updatedAt:template.updated_at || null,
   };
 }

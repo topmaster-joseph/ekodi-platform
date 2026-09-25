@@ -11,7 +11,7 @@ test('Education is one active platform with Admission and Study areas',async()=>
   const service=EKODI_SERVICE_MANIFEST.services.find(row=>row.id==='edu');
   assert.ok(service);
   assert.notEqual(service.state,'planned');
-  assert.equal(service.url,'https://edu.ekodi.kr/');
+  assert.equal(service.url,'https://ekodi.kr/education/');
   assert.equal(service.shellIntegration,'worker-injected');
   assert.equal(service.authMode,'client');
   assert.equal(service.openSso,true);

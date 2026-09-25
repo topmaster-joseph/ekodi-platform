@@ -34,7 +34,7 @@ function originAllowed(origin, env = {}) {
   if (configured.has(origin)) return true;
   try {
     const url = new URL(origin);
-    return url.protocol === 'https:' && (/^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(url.hostname) || url.hostname === 'business.ekodi.kr');
+    return url.protocol === 'https:' && (/^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(url.hostname) || url.hostname === 'ekodi.kr/business');
   } catch { return false; }
 }
 function cors(origin, allowed) {
@@ -277,8 +277,8 @@ async function requestCampaignReview(request, env, allowed, campaignId) {
   if (campaign.status !== 'draft') return json({ error:'초안 상태의 캠페인만 검수 요청할 수 있습니다.' }, 409, request, allowed);
   const now = new Date().toISOString();
   const target = scope.workspaceType === 'store'
-    ? String((await env.DB.prepare('SELECT canonical_domain FROM marketing_store_workspaces WHERE store_id=? LIMIT 1').bind(scope.workspaceKey).first())?.canonical_domain || `marketing.ekodi.kr/store/${scope.workspaceKey}`)
-    : `marketing.ekodi.kr/tenant/${scope.workspaceKey}`;
+    ? String((await env.DB.prepare('SELECT canonical_domain FROM marketing_store_workspaces WHERE store_id=? LIMIT 1').bind(scope.workspaceKey).first())?.canonical_domain || `ekodi.kr/marketing/store/${scope.workspaceKey}`)
+    : `ekodi.kr/marketing/tenant/${scope.workspaceKey}`;
   const payload = JSON.stringify({ campaignId:id,workspaceType:scope.workspaceType,workspaceKey:scope.workspaceKey,objective:campaign.objective,audienceSegment:campaign.audience_segment,channel:campaign.channel,offerSummary:campaign.offer_summary });
   const action = await env.DB.prepare(`INSERT INTO ai_agent_actions
     (agent_id,agent_name,action_type,area,target,rationale,payload_json,decision_tier,decision_reason,status,requested_by,created_at)

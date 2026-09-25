@@ -10,10 +10,10 @@ test('Core client uses the versioned server-side API and forwards auth', async (
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'content-type': 'application/json' } });
   };
   try {
-    const request = new Request('https://service.ekodi.kr', { headers: { authorization: 'Bearer test-token' } });
-    const body = await getCoreStatus(request, { CORE_API_ORIGIN: 'https://api-staging.ekodi.kr/' });
+    const request = new Request('https://ekodi.kr/service', { headers: { authorization: 'Bearer test-token' } });
+    const body = await getCoreStatus(request, { CORE_API_ORIGIN: 'https://ekodi.kr/api-staging/' });
     assert.equal(body.ok, true);
-    assert.equal(captured.url, 'https://api-staging.ekodi.kr/api/core/v1/status');
+    assert.equal(captured.url, 'https://ekodi.kr/api-staging/api/core/v1/status');
     assert.equal(captured.authorization, 'Bearer test-token');
   } finally {
     globalThis.fetch = originalFetch;
@@ -21,5 +21,5 @@ test('Core client uses the versioned server-side API and forwards auth', async (
 });
 
 test('Core client rejects malformed organization slugs before a network request', async () => {
-  assert.throws(() => getCoreOrganization(new Request('https://service.ekodi.kr'), {}, '../other'), /Invalid EKODI Core organization slug/);
+  assert.throws(() => getCoreOrganization(new Request('https://ekodi.kr/service'), {}, '../other'), /Invalid EKODI Core organization slug/);
 });

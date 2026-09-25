@@ -26,7 +26,7 @@
       "id": "platform_admin",
       "label": "관리자",
       "scope": "platform",
-      "description": "admin.ekodi.kr에서 EKODI 전체 플랫폼을 관리하는 별도 최고 관리 역할"
+      "description": "ekodi.kr/admin에서 EKODI 전체 플랫폼을 관리하는 별도 최고 관리 역할"
     }
   ],
   "surfaces": [

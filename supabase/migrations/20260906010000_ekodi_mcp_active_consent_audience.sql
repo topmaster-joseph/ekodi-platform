@@ -26,17 +26,17 @@ begin
              from auth.oauth_authorizations oa
             where oa.client_id = c.client_id
               and oa.user_id = c.user_id
-              and oa.resource = 'https://api.ekodi.kr/mcp'
+              and oa.resource = 'https://ekodi.kr/api/mcp'
               and oa.status::text = 'approved'
          )
     ) into mcp_authorized;
   end if;
 
   if mcp_authorized then
-    claims := jsonb_set(claims, '{aud}', to_jsonb('https://api.ekodi.kr/mcp'::text), true);
+    claims := jsonb_set(claims, '{aud}', to_jsonb('https://ekodi.kr/api/mcp'::text), true);
     claims := jsonb_set(claims, '{ekodi_ai_client}', 'true'::jsonb, true);
   else
-    if claims->>'aud' = 'https://api.ekodi.kr/mcp' then
+    if claims->>'aud' = 'https://ekodi.kr/api/mcp' then
       claims := jsonb_set(claims, '{aud}', to_jsonb('authenticated'::text), true);
     end if;
     claims := claims - 'ekodi_ai_client';
@@ -51,4 +51,4 @@ grant execute on function public.ekodi_mcp_access_token_hook(jsonb) to supabase_
 revoke execute on function public.ekodi_mcp_access_token_hook(jsonb) from authenticated, anon, public;
 
 comment on function public.ekodi_mcp_access_token_hook(jsonb) is
-  'Issues the EKODI MCP audience only for an active OAuth consent whose client/user pair previously approved resource https://api.ekodi.kr/mcp; revocation removes future MCP audience issuance.';
+  'Issues the EKODI MCP audience only for an active OAuth consent whose client/user pair previously approved resource https://ekodi.kr/api/mcp; revocation removes future MCP audience issuance.';

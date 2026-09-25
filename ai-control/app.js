@@ -6,7 +6,7 @@ const state={session:null,status:null,tasks:[],nodes:[]};
 function storedSession(){try{const value=JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null');return value?.accessToken?value:null}catch{return null}}
 function saveSession(value){state.session=value;sessionStorage.setItem(SESSION_KEY,JSON.stringify(value));renderIdentity()}
 function clearSession(){state.session=null;sessionStorage.removeItem(SESSION_KEY);renderIdentity()}
-function authUrl(){return cfg.authUrl||'https://auth.ekodi.kr/?site=ai&return_to=https%3A%2F%2Fai.ekodi.kr%2F'}
+function authUrl(){return cfg.authUrl||'https://ekodi.kr/auth/?site=ai&return_to=https%3A%2F%2Fekodi.kr/ai%2F'}
 function apiHeaders(){return state.session?.accessToken?{authorization:`Bearer ${state.session.accessToken}`}:{}}
 function renderIdentity(){const member=Boolean(state.session?.accessToken);$('appPanel').hidden=!member;$('loginPanel').hidden=member;$('authLink').href=member?'#logout':authUrl();$('authLink').textContent=member?'로그아웃':'Google 로그인';$('loginButton').href=authUrl();$('identity').textContent=member?state.session?.user?.email||'관리자':''}
 async function exchangeCentralToken(){const params=new URLSearchParams(location.hash.slice(1));const tokenHash=params.get('ekodi_token');if(!tokenHash)return false;const response=await fetch('/api/auth/exchange',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({tokenHash,type:params.get('ekodi_type')||'email'})});const data=await response.json();if(!response.ok)throw new Error(data.error||'auth_exchange_failed');saveSession(data);history.replaceState(null,'',location.pathname+location.search);return true}

@@ -7,7 +7,7 @@ preview_urls = false
 [vars]
 DATA_ENABLED = "false"
 DATA_MODE = "isolated-staging"
-AUTH_URL = "https://auth.ekodi.kr/?site=edu"
+AUTH_URL = "https://ekodi.kr/auth/?site=edu"
 
 [assets]
 directory = "./education"

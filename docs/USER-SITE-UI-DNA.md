@@ -47,8 +47,8 @@ EKODI의 사용자 사이트는 하나의 생태계라는 관계는 보여주되
 - 관리자/Control Center의 UI 문법을 일반 사용자 사이트로 복사하지 않는다.
 
 ## Change in this branch
-- `work.ekodi.kr`: Community와 겹치던 크림/그린/둥근 카드 문법을 슬레이트/코발트 기반의 정밀 워크벤치로 분리.
-- `mall.ekodi.kr`: Church/Community와 겹치던 그린/크림 중심에서 애프리콧/코럴/코발트/마켓 옐로 기반의 활기 있는 편집 마켓으로 분리.
+- `ekodi.kr/work`: Community와 겹치던 크림/그린/둥근 카드 문법을 슬레이트/코발트 기반의 정밀 워크벤치로 분리.
+- `ekodi.kr/ekodimall`: Church/Community와 겹치던 그린/크림 중심에서 애프리콧/코럴/코발트/마켓 옐로 기반의 활기 있는 편집 마켓으로 분리.
 - 기존에 이미 차별성이 큰 Church, Books, Author AI, Community, Social은 기능 안정성을 위해 이번 변경에서 억지로 재설계하지 않는다.
 - Lab은 다음 안전한 소스 변경 시 Green-dominant에서 Field Research Journal 계열로 이동한다.
 

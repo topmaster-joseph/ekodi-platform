@@ -35,8 +35,8 @@ Independent EKODI platforms and specialized services. Each platform keeps its ow
 ### 3. Experience and control planes
 
 - `ekodi.kr`: public front door
-- `my.ekodi.kr`: signed-in personal home, Workspace router, account and service entry point for ordinary users
-- `admin.ekodi.kr`: private control plane and operational command center for administrators
+- `ekodi.kr/my`: signed-in personal home, Workspace router, account and service entry point for ordinary users
+- `ekodi.kr/admin`: private control plane and operational command center for administrators
 
 Ordinary users should not need to understand infrastructure topology. Administrators must be able to observe failures, control releases, inspect service state, and fall back to manual operation.
 
@@ -81,7 +81,7 @@ The Shell must preserve:
 
 ## Administrator model
 
-`admin.ekodi.kr` is not a general-user dashboard. It is a control plane for:
+`ekodi.kr/admin` is not a general-user dashboard. It is a control plane for:
 
 - ecosystem health
 - service and domain state

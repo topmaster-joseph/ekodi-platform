@@ -28,11 +28,11 @@ URL은 신분증이 아니다. 인증과 권한의 기준은 항상 immutable `w
 | 피자마루 목포대점 | `ekodi.kr/pizzamaru` | 기존 사이트를 Store Workspace에 승격 완료 |
 | 요거트퍼플 목포대점 | `ekodi.kr/yogurt` | 승격 완료, `/yogurtpurple`은 별칭 |
 | 청계면상인회 | `ekodi.kr/cgma`, `cgma.or.kr` | 기존 사이트·고객 소유 도메인 유지 후 Core 연결 |
-| 에코디교회 | `ekodi.kr/ekodichurch`, `church.ekodi.kr` | 기존 공개면 유지 후 Workspace/Core 연결 |
-| 에코디비즈 | `ekodi.kr/ekodibiz`, `biz.ekodi.kr` | 기존 공개면 유지 후 Workspace/Core 연결 |
-| 에코디연구소 | `ekodi.kr/ekodilab`, `lab.ekodi.kr` | 기존 공개면 유지 후 Workspace/Core 연결 |
-| EKODI Global Trading | `trade.ekodi.kr` | URL 변경 없이 Core 연결, canonical 결정은 보류 |
-| 에코디 카페 | `cafe.ekodi.kr` | 준비 상태 유지, 실제 운영 중인 것처럼 표시하지 않음 |
+| 에코디교회 | `ekodi.kr/ekodichurch`, `ekodi.kr/ekodichurch` | 기존 공개면 유지 후 Workspace/Core 연결 |
+| 에코디비즈 | `ekodi.kr/ekodibiz`, `ekodi.kr/ekodibiz` | 기존 공개면 유지 후 Workspace/Core 연결 |
+| 에코디연구소 | `ekodi.kr/ekodilab`, `ekodi.kr/ekodilab` | 기존 공개면 유지 후 Workspace/Core 연결 |
+| EKODI Global Trading | `ekodi.kr/ekodibiz/trade` | URL 변경 없이 Core 연결, canonical 결정은 보류 |
+| 에코디 카페 | `ekodi.kr/cafe` | 준비 상태 유지, 실제 운영 중인 것처럼 표시하지 않음 |
 
 공통 Service는 이 표의 Workspace 사이트와 별개다. `ecosystem-services.json`의 Live/Beta Service는 등록된 서비스 경계를 유지하고, Preparing/Planned Service는 준비가 끝나기 전 새 Workspace 사이트처럼 자동 생성하지 않는다.
 

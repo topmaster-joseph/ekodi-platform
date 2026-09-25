@@ -94,10 +94,8 @@ async function proxyPersonalFinanceAdminControl(request,env){
   response.headers.set('x-content-type-options','nosniff');
   return response;
 }
-async function proxyLegacySurface(request,legacyFetch,prefix,legacyHost,surface){
-  const upstreamUrl=new URL(request.url);
-  upstreamUrl.hostname=legacyHost;
-  upstreamUrl.pathname=stripPrefix(upstreamUrl.pathname,prefix);
+async function proxyCanonicalSurface(request,legacyFetch,prefix,surface){
+  const upstreamUrl=new URL(request.url);upstreamUrl.hostname=CANONICAL_HOST;
   const response=await legacyFetch(cloneRequest(request,upstreamUrl));
   const routed=new Response(response.body,response);
   routed.headers.set('x-ekodi-canonical-surface',surface);
@@ -120,18 +118,7 @@ function rewriteAdminHtml(html){
   return html.replace(/<head(\s[^>]*)?>/i,match=>`${match}<base href="/admin/">`);
 }
 function executionSurfaceForPath(pathname){return platformExecutionSurfaceForPath(pathname)}
-function canonicalAbsoluteUrl(host,pathname='/',search='',hash=''){
-  const prefix=CANONICAL_HOST_PATHS[String(host||'').toLowerCase()];if(!prefix)return '';
-  const suffix=pathname==='/'?'':pathname;return `https://${CANONICAL_HOST}${prefix}${suffix}${search||''}${hash||''}`;
-}
-function rewriteAbsoluteEkodiOrigins(text){
-  let output=String(text||'');
-  for(const [host,prefix] of Object.entries(CANONICAL_HOST_PATHS)){
-    const from=`https://${host}`;const to=`https://${CANONICAL_HOST}${prefix}`;
-    output=output.replaceAll(from,to).replaceAll(encodeURIComponent(from),encodeURIComponent(to));
-  }
-  return output;
-}
+function rewriteAbsoluteEkodiOrigins(text){return String(text||'');}
 function prefixRootLiterals(text,prefix){
   if(!prefix||prefix==='/')return text;
   return String(text||'').replace(/(["'`])\/(?!\/)([^"'`\r\n]*)\1/g,(match,q,rest)=>{
@@ -161,8 +148,8 @@ function canonicalExecutionLocation(value,spec){
 }
 async function proxyAdminShell(request,legacyFetch){
   const upstreamUrl=new URL(request.url);
-  upstreamUrl.hostname='admin.ekodi.kr';
-  upstreamUrl.pathname='/';
+  upstreamUrl.hostname=CANONICAL_HOST;
+  upstreamUrl.pathname='/admin/';
   const response=await legacyFetch(cloneRequest(request,upstreamUrl));
   const routed=await rewriteHtmlResponse(response,rewriteAdminHtml);
   routed.headers.set('x-ekodi-canonical-surface','admin');
@@ -208,20 +195,16 @@ async function serveCanonicalAuth(request,env){
   return response;
 }
 async function proxyAdminRuntime(request,legacyFetch){
-  return proxyLegacySurface(request,legacyFetch,SURFACE_PREFIXES.admin,'admin.ekodi.kr','admin');
+  return proxyCanonicalSurface(request,legacyFetch,SURFACE_PREFIXES.admin,'admin');
 }
 async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch){
   const upstreamUrl=new URL(request.url);
   let response;
   if(spec.binding&&env?.[spec.binding]?.fetch){
     const binding=env[spec.binding];
-    upstreamUrl.hostname=spec.virtualHost||CANONICAL_HOST;
+    upstreamUrl.hostname=CANONICAL_HOST;
     upstreamUrl.pathname=spec.preservePrefix?upstreamUrl.pathname:stripPrefix(upstreamUrl.pathname,spec.prefix);
     response=await binding.fetch(cloneRequest(request,upstreamUrl));
-  }else if(spec.legacyHost){
-    if(typeof legacyFetch!=='function')return serviceUnavailable(spec.id);
-    upstreamUrl.hostname=spec.legacyHost;upstreamUrl.pathname=stripPrefix(upstreamUrl.pathname,spec.prefix);
-    response=await legacyFetch(cloneRequest(request,upstreamUrl));
   }else if(spec.assetPath){
     if(!env?.ASSETS?.fetch)return serviceUnavailable(spec.id);
     upstreamUrl.pathname=spec.assetPath;upstreamUrl.search='';

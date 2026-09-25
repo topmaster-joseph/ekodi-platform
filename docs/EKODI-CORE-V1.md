@@ -13,8 +13,8 @@ Cloudflare, Supabase, external AI providers, object storage and future worker se
 The existing control plane remains the starting point:
 
 - `ekodi.kr/api` / `control-api`: shared control and data API layer
-- `admin.ekodi.kr`: private control plane UI
-- `auth.ekodi.kr`: shared authentication entry
+- `ekodi.kr/admin`: private control plane UI
+- `ekodi.kr/auth`: shared authentication entry
 - `ekodi-auth` D1: current shared control-plane database
 - `customer_tenants`: canonical organization record for Core v1
 - `customer_users`: canonical person record for the customer control plane

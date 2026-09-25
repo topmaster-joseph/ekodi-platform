@@ -8,13 +8,13 @@ const WORKSPACES={
   ekodibiz:{
     id:'ekodibiz',name:'에코디비즈',englishName:'EKODIBIZ',classification:'internal',scope:'organization',accent:'business',
     description:'에코디비즈의 고객, 프로젝트, 마케팅, 업무, 매출과 재무 신호를 한 화면에서 운영하는 내부 Business OS 워크스페이스입니다.',
-    publicUrl:'https://ekodi.kr/ekodibiz',marketingUrl:'https://ekodi.kr/ekodibiz/marketing-ai',workUrl:'https://work.ekodi.kr',
+    publicUrl:'https://ekodi.kr/ekodibiz',marketingUrl:'https://ekodi.kr/ekodibiz/marketing-ai',workUrl:'https://ekodi.kr/work',
     dataState:'connection_required',dataMessage:'에코디비즈 운영 데이터는 아직 Business OS 읽기 전용 집계 API에 연결되지 않았습니다.',
     modules:[
       {code:'MKT',name:'Marketing AI',description:'콘텐츠·캠페인·채널 운영',status:'available',statusLabel:'허브 연결',href:'https://ekodi.kr/ekodibiz/marketing-ai'},
       {code:'CRM',name:'Customer AI',description:'고객·문의·관계·재방문 관리',status:'next',statusLabel:'CRM 원장 연결 대기'},
       {code:'SAL',name:'Sales AI',description:'견적·계약 전 단계·매출 파이프라인',status:'next',statusLabel:'매출 원장 연결 대기'},
-      {code:'WRK',name:'Work AI',description:'프로젝트·업무·역할·실행 추적',status:'available',statusLabel:'Work 연결',href:'https://work.ekodi.kr'},
+      {code:'WRK',name:'Work AI',description:'프로젝트·업무·역할·실행 추적',status:'available',statusLabel:'Work 연결',href:'https://ekodi.kr/work'},
       {code:'FIN',name:'Finance AI',description:'수입·비용·현금흐름·증빙 신호',status:'next',statusLabel:'읽기 전용 재무 연결 대기'},
       {code:'RPT',name:'AI Report',description:'일일 운영요약·이상징후·승인 필요 항목',status:'next',statusLabel:'집계 데이터 연결 후 자동화'}
     ]
@@ -22,13 +22,13 @@ const WORKSPACES={
   jadam:{
     id:'jadam',name:'자담치킨 목포대점',englishName:'JADAM CHICKEN',classification:'external_client',scope:'store',accent:'store',
     description:'자담치킨 목포대점의 Marketing AI, 고객관계, 매출, 매장업무와 비용 신호를 점포 단위로 분리해 운영하는 고객 Business OS 워크스페이스입니다.',
-    publicUrl:'https://ekodi.kr/jadam/marketing',marketingUrl:'https://ekodi.kr/jadam/marketing',workUrl:'https://work.ekodi.kr',
+    publicUrl:'https://ekodi.kr/jadam/marketing',marketingUrl:'https://ekodi.kr/jadam/marketing',workUrl:'https://ekodi.kr/work',
     dataState:'connection_required',dataMessage:'자담치킨 Marketing AI 워크스페이스는 연결되어 있지만 CRM·POS·재무 지표는 아직 Business OS 읽기 전용 집계 API에 연결되지 않았습니다.',
     modules:[
       {code:'MKT',name:'Marketing AI',description:'자담치킨 전용 콘텐츠·캠페인·채널 운영',status:'available',statusLabel:'전용 워크스페이스 연결',href:'https://ekodi.kr/jadam/marketing'},
       {code:'CRM',name:'Customer AI',description:'동의 기반 고객·재방문·휴면고객 관리',status:'next',statusLabel:'고객 원장 연결 대기'},
       {code:'SAL',name:'Sales AI',description:'일매출·주문채널·메뉴 흐름 분석',status:'next',statusLabel:'POS/주문 집계 연결 대기'},
-      {code:'WRK',name:'Work AI',description:'매장업무·채용·실행 체크',status:'available',statusLabel:'Work 연결',href:'https://work.ekodi.kr'},
+      {code:'WRK',name:'Work AI',description:'매장업무·채용·실행 체크',status:'available',statusLabel:'Work 연결',href:'https://ekodi.kr/work'},
       {code:'FIN',name:'Finance AI',description:'원가·배달수수료·광고비·현금흐름',status:'next',statusLabel:'읽기 전용 재무 연결 대기'},
       {code:'RPT',name:'AI Report',description:'매일 매장 핵심신호와 승인 필요 행동 보고',status:'next',statusLabel:'집계 데이터 연결 후 자동화'}
     ]
@@ -90,7 +90,7 @@ export default{async fetch(request,env){
   const url=new URL(request.url);const cfg=runtimeConfig(env);
   if(url.pathname==='/config.js')return new Response(`window.EKODI_BUSINESS_CONFIG=${JSON.stringify(cfg)};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...securityHeaders()}});
   if(url.pathname==='/health')return json({ok:true,service:'ekodi-business-os',stage:cfg.mode,integrationsEnabled:cfg.integrationsEnabled,executionEnabled:cfg.executionEnabled,policy:cfg.policy,readiness:cfg.readiness,workspaces:Object.keys(WORKSPACES)});
-  if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/business',307);
+  if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/business',307);
   if(request.method==='GET'&&url.pathname==='/api/workspaces')return json({workspaces:workspaceList(),defaultWorkspace:cfg.defaultWorkspace});
   if(request.method==='GET'&&url.pathname.startsWith('/api/workspace/')){const workspace=getWorkspace(decodeURIComponent(url.pathname.slice('/api/workspace/'.length)));return workspace?json({workspace,metrics:{sales:null,salesDelta:null,customers:null,newCustomers:null,repeatRate:null,targetRepeatRate:null,openActions:null,pendingApprovals:null},dataState:workspace.dataState,dataMessage:workspace.dataMessage}):json({error:'workspace_not_found'},404)}
   if(request.method==='POST'&&url.pathname==='/api/brief'){let body={};try{body=await request.json()}catch{return json({error:'invalid_json'},400)}const workspace=getWorkspace(body.workspace)||WORKSPACES.ekodibiz;return json({mode:hasObservedMetrics(body.metrics||{})?'explainable-rule-mvp':'connection-readiness',workspace:workspace.id,sampleSafe:true,priorities:buildBrief(body)});}

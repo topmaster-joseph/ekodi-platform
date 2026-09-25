@@ -36,7 +36,7 @@ test('trade auth uses EKODIBIZ tenant and canonical apex portal',async()=>{
   const [auth,access]=await Promise.all([read('auth-site/auth.js'),read('supabase/functions/access-api/index.ts')]);
   assert.ok(auth.includes("trade:{name:'EKODI Global Trading',tenant:'ekoditrade'"));  assert.ok(auth.includes("returnTo:'https://ekodi.kr/ekodibiz/trade'"));
   assert.ok(auth.includes('requestable:false'));
-  assert.ok(access.includes('trade:["https://ekodi.kr","https://trade.biz.ekodi.kr","https://trade.ekodi.kr"]'));
+  assert.ok(access.includes('trade:["https://ekodi.kr","https://ekodi.kr/ekodibiz/trade","https://ekodi.kr/ekodibiz/trade"]'));
 });
 
 test('trade authority supports overall and scoped company administration',async()=>{
@@ -112,7 +112,7 @@ test('trade admin uses shared two-level UI and canonical apex auth',async()=>{
   assert.ok(tradeAdmin.includes('id="tradeAdminSearch"'));
   assert.ok(tradeAdmin.includes('id="roles"'));
   assert.ok(tradeAdmin.includes("new URL('/auth/',location.origin)"));
-  assert.ok(!tradeAdmin.includes('https://auth.ekodi.kr/'));
+  assert.ok(!tradeAdmin.includes('https://ekodi.kr/auth/'));
   assert.ok(tradeAdmin.includes("'cache-control':'no-store'"));
   assert.ok(tradeAdmin.includes('거래회사 데이터 비공개'));
   assert.ok(tradeAdmin.includes('관계자 화면 보기'));

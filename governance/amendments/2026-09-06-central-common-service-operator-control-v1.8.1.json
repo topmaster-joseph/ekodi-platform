@@ -7,7 +7,7 @@
   "changeClass": "C2",
   "taskId": "ekodi-central-common-service-operator-20260906",
   "pullRequest": 1019,
-  "summary": "Make admin.ekodi.kr the canonical operator surface for EKODI common services while dedicated runtime hosts remain execution/API boundaries rather than separate administrator products.",
+  "summary": "Make ekodi.kr/admin the canonical operator surface for EKODI common services while dedicated runtime hosts remain execution/API boundaries rather than separate administrator products.",
   "approvalBasis": "The platform owner explicitly instructed this common-service centralization to be built through completion and then instructed the work to continue after the implementation, validation and production path were reported.",
   "adds": [
     "one canonical Common Services operator surface inside Admin",

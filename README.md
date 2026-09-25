@@ -2,13 +2,13 @@
 
 Production-oriented operating platform for the EKODI ecosystem.
 
-EKODI is designed around a **service-first, AI-enhanced** principle: ordinary users receive a simple signed-in experience through `my.ekodi.kr`, administrators receive a separate private control plane through `admin.ekodi.kr`, and core services continue to operate even when external AI providers are unavailable.
+EKODI is designed around a **service-first, AI-enhanced** principle: ordinary users receive a simple signed-in experience through `ekodi.kr/my`, administrators receive a separate private control plane through `ekodi.kr/admin`, and core services continue to operate even when external AI providers are unavailable.
 
 ## Product surfaces
 
 - Public front door: https://ekodi.kr
 - Signed-in personal home: https://ekodi.kr/my
-- Private control plane: https://admin.ekodi.kr
+- Private control plane: https://ekodi.kr/admin
 - Shared control/data API: https://ekodi.kr/api
 - Shared EKODI Shell: https://ekodi.kr/shell
 
@@ -33,7 +33,7 @@ The machine-readable contract is `config/external-ai-module-contract.json`; the 
 ```text
 People
   ├─ ekodi.kr       public front door
-  └─ my.ekodi.kr    signed-in experience plane
+  └─ ekodi.kr/my    signed-in experience plane
                           │
                           ▼
                 Identity / Workspace context
@@ -57,7 +57,7 @@ People
              Replaceable AI / automation layer
 
 Administrators
-  └─ admin.ekodi.kr  private control plane
+  └─ ekodi.kr/admin  private control plane
          ├─ health / domains / access
          ├─ deployments / audit / recovery
          └─ AI operations / resilience / manual fallback
@@ -133,7 +133,7 @@ For production-impacting work, a successful commit or deploy command alone is no
 
 ## Domain policy
 
-`ekodi.kr` is the primary digital root. New services should normally use EKODI subdomains rather than new standalone domains. Organization-specific functions may use hierarchical service subdomains such as `mail.biz.ekodi.kr` or `live.church.ekodi.kr` when an explicit product contract requires them.
+`ekodi.kr` is the primary digital root. New services should normally use EKODI subdomains rather than new standalone domains. Organization-specific functions may use hierarchical service subdomains such as `ekodi.kr/ekodibiz/mail` or `ekodi.kr/ekodichurch/live` when an explicit product contract requires them.
 
 Existing standalone EKODI domains may remain for brand protection or transition and should redirect to canonical EKODI addresses where appropriate.
 

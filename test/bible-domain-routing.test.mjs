@@ -6,7 +6,7 @@ import worker from '../bible-worker.js';
 const env = { DATA_ENABLED:'false', DATA_MODE:'test' };
 
 test('legacy Bible host permanently redirects to the constitutional canonical path', async () => {
-  const response = await worker.fetch(new Request('https://bible.ekodi.kr/reader?provider=KRV1961'), env);
+  const response = await worker.fetch(new Request('https://ekodi.kr/bible/reader?provider=KRV1961'), env);
   assert.equal(response.status, 308);
   assert.equal(response.headers.get('location'), 'https://ekodi.kr/bible/reader?provider=KRV1961');
 });
@@ -17,7 +17,7 @@ test('canonical Bible health route is path-scoped on ekodi.kr', async () => {
   const body = await response.json();
   assert.equal(body.ok, true);
   assert.equal(body.canonicalPath, '/bible');
-  assert.equal(body.legacyAlias, 'bible.ekodi.kr');
+  assert.equal(body.legacyAlias, 'ekodi.kr/bible');
 });
 
 test('canonical Bible provider API works beneath the path prefix', async () => {

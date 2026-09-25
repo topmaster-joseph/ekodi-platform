@@ -30,7 +30,7 @@ test('operations cockpit is operator-authenticated and read-only', async () => {
   try {
     await appendCommerceEvent({ DB:db }, { eventType:'catalog.observed', aggregateType:'product', aggregateId:'prd_1', actor:'test', action:'catalog.observe', idempotencyKey:'catalog:prd_1', payload:{} });
     const env={ DB:db, MALL_OPERATIONS_TOKEN:'ops-secret', PAYMENT_PROVIDER:'toss', PAYMENTS_ENABLED:'false' };
-    const request=new Request('https://mall-api.ekodi.kr/api/internal/operations/cockpit',{ headers:{ 'x-ekodi-mall-ops-token':'ops-secret' } });
+    const request=new Request('https://mall-ekodi.kr/api/api/internal/operations/cockpit',{ headers:{ 'x-ekodi-mall-ops-token':'ops-secret' } });
     const result=await handleCommerceOperationsRequest(request,env);
     assert.equal(result.status,200);
     assert.equal(result.body.actor,'mall-ops:service-token');
@@ -44,9 +44,9 @@ test('operations cockpit is operator-authenticated and read-only', async () => {
 test('operations cockpit preserves auth and red high-impact visibility', async () => {
   const db=migratedDb();
   try {
-    const unauth=await handleCommerceOperationsRequest(new Request('https://mall-api.ekodi.kr/api/internal/operations/cockpit'),{ DB:db, MALL_OPERATIONS_EMAILS:'ops@example.com' });
+    const unauth=await handleCommerceOperationsRequest(new Request('https://mall-ekodi.kr/api/api/internal/operations/cockpit'),{ DB:db, MALL_OPERATIONS_EMAILS:'ops@example.com' });
     assert.equal(unauth.status,401);
-    const request=new Request('https://mall-api.ekodi.kr/api/internal/operations/cockpit',{ headers:{ 'x-ekodi-mall-ops-token':'ops-secret' } });
+    const request=new Request('https://mall-ekodi.kr/api/api/internal/operations/cockpit',{ headers:{ 'x-ekodi-mall-ops-token':'ops-secret' } });
     const result=await handleCommerceOperationsRequest(request,{ DB:db, MALL_OPERATIONS_TOKEN:'ops-secret', PAYMENT_PROVIDER:'toss', BUYER_PII_RELEASE_ENABLED:'true' });
     assert.equal(result.status,200);
     assert.equal(result.body.cockpit.status,'attention');

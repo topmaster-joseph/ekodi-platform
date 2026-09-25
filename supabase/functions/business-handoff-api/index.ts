@@ -5,15 +5,15 @@ const url=Deno.env.get("SUPABASE_URL")!;
 const anon=Deno.env.get("SUPABASE_ANON_KEY")!;
 const service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin=createClient(url,service,{auth:{persistSession:false}});
-const RETURN_TO="https://business.ekodi.kr/";
+const RETURN_TO="https://ekodi.kr/business/";
 const WORKSPACES=["ekodibiz","jadam"] as const;
 const WORKSPACE_SET=new Set<string>(WORKSPACES);
 
 const cors=(req:Request)=>{
-  const origin=req.headers.get("Origin")||"https://auth.ekodi.kr";
-  const allowed=origin==="https://auth.ekodi.kr"||origin==="https://business.ekodi.kr";
+  const origin=req.headers.get("Origin")||"https://ekodi.kr/auth";
+  const allowed=origin==="https://ekodi.kr/auth"||origin==="https://ekodi.kr/business";
   return{
-    "Access-Control-Allow-Origin":allowed?origin:"https://auth.ekodi.kr",
+    "Access-Control-Allow-Origin":allowed?origin:"https://ekodi.kr/auth",
     "Vary":"Origin",
     "Access-Control-Allow-Headers":"authorization, apikey, content-type, x-client-info",
     "Access-Control-Allow-Methods":"POST,OPTIONS"

@@ -44,7 +44,7 @@ Until actual data is connected, the interface must display no fabricated values.
 
 ## 4. Phase 1: EKODIBIZ customer gateway
 
-Target: `business.ekodi.kr` / `biz.ekodi.kr`
+Target: `ekodi.kr/business` / `ekodi.kr/ekodibiz`
 
 First-screen question:
 

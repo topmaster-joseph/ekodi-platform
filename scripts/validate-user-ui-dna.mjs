@@ -235,7 +235,7 @@ for (const service of EKODI_SERVICE_MANIFEST.services ?? []) {
     errors.push(`User service host "${url.hostname}" (${service.id}) is not covered by the shared User UI Shell.`);
   }
 }
-if (shellServiceForHost('admin.ekodi.kr') !== '') errors.push('Admin host must never be classified as a User UI Shell host.');
+if (shellServiceForHost('ekodi.kr/admin') !== '') errors.push('Admin host must never be classified as a User UI Shell host.');
 
 const requiredMessageTypes = ['success', 'info', 'warning', 'error', 'permission', 'security', 'system', 'waiting'];
 if (messageUI?.name !== 'EKODI Message UI') errors.push('Message UI policy must be named "EKODI Message UI".');

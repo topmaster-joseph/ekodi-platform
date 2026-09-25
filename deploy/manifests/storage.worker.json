@@ -6,7 +6,7 @@
     "allowFirstDeploy": true,
     "requests": [
       {
-        "url": "https://drive.ekodi.kr/health",
+        "url": "https://ekodi.kr/storage/health",
         "statuses": [200],
         "redirect": "follow",
         "expect": ["\"service\":\"ekodi-storage-control\"", "\"provider\":\"google_drive\""]

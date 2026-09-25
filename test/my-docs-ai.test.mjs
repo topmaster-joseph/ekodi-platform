@@ -40,5 +40,5 @@ test('My guarded release smoke-tests the internal Worker candidate and defers ca
   const canonical=requests.filter(item=>item.url.startsWith('https://ekodi.kr/my/'));
   assert.equal(canonical.length,4);
   for(const probe of canonical){assert.equal(probe.candidateVerify,false);assert.match(probe.candidateVerifyReason,/verified after promotion/);}
-  assert.equal(requests.filter(item=>item.url.startsWith('https://my.ekodi.kr/')).length,0);
+  assert.equal(requests.filter(item=>item.url.startsWith('https://ekodi.kr/my/')).length,0);
 });

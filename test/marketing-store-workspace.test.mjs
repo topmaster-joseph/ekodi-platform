@@ -41,7 +41,7 @@ test('Plus canonical workspace uses the shared Marketing AI Pages project', () =
 
 test('Pro store custom domains reject EKODI and provider-owned suffixes', () => {
   assert.equal(normalizeStoreCustomerHostname('ai.example.com'), 'ai.example.com');
-  assert.equal(normalizeStoreCustomerHostname('shop.ekodi.kr'), '');
+  assert.equal(normalizeStoreCustomerHostname('ekodi.kr/shop'), '');
   assert.equal(normalizeStoreCustomerHostname('foo.pages.dev'), '');
   assert.match(domainControl, /PRO_OR_ABOVE/);
   assert.match(domainControl, /marketing_store_custom_domains/);

@@ -1,6 +1,6 @@
 ﻿(() => {
   const DEV_API='https://ekodi-insurance-api-staging.ekodi-development.workers.dev';
-  const PROD_API='https://insurance-api.ekodi.kr';
+  const PROD_API='https://insurance-ekodi.kr/api';
   const IS_PRODUCTION_UI=location.hostname==='ekodi.kr'&&location.pathname.startsWith('/insurance');
   const API=IS_PRODUCTION_UI?PROD_API:DEV_API;
   const ACCESS_KEY='ekodi-advisor-consultation-access-v1';

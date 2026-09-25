@@ -48,7 +48,7 @@ test('Space stays an internal engine while public aliases follow canonical works
   const routing=JSON.parse(policy).publicWorkspaceRouting;
   assert.equal(routing.canonicalPattern,'/{slug}');
   assert.equal(routing.kindEncodedInUrl,false);
-  assert.equal(routing.legacyRedirects['space.ekodi.kr/{slug}'],'ekodi.kr/{slug}');
+  assert.equal(routing.legacyRedirects['ekodi.kr/{slug}'],'ekodi.kr/{slug}');
 });
 
 test('workspace kinds remain metadata, not public path prefixes',async()=>{

@@ -254,7 +254,7 @@ begin
     'workspace_key', v_workspace_key,
     'creator_mode', v_project.creator_mode,
     'visibility', 'private',
-    'my_ekodi_url', 'https://my.ekodi.kr/'
+    'my_ekodi_url', 'https://ekodi.kr/my/'
   );
 end
 $$;

@@ -3,7 +3,7 @@ import authWorker, { isAllowedOrigin } from './auth-worker.js';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const TOSS_API = 'https://api.tosspayments.com/v1';
-const AUTHOR_ORIGIN = 'https://author.ekodi.kr';
+const AUTHOR_ORIGIN = 'https://ekodi.kr/author';
 const PAID_PLANS = new Set(['author', 'pro']);
 const enc = new TextEncoder();
 

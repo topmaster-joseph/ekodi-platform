@@ -5,13 +5,13 @@ workers_dev = true
 preview_urls = false
 
 [[routes]]
-pattern = "mall-api.ekodi.kr"
+pattern = "mall-ekodi.kr/api"
 custom_domain = true
 
 [vars]
 ENVIRONMENT = "production"
 MALL_BASE_URL = "https://ekodi.kr/ekodimall"
-ALLOWED_ORIGINS = "https://ekodi.kr,https://ekodi-mall.pages.dev"
+ALLOWED_ORIGINS = "https://ekodi.kr"
 SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 MALL_OPERATIONS_EMAILS = "topmaster.joseph@gmail.com"

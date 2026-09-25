@@ -1,7 +1,7 @@
 const accountId = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
 const token = String(process.env.CLOUDFLARE_API_TOKEN || '').trim();
-const targetDomain = 'drive.ekodi.kr';
-const callbackDomain = 'drive.ekodi.kr/api/control/storage/google/callback';
+const targetDomain = 'ekodi.kr/storage';
+const callbackDomain = 'ekodi.kr/storage/api/control/storage/google/callback';
 const appName = 'EKODI Storage';
 const callbackAppName = 'EKODI Storage OAuth Callback';
 const policyName = 'EKODI Cloudflare account members';

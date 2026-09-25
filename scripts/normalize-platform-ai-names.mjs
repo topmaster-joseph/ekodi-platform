@@ -79,7 +79,7 @@ const adminReplacements = new Map([
   ['<strong>EKODI Live</strong>', '<strong>에코디 라이브</strong>'],
   ['<strong>EKODI Cloud</strong>', '<strong>에코디 클라우드</strong>'],
   ['<strong>마케팅AI</strong>', '<strong>마케팅 AI</strong>'],
-  ['<strong>출판</strong><small>books.ekodi.kr</small>', '<strong>에코디서점</strong><small>books.ekodi.kr</small>']
+  ['<strong>출판</strong><small>ekodi.kr/books</small>', '<strong>에코디서점</strong><small>ekodi.kr/books</small>']
 ]);
 
 const displayNames = [
@@ -111,22 +111,22 @@ const scanned = [];
 const remaining = [];
 
 const adminScopeEntries = [
-  "    { domain:'bible.ekodi.kr', name:'에코디 말씀대화', group:'Community', role:'말씀·묵상·실천 대화', aliases:['말씀대화','성경대화','bible'] },",
-  "    { domain:'cafe.ekodi.kr', name:'에코디 카페', group:'Community', role:'카페·모임·커뮤니티 준비 공간', aliases:['카페','cafe'] },",
-  "    { domain:'business.ekodi.kr', name:'비즈니스 OS', group:'Business & Commerce', role:'AI 기반 공통 사업 운영', aliases:['비즈니스 os','business os','business'] },",
-  "    { domain:'management.ekodi.kr', name:'경영플랫폼', group:'Business & Commerce', role:'전문 경영AI 선택·연결', aliases:['경영플랫폼','경영 플랫폼','management'] },",
-  "    { domain:'shop.ekodi.kr', name:'쇼핑플랫폼', group:'Business & Commerce', role:'독립 쇼핑몰 생성·운영', aliases:['쇼핑플랫폼','쇼핑 플랫폼','shop'] },",
-  "    { domain:'invest.ekodi.kr', name:'에코디 투자', group:'Business & Commerce', role:'투자 검토·실사·연결', aliases:['투자','invest'] },",
+  "    { domain:'ekodi.kr/bible', name:'에코디 말씀대화', group:'Community', role:'말씀·묵상·실천 대화', aliases:['말씀대화','성경대화','bible'] },",
+  "    { domain:'ekodi.kr/cafe', name:'에코디 카페', group:'Community', role:'카페·모임·커뮤니티 준비 공간', aliases:['카페','cafe'] },",
+  "    { domain:'ekodi.kr/business', name:'비즈니스 OS', group:'Business & Commerce', role:'AI 기반 공통 사업 운영', aliases:['비즈니스 os','business os','business'] },",
+  "    { domain:'ekodi.kr/management', name:'경영플랫폼', group:'Business & Commerce', role:'전문 경영AI 선택·연결', aliases:['경영플랫폼','경영 플랫폼','management'] },",
+  "    { domain:'ekodi.kr/shop', name:'쇼핑플랫폼', group:'Business & Commerce', role:'독립 쇼핑몰 생성·운영', aliases:['쇼핑플랫폼','쇼핑 플랫폼','shop'] },",
+  "    { domain:'ekodi.kr/invest', name:'에코디 투자', group:'Business & Commerce', role:'투자 검토·실사·연결', aliases:['투자','invest'] },",
   "    { domain:'ekodi.kr/support', name:'지원사업 AI', group:'Business & Commerce', role:'지원사업 탐색·신청·정산', aliases:['지원사업 ai','지원사업','support'] },",
-  "    { domain:'money.ekodi.kr', name:'에코디 머니', group:'Business & Commerce', role:'계좌·자동이체 금융정리 안내', aliases:['머니','money'] },",
-  "    { domain:'publishing.ekodi.kr', name:'출판', group:'Knowledge & Content', role:'출판상담·제작·대행·유통', aliases:['출판','publishing'] },",
-  "    { domain:'author.ekodi.kr', name:'크리에이터 AI', group:'Knowledge & Content', role:'글·창작 전반 AI 지원', aliases:['크리에이터 ai','작가ai','creator ai','author'] },",
-  "    { domain:'my.ekodi.kr', name:'마이 에코디', group:'Work & Life', role:'개인 활동·서비스 허브', aliases:['마이 에코디','my ekodi','my'] },",
-  "    { domain:'work.ekodi.kr', name:'에코디 워크', group:'Work & Life', role:'업무·프로젝트 실행 공간', aliases:['워크','업무','work'] },",
-  "    { domain:'energy.ekodi.kr', name:'에너지 AI', group:'Work & Life', role:'전기·에너지 상태 분석·제안', aliases:['에너지 ai','에너지','energy'] },",
+  "    { domain:'ekodi.kr/money', name:'에코디 머니', group:'Business & Commerce', role:'계좌·자동이체 금융정리 안내', aliases:['머니','money'] },",
+  "    { domain:'ekodi.kr/publishing', name:'출판', group:'Knowledge & Content', role:'출판상담·제작·대행·유통', aliases:['출판','publishing'] },",
+  "    { domain:'ekodi.kr/author', name:'크리에이터 AI', group:'Knowledge & Content', role:'글·창작 전반 AI 지원', aliases:['크리에이터 ai','작가ai','creator ai','author'] },",
+  "    { domain:'ekodi.kr/my', name:'마이 에코디', group:'Work & Life', role:'개인 활동·서비스 허브', aliases:['마이 에코디','my ekodi','my'] },",
+  "    { domain:'ekodi.kr/work', name:'에코디 워크', group:'Work & Life', role:'업무·프로젝트 실행 공간', aliases:['워크','업무','work'] },",
+  "    { domain:'ekodi.kr/energy', name:'에너지 AI', group:'Work & Life', role:'전기·에너지 상태 분석·제안', aliases:['에너지 ai','에너지','energy'] },",
   "    { domain:'ekodi.kr/insurance', url:'https://ekodi.kr/insurance', name:'에코디보험', group:'Work & Life', role:'보험 진단·관리·청구 허브', aliases:['보험','insurance','ins'] },",
-  "    { domain:'messenger.ekodi.kr', name:'에코디 메신저', group:'Communication & Cloud', role:'사람·AI·공간 대화 연결', aliases:['메신저','messenger'] },",
-  "    { domain:'media.ekodi.kr', name:'에코디미디어', group:'Communication & Cloud', role:'영상·미디어 콘텐츠 연결', aliases:['미디어','media'] },"
+  "    { domain:'ekodi.kr/messenger', name:'에코디 메신저', group:'Communication & Cloud', role:'사람·AI·공간 대화 연결', aliases:['메신저','messenger'] },",
+  "    { domain:'ekodi.kr/media', name:'에코디미디어', group:'Communication & Cloud', role:'영상·미디어 콘텐츠 연결', aliases:['미디어','media'] },"
 ];
 
 function isAdminSurface(relative) {
@@ -202,9 +202,9 @@ const adminChecks = {
     "name: '비즈니스 OS'", "name: '에코디서점'", "name: '크리에이터 AI'", "name: '마케팅 AI'", "name: '에너지 AI'"
   ],
   'admin-lazy-features.js': [
-    "domain:'business.ekodi.kr'", "name:'비즈니스 OS'", "domain:'management.ekodi.kr'", "name:'경영플랫폼'",
-    "domain:'shop.ekodi.kr'", "name:'쇼핑플랫폼'", "domain:'ekodi.kr/support'", "name:'지원사업 AI'",
-    "domain:'author.ekodi.kr'", "name:'크리에이터 AI'", "domain:'energy.ekodi.kr'", "name:'에너지 AI'"
+    "domain:'ekodi.kr/business'", "name:'비즈니스 OS'", "domain:'ekodi.kr/management'", "name:'경영플랫폼'",
+    "domain:'ekodi.kr/shop'", "name:'쇼핑플랫폼'", "domain:'ekodi.kr/support'", "name:'지원사업 AI'",
+    "domain:'ekodi.kr/author'", "name:'크리에이터 AI'", "domain:'ekodi.kr/energy'", "name:'에너지 AI'"
   ],
   'admin-shell.html': ['<strong>에코디 메일</strong>', '<strong>에코디 라이브</strong>', '<strong>에코디 클라우드</strong>', '<strong>마케팅 AI</strong>'],
 };

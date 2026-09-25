@@ -27,9 +27,9 @@ test('shared site routes Invest admin before the generic workspace-admin matcher
 
 test('common Invest admin keeps the existing central service-admin handoff contract',async()=>{
   const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/service-admin-entry.worker.json',import.meta.url),'utf8'));
-  const probe=manifest.worker.requests.find(item=>item.url==='https://invest.ekodi.kr/admin');
+  const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/invest/admin');
   assert.ok(probe);assert.deepEqual(probe.statuses,[307]);
-  assert.ok(probe.headerExpect.some(value=>value.includes('location: https://admin.ekodi.kr/')));
+  assert.ok(probe.headerExpect.some(value=>value.includes('location: https://ekodi.kr/admin/')));
 });
 
 test('entry router does not swallow EKODIBIZ Invest admin as generic workspace admin',async()=>{

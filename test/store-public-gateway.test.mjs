@@ -11,7 +11,7 @@ test('store gateway is a public three-store chooser with canonical EKODI routes'
   assert.deepEqual(STORES.map(store=>store.slug),['jadam','pizzamaru','yogurt']);
   for(const slug of ['jadam','pizzamaru','yogurt'])assert.ok(html.includes(`href="/${slug}"`),slug);
   for(const store of STORES)assert.ok(html.includes(store.name),store.name);
-  assert.ok(!html.includes('pages.dev')); assert.ok(!html.includes('.ai.ekodi.kr'));
+  assert.ok(!html.includes('pages.dev')); assert.ok(!html.includes('.ekodi.kr/ai'));
 });
 test('cmpmyi is reserved and guarded while stores remains a compatibility route',async()=>{
   const [router,stage,prod,discovery]=await Promise.all([read('platform-router-entry-worker.js'),read('.github/workflows/stage-shared-site-shell.yml'),read('.github/workflows/deploy-site-core.yml'),read('discovery-layer.js')]);

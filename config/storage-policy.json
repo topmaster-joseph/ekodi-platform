@@ -3,7 +3,7 @@
   "canonicalStore": "google_workspace_shared_drive",
   "canonicalDriveName": "EKODI",
   "canonicalDriveIdSource": "wrangler.storage.toml:STORAGE_PRIMARY_SHARED_DRIVE_ID",
-  "controlPlane": "drive.ekodi.kr",
+  "controlPlane": "ekodi.kr/storage",
   "credentialsSource": "storage_connections:AES-GCM encrypted OAuth refresh token",
   "routeSource": "storage_routes",
   "principles": {

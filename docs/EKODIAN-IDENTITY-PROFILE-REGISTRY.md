@@ -25,6 +25,6 @@ EKODIAN Identity Profile Registry is the identity layer between the shared Chara
 
 ## Portrait asset contract
 
-A portrait is accepted only when it is an HTTPS reference on `ekodi.kr` or an `*.ekodi.kr` host. Base64/data URLs are rejected. The portrait is rendered inside the canonical EKODIAN face silhouette, preserving the shared body proportions, palette, role/state behavior and critical-workflow restraint.
+A portrait is accepted only when it is an HTTPS reference on `ekodi.kr` or an `EKODI child-host address` host. Base64/data URLs are rejected. The portrait is rendered inside the canonical EKODIAN face silhouette, preserving the shared body proportions, palette, role/state behavior and critical-workflow restraint.
 
 The Founder/Pastor portrait URL is intentionally empty until an approved reference asset is published. Adding the approved asset later does not require changing the operating model.

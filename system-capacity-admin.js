@@ -24,12 +24,12 @@
     sourceUrl: 'https://github.com/topmaster-joseph/ekodi-platform/blob/main/scripts/ecosystem-load-test.mjs',
     targets: [
       { name: 'EKODI', host: 'ekodi.kr', rps: 326.64, p95: 83.9, error: 0 },
-      { name: 'Admin', host: 'admin.ekodi.kr', rps: 396.94, p95: 66.8, error: 0 },
+      { name: 'Admin', host: 'ekodi.kr/admin', rps: 396.94, p95: 66.8, error: 0 },
       { name: 'API', host: 'ekodi.kr/api/health', rps: 620.26, p95: 43.4, error: 0 },
-      { name: 'Biz', host: 'biz.ekodi.kr', rps: 690.79, p95: 40.7, error: 0 },
-      { name: 'Marketing', host: 'marketing.ekodi.kr', rps: 204.40, p95: 98.8, error: 0 },
-      { name: 'Church', host: 'church.ekodi.kr', rps: 403.55, p95: 61.9, error: 0 },
-      { name: 'Lab', host: 'lab.ekodi.kr', rps: 471.48, p95: 57.2, error: 0 },
+      { name: 'Biz', host: 'ekodi.kr/ekodibiz', rps: 690.79, p95: 40.7, error: 0 },
+      { name: 'Marketing', host: 'ekodi.kr/marketing', rps: 204.40, p95: 98.8, error: 0 },
+      { name: 'Church', host: 'ekodi.kr/ekodichurch', rps: 403.55, p95: 61.9, error: 0 },
+      { name: 'Lab', host: 'ekodi.kr/ekodilab', rps: 471.48, p95: 57.2, error: 0 },
     ],
   });
 

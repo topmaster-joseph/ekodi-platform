@@ -6,7 +6,7 @@ EKODI 서비스 변경은 운영환경에 직접 덮어쓰지 않는다. 서비�
 
 Pages는 빌드 → 격리 preview branch 배포 → preview 자동검증 → 전부 통과한 경우에만 production 승격 → 운영 smoke/deep verification 순서로 진행한다. 공통 컨트롤러는 `scripts/guarded-pages-release.mjs`, 대상은 `deploy/manifests/*.pages.json`이다.
 
-현재 Marketing AI의 `marketing.ekodi.kr`, `jadam.ekodi.kr`, `pizzamaru.ekodi.kr`, `yogurt.ekodi.kr` 네 프로젝트는 하나의 release unit으로 보호한다.
+현재 Marketing AI의 `ekodi.kr/marketing`, `ekodi.kr/jadam`, `ekodi.kr/pizzamaru`, `ekodi.kr/yogurt` 네 프로젝트는 하나의 release unit으로 보호한다.
 
 ## 2. Stateless Workers: Stable 100% + Candidate 0%
 
@@ -16,7 +16,7 @@ Pages는 빌드 → 격리 preview branch 배포 → preview 자동검증 → �
 
 ## 3. Stateful Workers + D1
 
-Control API와 Finance API는 destructive migration 사전 차단 → production과 분리된 `ekodi-auth-staging` D1에 migration 적용 → `api-staging.ekodi.kr` 또는 `finance-api-staging.ekodi.kr` 검증 → production D1 Time Travel recovery bookmark 기록 → production migration → Worker candidate 0% 검증 → 100% 승격 → 운영 심층검증 순서로 진행한다.
+Control API와 Finance API는 destructive migration 사전 차단 → production과 분리된 `ekodi-auth-staging` D1에 migration 적용 → `ekodi.kr/api-staging` 또는 `ekodi.kr/finance-api-staging` 검증 → production D1 Time Travel recovery bookmark 기록 → production migration → Worker candidate 0% 검증 → 100% 승격 → 운영 심층검증 순서로 진행한다.
 
 Worker 코드 검증 실패는 자동 롤백한다. D1 Time Travel restore는 정상 신규 쓰기까지 지울 수 있으므로 자동 실행하지 않고 recovery bookmark를 남겨 수동 판단한다.
 
@@ -28,7 +28,7 @@ Worker route, custom domain, Pages-domain 연결 해제, DNS 레코드 삭제는
 
 ## Release Control
 
-`admin.ekodi.kr`의 `Release` 화면은 주요 release unit의 최근 GitHub Actions 실행, guarded release 모델, 위험등급, 운영 도메인을 한 화면에서 보여준다. 이 화면은 읽기 전용 관제면이며 배포 우회 버튼이나 DNS 직접편집 기능을 제공하지 않는다.
+`ekodi.kr/admin`의 `Release` 화면은 주요 release unit의 최근 GitHub Actions 실행, guarded release 모델, 위험등급, 운영 도메인을 한 화면에서 보여준다. 이 화면은 읽기 전용 관제면이며 배포 우회 버튼이나 DNS 직접편집 기능을 제공하지 않는다.
 
 Release Control의 자격증명 분리 상태는 실제 전용 Cloudflare token이 발급되기 전에는 `Prepared`로 표시한다. 코드가 준비되었다는 이유만으로 `Enforced`라고 표시하지 않는다.
 

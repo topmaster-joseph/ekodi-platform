@@ -12,9 +12,9 @@ const TENANTS = Object.freeze([
   { slug: 'cheonggye-local', name: '청계잇다 지역플랫폼', domain: 'ekodi.kr/cheonggye', realm: 'portal' },
   { slug: 'cheonggye-pass', name: '청계패스', domain: 'ekodi.kr/cheonggye/pass', realm: 'portal' },
   { slug: 'cmpmyi', name: '통합 매장 운영', domain: 'ekodi.kr/cmpmyi', realm: 'cmpmyi-client' },
-  { slug: 'jadam', name: '자담치킨 목포대점', domain: 'jadam.ekodi.kr', realm: 'jadam-client' },
-  { slug: 'pizzamaru', name: '피자마루 목포대점', domain: 'pizzamaru.ekodi.kr', realm: 'pizzamaru-client' },
-  { slug: 'yogurt', name: '요거트퍼플 목포대점', domain: 'yogurt.ekodi.kr', realm: 'yogurt-client' },
+  { slug: 'jadam', name: '자담치킨 목포대점', domain: 'ekodi.kr/jadam', realm: 'jadam-client' },
+  { slug: 'pizzamaru', name: '피자마루 목포대점', domain: 'ekodi.kr/pizzamaru', realm: 'pizzamaru-client' },
+  { slug: 'yogurt', name: '요거트퍼플 목포대점', domain: 'ekodi.kr/yogurt', realm: 'yogurt-client' },
 ]);
 
 const TENANT_REALMS = Object.freeze(Object.fromEntries(TENANTS.map(item => [item.slug, item.realm])));
@@ -138,7 +138,7 @@ export async function ensureCustomerAccessSchema(db) {
     VALUES (?, ?, ?, 'active', ?)`);
   await db.batch(TENANTS.map(tenant => seed.bind(tenant.slug, tenant.name, tenant.domain, now)));
   await db.prepare("UPDATE customer_tenants SET domain = 'ekodi.kr/cgma' WHERE slug = 'cgma' AND domain <> 'ekodi.kr/cgma'").run();
-  await db.prepare("UPDATE customer_tenants SET domain = 'yogurt.ekodi.kr' WHERE slug = 'yogurt' AND domain <> 'yogurt.ekodi.kr'").run();
+  await db.prepare("UPDATE customer_tenants SET domain = 'ekodi.kr/yogurt' WHERE slug = 'yogurt' AND domain <> 'ekodi.kr/yogurt'").run();
 
   try {
     await db.prepare(`INSERT OR IGNORE INTO customer_access_grants
@@ -298,7 +298,7 @@ async function preregister(request, env, slug) {
       visibility,
       status: existing?.last_verified_at ? 'active' : 'pre_registered',
       tenant: tenant.slug,
-      loginUrl: `https://auth.ekodi.kr/?site=${TENANT_REALMS[slug] || `${slug}-client`}`,
+      loginUrl: `https://ekodi.kr/auth/?site=${TENANT_REALMS[slug] || `${slug}-client`}`,
     },
   }, existing ? 200 : 201, request, env);
 }

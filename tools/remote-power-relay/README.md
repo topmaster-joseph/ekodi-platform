@@ -4,7 +4,7 @@
 
 ## 구조
 
-`admin.ekodi.kr → ekodi.kr/api → 인증된 HTTPS/Tunnel → LAN relay → Wake-on-LAN → Remote Desktop Commander 자동 시작`
+`ekodi.kr/admin → ekodi.kr/api → 인증된 HTTPS/Tunnel → LAN relay → Wake-on-LAN → Remote Desktop Commander 자동 시작`
 
 브라우저와 Cloudflare Worker에는 실제 MAC 주소를 저장하지 않습니다. MAC 주소와 브로드캐스트 주소는 LAN 릴레이에만 둡니다.
 

@@ -57,7 +57,7 @@ CREATE INDEX IF NOT EXISTS idx_marketing_domain_audit_subject
 INSERT OR IGNORE INTO marketing_workspaces
   (subject_type, subject_key, tenant_slug, workspace_slug, canonical_domain, provider, provider_project, landing_path, status, created_at, updated_at)
 VALUES
-  ('tenant', 'jadam', 'jadam', 'jadam', 'jadam.ai.ekodi.kr', 'cloudflare-pages', 'marketing-ai-jadam', '/', 'active', datetime('now'), datetime('now')),
-  ('tenant', 'pizzamaru', 'pizzamaru', 'pizzamaru', 'pizzamaru.ai.ekodi.kr', 'cloudflare-pages', 'marketing-ai-pizzamaru', '/', 'active', datetime('now'), datetime('now')),
-  ('tenant', 'yogurt', 'yogurt', 'yogurt', 'yogurt.ai.ekodi.kr', 'cloudflare-pages', 'marketing-ai-yogurtpurple', '/', 'active', datetime('now'), datetime('now')),
-  ('tenant', 'cgma', 'cgma', 'cgma', 'cgma.ai.ekodi.kr', 'cloudflare-pages', 'cheonggye-market', '/market-ai', 'active', datetime('now'), datetime('now'));
+  ('tenant', 'jadam', 'jadam', 'jadam', 'ekodi.kr/jadam/marketing', 'cloudflare-pages', 'marketing-ai-jadam', '/', 'active', datetime('now'), datetime('now')),
+  ('tenant', 'pizzamaru', 'pizzamaru', 'pizzamaru', 'ekodi.kr/pizzamaru/marketing', 'cloudflare-pages', 'marketing-ai-pizzamaru', '/', 'active', datetime('now'), datetime('now')),
+  ('tenant', 'yogurt', 'yogurt', 'yogurt', 'ekodi.kr/yogurt/marketing', 'cloudflare-pages', 'marketing-ai-yogurtpurple', '/', 'active', datetime('now'), datetime('now')),
+  ('tenant', 'cgma', 'cgma', 'cgma', 'ekodi.kr/cgma/marketing', 'cloudflare-pages', 'cheonggye-market', '/market-ai', 'active', datetime('now'), datetime('now'));

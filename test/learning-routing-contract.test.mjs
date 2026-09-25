@@ -19,7 +19,7 @@ test('Learning Fabric is canonical at /learn without replacing Education', () =>
   assert.match(manifest,/id:'learn'.*https:\/\/ekodi\.kr\/learn/);
   const edu=catalog.services.find(item=>item.id==='edu');
   const learn=catalog.services.find(item=>item.id==='learn');
-  assert.equal(edu.url,'https://edu.ekodi.kr');
+  assert.equal(edu.url,'https://ekodi.kr/education');
   assert.equal(learn.url,'https://ekodi.kr/learn');
   assert.equal(learn.productionVerified,true);
   assert.equal(learn.status,'live');

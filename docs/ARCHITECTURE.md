@@ -5,8 +5,8 @@
 Version 4.3 is an ecosystem operating architecture with two distinct human-facing planes over a shared stable core:
 
 1. `ekodi.kr` is the public front door.
-2. `my.ekodi.kr` is the signed-in experience plane for ordinary users.
-3. `admin.ekodi.kr` is the private control plane for system administrators.
+2. `ekodi.kr/my` is the signed-in experience plane for ordinary users.
+3. `ekodi.kr/admin` is the private control plane for system administrators.
 4. Specialized EKODI services remain isolated deployment and data domains.
 5. AI and automation enhance services but are replaceable and must never be required for core operation.
 
@@ -28,15 +28,15 @@ Normal source changes deploy only the owning platform. Shared edge runtimes requ
 
 ### Experience plane
 
-`my.ekodi.kr` is the signed-in home for ordinary users. It owns the personal entry experience, Workspace selection, identity/account management, and safe navigation into services.
+`ekodi.kr/my` is the signed-in home for ordinary users. It owns the personal entry experience, Workspace selection, identity/account management, and safe navigation into services.
 
 The canonical identity model is `Person + Space + Role + Capability`. A person can participate in multiple spaces without maintaining a separate identity for each service.
 
-Public workspace routing follows the Constitution: the canonical address is `ekodi.kr/{slug}`, while workspace kind remains internal metadata bound to immutable `workspace_id`. The `ekodi-space` Worker remains an internal Service Binding engine behind the apex workspace gateway. `space.ekodi.kr` is a legacy compatibility alias only and must redirect workspace paths to the apex; it is not a separate user-facing service.
+Public workspace routing follows the Constitution: the canonical address is `ekodi.kr/{slug}`, while workspace kind remains internal metadata bound to immutable `workspace_id`. The `ekodi-space` Worker remains an internal Service Binding engine behind the apex workspace gateway. `ekodi.kr` is a legacy compatibility alias only and must redirect workspace paths to the apex; it is not a separate user-facing service.
 
 ### Control plane
 
-`admin.ekodi.kr` is a private operational command center, not a general-user dashboard. It exists for service health, domains, access, deployment observation, AI operations, audit, recovery, and manual fallback.
+`ekodi.kr/admin` is a private operational command center, not a general-user dashboard. It exists for service health, domains, access, deployment observation, AI operations, audit, recovery, and manual fallback.
 
 Privileged, destructive, legally sensitive, financially sensitive, rights-reducing, or mission-sensitive actions remain subject to human gates and mission governance.
 

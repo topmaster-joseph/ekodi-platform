@@ -10,7 +10,7 @@ import {AI_COMMONS_POLICY,adminIdeaView,canFinalPublish,executionCatalogSnapshot
 const clean=value=>String(value??'').trim();
 const now=()=>new Date().toISOString();
 const ONLINE_WINDOW_MS=LOCAL_EXECUTION_POLICY.onlineWindowMs;
-function headers(){return{'x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin','permissions-policy':'camera=(), microphone=(), geolocation=(), payment=()','content-security-policy':"default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://ekodi.kr https://auth.ekodi.kr https://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"}}
+function headers(){return{'x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin','permissions-policy':'camera=(), microphone=(), geolocation=(), payment=()','content-security-policy':"default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://ekodi.kr https://ekodi.kr/auth https://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"}}
 function interpreterHeaders(){return{...headers(),'permissions-policy':'camera=(), microphone=(self), geolocation=(), payment=()'}}
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...headers()}})}
 async function body(request){try{return await request.json()}catch{return null}}
@@ -71,7 +71,7 @@ function capabilityGranted(authority,required){
 }
 async function centralAdminSession(request,env,requiredCapability='ai:read'){
   const token=bearer(request);if(!token)return null;
-  const base=(clean(env.CONTROL_API_URL)||'https://api.ekodi.kr').replace(/\/+$/,'');
+  const base=(clean(env.CONTROL_API_URL)||'https://ekodi.kr/api').replace(/\/+$/,'');
   try{
     const response=await fetch(`${base}/api/session`,{headers:{accept:'application/json',authorization:`Bearer ${token}`},cache:'no-store'});
     if(!response.ok)return null;

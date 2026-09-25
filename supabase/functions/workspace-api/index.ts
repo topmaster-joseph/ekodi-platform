@@ -4,11 +4,11 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const SUPABASE_URL=Deno.env.get("SUPABASE_URL")!;
 const ANON_KEY=Deno.env.get("SUPABASE_ANON_KEY")!;
 const IDENTITY_API=`${SUPABASE_URL}/functions/v1/identity-api`;
-const AUTH_ORIGIN="https://auth.ekodi.kr";
+const AUTH_ORIGIN="https://ekodi.kr/auth";
 const OPEN_SSO_ORIGINS:Record<string,string[]>={
-  social:["https://social.ekodi.kr"],
-  energy:["https://energy.ekodi.kr"],
-  space:["https://space.ekodi.kr"],
+  social:["https://ekodi.kr/social"],
+  energy:["https://ekodi.kr/energy"],
+  space:["https://ekodi.kr"],
 };
 const PERSON_WORKSPACE_SITES=["church","biz","books","author","lab","community","work","business","mall","marketing"];
 const ACTIVE_STATUSES=new Set(["active","pre_registered"]);
