@@ -23,13 +23,13 @@
     runUrl: 'https://github.com/topmaster-joseph/ekodi-platform/actions/runs/32541529236',
     sourceUrl: 'https://github.com/topmaster-joseph/ekodi-platform/blob/main/scripts/ecosystem-load-test.mjs',
     targets: [
-      { name: 'EKODI', host: 'ekodi.kr', rps: 326.64, p95: 83.9, error: 0 },
-      { name: 'Admin', host: 'ekodi.kr/admin', rps: 396.94, p95: 66.8, error: 0 },
-      { name: 'API', host: 'ekodi.kr/api/health', rps: 620.26, p95: 43.4, error: 0 },
-      { name: 'Biz', host: 'ekodi.kr/ekodibiz', rps: 690.79, p95: 40.7, error: 0 },
-      { name: 'Marketing', host: 'ekodi.kr/marketing', rps: 204.40, p95: 98.8, error: 0 },
-      { name: 'Church', host: 'ekodi.kr/ekodichurch', rps: 403.55, p95: 61.9, error: 0 },
-      { name: 'Lab', host: 'ekodi.kr/ekodilab', rps: 471.48, p95: 57.2, error: 0 },
+      { name: 'EKODI', target: 'ekodi.kr', rps: 326.64, p95: 83.9, error: 0 },
+      { name: 'Admin', target: 'ekodi.kr/admin', rps: 396.94, p95: 66.8, error: 0 },
+      { name: 'API', target: 'ekodi.kr/api/health', rps: 620.26, p95: 43.4, error: 0 },
+      { name: 'Biz', target: 'ekodi.kr/ekodibiz', rps: 690.79, p95: 40.7, error: 0 },
+      { name: 'Marketing', target: 'ekodi.kr/marketing', rps: 204.40, p95: 98.8, error: 0 },
+      { name: 'Church', target: 'ekodi.kr/ekodichurch', rps: 403.55, p95: 61.9, error: 0 },
+      { name: 'Lab', target: 'ekodi.kr/ekodilab', rps: 471.48, p95: 57.2, error: 0 },
     ],
   });
 
@@ -82,7 +82,7 @@
       <table class="health-capacity-table">
         <thead><tr><th>대상</th><th>동시요청</th><th>처리량</th><th>p95</th><th>오류</th></tr></thead>
         <tbody>
-          ${EVIDENCE.targets.map(row => `<tr><td><strong>${row.name}</strong><small>${row.host}</small></td><td>${EVIDENCE.maxVerifiedConcurrency}</td><td>${format.format(row.rps)} req/s</td><td>${format.format(row.p95)} ms</td><td>${row.error.toFixed(2)}%</td></tr>`).join('')}
+          ${EVIDENCE.targets.map(row => `<tr><td><strong>${row.name}</strong><small>${row.target}</small></td><td>${EVIDENCE.maxVerifiedConcurrency}</td><td>${format.format(row.rps)} req/s</td><td>${format.format(row.p95)} ms</td><td>${row.error.toFixed(2)}%</td></tr>`).join('')}
         </tbody>
       </table>
     </div>
