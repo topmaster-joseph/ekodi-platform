@@ -1,4 +1,4 @@
-import { PLATFORM_CANONICAL_HOST, PLATFORM_SURFACE_PREFIXES, PLATFORM_SYSTEM_PATHS, PLATFORM_EXECUTION_SURFACES, PLATFORM_LEGACY_HOST_PATHS, platformExecutionSurfaceForPath } from './platform-route-registry.js';
+import { PLATFORM_CANONICAL_HOST, PLATFORM_SURFACE_PREFIXES, PLATFORM_SYSTEM_PATHS, PLATFORM_EXECUTION_SURFACES, platformExecutionSurfaceForPath } from './platform-route-registry.js';
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
 import { injectEkodiShell, injectEkodiTenantReadability } from './ekodi-shell-injector.js';
 
@@ -6,7 +6,6 @@ const CANONICAL_HOST=PLATFORM_CANONICAL_HOST;
 const SURFACE_PREFIXES=PLATFORM_SURFACE_PREFIXES;
 const SYSTEM_PATHS=PLATFORM_SYSTEM_PATHS;
 const PUBLIC_EXECUTION_SURFACES=PLATFORM_EXECUTION_SURFACES;
-const CANONICAL_HOST_PATHS=PLATFORM_LEGACY_HOST_PATHS;
 const PUBLIC_PERSON_PATH_RE=/^\/@[a-z0-9][a-z0-9._-]{2,39}\/?$/;
 const PERSONAL_FINANCE_CONTROL_PATH='/api/control/personal-finance';
 const PUBLIC_CONTROL_PREVIEW_PATH='/api/public/preview/map';
@@ -136,13 +135,15 @@ function rewriteExecutionText(text,spec,type=''){
 }
 function canonicalExecutionLocation(value,spec){
   try{
-    const target=new URL(value);
-    const canonical=canonicalAbsoluteUrl(target.hostname,target.pathname,target.search,target.hash);
-    if(canonical)return canonical;
-    if(spec.host&&target.hostname===spec.host)return `https://${CANONICAL_HOST}${spec.prefix}${target.pathname==='/'?'':target.pathname}${target.search}${target.hash}`;
+    const target=new URL(value,`https://${CANONICAL_HOST}${spec.prefix}/`);
+    if(spec.host&&target.hostname===spec.host){
+      return `https://${CANONICAL_HOST}${spec.prefix}${target.pathname==='/'?'':target.pathname}${target.search}${target.hash}`;
+    }
+    if(target.hostname===CANONICAL_HOST)return target.toString();
   }catch{}
   return value;
-}function adminRuntimeRequest(path){
+}
+function adminRuntimeRequest(path){
   const stripped=stripPrefix(path,SURFACE_PREFIXES.admin);
   return ADMIN_RUNTIME_FILE.test(stripped)||stripped.startsWith('/api/')||stripped==='/auth/start';
 }
