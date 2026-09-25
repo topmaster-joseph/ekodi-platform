@@ -73,6 +73,36 @@ test('Wrangler generated README timestamp does not change the release digest', (
   }
 });
 
+
+test('run-specific ops health provenance does not change functional release identity', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ekodi-release-ops-health-'));
+  try {
+    seedRelease(root);
+    fs.mkdirSync(path.join(root, 'dist', 'ops'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'dist', 'ops', 'health.json'), JSON.stringify({
+      status:'ok',
+      deploy:{run_id:'100',run_attempt:'1',workflow:'Stage Shared Site Shell'}
+    })+'\n');
+    const first = attest(root, 'artifacts/first.json');
+
+    fs.writeFileSync(path.join(root, 'dist', 'ops', 'health.json'), JSON.stringify({
+      status:'ok',
+      deploy:{run_id:'100',run_attempt:'2',workflow:'Deploy EKODI Shared Site Core'}
+    })+'\n');
+    const second = attest(root, 'artifacts/second.json');
+
+    assert.equal(first.artifactDigest, second.artifactDigest);
+    assert.equal(first.claimBoundary.digestExcludesGeneratedOpsHealthProvenance, true);
+    assert.equal(first.entries.some(entry => entry.path === 'assets/ops/health.json'), false);
+
+    fs.writeFileSync(path.join(root, 'dist', 'nested', 'app.js'), 'console.log("functional-change");\n');
+    const changed = attest(root, 'artifacts/changed.json');
+    assert.notEqual(changed.artifactDigest, first.artifactDigest);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('release artifact attestation rejects symbolic links', { skip: process.platform === 'win32' }, () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ekodi-release-artifact-link-'));
   try {
