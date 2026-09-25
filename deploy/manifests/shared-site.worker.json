@@ -166,7 +166,7 @@
           "store_operating_space_snapshot",
           "store_delivery_platform_admin_snapshot",
           "setInterval",
-          "300000"
+          "deliveryRefresh"
         ],
         "rollbackVerify": false
       },
