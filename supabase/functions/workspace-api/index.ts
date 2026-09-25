@@ -4,7 +4,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const SUPABASE_URL=Deno.env.get("SUPABASE_URL")!;
 const ANON_KEY=Deno.env.get("SUPABASE_ANON_KEY")!;
 const IDENTITY_API=`${SUPABASE_URL}/functions/v1/identity-api`;
-const AUTH_ORIGIN="https://ekodi.kr/auth";
+const AUTH_ORIGIN="https://ekodi.kr";
 const OPEN_SSO_ORIGINS:Record<string,string[]>={
   social:["https://ekodi.kr/social"],
   energy:["https://ekodi.kr/energy"],
@@ -14,12 +14,7 @@ const PERSON_WORKSPACE_SITES=["church","biz","books","author","lab","community",
 const ACTIVE_STATUSES=new Set(["active","pre_registered"]);
 
 function allowedOrigin(origin:string|null){
-  if(!origin)return AUTH_ORIGIN;
-  try{
-    const url=new URL(origin);
-    if(url.protocol==="https:"&&(url.hostname==="ekodi.kr"||url.hostname.endsWith(".ekodi.kr")))return origin;
-  }catch{}
-  return AUTH_ORIGIN;
+  return origin==="https://ekodi.kr"?origin:"https://ekodi.kr";
 }
 function cors(req:Request){
   return {
