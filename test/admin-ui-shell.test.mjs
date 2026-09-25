@@ -36,11 +36,20 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.match(adminShell,/ekodiAdminLanguageControl='disabled'/);
   assert.equal(adminShell.includes('#ekodiAdminLocaleWrap'),true);
   assert.equal(adminShell.includes('#ekodiAdminLocale'),true);
-  assert.equal(adminShell.includes('const VERSION=2'),true);
+  assert.equal(adminShell.includes('const VERSION=3'),true);
   assert.match(adminShell,/position:sticky!important/);
   assert.match(adminShell,/#pageTitle\{display:block!important/);
   assert.doesNotMatch(adminShell,/ekodi-admin-header-title-hidden\{display:none/);
   assert.match(adminShell,/parentElement\?\.hidden\)node\.parentElement\.hidden=false/);
+  assert.match(adminShell,/ekodiAdminSurfaceContract/);
+  assert.match(adminShell,/readable-direct-v1/);
+  assert.match(adminShell,/normalizeMainRegions/);
+  assert.match(adminShell,/ekodi-admin-shell-heading/);
+  assert.match(adminShell,/ekodi-admin-shell-subnav/);
+  assert.match(adminShell,/primary-scroll-fallback/);
+  assert.match(adminShell,/navOverflowFallback/);
+  assert.match(adminShell,/min-height:44px/);
+  assert.match(adminShell,/height:auto!important;min-height:calc\(100dvh - 56px\)!important;overflow:visible!important/);
 
   assert.equal(adminRuntime.includes('function removeLocaleControl()'),true);
   assert.equal(adminRuntime.includes('function installLocaleControl()'),false);
@@ -72,10 +81,10 @@ test('admin shell is separate from user shell and removes the left brand header'
 
   assert.match(worker,/adminShellUrl\.pathname='\/admin-ui-shell\.js'/);
   assert.match(worker,/x-ekodi-admin-ui-shell/);
-  assert.match(worker,/adminUIShellVersion:2/);
-  assert.match(liveVerifier,/adminUIShellVersion\)<2/);
-  assert.match(liveVerifier,/x-ekodi-admin-ui-shell'\)!=='v2'/);
-  assert.match(liveVerifier,/adminUI=v2/);
+  assert.match(worker,/adminUIShellVersion:3/);
+  assert.match(liveVerifier,/adminUIShellVersion\)<3/);
+  assert.match(liveVerifier,/x-ekodi-admin-ui-shell'\)!=='v3'/);
+  assert.match(liveVerifier,/adminUI=v3/);
 
   assert.match(principles,/관리자 왼쪽 상단 헤더는 삭제가 기본 원칙/);
   assert.match(principles,/User Shell UI/);

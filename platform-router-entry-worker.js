@@ -289,7 +289,7 @@ async function routePlatform(request,env,ctx){
       if(url.pathname==='/tenant-live-admin.css')return tenantLiveAdminCss();
       if(url.pathname==='/tenant-live-admin.js')return tenantLiveAdminScript();
       const liveAdminTenant=realtimeTenantAdminFromPath(url.pathname);
-      if(liveAdminTenant)return tenantLiveAdminPage(liveAdminTenant);
+      if(liveAdminTenant)return liveShell(tenantLiveAdminPage(liveAdminTenant),'admin');
       const liveTenant=realtimeTenantFromPath(url.pathname);
       if(liveTenant){
         if(await livePublicStatus(env,liveTenant)==='maintenance')return liveShell(liveServiceMaintenancePage(liveTenant));
