@@ -101,10 +101,15 @@ test('Shared Site release and Mission E2E obey the same production quota budget 
   assert.match(shared, /steps\.continuity\.outputs\.release_action == 'prepare-and-hold'/);
   assert.match(shared, /Cloudflare Workers runtime quota is exhausted/);
   assert.match(shared, /steps\.quota\.outputs\.skip_nonessential != 'true'/);
-  assert.match(shared, /schedule:\s*\n\s*- cron: '7 0 \* \* \*'/);
+  assert.match(shared, /schedule:\s*\n\s*- cron: '17 0-5 \* \* \*'/);
   assert.match(shared, /scheduled_release_gate:/);
-  assert.match(shared, /gh run list --workflow deploy-site-core\.yml --branch main/);
-  assert.match(shared, /gh run view "\$prior_id" --log-failed/);
+  assert.match(shared, /gh run list -R "\$GITHUB_REPOSITORY" --workflow deploy-site-core\.yml --branch main/);
+  assert.match(shared, /gh run view "\$candidate_id" -R "\$GITHUB_REPOSITORY" --json jobs/);
+  assert.match(shared, /select\(\.name == "deploy"\)/);
+  assert.match(shared, /prior_deploy_conclusion="\$deploy_conclusion"/);
+  assert.match(shared, /reason=no-meaningful-prior-release/);
+  assert.match(shared, /reason=latest-meaningful-release-succeeded/);
+  assert.match(shared, /gh run view "\$prior_id" -R "\$GITHUB_REPOSITORY" --log-failed/);
   assert.match(shared, /Cloudflare Workers runtime quota is exhausted\\\. EKODI completed CI, staging and immutable artifact continuity/);
   assert.match(shared, /reason=quota-reset-retry/);
   assert.match(shared, /reason=non-quota-failure-requires-review/);
