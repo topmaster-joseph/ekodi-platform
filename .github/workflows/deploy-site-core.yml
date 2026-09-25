@@ -302,7 +302,7 @@ jobs:
             exit 0
           fi
 
-          runs="$(gh run list --workflow deploy-site-core.yml --branch main --limit 25 --json databaseId,status,conclusion,headSha,event,createdAt)"
+          runs="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow deploy-site-core.yml --branch main --limit 25 --json databaseId,status,conclusion,headSha,event,createdAt)"
           prior="$(printf '%s' "$runs" | jq -c --arg current "$GITHUB_RUN_ID" '[.[] | select((.databaseId|tostring) != $current and .status == "completed")][0] // empty')"
           if [ -z "$prior" ]; then
             echo "proceed=false" >> "$GITHUB_OUTPUT"
@@ -318,7 +318,7 @@ jobs:
             exit 0
           fi
 
-          failed_log="$(gh run view "$prior_id" --log-failed 2>&1 || true)"
+          failed_log="$(gh run view "$prior_id" --repo "$GITHUB_REPOSITORY" --log-failed 2>&1 || true)"
           if printf '%s' "$failed_log" | grep -Eq 'Cloudflare Workers quota exhausted; production promotion/probes stopped before any live Worker verification\.|Cloudflare Workers runtime quota is exhausted\. EKODI completed CI, staging and immutable artifact continuity'; then
             echo "proceed=true" >> "$GITHUB_OUTPUT"
             echo "reason=quota-reset-retry" >> "$GITHUB_OUTPUT"
