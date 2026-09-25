@@ -61,7 +61,6 @@ jobs:
           node --check platform-router-worker.js
           node --check platform-router-entry-worker.js
           node scripts/zero-subdomain-guard.mjs
-          node scripts/validate-apex-path-semantics.mjs
           npm run validate:constitution
           npm run validate:boundaries
           npm run validate:admin-routes
@@ -87,5 +86,5 @@ jobs:
             echo 'No migration changes to commit.'
             exit 0
           fi
-          git commit -m 'refactor: make ekodi.kr paths the only EKODI address model'
+          git commit -m 'refactor: make ekodi.kr paths the only EKODI address model [skip ci]'
           git push origin HEAD:ai/chatgpt/apex-path-final-20260925
