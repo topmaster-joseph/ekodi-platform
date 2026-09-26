@@ -95,8 +95,8 @@ test('Mission applicant share route is token-gated, read-only, noindex, and neve
     return new Response(JSON.stringify({
       ok:true,
       activity:{activity_key:'260926-chuseok-open-table',title:'2026 추석 열린식탁',starts_at:'2026-09-26T16:00:00+09:00',ends_at:'2026-09-26T18:00:00+09:00',venue:'자담치킨 목포대점'},
-      share:{expires_at:'2026-10-03T16:00:00+09:00',field_policy:{seq:true,name:true,status:true,party_size:true}},
-      participants:[{seq:1,name:'공유검증 참가자',status:'confirmed',party_size:2}]
+      share:{expires_at:'2026-10-03T16:00:00+09:00',field_policy:{seq:true,name:true,submitted_at:true,status:true,party_size:true,phone:true,email:true}},
+      participants:[{seq:1,name:'공유검증 참가자',submitted_at:'2026-09-19T14:00:00Z',phone:'010-0000-0099',email:'share-test@invalid.ekodi',status:'confirmed',party_size:2}]
     }),{status:200,headers:{'content-type':'application/json'}});
   };
   try{
@@ -109,10 +109,29 @@ test('Mission applicant share route is token-gated, read-only, noindex, and neve
     const body=await response.text();
     assert.match(body,/읽기전용 공유본/);
     assert.match(body,/공유검증 참가자/);
+    assert.match(body,/신청일시/);
+    assert.match(body,/2026년 9월 19일/);
+    assert.match(body,/010-0000-0099/);
+    assert.match(body,/share-test@invalid\.ekodi/);
     assert.match(body,/확정/);
     assert.match(body,/>2<\/td>/);
-    assert.doesNotMatch(body,/010-|@invalid|후속 메모|EKODI ID/);
+    assert.doesNotMatch(body,/후속 메모|EKODI ID/);
   }finally{globalThis.fetch=originalFetch}
+
+  const originalFetchPrivate=globalThis.fetch;
+  globalThis.fetch=async()=>new Response(JSON.stringify({
+    ok:true,
+    activity:{activity_key:'260926-chuseok-open-table',title:'2026 추석 열린식탁'},
+    share:{expires_at:'2026-10-03T16:00:00+09:00',field_policy:{seq:true,name:true,submitted_at:true,status:true,party_size:true,phone:false,email:false}},
+    participants:[{seq:1,name:'비공개 연락처 검증',submitted_at:'2026-09-19T14:00:00Z',status:'applied',party_size:1}]
+  }),{status:200,headers:{'content-type':'application/json'}});
+  try{
+    const privateContacts=await spaceWorker.fetch(new Request(`https://ekodi.kr/ekodimission/share/${token}`),dataEnv);
+    assert.equal(privateContacts.status,200);
+    const privateBody=await privateContacts.text();
+    assert.match(privateBody,/비공개 연락처 검증/);
+    assert.doesNotMatch(privateBody,/<th scope="col">전화번호<\/th>|<th scope="col">이메일<\/th>/);
+  }finally{globalThis.fetch=originalFetchPrivate}
 
   const originalFetch2=globalThis.fetch;
   globalThis.fetch=async()=>new Response(JSON.stringify({ok:false}),{status:200,headers:{'content-type':'application/json'}});
