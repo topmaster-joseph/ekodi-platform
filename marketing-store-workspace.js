@@ -224,32 +224,28 @@ async function provisionStoreWorkspace(request, env, allowed) {
   }
 
   let workspace = await workspaceFor(env, store.id);
-  if (workspace?.status === 'active') return json({ ok:true, created:false, workspace:publicWorkspace(workspace, subscription, store) }, 200, request, allowed);
-
   const slug = workspace?.workspace_slug || await chooseSlug(env, store, body?.slug);
-  const hostname = workspace?.canonical_domain || `${slug}.ekodi.kr/ai`;
-  let provider;
-  try {
-    provider = await attachCanonical(env, hostname);
-  } catch (error) {
-    return json({ error:error.message, code:error.code || 'WORKSPACE_PROVIDER_ERROR' }, error.code === 'DOMAIN_PROVIDER_NOT_READY' ? 503 : 502, request, allowed);
-  }
+  const landingPath=canonicalWorkspacePath(slug);
   const now = new Date().toISOString();
+  const alreadyCanonical=workspace?.status==='active'&&workspace?.canonical_domain==='ekodi.kr'&&workspace?.landing_path===landingPath;
   if (workspace) {
-    await env.DB.prepare(`UPDATE marketing_store_workspaces SET status='active',updated_at=? WHERE id=?`).bind(now, workspace.id).run();
+    await env.DB.prepare(`UPDATE marketing_store_workspaces
+      SET workspace_slug=?,canonical_domain='ekodi.kr',provider='platform-router',provider_project='ekodi-platform',
+          landing_path=?,status='active',updated_at=? WHERE id=?`)
+      .bind(slug,landingPath,now,workspace.id).run();
   } else {
     await env.DB.prepare(`INSERT INTO marketing_store_workspaces
       (store_id,tenant_slug,workspace_slug,canonical_domain,provider,provider_project,landing_path,status,created_at,updated_at)
-      VALUES (?,?,?,?, 'cloudflare-pages','marketing-ai','/','active',?,?)`)
-      .bind(store.id, store.tenant || null, slug, hostname, now, now).run();
+      VALUES (?,?,?,'ekodi.kr','platform-router','ekodi-platform',?,'active',?,?)`)
+      .bind(store.id, store.tenant || null, slug, landingPath, now, now).run();
   }
   workspace = await workspaceFor(env, store.id);
   return json({
     ok:true,
-    created:true,
-    providerStatus:String(provider?.domain?.status || provider?.domain?.validation_status || ''),
+    created:!alreadyCanonical,
+    providerStatus:'apex-path',
     workspace:publicWorkspace(workspace, subscription, store),
-  }, 201, request, allowed);
+  }, alreadyCanonical ? 200 : 201, request, allowed);
 }
 
 export async function handleMarketingStoreWorkspaceRequest(request, env) {
