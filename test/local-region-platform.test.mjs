@@ -90,3 +90,15 @@ test('Cheonggye public experience is local-first, readable, communicative and pe
   assert.match(html,/font-size:16px;line-height:1\.65/);
   assert.doesNotMatch(html,/>Space</);
 });
+
+
+test('Cheonggye mobile layout keeps primary actions compact and touch friendly',async()=>{
+  const region=localRegionBySlug('cheonggye');
+  const html=await localRegionPublicPage(region).text();
+  assert.match(html,/@media\(max-width:680px\)/);
+  assert.match(html,/\.hero-actions\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(html,/\.intent-strip\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(html,/\.grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(html,/\.site-header\{position:sticky;top:0;z-index:20\}/);
+  assert.match(html,/\.button\{min-height:46px\}/);
+});
