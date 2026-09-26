@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import spaceWorker from '../space-worker.js';
+import platformEntry from '../platform-router-entry-worker.js';
 
 const spaceRoot=new URL('../space/',import.meta.url);
 const contentType=path=>path.endsWith('.css')?'text/css; charset=utf-8':path.endsWith('.js')?'application/javascript; charset=utf-8':path.endsWith('.jpg')?'image/jpeg':path.endsWith('.svg')?'image/svg+xml':'text/html; charset=utf-8';
@@ -141,6 +142,35 @@ test('mission hero visuals are first-party SVG assets and pages render the compl
   for(const asset of ['/ekodimission/assets/mission-table-hero.svg','/ekodimission/assets/open-table-hero-260926.svg']){
     const response=await spaceWorker.fetch(new Request('https://ekodi.kr'+asset),env);assert.equal(response.status,200,asset);assert.match(response.headers.get('content-type')||'',/image\/svg\+xml/);
   }
+});
+
+test('canonical apex Mission pages and assets delegate to the Space service binding without internal operating-space chrome',async()=>{
+  const calls=[];
+  const platformEnv={SPACE:{fetch:async request=>{calls.push(new URL(request.url).pathname);return spaceWorker.fetch(request,env,{})}}};
+  const root=await platformEntry.fetch(new Request('https://ekodi.kr/ekodimission'),platformEnv,{});
+  assert.equal(root.status,200);
+  assert.equal(root.headers.get('x-ekodi-workspace-gateway'),'space-service-binding');
+  assert.equal(root.headers.get('x-ekodi-route'),'ekodimission-public');
+  assert.equal(root.headers.get('x-ekodi-independent-site'),'true');
+  assert.equal(root.headers.get('x-ekodi-operating-space-label'),null);
+  const rootHtml=await root.text();
+  assert.match(rootHtml,/EKODI MISSION/);
+  assert.doesNotMatch(rootHtml,/data-ekodi-operating-space-label|>운영공간</);
+
+  for(const path of ['/ekodimission/assets/shell.js','/ekodimission/assets/shell.css']){
+    const response=await platformEntry.fetch(new Request('https://ekodi.kr'+path),platformEnv,{});
+    assert.equal(response.status,200,path);
+    assert.equal(response.headers.get('x-ekodi-workspace-gateway'),'space-service-binding',path);
+    assert.equal(response.headers.get('x-ekodi-route'),'ekodimission-asset',path);
+  }
+
+  const beforeLive=calls.length;
+  const live=await platformEntry.fetch(new Request('https://ekodi.kr/ekodimission/live'),platformEnv,{});
+  assert.equal(live.status,200);
+  assert.equal(calls.length,beforeLive,'Mission Live must remain owned by the shared realtime route');
+  assert.ok(calls.includes('/ekodimission'));
+  assert.ok(calls.includes('/ekodimission/assets/shell.js'));
+  assert.ok(calls.includes('/ekodimission/assets/shell.css'));
 });
 
 test('platform router preserves tenant-branded independent sites without EKODI shell injection',async()=>{
