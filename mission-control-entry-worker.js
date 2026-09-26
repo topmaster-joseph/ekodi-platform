@@ -37,6 +37,8 @@ import { handleExternalAccountControl } from './external-account-control.js';
 import { handleRealtimeControl, runRealtimeRecordingRetention } from './realtime-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 import { runSeonamMediDailyCheck } from './seonam-medi-monitor.js';
+import { runEkodiDailyTechnologyScout } from './ekodi-technology-scout.js';
+import { handleTechnologyScoutControl } from './technology-scout-control.js';
 
 function errorResponse(message, code) {
   return applyApiSecurityHeaders(new Response(JSON.stringify({ error:message, code }), {
@@ -148,6 +150,11 @@ export default {
     if (externalAccountPreflight) return externalAccountPreflight;
 
     const path = incoming.pathname;
+
+    if (path.startsWith('/api/control/technology-scout')) {
+      try { const response = await handleTechnologyScoutControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Technology Scout control error', error); return errorResponse('EKODI 기술 스카우트 처리 중 오류가 발생했습니다.', 'TECH_SCOUT_CONTROL_ERROR'); }
+    }
 
     if ((path === '/api' || path === '/api/') && request.method === 'GET') {
       return applyApiSecurityHeaders(new Response(JSON.stringify({
@@ -372,6 +379,10 @@ export default {
     const seonamMediDaily = scheduledAt.getUTCHours() === 23
       ? runSeonamMediDailyCheck(env,{scheduledAt:scheduledAt.toISOString()}).catch(error => { console.error('Seonam Medi daily monitor error', error); return { ok:false, error:'seonam_medi_daily_monitor_failed' }; })
       : null;
+    // 08:00 Asia/Seoul = 23:00 UTC. Existing shared cron remains the scheduler owner.
+    const technologyScoutDaily = scheduledAt.getUTCHours() === 23
+      ? runEkodiDailyTechnologyScout(env,{trigger:'ekodi-cron'}).catch(error => { console.error('EKODI technology scout error', error); return { ok:false, error:'technology_scout_failed' }; })
+      : null;
     const authorBilling = runAuthorBillingSchedule(env).catch(error => { console.error('Author billing schedule error', error); return { processed:0, error:'author_billing_schedule_failed' }; });
     const messengerOutbox = drainMessengerOutbox(env, { limit:20 }).catch(error => { console.error('Messenger outbox schedule error', error); return { processed:0, failed:1, error:'messenger_outbox_schedule_failed' }; });
     const commandPulse = runEkodiPulseSchedule(env, { limit:1 }).catch(error => { console.error('EKODI v8 Pulse schedule error', error); return { ok:false, error:'ekodi_v8_pulse_failed' }; });
@@ -391,9 +402,11 @@ export default {
       ctx.waitUntil(recordingRetention);
       ctx.waitUntil(wakeOrchestration);
       if (seonamMediDaily) ctx.waitUntil(seonamMediDaily);
+      if (technologyScoutDaily) ctx.waitUntil(technologyScoutDaily);
     }
     const background = [authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration];
     if (seonamMediDaily) background.push(seonamMediDaily);
+    if (technologyScoutDaily) background.push(technologyScoutDaily);
     return customerSchedule || Promise.all(background);
   },
 };

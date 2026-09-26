@@ -1,0 +1,10 @@
+name = "ekodi-technology-scout-source"
+main = "technology-scout-source-worker.js"
+compatibility_date = "2026-09-26"
+workers_dev = false
+preview_urls = false
+[vars]
+OPENAI_SCOUT_MODEL = "gpt-5.6-luna"
+[observability.logs]
+enabled = true
+invocation_logs = true

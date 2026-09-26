@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.25.0
+# EKODI Platform Constitution v1.26.0
 
-Effective: 2026-09-24
+Effective: 2026-09-26
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 
@@ -272,3 +272,11 @@ Machine-readable sustainable evolution authority: `governance/architecture/ekodi
 - The canonical operating-context target remains **Person + Workspace + Membership + Capability**, with authority resolved through **Person + Workspace + Role + Capability**.
 - Future-generation promotion requires an explicit C2/C3 constitutional amendment, EKODI Platform Super Administrator confirmation, repository validation, guarded merge, and production verification whenever runtime behavior changes.
 - Machine-readable generation definitions, scale tiers, forward-evolution gates and boundary rules are maintained in `governance/architecture/ekodi-evolution-model.json` and enforced by repository validators.
+
+
+## 14. Mandatory Daily Technology Scout Constitution
+- `TECH-SCOUT-001` requires EKODI Orchestrator to own and execute one technology/trend scouting cycle every day at the canonical 08:00 Asia/Seoul schedule.
+- External search, OpenAI and other AI/providers are replaceable sources only; they never own the scout, policy, approval, execution or deployment authority.
+- Every material candidate preserves evidence, freshness, target, benefit, implementation difficulty, cost/free-tier impact, security risk, vendor-lock-in risk and operations risk.
+- Scouting is mandatory; application is human-gated. Apply/Hold/Reject remains an EKODI authority decision, and Apply must enter the normal isolated branch, validation, review, guarded deployment and production-verification lifecycle.
+- Scout failure is durable and visible; it cannot silently disable future daily runs or unrelated EKODI services.
