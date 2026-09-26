@@ -1,0 +1,10 @@
+{
+  "id": "2026-09-26-tech-scout-001",
+  "constitutionVersion": "1.26.0",
+  "changeClass": "C2",
+  "ownerConfirmation": "Explicit owner instruction in implementation conversation: make it an EKODI forced execution rule and continue to completion.",
+  "policyId": "TECH-SCOUT-001",
+  "summary": "EKODI-owned daily technology/trend scouting is mandatory; external providers are sources only; application remains human-gated.",
+  "rollback": "Revert v1.26.0 amendment and TECH-SCOUT-001 runtime wiring through governed rollback; preserve historical run/audit rows.",
+  "effectiveDate": "2026-09-26"
+}
