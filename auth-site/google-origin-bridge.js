@@ -20,6 +20,8 @@
   const host=document.getElementById('googleButton');
   let readyTimer=0;
   let waitTimeout=0;
+  let lifecycleTimer=0;
+  let openerReachedAuth=false;
   let started=false;
   const fail=message=>{status.textContent=message;status.dataset.state='error'};
   const validRequest=(clientId,nonce,state)=>/^[a-f0-9]{48}$/i.test(nonce)&&/^[a-zA-Z0-9._-]{12,160}$/.test(state)&&clientId===EXPECTED_CLIENT;
@@ -28,9 +30,18 @@
   const finishReady=()=>{
     if(readyTimer){clearInterval(readyTimer);readyTimer=0}
     if(waitTimeout){clearTimeout(waitTimeout);waitTimeout=0}
+    if(lifecycleTimer){clearInterval(lifecycleTimer);lifecycleTimer=0}
     window.removeEventListener('message',onStartMessage);
   };
   const notifyReady=()=>{try{window.opener.postMessage({type:'ekodi-google-origin-bridge-ready'},TARGET_ORIGIN)}catch{}};
+  const watchOpenerLifecycle=()=>{
+    try{
+      if(!window.opener||window.opener.closed){finishReady();window.close();return}
+      const pathname=String(window.opener.location?.pathname||'');
+      if(/^\/auth(?:\/|$)/i.test(pathname)){openerReachedAuth=true;return}
+      if(openerReachedAuth&&/(^|\/)admin(?:\/|$)/i.test(pathname)){finishReady();window.close()}
+    }catch{}
+  };
   const startGoogle=(clientId,nonce,state)=>{
     if(started)return;
     if(!validRequest(clientId,nonce,state)){finishReady();fail('유효하지 않은 인증 요청입니다. 창을 닫고 다시 시도해 주세요.');return}
@@ -70,7 +81,8 @@
     window.addEventListener('message',onStartMessage);
     notifyReady();
     readyTimer=setInterval(notifyReady,250);
-    waitTimeout=setTimeout(()=>{if(!started){finishReady();fail('관리자 인증 연결 시간이 초과되었습니다. 창을 닫고 다시 시도해 주세요.')}},15000);
+    lifecycleTimer=setInterval(watchOpenerLifecycle,400);
+    waitTimeout=setTimeout(()=>{if(!started){finishReady();fail('관리자 인증 연결 시간이 초과되었습니다. 창을 닫고 다시 시도해 주세요.');setTimeout(()=>window.close(),800)}},120000);
     return;
   }
 
