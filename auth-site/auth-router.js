@@ -35,7 +35,7 @@ function hasTrustedEkodiReturn(){
   try{
     const target=new URL(raw);
     const hostname=target.hostname.toLowerCase();
-    return target.protocol==='https:'&&!target.username&&!target.password&&(hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr'));
+    return target.protocol==='https:'&&!target.username&&!target.password&&hostname==='ekodi.kr';
   }catch{return false}
 }
 
