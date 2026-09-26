@@ -63,7 +63,7 @@ const FALLBACK_PROFILES=Object.freeze({
   management:{pose:'guide',prop:'chart',label:'운영을 정리하는 에코디언'}
 });
 
-function serviceId(){return String(document.documentElement.dataset.ekodiService||document.body?.dataset?.ekodiService||location.hostname.split('.')[0]||'my').trim().toLowerCase();}
+function serviceId(){const pathService=location.pathname.split('/').filter(Boolean)[0]||'my';return String(document.documentElement.dataset.ekodiService||document.body?.dataset?.ekodiService||pathService).trim().toLowerCase();}
 function surface(){return String(document.documentElement.dataset.ekodiShellSurface||document.documentElement.dataset.ekodiUserSurface||'').trim().toLowerCase();}
 function mode(){return String(document.documentElement.dataset.ekodiCharacter||document.body?.dataset?.ekodiCharacter||'auto').trim().toLowerCase();}
 function context(){return String(document.documentElement.dataset.ekodiCharacterContext||document.body?.dataset?.ekodiCharacterContext||'').trim().toLowerCase();}
@@ -93,7 +93,7 @@ function trustedPortraitUrl(identity=identityProfile()){
     const scriptBase=document.currentScript?.src?new URL('.',document.currentScript.src):new URL('https://ekodi.kr/shell/');
     const url=new URL(raw,scriptBase);
     const host=url.hostname.toLowerCase();
-    const allowed=host==='ekodi.kr'||host.endsWith('.ekodi.kr');
+    const allowed=host==='ekodi.kr';
     return url.protocol==='https:'&&allowed?url.href:'';
   }catch{return '';}
 }
@@ -132,7 +132,7 @@ function renderPreview(options={}){
 function profiles(){return registry()?.services||FALLBACK_PROFILES;}
 function isLanding(){
   const parts=location.pathname.split('/').filter(Boolean);
-  if(location.hostname==='ekodi.kr'||location.hostname==='ekodi.kr')return parts.length<=1;
+  if(location.hostname==='ekodi.kr')return parts.length<=1;
   return parts.length===0;
 }
 function profile(){return profiles()[serviceId()]||FALLBACK_PROFILES[serviceId()]||{pose:'welcome',prop:'heart',label:'함께하는 에코디언'};}
