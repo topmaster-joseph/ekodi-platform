@@ -275,6 +275,9 @@ try{
   checks.relationshipSeparated=await page.getByText('단순 참가자',{exact:true}).isVisible();
 
   const row=page.locator('[data-activity-row]').filter({hasText:'운영검증 참가자'}).first();
+  const rowDetails=row.locator('td.activity-manage details').first();
+  await rowDetails.locator('summary').click();
+  await rowDetails.locator('[data-field="role"]').waitFor({state:'visible'});
   await row.locator('[data-field="status"]').selectOption('confirmed');
   await row.locator('[data-field="role"]').fill('진행지원');
   await row.locator('[data-field="companions"]').fill('동반자 검증');
@@ -291,7 +294,10 @@ try{
   checks.checkinMutation=mutationCalls.some(call=>call.name==='activity_admin_update_participation'&&call.body.p_status==='attended');
   checks.checkedIn=!(await page.locator('[data-activity-row]').filter({hasText:'운영검증 참가자'}).first().innerText()).includes('미체크인');
 
+  const addDetails=page.locator('details.activity-add').first();
+  await addDetails.locator('summary').click();
   const form=page.locator('#activityAddForm');
+  await form.waitFor({state:'visible'});
   await form.locator('input[name="name"]').fill('운영검증 신규참가자');
   await form.locator('input[name="phone"]').fill('010-0000-0002');
   await form.locator('input[name="email"]').fill('mission-ui-e2e-2@invalid.ekodi');
