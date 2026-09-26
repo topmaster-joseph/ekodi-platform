@@ -7,7 +7,7 @@ const api=fs.readFileSync(new URL('../device-control.js',import.meta.url),'utf8'
 const policy=JSON.parse(fs.readFileSync(new URL('../config/isolated-desktop-backend-policy.json',import.meta.url),'utf8'));
 
 test('isolated desktop capability probe never silently activates desktop execution',()=>{
-  assert.match(agent,/\$AgentVersion = '2\.5\.1'/);
+  assert.match(agent,/\$AgentVersion = '2\.5\.2'/);
   assert.match(agent,/function Get-IsolatedDesktopBackendProbe/);
   assert.match(agent,/computer\.desktop\.probe/);
   assert.match(agent,/isolatedDesktopProbe = \$true/);
