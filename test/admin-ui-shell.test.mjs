@@ -60,7 +60,6 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.equal(adminDesign.includes('background:#0b1f36!important'),true);
   assert.equal(adminDesign.includes('background:#f6f8fb!important'),true);
   assert.equal(adminCompact.includes('social-connections'),true);
-  assert.match(adminDesign,/flexibleChildrenMinWidthZero|/);
 
   assert.match(userHeader,/USER_SURFACES=new Set\(\['public','workspace'\]\)/);
   assert.doesNotMatch(userHeader,/USER_SURFACES=new Set\([^)]*'admin'/);
