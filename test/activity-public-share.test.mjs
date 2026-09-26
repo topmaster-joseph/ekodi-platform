@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
-const sql=read('supabase/migrations/20260926140500_activity_public_readonly_shares.sql');
+const baseSql=read('supabase/migrations/20260926140500_activity_public_readonly_shares.sql');
+const extensionSql=read('supabase/migrations/20260927025500_activity_public_share_optional_contact_fields.sql');
+const sql=baseSql+'\n'+extensionSql;
 const worker=read('space-worker.js');
 const admin=read('workspace-admin-page.js');
 
@@ -32,15 +34,20 @@ test('share administration stays tenant-authorized while the public projection i
   assert.match(sql,/activity_is_workspace_operator/);
 });
 
-test('public share projection cannot return contact or internal management fields',()=>{
-  const start=sql.indexOf('create or replace function public.activity_public_share_snapshot');
-  const end=sql.indexOf('comment on function public.activity_public_share_snapshot',start);
+test('public share projection keeps internal management data private and gates contact fields behind explicit policy',()=>{
+  const start=extensionSql.indexOf('create or replace function public.activity_public_share_snapshot');
+  const end=extensionSql.indexOf('comment on function public.activity_public_share_snapshot',start);
   assert.ok(start>=0&&end>start);
-  const projection=sql.slice(start,end);
-  for(const forbidden of ['person_contacts','phone','email','follow_up_note','support_notes','participant_role','ekodi_id','relationships']){
+  const projection=extensionSql.slice(start,end);
+  for(const forbidden of ['follow_up_note','support_notes','participant_role','ekodi_id','relationships']){
     assert.equal(projection.includes(forbidden),false,forbidden);
   }
-  for(const allowed of ["'seq'","'name'","'status'","'party_size'"])assert.ok(projection.includes(allowed),allowed);
+  for(const allowed of ["'seq'","'name'","'submitted_at'","'status'","'party_size'","'phone'","'email'"])assert.ok(projection.includes(allowed),allowed);
+  assert.match(extensionSql,/'phone'.*else false end/s);
+  assert.match(extensionSql,/'email'.*else false end/s);
+  assert.match(projection,/v_policy->>'phone'.*boolean,false.*jsonb_build_object\('phone',q\.phone\)/s);
+  assert.match(projection,/v_policy->>'email'.*boolean,false.*jsonb_build_object\('email',q\.email\)/s);
+  assert.match(projection,/public\.person_contacts/);
 });
 
 test('Mission share route is private-by-link and the admin exposes explicit create/revoke controls',()=>{
@@ -48,10 +55,14 @@ test('Mission share route is private-by-link and the admin exposes explicit crea
   assert.match(worker,/activity_public_share_snapshot/);
   assert.match(worker,/x-ekodi-publication-status','private-share'/);
   assert.match(worker,/noindex, nofollow, noarchive/);
-  assert.match(worker,/전화번호·이메일·역할·후속관리·내부 메모는 포함하지 않습니다/);
+  assert.match(worker,/전화번호·이메일은 관리자가 명시적으로 선택한 경우에만 표시/);
   assert.match(admin,/activity_admin_share_status/);
   assert.match(admin,/activity_admin_create_share/);
   assert.match(admin,/activity_admin_revoke_share/);
   assert.match(admin,/읽기전용 링크 만들기/);
+  assert.match(admin,/activityShareFieldSubmittedAt/);
+  assert.match(admin,/activityShareFieldPhone/);
+  assert.match(admin,/activityShareFieldEmail/);
+  assert.match(admin,/activityShareSensitiveAck/);
   assert.match(admin,/이전 링크가 있었다면 즉시 무효화되었습니다/);
 });
