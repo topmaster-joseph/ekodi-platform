@@ -72,6 +72,7 @@
       'updates.scan':'업데이트 확인',
       'startup.scan':'시작프로그램 확인',
       'maintenance.temp_cleanup':'임시파일 정리',
+      'computer.browser.execute':'백그라운드 브라우저 자동실행',
       'power.always_on':'항상 켜짐',
       'power.presentation':'프레젠테이션',
       'power.normal':'일반 모드',
@@ -104,6 +105,12 @@
       .hybrid-fabric-policy[data-enabled="true"]{border-color:rgba(24,130,76,.35)}
       .hybrid-fabric-policy[data-enabled="false"]{border-color:rgba(191,126,0,.45)}
       .hybrid-fabric-policy strong{display:block;margin-bottom:3px}.hybrid-fabric-policy p{margin:0;max-width:760px;font-size:.86rem;opacity:.78}
+      .hybrid-automation-policy{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:12px;margin:14px 0;padding:14px;border:1px solid rgba(24,130,76,.35);border-radius:14px;background:rgba(24,130,76,.035)}
+      .hybrid-automation-policy h4{margin:0 0 5px}.hybrid-automation-policy p{margin:0;font-size:.86rem;opacity:.82}
+      .hybrid-policy-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      .hybrid-policy-item{padding:9px 10px;border:1px solid var(--line,#e0e4eb);border-radius:10px;background:var(--card,#fff)}
+      .hybrid-policy-item small{display:block;opacity:.68}.hybrid-policy-item strong{display:block;margin-top:2px;font-size:.88rem}
+      .hybrid-policy-item[data-state="protected"] strong{color:var(--ok,#187a4c)}
       .hybrid-watchdog{margin:14px 0;padding:13px;border:1px solid var(--line,#e0e4eb);border-radius:14px;background:rgba(127,127,127,.04)}
       .hybrid-watchdog[data-status="healthy"]{border-color:rgba(24,130,76,.35)}
       .hybrid-watchdog[data-status="degraded"]{border-color:rgba(191,126,0,.45)}
@@ -138,8 +145,8 @@
       .hybrid-event[data-type="failed"]{border-color:rgba(180,35,35,.35)}
       .hybrid-event[data-type="completed"]{border-color:rgba(24,130,76,.28)}
       .hybrid-privacy{margin:12px 0 0;font-size:.84rem;opacity:.76}
-      @media(max-width:900px){.hybrid-metrics{grid-template-columns:repeat(3,1fr)}}
-      @media(max-width:760px){.hybrid-grid{grid-template-columns:1fr}.hybrid-ledger{grid-column:auto}.hybrid-metrics{grid-template-columns:repeat(2,1fr)}}
+      @media(max-width:900px){.hybrid-automation-policy{grid-template-columns:1fr}.hybrid-metrics{grid-template-columns:repeat(3,1fr)}}
+      @media(max-width:760px){.hybrid-grid{grid-template-columns:1fr}.hybrid-ledger{grid-column:auto}.hybrid-policy-grid{grid-template-columns:1fr}.hybrid-metrics{grid-template-columns:repeat(2,1fr)}}
     `;
     document.head.append(style);
   }
@@ -155,6 +162,18 @@
       <section class="hybrid-fabric-policy" id="hybridFabricPolicy" data-enabled="true">
         <div><strong id="hybridFabricState">실행망 가동 중</strong><p id="hybridFabricNote">승인된 Worker에 새 작업을 자동 배정합니다. 일시중지하면 실행 중 작업은 완료하고 새 배정만 멈춥니다.</p></div>
         <button type="button" class="secondary" id="toggleHybridFabric">실행망 일시중지</button>
+      </section>
+      <section class="hybrid-automation-policy" id="hybridAutomationPolicy" data-execution-mode="background-only">
+        <div><p class="kicker">AUTOMATION SURFACE POLICY</p><h4>자동실행은 백그라운드 전용</h4>
+        <p>자동 API·브라우저 작업은 사용자 화면에 새 창이나 탭을 만들지 않습니다. EKODI가 만든 임시 실행면만 사용하고 작업 종료 또는 인증 필요 감지 시 자동으로 닫습니다.</p></div>
+        <div class="hybrid-policy-grid" aria-label="자동실행 정책 상태">
+          <div class="hybrid-policy-item" data-state="protected"><small>기본 실행</small><strong>백그라운드 전용</strong></div>
+          <div class="hybrid-policy-item" data-state="protected"><small>사용자 탭 생성</small><strong>차단</strong></div>
+          <div class="hybrid-policy-item" data-state="protected"><small>작업 완료 후</small><strong>임시 실행면 자동종료</strong></div>
+          <div class="hybrid-policy-item" data-state="protected"><small>인증 필요</small><strong>AUTH_REQUIRED 기록 후 종료</strong></div>
+          <div class="hybrid-policy-item" data-state="protected"><small>사용자 창·탭</small><strong>보존 · 자동종료 금지</strong></div>
+          <div class="hybrid-policy-item"><small>전경 표시 예외</small><strong>OAuth · CAPTCHA · OS 권한</strong></div>
+        </div>
       </section>
       <section class="hybrid-watchdog" id="hybridWatchdog" data-status="unknown">
         <div class="hybrid-watchdog-head"><div><strong>운영 자동감시</strong><span class="hybrid-pill" id="hybridMonitorStatus">확인 전</span></div><small id="hybridMonitorTime">10분 주기 감시</small></div>
