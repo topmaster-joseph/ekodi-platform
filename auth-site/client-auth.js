@@ -65,8 +65,8 @@ async function manifestRealm(id){
 function implicitEkodiRealm(id){
   const value=String(id||'').trim().toLowerCase();
   if(!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(value)||value==='portal')return null;
-  const origin=`https://${value}.ekodi.kr`;
-  return {name:value.replace(/-/g,' ').toUpperCase(),returnTo:`${origin}/`,origins:[origin],open:true,kind:value};
+  const returnTo=`https://ekodi.kr/${value}/`;
+  return {name:value.replace(/-/g,' ').toUpperCase(),returnTo,origins:['https://ekodi.kr'],open:true,kind:value};
 }
 const manifestConfig=await manifestRealm(site);
 const baseConfig=realms[site]||manifestConfig||implicitEkodiRealm(site)||realms.portal;
@@ -77,10 +77,10 @@ function safeReturn(raw){
   if(!raw)return fallback.href;
   try{
     const target=new URL(raw);
-    const allowedOrigins=new Set(config.origins||[fallback.origin]);
+    const allowedOrigins=new Set((config.origins||[fallback.origin]).map(value=>{try{return new URL(value).origin}catch{return ''}}).filter(Boolean));
     const hostname=target.hostname.toLowerCase();
     const cgmaPlatform=config.kind==='cgma-client'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/'));
-    const internalEkodi=config.kind==='cgma-client'?cgmaPlatform:(hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr'));
+    const internalEkodi=config.kind==='cgma-client'?cgmaPlatform:hostname==='ekodi.kr';
     if(target.protocol!=='https:'||target.username||target.password||(!allowedOrigins.has(target.origin)&&!internalEkodi))return fallback.href;
     target.hash='';
     return target.href;
