@@ -15,7 +15,9 @@ test('Windows image print preview policy is enforced and reversible', () => {
   assert.equal(policy.id, 'EKODI-WINDOWS-IMAGE-PRINT-PREVIEW-001');
   assert.equal(policy.status, 'enforced');
   assert.equal(policy.desiredState.previewBeforeFinalPrint, true);
+  assert.equal(policy.execution.autoReconcileEnabledByDefault, true);
   assert.equal(policy.execution.autoReconcileEnabledAfterRepair, true);
+  assert.equal(policy.execution.restoreCreatesPersistentOptOut, true);
   assert.equal(policy.safety.userHiveOnly, true);
   assert.equal(policy.safety.machineWideRegistryMutationForbidden, true);
   assert.equal(policy.safety.backupBeforeFirstMutation, true);
@@ -29,6 +31,8 @@ test('device control, admin and Windows agent expose bounded print preview comma
     assert.ok(admin.includes(`'${command}'`), `Admin missing ${command}`);
   }
   assert.ok(agent.includes('imagePrintPreview = $true'));
+  assert.ok(agent.includes("return @{ enforced = $true; updatedAt = ''; reason = 'ekodi-forced-default' }"));
+  assert.ok(agent.includes("reason = 'invalid-local-policy-state-fail-closed'"));
 });
 
 test('repair is user-hive only, backed up, verified and continuously reconciled after opt-in', () => {
