@@ -63,7 +63,7 @@ test('EKODI Mission is promoted to tenant-local Activity administration',async()
 
 test('Workspace Admin exposes one-screen activity participant operations',async()=>{
   const source=await (await workspaceAdminScript()).text();
-  for(const marker of ['activity_admin_snapshot','activity_admin_add_participant','activity_admin_update_participation','활동 · 참가자','data-activity-checkin','followUpStatus','companionsFromInput','google_form','privacyConsent'])assert.ok(source.includes(marker),marker);
+  for(const marker of ['activity_admin_snapshot','activity_admin_add_participant','activity_admin_update_participation','활동 · 참가자','data-activity-checkin','followUpStatus','companionsFromInput','google_form','privacyConsent','activity-seq','activity-seq-head','연번'])assert.ok(source.includes(marker),marker);
   assert.ok(source.includes("workspace==='ekodimission'"));
   assert.ok(source.includes("section==='activities'"));
 });
