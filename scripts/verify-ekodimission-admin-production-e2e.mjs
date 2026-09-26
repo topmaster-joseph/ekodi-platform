@@ -313,7 +313,7 @@ try{
   await row.locator('[data-field="status"]').selectOption('confirmed');
   const details=row.locator('details').first();
   if(!(await details.getAttribute('open')))await row.locator('details > summary').first().click();
-  checks.relationshipSeparated=await row.getByText('단순 참가자',{exact:true}).isVisible();
+  checks.relationshipSeparated=(await row.locator('.activity-detail-meta').textContent())?.includes('단순 참가자')||false;
   await row.locator('[data-field="role"]').fill('진행지원');
   await row.locator('[data-field="companions"]').fill('동반자 검증');
   await row.locator('[data-field="followUp"]').selectOption('pending');
