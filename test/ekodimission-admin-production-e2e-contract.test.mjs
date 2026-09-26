@@ -45,6 +45,7 @@ test('Mission tenant-admin production E2E exercises the deployed Activity partic
     "productionNosniff",
     "signed-out-failure.png",
     "details > summary",
+    "relationshipSeparated",
     "details.activity-add",
     "rowNumbering",
     "rowNumberingAfterAdd"
