@@ -283,3 +283,10 @@ Machine-readable sustainable evolution authority: `governance/architecture/ekodi
 - The canonical operating-context target remains **Person + Workspace + Membership + Capability**, with authority resolved through **Person + Workspace + Role + Capability**.
 - Future-generation promotion requires an explicit C2/C3 constitutional amendment, EKODI Platform Super Administrator confirmation, repository validation, guarded merge, and production verification whenever runtime behavior changes.
 - Machine-readable generation definitions, scale tiers, forward-evolution gates and boundary rules are maintained in `governance/architecture/ekodi-evolution-model.json` and enforced by repository validators.
+
+
+## Mandatory Daily Technology Scout Constitution
+- `TECH-SCOUT-001` requires EKODI Orchestrator to execute one technology/trend scouting cycle every day at 08:00 Asia/Seoul.
+- External search/OpenAI/providers are replaceable evidence sources only and never own policy, approval, execution or deployment authority.
+- Scouting is mandatory; candidate application remains human-gated and must use the normal isolated branch, validation, review, guarded deployment and production verification lifecycle.
+- Failed/degraded runs remain durable and visible and never silently disable future runs.
