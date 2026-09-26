@@ -68,7 +68,8 @@ test('Marketing admin includes EKODIBIZ as the internal tenant workspace beside 
   assert.match(source, /publicInternalWorkspace/);
   assert.match(source, /workspaceType:'tenant'/);
   assert.match(source, /workspace_key === 'ekodibiz'/);
-  assert.match(source, /canonicalDomain:'marketing\.ekodi\.kr'/);
+  assert.match(source, /canonicalDomain:'ekodi\.kr'/);
+  assert.match(source, /canonicalUrl:'https:\/\/ekodi\.kr\/marketing\/'/);
   assert.match(source, /internal:true/);
 });
 
