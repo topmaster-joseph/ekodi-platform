@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "policyId": "NATIVE-EXECUTION-INDEPENDENCE-001",
+  "status": "enforced",
+  "objective": "Keep EKODI operational when an external execution provider is unavailable, rate-limited, quota-exhausted, or commercially changed.",
+  "nativeFirst": true,
+  "providerLockIn": "forbidden",
+  "normalLaneOrder": [
+    "github_connector",
+    "github_actions",
+    "managed_cloud_runner",
+    "ekodi_native_remote_computer",
+    "ekodi_device_agent",
+    "self_hosted_runner",
+    "service_connector",
+    "external_remote_desktop"
+  ],
+  "externalProviders": {
+    "role": "replaceable_fallback_only",
+    "quotaExhaustionMustNotBlockOtherVerifiedLanes": true,
+    "automaticPaidUpgrade": false
+  },
+  "nativeExecutionRequirements": {
+    "registeredCapabilityOnly": true,
+    "arbitraryRemoteShellFromBrowser": false,
+    "leastPrivilege": true,
+    "secretValuesNeverInTaskPayload": true,
+    "nodeLocalSecretVault": true,
+    "heartbeatRequired": true,
+    "isolatedExecutorRequiredForMutation": true,
+    "executionReceiptRequired": true,
+    "postExecutionVerificationRequired": true,
+    "auditRequired": true,
+    "rollbackRequiredWhenReversible": true
+  },
+  "highImpact": {
+    "humanGate": true,
+    "classes": [
+      "constitutional_change",
+      "production_dns",
+      "permission_expansion",
+      "destructive_data",
+      "secrets"
+    ]
+  },
+  "failurePolicy": {
+    "preflightUnavailableLane": "skip_and_continue",
+    "quotaExhaustedLane": "skip_and_continue",
+    "verifiedRollback": "continue_to_next_lane",
+    "unsafeSideEffectUncertainty": "stop",
+    "securityBoundaryFailure": "stop"
+  },
+  "cutoverGate": [
+    "native_service_ready",
+    "healthy_enrolled_node",
+    "capability_verified",
+    "security_boundary_verified",
+    "isolated_mutation_executor_verified",
+    "receipt_recovery_audit_verified",
+    "production_canary_passed"
+  ]
+}
