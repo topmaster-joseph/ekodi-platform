@@ -23,6 +23,14 @@ for(const reason of ['native-capability-not-production-ready','native-capability
 for(const flag of ['auditIdRequired','nativeCapabilityGapRecordRequired','allEligibleNativeFailureEvidenceRequired','securityEquivalentOrStrongerRequired','paidUpgradeForbidden','providerLockInForbidden','fallbackDecisionMustBeMachineReadable']) if(routing.externalFallback?.[flag]!==true) fail(`external fallback guard missing: ${flag}`);
 if(routing.recovery?.nativeCapabilityMustBeRetriedOnNextEligibleExecution!==true||routing.recovery?.fallbackMustNotBecomeDefaultByHistory!==true) fail('external fallback must not become sticky/default');
 
+const automaticExecution=constitution.automaticExecutionLifecyclePolicy||{};
+if(automaticExecution.id!=='AUTOMATIC-EXECUTION-LIFECYCLE-001'||automaticExecution.status!=='enforced'||automaticExecution.mode!=='mandatory') fail('automatic execution lifecycle constitution missing or not enforced');
+if(automaticExecution.defaultExecutionMode!=='background-only'||automaticExecution.userBrowserTabCreation!==false||automaticExecution.foregroundWindowDefault!==false) fail('constitutional automatic execution must remain background-only and non-foreground');
+if(automaticExecution.ownedAutomationSurfaceAutoClose!==true||automaticExecution.authRequiredDisposition!=='record-and-close'||automaticExecution.authRequiredMustNotOpenInteractiveLogin!==true||automaticExecution.preserveUserOwnedWindowsAndTabs!==true) fail('constitutional automatic execution cleanup/auth boundary drifted');
+if(automaticExecution.localOverrideForbidden!==true||automaticExecution.serviceOrAgentWaiverForbidden!==true||automaticExecution.policyRegressionBlocksCi!==true) fail('automatic execution constitution must be non-waivable and CI-blocking');
+if(remote.constitutionalPolicy!=='AUTOMATIC-EXECUTION-LIFECYCLE-001'||remote.nonDisruptiveExecution?.automaticExecutionLifecycle?.constitutionalPolicy!=='AUTOMATIC-EXECUTION-LIFECYCLE-001') fail('remote execution must bind automatic execution constitution');
+if(!fabric.constitutionalPolicies?.includes('AUTOMATIC-EXECUTION-LIFECYCLE-001')||fabric.automaticExecutionLifecycle?.constitutionalPolicy!=='AUTOMATIC-EXECUTION-LIFECYCLE-001') fail('execution fabric must bind automatic execution constitution');
+
 const sovereignty=constitution.virtualizationSovereigntyPolicy||{};
 if(sovereignty.id!=='VIRTUALIZATION-SOVEREIGNTY-001'||sovereignty.ekodiOwnedVirtualizationFirst!==true) fail('constitutional native-first virtualization sovereignty missing');
 if(fabric.orchestration?.selection?.ekodiOwnedVirtualizationFirst!==true||fabric.providers?.virtualization?.nativeFirst!==true) fail('execution fabric native-first policy missing');
