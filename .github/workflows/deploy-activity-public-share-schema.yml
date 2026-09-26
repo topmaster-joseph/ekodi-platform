@@ -1,0 +1,117 @@
+name: Deploy Activity Public Share Schema
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20260926140500_activity_public_readonly_shares.sql'
+      - 'test/activity-public-share.test.mjs'
+      - '.github/workflows/deploy-activity-public-share-schema.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/20260926140500_activity_public_readonly_shares.sql'
+      - '.github/workflows/deploy-activity-public-share-schema.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-activity-public-share-schema-${{ github.event_name == 'pull_request' && format('validate-pr-{0}', github.event.pull_request.number) || 'production' }}
+  cancel-in-progress: false
+
+env:
+  PROJECT_REF: renzehysxirjilvdxacv
+  MIGRATION: supabase/migrations/20260926140500_activity_public_readonly_shares.sql
+  PUBLISHABLE_KEY: sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate share schema and privacy contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test test/activity-public-share.test.mjs
+          test -f "$MIGRATION"
+          grep -Fq 'create table if not exists public.activity_public_shares' "$MIGRATION"
+          grep -Fq 'activity_admin_create_share' "$MIGRATION"
+          grep -Fq 'activity_admin_revoke_share' "$MIGRATION"
+          grep -Fq 'activity_public_share_snapshot' "$MIGRATION"
+          grep -Fq 'token_hash text not null unique' "$MIGRATION"
+          ! grep -Eiq 'drop[[:space:]]+table|truncate[[:space:]]+table' "$MIGRATION"
+
+  production:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: production
+    env:
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Select Supabase deployment credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-}"
+          [ -n "$token" ] || token="${TOKEN_B:-}"
+          [ -n "$token" ] || token="${TOKEN_C:-}"
+          [ -n "$token" ] || token="${TOKEN_D:-}"
+          if [ -z "$token" ]; then
+            echo 'No Supabase production deployment credential is configured.'
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+
+      - name: Apply idempotent activity-share schema before UI promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -Rs '{query:.,read_only:false}' "$MIGRATION" > /tmp/activity-share-migration.json
+          code=$(curl -sS -o /tmp/activity-share-migration-result.json -w '%{http_code}'             -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query"             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN"             -H 'Content-Type: application/json'             --data-binary @/tmp/activity-share-migration.json)
+          if [ "$code" != '201' ]; then
+            echo "Activity share migration failed with HTTP $code."
+            cat /tmp/activity-share-migration-result.json
+            exit 1
+          fi
+
+      - name: Verify production activity-share function inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/activity-share-proof.sql <<'SQL'
+          select
+            to_regclass('public.activity_public_shares') is not null as share_table,
+            to_regprocedure('public.activity_admin_share_status(text,text)') is not null as share_status,
+            to_regprocedure('public.activity_admin_create_share(text,text,timestamp with time zone,jsonb)') is not null as create_share,
+            to_regprocedure('public.activity_admin_revoke_share(uuid)') is not null as revoke_share,
+            to_regprocedure('public.activity_public_share_snapshot(text)') is not null as public_snapshot;
+          SQL
+          jq -Rs '{query:.,read_only:true}' /tmp/activity-share-proof.sql > /tmp/activity-share-proof.json
+          code=$(curl -sS -o /tmp/activity-share-proof-result.json -w '%{http_code}'             -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query"             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN"             -H 'Content-Type: application/json'             --data-binary @/tmp/activity-share-proof.json)
+          [ "$code" = '201' ]
+          for marker in '"share_table":true' '"share_status":true' '"create_share":true' '"revoke_share":true' '"public_snapshot":true'; do
+            grep -Fq "$marker" /tmp/activity-share-proof-result.json
+          done
+
+      - name: Verify anonymous private-link projection endpoint exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://$PROJECT_REF.supabase.co/rest/v1/rpc/activity_public_share_snapshot"
+          code=$(curl -sS -o /tmp/activity-share-public.json -w '%{http_code}' -X POST "$endpoint"             -H "apikey: $PUBLISHABLE_KEY"             -H 'Content-Type: application/json'             --data '{"p_token":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')
+          [ "$code" = '200' ]
+          grep -Eq '"ok"[[:space:]]*:[[:space:]]*false' /tmp/activity-share-public.json
+          echo 'Activity public-share schema is production-ready before UI promotion.'
