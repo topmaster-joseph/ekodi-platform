@@ -16,7 +16,7 @@ const AUTOMATION_MARKERS = Object.freeze([
   'uptimerobot', 'statuscake', 'checkly', 'synthetic-monitor'
 ]);
 
-const LEGACY_SITE_ALIASES = Object.freeze({
+const EXTERNAL_SITE_HOSTS = Object.freeze({
   'ekodichurch.kr': 'church',
   'www.ekodichurch.kr': 'church',
   'ekodibiz.kr': 'biz',
@@ -31,12 +31,8 @@ export function normalizeTrafficHost(value) {
 export function trafficSiteIdForHost(value) {
   const host = normalizeTrafficHost(value);
   if (!host) return '';
-  if (LEGACY_SITE_ALIASES[host]) return LEGACY_SITE_ALIASES[host];
-  if (host === 'ekodi.kr' || host === 'ekodi.kr') return 'root';
-  if (host.endsWith('.ekodi.kr')) {
-    const label = host.slice(0, -'.ekodi.kr'.length).split('.')[0];
-    return /^[a-z0-9-]{1,64}$/.test(label) ? label : 'ekodi';
-  }
+  if (EXTERNAL_SITE_HOSTS[host]) return EXTERNAL_SITE_HOSTS[host];
+  if (host === 'ekodi.kr') return 'root';
   return host.replace(/[^a-z0-9.-]/g, '').slice(0, 80);
 }
 
@@ -63,7 +59,7 @@ export function isAllowedTelemetryOrigin(origin, configuredOrigins = '') {
   try { url = new URL(String(origin || '')); } catch { return false; }
   if (url.protocol !== 'https:') return false;
   const host = normalizeTrafficHost(url.hostname);
-  if (host === 'ekodi.kr' || host.endsWith('.ekodi.kr') || LEGACY_SITE_ALIASES[host]) return true;
+  if (host === 'ekodi.kr' || EXTERNAL_SITE_HOSTS[host]) return true;
   const configured = new Set(String(configuredOrigins || '').split(',').map(item => item.trim()).filter(Boolean));
   return configured.has(url.origin);
 }
