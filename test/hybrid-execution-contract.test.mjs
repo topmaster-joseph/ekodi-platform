@@ -143,3 +143,16 @@ test('hybrid runtime changes trigger the guarded Control API release path', () =
   assert.match(controlDeploy, /pull_request:[\s\S]*hybrid-execution\.js/);
   assert.doesNotMatch(controlDeploy, /pull_request_target:/);
 });
+
+
+test('execution admin visibly communicates the enforced background-only automation lifecycle', () => {
+  assert.match(admin, /id="hybridAutomationPolicy"/);
+  assert.match(admin, /data-execution-mode="background-only"/);
+  assert.match(admin, /자동실행은 백그라운드 전용/);
+  assert.match(admin, /사용자 탭 생성/);
+  assert.match(admin, /임시 실행면 자동종료/);
+  assert.match(admin, /AUTH_REQUIRED 기록 후 종료/);
+  assert.match(admin, /사용자 창·탭/);
+  assert.match(admin, /OAuth · CAPTCHA · OS 권한/);
+  assert.match(admin, /'computer\.browser\.execute':'백그라운드 브라우저 자동실행'/);
+});
