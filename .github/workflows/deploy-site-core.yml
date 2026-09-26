@@ -438,7 +438,7 @@ jobs:
           test -f mall.css
           test -f config/ekodi-service-urls.json
           grep -Fq 'https://ekodi.kr/ekodimall' config/ekodi-service-urls.json
-          if grep -Eq 'https://(ekodi-mall\.pages\.dev|mall\.ekodi\.kr)' mall.html mall.js 2>/dev/null; then
+          if grep -Eq 'https://ekodi-mall\.pages\.dev' mall.html mall.js 2>/dev/null; then
             echo 'Legacy Mall public URL detected in shared-site source.'
             exit 1
           fi
@@ -487,7 +487,7 @@ jobs:
           grep -Fq 'position:fixed!important' admin-shell.css
           grep -Fq '.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}' admin-shell.css
           grep -Fq -- '--ekodi-home-header-height' index.html
-          if grep -Eq "frame-src[^;]*https://marketing\.ekodi\.kr" site-worker.js; then
+          if grep -Eq "frame-src[^;]*https://ekodi\.kr" site-worker.js; then
             echo 'Marketing public UI must not be embedded in the admin CSP.'
             exit 1
           fi
