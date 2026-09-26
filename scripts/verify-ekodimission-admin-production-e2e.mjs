@@ -49,6 +49,8 @@ const participants = [{
   relationships:[],
 }];
 
+let shareRecord=null;
+const shareToken='SyntheticShareToken_abcdefghijklmnopqrstuvwxyz012345';
 const mutationCalls = [];
 const assetResponses = [];
 const consoleErrors = [];
@@ -201,6 +203,36 @@ await page.route('https://renzehysxirjilvdxacv.supabase.co/rest/v1/rpc/**',async
     return jsonResponse(route,snapshot());
   }
 
+  if(name==='activity_admin_share_status'){
+    if(body.p_workspace_slug!=='ekodimission'||body.p_activity_key!==activityKey)return jsonResponse(route,{message:'wrong share scope'},400);
+    return jsonResponse(route,shareRecord?{
+      active:true,
+      share_id:shareRecord.share_id,
+      expires_at:shareRecord.expires_at,
+      field_policy:shareRecord.field_policy,
+      created_at:shareRecord.created_at,
+      last_accessed_at:null,
+      access_count:0,
+    }:{active:false});
+  }
+
+  if(name==='activity_admin_create_share'){
+    mutationCalls.push({name,body});
+    shareRecord={
+      share_id:'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+      expires_at:body.p_expires_at,
+      field_policy:body.p_field_policy||{name:true,status:true,party_size:true},
+      created_at:new Date().toISOString(),
+    };
+    return jsonResponse(route,{ok:true,share_id:shareRecord.share_id,token:shareToken,share_path:'/ekodimission/share/'+shareToken,expires_at:shareRecord.expires_at,field_policy:shareRecord.field_policy});
+  }
+
+  if(name==='activity_admin_revoke_share'){
+    mutationCalls.push({name,body});
+    if(!shareRecord||body.p_share_id!==shareRecord.share_id)return jsonResponse(route,{message:'ACTIVITY_SHARE_NOT_FOUND'},404);
+    const id=shareRecord.share_id;shareRecord=null;return jsonResponse(route,{ok:true,share_id:id,active:false});
+  }
+
   if(name==='activity_admin_update_participation'){
     const item=participants.find(row=>row.participation_id===body.p_participation_id);
     if(!item)return jsonResponse(route,{message:'PARTICIPATION_NOT_FOUND'},404);
@@ -304,6 +336,24 @@ try{
   checks.addMutation=mutationCalls.some(call=>call.name==='activity_admin_add_participant'&&call.body.p_privacy_consent===true&&call.body.p_source_channel==='admin'&&Array.isArray(call.body.p_companions)&&call.body.p_companions.length===2);
   checks.addedVisible=await page.getByText('운영검증 신규참가자',{exact:true}).isVisible();
 
+  const shareButton=page.locator('#activityShareButton');
+  checks.shareButtonVisible=await shareButton.isVisible();
+  await shareButton.click();
+  await page.locator('#activityShareDialog[open]').waitFor({state:'visible'});
+  const shareDialogText=await page.locator('#activityShareDialog').innerText();
+  checks.sharePrivacyLock=/전화번호 · 이메일 · 역할 · 후속관리 · 내부 메모 · EKODI ID/.test(shareDialogText);
+  await page.locator('#activityShareCreate').click();
+  await page.waitForFunction(()=>document.querySelector('#activityShareLink')?.value?.includes('/ekodimission/share/'));
+  const shareHref=await page.locator('#activityShareLink').inputValue();
+  checks.shareLinkReadOnly=shareHref===origin+'/ekodimission/share/'+shareToken;
+  checks.shareCreateMutation=mutationCalls.some(call=>call.name==='activity_admin_create_share'&&call.body.p_workspace_slug==='ekodimission'&&call.body.p_activity_key===activityKey&&call.body.p_field_policy?.name===true&&call.body.p_field_policy?.status===true&&call.body.p_field_policy?.party_size===true);
+  const revokeButton=page.locator('#activityShareRevoke');
+  await revokeButton.waitFor({state:'visible'});
+  await revokeButton.click();
+  await page.waitForFunction(()=>!document.querySelector('#activityShareDialog')?.open);
+  checks.shareRevokeMutation=mutationCalls.some(call=>call.name==='activity_admin_revoke_share'&&call.body.p_share_id==='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee');
+
+
   const paths=new Set(assetResponses.filter(item=>item.status===200).map(item=>item.path));
   checks.productionAssets=paths.has('/workspace-admin.js')&&paths.has('/workspace-admin.css');
   const jsAsset=assetResponses.find(item=>item.path==='/workspace-admin.js'&&item.status===200);
@@ -338,4 +388,4 @@ try{
 }
 
 if(fatal)throw fatal;
-console.log('EKODI Mission tenant-admin production UI E2E passed: render, edit, follow-up, check-in, add-participant, privacy consent, and relationship separation.');
+console.log('EKODI Mission tenant-admin production UI E2E passed: render, edit, follow-up, check-in, add-participant, row numbering, read-only sharing, privacy consent, and relationship separation.');
