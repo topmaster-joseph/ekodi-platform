@@ -146,8 +146,6 @@ jobs:
           grep -Eiq '^access-control-allow-origin:[[:space:]]*https://ekodi\.kr' /tmp/docs-ai-canonical.headers
           grep -Eiq '^x-ekodi-docs-contract:[[:space:]]*ekodi\.document-ai\.v2' /tmp/docs-ai-canonical.headers
           grep -Eiq "^x-ekodi-docs-release:[[:space:]]*$DOCS_AI_RELEASE" /tmp/docs-ai-canonical.headers
-
-          legacy_options_code=$(curl -sS -D /tmp/docs-ai-legacy.headers -o /dev/null -w '%{http_code}' -X OPTIONS "$endpoint" \
 unauth_code=$(curl -sS -D /tmp/docs-ai-unauth.headers -o /tmp/docs-ai-unauth.json -w '%{http_code}' -X POST "$endpoint" \
             -H 'Origin: https://ekodi.kr' \
             -H 'Content-Type: application/json' \
