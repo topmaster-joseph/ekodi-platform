@@ -203,6 +203,20 @@ if (constitution.domainPolicy?.newFeatureSubdomainsForbidden !== true) fail('new
 if (constitution.domainPolicy?.newTenantSubdomainsForbidden !== true) fail('new tenant/workspace child hosts must be forbidden');
 if (constitution.domainPolicy?.allEkodiOwnedSubdomainsForbidden !== true) fail('all EKODI-owned child hosts must be forbidden');
 if ('legacyDomainAllowlist' in constitution || 'legacyDomainTargets' in constitution || 'legacyPathAliases' in constitution) fail('retired EKODI child-host alias registries must be absent');
+const apexRule=constitution.domainPolicy?.forceExecutionRule||{};
+if(apexRule.id!=='APEX-PATH-ONLY-001'||apexRule.status!=='enforced') fail('APEX-PATH-ONLY-001 force execution rule must remain enforced');
+for(const [key,expected] of Object.entries({
+  canonicalHost:'ekodi.kr',
+  ekodiOwnedChildHostsAllowed:false,
+  redirectsOrCompatibilityAliasesAllowed:false,
+  dedicatedRuntimeApiHostsAllowed:false,
+  dynamicChildHostConstructionAllowed:false,
+  deploymentRouteChildHostsAllowed:false,
+  corsChildHostOriginsAllowed:false,
+  databaseStoredEkodiChildHostsAllowed:false,
+  completionRule:'zero-ekodi-owned-child-host-reference-and-zero-live-database-reference'
+})) if(apexRule[key]!==expected) fail(`APEX-PATH-ONLY-001 drift: ${key}`);
+if(apexRule.owner!=='ekodi-orchestrator'||apexRule.finalAuthority!=='ekodi-platform-super-administrator') fail('APEX-PATH-ONLY-001 authority drift');
 for (const p of ['/journal','/marketing','/developer','/experience']) if (!registeredCommon.has(p)) fail('registered common-service path missing: '+p);
 if (!registeredCommonPaths.has('/invest')) fail('registered common-service path missing: /invest');
 if (!registeredCore.has('/ai')) fail('registered core-service path missing: /ai');
@@ -314,6 +328,7 @@ for (const [group, pattern] of Object.entries(expectedAdminRoutes)) {
   if (constitution.surfaceRoutingPolicy?.adminServiceManagement?.[group] !== pattern) fail(`constitutional Admin route drift: ${group}`);
 }
 if (workspace.commonServiceOperatorAccessRule?.canonicalPath !== '/admin/services/common-services') fail('common-service operator canonical path must use /admin/services');
+if (workspace.commonServiceOperatorAccessRule?.runtimeApiMayRemainOnDedicatedHost !== false) fail('dedicated EKODI runtime API hosts must remain forbidden');
 if (workspace.subdomainExceptions?.personalHome !== null) fail('service workspace policy must not preserve a personal-home user-entry subdomain');
 if (workspace.subdomainExceptions?.administration !== null) fail('service workspace policy must not preserve an administrator user-entry subdomain');
 if (workspace.subdomainExceptions?.authentication !== null) fail('service workspace policy must not preserve an authentication user-entry subdomain');
