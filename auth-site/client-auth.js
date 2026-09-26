@@ -26,7 +26,7 @@ const realms={
   energy:{name:'Energy AI',returnTo:'https://energy.ekodi.kr/',open:true,kind:'energy'},
   work:{name:'EKODI Work',returnTo:'https://work.ekodi.kr/',open:true,kind:'work'},
   messenger:{name:'EKODI Messenger',returnTo:'https://ekodi.kr/messenger',open:true,kind:'messenger'},
-  invest:{name:'EKODI Investment',returnTo:'https://invest.ekodi.kr/',open:true,kind:'invest'},
+  invest:{name:'EKODI Investment',returnTo:'https://ekodi.kr/invest',origins:['https://ekodi.kr'],open:true,kind:'invest'},
   support:{name:'EKODI Support AI',returnTo:'https://ekodi.kr/support/',open:true,kind:'support'},
   publishing:{name:'Publishing',returnTo:'https://publishing.ekodi.kr/',open:true,kind:'publishing'},
   money:{name:'EKODI Money',returnTo:'https://money.ekodi.kr/',open:true,kind:'money'},
