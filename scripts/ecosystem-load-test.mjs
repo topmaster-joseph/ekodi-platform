@@ -33,7 +33,7 @@ if (concurrencies.length === 0) throw new Error('At least one valid concurrency 
 
 function isProductionTarget(target) {
   const host = new URL(target.url).hostname.toLowerCase();
-  return host === 'ekodi.kr' || host.endsWith('.ekodi.kr');
+  return host === 'ekodi.kr';
 }
 
 const productionTargets = targets.filter(isProductionTarget);
