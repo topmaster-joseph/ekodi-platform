@@ -51,7 +51,7 @@ function misroutedServiceReturn(){
  try{
   const target=new URL(raw);
   const hostname=target.hostname.toLowerCase();
-  const trusted=target.protocol==='https:'&&!target.username&&!target.password&&(hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr')||hostname==='cgma.or.kr');
+  const trusted=target.protocol==='https:'&&!target.username&&!target.password&&(hostname==='ekodi.kr'||hostname==='cgma.or.kr');
   if(!trusted)return null;
   if(target.origin==='https://ekodi.kr'&&(target.pathname==='/my'||target.pathname.startsWith('/my/')))return null;
   target.hash=location.hash;
