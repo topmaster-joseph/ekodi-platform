@@ -45,7 +45,13 @@ test('Mission admin root stays on overview and applicant roster opens from its m
   assert.match(script,/activity_admin_share_status/);
   assert.match(script,/activity_admin_create_share/);
   assert.match(script,/activity_admin_revoke_share/);
-  assert.match(script,/전화번호 · 이메일 · 역할 · 후속관리 · 내부 메모 · EKODI ID/);
+  assert.match(script,/신청일시/);
+  assert.match(script,/activityShareFieldSubmittedAt/);
+  assert.match(script,/activityShareFieldPhone/);
+  assert.match(script,/activityShareFieldEmail/);
+  assert.match(script,/activityShareSensitiveAck/);
+  assert.match(script,/전화번호·이메일은 기본 비공개이며 선택 시에만 링크에 포함됩니다/);
+  assert.match(script,/항상 제외: 역할 · 후속관리 · 내부 메모 · EKODI ID/);
   assert.match(script,/신청자 관리/);
   assert.match(script,/MISSION_RETURN_KEY='ekodi-mission-admin-return'/);
   assert.match(script,/rememberMissionReturn/);

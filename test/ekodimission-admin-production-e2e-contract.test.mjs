@@ -48,7 +48,14 @@ test('Mission tenant-admin production E2E exercises the deployed Activity partic
     "relationshipSeparated",
     "details.activity-add",
     "rowNumbering",
-    "rowNumberingAfterAdd"
+    "rowNumberingAfterAdd",
+    "activityShareFieldSubmittedAt",
+    "activityShareFieldPhone",
+    "activityShareFieldEmail",
+    "activityShareSensitiveAck",
+    "shareSubmittedDefault",
+    "shareContactDefaultsPrivate",
+    "shareSensitiveAck"
   ]) assert.ok(source.includes(marker),marker);
   assert.ok(source.includes("p_privacy_consent===true"));
   assert.ok(source.includes("p_status==='attended'"));
