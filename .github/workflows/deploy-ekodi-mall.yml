@@ -408,6 +408,14 @@ jobs:
 
       - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+
+      - name: Enforce single EKODI Mall Pages production owner
+        env:
+          CF_PROJECT: ${{ needs.validate.outputs.project }}
+          EKODI_MALL_LEGACY_GIT_OWNER: topmaster-joseph
+          EKODI_MALL_LEGACY_GIT_REPO: ekodi-mall
+        run: node scripts/disable-git-auto-deploy.mjs
+
       - name: Rebuild exact production artifact
         if: steps.production_scope.outputs.site_changed == 'true'
         run: npm run build
