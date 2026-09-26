@@ -1,6 +1,6 @@
 {
-  "version": "1.25.0",
-  "effectiveDate": "2026-09-24",
+  "version": "1.26.0",
+  "effectiveDate": "2026-09-26",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -41,7 +41,8 @@
     "authentication-return-continuity",
     "canonical-human-url-without-tracking-query",
     "evidence-gated-ai-claims",
-    "evidence-gated-external-knowledge"
+    "evidence-gated-external-knowledge",
+    "mandatory-daily-technology-scouting"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -1081,5 +1082,19 @@
       "admin"
     ],
     "grandfatheredListExpansionRequiresConstitutionalAmendment": true
+  },
+  "technologyScoutPolicy": {
+    "id": "TECH-SCOUT-001",
+    "status": "enforced",
+    "mode": "mandatory",
+    "owner": "EKODI Orchestrator",
+    "schedule": "daily 08:00 Asia/Seoul",
+    "externalProviders": "sources-only",
+    "dailyExecutionRequired": true,
+    "humanApplicationDecisionRequired": true,
+    "automaticProductionMutationForbidden": true,
+    "knowledgeClaimPolicy": "AI-KNOWLEDGE-CLAIM-001",
+    "policyDocument": "TECHNOLOGY_SCOUT_POLICY.md",
+    "validator": "scripts/validate-technology-scout-policy.mjs"
   }
 }
