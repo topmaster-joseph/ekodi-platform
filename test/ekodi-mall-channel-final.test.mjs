@@ -26,6 +26,11 @@ test('Mall channel console unifies connection policy AI allocation and job recov
   assert.match(ui,/channel-help/);
   assert.match(ui,/data-channel-quick/);
   assert.match(ui,/data-channel-panel/);
+  assert.match(ui,/CHANNEL_OAUTH_RESULT_KEY/);
+  assert.match(ui,/ekodi-channel-oauth-result/);
+  assert.match(ui,/ekodi_channel_oauth_popup/);
+  assert.match(ui,/applyChannelOAuthResult/);
+  assert.match(ui,/채널 연결 완료/);
   assert.match(ui,/채널 설정/);
 
 });

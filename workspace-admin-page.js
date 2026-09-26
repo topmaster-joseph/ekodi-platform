@@ -52,6 +52,53 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   const adminBase=standaloneMall?'/ekodimall/admin':service==='mall'?'/ekodimall/admin':service?`${base}/${service}/admin`:`${base}/admin`;
   const sectionHref=key=>key==='overview'?`${adminBase}/overview`:`${adminBase}/${key==='channels'?'channel-settings':key}`;
   const $=id=>document.getElementById(id);
+  const CHANNEL_OAUTH_RESULT_KEY='ekodi-channel-oauth-result-v1';
+  const CHANNEL_OAUTH_POPUP_NAME='ekodi_channel_oauth_popup';
+  let channelOAuthNotice=null;
+  const channelOAuthResultFromLocation=()=>{
+    const params=new URLSearchParams(location.search),status=params.get('ekodi_connect');
+    if(!['success','error'].includes(String(status||'')))return null;
+    return {type:'ekodi-channel-oauth-result',status,provider:params.get('provider')||'',connections:Number(params.get('connections')||0),reason:params.get('reason')||'',at:Date.now()};
+  };
+  const clearChannelOAuthResultUrl=()=>{
+    const url=new URL(location.href);
+    for(const key of ['ekodi_connect','provider','connections','reason'])url.searchParams.delete(key);
+    history.replaceState(history.state,'',url.pathname+url.search+url.hash);
+  };
+  const publishChannelOAuthResult=result=>{
+    if(!result)return;
+    try{localStorage.setItem(CHANNEL_OAUTH_RESULT_KEY,JSON.stringify(result))}catch{}
+    try{const bus=new BroadcastChannel(CHANNEL_OAUTH_RESULT_KEY);bus.postMessage(result);bus.close()}catch{}
+  };
+  const initialChannelOAuthResult=channelOAuthResultFromLocation();
+  if(initialChannelOAuthResult){
+    publishChannelOAuthResult(initialChannelOAuthResult);
+    clearChannelOAuthResultUrl();
+    if(window.name===CHANNEL_OAUTH_POPUP_NAME){
+      document.body.innerHTML='<main style="font-family:system-ui,sans-serif;max-width:440px;margin:48px auto;padding:24px;text-align:center"><h1 style="font-size:20px">채널 인증 처리 완료</h1><p style="color:#667085">관리자 화면에 결과를 반영하고 이 창을 닫습니다.</p><button type="button" onclick="window.close()" style="padding:10px 16px">창 닫기</button></main>';
+      setTimeout(()=>window.close(),120);
+      return;
+    }
+    channelOAuthNotice=initialChannelOAuthResult;
+  }
+  async function applyChannelOAuthResult(result){
+    if(!result||result.type!=='ekodi-channel-oauth-result'||!['success','error'].includes(String(result.status||'')))return;
+    if(!['channels','publishing','marketing'].includes(section))return;
+    channelOAuthNotice=result;
+    try{await channel()}catch{}
+    const ok=result.status==='success',label=CHANNEL_PROVIDERS[result.provider]?.label||result.provider||'채널';
+    if($('pageCopy'))$('pageCopy').textContent=ok?label+' 인증이 완료되었습니다. 연결 상태를 새로 반영했습니다.':label+' 인증을 완료하지 못했습니다.'+(result.reason?' '+result.reason:'');
+    state(ok?'채널 연결 완료':'채널 연결 확인 필요');
+  }
+  try{
+    const channelOAuthBus=new BroadcastChannel(CHANNEL_OAUTH_RESULT_KEY);
+    channelOAuthBus.onmessage=event=>applyChannelOAuthResult(event.data);
+    window.addEventListener('pagehide',()=>channelOAuthBus.close(),{once:true});
+  }catch{}
+  window.addEventListener('storage',event=>{
+    if(event.key!==CHANNEL_OAUTH_RESULT_KEY||!event.newValue)return;
+    try{applyChannelOAuthResult(JSON.parse(event.newValue))}catch{}
+  });
   const fmt=n=>new Intl.NumberFormat('ko-KR').format(Number(n||0));
   const meta={chrome:['헤더 · 푸터','이 사이트의 헤더와 푸터 기본정보를 관리합니다. 저장하면 이 사이트에만 반영됩니다.'],overview:['운영 홈','지금 확인할 상태와 다음 행동을 한눈에 봅니다.'],sales:['영업장부','게시 → 유입 → 상품조회 → 제휴클릭 → 전환을 실제 이벤트로 확인합니다.'],products:['상품관리','공개 쇼핑몰 상품과 판매처 연결을 관리합니다.'],sourcing:['제휴·소싱','아고다·쿠팡 등 이 쇼핑몰이 사용할 제휴처와 실제 적용 여부를 관리합니다.'],marketing:['마케팅 AI','콘텐츠 생성, UTM, 캠페인과 게시 준비를 관리합니다.'],channels:['채널설정','게시 채널 연결, 운영설정과 자동게시 상태를 한곳에서 관리합니다.'],automation:['자동화','콘텐츠 생성과 예약게시 자동화 준비 상태를 확인합니다.'],growth:['AI 자동영업','아고다·쿠팡 상품의 추천·게시·유입·전환 현황과 자동 배분 설정을 관리합니다.'],analytics:['성과·학습','판매·채널·캠페인 성과와 AI 학습 결과를 확인합니다.'],mall:['에코디몰','에코디비즈가 운영하는 쇼핑몰 서비스입니다.'],work:['업무','업무 서비스 상태를 확인합니다.'],finance:['재무','재무 서비스 상태를 확인합니다.'],tax:['세금 · 증빙','에코디비즈 전자세금계산서·공급자·거래처·발행대장을 관리합니다.'],confirmations:['지급·수령 확인','지급과 수령을 분리 관리하고 필요할 때 같은 거래번호로 연결합니다.'],languages:['다국어 번역·게시','이 사이트의 번역 진행 상태와 실제 게시 여부를 관리합니다.'],members:['사용자 · 권한','운영공간 로컬 역할과 권한을 관리합니다.'],design:['사이트 설정','디자인과 다국어 등 고객 화면의 표시 설정을 관리합니다.'],publishing:['채널·자동게시','이 운영공간의 SNS 계정 연결, OAuth 인증, 예약·반복 게시와 자동게시 상태를 관리합니다.'],mail:['메일','도메인 메일 주소, Gmail 전달, DNS 인증 상태를 관리합니다.'],activities:['활동 · 참가자','활동별 신청·대기·확정·참석·불참·취소와 체크인, 역할, 동반자, 후속관리를 한 화면에서 관리합니다.'],status:['상태 · 배포','이 운영공간의 현재 접근·공개·권한 상태와 플랫폼 배포 확인 경로를 한눈에 봅니다.'],records:['설정 · 기록','운영공간 권한 경계, 변경·감사 기록과 관련 관리 화면을 확인합니다.'],member:['정회원','청계면상인회 소속 정회원 명단을 이 운영공간에서 관리합니다.']};
   const isBizWorkspace=service==='mall'||workspace==='ekodi-biz'||workspace==='ekodibiz';
@@ -432,7 +479,27 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     const s=x.settings||{};const val=(v,d='')=>ae(v??d);const checked=v=>Number(v)===1?'checked':'';const selected=(a,b)=>String(a||'')===String(b)?'selected':'';
     return `<form class="channel-settings" data-channel-settings-form="${x.id}"><div class="design-grid"><div class="design-field"><strong>연결 채널</strong><input value="${val(x.display_name,'YouTube')}" disabled><small>${val(x.external_id)}</small></div><div class="design-field"><strong>역할</strong><select name="role"><option value="mall" ${selected(s.role||'mall','mall')}>에코디몰</option><option value="representative" ${selected(s.role,'representative')}>대표채널</option><option value="service" ${selected(s.role,'service')}>기타 서비스</option></select></div><div class="design-field"><strong>기본 게시채널</strong><label><input name="isDefault" type="checkbox" ${checked(s.is_default??1)}> 이 서비스의 기본 채널</label></div><div class="design-field"><strong>기본 공개범위</strong><select name="publishPrivacy"><option value="private" ${selected(s.publish_privacy||'private','private')}>비공개</option><option value="unlisted" ${selected(s.publish_privacy,'unlisted')}>일부공개</option><option value="public" ${selected(s.publish_privacy,'public')}>공개</option></select></div><div class="design-field"><strong>동영상 카테고리 ID</strong><input name="categoryId" value="${val(s.category_id,'22')}" maxlength="8"></div><div class="design-field"><strong>국가 / 기본언어</strong><input name="country" value="${val(s.country,'KR')}" maxlength="2"><input name="defaultLanguage" value="${val(s.default_language,'ko')}" maxlength="16"></div></div><div class="design-field"><strong>채널 설명</strong><textarea name="description" rows="5" maxlength="1000">${val(s.description)}</textarea></div><div class="design-field"><strong>검색 키워드</strong><textarea name="keywords" rows="2" maxlength="500">${val(s.keywords)}</textarea></div><div class="design-field"><strong>비구독자 대표영상 ID</strong><input name="unsubscribedTrailer" value="${val(s.unsubscribed_trailer)}" maxlength="32"></div><div class="actions"><button class="button primary" type="button" data-channel-save="local">설정 저장</button><button class="button" type="button" data-channel-save="youtube">저장 + YouTube 반영</button><a class="button" target="_blank" rel="noopener" href="https://studio.youtube.com/channel/${encodeURIComponent(x.external_id)}/editing/profile">이름·핸들·이미지 설정</a></div><p class="empty">이름·@핸들·프로필·배너 이미지는 YouTube 정책상 API에서 직접 변경하지 않습니다. 설명·키워드·국가·언어·대표영상은 재승인된 YouTube 관리 권한으로 동기화할 수 있습니다.</p><p class="empty">동기화 상태: ${val(s.sync_status,'local')}${s.last_sync_error?' · '+val(s.last_sync_error):''}</p></form>`;
   }
-  async function startChannelConnect(provider,account={}){const target=CHANNEL_TARGETS.get(provider);if(!target)throw new Error('지원하지 않는 채널입니다.');const path=CHANNEL_AUTH_PATHS[target.authAdapter]||'';if(!target.automationAdapter||!path)throw new Error(target.limitation||`${target.label} 연결은 플랫폼 어댑터 활성 후 사용할 수 있습니다.`);const accountHint=String(account.loginHint||account.providerAccountId||'').trim();const registryConnectionId=String(account.id||'').trim();const d=await growth(path,{method:'POST',body:JSON.stringify({mode:'publish',returnUrl:location.origin+location.pathname,accountHint,registryConnectionId})});if(!d.authorizationUrl)throw new Error('인증 주소를 받지 못했습니다.');location.assign(d.authorizationUrl)}
+  async function startChannelConnect(provider,account={}){
+    const target=CHANNEL_TARGETS.get(provider);
+    if(!target)throw new Error('지원하지 않는 채널입니다.');
+    const path=CHANNEL_AUTH_PATHS[target.authAdapter]||'';
+    if(!target.automationAdapter||!path)throw new Error(target.limitation||`${target.label} 연결은 플랫폼 어댑터 활성 후 사용할 수 있습니다.`);
+    const accountHint=String(account.loginHint||account.providerAccountId||'').trim(),registryConnectionId=String(account.id||'').trim();
+    let popup=null;
+    try{
+      popup=window.open('about:blank',CHANNEL_OAUTH_POPUP_NAME,'popup,width=560,height=760,resizable=yes,scrollbars=yes');
+      if(popup){try{popup.document.title='EKODI 채널 인증';popup.document.body.innerHTML='<p style="font-family:system-ui,sans-serif;padding:24px">인증을 준비하고 있습니다.</p>';popup.opener=null}catch{}}
+      const d=await growth(path,{method:'POST',body:JSON.stringify({mode:'publish',returnUrl:location.origin+location.pathname,accountHint,registryConnectionId})});
+      if(!d.authorizationUrl)throw new Error('인증 주소를 받지 못했습니다.');
+      state(`${target.label} 인증 진행 중`);
+      if($('pageCopy'))$('pageCopy').textContent='Google 인증을 완료하면 인증창이 자동으로 닫히고 이 화면의 연결 상태가 갱신됩니다.';
+      if(popup&&!popup.closed){popup.location.replace(d.authorizationUrl);try{popup.focus()}catch{};return}
+      location.assign(d.authorizationUrl);
+    }catch(error){
+      try{if(popup&&!popup.closed)popup.close()}catch{}
+      throw error;
+    }
+  }
   async function channel(){
     try{
       await exchangeCentralToken();const token=await accessToken();if(!token)return loginPanel('채널 연결에는 운영공간 로그인이 필요합니다.');state('채널 운영상태 확인 중');
@@ -486,7 +553,12 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
 
       document.querySelectorAll('[data-channel-quick]').forEach(btn=>btn.onclick=()=>{const form=$('channelAccountForm');if(!form)return;const provider=String(btn.dataset.channelQuick||'');const select=form.querySelector('[name="provider"]');if(select&&provider&&[...select.options].some(option=>option.value===provider))select.value=provider;document.getElementById('channel-account-section')?.scrollIntoView({behavior:'smooth',block:'start'});form.querySelector('[name="account"]')?.focus()});
       document.querySelectorAll('[data-channel-panel]').forEach(btn=>btn.onclick=()=>{const panel=document.getElementById(btn.dataset.channelPanel);if(!panel)return;if(panel.tagName==='DETAILS')panel.open=true;panel.scrollIntoView({behavior:'smooth',block:'start'})});
-      state('채널 설정');
+      if(channelOAuthNotice){
+        const notice=channelOAuthNotice;channelOAuthNotice=null;
+        const ok=notice.status==='success',label=CHANNEL_PROVIDERS[notice.provider]?.label||notice.provider||'채널';
+        if($('pageCopy'))$('pageCopy').textContent=ok?label+' 인증이 완료되었습니다. 연결 상태를 새로 반영했습니다.':label+' 인증을 완료하지 못했습니다.'+(notice.reason?' '+notice.reason:'');
+        state(ok?'채널 연결 완료':'채널 연결 확인 필요');
+      }else state('채널 설정');
     }catch(e){if(e.status===401)return loginPanel('채널 연결에는 운영공간 로그인이 필요합니다.');$('mainPanel').innerHTML=`<h2>채널 통합관리</h2><p class="empty">${ae(e.message)}</p>`;state('확인 필요')}
   }
 
