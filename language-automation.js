@@ -316,7 +316,7 @@ export async function setLanguagePublication(env,{serviceIdValue,localeValue,pub
 function tenantAdminHeaders(request){
   const headers=new Headers({'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','vary':'Origin'});
   const origin=String(request.headers.get('origin')||'');
-  try{const url=new URL(origin);if(url.protocol==='https:'&&(url.hostname==='ekodi.kr'||url.hostname.endsWith('.ekodi.kr')||url.hostname==='cgma.or.kr'||url.hostname==='www.cgma.or.kr'))headers.set('access-control-allow-origin',origin)}catch{}
+  try{const url=new URL(origin);if(url.protocol==='https:'&&(url.hostname==='ekodi.kr'||url.hostname==='cgma.or.kr'||url.hostname==='www.cgma.or.kr'))headers.set('access-control-allow-origin',origin)}catch{}
   headers.set('access-control-allow-methods','GET,PUT,OPTIONS');headers.set('access-control-allow-headers','authorization,content-type');return headers;
 }
 function tenantAdminJson(request,data,status=200){return new Response(JSON.stringify(data),{status,headers:tenantAdminHeaders(request)})}
