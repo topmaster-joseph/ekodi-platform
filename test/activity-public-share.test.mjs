@@ -6,6 +6,8 @@ const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 const sql=read('supabase/migrations/20260926140500_activity_public_readonly_shares.sql');
 const worker=read('space-worker.js');
 const admin=read('workspace-admin-page.js');
+const schemaWorkflow=read('.github/workflows/deploy-activity-public-share-schema.yml');
+const sharedWorkflow=read('.github/workflows/deploy-site-core.yml');
 
 test('activity public shares store only a hash and remain expiring and revocable',()=>{
   assert.match(sql,/create table if not exists public\.activity_public_shares/);
@@ -61,3 +63,22 @@ test('Mission share route is private-by-link and the admin exposes explicit crea
   assert.match(admin,/읽기전용 링크 만들기/);
   assert.match(admin,/이전 링크가 있었다면 즉시 무효화되었습니다/);
 });
+
+test('activity-share deployment is schema-first and blocks UI promotion until dependencies are ready',()=>{
+  for(const marker of [
+    'Deploy Activity Public Share Schema',
+    'Apply idempotent activity-share schema before UI promotion',
+    'activity_public_readonly_shares.sql',
+    'activity_admin_create_share',
+    'activity_admin_revoke_share',
+    'activity_public_share_snapshot'
+  ])assert.ok(schemaWorkflow.includes(marker),marker);
+  for(const marker of [
+    'Wait for Mission activity gateway and share schema before UI promotion',
+    '/ekodimission/api/admin/activity-rpc',
+    'authentication_required',
+    'activity_public_share_snapshot',
+    'refusing UI promotion'
+  ])assert.ok(sharedWorkflow.includes(marker),marker);
+});
+
