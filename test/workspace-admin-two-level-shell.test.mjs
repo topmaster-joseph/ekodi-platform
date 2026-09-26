@@ -24,6 +24,7 @@ test('workspace admin uses direct left navigation and opens leaf sections in the
   assert.match(script,/ekodiAdminNavigationProfile/);
   assert.match(script,/a\.dataset\.adminSection=key/);
   assert.match(script,/a\.href=sectionHref\(key\)/);
+  assert.match(script,/workspace==='ekodimission'\|\|key==='overview'/);
   assert.doesNotMatch(script,/a\.dataset\.adminGroup=group\.id/);
   assert.doesNotMatch(script,/renderSecondaryNav\(activeGroup,role\)/);
   assert.match(script,/AbortSignal\.timeout\(10000\)/);
@@ -46,6 +47,11 @@ test('Mission admin root stays on overview and applicant roster opens from its m
   assert.match(script,/activity_admin_revoke_share/);
   assert.match(script,/전화번호 · 이메일 · 역할 · 후속관리 · 내부 메모 · EKODI ID/);
   assert.match(script,/신청자 관리/);
+  assert.match(script,/MISSION_RETURN_KEY='ekodi-mission-admin-return'/);
+  assert.match(script,/rememberMissionReturn/);
+  assert.match(script,/consumeMissionReturn/);
+  assert.match(script,/workspaceLoginButton/);
+  assert.match(script,/location\.replace\(missionReturn\)/);
   assert.match(script,/activity-summary/);
   assert.match(script,/activity-toolbar/);
   assert.match(script,/상세 관리/);
