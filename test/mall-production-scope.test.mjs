@@ -33,4 +33,7 @@ test('Mall production disables legacy Git auto-deploy before direct upload',()=>
   assert.match(ownershipGuard,/UNEXPECTED_PAGES_GIT_SOURCE/);
   assert.match(ownershipGuard,/PAGES_PRODUCTION_GIT_AUTODEPLOY_STILL_ENABLED/);
   assert.match(ownershipGuard,/production remains owned by ekodi-platform direct-upload CI/);
+  assert.match(ownershipGuard,/import fs from 'node:fs'/);
+  assert.match(ownershipGuard,/fs\.appendFileSync\(file/);
+  assert.doesNotMatch(ownershipGuard,/require\(['"]node:fs['"]\)/);
 });
