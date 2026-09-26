@@ -154,7 +154,7 @@ async function marketingOriginAllowed(origin, env) {
   let parsed;
   try { parsed = new URL(origin); } catch { return false; }
   if (parsed.protocol !== 'https:') return false;
-  if (/^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(parsed.hostname)) return true;
+  if (parsed.hostname === 'ekodi.kr') return true;
   if (!env.DB) return false;
   const row = await env.DB.prepare(`SELECT id FROM marketing_custom_domains
     WHERE hostname=? AND status IN ('pending_dns','verifying','active') LIMIT 1`)
