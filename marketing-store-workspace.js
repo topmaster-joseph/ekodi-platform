@@ -262,7 +262,7 @@ export async function handleMarketingStoreWorkspaceRequest(request, env) {
 }
 
 export async function runMarketingStoreWorkspaceSchedule(env) {
-  if (!env.DB) return { checked:0, suspended:0, restored:0 };
+  if (!env.DB) return { checked:0, suspended:0, restored:0, normalized:0 };
   const rows = await env.DB.prepare(`SELECT w.*,s.plan_id,s.status AS subscription_status
     FROM marketing_store_workspaces w
     LEFT JOIN service_subscriptions s ON s.subject_type='store' AND s.subject_key=w.store_id AND s.site='marketing'
@@ -270,28 +270,26 @@ export async function runMarketingStoreWorkspaceSchedule(env) {
   let checked = 0;
   let suspended = 0;
   let restored = 0;
+  let normalized = 0;
   for (const row of rows.results || []) {
     checked += 1;
     const eligible = planActive(row.plan_id, row.subscription_status);
+    const landingPath=canonicalWorkspacePath(row.workspace_slug);
+    if (landingPath && (row.canonical_domain!=='ekodi.kr' || row.landing_path!==landingPath || row.provider!=='platform-router')) {
+      await env.DB.prepare(`UPDATE marketing_store_workspaces
+        SET canonical_domain='ekodi.kr',provider='platform-router',provider_project='ekodi-platform',landing_path=?,updated_at=? WHERE id=?`)
+        .bind(landingPath,new Date().toISOString(),row.id).run();
+      normalized += 1;
+    }
     if (!eligible && row.status === 'active') {
-      try {
-        await detachCanonical(env, row.canonical_domain);
-        await env.DB.prepare("UPDATE marketing_store_workspaces SET status='suspended',updated_at=? WHERE id=?")
-          .bind(new Date().toISOString(), row.id).run();
-        suspended += 1;
-      } catch (error) {
-        console.error('Failed to suspend store Marketing workspace', row.id, error);
-      }
+      await env.DB.prepare("UPDATE marketing_store_workspaces SET status='suspended',updated_at=? WHERE id=?")
+        .bind(new Date().toISOString(), row.id).run();
+      suspended += 1;
     } else if (eligible && row.status === 'suspended') {
-      try {
-        await attachCanonical(env, row.canonical_domain);
-        await env.DB.prepare("UPDATE marketing_store_workspaces SET status='active',updated_at=? WHERE id=?")
-          .bind(new Date().toISOString(), row.id).run();
-        restored += 1;
-      } catch (error) {
-        console.error('Failed to restore store Marketing workspace', row.id, error);
-      }
+      await env.DB.prepare("UPDATE marketing_store_workspaces SET status='active',updated_at=? WHERE id=?")
+        .bind(new Date().toISOString(), row.id).run();
+      restored += 1;
     }
   }
-  return { checked, suspended, restored };
+  return { checked, suspended, restored, normalized };
 }
