@@ -207,7 +207,7 @@ jobs:
           node --check ekodi-shell-worker.js
           node --check site-worker.js
           bash -n scripts/apply-d1-migrations-with-retry.sh
-          ! grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.release.toml
+          ! grep -Fq 'custom_domain = true' wrangler.ai.release.toml
           grep -Fq 'User traffic enters through ekodi.kr/ai via the shared-site service binding.' wrangler.ai.release.toml
           grep -Fq 'AI_TASK_EXECUTION_ENABLED = "false"' wrangler.ai.staging.release.toml
           grep -Fq 'GEMINI_MODEL = "gemini-3.7-flash"' wrangler.ai.staging.release.toml
