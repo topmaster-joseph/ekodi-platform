@@ -311,12 +311,12 @@ jobs:
               && grep -Fq '"investLifecycleSchemaReady":true' "$file"
           }
           for attempt in $(seq 1 18); do
-            canonical_code=$(curl -sS -L -o /tmp/live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://workspace-api.ekodi.kr/health' || true)
+            canonical_code=$(curl -sS -L -o /tmp/live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/workspace-api/health' || true)
             apex_code=$(curl -sS -L -o /tmp/apex-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/workspace-api/health' || true)
             if [ "$canonical_code" = '200' ] && [ "$apex_code" = '200' ] \
               && health_ok /tmp/live-health.json \
               && health_ok /tmp/apex-health.json; then
-              echo "Workspace production health verified on canonical and apex projection at attempt=$attempt."
+              echo "Workspace production health verified on canonical apex path at attempt=$attempt."
               exit 0
             fi
             echo "Workspace production health attempt=$attempt/18 canonical_http=$canonical_code canonical_body=$(cat /tmp/live-health.json 2>/dev/null || true)"
