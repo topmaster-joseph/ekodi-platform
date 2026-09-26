@@ -1,4 +1,5 @@
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
+import { authorizeEkodiAction } from './ekodi-authorization.js';
 
 const BASE_PATH = '/api/control/secrets';
 const DEFAULT_BYTES = 48;
@@ -27,12 +28,35 @@ function splitList(value) {
   return String(value || '').split(',').map(item => item.trim()).filter(Boolean);
 }
 
-function managerAdmins(env) {
+function legacyManagerAdmins(env) {
   return new Set([
     ...splitList(env.SECRET_MANAGER_ADMIN_EMAILS),
     ...splitList(env.ADMIN_EMAIL),
     ...splitList(env.ADMIN_GOOGLE_BOOTSTRAP_EMAILS),
   ].map(email => email.toLowerCase()));
+}
+
+function secretAccessDecision(session, capability = 'secrets:read') {
+  return authorizeEkodiAction({
+    authority:session?.authority || null,
+    requiredCapabilities:[capability],
+    resourceScope:{ type:'platform', id:'global' },
+  });
+}
+
+function secretAccessError(decision, sourceHeaders = new Headers(), requiredCapability = 'secrets:read') {
+  if (decision?.code === 'ELEVATION_REQUIRED') {
+    return json({
+      error:'보호된 Secret 변경은 현재 Google 계정으로 추가 인증이 필요합니다.',
+      code:'ELEVATION_REQUIRED',
+      privilegedSessionMinutes:15,
+    }, 403, sourceHeaders);
+  }
+  return json({
+    error:'EKODI Secret 관리 권한이 필요합니다.',
+    code:'SECRET_MANAGER_FORBIDDEN',
+    requiredCapability,
+  }, 403, sourceHeaders);
 }
 
 function allowedScripts(env) {
@@ -51,8 +75,15 @@ async function sessionCheck(request, env) {
   if (!response?.ok) return { response };
   const session = await response.clone().json();
   if (!session?.authenticated) return { response };
-  if (!managerAdmins(env).has(String(session.email || '').toLowerCase())) {
-    return { response:json({ error:'최고관리자 권한이 필요합니다.', code:'SECRET_MANAGER_FORBIDDEN' }, 403, response.headers) };
+
+  const decision = secretAccessDecision(session, 'secrets:read');
+  if (!decision.allowed) {
+    // Legacy allowlists are kept only as an observability/backward-compatibility signal.
+    // They no longer grant Secret Manager authority.
+    const legacyListed = legacyManagerAdmins(env).has(String(session.email || '').toLowerCase());
+    const denied = secretAccessError(decision, response.headers);
+    const payload = await denied.clone().json();
+    return { response:json({ ...payload, legacyListed }, denied.status, response.headers) };
   }
   return { response, session };
 }
@@ -252,6 +283,10 @@ export async function handleCloudflareSecretControl(request, env) {
   }
 
   if (url.pathname !== `${BASE_PATH}/generate` || request.method !== 'POST') return null;
+
+  const writeDecision = secretAccessDecision(auth.session, 'secrets:write');
+  if (!writeDecision.allowed) return secretAccessError(writeDecision, auth.response.headers, 'secrets:write');
+
   if (!cloudflareReady(env)) {
     return json({ error:'Cloudflare Secret Manager 연결이 준비되지 않았습니다.', code:'SECRET_MANAGER_NOT_CONFIGURED' }, 503, auth.response.headers);
   }

@@ -46,11 +46,15 @@ test('secret-manager controller credentials cannot overwrite themselves', () => 
 });
 
 
-test('only configured top administrators may use secret manager', () => {
-  assert.match(control, /SECRET_MANAGER_ADMIN_EMAILS/);
-  assert.match(control, /ADMIN_GOOGLE_BOOTSTRAP_EMAILS/);
+test('Secret Manager uses canonical EKODI capabilities and elevated writes', () => {
+  assert.match(control, /authorizeEkodiAction/);
+  assert.match(control, /requiredCapabilities:\[capability\]/);
+  assert.match(control, /secretAccessDecision\(session, 'secrets:read'\)/);
+  assert.match(control, /secretAccessDecision\(auth\.session, 'secrets:write'\)/);
+  assert.match(control, /ELEVATION_REQUIRED/);
   assert.match(control, /SECRET_MANAGER_FORBIDDEN/);
   assert.match(control, /handleAdminSessionFastPath/);
+  assert.match(control, /legacyManagerAdmins/);
 });
 
 
