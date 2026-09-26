@@ -12,8 +12,9 @@ const config = fs.readFileSync(new URL('../wrangler.ekodibiz.toml', import.meta.
 const staging = fs.readFileSync(new URL('../wrangler.ekodibiz-staging.toml', import.meta.url), 'utf8');
 
 test('EKODIBIZ stays separate from common Business OS', () => {
-  assert.match(config, /pattern = "biz\.ekodi\.kr"/);
-  assert.doesNotMatch(config, /pattern = "business\.ekodi\.kr"/);
+  assert.match(config, /workers_dev = true/);
+  assert.doesNotMatch(config, /(?:pattern|route) = "[^"]*\.ekodi\.kr/);
+  assert.doesNotMatch(config, /custom_domain = true/);
   assert.match(config, /main = "ekodibiz-payment-architecture\.js"/);
   assert.match(adapter, /from '\.\/ekodibiz-worker\.js'/);
 });
@@ -76,7 +77,7 @@ test('high impact actions are approval-gated and prices are not invented', () =>
   assert.match(worker, /approval_required/);
   assert.match(worker, /quote_required/);
   assert.match(worker, /amount: null/);
-  assert.match(worker, /https:\/\/pay\.ekodi\.kr/);
+  assert.match(worker, /https:\/\/ekodi\.kr\/pay/);
   assert.match(adapter, /https:\/\/ekodi\.kr\/ekodibiz\/pay/);
 });
 

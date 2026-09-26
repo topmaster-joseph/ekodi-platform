@@ -100,7 +100,7 @@ test('Space worker renders PizzaMaru and YogurtPurple as distinct styled user pa
     assert.doesNotMatch(body,/__SPACE_PAGE_/);
     if(theme==='yogurt'){assert.match(body,/대표메뉴/);assert.match(body,/전체메뉴 자세히 보기/);assert.match(body,/본사 공식 메뉴 166종/);assert.match(body,/new_img58\.png/);assert.match(body,/배달앱에서 바로 주문/);assert.doesNotMatch(body,/USER OPERATIONS|STORE MASTER|로그아웃/);}
   }
-  const styleResponse=await spaceWorker.fetch(new Request('https://space.ekodi.kr/storefront.css'),env);
+  const styleResponse=await spaceWorker.fetch(new Request('https://ekodi.kr/storefront.css'),env);
   const styleBody=await styleResponse.text();
   assert.equal(styleResponse.status,200);
   assert.equal(styleResponse.headers.get('x-ekodi-route'),'storefront-asset');
@@ -121,7 +121,7 @@ test('Yogurt storefront publishes only customer-safe store projection without lo
   const originalFetch=globalThis.fetch;
   globalThis.fetch=async()=>new Response(JSON.stringify({slug:'yogurt',name:'요거트퍼플 목포대점',address:'전남 무안군 청계면 승달산길 37-1',phone:'061-453-8295',business_hours:{display:'11:00–22:00'},channels:[{provider:'baemin',display_name:'배달의민족',direct_url:null}],menu:[]}),{status:200,headers:{'content-type':'application/json'}});
   try{
-    const response=await spaceWorker.fetch(new Request('https://space.ekodi.kr/storefront.json?slug=yogurt'),{DATA_ENABLED:'true',SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'public-test',ASSETS:{fetch:async()=>new Response('')}});
+    const response=await spaceWorker.fetch(new Request('https://ekodi.kr/storefront.json?slug=yogurt'),{DATA_ENABLED:'true',SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'public-test',ASSETS:{fetch:async()=>new Response('')}});
     const data=await response.json();assert.equal(response.status,200);assert.equal(data.slug,'yogurt');assert.equal(data.phone,'061-453-8295');assert.equal('role' in data,false);assert.equal('email' in data,false);
   }finally{globalThis.fetch=originalFetch}
 });

@@ -4,7 +4,7 @@
 EKODI keeps two core Cloudflare accounts until a real legal, ownership, compliance, or enterprise-isolation requirement appears.
 
 - **EKODI Development**: development, pull-request staging, smoke tests, experiments, test-only data and non-production Workers.
-- **EKODI Production**: real `*.ekodi.kr` traffic, production Workers, production data, production routes and customer-facing services.
+- **EKODI Production**: real `EKODI child-host address` traffic, production Workers, production data, production routes and customer-facing services.
 - Future isolated customer accounts follow a **2 + N** model and are exceptions, not the default.
 
 ## Fixed Development boundary

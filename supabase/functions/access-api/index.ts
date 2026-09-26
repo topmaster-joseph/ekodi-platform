@@ -13,14 +13,8 @@ import {
   type RiskLevel,
 } from "../_shared/trust.ts";
 
-const allowedOrigin=(origin:string|null)=>{
-  if(!origin) return "https://auth.ekodi.kr";
-  try{
-    const u=new URL(origin);
-    if(u.protocol==="https:"&&(u.hostname==="ekodi.kr"||u.hostname.endsWith(".ekodi.kr")||u.hostname==="ekodibiz.kr"||u.hostname.endsWith(".ekodibiz.kr")||u.hostname==="cgma.or.kr"||u.hostname==="www.cgma.or.kr"||u.hostname==="cheonggye-market.pages.dev"))return origin;
-  }catch{}
-  return "https://auth.ekodi.kr";
-};
+const ALLOWED_CORS_ORIGINS=new Set(["https://ekodi.kr","https://ekodibiz.kr","https://www.ekodibiz.kr","https://cgma.or.kr","https://www.cgma.or.kr","https://cheonggye-market.pages.dev"]);
+const allowedOrigin=(origin:string|null)=>origin&&ALLOWED_CORS_ORIGINS.has(origin)?origin:"https://ekodi.kr";
 const cors=(req:Request)=>({
   "Access-Control-Allow-Origin":allowedOrigin(req.headers.get("Origin")),
   "Vary":"Origin",
@@ -163,38 +157,34 @@ async function observeAccessTrustShadow(input:{
     console.error("access-api trust shadow observation failed",error);
   }
 }
-function validMarketingOrigin(origin:string){
-  const fixed=["https://marketing.ekodi.kr","https://jadam.ekodi.kr","https://pizzamaru.ekodi.kr","https://yogurt.ekodi.kr","https://yogurtpurple.ekodi.kr"];
-  if(fixed.includes(origin))return true;
-  try{
-    const target=new URL(origin);
-    return target.protocol==="https:"&&/^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(target.hostname)&&target.origin===origin;
-  }catch{return false}
+const HANDOFF_PREFIXES:Record<string,string[]>={
+  cgma:["/cgma"],
+  marketing:["/marketing","/ekodibiz/marketing-ai","/cgma/marketing","/jadam/marketing","/pizzamaru/marketing","/yogurt/marketing"],
+  biz:["/ekodibiz"],
+  trade:["/ekodibiz/trade"],
+  mall:["/ekodimall"],
+  pay:["/pay","/ekodibiz/pay"],
+  books:["/books"],
+  church:["/ekodichurch"],
+  lab:["/ekodilab"],
+  mission:["/ekodimission"],
+  community:["/community"],
+  edu:["/education"],
+  media:["/media"],
+  admin:["/admin"],
+  portal:["/"]
+};
+function pathWithin(pathname:string,prefix:string){
+  return prefix==="/" ? pathname.startsWith("/") : pathname===prefix||pathname.startsWith(prefix+"/");
 }
 function validHandoff(site:string,raw:string){
-  const origins:Record<string,string[]>={
-    cgma:["https://ekodi.kr","https://cgma.or.kr","https://cgma.ekodi.kr"],
-    marketing:["https://marketing.ekodi.kr","https://jadam.ekodi.kr","https://pizzamaru.ekodi.kr","https://yogurt.ekodi.kr","https://yogurtpurple.ekodi.kr"],
-    biz:["https://biz.ekodi.kr"],
-    trade:["https://ekodi.kr","https://trade.biz.ekodi.kr","https://trade.ekodi.kr"],
-    mall:["https://ekodi.kr"],
-    pay:["https://pay.ekodi.kr"],
-    books:["https://books.ekodi.kr"],
-    church:["https://church.ekodi.kr"],
-    lab:["https://lab.ekodi.kr"],
-    mission:["https://ekodi.kr"],
-    community:["https://ekodi.kr"],
-    edu:["https://edu.ekodi.kr"],
-    media:["https://media.ekodi.kr"],
-    admin:["https://admin.ekodi.kr"],
-    portal:["https://ekodi.kr"]
-  };
   try{
     const target=new URL(raw);
     if(target.protocol!=="https:"||target.username||target.password)return null;
-    if(site==="marketing"&&validMarketingOrigin(target.origin))return target.href;
-    const platformPath=target.origin==="https://ekodi.kr"&&((site==="cgma"&&(target.pathname==="/cgma"||target.pathname.startsWith("/cgma/")))||(site==="mission"&&(target.pathname==="/ekodimission"||target.pathname.startsWith("/ekodimission/"))));
-    return (((origins[site]||[]).includes(target.origin)&&target.origin!=="https://ekodi.kr")||platformPath)?target.href:null;
+    if(site==="cgma"&&(target.hostname==="cgma.or.kr"||target.hostname==="www.cgma.or.kr"))return target.href;
+    if(target.hostname!=="ekodi.kr")return null;
+    const allowed=HANDOFF_PREFIXES[site]||[];
+    return allowed.some(prefix=>pathWithin(target.pathname,prefix))?target.href:null;
   }catch{return null}
 }
 function tenantSlugBase(name:string,email:string){

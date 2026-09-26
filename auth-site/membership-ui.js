@@ -3,7 +3,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const API='https://ekodi.kr';
-const MARKETING_API='https://marketing-api.ekodi.kr';
+const MARKETING_API='https://ekodi.kr/marketing-api';
 const params=new URLSearchParams(location.search);
 const site=params.get('site')||'portal';
 const supported=new Set(['marketing','biz','trade','mall','books','church','lab','community','edu','media','portal']);
@@ -18,9 +18,9 @@ const returnTo=params.get('return_to')||'';
 const selectedPlan=String(params.get('plan')||'').toLowerCase();
 const store=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(params.get('store')||'')?String(params.get('store')).toLowerCase():'';
 const tenantByOrigin=new Map([
-  ['https://jadam.ekodi.kr','jadam'],
-  ['https://pizzamaru.ekodi.kr','pizzamaru'],
-  ['https://yogurt.ekodi.kr','yogurt'],
+  ['https://ekodi.kr/jadam','jadam'],
+  ['https://ekodi.kr/pizzamaru','pizzamaru'],
+  ['https://ekodi.kr/yogurt','yogurt'],
 ]);
 const tenant=store?'':(()=>{try{return tenantByOrigin.get(new URL(returnTo).origin)||'';}catch{return '';}})();
 const won=value=>`${Number(value||0).toLocaleString('ko-KR')}원`;
@@ -129,7 +129,7 @@ function render(data){
     const price=document.createElement('span');price.textContent=plan.monthlyFee>0?`월 ${won(plan.monthlyFee)}`:plan.id==='flex'?'기본료 0원':'무료';
     head.append(name,price);
     const summary=document.createElement('p');
-    summary.textContent=store&&plan.id==='plus'?'점포 전용 *.ai.ekodi.kr 주소와 예약 운영':store&&['pro','auto'].includes(plan.id)?`${plan.summary||''} · 고객 소유 도메인 연결`:plan.summary||'';
+    summary.textContent=store&&plan.id==='plus'?'점포 전용 EKODI child-host address/ai 주소와 예약 운영':store&&['pro','auto'].includes(plan.id)?`${plan.summary||''} · 고객 소유 도메인 연결`:plan.summary||'';
     const button=document.createElement('button');button.type='button';
     button.textContent=plan.id===data.subscription.planId?'이용 중':!data.canManagePlan?'변경 권한 필요':plan.monthlyFee>0?`${plan.label} 구독하기`:`${plan.label} 선택`;
     button.disabled=plan.id===data.subscription.planId||!data.canManagePlan;

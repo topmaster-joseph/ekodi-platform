@@ -82,7 +82,7 @@ jobs:
           fi
           echo 'verificationOpsCacheBoundary=verified'
 
-          launch_readiness_code=$(curl -sS -o /tmp/mall-launch-readiness-unauth.json -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://mall-api.ekodi.kr/api/internal/verification/launch-readiness' || true)
+          launch_readiness_code=$(curl -sS -o /tmp/mall-launch-readiness-unauth.json -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodimall/api/internal/verification/launch-readiness' || true)
           if [ "$launch_readiness_code" != "401" ]; then
             echo "Production Launch Gate must require operator auth; HTTP $launch_readiness_code"
             cat /tmp/mall-launch-readiness-unauth.json || true
@@ -90,7 +90,7 @@ jobs:
           fi
           echo 'launchReadinessAuthBoundary=verified'
 
-          cockpit_code=$(curl -sS -o /tmp/mall-cockpit-unauth.json -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://mall-api.ekodi.kr/api/internal/operations/cockpit' || true)
+          cockpit_code=$(curl -sS -o /tmp/mall-cockpit-unauth.json -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodimall/api/internal/operations/cockpit' || true)
           if [ "$cockpit_code" != "401" ]; then
             echo "Commerce OS Cockpit must require operator auth; HTTP $cockpit_code"
             cat /tmp/mall-cockpit-unauth.json || true
@@ -98,7 +98,7 @@ jobs:
           fi
           echo 'commerceCockpitAuthBoundary=verified'
 
-          rehearsal_code=$(curl -sS -o /tmp/mall-production-rehearsal.json -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 -X POST 'https://mall-api.ekodi.kr/api/internal/rehearsal/transaction' || true)
+          rehearsal_code=$(curl -sS -o /tmp/mall-production-rehearsal.json -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 -X POST 'https://ekodi.kr/ekodimall/api/internal/rehearsal/transaction' || true)
           if [ "$rehearsal_code" != "404" ]; then
             echo "Production transaction rehearsal surface must be closed; HTTP $rehearsal_code"
             cat /tmp/mall-production-rehearsal.json || true
@@ -106,7 +106,7 @@ jobs:
           fi
           echo 'productionRehearsalSurface=closed'
 
-          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://mall-api.ekodi.kr/health' -o /tmp/mall-health.json
+          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodimall/health' -o /tmp/mall-health.json
           node <<'NODE'
           const fs = require('node:fs');
           const health = JSON.parse(fs.readFileSync('/tmp/mall-health.json', 'utf8'));

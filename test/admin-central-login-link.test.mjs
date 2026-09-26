@@ -41,12 +41,13 @@ test('apex admin fallback rewrites only auth destination and versioned assets us
   assert.match(worker, /function adminAssetCacheControl\(url\)/);
 });
 
-test('admin auth start remains a fixed-origin allow-listed fallback', async () => {
+test('admin login uses the canonical apex auth URL without a retired auth-start route', async () => {
   const worker = await read('site-worker.js');
-  assert.match(worker, /url\.pathname === '\/auth\/start'/);
-  assert.match(worker, /return ADMIN_ALIASES\.has\(candidate\) \? candidate : '\/'/);
+  assert.doesNotMatch(worker, /url\.pathname === '\/auth\/start'/);
+  assert.match(worker, /function adminApexAuthUrl\(\)/);
   assert.match(worker, /new URL\('https:\/\/ekodi\.kr\/auth\/'\)/);
-  assert.match(worker, /'X-EKODI-Route': 'admin-auth-start'/);
+  assert.match(worker, /target\.searchParams\.set\('site', 'admin'\)/);
+  assert.match(worker, /target\.searchParams\.set\('direct', '1'\)/);
 });
 
 test('central handoff preserves current admin destinations without retired route aliases', async () => {

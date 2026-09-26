@@ -84,10 +84,10 @@
     },
     {
       "id": "DOMAIN-002",
-      "area": "system-domain",
-      "title": "Reserved system subdomain ownership",
+      "area": "system-path",
+      "title": "Single-host EKODI system path ownership",
       "status": "active",
-      "sourcePointer": "/systemBoundaries",
+      "sourcePointer": "/domainPolicy/forceExecutionRule",
       "impactPaths": [
         "wrangler.ai*.toml",
         "wrangler.site.toml",
@@ -99,6 +99,22 @@
         "platform-router-entry-worker.js",
         "auth-site/admin-auth.js",
         "test/ai-gateway-domain.test.mjs"
+      ]
+    },
+    {
+      "id": "DOMAIN-003",
+      "area": "apex-path-enforcement",
+      "title": "APEX-PATH-ONLY-001 force execution",
+      "status": "active",
+      "sourcePointer": "/domainPolicy/forceExecutionRule",
+      "impactPaths": [
+        "config/domain-canonical-policy.json",
+        "config/service-workspace-policy.json",
+        "platform-boundaries.json",
+        "scripts/zero-subdomain-guard.mjs",
+        "scripts/validate-constitution.mjs",
+        ".github/workflows/migrate-apex-paths-20260924.yml",
+        "supabase/migrations/*apex_path*"
       ]
     },
     {

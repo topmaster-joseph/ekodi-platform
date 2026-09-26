@@ -46,8 +46,8 @@ jobs:
           node --check ekodibiz-payment-architecture.js
           node --check ekodibiz-pay-gateway-worker.js
           node --test test/ekodibiz-payment-architecture.test.mjs
-          ! grep -R -Fq 'pay.biz.ekodi.kr' ekodibiz-payment-architecture.js ekodibiz-pay-gateway-worker.js wrangler.ekodibiz.toml wrangler.ekodibiz-staging.toml wrangler.ekodibiz-pay-gateway.toml
-          grep -Fq 'PAYMENT_CORE_URL = "https://pay.ekodi.kr"' wrangler.ekodibiz.toml
+          ! grep -R -Fq 'ekodi.kr/ekodibiz/pay' ekodibiz-payment-architecture.js ekodibiz-pay-gateway-worker.js wrangler.ekodibiz.toml wrangler.ekodibiz-staging.toml wrangler.ekodibiz-pay-gateway.toml
+          grep -Fq 'PAYMENT_CORE_URL = "https://ekodi.kr/pay"' wrangler.ekodibiz.toml
           grep -Fq 'PAYMENT_GATEWAY_URL = "https://ekodi.kr/ekodibiz/pay"' wrangler.ekodibiz.toml
           grep -Fq 'pattern = "ekodi.kr/ekodibiz/pay*"' wrangler.ekodibiz-pay-gateway.toml
       - name: Validate Cloudflare bundles
@@ -84,7 +84,7 @@ jobs:
             body=$(curl -L -sS --max-time 15 'https://ekodi.kr/ekodibiz/pay' || true)
             code=$(curl -sS -o /tmp/ekodibiz-pay-invalid.html -w '%{http_code}' --max-time 15 'https://ekodi.kr/ekodibiz/pay?amount=100' || true)
             if grep -Fq '견적 승인 후 결제가 가능합니다' <<<"$body" \
-              && grep -Fq 'pay.ekodi.kr' <<<"$body" \
+              && grep -Fq 'ekodi.kr/pay' <<<"$body" \
               && [[ "$code" == "400" ]] \
               && grep -Fq '금액 입력이 차단되었습니다' /tmp/ekodibiz-pay-invalid.html; then
               echo 'EKODIBIZ canonical payment gateway verified.'

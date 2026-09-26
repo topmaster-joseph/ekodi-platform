@@ -12,7 +12,7 @@ function workspacePickerHref(){
 }
 function energyAuthHref(){
   const current=new URL(location.href);current.hash='';
-  const target=new URL('https://auth.ekodi.kr/');
+  const target=new URL('https://ekodi.kr/auth/');
   target.searchParams.set('site','energy');target.searchParams.set('return_to',current.href);
   return target.href;
 }

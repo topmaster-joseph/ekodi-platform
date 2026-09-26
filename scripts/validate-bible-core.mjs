@@ -60,13 +60,14 @@ const routeRegistry = fs.readFileSync(path.join(root, 'platform-route-registry.j
 const boundaries = JSON.parse(fs.readFileSync(path.join(root, 'platform-boundaries.json'), 'utf8'));
 const constitution = JSON.parse(fs.readFileSync(path.join(root, 'governance/constitution/constitution.json'), 'utf8'));
 const serviceManifest = fs.readFileSync(path.join(root, 'ekodi-service-manifest.js'), 'utf8');
-if (constitution.legacyDomainTargets?.['bible.ekodi.kr'] !== 'https://ekodi.kr/bible') fail('constitutional Bible legacy target drift');
-if (wrangler.includes('pattern = "ekodi.kr/bible*"') || !wrangler.includes('pattern = "bible.ekodi.kr"')) fail('Bible Worker must own only the legacy compatibility host');
+if (Object.keys(constitution.legacyDomainTargets||{}).some(host=>String(host).endsWith('.ekodi.kr'))) fail('constitution must not retain EKODI-owned child-host aliases');
+if (/^\s*(?:route|pattern)\s*=|^\s*custom_domain\s*=\s*true|^\[\[routes\]\]/m.test(wrangler)) fail('Bible Worker must remain internal behind the canonical /bible service binding');
 if (!siteWrangler.includes('binding = "BIBLE"') || !siteWrangler.includes('service = "ekodi-bible-conversation"') || !siteWrangler.includes('"/bible*"')) fail('apex gateway must own /bible through the Bible service binding');
 if (!routeRegistry.includes("id:'bible',prefix:'/bible',binding:'BIBLE',basePathAware:true")) fail('platform route registry must bind /bible without double-prefix rewriting');
 if (!canonicalRouter.includes('PLATFORM_EXECUTION_SURFACES') || !canonicalRouter.includes('platformExecutionSurfaceForPath')) fail('canonical surface router must consume the shared route registry');
 const bibleBoundary = boundaries.platforms?.['bible-conversation'];
-if (bibleBoundary?.canonicalPath !== 'https://ekodi.kr/bible' || !bibleBoundary?.legacyRedirectDomains?.includes('bible.ekodi.kr')) fail('Bible platform boundary must expose canonical path and legacy redirect');
+if (bibleBoundary?.canonicalPath !== '/bible' || bibleBoundary?.publicEntry !== 'https://ekodi.kr/bible') fail('Bible platform boundary must expose the canonical apex path');
+if ((bibleBoundary?.legacyRedirectDomains||[]).length) fail('Bible platform boundary must not retain EKODI-owned legacy aliases');
 if (!serviceManifest.includes("id:'bible'") || !serviceManifest.includes("url:'https://ekodi.kr/bible'")) fail('Bible user service manifest must use canonical path');
 for (const marker of ['/api/bible/providers', '/api/bible/passage', '/api/bible/search', 'scripture: scripture?.ok', '제공된 본문은 KRV1961 원문이며 수정·교정·의역' ]) {
   if (!worker.includes(marker)) fail(`worker marker missing: ${marker}`);

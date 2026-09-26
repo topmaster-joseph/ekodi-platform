@@ -56,7 +56,7 @@ jobs:
           npm run validate:boundaries
           npm run validate:shell
           npm run validate:mission
-          grep -Fq 'pattern = "management.ekodi.kr"' wrangler.management.toml
+          ! grep -Fq 'custom_domain = true' wrangler.management.toml
           grep -Fq 'INTEGRATIONS_ENABLED = "true"' wrangler.management.toml
           grep -Fq 'INTEGRATIONS_ENABLED = "false"' wrangler.management.staging.toml
           grep -Fq '"guestMode": "guide-only"' config/management-platform.json

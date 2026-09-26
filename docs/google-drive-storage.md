@@ -38,7 +38,7 @@ The folder IDs are recorded in D1 so services refer to IDs rather than brittle h
 
 Enable Google Drive API for the Google Cloud project that owns the OAuth web client. Add this authorized redirect URI exactly:
 
-`https://drive.ekodi.kr/api/control/storage/google/callback`
+`https://ekodi.kr/storage/api/control/storage/google/callback`
 
 The runtime requests `openid`, `email`, `profile`, `drive.file`, and `drive.metadata.readonly`. Shared Drives are supported with `supportsAllDrives=true`.
 

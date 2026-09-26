@@ -65,8 +65,7 @@
     "slugRole": "routing_locator_only",
     "workspaceSubdomains": "forbidden",
     "legacyRedirects": {
-      "space.ekodi.kr/{slug}": "ekodi.kr/{slug}",
-      "user.ekodi.kr/{slug}": "ekodi.kr/{slug}"
+      "ekodi.kr/{slug}": "ekodi.kr/{slug}"
     },
     "canonicalPattern": "/{slug}",
     "servicePattern": "/{slug}/{service}",
@@ -107,8 +106,8 @@
     "administration": null,
     "authentication": null,
     "api": null,
-    "status": "status.ekodi.kr",
-    "commonAndCoreServices": "allowed_only_when_security_operational_protocol_or_service_boundary_is_justified_and_registered"
+    "status": null,
+    "commonAndCoreServices": "forbidden"
   },
   "commonServiceUserAccessRule": {
     "appliesTo": [
@@ -126,10 +125,10 @@
     "google"
   ],
   "userSurfaceTopologyPolicy": {
-    "customerSpecificAiSubdomains": "forbidden_as_canonical",
+    "customerSpecificAiSubdomains": "forbidden",
     "marketingProduct": "https://ekodi.kr/ekodibiz/marketing-ai",
     "workspaceMarketingPattern": "https://ekodi.kr/{slug}/marketing",
-    "marketingCore": "https://marketing.ekodi.kr",
+    "marketingCore": "https://ekodi.kr/marketing",
     "aiGateway": "https://ekodi.kr/ai",
     "providerTopologyVisibleToOrdinaryUsers": false,
     "examples": {
@@ -189,7 +188,7 @@
     "authorityContext": "Person + Workspace + Role + Capability",
     "internalOperationalInfoBeforeAuthentication": false,
     "perServiceLoginUi": false,
-    "runtimeApiMayRemainOnDedicatedHost": true,
+    "runtimeApiMayRemainOnDedicatedHost": false,
     "capabilityExamples": [
       "service:read",
       "service:operate",

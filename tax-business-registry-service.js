@@ -2,11 +2,11 @@ import authWorker from './auth-worker.js';
 
 const ALLOWED_ORIGINS = new Set([
   'https://ekodi.kr',
-  'https://admin.ekodi.kr',
-  'https://admin.biz.ekodi.kr',
-  'https://admin.church.ekodi.kr',
-  'https://admin.lab.ekodi.kr',
-  'https://admin.trade.ekodi.kr'
+  'https://ekodi.kr',
+  'https://ekodi.kr',
+  'https://ekodi.kr',
+  'https://ekodi.kr',
+  'https://ekodi.kr'
 ]);
 const NTS_STATUS_ENDPOINT = 'https://api.odcloud.kr/api/nts-businessman/v1/status';
 const CACHE_TTL_MS = 30 * 60 * 1000;

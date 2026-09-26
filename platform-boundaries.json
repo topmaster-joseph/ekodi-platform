@@ -24,7 +24,8 @@
         "central auth workspace handoff"
       ],
       "database": "none",
-      "note": "Public service manifest plus navigation context only. Authorization remains server-side in each owning service."
+      "note": "Public service manifest plus navigation context only. Authorization remains server-side in each owning service.",
+      "publicEntry": "https://ekodi.kr/shell"
     },
     "my": {
       "kind": "personal-control-layer",
@@ -35,7 +36,7 @@
         "wrangler.my.staging.toml"
       ],
       "domains": [
-        "my.ekodi.kr",
+        "ekodi.kr",
         "ekodi-my-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-my.yml",
@@ -43,7 +44,9 @@
         "Supabase Auth",
         "central auth hub"
       ],
-      "database": "Supabase person/workspace views and person-scoped portfolio data"
+      "database": "Supabase person/workspace views and person-scoped portfolio data",
+      "canonicalPath": "/my",
+      "publicEntry": "https://ekodi.kr/my"
     },
     "management": {
       "kind": "management-platform-core",
@@ -58,7 +61,7 @@
         "deploy/manifests/management.worker.json"
       ],
       "domains": [
-        "management.ekodi.kr",
+        "ekodi.kr",
         "ekodi-management-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-management.yml",
@@ -70,7 +73,9 @@
         "future specialist AI modules through capability-scoped contracts"
       ],
       "database": "none in foundation release; browser-local non-sensitive module choices only; future management_* operational state namespace",
-      "note": "Management is a platform-core orchestration surface. Customer types map to canonical Person + Space kinds; franchise is an organization-profile hierarchy, not a new global identity kind. External mutations stay disabled without official adapters and explicit human approval."
+      "note": "Management is a platform-core orchestration surface. Customer types map to canonical Person + Space kinds; franchise is an organization-profile hierarchy, not a new global identity kind. External mutations stay disabled without official adapters and explicit human approval.",
+      "canonicalPath": "/management",
+      "publicEntry": "https://ekodi.kr/management"
     },
     "mall": {
       "kind": "independent-platform",
@@ -78,19 +83,16 @@
         "sites/ekodi-mall/**"
       ],
       "domains": [
+        "ekodi.kr",
         "ekodi-mall.pages.dev"
       ],
       "publicEntry": "https://ekodi.kr/ekodimall",
-      "legacyRedirectDomains": [
-        "mall.ekodi.kr",
-        "mall.biz.ekodi.kr"
-      ],
       "deployWorkflow": ".github/workflows/deploy-ekodi-mall.yml",
       "sharedDependencies": [
-        "service-proxy",
         "ekodi-shell"
       ],
-      "database": "none"
+      "database": "none",
+      "canonicalPath": "/ekodimall"
     },
     "cafe": {
       "kind": "independent-platform",
@@ -98,7 +100,7 @@
         "sites/ekodi-cafe/**"
       ],
       "domains": [
-        "cafe.ekodi.kr",
+        "ekodi.kr",
         "ekodi-cafe.pages.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-ekodi-cafe.yml",
@@ -106,7 +108,9 @@
         "ekodi-shell public manifest and navigation shell"
       ],
       "database": "none in imagination phase; browser-local notes only",
-      "note": "Future physical-place platform. Public copy must not imply an operating cafe before a verified opening state."
+      "note": "Future physical-place platform. Public copy must not imply an operating cafe before a verified opening state.",
+      "canonicalPath": "/cafe",
+      "publicEntry": "https://ekodi.kr/cafe"
     },
     "books": {
       "kind": "independent-platform",
@@ -117,7 +121,7 @@
         "wrangler.books.toml"
       ],
       "domains": [
-        "books.ekodi.kr"
+        "ekodi.kr"
       ],
       "deployWorkflow": ".github/workflows/deploy-books.yml",
       "sharedDependencies": [
@@ -125,7 +129,9 @@
         "publishing public handoff contract only"
       ],
       "database": "ekodi-auth D1 via control-api",
-      "note": "Bookstore owns catalog, storefront and commerce. It consumes 출판 only through an explicit public handoff and does not own publishing workflows."
+      "note": "Bookstore owns catalog, storefront and commerce. It consumes 출판 only through an explicit public handoff and does not own publishing workflows.",
+      "canonicalPath": "/books",
+      "publicEntry": "https://ekodi.kr/books"
     },
     "publishing": {
       "kind": "independent-platform",
@@ -138,7 +144,7 @@
         "deploy/manifests/publishing.worker.json"
       ],
       "domains": [
-        "publishing.ekodi.kr",
+        "ekodi.kr",
         "ekodi-publishing-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-publishing.yml",
@@ -148,7 +154,9 @@
         "books public catalog contract"
       ],
       "database": "none in first release; publishing workflows retain explicit human confirmation for external submission and distribution actions",
-      "note": "Professional publishing service is separate from the bookstore. Cross-service access uses public or explicitly declared contracts only; private cross-service data access is forbidden."
+      "note": "Professional publishing service is separate from the bookstore. Cross-service access uses public or explicitly declared contracts only; private cross-service data access is forbidden.",
+      "canonicalPath": "/publishing",
+      "publicEntry": "https://ekodi.kr/publishing"
     },
     "journal": {
       "kind": "common-service-platform",
@@ -163,7 +171,7 @@
         "deploy/manifests/journal.worker.json"
       ],
       "domains": [
-        "journal.ekodi.kr",
+        "ekodi.kr",
         "ekodi-journal-staging.ekodi-development.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-journal.yml",
@@ -172,7 +180,9 @@
         "central auth hub for admin handoff only"
       ],
       "database": "none in first release; public editorial records are source-controlled and provider-independent",
-      "note": "Registered common-service boundary for public EKODI memory, reflection and editorial distribution. Workspace-specific journals remain under canonical ekodi.kr workspace paths."
+      "note": "Registered common-service boundary for public EKODI memory, reflection and editorial distribution. Workspace-specific journals remain under canonical ekodi.kr workspace paths.",
+      "canonicalPath": "/journal",
+      "publicEntry": "https://ekodi.kr/journal"
     },
     "experience": {
       "kind": "common-service-platform",
@@ -190,9 +200,7 @@
         "deploy/manifests/experience.worker.json"
       ],
       "domains": [
-        "exp.ekodi.kr",
-        "dev.ekodi.kr",
-        "try.ekodi.kr",
+        "ekodi.kr",
         "ekodi-experience-staging.ekodi-development.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-experience.yml",
@@ -202,7 +210,13 @@
         "Responsible Independent Service public contract projection"
       ],
       "database": "none; synthetic and curated public projection only",
-      "note": "Shared S0 public runtime with two logical surfaces: exp.ekodi.kr is the canonical synthetic-only Experience portal; dev.ekodi.kr is the public Developer/Conformance portal exposing sanitized contracts only. try.ekodi.kr is a legacy 308 alias to exp. Neither portal carries workspace identity or production customer data."
+      "note": "Shared S0 public runtime with two logical surfaces: ekodi.kr/experience is the canonical synthetic-only Experience portal; ekodi.kr/developer is the public Developer/Conformance portal exposing sanitized contracts only. ekodi.kr/experience is a legacy 308 alias to exp. Neither portal carries workspace identity or production customer data.",
+      "canonicalPath": "/experience",
+      "publicEntry": "https://ekodi.kr/experience",
+      "canonicalPaths": [
+        "/experience",
+        "/developer"
+      ]
     },
     "invest": {
       "kind": "common-service-platform",
@@ -228,19 +242,20 @@
         "test/ekodibiz-invest-business.test.mjs",
         "test/ekodibiz-invest-admin.test.mjs"
       ],
-      "canonicalPath": "https://ekodi.kr/invest",
+      "canonicalPath": "/invest",
       "domains": [
         "ekodi.kr"
       ],
       "deployWorkflow": ".github/workflows/release-invest-personalization.yml",
       "sharedDependencies": [
-        "workspace-api.ekodi.kr",
+        "ekodi.kr/workspace-api",
         "central auth hub",
         "ekodi-shell",
         "official data adapters through reviewed credentials and licensed partners"
       ],
       "database": "ekodi-auth D1 investment_* and profile evidence namespaces",
-      "note": "Registered common-service boundary for reusable Evidence-First investment research, diligence, IR, simulation-first multi-broker portfolio analysis and connection support. EKODIBIZ-specific investment businesses remain under ekodi.kr/ekodibiz/invest and other workspaces may consume the common core without transferring workspace identity or business ownership."
+      "note": "Registered common-service boundary for reusable Evidence-First investment research, diligence, IR, simulation-first multi-broker portfolio analysis and connection support. EKODIBIZ-specific investment businesses remain under ekodi.kr/ekodibiz/invest and other workspaces may consume the common core without transferring workspace identity or business ownership.",
+      "publicEntry": "https://ekodi.kr/invest"
     },
     "community": {
       "kind": "independent-platform",
@@ -250,7 +265,7 @@
         "wrangler.community.toml"
       ],
       "domains": [
-        "community.ekodi.kr"
+        "ekodi.kr"
       ],
       "deployWorkflow": ".github/workflows/deploy-community.yml",
       "sharedDependencies": [
@@ -258,7 +273,9 @@
         "community-api",
         "ekodi-shell"
       ],
-      "database": "Supabase community_* table namespace"
+      "database": "Supabase community_* table namespace",
+      "canonicalPath": "/community",
+      "publicEntry": "https://ekodi.kr/community"
     },
     "work": {
       "kind": "independent-platform",
@@ -271,7 +288,7 @@
         "tests/work-db-integration.sql"
       ],
       "domains": [
-        "work.ekodi.kr",
+        "ekodi.kr",
         "ekodi-work-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-work.yml",
@@ -279,7 +296,9 @@
         "Supabase Auth",
         "central auth hub"
       ],
-      "database": "Supabase work_* table namespace"
+      "database": "Supabase work_* table namespace",
+      "canonicalPath": "/work",
+      "publicEntry": "https://ekodi.kr/work"
     },
     "education": {
       "kind": "independent-platform",
@@ -292,7 +311,7 @@
         "deploy/manifests/education.worker.json"
       ],
       "domains": [
-        "edu.ekodi.kr",
+        "ekodi.kr",
         "ekodi-education-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-education.yml",
@@ -302,12 +321,14 @@
         "My EKODI Life Journey"
       ],
       "database": "none in first release; browser-local non-sensitive planning metadata only; future education_* namespace",
-      "note": "Admission and Study are major workflow areas inside one Education platform, not separate deployment units. High-impact submission/payment actions remain human-confirmed and are disabled in the first release."
+      "note": "Admission and Study are major workflow areas inside one Education platform, not separate deployment units. High-impact submission/payment actions remain human-confirmed and are disabled in the first release.",
+      "canonicalPath": "/education",
+      "publicEntry": "https://ekodi.kr/education"
     },
     "bible-conversation": {
       "kind": "independent-feature-route",
       "publicName": "에코디 말씀대화",
-      "canonicalPath": "https://ekodi.kr/bible",
+      "canonicalPath": "/bible",
       "source": [
         "bible/**",
         "bible-core.js",
@@ -321,9 +342,6 @@
         "ekodi.kr",
         "ekodi-bible-conversation-staging.ekodi-development.workers.dev"
       ],
-      "legacyRedirectDomains": [
-        "bible.ekodi.kr"
-      ],
       "deployWorkflow": ".github/workflows/deploy-bible.yml",
       "sharedDependencies": [
         "Supabase Auth",
@@ -332,7 +350,8 @@
         "Control API User AI service"
       ],
       "database": "Supabase bible_* namespace with RLS; private-by-default personal Journey, follow-up and explicit group sharing",
-      "note": "Canonical user entry is ekodi.kr/bible; bible.ekodi.kr is a permanent compatibility redirect. Today, Conversation, Journey and Together are workflow areas inside one Bible Conversation service boundary. Authenticated AI is routed through the provider-independent central User AI service; anonymous and AI-unavailable states retain a local non-AI Scripture conversation fallback. Pastoral authority is never delegated to AI."
+      "note": "Canonical user entry is ekodi.kr/bible; ekodi.kr/bible is a permanent compatibility redirect. Today, Conversation, Journey and Together are workflow areas inside one Bible Conversation service boundary. Authenticated AI is routed through the provider-independent central User AI service; anonymous and AI-unavailable states retain a local non-AI Scripture conversation fallback. Pastoral authority is never delegated to AI.",
+      "publicEntry": "https://ekodi.kr/bible"
     },
     "life": {
       "kind": "independent-platform",
@@ -349,7 +368,7 @@
         "supabase/migrations/20260828163100_life_tenant_owner_index.sql"
       ],
       "domains": [
-        "life.ekodi.kr",
+        "ekodi.kr",
         "ekodi-life-ai-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-life-ai.yml",
@@ -359,10 +378,12 @@
         "ekodi-shell",
         "Control API User AI service",
         "ekodi.kr/bible public handoff",
-        "community.ekodi.kr public handoff"
+        "ekodi.kr/community public handoff"
       ],
       "database": "Supabase life_* namespace with RLS; only user-explicit saved reflections are persisted",
-      "note": "Today Question is the public brand and Life AI is the engine. Eight topic routes share one Life-to-Gospel core. Bible Conversation is a deeper Scripture handoff rather than a duplicate platform."
+      "note": "Today Question is the public brand and Life AI is the engine. Eight topic routes share one Life-to-Gospel core. Bible Conversation is a deeper Scripture handoff rather than a duplicate platform.",
+      "canonicalPath": "/life",
+      "publicEntry": "https://ekodi.kr/life"
     },
     "support": {
       "kind": "independent-feature-route",
@@ -375,7 +396,7 @@
         "deploy/manifests/support.worker.json",
         "docs/SUPPORT-OPPORTUNITY-AI.md"
       ],
-      "canonicalPath": "https://ekodi.kr/support",
+      "canonicalPath": "/support",
       "domains": [
         "ekodi.kr",
         "ekodi-support-opportunity-staging.topmaster-joseph.workers.dev"
@@ -387,7 +408,8 @@
         "official public support-program sources through reviewed source adapters"
       ],
       "database": "none in first release; browser-local non-sensitive planning metadata only; future support_* namespace",
-      "note": "Official-source-first opportunity analysis, grant workspace and form preparation. Submission, signature, agreement, payment, budget changes and settlement remain human-confirmed and are not autonomously executed."
+      "note": "Official-source-first opportunity analysis, grant workspace and form preparation. Submission, signature, agreement, payment, budget changes and settlement remain human-confirmed and are not autonomously executed.",
+      "publicEntry": "https://ekodi.kr/support"
     },
     "money": {
       "kind": "independent-platform",
@@ -401,7 +423,7 @@
         "docs/MONEY-FINANCIAL-CLEANUP.md"
       ],
       "domains": [
-        "money.ekodi.kr",
+        "ekodi.kr",
         "ekodi-money-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-money.yml",
@@ -412,7 +434,9 @@
         "AccountInfo official handoff in v1"
       ],
       "database": "none in first release; no sensitive financial identifiers persisted; future money_* namespace only after legal/security review",
-      "note": "Financial cleanup decision support. Transfers, account closure, autopay changes, payments and other financial execution are disabled for autonomous AI and require explicit human confirmation through authorized financial channels."
+      "note": "Financial cleanup decision support. Transfers, account closure, autopay changes, payments and other financial execution are disabled for autonomous AI and require explicit human confirmation through authorized financial channels.",
+      "canonicalPath": "/money",
+      "publicEntry": "https://ekodi.kr/money"
     },
     "social": {
       "kind": "independent-platform",
@@ -423,14 +447,16 @@
         "wrangler.social.staging.toml"
       ],
       "domains": [
-        "social.ekodi.kr"
+        "ekodi.kr"
       ],
       "deployWorkflow": ".github/workflows/deploy-social.yml",
       "sharedDependencies": [
         "control-api Social registry",
         "public social provider APIs"
       ],
-      "database": "ekodi-auth D1 via control-api with bundled static registry fallback"
+      "database": "ekodi-auth D1 via control-api with bundled static registry fallback",
+      "canonicalPath": "/social",
+      "publicEntry": "https://ekodi.kr/social"
     },
     "energy": {
       "kind": "independent-platform",
@@ -443,19 +469,21 @@
         "deploy/manifests/energy.worker.json"
       ],
       "domains": [
-        "energy.ekodi.kr",
+        "ekodi.kr",
         "ekodi-energy-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-energy.yml",
       "sharedDependencies": [
         "future device adapters via explicit energy integration contracts only"
       ],
-      "database": "none in first release; future energy_* namespace"
+      "database": "none in first release; future energy_* namespace",
+      "canonicalPath": "/energy",
+      "publicEntry": "https://ekodi.kr/energy"
     },
     "delivery": {
       "kind": "independent-feature-route",
       "publicName": "배달허브 AI",
-      "canonicalPath": "https://ekodi.kr/delivery",
+      "canonicalPath": "/delivery",
       "source": [
         "delivery/**",
         "delivery-worker.js",
@@ -476,12 +504,13 @@
         "future official order/POS/delivery-provider adapters through reviewed contracts only"
       ],
       "database": "none in MVP; browser-local non-sensitive delivery planning only; future delivery_* namespace",
-      "note": "Delivery Hub AI is isolated as a path-scoped Worker route at /delivery, ahead of the existing ekodi.kr Custom Domain. It orchestrates existing order and delivery networks. External dispatch, payment, settlement, and provider mutations remain disabled until official adapters and explicit human confirmation are configured."
+      "note": "Delivery Hub AI is isolated as a path-scoped Worker route at /delivery, ahead of the existing ekodi.kr Custom Domain. It orchestrates existing order and delivery networks. External dispatch, payment, settlement, and provider mutations remain disabled until official adapters and explicit human confirmation are configured.",
+      "publicEntry": "https://ekodi.kr/delivery"
     },
     "local-commerce": {
       "kind": "independent-feature-route",
       "publicName": "???? ??",
-      "canonicalPath": "https://ekodi.kr/local-commerce",
+      "canonicalPath": "/local-commerce",
       "source": [
         "local-commerce/**",
         "local-commerce-worker.js",
@@ -503,7 +532,8 @@
         "future licensed payment/prepaid provider adapters through separate reviewed contracts only"
       ],
       "database": "ekodi-auth D1 local_commerce_* namespace; append-only ledger is source of truth",
-      "note": "Reusable multi-tenant local-commerce engine. Issuers keep independent workspace authority while users see an aggregated wallet. MVP supports promotional vouchers, coupons and points only. EKODI does not custody stored-value cash or autonomously transfer money; external settlement is human-confirmed recordkeeping only."
+      "note": "Reusable multi-tenant local-commerce engine. Issuers keep independent workspace authority while users see an aggregated wallet. MVP supports promotional vouchers, coupons and points only. EKODI does not custody stored-value cash or autonomously transfer money; external settlement is human-confirmed recordkeeping only.",
+      "publicEntry": "https://ekodi.kr/local-commerce"
     },
     "business": {
       "kind": "independent-platform",
@@ -516,7 +546,7 @@
         "deploy/manifests/business.worker.json"
       ],
       "domains": [
-        "business.ekodi.kr",
+        "ekodi.kr",
         "ekodi-business-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-business.yml",
@@ -527,7 +557,9 @@
         "Finance API via explicit contract when enabled",
         "Energy AI via public service contract"
       ],
-      "database": "none in first release; future business_* namespace"
+      "database": "none in first release; future business_* namespace",
+      "canonicalPath": "/business",
+      "publicEntry": "https://ekodi.kr/business"
     },
     "finance": {
       "kind": "independent-service",
@@ -537,13 +569,15 @@
         "wrangler.finance.toml"
       ],
       "domains": [
-        "finance-api.ekodi.kr"
+        "ekodi.kr"
       ],
       "deployWorkflow": ".github/workflows/deploy-finance.yml",
       "sharedDependencies": [
         "ekodi-auth D1"
       ],
-      "database": "ekodi-auth D1 with finance_* table namespace"
+      "database": "ekodi-auth D1 with finance_* table namespace",
+      "canonicalPath": "/finance-api",
+      "publicEntry": "https://ekodi.kr/finance-api"
     },
     "control-api": {
       "kind": "shared-control-plane",
@@ -585,7 +619,8 @@
         "Toss Payments recurring billing when configured"
       ],
       "database": "ekodi-auth D1",
-      "canonicalPath": "https://ekodi.kr/api"
+      "canonicalPath": "/api",
+      "publicEntry": "https://ekodi.kr/api"
     },
     "mail-service": {
       "kind": "shared-provider-neutral-service",
@@ -600,7 +635,7 @@
         "test/mail-control.test.mjs"
       ],
       "domains": [
-        "mail.ekodi.kr"
+        "ekodi.kr"
       ],
       "deployWorkflow": ".github/workflows/deploy-site-core.yml",
       "sharedDependencies": [
@@ -610,7 +645,9 @@
         "Cloudflare Worker secrets and ekodi-auth D1"
       ],
       "database": "ekodi-auth D1 mail_* metadata and encrypted credential ciphertext only; mailbox content remains at source providers by default",
-      "note": "mail.ekodi.kr is the common Mail Engine and UI, while each institution retains ownership and authority under its immutable workspace_id. mail.ekodi.kr/admin is a projection of existing personal/workspace authority, not a source of tenant authority. Read, send and manage permissions are independent."
+      "note": "ekodi.kr/mail is the common Mail Engine and UI, while each institution retains ownership and authority under its immutable workspace_id. ekodi.kr/mail/admin is a projection of existing personal/workspace authority, not a source of tenant authority. Read, send and manage permissions are independent.",
+      "canonicalPath": "/mail",
+      "publicEntry": "https://ekodi.kr/mail"
     },
     "storage-control": {
       "kind": "external-storage-control-plane",
@@ -625,7 +662,7 @@
         "docs/google-drive-storage.md"
       ],
       "domains": [
-        "drive.ekodi.kr"
+        "ekodi.kr"
       ],
       "deployWorkflow": ".github/workflows/deploy-storage.yml",
       "sharedDependencies": [
@@ -637,7 +674,9 @@
         "R2 web-serving copies when enabled"
       ],
       "database": "ekodi-auth D1 storage_* metadata only; encrypted Google refresh tokens; file content remains in Google Drive",
-      "note": "Primary is organization-bound. Secondary Google accounts are opt-in. Drive is archive/original storage, not a CDN; R2 remains the web-object/backup-copy layer."
+      "note": "Primary is organization-bound. Secondary Google accounts are opt-in. Drive is archive/original storage, not a CDN; R2 remains the web-object/backup-copy layer.",
+      "canonicalPath": "/storage",
+      "publicEntry": "https://ekodi.kr/storage"
     },
     "marketing-domain-api": {
       "kind": "independent-service",
@@ -649,7 +688,7 @@
         "deploy/manifests/marketing-domain-api.worker.json"
       ],
       "domains": [
-        "marketing-api.ekodi.kr"
+        "ekodi.kr"
       ],
       "deployWorkflow": ".github/workflows/deploy-marketing-domain-api.yml",
       "sharedDependencies": [
@@ -658,7 +697,9 @@
         "Cloudflare Pages API",
         "control-api membership subscription data"
       ],
-      "database": "ekodi-auth D1 with marketing_* table namespace"
+      "database": "ekodi-auth D1 with marketing_* table namespace",
+      "canonicalPath": "/marketing-api",
+      "publicEntry": "https://ekodi.kr/marketing-api"
     },
     "marketing-publishing-api": {
       "kind": "independent-service",
@@ -681,7 +722,7 @@
         "deploy/manifests/marketing-publishing.worker.json"
       ],
       "domains": [
-        "marketing-publish-api.ekodi.kr",
+        "ekodi.kr",
         "ekodi-marketing-publishing-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-marketing-publishing.yml",
@@ -691,7 +732,9 @@
         "AI mission governance",
         "official channel APIs through explicit user-authorized credentials"
       ],
-      "database": "ekodi-auth D1 with marketing_brand_profiles and marketing_publication_* namespaces"
+      "database": "ekodi-auth D1 with marketing_brand_profiles and marketing_publication_* namespaces",
+      "canonicalPath": "/marketing-publish-api",
+      "publicEntry": "https://ekodi.kr/marketing-publish-api"
     },
     "admin-auth": {
       "kind": "shared-control-plane-ui",
@@ -709,8 +752,7 @@
         "storage-admin*"
       ],
       "domains": [
-        "admin.ekodi.kr",
-        "auth.ekodi.kr"
+        "ekodi.kr"
       ],
       "deployWorkflow": ".github/workflows/deploy-admin-site.yml",
       "sharedDependencies": [
@@ -718,7 +760,13 @@
         "control-api membership contract",
         "storage-control"
       ],
-      "database": "none"
+      "database": "none",
+      "canonicalPath": "/admin",
+      "publicEntry": "https://ekodi.kr/admin",
+      "canonicalPaths": [
+        "/admin",
+        "/auth"
+      ]
     },
     "site-core": {
       "kind": "shared-edge-runtime",
@@ -736,36 +784,24 @@
         "wrangler.site.toml"
       ],
       "domains": [
-        "ekodi.kr",
-        "www.ekodi.kr",
-        "pay.ekodi.kr",
-        "trade.ekodi.kr",
-        "mail.ekodi.kr",
-        "live.ekodi.kr"
+        "ekodi.kr"
       ],
       "deployWorkflow": ".github/workflows/deploy-site-core.yml",
       "sharedDependencies": [],
       "database": "none",
-      "note": "Temporary shared Worker. Split by domain family in isolation v2."
-    },
-    "service-proxy": {
-      "kind": "shared-edge-proxy",
-      "source": [
-        "service-proxy.js",
-        "wrangler.service-proxy.toml"
-      ],
-      "domains": [
-        "biz.ekodi.kr",
-        "mall.ekodi.kr",
-        "mail.*.ekodi.kr"
-      ],
-      "deployWorkflow": ".github/workflows/deploy-service-proxy.yml",
-      "sharedDependencies": [
-        "mall Pages",
-        "ekodi-shell"
-      ],
-      "database": "none",
-      "note": "Proxy changes are shared-edge changes and require regression verification of every routed domain. Church and Lab public surfaces are apex-path only."
+      "note": "Temporary shared Worker. Split by domain family in isolation v2.",
+      "canonicalPath": "/",
+      "publicEntry": "https://ekodi.kr",
+      "canonicalPaths": [
+        "/",
+        "/pay",
+        "/ekodibiz/trade",
+        "/mail",
+        "/live",
+        "/cloud",
+        "/messenger",
+        "/invest"
+      ]
     },
     "marketing-ai": {
       "kind": "independent-platform-family",
@@ -776,13 +812,8 @@
         "client-*"
       ],
       "domains": [
-        "marketing.ekodi.kr",
-        "cgma.or.kr",
-        "cgma.ekodi.kr",
-        "cgma.ai.ekodi.kr",
-        "jadam.ai.ekodi.kr",
-        "pizzamaru.ai.ekodi.kr",
-        "yogurt.ai.ekodi.kr"
+        "ekodi.kr",
+        "cgma.or.kr"
       ],
       "deployWorkflow": ".github/workflows/sync-marketing-ai.yml",
       "sharedDependencies": [
@@ -791,7 +822,17 @@
         "marketing-domain-api Pro custom-domain mapping",
         "marketing-publishing-api for immediate and scheduled distribution"
       ],
-      "database": "platform-specific external storage and control-api tenant data"
+      "database": "platform-specific external storage and control-api tenant data",
+      "canonicalPath": "/ekodibiz/marketing-ai",
+      "publicEntry": "https://ekodi.kr/ekodibiz/marketing-ai",
+      "canonicalPaths": [
+        "/ekodibiz/marketing-ai",
+        "/marketing",
+        "/cgma/marketing",
+        "/jadam/marketing",
+        "/pizzamaru/marketing",
+        "/yogurt/marketing"
+      ]
     }
   },
   "rules": [

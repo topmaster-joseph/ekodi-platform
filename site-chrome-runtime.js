@@ -161,7 +161,7 @@ async function canManageStoreViaSupabase(who,tenant){
 async function canManage(env,who,tenant){return await canManageViaD1(env,who,tenant)||await canManageViaContexts(who,tenant)||await canManageStoreViaSupabase(who,tenant)}
 
 export async function handleSiteChromeApi(request,env){
-  const url=new URL(request.url);const path=url.pathname.replace(/\/+$/,'');if(!path.startsWith('/v1/site-chrome'))return null;
+  const url=new URL(request.url);let path=url.pathname.replace(/\/+$/,'');if(path.startsWith('/workspace-api/'))path=path.slice('/workspace-api'.length);if(!path.startsWith('/v1/site-chrome'))return null;
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:responseHeaders()});
   if(!env?.DB)return json({error:'DATABASE_UNAVAILABLE'},503);
   const subjectKey=canonicalSiteSubject(url.searchParams.get('subject_key'));

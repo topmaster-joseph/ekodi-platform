@@ -48,7 +48,7 @@ test('shared-site release probe follows the canonical Invest boundary and reject
   assert.ok(probe, 'EKODIBIZ Invest release probe must exist');
   assert.ok(probe.expect.includes('ekodi.kr/invest'));
   assert.ok(probe.expect.includes('data-ekodi-business-unit="invest"'));
-  assert.equal(probe.expect.includes('invest.ekodi.kr'), false);
+  assert.equal(probe.expect.includes('ekodi.kr/invest'), false);
   assert.ok(probe.headerExpect.includes('x-ekodi-route: public-ekodibiz-invest'));
 });
 

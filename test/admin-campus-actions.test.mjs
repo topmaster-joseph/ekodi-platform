@@ -22,7 +22,7 @@ test('Campus first screen renders the full site catalog with direct operational 
 });
 
 test('Campus always keeps pre-open platforms visible and prevents dead planned links', () => {
-  for (const domain of ['my.ekodi.kr', 'ekodi.kr/insurance', 'edu.ekodi.kr', 'media.ekodi.kr']) {
+  for (const domain of ['ekodi.kr/my', 'ekodi.kr/insurance', 'ekodi.kr/education', 'ekodi.kr/media']) {
     assert.match(js, new RegExp(domain.replaceAll('.', '\\.')));
   }
   assert.match(js, /domain: 'ekodi\.kr\/insurance'[\s\S]*url: 'https:\/\/ekodi\.kr\/insurance'[\s\S]*lifecycle: 'beta'/);
@@ -37,7 +37,7 @@ test('Campus always keeps pre-open platforms visible and prevents dead planned l
 });
 
 test('Campus includes verified ecosystem services that were missing from the old view', () => {
-  for (const domain of ['author.ekodi.kr', 'work.ekodi.kr', 'energy.ekodi.kr', 'business.ekodi.kr']) {
+  for (const domain of ['ekodi.kr/author', 'ekodi.kr/work', 'ekodi.kr/energy', 'ekodi.kr/business']) {
     assert.match(js, new RegExp(domain.replaceAll('.', '\\.')));
   }
   assert.match(js, /업무·생활/);

@@ -4,13 +4,13 @@ const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const AUTHOR_ACCESS=`${SUPABASE_URL}/functions/v1/author-access-api`;
 const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
-const AUTHOR_HOME='https://author.ekodi.kr/';
+const AUTHOR_HOME='https://ekodi.kr/author/';
 const params=new URLSearchParams(location.search);
 function safeReturn(raw){
   if(!raw)return AUTHOR_HOME;
   try{
     const target=new URL(raw);
-    if(target.protocol!=='https:'||target.origin!=='https://author.ekodi.kr')return AUTHOR_HOME;
+    if(target.protocol!=='https:'||target.origin!=='https://ekodi.kr/author')return AUTHOR_HOME;
     target.hash='';
     return target.href;
   }catch{return AUTHOR_HOME}

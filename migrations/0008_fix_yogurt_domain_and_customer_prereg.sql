@@ -14,8 +14,8 @@ CREATE TABLE IF NOT EXISTS customer_invites (
 );
 
 UPDATE customer_tenants
-SET domain = 'yogurt.ekodi.kr'
-WHERE slug = 'yogurt' AND domain <> 'yogurt.ekodi.kr';
+SET domain = 'ekodi.kr/yogurt'
+WHERE slug = 'yogurt' AND domain <> 'ekodi.kr/yogurt';
 
 CREATE INDEX IF NOT EXISTS idx_customer_invites_tenant
 ON customer_invites(tenant_id, created_at DESC);

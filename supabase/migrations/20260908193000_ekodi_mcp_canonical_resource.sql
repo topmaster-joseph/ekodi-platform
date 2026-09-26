@@ -1,5 +1,5 @@
 -- Canonical MCP resource migration for EKODI Constitution v1.9.0.
--- Existing approvals for api.ekodi.kr/mcp remain valid during the transition,
+-- Existing approvals for ekodi.kr/api/mcp remain valid during the transition,
 -- but all newly issued authorized MCP access tokens converge on ekodi.kr/mcp.
 
 create or replace function public.current_ekodi_mcp_identity()
@@ -21,7 +21,7 @@ begin
   end if;
 
   if nullif(v_jwt->>'client_id', '') is null
-     or coalesce(v_jwt->>'aud', '') not in ('https://ekodi.kr/mcp', 'https://api.ekodi.kr/mcp')
+     or coalesce(v_jwt->>'aud', '') not in ('https://ekodi.kr/mcp', 'https://ekodi.kr/api/mcp')
      or coalesce((v_jwt->>'ekodi_ai_client')::boolean, false) is not true then
     return jsonb_build_object('authenticated', true, 'authorized', false);
   end if;
@@ -60,7 +60,7 @@ revoke all on function public.current_ekodi_mcp_identity() from public, authenti
 grant execute on function public.current_ekodi_mcp_identity() to anon;
 
 comment on function public.current_ekodi_mcp_identity() is
-  'Minimal identity projection for OAuth MCP tokens. Canonical audience is https://ekodi.kr/mcp; legacy api.ekodi.kr/mcp audience remains temporarily accepted for already-issued tokens.';
+  'Minimal identity projection for OAuth MCP tokens. Canonical audience is https://ekodi.kr/mcp; legacy ekodi.kr/api/mcp audience remains temporarily accepted for already-issued tokens.';
 
 create or replace function public.ekodi_mcp_access_token_hook(event jsonb)
 returns jsonb
@@ -91,7 +91,7 @@ begin
              from auth.oauth_authorizations oa
             where oa.client_id = c.client_id
               and oa.user_id = c.user_id
-              and oa.resource in ('https://ekodi.kr/mcp', 'https://api.ekodi.kr/mcp')
+              and oa.resource in ('https://ekodi.kr/mcp', 'https://ekodi.kr/api/mcp')
               and oa.status::text = 'approved'
          )
     ) into mcp_authorized;
@@ -101,7 +101,7 @@ begin
     claims := jsonb_set(claims, '{aud}', to_jsonb('https://ekodi.kr/mcp'::text), true);
     claims := jsonb_set(claims, '{ekodi_ai_client}', 'true'::jsonb, true);
   else
-    if claims->>'aud' in ('https://ekodi.kr/mcp', 'https://api.ekodi.kr/mcp') then
+    if claims->>'aud' in ('https://ekodi.kr/mcp', 'https://ekodi.kr/api/mcp') then
       claims := jsonb_set(claims, '{aud}', to_jsonb('authenticated'::text), true);
     end if;
     claims := claims - 'ekodi_ai_client';

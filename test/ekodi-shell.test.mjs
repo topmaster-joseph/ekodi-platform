@@ -42,13 +42,11 @@ test('shell injector is isolated in Shadow DOM and applies shared style only to 
   assert.match(workspaceCss,/data-ekodi-document-surface/);
 });
 
-test('My, Community and shared service proxy all consume the same shell contract',async()=>{
-  const [my,community,proxy]=await Promise.all([read('my-worker.js'),read('community-worker.js'),read('service-proxy.js')]);
+test('My and Community consume the same shell contract',async()=>{
+  const [my,community]=await Promise.all([read('my-worker.js'),read('community-worker.js')]);
   assert.match(my,/injectEkodiShell\(response,'my'\)/);
   assert.match(my,/contextModel:'person-space-role'/);
   assert.match(community,/injectEkodiShell\(withHeaders\(await env\.ASSETS\.fetch\(request\)\),'community'\)/);
-  assert.match(proxy,/shellServiceForHost/);
-  assert.match(proxy,/injectEkodiShell\(businessHub\(\), 'biz'\)/);
 });
 
 test('remaining Worker services use thin shared Shell adapters without moving domain logic',async()=>{

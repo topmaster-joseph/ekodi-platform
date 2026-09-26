@@ -5,7 +5,7 @@ const OWNED_SITE_URLS=Object.freeze({
   church:'https://ekodi.kr/ekodichurch',
   biz:'https://ekodi.kr/ekodibiz',
   lab:'https://ekodi.kr/ekodilab',
-  trade:'https://trade.ekodi.kr/',
+  trade:'https://ekodi.kr/ekodibiz/trade/',
 });
 const ROLE_FALLBACK=Object.freeze({
   church:'목사',

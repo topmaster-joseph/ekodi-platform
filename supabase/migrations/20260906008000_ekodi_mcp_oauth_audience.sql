@@ -15,7 +15,7 @@ begin
   oauth_client_id := nullif(claims->>'client_id', '');
 
   if oauth_client_id is not null then
-    claims := jsonb_set(claims, '{aud}', to_jsonb('https://api.ekodi.kr/mcp'::text), true);
+    claims := jsonb_set(claims, '{aud}', to_jsonb('https://ekodi.kr/api/mcp'::text), true);
     claims := jsonb_set(claims, '{ekodi_ai_client}', 'true'::jsonb, true);
   end if;
 

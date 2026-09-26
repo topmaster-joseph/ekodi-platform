@@ -9,11 +9,11 @@ import {
 } from '../marketing-canonical-projection.js';
 
 const expected = new Map([
-  ['/ekodibiz/marketing-ai','https://marketing.ekodi.kr'],
-  ['/jadam/marketing','https://jadam.ai.ekodi.kr'],
-  ['/pizzamaru/marketing','https://pizzamaru.ai.ekodi.kr'],
-  ['/yogurt/marketing','https://yogurt.ai.ekodi.kr'],
-  ['/cgma/marketing','https://cgma.ai.ekodi.kr'],
+  ['/ekodibiz/marketing-ai','https://marketing-ai.pages.dev'],
+  ['/jadam/marketing','https://marketing-ai-jadam.pages.dev'],
+  ['/pizzamaru/marketing','https://marketing-ai-pizzamaru.pages.dev'],
+  ['/yogurt/marketing','https://marketing-ai-yogurtpurple.pages.dev'],
+  ['/cgma/marketing','https://cheonggye-market.pages.dev'],
 ]);
 
 test('all canonical Marketing paths resolve to hidden execution origins',()=>{
@@ -27,7 +27,7 @@ test('all canonical Marketing paths resolve to hidden execution origins',()=>{
 
 test('HTML projection keeps navigation and assets on the canonical EKODI path',()=>{
   const projection=marketingProjectionForPath('/jadam/marketing');
-  const html='<link href="/site.css"><script src="/app.js"></script><a href="https://jadam.ai.ekodi.kr/">go</a><span>jadam.ai.ekodi.kr</span>';
+  const html='<link href="/site.css"><script src="/app.js"></script><a href="https://ekodi.kr/jadam/marketing/">go</a><span>ekodi.kr/jadam/marketing</span>';
   const out=rewriteMarketingCanonicalHtml(html,projection);
   assert.match(out,/href="\/jadam\/marketing\/site\.css"/);
   assert.match(out,/src="\/jadam\/marketing\/app\.js"/);
@@ -37,9 +37,9 @@ test('HTML projection keeps navigation and assets on the canonical EKODI path',(
 test('tenant script rewriting preserves canonical return URL and tenant selection',()=>{
   const projection=marketingProjectionForPath('/jadam/marketing');
   const source=`
-const ALLOWED=new Set(['https://jadam.ekodi.kr']);
+const ALLOWED=new Set(['https://ekodi.kr/jadam']);
 const dynamicAiOrigin=()=>location.protocol==='https:'&&/^[a-z0-9-]+\\.ai\\.ekodi\\.kr$/i.test(location.hostname);
-const returnTo=(ALLOWED.has(location.origin)||dynamicAiOrigin())?location.origin+location.pathname:'https://marketing.ekodi.kr/';
+const returnTo=(ALLOWED.has(location.origin)||dynamicAiOrigin())?location.origin+location.pathname:'https://ekodi.kr/marketing/';
 const preferredTenant=ORIGIN_TENANT[location.origin]||'';
 `;
   const out=rewriteMarketingCanonicalScript(source,projection);
@@ -59,7 +59,7 @@ test('proxy strips credentials and upstream identity while returning projected c
       headers:{
         'content-type':'text/html; charset=utf-8',
         'set-cookie':'secret=1',
-        'location':'https://jadam.ai.ekodi.kr/',
+        'location':'https://ekodi.kr/jadam/marketing/',
         'etag':'upstream-tag',
       },
     });
@@ -68,7 +68,7 @@ test('proxy strips credentials and upstream identity while returning projected c
     headers:{cookie:'session=private',authorization:'Bearer private','accept-language':'ko-KR'},
   });
   const response=await proxyCanonicalMarketing(request,fetcher);
-  assert.equal(seen.url,'https://jadam.ai.ekodi.kr/?x=1');
+  assert.equal(seen.url,'https://marketing-ai-jadam.pages.dev/?x=1');
   assert.equal(seen.init.headers.get('cookie'),null);
   assert.equal(seen.init.headers.get('authorization'),null);
   assert.equal(seen.init.headers.get('accept-language'),'ko-KR');

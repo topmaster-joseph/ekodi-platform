@@ -2,7 +2,7 @@
 
 ## Goal
 
-`admin.ekodi.kr` must stay light even as EKODI adds more services. New functions are not allowed to make the default admin entry path progressively heavier.
+`ekodi.kr/admin` must stay light even as EKODI adds more services. New functions are not allowed to make the default admin entry path progressively heavier.
 
 The operating rule is **load only what the operator is actually using**.
 

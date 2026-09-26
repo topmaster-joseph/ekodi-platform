@@ -10,21 +10,21 @@ const site=String(params.get('site')||'').trim().toLowerCase();
 const requested=String(params.get('workspace')||'').trim();
 const serviceDefaults={cgma:'https://ekodi.kr/cgma/',mission:'https://ekodi.kr/ekodimission/'};
 const serviceOrigins={
-  cgma:['https://ekodi.kr','https://cgma.or.kr','https://cgma.ekodi.kr'],
-  marketing:['https://marketing.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurt.ekodi.kr','https://yogurtpurple.ekodi.kr'],
-  biz:['https://biz.ekodi.kr'],
-  trade:['https://ekodi.kr','https://trade.biz.ekodi.kr','https://trade.ekodi.kr'],
+  cgma:['https://ekodi.kr','https://cgma.or.kr','https://ekodi.kr/cgma'],
+  marketing:['https://ekodi.kr/marketing','https://ekodi.kr/jadam','https://ekodi.kr/pizzamaru','https://ekodi.kr/yogurt','https://ekodi.kr/yogurtpurple'],
+  biz:['https://ekodi.kr/ekodibiz'],
+  trade:['https://ekodi.kr','https://ekodi.kr/ekodibiz/trade','https://ekodi.kr/ekodibiz/trade'],
   mall:['https://ekodi.kr'],
-  pay:['https://pay.ekodi.kr'],
-  books:['https://books.ekodi.kr'],
-  church:['https://church.ekodi.kr'],
-  lab:['https://lab.ekodi.kr'],
+  pay:['https://ekodi.kr/pay'],
+  books:['https://ekodi.kr/books'],
+  church:['https://ekodi.kr/ekodichurch'],
+  lab:['https://ekodi.kr/ekodilab'],
   mission:['https://ekodi.kr'],
   community:['https://ekodi.kr'],
-  edu:['https://edu.ekodi.kr'],
-  media:['https://media.ekodi.kr'],
-  social:['https://social.ekodi.kr'],
-  energy:['https://energy.ekodi.kr'],
+  edu:['https://ekodi.kr/education'],
+  media:['https://ekodi.kr/media'],
+  social:['https://ekodi.kr/social'],
+  energy:['https://ekodi.kr/energy'],
 };
 const origins=serviceOrigins[site]||[];
 const fallback=serviceDefaults[site]||`${origins[0]}/`;

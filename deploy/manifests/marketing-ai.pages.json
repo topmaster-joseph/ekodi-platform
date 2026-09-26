@@ -5,7 +5,7 @@
       "name": "Marketing AI Hub",
       "project": "marketing-ai",
       "directory": "dist/marketing-ai",
-      "productionUrl": "https://marketing.ekodi.kr/",
+      "productionUrl": "https://ekodi.kr/marketing/",
       "expect": [
         "id=\"freeTrialForm\"",
         "data-public-landing-cleanup",
@@ -20,7 +20,7 @@
         "class=\"powered\"",
         "id=\"trialStore\"",
         "class=\"case-list\"",
-        "href=\"https://pay.ekodi.kr",
+        "href=\"https://ekodi.kr/pay",
         "import{createClient}from'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';"
       ]
     },
@@ -28,7 +28,7 @@
       "name": "Jadam Marketing AI",
       "project": "marketing-ai-jadam",
       "directory": "dist/marketing-ai/jadam",
-      "productionUrl": "https://jadam.ai.ekodi.kr/",
+      "productionUrl": "https://ekodi.kr/jadam/marketing/",
       "expect": [
         "자담치킨 목포대점",
         "id=\"googleCustomerAuth\"",
@@ -46,7 +46,7 @@
       "name": "Pizzamaru Marketing AI",
       "project": "marketing-ai-pizzamaru",
       "directory": "dist/marketing-ai/pizzamaru",
-      "productionUrl": "https://pizzamaru.ai.ekodi.kr/",
+      "productionUrl": "https://ekodi.kr/pizzamaru/marketing/",
       "expect": [
         "피자마루 목포대점",
         "id=\"googleCustomerAuth\"",
@@ -64,7 +64,7 @@
       "name": "Yogurt Marketing AI",
       "project": "marketing-ai-yogurtpurple",
       "directory": "dist/marketing-ai/yogurtpurple",
-      "productionUrl": "https://yogurt.ai.ekodi.kr/",
+      "productionUrl": "https://ekodi.kr/yogurt/marketing/",
       "expect": [
         "요거트퍼플 목포대점",
         "id=\"googleCustomerAuth\"",

@@ -75,7 +75,7 @@ EKODI 인증은 `사람(Person)`, `로그인 수단(Identity)`, `기본 무료�
 
 ### Admin
 
-- `admin.ekodi.kr`은 platform admin 권한을 별도 검증한다.
+- `ekodi.kr/admin`은 platform admin 권한을 별도 검증한다.
 - 무료회원 또는 일반 서비스 로그인만으로 관리자 권한을 얻을 수 없다.
 
 ### Business OS

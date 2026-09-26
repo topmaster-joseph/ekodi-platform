@@ -1,4 +1,4 @@
-const CENTRAL_ADMIN = 'https://admin.ekodi.kr/';
+const CENTRAL_ADMIN = 'https://ekodi.kr/admin/';
 const ADMIN_ROOTS = new Set(['/admin', '/admin/']);
 
 function securityHeaders(headers) {

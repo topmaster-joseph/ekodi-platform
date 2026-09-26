@@ -21,7 +21,7 @@ test('Social registry rejects insecure channel URLs and duplicate organizations'
 });
 
 test('Social registry rejects the retired EKODI mission organization label', () => {
-  assert.throws(() => normalizeRegistry({ organizations: [{ id:'mission', name:'에코디선교회', website:'https://community.ekodi.kr', channels:[] }] }), /legacy EKODI mission/);
+  assert.throws(() => normalizeRegistry({ organizations: [{ id:'mission', name:'에코디선교회', website:'https://ekodi.kr/community', channels:[] }] }), /legacy EKODI mission/);
 });
 
 test('Social workspace switcher consumes one-time handoff and revalidates person workspace', async () => {

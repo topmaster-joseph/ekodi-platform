@@ -5,14 +5,8 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 if (!SUPABASE_URL || !SERVICE_ROLE) throw new Error("supabase_admin_environment_missing");
 const SESSION_URL = "https://ekodi.kr/api/session";
-const WORK_HEALTH_URL = "https://work.ekodi.kr/health";
-const ALLOWED_ORIGINS = new Set([
-  "https://admin.ekodi.kr",
-  "https://admin.biz.ekodi.kr",
-  "https://admin.church.ekodi.kr",
-  "https://admin.lab.ekodi.kr",
-  "https://admin.trade.ekodi.kr",
-]);
+const WORK_HEALTH_URL = "https://ekodi.kr/work/health";
+const ALLOWED_ORIGINS = new Set(["https://ekodi.kr"]);
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false, autoRefreshToken: false } });
 
 function cors(req) {
@@ -48,7 +42,7 @@ async function verifyEkodiAdmin(req) {
     method: "GET",
     headers: {
       authorization,
-      origin: "https://admin.ekodi.kr",
+      origin: "https://ekodi.kr",
       accept: "application/json",
     },
     cache: "no-store",

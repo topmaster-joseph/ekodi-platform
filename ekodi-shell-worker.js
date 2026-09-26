@@ -9,7 +9,7 @@ const USER_EXPERIENCE_PROFILES_BOOTSTRAP=renderUserExperienceProfilesBootstrap()
 const LANGUAGE_REGISTRY_BOOTSTRAP=renderLanguageRegistryBootstrap();
 const CANONICAL_BUNDLED_SERVICE_URLS=Object.freeze([
   Object.freeze(['https://ekodi.kr/api/i18n/v1','https://ekodi.kr/api/i18n/v1']),
-  Object.freeze(['https://social.ekodi.kr/api/media/youtube/status','https://ekodi.kr/social/api/media/youtube/status']),
+  Object.freeze(['https://ekodi.kr/social/api/media/youtube/status','https://ekodi.kr/social/api/media/youtube/status']),
 ]);
 
 function corsHeaders(){return {'access-control-allow-origin':'*','access-control-allow-methods':'GET,HEAD,OPTIONS','access-control-allow-headers':'content-type','access-control-max-age':'86400','x-content-type-options':'nosniff'};}

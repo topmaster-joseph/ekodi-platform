@@ -2,13 +2,13 @@ import { superviseConnection } from './integration-connection-supervisor.js';
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 
 const BASE = '/api/control/storage/google';
-const REDIRECT_URI = 'https://drive.ekodi.kr/api/control/storage/google/callback';
+const REDIRECT_URI = 'https://ekodi.kr/storage/api/control/storage/google/callback';
 const CANONICAL_REDIRECT_URI = 'https://ekodi.kr/storage/api/control/storage/google/callback';
 const MARKETING_YOUTUBE_CALLBACK = 'https://ekodi.kr/marketing-connect-api/oauth/youtube/callback';
 const ALLOWED_GOOGLE_REDIRECT_URIS = new Set([REDIRECT_URI,CANONICAL_REDIRECT_URI]);
 const YOUTUBE_SCOPES = ['openid','email','https://www.googleapis.com/auth/youtube.upload','https://www.googleapis.com/auth/youtube.readonly'];
 const GOOGLE_USERINFO = 'https://openidconnect.googleapis.com/v1/userinfo';
-const ADMIN_ORIGIN = 'https://admin.ekodi.kr';
+const ADMIN_ORIGIN = 'https://ekodi.kr/admin';
 const ADMIN_RETURN_PATH = '/#storage';
 const ADMIN_RETURN = `${ADMIN_ORIGIN}${ADMIN_RETURN_PATH}`;
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';

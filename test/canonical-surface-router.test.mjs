@@ -143,7 +143,7 @@ test('Auth secured text responses explicitly declare UTF-8 on canonical paths',a
 test('Admin deep routes render the shell while runtime assets stay addressable',async()=>{
   const legacy=legacyRecorder();
   let response=await routeCanonicalSurface(new Request('https://ekodi.kr/admin/services/insurance'),{}, {legacyFetch:legacy.fetch});
-  assert.equal(legacy.calls[0].hostname,'admin.ekodi.kr');assert.equal(legacy.calls[0].pathname,'/');
+  assert.equal(legacy.calls[0].hostname,'ekodi.kr/admin');assert.equal(legacy.calls[0].pathname,'/');
   assert.match(await response.text(),/<base href="\/admin\/">/);
   response=await routeCanonicalSurface(new Request('https://ekodi.kr/admin/admin-menu-layout.js'),{}, {legacyFetch:legacy.fetch});
   assert.equal(legacy.calls[1].pathname,'/admin-menu-layout.js');
@@ -197,9 +197,9 @@ test('Business canonical paths hide execution hosts while EKODIBIZ Trade stays t
     if(url.pathname==='/app.js')return new Response("fetch('/api/workspaces');https://ekodi.kr/auth/?site=business&return_to=https%3A%2F%2Fekodi.kr%2Fbusiness%2F\nfunction routeWorkspaceId(){\n  const path=location.pathname.replace(/^\\/+|\\/+$/g,'').toLowerCase();\n  if(path)return path;\n}\nif(push&&location.pathname!==`/${workspace.id}`)history.pushState({workspace:workspace.id},'',`/${workspace.id}`);",{headers:{'content-type':'text/javascript'}});
     throw new Error(`unexpected execution host ${url.hostname}`);
   };
-  const assets=binding('<html><body><a href="https://trade.biz.ekodi.kr/">trade.biz.ekodi.kr</a></body></html>','text/html');
+  const assets=binding('<html><body><a href="https://ekodi.kr/ekodibiz/trade/">ekodi.kr/ekodibiz/trade</a></body></html>','text/html');
   let response=await routeCanonicalSurface(new Request('https://ekodi.kr/business/app.js'),{ASSETS:assets},{externalFetch});
-  assert.equal(externalCalls[0].hostname,'business.ekodi.kr');assert.equal(externalCalls[0].pathname,'/app.js');
+  assert.equal(externalCalls[0].hostname,'ekodi.kr/business');assert.equal(externalCalls[0].pathname,'/app.js');
   let text=await response.text();assert.match(text,/fetch\('\/business\/api\/workspaces'/);assert.match(text,/https:\/\/ekodi\.kr\/auth\//);assert.match(text,/path\.startsWith\('business\/'\)/);assert.match(text,/`\/business\/\$\{workspace\.id\}`/);assert.doesNotMatch(text,/business\.ekodi\.kr/);
   response=await routeCanonicalSurface(new Request('https://ekodi.kr/ekodibiz/trade'),{ASSETS:assets},{externalFetch});
   assert.equal(response,null);

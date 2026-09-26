@@ -21,23 +21,15 @@ const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
 const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin = createClient(url, service, { auth: { persistSession: false } });
 
-const allowedOrigin = (origin: string | null) => {
-  if (!origin) return "https://auth.ekodi.kr";
-  try {
-    const parsed = new URL(origin);
-    if (
-      parsed.protocol === "https:" &&
-      (parsed.hostname === "ekodi.kr" ||
-        parsed.hostname.endsWith(".ekodi.kr") ||
-        parsed.hostname === "ekodibiz.kr" ||
-        parsed.hostname.endsWith(".ekodibiz.kr") ||
-        parsed.hostname === "cheonggye-market.pages.dev")
-    ) return origin;
-  } catch {
-    // fall through to canonical origin
-  }
-  return "https://auth.ekodi.kr";
-};
+const ALLOWED_CORS_ORIGINS = new Set([
+  "https://ekodi.kr",
+  "https://ekodibiz.kr",
+  "https://www.ekodibiz.kr",
+  "https://cgma.or.kr",
+  "https://www.cgma.or.kr",
+]);
+const allowedOrigin = (origin: string | null) =>
+  origin && ALLOWED_CORS_ORIGINS.has(origin) ? origin : "https://ekodi.kr";
 
 const cors = (req: Request) => ({
   "Access-Control-Allow-Origin": allowedOrigin(req.headers.get("Origin")),

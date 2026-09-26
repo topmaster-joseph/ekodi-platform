@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://mall-api.ekodi.kr';
+  const API = 'https://mall-ekodi.kr/api';
   const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
   const PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   if (!window.supabase) return;

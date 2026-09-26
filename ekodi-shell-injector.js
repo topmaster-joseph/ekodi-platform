@@ -28,9 +28,6 @@ const SHELL_TENANT_READABILITY_STYLE=`${SHELL_ORIGIN}/user-ui-shell.css?tenant-r
 const SHELL_MOBILE_HEADER_SCRIPT=`${SHELL_ORIGIN}/mobile-fixed-header.js?tenant-readability=${TENANT_READABILITY_VERSION}`;
 const ADMIN_BOOT_STYLE=`<style data-ekodi-admin-shell-boot>:where(.side-brand,.sidebar-brand,.admin-sidebar-brand,[data-ekodi-admin-sidebar-header],[data-ekodi-admin-brand]){display:none!important}</style>`;
 const ADMIN_DIRECT_GOOGLE_SCRIPT=`${SHELL_CSP_ORIGIN}/admin-direct-google.js?v=20260924-v1`;
-const SPECIAL_HOST_ALIASES=Object.freeze({
-  'mall.ekodi.kr':'mall','mall.biz.ekodi.kr':'mall','trade.biz.ekodi.kr':'trade','pay.biz.ekodi.kr':'pay'
-});
 const ROOT_PATH_SERVICES=Object.freeze((EKODI_SERVICE_MANIFEST.services||[]).flatMap(service=>{
   try{
     const url=new URL(service.url);
@@ -308,9 +305,7 @@ export function injectEkodiShell(response,serviceId,surface='',options={}){
 
 export function shellServiceForHost(hostname){
   const host=String(hostname||'').trim().toLowerCase();
-  if(!host||host==='ekodi.kr'||host==='www.ekodi.kr'||host==='admin.ekodi.kr')return '';
-  const alias=SPECIAL_HOST_ALIASES[host];
-  if(alias&&userSurfaceForService(alias))return alias;
+  if(!host||host==='ekodi.kr')return '';
   const service=manifestServiceForHost(host);
   if(!service||!userSurfaceForService(service.id))return '';
   return service.id;

@@ -14,9 +14,9 @@ const [source, entry, missionEntry, wrangler, migration, domainMigration] = awai
 
 const expected = [
   ['cgma', 'cgma.or.kr'],
-  ['jadam', 'jadam.ekodi.kr'],
-  ['pizzamaru', 'pizzamaru.ekodi.kr'],
-  ['yogurt', 'yogurt.ekodi.kr'],
+  ['jadam', 'ekodi.kr/jadam'],
+  ['pizzamaru', 'ekodi.kr/pizzamaru'],
+  ['yogurt', 'ekodi.kr/yogurt'],
 ];
 
 test('revenue clients are seeded as independent customer tenants', () => {

@@ -1,5 +1,5 @@
 (() => {
-  const API='https://mall-api.ekodi.kr';
+  const API='https://mall-ekodi.kr/api';
   const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
   const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   if(!window.supabase)return;
@@ -44,7 +44,7 @@
   $('#outreachStatusForm')?.addEventListener('submit',async(e)=>{e.preventDefault();const f=e.currentTarget.elements;if(!f.outreachId.value)return setStatus('연락 작업을 선택해 주세요.',true);try{await post(`/api/internal/supplier-outreach/${f.outreachId.value}/status`,{status:f.status.value,responseRef:f.responseRef.value});await load();setStatus('실제 연락 상태를 기록했습니다.');}catch(err){setStatus(err.message,true);}});
   $('#preflightForm')?.addEventListener('submit',async(e)=>{e.preventDefault();const f=e.currentTarget.elements;const parts=f.optionKey.value.split('|');if(parts.length!==4)return setStatus('파일럿 구성을 선택해 주세요.',true);try{const r=await post('/api/internal/supplier-preflight',{partnerId:parts[0],sourceId:parts[1],supplierSkuId:parts[2],productId:parts[3],scenarioSource:f.scenarioSource.value,quantity:f.quantity.value});const p=r.preflight;preflightResult.textContent=`${p.readinessStatus} · 매출 ${money(p.grossAmount)} · 수수료 ${p.feeRatePercent}% (${money(p.platformFeeAmount)}) · 공급가 ${money(p.supplierCostAmount)} · 배송 ${money(p.supplierShippingAmount)} · 기여이익 ${money(p.contributionMargin)} (${Number(p.contributionMarginPercent).toFixed(1)}%) · Blocker ${(p.blockers||[]).join(', ')||'없음'} · 실제 실행 ${p.executionAllowed?'허용':'잠김'}`;await load();setStatus('Pilot Preflight를 기록했습니다. 실제 주문은 자동 실행하지 않습니다.');}catch(err){setStatus(err.message,true);}});
   candidateSelect?.addEventListener('change',()=>{selectedCandidateId=candidateSelect.value;renderCandidateDetail();});
-  login?.addEventListener('click',()=>{location.href='https://auth.ekodi.kr/?site=mall-seller&returnTo=https%3A%2F%2Fmall.ekodi.kr%2Fsupplier-discovery';});
+  login?.addEventListener('click',()=>{location.href='https://ekodi.kr/auth/?site=mall-seller&returnTo=https%3A%2F%2Fekodi.kr/ekodimall%2Fsupplier-discovery';});
   logout?.addEventListener('click',async()=>{await sb.auth.signOut();session=null;sync();setStatus('로그아웃했습니다.');});reload?.addEventListener('click',()=>load().catch((e)=>setStatus(e.message,true)));
   function sync(){const signed=Boolean(session);if(login)login.hidden=signed;if(logout)logout.hidden=!signed;document.querySelectorAll('.ops-panel input,.ops-panel select,.ops-panel textarea,.ops-panel button').forEach((el)=>{el.disabled=!signed;});if(reload)reload.disabled=!signed;}
   exchangeCentralToken().catch((e)=>setStatus(`인증 연결 실패: ${e.message}`,true)).finally(async()=>{session=(await sb.auth.getSession()).data.session;sync();if(session)load().catch((e)=>setStatus(e.message,true));});

@@ -11,7 +11,7 @@ export default {
   async fetch(request,env){
     const url=new URL(request.url);
     if(url.pathname==='/health')return new Response(JSON.stringify({ok:true,service:'ekodi-community',socialRegistry:true,ekodiShell:true,contextModel:'person-space-role'}),{headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
-    if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/community',307);
+    if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/community',307);
     return injectEkodiShell(withHeaders(await env.ASSETS.fetch(request)),'community');
   }
 };

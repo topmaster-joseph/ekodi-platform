@@ -14,7 +14,7 @@ on:
     branches: [main]
     paths:
       - 'site-worker.js'
-      - 'test/admin-subdomain-redirect-runtime.test.mjs'
+      - 'test/admin-path-runtime.test.mjs'
       - 'cgmurrc.html'
       - 'test/ekodi-connect-route.test.mjs'
       - 'test/realtime-live-collaboration.test.mjs'
@@ -425,7 +425,7 @@ jobs:
           node --test test/cloudflare-quota-guard.test.mjs test/production-gate-transport-resilience.test.mjs
           node --test test/shared-site-release-ownership.test.mjs
           node --test test/hub-apex-routing.test.mjs
-          node --test test/admin-subdomain-redirect-runtime.test.mjs
+          node --test test/admin-path-runtime.test.mjs
           node --test test/tapo-admin-asset-boundary.test.mjs test/admin-true-lazy.test.mjs test/mall-production-verifier-contract.test.mjs
           node --test test/admin-assist-dock.test.mjs test/admin-deploy-report.test.mjs test/openai-workspace-release-contract.test.mjs test/shared-site-admin-probe.test.mjs
           node --test test/admin-communication.test.mjs test/devotional-admin-readiness.test.mjs test/ekodibiz-invest-business.test.mjs test/ekodibiz-invest-admin.test.mjs test/invest-site-system.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/marketing-canonical-projection.test.mjs test/church-pastor-admin.test.mjs test/church-route-ownership.test.mjs test/organization-subsite.test.mjs
@@ -438,7 +438,7 @@ jobs:
           test -f mall.css
           test -f config/ekodi-service-urls.json
           grep -Fq 'https://ekodi.kr/ekodimall' config/ekodi-service-urls.json
-          if grep -Eq 'https://(ekodi-mall\.pages\.dev|mall\.ekodi\.kr)' mall.html mall.js 2>/dev/null; then
+          if grep -Eq 'https://ekodi-mall\.pages\.dev' mall.html mall.js 2>/dev/null; then
             echo 'Legacy Mall public URL detected in shared-site source.'
             exit 1
           fi
@@ -458,7 +458,7 @@ jobs:
           test -f openai-workspace-admin.css
           grep -Fq "const API='/storage/api/control/storage/google'" storage-admin.js
           ! grep -Fq "const API='/api/control/storage/google'" storage-admin.js
-          ! grep -Fq 'drive.ekodi.kr/api/control/storage/google' storage-admin.js
+          ! grep -Fq 'ekodi.kr/api/control/storage/google' storage-admin.js
           grep -Fq '/api/control/public-sites' admin-public-site-controls.js
           grep -Fq '/api/control/language-status' admin-language-status.js
           grep -Fq 'admin-public-site-controls.js' admin-authenticated-shell.js
@@ -476,7 +476,7 @@ jobs:
           test -f deploy/manifests/shared-site.worker.json
           grep -Fq '/auth-workspace-target.js' canonical-surface-router.js
           grep -Fq '/marketing-ai-admin.js' site-worker.js
-          grep -Fq "const LIVE = 'https://marketing.ekodi.kr/';" marketing-ai-admin.js
+          grep -Fq "const LIVE = 'https://ekodi.kr/marketing/';" marketing-ai-admin.js
           grep -Fq 'marketing-ai-user-link' marketing-ai-admin.js
           grep -Fq "styles: ['marketing-ai-admin.css']" admin-demand-loader.js
           grep -Fq "scripts: ['marketing-ai-admin.js']" admin-demand-loader.js
@@ -487,7 +487,7 @@ jobs:
           grep -Fq 'position:fixed!important' admin-shell.css
           grep -Fq '.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}' admin-shell.css
           grep -Fq -- '--ekodi-home-header-height' index.html
-          if grep -Eq "frame-src[^;]*https://marketing\.ekodi\.kr" site-worker.js; then
+          if grep -Eq "frame-src[^;]*https://ekodi\.kr" site-worker.js; then
             echo 'Marketing public UI must not be embedded in the admin CSP.'
             exit 1
           fi
@@ -780,7 +780,7 @@ jobs:
             if(service.productionVerified!==true || !service.url) continue;
             try {
               const target=new URL(service.url);
-              if(target.hostname==='ekodi.kr' || !target.hostname.endsWith('.ekodi.kr')) urls.add(service.url);
+              urls.add(service.url);
             } catch {}
           }
           for(const match of shell.matchAll(/href=["'](https:\/\/ekodi\.kr\/[^"']*)["']/g)) urls.add(match[1]);

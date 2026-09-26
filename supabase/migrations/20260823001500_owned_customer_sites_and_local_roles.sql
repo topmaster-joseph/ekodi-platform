@@ -3,11 +3,11 @@
 
 insert into public.tenants (slug, name, status, kind, settings)
 values
-  ('ekodi-church', '에코디교회', 'active', 'church', jsonb_build_object('ownership','ekodi','operating_model','customer-site','site_key','church','domain','church.ekodi.kr','default_activity_role','pastor','default_activity_role_label','목사')),
-  ('ekodi-biz', '에코디비즈', 'active', 'business', jsonb_build_object('ownership','ekodi','operating_model','customer-site','site_key','biz','domain','biz.ekodi.kr','default_activity_role','representative','default_activity_role_label','대표')),
-  ('ekodi-lab', '에코디연구소', 'active', 'organization', jsonb_build_object('ownership','ekodi','operating_model','customer-site','site_key','lab','domain','lab.ekodi.kr','default_activity_role','director','default_activity_role_label','연구소장')),
-  ('ekodi-trade', 'EKODI Global Trading', 'active', 'business', jsonb_build_object('ownership','ekodi','operating_model','customer-site','site_key','trade','domain','trade.ekodi.kr','default_activity_role','representative','default_activity_role_label','대표')),
-  ('ekodi-cafe', '에코디 카페', 'active', 'business', jsonb_build_object('ownership','ekodi','operating_model','customer-site','site_key','cafe','domain','cafe.ekodi.kr','default_activity_role','representative','default_activity_role_label','대표'))
+  ('ekodi-church', '에코디교회', 'active', 'church', jsonb_build_object('ownership','ekodi','operating_model','customer-site','site_key','church','domain','ekodi.kr/ekodichurch','default_activity_role','pastor','default_activity_role_label','목사')),
+  ('ekodi-biz', '에코디비즈', 'active', 'business', jsonb_build_object('ownership','ekodi','operating_model','customer-site','site_key','biz','domain','ekodi.kr/ekodibiz','default_activity_role','representative','default_activity_role_label','대표')),
+  ('ekodi-lab', '에코디연구소', 'active', 'organization', jsonb_build_object('ownership','ekodi','operating_model','customer-site','site_key','lab','domain','ekodi.kr/ekodilab','default_activity_role','director','default_activity_role_label','연구소장')),
+  ('ekodi-trade', 'EKODI Global Trading', 'active', 'business', jsonb_build_object('ownership','ekodi','operating_model','customer-site','site_key','trade','domain','ekodi.kr/ekodibiz/trade','default_activity_role','representative','default_activity_role_label','대표')),
+  ('ekodi-cafe', '에코디 카페', 'active', 'business', jsonb_build_object('ownership','ekodi','operating_model','customer-site','site_key','cafe','domain','ekodi.kr/cafe','default_activity_role','representative','default_activity_role_label','대표'))
 on conflict (slug) do update
 set name = excluded.name,
     status = 'active',

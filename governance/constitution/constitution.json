@@ -1,5 +1,5 @@
 {
-  "version": "1.26.0",
+  "version": "1.27.0",
   "effectiveDate": "2026-09-27",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -67,23 +67,10 @@
   },
   "systemBoundaries": {
     "production": [
-      "ekodi.kr",
-      "my.ekodi.kr",
-      "admin.ekodi.kr",
-      "auth.ekodi.kr",
-      "api.ekodi.kr",
-      "status.ekodi.kr",
-      "ai.ekodi.kr",
-      "dev.ekodi.kr",
-      "exp.ekodi.kr"
+      "ekodi.kr"
     ],
-    "development": [
-      "my.dev.ekodi.kr",
-      "admin.dev.ekodi.kr",
-      "auth.dev.ekodi.kr",
-      "api.dev.ekodi.kr"
-    ],
-    "rule": "User-operated spaces live under ekodi.kr paths. Subdomains are reserved for justified system, security, protocol, common-service or core-service boundaries and never define workspace identity."
+    "development": [],
+    "rule": "All EKODI-owned human, admin, API, core and common-service surfaces use paths on ekodi.kr. EKODI-owned subdomains are forbidden."
   },
   "publicNamespaces": [
     "workspace-root-slug"
@@ -103,7 +90,7 @@
   "featurePatterns": [
     "https://ekodi.kr/{feature}",
     "https://ekodi.kr/my/{feature}",
-    "https://api.ekodi.kr/v1/{feature}"
+    "https://ekodi.kr/api/v1/{feature}"
   ],
   "workspaceRoutingPolicy": {
     "canonicalHost": "ekodi.kr",
@@ -114,7 +101,6 @@
     "kindEncodedInUrl": false,
     "reservedRootSlugsManagedBy": "platform_route_registry",
     "canonicalOperatingTerm": "Workspace",
-    "legacySpaceIsCompatibilityOnly": true,
     "personalHomeCanonicalPath": "/my",
     "workspaceAdminCanonical": "/{slug}/admin",
     "platformAdministrationCanonicalPath": "/admin",
@@ -125,56 +111,45 @@
   "domainPolicy": {
     "newFeatureSubdomainsForbidden": true,
     "newTenantSubdomainsForbidden": true,
-    "commonOrCoreServiceSubdomainsRequireGovernanceRegistration": true,
+    "commonOrCoreServiceSubdomainsRequireGovernanceRegistration": false,
     "sustainableBoundaryGateRequired": true,
     "customDomainsMapToTenantPublicSpace": true,
-    "legacyAliasesMayRedirect": true,
-    "legacyAliasesMustBeRegistered": true,
+    "legacyAliasesMayRedirect": false,
+    "legacyAliasesMustBeRegistered": false,
     "userFacingEngineAddressesForbidden": true,
     "canonicalHumanAndManagementHost": "ekodi.kr",
-    "subdomainUserEntryForbidden": true
+    "subdomainUserEntryForbidden": true,
+    "allEkodiOwnedSubdomainsForbidden": true,
+    "forceExecutionRule": {
+      "id": "APEX-PATH-ONLY-001",
+      "status": "enforced",
+      "canonicalHost": "ekodi.kr",
+      "ekodiOwnedChildHostsAllowed": false,
+      "redirectsOrCompatibilityAliasesAllowed": false,
+      "dedicatedRuntimeApiHostsAllowed": false,
+      "dynamicChildHostConstructionAllowed": false,
+      "deploymentRouteChildHostsAllowed": false,
+      "corsChildHostOriginsAllowed": false,
+      "databaseStoredEkodiChildHostsAllowed": false,
+      "correctionOrder": [
+        "detect",
+        "replace-with-canonical-path",
+        "verify-source",
+        "verify-database",
+        "verify-production",
+        "block-regression"
+      ],
+      "completionRule": "zero-ekodi-owned-child-host-reference-and-zero-live-database-reference",
+      "enforcement": [
+        "zero-subdomain-guard",
+        "constitution-validation",
+        "boundary-validation",
+        "database-canonical-url-audit"
+      ],
+      "owner": "ekodi-orchestrator",
+      "finalAuthority": "ekodi-platform-super-administrator"
+    }
   },
-  "legacyPathAliases": {
-    "https://space.ekodi.kr/{slug}": "https://ekodi.kr/{slug}",
-    "https://user.ekodi.kr/{slug}": "https://ekodi.kr/{slug}"
-  },
-  "legacyDomainAllowlist": [
-    "management.ekodi.kr",
-    "mall.ekodi.kr",
-    "mall.biz.ekodi.kr",
-    "cafe.ekodi.kr",
-    "books.ekodi.kr",
-    "publishing.ekodi.kr",
-    "community.ekodi.kr",
-    "work.ekodi.kr",
-    "edu.ekodi.kr",
-    "bible.ekodi.kr",
-    "life.ekodi.kr",
-    "money.ekodi.kr",
-    "social.ekodi.kr",
-    "energy.ekodi.kr",
-    "business.ekodi.kr",
-    "finance-api.ekodi.kr",
-    "drive.ekodi.kr",
-    "marketing-api.ekodi.kr",
-    "marketing-publish-api.ekodi.kr",
-    "www.ekodi.kr",
-    "pay.ekodi.kr",
-    "trade.ekodi.kr",
-    "mail.ekodi.kr",
-    "live.ekodi.kr",
-    "biz.ekodi.kr",
-    "church.ekodi.kr",
-    "lab.ekodi.kr",
-    "mail.*.ekodi.kr",
-    "cgma.ekodi.kr",
-    "cgma.ai.ekodi.kr",
-    "jadam.ai.ekodi.kr",
-    "pizzamaru.ai.ekodi.kr",
-    "yogurt.ai.ekodi.kr",
-    "space.ekodi.kr",
-    "user.ekodi.kr"
-  ],
   "dataSovereignty": {
     "ekodiCoreOwns": [
       "users",
@@ -315,58 +290,14 @@
     "owner": "topmaster-joseph",
     "rule": "C2/C3 changes are proposed first and applied only after explicit owner confirmation."
   },
-  "legacyDomainTargets": {
-    "management.ekodi.kr": "https://ekodi.kr/my/management",
-    "mall.ekodi.kr": "https://ekodi.kr/ekodimall",
-    "mall.biz.ekodi.kr": "https://ekodi.kr/ekodimall",
-    "cafe.ekodi.kr": "https://ekodi.kr/cafe",
-    "books.ekodi.kr": "https://ekodi.kr/books",
-    "publishing.ekodi.kr": "https://ekodi.kr/publish",
-    "community.ekodi.kr": "https://ekodi.kr/community",
-    "work.ekodi.kr": "https://ekodi.kr/work",
-    "edu.ekodi.kr": "https://ekodi.kr/education",
-    "bible.ekodi.kr": "https://ekodi.kr/bible",
-    "life.ekodi.kr": "https://ekodi.kr/life",
-    "money.ekodi.kr": "https://ekodi.kr/money",
-    "social.ekodi.kr": "https://ekodi.kr/social",
-    "energy.ekodi.kr": "https://ekodi.kr/energy",
-    "business.ekodi.kr": "https://ekodi.kr/business",
-    "finance-api.ekodi.kr": "https://ekodi.kr/api/v1/finance",
-    "drive.ekodi.kr": "https://ekodi.kr/my/files",
-    "marketing-api.ekodi.kr": "https://ekodi.kr/api/v1/marketing/domains",
-    "marketing-publish-api.ekodi.kr": "https://ekodi.kr/api/v1/marketing/publish",
-    "www.ekodi.kr": "https://ekodi.kr",
-    "pay.ekodi.kr": "https://ekodi.kr/pay",
-    "trade.ekodi.kr": "https://ekodi.kr/ekodibiz/trade",
-    "mail.ekodi.kr": "https://ekodi.kr/my/mail",
-    "live.ekodi.kr": "https://ekodi.kr/live",
-    "biz.ekodi.kr": "https://ekodi.kr/ekodibiz",
-    "church.ekodi.kr": "https://ekodi.kr/ekodichurch",
-    "lab.ekodi.kr": "https://ekodi.kr/ekodilab",
-    "mail.*.ekodi.kr": "https://ekodi.kr/my/mail",
-    "cgma.ekodi.kr": "https://ekodi.kr/cgma",
-    "cgma.ai.ekodi.kr": "https://ekodi.kr/cgma/marketing",
-    "jadam.ai.ekodi.kr": "https://ekodi.kr/jadam/marketing",
-    "pizzamaru.ai.ekodi.kr": "https://ekodi.kr/pizzamaru/marketing",
-    "yogurt.ai.ekodi.kr": "https://ekodi.kr/yogurt/marketing",
-    "space.ekodi.kr": "https://ekodi.kr",
-    "user.ekodi.kr": "https://ekodi.kr",
-    "my.ekodi.kr": "https://ekodi.kr/my",
-    "admin.ekodi.kr": "https://ekodi.kr/admin",
-    "auth.ekodi.kr": "https://ekodi.kr/auth",
-    "api.ekodi.kr": "https://ekodi.kr/api",
-    "trade.biz.ekodi.kr": "https://ekodi.kr/ekodibiz/trade",
-    "ins.ekodi.kr": "https://ekodi.kr/insurance"
-  },
   "registeredCommonServicePaths": [
     "/invest"
   ],
   "registeredCommonServiceBoundaries": [
-    "journal.ekodi.kr",
-    "marketing.ekodi.kr",
-    "dev.ekodi.kr",
-    "exp.ekodi.kr",
-    "try.ekodi.kr"
+    "/journal",
+    "/marketing",
+    "/developer",
+    "/experience"
   ],
   "evolutionPolicy": {
     "mode": "verification_first_security_native_self_evolving",
@@ -462,14 +393,14 @@
     "cgma.or.kr": "https://ekodi.kr/cgma"
   },
   "registeredCoreServiceBoundaries": [
-    "ai.ekodi.kr"
+    "/ai"
   ],
   "userSurfaceEngineSeparation": {
     "canonicalMarketingProduct": "https://ekodi.kr/ekodibiz/marketing-ai",
     "canonicalWorkspaceMarketingPattern": "https://ekodi.kr/{slug}/marketing",
-    "marketingCore": "https://marketing.ekodi.kr",
-    "aiGateway": "https://ai.ekodi.kr",
-    "customerAiSubdomains": "legacy_execution_alias_only",
+    "marketingCore": "https://ekodi.kr/marketing",
+    "aiGateway": "https://ekodi.kr/ai",
+    "customerAiSubdomains": "forbidden",
     "providerTopologyVisibleToOrdinaryUsers": false
   },
   "sovereignAutonomousOperations": {
@@ -521,10 +452,10 @@
     "futureGenerationOpenEnded": true
   },
   "publicPortalPolicy": {
-    "developerPortal": "https://dev.ekodi.kr",
-    "experiencePortal": "https://exp.ekodi.kr",
-    "legacyExperienceAlias": "https://try.ekodi.kr",
-    "developmentMirrorRule": "nested *.dev.ekodi.kr system hosts only; dev.ekodi.kr root is reserved for the public developer portal",
+    "developerPortal": "https://ekodi.kr/developer",
+    "experiencePortal": "https://ekodi.kr/experience",
+    "legacyExperienceAlias": "https://ekodi.kr/experience",
+    "developmentMirrorRule": "nested EKODI child-host address/developer system hosts only; ekodi.kr/developer root is reserved for the public developer portal",
     "sharedRuntimeAllowedAtS0": true,
     "experienceDataPolicy": "synthetic-only",
     "developerDataPolicy": "public-contract-only"

@@ -7,28 +7,28 @@ import {
 } from './admin-service-catalog.js';
 
 const LEGACY_DOMAIN_IDS=Object.freeze({
-  'church.ekodi.kr':'church',
-  'biz.ekodi.kr':'biz',
-  'business.ekodi.kr':'business',
-  'books.ekodi.kr':'books',
-  'author.ekodi.kr':'author',
-  'lab.ekodi.kr':'lab',
-  'edu.ekodi.kr':'education',
+  'ekodi.kr/ekodichurch':'church',
+  'ekodi.kr/ekodibiz':'biz',
+  'ekodi.kr/business':'business',
+  'ekodi.kr/books':'books',
+  'ekodi.kr/author':'author',
+  'ekodi.kr/ekodilab':'lab',
+  'ekodi.kr/education':'education',
   'ekodi.kr/community':'community',
-  'social.ekodi.kr':'social',
+  'ekodi.kr/social':'social',
   'ekodi.kr/ekodimall':'mall',
-  'marketing.ekodi.kr':'marketing',
-  'trade.ekodi.kr':'trade',
-  'pay.ekodi.kr':'pay',
-  'work.ekodi.kr':'work',
-  'energy.ekodi.kr':'energy',
+  'ekodi.kr/marketing':'marketing',
+  'ekodi.kr/ekodibiz/trade':'trade',
+  'ekodi.kr/pay':'pay',
+  'ekodi.kr/work':'work',
+  'ekodi.kr/energy':'energy',
   'ekodi.kr/insurance':'insurance',
-  'mail.ekodi.kr':'mail',
-  'live.ekodi.kr':'live',
-  'cgma.ekodi.kr':'cgma',
-  'jadam.ekodi.kr':'jadam',
-  'pizzamaru.ekodi.kr':'pizzamaru',
-  'yogurt.ekodi.kr':'yogurt',
+  'ekodi.kr/mail':'mail',
+  'ekodi.kr/live':'live',
+  'ekodi.kr/cgma':'cgma',
+  'ekodi.kr/jadam':'jadam',
+  'ekodi.kr/pizzamaru':'pizzamaru',
+  'ekodi.kr/yogurt':'yogurt',
 });
 
 function normalizeSurface(value){
@@ -79,7 +79,7 @@ function upgradeCampusRow(row){
   const descriptor=descriptorForRow(row);
   const legacy=normalizeSurface(row.dataset.siteDomain);
   if(!descriptor){
-    if(legacy==='my.ekodi.kr')row.hidden=true;
+    if(legacy==='ekodi.kr/my')row.hidden=true;
     return;
   }
   const publicUrl=canonicalServiceUrl(descriptor.basePath);

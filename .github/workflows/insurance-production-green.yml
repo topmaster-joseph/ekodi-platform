@@ -110,7 +110,7 @@ jobs:
           [vars]
           ENVIRONMENT = "production-green"
           INSURANCE_COMPARISON_PUBLIC_ENABLED = "false"
-          ALLOWED_ORIGINS = "https://ekodi-insurance-green.topmaster-joseph.workers.dev,https://ins.ekodi.kr"
+          ALLOWED_ORIGINS = "https://ekodi-insurance-green.topmaster-joseph.workers.dev,https://ekodi.kr"
           SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
           SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 
@@ -254,7 +254,7 @@ jobs:
           printf '%s' "$bridge" | grep -Fq 'ekodi-insurance-api-green.topmaster-joseph.workers.dev'
           printf '%s' "$bridge" | grep -Fq 'serverConsultationPanel'
           printf '%s' "$admin_headers" | grep -Eqi '^HTTP/.* 302'
-          printf '%s' "$admin_headers" | grep -Eqi '^location: https://admin\.ekodi\.kr/'
+          printf '%s' "$admin_headers" | grep -Eqi '^location: https://ekodi\.kr/admin/'
           echo 'Production Green UI verified. No production custom domain was changed.'
 
       - name: Green readiness summary

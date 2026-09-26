@@ -15,7 +15,7 @@ This diagram is a navigation aid, not a mandatory funnel. A person may start at 
 ### Admission
 
 - Platform: EKODI Education
-- Route: `edu.ekodi.kr/admission`
+- Route: `ekodi.kr/education/admission`
 - State: active
 - Responsibility: school/program discovery, eligibility preparation, official-source verification, application checklist, interview preparation and admission decision workflow
 - First-release boundary: no automatic application submission, payment or sensitive document vault
@@ -23,7 +23,7 @@ This diagram is a navigation aid, not a mandatory funnel. A person may start at 
 ### Study
 
 - Platform: EKODI Education
-- Route: `edu.ekodi.kr/study`
+- Route: `ekodi.kr/education/study`
 - State: active
 - Responsibility: learning and study-abroad preparation, academic life, mobility, scholarship and study planning
 - Admission and Study remain distinct user journeys while sharing one Education platform boundary, deployment unit and future `education_*` data namespace.
@@ -31,7 +31,7 @@ This diagram is a navigation aid, not a mandatory funnel. A person may start at 
 ### Career
 
 - Existing platform: EKODI Work
-- Canonical host: `work.ekodi.kr`
+- Canonical host: `ekodi.kr/work`
 - State: active
 - Responsibility: talent profile, job discovery, recruiting, applications and employer workflow
 - Do not create a duplicate Career database or a second recruiting platform.
@@ -39,7 +39,7 @@ This diagram is a navigation aid, not a mandatory funnel. A person may start at 
 ### Startup
 
 - Existing platform: EKODI Business OS
-- Canonical host: `business.ekodi.kr`
+- Canonical host: `ekodi.kr/business`
 - Supporting ecosystem: EKODI Biz, Marketing AI, Trade and Mall
 - State: active
 - Responsibility: move a user who chooses entrepreneurship into existing business operations rather than reimplementing business functions in My EKODI.
@@ -47,7 +47,7 @@ This diagram is a navigation aid, not a mandatory funnel. A person may start at 
 ### Settlement
 
 - Existing platform: EKODI Community
-- Canonical host: `community.ekodi.kr`
+- Canonical host: `ekodi.kr/community`
 - Supporting ecosystem: Work, Church and Energy where the user chooses them
 - State: active
 - Responsibility: local life, relationships, events and community connection
@@ -76,10 +76,10 @@ Specialist AI remains bounded by the platform that owns the work. My EKODI coord
 
 Machine-readable journey contract: `my/life-journey.js`
 
-User surface: `my.ekodi.kr/journey/`
+User surface: `ekodi.kr/my/journey/`
 
-Education platform: `edu.ekodi.kr/`
+Education platform: `ekodi.kr/education/`
 
-Education areas: `edu.ekodi.kr/admission` and `edu.ekodi.kr/study`
+Education areas: `ekodi.kr/education/admission` and `ekodi.kr/education/study`
 
 The My Journey surface reads only central access status for active owner services. It does not directly query Education, Work, Business or Community private tables. Education first release stores non-sensitive planning metadata in the browser only; any future persistent Education store must use an isolated `education_*` namespace and explicit Core contracts.

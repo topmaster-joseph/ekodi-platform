@@ -6,7 +6,7 @@ preview_urls = false
 
 [vars]
 DATA_MODE = "isolated-staging"
-AUTH_URL = "https://auth.ekodi.kr/?site=local-commerce"
+AUTH_URL = "https://ekodi.kr/auth/?site=local-commerce"
 API_BASE = "https://ekodi.kr/api/local-commerce"
 
 [assets]

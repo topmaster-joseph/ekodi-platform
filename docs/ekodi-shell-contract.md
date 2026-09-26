@@ -17,7 +17,7 @@ Every authenticated action is interpreted as:
 
 ## My EKODI responsibility
 
-`ekodi.kr/my` is the canonical personal home and the canonical place for selecting and changing workspaces. `my.ekodi.kr` is compatibility/internal routing only.
+`ekodi.kr/my` is the canonical personal home and the canonical place for selecting and changing workspaces. `ekodi.kr/my` is compatibility/internal routing only.
 
 Workspace selection, ecosystem discovery, recommendations, and service switching belong in My EKODI content. Service pages must not duplicate a global workspace directory or add persistent floating selectors. Individual-site headers also do not advertise or link back to the EKODI root or My EKODI; those cross-service journeys begin from the central surfaces themselves.
 

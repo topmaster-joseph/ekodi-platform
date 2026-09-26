@@ -32,7 +32,7 @@
           "approval-gated",
           "durable-object-sqlite",
           "rules-first-active",
-          "https://pay.ekodi.kr"
+          "https://ekodi.kr/pay"
         ],
         "candidateVerify": false,
         "candidateVerifyReason": "the canonical ekodi.kr gateway remains bound to the stable EKODIBIZ service during a 0% candidate smoke; verify this API immediately after promotion",

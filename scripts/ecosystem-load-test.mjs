@@ -3,10 +3,10 @@ import { performance } from 'node:perf_hooks';
 
 const DEFAULT_TARGETS = [
   { label: 'root', url: 'https://ekodi.kr/' },
-  { label: 'admin', url: 'https://admin.ekodi.kr/' },
+  { label: 'admin', url: 'https://ekodi.kr/admin/' },
   { label: 'api-health', url: 'https://ekodi.kr/api/health' },
-  { label: 'biz', url: 'https://biz.ekodi.kr/' },
-  { label: 'marketing', url: 'https://marketing.ekodi.kr/' },
+  { label: 'biz', url: 'https://ekodi.kr/ekodibiz/' },
+  { label: 'marketing', url: 'https://ekodi.kr/marketing/' },
   { label: 'church', url: 'https://ekodi.kr/ekodichurch/' },
   { label: 'lab', url: 'https://ekodi.kr/ekodilab/' },
 ];
@@ -33,7 +33,7 @@ if (concurrencies.length === 0) throw new Error('At least one valid concurrency 
 
 function isProductionTarget(target) {
   const host = new URL(target.url).hostname.toLowerCase();
-  return host === 'ekodi.kr' || host.endsWith('.ekodi.kr');
+  return host === 'ekodi.kr';
 }
 
 const productionTargets = targets.filter(isProductionTarget);

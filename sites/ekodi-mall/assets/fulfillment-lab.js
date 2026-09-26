@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://mall-api.ekodi.kr';
+  const API = 'https://mall-ekodi.kr/api';
   const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
   const PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   if (!window.supabase) return;
@@ -76,7 +76,7 @@
     if (logout) logout.hidden = !signed;
     if (reload) reload.disabled = !signed;
   }
-  login?.addEventListener('click', () => { location.href = 'https://auth.ekodi.kr/?site=mall-seller&returnTo=https%3A%2F%2Fmall.ekodi.kr%2Ffulfillment'; });
+  login?.addEventListener('click', () => { location.href = 'https://ekodi.kr/auth/?site=mall-seller&returnTo=https%3A%2F%2Fekodi.kr/ekodimall%2Ffulfillment'; });
   logout?.addEventListener('click', async () => { await sb.auth.signOut(); session = null; syncSessionUi(); render([]); setStatus('로그아웃했습니다.'); });
   reload?.addEventListener('click', () => load().catch((error) => setStatus(error.message, true)));
 

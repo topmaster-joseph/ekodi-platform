@@ -4,15 +4,15 @@
 
 `ekodi.kr` is the canonical root of the EKODI ecosystem.
 
-- `admin.ekodi.kr`: unified operations and monitoring console
-- `pay.ekodi.kr`: common payment gateway
-- `trade.ekodi.kr`: canonical EKODI Trading address
-- `mail.ekodi.kr`: common mail lobby
-- `live.ekodi.kr`: common live-broadcast lobby
-- `cloud.ekodi.kr`: common workspace lobby
-- `biz.ekodi.kr`, `mall.ekodi.kr`, `books.ekodi.kr`, `church.ekodi.kr`, `lab.ekodi.kr`: service and organization entry points
+- `ekodi.kr/admin`: unified operations and monitoring console
+- `ekodi.kr/pay`: common payment gateway
+- `ekodi.kr/ekodibiz/trade`: canonical EKODI Trading address
+- `ekodi.kr/mail`: common mail lobby
+- `ekodi.kr/live`: common live-broadcast lobby
+- `ekodi.kr/cloud`: common workspace lobby
+- `ekodi.kr/ekodibiz`, `ekodi.kr/ekodimall`, `ekodi.kr/books`, `ekodi.kr/ekodichurch`, `ekodi.kr/ekodilab`: service and organization entry points
 
-Historical nested addresses may remain only as compatibility redirects. `trade.biz.ekodi.kr` redirects to `trade.ekodi.kr`.
+Historical nested addresses may remain only as compatibility redirects. `ekodi.kr/ekodibiz/trade` redirects to `ekodi.kr/ekodibiz/trade`.
 
 ## 2. Control-plane separation
 
@@ -37,13 +37,13 @@ A payment outage therefore does not disable administrator authentication or the 
 
 ## 3. Payment safety boundary
 
-`pay.ekodi.kr` is a gateway, not a wallet and not a new PG company.
+`ekodi.kr/pay` is a gateway, not a wallet and not a new PG company.
 
 - Existing commercial payments are attributed to the actual contracted business entity.
 - Toss server credentials are stored only as Cloudflare Worker secrets.
 - No server secret is placed in HTML, browser JavaScript, GitHub source files, or browser storage.
 - A Toss webhook is treated as a notification. Before changing the internal payment ledger, the finance Worker re-queries Toss using the payment key or order ID.
-- If the production server secret is not configured, payment synchronization fails closed and `admin.ekodi.kr` explicitly shows the integration as not ready.
+- If the production server secret is not configured, payment synchronization fails closed and `ekodi.kr/admin` explicitly shows the integration as not ready.
 
 ### Test credential rollout
 
@@ -73,7 +73,7 @@ Sharing the `ekodi.kr` root must never merge legally distinct accounting books.
 
 Commercial EKODIBIZ payments, church/ministry funds, research projects, and association funds remain explicitly separated by organization and require the appropriate contract, settlement account, evidence, and accounting treatment before live processing is enabled.
 
-## 6. Monitoring visible at admin.ekodi.kr
+## 6. Monitoring visible at ekodi.kr/admin
 
 The unified admin console combines three monitoring layers:
 

@@ -18,6 +18,15 @@ for (const [id, platform] of Object.entries(manifest.platforms || {})) {
   else await requireFile(platform.deployWorkflow);
   if (!Array.isArray(platform.source) || platform.source.length === 0) failures.push(`${id}: source boundary is required`);
   if (!Array.isArray(platform.domains) || platform.domains.length === 0) failures.push(`${id}: production domain boundary is required`);
+  else {
+    for (const domain of platform.domains) {
+      if (String(domain).includes('/')) failures.push(`${id}: domains must contain hostnames only, got ${domain}`);
+      if (/\.ekodi\.kr$/i.test(String(domain)) && String(domain).toLowerCase() !== 'ekodi.kr') failures.push(`${id}: EKODI child host is forbidden: ${domain}`);
+    }
+  }
+  if (typeof platform.canonicalPath !== 'string' || !platform.canonicalPath.startsWith('/')) failures.push(`${id}: canonicalPath must be an apex pathname`);
+  if (platform.publicEntry !== `https://ekodi.kr${platform.canonicalPath === '/' ? '' : platform.canonicalPath}`) failures.push(`${id}: publicEntry must match canonical apex path`);
+  for (const extra of platform.canonicalPaths || []) if (!String(extra).startsWith('/')) failures.push(`${id}: canonicalPaths entries must be path-only: ${extra}`);
 }
 
 const fullDeploy = await read('.github/workflows/deploy.yml');

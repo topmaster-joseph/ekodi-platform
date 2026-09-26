@@ -22,7 +22,7 @@ test('reliability policy is internally valid', () => {
 test('target classification separates staging, production and local', () => {
   assert.equal(classifyTarget('https://ekodi-shared-site-staging.ekodi-development.workers.dev', config), 'staging');
   assert.equal(classifyTarget('https://ekodi.kr', config), 'production');
-  assert.equal(classifyTarget('https://admin.ekodi.kr', config), 'production');
+  assert.equal(classifyTarget('https://ekodi.kr/admin', config), 'production');
   assert.equal(classifyTarget('http://127.0.0.1:8787', config), 'local');
   assert.equal(classifyTarget('https://example.com', config), 'unknown');
 });

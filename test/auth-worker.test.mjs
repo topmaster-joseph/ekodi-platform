@@ -19,14 +19,14 @@ test('constant-time comparison reports equality', () => {
 test('DNS validation normalizes supported records', () => {
   assert.deepEqual(validateDnsRecord({
     type: 'cname',
-    name: 'WWW.EKODI.KR',
+    name: 'ekodi.kr/WWW',
     content: 'target.example.com',
     ttl: 300,
     proxied: true
   }), {
     value: {
       type: 'CNAME',
-      name: 'www.ekodi.kr',
+      name: 'ekodi.kr',
       content: 'target.example.com',
       ttl: 300,
       proxied: true

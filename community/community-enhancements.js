@@ -76,7 +76,7 @@
   const normalizeLocale = value => /^zh/i.test(value||'') ? 'zh-CN' : /^ja/i.test(value||'') ? 'ja' : /^en/i.test(value||'') ? 'en' : 'ko-KR';
   const locale = () => { try { return normalizeLocale(localStorage.getItem('ekodi.locale') || navigator.language); } catch { return normalizeLocale(navigator.language); } };
   const signedIn = () => $('#profileBtn') && !$('#profileBtn').hidden;
-  const authUrl = () => { const u = new URL('https://auth.ekodi.kr/'); u.searchParams.set('site','community'); u.searchParams.set('return_to',location.href.split('#')[0]); return u.href; };
+  const authUrl = () => { const u = new URL('https://ekodi.kr/auth/'); u.searchParams.set('site','community'); u.searchParams.set('return_to',location.href.split('#')[0]); return u.href; };
 
   function requireLogin(next) {
     if (signedIn()) return next();

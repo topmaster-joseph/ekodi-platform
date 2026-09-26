@@ -54,7 +54,7 @@ if (repeated) {
     let target = 'https://ekodi.kr/';
     try {
       const url = new URL(returnTo);
-      if (url.protocol === 'https:' && (url.hostname === 'ekodi.kr' || url.hostname.endsWith('.ekodi.kr'))) target = url.href;
+      if (url.protocol === 'https:' && url.hostname === 'ekodi.kr') target = url.href;
     } catch {}
     location.assign(target);
   }, { once: true });

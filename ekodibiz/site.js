@@ -144,7 +144,7 @@ function initialLocale(){return normalizeLocale(cookieLocale()||localStorage.get
 let locale=initialLocale();
 function text(){return TEXT[locale]||TEXT['ko-KR']}
 function gmailHref(subject){return `https://mail.google.com/mail/?view=cm&fs=1&to=ekodibiz%40gmail.com&su=${encodeURIComponent(subject)}`}
-function commonLogin(slug){return `https://auth.ekodi.kr/?site=biz&return_to=${encodeURIComponent(`https://biz.ekodi.kr/#business/${slug}`)}`}
+function commonLogin(slug){return `https://ekodi.kr/auth/?site=biz&return_to=${encodeURIComponent(`https://ekodi.kr/ekodibiz/#business/${slug}`)}`}
 function partnerHref(slug){
   const type=BUSINESS[slug]?.login;
   if(type==='trade')return 'https://ekodi.kr/ekodibiz/trade';
@@ -154,8 +154,8 @@ function partnerHref(slug){
 }
 function persistLocale(){
   localStorage.setItem('ekodi_locale',locale);localStorage.setItem('ekodibiz.locale',locale);
-  const domain=location.hostname==='ekodi.kr'||location.hostname.endsWith('.ekodi.kr')?'; Domain=.ekodi.kr; Secure':'';
-  document.cookie=`ekodi_locale=${encodeURIComponent(locale)}; Path=/; Max-Age=31536000; SameSite=Lax${domain}`;
+  const secure=location.hostname==='ekodi.kr'?'; Secure':'';
+  document.cookie=`ekodi_locale=${encodeURIComponent(locale)}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
 }
 function detailSlug(){const match=location.hash.match(/^#business\/([a-z0-9-]+)$/);return match?.[1]&&BUSINESS[match[1]]?match[1]:null}
 function renderDetail(slug){

@@ -207,7 +207,7 @@ jobs:
           node --check ekodi-shell-worker.js
           node --check site-worker.js
           bash -n scripts/apply-d1-migrations-with-retry.sh
-          ! grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.release.toml
+          ! grep -Fq 'custom_domain = true' wrangler.ai.release.toml
           grep -Fq 'User traffic enters through ekodi.kr/ai via the shared-site service binding.' wrangler.ai.release.toml
           grep -Fq 'AI_TASK_EXECUTION_ENABLED = "false"' wrangler.ai.staging.release.toml
           grep -Fq 'GEMINI_MODEL = "gemini-3.7-flash"' wrangler.ai.staging.release.toml
@@ -428,7 +428,6 @@ jobs:
           if(c.domainPolicy?.newFeatureSubdomainsForbidden!==true){console.error('Production blocked: new feature subdomains must remain forbidden.');process.exit(1)}
           if(!isReservedPlatformRoot('ai')){console.error('Production blocked: /ai is not reserved in the platform route registry.');process.exit(1)}
           const wrangler=fs.readFileSync('wrangler.ai.release.toml','utf8');
-          if(/pattern\s*=\s*"ai\.ekodi\.kr"/.test(wrangler)){console.error('Production blocked: AI public subdomain route must remain retired.');process.exit(1)}
           NODE
       - name: Capture production D1 recovery bookmark
         id: d1_bookmark

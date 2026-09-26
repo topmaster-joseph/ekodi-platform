@@ -3,9 +3,6 @@ import { projectValue } from './secure-projection.js';
 import { EXPERIENCE_META, getExperienceCatalog } from './experience-catalog.js';
 import { DEVELOPER_PORTAL_META, PUBLIC_CONFORMANCE_CONTRACT } from './developer-public-contract.js';
 
-const EXPERIENCE_HOST='exp.ekodi.kr';
-const LEGACY_EXPERIENCE_HOST='try.ekodi.kr';
-const DEVELOPER_HOST='dev.ekodi.kr';
 const SECURITY_HEADERS={
   'x-content-type-options':'nosniff',
   'referrer-policy':'strict-origin-when-cross-origin',
@@ -24,16 +21,6 @@ function withHeaders(response,cache=null){
   if(cache)headers.set('cache-control',cache);
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
-function resolvedHost(request){
-  const url=new URL(request.url);const host=url.hostname.toLowerCase();
-  if(!host.endsWith('.workers.dev')&&!['127.0.0.1','localhost'].includes(host))return host;
-  return String(request.headers.get('x-ekodi-staging-host')||host).trim().toLowerCase();
-}
-function canonicalExperienceRedirect(request){
-  const source=new URL(request.url);const target=new URL(source.toString());
-  target.protocol='https:';target.hostname=EXPERIENCE_HOST;target.port='';
-  return withHeaders(new Response(null,{status:308,headers:{location:target.toString()}}),'no-store');
-}
 function projectedCatalog(){return projectValue(getExperienceCatalog(),{profile:'experience_public',purpose:'experience-public-catalog'});}
 async function htmlAsset(env,request,path,serviceId){
   const assetUrl=new URL(path,request.url);
@@ -45,7 +32,7 @@ async function staticAsset(env,request,path){
   const response=await env.ASSETS.fetch(new Request(assetUrl,request));
   return withHeaders(response,STATIC_CACHE);
 }
-function adminRedirect(){return withHeaders(Response.redirect('https://admin.ekodi.kr/experience',307),'no-store');}
+function adminRedirect(){return withHeaders(Response.redirect('https://ekodi.kr/admin/experience',307),'no-store');}
 function experienceHealth(){return {
   ok:true,service:'ekodi-experience',publicName:EXPERIENCE_META.publicName,
   boundary:'registered-common-service',canonical:EXPERIENCE_META.canonicalOrigin,
@@ -60,15 +47,13 @@ function developerHealth(){return {
 };}
 export default {
   async fetch(request,env){
-    const url=new URL(request.url);const host=resolvedHost(request);const path=url.pathname.replace(/\/+$/,'')||'/';
+    const url=new URL(request.url);const rawPath=url.pathname.replace(/\/+$/,'')||'/';const developerMode=rawPath==='/developer'||rawPath.startsWith('/developer/');const experienceMode=rawPath==='/experience'||rawPath.startsWith('/experience/');const path=developerMode?(rawPath.slice('/developer'.length)||'/'):experienceMode?(rawPath.slice('/experience'.length)||'/'):rawPath;
     if(request.method!=='GET'&&request.method!=='HEAD')return json({error:'read_only_public_surface'},405);
-    if(host===LEGACY_EXPERIENCE_HOST)return canonicalExperienceRedirect(request);
-
-    if(host===DEVELOPER_HOST){
+    if(developerMode){
       if(path==='/health')return json(developerHealth(),200,PUBLIC_CACHE);
       if(path==='/api/contract')return json(PUBLIC_CONFORMANCE_CONTRACT,200,PUBLIC_CACHE);
       if(path==='/admin')return adminRedirect();
-      if(path==='/experience')return withHeaders(Response.redirect('https://exp.ekodi.kr/',307),'no-store');
+      if(path==='/experience')return withHeaders(Response.redirect('https://ekodi.kr/experience/',307),'no-store');
       if(['/','/standard','/standards','/contract','/validate','/sdk','/sandbox','/certify','/certification'].includes(path))return htmlAsset(env,request,'/developer','developer');
       if(path==='/developer.css'||path==='/developer.js')return staticAsset(env,request,path);
       return json({error:'not_found'},404,PUBLIC_CACHE);

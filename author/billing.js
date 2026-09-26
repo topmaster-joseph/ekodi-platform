@@ -91,7 +91,7 @@ function loadToss(){
 }
 
 function loginForBilling(){
-  const auth=new URL('https://auth.ekodi.kr/');
+  const auth=new URL('https://ekodi.kr/auth/');
   auth.searchParams.set('site','author');
   auth.searchParams.set('return_to',cleanReturnUrl());
   location.href=auth.href;

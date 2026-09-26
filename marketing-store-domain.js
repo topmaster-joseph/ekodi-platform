@@ -34,7 +34,7 @@ function originAllowed(origin, env) {
   if (configured.has(origin)) return true;
   try {
     const url = new URL(origin);
-    return url.protocol === 'https:' && /^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(url.hostname);
+    return url.protocol === 'https:' && url.hostname === 'ekodi.kr' && url.origin === origin;
   } catch { return false; }
 }
 function cors(origin, allowed) {
@@ -166,7 +166,7 @@ async function listStoreDomains(request, env, allowed) {
     WHERE d.store_id=? AND d.status<>'disabled' ORDER BY d.id DESC`).bind(store.id).all();
   return json({
     eligible, requiredPlan:'pro', planId:subscription?.plan_id || 'basic', planStatus:subscription?.status || 'active',
-    workspace:workspace ? { slug:workspace.workspace_slug, canonicalDomain:workspace.canonical_domain, canonicalUrl:`https://${workspace.canonical_domain}` } : null,
+    workspace:workspace ? { slug:workspace.workspace_slug, canonicalDomain:workspace.canonical_domain, canonicalUrl:`https://${workspace.canonical_domain}${workspace.landing_path||''}` } : null,
     mappingLimit:eligible ? mappingLimit(subscription?.plan_id) : 0,
     domains:(rows.results || []).map(publicDomain),
   }, 200, request, allowed);

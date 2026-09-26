@@ -27,7 +27,7 @@ test('release verification bypasses stale Shell bundle cache and refreshes the c
       const path=new URL(request.url).pathname;
       if(path==='/shell.js')return new Response('window.shellCore=true;',{status:200});
       if(path==='/user-language.js')return new Response("const I18N_API='https://ekodi.kr/api/i18n/v1';",{status:200});
-      if(path==='/media-meeting-adapter.js')return new Response("const RESOLVER_DEFAULT='https://social.ekodi.kr/api/media/youtube/status';",{status:200});
+      if(path==='/media-meeting-adapter.js')return new Response("const RESOLVER_DEFAULT='https://ekodi.kr/social/api/media/youtube/status';",{status:200});
       return new Response(`// ${path}`,{status:200});
     }}};
     const response=await worker.fetch(new Request('https://ekodi-shell.internal/shell.js?release=abc123&attempt=1'),env,{waitUntil(promise){pending.push(promise);}});

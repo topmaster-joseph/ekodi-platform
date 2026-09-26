@@ -60,7 +60,7 @@ jobs:
           npm run validate:deployments
           test -f deploy/manifests/journal.worker.json
           grep -Fq 'allowFirstDeploy' deploy/manifests/journal.worker.json
-          grep -Fq 'journal.ekodi.kr' wrangler.journal.toml
+          ! grep -Fq 'custom_domain = true' wrangler.journal.toml
           grep -Fq 'ekodi-journal-staging' wrangler.journal.staging.toml
 
   deploy-staging:
@@ -121,8 +121,8 @@ jobs:
           grep -Fq 'EKODI JOURNAL' /tmp/journal-root.html
           grep -Fq 'ekodi-journal' /tmp/journal-health.json
           grep -Fq '<rss version="2.0">' /tmp/journal-feed.xml
-          grep -Fq 'journal.ekodi.kr' /tmp/journal-posts.json
-          grep -Fiq 'location: https://admin.ekodi.kr/journal' /tmp/journal-admin.headers
+          grep -Fq 'ekodi.kr/journal' /tmp/journal-posts.json
+          grep -Fiq 'location: https://ekodi.kr/journal/admin' /tmp/journal-admin.headers
           if [[ "$remote_protected" == '1' ]]; then echo 'Development staging remains Access-protected; exact local runtime contract verified.'; fi
 
   deploy-production:
@@ -147,18 +147,18 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 24); do
-            root_code=$(curl -L -sS -D /tmp/root.headers -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://journal.ekodi.kr/' || true)
-            health_code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://journal.ekodi.kr/health' || true)
-            feed_code=$(curl -sS -o /tmp/feed.xml -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://journal.ekodi.kr/feed.xml' || true)
-            api_code=$(curl -sS -o /tmp/posts.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://journal.ekodi.kr/api/posts' || true)
-            admin_code=$(curl -sS --max-redirs 0 -D /tmp/admin.headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://journal.ekodi.kr/admin' || true)
+            root_code=$(curl -L -sS -D /tmp/root.headers -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/journal/' || true)
+            health_code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/journal/health' || true)
+            feed_code=$(curl -sS -o /tmp/feed.xml -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/journal/feed.xml' || true)
+            api_code=$(curl -sS -o /tmp/posts.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/journal/api/posts' || true)
+            admin_code=$(curl -sS --max-redirs 0 -D /tmp/admin.headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/journal/admin' || true)
             if [[ "$root_code" == '200' ]] && [[ "$health_code" == '200' ]] && [[ "$feed_code" == '200' ]] && [[ "$api_code" == '200' ]] && [[ "$admin_code" =~ ^30[1278]$ ]] \
               && grep -Fq 'EKODI JOURNAL' /tmp/root.html \
               && grep -Fq 'ekodi-journal' /tmp/health.json \
               && grep -Fq '<rss version="2.0">' /tmp/feed.xml \
-              && grep -Fq 'journal.ekodi.kr' /tmp/posts.json \
+              && grep -Fq 'ekodi.kr/journal' /tmp/posts.json \
               && grep -Fiq 'x-ekodi-shell: v2' /tmp/root.headers \
-              && grep -Fiq 'location: https://admin.ekodi.kr/journal' /tmp/admin.headers; then
+              && grep -Fiq 'location: https://ekodi.kr/journal/admin' /tmp/admin.headers; then
               echo 'Journal production verified.'
               exit 0
             fi

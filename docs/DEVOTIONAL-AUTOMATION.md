@@ -4,7 +4,7 @@
 Turn a monthly Bible-reading plan into independently written 30-second devotional videos, package each master for EKODI Church and EKODI Mission, retain durable artifacts in Shared Drive EKODI, and schedule each variant on its assigned YouTube channel.
 
 ## Control plane
-`admin.ekodi.kr` exposes **AI·자동화 → 매일묵상**. The panel shows source passages, render state, channel connection state, scheduled/published state, and failures. A disconnected provider must be shown as disconnected rather than simulated as complete.
+`ekodi.kr/admin` exposes **AI·자동화 → 매일묵상**. The panel shows source passages, render state, channel connection state, scheduled/published state, and failures. A disconnected provider must be shown as disconnected rather than simulated as complete.
 
 ## Runtime flow
 1. Seed monthly passages into D1 operational state.

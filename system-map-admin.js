@@ -16,7 +16,7 @@
     ['Monitoring', 'Observe', '상태 · 응답속도 · 복구 검증'],
   ];
   const identityKeys = new Set(['ekodi-shell', 'my', 'admin-auth']);
-  const coreKeys = new Set(['control-api', 'site-core', 'service-proxy', 'finance', 'marketing-domain-api', 'marketing-publishing-api']);
+  const coreKeys = new Set(['control-api', 'site-core', 'finance', 'marketing-domain-api', 'marketing-publishing-api']);
   const categoryLabels = Object.freeze({
     'community-ministry':'사람 · 공동체',
     'business-growth':'사업 · 성장',
@@ -136,7 +136,12 @@
   let model = null;
 
   function productionDomains(row = {}) {
-    return (row.domains || []).filter(domain => domain.endsWith('.ekodi.kr') && !domain.includes('staging'));
+    return (row.domains || []).filter(domain => domain === 'ekodi.kr');
+  }
+  function productionEntries(row = {}) {
+    if (row.publicEntry) return [row.publicEntry];
+    if (row.canonicalPath) return [`https://ekodi.kr${row.canonicalPath === '/' ? '' : row.canonicalPath}`];
+    return productionDomains(row).map(domain => `https://${domain}`);
   }
 
   function statusFor(row, monitor) {
@@ -176,10 +181,10 @@
 
     const domains = document.createElement('div');
     domains.className = 'system-map-domains';
-    const production = productionDomains(row);
-    (production.length ? production : (row.domains || []).slice(0, 2)).forEach(domain => {
+    const production = productionEntries(row);
+    (production.length ? production : (row.domains || []).slice(0, 2).map(domain => `https://${domain}`)).forEach(entry => {
       const link = document.createElement('a');
-      link.href = `https://${domain}`; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = domain;
+      link.href = entry; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = entry.replace(/^https:\/\//,'');
       domains.append(link);
     });
 

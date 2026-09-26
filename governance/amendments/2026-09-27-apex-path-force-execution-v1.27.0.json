@@ -1,0 +1,13 @@
+{
+  "id": "2026-09-27-apex-path-force-execution-v1.27.0",
+  "constitutionVersion": "1.27.0",
+  "effectiveDate": "2026-09-27",
+  "changeClass": "C3",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "summary": "Make apex-path-only routing a non-optional force-execution rule across source, runtime, CORS, deployment routes and database references.",
+  "ownerInstruction": "EKODI-owned services must use ekodi.kr paths only. Do not preserve redirects, compatibility aliases, dedicated runtime API hosts or child-host references; detect, replace, verify and block regression.",
+  "approvalBasis": "Explicit platform-owner instruction in the 2026-09-27 continuation task to establish this as an EKODI force-execution rule and finish correction.",
+  "migrationPolicy": "Enforce zero EKODI-owned child-host references in GitHub and zero live database references in Supabase, with CI and database health verification.",
+  "rollback": "Git revert may restore implementation changes, but restoring any EKODI-owned child host requires a new explicit C3 owner approval."
+}

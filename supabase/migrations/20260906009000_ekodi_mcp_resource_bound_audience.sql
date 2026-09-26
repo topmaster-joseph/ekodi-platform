@@ -20,14 +20,14 @@ begin
         from auth.oauth_authorizations oa
        where oa.client_id::text = oauth_client_id
          and oa.user_id::text = oauth_user_id
-         and oa.resource = 'https://api.ekodi.kr/mcp'
+         and oa.resource = 'https://ekodi.kr/api/mcp'
          and oa.status::text = 'approved'
          and oa.expires_at > now()
     ) into mcp_authorized;
   end if;
 
   if mcp_authorized then
-    claims := jsonb_set(claims, '{aud}', to_jsonb('https://api.ekodi.kr/mcp'::text), true);
+    claims := jsonb_set(claims, '{aud}', to_jsonb('https://ekodi.kr/api/mcp'::text), true);
     claims := jsonb_set(claims, '{ekodi_ai_client}', 'true'::jsonb, true);
   else
     claims := claims - 'ekodi_ai_client';
@@ -42,4 +42,4 @@ grant execute on function public.ekodi_mcp_access_token_hook(jsonb) to supabase_
 revoke execute on function public.ekodi_mcp_access_token_hook(jsonb) from authenticated, anon, public;
 
 comment on function public.ekodi_mcp_access_token_hook(jsonb) is
-  'Issues the EKODI MCP audience only when the current OAuth client and user have an approved, unexpired authorization for resource https://api.ekodi.kr/mcp.';
+  'Issues the EKODI MCP audience only when the current OAuth client and user have an approved, unexpired authorization for resource https://ekodi.kr/api/mcp.';

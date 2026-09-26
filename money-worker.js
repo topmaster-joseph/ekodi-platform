@@ -15,7 +15,7 @@ async function body(request){try{return await request.json()}catch{return null}}
 function hasSensitiveKeys(value){if(!value||typeof value!=='object')return false;if(Array.isArray(value))return value.some(hasSensitiveKeys);return Object.entries(value).some(([key,item])=>SENSITIVE_KEYS.has(String(key).toLowerCase())||hasSensitiveKeys(item))}
 function runtimeConfig(env){const readiness=buildIntegrationReadiness(env);return{
   dataMode:env.DATA_MODE||'isolated-staging',
-  authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=money',
+  authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=money',
   myUrl:'https://ekodi.kr/my/',
   officialHandoffUrl:env.ACCOUNTINFO_URL||'https://www.payinfo.or.kr/main/main.do',
   financialExecution:false,
@@ -61,6 +61,6 @@ export default{async fetch(request,env){
     const p=await body(request);const action=p?.action||'';return json({action,humanGateRequired:requiresHumanGate(action),allowedAutonomously:!requiresHumanGate(action),financialExecution:false});
   }
   if(url.pathname==='/api/execution'&&request.method==='POST'){logSecurity('blocked-financial-execution',{action:'execution'});return json({error:'financial_execution_disabled',humanGateRequired:true,officialHandoffUrl:runtimeConfig(env).officialHandoffUrl},409);}
-  if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?focus=money',307);
+  if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/?focus=money',307);
   const response=await env.ASSETS.fetch(request);return injectEkodiShell(withHeaders(response),'money');
 }};

@@ -2,7 +2,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-const LOGIN_URL = 'https://auth.ekodi.kr/?site=author&return_to=https%3A%2F%2Fauthor.ekodi.kr%2F';
+const LOGIN_URL = 'https://ekodi.kr/auth/?site=author&return_to=https%3A%2F%2Fekodi.kr/author%2F';
 const FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
 const MY_EKODI_URL = 'https://ekodi.kr/my/';
 const sb = createClient(SUPABASE_URL, PUBLISHABLE_KEY, { auth: { detectSessionInUrl: true, persistSession: true } });
@@ -330,7 +330,7 @@ async function openProject(id) {
   });
   overlay.querySelector('[data-my-ekodi]').addEventListener('click', async () => { if (canShare) await publishToMyEkodi(project, overlay); });
   const books = overlay.querySelector('[data-books]');
-  if (books) books.addEventListener('click', () => { recordEvent(project.id, 'books', 'books.handoff.requested', { target: 'EKODI BOOKS' }); location.assign('https://books.ekodi.kr/'); });
+  if (books) books.addEventListener('click', () => { recordEvent(project.id, 'books', 'books.handoff.requested', { target: 'EKODI BOOKS' }); location.assign('https://ekodi.kr/books/'); });
 }
 async function publishToMyEkodi(project, overlay) {
   const button = overlay.querySelector('[data-my-ekodi]');

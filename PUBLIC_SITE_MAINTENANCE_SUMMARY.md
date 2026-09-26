@@ -17,7 +17,7 @@
 ## 관리자 진입
 
 ```text
-https://admin.ekodi.kr/#public-site-controls
+https://ekodi.kr/admin/#public-site-controls
 ```
 
 ## 공개 사이트 확인

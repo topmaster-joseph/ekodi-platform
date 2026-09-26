@@ -9,7 +9,7 @@ function assert(condition, message) {
 
 assert(storage.canonicalStore === 'google_workspace_shared_drive', 'Shared Drive must be canonical store');
 assert(storage.canonicalDriveName === 'EKODI', 'Canonical Shared Drive must be EKODI');
-assert(storage.controlPlane === 'drive.ekodi.kr', 'drive.ekodi.kr must remain canonical storage control plane');
+assert(storage.controlPlane === 'ekodi.kr/storage', 'ekodi.kr/storage must remain canonical storage control plane');
 assert(storage.credentialsSource.includes('storage_connections'), 'Existing encrypted storage connection must be reused');
 assert(storage.routeSource === 'storage_routes', 'Canonical folder routing must use storage_routes');
 assert(storage.principles?.durableRecordsGoToDrive === true, 'Durable records must go to Drive');
@@ -54,13 +54,13 @@ const migration = fs.readFileSync(new URL('../migrations/0039_storage_ai_gateway
 const guardrailMigration = fs.readFileSync(new URL('../migrations/0078_ai_module_guardrails.sql', import.meta.url), 'utf8');
 
 assert(storageRuntime.includes('/api/storage/v1'), 'Storage runtime prefix missing');
-assert(storageRuntime.includes('https://drive.ekodi.kr'), 'API storage facade must terminate at drive.ekodi.kr');
+assert(storageRuntime.includes('https://ekodi.kr/storage'), 'API storage facade must terminate at ekodi.kr/storage');
 assert(!storageRuntime.includes('GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY'), 'Storage Gateway must not create a parallel service-account credential system');
 assert(driveWriter.includes('storage_connections'), 'Canonical writer must reuse encrypted storage_connections');
 assert(driveWriter.includes('storage_routes'), 'Canonical writer must reuse storage_routes');
 assert(driveWriter.includes('supportsAllDrives=true'), 'Canonical writer must support Shared Drives');
 assert(driveControl.includes('AES-GCM'), 'Canonical OAuth credentials must remain encrypted');
-assert(storageWorker.includes("handleStorageGateway"), 'drive.ekodi.kr worker must serve Storage Gateway');
+assert(storageWorker.includes("handleStorageGateway"), 'ekodi.kr/storage worker must serve Storage Gateway');
 assert(wranglerStorage.includes('STORAGE_PRIMARY_SHARED_DRIVE_ID = "0ACM_FnMYWMFuUk9PVA"'), 'Canonical EKODI Shared Drive id must remain pinned');
 
 assert(aiRuntime.includes('/api/ai-modules/v1'), 'AI module gateway prefix missing');
