@@ -34,5 +34,12 @@ test('channel admin is login-first and authenticates pre-registered account rows
   assert.match(source,/externalAccountApi\('\/accounts'/);
   assert.match(source,/channelPreAuth\(\).*loginPanel/s);
   assert.doesNotMatch(source,/CHANNEL_INTENT_KEY|pendingChannelIntent|CHANNEL_TARGET_ACCOUNTS/);
+  assert.match(source,/CHANNEL_OAUTH_POPUP_NAME='ekodi_channel_oauth_popup'/);
+  assert.match(source,/new BroadcastChannel\(CHANNEL_OAUTH_RESULT_KEY\)/);
+  assert.match(source,/localStorage\.setItem\(CHANNEL_OAUTH_RESULT_KEY/);
+  assert.match(source,/window\.open\('about:blank',CHANNEL_OAUTH_POPUP_NAME/);
+  assert.match(source,/setTimeout\(\(\)=>window\.close\(\),120\)/);
+  assert.match(source,/Google 인증을 완료하면 인증창이 자동으로 닫히고 이 화면의 연결 상태가 갱신됩니다/);
+  assert.match(source,/location\.assign\(d\.authorizationUrl\)/);
   assert.doesNotMatch(source,/topmaster\.joseph@gmail\.com/);
 });
