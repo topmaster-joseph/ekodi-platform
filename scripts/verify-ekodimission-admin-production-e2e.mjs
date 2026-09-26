@@ -224,7 +224,7 @@ await page.route('https://renzehysxirjilvdxacv.supabase.co/rest/v1/rpc/**',async
     shareRecord={
       share_id:'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
       expires_at:body.p_expires_at,
-      field_policy:body.p_field_policy||{name:true,status:true,party_size:true},
+      field_policy:body.p_field_policy||{name:true,submitted_at:true,status:true,party_size:true,phone:false,email:false},
       created_at:new Date().toISOString(),
     };
     return jsonResponse(route,{ok:true,share_id:shareRecord.share_id,token:shareToken,share_path:'/ekodimission/share/'+shareToken,expires_at:shareRecord.expires_at,field_policy:shareRecord.field_policy});
@@ -351,12 +351,19 @@ try{
   await shareButton.click();
   await page.locator('#activityShareDialog[open]').waitFor({state:'visible'});
   const shareDialogText=await page.locator('#activityShareDialog').innerText();
-  checks.sharePrivacyLock=/전화번호 · 이메일 · 역할 · 후속관리 · 내부 메모 · EKODI ID/.test(shareDialogText);
+  checks.sharePrivacyLock=/항상 제외: 역할 · 후속관리 · 내부 메모 · EKODI ID/.test(shareDialogText);
+  checks.shareSubmittedDefault=await page.locator('#activityShareFieldSubmittedAt').isChecked();
+  checks.shareContactDefaultsPrivate=!(await page.locator('#activityShareFieldPhone').isChecked())&&!(await page.locator('#activityShareFieldEmail').isChecked());
+  await page.locator('#activityShareFieldPhone').check();
+  await page.locator('#activityShareFieldEmail').check();
+  await page.locator('#activityShareSensitiveAckWrap').waitFor({state:'visible'});
+  await page.locator('#activityShareSensitiveAck').check();
+  checks.shareSensitiveAck=await page.locator('#activityShareSensitiveAck').isChecked();
   await page.locator('#activityShareCreate').click();
   await page.waitForFunction(()=>document.querySelector('#activityShareLink')?.value?.includes('/ekodimission/share/'));
   const shareHref=await page.locator('#activityShareLink').inputValue();
   checks.shareLinkReadOnly=shareHref===origin+'/ekodimission/share/'+shareToken;
-  checks.shareCreateMutation=mutationCalls.some(call=>call.name==='activity_admin_create_share'&&call.body.p_workspace_slug==='ekodimission'&&call.body.p_activity_key===activityKey&&call.body.p_field_policy?.name===true&&call.body.p_field_policy?.status===true&&call.body.p_field_policy?.party_size===true);
+  checks.shareCreateMutation=mutationCalls.some(call=>call.name==='activity_admin_create_share'&&call.body.p_workspace_slug==='ekodimission'&&call.body.p_activity_key===activityKey&&call.body.p_field_policy?.name===true&&call.body.p_field_policy?.submitted_at===true&&call.body.p_field_policy?.status===true&&call.body.p_field_policy?.party_size===true&&call.body.p_field_policy?.phone===true&&call.body.p_field_policy?.email===true);
   const revokeButton=page.locator('#activityShareRevoke');
   await revokeButton.waitFor({state:'visible'});
   await revokeButton.click();
