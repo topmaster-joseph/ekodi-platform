@@ -79,6 +79,7 @@ on:
       - 'workspace-route-policy.js'
       - 'workspace-admin-page.js'
       - 'supabase/migrations/20260926140500_activity_public_readonly_shares.sql'
+      - 'supabase/migrations/20260927032500_activity_public_share_minimal_projection_guard.sql'
       - '.github/workflows/deploy-activity-public-share-schema.yml'
       - 'organization-admin-page.js'
       - 'test/organization-subsite.test.mjs'
