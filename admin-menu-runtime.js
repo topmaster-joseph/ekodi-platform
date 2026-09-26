@@ -80,8 +80,8 @@ function readLocale() {
 function saveLocale(value) {
   locale = normalizeAdminLocale(value);
   try { localStorage.setItem(LOCALE_KEY, locale); } catch {}
-  if (location.hostname === 'ekodi.kr' || location.hostname.endsWith('.ekodi.kr')) {
-    document.cookie = `${LOCALE_COOKIE}=${locale}; Path=/; Domain=.ekodi.kr; Max-Age=31536000; SameSite=Lax; Secure`;
+  if (location.hostname === 'ekodi.kr') {
+    document.cookie = `${LOCALE_COOKIE}=${locale}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`;
   }
   document.documentElement.lang = locale;
 }
