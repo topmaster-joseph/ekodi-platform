@@ -39,7 +39,7 @@
   "approvalEvidence": {
     "explicitOwnerInstruction": true,
     "ownerInstructionDate": "2026-09-27",
-    "pullRequest": null,
+    "pullRequest": 2698,
     "requiredPullRequestLabel": "constitution-approved",
     "approvalLabel": "constitution-approved"
   }
