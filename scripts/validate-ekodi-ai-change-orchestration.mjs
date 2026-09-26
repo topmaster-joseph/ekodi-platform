@@ -65,6 +65,18 @@ if (policy.policyId !== 'AI-ORCHESTRATE-001' || policy.status !== 'enforced') fa
 if (policy.controlPlane !== 'EKODI AI') fail('EKODI AI must remain the control plane.');
 if (policy.mutationBoundary?.breakGlassBypassEnabled !== false) fail('break-glass bypass must remain disabled.');
 if (policy.sourceControl?.directPushToMain !== false) fail('direct main pushes must remain forbidden.');
+const prConvergence = policy.sourceControl?.prConvergence || {};
+if (prConvergence.policyId !== 'PR-CONVERGENCE-001' || prConvergence.status !== 'enforced' || prConvergence.enabled !== true) fail('automatic PR convergence must remain enforced.');
+if (prConvergence.mode !== 'automatic-until-merged-or-human-gate') fail('PR convergence must continue until merge or an explicit human gate.');
+if (prConvergence.refreshWhenBaseAdvances !== true || prConvergence.useGithubUpdateBranch !== true) fail('base-advance recovery must refresh the branch automatically.');
+if (prConvergence.neverForcePush !== true) fail('PR convergence may not use force push.');
+if (prConvergence.mergeOnlyThroughBranchProtection !== true) fail('automatic merge must remain subject to branch protection.');
+if (prConvergence.staleBaseAction !== 'refresh-rerun-retry') fail('stale base must be non-terminal and automatically retried.');
+if (prConvergence.requiredCheckWaitAction !== 'wait-for-check-completion-then-retry') fail('pending required checks must trigger retry, not abandonment.');
+if (prConvergence.conflictAction !== 'route-through-parallel-change-review-no-bypass') fail('real conflicts may not bypass parallel change review.');
+if (prConvergence.humanGateStopsAutomaticMerge !== true) fail('human gates must stop automatic merge.');
+if (prConvergence.auditEveryAttempt !== true || prConvergence.userInterruptionForResolvableBaseDrift !== false) fail('resolvable base drift must be audited and recovered without user interruption.');
+if (policy.execution?.baseAdvanceIsNonTerminal !== true || policy.execution?.sourceControlDriftRecovery !== 'refresh-rerun-retry-until-current') fail('base advance must remain a non-terminal recoverable state.');
 if (policy.execution?.externalAiMayOwnProductionMutation !== false) fail('external AI cannot own production mutation.');
 const dailyOperationalReport = policy.reporting?.dailyOperationalReport || {};
 if (dailyOperationalReport.policyId !== 'EKODI-DAILY-REPORT-ROLE-001') fail('daily operational report role policy must remain registered.');
