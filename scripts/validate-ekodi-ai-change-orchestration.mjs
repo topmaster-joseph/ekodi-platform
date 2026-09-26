@@ -77,6 +77,15 @@ if (prConvergence.conflictAction !== 'route-through-parallel-change-review-no-by
 if (prConvergence.humanGateStopsAutomaticMerge !== true) fail('human gates must stop automatic merge.');
 if (prConvergence.auditEveryAttempt !== true || prConvergence.userInterruptionForResolvableBaseDrift !== false) fail('resolvable base drift must be audited and recovered without user interruption.');
 if (policy.execution?.baseAdvanceIsNonTerminal !== true || policy.execution?.sourceControlDriftRecovery !== 'refresh-rerun-retry-until-current') fail('base advance must remain a non-terminal recoverable state.');
+const convergenceScriptPath = path.join(root, 'scripts', 'ekodi-pr-convergence.mjs');
+const convergenceWorkflowPath = path.join(root, '.github', 'workflows', 'ekodi-pr-convergence.yml');
+if (!fs.existsSync(convergenceScriptPath) || !fs.existsSync(convergenceWorkflowPath)) fail('PR convergence runtime and workflow must remain present.');
+const convergenceSyntax = spawnSync(process.execPath, ['--check', convergenceScriptPath], { cwd: root, encoding:'utf8' });
+if (convergenceSyntax.status !== 0) fail('PR convergence runtime must remain syntactically valid.');
+const convergenceWorkflow = fs.readFileSync(convergenceWorkflowPath, 'utf8');
+for (const marker of ['pull_request_target:','workflow_run:','schedule:','node scripts/ekodi-pr-convergence.mjs','validate-ekodi-ai-change-orchestration.mjs\" --release']) {
+  if (!convergenceWorkflow.includes(marker)) fail(`PR convergence workflow is missing required marker: ${marker}`);
+}
 if (policy.execution?.externalAiMayOwnProductionMutation !== false) fail('external AI cannot own production mutation.');
 const dailyOperationalReport = policy.reporting?.dailyOperationalReport || {};
 if (dailyOperationalReport.policyId !== 'EKODI-DAILY-REPORT-ROLE-001') fail('daily operational report role policy must remain registered.');
@@ -308,6 +317,8 @@ const governanceFiles = new Set([
   'config/parallel-change-review-scopes.json',
   'scripts/detect-related-change-overlap.mjs',
   '.github/workflows/ai-conflict-guard.yml',
+  'scripts/ekodi-pr-convergence.mjs',
+  '.github/workflows/ekodi-pr-convergence.yml',
 ]);
 if (changedFiles.some(file => governanceFiles.has(file)) && eventName && !(policy.governance.policyOwners || []).includes(actor)) {
   fail(`orchestration governance may only be changed from an owner-authorized intent; actor=${actor}`);
