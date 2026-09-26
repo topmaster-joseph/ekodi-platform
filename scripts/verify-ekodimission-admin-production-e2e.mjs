@@ -5,6 +5,7 @@ import { chromium } from 'playwright';
 const origin = String(process.env.EKODI_PRODUCTION_ORIGIN || 'https://ekodi.kr').replace(/\/+$/,'');
 const activityKey = '260926-chuseok-open-table';
 const targetUrl = origin + '/ekodimission/admin';
+const activityUrl = origin + '/ekodimission/admin/activities';
 const artifactsDir = path.resolve('artifacts/ekodimission-admin-production-e2e');
 await fs.mkdir(artifactsDir,{recursive:true});
 
@@ -96,8 +97,8 @@ function captureWorkspaceAsset(list,response){
 const browser=await chromium.launch({headless:true});
 
 // First verify the real signed-out production surface builds a Mission-scoped
-// auth URL that returns to the canonical Mission admin root. This catches
-// regressions where a tenant admin login is accidentally routed through My EKODI or a generic command home.
+// auth URL that returns to the exact applicant-management route. This catches
+// regressions where tenant admin login loses the requested subroute or hides the navigation structure.
 const signedOutContext=await browser.newContext({viewport:{width:1440,height:1100}});
 const signedOutPage=await signedOutContext.newPage();
 signedOutPage.setDefaultTimeout(12_000);
@@ -106,20 +107,21 @@ signedOutPage.on('console',message=>{if(message.type()==='error')signedOutConsol
 signedOutPage.on('pageerror',error=>signedOutPageErrors.push(String(error?.stack||error?.message||error)));
 signedOutPage.on('response',response=>captureWorkspaceAsset(signedOutAssetResponses,response));
 try{
-  await signedOutPage.goto(targetUrl,{waitUntil:'domcontentloaded'});
+  await signedOutPage.goto(activityUrl,{waitUntil:'domcontentloaded'});
+  await signedOutPage.waitForFunction(()=>document.querySelector('#adminNav')?.textContent?.includes('행사 · 신청자'));
   await signedOutPage.waitForFunction(()=>document.querySelector('#pageState')?.textContent?.includes('로그인 필요'));
   const loginAnchor=signedOutPage.locator('#mainPanel a.button.primary[href*="/auth/"]').first();
   await loginAnchor.waitFor({state:'visible'});
   const loginHref=await loginAnchor.getAttribute('href');
   if(!loginHref)throw new Error('Mission admin signed-out login link missing');
   const loginUrl=new URL(loginHref);
-  const expectedReturn=new URL(targetUrl);
+  const expectedReturn=new URL(activityUrl);
   if(loginUrl.origin!==origin||loginUrl.pathname!=='/auth/'||loginUrl.searchParams.get('site')!=='mission'||loginUrl.searchParams.get('direct')!=='1'){
     throw new Error('Mission admin auth scope is not canonical: '+loginUrl.href);
   }
   const returnTo=new URL(loginUrl.searchParams.get('return_to')||'');
   if(returnTo.origin!==expectedReturn.origin||returnTo.pathname!==expectedReturn.pathname||returnTo.search!==expectedReturn.search){
-    throw new Error('Mission admin return_to lost the canonical admin root: '+loginUrl.href);
+    throw new Error('Mission admin return_to lost the applicant-management route: '+loginUrl.href);
   }
 }catch(error){
   await signedOutPage.screenshot({path:path.join(artifactsDir,'signed-out-failure.png'),fullPage:true}).catch(()=>{});
@@ -137,10 +139,11 @@ try{
   const report={
     generatedAt:new Date().toISOString(),
     targetUrl,
+    activityUrl,
     passed:false,
     stage:'signed-out-auth-boundary',
     mode:'production-signed-out-surface',
-    checks:{authSiteMission:false,authReturnToExact:false},
+    checks:{authSiteMission:false,authReturnToExact:false,preAuthNavigationVisible:false},
     mutationCalls:[],
     assetResponses:signedOutAssetResponses,
     diagnostics:{
@@ -285,7 +288,7 @@ await page.route('https://renzehysxirjilvdxacv.supabase.co/rest/v1/rpc/**',async
 });
 
 let fatal=null;
-const checks={authSiteMission:true,authReturnToExact:true};
+const checks={authSiteMission:true,authReturnToExact:true,preAuthNavigationVisible:true};
 try{
   await page.goto(targetUrl,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>document.querySelector('#pageState')?.textContent?.includes('운영공간'));
