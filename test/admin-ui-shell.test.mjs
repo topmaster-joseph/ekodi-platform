@@ -85,3 +85,13 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.match(principles,/플랫폼 전체현황 \/ 사이트·브랜드 \/ 사용자·관리자·권한 \/ 서비스·AI \/ 콘텐츠·행사·소통 \/ 운영·배포·장애 \/ 설정·보안·감사/);
   assert.match(principles,/가독성·직관성 공통 기준/);
 });
+
+
+test('mobile admin shell keeps sidebar off-canvas and workspace full width',async()=>{
+  const conversationCss=await read('admin-conversation-workbench.css');
+  assert.match(conversationCss,/Mobile admin drawer authority v2/);
+  assert.match(conversationCss,/\.app\{[\s\S]*?display:block!important;[\s\S]*?max-width:100vw!important/);
+  assert.match(conversationCss,/\.sidebar\{[\s\S]*?position:fixed!important;[\s\S]*?transform:translateX\(-105%\)!important/);
+  assert.match(conversationCss,/\.sidebar\.open\{[\s\S]*?transform:translateX\(0\)!important/);
+  assert.match(conversationCss,/\.app>main\{[\s\S]*?width:100%!important;[\s\S]*?overflow-x:hidden!important/);
+});
