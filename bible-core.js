@@ -2,6 +2,7 @@ import { BOOKS, resolveBook } from './bible/books.js';
 
 const BSK_PLATFORM = 'https://bible.bskorea.or.kr';
 const RIGHTS_NOTICE = 'https://bskorea.or.kr/bbs/board.php?bo_table=copyright_faq&wr_id=5';
+const BSK_HOME = 'https://www.bskorea.or.kr';
 const PROVIDERS = {
   KRV1961: {
     id:'KRV1961', label:'개역한글', fullName:'성경전서 개역한글판', language:'ko',
@@ -22,7 +23,14 @@ export function bibleProviderCatalog() {
 }
 
 export function bibleCorePolicy() {
-  return { version:'1.0.0', defaultProvider:'KRV1961', textIntegrity:'verbatim', protectedText:'official-link-only', aiMayAlterScripture:false };
+  return {
+    version:'1.1.0',
+    defaultProvider:'KRV1961',
+    textIntegrity:'verbatim',
+    protectedText:'official-link-only',
+    aiMayAlterScripture:false,
+    officialAuthority:{ name:'대한성서공회', home:BSK_HOME, biblePlatform:BSK_PLATFORM, rightsNotice:RIGHTS_NOTICE },
+  };
 }function providerFor(value) {
   const key = String(value || 'KRV1961').toUpperCase();
   if (key === 'KRV') return PROVIDERS.KRV1961;
@@ -75,6 +83,7 @@ export async function readBiblePassage(request, env, input = {}) {
       ok:true, mode:provider.mode, provider, book:{ id:book.id, name:book.ko }, chapter:chapterNumber,
       officialUrl:officialBibleUrl(provider, book, chapterNumber), verses:[],
       notice:'저작권 보호 번역본은 에코디에 저장하지 않고 대한성서공회 공식 본문으로 연결합니다.',
+      source:{ authority:'대한성서공회', official:true, home:BSK_HOME, biblePlatform:BSK_PLATFORM, rightsNotice:RIGHTS_NOTICE },
     };
   }
   const data = await assetJson(request, env, `/data/krv/${book.id}.json`);
