@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.26.0
+# EKODI Platform Constitution v1.27.0
 
 Effective: 2026-09-27
 
@@ -69,28 +69,22 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Changes that weaken or waive this rule are constitutional changes and require the EKODI Platform Super Administrator's explicit approval, an amendment record, a version bump, rollback definition and governed promotion.
 
 ## 2. Domain Constitution
-- The apex `ekodi.kr` is the canonical public ecosystem entry point and canonical host for user-operated public spaces.
-- `ekodi.kr` is the canonical human and management host. Existing system subdomains may remain only as internal execution, protocol, emergency or compatibility boundaries and are not canonical user entry points.
-- Development mirrors production system boundaries on nested `EKODI child-host address/developer` hosts such as `ekodi.kr/my/developer`, `ekodi.kr/admin/developer`, `ekodi.kr/auth/developer` and `ekodi.kr/api/developer`; the root `ekodi.kr/developer` is reserved for the public EKODI Developer portal.
-- Subdomains represent justified system, security, protocol, common-service or core-service boundaries. They must not represent person, organization, group or project identity.
-- Canonical public user-space addresses use the universal root pattern `ekodi.kr/{slug}`. Workspace kind is internal metadata and is never encoded into the public URL.
-- Workspace child services use `ekodi.kr/{slug}/{service}`. Every independently managed site uses its own public canonical path plus `/admin`: a Workspace uses `ekodi.kr/{slug}/admin`, and a child site or service uses `ekodi.kr/{slug}/{service}/admin`. The URL is a routing locator only; authorization still resolves from immutable identity and Person + Workspace + Role + Capability.
-- `ekodi.kr/admin` is the EKODI Platform Super Administrator control plane. It may aggregate directory, status, observability, search and explicit handoff to lower administrators, but it must not create an alternate lower-site administrator URL such as `/admin/{site}` or `/{parent}/admin/{child-site}`. Parent administrators follow the same rule.
-- Platform-owned administrator internal navigation keeps the five management work areas `/admin/home/*`, `/admin/operations/*`, `/admin/workspaces/*`, `/admin/services/*`, and `/admin/system/*`. These paths govern platform-owned capabilities and are not substitute operational admin URLs for independently managed sites. Legacy or aggregate lower-admin aliases may redirect during migration but must never render the lower administrator UI.
-- `ekodi.kr`, `ekodi.kr` and per-tenant subdomains are not canonical workspace addresses. If such aliases exist, they must redirect to the corresponding `ekodi.kr` path while preserving the remaining path where practical.
-- `ekodi.kr/my` is the canonical personal authenticated home. `ekodi.kr/my` may remain temporarily as a compatibility or internal execution boundary only.
-- Public and private routing resolve tenant/workspace authorization from immutable `workspace_id`; URL host, path and slug are routing locators, not identity or authorization truth.
-- Common services and core services may keep or receive dedicated subdomains only when security, operational isolation, protocol separation or independently managed service boundaries justify them and the domain is registered in constitutional governance.
-- `ekodi.kr/journal` is a registered common-service boundary for the EKODI living journal. It does not represent workspace identity; personal and tenant journal surfaces remain under their canonical `ekodi.kr` workspace paths and resolve authority from immutable `workspace_id`.
-- `ekodi.kr/experience` is the canonical registered common-service boundary for EKODI Experience. It exposes synthetic data and sanitized public projections only; it is never a workspace identity, production-data mirror or internal architecture surface. Legacy `ekodi.kr/experience` permanently redirects to `ekodi.kr/experience`.
-- `ekodi.kr/developer` is the registered public EKODI Developer and Conformance portal. It exposes public integration contracts, examples and browser-local preflight validation only; private repository structure, secrets, production customer data and internal provider topology remain excluded.
-- `ekodi.kr/invest` is the registered common Invest Core for Evidence-First research, diligence, IR and connection support; workspace-specific investment businesses remain under `ekodi.kr/{slug}/invest`.
-- `ekodi.kr/marketing` is the registered EKODI Marketing Core engine boundary. It is not the ordinary product or customer entry; the product entry is `ekodi.kr/ekodibiz/marketing-ai`, and workspace marketing uses `ekodi.kr/{slug}/marketing`.
-- `ekodi.kr/ai` is the registered provider-independent AI Gateway/Core boundary. Customer-specific `EKODI child-host address/ai` addresses are compatibility execution aliases only and must not be presented as canonical user URLs.
-- Existing feature subdomains are legacy aliases unless explicitly registered as current system/common/core service boundaries. No new convenience or tenant-specific subdomain may be added without a constitutional amendment and the sustainable boundary-creation gate.
-- `https://ekodi.kr/support` is the sole canonical Support user entry. `ekodi.kr/support` is retired and is not retained as a compatibility redirect.
-- Customer-owned domains map to a workspace public surface and never redefine EKODI internal identity, `workspace_id` or private routing.
-- CGMA uses `https://ekodi.kr/cgma` as its EKODI platform route and `https://cgma.or.kr` as its customer-owned public address; legacy `ekodi.kr/cgma` is compatibility-only.
+- **APEX-PATH-ONLY-001** is mandatory and enforced for every current and future EKODI-owned public, user, administrator, authentication, API, AI, common-service, core-service and internal runtime address.
+- The only EKODI-owned host is `ekodi.kr`. EKODI-owned child hosts, wildcard child hosts, dedicated runtime API hosts, compatibility aliases and redirect-only child hosts are forbidden.
+- New services, engines and protocols receive an `ekodi.kr` path or a private service binding. They do not receive an EKODI child host.
+- Canonical public workspace addresses use `https://ekodi.kr/{slug}`; workspace child services use `https://ekodi.kr/{slug}/{service}`.
+- Workspace administration uses `https://ekodi.kr/{slug}/admin`; child-service administration uses `https://ekodi.kr/{slug}/{service}/admin`.
+- Platform administration uses `https://ekodi.kr/admin`; authentication uses `https://ekodi.kr/auth`; APIs use `https://ekodi.kr/api`; AI uses `https://ekodi.kr/ai`; MCP uses `https://ekodi.kr/mcp`.
+- Platform-owned administrator navigation uses `/admin/home/*`, `/admin/operations/*`, `/admin/workspaces/*`, `/admin/services/*` and `/admin/system/*`. It must not create alternate lower-site administrator addresses.
+- `https://ekodi.kr/my` is the canonical personal authenticated home.
+- Common and core capabilities use root paths such as `/journal`, `/experience`, `/developer`, `/invest`, `/marketing`, `/ai` and `/support`, or private service bindings when they are not human-facing.
+- Marketing product entry is `https://ekodi.kr/ekodibiz/marketing-ai`; workspace marketing is `https://ekodi.kr/{slug}/marketing`; the shared Marketing Core is `https://ekodi.kr/marketing`.
+- URL path and slug are routing locators only. Identity and authorization resolve from immutable `workspace_id` and Person + Workspace + Role + Capability.
+- Customer-owned external domains may map to an EKODI workspace surface, but they never redefine EKODI internal identity, authorization or host grammar.
+- CGMA uses `https://ekodi.kr/cgma` as its EKODI platform route and `https://cgma.or.kr` as its customer-owned public address.
+- Any source, configuration, workflow, database value, CORS rule or runtime code that introduces an EKODI-owned child host is a blocking regression.
+- Correction is mandatory and sequential: detect → replace with canonical path → verify source → verify database → verify production → block regression.
+- Completion requires zero EKODI-owned child-host references in governed source and zero live database references. Local service, agent or provider exceptions are not permitted.
 
 ## 2A. Public User Surface Constitution
 - Every canonical public user page is **guest-open by default**. A person must be able to reach and read the safe public projection without signing in.
