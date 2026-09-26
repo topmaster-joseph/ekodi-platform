@@ -23,9 +23,10 @@ export function normalizeWorkspaceSlug(value) {
   if (slug.length < 3 || RESERVED_SLUGS.has(slug)) return '';
   return slug;
 }
-function normalizeCanonicalHost(value) {
-  const host = String(value || '').trim().toLowerCase().replace(/\.$/, '');
-  return /^[a-z0-9-]+\.ai\.ekodi\.kr$/.test(host) ? host : '';
+function normalizeCanonicalPath(value) {
+  const input = String(value || '').trim().toLowerCase();
+  const match = input.match(/^ekodi\.kr\/marketing\/([a-z0-9-]{3,48})\/?$/);
+  return match ? `ekodi.kr/marketing/${match[1]}` : '';
 }
 function planActive(planId, status) {
   return String(status || '').toLowerCase() === 'active' && PLUS_OR_ABOVE.has(String(planId || '').toLowerCase());
@@ -40,7 +41,7 @@ function originAllowed(origin, env) {
   if (configured.has(origin)) return true;
   try {
     const url = new URL(origin);
-    return url.protocol === 'https:' && /^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(url.hostname);
+    return url.protocol === 'https:' && url.hostname === 'ekodi.kr';
   } catch {
     return false;
   }
@@ -194,7 +195,7 @@ async function detachCanonical(env, hostname) {
 
 async function slugAvailable(env, slug, storeId) {
   const row = await env.DB.prepare(`SELECT store_id FROM marketing_store_workspaces
-    WHERE workspace_slug=? OR canonical_domain=? LIMIT 1`).bind(slug, `${slug}.ekodi.kr/ai`).first();
+    WHERE workspace_slug=? OR canonical_domain=? LIMIT 1`).bind(slug, `ekodi.kr/marketing/${slug}`).first();
   return !row || row.store_id === storeId;
 }
 async function chooseSlug(env, store, requested='') {
@@ -215,10 +216,10 @@ async function chooseSlug(env, store, requested='') {
 }
 
 async function resolveCanonical(request, env, allowed) {
-  const host = normalizeCanonicalHost(new URL(request.url).searchParams.get('host'));
-  if (!host) return json({ error:'유효한 EKODI AI Workspace 주소를 입력해 주세요.', code:'INVALID_CANONICAL_HOST' }, 400, request, allowed);
+  const canonicalPath = normalizeCanonicalPath(new URL(request.url).searchParams.get('host'));
+  if (!canonicalPath) return json({ error:'유효한 EKODI Marketing Workspace 주소를 입력해 주세요.', code:'INVALID_CANONICAL_PATH' }, 400, request, allowed);
   const row = await env.DB.prepare(`SELECT store_id,workspace_slug,canonical_domain,landing_path,status
-    FROM marketing_store_workspaces WHERE canonical_domain=? AND status='active' LIMIT 1`).bind(host).first();
+    FROM marketing_store_workspaces WHERE canonical_domain=? AND status='active' LIMIT 1`).bind(canonicalPath).first();
   if (!row) return json({ error:'활성화된 점포 Workspace를 찾을 수 없습니다.', code:'WORKSPACE_NOT_FOUND' }, 404, request, allowed);
   return json({
     workspace:{
@@ -261,13 +262,8 @@ async function provisionStoreWorkspace(request, env, allowed) {
   if (workspace?.status === 'active') return json({ ok:true, created:false, workspace:publicWorkspace(workspace, subscription, store) }, 200, request, allowed);
 
   const slug = workspace?.workspace_slug || await chooseSlug(env, store, body?.slug);
-  const hostname = workspace?.canonical_domain || `${slug}.ekodi.kr/ai`;
-  let provider;
-  try {
-    provider = await attachCanonical(env, hostname);
-  } catch (error) {
-    return json({ error:error.message, code:error.code || 'WORKSPACE_PROVIDER_ERROR' }, error.code === 'DOMAIN_PROVIDER_NOT_READY' ? 503 : 502, request, allowed);
-  }
+  const hostname = workspace?.canonical_domain || `ekodi.kr/marketing/${slug}`;
+  const provider = { domain:{ status:'apex-path' } };
   const now = new Date().toISOString();
   if (workspace) {
     await env.DB.prepare(`UPDATE marketing_store_workspaces SET status='active',updated_at=? WHERE id=?`).bind(now, workspace.id).run();
@@ -313,7 +309,6 @@ export async function runMarketingStoreWorkspaceSchedule(env) {
     const eligible = planActive(row.plan_id, row.subscription_status);
     if (!eligible && row.status === 'active') {
       try {
-        await detachCanonical(env, row.canonical_domain);
         await env.DB.prepare("UPDATE marketing_store_workspaces SET status='suspended',updated_at=? WHERE id=?")
           .bind(new Date().toISOString(), row.id).run();
         suspended += 1;
@@ -322,7 +317,6 @@ export async function runMarketingStoreWorkspaceSchedule(env) {
       }
     } else if (eligible && row.status === 'suspended') {
       try {
-        await attachCanonical(env, row.canonical_domain);
         await env.DB.prepare("UPDATE marketing_store_workspaces SET status='active',updated_at=? WHERE id=?")
           .bind(new Date().toISOString(), row.id).run();
         restored += 1;
