@@ -77,7 +77,7 @@ test('Mission share route is private-by-link and the admin exposes explicit crea
 test('activity-share deployment is schema-first and blocks UI promotion until dependencies are ready',()=>{
   for(const marker of [
     'Deploy Activity Public Share Schema',
-    'Apply idempotent activity-share schema before UI promotion',
+    'Apply schema and privacy guard before UI promotion',
     'activity_public_readonly_shares.sql',
     'activity_public_share_minimal_projection_guard.sql',
     'minimal_projection',
