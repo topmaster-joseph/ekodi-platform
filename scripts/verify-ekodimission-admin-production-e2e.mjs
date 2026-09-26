@@ -316,7 +316,6 @@ try{
   checks.title=(await page.locator('#pageTitle').textContent())?.includes('행사 · 신청자')||false;
   checks.activityPicker=await page.locator('#activityPicker').inputValue()===activityKey;
   checks.rowVisible=await page.getByText('운영검증 참가자',{exact:true}).isVisible();
-  checks.relationshipSeparated=await page.getByText('단순 참가자',{exact:true}).isVisible();
   checks.rowNumbering=(await page.locator('[data-activity-row] .activity-seq').first().textContent())?.trim()==='1';
   checks.activityGatewayContract=(await page.locator('#activityShareButton').count())===1;
 
@@ -324,6 +323,7 @@ try{
   await row.locator('[data-field="status"]').selectOption('confirmed');
   const details=row.locator('details').first();
   if(!(await details.getAttribute('open')))await row.locator('details > summary').first().click();
+  checks.relationshipSeparated=(await row.locator('.activity-detail-meta').textContent())?.includes('단순 참가자')||false;
   await row.locator('[data-field="role"]').fill('진행지원');
   await row.locator('[data-field="companions"]').fill('동반자 검증');
   await row.locator('[data-field="followUp"]').selectOption('pending');
