@@ -5,12 +5,14 @@ on:
   pull_request:
     paths:
       - 'supabase/migrations/20260926140500_activity_public_readonly_shares.sql'
+      - 'supabase/migrations/20260927032500_activity_public_share_minimal_projection_guard.sql'
       - 'test/activity-public-share.test.mjs'
       - '.github/workflows/deploy-activity-public-share-schema.yml'
   push:
     branches: [main]
     paths:
       - 'supabase/migrations/20260926140500_activity_public_readonly_shares.sql'
+      - 'supabase/migrations/20260927032500_activity_public_share_minimal_projection_guard.sql'
       - '.github/workflows/deploy-activity-public-share-schema.yml'
 
 permissions:
@@ -22,7 +24,8 @@ concurrency:
 
 env:
   PROJECT_REF: renzehysxirjilvdxacv
-  MIGRATION: supabase/migrations/20260926140500_activity_public_readonly_shares.sql
+  BASE_MIGRATION: supabase/migrations/20260926140500_activity_public_readonly_shares.sql
+  PRIVACY_GUARD_MIGRATION: supabase/migrations/20260927032500_activity_public_share_minimal_projection_guard.sql
   PUBLISHABLE_KEY: sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
 
 jobs:
@@ -39,13 +42,17 @@ jobs:
         run: |
           set -euo pipefail
           node --test test/activity-public-share.test.mjs
-          test -f "$MIGRATION"
-          grep -Fq 'create table if not exists public.activity_public_shares' "$MIGRATION"
-          grep -Fq 'activity_admin_create_share' "$MIGRATION"
-          grep -Fq 'activity_admin_revoke_share' "$MIGRATION"
-          grep -Fq 'activity_public_share_snapshot' "$MIGRATION"
-          grep -Fq 'token_hash text not null unique' "$MIGRATION"
-          ! grep -Eiq 'drop[[:space:]]+table|truncate[[:space:]]+table' "$MIGRATION"
+          test -f "$BASE_MIGRATION"
+          test -f "$PRIVACY_GUARD_MIGRATION"
+          grep -Fq 'create table if not exists public.activity_public_shares' "$BASE_MIGRATION"
+          grep -Fq 'activity_admin_create_share' "$BASE_MIGRATION"
+          grep -Fq 'activity_admin_revoke_share' "$BASE_MIGRATION"
+          grep -Fq 'activity_public_share_snapshot' "$BASE_MIGRATION"
+          grep -Fq 'token_hash text not null unique' "$BASE_MIGRATION"
+          grep -Fq 'Privacy-minimal share policy' "$PRIVACY_GUARD_MIGRATION"
+          grep -Fq 'returns only seq/name/status/party_size' "$PRIVACY_GUARD_MIGRATION"
+          ! grep -Fq 'person_contacts' "$PRIVACY_GUARD_MIGRATION"
+          ! grep -Eiq 'drop[[:space:]]+table|truncate[[:space:]]+table' "$BASE_MIGRATION" "$PRIVACY_GUARD_MIGRATION"
 
   production:
     if: github.event_name != 'pull_request'
@@ -60,6 +67,7 @@ jobs:
       TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
     steps:
       - uses: actions/checkout@v7
+
       - name: Select Supabase deployment credential
         shell: bash
         run: |
@@ -75,19 +83,26 @@ jobs:
           echo "::add-mask::$token"
           echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
 
-      - name: Apply idempotent activity-share schema before UI promotion
+      - name: Apply schema and privacy guard before UI promotion
         shell: bash
         run: |
           set -euo pipefail
-          jq -Rs '{query:.,read_only:false}' "$MIGRATION" > /tmp/activity-share-migration.json
-          code=$(curl -sS -o /tmp/activity-share-migration-result.json -w '%{http_code}'             -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query"             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN"             -H 'Content-Type: application/json'             --data-binary @/tmp/activity-share-migration.json)
-          if [ "$code" != '201' ]; then
-            echo "Activity share migration failed with HTTP $code."
-            cat /tmp/activity-share-migration-result.json
-            exit 1
-          fi
+          for migration in "$BASE_MIGRATION" "$PRIVACY_GUARD_MIGRATION"; do
+            echo "Applying $migration"
+            jq -Rs '{query:.,read_only:false}' "$migration" > /tmp/activity-share-migration.json
+            code=$(curl -sS -o /tmp/activity-share-migration-result.json -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H 'Content-Type: application/json' \
+              --data-binary @/tmp/activity-share-migration.json)
+            if [ "$code" != '201' ]; then
+              echo "Activity share migration failed for $migration with HTTP $code."
+              cat /tmp/activity-share-migration-result.json
+              exit 1
+            fi
+          done
 
-      - name: Verify production activity-share function inventory
+      - name: Verify production activity-share function inventory and minimal projection
         shell: bash
         run: |
           set -euo pipefail
@@ -97,12 +112,23 @@ jobs:
             to_regprocedure('public.activity_admin_share_status(text,text)') is not null as share_status,
             to_regprocedure('public.activity_admin_create_share(text,text,timestamp with time zone,jsonb)') is not null as create_share,
             to_regprocedure('public.activity_admin_revoke_share(uuid)') is not null as revoke_share,
-            to_regprocedure('public.activity_public_share_snapshot(text)') is not null as public_snapshot;
+            to_regprocedure('public.activity_public_share_snapshot(text)') is not null as public_snapshot,
+            (
+              position('person_contacts' in lower(pg_get_functiondef('public.activity_public_share_snapshot(text)'::regprocedure)))=0
+              and position('phone' in lower(pg_get_functiondef('public.activity_public_share_snapshot(text)'::regprocedure)))=0
+              and position('email' in lower(pg_get_functiondef('public.activity_public_share_snapshot(text)'::regprocedure)))=0
+              and position('phone' in lower(pg_get_functiondef('public.activity_admin_create_share(text,text,timestamp with time zone,jsonb)'::regprocedure)))=0
+              and position('email' in lower(pg_get_functiondef('public.activity_admin_create_share(text,text,timestamp with time zone,jsonb)'::regprocedure)))=0
+            ) as minimal_projection;
           SQL
           jq -Rs '{query:.,read_only:true}' /tmp/activity-share-proof.sql > /tmp/activity-share-proof.json
-          code=$(curl -sS -o /tmp/activity-share-proof-result.json -w '%{http_code}'             -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query"             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN"             -H 'Content-Type: application/json'             --data-binary @/tmp/activity-share-proof.json)
+          code=$(curl -sS -o /tmp/activity-share-proof-result.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/activity-share-proof.json)
           [ "$code" = '201' ]
-          for marker in '"share_table":true' '"share_status":true' '"create_share":true' '"revoke_share":true' '"public_snapshot":true'; do
+          for marker in '"share_table":true' '"share_status":true' '"create_share":true' '"revoke_share":true' '"public_snapshot":true' '"minimal_projection":true'; do
             grep -Fq "$marker" /tmp/activity-share-proof-result.json
           done
 
@@ -111,7 +137,11 @@ jobs:
         run: |
           set -euo pipefail
           endpoint="https://$PROJECT_REF.supabase.co/rest/v1/rpc/activity_public_share_snapshot"
-          code=$(curl -sS -o /tmp/activity-share-public.json -w '%{http_code}' -X POST "$endpoint"             -H "apikey: $PUBLISHABLE_KEY"             -H 'Content-Type: application/json'             --data '{"p_token":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')
+          code=$(curl -sS -o /tmp/activity-share-public.json -w '%{http_code}' \
+            -X POST "$endpoint" \
+            -H "apikey: $PUBLISHABLE_KEY" \
+            -H 'Content-Type: application/json' \
+            --data '{"p_token":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')
           [ "$code" = '200' ]
           grep -Eq '"ok"[[:space:]]*:[[:space:]]*false' /tmp/activity-share-public.json
-          echo 'Activity public-share schema is production-ready before UI promotion.'
+          echo 'Activity public-share schema is production-ready and privacy-minimal before UI promotion.'
