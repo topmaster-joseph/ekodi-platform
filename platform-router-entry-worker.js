@@ -66,6 +66,7 @@ const EKODIBIZ_ASSET_PREFIX='/_ekodi/ekodibiz/';
 const EKODIBIZ_ASSETS=new Set(['style.css','site.js']);
 const EKODIBIZ_NAMESPACE_PREFIX='/ekodibiz/';
 const WORKSPACE_ASSET_PREFIX='/_ekodi/space/';
+const EKODIMISSION_APEX_PREFIX='/ekodimission';
 const DEPLOYMENT_PROBE_PATH='/deployment-probe';
 const STORE_GATEWAY_PATHS=new Set(['/cmpmyi','/cmpmyi/']);
 const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js','storefront.json','storefront.css','jadam-storefront.css']);
@@ -195,6 +196,26 @@ async function routePublicWorkspace(request,env){
   return injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace',{progressiveHome,contextKind:'workspace'});
 }
 
+function isEkodiMissionSpacePath(pathname){
+  const raw=String(pathname||'').toLowerCase();
+  const path=raw.length>1?raw.replace(/\/+$/,''):raw;
+  if(path!==EKODIMISSION_APEX_PREFIX&&!path.startsWith(EKODIMISSION_APEX_PREFIX+'/'))return false;
+  if(path===EKODIMISSION_APEX_PREFIX+'/live'||path.startsWith(EKODIMISSION_APEX_PREFIX+'/live/'))return false;
+  if(path===EKODIMISSION_APEX_PREFIX+'/admin'||path.startsWith(EKODIMISSION_APEX_PREFIX+'/admin/'))return false;
+  return true;
+}
+async function routeEkodiMissionSpace(request,env){
+  if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
+  const upstream=await env.SPACE.fetch(request);
+  const routed=new Response(upstream.body,upstream);
+  routed.headers.set('x-ekodi-workspace-gateway','space-service-binding');
+  if(routed.headers.get('x-ekodi-independent-site')==='true'){
+    routed.headers.set('x-ekodi-public-surface','independent-workspace-site');
+    return injectEkodiTenantReadability(routed,{operatingSpace:false});
+  }
+  return routed;
+}
+
 async function routeTaxFinance(request,env,ctx){
   if(env?.FINANCE?.fetch){
     try{
@@ -288,6 +309,7 @@ async function routePlatform(request,env,ctx){
         if(!liveTenant.dedicated)return tenantLivePage(liveTenant);
       }
     }
+    if(host===PUBLIC_HOST&&isEkodiMissionSpacePath(url.pathname))return routeEkodiMissionSpace(request,env);
     const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
     if(canonical)return canonical;
 
