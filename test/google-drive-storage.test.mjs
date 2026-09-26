@@ -128,8 +128,8 @@ test('Admin Worker proxies Storage through a Cloudflare service binding', () => 
 });
 
 test('Storage Access is exact-target fail-closed with a narrow OAuth callback bypass', () => {
-  assert.match(accessScript, /const targetDomain = 'drive\.ekodi\.kr'/);
-  assert.match(accessScript, /const callbackDomain = 'drive\.ekodi\.kr\/api\/control\/storage\/google\/callback'/);
+  assert.match(accessScript, /const targetDomain = 'ekodi\.kr\/storage'/);
+  assert.match(accessScript, /const callbackDomain = 'ekodi\.kr\/storage\/api\/control\/storage\/google\/callback'/);
   assert.match(accessScript, /destinations: \[\{ type: 'public', uri: target \}\]/);
   assert.match(accessScript, /appTargetsExact/);
   assert.match(accessScript, /cloudflare_account_member/);
@@ -146,7 +146,7 @@ test('storage worker handles CORS preflight before app auth and mirrors credenti
   assert.match(worker, /access-control-allow-credentials','true/);
   assert.match(worker, /access-control-allow-origin',origin/);
   assert.match(worker, /function withCors\(/);
-  assert.match(config, /ALLOWED_ORIGINS = "https:\/\/admin\.ekodi\.kr,https:\/\/ekodi\.kr,https:\/\/my\.ekodi\.kr"/);
+  assert.match(config, /ALLOWED_ORIGINS = "https:\/\/ekodi\.kr"/);
 });
 
 test('R2 binding is source-controlled so redeployments cannot drop it', () => {
@@ -160,7 +160,7 @@ test('canonical EKODI archive folders are source-controlled', () => {
     assert.match(migration, new RegExp(folder));
   }
   assert.match(worker, /ekodi-storage-control/);
-  assert.match(config, /drive\.ekodi\.kr/);
+  assert.doesNotMatch(config, /[a-z0-9-]+\.ekodi\.kr/);
 });
 
 test('new storage worker may bootstrap exactly through explicit manifest opt-in', () => {
