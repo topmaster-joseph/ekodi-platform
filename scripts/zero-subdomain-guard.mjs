@@ -150,6 +150,45 @@ if (!fs.existsSync(sharedReleaseManifestPath)) {
   }
 }
 
+
+const repoScanIgnored = new Set([
+  'scripts/zero-subdomain-guard.mjs',
+  'scripts/validate-constitution.mjs',
+  'scripts/validate-canonical-boundary-sync.mjs',
+  'supabase/migrations/20260926095500_finalize_apex_path_db_urls.sql',
+]);
+const textExtensions = new Set(['.js','.mjs','.cjs','.ts','.tsx','.jsx','.json','.md','.html','.css','.toml','.yml','.yaml','.txt','.sql','.sh','.cmd','.ps1','.xml']);
+function walkTextFiles(dir, base='') {
+  const out=[];
+  for (const entry of fs.readdirSync(dir,{withFileTypes:true})) {
+    if (['.git','node_modules','dist'].includes(entry.name)) continue;
+    const relative=path.join(base,entry.name).replaceAll('\\','/');
+    const full=path.join(dir,entry.name);
+    if (entry.isDirectory()) out.push(...walkTextFiles(full,relative));
+    else if (textExtensions.has(path.extname(entry.name).toLowerCase()) || entry.name.startsWith('.') || ['_headers','_redirects'].includes(entry.name)) out.push(relative);
+  }
+  return out;
+}
+const literalChildHost=/(?<!@)\b(?:[a-z0-9-]+\.)+ekodi\.kr\b|\*\.ekodi\.kr\b/ig;
+const dynamicChildHostPatterns=[
+  /\.endsWith\(\s*['"]\.ekodi\.kr['"]\s*\)/g,
+  /\.endsWith\(\s*`\.ekodi\.kr`\s*\)/g,
+  /\\\.ekodi\\\.kr/g,
+  /\$\{[^}]+\}\.ekodi\.kr/g,
+  /https?:\/\/\$\{[^}]+\}\.ekodi\.kr/g,
+];
+for (const file of walkTextFiles(root)) {
+  if (repoScanIgnored.has(file)) continue;
+  let text='';
+  try { text=fs.readFileSync(path.join(root,file),'utf8'); } catch { continue; }
+  const literal=[...text.matchAll(literalChildHost)].map(match=>match[0]);
+  if (literal.length) fail(`${file}: EKODI child-host reference remains: ${[...new Set(literal)].slice(0,8).join(', ')}`);
+  for (const rx of dynamicChildHostPatterns) {
+    rx.lastIndex=0;
+    if (rx.test(text)) fail(`${file}: dynamic EKODI child-host construction/acceptance remains: ${rx}`);
+  }
+}
+
 const ignoredFiles = new Set(['scripts/zero-subdomain-guard.mjs','supabase/migrations/20260920154500_retire_api_subdomain_mcp_resource.sql']);
 const hostPattern = /(?<!@)\b(?:[a-z0-9-]+\.)+ekodi\.kr\b|\*\.ekodi\.kr\b/ig;
 const removedHosts = new Map();
