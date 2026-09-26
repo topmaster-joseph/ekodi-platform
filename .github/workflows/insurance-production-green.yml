@@ -254,7 +254,7 @@ jobs:
           printf '%s' "$bridge" | grep -Fq 'ekodi-insurance-api-green.topmaster-joseph.workers.dev'
           printf '%s' "$bridge" | grep -Fq 'serverConsultationPanel'
           printf '%s' "$admin_headers" | grep -Eqi '^HTTP/.* 302'
-          printf '%s' "$admin_headers" | grep -Eqi '^location: https://admin\.ekodi\.kr/'
+          printf '%s' "$admin_headers" | grep -Eqi '^location: https://ekodi\.kr/admin/'
           echo 'Production Green UI verified. No production custom domain was changed.'
 
       - name: Green readiness summary
