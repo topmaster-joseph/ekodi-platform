@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+
 const API = 'https://api.cloudflare.com/client/v4';
 const accountId = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
 const token = String(process.env.CLOUDFLARE_API_TOKEN || '').trim();
