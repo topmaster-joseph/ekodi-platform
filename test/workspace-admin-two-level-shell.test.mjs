@@ -40,6 +40,11 @@ test('Mission admin root stays on overview and applicant roster opens from its m
   assert.match(script,/activityCheckinFilter/);
   assert.match(script,/data-checkin/);
   assert.match(script,/공개 행사 보기/);
+  assert.match(script,/외부 공유/);
+  assert.match(script,/activity_admin_share_status/);
+  assert.match(script,/activity_admin_create_share/);
+  assert.match(script,/activity_admin_revoke_share/);
+  assert.match(script,/전화번호 · 이메일 · 역할 · 후속관리 · 내부 메모 · EKODI ID/);
   assert.match(script,/신청자 관리/);
   assert.match(script,/activity-summary/);
   assert.match(script,/activity-toolbar/);

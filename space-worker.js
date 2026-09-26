@@ -15,13 +15,55 @@ const MISSION_EVENT_SLUG='260926-chuseok-open-table';
 const MISSION_EVENT_PATH='/ekodimission/apply/260926-open-table';
 const MISSION_EVENT_LEGACY_PATHS=new Set(['/ekodimission/activities/260926-chuseok-open-table','/ekodimission/activities/260925-chuseok-open-table','/ekodimission/activities/2026-chuseok-open-table']);
 const MISSION_EVENT_APPLICATION_API=`/ekodimission/api/activities/${MISSION_EVENT_RECORD_KEY}/applications`;
+const MISSION_SHARE_PATH_RE=/^\/ekodimission\/share\/([A-Za-z0-9_-]{32,200})$/;
 const EKODIMISSION_PAGES=new Map([['/ekodimission','/ekodimission.page'],['/ekodimission/vision','/ekodimission-vision.page'],['/ekodimission/activities','/ekodimission-activities.page'],[MISSION_EVENT_PATH,'/ekodimission-open-table-apply.page'],['/ekodimission/prayer','/ekodimission-prayer.page'],['/ekodimission/participate','/ekodimission-participate.page'],['/ekodimission/partners','/ekodimission-partners.page'],['/ekodimission/stories','/ekodimission-stories.page'],['/ekodimission/give','/ekodimission-give.page'],['/ekodimission/transparency','/ekodimission-transparency.page'],['/ekodimission/contact','/ekodimission-contact.page']]);
-const EKODIMISSION_ASSETS=new Map([['/ekodimission/assets/site.css','/ekodimission.css'],['/ekodimission/assets/site.js','/ekodimission.js'],['/ekodimission/assets/shell.css','/ekodimission-shell.css'],['/ekodimission/assets/shell.js','/ekodimission-shell.js'],['/ekodimission/assets/mission-table-hero.svg','/mission-table-hero.svg'],['/ekodimission/assets/open-table-hero-260926.svg','/open-table-hero-260926.svg'],['/ekodimission/assets/open-table-meal-260925.jpg','/open-table-meal-260925.jpg']]);
+const EKODIMISSION_ASSETS=new Map([['/ekodimission/assets/site.css','/ekodimission.css'],['/ekodimission/assets/site.js','/ekodimission.js'],['/ekodimission/assets/shell.css','/ekodimission-shell.css'],['/ekodimission/assets/shell.js','/ekodimission-shell.js'],['/ekodimission/assets/mission-table-hero.svg','/mission-table-hero.svg'],['/ekodimission/assets/open-table-hero-260926.svg','/open-table-hero-260926.svg'],['/ekodimission/assets/open-table-meal-260925.jpg','/open-table-meal-260925.jpg'],['/ekodimission/assets/share.css','/ekodimission-share.css']]);
 function normalizedMissionPath(pathname){const clean=String(pathname||'').replace(/\/+$/,'');return clean||'/'}
 function publishMissionHtml(html){return String(html||'').replace(/<meta name="robots" content="noindex,nofollow,noarchive">/gi,'<meta name="robots" content="index,follow">').replace(/<div class="review-banner">[\s\S]*?<\/div>/i,'')}
 function brandSiteResponse(response){response.headers.set('x-ekodi-independent-site','true');response.headers.set('x-ekodi-site-class','brand-site');response.headers.set('x-ekodi-workspace','ekodimission');response.headers.set('x-ekodi-publication-status','published');return response;}
+const MISSION_SHARE_STATUS_LABEL=Object.freeze({applied:'신청',waitlist:'대기',confirmed:'확정',attended:'참석',no_show:'불참',cancelled:'취소'});
+function missionShareDate(value){
+  if(!value)return '';
+  const date=new Date(value);if(Number.isNaN(date.getTime()))return '';
+  return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'long',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(date);
+}
+function missionShareResponse(env,html,status=200){
+  const response=withHeaders(env,new Response(html,{status,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}}),'ekodimission-share');
+  response.headers.set('x-ekodi-independent-site','true');
+  response.headers.set('x-ekodi-site-class','brand-site');
+  response.headers.set('x-ekodi-workspace','ekodimission');
+  response.headers.set('x-ekodi-publication-status','private-share');
+  response.headers.set('x-robots-tag','noindex, nofollow, noarchive');
+  return response;
+}
+function missionShareUnavailable(env,status=404){
+  return missionShareResponse(env,'<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><title>공유 링크 확인 | EKODI</title><link rel="stylesheet" href="/ekodimission/assets/share.css"></head><body><main class="mission-share-page"><p class="mission-share-kicker">EKODI MISSION · READ ONLY</p><h1>사용할 수 없는 공유 링크입니다.</h1><p class="mission-share-meta">링크가 만료되었거나 공유가 중지되었을 수 있습니다. 행사 관리자에게 새 링크를 요청해 주세요.</p></main></body></html>',status);
+}
+function renderMissionShareHtml(data){
+  const activity=data?.activity||{},share=data?.share||{},policy=share?.field_policy||{},participants=Array.isArray(data?.participants)?data.participants:[];
+  const showName=policy.name!==false,showStatus=policy.status!==false,showParty=policy.party_size!==false;
+  const headers=['<th scope="col">연번</th>',showName?'<th scope="col">이름</th>':'',showStatus?'<th scope="col">상태</th>':'',showParty?'<th scope="col">인원</th>':''].join('');
+  const rows=participants.map(item=>'<tr><td>'+htmlText(item?.seq||'')+'</td>'+(showName?'<td>'+htmlText(item?.name||'-')+'</td>':'')+(showStatus?'<td>'+htmlText(MISSION_SHARE_STATUS_LABEL[item?.status]||item?.status||'-')+'</td>':'')+(showParty?'<td>'+htmlText(item?.party_size||1)+'</td>':'')+'</tr>').join('');
+  const start=missionShareDate(activity.starts_at),end=missionShareDate(activity.ends_at),venue=String(activity.venue||'').trim();
+  const meta=[start,end&&end!==start?'종료 '+end:'',venue].filter(Boolean).map(htmlText).join(' · ');
+  const expiry=missionShareDate(share.expires_at);
+  return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><title>'+htmlText(activity.title||'신청자 명단')+' · 읽기전용</title><link rel="stylesheet" href="/ekodimission/assets/share.css"></head><body><main class="mission-share-page"><p class="mission-share-kicker">EKODI MISSION · READ ONLY SHARE</p><h1>'+htmlText(activity.title||'신청자 명단')+'</h1><p class="mission-share-meta">'+(meta||'행사 신청자 명단')+'</p><div class="mission-share-notice">이 페이지는 읽기전용 공유본입니다. 전화번호·이메일·역할·후속관리·내부 메모는 포함하지 않습니다.</div><div class="mission-share-table-wrap"><table class="mission-share-table"><thead><tr>'+headers+'</tr></thead><tbody>'+(rows||'<tr><td class="mission-share-empty" colspan="'+(1+Number(showName)+Number(showStatus)+Number(showParty))+'">표시할 신청자가 없습니다.</td></tr>')+'</tbody></table></div><p class="mission-share-footer">공유 만료: '+htmlText(expiry||'관리자 설정 시각')+' · 이 링크는 만료되거나 관리자가 중지하면 더 이상 열리지 않습니다.</p></main></body></html>';
+}
+async function routeMissionShare(request,env,token){
+  if(!['GET','HEAD'].includes(request.method))return missionShareUnavailable(env,405);
+  if(env.DATA_ENABLED!=='true'||!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return missionShareUnavailable(env,503);
+  try{
+    const upstream=await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/activity_public_share_snapshot`,{method:'POST',headers:{apikey:env.SUPABASE_PUBLISHABLE_KEY,'content-type':'application/json','cache-control':'no-store'},body:JSON.stringify({p_token:token})});
+    if(!upstream.ok)return missionShareUnavailable(env,upstream.status>=500?503:404);
+    const data=await upstream.json().catch(()=>null);
+    if(!data?.ok)return missionShareUnavailable(env,404);
+    const html=renderMissionShareHtml(data);
+    return missionShareResponse(env,request.method==='HEAD'?null:html,200);
+  }catch{return missionShareUnavailable(env,503)}
+}
 async function routeEkodiMission(request,env){
-  const url=new URL(request.url);const pathname=normalizedMissionPath(url.pathname);
+  const url=new URL(request.url);const pathname=normalizedMissionPath(url.pathname);const shareMatch=pathname.match(MISSION_SHARE_PATH_RE);
+  if(shareMatch)return routeMissionShare(request,env,shareMatch[1]);
   if(MISSION_EVENT_LEGACY_PATHS.has(pathname)){const target=new URL(MISSION_EVENT_PATH+url.search,'https://ekodi.kr');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-route':'ekodimission-event-canonical','x-ekodi-publication-status':'published'}});}
   if(pathname==='/ekodimission/live'){
     const tenant=realtimeTenant('ekodimission');if(!tenant)return withHeaders(env,new Response('Not Found',{status:404}),'ekodimission-not-found');
