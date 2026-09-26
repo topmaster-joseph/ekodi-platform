@@ -194,95 +194,101 @@ signedOutPage.on('console',message=>{if(message.type()==='error')signedOutConsol
 signedOutPage.on('pageerror',error=>signedOutPageErrors.push(String(error?.stack||error?.message||error)));
 signedOutPage.on('response',response=>captureWorkspaceAsset(signedOutAssetResponses,response));
 try{
-  await signedOutPag  return jsonResponse(route,{message:'unexpected direct activity rpc '+name},500);ive:false,
+  await signedOutPage.goto(activityUrl,{waitUntil:'domcontentloaded'});
+  await signedOutPage.waitForFunction(()=>document.querySelector('#adminNav')?.textContent?.includes('행사 · 신청자'));
+  await signedOutPage.waitForFunction(()=>document.querySelector('#pageState')?.textContent?.includes('로그인 필요'));
+  const loginAnchor=signedOutPage.locator('#mainPanel a.button.primary[href*="/auth/"]').first();
+  await loginAnchor.waitFor({state:'visible'});
+  const loginHref=await loginAnchor.getAttribute('href');
+  if(!loginHref)throw new Error('Mission admin signed-out login link missing');
+  const loginUrl=new URL(loginHref);
+  const expectedReturn=new URL(activityUrl);
+  if(loginUrl.origin!==origin||loginUrl.pathname!=='/auth/'||loginUrl.searchParams.get('site')!=='mission'||loginUrl.searchParams.get('direct')!=='1'){
+    throw new Error('Mission admin auth scope is not canonical: '+loginUrl.href);
+  }
+  const returnTo=new URL(loginUrl.searchParams.get('return_to')||'');
+  if(returnTo.origin!==expectedReturn.origin||returnTo.pathname!==expectedReturn.pathname||returnTo.search!==expectedReturn.search){
+    throw new Error('Mission admin return_to lost the applicant-management route: '+loginUrl.href);
+  }
+}catch(error){
+  await signedOutPage.screenshot({path:path.join(artifactsDir,'signed-out-failure.png'),fullPage:true}).catch(()=>{});
+  const signedOutState=await signedOutPage.evaluate(()=>({
+    url:location.href,
+    title:document.title,
+    pageState:document.querySelector('#pageState')?.textContent||'',
+    workspaceName:document.querySelector('#workspaceName')?.textContent||'',
+    pageTitle:document.querySelector('#pageTitle')?.textContent||'',
+    mainText:document.querySelector('#mainPanel')?.textContent?.trim().slice(0,1200)||'',
+    hasLoginLink:Boolean(document.querySelector('#mainPanel a.button.primary[href*="/auth/"]')),
+    htmlRuntime:document.documentElement.dataset.ekodiWorkspaceAdminRuntime||'',
+    scriptRuntime:String(window.__EKODI_WORKSPACE_ADMIN_RUNTIME__||''),
+  })).catch(()=>({}));
+  const report={
+    generatedAt:new Date().toISOString(),
+    targetUrl,
+    activityUrl,
+    passed:false,
+    stage:'signed-out-auth-boundary',
+    mode:'production-signed-out-surface',
+    checks:{authSiteMission:false,authReturnToExact:false,preAuthNavigationVisible:false},
+    mutationCalls:[],
+    assetResponses:signedOutAssetResponses,
+    diagnostics:{
+      signedOutState,
+      pageErrors:signedOutPageErrors,
+      consoleErrors:signedOutConsoleErrors.slice(-40),
+    },
+    error:String(error?.stack||error?.message||error),
+  };
+  await fs.writeFile(path.join(artifactsDir,'report.json'),JSON.stringify(report,null,2));
+  await signedOutContext.close().catch(()=>{});
+  await browser.close().catch(()=>{});
+  throw error;
+}
+await signedOutContext.close();
+
+const context=await browser.newContext({viewport:{width:1440,height:1100}});
+const page=await context.newPage();
+page.setDefaultTimeout(12_000);
+page.setDefaultNavigationTimeout(20_000);
+
+page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text())});
+page.on('pageerror',error=>pageErrors.push(String(error?.stack||error?.message||error)));
+page.on('response',response=>captureWorkspaceAsset(assetResponses,response));
+
+await page.addInitScript(()=>{
+  const now=Math.floor(Date.now()/1000);
+  sessionStorage.setItem('ekodi-workspace-admin-session',JSON.stringify({
+    accessToken:'synthetic-mission-production-ui-token',
+    refreshToken:'',
+    expiresAt:now+3600,
+    user:{id:'dddddddd-dddd-4ddd-8ddd-dddddddddddd',email:'mission-ui-e2e@invalid.ekodi'},
+  }));
+});
+
+await page.route('https://renzehysxirjilvdxacv.supabase.co/rest/v1/rpc/**',async route=>{
+  const request=route.request();
+  const name=new URL(request.url()).pathname.split('/').pop();
+  const body=requestBody(request);
+
+  if(name==='current_site_activity_contexts'){
+    return jsonResponse(route,[{
+      workspace_key:'tenant:11111111-1111-4111-8111-111111111111',
+      site:'mission',
+      tenant_id:'11111111-1111-4111-8111-111111111111',
+      tenant:'ekodimission',
+      workspace_name:'에코디선교회',
+      workspace_kind:'mission',
+      authorization_role:'tenant_admin',
+      activity_role:'mission_operator',
+      activity_role_label:'선교회 운영자',
+      authority_scope:'tenant',
+      platform_admin_active:false,
       operating_model:'customer-site',
     }]);
   }
 
-  if(name==='activity_admin_snapshot'){
-    if(body.p_workspace_slug!=='ekodimission') return jsonResponse(route,{message:'wrong workspace'},400);
-    return jsonResponse(route,snapshot());
-  }
-
-  if(name==='activity_admin_share_status'){
-    if(body.p_workspace_slug!=='ekodimission'||body.p_activity_key!==activityKey)return jsonResponse(route,{message:'wrong share scope'},400);
-    return jsonResponse(route,shareRecord?{
-      active:true,
-      share_id:shareRecord.share_id,
-      expires_at:shareRecord.expires_at,
-      field_policy:shareRecord.field_policy,
-      created_at:shareRecord.created_at,
-      last_accessed_at:null,
-      access_count:0,
-    }:{active:false});
-  }
-
-  if(name==='activity_admin_create_share'){
-    mutationCalls.push({name,body});
-    shareRecord={
-      share_id:'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
-      expires_at:body.p_expires_at,
-      field_policy:body.p_field_policy||{name:true,status:true,party_size:true},
-      created_at:new Date().toISOString(),
-    };
-    return jsonResponse(route,{ok:true,share_id:shareRecord.share_id,token:shareToken,share_path:'/ekodimission/share/'+shareToken,expires_at:shareRecord.expires_at,field_policy:shareRecord.field_policy});
-  }
-
-  if(name==='activity_admin_revoke_share'){
-    mutationCalls.push({name,body});
-    if(!shareRecord||body.p_share_id!==shareRecord.share_id)return jsonResponse(route,{message:'ACTIVITY_SHARE_NOT_FOUND'},404);
-    const id=shareRecord.share_id;shareRecord=null;return jsonResponse(route,{ok:true,share_id:id,active:false});
-  }
-
-  if(name==='activity_admin_update_participation'){
-    const item=participants.find(row=>row.participation_id===body.p_participation_id);
-    if(!item)return jsonResponse(route,{message:'PARTICIPATION_NOT_FOUND'},404);
-    mutationCalls.push({name,body});
-    if(body.p_status)item.status=body.p_status;
-    if(body.p_participant_role!==undefined&&body.p_participant_role!==null)item.participant_role=body.p_participant_role;
-    if(body.p_party_size!==undefined&&body.p_party_size!==null)item.party_size=Number(body.p_party_size);
-    if(Array.isArray(body.p_companions))item.companions=body.p_companions;
-    if(body.p_support_notes!==undefined&&body.p_support_notes!==null)item.support_notes=body.p_support_notes;
-    if(body.p_follow_up_status!==undefined&&body.p_follow_up_status!==null)item.follow_up_status=body.p_follow_up_status;
-    if(body.p_follow_up_note!==undefined&&body.p_follow_up_note!==null)item.follow_up_note=body.p_follow_up_note;
-    if(body.p_status==='attended')item.checked_in_at=new Date().toISOString();
-    return jsonResponse(route,{ok:true,participation_id:item.participation_id,status:item.status,checked_in_at:item.checked_in_at});
-  }
-
-  if(name==='activity_admin_add_participant'){
-    mutationCalls.push({name,body});
-    if(body.p_privacy_consent!==true)return jsonResponse(route,{message:'PRIVACY_CONSENT_REQUIRED'},400);
-    const item={
-      participation_id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2',
-      activity_id:activity.id,
-      activity_key:activityKey,
-      activity_title:activity.title,
-      person_id:'cccccccc-cccc-4ccc-8ccc-ccccccccccc2',
-      ekodi_id:'EKD-PRODUCTION-E2E-2',
-      name:String(body.p_name||''),
-      phone:String(body.p_phone||''),
-      email:String(body.p_email||''),
-      status:String(body.p_status||'applied'),
-      participant_role:String(body.p_participant_role||'participant'),
-      party_size:Number(body.p_party_size||1),
-      companions:Array.isArray(body.p_companions)?body.p_companions:[],
-      language:String(body.p_language||'ko'),
-      dietary_notes:'',
-      support_notes:String(body.p_support_notes||''),
-      media_consent:'confirm_on_site',
-      follow_up_status:String(body.p_follow_up_status||'none'),
-      follow_up_note:String(body.p_follow_up_note||''),
-      source_channel:String(body.p_source_channel||'admin'),
-      source_ref:'production-ui-synthetic',
-      submitted_at:new Date().toISOString(),
-      checked_in_at:body.p_status==='attended'?new Date().toISOString():null,
-      relationships:[],
-    };
-    participants.push(item);
-    return jsonResponse(route,{ok:true,person_id:item.person_id,participation_id:item.participation_id,status:item.status});
-  }
-
-  return jsonResponse(route,{message:'unexpected rpc '+name},500);
+  return jsonResponse(route,{message:'unexpected direct activity rpc '+name},500);
 });
 
 await page.route('**/ekodimission/api/admin/activity-rpc',async route=>{
@@ -312,7 +318,7 @@ try{
   checks.rowVisible=await page.getByText('운영검증 참가자',{exact:true}).isVisible();
   checks.relationshipSeparated=await page.getByText('단순 참가자',{exact:true}).isVisible();
   checks.rowNumbering=(await page.locator('[data-activity-row] .activity-seq').first().textContent())?.trim()==='1';
-  checks.activityGatewayContract=(await page.evaluate(()=>document.querySelector('#activityShareButton')!==null))===true;
+  checks.activityGatewayContract=(await page.locator('#activityShareButton').count())===1;
 
   const row=page.locator('[data-activity-row]').filter({hasText:'운영검증 참가자'}).first();
   await row.locator('[data-field="status"]').selectOption('confirmed');
