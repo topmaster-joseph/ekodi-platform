@@ -20,12 +20,12 @@ test('activity public shares store only a hash and remain expiring and revocable
 
 test('share administration stays tenant-authorized while the public projection is narrowly anonymous',()=>{
   for(const signature of [
-    'activity_admin_share_status\(text,text\)',
-    'activity_admin_create_share\(text,text,timestamptz,jsonb\)',
-    'activity_admin_revoke_share\(uuid\)'
+    'activity_admin_share_status(text,text)',
+    'activity_admin_create_share(text,text,timestamptz,jsonb)',
+    'activity_admin_revoke_share(uuid)'
   ]){
-    assert.match(sql,new RegExp(`revoke all on function public\\.${signature} from public, anon, authenticated;`));
-    assert.match(sql,new RegExp(`grant execute on function public\\.${signature} to authenticated, service_role;`));
+    assert.ok(sql.includes(`revoke all on function public.${signature} from public, anon, authenticated;`),signature);
+    assert.ok(sql.includes(`grant execute on function public.${signature} to authenticated, service_role;`),signature);
   }
   assert.match(sql,/revoke all on function public\.activity_public_share_snapshot\(text\) from public, anon, authenticated;/);
   assert.match(sql,/grant execute on function public\.activity_public_share_snapshot\(text\) to anon, authenticated, service_role;/);
