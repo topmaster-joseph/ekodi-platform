@@ -1,6 +1,6 @@
 {
-  "version": "1.26.0",
-  "effectiveDate": "2026-09-24",
+  "version": "1.27.0",
+  "effectiveDate": "2026-09-27",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -118,7 +118,36 @@
     "userFacingEngineAddressesForbidden": true,
     "canonicalHumanAndManagementHost": "ekodi.kr",
     "subdomainUserEntryForbidden": true,
-    "allEkodiOwnedSubdomainsForbidden": true
+    "allEkodiOwnedSubdomainsForbidden": true,
+    "forceExecutionRule": {
+      "id": "APEX-PATH-ONLY-001",
+      "status": "enforced",
+      "canonicalHost": "ekodi.kr",
+      "ekodiOwnedChildHostsAllowed": false,
+      "redirectsOrCompatibilityAliasesAllowed": false,
+      "dedicatedRuntimeApiHostsAllowed": false,
+      "dynamicChildHostConstructionAllowed": false,
+      "deploymentRouteChildHostsAllowed": false,
+      "corsChildHostOriginsAllowed": false,
+      "databaseStoredEkodiChildHostsAllowed": false,
+      "correctionOrder": [
+        "detect",
+        "replace-with-canonical-path",
+        "verify-source",
+        "verify-database",
+        "verify-production",
+        "block-regression"
+      ],
+      "completionRule": "zero-ekodi-owned-child-host-reference-and-zero-live-database-reference",
+      "enforcement": [
+        "zero-subdomain-guard",
+        "constitution-validation",
+        "boundary-validation",
+        "database-canonical-url-audit"
+      ],
+      "owner": "ekodi-orchestrator",
+      "finalAuthority": "ekodi-platform-super-administrator"
+    }
   },
   "dataSovereignty": {
     "ekodiCoreOwns": [
