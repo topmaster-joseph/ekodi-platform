@@ -3,7 +3,7 @@
 
 update auth.oauth_authorizations
    set resource = 'https://ekodi.kr/mcp'
- where resource in ('https://' || 'api.' || 'ekodi.kr/mcp','https://ekodi.kr/api/mcp');
+ where resource = 'https://ekodi.kr/api/mcp';
 
 create or replace function public.current_ekodi_mcp_identity()
 returns jsonb
