@@ -155,7 +155,6 @@ const repoScanIgnored = new Set([
   'scripts/zero-subdomain-guard.mjs',
   'scripts/validate-constitution.mjs',
   'scripts/validate-canonical-boundary-sync.mjs',
-  'supabase/migrations/20260926095500_finalize_apex_path_db_urls.sql',
 ]);
 const textExtensions = new Set(['.js','.mjs','.cjs','.ts','.tsx','.jsx','.json','.md','.html','.css','.toml','.yml','.yaml','.txt','.sql','.sh','.cmd','.ps1','.xml']);
 function walkTextFiles(dir, base='') {
@@ -199,7 +198,7 @@ for (const file of walkTextFiles(root)) {
   }
 }
 
-const ignoredFiles = new Set(['scripts/zero-subdomain-guard.mjs','supabase/migrations/20260920154500_retire_api_subdomain_mcp_resource.sql']);
+const ignoredFiles = new Set(['scripts/zero-subdomain-guard.mjs']);
 const hostPattern = /(?<!@)\b(?:[a-z0-9-]+\.)+ekodi\.kr\b|\*\.ekodi\.kr\b/ig;
 const removedHosts = new Map();
 const addedHosts = new Map();
