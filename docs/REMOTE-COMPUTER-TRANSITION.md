@@ -20,6 +20,21 @@ The bridge policy is not evidence that native cutover has happened. Native compl
 
 Whenever browser/runtime/desktop virtualization or computer-use automation is required, the normal route is an EKODI-owned capability first: the Autonomous Execution Fabric, EKODI Background Browser Worker, or EKODI Native Remote Computer capability as applicable. External browser/computer-use services remain temporary, replaceable fallback adapters only while the required native capability is not ready, unavailable, not yet implemented, or has a verified runtime/capacity failure. Every such fallback records the reason and the native capability gap; it must not become a permanent dependency by convenience.
 
+## Mandatory cloud-first execution rule
+
+For source, database, validation and deployment work, EKODI must not treat a remote desktop bridge as a required execution dependency.
+
+Execution precedence is enforced as follows:
+
+1. Repository-native/API path (GitHub branch, PR, CI and guarded deployment).
+2. Service-native API path (for example Supabase project/database/runtime tooling) when the task belongs to that service.
+3. EKODI-owned background or native execution capability after its readiness gate passes.
+4. External remote desktop/computer bridge only for work that genuinely requires a user-owned machine or local-only application/file.
+
+If any lower-priority route is unavailable, quota-exhausted, rate-limited or temporarily disconnected, the orchestrator must continue through an authorized higher-priority independent path whenever that path can complete the same task safely. A remote-desktop quota failure must not stop repository-native development, CI validation, service-native operations, or guarded cloud deployment.
+
+Production rules remain unchanged: every mutation uses an isolated task branch/sandbox, protected production branches are not edited directly, and completion requires guarded merge/deployment plus production verification evidence. Fallback routing must never weaken authorization, isolation, review, rollback or verification gates.
+
 ## Native cutover gate
 
 Cutover requires all of the following:
