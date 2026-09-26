@@ -45,7 +45,7 @@ for (const service of normalized) {
   if (RESERVED_INTERNAL.has(service.id)) throw new Error(`Internal component cannot inherit user membership: ${service.id}`);
   if (!service.name) throw new Error(`Missing service name: ${service.id}`);
   const apexPathService = service.domain === 'ekodi.kr' && /^https:\/\/ekodi\.kr\/[^/?#]/.test(service.url);
-  if (!service.domain.endsWith('.ekodi.kr') && !apexPathService) throw new Error(`Invalid EKODI user service domain: ${service.domain}`);
+  if (!apexPathService) throw new Error(`EKODI user service must use an ekodi.kr path: ${service.url}`);
   if (!Number.isInteger(service.homepageOrder) || service.homepageOrder < 0 || service.homepageOrder > 9999) {
     throw new Error(`Invalid homepage order: ${service.id}`);
   }
@@ -54,11 +54,8 @@ for (const service of normalized) {
 const ids = normalized.map((service) => service.id);
 if (new Set(ids).size !== ids.length) throw new Error('Duplicate user service id in ecosystem-services.json');
 
-// Subdomain services are unique by hostname. Multiple first-class services may
-// intentionally live under different paths on the EKODI apex, for example
-// /mall and /delivery, so those are unique by their canonical first path.
+// All first-class services live on the EKODI apex and are unique by canonical path.
 const serviceAddresses = normalized.map((service) => {
-  if (service.domain !== 'ekodi.kr') return service.domain;
   let parsed = null;
   try { parsed = new URL(service.url); } catch {}
   const pathname = String(parsed?.pathname || '/').replace(/\/+$/, '') || '/';
