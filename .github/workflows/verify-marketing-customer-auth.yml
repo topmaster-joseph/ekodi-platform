@@ -36,9 +36,9 @@ jobs:
           }
 
           for attempt in $(seq 1 12); do
-            if verify 'jadam.ekodi.kr' '자담치킨 목포대점' 'jadam' \
-              && verify 'pizzamaru.ekodi.kr' '피자마루 목포대점' 'pizzamaru' \
-              && verify 'yogurt.ekodi.kr' '요거트퍼플 목포대점' 'yogurt'; then
+            if verify 'https://ekodi.kr/jadam/marketing/' '자담치킨 목포대점' \
+              && verify 'https://ekodi.kr/pizzamaru/marketing/' '피자마루 목포대점' \
+              && verify 'https://ekodi.kr/yogurt/marketing/' '요거트퍼플 목포대점'; then
               echo 'Production customer authentication UI verified on all Marketing AI tenants.'
               exit 0
             fi
