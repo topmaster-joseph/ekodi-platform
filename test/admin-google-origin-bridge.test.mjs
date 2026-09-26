@@ -26,3 +26,11 @@ test('canonical auth path owns the Google bridge and the legacy auth host is ret
   assert.match(build,/google-origin-bridge\.html/);
   assert.match(admin,/new URL\('\/auth\/google-origin-bridge',GOOGLE_BRIDGE_ORIGIN\)/);
 });
+test('preopened Google bridge follows the opener lifecycle and cannot remain as a stale timeout window',()=>{
+  assert.match(bridge,/openerReachedAuth/);
+  assert.match(bridge,/\^\\\/auth\(\?:\\\/\|\$\)/);
+  assert.match(bridge,/openerReachedAuth&&\/\(\^\|\\\/\)admin/);
+  assert.match(bridge,/lifecycleTimer=setInterval\(watchOpenerLifecycle,400\)/);
+  assert.match(bridge,/120000/);
+  assert.match(bridge,/setTimeout\(\(\)=>window\.close\(\),800\)/);
+});
