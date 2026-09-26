@@ -44,7 +44,7 @@ function secretAccessDecision(session, capability = 'secrets:read') {
   });
 }
 
-function secretAccessError(decision, sourceHeaders = new Headers()) {
+function secretAccessError(decision, sourceHeaders = new Headers(), requiredCapability = 'secrets:read') {
   if (decision?.code === 'ELEVATION_REQUIRED') {
     return json({
       error:'보호된 Secret 변경은 현재 Google 계정으로 추가 인증이 필요합니다.',
@@ -55,7 +55,7 @@ function secretAccessError(decision, sourceHeaders = new Headers()) {
   return json({
     error:'EKODI Secret 관리 권한이 필요합니다.',
     code:'SECRET_MANAGER_FORBIDDEN',
-    requiredCapability:'secrets:read',
+    requiredCapability,
   }, 403, sourceHeaders);
 }
 
@@ -285,7 +285,7 @@ export async function handleCloudflareSecretControl(request, env) {
   if (url.pathname !== `${BASE_PATH}/generate` || request.method !== 'POST') return null;
 
   const writeDecision = secretAccessDecision(auth.session, 'secrets:write');
-  if (!writeDecision.allowed) return secretAccessError(writeDecision, auth.response.headers);
+  if (!writeDecision.allowed) return secretAccessError(writeDecision, auth.response.headers, 'secrets:write');
 
   if (!cloudflareReady(env)) {
     return json({ error:'Cloudflare Secret Manager 연결이 준비되지 않았습니다.', code:'SECRET_MANAGER_NOT_CONFIGURED' }, 503, auth.response.headers);
