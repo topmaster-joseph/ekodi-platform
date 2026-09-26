@@ -44,7 +44,10 @@ test('Mission tenant-admin production E2E exercises the deployed Activity partic
     "productionAssetTypes",
     "productionNosniff",
     "signed-out-failure.png",
-    "details > summary"
+    "details > summary",
+    "details.activity-add",
+    "rowNumbering",
+    "rowNumberingAfterAdd"
   ]) assert.ok(source.includes(marker),marker);
   assert.ok(source.includes("p_privacy_consent===true"));
   assert.ok(source.includes("p_status==='attended'"));

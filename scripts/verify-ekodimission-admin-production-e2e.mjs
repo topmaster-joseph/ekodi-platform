@@ -308,6 +308,7 @@ try{
   checks.activityPicker=await page.locator('#activityPicker').inputValue()===activityKey;
   checks.rowVisible=await page.getByText('운영검증 참가자',{exact:true}).isVisible();
   checks.relationshipSeparated=await page.getByText('단순 참가자',{exact:true}).isVisible();
+  checks.rowNumbering=(await page.locator('[data-activity-row] .activity-seq').first().textContent())?.trim()==='1';
 
   const row=page.locator('[data-activity-row]').filter({hasText:'운영검증 참가자'}).first();
   await row.locator('[data-field="status"]').selectOption('confirmed');
@@ -328,7 +329,10 @@ try{
   checks.checkinMutation=mutationCalls.some(call=>call.name==='activity_admin_update_participation'&&call.body.p_status==='attended');
   checks.checkedIn=!(await page.locator('[data-activity-row]').filter({hasText:'운영검증 참가자'}).first().innerText()).includes('미체크인');
 
+  const addDetails=page.locator('details.activity-add').first();
+  if(!(await addDetails.getAttribute('open')))await addDetails.locator('> summary').click();
   const form=page.locator('#activityAddForm');
+  await form.locator('input[name="name"]').waitFor({state:'visible'});
   await form.locator('input[name="name"]').fill('운영검증 신규참가자');
   await form.locator('input[name="phone"]').fill('010-0000-0002');
   await form.locator('input[name="email"]').fill('mission-ui-e2e-2@invalid.ekodi');
@@ -340,6 +344,7 @@ try{
   await page.waitForFunction(()=>document.body.innerText.includes('운영검증 신규참가자'));
   checks.addMutation=mutationCalls.some(call=>call.name==='activity_admin_add_participant'&&call.body.p_privacy_consent===true&&call.body.p_source_channel==='admin'&&Array.isArray(call.body.p_companions)&&call.body.p_companions.length===2);
   checks.addedVisible=await page.getByText('운영검증 신규참가자',{exact:true}).isVisible();
+  checks.rowNumberingAfterAdd=(await page.locator('[data-activity-row] .activity-seq').allTextContents()).map(value=>value.trim()).join(',')==='1,2';
 
   const shareButton=page.locator('#activityShareButton');
   checks.shareButtonVisible=await shareButton.isVisible();
