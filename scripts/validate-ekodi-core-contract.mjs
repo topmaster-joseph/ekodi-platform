@@ -24,7 +24,8 @@ if (core.controlPlane?.platformId !== 'control-api') fail('control plane must be
 
 const controlApi = boundaries.platforms?.[core.controlPlane?.platformId];
 if (!controlApi) fail('control-api platform boundary is missing');
-if (controlApi && controlApi.canonicalPath !== core.canonicalApiBase) fail('control-api canonical path must match Core canonical API base');
+if (controlApi && controlApi.canonicalPath !== core.canonicalPaths?.api) fail('control-api canonical path must match Core canonical API path');
+if (controlApi && controlApi.publicEntry !== core.canonicalApiBase) fail('control-api public entry must match Core canonical API base');
 if (controlApi && !controlApi.domains?.includes(core.canonicalHost)) fail('control-api must execute behind the canonical apex host');
 if (controlApi && controlApi.database !== core.controlPlane.database) fail('control-plane database declaration differs from Core contract');
 
