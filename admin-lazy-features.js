@@ -47,7 +47,7 @@
     { domain:'business.ekodi.kr', name:'비즈니스 OS', group:'Business & Commerce', role:'AI 기반 공통 사업 운영', aliases:['비즈니스 os','business os','business'] },
     { domain:'management.ekodi.kr', name:'경영플랫폼', group:'Business & Commerce', role:'전문 경영AI 선택·연결', aliases:['경영플랫폼','경영 플랫폼','management'] },
     { domain:'shop.ekodi.kr', name:'쇼핑플랫폼', group:'Business & Commerce', role:'독립 쇼핑몰 생성·운영', aliases:['쇼핑플랫폼','쇼핑 플랫폼','shop'] },
-    { domain:'invest.ekodi.kr', name:'에코디 투자', group:'Business & Commerce', role:'투자 검토·실사·연결', aliases:['투자','invest'] },
+    { domain:'ekodi.kr/invest', name:'에코디 투자', group:'Business & Commerce', role:'투자 검토·실사·연결', aliases:['투자','invest'] },
     { domain:'ekodi.kr/support', name:'지원사업 AI', group:'Business & Commerce', role:'지원사업 탐색·신청·정산', aliases:['지원사업 ai','지원사업','support'] },
     { domain:'money.ekodi.kr', name:'에코디 머니', group:'Business & Commerce', role:'계좌·자동이체 금융정리 안내', aliases:['머니','money'] },
     { domain:'publishing.ekodi.kr', name:'출판', group:'Knowledge & Content', role:'출판상담·제작·대행·유통', aliases:['출판','publishing'] },
