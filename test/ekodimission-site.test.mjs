@@ -60,7 +60,7 @@ test('standalone Open Table application link is action-first, compact, and write
 });
 
 test('EKODI Mission shared assets and unknown child routes are guarded',async()=>{
-  for(const path of ['/ekodimission/assets/site.css','/ekodimission/assets/site.js','/ekodimission/assets/shell.css','/ekodimission/assets/shell.js','/ekodimission/assets/mission-table-hero.svg','/ekodimission/assets/open-table-hero-260926.svg','/ekodimission/assets/open-table-meal-260925.jpg']){const response=await spaceWorker.fetch(new Request(`https://ekodi.kr${path}`),env);assert.equal(response.status,200,path);assert.equal(response.headers.get('x-ekodi-route'),'ekodimission-asset',path);assert.equal(response.headers.get('x-ekodi-publication-status'),'published',path)}
+  for(const path of ['/ekodimission/assets/site.css','/ekodimission/assets/site.js','/ekodimission/assets/shell.css','/ekodimission/assets/shell.js','/ekodimission/assets/share.css','/ekodimission/assets/mission-table-hero.svg','/ekodimission/assets/open-table-hero-260926.svg','/ekodimission/assets/open-table-meal-260925.jpg']){const response=await spaceWorker.fetch(new Request(`https://ekodi.kr${path}`),env);assert.equal(response.status,200,path);assert.equal(response.headers.get('x-ekodi-route'),'ekodimission-asset',path);assert.equal(response.headers.get('x-ekodi-publication-status'),'published',path)}
   const missing=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/not-published'),env);assert.equal(missing.status,404);assert.equal(missing.headers.get('x-ekodi-route'),'ekodimission-not-found');
 });
 
@@ -83,6 +83,47 @@ test('first-party application API uses the canonical Sep 26 event key end-to-end
   const denied=await spaceWorker.fetch(new Request(`https://ekodi.kr${applicationApi}`,{method:'POST',headers:{origin:'https://ekodi.kr','content-type':'application/json'},body:JSON.stringify({name:'홍길동',phone:'010-1234-5678',partySize:1,privacyConsent:false})}),dataEnv);
   assert.equal(denied.status,400);
 });
+
+
+test('Mission applicant share route is token-gated, read-only, noindex, and never projects private contact data',async()=>{
+  const dataEnv={...env,DATA_ENABLED:'true',SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'publishable-test'};
+  const token='AbCdEfGhIjKlMnOpQrStUvWxYz0123456789-_ABCD';
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async(input,init)=>{
+    assert.equal(String(input),'https://example.supabase.co/rest/v1/rpc/activity_public_share_snapshot');
+    const payload=JSON.parse(init.body);assert.equal(payload.p_token,token);
+    return new Response(JSON.stringify({
+      ok:true,
+      activity:{activity_key:'260926-chuseok-open-table',title:'2026 추석 열린식탁',starts_at:'2026-09-26T16:00:00+09:00',ends_at:'2026-09-26T18:00:00+09:00',venue:'자담치킨 목포대점'},
+      share:{expires_at:'2026-10-03T16:00:00+09:00',field_policy:{seq:true,name:true,status:true,party_size:true}},
+      participants:[{seq:1,name:'공유검증 참가자',status:'confirmed',party_size:2}]
+    }),{status:200,headers:{'content-type':'application/json'}});
+  };
+  try{
+    const response=await spaceWorker.fetch(new Request(`https://ekodi.kr/ekodimission/share/${token}`),dataEnv);
+    assert.equal(response.status,200);
+    assert.equal(response.headers.get('x-ekodi-route'),'ekodimission-share');
+    assert.equal(response.headers.get('x-ekodi-publication-status'),'private-share');
+    assert.match(response.headers.get('x-robots-tag')||'',/noindex/i);
+    assert.equal(response.headers.get('cache-control'),'no-store');
+    const body=await response.text();
+    assert.match(body,/읽기전용 공유본/);
+    assert.match(body,/공유검증 참가자/);
+    assert.match(body,/확정/);
+    assert.match(body,/>2<\/td>/);
+    assert.doesNotMatch(body,/010-|@invalid|후속 메모|EKODI ID/);
+  }finally{globalThis.fetch=originalFetch}
+
+  const originalFetch2=globalThis.fetch;
+  globalThis.fetch=async()=>new Response(JSON.stringify({ok:false}),{status:200,headers:{'content-type':'application/json'}});
+  try{
+    const missing=await spaceWorker.fetch(new Request(`https://ekodi.kr/ekodimission/share/${token}`),dataEnv);
+    assert.equal(missing.status,404);
+    assert.equal(missing.headers.get('x-ekodi-publication-status'),'private-share');
+    assert.match(missing.headers.get('x-robots-tag')||'',/noindex/i);
+  }finally{globalThis.fetch=originalFetch2}
+});
+
 
 // Regression guard: all public Mission surfaces, including Live, consume one shell contract.
 test('every EKODI Mission page consumes one shared shell with published-only languages',async()=>{
