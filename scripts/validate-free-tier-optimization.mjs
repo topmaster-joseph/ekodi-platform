@@ -84,6 +84,10 @@ expect(collector.includes('/database/query/read-only'),'Supabase database usage 
 expect(!/\/database\/query(?!\/read-only)/.test(collector),'collector must not fall back to the writable Management API query endpoint');
 expect(collector.includes('/actions/cache/usage'),'GitHub cache usage must come from the official repository usage endpoint');
 expect(collector.includes('/actions/artifacts?'),'GitHub artifact usage must come from the official repository artifact endpoint');
+expect(collector.includes('workersInvocationsAdaptive'),'Cloudflare Workers usage must come from Cloudflare Analytics');
+expect(collector.includes('cloudflare-workers-analytics'),'Cloudflare snapshot must identify its measured source');
+expect(collector.includes('assertProductionAccountBoundary'),'Cloudflare collector must preserve Production/Development account separation');
+expect(collectorWorkflow.includes("'cloudflare','supabase','github'"),'resource proof must require Cloudflare, Supabase and GitHub snapshots');
 expect(supabaseCapacityGuard.includes('management-api-project-create'),'Supabase capacity guard must detect Management API project creation');
 expect(supabaseCapacityGuard.includes('supabase-cli-project-create'),'Supabase capacity guard must detect CLI project creation');
 expect(workflow.includes('validate-supabase-free-project-capacity.mjs'),'orchestration gate must enforce Supabase Free project capacity');
