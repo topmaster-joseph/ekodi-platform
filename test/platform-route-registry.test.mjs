@@ -24,7 +24,7 @@ test('execution surface roots cannot fall through to generic workspace routing',
 
 test('apex-only execution registry contains no EKODI-owned child-host compatibility layer',()=>{
   assert.deepEqual(Object.keys(PLATFORM_LEGACY_HOST_PATHS),[]);
-  assert.equal(canonicalPathForLegacyHost('management.ekodi.kr'),'');
+  assert.equal(canonicalPathForLegacyHost('legacy-host.example'),'');
   for(const spec of PLATFORM_EXECUTION_SURFACES){
     for(const host of [spec.virtualHost,spec.legacyHost,spec.canonicalHost].filter(Boolean)){
       assert.equal(host.endsWith('.ekodi.kr'),false,`${spec.id} must not depend on ${host}`);
