@@ -28,13 +28,15 @@ test('association Basic remains the floor while paid plans belong to the store s
   assert.match(billing, /UNIQUE\(subject_type, subject_key, site\)/);
 });
 
-test('Plus canonical workspace uses the shared Marketing AI Pages project', () => {
+test('Plus canonical workspace uses the shared apex Marketing path', () => {
   assert.equal(normalizeWorkspaceSlug('My Store 01'), 'my-store-01');
   assert.equal(normalizeWorkspaceSlug('marketing'), '');
   assert.match(workspaceControl, /PLUS_OR_ABOVE/);
-  assert.match(workspaceControl, /\.ai\.ekodi\.kr/);
+  assert.match(workspaceControl, /canonicalWorkspacePath/);
+  assert.match(workspaceControl, /canonicalDomain:'ekodi\.kr'/);
+  assert.match(workspaceControl, /provider='platform-router'/);
+  assert.match(workspaceControl, /provider_project='ekodi-platform'/);
   assert.match(workspaceControl, /marketing_store_workspaces/);
-  assert.match(workspaceControl, /provider_project.*marketing-ai/s);
   assert.match(workspaceControl, /workspace\/resolve/);
   assert.match(worker, /handleMarketingStoreWorkspaceRequest/);
 });
