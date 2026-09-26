@@ -138,7 +138,7 @@ must('worker',"aiEntitlementManager:'/my/'");
 mustNot('prod','ekodi.kr/my');
 must('prod','workers_dev = true');
 must('manifest','https://ekodi-my.topmaster-joseph.workers.dev/');
-mustNot('manifest','https://ekodi.kr/my');
+must('manifest','https://ekodi.kr/my/');
 must('prod','DATA_ENABLED = "true"');
 must('staging','DATA_ENABLED = "false"');
 mustNot('staging','ekodi.kr/my');
