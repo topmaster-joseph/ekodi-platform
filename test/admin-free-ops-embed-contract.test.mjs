@@ -9,11 +9,14 @@ test('Admin Free Ops verifier follows the canonical ekodi.kr embed origin',async
   assert.match(workflow,/https:\/\/ekodi\.kr\/ekodimall\/free-ops\?embed=admin/);
   assert.match(workflow,/frame-src\[\^;\]\*https:\/\/ekodi\\\.kr/);
   assert.doesNotMatch(workflow,/frame-src\[\^;\]\*https:\/\/mall\\\.ekodi\\\.kr/);
+  assert.match(workflow,/https:\/\/ekodi\.kr\/admin\//);
+  assert.match(workflow,/https:\/\/ekodi\.kr\/release-control-admin\.js/);
+  assert.doesNotMatch(workflow,/https:\/\/admin\.ekodi\.kr/);
 });
 
 test('Admin remains non-embeddable while only the Free Ops page may be framed by Admin',async()=>{
   const workflow=await readFile(workflowPath,'utf8');
   assert.match(workflow,/frame-ancestors '\\''none'\\''/);
-  assert.match(workflow,/frame-ancestors https:\/\/admin\\\.ekodi\\\.kr/);
+  assert.match(workflow,/frame-ancestors https:\/\/ekodi\\\.kr/);
   assert.match(workflow,/x-frame-options:\[\[:space:\]\]\*DENY/);
 });
