@@ -138,7 +138,7 @@
       actions.append(refresh, external);
       head.append(copy, actions);
 
-      const note = el('div', 'Free Ops만 admin.ekodi.kr 내부 표시를 허용합니다. 다른 Mall 페이지의 iframe 차단 정책은 그대로 유지됩니다.', 'mall-free-ops-note');
+      const note = el('div', 'Free Ops만 EKODI 관리자 화면 내부 표시를 허용합니다. 다른 Mall 페이지의 iframe 차단 정책은 그대로 유지됩니다.', 'mall-free-ops-note');
       const frameWrap = el('div', '', 'mall-free-ops-frame-wrap');
       const frame = document.createElement('iframe');
       frame.title = 'EKODI Mall Free Ops';
