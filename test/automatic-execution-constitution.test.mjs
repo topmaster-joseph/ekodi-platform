@@ -70,11 +70,20 @@ test('runtime implementations retain the enforced no-user-tab and cleanup eviden
   }
   assert.match(hybrid, /createUserBrowserTab:false/);
   assert.match(hybrid, /authRequiredDisposition:'record-and-close'/);
-  assert.match(provider, /createUserBrowserTab:false/);
-  assert.match(router, /createUserBrowserTab:false/);
+  assert.match(provider, /userBrowserTabCreated === true/);
+  assert.match(provider, /ownedSurfaceClosed !== true/);
+  assert.match(provider, /userOwnedSurfacesPreserved !== true/);
+  assert.match(provider, /interactiveLoginOpened === true/);
+  assert.match(router, /userBrowserTabCreation:false/);
+  assert.match(router, /ownedSurfaceAutoClose:true/);
+  assert.match(router, /preserveUserOwnedSurfaces:true/);
+  assert.match(router, /interactiveLoginAllowed:false/);
   assert.match(device, /createUserBrowserTab:false/);
-  assert.match(agent, /userBrowserTabCreated/);
-  assert.match(agent, /interactiveLoginOpened/);
+  assert.match(agent, /\$Payload\.createUserBrowserTab -ne \$false/);
+  assert.match(agent, /interactiveLoginOpened = \$false/);
+  assert.match(agent, /createUserBrowserTab = \$false/);
+  assert.match(agent, /ownedAutomationSurfaceAutoClosed = \$true/);
+  assert.match(agent, /userOwnedSurfacesPreserved = \$true/);
 });
 
 test('automatic execution policy and its validators are constitutionally protected', () => {
