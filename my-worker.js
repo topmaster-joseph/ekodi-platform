@@ -9,6 +9,10 @@ const SERVICE_ID_RE=/^[a-z][a-z0-9-]*$/;
 const PUBLIC_PERSON_PATH_RE=/^\/@([a-z0-9][a-z0-9._-]{2,39})\/?$/;
 const PRIVATE_ROUTER_TAG='<script src="/my/private-workspace-router.js?v=20260827-private-workspace-1"></script>';
 const ACCESS_CONTEXT_TAG='<script type="module" src="/my/access-context.js?v=20260829-common-service-access-1"></script>';
+const CANONICAL_MY_ASSET_ALIASES=new Map([
+  ['/my/private-workspace-router.js','/private-workspace-router.js'],
+  ['/my/access-context.js','/access-context.js'],
+]);
 
 function securityHeaders(env={}){
   const connect=["'self'",'https://cdn.jsdelivr.net','https://ekodi.kr','https://marketing-publish-api.ekodi.kr','https://personal-finance-api.ekodi.kr'];
@@ -286,6 +290,11 @@ export default{
     const url=new URL(request.url);
     const publicHandle=parsePublicPersonPath(url.pathname);
     if(publicHandle)return servePublicProfile(request,env,publicHandle);
+    const canonicalAsset=CANONICAL_MY_ASSET_ALIASES.get(url.pathname);
+    if(canonicalAsset){
+      const target=new URL(request.url);target.pathname=canonicalAsset;
+      return withHeaders(env,await env.ASSETS.fetch(new Request(target.toString(),request)));
+    }
     if(url.pathname==='/config.js'){
       const cfg=runtimeConfig(env);
       return new Response(`window.EKODI_MY_CONFIG=${JSON.stringify(cfg)};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...securityHeaders(env)}});
