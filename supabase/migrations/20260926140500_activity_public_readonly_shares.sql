@@ -99,11 +99,12 @@ declare
   v_policy jsonb;
   v_share public.activity_public_shares%rowtype;
 begin
-  select a,t.slug into v_activity,v_tenant_slug
+  select a.* into v_activity
   from public.activities a
   join public.tenants t on t.id=a.workspace_tenant_id
   where t.slug=lower(trim(p_workspace_slug))
     and a.activity_key=p_activity_key;
+  v_tenant_slug:=lower(trim(p_workspace_slug));
 
   if not found or not public.activity_is_workspace_operator(v_activity.workspace_tenant_id) then
     raise exception 'ACTIVITY_ADMIN_FORBIDDEN';
