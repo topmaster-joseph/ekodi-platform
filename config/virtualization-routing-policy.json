@@ -75,5 +75,16 @@
     "correctableNativeGapMustNotInterruptUserWorkflow": true,
     "nativeCapabilityMustBeRetriedOnNextEligibleExecution": true,
     "fallbackMustNotBecomeDefaultByHistory": true
+  },
+  "constitutionalPolicies": [
+    "VIRTUALIZATION-SOVEREIGNTY-001",
+    "AUTOMATIC-EXECUTION-LIFECYCLE-001"
+  ],
+  "automaticExecutionLifecycle": {
+    "constitutionalPolicy": "AUTOMATIC-EXECUTION-LIFECYCLE-001",
+    "defaultMode": "background-only",
+    "userBrowserTabCreation": false,
+    "foregroundWindowDefault": false,
+    "localOverrideForbidden": true
   }
 }

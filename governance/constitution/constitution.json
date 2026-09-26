@@ -1,6 +1,6 @@
 {
-  "version": "1.25.0",
-  "effectiveDate": "2026-09-24",
+  "version": "1.26.0",
+  "effectiveDate": "2026-09-27",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -41,7 +41,8 @@
     "authentication-return-continuity",
     "canonical-human-url-without-tracking-query",
     "evidence-gated-ai-claims",
-    "evidence-gated-external-knowledge"
+    "evidence-gated-external-knowledge",
+    "automatic-execution-background-only-enforced"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -303,7 +304,13 @@
       "ai-knowledge-claim.js",
       "scripts/validate-ai-knowledge-claim.mjs",
       "config/knowledge-source-registry.json",
-      "scripts/validate-capability-first-service-creation.mjs"
+      "scripts/validate-capability-first-service-creation.mjs",
+      "config/remote-computer-execution-policy.json",
+      "config/autonomous-execution-fabric-policy.json",
+      "config/virtualization-routing-policy.json",
+      "config/background-browser-worker-policy.json",
+      "scripts/validate-virtualization-routing.mjs",
+      "test/automatic-execution-constitution.test.mjs"
     ],
     "owner": "topmaster-joseph",
     "rule": "C2/C3 changes are proposed first and applied only after explicit owner confirmation."
@@ -1081,5 +1088,50 @@
       "admin"
     ],
     "grandfatheredListExpansionRequiresConstitutionalAmendment": true
+  },
+  "automaticExecutionLifecyclePolicy": {
+    "id": "AUTOMATIC-EXECUTION-LIFECYCLE-001",
+    "status": "enforced",
+    "mode": "mandatory",
+    "finalAuthority": "ekodi_platform_super_administrator",
+    "orchestrationOwner": "ekodi-orchestrator",
+    "appliesToAllCurrentAndFutureAutomaticExecution": true,
+    "defaultExecutionMode": "background-only",
+    "foregroundWindowDefault": false,
+    "userBrowserTabCreation": false,
+    "ownedAutomationSurfaceAutoClose": true,
+    "authRequiredDisposition": "record-and-close",
+    "authRequiredMustNotOpenInteractiveLogin": true,
+    "preserveUserOwnedWindowsAndTabs": true,
+    "temporaryAutomationProfilesMustBeRemoved": true,
+    "backgroundApiPreferredOverBrowserForApiChecks": true,
+    "localOverrideForbidden": true,
+    "serviceOrAgentWaiverForbidden": true,
+    "policyRegressionBlocksCi": true,
+    "foregroundAllowedOnlyFor": [
+      "oauth-or-provider-consent",
+      "captcha-or-human-verification",
+      "hardware-backed-authentication",
+      "os-privileged-consent"
+    ],
+    "requiredPolicyBindings": [
+      "config/remote-computer-execution-policy.json",
+      "config/autonomous-execution-fabric-policy.json",
+      "config/virtualization-routing-policy.json",
+      "config/background-browser-worker-policy.json"
+    ],
+    "requiredRuntimeBindings": [
+      "hybrid-execution.js",
+      "remote-computer-provider.js",
+      "virtualization-router.js",
+      "device-control.js",
+      "tools/ekodi-device-agent/windows/ekodi-device-agent.ps1"
+    ],
+    "verification": [
+      "scripts/validate-constitution.mjs",
+      "scripts/validate-virtualization-routing.mjs",
+      "test/automatic-execution-constitution.test.mjs",
+      "test/hybrid-execution-contract.test.mjs"
+    ]
   }
 }
