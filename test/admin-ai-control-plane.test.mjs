@@ -51,3 +51,11 @@ test('Admin control plane UI renders provider context and specialist selector', 
   assert.match(ui, /GitOps\/Actions 가드 사용/);
   assert.match(bootstrap, /admin-ai-control-plane\.js/);
 });
+
+test('provider diagnostics distinguish EKODI authorization from Cloudflare API permission failures', () => {
+  assert.match(ui, /SECRET_MANAGER_FORBIDDEN/);
+  assert.match(ui, /EKODI Secret 관리 권한이 필요합니다/);
+  assert.match(ui, /ELEVATION_REQUIRED/);
+  assert.match(ui, /보호된 작업 추가 인증이 필요합니다/);
+  assert.match(ui, /Cloudflare API 권한이 부족합니다/);
+});
