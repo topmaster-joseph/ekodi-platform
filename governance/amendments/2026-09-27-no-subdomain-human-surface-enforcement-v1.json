@@ -1,0 +1,20 @@
+{
+  "id": "2026-09-27-no-subdomain-human-surface-enforcement-v1",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-27",
+  "changeClass": "C3",
+  "summary": "Enforce ekodi.kr path-based URLs as the only human-facing EKODI service topology and prohibit service subdomains from being introduced, restored, or retained as user entry points.",
+  "approvalBasis": "The platform owner explicitly reaffirmed that EKODI no longer uses subdomains and instructed EKODI to make this a mandatory execution rule and complete the correction.",
+  "mandatoryRules": [
+    "All human-facing services use https://ekodi.kr/{service} or an approved nested path.",
+    "Authentication return targets for human-facing services must resolve to https://ekodi.kr paths.",
+    "Service registries, admin navigation, manifests and UI must not advertise *.ekodi.kr service URLs.",
+    "Retired service subdomains must not be recreated as compatibility redirects without a new explicit owner approval.",
+    "New code and tests must reject reintroduction of human-facing service subdomains.",
+    "Infrastructure-only provider endpoints may remain only when they are not presented or used as EKODI human-facing service URLs and until replaced by apex-path/internal bindings."
+  ],
+  "investCanonical": "https://ekodi.kr/invest",
+  "migrationPolicy": "Migrate incrementally through guarded branches and verification. Remove human-facing subdomain dependencies first, then retire infrastructure routes only after equivalent apex-path or internal binding health is verified.",
+  "rollbackPlan": "Roll back a failing application release to the last verified apex-path artifact. Do not restore a retired human-facing service subdomain as the rollback mechanism."
+}
