@@ -1,0 +1,57 @@
+name: EKODI PR Convergence
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_run:
+    workflows:
+      - CI
+      - Supabase Local CI
+      - EKODI AI Orchestration Gate
+      - EKODI Parallel Change Conflict Guard
+      - EKODI Zero-Subdomain Guard
+      - Validate AI Provider Control
+      - Deploy EKODI Bible Conversation
+    types: [completed]
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Optional PR number to reconcile
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  actions: read
+
+concurrency:
+  group: ekodi-pr-convergence-${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || inputs.pr_number || 'scheduled' }}
+  cancel-in-progress: false
+
+jobs:
+  converge:
+    name: EKODI PR Convergence
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Reconcile eligible EKODI PRs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EKODI_PR_NUMBER: ${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || inputs.pr_number }}
+        run: node scripts/ekodi-pr-convergence.mjs

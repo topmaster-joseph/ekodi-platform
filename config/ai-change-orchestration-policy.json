@@ -68,7 +68,9 @@
     ],
     "nonTerminalFailuresRequireAutomaticRecovery": true,
     "validationFailureAction": "diagnose-repair-rerun-continue",
-    "parallelConflictAction": "cross-review-select-winner-retire-or-refresh-overlap-rerun-continue"
+    "parallelConflictAction": "cross-review-select-winner-retire-or-refresh-overlap-rerun-continue",
+    "baseAdvanceIsNonTerminal": true,
+    "sourceControlDriftRecovery": "refresh-rerun-retry-until-current"
   },
   "consultationDecision": {
     "policyId": "AI-CONSULT-001",
@@ -156,7 +158,36 @@
     },
     "requiredStatusCheck": "EKODI AI Orchestration Gate",
     "forcePush": false,
-    "branchDeletion": false
+    "branchDeletion": false,
+    "prConvergence": {
+      "policyId": "PR-CONVERGENCE-001",
+      "status": "enforced",
+      "enabled": true,
+      "mode": "automatic-until-merged-or-human-gate",
+      "refreshWhenBaseAdvances": true,
+      "useGithubUpdateBranch": true,
+      "neverForcePush": true,
+      "mergeMethod": "squash",
+      "mergeOnlyThroughBranchProtection": true,
+      "retryTriggers": [
+        "pull-request-change",
+        "status-check-completed",
+        "scheduled-reconciliation"
+      ],
+      "maxAutomaticRefreshCycles": 12,
+      "staleBaseAction": "refresh-rerun-retry",
+      "requiredCheckWaitAction": "wait-for-check-completion-then-retry",
+      "conflictAction": "route-through-parallel-change-review-no-bypass",
+      "humanGateStopsAutomaticMerge": true,
+      "terminalStates": [
+        "merged",
+        "human-gate-required",
+        "irreconcilable-conflict-after-safe-recovery",
+        "ambiguous-side-effect"
+      ],
+      "auditEveryAttempt": true,
+      "userInterruptionForResolvableBaseDrift": false
+    }
   },
   "mutationBoundary": {
     "orchestrationGateRequiredBeforeMutation": true,
