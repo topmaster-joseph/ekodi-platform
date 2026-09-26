@@ -15,9 +15,10 @@ test('service bridge keeps static-token compatibility and has a pinned Mall OIDC
   }), true);
   const now=Math.floor(Date.now()/1000);
   const claims={iss:'https://token.actions.githubusercontent.com',aud:'ekodi-channel-service',exp:now+300,iat:now,
-    repository:'topmaster-joseph/ekodi-mall',repository_id:'1309951804',ref:'refs/heads/main',event_name:'schedule'};
+    repository:'topmaster-joseph/ekodi-platform',repository_id:'1308587929',ref:'refs/heads/main',event_name:'schedule'};
   assert.equal(githubServiceClaimsAllowed(claims),true);
   assert.equal(githubServiceClaimsAllowed({...claims,repository:'other/repo'}),false);
+  assert.equal(githubServiceClaimsAllowed({...claims,repository:'topmaster-joseph/ekodi-mall',repository_id:'1309951804'}),false);
   assert.equal(githubServiceClaimsAllowed({...claims,ref:'refs/heads/development'}),false);
   assert.equal(githubServiceClaimsAllowed({...claims,aud:'wrong-audience'}),false);
 });
@@ -108,8 +109,8 @@ test('bridge persistence is additive, central-vault only, and Mall channel selec
   assert.doesNotMatch(migration,/(refresh_token|access_token|bearer_token)\s+TEXT/i);
   assert.match(bridge,/managedCredential/);
   assert.match(bridge,/GITHUB_AUDIENCE = 'ekodi-channel-service'/);
-  assert.match(bridge,/MALL_REPOSITORY = 'topmaster-joseph\/ekodi-mall'/);
-  assert.match(bridge,/MALL_REPOSITORY_ID = '1309951804'/);
+  assert.match(bridge,/MALL_REPOSITORY = 'topmaster-joseph\/ekodi-platform'/);
+  assert.match(bridge,/MALL_REPOSITORY_ID = '1308587929'/);
   assert.match(bridge,/identity\?\.claims\?\.event_name === 'workflow_dispatch'/);
   assert.match(bridge,/provider_private_proof_uploaded/);
   assert.match(bridge,/privateProof \? 'private'/);
