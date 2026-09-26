@@ -23,7 +23,7 @@ test('Admin production verifier runs after successful canonical shared-site rele
   assert.match(workflow, /gh issue comment 333/);
   assert.match(workflow, /PRODUCTION NOT VERIFIED/);
   assert.doesNotMatch(workflow, /PRODUCTION VERIFIED/);
-  assert.match(workflow, /canonical seven-area sidebar · delegated panels · stale-tab convergence · fingerprinted immutable assets/);
+  assert.match(workflow, /canonical seven-area sidebar · delegated panels · stale-tab convergence · fingerprinted asset-first mirror/);
   assert.doesNotMatch(workflow, /guarded-worker-release\.mjs/);
   assert.doesNotMatch(workflow, /CLOUDFLARE_API_TOKEN/);
 });
@@ -33,7 +33,7 @@ test('Admin production verification follows the content fingerprint and lazy AI 
   assert.match(workflow, /admin-authenticated-shell\\\.js\\\?v=\[a-f0-9\]\{16\}/);
   assert.match(workflow, /EXPECTED_VERSION/);
   assert.match(workflow, /LIVE_VERSION/);
-  assert.match(workflow, /max-age=31536000, immutable/);
+  assert.match(workflow, /cache-control: no-store/);
   assert.match(workflow, /x-content-type-options: nosniff/);
   assert.doesNotMatch(workflow, /x-ekodi-route: admin-asset/);
   assert.match(workflow, /verify_asset 'ai-ops-admin\.css'/);
@@ -43,7 +43,7 @@ test('Admin production verification follows the content fingerprint and lazy AI 
   assert.match(workflow, /verify_asset 'admin-demand-loader\.js' "window\.EKODIAdminSidebar\?\.sync\?\.\(document\);"/);
   assert.match(workflow, /verify_asset 'admin-menu-layout\.js' "window\.EKODICommonServicesAdmin\?\.activate\?\.\("/);
   assert.match(workflow, /verify_asset 'admin-release-convergence\.js' "convergeAdminRelease"/);
-  assert.match(workflow, /missing immutable cache contract/);
+  assert.match(workflow, /missing asset-first no-store cache contract/);
   assert.match(workflow, /missing production marker/);
   assert.match(workflow, /navLabel\.textContent = '\\\\uc2dc\\\\uc2a4\\\\ud15c \\\\uac74\\\\uac15'/);
   assert.match(workflow, /pageTitle\.textContent = '\\\\uc2dc\\\\uc2a4\\\\ud15c \\\\uac74\\\\uac15'/);
