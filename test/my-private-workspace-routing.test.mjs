@@ -25,6 +25,9 @@ test('private workspace routes serve the My shell rather than exposing workspace
   assert.match(worker,/PRIVATE_ROUTER_TAG/);
   assert.match(worker,/PRIVATE_ROUTER_TAG='<script src="\/my\/private-workspace-router\.js\?v=20260827-private-workspace-1"><\\/script>'/);
   assert.doesNotMatch(worker,/PRIVATE_ROUTER_TAG='<script src="\/private-workspace-router\.js/);
+  assert.match(worker,/CANONICAL_MY_ASSET_ALIASES=new Map/);
+  assert.match(worker,/\['\/my\/private-workspace-router\.js','\/private-workspace-router\.js'\]/);
+  assert.match(worker,/\['\/my\/access-context\.js','\/access-context\.js'\]/);
   const start=worker.indexOf('async function routedMyHome');
   const end=worker.indexOf('export default',start);
   const privateRouteOwner=worker.slice(start,end);
