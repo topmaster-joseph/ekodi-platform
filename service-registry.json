@@ -1,19 +1,160 @@
 {
-  "updatedAt": "2026-08-24T15:38:00+09:00",
+  "updatedAt": "2026-09-27T03:21:00+09:00",
   "services": [
-    {"id":"biz","name":"에코디비즈","label":"Business","domain":"ekodi.kr/ekodibiz","href":"https://ekodi.kr/ekodibiz","icon":"B","qaVerified":false,"healthCheck":true},
-    {"id":"business","name":"Business OS","label":"AI Business OS","domain":"ekodi.kr/business","href":"https://ekodi.kr/business","icon":"O","qaVerified":true,"healthCheck":true},
-    {"id":"trade","name":"글로벌 무역","label":"Trading","domain":"ekodi.kr/ekodibiz/trade","href":"https://ekodi.kr/ekodibiz/trade","icon":"T","qaVerified":false,"healthCheck":true},
-    {"id":"mall","name":"에코디몰","label":"Mall","domain":"ekodi.kr/ekodimall","href":"https://ekodi.kr/ekodimall","icon":"M","qaVerified":true,"healthCheck":true},
-    {"id":"pay","name":"에코디결제","label":"Payments","domain":"ekodi.kr/pay","href":"https://ekodi.kr/pay","icon":"P","qaVerified":false,"healthCheck":true},
-    {"id":"books","name":"에코디서점","label":"Bookstore","domain":"ekodi.kr/books","href":"https://ekodi.kr/books","icon":"K","qaVerified":true,"healthCheck":true},
-    {"id":"publishing","name":"출판","label":"Publishing","domain":"ekodi.kr/publishing","href":"https://ekodi.kr/publishing","icon":"P","qaVerified":false,"healthCheck":true},
-    {"id":"church","name":"에코디교회","label":"Church","domain":"ekodi.kr/ekodichurch","href":"https://ekodi.kr/ekodichurch","icon":"C","qaVerified":true,"healthCheck":true},
-    {"id":"lab","name":"에코디연구소","label":"Lab","domain":"ekodi.kr/ekodilab","href":"https://ekodi.kr/ekodilab","icon":"L","qaVerified":true,"healthCheck":true},
-    {"id":"mission","name":"에코디선교회","label":"Mission","domain":"ekodi.kr/ekodimission","href":"https://ekodi.kr/ekodimission","icon":"S","qaVerified":false,"healthCheck":true},
-    {"id":"community","name":"커뮤니티","label":"Community","domain":"ekodi.kr/community","href":"https://ekodi.kr/community","icon":"N","qaVerified":true,"healthCheck":true},
-    {"id":"edu","name":"에코디교육","label":"Education","domain":"ekodi.kr/education","href":"https://ekodi.kr/education","icon":"E","qaVerified":false,"healthCheck":true},
-    {"id":"media","name":"에코디미디어","label":"Media","domain":"ekodi.kr/media","href":"https://ekodi.kr/media","icon":"V","qaVerified":false,"healthCheck":true},
-    {"id":"admin","name":"관리자","label":"Control Center","domain":"ekodi.kr/admin","href":"https://ekodi.kr/admin","icon":"A","qaVerified":false,"healthCheck":true,"admin":true}
+    {
+      "id": "biz",
+      "name": "에코디비즈",
+      "label": "Business",
+      "domain": "ekodi.kr",
+      "href": "https://ekodi.kr/ekodibiz",
+      "icon": "B",
+      "qaVerified": false,
+      "healthCheck": true,
+      "canonicalPath": "/ekodibiz"
+    },
+    {
+      "id": "business",
+      "name": "Business OS",
+      "label": "AI Business OS",
+      "domain": "ekodi.kr",
+      "href": "https://ekodi.kr/business",
+      "icon": "O",
+      "qaVerified": true,
+      "healthCheck": true,
+      "canonicalPath": "/business"
+    },
+    {
+      "id": "trade",
+      "name": "글로벌 무역",
+      "label": "Trading",
+      "domain": "ekodi.kr",
+      "href": "https://ekodi.kr/ekodibiz/trade",
+      "icon": "T",
+      "qaVerified": false,
+      "healthCheck": true,
+      "canonicalPath": "/ekodibiz/trade"
+    },
+    {
+      "id": "mall",
+      "name": "에코디몰",
+      "label": "Mall",
+      "domain": "ekodi.kr",
+      "href": "https://ekodi.kr/ekodimall",
+      "icon": "M",
+      "qaVerified": true,
+      "healthCheck": true,
+      "canonicalPath": "/ekodimall"
+    },
+    {
+      "id": "pay",
+      "name": "에코디결제",
+      "label": "Payments",
+      "domain": "ekodi.kr",
+      "href": "https://ekodi.kr/pay",
+      "icon": "P",
+      "qaVerified": false,
+      "healthCheck": true,
+      "canonicalPath": "/pay"
+    },
+    {
+      "id": "books",
+      "name": "에코디서점",
+      "label": "Bookstore",
+      "domain": "ekodi.kr",
+      "href": "https://ekodi.kr/books",
+      "icon": "K",
+      "qaVerified": true,
+      "healthCheck": true,
+      "canonicalPath": "/books"
+    },
+    {
+      "id": "publishing",
+      "name": "출판",
+      "label": "Publishing",
+      "domain": "ekodi.kr",
+      "href": "https://ekodi.kr/publishing",
+      "icon": "P",
+      "qaVerified": false,
+      "healthCheck": true,
+      "canonicalPath": "/publishing"
+    },
+    {
+      "id": "church",
+      "name": "에코디교회",
+      "label": "Church",
+      "domain": "ekodi.kr",
+      "href": "https://ekodi.kr/ekodichurch",
+      "icon": "C",
+      "qaVerified": true,
+      "healthCheck": true,
+      "canonicalPath": "/ekodichurch"
+    },
+    {
+      "id": "lab",
+      "name": "에코디연구소",
+      "label": "Lab",
+      "domain": "ekodi.kr",
+      "href": "https://ekodi.kr/ekodilab",
+      "icon": "L",
+      "qaVerified": true,
+      "healthCheck": true,
+      "canonicalPath": "/ekodilab"
+    },
+    {
+      "id": "mission",
+      "name": "에코디선교회",
+      "label": "Mission",
+      "domain": "ekodi.kr",
+      "href": "https://ekodi.kr/ekodimission",
+      "icon": "S",
+      "qaVerified": false,
+      "healthCheck": true,
+      "canonicalPath": "/ekodimission"
+    },
+    {
+      "id": "community",
+      "name": "커뮤니티",
+      "label": "Community",
+      "domain": "ekodi.kr",
+      "href": "https://ekodi.kr/community",
+      "icon": "N",
+      "qaVerified": true,
+      "healthCheck": true,
+      "canonicalPath": "/community"
+    },
+    {
+      "id": "edu",
+      "name": "에코디교육",
+      "label": "Education",
+      "domain": "ekodi.kr",
+      "href": "https://ekodi.kr/education",
+      "icon": "E",
+      "qaVerified": false,
+      "healthCheck": true,
+      "canonicalPath": "/education"
+    },
+    {
+      "id": "media",
+      "name": "에코디미디어",
+      "label": "Media",
+      "domain": "ekodi.kr",
+      "href": "https://ekodi.kr/media",
+      "icon": "V",
+      "qaVerified": false,
+      "healthCheck": true,
+      "canonicalPath": "/media"
+    },
+    {
+      "id": "admin",
+      "name": "관리자",
+      "label": "Control Center",
+      "domain": "ekodi.kr",
+      "href": "https://ekodi.kr/admin",
+      "icon": "A",
+      "qaVerified": false,
+      "healthCheck": true,
+      "admin": true,
+      "canonicalPath": "/admin"
+    }
   ]
 }
