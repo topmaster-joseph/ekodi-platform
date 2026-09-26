@@ -138,17 +138,20 @@ async function workspaceFor(env, storeId) {
 function publicWorkspace(workspace, subscription, store) {
   if (!workspace) return null;
   const active = workspace.status === 'active';
+  const landingPath=canonicalWorkspacePath(workspace.workspace_slug) || workspace.landing_path || '/marketing';
   return {
     id:Number(workspace.id),
     storeId:workspace.store_id,
     storeName:store?.name || '',
     slug:workspace.workspace_slug,
-    canonicalDomain:workspace.canonical_domain,
-    canonicalUrl:`https://${workspace.canonical_domain}${workspace.landing_path !== '/' ? workspace.landing_path : ''}`,
+    canonicalDomain:'ekodi.kr',
+    canonicalPath:landingPath,
+    canonicalUrl:`https://ekodi.kr${landingPath}`,
     status:workspace.status,
     planId:subscription?.plan_id || store?.basePlan || 'free',
     planStatus:subscription?.status || (store?.basePlan === 'basic' ? 'active' : 'free'),
-    dedicatedDomainActive:active,
+    dedicatedDomainActive:false,
+    workspacePathActive:active,
     customDomainEligible:proActive(subscription?.plan_id, subscription?.status),
   };
 }
@@ -176,17 +179,19 @@ async function chooseSlug(env, store, requested='') {
 }
 
 async function resolveCanonical(request, env, allowed) {
-  const host = normalizeCanonicalHost(new URL(request.url).searchParams.get('host'));
-  if (!host) return json({ error:'유효한 EKODI AI Workspace 주소를 입력해 주세요.', code:'INVALID_CANONICAL_HOST' }, 400, request, allowed);
+  const url=new URL(request.url);
+  const path=normalizeCanonicalPath(url.searchParams.get('path'));
+  if (!path) return json({ error:'유효한 EKODI Marketing Workspace 경로를 입력해 주세요.', code:'INVALID_CANONICAL_PATH' }, 400, request, allowed);
   const row = await env.DB.prepare(`SELECT store_id,workspace_slug,canonical_domain,landing_path,status
-    FROM marketing_store_workspaces WHERE canonical_domain=? AND status='active' LIMIT 1`).bind(host).first();
+    FROM marketing_store_workspaces WHERE canonical_domain='ekodi.kr' AND landing_path=? AND status='active' LIMIT 1`).bind(path).first();
   if (!row) return json({ error:'활성화된 점포 Workspace를 찾을 수 없습니다.', code:'WORKSPACE_NOT_FOUND' }, 404, request, allowed);
   return json({
     workspace:{
       storeId:row.store_id,
       slug:row.workspace_slug,
-      canonicalDomain:row.canonical_domain,
-      canonicalUrl:`https://${row.canonical_domain}${row.landing_path !== '/' ? row.landing_path : ''}`,
+      canonicalDomain:'ekodi.kr',
+      canonicalPath:row.landing_path,
+      canonicalUrl:`https://ekodi.kr${row.landing_path}`,
     },
   }, 200, request, allowed);
 }
