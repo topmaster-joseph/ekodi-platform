@@ -4,6 +4,7 @@ import fs from 'node:fs';
 
 const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 const sql=read('supabase/migrations/20260926140500_activity_public_readonly_shares.sql');
+const privacyGuard=read('supabase/migrations/20260927032500_activity_public_share_minimal_projection_guard.sql');
 const worker=read('space-worker.js');
 const admin=read('workspace-admin-page.js');
 const schemaWorkflow=read('.github/workflows/deploy-activity-public-share-schema.yml');
@@ -45,6 +46,15 @@ test('public share projection cannot return contact or internal management field
   for(const allowed of ["'seq'","'name'","'status'","'party_size'"])assert.ok(projection.includes(allowed),allowed);
 });
 
+test('privacy guard reasserts the agreed minimal external projection',()=>{
+  assert.match(privacyGuard,/Privacy-minimal share policy/);
+  assert.match(privacyGuard,/returns only seq\/name\/status\/party_size/);
+  assert.doesNotMatch(privacyGuard,/person_contacts/);
+  assert.doesNotMatch(privacyGuard,/jsonb_build_object\('phone'/);
+  assert.doesNotMatch(privacyGuard,/jsonb_build_object\('email'/);
+  assert.match(privacyGuard,/update public\.activity_public_shares[\s\S]*'seq',true[\s\S]*'name'[\s\S]*'status'[\s\S]*'party_size'/);
+});
+
 test('Mission share route is private-by-link and the admin exposes explicit create/revoke controls',()=>{
   assert.match(worker,/MISSION_SHARE_PATH_RE/);
   assert.match(worker,/MISSION_ADMIN_ACTIVITY_RPC_API/);
@@ -69,6 +79,8 @@ test('activity-share deployment is schema-first and blocks UI promotion until de
     'Deploy Activity Public Share Schema',
     'Apply idempotent activity-share schema before UI promotion',
     'activity_public_readonly_shares.sql',
+    'activity_public_share_minimal_projection_guard.sql',
+    'minimal_projection',
     'activity_admin_create_share',
     'activity_admin_revoke_share',
     'activity_public_share_snapshot'
