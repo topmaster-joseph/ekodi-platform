@@ -3,7 +3,7 @@ import { readMarketingPublicationOverview } from './marketing-admin-publications
 
 const PAID_PLANS = new Set(['plus','pro','auto','enterprise']);
 const MARKETING_ACTION_RE = /(marketing|campaign|social|channel|crm|review|advert|promotion)/i;
-const MARKETING_TARGET_RE = /(marketing\.ekodi\.kr|\.ai\.ekodi\.kr|ekodibiz|jadam|pizzamaru|yogurt|cgma)/i;
+const MARKETING_TARGET_RE = /(ekodi\.kr\/(?:marketing|ekodibiz|jadam|pizzamaru|yogurt|cgma)|ekodibiz|jadam|pizzamaru|yogurt|cgma)/i;
 
 function cors(origin, env = {}) {
   const headers = {
@@ -63,7 +63,7 @@ function publicInternalWorkspace(template) {
   return {
     id:`tenant:${template.workspace_key}`,workspaceType:'tenant',workspaceKey:String(template.workspace_key || ''),
     internal:true,dedicatedDomain:false,storeId:'',tenantSlug:String(template.tenant_slug || ''),slug:String(template.workspace_key || ''),
-    canonicalDomain:'ekodi.kr/marketing',canonicalUrl:'https://ekodi.kr/marketing/',status:'active',planId:'internal',subscriptionStatus:'internal',monthlyFee:0,
+    canonicalDomain:'ekodi.kr',canonicalUrl:'https://ekodi.kr/marketing/',status:'active',planId:'internal',subscriptionStatus:'internal',monthlyFee:0,
     cancelAtPeriodEnd:false,currentPeriodEnd:null,updatedAt:template.updated_at || null,
   };
 }
