@@ -34,8 +34,9 @@ test('Admin CSP permits only Google sign-in plus the first-party EKODI Mall cano
   assert.doesNotMatch(siteWorker, /frame-src[^\n]*https:\/\/mall\.ekodi\.kr/);
 });
 
-test('Free Ops embed contract contains no retired Admin subdomain', () => {
-  assert.doesNotMatch(siteWorker,/admin\.ekodi\.kr/);
+test('Free Ops embed contract contains no retired Admin subdomain in the narrow embed policy', () => {
+  assert.ok(siteWorker.includes("const MALL_ADMIN_EMBED_CSP = MALL_CSP.replace(\"frame-ancestors 'none'\", 'frame-ancestors https://ekodi.kr')"));
+  assert.doesNotMatch(siteWorker,/MALL_ADMIN_EMBED_CSP[^\n]*admin\.ekodi\.kr/);
   assert.doesNotMatch(mallHeaders,/admin\.ekodi\.kr/);
 });
 
