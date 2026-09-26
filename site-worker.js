@@ -424,29 +424,6 @@ function adminAssetCacheControl(url) {
     : 'no-store';
 }
 
-function safeAdminReturnPath(value) {
-  const candidate = String(value || '/');
-  return ADMIN_ALIASES.has(candidate) ? candidate : '/';
-}
-
-function adminAuthRedirect(returnPath) {
-  const safePath = safeAdminReturnPath(returnPath);
-  const target = new URL('https://ekodi.kr/auth/');
-  target.searchParams.set('site', 'admin');
-  target.searchParams.set('direct', '1');
-  target.searchParams.set('return_to', safePath === '/' ? 'https://ekodi.kr/admin/' : `https://ekodi.kr/admin${safePath}`);
-  const response = new Response(null, {
-    status: 302,
-    headers: {
-      'Location': target.toString(),
-      'Cache-Control': 'no-store',
-      'X-EKODI-Route': 'admin-auth-start',
-    },
-  });
-  applyBaseSecurityHeaders(response.headers);
-  return response;
-}
-
 function adminApexAuthUrl() {
   const target = new URL('https://ekodi.kr/auth/');
   target.searchParams.set('site', 'admin');
