@@ -153,55 +153,6 @@ function publicWorkspace(workspace, subscription, store) {
   };
 }
 
-async function cfRequest(env, path, { method='GET', body=null, allow404=false } = {}) {
-  const token = String(env.CF_API_TOKEN || '').trim();
-  if (!token) throw Object.assign(new Error('Cloudflare Workspace 연결 권한이 준비되지 않았습니다.'), { code:'DOMAIN_PROVIDER_NOT_READY' });
-  const response = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
-    method,
-    headers: { authorization:`Bearer ${token}`, 'content-type':'application/json' },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (allow404 && response.status === 404) return null;
-  let payload = {};
-  try { payload = await response.json(); } catch {}
-  if (!response.ok || payload.success === false) {
-    const message = payload?.errors?.[0]?.message || `Cloudflare 요청 실패 (${response.status})`;
-    throw Object.assign(new Error(message), { code:'DOMAIN_PROVIDER_ERROR', status:response.status });
-  }
-  return payload.result;
-}
-async function accountId(env) {
-  const configured = String(env.CF_ACCOUNT_ID || '').trim();
-  if (/^[a-f0-9]{32}$/i.test(configured)) return configured;
-  const accounts = await cfRequest(env, '/accounts?per_page=50');
-  const active = (Array.isArray(accounts) ? accounts : []).filter(item => item?.id && item?.status !== 'closed');
-  if (active.length === 1) return active[0].id;
-  throw Object.assign(new Error('Cloudflare 계정을 자동으로 결정할 수 없습니다.'), { code:'DOMAIN_PROVIDER_ACCOUNT_REQUIRED' });
-}
-function pagesPath(account, suffix='') {
-  return `/accounts/${account}/pages/projects/marketing-ai${suffix}`;
-}
-async function pagesProject(env) {
-  const account = await accountId(env);
-  const project = await cfRequest(env, pagesPath(account));
-  const target = String(project?.subdomain || '').trim().toLowerCase();
-  if (!target) throw Object.assign(new Error('Marketing AI 배포 대상을 찾을 수 없습니다.'), { code:'WORKSPACE_TARGET_NOT_READY' });
-  return { account, target };
-}
-async function attachCanonical(env, hostname) {
-  const { account, target } = await pagesProject(env);
-  const suffix = `/domains/${encodeURIComponent(hostname)}`;
-  let domain = await cfRequest(env, pagesPath(account, suffix), { allow404:true });
-  if (!domain) domain = await cfRequest(env, pagesPath(account, '/domains'), { method:'POST', body:{ name:hostname } });
-  return { domain, target };
-}
-async function detachCanonical(env, hostname) {
-  const { account } = await pagesProject(env);
-  const suffix = `/domains/${encodeURIComponent(hostname)}`;
-  const current = await cfRequest(env, pagesPath(account, suffix), { allow404:true });
-  if (current) await cfRequest(env, pagesPath(account, suffix), { method:'DELETE' });
-}
-
 async function slugAvailable(env, slug, storeId) {
   const row = await env.DB.prepare(`SELECT store_id FROM marketing_store_workspaces
     WHERE workspace_slug=? LIMIT 1`).bind(slug).first();
