@@ -28,7 +28,7 @@ if(!spaceApp.includes('renderPublicWorkspaceFallback')||/접근할 수 없는 �
 const surfaces=['index.html','admin-shell.html','hub.html','trade.html','business-worker.js','business/customer-next.js','business/index.html','bible/index.html','community/index.html','life/index.html','social/index.html','energy/app.js','my-worker.js','my/app.js','my/church-marketing-ai.js','my/site-activity-role-ui.js','management-platform.js','config/management-platform.json','social-registry-api.js','social/channels.json'];
 for(const rel of surfaces){const text=read(rel);if(/https:\/\/marketing\.ekodi\.kr/gi.test(text)) fail(`${rel}: Marketing Core exposed as user entry`);if(/https:\/\/(jadam|pizzamaru|yogurt|cgma)\.ai\.ekodi\.kr/gi.test(text)) fail(`${rel}: customer AI alias exposed as user entry`);}
 if(constitution.userSurfaceEngineSeparation?.canonicalMarketingProduct!=='https://ekodi.kr/ekodibiz/marketing-ai') fail('constitutional Marketing product canonical missing');
-if(!constitution.registeredCommonServiceBoundaries?.includes('ekodi.kr/marketing')) fail('Marketing Core not registered');
-if(!constitution.registeredCoreServiceBoundaries?.includes('ekodi.kr/ai')) fail('AI Gateway/Core not registered');
+if(!constitution.registeredCommonServiceBoundaries?.includes('/marketing')) fail('Marketing Core not registered');
+if(!constitution.registeredCoreServiceBoundaries?.includes('/ai')) fail('AI Gateway/Core not registered');
 if(failures.length){console.error(`EKODI user-surface validation failed (${failures.length})`);for(const f of failures) console.error(`- ${f}`);process.exit(1);}
 console.log('EKODI user-surface/engine separation: OK');
