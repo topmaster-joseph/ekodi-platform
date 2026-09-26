@@ -37,7 +37,7 @@ function command(commandName, args) {
 }
 function unique(values) { return [...new Set(values.filter(Boolean))]; }
 function hostOf(rawUrl) { try { return new URL(rawUrl).hostname.toLowerCase(); } catch { return ''; } }
-function isEkodiHost(host) { return host === 'ekodi.kr' || host.endsWith('.ekodi.kr'); }
+function isEkodiHost(host) { return host === 'ekodi.kr'; }
 function extractUrls(text) {
   const found = text.match(/https:\/\/(?:[a-z0-9-]+\.)*ekodi\.kr(?:\/[^\s"'`)<>{}\]]*)?/gi) || [];
   return found.map(value => value.replace(/[.,;:!?]+$/, ''));
