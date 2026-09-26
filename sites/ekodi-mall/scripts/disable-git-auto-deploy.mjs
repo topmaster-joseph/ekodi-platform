@@ -57,7 +57,6 @@ function summaryLine(message) {
   console.log(message);
   const file = process.env.GITHUB_STEP_SUMMARY;
   if (file) {
-    const fs = require('node:fs');
     fs.appendFileSync(file, `${message}\n`);
   }
 }
