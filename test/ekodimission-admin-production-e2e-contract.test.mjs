@@ -45,10 +45,15 @@ test('Mission tenant-admin production E2E exercises the deployed Activity partic
     "productionNosniff",
     "signed-out-failure.png",
     "details > summary",
+    "activity-detail-meta",
     "relationshipSeparated",
     "details.activity-add",
     "rowNumbering",
-    "rowNumberingAfterAdd"
+    "rowNumberingAfterAdd",
+    "/ekodimission/api/admin/activity-rpc",
+    "handleSyntheticActivityRpc",
+    "unexpected direct activity rpc",
+    "activityGatewayContract"
   ]) assert.ok(source.includes(marker),marker);
   assert.ok(source.includes("p_privacy_consent===true"));
   assert.ok(source.includes("p_status==='attended'"));
@@ -98,5 +103,6 @@ test('generated Workspace Admin runtime is executable JavaScript with nosniff-sa
   assert.doesNotThrow(()=>new Function(source));
   assert.equal(/<html[\s>]/i.test(source),false);
   assert.match(source,/__EKODI_WORKSPACE_ADMIN_RUNTIME__/);
+  assert.match(source,/\/ekodimission\/api\/admin\/activity-rpc/);
   assert.doesNotMatch(source,/^const __name=/m);
 });

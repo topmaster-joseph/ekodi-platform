@@ -78,6 +78,9 @@ on:
       - 'marketing-canonical-projection.js'
       - 'workspace-route-policy.js'
       - 'workspace-admin-page.js'
+      - 'supabase/migrations/20260926140500_activity_public_readonly_shares.sql'
+      - 'supabase/migrations/20260927032500_activity_public_share_minimal_projection_guard.sql'
+      - '.github/workflows/deploy-activity-public-share-schema.yml'
       - 'organization-admin-page.js'
       - 'test/organization-subsite.test.mjs'
       - 'tenant-admin-policy.js'
@@ -413,6 +416,34 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/validate-deployment-guardrails.mjs
+
+      - name: Wait for Mission activity gateway and share schema before UI promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          publishable='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_'
+          gateway_ready=false
+          schema_ready=false
+          for attempt in $(seq 1 30); do
+            gateway_code=$(curl -sS -o /tmp/mission-activity-gateway.json -w '%{http_code}'               -X POST 'https://ekodi.kr/ekodimission/api/admin/activity-rpc'               -H 'Content-Type: application/json'               --data '{"rpc":"activity_admin_share_status","args":{}}' || true)
+            if [ "$gateway_code" = '401' ] && grep -Fq 'authentication_required' /tmp/mission-activity-gateway.json; then
+              gateway_ready=true
+            fi
+
+            schema_code=$(curl -sS -o /tmp/mission-activity-schema.json -w '%{http_code}'               -X POST 'https://renzehysxirjilvdxacv.supabase.co/rest/v1/rpc/activity_public_share_snapshot'               -H "apikey: $publishable"               -H 'Content-Type: application/json'               --data '{"p_token":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}' || true)
+            if [ "$schema_code" = '200' ] && grep -Eq '"ok"[[:space:]]*:[[:space:]]*false' /tmp/mission-activity-schema.json; then
+              schema_ready=true
+            fi
+
+            if [ "$gateway_ready" = true ] && [ "$schema_ready" = true ]; then
+              echo "Mission activity dependency gate ready on attempt $attempt."
+              break
+            fi
+            echo "Waiting for Mission activity dependencies: gateway=$gateway_ready schema=$schema_ready attempt=$attempt/30"
+            sleep 6
+          done
+          [ "$gateway_ready" = true ] || { echo 'Mission activity gateway is not production-ready; refusing UI promotion.' >&2; cat /tmp/mission-activity-gateway.json || true; exit 1; }
+          [ "$schema_ready" = true ] || { echo 'Mission activity share schema is not production-ready; refusing UI promotion.' >&2; cat /tmp/mission-activity-schema.json || true; exit 1; }
 
       - name: Validate current shared site and admin sources
         run: |
