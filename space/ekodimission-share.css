@@ -1,0 +1,21 @@
+:root{font-family:Inter,Pretendard,"Noto Sans KR",system-ui,sans-serif;color:#172033;background:#f6f7f4;color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:#f6f7f4;color:#172033}
+.mission-share-page{width:min(920px,calc(100% - 28px));margin:0 auto;padding:30px 0 42px}
+.mission-share-kicker{margin:0 0 8px;color:#708070;font-size:12px;font-weight:800;letter-spacing:.08em}
+.mission-share-page h1{margin:0;font-size:clamp(25px,4vw,38px);letter-spacing:-.04em;word-break:keep-all;overflow-wrap:break-word}
+.mission-share-meta{margin:10px 0 0;color:#667085;font-size:13px;line-height:1.65;word-break:keep-all}
+.mission-share-notice{margin:18px 0 12px;padding:12px 14px;border:1px solid #dce5dd;border-radius:12px;background:#fff;color:#526257;font-size:12px;line-height:1.6}
+.mission-share-table-wrap{overflow:auto;border:1px solid #e2e7e2;border-radius:14px;background:#fff}
+.mission-share-table{width:100%;border-collapse:collapse;font-size:13px}
+.mission-share-table th,.mission-share-table td{padding:12px 14px;border-bottom:1px solid #edf0ed;text-align:left;white-space:nowrap}
+.mission-share-table th{background:#f8faf8;color:#667085;font-size:12px}
+.mission-share-table th:first-child,.mission-share-table td:first-child{width:64px;text-align:center;font-variant-numeric:tabular-nums}
+.mission-share-table tbody tr:last-child td{border-bottom:0}
+.mission-share-empty{padding:26px 16px;text-align:center;color:#7d8796}
+.mission-share-footer{margin:12px 2px 0;color:#7d8796;font-size:11px;line-height:1.6}
+@media(max-width:620px){
+  .mission-share-page{width:min(100% - 20px,920px);padding-top:18px}
+  .mission-share-table th,.mission-share-table td{padding:10px 9px;font-size:12px}
+  .mission-share-table th:first-child,.mission-share-table td:first-child{width:46px}
+}
