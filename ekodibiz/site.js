@@ -154,8 +154,8 @@ function partnerHref(slug){
 }
 function persistLocale(){
   localStorage.setItem('ekodi_locale',locale);localStorage.setItem('ekodibiz.locale',locale);
-  const domain=location.hostname==='ekodi.kr'||location.hostname.endsWith('.ekodi.kr')?'; Domain=.ekodi.kr; Secure':'';
-  document.cookie=`ekodi_locale=${encodeURIComponent(locale)}; Path=/; Max-Age=31536000; SameSite=Lax${domain}`;
+  const secure=location.hostname==='ekodi.kr'?'; Secure':'';
+  document.cookie=`ekodi_locale=${encodeURIComponent(locale)}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
 }
 function detailSlug(){const match=location.hash.match(/^#business\/([a-z0-9-]+)$/);return match?.[1]&&BUSINESS[match[1]]?match[1]:null}
 function renderDetail(slug){
