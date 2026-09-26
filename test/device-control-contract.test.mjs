@@ -15,7 +15,7 @@ const [api, agent, admin, build, entry, security, bootstrap, startup] = await Pr
 
 const commands = [
   'power.always_on','power.presentation','power.normal','power.restore','lock.resume_off','lock.resume_on','autologon.open',
-  'diagnostics.collect','network.diagnose','printers.diagnose','startup.scan','startup.disable','startup.restore',
+  'diagnostics.collect','network.diagnose','printers.diagnose','printing.image_preview.status','printing.image_preview.repair','printing.image_preview.restore','startup.scan','startup.disable','startup.restore',
   'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update',
 ];
 
