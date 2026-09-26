@@ -37,6 +37,8 @@ import { handleExternalAccountControl } from './external-account-control.js';
 import { handleRealtimeControl, runRealtimeRecordingRetention } from './realtime-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 import { runSeonamMediDailyCheck } from './seonam-medi-monitor.js';
+import { runEkodiDailyTechnologyScout } from './ekodi-technology-scout.js';
+import { handleTechnologyScoutControl } from './technology-scout-control.js';
 
 function errorResponse(message, code) {
   return applyApiSecurityHeaders(new Response(JSON.stringify({ error:message, code }), {
@@ -148,6 +150,11 @@ export default {
     if (externalAccountPreflight) return externalAccountPreflight;
 
     const path = incoming.pathname;
+
+    if (path.startsWith('/api/control/technology-scout')) {
+      try { const response = await handleTechnologyScoutControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Technology Scout control error', error); return errorResponse('EKODI 기술 스카우트 처리 중 오류가 발생했습니다.', 'TECH_SCOUT_CONTROL_ERROR'); }
+    }
 
     if ((path === '/api' || path === '/api/') && request.method === 'GET') {
       return applyApiSecurityHeaders(new Response(JSON.stringify({
