@@ -53,7 +53,7 @@ jobs:
             asset_ok=false
 
             if [ "$free_code" = '200' ] \
-              && grep -Eiq '^content-security-policy:.*frame-ancestors https://admin\.ekodi\.kr([;[:space:]]|$)' /tmp/free-headers \
+              && grep -Eiq '^content-security-policy:.*frame-ancestors https://ekodi\.kr([;[:space:]]|$)' /tmp/free-headers \
               && ! grep -Eiq '^x-frame-options:[[:space:]]*DENY' /tmp/free-headers \
               && ! grep -Eiq '^content-security-policy:.*frame-ancestors '\''none'\''' /tmp/free-headers; then
               free_ok=true
