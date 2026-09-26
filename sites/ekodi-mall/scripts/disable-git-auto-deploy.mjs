@@ -56,10 +56,7 @@ function editableSource(source) {
 function summaryLine(message) {
   console.log(message);
   const file = process.env.GITHUB_STEP_SUMMARY;
-  if (file) {
-    const fs = require('node:fs');
-    fs.appendFileSync(file, `${message}\n`);
-  }
+  if (file) fs.appendFileSync(file, `${message}\n`);
 }
 
 requireValue(accountId, 'CLOUDFLARE_ACCOUNT_ID');
