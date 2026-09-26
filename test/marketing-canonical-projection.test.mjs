@@ -9,11 +9,11 @@ import {
 } from '../marketing-canonical-projection.js';
 
 const expected = new Map([
-  ['/ekodibiz/marketing-ai','https://ekodi.kr/marketing'],
-  ['/jadam/marketing','https://ekodi.kr/jadam/marketing'],
-  ['/pizzamaru/marketing','https://ekodi.kr/pizzamaru/marketing'],
-  ['/yogurt/marketing','https://ekodi.kr/yogurt/marketing'],
-  ['/cgma/marketing','https://ekodi.kr/cgma/marketing'],
+  ['/ekodibiz/marketing-ai','https://marketing-ai.pages.dev'],
+  ['/jadam/marketing','https://marketing-ai-jadam.pages.dev'],
+  ['/pizzamaru/marketing','https://marketing-ai-pizzamaru.pages.dev'],
+  ['/yogurt/marketing','https://marketing-ai-yogurtpurple.pages.dev'],
+  ['/cgma/marketing','https://cheonggye-market.pages.dev'],
 ]);
 
 test('all canonical Marketing paths resolve to hidden execution origins',()=>{
@@ -68,7 +68,7 @@ test('proxy strips credentials and upstream identity while returning projected c
     headers:{cookie:'session=private',authorization:'Bearer private','accept-language':'ko-KR'},
   });
   const response=await proxyCanonicalMarketing(request,fetcher);
-  assert.equal(seen.url,'https://ekodi.kr/jadam/marketing/?x=1');
+  assert.equal(seen.url,'https://marketing-ai-jadam.pages.dev/?x=1');
   assert.equal(seen.init.headers.get('cookie'),null);
   assert.equal(seen.init.headers.get('authorization'),null);
   assert.equal(seen.init.headers.get('accept-language'),'ko-KR');
