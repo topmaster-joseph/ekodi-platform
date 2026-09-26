@@ -36,11 +36,19 @@ const reviewMode=marketing&&params.get('review')==='1';
 const explicitPro=marketing&&(params.get('plan')==='pro'||params.get('intent')==='pro');
 const manageMode=params.get('manage')==='1';
 const interactiveMode=reviewMode||explicitPro||manageMode;
-function isMarketingReturnOrigin(origin){
-  if(config.origins.includes(origin))return true;
-  try{const u=new URL(origin);return u.protocol==='https:'&&/^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(u.hostname)&&u.origin===origin}catch{return false}
+const MARKETING_RETURN_PREFIXES=['/marketing','/ekodibiz/marketing-ai','/cgma/marketing','/jadam/marketing','/pizzamaru/marketing','/yogurt/marketing','/yogurtpurple'];
+function pathWithin(pathname,prefix){return prefix==='/'?pathname==='/':pathname===prefix||pathname.startsWith(prefix+'/')}
+function safeReturn(raw){
+  try{
+    const target=new URL(raw||config.returnTo);
+    if(target.protocol!=='https:'||target.username||target.password)return config.returnTo;
+    const defaultPrefix=new URL(config.returnTo).pathname.replace(/\/+$/,'')||'/';
+    const prefixes=marketing?MARKETING_RETURN_PREFIXES:[defaultPrefix];
+    if(target.hostname==='ekodi.kr'&&prefixes.some(prefix=>pathWithin(target.pathname,prefix)))return target.href;
+    const externalOrigins=new Set((config.origins||[]).map(value=>{try{const u=new URL(value);return u.hostname==='ekodi.kr'?'':u.origin}catch{return ''}}).filter(Boolean));
+    return externalOrigins.has(target.origin)?target.href:config.returnTo;
+  }catch{return config.returnTo}
 }
-const safeReturn=raw=>{try{const target=new URL(raw||config.returnTo);if(target.protocol!=='https:'||target.username||target.password)return config.returnTo;const platformPath=target.origin==='https://ekodi.kr'&&((site==='cgma'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/')))||(site==='mission'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/'))));return ((config.origins.includes(target.origin)&&target.origin!=='https://ekodi.kr')||platformPath||(marketing&&isMarketingReturnOrigin(target.origin)))?target.href:config.returnTo}catch{return config.returnTo}};
 const returnTo=safeReturn(params.get('return_to'));
 const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
 const $=id=>document.getElementById(id);
@@ -69,7 +77,7 @@ function cancelToService(){location.assign(returnTo)}
 function marketingFreeTarget(){
   try{
     const target=new URL(returnTo);
-    if(target.origin==='https://ekodi.kr/marketing'){
+    if(target.origin==='https://ekodi.kr'&&(target.pathname==='/marketing'||target.pathname.startsWith('/marketing/'))){
       target.searchParams.set('welcome','free');
       target.hash='memberTrial';
     }
