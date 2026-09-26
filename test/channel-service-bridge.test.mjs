@@ -109,7 +109,7 @@ test('bridge persistence is additive, central-vault only, and Mall channel selec
   assert.doesNotMatch(migration,/(refresh_token|access_token|bearer_token)\s+TEXT/i);
   assert.match(bridge,/managedCredential/);
   assert.match(bridge,/GITHUB_AUDIENCE = 'ekodi-channel-service'/);
-  assert.match(bridge,/MALL_REPOSITORY = 'topmaster-joseph\/ekodi-mall'/);
+  assert.match(bridge,/MALL_REPOSITORY = 'topmaster-joseph\/ekodi-platform'/);
   assert.match(bridge,/MALL_REPOSITORY_ID = '1308587929'/);
   assert.match(bridge,/identity\?\.claims\?\.event_name === 'workflow_dispatch'/);
   assert.match(bridge,/provider_private_proof_uploaded/);
