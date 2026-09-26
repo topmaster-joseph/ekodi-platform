@@ -10,7 +10,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = '2.5.0'
+$AgentVersion = '2.5.1'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -34,6 +34,13 @@ $IsolatedDesktopGuestCanaryStatePath = Join-Path $Root 'isolated-desktop-guest-c
 $IsolatedDesktopUiCanaryStatePath = Join-Path $Root 'isolated-desktop-ui-canary.json'
 $IsolatedDesktopSessionCanaryStatePath = Join-Path $Root 'isolated-desktop-session-canary.json'
 $IsolatedDesktopSessionRoot = Join-Path $env:ProgramData 'EKODI\IsolatedDesktop\Sessions'
+$ImagePrintPreviewClsid = '{60fd46de-f830-4894-a628-6fa81bc0190d}'
+$ImagePrintPreviewUserKey = 'HKCU:\Software\Classes\SystemFileAssociations\image\shell\print'
+$ImagePrintPreviewEffectiveKey = 'Registry::HKEY_CLASSES_ROOT\SystemFileAssociations\image\shell\print'
+$ImagePrintPreviewBackupRoot = Join-Path $Root 'image-print-preview'
+$ImagePrintPreviewBackupMeta = Join-Path $ImagePrintPreviewBackupRoot 'baseline.json'
+$ImagePrintPreviewBackupReg = Join-Path $ImagePrintPreviewBackupRoot 'baseline.reg'
+$ImagePrintPreviewPolicyStatePath = Join-Path $ImagePrintPreviewBackupRoot 'policy.json'
 
 function Test-IsAdministrator {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -2275,6 +2282,129 @@ function Get-FullDiagnostic {
   }
 }
 
+function Get-ImagePrintPreviewPolicyState {
+  if (-not (Test-Path -LiteralPath $ImagePrintPreviewPolicyStatePath)) {
+    return @{ enforced = $false; updatedAt = ''; reason = '' }
+  }
+  try {
+    $state = Get-Content -LiteralPath $ImagePrintPreviewPolicyStatePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    return @{
+      enforced = [bool]$state.enforced
+      updatedAt = [string]$state.updatedAt
+      reason = [string]$state.reason
+    }
+  } catch {
+    return @{ enforced = $false; updatedAt = ''; reason = 'invalid-local-policy-state' }
+  }
+}
+
+function Set-ImagePrintPreviewPolicyState([bool]$Enforced, [string]$Reason) {
+  New-Item -ItemType Directory -Path $ImagePrintPreviewBackupRoot -Force | Out-Null
+  @{
+    enforced = $Enforced
+    reason = $Reason
+    updatedAt = (Get-Date).ToUniversalTime().ToString('o')
+    policyId = 'EKODI-WINDOWS-IMAGE-PRINT-PREVIEW-001'
+  } | ConvertTo-Json | Set-Content -LiteralPath $ImagePrintPreviewPolicyStatePath -Encoding UTF8
+  return Get-ImagePrintPreviewPolicyState
+}
+
+function Get-ImagePrintPreviewState {
+  $effectiveDropTargetPath = Join-Path $ImagePrintPreviewEffectiveKey 'DropTarget'
+  $effectiveCommandPath = Join-Path $ImagePrintPreviewEffectiveKey 'command'
+  $userDropTargetPath = Join-Path $ImagePrintPreviewUserKey 'DropTarget'
+  $userCommandPath = Join-Path $ImagePrintPreviewUserKey 'command'
+  $effectiveClsid = ''
+  $effectiveCommand = ''
+  $userClsid = ''
+  $userCommand = ''
+  try { if (Test-Path -LiteralPath $effectiveDropTargetPath) { $effectiveClsid = [string](Get-Item -LiteralPath $effectiveDropTargetPath).GetValue('Clsid') } } catch { }
+  try { if (Test-Path -LiteralPath $effectiveCommandPath) { $effectiveCommand = [string](Get-Item -LiteralPath $effectiveCommandPath).GetValue('') } } catch { }
+  try { if (Test-Path -LiteralPath $userDropTargetPath) { $userClsid = [string](Get-Item -LiteralPath $userDropTargetPath).GetValue('Clsid') } } catch { }
+  try { if (Test-Path -LiteralPath $userCommandPath) { $userCommand = [string](Get-Item -LiteralPath $userCommandPath).GetValue('') } } catch { }
+  $previewHandlerConfigured = $effectiveClsid -eq $ImagePrintPreviewClsid
+  $userCommandOverride = [bool](Test-Path -LiteralPath $userCommandPath)
+  return @{
+    checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+    desiredClsid = $ImagePrintPreviewClsid
+    effectiveClsid = $effectiveClsid
+    effectiveCommand = $effectiveCommand
+    userClsid = $userClsid
+    userCommand = $userCommand
+    userCommandOverride = $userCommandOverride
+    previewHandlerConfigured = [bool]$previewHandlerConfigured
+    previewFirst = [bool]($previewHandlerConfigured -and -not $userCommandOverride)
+    policy = Get-ImagePrintPreviewPolicyState
+  }
+}
+
+function Ensure-ImagePrintPreviewBackup {
+  New-Item -ItemType Directory -Path $ImagePrintPreviewBackupRoot -Force | Out-Null
+  if (Test-Path -LiteralPath $ImagePrintPreviewBackupMeta) {
+    return Get-Content -LiteralPath $ImagePrintPreviewBackupMeta -Raw -Encoding UTF8 | ConvertFrom-Json
+  }
+  $userKeyExisted = Test-Path -LiteralPath $ImagePrintPreviewUserKey
+  if ($userKeyExisted) {
+    $null = & reg.exe export 'HKCU\Software\Classes\SystemFileAssociations\image\shell\print' $ImagePrintPreviewBackupReg /y 2>&1
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $ImagePrintPreviewBackupReg)) {
+      throw 'image_print_preview_backup_failed'
+    }
+  }
+  $meta = @{
+    userKeyExisted = [bool]$userKeyExisted
+    registryBackup = $(if ($userKeyExisted) { $ImagePrintPreviewBackupReg } else { '' })
+    createdAt = (Get-Date).ToUniversalTime().ToString('o')
+    agentVersion = $AgentVersion
+  }
+  $meta | ConvertTo-Json | Set-Content -LiteralPath $ImagePrintPreviewBackupMeta -Encoding UTF8
+  return $meta
+}
+
+function Repair-ImagePrintPreview {
+  [void](Ensure-ImagePrintPreviewBackup)
+  $userCommandPath = Join-Path $ImagePrintPreviewUserKey 'command'
+  $userDropTargetPath = Join-Path $ImagePrintPreviewUserKey 'DropTarget'
+  if (Test-Path -LiteralPath $userCommandPath) {
+    Remove-Item -LiteralPath $userCommandPath -Recurse -Force
+  }
+  New-Item -Path $ImagePrintPreviewUserKey -Force | Out-Null
+  New-Item -Path $userDropTargetPath -Force | Out-Null
+  New-ItemProperty -Path $userDropTargetPath -Name 'Clsid' -Value $ImagePrintPreviewClsid -PropertyType String -Force | Out-Null
+  [void](Set-ImagePrintPreviewPolicyState $true 'user-requested-enforced-repair')
+  $state = Get-ImagePrintPreviewState
+  if (-not $state.previewFirst) { throw 'image_print_preview_verification_failed' }
+  return @{
+    message = '이미지 우클릭 인쇄가 Windows 사진 인쇄 미리보기/레이아웃을 먼저 사용하도록 복구했고 자동 재조정 규칙을 활성화했습니다.'
+    printPreview = $state
+  }
+}
+
+function Restore-ImagePrintPreview {
+  $meta = $null
+  if (Test-Path -LiteralPath $ImagePrintPreviewBackupMeta) {
+    $meta = Get-Content -LiteralPath $ImagePrintPreviewBackupMeta -Raw -Encoding UTF8 | ConvertFrom-Json
+  }
+  [void](Set-ImagePrintPreviewPolicyState $false 'user-requested-restore')
+  if (Test-Path -LiteralPath $ImagePrintPreviewUserKey) {
+    Remove-Item -LiteralPath $ImagePrintPreviewUserKey -Recurse -Force
+  }
+  if ($meta -and $meta.userKeyExisted -and $meta.registryBackup -and (Test-Path -LiteralPath ([string]$meta.registryBackup))) {
+    $null = & reg.exe import ([string]$meta.registryBackup) 2>&1
+    if ($LASTEXITCODE -ne 0) { throw 'image_print_preview_restore_failed' }
+  }
+  return @{
+    message = 'EKODI 인쇄 미리보기 강제 규칙을 해제하고 최초 변경 전 사용자 레지스트리 상태를 복원했습니다.'
+    printPreview = Get-ImagePrintPreviewState
+  }
+}
+
+function Reconcile-ImagePrintPreviewPolicy {
+  $policy = Get-ImagePrintPreviewPolicyState
+  if (-not $policy.enforced) { return }
+  $state = Get-ImagePrintPreviewState
+  if (-not $state.previewFirst) { [void](Repair-ImagePrintPreview) }
+}
+
 function Invoke-DeviceCommand([pscustomobject]$Command) {
   $type = [string]$Command.type
   $payload = if ($Command.PSObject.Properties.Name -contains 'payload' -and $Command.payload) { $Command.payload } else { [pscustomobject]@{} }
@@ -2337,6 +2467,9 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'computer.desktop.session.execute' { return Invoke-IsolatedDesktopSessionExecute $payload }
     'network.diagnose' { return @{ message = '네트워크 진단을 완료했습니다.'; network = Get-NetworkDiagnostic } }
     'printers.diagnose' { return @{ message = '프린터와 인쇄 대기열 진단을 완료했습니다.'; printers = Get-PrinterDiagnostic } }
+    'printing.image_preview.status' { return @{ message = 'Windows 이미지 인쇄 미리보기 연결 상태를 확인했습니다.'; printPreview = Get-ImagePrintPreviewState } }
+    'printing.image_preview.repair' { return Repair-ImagePrintPreview }
+    'printing.image_preview.restore' { return Restore-ImagePrintPreview }
     'startup.scan' { return @{ message = '시작 프로그램 목록을 확인했습니다.'; startup = Get-StartupDiagnostic } }
     'startup.disable' { return Disable-StartupItem ([string]$payload.itemId) }
     'startup.restore' { return Restore-StartupItem ([string]$payload.itemId) }
@@ -2433,7 +2566,7 @@ function Send-Heartbeat($Config) {
     capabilities = @{
       powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
-      networkDiagnostics = $true; printerDiagnostics = $true; workstationProfile = $true; protocolLaunch = $true
+      networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true
       computerRead = $true; processRead = $true; agentStatus = $true
       isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified; isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified; isolatedDesktopSessionCanary = [bool](Get-IsolatedDesktopSessionCanaryState).verified; isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified
       desktopCapture = $false; desktopInput = $false
@@ -2536,7 +2669,7 @@ function Install-Agent {
       capabilities = @{
         powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
         diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
-        networkDiagnostics = $true; printerDiagnostics = $true; workstationProfile = $true; protocolLaunch = $true
+        networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true
         arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
       }
     } | ConvertTo-Json -Depth 8
@@ -2613,6 +2746,7 @@ function Run-Agent {
       try {
         if (((Get-Date) - $lastHeartbeat).TotalSeconds -ge 60) { Send-Heartbeat $config; $lastHeartbeat = Get-Date }
         Reconcile-DesktopCommanderRecovery
+        Reconcile-ImagePrintPreviewPolicy
         Poll-Command $config
         if ($script:RestartAfterCommand) { break }
       } catch {
