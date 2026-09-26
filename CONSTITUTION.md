@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.25.0
+# EKODI Platform Constitution v1.26.0
 
-Effective: 2026-09-24
+Effective: 2026-09-27
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 
@@ -56,6 +56,17 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Services already registered at the adoption of v1.24.0 are grandfathered only as a fixed baseline. Expanding that grandfather list requires another constitutional amendment and may not be used to bypass the evidence gate.
 - A new service outside the grandfathered baseline without governed creation evidence is a CI failure. A new independent deployment boundary must additionally pass the sustainable boundary-creation gate.
 - Machine-readable authority: `governance/constitution/constitution.json` -> `capabilityFirstServiceCreationPolicy`. Evidence registry: `config/service-creation-evidence.json`. Enforcement: `scripts/validate-capability-first-service-creation.mjs`.
+
+## 1D. Mandatory Automatic Execution Lifecycle Constitution
+- **AUTOMATIC-EXECUTION-LIFECYCLE-001** is a mandatory EKODI execution rule for every current and future automatic API, browser, remote-computer, isolated-desktop and equivalent agent execution path.
+- Automatic execution defaults to **background-only**. It must not create, focus, hijack or close a user-owned browser tab, window or interactive desktop surface.
+- EKODI-owned temporary automation surfaces must be isolated and must close automatically when work completes, fails terminally, is cancelled, or reaches an authentication boundary that cannot be completed without human action.
+- `AUTH_REQUIRED` is a terminal background state: record it, preserve evidence, close the EKODI-owned temporary surface, and do not open an interactive login window automatically.
+- Background API execution is preferred over browser automation for API-status or machine-readable checks.
+- Foreground interaction is permitted only for bounded human-required steps: OAuth/provider consent, CAPTCHA/human verification, hardware-backed authentication, or OS privileged consent. The foreground exception never grants the automation authority to control or close unrelated user-owned windows or tabs.
+- Service-local, agent-local, provider-local, workspace-local and learning-loop overrides are forbidden. A regression of this lifecycle is a CI failure.
+- The rule binds `config/remote-computer-execution-policy.json`, `config/autonomous-execution-fabric-policy.json`, `config/virtualization-routing-policy.json`, the background-browser policy, Hybrid Execution, Remote Computer Provider, Virtualization Router, Device Control and the EKODI Windows Agent.
+- Changes that weaken or waive this rule are constitutional changes and require the EKODI Platform Super Administrator's explicit approval, an amendment record, a version bump, rollback definition and governed promotion.
 
 ## 2. Domain Constitution
 - The apex `ekodi.kr` is the canonical public ecosystem entry point and canonical host for user-operated public spaces.
