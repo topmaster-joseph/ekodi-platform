@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "policyId": "CAPABILITY-BEFORE-SERVICE-001",
-  "policyVersion": "1.26.0",
+  "policyVersion": "1.27.0",
   "status": "active",
   "rule": "Only services outside the constitutionally grandfathered baseline require a record here. Records are evidence for packaging approval, not a replacement for Capability Foundry, sustainable boundary or release gates.",
   "requiredRecordShape": {
