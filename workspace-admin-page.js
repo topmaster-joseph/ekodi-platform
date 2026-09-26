@@ -262,7 +262,8 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
 
   async function activityRpc(name,body={}){
     const token=await accessToken();if(!token)throw Object.assign(new Error('AUTH_REQUIRED'),{code:'AUTH_REQUIRED',status:401});
-    const r=await fetch(SUPABASE_URL+'/rest/v1/rpc/'+encodeURIComponent(name),{method:'POST',headers:{apikey:SUPABASE_KEY,authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify(body),cache:'no-store'});
+    const missionGateway=workspace==='ekodimission';
+    const r=await fetch(missionGateway?'/ekodimission/api/admin/activity-rpc':SUPABASE_URL+'/rest/v1/rpc/'+encodeURIComponent(name),{method:'POST',headers:{...(missionGateway?{}:{apikey:SUPABASE_KEY}),authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify(missionGateway?{rpc:name,args:body}:body),cache:'no-store'});
     const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.message||d.error||('activity_'+r.status)),{status:r.status,code:d.code||d.error});return d;
   }
   const ACTIVITY_STATUS_LABEL=Object.freeze({applied:'신청',waitlist:'대기',confirmed:'확정',attended:'참석',no_show:'불참',cancelled:'취소'});
