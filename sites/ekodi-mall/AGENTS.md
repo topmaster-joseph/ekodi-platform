@@ -106,6 +106,8 @@ Mall 변경은 `.github/workflows/deploy-ekodi-mall.yml`에서 다음 순서로�
 4. staging `/health`에서 base/order/first-touch/sourcing schema, 7·8·9, 공개상품 feed, `paymentsEnabled=false`, `payoutExecutionEnabled=false`를 확인한다.
 5. staging 성공 후에만 production D1 `ekodi-mall`과 `mall-ekodi.kr/api`로 승격한다.
 6. production API 검증 성공 후에만 Cloudflare Pages 운영본을 배포하고 UI smoke test를 수행한다.
+7. production Pages 배포 직전 `scripts/disable-git-auto-deploy.mjs`가 Cloudflare Pages의 레거시 Git 자동배포를 강제로 끈다. 예상 소스는 `topmaster-joseph/ekodi-mall`뿐이며 다른 저장소가 연결되어 있으면 수정하지 않고 배포를 실패시킨다.
+8. 운영 Pages의 유일한 쓰기 경로는 이 저장소의 `.github/workflows/deploy-ekodi-mall.yml`에서 수행하는 Wrangler Direct Upload CI다. 레거시 저장소 push가 운영 또는 preview 배포를 만들 수 없어야 한다.
 
 ## 결제·자동발주 기능을 켜기 전
 
