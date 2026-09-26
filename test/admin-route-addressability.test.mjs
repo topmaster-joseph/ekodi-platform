@@ -53,6 +53,9 @@ test('canonical URL preserves page state query while removing only legacy route 
 test('workspace and service admins accept deep submenu and detail addresses',()=>{
   assert.equal(isWorkspaceAdminPathShape('/sample-workspace/admin/members/member-123/edit'),true);
   assert.equal(isWorkspaceAdminPathShape('/sample-workspace/service/admin/settings/profile/edit'),true);
+  assert.equal(isWorkspaceAdminPathShape('/ekodimission/admin'),true);
+  assert.equal(isWorkspaceAdminPathShape('/ekodimission/admin/activities'),true);
+  assert.equal(isWorkspaceAdminPathShape('/ekodimission/admin/activities/participant-123/edit'),true);
 });
 
 test('store admins require a registered first menu segment but allow detail descendants',()=>{

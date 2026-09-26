@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { workspaceAdminScript } from '../workspace-admin-page.js';
+import { isWorkspaceAdminPathShape } from '../workspace-route-policy.js';
 
 const scriptUrl=new URL('../scripts/verify-ekodimission-admin-production-e2e.mjs',import.meta.url);
 const workflowUrl=new URL('../.github/workflows/verify-ekodimission-admin-production-e2e.yml',import.meta.url);
@@ -58,6 +59,11 @@ test('Mission tenant-admin E2E runs only after a successful Shared Site deploy o
   assert.ok(workflow.includes("Mission production browser E2E skipped because Cloudflare quota protection is active."));
 });
 
+
+test('Mission canonical admin root remains owned by the tenant Workspace Admin router',()=>{
+  assert.equal(isWorkspaceAdminPathShape('/ekodimission/admin'),true);
+  assert.equal(isWorkspaceAdminPathShape('/ekodimission/admin/activities'),true);
+});
 
 test('Mission workspace admin selects mission auth scope instead of shared space auth',async()=>{
   const source=await readFile(new URL('../workspace-admin-page.js',import.meta.url),'utf8');

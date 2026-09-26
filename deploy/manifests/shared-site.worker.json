@@ -1,5 +1,5 @@
 {
-  "version": 92,
+  "version": 93,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -242,6 +242,24 @@
           "x-ekodi-independent-site: true",
           "x-ekodi-publication-status: published",
           "x-ekodi-workspace-gateway: space-service-binding"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/admin",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKODI Workspace Admin",
+          "data-ekodi-authority-scope=\"tenant\"",
+          "data-ekodi-admin-layout=\"direct-left\""
+        ],
+        "headerExpect": [
+          "x-ekodi-route: workspace-admin",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
       },
