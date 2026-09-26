@@ -198,7 +198,7 @@ const MALL_CSP = [
   "object-src 'none'",
 ].join('; ');
 
-const MALL_ADMIN_EMBED_CSP = MALL_CSP.replace("frame-ancestors 'none'", 'frame-ancestors https://ekodi.kr/admin');
+const MALL_ADMIN_EMBED_CSP = MALL_CSP.replace("frame-ancestors 'none'", 'frame-ancestors https://ekodi.kr');
 
 const ADMIN_CSP = [
   "default-src 'self'",
