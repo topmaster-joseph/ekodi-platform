@@ -313,6 +313,8 @@ try{
   await row.locator('[data-field="status"]').selectOption('confirmed');
   const details=row.locator('details').first();
   if(!(await details.getAttribute('open')))await row.locator('details > summary').first().click();
+  if(!(await details.getAttribute('open')))await details.evaluate(element=>{element.open=true});
+  await page.waitForFunction(()=>document.querySelector('[data-activity-row] details')?.open===true);
   await row.locator('[data-field="role"]').fill('진행지원');
   await row.locator('[data-field="companions"]').fill('동반자 검증');
   await row.locator('[data-field="followUp"]').selectOption('pending');
