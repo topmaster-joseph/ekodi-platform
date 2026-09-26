@@ -319,4 +319,4 @@ for (const required of ['admin-compact.js','remote-power-admin.js','remote-power
   if (!rootAsset.equals(mirroredAsset)) throw new Error(`Final Admin mirror is stale: ${required}`);
 }
 
-console.log(`Admin performance postbuild: version=${assetVersion} handoff=${bytes.handoff}B post-auth=${postAuthBytes}B first-path=${firstPathBytes}B CSS=${firstCssBytes}B; immutable versioning ready, shared menu modules published, retired runtime removed and polling guarded.`);
+console.log(`Admin performance postbuild: version=${assetVersion} handoff=${bytes.handoff}B post-auth=${postAuthBytes}B first-path=${firstPathBytes}B CSS=${firstCssBytes}B; fingerprinted asset-first mirror ready, shared menu modules published, retired runtime removed and polling guarded.`);
