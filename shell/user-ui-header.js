@@ -3,7 +3,7 @@
 if(window.__EKODI_USER_UI_HEADER_BOOTED)return;
 window.__EKODI_USER_UI_HEADER_BOOTED=true;
 
-const VERSION=8;
+const VERSION=7;
 const SITE_CHROME_URL='https://workspace-api.ekodi.kr/v1/site-chrome/public';
 const STYLE_ID='ekodi-user-ui-header-style';
 const USER_SURFACES=new Set(['public','workspace']);
@@ -177,12 +177,28 @@ function operatingSpaceTarget(header){
   if(!header)return null;
   return header.querySelector('[data-ekodi-header-site-name],[data-ekodi-site-name],.brand-title,.site-title,[data-ekodi-header-title],.header-title')||findHomeAnchor(header)||findCenter(header)||null;
 }
-function ensureOperatingSpaceLabel(header){
+function ensureOperatingSpaceLabel(header,target=operatingSpaceTarget(header)){
   if(!header)return null;
   const existing=document.querySelector(`[${OPERATING_SCOPE_ATTR}]`);
-  if(existing)existing.remove();
-  delete header.dataset.ekodiOperatingSpace;
-  return null;
+  if(!isIndividualSite()){
+    if(existing)existing.remove();
+    return null;
+  }
+  if(existing)return existing;
+  const badge=document.createElement('span');
+  badge.className=OPERATING_SCOPE_CLASS;
+  badge.setAttribute(OPERATING_SCOPE_ATTR,`v${VERSION}`);
+  badge.textContent='운영공간';
+  badge.setAttribute('aria-label','개별 운영공간');
+  badge.setAttribute('title','개별 운영공간');
+  if(target&&target!==header){
+    target.append(badge);
+  }else{
+    badge.dataset.ekodiOperatingSpaceFloating='true';
+    header.append(badge);
+  }
+  header.dataset.ekodiOperatingSpace='true';
+  return badge;
 }
 function siteSubject(){const explicit=String(document.documentElement.dataset.ekodiSiteSubject||document.body?.dataset?.ekodiSiteSubject||'').trim().toLowerCase();if(explicit)return explicit;const service=serviceId();const owned={church:'ekodi-church',biz:'ekodi-biz',lab:'ekodi-lab',trade:'ekodi-trade',cafe:'ekodi-cafe'};if(owned[service])return owned[service];const first=location.pathname.split('/').filter(Boolean)[0]||'';const aliases={ekodibiz:'ekodi-biz',biz:'ekodi-biz',ekodichurch:'ekodi-church',church:'ekodi-church',ekodilab:'ekodi-lab',lab:'ekodi-lab',cheonggye:'cgma','cheonggye-merchants':'cgma','cheonggye-merchant-association':'cgma'};return aliases[first]||first}
 async function siteChrome(){const subject=siteSubject();if(!subject||['admin','auth','privacy','terms','api'].includes(subject))return null;if(!siteChromePromise)siteChromePromise=fetch(`${SITE_CHROME_URL}?subject_key=${encodeURIComponent(subject)}`,{credentials:'omit',cache:'no-store'}).then(async r=>r.ok?r.json():null).catch(()=>null);return siteChromePromise}
