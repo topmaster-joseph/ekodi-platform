@@ -172,8 +172,8 @@ test('shared admin menu modules use the secured immutable admin asset route', as
   assert.doesNotMatch(wrangler, /"\/ekodibiz-admin-registry\.js"/);
 });
 
-test('versioned admin startup graph runs Worker-first so cache policy is not bypassed by static asset headers', async () => {
-  const wrangler = await read('wrangler.site.toml');
+test('secured root Admin assets remain Worker-first while canonical /admin/* modules stay asset-first', async () => {
+  const [wrangler, headers] = await Promise.all([read('wrangler.site.toml'), read('_headers')]);
   for (const asset of [
     '/admin-shell.css',
     '/admin-central-handoff.js',
@@ -194,6 +194,9 @@ test('versioned admin startup graph runs Worker-first so cache policy is not byp
   assert.match(wrangler, /run_worker_first\s*=\s*\[[\s\S]*"\/ai\/\*"/);
   assert.doesNotMatch(wrangler, /"\/ai\*"/);
   assert.doesNotMatch(wrangler, /"\/ai-ops-admin\.css"/);
+  assert.match(wrangler, /"!\/admin\/\*\.js"/);
+  assert.match(wrangler, /"!\/admin\/\*\.css"/);
+  assert.match(headers, /\/admin\/\*[\s\S]*Cache-Control: no-store/);
 });
 
 test('Admin runtime publishes and versions its EKODIBIZ scope-registry dependency', async () => {
