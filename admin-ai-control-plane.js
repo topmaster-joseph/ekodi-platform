@@ -23,8 +23,11 @@
   function setProviderState(next){providerState={...providerState,...next,updatedAt:new Date().toISOString()};renderDiagnostics();enhanceAiOps(true)}
   function classifyProviderError(status,payload){
     const serverMessage=payload?.message||payload?.error||payload?.detail||'';
+    const code=String(payload?.code||'');
     if(status===401)return {status:'error',httpStatus:status,message:'EKODI 관리자 인증이 필요합니다.',detail:'로그인 세션 또는 관리자 토큰을 확인하세요.'};
-    if(status===403)return {status:'error',httpStatus:status,message:'Cloudflare 또는 관리자 권한이 부족합니다.',detail:serverMessage||'API Token의 Account/Zone/Workers 읽기 권한과 관리자 권한을 확인하세요.'};
+    if(status===403&&code==='SECRET_MANAGER_FORBIDDEN')return {status:'error',httpStatus:status,message:'EKODI Secret 관리 권한이 필요합니다.',detail:serverMessage||'플랫폼 최고관리자 또는 secrets:read 권한을 확인하세요.'};
+    if(status===403&&code==='ELEVATION_REQUIRED')return {status:'warn',httpStatus:status,message:'보호된 작업 추가 인증이 필요합니다.',detail:serverMessage||'현재 Google 관리자 계정으로 추가 인증하면 같은 화면에서 계속할 수 있습니다.'};
+    if(status===403)return {status:'error',httpStatus:status,message:'Cloudflare API 권한이 부족합니다.',detail:serverMessage||'Secret Manager용 API Token의 Account/Zone/Workers 권한을 확인하세요.'};
     if(status===404)return {status:'error',httpStatus:status,message:'공급자 조회 API를 찾을 수 없습니다.',detail:'api.ekodi.kr 배포 경로와 라우팅을 확인하세요.'};
     if(status===429)return {status:'warn',httpStatus:status,message:'Cloudflare 조회가 일시적으로 제한되었습니다.',detail:'잠시 후 다시 확인하거나 API rate limit 상태를 점검하세요.'};
     if(status>=500)return {status:'error',httpStatus:status,message:'공급자 조회 서버에서 오류가 발생했습니다.',detail:serverMessage||'Control API와 Cloudflare 연동 로그를 확인하세요.'};
