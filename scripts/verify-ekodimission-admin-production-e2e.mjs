@@ -311,6 +311,8 @@ try{
 
   const row=page.locator('[data-activity-row]').filter({hasText:'운영검증 참가자'}).first();
   await row.locator('[data-field="status"]').selectOption('confirmed');
+  const details=row.locator('details').first();
+  if(!(await details.getAttribute('open')))await row.locator('details > summary').first().click();
   await row.locator('[data-field="role"]').fill('진행지원');
   await row.locator('[data-field="companions"]').fill('동반자 검증');
   await row.locator('[data-field="followUp"]').selectOption('pending');
