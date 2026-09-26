@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import {
   EKODI_MCP_RESOURCE,
   EKODI_MCP_LEGACY_RESOURCES,
@@ -15,6 +16,15 @@ function tokenFor(claims){
   return `${part({alg:'RS256',typ:'JWT'})}.${part(claims)}.signature`;
 }
 function tool(name){return EKODI_MCP_TOOLS.find(item=>item.name===name)}
+
+const gatewaySource = await readFile(new URL('../ekodi-mcp-gateway.js', import.meta.url), 'utf8');
+
+test('MCP personal status and membership use only canonical apex API routes',()=>{
+  assert.match(gatewaySource,/https:\/\/ekodi\.kr\/api\/user-ai\/status/);
+  assert.match(gatewaySource,/https:\/\/ekodi\.kr\/api\/membership\/portfolio/);
+  assert.doesNotMatch(gatewaySource,/https:\/\/api\.ekodi\.kr/);
+  assert.doesNotMatch(gatewaySource,/https:\/\/ekodi\.kr\/api\/api\//);
+});
 
 test('protected resource metadata points MCP at EKODI Supabase OAuth',()=>{
   const metadata=mcpProtectedResourceMetadata();

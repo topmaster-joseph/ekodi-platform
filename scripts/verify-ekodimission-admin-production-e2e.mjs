@@ -5,6 +5,7 @@ import { chromium } from 'playwright';
 const origin = String(process.env.EKODI_PRODUCTION_ORIGIN || 'https://ekodi.kr').replace(/\/+$/,'');
 const activityKey = '260926-chuseok-open-table';
 const targetUrl = origin + '/ekodimission/admin';
+const activityUrl = origin + '/ekodimission/admin/activities';
 const artifactsDir = path.resolve('artifacts/ekodimission-admin-production-e2e');
 await fs.mkdir(artifactsDir,{recursive:true});
 
@@ -49,6 +50,8 @@ const participants = [{
   relationships:[],
 }];
 
+let shareRecord=null;
+const shareToken='SyntheticShareToken_abcdefghijklmnopqrstuvwxyz012345';
 const mutationCalls = [];
 const assetResponses = [];
 const consoleErrors = [];
@@ -94,8 +97,8 @@ function captureWorkspaceAsset(list,response){
 const browser=await chromium.launch({headless:true});
 
 // First verify the real signed-out production surface builds a Mission-scoped
-// auth URL that returns to the canonical Mission admin root. This catches
-// regressions where a tenant admin login is accidentally routed through My EKODI or a generic command home.
+// auth URL that returns to the exact applicant-management route. This catches
+// regressions where tenant admin login loses the requested subroute or hides the navigation structure.
 const signedOutContext=await browser.newContext({viewport:{width:1440,height:1100}});
 const signedOutPage=await signedOutContext.newPage();
 signedOutPage.setDefaultTimeout(12_000);
@@ -104,20 +107,21 @@ signedOutPage.on('console',message=>{if(message.type()==='error')signedOutConsol
 signedOutPage.on('pageerror',error=>signedOutPageErrors.push(String(error?.stack||error?.message||error)));
 signedOutPage.on('response',response=>captureWorkspaceAsset(signedOutAssetResponses,response));
 try{
-  await signedOutPage.goto(targetUrl,{waitUntil:'domcontentloaded'});
+  await signedOutPage.goto(activityUrl,{waitUntil:'domcontentloaded'});
+  await signedOutPage.waitForFunction(()=>document.querySelector('#adminNav')?.textContent?.includes('행사 · 신청자'));
   await signedOutPage.waitForFunction(()=>document.querySelector('#pageState')?.textContent?.includes('로그인 필요'));
   const loginAnchor=signedOutPage.locator('#mainPanel a.button.primary[href*="/auth/"]').first();
   await loginAnchor.waitFor({state:'visible'});
   const loginHref=await loginAnchor.getAttribute('href');
   if(!loginHref)throw new Error('Mission admin signed-out login link missing');
   const loginUrl=new URL(loginHref);
-  const expectedReturn=new URL(targetUrl);
+  const expectedReturn=new URL(activityUrl);
   if(loginUrl.origin!==origin||loginUrl.pathname!=='/auth/'||loginUrl.searchParams.get('site')!=='mission'||loginUrl.searchParams.get('direct')!=='1'){
     throw new Error('Mission admin auth scope is not canonical: '+loginUrl.href);
   }
   const returnTo=new URL(loginUrl.searchParams.get('return_to')||'');
   if(returnTo.origin!==expectedReturn.origin||returnTo.pathname!==expectedReturn.pathname||returnTo.search!==expectedReturn.search){
-    throw new Error('Mission admin return_to lost the canonical admin root: '+loginUrl.href);
+    throw new Error('Mission admin return_to lost the applicant-management route: '+loginUrl.href);
   }
 }catch(error){
   await signedOutPage.screenshot({path:path.join(artifactsDir,'signed-out-failure.png'),fullPage:true}).catch(()=>{});
@@ -135,10 +139,11 @@ try{
   const report={
     generatedAt:new Date().toISOString(),
     targetUrl,
+    activityUrl,
     passed:false,
     stage:'signed-out-auth-boundary',
     mode:'production-signed-out-surface',
-    checks:{authSiteMission:false,authReturnToExact:false},
+    checks:{authSiteMission:false,authReturnToExact:false,preAuthNavigationVisible:false},
     mutationCalls:[],
     assetResponses:signedOutAssetResponses,
     diagnostics:{
@@ -201,6 +206,36 @@ await page.route('https://renzehysxirjilvdxacv.supabase.co/rest/v1/rpc/**',async
     return jsonResponse(route,snapshot());
   }
 
+  if(name==='activity_admin_share_status'){
+    if(body.p_workspace_slug!=='ekodimission'||body.p_activity_key!==activityKey)return jsonResponse(route,{message:'wrong share scope'},400);
+    return jsonResponse(route,shareRecord?{
+      active:true,
+      share_id:shareRecord.share_id,
+      expires_at:shareRecord.expires_at,
+      field_policy:shareRecord.field_policy,
+      created_at:shareRecord.created_at,
+      last_accessed_at:null,
+      access_count:0,
+    }:{active:false});
+  }
+
+  if(name==='activity_admin_create_share'){
+    mutationCalls.push({name,body});
+    shareRecord={
+      share_id:'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+      expires_at:body.p_expires_at,
+      field_policy:body.p_field_policy||{name:true,status:true,party_size:true},
+      created_at:new Date().toISOString(),
+    };
+    return jsonResponse(route,{ok:true,share_id:shareRecord.share_id,token:shareToken,share_path:'/ekodimission/share/'+shareToken,expires_at:shareRecord.expires_at,field_policy:shareRecord.field_policy});
+  }
+
+  if(name==='activity_admin_revoke_share'){
+    mutationCalls.push({name,body});
+    if(!shareRecord||body.p_share_id!==shareRecord.share_id)return jsonResponse(route,{message:'ACTIVITY_SHARE_NOT_FOUND'},404);
+    const id=shareRecord.share_id;shareRecord=null;return jsonResponse(route,{ok:true,share_id:id,active:false});
+  }
+
   if(name==='activity_admin_update_participation'){
     const item=participants.find(row=>row.participation_id===body.p_participation_id);
     if(!item)return jsonResponse(route,{message:'PARTICIPATION_NOT_FOUND'},404);
@@ -253,7 +288,7 @@ await page.route('https://renzehysxirjilvdxacv.supabase.co/rest/v1/rpc/**',async
 });
 
 let fatal=null;
-const checks={authSiteMission:true,authReturnToExact:true};
+const checks={authSiteMission:true,authReturnToExact:true,preAuthNavigationVisible:true};
 try{
   await page.goto(targetUrl,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>document.querySelector('#pageState')?.textContent?.includes('운영공간'));
@@ -276,6 +311,8 @@ try{
 
   const row=page.locator('[data-activity-row]').filter({hasText:'운영검증 참가자'}).first();
   await row.locator('[data-field="status"]').selectOption('confirmed');
+  const details=row.locator('details').first();
+  if(!(await details.getAttribute('open')))await row.locator('details > summary').first().click();
   await row.locator('[data-field="role"]').fill('진행지원');
   await row.locator('[data-field="companions"]').fill('동반자 검증');
   await row.locator('[data-field="followUp"]').selectOption('pending');
@@ -303,6 +340,24 @@ try{
   await page.waitForFunction(()=>document.body.innerText.includes('운영검증 신규참가자'));
   checks.addMutation=mutationCalls.some(call=>call.name==='activity_admin_add_participant'&&call.body.p_privacy_consent===true&&call.body.p_source_channel==='admin'&&Array.isArray(call.body.p_companions)&&call.body.p_companions.length===2);
   checks.addedVisible=await page.getByText('운영검증 신규참가자',{exact:true}).isVisible();
+
+  const shareButton=page.locator('#activityShareButton');
+  checks.shareButtonVisible=await shareButton.isVisible();
+  await shareButton.click();
+  await page.locator('#activityShareDialog[open]').waitFor({state:'visible'});
+  const shareDialogText=await page.locator('#activityShareDialog').innerText();
+  checks.sharePrivacyLock=/전화번호 · 이메일 · 역할 · 후속관리 · 내부 메모 · EKODI ID/.test(shareDialogText);
+  await page.locator('#activityShareCreate').click();
+  await page.waitForFunction(()=>document.querySelector('#activityShareLink')?.value?.includes('/ekodimission/share/'));
+  const shareHref=await page.locator('#activityShareLink').inputValue();
+  checks.shareLinkReadOnly=shareHref===origin+'/ekodimission/share/'+shareToken;
+  checks.shareCreateMutation=mutationCalls.some(call=>call.name==='activity_admin_create_share'&&call.body.p_workspace_slug==='ekodimission'&&call.body.p_activity_key===activityKey&&call.body.p_field_policy?.name===true&&call.body.p_field_policy?.status===true&&call.body.p_field_policy?.party_size===true);
+  const revokeButton=page.locator('#activityShareRevoke');
+  await revokeButton.waitFor({state:'visible'});
+  await revokeButton.click();
+  await page.waitForFunction(()=>!document.querySelector('#activityShareDialog')?.open);
+  checks.shareRevokeMutation=mutationCalls.some(call=>call.name==='activity_admin_revoke_share'&&call.body.p_share_id==='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee');
+
 
   const paths=new Set(assetResponses.filter(item=>item.status===200).map(item=>item.path));
   checks.productionAssets=paths.has('/workspace-admin.js')&&paths.has('/workspace-admin.css');
@@ -338,4 +393,4 @@ try{
 }
 
 if(fatal)throw fatal;
-console.log('EKODI Mission tenant-admin production UI E2E passed: render, edit, follow-up, check-in, add-participant, privacy consent, and relationship separation.');
+console.log('EKODI Mission tenant-admin production UI E2E passed: render, edit, follow-up, check-in, add-participant, row numbering, read-only sharing, privacy consent, and relationship separation.');

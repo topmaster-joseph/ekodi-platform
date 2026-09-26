@@ -69,5 +69,16 @@
     "externalFallbackForThisWorker": "forbidden-while-runtime-healthy",
     "mustIdentifyAsNativeInEvidence": true
   },
-  "routingPolicy": "config/virtualization-routing-policy.json"
+  "routingPolicy": "config/virtualization-routing-policy.json",
+  "constitutionalPolicy": "AUTOMATIC-EXECUTION-LIFECYCLE-001",
+  "executionLifecycle": {
+    "constitutionalPolicy": "AUTOMATIC-EXECUTION-LIFECYCLE-001",
+    "mode": "background-only",
+    "userBrowserTabCreation": false,
+    "ownedAutomationSurfaceAutoClose": true,
+    "authRequiredDisposition": "record-and-close",
+    "authRequiredMustNotOpenInteractiveLogin": true,
+    "preserveUserOwnedWindowsAndTabs": true,
+    "localOverrideForbidden": true
+  }
 }

@@ -1,5 +1,5 @@
 {
-  "version": 92,
+  "version": 93,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -166,7 +166,7 @@
           "store_operating_space_snapshot",
           "store_delivery_platform_admin_snapshot",
           "setInterval",
-          "300000"
+          "visibilityState"
         ],
         "rollbackVerify": false
       },
@@ -224,6 +224,78 @@
           "x-ekodi-surface-context: public-person-profile",
           "x-robots-tag: noindex, nofollow, noarchive"
         ]
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKODI MISSION",
+          "data-mission-nav",
+          "/ekodimission/assets/shell.css",
+          "/ekodimission/assets/shell.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: ekodimission-public",
+          "x-ekodi-independent-site: true",
+          "x-ekodi-publication-status: published",
+          "x-ekodi-workspace-gateway: space-service-binding"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/admin",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKODI Workspace Admin",
+          "data-ekodi-authority-scope=\"tenant\"",
+          "data-ekodi-admin-layout=\"direct-left\""
+        ],
+        "headerExpect": [
+          "x-ekodi-route: workspace-admin",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/assets/shell.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKODI_MISSION_NAVIGATION_CONTRACT",
+          "data-mission-nav"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: ekodimission-asset",
+          "x-ekodi-publication-status: published",
+          "x-ekodi-workspace-gateway: space-service-binding"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/assets/shell.css",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          ".mission-site-header",
+          ".mission-language"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: ekodimission-asset",
+          "x-ekodi-publication-status: published",
+          "x-ekodi-workspace-gateway: space-service-binding"
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/live",

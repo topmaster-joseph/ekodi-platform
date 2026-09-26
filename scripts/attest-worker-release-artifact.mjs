@@ -29,6 +29,7 @@ const root = process.cwd();
 const sha256 = value => crypto.createHash('sha256').update(value).digest('hex');
 const normalize = value => value.split(path.sep).join('/');
 const WRANGLER_GENERATED_METADATA = new Set(['README.md']);
+const GENERATED_ASSET_PROVENANCE = new Set(['ops/health.json']);
 
 function assertInsideWorkspace(targetPath, label) {
   const resolved = path.resolve(root, targetPath);
@@ -39,7 +40,7 @@ function assertInsideWorkspace(targetPath, label) {
   return resolved;
 }
 
-function collectDirectory(directory, prefix, { excludeRootFiles = new Set() } = {}) {
+function collectDirectory(directory, prefix, { excludeRootFiles = new Set(), excludeRelativePaths = new Set() } = {}) {
   const resolved = assertInsideWorkspace(directory, prefix);
   if (!fs.existsSync(resolved) || !fs.statSync(resolved).isDirectory()) {
     throw new Error(`${prefix} directory missing: ${directory}`);
@@ -55,6 +56,8 @@ function collectDirectory(directory, prefix, { excludeRootFiles = new Set() } = 
       if (stat.isSymbolicLink()) throw new Error(`symbolic links are not allowed in release artifacts: ${absolute}`);
       if (stat.isDirectory()) walk(absolute, relative);
       else if (stat.isFile()) {
+        const normalizedRelative = normalize(relative);
+        if (excludeRelativePaths.has(normalizedRelative)) continue;
         const content = fs.readFileSync(absolute);
         entries.push({
           path: `${prefix}/${normalize(relative)}`,
@@ -83,7 +86,7 @@ function collectFile(spec) {
 try {
   const entries = [
     ...collectDirectory(options.bundle, 'bundle', { excludeRootFiles: WRANGLER_GENERATED_METADATA }),
-    ...(options.assets ? collectDirectory(options.assets, 'assets') : []),
+    ...(options.assets ? collectDirectory(options.assets, 'assets', { excludeRelativePaths: GENERATED_ASSET_PROVENANCE }) : []),
     ...options.files.map(collectFile),
   ].sort((a, b) => a.path.localeCompare(b.path, 'en'));
 
@@ -106,6 +109,8 @@ try {
       digestCoversDeclaredMetadataFiles: options.files.length > 0,
       digestExcludesWranglerGeneratedOutdirReadme: true,
       wranglerGeneratedOutdirReadmeReason: 'Wrangler writes README.md with new Date().toISOString(); it is tool metadata and not part of the deployed Worker payload.',
+      digestExcludesGeneratedOpsHealthProvenance: true,
+      generatedOpsHealthProvenanceReason: 'ops/health.json contains non-authoritative workflow/run provenance that may change across safe reruns without changing executable code, static product assets, configuration, or release contracts.',
       digestDoesNotIncludeSecrets: true,
       providerUploadPerformedByThisScript: false,
     },

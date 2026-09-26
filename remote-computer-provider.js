@@ -17,7 +17,11 @@ export const REMOTE_COMPUTER_OPERATIONS = Object.freeze({
   'computer.files.read': Object.freeze({ capability:'filesystemRead', risk:'observe', hostMode:'isolated-required', mutation:false }),
   'computer.files.write': Object.freeze({ capability:'filesystemWrite', risk:'maintain', hostMode:'isolated-required', mutation:true }),
   'computer.terminal.exec': Object.freeze({ capability:'isolatedCommand', risk:'maintain', hostMode:'isolated-required', mutation:true }),
-  'computer.browser.execute': Object.freeze({ capability:'backgroundBrowser', risk:'maintain', hostMode:'isolated-required', mutation:true }),
+  'computer.browser.execute': Object.freeze({
+    capability:'backgroundBrowser', risk:'maintain', hostMode:'isolated-required', mutation:true,
+    executionMode:'background-only', foregroundAllowed:false, userBrowserTabCreation:false,
+    ownedSurfaceAutoClose:true, preserveUserOwnedSurfaces:true,
+  }),
   'computer.desktop.session.execute': Object.freeze({ capability:'isolatedDesktop', risk:'privileged', hostMode:'isolated-required', mutation:true }),
   'computer.desktop.capture': Object.freeze({ capability:'desktopCapture', risk:'privileged', hostMode:'consent-required', mutation:false }),
   'computer.desktop.input': Object.freeze({ capability:'desktopInput', risk:'privileged', hostMode:'consent-required', mutation:true }),
@@ -39,6 +43,10 @@ export function remoteComputerProviderDescriptor() {
     nonDisruptiveDefault: true,
     foregroundUserSessionOwnedByUser: true,
     minimizedWindowCountsAsIsolation: false,
+    automaticBrowserExecutionMode: 'background-only',
+    automaticUserBrowserTabCreation: false,
+    ownedAutomationSurfaceAutoClose: true,
+    preserveUserOwnedSurfaces: true,
     persistentAgentShell: false,
     directHostMutation: false,
     supportedOperations: Object.keys(REMOTE_COMPUTER_OPERATIONS),
@@ -83,6 +91,11 @@ export function planRemoteComputerExecution({
       operation,
       risk: policy.risk,
       securityMode: policy.hostMode,
+      executionMode: policy.executionMode || null,
+      foregroundAllowed: policy.foregroundAllowed !== false,
+      userBrowserTabCreation: policy.userBrowserTabCreation !== false,
+      ownedSurfaceAutoClose: policy.ownedSurfaceAutoClose === true,
+      preserveUserOwnedSurfaces: policy.preserveUserOwnedSurfaces === true,
       costModel: REMOTE_COMPUTER_TRANSITION_POLICY.targetCostModel,
     }));
   }
@@ -91,6 +104,14 @@ export function planRemoteComputerExecution({
     if (!item || item.state !== 'online' || item.securityEquivalent !== true) continue;
     const operations = Array.isArray(item.operations) ? item.operations : [];
     if (!operations.includes(operation)) continue;
+    if (operation === 'computer.browser.execute') {
+      if (item.executionMode !== 'background-only') continue;
+      if (item.headlessOrOffscreen !== true) continue;
+      if (item.userBrowserTabCreation !== false) continue;
+      if (item.ownedSurfaceAutoClose !== true) continue;
+      if (item.preserveUserOwnedSurfaces !== true) continue;
+      if (item.interactiveLoginAllowed === true) continue;
+    }
 
     const providerId = safeText(item.id, 80);
     const paidOnly = item.requiresPaidUpgrade === true || safeText(item.costModel, 40) === 'paid-only';
@@ -116,6 +137,11 @@ export function planRemoteComputerExecution({
       operation,
       risk: policy.risk,
       securityMode: safeText(item.securityMode || 'equivalent', 40),
+      executionMode: operation === 'computer.browser.execute' ? 'background-only' : null,
+      foregroundAllowed: operation === 'computer.browser.execute' ? false : null,
+      userBrowserTabCreation: operation === 'computer.browser.execute' ? false : null,
+      ownedSurfaceAutoClose: operation === 'computer.browser.execute' ? true : null,
+      preserveUserOwnedSurfaces: operation === 'computer.browser.execute' ? true : null,
       temporaryBridge: isTemporaryBridge,
       costModel: safeText(item.costModel || 'external-provider', 40),
     }));
@@ -145,5 +171,12 @@ export function validateRemoteComputerReceipt(receipt = {}) {
   if (receipt.directProductionMutation === true) errors.push('direct_production_mutation_forbidden');
   if (receipt.foregroundFocusStolen === true) errors.push('foreground_focus_theft_forbidden');
   if (receipt.activeUserBrowserProfileReused === true) errors.push('active_user_profile_reuse_forbidden');
+  if (receipt.operation === 'computer.browser.execute') {
+    if (receipt.executionMode !== 'background-only') errors.push('browser_background_only_required');
+    if (receipt.userBrowserTabCreated === true) errors.push('browser_user_tab_creation_forbidden');
+    if (receipt.ownedSurfaceClosed !== true) errors.push('browser_owned_surface_cleanup_required');
+    if (receipt.userOwnedSurfacesPreserved !== true) errors.push('browser_user_surface_preservation_required');
+    if (receipt.interactiveLoginOpened === true) errors.push('browser_interactive_login_forbidden');
+  }
   return Object.freeze({ ok:errors.length === 0, errors });
 }

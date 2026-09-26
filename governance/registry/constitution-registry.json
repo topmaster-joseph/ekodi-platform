@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-23",
+  "updatedAt": "2026-09-27",
   "title": "EKODI Constitution Registry Index",
   "mode": "index-only",
   "authority": {
@@ -365,6 +365,27 @@
         "config/capability-foundry.json",
         "config/service-creation-evidence.json",
         "scripts/validate-capability-first-service-creation.mjs"
+      ]
+    },
+    {
+      "id": "EXECUTION-001",
+      "area": "automatic-execution-lifecycle",
+      "title": "Mandatory background-only automatic execution lifecycle",
+      "status": "active",
+      "sourcePointer": "/automaticExecutionLifecyclePolicy",
+      "impactPaths": [
+        "config/remote-computer-execution-policy.json",
+        "config/autonomous-execution-fabric-policy.json",
+        "config/virtualization-routing-policy.json",
+        "config/background-browser-worker-policy.json",
+        "hybrid-execution.js",
+        "remote-computer-provider.js",
+        "virtualization-router.js",
+        "device-control.js",
+        "tools/ekodi-device-agent/windows/ekodi-device-agent.ps1",
+        "scripts/validate-virtualization-routing.mjs",
+        "test/automatic-execution-constitution.test.mjs",
+        "test/hybrid-execution-contract.test.mjs"
       ]
     }
   ]

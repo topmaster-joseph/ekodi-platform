@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { workspaceAdminScript } from '../workspace-admin-page.js';
+import { isWorkspaceAdminPathShape } from '../workspace-route-policy.js';
 
 const scriptUrl=new URL('../scripts/verify-ekodimission-admin-production-e2e.mjs',import.meta.url);
 const workflowUrl=new URL('../.github/workflows/verify-ekodimission-admin-production-e2e.yml',import.meta.url);
@@ -22,6 +23,9 @@ test('Mission tenant-admin production E2E exercises the deployed Activity partic
     "activity_admin_snapshot",
     "activity_admin_update_participation",
     "activity_admin_add_participant",
+    "activity_admin_share_status",
+    "activity_admin_create_share",
+    "activity_admin_revoke_share",
     "data-activity-checkin",
     "privacyConsent",
     "단순 참가자",
@@ -31,12 +35,16 @@ test('Mission tenant-admin production E2E exercises the deployed Activity partic
     "#mainPanel a.button.primary[href*=\"/auth/\"]",
     "searchParams.get('site')!=='mission'",
     "authReturnToExact:true",
+    "preAuthNavigationVisible:true",
+    "activityUrl",
+    "행사 · 신청자",
     "captureWorkspaceAsset",
     "signed-out-auth-boundary",
     "signedOutState",
     "productionAssetTypes",
     "productionNosniff",
-    "signed-out-failure.png"
+    "signed-out-failure.png",
+    "details > summary"
   ]) assert.ok(source.includes(marker),marker);
   assert.ok(source.includes("p_privacy_consent===true"));
   assert.ok(source.includes("p_status==='attended'"));
@@ -59,11 +67,19 @@ test('Mission tenant-admin E2E runs only after a successful Shared Site deploy o
 });
 
 
+test('Mission canonical admin root remains owned by the tenant Workspace Admin router',()=>{
+  assert.equal(isWorkspaceAdminPathShape('/ekodimission/admin'),true);
+  assert.equal(isWorkspaceAdminPathShape('/ekodimission/admin/activities'),true);
+});
+
 test('Mission workspace admin selects mission auth scope instead of shared space auth',async()=>{
   const source=await readFile(new URL('../workspace-admin-page.js',import.meta.url),'utf8');
   assert.ok(source.includes("if(workspace==='ekodimission')return'mission'"));
   assert.ok(source.includes("u.searchParams.set('site',workspaceAuthSite())"));
   assert.ok(source.includes("u.searchParams.set('return_to',location.origin+location.pathname+location.search)"));
+  assert.ok(source.includes("MISSION_RETURN_KEY='ekodi-mission-admin-return'"));
+  assert.ok(source.includes("rememberMissionReturn"));
+  assert.ok(source.includes("consumeMissionReturn"));
 });
 
 

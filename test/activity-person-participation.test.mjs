@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { tenantAdminCan, tenantAdminPolicySnapshot } from '../tenant-admin-policy.js';
-import { workspaceAdminCanAccess, workspaceAdminScript } from '../workspace-admin-page.js';
+import { workspaceAdminCanAccess, workspaceAdminCss, workspaceAdminScript } from '../workspace-admin-page.js';
 
 const migrationUrl=new URL('../supabase/migrations/20260919143000_activity_person_participation.sql',import.meta.url);
 
@@ -62,8 +62,11 @@ test('EKODI Mission is promoted to tenant-local Activity administration',async()
 });
 
 test('Workspace Admin exposes one-screen activity participant operations',async()=>{
-  const source=await (await workspaceAdminScript()).text();
-  for(const marker of ['activity_admin_snapshot','activity_admin_add_participant','activity_admin_update_participation','활동 · 참가자','data-activity-checkin','followUpStatus','companionsFromInput','google_form','privacyConsent'])assert.ok(source.includes(marker),marker);
+  const [source,css]=await Promise.all([(await workspaceAdminScript()).text(),(await workspaceAdminCss()).text()]);
+  for(const marker of ['activity_admin_snapshot','activity_admin_add_participant','activity_admin_update_participation','활동 · 참가자','data-activity-checkin','followUpStatus','companionsFromInput','google_form','privacyConsent','activity-seq','activity-seq-head','연번'])assert.ok(source.includes(marker),marker);
   assert.ok(source.includes("workspace==='ekodimission'"));
   assert.ok(source.includes("section==='activities'"));
+  assert.ok(css.includes('grid-template-columns:40px minmax(0,1fr) auto'));
+  assert.ok(css.includes('.activity-table-wrap td:nth-child(6){grid-column:1/-1}'));
+  assert.match(source,/<th class="activity-seq-head" scope="col">연번<\/th><th scope="col">신청자<\/th>/);
 });

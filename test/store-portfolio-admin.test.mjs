@@ -25,6 +25,9 @@ test('cmpmyi admin provides fixed common and brand navigation with a right works
   assert.match(html,/class="panel-frame"/);
   assert.match(html,/class="portfolio-sidebar"/);
   assert.match(html,/data-cmpmyi-navigation="left-fixed"/);
+  assert.match(html,/<details class="brand-group"/);
+  assert.match(html,/class="brand-caret"/);
+  assert.match(html,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.doesNotMatch(html,/class="sidebar"/);
   for(const store of CMPMYI_STORES){
     assert.ok(html.includes(store.name));
@@ -70,6 +73,8 @@ test('cmpmyi delivery runtime reads existing store ledgers without adding cross-
   assert.match(script,/ekodi-store-admin-session:jadam/);
   assert.match(script,/data-delivery-live/);
   assert.match(script,/5분 자동갱신/);
+  assert.match(script,/document\.visibilityState==='visible'/);
+  assert.match(script,/setInterval[\s\S]*300000/);
   assert.doesNotMatch(script,/store_platform_sync_queue|store_platform_review_queue_reply|menu_price_update|menu_availability_update/);
 });
 
@@ -90,6 +95,9 @@ test('router serves cmpmyi common panels and same-origin embedded canonical stor
   assert.equal(embedded.headers.get('x-ekodi-embedded-admin'),'cmpmyi');
   assert.match(embedded.headers.get('content-security-policy')||'',/frame-ancestors 'self'/);
   assert.match(embeddedHtml,/data-ekodi-embedded-admin="true"/);
+  const css=await (await platformEntry.fetch(new Request('https://ekodi.kr/store-admin.css'),{},{})).text();
+  assert.match(css,/\[data-ekodi-embedded-admin="true"\] main\{max-width:none;padding:8px 10px 16px\}/);
+  assert.match(css,/\[data-ekodi-embedded-admin="true"\] \.panel\{padding:10px;min-height:120px/);
 
   const direct=storeAdminPage({slug:'jadam',name:'자담치킨 목포대점',id:'4b1e5933-b9ae-4cb9-9d31-dcbb0a5b25aa',mark:'JD',brand:'JADAM CHICKEN',pathname:'/jadam/admin/menu'});
   assert.equal(direct.status,200);
@@ -127,7 +135,8 @@ test('guarded release probes canonical store admins and redirect-only aggregate 
   assert.ok(liveRuntime?.expect.includes('store_operating_space_snapshot'));
   assert.ok(liveRuntime?.expect.includes('store_delivery_platform_admin_snapshot'));
   assert.ok(liveRuntime?.expect.includes('setInterval'));
-  assert.ok(liveRuntime?.expect.includes('300000'));
+  assert.ok(liveRuntime?.expect.includes('visibilityState'));
+  assert.ok(!liveRuntime?.expect.includes('300000'));
   assert.ok(!liveRuntime?.expect.some(marker=>/[^\x00-\x7F]/.test(marker)));
   assert.deepEqual(byUrl.get('https://ekodi.kr/jadam/admin/menu?embed=cmpmyi')?.statuses,[200]);
   assert.ok(byUrl.get('https://ekodi.kr/jadam/admin/menu?embed=cmpmyi')?.headerExpect.includes('x-ekodi-embedded-admin: cmpmyi'));
