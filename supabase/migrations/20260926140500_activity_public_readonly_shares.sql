@@ -32,10 +32,9 @@ create or replace function public.activity_admin_share_status(
   p_activity_key text
 ) returns jsonb
 language plpgsql
-stable
 security definer
 set search_path=public,auth,extensions,pg_temp
-as $$
+as $
 declare
   v_activity public.activities%rowtype;
   v_share public.activity_public_shares%rowtype;
@@ -100,7 +99,7 @@ declare
   v_policy jsonb;
   v_share public.activity_public_shares%rowtype;
 begin
-  select a.*,t.slug into v_activity,v_tenant_slug
+  select a,t.slug into v_activity,v_tenant_slug
   from public.activities a
   join public.tenants t on t.id=a.workspace_tenant_id
   where t.slug=lower(trim(p_workspace_slug))
