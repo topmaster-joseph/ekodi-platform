@@ -226,11 +226,11 @@ jobs:
             grep -Fq 'data-ekodi-workspace-handoff' "$file"
             grep -Fq 'window.EKODI_MARKETING_CONTEXT' "$file"
             grep -Fq "/workspaces?site=marketing" "$file"
-            grep -Fq 'https://auth.ekodi.kr/?site=marketing' "$file"
+            grep -Fq 'https://ekodi.kr/auth/?site=marketing' "$file"
             grep -Fq 'id="customDomainPanel"' "$file"
-            grep -Fq 'https://marketing-api.ekodi.kr' "$file"
+            grep -Fq 'https://ekodi.kr/marketing-api' "$file"
             grep -Fq '/api/marketing/domains' "$file"
-            grep -Fq '/api/marketing/workspace/resolve?host=' "$file"
+            grep -Fq '/api/marketing/workspace/resolve?path=' "$file"
             grep -Fq '/api/marketing/store-domains' "$file"
             grep -Fq 'STORE MARKETING AI' "$file"
             grep -Fq 'data-ekodi-shell="v1"' "$file"
@@ -303,25 +303,22 @@ jobs:
           for attempt in $(seq 1 24); do
             ok=1
             for spec in \
-              'marketing.ekodi.kr:마케팅AI' \
-              'jadam.ekodi.kr:자담치킨' \
-              'pizzamaru.ekodi.kr:피자마루' \
-              'yogurt.ekodi.kr:요거트퍼플' \
-              'jadam.ai.ekodi.kr:자담치킨' \
-              'pizzamaru.ai.ekodi.kr:피자마루' \
-              'yogurt.ai.ekodi.kr:요거트퍼플'; do
-              domain="${spec%%:*}"
-              needle="${spec#*:}"
-              code=$(curl -L -sS -o /tmp/live.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://$domain/" || true)
-              echo "$domain http=$code attempt=$attempt"
+              'https://ekodi.kr/marketing/|마케팅AI' \
+              'https://ekodi.kr/jadam/marketing/|자담치킨' \
+              'https://ekodi.kr/pizzamaru/marketing/|피자마루' \
+              'https://ekodi.kr/yogurt/marketing/|요거트퍼플'; do
+              url="${spec%%|*}"
+              needle="${spec#*|}"
+              code=$(curl -L -sS -o /tmp/live.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
+              echo "$url http=$code attempt=$attempt"
               if [ "$code" != '200' ] \
                  || ! grep -Fq "$needle" /tmp/live.html \
                  || ! grep -Fq 'data-ekodi-workspace-handoff' /tmp/live.html \
                  || ! grep -Fq 'window.EKODI_MARKETING_CONTEXT' /tmp/live.html \
                  || ! grep -Fq 'id="customDomainPanel"' /tmp/live.html \
-                 || ! grep -Fq 'https://marketing-api.ekodi.kr' /tmp/live.html \
+                 || ! grep -Fq 'https://ekodi.kr/marketing-api' /tmp/live.html \
                  || ! grep -Fq '/api/marketing/domains' /tmp/live.html \
-                 || ! grep -Fq '/api/marketing/workspace/resolve?host=' /tmp/live.html \
+                 || ! grep -Fq '/api/marketing/workspace/resolve?path=' /tmp/live.html \
                  || ! grep -Fq '/api/marketing/store-domains' /tmp/live.html \
                  || ! grep -Fq 'STORE MARKETING AI' /tmp/live.html \
                  || ! grep -Fq 'data-ekodi-shell="v1"' /tmp/live.html \
@@ -334,7 +331,7 @@ jobs:
             sleep 5
           done
           [ "$verified" -eq 1 ]
-          curl -L -fsS --connect-timeout 5 --max-time 15 'https://marketing.ekodi.kr/' -o /tmp/live-store-plan.html
+          curl -L -fsS --connect-timeout 5 --max-time 15 'https://ekodi.kr/marketing/' -o /tmp/live-store-plan.html
           grep -Fq 'data-store-plan-links' /tmp/live-store-plan.html
           grep -Fq "url.searchParams.set('store',store)" /tmp/live-store-plan.html
 
