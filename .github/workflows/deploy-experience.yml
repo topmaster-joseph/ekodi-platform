@@ -112,7 +112,7 @@ jobs:
           catalog_code=$(curl -sS -o /tmp/experience-catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/api/catalog" || true)
           admin_code=$(curl -sS --max-redirs 0 -D /tmp/experience-admin.headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/admin" || true)
           dev_root_code=$(curl -sS -D /tmp/developer-root.headers -o /tmp/developer-root.html -w '%{http_code}' "$verify_base/developer" || true)
-          dev_contract_code=$(curl -sS -H 'x-ekodi-staging-host: dev.ekodi.kr' -o /tmp/developer-contract.json -w '%{http_code}' "$verify_base/api/contract" || true)
+          dev_contract_code=$(curl -sS -o /tmp/developer-contract.json -w '%{http_code}' "$verify_base/developer/api/contract" || true)
           [[ "$root_code" == '200' ]]
           [[ "$health_code" == '200' ]]
           [[ "$catalog_code" == '200' ]]
