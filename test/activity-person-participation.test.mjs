@@ -66,4 +66,6 @@ test('Workspace Admin exposes one-screen activity participant operations',async(
   for(const marker of ['activity_admin_snapshot','activity_admin_add_participant','activity_admin_update_participation','활동 · 참가자','data-activity-checkin','followUpStatus','companionsFromInput','google_form','privacyConsent','activity-seq','activity-seq-head','연번'])assert.ok(source.includes(marker),marker);
   assert.ok(source.includes("workspace==='ekodimission'"));
   assert.ok(source.includes("section==='activities'"));
+  assert.ok(source.includes('grid-template-columns:40px minmax(0,1fr) auto'));
+  assert.ok(source.includes('td:nth-child(6){grid-column:1/-1}'));
 });
