@@ -41,7 +41,11 @@ export async function handleR2StorageControl(request, env) {
   if (accessError) return accessError;
 
   const url = new URL(request.url);
-  const path = url.pathname;
+  const path = url.pathname === '/storage'
+    ? '/'
+    : url.pathname.startsWith('/storage/')
+      ? url.pathname.slice('/storage'.length)
+      : url.pathname;
 
   if (path === '/api/control/storage/r2/status' && request.method === 'GET') {
     return json({ ok: true, provider: 'r2', configured: true, binding: 'R2_BUCKET' });
