@@ -34,7 +34,7 @@ create or replace function public.activity_admin_share_status(
 language plpgsql
 security definer
 set search_path=public,auth,extensions,pg_temp
-as $
+as $$
 declare
   v_activity public.activities%rowtype;
   v_share public.activity_public_shares%rowtype;
