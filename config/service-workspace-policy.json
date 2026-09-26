@@ -188,7 +188,7 @@
     "authorityContext": "Person + Workspace + Role + Capability",
     "internalOperationalInfoBeforeAuthentication": false,
     "perServiceLoginUi": false,
-    "runtimeApiMayRemainOnDedicatedHost": true,
+    "runtimeApiMayRemainOnDedicatedHost": false,
     "capabilityExamples": [
       "service:read",
       "service:operate",
