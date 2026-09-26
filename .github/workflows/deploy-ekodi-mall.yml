@@ -408,6 +408,14 @@ jobs:
 
       - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+
+      - name: Enforce single EKODI Mall Pages production owner
+        env:
+          CF_PROJECT: ${{ needs.validate.outputs.project }}
+          EKODI_MALL_LEGACY_GIT_OWNER: topmaster-joseph
+          EKODI_MALL_LEGACY_GIT_REPO: ekodi-mall
+        run: node scripts/disable-git-auto-deploy.mjs
+
       - name: Rebuild exact production artifact
         if: steps.production_scope.outputs.site_changed == 'true'
         run: npm run build
@@ -446,13 +454,13 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            health_code=$(curl -sS -o /tmp/mall-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://ekodi.kr/ekodimall/health || true)
-            fees_code=$(curl -sS -o /tmp/mall-fees.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://ekodi.kr/ekodimall/api/public/fees || true)
-            feed_code=$(curl -sS -o /tmp/mall-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ekodimall/api/public/products?limit=1' || true)
-            verification_queue_code=$(curl -sS -o /tmp/mall-verification-unauth.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ekodimall/api/internal/verification/queue' || true)
-            launch_readiness_code=$(curl -sS -o /tmp/mall-launch-readiness-unauth.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ekodimall/api/internal/verification/launch-readiness' || true)
-            cockpit_code=$(curl -sS -o /tmp/mall-cockpit-unauth.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ekodimall/api/internal/operations/cockpit' || true)
-            rehearsal_code=$(curl -sS -o /tmp/mall-production-rehearsal.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -X POST 'https://ekodi.kr/ekodimall/api/internal/rehearsal/transaction' || true)
+            health_code=$(curl -sS -o /tmp/mall-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://ekodi.kr/ekodimall/api/health || true)
+            fees_code=$(curl -sS -o /tmp/mall-fees.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://ekodi.kr/ekodimall/api/api/public/fees || true)
+            feed_code=$(curl -sS -o /tmp/mall-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ekodimall/api/api/public/products?limit=1' || true)
+            verification_queue_code=$(curl -sS -o /tmp/mall-verification-unauth.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ekodimall/api/api/internal/verification/queue' || true)
+            launch_readiness_code=$(curl -sS -o /tmp/mall-launch-readiness-unauth.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ekodimall/api/api/internal/verification/launch-readiness' || true)
+            cockpit_code=$(curl -sS -o /tmp/mall-cockpit-unauth.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ekodimall/api/api/internal/operations/cockpit' || true)
+            rehearsal_code=$(curl -sS -o /tmp/mall-production-rehearsal.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -X POST 'https://ekodi.kr/ekodimall/api/api/internal/rehearsal/transaction' || true)
             if [ "$health_code" = "200" ] && [ "$fees_code" = "200" ] && [ "$feed_code" = "200" ] \
               && grep -Fq '"schemaReady":true' /tmp/mall-api.json \
               && grep -Fq '"orderSchemaReady":true' /tmp/mall-api.json \
