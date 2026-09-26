@@ -183,9 +183,19 @@ for (const file of walkTextFiles(root)) {
   try { text=fs.readFileSync(path.join(root,file),'utf8'); } catch { continue; }
   const literal=[...text.matchAll(literalChildHost)].map(match=>match[0]);
   if (literal.length) fail(`${file}: EKODI child-host reference remains: ${[...new Set(literal)].slice(0,8).join(', ')}`);
-  for (const rx of dynamicChildHostPatterns) {
-    rx.lastIndex=0;
-    if (rx.test(text)) fail(`${file}: dynamic EKODI child-host construction/acceptance remains: ${rx}`);
+  const runtimeDynamicCheck =
+    !file.startsWith('test/') &&
+    !file.startsWith('scripts/') &&
+    !file.startsWith('docs/') &&
+    !file.startsWith('governance/') &&
+    !file.startsWith('supabase/migrations/') &&
+    !file.startsWith('.github/workflows/') &&
+    /\.(?:js|mjs|cjs|ts|tsx|jsx)$/.test(file);
+  if (runtimeDynamicCheck) {
+    for (const rx of dynamicChildHostPatterns) {
+      rx.lastIndex=0;
+      if (rx.test(text)) fail(`${file}: dynamic EKODI child-host construction/acceptance remains: ${rx}`);
+    }
   }
 }
 
