@@ -45,10 +45,16 @@ test('public share projection cannot return contact or internal management field
 
 test('Mission share route is private-by-link and the admin exposes explicit create/revoke controls',()=>{
   assert.match(worker,/MISSION_SHARE_PATH_RE/);
+  assert.match(worker,/MISSION_ADMIN_ACTIVITY_RPC_API/);
+  assert.match(worker,/MISSION_ADMIN_ACTIVITY_RPCS/);
+  assert.match(worker,/activity_rpc_not_allowed/);
+  assert.match(worker,/activity_schema_not_ready/);
   assert.match(worker,/activity_public_share_snapshot/);
   assert.match(worker,/x-ekodi-publication-status','private-share'/);
   assert.match(worker,/noindex, nofollow, noarchive/);
   assert.match(worker,/전화번호·이메일·역할·후속관리·내부 메모는 포함하지 않습니다/);
+  assert.match(admin,/\/ekodimission\/api\/admin\/activity-rpc/);
+  assert.match(admin,/missionGateway/);
   assert.match(admin,/activity_admin_share_status/);
   assert.match(admin,/activity_admin_create_share/);
   assert.match(admin,/activity_admin_revoke_share/);
