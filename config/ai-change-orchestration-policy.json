@@ -346,5 +346,20 @@
     "claimScopeMustMatchEvidenceScope": true,
     "materialKnowledgeCitationRequired": true,
     "finalResponseGuardRequired": true
+  },
+  "authenticationPolicy": {
+    "policyId": "EKODI-AUTH-UX-001",
+    "status": "enforced",
+    "adminDefaultFlow": "single-window-central-session",
+    "rules": [
+      "admin-authentication-must-use-canonical-ekodi-auth-in-the-current-window",
+      "valid-admin-session-must-not-trigger-google-reauthentication-during-admin-navigation",
+      "popup-window-opener-postmessage-handoff-must-not-be-a-required-admin-login-path",
+      "return-to-original-admin-path-after-authentication",
+      "mobile-and-desktop-must-share-the-same-primary-authentication-flow",
+      "additional-google-oauth-consent-is-allowed-only-for-service-specific-scopes-such-as-drive-or-youtube"
+    ],
+    "regressionRequired": true,
+    "legacyPopupBridgeDisposition": "fallback-only-until-removed"
   }
 }
