@@ -5,9 +5,9 @@ const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
 const MARKETING_API='https://ekodi.kr/marketing-api';
 const params=new URLSearchParams(location.search);
 const site='marketing';
-const returnOrigins=new Set(['https://ekodi.kr/marketing','https://ekodi.kr/jadam','https://ekodi.kr/pizzamaru','https://ekodi.kr/yogurt','https://ekodi.kr/yogurtpurple']);
-const isMarketingOrigin=origin=>{if(returnOrigins.has(origin))return true;try{const u=new URL(origin);return u.protocol==='https:'&&/^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(u.hostname)&&u.origin===origin}catch{return false}};
-const safeReturn=raw=>{try{const u=new URL(raw||'https://ekodi.kr/marketing');return u.protocol==='https:'&&!u.username&&!u.password&&isMarketingOrigin(u.origin)?u.href:'https://ekodi.kr/marketing/'}catch{return'https://ekodi.kr/marketing/'}};
+const MARKETING_RETURN_PREFIXES=['/marketing','/ekodibiz/marketing-ai','/cgma/marketing','/jadam/marketing','/pizzamaru/marketing','/yogurt/marketing','/yogurtpurple'];
+const pathWithin=(pathname,prefix)=>pathname===prefix||pathname.startsWith(prefix+'/');
+const safeReturn=raw=>{try{const u=new URL(raw||'https://ekodi.kr/marketing');return u.protocol==='https:'&&!u.username&&!u.password&&u.hostname==='ekodi.kr'&&MARKETING_RETURN_PREFIXES.some(prefix=>pathWithin(u.pathname,prefix))?u.href:'https://ekodi.kr/marketing/'}catch{return'https://ekodi.kr/marketing/'}};
 const returnTo=safeReturn(params.get('return_to'));
 const explicitPro=params.get('plan')==='pro'||params.get('intent')==='pro';
 const manageMode=params.get('manage')==='1';
@@ -46,7 +46,7 @@ let currentWorkspaces=[];
 let fallbackWorkspaceKey=null;
 
 function cleanUrl(){const q=new URLSearchParams({site,return_to:returnTo});if(explicitPro)q.set('plan','pro');if(manageMode)q.set('manage','1');history.replaceState({},document.title,`/?${q.toString()}`)}
-function marketingFreeTarget(){try{const u=new URL(returnTo);if(u.origin==='https://ekodi.kr/marketing'){u.searchParams.set('welcome','free');u.hash='memberTrial'}return u.href}catch{return'https://ekodi.kr/marketing/?welcome=free#memberTrial'}}
+function marketingFreeTarget(){try{const u=new URL(returnTo);if(u.origin==='https://ekodi.kr'&&(u.pathname==='/marketing'||u.pathname.startsWith('/marketing/'))){u.searchParams.set('welcome','free');u.hash='memberTrial'}return u.href}catch{return'https://ekodi.kr/marketing/?welcome=free#memberTrial'}}
 function showSignedIn(s){show('signedOut',false);show('signedIn',true);$('accountEmail').textContent=s?.user?.email||'인증 계정'}
 function resetPanels(){show('approvedActions',false);show('freeActions',false);show('requestActions',false);show('workspacePanel',false)}
 function showFailure(text){routing=false;$('serviceBadge').textContent='인증 실패';show('signedIn',false);show('signedOut',true);show('googleButtonHost',false);show('googleRetry',true);show('cancelSignedOut',true);notice('authStatus',text,'error')}
