@@ -76,7 +76,7 @@ jobs:
           grep -Fq 'INTEGRATIONS_ENABLED = "false"' wrangler.business-staging.toml
           grep -Fq 'EXECUTION_ENABLED = "false"' wrangler.business-staging.toml
           grep -Fq 'main = "business-live-worker.js"' wrangler.business.toml
-          grep -Fq 'pattern = "business.ekodi.kr"' wrangler.business.toml
+          ! grep -Fq 'custom_domain = true' wrangler.business.toml
           grep -Fq 'INTEGRATIONS_ENABLED = "true"' wrangler.business.toml
           grep -Fq 'EXECUTION_ENABLED = "false"' wrangler.business.toml
           grep -Fq 'SUPABASE_URL' wrangler.business.toml
@@ -210,7 +210,7 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/guarded-worker-release.mjs --manifest deploy/manifests/business.worker.json
-      - name: Deep verify Business OS production hostname and safety boundaries
+      - name: Deep verify Business OS canonical path and safety boundaries
         shell: bash
         run: |
           set -euo pipefail
