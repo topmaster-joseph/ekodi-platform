@@ -32,7 +32,7 @@ test('Plus canonical workspace uses the shared Marketing AI Pages project', () =
   assert.equal(normalizeWorkspaceSlug('My Store 01'), 'my-store-01');
   assert.equal(normalizeWorkspaceSlug('marketing'), '');
   assert.match(workspaceControl, /PLUS_OR_ABOVE/);
-  assert.match(workspaceControl, /\.ai\.ekodi\.kr/);
+  assert.match(workspaceControl, /ekodi\.kr\/marketing\//);
   assert.match(workspaceControl, /marketing_store_workspaces/);
   assert.match(workspaceControl, /provider_project.*marketing-ai/s);
   assert.match(workspaceControl, /workspace\/resolve/);
