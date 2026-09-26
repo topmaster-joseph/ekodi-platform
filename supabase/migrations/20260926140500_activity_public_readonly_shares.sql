@@ -25,7 +25,7 @@ create index if not exists activity_public_shares_expiry_idx
   where status='active';
 
 alter table public.activity_public_shares enable row level security;
-revoke all on table public.activity_public_shares from public, anon, authenticated;
+revoke all on table public.activity_public_shares from public, anon, authenticated, service_role;
 
 create or replace function public.activity_admin_share_status(
   p_workspace_slug text,
