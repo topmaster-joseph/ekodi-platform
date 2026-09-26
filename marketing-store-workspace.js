@@ -23,9 +23,17 @@ export function normalizeWorkspaceSlug(value) {
   if (slug.length < 3 || RESERVED_SLUGS.has(slug)) return '';
   return slug;
 }
-function normalizeCanonicalHost(value) {
-  const host = String(value || '').trim().toLowerCase().replace(/\.$/, '');
-  return /^[a-z0-9-]+\.ai\.ekodi\.kr$/.test(host) ? host : '';
+function canonicalWorkspacePath(slug) {
+  const value=normalizeWorkspaceSlug(slug);
+  return value ? `/${value}/marketing` : '';
+}
+function normalizeCanonicalPath(value) {
+  try {
+    const url=new URL(String(value||''), 'https://ekodi.kr');
+    if (url.hostname!=='ekodi.kr' || url.protocol!=='https:') return '';
+    const path=url.pathname.replace(/\/+$/,'')||'/';
+    return /^\/[a-z0-9][a-z0-9-]{2,47}\/marketing$/.test(path) ? path : '';
+  } catch { return ''; }
 }
 function planActive(planId, status) {
   return String(status || '').toLowerCase() === 'active' && PLUS_OR_ABOVE.has(String(planId || '').toLowerCase());
@@ -36,11 +44,13 @@ function proActive(planId, status) {
 function canManage(role) { return STORE_MANAGERS.has(String(role || '')); }
 function originAllowed(origin, env) {
   if (!origin) return true;
-  const configured = new Set(String(env.ALLOWED_ORIGINS || '').split(',').map(value => value.trim()).filter(Boolean));
+  const configured = new Set(String(env.ALLOWED_ORIGINS || '').split(',').map(value => {
+    try { return new URL(value.trim()).origin; } catch { return ''; }
+  }).filter(Boolean));
   if (configured.has(origin)) return true;
   try {
     const url = new URL(origin);
-    return url.protocol === 'https:' && /^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(url.hostname);
+    return url.protocol === 'https:' && url.hostname === 'ekodi.kr' && url.origin === origin;
   } catch {
     return false;
   }
@@ -194,7 +204,7 @@ async function detachCanonical(env, hostname) {
 
 async function slugAvailable(env, slug, storeId) {
   const row = await env.DB.prepare(`SELECT store_id FROM marketing_store_workspaces
-    WHERE workspace_slug=? OR canonical_domain=? LIMIT 1`).bind(slug, `${slug}.ekodi.kr/ai`).first();
+    WHERE workspace_slug=? LIMIT 1`).bind(slug).first();
   return !row || row.store_id === storeId;
 }
 async function chooseSlug(env, store, requested='') {
