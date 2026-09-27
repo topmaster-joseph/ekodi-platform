@@ -2,7 +2,8 @@ const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const PRO_OR_ABOVE = new Set(['pro','auto','enterprise']);
 const STORE_MANAGERS = new Set(['store_owner','tenant_admin','platform_admin','hq_manager','client_admin','accounting_manager']);
-const RESERVED_SUFFIXES = ['.ekodi.kr','.pages.dev','.workers.dev'];
+const EKODI_HOST='ekodi.kr';
+const RESERVED_SUFFIXES = ['.pages.dev','.workers.dev'];
 
 function bearerToken(request) {
   const auth = String(request.headers.get('authorization') || '');
