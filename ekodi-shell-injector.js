@@ -155,9 +155,9 @@ class UserFooterCanonicalizer{
   }
 }
 class UserChromeInjector{
-  constructor(serviceId){this.serviceId=serviceId;}
+  constructor(serviceId,addFallbackHeader=true){this.serviceId=serviceId;this.addFallbackHeader=addFallbackHeader;}
   element(element){
-    element.prepend(fallbackHeader(this.serviceId),{html:true});
+    if(this.addFallbackHeader)element.prepend(fallbackHeader(this.serviceId),{html:true});
     if(!serviceOwnsFooter(this.serviceId))element.append(renderEkodiUserFooter(),{html:true});
   }
 }
@@ -272,9 +272,10 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public',op
     .on('.main-header',headerAdopter)
     .on('[data-ekodi-fixed-header]',headerAdopter);
   if(!alreadyHasChrome){
+    const addFallbackHeader=options?.existingHeader!==true;
     rewriter=rewriter
       .on('footer',new UserFooterCanonicalizer(serviceId))
-      .on('body',new UserChromeInjector(serviceId));
+      .on('body',new UserChromeInjector(serviceId,addFallbackHeader));
   }
   return rewriter.transform(new Response(response.body,{status:response.status,statusText:response.statusText,headers}));
 }
