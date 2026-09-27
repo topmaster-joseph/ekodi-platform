@@ -6,6 +6,7 @@ import { channelAutomationActor, resolveChannelAutomationSubject } from './chann
 import { automationEntitlement, listAutomationProfiles, upsertAutomationProfile } from './channel-automation-runtime.js';
 import { disconnectManagedConnection, handleYoutubeCallback, listManagedConnections, managedCredential, selectYoutubeConnection, startYoutubeConnection, youtubeConnectionReady } from './channel-oauth-control.js';
 import { channelServiceBridgeReady, channelServiceBridgeSchemaReady, listServiceChannels, scheduleServiceYoutube } from './channel-service-bridge.js';
+import { EKODI_SERVICE_MANIFEST, serviceForId } from './ekodi-service-manifest.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -88,6 +89,12 @@ async function channelSchemaReady(env) {
     ]);
     return true;
   } catch { return false; }
+}
+
+async function channelSiteBindingSchemaReady(env) {
+  if (!env.DB) return false;
+  try { await env.DB.prepare('SELECT 1 FROM channel_site_bindings LIMIT 0').all(); return true; }
+  catch { return false; }
 }
 
 async function automationSnapshot(request,env,subject) {
@@ -190,11 +197,103 @@ async function updateChannelControl(request,env,identity,subject,id){
   return json(request,env,{ok:true,channelId:Number(id),status,control});
 }
 
+function channelSiteCatalog() {
+  return EKODI_SERVICE_MANIFEST.services
+    .filter(service=>service?.id && service?.url)
+    .map(service=>({id:service.id,name:service.name,shortName:service.shortName||service.name,url:service.url,group:service.group||'',state:service.state||'live'}));
+}
+function normalizeChannelSiteBinding(input={}) {
+  const serviceId=clean(input.serviceId,80).toLowerCase();
+  const service=serviceForId(serviceId);
+  if(!service) throw Object.assign(new Error('CHANNEL_SITE_SERVICE_NOT_FOUND'),{code:'CHANNEL_SITE_SERVICE_NOT_FOUND',status:400});
+  const role=['primary','secondary','archive_only'].includes(String(input.role||''))?String(input.role):'primary';
+  return {
+    serviceId,
+    role,
+    isDefault:Boolean(input.isDefault),
+    autoArchive:Boolean(input.autoArchive),
+    archiveCategory:clean(input.archiveCategory||'past-event',80)||'past-event',
+    enabled:input.enabled!==false,
+    priority:Math.max(0,Math.min(9999,Number(input.priority??100)||0)),
+    site:{id:service.id,name:service.name,url:service.url,group:service.group||''},
+  };
+}
+async function channelSiteBindings(env,subject,{channelId=0,serviceId=''}={}) {
+  const where=['c.subject_type=?','c.subject_key=?'];
+  const args=[subject.type,subject.key];
+  if(Number(channelId)>0){where.push('b.channel_id=?');args.push(Number(channelId))}
+  if(serviceId){where.push('b.service_id=?');args.push(clean(serviceId,80).toLowerCase())}
+  const result=await env.DB.prepare(`SELECT b.id,b.channel_id,b.service_id,b.role,b.is_default,b.auto_archive,b.archive_category,b.enabled,b.priority,b.created_at,b.updated_at,
+    c.provider,c.channel_type,c.display_name,c.external_account_id,c.status AS channel_status
+    FROM channel_site_bindings b JOIN marketing_publish_channels c ON c.id=b.channel_id
+    WHERE ${where.join(' AND ')} ORDER BY b.service_id,b.is_default DESC,b.priority ASC,b.id ASC`).bind(...args).all();
+  return (result.results||[]).map(row=>{
+    const service=serviceForId(row.service_id);
+    return {...row,isDefault:Boolean(row.is_default),autoArchive:Boolean(row.auto_archive),enabled:Boolean(row.enabled),
+      site:service?{id:service.id,name:service.name,url:service.url,group:service.group||''}:null};
+  });
+}
+async function readChannelSites(request,env,subject,channelId) {
+  const channel=await env.DB.prepare('SELECT id FROM marketing_publish_channels WHERE id=? AND subject_type=? AND subject_key=?').bind(Number(channelId),subject.type,subject.key).first();
+  if(!channel)return json(request,env,{error:'CHANNEL_NOT_FOUND'},404);
+  return json(request,env,{channelId:Number(channelId),bindings:await channelSiteBindings(env,subject,{channelId}),sites:channelSiteCatalog()});
+}
+async function replaceChannelSites(request,env,identity,subject,channelId) {
+  const body=await readJson(request); if(!body||!Array.isArray(body.bindings))return json(request,env,{error:'CHANNEL_SITE_BINDINGS_REQUIRED'},400);
+  const channel=await env.DB.prepare('SELECT id FROM marketing_publish_channels WHERE id=? AND subject_type=? AND subject_key=?').bind(Number(channelId),subject.type,subject.key).first();
+  if(!channel)return json(request,env,{error:'CHANNEL_NOT_FOUND'},404);
+  let bindings;
+  try{bindings=body.bindings.slice(0,100).map(normalizeChannelSiteBinding)}
+  catch(error){return json(request,env,{error:error.code||'CHANNEL_SITE_BINDING_INVALID'},error.status||400)}
+  const seen=new Set();
+  for(const binding of bindings){
+    if(seen.has(binding.serviceId))return json(request,env,{error:'CHANNEL_SITE_DUPLICATE_SERVICE',serviceId:binding.serviceId},400);
+    seen.add(binding.serviceId);
+  }
+  const now=nowIso();
+  const statements=[];
+  for(const binding of bindings.filter(item=>item.isDefault&&item.enabled)){
+    statements.push(env.DB.prepare(`UPDATE channel_site_bindings SET is_default=0,updated_at=? WHERE subject_type=? AND subject_key=? AND service_id=? AND channel_id<>?`)
+      .bind(now,subject.type,subject.key,binding.serviceId,Number(channelId)));
+  }
+  statements.push(env.DB.prepare('DELETE FROM channel_site_bindings WHERE subject_type=? AND subject_key=? AND channel_id=?').bind(subject.type,subject.key,Number(channelId)));
+  for(const binding of bindings){
+    statements.push(env.DB.prepare(`INSERT INTO channel_site_bindings(subject_type,subject_key,workspace_id,channel_id,service_id,role,is_default,auto_archive,archive_category,enabled,priority,created_by_email,created_at,updated_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(subject.type,subject.key,subject.workspaceId||'',Number(channelId),binding.serviceId,binding.role,binding.isDefault?1:0,binding.autoArchive?1:0,binding.archiveCategory,binding.enabled?1:0,binding.priority,identity.email,now,now));
+  }
+  await env.DB.batch(statements);
+  await audit(env,subject,null,'channel_site_bindings_replaced',`${channelId}:${bindings.map(item=>item.serviceId).join(',')}`,identity.email);
+  return json(request,env,{ok:true,channelId:Number(channelId),bindings:await channelSiteBindings(env,subject,{channelId})});
+}
+async function listSitePublishingChannels(request,env,subject,serviceId) {
+  const service=serviceForId(clean(serviceId,80).toLowerCase());
+  if(!service)return json(request,env,{error:'CHANNEL_SITE_SERVICE_NOT_FOUND'},404);
+  const bindings=await channelSiteBindings(env,subject,{serviceId:service.id});
+  return json(request,env,{site:{id:service.id,name:service.name,url:service.url,group:service.group||''},channels:bindings});
+}
+async function resolveSiteChannelIds(env,subject,siteIds=[]) {
+  const ids=[];
+  for(const raw of siteIds.slice(0,20)){
+    const service=serviceForId(clean(raw,80).toLowerCase());
+    if(!service)throw Object.assign(new Error('CHANNEL_SITE_SERVICE_NOT_FOUND'),{code:'CHANNEL_SITE_SERVICE_NOT_FOUND',status:400});
+    const row=await env.DB.prepare(`SELECT c.id FROM channel_site_bindings b JOIN marketing_publish_channels c ON c.id=b.channel_id
+      WHERE b.subject_type=? AND b.subject_key=? AND b.service_id=? AND b.enabled=1 AND c.status='active'
+      ORDER BY b.is_default DESC,b.priority ASC,b.id ASC LIMIT 1`).bind(subject.type,subject.key,service.id).first();
+    if(row?.id)ids.push(Number(row.id));
+  }
+  return ids;
+}
+
 async function listChannels(request, env, subject) {
-  const result = await env.DB.prepare(`SELECT id,provider,channel_type,display_name,external_account_id,credential_ref,status,config_json,last_check_at,last_error,created_at,updated_at
-    FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? ORDER BY id DESC`).bind(subject.type,subject.key).all();
-  const channels = (result.results || []).map(row => ({...row,credential_ref:row.credential_ref ? 'configured' : '',config:safeParse(row.config_json,{})}));
-  return json(request, env, {subject:{type:subject.type,key:subject.key},channels});
+  const [result,bindings]=await Promise.all([
+    env.DB.prepare(`SELECT id,provider,channel_type,display_name,external_account_id,credential_ref,status,config_json,last_check_at,last_error,created_at,updated_at
+      FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? ORDER BY id DESC`).bind(subject.type,subject.key).all(),
+    channelSiteBindings(env,subject)
+  ]);
+  const byChannel=new Map();
+  for(const binding of bindings){const list=byChannel.get(Number(binding.channel_id))||[];list.push(binding);byChannel.set(Number(binding.channel_id),list)}
+  const channels = (result.results || []).map(row => ({...row,credential_ref:row.credential_ref ? 'configured' : '',config:safeParse(row.config_json,{}),siteBindings:byChannel.get(Number(row.id))||[]}));
+  return json(request, env, {subject:{type:subject.type,key:subject.key},channels,sites:channelSiteCatalog()});
 }
 
 async function connectChannel(request, env, identity, subject) {
@@ -225,7 +324,13 @@ function normalizeScheduledAt(value) {
 
 async function queuePublish(request, env, identity, subject) {
   const body = await readJson(request);
-  if (!body || !body.content || !Array.isArray(body.channelIds) || !body.channelIds.length) return json(request, env, {error:'CONTENT_AND_CHANNELS_REQUIRED'}, 400);
+  if (!body || !body.content) return json(request, env, {error:'CONTENT_REQUIRED'}, 400);
+  const requestedChannelIds=Array.isArray(body.channelIds)?body.channelIds:[];
+  const requestedSiteIds=Array.isArray(body.siteIds)?[...new Set(body.siteIds.map(value=>clean(value,80).toLowerCase()).filter(Boolean))]:[];
+  let siteChannelIds=[];
+  try{if(requestedSiteIds.length)siteChannelIds=await resolveSiteChannelIds(env,subject,requestedSiteIds)}
+  catch(error){return json(request,env,{error:error.code||'CHANNEL_SITE_RESOLUTION_FAILED'},error.status||400)}
+  if(!requestedChannelIds.length&&!siteChannelIds.length)return json(request,env,{error:'CONTENT_AND_CHANNELS_REQUIRED'},400);
   const scheduledAt = normalizeScheduledAt(body.scheduledAt);
   if (!scheduledAt) return json(request, env, {error:'INVALID_SCHEDULE'}, 400);
   const recurrence = ['', 'daily','weekly','monthly'].includes(String(body.recurrenceRule || '')) ? String(body.recurrenceRule || '') : '';
@@ -254,7 +359,7 @@ async function queuePublish(request, env, identity, subject) {
   const contentId = Number(insertContent.meta?.last_row_id || 0);
   if (!contentId) return json(request, env, {error:'CONTENT_INSERT_FAILED'}, 500);
 
-  const ids = [...new Set(body.channelIds.map(Number).filter(Number.isInteger))].slice(0,20);
+  const ids = [...new Set([...requestedChannelIds,...siteChannelIds].map(Number).filter(Number.isInteger))].slice(0,20);
   if (ids.length > entitlement.maxChannels) return json(request,env,{error:'CHANNEL_PLAN_LIMIT_REACHED',entitlement},409);
   const placeholders = ids.map(()=>'?').join(',');
   const channelResult = await env.DB.prepare(`SELECT id,provider,channel_type,status,credential_ref,config_json FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? AND status='active' AND id IN (${placeholders})`)
@@ -272,7 +377,7 @@ async function queuePublish(request, env, identity, subject) {
     await audit(env,subject,jobId,'publication_queued',`${channel.provider}:${channel.channel_type}:${scheduledAt}`,identity.email);
   }
   if (!jobs.length) return json(request, env, {error:'NO_OWNED_CHANNELS'}, 400);
-  return json(request, env, {ok:true,contentId,scheduleKind,scheduledAt,recurrenceRule:recurrence,jobs,entitlement}, 201);
+  return json(request, env, {ok:true,contentId,scheduleKind,scheduledAt,recurrenceRule:recurrence,jobs,siteIds:requestedSiteIds,entitlement}, 201);
 }
 
 async function listJobs(request, env, subject) {
@@ -544,8 +649,8 @@ export default {
     const corsInfo = cors(request,env);
     if (request.method === 'OPTIONS') return new Response(null,{status:corsInfo.allowed?204:403,headers:corsInfo.headers});
     if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?route=marketing-ai&source=marketing-publish-api.ekodi.kr',307);
-    const baseReady=await schemaReady(env), automationReady=await channelSchemaReady(env), serviceBridgeSchema=await channelServiceBridgeSchemaReady(env);
-    if (url.pathname === '/health') return json(request,env,{ok:true,service:'ekodi-marketing-publishing',environment:env.ENVIRONMENT || 'unknown',schemaReady:baseReady,channelAutomationCore:automationReady,channelServiceBridgeSchema:serviceBridgeSchema,channelServiceBridgeConfigured:channelServiceBridgeReady(env),scheduler:true,personalBrand:true,workspaceIdentity:true,youtubeOAuth:youtubeConnectionReady(env),credentialVault:channelCredentialReady(env),mutations:String(env.ALLOW_MUTATIONS || 'true') !== 'false'});
+    const baseReady=await schemaReady(env), automationReady=await channelSchemaReady(env), siteBindingReady=await channelSiteBindingSchemaReady(env), serviceBridgeSchema=await channelServiceBridgeSchemaReady(env);
+    if (url.pathname === '/health') return json(request,env,{ok:true,service:'ekodi-marketing-publishing',environment:env.ENVIRONMENT || 'unknown',schemaReady:baseReady,channelAutomationCore:automationReady,channelSiteBindings:siteBindingReady,channelServiceBridgeSchema:serviceBridgeSchema,channelServiceBridgeConfigured:channelServiceBridgeReady(env),scheduler:true,personalBrand:true,workspaceIdentity:true,youtubeOAuth:youtubeConnectionReady(env),credentialVault:channelCredentialReady(env),mutations:String(env.ALLOW_MUTATIONS || 'true') !== 'false'});
     if (!baseReady) return json(request,env,{error:'SCHEMA_NOT_READY'},503);
     if (url.pathname.startsWith('/v1/internal/')) {
       if (!automationReady || !serviceBridgeSchema) return json(request,env,{error:'CHANNEL_SERVICE_BRIDGE_NOT_READY'},503);
@@ -594,9 +699,27 @@ export default {
     if (url.pathname === '/v1/brand' && request.method === 'PUT') return upsertBrand(request,env,identity,subject);
     if (url.pathname === '/v1/policy' && request.method === 'GET') return readPolicy(request,env,subject);
     if (url.pathname === '/v1/policy' && request.method === 'PUT') return upsertPolicy(request,env,identity,subject);
+    const channelSiteMatch=url.pathname.match(/^\/v1\/channels\/(\d+)\/sites$/);
+    if(channelSiteMatch){
+      if(!siteBindingReady)return json(request,env,{error:'CHANNEL_SITE_BINDINGS_NOT_READY'},503);
+      if(request.method==='GET')return readChannelSites(request,env,subject,Number(channelSiteMatch[1]));
+      if(request.method==='PUT')return replaceChannelSites(request,env,identity,subject,Number(channelSiteMatch[1]));
+    }
+    const siteChannelsMatch=url.pathname.match(/^\/v1\/sites\/([^/]+)\/channels$/);
+    if(siteChannelsMatch&&request.method==='GET'){
+      if(!siteBindingReady)return json(request,env,{error:'CHANNEL_SITE_BINDINGS_NOT_READY'},503);
+      return listSitePublishingChannels(request,env,subject,decodeURIComponent(siteChannelsMatch[1]));
+    }
+    if(url.pathname==='/v1/channel-sites/catalog'&&request.method==='GET'){
+      if(!siteBindingReady)return json(request,env,{error:'CHANNEL_SITE_BINDINGS_NOT_READY'},503);
+      return json(request,env,{sites:channelSiteCatalog(),bindings:await channelSiteBindings(env,subject)});
+    }
     const channelControlMatch=url.pathname.match(/^\/v1\/channels\/(\d+)\/settings$/);
     if(channelControlMatch&&request.method==='PUT')return updateChannelControl(request,env,identity,subject,Number(channelControlMatch[1]));
-    if (url.pathname === '/v1/channels' && request.method === 'GET') return listChannels(request,env,subject);
+    if (url.pathname === '/v1/channels' && request.method === 'GET') {
+      if(!siteBindingReady)return json(request,env,{error:'CHANNEL_SITE_BINDINGS_NOT_READY'},503);
+      return listChannels(request,env,subject);
+    }
     if (url.pathname === '/v1/channels' && request.method === 'POST') return connectChannel(request,env,identity,subject);
     if (url.pathname === '/v1/jobs' && request.method === 'GET') return listJobs(request,env,subject);
     if (url.pathname === '/v1/publish' && request.method === 'POST') return queuePublish(request,env,identity,subject);
