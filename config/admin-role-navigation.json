@@ -11,7 +11,7 @@
   "profiles": {
     "platform-super-admin": {
       "surface": "/admin",
-      "navigationMode": "seven-control-areas-with-active-left-details",
+      "navigationMode": "seven-control-areas-with-flat-service-direct-routes",
       "groups": [
         {"id":"summary","labelKo":"플랫폼 전체현황","purpose":"전체 상태, 우선 작업, 승인과 핵심 지표"},
         {"id":"sites","labelKo":"사이트·브랜드","purpose":"전체 사이트, 브랜드, 고객·협력, 준비 사이트"},
@@ -22,6 +22,7 @@
         {"id":"settings-records","labelKo":"설정·보안·감사","purpose":"공통설정, 언어, 자동화, 저장, API, 감사"}
       ],
       "leftDetailRule": "Show the active group's high-frequency direct task routes directly under the selected control area.",
+      "serviceGroupRule": "Services & AI renders all engine routes as flat direct links and suppresses the duplicate top context tab strip.",
       "maySeeControlPlane": true,
       "mayAggregateChildStatus": true
     },
