@@ -26,7 +26,7 @@ test('closed-loop proof blocks new Supabase projects at measured 2/2 capacity',(
   assert.equal(proof.supabase.provisioningAllowed,false);
   assert.deepEqual(proof.supabase.capacityBlocks,['active_projects']);
   assert.equal(proof.supabase.databaseMetrics.length,2);
-  assert.equal(proof.github.telemetryStatus,'partial');
+  assert.equal(proof.github.telemetryStatus,'measured');
   assert.equal(proof.github.cacheStorage.state,'normal');
 });
 
