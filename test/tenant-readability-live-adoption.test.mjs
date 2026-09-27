@@ -48,12 +48,17 @@ test('live mobile verifier checks canonical apex tenant paths only',async()=>{
     'https://ekodi.kr/cgma',
     'https://ekodi.kr/cgma/market-ai',
     'https://ekodi.kr/cgma/admin',
+    'https://ekodi.kr/cheonggye',
   ]) assert.ok(verifier.includes(url),`missing canonical verifier target: ${url}`);
   const origins=[...verifier.matchAll(/https:\/\/[^/'"`]+/g)].map(match=>match[0]);
   assert.ok(origins.length>0);
   assert.ok(origins.every(origin=>origin==='https://ekodi.kr'));
   assert.match(verifier,/tenant-readability-css/);
   assert.match(verifier,/live-readability-not-observed/);
+  assert.match(verifier,/function forbid\(result,label,needle,errors\)/);
+  assert.match(verifier,/forbid\(cgmaRoot,'cgma-root','운영공간',errors\)/);
+  assert.match(verifier,/forbid\(cheonggyeRoot,'cheonggye-root','운영공간',errors\)/);
+  assert.match(verifier,/publicBrandSurface/);
 });
 
 test('tenant roots stay Worker-first without exceeding Cloudflare route capacity',async()=>{
@@ -103,6 +108,10 @@ test('guarded release keeps public site bodies brand-only while ownership stays 
 
   const cgmaSharedProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/cgma'||item.url==='https://ekodi.kr/cgma/');
   assert.equal(cgmaSharedProbe,undefined,'CGMA root is independently owned by cgma-root-gateway and must not be evaluated as a Shared Site candidate');
+  const cheonggyeProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/cheonggye');
+  assert.ok(cheonggyeProbe,'missing Cheonggye public release probe');
+  assert.ok(cheonggyeProbe.forbid?.includes('운영공간'),'Cheonggye release must reject internal workspace wording');
+  assert.ok(cheonggyeProbe.forbid?.includes('data-ekodi-operating-space-label'),'Cheonggye release must reject legacy workspace marker');
 
   for(const url of [
     'https://ekodi.kr/ekodichurch/',
