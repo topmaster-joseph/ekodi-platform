@@ -173,24 +173,7 @@ function svg(p,identity=identityProfile()){
   return `<svg viewBox="0 0 180 180" role="img" aria-label="${p.label}"><ellipse cx="89" cy="153" rx="55" ry="9" class="ekodian-shadow"/><g class="ekodian-body">${face}<path d="M58 91c16-15 41-15 56 0l10 53H48Z" class="ekodian-shirt"/><path class="ekodian-line" d="M70 62h3M91 62h3M76 73c5 4 10 4 15 0"/>${wave}<path class="ekodian-line" d="M58 102c-12 9-17 19-18 32M112 102c11 8 17 19 18 32"/>${propSvg(p.prop)}</g></svg>`;
 }
 function installStyle(){
-  if(document.getElementById(STYLE_ID))return;
-  const style=document.createElement('style');style.id=STYLE_ID;style.textContent=`
-  .ekodi-main-ekodian-host{position:relative!important;isolation:isolate}
-  .ekodi-main-ekodian{--ekodi-character-width:clamp(108px,13vw,176px);position:absolute;z-index:3;width:var(--ekodi-character-width);pointer-events:none;opacity:.96;filter:drop-shadow(0 10px 18px rgba(22,43,31,.10));color:var(--ekodi-service-accent,var(--accent,#78b89b));transition:opacity .18s ease}
-  .ekodi-main-ekodian[data-ekodi-character-size="compact"]{--ekodi-character-width:clamp(86px,10vw,132px)}
-  .ekodi-main-ekodian[data-ekodi-character-size="mini"]{--ekodi-character-width:clamp(66px,8vw,96px);opacity:.90}
-  .ekodi-main-ekodian[data-ekodi-character-placement="bottom-right"]{right:clamp(10px,3vw,42px);left:auto;bottom:clamp(6px,1.6vw,24px);top:auto;transform:none}
-  .ekodi-main-ekodian[data-ekodi-character-placement="bottom-left"]{left:clamp(10px,3vw,42px);right:auto;bottom:clamp(6px,1.6vw,24px);top:auto;transform:none}
-  .ekodi-main-ekodian[data-ekodi-character-placement="top-right"]{right:clamp(10px,3vw,42px);left:auto;top:clamp(8px,2vw,30px);bottom:auto;transform:none}
-  .ekodi-main-ekodian[data-ekodi-character-placement="top-left"]{left:clamp(10px,3vw,42px);right:auto;top:clamp(8px,2vw,30px);bottom:auto;transform:none}
-  .ekodi-main-ekodian[data-ekodi-character-placement="right-center"]{right:clamp(10px,3vw,42px);left:auto;top:50%;bottom:auto;transform:translateY(-50%)}
-  .ekodi-main-ekodian[data-ekodi-character-placement="left-center"]{left:clamp(10px,3vw,42px);right:auto;top:50%;bottom:auto;transform:translateY(-50%)}
-  .ekodi-main-ekodian[data-ekodi-character-placement="hidden"]{display:none!important}
-  .ekodi-main-ekodian svg{display:block;width:100%;height:auto;overflow:visible}.ekodi-main-ekodian .ekodian-shadow{fill:color-mix(in srgb,currentColor 10%,transparent)}.ekodi-main-ekodian .ekodian-skin{fill:#f1c3a0;stroke:#26372e;stroke-width:3}.ekodi-main-ekodian .ekodian-hair{fill:#26372e}.ekodi-main-ekodian .ekodian-portrait{pointer-events:none}.ekodi-main-ekodian .ekodian-face-outline{fill:none;stroke:#26372e;stroke-width:3}.ekodi-main-ekodian .ekodian-shirt{fill:color-mix(in srgb,currentColor 64%,#fff 36%);stroke:#26372e;stroke-width:3}.ekodi-main-ekodian .ekodian-line{fill:none;stroke:#26372e;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}.ekodi-main-ekodian g g{fill:color-mix(in srgb,currentColor 28%,#fff 72%);stroke:#26372e;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}.ekodi-main-ekodian .ekodian-body{transform-origin:88px 142px;animation:ekodi-ekodian-breathe 5.8s ease-in-out infinite}@keyframes ekodi-ekodian-breathe{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-3px) rotate(.4deg)}}
-  @media(max-width:760px){.ekodi-main-ekodian{--ekodi-character-width:clamp(92px,28vw,126px);opacity:.91}.ekodi-main-ekodian[data-ekodi-character-size="compact"]{--ekodi-character-width:clamp(76px,22vw,104px)}.ekodi-main-ekodian[data-ekodi-character-size="mini"]{--ekodi-character-width:68px;opacity:.86}}
-  @media(max-width:420px){.ekodi-main-ekodian{--ekodi-character-width:88px;opacity:.88}.ekodi-main-ekodian[data-ekodi-character-size="compact"]{--ekodi-character-width:74px}.ekodi-main-ekodian[data-ekodi-character-size="mini"]{--ekodi-character-width:62px;opacity:.84}}
-  @media(prefers-reduced-motion:reduce){.ekodi-main-ekodian{transition:none!important}.ekodi-main-ekodian .ekodian-body{animation:none!important}}
-  `;(document.head||document.documentElement).append(style);
+  // Static presentation is owned by the external CSP-safe shell stylesheet.
 }
 function heroTarget(){
   const explicit=document.querySelector('[data-ekodi-character-host]');if(explicit)return explicit;
@@ -238,7 +221,7 @@ function adaptPlacement(host,node){
   }
   const preferred=requestedPlacement();
   const placements=preferred?[preferred,...PLACEMENT_POINTS.filter(value=>value!==preferred)]:PLACEMENT_POINTS;
-  node.style.visibility='hidden';
+  node.dataset.ekodiCharacterMeasuring='true';
   node.dataset.ekodiCharacterPlacement='bottom-right';
   node.dataset.ekodiCharacterSize='regular';
   const obstacles=protectedRects(host,node);
@@ -257,13 +240,13 @@ function adaptPlacement(host,node){
       const chosen=safe[0];
       node.dataset.ekodiCharacterPlacement=chosen.placement;
       node.dataset.ekodiCharacterSize=chosen.size;
-      node.style.visibility='';
+      delete node.dataset.ekodiCharacterMeasuring;
       return {...chosen,reason:'safe-zone'};
     }
   }
   node.dataset.ekodiCharacterPlacement='hidden';
   node.dataset.ekodiCharacterSize='mini';
-  node.style.visibility='';
+  delete node.dataset.ekodiCharacterMeasuring;
   return {placement:'hidden',size:'mini',reason:'no-safe-zone'};
 }
 function disconnectPlacementObserver(){
