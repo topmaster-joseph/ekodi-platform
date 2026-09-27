@@ -44,3 +44,27 @@ Each resource must preserve tenant scope, audit external mutations, support retr
 ## Verification
 - PR CI must pass the repository CI and constitution checks before merge.
 - Production activation requires the canonical `/ekodimall/admin/amazon` route verification.
+
+
+## Free-first cost governance
+The default policy is fail-closed for paid Amazon/AWS capabilities.
+
+- free-first: enabled
+- monthly paid budget: USD 0
+- auto-stop threshold: 90%
+- paid AWS: disabled
+- Seller paid plan: disabled
+- FBA: disabled
+- paid Bedrock: disabled
+
+The Mall admin surface `/ekodimall/admin/amazon` displays the normalized usage snapshot, free allowance remaining when known, and estimated monthly cost.
+
+Cost-control API:
+- `GET /api/amazon/cost-policy`: read current policy/dashboard
+- `PUT /api/amazon/cost-policy`: operator-only policy update
+- `POST /api/amazon/usage`: operator-only normalized usage snapshot ingestion
+- `POST /api/amazon/approvals`: operator-only paid-feature approval with a bounded USD limit
+
+A paid-feature switch does not by itself authorize spending. A currently valid feature approval and a non-zero monthly budget are also required. If cost data is unavailable, paid execution remains blocked.
+
+The policy engine classifies execution into levels 0-5: free only, free tier, credit, micro-paid, monthly-paid, and persistent-paid. Live SP-API mutation remains separately disabled until the production adapter gate is explicitly enabled.
