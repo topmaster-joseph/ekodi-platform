@@ -59,6 +59,8 @@ test('cmpmyi common panel stays same-origin frameable and exposes brand handoffs
   assert.match(html,/브랜드 간 데이터를 합쳐 쓰지 않습니다/);
   assert.match(html,/id="deliveryLiveState"/);
   assert.match(html,/id="deliveryPortfolioSummary"/);
+  assert.match(html,/id="deliveryIssuesOnly"/);
+  assert.match(html,/이상 브랜드만 보기/);
   assert.match(html,/data-delivery-live="jadam"/);
   assert.match(html,/\/cmpmyi\/admin\/panel\.js/);
 });
@@ -75,7 +77,19 @@ test('cmpmyi delivery runtime reads existing store ledgers without adding cross-
   assert.match(script,/5분 자동갱신/);
   assert.match(script,/document\.visibilityState==='visible'/);
   assert.match(script,/setInterval[\s\S]*300000/);
+  assert.match(script,/function applyIssuesFilter/);
+  assert.match(script,/d\.syncIssues/);
+  assert.match(script,/d\.priceDiff/);
+  assert.match(script,/d\.availabilityDiff/);
+  assert.match(script,/d\.pendingSettlements/);
+  assert.match(script,/d\.unansweredReviews/);
+  assert.match(script,/metricLink\(store,'menu','가격차이'/);
+  assert.match(script,/metricLink\(store,'inventory','품절차이'/);
+  assert.match(script,/metricLink\(store,'finance','정산대기'/);
+  assert.match(script,/metricLink\(store,'reviews','미응답 리뷰'/);
+  assert.match(script,/storeAdminHref\(store,section\)/);
   assert.doesNotMatch(script,/store_platform_sync_queue|store_platform_review_queue_reply|menu_price_update|menu_availability_update/);
+  assert.doesNotMatch(script,/method:'PATCH'|method:'PUT'|method:'DELETE'/);
 });
 
 test('router serves cmpmyi common panels and same-origin embedded canonical store admins',async()=>{
