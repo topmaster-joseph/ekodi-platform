@@ -17,7 +17,7 @@ Workspace identity remains the immutable `workspace_id`. The slug and URL are ro
 
 - `ekodi.kr/marketing` = EKODI Marketing Core common-service engine boundary.
 - `ekodi.kr/ai` = provider-independent EKODI AI Gateway/Core boundary.
-- `<tenant>.ekodi.kr/ai` = compatibility execution alias only, never a canonical customer URL.
+- `ekodi.kr/<tenant>/marketing` = canonical customer Marketing workspace path.
 
 Ordinary user surfaces must not expose provider, model, orchestration or internal execution topology. Internal admin, API, observability and deployment systems may reference engine addresses when operationally required.
 
