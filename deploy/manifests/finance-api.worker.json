@@ -28,7 +28,7 @@
         ]
       },
       {
-        "url": "https://finance-api.ekodi.kr/api/finance/banking/health",
+        "url": "https://ekodi.kr/api/finance/banking/health",
         "statuses": [
           200
         ],
@@ -39,7 +39,7 @@
         ]
       },
       {
-        "url": "https://finance-api.ekodi.kr/api/finance/banking/overview",
+        "url": "https://ekodi.kr/api/finance/banking/overview",
         "statuses": [
           401
         ]
