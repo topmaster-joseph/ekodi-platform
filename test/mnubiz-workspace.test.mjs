@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { isMnuBizWorkspaceSlug, renderMnuBizPublicPage, mnubizPublicCss } from '../mnubiz-public-page.js';
+import { isWorkspaceAdminPathShape } from '../workspace-route-policy.js';
 
 test('mnubiz public surface follows CSP-safe user-site UI contract', async()=>{
   const worker=await readFile(new URL('../space-worker.js',import.meta.url),'utf8');
@@ -44,4 +45,17 @@ test('mnubiz public surface follows CSP-safe user-site UI contract', async()=>{
   assert.match(css,/@media\(max-width:860px\)/);
   assert.match(css,/word-break:keep-all/);
   assert.equal(cssResponse.headers.get('content-type'),'text/css; charset=utf-8');
+});
+
+
+test('mnubiz is governed as a canonical workspace site without leaking admin chrome publicly', async()=>{
+  const registry=JSON.parse(await readFile(new URL('../config/site-lifecycle-registry.json',import.meta.url),'utf8'));
+  const site=registry.existingWorkspaceSites.find(item=>item.id==='mnubiz');
+  assert.ok(site);
+  assert.equal(site.class,'workspace_user_site');
+  assert.equal(site.canonicalUrl,'https://ekodi.kr/mnubiz');
+  assert.equal(site.ownerKind,'organization');
+  assert.equal(isWorkspaceAdminPathShape('/mnubiz/admin'),true);
+  const verifier=await readFile(new URL('../scripts/verify-mobile-fixed-headers-live.mjs',import.meta.url),'utf8');
+  assert.match(verifier,/https:\/\/ekodi\.kr\/mnubiz/);
 });
