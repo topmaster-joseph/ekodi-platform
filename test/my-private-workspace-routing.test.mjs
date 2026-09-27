@@ -23,8 +23,8 @@ test('private workspace routes serve the My shell rather than exposing workspace
   assert.match(worker,/target\.pathname='\/'/);
   assert.match(worker,/env\.ASSETS\.fetch\(new Request\(target\.toString\(\),request\)\)/);
   assert.match(worker,/PRIVATE_ROUTER_TAG/);
-  assert.match(worker,/PRIVATE_ROUTER_TAG='<script src="\/my\/private-workspace-router\.js\?v=20260827-private-workspace-1"><\\/script>'/);
-  assert.doesNotMatch(worker,/PRIVATE_ROUTER_TAG='<script src="\/private-workspace-router\.js/);
+  assert.ok(worker.includes('const PRIVATE_ROUTER_TAG=\'<script src="/my/private-workspace-router.js?v=20260827-private-workspace-1"></script>\';'));
+  assert.ok(!worker.includes('const PRIVATE_ROUTER_TAG=\'<script src="/private-workspace-router.js'));
   assert.match(worker,/CANONICAL_MY_ASSET_ALIASES=new Map/);
   assert.match(worker,/\['\/my\/private-workspace-router\.js','\/private-workspace-router\.js'\]/);
   assert.match(worker,/\['\/my\/access-context\.js','\/access-context\.js'\]/);
