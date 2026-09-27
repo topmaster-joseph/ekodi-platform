@@ -2,6 +2,8 @@ name: Verify EKODI Orchestrator Live Production E2E
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '7 0 * * *'
   push:
     branches: [main]
     paths:
@@ -178,7 +180,13 @@ jobs:
           configured_providers=$(jq -c '[.task.result.plan.configuredProviders[]? | {id,available,costClass,freeQuotaRemaining}]' "$RUNNER_TEMP/ekodi-orchestrator-task.json")
           provider_attempts=$(jq -c '[.task.result.specialists[]? | {role,provider,mode,ok,reason:(.value.reason // .value.code // null)}]' "$RUNNER_TEMP/ekodi-orchestrator-task.json")
 
-          jq -n             --arg taskId "$TASK_ID"             --arg state "$terminal"             --arg canonicalIngress "$EKODI_ORIGIN/api/control/ai/v8/pulse"             --argjson providerDiversity "$provider_diversity"             --argjson actualProviderCount "$actual_provider_count"             --argjson actualProviders "$actual_providers"             --argjson sentinelIndependent "$sentinel_independent"             --arg consultationStatus "$consultation_status"             --argjson configuredProviders "$configured_providers"             --argjson providerAttempts "$provider_attempts"             '{
+          quota_response=$(curl -fsS --retry 2 --retry-delay 1             -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$E2E_AUTH_DB_ID/query"             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN"             -H 'Content-Type: application/json'             --data "$(jq -nc --arg sql "SELECT call_count FROM ai_provider_daily_budget WHERE provider_id='cloudflare-workers-ai' AND usage_date=date('now') LIMIT 1" '{sql:$sql}')" || echo '{"success":false}')
+          workers_ai_used=$(echo "$quota_response" | jq -r '.result[]?.results[0]?.call_count // 0' | head -1)
+          workers_ai_limit=$(awk -F'"' '/EKODI_WORKERS_AI_DAILY_CALL_LIMIT/{print $2; exit}' wrangler.api.toml)
+          workers_ai_limit=${workers_ai_limit:-0}
+          workers_ai_remaining=$(( workers_ai_limit > workers_ai_used ? workers_ai_limit - workers_ai_used : 0 ))
+
+          jq -n             --arg taskId "$TASK_ID"             --arg state "$terminal"             --arg canonicalIngress "$EKODI_ORIGIN/api/control/ai/v8/pulse"             --argjson providerDiversity "$provider_diversity"             --argjson actualProviderCount "$actual_provider_count"             --argjson actualProviders "$actual_providers"             --argjson sentinelIndependent "$sentinel_independent"             --arg consultationStatus "$consultation_status"             --argjson configuredProviders "$configured_providers"             --argjson providerAttempts "$provider_attempts"             --argjson workersAiUsed "$workers_ai_used"             --argjson workersAiLimit "$workers_ai_limit"             --argjson workersAiRemaining "$workers_ai_remaining"             '{
               schemaVersion:1,
               proof:"ekodi-orchestrator-live-production-e2e",
               externalTestClient:"github-actions",
@@ -190,6 +198,7 @@ jobs:
               actualProviders:$actualProviders,
               configuredProviders:$configuredProviders,
               providerAttempts:$providerAttempts,
+              workersAiQuota:{used:$workersAiUsed,limit:$workersAiLimit,remaining:$workersAiRemaining},
               sentinelIndependent:$sentinelIndependent,
               consultationStatus:$consultationStatus,
               productionMutationPerformed:false
