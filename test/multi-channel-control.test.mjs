@@ -39,7 +39,9 @@ test('central admin exposes site-by-site channel handoffs plus the platform conn
   assert.match(admin, /loadChannelAdminDirectory/);
   assert.match(admin, /canonicalServiceChannelAdminUrl/);
   assert.match(admin, /dataset\.siteChannelAdmin=site\.id/);
-  assert.match(admin, /채널·자동게시 관리 ↗/);
+  assert.match(admin, /사이트 채널센터 ↗/);
+  assert.match(admin, /최고관리자에서 관리/);
+  assert.match(admin, /data-central-channel-subject/);
   assert.match(admin, /플랫폼 연결 원장 점검/);
   assert.match(admin, /YouTube 계정·채널 추가/);
   assert.match(admin, /Facebook · Instagram 계정 추가/);
@@ -50,9 +52,13 @@ test('central admin exposes site-by-site channel handoffs plus the platform conn
 
 test('site channel directory resolves to each canonical local administrator instead of central child-admin aliases', () => {
   const expected = new Map([
+    ['church','/ekodichurch/admin/publishing'],
+    ['mission','/ekodimission/admin/publishing'],
     ['biz','/ekodibiz/admin/publishing'],
     ['mall','/ekodimall/admin/channel-settings'],
     ['trade','/ekodibiz/trade/admin/publishing'],
+    ['cheonggye-local','/cheonggye/admin/publishing'],
+    ['cmpmyi','/cmpmyi/admin/publishing'],
     ['cgma','/cgma/admin/publishing'],
     ['jadam','/jadam/admin/publishing'],
     ['pizzamaru','/pizzamaru/admin/publishing'],
@@ -65,6 +71,7 @@ test('site channel directory resolves to each canonical local administrator inst
     assert.ok(!canonicalServiceChannelAdminPath(site).startsWith('/admin/'),site.id);
   }
   assert.deepEqual(new Set(sites.map(site=>site.id)),new Set(expected.keys()));
+  for(const site of sites) assert.ok(site.channelSubjectKey,`${site.id}: channelSubjectKey`);
 });
 
 test('central channel manager can scope connections to person, tenant or store without bypassing backend membership checks', () => {
