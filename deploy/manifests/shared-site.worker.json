@@ -2107,7 +2107,9 @@
         "expect": [
           "기관·단체·지역안내",
           "운영 기준",
-          "청계면상인회"
+          "청계면상인회",
+          "지역 공개정보",
+          "local-region-module-public.js"
         ],
         "headerExpect": [
           "x-ekodi-route: local-region-module-public",
@@ -2126,7 +2128,9 @@
           "기관·단체·지역안내 운영관리",
           "강제 실행 계약",
           "청계면상인회",
-          "local-region-admin-auth.js"
+          "local-region-admin-auth.js",
+          "운영정보 등록·수정",
+          "local-region-module-admin.js"
         ],
         "headerExpect": [
           "x-ekodi-route: local-region-module-admin",
@@ -2144,7 +2148,9 @@
         "expect": [
           "상점·상권",
           "운영 기준",
-          "청계면상인회"
+          "청계면상인회",
+          "지역 공개정보",
+          "local-region-module-public.js"
         ],
         "headerExpect": [
           "x-ekodi-route: local-region-module-public",
@@ -2163,7 +2169,9 @@
           "상점·상권 운영관리",
           "강제 실행 계약",
           "청계면상인회",
-          "local-region-admin-auth.js"
+          "local-region-admin-auth.js",
+          "운영정보 등록·수정",
+          "local-region-module-admin.js"
         ],
         "headerExpect": [
           "x-ekodi-route: local-region-module-admin",
@@ -2181,7 +2189,9 @@
         "expect": [
           "지역행사·프로그램",
           "운영 기준",
-          "청계면상인회"
+          "청계면상인회",
+          "지역 공개정보",
+          "local-region-module-public.js"
         ],
         "headerExpect": [
           "x-ekodi-route: local-region-module-public",
@@ -2200,7 +2210,9 @@
           "지역행사·프로그램 운영관리",
           "강제 실행 계약",
           "청계면상인회",
-          "local-region-admin-auth.js"
+          "local-region-admin-auth.js",
+          "운영정보 등록·수정",
+          "local-region-module-admin.js"
         ],
         "headerExpect": [
           "x-ekodi-route: local-region-module-admin",
@@ -2218,7 +2230,9 @@
         "expect": [
           "구인구직",
           "운영 기준",
-          "청계면상인회"
+          "청계면상인회",
+          "지역 공개정보",
+          "local-region-module-public.js"
         ],
         "headerExpect": [
           "x-ekodi-route: local-region-module-public",
@@ -2237,7 +2251,9 @@
           "구인구직 운영관리",
           "강제 실행 계약",
           "청계면상인회",
-          "local-region-admin-auth.js"
+          "local-region-admin-auth.js",
+          "운영정보 등록·수정",
+          "local-region-module-admin.js"
         ],
         "headerExpect": [
           "x-ekodi-route: local-region-module-admin",
@@ -2255,7 +2271,9 @@
         "expect": [
           "나눔마켓",
           "운영 기준",
-          "청계면상인회"
+          "청계면상인회",
+          "지역 공개정보",
+          "local-region-module-public.js"
         ],
         "headerExpect": [
           "x-ekodi-route: local-region-module-public",
@@ -2274,7 +2292,9 @@
           "나눔마켓 운영관리",
           "강제 실행 계약",
           "청계면상인회",
-          "local-region-admin-auth.js"
+          "local-region-admin-auth.js",
+          "운영정보 등록·수정",
+          "local-region-module-admin.js"
         ],
         "headerExpect": [
           "x-ekodi-route: local-region-module-admin",
@@ -2292,7 +2312,9 @@
         "expect": [
           "지역방송·라이브",
           "운영 기준",
-          "청계면상인회"
+          "청계면상인회",
+          "지역 공개정보",
+          "local-region-module-public.js"
         ],
         "headerExpect": [
           "x-ekodi-route: local-region-module-public",
@@ -2311,7 +2333,9 @@
           "지역방송·라이브 운영관리",
           "강제 실행 계약",
           "청계면상인회",
-          "local-region-admin-auth.js"
+          "local-region-admin-auth.js",
+          "운영정보 등록·수정",
+          "local-region-module-admin.js"
         ],
         "headerExpect": [
           "x-ekodi-route: local-region-module-admin",
@@ -2329,7 +2353,9 @@
         "expect": [
           "주민참여·제안",
           "운영 기준",
-          "청계면상인회"
+          "청계면상인회",
+          "지역 공개정보",
+          "local-region-module-public.js"
         ],
         "headerExpect": [
           "x-ekodi-route: local-region-module-public",
@@ -2348,7 +2374,9 @@
           "주민참여·제안 운영관리",
           "강제 실행 계약",
           "청계면상인회",
-          "local-region-admin-auth.js"
+          "local-region-admin-auth.js",
+          "운영정보 등록·수정",
+          "local-region-module-admin.js"
         ],
         "headerExpect": [
           "x-ekodi-route: local-region-module-admin",
