@@ -7,6 +7,7 @@ on:
     paths:
       - 'ai-control/**'
       - 'ai-control-*.js'
+      - 'ekodi-site-improvement-scheduler.js'
       - 'ekodi-ai-provider-registry.js'
       - 'openai-provider-adapter.js'
       - 'anthropic-provider-adapter.js'
@@ -21,6 +22,7 @@ on:
       - 'ai-commons-admin.js'
       - 'config/ai-execution-services.json'
       - 'config/capability-registry.json'
+      - 'config/site-lifecycle-registry.json'
       - 'shell/user-ai-entry.js'
       - 'ekodi-shell-worker.js'
       - 'site-worker.js'
@@ -28,6 +30,7 @@ on:
       - 'wrangler.site.toml'
       - 'test/ai-commons*.test.mjs'
       - 'test/ai-interpreter.test.mjs'
+      - 'test/ekodi-site-improvement-scheduler.test.mjs'
       - 'ai-router-score.js'
       - 'ai-collaboration-settings.js'
       - 'local-execution-policy.js'
@@ -66,6 +69,7 @@ on:
       - 'migrations/0094_ai_provider_daily_budget.sql'
       - 'migrations/0095_ai_free_quota_decisions.sql'
       - 'migrations/0096_activate_ai_provider_pool.sql'
+      - 'migrations/0109_low_traffic_site_improvement.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -78,6 +82,7 @@ on:
     paths:
       - 'ai-control/**'
       - 'ai-control-*.js'
+      - 'ekodi-site-improvement-scheduler.js'
       - 'ekodi-ai-provider-registry.js'
       - 'openai-provider-adapter.js'
       - 'anthropic-provider-adapter.js'
@@ -92,6 +97,7 @@ on:
       - 'ai-commons-admin.js'
       - 'config/ai-execution-services.json'
       - 'config/capability-registry.json'
+      - 'config/site-lifecycle-registry.json'
       - 'shell/user-ai-entry.js'
       - 'ekodi-shell-worker.js'
       - 'site-worker.js'
@@ -99,6 +105,7 @@ on:
       - 'wrangler.site.toml'
       - 'test/ai-commons*.test.mjs'
       - 'test/ai-interpreter.test.mjs'
+      - 'test/ekodi-site-improvement-scheduler.test.mjs'
       - 'ai-router-score.js'
       - 'ai-collaboration-settings.js'
       - 'local-execution-policy.js'
@@ -137,6 +144,7 @@ on:
       - 'migrations/0094_ai_provider_daily_budget.sql'
       - 'migrations/0095_ai_free_quota_decisions.sql'
       - 'migrations/0096_activate_ai_provider_pool.sql'
+      - 'migrations/0109_low_traffic_site_improvement.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -188,6 +196,7 @@ jobs:
           node --check groq-free-provider-adapter.js
           node --check openrouter-free-provider-adapter.js
           node --check ai-control-worker.js
+          node --check ekodi-site-improvement-scheduler.js
           node --check ai-control/app.js
           node --check scripts/ai-account-node.mjs
           node --check scripts/build-ai-control-release.mjs
@@ -198,7 +207,7 @@ jobs:
           node scripts/validate-constitution.mjs
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-additive-migrations.mjs migrations
-          node --test test/ai-knowledge-claim.test.mjs test/ai-control-platform.test.mjs test/ai-control-provider-router.test.mjs test/ai-free-quota.test.mjs test/free-provider-adapters.test.mjs test/ai-router-score.test.mjs test/ai-collaboration-settings.test.mjs test/local-execution-policy.test.mjs test/ai-account-node-scheduler.test.mjs test/cognitive-control-plane.test.mjs test/common-service-operator-control.test.mjs test/ai-commons.test.mjs test/ai-commons-subservice.test.mjs test/ai-interpreter.test.mjs
+          node --test test/ai-knowledge-claim.test.mjs test/ai-control-platform.test.mjs test/ai-control-provider-router.test.mjs test/ai-free-quota.test.mjs test/free-provider-adapters.test.mjs test/ai-router-score.test.mjs test/ai-collaboration-settings.test.mjs test/local-execution-policy.test.mjs test/ai-account-node-scheduler.test.mjs test/cognitive-control-plane.test.mjs test/ekodi-site-improvement-scheduler.test.mjs test/common-service-operator-control.test.mjs test/ai-commons.test.mjs test/ai-commons-subservice.test.mjs test/ai-interpreter.test.mjs
           node --check ai-commons.js
           node --check ai-commons-admin.js
           node --check ai-control/commons.js
@@ -210,6 +219,8 @@ jobs:
           ! grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.release.toml
           grep -Fq 'User traffic enters through ekodi.kr/ai via the shared-site service binding.' wrangler.ai.release.toml
           grep -Fq 'AI_TASK_EXECUTION_ENABLED = "false"' wrangler.ai.staging.release.toml
+          grep -Fq 'crons = ["5 * * * *"]' wrangler.ai.release.toml
+          ! grep -Fq 'crons = ["5 * * * *"]' wrangler.ai.staging.release.toml
           grep -Fq 'GEMINI_MODEL = "gemini-3.7-flash"' wrangler.ai.staging.release.toml
           grep -Fq 'no_bundle = true' wrangler.ai.release.toml
           grep -Fq 'binding = "AI"' wrangler.ai.release.toml
@@ -226,6 +237,7 @@ jobs:
           grep -Fq 'missionPolicyVersion' ai-control-worker.js
           grep -Fq 'ai-task-allocator.yml' ai-control-worker.js
           grep -Fq '/api/node/lease' ai-control-worker.js
+          grep -Fq 'async scheduled(controller,env,ctx)' ai-control-worker.js
           grep -Fq "https://ekodi.kr/admin/services/common-services?service=ai" ai-control-worker.js
           grep -Fq "surface:'runtime-and-commons'" ai-control-worker.js
           grep -Fq "commons:true" ai-control-worker.js
@@ -240,6 +252,7 @@ jobs:
           test -f migrations/0087_ai_commons_governance.sql
           test -f migrations/0088_ai_commons_sources.sql
           test -f migrations/0096_activate_ai_provider_pool.sql
+          test -f migrations/0109_low_traffic_site_improvement.sql
           test -f deploy/manifests/ai-control.worker.json
       - name: Build one immutable AI Control application artifact
         id: build_artifact
