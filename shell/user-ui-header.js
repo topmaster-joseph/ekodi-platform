@@ -180,7 +180,7 @@ function operatingSpaceTarget(header){
 function shouldShowOperatingSpaceLabel(){return surface()==='workspace'&&isIndividualSite();}
 function ensureOperatingSpaceLabel(header,target=operatingSpaceTarget(header)){
   if(!header)return null;
-  const existing=document.querySelector(`[${OPERATING_SCOPE_ATTR}]`);
+  const existing=header.querySelector(`[${OPERATING_SCOPE_ATTR}]`);
   if(!shouldShowOperatingSpaceLabel()){
     if(existing)existing.remove();
     header.removeAttribute('data-ekodi-operating-space');
