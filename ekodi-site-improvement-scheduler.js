@@ -1,7 +1,8 @@
 import siteLifecycleRegistry from './config/site-lifecycle-registry.json' with { type: 'json' };
+import siteExecutionEnforcement from './config/site-execution-enforcement.json' with { type: 'json' };
 
 const HOUR_MS = 60 * 60 * 1000;
-const PROTECTED_FILE = /^(?:\.github\/|migrations\/|supabase\/|governance\/|deploy\/|wrangler\.|platform-route-registry\.js$|CONSTITUTION\.md$|AI_DEVELOPMENT_POLICY\.md$|AGENTS(?:\.override)?\.md$|ai-control-(?:worker|core)\.js$|ekodi-site-improvement-scheduler\.js$|config\/(?:site-lifecycle-registry|.*policy)\.json$)|(?:^|\/)(?:auth|oauth|billing|payment|payments|finance|money|credential|credentials|secret|secrets|security)(?:[./_-]|$)/i;
+const PROTECTED_FILE = /^(?:\.github\/|migrations\/|supabase\/|governance\/|deploy\/|wrangler\.|platform-route-registry\.js$|CONSTITUTION\.md$|AI_DEVELOPMENT_POLICY\.md$|AGENTS(?:\.override)?\.md$|ai-control-(?:worker|core)\.js$|ekodi-site-improvement-scheduler\.js$|config\/(?:site-lifecycle-registry|site-execution-enforcement|.*policy)\.json$|scripts\/validate-site-execution-enforcement\.mjs$)|(?:^|\/)(?:auth|oauth|billing|payment|payments|finance|money|credential|credentials|secret|secrets|security)(?:[./_-]|$)/i;
 const SAFE_CONCLUSIONS = new Set(['success','neutral','skipped']);
 
 function clean(value,max=500){return String(value??'').trim().slice(0,max)}
@@ -15,7 +16,7 @@ function parseJson(value,fallback={}){try{return JSON.parse(value||JSON.stringif
 function json(value){try{return JSON.stringify(value??{})}catch{return '{}'}}
 
 export const SITE_IMPROVEMENT_POLICY = Object.freeze({
-  version:'1.1.0',
+  version:'1.2.0',
   cadence:'hourly-quiet-gate',
   dailyLimit:1,
   defaultQuietWindowMinutes:30,
@@ -25,6 +26,7 @@ export const SITE_IMPROVEMENT_POLICY = Object.freeze({
   maxFiles:25,
   maxChangedLines:1600,
   sourceOfSites:'config/site-lifecycle-registry.json',
+  siteExecutionPolicy:'config/site-execution-enforcement.json',
   canonicalHost:'ekodi.kr',
   directProductionMutation:false,
   cloudFallbackWorkflow:'site-improvement-cloud.yml',
@@ -55,6 +57,8 @@ export function buildSiteImprovementPrompt(claim={}){
     'Target site: '+(site.name||site.id)+' ('+site.id+')',
     'Canonical production URL: '+site.canonicalUrl,
     'Repository: topmaster-joseph/ekodi-platform. Work only in the allocated isolated branch/worktree.',
+    'Mandatory recursive site execution policy: '+siteExecutionEnforcement.policyId+'. The target root, every discoverable same-site subservice and site-owned admin surface are one enforced scope; child surfaces may tighten but must not relax the parent contracts.',
+    'Apply the same canonical-path, shared-shell/UI-DNA, public-header, auth-return, responsive/readability/accessibility, link-integrity, header/footer/language, staging and rollback rules to the site root and every descendant path.',
     'Deeply inspect the target site and every discoverable same-site subservice before editing. Use production HTTP/browser evidence plus repository evidence; do not guess.',
     'Check internal and external links, user/admin paths, login-before/login-after continuity, mobile and desktop responsive layout, header/footer/menu structure, shared-shell consistency, readability, intuitiveness, usability, accessibility, keyboard/tap targets, clipping, overlap, horizontal overflow, excessive whitespace, loading/error/empty states, and obvious broken functionality.',
     'Apply only bounded low-risk reversible fixes within the existing site/UI/service boundary. Prefer shared EKODI UI rules when the defect is genuinely shared, but avoid unrelated refactors.',

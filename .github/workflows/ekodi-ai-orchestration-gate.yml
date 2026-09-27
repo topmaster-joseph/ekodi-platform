@@ -108,6 +108,11 @@ jobs:
         run: |
           node --check scripts/zero-subdomain-guard.mjs
           node scripts/zero-subdomain-guard.mjs
+      - name: Enforce recursive site and subsite execution policy
+        run: |
+          set -euo pipefail
+          node --check scripts/validate-site-execution-enforcement.mjs
+          npm run validate:site-execution
       - name: Enforce Generation 10 Evolution Kernel
         run: |
           set -euo pipefail
