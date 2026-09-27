@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "evidence": {
     "generation": 10,
     "ledger": "ai_production_evidence",
@@ -26,7 +26,6 @@
           "x-content-type-options: nosniff",
           "cache-control: public"
         ],
-        "candidateUrl": "https://ekodi-auth-api.topmaster-joseph.workers.dev/api/public/preview/map?scope=ekodi&mode=platform",
         "candidateStatuses": [
           200
         ],
@@ -208,7 +207,7 @@
         ]
       },
       {
-        "url": "https://ekodi-auth-api.topmaster-joseph.workers.dev/api/control/personal-finance",
+        "url": "https://ekodi.kr/api/control/personal-finance",
         "statuses": [
           401
         ],
@@ -220,7 +219,10 @@
           "x-ekodi-personal-finance-proxy: service-binding-v1",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Canonical Personal Finance is owned by the Shared Site PERSONAL_FINANCE binding; the Control API Personal Finance proxy is verified in isolated staging and unit contracts.",
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/api/control/ai/governance",
