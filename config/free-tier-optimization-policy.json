@@ -2,9 +2,9 @@
   "schemaVersion": 3,
   "policyId": "EKODI-FREE-TIER-001",
   "status": "enforced",
-  "effectiveDate": "2026-09-20",
-  "referenceDate": "2026-09-25",
-  "principle": "maximize-zero-marginal-cost-without-weakening-security-or-source-of-truth",
+  "effectiveDate": "2026-09-28",
+  "referenceDate": "2026-09-28",
+  "principle": "paid-core-free-first-with-measured-overage-protection",
   "automaticPaidUpgrade": false,
   "requireMeasuredTelemetryBeforeUsagePercentClaims": true,
   "thresholds": {
@@ -97,7 +97,7 @@
   },
   "sourceOfTruth": {
     "relationalBusinessData": "supabase-postgres",
-    "edgeDerivedState": "cloudflare-d1-or-kv",
+    "edgeDerivedState": "cloudflare-d1-or-kv-plan-aware",
     "largePublicOrOperationalObjects": "cloudflare-r2",
     "officialDurableOrganizationalArtifacts": "google-workspace-shared-drive-ekodi",
     "sourceAndReleaseHistory": "github"
@@ -161,7 +161,7 @@
       }
     },
     "providerTelemetry": {
-      "cloudflare": "D1 quota ledger plus production quota collectors",
+      "cloudflare": "Cloudflare Workers Analytics plus D1 Analytics; Billing API plan detection when readable, otherwise Free-safe limits",
       "supabase": "Management API or direct project measurement; unknown values stay unknown",
       "github": "repository/action metadata; public standard hosted runner minutes are free, storage remains plan-aware"
     },
@@ -197,5 +197,27 @@
       "account-or-billing-change",
       "root-security-change"
     ]
+  },
+  "paidCore": {
+    "mode": "owner-activated-minimum-paid-core",
+    "cloudflareWorkersPaid": {
+      "minimumMonthlyUsd": 5,
+      "ownerActivationRequired": true,
+      "automaticPurchase": false,
+      "activationDetection": "cloudflare-billing-api-when-readable-else-free-safe",
+      "includedCapacity": {
+        "workersRequestsPerMonth": 10000000,
+        "d1RowsReadPerMonth": 25000000000,
+        "d1RowsWrittenPerMonth": 50000000,
+        "d1StorageBytes": 5368709120
+      },
+      "policy": "use-paid-capacity-for-continuity-but-continue-static-cache-r2-queue-and-supabase-optimization"
+    },
+    "nonessentialOverageGuard": {
+      "warningPercent": 70,
+      "protectPercent": 90,
+      "blockNonessentialAtOrAboveProtect": true,
+      "preserveAuthSecurityOrdersFinanceAndAdminControl": true
+    }
   }
 }
