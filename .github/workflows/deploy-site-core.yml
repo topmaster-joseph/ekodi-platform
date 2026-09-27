@@ -80,6 +80,7 @@ on:
       - 'workspace-admin-page.js'
       - 'supabase/migrations/20260926140500_activity_public_readonly_shares.sql'
       - 'supabase/migrations/20260927032500_activity_public_share_minimal_projection_guard.sql'
+      - 'supabase/migrations/20260927041500_activity_public_share_contract_health.sql'
       - '.github/workflows/deploy-activity-public-share-schema.yml'
       - 'organization-admin-page.js'
       - 'test/organization-subsite.test.mjs'
@@ -424,26 +425,51 @@ jobs:
           publishable='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_'
           gateway_ready=false
           schema_ready=false
+          contract_ready=false
           for attempt in $(seq 1 30); do
-            gateway_code=$(curl -sS -o /tmp/mission-activity-gateway.json -w '%{http_code}'               -X POST 'https://ekodi.kr/ekodimission/api/admin/activity-rpc'               -H 'Content-Type: application/json'               --data '{"rpc":"activity_admin_share_status","args":{}}' || true)
+            gateway_code=$(curl -sS -o /tmp/mission-activity-gateway.json -w '%{http_code}' \
+              -X POST 'https://ekodi.kr/ekodimission/api/admin/activity-rpc' \
+              -H 'Content-Type: application/json' \
+              --data '{"rpc":"activity_admin_share_status","args":{}}' || true)
             if [ "$gateway_code" = '401' ] && grep -Fq 'authentication_required' /tmp/mission-activity-gateway.json; then
               gateway_ready=true
             fi
 
-            schema_code=$(curl -sS -o /tmp/mission-activity-schema.json -w '%{http_code}'               -X POST 'https://renzehysxirjilvdxacv.supabase.co/rest/v1/rpc/activity_public_share_snapshot'               -H "apikey: $publishable"               -H 'Content-Type: application/json'               --data '{"p_token":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}' || true)
+            schema_code=$(curl -sS -o /tmp/mission-activity-schema.json -w '%{http_code}' \
+              -X POST 'https://renzehysxirjilvdxacv.supabase.co/rest/v1/rpc/activity_public_share_snapshot' \
+              -H "apikey: $publishable" \
+              -H 'Content-Type: application/json' \
+              --data '{"p_token":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}' || true)
             if [ "$schema_code" = '200' ] && grep -Eq '"ok"[[:space:]]*:[[:space:]]*false' /tmp/mission-activity-schema.json; then
               schema_ready=true
             fi
 
-            if [ "$gateway_ready" = true ] && [ "$schema_ready" = true ]; then
+            contract_code=$(curl -sS -o /tmp/mission-activity-contract.json -w '%{http_code}' \
+              -X POST 'https://renzehysxirjilvdxacv.supabase.co/rest/v1/rpc/activity_public_share_contract' \
+              -H "apikey: $publishable" \
+              -H 'Content-Type: application/json' \
+              --data '{}' || true)
+            contract_ready=false
+            if [ "$contract_code" = '200' ] && node - /tmp/mission-activity-contract.json <<'NODE'
+            const fs=require('node:fs');
+            const value=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+            const expected=['seq','name','status','party_size'];
+            if(value?.ok!==true||value?.contract!=='ekodi.activity-public-share.v1'||value?.contact_fields!==false||JSON.stringify(value?.fields)!==JSON.stringify(expected))process.exit(1);
+            NODE
+            then
+              contract_ready=true
+            fi
+
+            if [ "$gateway_ready" = true ] && [ "$schema_ready" = true ] && [ "$contract_ready" = true ]; then
               echo "Mission activity dependency gate ready on attempt $attempt."
               break
             fi
-            echo "Waiting for Mission activity dependencies: gateway=$gateway_ready schema=$schema_ready attempt=$attempt/30"
+            echo "Waiting for Mission activity dependencies: gateway=$gateway_ready schema=$schema_ready contract=$contract_ready attempt=$attempt/30"
             sleep 6
           done
           [ "$gateway_ready" = true ] || { echo 'Mission activity gateway is not production-ready; refusing UI promotion.' >&2; cat /tmp/mission-activity-gateway.json || true; exit 1; }
           [ "$schema_ready" = true ] || { echo 'Mission activity share schema is not production-ready; refusing UI promotion.' >&2; cat /tmp/mission-activity-schema.json || true; exit 1; }
+          [ "$contract_ready" = true ] || { echo 'Mission activity privacy contract is not production-ready; refusing UI promotion.' >&2; cat /tmp/mission-activity-contract.json || true; exit 1; }
 
       - name: Validate current shared site and admin sources
         run: |
