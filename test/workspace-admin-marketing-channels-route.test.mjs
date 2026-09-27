@@ -54,8 +54,11 @@ test('channel admin is login-first and authenticates pre-registered account rows
   assert.match(source,/needsReconnect/);
   assert.match(source,/async function startChannelConnect\(provider,account=\{\},existingPopup=null\)/);
   assert.match(source,/account_already_registered/);
-  assert.match(source,/기존 YouTube 계정 인증 준비/);
-  assert.match(source,/YouTube 계정 등록 완료 · 인증 준비/);
+  assert.match(source,/alreadyActive/);
+  assert.match(source,/이미 연결된 계정입니다\. 추가 OAuth 승인 없이 관리자 로그인으로 계속 사용합니다/);
+  assert.match(source,/YouTube 재연결 준비/);
+  assert.match(source,/YouTube 계정 등록 완료 · 최초 연결 준비/);
+  assert.doesNotMatch(source,/기존 YouTube 계정 인증 준비/);
   assert.match(source,/location\.assign\(d\.authorizationUrl\)/);
   assert.doesNotMatch(source,/topmaster\.joseph@gmail\.com/);
 });
