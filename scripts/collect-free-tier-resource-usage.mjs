@@ -186,10 +186,11 @@ export function snapshotFromCloudflareQuotaReport(report){
   if(!Number.isFinite(requests)||requests<0)throw new Error('CLOUDFLARE_QUOTA_REPORT_REQUESTS_INVALID');
   if(!Number.isFinite(limit)||limit<=0)throw new Error('CLOUDFLARE_QUOTA_REPORT_LIMIT_INVALID');
   if(!Number.isFinite(Date.parse(observedAt)))throw new Error('CLOUDFLARE_QUOTA_REPORT_TIME_INVALID');
+  const periodKind=String(report.periodKind||'day').toLowerCase()==='month'?'month':'day';
   return {
     provider:'cloudflare',
-    metric:'workers_requests_daily',
-    periodStart:periodDay(report?.window?.start||observedAt),
+    metric:periodKind==='month'?'workers_requests_month':'workers_requests_daily',
+    periodStart:periodKind==='month'?periodMonth(report?.window?.start||observedAt):periodDay(report?.window?.start||observedAt),
     observedValue:requests,
     freeLimit:limit,
     source:'cloudflare-workers-analytics',
@@ -197,10 +198,42 @@ export function snapshotFromCloudflareQuotaReport(report){
   };
 }
 
+export function snapshotsFromCloudflareQuotaReport(report){
+  const worker=snapshotFromCloudflareQuotaReport(report);
+  const snapshots=[worker];
+  const d1=report?.d1;
+  if(d1?.available===true){
+    const observedAt=String(report.generatedAt||'');
+    const periodKind=String(report.periodKind||d1.periodKind||'day').toLowerCase()==='month'?'month':'day';
+    const periodStart=periodKind==='month'?periodMonth(report?.window?.start||observedAt):periodDay(report?.window?.start||observedAt);
+    const rowsRead=Number(d1.rowsRead);
+    const rowsWritten=Number(d1.rowsWritten);
+    const readLimit=Number(d1.readLimit);
+    const writeLimit=Number(d1.writeLimit);
+    if(Number.isFinite(rowsRead)&&rowsRead>=0&&Number.isFinite(readLimit)&&readLimit>0){
+      snapshots.push({
+        provider:'cloudflare',
+        metric:periodKind==='month'?'d1_rows_read_month':'d1_rows_read_daily',
+        periodStart,observedValue:rowsRead,freeLimit:readLimit,
+        source:'cloudflare-d1-analytics',observedAt
+      });
+    }
+    if(Number.isFinite(rowsWritten)&&rowsWritten>=0&&Number.isFinite(writeLimit)&&writeLimit>0){
+      snapshots.push({
+        provider:'cloudflare',
+        metric:periodKind==='month'?'d1_rows_written_month':'d1_rows_written_daily',
+        periodStart,observedValue:rowsWritten,freeLimit:writeLimit,
+        source:'cloudflare-d1-analytics',observedAt
+      });
+    }
+  }
+  return snapshots;
+}
+
 export async function loadCloudflareQuotaSnapshot(path){
   if(!path)return {available:false,reason:'report_missing',snapshots:[]};
   const raw=JSON.parse(await fs.readFile(path,'utf8'));
-  return {available:true,reason:null,snapshots:[snapshotFromCloudflareQuotaReport(raw)],reportState:String(raw.state||'unknown')};
+  return {available:true,reason:null,snapshots:snapshotsFromCloudflareQuotaReport(raw),reportState:String(raw.state||'unknown'),plan:String(raw?.plan?.workers||'unknown')};
 }
 
 export async function collectGitHub({repository,token='',fetchJson=jsonFetch,observedAt=nowIso()}={}){
