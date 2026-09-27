@@ -4,19 +4,21 @@ import { readFile } from 'node:fs/promises';
 
 const cfg = JSON.parse(await readFile(new URL('../config/marketing-tenants.json', import.meta.url), 'utf8'));
 
-test('customer AI domains remain compatibility execution aliases while user routes stay canonical', () => {
-  assert.equal(cfg.domainPattern, '{tenant}.ekodi.kr/ai');
-  assert.equal(cfg.domainPatternRole, 'legacy_execution_alias_only');
-  assert.equal(cfg.namespace.domain, 'ekodi.kr/ai');
+test('Marketing workspaces use the apex-path-only address model', () => {
+  assert.equal(cfg.addressModel, 'apex-path-only');
+  assert.equal(cfg.namespace.canonicalHost, 'ekodi.kr');
   assert.equal(cfg.namespace.productHub, 'https://ekodi.kr/ekodibiz/marketing-ai');
-  assert.equal(cfg.namespace.engineDomain, 'ekodi.kr/marketing');
-  assert.equal(cfg.namespace.aiGateway, 'ekodi.kr/ai');
+  assert.equal(cfg.namespace.enginePath, '/marketing');
+  assert.equal(cfg.namespace.aiGatewayPath, '/ai');
   assert.equal(cfg.namespace.providerTopologyVisibleToOrdinaryUsers, false);
-  const canon = { jadam:'https://ekodi.kr/jadam/marketing', pizzamaru:'https://ekodi.kr/pizzamaru/marketing', yogurt:'https://ekodi.kr/yogurt/marketing', cgma:'https://ekodi.kr/cgma/marketing' };
+  const canon = { jadam:'/jadam/marketing', pizzamaru:'/pizzamaru/marketing', yogurt:'/yogurt/marketing', cgma:'/cgma/marketing' };
   for (const tenant of cfg.tenants) {
-    assert.equal(tenant.domain, `${tenant.tenant}.ekodi.kr/ai`);
-    assert.equal(tenant.domainRole, 'legacy_execution_alias');
-    assert.equal(tenant.canonicalUrl, canon[tenant.tenant]);
+    assert.equal(tenant.host, 'ekodi.kr');
+    assert.equal(tenant.domain, 'ekodi.kr');
+    assert.equal(tenant.canonicalPath, canon[tenant.tenant]);
+    assert.equal(tenant.canonicalUrl, 'https://ekodi.kr' + canon[tenant.tenant]);
+    assert.equal(tenant.legacyDomains, undefined);
+    assert.equal(tenant.executionAlias, undefined);
   }
 });
 
@@ -29,35 +31,33 @@ test('EKODIBIZ is a first-party Marketing AI consumer on the canonical product p
   assert.equal(biz.entryUrl, 'https://ekodi.kr/ekodibiz/marketing-ai');
   assert.equal(biz.engineUrl, 'https://ekodi.kr/marketing/');
   assert.equal(biz.templateKey, 'service_b2b');
-  assert.equal(biz.dedicatedEkodiDomain, false);
 });
 
-test('workspace plans share canonical path routing while Pro may map a customer-owned domain', () => {
-  assert.equal(cfg.policy.organizationWorkspace.dedicatedEkodiDomain, false);
-  assert.equal(cfg.policy.storeBasic.dedicatedEkodiDomain, false);
-  assert.equal(cfg.policy.storePlus.dedicatedEkodiDomain, false);
+test('workspace plans use canonical paths while Pro may map a customer-owned domain', () => {
+  for (const key of ['organizationWorkspace','storeBasic','storePlus','storePro']) {
+    assert.equal(cfg.policy[key].addressModel, 'apex-path-only');
+  }
   assert.equal(cfg.policy.storePlus.customDomain, false);
-  assert.equal(cfg.policy.storePro.dedicatedEkodiDomain, false);
   assert.equal(cfg.policy.storePro.customDomain, true);
   assert.equal(cfg.policy.storePro.includedCustomDomains, 1);
-  for (const key of ['organizationWorkspace','storePlus','storePro']) assert.equal(cfg.policy[key].canonicalPattern, 'https://ekodi.kr/{public_namespace}/marketing');
+  for (const key of ['organizationWorkspace','storePlus','storePro']) {
+    assert.equal(cfg.policy[key].canonicalPattern, 'https://ekodi.kr/{public_namespace}/marketing');
+  }
 });
 
-test('Pro custom domain means mapping a customer-owned hostname, not giving away a domain', () => {
+test('Pro custom domain maps a customer-owned hostname only', () => {
   assert.equal(cfg.policy.customDomain.ownership, 'customer');
   assert.equal(cfg.policy.customDomain.registrationIncluded, false);
   assert.equal(cfg.policy.customDomain.mappingOnly, true);
 });
 
-test('CGMA public site stays separate from its private AI workspace', () => {
+test('CGMA public domain remains separate from its private Marketing workspace path', () => {
   const cgma = cfg.tenants.find((row) => row.tenant === 'cgma');
   assert.ok(cgma);
   assert.equal(cgma.tenantType, 'organization');
   assert.equal(cgma.visibility, 'private');
   assert.equal(cgma.platformSitePath, '/cgma');
   assert.equal(cgma.publicSiteDomain, 'cgma.or.kr');
-  assert.equal(cgma.privateSiteDomain, undefined);
-  assert.equal(cgma.domain, 'ekodi.kr/cgma/marketing');
-  assert.equal(cgma.landingPath, '/market-ai');
-  assert.ok(cgma.legacyDomains.includes('ekodi.kr/cgma'));
+  assert.equal(cgma.canonicalPath, '/cgma/marketing');
+  assert.equal(cgma.canonicalUrl, 'https://ekodi.kr/cgma/marketing');
 });
