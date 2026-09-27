@@ -223,6 +223,27 @@ for (const [key, count] of addedHosts) {
   fail(`${file}: new EKODI subdomain reference is forbidden: ${host}`);
 }
 
+
+const textExtensions = new Set(['.js','.mjs','.cjs','.ts','.tsx','.jsx','.json','.md','.html','.css','.toml','.yml','.yaml','.txt','.sql','.sh','.cmd','.ps1','.xml']);
+function walkText(dir, base='') {
+  const out = [];
+  for (const entry of fs.readdirSync(dir,{withFileTypes:true})) {
+    if (['.git','node_modules','dist'].includes(entry.name)) continue;
+    const rel = path.join(base,entry.name);
+    const full = path.join(dir,entry.name);
+    if (entry.isDirectory()) out.push(...walkText(full,rel));
+    else if (textExtensions.has(path.extname(entry.name).toLowerCase()) || entry.name.startsWith('.') || ['_headers','_redirects'].includes(entry.name)) out.push(rel.replaceAll('\\','/'));
+  }
+  return out;
+}
+for (const file of walkText(root)) {
+  if (file === 'scripts/zero-subdomain-guard.mjs') continue;
+  let source = '';
+  try { source = fs.readFileSync(path.join(root,file),'utf8'); } catch { continue; }
+  if (source.includes('.ekodi.kr')) fail(`${file}: any EKODI child-host suffix reference is forbidden`);
+  if (/\\\.ekodi\\\.kr/i.test(source)) fail(`${file}: escaped EKODI child-host pattern is forbidden`);
+}
+
 if (failures.length) {
   console.error('❌ EKODI Zero-Subdomain / Site-Boundary Guard failed.');
   for (const message of failures) console.error(` - ${message}`);
