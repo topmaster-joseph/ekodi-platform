@@ -13,5 +13,6 @@ test('shared user chrome carries a response ownership marker and skips duplicate
   assert.match(injector,/headers\.set\(USER_CHROME_HEADER,USER_UI_VERSION\)/);
   assert.match(injector,/if\(!alreadyHasChrome\)\{/);
   assert.match(injector,/\.on\('footer',new UserFooterCanonicalizer\(serviceId\)\)/);
-  assert.match(injector,/\.on\('body',new UserChromeInjector\(serviceId\)\)/);
+  assert.match(injector,/const addFallbackHeader=options\?\.existingHeader!==true/);
+  assert.match(injector,/\.on\('body',new UserChromeInjector\(serviceId,addFallbackHeader\)\)/);
 });

@@ -371,8 +371,11 @@
         "redirect": "manual",
         "expect": [
           "EKODIBIZ",
-          "WHAT WE DO",
-          "운영공간"
+          "WHAT WE DO"
+        ],
+        "forbid": [
+          "운영공간",
+          "data-ekodi-operating-space-label"
         ],
         "headerExpect": [
           "x-ekodi-workspace-gateway: ekodibiz-service-binding",
@@ -2043,8 +2046,11 @@
         "redirect": "manual",
         "expect": [
           "WELCOME TO EKODI CHURCH",
-          "에코디교회",
-          "운영공간"
+          "에코디교회"
+        ],
+        "forbid": [
+          "운영공간",
+          "data-ekodi-operating-space-label"
         ],
         "headerExpect": [
           "x-ekodi-route: church-public-path",
@@ -2060,7 +2066,12 @@
         ],
         "redirect": "manual",
         "expect": [
-          "운영공간"
+          "자담치킨",
+          "목포대점"
+        ],
+        "forbid": [
+          "운영공간",
+          "data-ekodi-operating-space-label"
         ],
         "headerExpect": [
           "x-ekodi-tenant-readability: v1",
@@ -2075,7 +2086,12 @@
         ],
         "redirect": "manual",
         "expect": [
-          "운영공간"
+          "피자마루",
+          "목포대점"
+        ],
+        "forbid": [
+          "운영공간",
+          "data-ekodi-operating-space-label"
         ],
         "headerExpect": [
           "x-ekodi-tenant-readability: v1",
@@ -2090,7 +2106,12 @@
         ],
         "redirect": "manual",
         "expect": [
-          "운영공간"
+          "요거트퍼플",
+          "목포대점"
+        ],
+        "forbid": [
+          "운영공간",
+          "data-ekodi-operating-space-label"
         ],
         "headerExpect": [
           "x-ekodi-tenant-readability: v1",

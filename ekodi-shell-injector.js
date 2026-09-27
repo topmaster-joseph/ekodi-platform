@@ -155,9 +155,9 @@ class UserFooterCanonicalizer{
   }
 }
 class UserChromeInjector{
-  constructor(serviceId){this.serviceId=serviceId;}
+  constructor(serviceId,addFallbackHeader=true){this.serviceId=serviceId;this.addFallbackHeader=addFallbackHeader;}
   element(element){
-    element.prepend(fallbackHeader(this.serviceId),{html:true});
+    if(this.addFallbackHeader)element.prepend(fallbackHeader(this.serviceId),{html:true});
     if(!serviceOwnsFooter(this.serviceId))element.append(renderEkodiUserFooter(),{html:true});
   }
 }
@@ -168,9 +168,6 @@ class TenantReadabilityHtmlInjector{
 }
 class TenantReadabilityHeadInjector{
   element(element){element.append(`<link rel="stylesheet" href="${SHELL_TENANT_READABILITY_STYLE}" data-ekodi-tenant-readability-style="${TENANT_READABILITY_VERSION}"><script src="${SHELL_MOBILE_HEADER_SCRIPT}" defer data-ekodi-tenant-mobile-header="${TENANT_READABILITY_VERSION}"></script>`,{html:true});}
-}
-class TenantOperatingSpaceBodyInjector{
-  element(element){element.prepend(`<span hidden data-ekodi-operating-space-label="${OPERATING_SPACE_LABEL_VERSION}" aria-hidden="true">운영공간</span>`,{html:true});}
 }
 class TenantOperatingSpaceExistingMarkerRemover{
   element(element){element.remove();}
@@ -219,10 +216,7 @@ export function injectEkodiTenantReadability(response,options={}){
     .on('.yp-top',headerAdopter)
     .on('.top',headerAdopter)
     .on('[data-ekodi-fixed-header]',headerAdopter);
-  if(operatingSpace){
-    if(forceOperatingSpace)rewriter=rewriter.on('[data-ekodi-operating-space-label]',new TenantOperatingSpaceExistingMarkerRemover());
-    rewriter=rewriter.on('body',new TenantOperatingSpaceBodyInjector());
-  }
+  if(operatingSpace)rewriter=rewriter.on('[data-ekodi-operating-space-label]',new TenantOperatingSpaceExistingMarkerRemover());
   return rewriter.transform(new Response(response.body,{status:response.status,statusText:response.statusText,headers}));
 }
 
@@ -278,9 +272,10 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public',op
     .on('.main-header',headerAdopter)
     .on('[data-ekodi-fixed-header]',headerAdopter);
   if(!alreadyHasChrome){
+    const addFallbackHeader=options?.existingHeader!==true;
     rewriter=rewriter
       .on('footer',new UserFooterCanonicalizer(serviceId))
-      .on('body',new UserChromeInjector(serviceId));
+      .on('body',new UserChromeInjector(serviceId,addFallbackHeader));
   }
   return rewriter.transform(new Response(response.body,{status:response.status,statusText:response.statusText,headers}));
 }
