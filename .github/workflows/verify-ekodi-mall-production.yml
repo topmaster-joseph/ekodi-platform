@@ -49,6 +49,14 @@ jobs:
           fi
           echo 'storefront=verified'
 
+          amazon_admin_code=$(curl -sS -o /tmp/mall-amazon-admin.html -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodimall/admin/amazon' || true)
+          if [ "$amazon_admin_code" != "200" ]; then
+            echo "Canonical Amazon admin must return 200: HTTP $amazon_admin_code"
+            exit 1
+          fi
+          grep -Fq 'workspace-admin.js' /tmp/mall-amazon-admin.html || { echo 'Amazon admin is missing workspace-admin.js'; exit 1; }
+          echo 'amazonAdminRoute=verified'
+
           verification_entry_code=$(curl -sS -D /tmp/mall-verification-entry.headers -o /tmp/mall-verification-entry.body -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodimall/verification-ops' || true)
           if [[ ! "$verification_entry_code" =~ ^[23] ]] || ! grep -Fiq 'cache-control: no-store' /tmp/mall-verification-entry.headers; then
             echo "Verification Ops canonical entry is not fail-closed for caching: HTTP $verification_entry_code"
