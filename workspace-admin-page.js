@@ -667,40 +667,86 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   function statusAdmin(){const name=workspaceLabel();$('summaryCards').innerHTML=[card('운영공간',name,'tenant scoped'),card('인증','연결됨','운영공간 권한 확인 완료'),card('공개주소',workspacePublicUrl().replace('https://ekodi.kr',''),'사용자 화면'),card('내 권한',workspaceRole||'-','Capability 기준')].join('');$('mainPanel').innerHTML=`<div class="panel-head"><div><h2>운영 상태</h2><p class="empty">사이트 운영 상태와 접근 경계를 확인합니다. 실제 플랫폼 배포 이력과 장애·로그는 공통 최고관리자에서 분리 관리합니다.</p></div><span class="tag live">관리자 연결 정상</span></div><div class="service-list"><div class="service-row"><div><strong>공개 사용자 화면</strong><p>${ae(workspacePublicUrl())}</p></div><a href="${ae(workspacePublicUrl())}" target="_blank" rel="noopener">열기</a></div><div class="service-row"><div><strong>운영공간 관리자</strong><p>${ae(adminBase)}</p></div><a href="${ae(adminBase)}">새로 확인</a></div><div class="service-row"><div><strong>플랫폼 상태 · 배포</strong><p>공통 배포·검증·오류 상태는 플랫폼 최고관리자 범위입니다.</p></div><a href="/admin/">최고관리자</a></div></div>`;state('운영 상태 확인됨')}
   function recordsAdmin(){$('summaryCards').innerHTML=[card('권한 경계','운영공간','tenant-local'),card('변경 처리','권한 기반','Capability 검증'),card('개인정보','분리 관리','공개 화면과 분리'),card('감사 기준','원본 유지','관리 작업 추적')].join('');const links=[];if(canSection('members'))links.push(`<div class="service-row"><div><strong>사용자 · 관리자 권한</strong><p>누가 어떤 범위에서 관리할 수 있는지 확인합니다.</p></div><a href="${sectionHref('members')}">관리</a></div>`);if(canSection('confirmations'))links.push(`<div class="service-row"><div><strong>지급 · 수령 기록</strong><p>확인서와 거래 연결 기록을 관리합니다.</p></div><a href="${sectionHref('confirmations')}">관리</a></div>`);$('mainPanel').innerHTML=`<h2>설정 · 기록</h2><p class="empty">운영 데이터 원본과 권한 경계를 유지하면서 변경·확인 기록을 관련 관리화면에서 추적합니다.</p><div class="service-list">${links.join('')||'<p class="empty">현재 역할에서 열 수 있는 기록 관리 화면이 없습니다.</p>'}</div>`;state('기록 관리')}
   async async function amazonAdmin(){
-    state('Amazon 연결 상태 확인 중');
+    state('Amazon 무료우선 정책 확인 중');
     try{
       const token=await accessToken();
-      const r=await fetch('/api/amazon/status',{headers:token?{authorization:`Bearer ${token}`}:{},cache:'no-store'});
+      const headers=token?{authorization:`Bearer ${token}`}:{};
+      const r=await fetch('/api/amazon/status',{headers,cache:'no-store'});
       const d=await r.json().catch(()=>({}));
       if(!r.ok)throw new Error(d.error||`amazon_${r.status}`);
-      const seller=d.sellerCentral||{},aws=d.aws||{},pay=d.amazonPay||{};
+      const seller=d.sellerCentral||{},aws=d.aws||{},pay=d.amazonPay||{},cost=d.cost||{},policy=cost.policy||{},usage=Array.isArray(cost.usage)?cost.usage:[];
+      const money=v=>Number(v||0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2});
+      const usageRows=usage.length?usage.map(row=>`<tr><td>${ae(row.serviceKey||'-')}</td><td>${ae(row.usageValue??'-')} ${ae(row.usageUnit||'')}</td><td>${row.freeRemainingPercent==null?'-':ae(row.freeRemainingPercent)+'%'}</td><td>$${money(row.estimatedCostUsd)}</td></tr>`).join(''):'<tr><td colspan="4">아직 수집된 사용량이 없습니다. 비용 수집기가 연결되면 여기에 표시됩니다.</td></tr>';
       $('summaryCards').innerHTML=[
+        card('무료우선',policy.freeFirstEnabled?'ON':'OFF',`자동중지 ${policy.autoStopPercent??90}%`),
+        card('예상 월비용',`$${money(cost.estimatedMonthUsd)}`,`예산 $${money(policy.monthlyBudgetUsd)}`),
         card('Seller Central',seller.configured?'연결 준비':'설정 필요',seller.marketplaceId||'Marketplace 미설정'),
-        card('AWS',aws.configured?'연결됨':'선택 연결',aws.region||'보조 인프라'),
-        card('Amazon Pay',pay.configured?'연결됨':'선택 연결','해외 결제 옵션')
+        card('AWS',aws.configured?'연결됨':'선택 연결',aws.region||'보조 인프라')
       ].join('');
-      $('mainPanel').innerHTML=`<h2>Amazon 연결센터</h2>
-        <p class="empty">EKODI 공통 Amazon Connector를 통해 에코디몰의 상품·가격·재고·주문·배송·FBA 연결을 관리합니다. 비밀키는 화면에 표시하지 않습니다.</p>
+      $('mainPanel').innerHTML=`<h2>Amazon · AWS 무료우선 비용센터</h2>
+        <p class="empty">무료 한도와 크레딧을 먼저 사용하고, 예상 유료비용이 생기는 기능은 승인 전까지 자동 차단합니다. 비밀키는 화면에 표시하지 않습니다.</p>
         <div class="actions">
           <a class="button primary" href="/ekodimall/admin/products">상품 관리</a>
           <a class="button" href="/ekodimall/admin/analytics">주문·매출</a>
           <a class="button" href="/ekodimall/admin/sourcing">공급·제휴</a>
         </div>
         <div class="panel" style="margin-top:14px">
-          <h3>운영 준비 상태</h3>
+          <h3>비용 강제실행 규칙</h3>
+          <form id="amazonCostPolicyForm">
+            <div class="grid two">
+              <label>월 최대 유료예산(USD)<input name="monthlyBudgetUsd" type="number" min="0" step="0.01" value="${ae(policy.monthlyBudgetUsd??0)}"></label>
+              <label>자동중지 기준(%)<input name="autoStopPercent" type="number" min="1" max="100" value="${ae(policy.autoStopPercent??90)}"></label>
+            </div>
+            <div class="grid two">
+              <label><input name="freeFirstEnabled" type="checkbox" ${policy.freeFirstEnabled!==false?'checked':''}> 무료우선 강제</label>
+              <label><input name="paidAwsEnabled" type="checkbox" ${policy.paidAwsEnabled?'checked':''}> 유료 AWS 허용</label>
+              <label><input name="sellerPaidPlanEnabled" type="checkbox" ${policy.sellerPaidPlanEnabled?'checked':''}> Seller 유료플랜 허용</label>
+              <label><input name="fbaEnabled" type="checkbox" ${policy.fbaEnabled?'checked':''}> FBA 허용</label>
+              <label><input name="bedrockPaidEnabled" type="checkbox" ${policy.bedrockPaidEnabled?'checked':''}> Bedrock 유료사용 허용</label>
+            </div>
+            <div class="actions"><button class="button primary" type="submit">비용정책 저장</button></div>
+          </form>
+          <p class="empty">유료 기능 스위치를 켜더라도 기능별 승인 레코드와 금액 한도가 없으면 실제 유료 실행은 계속 차단됩니다.</p>
+        </div>
+        <div class="panel" style="margin-top:14px">
+          <h3>서비스별 사용량 · 무료잔여 · 예상비용</h3>
+          <div class="table-wrap"><table><thead><tr><th>서비스</th><th>사용량</th><th>무료잔여</th><th>예상비용</th></tr></thead><tbody>${usageRows}</tbody></table></div>
+          <p class="empty">${(cost.warnings||[]).length?'주의: '+(cost.warnings||[]).map(ae).join(' · '):'현재 비용경고 없음'}</p>
+        </div>
+        <div class="panel" style="margin-top:14px">
+          <h3>연결 준비 상태</h3>
           <p>Seller Central: <strong>${seller.configured?'설정 완료':'자격정보 등록 필요'}</strong></p>
-          <p>Marketplace: <strong>${ae(seller.marketplaceId||'미설정')}</strong></p>
+          <p>AWS: <strong>${aws.configured?'보조 인프라 연결':'선택 연결'}</strong> · Amazon Pay: <strong>${pay.configured?'연결됨':'선택 연결'}</strong></p>
           <p>지원 범위: ${(seller.resources||[]).map(ae).join(' · ')||'catalog · listings · pricing · inventory · orders · fulfillment · reports'}</p>
-          <p class="empty">실제 Amazon 쓰기 작업은 SP-API 자격정보와 운영 검증이 완료된 뒤에만 활성화됩니다.</p>
         </div>`;
-      state(seller.configured?'Amazon 연결 준비':'Amazon 설정 필요');
+      const form=$('amazonCostPolicyForm');
+      form?.addEventListener('submit',async event=>{
+        event.preventDefault();
+        const fd=new FormData(form);
+        const body={
+          freeFirstEnabled:fd.get('freeFirstEnabled')==='on',
+          monthlyBudgetUsd:Number(fd.get('monthlyBudgetUsd')||0),
+          autoStopPercent:Number(fd.get('autoStopPercent')||90),
+          paidAwsEnabled:fd.get('paidAwsEnabled')==='on',
+          sellerPaidPlanEnabled:fd.get('sellerPaidPlanEnabled')==='on',
+          fbaEnabled:fd.get('fbaEnabled')==='on',
+          bedrockPaidEnabled:fd.get('bedrockPaidEnabled')==='on'
+        };
+        state('Amazon 비용정책 저장 중');
+        const save=await fetch('/api/amazon/cost-policy',{method:'PUT',headers:{...headers,'content-type':'application/json'},body:JSON.stringify(body)});
+        const out=await save.json().catch(()=>({}));
+        if(!save.ok){state('저장 권한 또는 설정 확인 필요');$('pageCopy').textContent=out.error||'비용정책을 저장하지 못했습니다.';return}
+        state('Amazon 비용정책 저장 완료');
+        amazonAdmin();
+      });
+      state((cost.warnings||[]).length?'비용 주의 필요':seller.configured?'무료우선 운영 준비':'Amazon 설정 필요');
     }catch(e){
       $('summaryCards').innerHTML=[card('Amazon','확인 실패','connector status')].join('');
-      $('mainPanel').innerHTML=`<h2>Amazon 연결센터</h2><p class="empty">${ae(e.message||'상태를 확인하지 못했습니다.')}</p>`;
+      $('mainPanel').innerHTML=`<h2>Amazon · AWS 무료우선 비용센터</h2><p class="empty">${ae(e.message||'상태를 확인하지 못했습니다.')}</p>`;
       state('확인 필요');
     }
   }
-  function render(){if(!service){if(section==='overview')return rootHome();if(section==='activities')return activityAdmin();if(section==='status')return statusAdmin();if(section==='records')return recordsAdmin();if(section==='members')return membersAdmin();if(workspace==='cgma'&&section==='member')return cgmaMemberAdmin();if(section==='chrome')return siteChromeAdmin();if(section==='design')return designAdmin();if(section==='languages')return languageAdmin();if(section==='mail')return mailAdmin();if(section==='confirmations')return confirmationAdmin();if(section==='finance')return financeAdmin();if(isBizWorkspace&&section==='tax')return taxAdmin();if(section==='publishing'||section==='marketing')return channel();if(section==='mall')return location.replace('/ekodimall/admin');$('summaryCards').innerHTML=[card('운영공간',workspaceLabel(),'tenant scoped'),card('메뉴',meta[section]?.[0]||section,'로컬 관리')].join('');$('mainPanel').innerHTML='<p class="empty">이 운영공간의 독립 모듈입니다.</p>';return state('운영')}if(service!=='mall'){if(section==='overview'){$('summaryCards').innerHTML=[card('운영공간',workspaceLabel(),'tenant scoped'),card('하위서비스',service,'service scoped'),card('공통엔진','Channel · OAuth · Vault','shared capability'),card('권한',workspaceRole||'-','tenant role')].join('');$('mainPanel').innerHTML=`<h2>${ae(service)} 서비스 관리</h2><p class="empty">상위 운영공간의 권한을 상속하되 채널·게시 설정은 이 서비스 문맥에서 관리합니다.</p><div class="actions"><a class="button primary" href="${adminBase}/publishing">채널·자동게시</a><a class="button" href="${adminBase}/design">사이트 스타일</a><a class="button" href="${adminBase}/languages">다국어</a></div>`;return state('운영')}if(section==='chrome')return siteChromeAdmin();if(section==='design')return designAdmin();if(section==='languages')return languageAdmin();if(section==='confirmations')return confirmationAdmin();if(section==='finance')return financeAdmin();if(section==='publishing'||section==='marketing'||section==='channels')return channel();$('summaryCards').innerHTML=[card('하위서비스',service,'service scoped'),card('운영공간',workspaceLabel(),'tenant authority')].join('');$('mainPanel').innerHTML='<p class="empty">이 하위서비스는 공통 시스템 기능을 상속합니다.</p>';return state('운영')}if(section==='chrome')return siteChromeAdmin();if(section==='design')return designAdmin();if(section==='languages')return languageAdmin();if(section==='sales')return location.replace(`${adminBase}/analytics`);if(section==='analytics')return mallAnalytics();if(section==='confirmations')return confirmationAdmin();if(section==='overview')return mallHome();if(section==='amazon')return amazonAdmin();if(section==='sourcing'||section==='growth')return growthPolicyPanel(section);if(['marketing','automation'].includes(section))return location.replace(`${adminBase}/channel-settings`);if(section==='channels'||section==='publishing')return channel();if(section==='products')return mallProducts();$('summaryCards').innerHTML=[card('상품 서비스','에코디몰','EKODIBIZ 소유 운영'),card('공개주소','/ekodimall','ekodi.kr')].join('');$('mainPanel').innerHTML='<h2>상품 관리</h2><p class="empty">상품 원본은 에코디몰 독립 상품 모듈에서 관리합니다.</p>';state('운영')}
+    function render(){if(!service){if(section==='overview')return rootHome();if(section==='activities')return activityAdmin();if(section==='status')return statusAdmin();if(section==='records')return recordsAdmin();if(section==='members')return membersAdmin();if(workspace==='cgma'&&section==='member')return cgmaMemberAdmin();if(section==='chrome')return siteChromeAdmin();if(section==='design')return designAdmin();if(section==='languages')return languageAdmin();if(section==='mail')return mailAdmin();if(section==='confirmations')return confirmationAdmin();if(section==='finance')return financeAdmin();if(isBizWorkspace&&section==='tax')return taxAdmin();if(section==='publishing'||section==='marketing')return channel();if(section==='mall')return location.replace('/ekodimall/admin');$('summaryCards').innerHTML=[card('운영공간',workspaceLabel(),'tenant scoped'),card('메뉴',meta[section]?.[0]||section,'로컬 관리')].join('');$('mainPanel').innerHTML='<p class="empty">이 운영공간의 독립 모듈입니다.</p>';return state('운영')}if(service!=='mall'){if(section==='overview'){$('summaryCards').innerHTML=[card('운영공간',workspaceLabel(),'tenant scoped'),card('하위서비스',service,'service scoped'),card('공통엔진','Channel · OAuth · Vault','shared capability'),card('권한',workspaceRole||'-','tenant role')].join('');$('mainPanel').innerHTML=`<h2>${ae(service)} 서비스 관리</h2><p class="empty">상위 운영공간의 권한을 상속하되 채널·게시 설정은 이 서비스 문맥에서 관리합니다.</p><div class="actions"><a class="button primary" href="${adminBase}/publishing">채널·자동게시</a><a class="button" href="${adminBase}/design">사이트 스타일</a><a class="button" href="${adminBase}/languages">다국어</a></div>`;return state('운영')}if(section==='chrome')return siteChromeAdmin();if(section==='design')return designAdmin();if(section==='languages')return languageAdmin();if(section==='confirmations')return confirmationAdmin();if(section==='finance')return financeAdmin();if(section==='publishing'||section==='marketing'||section==='channels')return channel();$('summaryCards').innerHTML=[card('하위서비스',service,'service scoped'),card('운영공간',workspaceLabel(),'tenant authority')].join('');$('mainPanel').innerHTML='<p class="empty">이 하위서비스는 공통 시스템 기능을 상속합니다.</p>';return state('운영')}if(section==='chrome')return siteChromeAdmin();if(section==='design')return designAdmin();if(section==='languages')return languageAdmin();if(section==='sales')return location.replace(`${adminBase}/analytics`);if(section==='analytics')return mallAnalytics();if(section==='confirmations')return confirmationAdmin();if(section==='overview')return mallHome();if(section==='amazon')return amazonAdmin();if(section==='sourcing'||section==='growth')return growthPolicyPanel(section);if(['marketing','automation'].includes(section))return location.replace(`${adminBase}/channel-settings`);if(section==='channels'||section==='publishing')return channel();if(section==='products')return mallProducts();$('summaryCards').innerHTML=[card('상품 서비스','에코디몰','EKODIBIZ 소유 운영'),card('공개주소','/ekodimall','ekodi.kr')].join('');$('mainPanel').innerHTML='<h2>상품 관리</h2><p class="empty">상품 원본은 에코디몰 독립 상품 모듈에서 관리합니다.</p>';state('운영')}
   $('workspaceLogout')?.addEventListener('click',()=>{suppressWorkspaceSsoRecovery();clearSession();location.assign(adminBase)});
   async function boot(){setup();acceptPlatformAdminHandoff();try{await exchangeCentralToken()}catch{clearSession();return loginPanel('통합인증 연결에 실패했습니다. 다시 로그인해 주세요.')}if(!(await accessToken())){if(platformAdminToken()){markPlatformAdminIntent();platformAdminSessionToken=''}if(beginWorkspaceSsoRecovery())return;if(section==='channels'||section==='publishing'||section==='marketing')return channelPreAuth();return loginPanel(hasPlatformAdminIntent()?'1단계 운영공간 로그인 후 플랫폼 관리자 인증으로 자동 이어집니다.':'중앙 EKODI 로그인 상태가 없거나 만료되었습니다. 관리자 로그인을 진행해 주세요.')}state('권한 확인 중');let context;try{context=await loadWorkspaceContext()}catch(e){if(e.status===401){clearSession();return loginPanel()}$('summaryCards').innerHTML=[card('운영공간',workspaceLabel(),'권한 확인 필요')].join('');$('mainPanel').innerHTML=`<h2>권한 확인 실패</h2><p class="empty">${e.message}</p>`;return state('확인 필요')}if(!context)return deniedPanel();applyWorkspaceContext(context);if(!roleCapabilities(workspaceRole).length)return deniedPanel();const missionReturn=consumeMissionReturn();if(missionReturn){location.replace(missionReturn);return}if(!canSection(section))return permissionPanel();if(service==='mall'&&section==='sourcing'&&hasPlatformAdminIntent()&&!platformAdminToken()){clearPlatformAdminIntent();state('플랫폼 관리자 인증으로 연결 중');location.assign(platformAdminAuthUrl());return}return render()}
 
