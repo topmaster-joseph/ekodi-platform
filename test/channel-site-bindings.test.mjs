@@ -18,8 +18,11 @@ test('channel-site binding migration is additive and enforces one default per si
 });
 
 test('publishing API exposes reusable channel-site bindings and site-driven channel resolution',()=>{
-  assert.match(worker,/EKODI_SERVICE_MANIFEST, serviceForId/);
+  assert.match(worker,/EKODI_SERVICE_MANIFEST/);
+  assert.match(worker,/channelAdminServices, canonicalServiceChannelAdminUrl/);
   assert.match(worker,/function channelSiteCatalog\(\)/);
+  assert.match(worker,/function channelSiteForId\(serviceId\)/);
+  assert.match(worker,/site\.channelSubjectKey/);
   assert.match(worker,/async function replaceChannelSites/);
   assert.match(worker,/async function listSitePublishingChannels/);
   assert.match(worker,/async function resolveSiteChannelIds/);
@@ -39,4 +42,6 @@ test('central social admin can register publishing channels and bind them to sit
   assert.match(admin,/\/v1\/oauth\/youtube\/start/);
   assert.match(admin,/\/v1\/channels\/\$\{encodeURIComponent\(channel\.id\)\}\/sites/);
   assert.match(admin,/loadPublishingChannels/);
+  assert.match(admin,/최고관리자에서 관리/);
+  assert.match(admin,/centralChannelSubject/);
 });
