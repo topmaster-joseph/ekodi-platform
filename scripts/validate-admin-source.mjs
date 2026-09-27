@@ -55,8 +55,21 @@ for (const path of ['/admin.html','/control-center','/control-center/','/control
 if (!worker.includes('RETIRED_ADMIN_PATHS.has(url.pathname)')) violations.push('site-worker.js: retired admin 404 gate missing');
 
 const adminPrinciples = readFileSync(join(root, 'ADMIN_UI_PRINCIPLES.md'), 'utf8');
-for (const marker of ['공개 사이트의 고정 헤더용 body 상단 여백', '좌측 전역 사이드바는 데스크톱에서 뷰포트에 고정', '최고관리자 좌측 사이드바는 선택 영역의 핵심 직접업무가 잘리지 않도록 필요 시 독립 세로 스크롤을 허용한다']) {
+for (const marker of ['공개 사이트의 고정 헤더용 body 상단 여백', '좌측 전역 사이드바는 데스크톱에서 뷰포트에 고정', '최고관리자 좌측 사이드바는 선택 영역의 핵심 직접업무가 잘리지 않도록 필요 시 독립 세로 스크롤을 허용한다', '로그인 1회 · 권한은 조용히 확인 · 외부 OAuth는 최초 연결/복구 시만', '이미 `active`인 외부 채널 계정은 관리자 로그인 후 저장된 중앙 Vault 연결을 재사용']) {
   if (!adminPrinciples.includes(marker)) violations.push(`ADMIN_UI_PRINCIPLES.md: missing admin viewport contract marker: ${marker}`);
+}
+const workspaceAdmin = readFileSync(join(root, 'workspace-admin-page.js'), 'utf8');
+for (const marker of [
+  'ADMIN_SSO_RECOVERY_KEY',
+  'beginWorkspaceSsoRecovery()',
+  "account.status==='active'?`<span class='tag live'>연결 유지</span>`",
+  '추가 OAuth 승인 없이 관리자 로그인으로 계속 사용합니다',
+  "['reconnect_required','revoked','error'].includes"
+]) {
+  if (!workspaceAdmin.includes(marker)) violations.push(`workspace-admin-page.js: missing single-login/OAuth reuse marker: ${marker}`);
+}
+if (workspaceAdmin.includes("account.status==='active'?'재인증'")) {
+  violations.push('workspace-admin-page.js: active channel must not expose repeat OAuth reauthentication');
 }
 const adminDesignCss = readFileSync(join(root, 'admin-design-engine.css'), 'utf8');
 const authenticatedShell = readFileSync(join(root, 'admin-authenticated-shell.js'), 'utf8');
