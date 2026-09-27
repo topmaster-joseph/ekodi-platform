@@ -15,7 +15,7 @@ const WORKSPACE_ALIASES=Object.freeze({
   'ekodi-trade':'ekoditrade','ekoditrade':'ekoditrade',
   'cheonggye':'cgma','cgma':'cgma',
   'ekodi-mission':'ekodimission','ekodimission':'ekodimission',
-  'ekodi-lab':'ekodi-lab','ekodimall':'ekodimall'
+  'ekodi-lab':'ekodilab','ekodilab':'ekodilab','ekodimall':'ekodimall'
 });
 const nowIso=()=>new Date().toISOString();
 const clean=(value,max=240)=>String(value??'').trim().slice(0,max);
