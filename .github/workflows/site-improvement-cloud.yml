@@ -57,6 +57,7 @@ jobs:
             git switch -C "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
           else
             git switch -c "$TARGET_BRANCH" origin/main
+            git push -u origin "$TARGET_BRANCH"
           fi
 
       - name: Build bounded improvement prompt
