@@ -41,6 +41,7 @@ test('channel admin is login-first and authenticates pre-registered account rows
   assert.match(source,/suppressWorkspaceSsoRecovery\(\);clearSession\(\)/);
   assert.match(source,/clearWorkspaceSsoRecovery\(\);clearWorkspaceSsoSuppression\(\)/);
   assert.match(source,/관리자 로그인 상태가 있으면 자동으로 복원합니다/);
+  assert.doesNotMatch(source,/localStorage\.setItem\(SESSION_KEY/);
   assert.doesNotMatch(source,/CHANNEL_INTENT_KEY|pendingChannelIntent|CHANNEL_TARGET_ACCOUNTS/);
   assert.match(source,/CHANNEL_OAUTH_POPUP_NAME='ekodi_channel_oauth_popup'/);
   assert.match(source,/new BroadcastChannel\(CHANNEL_OAUTH_RESULT_KEY\)/);
