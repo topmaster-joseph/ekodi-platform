@@ -175,7 +175,7 @@
     shell.sync.replaceChildren(left, right);
   }
 
-  let shell;  let shell;
+  let shell;
   let directory = { summary: {}, tenants: [], roles: [], members: [] };
   let selectedSlug = '';
   let activeTab = 'members';
