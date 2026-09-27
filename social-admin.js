@@ -121,7 +121,7 @@
     section.dataset.panel = 'social'; section.id = 'socialAdmin';
     const head = el('div', '', 'social-admin-head');
     const copy = el('div');
-    copy.append(el('p','MULTI-CHANNEL CONTROL CENTER','kicker'), el('h2','사이트별 채널·자동게시'), el('p','각 사용자 사이트의 채널·자동게시 관리자 화면을 운영 원장으로 사용합니다. 최고관리자는 아래 사이트별 목록에서 같은 관리자 화면으로 이동해 상태와 설정을 확인하고, 중앙 영역은 플랫폼 연결 원장 점검과 명시적 개입에만 사용합니다. OAuth 비밀값은 암호화 Vault에만 보관됩니다.','operations-copy'));
+    copy.append(el('p','MULTI-CHANNEL CONTROL CENTER','kicker'), el('h2','사이트별 채널센터'), el('p','각 사이트 관리자는 자기 사이트 채널센터에서 계정 등록·OAuth 연결·자동게시 설정을 관리합니다. 최고관리자는 사이트를 선택해 동일한 원장을 조회·등록·수정할 수 있습니다. OAuth 비밀값은 암호화 Vault에만 보관됩니다.','operations-copy'));
     const actions = el('div','','social-admin-actions');
     const open = el('a','Open Social ↗','secondary'); open.href='https://social.ekodi.kr'; open.target='_blank'; open.rel='noopener';
     const refresh = el('button','↻ Refresh','secondary'); refresh.type='button';
@@ -152,13 +152,16 @@
           const controls=el('div','','social-site-directory-actions');
           const publicLink=el('a','사용자페이지 ↗','secondary');
           publicLink.href=site.publicUrl; publicLink.target='_blank'; publicLink.rel='noopener';
-          const adminLink=el('a','채널·자동게시 관리 ↗','primary');
+          const adminLink=el('a','사이트 채널센터 ↗','primary');
           adminLink.href=site.channelAdminUrl; adminLink.dataset.siteChannelAdminUrl=site.id;
-          controls.append(publicLink,adminLink);
+          const centralManage=el('button','최고관리자에서 관리','secondary'); centralManage.type='button';
+          centralManage.dataset.centralChannelSubject=site.channelSubjectKey||site.id;
+          centralManage.dataset.centralChannelName=site.name;
+          controls.append(publicLink,adminLink,centralManage);
           card.append(copy,controls);
           siteDirectoryList.append(card);
         }
-        siteDirectoryStatus.textContent=`${sites.length}개 운영공간 · 사이트별 관리자 원장을 직접 확인합니다.`;
+        siteDirectoryStatus.textContent=`${sites.length}개 사이트 · 각 사이트 채널센터와 최고관리자 화면이 같은 원장을 사용합니다.`;
         siteDirectoryStatus.dataset.state='ready';
       } catch(error) {
         siteDirectoryStatus.textContent=`사이트별 관리자 목록을 불러오지 못했습니다: ${error.message}`;
@@ -186,7 +189,7 @@
 
     const publishingPanel = el('section','','social-publishing-registry');
     const publishingHead = el('div','','social-channel-head');
-    publishingHead.append(el('h3','게시 채널 · 사이트 연결'),el('span','채널을 미리 등록하고 게시 시 선택'));
+    publishingHead.append(el('h3','선택 사이트 채널센터'),el('span','계정 등록 · 연결 · 기본채널 · 자동게시 설정을 같은 원장에서 관리'));
     const publishingActions = el('div','','social-connection-actions');
     const publishingAddYoutube = el('button','＋ YouTube 게시 채널 등록','primary'); publishingAddYoutube.type='button';
     const publishingReload = el('button','↻ 게시 채널 새로고침','secondary'); publishingReload.type='button';
@@ -427,7 +430,7 @@
     async function activate() {
       document.querySelectorAll('[data-panel]').forEach(panel=>{ const targets=String(panel.dataset.panel||'').split(' '); panel.classList.toggle('hidden-panel',!targets.includes('social')); });
       document.querySelectorAll('.sidebar .nav[data-section]').forEach(item=>item.classList.toggle('active',item.dataset.section==='social'));
-      const pageTitle=document.querySelector('#pageTitle'); if(pageTitle) pageTitle.textContent='사이트별 채널·자동게시'; document.querySelector('.sidebar')?.classList.remove('open');
+      const pageTitle=document.querySelector('#pageTitle'); if(pageTitle) pageTitle.textContent='사이트별 채널센터'; document.querySelector('.sidebar')?.classList.remove('open');
       await Promise.all([renderSiteDirectory(), registry.organizations.length ? Promise.resolve() : load(), loadConnections(), loadPublishingChannels()]);
     }
 
@@ -439,6 +442,17 @@
       const type=scopeType.value; const key=scopeKey.value.trim();
       if(type!=='person'&&!key){connectionStatus.textContent='운영공간 slug 또는 매장 ID를 입력해 주세요.';connectionStatus.dataset.state='error';return;}
       connectionScope={type,key:type==='person'?'':key}; await Promise.all([loadConnections(),loadPublishingChannels()]);
+    });
+    siteDirectoryList.addEventListener('click',async event=>{
+      const button=event.target.closest('[data-central-channel-subject]');
+      if(!button)return;
+      const key=slug(button.dataset.centralChannelSubject||'');
+      if(!key)return;
+      scopeType.value='tenant';scopeKey.disabled=false;scopeKey.value=key;connectionScope={type:'tenant',key};
+      siteDirectoryStatus.textContent=`${button.dataset.centralChannelName||key} 채널센터를 최고관리자 권한으로 불러오는 중입니다.`;siteDirectoryStatus.dataset.state='loading';
+      await Promise.all([loadConnections(),loadPublishingChannels()]);
+      siteDirectoryStatus.textContent=`${button.dataset.centralChannelName||key} 채널센터 · 사이트 관리자와 동일 원장`;siteDirectoryStatus.dataset.state='ready';
+      publishingPanel.scrollIntoView({behavior:'smooth',block:'start'});
     });
     publishingAddYoutube.addEventListener('click',async()=>{publishingAddYoutube.disabled=true;publishingStatus.textContent='YouTube 게시 채널 인증을 준비하는 중입니다.';publishingStatus.dataset.state='loading';try{await startPublishingYoutube()}catch(error){publishingStatus.textContent=error.message;publishingStatus.dataset.state='error';publishingAddYoutube.disabled=false}});
     publishingReload.addEventListener('click',loadPublishingChannels);

@@ -25,6 +25,10 @@ binding = "MARKETING_GROWTH"
 service = "ekodi-marketing-growth"
 entrypoint = "MarketingGrowthPublisher"
 
+[[services]]
+binding = "CONTROL_API"
+service = "ekodi-auth-api"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "ekodi-auth"

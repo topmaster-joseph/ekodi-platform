@@ -6,7 +6,8 @@ import { channelAutomationActor, resolveChannelAutomationSubject } from './chann
 import { automationEntitlement, listAutomationProfiles, upsertAutomationProfile } from './channel-automation-runtime.js';
 import { disconnectManagedConnection, handleYoutubeCallback, listManagedConnections, managedCredential, selectYoutubeConnection, startYoutubeConnection, youtubeConnectionReady } from './channel-oauth-control.js';
 import { channelServiceBridgeReady, channelServiceBridgeSchemaReady, listServiceChannels, scheduleServiceYoutube } from './channel-service-bridge.js';
-import { EKODI_SERVICE_MANIFEST, serviceForId } from './ekodi-service-manifest.js';
+import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
+import { channelAdminServices, canonicalServiceChannelAdminUrl } from './admin-service-catalog.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -198,13 +199,23 @@ async function updateChannelControl(request,env,identity,subject,id){
 }
 
 function channelSiteCatalog() {
-  return EKODI_SERVICE_MANIFEST.services
-    .filter(service=>service?.id && service?.url)
-    .map(service=>({id:service.id,name:service.name,shortName:service.shortName||service.name,url:service.url,group:service.group||'',state:service.state||'live'}));
+  const merged=new Map();
+  for(const service of EKODI_SERVICE_MANIFEST.services.filter(service=>service?.id&&service?.url)){
+    merged.set(service.id,{id:service.id,name:service.name,shortName:service.shortName||service.name,url:service.url,group:service.group||'',state:service.state||'live',channelSubjectKey:service.tenantSlug||'',channelAdminUrl:''});
+  }
+  for(const site of channelAdminServices()){
+    const current=merged.get(site.id)||{};
+    merged.set(site.id,{...current,id:site.id,name:site.name,shortName:site.name,url:`https://ekodi.kr${site.basePath}`,group:site.group||current.group||'sites',state:'live',channelSubjectKey:site.channelSubjectKey||'',channelAdminUrl:canonicalServiceChannelAdminUrl(site),siteRelation:site.siteRelation||''});
+  }
+  return [...merged.values()];
+}
+function channelSiteForId(serviceId){
+  const id=clean(serviceId,80).toLowerCase();
+  return channelSiteCatalog().find(site=>site.id===id)||null;
 }
 function normalizeChannelSiteBinding(input={}) {
   const serviceId=clean(input.serviceId,80).toLowerCase();
-  const service=serviceForId(serviceId);
+  const service=channelSiteForId(serviceId);
   if(!service) throw Object.assign(new Error('CHANNEL_SITE_SERVICE_NOT_FOUND'),{code:'CHANNEL_SITE_SERVICE_NOT_FOUND',status:400});
   const role=['primary','secondary','archive_only'].includes(String(input.role||''))?String(input.role):'primary';
   return {
@@ -215,7 +226,7 @@ function normalizeChannelSiteBinding(input={}) {
     archiveCategory:clean(input.archiveCategory||'past-event',80)||'past-event',
     enabled:input.enabled!==false,
     priority:Math.max(0,Math.min(9999,Number(input.priority??100)||0)),
-    site:{id:service.id,name:service.name,url:service.url,group:service.group||''},
+    site:{id:service.id,name:service.name,url:service.url,group:service.group||'',channelAdminUrl:service.channelAdminUrl||'',channelSubjectKey:service.channelSubjectKey||''},
   };
 }
 async function channelSiteBindings(env,subject,{channelId=0,serviceId=''}={}) {
@@ -228,9 +239,9 @@ async function channelSiteBindings(env,subject,{channelId=0,serviceId=''}={}) {
     FROM channel_site_bindings b JOIN marketing_publish_channels c ON c.id=b.channel_id
     WHERE ${where.join(' AND ')} ORDER BY b.service_id,b.is_default DESC,b.priority ASC,b.id ASC`).bind(...args).all();
   return (result.results||[]).map(row=>{
-    const service=serviceForId(row.service_id);
+    const service=channelSiteForId(row.service_id);
     return {...row,isDefault:Boolean(row.is_default),autoArchive:Boolean(row.auto_archive),enabled:Boolean(row.enabled),
-      site:service?{id:service.id,name:service.name,url:service.url,group:service.group||''}:null};
+      site:service?{id:service.id,name:service.name,url:service.url,group:service.group||'',channelAdminUrl:service.channelAdminUrl||'',channelSubjectKey:service.channelSubjectKey||''}:null};
   });
 }
 async function readChannelSites(request,env,subject,channelId) {
@@ -266,7 +277,7 @@ async function replaceChannelSites(request,env,identity,subject,channelId) {
   return json(request,env,{ok:true,channelId:Number(channelId),bindings:await channelSiteBindings(env,subject,{channelId})});
 }
 async function listSitePublishingChannels(request,env,subject,serviceId) {
-  const service=serviceForId(clean(serviceId,80).toLowerCase());
+  const service=channelSiteForId(clean(serviceId,80).toLowerCase());
   if(!service)return json(request,env,{error:'CHANNEL_SITE_SERVICE_NOT_FOUND'},404);
   const bindings=await channelSiteBindings(env,subject,{serviceId:service.id});
   return json(request,env,{site:{id:service.id,name:service.name,url:service.url,group:service.group||''},channels:bindings});
@@ -274,7 +285,7 @@ async function listSitePublishingChannels(request,env,subject,serviceId) {
 async function resolveSiteChannelIds(env,subject,siteIds=[]) {
   const ids=[];
   for(const raw of siteIds.slice(0,20)){
-    const service=serviceForId(clean(raw,80).toLowerCase());
+    const service=channelSiteForId(clean(raw,80).toLowerCase());
     if(!service)throw Object.assign(new Error('CHANNEL_SITE_SERVICE_NOT_FOUND'),{code:'CHANNEL_SITE_SERVICE_NOT_FOUND',status:400});
     const row=await env.DB.prepare(`SELECT c.id FROM channel_site_bindings b JOIN marketing_publish_channels c ON c.id=b.channel_id
       WHERE b.subject_type=? AND b.subject_key=? AND b.service_id=? AND b.enabled=1 AND c.status='active'
