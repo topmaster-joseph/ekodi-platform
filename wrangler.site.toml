@@ -235,3 +235,8 @@ service = "ekodi-education"
 [[services]]
 binding = "MARKETING_DOMAIN"
 service = "ekodi-marketing-domain-api"
+
+
+[[services]]
+binding = "MALL_API"
+service = "ekodi-mall-api"
