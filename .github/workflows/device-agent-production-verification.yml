@@ -65,10 +65,7 @@ jobs:
           grep -Fq "DEFERRED_NO_ONLINE_TARGET" scripts/verify-device-agent-production.mjs
           grep -Fq "browserWorkerActivated:false" scripts/verify-device-agent-production.mjs
           grep -Fq "https://ekodi.kr" scripts/verify-device-agent-production.mjs
-          if grep -Eq 'https://(api|admin|my|cloud|community)\.ekodi\.kr' scripts/verify-device-agent-production.mjs; then
-            echo 'Production verifier must use the canonical apex only.'
-            exit 1
-          fi
+          node scripts/zero-subdomain-guard.mjs
 
   real-device:
     needs: contract
