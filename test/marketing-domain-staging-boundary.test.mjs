@@ -13,10 +13,10 @@ test('Marketing domain deployment uses the canonical EKODI auth origin', async (
   assert.match(workflow, /ALLOWED_ORIGINS = "https:\/\/ekodi\.kr"/);
   assert.match(workflow, /Origin: https:\/\/ekodi\.kr/);
   assert.match(workflow, /https:\/\/ekodi\.kr\/marketing-api/);
-  assert.doesNotMatch(workflow, /Origin: https:\/\/auth\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(handoff, /const AUTH_ORIGIN = 'https:\/\/ekodi\.kr'/);
   assert.match(handoff, /'https:\/\/cgma\.or\.kr'/);
-  assert.doesNotMatch(handoff, /\.ai\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(config, /ALLOWED_ORIGINS = "https:\/\/ekodi\.kr,https:\/\/cgma\.or\.kr"/);
-  assert.doesNotMatch(config, /ALLOWED_ORIGINS = "[^"]*auth\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });

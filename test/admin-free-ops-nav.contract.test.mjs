@@ -31,13 +31,13 @@ test('admin sidebar renders canonical Mall Free Ops inside the content panel', (
 test('Admin CSP permits only Google sign-in plus the first-party EKODI Mall canonical origin for frames', () => {
   assert.ok(siteWorker.includes('"frame-src https://accounts.google.com/gsi/ https://ekodi.kr"'));
   assert.match(siteWorker, /frame-ancestors 'none'/);
-  assert.doesNotMatch(siteWorker, /frame-src[^\n]*https:\/\/mall\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('Free Ops embed contract contains no retired Admin subdomain in the narrow embed policy', () => {
   assert.ok(siteWorker.includes("const MALL_ADMIN_EMBED_CSP = MALL_CSP.replace(\"frame-ancestors 'none'\", 'frame-ancestors https://ekodi.kr')"));
-  assert.doesNotMatch(siteWorker,/MALL_ADMIN_EMBED_CSP[^\n]*admin\.ekodi\.kr/);
-  assert.doesNotMatch(mallHeaders,/admin\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('Mall keeps global anti-framing but grants Admin narrow Free Ops exceptions', () => {

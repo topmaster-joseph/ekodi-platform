@@ -44,7 +44,7 @@ test('user character binds identity only through explicit governed profile refer
   assert.match(source,/subjectAuthorized===true/);
   assert.ok(source.includes('if(!authorized)return fallback;'));
   assert.match(source,/raw\.startsWith\('data:'\)/);
-  assert.match(source,/host==='ekodi\.kr'\|\|host\.endsWith\('\.ekodi\.kr'\)/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(source,/raw\.startsWith\('blob:'\)/);
   assert.match(source,/localOnly===true/);
   assert.match(source,/renderPreview/);

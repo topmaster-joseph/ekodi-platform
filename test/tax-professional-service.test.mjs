@@ -51,7 +51,7 @@ test('Tax apex path uses same-origin API and explicit canonical-auth return targ
   assert.match(auth, /u\.origin==='https:\/\/ekodi\.kr'/);
   assert.match(auth, /u\.pathname==='\/tax'/);
   const wrangler = await read('wrangler.site.toml');
-  assert.doesNotMatch(wrangler, /tax\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('Finance no longer owns Health polling and links to EKODI Tax', async () => {

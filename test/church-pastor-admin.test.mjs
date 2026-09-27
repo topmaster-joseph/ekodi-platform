@@ -50,7 +50,7 @@ test('pastor admin page is private-by-default', async () => {
   assert.match(html, /오늘 일정·다음 예배·새가족·돌봄 후속/);
   assert.match(html, /church-pastor-admin\.js\?v=20260923-groups1/);
   assert.match(response.headers.get('content-security-policy') || '', /frame-ancestors 'none'/);
-  assert.doesNotMatch(response.headers.get('content-security-policy') || '', /(?:api|workspace-api)\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(response.headers.get('cache-control') || '', /no-store/);
 });
 
@@ -82,7 +82,7 @@ test('pastor admin client enforces church staff lookup before data modules', asy
   assert.match(source, /교인·돌봄 데이터 비공개/);
   assert.match(source, /Google 계정으로 관리자 확인/);
   assert.match(source, /https:\/\/ekodi\.kr\/workspace-api\/v1\/site-chrome/);
-  assert.doesNotMatch(source, /https:\/\/(?:api|workspace-api)\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('production entry routes church admin before generic workspace admin', async () => {

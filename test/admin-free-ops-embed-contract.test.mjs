@@ -11,7 +11,7 @@ test('Admin Free Ops verifier follows the canonical ekodi.kr embed origin',async
   assert.doesNotMatch(workflow,/frame-src\[\^;\]\*https:\/\/mall\\\.ekodi\\\.kr/);
   assert.match(workflow,/https:\/\/ekodi\.kr\/admin\//);
   assert.match(workflow,/https:\/\/ekodi\.kr\/admin\/release-control-admin\.js/);
-  assert.doesNotMatch(workflow,/https:\/\/admin\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('Admin remains non-embeddable while only the Free Ops page may be framed by Admin',async()=>{

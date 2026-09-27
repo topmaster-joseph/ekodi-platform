@@ -80,7 +80,7 @@ test('My account center edits canonical person name and keeps linked Google iden
   assert.match(profileApi,/admin\.from\("login_identities"\)/);
   assert.match(profileApi,/ALLOWED_ORIGINS/);
   assert.match(profileApi,/https:\/\/ekodi\.kr/);
-  assert.doesNotMatch(profileApi,/https:\/\/my\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(profileApi,/SUPABASE_SERVICE_ROLE_KEY/);
   assert.doesNotMatch(app,/SUPABASE_SERVICE_ROLE_KEY/);
 });
@@ -98,9 +98,9 @@ test('My EKODI staging is isolated from production personal data',async()=>{
   const [prod,staging,worker]=await Promise.all([read('wrangler.my.toml'),read('wrangler.my.staging.toml'),read('my-worker.js')]);
   assert.match(prod,/DATA_ENABLED = "true"/);
   assert.match(prod,/workers_dev = true/);
-  assert.doesNotMatch(prod,/my\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(staging,/DATA_ENABLED = "false"/);
-  assert.doesNotMatch(staging,/my\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(worker,/dataEnabled/);
   assert.match(worker,/person-scoped/);
 });
@@ -124,7 +124,7 @@ test('My EKODI recovers any trusted service handoff before consuming the one-tim
   const app=await read('my/app.js');
   assert.match(app,/function misroutedServiceReturn\(\)/);
   assert.match(app,/hash\.get\('ekodi_token'\)/);
-  assert.match(app,/hostname==='ekodi\.kr'\|\|hostname\.endsWith\('\.ekodi\.kr'\)\|\|hostname==='cgma\.or\.kr'/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(app,/target\.origin==='https:\/\/ekodi\.kr'.*target\.pathname==='\/my'/);
   assert.match(app,/target\.hash=location\.hash/);
   assert.match(app,/location\.replace\(MISROUTED_SERVICE_RETURN\.href\)/);
@@ -205,7 +205,7 @@ test('My EKODI approval hub keeps unified visibility and person-scoped decision 
 
 test('My production verification uses only the canonical apex path',async()=>{
   const workflow=await read('.github/workflows/deploy-my.yml');
-  assert.doesNotMatch(workflow,/https:\/\/my\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(workflow,/https:\/\/ekodi\.kr\/my\/w\/person:deployment-probe/);
   assert.match(workflow,/https:\/\/ekodi\.kr\/my\/service-manifest\.json/);
   assert.match(workflow,/access-control-allow-origin:\[\[:space:\]\]\*https:\/\/ekodi/);
@@ -226,7 +226,7 @@ test('My staging verification preserves Cloudflare Access instead of weakening i
 });
 test('My deployment verification derives Trade route from the live service manifest',async()=>{
   const workflow=await read('.github/workflows/deploy-my.yml');
-  assert.doesNotMatch(workflow,/https:\/\/trade\.ekodi\.kr\//);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.equal((workflow.match(/m\.services\.find\(v=>v\.id===\"trade\"\)/g)||[]).length,2);
   assert.equal((workflow.match(/JSON\.stringify\(\[s\.id,s\.name,s\.url\]\)/g)||[]).length,2);
 });

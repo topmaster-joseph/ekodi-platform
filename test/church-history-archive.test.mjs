@@ -64,5 +64,5 @@ test('worker routes stay on canonical ekodi.kr path hierarchy', async () => {
   assert.match(config, /ekodi\.kr\/ekodichurch\/history\*/);
   assert.match(config, /ekodi\.kr\/ekodichurch\/admin\/history\*/);
   assert.match(config, /ekodi\.kr\/api\/church\/admin\/history\*/);
-  assert.doesNotMatch(config, /history\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });

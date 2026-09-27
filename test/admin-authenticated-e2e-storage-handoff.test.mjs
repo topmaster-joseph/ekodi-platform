@@ -12,7 +12,7 @@ test('authenticated Admin E2E verifies Storage Google reauth from the top-level 
   assert.match(script, /page\.waitForRequest/);
   assert.match(script, /request\.isNavigationRequest\(\)/);
   assert.match(script, /request\.frame\(\) === page\.mainFrame\(\)/);
-  assert.match(script, /destination\.hostname !== 'admin\.ekodi\.kr'/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(script, /destination\.hostname !== 'accounts\.google\.com'/);
   assert.match(script, /reauthHandoff: true/);
   assert.match(script, /await page\.goto\(authenticatedEntryUrl/);

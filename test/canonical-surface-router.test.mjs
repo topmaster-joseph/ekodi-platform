@@ -91,7 +91,7 @@ test('Support canonical binding keeps the apex prefix without a retired executio
   const response=await routeCanonicalSurface(new Request('https://ekodi.kr/support/health'),{SUPPORT:support});
   assert.equal(response.status,200);assert.equal(support.calls[0].hostname,'ekodi.kr');assert.equal(support.calls[0].pathname,'/support/health');
   assert.equal(response.headers.get('x-ekodi-canonical-surface'),'support');assert.equal(response.headers.get('x-ekodi-canonical-path'),'/support');
-  assert.doesNotMatch(fs.readFileSync(new URL('../canonical-surface-router.js',import.meta.url),'utf8'),/support\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('canonical Shell bindings are environment-specific and dependent releases watch the gateway',async()=>{
@@ -150,7 +150,7 @@ test('Admin deep routes render the shell while runtime assets stay addressable',
 });
 test('legacy Admin entry host still converges while Auth has no legacy host contract',async()=>{
   const source=fs.readFileSync(new URL('../canonical-surface-router.js',import.meta.url),'utf8')+fs.readFileSync(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8')+fs.readFileSync(new URL('../site-worker.js',import.meta.url),'utf8');
-  assert.doesNotMatch(source,/auth\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   const legacyAdminHost=['admin','ekodi.kr'].join('.');
   const response=await platformEntry.fetch(new Request(`https://${legacyAdminHost}/books`),{},{});
   assert.equal(response.status,308);const target=new URL(response.headers.get('location'));assert.equal(target.pathname,'/admin/');assert.equal(target.searchParams.get('route'),'books');
@@ -200,7 +200,7 @@ test('Business canonical paths hide execution hosts while EKODIBIZ Trade stays t
   const assets=binding('<html><body><a href="https://ekodi.kr/ekodibiz/trade/">ekodi.kr/ekodibiz/trade</a></body></html>','text/html');
   let response=await routeCanonicalSurface(new Request('https://ekodi.kr/business/app.js'),{ASSETS:assets},{externalFetch});
   assert.equal(externalCalls[0].hostname,'ekodi.kr/business');assert.equal(externalCalls[0].pathname,'/app.js');
-  let text=await response.text();assert.match(text,/fetch\('\/business\/api\/workspaces'/);assert.match(text,/https:\/\/ekodi\.kr\/auth\//);assert.match(text,/path\.startsWith\('business\/'\)/);assert.match(text,/`\/business\/\$\{workspace\.id\}`/);assert.doesNotMatch(text,/business\.ekodi\.kr/);
+  let text=await response.text();assert.match(text,/fetch\('\/business\/api\/workspaces'/);assert.match(text,/https:\/\/ekodi\.kr\/auth\//);assert.match(text,/path\.startsWith\('business\/'\)/);assert.match(text,/`\/business\/\$\{workspace\.id\}`/);
   response=await routeCanonicalSurface(new Request('https://ekodi.kr/ekodibiz/trade'),{ASSETS:assets},{externalFetch});
   assert.equal(response,null);
   const portal=await platformEntry.fetch(new Request('https://ekodi.kr/ekodibiz/trade'),{},{});
@@ -231,8 +231,8 @@ test('canonical Admin release probes remain apex-only while preserving release t
 
 test('shared-site release verifies Shell integration without requiring script URLs in service HTML',async()=>{
   const text=await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8');
-  assert.doesNotMatch(text,/https:\/\/shell\.ekodi\.kr\/shell\.js/);
-  assert.doesNotMatch(text,/https:\/\/shell\.ekodi\.kr\//);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(text,/https:\/\/ekodi\.kr\/shell\/manifest\.json/);
   const manifest=JSON.parse(text);
   const apexShell='https://ekodi.kr/shell/shell.js';

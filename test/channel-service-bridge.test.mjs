@@ -120,7 +120,7 @@ test('bridge persistence is additive, central-vault only, and Mall channel selec
   assert.match(oauth,/template_id,enabled,timezone/);
   assert.match(oauth,/'product_short',1,'Asia\/Seoul'/);
   assert.match(oauth,/youtube_channel_selection/);
-  assert.doesNotMatch(oauth,/my\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(migration,/UNIQUE\(service_id, subject_type, subject_key, idempotency_key\)/);
   assert.match(worker,/\/v1\/internal\/youtube\/schedule/);
 });

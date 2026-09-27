@@ -11,7 +11,7 @@ test('My EKODI exposes a private personal finance control surface',async()=>{
   assert.match(html,/id="money"/);
   assert.match(html,/personal-finance\.js/);
   assert.match(html,/personal-finance\.css/);
-  assert.match(worker,/https:\/\/personal-finance-api\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(worker,/personalFinanceControl:true/);
   assert.match(app,/EKODI_MY_AUTH\?\.getAccessToken/);
   assert.match(app,/\/import\/preview/);

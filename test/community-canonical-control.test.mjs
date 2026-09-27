@@ -11,7 +11,7 @@ test('Control API contains Community and Social as active services without legac
   assert.doesNotMatch(api, /id: 'mission'/);
   assert.doesNotMatch(api, /에코디선교회/);
   assert.match(api, /id: 'community'.*defaultState: 'active'.*defaultMonitor: true/);
-  assert.match(api, /id: 'social'.*social\.ekodi\.kr\/health.*defaultState: 'active'.*defaultMonitor: true/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('Admin registry keeps Community functionality under the content operations area', async () => {

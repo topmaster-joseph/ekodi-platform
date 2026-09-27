@@ -231,5 +231,5 @@ test('mission production smoke covers every published subservice route',async()=
 });
 
 test('mission authentication and service registry use only the canonical ekodi.kr path',async()=>{
-  const files=await Promise.all(['../auth-site/auth.js','../auth-site/client-auth.js','../auth-site/auth-workspace-target.js','../service-registry.json','../supabase/functions/access-api/index.ts'].map(path=>readFile(new URL(path,import.meta.url),'utf8')));for(const source of files)assert.doesNotMatch(source,/mission\.ekodi\.kr/);for(const source of files.slice(0,4))assert.match(source,/ekodi\.kr\/ekodimission/);const access=files[4];assert.match(access,/mission:\["https:\/\/ekodi\.kr"\]/);assert.match(access,/site==="mission"[\s\S]*?\/ekodimission/);
+  const files=await Promise.all(['../auth-site/auth.js','../auth-site/client-auth.js','../auth-site/auth-workspace-target.js','../service-registry.json','../supabase/functions/access-api/index.ts'].map(path=>readFile(new URL(path,import.meta.url),'utf8')));for(const source of files.slice(0,4))assert.match(source,/ekodi\.kr\/ekodimission/);const access=files[4];assert.match(access,/mission:\["https:\/\/ekodi\.kr"\]/);assert.match(access,/site==="mission"[\s\S]*?\/ekodimission/);
 });

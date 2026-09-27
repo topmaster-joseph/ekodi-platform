@@ -47,8 +47,8 @@ test('Creator AI remains an independent compatibility service with isolated stag
     read('author-worker.js'),
     read('auth-site/author-auth.js')
   ]);
-  assert.match(prod, /author\.ekodi\.kr/);
-  assert.doesNotMatch(staging, /author\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(worker, /ekodi-author-ai/);
   assert.match(worker, /author-events-v1/);
   assert.match(auth, /author-access-api/);

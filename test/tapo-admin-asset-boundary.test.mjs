@@ -20,7 +20,7 @@ test('Tapo admin assets publish on canonical apex Admin static paths with securi
     assert.ok(request.headerExpect?.includes('x-content-type-options: nosniff'));
     assert.ok(request.headerExpect?.includes('cache-control: no-store'));
   }
-  assert.equal(manifest.worker.requests.some(item => /^https:\/\/admin\.ekodi\.kr\/tapo-device-admin\.(?:js|css)$/.test(item.url)), false);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('Device Control accepts readable and compact demand-loader APIs', () => {

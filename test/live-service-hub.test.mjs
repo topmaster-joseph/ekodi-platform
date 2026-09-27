@@ -20,7 +20,7 @@ test('Live hub lists the registered tenant Live surfaces on the canonical apex p
     assert.match(html,new RegExp(escapeRe(tenant.path)),tenant.id);
     assert.match(html,new RegExp(escapeRe(tenant.name)),tenant.id);
   }
-  assert.doesNotMatch(html,/https:\/\/live\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('Live admin preserves its own central-auth return target and exposes per-site admin menus',async()=>{
@@ -38,7 +38,7 @@ test('Live admin preserves its own central-auth return target and exposes per-si
     assert.match(html,new RegExp(escapeRe(liveAdmin)),tenant.id);
     assert.match(html,new RegExp(escapeRe(siteAdmin)),tenant.id);
   }
-  assert.doesNotMatch(html,/source=live\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('central admin auth explicitly accepts /live/admin as a safe apex return',async()=>{
@@ -58,5 +58,5 @@ test('Control API derives Live visibility records from the shared realtime tenan
 test('service manifest advertises canonical apex Live as an active public surface',async()=>{
   const manifest=await read('ekodi-service-manifest.js');
   assert.match(manifest,/id:'live'.*url:'https:\/\/ekodi\.kr\/live'.*defaultSurface:'public'.*state:'live'/);
-  assert.doesNotMatch(manifest,/id:'live'.*url:'https:\/\/live\.ekodi\.kr\//);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });

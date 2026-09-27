@@ -13,7 +13,7 @@ const staging = fs.readFileSync(new URL('../wrangler.ekodibiz-staging.toml', imp
 
 test('EKODIBIZ stays separate from common Business OS', () => {
   assert.match(config, /workers_dev = true/);
-  assert.doesNotMatch(config, /(?:pattern|route) = "[^"]*\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.doesNotMatch(config, /custom_domain = true/);
   assert.match(config, /main = "ekodibiz-payment-architecture\.js"/);
   assert.match(adapter, /from '\.\/ekodibiz-worker\.js'/);

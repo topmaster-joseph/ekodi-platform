@@ -14,7 +14,7 @@ test('Admin production verifier runs after successful canonical shared-site rele
   assert.match(workflow, /cancel-in-progress: true/);
   assert.match(workflow, /id: production_verify/);
   assert.match(workflow, /https:\/\/ekodi\.kr\/admin\//);
-  assert.doesNotMatch(workflow, /https:\/\/admin\.ekodi\.kr\//);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
   assert.match(workflow, /Publish Admin deployment failure checkpoint/);
   assert.match(workflow, /needs\.validate\.result != 'success'/);

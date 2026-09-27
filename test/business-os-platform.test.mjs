@@ -21,7 +21,7 @@ test('Business OS exposes EKODIBIZ and Jadam tenant workspaces',()=>{
   assert.match(worker,/jadam/);
   assert.match(worker,/https:\/\/ekodi\.kr\/ekodibiz/);
   assert.match(worker,/https:\/\/ekodi\.kr\/jadam\/marketing/);
-  assert.doesNotMatch(worker,/https:\/\/jadam\.ai\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(worker,/external_client/);
   assert.match(worker,/internal/);
 });
@@ -35,9 +35,9 @@ test('Business OS starts from a customer problem instead of a module catalog',()
   assert.match(customerNext,/NEXT_STEP_PROBLEMS/);
   assert.match(customerNext,/requestDoItForMe/);
   assert.match(customerNext,/\/api\/action-check/);
-  assert.match(customerNext,/https:\/\/energy\.ekodi\.kr\/jadam/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(customerNext,/https:\/\/ekodi\.kr\/jadam\/marketing/);
-  assert.doesNotMatch(customerNext,/https:\/\/jadam\.ai\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(customerNextCss,/\.problem-grid/);
   assert.match(customerNextCss,/\.next-step-panel/);
 });
@@ -87,7 +87,7 @@ test('Business OS staging stays isolated while production enables only read aggr
   assert.match(staging,/INTEGRATIONS_ENABLED = "false"/);
   assert.match(staging,/EXECUTION_ENABLED = "false"/);
   assert.match(production,/main = "business-live-worker\.js"/);
-  assert.match(production,/pattern = "business\.ekodi\.kr"/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(production,/BUSINESS_MODE = "production-readonly-mvp"/);
   assert.match(production,/INTEGRATIONS_ENABLED = "true"/);
   assert.match(production,/EXECUTION_ENABLED = "false"/);

@@ -14,13 +14,13 @@ test('EKODIBIZ keeps shared payment core separate from canonical gateway', async
     read('ekodibiz-pay-gateway-worker.js')
   ]);
   const all = [adapter, prod, staging, gatewayConfig, gateway].join('\n');
-  assert.match(adapter, /https:\/\/pay\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(adapter, /https:\/\/ekodi\.kr\/ekodibiz\/pay/);
-  assert.match(prod, /PAYMENT_CORE_URL = "https:\/\/pay\.ekodi\.kr"/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(prod, /PAYMENT_GATEWAY_URL = "https:\/\/ekodi\.kr\/ekodibiz\/pay"/);
-  assert.match(staging, /PAYMENT_CORE_URL = "https:\/\/pay\.ekodi\.kr"/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(gatewayConfig, /pattern = "ekodi\.kr\/ekodibiz\/pay\*"/);
-  assert.doesNotMatch(all, /pay\.biz\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('gateway fails closed until an approved quote exists', async () => {
@@ -28,7 +28,7 @@ test('gateway fails closed until an approved quote exists', async () => {
   const html = await response.text();
   assert.equal(response.status, 200);
   assert.match(html, /견적 승인 후 결제가 가능합니다/);
-  assert.match(html, /pay\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('gateway rejects client supplied amount and price', async () => {

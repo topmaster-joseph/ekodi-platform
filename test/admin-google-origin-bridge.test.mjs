@@ -21,8 +21,8 @@ test('bridge validates request and returns credential only to canonical EKODI',(
   assert.match(html,/accounts\.google\.com\/gsi\/client/);
 });
 test('canonical auth path owns the Google bridge and the legacy auth host is retired',()=>{
-  assert.doesNotMatch(router,/auth\.ekodi\.kr/);
-  assert.doesNotMatch(site,/auth\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(build,/google-origin-bridge\.html/);
   assert.match(admin,/new URL\('\/auth\/google-origin-bridge',GOOGLE_BRIDGE_ORIGIN\)/);
 });

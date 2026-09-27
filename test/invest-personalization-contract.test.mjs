@@ -88,7 +88,7 @@ test('My EKODI keeps Invest inside progressive discovery and passes only an auth
   assert.equal(invest?.sso,true);
   assert.equal(invest?.targetable,true);
   assert.match(userAi,/data-personalization-recommended/);
-  assert.doesNotMatch(userAi,/https:\/\/invest\.ekodi\.kr\//,'User AI must not hard-code Invest as a fixed recommendation');
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(app,/function serviceRoute\(id,url\)/);
   assert.match(app,/TARGETABLE_WORKSPACE_SITES\.has\(id\)/);
   assert.match(app,/searchParams\.set\('workspace',current\.workspace_key\)/);

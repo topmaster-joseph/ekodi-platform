@@ -53,7 +53,7 @@ test('production build ships current operations surfaces', () => {
 test('Mission Control security wrapper preserves the ten-minute monitoring schedule', () => {
   assert.match(wranglerApi, /main = "mission-control-entry-worker\.js"/);
   assert.match(wranglerApi, /Public API is canonical at https:\/\/ekodi\.kr\/api/);
-  assert.doesNotMatch(wranglerApi, /pattern = "api\.ekodi\.kr"/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(wranglerApi, /crons = \["\*\/10 \* \* \* \*"\]/);
   assert.match(missionEntrySource, /customerEntryWorker\.scheduled/);
   assert.match(missionEntrySource, /applyApiSecurityHeaders/);

@@ -74,9 +74,9 @@ test('staging is read-only while production owns the one-minute scheduler', asyn
   ]);
   assert.match(staging, /ALLOW_MUTATIONS = "false"/);
   assert.doesNotMatch(staging, /\[\[d1_databases\]\]/, 'development staging must not bind production D1');
-  assert.doesNotMatch(staging, /marketing-publish-api\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(production, /\[\[d1_databases\]\]/);
-  assert.match(production, /marketing-publish-api\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(production, /crons = \["\* \* \* \* \*"\]/);
 });
 

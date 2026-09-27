@@ -22,7 +22,7 @@ test('synthetic production Admin UI verifier stubs the canonical apex session ro
   assert.match(text, /page\.route\('https:\/\/ekodi\.kr\/api\/session'/);
   assert.match(text, /authenticated:\s*true/);
   assert.match(text, /role:\s*'super_admin'/);
-  assert.doesNotMatch(text, /page\.route\('https:\/\/api\.ekodi\.kr\/api\/session'/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 
@@ -40,7 +40,7 @@ test('synthetic production Admin UI verifier accepts the role-projected platform
 test('synthetic production Admin UI verifier targets the canonical apex Admin path', async () => {
   const text = await source();
   assert.match(text, /const ADMIN_URL = process\.env\.ADMIN_URL \|\| 'https:\/\/ekodi\.kr\/admin\/'/);
-  assert.doesNotMatch(text, /https:\/\/admin\.ekodi\.kr\//);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('synthetic production Admin UI verifier validates tax handoff without navigating the Admin page', async () => {

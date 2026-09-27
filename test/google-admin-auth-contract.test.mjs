@@ -128,7 +128,7 @@ test('DEV/STAGING/PROD Google clients remain isolated in active environment conf
 
 test('canonical PROD Google challenge keeps the ekodi.kr origin through Mission Control', () => {
   assert.doesNotMatch(missionControl, /handleSameOriginOperatorGoogleAuth/);
-  assert.doesNotMatch(missionControl, /headers\.set\('origin',\s*'https:\/\/admin\.ekodi\.kr'\)/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(backend, /identitySensitive && origin && identityOrigin && origin !== identityOrigin/);
   assert.match(backend, /path === '\/api\/google\/challenge'/);
 });

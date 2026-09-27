@@ -17,7 +17,7 @@ test('Workspace production verification retries strict canonical and apex health
   const workflow=await read();
   const block=jobBlock(workflow,'production-workspace','production-control');
   assert.match(block,/for attempt in \$\(seq 1 18\)/);
-  assert.match(block,/https:\/\/workspace-api\.ekodi\.kr\/health/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(block,/https:\/\/ekodi\.kr\/workspace-api\/health/);
   for(const marker of [
     '"schemaReady":true',

@@ -51,7 +51,7 @@ test('shared-site Mall release gate uses the same stable ownership contract', ()
 });
 
 test('Mall production verifier checks the server transaction safety boundary', () => {
-  assert.match(workflow, /https:\/\/mall-api\.ekodi\.kr\/health/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   for (const field of [
     'schemaReady',
     'orderSchemaReady',

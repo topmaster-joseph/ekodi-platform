@@ -56,7 +56,7 @@ test('production worker-first routing includes all three canonical roots',async(
 
 test('shared staging verifies canonical Shell and apex Messenger/Invest paths',async()=>{
   const stage=await readFile(new URL('../.github/workflows/stage-shared-site-shell.yml',import.meta.url),'utf8');
-  assert.doesNotMatch(stage,/https:\/\/shell\.ekodi\.kr\/shell\.js/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(stage,/\$STAGING_URL\/shell\/shell\.js/);
   assert.match(stage,/verify_public_path '\/messenger'/);
   assert.match(stage,/verify_public_path '\/invest'/);

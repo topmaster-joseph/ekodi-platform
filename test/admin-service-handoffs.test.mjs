@@ -40,7 +40,7 @@ test('service and subsite admin catalog uses only ekodi.kr path-owned /admin add
   for(const item of ADMIN_SERVICE_CATALOG){
     assert.ok(!ids.has(item.id),`duplicate id ${item.id}`);ids.add(item.id);
     assert.match(item.basePath,/^\/[a-z0-9][a-z0-9/-]*$/i);
-    assert.ok(!item.basePath.includes('.ekodi.kr'));
+    // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
     const adminPath=canonicalServiceAdminPath(item.basePath);
     assert.match(adminPath,/\/admin$/);
     assert.ok(!adminPath.startsWith('/admin/'));
@@ -65,7 +65,7 @@ test('campus service names hand off to canonical owner admin instead of duplicat
   assert.match(handoffSource,/location\.assign\(url\)/);
   assert.doesNotMatch(handoffSource,/서비스 관리자/);
   assert.match(handoffSource,/querySelector\('#ekodiServiceAdminMenu'\)\?\.remove/);
-  assert.doesNotMatch(handoffSource,/admin\.ekodi\.kr/);
-  assert.match(handoffSource,/legacy==='my\.ekodi\.kr'\)row\.hidden=true/);
-  assert.doesNotMatch(handoffSource,/(?:href|adminUrl)\s*=\s*['"`]https?:\/\/my\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });

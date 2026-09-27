@@ -65,8 +65,8 @@ test('developer portal is public, read-only and canonical at ekodi.kr/developer'
 test('developer browser preflight never submits manifest data',()=>{
   const html=read('experience/developer.html');
   const js=read('experience/developer.js');
-  assert.match(html,/https:\/\/dev\.ekodi\.kr\//);
-  assert.match(html,/https:\/\/exp\.ekodi\.kr\//);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(html,/CONFORMANCE PREFLIGHT/);
   assert.match(js,/fetch\('\/api\/contract'/);
   assert.doesNotMatch(js,/method\s*:\s*['"]POST['"]/i);
@@ -79,9 +79,9 @@ test('developer browser preflight never submits manifest data',()=>{
 
 test('Experience links directly to the canonical Developer portal',()=>{
   const html=read('experience/index.html');
-  assert.match(html,/href="https:\/\/dev\.ekodi\.kr\/"/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(html,/개발자 포털 ↗/);
-  assert.match(html,/실제 규격 검사는 dev\.ekodi\.kr에서 이어집니다/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('legacy ekodi.kr/experience permanently redirects to canonical ekodi.kr/experience',async()=>{

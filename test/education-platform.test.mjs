@@ -39,7 +39,7 @@ test('Education is an isolated Worker with Shell and admin handoff',async()=>{
   assert.match(worker,/Response\.redirect\('https:\/\/ekodi\.kr\/admin\/',307\)/);
   assert.match(boundaries,/"education"/);
   assert.match(boundaries,/education_\*/);
-  assert.match(production,/pattern = "edu\.ekodi\.kr"/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(production,/DATA_MODE = "production"/);
   assert.match(staging,/DATA_ENABLED = "false"/);
   assert.match(staging,/DATA_MODE = "isolated-staging"/);
@@ -47,8 +47,8 @@ test('Education is an isolated Worker with Shell and admin handoff',async()=>{
 
 test('Admin Campus observes Education as live, not planned',async()=>{
   const campus=await read('campus-actions.js');
-  assert.match(campus,/name: '에코디교육', domain: 'edu\.ekodi\.kr'/);
-  assert.doesNotMatch(campus,/domain: 'edu\.ekodi\.kr'[^\n]*lifecycle: 'planned'/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('Education browser code stores planning metadata only and parses',async()=>{

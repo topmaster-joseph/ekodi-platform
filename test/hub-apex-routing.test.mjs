@@ -73,8 +73,8 @@ test('hub source uses canonical path-only routing and apex Admin/Auth links', ()
   assert.match(hub, /if \(path === '\/pay'\)/);
   assert.match(hub, /else if \(path === '\/cloud'\)/);
   assert.match(hub, /path === '\/live'/);
-  assert.doesNotMatch(hub, /https:\/\/admin\.ekodi\.kr/);
-  assert.doesNotMatch(hub, /https:\/\/auth\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(hub, /https:\/\/ekodi\.kr\/admin\//);
   assert.match(hub, /https:\/\/ekodi\.kr\/auth\//);
 });

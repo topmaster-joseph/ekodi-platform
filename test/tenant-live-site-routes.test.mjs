@@ -102,7 +102,7 @@ test('canonical /live and /live/admin are owned by the apex Live service',async(
   const adminHtml=await admin.text();
   assert.match(adminHtml,/라이브 전문서비스 관리/);
   assert.match(adminHtml,/return_to=https%3A%2F%2Fekodi.kr%2Flive%2Fadmin/);
-  assert.doesNotMatch(adminHtml,/source=live\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('Live public visibility control can hide a tenant route without blocking its admin route',async()=>{

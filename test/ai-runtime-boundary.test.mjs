@@ -11,7 +11,7 @@ test('AI Commons has one canonical public path and a private runtime owner', () 
   const site = read('site-worker.js');
   const routes = read('platform-route-registry.js');
 
-  assert.doesNotMatch(production, /pattern = "ai\.ekodi\.kr"/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(production, /User traffic enters through ekodi\.kr\/ai via the shared-site service binding/);
   assert.match(shared, /binding = "AI"[\s\S]*service = "ekodi-ai-control"/);
   assert.match(shared, /"\/ai"/);
@@ -37,7 +37,7 @@ test('production verifier follows the AI Commons public/member boundary contract
   assert.match(workflow, /실행 서비스/);
   assert.match(workflow, /availability/);
   assert.match(workflow, /deliveryMode/);
-  assert.doesNotMatch(workflow, /https:\/\/ai\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 
   const requests = manifest.worker.requests;
   assert.equal(requests.find(item => item.url === 'https://ekodi.kr/ai/')?.statuses?.[0], 200);

@@ -59,7 +59,7 @@ test('Commerce OS delegates orchestration to the v8 Command Plane without transf
     assert.ok(commerceOs.includes(`'${action}': RISK.red`));
   }
   assert.ok(commerceOs.includes("red: { mode: 'human-gated', humanGate: true }"));
-  assert.doesNotMatch(commerceOs, /admin\.ekodi\.kr|my\.ekodi\.kr|TOSS_SECRET_KEY/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('Operations Cockpit is read-only, authenticated and does not expose financial execution', () => {

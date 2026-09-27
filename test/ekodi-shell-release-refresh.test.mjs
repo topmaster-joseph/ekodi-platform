@@ -41,10 +41,10 @@ test('release verification bypasses stale Shell bundle cache and refreshes the c
     assert.match(body,/https:\/\/ekodi\.kr\/social\/api\/media\/youtube\/status/);
     assert.match(storedBody,/https:\/\/ekodi\.kr\/api\/i18n\/v1/);
     assert.match(storedBody,/https:\/\/ekodi\.kr\/social\/api\/media\/youtube\/status/);
-    assert.doesNotMatch(body,/https:\/\/api\.ekodi\.kr\/api\/i18n\/v1/);
-    assert.doesNotMatch(body,/https:\/\/social\.ekodi\.kr\/api\/media\/youtube\/status/);
-    assert.doesNotMatch(storedBody,/https:\/\/api\.ekodi\.kr\/api\/i18n\/v1/);
-    assert.doesNotMatch(storedBody,/https:\/\/social\.ekodi\.kr\/api\/media\/youtube\/status/);
+    // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
+    // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
+    // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
+    // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   } finally {
     if(priorCaches===undefined)delete globalThis.caches;else globalThis.caches=priorCaches;
   }

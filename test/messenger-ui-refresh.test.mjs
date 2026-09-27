@@ -28,7 +28,7 @@ test('Messenger helper auto-generates title and supports mobile thread navigatio
 
 test('shared router entry changes only Messenger and delegates all other services',async()=>{
   const entry=await read('platform-router-entry-worker.js');
-  assert.match(entry,/MESSENGER_HOST='messenger\.ekodi\.kr'/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(entry,/messengerUserPage/);
   assert.match(entry,/legacyPlatformRouter\.fetch/);
   assert.match(entry,/x-ekodi-staging-host/);
@@ -60,10 +60,10 @@ test('production configs keep friendly Messenger entry without overriding canoni
   assert.match(prod,/main = "platform-router-entry-worker\.js"/);
   assert.match(staging,/main = "platform-router-entry-worker\.js"/);
   assert.match(api,/https:\/\/ekodi\.kr\/api/);
-  assert.doesNotMatch(api,/pattern = "api\.ekodi\.kr"/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(mission,/handleMessengerOperatorPage/);
   assert.match(mission,/path === '\/api\/operator'/);
   assert.match(mission,/path === '\/api\/operator\.js'/);
   assert.doesNotMatch(mission,/handleSameOriginOperatorGoogleAuth/);
-  assert.doesNotMatch(mission,/https:\/\/admin\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });

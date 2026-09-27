@@ -81,7 +81,7 @@ test('central channel manager can scope connections to person, tenant or store w
   assert.doesNotMatch(admin, /tenantPresets/);
   assert.ok(admin.includes("const CONNECT_API = '/marketing-connect-api'"));
   assert.ok(admin.includes("new URL(`${CONNECT_API}${path}`, location.origin)"));
-  assert.doesNotMatch(admin, /marketing-connect-api\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(worker, /customer_access_grants WHERE tenant_id=\? AND email=\?/);
   assert.match(worker, /if \(write && !subject\.writable\) return \{ error:'SUBJECT_READ_ONLY'/);
 });

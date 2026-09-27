@@ -22,7 +22,7 @@ const gatewaySource = await readFile(new URL('../ekodi-mcp-gateway.js', import.m
 test('MCP personal status and membership use only canonical apex API routes',()=>{
   assert.match(gatewaySource,/https:\/\/ekodi\.kr\/api\/user-ai\/status/);
   assert.match(gatewaySource,/https:\/\/ekodi\.kr\/api\/membership\/portfolio/);
-  assert.doesNotMatch(gatewaySource,/https:\/\/api\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.doesNotMatch(gatewaySource,/https:\/\/ekodi\.kr\/api\/api\//);
 });
 

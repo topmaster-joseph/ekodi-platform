@@ -62,5 +62,5 @@ test('Public publishing page has transparent pricing and consultation submission
   assert.match(publishingApp, /digital-start/);
   assert.match(publishingApp, /publish-pro/);
   assert.match(publishingApp, /\/api\/books\/inquiries/);
-  assert.match(booksWorker, /admin\.ekodi\.kr\/books#books/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });

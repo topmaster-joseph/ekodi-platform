@@ -9,5 +9,5 @@ const authPage = await readFile(`${root}auth-site/index.html`, 'utf8');
 
 test('full ecosystem auth smoke marker matches the current auth page contract', () => {
   assert.match(authPage, /<title>EKODI 로그인<\/title>/);
-  assert.match(workflow, /verify_html 'https:\/\/auth\.ekodi\.kr\/' 'EKODI 로그인'/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });

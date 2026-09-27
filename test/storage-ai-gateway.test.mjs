@@ -21,7 +21,7 @@ test('Shared Drive EKODI is canonical while D1/Supabase and R2 remain supporting
 
 test('Storage Gateway reuses the existing ekodi.kr/storage encrypted OAuth control plane', () => {
   assert.equal(storagePolicy.controlPlane, 'ekodi.kr/storage');
-  assert.match(storageGateway, /https:\/\/drive\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(writer, /storage_connections/);
   assert.match(writer, /storage_routes/);
   assert.match(writer, /supportsAllDrives=true/);

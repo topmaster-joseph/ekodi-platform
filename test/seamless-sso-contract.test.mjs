@@ -43,8 +43,8 @@ test('user-site special auth modules preserve only allowed same-service HTTPS re
   }
   assert.match(client,/const allowedOrigins=new Set\(config\.origins\|\|\[fallback\.origin\]\)/);
   assert.match(client,/!allowedOrigins\.has\(target\.origin\)/);
-  assert.match(business,/target\.origin!=='https:\/\/business\.ekodi\.kr'/);
-  assert.match(author,/target\.origin!=='https:\/\/author\.ekodi\.kr'/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('existing central sessions bypass repeated Google selection on user services',()=>{

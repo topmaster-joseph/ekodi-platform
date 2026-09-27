@@ -28,7 +28,7 @@ test('authenticated Admin E2E boots the canonical path-hosted Admin surface', as
   assert.match(worker, /const adminOrigin = 'https:\/\/ekodi\.kr';/);
   assert.match(worker, /const baseUrl = `\$\{adminOrigin\}\/admin\/`;/);
   assert.match(worker, /isCanonicalAdminUrl/);
-  assert.doesNotMatch(worker, /https:\/\/admin\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 

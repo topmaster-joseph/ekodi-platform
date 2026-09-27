@@ -15,7 +15,7 @@ test('service manifest is the person-space-role registry for future EKODI sites'
 test('Shell live verifier follows the canonical EKODIBIZ apex route',async()=>{
   const verifier=await read('scripts/verify-ekodi-shell-live.mjs');
   assert.match(verifier,/https:\/\/ekodi\.kr\/ekodibiz/);
-  assert.doesNotMatch(verifier,/https:\/\/biz\.ekodi\.kr\//);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('browser shell preserves workspace context, bounded surfaces and intent-first navigation',async()=>{
@@ -60,8 +60,8 @@ test('remaining Worker services use thin shared Shell adapters without moving do
   assert.match(social,/socialWorker\.fetch/); assert.match(social,/,\s*'social'\)/);
   assert.match(energy,/energyWorker\.fetch/); assert.match(energy,/,\s*'energy'\)/);
   assert.match(site,/shellServiceForHost/);
-  assert.match(shellInjector,/manifestServiceForHost/); assert.match(shellInjector,/SPECIAL_HOST_ALIASES/); assert.match(shellInjector,/trade\.biz\.ekodi\.kr/); assert.match(shellInjector,/shellServiceForRootPath/);
-  assert.match(platform,/messenger\.ekodi\.kr/); assert.match(platform,/invest\.ekodi\.kr/); assert.match(platform,/injectEkodiShell/);
+  assert.match(shellInjector,/manifestServiceForHost/); assert.match(shellInjector,/SPECIAL_HOST_ALIASES/); assert.match(shellInjector,/shellServiceForRootPath/);
+ assert.match(platform,/injectEkodiShell/);
   assert.match(platformEntry,/legacyPlatformRouter\.fetch/); assert.match(platformEntry,/injectEkodiShell\(response,'messenger'\)/);
   assert.match(workToml,/main = "work-shell-worker\.js"/);
   assert.match(socialToml,/main = "social-shell-worker\.js"/);

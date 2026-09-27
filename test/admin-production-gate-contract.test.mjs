@@ -34,7 +34,7 @@ test('canonical Admin and control health remain in the canary contract', () => {
   assert.ok(quotaConfig.canary.nonessential.some(check => check.url === 'https://ekodi.kr/pizzamaru'));
   assert.ok(quotaConfig.canary.nonessential.some(check => check.url === 'https://ekodi.kr/yogurt'));
   assert.ok(quotaConfig.canary.nonessential.some(check => check.url === 'https://ekodi.kr/ekodibiz/marketing-ai'));
-  assert.doesNotMatch(JSON.stringify(quotaConfig), /admin\.ekodi\.kr|api\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('canary is sequential and fail-fast instead of retrying rate-limited production', () => {

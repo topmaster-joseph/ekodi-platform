@@ -36,7 +36,7 @@ test('Space stays an internal engine while public aliases follow canonical works
     read('space-worker.js'),read('ekodi-service-manifest.js'),read('shell/shell.js'),
     read('config/ecosystem-services.json'),read('config/service-workspace-policy.json')
   ]);
-  assert.match(worker,/legacyAlias=url\.hostname\.toLowerCase\(\)==='space\.ekodi\.kr'/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(worker,/status:308/);
   assert.match(worker,/new URL\(url\.pathname\+url\.search,'https:\/\/ekodi\.kr'\)/);
   assert.match(worker,/location:'https:\/\/ekodi\.kr\/my\/'/);

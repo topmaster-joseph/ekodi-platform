@@ -21,7 +21,7 @@ test('production Admin login workflow is apex-native', async () => {
   assert.match(workflow, /https:\/\/ekodi\.kr\/auth\/\?site=admin&direct=1&return_to=https%3A%2F%2Fekodi\.kr%2Fadmin%2Fwork/);
   assert.match(workflow, /x-ekodi-route: admin-shell/i);
   assert.match(workflow, /x-ekodi-route: central-auth/i);
-  assert.doesNotMatch(workflow, /https:\/\/admin\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('canonical admin edge explicitly rejects retired admin entry paths', async () => {

@@ -32,7 +32,7 @@ test('gateway authority is observe-only and stream bounded',()=>{
 test('edge bridge composes device endpoints from the canonical apex origin',()=>{
   assert.match(bridge,/const API_DEFAULT = 'https:\/\/ekodi\.kr';/);
   assert.match(bridge,/\/api\/device-agent\/enroll/);
-  assert.doesNotMatch(bridge,/https:\/\/api\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.doesNotMatch(bridge,/https:\/\/ekodi\.kr\/api['"]/);
 });
 

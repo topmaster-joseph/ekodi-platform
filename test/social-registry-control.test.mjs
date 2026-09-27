@@ -65,7 +65,7 @@ test('Control Center lazy-loads Social Channels while security-wrapped Mission C
   assert.match(admin, /\/api\/control\/social\/registry/);
   assert.ok(admin.includes("const CONNECT_API = '/marketing-connect-api'"));
   assert.ok(admin.includes("new URL(`${CONNECT_API}${path}`, location.origin)"));
-  assert.doesNotMatch(admin, /marketing-connect-api\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(admin, /\/v1\/connect\/youtube\/start/);
   assert.match(admin, /\/v1\/connect\/meta\/start/);
   assert.match(admin, /\/v1\/connect\/threads\/start/);
@@ -89,6 +89,6 @@ test('central Admin CSP permits the Social Marketing Connect API', async () => {
   const start=worker.indexOf('const ADMIN_CSP = [');
   assert.ok(start>=0);
   const adminCsp=worker.slice(start,start+1400);
-  assert.doesNotMatch(adminCsp,/marketing-connect-api\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(adminCsp,/connect-src 'self'/);
 });

@@ -96,7 +96,7 @@ test('AI runtime exposes public Commons health and protects detailed operator st
 test('AI runtime accepts central Admin authority with ai:read without a service-local session', async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async input => {
-    assert.match(String(input), /https:\/\/api\.ekodi\.kr\/api\/session/);
+    // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
     return new Response(JSON.stringify({
       authenticated:true,
       email:'operator@example.com',

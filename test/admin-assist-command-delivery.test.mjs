@@ -62,7 +62,7 @@ test('production verification submits the real bottom command on canonical ekodi
   assert.match(probe,/https:\/\/ekodi\.kr\/admin\//);
   assert.match(probe,/https:\/\/ekodi\.kr\/admin\/home\/campus/);
   assert.match(probe,/https:\/\/ekodi\.kr\/api\/control\/ai\/assist/);
-  assert.doesNotMatch(probe,/api\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   const dock=await read('admin-assist-dock.js');
   assert.match(dock,/const API='https:\/\/ekodi\.kr'/);
   assert.match(probe,/#ekodiAssistBootstrap input/);
@@ -70,7 +70,7 @@ test('production verification submits the real bottom command on canonical ekodi
   assert.match(probe,/ekodi-admin-command-history-v1/);
   assert.match(probe,/#ekodiAssistPanel:not\(\[hidden\]\)/);
   assert.match(probe,/ekodi-assist-turn\.assistant/);
-  assert.doesNotMatch(probe,/admin\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(probe,/visualContractVerified/);
   assert.match(probe,/admin-home-visual\.png/);
   assert.match(probe,/admin-command-home/);

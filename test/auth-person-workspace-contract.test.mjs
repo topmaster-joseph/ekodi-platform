@@ -101,8 +101,8 @@ test('access api resolves and revalidates workspace-scoped handoff',()=>{
 
 test('person workspace api aggregates verified workspaces for open SSO services',()=>{
   assert.match(workspaceApi,/OPEN_SSO_ORIGINS/);
-  assert.match(workspaceApi,/social:\["https:\/\/social\.ekodi\.kr"\]/);
-  assert.match(workspaceApi,/energy:\["https:\/\/energy\.ekodi\.kr"\]/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(workspaceApi,/PERSON_WORKSPACE_SITES/);
   assert.match(workspaceApi,/current_site_workspaces/);
   assert.match(workspaceApi,/workspace_scope:"person"/);

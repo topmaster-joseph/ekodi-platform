@@ -75,7 +75,7 @@ test('admin access runtime uses protected API, authority-aware context and share
   assert.match(source, /\/api\/admin-access\/google-accounts/);
   assert.match(source, /withPrivilege\(\(\) => api\('\/api\/admin-access\/google-accounts/);
   assert.ok(source.includes('authority:currentSession?.authority || null'));
-  assert.match(source, /Domain=\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('shared admin browser modules pass syntax checks', () => {

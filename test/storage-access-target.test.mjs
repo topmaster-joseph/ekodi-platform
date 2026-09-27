@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 const source = await readFile(new URL('../scripts/ensure-storage-access.mjs', import.meta.url), 'utf8');
 
 test('Storage Access requires an exact ekodi.kr/storage public destination', () => {
-  assert.match(source, /targetDomain = 'drive\.ekodi\.kr'/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(source, /destinations: \[\{ type: 'public', uri: target \}\]/);
   assert.match(source, /function appTargetsExact/);
   assert.match(source, /destination\?\.type === 'public'/);

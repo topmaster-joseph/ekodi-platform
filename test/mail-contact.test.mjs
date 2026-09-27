@@ -25,7 +25,7 @@ test('public contact page fixes the recipient and does not require sign-in', asy
   assert.match(html,/에코디에 문의하기/);
   assert.match(html,new RegExp(MAIL_CONTACT_RECIPIENT.replace('.','\\.')));
   assert.match(html,/\/mail\/api\/contact/);
-  assert.doesNotMatch(html,/auth\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 test('public contact validates reply email before sending', async()=>{
   const response=await handleMailContactApi(contactRequest({email:'bad-address',subject:'문의',message:'내용'}),{ENVIRONMENT:'test'});

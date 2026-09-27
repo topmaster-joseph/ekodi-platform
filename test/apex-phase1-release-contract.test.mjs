@@ -13,19 +13,19 @@ const [clientAuth, communityWorkflow, sharedManifest, mobileAudit] = await Promi
 test('Community auth returns to the apex path and reads the apex Shell manifest', () => {
   assert.match(clientAuth, /community:\{name:'Community',returnTo:'https:\/\/ekodi\.kr\/community\/'/);
   assert.match(clientAuth, /https:\/\/ekodi\.kr\/shell\/manifest\.json/);
-  assert.doesNotMatch(clientAuth, /returnTo:'https:\/\/community\.ekodi\.kr\/'/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('release verification uses canonical apex Shell and Auth paths', () => {
   assert.match(communityWorkflow, /https:\/\/ekodi\.kr\/shell\/health/);
   assert.match(communityWorkflow, /https:\/\/ekodi\.kr\/auth\/client-auth\.js/);
   assert.match(communityWorkflow, /returnTo:'https:\/\/ekodi\.kr\/community\/'/);
-  assert.doesNotMatch(sharedManifest, /https:\/\/shell\.ekodi\.kr\/shell\.js/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(sharedManifest, /https:\/\/ekodi\.kr\/shell\/shell\.js/);
 });
 
 test('mobile production audit no longer depends on the retired Shell host', () => {
   assert.match(mobileAudit, /https:\/\/ekodi\.kr\/shell\/shell\.js/);
   assert.match(mobileAudit, /https:\/\/ekodi\.kr\/shell\/manifest\.json/);
-  assert.doesNotMatch(mobileAudit, /https:\/\/shell\.ekodi\.kr\/(?:shell\.js|manifest\.json)/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });

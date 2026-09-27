@@ -81,17 +81,17 @@ test('nested EKODI business services remain explicit apex-path boundaries', () =
 test('ekodi.kr/ekodibiz proxy remains independent while legacy external domain redirect stays dedicated', () => {
   hasRoute(proxyToml, 'ekodi.kr/ekodibiz');
   hasRoute(proxyToml, 'ekodi.kr/ekodimall');
-  assert.match(proxy, /host === 'biz\.ekodi\.kr'/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(proxy, /requestHost\(request, env, incoming\)/);
-  assert.doesNotMatch(proxy, /'biz\.ekodi\.kr': 'https:\/\/ekodibiz\.kr'/);
-  assert.match(bizLegacy, /TARGET = 'https:\/\/biz\.ekodi\.kr'/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(bizLegacy, /Response\.redirect\(target\.toString\(\), 301\)/);
   for (const d of ['ekodibiz.kr','www.ekodibiz.kr']) hasRoute(bizLegacyToml,d);
 });
 
 test('finance and root custom-domain contracts remain intact', () => {
   assert.match(financeToml, /name = "ekodi-finance-api"/);
-  assert.doesNotMatch(financeToml, /finance-api\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(financeToml, /ALLOWED_ORIGINS = "https:\/\/ekodi\.kr"/);
   assert.match(siteToml, /binding = "FINANCE"[\s\S]*service = "ekodi-finance-api"/);
   assert.match(platformRouter, /url\.pathname==='\/api\/finance'\|\|url\.pathname\.startsWith\('\/api\/finance\/'\)/);

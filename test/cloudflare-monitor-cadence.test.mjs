@@ -36,5 +36,5 @@ test('hourly performance watch reads Production quota before generating endpoint
   assert.match(performance, /cloudflare-production-budget\.mjs/);
   assert.match(performance, /steps\.quota\.outputs\.skip_nonessential != 'true'/);
   assert.match(performance, /endpoint requests: \*\*0\*\*/);
-  assert.doesNotMatch(performance, /https:\/\/admin\.ekodi\.kr\//);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });

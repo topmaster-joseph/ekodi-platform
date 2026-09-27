@@ -21,7 +21,7 @@ test('Energy AI expands from household monitoring into a distributed energy plat
 });
 
 test('consumer connection starts with central auth and does not imply address-only data access',()=>{
-  assert.match(app,/https:\/\/auth\.ekodi\.kr\//);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(app,/target\.searchParams\.set\('site','energy'\)/);
   assert.match(app,/주소만으로 타인의 전력 데이터를 조회하지 않습니다/);
   assert.match(app,/고객 동의·계약 확인 후 읽기/);

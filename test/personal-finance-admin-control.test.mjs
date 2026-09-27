@@ -119,7 +119,7 @@ test('Personal Finance admin UI manages policy only and never calls personal led
   assert.match(serviceControl,/signal=AbortSignal\.timeout\(8_000\)/);assert.match(serviceControl,/controlApi\?\.fetch/);assert.match(pfWrangler,/binding = \"CONTROL_API\"\s+service = \"ekodi-auth-api\"/);
   assert.match(serviceControl,/canonicalPath:'\/api\/control\/personal-finance'/);
   assert.match(serviceControl,/serviceBinding:'PERSONAL_FINANCE'/);
-  assert.doesNotMatch(serviceControl,/https:\/\/api\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 

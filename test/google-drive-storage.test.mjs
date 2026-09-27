@@ -51,7 +51,7 @@ test('admin browser uses canonical same-origin Storage API and localized failure
   assert.match(admin, /const API='\/storage\/api\/control\/storage\/google'/);
   assert.doesNotMatch(admin, /const API='\/api\/control\/storage\/google'/);
   assert.match(admin, /credentials:'same-origin'/);
-  assert.doesNotMatch(admin, /drive\.ekodi\.kr\/api\/control\/storage\/google/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(admin, /저장소 연결을 확인할 수 없습니다/);
   assert.match(admin, /t\('저장소','Storage'\)/);
 });
@@ -86,7 +86,7 @@ test('successful Google Drive OAuth returns directly to the exact admin route wi
 test('production Storage selects the canonical apex Google OAuth redirect only after registration', async () => {
   const config = await readFile(new URL('../wrangler.storage.toml', import.meta.url),'utf8');
   assert.match(config,/GOOGLE_DRIVE_OAUTH_REDIRECT_URI = "https:\/\/ekodi\.kr\/storage\/api\/control\/storage\/google\/callback"/);
-  assert.doesNotMatch(config,/GOOGLE_DRIVE_OAUTH_REDIRECT_URI = "https:\/\/drive\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('Google OAuth callback cutover is dual-stack, state-pinned, and apex-ready', () => {
@@ -161,7 +161,7 @@ test('canonical EKODI archive folders are source-controlled', () => {
   }
   assert.match(worker, /ekodi-storage-control/);
   assert.match(config, /GOOGLE_DRIVE_OAUTH_REDIRECT_URI = "https:\/\/ekodi\.kr\/storage\//);
-  assert.doesNotMatch(config, /drive\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
 });
 
 test('new storage worker may bootstrap exactly through explicit manifest opt-in', () => {

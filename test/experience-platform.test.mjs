@@ -68,7 +68,7 @@ test('experience deploy files use isolated staging and guarded production releas
   const prod=read('wrangler.experience.toml');
   const staging=read('wrangler.experience.staging.toml');
   const workflow=read('.github/workflows/deploy-experience.yml');
-  assert.match(prod,/try\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(prod,/custom_domain = true/);
   assert.match(staging,/ekodi-experience-staging/);
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/experience\.worker\.json/);

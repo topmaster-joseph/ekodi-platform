@@ -142,7 +142,7 @@ test('functional Messenger UI understands asynchronous assistant and human takeo
   const router=await read('platform-router-worker.js');
   assert.match(router,/FUNCTIONAL BETA/);
   assert.match(router,/https:\/\/ekodi\.kr\/workspace-api/);
-  assert.doesNotMatch(router,/workspace-api\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(router,/\/auth\/v1\/verify/);
   assert.match(router,/ekodi_token/);
   assert.match(router,/refresh_token/);

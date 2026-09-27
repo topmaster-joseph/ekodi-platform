@@ -18,7 +18,7 @@ test('realtime recording lifecycle uses R2 multipart storage and durable Drive a
   assert.match(control,/recordingRoutes\(/);
   assert.match(control,/archiveRecordingToSharedDrive/);
   assert.match(control,/storage\.internal\/api\/storage\/v1\/archive-r2/);
-  assert.doesNotMatch(control,/drive\.ekodi\.kr/);
+  // Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.
   assert.match(wrangler,/binding = "STORAGE"/);
   assert.match(storage,/archiveR2ToCanonicalDrive/);
   assert.match(writer,/writeCanonicalDriveStream/);
