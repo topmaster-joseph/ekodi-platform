@@ -3,6 +3,7 @@
 CREATE TABLE IF NOT EXISTS ekodi_technology_scout_runs (
   run_id TEXT PRIMARY KEY,
   trigger_source TEXT NOT NULL DEFAULT 'ekodi-cron',
+  run_day_kst TEXT UNIQUE,
   started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   completed_at TEXT,
   status TEXT NOT NULL DEFAULT 'running' CHECK(status IN ('running','completed','degraded','failed')),
@@ -31,6 +32,7 @@ CREATE TABLE IF NOT EXISTS ekodi_technology_scout_candidates (
   decision TEXT NOT NULL DEFAULT 'pending' CHECK(decision IN ('pending','apply','hold','reject')),
   decision_by TEXT,
   decided_at TEXT,
+  orchestrator_task_id TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(run_id) REFERENCES ekodi_technology_scout_runs(run_id) ON DELETE CASCADE
 );
