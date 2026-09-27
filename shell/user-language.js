@@ -69,7 +69,7 @@ function initialPreference(){
 }
 function persist(locale){
   try{localStorage.setItem(STORAGE_KEY,locale);}catch{}
-  try{document.cookie=`${COOKIE_KEY}=${encodeURIComponent(locale)}; Domain=.ekodi.kr; Path=/; Max-Age=31536000; SameSite=Lax; Secure`; }catch{}
+  try{document.cookie=`${COOKIE_KEY}=${encodeURIComponent(locale)}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`; }catch{}
 }
 function text(locale=activeLocale){return COPY[normalize(locale)||FALLBACK_LOCALE]||COPY[FALLBACK_LOCALE];}
 function preparingText(locale){
