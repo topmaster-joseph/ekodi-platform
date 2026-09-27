@@ -1,0 +1,40 @@
+name: Diagnose Apex Branch Main Sync
+
+on:
+  push:
+    branches:
+      - ai/chatgpt/apex-path-final-20260925
+    paths:
+      - '.github/workflows/diagnose-apex-main-sync.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  merge-diagnosis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Diagnose merge with latest main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'EKODI Merge Diagnosis'
+          git config user.email 'actions@users.noreply.github.com'
+          git fetch origin main
+          set +e
+          git merge --no-commit --no-ff origin/main >/tmp/merge.out 2>/tmp/merge.err
+          code=$?
+          set -e
+          cat /tmp/merge.out || true
+          cat /tmp/merge.err || true
+          if [ "$code" -ne 0 ]; then
+            echo 'ACTUAL_CONFLICTS_BEGIN'
+            git diff --name-only --diff-filter=U | sort
+            echo 'ACTUAL_CONFLICTS_END'
+            exit 1
+          fi
+          echo 'Latest main merges cleanly into the apex branch.'
