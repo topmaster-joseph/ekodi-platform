@@ -141,3 +141,12 @@ test('live production proof is structurally read-only', () => {
   assert.match(goal, /Read-only service-health orchestration proof/);
   assert.doesNotMatch(goal.toLowerCase(), /\b(deploy|dns|permissions|secrets)\b/);
 });
+
+
+test('live proof records bounded provider quota evidence and schedules a daily reprobe', () => {
+  const workflow = fs.readFileSync(new URL('../.github/workflows/verify-ekodi-orchestrator-live-e2e.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /cron: '7 0 \* \* \*'/);
+  assert.match(workflow, /ai_provider_daily_budget/);
+  assert.match(workflow, /workersAiQuota/);
+  assert.match(workflow, /EKODI_WORKERS_AI_DAILY_CALL_LIMIT/);
+});
