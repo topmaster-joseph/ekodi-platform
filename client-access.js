@@ -44,12 +44,12 @@
   async function request(path, options = {}) {
     const headers = new Headers(options.headers || {});
     const token = adminToken();
-    if (token) headers.set('authorization', \`Bearer \${token}\`);
+    if (token) headers.set('authorization', `Bearer ${token}`);
     if (options.body && !headers.has('content-type')) headers.set('content-type', 'application/json');
     const controller = options.signal ? null : new AbortController();
     const timeout = controller ? setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS) : null;
     try {
-      const response = await fetch(\`\${API}\${path}\`, {
+      const response = await fetch(`${API}${path}`, {
         ...options,
         headers,
         signal: options.signal || controller?.signal,
@@ -58,8 +58,8 @@
       let data = {};
       try { data = await response.json(); } catch {}
       if (!response.ok) {
-        const suffix = data.code ? \` · \${data.code}\` : '';
-        throw new Error(\`\${data.error || \`고객관리 API 요청 실패 (\${response.status})\`}\${suffix}\`);
+        const suffix = data.code ? ` · ${data.code}` : '';
+        throw new Error(`${data.error || `고객관리 API 요청 실패 (${response.status})`}${suffix}`);
       }
       return data;
     } catch (error) {
