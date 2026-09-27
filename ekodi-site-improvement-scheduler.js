@@ -2,7 +2,7 @@ import siteLifecycleRegistry from './config/site-lifecycle-registry.json' with {
 import siteExecutionEnforcement from './config/site-execution-enforcement.json' with { type: 'json' };
 
 const HOUR_MS = 60 * 60 * 1000;
-const PROTECTED_FILE = /^(?:\.github\/|migrations\/|supabase\/|governance\/|deploy\/|wrangler\.|platform-route-registry\.js$|CONSTITUTION\.md$|AI_DEVELOPMENT_POLICY\.md$|AGENTS(?:\.override)?\.md$|ai-control-(?:worker|core)\.js$|ekodi-site-improvement-scheduler\.js$|config\/(?:site-lifecycle-registry|.*policy)\.json$)|(?:^|\/)(?:auth|oauth|billing|payment|payments|finance|money|credential|credentials|secret|secrets|security)(?:[./_-]|$)/i;
+const PROTECTED_FILE = /^(?:\.github\/|migrations\/|supabase\/|governance\/|deploy\/|wrangler\.|platform-route-registry\.js$|CONSTITUTION\.md$|AI_DEVELOPMENT_POLICY\.md$|AGENTS(?:\.override)?\.md$|ai-control-(?:worker|core)\.js$|ekodi-site-improvement-scheduler\.js$|config\/(?:site-lifecycle-registry|site-execution-enforcement|.*policy)\.json$|scripts\/validate-site-execution-enforcement\.mjs$)|(?:^|\/)(?:auth|oauth|billing|payment|payments|finance|money|credential|credentials|secret|secrets|security)(?:[./_-]|$)/i;
 const SAFE_CONCLUSIONS = new Set(['success','neutral','skipped']);
 
 function clean(value,max=500){return String(value??'').trim().slice(0,max)}
