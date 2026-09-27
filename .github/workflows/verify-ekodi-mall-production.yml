@@ -57,6 +57,16 @@ jobs:
           grep -Fq 'workspace-admin.js' /tmp/mall-amazon-admin.html || { echo 'Amazon admin is missing workspace-admin.js'; exit 1; }
           echo 'amazonAdminRoute=verified'
 
+          amazon_cost_code=$(curl -sS -o /tmp/mall-amazon-cost.json -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodimall/api/amazon/cost-policy' || true)
+          if [ "$amazon_cost_code" != "200" ]; then
+            echo "Canonical Amazon cost API must return 200: HTTP $amazon_cost_code"
+            cat /tmp/mall-amazon-cost.json || true
+            exit 1
+          fi
+          grep -Fq '"freeFirstEnabled":true' /tmp/mall-amazon-cost.json || { echo 'Amazon free-first default missing'; exit 1; }
+          grep -Fq '"monthlyBudgetUsd":0' /tmp/mall-amazon-cost.json || { echo 'Amazon zero paid budget default missing'; exit 1; }
+          echo 'amazonCostApex=verified'
+
           verification_entry_code=$(curl -sS -D /tmp/mall-verification-entry.headers -o /tmp/mall-verification-entry.body -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodimall/verification-ops' || true)
           if [[ ! "$verification_entry_code" =~ ^[23] ]] || ! grep -Fiq 'cache-control: no-store' /tmp/mall-verification-entry.headers; then
             echo "Verification Ops canonical entry is not fail-closed for caching: HTTP $verification_entry_code"
