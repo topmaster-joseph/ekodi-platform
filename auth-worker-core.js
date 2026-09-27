@@ -1,5 +1,5 @@
 const DEFAULT_ADMIN_EMAIL = 'topmaster.joseph@gmail.com';
-const DEFAULT_ALLOWED_ORIGIN = 'https://shy-thunder-39a4.topmaster-joseph.workers.dev';
+const DEFAULT_ALLOWED_ORIGIN = 'https://ekodi.kr';
 const LEGACY_ITERATIONS = 100000;
 const CURRENT_ITERATIONS = 310000;
 const BOOTSTRAP_RECOVERY_HASH = 'a3a3f6c2f64ee7f1595741906bf19a14d2a5d1184c8255d9a330719491d3a21b';
