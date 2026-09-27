@@ -192,7 +192,7 @@ function pastorClient(POLICY){
     const f=$('offeringForm');if(f)f.onsubmit=async e=>{e.preventDefault();try{state('저장 중');const fd=new FormData(f);const body=Object.fromEntries(fd.entries());body.amount=Number(body.amount||0);body.anonymous=fd.get('anonymous')==='on';if(!body.member_id)delete body.member_id;await rest('church_offerings','',{method:'POST',body});await offerings();}catch(err){$('formFlash').textContent=`저장 실패: ${err.message}`;state('확인 필요');}};
     state('재정 보호 운영');
   }
-  async function banking(){const module=await import('/tenant-finance-admin.js?v=20260928-banking1');return module.mountTenantBankingAdmin({root:$('mainPanel'),summaryRoot:$('summaryCards'),getToken:async()=>session?.accessToken||'',workspace:'ekodichurch',state,mode:'church'});}
+  async function banking(){const moduleUrl=new URL('/tenant-finance-admin.js?v=20260928-banking1',location.origin).href;const module=await import(moduleUrl);return module.mountTenantBankingAdmin({root:$('mainPanel'),summaryRoot:$('summaryCards'),getToken:async()=>session?.accessToken||'',workspace:'ekodichurch',state,mode:'church'});}
   async function accounting(){
     state('회계 원장 확인 중');
     const rows=await rest('church_ledger_entries','limit=250');
