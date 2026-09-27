@@ -8,6 +8,7 @@ test('pastor admin route is scoped to canonical ekodichurch path', () => {
   assert.equal(isChurchPastorAdminPath('/ekodichurch/admin/care'), true);
   assert.equal(isChurchPastorAdminPath('/ekodichurch/admin/attendance'), true);
   assert.equal(isChurchPastorAdminPath('/ekodichurch/admin/offerings'), true);
+  assert.equal(isChurchPastorAdminPath('/ekodichurch/admin/banking'), true);
   assert.equal(isChurchPastorAdminPath('/ekodichurch/admin/accounting'), true);
   assert.equal(isChurchPastorAdminPath('/ekodichurch/admin/receipts'), true);
   assert.equal(isChurchPastorAdminPath('/ekodichurch/admin/reports'), true);
@@ -19,16 +20,17 @@ test('pastor admin route is scoped to canonical ekodichurch path', () => {
 });
 
 test('one pastor admin page projects navigation from the church-local role', () => {
-  assert.deepEqual(churchPastorSectionsForRole('senior_pastor'), ['overview','people','attendance','worship','care','calendar','ministry','offerings','accounting','receipts','reports','ai','chrome','access']);
+  assert.deepEqual(churchPastorSectionsForRole('senior_pastor'), ['overview','people','attendance','worship','care','calendar','ministry','offerings','banking','accounting','receipts','reports','ai','chrome','access']);
   assert.deepEqual(churchPastorSectionsForRole('pastor'), ['overview','people','attendance','worship','care','calendar','ministry','reports','ai']);
-  assert.deepEqual(churchPastorSectionsForRole('church_treasurer'), ['overview','offerings','accounting','receipts']);
-  assert.deepEqual(churchPastorSectionsForRole('church_finance'), ['overview','offerings','accounting','receipts']);
+  assert.deepEqual(churchPastorSectionsForRole('church_treasurer'), ['overview','offerings','banking','accounting','receipts']);
+  assert.deepEqual(churchPastorSectionsForRole('church_finance'), ['overview','offerings','banking','accounting','receipts']);
   assert.deepEqual(churchPastorSectionsForRole('care_staff'), ['overview','people','attendance','care','calendar','ministry','ai']);
   assert.deepEqual(churchPastorSectionsForRole('staff'), ['overview','people','attendance','worship','calendar','ministry','reports']);
   assert.deepEqual(churchPastorSectionsForRole('viewer'), ['overview','worship','calendar']);
   assert.equal(churchPastorCanAccess('viewer','care'), false);
   assert.equal(churchPastorCanAccess('pastor','offerings'), false);
   assert.equal(churchPastorCanAccess('staff','accounting'), false);
+  assert.equal(churchPastorCanAccess('church_finance','banking'), true);
   assert.equal(churchPastorCanAccess('church_finance','receipts'), true);
   assert.equal(churchPastorCanAccess('senior_pastor','chrome'), true);
   assert.equal(churchPastorCanAccess('pastor','chrome'), false);
@@ -48,7 +50,7 @@ test('pastor admin page is private-by-default', async () => {
   assert.match(html, /목회자 운영/);
   assert.match(html, /<h1 id="pageTitle">오늘의 교회<\/h1>/);
   assert.match(html, /오늘 일정·다음 예배·새가족·돌봄 후속/);
-  assert.match(html, /church-pastor-admin\.js\?v=20260923-groups1/);
+  assert.match(html, /church-pastor-admin\.js\?v=20260928-banking1/);
   assert.match(response.headers.get('content-security-policy') || '', /frame-ancestors 'none'/);
   assert.doesNotMatch(response.headers.get('content-security-policy') || '', /(?:api|workspace-api)\.ekodi\.kr/);
   assert.match(response.headers.get('cache-control') || '', /no-store/);
