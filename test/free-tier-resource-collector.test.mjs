@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { collectSupabase, collectSupabaseOidc, collectGitHub, snapshotsToSql } from '../scripts/collect-free-tier-resource-usage.mjs';
+import { collectSupabase, collectSupabaseOidc, collectGitHub, snapshotFromCloudflareQuotaReport, snapshotsToSql } from '../scripts/collect-free-tier-resource-usage.mjs';
 
 const observedAt='2026-09-20T08:30:00.000Z';
 
@@ -42,6 +42,29 @@ test('Supabase collector reports missing telemetry when no management credential
   assert.equal(result.reason,'credential_missing');
   assert.deepEqual(result.snapshots,[]);
   assert.equal(called,false);
+});
+
+test('Cloudflare production budget report becomes the canonical Workers request snapshot',()=>{
+  const snapshot=snapshotFromCloudflareQuotaReport({
+    policyId:'CF-QUOTA-001',
+    account:'PROD',
+    generatedAt:'2026-09-27T13:46:29.571Z',
+    window:{start:'2026-09-27T00:00:00.000Z',end:'2026-09-27T13:46:29.571Z'},
+    requests:43210,
+    limit:100000,
+    state:'normal',
+  });
+  assert.deepEqual(snapshot,{
+    provider:'cloudflare',
+    metric:'workers_requests_daily',
+    periodStart:'2026-09-27',
+    observedValue:43210,
+    freeLimit:100000,
+    source:'cloudflare-workers-analytics',
+    observedAt:'2026-09-27T13:46:29.571Z',
+  });
+  assert.throws(()=>snapshotFromCloudflareQuotaReport({policyId:'wrong',account:'PROD',requests:1,limit:100000,generatedAt:observedAt}),/POLICY_INVALID/);
+  assert.throws(()=>snapshotFromCloudflareQuotaReport({policyId:'CF-QUOTA-001',account:'DEV',requests:1,limit:100000,generatedAt:observedAt}),/ACCOUNT_INVALID/);
 });
 
 test('GitHub collector records public repository cache and artifact storage only',async()=>{
