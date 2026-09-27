@@ -1866,6 +1866,10 @@
           "지역 서비스",
           "청계면상인회"
         ],
+        "forbid": [
+          "운영공간",
+          "data-ekodi-operating-space-label"
+        ],
         "headerExpect": [
           "x-ekodi-route: local-region-public",
           "x-ekodi-shell: v2",
