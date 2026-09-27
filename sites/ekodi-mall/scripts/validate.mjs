@@ -52,6 +52,8 @@ const affiliateHubPaths = new Set();
 for (const [index, hub] of affiliateHubs.entries()) {
   const label = `affiliateHubs[${index}]`;
   required(hub.id, `${label}.id`); required(hub.name, `${label}.name`); required(hub.disclosure, `${label}.disclosure`);
+  required(hub.mode, `${label}.mode`); required(hub.searchLabel, `${label}.searchLabel`); required(hub.resultsTitle, `${label}.resultsTitle`); required(hub.resultsIntro, `${label}.resultsIntro`); required(hub.loadingLabel, `${label}.loadingLabel`);
+  if (!['stay','shopping'].includes(hub.mode)) errors.push(`${label}.mode must be stay or shopping`);
   if (!/^[a-z0-9-]+$/.test(hub.id || '')) errors.push(`${label}.id must use lowercase letters, numbers, and hyphens`);
   if (affiliateHubIds.has(hub.id)) errors.push(`${label}.id duplicates ${hub.id}`);
   affiliateHubIds.add(hub.id);
