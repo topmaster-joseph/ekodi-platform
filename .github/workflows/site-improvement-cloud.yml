@@ -121,10 +121,11 @@ jobs:
           OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
         run: |
           set -euo pipefail
+          payload=$(node -e "process.stdout.write(JSON.stringify({taskId:process.env.TASK_ID}))")
           response=$(curl -fsS -X POST \
             -H "Authorization: Bearer $OIDC_TOKEN" \
             -H 'Content-Type: application/json' \
-            --data "{"taskId":"$TASK_ID"}" \
+            --data "$payload" \
             https://ekodi.kr/ai/api/site-improvement/token)
           token=$(printf '%s' "$response" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const t=String(j.token||'');if(!/^ekodi_[A-Za-z0-9_-]{40,96}$/.test(t))process.exit(2);process.stdout.write(t)})")
           echo "::add-mask::$token"
