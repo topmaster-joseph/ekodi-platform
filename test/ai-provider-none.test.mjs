@@ -28,19 +28,34 @@ test('AI_PROVIDER=NONE disables providers without throwing or invoking them', as
   assert.deepEqual(result.value, { template: 'free-assist' });
 });
 
-test('provider failure silently falls back instead of escaping into the core request', async () => {
+test('provider failure silently falls back and exposes only a sanitized failure code', async () => {
   resetAiResilienceCircuitsForTest();
   const result = await runAiEnhancedTask({
     env: {},
     taskName: 'survival.failure',
     providers: [{ id: 'openai', invoke: async () => { throw new Error('provider down'); } }],
-    fallback: async ({ reason, attemptedProviders }) => ({ reason, attemptedProviders }),
+    fallback: async ({ reason, attemptedProviders, failureCodes }) => ({ reason, attemptedProviders, failureCodes }),
   });
 
   assert.equal(result.ok, true);
   assert.equal(result.mode, 'free_assist');
   assert.equal(result.reason, 'provider_unavailable');
   assert.deepEqual(result.attemptedProviders, ['openai']);
+  assert.deepEqual(result.failureCodes, [{ provider: 'openai', code: 'PROVIDER_ERROR' }]);
+  assert.deepEqual(result.value.failureCodes, [{ provider: 'openai', code: 'PROVIDER_ERROR' }]);
+});
+
+test('known provider quota failures remain observable without exposing provider payloads', async () => {
+  resetAiResilienceCircuitsForTest();
+  const result = await runAiEnhancedTask({
+    env: {},
+    taskName: 'survival.quota',
+    providers: [{ id: 'cloudflare-workers-ai', invoke: async () => { throw new Error('WORKERS_AI_DAILY_CALL_LIMIT'); } }],
+    fallback: async ({ failureCodes }) => ({ failureCodes }),
+  });
+  assert.equal(result.mode, 'free_assist');
+  assert.deepEqual(result.failureCodes, [{ provider: 'cloudflare-workers-ai', code: 'WORKERS_AI_DAILY_CALL_LIMIT' }]);
+  assert.deepEqual(result.value.failureCodes, [{ provider: 'cloudflare-workers-ai', code: 'WORKERS_AI_DAILY_CALL_LIMIT' }]);
 });
 
 test('healthy provider is used when available', async () => {
@@ -71,6 +86,7 @@ test('timeout degrades to free assist quickly', async () => {
 
   assert.equal(result.mode, 'free_assist');
   assert.equal(result.value, 'fallback-now');
+  assert.deepEqual(result.failureCodes, [{ provider: 'slow-provider', code: 'AI_PROVIDER_TIMEOUT' }]);
 });
 
 test('total timeout budget is shared across slow providers before fallback', async () => {
