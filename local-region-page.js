@@ -2,19 +2,49 @@ import { renderEkodiUserFooter } from './config/user-footer.js';
 
 function esc(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
 
-const PUBLIC_LINKS=Object.freeze([
-  {id:'neighborhood',name:'우리동네',tag:'생활',desc:'지역 소식과 생활정보',audiences:'resident student merchant organization'},
-  {id:'commerce',name:'상권·상점',tag:'상권',desc:'지역 상점과 상권 정보',audiences:'resident student merchant',href:'/cgma'},
-  {id:'pass',name:'청계패스',tag:'혜택',desc:'지역상품권·쿠폰·포인트·상권혜택',audiences:'resident student merchant',href:'/cheonggye/pass'},
-  {id:'campus',name:'목포대',tag:'대학',desc:'대학과 지역의 연결',audiences:'student resident merchant organization'},
-  {id:'directory',name:'기관·단체',tag:'연결',desc:'지역 기관과 단체 찾기',audiences:'resident organization'},
-  {id:'events',name:'행사·프로그램',tag:'참여',desc:'지역 행사와 신청',audiences:'resident student merchant organization'},
-  {id:'forest',name:'국민의숲',tag:'숲',desc:'승달산·목포대 지역상생 프로젝트',audiences:'resident student merchant organization',href:'/cheonggye/forest'},
-  {id:'jobs',name:'구인구직',tag:'일자리',desc:'지역 일자리 연결',audiences:'resident student merchant'},
-  {id:'sharing',name:'나눔마켓',tag:'나눔',desc:'지역 나눔과 교환',audiences:'resident student merchant'},
-  {id:'broadcast',name:'지역방송',tag:'소식',desc:'라이브와 지역 콘텐츠',audiences:'resident student merchant organization'},
-  {id:'proposal',name:'참여·제안',tag:'소통',desc:'주민 의견과 제안',audiences:'resident student merchant organization'},
-]);
+const MODULE_PRESENTATION=Object.freeze({
+  directory:{name:'기관·단체',tag:'연결',desc:'지역 기관·단체·대학과 생활정보 찾기',audiences:'resident student merchant organization'},
+  commerce:{name:'상권·상점',tag:'상권',desc:'지역 상점과 상권 공개정보',audiences:'resident student merchant'},
+  'commerce-pass':{name:'청계패스',tag:'혜택',desc:'쿠폰·포인트·지역상품권·상권혜택',audiences:'resident student merchant'},
+  events:{name:'행사·프로그램',tag:'참여',desc:'지역 행사와 신청',audiences:'resident student merchant organization'},
+  forest:{name:'국민의숲',tag:'숲',desc:'승달산·목포대 지역상생 프로젝트',audiences:'resident student merchant organization'},
+  jobs:{name:'구인구직',tag:'일자리',desc:'지역 일자리 연결',audiences:'resident student merchant'},
+  sharing:{name:'나눔마켓',tag:'나눔',desc:'지역 나눔과 교환',audiences:'resident student merchant'},
+  broadcast:{name:'지역방송',tag:'소식',desc:'라이브와 지역 콘텐츠',audiences:'resident student merchant organization'},
+  proposals:{name:'참여·제안',tag:'소통',desc:'주민 의견과 제안',audiences:'resident student merchant organization'},
+});
+
+const EXPERIENCE_LINKS=Object.freeze({
+  neighborhood:{id:'neighborhood',name:'우리동네',tag:'생활',desc:'지역 소식과 생활정보',audiences:'resident student merchant organization',href:'/cheonggye/directory'},
+  campus:{id:'campus',name:'목포대 × 청계',tag:'대학',desc:'대학과 지역의 프로그램·상권·일자리 연결',audiences:'student resident merchant organization',href:'/cheonggye/directory#campus'},
+});
+
+function publicLinks(region){
+  const modules=Object.fromEntries((region.modules||[]).map(module=>{
+    const presentation=MODULE_PRESENTATION[module.id]||{};
+    return [module.id,{
+      id:module.id,
+      name:presentation.name||module.label,
+      tag:presentation.tag||'지역',
+      desc:presentation.desc||module.summary,
+      audiences:presentation.audiences||'resident student merchant organization',
+      href:module.publicPath,
+    }];
+  }));
+  return [
+    EXPERIENCE_LINKS.neighborhood,
+    modules.commerce,
+    modules['commerce-pass'],
+    EXPERIENCE_LINKS.campus,
+    modules.directory,
+    modules.events,
+    modules.forest,
+    modules.jobs,
+    modules.sharing,
+    modules.broadcast,
+    modules.proposals,
+  ].filter(Boolean);
+}
 
 function baseStyle(){
   return `<style>
@@ -80,7 +110,7 @@ function publicCard(item){
 function publicBody(region){
   return `<main class="local-page"><section class="hero"><div class="eyebrow">청계 지역 공통 플랫폼</div><h1>${esc(region.brand)}</h1><p class="lead">청계에서 필요한 소식, 상점, 행사, 일자리와 나눔을 한곳에서 찾고 지역의 사람·단체와 자연스럽게 연결됩니다.</p><div class="hero-actions" aria-label="빠른 시작"><a href="#commerce">가게 찾기</a><a href="#events">행사 보기</a><a href="#jobs">일자리</a><a href="#proposal">의견·제안</a></div></section>
   <section class="section" aria-labelledby="intent-title"><div class="section-head"><div><h2 id="intent-title">오늘, 청계에서 무엇을 하시나요?</h2><p class="section-note">설명보다 목적을 먼저 고르면 필요한 영역으로 바로 이동합니다.</p></div></div><div class="intent-strip"><a href="#neighborhood">동네 소식 보기</a><a href="#commerce">상점·상권 찾기</a><a href="#events">행사 참여하기</a><a href="#proposal">지역에 의견 전하기</a></div></section>
-  <section class="section" id="local-services"><div class="section-head"><div><h2>지역 서비스</h2><p class="section-note">주민·상인·학생·기관이 함께 쓰되, 각 서비스는 필요한 정보부터 짧고 분명하게 보여줍니다.</p></div></div><div class="grid">${PUBLIC_LINKS.map(publicCard).join('')}</div></section>
+  <section class="section" id="local-services"><div class="section-head"><div><h2>지역 서비스</h2><p class="section-note">주민·상인·학생·기관이 함께 쓰되, 각 서비스는 필요한 정보부터 짧고 분명하게 보여줍니다.</p></div></div><div class="grid">${publicLinks(region).map(publicCard).join('')}</div></section>
   <section class="section personal" data-personalization-surface="local-cheonggye"><div class="personal__main"><strong>나에게 맞게 보기</strong><p>로그인하면 주민·상인·학생·기관 등 내가 선택한 역할과 관심사에 맞춰 자주 쓰는 지역서비스와 알림을 우선 보여주는 방식으로 확장합니다. 비로그인 상태에서도 모든 기본 정보는 그대로 사용할 수 있습니다.</p><a class="button button-light" href="/my/">내 에코디에서 맞춤 설정</a></div><div class="personal__aside"><strong>맞춤의 원칙</strong><p>권한은 바꾸지 않고 화면 순서와 추천만 조정합니다. 민감한 정보를 추정하지 않으며, 맞춤 설정은 언제든 되돌릴 수 있습니다.</p></div></section>
   <section class="section" id="participate"><div class="talk"><div><strong>청계에 말하기</strong><p>지역 제안·행사·상권·생활정보는 해당 서비스의 운영주체와 연결합니다. 플랫폼은 주민의 목소리를 묻고 듣는 통로를 우선합니다.</p></div><a class="button" href="#proposal">참여·제안 보기</a></div></section>
   <section class="section" id="local-organizations"><div class="section-head"><div><h2>함께 운영하는 지역 조직</h2><p class="section-note">지역 공통서비스와 단체의 고유업무는 분리해 운영합니다.</p></div></div><div class="org"><div><strong>청계면상인회</strong><div class="muted">현재 청계 지역 공통서비스의 초기 운영기관입니다. 상인회 정회원·회비·내부문서 등 고유 데이터는 지역플랫폼과 분리됩니다.</div></div><a class="button" href="/cgma">상인회 바로가기</a></div></section>
@@ -109,6 +139,47 @@ function adminBody(region){
   <section class="section"><h2>권한 이양 원칙</h2><div class="policy">새 운영주체 등록 → 서비스별 공동운영 기간 → 책임권한 이양 → 기존 운영자 권한 축소의 순서로 처리합니다. 이양 시 지역 데이터는 이동·복사하지 않고 그대로 유지하며, 변경 전후 운영자와 감사이력을 보존합니다. 상인회 자체 데이터는 <strong>/cgma</strong> 소유로 남습니다.</div></section>
   <div class="auth-meta"><span class="auth-chip">로그인 <span data-region-auth-email></span></span><span class="auth-chip">권한 <span data-region-auth-role></span></span></div>
   </main>`;
+}
+
+
+function modulePublicBody(region,module){
+  const lead=region.operators?.[module.leadOperatorId]||null;
+  const sourceLink=module.sourceWorkspace?'<a class="button" href="'+esc(module.sourceWorkspace)+'">연결 조직 보기</a>':'';
+  return `<main class="local-page" data-ekodi-local-module="${esc(module.id)}"><section class="hero"><div class="eyebrow">청계잇다 · 지역 하위서비스</div><h1>${esc(module.label)}</h1><p class="lead">${esc(module.summary)}</p><div class="hero-actions"><a href="/cheonggye">청계잇다 홈</a><a href="${esc(module.publicPath)}">현재 서비스</a></div></section>
+  <section class="section"><div class="section-head"><div><h2>운영 기준</h2><p class="section-note">모든 하위서비스는 지역 공통정보와 조직 내부정보의 소유경계를 분리합니다.</p></div></div><div class="grid">
+    <article class="card"><span class="card__tag">운영</span><div><strong>${esc(lead?.name||module.leadOperatorId)}</strong><span>현재 위임된 주 운영단체</span></div><span class="card__arrow">운영권은 감사이력과 함께 관리</span></article>
+    <article class="card"><span class="card__tag">소유</span><div><strong>청계 지역플랫폼</strong><span>지역 공개데이터의 기준 소유자</span></div><span class="card__arrow">${esc(module.dataOwner)}</span></article>
+    <article class="card"><span class="card__tag">데이터</span><div><strong>소스정책</strong><span>${esc(module.sourcePolicy)}</span></div><span class="card__arrow">조직 원본을 임의 복제하지 않음</span></article>
+    <article class="card"><span class="card__tag">공개</span><div><strong>지역 공통범위</strong><span>${esc(module.publishScope)}</span></div><span class="card__arrow">필요한 공개정보만 연결</span></article>
+  </div></section>
+  <section class="section"><div class="talk"><div><strong>정보를 운영하거나 수정해야 하나요?</strong><p>지역 공통정보는 이 서비스의 관리자 권한으로 관리하고, 회원·회비·회계·내부문서 같은 단체 고유정보는 해당 조직 관리공간에서 처리합니다.</p></div><div class="access-actions"><a class="button" href="${esc(module.adminPath)}">운영관리</a>${sourceLink}</div></div></section>
+  </main>`;
+}
+
+function moduleAdminBody(region,module){
+  const lead=region.operators?.[module.leadOperatorId]||null;
+  return `<main class="admin-page" data-ekodi-local-module="${esc(module.id)}"><section class="hero"><div class="eyebrow">청계잇다 · 하위서비스 관리자</div><h1>${esc(module.label)} 운영관리</h1><p class="lead">${esc(module.summary)} 공개 지역데이터는 청계 지역플랫폼에 남고, 현재 운영권은 ${esc(lead?.name||module.leadOperatorId)}에 위임되어 있습니다.</p></section>
+  <section class="admin-summary" aria-label="하위서비스 운영계약"><div class="admin-kpi"><span>주 운영단체</span><strong>${esc(lead?.name||module.leadOperatorId)}</strong><small>${esc(module.leadOperatorId)}</small></div><div class="admin-kpi"><span>데이터 소유</span><strong>지역플랫폼</strong><small>${esc(module.dataOwner)}</small></div><div class="admin-kpi"><span>소스정책</span><strong>분리·투영</strong><small>${esc(module.sourcePolicy)}</small></div><div class="admin-kpi"><span>공개범위</span><strong>${esc(module.publishScope)}</strong><small>공개 경로 ${esc(module.publicPath)}</small></div></section>
+  <section class="section"><div class="section-head"><div><h2>강제 실행 계약</h2><p class="section-note">이 서비스는 등록 경로·운영주체·데이터 소유경계·소스정책이 모두 유효해야 라우팅됩니다.</p></div></div><div class="policy"><strong>공개:</strong> ${esc(module.publicPath)}<br><strong>관리:</strong> ${esc(module.adminPath)}<br><strong>운영주체:</strong> ${esc(lead?.name||module.leadOperatorId)}<br><strong>데이터 원칙:</strong> 조직 내부 원본은 복제하지 않고 승인된 공개 투영만 지역플랫폼에 연결합니다.</div></section>
+  <section class="section"><div class="admin-actions"><a class="admin-action" href="${esc(module.publicPath)}"><strong>사용자 화면</strong><span>공개 하위서비스를 확인합니다.</span></a><a class="admin-action" href="/cheonggye/admin"><strong>청계잇다 통합관리</strong><span>전체 서비스 운영권과 이력을 확인합니다.</span></a><a class="admin-action" href="${esc(lead?.adminPath||'/cgma/admin')}"><strong>운영단체 관리</strong><span>회원·회비·내부문서 등 조직 고유업무로 이동합니다.</span></a></div></section>
+  <div class="auth-meta"><span class="auth-chip">로그인 <span data-region-auth-email></span></span><span class="auth-chip">권한 <span data-region-auth-role></span></span></div></main>`;
+}
+
+export function localRegionModulePublicPage(region,module){
+  if(!region||!module)return localRegionNotFoundPage(region,{path:'unknown'});
+  return new Response(document(region,`${module.label} | ${region.brand}`,modulePublicBody(region,module),false),{status:200,headers:headers('local-region-module-public',{userChrome:true})});
+}
+
+export function localRegionModuleAdminPage(region,module){
+  if(!region||!module)return localRegionNotFoundPage(region,{admin:true,path:'unknown'});
+  return new Response(document(region,`${module.label} 운영관리 | ${region.brand}`,moduleAdminBody(region,module),true),{status:200,headers:headers('local-region-module-admin')});
+}
+
+export function localRegionNotFoundPage(region,{admin=false,path=''}={}){
+  const brand=region?.brand||'청계잇다';
+  const home=admin?'/cheonggye/admin':'/cheonggye';
+  const body=`<main><section class="hero"><div class="eyebrow">등록되지 않은 지역 경로</div><h1>페이지를 찾을 수 없습니다</h1><p class="lead">${esc(path||'요청한 경로')}는 ${esc(brand)}에 등록된 하위서비스가 아닙니다. 등록된 서비스만 운영 규칙에 따라 연결됩니다.</p><div class="hero-actions"><a href="${home}">돌아가기</a></div></section></main>`;
+  return new Response(document(region||{brand,siteSubject:'local-cheonggye',id:'local:cheonggye'},`페이지 없음 | ${brand}`,body,admin),{status:404,headers:headers('local-region-not-found',{userChrome:!admin})});
 }
 
 function headers(route,{userChrome=false}={}){
