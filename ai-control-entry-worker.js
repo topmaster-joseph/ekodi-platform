@@ -7,4 +7,8 @@ export default {
     if (workloadResponse) return workloadResponse;
     return aiControlWorker.fetch(request, env, ctx);
   },
+  async scheduled(controller, env, ctx) {
+    if (typeof aiControlWorker.scheduled !== 'function') return;
+    return aiControlWorker.scheduled(controller, env, ctx);
+  },
 };

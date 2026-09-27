@@ -80,10 +80,24 @@ async function handleVisit(request, env) {
     const hash = await sessionHash(day, host, sid);
     const now = new Date().toISOString();
 
-    await env.DB.prepare(`INSERT OR IGNORE INTO traffic_human_sessions
-      (day, host, site_id, session_hash, country, first_seen_at)
-      VALUES (?, ?, ?, ?, ?, ?)`)
-      .bind(day, host, siteId, hash, country, now).run();
+    try {
+      await env.DB.prepare(`INSERT INTO traffic_human_sessions
+        (day, host, site_id, session_hash, country, first_seen_at, last_seen_at, visit_count)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+        ON CONFLICT(day, host, session_hash) DO UPDATE SET
+          site_id=excluded.site_id,
+          country=excluded.country,
+          last_seen_at=excluded.last_seen_at,
+          visit_count=traffic_human_sessions.visit_count+1`)
+        .bind(day, host, siteId, hash, country, now, now).run();
+    } catch (activityError) {
+      const activityMessage = String(activityError?.message || activityError).toLowerCase();
+      if (!activityMessage.includes('last_seen_at') && !activityMessage.includes('visit_count')) throw activityError;
+      await env.DB.prepare(`INSERT OR IGNORE INTO traffic_human_sessions
+        (day, host, site_id, session_hash, country, first_seen_at)
+        VALUES (?, ?, ?, ?, ?, ?)`)
+        .bind(day, host, siteId, hash, country, now).run();
+    }
     return new Response(null, { status:204, headers:responseHeaders(origin) });
   } catch (error) {
     const message = String(error?.message || error).toLowerCase();

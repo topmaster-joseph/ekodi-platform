@@ -43,6 +43,10 @@ test('storage contract contains aggregates and daily hashes, not raw request ide
   const control = await readFile('traffic-intelligence-control.js', 'utf8');
   assert.doesNotMatch(control, /cf-connecting-ip|x-forwarded-for|headers\.get\(['"]user-agent/i);
   assert.match(control, /crypto\.subtle\.digest\('SHA-256'/);
+  assert.match(control, /last_seen_at/);
+  assert.match(control, /visit_count/);
+  assert.match(control, /ON CONFLICT\(day, host, session_hash\) DO UPDATE/);
+  assert.doesNotMatch(control, /cf-connecting-ip|x-forwarded-for|headers\.get\(['"]user-agent/i);
 });
 
 test('browser beacon respects privacy signals and classifier collector is daily aggregate only', async () => {
