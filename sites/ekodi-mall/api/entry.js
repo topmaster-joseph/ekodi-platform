@@ -11,7 +11,7 @@ import { handleAnalyticsRequest } from './analytics.js';
 import { handleStorefrontRequest } from './storefront.js';
 import { commerceEventSchemaReady } from './commerce-events.js';
 import { handleCommerceOperationsRequest } from './commerce-operations.js';
-import { handleAmazonRequest, amazonConnectorStatus } from './amazon.js';
+import { handleAmazonRequest, amazonConnectorStatus, amazonCostSchemaReady } from './amazon.js';
 
 const FEE_RATES = Object.freeze({ direct: 7, marketplace: 8, ai: 9 });
 const ATTRIBUTION_WINDOW_DAYS = 7;
@@ -154,13 +154,14 @@ export default {
       const domemaeReady = Boolean(env.DB) && await domemaeConnectorReady(env);
       const commerceEventsReady = Boolean(env.DB) && await commerceEventSchemaReady(env);
       const amazon = amazonConnectorStatus(env);
+      const amazonCostReady = Boolean(env.DB) && await amazonCostSchemaReady(env);
       const ok = coreResponse.ok && firstTouchReady && sourcingReady && fulfillmentReady && verificationReady && supplierPilotReady && supplierDiscoveryReady && domemaeReady && commerceEventsReady;
       return reply({
         ...coreBody, ok, version:3, environment:env.ENVIRONMENT || 'unknown', firstTouchSchemaReady:firstTouchReady,
         sourcingSchemaReady:sourcingReady, fulfillmentSchemaReady:fulfillmentReady, verificationSchemaReady:verificationReady,
         supplierPilotSchemaReady:supplierPilotReady, supplierDiscoverySchemaReady:supplierDiscoveryReady, domemaeConnectorReady:domemaeReady,
         commerceEventSchemaReady:commerceEventsReady, commerceOsVersion:1,
-        amazonConnector:amazon,
+        amazonConnector:amazon, amazonCostSchemaReady:amazonCostReady,
         domemaeLookupEnabled:String(env.DOMEMAE_LOOKUP_ENABLED || '').toLowerCase() === 'true', domemaeOrderEnabled:false,
         attributionWindowDays:ATTRIBUTION_WINDOW_DAYS,
         operationsReviewConfigured:Boolean(env.MALL_OPERATIONS_TOKEN || env.MALL_OPERATIONS_EMAILS), operationsEmailAllowlistConfigured:Boolean(env.MALL_OPERATIONS_EMAILS),
