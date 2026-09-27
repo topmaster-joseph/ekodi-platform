@@ -166,8 +166,9 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   function canonicalSubjectKey(){
     if(service==='mall')return 'ekodimall';
     if(service==='trade')return 'ekoditrade';
-    const aliases={'ekodibiz':'ekodi-biz','ekodi-biz':'ekodi-biz','ekodichurch':'ekodi-church','ekodi-church':'ekodi-church','ekodilab':'ekodi-lab','ekodi-lab':'ekodi-lab','cheonggye':'cheonggye-local'};
-    const raw=String(workspaceContext?.slug||workspace).trim().toLowerCase();
+    const root=workspace==='ekodibiz'?'ekodi-biz':workspace;
+    const aliases={'ekodi-biz':'ekodi-biz','ekodichurch':'ekodi-church','ekodi-church':'ekodi-church','ekodilab':'ekodi-lab','ekodi-lab':'ekodi-lab','cheonggye':'cheonggye-local'};
+    const raw=String(workspaceContext?.slug||root).trim().toLowerCase();
     return aliases[raw]||raw;
   }
 
