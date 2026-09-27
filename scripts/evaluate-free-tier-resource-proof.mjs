@@ -45,9 +45,13 @@ export function evaluateMeasuredProof(rows,{now=Date.now(),staleAfterHours=26}={
     assert(supabase.capacityBlocks.includes('active_projects'),'SUPABASE_ACTIVE_PROJECT_CAPACITY_BLOCK_REQUIRED');
   }
 
-  const workers=cloudflare.metrics.find(item=>item.metric==='workers_requests_daily');
+  const workers=cloudflare.metrics.find(item=>item.metric==='workers_requests_daily'||item.metric==='workers_requests_month');
   assert(workers,'CLOUDFLARE_WORKERS_REQUESTS_METRIC_REQUIRED');
-  assert(workers.freeLimit===100000,'CLOUDFLARE_WORKERS_FREE_LIMIT_MUST_REMAIN_100000');
+  if(workers.metric==='workers_requests_daily'){
+    assert(workers.freeLimit===100000,'CLOUDFLARE_WORKERS_FREE_LIMIT_MUST_REMAIN_100000');
+  }else{
+    assert(workers.freeLimit===10000000,'CLOUDFLARE_WORKERS_PAID_INCLUDED_REQUESTS_MUST_BE_10000000');
+  }
 
   const cache=github.metrics.find(item=>item.metric==='cache_storage_bytes');
   assert(cache,'GITHUB_CACHE_STORAGE_METRIC_REQUIRED');
@@ -61,11 +65,15 @@ export function evaluateMeasuredProof(rows,{now=Date.now(),staleAfterHours=26}={
       action:cloudflare.action,
       telemetryStatus:cloudflare.telemetryStatus,
       workersRequests:Object.freeze({
+        metric:workers.metric,
         observedValue:workers.observedValue,
         freeLimit:workers.freeLimit,
         usagePercent:workers.usagePercent,
         state:workers.state,
       }),
+      d1Metrics:cloudflare.metrics
+        .filter(item=>item.metric.startsWith('d1_rows_read_')||item.metric.startsWith('d1_rows_written_'))
+        .map(item=>({metric:item.metric,observedValue:item.observedValue,freeLimit:item.freeLimit,usagePercent:item.usagePercent,state:item.state})),
     }),
     supabase:Object.freeze({
       state:supabase.state,
@@ -105,7 +113,7 @@ export function formatProofSummary(proof){
     '### EKODI Free-Tier Resource Governor proof',
     `- observed_at: ${proof.latestObservedAt||'unknown'}`,
     `- automatic_paid_upgrade: ${proof.automaticPaidUpgrade}`,
-    `- cloudflare: state=${proof.cloudflare.state}, telemetry=${proof.cloudflare.telemetryStatus}, workers_requests=${proof.cloudflare.workersRequests.observedValue}/${proof.cloudflare.workersRequests.freeLimit} (${proof.cloudflare.workersRequests.usagePercent}%), action=${proof.cloudflare.action}`,
+    `- cloudflare: state=${proof.cloudflare.state}, telemetry=${proof.cloudflare.telemetryStatus}, ${proof.cloudflare.workersRequests.metric}=${proof.cloudflare.workersRequests.observedValue}/${proof.cloudflare.workersRequests.freeLimit} (${proof.cloudflare.workersRequests.usagePercent}%), d1_metrics=${proof.cloudflare.d1Metrics.length}, action=${proof.cloudflare.action}`,
     `- supabase: state=${proof.supabase.state}, telemetry=${proof.supabase.telemetryStatus}, active_projects=${proof.supabase.activeProjects.observedValue}/${proof.supabase.activeProjects.freeLimit}, provisioning_allowed=${proof.supabase.provisioningAllowed}`,
     `- supabase_db: ${db}`,
     `- github: state=${proof.github.state}, telemetry=${proof.github.telemetryStatus}, cache=${cache}`,
