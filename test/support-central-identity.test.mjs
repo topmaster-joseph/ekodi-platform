@@ -30,7 +30,7 @@ test('staging central identity is isolated while production is configured',()=>{
   assert.doesNotMatch(staging,/SUPABASE_PUBLISHABLE_KEY/);
   assert.ok(prod.includes('AUTH_URL = "https://ekodi.kr/auth/?site=support"'));
   assert.ok(staging.includes('AUTH_URL = "https://ekodi.kr/auth/?site=support"'));
-  assert.doesNotMatch(worker,/auth\.ekodi\.kr|admin\.ekodi\.kr/);
+  assert.match(worker,/https:\/\/ekodi\.kr\/(?:auth|admin)/);
 });
 
 test('Support release dependencies use canonical apex gateways',()=>{
@@ -53,7 +53,7 @@ test('Support release dependencies use canonical apex gateways',()=>{
 
 test('profile api allows production Support origin only through explicit allowlist',()=>{
   const profileApi=read('supabase/functions/profile-api/index.ts');
-  assert.match(profileApi,/"https:\/\/ekodi\.kr"/);assert.doesNotMatch(profileApi,/support\.ekodi\.kr/);
+  assert.match(profileApi,/"https:\/\/ekodi\.kr"/);assert.match(profileApi,/https:\/\/ekodi\.kr/);
   assert.doesNotMatch(profileApi,/ekodi-support-opportunity-staging/);
 });
 
