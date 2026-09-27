@@ -75,7 +75,5 @@ test('low traffic decision uses recent active sessions and keeps cumulative visi
   const source=await readFile(new URL('../ekodi-site-improvement-scheduler.js',import.meta.url),'utf8');
   assert.match(source,/quiet:!!latestActivity&&recentSessions<=maxSessions/);
   assert.doesNotMatch(source,/quiet:!!latestActivity&&recentSessions<=maxSessions&&recentVisits<=maxVisits/);
-  assert.ok(source.includes('platform-route-registry\\.js
-});
-));
+  assert.ok(source.includes('platform-route-registry\\.js$'));
 });
