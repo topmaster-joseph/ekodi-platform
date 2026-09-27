@@ -20,6 +20,7 @@ test('public EKODI API is apex-only and the legacy Worker domain is explicitly r
   assert.equal(wrangler.includes('pattern = "'+retiredHost+'"'),false);
   assert.match(wrangler,/name = "ekodi-auth-api"/);
   assert.match(wrangler,/main = "mission-control-entry-worker\.js"/);
+  assert.match(wrangler,/workers_dev = false/);
 
   assert.equal(workflow.includes('https://'+retiredHost),false);
   assert.match(workflow,/https:\/\/ekodi\.kr\/api\/health/);
@@ -30,8 +31,9 @@ test('public EKODI API is apex-only and the legacy Worker domain is explicitly r
   assert.equal(mcp.includes('https://'+retiredHost),false);
   assert.equal(tapo.includes('https://'+retiredHost),false);
 
-  const urls=manifest.worker.requests.map(item=>String(item.url||''));
+  const urls=manifest.worker.requests.flatMap(item=>[String(item.url||''),String(item.candidateUrl||'')]);
   assert.equal(urls.some(url=>url.includes(retiredHost)),false);
+  assert.equal(urls.some(url=>url.includes('ekodi-auth-api.topmaster-joseph.workers.dev')),false);
   assert.equal(urls.some(url=>url==='https://ekodi.kr/api/health'),true);
 
   assert.equal(policy.canonicalHost,'ekodi.kr');
@@ -46,7 +48,7 @@ test('public EKODI API is apex-only and the legacy Worker domain is explicitly r
   assert.ok(apiTarget,'API legacy hostname must be included in retirement targets');
   assert.equal(apiTarget.service,'ekodi-auth-api');
   assert.equal(apiTarget.apexHealth,'https://ekodi.kr/api/health');
-  assert.equal(apiTarget.directHealth,'https://ekodi-auth-api.topmaster-joseph.workers.dev/health');
+  assert.equal(apiTarget.directHealth,undefined);
   assert.ok(apiTarget.apexExpect.includes('"canonicalApiBase":"https://ekodi.kr/api"'));
   assert.match(retirementWorkflow,/wrangler\.api\.toml/);
   assert.match(retirementWorkflow,/wrangler\.community\.toml wrangler\.social\.toml wrangler\.energy\.toml wrangler\.api\.toml/);
