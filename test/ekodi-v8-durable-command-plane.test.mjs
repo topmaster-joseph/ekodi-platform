@@ -116,7 +116,7 @@ test('live production proof is daily quota-gated instead of consuming AI budget 
   assert.doesNotMatch(workflow, /workflow_run:/);
   assert.doesNotMatch(workflow, /workflows: \['Deploy Control API'\]/);
   assert.match(workflow, /ai_provider_daily_budget/);
-  assert.match(workflow, /proof_calls=3/);
+  assert.match(workflow, /proof_calls=1/);
   assert.match(workflow, /operational_reserve=6/);
   assert.match(workflow, /proofStatus:"quota_gated"/);
   assert.match(workflow, /externalProofSatisfied:false/);
@@ -144,4 +144,15 @@ test('v8 command surfaces require explicit read or operate capability after auth
   assert.match(source, /const commandRead = request\.method === 'GET'/);
   assert.match(source, /requiredCommandCapability = commandMutation \? 'ai:operate' : commandRead \? 'ai:read'/);
   assert.match(source, /sessionCapabilityGranted\(auth\.session, requiredCommandCapability\)/);
+});
+
+
+test('live production proof is structurally read-only', () => {
+  const workflow = fs.readFileSync(new URL('../.github/workflows/verify-ekodi-orchestrator-live-e2e.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /readOnly:true/);
+  assert.match(workflow, /mutation:false/);
+  assert.match(workflow, /routine:true/);
+  const goal = workflow.match(/goal='([^']+)'/)?.[1] || '';
+  assert.match(goal, /Read-only service-health orchestration proof/);
+  assert.doesNotMatch(goal.toLowerCase(), /\b(deploy|dns|permissions|secrets)\b/);
 });
