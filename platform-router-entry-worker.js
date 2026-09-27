@@ -290,11 +290,40 @@ async function livePublicStatus(env,tenant){
 }
 function liveShell(response,surface=''){return typeof HTMLRewriter==='function'?injectEkodiShell(response,'live',surface):response}
 
+const MALL_API_APEX_PREFIX='/ekodimall/api';
+function mallApiUpstreamRequest(request){
+  const source=new URL(request.url);
+  const target=new URL(request.url);
+  const suffix=source.pathname.slice(MALL_API_APEX_PREFIX.length);
+  target.pathname=suffix.startsWith('/api/')?suffix:`/api${suffix||'/'}`;
+  return new Request(target.toString(),{
+    method:request.method,
+    headers:request.headers,
+    body:['GET','HEAD'].includes(request.method)?undefined:request.body,
+    redirect:request.redirect
+  });
+}
+async function routeMallApiApex(request,env){
+  const url=new URL(request.url);
+  if(!(url.pathname===MALL_API_APEX_PREFIX||url.pathname.startsWith(MALL_API_APEX_PREFIX+'/')))return null;
+  if(!env?.MALL_API?.fetch)return new Response(JSON.stringify({error:'Mall API service unavailable'}),{
+    status:503,
+    headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-mall-api-gateway':'binding-unavailable'}
+  });
+  const upstream=await env.MALL_API.fetch(mallApiUpstreamRequest(request));
+  const response=new Response(upstream.body,upstream);
+  response.headers.set('cache-control','no-store');
+  response.headers.set('x-ekodi-mall-api-gateway','service-binding-v1');
+  response.headers.set('x-ekodi-canonical-path','/ekodimall/api');
+  return response;
+}
+
 async function routePlatform(request,env,ctx){
     const url=new URL(request.url);
     const host=resolvedHost(request,env);
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
+    if(host===PUBLIC_HOST&&url.pathname.startsWith(MALL_API_APEX_PREFIX)){const mallApi=await routeMallApiApex(request,env);if(mallApi)return mallApi;}
     if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/seonam-medi/')){const monitor=await handleSeonamMediMonitorApi(request,env);if(monitor)return monitor;const civic=await handleSeonamMediCivicApi(request,env);if(civic)return civic;}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isLegacySeonamMedPath(url.pathname))return redirectLegacySeonamMed(request);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isSeonamMediPath(url.pathname))return routeSeonamMediStatic(request,env);
