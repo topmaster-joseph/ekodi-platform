@@ -22,6 +22,9 @@ expect(policy.paidCore?.mode==='owner-activated-minimum-paid-core','paid-core fr
 expect(policy.paidCore?.cloudflareWorkersPaid?.minimumMonthlyUsd===5,'Cloudflare Workers Paid base commitment must remain $5');
 expect(policy.paidCore?.cloudflareWorkersPaid?.automaticPurchase===false,'paid plan purchase must remain owner-controlled');
 expect(policy.paidCore?.nonessentialOverageGuard?.blockNonessentialAtOrAboveProtect===true,'nonessential paid overage guard must remain enabled');
+expect(policy.cloudflareAccountPool?.policyId==='EKODI-CF-ACCOUNT-POOL-001','Cloudflare account pool policy must stay linked');
+expect(policy.cloudflareAccountPool?.productionCriticalFailoverToAuxiliary===false,'production critical failover to auxiliary must stay disabled');
+expect(policy.cloudflareAccountPool?.appliesRecursivelyToAllServices===true,'Cloudflare account pool policy must bind all current and future services');
 expect(policy.deploymentContinuity?.policyId==='EKODI-DEPLOYMENT-FOUR-LAYER-001','four-layer deployment continuity policy must be linked');
 expect(JSON.stringify(policy.deploymentContinuity?.priority)===JSON.stringify(['runtime','guarded-deploy','cloud-control','owner']),'deployment continuity priority must remain Runtime > Deploy > Cloud Control > Owner');
 expect(policy.deploymentContinuity?.cloudflareWorkersBuildsRequiredForGuardedDeploy===false,'guarded deploy must remain independent of Workers Builds');
