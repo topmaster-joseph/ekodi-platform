@@ -33,6 +33,14 @@ test('channel admin is login-first and authenticates pre-registered account rows
   for(const marker of ['channelAccountForm','data-account-auth','registryConnectionId','EXTERNAL_ACCOUNT_CONTROL']) assert.ok(source.includes(marker),marker);
   assert.match(source,/externalAccountApi\('\/accounts'/);
   assert.match(source,/channelPreAuth\(\).*loginPanel/s);
+  assert.match(source,/ADMIN_SSO_RECOVERY_KEY='ekodi-workspace-admin-sso-recovery-v1'/);
+  assert.match(source,/ADMIN_SSO_SUPPRESS_KEY='ekodi-workspace-admin-sso-suppress-v1'/);
+  assert.match(source,/beginWorkspaceSsoRecovery/);
+  assert.match(source,/location\.replace\(workspaceAuthUrl\(\)\)/);
+  assert.match(source,/if\(beginWorkspaceSsoRecovery\(\)\)return/);
+  assert.match(source,/suppressWorkspaceSsoRecovery\(\);clearSession\(\)/);
+  assert.match(source,/clearWorkspaceSsoRecovery\(\);clearWorkspaceSsoSuppression\(\)/);
+  assert.match(source,/관리자 로그인 상태가 있으면 자동으로 복원합니다/);
   assert.doesNotMatch(source,/CHANNEL_INTENT_KEY|pendingChannelIntent|CHANNEL_TARGET_ACCOUNTS/);
   assert.match(source,/CHANNEL_OAUTH_POPUP_NAME='ekodi_channel_oauth_popup'/);
   assert.match(source,/new BroadcastChannel\(CHANNEL_OAUTH_RESULT_KEY\)/);
