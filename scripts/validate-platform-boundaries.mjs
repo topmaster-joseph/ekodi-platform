@@ -21,7 +21,7 @@ for (const [id, platform] of Object.entries(manifest.platforms || {})) {
   else {
     for (const domain of platform.domains) {
       if (String(domain).includes('/')) failures.push(`${id}: domains must contain hostnames only, got ${domain}`);
-      if (/\.ekodi\.kr$/i.test(String(domain)) && String(domain).toLowerCase() !== 'ekodi.kr') failures.push(`${id}: EKODI child host is forbidden: ${domain}`);
+      if (String(domain).toLowerCase().endsWith('.'+'ekodi.kr')) failures.push(`${id}: EKODI child host is forbidden: ${domain}`);
     }
   }
   if (typeof platform.canonicalPath !== 'string' || !platform.canonicalPath.startsWith('/')) failures.push(`${id}: canonicalPath must be an apex pathname`);
