@@ -48,10 +48,11 @@ export async function runAiEnhancedTask(options = {}) {
 
   const normalized = normalizeProviders(providers);
   if (isAiProviderDisabled(env) || normalized.length === 0) {
-    return runFallback(fallback, { taskName, reason: 'provider_disabled_or_missing', attemptedProviders: [] });
+    return runFallback(fallback, { taskName, reason: 'provider_disabled_or_missing', attemptedProviders: [], failureCodes: [] });
   }
 
   const attemptedProviders = [];
+  const failureCodes = [];
   const perProviderTimeoutMs = Math.max(1, Number(timeoutMs) || AI_RESILIENCE_POLICY.defaultTimeoutMs);
   const requestedTotalTimeoutMs = Number(totalTimeoutMs);
   const totalBudgetMs = Number.isFinite(requestedTotalTimeoutMs) && requestedTotalTimeoutMs > 0
@@ -87,11 +88,19 @@ export async function runAiEnhancedTask(options = {}) {
         notice: '',
       });
     } catch (error) {
+      failureCodes.push(Object.freeze({ provider: provider.id, code: safeFailureCode(error) }));
       recordFailure(provider.id, now());
     }
   }
 
-  return runFallback(fallback, { taskName, reason: 'provider_unavailable', attemptedProviders });
+  return runFallback(fallback, { taskName, reason: 'provider_unavailable', attemptedProviders, failureCodes });
+}
+
+function safeFailureCode(error) {
+  const raw = String(error?.code || error?.message || error || '').trim().toUpperCase();
+  if (/^[A-Z0-9_:-]{1,80}$/.test(raw)) return raw;
+  if (raw.includes('TIMEOUT')) return 'AI_PROVIDER_TIMEOUT';
+  return 'PROVIDER_ERROR';
 }
 
 function normalizeProviders(providers) {
@@ -116,6 +125,7 @@ async function runFallback(fallback, context) {
       taskName: context.taskName,
       reason: context.reason,
       attemptedProviders: Object.freeze([...context.attemptedProviders]),
+      failureCodes: Object.freeze([...(context.failureCodes || [])]),
       value,
       notice: AI_RESILIENCE_POLICY.userNotice,
     });
@@ -128,6 +138,7 @@ async function runFallback(fallback, context) {
       taskName: context.taskName,
       reason: 'assist_unavailable',
       attemptedProviders: Object.freeze([...context.attemptedProviders]),
+      failureCodes: Object.freeze([...(context.failureCodes || [])]),
       value: null,
       notice: 'AI 보조 기능 없이 핵심 기능을 계속 이용할 수 있습니다.',
     });

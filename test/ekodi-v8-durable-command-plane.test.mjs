@@ -109,14 +109,29 @@ test('live production proof fails fast unless the submitted task itself executes
   assert.doesNotMatch(workflow, /Wait for an empty command queue/);
 });
 
-test('live production proof follows successful Control API deployment and emits sanitized provider diagnostics', () => {
+test('live production proof is daily quota-gated instead of consuming AI budget after every Control deploy', () => {
   const workflow = fs.readFileSync(new URL('../.github/workflows/verify-ekodi-orchestrator-live-e2e.yml', import.meta.url), 'utf8');
-  assert.match(workflow, /workflow_run:/);
-  assert.match(workflow, /workflows: \['Deploy Control API'\]/);
-  assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
+  assert.match(workflow, /schedule:/);
+  assert.match(workflow, /cron: '15 0 \* \* \*'/);
+  assert.doesNotMatch(workflow, /workflow_run:/);
+  assert.doesNotMatch(workflow, /workflows: \['Deploy Control API'\]/);
+  assert.match(workflow, /ai_provider_daily_budget/);
+  assert.match(workflow, /proof_calls=3/);
+  assert.match(workflow, /operational_reserve=6/);
+  assert.match(workflow, /proofStatus:"quota_gated"/);
+  assert.match(workflow, /externalProofSatisfied:false/);
   assert.match(workflow, /configuredProviders/);
   assert.match(workflow, /providerAttempts/);
   assert.doesNotMatch(workflow, /OPENAI_API_KEY|ANTHROPIC_API_KEY|GEMINI_API_KEY/);
+});
+
+test('provider fallback evidence preserves sanitized runtime failure codes', () => {
+  const resilience = fs.readFileSync(new URL('../ai-resilience-runtime.js', import.meta.url), 'utf8');
+  const commandPlane = fs.readFileSync(new URL('../ekodi-command-plane.js', import.meta.url), 'utf8');
+  assert.match(resilience, /function safeFailureCode\(error\)/);
+  assert.match(resilience, /failureCodes\.push/);
+  assert.match(commandPlane, /reason\.failureCodes/);
+  assert.match(commandPlane, /failureCode \|\| reason\?\.reason/);
 });
 
 

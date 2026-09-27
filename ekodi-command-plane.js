@@ -211,10 +211,11 @@ function providerById(providers, id) {
 }
 
 function degradedValue(role, reason) {
+  const failureCode = Array.isArray(reason?.failureCodes) ? reason.failureCodes.at(-1)?.code : '';
   return Object.freeze({
     role,
     status: 'degraded',
-    reason: text(reason?.reason || reason?.code || reason || 'provider_unavailable', 160),
+    reason: text(failureCode || reason?.reason || reason?.code || reason || 'provider_unavailable', 160),
   });
 }
 

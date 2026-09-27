@@ -2,14 +2,12 @@ name: Verify EKODI Orchestrator Live Production E2E
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '15 0 * * *'
   push:
     branches: [main]
     paths:
       - '.github/workflows/verify-ekodi-orchestrator-live-e2e.yml'
-  workflow_run:
-    workflows: ['Deploy Control API']
-    types: [completed]
-    branches: [main]
 
 permissions:
   contents: read
@@ -25,16 +23,90 @@ env:
 
 jobs:
   live-orchestration-proof:
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.sha }}
+
+      - name: Check Workers AI proof budget
+        id: budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+
+          cf_query() {
+            local db="$1" sql="$2"
+            curl -fsS --retry 2 --retry-delay 1               -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$db/query"               -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN"               -H 'Content-Type: application/json'               --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')"
+          }
+
+          databases=$(curl -fsS --retry 2 --retry-delay 1             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database?per_page=100"             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          echo "$databases" | jq -e '.success == true' >/dev/null
+
+          budget_db=''
+          while IFS= read -r db; do
+            [ -n "$db" ] || continue
+            schema=$(cf_query "$db" "SELECT name FROM sqlite_master WHERE type='table' AND name='ai_provider_daily_budget'" || true)
+            if echo "$schema" | jq -e '.success == true and ([.result[]?.results[]?.name] | index("ai_provider_daily_budget") != null)' >/dev/null 2>&1; then
+              budget_db="$db"
+              break
+            fi
+          done < <(echo "$databases" | jq -r '.result[]? | (.uuid // .id // empty)')
+          test -n "$budget_db"
+
+          limit=$(sed -n 's/^EKODI_WORKERS_AI_DAILY_CALL_LIMIT = "\([0-9][0-9]*\)"/\1/p' wrangler.api.toml | head -1)
+          test -n "$limit"
+          day=$(date -u +%F)
+          usage=$(cf_query "$budget_db" "SELECT COALESCE(MAX(call_count),0) AS call_count FROM ai_provider_daily_budget WHERE provider_id='cloudflare-workers-ai' AND usage_date='$day'")
+          used=$(echo "$usage" | jq -r '.result[]?.results[0]?.call_count // 0' | head -1)
+          [[ "$used" =~ ^[0-9]+$ ]]
+          [[ "$limit" =~ ^[0-9]+$ ]]
+
+          proof_calls=3
+          operational_reserve=6
+          remaining=$(( limit - used ))
+          if (( remaining >= proof_calls + operational_reserve )); then
+            allowed=true
+          else
+            allowed=false
+          fi
+
+          echo "allowed=$allowed" >> "$GITHUB_OUTPUT"
+          echo "used=$used" >> "$GITHUB_OUTPUT"
+          echo "limit=$limit" >> "$GITHUB_OUTPUT"
+          echo "remaining=$remaining" >> "$GITHUB_OUTPUT"
+          echo "Workers AI proof budget: used=$used limit=$limit remaining=$remaining required=$proof_calls reserve=$operational_reserve allowed=$allowed" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record quota-gated proof deferral
+        if: steps.budget.outputs.allowed != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -n             --arg day "$(date -u +%F)"             --argjson used "${{ steps.budget.outputs.used }}"             --argjson limit "${{ steps.budget.outputs.limit }}"             --argjson remaining "${{ steps.budget.outputs.remaining }}"             '{
+              schemaVersion:1,
+              proof:"ekodi-orchestrator-live-production-e2e",
+              proofStatus:"quota_gated",
+              externalProofSatisfied:false,
+              productionMutationPerformed:false,
+              provider:"cloudflare-workers-ai",
+              budget:{day:$day,used:$used,limit:$limit,remaining:$remaining},
+              reason:"workers_ai_operational_reserve_protected"
+            }' > "$RUNNER_TEMP/ekodi-orchestrator-proof.json"
+          {
+            echo '## EKODI Orchestrator live production proof'
+            echo
+            echo '- Result: quota-gated; external provider proof was not claimed.'
+            echo "- Workers AI usage: ${{ steps.budget.outputs.used }}/${{ steps.budget.outputs.limit }}"
+            echo "- Remaining: ${{ steps.budget.outputs.remaining }}"
+            echo '- EKODI Core remains provider-independent; operational reserve was preserved.'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Issue short-lived genuine production admin session
+        if: steps.budget.outputs.allowed == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -88,6 +160,7 @@ jobs:
           echo 'Canonical ekodi.kr production session verified.' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Submit and execute read-only orchestration proof
+        if: steps.budget.outputs.allowed == 'true'
         id: execute
         shell: bash
         run: |
@@ -140,6 +213,7 @@ jobs:
           echo "Submitted production task: $task_id" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Poll authoritative command state to terminal
+        if: steps.budget.outputs.allowed == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -204,6 +278,7 @@ jobs:
           esac
 
       - name: Verify durable D1 run evidence
+        if: steps.budget.outputs.allowed == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -249,7 +324,7 @@ jobs:
           cat "$RUNNER_TEMP/ekodi-orchestrator-proof.json"
 
       - name: Publish proof summary
-        if: success()
+        if: steps.budget.outputs.allowed == 'true' && success()
         shell: bash
         run: |
           proof="$RUNNER_TEMP/ekodi-orchestrator-proof.json"
