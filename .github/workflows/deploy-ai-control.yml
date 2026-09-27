@@ -8,6 +8,7 @@ on:
       - 'ai-control/**'
       - 'ai-control-*.js'
       - 'ekodi-site-improvement-scheduler.js'
+      - '.github/workflows/site-improvement-cloud.yml'
       - 'ekodi-ai-provider-registry.js'
       - 'openai-provider-adapter.js'
       - 'anthropic-provider-adapter.js'
@@ -83,6 +84,7 @@ on:
       - 'ai-control/**'
       - 'ai-control-*.js'
       - 'ekodi-site-improvement-scheduler.js'
+      - '.github/workflows/site-improvement-cloud.yml'
       - 'ekodi-ai-provider-registry.js'
       - 'openai-provider-adapter.js'
       - 'anthropic-provider-adapter.js'
@@ -197,6 +199,9 @@ jobs:
           node --check openrouter-free-provider-adapter.js
           node --check ai-control-worker.js
           node --check ekodi-site-improvement-scheduler.js
+          test -f .github/workflows/site-improvement-cloud.yml
+          grep -Fq 'uses: openai/codex-action@v1' .github/workflows/site-improvement-cloud.yml
+          grep -Fq "permission-profile: ':workspace'" .github/workflows/site-improvement-cloud.yml
           node --check ai-control/app.js
           node --check scripts/ai-account-node.mjs
           node --check scripts/build-ai-control-release.mjs

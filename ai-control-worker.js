@@ -6,7 +6,7 @@ import {loadAiCollaborationPolicy} from './ai-collaboration-settings.js';
 import { LOCAL_EXECUTION_POLICY, compareLocalExecutionCandidates, localExecutionPolicySnapshot, normalizeLocalResource } from './local-execution-policy.js';
 import capabilityRegistry from './config/capability-registry.json' with { type: 'json' };
 import {AI_COMMONS_POLICY,adminIdeaView,canFinalPublish,executionCatalogSnapshot,memberIdeaView,normalizeAiIdeaInput,publicRequestView,rankCommonCapabilities,rankPublicExecutionServices,requestSimilarity,resolveExecutionServiceEntry,suggestedIdeaState} from './ai-commons.js';
-import {attachSiteImprovementTask,buildSiteImprovementPrompt,claimLowTrafficSiteImprovement,completeSiteImprovementNodeJob,failSiteImprovementClaim,failSiteImprovementTask,markSiteImprovementRunning,reconcileSiteImprovementRelease} from './ekodi-site-improvement-scheduler.js';
+import {attachSiteImprovementTask,buildSiteImprovementPrompt,claimLowTrafficSiteImprovement,completeSiteImprovementNodeJob,dispatchCloudSiteImprovement,failSiteImprovementClaim,failSiteImprovementTask,markSiteImprovementRunning,reconcileSiteImprovementRelease} from './ekodi-site-improvement-scheduler.js';
 
 const clean=value=>String(value??'').trim();
 const now=()=>new Date().toISOString();
@@ -283,12 +283,11 @@ async function runScheduledSiteImprovement(env){
   let task=null;
   try{
     const nodeProviders=await onlineNodeProviders(env);
-    const localProvider=['codex','gemini-cli'].find(provider=>nodeProviders.includes(provider));
-    if(!localProvider)throw new Error('no_online_code_node_provider');
+    const localProvider=['codex','gemini-cli'].find(provider=>nodeProviders.includes(provider))||'';
     const input=normalizeTaskInput({
       title:'EKODI daily site improvement: '+claim.site.name,
       prompt:buildSiteImprovementPrompt(claim),
-      providers:['node:'+localProvider],
+      providers:localProvider?['node:'+localProvider]:[],
       needsCodeBranch:true,
       origin:{provider:'ekodi',channel:'site-improvement-scheduler',requestId:'site-improvement:'+claim.day+':'+claim.site.id},
       governance:{
@@ -316,11 +315,18 @@ async function runScheduledSiteImprovement(env){
     task={...task,branch};
     await patchTask(env,task.id,{branch,state:'running',updated_at:now(),error:''});
     await attachSiteImprovementTask(env,claim,task);
+
+    if(!localProvider){
+      const cloud=await dispatchCloudSiteImprovement(env,claim,task);
+      await patchTask(env,task.id,{state:'running',updated_at:now(),result_summary:{executionLane:cloud.lane,fallback:true,reason:'no_online_code_node_provider'}});
+      return{started:true,taskId:task.id,branch,site:claim.site.id,provider:'cloud:github-hosted-codex',fallback:true,traffic:claim.traffic};
+    }
+
     const entry={providerId:'node:'+localProvider,role:'site-improvement-builder',routerScore:0,routerScoreBreakdown:{scheduled:true,lowTraffic:true},routerScorePolicyVersion:AI_ROUTER_SCORE_POLICY.version};
     const prompt=rolePrompt(task,entry.role,{branch,missionDecision});
     await enqueueNodeRun(env,task,entry,prompt);
     await markSiteImprovementRunning(env,task.id);
-    return{started:true,taskId:task.id,branch,site:claim.site.id,provider:entry.providerId,traffic:claim.traffic};
+    return{started:true,taskId:task.id,branch,site:claim.site.id,provider:entry.providerId,fallback:false,traffic:claim.traffic};
   }catch(error){
     await failSiteImprovementClaim(env,claim,error);
     if(task?.id)await patchTask(env,task.id,{state:'failed',updated_at:now(),error:clean(error?.message||error)});

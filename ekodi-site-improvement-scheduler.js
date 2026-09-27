@@ -1,7 +1,7 @@
 import siteLifecycleRegistry from './config/site-lifecycle-registry.json' with { type: 'json' };
 
 const HOUR_MS = 60 * 60 * 1000;
-const PROTECTED_FILE = /^(?:\.github\/|migrations\/|supabase\/|governance\/|deploy\/|wrangler\.|platform-route-registry\.js$|CONSTITUTION\.md$|AI_DEVELOPMENT_POLICY\.md$|AGENTS(?:\.override)?\.md$)|(?:^|\/)(?:auth|oauth|billing|payment|payments|finance|money|credential|credentials|secret|secrets|security)(?:[./_-]|$)/i;
+const PROTECTED_FILE = /^(?:\.github\/|migrations\/|supabase\/|governance\/|deploy\/|wrangler\.|platform-route-registry\.js$|CONSTITUTION\.md$|AI_DEVELOPMENT_POLICY\.md$|AGENTS(?:\.override)?\.md$|ai-control-(?:worker|core)\.js$|ekodi-site-improvement-scheduler\.js$|config\/(?:site-lifecycle-registry|.*policy)\.json$)|(?:^|\/)(?:auth|oauth|billing|payment|payments|finance|money|credential|credentials|secret|secrets|security)(?:[./_-]|$)/i;
 const SAFE_CONCLUSIONS = new Set(['success','neutral','skipped']);
 
 function clean(value,max=500){return String(value??'').trim().slice(0,max)}
@@ -15,7 +15,7 @@ function parseJson(value,fallback={}){try{return JSON.parse(value||JSON.stringif
 function json(value){try{return JSON.stringify(value??{})}catch{return '{}'}}
 
 export const SITE_IMPROVEMENT_POLICY = Object.freeze({
-  version:'1.0.0',
+  version:'1.1.0',
   cadence:'hourly-quiet-gate',
   dailyLimit:1,
   defaultQuietWindowMinutes:30,
@@ -27,6 +27,8 @@ export const SITE_IMPROVEMENT_POLICY = Object.freeze({
   sourceOfSites:'config/site-lifecycle-registry.json',
   canonicalHost:'ekodi.kr',
   directProductionMutation:false,
+  cloudFallbackWorkflow:'site-improvement-cloud.yml',
+  cloudFallbackLane:'github-hosted-native+codex-workspace-sandbox',
   protectedBoundaries:Object.freeze(['identity','auth','oauth','payment','billing','finance','credentials','security','dns','governance','migrations','deployment-config']),
 });
 
@@ -185,7 +187,7 @@ export async function claimLowTrafficSiteImprovement(env={},options={}){
   const sites=eligibleSiteImprovementTargets();
   if(!sites.length)return Object.freeze({claimed:false,reason:'no_eligible_sites'});
   try{
-    const unresolved=await store.prepare("SELECT * FROM ekodi_site_improvement_runs WHERE run_day<>? AND state IN ('claimed','queued','running','pr_open','deployment_verifying') ORDER BY run_day ASC LIMIT 1").bind(day).first();
+    const unresolved=await store.prepare("SELECT * FROM ekodi_site_improvement_runs WHERE run_day<>? AND state IN ('claimed','queued','running','cloud_dispatched','pr_open','deployment_verifying') ORDER BY run_day ASC LIMIT 1").bind(day).first();
     if(unresolved)return Object.freeze({claimed:false,reason:'previous_site_still_active',run:unresolved});
 
     const existing=await store.prepare('SELECT * FROM ekodi_site_improvement_runs WHERE run_day=?').bind(day).first();
@@ -243,6 +245,35 @@ export async function markSiteImprovementRunning(env,taskId){
   const store=db(env);if(!store)return;
   await store.prepare("UPDATE ekodi_site_improvement_runs SET state='running',updated_at=? WHERE task_id=? AND state='queued'")
     .bind(new Date().toISOString(),clean(taskId,180)).run();
+}
+
+export async function dispatchCloudSiteImprovement(env,claim,task={}){
+  if(!claim?.claimed||!clean(task.id,180)||!clean(task.branch,300))throw new Error('cloud_site_improvement_task_invalid');
+  const dispatchedAt=new Date().toISOString();
+  await github(env,'/actions/workflows/'+SITE_IMPROVEMENT_POLICY.cloudFallbackWorkflow+'/dispatches',{
+    method:'POST',
+    body:{
+      ref:'main',
+      inputs:{
+        task_id:clean(task.id,180),
+        branch:clean(task.branch,300),
+        site_id:clean(claim.site?.id,120),
+        site_name:clean(claim.site?.name,180),
+        canonical_url:clean(claim.site?.canonicalUrl,500),
+      },
+    },
+  });
+  await setRun(env,claim.day,{
+    state:'cloud_dispatched',
+    deployment_state:'cloud_dispatched',
+    evidence_json:{
+      executionLane:SITE_IMPROVEMENT_POLICY.cloudFallbackLane,
+      fallbackReason:'no_online_code_node_provider',
+      dispatchedAt,
+    },
+    error:'',
+  });
+  return Object.freeze({dispatched:true,workflow:SITE_IMPROVEMENT_POLICY.cloudFallbackWorkflow,lane:SITE_IMPROVEMENT_POLICY.cloudFallbackLane,dispatchedAt});
 }
 
 export async function failSiteImprovementTask(env,taskId,error){
@@ -371,16 +402,82 @@ export async function verifySiteProductionLinks(canonicalUrl,options={}){
   }
 }
 
+async function failCloudDispatchedRun(env,row,reason){
+  const store=db(env);if(!store)return Object.freeze({handled:true,state:'failed',reason});
+  const stamp=new Date().toISOString();
+  const statements=[
+    store.prepare("UPDATE ekodi_site_improvement_runs SET state='failed',task_id='',deployment_state='cloud_failed',error=?,updated_at=? WHERE run_day=?")
+      .bind(clean(reason,500),stamp,row.run_day),
+  ];
+  if(row.task_id)statements.push(
+    store.prepare("UPDATE ai_control_tasks SET state='failed',approval_state='system_retryable',error=?,updated_at=? WHERE id=? AND created_by='ekodi-site-improvement-scheduler'")
+      .bind(clean(reason,500),stamp,row.task_id)
+  );
+  await store.batch(statements);
+  return Object.freeze({handled:true,state:'failed',reason:clean(reason,300)});
+}
+
+async function reconcileCloudDispatched(env,row){
+  const owner=repository(env).split('/')[0];
+  const head=encodeURIComponent(owner+':'+clean(row.branch,300));
+  const pulls=await github(env,'/pulls?state=all&head='+head+'&base=main&per_page=10');
+  const prs=Array.isArray(pulls)?pulls:[];
+  const pr=prs.find(item=>item?.merged_at)||prs.find(item=>item?.state==='open')||null;
+  if(pr){
+    if(pr.merged_at){
+      await setRun(env,row.run_day,{state:'deployment_verifying',pull_request_number:Number(pr.number||0)||null,head_sha:clean(pr?.head?.sha,120),merge_sha:clean(pr.merge_commit_sha,120),deployment_state:'waiting_for_main_release',error:''});
+      return Object.freeze({handled:true,state:'deployment_verifying',reason:'cloud_pr_already_merged'});
+    }
+    await setRun(env,row.run_day,{state:'pr_open',pull_request_number:Number(pr.number||0)||null,head_sha:clean(pr?.head?.sha,120),deployment_state:'cloud_pr_open',error:''});
+    return Object.freeze({handled:true,state:'pr_open',pullRequestNumber:Number(pr.number||0)});
+  }
+
+  const workflowRuns=await github(env,'/actions/workflows/'+SITE_IMPROVEMENT_POLICY.cloudFallbackWorkflow+'/runs?event=workflow_dispatch&per_page=50');
+  const rows=Array.isArray(workflowRuns?.workflow_runs)?workflowRuns.workflow_runs:[];
+  const taskId=clean(row.task_id,180);
+  const run=rows.find(item=>clean(item?.display_title,300).includes(taskId));
+  if(!run){
+    const age=Date.now()-Date.parse(row.started_at||row.updated_at||0);
+    if(Number.isFinite(age)&&age>30*60*1000)return failCloudDispatchedRun(env,row,'cloud_fallback_dispatch_not_observed');
+    await setRun(env,row.run_day,{deployment_state:'cloud_dispatch_waiting'});
+    return Object.freeze({handled:true,state:'cloud_dispatched',reason:'workflow_run_pending'});
+  }
+  if(run.status!=='completed'){
+    await setRun(env,row.run_day,{deployment_state:'cloud_'+clean(run.status,60)});
+    return Object.freeze({handled:true,state:'cloud_dispatched',reason:'workflow_'+clean(run.status,60)});
+  }
+  const conclusion=clean(run.conclusion,60).toLowerCase();
+  if(!SAFE_CONCLUSIONS.has(conclusion))return failCloudDispatchedRun(env,row,'cloud_fallback_'+(conclusion||'failed'));
+
+  let compare;
+  try{compare=await github(env,'/compare/'+encodeURIComponent('main...'+row.branch));}
+  catch(error){return failCloudDispatchedRun(env,row,'cloud_branch_compare_failed:'+clean(error?.message||error,240));}
+  const scope=reviewChangedFiles(compare?.files||[]);
+  if(!scope.safe){
+    await setRun(env,row.run_day,{state:'blocked',deployment_state:'cloud_scope_blocked',evidence_json:{...parseJson(row.evidence_json,{}),scope},error:scope.reasons.join(',')});
+    return Object.freeze({handled:true,state:'blocked',reason:'scope_guard_failed',scope});
+  }
+  const ahead=Number(compare?.ahead_by||0);
+  if(ahead===0){
+    await setRun(env,row.run_day,{deployment_state:'cloud_no_change',evidence_json:{...parseJson(row.evidence_json,{}),scope,noChange:true,cloudWorkflowConclusion:conclusion}});
+    await advanceCursor(env,row,'no_change');
+    return Object.freeze({handled:true,state:'completed',reason:'cloud_no_change',scope});
+  }
+  await setRun(env,row.run_day,{deployment_state:'cloud_completed_waiting_pr',head_sha:clean(compare?.head_commit?.sha,120),evidence_json:{...parseJson(row.evidence_json,{}),scope,cloudWorkflowConclusion:conclusion}});
+  return Object.freeze({handled:true,state:'cloud_dispatched',reason:'cloud_completed_waiting_pr',scope});
+}
+
 export async function reconcileSiteImprovementRelease(env={}){
   const store=db(env);if(!store)return Object.freeze({handled:false,reason:'state_store_unavailable'});
   let row;
   try{
-    row=await store.prepare("SELECT * FROM ekodi_site_improvement_runs WHERE state IN ('pr_open','deployment_verifying') ORDER BY run_day ASC LIMIT 1").first();
+    row=await store.prepare("SELECT * FROM ekodi_site_improvement_runs WHERE state IN ('cloud_dispatched','pr_open','deployment_verifying') ORDER BY run_day ASC LIMIT 1").first();
   }catch(error){
     return Object.freeze({handled:false,reason:'site_improvement_schema_unavailable',error:clean(error?.message||error,240)});
   }
   if(!row)return Object.freeze({handled:false,reason:'no_release_to_reconcile'});
   try{
+    if(row.state==='cloud_dispatched')return reconcileCloudDispatched(env,row);
     if(row.state==='pr_open'){
       const pr=await github(env,'/pulls/'+Number(row.pull_request_number));
       if(pr.merged_at){

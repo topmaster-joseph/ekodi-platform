@@ -80,3 +80,28 @@ test('low traffic decision uses recent active sessions and keeps cumulative visi
   assert.match(source,/const deploymentRows=rows\.filter/);
   assert.match(source,/platform-route-registry/);
 });
+
+test('cloud fallback is EKODI-owned, workspace-sandboxed, and fail-closed',async()=>{
+  const [scheduler,worker,workflow]=await Promise.all([
+    readFile(new URL('../ekodi-site-improvement-scheduler.js',import.meta.url),'utf8'),
+    readFile(new URL('../ai-control-worker.js',import.meta.url),'utf8'),
+    readFile(new URL('../.github/workflows/site-improvement-cloud.yml',import.meta.url),'utf8'),
+  ]);
+  assert.match(scheduler,/cloudFallbackWorkflow:'site-improvement-cloud\.yml'/);
+  assert.match(scheduler,/state:'cloud_dispatched'/);
+  assert.match(scheduler,/reconcileCloudDispatched/);
+  assert.match(scheduler,/github-hosted-native\+codex-workspace-sandbox/);
+  assert.match(scheduler,/ai-control-\(\?:worker\|core\)/);
+  assert.match(worker,/dispatchCloudSiteImprovement/);
+  assert.match(worker,/provider:'cloud:github-hosted-codex'/);
+  assert.doesNotMatch(worker,/no_online_code_node_provider'\);/);
+  assert.match(workflow,/uses: openai\/codex-action@v1/);
+  assert.match(workflow,/permission-profile: ':workspace'/);
+  assert.match(workflow,/protected boundary changed/);
+  assert.match(workflow,/files\.length>25/);
+  assert.match(workflow,/changedLines>1600/);
+  assert.match(workflow,/No safe source change was necessary/);
+  assert.match(workflow,/gh pr create --base main/);
+  assert.doesNotMatch(workflow,/wrangler deploy|git push origin main|gh pr merge/);
+});
+
