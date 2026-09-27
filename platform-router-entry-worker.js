@@ -37,8 +37,8 @@ import { realtimeTenantAdminFromPath, realtimeTenantFromPath } from './realtime-
 import { managementCameraPage, tenantLivePage } from './tenant-live-page.js';
 import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from './tenant-live-admin-page.js';
 import { liveServiceAdminPage, liveServiceMaintenancePage, liveServicePage } from './live-service-page.js';
-import { localRegionFromPath } from './local-region-registry.js';
-import { localRegionPublicPage, localRegionAdminPage, localRegionAccessAdminPage } from './local-region-page.js';
+import { localRegionFromPath, localRegionModuleFromRoute } from './local-region-registry.js';
+import { localRegionPublicPage, localRegionAdminPage, localRegionAccessAdminPage, localRegionModulePublicPage, localRegionModuleAdminPage, localRegionNotFoundPage } from './local-region-page.js';
 import { localRegionForestPublicPage, localRegionForestAdminPage } from './local-region-forest-page.js';
 import { localRegionForestPublicScript } from './local-region-forest-public.js';
 import { localRegionForestAdminScript } from './local-region-forest-admin.js';
@@ -378,11 +378,17 @@ async function routePlatform(request,env,ctx){
           const accessAdmin=localRegionRoute.admin&&String(localRegionRoute.segments?.[1]||'').toLowerCase()==='access';
           const forestPublic=!localRegionRoute.admin&&String(localRegionRoute.segments?.[0]||'').toLowerCase()==='forest';
           const forestAdmin=localRegionRoute.admin&&String(localRegionRoute.segments?.[1]||'').toLowerCase()==='forest';
+          const regionalModule=localRegionModuleFromRoute(localRegionRoute);
+          const rootRoute=localRegionRoute.admin?localRegionRoute.segments.length===1:localRegionRoute.segments.length===0;
+          const exactModuleRoute=Boolean(regionalModule&&(localRegionRoute.admin?localRegionRoute.segments.length===2:localRegionRoute.segments.length===1));
           const page=commerceProgram
             ?(localRegionRoute.admin?regionalCommerceProgramAdminPage(localRegionRoute.region,commerceProgram):regionalCommerceProgramPublicPage(localRegionRoute.region,commerceProgram))
             :(forestPublic?localRegionForestPublicPage(localRegionRoute.region,localRegionRoute.segments.slice(1))
               :(forestAdmin?localRegionForestAdminPage(localRegionRoute.region)
-                :(accessAdmin?localRegionAccessAdminPage(localRegionRoute.region):(localRegionRoute.admin?localRegionAdminPage(localRegionRoute.region):localRegionPublicPage(localRegionRoute.region)))));
+                :(accessAdmin?localRegionAccessAdminPage(localRegionRoute.region)
+                  :(exactModuleRoute?(localRegionRoute.admin?localRegionModuleAdminPage(localRegionRoute.region,regionalModule):localRegionModulePublicPage(localRegionRoute.region,regionalModule))
+                    :(rootRoute?(localRegionRoute.admin?localRegionAdminPage(localRegionRoute.region):localRegionPublicPage(localRegionRoute.region))
+                      :localRegionNotFoundPage(localRegionRoute.region,{admin:localRegionRoute.admin,path:url.pathname}))))));
           const surface=localRegionRoute.admin?'admin':'workspace';
           const response=injectEkodiShell(page,'space',surface,{contextKind:'workspace'});
           return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;

@@ -51,6 +51,10 @@ An organization may publish selected projections into the regional platform. A p
 
 The connected mode must not grant regional operators implicit access to private organization records.
 
+## Enforced Cheonggye service contract
+
+Cheonggye subservices are governed by the executable contract in `local-region-registry.js` and the deployment/test requirements documented in [cheonggye-execution-rules.md](./cheonggye-execution-rules.md). A registered module must have canonical public/admin paths, an explicit operator, data ownership and source policy; unknown subservice routes fail closed instead of falling back to the regional home.
+
 ## Cheonggye initial state
 
 청계면상인회 is the initial delegated operator for the common Cheonggye services. This is an operating assignment only. The regional platform remains independently identifiable as `local:cheonggye`.

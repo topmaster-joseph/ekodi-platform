@@ -2097,6 +2097,300 @@
           "x-ekodi-operating-space-label: v1"
         ],
         "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/directory",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "기관·단체·지역안내",
+          "운영 기준",
+          "청계면상인회"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-module-public",
+          "x-ekodi-shell: v2",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/admin/directory",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "기관·단체·지역안내 운영관리",
+          "강제 실행 계약",
+          "청계면상인회",
+          "local-region-admin-auth.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-module-admin",
+          "x-ekodi-shell: v2",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/commerce",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "상점·상권",
+          "운영 기준",
+          "청계면상인회"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-module-public",
+          "x-ekodi-shell: v2",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/admin/commerce",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "상점·상권 운영관리",
+          "강제 실행 계약",
+          "청계면상인회",
+          "local-region-admin-auth.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-module-admin",
+          "x-ekodi-shell: v2",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/events",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "지역행사·프로그램",
+          "운영 기준",
+          "청계면상인회"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-module-public",
+          "x-ekodi-shell: v2",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/admin/events",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "지역행사·프로그램 운영관리",
+          "강제 실행 계약",
+          "청계면상인회",
+          "local-region-admin-auth.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-module-admin",
+          "x-ekodi-shell: v2",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/jobs",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "구인구직",
+          "운영 기준",
+          "청계면상인회"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-module-public",
+          "x-ekodi-shell: v2",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/admin/jobs",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "구인구직 운영관리",
+          "강제 실행 계약",
+          "청계면상인회",
+          "local-region-admin-auth.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-module-admin",
+          "x-ekodi-shell: v2",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/sharing",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "나눔마켓",
+          "운영 기준",
+          "청계면상인회"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-module-public",
+          "x-ekodi-shell: v2",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/admin/sharing",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "나눔마켓 운영관리",
+          "강제 실행 계약",
+          "청계면상인회",
+          "local-region-admin-auth.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-module-admin",
+          "x-ekodi-shell: v2",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/broadcast",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "지역방송·라이브",
+          "운영 기준",
+          "청계면상인회"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-module-public",
+          "x-ekodi-shell: v2",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/admin/broadcast",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "지역방송·라이브 운영관리",
+          "강제 실행 계약",
+          "청계면상인회",
+          "local-region-admin-auth.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-module-admin",
+          "x-ekodi-shell: v2",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/proposals",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "주민참여·제안",
+          "운영 기준",
+          "청계면상인회"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-module-public",
+          "x-ekodi-shell: v2",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/admin/proposals",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "주민참여·제안 운영관리",
+          "강제 실행 계약",
+          "청계면상인회",
+          "local-region-admin-auth.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-module-admin",
+          "x-ekodi-shell: v2",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/forest",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "청계면 국민의숲",
+          "승달산",
+          "목포대"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-forest-public",
+          "x-ekodi-shell: v2",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/admin/forest",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "청계면 국민의숲 운영관리",
+          "local-region-admin-auth.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-forest-admin",
+          "x-ekodi-shell: v2",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
       }
     ]
   }
