@@ -172,7 +172,7 @@ h1{margin:0 0 4px;font-size:24px;letter-spacing:-.04em;line-height:1.18}p{margin
 .actions{display:grid;gap:5px}.actions a{display:flex;align-items:center;justify-content:space-between;gap:7px;padding:8px 9px;border:1px solid #e0e6df;border-radius:7px;background:#fff;text-decoration:none;color:#405047;font-size:10px;font-weight:780}
 .actions a:hover{background:#eff6f0;color:#17492b;border-color:#cddfd1}.actions a:first-child{background:#1f5b36;color:#fff;border-color:#1f5b36}
 .help{margin-top:9px;padding:10px 11px;background:#fff;border:1px solid var(--line);border-radius:10px;color:#768279;font-size:9px;line-height:1.5}
-.delivery-overview{margin-bottom:14px;padding:14px 15px;border:1px solid #d7e3d8;border-radius:13px;background:#f8fbf8}.delivery-overview strong{display:block;font-size:13px;margin-bottom:5px}.delivery-overview p{font-size:11px}.delivery-platforms{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.delivery-platform{display:inline-flex;align-items:center;padding:6px 8px;border:1px solid #dfe7df;border-radius:999px;background:#fff;color:#4b5b50;font-size:9.5px;font-weight:800}.delivery-card-note{margin:-3px 0 10px;padding:8px 9px;border-radius:8px;background:#f5f8f5;color:#758078;font-size:9.5px;line-height:1.5}.delivery-card .actions{grid-template-columns:repeat(2,minmax(0,1fr))}.delivery-card .actions a:first-child{grid-column:1/-1}.delivery-card .actions a:nth-child(2){background:#eef6f0;color:#17492b;border-color:#cddfd1}.delivery-safety{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}.delivery-safety div{padding:10px;border:1px solid #e1e7df;border-radius:9px;background:#fff}.delivery-safety b{display:block;font-size:10px;margin-bottom:3px}.delivery-safety span{display:block;color:#7a867e;font-size:9px;line-height:1.45}.delivery-live-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding-top:11px;border-top:1px solid #e1e8e1}.delivery-live-toolbar span{font-size:10px;color:#607068;font-weight:750}.delivery-live-toolbar button,.delivery-live-toolbar a{border:1px solid #cbd9cd;border-radius:8px;background:#fff;color:#285239;padding:7px 9px;font-size:10px;font-weight:800;text-decoration:none;cursor:pointer}.delivery-summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-top:10px}.delivery-summary-grid[hidden]{display:none}.delivery-summary-grid div{padding:9px 10px;border:1px solid #e0e7df;border-radius:9px;background:#fff}.delivery-summary-grid small{display:block;color:#7d8880;font-size:8.5px}.delivery-summary-grid b{display:block;margin-top:3px;color:#20382a;font-size:13px}.delivery-live{margin:0 0 11px;padding:10px;border:1px solid #e0e7df;border-radius:9px;background:#fbfcfb}.delivery-live-state{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}.delivery-live-state b{font-size:10px}.delivery-live-state span{font-size:8.5px;color:#768178}.delivery-live-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.delivery-live-metrics div{padding:7px;border-radius:7px;background:#f4f7f4}.delivery-live-metrics small{display:block;color:#7d8880;font-size:8px}.delivery-live-metrics strong{display:block;margin-top:2px;font-size:11px;color:#243a2b}.delivery-live-error{color:#9a3f34;font-size:9.5px;line-height:1.5}.delivery-live-muted{color:#7a867e;font-size:9.5px;line-height:1.5}.delivery-live-login{display:inline-flex;margin-top:7px;padding:7px 9px;border:1px solid #cbd9cd;border-radius:8px;background:#fff;color:#285239;text-decoration:none;font-size:9.5px;font-weight:800}
+.delivery-overview{margin-bottom:14px;padding:14px 15px;border:1px solid #d7e3d8;border-radius:13px;background:#f8fbf8}.delivery-overview strong{display:block;font-size:13px;margin-bottom:5px}.delivery-overview p{font-size:11px}.delivery-platforms{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.delivery-platform{display:inline-flex;align-items:center;padding:6px 8px;border:1px solid #dfe7df;border-radius:999px;background:#fff;color:#4b5b50;font-size:9.5px;font-weight:800}.delivery-card-note{margin:-3px 0 10px;padding:8px 9px;border-radius:8px;background:#f5f8f5;color:#758078;font-size:9.5px;line-height:1.5}.delivery-card .actions{grid-template-columns:repeat(2,minmax(0,1fr))}.delivery-card .actions a:first-child{grid-column:1/-1}.delivery-card .actions a:nth-child(2){background:#eef6f0;color:#17492b;border-color:#cddfd1}.delivery-safety{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}.delivery-safety div{padding:10px;border:1px solid #e1e7df;border-radius:9px;background:#fff}.delivery-safety b{display:block;font-size:10px;margin-bottom:3px}.delivery-safety span{display:block;color:#7a867e;font-size:9px;line-height:1.45}.delivery-live-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding-top:11px;border-top:1px solid #e1e8e1}.delivery-live-toolbar span{font-size:10px;color:#607068;font-weight:750}.delivery-live-toolbar-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.delivery-live-toolbar button,.delivery-live-toolbar a{border:1px solid #cbd9cd;border-radius:8px;background:#fff;color:#285239;padding:7px 9px;font-size:10px;font-weight:800;text-decoration:none;cursor:pointer}.delivery-live-toolbar button[aria-pressed="true"]{background:#174e2d;color:#fff;border-color:#174e2d}.delivery-summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-top:10px}.delivery-summary-grid[hidden]{display:none}.delivery-summary-grid div{padding:9px 10px;border:1px solid #e0e7df;border-radius:9px;background:#fff}.delivery-summary-grid small{display:block;color:#7d8880;font-size:8.5px}.delivery-summary-grid b{display:block;margin-top:3px;color:#20382a;font-size:13px}.delivery-live{margin:0 0 11px;padding:10px;border:1px solid #e0e7df;border-radius:9px;background:#fbfcfb}.delivery-live-state{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}.delivery-live-state b{font-size:10px}.delivery-live-state span{font-size:8.5px;color:#768178}.delivery-live-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.delivery-live-metrics a{display:block;padding:7px;border-radius:7px;background:#f4f7f4;color:inherit;text-decoration:none;border:1px solid transparent}.delivery-live-metrics a:hover,.delivery-live-metrics a:focus-visible{background:#edf5ef;border-color:#c9ddce;outline:none}.delivery-live-metrics a.is-issue{background:#fff7f4;border-color:#efd2c8}.delivery-live-metrics small{display:block;color:#7d8880;font-size:8px}.delivery-live-metrics strong{display:block;margin-top:2px;font-size:11px;color:#243a2b}.delivery-card[data-issues-only="hidden"]{display:none}.delivery-live-error{color:#9a3f34;font-size:9.5px;line-height:1.5}.delivery-live-muted{color:#7a867e;font-size:9.5px;line-height:1.5}.delivery-live-login{display:inline-flex;margin-top:7px;padding:7px 9px;border:1px solid #cbd9cd;border-radius:8px;background:#fff;color:#285239;text-decoration:none;font-size:9.5px;font-weight:800}
 @media(max-width:900px){.grid{grid-template-columns:1fr}.head{display:block}.badge{display:inline-block;margin-top:10px}.delivery-safety{grid-template-columns:1fr}.delivery-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:390px){body{padding:16px}h1{font-size:24px}}`;
 
@@ -203,7 +203,7 @@ function deliveryPanelCard(store,view){
 }
 
 function deliveryOverview(){
-  return `<section class="delivery-overview" data-cmpmyi-delivery-control="brand-handoff"><strong>3개 브랜드 · 7개 배달/주문 채널을 한곳에서 관리</strong><p>여기서는 브랜드와 업무를 빠르게 선택합니다. 가격·품절·게시·주문 변경은 선택한 브랜드 관리자에서 권한을 다시 확인하고 사람 승인과 공식 Adapter를 거쳐 실행합니다.</p><div class="delivery-platforms">${DELIVERY_PLATFORMS.map(label=>`<span class="delivery-platform">${label}</span>`).join('')}</div><div class="delivery-safety"><div><b>1 · 상태 확인</b><span>브랜드별 연결·동기화·가격차이·주문·정산·리뷰를 확인합니다.</span></div><div><b>2 · 변경 선택</b><span>메뉴·가격·품절 등 변경할 업무와 배달앱을 선택합니다.</span></div><div><b>3 · 승인 후 실행</b><span>브랜드 권한과 Human Gate를 확인한 뒤 연결된 공식 Adapter만 실행합니다.</span></div></div><div class="delivery-live-toolbar"><span id="deliveryLiveState">실데이터 권한 확인 중</span><button id="deliveryRefresh" type="button">실데이터 새로고침</button></div><div class="delivery-summary-grid" id="deliveryPortfolioSummary" hidden aria-label="배달플랫폼 통합 실데이터 요약"></div></section>`;
+  return `<section class="delivery-overview" data-cmpmyi-delivery-control="brand-handoff"><strong>3개 브랜드 · 7개 배달/주문 채널을 한곳에서 관리</strong><p>여기서는 브랜드와 업무를 빠르게 선택합니다. 가격·품절·게시·주문 변경은 선택한 브랜드 관리자에서 권한을 다시 확인하고 사람 승인과 공식 Adapter를 거쳐 실행합니다.</p><div class="delivery-platforms">${DELIVERY_PLATFORMS.map(label=>`<span class="delivery-platform">${label}</span>`).join('')}</div><div class="delivery-safety"><div><b>1 · 상태 확인</b><span>브랜드별 연결·동기화·가격차이·주문·정산·리뷰를 확인합니다.</span></div><div><b>2 · 변경 선택</b><span>메뉴·가격·품절 등 변경할 업무와 배달앱을 선택합니다.</span></div><div><b>3 · 승인 후 실행</b><span>브랜드 권한과 Human Gate를 확인한 뒤 연결된 공식 Adapter만 실행합니다.</span></div></div><div class="delivery-live-toolbar"><span id="deliveryLiveState">실데이터 권한 확인 중</span><div class="delivery-live-toolbar-actions"><button id="deliveryIssuesOnly" type="button" aria-pressed="false">이상 브랜드만 보기</button><button id="deliveryRefresh" type="button">실데이터 새로고침</button></div></div><div class="delivery-summary-grid" id="deliveryPortfolioSummary" hidden aria-label="배달플랫폼 통합 실데이터 요약"></div></section>`;
 }
 
 
@@ -218,6 +218,8 @@ function portfolioPanelClient(){
   const stateEl=document.getElementById('deliveryLiveState');
   const summaryEl=document.getElementById('deliveryPortfolioSummary');
   const refresh=document.getElementById('deliveryRefresh');
+  const issuesOnlyButton=document.getElementById('deliveryIssuesOnly');
+  let issuesOnly=false;
   const won=value=>new Intl.NumberFormat('ko-KR',{style:'currency',currency:'KRW',maximumFractionDigits:0}).format(Number(value||0));
   const num=value=>new Intl.NumberFormat('ko-KR').format(Number(value||0));
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -297,20 +299,34 @@ function portfolioPanelClient(){
       return{ok:false,error};
     }
   }
+  function storeAdminHref(store,section){return '/'+store.slug+'/admin/'+section+'?embed=cmpmyi'}
+  function issueCount(d){return Number(d.syncIssues||0)+Number(d.priceDiff||0)+Number(d.availabilityDiff||0)+Number(d.pendingSettlements||0)+Number(d.unansweredReviews||0)}
+  function applyIssuesFilter(){
+    document.querySelectorAll('[data-delivery-brand]').forEach(card=>{
+      const count=Number(card.dataset.issueCount||-1);
+      card.dataset.issuesOnly=issuesOnly&&count===0?'hidden':'visible';
+    });
+    if(issuesOnlyButton){issuesOnlyButton.setAttribute('aria-pressed',String(issuesOnly));issuesOnlyButton.textContent=issuesOnly?'전체 브랜드 보기':'이상 브랜드만 보기'}
+  }
+  function metricLink(store,section,label,value,isIssue=false){
+    return '<a class="'+(isIssue?'is-issue':'')+'" href="'+storeAdminHref(store,section)+'"><small>'+esc(label)+'</small><strong>'+esc(value)+'</strong></a>';
+  }
   function renderStore(store,result){
     const host=document.querySelector('[data-delivery-live="'+store.slug+'"]');if(!host)return;
-    if(result.forbidden){host.innerHTML='<div class="delivery-live-muted">이 브랜드의 배달 운영 데이터를 볼 권한이 없습니다.</div>';return}
-    if(!result.ok){host.innerHTML='<div class="delivery-live-error">실데이터를 불러오지 못했습니다. 잠시 후 다시 확인해 주세요.</div>';return}
-    const d=result.data;
-    host.innerHTML='<div class="delivery-live-state"><b>실데이터 · 읽기 전용</b><span>'+esc(d.lastSync)+'</span></div><div class="delivery-live-metrics">'+
-      '<div><small>플랫폼 연결</small><strong>'+d.connected+' / 7</strong></div>'+
-      '<div><small>동기화 주의</small><strong>'+num(d.syncIssues)+'</strong></div>'+
-      '<div><small>가격차이</small><strong>'+num(d.priceDiff)+'</strong></div>'+
-      '<div><small>품절차이</small><strong>'+num(d.availabilityDiff)+'</strong></div>'+
-      '<div><small>30일 주문</small><strong>'+num(d.orders)+'</strong></div>'+
-      '<div><small>30일 매출</small><strong>'+esc(won(d.gross))+'</strong></div>'+
-      '<div><small>정산대기</small><strong>'+num(d.pendingSettlements)+'</strong></div>'+
-      '<div><small>미응답 리뷰</small><strong>'+num(d.unansweredReviews)+'</strong></div></div>';
+    const card=host.closest('[data-delivery-brand]');
+    if(result.forbidden){if(card)card.dataset.issueCount='-1';host.innerHTML='<div class="delivery-live-muted">이 브랜드의 배달 운영 데이터를 볼 권한이 없습니다.</div>';applyIssuesFilter();return}
+    if(!result.ok){if(card)card.dataset.issueCount='-1';host.innerHTML='<div class="delivery-live-error">실데이터를 불러오지 못했습니다. 잠시 후 다시 확인해 주세요.</div>';applyIssuesFilter();return}
+    const d=result.data,issues=issueCount(d);if(card)card.dataset.issueCount=String(issues);
+    host.innerHTML='<div class="delivery-live-state"><b>실데이터 · 읽기 전용'+(issues?(' · 이상 '+num(issues)+'건'):' · 이상 없음')+'</b><span>'+esc(d.lastSync)+'</span></div><div class="delivery-live-metrics">'+
+      metricLink(store,'connections','플랫폼 연결',d.connected+' / 7',false)+
+      metricLink(store,'connections','동기화 주의',num(d.syncIssues),d.syncIssues>0)+
+      metricLink(store,'menu','가격차이',num(d.priceDiff),d.priceDiff>0)+
+      metricLink(store,'inventory','품절차이',num(d.availabilityDiff),d.availabilityDiff>0)+
+      metricLink(store,'orders','30일 주문',num(d.orders),false)+
+      metricLink(store,'sales','30일 매출',won(d.gross),false)+
+      metricLink(store,'finance','정산대기',num(d.pendingSettlements),d.pendingSettlements>0)+
+      metricLink(store,'reviews','미응답 리뷰',num(d.unansweredReviews),d.unansweredReviews>0)+'</div>';
+    applyIssuesFilter();
   }
   function renderSummary(results){
     const rows=results.filter(row=>row.ok).map(row=>row.data);
@@ -350,6 +366,7 @@ function portfolioPanelClient(){
     }finally{loading=false;if(refresh)refresh.disabled=false}
   }
   if(refresh)refresh.addEventListener('click',load);
+  if(issuesOnlyButton)issuesOnlyButton.addEventListener('click',()=>{issuesOnly=!issuesOnly;applyIssuesFilter()});
   load();
   setInterval(()=>{if(document.visibilityState==='visible')load()},300000);
 }
