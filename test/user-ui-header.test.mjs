@@ -114,6 +114,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(header,/function shouldShowOperatingSpaceLabel\(\)/);
   assert.match(header,/surface\(\)==='workspace'&&isIndividualSite\(\)/);
   assert.match(header,/ensureOperatingSpaceLabel/);
+  assert.match(header,/const existing=header\.querySelector/);
   assert.match(header,/badge\.textContent='운영공간'/);
   assert.match(header,/ensureOperatingSpaceLabel\(header\)/);
   assert.match(header,/ensureOperatingSpaceLabel\(header,siteNode\|\|operatingSpaceTarget\(header\)\)/);
