@@ -113,7 +113,7 @@ export function formatProofSummary(proof){
     '### EKODI Free-Tier Resource Governor proof',
     `- observed_at: ${proof.latestObservedAt||'unknown'}`,
     `- automatic_paid_upgrade: ${proof.automaticPaidUpgrade}`,
-    `- cloudflare: state=${proof.cloudflare.state}, telemetry=${proof.cloudflare.telemetryStatus}, ${proof.cloudflare.workersRequests.metric}=${proof.cloudflare.workersRequests.observedValue}/${proof.cloudflare.workersRequests.freeLimit} (${proof.cloudflare.workersRequests.usagePercent}%), d1_metrics=${proof.cloudflare.d1Metrics.length}, action=${proof.cloudflare.action}`,
+    `- cloudflare: state=${proof.cloudflare.state}, telemetry=${proof.cloudflare.telemetryStatus}, workers_requests=${proof.cloudflare.workersRequests.observedValue}/${proof.cloudflare.workersRequests.freeLimit} (${proof.cloudflare.workersRequests.usagePercent}%), workers_metric=${proof.cloudflare.workersRequests.metric}, d1_metrics=${proof.cloudflare.d1Metrics.length}, action=${proof.cloudflare.action}`,
     `- supabase: state=${proof.supabase.state}, telemetry=${proof.supabase.telemetryStatus}, active_projects=${proof.supabase.activeProjects.observedValue}/${proof.supabase.activeProjects.freeLimit}, provisioning_allowed=${proof.supabase.provisioningAllowed}`,
     `- supabase_db: ${db}`,
     `- github: state=${proof.github.state}, telemetry=${proof.github.telemetryStatus}, cache=${cache}`,
