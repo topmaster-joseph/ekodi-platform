@@ -5,7 +5,7 @@ import {AI_ROUTER_SCORE_POLICY} from './ai-router-score.js';
 import {loadAiCollaborationPolicy} from './ai-collaboration-settings.js';
 import { LOCAL_EXECUTION_POLICY, compareLocalExecutionCandidates, localExecutionPolicySnapshot, normalizeLocalResource } from './local-execution-policy.js';
 import capabilityRegistry from './config/capability-registry.json' with { type: 'json' };
-import {AI_COMMONS_POLICY,adminIdeaView,canFinalPublish,executionCatalogSnapshot,memberIdeaView,normalizeAiIdeaInput,publicRequestView,rankCommonCapabilities,rankPublicExecutionServices,requestSimilarity,resolveExecutionServiceEntry,suggestedIdeaState} from './ai-commons.js';
+import {AI_COMMONS_POLICY,adminIdeaView,canFinalPublish,executionCatalogSnapshot,memberIdeaView,normalizeAiIdeaInput,publicRequestView,rankCommonCapabilities,rankPublicExecutionServices,requestSimilarity,resolveExecutionServiceEntry,suggestedIdeaState} from './ai-commons.js';\nimport {attachSiteImprovementTask,buildSiteImprovementPrompt,claimLowTrafficSiteImprovement,completeSiteImprovementNodeJob,failSiteImprovementClaim,failSiteImprovementTask,markSiteImprovementRunning,reconcileSiteImprovementRelease} from './ekodi-site-improvement-scheduler.js';
 
 const clean=value=>String(value??'').trim();
 const now=()=>new Date().toISOString();
@@ -252,7 +252,79 @@ async function leaseNodeJob(request,env,node){
 }
 async function completeNodeJob(request,env,node,jobId){
   const input=await body(request)||{};const job=await env.DB.prepare('SELECT * FROM ai_control_jobs WHERE id=?').bind(jobId).first();if(!job)return json({error:'job_not_found'},404);if(job.lease_owner!==node.id)return json({error:'job_lease_owner_mismatch'},409);const ok=input.ok===true;const stamp=now();const output=clean(input.output).slice(0,250000);const error=clean(input.error).slice(0,8000);
-  await env.DB.prepare('UPDATE ai_control_jobs SET state=?,output=?,error=?,updated_at=?,finished_at=? WHERE id=?').bind(ok?'completed':'failed',output,error,stamp,stamp,jobId).run();await finishRun(env,{id:job.run_id,state:ok?'completed':'failed',output,error,finishedAt:stamp});await finalizeTask(env,job.task_id);return json({ok:true});
+  await env.DB.prepare('UPDATE ai_control_jobs SET state=?,output=?,error=?,updated_at=?,finished_at=? WHERE id=?').bind(ok?'completed':'failed',output,error,stamp,stamp,jobId).run();
+  await finishRun(env,{id:job.run_id,state:ok?'completed':'failed',output,error,finishedAt:stamp});
+  const task=await getTask(env,job.task_id);
+  if(task?.createdBy==='ekodi-site-improvement-scheduler'){
+    if(!ok){
+      await failSiteImprovementTask(env,job.task_id,error||'site_improvement_node_failed');
+      await patchTask(env,job.task_id,{state:'failed',updated_at:stamp,error:error||'site_improvement_node_failed'});
+      return json({ok:true,siteImprovement:{state:'failed'}});
+    }
+    const review=await completeSiteImprovementNodeJob(env,task,output);
+    if(review.handled){
+      const state=review.state==='no_change'?'completed':review.state==='pr_open'?'approval_required':'approval_required';
+      const approvalState=review.state==='pr_open'?'system_release_pending':review.state==='no_change'?'system_verified':'human_review_required';
+      await patchTask(env,job.task_id,{state,approval_state:approvalState,updated_at:stamp,error:review.state==='blocked'?clean(review.reason||review.error):''});
+      return json({ok:true,siteImprovement:review});
+    }
+  }
+  await finalizeTask(env,job.task_id);return json({ok:true});
+}
+
+async function runScheduledSiteImprovement(env){
+  if(env.AI_TASK_EXECUTION_ENABLED!=='true')return{started:false,reason:'task_execution_disabled'};
+  const release=await reconcileSiteImprovementRelease(env);
+  if(release.handled&&release.state!=='completed')return{started:false,reason:'release_reconciliation_active',release};
+  const claim=await claimLowTrafficSiteImprovement(env);
+  if(!claim.claimed)return{started:false,reason:claim.reason,claim};
+
+  let task=null;
+  try{
+    const nodeProviders=await onlineNodeProviders(env);
+    const localProvider=['codex','gemini-cli','claude-code'].find(provider=>nodeProviders.includes(provider));
+    if(!localProvider)throw new Error('no_online_code_node_provider');
+    const input=normalizeTaskInput({
+      title:'EKODI daily site improvement: '+claim.site.name,
+      prompt:buildSiteImprovementPrompt(claim),
+      providers:['node:'+localProvider],
+      needsCodeBranch:true,
+      origin:{provider:'ekodi',channel:'site-improvement-scheduler',requestId:'site-improvement:'+claim.day+':'+claim.site.id},
+      governance:{
+        agentId:'chief',
+        area:'software_change',
+        delegated:true,
+        reversible:true,
+        logged:true,
+        preflightVerified:true,
+        existingBoundary:true,
+        rollbackDefined:true,
+        verificationDefined:true,
+        postVerificationRequired:true,
+        production:false,
+        standingDelegation:true,
+      },
+    });
+    const missionDecision=evaluateTaskMissionPolicy(input);
+    if(missionDecision.forbidden||missionDecision.humanGate)throw new Error('site_improvement_mission_gate:'+missionDecision.reason);
+    const stamp=now();
+    task={...input,missionDecision,id:createTaskId(),state:'queued',createdBy:'ekodi-site-improvement-scheduler',createdAt:stamp,updatedAt:stamp};
+    await insertTask(env,task);
+    const branch=await allocateBranch(env,task);
+    if(!branch)throw new Error('site_improvement_branch_allocation_unavailable');
+    task={...task,branch};
+    await patchTask(env,task.id,{branch,state:'running',updated_at:now(),error:''});
+    await attachSiteImprovementTask(env,claim,task);
+    const entry={providerId:'node:'+localProvider,role:'site-improvement-builder',routerScore:0,routerScoreBreakdown:{scheduled:true,lowTraffic:true},routerScorePolicyVersion:AI_ROUTER_SCORE_POLICY.version};
+    const prompt=rolePrompt(task,entry.role,{branch,missionDecision});
+    await enqueueNodeRun(env,task,entry,prompt);
+    await markSiteImprovementRunning(env,task.id);
+    return{started:true,taskId:task.id,branch,site:claim.site.id,provider:entry.providerId,traffic:claim.traffic};
+  }catch(error){
+    await failSiteImprovementClaim(env,claim,error);
+    if(task?.id)await patchTask(env,task.id,{state:'failed',updated_at:now(),error:clean(error?.message||error)});
+    return{started:false,reason:clean(error?.message||error),site:claim.site?.id||''};
+  }
 }
 
 function commonsConfig(env={}){return{policy:AI_COMMONS_POLICY,authUrl:'https://ekodi.kr/auth/?site=ai&return_to=https%3A%2F%2Fekodi.kr%2Fai%2F',supabaseUrl:clean(env.SUPABASE_URL),supabasePublishableKey:clean(env.SUPABASE_PUBLISHABLE_KEY)}}
@@ -471,4 +543,8 @@ export default{async fetch(request,env,ctx){
     return json({error:'not_found'},404);
   }
   return env.ASSETS.fetch(request);
+},
+async scheduled(controller,env,ctx){
+  const work=runScheduledSiteImprovement(env).catch(error=>console.error('EKODI scheduled site improvement failed',clean(error?.message||error)));
+  if(ctx?.waitUntil)ctx.waitUntil(work);else await work;
 }};
