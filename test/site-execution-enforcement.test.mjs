@@ -34,6 +34,20 @@ test('descendant service and admin addressing stay under the site root',()=>{
   assert.equal(policy.canonicalAddressing.featureSubdomainCreationForbidden,true);
 });
 
+test('three daily site-improvement windows preserve cumulative usage ceilings and reserve',()=>{
+  const policy=json('config/site-execution-enforcement.json');
+  const budget=policy.continuousImprovement.dailyBudget;
+  assert.equal(budget.resetTimeKst,'09:00');
+  assert.equal(budget.timezone,'Asia/Seoul');
+  assert.equal(budget.executionCountPerBudgetDay,3);
+  assert.deepEqual(budget.cumulativeCeilingsPercent,{morning:30,lunch:60,evening:90});
+  assert.equal(budget.emergencyReservePercent,10);
+  assert.equal(budget.cumulativeNotPerRun,true);
+  assert.equal(budget.futureSlotBudgetBorrowingForbidden,true);
+  assert.equal(policy.continuousImprovement.rootAndDescendantsShareOneExecutionBudget,true);
+  assert.equal(policy.continuousImprovement.slotExecutionMustRemainLowTrafficGated,true);
+});
+
 test('continuous site improvement is bound to the same recursive policy',()=>{
   const scheduler=read('ekodi-site-improvement-scheduler.js');
   assert.match(scheduler,/site-execution-enforcement\.json/);
