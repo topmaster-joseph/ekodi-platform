@@ -1,5 +1,5 @@
 {
-  "version": 93,
+  "version": 94,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -2437,6 +2437,54 @@
         "headerExpect": [
           "x-ekodi-route: local-region-forest-admin",
           "x-ekodi-shell: v2",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/tenant-finance-admin.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "mountTenantBankingAdmin",
+          "recipientAccountNumber",
+          "수취계좌 전체번호"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: admin-fallback-asset"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/admin/finance",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKODI Workspace Admin",
+          "workspace-admin.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: workspace-admin",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodichurch/admin/banking",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "에코디교회 목회자 관리자",
+          "church-pastor-admin.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: church-pastor-admin",
           "cache-control: no-store"
         ],
         "rollbackVerify": false

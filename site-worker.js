@@ -120,6 +120,7 @@ const ADMIN_ASSETS = new Set([
   '/admin-design-engine.css',
   '/homepage-admin.js',
   '/finance-monitor.js',
+  '/tenant-finance-admin.js',
   '/admin-compact.css',
   '/admin-compact.js',
   '/ekodi-device-bootstrap.cmd',

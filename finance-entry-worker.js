@@ -1,4 +1,5 @@
 import financeWorker from './finance-worker.js';
+import bankingWorker from './finance-banking-worker.js';
 import taxServiceWorker from './tax-service-worker.js';
 import taxHometaxLedgerService from './tax-hometax-ledger-service.js';
 import taxBusinessRegistryService from './tax-business-registry-service.js';
@@ -19,7 +20,13 @@ const FINANCE_TABLES = Object.freeze({
   tax_invoice_events: 'finance_tax_invoice_events',
   tax_hometax_import_batches: 'finance_tax_hometax_import_batches',
   tax_hometax_ledger: 'finance_tax_hometax_ledger',
-  tax_business_registry_status: 'finance_tax_business_registry_status'
+  tax_business_registry_status: 'finance_tax_business_registry_status',
+  workspace_organization_links: 'finance_workspace_organization_links',
+  bank_connections: 'finance_bank_connections',
+  bank_transactions: 'finance_bank_transactions',
+  transfer_requests: 'finance_transfer_requests',
+  transfer_approvals: 'finance_transfer_approvals',
+  bank_audit_log: 'finance_bank_audit_log'
 });
 
 const TABLE_PATTERN = new RegExp(`\\b(${Object.keys(FINANCE_TABLES).join('|')})\\b`, 'g');
@@ -47,6 +54,7 @@ export default {
     if (env?.DB) financeEnv.DB = namespacedDatabase(env.DB);
     const pathname = new URL(request.url).pathname;
     if (pathname === '/admin' || pathname === '/admin/') return Response.redirect('https://ekodi.kr/admin?route=finance&source=finance', 307);
+    if (pathname.startsWith('/api/finance/banking')) return bankingWorker.fetch(request, financeEnv, ctx);
     if (pathname.startsWith('/api/finance/policy-funds')) return policyFundWorker.fetch(request, financeEnv, ctx);
     if (pathname.startsWith('/api/finance/tax-business-')) return taxBusinessRegistryService.fetch(request, financeEnv, ctx);
     if (pathname.startsWith('/api/finance/tax-hometax-')) return taxHometaxLedgerService.fetch(request, financeEnv, ctx);
