@@ -134,12 +134,17 @@ async function advanceCursor(env,row,state='completed'){
   const sites=eligibleSiteImprovementTargets();
   const next=sites.length?(Number(row.site_index||0)+1)%sites.length:0;
   const now=new Date().toISOString();
-  await store.batch([
+  const statements=[
     store.prepare('UPDATE ekodi_site_improvement_runs SET state=?,deployment_state=?,completed_at=?,updated_at=? WHERE run_day=?')
       .bind(state,state,now,now,row.run_day),
     store.prepare("UPDATE ekodi_site_improvement_state SET cursor_index=?,last_site_id=?,last_task_id=?,last_completed_at=?,updated_at=? WHERE id='singleton'")
       .bind(next,row.site_id,row.task_id||'',now,now),
-  ]);
+  ];
+  if(row.task_id)statements.push(
+    store.prepare("UPDATE ai_control_tasks SET state='completed',approval_state='system_verified',updated_at=? WHERE id=? AND created_by='ekodi-site-improvement-scheduler'")
+      .bind(now,row.task_id)
+  );
+  await store.batch(statements);
 }
 
 async function trafficSnapshot(env,at=new Date()){
