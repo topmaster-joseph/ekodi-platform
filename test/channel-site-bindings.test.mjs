@@ -37,7 +37,7 @@ test('publishing API exposes reusable channel-site bindings and site-driven chan
 test('central social admin can register publishing channels and bind them to sites',()=>{
   assert.match(admin,/async function publishingApi/);
   assert.match(admin,/YouTube 게시 채널 등록/);
-  assert.match(admin,/게시 채널 · 사이트 연결/);
+  assert.match(admin,/선택 사이트 채널센터/);
   assert.match(admin,/지난행사 자동등록/);
   assert.match(admin,/\/v1\/oauth\/youtube\/start/);
   assert.match(admin,/\/v1\/channels\/\$\{encodeURIComponent\(channel\.id\)\}\/sites/);
