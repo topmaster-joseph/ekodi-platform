@@ -46,6 +46,7 @@ test('channel workspace follows status quick-action list detail ordering on ever
   const ops=script.indexOf('data-publishing-operations');
   const detail=script.indexOf('class="publishing-detail"');
   assert.ok(quick>=0&&ops>quick&&detail>ops);
+  assert.match(script,/storePublishPolicyForm/);
   for(const store of CMPMYI_STORES){
     const page=await storeAdminPage({...store,id:store.slug,brand:store.short,pathname:'/'+store.slug+'/admin/publishing'}).text();
     assert.match(page,/채널 · 자동게시/);
