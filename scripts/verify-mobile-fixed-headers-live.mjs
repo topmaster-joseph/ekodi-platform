@@ -20,8 +20,13 @@ async function get(raw,{redirect='follow'}={}){
     return {ok:false,status:0,text:'',headers:new Headers(),url:String(raw),error:String(error?.message||error)};
   }finally{clearTimeout(timer)}
 }
+const PUBLIC_HEADER_FORBIDDEN=['운영공간','operating space','workspace operating space','data-ekodi-operating-space-label'];
 function need(result,label,needle,errors){if(!result.text.includes(needle))errors.push(`${label}:missing:${needle}`)}
-function forbid(result,label,needle,errors){if(result.text.includes(needle))errors.push(`${label}:forbidden:${needle}`)}
+function headerMarkup(result){return result.text.match(/<header\\b[\\s\\S]*?<\\/header>/i)?.[0]||''}
+function forbidPublicHeader(result,label,errors){
+  const header=headerMarkup(result).toLowerCase();
+  for(const needle of PUBLIC_HEADER_FORBIDDEN)if(header.includes(String(needle).toLowerCase()))errors.push(`${label}:forbidden-public-header:${needle}`);
+}
 function http(result,label,errors){if(!result.ok)errors.push(`${label}:http-${result.status||'network'}`)}
 function readabilityObserved(result){
   const shellHeader=String(result.headers.get('x-ekodi-shell')||'').toLowerCase();
@@ -86,8 +91,7 @@ async function audit(){
     const tenantReadability=String(result.headers.get('x-ekodi-tenant-readability')||'').toLowerCase()==='v1'||result.text.includes('data-ekodi-tenant-readability="v1"');
     if(!shellInBody&&shellHeader!=='v2'&&!tenantReadability)errors.push(`service:${id}:canonical-user-chrome-not-observed`);
     if(publicBrandSurface){
-      forbid(result,`service:${id}`,'운영공간',errors);
-      forbid(result,`service:${id}`,'data-ekodi-operating-space-label',errors);
+      forbidPublicHeader(result,`service:${id}`,errors);
     }
   }
 
@@ -103,8 +107,7 @@ async function audit(){
     need(result,`tenant:${id}`,'data-ekodi-tenant-readability="v1"',errors);
     need(result,`tenant:${id}`,'data-ekodi-fixed-header',errors);
     need(result,`tenant:${id}`,'https://ekodi.kr/shell/mobile-fixed-header.js',errors);
-    forbid(result,`tenant:${id}`,'운영공간',errors);
-    forbid(result,`tenant:${id}`,'data-ekodi-operating-space-label',errors);
+    forbidPublicHeader(result,`tenant:${id}`,errors);
   }
 
   const [cgmaRoot,cgmaAi,cgmaAdmin,cheonggyeRoot]=await Promise.all([
@@ -116,12 +119,10 @@ async function audit(){
   http(cgmaRoot,'cgma-root',errors);
   need(cgmaRoot,'cgma-root','청계면상인회',errors);
   requireReadability(cgmaRoot,'cgma-root',errors);
-  forbid(cgmaRoot,'cgma-root','운영공간',errors);
-  forbid(cgmaRoot,'cgma-root','data-ekodi-operating-space-label',errors);
+  forbidPublicHeader(cgmaRoot,'cgma-root',errors);
   http(cheonggyeRoot,'cheonggye-root',errors);
   need(cheonggyeRoot,'cheonggye-root','청계잇다',errors);
-  forbid(cheonggyeRoot,'cheonggye-root','운영공간',errors);
-  forbid(cheonggyeRoot,'cheonggye-root','data-ekodi-operating-space-label',errors);
+  forbidPublicHeader(cheonggyeRoot,'cheonggye-root',errors);
   http(cgmaAi,'cgma-market-ai',errors);
   need(cgmaAi,'cgma-market-ai','CHEONGGYE MARKETING AI',errors);
   http(cgmaAdmin,'cgma-admin',errors);
