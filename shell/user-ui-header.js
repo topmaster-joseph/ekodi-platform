@@ -177,11 +177,13 @@ function operatingSpaceTarget(header){
   if(!header)return null;
   return header.querySelector('[data-ekodi-header-site-name],[data-ekodi-site-name],.brand-title,.site-title,[data-ekodi-header-title],.header-title')||findHomeAnchor(header)||findCenter(header)||null;
 }
+function shouldShowOperatingSpaceLabel(){return surface()==='workspace'&&isIndividualSite();}
 function ensureOperatingSpaceLabel(header,target=operatingSpaceTarget(header)){
   if(!header)return null;
   const existing=document.querySelector(`[${OPERATING_SCOPE_ATTR}]`);
-  if(!isIndividualSite()){
+  if(!shouldShowOperatingSpaceLabel()){
     if(existing)existing.remove();
+    header.removeAttribute('data-ekodi-operating-space');
     return null;
   }
   if(existing)return existing;
