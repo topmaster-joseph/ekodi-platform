@@ -111,7 +111,10 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(header,/isIndividualSite\(\)\?serviceHomeUrl\(\)\.toString\(\):String\(cfg\.homeUrl\)/);
   assert.match(header,/dataset\.ekodiHeaderScope='service-local'/);
   assert.match(header,/data-ekodi-operating-space-label/);
+  assert.match(header,/function shouldShowOperatingSpaceLabel\(\)/);
+  assert.match(header,/surface\(\)==='workspace'&&isIndividualSite\(\)/);
   assert.match(header,/ensureOperatingSpaceLabel/);
+  assert.match(header,/const existing=header\.querySelector/);
   assert.match(header,/badge\.textContent='운영공간'/);
   assert.match(header,/ensureOperatingSpaceLabel\(header\)/);
   assert.match(header,/ensureOperatingSpaceLabel\(header,siteNode\|\|operatingSpaceTarget\(header\)\)/);
@@ -193,6 +196,10 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.equal(parsedPolicy.principles.languageChoiceInHeaderOnly,true);
   assert.equal(parsedPolicy.principles.footerLanguageChoiceForbidden,true);
   assert.equal(parsedPolicy.principles.individualSiteHeaderStaysLocal,true);
+  assert.equal(parsedPolicy.principles.publicSiteOperationalRoleLabelsForbidden,true);
+  assert.ok(parsedPolicy.header.forbidden.includes('internal operating-space or administrator role labels on public surfaces'));
+  assert.equal(parsedPolicy.header.surfaceMeaning.public,'brand and service identity only; do not expose internal operating-space or administrator terminology');
+  assert.equal(parsedPolicy.header.surfaceMeaning.workspace,'operating context may be shown when it helps distinguish an authenticated workspace');
   assert.deepEqual(parsedPolicy.header.requiredMeaning,['current site identity','current service context','language choice']);
   assert.ok(parsedPolicy.header.forbidden.includes('global EKODI root or My EKODI links in individual-site headers'));
   assert.equal(parsedPolicy.header.alignment,'centered-canvas');

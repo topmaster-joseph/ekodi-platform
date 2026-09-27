@@ -1,5 +1,5 @@
 {
-  "version": 14,
+  "version": 15,
   "name": "EKODI User UI Shell",
   "parentPolicy": "config/user-ui-dna.json",
   "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family, with persistent common chrome limited to one shared header and one shared footer.",
@@ -36,7 +36,8 @@
     "individualSiteHeaderStaysLocal": true,
     "firstPaintVisualContinuity": true,
     "documentLoadAmbientVariation": true,
-    "transientCharacterFlashForbidden": true
+    "transientCharacterFlashForbidden": true,
+    "publicSiteOperationalRoleLabelsForbidden": true
   },
   "header": {
     "owner": "shared-shell",
@@ -72,11 +73,16 @@
       "admin navigation mixed into user header",
       "global MR or background-music playback control",
       "global workspace or space-selection control",
-      "global EKODI root or My EKODI links in individual-site headers"
+      "global EKODI root or My EKODI links in individual-site headers",
+      "internal operating-space or administrator role labels on public surfaces"
     ],
     "alignment": "centered-canvas",
     "geometry": "service-token-driven",
-    "contentWidth": "match-adopted-main-canvas"
+    "contentWidth": "match-adopted-main-canvas",
+    "surfaceMeaning": {
+      "public": "brand and service identity only; do not expose internal operating-space or administrator terminology",
+      "workspace": "operating context may be shown when it helps distinguish an authenticated workspace"
+    }
   },
   "footer": {
     "owner": "shared-shell",
