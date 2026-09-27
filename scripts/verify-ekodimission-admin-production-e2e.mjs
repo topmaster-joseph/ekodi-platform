@@ -187,6 +187,11 @@ const browser=await chromium.launch({headless:true});
 // auth URL that returns to the exact applicant-management route. This catches
 // regressions where tenant admin login loses the requested subroute or hides the navigation structure.
 const signedOutContext=await browser.newContext({viewport:{width:1440,height:1100}});
+// The production Workspace Admin now attempts central SSO recovery before
+// rendering the explicit signed-out login panel. Suppress only that automatic
+// recovery in this isolated verifier so the pre-auth navigation/login contract
+// remains observable; production behavior is unchanged.
+await signedOutContext.addInitScript(()=>sessionStorage.setItem('ekodi-workspace-admin-sso-suppress-v1','1'));
 const signedOutPage=await signedOutContext.newPage();
 signedOutPage.setDefaultTimeout(12_000);
 signedOutPage.setDefaultNavigationTimeout(20_000);

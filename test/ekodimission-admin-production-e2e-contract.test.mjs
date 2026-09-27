@@ -44,6 +44,7 @@ test('Mission tenant-admin production E2E exercises the deployed Activity partic
     "productionAssetTypes",
     "productionNosniff",
     "signed-out-failure.png",
+    "ekodi-workspace-admin-sso-suppress-v1",
     "details > summary",
     "activity-detail-meta",
     "relationshipSeparated",
