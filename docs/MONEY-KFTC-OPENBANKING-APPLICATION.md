@@ -2,6 +2,9 @@
 
 Status: `pre-application / contract-required`
 
+Canonical EKODI surface: `https://ekodi.kr/money`
+Approved OAuth redirect target to request: `https://ekodi.kr/money/oauth/kftc/callback`
+
 This document is an internal launch checklist. It does not represent approval by the Korea Financial Telecommunications & Clearings Institute (KFTC).
 
 ## Official references
@@ -21,7 +24,7 @@ Initial desired capabilities:
 - balance inquiry;
 - transaction-history inquiry;
 - account relationship discovery where permitted;
-- card, insurance and loan list/basic-information inquiry where applicable to the approved package;
+- additional financial-product data only through a separately approved provider/service; Open Banking approval is not treated as approval for card, insurance or loan data;
 - user authentication/consent management required for those inquiry APIs.
 
 Explicitly out of first activation:
@@ -59,7 +62,7 @@ The production adapter remains disabled until every required item is complete:
 - [ ] Contract / service approval completed
 - [ ] Approved API scope recorded in EKODI configuration
 - [ ] Production client identifier issued
-- [ ] Approved redirect URI configured
+- [ ] Approved redirect URI configured exactly as `https://ekodi.kr/money/oauth/kftc/callback`
 - [ ] OAuth state/session store deployed with replay protection
 - [ ] Token encryption and rotation implemented server-side
 - [ ] Consent receipt + revocation storage implemented
@@ -69,7 +72,7 @@ The production adapter remains disabled until every required item is complete:
 - [ ] Privacy/security review signed off
 - [ ] Production monitoring and incident runbook active
 
-After these items are complete, `KFTC_OPENBANKING_ENABLED=true` may be considered. It must never be used as the sole activation switch: the runtime also requires client configuration and OAuth state-store readiness.
+After these items are complete, `KFTC_OPENBANKING_ENABLED=true` may be considered. It must never be used as the sole activation switch: the runtime also requires contract approval, an issued client id, the exact canonical redirect URI, OAuth replay-safe state storage, encrypted token storage, consent storage, an approved read-scope list, and an explicitly attached server-side KFTC adapter. Until that adapter exists, `openBankingReadReady` remains false.
 
 ## Separate high-impact gate
 
