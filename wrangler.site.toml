@@ -28,6 +28,15 @@ zone_name = "ekodi.kr"
 pattern = "ekodi.kr/ekodibiz/trade*"
 zone_name = "ekodi.kr"
 
+# Canonical Church member home must outrank the public /ekodichurch/* gateway without capturing /mypage.
+[[routes]]
+pattern = "ekodi.kr/ekodichurch/my"
+zone_name = "ekodi.kr"
+
+[[routes]]
+pattern = "ekodi.kr/ekodichurch/my/*"
+zone_name = "ekodi.kr"
+
 # Canonical Church admin must outrank the public /ekodichurch* path gateway.
 [[routes]]
 pattern = "ekodi.kr/ekodichurch/admin*"

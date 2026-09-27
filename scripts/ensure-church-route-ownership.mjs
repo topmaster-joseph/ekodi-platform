@@ -5,11 +5,15 @@ const quotaConfig=JSON.parse(await readFile(fileURLToPath(new URL('../config/clo
 const API='https://api.cloudflare.com/client/v4';
 export const CHURCH_ROUTE_CONTRACT=Object.freeze({
   gateway:'ekodi-church-path-gateway',
+  sharedSite:'shy-thunder-39a4',
   desiredGateway:['ekodi.kr/ekodichurch','ekodi.kr/ekodichurch/*'],
+  memberRoutes:['ekodi.kr/ekodichurch/my','ekodi.kr/ekodichurch/my/*'],
   retiredGateway:'ekodi.kr/ekodichurch*',
   publicUrl:'https://ekodi.kr/ekodichurch/',
+  memberUrl:'https://ekodi.kr/ekodichurch/my',
   adminUrl:'https://ekodi.kr/ekodichurch/admin',
   publicRoute:'church-public-path',
+  memberRoute:'church-member-home',
   adminRoute:'church-pastor-admin',
 });
 function headers(token){return{Authorization:`Bearer ${token}`,'content-type':'application/json'}}
@@ -58,14 +62,28 @@ export async function ensureChurchRouteOwnership({token=process.env.CLOUDFLARE_A
   const retired=routes.find(row=>row.pattern===CHURCH_ROUTE_CONTRACT.retiredGateway&&row.script===CHURCH_ROUTE_CONTRACT.gateway);
   if(retired){await cf(`/zones/${zone}/workers/routes/${retired.id}`,token,{method:'DELETE'});console.log(`Retired ambiguous route: ${retired.pattern}`)}
   routes=(await cf(`/zones/${zone}/workers/routes`,token)).result||[];
+  for(const pattern of CHURCH_ROUTE_CONTRACT.memberRoutes){
+    const current=routes.find(row=>row.pattern===pattern);
+    if(current?.script===CHURCH_ROUTE_CONTRACT.sharedSite)continue;
+    if(current){
+      await cf(`/zones/${zone}/workers/routes/${current.id}`,token,{method:'DELETE'});
+      console.log(`Reassigned route: ${pattern} from ${current.script||'none'} to ${CHURCH_ROUTE_CONTRACT.sharedSite}`);
+    }
+    await createRoute(zone,token,pattern,CHURCH_ROUTE_CONTRACT.sharedSite);
+    routes=(await cf(`/zones/${zone}/workers/routes`,token)).result||[];
+  }
   for(const pattern of CHURCH_ROUTE_CONTRACT.desiredGateway){
     const row=routes.find(item=>item.pattern===pattern);
     if(row?.script!==CHURCH_ROUTE_CONTRACT.gateway)throw new Error(`Church gateway route missing after repair: ${pattern}`);
   }
+  for(const pattern of CHURCH_ROUTE_CONTRACT.memberRoutes){
+    const row=routes.find(item=>item.pattern===pattern);
+    if(row?.script!==CHURCH_ROUTE_CONTRACT.sharedSite)throw new Error(`Church member route missing after repair: ${pattern}`);
+  }
   if(routes.some(row=>row.pattern===CHURCH_ROUTE_CONTRACT.retiredGateway&&row.script===CHURCH_ROUTE_CONTRACT.gateway))throw new Error('Ambiguous church gateway route still present');
   await verifyLive(CHURCH_ROUTE_CONTRACT.publicUrl,CHURCH_ROUTE_CONTRACT.publicRoute);
   await verifyLive(CHURCH_ROUTE_CONTRACT.adminUrl,CHURCH_ROUTE_CONTRACT.adminRoute);
-  console.log('Church route ownership and live boundaries verified.');
+  console.log('Church public/admin boundaries and dedicated member route ownership verified.');
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   ensureChurchRouteOwnership().catch(error=>{console.error(error.message);process.exitCode=1});
