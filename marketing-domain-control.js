@@ -5,7 +5,8 @@ const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
 const DOMAIN_MANAGER_ROLES = new Set(['store_owner', 'hq_manager', 'client_admin']);
 const PRO_OR_ABOVE = new Set(['pro', 'auto', 'enterprise']);
 const LIVE_DOMAIN_STATES = new Set(['pending_dns', 'verifying', 'active', 'disconnect_pending']);
-const RESERVED_SUFFIXES = ['.ekodi.kr', '.pages.dev', '.workers.dev'];
+const EKODI_HOST='ekodi.kr';
+const RESERVED_SUFFIXES = ['.pages.dev', '.workers.dev'];
 
 function normalizeTenant(value) {
   return String(value || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 80);
@@ -30,7 +31,7 @@ export function normalizeCustomerHostname(value) {
   if (!/^[a-z0-9.-]+$/.test(hostname) || !hostname.includes('.')) return '';
   const labels = hostname.split('.');
   if (labels.length < 3 || labels.some(label => !label || label.length > 63 || label.startsWith('-') || label.endsWith('-'))) return '';
-  if (RESERVED_SUFFIXES.some(suffix => hostname.endsWith(suffix))) return '';
+  if (hostname===EKODI_HOST || hostname.endsWith('.'+EKODI_HOST) || RESERVED_SUFFIXES.some(suffix => hostname.endsWith(suffix))) return '';
   return hostname;
 }
 
