@@ -30,7 +30,7 @@ Use a first-level subdomain when the service is an ecosystem-wide brand, platfor
 
 When the same function can exist independently inside multiple EKODI units, use:
 
-`<function>.<unit>.ekodi.kr`
+`ekodi.kr/<unit>/<function>`
 
 Examples:
 
@@ -175,7 +175,7 @@ This keeps DNS, web services, mail entry points, Google Drive, and operational n
 
 Use the pattern:
 
-`<customer>.ekodi.kr/ai`
+`ekodi.kr/<customer>/ai`
 
 Examples:
 
@@ -187,10 +187,10 @@ The public website and AI workspace must be treated as separate addresses even w
 
 ### AI domain entitlement
 
-- Organization/site customer workspace: dedicated `<organization>.ekodi.kr/ai`.
+- Organization/site customer workspace: dedicated `ekodi.kr/<organization>/marketing`.
 - Store Basic, including a store receiving Basic as an organization-member benefit: no dedicated store subdomain.
-- Store Plus: dedicated `<store>.ekodi.kr/ai`.
-- Store Pro: dedicated `<store>.ekodi.kr/ai` plus one customer-owned custom hostname mapping by default.
+- Store Plus: dedicated `ekodi.kr/<store>/marketing`.
+- Store Pro: dedicated `ekodi.kr/<store>/marketing` plus one customer-owned custom hostname mapping by default.
 - Enterprise: custom hostname quantity and routing are contract-based.
 
 ### Customer-owned custom domain
