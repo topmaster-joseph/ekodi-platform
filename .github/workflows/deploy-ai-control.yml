@@ -163,6 +163,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ekodi-ai-control-${{ github.ref }}
