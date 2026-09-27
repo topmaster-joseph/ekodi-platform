@@ -102,6 +102,16 @@
       ]
     },
     {
+      "id": "mnubiz",
+      "name": "국립목포대학교 경영동문회",
+      "ownerKind": "organization",
+      "class": "workspace_user_site",
+      "canonicalUrl": "https://ekodi.kr/mnubiz",
+      "migrationState": "retain_existing",
+      "runtime": "customer_tenants+space-organization",
+      "action": "connect_core_preserve_public_surface"
+    },
+    {
       "id": "ekodi-church",
       "name": "에코디교회",
       "ownerKind": "church",

@@ -75,6 +75,7 @@ async function audit(){
   const canonicalUserSurfaces=[
     ['ekodibiz','https://ekodi.kr/ekodibiz',true],
     ['church','https://ekodi.kr/ekodichurch',true],
+    ['mnubiz','https://ekodi.kr/mnubiz',true],
     ['my','https://ekodi.kr/my/',false],
     ['business','https://ekodi.kr/business',false],
     ['trade','https://ekodi.kr/ekodibiz/trade',true],
