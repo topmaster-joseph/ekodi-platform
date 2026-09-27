@@ -3,6 +3,7 @@ import {test} from 'node:test';
 import {readFile} from 'node:fs/promises';
 import {
   SITE_IMPROVEMENT_OIDC_BROKER_POLICY,
+  isSiteImprovementBrokerToken,
   validateSiteImprovementOidcClaims,
   verifySiteImprovementGitHubOidc,
 } from '../ekodi-site-improvement-oidc-broker.js';
@@ -48,6 +49,9 @@ test('site improvement OIDC policy is pinned to the exact EKODI workflow',()=>{
   assert.equal(SITE_IMPROVEMENT_OIDC_BROKER_POLICY.environment,'development');
   assert.match(SITE_IMPROVEMENT_OIDC_BROKER_POLICY.workflowRef,/site-improvement-cloud\.yml@refs\/heads\/main$/);
   assert.equal(SITE_IMPROVEMENT_OIDC_BROKER_POLICY.longLivedCredentialInGitHub,false);
+  assert.equal(SITE_IMPROVEMENT_OIDC_BROKER_POLICY.githubOidcUsedForExchangeOnly,true);
+  assert.equal(SITE_IMPROVEMENT_OIDC_BROKER_POLICY.brokerTokenStoredAsHashOnly,true);
+  assert.equal(SITE_IMPROVEMENT_OIDC_BROKER_POLICY.brokerTokenTtlSeconds,1800);
 });
 
 test('claim validation rejects repo, ref, workflow and stale-token drift',async()=>{
@@ -71,15 +75,47 @@ test('JWT verification requires a valid GitHub-style RS256 signature',async()=>{
   await assert.rejects(()=>verifySiteImprovementGitHubOidc(bad,{jwks:[jwk],nowSeconds:now}),/signature_invalid/);
 });
 
-test('cloud workflow uses short-lived OIDC and EKODI broker instead of a GitHub OpenAI secret',async()=>{
+test('opaque broker token matches the Codex proxy safe credential alphabet',()=>{
+  const good='ekodi_'+('Ab3_-xY9'.repeat(6));
+  assert.equal(isSiteImprovementBrokerToken(good),true);
+  assert.equal(isSiteImprovementBrokerToken('eyJhbGciOiJSUzI1NiJ9.payload.signature'),false);
+  assert.equal(isSiteImprovementBrokerToken('sk-proj-secret'),false);
+  assert.match(SITE_IMPROVEMENT_OIDC_BROKER_POLICY.brokerTokenPattern,/A-Za-z0-9_-/);
+});
+
+test('cloud workflow exchanges OIDC for an opaque EKODI token before Codex',async()=>{
   const workflow=await readFile(new URL('../.github/workflows/site-improvement-cloud.yml',import.meta.url),'utf8');
   assert.match(workflow,/id-token: write/);
   assert.match(workflow,/audience=ekodi-site-improvement/);
+  assert.match(workflow,/Exchange OIDC for EKODI short-lived broker token/);
+  assert.match(workflow,/https:\/\/ekodi\.kr\/ai\/api\/site-improvement\/token/);
+  assert.match(workflow,/\^ekodi_\[A-Za-z0-9_-\]\{40,96\}\$/);
   assert.match(workflow,/responses-api-endpoint: https:\/\/ekodi\.kr\/ai\/api\/site-improvement\/responses/);
-  assert.match(workflow,/openai-api-key: \$\{\{ steps\.oidc\.outputs\.token \}\}/);
+  assert.match(workflow,/openai-api-key: \$\{\{ steps\.broker_token\.outputs\.token \}\}/);
+  assert.doesNotMatch(workflow,/openai-api-key: \$\{\{ steps\.oidc\.outputs\.token \}\}/);
+  assert.match(workflow,/Revoke EKODI short-lived broker token/);
+  assert.match(workflow,/site-improvement\/token\/revoke/);
   assert.doesNotMatch(workflow,/secrets\.AI_CONTROL_OPENAI_API_KEY|secrets\.OPENAI_API_KEY/);
   assert.match(workflow,/Validate scheduler-owned inputs/);
+  assert.match(workflow,/\^task-\[0-9\]\{14\}-\[a-z0-9\]\{4\}\$/i);
   assert.match(workflow,/^\s*environment: development$/m);
+});
+
+test('opaque broker uses a durable short-lived hashed token ledger',async()=>{
+  const [broker,migration]=await Promise.all([
+    readFile(new URL('../ekodi-site-improvement-oidc-broker.js',import.meta.url),'utf8'),
+    readFile(new URL('../migrations/0110_site_improvement_broker_tokens.sql',import.meta.url),'utf8'),
+  ]);
+  assert.match(broker,/BROKER_TOKEN_TTL_SECONDS=30\*60/);
+  assert.match(broker,/BROKER_TOKEN_MAX_REQUESTS=256/);
+  assert.match(broker,/DELETE FROM ekodi_site_improvement_broker_tokens WHERE task_id=\?/);
+  assert.match(broker,/request_count=request_count\+1/);
+  assert.match(broker,/expires_at>\?/);
+  assert.match(broker,/revoked_at=''/);
+  assert.match(broker,/created_by!=='ekodi-site-improvement-scheduler'/);
+  assert.match(migration,/CREATE TABLE IF NOT EXISTS ekodi_site_improvement_broker_tokens/);
+  assert.match(migration,/token_hash TEXT PRIMARY KEY/);
+  assert.doesNotMatch(migration,/raw_token|openai_api_key|oidc_token/i);
 });
 
 test('AI worker routes broker before generic admin API authentication',async()=>{
