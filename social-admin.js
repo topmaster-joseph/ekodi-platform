@@ -194,7 +194,7 @@
     const publishingHead = el('div','','social-channel-head');
     publishingHead.append(el('h3','선택 사이트 채널센터'),el('span','계정 등록 · 연결 · 기본채널 · 자동게시 설정을 같은 원장에서 관리'));
     const publishingActions = el('div','','social-connection-actions');
-    const publishingAddYoutube = el('button','＋ YouTube 게시 채널 등록','primary'); publishingAddYoutube.type='button';
+    const publishingAddYoutube = el('button','＋ YouTube 계정 연결','primary'); publishingAddYoutube.type='button';
     const publishingReload = el('button','↻ 게시 채널 새로고침','secondary'); publishingReload.type='button';
     publishingActions.append(publishingAddYoutube,publishingReload);
     const publishingStatus = el('p','게시 채널 원장을 불러오지 않았습니다.','social-admin-status'); publishingStatus.setAttribute('role','status');
@@ -364,37 +364,18 @@
       controls.append(siteSelect,addSite,saveSites,note);
       card.append(head,bindings,controls);rerender();return card;
     }
-    async function startPublishingYoutube() {
-      const data=await publishingApi('/v1/oauth/youtube/start',{method:'POST',body:{returnTo:returnUrl()}});
-      if(!data.authorizeUrl)throw new Error('YouTube 인증 주소를 받지 못했습니다.');
-      location.assign(data.authorizeUrl);
-    }
-    async function selectPublishingYoutube(connectionId,externalAccountId) {
-      await publishingApi(`/v1/oauth/connections/${encodeURIComponent(connectionId)}/select`,{method:'POST',body:{externalAccountId}});
-      await loadPublishingChannels();
-    }
     async function loadPublishingChannels() {
       publishingStatus.textContent='게시 채널과 사이트 연결을 확인하는 중입니다.';publishingStatus.dataset.state='loading';
       try{
-        const [automation,channelData]=await Promise.all([publishingApi('/v1/automation'),publishingApi('/v1/channels')]);
+        const [connectionData,channelData]=await Promise.all([connectApi('/v1/connections'),publishingApi('/v1/channels')]);
         const sites=Array.isArray(channelData.sites)?channelData.sites:[];
-        publishingConnections.replaceChildren();
-        const pending=(automation.connections||[]).filter(item=>item.status==='selection_required');
-        for(const connection of pending){
-          const card=el('article','','social-publishing-selection');
-          card.append(el('strong','YouTube 채널을 선택해 등록하세요'),el('small','이 인증은 선택한 채널의 게시 자격증명으로 보관됩니다.'));
-          const choices=el('div','','social-connection-actions');
-          for(const channel of connection.discoveredChannels||[]){
-            const button=el('button',channel.title||channel.id,'secondary');button.type='button';
-            button.addEventListener('click',async()=>{button.disabled=true;try{await selectPublishingYoutube(connection.id,channel.id)}catch(error){publishingStatus.textContent=error.message;publishingStatus.dataset.state='error';button.disabled=false}});
-            choices.append(button);
-          }
-          card.append(choices);publishingConnections.append(card);
-        }
+        const connections=Array.isArray(connectionData.connections)?connectionData.connections:[];
+        const activeConnections=connections.filter(item=>item.status==='active');
+        publishingConnections.replaceChildren(el('p',`공식 OAuth 연결 ${activeConnections.length}개 · 연결된 계정은 게시 채널 원장으로 자동 투영됩니다.`,'social-connection-empty'));
         publishingChannels.replaceChildren();
         for(const channel of channelData.channels||[])publishingChannels.append(publishingChannelCard(channel,sites));
-        if(!(channelData.channels||[]).length)publishingChannels.append(el('p','등록된 게시 채널이 없습니다. YouTube 게시 채널 등록을 눌러 최초 1회 인증해 주세요.','social-connection-empty'));
-        publishingStatus.textContent=`등록 채널 ${(channelData.channels||[]).length}개 · 사이트 연결은 채널별로 미리 저장하고 게시할 때 재사용합니다.`;
+        if(!(channelData.channels||[]).length)publishingChannels.append(el('p','등록된 게시 채널이 없습니다. YouTube 계정 연결 또는 플랫폼 연결 원장에서 계정을 연결하면 게시 채널이 자동 생성됩니다.','social-connection-empty'));
+        publishingStatus.textContent=`등록 채널 ${(channelData.channels||[]).length}개 · OAuth 연결과 게시채널은 동일 원장을 사용하며 사이트 연결만 별도로 지정합니다.`;
         publishingStatus.dataset.state='ready';
       }catch(error){
         publishingConnections.replaceChildren();publishingChannels.replaceChildren();
@@ -457,7 +438,7 @@
       siteDirectoryStatus.textContent=`${button.dataset.centralChannelName||key} 채널센터 · 사이트 관리자와 동일 원장`;siteDirectoryStatus.dataset.state='ready';
       publishingPanel.scrollIntoView({behavior:'smooth',block:'start'});
     });
-    publishingAddYoutube.addEventListener('click',async()=>{publishingAddYoutube.disabled=true;publishingStatus.textContent='YouTube 게시 채널 인증을 준비하는 중입니다.';publishingStatus.dataset.state='loading';try{await startPublishingYoutube()}catch(error){publishingStatus.textContent=error.message;publishingStatus.dataset.state='error';publishingAddYoutube.disabled=false}});
+    publishingAddYoutube.addEventListener('click',async()=>{publishingAddYoutube.disabled=true;publishingStatus.textContent='YouTube 공식 OAuth 연결을 준비하는 중입니다.';publishingStatus.dataset.state='loading';try{await startConnection('youtube')}catch(error){publishingStatus.textContent=error.message;publishingStatus.dataset.state='error';publishingAddYoutube.disabled=false}});
     publishingReload.addEventListener('click',loadPublishingChannels);
         connectionActions.addEventListener('click', async event => {
       const button = event.target.closest('[data-connect-provider]'); if (!button) return;
