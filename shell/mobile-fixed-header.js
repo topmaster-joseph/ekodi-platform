@@ -31,26 +31,7 @@ let mutationObserver=null;
 function isMobile(){return window.matchMedia(`(max-width:${MOBILE_MAX}px)`).matches;}
 function isAdminSurface(){return String(document.documentElement.dataset.ekodiShellSurface||'').trim().toLowerCase()==='admin';}
 function installStyle(){
-  if(document.getElementById(STYLE_ID))return;
-  const style=document.createElement('style');
-  style.id=STYLE_ID;
-  style.textContent=`@media(max-width:${MOBILE_MAX}px){
-    .ekodi-mobile-fixed-header{
-      position:fixed!important;
-      top:0!important;
-      left:0!important;
-      right:0!important;
-      width:100%!important;
-      max-width:none!important;
-      z-index:2147482000!important;
-      box-sizing:border-box!important;
-      padding-top:calc(var(--ekodi-mobile-header-base-padding-top,0px) + env(safe-area-inset-top,0px))!important;
-      transform:none!important;
-    }
-    [${SPACER_ATTR}]{display:block!important;width:100%!important;min-width:0!important;pointer-events:none!important;visibility:hidden!important;grid-column:1/-1!important;flex:0 0 auto!important}
-    html{scroll-padding-top:calc(var(--ekodi-mobile-fixed-header-height,0px) + 12px)}
-  }`;
-  (document.head||document.documentElement).append(style);
+  // Static presentation is owned by the external CSP-safe shell stylesheet.
 }
 function visible(element){
   if(!element||!element.isConnected)return false;
