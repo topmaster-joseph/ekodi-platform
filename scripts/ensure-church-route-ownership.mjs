@@ -140,10 +140,13 @@ export async function ensureChurchRouteOwnership({token=process.env.CLOUDFLARE_A
   }
   if(routes.some(row=>row.pattern===CHURCH_ROUTE_CONTRACT.retiredGateway&&row.script===CHURCH_ROUTE_CONTRACT.gateway))throw new Error('Ambiguous church gateway route still present');
   await verifyLive(CHURCH_ROUTE_CONTRACT.publicUrl,CHURCH_ROUTE_CONTRACT.publicRoute);
-  await verifyRedirect(CHURCH_ROUTE_CONTRACT.memberUrl,CHURCH_ROUTE_CONTRACT.memberCanonicalUrl,CHURCH_ROUTE_CONTRACT.memberRoute);
+  // Route ownership is repaired before the new Shared Site candidate is deployed.
+  // The exact /my -> /my/ redirect therefore still reflects the previous Worker here
+  // and is verified by the guarded candidate manifest immediately after deployment.
+  console.log('Church member canonical redirect response verification deferred to guarded candidate deployment.');
   for(const page of CHURCH_ROUTE_CONTRACT.memberDeepPages)await verifyMemberPage(page.url,page.marker);
   await verifyLive(CHURCH_ROUTE_CONTRACT.adminUrl,CHURCH_ROUTE_CONTRACT.adminRoute);
-  console.log('Church public/admin boundaries, canonical member redirect and Pages-owned member descendants verified.');
+  console.log('Church public/admin boundaries and Pages-owned member descendants verified before candidate promotion.');
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   ensureChurchRouteOwnership().catch(error=>{console.error(error.message);process.exitCode=1});
