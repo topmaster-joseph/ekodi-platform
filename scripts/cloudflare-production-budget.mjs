@@ -3,7 +3,9 @@ import { appendFile, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import {
   assertProductionAccountBoundary,
-  classifyQuotaState
+  classifyQuotaState,
+  detectWorkersPaidPlan,
+  cloudflareUsageWindow
 } from './cloudflare-quota-guard-lib.mjs';
 
 const configPath = fileURLToPath(new URL('../config/cloudflare-production-quota-guard.json', import.meta.url));
@@ -23,11 +25,78 @@ assertProductionAccountBoundary({
 });
 if (!token) throw new Error('Missing CLOUDFLARE_API_TOKEN');
 
-const end = new Date();
-const start = new Date(end);
-start.setUTCHours(0, 0, 0, 0);
+async function cloudflareJson(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      authorization: `Bearer ${token}`,
+      accept: 'application/json',
+      ...(options.body ? {'content-type':'application/json'} : {}),
+      ...(options.headers || {})
+    },
+    signal: AbortSignal.timeout(20000)
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || payload?.success === false) {
+    const error = new Error(`Cloudflare HTTP ${response.status}`);
+    error.status = response.status;
+    error.payload = payload;
+    throw error;
+  }
+  return payload;
+}
 
-const query = `query Usage($accountTag: string, $start: string, $end: string) {
+async function detectWorkersPlan() {
+  try {
+    const payload = await cloudflareJson(
+      `https://api.cloudflare.com/client/v4/accounts/${productionAccountId}/subscriptions`
+    );
+    const subscriptions = Array.isArray(payload?.result) ? payload.result : [];
+    return {
+      paid: detectWorkersPaidPlan(subscriptions),
+      readable: true,
+      source: 'cloudflare-billing-api'
+    };
+  } catch (error) {
+    if ([401, 403].includes(Number(error?.status || 0))) {
+      return {
+        paid: false,
+        readable: false,
+        source: 'billing-api-unavailable-free-safe'
+      };
+    }
+    throw error;
+  }
+}
+
+async function graphql(query, variables) {
+  const response = await fetch('https://api.cloudflare.com/client/v4/graphql', {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${token}`,
+      accept: 'application/json',
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({ query, variables }),
+    signal: AbortSignal.timeout(20000)
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || payload?.errors?.length) {
+    const detail = payload?.errors?.[0]?.message || `Cloudflare HTTP ${response.status}`;
+    const error = new Error(detail);
+    error.status = response.status;
+    throw error;
+  }
+  return payload;
+}
+
+const plan = await detectWorkersPlan();
+const window = cloudflareUsageWindow({ paid: plan.paid, now: new Date() });
+const workersLimit = plan.paid
+  ? Number(config.paidPlan?.workersRequestsIncludedPerMonth || 10_000_000)
+  : Number(config.dailyRequestLimit || config.freePlan?.workersRequestsPerDay || 100_000);
+
+const workersQuery = `query Usage($accountTag: string, $start: string, $end: string) {
   viewer {
     accounts(filter:{accountTag:$accountTag}) {
       workersInvocationsAdaptive(limit:10000, filter:{datetime_geq:$start, datetime_leq:$end}) {
@@ -37,44 +106,104 @@ const query = `query Usage($accountTag: string, $start: string, $end: string) {
   }
 }`;
 
-const response = await fetch('https://api.cloudflare.com/client/v4/graphql', {
-  method: 'POST',
-  headers: {
-    authorization: `Bearer ${token}`,
-    accept: 'application/json',
-    'content-type': 'application/json'
-  },
-  body: JSON.stringify({
-    query,
-    variables: {
-      accountTag: productionAccountId,
-      start: start.toISOString(),
-      end: end.toISOString()
-    }
-  })
+const workersPayload = await graphql(workersQuery, {
+  accountTag: productionAccountId,
+  start: window.start,
+  end: window.end
 });
-const payload = await response.json().catch(() => null);
-if (!response.ok || payload?.errors?.length) {
-  const detail = payload?.errors?.[0]?.message || `Cloudflare HTTP ${response.status}`;
-  throw new Error(`Production quota Source of Truth unavailable: ${detail}`);
-}
-
-const rows = payload?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive || [];
-const requests = rows.reduce((sum, row) => sum + Number(row?.sum?.requests || 0), 0);
+const workerRows = workersPayload?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive || [];
+const requests = workerRows.reduce((sum, row) => sum + Number(row?.sum?.requests || 0), 0);
 const quota = classifyQuotaState({
   requests,
-  limit: config.dailyRequestLimit,
+  limit: workersLimit,
   warningRatio: config.warningRatio,
   protectRatio: config.protectRatio
 });
+
+let d1 = {
+  available: false,
+  periodKind: window.periodKind,
+  rowsRead: null,
+  rowsWritten: null,
+  readLimit: plan.paid
+    ? Number(config.paidPlan?.d1RowsReadIncludedPerMonth || 25_000_000_000)
+    : Number(config.freePlan?.d1RowsReadPerDay || 5_000_000),
+  writeLimit: plan.paid
+    ? Number(config.paidPlan?.d1RowsWrittenIncludedPerMonth || 50_000_000)
+    : Number(config.freePlan?.d1RowsWrittenPerDay || 100_000),
+  source: 'cloudflare-d1-analytics'
+};
+
+try {
+  const d1Query = `query D1Usage($accountTag: string, $startDate: Date, $endDate: Date) {
+    viewer {
+      accounts(filter:{accountTag:$accountTag}) {
+        d1AnalyticsAdaptiveGroups(
+          limit:10000
+          filter:{date_geq:$startDate, date_leq:$endDate}
+        ) {
+          sum { rowsRead rowsWritten }
+        }
+      }
+    }
+  }`;
+  const d1Payload = await graphql(d1Query, {
+    accountTag: productionAccountId,
+    startDate: window.startDate,
+    endDate: window.endDate
+  });
+  const rows = d1Payload?.data?.viewer?.accounts?.[0]?.d1AnalyticsAdaptiveGroups || [];
+  const rowsRead = rows.reduce((sum, row) => sum + Number(row?.sum?.rowsRead || 0), 0);
+  const rowsWritten = rows.reduce((sum, row) => sum + Number(row?.sum?.rowsWritten || 0), 0);
+  const readQuota = classifyQuotaState({
+    requests: rowsRead,
+    limit: d1.readLimit,
+    warningRatio: config.warningRatio,
+    protectRatio: config.protectRatio
+  });
+  const writeQuota = classifyQuotaState({
+    requests: rowsWritten,
+    limit: d1.writeLimit,
+    warningRatio: config.warningRatio,
+    protectRatio: config.protectRatio
+  });
+  d1 = {
+    ...d1,
+    available: true,
+    rowsRead,
+    rowsWritten,
+    readQuota,
+    writeQuota
+  };
+} catch (error) {
+  d1 = {
+    ...d1,
+    error: String(error?.message || error).slice(0, 240)
+  };
+}
+
+const skipNonessential = Boolean(
+  quota.skipNonessential ||
+  d1.readQuota?.skipNonessential ||
+  d1.writeQuota?.skipNonessential
+);
 const report = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   policyId: config.policyId,
   generatedAt: new Date().toISOString(),
-  window: { start: start.toISOString(), end: end.toISOString() },
+  window: { start: window.start, end: window.end },
+  periodKind: window.periodKind,
+  plan: {
+    workers: plan.paid ? 'paid' : (plan.readable ? 'free' : 'free_or_unverified'),
+    verified: plan.readable,
+    source: plan.source,
+    automaticPurchase: false
+  },
   account: 'PROD',
   accountIdMasked: `${productionAccountId.slice(0, 4)}...${productionAccountId.slice(-4)}`,
-  ...quota
+  ...quota,
+  skipNonessential,
+  d1
 };
 
 const output = args.get('output');
@@ -87,13 +216,25 @@ if (process.env.GITHUB_OUTPUT) {
     percent: report.percent,
     state: report.state,
     remaining: report.remaining,
-    skip_nonessential: String(report.skipNonessential)
+    skip_nonessential: String(report.skipNonessential),
+    plan_mode: report.plan.workers,
+    period_kind: report.periodKind,
+    d1_rows_read: report.d1.rowsRead ?? '',
+    d1_rows_written: report.d1.rowsWritten ?? ''
   };
-  await appendFile(process.env.GITHUB_OUTPUT, Object.entries(values).map(([key, value]) => `${key}=${value}`).join('\n') + '\n', 'utf8');
+  await appendFile(
+    process.env.GITHUB_OUTPUT,
+    Object.entries(values).map(([key, value]) => `${key}=${value}`).join('\n') + '\n',
+    'utf8'
+  );
 }
 if (process.env.GITHUB_STEP_SUMMARY) {
-  await appendFile(process.env.GITHUB_STEP_SUMMARY,
-    `### Cloudflare Production quota\n- Source: Cloudflare Workers Analytics\n- UTC window: ${report.window.start} → ${report.window.end}\n- Usage: **${report.requests.toLocaleString()} / ${report.limit.toLocaleString()} (${report.percent}%)**\n- State: **${report.state}**\n- Nonessential probes: **${report.skipNonessential ? 'blocked' : 'allowed'}**\n`,
+  const d1Summary = report.d1.available
+    ? `- D1 rows read: **${report.d1.rowsRead.toLocaleString()} / ${report.d1.readLimit.toLocaleString()}**\n- D1 rows written: **${report.d1.rowsWritten.toLocaleString()} / ${report.d1.writeLimit.toLocaleString()}**\n`
+    : `- D1 telemetry: **unavailable (runtime remains free-safe)**\n`;
+  await appendFile(
+    process.env.GITHUB_STEP_SUMMARY,
+    `### Cloudflare Production quota\n- Workers plan: **${report.plan.workers}** (${report.plan.source})\n- Window: **${report.periodKind}** · ${report.window.start} → ${report.window.end}\n- Worker requests: **${report.requests.toLocaleString()} / ${report.limit.toLocaleString()} (${report.percent}%)**\n${d1Summary}- State: **${report.state}**\n- Nonessential work: **${report.skipNonessential ? 'blocked' : 'allowed'}**\n`,
     'utf8'
   );
 }
