@@ -267,7 +267,7 @@ async function withInvestSubjectScript(response){
   return new Response(patched,{status:response.status,statusText:response.statusText,headers:response.headers});
 }
 
-const LEGACY_OPERATING_SPACE_ROOTS=new Set(['ekodichurch','ekodimission']);
+const LEGACY_OPERATING_SPACE_ROOTS=new Set(['ekodimission']);
 function legacyOperatingSpacePath(pathname){const first=String(pathname||'').split('/').filter(Boolean)[0]?.toLowerCase()||'';return LEGACY_OPERATING_SPACE_ROOTS.has(first);}
 async function ensureLegacyOperatingSpaceMarker(response,includeBody=true){
   if(!response)return response;
