@@ -205,7 +205,7 @@ jobs:
               && grep -Fq '"dispatchExecuted":false' /tmp/delivery-recommend.json \
               && grep -Fq '"reason":"official_adapter_required"' /tmp/delivery-block.json \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/delivery-headers \
-              && grep -Eiq '^location: https://admin\.ekodi\.kr/?' /tmp/delivery-admin-headers; then
+              && grep -Eiq '^location: https://ekodi\.kr/admin/?' /tmp/delivery-admin-headers; then
               echo 'Delivery Hub AI production verified on https://ekodi.kr/delivery.'
               exit 0
             fi
