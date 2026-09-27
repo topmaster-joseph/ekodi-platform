@@ -21,7 +21,7 @@ export const SITE_IMPROVEMENT_POLICY = Object.freeze({
   defaultQuietWindowMinutes:30,
   defaultMaxRecentSessions:2,
   defaultMaxRecentVisits:8,
-  telemetryFreshnessHours:24,
+  telemetryFreshnessHours:36,
   maxFiles:25,
   maxChangedLines:1600,
   sourceOfSites:'config/site-lifecycle-registry.json',
@@ -155,16 +155,21 @@ async function trafficSnapshot(env,at=new Date()){
   const cutoff=new Date(at.getTime()-quietWindow*60*1000).toISOString();
   const freshCutoff=new Date(at.getTime()-SITE_IMPROVEMENT_POLICY.telemetryFreshnessHours*HOUR_MS).toISOString();
   try{
-    const row=await store.prepare("SELECT COUNT(DISTINCT CASE WHEN COALESCE(NULLIF(last_seen_at,''),first_seen_at) >= ? THEN host || ':' || session_hash END) AS recent_sessions, COALESCE(SUM(CASE WHEN COALESCE(NULLIF(last_seen_at,''),first_seen_at) >= ? THEN visit_count ELSE 0 END),0) AS recent_visits, MAX(COALESCE(NULLIF(last_seen_at,''),first_seen_at)) AS latest_activity FROM traffic_human_sessions WHERE COALESCE(NULLIF(last_seen_at,''),first_seen_at) >= ?")
-      .bind(cutoff,cutoff,freshCutoff).first();
+    const [row,collector]=await Promise.all([
+      store.prepare("SELECT COUNT(DISTINCT CASE WHEN COALESCE(NULLIF(last_seen_at,''),first_seen_at) >= ? THEN host || ':' || session_hash END) AS recent_sessions, COALESCE(SUM(CASE WHEN COALESCE(NULLIF(last_seen_at,''),first_seen_at) >= ? THEN visit_count ELSE 0 END),0) AS recent_visits, MAX(COALESCE(NULLIF(last_seen_at,''),first_seen_at)) AS latest_activity FROM traffic_human_sessions WHERE COALESCE(NULLIF(last_seen_at,''),first_seen_at) >= ?")
+        .bind(cutoff,cutoff,freshCutoff).first(),
+      store.prepare("SELECT last_success_at FROM traffic_intelligence_state WHERE source='cloudflare' LIMIT 1").first(),
+    ]);
     const recentSessions=Number(row?.recent_sessions||0);
     const recentVisits=Number(row?.recent_visits||0);
     const latestActivity=clean(row?.latest_activity,80);
+    const collectorLastSuccess=clean(collector?.last_success_at,80);
+    const telemetryFresh=Boolean(latestActivity)||(Boolean(collectorLastSuccess)&&collectorLastSuccess>=freshCutoff);
     return Object.freeze({
-      quiet:!!latestActivity&&recentSessions<=maxSessions,
-      recentSessions,recentVisits,latestActivity,
+      quiet:telemetryFresh&&recentSessions<=maxSessions,
+      recentSessions,recentVisits,latestActivity,collectorLastSuccess,telemetryFresh,
       quietWindowMinutes:quietWindow,maxSessions,maxVisits,cutoff,
-      reason:!latestActivity?'traffic_telemetry_stale_or_empty':recentSessions>maxSessions?'recent_sessions_above_threshold':'quiet',
+      reason:!telemetryFresh?'traffic_telemetry_stale_or_empty':recentSessions>maxSessions?'recent_sessions_above_threshold':'quiet',
     });
   }catch(error){
     return Object.freeze({quiet:false,reason:'traffic_telemetry_schema_unavailable',error:clean(error?.message||error,240)});
@@ -317,10 +322,12 @@ async function checksReady(env,sha){
 async function deploymentRunsReady(env,sha){
   const result=await github(env,'/actions/runs?head_sha='+encodeURIComponent(sha)+'&event=push&per_page=100');
   const rows=Array.isArray(result?.workflow_runs)?result.workflow_runs:[];
-  if(!rows.length)return Object.freeze({ready:false,reason:'deployment_runs_not_started',runs:0});
+  if(!rows.length)return Object.freeze({ready:false,reason:'deployment_runs_not_started',runs:0,deploymentRuns:0});
+  const deploymentRows=rows.filter(row=>/deploy|release/i.test(clean(row.name,180)));
+  if(!deploymentRows.length)return Object.freeze({ready:false,reason:'deployment_runs_not_started',runs:rows.length,deploymentRuns:0});
   const pending=rows.filter(row=>row.status!=='completed');
   const failed=rows.filter(row=>row.status==='completed'&&!SAFE_CONCLUSIONS.has(clean(row.conclusion,40).toLowerCase()));
-  return Object.freeze({ready:pending.length===0&&failed.length===0,reason:failed.length?'deployment_run_failed':pending.length?'deployment_runs_pending':'deployment_runs_passed',runs:rows.length,pending:pending.length,failed:failed.map(row=>clean(row.name,180))});
+  return Object.freeze({ready:pending.length===0&&failed.length===0,reason:failed.length?'deployment_run_failed':pending.length?'deployment_runs_pending':'deployment_runs_passed',runs:rows.length,deploymentRuns:deploymentRows.length,pending:pending.length,failed:failed.map(row=>clean(row.name,180))});
 }
 
 function sameSiteLink(base,value){
