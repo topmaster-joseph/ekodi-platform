@@ -32,29 +32,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Verify zero EKODI child-host references
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import pathlib,re
-          root=pathlib.Path('.')
-          skip={'.git','node_modules','dist'}
-          allowed={'scripts/zero-subdomain-guard.mjs','scripts/migrate-apex-paths-20260924.mjs'}
-          rx=re.compile(r'(?<!@)\b(?:[a-z0-9-]+\.)+ekodi\.kr\b|\*\.ekodi\.kr\b',re.I)
-          hits=[]
-          for p in root.rglob('*'):
-              if not p.is_file() or any(part in skip for part in p.parts): continue
-              rel=p.as_posix()
-              if rel in allowed: continue
-              try: text=p.read_text()
-              except Exception: continue
-              found=sorted(set(rx.findall(text)))
-              if found: hits.append((rel,found))
-          if hits:
-              for rel,found in hits[:100]: print(rel,found)
-              raise SystemExit('EKODI child-host references remain')
-          print('source scan: zero EKODI child-host references')
-          PY
+        run: node scripts/zero-subdomain-guard.mjs
       - name: Validate syntax and core domain contracts
         run: |
           node --check canonical-surface-router.js
