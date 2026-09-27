@@ -229,6 +229,10 @@ jobs:
           grep -Fq 'site-header mnubiz-header' /tmp/mnubiz.html
           grep -Fq 'data-ekodi-user-footer=' /tmp/mnubiz.html
           grep -Fq 'data-ekodi-user-header-root=' /tmp/mnubiz.html
+          if grep -Fq 'data-ekodi-user-header-fallback' /tmp/mnubiz.html || grep -Fq '>Community</a>' /tmp/mnubiz.html; then
+            echo 'mnubiz must keep exactly one site-owned header and must not inject the Community fallback header'
+            exit 1
+          fi
           grep -Fq 'data-ekodi-user-ai-entry="off"' /tmp/mnubiz.html
           grep -Fq '국립목포대학교 경영동문회' /tmp/mnubiz.html
           grep -Fq '.mnubiz-hero' /tmp/mnubiz.css
