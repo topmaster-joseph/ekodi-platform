@@ -54,79 +54,8 @@ let scheduled=false;
 let siteChromePromise=null;
 
 function installStyle(){
-  if(document.getElementById(STYLE_ID))return;
-  const style=document.createElement('style');
-  style.id=STYLE_ID;
-  style.textContent=`
-    .${ROOT_CLASS}{
-      position:fixed!important;
-      top:0!important;
-      left:0!important;
-      right:0!important;
-      width:100%!important;
-      max-width:none!important;
-      z-index:2147482000!important;
-      box-sizing:border-box!important;
-      --ekodi-user-header-inline-gutter:var(--ekodi-user-content-left,max(16px,calc((100vw - var(--ekodi-user-canvas-max,1240px)) / 2)));
-      padding-left:var(--ekodi-user-header-inline-gutter)!important;
-      padding-right:var(--ekodi-user-content-right,var(--ekodi-user-header-inline-gutter))!important;
-      min-height:var(--ekodi-user-header-min-height,48px)!important;
-      padding-top:calc(var(--ekodi-user-header-base-padding-top,0px) + env(safe-area-inset-top,0px))!important;
-      transform:none!important;
-      isolation:isolate;
-    }
-    .${ROOT_CLASS} .${CENTER_CLASS}{
-      position:absolute!important;
-      left:50%!important;
-      top:50%!important;
-      transform:translate(-50%,-50%)!important;
-      width:max-content!important;
-      max-width:min(66vw,760px)!important;
-      margin-left:0!important;
-      margin-right:0!important;
-      text-align:center!important;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      z-index:1;
-    }
-    .${FALLBACK_CLASS}{
-      min-height:64px!important;
-      border-bottom:1px solid color-mix(in srgb,var(--ekodi-shell-border,#dfe4df) 72%,transparent)!important;
-      background:color-mix(in srgb,var(--ekodi-shell-surface,#fafaf7) 94%,transparent)!important;
-      backdrop-filter:blur(14px);
-      color:var(--ekodi-shell-text,#18251d)!important;
-      font:14px/1.4 system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif!important;
-      padding-left:0!important;
-      padding-right:0!important;
-    }
-    .${FALLBACK_CLASS} .ekodi-user-ui-header-fallback__inner{width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 32px));min-height:64px;margin:0 auto;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:16px}
-    .${FALLBACK_CLASS} a{color:inherit;text-decoration:none}.${FALLBACK_CLASS} a:focus-visible{outline:2px solid currentColor;outline-offset:4px;border-radius:4px}
-    .${FALLBACK_CLASS} .ekodi-user-ui-header-fallback__brand{font-weight:850;letter-spacing:.12em}.ekodi-user-ui-header-fallback__context{text-align:center;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ekodi-user-ui-header-fallback__my{color:var(--ekodi-shell-focus,#315d48)!important;font-weight:650}
-    .${OPERATING_SCOPE_CLASS}{display:inline-flex!important;align-items:center!important;justify-content:center!important;margin-left:8px!important;padding:2px 7px!important;border:1px solid color-mix(in srgb,currentColor 26%,transparent)!important;border-radius:999px!important;background:color-mix(in srgb,var(--ekodi-shell-surface,#fafaf7) 82%,transparent)!important;color:inherit!important;font:750 10px/1.2 system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif!important;letter-spacing:.02em!important;white-space:nowrap!important;vertical-align:middle!important;opacity:.74!important}
-    .${OPERATING_SCOPE_CLASS}[data-ekodi-operating-space-floating="true"]{position:absolute!important;left:50%!important;bottom:4px!important;transform:translateX(-50%)!important;margin-left:0!important;pointer-events:none!important}
-    [${SPACER_ATTR}]{
-      display:block!important;
-      width:100%!important;
-      min-width:0!important;
-      pointer-events:none!important;
-      visibility:hidden!important;
-      grid-column:1/-1!important;
-      flex:0 0 auto!important;
-    }
-    html{scroll-padding-top:calc(var(--ekodi-user-header-height,0px) + 12px)}
-    @media(max-width:768px){
-      .${ROOT_CLASS} .${CENTER_CLASS}{max-width:54vw!important}
-    }
-    @media(max-width:480px){
-      .${ROOT_CLASS} .${CENTER_CLASS}{max-width:48vw!important}
-      .${FALLBACK_CLASS} .ekodi-user-ui-header-fallback__inner{width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 20px));gap:10px;font-size:12px}
-      .${OPERATING_SCOPE_CLASS}{margin-left:5px!important;padding:2px 5px!important;font-size:9px!important}
-    }
-  `;
-  (document.head||document.documentElement).append(style);
+  // Static presentation is owned by the external CSP-safe shell stylesheet.
 }
-
 function findContentCanvas(){
   const selectors=['[data-ekodi-user-canvas="centered-v1"]','body > main','body > [role="main"]','main','[role="main"]'];
   for(const selector of selectors){for(const node of document.querySelectorAll(selector)){if(visible(node)&&!node.closest('[data-ekodi-shell-root]'))return node;}}
