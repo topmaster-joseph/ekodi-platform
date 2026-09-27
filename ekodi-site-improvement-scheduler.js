@@ -1,7 +1,7 @@
 import siteLifecycleRegistry from './config/site-lifecycle-registry.json' with { type: 'json' };
 
 const HOUR_MS = 60 * 60 * 1000;
-const PROTECTED_FILE = /^(?:\.github\/|migrations\/|supabase\/|governance\/|deploy\/|wrangler\.|CONSTITUTION\.md$|AI_DEVELOPMENT_POLICY\.md$|AGENTS(?:\.override)?\.md$)|(?:^|\/)(?:auth|oauth|billing|payment|payments|finance|money|credential|credentials|secret|secrets|security)(?:[./_-]|$)/i;
+const PROTECTED_FILE = /^(?:\.github\/|migrations\/|supabase\/|governance\/|deploy\/|wrangler\.|platform-route-registry\.js$|CONSTITUTION\.md$|AI_DEVELOPMENT_POLICY\.md$|AGENTS(?:\.override)?\.md$)|(?:^|\/)(?:auth|oauth|billing|payment|payments|finance|money|credential|credentials|secret|secrets|security)(?:[./_-]|$)/i;
 const SAFE_CONCLUSIONS = new Set(['success','neutral','skipped']);
 
 function clean(value,max=500){return String(value??'').trim().slice(0,max)}
@@ -161,10 +161,10 @@ async function trafficSnapshot(env,at=new Date()){
     const recentVisits=Number(row?.recent_visits||0);
     const latestActivity=clean(row?.latest_activity,80);
     return Object.freeze({
-      quiet:!!latestActivity&&recentSessions<=maxSessions&&recentVisits<=maxVisits,
+      quiet:!!latestActivity&&recentSessions<=maxSessions,
       recentSessions,recentVisits,latestActivity,
       quietWindowMinutes:quietWindow,maxSessions,maxVisits,cutoff,
-      reason:!latestActivity?'traffic_telemetry_stale_or_empty':recentSessions>maxSessions?'recent_sessions_above_threshold':recentVisits>maxVisits?'recent_visits_above_threshold':'quiet',
+      reason:!latestActivity?'traffic_telemetry_stale_or_empty':recentSessions>maxSessions?'recent_sessions_above_threshold':'quiet',
     });
   }catch(error){
     return Object.freeze({quiet:false,reason:'traffic_telemetry_schema_unavailable',error:clean(error?.message||error,240)});
