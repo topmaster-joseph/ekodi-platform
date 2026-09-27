@@ -175,6 +175,8 @@ jobs:
             user_services_code=$(curl -sS -o /tmp/my-stage-user-services.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/user-services.js" || true)
             manifest_code=$(curl -sS -o /tmp/my-stage-services.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/service-manifest.json" || true)
             health_code=$(curl -sS -o /tmp/my-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            private_router_code=$(curl -sS -o /tmp/my-stage-private-router.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/my/private-workspace-router.js?v=20260827-private-workspace-1" || true)
+            access_context_code=$(curl -sS -o /tmp/my-stage-access-context.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/my/access-context.js?v=20260829-common-service-access-1" || true)
             if [[ "$root_code" == '200' && "$approval_code" == '200' ]] \
               && grep -Fq 'Cloudflare Access' /tmp/my-stage.html \
               && grep -Fq 'Cloudflare Access' /tmp/my-stage-approvals.html; then
@@ -182,12 +184,15 @@ jobs:
               echo 'My EKODI staging is deployed and correctly protected by Cloudflare Access.'
               exit 0
             fi
-            if [[ "$root_code" == '200' && "$private_code" == '200' && "$journey_code" == '200' && "$approval_code" == '200' && "$journey_app_code" == '200' && "$config_code" == '200' && "$personalization_code" == '200' && "$character_code" == '200' && "$app_code" == '200' && "$membership_code" == '200' && "$membership_css_code" == '200' && "$user_services_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' ]] \
+            if [[ "$root_code" == '200' && "$private_code" == '200' && "$journey_code" == '200' && "$approval_code" == '200' && "$journey_app_code" == '200' && "$config_code" == '200' && "$personalization_code" == '200' && "$character_code" == '200' && "$app_code" == '200' && "$membership_code" == '200' && "$membership_css_code" == '200' && "$user_services_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' && "$private_router_code" == '200' && "$access_context_code" == '200' ]] \
               && grep -Fq 'My EKODI' /tmp/my-stage.html \
               && grep -Fq 'MY PLATFORMS' /tmp/my-stage.html \
               && grep -Fq 'membership-summary.js' /tmp/my-stage.html \
               && grep -Fq 'PERSONAL BRAND MARKETING' /tmp/my-stage.html \
-              && grep -Fq '/private-workspace-router.js' /tmp/my-stage-private.html \
+              && grep -Fq '/my/private-workspace-router.js' /tmp/my-stage-private.html \
+              && grep -Fq '/my/access-context.js' /tmp/my-stage-private.html \
+              && grep -Fq "STORAGE_KEY='ekodi_my_active_workspace'" /tmp/my-stage-private-router.js \
+              && grep -Fq 'current_site_access' /tmp/my-stage-access-context.js \
               && grep -Eiq '^x-ekodi-private-workspace:[[:space:]]*v1' /tmp/my-stage-private.headers \
               && grep -Eiq '^x-robots-tag:[[:space:]]*noindex, nofollow, noarchive' /tmp/my-stage-private.headers \
               && grep -Fq 'MY JOURNEY · PERSON FIRST' /tmp/my-stage-journey.html \
@@ -350,12 +355,17 @@ jobs:
             user_services_code=$(curl -sS -o /tmp/my-user-services.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/user-services.js' || true)
             manifest_code=$(curl -sS -o /tmp/my-services.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/service-manifest.json' || true)
             health_code=$(curl -sS -o /tmp/my-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/health' || true)
-            if [[ "$root_code" == '200' && "$private_code" == '200' && "$journey_code" == '200' && "$approval_code" == '200' && "$journey_app_code" == '200' && "$config_code" == '200' && "$personalization_code" == '200' && "$character_code" == '200' && "$app_code" == '200' && "$membership_code" == '200' && "$membership_css_code" == '200' && "$user_services_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' ]] \
+            private_router_code=$(curl -sS -o /tmp/my-private-router.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/private-workspace-router.js?v=20260827-private-workspace-1' || true)
+            access_context_code=$(curl -sS -o /tmp/my-access-context.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/access-context.js?v=20260829-common-service-access-1' || true)
+            if [[ "$root_code" == '200' && "$private_code" == '200' && "$journey_code" == '200' && "$approval_code" == '200' && "$journey_app_code" == '200' && "$config_code" == '200' && "$personalization_code" == '200' && "$character_code" == '200' && "$app_code" == '200' && "$membership_code" == '200' && "$membership_css_code" == '200' && "$user_services_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' && "$private_router_code" == '200' && "$access_context_code" == '200' ]] \
               && grep -Fq 'My EKODI' /tmp/my.html \
               && grep -Fq 'MY PLATFORMS' /tmp/my.html \
               && grep -Fq 'membership-summary.js' /tmp/my.html \
               && grep -Fq 'PERSONAL BRAND MARKETING' /tmp/my.html \
-              && grep -Fq '/private-workspace-router.js' /tmp/my-private.html \
+              && grep -Fq '/my/private-workspace-router.js' /tmp/my-private.html \
+              && grep -Fq '/my/access-context.js' /tmp/my-private.html \
+              && grep -Fq "STORAGE_KEY='ekodi_my_active_workspace'" /tmp/my-private-router.js \
+              && grep -Fq 'current_site_access' /tmp/my-access-context.js \
               && grep -Eiq '^x-ekodi-private-workspace:[[:space:]]*v1' /tmp/my-private.headers \
               && grep -Eiq '^x-robots-tag:[[:space:]]*noindex, nofollow, noarchive' /tmp/my-private.headers \
               && grep -Fq 'MY JOURNEY · PERSON FIRST' /tmp/my-journey.html \
