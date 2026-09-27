@@ -16,7 +16,9 @@ test('church member home has its own private user surface', async () => {
   assert.match(html,/data-ekodi-surface="church-member-home"/);
   assert.match(html,/내 교회 공간/);
   assert.match(html,/My EKODI/);
-  assert.match(html,/교회 관리자/);
+  assert.match(html,/운영자용 교회 관리자/);
+  assert.equal((html.match(/href="\/ekodichurch\/admin"/g)||[]).length,1);
+  assert.doesNotMatch(html,/<div class="grid">[\s\S]*?<b>교회 관리자<\/b>/);
   assert.doesNotMatch(html,/church_care_tasks|church_staff|SUPABASE|access_token|service_role/i);
 });
 
