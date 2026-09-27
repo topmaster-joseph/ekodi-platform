@@ -428,8 +428,8 @@
     {
       "id": "money",
       "name": "EKODI Money",
-      "domain": "money.ekodi.kr",
-      "url": "https://money.ekodi.kr/",
+      "domain": "ekodi.kr/money",
+      "url": "https://ekodi.kr/money/",
       "status": "offline",
       "httpStatus": 429,
       "responseTime": 103,
