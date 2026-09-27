@@ -9,7 +9,7 @@
   "mandatoryRules": [
     "All human-facing services use https://ekodi.kr/{service} or an approved nested path.",
     "Authentication return targets for human-facing services must resolve to https://ekodi.kr paths.",
-    "Service registries, admin navigation, manifests and UI must not advertise *.ekodi.kr service URLs.",
+    "Service registries, admin navigation, manifests and UI must not advertise service-specific EKODI hostnames.",
     "Retired service subdomains must not be recreated as compatibility redirects without a new explicit owner approval.",
     "New code and tests must reject reintroduction of human-facing service subdomains.",
     "Infrastructure-only provider endpoints may remain only when they are not presented or used as EKODI human-facing service URLs and until replaced by apex-path/internal bindings."
