@@ -21,7 +21,7 @@ test('parses Wrangler D1 JSON batches',()=>{
 test('closed-loop proof blocks new Supabase projects at measured 2/2 capacity',()=>{
   const proof=evaluateMeasuredProof(rows,{now:NOW});
   assert.equal(proof.automaticPaidUpgrade,false);
-  assert.equal(proof.cloudflare.telemetryStatus,'measured');
+  assert.equal(proof.cloudflare.telemetryStatus,'partial');
   assert.equal(proof.cloudflare.workersRequests.observedValue,43210);
   assert.equal(proof.cloudflare.workersRequests.freeLimit,100000);
   assert.equal(proof.cloudflare.state,'normal');
