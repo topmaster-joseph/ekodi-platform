@@ -369,6 +369,197 @@ async function readPayload(env,region,access,{historyOnly=false,operatorsOnly=fa
 }
 
 
+
+const CONTENT_KIND=/^[a-z0-9][a-z0-9_-]{0,63}$/;
+const CONTENT_STATUSES=new Set(['active','planned','completed','closed','filled']);
+const CONTENT_VISIBILITIES=new Set(['public','private','archived']);
+function optionalDate(value){
+  const text=boundedText(value,10);
+  return text&&/^\d{4}-\d{2}-\d{2}$/.test(text)?text:'';
+}
+function cleanTargetUrl(value){
+  const text=boundedText(value,600);
+  if(!text)return'';
+  if(text.startsWith('/'))return text;
+  try{const url=new URL(text);return ['http:','https:'].includes(url.protocol)?url.toString():''}catch{return''}
+}
+function cleanPayloadObject(value){
+  if(!value||typeof value!=='object'||Array.isArray(value))return{};
+  const serialized=JSON.stringify(value);
+  if(serialized.length>12000)return{};
+  return value;
+}
+function contentItem(row,{admin=false}={}){
+  return {
+    id:Number(row.id),
+    moduleId:row.module_id,
+    kind:row.kind,
+    title:row.title,
+    summary:row.summary||'',
+    status:row.status,
+    startsOn:row.starts_on||'',
+    endsOn:row.ends_on||'',
+    location:row.location||'',
+    contactText:row.contact_text||'',
+    targetUrl:row.target_url||'',
+    payload:safeJsonObject(row.payload_json),
+    ...(admin?{
+      visibility:row.visibility,
+      sortOrder:Number(row.sort_order||0),
+      createdBy:row.created_by||'',
+      createdAt:row.created_at,
+      updatedAt:row.updated_at,
+    }:{})
+  };
+}
+function safeJsonObject(raw){
+  try{const value=JSON.parse(String(raw||'{}'));return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}catch{return{}}
+}
+function contentWriteFields(body){
+  const title=boundedText(body.title,180);
+  if(!title)return null;
+  const kind=CONTENT_KIND.test(clean(body.kind))?clean(body.kind):'item';
+  const status=CONTENT_STATUSES.has(clean(body.status))?clean(body.status):'active';
+  const visibility=CONTENT_VISIBILITIES.has(clean(body.visibility))?clean(body.visibility):'public';
+  const startsOn=optionalDate(body.startsOn);
+  const endsOn=optionalDate(body.endsOn);
+  if(endsOn&&startsOn&&endsOn<startsOn)return null;
+  const sortOrder=Math.max(-1000,Math.min(1000,Number.parseInt(body.sortOrder,10)||0));
+  return {
+    kind,title,status,visibility,startsOn,endsOn,sortOrder,
+    summary:boundedText(body.summary,1800),
+    location:boundedText(body.location,240),
+    contactText:boundedText(body.contactText,240),
+    targetUrl:cleanTargetUrl(body.targetUrl),
+    payload:cleanPayloadObject(body.payload),
+  };
+}
+function canOperateModuleContent(access,moduleId){
+  if(!canReadOperations(access))return false;
+  if(access?.platform)return true;
+  const delegated=access?.delegatedOperator;
+  if(delegated)return Array.isArray(delegated.moduleIds)&&delegated.moduleIds.includes(moduleId);
+  return true;
+}
+async function insertContentEvent(env,{regionId,moduleId,itemId=null,eventType,actorEmail='',payload={}}){
+  const now=new Date().toISOString();
+  await env.DB.prepare(`
+    INSERT INTO local_region_content_events
+    (event_key,region_id,module_id,item_id,event_type,actor_email,payload_json,event_at)
+    VALUES(?,?,?,?,?,?,?,?)
+  `).bind(
+    ['content',regionId,moduleId,eventType,Date.now(),crypto.randomUUID()].join(':'),
+    regionId,moduleId,itemId,eventType,actorEmail,JSON.stringify(payload||{}),now
+  ).run();
+}
+async function loadContentItems(env,regionId,moduleId,{admin=false}={}){
+  const publicWhere=admin?'':"AND visibility='public'";
+  const rows=await env.DB.prepare(`
+    SELECT id,region_id,module_id,kind,title,summary,status,starts_on,ends_on,location,contact_text,target_url,payload_json,visibility,sort_order,created_by,created_at,updated_at
+    FROM local_region_content_items
+    WHERE region_id=? AND module_id=? ${publicWhere}
+    ORDER BY sort_order DESC,
+      CASE WHEN starts_on='' THEN 1 ELSE 0 END,
+      starts_on ASC,
+      updated_at DESC,
+      id DESC
+    LIMIT 300
+  `).bind(regionId,moduleId).all();
+  return rows.results||[];
+}
+async function handleLocalRegionModuleContent(request,env,match){
+  if(!env?.DB)return json(request,{error:'지역 콘텐츠 데이터베이스를 사용할 수 없습니다.',code:'LOCAL_REGION_CONTENT_DB_UNAVAILABLE'},503);
+  const slug=clean(match[1]);
+  const moduleId=clean(match[2]);
+  const subroute=clean(match[3]);
+  const region=localRegionBySlug(slug);
+  const module=region&&moduleById(region,moduleId);
+  if(!region||!module||module.contentMode!=='regional-ledger'){
+    return json(request,{error:'공통 콘텐츠 원장을 사용하지 않는 지역서비스입니다.',code:'LOCAL_REGION_CONTENT_MODULE_NOT_FOUND'},404);
+  }
+
+  if(request.method==='GET'&&!subroute){
+    const rows=await loadContentItems(env,region.id,module.id,{admin:false});
+    return json(request,{
+      module:{id:module.id,label:module.label,summary:module.summary,publicPath:module.publicPath},
+      items:rows.map(row=>contentItem(row)),
+    });
+  }
+
+  const access=await resolveRegionalAccess(request,env,slug==='cheonggye'?'cheonggye-local':'');
+  if(!access.ok)return json(request,{authenticated:false,error:'지역서비스 운영권한이 없습니다.',code:access.code||'LOCAL_REGION_CONTENT_FORBIDDEN'},access.status||403);
+  if(!canOperateModuleContent(access,module.id)){
+    return json(request,{authenticated:true,error:'이 하위서비스의 운영권이 없습니다.',code:'LOCAL_REGION_CONTENT_MODULE_FORBIDDEN'},403);
+  }
+
+  if(request.method==='GET'&&subroute==='admin'){
+    const rows=await loadContentItems(env,region.id,module.id,{admin:true});
+    return json(request,{
+      module:{id:module.id,label:module.label,summary:module.summary,publicPath:module.publicPath,adminPath:module.adminPath},
+      items:rows.map(row=>contentItem(row,{admin:true})),
+      access:{email:access.email||'',role:access.role||'',delegatedOperator:access.delegatedOperator||null},
+    });
+  }
+
+  if(request.method!=='POST'||subroute!=='actions')return json(request,{error:'method_not_allowed'},405);
+  if(!sameOriginForWrite(request))return json(request,{error:'허용되지 않은 요청 출처입니다.',code:'LOCAL_REGION_ORIGIN_FORBIDDEN'},403);
+  const body=await request.json().catch(()=>null);
+  if(!body||typeof body!=='object')return json(request,{error:'요청 본문이 올바르지 않습니다.',code:'LOCAL_REGION_CONTENT_BODY_INVALID'},400);
+  const action=clean(body.action);
+  const now=new Date().toISOString();
+
+  if(action==='create_item'){
+    const fields=contentWriteFields(body);
+    if(!fields)return json(request,{error:'제목과 날짜 범위를 확인해 주세요.',code:'LOCAL_REGION_CONTENT_ITEM_INVALID'},400);
+    const result=await env.DB.prepare(`
+      INSERT INTO local_region_content_items
+      (region_id,module_id,kind,title,summary,status,starts_on,ends_on,location,contact_text,target_url,payload_json,visibility,sort_order,created_by,created_at,updated_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `).bind(
+      region.id,module.id,fields.kind,fields.title,fields.summary,fields.status,fields.startsOn,fields.endsOn,
+      fields.location,fields.contactText,fields.targetUrl,JSON.stringify(fields.payload),fields.visibility,fields.sortOrder,
+      access.email||'',now,now
+    ).run();
+    const itemId=Number(result?.meta?.last_row_id||0)||null;
+    await insertContentEvent(env,{regionId:region.id,moduleId:module.id,itemId,eventType:'item_created',actorEmail:access.email||'',payload:{title:fields.title,visibility:fields.visibility}});
+    return json(request,{ok:true,action,itemId,updatedAt:now},201);
+  }
+
+  const itemId=Number(body.itemId||0);
+  if(!Number.isInteger(itemId)||itemId<1)return json(request,{error:'콘텐츠 ID가 올바르지 않습니다.',code:'LOCAL_REGION_CONTENT_ITEM_ID_INVALID'},400);
+  const current=await env.DB.prepare(`
+    SELECT id,title,visibility FROM local_region_content_items
+    WHERE id=? AND region_id=? AND module_id=? LIMIT 1
+  `).bind(itemId,region.id,module.id).first();
+  if(!current)return json(request,{error:'콘텐츠를 찾을 수 없습니다.',code:'LOCAL_REGION_CONTENT_ITEM_NOT_FOUND'},404);
+
+  if(action==='update_item'){
+    const fields=contentWriteFields(body);
+    if(!fields)return json(request,{error:'제목과 날짜 범위를 확인해 주세요.',code:'LOCAL_REGION_CONTENT_ITEM_INVALID'},400);
+    await env.DB.prepare(`
+      UPDATE local_region_content_items
+      SET kind=?,title=?,summary=?,status=?,starts_on=?,ends_on=?,location=?,contact_text=?,target_url=?,payload_json=?,visibility=?,sort_order=?,updated_at=?
+      WHERE id=? AND region_id=? AND module_id=?
+    `).bind(
+      fields.kind,fields.title,fields.summary,fields.status,fields.startsOn,fields.endsOn,fields.location,fields.contactText,
+      fields.targetUrl,JSON.stringify(fields.payload),fields.visibility,fields.sortOrder,now,itemId,region.id,module.id
+    ).run();
+    await insertContentEvent(env,{regionId:region.id,moduleId:module.id,itemId,eventType:'item_updated',actorEmail:access.email||'',payload:{title:fields.title,visibility:fields.visibility}});
+    return json(request,{ok:true,action,itemId,updatedAt:now});
+  }
+
+  if(action==='archive_item'){
+    await env.DB.prepare(`
+      UPDATE local_region_content_items SET visibility='archived',updated_at=?
+      WHERE id=? AND region_id=? AND module_id=?
+    `).bind(now,itemId,region.id,module.id).run();
+    await insertContentEvent(env,{regionId:region.id,moduleId:module.id,itemId,eventType:'item_archived',actorEmail:access.email||'',payload:{title:current.title,previousVisibility:current.visibility}});
+    return json(request,{ok:true,action,itemId,updatedAt:now});
+  }
+
+  return json(request,{error:'지원하지 않는 콘텐츠 작업입니다.',code:'LOCAL_REGION_CONTENT_ACTION_UNKNOWN'},400);
+}
+
 const PROJECT_ID=/^[a-z0-9][a-z0-9-]{0,63}$/;
 const PROJECT_CATEGORIES=new Set(['administration','research','field','participation','campus','forest','commerce','media']);
 const PROJECT_STATUSES=new Set(['completed','in_progress','planned','waiting']);
@@ -562,6 +753,11 @@ async function handleLocalRegionProject(request,env,match){
 
 export async function handleLocalRegionOperations(request,env){
   const url=new URL(request.url);
+  const moduleMatch=url.pathname.match(/^\/api\/local-operations\/([a-z0-9-]+)\/modules\/([a-z0-9-]+)(?:\/(admin|actions))?$/);
+  if(moduleMatch){
+    if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{'access-control-allow-origin':'https://ekodi.kr','access-control-allow-headers':'authorization,content-type','access-control-allow-methods':'GET,POST,OPTIONS','cache-control':'no-store'}});
+    return handleLocalRegionModuleContent(request,env,moduleMatch);
+  }
   const projectMatch=url.pathname.match(/^\/api\/local-operations\/([a-z0-9-]+)\/projects\/([a-z0-9-]+)(?:\/(admin|actions))?$/);
   if(projectMatch){
     if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{'access-control-allow-origin':'https://ekodi.kr','access-control-allow-headers':'authorization,content-type','access-control-allow-methods':'GET,POST,OPTIONS','cache-control':'no-store'}});
