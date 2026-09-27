@@ -62,7 +62,9 @@
       "resetTimeKst": "09:00",
       "timezone": "Asia/Seoul",
       "executionCountPerBudgetDay": 3,
-      "cumulativeCeilingsPercent": {
+      "basis": "live-server-resource-load",
+      "apiUsageExcluded": true,
+      "serverLoadCeilingsPercent": {
         "morning": 30,
         "lunch": 60,
         "evening": 90
@@ -72,14 +74,22 @@
         "lunch": "12:00-17:59",
         "evening": "18:00-08:59(next day)"
       },
+      "serverMetrics": [
+        "current_load",
+        "cpu_load_pct",
+        "memory_used_pct",
+        "active_job_concurrency_pct"
+      ],
+      "effectiveLoadRule": "max-of-server-metrics",
+      "serverTelemetryFreshSeconds": 90,
       "emergencyReservePercent": 10,
-      "cumulativeNotPerRun": true,
       "trafficAware": true,
       "sameSiteRetryBeforeCursorAdvance": true,
-      "futureSlotBudgetBorrowingForbidden": true
+      "startBlockedAtOrAboveCeiling": true
     },
     "rootAndDescendantsShareOneExecutionBudget": true,
-    "slotExecutionMustRemainLowTrafficGated": true
+    "slotExecutionMustRemainLowTrafficGated": true,
+    "slotExecutionMustRemainServerLoadGated": true
   },
   "exceptions": {
     "constitutionalBoundaryOnly": true,
