@@ -22,10 +22,11 @@ test('local-region operating-rights migrations are additive and seed CGMA',async
 });
 
 test('Cheonggye admin exposes live operating-rights history and guarded management controls',async()=>{
-  const [page,client,router]=await Promise.all([
+  const [page,client,router,staticAssets]=await Promise.all([
     read('local-region-page.js'),
     read('local-region-operations-admin.js'),
     read('platform-router-entry-worker.js'),
+    read('platform-router-static-assets.js'),
   ]);
   assert.match(page,/운영권 이력/);
   assert.match(page,/data-region-operations-ledger/);
@@ -38,8 +39,9 @@ test('Cheonggye admin exposes live operating-rights history and guarded manageme
   assert.match(client,/complete_transfer/);
   assert.match(client,/canManageOperatingRights/);
   assert.match(client,/tenant\.operations\.manage/);
-  assert.match(router,/localRegionOperationsAdminScript/);
-  assert.match(router,/\/cheonggye\/local-region-operations-admin\.js/);
+  assert.match(router,/routePlatformStaticAsset\(url\.pathname\)/);
+  assert.match(staticAssets,/localRegionOperationsAdminScript/);
+  assert.match(staticAssets,/\/cheonggye\/local-region-operations-admin\.js/);
 });
 
 test('regional governance API separates read operations from high-authority writes',async()=>{

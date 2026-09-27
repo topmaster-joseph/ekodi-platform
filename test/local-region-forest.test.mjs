@@ -27,13 +27,16 @@ test('forest public and admin pages expose project-first surfaces',async()=>{
 });
 
 test('regional router gives forest routes priority over generic Cheonggye page',async()=>{
-  const router=await fs.readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
+  const [router,staticAssets]=await Promise.all([
+    fs.readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8'),
+    fs.readFile(new URL('../platform-router-static-assets.js',import.meta.url),'utf8'),
+  ]);
   assert.match(router,/forestPublic/);
   assert.match(router,/forestAdmin/);
   assert.match(router,/localRegionForestPublicPage/);
   assert.match(router,/localRegionForestAdminPage/);
-  assert.match(router,/\/cheonggye\/local-region-forest-public\.js/);
-  assert.match(router,/\/cheonggye\/local-region-forest-admin\.js/);
+  assert.match(staticAssets,/\/cheonggye\/local-region-forest-public\.js/);
+  assert.match(staticAssets,/\/cheonggye\/local-region-forest-admin\.js/);
 });
 
 test('forest project API preserves public read, authenticated admin and archive semantics',async()=>{

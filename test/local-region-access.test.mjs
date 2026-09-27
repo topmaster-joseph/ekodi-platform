@@ -100,17 +100,21 @@ test('regional governor may manage child pass grants but pass vendor does not in
 });
 
 test('router exposes auth assets and regional access page before generic workspace routing',async()=>{
-  const router=await fs.readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
-  assert.match(router,/localRegionAdminAuthScript/);
-  assert.match(router,/localRegionAccessAdminScript/);
+  const [router,staticAssets]=await Promise.all([
+    fs.readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8'),
+    fs.readFile(new URL('../platform-router-static-assets.js',import.meta.url),'utf8'),
+  ]);
+  assert.match(router,/routePlatformStaticAsset\(url\.pathname\)/);
   assert.match(router,/localRegionAccessAdminPage/);
+  assert.match(staticAssets,/localRegionAdminAuthScript/);
+  assert.match(staticAssets,/localRegionAccessAdminScript/);
   const regional=router.indexOf('localRegionFromPath(url.pathname)');
   const generic=router.indexOf('isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname)');
   assert.ok(regional>0&&generic>regional);
   const wrangler=await fs.readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
   assert.match(wrangler,/\/cheonggye\*/);
-  assert.match(router,/\/cheonggye\/local-region-admin-auth\.js/);
-  assert.match(router,/\/cheonggye\/local-region-access-admin\.js/);
+  assert.match(staticAssets,/\/cheonggye\/local-region-admin-auth\.js/);
+  assert.match(staticAssets,/\/cheonggye\/local-region-access-admin\.js/);
 });
 
 test('customer API routes local access resolver before generic customer access',async()=>{

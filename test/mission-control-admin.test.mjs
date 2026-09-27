@@ -51,13 +51,16 @@ test('Primary AI Ops does not auto-hydrate Governance, Health or Deployments',as
 });
 
 test('System timeline remains available inside the separate Deployments technical surface',async()=>{
-  const [mission,timeline,build]=await Promise.all([read('mission-control-admin.js'),read('system-timeline-admin.js'),read('scripts/build.mjs')]);
+  const [mission,timeline,manifestText]=await Promise.all([read('mission-control-admin.js'),read('system-timeline-admin.js'),read('config/admin-build-composition.json')]);
   assert.match(mission,/key:'system'/);
   assert.match(timeline,/root\.id = 'systemTimeline'/);
   assert.match(timeline,/document\.querySelector\('#releaseControl'\)/);
   assert.match(timeline,/OPERATIONS BLACK BOX/);
-  assert.match(build,/system-timeline-admin\.js/);
-  assert.match(build,/system-timeline-admin\.css/);
+  const manifest=JSON.parse(manifestText);
+  const releaseJs=manifest.compositions.find(item=>item.target==='release-control-admin.js');
+  const releaseCss=manifest.compositions.find(item=>item.target==='release-control-admin.css');
+  assert.ok(releaseJs?.sources.some(item=>item.path==='system-timeline-admin.js'));
+  assert.ok(releaseCss?.sources.some(item=>item.path==='system-timeline-admin.css'));
 });
 
 test('Flat AI Ops keeps decision safety while current conversation owns normal requests',async()=>{

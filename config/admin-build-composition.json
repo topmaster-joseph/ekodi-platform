@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "policyId": "ADMIN-BUILD-COMPOSITION-001",
+  "status": "enforced",
+  "compositions": [
+    {
+      "target": "admin-design-engine.css",
+      "sources": [
+        {"path": "admin-conversation-workbench.css", "marker": "EKODI Admin conversation-first workbench v1"}
+      ]
+    },
+    {
+      "target": "device-browser-diagnostics.js",
+      "targetMarker": "서버로 업로드하지 않습니다",
+      "sources": [
+        {"path": "device-wake-admin.js", "marker": "원격 전원 · 작업 자동복귀"}
+      ]
+    },
+    {
+      "target": "admin-finance.css",
+      "sources": [{"path": "tax-invoice-admin.css"}]
+    },
+    {
+      "target": "finance-monitor.js",
+      "sources": [{"path": "tax-invoice-admin.js"}]
+    },
+    {
+      "target": "books-finance-admin.css",
+      "sources": [
+        {"path": "books-distribution-admin.css"},
+        {"path": "books-pipeline-admin.css"},
+        {"path": "books-royalty-admin.css"}
+      ]
+    },
+    {
+      "target": "books-finance-admin.js",
+      "sources": [
+        {"path": "books-distribution-admin.js"},
+        {"path": "books-pipeline-admin.js"},
+        {"path": "books-pipeline-bridge.js"},
+        {"path": "books-royalty-admin.js"}
+      ]
+    },
+    {
+      "target": "release-control-admin.css",
+      "sources": [{"path": "system-timeline-admin.css"}]
+    },
+    {
+      "target": "release-control-admin.js",
+      "sources": [{"path": "system-timeline-admin.js"}]
+    }
+  ]
+}

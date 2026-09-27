@@ -38,10 +38,11 @@ test('Books pipeline UI links production, distribution and finance', async () =>
 });
 
 test('Books build bundles pipeline into secured lazy Books assets', async () => {
-  const build = await read('scripts/build.mjs');
-  for (const marker of ['books-pipeline-admin.css', 'books-pipeline-admin.js', 'books-pipeline-bridge.js', 'books-finance-admin.css', 'books-finance-admin.js']) {
-    assert.ok(build.includes(marker), `missing build marker: ${marker}`);
-  }
+  const manifest = JSON.parse(await read('config/admin-build-composition.json'));
+  const css = manifest.compositions.find(item=>item.target==='books-finance-admin.css');
+  const js = manifest.compositions.find(item=>item.target==='books-finance-admin.js');
+  for (const marker of ['books-pipeline-admin.css']) assert.ok(css?.sources.some(item=>item.path===marker), `missing composition source: ${marker}`);
+  for (const marker of ['books-pipeline-admin.js','books-pipeline-bridge.js']) assert.ok(js?.sources.some(item=>item.path===marker), `missing composition source: ${marker}`);
 });
 
 test('Canonical Control API entry preserves Books pipeline routing behind security-wrapped Mission Control', async () => {

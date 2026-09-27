@@ -62,9 +62,9 @@ test('Books distribution operations surface stale checks, action queue and CSV e
 });
 
 test('Books build bundles distribution module into secured lazy Books assets', async () => {
-  const build = await read('scripts/build.mjs');
-  assert.ok(build.includes('books-distribution-admin.css'));
-  assert.ok(build.includes('books-distribution-admin.js'));
-  assert.ok(build.includes('books-finance-admin.css'));
-  assert.ok(build.includes('books-finance-admin.js'));
+  const manifest = JSON.parse(await read('config/admin-build-composition.json'));
+  const css = manifest.compositions.find(item=>item.target==='books-finance-admin.css');
+  const js = manifest.compositions.find(item=>item.target==='books-finance-admin.js');
+  assert.ok(css?.sources.some(item=>item.path==='books-distribution-admin.css'));
+  assert.ok(js?.sources.some(item=>item.path==='books-distribution-admin.js'));
 });

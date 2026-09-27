@@ -86,9 +86,13 @@ test('pastor admin client enforces church staff lookup before data modules', asy
 });
 
 test('production entry routes church admin before generic workspace admin', async () => {
-  const source = await fs.promises.readFile(new URL('../platform-router-entry-worker.js', import.meta.url), 'utf8');
+  const [source,staticAssets] = await Promise.all([
+    fs.promises.readFile(new URL('../platform-router-entry-worker.js', import.meta.url), 'utf8'),
+    fs.promises.readFile(new URL('../platform-router-static-assets.js', import.meta.url), 'utf8'),
+  ]);
   assert.match(source, /churchPastorAdminPage/);
-  assert.match(source, /church-pastor-admin\.js/);
+  assert.match(source, /routePlatformStaticAsset\(url\.pathname\)/);
+  assert.match(staticAssets, /\/church-pastor-admin\.js/);
   assert.match(source, /url\.pathname===\'\/ekodi-church\'/);
   assert.match(source, /\/ekodichurch/);
   const church = source.indexOf('isChurchPastorAdminPath(url.pathname)');

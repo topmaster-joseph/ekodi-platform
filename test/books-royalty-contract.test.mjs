@@ -45,8 +45,9 @@ test('Books royalties admin manages holders, rights rules and statement lifecycl
 });
 
 test('Books build includes royalties in secured lazy operations bundle', async () => {
-  const build = await read('scripts/build.mjs');
-  for (const marker of ['books-royalty-admin.css','books-royalty-admin.js','books-finance-admin.css','books-finance-admin.js']) {
-    assert.ok(build.includes(marker), `missing royalty build marker: ${marker}`);
-  }
+  const manifest = JSON.parse(await read('config/admin-build-composition.json'));
+  const css = manifest.compositions.find(item=>item.target==='books-finance-admin.css');
+  const js = manifest.compositions.find(item=>item.target==='books-finance-admin.js');
+  assert.ok(css?.sources.some(item=>item.path==='books-royalty-admin.css'));
+  assert.ok(js?.sources.some(item=>item.path==='books-royalty-admin.js'));
 });
