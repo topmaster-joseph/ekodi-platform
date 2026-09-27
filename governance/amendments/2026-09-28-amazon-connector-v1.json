@@ -6,10 +6,10 @@
   "approvedAt": "2026-09-28",
   "changeClass": "C2",
   "taskId": "20260928-ekodi-amazon-connector",
-  "summary": "Add Amazon as an optional shared external commerce connector, surfaced first in EKODI Mall at /ekodimall/admin/amazon without introducing a new EKODI subdomain.",
+  "summary": "Add Amazon as an optional shared external commerce connector with free-first cost governance, surfaced first in EKODI Mall at /ekodimall/admin/amazon without introducing a new EKODI subdomain.",
   "approvalBasis": "The platform owner explicitly approved the proposed Amazon integration architecture and instructed EKODI to carry it through subordinate pages and services under the forced-execution rules.",
   "migrationPlan": "Add a shared Amazon connector boundary to the Mall API, expose tenant-scoped readiness in the existing Mall administrator shell, and keep live Selling Partner API mutations disabled until credentials and production verification are complete.",
-  "securityModel": "Amazon credentials remain server-side only; the browser receives readiness metadata but never secrets. Tenant authorization remains Person + Workspace + Role + Capability. Live external mutations fail closed until explicit credentials and a verified SP-API execution adapter are enabled.",
+  "securityModel": "Amazon credentials remain server-side only; the browser receives readiness and normalized cost metadata but never secrets. Tenant authorization remains Person + Workspace + Role + Capability. Paid AWS, Seller paid plan, FBA and paid Bedrock default off; paid execution requires both an enabled policy switch and a bounded operator approval. Live external mutations remain fail-closed until explicit credentials and a verified SP-API execution adapter are enabled.",
   "rollback": "Remove the Amazon route from Mall navigation and API entry routing while retaining no Amazon credentials or user-visible dependency in the platform.",
-  "verificationPolicy": "Run repository syntax/tests, Mall navigation and connector contract tests, guarded staging/release, and production verification of /ekodimall/admin/amazon before enabling live synchronization."
+  "verificationPolicy": "Run repository syntax/tests, additive Mall D1 migration validation, Amazon cost-governance contract tests, Mall navigation tests, guarded staging with free-first defaults, guarded release, and production verification of /ekodimall/admin/amazon before enabling live synchronization."
 }
