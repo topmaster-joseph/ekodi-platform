@@ -88,7 +88,7 @@ test('cloud fallback is EKODI-owned, workspace-sandboxed, and fail-closed',async
     readFile(new URL('../.github/workflows/site-improvement-cloud.yml',import.meta.url),'utf8'),
   ]);
   assert.match(scheduler,/cloudFallbackWorkflow:'site-improvement-cloud\.yml'/);
-  assert.match(scheduler,/state='cloud_dispatched'/);
+  assert.match(scheduler,/state:'cloud_dispatched'/);
   assert.match(scheduler,/reconcileCloudDispatched/);
   assert.match(scheduler,/github-hosted-native\+codex-workspace-sandbox/);
   assert.match(scheduler,/ai-control-\(\?:worker\|core\)/);
