@@ -71,7 +71,7 @@ test('remaining canonical business, trade and lab surfaces inherit a readability
     read('scripts/verify-mobile-fixed-headers-live.mjs'),
   ]);
   assert.match(router,/routeEkodiBizPublic[\s\S]*injectEkodiProgressiveHome\(injectEkodiTenantReadability\(rewritten\)\)/);
-  assert.match(router,/LEGACY_OPERATING_SPACE_ROOTS=new Set\(\['ekodichurch','ekodimission'\]\)/);
+  assert.match(router,/LEGACY_OPERATING_SPACE_ROOTS=new Set\(\['ekodimission'\]\)/);
   assert.match(router,/async function ensureLegacyOperatingSpaceMarker/);
   assert.match(router,/html\.includes\('data-ekodi-operating-space-label'\)/);
   assert.match(router,/if\(!includeBody\)return new Response\(response\.body/);
@@ -102,8 +102,18 @@ test('guarded release requires the operating-space distinction on representative
   const cgmaSharedProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/cgma'||item.url==='https://ekodi.kr/cgma/');
   assert.equal(cgmaSharedProbe,undefined,'CGMA root is independently owned by cgma-root-gateway and must not be evaluated as a Shared Site candidate');
 
+  const church=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/ekodichurch/');
+  assert.ok(church,'missing Church public release probe');
+  assert.deepEqual(church.statuses,[200]);
+  assert.ok(church.expect?.includes('WELCOME TO EKODI CHURCH'),'Church probe must bind to the actual public-page identity');
+  assert.ok(church.expect?.includes('에코디교회'),'Church probe must retain the Korean service identity');
+  assert.ok(!church.expect?.includes('운영공간'),'Church public surface must not require internal operating-space wording');
+  assert.ok(church.forbid?.includes('운영공간'),'Church release must reject internal operating-space wording');
+  assert.ok(church.forbid?.includes('data-ekodi-operating-space-label'),'Church release must reject internal operating-space markers');
+  assert.ok(!church.headerExpect?.includes('x-ekodi-operating-space-label: v1'),'Church public ownership must not depend on internal operating-space headers');
+  assert.equal(church.rollbackVerify,false);
+
   for(const url of [
-    'https://ekodi.kr/ekodichurch/',
     'https://ekodi.kr/ekodibiz',
     'https://ekodi.kr/jadam',
     'https://ekodi.kr/pizzamaru',
@@ -112,10 +122,6 @@ test('guarded release requires the operating-space distinction on representative
     const probe=manifest.worker.requests.find(item=>item.url===url);
     assert.ok(probe,'missing operating-space release probe: '+url);
     assert.deepEqual(probe.statuses,[200]);
-    if(url==='https://ekodi.kr/ekodichurch/'){
-      assert.ok(probe.expect?.includes('WELCOME TO EKODI CHURCH'),'Church probe must bind to the actual public-page identity');
-      assert.ok(probe.expect?.includes('에코디교회'),'Church probe must retain the Korean service identity');
-    }
     assert.ok(probe.expect?.includes('운영공간'),url+' must render the operating-space distinction');
     assert.ok(probe.headerExpect?.includes('x-ekodi-operating-space-label: v1'),url+' must prove shared operating-space ownership');
     assert.equal(probe.rollbackVerify,false);
