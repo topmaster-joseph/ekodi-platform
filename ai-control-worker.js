@@ -7,6 +7,7 @@ import { LOCAL_EXECUTION_POLICY, compareLocalExecutionCandidates, localExecution
 import capabilityRegistry from './config/capability-registry.json' with { type: 'json' };
 import {AI_COMMONS_POLICY,adminIdeaView,canFinalPublish,executionCatalogSnapshot,memberIdeaView,normalizeAiIdeaInput,publicRequestView,rankCommonCapabilities,rankPublicExecutionServices,requestSimilarity,resolveExecutionServiceEntry,suggestedIdeaState} from './ai-commons.js';
 import {attachSiteImprovementTask,buildSiteImprovementPrompt,claimLowTrafficSiteImprovement,completeSiteImprovementNodeJob,dispatchCloudSiteImprovement,failSiteImprovementClaim,failSiteImprovementTask,markSiteImprovementRunning,reconcileSiteImprovementRelease} from './ekodi-site-improvement-scheduler.js';
+import {handleSiteImprovementResponsesBroker} from './ekodi-site-improvement-oidc-broker.js';
 
 const clean=value=>String(value??'').trim();
 const now=()=>new Date().toISOString();
@@ -508,6 +509,7 @@ export default{async fetch(request,env,ctx){
   if(['GET','HEAD'].includes(request.method)&&url.pathname==='/api/interpreter/style')return interpreterBrowserAsset(request,env,'interpreter.css','text/css; charset=utf-8');
   if(url.pathname==='/config.js')return json({error:'operator_surface_moved',adminUrl:config(env).adminUrl},410);
   if(request.method==='GET'&&url.pathname==='/__health')return json({ok:true,platform:'ai-control',architectureVersion:config(env).architectureVersion,surface:'runtime-and-commons',commons:true,commonsPolicy:AI_COMMONS_POLICY.version,costMode:'free-first',freeQuotaPolicy:AI_FREE_QUOTA_POLICY.policyId,paidApiAutoEscalation:false,paidDecisionGate:true});
+  const siteImprovementBroker=await handleSiteImprovementResponsesBroker(request,env);if(siteImprovementBroker)return siteImprovementBroker;
   const commons=await handleCommonsApi(request,env,ctx);if(commons)return commons;
   if(request.method==='GET'&&url.pathname==='/api/status'){
     const auth=await requireAdmin(request,env,'ai:read');if(auth.error)return auth.error;
