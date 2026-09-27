@@ -3,38 +3,33 @@ import assert from 'node:assert/strict';
 import router from '../platform-router-entry-worker.js';
 import { churchMemberHomePage, isChurchMemberHomePath } from '../church-member-home-page.js';
 
-test('church member home has its own private user surface', async () => {
+test('shared site owns only the no-slash church member canonical entry', async () => {
   assert.equal(isChurchMemberHomePath('/ekodichurch/my'), true);
+  assert.equal(isChurchMemberHomePath('/ekodichurch/my/'), false);
+  assert.equal(isChurchMemberHomePath('/ekodichurch/my/giving/'), false);
+  assert.equal(isChurchMemberHomePath('/ekodichurch/my/attendance/'), false);
   assert.equal(isChurchMemberHomePath('/ekodichurch/admin'), false);
-  const response=churchMemberHomePage(new Request('https://ekodi.kr/ekodichurch/my'));
-  const html=await response.text();
-  assert.equal(response.status,200);
-  assert.equal(response.headers.get('x-ekodi-route'),'church-member-home');
+
+  const response=churchMemberHomePage(new Request('https://ekodi.kr/ekodichurch/my?from=header'));
+  assert.equal(response.status,308);
+  assert.equal(response.headers.get('location'),'https://ekodi.kr/ekodichurch/my/?from=header');
+  assert.equal(response.headers.get('x-ekodi-route'),'church-member-canonical-redirect');
   assert.equal(response.headers.get('x-ekodi-authority-scope'),'user');
   assert.match(response.headers.get('x-robots-tag')||'',/noindex/i);
   assert.match(response.headers.get('cache-control')||'',/no-store/);
-  assert.match(html,/data-ekodi-surface="church-member-home"/);
-  assert.match(html,/내 교회 공간/);
-  assert.match(html,/My EKODI/);
-  assert.match(html,/운영자용 교회 관리자/);
-  assert.equal((html.match(/href="\/ekodichurch\/admin"/g)||[]).length,1);
-  assert.doesNotMatch(html,/<div class="grid">[\s\S]*?<b>교회 관리자<\/b>/);
-  assert.doesNotMatch(html,/church_care_tasks|church_staff|SUPABASE|access_token|service_role/i);
 });
 
-test('apex router owns church member home before public workspace fallback', async () => {
+test('apex router canonicalizes the no-slash church member entry before public routing', async () => {
   const response=await router.fetch(new Request('https://ekodi.kr/ekodichurch/my'),{},{waitUntil(){}});
-  assert.equal(response.status,200);
-  assert.equal(response.headers.get('x-ekodi-route'),'church-member-home');
-  const html=await response.text();
-  assert.match(html,/에코디교회 마이페이지/);
-  assert.doesNotMatch(html,/WELCOME TO EKODI CHURCH/);
+  assert.equal(response.status,308);
+  assert.equal(response.headers.get('location'),'https://ekodi.kr/ekodichurch/my/');
+  assert.equal(response.headers.get('x-ekodi-route'),'church-member-canonical-redirect');
 });
 
-
-test('member home routing precedes canonical public routing', async () => {
+test('member canonical redirect routing precedes canonical public routing', async () => {
   const source=await (await import('node:fs/promises')).readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
   const member=source.indexOf("isChurchMemberHomePath(url.pathname)");
   const canonical=source.indexOf("const canonical=await routeCanonicalSurface");
-  assert.ok(member>=0&&canonical>member,'church member home must route before canonical public redirect');
+  assert.ok(member>=0&&canonical>member,'church member canonical redirect must route before canonical public redirect');
+  assert.doesNotMatch(source,/churchMemberHomeCss/);
 });
