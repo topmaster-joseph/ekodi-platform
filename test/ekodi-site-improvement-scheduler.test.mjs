@@ -92,6 +92,7 @@ test('cloud fallback is EKODI-owned, workspace-sandboxed, and fail-closed',async
   assert.match(scheduler,/reconcileCloudDispatched/);
   assert.match(scheduler,/github-hosted-native\+codex-workspace-sandbox/);
   assert.match(scheduler,/ai-control-\(\?:worker\|core\)/);
+  assert.match(scheduler,/ekodi-site-improvement-\(\?:scheduler\|oidc-broker\)/);
   assert.match(worker,/dispatchCloudSiteImprovement/);
   assert.match(worker,/provider:'cloud:github-hosted-codex'/);
   assert.doesNotMatch(worker,/no_online_code_node_provider'\);/);

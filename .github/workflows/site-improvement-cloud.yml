@@ -21,6 +21,7 @@ on:
         type: string
 
 permissions:
+  id-token: write
   contents: write
   pull-requests: write
 
@@ -31,6 +32,7 @@ concurrency:
 jobs:
   improve:
     runs-on: ubuntu-latest
+    environment: development
     timeout-minutes: 35
     env:
       TARGET_BRANCH: ${{ inputs.branch }}
@@ -46,6 +48,25 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+
+      - name: Validate scheduler-owned inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import registry from './config/site-lifecycle-registry.json' with {type:'json'};
+          import policy from './config/site-execution-enforcement.json' with {type:'json'};
+          if(policy?.status!=='enforced'||policy?.scope?.allDescendantServicePaths!==true||policy?.scope?.siteOwnedAdmin!==true||policy?.inheritance?.mode!=='mandatory-recursive')throw new Error('recursive site execution policy unavailable');
+          const task=String(process.env.TASK_ID||'');
+          const branch=String(process.env.TARGET_BRANCH||'');
+          if(!/^task_[a-z0-9_-]+$/i.test(task))throw new Error('invalid scheduler task id');
+          if(!/^ai\/generic\/[a-z0-9._-]+$/.test(branch))throw new Error('invalid isolated branch');
+          const sites=(registry.existingWorkspaceSites||[]).filter(x=>x?.class==='workspace_user_site'&&String(x?.canonicalUrl||'').startsWith('https://ekodi.kr/'));
+          const site=sites.find(x=>x.id===process.env.SITE_ID);
+          if(!site)throw new Error('site is not an eligible registered workspace');
+          if(String(site.name||site.id)!==process.env.SITE_NAME)throw new Error('site name mismatch');
+          if(String(site.canonicalUrl)!==process.env.CANONICAL_URL)throw new Error('canonical url mismatch');
+          NODE
 
       - name: Prepare isolated branch
         shell: bash
@@ -70,6 +91,7 @@ jobs:
             'EKODI low-traffic daily site improvement task.',
             `Target site: ${process.env.SITE_NAME} (${process.env.SITE_ID})`,
             `Canonical production URL: ${process.env.CANONICAL_URL}`,
+            'Mandatory recursive policy SITE-EXECUTION-ENFORCEMENT-001 applies to the site root, every discoverable same-site descendant service path, and site-owned admin surface as one enforced scope. Child surfaces may tighten but never relax parent contracts.',
             'Work only in the checked-out isolated branch. Do not commit, push, merge, deploy, or modify GitHub workflow files.',
             'Deeply inspect the selected site and every discoverable same-site child surface before editing. Use repository evidence and safe public HTTP/browser evidence; do not guess.',
             'Check links, user/admin/member/marketing paths, login-before/login-after continuity, mobile and desktop responsive layout, header/footer/menu consistency, readability, intuitiveness, usability, accessibility, tap targets, clipping, overlap, overflow, excessive whitespace, loading/error/empty states, and broken functionality.',
@@ -82,10 +104,21 @@ jobs:
           fs.writeFileSync(process.env.RUNNER_TEMP+'/site-improvement-prompt.txt',p);
           NODE
 
-      - name: Run Codex in workspace-only sandbox
+      - name: Mint short-lived GitHub OIDC token
+        id: oidc
+        shell: bash
+        run: |
+          set -euo pipefail
+          response=$(curl -fsS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=ekodi-site-improvement")
+          token=$(printf '%s' "$response" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);if(!j.value)process.exit(2);process.stdout.write(j.value)})")
+          echo "::add-mask::$token"
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+
+      - name: Run Codex through EKODI OIDC broker in workspace-only sandbox
         uses: openai/codex-action@v1
         with:
-          openai-api-key: ${{ secrets.AI_CONTROL_OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
+          openai-api-key: ${{ steps.oidc.outputs.token }}
+          responses-api-endpoint: https://ekodi.kr/ai/api/site-improvement/responses
           permission-profile: ':workspace'
           prompt-file: ${{ runner.temp }}/site-improvement-prompt.txt
           effort: high
@@ -97,7 +130,7 @@ jobs:
           git add -N .
           node --input-type=module <<'NODE'
           import {execFileSync} from 'node:child_process';
-          const protectedFile=/^(?:\.github\/|migrations\/|supabase\/|governance\/|deploy\/|wrangler\.|platform-route-registry\.js$|CONSTITUTION\.md$|AI_DEVELOPMENT_POLICY\.md$|AGENTS(?:\.override)?\.md$|ai-control-(?:worker|core)\.js$|ekodi-site-improvement-scheduler\.js$|config\/(?:site-lifecycle-registry|.*policy)\.json$)|(?:^|\/)(?:auth|oauth|billing|payment|payments|finance|money|credential|credentials|secret|secrets|security)(?:[./_-]|$)/i;
+          const protectedFile=/^(?:\.github\/|migrations\/|supabase\/|governance\/|deploy\/|wrangler\.|platform-route-registry\.js$|CONSTITUTION\.md$|AI_DEVELOPMENT_POLICY\.md$|AGENTS(?:\.override)?\.md$|ai-control-(?:worker|core)\.js$|ekodi-site-improvement-(?:scheduler|oidc-broker)\.js$|config\/(?:site-lifecycle-registry|.*policy)\.json$)|(?:^|\/)(?:auth|oauth|billing|payment|payments|finance|money|credential|credentials|secret|secrets|security)(?:[./_-]|$)/i;
           const raw=execFileSync('git',['diff','--numstat'],{encoding:'utf8'}).trim();
           const files=raw?raw.split(/\r?\n/).map(line=>{const [a,d,...rest]=line.split('\t');return{filename:rest.join('\t'),additions:/^\d+$/.test(a)?Number(a):2000,deletions:/^\d+$/.test(d)?Number(d):2000};}):[];
           const protectedFiles=files.filter(f=>protectedFile.test(f.filename)).map(f=>f.filename);
