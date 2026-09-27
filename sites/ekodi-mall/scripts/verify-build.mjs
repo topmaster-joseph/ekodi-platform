@@ -13,12 +13,12 @@ const checks = [
   ['assets/affiliate-hub.js', ['affiliate/public/products', 'noopener sponsored', '검증된 제휴상품']],
   ['assets/context-curator.css', ['context-hero', 'context-result-grid', 'discover-grid', 'buyer-mobile', 'context-offer-dialog', 'context-detail-offer']],
   ['assets/styles.css', ['EKODI typography invariant', 'word-break:keep-all', 'overflow-wrap:break-word', 'hyphens:none', '.ekodi-break-anywhere']],
-  ['seller/index.html', ['OPEN SELLER STUDIO', 'PERSONAL PRODUCT STUDIO', 'sellerDraftForm', 'Google로 무료 시작', '7%', '8%', '9%', 'STOREFRONT', 'ANALYTICS', '/assets/seller-readiness.js', '/assets/seller-analytics.js', '/assets/seller-storefronts.js', '/assets/analytics.css']],
+  ['seller/index.html', ['OPEN SELLER STUDIO', 'PERSONAL PRODUCT STUDIO', 'sellerDraftForm', '판매 시작하기', '7%', '8%', '9%', 'STOREFRONT', 'ANALYTICS', '/assets/seller-readiness.js', '/assets/seller-analytics.js', '/assets/seller-storefronts.js', '/assets/analytics.css']],
   ['checkout/index.html', ['INQUIRY BASKET', 'basketItems', '/assets/commerce.js']],
   ['stores/ekodi-select/index.html', ['EKODI Select', 'STORE COLLECTION']],
   ['products/reusable-daily-bottle/index.html', ['리유저블 데일리 보틀', 'PRODUCT PAGE', 'data-add-basket']],
   ['assets/commerce.js', ['ekodiMallInquiryBasketV1', 'data-basket-copy']],
-  ['assets/seller.js', ['ekodiMallSellerStudioDraftV5', 'mall-seller', "plan: 'free'", 'product-link-reservation']],
+  ['assets/seller.js', ['ekodiMallSellerStudioDraftV5', "new URL('/auth', location.origin)", 'mall-seller', "plan: 'free'", 'product-link-reservation']],
   ['assets/seller-server.js', ['mall-api.ekodi.kr', '서버에 저장', '게시 · 링크 활성화', '/api/products', '/share-links', '/api/orders?limit=20', '/api/settlements', '직접링크 복사 · 7%', '일반 상품링크 · 8%']],
   ['assets/seller-readiness.js', ['DIRECT SALE READINESS', '/api/readiness', '/api/verification/seller/submit', '/verification/submit', 'payments-disabled', 'product-checkout-gate']],
   ['assets/seller-analytics.js', ['SELLER ANALYTICS', '/api/analytics/summary', 'PAID GROSS', 'first-touch', 'visitor ID']],
@@ -56,6 +56,14 @@ for (const [relative, needles] of checks) {
   for (const needle of needles) if (!content.includes(needle)) errors.push(`${relative} is missing marker: ${needle}`);
   if (/\{\{[A-Z0-9_]+\}\}/.test(content)) errors.push(`${relative} contains unresolved template tokens`);
 }
+
+const sellerHtml = await readFile(path.join(dist, 'seller/index.html'), 'utf8').catch(()=>'');
+const sellerJs = await readFile(path.join(dist, 'assets/seller.js'), 'utf8').catch(()=>'');
+for (const forbidden of ['https://auth.ekodi.kr/', 'Mall API는 매 요청마다 사용자 토큰을 다시 검증합니다.', 'Google로 무료 시작']) {
+  if (sellerHtml.includes(forbidden) || sellerJs.includes(forbidden)) errors.push(`Mall Seller canonical auth violation: ${forbidden}`);
+}
+if (!sellerHtml.includes('/auth?site=mall-seller')) errors.push('Mall Seller must enter authentication through /auth');
+
 if (errors.length) {
   console.error(`EKODI Mall build verification failed (${errors.length})`);
   errors.forEach((error) => console.error(`- ${error}`));
