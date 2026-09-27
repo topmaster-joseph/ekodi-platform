@@ -60,7 +60,7 @@ const routeRegistry = fs.readFileSync(path.join(root, 'platform-route-registry.j
 const boundaries = JSON.parse(fs.readFileSync(path.join(root, 'platform-boundaries.json'), 'utf8'));
 const constitution = JSON.parse(fs.readFileSync(path.join(root, 'governance/constitution/constitution.json'), 'utf8'));
 const serviceManifest = fs.readFileSync(path.join(root, 'ekodi-service-manifest.js'), 'utf8');
-if (Object.keys(constitution.legacyDomainTargets||{}).some(host=>String(host).endsWith('.ekodi.kr'))) fail('constitution must not retain EKODI-owned child-host aliases');
+if ('legacyDomainTargets' in constitution) fail('constitution must not retain retired child-host alias registries');
 if (/^\s*(?:route|pattern)\s*=|^\s*custom_domain\s*=\s*true|^\[\[routes\]\]/m.test(wrangler)) fail('Bible Worker must remain internal behind the canonical /bible service binding');
 if (!siteWrangler.includes('binding = "BIBLE"') || !siteWrangler.includes('service = "ekodi-bible-conversation"') || !siteWrangler.includes('"/bible*"')) fail('apex gateway must own /bible through the Bible service binding');
 if (!routeRegistry.includes("id:'bible',prefix:'/bible',binding:'BIBLE',basePathAware:true")) fail('platform route registry must bind /bible without double-prefix rewriting');
