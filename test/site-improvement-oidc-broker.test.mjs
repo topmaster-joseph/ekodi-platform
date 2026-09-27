@@ -28,7 +28,7 @@ async function signedToken(overrides={}){
     repository:'topmaster-joseph/ekodi-platform',
     ref:'refs/heads/main',
     workflow_ref:'topmaster-joseph/ekodi-platform/.github/workflows/site-improvement-cloud.yml@refs/heads/main',
-    event_name:'workflow_dispatch',
+    environment:'development',
     iat:now-5,
     nbf:now-5,
     exp:now+300,
@@ -45,7 +45,7 @@ test('site improvement OIDC policy is pinned to the exact EKODI workflow',()=>{
   assert.equal(SITE_IMPROVEMENT_OIDC_BROKER_POLICY.audience,'ekodi-site-improvement');
   assert.equal(SITE_IMPROVEMENT_OIDC_BROKER_POLICY.repository,'topmaster-joseph/ekodi-platform');
   assert.equal(SITE_IMPROVEMENT_OIDC_BROKER_POLICY.ref,'refs/heads/main');
-  assert.equal(SITE_IMPROVEMENT_OIDC_BROKER_POLICY.eventName,'workflow_dispatch');
+  assert.equal(SITE_IMPROVEMENT_OIDC_BROKER_POLICY.environment,'development');
   assert.match(SITE_IMPROVEMENT_OIDC_BROKER_POLICY.workflowRef,/site-improvement-cloud\.yml@refs\/heads\/main$/);
   assert.equal(SITE_IMPROVEMENT_OIDC_BROKER_POLICY.longLivedCredentialInGitHub,false);
 });
@@ -56,6 +56,7 @@ test('claim validation rejects repo, ref, workflow and stale-token drift',async(
   assert.equal(validateSiteImprovementOidcClaims({...claims,repository:'someone/else'},now).ok,false);
   assert.equal(validateSiteImprovementOidcClaims({...claims,ref:'refs/heads/feature'},now).ok,false);
   assert.equal(validateSiteImprovementOidcClaims({...claims,workflow_ref:'topmaster-joseph/ekodi-platform/.github/workflows/other.yml@refs/heads/main'},now).ok,false);
+  assert.equal(validateSiteImprovementOidcClaims({...claims,environment:'production'},now).ok,false);
   assert.equal(validateSiteImprovementOidcClaims({...claims,iat:now-2000,exp:now+10},now).ok,false);
 });
 
