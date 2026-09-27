@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  PLATFORM_CANONICAL_HOST,
   PLATFORM_EXECUTION_SURFACES,
   isReservedPlatformRoot,
   platformExecutionSurfaceForPath,
@@ -23,6 +24,6 @@ test('execution surface roots cannot fall through to generic workspace routing',
 test('execution surfaces contain no EKODI child-host compatibility fields',()=>{
   for(const spec of PLATFORM_EXECUTION_SURFACES){
     assert.equal(Boolean(spec.virtualHost||spec.legacyHost||spec.canonicalHost),false,`${spec.id} must not carry retired host fields`);
-    if(spec.host)assert.equal(String(spec.host).endsWith('.ekodi.kr'),false,`${spec.id} external host must not be an EKODI child host`);
+    if(spec.host)assert.equal(String(spec.host).endsWith('.'+PLATFORM_CANONICAL_HOST),false,`${spec.id} external host must not be an EKODI child host`);
   }
 });
