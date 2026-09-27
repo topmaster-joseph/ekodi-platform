@@ -105,6 +105,7 @@ test('production workflows that validate PR provenance can read pull requests', 
 test('shared-site production provenance gate receives the scoped GitHub token', () => {
   assert.match(sharedDeploy, /name: EKODI AI Orchestration Gate[\s\S]*?GITHUB_TOKEN:\s*\$\{\{ github\.token \}\}[\s\S]*?validate-ekodi-ai-change-orchestration\.mjs" --release/);
   assert.match(sharedDeploy, /name: Candidate at 0%, verify routes, promote and auto-rollback on failure[\s\S]*?GITHUB_TOKEN:\s*\$\{\{ github\.token \}\}[\s\S]*?guarded-worker-release\.mjs --manifest deploy\/manifests\/shared-site\.worker\.json/);
+  assert.match(sharedDeploy, /paths:[\s\S]*?- '\.github\/workflows\/deploy-site-core\.yml'/, 'shared-site workflow changes must retrigger the guarded release');
 });
 test('main accepts verified PR provenance and still rejects a direct push', () => {
   const cwd = new URL('..', import.meta.url); const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).stdout.trim();
