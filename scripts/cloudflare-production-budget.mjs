@@ -58,14 +58,19 @@ async function detectWorkersPlan() {
       source: 'cloudflare-billing-api'
     };
   } catch (error) {
-    if ([401, 403].includes(Number(error?.status || 0))) {
+    const ownerConfirmed = String(config.planDetection?.ownerConfirmedWorkersPlan || '').toLowerCase() === 'paid';
+    if (ownerConfirmed) {
       return {
-        paid: false,
+        paid: true,
         readable: false,
-        source: 'billing-api-unavailable-free-safe'
+        source: 'owner-confirmed-config'
       };
     }
-    throw error;
+    return {
+      paid: false,
+      readable: false,
+      source: 'billing-api-unavailable-free-safe'
+    };
   }
 }
 
