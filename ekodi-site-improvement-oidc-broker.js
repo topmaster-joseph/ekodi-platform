@@ -4,7 +4,7 @@ const EXPECTED_AUDIENCE='ekodi-site-improvement';
 const EXPECTED_REPOSITORY='topmaster-joseph/ekodi-platform';
 const EXPECTED_REF='refs/heads/main';
 const EXPECTED_WORKFLOW_REF='topmaster-joseph/ekodi-platform/.github/workflows/site-improvement-cloud.yml@refs/heads/main';
-const EXPECTED_EVENT='workflow_dispatch';
+const EXPECTED_ENVIRONMENT='development';
 const MAX_TOKEN_AGE_SECONDS=10*60;
 const MAX_REQUEST_BYTES=8*1024*1024;
 
@@ -33,7 +33,7 @@ export function validateSiteImprovementOidcClaims(claims={},nowSeconds=Math.floo
   if(claims.repository!==EXPECTED_REPOSITORY)errors.push('repository');
   if(claims.ref!==EXPECTED_REF)errors.push('ref');
   if(claims.workflow_ref!==EXPECTED_WORKFLOW_REF)errors.push('workflow_ref');
-  if(claims.event_name!==EXPECTED_EVENT)errors.push('event_name');
+  if(claims.environment!==EXPECTED_ENVIRONMENT)errors.push('environment');
   const exp=Number(claims.exp||0);
   const iat=Number(claims.iat||0);
   const nbf=Number(claims.nbf||iat||0);
@@ -127,7 +127,7 @@ export const SITE_IMPROVEMENT_OIDC_BROKER_POLICY=Object.freeze({
   repository:EXPECTED_REPOSITORY,
   ref:EXPECTED_REF,
   workflowRef:EXPECTED_WORKFLOW_REF,
-  eventName:EXPECTED_EVENT,
+  environment:EXPECTED_ENVIRONMENT,
   maxTokenAgeSeconds:MAX_TOKEN_AGE_SECONDS,
   maxRequestBytes:MAX_REQUEST_BYTES,
   upstream:'https://api.openai.com/v1/responses',
