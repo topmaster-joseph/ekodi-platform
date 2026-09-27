@@ -130,7 +130,12 @@
         "captcha-or-human-verification",
         "hardware-backed-authentication",
         "os-privileged-consent"
-      ]
+      ],
+      "constitutionalPolicy": "AUTOMATIC-EXECUTION-LIFECYCLE-001",
+      "mandatory": true,
+      "localOverrideForbidden": true,
+      "appliesToAllCurrentAndFutureAutomaticExecution": true,
+      "policyRegressionBlocksCi": true
     }
   },
   "isolatedExecution": {
@@ -199,5 +204,6 @@
       "computer.desktop.session.execute",
       "computer.desktop.input"
     ]
-  }
+  },
+  "constitutionalPolicy": "AUTOMATIC-EXECUTION-LIFECYCLE-001"
 }

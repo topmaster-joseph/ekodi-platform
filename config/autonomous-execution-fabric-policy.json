@@ -302,5 +302,21 @@
       "incompleteEvidenceMeansReady": false,
       "multiProviderFailureDomainEvidenceRequired": true
     }
+  },
+  "constitutionalPolicies": [
+    "AUTOMATIC-EXECUTION-LIFECYCLE-001"
+  ],
+  "automaticExecutionLifecycle": {
+    "constitutionalPolicy": "AUTOMATIC-EXECUTION-LIFECYCLE-001",
+    "mandatory": true,
+    "defaultMode": "background-only",
+    "foregroundWindowDefault": false,
+    "userBrowserTabCreation": false,
+    "ownedAutomationSurfaceAutoClose": true,
+    "authRequiredDisposition": "record-and-close",
+    "authRequiredMustNotOpenInteractiveLogin": true,
+    "preserveUserOwnedWindowsAndTabs": true,
+    "localOverrideForbidden": true,
+    "policyRegressionBlocksCi": true
   }
 }

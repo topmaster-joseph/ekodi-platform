@@ -29,6 +29,8 @@
   const CONFIRM_MESSAGES = {
     'autologon.open': '자동로그인 암호는 클라우드에서 받지 않습니다. 이 PC에서 Microsoft Autologon 창을 열까요?',
     'maintenance.temp_cleanup': '7일 이상 지난 사용자/Windows 임시 파일만 정리합니다. 진행할까요?',
+    'printing.image_preview.repair': '이미지 우클릭 인쇄가 바로 출력되지 않고 Windows 미리보기/레이아웃을 먼저 열도록 복구하고, 이후 변경도 자동 재복구할까요?',
+    'printing.image_preview.restore': 'EKODI 인쇄 미리보기 강제 규칙을 해제하고 최초 변경 전 사용자 설정으로 복원할까요?',
     'updates.install': '대기 중인 Windows 소프트웨어 업데이트를 설치합니다. EKODI는 자동 재부팅하지 않습니다. 진행할까요?',
     'profile.workstation.apply': '바탕화면과 시작 메뉴에 EKODI 업무 바로가기를 구성할까요?',
     'profile.workstation.restore': 'EKODI가 만든 업무 바로가기를 제거할까요?',
@@ -103,7 +105,7 @@
     const labels = {
       'power.always_on': '항상 켜짐', 'power.presentation': '프레젠테이션', 'power.normal': '일반 모드', 'power.restore': '원상복구',
       'lock.resume_off': '복귀 잠금 해제', 'lock.resume_on': '복귀 잠금 사용', 'autologon.open': '자동로그인 관리',
-      'diagnostics.collect': '전체 진단', 'network.diagnose': '네트워크 진단', 'printers.diagnose': '프린터 진단', 'startup.scan': '시작프로그램 확인',
+      'diagnostics.collect': '전체 진단', 'network.diagnose': '네트워크 진단', 'printers.diagnose': '프린터 진단', 'printing.image_preview.status': '인쇄 미리보기 점검', 'printing.image_preview.repair': '인쇄 미리보기 복구', 'printing.image_preview.restore': '인쇄 미리보기 원상복구', 'startup.scan': '시작프로그램 확인',
       'startup.disable': '시작프로그램 해제', 'startup.restore': '시작프로그램 복원', 'maintenance.temp_cleanup': '임시파일 정리',
       'updates.scan': '업데이트 확인', 'updates.install': '업데이트 설치', 'profile.workstation.apply': 'EKODI 업무환경',
       'profile.workstation.restore': '업무환경 복원', 'agent.self_update': 'Agent 업데이트', 'computer.browser.canary': 'BG Browser Canary',
@@ -426,6 +428,9 @@
       makeActionButton(device, 'maintenance.temp_cleanup', '임시파일 정리', 'ghost', {}, !capability(device, 'storageMaintenance')),
       makeActionButton(device, 'updates.install', '업데이트 설치', 'ghost', {}, !capability(device, 'windowsUpdate')),
       makeActionButton(device, 'printers.diagnose', '프린터 진단', 'ghost', {}, !capability(device, 'printerDiagnostics')),
+      makeActionButton(device, 'printing.image_preview.status', '인쇄 미리보기 점검', 'ghost', {}, !capability(device, 'imagePrintPreview')),
+      makeActionButton(device, 'printing.image_preview.repair', '인쇄 미리보기 복구', 'primary', {}, !capability(device, 'imagePrintPreview')),
+      makeActionButton(device, 'printing.image_preview.restore', '인쇄 설정 원상복구', 'secondary', {}, !capability(device, 'imagePrintPreview')),
       makeActionButton(device, 'profile.workstation.apply', 'EKODI 업무환경', 'ghost', {}, !capability(device, 'workstationProfile')),
       makeActionButton(device, 'profile.workstation.restore', '업무환경 복원', 'ghost', {}, !capability(device, 'workstationProfile')),
     );
