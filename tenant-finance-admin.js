@@ -102,7 +102,7 @@ export async function mountTenantBankingAdmin({root,summaryRoot,getToken,workspa
       try{await request(`/transfers/${encodeURIComponent(button.dataset.transferApprove)}/approve`,{method:'POST',body:'{}'});notice('이체 요청을 승인했습니다.','good');await render();}catch(error){notice(`승인 실패: ${error.message}`,'error');}
     });
     root.querySelectorAll('[data-transfer-reject]').forEach(button=>button.onclick=async()=>{
-      const reason=window.prompt('반려 사유를 입력해 주세요.','')??'';if(reason===null)return;
+      const reason=window.prompt('반려 사유를 입력해 주세요.','');if(reason===null)return;
       try{await request(`/transfers/${encodeURIComponent(button.dataset.transferReject)}/reject`,{method:'POST',body:JSON.stringify({reason})});notice('이체 요청을 반려했습니다.','good');await render();}catch(error){notice(`반려 실패: ${error.message}`,'error');}
     });
     root.querySelectorAll('[data-transfer-execute]').forEach(button=>button.onclick=async()=>{
