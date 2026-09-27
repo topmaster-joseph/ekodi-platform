@@ -71,10 +71,10 @@ test('production AI worker owns the hourly scheduler while staging stays passive
   assert.match(worker,/\['codex','gemini-cli'\]\.find/);
 });
 
-test('low traffic decision uses recent active sessions and keeps cumulative visits informational',async()=>{
+test('low traffic decision enforces both recent sessions and cumulative visit pressure',async()=>{
   const source=await readFile(new URL('../ekodi-site-improvement-scheduler.js',import.meta.url),'utf8');
-  assert.match(source,/quiet:telemetryFresh&&recentSessions<=maxSessions/);
-  assert.doesNotMatch(source,/recentSessions<=maxSessions&&recentVisits<=maxVisits/);
+  assert.match(source,/quiet:telemetryFresh&&recentSessions<=maxSessions&&recentVisits<=maxVisits/);
+  assert.match(source,/recent_visits_above_threshold/);
   assert.match(source,/traffic_intelligence_state/);
   assert.match(source,/collectorLastSuccess/);
   assert.match(source,/const deploymentRows=rows\.filter/);
