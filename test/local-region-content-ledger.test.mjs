@@ -49,7 +49,9 @@ test('specialized Cheonggye module surfaces do not load the generic content ledg
 
 test('module content API is public-read, scoped-write, auditable, and fail-closed for specialized modules',async()=>{
   const control=await read('local-region-operations-control.js');
-  assert.match(control,/\/modules\\\/\(\[a-z0-9-\]\+\)/);
+  assert.match(control,/moduleMatch=url\.pathname\.match/);
+  assert.match(control,/local-operations/);
+  assert.match(control,/modules/);
   assert.match(control,/module\.contentMode!==\'regional-ledger\'/);
   assert.match(control,/canOperateModuleContent/);
   assert.match(control,/delegated\.moduleIds\.includes\(moduleId\)/);
@@ -66,6 +68,27 @@ test('shared router serves both regional module content client assets',async()=>
   assert.match(router,/localRegionModuleAdminScript/);
   assert.match(router,/\/cheonggye\/local-region-module-public\.js/);
   assert.match(router,/\/cheonggye\/local-region-module-admin\.js/);
+});
+
+test('deployment manifests probe all generic module pages and content APIs',async()=>{
+  const [controlText,sharedText]=await Promise.all([
+    read('deploy/manifests/control-api.worker.json'),
+    read('deploy/manifests/shared-site.worker.json'),
+  ]);
+  const control=JSON.parse(controlText);
+  const shared=JSON.parse(sharedText);
+  const controlUrls=new Set((control.worker?.requests||[]).map(item=>item.url));
+  const sharedRequests=shared.worker?.requests||[];
+  for(const module of ledgerModules){
+    assert.ok(controlUrls.has('https://ekodi.kr/api/local-operations/cheonggye/modules/'+module.id));
+    assert.ok(controlUrls.has('https://ekodi.kr/api/local-operations/cheonggye/modules/'+module.id+'/admin'));
+    const publicProbe=sharedRequests.find(item=>item.url==='https://ekodi.kr'+module.publicPath);
+    const adminProbe=sharedRequests.find(item=>item.url==='https://ekodi.kr'+module.adminPath);
+    assert.ok(publicProbe?.expect?.includes('지역 공개정보'));
+    assert.ok(publicProbe?.expect?.includes('local-region-module-public.js'));
+    assert.ok(adminProbe?.expect?.includes('운영정보 등록·수정'));
+    assert.ok(adminProbe?.expect?.includes('local-region-module-admin.js'));
+  }
 });
 
 test('regional module content clients use canonical APIs and never write organization-owned records',async()=>{
