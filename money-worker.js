@@ -15,7 +15,7 @@ async function body(request){try{return await request.json()}catch{return null}}
 function hasSensitiveKeys(value){if(!value||typeof value!=='object')return false;if(Array.isArray(value))return value.some(hasSensitiveKeys);return Object.entries(value).some(([key,item])=>SENSITIVE_KEYS.has(String(key).toLowerCase())||hasSensitiveKeys(item))}
 function runtimeConfig(env){const readiness=buildIntegrationReadiness(env);return{
   dataMode:env.DATA_MODE||'isolated-staging',
-  authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=money',
+  authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=money&return_to=https%3A%2F%2Fekodi.kr%2Fmoney%2F',
   myUrl:'https://ekodi.kr/my/',
   officialHandoffUrl:env.ACCOUNTINFO_URL||'https://www.payinfo.or.kr/main/main.do',
   financialExecution:false,
@@ -25,14 +25,29 @@ function runtimeConfig(env){const readiness=buildIntegrationReadiness(env);retur
   persistence:'none-v2-readiness',
   apiStatus:'integration-readiness',
   integrationVersion:readiness.version,
-  openBankingConfigured:readiness.openBankingConfigured
+  canonicalPath:'/money',
+  openBankingConfigured:readiness.openBankingConfigured,
+  openBankingReadReady:readiness.openBankingReadReady
 }}
 function logSecurity(type,detail={}){console.log(JSON.stringify(securityEvent(type,detail)));}
+async function financeBankingBridge(env){
+  if(!env?.FINANCE?.fetch)return json({ok:false,connected:false,service:'ekodi-finance-banking',financialExecution:false,error:'finance_binding_unavailable'},503);
+  try{
+    const upstream=await env.FINANCE.fetch(new Request('https://finance.internal/api/finance/banking/health',{method:'GET',headers:{accept:'application/json'}}));
+    const data=await upstream.json().catch(()=>({}));
+    if(!upstream.ok||data.service!=='ekodi-finance-banking')return json({ok:false,connected:true,service:'ekodi-finance-banking',financialExecution:false,error:'finance_banking_health_unavailable'},502);
+    return json({ok:true,connected:true,service:'ekodi-finance-banking',readerConnected:Boolean(data.readerConnected),executorConnected:Boolean(data.executorConnected),transferExecutionEnabled:Boolean(data.transferExecutionEnabled),financialExecution:false});
+  }catch(error){
+    console.error('money finance bridge health failed',error);
+    return json({ok:false,connected:false,service:'ekodi-finance-banking',financialExecution:false,error:'finance_banking_health_unavailable'},502);
+  }
+}
 export default{async fetch(request,env){
   const url=new URL(request.url);
   if(url.pathname==='/health')return json({ok:true,service:'ekodi-money',surface:'money-platform',...runtimeConfig(env),ekodiShell:true});
   if(url.pathname==='/config.js')return new Response(`window.EKODI_MONEY_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
   if(url.pathname==='/api/integrations'&&request.method==='GET')return json(buildIntegrationReadiness(env));
+  if(url.pathname==='/api/finance-bridge'&&request.method==='GET')return financeBankingBridge(env);
   if(url.pathname==='/api/consent/preview'&&request.method==='POST'){
     const p=await body(request);if(!p||hasSensitiveKeys(p))return json({error:'invalid_or_sensitive_consent_payload'},400);
     const preview=buildConsentPreview(p.providerId,p.scopes);if(!preview.ok)return json(preview,404);
@@ -61,6 +76,6 @@ export default{async fetch(request,env){
     const p=await body(request);const action=p?.action||'';return json({action,humanGateRequired:requiresHumanGate(action),allowedAutonomously:!requiresHumanGate(action),financialExecution:false});
   }
   if(url.pathname==='/api/execution'&&request.method==='POST'){logSecurity('blocked-financial-execution',{action:'execution'});return json({error:'financial_execution_disabled',humanGateRequired:true,officialHandoffUrl:runtimeConfig(env).officialHandoffUrl},409);}
-  if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?focus=money',307);
+  if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/?focus=money',307);
   const response=await env.ASSETS.fetch(request);return injectEkodiShell(withHeaders(response),'money');
 }};
