@@ -50,6 +50,18 @@
     if (!response.ok) throw new Error(data.detail || data.error || `채널 연결 요청 실패 (${response.status})`);
     return data;
   }
+  async function publishingApi(path, options = {}) {
+    const headers = new Headers(options.headers || {});
+    if (token()) headers.set('authorization', `Bearer ${token()}`);
+    if (options.body && !headers.has('content-type')) headers.set('content-type', 'application/json');
+    const url = new URL(`/marketing-publish-api${path}`, location.origin);
+    url.searchParams.set('subject_type',connectionScope.type);
+    if (connectionScope.type !== 'person' && connectionScope.key) url.searchParams.set('subject_key',connectionScope.key);
+    const response = await fetch(url, { ...options, headers, body: options.body ? JSON.stringify(options.body) : undefined, cache:'no-store' });
+    let data = {}; try { data = await response.json(); } catch {}
+    if (!response.ok) { const error=new Error(data.detail || data.error || `게시 채널 요청 실패 (${response.status})`); error.code=data.error||''; throw error; }
+    return data;
+  }
   function providerLabel(value) { return ({youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',threads:'Threads',facebook_ads:'Meta 광고',kakao:'Kakao',blog:'Blog',tiktok:'TikTok',linkedin:'LinkedIn'})[String(value||'').toLowerCase()] || String(value || '채널'); }
   function reconnectProvider(value) { const provider=String(value||'').toLowerCase(); return provider==='youtube'?'youtube':provider==='threads'?'threads':['facebook','instagram','facebook_ads','meta'].includes(provider)?'meta':''; }
   function formatDate(value) { const parsed=Date.parse(String(value||'')); return Number.isFinite(parsed)?new Date(parsed).toLocaleString('ko-KR'):'-'; }
@@ -171,6 +183,18 @@
     const connectionStatus = el('p','OAuth 연결상태를 확인하지 않았습니다.','social-admin-status'); connectionStatus.setAttribute('role','status');
     const connectionList = el('div','','social-connection-list');
     connectionPanel.append(connectionHead,scopeBar,connectionActions,connectionMetrics,connectionStatus,connectionList);
+
+    const publishingPanel = el('section','','social-publishing-registry');
+    const publishingHead = el('div','','social-channel-head');
+    publishingHead.append(el('h3','게시 채널 · 사이트 연결'),el('span','채널을 미리 등록하고 게시 시 선택'));
+    const publishingActions = el('div','','social-connection-actions');
+    const publishingAddYoutube = el('button','＋ YouTube 게시 채널 등록','primary'); publishingAddYoutube.type='button';
+    const publishingReload = el('button','↻ 게시 채널 새로고침','secondary'); publishingReload.type='button';
+    publishingActions.append(publishingAddYoutube,publishingReload);
+    const publishingStatus = el('p','게시 채널 원장을 불러오지 않았습니다.','social-admin-status'); publishingStatus.setAttribute('role','status');
+    const publishingConnections = el('div','','social-publishing-connections');
+    const publishingChannels = el('div','','social-publishing-channels');
+    publishingPanel.append(publishingHead,publishingActions,publishingStatus,publishingConnections,publishingChannels);
     const initialIntent = initialConnectionIntent();
     if (initialIntent.type !== 'person' && initialIntent.key) {
       scopeType.value = initialIntent.type;
@@ -184,7 +208,7 @@
     const status = el('p','Registry를 불러오지 않았습니다.','social-admin-status'); status.setAttribute('role','status');
     const list = el('div','','social-org-list');
     const addOrg = el('button','＋ 기관 추가','ghost social-add-org'); addOrg.type='button';
-    section.append(head, siteDirectoryPanel, connectionPanel, summary, status, list, addOrg); content.append(section);
+    section.append(head, siteDirectoryPanel, connectionPanel, publishingPanel, summary, status, list, addOrg); content.append(section);
 
     function renderSummary() {
       const orgs = registry.organizations || [];
@@ -284,6 +308,95 @@
       connectionStatus.dataset.state = missing.length ? 'dirty' : 'ready';
     }
 
+    function publishingBindingRow(binding, sites, state, rerender) {
+      const row=el('div','','social-publishing-binding');
+      const service=sites.find(site=>site.id===binding.serviceId);
+      const label=el('div','','social-publishing-binding-copy');
+      label.append(el('strong',service?.name||binding.serviceId),el('small',service?.url||binding.serviceId));
+      const role=select(binding.role||'primary',[['primary','주 연결'],['secondary','보조'],['archive_only','아카이브만']]);
+      const primary=document.createElement('input');primary.type='checkbox';primary.checked=Boolean(binding.isDefault);
+      const archive=document.createElement('input');archive.type='checkbox';archive.checked=Boolean(binding.autoArchive);
+      const remove=el('button','삭제','ghost danger');remove.type='button';
+      role.addEventListener('change',()=>binding.role=role.value);
+      primary.addEventListener('change',()=>binding.isDefault=primary.checked);
+      archive.addEventListener('change',()=>binding.autoArchive=archive.checked);
+      remove.addEventListener('click',()=>{state.splice(state.indexOf(binding),1);rerender()});
+      row.append(label,field('역할',role),field('기본채널',primary,'check'),field('지난행사 자동등록',archive,'check'),remove);
+      return row;
+    }
+    function publishingChannelCard(channel, sites) {
+      const card=el('article','','social-publishing-channel-card');
+      const head=el('div','','social-publishing-channel-head');
+      const copy=el('div','','social-publishing-channel-copy');
+      copy.append(el('strong',channel.display_name||channel.displayName||channel.external_account_id||'YouTube'),el('small',`${providerLabel(channel.provider)} · ${channel.status||'-'} · ${channel.external_account_id||''}`));
+      head.append(copy,el('span',channel.status==='active'?'사용 가능':'확인 필요',`social-connection-state ${channel.status||''}`));
+      const state=(channel.siteBindings||[]).map(item=>({serviceId:item.service_id||item.serviceId,role:item.role||'primary',isDefault:Boolean(item.isDefault??item.is_default),autoArchive:Boolean(item.autoArchive??item.auto_archive),archiveCategory:item.archive_category||item.archiveCategory||'past-event',enabled:item.enabled!==false,priority:Number(item.priority||100)}));
+      const bindings=el('div','','social-publishing-bindings');
+      const controls=el('div','','social-publishing-site-add');
+      const siteSelect=select('',[['','연결할 사이트 선택'],...sites.map(site=>[site.id,`${site.name} · ${new URL(site.url).pathname}`])]);
+      const addSite=el('button','사이트 연결 추가','secondary');addSite.type='button';
+      const saveSites=el('button','사이트 연결 저장','primary');saveSites.type='button';
+      const note=el('small','','social-publishing-note');
+      const rerender=()=>{
+        bindings.replaceChildren();
+        state.forEach(binding=>bindings.append(publishingBindingRow(binding,sites,state,rerender)));
+        note.textContent=state.length?`${state.length}개 사이트 연결`:'연결 사이트 없음';
+      };
+      addSite.addEventListener('click',()=>{
+        const serviceId=siteSelect.value;
+        if(!serviceId||state.some(item=>item.serviceId===serviceId))return;
+        state.push({serviceId,role:'primary',isDefault:state.length===0,autoArchive:false,archiveCategory:'past-event',enabled:true,priority:(state.length+1)*10});
+        rerender();
+      });
+      saveSites.addEventListener('click',async()=>{
+        saveSites.disabled=true; publishingStatus.textContent=`${channel.display_name||'채널'} 사이트 연결을 저장하는 중입니다.`; publishingStatus.dataset.state='loading';
+        try{
+          await publishingApi(`/v1/channels/${encodeURIComponent(channel.id)}/sites`,{method:'PUT',body:{bindings:state}});
+          publishingStatus.textContent='채널과 사이트 연결을 저장했습니다.';publishingStatus.dataset.state='saved';await loadPublishingChannels();
+        }catch(error){publishingStatus.textContent=error.message;publishingStatus.dataset.state='error';saveSites.disabled=false}
+      });
+      controls.append(siteSelect,addSite,saveSites,note);
+      card.append(head,bindings,controls);rerender();return card;
+    }
+    async function startPublishingYoutube() {
+      const data=await publishingApi('/v1/oauth/youtube/start',{method:'POST',body:{returnTo:returnUrl()}});
+      if(!data.authorizeUrl)throw new Error('YouTube 인증 주소를 받지 못했습니다.');
+      location.assign(data.authorizeUrl);
+    }
+    async function selectPublishingYoutube(connectionId,externalAccountId) {
+      await publishingApi(`/v1/oauth/connections/${encodeURIComponent(connectionId)}/select`,{method:'POST',body:{externalAccountId}});
+      await loadPublishingChannels();
+    }
+    async function loadPublishingChannels() {
+      publishingStatus.textContent='게시 채널과 사이트 연결을 확인하는 중입니다.';publishingStatus.dataset.state='loading';
+      try{
+        const [automation,channelData]=await Promise.all([publishingApi('/v1/automation'),publishingApi('/v1/channels')]);
+        const sites=Array.isArray(channelData.sites)?channelData.sites:[];
+        publishingConnections.replaceChildren();
+        const pending=(automation.connections||[]).filter(item=>item.status==='selection_required');
+        for(const connection of pending){
+          const card=el('article','','social-publishing-selection');
+          card.append(el('strong','YouTube 채널을 선택해 등록하세요'),el('small','이 인증은 선택한 채널의 게시 자격증명으로 보관됩니다.'));
+          const choices=el('div','','social-connection-actions');
+          for(const channel of connection.discoveredChannels||[]){
+            const button=el('button',channel.title||channel.id,'secondary');button.type='button';
+            button.addEventListener('click',async()=>{button.disabled=true;try{await selectPublishingYoutube(connection.id,channel.id)}catch(error){publishingStatus.textContent=error.message;publishingStatus.dataset.state='error';button.disabled=false}});
+            choices.append(button);
+          }
+          card.append(choices);publishingConnections.append(card);
+        }
+        publishingChannels.replaceChildren();
+        for(const channel of channelData.channels||[])publishingChannels.append(publishingChannelCard(channel,sites));
+        if(!(channelData.channels||[]).length)publishingChannels.append(el('p','등록된 게시 채널이 없습니다. YouTube 게시 채널 등록을 눌러 최초 1회 인증해 주세요.','social-connection-empty'));
+        publishingStatus.textContent=`등록 채널 ${(channelData.channels||[]).length}개 · 사이트 연결은 채널별로 미리 저장하고 게시할 때 재사용합니다.`;
+        publishingStatus.dataset.state='ready';
+      }catch(error){
+        publishingConnections.replaceChildren();publishingChannels.replaceChildren();
+        publishingStatus.textContent=error.code==='CHANNEL_SITE_BINDINGS_NOT_READY'?'채널-사이트 연결 스키마 배포가 필요합니다.':error.message;
+        publishingStatus.dataset.state='error';
+      }
+    }
+
     async function loadConnections() {
       connectionStatus.textContent='OAuth 연결상태를 확인하는 중입니다.'; connectionStatus.dataset.state='loading';
       try { renderConnections(await connectApi('/v1/connections')); }
@@ -315,19 +428,21 @@
       document.querySelectorAll('[data-panel]').forEach(panel=>{ const targets=String(panel.dataset.panel||'').split(' '); panel.classList.toggle('hidden-panel',!targets.includes('social')); });
       document.querySelectorAll('.sidebar .nav[data-section]').forEach(item=>item.classList.toggle('active',item.dataset.section==='social'));
       const pageTitle=document.querySelector('#pageTitle'); if(pageTitle) pageTitle.textContent='사이트별 채널·자동게시'; document.querySelector('.sidebar')?.classList.remove('open');
-      await Promise.all([renderSiteDirectory(), registry.organizations.length ? Promise.resolve() : load(), loadConnections()]);
+      await Promise.all([renderSiteDirectory(), registry.organizations.length ? Promise.resolve() : load(), loadConnections(), loadPublishingChannels()]);
     }
 
     navButton.addEventListener('click',activate);
-    refresh.addEventListener('click',()=>Promise.all([renderSiteDirectory(),load(),loadConnections()]));
+    refresh.addEventListener('click',()=>Promise.all([renderSiteDirectory(),load(),loadConnections(),loadPublishingChannels()]));
     save.addEventListener('click',saveChanges);
     scopeType.addEventListener('change',()=>{ scopeKey.disabled=scopeType.value==='person'; if(scopeKey.disabled) scopeKey.value=''; });
     scopeApply.addEventListener('click',async()=>{
       const type=scopeType.value; const key=scopeKey.value.trim();
       if(type!=='person'&&!key){connectionStatus.textContent='운영공간 slug 또는 매장 ID를 입력해 주세요.';connectionStatus.dataset.state='error';return;}
-      connectionScope={type,key:type==='person'?'':key}; await loadConnections();
+      connectionScope={type,key:type==='person'?'':key}; await Promise.all([loadConnections(),loadPublishingChannels()]);
     });
-    connectionActions.addEventListener('click', async event => {
+    publishingAddYoutube.addEventListener('click',async()=>{publishingAddYoutube.disabled=true;publishingStatus.textContent='YouTube 게시 채널 인증을 준비하는 중입니다.';publishingStatus.dataset.state='loading';try{await startPublishingYoutube()}catch(error){publishingStatus.textContent=error.message;publishingStatus.dataset.state='error';publishingAddYoutube.disabled=false}});
+    publishingReload.addEventListener('click',loadPublishingChannels);
+        connectionActions.addEventListener('click', async event => {
       const button = event.target.closest('[data-connect-provider]'); if (!button) return;
       button.disabled=true; connectionStatus.textContent=`${button.textContent} 준비 중입니다.`; connectionStatus.dataset.state='loading';
       try { await startConnection(button.dataset.connectProvider); }
