@@ -106,3 +106,14 @@ test('cloud fallback is EKODI-owned, workspace-sandboxed, and fail-closed',async
   assert.doesNotMatch(workflow,/wrangler deploy|git push origin main|gh pr merge/);
 });
 
+
+test('site improvement capacity gate uses live server resources and excludes API quota',async()=>{
+  const source=await readFile(new URL('../ekodi-site-improvement-scheduler.js',import.meta.url),'utf8');
+  assert.match(source,/serverResourceSnapshot/);
+  assert.match(source,/cpu_load_pct/);
+  assert.match(source,/memory_used_pct/);
+  assert.match(source,/active_job_concurrency_pct|concurrencyPct/);
+  assert.match(source,/server_load_above_slot_limit/);
+  assert.match(source,/apiUsageExcluded:true/);
+  assert.doesNotMatch(source,/remaining_requests|remaining_tokens/);
+});

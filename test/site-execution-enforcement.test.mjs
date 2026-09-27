@@ -40,12 +40,14 @@ test('three daily site-improvement windows preserve cumulative usage ceilings an
   assert.equal(budget.resetTimeKst,'09:00');
   assert.equal(budget.timezone,'Asia/Seoul');
   assert.equal(budget.executionCountPerBudgetDay,3);
-  assert.deepEqual(budget.cumulativeCeilingsPercent,{morning:30,lunch:60,evening:90});
+  assert.equal(budget.basis,'live-server-resource-load');
+  assert.equal(budget.apiUsageExcluded,true);
+  assert.deepEqual(budget.serverLoadCeilingsPercent,{morning:30,lunch:60,evening:90});
   assert.equal(budget.emergencyReservePercent,10);
-  assert.equal(budget.cumulativeNotPerRun,true);
-  assert.equal(budget.futureSlotBudgetBorrowingForbidden,true);
+  assert.equal(budget.startBlockedAtOrAboveCeiling,true);
   assert.equal(policy.continuousImprovement.rootAndDescendantsShareOneExecutionBudget,true);
   assert.equal(policy.continuousImprovement.slotExecutionMustRemainLowTrafficGated,true);
+  assert.equal(policy.continuousImprovement.slotExecutionMustRemainServerLoadGated,true);
 });
 
 test('continuous site improvement is bound to the same recursive policy',()=>{

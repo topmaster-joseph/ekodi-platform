@@ -24,10 +24,12 @@ if(policy.exceptions?.constitutionalBoundaryOnly!==true||policy.exceptions?.sile
 const dailyBudget=policy.continuousImprovement?.dailyBudget||{};
 if(dailyBudget.resetTimeKst!=='09:00'||dailyBudget.timezone!=='Asia/Seoul')fail('site improvement daily budget must reset at 09:00 KST');
 if(dailyBudget.executionCountPerBudgetDay!==3)fail('site improvement must provide three traffic-aware daily execution windows');
-if(dailyBudget.cumulativeCeilingsPercent?.morning!==30||dailyBudget.cumulativeCeilingsPercent?.lunch!==60||dailyBudget.cumulativeCeilingsPercent?.evening!==90)fail('site improvement cumulative budget ceilings must remain 30/60/90');
-if(dailyBudget.emergencyReservePercent!==10||dailyBudget.cumulativeNotPerRun!==true||dailyBudget.futureSlotBudgetBorrowingForbidden!==true)fail('site improvement must preserve the 10% emergency reserve and cumulative budget semantics');
+if(dailyBudget.basis!=='live-server-resource-load'||dailyBudget.apiUsageExcluded!==true)fail('site improvement usage gate must be based on live server resources, not API quota');
+if(dailyBudget.serverLoadCeilingsPercent?.morning!==30||dailyBudget.serverLoadCeilingsPercent?.lunch!==60||dailyBudget.serverLoadCeilingsPercent?.evening!==90)fail('site improvement server load ceilings must remain 30/60/90');
+if(dailyBudget.emergencyReservePercent!==10||dailyBudget.startBlockedAtOrAboveCeiling!==true)fail('site improvement must preserve the 10% server reserve and fail-closed load ceiling');
 if(policy.continuousImprovement?.rootAndDescendantsShareOneExecutionBudget!==true)fail('root and descendants must share one site-improvement execution budget');
 if(policy.continuousImprovement?.slotExecutionMustRemainLowTrafficGated!==true)fail('three-window execution must remain low-traffic gated');
+if(policy.continuousImprovement?.slotExecutionMustRemainServerLoadGated!==true)fail('three-window execution must remain server-load gated');
 
 const requiredContracts=new Set([
   'canonical-apex-path','shared-shell-and-ui-dna','brand-or-service-only-public-header',
@@ -70,7 +72,9 @@ if(policy.canonicalAddressing?.featureSubdomainCreationForbidden!==true)fail('fe
 if(!scheduler.includes("site-execution-enforcement.json"))fail('site improvement scheduler must load the recursive site execution policy');
 if(!scheduler.includes('Mandatory recursive site execution policy'))fail('site improvement prompt must explicitly enforce root + descendant policy');
 if(!scheduler.includes('every discoverable same-site subservice and site-owned admin surface'))fail('site improvement prompt must inspect descendant services and site-owned admin');
-if(!scheduler.includes("cumulativeBudgetCapPercent=30")||!scheduler.includes("cumulativeBudgetCapPercent=60")||!scheduler.includes("cumulativeBudgetCapPercent=90"))fail('scheduler must enforce 30/60/90 cumulative usage ceilings');
+if(!scheduler.includes("cumulativeBudgetCapPercent=30")||!scheduler.includes("cumulativeBudgetCapPercent=60")||!scheduler.includes("cumulativeBudgetCapPercent=90"))fail('scheduler must retain the 30/60/90 slot ceilings');
+if(!scheduler.includes("serverResourceSnapshot")||!scheduler.includes("cpu_load_pct")||!scheduler.includes("memory_used_pct")||!scheduler.includes("server_load_above_slot_limit"))fail('scheduler must enforce live server resource preflight');
+if(!scheduler.includes("apiUsageExcluded:true"))fail('scheduler must explicitly exclude API usage from server resource gating');
 if(!scheduler.includes("resetHourKst:9")||!scheduler.includes("dailyLimit:3"))fail('scheduler must enforce the 09:00 KST reset and three daily windows');
 if(!scheduler.includes("recentVisits<=maxVisits"))fail('traffic gate must enforce both recent-session and recent-visit limits');
 
