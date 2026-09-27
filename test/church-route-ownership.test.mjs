@@ -56,9 +56,11 @@ test('Shared Site release probes stay aligned with the canonical Church public U
   assert.ok(canonical.headerExpect?.includes('x-ekodi-route: '+CHURCH_ROUTE_CONTRACT.publicRoute));
   assert.ok(canonical.expect?.includes('WELCOME TO EKODI CHURCH'));
   assert.ok(canonical.expect?.includes('에코디교회'));
-  assert.ok(canonical.expect?.includes('운영공간'));
+  assert.ok(!canonical.expect?.includes('운영공간'));
+  assert.ok(canonical.forbid?.includes('운영공간'));
+  assert.ok(canonical.forbid?.includes('data-ekodi-operating-space-label'));
   assert.ok(canonical.headerExpect?.includes('x-ekodi-tenant-readability: v1'));
-  assert.ok(canonical.headerExpect?.includes('x-ekodi-operating-space-label: v1'));
+  assert.ok(!canonical.headerExpect?.includes('x-ekodi-operating-space-label: v1'));
   const noSlash=manifest.worker.requests.find(item=>item.url===CHURCH_ROUTE_CONTRACT.publicUrl.replace(/\/$/,''));
   assert.ok(noSlash,'Church no-slash canonical redirect probe missing');
   assert.deepEqual(noSlash.statuses,[308]);
