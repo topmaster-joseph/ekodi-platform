@@ -282,7 +282,7 @@ async function runScheduledSiteImprovement(env){
   let task=null;
   try{
     const nodeProviders=await onlineNodeProviders(env);
-    const localProvider=['codex','gemini-cli','claude-code'].find(provider=>nodeProviders.includes(provider));
+    const localProvider=['codex','gemini-cli'].find(provider=>nodeProviders.includes(provider));
     if(!localProvider)throw new Error('no_online_code_node_provider');
     const input=normalizeTaskInput({
       title:'EKODI daily site improvement: '+claim.site.name,
