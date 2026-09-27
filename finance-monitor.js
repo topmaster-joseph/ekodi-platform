@@ -4,6 +4,7 @@ const financeRefresh = document.querySelector('#refreshFinance');
 const FINANCE_TTL_MS = 60 * 1000;
 let financeLoading = false;
 let financeLastLoadedAt = 0;
+let financeStructureSnapshot = { organizations:[], businessUnits:[], projects:[] };
 
 function financeToken() { return sessionStorage.getItem('ekodi-auth-token') || ''; }
 function financeKRW(value) { return `₩${Math.round(Number(value) || 0).toLocaleString('ko-KR')}`; }
@@ -13,8 +14,11 @@ function financeDate(value) {
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('ko-KR', { dateStyle:'short', timeStyle:'short' });
 }
 
-async function financeRequest(path) {
-  const response = await fetch(`${FINANCE_API}${path}`, { cache:'no-store', headers:{ authorization:`Bearer ${financeToken()}` } });
+async function financeRequest(path, options = {}) {
+  const headers = new Headers(options.headers || {});
+  headers.set('authorization', `Bearer ${financeToken()}`);
+  if (options.body && !headers.has('content-type')) headers.set('content-type','application/json');
+  const response = await fetch(`${FINANCE_API}${path}`, { cache:'no-store', ...options, headers });
   let data = {};
   try { data = await response.json(); } catch {}
   if (!response.ok) throw new Error(data.error || `Finance API 요청 실패 (${response.status})`);
@@ -113,6 +117,7 @@ function renderFinanceAccounting(rows) {
 }
 
 function renderFinanceStructure(data) {
+  financeStructureSnapshot = data || financeStructureSnapshot;
   const root = document.querySelector('#financeStructure');
   if (!root) return;
   const unitsByOrganization = new Map();
@@ -145,6 +150,114 @@ function renderFinanceStructure(data) {
   root.replaceChildren(fragment);
 }
 
+
+function ensureBankingPanel() {
+  const financePanel = document.querySelector('[data-panel~="finance"]');
+  if (!financePanel || document.querySelector('#financeBankingPanel')) return;
+  const panel = document.createElement('section');
+  panel.id = 'financeBankingPanel';
+  panel.className = 'policy-fund-panel';
+  panel.innerHTML = `
+    <div class="policy-fund-head"><div><span class="eyebrow">BANKING CONTROL</span><h3>통장 · 거래 · 이체 통합관리</h3>
+      <p>기관별 연결계좌, 거래내역, 이체 요청·승인을 통합해서 봅니다. 전체 계좌번호·인터넷뱅킹 비밀번호·공동인증서는 저장하지 않습니다.</p></div>
+      <button id="financeBankingRefresh" type="button">↻ 통장 새로고침</button></div>
+    <div class="policy-fund-grid">
+      <article><span>연결계좌</span><strong id="financeBankAccountCount">0</strong><small id="financeBankActiveCount">활성 0</small></article>
+      <article><span>현재잔액</span><strong id="financeBankBalance">₩0</strong><small>연결계좌 합계</small></article>
+      <article><span>이체 대기</span><strong id="financeBankPendingTransfers">0</strong><small>요청·승인·실행중</small></article>
+      <article><span>거래조회</span><strong id="financeBankReaderState">잠금</strong><small>은행 조회 연결</small></article>
+      <article><span>실제이체</span><strong id="financeBankExecutorState">잠금</strong><small>실행 바인딩</small></article>
+    </div>
+    <div id="financeBankingNotice" class="finance-note"></div>
+    <h4>연결계좌</h4><div class="table-wrap"><table><thead><tr><th>기관</th><th>금융기관 · 별칭</th><th>표시번호</th><th>잔액</th><th>상태</th><th>권한</th></tr></thead><tbody id="financeBankAccountRows"></tbody></table></div>
+    <h4>최근 거래내역</h4><div class="table-wrap"><table><thead><tr><th>일시</th><th>기관</th><th>내용</th><th>구분</th><th class="right">금액</th><th class="right">잔액</th></tr></thead><tbody id="financeBankTransactionRows"></tbody></table></div>
+    <h4>이체 요청 · 승인</h4><div class="table-wrap"><table><thead><tr><th>요청일</th><th>기관</th><th>수취인</th><th class="right">금액</th><th>상태</th><th>처리</th></tr></thead><tbody id="financeBankTransferRows"></tbody></table></div>
+    <details class="finance-note"><summary><strong>계좌 연결 메타데이터 등록</strong></summary>
+      <form id="financeBankConnectionForm" class="trade-form">
+        <div class="trade-grid">
+          <label>기관<select name="organizationId" id="financeBankOrganization" required></select></label>
+          <label>금융기관<input name="institutionName" maxlength="120" required></label>
+          <label>계좌 별칭<input name="accountAlias" maxlength="120" required placeholder="운영통장"></label>
+          <label>끝 4자리<input name="accountLast4" inputmode="numeric" pattern="[0-9]{4}" maxlength="4"></label>
+          <label>연동 제공자<input name="provider" maxlength="40" value="MANUAL"></label>
+          <label>제공자 계좌참조<input name="accountRef" maxlength="240" placeholder="금융기관/API가 발급한 참조값"></label>
+          <label>현재잔액<input name="currentBalance" type="number" step="1"></label>
+          <label><input name="transferEnabled" type="checkbox"> 이 계좌 이체 허용</label>
+        </div><div class="actions"><button class="button primary" type="submit">계좌 메타데이터 등록</button></div>
+      </form>
+    </details>`;
+  const taxBox = document.querySelector('#taxProfessionalServiceLink');
+  if (taxBox) taxBox.insertAdjacentElement('beforebegin', panel);
+  else financePanel.append(panel);
+  panel.querySelector('#financeBankingRefresh')?.addEventListener('click',()=>loadFinanceBanking(true));
+  panel.querySelector('#financeBankConnectionForm')?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const values=Object.fromEntries(new FormData(event.currentTarget));
+    values.currentBalance=values.currentBalance===''?null:Number(values.currentBalance);
+    values.transferEnabled=new FormData(event.currentTarget).get('transferEnabled')==='on';
+    try{
+      await financeRequest('/api/finance/banking/accounts',{method:'POST',body:JSON.stringify(values)});
+      event.currentTarget.reset();
+      await loadFinanceBanking(true);
+    }catch(error){
+      const notice=document.querySelector('#financeBankingNotice');if(notice)notice.textContent=`계좌 등록 실패: ${error.message}`;
+    }
+  });
+}
+function bankingStatus(value){return ({pending:'연결대기',active:'연결됨',disconnected:'연결끊김',error:'오류',requested:'승인대기',approved:'승인완료',rejected:'반려',executing:'이체중',completed:'이체완료',failed:'실패',cancelled:'취소'})[value]||value||'—'}
+function fillBankOrganizationOptions(){
+  const select=document.querySelector('#financeBankOrganization');if(!select)return;
+  const current=select.value;select.replaceChildren();
+  for(const org of financeStructureSnapshot.organizations||[]){
+    if(!org.active)continue;const option=document.createElement('option');option.value=org.id;option.textContent=`${org.name} · ${org.id}`;select.append(option);
+  }
+  if([...select.options].some(option=>option.value===current))select.value=current;
+}
+function renderFinanceBanking(data){
+  ensureBankingPanel();fillBankOrganizationOptions();
+  if(data?.__error){
+    const notice=document.querySelector('#financeBankingNotice');if(notice){notice.className='finance-note';notice.textContent=`통장 모듈 확인 필요: ${data.__error}`;}return;
+  }
+  const accounts=Array.isArray(data.accounts)?data.accounts:[],txs=Array.isArray(data.transactions)?data.transactions:[],transfers=Array.isArray(data.transfers)?data.transfers:[];
+  const ready=data.readiness||{},summary=data.summary||{};
+  document.querySelector('#financeBankAccountCount').textContent=String(summary.accounts||0);
+  document.querySelector('#financeBankActiveCount').textContent=`활성 ${summary.activeAccounts||0}`;
+  document.querySelector('#financeBankBalance').textContent=financeKRW(summary.currentBalance||0);
+  document.querySelector('#financeBankPendingTransfers').textContent=String(summary.pendingTransfers||0);
+  document.querySelector('#financeBankReaderState').textContent=ready.readerConnected?'연결됨':'잠금';
+  document.querySelector('#financeBankExecutorState').textContent=ready.executorConnected&&ready.transferExecutionEnabled?'사용 가능':'잠금';
+  const notice=document.querySelector('#financeBankingNotice');
+  if(notice){notice.className=ready.executorConnected&&ready.transferExecutionEnabled?'finance-note good':'finance-note';notice.textContent=ready.executorConnected&&ready.transferExecutionEnabled?'은행 실행 바인딩이 연결되어 승인된 이체를 실행할 수 있습니다.':'은행 실행 자격증명/바인딩 연결 전이므로 실제 출금은 서버에서 차단됩니다. 조회·요청·승인과 감사기록은 사용할 수 있습니다.';}
+  const accountMap=new Map(accounts.map(a=>[a.id,a]));
+  const accountRows=document.querySelector('#financeBankAccountRows');
+  if(accountRows){
+    if(!accounts.length)financeEmpty(accountRows,6,'연결된 은행계좌가 없습니다.');
+    else accountRows.innerHTML=accounts.map(a=>`<tr><td>${String(a.organizationId||'')}</td><td><strong>${String(a.institutionName||a.provider||'')}</strong><br><small>${String(a.accountAlias||'')}</small></td><td>${a.accountLast4?'****'+a.accountLast4:'참조값만 저장'}</td><td class="right">${financeKRW(a.currentBalance)}</td><td>${bankingStatus(a.connectionStatus)}</td><td>${a.transferEnabled?'조회 · 이체':'조회 전용'}</td></tr>`).join('');
+  }
+  const txRows=document.querySelector('#financeBankTransactionRows');
+  if(txRows){
+    if(!txs.length)financeEmpty(txRows,6,'수집된 은행 거래내역이 없습니다.');
+    else txRows.innerHTML=txs.map(t=>`<tr><td>${financeDate(t.bookedAt)}</td><td>${String(t.organizationId||'')}</td><td><strong>${String(t.counterpartyName||t.description||'—')}</strong><br><small>${String(t.description||t.category||'')}</small></td><td>${t.direction==='in'?'입금':'출금'}</td><td class="right">${financeKRW(t.amount)}</td><td class="right">${t.balanceAfter==null?'—':financeKRW(t.balanceAfter)}</td></tr>`).join('');
+  }
+  const transferRows=document.querySelector('#financeBankTransferRows');
+  if(transferRows){
+    if(!transfers.length)financeEmpty(transferRows,6,'이체 요청이 없습니다.');
+    else transferRows.innerHTML=transfers.map(t=>{
+      const approve=t.status==='requested'? `<button type="button" data-bank-approve="${t.id}">승인</button><button type="button" data-bank-reject="${t.id}">반려</button>`:'';
+      const execute=t.status==='approved'&&ready.executorConnected&&ready.transferExecutionEnabled?`<button class="primary compact" type="button" data-bank-execute="${t.id}">실제 이체</button>`:(t.status==='approved'?'<small>실이체 잠금</small>':'');
+      return `<tr><td>${financeDate(t.requestedAt)}</td><td>${String(t.organizationId||'')}</td><td><strong>${String(t.recipientName||'')}</strong><br><small>${String(t.recipientBankName||'')} ${t.recipientAccountLast4?'****'+t.recipientAccountLast4:''}</small></td><td class="right">${financeKRW(t.amount)}</td><td>${bankingStatus(t.status)}</td><td><div class="actions">${approve}${execute}</div></td></tr>`;
+    }).join('');
+    transferRows.querySelectorAll('[data-bank-approve]').forEach(button=>button.onclick=async()=>{try{await financeRequest(`/api/finance/banking/transfers/${encodeURIComponent(button.dataset.bankApprove)}/approve`,{method:'POST',body:'{}'});await loadFinanceBanking(true)}catch(error){notice.textContent=`승인 실패: ${error.message}`}});
+    transferRows.querySelectorAll('[data-bank-reject]').forEach(button=>button.onclick=async()=>{const reason=window.prompt('반려 사유를 입력해 주세요.','');if(reason===null)return;try{await financeRequest(`/api/finance/banking/transfers/${encodeURIComponent(button.dataset.bankReject)}/reject`,{method:'POST',body:JSON.stringify({reason})});await loadFinanceBanking(true)}catch(error){notice.textContent=`반려 실패: ${error.message}`}});
+    transferRows.querySelectorAll('[data-bank-execute]').forEach(button=>button.onclick=async()=>{const accountNumber=window.prompt('실제 실행용 수취계좌 전체번호를 입력하세요. 이 값은 EKODI DB에 저장되지 않습니다.','');if(!accountNumber)return;if(!window.confirm('승인된 이체를 실제 금융기관으로 실행합니다. 계속하시겠습니까?'))return;try{button.disabled=true;await financeRequest(`/api/finance/banking/transfers/${encodeURIComponent(button.dataset.bankExecute)}/execute`,{method:'POST',body:JSON.stringify({recipientAccountNumber:accountNumber})});await loadFinanceBanking(true)}catch(error){notice.textContent=`이체 실행 실패: ${error.message}`;button.disabled=false}});
+  }
+}
+async function loadFinanceBanking(force=false){
+  ensureBankingPanel();
+  if(!financeToken())return;
+  try{const data=await financeRequest('/api/finance/banking/overview');renderFinanceBanking(data)}catch(error){renderFinanceBanking({__error:error.message})}
+}
+
 async function loadFinance(force = false) {
   if (!financeToken() || financeLoading) return;
   const now = Date.now();
@@ -154,16 +267,18 @@ async function loadFinance(force = false) {
   financePanel?.setAttribute('aria-busy', 'true');
   if (financeRefresh) { financeRefresh.disabled = true; financeRefresh.textContent = '↻ 확인 중…'; }
   try {
-    const [overview, payments, accounting, structure] = await Promise.all([
+    const [overview, payments, accounting, structure, banking] = await Promise.all([
       financeRequest('/api/finance/overview'),
       financeRequest('/api/finance/payments?limit=30'),
       financeRequest('/api/finance/accounting'),
-      financeRequest('/api/finance/structure')
+      financeRequest('/api/finance/structure'),
+      financeRequest('/api/finance/banking/overview').catch(error=>({__error:error.message}))
     ]);
     renderFinanceOverview(overview);
     renderFinancePayments(payments.payments || []);
     renderFinanceAccounting(accounting.rows || []);
     renderFinanceStructure(structure);
+    renderFinanceBanking(banking);
     financeLastLoadedAt = Date.now();
   } catch (error) {
     const generated = document.querySelector('#financeGenerated');
@@ -178,6 +293,7 @@ async function loadFinance(force = false) {
 }
 
 ensureTaxServiceLink();
+ensureBankingPanel();
 financeRefresh?.addEventListener('click', () => loadFinance(true));
 financeSectionButton?.addEventListener('click', () => {
   const title = document.querySelector('#pageTitle');
