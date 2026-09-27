@@ -3,12 +3,13 @@ import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { channelAdminServices, canonicalServiceChannelAdminPath } from '../admin-service-catalog.js';
 
-const [worker, admin, broker, registry, loader] = await Promise.all([
+const [worker, admin, broker, registry, loader, router] = await Promise.all([
   readFile(new URL('../marketing-growth-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../social-admin.js', import.meta.url), 'utf8'),
   readFile(new URL('../google-drive-storage-control.js', import.meta.url), 'utf8'),
   readFile(new URL('../admin-menu-registry.js', import.meta.url), 'utf8'),
   readFile(new URL('../admin-demand-loader.js', import.meta.url), 'utf8'),
+  readFile(new URL('../platform-router-entry-worker.js', import.meta.url), 'utf8'),
 ]);
 
 test('YouTube OAuth supports repeated account selection and does not hard-lock EKODIBIZ to one named channel', () => {
@@ -58,7 +59,7 @@ test('site channel directory resolves to each canonical local administrator inst
     ['mall','/ekodimall/admin/channel-settings'],
     ['trade','/ekodibiz/trade/admin/publishing'],
     ['cheonggye-local','/cheonggye/admin/publishing'],
-    ['cmpmyi','/cmpmyi/admin/publishing'],
+    ['cmpmyi','/cmpmyi/admin/panel/publishing'],
     ['cgma','/cgma/admin/publishing'],
     ['jadam','/jadam/admin/publishing'],
     ['pizzamaru','/pizzamaru/admin/publishing'],
@@ -71,7 +72,12 @@ test('site channel directory resolves to each canonical local administrator inst
     assert.ok(!canonicalServiceChannelAdminPath(site).startsWith('/admin/'),site.id);
   }
   assert.deepEqual(new Set(sites.map(site=>site.id)),new Set(expected.keys()));
-  for(const site of sites) assert.ok(site.channelSubjectKey,`${site.id}: channelSubjectKey`);
+  for(const site of sites){
+    if(site.channelAggregate) assert.equal(site.channelSubjectKey,'',`${site.id}: aggregate hub must not impersonate one tenant ledger`);
+    else assert.ok(site.channelSubjectKey,`${site.id}: channelSubjectKey`);
+  }
+  assert.match(router,/\^\\\/cheonggye\\\/admin\\\/publishing\\\/?\$/i);
+  assert.match(router,/workspaceAdminPage\(\)/);
 });
 
 test('central channel manager can scope connections to person, tenant or store without bypassing backend membership checks', () => {
