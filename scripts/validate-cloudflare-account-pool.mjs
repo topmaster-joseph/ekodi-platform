@@ -6,6 +6,8 @@ const gate=fs.readFileSync('.github/workflows/ekodi-ai-orchestration-gate.yml','
 const prod=fs.readFileSync('.github/workflows/deploy-site-core.yml','utf8');
 const prodGate=fs.readFileSync('.github/workflows/production-gate.yml','utf8');
 const development=fs.readFileSync('.github/workflows/deploy-development.yml','utf8');
+const health=fs.readFileSync('.github/workflows/cloudflare-account-pool-health.yml','utf8');
+const registry=JSON.parse(fs.readFileSync('config/evolution-resource-registry.json','utf8'));
 
 const failures=[];
 const expect=(condition,message)=>{if(!condition)failures.push(message)};
@@ -48,6 +50,12 @@ expect(development.includes('CLOUDFLARE_DEVELOPMENT_API_TOKEN')||development.inc
 
 expect(gate.includes('validate-cloudflare-account-pool.mjs'),'orchestration gate must validate Cloudflare account pool');
 expect(gate.includes('cloudflare-account-pool.test.mjs'),'orchestration gate must run Cloudflare account pool tests');
+expect(health.includes('Primary + Auxiliary read-only health'),'account pool health workflow must verify both account lanes');
+expect(health.includes('test "$CLOUDFLARE_ACCOUNT_ID" != "$CLOUDFLARE_AUXILIARY_ACCOUNT_ID"'),'account pool health must reject account collisions');
+expect(health.includes('cloudflare-production-budget.mjs'),'account pool health must verify the primary plan-aware budget');
+const registered=(registry.explicitResources||[]).find(item=>item.id==='cloudflare-account-pool-policy');
+expect(registered?.source==='config/cloudflare-account-pool.json','account pool policy must be registered in evolution resources');
+expect(registered?.verificationState==='ci_gate','account pool policy must remain CI-gated');
 
 if(failures.length){
   for(const failure of failures) console.error(`[EKODI-CF-ACCOUNT-POOL-001] ${failure}`);
