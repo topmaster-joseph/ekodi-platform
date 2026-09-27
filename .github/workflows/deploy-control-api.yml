@@ -679,6 +679,17 @@ jobs:
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
       - name: Deploy production routes and Cron triggers
         run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.api.toml
+      - name: Verify production Control workers.dev is closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          direct_code=$(curl -sS -o /tmp/control-direct-worker.txt -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://ekodi-auth-api.topmaster-joseph.workers.dev/health' || true)
+          if [[ "$direct_code" =~ ^[23] ]]; then
+            echo "Production Control workers.dev route is still publicly reachable: HTTP $direct_code" >&2
+            cat /tmp/control-direct-worker.txt >&2 || true
+            exit 1
+          fi
+          echo "Production Control workers.dev route is closed (HTTP $direct_code)."
       - name: Verify production Control and universal membership boundaries
         shell: bash
         run: |
