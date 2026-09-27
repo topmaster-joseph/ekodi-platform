@@ -216,6 +216,21 @@
       "effectiveDate": "2026-09-20",
       "verificationState": "ci_gate",
       "lifecycleState": "active"
+    },
+    {
+      "id": "cloudflare-account-pool-policy",
+      "kind": "policy",
+      "source": "config/cloudflare-account-pool.json",
+      "version": "EKODI-CF-ACCOUNT-POOL-001",
+      "owner": "EKODI Orchestrator",
+      "dependencies": [
+        "CONSTITUTION.md",
+        "config/free-tier-optimization-policy.json",
+        "config/deployment-four-layer-policy.json"
+      ],
+      "effectiveDate": "2026-09-28",
+      "verificationState": "ci_gate",
+      "lifecycleState": "active"
     }
   ]
 }
