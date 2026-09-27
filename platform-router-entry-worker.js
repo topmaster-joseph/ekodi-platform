@@ -42,6 +42,8 @@ import { localRegionPublicPage, localRegionAdminPage, localRegionAccessAdminPage
 import { localRegionForestPublicPage, localRegionForestAdminPage } from './local-region-forest-page.js';
 import { localRegionForestPublicScript } from './local-region-forest-public.js';
 import { localRegionForestAdminScript } from './local-region-forest-admin.js';
+import { localRegionModulePublicScript } from './local-region-module-public.js';
+import { localRegionModuleAdminScript } from './local-region-module-admin.js';
 import { localRegionAdminAuthScript } from './local-region-admin-auth.js';
 import { localRegionAccessAdminScript } from './local-region-access-admin.js';
 import { localRegionOperationsAdminScript } from './local-region-operations-admin.js';
@@ -344,6 +346,8 @@ async function routePlatform(request,env,ctx){
         if(url.pathname==='/cheonggye/local-region-operations-admin.js')return localRegionOperationsAdminScript();
         if(url.pathname==='/cheonggye/local-region-forest-public.js')return localRegionForestPublicScript();
         if(url.pathname==='/cheonggye/local-region-forest-admin.js')return localRegionForestAdminScript();
+        if(url.pathname==='/cheonggye/local-region-module-public.js')return localRegionModulePublicScript();
+        if(url.pathname==='/cheonggye/local-region-module-admin.js')return localRegionModuleAdminScript();
         if(url.pathname==='/tenant-admin-command-home.css')return tenantAdminCommandHomeCss();
         if(url.pathname==='/tenant-admin-command-home.js')return tenantAdminCommandHomeScript();
         if(['/store-admin.css','/jadam-admin.css','/pizzamaru-admin.css','/yogurt-admin.css'].includes(url.pathname))return storeAdminCss();
