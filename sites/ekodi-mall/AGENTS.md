@@ -17,7 +17,7 @@
 
 1. 사용자에게 노출되는 EKODI 인증 canonical entry는 `https://ekodi.kr/auth`와 그 하위경로만 사용한다.
 2. Mall은 자체 인증센터를 만들지 않는다. `/ekodimall/**`에서 인증이 필요하면 `/auth?return_to=...`로 이동하고 인증 완료 후 최초 요청 경로로 복귀한다.
-3. 새 `auth.ekodi.kr`, `/ekodimall/auth`, 서비스별 인증 URL 의존성을 추가하지 않는다. 기존 레거시 인증 호스트는 migration compatibility 외 신규 UI 진입점으로 사용하지 않는다.
+3. 새 `legacy-auth-host`, `/ekodimall/auth`, 서비스별 인증 URL 의존성을 추가하지 않는다. 기존 레거시 인증 호스트는 migration compatibility 외 신규 UI 진입점으로 사용하지 않는다.
 4. 로그인된 Seller에게 로그인/가입 CTA를 다시 표시하지 않는다. `/ekodimall/seller/`는 인증 후 상품등록·상품·주문·정산 업무를 우선 표시한다.
 5. 인증(Authentication)은 중앙 `/auth`, 권한(Authorization)은 서버 권한검사, Mall 업무(Application)는 `/ekodimall/**`로 분리한다. 브라우저 표시 상태를 권한 근거로 사용하지 않는다.
 6. 모바일 320/360/390/412/430px에서 horizontal overflow가 발생하면 검증 실패로 간주한다. 고정 min-width, viewport를 넘는 카드/폼/버튼을 신규 추가하지 않는다.
@@ -26,7 +26,7 @@
 ## 플랫폼 격리 규칙
 
 1. Mall 기능 작업은 원칙적으로 `sites/ekodi-mall/**` 안에서 완결한다.
-2. `ekodi.kr/api`, `auth.ekodi.kr`, `pay.ekodi.kr`, `finance-ekodi.kr/api` 내부 DB를 Mall 편의를 위해 직접 수정하지 않는다.
+2. `ekodi.kr/api`, `legacy-auth-host`, `pay.ekodi.kr`, `finance-ekodi.kr/api` 내부 DB를 Mall 편의를 위해 직접 수정하지 않는다.
 3. production은 Worker `ekodi-mall-api` + D1 `ekodi-mall`, staging은 Worker `ekodi-mall-api-staging` + D1 `ekodi-mall-staging`을 사용한다. 두 DB를 섞지 않는다.
 4. 루트에 별도 `mall-api-worker.js`/`wrangler.mall-api.toml` 같은 두 번째 Mall API를 만들지 않는다. `mall-ekodi.kr/api`는 `sites/ekodi-mall/api/entry.js` 단일 진입점만 사용한다.
 5. Google/Supabase 사용자 토큰은 Mall API가 Auth 서버에서 재검증한다. 브라우저가 보낸 이메일·회원등급을 신뢰하지 않는다.
