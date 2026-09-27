@@ -40,3 +40,7 @@ Until the verified live SP-API execution adapter is enabled, `POST /api/amazon/s
 6. reports/settlement
 
 Each resource must preserve tenant scope, audit external mutations, support retry/idempotency, and remain independently disableable.
+
+## Verification
+- PR CI must pass the repository CI and constitution checks before merge.
+- Production activation requires the canonical `/ekodimall/admin/amazon` route verification.
