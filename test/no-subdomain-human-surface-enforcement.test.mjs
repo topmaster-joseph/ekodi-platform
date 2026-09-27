@@ -16,5 +16,5 @@ test('Invest authentication and admin discovery use only the canonical apex path
   assert.doesNotMatch(admin,/domain:'invest\.ekodi\.kr', name:'에코디 투자'/);
   const rule=JSON.parse(policy);
   assert.equal(rule.investCanonical,'https://ekodi.kr/invest');
-  assert.ok(rule.mandatoryRules.some(value=>value.includes('must not advertise *.ekodi.kr')));
+  assert.ok(rule.mandatoryRules.some(value=>value.includes('must not advertise service-specific EKODI hostnames')));
 });
