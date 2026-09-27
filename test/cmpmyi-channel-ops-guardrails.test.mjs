@@ -50,8 +50,8 @@ test('channel workspace follows status quick-action list detail ordering on ever
   for(const store of CMPMYI_STORES){
     const page=await storeAdminPage({...store,id:store.slug,brand:store.short,pathname:'/'+store.slug+'/admin/publishing'}).text();
     assert.match(page,/채널 · 자동게시/);
-    assert.match(page,/store-admin\.css\?v=20260928-channel-ops-v1/);
-    assert.match(page,/store-admin\.js\?v=20260928-channel-ops-v1/);
+    assert.match(page,/store-admin\.css\?v=20260928-channel-ops-v2/);
+    assert.match(page,/store-admin\.js\?v=20260928-channel-ops-v2/);
   }
 });
 
@@ -75,4 +75,25 @@ test('forced execution rule is documented as a release-blocking shared contract'
   assert.match(principles,/active.*재인증 동작을 제공하지 않는다/);
   assert.match(principles,/자담치킨 · 피자마루 · 요거트퍼플/);
   assert.match(principles,/CI를 실패시킨다/);
+});
+
+
+test('publishing first paint is informative and store-admin typography respects the 11px floor',async()=>{
+  const page=await storeAdminPage({slug:'jadam',name:'자담치킨 목포대점',id:'jadam',brand:'JADAM',pathname:'/jadam/admin/publishing'}).text();
+  const css=await (await import('../store-admin-engine.js')).storeAdminCss().text();
+  assert.match(page,/연결 채널/);
+  assert.match(page,/자동게시 활성/);
+  assert.match(page,/최대 8초 안에 확인합니다/);
+  assert.doesNotMatch(css,/font-size:(?:8(?:\.5)?|9(?:\.5)?|10(?:\.5)?)px/);
+});
+
+test('connected channels expose recent and next publishing signals with Korean status labels',async()=>{
+  const script=await storeAdminScript().text();
+  assert.match(script,/최근 게시/);
+  assert.match(script,/다음 예약/);
+  assert.match(script,/publishingJobStatus/);
+  assert.match(script,/publishingTime/);
+  assert.match(script,/channel-setting-row/);
+  assert.match(script,/reconnect_required:'재연결 필요'/);
+  assert.doesNotMatch(script,/reconnect_required:'재인증 필요'/);
 });
