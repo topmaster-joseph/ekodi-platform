@@ -52,6 +52,25 @@ test('public readiness endpoint exposes only published locales without mutation 
   const blocked=await handleLanguageAutomationPublic(new Request('https://ekodi.kr/api/i18n/v1/status?service=community',{method:'POST'}),{});
   assert.equal(blocked.status,405);
 });
+test('public readiness endpoint falls back to the registry when runtime DB seed fails',async()=>{
+  const failingDb={
+    prepare(){
+      return {
+        bind(){return this},
+        async first(){throw new Error('schema_drift')},
+        async all(){throw new Error('schema_drift')},
+        async run(){throw new Error('schema_drift')}
+      };
+    }
+  };
+  const response=await handleLanguageAutomationPublic(new Request('https://ekodi.kr/api/i18n/v1/status?service=mission'),{DB:failingDb});
+  assert.equal(response.status,200);
+  const data=await response.json();
+  assert.equal(data.serviceId,'mission');
+  assert.ok(Array.isArray(data.publishedLocales));
+  assert.ok(data.publishedLocales.includes('ko-KR'));
+});
+
 test('publication control uses an idempotent side table so partially applied legacy columns cannot block staging',async()=>{
   const sql=await readFile(new URL('../migrations/0083_language_publication_control.sql',import.meta.url),'utf8');
   assert.match(sql,/CREATE TABLE IF NOT EXISTS language_publication_state/);
