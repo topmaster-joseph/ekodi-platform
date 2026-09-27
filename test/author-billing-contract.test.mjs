@@ -107,7 +107,8 @@ test('Creator site and control plane route the isolated billing surface without 
   assert.match(mission, /path\.startsWith\('\/api\/marketing\/ledger\/'\)/);
   assert.match(security, /path\.startsWith\('\/api\/author\/billing\/'\)/);
   assert.match(security, /path\.startsWith\('\/api\/marketing\/ledger\/'\)/);
-  assert.match(wrangler, /https:\/\/author\.ekodi\.kr/);
+  assert.match(wrangler, /ALLOWED_ORIGINS = "https:\/\/ekodi\.kr,https:\/\/cgma\.or\.kr"/);
+  assert.doesNotMatch(wrangler, /https:\/\/author\.ekodi\.kr/);
 });
 
 test('admin pricing code is bundled into already authenticated admin assets', () => {
