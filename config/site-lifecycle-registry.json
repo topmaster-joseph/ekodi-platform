@@ -186,5 +186,14 @@
     "verify_canonical_surface",
     "redirect_only_verified_legacy_aliases",
     "retire_duplicate_runtime_after_observation_window"
-  ]
+  ],
+  "enforcement": {
+    "policy": "config/site-execution-enforcement.json",
+    "status": "enforced",
+    "inheritance": "mandatory-recursive",
+    "descendantsIncluded": true,
+    "siteAdminIncluded": true,
+    "futureSitesAutoInherit": true,
+    "perSiteOptOutAllowed": false
+  }
 }
