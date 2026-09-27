@@ -5,7 +5,8 @@ import {AI_ROUTER_SCORE_POLICY} from './ai-router-score.js';
 import {loadAiCollaborationPolicy} from './ai-collaboration-settings.js';
 import { LOCAL_EXECUTION_POLICY, compareLocalExecutionCandidates, localExecutionPolicySnapshot, normalizeLocalResource } from './local-execution-policy.js';
 import capabilityRegistry from './config/capability-registry.json' with { type: 'json' };
-import {AI_COMMONS_POLICY,adminIdeaView,canFinalPublish,executionCatalogSnapshot,memberIdeaView,normalizeAiIdeaInput,publicRequestView,rankCommonCapabilities,rankPublicExecutionServices,requestSimilarity,resolveExecutionServiceEntry,suggestedIdeaState} from './ai-commons.js';\nimport {attachSiteImprovementTask,buildSiteImprovementPrompt,claimLowTrafficSiteImprovement,completeSiteImprovementNodeJob,failSiteImprovementClaim,failSiteImprovementTask,markSiteImprovementRunning,reconcileSiteImprovementRelease} from './ekodi-site-improvement-scheduler.js';
+import {AI_COMMONS_POLICY,adminIdeaView,canFinalPublish,executionCatalogSnapshot,memberIdeaView,normalizeAiIdeaInput,publicRequestView,rankCommonCapabilities,rankPublicExecutionServices,requestSimilarity,resolveExecutionServiceEntry,suggestedIdeaState} from './ai-commons.js';
+import {attachSiteImprovementTask,buildSiteImprovementPrompt,claimLowTrafficSiteImprovement,completeSiteImprovementNodeJob,failSiteImprovementClaim,failSiteImprovementTask,markSiteImprovementRunning,reconcileSiteImprovementRelease} from './ekodi-site-improvement-scheduler.js';
 
 const clean=value=>String(value??'').trim();
 const now=()=>new Date().toISOString();
