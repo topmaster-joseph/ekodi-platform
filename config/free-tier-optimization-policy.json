@@ -219,5 +219,12 @@
       "blockNonessentialAtOrAboveProtect": true,
       "preserveAuthSecurityOrdersFinanceAndAdminControl": true
     }
+  },
+  "cloudflareAccountPool": {
+    "policyId": "EKODI-CF-ACCOUNT-POOL-001",
+    "primary": "workers-paid-production-critical",
+    "auxiliary": "free-preferred-bounded-noncritical",
+    "productionCriticalFailoverToAuxiliary": false,
+    "appliesRecursivelyToAllServices": true
   }
 }
