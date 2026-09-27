@@ -80,7 +80,14 @@
     "mode": "billing-api-when-readable",
     "fallback": "free-safe",
     "ownerActivationRequired": true,
-    "automaticPurchase": false
+    "automaticPurchase": false,
+    "ownerConfirmedWorkersPlan": "paid",
+    "ownerConfirmedAt": "2026-09-28",
+    "fallbackOrder": [
+      "cloudflare-billing-api",
+      "owner-confirmed-config",
+      "free-safe"
+    ]
   },
   "paidPlan": {
     "minimumMonthlyUsd": 5,
