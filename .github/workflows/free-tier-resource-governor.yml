@@ -13,6 +13,8 @@ on:
       - 'free-tier-resource-governor.js'
       - 'config/free-tier-optimization-policy.json'
       - 'scripts/collect-free-tier-resource-usage.mjs'
+      - 'scripts/cloudflare-production-budget.mjs'
+      - 'config/cloudflare-production-quota-guard.json'
       - 'scripts/evaluate-free-tier-resource-proof.mjs'
       - 'scripts/validate-supabase-free-project-capacity.mjs'
       - 'test/free-tier-resource-governor.test.mjs'
@@ -28,6 +30,8 @@ on:
       - 'free-tier-resource-governor.js'
       - 'config/free-tier-optimization-policy.json'
       - 'scripts/collect-free-tier-resource-usage.mjs'
+      - 'scripts/cloudflare-production-budget.mjs'
+      - 'config/cloudflare-production-quota-guard.json'
       - 'scripts/evaluate-free-tier-resource-proof.mjs'
       - 'scripts/validate-supabase-free-project-capacity.mjs'
       - 'test/free-tier-resource-governor.test.mjs'
@@ -62,6 +66,7 @@ jobs:
           set -euo pipefail
           node --check free-tier-resource-governor.js
           node --check scripts/collect-free-tier-resource-usage.mjs
+          node --check scripts/cloudflare-production-budget.mjs
           node --check scripts/evaluate-free-tier-resource-proof.mjs
           node --check scripts/validate-free-tier-optimization.mjs
           node --check scripts/validate-supabase-free-project-capacity.mjs
@@ -123,6 +128,18 @@ jobs:
           set -euo pipefail
           node scripts/validate-supabase-free-project-capacity.mjs
 
+      - name: Read Production Cloudflare quota Source of Truth
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          report="$RUNNER_TEMP/cloudflare-production-quota.json"
+          node scripts/cloudflare-production-budget.mjs --output="$report"
+          test -s "$report"
+          node -e "const r=require(process.argv[1]);if(r.policyId!=='CF-QUOTA-001'||r.account!=='PROD')process.exit(1)" "$report"
+          echo "CLOUDFLARE_QUOTA_REPORT=$report" >> "$GITHUB_ENV"
+
       - name: Collect measured free-tier resource telemetry
         shell: bash
         run: |
@@ -144,7 +161,7 @@ jobs:
           set -euo pipefail
           npx --yes wrangler@4.127.1 d1 execute ekodi-auth \
             --remote --config wrangler.api.toml --json \
-            --command "SELECT provider,metric,observed_value,free_limit,source,observed_at FROM provider_quota_snapshots WHERE provider IN ('supabase','github') ORDER BY observed_at DESC LIMIT 20;" \
+            --command "SELECT provider,metric,observed_value,free_limit,source,observed_at FROM provider_quota_snapshots WHERE provider IN ('cloudflare','supabase','github') ORDER BY observed_at DESC LIMIT 30;" \
             > "$RUNNER_TEMP/free-tier-resource-proof.json"
           grep -Fq '"provider"' "$RUNNER_TEMP/free-tier-resource-proof.json"
           node scripts/evaluate-free-tier-resource-proof.mjs "$RUNNER_TEMP/free-tier-resource-proof.json"
