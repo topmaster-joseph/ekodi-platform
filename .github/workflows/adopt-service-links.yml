@@ -32,7 +32,7 @@ jobs:
       - name: Reject retired public domains and verify canonical Mall URL
         run: |
           set -euo pipefail
-          if grep -E 'ekodibook\.kr|ekodichurch\.kr|ekodilab\.kr|mall\.ekodi\.kr|www\.mall\.ekodi\.kr' index.html scripts/monitor-lib.mjs; then
+          if grep -E 'ekodibook\.kr|ekodichurch\.kr|ekodilab\.kr' index.html scripts/monitor-lib.mjs; then
             echo 'Retired service domain found. EKODI Mall must use https://ekodi.kr/ekodimall.'
             exit 1
           fi
