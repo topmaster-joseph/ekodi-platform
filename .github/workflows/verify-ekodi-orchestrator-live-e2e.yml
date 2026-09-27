@@ -66,7 +66,7 @@ jobs:
           [[ "$used" =~ ^[0-9]+$ ]]
           [[ "$limit" =~ ^[0-9]+$ ]]
 
-          proof_calls=3
+          proof_calls=1
           operational_reserve=6
           remaining=$(( limit - used ))
           if (( remaining >= proof_calls + operational_reserve )); then
@@ -167,12 +167,15 @@ jobs:
           set -euo pipefail
           task_id="proof_orch_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
           pulse_id="pulse_${task_id}"
-          goal='Read-only production orchestration proof. Check current EKODI platform health at a high level and return a concise structured assessment. Do not deploy, modify data, change permissions, alter DNS, touch secrets, make purchases, or perform any irreversible action. Use configured AI provider collaboration only within existing EKODI governance and include verifiable execution evidence.'
+          goal='Read-only service-health orchestration proof. Inspect the current EKODI platform health at a high level and return a concise structured assessment with verifiable execution evidence. This task is observation-only and authorizes no external action.'
 
           payload=$(jq -nc             --arg taskId "$task_id"             --arg pulseId "$pulse_id"             --arg goal "$goal"             '{
               taskId:$taskId,
               goal:$goal,
               risk:"low",
+              readOnly:true,
+              mutation:false,
+              routine:true,
               maxAttempts:1,
               target:{service:"core",capability:"platform_health",surface:"admin"},
               delegation:{allowed:true,reversible:true,audited:true,preflightVerified:true,verificationDefined:true},
