@@ -6,6 +6,7 @@ on:
     paths:
       - 'supabase/migrations/20260926140500_activity_public_readonly_shares.sql'
       - 'supabase/migrations/20260927032500_activity_public_share_minimal_projection_guard.sql'
+      - 'supabase/migrations/20260927041500_activity_public_share_contract_health.sql'
       - 'test/activity-public-share.test.mjs'
       - '.github/workflows/deploy-activity-public-share-schema.yml'
   push:
@@ -13,6 +14,7 @@ on:
     paths:
       - 'supabase/migrations/20260926140500_activity_public_readonly_shares.sql'
       - 'supabase/migrations/20260927032500_activity_public_share_minimal_projection_guard.sql'
+      - 'supabase/migrations/20260927041500_activity_public_share_contract_health.sql'
       - '.github/workflows/deploy-activity-public-share-schema.yml'
 
 permissions:
@@ -26,6 +28,7 @@ env:
   PROJECT_REF: renzehysxirjilvdxacv
   BASE_MIGRATION: supabase/migrations/20260926140500_activity_public_readonly_shares.sql
   PRIVACY_GUARD_MIGRATION: supabase/migrations/20260927032500_activity_public_share_minimal_projection_guard.sql
+  CONTRACT_MIGRATION: supabase/migrations/20260927041500_activity_public_share_contract_health.sql
   PUBLISHABLE_KEY: sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
 
 jobs:
@@ -44,6 +47,7 @@ jobs:
           node --test test/activity-public-share.test.mjs
           test -f "$BASE_MIGRATION"
           test -f "$PRIVACY_GUARD_MIGRATION"
+          test -f "$CONTRACT_MIGRATION"
           grep -Fq 'create table if not exists public.activity_public_shares' "$BASE_MIGRATION"
           grep -Fq 'activity_admin_create_share' "$BASE_MIGRATION"
           grep -Fq 'activity_admin_revoke_share' "$BASE_MIGRATION"
@@ -52,7 +56,10 @@ jobs:
           grep -Fq 'Privacy-minimal share policy' "$PRIVACY_GUARD_MIGRATION"
           grep -Fq 'returns only seq/name/status/party_size' "$PRIVACY_GUARD_MIGRATION"
           ! grep -Fq 'person_contacts' "$PRIVACY_GUARD_MIGRATION"
-          ! grep -Eiq 'drop[[:space:]]+table|truncate[[:space:]]+table' "$BASE_MIGRATION" "$PRIVACY_GUARD_MIGRATION"
+          grep -Fq 'activity_public_share_contract()' "$CONTRACT_MIGRATION"
+          grep -Fq "'ekodi.activity-public-share.v1'" "$CONTRACT_MIGRATION"
+          grep -Fq "'contact_fields',false" "$CONTRACT_MIGRATION"
+          ! grep -Eiq 'drop[[:space:]]+table|truncate[[:space:]]+table' "$BASE_MIGRATION" "$PRIVACY_GUARD_MIGRATION" "$CONTRACT_MIGRATION"
 
   production:
     if: github.event_name != 'pull_request'
@@ -67,27 +74,63 @@ jobs:
       TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
 
-      - name: Select Supabase deployment credential
+      - name: Probe existing public activity-share contract
         shell: bash
         run: |
           set -euo pipefail
+          endpoint="https://$PROJECT_REF.supabase.co/rest/v1/rpc/activity_public_share_contract"
+          code=$(curl -sS -o /tmp/activity-share-contract.json -w '%{http_code}' \
+            -X POST "$endpoint" \
+            -H "apikey: $PUBLISHABLE_KEY" \
+            -H 'Content-Type: application/json' \
+            --data '{}')
+          ready=false
+          if [ "$code" = '200' ] && node - /tmp/activity-share-contract.json <<'NODE'
+          const fs=require('node:fs');
+          const value=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+          const expected=['seq','name','status','party_size'];
+          if(value?.ok!==true)process.exit(1);
+          if(value?.contract!=='ekodi.activity-public-share.v1')process.exit(1);
+          if(value?.contact_fields!==false)process.exit(1);
+          if(JSON.stringify(value?.fields)!==JSON.stringify(expected))process.exit(1);
+          NODE
+          then
+            ready=true
+          fi
+          echo "SCHEMA_ALREADY_READY=$ready" >> "$GITHUB_ENV"
+          echo "Live activity-share contract ready=$ready (HTTP $code)."
+
+      - name: Select Supabase deployment credential when schema repair is needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${SCHEMA_ALREADY_READY:-false}" = 'true' ]; then
+            echo 'Live schema contract is already correct; management credential is not required for this run.'
+            echo 'SUPABASE_DEPLOY_AVAILABLE=false' >> "$GITHUB_ENV"
+            exit 0
+          fi
           token="${TOKEN_A:-}"
           [ -n "$token" ] || token="${TOKEN_B:-}"
           [ -n "$token" ] || token="${TOKEN_C:-}"
           [ -n "$token" ] || token="${TOKEN_D:-}"
           if [ -z "$token" ]; then
-            echo 'No Supabase production deployment credential is configured.'
+            echo 'Activity-share schema is not ready and no Supabase production deployment credential is configured.' >&2
             exit 1
           fi
           echo "::add-mask::$token"
           echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+          echo 'SUPABASE_DEPLOY_AVAILABLE=true' >> "$GITHUB_ENV"
 
-      - name: Apply schema and privacy guard before UI promotion
+      - name: Apply schema, privacy guard and public contract before UI promotion
+        if: env.SUPABASE_DEPLOY_AVAILABLE == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          for migration in "$BASE_MIGRATION" "$PRIVACY_GUARD_MIGRATION"; do
+          for migration in "$BASE_MIGRATION" "$PRIVACY_GUARD_MIGRATION" "$CONTRACT_MIGRATION"; do
             echo "Applying $migration"
             jq -Rs '{query:.,read_only:false}' "$migration" > /tmp/activity-share-migration.json
             code=$(curl -sS -o /tmp/activity-share-migration-result.json -w '%{http_code}' \
@@ -102,7 +145,8 @@ jobs:
             fi
           done
 
-      - name: Verify production activity-share function inventory and minimal projection
+      - name: Verify production function inventory through Management API
+        if: env.SUPABASE_DEPLOY_AVAILABLE == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -113,6 +157,7 @@ jobs:
             to_regprocedure('public.activity_admin_create_share(text,text,timestamp with time zone,jsonb)') is not null as create_share,
             to_regprocedure('public.activity_admin_revoke_share(uuid)') is not null as revoke_share,
             to_regprocedure('public.activity_public_share_snapshot(text)') is not null as public_snapshot,
+            to_regprocedure('public.activity_public_share_contract()') is not null as public_contract,
             (
               position('person_contacts' in lower(pg_get_functiondef('public.activity_public_share_snapshot(text)'::regprocedure)))=0
               and position('phone' in lower(pg_get_functiondef('public.activity_public_share_snapshot(text)'::regprocedure)))=0
@@ -128,14 +173,30 @@ jobs:
             -H 'Content-Type: application/json' \
             --data-binary @/tmp/activity-share-proof.json)
           [ "$code" = '201' ]
-          for marker in '"share_table":true' '"share_status":true' '"create_share":true' '"revoke_share":true' '"public_snapshot":true' '"minimal_projection":true'; do
+          for marker in '"share_table":true' '"share_status":true' '"create_share":true' '"revoke_share":true' '"public_snapshot":true' '"public_contract":true' '"minimal_projection":true'; do
             grep -Fq "$marker" /tmp/activity-share-proof-result.json
           done
 
-      - name: Verify anonymous private-link projection endpoint exists
+      - name: Verify anonymous privacy contract and private-link endpoint
         shell: bash
         run: |
           set -euo pipefail
+          contract_endpoint="https://$PROJECT_REF.supabase.co/rest/v1/rpc/activity_public_share_contract"
+          contract_code=$(curl -sS -o /tmp/activity-share-contract-final.json -w '%{http_code}' \
+            -X POST "$contract_endpoint" \
+            -H "apikey: $PUBLISHABLE_KEY" \
+            -H 'Content-Type: application/json' \
+            --data '{}')
+          [ "$contract_code" = '200' ]
+          node - /tmp/activity-share-contract-final.json <<'NODE'
+          const fs=require('node:fs');
+          const value=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+          const expected=['seq','name','status','party_size'];
+          if(value?.ok!==true||value?.contract!=='ekodi.activity-public-share.v1'||value?.contact_fields!==false||JSON.stringify(value?.fields)!==JSON.stringify(expected)){
+            console.error(value);process.exit(1);
+          }
+          NODE
+
           endpoint="https://$PROJECT_REF.supabase.co/rest/v1/rpc/activity_public_share_snapshot"
           code=$(curl -sS -o /tmp/activity-share-public.json -w '%{http_code}' \
             -X POST "$endpoint" \
@@ -144,4 +205,4 @@ jobs:
             --data '{"p_token":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')
           [ "$code" = '200' ]
           grep -Eq '"ok"[[:space:]]*:[[:space:]]*false' /tmp/activity-share-public.json
-          echo 'Activity public-share schema is production-ready and privacy-minimal before UI promotion.'
+          echo "Activity public-share schema is production-ready and privacy-minimal (deploy_available=${SUPABASE_DEPLOY_AVAILABLE:-false})."
