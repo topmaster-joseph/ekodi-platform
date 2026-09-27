@@ -280,7 +280,7 @@ export default{
       }
       if(isMnuBizWorkspaceSlug(requested)&&!workspaceRoute?.service){
         const page=withHeaders(env,renderMnuBizPublicPage(),'space-organization');
-        return injectEkodiShell(page,'community','public');
+        return injectEkodiShell(page,'community','public',{existingHeader:true});
       }
       if(isOrganizationWorkspaceSlug(requested)&&!workspaceRoute?.service){
         return withHeaders(env,await renderOrganizationPublicPage(request,env,resolved,requested),'space-organization');
