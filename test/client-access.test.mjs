@@ -86,7 +86,7 @@ test('access center never leaves loading, empty, auth and error states ambiguous
   assert.match(source, /REQUEST_TIMEOUT_MS = 8000/);
   assert.match(source, /new AbortController\(\)/);
   assert.match(source, /function statePanel/);
-  assert.match(source, /client-state-loading/);
+  assert.match(source, /statePanel\(\s*'loading'/);
   assert.match(source, /사용자·접근 정보를 불러오지 못했습니다/);
   assert.match(source, /다시 확인/);
   assert.match(source, /lastSuccessfulSyncAt/);
