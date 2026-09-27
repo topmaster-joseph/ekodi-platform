@@ -707,6 +707,15 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
             <div class="actions"><button class="button primary" type="submit">비용정책 저장</button></div>
           </form>
           <p class="empty">유료 기능 스위치를 켜더라도 기능별 승인 레코드와 금액 한도가 없으면 실제 유료 실행은 계속 차단됩니다.</p>
+          <form id="amazonApprovalForm" style="margin-top:14px">
+            <h3>유료기능 승인</h3>
+            <div class="grid two">
+              <label>기능<select name="featureKey"><option value="aws-generic">일반 AWS</option><option value="seller-paid-plan">Seller 유료플랜</option><option value="fba">FBA</option><option value="bedrock-paid">Bedrock 유료</option><option value="seller-sync">Amazon 동기화</option></select></label>
+              <label>승인 한도(USD)<input name="amountLimitUsd" type="number" min="0" step="0.01" value="0"></label>
+            </div>
+            <label>승인 사유<input name="reason" maxlength="500" placeholder="필요성과 한도 근거"></label>
+            <div class="actions"><button class="button" type="submit">이 기능 승인</button></div>
+          </form>
         </div>
         <div class="panel" style="margin-top:14px">
           <h3>서비스별 사용량 · 무료잔여 · 예상비용</h3>
@@ -719,6 +728,18 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
           <p>AWS: <strong>${aws.configured?'보조 인프라 연결':'선택 연결'}</strong> · Amazon Pay: <strong>${pay.configured?'연결됨':'선택 연결'}</strong></p>
           <p>지원 범위: ${(seller.resources||[]).map(ae).join(' · ')||'catalog · listings · pricing · inventory · orders · fulfillment · reports'}</p>
         </div>`;
+      const approvalForm=$('amazonApprovalForm');
+      approvalForm?.addEventListener('submit',async event=>{
+        event.preventDefault();
+        const fd=new FormData(approvalForm);
+        const body={featureKey:String(fd.get('featureKey')||''),amountLimitUsd:Number(fd.get('amountLimitUsd')||0),reason:String(fd.get('reason')||'')};
+        state('Amazon 유료기능 승인 저장 중');
+        const save=await fetch('https://mall-api.ekodi.kr/api/amazon/approvals',{method:'POST',headers:{...headers,'content-type':'application/json'},body:JSON.stringify(body)});
+        const out=await save.json().catch(()=>({}));
+        if(!save.ok){state('승인 권한 또는 설정 확인 필요');$('pageCopy').textContent=out.error||'승인을 저장하지 못했습니다.';return}
+        state('Amazon 유료기능 승인 완료');
+        amazonAdmin();
+      });
       const form=$('amazonCostPolicyForm');
       form?.addEventListener('submit',async event=>{
         event.preventDefault();
