@@ -8,6 +8,25 @@ const SAFE_CONCLUSIONS = new Set(['success','neutral','skipped']);
 function clean(value,max=500){return String(value??'').trim().slice(0,max)}
 function integer(value,fallback,min,max){const n=Number.parseInt(value,10);return Number.isFinite(n)?Math.max(min,Math.min(max,n)):fallback}
 function kstDay(value=new Date()){const date=value instanceof Date?value:new Date(value);return new Date(date.getTime()+9*HOUR_MS).toISOString().slice(0,10)}
+function siteImprovementWindow(value=new Date()){
+  const date=value instanceof Date?value:new Date(value);
+  const kst=new Date(date.getTime()+9*HOUR_MS);
+  const hour=kst.getUTCHours();
+  let slot='evening',cumulativeBudgetCapPercent=90;
+  if(hour>=9&&hour<12){slot='morning';cumulativeBudgetCapPercent=30}
+  else if(hour>=12&&hour<18){slot='lunch';cumulativeBudgetCapPercent=60}
+  let budgetDay=kst.toISOString().slice(0,10);
+  if(hour<9)budgetDay=new Date(kst.getTime()-24*HOUR_MS).toISOString().slice(0,10);
+  return Object.freeze({
+    budgetDay,
+    slot,
+    cycleKey:budgetDay+':'+slot,
+    cumulativeBudgetCapPercent,
+    incrementalBudgetPercent:30,
+    emergencyReservePercent:10,
+    resetHourKst:9,
+  });
+}
 function repository(env={}){return clean(env.GITHUB_REPOSITORY,180)||'topmaster-joseph/ekodi-platform'}
 function githubToken(env={}){return clean(env.GITHUB_TASK_TOKEN,2000)}
 function db(env={}){return env?.DB?.prepare?env.DB:null}
@@ -16,9 +35,16 @@ function parseJson(value,fallback={}){try{return JSON.parse(value||JSON.stringif
 function json(value){try{return JSON.stringify(value??{})}catch{return '{}'}}
 
 export const SITE_IMPROVEMENT_POLICY = Object.freeze({
-  version:'1.2.0',
-  cadence:'hourly-quiet-gate',
-  dailyLimit:1,
+  version:'1.3.0',
+  cadence:'hourly-traffic-aware-three-window',
+  dailyLimit:3,
+  budgetResetHourKst:9,
+  emergencyReservePercent:10,
+  executionWindows:Object.freeze([
+    Object.freeze({id:'morning',startHourKst:9,endHourKst:12,cumulativeBudgetCapPercent:30}),
+    Object.freeze({id:'lunch',startHourKst:12,endHourKst:18,cumulativeBudgetCapPercent:60}),
+    Object.freeze({id:'evening',startHourKst:18,endHourKst:9,cumulativeBudgetCapPercent:90}),
+  ]),
   defaultQuietWindowMinutes:30,
   defaultMaxRecentSessions:2,
   defaultMaxRecentVisits:8,
@@ -56,6 +82,8 @@ export function buildSiteImprovementPrompt(claim={}){
     'EKODI low-traffic daily site improvement task.',
     'Target site: '+(site.name||site.id)+' ('+site.id+')',
     'Canonical production URL: '+site.canonicalUrl,
+    'Daily budget cycle: '+(claim.budgetDay||'unknown')+' / '+(claim.slot||'unknown')+' slot. Cumulative EKODI site-improvement usage ceiling: '+Number(claim.cumulativeBudgetCapPercent||0)+'%; incremental allowance for this slot: up to '+Number(claim.incrementalBudgetPercent||0)+'%; emergency reserve: '+Number(claim.emergencyReservePercent||10)+'%. Reset boundary is 09:00 KST.',
+    'The cumulative usage ceiling is strict. Do not borrow from a later slot or consume the emergency reserve. If the verified work cannot fit the current slot budget, prioritize the highest-impact safe defects and leave the remainder for the next scheduled pass.',
     'Repository: topmaster-joseph/ekodi-platform. Work only in the allocated isolated branch/worktree.',
     'Mandatory recursive site execution policy: '+siteExecutionEnforcement.policyId+'. The target root, every discoverable same-site subservice and site-owned admin surface are one enforced scope; child surfaces may tighten but must not relax the parent contracts.',
     'Apply the same canonical-path, shared-shell/UI-DNA, public-header, auth-return, responsive/readability/accessibility, link-integrity, header/footer/language, staging and rollback rules to the site root and every descendant path.',
@@ -172,10 +200,10 @@ async function trafficSnapshot(env,at=new Date()){
     const collectorLastSuccess=clean(collector?.last_success_at,80);
     const telemetryFresh=Boolean(latestActivity)||(Boolean(collectorLastSuccess)&&collectorLastSuccess>=freshCutoff);
     return Object.freeze({
-      quiet:telemetryFresh&&recentSessions<=maxSessions,
+      quiet:telemetryFresh&&recentSessions<=maxSessions&&recentVisits<=maxVisits,
       recentSessions,recentVisits,latestActivity,collectorLastSuccess,telemetryFresh,
       quietWindowMinutes:quietWindow,maxSessions,maxVisits,cutoff,
-      reason:!telemetryFresh?'traffic_telemetry_stale_or_empty':recentSessions>maxSessions?'recent_sessions_above_threshold':'quiet',
+      reason:!telemetryFresh?'traffic_telemetry_stale_or_empty':recentSessions>maxSessions?'recent_sessions_above_threshold':recentVisits>maxVisits?'recent_visits_above_threshold':'quiet',
     });
   }catch(error){
     return Object.freeze({quiet:false,reason:'traffic_telemetry_schema_unavailable',error:clean(error?.message||error,240)});
@@ -186,8 +214,17 @@ export async function claimLowTrafficSiteImprovement(env={},options={}){
   const store=db(env);if(!store)return Object.freeze({claimed:false,reason:'state_store_unavailable'});
   if(String(env.EKODI_SITE_IMPROVEMENT_ENABLED||'true').toLowerCase()==='false')return Object.freeze({claimed:false,reason:'disabled'});
   const at=options.now instanceof Date?options.now:new Date(options.now||Date.now());
-  const day=kstDay(at);
+  const window=siteImprovementWindow(at);
+  const day=window.cycleKey;
   const now=at.toISOString();
+  const budgetContext=Object.freeze({
+    budgetDay:window.budgetDay,
+    slot:window.slot,
+    cumulativeBudgetCapPercent:window.cumulativeBudgetCapPercent,
+    incrementalBudgetPercent:window.incrementalBudgetPercent,
+    emergencyReservePercent:window.emergencyReservePercent,
+    resetHourKst:window.resetHourKst,
+  });
   const sites=eligibleSiteImprovementTargets();
   if(!sites.length)return Object.freeze({claimed:false,reason:'no_eligible_sites'});
   try{
@@ -213,16 +250,17 @@ export async function claimLowTrafficSiteImprovement(env={},options={}){
         .bind(traffic.recentSessions,traffic.recentVisits,traffic.quietWindowMinutes,traffic.maxSessions,now,now,day).run();
       if(changes(retryResult)<1)return Object.freeze({claimed:false,reason:'retry_claim_raced'});
       const site=sites.find(item=>item.id===existing.site_id)||sites[Number(existing.site_index||0)%sites.length];
-      return Object.freeze({claimed:true,day,site,siteIndex:Number(existing.site_index||0),traffic,retry:true});
+      return Object.freeze({claimed:true,day,site,siteIndex:Number(existing.site_index||0),traffic,retry:true,...budgetContext});
     }
 
     const state=await store.prepare("SELECT cursor_index FROM ekodi_site_improvement_state WHERE id='singleton'").first();
     const siteIndex=((Number(state?.cursor_index)||0)%sites.length+sites.length)%sites.length;
     const site=sites[siteIndex];
-    const result=await store.prepare("INSERT OR IGNORE INTO ekodi_site_improvement_runs (run_day,site_id,site_name,canonical_url,site_index,state,attempts,recent_sessions,recent_visits,quiet_window_minutes,quiet_threshold,evaluated_at,updated_at) VALUES (?,?,?,?,?,'claimed',1,?,?,?,?,?,?)")
-      .bind(day,site.id,site.name,site.canonicalUrl,siteIndex,traffic.recentSessions,traffic.recentVisits,traffic.quietWindowMinutes,traffic.maxSessions,now,now).run();
+    const budgetEvidence={budgetPolicy:{...budgetContext,policyVersion:SITE_IMPROVEMENT_POLICY.version}};
+    const result=await store.prepare("INSERT OR IGNORE INTO ekodi_site_improvement_runs (run_day,site_id,site_name,canonical_url,site_index,state,attempts,recent_sessions,recent_visits,quiet_window_minutes,quiet_threshold,evidence_json,evaluated_at,updated_at) VALUES (?,?,?,?,?,'claimed',1,?,?,?,?,?,?,?)")
+      .bind(day,site.id,site.name,site.canonicalUrl,siteIndex,traffic.recentSessions,traffic.recentVisits,traffic.quietWindowMinutes,traffic.maxSessions,json(budgetEvidence),now,now).run();
     if(changes(result)<1)return Object.freeze({claimed:false,reason:'claim_raced'});
-    return Object.freeze({claimed:true,day,site,siteIndex,traffic});
+    return Object.freeze({claimed:true,day,site,siteIndex,traffic,...budgetContext});
   }catch(error){
     return Object.freeze({claimed:false,reason:'site_improvement_schema_unavailable',error:clean(error?.message||error,300)});
   }
@@ -535,4 +573,4 @@ export async function reconcileSiteImprovementRelease(env={}){
   }
 }
 
-export const __test = Object.freeze({kstDay,sameSiteLink,protectedFilePattern:PROTECTED_FILE});
+export const __test = Object.freeze({kstDay,siteImprovementWindow,sameSiteLink,protectedFilePattern:PROTECTED_FILE});
