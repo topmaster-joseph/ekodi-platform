@@ -50,6 +50,18 @@ export const FREE_TIER_RESOURCE_CATALOG=Object.freeze({
       {metric:'cache_storage_bytes',label:'Actions cache storage',freeLimit:10*GB,unit:'bytes',scope:'consumption'},
     ]),
   }),
+  aws:Object.freeze({
+    referenceDate:'2026-09-28',
+    facts:Object.freeze({role:'optional-provider',automaticPaidUpgrade:false,limits:'account-and-offer-dependent'}),
+    metrics:Object.freeze([
+      {metric:'estimated_monthly_cost_usd',label:'AWS estimated monthly cost',freeLimit:null,unit:'usd',scope:'consumption',planDependent:true},
+      {metric:'credit_remaining_usd',label:'AWS promotional credit remaining',freeLimit:null,unit:'usd',scope:'capacity',planDependent:true,optional:true},
+      {metric:'lambda_requests_month',label:'Lambda requests / month',freeLimit:null,unit:'requests',scope:'consumption',planDependent:true,optional:true},
+      {metric:'s3_storage_bytes_month',label:'S3 storage / month',freeLimit:null,unit:'byte-month',scope:'consumption',planDependent:true,optional:true},
+      {metric:'dynamodb_requests_month',label:'DynamoDB requests / month',freeLimit:null,unit:'requests',scope:'consumption',planDependent:true,optional:true},
+      {metric:'cloudfront_transfer_bytes_month',label:'CloudFront transfer / month',freeLimit:null,unit:'bytes',scope:'consumption',planDependent:true,optional:true},
+    ]),
+  }),
 });
 
 function finite(value){const n=Number(value);return Number.isFinite(n)?n:null}
