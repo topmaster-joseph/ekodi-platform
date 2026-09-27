@@ -53,17 +53,20 @@ test('migration extends privacy-preserving traffic activity and durable rotation
 
 
 test('production AI worker owns the hourly scheduler while staging stays passive',async()=>{
-  const [prod,release,staging,worker]=await Promise.all([
+  const [prod,release,staging,worker,entry]=await Promise.all([
     readFile(new URL('../wrangler.ai.toml',import.meta.url),'utf8'),
     readFile(new URL('../wrangler.ai.release.toml',import.meta.url),'utf8'),
     readFile(new URL('../wrangler.ai.staging.release.toml',import.meta.url),'utf8'),
     readFile(new URL('../ai-control-worker.js',import.meta.url),'utf8'),
+    readFile(new URL('../ai-control-entry-worker.js',import.meta.url),'utf8'),
   ]);
   assert.match(prod,/\[triggers\][\s\S]*crons = \["5 \* \* \* \*"\]/);
   assert.match(release,/\[triggers\][\s\S]*crons = \["5 \* \* \* \*"\]/);
   assert.doesNotMatch(staging,/crons = \["5 \* \* \* \*"\]/);
   assert.match(worker,/async scheduled\(controller,env,ctx\)/);
   assert.match(worker,/runScheduledSiteImprovement/);
+  assert.match(entry,/async scheduled\(controller, env, ctx\)/);
+  assert.match(entry,/aiControlWorker\.scheduled\(controller, env, ctx\)/);
   assert.match(worker,/createdBy:'ekodi-site-improvement-scheduler'/);
   assert.match(worker,/\['codex','gemini-cli'\]\.find/);
 });
