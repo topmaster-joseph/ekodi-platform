@@ -85,6 +85,32 @@ test('first-party application API uses the canonical Sep 26 event key end-to-end
 });
 
 
+test('Mission activity admin gateway allowlists RPCs, forwards bearer auth, and normalizes missing schema',async()=>{
+  const dataEnv={...env,DATA_ENABLED:'true',SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'publishable-test'};
+  const originalFetch=globalThis.fetch;let upstreamCalls=0;
+  globalThis.fetch=async(input,init)=>{
+    upstreamCalls+=1;
+    assert.equal(String(input),'https://example.supabase.co/rest/v1/rpc/activity_admin_create_share');
+    assert.equal(init.headers.authorization,'Bearer synthetic-admin-token');
+    assert.equal(init.headers.apikey,'publishable-test');
+    const body=JSON.parse(init.body);assert.equal(body.p_workspace_slug,'ekodimission');
+    return new Response(JSON.stringify({ok:true,share_id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',share_path:'/ekodimission/share/token'}),{status:200,headers:{'content-type':'application/json'}});
+  };
+  try{
+    const response=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/api/admin/activity-rpc',{method:'POST',headers:{authorization:'Bearer synthetic-admin-token','content-type':'application/json'},body:JSON.stringify({rpc:'activity_admin_create_share',args:{p_workspace_slug:'ekodimission',p_activity_key:'260926-chuseok-open-table',p_expires_at:'2026-10-03T00:00:00Z',p_field_policy:{name:true,status:true,party_size:true}}})}),dataEnv);
+    assert.equal(response.status,200);assert.equal(response.headers.get('x-ekodi-activity-gateway'),'mission-admin-v1');assert.equal(response.headers.get('x-ekodi-activity-schema'),'ready');assert.equal((await response.json()).ok,true);assert.equal(upstreamCalls,1);
+    const denied=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/api/admin/activity-rpc',{method:'POST',headers:{authorization:'Bearer synthetic-admin-token','content-type':'application/json'},body:JSON.stringify({rpc:'activity_delete_everything',args:{}})}),dataEnv);
+    assert.equal(denied.status,400);assert.equal((await denied.json()).error,'activity_rpc_not_allowed');assert.equal(upstreamCalls,1);
+  }finally{globalThis.fetch=originalFetch}
+
+  const missingFetch=globalThis.fetch;
+  globalThis.fetch=async()=>new Response(JSON.stringify({code:'PGRST202',message:'Could not find the function public.activity_admin_create_share'}),{status:404,headers:{'content-type':'application/json'}});
+  try{
+    const response=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/api/admin/activity-rpc',{method:'POST',headers:{authorization:'Bearer synthetic-admin-token','content-type':'application/json'},body:JSON.stringify({rpc:'activity_admin_create_share',args:{}})}),dataEnv);
+    assert.equal(response.status,503);assert.equal(response.headers.get('x-ekodi-activity-schema'),'missing');const body=await response.json();assert.equal(body.error,'activity_schema_not_ready');assert.match(body.message,/데이터 준비/);
+  }finally{globalThis.fetch=missingFetch}
+});
+
 test('Mission applicant share route is token-gated, read-only, noindex, and never projects private contact data',async()=>{
   const dataEnv={...env,DATA_ENABLED:'true',SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'publishable-test'};
   const token='AbCdEfGhIjKlMnOpQrStUvWxYz0123456789-_ABCD';

@@ -4,8 +4,11 @@ import fs from 'node:fs';
 
 const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 const sql=read('supabase/migrations/20260926140500_activity_public_readonly_shares.sql');
+const privacyGuard=read('supabase/migrations/20260927032500_activity_public_share_minimal_projection_guard.sql');
 const worker=read('space-worker.js');
 const admin=read('workspace-admin-page.js');
+const schemaWorkflow=read('.github/workflows/deploy-activity-public-share-schema.yml');
+const sharedWorkflow=read('.github/workflows/deploy-site-core.yml');
 
 test('activity public shares store only a hash and remain expiring and revocable',()=>{
   assert.match(sql,/create table if not exists public\.activity_public_shares/);
@@ -43,15 +46,51 @@ test('public share projection cannot return contact or internal management field
   for(const allowed of ["'seq'","'name'","'status'","'party_size'"])assert.ok(projection.includes(allowed),allowed);
 });
 
+test('privacy guard reasserts the agreed minimal external projection',()=>{
+  assert.match(privacyGuard,/Privacy-minimal share policy/);
+  assert.match(privacyGuard,/returns only seq\/name\/status\/party_size/);
+  assert.doesNotMatch(privacyGuard,/person_contacts/);
+  assert.doesNotMatch(privacyGuard,/jsonb_build_object\('phone'/);
+  assert.doesNotMatch(privacyGuard,/jsonb_build_object\('email'/);
+  assert.match(privacyGuard,/update public\.activity_public_shares[\s\S]*'seq',true[\s\S]*'name'[\s\S]*'status'[\s\S]*'party_size'/);
+});
+
 test('Mission share route is private-by-link and the admin exposes explicit create/revoke controls',()=>{
   assert.match(worker,/MISSION_SHARE_PATH_RE/);
+  assert.match(worker,/MISSION_ADMIN_ACTIVITY_RPC_API/);
+  assert.match(worker,/MISSION_ADMIN_ACTIVITY_RPCS/);
+  assert.match(worker,/activity_rpc_not_allowed/);
+  assert.match(worker,/activity_schema_not_ready/);
   assert.match(worker,/activity_public_share_snapshot/);
   assert.match(worker,/x-ekodi-publication-status','private-share'/);
   assert.match(worker,/noindex, nofollow, noarchive/);
   assert.match(worker,/전화번호·이메일·역할·후속관리·내부 메모는 포함하지 않습니다/);
+  assert.match(admin,/\/ekodimission\/api\/admin\/activity-rpc/);
+  assert.match(admin,/missionGateway/);
   assert.match(admin,/activity_admin_share_status/);
   assert.match(admin,/activity_admin_create_share/);
   assert.match(admin,/activity_admin_revoke_share/);
   assert.match(admin,/읽기전용 링크 만들기/);
   assert.match(admin,/이전 링크가 있었다면 즉시 무효화되었습니다/);
 });
+
+test('activity-share deployment is schema-first and blocks UI promotion until dependencies are ready',()=>{
+  for(const marker of [
+    'Deploy Activity Public Share Schema',
+    'Apply schema and privacy guard before UI promotion',
+    'activity_public_readonly_shares.sql',
+    'activity_public_share_minimal_projection_guard.sql',
+    'minimal_projection',
+    'activity_admin_create_share',
+    'activity_admin_revoke_share',
+    'activity_public_share_snapshot'
+  ])assert.ok(schemaWorkflow.includes(marker),marker);
+  for(const marker of [
+    'Wait for Mission activity gateway and share schema before UI promotion',
+    '/ekodimission/api/admin/activity-rpc',
+    'authentication_required',
+    'activity_public_share_snapshot',
+    'refusing UI promotion'
+  ])assert.ok(sharedWorkflow.includes(marker),marker);
+});
+
