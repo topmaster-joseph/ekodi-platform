@@ -26,7 +26,7 @@ for(const spec of PLATFORM_EXECUTION_SURFACES){
   for(const key of ['virtualHost','legacyHost','canonicalHost']){
     if(spec[key])fail(`${spec.id}: retired host field remains: ${key}`);
   }
-  if(spec.host&&String(spec.host).endsWith('.ekodi.kr'))fail(`${spec.id}: EKODI child host remains in execution surface: ${spec.host}`);
+  if(spec.host&&String(spec.host).endsWith('.'+PLATFORM_CANONICAL_HOST))fail(`${spec.id}: EKODI child host remains in execution surface: ${spec.host}`);
 }
 
 for(const [id,boundary] of Object.entries(boundaries.platforms||{})){
