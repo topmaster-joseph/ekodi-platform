@@ -288,7 +288,7 @@ async function publicServiceStatus(env,id){
   const base=languageStatusSnapshot([...EKODI_SERVICE_MANIFEST.services,...MANAGED_LANGUAGE_SITES]).sites.find(site=>site.id===service.id);
   if(!base)return null;
   if(!env.DB?.prepare)return base;
-  await seedLanguageAutomation(env);
+  try{await seedLanguageAutomation(env)}catch{return base}
   const rows=await stateRows(env,service.id).catch(()=>[]);
   return rows.length?overlaySiteStatus(base,rows):base;
 }
