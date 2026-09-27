@@ -177,6 +177,32 @@ export async function collectSupabaseOidc({token,config,fetchJson=jsonFetch,obse
   };
 }
 
+export function snapshotFromCloudflareQuotaReport(report){
+  if(!report||report.policyId!=='CF-QUOTA-001')throw new Error('CLOUDFLARE_QUOTA_REPORT_POLICY_INVALID');
+  if(String(report.account||'').toUpperCase()!=='PROD')throw new Error('CLOUDFLARE_QUOTA_REPORT_ACCOUNT_INVALID');
+  const requests=Number(report.requests);
+  const limit=Number(report.limit);
+  const observedAt=String(report.generatedAt||'');
+  if(!Number.isFinite(requests)||requests<0)throw new Error('CLOUDFLARE_QUOTA_REPORT_REQUESTS_INVALID');
+  if(!Number.isFinite(limit)||limit<=0)throw new Error('CLOUDFLARE_QUOTA_REPORT_LIMIT_INVALID');
+  if(!Number.isFinite(Date.parse(observedAt)))throw new Error('CLOUDFLARE_QUOTA_REPORT_TIME_INVALID');
+  return {
+    provider:'cloudflare',
+    metric:'workers_requests_daily',
+    periodStart:periodDay(report?.window?.start||observedAt),
+    observedValue:requests,
+    freeLimit:limit,
+    source:'cloudflare-workers-analytics',
+    observedAt,
+  };
+}
+
+export async function loadCloudflareQuotaSnapshot(path){
+  if(!path)return {available:false,reason:'report_missing',snapshots:[]};
+  const raw=JSON.parse(await fs.readFile(path,'utf8'));
+  return {available:true,reason:null,snapshots:[snapshotFromCloudflareQuotaReport(raw)],reportState:String(raw.state||'unknown')};
+}
+
 export async function collectGitHub({repository,token='',fetchJson=jsonFetch,observedAt=nowIso()}={}){
   if(!repository||!repository.includes('/'))throw new Error('GITHUB_REPOSITORY_REQUIRED');
   const headers={'x-github-api-version':'2026-03-10','accept':'application/vnd.github+json'};
@@ -217,6 +243,7 @@ ON CONFLICT(provider,metric,period_start) DO UPDATE SET observed_value=excluded.
 export async function collectAll(env=process.env){
   const observedAt=nowIso();
   const githubPromise=collectGitHub({repository:env.GITHUB_REPOSITORY,token:env.GITHUB_TOKEN||'',observedAt});
+  const cloudflarePromise=loadCloudflareQuotaSnapshot(env.CLOUDFLARE_QUOTA_REPORT||'');
   let supabasePromise;
   if(env.SUPABASE_ACCESS_TOKEN){
     supabasePromise=collectSupabase({token:env.SUPABASE_ACCESS_TOKEN,observedAt}).then(result=>({...result,mode:'management_api'}));
@@ -226,8 +253,8 @@ export async function collectAll(env=process.env){
   }else{
     supabasePromise=Promise.resolve({available:false,reason:'credential_missing',mode:'none',snapshots:[],freeOrganizations:[],activeProjects:[],projects:[],errors:[]});
   }
-  const [supabase,github]=await Promise.all([supabasePromise,githubPromise]);
-  return {observedAt,supabase,github,snapshots:[...supabase.snapshots,...github.snapshots]};
+  const [supabase,github,cloudflare]=await Promise.all([supabasePromise,githubPromise,cloudflarePromise]);
+  return {observedAt,cloudflare,supabase,github,snapshots:[...cloudflare.snapshots,...supabase.snapshots,...github.snapshots]};
 }
 
 async function main(){
@@ -237,6 +264,7 @@ async function main(){
   await fs.writeFile(output,snapshotsToSql(result.snapshots)+'\n','utf8');
   process.stdout.write(JSON.stringify({
     observedAt:result.observedAt,
+    cloudflare:{available:result.cloudflare.available,reason:result.cloudflare.reason,state:result.cloudflare.reportState||'unknown',snapshots:result.cloudflare.snapshots.length},
     supabase:{available:result.supabase.available,reason:result.supabase.reason,mode:result.supabase.mode||'management_api',freeOrganizations:(result.supabase.freeOrganizations||[]).length,activeProjects:(result.supabase.activeProjects||[]).length,projects:(result.supabase.projects||[]).length,snapshots:result.supabase.snapshots.length},
     github:{repository:result.github.repository,snapshots:result.github.snapshots.length},
   })+'\n');
