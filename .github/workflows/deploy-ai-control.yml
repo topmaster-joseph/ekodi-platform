@@ -8,6 +8,7 @@ on:
       - 'ai-control/**'
       - 'ai-control-*.js'
       - 'ekodi-site-improvement-scheduler.js'
+      - 'ekodi-site-improvement-oidc-broker.js'
       - '.github/workflows/site-improvement-cloud.yml'
       - 'ekodi-ai-provider-registry.js'
       - 'openai-provider-adapter.js'
@@ -32,6 +33,7 @@ on:
       - 'test/ai-commons*.test.mjs'
       - 'test/ai-interpreter.test.mjs'
       - 'test/ekodi-site-improvement-scheduler.test.mjs'
+      - 'test/site-improvement-oidc-broker.test.mjs'
       - 'ai-router-score.js'
       - 'ai-collaboration-settings.js'
       - 'local-execution-policy.js'
@@ -84,6 +86,7 @@ on:
       - 'ai-control/**'
       - 'ai-control-*.js'
       - 'ekodi-site-improvement-scheduler.js'
+      - 'ekodi-site-improvement-oidc-broker.js'
       - '.github/workflows/site-improvement-cloud.yml'
       - 'ekodi-ai-provider-registry.js'
       - 'openai-provider-adapter.js'
@@ -108,6 +111,7 @@ on:
       - 'test/ai-commons*.test.mjs'
       - 'test/ai-interpreter.test.mjs'
       - 'test/ekodi-site-improvement-scheduler.test.mjs'
+      - 'test/site-improvement-oidc-broker.test.mjs'
       - 'ai-router-score.js'
       - 'ai-collaboration-settings.js'
       - 'local-execution-policy.js'
@@ -199,9 +203,14 @@ jobs:
           node --check openrouter-free-provider-adapter.js
           node --check ai-control-worker.js
           node --check ekodi-site-improvement-scheduler.js
+          node --check ekodi-site-improvement-oidc-broker.js
           test -f .github/workflows/site-improvement-cloud.yml
           grep -Fq 'uses: openai/codex-action@v1' .github/workflows/site-improvement-cloud.yml
           grep -Fq "permission-profile: ':workspace'" .github/workflows/site-improvement-cloud.yml
+          grep -Fq 'id-token: write' .github/workflows/site-improvement-cloud.yml
+          grep -Fq 'audience=ekodi-site-improvement' .github/workflows/site-improvement-cloud.yml
+          grep -Fq 'responses-api-endpoint: https://ekodi.kr/ai/api/site-improvement/responses' .github/workflows/site-improvement-cloud.yml
+          ! grep -Eq 'secrets\.(AI_CONTROL_OPENAI_API_KEY|OPENAI_API_KEY)' .github/workflows/site-improvement-cloud.yml
           node --check ai-control/app.js
           node --check scripts/ai-account-node.mjs
           node --check scripts/build-ai-control-release.mjs
@@ -212,7 +221,7 @@ jobs:
           node scripts/validate-constitution.mjs
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-additive-migrations.mjs migrations
-          node --test test/ai-knowledge-claim.test.mjs test/ai-control-platform.test.mjs test/ai-control-provider-router.test.mjs test/ai-free-quota.test.mjs test/free-provider-adapters.test.mjs test/ai-router-score.test.mjs test/ai-collaboration-settings.test.mjs test/local-execution-policy.test.mjs test/ai-account-node-scheduler.test.mjs test/cognitive-control-plane.test.mjs test/ekodi-site-improvement-scheduler.test.mjs test/common-service-operator-control.test.mjs test/ai-commons.test.mjs test/ai-commons-subservice.test.mjs test/ai-interpreter.test.mjs
+          node --test test/ai-knowledge-claim.test.mjs test/ai-control-platform.test.mjs test/ai-control-provider-router.test.mjs test/ai-free-quota.test.mjs test/free-provider-adapters.test.mjs test/ai-router-score.test.mjs test/ai-collaboration-settings.test.mjs test/local-execution-policy.test.mjs test/ai-account-node-scheduler.test.mjs test/cognitive-control-plane.test.mjs test/ekodi-site-improvement-scheduler.test.mjs test/site-improvement-oidc-broker.test.mjs test/common-service-operator-control.test.mjs test/ai-commons.test.mjs test/ai-commons-subservice.test.mjs test/ai-interpreter.test.mjs
           node --check ai-commons.js
           node --check ai-commons-admin.js
           node --check ai-control/commons.js
