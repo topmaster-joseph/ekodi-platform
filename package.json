@@ -72,7 +72,8 @@
     "validate:repository-sot": "node scripts/validate-repository-source-of-truth.mjs",
     "validate:data-ownership": "node scripts/validate-data-ownership.mjs",
     "validate:fast": "node --check platform-route-registry.js && node --check canonical-surface-router.js && node --check scripts/build.mjs && node --test test/platform-route-registry.test.mjs && npm run validate:canonical-boundaries && npm run validate:repository-sot && npm run validate:data-ownership && npm run validate:autonomic-control-plane && npm run validate:boundaries && npm run validate:deployments && npm run validate:admin-routes && npm run validate:security",
-    "validate:full": "npm run check && npm test"
+    "validate:full": "npm run check && npm test",
+    "validate:technology-scout": "node scripts/validate-technology-scout-policy.mjs && node --check technology-scout-source-worker.js && node --check technology-scout-control.js && node --test test/technology-scout.test.mjs"
   },
   "engines": {
     "node": ">=20"

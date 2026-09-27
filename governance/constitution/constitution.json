@@ -42,7 +42,8 @@
     "canonical-human-url-without-tracking-query",
     "evidence-gated-ai-claims",
     "evidence-gated-external-knowledge",
-    "automatic-execution-background-only-enforced"
+    "automatic-execution-background-only-enforced",
+    "mandatory-daily-technology-scouting"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -1133,5 +1134,19 @@
       "test/automatic-execution-constitution.test.mjs",
       "test/hybrid-execution-contract.test.mjs"
     ]
+  },
+  "technologyScoutPolicy": {
+    "id": "TECH-SCOUT-001",
+    "status": "enforced",
+    "mode": "mandatory",
+    "owner": "EKODI Orchestrator",
+    "schedule": "daily 08:00 Asia/Seoul",
+    "externalProviders": "sources-only",
+    "dailyExecutionRequired": true,
+    "humanApplicationDecisionRequired": true,
+    "automaticProductionMutationForbidden": true,
+    "knowledgeClaimPolicy": "AI-KNOWLEDGE-CLAIM-001",
+    "policyDocument": "TECHNOLOGY_SCOUT_POLICY.md",
+    "validator": "scripts/validate-technology-scout-policy.mjs"
   }
 }

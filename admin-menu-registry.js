@@ -16,6 +16,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'platform-overview', group: 'summary', icon: '◉', delegateSection: 'health', labels: { ko: '플랫폼 전체현황', en: 'Platform Overview' } },
   { id: 'command-home', group: 'summary', icon: '⌘', labels: { ko: '에코디와 대화하기', en: 'Talk with EKODI' }, internal: true },
 
+  { id: 'technology-scout', group: 'services', icon: 'T', labels: { ko: '기술·트렌드', en: 'Technology & Trends' } },
   { id: 'engine-all', group: 'services', icon: '▦', delegateSection: 'common-services', engineCategory: 'all', labels: { ko: '전체 서비스·엔진', en: 'All Services & Engines' } },
   { id: 'engine-core', group: 'services', icon: '◆', delegateSection: 'common-services', engineCategory: 'core', labels: { ko: '핵심 엔진', en: 'Core Engines' } },
   { id: 'engine-common', group: 'services', icon: '◇', delegateSection: 'common-services', engineCategory: 'common', labels: { ko: '공통 엔진', en: 'Common Engines' } },
@@ -113,7 +114,7 @@ const ADMIN_MENU_CATEGORY_ORDER = Object.freeze({
 });
 const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   'platform-overview':'overview','command-home':'overview',
-  'engine-all':'catalog','engine-core':'catalog','engine-common':'catalog','engine-operations':'catalog','engine-professional':'catalog','engine-ai':'catalog','engine-integration':'catalog','engine-preview':'catalog','service-modules':'catalog',
+  'technology-scout':'catalog','engine-all':'catalog','engine-core':'catalog','engine-common':'catalog','engine-operations':'catalog','engine-professional':'catalog','engine-ai':'catalog','engine-integration':'catalog','engine-preview':'catalog','service-modules':'catalog',
   'sites-all':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',campus:'sites',clients:'sites','site-chrome':'sites',cmpmyi:'sites',organization:'sites',workspace:'sites',
   'users-access':'access',security:'access',admins:'access','ai-membership':'access',
   work:'content',communication:'content',community:'content',books:'content',devotional:'content',social:'content',finance:'content',tax:'content',

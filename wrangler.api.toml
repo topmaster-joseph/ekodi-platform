@@ -55,6 +55,10 @@ ALLOWED_ORIGINS = "https://ekodi.kr,https://www.ekodi.kr,https://my.ekodi.kr,htt
 binding = "AI"
 
 [[services]]
+binding = "TECH_SCOUT_SOURCE"
+service = "ekodi-technology-scout-source"
+
+[[services]]
 binding = "PERSONAL_FINANCE"
 service = "ekodi-personal-finance-api"
 

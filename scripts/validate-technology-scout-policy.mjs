@@ -1,0 +1,11 @@
+import fs from 'node:fs';
+const fail=m=>{console.error('[TECH-SCOUT-001]',m);process.exitCode=1};
+const runtime=fs.readFileSync('ekodi-technology-scout.js','utf8');
+const mission=fs.readFileSync('mission-control-entry-worker.js','utf8');
+const policy=fs.readFileSync('TECHNOLOGY_SCOUT_POLICY.md','utf8');
+const migration=fs.readFileSync('migrations/0092_daily_technology_scout.sql','utf8');
+if(!policy.includes('TECH-SCOUT-001')||!policy.includes('MUST execute one technology/trend scouting cycle every day'))fail('mandatory policy missing');
+if(!runtime.includes("owner:'EKODI'")||!runtime.includes("externalProviders:'sources-only'")||!runtime.includes('automaticProductionMutation:false')||!runtime.includes('humanDecisionRequired:true'))fail('authority boundary drifted');
+if(!mission.includes("getUTCHours() === 23")||!mission.includes("trigger:'ekodi-cron'"))fail('08:00 KST daily schedule wiring missing');
+if(!migration.includes('ekodi_technology_scout_runs')||!migration.includes('ekodi_technology_scout_candidates'))fail('durable audit schema missing');
+if(!process.exitCode)console.log('[TECH-SCOUT-001] verified: EKODI-owned daily scout remains mandatory and approval-gated');
