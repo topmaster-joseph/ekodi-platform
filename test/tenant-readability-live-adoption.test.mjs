@@ -35,6 +35,7 @@ test('tenant readability injector stays brand-neutral and idempotent',async()=>{
   assert.match(css,/min-height:44px/);
   assert.match(css,/text-wrap:balance/);
   assert.match(css,/\.ekodi-operating-space-note\[data-ekodi-operating-space-label\]/);
+  assert.match(css,/display:none!important/);
 });
 
 test('live mobile verifier checks canonical apex tenant paths only',async()=>{
