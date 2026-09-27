@@ -24,12 +24,15 @@ function assert(condition,message){
 export function evaluateMeasuredProof(rows,{now=Date.now(),staleAfterHours=26}={}){
   assert(Array.isArray(rows)&&rows.length>0,'FREE_TIER_SNAPSHOT_ROWS_REQUIRED');
   const governor=buildFreeTierResourceGovernor({snapshots:rows,now,staleAfterHours});
+  const cloudflare=governor.providers.cloudflare;
   const supabase=governor.providers.supabase;
   const github=governor.providers.github;
 
   assert(governor.automaticPaidUpgrade===false,'AUTOMATIC_PAID_UPGRADE_MUST_REMAIN_DISABLED');
+  assert(cloudflare,'CLOUDFLARE_GOVERNOR_STATE_REQUIRED');
   assert(supabase,'SUPABASE_GOVERNOR_STATE_REQUIRED');
   assert(github,'GITHUB_GOVERNOR_STATE_REQUIRED');
+  assert(cloudflare.telemetryStatus!=='missing','CLOUDFLARE_TELEMETRY_MUST_BE_FRESH');
   assert(supabase.telemetryStatus!=='missing','SUPABASE_TELEMETRY_MUST_BE_FRESH');
   assert(github.telemetryStatus!=='missing','GITHUB_TELEMETRY_MUST_BE_FRESH');
 
@@ -42,6 +45,10 @@ export function evaluateMeasuredProof(rows,{now=Date.now(),staleAfterHours=26}={
     assert(supabase.capacityBlocks.includes('active_projects'),'SUPABASE_ACTIVE_PROJECT_CAPACITY_BLOCK_REQUIRED');
   }
 
+  const workers=cloudflare.metrics.find(item=>item.metric==='workers_requests_daily');
+  assert(workers,'CLOUDFLARE_WORKERS_REQUESTS_METRIC_REQUIRED');
+  assert(workers.freeLimit===100000,'CLOUDFLARE_WORKERS_FREE_LIMIT_MUST_REMAIN_100000');
+
   const cache=github.metrics.find(item=>item.metric==='cache_storage_bytes');
   assert(cache,'GITHUB_CACHE_STORAGE_METRIC_REQUIRED');
 
@@ -49,6 +56,17 @@ export function evaluateMeasuredProof(rows,{now=Date.now(),staleAfterHours=26}={
     generatedAt:new Date(now).toISOString(),
     latestObservedAt:latestObservedAt(rows),
     automaticPaidUpgrade:governor.automaticPaidUpgrade,
+    cloudflare:Object.freeze({
+      state:cloudflare.state,
+      action:cloudflare.action,
+      telemetryStatus:cloudflare.telemetryStatus,
+      workersRequests:Object.freeze({
+        observedValue:workers.observedValue,
+        freeLimit:workers.freeLimit,
+        usagePercent:workers.usagePercent,
+        state:workers.state,
+      }),
+    }),
     supabase:Object.freeze({
       state:supabase.state,
       action:supabase.action,
@@ -87,6 +105,7 @@ export function formatProofSummary(proof){
     '### EKODI Free-Tier Resource Governor proof',
     `- observed_at: ${proof.latestObservedAt||'unknown'}`,
     `- automatic_paid_upgrade: ${proof.automaticPaidUpgrade}`,
+    `- cloudflare: state=${proof.cloudflare.state}, telemetry=${proof.cloudflare.telemetryStatus}, workers_requests=${proof.cloudflare.workersRequests.observedValue}/${proof.cloudflare.workersRequests.freeLimit} (${proof.cloudflare.workersRequests.usagePercent}%), action=${proof.cloudflare.action}`,
     `- supabase: state=${proof.supabase.state}, telemetry=${proof.supabase.telemetryStatus}, active_projects=${proof.supabase.activeProjects.observedValue}/${proof.supabase.activeProjects.freeLimit}, provisioning_allowed=${proof.supabase.provisioningAllowed}`,
     `- supabase_db: ${db}`,
     `- github: state=${proof.github.state}, telemetry=${proof.github.telemetryStatus}, cache=${cache}`,
