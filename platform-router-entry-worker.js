@@ -318,6 +318,8 @@ async function routePlatform(request,env,ctx){
         if(!liveTenant.dedicated)return tenantLivePage(liveTenant);
       }
     }
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&url.pathname==='/church-member-home.css')return churchMemberHomeCss();
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isChurchMemberHomePath(url.pathname))return churchMemberHomePage(request);
     if(host===PUBLIC_HOST&&isEkodiMissionSpacePath(url.pathname))return routeEkodiMissionSpace(request,env);
     const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
     if(canonical)return canonical;
@@ -365,8 +367,6 @@ async function routePlatform(request,env,ctx){
         if(url.pathname==='/workspace-admin.js')return workspaceAdminScript();
         if(url.pathname==='/workspace-trade-admin.js')return workspaceTradeAdminScript();
         if(url.pathname==='/church-pastor-admin.js')return churchPastorAdminScript();
-        if(url.pathname==='/church-member-home.css')return churchMemberHomeCss();
-        if(isChurchMemberHomePath(url.pathname))return churchMemberHomePage(request);
         if(url.pathname==='/workspace-trade-portal.css')return tradePartnerCss();
         if(url.pathname==='/workspace-trade-portal.js')return tradePartnerScript();
         if(isTradePartnerPath(url.pathname))return injectEkodiTenantReadability(tradePartnerPage());
