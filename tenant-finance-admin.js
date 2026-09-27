@@ -70,10 +70,11 @@ export async function mountTenantBankingAdmin({root,summaryRoot,getToken,workspa
       <td class="right"><strong>${esc(krw(t.amount))}</strong></td><td>${tag(t.status)}</td><td>${esc(t.requesterEmail||'')}</td><td><div class="actions">${approve}${execute}</div></td></tr>`;
     }).join(''):`<tr><td colspan="6" class="empty">이체 요청이 없습니다.</td></tr>`;
 
-    const transferForm=caps.manage&&accounts.length?`<form id="bankTransferRequestForm" class="trade-form">
+    const transferAccounts=accounts.filter(account=>Boolean(account.transferEnabled));
+    const transferForm=caps.manage&&transferAccounts.length?`<form id="bankTransferRequestForm" class="trade-form">
       <h3>이체 요청</h3><p class="empty">수취계좌 전체번호는 요청 단계에서 저장하지 않습니다. 승인 후 실제 실행 시에만 금융기관 연결로 전달합니다.</p>
       <div class="trade-grid">
-        <label>출금계좌<select name="bankConnectionId" required>${accounts.filter(a=>a.transferEnabled).map(a=>`<option value="${esc(a.id)}">${esc(accountMap.get(a.id)||a.accountAlias)}</option>`).join('')}</select></label>
+        <label>출금계좌<select name="bankConnectionId" required>${transferAccounts.map(a=>`<option value="${esc(a.id)}">${esc(accountMap.get(a.id)||a.accountAlias)}</option>`).join('')}</select></label>
         <label>수취은행<input name="recipientBankName" maxlength="120" required></label>
         <label>예금주<input name="recipientName" maxlength="120" required></label>
         <label>수취계좌 끝 4자리<input name="recipientAccountLast4" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required></label>
