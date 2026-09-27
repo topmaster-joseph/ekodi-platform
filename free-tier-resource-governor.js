@@ -15,8 +15,11 @@ export const FREE_TIER_RESOURCE_CATALOG=Object.freeze({
     }),
     metrics:Object.freeze([
       {metric:'workers_requests_daily',label:'Workers requests / day',freeLimit:100000,unit:'requests',scope:'consumption'},
+      {metric:'workers_requests_month',label:'Workers requests / month (Paid included)',freeLimit:null,unit:'requests',scope:'consumption',optional:true},
       {metric:'d1_rows_read_daily',label:'D1 rows read / day',freeLimit:5000000,unit:'rows',scope:'consumption'},
+      {metric:'d1_rows_read_month',label:'D1 rows read / month (Paid included)',freeLimit:null,unit:'rows',scope:'consumption',optional:true},
       {metric:'d1_rows_written_daily',label:'D1 rows written / day',freeLimit:100000,unit:'rows',scope:'consumption'},
+      {metric:'d1_rows_written_month',label:'D1 rows written / month (Paid included)',freeLimit:null,unit:'rows',scope:'consumption',optional:true},
       {metric:'d1_storage_bytes',label:'D1 total storage',freeLimit:5*GB,unit:'bytes',scope:'consumption'},
       {metric:'kv_reads_daily',label:'KV reads / day',freeLimit:100000,unit:'operations',scope:'consumption'},
       {metric:'kv_writes_daily',label:'KV writes / day',freeLimit:1000,unit:'operations',scope:'consumption'},
@@ -45,6 +48,18 @@ export const FREE_TIER_RESOURCE_CATALOG=Object.freeze({
     metrics:Object.freeze([
       {metric:'artifact_storage_bytes',label:'Actions artifact storage',freeLimit:null,unit:'bytes',scope:'consumption',planDependent:true},
       {metric:'cache_storage_bytes',label:'Actions cache storage',freeLimit:10*GB,unit:'bytes',scope:'consumption'},
+    ]),
+  }),
+  aws:Object.freeze({
+    referenceDate:'2026-09-28',
+    facts:Object.freeze({role:'optional-provider',automaticPaidUpgrade:false,limits:'account-and-offer-dependent'}),
+    metrics:Object.freeze([
+      {metric:'estimated_monthly_cost_usd',label:'AWS estimated monthly cost',freeLimit:null,unit:'usd',scope:'consumption',planDependent:true},
+      {metric:'credit_remaining_usd',label:'AWS promotional credit remaining',freeLimit:null,unit:'usd',scope:'capacity',planDependent:true,optional:true},
+      {metric:'lambda_requests_month',label:'Lambda requests / month',freeLimit:null,unit:'requests',scope:'consumption',planDependent:true,optional:true},
+      {metric:'s3_storage_bytes_month',label:'S3 storage / month',freeLimit:null,unit:'byte-month',scope:'consumption',planDependent:true,optional:true},
+      {metric:'dynamodb_requests_month',label:'DynamoDB requests / month',freeLimit:null,unit:'requests',scope:'consumption',planDependent:true,optional:true},
+      {metric:'cloudfront_transfer_bytes_month',label:'CloudFront transfer / month',freeLimit:null,unit:'bytes',scope:'consumption',planDependent:true,optional:true},
     ]),
   }),
 });
@@ -118,7 +133,7 @@ export function buildFreeTierResourceGovernor({snapshots=[],states=[],now=Date.n
     const capacityBlocks=capacities.filter(item=>item.state==='capacity_full').map(item=>item.metric);
     const catalog=FREE_TIER_RESOURCE_CATALOG[provider]||{metrics:[]};
     const knownMetrics=new Set(metrics.map(item=>item.metric));
-    const missing=(catalog.metrics||[]).filter(def=>def.metric&&!knownMetrics.has(def.metric)).map(def=>def.metric);
+    const missing=(catalog.metrics||[]).filter(def=>def.metric&&!def.optional&&!knownMetrics.has(def.metric)).map(def=>def.metric);
     providers[provider]=Object.freeze({
       state,
       action:circuitOpen?'circuit_breaker':runtimePolicy.action,
