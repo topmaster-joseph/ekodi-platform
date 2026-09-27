@@ -213,6 +213,24 @@ function channelSiteForId(serviceId){
   const id=clean(serviceId,80).toLowerCase();
   return channelSiteCatalog().find(site=>site.id===id)||null;
 }
+
+function canonicalChannelSubjectKey(value){
+  const key=clean(value,120).toLowerCase();
+  return ({
+    ekodibiz:'ekodi-biz','ekodi-biz':'ekodi-biz',
+    ekodichurch:'ekodi-church','ekodi-church':'ekodi-church',
+    'ekodi-trade':'ekoditrade','ekodibiz-trade':'ekoditrade',ekoditrade:'ekoditrade',
+    ekodilab:'ekodi-lab','ekodi-lab':'ekodi-lab',
+    cheonggye:'cheonggye-local','cheonggye-local':'cheonggye-local'
+  })[key]||key;
+}
+function siteBindingOwnedBySubject(subject,site){
+  const owner=canonicalChannelSubjectKey(site?.channelSubjectKey||'');
+  return Boolean(owner&&owner===canonicalChannelSubjectKey(subject?.workspaceSlug||subject?.key||''));
+}
+function canManageChannelSite(identity,subject,site){
+  return Boolean(identity?.platformAdmin&&identity?.adminRole==='super_admin')||siteBindingOwnedBySubject(subject,site);
+}
 function normalizeChannelSiteBinding(input={}) {
   const serviceId=clean(input.serviceId,80).toLowerCase();
   const service=channelSiteForId(serviceId);
@@ -259,6 +277,7 @@ async function replaceChannelSites(request,env,identity,subject,channelId) {
   const seen=new Set();
   for(const binding of bindings){
     if(seen.has(binding.serviceId))return json(request,env,{error:'CHANNEL_SITE_DUPLICATE_SERVICE',serviceId:binding.serviceId},400);
+    if(!canManageChannelSite(identity,subject,binding.site))return json(request,env,{error:'CHANNEL_SITE_FORBIDDEN',serviceId:binding.serviceId},403);
     seen.add(binding.serviceId);
   }
   const now=nowIso();
@@ -276,11 +295,39 @@ async function replaceChannelSites(request,env,identity,subject,channelId) {
   await audit(env,subject,null,'channel_site_bindings_replaced',`${channelId}:${bindings.map(item=>item.serviceId).join(',')}`,identity.email);
   return json(request,env,{ok:true,channelId:Number(channelId),bindings:await channelSiteBindings(env,subject,{channelId})});
 }
-async function listSitePublishingChannels(request,env,subject,serviceId) {
+async function listSitePublishingChannels(request,env,identity,subject,serviceId) {
   const service=channelSiteForId(clean(serviceId,80).toLowerCase());
   if(!service)return json(request,env,{error:'CHANNEL_SITE_SERVICE_NOT_FOUND'},404);
+  if(!canManageChannelSite(identity,subject,service))return json(request,env,{error:'CHANNEL_SITE_FORBIDDEN',serviceId:service.id},403);
   const bindings=await channelSiteBindings(env,subject,{serviceId:service.id});
-  return json(request,env,{site:{id:service.id,name:service.name,url:service.url,group:service.group||''},channels:bindings});
+  return json(request,env,{site:{id:service.id,name:service.name,url:service.url,group:service.group||'',channelAdminUrl:service.channelAdminUrl||''},channels:bindings});
+}
+async function upsertSiteChannelBinding(request,env,identity,subject,serviceId,channelId){
+  const service=channelSiteForId(clean(serviceId,80).toLowerCase());
+  if(!service)return json(request,env,{error:'CHANNEL_SITE_SERVICE_NOT_FOUND'},404);
+  if(!canManageChannelSite(identity,subject,service))return json(request,env,{error:'CHANNEL_SITE_FORBIDDEN',serviceId:service.id},403);
+  const channel=await env.DB.prepare('SELECT id FROM marketing_publish_channels WHERE id=? AND subject_type=? AND subject_key=?').bind(Number(channelId),subject.type,subject.key).first();
+  if(!channel)return json(request,env,{error:'CHANNEL_NOT_FOUND'},404);
+  const body=await readJson(request)||{};
+  if(body.remove===true||body.enabled===false){
+    await env.DB.prepare('DELETE FROM channel_site_bindings WHERE subject_type=? AND subject_key=? AND channel_id=? AND service_id=?').bind(subject.type,subject.key,Number(channelId),service.id).run();
+    await audit(env,subject,null,'channel_site_binding_removed',`${channelId}:${service.id}`,identity.email);
+    return json(request,env,{ok:true,channelId:Number(channelId),serviceId:service.id,removed:true});
+  }
+  const binding=normalizeChannelSiteBinding({serviceId:service.id,role:body.role,isDefault:body.isDefault,autoArchive:body.autoArchive,archiveCategory:body.archiveCategory,enabled:true,priority:body.priority});
+  const now=nowIso();
+  const statements=[];
+  if(binding.isDefault){
+    statements.push(env.DB.prepare('UPDATE channel_site_bindings SET is_default=0,updated_at=? WHERE subject_type=? AND subject_key=? AND service_id=? AND channel_id<>?').bind(now,subject.type,subject.key,service.id,Number(channelId)));
+  }
+  statements.push(env.DB.prepare(`INSERT INTO channel_site_bindings(subject_type,subject_key,workspace_id,channel_id,service_id,role,is_default,auto_archive,archive_category,enabled,priority,created_by_email,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(subject_type,subject_key,channel_id,service_id) DO UPDATE SET role=excluded.role,is_default=excluded.is_default,auto_archive=excluded.auto_archive,archive_category=excluded.archive_category,enabled=excluded.enabled,priority=excluded.priority,updated_at=excluded.updated_at`)
+    .bind(subject.type,subject.key,subject.workspaceId||'',Number(channelId),service.id,binding.role,binding.isDefault?1:0,binding.autoArchive?1:0,binding.archiveCategory,1,binding.priority,identity.email,now,now));
+  await env.DB.batch(statements);
+  await audit(env,subject,null,'channel_site_binding_updated',`${channelId}:${service.id}:${binding.isDefault?'default':'linked'}:${binding.autoArchive?'archive':'manual'}`,identity.email);
+  const rows=await channelSiteBindings(env,subject,{channelId:Number(channelId),serviceId:service.id});
+  return json(request,env,{ok:true,channelId:Number(channelId),serviceId:service.id,binding:rows[0]||null});
 }
 async function resolveSiteChannelIds(env,subject,siteIds=[]) {
   const ids=[];
@@ -719,7 +766,12 @@ export default {
     const siteChannelsMatch=url.pathname.match(/^\/v1\/sites\/([^/]+)\/channels$/);
     if(siteChannelsMatch&&request.method==='GET'){
       if(!siteBindingReady)return json(request,env,{error:'CHANNEL_SITE_BINDINGS_NOT_READY'},503);
-      return listSitePublishingChannels(request,env,subject,decodeURIComponent(siteChannelsMatch[1]));
+      return listSitePublishingChannels(request,env,identity,subject,decodeURIComponent(siteChannelsMatch[1]));
+    }
+    const siteChannelBindingMatch=url.pathname.match(/^\/v1\/sites\/([^/]+)\/channels\/(\d+)$/);
+    if(siteChannelBindingMatch&&request.method==='PUT'){
+      if(!siteBindingReady)return json(request,env,{error:'CHANNEL_SITE_BINDINGS_NOT_READY'},503);
+      return upsertSiteChannelBinding(request,env,identity,subject,decodeURIComponent(siteChannelBindingMatch[1]),Number(siteChannelBindingMatch[2]));
     }
     if(url.pathname==='/v1/channel-sites/catalog'&&request.method==='GET'){
       if(!siteBindingReady)return json(request,env,{error:'CHANNEL_SITE_BINDINGS_NOT_READY'},503);
