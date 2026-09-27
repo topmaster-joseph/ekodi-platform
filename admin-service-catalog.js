@@ -28,7 +28,7 @@ export const ADMIN_SERVICE_CATALOG = Object.freeze([
   { id:'work', name:'에코디 워크', basePath:'/work', group:'professional' },
   { id:'lab', name:'에코디연구소', basePath:'/ekodilab', group:'knowledge' },
   { id:'cafe', name:'에코디 카페', basePath:'/cafe', group:'community' },
-  { id:'cmpmyi', name:'통합 매장 운영', basePath:'/cmpmyi', group:'sites', kind:'site', siteRelation:'user', channelAdminSection:'publishing', channelSubjectKey:'cmpmyi' },
+  { id:'cmpmyi', name:'통합 매장 운영', basePath:'/cmpmyi', group:'sites', kind:'site', siteRelation:'user', channelAdminSection:'publishing', channelAdminPath:'/cmpmyi/admin/panel/publishing', channelAggregate:true, channelSubjectKey:'' },
   { id:'developer', name:'개발자 서비스', basePath:'/developer', group:'professional' },
   { id:'tax', name:'세금·증빙', basePath:'/tax', group:'professional' },
   { id:'cheonggye-local', name:'청계잇다', basePath:'/cheonggye', group:'sites', kind:'site', siteRelation:'user', channelAdminSection:'publishing', channelSubjectKey:'cheonggye-local' },
@@ -74,6 +74,7 @@ export function channelAdminServices(){
 export function canonicalServiceChannelAdminPath(service){
   const item=typeof service==='string'?getAdminService(service):service;
   if(!item?.channelAdminSection)return '';
+  if(item.channelAdminPath)return normalizeBasePath(item.channelAdminPath);
   return `${canonicalServiceAdminPath(item.basePath)}/${String(item.channelAdminSection).replace(/^\/+|\/+$/g,'')}`;
 }
 
