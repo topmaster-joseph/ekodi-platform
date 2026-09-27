@@ -64,11 +64,6 @@ export async function validatePlatformSourceOfTruth() {
     errors.push('technology_policy_not_bound_to_source_of_truth');
   }
 
-  const readme = await fs.readFile(path.join(root, 'README.md'), 'utf8').catch(() => '');
-  if (/https:\/\/(?:my|admin|api)\.ekodi\.kr/i.test(readme)) {
-    warnings.push('README_contains_legacy_subdomain_examples_non_authoritative_until_topology_cleanup_merges');
-  }
-
   return Object.freeze({
     ok: errors.length === 0,
     policyId: policy.policyId,
