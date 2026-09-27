@@ -119,6 +119,8 @@ test('guarded release keeps public site bodies brand-only while ownership stays 
       assert.ok(probe.expect?.includes('에코디교회'),'Church probe must retain the Korean service identity');
     }
     assert.ok(!probe.expect?.includes('운영공간'),url+' public body must not expose internal operating-space terminology');
+    assert.ok(probe.forbid?.includes('운영공간'),url+' release must reject internal operating-space wording');
+    assert.ok(probe.forbid?.includes('data-ekodi-operating-space-label'),url+' release must reject internal operating-space DOM markers');
     assert.ok((probe.expect||[]).length>0,url+' must verify public brand/service identity');
     assert.ok(probe.headerExpect?.includes('x-ekodi-operating-space-label: v1'),url+' must prove shared ownership in response metadata');
     assert.equal(probe.rollbackVerify,false);
