@@ -183,7 +183,7 @@ jobs:
             marker=$(curl -L -sS -o /tmp/church-release.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-release.json?release=${release}" || true)
             if [[ "$root" == 200 && "$member" == 200 && "$giving_member" == 200 && "$giving_member_js" == 200 && "$attendance_member" == 200 && "$attendance_member_js" == 200 && "$life" == 200 && "$life_i18n" == 200 && "$life_css" == 200 && "$online_status" == 200 && "$live_css" == 200 && "$live_js" == 200 && "$live_intent" == 200 && "$marker" == 200 ]] \
               && grep -Fq 'data-ekodi-life-hub' /tmp/church.html \
-              && grep -Fq '<span hidden data-ekodi-operating-space-label="v1" aria-hidden="true">운영공간</span>' /tmp/church.html \
+              && ! grep -Fq 'data-ekodi-operating-space-label' /tmp/church.html \
               && ! grep -Fq '<em class="operating-space-label"' /tmp/church.html \
               && grep -Fq 'EKODI CHURCH · MY PAGE' /tmp/church-my.html \
               && grep -Fq 'data-ekodi-header-actions' /tmp/church-my.html \
