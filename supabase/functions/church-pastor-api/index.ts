@@ -19,6 +19,7 @@ const READ_ROLES={
   church_ledger_entries:['senior_pastor','church_treasurer','church_finance'],
   church_receipt_requests:['senior_pastor','church_treasurer','church_finance'],
 };
+const FINANCE_ACCESS_ROLES=new Set(['senior_pastor','church_treasurer','church_finance']);
 const WRITE_ROLES={
   church_members:['senior_pastor','pastor','staff'],
   church_services:['senior_pastor','pastor','staff'],
@@ -124,7 +125,12 @@ Deno.serve(async req=>{
   const identity=await centralIdentity(req);if(!identity)return json({error:'AUTH_REQUIRED'},401,origin);
   let staff=null;try{staff=await staffFor(identity.id);}catch(error){return json({error:String(error?.message||error)},503,origin);}
   if(!staff)return json({error:'CHURCH_STAFF_REQUIRED'},403,origin);
-  const url=new URL(req.url);const table=String(url.searchParams.get('table')||'');
+  const url=new URL(req.url);
+  if(url.searchParams.get('scope')==='finance-access'){
+    if(!FINANCE_ACCESS_ROLES.has(staff.role))return json({error:'ROLE_NOT_ALLOWED'},403,origin);
+    return json({ok:true,role:staff.role,email:identity.email,userId:identity.id,churchSlug:CHURCH_SLUG},200,origin);
+  }
+  const table=String(url.searchParams.get('table')||'');
   if(!Object.prototype.hasOwnProperty.call(READ_ROLES,table))return json({error:'TABLE_NOT_ALLOWED'},404,origin);
   if(req.method==='GET'){
     if(!allowed(staff.role,READ_ROLES[table]))return json({error:'ROLE_NOT_ALLOWED'},403,origin);
