@@ -1,8 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { isMnuBizWorkspaceSlug, renderMnuBizPublicPage, mnubizPublicCss } from '../mnubiz-public-page.js';
 
 test('mnubiz public surface follows CSP-safe user-site UI contract', async()=>{
+  const worker=await readFile(new URL('../space-worker.js',import.meta.url),'utf8');
+  assert.match(worker,/injectEkodiShell\(page,'community','public',\{existingHeader:true\}\)/);
   assert.equal(isMnuBizWorkspaceSlug('mnubiz'),true);
   const response=renderMnuBizPublicPage();
   const html=await response.text();
