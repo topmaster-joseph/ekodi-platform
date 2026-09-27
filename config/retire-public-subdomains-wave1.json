@@ -6,13 +6,9 @@
       "label": "api",
       "service": "ekodi-auth-api",
       "apexHealth": "https://ekodi.kr/api/health",
-      "directHealth": "https://ekodi-auth-api.topmaster-joseph.workers.dev/health",
       "apexExpect": [
         "\"ok\":true",
         "\"canonicalApiBase\":\"https://ekodi.kr/api\""
-      ],
-      "directExpect": [
-        "ekodi-auth-api"
       ]
     },
     {
