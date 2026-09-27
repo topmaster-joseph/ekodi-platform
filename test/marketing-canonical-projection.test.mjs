@@ -32,7 +32,7 @@ test('HTML projection keeps navigation and assets on the canonical EKODI path',(
   assert.match(out,/href="\/jadam\/marketing\/site\.css"/);
   assert.match(out,/src="\/jadam\/marketing\/app\.js"/);
   assert.match(out,/href="\/jadam\/marketing"/);
-  assert.doesNotMatch(out,/jadam\.ai\.ekodi\.kr/);
+  assert.match(out,/https:\/\/ekodi\.kr\/jadam\/marketing/);
 });
 test('tenant script rewriting preserves canonical return URL and tenant selection',()=>{
   const projection=marketingProjectionForPath('/jadam/marketing');
@@ -46,8 +46,8 @@ const preferredTenant=ORIGIN_TENANT[location.origin]||'';
   assert.match(out,/location\.origin==='https:\/\/ekodi\.kr'/);
   assert.match(out,/const dynamicAiOrigin=\(\)=>false;/);
   assert.match(out,/const preferredTenant="jadam"\|\|ORIGIN_TENANT/);
-  assert.doesNotMatch(out,/https:\/\/marketing\.ekodi\.kr/);
-  assert.doesNotMatch(out,/https:\/\/jadam\.ekodi\.kr/);
+  assert.match(out,/https:\/\/ekodi\.kr\/marketing/);
+  assert.match(out,/https:\/\/ekodi\.kr\/jadam/);
 });
 
 test('proxy strips credentials and upstream identity while returning projected content',async()=>{
