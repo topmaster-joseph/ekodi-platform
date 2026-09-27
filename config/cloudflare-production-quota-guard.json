@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "policyId": "CF-QUOTA-001",
-  "purpose": "Protect EKODI Production from Cloudflare Workers Free-plan quota exhaustion without weakening auth or security boundaries.",
+  "purpose": "Protect EKODI Production with plan-aware Cloudflare quota control: Free-safe before owner upgrade, Paid-core after verified Workers Paid activation, while keeping nonessential usage inside included capacity.",
   "dailyRequestLimit": 100000,
   "warningRatio": 0.7,
   "protectRatio": 0.9,
@@ -11,7 +11,9 @@
     "46aad4738793fbaca88574832a2ccc0f"
   ],
   "circuitBreaker": {
-    "statuses": [429],
+    "statuses": [
+      429
+    ],
     "bodyMarkers": [
       "Error 1027",
       "temporarily rate limited",
@@ -73,5 +75,32 @@
         "text": "마케팅AI"
       }
     ]
+  },
+  "planDetection": {
+    "mode": "billing-api-when-readable",
+    "fallback": "free-safe",
+    "ownerActivationRequired": true,
+    "automaticPurchase": false,
+    "ownerConfirmedWorkersPlan": "paid",
+    "ownerConfirmedAt": "2026-09-28",
+    "fallbackOrder": [
+      "cloudflare-billing-api",
+      "owner-confirmed-config",
+      "free-safe"
+    ]
+  },
+  "paidPlan": {
+    "minimumMonthlyUsd": 5,
+    "workersRequestsIncludedPerMonth": 10000000,
+    "d1RowsReadIncludedPerMonth": 25000000000,
+    "d1RowsWrittenIncludedPerMonth": 50000000,
+    "d1StorageIncludedBytes": 5368709120,
+    "overagePolicy": "protect-nonessential-before-included-capacity-is-exhausted"
+  },
+  "freePlan": {
+    "workersRequestsPerDay": 100000,
+    "d1RowsReadPerDay": 5000000,
+    "d1RowsWrittenPerDay": 100000,
+    "d1StorageBytes": 5368709120
   }
 }

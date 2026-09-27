@@ -9,9 +9,9 @@ const prod = {
   token:String(process.env.CLOUDFLARE_API_TOKEN || '').trim(),
 };
 const dev = {
-  label:'DEV',
-  accountId:String(process.env.CLOUDFLARE_DEVELOPMENT_ACCOUNT_ID || '').trim(),
-  token:String(process.env.CLOUDFLARE_DEVELOPMENT_API_TOKEN || '').trim(),
+  label:'AUX',
+  accountId:String(process.env.CLOUDFLARE_AUXILIARY_ACCOUNT_ID || process.env.CLOUDFLARE_DEVELOPMENT_ACCOUNT_ID || '').trim(),
+  token:String(process.env.CLOUDFLARE_AUXILIARY_API_TOKEN || process.env.CLOUDFLARE_DEVELOPMENT_API_TOKEN || '').trim(),
 };
 const outputJson = process.argv[2] || '/tmp/ekodi-cloudflare-usage-diagnose.json';
 const outputMd = process.argv[3] || '/tmp/ekodi-cloudflare-usage-diagnose.md';
@@ -385,7 +385,7 @@ function markdown(report) {
       `2. Worker loop/retry: ${icon(s.loopRetry.severity)} max ${s.loopRetry.maxSubrequestRatio} subrequests/request at \`${s.loopRetry.script || 'n/a'}\``,
       `3. Cache: ${icon(s.cache.severity)} ${s.cache.available ? `hit ${s.cache.hitPercent}%, pressure ${s.cache.pressurePercent}%` : 'analytics field unavailable'} | zones ${s.cache.coverage}`,
       `4. Cron/Health: ${icon(s.cronHealth.severity)} health ${s.cronHealth.healthAvailable ? `${s.cronHealth.healthRequests} (${s.cronHealth.healthPercent}%)` : 'analytics unavailable'} | zones ${s.cronHealth.coverage}, scheduled top scripts ${s.cronHealth.scheduledScripts}, every-minute ${s.cronHealth.everyMinuteScripts.join(', ') || 'none'}`,
-      `5. DEV->PROD / boundary: ${icon(s.boundary.severity)} suspect ${s.boundary.devToProdSuspectRequests}, internal ${s.boundary.available ? `${s.boundary.internalRequests} (${s.boundary.internalPercent}%)` : 'analytics unavailable'} | zones ${s.boundary.coverage}, PROD staging residue ${s.boundary.prodStagingResidues.join(', ') || 'none'}`,
+      `5. AUX->PROD / boundary: ${icon(s.boundary.severity)} suspect ${s.boundary.devToProdSuspectRequests}, internal ${s.boundary.available ? `${s.boundary.internalRequests} (${s.boundary.internalPercent}%)` : 'analytics unavailable'} | zones ${s.boundary.coverage}, PROD staging residue ${s.boundary.prodStagingResidues.join(', ') || 'none'}`,
       '', 'Top Workers:',
       ...row.workers.top.slice(0,10).map(item => { const statusSummary=Object.entries(item.statuses||{}).sort((a,b)=>b[1]-a[1]).map(([status,count])=>status+':'+count).join(', ')||'n/a'; return `- ${item.requests} req | ${item.subrequestRatio}x subreq | ${item.errorPercent}% errors | status ${statusSummary} | cpuP99 raw ${item.cpuP99} | \`${item.script}\``; }),
       '', 'Top Hosts (covered Zone Analytics):',

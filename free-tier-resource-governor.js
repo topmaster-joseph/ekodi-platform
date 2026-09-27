@@ -15,8 +15,11 @@ export const FREE_TIER_RESOURCE_CATALOG=Object.freeze({
     }),
     metrics:Object.freeze([
       {metric:'workers_requests_daily',label:'Workers requests / day',freeLimit:100000,unit:'requests',scope:'consumption'},
+      {metric:'workers_requests_month',label:'Workers requests / month (Paid included)',freeLimit:null,unit:'requests',scope:'consumption',optional:true},
       {metric:'d1_rows_read_daily',label:'D1 rows read / day',freeLimit:5000000,unit:'rows',scope:'consumption'},
+      {metric:'d1_rows_read_month',label:'D1 rows read / month (Paid included)',freeLimit:null,unit:'rows',scope:'consumption',optional:true},
       {metric:'d1_rows_written_daily',label:'D1 rows written / day',freeLimit:100000,unit:'rows',scope:'consumption'},
+      {metric:'d1_rows_written_month',label:'D1 rows written / month (Paid included)',freeLimit:null,unit:'rows',scope:'consumption',optional:true},
       {metric:'d1_storage_bytes',label:'D1 total storage',freeLimit:5*GB,unit:'bytes',scope:'consumption'},
       {metric:'kv_reads_daily',label:'KV reads / day',freeLimit:100000,unit:'operations',scope:'consumption'},
       {metric:'kv_writes_daily',label:'KV writes / day',freeLimit:1000,unit:'operations',scope:'consumption'},
@@ -118,7 +121,7 @@ export function buildFreeTierResourceGovernor({snapshots=[],states=[],now=Date.n
     const capacityBlocks=capacities.filter(item=>item.state==='capacity_full').map(item=>item.metric);
     const catalog=FREE_TIER_RESOURCE_CATALOG[provider]||{metrics:[]};
     const knownMetrics=new Set(metrics.map(item=>item.metric));
-    const missing=(catalog.metrics||[]).filter(def=>def.metric&&!knownMetrics.has(def.metric)).map(def=>def.metric);
+    const missing=(catalog.metrics||[]).filter(def=>def.metric&&!def.optional&&!knownMetrics.has(def.metric)).map(def=>def.metric);
     providers[provider]=Object.freeze({
       state,
       action:circuitOpen?'circuit_breaker':runtimePolicy.action,

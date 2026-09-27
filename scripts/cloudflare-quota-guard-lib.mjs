@@ -39,6 +39,41 @@ export function classifyQuotaState({
   };
 }
 
+export function detectWorkersPaidPlan(subscriptions = []) {
+  const activeStates = new Set(['paid','provisioned','trial']);
+  for (const subscription of Array.isArray(subscriptions) ? subscriptions : []) {
+    const state = String(subscription?.state || '').trim().toLowerCase();
+    if (!activeStates.has(state)) continue;
+    const ratePlan = subscription?.rate_plan || {};
+    const haystack = [
+      ratePlan.id,
+      ratePlan.public_name,
+      ratePlan.scope,
+      ...(Array.isArray(ratePlan.sets) ? ratePlan.sets : []),
+    ].map(value => String(value || '').toLowerCase()).join(' ');
+    if (haystack.includes('worker') && !haystack.includes('free')) return true;
+  }
+  return false;
+}
+
+export function cloudflareUsageWindow({ paid = false, now = new Date() } = {}) {
+  const end = new Date(now);
+  const start = new Date(end);
+  if (paid) {
+    start.setUTCDate(1);
+    start.setUTCHours(0, 0, 0, 0);
+  } else {
+    start.setUTCHours(0, 0, 0, 0);
+  }
+  return Object.freeze({
+    periodKind: paid ? 'month' : 'day',
+    start: start.toISOString(),
+    end: end.toISOString(),
+    startDate: start.toISOString().slice(0, 10),
+    endDate: end.toISOString().slice(0, 10),
+  });
+}
+
 export function isQuotaCircuitBreak({ status, body = '', config = {} }) {
   const statuses = Array.isArray(config.statuses) ? config.statuses.map(Number) : [429];
   if (statuses.includes(Number(status))) return true;
