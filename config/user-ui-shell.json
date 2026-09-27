@@ -107,7 +107,7 @@
       "id"
     ],
     "default": "ko-KR",
-    "persistence": "ekodi_locale cookie scoped to .ekodi.kr with localStorage fallback",
+    "persistence": "host-only ekodi_locale cookie on ekodi.kr with localStorage fallback",
     "serviceContract": "central language registry + runtime published locales; shared shell dispatches ekodi:locale-change and applies generated public catalogs only when present",
     "readiness": "D1 language_site_state runtime overlay with central registry baseline; ko-KR is mandatory source/fallback",
     "unsupportedBehavior": "unready languages are hidden from selectors; stale/direct links safely return to ko-KR",
