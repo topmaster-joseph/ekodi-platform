@@ -156,6 +156,30 @@
     }
   }
 
+  async function submitCloudflareSecret(name, allowElevation = true) {
+    const result = await api('/api/control/secrets/generate', {
+      method:'POST',
+      headers:{ 'x-ekodi-confirm-impact':'cloudflare-secret-create' },
+      body:JSON.stringify({
+        scriptName:cfTarget.value,
+        name,
+        type:cfType.value,
+        bytes:Number(cfBytes.value),
+        replace:replaceMode,
+      }),
+    });
+    if (result.response.status === 403 && result.data?.code === 'ELEVATION_REQUIRED' && allowElevation) {
+      const elevate = window.EKODIAdminContext?.elevate;
+      if (typeof elevate !== 'function') {
+        throw Object.assign(new Error('보호된 Secret 변경에는 Google 추가 인증이 필요합니다. 관리자 인증 기능을 새로고침해 주세요.'), { code:'ELEVATION_UNAVAILABLE' });
+      }
+      cfStatus.textContent = '보호된 Secret 변경입니다. 현재 Google 관리자 계정으로 추가 인증한 뒤 같은 작업을 자동으로 이어갑니다.';
+      await elevate();
+      return submitCloudflareSecret(name, false);
+    }
+    return result;
+  }
+
   cfCreate.addEventListener('click', async () => {
     if (cfCreate.disabled) return;
     const name = cfName.value.trim();
@@ -166,19 +190,9 @@
     }
     cfCreate.disabled = true;
     cfCreate.setAttribute('aria-busy', 'true');
-    cfStatus.textContent = replaceMode ? '기존 Secret을 새 무작위값으로 교체하고 있습니다.' : '새 무작위값을 생성해 Cloudflare에 등록하고 있습니다.';
+    cfStatus.textContent = replaceMode ? '기존 Secret 교체 승인을 확인하고 있습니다.' : '새 Secret 생성 권한을 확인하고 있습니다.';
     try {
-      const { response, data } = await api('/api/control/secrets/generate', {
-        method:'POST',
-        headers:{ 'x-ekodi-confirm-impact':'cloudflare-secret-create' },
-        body:JSON.stringify({
-          scriptName:cfTarget.value,
-          name,
-          type:cfType.value,
-          bytes:Number(cfBytes.value),
-          replace:replaceMode,
-        }),
-      });
+      const { response, data } = await submitCloudflareSecret(name);
       if (response.status === 409 && data?.code === 'SECRET_ALREADY_EXISTS') {
         replaceMode = true;
         cfCreate.textContent = '기존 Secret 교체 승인';
@@ -186,7 +200,10 @@
         cfStatus.textContent = '같은 Variable name이 이미 있습니다. 교체하려면 아래 버튼을 다시 누르세요. 첫 클릭에서는 아무 값도 변경하지 않았습니다.';
         return;
       }
-      if (!response.ok) throw new Error(data?.error || `HTTP ${response.status}`);
+      if (!response.ok) {
+        const error = Object.assign(new Error(data?.error || `HTTP ${response.status}`), { code:data?.code || '', status:response.status });
+        throw error;
+      }
       resetReplaceMode();
       cfStatus.textContent = `${data.name} 등록 완료 · ${data.replaced ? '기존 값 교체' : '새 Secret 생성'} · 확인 지문 ${data.fingerprint}. 비밀값 자체는 브라우저로 반환되지 않았습니다.`;
     } catch (error) {

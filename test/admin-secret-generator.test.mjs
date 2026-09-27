@@ -63,3 +63,11 @@ test('Security, Health and Marketing AI follow the canonical people, status and 
   assert.match(menuRegistry, /\{ id: 'marketing-ai', group: 'services'[^\n]*internal: true/);
   assert.match(build, /'admin-secret-generator\.css','admin-secret-generator\.js'/);
 });
+
+test('protected Secret writes request Google elevation and retry in place', () => {
+  assert.match(generator, /ELEVATION_REQUIRED/);
+  assert.match(generator, /window\.EKODIAdminContext\?\.elevate/);
+  assert.match(generator, /await elevate\(\)/);
+  assert.match(generator, /return submitCloudflareSecret\(name, false\)/);
+  assert.match(generator, /보호된 Secret 변경입니다/);
+});
