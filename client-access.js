@@ -1,5 +1,6 @@
 (() => {
   const API = 'https://ekodi.kr';
+  const REQUEST_TIMEOUT_MS = 8000;
   const ROLE_OPTIONS = [
     ['owner', '사이트 책임관리자'],
     ['admin', '사이트 관리자'],
@@ -30,10 +31,10 @@
   ];
   const USER_ROLE_SET = new Set(USER_ROLE_OPTIONS.map(item => item[0]));
   const TAB_LABELS = {
-    members: '전체 회원',
-    sites: '사이트별',
+    members: '전체 사용자',
+    sites: '사이트·공간',
     pending: '인증 대기',
-    roles: '권한별',
+    roles: '역할·권한',
   };
 
   function adminToken() {
@@ -43,16 +44,30 @@
   async function request(path, options = {}) {
     const headers = new Headers(options.headers || {});
     const token = adminToken();
-    if (token) headers.set('authorization', `Bearer ${token}`);
+    if (token) headers.set('authorization', \`Bearer \${token}\`);
     if (options.body && !headers.has('content-type')) headers.set('content-type', 'application/json');
-    const response = await fetch(`${API}${path}`, { ...options, headers, cache: 'no-store' });
-    let data = {};
-    try { data = await response.json(); } catch {}
-    if (!response.ok) {
-      const suffix = data.code ? ` · ${data.code}` : '';
-      throw new Error(`${data.error || `고객관리 API 요청 실패 (${response.status})`}${suffix}`);
+    const controller = options.signal ? null : new AbortController();
+    const timeout = controller ? setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS) : null;
+    try {
+      const response = await fetch(\`\${API}\${path}\`, {
+        ...options,
+        headers,
+        signal: options.signal || controller?.signal,
+        cache: 'no-store',
+      });
+      let data = {};
+      try { data = await response.json(); } catch {}
+      if (!response.ok) {
+        const suffix = data.code ? \` · \${data.code}\` : '';
+        throw new Error(\`\${data.error || \`고객관리 API 요청 실패 (\${response.status})\`}\${suffix}\`);
+      }
+      return data;
+    } catch (error) {
+      if (error?.name === 'AbortError') throw new Error('사용자·접근 정보를 8초 안에 불러오지 못했습니다. 다시 확인해 주세요.');
+      throw error;
+    } finally {
+      if (timeout) clearTimeout(timeout);
     }
-    return data;
   }
 
   function text(tag, value, className = '') {
@@ -108,6 +123,7 @@
   let activeTab = 'members';
   let loaded = false;
   let loading = false;
+  let lastSuccessfulSyncAt = '';
 
   function installShell() {
     const nav = document.querySelector('.sidebar nav');
@@ -132,8 +148,8 @@
     const head = document.createElement('div');
     head.className = 'section-head client-access-head';
     const heading = document.createElement('div');
-    heading.append(text('p', 'USERS · SPACE ACCESS', 'kicker'), text('h2', '사용자설정'));
-    heading.append(text('p', '사이트·공간을 선택해 일반 사용자 목록, 역할, 활성상태와 공개·비공개 상태를 관리합니다.', 'operations-copy'));
+    heading.append(text('p', 'USERS · ACCESS CONTROL', 'kicker'), text('h2', '사용자·접근 관리'));
+    heading.append(text('p', '사용자, 사이트 범위, 역할과 인증 상태를 한 화면에서 확인하고 필요한 접근권한만 관리합니다.', 'operations-copy'));
     const refresh = button('↻ 새로고침', 'secondary');
     refresh.id = 'refreshClients';
     head.append(heading, refresh);
@@ -141,6 +157,11 @@
     const summary = document.createElement('div');
     summary.className = 'client-access-summary';
     summary.id = 'clientAccessSummary';
+
+    const sync = document.createElement('div');
+    sync.className = 'client-syncbar';
+    sync.id = 'clientAccessSync';
+    sync.setAttribute('aria-live', 'polite');
 
     const tabs = document.createElement('div');
     tabs.className = 'client-tabs';
@@ -185,7 +206,7 @@
 
     for (const control of [search, site, role, status]) control.addEventListener('input', renderActiveTab);
 
-    section.append(head, summary, tabs, toolbar, body);
+    section.append(head, summary, sync, tabs, toolbar, body);
     content.append(section);
 
     const activateClients = () => {
@@ -195,14 +216,14 @@
       });
       document.querySelectorAll('.sidebar .nav[data-section]').forEach(item => item.classList.toggle('active', item.dataset.section === 'clients'));
       const pageTitle = document.querySelector('#pageTitle');
-      if (pageTitle) pageTitle.textContent = '사용자설정';
+      if (pageTitle) pageTitle.textContent = '사용자·접근 관리';
       document.querySelector('.sidebar')?.classList.remove('open');
       loadDirectory();
     };
 
     navButton.addEventListener('click', activateClients);
     refresh.addEventListener('click', () => loadDirectory(true));
-    return { section, summary, tabs, toolbar, body, search, site, role, status };
+    return { section, summary, sync, tabs, toolbar, body, search, site, role, status, refresh };
   }
 
   function setTab(tab) {
