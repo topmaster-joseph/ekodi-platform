@@ -192,10 +192,6 @@ export async function claimLowTrafficSiteImprovement(env={},options={}){
     if(existing){
       const canRetry=existing.state==='failed'&&!existing.task_id&&Number(existing.attempts||0)<2;
       if(!canRetry)return Object.freeze({claimed:false,reason:'daily_site_already_claimed',run:existing});
-      await store.prepare("UPDATE ekodi_site_improvement_runs SET state='claimed',attempts=attempts+1,error='',evaluated_at=?,updated_at=? WHERE run_day=? AND state='failed'")
-        .bind(now,now,day).run();
-      const site=sites.find(item=>item.id===existing.site_id)||sites[Number(existing.site_index||0)%sites.length];
-      return Object.freeze({claimed:true,day,site,siteIndex:Number(existing.site_index||0),traffic:{recentSessions:Number(existing.recent_sessions||0),recentVisits:Number(existing.recent_visits||0),quietWindowMinutes:Number(existing.quiet_window_minutes||30)},retry:true});
     }
 
     const traffic=await trafficSnapshot(env,at);
@@ -203,8 +199,16 @@ export async function claimLowTrafficSiteImprovement(env={},options={}){
     if(!traffic?.quiet)return Object.freeze({claimed:false,reason:traffic?.reason||'traffic_not_quiet',traffic});
 
     const busy=await store.prepare("SELECT COUNT(*) AS n FROM ai_control_jobs WHERE state IN ('queued','leased','running')").first().catch(()=>({n:0}));
-    const maxActive=integer(env.EKODI_SITE_IMPROVEMENT_MAX_ACTIVE_AI_JOBS,2,0,20);
-    if(Number(busy?.n||0)>maxActive)return Object.freeze({claimed:false,reason:'ai_execution_queue_busy',activeJobs:Number(busy?.n||0),maxActive});
+    const maxActive=integer(env.EKODI_SITE_IMPROVEMENT_MAX_ACTIVE_AI_JOBS,2,1,20);
+    if(Number(busy?.n||0)>=maxActive)return Object.freeze({claimed:false,reason:'ai_execution_queue_busy',activeJobs:Number(busy?.n||0),maxActive});
+
+    if(existing){
+      const retryResult=await store.prepare("UPDATE ekodi_site_improvement_runs SET state='claimed',attempts=attempts+1,error='',recent_sessions=?,recent_visits=?,quiet_window_minutes=?,quiet_threshold=?,evaluated_at=?,updated_at=? WHERE run_day=? AND state='failed'")
+        .bind(traffic.recentSessions,traffic.recentVisits,traffic.quietWindowMinutes,traffic.maxSessions,now,now,day).run();
+      if(changes(retryResult)<1)return Object.freeze({claimed:false,reason:'retry_claim_raced'});
+      const site=sites.find(item=>item.id===existing.site_id)||sites[Number(existing.site_index||0)%sites.length];
+      return Object.freeze({claimed:true,day,site,siteIndex:Number(existing.site_index||0),traffic,retry:true});
+    }
 
     const state=await store.prepare("SELECT cursor_index FROM ekodi_site_improvement_state WHERE id='singleton'").first();
     const siteIndex=((Number(state?.cursor_index)||0)%sites.length+sites.length)%sites.length;
