@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { collectSupabase, collectSupabaseOidc, collectGitHub, snapshotFromCloudflareQuotaReport, snapshotsToSql } from '../scripts/collect-free-tier-resource-usage.mjs';
+import { collectSupabase, collectSupabaseOidc, collectGitHub, snapshotFromCloudflareQuotaReport, snapshotsFromCloudflareQuotaReport, snapshotsToSql } from '../scripts/collect-free-tier-resource-usage.mjs';
 
 const observedAt='2026-09-20T08:30:00.000Z';
 
@@ -65,6 +65,34 @@ test('Cloudflare production budget report becomes the canonical Workers request 
   });
   assert.throws(()=>snapshotFromCloudflareQuotaReport({policyId:'wrong',account:'PROD',requests:1,limit:100000,generatedAt:observedAt}),/POLICY_INVALID/);
   assert.throws(()=>snapshotFromCloudflareQuotaReport({policyId:'CF-QUOTA-001',account:'DEV',requests:1,limit:100000,generatedAt:observedAt}),/ACCOUNT_INVALID/);
+});
+
+test('Cloudflare Paid report switches to monthly Workers and D1 included-capacity snapshots',()=>{
+  const snapshots=snapshotsFromCloudflareQuotaReport({
+    policyId:'CF-QUOTA-001',
+    account:'PROD',
+    generatedAt:'2026-09-28T02:00:00.000Z',
+    periodKind:'month',
+    window:{start:'2026-09-01T00:00:00.000Z',end:'2026-09-28T02:00:00.000Z'},
+    requests:123456,
+    limit:10000000,
+    state:'normal',
+    d1:{
+      available:true,
+      rowsRead:7654321,
+      rowsWritten:12345,
+      readLimit:25000000000,
+      writeLimit:50000000
+    }
+  });
+  const byMetric=new Map(snapshots.map(row=>[row.metric,row]));
+  assert.equal(byMetric.get('workers_requests_month').periodStart,'2026-09');
+  assert.equal(byMetric.get('workers_requests_month').freeLimit,10000000);
+  assert.equal(byMetric.get('d1_rows_read_month').observedValue,7654321);
+  assert.equal(byMetric.get('d1_rows_read_month').freeLimit,25000000000);
+  assert.equal(byMetric.get('d1_rows_written_month').observedValue,12345);
+  assert.equal(byMetric.get('d1_rows_written_month').freeLimit,50000000);
+  assert.equal(byMetric.get('d1_rows_read_month').source,'cloudflare-d1-analytics');
 });
 
 test('GitHub collector records public repository cache and artifact storage only',async()=>{
