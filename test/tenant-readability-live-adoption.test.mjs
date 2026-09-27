@@ -39,6 +39,13 @@ test('tenant readability injector stays brand-neutral and idempotent',async()=>{
   assert.match(css,/display:none!important/);
 });
 
+test('mobile fixed-header workflow validates the live verifier before merge',async()=>{
+  const workflow=await read('.github/workflows/verify-mobile-fixed-headers.yml');
+  assert.match(workflow,/pull_request:/);
+  assert.match(workflow,/node --check scripts\/verify-mobile-fixed-headers-live\.mjs/);
+  assert.match(workflow,/if: github\.event_name != 'pull_request'/);
+});
+
 test('live mobile verifier checks canonical apex tenant paths only',async()=>{
   const verifier=await read('scripts/verify-mobile-fixed-headers-live.mjs');
   for(const url of [
