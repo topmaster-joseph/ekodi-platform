@@ -78,6 +78,5 @@ test('low traffic decision uses recent active sessions and keeps cumulative visi
   assert.match(source,/traffic_intelligence_state/);
   assert.match(source,/collectorLastSuccess/);
   assert.match(source,/const deploymentRows=rows\.filter/);
-  assert.ok(source.includes('platform-route-registry\\.js
-));
+  assert.match(source,/platform-route-registry/);
 });
