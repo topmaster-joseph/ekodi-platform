@@ -4,11 +4,7 @@ import { TENANT_ADMIN_CAPABILITIES, tenantAdminCan } from './tenant-admin-policy
 const CENTRAL_SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const CENTRAL_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const CHURCH_PASTOR_API=`${CENTRAL_SUPABASE_URL}/functions/v1/church-pastor-api`;
-const ALLOWED_ORIGINS=new Set([
-  'https://ekodi.kr','https://www.ekodi.kr',
-  'https://admin.ekodi.kr','https://admin.biz.ekodi.kr','https://admin.church.ekodi.kr',
-  'https://admin.lab.ekodi.kr','https://admin.trade.ekodi.kr'
-]);
+const ALLOWED_ORIGINS=new Set(['https://ekodi.kr']);
 const WORKSPACE_ALIASES=Object.freeze({
   'ekodi-church':'ekodichurch','ekodichurch':'ekodichurch',
   'ekodi-biz':'ekodibiz','ekodibiz':'ekodibiz',
