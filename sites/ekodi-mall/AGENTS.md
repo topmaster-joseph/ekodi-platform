@@ -13,6 +13,16 @@
 7. 제휴판매 URL은 HTTPS만 허용하고 에코디 결제로 위장하지 않는다.
 8. `dist/`는 빌드 산출물이므로 직접 편집하거나 커밋하지 않는다.
 
+## 인증·경로 강제실행 규칙
+
+1. 사용자에게 노출되는 EKODI 인증 canonical entry는 `https://ekodi.kr/auth`와 그 하위경로만 사용한다.
+2. Mall은 자체 인증센터를 만들지 않는다. `/ekodimall/**`에서 인증이 필요하면 `/auth?return_to=...`로 이동하고 인증 완료 후 최초 요청 경로로 복귀한다.
+3. 새 `auth.ekodi.kr`, `/ekodimall/auth`, 서비스별 인증 URL 의존성을 추가하지 않는다. 기존 레거시 인증 호스트는 migration compatibility 외 신규 UI 진입점으로 사용하지 않는다.
+4. 로그인된 Seller에게 로그인/가입 CTA를 다시 표시하지 않는다. `/ekodimall/seller/`는 인증 후 상품등록·상품·주문·정산 업무를 우선 표시한다.
+5. 인증(Authentication)은 중앙 `/auth`, 권한(Authorization)은 서버 권한검사, Mall 업무(Application)는 `/ekodimall/**`로 분리한다. 브라우저 표시 상태를 권한 근거로 사용하지 않는다.
+6. 모바일 320/360/390/412/430px에서 horizontal overflow가 발생하면 검증 실패로 간주한다. 고정 min-width, viewport를 넘는 카드/폼/버튼을 신규 추가하지 않는다.
+7. 인증 구현·API 토큰 검증 같은 내부 기술설명은 일반 Seller UI의 주 CTA 영역에 노출하지 않는다.
+
 ## 플랫폼 격리 규칙
 
 1. Mall 기능 작업은 원칙적으로 `sites/ekodi-mall/**` 안에서 완결한다.
