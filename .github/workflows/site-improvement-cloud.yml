@@ -158,7 +158,7 @@ jobs:
           git add -N .
           node --input-type=module <<'NODE'
           import {execFileSync} from 'node:child_process';
-          const protectedFile=/^(?:\.github\/|migrations\/|supabase\/|governance\/|deploy\/|wrangler\.|platform-route-registry\.js$|CONSTITUTION\.md$|AI_DEVELOPMENT_POLICY\.md$|AGENTS(?:\.override)?\.md$|ai-control-(?:worker|core)\.js$|ekodi-site-improvement-(?:scheduler|oidc-broker)\.js$|config\/(?:site-lifecycle-registry|.*policy)\.json$)|(?:^|\/)(?:auth|oauth|billing|payment|payments|finance|money|credential|credentials|secret|secrets|security)(?:[./_-]|$)/i;
+          const protectedFile=/^(?:\.github\/|migrations\/|supabase\/|governance\/|deploy\/|wrangler\.|platform-route-registry\.js$|CONSTITUTION\.md$|AI_DEVELOPMENT_POLICY\.md$|AGENTS(?:\.override)?\.md$|ai-control-(?:worker|core)\.js$|ekodi-site-improvement-(?:scheduler|oidc-broker)\.js$|config\/(?:site-lifecycle-registry|site-execution-enforcement|.*policy)\.json$|scripts\/validate-site-execution-enforcement\.mjs$)|(?:^|\/)(?:auth|oauth|billing|payment|payments|finance|money|credential|credentials|secret|secrets|security)(?:[./_-]|$)/i;
           const raw=execFileSync('git',['diff','--numstat'],{encoding:'utf8'}).trim();
           const files=raw?raw.split(/\r?\n/).map(line=>{const [a,d,...rest]=line.split('\t');return{filename:rest.join('\t'),additions:/^\d+$/.test(a)?Number(a):2000,deletions:/^\d+$/.test(d)?Number(d):2000};}):[];
           const protectedFiles=files.filter(f=>protectedFile.test(f.filename)).map(f=>f.filename);
@@ -191,6 +191,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          npm run validate:site-execution
           npm run validate:ui-surfaces
           npm run validate:user-surfaces
           npm run validate:shell
