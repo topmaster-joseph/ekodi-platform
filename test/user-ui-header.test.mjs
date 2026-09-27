@@ -176,6 +176,8 @@ test('user UI header/footer/language are shared user-surface-only modules',async
 
   assert.match(injector,/SHELL_USER_UI_STYLE=`\$\{SHELL_ORIGIN\}\/user-ui-shell\.css\?v=\$\{EKODI_SERVICE_MANIFEST\.shellVersion\}`/);
   assert.match(injector,/renderEkodiUserFooter/);
+  assert.match(injector,/options\?\.existingHeader!==true/);
+  assert.match(injector,/new UserChromeInjector\(serviceId,addFallbackHeader\)/);
   assert.match(injector,/data-ekodi-user-ui-style/);
   assert.match(injector,/platformRoot\?'platform':'service-local'/);
   assert.match(injector,/platformRoot\?'[^']*사용자 계정':'사이트 도구'/);
