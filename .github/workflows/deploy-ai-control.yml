@@ -73,6 +73,7 @@ on:
       - 'migrations/0095_ai_free_quota_decisions.sql'
       - 'migrations/0096_activate_ai_provider_pool.sql'
       - 'migrations/0109_low_traffic_site_improvement.sql'
+      - 'migrations/0110_site_improvement_broker_tokens.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -151,6 +152,7 @@ on:
       - 'migrations/0095_ai_free_quota_decisions.sql'
       - 'migrations/0096_activate_ai_provider_pool.sql'
       - 'migrations/0109_low_traffic_site_improvement.sql'
+      - 'migrations/0110_site_improvement_broker_tokens.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -209,6 +211,11 @@ jobs:
           grep -Fq "permission-profile: ':workspace'" .github/workflows/site-improvement-cloud.yml
           grep -Fq 'id-token: write' .github/workflows/site-improvement-cloud.yml
           grep -Fq 'audience=ekodi-site-improvement' .github/workflows/site-improvement-cloud.yml
+          grep -Fq 'Exchange OIDC for EKODI short-lived broker token' .github/workflows/site-improvement-cloud.yml
+          grep -Fq 'steps.broker_token.outputs.token' .github/workflows/site-improvement-cloud.yml
+          ! grep -Fq 'openai-api-key: ${{ steps.oidc.outputs.token }}' .github/workflows/site-improvement-cloud.yml
+          grep -Fq 'site-improvement/token/revoke' .github/workflows/site-improvement-cloud.yml
+          grep -Fq 'npm run validate:site-execution' .github/workflows/site-improvement-cloud.yml
           grep -Fq 'responses-api-endpoint: https://ekodi.kr/ai/api/site-improvement/responses' .github/workflows/site-improvement-cloud.yml
           ! grep -Eq 'secrets\.(AI_CONTROL_OPENAI_API_KEY|OPENAI_API_KEY)' .github/workflows/site-improvement-cloud.yml
           node --check ai-control/app.js
@@ -267,6 +274,7 @@ jobs:
           test -f migrations/0088_ai_commons_sources.sql
           test -f migrations/0096_activate_ai_provider_pool.sql
           test -f migrations/0109_low_traffic_site_improvement.sql
+          test -f migrations/0110_site_improvement_broker_tokens.sql
           test -f deploy/manifests/ai-control.worker.json
       - name: Build one immutable AI Control application artifact
         id: build_artifact
