@@ -24,8 +24,8 @@ test('publishing API exposes reusable channel-site bindings and site-driven chan
   assert.match(worker,/async function listSitePublishingChannels/);
   assert.match(worker,/async function resolveSiteChannelIds/);
   assert.match(worker,/\/v1\/channel-sites\/catalog/);
-  assert.match(worker,/\/v1\/channels\\\/\(\\d\+\)\\\/sites/);
-  assert.match(worker,/\/v1\/sites\\\/\(\[\^\/\]\+\)\\\/channels/);
+  assert.ok(worker.includes("const channelSiteMatch=url.pathname.match(/^\\/v1\\/channels\\/(\\d+)\\/sites$/);"));
+  assert.ok(worker.includes("const siteChannelsMatch=url.pathname.match(/^\\/v1\\/sites\\/([^/]+)\\/channels$/);"));
   assert.match(worker,/requestedSiteIds/);
   assert.match(worker,/siteChannelIds=await resolveSiteChannelIds/);
   assert.match(worker,/channelSiteBindings:siteBindingReady/);
