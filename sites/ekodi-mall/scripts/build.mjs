@@ -290,6 +290,12 @@ for (const hub of affiliateHubs) {
     DESCRIPTION: esc(hub.description),
     PROMPT: esc(hub.prompt),
     PROVIDER_KEYS: esc((hub.providerKeys || []).join(',')),
+    MODE: esc(hub.mode || 'shopping'),
+    SEARCH_LABEL: esc(hub.searchLabel || '찾는 조건을 입력하세요'),
+    RESULTS_EYEBROW: esc(hub.resultsEyebrow || 'AFFILIATE RECOMMENDATIONS'),
+    RESULTS_TITLE: esc(hub.resultsTitle || '추천'),
+    RESULTS_INTRO: esc(hub.resultsIntro || '현재 연결된 제휴망에서 조건에 맞는 후보를 확인합니다.'),
+    LOADING_LABEL: esc(hub.loadingLabel || '후보를 불러오고 있습니다.'),
     DISCLOSURE: esc(hub.disclosure),
     PAGE_URL: esc(pageUrl),
     NOTICE: esc(site.notice)

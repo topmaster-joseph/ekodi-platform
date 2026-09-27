@@ -11,7 +11,13 @@
     ],
     "disclosure": "이 페이지에는 숙박 제휴링크가 포함될 수 있으며, 예약이 이루어지면 에코디비즈가 일정 수수료를 받을 수 있습니다.",
     "published": true,
-    "path": "travel/stay"
+    "path": "travel/stay",
+    "mode": "stay",
+    "searchLabel": "지역·일정·인원·예산 등 숙소 조건을 입력하세요",
+    "resultsEyebrow": "STAY RECOMMENDATIONS",
+    "resultsTitle": "숙소 추천",
+    "resultsIntro": "현재 연결된 숙박 제휴망에서 조건에 맞는 후보를 확인합니다.",
+    "loadingLabel": "숙소 후보를 불러오고 있습니다."
   },
   {
     "id": "coupang",
@@ -25,6 +31,12 @@
       "coupang-partners"
     ],
     "disclosure": "이 페이지는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.",
-    "published": true
+    "published": true,
+    "mode": "shopping",
+    "searchLabel": "사람·상황·예산·용도 등 상품 조건을 입력하세요",
+    "resultsEyebrow": "SHOPPING RECOMMENDATIONS",
+    "resultsTitle": "상품 추천",
+    "resultsIntro": "현재 연결된 쇼핑 제휴망에서 조건에 맞는 상품 후보를 확인합니다.",
+    "loadingLabel": "상품 후보를 불러오고 있습니다."
   }
 ]
