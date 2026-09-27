@@ -720,6 +720,8 @@ jobs:
         run: node scripts/ensure-church-route-ownership.mjs
 
       - name: Candidate at 0%, verify routes, promote and auto-rollback on failure
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
 
       - name: Verify EKODI Mission LIVE production shell contract
