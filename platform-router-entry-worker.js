@@ -275,13 +275,8 @@ async function ensureLegacyOperatingSpaceMarker(response,includeBody=true){
   if(!contentType.includes('text/html'))return response;
   const headers=new Headers(response.headers);
   headers.set('x-ekodi-operating-space-label','v1');
-  if(!includeBody)return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
-  const html=await response.text();
-  headers.delete('content-length');
-  if(html.includes('data-ekodi-operating-space-label'))return new Response(html,{status:response.status,statusText:response.statusText,headers});
-  const note='<span hidden data-ekodi-operating-space-label="v1" aria-hidden="true">운영공간</span>';
-  const patched=/<body\b[^>]*>/i.test(html)?html.replace(/(<body\b[^>]*>)/i,'$1'+note):note+html;
-  return new Response(patched,{status:response.status,statusText:response.statusText,headers});
+  void includeBody;
+  return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
 
 const LEGACY_ADMIN_HOSTS=new Set(['admin.ekodi.kr','admin.biz.ekodi.kr','admin.church.ekodi.kr','admin.lab.ekodi.kr','admin.trade.ekodi.kr']);
