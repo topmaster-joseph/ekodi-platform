@@ -52,6 +52,12 @@ for (const marker of [
   'limit = 20',
   'limit = 120',
 ]) assert(wrangler.includes(marker), `wrangler security binding missing: ${marker}`);
+assert(wrangler.includes('workers_dev = false'), 'production Control API must not expose workers.dev');
+const allowedOrigins = (wrangler.match(/ALLOWED_ORIGINS\s*=\s*"([^"]*)"/)?.[1] || '').split(',').map(value => value.trim()).filter(Boolean);
+for (const forbiddenOrigin of [
+  'https://shy-thunder-39a4.topmaster-joseph.workers.dev',
+  'https://ekodi-platform.pages.dev',
+]) assert(!allowedOrigins.includes(forbiddenOrigin), `production Control API CORS must not allow non-production origin: ${forbiddenOrigin}`);
 
 for (const marker of [
   'GOOGLE_ISSUERS',
