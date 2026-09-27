@@ -514,6 +514,31 @@
     }));
   }
 
+  function setDeviceLoadState(state, detail = '') {
+    const metricIds = ['deviceMetricTotal','deviceMetricOnline','deviceMetricIssues','deviceMetricHealth','deviceMetricQueued'];
+    metricIds.forEach(id => {
+      const node = document.querySelector('#' + id);
+      if (!node) return;
+      node.dataset.state = state;
+      if (state === 'loading') node.textContent = '확인 중';
+      if (state === 'error') node.textContent = '조회 실패';
+    });
+    const host = document.querySelector('#deviceAttentionSummary');
+    if (!host) return;
+    if (state === 'loading') {
+      host.dataset.state = 'loading';
+      host.innerHTML = '<div><strong>기기 상태를 확인하고 있습니다.</strong><span>등록 기기 · Agent · 작업 큐를 순서대로 확인합니다.</span></div>';
+    } else if (state === 'error') {
+      host.dataset.state = 'error';
+      host.innerHTML = `<div><strong>기기 상태 조회에 실패했습니다.</strong><span>${escapeHtml(detail || '연결 또는 권한 상태를 확인한 뒤 다시 시도해 주세요.')}</span></div>`;
+    } else {
+      metricIds.forEach(id => {
+        const node = document.querySelector('#' + id);
+        if (node) node.dataset.state = 'ready';
+      });
+    }
+  }
+
   function renderDevices(devices) {
     currentDevices = devices;
     const list = document.querySelector('#ekodiDeviceList');
@@ -523,7 +548,7 @@
     total.textContent = String(devices.length);
     online.textContent = String(devices.filter(device => device.status === 'online').length);
     issues.textContent = String(devices.filter(device => ['stale','offline'].includes(device.status) || (Number.isFinite(Number(device.health?.score)) && Number(device.health.score) < 75)).length);
-    avgHealth.textContent = scored.length ? String(Math.round(scored.reduce((sum, device) => sum + Number(device.health.score), 0) / scored.length)) : '—';
+    avgHealth.textContent = scored.length ? String(Math.round(scored.reduce((sum, device) => sum + Number(device.health.score), 0) / scored.length)) : '미측정';
     renderAttentionSummary(devices);
     renderTypeFilters(devices);
     const visible = activeType === 'all' ? devices : devices.filter(device => (device.management?.type || 'pc') === activeType);
@@ -535,13 +560,21 @@
   async function loadDevices() {
     const list = document.querySelector('#ekodiDeviceList');
     if (!list || !sessionStorage.getItem(TOKEN_KEY)) return;
+    setDeviceLoadState('loading');
     try {
       const data = await request('/api/control/devices');
       if (Array.isArray(data.catalog) && data.catalog.length) deviceCatalog = data.catalog;
       renderDevices(data.devices || []); renderJobs(data.jobs || []);
+      setDeviceLoadState('ready');
       window.dispatchEvent(new CustomEvent('ekodi-device-control-data', { detail:{ devices:data.devices || [], jobs:data.jobs || [], generatedAt:data.generatedAt } }));
       const stamp = document.querySelector('#deviceGeneratedAt'); if (stamp) stamp.textContent = `최근 갱신 ${timeLabel(data.generatedAt)}`;
-    } catch (error) { list.innerHTML = '<div class="device-empty error"><strong>Device Control API를 불러오지 못했습니다.</strong><p></p></div>'; list.querySelector('p').textContent = error.message; }
+    } catch (error) {
+      setDeviceLoadState('error', error.message);
+      const stamp = document.querySelector('#deviceGeneratedAt'); if (stamp) stamp.textContent = '갱신 실패';
+      list.innerHTML = '<div class="device-empty error"><strong>Device Control API를 불러오지 못했습니다.</strong><p></p><button type="button" class="secondary" data-device-retry>다시 시도</button></div>';
+      list.querySelector('p').textContent = error.message;
+      list.querySelector('[data-device-retry]')?.addEventListener('click', loadDevices);
+    }
   }
 
   async function createEnrollment() {
@@ -586,11 +619,11 @@
         <div class="device-head-actions"><span id="deviceGeneratedAt">연결 상태 확인 전</span><button type="button" class="secondary" id="refreshDevices">↻ 새로고침</button></div>
       </div>
       <div class="device-metrics" aria-label="기기 핵심 현황">
-        <article><small>등록 기기</small><strong id="deviceMetricTotal">—</strong><span>전체 자산</span></article>
-        <article><small>현재 온라인</small><strong id="deviceMetricOnline">—</strong><span>Agent 응답 기준</span></article>
-        <article><small>확인 필요</small><strong id="deviceMetricIssues">—</strong><span>오프라인·지연·건강 저하</span></article>
-        <article><small>평균 건강점수</small><strong id="deviceMetricHealth">—</strong><span>진단 가능한 기기 기준</span></article>
-        <article><small>배정 대기</small><strong id="deviceMetricQueued">—</strong><span>자동 작업 큐</span></article>
+        <article><small>등록 기기</small><strong id="deviceMetricTotal">확인 중</strong><span>전체 자산</span></article>
+        <article><small>현재 온라인</small><strong id="deviceMetricOnline">확인 중</strong><span>Agent 응답 기준</span></article>
+        <article><small>확인 필요</small><strong id="deviceMetricIssues">확인 중</strong><span>오프라인·지연·건강 저하</span></article>
+        <article><small>평균 건강점수</small><strong id="deviceMetricHealth">확인 중</strong><span>진단 가능한 기기 기준</span></article>
+        <article><small>배정 대기</small><strong id="deviceMetricQueued">확인 중</strong><span>자동 작업 큐</span></article>
       </div>
       <div class="device-attention-summary" id="deviceAttentionSummary" data-state="good"><div><strong>기기 상태를 확인하는 중입니다.</strong><span>문제가 있는 기기를 우선 표시합니다.</span></div></div>
       <div class="device-type-filters" id="deviceTypeFilters" aria-label="기기 유형 필터"></div>
