@@ -671,7 +671,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     try{
       const token=await accessToken();
       const headers=token?{authorization:`Bearer ${token}`}:{};
-      const r=await fetch('https://mall-api.ekodi.kr/api/amazon/status',{headers,cache:'no-store'});
+      const r=await fetch('/ekodimall/api/amazon/status',{headers,cache:'no-store'});
       const d=await r.json().catch(()=>({}));
       if(!r.ok)throw new Error(d.error||`amazon_${r.status}`);
       const seller=d.sellerCentral||{},aws=d.aws||{},pay=d.amazonPay||{},cost=d.cost||{},policy=cost.policy||{},usage=Array.isArray(cost.usage)?cost.usage:[];
@@ -734,7 +734,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
         const fd=new FormData(approvalForm);
         const body={featureKey:String(fd.get('featureKey')||''),amountLimitUsd:Number(fd.get('amountLimitUsd')||0),reason:String(fd.get('reason')||'')};
         state('Amazon 유료기능 승인 저장 중');
-        const save=await fetch('https://mall-api.ekodi.kr/api/amazon/approvals',{method:'POST',headers:{...headers,'content-type':'application/json'},body:JSON.stringify(body)});
+        const save=await fetch('/ekodimall/api/amazon/approvals',{method:'POST',headers:{...headers,'content-type':'application/json'},body:JSON.stringify(body)});
         const out=await save.json().catch(()=>({}));
         if(!save.ok){state('승인 권한 또는 설정 확인 필요');$('pageCopy').textContent=out.error||'승인을 저장하지 못했습니다.';return}
         state('Amazon 유료기능 승인 완료');
@@ -754,7 +754,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
           bedrockPaidEnabled:fd.get('bedrockPaidEnabled')==='on'
         };
         state('Amazon 비용정책 저장 중');
-        const save=await fetch('https://mall-api.ekodi.kr/api/amazon/cost-policy',{method:'PUT',headers:{...headers,'content-type':'application/json'},body:JSON.stringify(body)});
+        const save=await fetch('/ekodimall/api/amazon/cost-policy',{method:'PUT',headers:{...headers,'content-type':'application/json'},body:JSON.stringify(body)});
         const out=await save.json().catch(()=>({}));
         if(!save.ok){state('저장 권한 또는 설정 확인 필요');$('pageCopy').textContent=out.error||'비용정책을 저장하지 못했습니다.';return}
         state('Amazon 비용정책 저장 완료');
