@@ -4,7 +4,7 @@ const demoAccounts = [];
 
 const money = value => `${Number(value||0).toLocaleString('ko-KR')}원`;
 const labels = {keep:'유지',review:'검토',cleanup:'정리 추천',attention:'확인 필요'};
-const providerStates={available:'공식 연결 가능','contract-required':'계약 필요','legal-review':'법적 검토','configured-awaiting-approval':'설정 완료·승인 대기'};
+const providerStates={available:'공식 연결 가능','contract-required':'계약 필요','legal-review':'법적 검토','security-configuration-required':'보안설정 필요','adapter-required':'승인 완료·어댑터 연결 대기','read-only-live':'조회 전용 연결됨'};
 const defaultScopes=['accounts:read','balances:read','transactions:read','autopay:read'];
 
 function escapeHtml(value){return String(value??'').replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));}
@@ -65,10 +65,15 @@ function renderProviders(readiness){
 async function loadIntegrations(){
   const status=document.querySelector('#integration-status');
   try{
-    const {response,data}=await api('/api/integrations',{method:'GET',headers:{}});
-    if(!response.ok)throw new Error('integration_status_unavailable');
-    renderProviders(data);
-    if(status)status.textContent=data.openBankingConfigured?'오픈뱅킹 어댑터: 승인 대기':'오픈뱅킹 어댑터: 계약 전 안전 대기';
+    const [integration,finance]=await Promise.all([
+      api('/api/integrations',{method:'GET',headers:{}}),
+      api('/api/finance-bridge',{method:'GET',headers:{}})
+    ]);
+    if(!integration.response.ok)throw new Error('integration_status_unavailable');
+    renderProviders(integration.data);
+    const openBanking=integration.data.openBankingReadReady?'오픈뱅킹: 조회 전용 연결됨':integration.data.contractApproved?'오픈뱅킹: 승인 후 보안연결 준비':'오픈뱅킹: 계약 전 안전 대기';
+    const financeState=finance.response.ok&&finance.data.connected?(finance.data.readerConnected?'EKODI 금융관리: 은행조회 연결':'EKODI 금융관리: 은행조회 연결 대기'):'EKODI 금융관리: 상태 확인 필요';
+    if(status)status.textContent=`${openBanking} · ${financeState}`;
   }catch{
     if(status)status.textContent='연동상태를 불러오지 못했습니다. 금융 실행 기능은 계속 차단되어 있습니다.';
   }
