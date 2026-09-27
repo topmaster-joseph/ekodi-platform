@@ -307,15 +307,19 @@
 
   function renderSummary() {
     if (!shell) return;
-    const summary = directory.summary || {};
+    const members = loaded ? userMembers() : [];
+    const uniqueAccounts = loaded ? new Set(members.map(member => String(member.email || '').trim().toLowerCase()).filter(Boolean)).size : '—';
+    const active = loaded ? members.filter(member => member.status === 'active').length : '—';
+    const pending = loaded ? members.filter(member => member.status === 'pre_registered').length : '—';
+    const disabled = loaded ? members.filter(member => member.status === 'disabled').length : 0;
+    const expired = loaded ? members.filter(member => member.status === 'expired').length : 0;
+    const disabledExpired = loaded ? disabled + expired : '—';
     shell.summary.replaceChildren();
-    const value = key => loaded ? Number(summary[key] || 0) : '—';
-    const disabledExpired = loaded ? Number(summary.disabled || 0) + Number(summary.expired || 0) : '—';
     const cards = [
-      ['전체 계정', value('uniqueGoogleAccounts'), '중복 이메일은 하나의 계정으로 집계'],
-      ['활성', value('active'), '현재 인증되어 사용할 수 있는 멤버십'],
-      ['인증 대기', value('pending'), 'Google 인증이 아직 완료되지 않은 멤버십'],
-      ['중지·만료', disabledExpired, loaded ? `중지 ${summary.disabled || 0} · 만료 ${summary.expired || 0}` : '권한 확인 후 표시'],
+      ['전체 계정', uniqueAccounts, '현재 사용자 역할 범위의 중복 이메일 제거 계정'],
+      ['활성', active, '현재 인증되어 사용할 수 있는 사용자 멤버십'],
+      ['인증 대기', pending, 'Google 인증이 아직 완료되지 않은 사용자 멤버십'],
+      ['중지·만료', disabledExpired, loaded ? `중지 ${disabled} · 만료 ${expired}` : '권한 확인 후 표시'],
     ];
     for (const [label, cardValue, note] of cards) {
       const card = document.createElement('article');
