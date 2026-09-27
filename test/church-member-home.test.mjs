@@ -28,3 +28,11 @@ test('apex router owns church member home before public workspace fallback', asy
   assert.match(html,/에코디교회 마이페이지/);
   assert.doesNotMatch(html,/WELCOME TO EKODI CHURCH/);
 });
+
+
+test('member home routing precedes canonical public routing', async () => {
+  const source=await (await import('node:fs/promises')).readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
+  const member=source.indexOf("isChurchMemberHomePath(url.pathname)");
+  const canonical=source.indexOf("const canonical=await routeCanonicalSurface");
+  assert.ok(member>=0&&canonical>member,'church member home must route before canonical public redirect');
+});
