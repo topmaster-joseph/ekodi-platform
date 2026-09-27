@@ -281,7 +281,8 @@ const checkoutHtml = fill(checkoutTemplate, {
 await write('checkout/index.html', checkoutHtml);
 
 for (const hub of affiliateHubs) {
-  const pageUrl = `${baseUrl}/${hub.id}/`;
+  const hubPath = hub.path || hub.id;
+  const pageUrl = `${baseUrl}/${hubPath}/`;
   const html = fill(affiliateHubTemplate, {
     NAME: esc(hub.name),
     EYEBROW: esc(hub.eyebrow),
@@ -293,7 +294,7 @@ for (const hub of affiliateHubs) {
     PAGE_URL: esc(pageUrl),
     NOTICE: esc(site.notice)
   });
-  await write(`${hub.id}/index.html`, html);
+  await write(`${hubPath}/index.html`, html);
 }
 
 for (const policy of pages.policies || []) {
@@ -316,7 +317,7 @@ const urls = [
   ...stores.map((store) => `${baseUrl}/stores/${store.slug}/`),
   ...products.map((product) => `${baseUrl}/products/${product.slug}/`),
   ...(pages.policies || []).map((policy) => `${baseUrl}/pages/${policy.slug}/`),
-  ...affiliateHubs.map((hub) => `${baseUrl}/${hub.id}/`)
+  ...affiliateHubs.map((hub) => `${baseUrl}/${hub.path || hub.id}/`)
 ];
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((url) => `  <url><loc>${esc(url)}</loc></url>`).join('\n')}\n</urlset>\n`;
 await write('sitemap.xml', sitemap);

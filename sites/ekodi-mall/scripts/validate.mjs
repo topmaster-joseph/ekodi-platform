@@ -48,12 +48,17 @@ internalPath(site?.platform?.sellerStudioHref, 'site.platform.sellerStudioHref')
 internalPath(site?.platform?.basketHref, 'site.platform.basketHref');
 
 const affiliateHubIds = new Set();
+const affiliateHubPaths = new Set();
 for (const [index, hub] of affiliateHubs.entries()) {
   const label = `affiliateHubs[${index}]`;
   required(hub.id, `${label}.id`); required(hub.name, `${label}.name`); required(hub.disclosure, `${label}.disclosure`);
   if (!/^[a-z0-9-]+$/.test(hub.id || '')) errors.push(`${label}.id must use lowercase letters, numbers, and hyphens`);
   if (affiliateHubIds.has(hub.id)) errors.push(`${label}.id duplicates ${hub.id}`);
   affiliateHubIds.add(hub.id);
+  const hubPath = hub.path || hub.id;
+  if (!/^[a-z0-9-]+(?:\/[a-z0-9-]+)*$/.test(hubPath)) errors.push(`${label}.path must be a lowercase internal path`);
+  if (affiliateHubPaths.has(hubPath)) errors.push(`${label}.path duplicates ${hubPath}`);
+  affiliateHubPaths.add(hubPath);
   if (!Array.isArray(hub.providerKeys) || hub.providerKeys.length === 0) errors.push(`${label}.providerKeys must contain at least one provider key`);
   if (typeof hub.published !== 'boolean') errors.push(`${label}.published must be boolean`);
 }
