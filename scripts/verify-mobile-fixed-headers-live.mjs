@@ -20,7 +20,13 @@ async function get(raw,{redirect='follow'}={}){
     return {ok:false,status:0,text:'',headers:new Headers(),url:String(raw),error:String(error?.message||error)};
   }finally{clearTimeout(timer)}
 }
+const PUBLIC_HEADER_FORBIDDEN=['운영공간','operating space','workspace operating space','data-ekodi-operating-space-label'];
 function need(result,label,needle,errors){if(!result.text.includes(needle))errors.push(`${label}:missing:${needle}`)}
+function headerMarkup(result){return result.text.match(/<header\\b[\\s\\S]*?<\\/header>/i)?.[0]||''}
+function forbidPublicHeader(result,label,errors){
+  const header=headerMarkup(result).toLowerCase();
+  for(const needle of PUBLIC_HEADER_FORBIDDEN)if(header.includes(String(needle).toLowerCase()))errors.push(`${label}:forbidden-public-header:${needle}`);
+}
 function http(result,label,errors){if(!result.ok)errors.push(`${label}:http-${result.status||'network'}`)}
 function readabilityObserved(result){
   const shellHeader=String(result.headers.get('x-ekodi-shell')||'').toLowerCase();
@@ -67,16 +73,16 @@ async function audit(){
   if(productionManifest?.services?.some(service=>service.shellIntegration==='pending'))errors.push('shell-manifest:pending-integration');
 
   const canonicalUserSurfaces=[
-    ['ekodibiz','https://ekodi.kr/ekodibiz'],
-    ['church','https://ekodi.kr/ekodichurch'],
-    ['my','https://ekodi.kr/my/'],
-    ['business','https://ekodi.kr/business'],
-    ['trade','https://ekodi.kr/ekodibiz/trade'],
-    ['insurance','https://ekodi.kr/insurance'],
-    ['lab','https://ekodi.kr/ekodilab'],
-    ['mall','https://ekodi.kr/ekodimall'],
+    ['ekodibiz','https://ekodi.kr/ekodibiz',true],
+    ['church','https://ekodi.kr/ekodichurch',true],
+    ['my','https://ekodi.kr/my/',false],
+    ['business','https://ekodi.kr/business',false],
+    ['trade','https://ekodi.kr/ekodibiz/trade',true],
+    ['insurance','https://ekodi.kr/insurance',true],
+    ['lab','https://ekodi.kr/ekodilab',true],
+    ['mall','https://ekodi.kr/ekodimall',true],
   ];
-  for(const [id,url] of canonicalUserSurfaces){
+  for(const [id,url,publicBrandSurface] of canonicalUserSurfaces){
     const result=await get(url);
     http(result,`service:${id}`,errors);
     if(!result.ok)continue;
@@ -84,6 +90,9 @@ async function audit(){
     const shellInBody=result.text.includes('ekodi.kr/shell/shell.js')||result.text.includes('data-ekodi-shell');
     const tenantReadability=String(result.headers.get('x-ekodi-tenant-readability')||'').toLowerCase()==='v1'||result.text.includes('data-ekodi-tenant-readability="v1"');
     if(!shellInBody&&shellHeader!=='v2'&&!tenantReadability)errors.push(`service:${id}:canonical-user-chrome-not-observed`);
+    if(publicBrandSurface){
+      forbidPublicHeader(result,`service:${id}`,errors);
+    }
   }
 
   const tenants=[
@@ -98,16 +107,22 @@ async function audit(){
     need(result,`tenant:${id}`,'data-ekodi-tenant-readability="v1"',errors);
     need(result,`tenant:${id}`,'data-ekodi-fixed-header',errors);
     need(result,`tenant:${id}`,'https://ekodi.kr/shell/mobile-fixed-header.js',errors);
+    forbidPublicHeader(result,`tenant:${id}`,errors);
   }
 
-  const [cgmaRoot,cgmaAi,cgmaAdmin]=await Promise.all([
+  const [cgmaRoot,cgmaAi,cgmaAdmin,cheonggyeRoot]=await Promise.all([
     get('https://ekodi.kr/cgma'),
     get('https://ekodi.kr/cgma/market-ai'),
     get('https://ekodi.kr/cgma/admin'),
+    get('https://ekodi.kr/cheonggye'),
   ]);
   http(cgmaRoot,'cgma-root',errors);
   need(cgmaRoot,'cgma-root','청계면상인회',errors);
   requireReadability(cgmaRoot,'cgma-root',errors);
+  forbidPublicHeader(cgmaRoot,'cgma-root',errors);
+  http(cheonggyeRoot,'cheonggye-root',errors);
+  need(cheonggyeRoot,'cheonggye-root','청계잇다',errors);
+  forbidPublicHeader(cheonggyeRoot,'cheonggye-root',errors);
   http(cgmaAi,'cgma-market-ai',errors);
   need(cgmaAi,'cgma-market-ai','CHEONGGYE MARKETING AI',errors);
   http(cgmaAdmin,'cgma-admin',errors);

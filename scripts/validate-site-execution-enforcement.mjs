@@ -3,12 +3,13 @@ import { readFile } from 'node:fs/promises';
 const readJson=async path=>JSON.parse((await readFile(new URL(`../${path}`,import.meta.url),'utf8')).replace(/^\uFEFF/,''));
 const read=async path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
-const [policy,registry,pkg,scheduler,workflow]=await Promise.all([
+const [policy,registry,pkg,scheduler,workflow,liveVerifier]=await Promise.all([
   readJson('config/site-execution-enforcement.json'),
   readJson('config/site-lifecycle-registry.json'),
   readJson('package.json'),
   read('ekodi-site-improvement-scheduler.js'),
   read('.github/workflows/ekodi-ai-orchestration-gate.yml'),
+  read('scripts/verify-mobile-fixed-headers-live.mjs'),
 ]);
 
 const failures=[];
@@ -59,11 +60,16 @@ for(const site of sites){
     const parsed=new URL(canonical);
     const root=parsed.pathname.replace(/^\/+|\/+$/g,'');
     if(!root||root.includes('/'))fail(`${site.id}: canonical workspace site must own one root slug before descendant services`);
+    const liveTarget=canonical.replace(/\/+$/,'');
+    if(!liveVerifier.includes(liveTarget))fail(`${site.id}: canonical workspace site must be covered by the live public-header verifier`);
   }else if(!pendingStates.has(String(site?.migrationState||''))){
     fail(`${site.id}: missing canonicalUrl without an explicit pending-canonical state`);
   }
 }
 if(canonicalCount<1)fail('no canonical workspace sites are covered by enforcement');
+if(!liveVerifier.includes('PUBLIC_HEADER_FORBIDDEN'))fail('live verifier must enforce the public-header forbidden-label set');
+for(const label of policy.publicHeader?.forbiddenLabels||[])if(!liveVerifier.includes(label))fail(`live verifier missing public-header forbidden label: ${label}`);
+if(!liveVerifier.includes('data-ekodi-operating-space-label'))fail('live verifier must reject the legacy operating-space marker from public headers');
 
 if(registry.workspaceServicePolicy?.canonicalPattern!==policy.canonicalAddressing?.descendantPattern)fail('workspace service canonical pattern must match recursive enforcement policy');
 if(policy.canonicalAddressing?.adminPattern!=='https://ekodi.kr/{slug}/admin')fail('site admin canonical pattern drifted');

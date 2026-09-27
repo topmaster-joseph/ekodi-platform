@@ -17,7 +17,11 @@ test('all canonical workspace sites inherit one recursive execution policy',()=>
   assert.equal(registry.enforcement.policy,'config/site-execution-enforcement.json');
   const pending=new Set(policy.exceptions.pendingCanonicalStates);
   const canonical=registry.existingWorkspaceSites.filter(site=>site.class==='workspace_user_site'&&site.canonicalUrl);
+  const liveVerifier=read('scripts/verify-mobile-fixed-headers-live.mjs');
   assert.ok(canonical.length>=8);
+  assert.match(liveVerifier,/PUBLIC_HEADER_FORBIDDEN/);
+  for(const label of policy.publicHeader.forbiddenLabels)assert.ok(liveVerifier.includes(label),label);
+  for(const site of canonical)assert.ok(liveVerifier.includes(site.canonicalUrl.replace(/\/+$/,'')),site.id);
   for(const site of registry.existingWorkspaceSites.filter(site=>site.class==='workspace_user_site')){
     assert.notEqual(site.enforcementOptOut,true,site.id);
     if(site.canonicalUrl)assert.ok(site.canonicalUrl.startsWith('https://ekodi.kr/'),site.id);
