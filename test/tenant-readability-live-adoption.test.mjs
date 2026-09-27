@@ -16,6 +16,8 @@ test('tenant readability injector stays brand-neutral and idempotent',async()=>{
   assert.match(injector,/data-ekodi-fixed-header/);
   assert.match(injector,/OPERATING_SPACE_LABEL_HEADER='x-ekodi-operating-space-label'/);
   assert.match(injector,/data-ekodi-operating-space-label/);
+  assert.match(injector,/span hidden data-ekodi-operating-space-label/);
+  assert.doesNotMatch(injector,/<aside class=\"ekodi-operating-space-note\" data-ekodi-operating-space-label/);
   assert.match(injector,/options\?\.operatingSpace!==false/);
   assert.match(injector,/forceOperatingSpace=operatingSpace&&options\?\.forceOperatingSpace===true/);
   assert.match(injector,/alreadyReadable&&!forceOperatingSpace/);
