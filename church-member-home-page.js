@@ -1,17 +1,22 @@
 const MEMBER_HOME='/ekodichurch/my';
+const MEMBER_HOME_CANONICAL='/ekodichurch/my/';
 
 export function isChurchMemberHomePath(pathname){
-  const path=String(pathname||'').replace(/\/+$/,'')||'/';
-  return path===MEMBER_HOME;
+  return String(pathname||'')===MEMBER_HOME;
 }
 
 export function churchMemberHomePage(request=new Request('https://ekodi.kr/ekodichurch/my')){
-  const html='<!doctype html><html lang="ko" data-ekodi-ui="USER" data-ekodi-surface="church-member-home"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><title>에코디교회 마이페이지</title><link rel="stylesheet" href="/church-member-home.css"></head><body><header><a href="/ekodichurch/">에코디교회</a><nav><a href="/ekodichurch/">교회 홈</a><a href="/my/?from=church">My EKODI</a></nav></header><main><section><p>MY CHURCH</p><h1>교회에서 필요한 것만 이어갑니다.</h1><p>예배와 말씀, 공동체 활동은 에코디교회 문맥에서 확인하고 개인의 다른 활동과 서비스는 My EKODI에서 이어갑니다.</p><div><a class="primary" href="/my/?from=church">내 교회 공간 열기</a></div></section><section><h2>교회 바로가기</h2><div class="grid"><a href="/ekodichurch/#worship"><b>예배</b><span>주일예배와 토요모임</span></a><a href="/ekodichurch/live/"><b>실시간 예배</b><span>교회 라이브 방송</span></a><a href="/bible"><b>말씀대화</b><span>말씀과 묵상</span></a><a href="/ekodichurch/history"><b>지나온 길</b><span>교회 역사와 기록</span></a><a href="/my/?from=church"><b>내 교회 공간</b><span>My EKODI에서 로그인 후 이용</span></a></div></section><aside><strong>사용자 화면과 운영자 화면을 분리합니다.</strong><span>목양·돌봄·관리자 자료는 이 페이지에 노출하지 않습니다.</span><a class="staff-link" href="/ekodichurch/admin">운영자용 교회 관리자 →</a></aside></main><footer>EKODI CHURCH · USER SURFACE</footer></body></html>';
-  const headers=new Headers({'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-frame-options':'DENY','referrer-policy':'no-referrer','x-robots-tag':'noindex, nofollow, noarchive','content-security-policy':"default-src 'self'; style-src 'self'; script-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",'x-ekodi-route':'church-member-home','x-ekodi-authority-scope':'user'});
-  return new Response(request.method==='HEAD'?null:html,{status:200,headers});
-}
-
-export function churchMemberHomeCss(){
-  const css=':root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17211b;background:#f4f7f2}*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#f8fbf6,#eef3ec);min-height:100vh}header,main,footer{width:min(1040px,calc(100% - 32px));margin:auto}header{min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:18px}header>a{font-weight:900;color:inherit;text-decoration:none}nav{display:flex;gap:12px}nav a{color:#536157;text-decoration:none}main>section:first-child{padding:58px 0 34px}h1{font-size:clamp(34px,6vw,56px);letter-spacing:-.05em;margin:12px 0}p{color:#657168;line-height:1.7}.primary{display:inline-flex;background:#24482f;color:#fff;padding:11px 16px;border-radius:999px;text-decoration:none;font-weight:800;margin-right:8px}section>div>a:not(.primary){display:inline-flex;color:#27402d;padding:11px 14px;text-decoration:none}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:10px 0 34px}.grid a{display:flex;flex-direction:column;gap:8px;min-height:135px;padding:20px;background:#fff;border:1px solid #dce5d9;border-radius:18px;color:inherit;text-decoration:none}.grid span,aside{color:#6b776f}aside{display:grid;gap:6px;background:#e8f0e5;padding:18px 20px;border-radius:16px;margin-bottom:42px}aside strong{color:#27402d}.staff-link{justify-self:start;margin-top:6px;color:#536157;text-decoration:none;font-size:14px;font-weight:700}footer{border-top:1px solid #dfe7dc;padding:24px 0 34px;color:#7b887e;font-size:13px}@media(max-width:760px){.grid{grid-template-columns:1fr 1fr}}@media(max-width:520px){.grid{grid-template-columns:1fr}header{align-items:flex-start;padding-top:16px}}';
-  return new Response(css,{headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}});
+  const source=new URL(request.url);
+  const target=new URL(MEMBER_HOME_CANONICAL,source.origin);
+  target.search=source.search;
+  const headers=new Headers({
+    location:target.href,
+    'cache-control':'no-store',
+    'x-content-type-options':'nosniff',
+    'referrer-policy':'no-referrer',
+    'x-robots-tag':'noindex, nofollow, noarchive',
+    'x-ekodi-route':'church-member-canonical-redirect',
+    'x-ekodi-authority-scope':'user'
+  });
+  return new Response(null,{status:308,headers});
 }
