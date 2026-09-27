@@ -195,7 +195,7 @@
     section.innerHTML = `
       <div class="admin-browser-diagnostic-head">
         <div><p class="kicker">CURRENT ADMIN BROWSER</p><h3>현재 관리자 브라우저 진단</h3><p>이 브라우저와 admin.ekodi.kr 웹 환경만 확인합니다. Windows 설정, 다른 사이트 데이터, 개인 파일에는 접근하지 않습니다.</p></div>
-        <span data-browser-diagnostic-stamp>아직 진단하지 않음</span>
+        <span data-browser-diagnostic-stamp>자동 진단 준비</span>
       </div>
       <div class="admin-browser-diagnostic-actions">
         <button type="button" class="primary" data-browser-diagnose>현재 브라우저 진단</button>
@@ -206,7 +206,8 @@
     const metrics = panel.querySelector('.device-metrics');
     if (metrics) metrics.insertAdjacentElement('afterend', section); else panel.prepend(section);
 
-    section.querySelector('[data-browser-diagnose]').addEventListener('click', async event => {
+    const diagnoseButton = section.querySelector('[data-browser-diagnose]');
+    diagnoseButton.addEventListener('click', async event => {
       const button = event.currentTarget;
       button.disabled = true;
       section.querySelector('[data-browser-diagnostic-status]').textContent = '현재 브라우저를 진단하고 있습니다…';
@@ -221,6 +222,7 @@
       }
     });
     section.querySelector('[data-browser-safe-optimize]').addEventListener('click', () => safeOptimize(section));
+    queueMicrotask(() => diagnoseButton.click());
   }
 
   install();
