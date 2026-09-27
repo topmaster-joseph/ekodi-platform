@@ -96,3 +96,18 @@ test('Shared Site manifest guards only the Church member canonical redirect',asy
   assert.ok(member.headerExpect?.includes('x-ekodi-authority-scope: user'));
   assert.equal(member.expect,undefined);
 });
+
+
+test('pre-candidate Church route repair defers exact member response verification',async()=>{
+  const source=await readFile(new URL('../scripts/ensure-church-route-ownership.mjs',import.meta.url),'utf8');
+  const start=source.indexOf('export async function ensureChurchRouteOwnership');
+  const end=source.indexOf('if(process.argv[1]',start);
+  const ensureBody=source.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.doesNotMatch(ensureBody,/await verifyRedirect\(/);
+  assert.match(ensureBody,/canonical redirect response verification deferred to guarded candidate deployment/);
+  const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const member=manifest.worker.requests.find(item=>item.url===CHURCH_ROUTE_CONTRACT.memberUrl);
+  assert.deepEqual(member?.statuses,[308]);
+  assert.ok(member?.headerExpect?.includes('location: '+CHURCH_ROUTE_CONTRACT.memberCanonicalUrl));
+});
