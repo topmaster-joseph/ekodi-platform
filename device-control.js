@@ -401,8 +401,8 @@ function sanitizeProviderPublicBase(value, env) {
   const raw=safeText(value,300); if(!raw)return '';
   let url; try{url=new URL(raw);}catch{return '';}
   if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash)return '';
-  const suffixes=String(env.DEVICE_BRIDGE_ALLOWED_HOST_SUFFIXES||'.ekodi.kr').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
-  const host=url.hostname.toLowerCase(); if(!suffixes.some(x=>host===x.replace(/^\./,'')||host.endsWith(x)))return '';
+  const allowedHosts=String(env.DEVICE_BRIDGE_ALLOWED_HOSTS||'ekodi.kr').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
+  const host=url.hostname.toLowerCase(); if(!allowedHosts.includes(host))return '';
   url.pathname=url.pathname.replace(/\/$/,''); return url.toString().replace(/\/$/,'');
 }
 function sanitizeTapoProviderDevices(rawDevices,bridgeId){
