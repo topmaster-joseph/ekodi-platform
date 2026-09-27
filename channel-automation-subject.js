@@ -92,7 +92,8 @@ export async function channelAutomationActor(request, env) {
 function clean(value, max = 100) { return String(value || '').trim().slice(0, max); }
 function workspaceMatch(actor, key) {
   const value = clean(key, 120).toLowerCase();
-  return actor.contexts.find(item => item.workspaceId.toLowerCase() === value || item.workspaceSlug === value || item.workspaceKey.toLowerCase() === value) || null;
+  const candidates=new Set(tenantKeyCandidates(value));
+  return actor.contexts.find(item => item.workspaceId.toLowerCase() === value || candidates.has(item.workspaceSlug) || item.workspaceKey.toLowerCase() === value) || null;
 }
 
 export async function resolveChannelAutomationSubject(env, actor, type, key) {
