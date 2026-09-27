@@ -56,8 +56,8 @@ test('Mall admin exposes the canonical Amazon free-first cost center', async () 
   const admin = await readFile(new URL('../workspace-admin-page.js', import.meta.url),'utf8');
   assert.match(admin,/\['amazon','Amazon'\]/);
   assert.match(admin,/if\(section==='amazon'\)return amazonAdmin\(\)/);
-  assert.match(admin,/https:\/\/mall-api\.ekodi\.kr\/api\/amazon\/status/);
-  assert.match(admin,/https:\/\/mall-api\.ekodi\.kr\/api\/amazon\/cost-policy/);
+  assert.match(admin,/\/ekodimall\/api\/amazon\/status/);
+  assert.match(admin,/\/ekodimall\/api\/amazon\/cost-policy/);
   assert.match(admin,/Amazon · AWS 무료우선 비용센터/);
   assert.match(admin,/무료우선 강제/);
   assert.match(admin,/유료 AWS 허용/);
