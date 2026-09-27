@@ -324,6 +324,223 @@
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/directory",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"module\":{\"id\":\"directory\"",
+          "\"items\":"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/directory/admin",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "REGION_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/commerce",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"module\":{\"id\":\"commerce\"",
+          "\"items\":"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/commerce/admin",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "REGION_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/events",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"module\":{\"id\":\"events\"",
+          "\"items\":"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/events/admin",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "REGION_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/jobs",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"module\":{\"id\":\"jobs\"",
+          "\"items\":"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/jobs/admin",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "REGION_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/sharing",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"module\":{\"id\":\"sharing\"",
+          "\"items\":"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/sharing/admin",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "REGION_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/broadcast",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"module\":{\"id\":\"broadcast\"",
+          "\"items\":"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/broadcast/admin",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "REGION_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/proposals",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"module\":{\"id\":\"proposals\"",
+          "\"items\":"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/proposals/admin",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "REGION_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
       }
     ]
   }
