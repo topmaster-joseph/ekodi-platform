@@ -22,7 +22,7 @@ async function get(raw,{redirect='follow'}={}){
 }
 const PUBLIC_HEADER_FORBIDDEN=['운영공간','operating space','workspace operating space','data-ekodi-operating-space-label'];
 function need(result,label,needle,errors){if(!result.text.includes(needle))errors.push(`${label}:missing:${needle}`)}
-function headerMarkup(result){return result.text.match(/<header\\b[\\s\\S]*?<\\/header>/i)?.[0]||''}
+function headerMarkup(result){return result.text.match(/<header\b[\s\S]*?<\/header>/i)?.[0]||''}
 function forbidPublicHeader(result,label,errors){
   const header=headerMarkup(result).toLowerCase();
   for(const needle of PUBLIC_HEADER_FORBIDDEN)if(header.includes(String(needle).toLowerCase()))errors.push(`${label}:forbidden-public-header:${needle}`);
