@@ -4,6 +4,8 @@ import { readFile } from 'node:fs/promises';
 import {
   assertProductionAccountBoundary,
   classifyQuotaState,
+  detectWorkersPaidPlan,
+  cloudflareUsageWindow,
   isQuotaCircuitBreak
 } from '../scripts/cloudflare-quota-guard-lib.mjs';
 
@@ -14,6 +16,26 @@ test('quota states enforce 70 percent warning and 90 percent protection', () => 
   const exhausted = classifyQuotaState({ requests: 100000, limit: 100000, warningRatio: 0.7, protectRatio: 0.9 });
   assert.equal(exhausted.state, 'exhausted');
   assert.equal(exhausted.skipNonessential, true);
+});
+
+test('Workers Paid detection is conservative and usage windows switch from day to month', () => {
+  assert.equal(detectWorkersPaidPlan([{
+    state:'Paid',
+    rate_plan:{public_name:'Workers Paid',sets:['workers']}
+  }]), true);
+  assert.equal(detectWorkersPaidPlan([{
+    state:'Paid',
+    rate_plan:{public_name:'Workers Free',sets:['workers']}
+  }]), false);
+  assert.equal(detectWorkersPaidPlan([]), false);
+
+  const now=new Date('2026-09-28T02:00:00.000Z');
+  const free=cloudflareUsageWindow({paid:false,now});
+  const paid=cloudflareUsageWindow({paid:true,now});
+  assert.equal(free.periodKind,'day');
+  assert.equal(free.start,'2026-09-28T00:00:00.000Z');
+  assert.equal(paid.periodKind,'month');
+  assert.equal(paid.start,'2026-09-01T00:00:00.000Z');
 });
 
 test('production account cannot resolve to development account', () => {
