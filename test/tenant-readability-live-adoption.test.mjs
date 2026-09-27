@@ -55,9 +55,10 @@ test('live mobile verifier checks canonical apex tenant paths only',async()=>{
   assert.ok(origins.every(origin=>origin==='https://ekodi.kr'));
   assert.match(verifier,/tenant-readability-css/);
   assert.match(verifier,/live-readability-not-observed/);
-  assert.match(verifier,/function forbid\(result,label,needle,errors\)/);
-  assert.match(verifier,/forbid\(cgmaRoot,'cgma-root','운영공간',errors\)/);
-  assert.match(verifier,/forbid\(cheonggyeRoot,'cheonggye-root','운영공간',errors\)/);
+  assert.match(verifier,/PUBLIC_HEADER_FORBIDDEN/);
+  assert.match(verifier,/function forbidPublicHeader\(result,label,errors\)/);
+  assert.match(verifier,/forbidPublicHeader\(cgmaRoot,'cgma-root',errors\)/);
+  assert.match(verifier,/forbidPublicHeader\(cheonggyeRoot,'cheonggye-root',errors\)/);
   assert.match(verifier,/publicBrandSurface/);
 });
 
