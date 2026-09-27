@@ -2452,10 +2452,9 @@
           "recipientAccountNumber",
           "수취계좌 전체번호"
         ],
-        "headerExpect": [
-          "x-ekodi-route: admin-fallback-asset"
-        ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "candidateVerify": true,
+        "candidateVerifyReason": "Static asset body is verified through the candidate version override; x-ekodi-route is not emitted for asset-first delivery."
       },
       {
         "url": "https://ekodi.kr/ekodimission/admin/finance",
