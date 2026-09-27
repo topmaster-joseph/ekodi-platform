@@ -147,3 +147,109 @@ body.admin-compact .campus-empty-state[hidden]{display:none!important}
   body.admin-compact .campus-homepage-notice{align-items:flex-start!important}
   body.admin-compact .campus-homepage-preview{overflow-wrap:anywhere!important}
 }
+
+
+/* Site directory mode: the top category bar owns classification.
+   The center surface shows only site-name buttons; detailed homepage controls
+   appear only after the explicit "첫화면 설정" action is opened. */
+body.admin-compact .campus-table-wrap.campus-groups-wrap{
+  background:#fff!important;
+  padding:18px!important;
+}
+body.admin-compact .campus-groups-grid{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(210px,1fr))!important;
+  gap:12px!important;
+  align-items:stretch!important;
+}
+body.admin-compact .campus-group-card,
+body.admin-compact .campus-group-list{
+  display:contents!important;
+}
+body.admin-compact .campus-group-card[hidden],
+body.admin-compact .campus-site-item[hidden]{
+  display:none!important;
+}
+body.admin-compact .campus-group-head{
+  display:none!important;
+}
+body.admin-compact .campus-site-item{
+  display:block!important;
+  min-width:0!important;
+  min-height:0!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+body.admin-compact .campus-site-item:hover,
+body.admin-compact .campus-site-item.is-planned,
+body.admin-compact .campus-site-item.is-preparing,
+body.admin-compact .campus-site-item.is-beta,
+body.admin-compact .campus-site-item.is-planned:hover,
+body.admin-compact .campus-site-item.is-preparing:hover,
+body.admin-compact .campus-site-item.is-beta:hover{
+  background:transparent!important;
+}
+body.admin-compact .campus-site-admin-button{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:10px!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:56px!important;
+  padding:14px 16px!important;
+  border:1px solid #d5e0ea!important;
+  border-radius:12px!important;
+  background:#fff!important;
+  color:#20364c!important;
+  font-size:15px!important;
+  line-height:1.35!important;
+  font-weight:800!important;
+  text-align:left!important;
+  text-decoration:none!important;
+  white-space:normal!important;
+  word-break:keep-all!important;
+  cursor:pointer!important;
+  box-shadow:0 3px 10px rgba(35,55,75,.04)!important;
+}
+body.admin-compact .campus-site-admin-button::after{
+  content:'›';
+  margin-left:auto;
+  flex:0 0 auto;
+  font-size:20px;
+  line-height:1;
+  opacity:.55;
+}
+body.admin-compact .campus-site-admin-button:hover{
+  border-color:#9fc1de!important;
+  background:#f7fbff!important;
+  color:#0b5cab!important;
+}
+body.admin-compact .campus-site-admin-button:focus-visible{
+  outline:3px solid #b7daf8!important;
+  outline-offset:2px!important;
+}
+body.admin-compact .campus-site-button-stage{
+  display:inline-flex!important;
+  align-items:center!important;
+  min-height:22px!important;
+  padding:3px 7px!important;
+  border:1px solid #d8e2eb!important;
+  border-radius:999px!important;
+  background:#f4f7fa!important;
+  color:#64778a!important;
+  font-size:11px!important;
+  line-height:1!important;
+  font-weight:750!important;
+  white-space:nowrap!important;
+}
+body.admin-compact .campus-homepage-controls{
+  margin-top:8px!important;
+}
+@media (max-width:760px){
+  body.admin-compact .campus-table-wrap.campus-groups-wrap{padding:12px!important}
+  body.admin-compact .campus-groups-grid{grid-template-columns:1fr!important;gap:10px!important}
+  body.admin-compact .campus-site-admin-button{min-height:52px!important;padding:13px 14px!important;font-size:15px!important}
+}

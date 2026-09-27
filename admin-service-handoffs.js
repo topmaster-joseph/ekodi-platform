@@ -109,7 +109,7 @@ function upgradeCampusRow(row){
   if(manage){
     manage.dataset.serviceAdminHandoff='true';
     manage.dataset.serviceAdminUrl=adminUrl;
-    manage.textContent='관리 ↗';
+    if(manage.dataset.campusSiteButton!=='true')manage.textContent='관리 ↗';
     manage.setAttribute('aria-label',`${descriptor.name} 관리자 열기`);
   }
 }

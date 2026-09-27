@@ -35,6 +35,7 @@ test('superadmin service handoff catalog preserves the canonical seven-area menu
 
 test('service and subsite admin catalog uses only ekodi.kr path-owned /admin addresses',()=>{
   assert.ok(ADMIN_SERVICE_CATALOG.length>=35);
+  assert.equal(canonicalServiceAdminPath(ADMIN_SERVICE_CATALOG.find(item=>item.id==='books')?.basePath),'/ekodibooks/admin');
   const ids=new Set();
   const adminPaths=new Set();
   for(const item of ADMIN_SERVICE_CATALOG){
@@ -62,6 +63,7 @@ test('machine site hierarchy is represented in the superadmin handoff catalog',(
 
 test('campus service names hand off to canonical owner admin instead of duplicating CRUD',()=>{
   assert.match(handoffSource,/data-service-admin-name/);
+  assert.match(handoffSource,/dataset\.campusSiteButton!=='true'/);
   assert.match(handoffSource,/location\.assign\(url\)/);
   assert.doesNotMatch(handoffSource,/서비스 관리자/);
   assert.match(handoffSource,/querySelector\('#ekodiServiceAdminMenu'\)\?\.remove/);

@@ -22,6 +22,7 @@ test('Site Structure renders one shared list for operations and homepage present
   assert.match(homepage, /document\.querySelector\('#campusPanel'\)/);
   assert.match(homepage, /targets\.add\('sites'\)/);
   assert.match(homepage, /querySelectorAll\('#campusSiteGroups \.campus-site-item'\)/);
+  assert.match(homepage, /row\.dataset\.siteName \|\| row\.querySelector\('\.campus-site-admin-button'\)/);
   assert.match(homepage, /EKODI\.KR 첫화면 비대상/);
   assert.doesNotMatch(homepage, /homepage-admin-grid/);
 });
