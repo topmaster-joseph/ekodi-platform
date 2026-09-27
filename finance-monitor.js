@@ -8,6 +8,7 @@ let financeStructureSnapshot = { organizations:[], businessUnits:[], projects:[]
 
 function financeToken() { return sessionStorage.getItem('ekodi-auth-token') || ''; }
 function financeKRW(value) { return `₩${Math.round(Number(value) || 0).toLocaleString('ko-KR')}`; }
+function financeEscape(value) { return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
 function financeDate(value) {
   if (!value) return '—';
   const date = new Date(value);
@@ -232,12 +233,12 @@ function renderFinanceBanking(data){
   const accountRows=document.querySelector('#financeBankAccountRows');
   if(accountRows){
     if(!accounts.length)financeEmpty(accountRows,6,'연결된 은행계좌가 없습니다.');
-    else accountRows.innerHTML=accounts.map(a=>`<tr><td>${String(a.organizationId||'')}</td><td><strong>${String(a.institutionName||a.provider||'')}</strong><br><small>${String(a.accountAlias||'')}</small></td><td>${a.accountLast4?'****'+a.accountLast4:'참조값만 저장'}</td><td class="right">${financeKRW(a.currentBalance)}</td><td>${bankingStatus(a.connectionStatus)}</td><td>${a.transferEnabled?'조회 · 이체':'조회 전용'}</td></tr>`).join('');
+    else accountRows.innerHTML=accounts.map(a=>`<tr><td>${financeEscape(a.organizationId||'')}</td><td><strong>${financeEscape(a.institutionName||a.provider||'')}</strong><br><small>${financeEscape(a.accountAlias||'')}</small></td><td>${a.accountLast4?'****'+financeEscape(a.accountLast4):'참조값만 저장'}</td><td class="right">${financeKRW(a.currentBalance)}</td><td>${bankingStatus(a.connectionStatus)}</td><td>${a.transferEnabled?'조회 · 이체':'조회 전용'}</td></tr>`).join('');
   }
   const txRows=document.querySelector('#financeBankTransactionRows');
   if(txRows){
     if(!txs.length)financeEmpty(txRows,6,'수집된 은행 거래내역이 없습니다.');
-    else txRows.innerHTML=txs.map(t=>`<tr><td>${financeDate(t.bookedAt)}</td><td>${String(t.organizationId||'')}</td><td><strong>${String(t.counterpartyName||t.description||'—')}</strong><br><small>${String(t.description||t.category||'')}</small></td><td>${t.direction==='in'?'입금':'출금'}</td><td class="right">${financeKRW(t.amount)}</td><td class="right">${t.balanceAfter==null?'—':financeKRW(t.balanceAfter)}</td></tr>`).join('');
+    else txRows.innerHTML=txs.map(t=>`<tr><td>${financeDate(t.bookedAt)}</td><td>${financeEscape(t.organizationId||'')}</td><td><strong>${financeEscape(t.counterpartyName||t.description||'—')}</strong><br><small>${financeEscape(t.description||t.category||'')}</small></td><td>${t.direction==='in'?'입금':'출금'}</td><td class="right">${financeKRW(t.amount)}</td><td class="right">${t.balanceAfter==null?'—':financeKRW(t.balanceAfter)}</td></tr>`).join('');
   }
   const transferRows=document.querySelector('#financeBankTransferRows');
   if(transferRows){
@@ -245,7 +246,7 @@ function renderFinanceBanking(data){
     else transferRows.innerHTML=transfers.map(t=>{
       const approve=t.status==='requested'? `<button type="button" data-bank-approve="${t.id}">승인</button><button type="button" data-bank-reject="${t.id}">반려</button>`:'';
       const execute=t.status==='approved'&&ready.executorConnected&&ready.transferExecutionEnabled?`<button class="primary compact" type="button" data-bank-execute="${t.id}">실제 이체</button>`:(t.status==='approved'?'<small>실이체 잠금</small>':'');
-      return `<tr><td>${financeDate(t.requestedAt)}</td><td>${String(t.organizationId||'')}</td><td><strong>${String(t.recipientName||'')}</strong><br><small>${String(t.recipientBankName||'')} ${t.recipientAccountLast4?'****'+t.recipientAccountLast4:''}</small></td><td class="right">${financeKRW(t.amount)}</td><td>${bankingStatus(t.status)}</td><td><div class="actions">${approve}${execute}</div></td></tr>`;
+      return `<tr><td>${financeDate(t.requestedAt)}</td><td>${financeEscape(t.organizationId||'')}</td><td><strong>${financeEscape(t.recipientName||'')}</strong><br><small>${financeEscape(t.recipientBankName||'')} ${t.recipientAccountLast4?'****'+financeEscape(t.recipientAccountLast4):''}</small></td><td class="right">${financeKRW(t.amount)}</td><td>${bankingStatus(t.status)}</td><td><div class="actions">${approve}${execute}</div></td></tr>`;
     }).join('');
     transferRows.querySelectorAll('[data-bank-approve]').forEach(button=>button.onclick=async()=>{try{await financeRequest(`/api/finance/banking/transfers/${encodeURIComponent(button.dataset.bankApprove)}/approve`,{method:'POST',body:'{}'});await loadFinanceBanking(true)}catch(error){notice.textContent=`승인 실패: ${error.message}`}});
     transferRows.querySelectorAll('[data-bank-reject]').forEach(button=>button.onclick=async()=>{const reason=window.prompt('반려 사유를 입력해 주세요.','');if(reason===null)return;try{await financeRequest(`/api/finance/banking/transfers/${encodeURIComponent(button.dataset.bankReject)}/reject`,{method:'POST',body:JSON.stringify({reason})});await loadFinanceBanking(true)}catch(error){notice.textContent=`반려 실패: ${error.message}`}});
