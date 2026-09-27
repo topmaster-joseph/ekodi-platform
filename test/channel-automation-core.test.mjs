@@ -48,6 +48,7 @@ test('platform super admin can resolve tenant channel subjects through Control A
   assert.match(subject, /adminRole==='super_admin'/);
   assert.match(subject, /customer_tenants WHERE slug=\?/);
   assert.match(subject, /tenantKeyCandidates/);
+  assert.match(subject, /candidates\.has\(item\.workspaceSlug\)/);
   assert.match(wrangler, /binding = "CONTROL_API"/);
   assert.match(wrangler, /service = "ekodi-auth-api"/);
 });
