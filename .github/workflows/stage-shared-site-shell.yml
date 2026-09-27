@@ -19,6 +19,9 @@ on:
       - 'local-region-registry.js'
       - 'local-region-page.js'
       - 'local-region-operations-admin.js'
+      - 'test/local-region-content-ledger.test.mjs'
+      - 'local-region-module-admin.js'
+      - 'local-region-module-public.js'
       - 'test/local-region-operations.test.mjs'
       - 'test/local-region-platform.test.mjs'
       - 'test/local-region-enforcement.test.mjs'
@@ -100,7 +103,7 @@ jobs:
           node --check platform-router-entry-worker.js
           node --check local-region-registry.js
           node --check local-region-page.js
-          node --test test/local-region-platform.test.mjs test/local-region-operations.test.mjs test/local-region-enforcement.test.mjs
+          node --test test/local-region-platform.test.mjs test/local-region-operations.test.mjs test/local-region-enforcement.test.mjs test/local-region-content-ledger.test.mjs
           node --check store-gateway-page.js
           node --check store-portfolio-admin-page.js
           node --check insurance-public-route.js
