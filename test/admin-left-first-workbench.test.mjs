@@ -17,7 +17,7 @@ test('Platform Admin uses seven explicit control areas with active direct-task n
     "summary: ['platform-overview']",
     "sites: ['sites-all', 'sites-business', 'sites-clients', 'sites-community', 'sites-core', 'sites-preparing']",
     "people: ['users-access', 'admins', 'ai-membership', 'security']",
-    "services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration']",
+    "services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview']",
     "content: ['work', 'communication', 'community', 'books', 'social']",
     "status: ['health', 'deployments', 'aiops', 'devices', 'api-cost']",
     "'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'ai-module-spec', 'audit-records']",
@@ -51,8 +51,9 @@ test('Integrated overview removes duplicate singleton tab and keeps health cards
     read('system-health-admin.css'),
   ]);
   assert.match(sidebar, /const singleEquivalent = ids\.length === 1/);
-  assert.match(sidebar, /shell\.dataset\.adminSingleContext = singleEquivalent \? 'true' : 'false'/);
-  assert.match(sidebar, /tabs\.hidden = singleEquivalent/);
+  assert.match(sidebar, /const hideContextTabs = suppressContextTabs \|\| singleEquivalent/);
+  assert.match(sidebar, /shell\.dataset\.adminSingleContext = hideContextTabs \? 'true' : 'false'/);
+  assert.match(sidebar, /tabs\.hidden = hideContextTabs/);
   assert.match(healthJs, /<h2>플랫폼 통합현황<\/h2>/);
   assert.match(healthJs, /<span>운영 연결 상태<\/span>/);
   assert.match(healthCss, /body\.admin-compact #ekodiSystemHealth\{--muted:#66768a;--health-surface:#fff/);
