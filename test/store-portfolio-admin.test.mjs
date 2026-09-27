@@ -14,7 +14,7 @@ test('cmpmyi admin provides fixed common and brand navigation with a right works
   for(const section of ['delivery','menu','orders','sales','inventory','customers','reviews','marketing','publishing','work','finance','connections','site','members']){
     assert.ok(CMPMYI_ADMIN_SECTIONS.some(([key])=>key===section),`missing ${section}`);
   }
-  for(const view of ['overview','delivery','menu','orders','sales','customer','marketing','operations','connections']){
+  for(const view of ['overview','delivery','menu','orders','sales','customer','marketing','publishing','operations','connections']){
     assert.ok(CMPMYI_COMMON_MENU.some(([key])=>key===view),`missing common view ${view}`);
     assert.ok(html.includes(`/cmpmyi/admin/panel/${view}`));
   }
