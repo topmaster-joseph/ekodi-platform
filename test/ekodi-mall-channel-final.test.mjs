@@ -24,6 +24,11 @@ test('Mall channel console unifies connection policy AI allocation and job recov
   assert.match(ui,/빠른 시작/);
   assert.match(ui,/channel-main-grid/);
   assert.match(ui,/channel-help/);
+  assert.match(ui,/YouTube 최초 연결/);
+  assert.match(ui,/관리자 로그인으로 사용/);
+  assert.match(ui,/연결 유지/);
+  assert.match(ui,/reconnect_required/);
+  assert.doesNotMatch(ui,/account.status==='active'\?'재인증'/);
   assert.match(ui,/data-channel-quick/);
   assert.match(ui,/data-channel-panel/);
   assert.match(ui,/CHANNEL_OAUTH_RESULT_KEY/);

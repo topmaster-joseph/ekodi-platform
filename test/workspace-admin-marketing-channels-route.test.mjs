@@ -39,7 +39,10 @@ test('channel admin is login-first and authenticates pre-registered account rows
   assert.match(source,/localStorage\.setItem\(CHANNEL_OAUTH_RESULT_KEY/);
   assert.match(source,/window\.open\('about:blank',CHANNEL_OAUTH_POPUP_NAME/);
   assert.match(source,/setTimeout\(\(\)=>window\.close\(\),120\)/);
-  assert.match(source,/Google 인증을 완료하면 인증창이 자동으로 닫히고 이 화면의 연결 상태가 갱신됩니다/);
+  assert.match(source,/이 승인은 최초 연결 또는 연결 복구 시에만 필요합니다/);
+  assert.match(source,/관리자 로그인으로 사용/);
+  assert.match(source,/연결 유지/);
+  assert.match(source,/needsReconnect/);
   assert.match(source,/async function startChannelConnect\(provider,account=\{\},existingPopup=null\)/);
   assert.match(source,/account_already_registered/);
   assert.match(source,/기존 YouTube 계정 인증 준비/);
