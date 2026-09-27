@@ -54,13 +54,15 @@ test('Control staging binds to isolated Personal Finance staging while broad loc
 
 test('Control guarded release probes the Personal Finance canonical auth boundary through the Worker candidate',()=>{
   const manifest=JSON.parse(read('deploy/manifests/control-api.worker.json'));
-  const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi-auth-api.topmaster-joseph.workers.dev/api/control/personal-finance');
+  const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/api/control/personal-finance');
   assert.ok(probe);
   assert.deepEqual(probe.statuses,[401]);
   assert.ok(probe.expect.includes('PF_ADMIN_AUTH_REQUIRED'));
   assert.ok(probe.headerExpect.includes('x-ekodi-personal-finance-proxy: service-binding-v1'));
   assert.ok(probe.headerExpect.includes('cache-control: no-store'));
   assert.ok(probe.headerExpect.includes('x-content-type-options: nosniff'));
+  assert.equal(probe.candidateVerify,false);
+  assert.match(probe.candidateVerifyReason,/isolated staging/);
   const google=manifest.worker.requests.find(item=>String(item.url||'').endsWith('/api/google/config'));
   assert.ok(google);
   assert.ok(google.expect.includes('483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com'));

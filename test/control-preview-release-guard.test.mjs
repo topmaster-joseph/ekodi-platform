@@ -11,13 +11,10 @@ function requestFor(url) {
   return manifest.worker.requests.find(request => request.url === url);
 }
 
-test('Control public preview smoke-tests the candidate directly before canonical service-binding promotion', () => {
+test('Control public preview smoke-tests the candidate through the canonical service binding', () => {
   const request = requestFor('https://ekodi.kr/api/public/preview/map?scope=ekodi&mode=platform');
   assert.ok(request);
-  assert.equal(
-    request.candidateUrl,
-    'https://ekodi-auth-api.topmaster-joseph.workers.dev/api/public/preview/map?scope=ekodi&mode=platform',
-  );
+  assert.equal(request.candidateUrl, undefined);
   assert.deepEqual(request.candidateStatuses, [200]);
   assert.ok(request.candidateExpect.includes('"schemaVersion":1'));
   assert.ok(request.candidateHeaderExpect.includes('cache-control: public'));

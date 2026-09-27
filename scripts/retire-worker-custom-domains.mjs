@@ -15,7 +15,7 @@ for(const t of targets){
   if(!/^[a-z0-9-]+$/.test(String(t.label||"")))throw new Error("Invalid target label");
   if(!String(t.service||"").startsWith("ekodi-"))throw new Error("Invalid target service");
   if(!String(t.apexHealth||"").startsWith("https://ekodi.kr/"))throw new Error("Apex health must use ekodi.kr path");
-  if(!String(t.directHealth||"").endsWith(".workers.dev/health"))throw new Error("Direct health must use workers.dev");
+  if(t.directHealth&&!String(t.directHealth).endsWith(".workers.dev/health"))throw new Error("Direct health must use workers.dev");
 }
 if(dryRun){for(const t of targets)console.log("PLAN "+t.label+" -> "+t.service+" -> "+t.apexHealth);process.exit(0)}
 const account=process.env.CLOUDFLARE_ACCOUNT_ID||"";
@@ -94,7 +94,7 @@ async function legacyGone(host){
 const detached=[];
 let rollbackAllowed=true;
 try{
-  for(const t of targets){await health(t.apexHealth,t.apexExpect||t.expect);await health(t.directHealth,t.directExpect||t.expect)}
+  for(const t of targets){await health(t.apexHealth,t.apexExpect||t.expect);if(t.directHealth)await health(t.directHealth,t.directExpect||t.expect)}
   const domains=await listDomains();
   for(const t of targets){
     const host=oldHost(t);
@@ -113,7 +113,7 @@ try{
     for(let attempt=1;attempt<=18;attempt++){absent=!(await listDomains()).some(d=>d.hostname===host);if(absent)break;await sleep(2500)}
     if(!absent)throw new Error("Domain still attached: "+host);
     await health(t.apexHealth,t.apexExpect||t.expect);
-    await health(t.directHealth,t.directExpect||t.expect);
+    if(t.directHealth)await health(t.directHealth,t.directExpect||t.expect);
   }
   rollbackAllowed=false;
   const zoneId=await rootZoneId();
