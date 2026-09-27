@@ -39,6 +39,19 @@ test('OAuth credentials are encrypted and owned by person or immutable workspace
   assert.match(subject, /ownerKey:context\.workspaceId/);
 });
 
+test('platform super admin can resolve tenant channel subjects through Control API authority', async () => {
+  const [subject,wrangler] = await Promise.all([
+    read('channel-automation-subject.js'),
+    read('wrangler.marketing-publishing.toml'),
+  ]);
+  assert.match(subject, /platformAdminActor/);
+  assert.match(subject, /adminRole==='super_admin'/);
+  assert.match(subject, /customer_tenants WHERE slug=\?/);
+  assert.match(subject, /tenantKeyCandidates/);
+  assert.match(wrangler, /binding = "CONTROL_API"/);
+  assert.match(wrangler, /service = "ekodi-auth-api"/);
+});
+
 test('YouTube adapter uses OAuth, channel discovery and resumable upload', async () => {
   const adapter = await read('channel-youtube-adapter.js');
   assert.match(adapter, /youtube\.upload/);
