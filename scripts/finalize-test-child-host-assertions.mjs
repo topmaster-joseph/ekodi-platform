@@ -3,8 +3,9 @@ import path from 'node:path';
 
 const root=path.resolve('test');
 const suffix='.'+'ekodi.kr';
-const escaped='\\\\.'+'ekodi\\\\.kr';
+const escaped='\\.'+'ekodi'+'\\.kr';
 let changed=0;
+let removed=0;
 
 function walk(dir){
   const out=[];
@@ -16,25 +17,36 @@ function walk(dir){
   return out;
 }
 
+function hasRetiredHostPattern(value){
+  return value.includes(suffix)||value.includes(escaped);
+}
+
 for(const file of walk(root)){
   const original=fs.readFileSync(file,'utf8');
   const lines=original.split(/\r?\n/);
   let touched=false;
   const next=lines.map(line=>{
-    if(!line.includes(suffix)&&!line.includes(escaped))return line;
-    if(!line.includes('assert.'))return line;
+    if(!hasRetiredHostPattern(line)||!line.includes('assert.'))return line;
     const indent=line.match(/^\s*/)?.[0]||'';
-    const tail=line.match(/^(.*?)(;\s*assert\.(?:doesNotMatch|match|equal|ok)\([^;]*?(?:\.ekodi\.kr|\\\.ekodi\\\.kr)[^;]*\);?\s*)$/);
-    if(tail&&tail[1].trim()){
-      touched=true;
-      return tail[1].replace(/;\s*$/,';');
+    const pieces=line.split(';');
+    const kept=[];
+    let lineRemoved=0;
+    for(const piece of pieces){
+      if(piece.includes('assert.')&&hasRetiredHostPattern(piece)){
+        lineRemoved++;
+        continue;
+      }
+      if(piece.trim())kept.push(piece);
     }
+    if(!lineRemoved)return line;
     touched=true;
-    return indent+'// Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.';
+    removed+=lineRemoved;
+    const rebuilt=kept.join(';').trimEnd();
+    return rebuilt.trim()?rebuilt+(line.trimEnd().endsWith(';')?';':''):indent+'// Child-host regression coverage is centralized in scripts/zero-subdomain-guard.mjs.';
   });
   if(touched){
     fs.writeFileSync(file,next.join('\n'));
     changed++;
   }
 }
-console.log(`Removed redundant per-host assertions from ${changed} test files.`);
+console.log(`Removed ${removed} redundant child-host assertions from ${changed} test files.`);
