@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "policyId": "SITE-EXECUTION-ENFORCEMENT-001",
+  "status": "enforced",
+  "sourceOfSites": "config/site-lifecycle-registry.json",
+  "canonicalHost": "ekodi.kr",
+  "scope": {
+    "siteClasses": ["workspace_user_site"],
+    "rootSite": true,
+    "allDescendantServicePaths": true,
+    "siteOwnedAdmin": true,
+    "futureSitesAutoInherit": true,
+    "perSiteOptOutAllowed": false
+  },
+  "canonicalAddressing": {
+    "publicPattern": "https://ekodi.kr/{slug}",
+    "descendantPattern": "https://ekodi.kr/{slug}/{service}",
+    "adminPattern": "https://ekodi.kr/{slug}/admin",
+    "featureSubdomainCreationForbidden": true,
+    "legacyAliasesAreCompatibilityOnly": true
+  },
+  "mandatoryContracts": [
+    "canonical-apex-path",
+    "shared-shell-and-ui-dna",
+    "brand-or-service-only-public-header",
+    "site-owned-admin-addressability",
+    "auth-return-continuity",
+    "responsive-mobile-desktop-layout",
+    "readability-and-no-clipping",
+    "keyboard-and-touch-accessibility",
+    "internal-external-link-integrity",
+    "loading-error-empty-state-usability",
+    "shared-header-footer-language-behavior",
+    "no-direct-production-mutation",
+    "isolated-branch-and-regression-validation",
+    "guarded-staging-before-production"
+  ],
+  "publicHeader": {
+    "internalWorkspaceWordingForbidden": true,
+    "forbiddenLabels": ["운영공간", "operating space", "workspace operating space"],
+    "brandOrServiceIdentityOnly": true
+  },
+  "inheritance": {
+    "mode": "mandatory-recursive",
+    "rootAppliesToAllDescendants": true,
+    "childMayTightenButNotRelax": true,
+    "adminMayTightenSecurityButNotRelaxAddressingOrUx": true,
+    "sharedComponentFixPreferredForSharedDefect": true
+  },
+  "continuousImprovement": {
+    "scheduler": "ekodi-site-improvement-scheduler.js",
+    "rootAndDescendantsMustBeInspectedTogether": true,
+    "lowTrafficTaskMustUseThisPolicy": true,
+    "verifiedNoChangeAllowed": true
+  },
+  "exceptions": {
+    "constitutionalBoundaryOnly": true,
+    "requiresExplicitRegisteredBoundary": true,
+    "pendingCanonicalStates": [
+      "hold_existing_url_pending_canonical_decision",
+      "preparing_keep_existing"
+    ],
+    "silentExceptionForbidden": true
+  },
+  "enforcement": {
+    "validator": "scripts/validate-site-execution-enforcement.mjs",
+    "tests": ["test/site-execution-enforcement.test.mjs"],
+    "orchestrationGate": ".github/workflows/ekodi-ai-orchestration-gate.yml",
+    "packageScript": "validate:site-execution"
+  }
+}
