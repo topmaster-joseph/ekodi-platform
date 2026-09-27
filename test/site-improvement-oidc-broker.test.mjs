@@ -65,7 +65,9 @@ test('JWT verification requires a valid GitHub-style RS256 signature',async()=>{
   const verified=await verifySiteImprovementGitHubOidc(token,{jwks:[jwk],nowSeconds:now});
   assert.equal(verified.ok,true);
   const parts=token.split('.');
-  const bad=parts[0]+'.'+parts[1]+'.'+parts[2].replace(/.$/,'A');
+  const signature=parts[2];
+  const badSignature=(signature[0]==='A'?'B':'A')+signature.slice(1);
+  const bad=parts[0]+'.'+parts[1]+'.'+badSignature;
   await assert.rejects(()=>verifySiteImprovementGitHubOidc(bad,{jwks:[jwk],nowSeconds:now}),/signature_invalid/);
 });
 
