@@ -231,6 +231,12 @@ export async function markSiteImprovementRunning(env,taskId){
     .bind(new Date().toISOString(),clean(taskId,180)).run();
 }
 
+export async function failSiteImprovementTask(env,taskId,error){
+  const store=db(env);if(!store)return;
+  await store.prepare("UPDATE ekodi_site_improvement_runs SET state='failed',error=?,updated_at=? WHERE task_id=?")
+    .bind(clean(error?.message||error||'site_improvement_node_failed',500),new Date().toISOString(),clean(taskId,180)).run();
+}
+
 export async function completeSiteImprovementNodeJob(env,task,output=''){
   const store=db(env);if(!store)return Object.freeze({handled:false,reason:'state_store_unavailable'});
   const run=await store.prepare('SELECT * FROM ekodi_site_improvement_runs WHERE task_id=? ORDER BY run_day DESC LIMIT 1').bind(task.id).first();
