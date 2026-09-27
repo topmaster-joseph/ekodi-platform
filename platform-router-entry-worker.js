@@ -276,7 +276,7 @@ async function ensureLegacyOperatingSpaceMarker(response,includeBody=true){
   const html=await response.text();
   headers.delete('content-length');
   if(html.includes('data-ekodi-operating-space-label'))return new Response(html,{status:response.status,statusText:response.statusText,headers});
-  const note='<aside class="ekodi-operating-space-note" data-ekodi-operating-space-label="v1" role="note" aria-label="개별 운영공간"><span>운영공간</span></aside>';
+  const note='<span hidden data-ekodi-operating-space-label="v1" aria-hidden="true">운영공간</span>';
   const patched=/<body\b[^>]*>/i.test(html)?html.replace(/(<body\b[^>]*>)/i,'$1'+note):note+html;
   return new Response(patched,{status:response.status,statusText:response.statusText,headers});
 }
