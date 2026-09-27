@@ -2043,13 +2043,15 @@
         "redirect": "manual",
         "expect": [
           "WELCOME TO EKODI CHURCH",
-          "에코디교회",
-          "운영공간"
+          "에코디교회"
+        ],
+        "forbid": [
+          "운영공간",
+          "data-ekodi-operating-space-label"
         ],
         "headerExpect": [
           "x-ekodi-route: church-public-path",
-          "x-ekodi-tenant-readability: v1",
-          "x-ekodi-operating-space-label: v1"
+          "x-ekodi-tenant-readability: v1"
         ],
         "rollbackVerify": false
       },
