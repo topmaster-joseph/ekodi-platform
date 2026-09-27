@@ -5,6 +5,7 @@ import fs from 'node:fs';
 const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 const sql=read('supabase/migrations/20260926140500_activity_public_readonly_shares.sql');
 const privacyGuard=read('supabase/migrations/20260927032500_activity_public_share_minimal_projection_guard.sql');
+const contractHealth=read('supabase/migrations/20260927041500_activity_public_share_contract_health.sql');
 const worker=read('space-worker.js');
 const admin=read('workspace-admin-page.js');
 const schemaWorkflow=read('.github/workflows/deploy-activity-public-share-schema.yml');
@@ -55,6 +56,15 @@ test('privacy guard reasserts the agreed minimal external projection',()=>{
   assert.match(privacyGuard,/update public\.activity_public_shares[\s\S]*'seq',true[\s\S]*'name'[\s\S]*'status'[\s\S]*'party_size'/);
 });
 
+test('public share health contract exposes the minimal projection without applicant data',()=>{
+  assert.match(contractHealth,/activity_public_share_contract\(\)/);
+  assert.match(contractHealth,/ekodi\.activity-public-share\.v1/);
+  assert.match(contractHealth,/'fields',jsonb_build_array\('seq','name','status','party_size'\)/);
+  assert.match(contractHealth,/'contact_fields',false/);
+  assert.match(contractHealth,/grant execute on function public\.activity_public_share_contract\(\) to anon, authenticated, service_role/);
+  assert.doesNotMatch(contractHealth,/person_contacts|activity_participations|people\b/);
+});
+
 test('Mission share route is private-by-link and the admin exposes explicit create/revoke controls',()=>{
   assert.match(worker,/MISSION_SHARE_PATH_RE/);
   assert.match(worker,/MISSION_ADMIN_ACTIVITY_RPC_API/);
@@ -77,9 +87,13 @@ test('Mission share route is private-by-link and the admin exposes explicit crea
 test('activity-share deployment is schema-first and blocks UI promotion until dependencies are ready',()=>{
   for(const marker of [
     'Deploy Activity Public Share Schema',
-    'Apply schema and privacy guard before UI promotion',
+    'Apply schema, privacy guard and public contract before UI promotion',
     'activity_public_readonly_shares.sql',
     'activity_public_share_minimal_projection_guard.sql',
+    'activity_public_share_contract_health.sql',
+    'activity_public_share_contract',
+    'SCHEMA_ALREADY_READY',
+    'SUPABASE_DEPLOY_AVAILABLE',
     'minimal_projection',
     'activity_admin_create_share',
     'activity_admin_revoke_share',
@@ -90,6 +104,8 @@ test('activity-share deployment is schema-first and blocks UI promotion until de
     '/ekodimission/api/admin/activity-rpc',
     'authentication_required',
     'activity_public_share_snapshot',
+    'activity_public_share_contract',
+    'contract_ready',
     'refusing UI promotion'
   ])assert.ok(sharedWorkflow.includes(marker),marker);
 });
