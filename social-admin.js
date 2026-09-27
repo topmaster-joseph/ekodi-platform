@@ -121,7 +121,7 @@
     section.dataset.panel = 'social'; section.id = 'socialAdmin';
     const head = el('div', '', 'social-admin-head');
     const copy = el('div');
-    copy.append(el('p','MULTI-CHANNEL CONTROL CENTER','kicker'), el('h2','사이트별 채널센터'), el('p','각 사이트 관리자는 자기 사이트 채널센터에서 계정 등록·OAuth 연결·자동게시 설정을 관리합니다. 최고관리자는 사이트를 선택해 동일한 원장을 조회·등록·수정할 수 있습니다. OAuth 비밀값은 암호화 Vault에만 보관됩니다.','operations-copy'));
+    copy.append(el('p','MULTI-CHANNEL CONTROL CENTER','kicker'), el('h2','사이트별 채널센터'), el('p','각 사이트 관리자는 자기 사이트 채널센터에서 계정 등록·OAuth 연결·자동게시 설정을 관리합니다. 최고관리자는 개별 사이트를 선택해 동일한 원장을 조회·등록·수정하고, 통합 허브에서는 하위 사이트 채널센터를 한곳에서 확인합니다. OAuth 비밀값은 암호화 Vault에만 보관됩니다.','operations-copy'));
     const actions = el('div','','social-admin-actions');
     const open = el('a','Open Social ↗','secondary'); open.href='https://social.ekodi.kr'; open.target='_blank'; open.rel='noopener';
     const refresh = el('button','↻ Refresh','secondary'); refresh.type='button';
@@ -154,14 +154,17 @@
           publicLink.href=site.publicUrl; publicLink.target='_blank'; publicLink.rel='noopener';
           const adminLink=el('a','사이트 채널센터 ↗','primary');
           adminLink.href=site.channelAdminUrl; adminLink.dataset.siteChannelAdminUrl=site.id;
-          const centralManage=el('button','최고관리자에서 관리','secondary'); centralManage.type='button';
-          centralManage.dataset.centralChannelSubject=site.channelSubjectKey||site.id;
-          centralManage.dataset.centralChannelName=site.name;
-          controls.append(publicLink,adminLink,centralManage);
+          controls.append(publicLink,adminLink);
+          if(site.channelSubjectKey){
+            const centralManage=el('button','최고관리자에서 관리','secondary'); centralManage.type='button';
+            centralManage.dataset.centralChannelSubject=site.channelSubjectKey;
+            centralManage.dataset.centralChannelName=site.name;
+            controls.append(centralManage);
+          }
           card.append(copy,controls);
           siteDirectoryList.append(card);
         }
-        siteDirectoryStatus.textContent=`${sites.length}개 사이트 · 각 사이트 채널센터와 최고관리자 화면이 같은 원장을 사용합니다.`;
+        siteDirectoryStatus.textContent=`${sites.length}개 사이트 · 개별 사이트는 최고관리자와 같은 원장을 사용하며, 통합 허브는 하위 사이트 채널센터를 모아 보여줍니다.`;
         siteDirectoryStatus.dataset.state='ready';
       } catch(error) {
         siteDirectoryStatus.textContent=`사이트별 관리자 목록을 불러오지 못했습니다: ${error.message}`;
