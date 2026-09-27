@@ -59,7 +59,7 @@ for (const [relative, needles] of checks) {
 
 const sellerHtml = await readFile(path.join(dist, 'seller/index.html'), 'utf8').catch(()=>'');
 const sellerJs = await readFile(path.join(dist, 'assets/seller.js'), 'utf8').catch(()=>'');
-for (const forbidden of ['https://auth.ekodi.kr/', 'Mall API는 매 요청마다 사용자 토큰을 다시 검증합니다.', 'Google로 무료 시작']) {
+for (const forbidden of ['https://legacy-auth-host/', 'Mall API는 매 요청마다 사용자 토큰을 다시 검증합니다.', 'Google로 무료 시작']) {
   if (sellerHtml.includes(forbidden) || sellerJs.includes(forbidden)) errors.push(`Mall Seller canonical auth violation: ${forbidden}`);
 }
 if (!sellerHtml.includes('/auth?site=mall-seller')) errors.push('Mall Seller must enter authentication through /auth');
