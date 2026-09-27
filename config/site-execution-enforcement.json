@@ -5,7 +5,9 @@
   "sourceOfSites": "config/site-lifecycle-registry.json",
   "canonicalHost": "ekodi.kr",
   "scope": {
-    "siteClasses": ["workspace_user_site"],
+    "siteClasses": [
+      "workspace_user_site"
+    ],
     "rootSite": true,
     "allDescendantServicePaths": true,
     "siteOwnedAdmin": true,
@@ -37,7 +39,11 @@
   ],
   "publicHeader": {
     "internalWorkspaceWordingForbidden": true,
-    "forbiddenLabels": ["운영공간", "operating space", "workspace operating space"],
+    "forbiddenLabels": [
+      "운영공간",
+      "operating space",
+      "workspace operating space"
+    ],
     "brandOrServiceIdentityOnly": true
   },
   "inheritance": {
@@ -51,7 +57,29 @@
     "scheduler": "ekodi-site-improvement-scheduler.js",
     "rootAndDescendantsMustBeInspectedTogether": true,
     "lowTrafficTaskMustUseThisPolicy": true,
-    "verifiedNoChangeAllowed": true
+    "verifiedNoChangeAllowed": true,
+    "dailyBudget": {
+      "resetTimeKst": "09:00",
+      "timezone": "Asia/Seoul",
+      "executionCountPerBudgetDay": 3,
+      "cumulativeCeilingsPercent": {
+        "morning": 30,
+        "lunch": 60,
+        "evening": 90
+      },
+      "executionWindowsKst": {
+        "morning": "09:00-11:59",
+        "lunch": "12:00-17:59",
+        "evening": "18:00-08:59(next day)"
+      },
+      "emergencyReservePercent": 10,
+      "cumulativeNotPerRun": true,
+      "trafficAware": true,
+      "sameSiteRetryBeforeCursorAdvance": true,
+      "futureSlotBudgetBorrowingForbidden": true
+    },
+    "rootAndDescendantsShareOneExecutionBudget": true,
+    "slotExecutionMustRemainLowTrafficGated": true
   },
   "exceptions": {
     "constitutionalBoundaryOnly": true,
@@ -64,7 +92,9 @@
   },
   "enforcement": {
     "validator": "scripts/validate-site-execution-enforcement.mjs",
-    "tests": ["test/site-execution-enforcement.test.mjs"],
+    "tests": [
+      "test/site-execution-enforcement.test.mjs"
+    ],
     "orchestrationGate": ".github/workflows/ekodi-ai-orchestration-gate.yml",
     "packageScript": "validate:site-execution"
   }
