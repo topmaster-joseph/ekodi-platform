@@ -64,6 +64,9 @@ expect(workflow.includes('free-tier-resource-governor.test.mjs'),'orchestration 
 expect(workflow.includes('validate-deployment-four-layer.mjs'),'orchestration gate must validate four-layer deployment policy');
 expect(workflow.includes('deployment-four-layer.test.mjs'),'orchestration gate must test four-layer deployment routing');
 expect(collectorWorkflow.includes('collect-free-tier-resource-usage.mjs'),'resource collector workflow must execute the measured collector');
+expect(collectorWorkflow.includes('cloudflare-production-budget.mjs'),'resource collector must reuse the Production Cloudflare quota Source of Truth');
+expect(collectorWorkflow.includes('CLOUDFLARE_QUOTA_REPORT'),'resource collector must pass the measured Cloudflare report into the shared ledger writer');
+expect(collectorWorkflow.includes("provider IN ('cloudflare','supabase','github')"),'resource proof must read all three provider snapshots from the shared ledger');
 expect(collectorWorkflow.includes('push:')&&collectorWorkflow.includes('branches:')&&collectorWorkflow.includes('- main'),'resource collector must run on relevant main pushes');
 expect(collectorWorkflow.includes('provider_quota_snapshots'),'resource collector workflow must persist into the quota snapshot ledger');
 expect(collectorWorkflow.includes('evaluate-free-tier-resource-proof.mjs'),'resource collector workflow must evaluate persisted snapshots through the governor');
@@ -71,6 +74,8 @@ expect(collectorWorkflow.includes('free-tier-resource-proof.test.mjs'),'resource
 expect(proofEvaluator.includes('buildFreeTierResourceGovernor'),'resource proof evaluator must use the production governor implementation');
 expect(proofEvaluator.includes('SUPABASE_NEW_PROJECT_CREATION_MUST_BE_BLOCKED_AT_CAPACITY'),'resource proof evaluator must fail closed when Supabase project capacity is full');
 expect(proofEvaluator.includes('AUTOMATIC_PAID_UPGRADE_MUST_REMAIN_DISABLED'),'resource proof evaluator must enforce no automatic paid upgrade');
+expect(proofEvaluator.includes('CLOUDFLARE_TELEMETRY_MUST_BE_FRESH'),'resource proof evaluator must require fresh Cloudflare telemetry');
+expect(proofEvaluator.includes('CLOUDFLARE_WORKERS_REQUESTS_METRIC_REQUIRED'),'resource proof evaluator must require the measured Workers request metric');
 expect(collectorWorkflow.includes('environment: production'),'resource collector must reuse the established production environment secret boundary');
 expect(collectorWorkflow.includes('SUPABASE_ACCESS_TOKEN'),'resource collector must use the existing Supabase management credential boundary');
 expect(collectorWorkflow.includes('SUPABASE_TOKEN'),'resource collector must accept the existing Supabase token fallback');
@@ -90,6 +95,8 @@ expect(collector.includes('/database/query/read-only'),'Supabase database usage 
 expect(!/\/database\/query(?!\/read-only)/.test(collector),'collector must not fall back to the writable Management API query endpoint');
 expect(collector.includes('/actions/cache/usage'),'GitHub cache usage must come from the official repository usage endpoint');
 expect(collector.includes('/actions/artifacts?'),'GitHub artifact usage must come from the official repository artifact endpoint');
+expect(collector.includes('snapshotFromCloudflareQuotaReport'),'collector must convert the existing Cloudflare quota report instead of inventing usage');
+expect(collector.includes("source:'cloudflare-workers-analytics'"),'Cloudflare ledger snapshot must preserve the measured analytics source');
 expect(supabaseCapacityGuard.includes('management-api-project-create'),'Supabase capacity guard must detect Management API project creation');
 expect(supabaseCapacityGuard.includes('supabase-cli-project-create'),'Supabase capacity guard must detect CLI project creation');
 expect(workflow.includes('validate-supabase-free-project-capacity.mjs'),'orchestration gate must enforce Supabase Free project capacity');
