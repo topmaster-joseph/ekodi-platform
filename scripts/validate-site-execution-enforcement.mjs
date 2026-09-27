@@ -21,6 +21,13 @@ if(policy.scope?.rootSite!==true||policy.scope?.allDescendantServicePaths!==true
 if(policy.scope?.futureSitesAutoInherit!==true||policy.scope?.perSiteOptOutAllowed!==false)fail('future sites must auto-inherit and per-site opt-out must remain forbidden');
 if(policy.inheritance?.mode!=='mandatory-recursive'||policy.inheritance?.rootAppliesToAllDescendants!==true||policy.inheritance?.childMayTightenButNotRelax!==true)fail('recursive inheritance contract drifted');
 if(policy.exceptions?.constitutionalBoundaryOnly!==true||policy.exceptions?.silentExceptionForbidden!==true)fail('exceptions must remain constitutional and explicit only');
+const dailyBudget=policy.continuousImprovement?.dailyBudget||{};
+if(dailyBudget.resetTimeKst!=='09:00'||dailyBudget.timezone!=='Asia/Seoul')fail('site improvement daily budget must reset at 09:00 KST');
+if(dailyBudget.executionCountPerBudgetDay!==3)fail('site improvement must provide three traffic-aware daily execution windows');
+if(dailyBudget.cumulativeCeilingsPercent?.morning!==30||dailyBudget.cumulativeCeilingsPercent?.lunch!==60||dailyBudget.cumulativeCeilingsPercent?.evening!==90)fail('site improvement cumulative budget ceilings must remain 30/60/90');
+if(dailyBudget.emergencyReservePercent!==10||dailyBudget.cumulativeNotPerRun!==true||dailyBudget.futureSlotBudgetBorrowingForbidden!==true)fail('site improvement must preserve the 10% emergency reserve and cumulative budget semantics');
+if(policy.continuousImprovement?.rootAndDescendantsShareOneExecutionBudget!==true)fail('root and descendants must share one site-improvement execution budget');
+if(policy.continuousImprovement?.slotExecutionMustRemainLowTrafficGated!==true)fail('three-window execution must remain low-traffic gated');
 
 const requiredContracts=new Set([
   'canonical-apex-path','shared-shell-and-ui-dna','brand-or-service-only-public-header',
@@ -63,6 +70,9 @@ if(policy.canonicalAddressing?.featureSubdomainCreationForbidden!==true)fail('fe
 if(!scheduler.includes("site-execution-enforcement.json"))fail('site improvement scheduler must load the recursive site execution policy');
 if(!scheduler.includes('Mandatory recursive site execution policy'))fail('site improvement prompt must explicitly enforce root + descendant policy');
 if(!scheduler.includes('every discoverable same-site subservice and site-owned admin surface'))fail('site improvement prompt must inspect descendant services and site-owned admin');
+if(!scheduler.includes("cumulativeBudgetCapPercent=30")||!scheduler.includes("cumulativeBudgetCapPercent=60")||!scheduler.includes("cumulativeBudgetCapPercent=90"))fail('scheduler must enforce 30/60/90 cumulative usage ceilings');
+if(!scheduler.includes("resetHourKst:9")||!scheduler.includes("dailyLimit:3"))fail('scheduler must enforce the 09:00 KST reset and three daily windows');
+if(!scheduler.includes("recentVisits<=maxVisits"))fail('traffic gate must enforce both recent-session and recent-visit limits');
 
 if(!String(pkg.scripts?.['validate:site-execution']||'').includes('validate-site-execution-enforcement.mjs'))fail('package must expose validate:site-execution');
 if(!String(pkg.scripts?.check||'').includes('validate:site-execution'))fail('full check must enforce site execution policy');
