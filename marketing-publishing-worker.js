@@ -6,7 +6,7 @@ import { channelAutomationActor, resolveChannelAutomationSubject } from './chann
 import { automationEntitlement, listAutomationProfiles, upsertAutomationProfile } from './channel-automation-runtime.js';
 import { disconnectManagedConnection, handleYoutubeCallback, listManagedConnections, managedCredential, selectYoutubeConnection, startYoutubeConnection, youtubeConnectionReady } from './channel-oauth-control.js';
 import { channelServiceBridgeReady, channelServiceBridgeSchemaReady, listServiceChannels, scheduleServiceYoutube } from './channel-service-bridge.js';
-import { EKODI_SERVICE_MANIFEST, serviceForId } from './ekodi-service-manifest.js';
+import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 import { channelAdminServices, canonicalServiceChannelAdminUrl } from './admin-service-catalog.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
