@@ -164,13 +164,15 @@ function installEkodiBizSourceHub() {
   if (source !== 'ekodibiz' || currentSession?.role !== 'super_admin') { existing?.remove(); return; }
   if (!document.querySelector('#ekodibiz-admin-hub-style')) {
     const style=document.createElement('style'); style.id='ekodibiz-admin-hub-style';
-    style.textContent='.ekodibiz-admin-hub{display:flex;align-items:center;gap:7px;padding:8px 16px;border-bottom:1px solid rgba(148,163,184,.22);background:#fff;color:#172033;overflow-x:auto;scrollbar-width:none}.ekodibiz-admin-hub::-webkit-scrollbar{display:none}.ekodibiz-admin-hub>strong{flex:0 0 auto;font-size:11px;color:#66768a}.ekodibiz-admin-hub a{flex:0 0 auto;display:inline-flex;align-items:center;min-height:36px;padding:7px 10px;border:1px solid #dfe5ee;border-radius:8px;background:#fafbfc;color:#405269;text-decoration:none;font-size:12px;font-weight:760;white-space:nowrap}.ekodibiz-admin-hub a.active{border-color:#bfd5ee;background:#edf4ff;color:#0b5cab}@media(max-width:760px){.ekodibiz-admin-hub{padding:7px 10px}.ekodibiz-admin-hub a{min-height:42px;font-size:13px}}';
+    style.textContent='.ekodibiz-admin-hub{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:8px 16px;border-bottom:1px solid rgba(148,163,184,.22);background:#fff;color:#172033}.ekodibiz-admin-hub>strong{font-size:11px;color:#66768a;white-space:nowrap}.ekodibiz-admin-hub select{min-width:220px;min-height:36px;border:1px solid #dfe5ee;border-radius:8px;background:#fff;color:#405269;padding:7px 34px 7px 10px;font:inherit;font-size:12px;font-weight:760}@media(max-width:760px){.ekodibiz-admin-hub{padding:7px 10px}.ekodibiz-admin-hub>strong{margin-right:auto}.ekodibiz-admin-hub select{min-width:0;max-width:68vw;min-height:42px;font-size:13px}}';
     document.head.append(style);
   }
   const main=document.querySelector('#app main')||document.querySelector('main'); if(!main)return;
-  const host=existing||document.createElement('nav'); host.className='ekodibiz-admin-hub'; host.dataset.ekodibizAdminHub='true'; host.setAttribute('aria-label','에코디비즈 관리 영역'); host.replaceChildren();
-  const label=document.createElement('strong'); label.textContent='에코디비즈 관리'; host.append(label);
-  for(const scope of EKODIBIZ_ADMIN_SCOPES){const link=document.createElement('a');link.href=scope.adminHref;link.textContent=scope.label;link.title=scope.description||scope.label;if(scope.id==='books'){link.classList.add('active');link.setAttribute('aria-current','page')}host.append(link)}
+  const host=existing||document.createElement('nav'); host.className='ekodibiz-admin-hub'; host.dataset.ekodibizAdminHub='true'; host.setAttribute('aria-label','에코디비즈 사이트 전환'); host.replaceChildren();
+  const label=document.createElement('strong'); label.textContent='사이트 전환'; host.append(label);
+  const select=document.createElement('select');select.setAttribute('aria-label','에코디비즈 관리 사이트 전환');
+  for(const scope of EKODIBIZ_ADMIN_SCOPES){const option=document.createElement('option');option.value=scope.adminHref;option.textContent=scope.label;option.title=scope.description||scope.label;option.selected=scope.id==='books';select.append(option)}
+  select.addEventListener('change',()=>{if(select.value)location.assign(select.value)});host.append(select);
   if(!existing)main.prepend(host);
 }
 
