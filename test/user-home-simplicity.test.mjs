@@ -8,7 +8,7 @@ test('home focus targets user and first-level subservice roots but excludes EKOD
   assert.equal(isUserHomePath('/ekodichurch', 'church'), false);
   assert.equal(isUserHomePath('/ekodibiz', 'biz'), true);
   assert.equal(isUserHomePath('/ekodilab', 'lab'), true);
-  assert.equal(isUserHomePath('/ekodibiz/trade', 'trade'), true);
+  assert.equal(isUserHomePath('/trade', 'trade'), true);
   assert.equal(isUserHomePath('/cafe', 'cafe'), true);
   assert.equal(isUserHomePath('/jadam', '', 'jadam'), true);
   assert.equal(isUserHomePath('/cgma', '', 'cgma'), true);
