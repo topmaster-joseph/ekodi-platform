@@ -12,6 +12,7 @@ import { handleStorefrontRequest } from './storefront.js';
 import { commerceEventSchemaReady } from './commerce-events.js';
 import { handleCommerceOperationsRequest } from './commerce-operations.js';
 import { handleAmazonRequest, amazonRuntimeStatus, amazonCostSchemaReady, amazonConnectionSchemaReady } from './amazon.js';
+import { handleAmazonReadonlyRequest, amazonReadSyncSchemaReady } from './amazon-readonly-sync.js';
 
 const FEE_RATES = Object.freeze({ direct: 7, marketplace: 8, ai: 9 });
 const ATTRIBUTION_WINDOW_DAYS = 7;
@@ -156,13 +157,14 @@ export default {
       const amazon = await amazonRuntimeStatus(env);
       const amazonCostReady = Boolean(env.DB) && await amazonCostSchemaReady(env);
       const amazonConnectionReady = Boolean(env.DB) && await amazonConnectionSchemaReady(env);
+      const amazonReadSyncReady = Boolean(env.DB) && await amazonReadSyncSchemaReady(env);
       const ok = coreResponse.ok && firstTouchReady && sourcingReady && fulfillmentReady && verificationReady && supplierPilotReady && supplierDiscoveryReady && domemaeReady && commerceEventsReady;
       return reply({
         ...coreBody, ok, version:3, environment:env.ENVIRONMENT || 'unknown', firstTouchSchemaReady:firstTouchReady,
         sourcingSchemaReady:sourcingReady, fulfillmentSchemaReady:fulfillmentReady, verificationSchemaReady:verificationReady,
         supplierPilotSchemaReady:supplierPilotReady, supplierDiscoverySchemaReady:supplierDiscoveryReady, domemaeConnectorReady:domemaeReady,
         commerceEventSchemaReady:commerceEventsReady, commerceOsVersion:1,
-        amazonConnector:amazon, amazonCostSchemaReady:amazonCostReady, amazonConnectionSchemaReady:amazonConnectionReady,
+        amazonConnector:amazon, amazonCostSchemaReady:amazonCostReady, amazonConnectionSchemaReady:amazonConnectionReady, amazonReadSyncSchemaReady:amazonReadSyncReady,
         domemaeLookupEnabled:String(env.DOMEMAE_LOOKUP_ENABLED || '').toLowerCase() === 'true', domemaeOrderEnabled:false,
         attributionWindowDays:ATTRIBUTION_WINDOW_DAYS,
         operationsReviewConfigured:Boolean(env.MALL_OPERATIONS_TOKEN || env.MALL_OPERATIONS_EMAILS), operationsEmailAllowlistConfigured:Boolean(env.MALL_OPERATIONS_EMAILS),
@@ -198,6 +200,9 @@ export default {
 
     const commerceOperations = await handleCommerceOperationsRequest(request, env);
     if (commerceOperations) return reply(commerceOperations.body, commerceOperations.status, origin, env);
+
+    const amazonReadonly = await handleAmazonReadonlyRequest(request, env);
+    if (amazonReadonly) return reply(amazonReadonly.body, amazonReadonly.status, origin, env);
 
     const amazon = await handleAmazonRequest(request, env);
     if (amazon) return reply(amazon.body, amazon.status, origin, env);
