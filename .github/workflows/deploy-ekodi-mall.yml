@@ -228,6 +228,24 @@ jobs:
       - name: Apply staging migrations
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config api/wrangler.staging.runtime.toml
 
+      - name: Verify Amazon free-first D1 defaults
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute DB --remote --config api/wrangler.staging.runtime.toml --json \
+            --command "SELECT free_first_enabled,monthly_budget_usd,paid_aws_enabled,seller_paid_plan_enabled,fba_enabled,bedrock_paid_enabled FROM amazon_cost_policy WHERE scope='ekodimall'" \
+            > /tmp/mall-stage-amazon-policy.json
+          node <<'NODE'
+          const fs=require('node:fs');
+          const raw=JSON.parse(fs.readFileSync('/tmp/mall-stage-amazon-policy.json','utf8'));
+          const sets=Array.isArray(raw)?raw:(raw.result||[]);
+          const row=(sets[0]?.results||sets[0]?.result||sets.results||[])[0];
+          if(!row)throw new Error('Amazon cost policy default row missing');
+          const expected={free_first_enabled:1,monthly_budget_usd:0,paid_aws_enabled:0,seller_paid_plan_enabled:0,fba_enabled:0,bedrock_paid_enabled:0};
+          for(const [key,value] of Object.entries(expected))if(Number(row[key])!==value)throw new Error(`Amazon cost default drift: ${key}=${row[key]}`);
+          console.log('Amazon free-first D1 defaults verified');
+          NODE
+
       - name: Deploy staging Mall API
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.staging.runtime.toml
 
@@ -243,8 +261,7 @@ jobs:
             health_code=$(curl -sS -o /tmp/mall-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "${STAGING_URL}/health" || true)
             fees_code=$(curl -sS -o /tmp/mall-stage-fees.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "${STAGING_URL}/api/public/fees" || true)
             feed_code=$(curl -sS -o /tmp/mall-stage-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "${STAGING_URL}/api/public/products?limit=1" || true)
-            amazon_cost_code=$(curl -sS -o /tmp/mall-stage-amazon-cost.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "${STAGING_URL}/api/amazon/cost-policy" || true)
-            if [ "$health_code" = "200" ] && [ "$fees_code" = "200" ] && [ "$feed_code" = "200" ] && [ "$amazon_cost_code" = "200" ] \
+            if [ "$health_code" = "200" ] && [ "$fees_code" = "200" ] && [ "$feed_code" = "200" ] \
               && grep -Fq '"schemaReady":true' /tmp/mall-stage-health.json \
               && grep -Fq '"orderSchemaReady":true' /tmp/mall-stage-health.json \
               && grep -Fq '"firstTouchSchemaReady":true' /tmp/mall-stage-health.json \
@@ -266,11 +283,6 @@ jobs:
               && grep -Fq '"ai":9' /tmp/mall-stage-fees.json \
               && grep -Fq '"attributionWindowDays":7' /tmp/mall-stage-fees.json \
               && grep -Fq '"products":[' /tmp/mall-stage-feed.json \
-              && grep -Fq '"freeFirstEnabled":true' /tmp/mall-stage-amazon-cost.json \
-              && grep -Fq '"monthlyBudgetUsd":0' /tmp/mall-stage-amazon-cost.json \
-              && grep -Fq '"paidAwsEnabled":false' /tmp/mall-stage-amazon-cost.json \
-              && grep -Fq '"sellerPaidPlanEnabled":false' /tmp/mall-stage-amazon-cost.json \
-              && grep -Fq '"fbaEnabled":false' /tmp/mall-stage-amazon-cost.json \
               && grep -Fq '"bedrockPaidEnabled":false' /tmp/mall-stage-amazon-cost.json; then
               echo "Mall Development staging passed D1, order, first-touch, 7/8/9, feed and disabled-payment/payout checks."
               break
