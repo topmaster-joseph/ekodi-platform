@@ -58,8 +58,8 @@ async function audit(){
   need(root,'ekodi.kr','.site-header{position:fixed;top:0;left:0;right:0;width:100%',errors);
   need(root,'ekodi.kr','--ekodi-home-header-height',errors);
   http(adminCss,'ekodi.kr/admin-shell.css',errors);
-  need(adminCss,'admin','position:fixed!important',errors);
-  need(adminCss,'admin','.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}',errors);
+  need(adminCss,'admin','.app>main{padding-top:0;min-width:0;max-width:100vw}',errors);
+  need(adminCss,'admin','.topbar{position:sticky!important;top:0!important;left:auto!important;right:auto!important;width:100%!important',errors);
   http(shell,'ekodi.kr/shell/shell.js',errors);
   for(const marker of ['ekodi-mobile-fixed-header-style','data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important'])need(shell,'shell',marker,errors);
   http(mobileHeader,'ekodi.kr/shell/mobile-fixed-header.js',errors);
