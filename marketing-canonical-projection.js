@@ -1,7 +1,7 @@
 const HIDDEN_UI_ORIGINS=Object.freeze(['https://marketing.ekodi.kr','https://jadam.ai.ekodi.kr','https://pizzamaru.ai.ekodi.kr','https://yogurt.ai.ekodi.kr','https://cgma.ai.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurt.ekodi.kr','https://marketing.jadam.ekodi.kr','https://marketing.pizzamaru.ekodi.kr','https://marketing.yogurt.ekodi.kr','https://marketing.cheonggye.ekodi.kr']);
 
 const PROJECTIONS = [
-  { prefix:'/ekodibiz/marketing-ai', sourceOrigin:'https://marketing.ekodi.kr', entryPath:'/', tenant:null, hiddenOrigins:HIDDEN_UI_ORIGINS },
+  { prefix:'/ekodimarketing', sourceOrigin:'https://marketing.ekodi.kr', entryPath:'/', tenant:null, hiddenOrigins:HIDDEN_UI_ORIGINS },
   { prefix:'/jadam/marketing', sourceOrigin:'https://jadam.ai.ekodi.kr', entryPath:'/', tenant:'jadam', hiddenOrigins:HIDDEN_UI_ORIGINS },
   { prefix:'/pizzamaru/marketing', sourceOrigin:'https://pizzamaru.ai.ekodi.kr', entryPath:'/', tenant:'pizzamaru', hiddenOrigins:HIDDEN_UI_ORIGINS },
   { prefix:'/yogurt/marketing', sourceOrigin:'https://yogurt.ai.ekodi.kr', entryPath:'/', tenant:'yogurt', hiddenOrigins:HIDDEN_UI_ORIGINS },
