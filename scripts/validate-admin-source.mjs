@@ -74,12 +74,22 @@ if (workspaceAdmin.includes("account.status==='active'?'재인증'")) {
 const mobileWorkbench = readFileSync(join(root, 'admin-conversation-workbench.css'), 'utf8');
 const mobileSidebar = readFileSync(join(root, 'admin-sidebar.js'), 'utf8');
 const mobileAssistCss = readFileSync(join(root, 'admin-assist-bootstrap.css'), 'utf8');
+const adminAssistDock = readFileSync(join(root, 'admin-assist-dock.js'), 'utf8');
 const canonicalRoutes = readFileSync(join(root, 'admin-canonical-routes.js'), 'utf8');
 for (const marker of ['Mobile admin shell authority v3','transform:translateX(-105%)!important','admin-mobile-primary-nav','admin-mobile-drawer-scrim','padding-top:0!important']) {
   if (!mobileWorkbench.includes(marker)) violations.push(`admin-conversation-workbench.css: missing ADMIN-MOBILE-SHELL-003 marker: ${marker}`);
 }
 for (const marker of ["MOBILE_NAV_CLASS = 'admin-mobile-primary-nav'","DRAWER_SCRIM_CLASS = 'admin-mobile-drawer-scrim'","const setDrawerOpen = open =>"]) {
   if (!mobileSidebar.includes(marker)) violations.push(`admin-sidebar.js: missing ADMIN-MOBILE-SHELL-003 navigation marker: ${marker}`);
+}
+for (const marker of ["commandEntry.hidden = true","commandEntry.style.setProperty('display', 'none', 'important')","shell.hidden = true","shell.style.setProperty('display', 'none', 'important')"]) {
+  if (!mobileSidebar.includes(marker)) violations.push(`admin-sidebar.js: missing ADMIN-CLUTTER-005 single-navigation marker: ${marker}`);
+}
+for (const marker of ['ADMIN-CLUTTER-005','.admin-command-entry,','.admin-context-tabs-shell','display:none!important']) {
+  if (!mobileWorkbench.includes(marker)) violations.push(`admin-conversation-workbench.css: missing ADMIN-CLUTTER-005 visual marker: ${marker}`);
+}
+for (const marker of ['/api/control/ai/assist','/api/control/ai/v8/pulse','/api/control/ai/actions','handoffCommand','EXTERNAL_SECRET_RE']) {
+  if (!adminAssistDock.includes(marker)) violations.push(`admin-assist-dock.js: missing persistent command execution marker: ${marker}`);
 }
 for (const marker of ['.ekodi-assist-bootstrap{left:auto;right:12px;bottom:76px;padding:0;background:none}','.ekodi-assist-bootstrap-form{width:52px;height:52px;min-height:52px;padding:0}','.ekodi-assist-bootstrap-form input,.ekodi-assist-bootstrap-send{display:none}']) {
   if (!mobileAssistCss.includes(marker)) violations.push(`admin-assist-bootstrap.css: missing ADMIN-MOBILE-SHELL-003 first-paint Assist marker: ${marker}`);
