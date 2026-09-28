@@ -32,3 +32,16 @@ test('compact styling retains Site Structure focus affordances', () => {
   assert.match(css, /campus/);
   assert.match(css, /campus-focus/);
 });
+
+
+test('site registry exposes separate user and administrator surfaces for EKODI sites', () => {
+  for (const marker of [
+    "name: '에코디비즈'","publicHref:'/ekodibiz'","adminHref:'/ekodibiz/admin'",
+    "name: '에코디몰'","publicHref:'/ekodimall'","adminHref:'/ekodimall/admin'",
+    "name: '에코디투자'","publicHref:'/invest'","adminHref:'/invest/admin'",
+    "name: '에코디무역'","publicHref:'/trade'","adminHref:'/ekodibiz/trade/admin'"
+  ]) assert.ok(campus.includes(marker), marker);
+  assert.ok(campus.includes("makeSurfaceLink('사용자'"));
+  assert.ok(campus.includes("makeSurfaceLink('관리자'"));
+  assert.ok(campus.includes("relation.textContent=site.adminHref?'사용자·관리자 분리'"));
+});
