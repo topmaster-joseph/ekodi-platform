@@ -19,6 +19,8 @@ on:
       - 'tax-service-worker.js'
       - 'tax-member-service.js'
       - 'config/tax-membership-policy.json'
+      - 'config/ekodibiz-membership-packaging-policy.json'
+      - 'scripts/validate-ekodibiz-membership-packaging.mjs'
       - 'test/tax-member-service.test.mjs'
       - 'tax-invoice-free-first-worker.js'
       - 'tax-invoice-worker.js'
@@ -44,6 +46,8 @@ on:
       - 'tax-service-worker.js'
       - 'tax-member-service.js'
       - 'config/tax-membership-policy.json'
+      - 'config/ekodibiz-membership-packaging-policy.json'
+      - 'scripts/validate-ekodibiz-membership-packaging.mjs'
       - 'test/tax-member-service.test.mjs'
       - 'tax-invoice-free-first-worker.js'
       - 'tax-invoice-worker.js'
@@ -107,6 +111,7 @@ jobs:
           node --check tax-service-worker.js
           node --check tax-member-service.js
           node --test test/tax-member-service.test.mjs
+          node scripts/validate-ekodibiz-membership-packaging.mjs
           node --check tax-invoice-free-first-worker.js
           node --check tax-invoice-worker.js
           node --check tax-hometax-ledger-service.js
