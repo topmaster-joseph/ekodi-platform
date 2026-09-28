@@ -132,8 +132,7 @@ forbidText('.github/workflows/deploy-jadam-marketing-ai.yml', ['pages deploy', '
 requireText('.github/workflows/deploy-ekodi-lab-homepage.yml', [
   'guarded-pages-release.mjs',
   'ekodilab.pages.json',
-  'topmaster-joseph/ekodi-site',
-  'AI_CONTROL_GITHUB_TASK_TOKEN',
+  'sites/ekodi-lab',
   'lab-release.json',
   'https://ekodi.kr/ekodilab',
 ]);
