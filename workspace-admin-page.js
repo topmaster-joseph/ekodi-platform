@@ -735,6 +735,14 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
           ${(connection.marketplaces||[]).length?`<div class="table-wrap" style="margin-top:10px"><table><thead><tr><th>Marketplace</th><th>국가</th><th>스토어</th><th>참여</th><th>정지</th></tr></thead><tbody>${connection.marketplaces.map(m=>`<tr><td>${ae(m.name||m.marketplaceId)}</td><td>${ae(m.countryCode||'-')}</td><td>${ae(m.storeName||'-')}</td><td>${m.participationActive?'활성':'비활성'}</td><td>${m.suspended?'예':'아니오'}</td></tr>`).join('')}</tbody></table></div>`:''}
         </div>
         <div class="panel" style="margin-top:14px">
+          <h3>Amazon 읽기 전용 동기화</h3>
+          <p class="empty">Seller Central에서 상품·FBA 재고·주문을 읽어 EKODI 캐시에 반영합니다. Amazon의 상품·가격·재고·주문 상태는 변경하지 않습니다.</p>
+          <div class="actions">
+            <button class="button primary" id="amazonReadonlySync" type="button">상품·재고·주문 조회</button>
+          </div>
+          <div id="amazonReadonlyResults" class="empty">최근 동기화 정보를 불러오는 중입니다.</div>
+        </div>
+        <div class="panel" style="margin-top:14px">
           <h3>비용 강제실행 규칙</h3>
           <form id="amazonCostPolicyForm">
             <div class="grid two">
@@ -809,6 +817,27 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
         if(!remove.ok){state('Amazon 연결 해제 실패');$('pageCopy').textContent=out.error||'연결을 해제하지 못했습니다.';return}
         state('Amazon 연결 해제 완료');
         amazonAdmin();
+      });
+      const renderReadonlySnapshot=s=>{
+        const el=$('amazonReadonlyResults'); if(!el)return;
+        const listings=Array.isArray(s?.listings)?s.listings:[], inventory=Array.isArray(s?.inventory)?s.inventory:[], orders=Array.isArray(s?.orders)?s.orders:[], runs=Array.isArray(s?.runs)?s.runs:[];
+        const last=runs[0];
+        el.innerHTML=`Marketplace: <strong>${ae(s?.marketplaceId||connection.marketplaceId||'-')}</strong> · 상품 <strong>${listings.length}</strong> · 재고 <strong>${inventory.length}</strong> · 주문 <strong>${orders.length}</strong>${last?` · 최근 실행 <strong>${ae(last.status||'-')}</strong> (${ae(last.startedAt||'-')})`:''}`;
+      };
+      if(connection.marketplaceId){
+        fetch('/ekodimall/api/amazon/read-model?marketplaceId='+encodeURIComponent(connection.marketplaceId),{headers,cache:'no-store'})
+          .then(r=>r.ok?r.json():null).then(d=>{if(d)renderReadonlySnapshot(d)}).catch(()=>{});
+      }else{
+        const el=$('amazonReadonlyResults'); if(el)el.textContent='Marketplace 연결 테스트 후 사용할 수 있습니다.';
+      }
+      $('amazonReadonlySync')?.addEventListener('click',async()=>{
+        if(!connection.configured){state('Amazon 계정 연결 필요');return}
+        state('Amazon 상품·재고·주문 읽기 동기화 중');
+        const sync=await fetch('/ekodimall/api/amazon/sync/read-only',{method:'POST',headers:{...headers,'content-type':'application/json'},body:JSON.stringify({marketplaceId:connection.marketplaceId,resources:['listings','inventory','orders']})});
+        const out=await sync.json().catch(()=>({}));
+        if(!sync.ok&&out.status!=='partial'){state('Amazon 읽기 동기화 확인 필요');$('pageCopy').textContent=(out.errors||[]).map(x=>x.resource+': '+x.code).join(' · ')||out.error||'읽기 동기화에 실패했습니다.';return}
+        renderReadonlySnapshot(out.snapshot||{});
+        state(out.status==='partial'?'Amazon 일부 읽기 완료':'Amazon 읽기 동기화 완료');
       });
       const approvalForm=$('amazonApprovalForm');
       approvalForm?.addEventListener('submit',async event=>{
