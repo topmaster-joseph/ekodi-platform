@@ -121,8 +121,10 @@ test('Mall deploy workflow provisions Amazon vault keys without exposing values'
   assert.match(workflow,/Ensure persistent production Amazon credential key/);
   assert.match(workflow,/secret list --config api\/wrangler\.staging\.runtime\.toml/);
   assert.match(workflow,/secret put AMAZON_CREDENTIAL_KEY --config api\/wrangler\.staging\.runtime\.toml/);
-  assert.match(workflow,/secret list --config api\/wrangler\.runtime\.toml/);
-  assert.match(workflow,/secret put AMAZON_CREDENTIAL_KEY --config api\/wrangler\.runtime\.toml/);
+  assert.match(workflow,/secret list --name ekodi-mall-api/);
+  assert.match(workflow,/secret put AMAZON_CREDENTIAL_KEY --name ekodi-mall-api/);
+  assert.match(workflow,/Verify production Amazon vault readiness/);
+  assert.match(workflow,/\/ekodimall\/api\/amazon\/status/);
   assert.match(workflow,/openssl rand -hex 32/);
   assert.match(workflow,/"vaultReady":true/);
   assert.doesNotMatch(workflow,/echo\s+["']?\$\{?AMAZON_CREDENTIAL_KEY/i);
