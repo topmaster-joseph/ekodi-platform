@@ -5,7 +5,8 @@
   const TOKEN_KEY = 'ekodi-auth-token';
   const START_KEY = 'ekodi-governance-cockpit-started-v1';
   const OVERVIEW_TTL_MS = 5 * 60 * 1000;
-  const CORE_DOMAINS = new Set(['admin.ekodi.kr','auth.ekodi.kr','api.ekodi.kr','pay.ekodi.kr']);
+  const CORE_SERVICE_IDS = new Set(['admin','auth','api','pay']);
+  const CORE_DOMAINS = new Set(['admin.ekodi.kr','auth.ekodi.kr','pay.ekodi.kr']);
   const PRIMARY_ROUTES = [
     { key:'overview', label:'Overview', icon:'◈', focus:'overview' },
     { key:'decisions', label:'Decisions', icon:'✓', focus:'decisions' },
@@ -60,13 +61,18 @@
   }
 
   function services() { return Array.isArray(latestOverview?.services) ? latestOverview.services : []; }
+  function isCoreService(service) {
+    const id=String(service?.id||'').toLowerCase();
+    const domain=String(service?.domain||'').toLowerCase();
+    return CORE_SERVICE_IDS.has(id)||CORE_DOMAINS.has(domain);
+  }
   function issueItems() {
     return services().map(service => ({ service, status:serviceStatus(service) }))
       .filter(({ status }) => ['critical','attention'].includes(status.key));
   }
   function decisionItems() {
     return issueItems().filter(({ service, status }) =>
-      status.key === 'critical' || CORE_DOMAINS.has(String(service.domain || '').toLowerCase()))
+      status.key === 'critical' || isCoreService(service))
       .map(({ service, status }) => ({
         title:`${service.name || service.domain} ${status.key === 'critical' ? '중요 장애' : '주의 상태'}`,
         domain:service.domain || '', status:status.label,

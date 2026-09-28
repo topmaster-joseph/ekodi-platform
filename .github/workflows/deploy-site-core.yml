@@ -250,6 +250,9 @@ on:
       - 'scripts/admin-readable-command-postbuild.mjs'
       - 'scripts/admin-thin-postbuild.mjs'
       - 'scripts/admin-performance-postbuild.mjs'
+      - 'scripts/validate-canonical-api-execution.mjs'
+      - 'config/canonical-api-execution-policy.json'
+      - 'test/apex-api-retirement.test.mjs'
       - 'admin-conversation-workbench.css'
       - 'test/admin-performance-hardening.test.mjs'
       - 'test/admin-conversation-workbench.test.mjs'
@@ -474,6 +477,7 @@ jobs:
           node scripts/validate-admin-source.mjs
           node scripts/validate-user-ui-dna.mjs
           node scripts/validate-platform-security-policy.mjs
+          node scripts/validate-canonical-api-execution.mjs
           if [ -f scripts/audit-admin-menu-services.mjs ]; then node scripts/audit-admin-menu-services.mjs; fi
           test -f homepage-ambient.css
           test -f mall.html
@@ -582,6 +586,8 @@ jobs:
           grep -Fq "nav.dataset.ekodiIndependentScroll='platform-admin'" dist/admin-authenticated-shell.js
           grep -Fq '/api/control/public-sites' dist/admin-public-site-controls.js
           grep -Fq '/api/control/language-status' dist/admin-language-status.js
+          grep -Fq "const API='https://ekodi.kr'" dist/admin-ai-control-plane.js
+          grep -Fq 'admin-ai-control-plane.js' scripts/admin-performance-postbuild.mjs
           grep -Fq 'admin-public-site-controls.js' dist/admin-authenticated-shell.js
           grep -Fq 'EVOLUTION INTELLIGENCE' dist/ai-ops-admin.js
           grep -Fq '/api/control/evolution' dist/ai-ops-admin.js
