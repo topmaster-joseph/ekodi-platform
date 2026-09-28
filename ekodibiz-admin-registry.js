@@ -12,7 +12,7 @@ const EKODIBIZ_ADMIN_SCOPE_DEFINITIONS = [
   {
     id: 'trade', label: '에코디무역', shortLabel: '무역',
     description: '거래회사·거래 운영·무역 관리자 권한을 관리합니다.',
-    adminHref: '/ekodibiz/trade/admin', publicHref: '/ekodibiz/trade', kind: 'module',
+    adminHref: '/ekoditrade/admin', publicHref: '/ekoditrade', kind: 'module',
   },
   {
     id: 'invest', label: '에코디투자', shortLabel: '투자',
@@ -22,7 +22,7 @@ const EKODIBIZ_ADMIN_SCOPE_DEFINITIONS = [
   {
     id: 'tax', label: '세금·증빙', shortLabel: '세금',
     description: '에코디비즈 전자세금계산서·공급자·거래처·발행대장을 관리합니다.',
-    adminHref: '/tax', publicHref: '/tax', kind: 'service',
+    adminHref: '/ekoditax/admin', publicHref: '/ekoditax', kind: 'service',
   },
   {
     id: 'books', label: '에코디서점', shortLabel: '서점',
@@ -47,9 +47,9 @@ export function ekodiBizAdminScopeSnapshot() {
 export function ekodiBizAdminScopeForPath(pathname = '') {
   const path = String(pathname || '').replace(/\/+$/, '') || '/';
   if (/^\/ekodimall\/admin(?:\/|$)/i.test(path)) return 'mall';
-  if (/^\/ekodibiz\/trade\/admin(?:\/|$)/i.test(path)) return 'trade';
+  if (/^\/ekoditrade\/admin(?:\/|$)/i.test(path)) return 'trade';
   if (/^\/ekodibiz\/invest\/admin(?:\/|$)/i.test(path)) return 'invest';
-  if (/^\/tax(?:\/|$)/i.test(path)) return 'tax';
+  if (/^\/ekoditax\/admin(?:\/|$)/i.test(path)) return 'tax';
   if (/^\/admin\/services\/books(?:\/|$)/i.test(path)) return 'books';
   if (/^\/(?:ekodi-lab|ekodilab)\/admin(?:\/|$)/i.test(path)) return 'lab';
   if (/^\/ekodibiz\/admin(?:\/|$)/i.test(path)) return 'common';
