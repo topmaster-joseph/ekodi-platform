@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { EKODIBIZ_INVEST_ADMIN, ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from '../ekodibiz-invest-admin-page.js';
 
-test('EKODIBIZ Invest admin uses nested site-local canonical paths',()=>{
+test('EKODI Invest admin uses independent canonical path with compatibility alias',()=>{
   for(const path of ['/invest/admin','/invest/admin/projects','/invest/admin/ir','/invest/admin/connect','/invest/admin/programs','/ekodibiz/invest/admin']) assert.equal(isEkodiBizInvestAdminPath(path),true,path);
   assert.equal(isEkodiBizInvestAdminPath('/invest'),false);
   assert.equal(isEkodiBizInvestAdminPath('/ekodibiz/invest/admin/unknown'),false);
-  assert.equal(EKODIBIZ_INVEST_ADMIN.canonicalPath,'/ekodibiz/invest/admin');
+  assert.equal(EKODIBIZ_INVEST_ADMIN.canonicalPath,'/invest/admin');
 });
 
 test('local Invest admin is no-store and preserves the regulated transaction boundary',async()=>{
