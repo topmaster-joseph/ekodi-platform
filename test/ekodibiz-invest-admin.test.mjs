@@ -4,8 +4,8 @@ import { readFile } from 'node:fs/promises';
 import { EKODIBIZ_INVEST_ADMIN, ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from '../ekodibiz-invest-admin-page.js';
 
 test('EKODIBIZ Invest admin uses nested site-local canonical paths',()=>{
-  for(const path of ['/ekodibiz/invest/admin','/ekodibiz/invest/admin/projects','/ekodibiz/invest/admin/ir','/ekodibiz/invest/admin/connect','/ekodibiz/invest/admin/programs']) assert.equal(isEkodiBizInvestAdminPath(path),true,path);
-  assert.equal(isEkodiBizInvestAdminPath('/ekodibiz/invest'),false);
+  for(const path of ['/invest/admin','/invest/admin/projects','/invest/admin/ir','/invest/admin/connect','/invest/admin/programs','/ekodibiz/invest/admin']) assert.equal(isEkodiBizInvestAdminPath(path),true,path);
+  assert.equal(isEkodiBizInvestAdminPath('/invest'),false);
   assert.equal(isEkodiBizInvestAdminPath('/ekodibiz/invest/admin/unknown'),false);
   assert.equal(EKODIBIZ_INVEST_ADMIN.canonicalPath,'/ekodibiz/invest/admin');
 });
@@ -36,3 +36,5 @@ test('entry router does not swallow EKODIBIZ Invest admin as generic workspace a
   const source=await readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
   assert.match(source,/isWorkspaceAdminPath\(url\.pathname\)&&!isEkodiBizInvestAdminPath\(url\.pathname\)/);
 });
+
+test('EKODI Invest canonical admin is independent from EKODIBIZ path',()=>{ assert.equal(EKODIBIZ_INVEST_ADMIN.canonicalPath,'/invest/admin'); assert.equal(EKODIBIZ_INVEST_ADMIN.publicPath,'/invest'); assert.equal(EKODIBIZ_INVEST_ADMIN.legacyPath,'/ekodibiz/invest/admin'); });
