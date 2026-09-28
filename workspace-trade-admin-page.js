@@ -5,6 +5,8 @@ function tradeAdminClient(ADMIN_HUB){
   const workspaceUrlSlug=route[1].toLowerCase();
   const workspace=workspaceUrlSlug==='ekodibiz'?'ekoditrade':workspaceUrlSlug;
   const section=(route[2]||'overview').toLowerCase();
+  const routeParts=location.pathname.replace(/\/+$/,'').split('/').filter(Boolean);
+  const productCode=section==='products'&&routeParts.length>4?decodeURIComponent(routeParts.slice(4).join('/')):'';
   if(['publishing','marketing','channels'].includes(section))return;
   const API='https://renzehysxirjilvdxacv.supabase.co/functions/v1/workspace-api';
   const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
@@ -150,9 +152,20 @@ function tradeAdminClient(ADMIN_HUB){
     accessSummary();state('제품 불러오는 중');
     const groups=await loadAllEngagements();
     const products=groups.flatMap(group=>group.engagements.map(item=>({...item,company:group.company})));
-    const rows=products.length?`<div class="table-wrap"><table><thead><tr><th>공급사</th><th>제품</th><th>단계</th><th>상태</th><th>목표일</th><th>공급자 공유</th></tr></thead><tbody>${products.map(p=>`<tr><td><strong>${esc(p.company.display_name)}</strong><br><small>${esc(p.company.country_code||p.company.slug)}</small></td><td><strong>${esc(p.title)}</strong><br><small>${esc(p.code)}</small></td><td><span class="tag">${esc(phaseLabel(p.phase))}</span></td><td>${esc(productStatusLabel(p.status))}</td><td>${p.target_at?esc(new Date(p.target_at).toLocaleDateString('ko-KR')):'-'}</td><td><a class="button" href="/${workspaceUrlSlug}/trade">공급자 업무공간</a></td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">등록된 제품이 없습니다. 공급사를 등록한 뒤 첫 제품을 등록해 주세요.</p>';
+    const rows=products.length?`<div class="table-wrap"><table><thead><tr><th>공급사</th><th>제품</th><th>단계</th><th>상태</th><th>목표일</th><th>공급자 공유</th></tr></thead><tbody>${products.map(p=>`<tr><td><strong>${esc(p.company.display_name)}</strong><br><small>${esc(p.company.country_code||p.company.slug)}</small></td><td><strong>${esc(p.title)}</strong><br><small>${esc(p.code)}</small></td><td><span class="tag">${esc(phaseLabel(p.phase))}</span></td><td>${esc(productStatusLabel(p.status))}</td><td>${p.target_at?esc(new Date(p.target_at).toLocaleDateString('ko-KR')):'-'}</td><td><div class="actions"><a class="button" href="/${workspaceUrlSlug}/trade/products/${encodeURIComponent(p.code)}/supplier">공급자</a><a class="button" href="/${workspaceUrlSlug}/trade/products/${encodeURIComponent(p.code)}">소비자</a><a class="button" href="${base}/products/${encodeURIComponent(p.code)}">하위관리</a></div></td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">등록된 제품이 없습니다. 공급사를 등록한 뒤 첫 제품을 등록해 주세요.</p>';
     $('mainPanel').innerHTML=`<section><div class="panel-head"><div><h2>전체 제품</h2><p class="empty">제품은 공급사에 연결되며 공급자는 자신의 회사 범위 안에서 해당 진행건과 공유기록만 확인합니다.</p></div></div>${rows}</section>${productEditor(companies[0]?.id||'')}`;
     bindProductEditor();state(`제품 ${products.length}건`);
+  }
+  async function renderProductDetail(code){
+    sectionTitle('제품 하위관리','제품 하나를 독립 운영 단위로 관리합니다.');
+    accessSummary();state('제품 불러오는 중');
+    const groups=await loadAllEngagements();
+    const product=groups.flatMap(group=>group.engagements.map(item=>({...item,company:group.company}))).find(item=>String(item.code).toUpperCase()===String(code).toUpperCase());
+    if(!product){$('mainPanel').innerHTML='<h2>제품을 찾을 수 없습니다.</h2><p class="empty">제품 코드 또는 관리 범위를 확인해 주세요.</p>';state('제품 없음');return;}
+    const publicUrl=`/${workspaceUrlSlug}/trade/products/${encodeURIComponent(product.code)}`;
+    const supplierUrl=`${publicUrl}/supplier`;
+    $('mainPanel').innerHTML=`<section><div class="panel-head"><div><h2>${esc(product.title)}</h2><p class="empty">${esc(product.company.display_name)} · ${esc(product.code)}</p></div><span class="tag">${esc(phaseLabel(product.phase))}</span></div><div class="role-guide"><article class="role-card"><strong>에코디 구매·운영</strong><p>공급가·계약·인증·수입·판매정책·내부 의사결정을 관리합니다. 공급자와 소비자에게 비공개인 내부 영역입니다.</p></article><article class="role-card"><strong>공급자 협업</strong><p>공급자는 자기 회사의 이 제품에 한해 진행상황·요청·문서·공식기록을 공유합니다.</p><p><a class="button" href="${supplierUrl}">공급자 페이지</a></p></article><article class="role-card"><strong>소비자 구매</strong><p>공개 사양·판매가·배송/A/S 정보와 구매 버튼만 제공합니다. 내부 계약·원가·공급사 메모는 노출하지 않습니다.</p><p><a class="button primary" href="${publicUrl}">소비자 상품페이지</a></p></article></div></section><section style="margin-top:18px"><h2>제품 운영</h2><div class="service-list"><div class="service-row"><div><strong>현재 단계</strong><p>${esc(phaseLabel(product.phase))} · ${esc(productStatusLabel(product.status))}</p></div><a href="${base}/pipeline">전체 도입진행</a></div><div class="service-row"><div><strong>공급회사</strong><p>${esc(product.company.display_name)} · ${esc(product.company.country_code||product.company.slug)}</p></div><a href="${base}/companies">공급사 관리</a></div><div class="service-row"><div><strong>소비자 판매 채널</strong><p>제품 공개페이지에서 에코디몰 구매 흐름으로 연결합니다. 결제·주문·배송 상태는 에코디몰이 담당합니다.</p></div><a href="/ekodimall/admin/products">에코디몰 상품관리</a></div></div></section>`;
+    state('제품 하위관리');
   }
   async function renderPipeline(){
     sectionTitle('도입 진행','계약·샘플·인증·수입·판매 준비를 제품별로 추적합니다.');
@@ -181,7 +194,7 @@ function tradeAdminClient(ADMIN_HUB){
       $('workspaceLogout')?.addEventListener('click',async()=>{try{await sb.auth.signOut();}finally{location.assign(base);}});
       await consumeHandoff();const session=await currentSession();if(!session){authRequired();return;}
       await loadContext();renderAdminScopeSwitcher();await loadCompanies();if(section==='access')await loadAdmins();
-      if(section==='companies')renderCompanies();else if(section==='products')await renderProducts();else if(section==='pipeline')await renderPipeline();else if(section==='access')renderAccess();else renderOverview();
+      if(section==='companies')renderCompanies();else if(section==='products'&&productCode)await renderProductDetail(productCode);else if(section==='products')await renderProducts();else if(section==='pipeline')await renderPipeline();else if(section==='access')renderAccess();else renderOverview();
     }catch(error){
       console.error('trade admin bootstrap',error);if(error.status===401||error.message==='login_required'){authRequired();return;}
       sectionTitle('무역거래 관리자','현재 계정의 에코디비즈 무역 권한을 확인합니다.');$('summaryCards').innerHTML=card('접근','제한됨','권한 확인');
