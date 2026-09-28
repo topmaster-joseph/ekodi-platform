@@ -6,6 +6,9 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('Admin production verifier runs after successful canonical shared-site releases and publishes failures only', async () => {
   const workflow = await read('.github/workflows/deploy-admin-ai-ops.yml');
+  assert.match(workflow, /push:/);
+  assert.match(workflow, /branches: \[main\]/);
+  assert.match(workflow, /github\.event_name == 'push'/);
   assert.match(workflow, /workflow_run:/);
   assert.match(workflow, /workflows: \['Deploy EKODI Shared Site Core'\]/);
   assert.match(workflow, /types: \[completed\]/);
