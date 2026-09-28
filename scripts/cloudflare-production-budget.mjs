@@ -7,6 +7,7 @@ import {
   detectWorkersPaidPlan,
   cloudflareUsageWindow
 } from './cloudflare-quota-guard-lib.mjs';
+import { buildAdaptiveInfrastructureDecision } from '../adaptive-resource-orchestrator.js';
 
 const configPath = fileURLToPath(new URL('../config/cloudflare-production-quota-guard.json', import.meta.url));
 const config = JSON.parse(await readFile(configPath, 'utf8'));
@@ -187,10 +188,46 @@ try {
   };
 }
 
+const adaptiveMetrics = [
+  {
+    provider:'cloudflare',
+    metric:plan.paid ? 'workers_requests_month' : 'workers_requests_daily',
+    usagePercent:quota.percent,
+    measured:true,
+    stale:false,
+    scope:'consumption',
+    periodStart:window.periodKind==='month' ? window.start.slice(0,7) : window.start.slice(0,10)
+  },
+  ...(d1.available ? [
+    {
+      provider:'cloudflare',
+      metric:plan.paid ? 'd1_rows_read_month' : 'd1_rows_read_daily',
+      usagePercent:d1.readQuota?.percent,
+      measured:true,
+      stale:false,
+      scope:'consumption',
+      periodStart:window.periodKind==='month' ? window.start.slice(0,7) : window.start.slice(0,10)
+    },
+    {
+      provider:'cloudflare',
+      metric:plan.paid ? 'd1_rows_written_month' : 'd1_rows_written_daily',
+      usagePercent:d1.writeQuota?.percent,
+      measured:true,
+      stale:false,
+      scope:'consumption',
+      periodStart:window.periodKind==='month' ? window.start.slice(0,7) : window.start.slice(0,10)
+    }
+  ] : [])
+];
+const adaptive = buildAdaptiveInfrastructureDecision({
+  metrics: adaptiveMetrics,
+  now: Date.parse(window.end)
+});
 const skipNonessential = Boolean(
   quota.skipNonessential ||
   d1.readQuota?.skipNonessential ||
-  d1.writeQuota?.skipNonessential
+  d1.writeQuota?.skipNonessential ||
+  adaptive.blockNonessential
 );
 const report = {
   schemaVersion: 2,
@@ -208,6 +245,7 @@ const report = {
   accountIdMasked: `${productionAccountId.slice(0, 4)}...${productionAccountId.slice(-4)}`,
   ...quota,
   skipNonessential,
+  adaptive,
   d1
 };
 
@@ -225,7 +263,11 @@ if (process.env.GITHUB_OUTPUT) {
     plan_mode: report.plan.workers,
     period_kind: report.periodKind,
     d1_rows_read: report.d1.rowsRead ?? '',
-    d1_rows_written: report.d1.rowsWritten ?? ''
+    d1_rows_written: report.d1.rowsWritten ?? '',
+    adaptive_mode: report.adaptive.mode,
+    adaptive_burn_rate: report.adaptive.highestBurnRate ?? '',
+    adaptive_cache_profile: report.adaptive.cacheProfile,
+    adaptive_background_mode: report.adaptive.backgroundMode
   };
   await appendFile(
     process.env.GITHUB_OUTPUT,
@@ -239,7 +281,7 @@ if (process.env.GITHUB_STEP_SUMMARY) {
     : `- D1 telemetry: **unavailable (runtime remains free-safe)**\n`;
   await appendFile(
     process.env.GITHUB_STEP_SUMMARY,
-    `### Cloudflare Production quota\n- Workers plan: **${report.plan.workers}** (${report.plan.source})\n- Window: **${report.periodKind}** · ${report.window.start} → ${report.window.end}\n- Worker requests: **${report.requests.toLocaleString()} / ${report.limit.toLocaleString()} (${report.percent}%)**\n${d1Summary}- State: **${report.state}**\n- Nonessential work: **${report.skipNonessential ? 'blocked' : 'allowed'}**\n`,
+    `### Cloudflare Production quota\n- Workers plan: **${report.plan.workers}** (${report.plan.source})\n- Window: **${report.periodKind}** · ${report.window.start} → ${report.window.end}\n- Worker requests: **${report.requests.toLocaleString()} / ${report.limit.toLocaleString()} (${report.percent}%)**\n${d1Summary}- State: **${report.state}**\n- Adaptive mode: **${report.adaptive.mode}** · burn rate **${report.adaptive.highestBurnRate ?? 'n/a'}** · cache **${report.adaptive.cacheProfile}**\n- Nonessential work: **${report.skipNonessential ? 'blocked' : 'allowed'}**\n`,
     'utf8'
   );
 }
