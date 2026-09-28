@@ -1,7 +1,7 @@
 import authWorker from './auth-worker.js';
 import { principalFromSupabaseRequest } from './ekodi-principal.js';
-import { accessGrantIsActive } from './access-governance.js';
-import { TENANT_ADMIN_CAPABILITIES, TENANT_ADMIN_ROLE_CAPABILITIES } from './tenant-admin-policy.js';
+import { accessGrantExpired, accessGrantIsActive, accessRolePreset, effectiveAccessCapabilities, parseCapabilityList } from './access-governance.js';
+import { TENANT_ADMIN_CAPABILITIES, TENANT_ADMIN_ROLE_CAPABILITIES, tenantAdminCapabilitiesForRole } from './tenant-admin-policy.js';
 
 const normalize=value=>String(value||'').trim().toLowerCase();
 
@@ -18,6 +18,47 @@ export const SITE_ASSIGNABLE_ROLES=Object.freeze([
 export function tenantRoleCanManageAccess(role){
   const allowed=TENANT_ADMIN_ROLE_CAPABILITIES[normalize(role)]||[];
   return allowed.includes('*')||allowed.includes(TENANT_ADMIN_CAPABILITIES.access);
+}
+
+export function tenantGrantCapabilityProjection(grant={}){
+  const roleCapabilities=tenantAdminCapabilitiesForRole(grant?.role);
+  const explicitCapabilities=effectiveAccessCapabilities(grant);
+  const denied=new Set([
+    ...(accessRolePreset(grant?.role)?.denied||[]),
+    ...parseCapabilityList(grant?.denied_capabilities_json??grant?.deniedCapabilities),
+  ]);
+  const wildcard=roleCapabilities.includes('*');
+  const combined=[...new Set([...roleCapabilities.filter(item=>item!=='*'),...explicitCapabilities])];
+  return Object.freeze({
+    mode:wildcard?'all_except_denied':'listed',
+    effectiveCapabilities:wildcard?Object.freeze(['*']):Object.freeze(combined.filter(capability=>!denied.has(capability)).sort()),
+    deniedCapabilities:Object.freeze([...denied].sort()),
+  });
+}
+
+export function tenantGrantCapabilityDecision(grant={},capability='',now=new Date()){
+  const target=normalize(capability);
+  if(!target)return Object.freeze({allowed:false,capability:'',reason:'CAPABILITY_REQUIRED'});
+  if(!grant)return Object.freeze({allowed:false,capability:target,reason:'GRANT_NOT_FOUND'});
+  if(Number(grant.enabled)!==1)return Object.freeze({allowed:false,capability:target,reason:'GRANT_DISABLED'});
+  if(accessGrantExpired(grant,now))return Object.freeze({allowed:false,capability:target,reason:'GRANT_EXPIRED'});
+  if(!accessGrantIsActive(grant,now))return Object.freeze({allowed:false,capability:target,reason:'GRANT_INACTIVE'});
+
+  const projection=tenantGrantCapabilityProjection(grant);
+  if(projection.deniedCapabilities.includes(target)){
+    return Object.freeze({allowed:false,capability:target,reason:'EXPLICIT_DENY'});
+  }
+  if(projection.mode==='all_except_denied'){
+    return Object.freeze({allowed:true,capability:target,reason:'ROLE_WILDCARD'});
+  }
+  const roleCapabilities=tenantAdminCapabilitiesForRole(grant?.role);
+  if(roleCapabilities.includes(target)){
+    return Object.freeze({allowed:true,capability:target,reason:'ROLE_ALLOW'});
+  }
+  if(effectiveAccessCapabilities(grant).includes(target)){
+    return Object.freeze({allowed:true,capability:target,reason:'EXPLICIT_ALLOW'});
+  }
+  return Object.freeze({allowed:false,capability:target,reason:'NOT_GRANTED'});
 }
 
 async function adminSession(request,env){
