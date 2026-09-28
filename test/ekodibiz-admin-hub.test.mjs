@@ -39,5 +39,7 @@ test('workspace and trade admins expose scope handoff only through full authorit
   assert.match(rootScript,/isBizWorkspace&&section==='tax'/);
   assert.match(rootScript,/roleCapabilities\(role\)\.includes\('\*'\)/);
   assert.match(tradeScript,/access\?\.role!=='workspace_admin'/);
-  assert.match(tradeScript,/scope\.id==='trade'/);
+  assert.match(tradeScript,/사이트 전환/);
+  assert.match(tradeScript,/admin-scope-select/);
+  assert.match(tradeScript,/option\.selected=scope\.id==='trade'/);
 });
