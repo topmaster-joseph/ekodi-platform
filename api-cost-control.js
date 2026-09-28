@@ -181,6 +181,14 @@ function providerCards(allowance, traffic, env, governor) {
       resourceGovernor: providerResource(governor,'github'),
       note: '현재 저장소는 public 기준으로 표준 GitHub-hosted runner 실행시간을 비용 병목으로 보지 않고 중복 실행·artifact/cache 저장량을 우선 최적화합니다.',
     },
+    {
+      id: 'aws', name: 'AWS / Amazon', connection: providerResource(governor,'aws')?.telemetryStatus || 'needs-connection',
+      status: providerResource(governor,'aws')?.state || 'unknown', comparisonEligible: false,
+      usage: providerResource(governor,'aws')?.metrics || null,
+      limit: FREE_TIER_RESOURCE_CATALOG.aws,
+      resourceGovernor: providerResource(governor,'aws'),
+      note: 'AWS는 선택형 보조 공급자입니다. 실제 계정 사용량·크레딧·비용이 측정되기 전에는 무료잔여율을 추정하지 않고 유료 실행을 허용하지 않습니다.',
+    },
   ];
 }
 

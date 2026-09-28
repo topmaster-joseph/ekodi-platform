@@ -93,6 +93,26 @@
         "long-lived-large-artifacts-when-r2-or-canonical-storage-is-more-appropriate",
         "self-hosted-runner-on-privileged-production-host"
       ]
+    },
+    "aws": {
+      "role": "optional-serverless-burst-backup-and-amazon-commerce-support",
+      "prefer": [
+        "serverless-and-event-driven-before-always-on-compute",
+        "lambda-for-bounded-amazon-connector-jobs-when-free-or-credit-covered",
+        "s3-or-glacier-only-when-lifecycle-and-egress-economics-beat-existing-storage",
+        "dynamodb-only-for-small-provider-local-state-not-ekodi-source-of-truth",
+        "sqs-and-sns-for-bounded-amazon-workflows-when-zero-cost-eligible",
+        "cloudfront-only-when-it-improves-cost-or-amazon-specific-delivery",
+        "aws-credits-before-paid-commitment"
+      ],
+      "forbid": [
+        "always-on-ec2-or-rds-as-ekodi-default-runtime",
+        "nat-gateway-without-explicit-cost-approval",
+        "unbounded-cross-region-data-transfer",
+        "duplicating-supabase-source-of-truth-into-dynamodb",
+        "automatic-paid-plan-or-reserved-commitment",
+        "paid-bedrock-fba-or-seller-plan-without-owner-approved-budget"
+      ]
     }
   },
   "sourceOfTruth": {
@@ -163,7 +183,8 @@
     "providerTelemetry": {
       "cloudflare": "Cloudflare Workers Analytics plus D1 Analytics; Billing API plan detection when readable, otherwise Free-safe limits",
       "supabase": "Management API or direct project measurement; unknown values stay unknown",
-      "github": "repository/action metadata; public standard hosted runner minutes are free, storage remains plan-aware"
+      "github": "repository/action metadata; public standard hosted runner minutes are free, storage remains plan-aware",
+      "aws": "AWS account billing/usage telemetry when explicitly connected; unknown limits and costs stay unknown and paid execution remains blocked by the Amazon cost gate"
     },
     "verifiedFreeLimitsReferenceDate": "2026-09-25",
     "projectCreationPolicy": {
@@ -195,7 +216,11 @@
       "paid-cost-commitment",
       "limit-increase-request",
       "account-or-billing-change",
-      "root-security-change"
+      "root-security-change",
+      "amazon-seller-paid-plan",
+      "amazon-fba-activation",
+      "aws-paid-service-activation",
+      "aws-commitment-or-reservation"
     ]
   },
   "paidCore": {

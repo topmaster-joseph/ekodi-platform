@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 const source = await readFile(new URL('../workspace-admin-page.js', import.meta.url), 'utf8');
 
 test('Mall admin exposes operator-first direct navigation', () => {
-  const direct = "const mallDirectSections=[['overview','홈'],['products','상품'],['sourcing','공급·제휴'],['analytics','주문·매출'],['channels','채널'],['growth','AI 영업'],['confirmations','지급·수령'],['design','설정']]";
+  const direct = "const mallDirectSections=[['overview','홈'],['products','상품'],['sourcing','공급·제휴'],['amazon','Amazon'],['analytics','주문·매출'],['channels','채널'],['growth','AI 영업'],['confirmations','지급·수령'],['design','설정']]";
   assert.ok(source.includes(direct));
   assert.ok(source.includes("const mallDelegatedGroups=["));
   assert.ok(source.includes("const mallLocalGroups=["));
