@@ -186,15 +186,15 @@ body.admin-compact.ekodi-admin-design-engine .sidebar nav{
   gap:1px!important;
 }
 body.admin-compact.ekodi-admin-design-engine .admin-global-nav{
-  min-height:36px!important;
+  min-height:38px!important;
   padding:4px 8px!important;
-  line-height:1.2!important;
+  line-height:1.25!important;
 }
 body.admin-compact.ekodi-admin-design-engine .admin-detail-item,
 body.admin-compact.ekodi-admin-design-engine .admin-detail-more{
-  min-height:31px!important;
+  min-height:34px!important;
   padding-block:4px!important;
-  line-height:1.2!important;
+  line-height:1.25!important;
 }
 body.admin-compact.ekodi-admin-design-engine .content{
   margin-left:0!important;
