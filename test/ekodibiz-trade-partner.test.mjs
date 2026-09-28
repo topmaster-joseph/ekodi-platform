@@ -102,6 +102,25 @@ test('EKODIBIZ canonical workspace root is backed by the EKODIBIZ service',async
   assert.ok(!deployWorkflow.includes("grep -Fq '프로그램 개발'"));
 });
 
+test('trade manager and supplier product workspaces are separated by responsibility',async()=>{
+  const [admin,portal]=await Promise.all([read('workspace-trade-admin-page.js'),read('workspace-trade-portal.js')]);
+  assert.ok(admin.includes("['products','제품']"));
+  assert.ok(admin.includes("['pipeline','도입진행']"));
+  assert.ok(admin.includes('제품 도입 8단계'));
+  assert.ok(admin.includes('공급사 확인'));
+  assert.ok(admin.includes('샘플'));
+  assert.ok(admin.includes('인증'));
+  assert.ok(admin.includes('계약'));
+  assert.ok(admin.includes('수입'));
+  assert.ok(admin.includes('판매준비'));
+  assert.ok(admin.includes('영업·판매'));
+  assert.ok(admin.includes('A/S'));
+  assert.ok(admin.includes('에코디비즈 총괄 중간관리자'));
+  assert.ok(admin.includes('제품 공급자'));
+  assert.ok(portal.includes('SUPPLIER PRODUCT WORKSPACE'));
+  assert.ok(portal.includes('자기 회사에 연결된 제품·사업만 확인'));
+});
+
 test('trade admin uses shared two-level UI and canonical apex auth',async()=>{
   const [workspaceAdmin,tradeAdmin]=await Promise.all([read('workspace-admin-page.js'),read('workspace-trade-admin-page.js')]);
   assert.ok(workspaceAdmin.includes("tradeAdminMatch=clean.match(/^\\/[^/]+\\/trade\\/admin"));
