@@ -1,25 +1,26 @@
 (() => {
   const ALL_SITES = [
-    { type: 'Core', name: 'EKODI Home', domain: 'ekodi.kr', section: 'services', group: 'core' },
-    { type: 'Control', name: 'EKODI Admin', domain: 'admin.ekodi.kr', section: 'admins', fallback: 'services', group: 'core' },
-    { type: 'Auth', name: 'EKODI Auth', domain: 'auth.ekodi.kr', section: 'admins', fallback: 'services', group: 'core' },
-    { type: '교회', name: '에코디교회', domain: 'church.ekodi.kr', section: 'services', group: 'community' },
-    { type: '비즈', name: '에코디비즈', domain: 'biz.ekodi.kr', section: 'organization', fallback: 'services', group: 'business' },
+    { type: 'Core', name: 'EKODI Home', domain: 'ekodi.kr', url:'https://ekodi.kr/', label:'ekodi.kr', publicHref:'/', adminHref:'/admin', section: 'services', group: 'core', relation:'internal' },
+    { type: 'Control', name: 'EKODI Admin', domain: 'ekodi.kr/admin', url:'https://ekodi.kr/admin', label:'ekodi.kr/admin', publicHref:'/', adminHref:'/admin', section: 'admins', fallback: 'services', group: 'core', relation:'internal' },
+    { type: 'Auth', name: 'EKODI Auth', domain: 'ekodi.kr/auth', url:'https://ekodi.kr/auth', label:'ekodi.kr/auth', publicHref:'/auth', section: 'admins', fallback: 'services', group: 'core', relation:'internal' },
+    { type: '교회', name: '에코디교회', domain: 'ekodi.kr/ekodichurch', url:'https://ekodi.kr/ekodichurch', label:'ekodi.kr/ekodichurch', publicHref:'/ekodichurch', adminHref:'/ekodichurch/admin', section: 'services', group: 'community', relation:'user' },
+    { type: '비즈', name: '에코디비즈', domain: 'ekodi.kr/ekodibiz', url:'https://ekodi.kr/ekodibiz', label:'ekodi.kr/ekodibiz', publicHref:'/ekodibiz', adminHref:'/ekodibiz/admin', section: 'organization', fallback: 'services', group: 'business', relation:'user' },
     { type: 'OS', name: '비즈니스 OS', domain: 'business.ekodi.kr', section: 'services', group: 'business' },
-    { type: '출판', name: '에코디서점', domain: 'books.ekodi.kr', section: 'books', fallback: 'services', group: 'knowledge' },
+    { type: '서점', name: '에코디서점', domain: 'ekodi.kr/books', url:'https://ekodi.kr/books', label:'ekodi.kr/books', publicHref:'/books', adminHref:'/books/admin', section: 'books', fallback: 'services', group: 'knowledge', relation:'user' },
     { type: '작가AI', name: '크리에이터 AI', domain: 'author.ekodi.kr', section: 'books', fallback: 'services', group: 'knowledge' },
-    { type: '연구소', name: '에코디연구소', domain: 'lab.ekodi.kr', section: 'services', group: 'knowledge' },
+    { type: '연구소', name: '에코디연구소', domain: 'ekodi.kr/ekodilab', url:'https://ekodi.kr/ekodilab', label:'ekodi.kr/ekodilab', publicHref:'/ekodilab', adminHref:'/ekodilab/admin', section: 'services', group: 'knowledge', relation:'user' },
     { type: '교육', name: '에코디교육', domain: 'edu.ekodi.kr', section: 'services', group: 'knowledge' },
     { type: '커뮤니티', name: '커뮤니티', domain: 'ekodi.kr/community', section: 'community', fallback: 'services', group: 'community' },
     { type: '소셜', name: '에코디 소셜', domain: 'social.ekodi.kr', section: 'social', fallback: 'services', group: 'community' },
-    { type: '몰', name: '에코디몰', domain: 'ekodi.kr/ekodimall', section: 'services', group: 'business' },
+    { type: '몰', name: '에코디몰', domain: 'ekodi.kr/ekodimall', url:'https://ekodi.kr/ekodimall', label:'ekodi.kr/ekodimall', publicHref:'/ekodimall', adminHref:'/ekodimall/admin', section: 'services', group: 'business', relation:'user' },
+    { type: '투자', name: '에코디투자', domain: 'ekodi.kr/invest', url:'https://ekodi.kr/invest', label:'ekodi.kr/invest', publicHref:'/invest', adminHref:'/invest/admin', section:'invest', fallback:'services', group:'business', lifecycle:'beta', relation:'user' },
     { type: '마케팅', name: '마케팅 AI', domain: 'marketing.ekodi.kr', section: 'services', group: 'business' },
-    { type: '무역', name: '에코디 트레이딩', domain: 'trade.ekodi.kr', section: 'organization', fallback: 'services', group: 'business' },
+    { type: '무역', name: '에코디무역', domain: 'ekodi.kr/trade', url:'https://ekodi.kr/trade', label:'ekodi.kr/trade', publicHref:'/trade', adminHref:'/ekodibiz/trade/admin', section: 'organization', fallback: 'services', group: 'business', relation:'user' },
     { type: '결제', name: '에코디 페이', domain: 'pay.ekodi.kr', section: 'finance', fallback: 'services', group: 'business' },
     { type: 'My', name: '마이 에코디', domain: 'my.ekodi.kr', section: 'services', group: 'worklife' },
     { type: '워크', name: '에코디 워크', domain: 'work.ekodi.kr', section: 'work', fallback: 'services', group: 'worklife' },
     { type: '에너지', name: '에너지 AI', domain: 'energy.ekodi.kr', section: 'services', group: 'worklife' },
-    { type: '보험', name: '에코디보험', domain: 'ekodi.kr/insurance', url: 'https://ekodi.kr/insurance', label: 'ekodi.kr/insurance', section: 'services', group: 'worklife', lifecycle: 'beta' },
+    { type: '보험', name: '에코디보험', domain: 'ekodi.kr/insurance', url: 'https://ekodi.kr/insurance', label: 'ekodi.kr/insurance', publicHref:'/insurance', adminHref:'/insurance/admin', section: 'services', group: 'worklife', lifecycle: 'beta', relation:'user' },
     { type: '메일', name: '에코디 메일', domain: 'mail.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
     { type: '라이브', name: '에코디 라이브', domain: 'live.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
     { type: '클라우드', name: '에코디 클라우드', domain: 'cloud.ekodi.kr', section: 'workspace', fallback: 'services', group: 'communication', lifecycle: 'planned' },
@@ -113,7 +114,8 @@
     const lifecycle = String(site?.lifecycle || '').trim().toLowerCase();
     if (['planned','preparing','private','hidden'].includes(lifecycle)) return 'preparing';
     if (site?.group === 'clients') return 'customer-partner';
-    if (String(site?.id || '').toLowerCase() === 'mall' || String(site?.name || '').trim() === '에코디몰') return 'user';
+    if (site?.relation) return site.relation;
+    if (site?.publicHref || site?.adminHref) return 'user';
     if (site?.group === 'other') return 'independent';
     return 'internal';
   }
@@ -203,6 +205,10 @@
     const strong = document.createElement('strong');
     strong.textContent = site.name;
     identity.append(type, strong);
+    const relation=document.createElement('small');
+    relation.className='campus-site-relation';
+    relation.textContent=site.adminHref?'사용자·관리자 분리':siteRelation(site)==='internal'?'공통·내부':'사용자 사이트';
+    identity.append(relation);
     const stageText = stageLabel(site.lifecycle);
     if (stageText) {
       const stage = document.createElement('span');
@@ -223,14 +229,25 @@
     return domain;
   }
 
+  function makeSurfaceLink(label, href, className='secondary') {
+    if (!href) return null;
+    const link=document.createElement('a');
+    link.className=`${className} campus-row-action`;
+    link.href=href;
+    link.target='_blank';
+    link.rel='noopener';
+    link.textContent=label;
+    return link;
+  }
+
   function makeOperationalActions(site) {
     const actions = document.createElement('div');
     actions.className = 'campus-row-actions';
-    actions.append(
-      makeButton('Manage', 'secondary', 'manage', site),
-      makeButton('Status', 'secondary', 'status', site),
-      makeOpenControl(site),
-    );
+    const publicLink=makeSurfaceLink('사용자', site.publicHref || surfaceInfo(site).url, 'secondary');
+    const adminLink=makeSurfaceLink('관리자', site.adminHref, 'primary');
+    const status=makeButton('상태', 'secondary', 'status', site);
+    for (const control of [publicLink, adminLink, status]) if(control) actions.append(control);
+    if (!site.adminHref) actions.append(makeButton('관리', 'secondary', 'manage', site));
     return actions;
   }
 
