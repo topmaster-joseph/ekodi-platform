@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-21T04:45:00.069Z",
-  "startedAt": "2026-09-21T04:44:39.043Z",
+  "generatedAt": "2026-09-28T05:12:42.670Z",
+  "startedAt": "2026-09-28T05:12:18.573Z",
   "repository": "topmaster-joseph/ekodi-platform",
   "branch": "main",
-  "head": "4cd57c48f5d18b87e4f2ac19decaa336527a5abc",
-  "overallScore": 86.5,
+  "head": "4027ca357e935a7162d64f8baab40f3b98443364",
+  "overallScore": 86.1,
   "status": "watch",
   "thresholds": {
     "healthy": 90,
@@ -18,19 +18,19 @@
       "weight": 25,
       "score": 25,
       "status": "ok",
-      "detail": "549개 테스트 파일 · 전체 테스트 통과"
+      "detail": "636개 테스트 파일 · 전체 테스트 통과"
     },
     "duplication": {
       "weight": 15,
       "score": 1.5,
       "status": "error",
-      "detail": "교차 파일 중복 군집 30개 · 겹침 창 115개 정규화"
+      "detail": "교차 파일 중복 군집 30개 · 겹침 창 111개 정규화"
     },
     "complexity": {
       "weight": 15,
-      "score": 15,
+      "score": 14.6,
       "status": "ok",
-      "detail": "대형 파일 0개 · 매우 큰 파일 0개 · TODO/FIXME 7건"
+      "detail": "대형 파일 1개 · 매우 큰 파일 0개 · TODO/FIXME 14건"
     },
     "security": {
       "weight": 15,
@@ -48,7 +48,7 @@
       "weight": 10,
       "score": 10,
       "status": "ok",
-      "detail": "197개 Workflow · 배포 가드 검증 통과"
+      "detail": "206개 Workflow · 배포 가드 검증 통과"
     },
     "documentation": {
       "weight": 5,
@@ -58,15 +58,15 @@
     }
   },
   "metrics": {
-    "runtimeFiles": 739,
-    "runtimeLines": 122919,
-    "testFiles": 549,
-    "workflows": 197,
-    "largeFiles": 0,
+    "runtimeFiles": 824,
+    "runtimeLines": 140871,
+    "testFiles": 636,
+    "workflows": 206,
+    "largeFiles": 1,
     "veryLargeFiles": 0,
-    "todoMarkers": 7,
+    "todoMarkers": 14,
     "duplicateGroups": 30,
-    "duplicateWindows": 115
+    "duplicateWindows": 111
   },
   "technicalDebt": [
     {
@@ -90,9 +90,9 @@
       "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "customer-auth.js:94",
-        "customer-federated-auth.js:66",
-        "customer-google-prereg.js:79"
+        "tax-invoice-free-first-worker.js:21",
+        "tax-invoice-worker.js:19",
+        "tax-service-worker.js:18"
       ]
     },
     {
@@ -100,41 +100,15 @@
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
-      "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
-      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
-      "evidence": [
-        "customer-federated-auth.js:47",
-        "customer-google-prereg.js:60",
-        "customer-member-directory.js:32"
-      ]
-    },
-    {
-      "id": "duplicate-3",
-      "severity": "medium",
-      "category": "duplication",
-      "title": "교차 파일 중복 로직 후보",
-      "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
-      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
-      "evidence": [
-        "tax-invoice-free-first-worker.js:21",
-        "tax-invoice-worker.js:19",
-        "tax-service-worker.js:18"
-      ]
-    },
-    {
-      "id": "duplicate-4",
-      "severity": "medium",
-      "category": "duplication",
-      "title": "교차 파일 중복 로직 후보",
       "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
         "affiliate-control.js:96",
-        "device-control.js:279"
+        "device-control.js:299"
       ]
     },
     {
-      "id": "duplicate-5",
+      "id": "duplicate-3",
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
@@ -146,7 +120,19 @@
       ]
     },
     {
-      "id": "duplicate-6",
+      "id": "duplicate-4",
+      "severity": "medium",
+      "category": "duplication",
+      "title": "교차 파일 중복 로직 후보",
+      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
+      "evidence": [
+        "author-billing-control.js:15",
+        "customer-google-prereg.js:86"
+      ]
+    },
+    {
+      "id": "duplicate-5",
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
@@ -158,7 +144,7 @@
       ]
     },
     {
-      "id": "duplicate-7",
+      "id": "duplicate-6",
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
@@ -168,6 +154,18 @@
         "books/publishing/studio/app.js:1",
         "publishing/studio/app.js:1"
       ]
+    },
+    {
+      "id": "duplicate-7",
+      "severity": "medium",
+      "category": "duplication",
+      "title": "교차 파일 중복 로직 후보",
+      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
+      "evidence": [
+        "channel-credential-vault.js:1",
+        "mail-credential-vault.js:1"
+      ]
     }
   ],
   "checks": {
@@ -175,13 +173,13 @@
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "✔ same workspace identity is deterministic (1.003548ms)\n✔ different workspaces receive distinct visual identities while structure remains shared (0.435604ms)\n✔ different ids within the same kind still vary atmosphere (1.017704ms)\n✔ css variables expose only visual tokens, not layout structure (0.362726ms)\nℹ tests 2615\nℹ suites 0\nℹ pass 2615\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 19710.02455"
+      "summary": "✔ same workspace identity is deterministic (1.276765ms)\n✔ different workspaces receive distinct visual identities while structure remains shared (0.395521ms)\n✔ different ids within the same kind still vary atmosphere (1.120463ms)\n✔ css variables expose only visual tokens, not layout structure (0.347239ms)\nℹ tests 3118\nℹ suites 0\nℹ pass 3118\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 22654.724786"
     },
     "security": {
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "> ekodi-platform@4.3.1 validate:security\n> node scripts/validate-security-baseline.mjs\n\nSecurity baseline valid: fail-closed edge throttling, capability-scoped Admin OS authority, temporary Google elevation, browser headers, session revocation, password shutdown and Secure Projection enforced."
+      "summary": "> ekodi-platform@4.3.1 validate:security\n> node scripts/validate-security-baseline.mjs && node scripts/validate-platform-security-policy.mjs\n\nSecurity baseline valid: fail-closed edge throttling, capability-scoped Admin OS authority, temporary Google elevation, browser headers, session revocation, password shutdown and Secure Projection enforced.\nPlatform security policy valid: canonical edge enforcement, split mutation throttling, fail-closed sensitive paths, hardened response headers and production workflow enforcement are active."
     },
     "architecture": {
       "ok": true,
