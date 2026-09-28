@@ -43,6 +43,8 @@ const results = [];
 const consoleErrors = [];
 const pageErrors = [];
 const failedAdminAssets = [];
+const retiredApiRequests = [];
+const retiredApiHost = ['api','ekodi','kr'].join('.');
 
 stage('browser-launch');
 const browser = await withTimeout(chromium.launch({ headless: true, timeout: 20_000 }), 25_000, 'Chromium launch');
@@ -63,6 +65,9 @@ page.on('requestfailed', request => {
     const url = new URL(request.url());
     if (url.hostname === 'admin.ekodi.kr' && /\.(?:js|css)(?:$|\?)/.test(url.pathname + url.search)) {
       failedAdminAssets.push(`${request.method()} ${request.url()} :: ${request.failure()?.errorText || 'failed'}`);
+    }
+    if (url.hostname === retiredApiHost) {
+      retiredApiRequests.push(`${request.method()} ${request.url()} :: ${request.failure()?.errorText || 'failed'}`);
     }
   } catch {}
 });
@@ -321,6 +326,9 @@ try {
 
   stage('final-diagnostics');
   if (failedAdminAssets.length) throw new Error(`Admin JS/CSS request failures: ${failedAdminAssets.join(' | ')}`);
+  if (retiredApiRequests.length) throw new Error(`Retired API browser requests detected: ${retiredApiRequests.join(' | ')}`);
+  const retiredApiConsole = consoleErrors.filter(text => text.includes(retiredApiHost));
+  if (retiredApiConsole.length) throw new Error(`Retired API console references detected: ${retiredApiConsole.join(' | ')}`);
   if (pageErrors.length) throw new Error(`Uncaught page errors: ${pageErrors.join(' | ')}`);
   const seriousConsole = consoleErrors.filter(text => /(?:TypeError|ReferenceError|SyntaxError|uncaught|failed to load module|blocked untrusted admin handoff)/i.test(text));
   if (seriousConsole.length) throw new Error(`Serious console errors: ${seriousConsole.join(' | ')}`);
@@ -343,6 +351,7 @@ try {
       pageErrors,
       consoleErrors: consoleErrors.slice(-40),
       failedAdminAssets,
+      retiredApiRequests,
     },
     error: fatal ? String(fatal?.stack || fatal?.message || fatal) : null,
   };
