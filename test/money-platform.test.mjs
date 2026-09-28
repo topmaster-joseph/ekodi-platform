@@ -47,7 +47,7 @@ test('official accountinfo handoff remains available without live API access',()
 test('open banking requires contract, canonical redirect, security stores, approved scopes and server adapter',()=>{
   const incomplete=buildIntegrationReadiness({KFTC_OPENBANKING_ENABLED:'true',KFTC_OPENBANKING_CLIENT_ID:'client',KFTC_OPENBANKING_REDIRECT_URI:KFTC_OPENBANKING.canonicalRedirectUri,OAUTH_STATE_STORE_READY:'true'});
   assert.equal(incomplete.openBankingConfigured,false);
-  const configuredEnv={KFTC_OPENBANKING_ENABLED:'true',KFTC_OPENBANKING_CONTRACT_APPROVED:'true',KFTC_OPENBANKING_CLIENT_ID:'client',KFTC_OPENBANKING_REDIRECT_URI:KFTC_OPENBANKING.canonicalRedirectUri,OAUTH_STATE_STORE_READY:'true',TOKEN_ENCRYPTION_READY:'true',CONSENT_STORE_READY:'true',KFTC_OPENBANKING_APPROVED_READ_SCOPES:'accounts:read,balances:read,transactions:read'};
+  const configuredEnv={KFTC_OPENBANKING_ENABLED:'true',KFTC_OPENBANKING_CONTRACT_APPROVED:'true',KFTC_OPENBANKING_CLIENT_ID:'client',KFTC_OPENBANKING_REDIRECT_URI:KFTC_OPENBANKING.canonicalRedirectUri,OAUTH_STATE_STORE_READY:'true',TOKEN_ENCRYPTION_READY:'true',CONSENT_STORE_READY:'true',KFTC_OPENBANKING_APPROVED_READ_SCOPES:'inquiry'};
   const configured=buildIntegrationReadiness(configuredEnv);
   assert.equal(configured.openBankingConfigured,true);
   assert.equal(configured.openBankingReadReady,false);
@@ -58,9 +58,9 @@ test('open banking requires contract, canonical redirect, security stores, appro
 });
 
 test('consent preview accepts read scopes only and separates execution',()=>{
-  const preview=buildConsentPreview('kftc-openbanking',['accounts:read','transactions:read','cards:read','payment:write','accounts:read']);
+  const preview=buildConsentPreview('kftc-openbanking',['inquiry','oob','accounts:read','transactions:read','payment:write','inquiry']);
   assert.equal(preview.ok,true);
-  assert.deepEqual(preview.scopes,['accounts:read','transactions:read']);
+  assert.deepEqual(preview.scopes,['inquiry']);
   assert.equal(preview.humanGateRequired,true);
   assert.match(preview.execution,/분리/);
 });
@@ -93,4 +93,15 @@ test('Money V3 public and health copy do not expose stale V2 readiness labels',a
   assert.doesNotMatch(worker,/none-v2-readiness/);
   assert.match(page,/V3는 공인 API 연동/);
   assert.doesNotMatch(page,/V2는 공인 API 연동/);
+});
+
+
+test('KFTC official read-only contract uses inquiry scope only',()=>{
+  assert.deepEqual(KFTC_OPENBANKING.initialReadScopes,['inquiry']);
+  const provider=providerFor('kftc-openbanking');
+  assert.deepEqual(provider.capabilities,['balance-inquiry','transaction-history']);
+  const rejected=buildConsentPreview('kftc-openbanking',['oob','accounts:read','balances:read','transactions:read']);
+  assert.deepEqual(rejected.scopes,[]);
+  const accepted=buildConsentPreview('kftc-openbanking',['inquiry','inquiry']);
+  assert.deepEqual(accepted.scopes,['inquiry']);
 });

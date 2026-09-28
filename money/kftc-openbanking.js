@@ -5,7 +5,7 @@ export const KFTC_OPENBANKING=Object.freeze({
   tokenUrl:'https://openapi.openbanking.or.kr/oauth/2.0/token',
   balanceInquiryUrl:'https://openapi.openbanking.or.kr/v2.0/account/balance/fin_num',
   transactionHistoryUrl:'https://openapi.openbanking.or.kr/v2.0/account/transaction_list/fin_num',
-  initialReadScopes:Object.freeze(['accounts:read','balances:read','transactions:read'])
+  initialReadScopes:Object.freeze(['inquiry'])
 });
 const enabled=value=>String(value||'').toLowerCase()==='true';
 export function normalizeKftcApprovedReadScopes(value=''){

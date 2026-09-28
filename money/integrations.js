@@ -24,7 +24,7 @@ export const MONEY_PROVIDERS=Object.freeze([
     contractRequired:true,
     oauth:true,
     officialUrl:'https://openapi.kftc.or.kr/service/openBanking',
-    capabilities:['balance-inquiry','transaction-history','account-holder-check','recipient-check'],
+    capabilities:['balance-inquiry','transaction-history'],
     execution:'disabled-until-contract-and-human-gate',
     note:'이용기관 신청·계약과 사용자 OAuth 인증/동의가 완료된 뒤 서버측 어댑터를 활성화합니다.'
   }),
@@ -44,6 +44,7 @@ export const MONEY_PROVIDERS=Object.freeze([
 ]);
 
 const ALLOWED_SCOPES=new Set([
+  'inquiry',
   'accounts:read',
   'balances:read',
   'transactions:read',
@@ -57,7 +58,7 @@ export function providerFor(id){return MONEY_PROVIDERS.find(provider=>provider.i
 
 export function normalizeScopes(scopes=[],providerId=''){
   const provider=String(providerId||'');
-  const kftcAllowed=new Set(['accounts:read','balances:read','transactions:read']);
+  const kftcAllowed=new Set(['inquiry']);
   return [...new Set((Array.isArray(scopes)?scopes:[]).map(value=>String(value||'').trim()).filter(scope=>ALLOWED_SCOPES.has(scope)&&(provider!=='kftc-openbanking'||kftcAllowed.has(scope))))];
 }
 
@@ -72,7 +73,7 @@ export function buildConsentPreview(providerId,scopes=[]){
     scopes:normalized,
     purpose:'금융관계 정리와 유지·검토·정리 순서 제안',
     collection:'최소수집 원칙. 계약 전에는 실제 금융 API 데이터나 인증토큰을 수집하지 않습니다.',
-    retention:'V2 준비단계에서는 금융 연결정보를 영구 저장하지 않습니다.',
+    retention:'V3 준비단계에서는 금융 연결정보를 영구 저장하지 않습니다.',
     execution:'조회 동의와 자금이동·해지·자동이체 변경 승인은 분리합니다.',
     revocable:true,
     humanGateRequired:true

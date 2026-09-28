@@ -6,6 +6,7 @@ const money = value => `${Number(value||0).toLocaleString('ko-KR')}원`;
 const labels = {keep:'유지',review:'검토',cleanup:'정리 추천',attention:'확인 필요'};
 const providerStates={available:'공식 연결 가능','contract-required':'계약 필요','legal-review':'법적 검토','security-configuration-required':'보안설정 필요','adapter-required':'승인 완료·어댑터 연결 대기','read-only-live':'조회 전용 연결됨'};
 const defaultScopes=['accounts:read','balances:read','transactions:read','autopay:read'];
+const scopesForProvider=providerId=>providerId==='kftc-openbanking'?['inquiry']:defaultScopes;
 
 function escapeHtml(value){return String(value??'').replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));}
 
@@ -82,14 +83,14 @@ async function loadIntegrations(){
 async function showConsent(providerId){
   const box=document.querySelector('#consent-detail');
   if(!box)return;
-  const {response,data}=await api('/api/consent/preview',{method:'POST',body:JSON.stringify({providerId,scopes:defaultScopes})});
+  const {response,data}=await api('/api/consent/preview',{method:'POST',body:JSON.stringify({providerId,scopes:scopesForProvider(providerId)})});
   if(!response.ok){box.innerHTML='<p class="empty">동의 구조를 확인할 수 없습니다.</p>';return;}
   box.innerHTML=`<div class="consent-panel"><strong>${escapeHtml(data.provider.name)} 연결 동의 미리보기</strong><p>${escapeHtml(data.purpose)}</p><div class="meta">${data.scopes.map(scope=>`<span>${escapeHtml(scope)}</span>`).join('')}</div><p><b>수집:</b> ${escapeHtml(data.collection)}</p><p><b>보관:</b> ${escapeHtml(data.retention)}</p><p><b>실행:</b> ${escapeHtml(data.execution)}</p><span class="gate">언제든 철회 가능 · 금융행위 별도 승인</span></div>`;
   box.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
 async function connectProvider(providerId){
-  const {response,data}=await api('/api/connect/begin',{method:'POST',body:JSON.stringify({providerId,scopes:defaultScopes})});
+  const {response,data}=await api('/api/connect/begin',{method:'POST',body:JSON.stringify({providerId,scopes:scopesForProvider(providerId)})});
   if(response.ok&&data.mode==='official-handoff'&&data.url){window.open(data.url,'_blank','noopener,noreferrer');return;}
   const box=document.querySelector('#consent-detail');
   if(box)box.innerHTML=`<div class="consent-panel"><strong>아직 실제 API 연결 전입니다.</strong><p>${escapeHtml(data.message||'정식 계약과 보안검토가 완료된 뒤 활성화됩니다.')}</p><span class="state-chip">${escapeHtml(providerStates[data.state]||data.state||'준비중')}</span></div>`;

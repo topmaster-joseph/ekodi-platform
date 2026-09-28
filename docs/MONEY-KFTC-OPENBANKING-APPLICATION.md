@@ -18,11 +18,11 @@ KFTC states that use of Open APIs requires portal registration followed by API a
 
 ## EKODI Money intended first API scope
 
-Start with inquiry-only capabilities. Do not request transfer/write authority in the first institutional application unless a separate business and compliance review approves it.
+Start with inquiry-only capabilities. For the initial balance and transaction-history integration, EKODI uses the official KFTC `inquiry` scope. Do not enable `oob`, deposit-transfer, withdrawal-transfer, or other transfer/write authority in the first activation unless a separate business, compliance, security and owner review approves it.
 
 Initial desired capabilities:
-- balance inquiry;
-- transaction-history inquiry;
+- balance inquiry using the KFTC Open Banking `inquiry` token scope;
+- transaction-history inquiry using the KFTC Open Banking `inquiry` token scope;
 - account relationship discovery where permitted;
 - additional financial-product data only through a separately approved provider/service; Open Banking approval is not treated as approval for card, insurance or loan data;
 - user authentication/consent management required for those inquiry APIs.
@@ -60,7 +60,7 @@ The production adapter remains disabled until every required item is complete:
 
 - [ ] KFTC institutional application accepted for the intended service model
 - [ ] Contract / service approval completed
-- [ ] Approved API scope recorded in EKODI configuration
+- [ ] Approved API scope recorded in EKODI configuration; the initial read-only target is exactly `inquiry`
 - [ ] Production client identifier issued
 - [ ] Approved redirect URI configured exactly as `https://ekodi.kr/money/oauth/kftc/callback`
 - [ ] OAuth state/session store deployed with replay protection
