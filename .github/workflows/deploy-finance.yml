@@ -17,6 +17,9 @@ on:
       - 'finance-banking-worker.js'
       - 'test/finance-banking.test.mjs'
       - 'tax-service-worker.js'
+      - 'tax-member-service.js'
+      - 'config/tax-membership-policy.json'
+      - 'test/tax-member-service.test.mjs'
       - 'tax-invoice-free-first-worker.js'
       - 'tax-invoice-worker.js'
       - 'tax-hometax-ledger-service.js'
@@ -39,6 +42,9 @@ on:
       - 'finance-banking-worker.js'
       - 'test/finance-banking.test.mjs'
       - 'tax-service-worker.js'
+      - 'tax-member-service.js'
+      - 'config/tax-membership-policy.json'
+      - 'test/tax-member-service.test.mjs'
       - 'tax-invoice-free-first-worker.js'
       - 'tax-invoice-worker.js'
       - 'tax-hometax-ledger-service.js'
@@ -99,6 +105,8 @@ jobs:
           node --check finance-banking-worker.js
           node --test test/finance-banking.test.mjs
           node --check tax-service-worker.js
+          node --check tax-member-service.js
+          node --test test/tax-member-service.test.mjs
           node --check tax-invoice-free-first-worker.js
           node --check tax-invoice-worker.js
           node --check tax-hometax-ledger-service.js
