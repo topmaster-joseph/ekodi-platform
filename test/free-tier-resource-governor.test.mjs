@@ -66,3 +66,14 @@ test('verified catalog keeps public GitHub runners free and storage plan-aware',
   assert.equal(FREE_TIER_RESOURCE_CATALOG.cloudflare.facts.workersRequestsPerDayFree,100000);
   assert.equal(FREE_TIER_RESOURCE_CATALOG.supabase.metrics.find(x=>x.metric==='active_projects').freeLimit,2);
 });
+
+
+test('AWS remains optional and plan-dependent until measured telemetry exists',()=>{
+  assert.equal(FREE_TIER_RESOURCE_CATALOG.aws.facts.role,'optional-provider');
+  assert.equal(FREE_TIER_RESOURCE_CATALOG.aws.facts.automaticPaidUpgrade,false);
+  assert.equal(FREE_TIER_RESOURCE_CATALOG.aws.metrics.find(x=>x.metric==='estimated_monthly_cost_usd').freeLimit,null);
+  const governor=buildFreeTierResourceGovernor({now:NOW,snapshots:[]});
+  assert.equal(governor.providers.aws.telemetryStatus,'missing');
+  assert.equal(governor.providers.aws.highestUsagePercent,null);
+  assert.equal(governor.providers.aws.automaticPaidUpgrade,false);
+});
