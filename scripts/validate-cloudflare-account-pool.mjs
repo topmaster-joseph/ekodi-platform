@@ -40,6 +40,10 @@ expect(router.includes('CLOUDFLARE_ACCOUNT_POOL_BOUNDARY_COLLISION'),'same-accou
 expect(router.includes('CLOUDFLARE_PRIMARY_REQUIRED_FAIL_CLOSED'),'critical work must fail closed without primary credentials');
 expect(router.includes('CLOUDFLARE_AUXILIARY_ACCOUNT_ID || env.CLOUDFLARE_DEVELOPMENT_ACCOUNT_ID'),'legacy development account must be accepted only as auxiliary compatibility');
 expect(router.includes('CLOUDFLARE_AUXILIARY_API_TOKEN || env.CLOUDFLARE_DEVELOPMENT_API_TOKEN'),'legacy development token must be accepted only as auxiliary compatibility');
+expect(router.includes("identityEmail:'topmaster.joseph@gmail.com'"),'sanitized account metadata must identify the Paid primary owner');
+expect(router.includes("identityEmail:'joseph@ekodi.kr'"),'sanitized account metadata must identify the bounded auxiliary owner');
+expect(router.includes("acceptPlaintextSecretsInAdmin:false"),'Account Center must never accept plaintext infrastructure secrets');
+expect(router.includes('describeCloudflareAccountPool'),'Account Center must use the sanitized account-pool projection');
 
 for(const workflow of [prod,prodGate]){
   expect(workflow.includes('CLOUDFLARE_ACCOUNT_ID'),'production workflow must use primary account id');

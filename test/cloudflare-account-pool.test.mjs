@@ -4,7 +4,8 @@ import {
   resolveCloudflareAccounts,
   classifyCloudflareWorkload,
   selectCloudflareAccount,
-  assertAuxiliaryCannotOwnProduction
+  assertAuxiliaryCannotOwnProduction,
+  describeCloudflareAccountPool
 } from '../cloudflare-account-pool.js';
 
 const env={
@@ -76,4 +77,17 @@ test('auxiliary loss may fall back to primary only for noncritical work and only
 test('unknown workload defaults to primary instead of silently escaping to auxiliary',()=>{
   assert.equal(classifyCloudflareWorkload('future-service'),'primary_default');
   assert.equal(selectCloudflareAccount({workload:'future-service',env}).account.id,'primary-account');
+});
+
+
+test('sanitized account-pool description exposes policy metadata but never secrets',()=>{
+  const view=describeCloudflareAccountPool(env);
+  assert.equal(view.accounts[0].identityEmail,'topmaster.joseph@gmail.com');
+  assert.equal(view.accounts[0].planClass,'workers-paid');
+  assert.equal(view.accounts[1].identityEmail,'joseph@ekodi.kr');
+  assert.equal(view.accounts[1].planClass,'free-preferred');
+  assert.equal(view.accounts[0].secretVisible,false);
+  assert.equal(view.accounts[1].secretVisible,false);
+  assert.doesNotMatch(JSON.stringify(view),/primary-token|aux-token/);
+  assert.equal(view.productionCriticalFailoverToAuxiliary,false);
 });

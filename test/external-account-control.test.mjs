@@ -21,6 +21,38 @@ test('control route requires central authentication', async () => {
   assert.equal((await response.json()).error, 'auth_required');
 });
 
+test('super admin infrastructure summary exposes account roles without secrets', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async url => String(url).includes('/auth/v1/user')
+    ? new Response(JSON.stringify({ id:'u1', email:'topmaster.joseph@gmail.com' }), { status:200, headers:{'content-type':'application/json'} })
+    : new Response(JSON.stringify([]), { status:200, headers:{'content-type':'application/json'} });
+  try {
+    const request = new Request('https://ekodi.kr/api/control/external-accounts/infrastructure', { headers:{ authorization:'Bearer session' } });
+    const response = await handleExternalAccountControl(request, {
+      MY_SUPABASE_URL:'https://example.supabase.co',
+      MY_SUPABASE_PUBLISHABLE_KEY:'public-key',
+      ADMIN_GOOGLE_BOOTSTRAP_EMAILS:'topmaster.joseph@gmail.com',
+      CLOUDFLARE_ACCOUNT_ID:'6986123412341234d797',
+      CLOUDFLARE_API_TOKEN:'primary-secret',
+      CLOUDFLARE_AUXILIARY_ACCOUNT_ID:'46aad4738793fbaca88574832a2ccc0f',
+      CLOUDFLARE_AUXILIARY_API_TOKEN:'aux-secret'
+    });
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    const accounts = body.infrastructure.cloudflare.accounts;
+    assert.equal(accounts.length, 2);
+    assert.equal(accounts[0].identityEmail, 'topmaster.joseph@gmail.com');
+    assert.equal(accounts[0].planClass, 'workers-paid');
+    assert.equal(accounts[1].identityEmail, 'joseph@ekodi.kr');
+    assert.equal(accounts[1].planClass, 'free-preferred');
+    assert.equal(accounts[0].secretVisible, false);
+    assert.equal(accounts[1].secretVisible, false);
+    assert.match(accounts[0].accountIdMasked, /^6986…d797$/);
+    assert.doesNotMatch(JSON.stringify(body), /primary-secret|aux-secret/);
+    assert.equal(body.secretPolicy.acceptPlaintextSecrets, false);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
 test('registration rejects direct secret material before persistence', async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async url => String(url).includes('/auth/v1/user')
@@ -37,7 +69,8 @@ test('registration rejects direct secret material before persistence', async () 
 test('admin UI and mission control expose the central account center', () => {
   assert.match(read('mission-control-entry-worker.js'), /handleExternalAccountControl/);
   assert.match(read('admin-menu-runtime.js'), /external-accounts/);
-  assert.match(read('external-account-admin.js'), /외부계정 통합운영센터/);
+  assert.match(read('external-account-admin.js'), /<h2>계정·연결<\/h2>/);
+  assert.match(read('admin-menu-runtime.js'), /계정·연결/);
   assert.doesNotMatch(read('external-account-admin.js'), /name="password"/);
 });
 
@@ -68,7 +101,19 @@ test('external account admin reuses mail OAuth instead of collecting Gmail secre
 });
 
 
+test('account center separates infrastructure, work accounts, channels and services', () => {
+  const source = read('external-account-admin.js');
+  for (const tab of ['infra','work','channels','services']) assert.match(source, new RegExp(`data-xac-tab="${tab}"`));
+  assert.match(source, /Cloudflare ·/);
+  assert.match(source, /비용·사용량/);
+  assert.match(source, /API Token·Secret 원문/);
+  assert.doesNotMatch(source, /type="password"/);
+});
+
 test('external account admin changes trigger the canonical shared-site production owner', () => {
+  const control = read('.github/workflows/deploy-control-api.yml');
+  assert.match(control, /- 'external-account-control\.js'/);
+  assert.match(control, /- 'cloudflare-account-pool\.js'/);
   const workflow = read('.github/workflows/deploy-site-core.yml');
   assert.match(workflow, /- 'external-account-admin\.js'/);
   assert.match(workflow, /- 'test\/external-account-control\.test\.mjs'/);

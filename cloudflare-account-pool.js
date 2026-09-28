@@ -8,6 +8,44 @@ const AUXILIARY_PREFERRED = new Set([
 ]);
 
 function clean(value){return String(value||'').trim()}
+function masked(value){
+  const id=clean(value);
+  if(!id)return '';
+  if(id.length<=10)return `${id.slice(0,3)}…${id.slice(-2)}`;
+  return `${id.slice(0,4)}…${id.slice(-4)}`;
+}
+function readiness(account){
+  if(account.id&&account.token)return 'configured';
+  if(account.id||account.token)return 'partial';
+  return 'unavailable';
+}
+
+export const CLOUDFLARE_ACCOUNT_POOL_METADATA = Object.freeze({
+  policyId:'EKODI-CF-ACCOUNT-POOL-001',
+  primary:Object.freeze({
+    label:'주계정',
+    identityEmail:'topmaster.joseph@gmail.com',
+    role:'production-critical-owner',
+    planClass:'workers-paid',
+    canonicalDomainAuthority:true,
+    mutableRole:false,
+    purposes:Object.freeze(['production','auth','identity','authorization','payments','finance','orders','secrets','canonical-domain'])
+  }),
+  auxiliary:Object.freeze({
+    label:'보조계정',
+    identityEmail:'joseph@ekodi.kr',
+    role:'bounded-noncritical-execution',
+    planClass:'free-preferred',
+    canonicalDomainAuthority:false,
+    mutableRole:false,
+    purposes:Object.freeze(['development','staging','batch','backup','snapshot','diagnostics','synthetic-verification','nonproduction-ai'])
+  }),
+  secretPolicy:Object.freeze({
+    revealSecrets:false,
+    acceptPlaintextSecretsInAdmin:false,
+    mutationBoundary:'provider-secret-store-and-ci-only'
+  })
+});
 
 export function resolveCloudflareAccounts(env = {}) {
   const primary = Object.freeze({
@@ -24,6 +62,28 @@ export function resolveCloudflareAccounts(env = {}) {
     throw new Error('CLOUDFLARE_ACCOUNT_POOL_BOUNDARY_COLLISION');
   }
   return Object.freeze({primary, auxiliary});
+}
+
+export function describeCloudflareAccountPool(env = {}) {
+  const accounts=resolveCloudflareAccounts(env);
+  const item=(kind,account)=>Object.freeze({
+    kind,
+    ...CLOUDFLARE_ACCOUNT_POOL_METADATA[kind],
+    accountIdMasked:masked(account.id),
+    runtimeCredentialState:readiness(account),
+    runtimeCredentialSource:account.source,
+    secretVisible:false
+  });
+  return Object.freeze({
+    policyId:CLOUDFLARE_ACCOUNT_POOL_METADATA.policyId,
+    secretPolicy:CLOUDFLARE_ACCOUNT_POOL_METADATA.secretPolicy,
+    accounts:Object.freeze([
+      item('primary',accounts.primary),
+      item('auxiliary',accounts.auxiliary)
+    ]),
+    productionCriticalFailoverToAuxiliary:false,
+    localOverrideAllowed:false
+  });
 }
 
 export function classifyCloudflareWorkload(workload) {
