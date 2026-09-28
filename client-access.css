@@ -36,6 +36,20 @@
 .client-scope-item:hover,.client-member-item:hover{background:#f8fbff}
 .client-scope-item.active,.client-member-item.active{background:#edf4ff;box-shadow:inset 3px 0 0 #4d8fd8}
 .client-member-list{display:grid;max-height:720px;overflow:auto;scrollbar-width:thin}
+.client-member-row{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:stretch;border-bottom:1px solid #edf1f5;background:#fff}
+.client-member-row:last-child{border-bottom:0}
+.client-member-row>.client-member-item{border-bottom:0}
+.client-member-select{display:grid;place-items:center;padding:0 4px 0 9px;background:#f8fafc}
+.client-member-select input{width:16px;height:16px;margin:0}
+.client-bulk-toolbar{display:grid;gap:7px;margin:0 0 10px;padding:10px 11px;border:1px solid #cbdbea;border-radius:10px;background:#f8fbff}
+.client-bulk-controls{display:grid;grid-template-columns:auto auto minmax(180px,1fr) auto;gap:8px;align-items:center}
+.client-bulk-selectall{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--admin-secondary,#66768a);white-space:nowrap}
+.client-bulk-selectall input{width:16px;height:16px}
+.client-bulk-count{font-size:11px;white-space:nowrap}
+.client-bulk-controls select{width:100%;min-width:0;min-height:36px}
+.client-bulk-preview,.client-bulk-note{font-size:10px;color:var(--admin-secondary,#66768a)}
+.client-bulk-result{display:flex;gap:4px;flex-wrap:wrap;align-items:center;min-height:16px;font-size:10px;color:var(--admin-secondary,#66768a)}
+.client-bulk-result strong{color:var(--admin-readable,#172033)}
 .client-member-item{display:grid;gap:6px;padding:11px}
 .client-member-item-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;min-width:0}
 .client-member-item-head>strong{font-size:12px;overflow:hidden;text-overflow:ellipsis}
@@ -127,6 +141,7 @@
   .client-role-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:900px){
+  .client-bulk-controls{grid-template-columns:repeat(2,minmax(0,1fr))}
   .client-iam-workspace{grid-template-columns:minmax(160px,.62fr) minmax(0,1.38fr)}
   .client-member-detail{grid-column:1/-1;position:static;max-height:none}
   .client-member-list{max-height:520px}
@@ -138,6 +153,9 @@
   .client-detail-head .secondary{width:100%;text-align:center}
 }
 @media(max-width:700px){
+  .client-bulk-controls{grid-template-columns:1fr}
+  .client-bulk-selectall{white-space:normal}
+  .client-bulk-controls .primary{width:100%}
   .client-iam-workspace{display:grid;grid-template-columns:1fr}
   .client-scope-pane{order:1}
   .client-member-pane{order:2}
