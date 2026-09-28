@@ -30,7 +30,7 @@ function tradeAdminClient(ADMIN_HUB){
   function setHeader(){
     $('workspaceName').textContent='에코디비즈';$('scopeLabel').textContent='에코디비즈';$('serviceName').textContent='무역거래 관리';
     $('breadcrumb').textContent='에코디비즈 / 무역거래 / ADMIN';$('publicLink').href=`/${workspaceUrlSlug}/trade`;$('publicLink').textContent='관계자 화면';    const nav=$('adminNav');nav.replaceChildren();
-    [['overview','홈'],['companies','공급사'],['products','제품'],['pipeline','도입진행'],['publishing','채널 · 게시'],['access','권한']].forEach(([key,label])=>{
+    [['overview','홈'],['companies','거래처'],['products','제품'],['pipeline','도입진행'],['publishing','채널 · 게시'],['access','권한']].forEach(([key,label])=>{
       const a=document.createElement('a');a.href=sectionHref(key);a.dataset.adminGroup=key;a.textContent=label;
       if(key===section)a.classList.add('active');nav.append(a);
     });
