@@ -8,7 +8,7 @@ test('EKODIBIZ public site keeps partner login inside business-area detail',asyn
   assert.ok(html.includes('WHAT WE DO'));
   assert.ok(html.includes('data-i18n="partnerLogin"'));
   assert.ok(!html.match(/<header[\s\S]*관계자 로그인[\s\S]*<\/header>/));
-  assert.ok(site.includes("if(type==='trade')return 'https://ekodi.kr/ekodibiz/trade'"));
+  assert.ok(site.includes("if(type==='trade')return 'https://ekodi.kr/trade'"));
   assert.ok(!html.includes('id="goalForm"'));
   assert.ok(!html.includes('무엇을 이루고 싶으세요?'));
 });
@@ -21,11 +21,11 @@ test('trade partner and trade admin routes are apex workspace routes',async()=>{
   assert.ok(router.includes('isTradePartnerPath(url.pathname)'));
   assert.ok(router.includes("isTradePartnerPath(url.pathname))return injectEkodiTenantReadability(tradePartnerPage())"));
   assert.ok(portal.includes('export function isTradePartnerPath'));
-  assert.ok(portal.includes('/ekodibiz\\/trade'));
+  assert.ok(portal.includes('(?:trade|ekodibiz\\/trade)'));
   assert.ok(admin.includes('/trade\\/admin'));
   for(const asset of ['/workspace-trade-admin.js','/workspace-trade-portal.css','/workspace-trade-portal.js'])assert.ok(wrangler.includes(`"${asset}"`),asset);
-  assert.match(wrangler,/pattern = "ekodi\.kr\/ekodibiz\/trade\*"[\s\S]*zone_name = "ekodi\.kr"/);
-  const probe=JSON.parse(manifestText).worker.requests.find(x=>x.url==='https://ekodi.kr/ekodibiz/trade');
+  assert.match(wrangler,/pattern = "ekodi\.kr\/trade\*"[\s\S]*zone_name = "ekodi\.kr"/);
+  const probe=JSON.parse(manifestText).worker.requests.find(x=>x.url==='https://ekodi.kr/trade');
   assert.equal(probe?.candidateVerify,false);
   assert.match(probe?.candidateVerifyReason||'',/run_worker_first bootstrap/);
   assert.ok(probe?.expect?.includes('PRIVATE TRADE WORKSPACE'));
@@ -34,7 +34,7 @@ test('trade partner and trade admin routes are apex workspace routes',async()=>{
 
 test('trade auth uses EKODIBIZ tenant and canonical apex portal',async()=>{
   const [auth,access]=await Promise.all([read('auth-site/auth.js'),read('supabase/functions/access-api/index.ts')]);
-  assert.ok(auth.includes("trade:{name:'EKODI Global Trading',tenant:'ekoditrade'"));  assert.ok(auth.includes("returnTo:'https://ekodi.kr/ekodibiz/trade'"));
+  assert.ok(auth.includes("trade:{name:'EKODI Global Trading',tenant:'ekoditrade'"));  assert.ok(auth.includes("returnTo:'https://ekodi.kr/trade'"));
   assert.ok(auth.includes('requestable:false'));
   assert.ok(access.includes('trade:["https://ekodi.kr","https://trade.biz.ekodi.kr","https://trade.ekodi.kr"]'));
 });
@@ -71,7 +71,7 @@ test('workspace API exposes authenticated trade partner operations',async()=>{
 test('canonical EKODIBIZ URL slug maps to immutable internal tenant slug',async()=>{
   const [portal,admin,auth]=await Promise.all([read('workspace-trade-portal.js'),read('workspace-trade-admin-page.js'),read('auth-site/auth.js')]);
   assert.ok(portal.includes("const WORKSPACE='ekoditrade'"));
-  assert.ok(admin.includes("workspaceUrlSlug==='ekodibiz'?'ekoditrade':workspaceUrlSlug"));
+  assert.ok(admin.includes("workspace='ekoditrade'"));
   assert.ok(auth.includes("tenant:'ekoditrade'"));
 });
 
@@ -102,14 +102,50 @@ test('EKODIBIZ canonical workspace root is backed by the EKODIBIZ service',async
   assert.ok(!deployWorkflow.includes("grep -Fq '프로그램 개발'"));
 });
 
+test('trade manager and supplier product workspaces are separated by responsibility',async()=>{
+  const [admin,portal]=await Promise.all([read('workspace-trade-admin-page.js'),read('workspace-trade-portal.js')]);
+  assert.ok(admin.includes("['products','제품']"));
+  assert.ok(admin.includes("['pipeline','도입진행']"));
+  assert.ok(admin.includes('제품 도입 8단계'));
+  assert.ok(admin.includes('공급사 확인'));
+  assert.ok(admin.includes('샘플'));
+  assert.ok(admin.includes('인증'));
+  assert.ok(admin.includes('계약'));
+  assert.ok(admin.includes('수입'));
+  assert.ok(admin.includes('판매준비'));
+  assert.ok(admin.includes('영업·판매'));
+  assert.ok(admin.includes('A/S'));
+  assert.ok(admin.includes('에코디비즈 총괄 중간관리자'));
+  assert.ok(admin.includes('제품 공급자'));
+  assert.ok(portal.includes('SUPPLIER PRODUCT WORKSPACE'));
+  assert.ok(portal.includes('자기 회사에 연결된 제품·사업만 확인'));
+});
+
+test('trade products expose separate buyer admin, supplier collaboration and consumer purchase surfaces',async()=>{
+  const [admin,portal,publicPage,router]=await Promise.all([
+    read('workspace-trade-admin-page.js'),read('workspace-trade-portal.js'),read('trade-product-public-page.js'),read('platform-router-entry-worker.js')
+  ]);
+  assert.ok(admin.includes('제품 하위관리'));
+  assert.ok(admin.includes('에코디 구매·운영'));
+  assert.ok(admin.includes('공급자 협업'));
+  assert.ok(admin.includes('소비자 구매'));
+  assert.ok(admin.includes('/trade/products/'));
+  assert.ok(portal.includes('/products\\/([^/]+)\\/supplier'));
+  assert.ok(portal.includes('requestedProductCode'));
+  assert.ok(publicPage.includes('CONSUMER PRODUCT'));
+  assert.ok(publicPage.includes('에코디몰에서 구매하기'));
+  assert.ok(publicPage.includes('/ekodimall?trade_product='));
+  assert.ok(router.includes('tradeProductPublicRoute'));
+  assert.ok(router.includes('tradeProductPublicPage'));
+});
 test('trade admin uses shared two-level UI and canonical apex auth',async()=>{
   const [workspaceAdmin,tradeAdmin]=await Promise.all([read('workspace-admin-page.js'),read('workspace-trade-admin-page.js')]);
-  assert.ok(workspaceAdmin.includes("tradeAdminMatch=clean.match(/^\\/[^/]+\\/trade\\/admin"));
+  assert.ok(workspaceAdmin.includes("tradeAdminMatch=clean.match(/^\\/(?:trade\\/admin|[^/]+\\/trade\\/admin)"));
   assert.ok(workspaceAdmin.includes("['publishing','marketing','channels']"));
   assert.ok(workspaceAdmin.includes('/workspace-trade-admin.js?v=20260909-admin-ui-v8'));
   assert.ok(tradeAdmin.includes("a.dataset.adminGroup=key"));
   assert.ok(tradeAdmin.includes("a.href=sectionHref(key)"));
-  assert.ok(tradeAdmin.includes("[['overview','홈'],['companies','거래처'],['publishing','채널 · 게시'],['access','권한']]"));
+  assert.ok(tradeAdmin.includes("[['overview','홈'],['companies','거래처'],['products','제품'],['pipeline','도입진행'],['publishing','채널 · 게시'],['access','권한']]"));
   assert.ok(tradeAdmin.includes('renderSecondaryNav();'));
   assert.ok(tradeAdmin.includes('id="tradeAdminSearch"'));
   assert.ok(tradeAdmin.includes('id="roles"'));
