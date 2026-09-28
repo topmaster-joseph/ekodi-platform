@@ -20,7 +20,7 @@ on:
       - 'test/free-tier-resource-governor.test.mjs'
       - 'test/free-tier-resource-collector.test.mjs'
       - 'test/free-tier-resource-proof.test.mjs'
-      - 'test/supabase-free-project-capacity-guard.test.mjs'
+      - 'test/supabase-free-project-capacity-guard.test.mjs test/adaptive-resource-orchestrator.test.mjs'
       - 'migrations/0099_free_tier_provider_quota.sql'
       - '.github/workflows/free-tier-resource-governor.yml'
       - '.github/workflows/verify-admin-production-ui-e2e.yml'
@@ -65,12 +65,15 @@ jobs:
         run: |
           set -euo pipefail
           node --check free-tier-resource-governor.js
+          node --check adaptive-resource-orchestrator.js
           node --check scripts/collect-free-tier-resource-usage.mjs
           node --check scripts/cloudflare-production-budget.mjs
           node --check scripts/evaluate-free-tier-resource-proof.mjs
           node --check scripts/validate-free-tier-optimization.mjs
+          node --check scripts/validate-adaptive-infrastructure.mjs
           node --check scripts/validate-supabase-free-project-capacity.mjs
           node scripts/validate-free-tier-optimization.mjs
+          node scripts/validate-adaptive-infrastructure.mjs
           node scripts/validate-supabase-free-project-capacity.mjs
           node --test test/free-tier-resource-governor.test.mjs test/free-tier-resource-collector.test.mjs test/free-tier-resource-proof.test.mjs test/free-tier-supabase-oidc-contract.test.mjs test/supabase-free-project-capacity-guard.test.mjs
 
