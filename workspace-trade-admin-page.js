@@ -159,15 +159,100 @@ function tradeAdminClient(ADMIN_HUB){
     $('mainPanel').innerHTML=`<section><div class="panel-head"><div><h2>전체 제품</h2><p class="empty">제품은 공급사에 연결되며 공급자는 자신의 회사 범위 안에서 해당 진행건과 공유기록만 확인합니다.</p></div></div>${rows}</section>${productEditor(companies[0]?.id||'')}`;
     bindProductEditor();state(`제품 ${products.length}건`);
   }
+  function specsToText(specs=[]){
+    return (Array.isArray(specs)?specs:[]).map(item=>`${item?.label||''}: ${item?.value||''}`.trim()).filter(Boolean).join('\n');
+  }
+  function specsFromText(text=''){
+    return String(text||'').split(/\r?\n/).map(line=>line.trim()).filter(Boolean).map(line=>{
+      const idx=line.indexOf(':');
+      return idx>0?{label:line.slice(0,idx).trim(),value:line.slice(idx+1).trim()}:{label:line,value:''};
+    }).slice(0,40);
+  }
+  async function loadPublicProfile(engagementId){
+    const {data,error}=await sb.from('trade_product_public_profiles').select('*').eq('engagement_id',engagementId).maybeSingle();
+    if(error)throw error;return data||null;
+  }
+  function publicProfileForm(product,profile={}){
+    if(!access?.can_write)return '<p class="empty">현재 권한은 조회 전용입니다.</p>';
+    return `<form id="tradePublicProfileForm" class="trade-form">
+      <div class="trade-grid">
+        <label>소비자 상품명<input name="publicName" required maxlength="240" value="${esc(profile.public_name||product.title||'')}"></label>
+        <label>브랜드<input name="brand" maxlength="120" value="${esc(profile.brand||'')}"></label>
+        <label>모델<input name="model" maxlength="120" value="${esc(profile.model||'')}"></label>
+        <label>판매가(원)<input name="price" type="number" min="0" step="1" value="${profile.list_price_krw??''}"></label>
+        <label>판매 상태<select name="saleStatus">
+          <option value="preparing" ${profile.sale_status!=='available'&&profile.sale_status!=='sold_out'&&profile.sale_status!=='discontinued'?'selected':''}>판매 준비중</option>
+          <option value="available" ${profile.sale_status==='available'?'selected':''}>구매 가능</option>
+          <option value="sold_out" ${profile.sale_status==='sold_out'?'selected':''}>품절</option>
+          <option value="discontinued" ${profile.sale_status==='discontinued'?'selected':''}>판매 종료</option>
+        </select></label>
+        <label>공개 상태<select name="publicationStatus">
+          <option value="draft" ${profile.publication_status!=='published'?'selected':''}>비공개</option>
+          <option value="published" ${profile.publication_status==='published'?'selected':''}>소비자 공개</option>
+        </select></label>
+        <label class="wide">한 줄 설명<textarea name="shortDescription" rows="3" maxlength="1200">${esc(profile.short_description||'')}</textarea></label>
+        <label class="wide">공개 사양<textarea name="specs" rows="6" placeholder="정격전압: 220V&#10;정격출력: 3.0kW">${esc(specsToText(profile.public_specs))}</textarea></label>
+        <label class="wide">에코디몰 구매 URL<input name="mallUrl" type="url" placeholder="https://ekodi.kr/ekodimall/p/..." value="${esc(profile.mall_public_url||'')}"></label>
+        <label class="wide">대표 이미지 URL<input name="imageUrl" type="url" placeholder="https://..." value="${esc(profile.image_url||'')}"></label>
+        <label class="wide">배송·설치 안내<textarea name="fulfillment" rows="3" maxlength="1600">${esc(profile.fulfillment||'')}</textarea></label>
+        <label class="wide">A/S 안내<textarea name="afterSalesNote" rows="3" maxlength="1600">${esc(profile.after_sales_note||'')}</textarea></label>
+      </div>
+      <div class="actions"><button class="button primary" type="submit">소비자 공개정보 저장</button></div>
+      <p class="empty">‘구매 가능’은 판매가와 에코디몰 구매 URL이 모두 있어야 저장됩니다. 공개상태가 ‘소비자 공개’일 때만 비로그인 사용자가 확인할 수 있습니다.</p>
+      <p class="trade-flash" id="tradePublicProfileFlash"></p>
+    </form>`;
+  }
+  function bindPublicProfileForm(product,profile){
+    const form=$('tradePublicProfileForm');if(!form)return;
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();const fd=new FormData(form);
+      const price=String(fd.get('price')||'').trim();
+      const saleStatus=String(fd.get('saleStatus')||'preparing');
+      const mallUrl=String(fd.get('mallUrl')||'').trim();
+      if(saleStatus==='available'&&(!price||!mallUrl)){
+        $('tradePublicProfileFlash').textContent='구매 가능 상태에는 판매가와 에코디몰 구매 URL이 모두 필요합니다.';return;
+      }
+      const session=await currentSession();
+      const row={
+        engagement_id:product.id,product_code:product.code,
+        public_name:String(fd.get('publicName')||product.title).trim(),
+        brand:String(fd.get('brand')||'').trim(),model:String(fd.get('model')||'').trim(),
+        short_description:String(fd.get('shortDescription')||'').trim(),
+        public_specs:specsFromText(fd.get('specs')),
+        list_price_krw:price?Number(price):null,
+        sale_status:saleStatus,
+        publication_status:String(fd.get('publicationStatus')||'draft'),
+        mall_public_url:mallUrl||null,
+        image_url:String(fd.get('imageUrl')||'').trim()||null,
+        fulfillment:String(fd.get('fulfillment')||'').trim(),
+        after_sales_note:String(fd.get('afterSalesNote')||'').trim(),
+        updated_by:session?.user?.id||null,
+        updated_at:new Date().toISOString()
+      };
+      try{
+        state('공개정보 저장 중');
+        const {error}=await sb.from('trade_product_public_profiles').upsert(row,{onConflict:'engagement_id'});
+        if(error)throw error;
+        $('tradePublicProfileFlash').textContent='저장했습니다.';
+        await renderProductDetail(product.code);
+      }catch(error){
+        $('tradePublicProfileFlash').textContent=`저장 실패: ${error.message||error}`;state('확인 필요');
+      }
+    });
+  }
   async function renderProductDetail(code){
     sectionTitle('제품 하위관리','제품 하나를 독립 운영 단위로 관리합니다.');
     accessSummary();state('제품 불러오는 중');
     const groups=await loadAllEngagements();
     const product=groups.flatMap(group=>group.engagements.map(item=>({...item,company:group.company}))).find(item=>String(item.code).toUpperCase()===String(code).toUpperCase());
     if(!product){$('mainPanel').innerHTML='<h2>제품을 찾을 수 없습니다.</h2><p class="empty">제품 코드 또는 관리 범위를 확인해 주세요.</p>';state('제품 없음');return;}
+    const profile=await loadPublicProfile(product.id).catch(error=>{console.warn('public profile load failed',error);return null;});
     const publicUrl=`${publicBase}/products/${encodeURIComponent(product.code)}`;
     const supplierUrl=`${publicUrl}/supplier`;
-    $('mainPanel').innerHTML=`<section><div class="panel-head"><div><h2>${esc(product.title)}</h2><p class="empty">${esc(product.company.display_name)} · ${esc(product.code)}</p></div><span class="tag">${esc(phaseLabel(product.phase))}</span></div><div class="role-guide"><article class="role-card"><strong>에코디 구매·운영</strong><p>공급가·계약·인증·수입·판매정책·내부 의사결정을 관리합니다. 공급자와 소비자에게 비공개인 내부 영역입니다.</p></article><article class="role-card"><strong>공급자 협업</strong><p>공급자는 자기 회사의 이 제품에 한해 진행상황·요청·문서·공식기록을 공유합니다.</p><p><a class="button" href="${supplierUrl}">공급자 페이지</a></p></article><article class="role-card"><strong>소비자 구매</strong><p>공개 사양·판매가·배송/A/S 정보와 구매 버튼만 제공합니다. 내부 계약·원가·공급사 메모는 노출하지 않습니다.</p><p><a class="button primary" href="${publicUrl}">소비자 상품페이지</a></p></article></div></section><section style="margin-top:18px"><h2>제품 운영</h2><div class="service-list"><div class="service-row"><div><strong>현재 단계</strong><p>${esc(phaseLabel(product.phase))} · ${esc(productStatusLabel(product.status))}</p></div><a href="${base}/pipeline">전체 도입진행</a></div><div class="service-row"><div><strong>공급회사</strong><p>${esc(product.company.display_name)} · ${esc(product.company.country_code||product.company.slug)}</p></div><a href="${base}/companies">공급사 관리</a></div><div class="service-row"><div><strong>소비자 판매 채널</strong><p>제품 공개페이지에서 에코디몰 구매 흐름으로 연결합니다. 결제·주문·배송 상태는 에코디몰이 담당합니다.</p></div><a href="/ekodimall/admin/products">에코디몰 상품관리</a></div></div></section>`;
+    const saleLabel=profile?.sale_status==='available'?'구매 가능':profile?.sale_status==='sold_out'?'품절':profile?.sale_status==='discontinued'?'판매 종료':'판매 준비중';
+    const publishLabel=profile?.publication_status==='published'?'소비자 공개':'비공개';
+    $('mainPanel').innerHTML=`<section><div class="panel-head"><div><h2>${esc(product.title)}</h2><p class="empty">${esc(product.company.display_name)} · ${esc(product.code)}</p></div><span class="tag">${esc(phaseLabel(product.phase))}</span></div><div class="role-guide"><article class="role-card"><strong>에코디 구매·운영</strong><p>공급가·계약·인증·수입·판매정책·내부 의사결정을 관리합니다. 공급자와 소비자에게 비공개인 내부 영역입니다.</p></article><article class="role-card"><strong>공급자 협업</strong><p>공급자는 자기 회사의 이 제품에 한해 진행상황·요청·문서·공식기록을 공유합니다.</p><p><a class="button" href="${supplierUrl}">공급자 페이지</a></p></article><article class="role-card"><strong>소비자 구매</strong><p>현재 ${esc(publishLabel)} · ${esc(saleLabel)}. 공개 사양·판매가·배송/A/S 정보만 표시합니다.</p><p><a class="button primary" href="${publicUrl}">소비자 상품페이지</a></p></article></div></section><section style="margin-top:18px"><h2>제품 운영</h2><div class="service-list"><div class="service-row"><div><strong>현재 단계</strong><p>${esc(phaseLabel(product.phase))} · ${esc(productStatusLabel(product.status))}</p></div><a href="${base}/pipeline">전체 도입진행</a></div><div class="service-row"><div><strong>공급회사</strong><p>${esc(product.company.display_name)} · ${esc(product.company.country_code||product.company.slug)}</p></div><a href="${base}/companies">공급사 관리</a></div><div class="service-row"><div><strong>소비자 판매 채널</strong><p>${profile?.mall_public_url?'에코디몰 상품 연결됨':'에코디몰 상품 연결 대기'} · 결제·주문·배송 상태는 에코디몰이 담당합니다.</p></div><a href="/ekodimall/admin/products">에코디몰 상품관리</a></div></div></section><section class="editor-shell" style="margin-top:18px"><h2>소비자 공개 · 판매 설정</h2>${publicProfileForm(product,profile||{})}</section>`;
+    bindPublicProfileForm(product,profile||{});
     state('제품 하위관리');
   }
   async function renderPipeline(){
