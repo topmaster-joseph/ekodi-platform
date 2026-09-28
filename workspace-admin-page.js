@@ -695,7 +695,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       const r=await fetch('/ekodimall/api/amazon/status',{headers,cache:'no-store'});
       const d=await r.json().catch(()=>({}));
       if(!r.ok)throw new Error(d.error||`amazon_${r.status}`);
-      const seller=d.sellerCentral||{},aws=d.aws||{},pay=d.amazonPay||{},cost=d.cost||{},policy=cost.policy||{},usage=Array.isArray(cost.usage)?cost.usage:[];
+      const seller=d.sellerCentral||{},aws=d.aws||{},pay=d.amazonPay||{},connection=d.connection||{},cost=d.cost||{},policy=cost.policy||{},usage=Array.isArray(cost.usage)?cost.usage:[];
       const money=v=>Number(v||0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2});
       const usageRows=usage.length?usage.map(row=>`<tr><td>${ae(row.serviceKey||'-')}</td><td>${ae(row.usageValue??'-')} ${ae(row.usageUnit||'')}</td><td>${row.freeRemainingPercent==null?'-':ae(row.freeRemainingPercent)+'%'}</td><td>${money(row.estimatedCostUsd)}</td></tr>`).join(''):'<tr><td colspan="4">아직 수집된 사용량이 없습니다. 비용 수집기가 연결되면 여기에 표시됩니다.</td></tr>';
       $('summaryCards').innerHTML=[
@@ -710,6 +710,29 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
           <a class="button primary" href="/ekodimall/admin/products">상품 관리</a>
           <a class="button" href="/ekodimall/admin/analytics">주문·매출</a>
           <a class="button" href="/ekodimall/admin/sourcing">공급·제휴</a>
+        </div>
+        <div class="panel" style="margin-top:14px">
+          <h3>Seller Central · SP-API 계정 연결</h3>
+          <p class="empty">Amazon 앱의 LWA 자격정보를 암호화 Vault에 저장합니다. 저장된 Client Secret·Refresh Token은 다시 화면에 표시하지 않습니다.</p>
+          <form id="amazonConnectionForm">
+            <div class="grid two">
+              <label>연결 이름<input name="displayName" maxlength="160" value="${ae(connection.displayName||'EKODI Mall Amazon')}"></label>
+              <label>Seller ID<input name="sellerId" maxlength="120" value="${ae(connection.sellerId||'')}"></label>
+              <label>Marketplace ID<input name="marketplaceId" maxlength="120" value="${ae(connection.marketplaceId||'')}" placeholder="연결 테스트 후 자동확인 가능"></label>
+              <label>SP-API Endpoint<input name="endpoint" maxlength="300" value="${ae(connection.endpoint||'https://sellingpartnerapi-fe.amazon.com')}"></label>
+              <label>LWA Client ID<input name="clientId" autocomplete="off" placeholder="${connection.configured?'등록됨 · 변경할 때만 입력':'amzn1.application-oa2-client...'}"></label>
+              <label>LWA Client Secret<input name="clientSecret" type="password" autocomplete="new-password" placeholder="${connection.configured?'등록됨 · 변경할 때만 입력':'Client Secret'}"></label>
+            </div>
+            <label style="display:grid;gap:5px;margin-top:10px">LWA Refresh Token<input name="refreshToken" type="password" autocomplete="new-password" placeholder="${connection.configured?'등록됨 · 변경할 때만 입력':'Atzr|...'}"></label>
+            <div class="actions">
+              <button class="button primary" type="submit">계정 연결 저장</button>
+              <button class="button" id="amazonConnectionTest" type="button">읽기 전용 연결 테스트</button>
+              <button class="button" id="amazonConnectionRemove" type="button">연결 해제</button>
+              <a class="button" href="https://developer-docs.amazon.com/sp-api/docs/registering-your-application" target="_blank" rel="noopener">Amazon 앱 등록 안내</a>
+            </div>
+          </form>
+          <p class="empty">상태: <strong>${ae(connection.status||'setup-required')}</strong> · Vault: <strong>${connection.vaultReady?'준비됨':'서버키 설정 필요'}</strong> · 마지막 확인: ${ae(connection.lastVerifiedAt||'-')}</p>
+          ${(connection.marketplaces||[]).length?`<div class="table-wrap" style="margin-top:10px"><table><thead><tr><th>Marketplace</th><th>국가</th><th>스토어</th><th>참여</th><th>정지</th></tr></thead><tbody>${connection.marketplaces.map(m=>`<tr><td>${ae(m.name||m.marketplaceId)}</td><td>${ae(m.countryCode||'-')}</td><td>${ae(m.storeName||'-')}</td><td>${m.participationActive?'활성':'비활성'}</td><td>${m.suspended?'예':'아니오'}</td></tr>`).join('')}</tbody></table></div>`:''}
         </div>
         <div class="panel" style="margin-top:14px">
           <h3>비용 강제실행 규칙</h3>
@@ -749,6 +772,44 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
           <p>AWS: <strong>${aws.configured?'보조 인프라 연결':'선택 연결'}</strong> · Amazon Pay: <strong>${pay.configured?'연결됨':'선택 연결'}</strong></p>
           <p>지원 범위: ${(seller.resources||[]).map(ae).join(' · ')||'catalog · listings · pricing · inventory · orders · fulfillment · reports'}</p>
         </div>`;
+      const connectionForm=$('amazonConnectionForm');
+      connectionForm?.addEventListener('submit',async event=>{
+        event.preventDefault();
+        const fd=new FormData(connectionForm);
+        const body={
+          displayName:String(fd.get('displayName')||''),
+          sellerId:String(fd.get('sellerId')||''),
+          marketplaceId:String(fd.get('marketplaceId')||''),
+          endpoint:String(fd.get('endpoint')||''),
+          clientId:String(fd.get('clientId')||''),
+          clientSecret:String(fd.get('clientSecret')||''),
+          refreshToken:String(fd.get('refreshToken')||'')
+        };
+        for(const key of ['clientId','clientSecret','refreshToken'])if(!body[key])delete body[key];
+        state('Amazon 계정 연결 저장 중');
+        const save=await fetch('/ekodimall/api/amazon/connection',{method:'PUT',headers:{...headers,'content-type':'application/json'},body:JSON.stringify(body)});
+        const out=await save.json().catch(()=>({}));
+        if(!save.ok){state('계정 연결 저장 실패');$('pageCopy').textContent=out.message||out.error||'Amazon 계정 연결을 저장하지 못했습니다.';return}
+        state('Amazon 계정 연결 저장 완료');
+        amazonAdmin();
+      });
+      $('amazonConnectionTest')?.addEventListener('click',async()=>{
+        state('Amazon 읽기 전용 연결 테스트 중');
+        const test=await fetch('/ekodimall/api/amazon/connection/test',{method:'POST',headers});
+        const out=await test.json().catch(()=>({}));
+        if(!test.ok){state('Amazon 연결 확인 실패');$('pageCopy').textContent=out.code||out.error||'Amazon 연결을 확인하지 못했습니다.';return}
+        state('Amazon 연결 확인 완료');
+        amazonAdmin();
+      });
+      $('amazonConnectionRemove')?.addEventListener('click',async()=>{
+        if(!confirm('Amazon Seller Central 연결을 해제할까요? 저장된 암호화 자격정보와 Marketplace 캐시가 삭제됩니다.'))return;
+        state('Amazon 연결 해제 중');
+        const remove=await fetch('/ekodimall/api/amazon/connection',{method:'DELETE',headers});
+        const out=await remove.json().catch(()=>({}));
+        if(!remove.ok){state('Amazon 연결 해제 실패');$('pageCopy').textContent=out.error||'연결을 해제하지 못했습니다.';return}
+        state('Amazon 연결 해제 완료');
+        amazonAdmin();
+      });
       const approvalForm=$('amazonApprovalForm');
       approvalForm?.addEventListener('submit',async event=>{
         event.preventDefault();
