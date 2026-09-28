@@ -31,7 +31,7 @@ test('public UI stays simple while the revenue engine remains available behind o
 test('public company page moves partner access behind business-area detail views', () => {
   assert.match(html, /id="detailView"/);
   assert.match(html, /data-i18n="partnerLogin"/);
-  assert.match(site, /type==='trade'/); assert.match(site, /https:\/\/ekodi\.kr\/ekodibiz\/trade/);
+  assert.match(site, /type==='trade'/); assert.match(site, /https:\/\/ekodi\.kr\/trade/);
   assert.match(html, /<link rel="canonical" href="https:\/\/ekodi\.kr\/ekodibiz">/);
   assert.match(css, /position:sticky/);
   assert.match(css, /@media\(max-width:600px\)/);

@@ -1,17 +1,20 @@
 import { ekodiBizAdminScopeSnapshot } from './ekodibiz-admin-registry.js';
 function tradeAdminClient(ADMIN_HUB){
-  const route=location.pathname.replace(/\/+$/,'').match(/^\/([^/]+)\/trade\/admin(?:\/([^/]+))?(?:\/.*)?$/i);
+  const clean=location.pathname.replace(/\/+$/,'');
+  const route=clean.match(/^\/(?:trade\/admin|([^/]+)\/trade\/admin)(?:\/([^/]+))?(?:\/.*)?$/i);
   if(!route)return;
-  const workspaceUrlSlug=route[1].toLowerCase();
-  const workspace=workspaceUrlSlug==='ekodibiz'?'ekoditrade':workspaceUrlSlug;
+  const standaloneTrade=/^\/trade\/admin(?:\/|$)/i.test(clean);
+  const workspaceUrlSlug=standaloneTrade?'trade':String(route[1]||'ekodibiz').toLowerCase();
+  const workspace='ekoditrade';
   const section=(route[2]||'overview').toLowerCase();
   const routeParts=location.pathname.replace(/\/+$/,'').split('/').filter(Boolean);
-  const productCode=section==='products'&&routeParts.length>4?decodeURIComponent(routeParts.slice(4).join('/')):'';
+  const productCode=section==='products'?(standaloneTrade&&routeParts.length>3?decodeURIComponent(routeParts.slice(3).join('/')):!standaloneTrade&&routeParts.length>4?decodeURIComponent(routeParts.slice(4).join('/')):''):'';
   if(['publishing','marketing','channels'].includes(section))return;
   const API='https://renzehysxirjilvdxacv.supabase.co/functions/v1/workspace-api';
   const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
   const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-  const base=`/${workspaceUrlSlug}/trade/admin`;
+  const base=standaloneTrade?'/trade/admin':`/${workspaceUrlSlug}/trade/admin`;
+  const publicBase=standaloneTrade?'/trade':publicBase;
   const $=id=>document.getElementById(id);
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const roleLabel={workspace_admin:'에코디비즈 전체관리자',trade_admin:'무역 전체관리자',trade_manager:'거래 운영관리자',trade_viewer:'조회 관리자'};
@@ -29,7 +32,7 @@ function tradeAdminClient(ADMIN_HUB){
   }
   function setHeader(){
     $('workspaceName').textContent='에코디비즈';$('scopeLabel').textContent='에코디비즈';$('serviceName').textContent='무역거래 관리';
-    $('breadcrumb').textContent='에코디비즈 / 무역거래 / ADMIN';$('publicLink').href=`/${workspaceUrlSlug}/trade`;$('publicLink').textContent='관계자 화면';    const nav=$('adminNav');nav.replaceChildren();
+    $('breadcrumb').textContent='에코디비즈 / 무역거래 / ADMIN';$('publicLink').href=publicBase;$('publicLink').textContent='관계자 화면';    const nav=$('adminNav');nav.replaceChildren();
     [['overview','홈'],['companies','거래처'],['products','제품'],['pipeline','도입진행'],['publishing','채널 · 게시'],['access','권한']].forEach(([key,label])=>{
       const a=document.createElement('a');a.href=sectionHref(key);a.dataset.adminGroup=key;a.textContent=label;
       if(key===section)a.classList.add('active');nav.append(a);
@@ -244,7 +247,7 @@ function tradeAdminClient(ADMIN_HUB){
     const product=groups.flatMap(group=>group.engagements.map(item=>({...item,company:group.company}))).find(item=>String(item.code).toUpperCase()===String(code).toUpperCase());
     if(!product){$('mainPanel').innerHTML='<h2>제품을 찾을 수 없습니다.</h2><p class="empty">제품 코드 또는 관리 범위를 확인해 주세요.</p>';state('제품 없음');return;}
     const profile=await loadPublicProfile(product.id).catch(error=>{console.warn('public profile load failed',error);return null;});
-    const publicUrl=`/${workspaceUrlSlug}/trade/products/${encodeURIComponent(product.code)}`;
+    const publicUrl=`${publicBase}/products/${encodeURIComponent(product.code)}`;
     const supplierUrl=`${publicUrl}/supplier`;
     const saleLabel=profile?.sale_status==='available'?'구매 가능':profile?.sale_status==='sold_out'?'품절':profile?.sale_status==='discontinued'?'판매 종료':'판매 준비중';
     const publishLabel=profile?.publication_status==='published'?'소비자 공개':'비공개';

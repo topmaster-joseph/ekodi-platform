@@ -11,11 +11,11 @@ test('canonical Mall and child-service publishing routes use site-owned admins',
   assert.equal(isWorkspaceAdminPathShape('/ekodimall/admin/channel-settings/'),true);
   assert.equal(isWorkspaceAdminPathShape('/admin/ekodimall/channel-settings/'),false);
   assert.equal(isWorkspaceAdminPathShape('/ekodimall/admin/channels/'),false);
-  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/trade/admin/publishing/'),true);
+  assert.equal(isWorkspaceAdminPathShape('/trade/admin/publishing/'),true);
   assert.equal(isWorkspaceAdminPathShape('/cgma/admin/publishing/'),true);
   const source=await read('workspace-admin-page.js');
   assert.match(source,/genericService=clean\.match/);
-  assert.match(source,/adminBase=standaloneMall\?'\/ekodimall\/admin':service==='mall'\?'\/ekodimall\/admin'/);
+  assert.match(source,/adminBase=standaloneMall\?'\/ekodimall\/admin':standaloneTrade\?'\/trade\/admin':service==='mall'\?'\/ekodimall\/admin'/);
   assert.match(source,/service\?`\$\{base\}\/\$\{service\}\/admin`/);
   assert.match(source,/visibleChannelIds/);
 });

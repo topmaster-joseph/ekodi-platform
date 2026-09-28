@@ -26,6 +26,7 @@ import { tradeProductPublicRoute, tradeProductPublicPage } from './trade-product
 import { isPublicWorkspacePath } from './workspace-route-policy.js';
 import { workspaceRouteFromPublicPath } from './workspace-route-policy.js';
 import { isInsurancePublicPath, routeInsurancePublic } from './insurance-public-route.js';
+import { independentServiceAdminPage } from './independent-service-admin-page.js';
 import { marketingProjectionForPath, proxyCanonicalMarketing } from './marketing-canonical-projection.js';
 import { routeCanonicalSurface } from './canonical-surface-router.js';
 import { handlePreviewRequest } from './preview-page.js';
@@ -100,6 +101,14 @@ function redirectLegacySeonamMed(request){const source=new URL(request.url);cons
 async function routeSeonamMediStatic(request,env){if(!env?.ASSETS?.fetch)return new Response('Site assets unavailable',{status:503,headers:{'cache-control':'no-store'}});const source=new URL(request.url);const target=new URL(request.url);if(source.pathname===SEONAM_MEDI_PREFIX)target.pathname=SEONAM_MEDI_PREFIX+'/';const upstream=await env.ASSETS.fetch(new Request(target.toString(),request));const out=new Response(upstream.body,upstream);out.headers.set('x-ekodi-route','seonam-medi-static');out.headers.set('x-content-type-options','nosniff');if((out.headers.get('content-type')||'').includes('text/html'))out.headers.set('cache-control','no-store');return out;}
 function isPyeonggongmokPath(pathname){const path=String(pathname||'');return path===PYEONGGONGMOK_PREFIX||path.startsWith(PYEONGGONGMOK_PREFIX+'/');}
 async function routePyeonggongmokStatic(request,env){if(!env?.ASSETS?.fetch)return new Response('Site assets unavailable',{status:503,headers:{'cache-control':'no-store'}});const source=new URL(request.url);const target=new URL(request.url);if(source.pathname===PYEONGGONGMOK_PREFIX)target.pathname=PYEONGGONGMOK_PREFIX+'/';const upstream=await env.ASSETS.fetch(new Request(target.toString(),request));const out=new Response(upstream.body,upstream);out.headers.set('x-ekodi-route','pyeonggongmok-static');out.headers.set('x-content-type-options','nosniff');if((out.headers.get('content-type')||'').includes('text/html'))out.headers.set('cache-control','no-store');return out;}
+
+function redirectLegacyIndependentAdmin(request){
+  const url=new URL(request.url),target=new URL(request.url);
+  if(/^\/ekodibiz\/invest\/admin(?:\/|$)/i.test(url.pathname))target.pathname=url.pathname.replace(/^\/ekodibiz\/invest\/admin/i,'/invest/admin');
+  else if(/^\/ekodibiz\/trade\/admin(?:\/|$)/i.test(url.pathname))target.pathname=url.pathname.replace(/^\/ekodibiz\/trade\/admin/i,'/trade/admin');
+  else return null;
+  return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-canonical-admin':'independent-site'}});
+}
 
 function workspaceServiceUnavailable(){
   return new Response('Workspace service unavailable',{status:503,headers:{'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-workspace-gateway':'space-binding-unavailable'}});
@@ -330,7 +339,8 @@ async function routePlatform(request,env,ctx){
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isSeonamMediPath(url.pathname))return routeSeonamMediStatic(request,env);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isPyeonggongmokPath(url.pathname))return routePyeonggongmokStatic(request,env);
     if(host===PUBLIC_HOST&&(url.pathname==='/api/finance'||url.pathname.startsWith('/api/finance/')))return routeTaxFinance(request,env,ctx);
-    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){const adminTarget=legacyAdminAliasTarget(url.pathname);if(adminTarget){const target=new URL(request.url);target.pathname=adminTarget;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'admin-canonical-handoff'}})}}
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
+      const legacyIndependentAdmin=redirectLegacyIndependentAdmin(request);if(legacyIndependentAdmin)return legacyIndependentAdmin;const adminTarget=legacyAdminAliasTarget(url.pathname);if(adminTarget){const target=new URL(request.url);target.pathname=adminTarget;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'admin-canonical-handoff'}})}}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
       const cameraPair=url.pathname.match(/^\/live\/c\/([A-Za-z0-9_-]{8,80})\/?$/);if(cameraPair)return managementCameraPage(cameraPair[1]);
       if(url.pathname==='/live'||url.pathname==='/live/')return liveShell(liveServicePage());
@@ -358,6 +368,7 @@ async function routePlatform(request,env,ctx){
       const messengerApex=await routeMessengerApex(request,env,ctx);if(messengerApex)return messengerApex;
       const investApex=await routeInvestApex(request,env,ctx);if(investApex)return investApex;
       const investSite=routeInvestSite(request);if(investSite)return injectEkodiShell(investSite,'invest');
+      const independentAdmin=independentServiceAdminPage(url.pathname);if(independentAdmin)return injectEkodiShell(independentAdmin,'ekodi','admin');
       const taxPortal=await routeTaxPortalApex(request,env,ctx);if(taxPortal)return taxPortal;
       const contactResponse=await handleMailContactApi(request,env);if(contactResponse)return contactResponse;
       if(request.method==='GET'&&url.pathname==='/mail/contact')return injectEkodiShell(mailContactPage(),'mail');

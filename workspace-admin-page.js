@@ -35,24 +35,25 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   const PLATFORM_ADMIN_INTENT_MAX_AGE_MS=10*60*1000;
       const AUTH_URL='https://ekodi.kr/auth/';
   const clean=location.pathname.replace(/\/+$/,'');
-  const tradeAdminMatch=clean.match(/^\/[^/]+\/trade\/admin(?:\/([^/]+)(?:\/[^/]+)*)?$/i);
+  const tradeAdminMatch=clean.match(/^\/(?:trade\/admin|[^/]+\/trade\/admin)(?:\/([^/]+)(?:\/[^/]+)*)?$/i);
   const tradeAdminRoute=Boolean(tradeAdminMatch);
   if(tradeAdminRoute&&!['publishing','marketing','channels'].includes(String(tradeAdminMatch?.[1]||'').toLowerCase()))return;
   const standaloneMall=clean.match(/^\/ekodimall\/admin(?:\/([^/]+)(?:\/[^/]+)*)?$/i);
   const genericService=clean.match(/^\/([^/]+)\/([^/]+)\/admin(?:\/([^/]+)(?:\/[^/]+)*)?$/i);
   const root=clean.match(/^\/([^/]+)\/admin(?:\/([^/]+)(?:\/[^/]+)*)?$/i);
   const mall=Boolean(standaloneMall);
-  const workspace=(standaloneMall?'ekodibiz':genericService?.[1]||root?.[1]||'ekodibiz').toLowerCase();
-  const service=mall?'mall':(genericService?.[2]?.toLowerCase()||null);
+  const standaloneTrade=/^\/trade\/admin(?:\/|$)/i.test(clean);
+  const workspace=(standaloneMall?'ekodibiz':standaloneTrade?'ekoditrade':genericService?.[1]||root?.[1]||'ekodibiz').toLowerCase();
+  const service=mall?'mall':standaloneTrade?'trade':(genericService?.[2]?.toLowerCase()||null);
   const MISSION_DEFAULT_ACTIVITY='260926-chuseok-open-table';
   const defaultSection='overview';
-  const rawSection=standaloneMall?.[1]||(genericService?.[3]||root?.[2]||defaultSection);
+  const rawSection=standaloneMall?.[1]||(tradeAdminMatch?.[1]||genericService?.[3]||root?.[2]||defaultSection);
   const section=(rawSection==='channel-settings'?'channels':rawSection).toLowerCase();
   const CHANNEL_TARGETS=new Map((CHANNEL_CATALOG||[]).map(target=>[target.id,target]));
   const CHANNEL_PROVIDERS=Object.freeze(Object.fromEntries((CHANNEL_CATALOG||[]).map(target=>[target.id,target])));
   const CHANNEL_AUTH_PATHS=Object.freeze({youtube:'/v1/connect/youtube/start',meta:'/v1/connect/meta/start',threads:'/v1/connect/threads/start'});
   const base=`/${workspace}`;
-  const adminBase=standaloneMall?'/ekodimall/admin':service==='mall'?'/ekodimall/admin':service?`${base}/${service}/admin`:`${base}/admin`;
+  const adminBase=standaloneMall?'/ekodimall/admin':standaloneTrade?'/trade/admin':service==='mall'?'/ekodimall/admin':service==='trade'?'/trade/admin':service?`${base}/${service}/admin`:`${base}/admin`;
   const sectionHref=key=>key==='overview'?`${adminBase}/overview`:`${adminBase}/${key==='channels'?'channel-settings':key}`;
   const $=id=>document.getElementById(id);
   const CHANNEL_OAUTH_RESULT_KEY='ekodi-channel-oauth-result-v1';
@@ -124,7 +125,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   const specialistRootGroups=[{id:'specialist',label:'외부 전문작업',sections:[['overview','운영 홈'],['status','운영 상태']]}];
   const adminHubScopes=Array.isArray(ADMIN_HUB?.scopes)?ADMIN_HUB.scopes:[];
   const adminHubSource=new URLSearchParams(location.search).get('source')||'';
-  const mallDirectSections=[['overview','홈'],['products','상품'],['sourcing','공급·제휴'],['amazon','Amazon'],['analytics','주문·매출'],['channels','채널'],['growth','AI 영업'],['confirmations','지급·수령'],['design','설정']];
+  const mallDirectSections=[['overview','대시보드'],['products','상품'],['analytics','주문·매출'],['channels','판매채널'],['sourcing','공급·제휴'],['growth','마케팅·AI'],['confirmations','정산·확인'],['design','설정']];
   const mallDelegatedGroups=[
     {id:'home',label:'홈',sections:[['overview','운영 홈']]},
     {id:'catalog',label:'상품 관리',sections:[['products','상품'],['sourcing','공급·제휴'],['amazon','Amazon']]},
@@ -165,7 +166,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   function applyWorkspaceContext(context){workspaceContext=context;workspaceRole=String(context?.role||'').trim().toLowerCase();renderNav(workspaceRole);renderAdminScopeSwitcher(workspaceRole);publishTenantContext()}
   function canonicalSubjectKey(){
     if(service==='mall')return 'ekodimall';
-    if(service==='trade')return 'ekoditrade';
+    if(service==='trade'||workspace==='ekoditrade'||workspace==='trade')return 'ekoditrade';
     const root=workspace==='ekodibiz'?'ekodi-biz':workspace;
     const aliases={'ekodi-biz':'ekodi-biz','ekodichurch':'ekodi-church','ekodi-church':'ekodi-church','ekodilab':'ekodi-lab','ekodi-lab':'ekodi-lab','cheonggye':'cheonggye-local'};
     const raw=String(workspaceContext?.slug||root).trim().toLowerCase();
@@ -212,7 +213,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   }
   function workspaceSlugs(){
     if(service==='mall')return new Set(['ekodimall']);
-    if(service==='trade')return new Set(['ekoditrade','ekodi-trade','ekodibiz-trade']);
+    if(service==='trade'||workspace==='ekoditrade'||workspace==='trade')return new Set(['ekoditrade','ekodi-trade','ekodibiz-trade','trade']);
     const values=new Set([workspace,preferredWorkspaceSlug()]);
     if(workspace==='ekodibiz')values.add('ekodi-biz');
     if(workspace==='ekodi-biz')values.add('ekodibiz');
@@ -788,7 +789,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       state('확인 필요');
     }
   }
-  async function render(){if(!service){if(section==='overview')return rootHome();if(section==='activities')return activityAdmin();if(section==='status')return statusAdmin();if(section==='records')return recordsAdmin();if(section==='members')return membersAdmin();if(workspace==='cgma'&&section==='member')return cgmaMemberAdmin();if(section==='chrome')return siteChromeAdmin();if(section==='design')return designAdmin();if(section==='languages')return languageAdmin();if(section==='mail')return mailAdmin();if(section==='confirmations')return confirmationAdmin();if(section==='finance')return financeAdmin();if(isBizWorkspace&&section==='tax')return taxAdmin();if(section==='publishing'||section==='marketing')return channel();if(section==='mall')return location.replace('/ekodimall/admin');$('summaryCards').innerHTML=[card('운영공간',workspaceLabel(),'tenant scoped'),card('메뉴',meta[section]?.[0]||section,'로컬 관리')].join('');$('mainPanel').innerHTML='<p class="empty">이 운영공간의 독립 모듈입니다.</p>';return state('운영')}if(service!=='mall'){if(section==='overview'){$('summaryCards').innerHTML=[card('운영공간',workspaceLabel(),'tenant scoped'),card('하위서비스',service,'service scoped'),card('공통엔진','Channel · OAuth · Vault','shared capability'),card('권한',workspaceRole||'-','tenant role')].join('');$('mainPanel').innerHTML=`<h2>${ae(service)} 서비스 관리</h2><p class="empty">상위 운영공간의 권한을 상속하되 채널·게시 설정은 이 서비스 문맥에서 관리합니다.</p><div class="actions"><a class="button primary" href="${adminBase}/publishing">채널·자동게시</a><a class="button" href="${adminBase}/design">사이트 스타일</a><a class="button" href="${adminBase}/languages">다국어</a></div>`;return state('운영')}if(section==='chrome')return siteChromeAdmin();if(section==='design')return designAdmin();if(section==='languages')return languageAdmin();if(section==='confirmations')return confirmationAdmin();if(section==='finance')return financeAdmin();if(section==='publishing'||section==='marketing'||section==='channels')return channel();$('summaryCards').innerHTML=[card('하위서비스',service,'service scoped'),card('운영공간',workspaceLabel(),'tenant authority')].join('');$('mainPanel').innerHTML='<p class="empty">이 하위서비스는 공통 시스템 기능을 상속합니다.</p>';return state('운영')}if(section==='chrome')return siteChromeAdmin();if(section==='design')return designAdmin();if(section==='languages')return languageAdmin();if(section==='sales')return location.replace(`${adminBase}/analytics`);if(section==='analytics')return mallAnalytics();if(section==='confirmations')return confirmationAdmin();if(section==='overview')return mallHome();if(section==='amazon')return amazonAdmin();if(section==='sourcing'||section==='growth')return growthPolicyPanel(section);if(['marketing','automation'].includes(section))return location.replace(`${adminBase}/channel-settings`);if(section==='channels'||section==='publishing')return channel();if(section==='products')return mallProducts();$('summaryCards').innerHTML=[card('상품 서비스','에코디몰','EKODIBIZ 소유 운영'),card('공개주소','/ekodimall','ekodi.kr')].join('');$('mainPanel').innerHTML='<h2>상품 관리</h2><p class="empty">상품 원본은 에코디몰 독립 상품 모듈에서 관리합니다.</p>';state('운영')}
+  async function render(){if(!service){if(section==='overview')return rootHome();if(section==='activities')return activityAdmin();if(section==='status')return statusAdmin();if(section==='records')return recordsAdmin();if(section==='members')return membersAdmin();if(workspace==='cgma'&&section==='member')return cgmaMemberAdmin();if(section==='chrome')return siteChromeAdmin();if(section==='design')return designAdmin();if(section==='languages')return languageAdmin();if(section==='mail')return mailAdmin();if(section==='confirmations')return confirmationAdmin();if(section==='finance')return financeAdmin();if(isBizWorkspace&&section==='tax')return taxAdmin();if(section==='publishing'||section==='marketing')return channel();if(section==='mall')return location.replace('/ekodimall/admin');$('summaryCards').innerHTML=[card('운영공간',workspaceLabel(),'tenant scoped'),card('메뉴',meta[section]?.[0]||section,'로컬 관리')].join('');$('mainPanel').innerHTML='<p class="empty">이 운영공간의 독립 모듈입니다.</p>';return state('운영')}if(service!=='mall'){if(section==='overview'){$('summaryCards').innerHTML=[card('운영공간',workspaceLabel(),'tenant scoped'),card('하위서비스',service,'service scoped'),card('공통엔진','Channel · OAuth · Vault','shared capability'),card('권한',workspaceRole||'-','tenant role')].join('');$('mainPanel').innerHTML=`<h2>${ae(service)} 서비스 관리</h2><p class="empty">상위 운영공간의 권한을 상속하되 채널·게시 설정은 이 서비스 문맥에서 관리합니다.</p><div class="actions"><a class="button primary" href="${adminBase}/publishing">채널·자동게시</a><a class="button" href="${adminBase}/design">사이트 스타일</a><a class="button" href="${adminBase}/languages">다국어</a></div>`;return state('운영')}if(section==='chrome')return siteChromeAdmin();if(section==='design')return designAdmin();if(section==='languages')return languageAdmin();if(section==='confirmations')return confirmationAdmin();if(section==='finance')return financeAdmin();if(section==='publishing'||section==='marketing'||section==='channels')return channel();$('summaryCards').innerHTML=[card('하위서비스',service,'service scoped'),card('운영공간',workspaceLabel(),'tenant authority')].join('');$('mainPanel').innerHTML='<p class="empty">이 하위서비스는 공통 시스템 기능을 상속합니다.</p>';return state('운영')}if(section==='chrome')return siteChromeAdmin();if(section==='design')return designAdmin();if(section==='languages')return languageAdmin();if(section==='sales')return location.replace(`${adminBase}/analytics`);if(section==='analytics')return mallAnalytics();if(section==='confirmations')return confirmationAdmin();if(section==='overview')return mallHome();if(section==='amazon')return amazonAdmin();if(section==='sourcing'||section==='growth')return growthPolicyPanel(section);if(['marketing','automation'].includes(section))return location.replace(`${adminBase}/channel-settings`);if(section==='channels'||section==='publishing')return channel();if(section==='products')return mallProducts();$('summaryCards').innerHTML=[card('커머스 운영','에코디몰','독립 관리자'),card('공개주소','/ekodimall','ekodi.kr')].join('');$('mainPanel').innerHTML='<h2>상품 관리</h2><p class="empty">에코디몰의 상품·주문·판매채널·공급·마케팅·정산을 이 관리자에서 관리합니다.</p>';state('운영')}
   $('workspaceLogout')?.addEventListener('click',()=>{suppressWorkspaceSsoRecovery();clearSession();location.assign(adminBase)});
   async function boot(){setup();acceptPlatformAdminHandoff();try{await exchangeCentralToken()}catch{clearSession();return loginPanel('통합인증 연결에 실패했습니다. 다시 로그인해 주세요.')}if(!(await accessToken())){if(platformAdminToken()){markPlatformAdminIntent();platformAdminSessionToken=''}if(beginWorkspaceSsoRecovery())return;if(section==='channels'||section==='publishing'||section==='marketing')return channelPreAuth();return loginPanel(hasPlatformAdminIntent()?'1단계 운영공간 로그인 후 플랫폼 관리자 인증으로 자동 이어집니다.':'중앙 EKODI 로그인 상태가 없거나 만료되었습니다. 관리자 로그인을 진행해 주세요.')}state('권한 확인 중');let context;try{context=await loadWorkspaceContext()}catch(e){if(e.status===401){clearSession();return loginPanel()}$('summaryCards').innerHTML=[card('운영공간',workspaceLabel(),'권한 확인 필요')].join('');$('mainPanel').innerHTML=`<h2>권한 확인 실패</h2><p class="empty">${e.message}</p>`;return state('확인 필요')}if(!context)return deniedPanel();applyWorkspaceContext(context);if(!roleCapabilities(workspaceRole).length)return deniedPanel();const missionReturn=consumeMissionReturn();if(missionReturn){location.replace(missionReturn);return}if(!canSection(section))return permissionPanel();if(service==='mall'&&section==='sourcing'&&hasPlatformAdminIntent()&&!platformAdminToken()){clearPlatformAdminIntent();state('플랫폼 관리자 인증으로 연결 중');location.assign(platformAdminAuthUrl());return}return render()}
 

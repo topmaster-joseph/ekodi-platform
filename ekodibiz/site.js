@@ -147,7 +147,7 @@ function gmailHref(subject){return `https://mail.google.com/mail/?view=cm&fs=1&t
 function commonLogin(slug){return `https://auth.ekodi.kr/?site=biz&return_to=${encodeURIComponent(`https://biz.ekodi.kr/#business/${slug}`)}`}
 function partnerHref(slug){
   const type=BUSINESS[slug]?.login;
-  if(type==='trade')return 'https://ekodi.kr/ekodibiz/trade';
+  if(type==='trade')return 'https://ekodi.kr/trade';
   if(type==='mall')return 'https://ekodi.kr/ekodibiz/ekodimall/admin/';
   if(type==='invest')return 'https://ekodi.kr/ekodibiz/invest/admin';
   return commonLogin(slug);

@@ -12,12 +12,12 @@ const EKODIBIZ_ADMIN_SCOPE_DEFINITIONS = [
   {
     id: 'trade', label: '에코디무역', shortLabel: '무역',
     description: '거래회사·거래 운영·무역 관리자 권한을 관리합니다.',
-    adminHref: '/ekodibiz/trade/admin', publicHref: '/ekodibiz/trade', kind: 'module',
+    adminHref: '/trade/admin', publicHref: '/trade', kind: 'site',
   },
   {
     id: 'invest', label: '에코디투자', shortLabel: '투자',
     description: '투자 프로젝트·IR·Evidence·투자 연결·프로그램을 관리합니다.',
-    adminHref: '/ekodibiz/invest/admin', publicHref: '/ekodibiz/invest', kind: 'module',
+    adminHref: '/invest/admin', publicHref: '/invest', kind: 'site',
   },
   {
     id: 'tax', label: '세금·증빙', shortLabel: '세금',
@@ -27,12 +27,12 @@ const EKODIBIZ_ADMIN_SCOPE_DEFINITIONS = [
   {
     id: 'books', label: '에코디서점', shortLabel: '서점',
     description: '출판물·상담·출판대행·가격·기능 노출을 관리합니다.',
-    adminHref: '/admin/services/books?source=ekodibiz', publicHref: '/books', kind: 'service',
+    adminHref: '/books/admin', publicHref: '/books', kind: 'site',
   },
   {
     id: 'lab', label: '에코디연구소', shortLabel: '연구소',
     description: '연구소 운영공간과 사이트·서비스·권한을 관리합니다.',
-    adminHref: '/ekodi-lab/admin?source=ekodibiz', publicHref: '/ekodilab', kind: 'workspace',
+    adminHref: '/ekodilab/admin', publicHref: '/ekodilab', kind: 'site',
   },
 ];
 
@@ -47,10 +47,10 @@ export function ekodiBizAdminScopeSnapshot() {
 export function ekodiBizAdminScopeForPath(pathname = '') {
   const path = String(pathname || '').replace(/\/+$/, '') || '/';
   if (/^\/ekodimall\/admin(?:\/|$)/i.test(path)) return 'mall';
-  if (/^\/ekodibiz\/trade\/admin(?:\/|$)/i.test(path)) return 'trade';
-  if (/^\/ekodibiz\/invest\/admin(?:\/|$)/i.test(path)) return 'invest';
+  if (/^\/(?:trade|ekodibiz\/trade)\/admin(?:\/|$)/i.test(path)) return 'trade';
+  if (/^\/(?:invest|ekodibiz\/invest)\/admin(?:\/|$)/i.test(path)) return 'invest';
   if (/^\/tax(?:\/|$)/i.test(path)) return 'tax';
-  if (/^\/admin\/services\/books(?:\/|$)/i.test(path)) return 'books';
+  if (/^\/books\/admin(?:\/|$)/i.test(path)) return 'books';
   if (/^\/(?:ekodi-lab|ekodilab)\/admin(?:\/|$)/i.test(path)) return 'lab';
   if (/^\/ekodibiz\/admin(?:\/|$)/i.test(path)) return 'common';
   return '';

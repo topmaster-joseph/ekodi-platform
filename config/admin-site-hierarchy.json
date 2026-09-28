@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "principle": "Every independently managed site uses its own public canonical path plus /admin. Higher-level administrators may list, observe and hand off to child administrators, but must not create alternate child-admin URLs under the higher-level admin path.",
   "platformAdmin": {
     "publicPath": "/",
@@ -31,14 +31,14 @@
       "id": "ekodimall",
       "publicPath": "/ekodimall",
       "adminPath": "/ekodimall/admin",
-      "parentId": "ekodibiz",
+      "parentId": "platform",
       "navigationProfile": "role-projected-site-admin"
     },
     {
-      "id": "ekodibiz-trade",
-      "publicPath": "/ekodibiz/trade",
-      "adminPath": "/ekodibiz/trade/admin",
-      "parentId": "ekodibiz",
+      "id": "trade",
+      "publicPath": "/trade",
+      "adminPath": "/trade/admin",
+      "parentId": "platform",
       "navigationProfile": "role-projected-site-admin"
     },
     {
@@ -88,6 +88,139 @@
       "publicPath": "/yogurt",
       "adminPath": "/yogurt/admin",
       "parentId": "cmpmyi",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "ekodimission",
+      "publicPath": "/ekodimission",
+      "adminPath": "/ekodimission/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "bible",
+      "publicPath": "/bible",
+      "adminPath": "/bible/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "social",
+      "publicPath": "/social",
+      "adminPath": "/social/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "cafe",
+      "publicPath": "/cafe",
+      "adminPath": "/cafe/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "invest",
+      "publicPath": "/invest",
+      "adminPath": "/invest/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "money",
+      "publicPath": "/money",
+      "adminPath": "/money/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "pay",
+      "publicPath": "/pay",
+      "adminPath": "/pay/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "books",
+      "publicPath": "/books",
+      "adminPath": "/books/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "publishing",
+      "publicPath": "/publishing",
+      "adminPath": "/publishing/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "journal",
+      "publicPath": "/journal",
+      "adminPath": "/journal/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "ekodilab",
+      "publicPath": "/ekodilab",
+      "adminPath": "/ekodilab/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "education",
+      "publicPath": "/education",
+      "adminPath": "/education/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "work",
+      "publicPath": "/work",
+      "adminPath": "/work/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "insurance",
+      "publicPath": "/insurance",
+      "adminPath": "/insurance/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "messenger",
+      "publicPath": "/messenger",
+      "adminPath": "/messenger/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "mail",
+      "publicPath": "/mail",
+      "adminPath": "/mail/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "live",
+      "publicPath": "/live",
+      "adminPath": "/live/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "cloud",
+      "publicPath": "/cloud",
+      "adminPath": "/cloud/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "media",
+      "publicPath": "/media",
+      "adminPath": "/media/admin",
+      "parentId": "platform",
       "navigationProfile": "role-projected-site-admin"
     }
   ],

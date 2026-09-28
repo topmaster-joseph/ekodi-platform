@@ -625,7 +625,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/ekodibiz/trade/admin",
+        "url": "https://ekodi.kr/trade/admin",
         "statuses": [
           200
         ],
@@ -637,7 +637,20 @@
         "headerExpect": [
           "x-ekodi-route: workspace-admin",
           "cache-control: no-store"
-        ]
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/trade/admin",
+        "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/trade/admin",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodichurch/my",
@@ -687,6 +700,25 @@
         "headerExpect": [
           "x-content-type-options: nosniff"
         ]
+      },
+      {
+        "url": "https://ekodi.kr/trade",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "PRIVATE TRADE WORKSPACE",
+          "함께 진행하고",
+          "거래의 역사를 남깁니다"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: trade-partner-workspace",
+          "cache-control: no-store"
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "canonical /trade route is worker-owned and verified independently from the compatibility path",
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodibiz/trade",
