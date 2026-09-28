@@ -9,7 +9,7 @@ import {
 } from '../marketing-canonical-projection.js';
 
 const expected = new Map([
-  ['/ekodibiz/marketing-ai','https://marketing.ekodi.kr'],
+  ['/ekodimarketing','https://marketing.ekodi.kr'],
   ['/jadam/marketing','https://jadam.ai.ekodi.kr'],
   ['/pizzamaru/marketing','https://pizzamaru.ai.ekodi.kr'],
   ['/yogurt/marketing','https://yogurt.ai.ekodi.kr'],
