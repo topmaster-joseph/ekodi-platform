@@ -121,3 +121,15 @@ test('delegated admin navigation never requires a category click before reaching
   assert.match(trade,/a\.href=sectionHref\(key\)/);
   assert.match(trade,/sub\.hidden=true/);
 });
+
+
+test('delegated admin navigation uses flat compact desktop rows without changing mobile touch targets',async()=>{
+  const css=await read('shell/workspace.css');
+  assert.match(css,/Tenant \/ delegated admin navigation density convergence v3/);
+  assert.match(css,/\.admin-nav-group-label[\s\S]*display:none!important/);
+  assert.match(css,/@media\(min-width:769px\)[\s\S]*\[data-ekodi-admin-nav\][\s\S]*gap:2px!important/);
+  assert.match(css,/min-height:38px!important/);
+  assert.match(css,/padding-block:6px!important/);
+  assert.match(css,/line-height:1\.25!important/);
+  assert.match(css,/@media\(max-width:768px\)[\s\S]*--ekodi-tenant-admin-touch:44px/);
+});

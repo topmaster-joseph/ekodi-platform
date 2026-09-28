@@ -48,3 +48,30 @@
     --ekodi-tenant-admin-touch:44px;
   }
 }
+
+
+/* Tenant / delegated admin navigation density convergence v3.
+ * Keeps tenant identity and role boundaries intact while flattening non-clickable
+ * group labels and tightening desktop navigation rows across site/service admins.
+ */
+:root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="tenant"] .admin-nav-group-label,
+:root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="platform-entry"] .admin-nav-group-label{
+  display:none!important;
+}
+@media(min-width:769px){
+  :root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="tenant"] :is([data-ekodi-admin-nav],.oa-side nav),
+  :root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="platform-entry"] :is([data-ekodi-admin-nav],.oa-side nav){
+    gap:2px!important;
+  }
+  :root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="tenant"] :is([data-ekodi-admin-nav],.oa-side nav)>:is(a,button),
+  :root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="platform-entry"] :is([data-ekodi-admin-nav],.oa-side nav)>:is(a,button){
+    min-height:38px!important;
+    padding-block:6px!important;
+    line-height:1.25!important;
+  }
+  :root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="tenant"] .admin-nav-head,
+  :root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="platform-entry"] .admin-nav-head{
+    margin-block:0 4px!important;
+    padding-block:2px 4px!important;
+  }
+}
