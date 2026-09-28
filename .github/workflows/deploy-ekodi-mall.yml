@@ -92,7 +92,7 @@ jobs:
           for migration in sorted(Path('api/migrations').glob('*.sql')):
               db.executescript(migration.read_text(encoding='utf-8'))
           tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-          required = {'seller_profiles','memberships','stores','products','attribution_tokens','product_events','share_links','orders','order_payments','settlement_ledger','attribution_visits','commerce_events'}
+          required = {'seller_profiles','memberships','stores','products','attribution_tokens','product_events','share_links','orders','order_payments','settlement_ledger','attribution_visits','commerce_events','amazon_cost_policy','amazon_usage_snapshots','amazon_cost_approvals'}
           missing = required - tables
           if missing:
               raise SystemExit(f'Missing Mall tables: {sorted(missing)}')
@@ -228,6 +228,24 @@ jobs:
       - name: Apply staging migrations
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config api/wrangler.staging.runtime.toml
 
+      - name: Verify Amazon free-first D1 defaults
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute DB --remote --config api/wrangler.staging.runtime.toml --json \
+            --command "SELECT free_first_enabled,monthly_budget_usd,paid_aws_enabled,seller_paid_plan_enabled,fba_enabled,bedrock_paid_enabled FROM amazon_cost_policy WHERE scope='ekodimall'" \
+            > /tmp/mall-stage-amazon-policy.json
+          node <<'NODE'
+          const fs=require('node:fs');
+          const raw=JSON.parse(fs.readFileSync('/tmp/mall-stage-amazon-policy.json','utf8'));
+          const sets=Array.isArray(raw)?raw:(raw.result||[]);
+          const row=(sets[0]?.results||sets[0]?.result||sets.results||[])[0];
+          if(!row)throw new Error('Amazon cost policy default row missing');
+          const expected={free_first_enabled:1,monthly_budget_usd:0,paid_aws_enabled:0,seller_paid_plan_enabled:0,fba_enabled:0,bedrock_paid_enabled:0};
+          for(const [key,value] of Object.entries(expected))if(Number(row[key])!==value)throw new Error(`Amazon cost default drift: ${key}=${row[key]}`);
+          console.log('Amazon free-first D1 defaults verified');
+          NODE
+
       - name: Deploy staging Mall API
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.staging.runtime.toml
 
@@ -249,6 +267,7 @@ jobs:
               && grep -Fq '"firstTouchSchemaReady":true' /tmp/mall-stage-health.json \
               && grep -Fq '"verificationSchemaReady":true' /tmp/mall-stage-health.json \
               && grep -Fq '"commerceEventSchemaReady":true' /tmp/mall-stage-health.json \
+              && grep -Fq '"amazonCostSchemaReady":true' /tmp/mall-stage-health.json \
               && grep -Fq '"commerceOsVersion":1' /tmp/mall-stage-health.json \
               && grep -Fq '"environment":"staging"' /tmp/mall-stage-health.json \
               && grep -Fq '"version":3' /tmp/mall-stage-health.json \
@@ -467,6 +486,7 @@ jobs:
               && grep -Fq '"firstTouchSchemaReady":true' /tmp/mall-api.json \
               && grep -Fq '"verificationSchemaReady":true' /tmp/mall-api.json \
               && grep -Fq '"commerceEventSchemaReady":true' /tmp/mall-api.json \
+              && grep -Fq '"amazonCostSchemaReady":true' /tmp/mall-api.json \
               && grep -Fq '"commerceOsVersion":1' /tmp/mall-api.json \
               && grep -Fq '"environment":"production"' /tmp/mall-api.json \
               && grep -Fq '"version":3' /tmp/mall-api.json \
