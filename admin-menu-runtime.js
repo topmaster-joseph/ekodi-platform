@@ -234,7 +234,7 @@ function ensureExternalAccountNav() {
     const admins = nav.querySelector('.nav[data-section="admins"]');
     admins?.insertAdjacentElement('afterend', button) || nav.append(button);
   }
-  button.querySelector('span').textContent = t('외부계정 통합운영', 'External Account Control');
+  button.querySelector('span').textContent = t('계정·연결', 'Accounts & Connections');
 }
 function ensureAdminPanel() {
   if (panelInstalled) return document.querySelector('[data-panel~="admins"]');
