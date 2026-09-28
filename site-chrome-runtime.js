@@ -16,7 +16,7 @@ const CANONICAL_PATHS=Object.freeze({
   'ekodi-biz':'/ekodibiz',
   'ekodi-church':'/ekodichurch',
   'ekodi-lab':'/ekodilab',
-  'ekodi-trade':'/ekodibiz/trade',
+  'ekodi-trade':'/ekoditrade',
   'ekodi-cafe':'/cafe',
   cgma:'/cgma',
 });
