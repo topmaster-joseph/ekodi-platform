@@ -19,6 +19,8 @@ const HIERARCHY_TO_CATALOG=Object.freeze({
   ekodimall:'mall',
   'ekodibiz-trade':'trade',
   ekodichurch:'church',
+  ekodimission:'mission',
+  ekodilab:'lab',
   cgma:'cgma',
   cmpmyi:'cmpmyi',
   jadam:'jadam',
