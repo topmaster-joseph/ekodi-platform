@@ -11,7 +11,7 @@ test('Education is one active platform with Admission and Study areas',async()=>
   const service=EKODI_SERVICE_MANIFEST.services.find(row=>row.id==='edu');
   assert.ok(service);
   assert.notEqual(service.state,'planned');
-  assert.equal(service.url,'https://edu.ekodi.kr/');
+  assert.equal(service.url,'https://ekodi.kr/education');
   assert.equal(service.shellIntegration,'worker-injected');
   assert.equal(service.authMode,'client');
   assert.equal(service.openSso,true);
@@ -47,8 +47,8 @@ test('Education is an isolated Worker with Shell and admin handoff',async()=>{
 
 test('Admin Campus observes Education as live, not planned',async()=>{
   const campus=await read('campus-actions.js');
-  assert.match(campus,/name: '에코디교육', domain: 'edu\.ekodi\.kr'/);
-  assert.doesNotMatch(campus,/domain: 'edu\.ekodi\.kr'[^\n]*lifecycle: 'planned'/);
+  assert.match(campus,/name: '에코디교육', domain: 'ekodi\.kr\/education'/);
+  assert.doesNotMatch(campus,/domain: 'ekodi\.kr\/education'[^\n]*lifecycle: 'planned'/);
 });
 
 test('Education browser code stores planning metadata only and parses',async()=>{
