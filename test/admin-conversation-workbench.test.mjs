@@ -28,9 +28,9 @@ test('Admin authenticated shell ships the conversation-first workbench skin', as
   assert.match(css, /\.admin-global-details\{[\s\S]*display:grid!important/);
   assert.match(css, /\.admin-global-nav\{[\s\S]*min-height:40px!important[\s\S]*padding:6px 9px!important/);
   assert.match(css, /\.admin-global-details\[data-admin-flat-details="true"\]\{[\s\S]*margin:0 0 6px!important/);
-  assert.match(css, /admin-command-home \.admin-context-tabs-shell\{[\s\S]*display:none!important/);
-  assert.match(css, /not\(\.admin-command-home\) \.admin-context-tabs-shell\{[\s\S]*display:flex!important/);
-  assert.match(css, /\.admin-command-entry\{[\s\S]*background:#e8f0fe!important/);
+  assert.match(css, /ADMIN-CLUTTER-005/);
+  assert.match(css, /\.admin-command-entry,[\s\S]*\.admin-context-tabs-shell\{[\s\S]*display:none!important/);
+  assert.match(css, /body\.admin-compact \.ekodi-assist-bootstrap-form/);
   assert.match(css, /admin-command-home\.admin-command-active \.ekodi-assist-rail\{[\s\S]*display:none!important/);
   assert.match(css, /admin-command-home\.admin-command-active \.ekodi-assist-quick\{[\s\S]*display:none!important/);
   assert.match(css, /body\.admin-compact \.ekodi-assist-bootstrap-form/);
