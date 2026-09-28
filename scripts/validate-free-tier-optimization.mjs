@@ -13,6 +13,8 @@ const supabaseCapacityGuard = fs.readFileSync('scripts/validate-supabase-free-pr
 const adminVisualWorkflow = fs.readFileSync('.github/workflows/verify-admin-production-ui-e2e.yml','utf8');
 const adminVisualProductionWorkflow = fs.readFileSync('.github/workflows/verify-admin-visual-production.yml','utf8');
 const adminAuthenticatedProductionWorkflow = fs.readFileSync('.github/workflows/verify-admin-authenticated-production-e2e.yml','utf8');
+const adaptivePolicy = JSON.parse(fs.readFileSync('config/adaptive-infrastructure-policy.json','utf8'));
+const adaptiveRuntime = fs.readFileSync('adaptive-resource-orchestrator.js','utf8');
 const failures=[];
 const expect=(condition,message)=>{if(!condition)failures.push(message)};
 
@@ -27,6 +29,12 @@ expect(policy.paidCore?.nonessentialOverageGuard?.blockNonessentialAtOrAboveProt
 expect(policy.cloudflareAccountPool?.policyId==='EKODI-CF-ACCOUNT-POOL-001','Cloudflare account pool policy must stay linked');
 expect(policy.cloudflareAccountPool?.productionCriticalFailoverToAuxiliary===false,'production critical failover to auxiliary must stay disabled');
 expect(policy.cloudflareAccountPool?.appliesRecursivelyToAllServices===true,'Cloudflare account pool policy must bind all current and future services');
+expect(policy.adaptiveInfrastructure?.policyId==='EKODI-ADAPTIVE-INFRA-001','adaptive infrastructure policy must stay linked');
+expect(policy.adaptiveInfrastructure?.appliesRecursivelyToAllServices===true,'adaptive infrastructure must bind all current and future services');
+expect(policy.adaptiveInfrastructure?.staleS0Fallback===false,'adaptive infrastructure must forbid stale S0 fallback');
+expect(policy.adaptiveInfrastructure?.criticalProductionFailoverToAuxiliary===false,'adaptive infrastructure must forbid critical auxiliary production failover');
+expect(adaptivePolicy.status==='enforced','adaptive infrastructure policy must remain enforced');
+expect(adaptiveRuntime.includes('metricBurnRate'),'adaptive runtime must retain burn-rate control');
 expect(policy.deploymentContinuity?.policyId==='EKODI-DEPLOYMENT-FOUR-LAYER-001','four-layer deployment continuity policy must be linked');
 expect(JSON.stringify(policy.deploymentContinuity?.priority)===JSON.stringify(['runtime','guarded-deploy','cloud-control','owner']),'deployment continuity priority must remain Runtime > Deploy > Cloud Control > Owner');
 expect(policy.deploymentContinuity?.cloudflareWorkersBuildsRequiredForGuardedDeploy===false,'guarded deploy must remain independent of Workers Builds');
@@ -71,11 +79,15 @@ expect(governor.includes('workersBuildConcurrencyFree:1'),'resource governor mus
 expect(governor.includes("metric:'workers_requests_month'"),'resource governor must support Workers Paid monthly included-request telemetry');
 expect(governor.includes("metric:'d1_rows_read_month'")&&governor.includes("metric:'d1_rows_written_month'"),'resource governor must support D1 Paid monthly included-capacity telemetry');
 expect(workflow.includes('validate-free-tier-optimization.mjs'),'orchestration gate must validate free-tier policy');
+expect(workflow.includes('validate-adaptive-infrastructure.mjs'),'orchestration gate must validate adaptive infrastructure policy');
+expect(workflow.includes('adaptive-resource-orchestrator.test.mjs'),'orchestration gate must run adaptive infrastructure regression tests');
 expect(workflow.includes('free-tier-quota-guard.test.mjs'),'orchestration gate must run free-tier regression tests');
 expect(workflow.includes('free-tier-resource-governor.test.mjs'),'orchestration gate must run resource governor regression tests');
 expect(workflow.includes('validate-deployment-four-layer.mjs'),'orchestration gate must validate four-layer deployment policy');
 expect(workflow.includes('deployment-four-layer.test.mjs'),'orchestration gate must test four-layer deployment routing');
 expect(collectorWorkflow.includes('collect-free-tier-resource-usage.mjs'),'resource collector workflow must execute the measured collector');
+expect(collectorWorkflow.includes('validate-adaptive-infrastructure.mjs'),'resource collector workflow must validate adaptive infrastructure');
+expect(collectorWorkflow.includes('adaptive-resource-orchestrator.test.mjs'),'resource collector workflow must run adaptive infrastructure regression tests');
 expect(collectorWorkflow.includes('cloudflare-production-budget.mjs'),'resource collector must reuse the Production Cloudflare quota Source of Truth');
 expect(collectorWorkflow.includes('CLOUDFLARE_QUOTA_REPORT'),'resource collector must pass the measured Cloudflare report into the shared ledger writer');
 expect(collectorWorkflow.includes("provider IN ('cloudflare','supabase','github')"),'resource proof must read all three provider snapshots from the shared ledger');
