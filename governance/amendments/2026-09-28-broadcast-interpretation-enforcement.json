@@ -18,5 +18,7 @@
     "ci-enforcement"
   ],
   "migrationPolicy": "non-breaking; reuse the existing realtime-control.js runtime and /live platform route, add policy and validation without creating a new feature subdomain or independent deployment boundary",
-  "rollbackPlan": "revert the policy, validator, tests, workflow gate and this amendment record; existing realtime runtime and live route remain unchanged"
+  "rollbackPlan": "revert the policy, validator, tests, workflow gate and this amendment record; existing realtime runtime and live route remain unchanged",
+  "approvalLabel": "constitution-approved",
+  "approvalRecordedAt": "2026-09-28"
 }
