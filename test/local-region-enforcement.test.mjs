@@ -68,7 +68,10 @@ test('generic Cheonggye subservice surfaces expose ownership and source boundari
     assert.equal(publicResponse.headers.get('x-ekodi-route'),'local-region-module-public');
     assert.equal(adminResponse.headers.get('x-ekodi-route'),'local-region-module-admin');
     assert.ok(publicHtml.includes('data-ekodi-local-module="'+module.id+'"'));
+    assert.ok(publicHtml.includes('<link rel="canonical" href="https://ekodi.kr'+module.publicPath+'">'));
+    assert.ok(publicHtml.includes('<meta property="og:url" content="https://ekodi.kr'+module.publicPath+'">'));
     assert.ok(adminHtml.includes('data-ekodi-local-module="'+module.id+'"'));
+    assert.doesNotMatch(adminHtml,/rel="canonical"/);
     assert.match(publicHtml,/조직 내부정보의 소유경계를 분리/);
     assert.match(adminHtml,/강제 실행 계약/);
     assert.match(adminHtml,/조직 내부 원본은 복제하지 않고/);
