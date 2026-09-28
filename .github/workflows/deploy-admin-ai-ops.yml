@@ -1,6 +1,11 @@
 name: Verify Admin AI Ops
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-admin-ai-ops.yml'
+      - 'test/admin-deploy-report.test.mjs'
   pull_request:
     paths:
       - '.github/workflows/deploy-admin-ai-ops.yml'
@@ -126,7 +131,7 @@ jobs:
 
   verify_production:
     needs: validate
-    if: ${{ always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')) }}
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
@@ -171,8 +176,8 @@ jobs:
               cat /tmp/asset-headers
               return 1
             fi
-            if ! grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/asset-headers; then
-              echo "::error::$asset missing immutable cache contract"
+            if ! grep -Fiq 'cache-control: no-store' /tmp/asset-headers; then
+              echo "::error::$asset missing asset-first no-store cache contract"
               cat /tmp/asset-headers
               return 1
             fi
@@ -185,7 +190,7 @@ jobs:
           verify_compact_without_readable_css() {
             code=$(curl -sS -D /tmp/compact-headers -o /tmp/compact-css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/admin/admin-compact.css?v=$LIVE_VERSION" || true)
             [ "$code" = '200' ] || return 1
-            grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/compact-headers || return 1
+            grep -Fiq 'cache-control: no-store' /tmp/compact-headers || return 1
             ! grep -Fq 'admin-readable-command.css' /tmp/compact-css || return 1
           }
 
@@ -209,7 +214,7 @@ jobs:
               && verify_asset 'ai-ops-admin.css' '#aiOpsPanel .ai-ops-side' \
               && verify_asset 'admin-perf-diagnostics.js' 'PerformanceObserver' \
               && verify_compact_without_readable_css; then
-              echo "Production Admin verified: version=$LIVE_VERSION, canonical seven-area sidebar, delegated panels, stale-tab convergence and fingerprinted immutable assets."
+              echo "Production Admin verified: version=$LIVE_VERSION, canonical seven-area sidebar, delegated panels, stale-tab convergence and fingerprinted asset-first no-store mirrors."
               exit 0
             fi
             echo "Admin production verification pending (attempt $attempt/24, expected=$EXPECTED_VERSION, live=${LIVE_VERSION:-none})."
@@ -240,7 +245,7 @@ jobs:
           - production check: \`$outcome\`
           - upstream canonical shared-site deployment: \`$UPSTREAM_OUTCOME\`
           - canonical: https://ekodi.kr/admin/
-          - contract: canonical seven-area sidebar · delegated panels · stale-tab convergence · fingerprinted immutable assets
+          - contract: canonical seven-area sidebar · delegated panels · stale-tab convergence · fingerprinted asset-first no-store mirrors
           - verification workflow: $RUN_URL
           - upstream workflow: $UPSTREAM_RUN_URL
           - checked: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
