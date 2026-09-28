@@ -6,6 +6,8 @@ import {
   getAdminService,
 } from './admin-service-catalog.js';
 
+const SITE_ID_ALIASES=Object.freeze({ekodibooks:'books'});
+
 const LEGACY_DOMAIN_IDS=Object.freeze({
   'church.ekodi.kr':'church',
   'biz.ekodi.kr':'biz',
@@ -38,7 +40,7 @@ function normalizeSurface(value){
 
 function descriptorForRow(row){
   const id=String(row?.dataset?.siteId||'').trim().toLowerCase();
-  if(id){const direct=getAdminService(id);if(direct)return direct}
+  if(id){const direct=getAdminService(SITE_ID_ALIASES[id]||id);if(direct)return direct}
   const domain=normalizeSurface(row?.dataset?.siteDomain);
   const aliasId=LEGACY_DOMAIN_IDS[domain];
   if(aliasId)return getAdminService(aliasId);

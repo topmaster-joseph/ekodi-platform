@@ -16,6 +16,9 @@ test('EKODIBIZ admin hub registers common and independent service management sco
   assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/invest/admin/ir'),'invest');
   assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='invest')?.publicHref,'/ekodibiz/invest');
   assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='tax')?.adminHref,'/tax');
+  assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='books')?.label,'에코디북스');
+  assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='books')?.adminHref,'/books/admin');
+  assert.equal(ekodiBizAdminScopeForPath('/books/admin/catalog'),'books');
   assert.equal(ekodiBizAdminScopeForPath('/tax'),'tax');
   assert.equal(ekodiBizAdminScopeForPath('/tax/invoices'),'tax');
   assert.equal(ekodiBizAdminScopeForPath('/ekodi-lab/admin'),'lab');
