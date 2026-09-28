@@ -391,6 +391,7 @@
     },
     "money": {
       "kind": "independent-platform",
+      "canonicalPath": "https://ekodi.kr/money",
       "source": [
         "money/**",
         "money-worker.js",
@@ -401,13 +402,14 @@
         "docs/MONEY-FINANCIAL-CLEANUP.md"
       ],
       "domains": [
-        "money.ekodi.kr",
+        "ekodi.kr",
         "ekodi-money-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-money.yml",
       "sharedDependencies": [
         "central auth hub",
         "ekodi-shell",
+        "Finance banking health through read-only service binding",
         "financial institution services only through explicit reviewed contracts",
         "AccountInfo official handoff in v1"
       ],
