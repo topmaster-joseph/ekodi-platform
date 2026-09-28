@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { amazonConnectorStatus, evaluateAmazonCostPolicy, handleAmazonRequest } from '../sites/ekodi-mall/api/amazon.js';
+import { amazonConnectorStatus, amazonConnectionSchemaReady, amazonRuntimeStatus, evaluateAmazonCostPolicy, handleAmazonRequest } from '../sites/ekodi-mall/api/amazon.js';
 
 test('Amazon connector keeps secrets server-side and exposes canonical readiness', () => {
   const status = amazonConnectorStatus({
@@ -48,7 +48,8 @@ test('Amazon cost governance migration is additive and defaults paid services of
 test('Mall API entry routes Amazon connector and health exposes readiness', async () => {
   const entry = await readFile(new URL('../sites/ekodi-mall/api/entry.js', import.meta.url),'utf8');
   assert.match(entry,/handleAmazonRequest/);
-  assert.match(entry,/amazonConnectorStatus/);
+  assert.match(entry,/amazonRuntimeStatus/);
+  assert.match(entry,/amazonConnectionSchemaReady/);
   assert.match(entry,/amazonConnector:amazon/);
 });
 
@@ -64,4 +65,51 @@ test('Mall admin exposes the canonical Amazon free-first cost center', async () 
   assert.match(admin,/FBA 허용/);
   assert.match(admin,/유료기능 승인/);
   assert.match(admin,/api\/amazon\/approvals/);
+  assert.match(admin,/Seller Central · SP-API 계정 연결/);
+  assert.match(admin,/\/ekodimall\/api\/amazon\/connection/);
+  assert.match(admin,/읽기 전용 연결 테스트/);
+});
+
+
+test('Amazon credential vault schema is encrypted-only and additive', async () => {
+  const sql = await readFile(new URL('../sites/ekodi-mall/api/migrations/0014_amazon_connector_vault.sql', import.meta.url),'utf8');
+  assert.match(sql,/CREATE TABLE IF NOT EXISTS amazon_connections/);
+  assert.match(sql,/credential_ciphertext TEXT NOT NULL/);
+  assert.match(sql,/credential_iv TEXT NOT NULL/);
+  assert.match(sql,/CREATE TABLE IF NOT EXISTS amazon_marketplaces/);
+  assert.doesNotMatch(sql,/client_secret\s+TEXT|refresh_token\s+TEXT|access_token\s+TEXT/i);
+  assert.doesNotMatch(sql,/DROP TABLE/i);
+});
+
+test('Amazon vault refuses credential storage without a server encryption key', async () => {
+  const db = {
+    prepare(sql) {
+      return {
+        bind() { return this; },
+        async all() {
+          if (String(sql).includes("sqlite_master")) return { results:[{name:'amazon_connections'},{name:'amazon_marketplaces'}] };
+          return { results:[] };
+        },
+        async first() { return null; },
+        async run() { return { success:true }; }
+      };
+    }
+  };
+  assert.equal(await amazonConnectionSchemaReady({DB:db}),true);
+  const request = new Request('https://ekodi.kr/api/amazon/connection',{
+    method:'PUT',
+    headers:{'content-type':'application/json','x-ekodi-mall-ops-token':'ops'},
+    body:JSON.stringify({clientId:'client',clientSecret:'secret',refreshToken:'refresh'})
+  });
+  const response = await handleAmazonRequest(request,{DB:db,MALL_OPERATIONS_TOKEN:'ops'});
+  assert.equal(response.status,503);
+  assert.equal(response.body.error,'AMAZON_CREDENTIAL_KEY_MISSING');
+});
+
+test('Amazon runtime status never returns encrypted credential material', async () => {
+  const status=await amazonRuntimeStatus({});
+  assert.equal(status.connection.configured,false);
+  assert.equal(status.connection.secretsNeverReturned,true);
+  assert.equal(status.connection.clientSecret,undefined);
+  assert.equal(status.connection.refreshToken,undefined);
 });
