@@ -51,8 +51,8 @@ jobs:
           budget_db=''
           while IFS= read -r db; do
             [ -n "$db" ] || continue
-            schema=$(cf_query "$db" "SELECT name FROM sqlite_master WHERE type='table' AND name='ai_provider_daily_budget'" || true)
-            if echo "$schema" | jq -e '.success == true and ([.result[]?.results[]?.name] | index("ai_provider_daily_budget") != null)' >/dev/null 2>&1; then
+            schema=$(cf_query "$db" "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('ai_provider_daily_budget','ai_command_runs')" || true)
+            if echo "$schema" | jq -e '.success == true and ([.result[]?.results[]?.name] | (index("ai_provider_daily_budget") != null and index("ai_command_runs") != null))' >/dev/null 2>&1; then
               budget_db="$db"
               break
             fi
