@@ -57,7 +57,7 @@ test('public EKODI API is apex-only and the legacy Worker domain is explicitly r
 
 test('canonical apex API execution policy blocks retired browser and Admin host use',()=>{
   const policy=JSON.parse(read('config/canonical-api-execution-policy.json'));
-  const retired=policy.retiredPublicHost;
+  const retired=policy.retiredPublicHostParts.join('.');
   assert.equal(policy.policyId,'CANONICAL-APEX-API-001');
   assert.equal(policy.status,'enforced');
   assert.equal(policy.mode,'mandatory');
