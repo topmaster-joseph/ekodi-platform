@@ -55,7 +55,7 @@ for (const path of ['/admin.html','/control-center','/control-center/','/control
 if (!worker.includes('RETIRED_ADMIN_PATHS.has(url.pathname)')) violations.push('site-worker.js: retired admin 404 gate missing');
 
 const adminPrinciples = readFileSync(join(root, 'ADMIN_UI_PRINCIPLES.md'), 'utf8');
-for (const marker of ['공개 사이트의 고정 헤더용 body 상단 여백', '좌측 전역 사이드바는 데스크톱에서 뷰포트에 고정', '최고관리자 좌측 사이드바는 선택 영역의 핵심 직접업무가 잘리지 않도록 필요 시 독립 세로 스크롤을 허용한다', '로그인 1회 · 권한은 조용히 확인 · 외부 OAuth는 최초 연결/복구 시만', '이미 `active`인 외부 채널 계정은 관리자 로그인 후 저장된 중앙 Vault 연결을 재사용']) {
+for (const marker of ['공개 사이트의 고정 헤더용 body 상단 여백', '좌측 전역 사이드바는 데스크톱에서 뷰포트에 고정', '최고관리자 좌측 사이드바는 선택 영역의 핵심 직접업무가 잘리지 않도록 필요 시 독립 세로 스크롤을 허용한다', '로그인 1회 · 권한은 조용히 확인 · 외부 OAuth는 최초 연결/복구 시만', '이미 `active`인 외부 채널 계정은 관리자 로그인 후 저장된 중앙 Vault 연결을 재사용', 'ADMIN-MOBILE-SHELL-003', '홈 · 사이트 · 서비스 · 운영 · 더보기']) {
   if (!adminPrinciples.includes(marker)) violations.push(`ADMIN_UI_PRINCIPLES.md: missing admin viewport contract marker: ${marker}`);
 }
 const workspaceAdmin = readFileSync(join(root, 'workspace-admin-page.js'), 'utf8');
@@ -70,6 +70,25 @@ for (const marker of [
 }
 if (workspaceAdmin.includes("account.status==='active'?'재인증'")) {
   violations.push('workspace-admin-page.js: active channel must not expose repeat OAuth reauthentication');
+}
+const mobileWorkbench = readFileSync(join(root, 'admin-conversation-workbench.css'), 'utf8');
+const mobileSidebar = readFileSync(join(root, 'admin-sidebar.js'), 'utf8');
+const mobileAssistCss = readFileSync(join(root, 'admin-assist-bootstrap.css'), 'utf8');
+const canonicalRoutes = readFileSync(join(root, 'admin-canonical-routes.js'), 'utf8');
+for (const marker of ['Mobile admin shell authority v3','transform:translateX(-105%)!important','admin-mobile-primary-nav','admin-mobile-drawer-scrim','padding-top:0!important']) {
+  if (!mobileWorkbench.includes(marker)) violations.push(`admin-conversation-workbench.css: missing ADMIN-MOBILE-SHELL-003 marker: ${marker}`);
+}
+for (const marker of ["MOBILE_NAV_CLASS = 'admin-mobile-primary-nav'","DRAWER_SCRIM_CLASS = 'admin-mobile-drawer-scrim'","const setDrawerOpen = open =>"]) {
+  if (!mobileSidebar.includes(marker)) violations.push(`admin-sidebar.js: missing ADMIN-MOBILE-SHELL-003 navigation marker: ${marker}`);
+}
+for (const marker of ['.ekodi-assist-bootstrap{left:auto;right:12px;bottom:76px;padding:0;background:none}','.ekodi-assist-bootstrap-form{width:52px;height:52px;min-height:52px;padding:0}','.ekodi-assist-bootstrap-form input,.ekodi-assist-bootstrap-send{display:none}']) {
+  if (!mobileAssistCss.includes(marker)) violations.push(`admin-assist-bootstrap.css: missing ADMIN-MOBILE-SHELL-003 first-paint Assist marker: ${marker}`);
+}
+for (const marker of ["Mobile admin shell authority v3",".ekodi-assist-bootstrap-plus::after{","content:'AI'","admin-command-active .ekodi-assist-bootstrap{display:none!important}"]) {
+  if (!mobileWorkbench.includes(marker)) violations.push(`admin-conversation-workbench.css: missing ADMIN-MOBILE-SHELL-003 lazy Assist marker: ${marker}`);
+}
+for (const marker of ["window.matchMedia?.('(max-width:760px)').matches","return'platform-overview'","version:'1.7.0'"]) {
+  if (!canonicalRoutes.includes(marker)) violations.push(`admin-canonical-routes.js: missing ADMIN-MOBILE-SHELL-003 routing marker: ${marker}`);
 }
 const adminDesignCss = readFileSync(join(root, 'admin-design-engine.css'), 'utf8');
 const authenticatedShell = readFileSync(join(root, 'admin-authenticated-shell.js'), 'utf8');

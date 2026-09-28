@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
 test('admin shell is separate from user shell and removes the left brand header',async()=>{
-  const [adminShell,adminRuntime,adminRegistry,adminSidebar,adminCompact,adminDesign,userHeader,userLanguage,injector,worker,principles,liveVerifier]=await Promise.all([
+  const [adminShell,adminRuntime,adminRegistry,adminSidebar,adminCompact,adminDesign,userHeader,userLanguage,injector,worker,principles,liveVerifier,mobileHeaderVerifier,sharedSiteWorkflow,legacyAdminWorkflow]=await Promise.all([
     read('shell/admin-ui-shell.js'),
     read('admin-menu-runtime.js'),
     read('admin-menu-registry.js'),
@@ -17,7 +17,10 @@ test('admin shell is separate from user shell and removes the left brand header'
     read('ekodi-shell-injector.js'),
     read('ekodi-shell-worker.js'),
     read('docs/admin-ui-module-principles.md'),
-    read('scripts/verify-ekodi-shell-live.mjs')
+    read('scripts/verify-ekodi-shell-live.mjs'),
+    read('scripts/verify-mobile-fixed-headers-live.mjs'),
+    read('.github/workflows/deploy-site-core.yml'),
+    read('.github/workflows/deploy-admin-site.yml')
   ]);
 
   assert.match(adminShell,/SURFACE='admin'/);
@@ -38,6 +41,9 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.equal(adminShell.includes('#ekodiAdminLocale'),true);
   assert.equal(adminShell.includes('const VERSION=2'),true);
   assert.match(adminShell,/position:sticky!important/);
+  assert.match(adminShell,/ADMIN-MOBILE-SHELL-003/);
+  assert.match(adminShell,/\.ekodi-admin-shell-main\{padding-top:0!important/);
+  assert.match(adminShell,/min-height:calc\(56px \+ env\(safe-area-inset-top,0px\)\)!important/);
   assert.match(adminShell,/#pageTitle\{display:block!important/);
   assert.doesNotMatch(adminShell,/ekodi-admin-header-title-hidden\{display:none/);
   assert.match(adminShell,/parentElement\?\.hidden\)node\.parentElement\.hidden=false/);
@@ -54,6 +60,11 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.equal(adminSidebar.includes("role-projected-sidebar-v4"),true);
   assert.match(adminSidebar,/nav\[data-ekodi-admin-nav-mode="primary"\] > \.nav\{display:none!important\}/);
   assert.match(adminSidebar,/const closeDrawer = \(\) =>/);
+  assert.match(adminSidebar,/MOBILE_NAV_CLASS = 'admin-mobile-primary-nav'/);
+  assert.match(adminSidebar,/DRAWER_SCRIM_CLASS = 'admin-mobile-drawer-scrim'/);
+  assert.match(adminSidebar,/dataset\.adminMobileGroup=item\.id/);
+  assert.match(adminSidebar,/dataset\.adminMobileMore='true'/);
+  assert.match(adminSidebar,/const setDrawerOpen = open =>/);
   assert.match(adminSidebar,/menuButton\.addEventListener\('click',toggleDrawer\)/);
   assert.equal(adminSidebar.includes("display:flex!important;align-items:center;gap:8px"),true);
   assert.equal(adminSidebar.includes("renderSidebarDetails(nav, globals, group, displayedSection || section, locale)"),true);
@@ -76,6 +87,15 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.match(liveVerifier,/adminUIShellVersion\)<2/);
   assert.match(liveVerifier,/x-ekodi-admin-ui-shell'\)!=='v2'/);
   assert.match(liveVerifier,/adminUI=v2/);
+  assert.match(mobileHeaderVerifier,/\.app>main\{padding-top:0;min-width:0;max-width:100vw\}/);
+  assert.match(mobileHeaderVerifier,/\.topbar\{position:sticky!important;top:0!important;left:auto!important;right:auto!important;width:100%!important/);
+  assert.doesNotMatch(mobileHeaderVerifier,/\.app>main\{padding-top:calc\(78px \+ env\(safe-area-inset-top,0px\)\)\}/);
+  assert.match(sharedSiteWorkflow,/grep -Fq '\.app>main\{padding-top:0;min-width:0;max-width:100vw\}' admin-shell\.css/);
+  assert.match(sharedSiteWorkflow,/grep -Fq '\.topbar\{position:sticky!important;top:0!important;left:auto!important;right:auto!important;width:100%!important' admin-shell\.css/);
+  assert.match(sharedSiteWorkflow,/grep -Fq '\.app>main\{padding-top:0;min-width:0;max-width:100vw\}' dist\/admin-shell\.css/);
+  assert.doesNotMatch(sharedSiteWorkflow,/grep -Fq 'position:fixed!important' (?:dist\/)?admin-shell\.css/);
+  assert.match(legacyAdminWorkflow,/grep -Fq '\.app>main\{padding-top:0;min-width:0;max-width:100vw\}' dist\/control-center\.css/);
+  assert.doesNotMatch(legacyAdminWorkflow,/grep -Fq 'position:fixed!important' dist\/control-center\.css/);
 
   assert.match(principles,/관리자 왼쪽 상단 헤더는 삭제가 기본 원칙/);
   assert.match(principles,/User Shell UI/);

@@ -81,11 +81,19 @@
 
   async function resolveImage(url) {
     if (!url) return '';
+    let source = url;
     try {
-      if (new URL(url).hostname !== 'api.ekodi.kr') return url;
+      const parsed = new URL(url, location.origin);
+      const retiredApiHost = ['api','ekodi','kr'].join('.');
+      if (parsed.hostname !== retiredApiHost) return url;
+      parsed.protocol = 'https:';
+      parsed.hostname = 'ekodi.kr';
+      parsed.port = '';
+      if (!parsed.pathname.startsWith('/api/')) parsed.pathname = `/api${parsed.pathname.startsWith('/') ? '' : '/'}${parsed.pathname}`;
+      source = parsed.toString();
     } catch { return ''; }
     if (imageCache.has(url)) return imageCache.get(url);
-    const promise = fetch(url, { method: 'GET', mode: 'cors', credentials: 'omit' })
+    const promise = fetch(source, { method: 'GET', mode: 'cors', credentials: 'omit' })
       .then(response => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const type = String(response.headers.get('content-type') || '').toLowerCase();

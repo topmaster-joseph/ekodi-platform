@@ -251,5 +251,27 @@
     "auxiliary": "free-preferred-bounded-noncritical",
     "productionCriticalFailoverToAuxiliary": false,
     "appliesRecursivelyToAllServices": true
+  },
+  "adaptiveInfrastructure": {
+    "policyId": "EKODI-ADAPTIVE-INFRA-001",
+    "mode": "traffic-and-burn-rate-controlled",
+    "usageThresholds": {
+      "normalBelow": 60,
+      "saveAt": 60,
+      "protectAt": 75,
+      "surviveAt": 90
+    },
+    "burnRateThresholds": {
+      "normalBelow": 0.7,
+      "saveAt": 0.7,
+      "protectAt": 1,
+      "surviveAt": 1.5,
+      "minUsagePercentForEscalation": 2
+    },
+    "preserveS0Live": true,
+    "staleS0Fallback": false,
+    "criticalProductionFailoverToAuxiliary": false,
+    "appliesRecursivelyToAllServices": true,
+    "automaticPaidUpgrade": false
   }
 }

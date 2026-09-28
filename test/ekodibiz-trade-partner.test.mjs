@@ -29,6 +29,8 @@ test('trade partner and trade admin routes are apex workspace routes',async()=>{
   assert.equal(probe?.candidateVerify,false);
   assert.match(probe?.candidateVerifyReason||'',/run_worker_first bootstrap/);
   assert.ok(probe?.expect?.includes('PRIVATE TRADE WORKSPACE'));
+  assert.ok(!probe?.expect?.includes('함께 진행하고'));
+  assert.ok(!probe?.expect?.includes('거래의 역사를 남깁니다'));
   assert.ok(probe?.headerExpect?.includes('x-ekodi-route: trade-partner-workspace'));
 });
 
@@ -102,6 +104,68 @@ test('EKODIBIZ canonical workspace root is backed by the EKODIBIZ service',async
   assert.ok(!deployWorkflow.includes("grep -Fq '프로그램 개발'"));
 });
 
+test('trade manager and supplier product workspaces are separated by responsibility',async()=>{
+  const [admin,portal]=await Promise.all([read('workspace-trade-admin-page.js'),read('workspace-trade-portal.js')]);
+  assert.ok(admin.includes("['products','제품']"));
+  assert.ok(admin.includes("['pipeline','도입진행']"));
+  assert.ok(admin.includes('제품 도입 8단계'));
+  assert.ok(admin.includes('공급사 확인'));
+  assert.ok(admin.includes('샘플'));
+  assert.ok(admin.includes('인증'));
+  assert.ok(admin.includes('계약'));
+  assert.ok(admin.includes('수입'));
+  assert.ok(admin.includes('판매준비'));
+  assert.ok(admin.includes('영업·판매'));
+  assert.ok(admin.includes('A/S'));
+  assert.ok(admin.includes('에코디비즈 총괄 중간관리자'));
+  assert.ok(admin.includes('제품 공급자'));
+  assert.ok(portal.includes('SUPPLIER PRODUCT WORKSPACE'));
+  assert.ok(portal.includes('자기 회사에 연결된 제품·사업만 확인'));
+});
+
+test('trade products expose separate buyer admin, supplier collaboration and consumer purchase surfaces',async()=>{
+  const [admin,portal,publicPage,router]=await Promise.all([
+    read('workspace-trade-admin-page.js'),read('workspace-trade-portal.js'),read('trade-product-public-page.js'),read('platform-router-entry-worker.js')
+  ]);
+  assert.ok(admin.includes('제품 하위관리'));
+  assert.ok(admin.includes('에코디 구매·운영'));
+  assert.ok(admin.includes('공급자 협업'));
+  assert.ok(admin.includes('소비자 구매'));
+  assert.ok(admin.includes('/trade/products/'));
+  assert.ok(portal.includes('/products\\/([^/]+)\\/supplier'));
+  assert.ok(portal.includes('requestedProductCode'));
+  assert.ok(publicPage.includes('CONSUMER PRODUCT'));
+  assert.ok(publicPage.includes('에코디몰에서 구매하기'));
+  assert.ok(!publicPage.includes('/ekodimall?trade_product='));
+  assert.ok(publicPage.includes("sale_status==='available'&&p.mall_public_url"));
+  assert.ok(publicPage.includes('판매 준비 중'));
+  assert.ok(router.includes('tradeProductPublicRoute'));
+  assert.ok(router.includes('tradeProductPublicPage'));
+});
+test('trade public catalog separates consumer-safe data and guards checkout readiness',async()=>{
+  const [sql,admin,publicPage]=await Promise.all([
+    read('supabase/migrations/20260928071500_trade_product_public_catalog.sql'),
+    read('workspace-trade-admin-page.js'),
+    read('trade-product-public-page.js')
+  ]);
+  assert.ok(sql.includes('public.trade_product_public_profiles'));
+  assert.ok(sql.includes('enable row level security'));
+  assert.ok(sql.includes("to anon"));
+  assert.ok(sql.includes("publication_status='published'"));
+  assert.ok(sql.includes('trade_product_public_profiles_available_requires_checkout'));
+  assert.ok(sql.includes("sale_status <> 'available'"));
+  assert.ok(sql.includes('list_price_krw is not null and mall_public_url is not null'));
+  assert.ok(admin.includes('tradePublicProfileForm'));
+  assert.ok(admin.includes('소비자 공개 · 판매 설정'));
+  assert.ok(admin.includes('에코디몰 구매 URL'));
+  assert.ok(admin.includes("saleStatus==='available'&&(!price||!mallUrl)"));
+  assert.ok(publicPage.includes('trade_product_public_profiles'));
+  assert.ok(publicPage.includes("sale_status==='available'&&p.mall_public_url"));
+  assert.ok(publicPage.includes('에코디몰에서 구매하기'));
+  assert.ok(publicPage.includes('판매 준비 중'));
+  assert.ok(!publicPage.includes('/ekodimall?trade_product='));
+});
+
 test('trade admin uses shared two-level UI and canonical apex auth',async()=>{
   const [workspaceAdmin,tradeAdmin]=await Promise.all([read('workspace-admin-page.js'),read('workspace-trade-admin-page.js')]);
   assert.ok(workspaceAdmin.includes("tradeAdminMatch=clean.match(/^\\/[^/]+\\/trade\\/admin"));
@@ -109,7 +173,7 @@ test('trade admin uses shared two-level UI and canonical apex auth',async()=>{
   assert.ok(workspaceAdmin.includes('/workspace-trade-admin.js?v=20260909-admin-ui-v8'));
   assert.ok(tradeAdmin.includes("a.dataset.adminGroup=key"));
   assert.ok(tradeAdmin.includes("a.href=sectionHref(key)"));
-  assert.ok(tradeAdmin.includes("[['overview','홈'],['companies','거래처'],['publishing','채널 · 게시'],['access','권한']]"));
+  assert.ok(tradeAdmin.includes("[['overview','홈'],['companies','거래처'],['products','제품'],['pipeline','도입진행'],['publishing','채널 · 게시'],['access','권한']]"));
   assert.ok(tradeAdmin.includes('renderSecondaryNav();'));
   assert.ok(tradeAdmin.includes('id="tradeAdminSearch"'));
   assert.ok(tradeAdmin.includes('id="roles"'));

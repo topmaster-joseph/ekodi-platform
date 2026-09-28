@@ -87,6 +87,9 @@ test('Assist first path is bottom command-entry-only and upgrades through existi
   assert.match(bootstrapCss,/left:var\(--ekodi-assist-left,260px\)/);
   assert.match(bootstrapCss,/bottom:0/);
   assert.match(bootstrapCss,/\.content\{padding-bottom:calc\(120px/);
+  assert.match(bootstrapCss,/\.ekodi-assist-bootstrap\{left:auto;right:12px;bottom:76px;padding:0;background:none\}/);
+  assert.match(bootstrapCss,/\.ekodi-assist-bootstrap-form\{width:52px;height:52px;min-height:52px;padding:0\}/);
+  assert.match(bootstrapCss,/\.ekodi-assist-bootstrap-form input,\.ekodi-assist-bootstrap-send\{display:none\}/);
   assert.doesNotMatch(bootstrapCss,/top:50%/);
   assert.doesNotMatch(bootstrap,/\/api\/control\/messenger\/inbox/);
   assert.match(shell,/admin-compact\.js/);

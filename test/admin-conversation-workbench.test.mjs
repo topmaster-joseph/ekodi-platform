@@ -54,4 +54,13 @@ test('Admin conversation-first skin preserves mobile drawer and readable light s
   assert.match(css, /box-shadow:18px 0 54px/);
   assert.match(css, /top:56px!important/);
   assert.match(css, /margin:48px auto 0!important/);
+  assert.match(css, /Mobile admin shell authority v3/);
+  assert.match(css, /\.app>main,[\s\S]*padding-top:0!important/);
+  assert.match(css, /\.sidebar\{[\s\S]*transform:translateX\(-105%\)!important/);
+  assert.match(css, /\.sidebar\.open\{[\s\S]*transform:translateX\(0\)!important/);
+  assert.match(css, /\.admin-mobile-primary-nav\{[\s\S]*grid-template-columns:repeat\(5,minmax\(0,1fr\)\)!important/);
+  assert.match(css, /\.admin-mobile-drawer-scrim\{[\s\S]*z-index:1350!important/);
+  assert.match(css, /\.ekodi-assist-bootstrap-form\[data-execution-ready="true"\]\{[\s\S]*grid-template-columns:52px!important/);
+  assert.match(css, /\.ekodi-assist-bootstrap-plus::after\{[\s\S]*content:'AI'/);
+  assert.match(css, /admin-command-active \.ekodi-assist-bootstrap\{display:none!important/);
 });

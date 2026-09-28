@@ -50,4 +50,6 @@ test('Admin control plane UI renders provider context and specialist selector', 
   assert.match(ui, /Development AI/);
   assert.match(ui, /GitOps\/Actions 가드 사용/);
   assert.match(bootstrap, /admin-ai-control-plane\.js/);
+  assert.match(ui, /const API='https:\/\/ekodi\.kr'/);
+  assert.doesNotMatch(ui, /api\.ekodi\.kr/);
 });

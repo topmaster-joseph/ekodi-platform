@@ -231,6 +231,22 @@
       "effectiveDate": "2026-09-28",
       "verificationState": "ci_gate",
       "lifecycleState": "active"
+    },
+    {
+      "id": "adaptive-infrastructure-policy",
+      "kind": "policy",
+      "source": "config/adaptive-infrastructure-policy.json",
+      "version": "EKODI-ADAPTIVE-INFRA-001",
+      "owner": "EKODI Orchestrator",
+      "dependencies": [
+        "config/free-tier-optimization-policy.json",
+        "config/cloudflare-account-pool.json",
+        "free-tier-resource-governor.js",
+        "adaptive-resource-orchestrator.js"
+      ],
+      "effectiveDate": "2026-09-28",
+      "verificationState": "ci_gate",
+      "lifecycleState": "active"
     }
   ]
 }

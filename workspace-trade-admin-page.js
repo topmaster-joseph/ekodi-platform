@@ -1,10 +1,12 @@
 import { ekodiBizAdminScopeSnapshot } from './ekodibiz-admin-registry.js';
 function tradeAdminClient(ADMIN_HUB){
-  const route=location.pathname.replace(/\/+$/,'').match(/^\/([^/]+)\/trade\/admin(?:\/([^/]+))?$/i);
+  const route=location.pathname.replace(/\/+$/,'').match(/^\/([^/]+)\/trade\/admin(?:\/([^/]+))?(?:\/.*)?$/i);
   if(!route)return;
   const workspaceUrlSlug=route[1].toLowerCase();
   const workspace=workspaceUrlSlug==='ekodibiz'?'ekoditrade':workspaceUrlSlug;
   const section=(route[2]||'overview').toLowerCase();
+  const routeParts=location.pathname.replace(/\/+$/,'').split('/').filter(Boolean);
+  const productCode=section==='products'&&routeParts.length>4?decodeURIComponent(routeParts.slice(4).join('/')):'';
   if(['publishing','marketing','channels'].includes(section))return;
   const API='https://renzehysxirjilvdxacv.supabase.co/functions/v1/workspace-api';
   const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
@@ -28,7 +30,7 @@ function tradeAdminClient(ADMIN_HUB){
   function setHeader(){
     $('workspaceName').textContent='에코디비즈';$('scopeLabel').textContent='에코디비즈';$('serviceName').textContent='무역거래 관리';
     $('breadcrumb').textContent='에코디비즈 / 무역거래 / ADMIN';$('publicLink').href=`/${workspaceUrlSlug}/trade`;$('publicLink').textContent='관계자 화면';    const nav=$('adminNav');nav.replaceChildren();
-    [['overview','홈'],['companies','거래처'],['publishing','채널 · 게시'],['access','권한']].forEach(([key,label])=>{
+    [['overview','홈'],['companies','거래처'],['products','제품'],['pipeline','도입진행'],['publishing','채널 · 게시'],['access','권한']].forEach(([key,label])=>{
       const a=document.createElement('a');a.href=sectionHref(key);a.dataset.adminGroup=key;a.textContent=label;
       if(key===section)a.classList.add('active');nav.append(a);
     });
@@ -109,6 +111,160 @@ function tradeAdminClient(ADMIN_HUB){
     const apply=()=>{const q=String($('tradeAdminSearch')?.value||'').trim().toLowerCase(),role=$('tradeAdminRole')?.value||'',status=$('tradeAdminStatus')?.value||'';const filtered=admins.filter(a=>(!q||String(a.email||'').toLowerCase().includes(q))&&(!role||a.role===role)&&(!status||a.status===status));$('tradeAdminRows').innerHTML=adminRows(filtered);bindRows();};
     $('tradeAdminSearch')?.addEventListener('input',apply);$('tradeAdminRole')?.addEventListener('change',apply);$('tradeAdminStatus')?.addEventListener('change',apply);bindAdminForm();if(editing)document.querySelector('.editor-shell')?.scrollIntoView({block:'nearest'});state('전체관리자');
   }
+  async function loadCompanyEngagements(company){
+    const data=await api(`/trade/partner/companies/${company.id}/engagements`);
+    return {company,access:data.access,engagements:Array.isArray(data.engagements)?data.engagements:[]};
+  }
+  async function loadAllEngagements(){
+    const rows=[];
+    for(const company of companies){
+      try{rows.push(await loadCompanyEngagements(company));}
+      catch(error){console.warn('trade engagement load failed',company.id,error);}
+    }
+    return rows;
+  }
+  function phaseLabel(value){
+    const map={supplier_check:'공급사 확인',sample:'샘플',certification:'인증',contract:'계약',import:'수입',sales_ready:'판매준비',sales:'영업·판매',after_sales:'A/S'};
+    return map[String(value||'').toLowerCase()]||value||'미지정';
+  }
+  function productStatusLabel(value){
+    const map={prospecting:'검토',negotiating:'협의',contracted:'계약',in_progress:'진행',on_hold:'보류',completed:'완료',cancelled:'종료'};
+    return map[value]||value||'-';
+  }
+  function productEditor(companyId=''){
+    if(!access?.can_write)return '';
+    const options=companies.filter(c=>c.status!=='archived').map(c=>`<option value="${esc(c.id)}" ${c.id===companyId?'selected':''}>${esc(c.display_name)}</option>`).join('');
+    return `<section class="editor-shell"><h2>제품 · 사업 등록</h2><p class="empty">공급사별 제품을 하나의 거래 진행건으로 등록하고 계약·인증·샘플·수입·영업 진행을 함께 관리합니다.</p><form id="tradeProductForm" class="trade-form"><div class="trade-grid"><label>공급사<select name="companyId" required>${options}</select></label><label>제품 코드<input name="code" maxlength="80" required placeholder="YUANFENG-3KW"></label><label>제품명<input name="title" maxlength="240" required placeholder="Yuanfeng 엔진예열기 3.0kW"></label><label>현재 단계<select name="phase"><option value="supplier_check">공급사 확인</option><option value="sample">샘플</option><option value="certification">인증</option><option value="contract">계약</option><option value="import">수입</option><option value="sales_ready">판매준비</option><option value="sales">영업·판매</option><option value="after_sales">A/S</option></select></label><label>상태<select name="status"><option value="prospecting">검토</option><option value="negotiating">협의</option><option value="contracted">계약</option><option value="in_progress">진행</option><option value="on_hold">보류</option><option value="completed">완료</option></select></label><label>목표일<input name="targetAt" type="date"></label><label class="wide">요약<textarea name="summary" rows="4" maxlength="6000" placeholder="제품 사양, 한국 판매 목표, 주요 협의사항"></textarea></label></div><div class="actions"><button class="button primary" type="submit">제품 등록</button></div><p class="trade-flash" id="tradeProductFlash"></p></form></section>`;
+  }
+  function bindProductEditor(){
+    const form=$('tradeProductForm');if(!form)return;
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();const fd=new FormData(form);const target=fd.get('targetAt');
+      try{
+        state('제품 저장 중');
+        await api(`/trade/partner/companies/${fd.get('companyId')}/engagements`,{method:'POST',body:{code:fd.get('code'),title:fd.get('title'),summary:fd.get('summary'),status:fd.get('status'),phase:fd.get('phase'),targetAt:target?new Date(`${target}T12:00:00+09:00`).toISOString():null}});
+        await renderProducts();state('제품 등록 완료');
+      }catch(error){$('tradeProductFlash').textContent=`저장 실패: ${error.message}`;state('확인 필요');}
+    });
+  }
+  async function renderProducts(){
+    sectionTitle('제품 관리','공급사별 제품과 한국 판매 프로젝트를 한 화면에서 관리합니다.');
+    accessSummary();state('제품 불러오는 중');
+    const groups=await loadAllEngagements();
+    const products=groups.flatMap(group=>group.engagements.map(item=>({...item,company:group.company})));
+    const rows=products.length?`<div class="table-wrap"><table><thead><tr><th>공급사</th><th>제품</th><th>단계</th><th>상태</th><th>목표일</th><th>공급자 공유</th></tr></thead><tbody>${products.map(p=>`<tr><td><strong>${esc(p.company.display_name)}</strong><br><small>${esc(p.company.country_code||p.company.slug)}</small></td><td><strong>${esc(p.title)}</strong><br><small>${esc(p.code)}</small></td><td><span class="tag">${esc(phaseLabel(p.phase))}</span></td><td>${esc(productStatusLabel(p.status))}</td><td>${p.target_at?esc(new Date(p.target_at).toLocaleDateString('ko-KR')):'-'}</td><td><div class="actions"><a class="button" href="/${workspaceUrlSlug}/trade/products/${encodeURIComponent(p.code)}/supplier">공급자</a><a class="button" href="/${workspaceUrlSlug}/trade/products/${encodeURIComponent(p.code)}">소비자</a><a class="button" href="${base}/products/${encodeURIComponent(p.code)}">하위관리</a></div></td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">등록된 제품이 없습니다. 공급사를 등록한 뒤 첫 제품을 등록해 주세요.</p>';
+    $('mainPanel').innerHTML=`<section><div class="panel-head"><div><h2>전체 제품</h2><p class="empty">제품은 공급사에 연결되며 공급자는 자신의 회사 범위 안에서 해당 진행건과 공유기록만 확인합니다.</p></div></div>${rows}</section>${productEditor(companies[0]?.id||'')}`;
+    bindProductEditor();state(`제품 ${products.length}건`);
+  }
+  function specsToText(specs=[]){
+    return (Array.isArray(specs)?specs:[]).map(item=>`${item?.label||''}: ${item?.value||''}`.trim()).filter(Boolean).join('\n');
+  }
+  function specsFromText(text=''){
+    return String(text||'').split(/\r?\n/).map(line=>line.trim()).filter(Boolean).map(line=>{
+      const idx=line.indexOf(':');
+      return idx>0?{label:line.slice(0,idx).trim(),value:line.slice(idx+1).trim()}:{label:line,value:''};
+    }).slice(0,40);
+  }
+  async function loadPublicProfile(engagementId){
+    const {data,error}=await sb.from('trade_product_public_profiles').select('*').eq('engagement_id',engagementId).maybeSingle();
+    if(error)throw error;return data||null;
+  }
+  function publicProfileForm(product,profile={}){
+    if(!access?.can_write)return '<p class="empty">현재 권한은 조회 전용입니다.</p>';
+    return `<form id="tradePublicProfileForm" class="trade-form">
+      <div class="trade-grid">
+        <label>소비자 상품명<input name="publicName" required maxlength="240" value="${esc(profile.public_name||product.title||'')}"></label>
+        <label>브랜드<input name="brand" maxlength="120" value="${esc(profile.brand||'')}"></label>
+        <label>모델<input name="model" maxlength="120" value="${esc(profile.model||'')}"></label>
+        <label>판매가(원)<input name="price" type="number" min="0" step="1" value="${profile.list_price_krw??''}"></label>
+        <label>판매 상태<select name="saleStatus">
+          <option value="preparing" ${profile.sale_status!=='available'&&profile.sale_status!=='sold_out'&&profile.sale_status!=='discontinued'?'selected':''}>판매 준비중</option>
+          <option value="available" ${profile.sale_status==='available'?'selected':''}>구매 가능</option>
+          <option value="sold_out" ${profile.sale_status==='sold_out'?'selected':''}>품절</option>
+          <option value="discontinued" ${profile.sale_status==='discontinued'?'selected':''}>판매 종료</option>
+        </select></label>
+        <label>공개 상태<select name="publicationStatus">
+          <option value="draft" ${profile.publication_status!=='published'?'selected':''}>비공개</option>
+          <option value="published" ${profile.publication_status==='published'?'selected':''}>소비자 공개</option>
+        </select></label>
+        <label class="wide">한 줄 설명<textarea name="shortDescription" rows="3" maxlength="1200">${esc(profile.short_description||'')}</textarea></label>
+        <label class="wide">공개 사양<textarea name="specs" rows="6" placeholder="정격전압: 220V&#10;정격출력: 3.0kW">${esc(specsToText(profile.public_specs))}</textarea></label>
+        <label class="wide">에코디몰 구매 URL<input name="mallUrl" type="url" placeholder="https://ekodi.kr/ekodimall/p/..." value="${esc(profile.mall_public_url||'')}"></label>
+        <label class="wide">대표 이미지 URL<input name="imageUrl" type="url" placeholder="https://..." value="${esc(profile.image_url||'')}"></label>
+        <label class="wide">배송·설치 안내<textarea name="fulfillment" rows="3" maxlength="1600">${esc(profile.fulfillment||'')}</textarea></label>
+        <label class="wide">A/S 안내<textarea name="afterSalesNote" rows="3" maxlength="1600">${esc(profile.after_sales_note||'')}</textarea></label>
+      </div>
+      <div class="actions"><button class="button primary" type="submit">소비자 공개정보 저장</button></div>
+      <p class="empty">‘구매 가능’은 판매가와 에코디몰 구매 URL이 모두 있어야 저장됩니다. 공개상태가 ‘소비자 공개’일 때만 비로그인 사용자가 확인할 수 있습니다.</p>
+      <p class="trade-flash" id="tradePublicProfileFlash"></p>
+    </form>`;
+  }
+  function bindPublicProfileForm(product,profile){
+    const form=$('tradePublicProfileForm');if(!form)return;
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();const fd=new FormData(form);
+      const price=String(fd.get('price')||'').trim();
+      const saleStatus=String(fd.get('saleStatus')||'preparing');
+      const mallUrl=String(fd.get('mallUrl')||'').trim();
+      if(saleStatus==='available'&&(!price||!mallUrl)){
+        $('tradePublicProfileFlash').textContent='구매 가능 상태에는 판매가와 에코디몰 구매 URL이 모두 필요합니다.';return;
+      }
+      const session=await currentSession();
+      const row={
+        engagement_id:product.id,product_code:product.code,
+        public_name:String(fd.get('publicName')||product.title).trim(),
+        brand:String(fd.get('brand')||'').trim(),model:String(fd.get('model')||'').trim(),
+        short_description:String(fd.get('shortDescription')||'').trim(),
+        public_specs:specsFromText(fd.get('specs')),
+        list_price_krw:price?Number(price):null,
+        sale_status:saleStatus,
+        publication_status:String(fd.get('publicationStatus')||'draft'),
+        mall_public_url:mallUrl||null,
+        image_url:String(fd.get('imageUrl')||'').trim()||null,
+        fulfillment:String(fd.get('fulfillment')||'').trim(),
+        after_sales_note:String(fd.get('afterSalesNote')||'').trim(),
+        updated_by:session?.user?.id||null,
+        updated_at:new Date().toISOString()
+      };
+      try{
+        state('공개정보 저장 중');
+        const {error}=await sb.from('trade_product_public_profiles').upsert(row,{onConflict:'engagement_id'});
+        if(error)throw error;
+        $('tradePublicProfileFlash').textContent='저장했습니다.';
+        await renderProductDetail(product.code);
+      }catch(error){
+        $('tradePublicProfileFlash').textContent=`저장 실패: ${error.message||error}`;state('확인 필요');
+      }
+    });
+  }
+  async function renderProductDetail(code){
+    sectionTitle('제품 하위관리','제품 하나를 독립 운영 단위로 관리합니다.');
+    accessSummary();state('제품 불러오는 중');
+    const groups=await loadAllEngagements();
+    const product=groups.flatMap(group=>group.engagements.map(item=>({...item,company:group.company}))).find(item=>String(item.code).toUpperCase()===String(code).toUpperCase());
+    if(!product){$('mainPanel').innerHTML='<h2>제품을 찾을 수 없습니다.</h2><p class="empty">제품 코드 또는 관리 범위를 확인해 주세요.</p>';state('제품 없음');return;}
+    const profile=await loadPublicProfile(product.id).catch(error=>{console.warn('public profile load failed',error);return null;});
+    const publicUrl=`/${workspaceUrlSlug}/trade/products/${encodeURIComponent(product.code)}`;
+    const supplierUrl=`${publicUrl}/supplier`;
+    const saleLabel=profile?.sale_status==='available'?'구매 가능':profile?.sale_status==='sold_out'?'품절':profile?.sale_status==='discontinued'?'판매 종료':'판매 준비중';
+    const publishLabel=profile?.publication_status==='published'?'소비자 공개':'비공개';
+    $('mainPanel').innerHTML=`<section><div class="panel-head"><div><h2>${esc(product.title)}</h2><p class="empty">${esc(product.company.display_name)} · ${esc(product.code)}</p></div><span class="tag">${esc(phaseLabel(product.phase))}</span></div><div class="role-guide"><article class="role-card"><strong>에코디 구매·운영</strong><p>공급가·계약·인증·수입·판매정책·내부 의사결정을 관리합니다. 공급자와 소비자에게 비공개인 내부 영역입니다.</p></article><article class="role-card"><strong>공급자 협업</strong><p>공급자는 자기 회사의 이 제품에 한해 진행상황·요청·문서·공식기록을 공유합니다.</p><p><a class="button" href="${supplierUrl}">공급자 페이지</a></p></article><article class="role-card"><strong>소비자 구매</strong><p>현재 ${esc(publishLabel)} · ${esc(saleLabel)}. 공개 사양·판매가·배송/A/S 정보만 표시합니다.</p><p><a class="button primary" href="${publicUrl}">소비자 상품페이지</a></p></article></div></section><section style="margin-top:18px"><h2>제품 운영</h2><div class="service-list"><div class="service-row"><div><strong>현재 단계</strong><p>${esc(phaseLabel(product.phase))} · ${esc(productStatusLabel(product.status))}</p></div><a href="${base}/pipeline">전체 도입진행</a></div><div class="service-row"><div><strong>공급회사</strong><p>${esc(product.company.display_name)} · ${esc(product.company.country_code||product.company.slug)}</p></div><a href="${base}/companies">공급사 관리</a></div><div class="service-row"><div><strong>소비자 판매 채널</strong><p>${profile?.mall_public_url?'에코디몰 상품 연결됨':'에코디몰 상품 연결 대기'} · 결제·주문·배송 상태는 에코디몰이 담당합니다.</p></div><a href="/ekodimall/admin/products">에코디몰 상품관리</a></div></div></section><section class="editor-shell" style="margin-top:18px"><h2>소비자 공개 · 판매 설정</h2>${publicProfileForm(product,profile||{})}</section>`;
+    bindPublicProfileForm(product,profile||{});
+    state('제품 하위관리');
+  }
+  async function renderPipeline(){
+    sectionTitle('도입 진행','계약·샘플·인증·수입·판매 준비를 제품별로 추적합니다.');
+    accessSummary();state('진행현황 불러오는 중');
+    const groups=await loadAllEngagements();
+    const products=groups.flatMap(group=>group.engagements.map(item=>({...item,company:group.company})));
+    const steps=['supplier_check','sample','certification','contract','import','sales_ready','sales','after_sales'];
+    const cards=steps.map(step=>{
+      const list=products.filter(p=>String(p.phase||'').toLowerCase()===step);
+      return `<article class="role-card"><strong>${esc(phaseLabel(step))} · ${list.length}건</strong><p>${list.length?list.slice(0,4).map(p=>esc(p.title)+' · '+esc(p.company.display_name)).join('<br>'):'현재 제품 없음'}</p></article>`;
+    }).join('');
+    $('mainPanel').innerHTML=`<section><h2>제품 도입 8단계</h2><p class="empty">① 공급사 확인 → ② 샘플 → ③ 인증 → ④ 계약 → ⑤ 수입 → ⑥ 판매준비 → ⑦ 영업·판매 → ⑧ A/S. 각 단계의 상세 협의와 문서는 공급자 업무공간의 공유·공식 기록으로 남깁니다.</p><div class="role-guide">${cards}</div></section><section style="margin-top:18px"><h2>운영 원칙</h2><div class="service-list"><div class="service-row"><div><strong>에코디비즈 총괄 중간관리자</strong><p>전체 공급사·제품·단계를 조회하고 제품 등록, 진행상태 조정, 공급자 권한·공유 범위를 관리합니다.</p></div><a href="${base}/products">제품 관리</a></div><div class="service-row"><div><strong>제품 공급자</strong><p>자기 회사와 연결된 제품·거래만 보고 진행기록·문서·요청사항을 공유합니다. 다른 공급사 정보와 에코디 내부기록은 보이지 않습니다.</p></div><a href="/${workspaceUrlSlug}/trade">공급자 업무공간</a></div></div></section>`;
+    state(`제품 ${products.length}건`);
+  }
   function renderOverview(){
     sectionTitle('운영 홈','내 거래 범위와 다음 관리 행동을 한눈에 확인합니다.');accessSummary();
     const visible=companies.length,active=companies.filter(c=>c.status==='active').length;
@@ -123,7 +279,7 @@ function tradeAdminClient(ADMIN_HUB){
       $('workspaceLogout')?.addEventListener('click',async()=>{try{await sb.auth.signOut();}finally{location.assign(base);}});
       await consumeHandoff();const session=await currentSession();if(!session){authRequired();return;}
       await loadContext();renderAdminScopeSwitcher();await loadCompanies();if(section==='access')await loadAdmins();
-      if(section==='companies')renderCompanies();else if(section==='access')renderAccess();else renderOverview();
+      if(section==='companies')renderCompanies();else if(section==='products'&&productCode)await renderProductDetail(productCode);else if(section==='products')await renderProducts();else if(section==='pipeline')await renderPipeline();else if(section==='access')renderAccess();else renderOverview();
     }catch(error){
       console.error('trade admin bootstrap',error);if(error.status===401||error.message==='login_required'){authRequired();return;}
       sectionTitle('무역거래 관리자','현재 계정의 에코디비즈 무역 권한을 확인합니다.');$('summaryCards').innerHTML=card('접근','제한됨','권한 확인');

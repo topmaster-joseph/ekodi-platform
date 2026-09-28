@@ -53,3 +53,54 @@ test('public EKODI API is apex-only and the legacy Worker domain is explicitly r
   assert.match(retirementWorkflow,/wrangler\.api\.toml/);
   assert.match(retirementWorkflow,/wrangler\.community\.toml wrangler\.social\.toml wrangler\.energy\.toml wrangler\.api\.toml/);
 });
+
+
+test('canonical apex API execution policy blocks retired browser and Admin host use',()=>{
+  const policy=JSON.parse(read('config/canonical-api-execution-policy.json'));
+  const retired=policy.retiredPublicHostParts.join('.');
+  assert.equal(policy.policyId,'CANONICAL-APEX-API-001');
+  assert.equal(policy.status,'enforced');
+  assert.equal(policy.mode,'mandatory');
+  assert.equal(policy.canonicalApiBase,'https://ekodi.kr/api');
+  assert.equal(policy.internalExecutionBoundary,'CONTROL_API');
+  assert.equal(policy.csp.retiredHostAllowed,false);
+  assert.equal(policy.csp.wideningToRetiredHostForbidden,true);
+  assert.ok(policy.enforcement.includes('scripts/verify-admin-production-ui-e2e.mjs'));
+  assert.ok(policy.fingerprintRequiredAssets.includes('common-services-admin.js'));
+  assert.ok(policy.fingerprintRequiredAssets.includes('ai-ops-admin.js'));
+
+  for(const file of policy.browserRuntimeFiles){
+    assert.equal(read(file).includes(retired),false,`${file} must not contain retired API host`);
+  }
+  for(const file of policy.serverRuntimeFiles){
+    assert.equal(read(file).includes(retired),false,`${file} must not contain retired API host fallback`);
+  }
+
+  const controlPlane=read('admin-ai-control-plane.js');
+  const commonServices=read('common-services-admin.js');
+  const providerControl=read('admin-provider-control.js');
+  const aiControl=read('ai-control-worker.js');
+  const postbuild=read('scripts/admin-performance-postbuild.mjs');
+  const e2e=read('scripts/admin-authenticated-e2e.mjs');
+  const productionE2e=read('scripts/verify-admin-production-ui-e2e.mjs');
+  const pkg=JSON.parse(read('package.json'));
+  const monitor=JSON.parse(read('monitor-status.json'));
+  const api=monitor.sites.find(item=>item.id==='api');
+
+  assert.match(controlPlane,/const API='https:\/\/ekodi\.kr'/);
+  assert.match(commonServices,/const CONTROL='https:\/\/ekodi\.kr'/);
+  assert.match(providerControl,/const API='https:\/\/ekodi\.kr'/);
+  assert.match(aiControl,/clean\(env\.CONTROL_API_URL\)\|\|'https:\/\/ekodi\.kr'/);
+  assert.match(postbuild,/admin-ai-control-plane\.js/);
+  assert.match(postbuild,/common-services-admin\.js/);
+  assert.match(postbuild,/ai-ops-admin\.js/);
+  assert.match(e2e,/retiredApiRequests/);
+  assert.match(e2e,/Retired API browser requests detected/);
+  assert.match(e2e,/Retired API console references detected/);
+  assert.match(productionE2e,/retiredApiRequests/);
+  assert.match(productionE2e,/Retired API browser requests detected/);
+  assert.match(productionE2e,/Retired API console references detected/);
+  assert.match(pkg.scripts.precheck,/validate-canonical-api-execution\.mjs/);
+  assert.equal(api.domain,'ekodi.kr');
+  assert.equal(api.url,'https://ekodi.kr/api/health');
+});
