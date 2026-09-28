@@ -912,3 +912,14 @@ html body.admin-compact .ekodi-assist-bootstrap-form[data-execution-ready="true"
   }
 }
 
+
+
+/* ADMIN-CLUTTER-005 · one navigation surface + one command surface.
+ * The left direct-work menu is authoritative. The legacy new-task entry and
+ * duplicated top context strip stay mounted only for internal state/E2E compatibility.
+ * The bottom EKODI composer remains the single visible command entry.
+ */
+html body.admin-compact.ekodi-admin-design-engine .admin-command-entry,
+html body.admin-compact.ekodi-admin-design-engine .admin-context-tabs-shell{
+  display:none!important;
+}
