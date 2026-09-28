@@ -48,6 +48,8 @@ test('all admin surfaces inherit compact readable density and left-anchored work
   ]);
   assert.match(engine, /ADMIN-READABILITY-004/);
   assert.match(engine, /margin-left:0!important/);
+  assert.match(engine, /min-height:38px!important/);
+  assert.match(engine, /min-height:34px!important/);
   assert.match(engine, /line-height:1\.48!important/);
   assert.match(workbench, /justify-content:center!important/);
   assert.match(workbench, /min-width:156px!important/);
