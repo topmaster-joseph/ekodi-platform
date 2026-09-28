@@ -71,9 +71,22 @@ test('global navigation remains synchronized to the active panel and opens an ax
   assert.match(sidebar, /nav\.dataset\.adminFocusedGroup = group/);
   assert.match(sidebar, /const currentSection = activeSection\(nav\)/);
   assert.match(sidebar, /currentSection === 'command-home' \|\| getAdminMenuGroupForSection\(currentSection\) !== group/);
-  assert.match(sidebar, /activateSection\(nav, getAdminMenuGroupDefault\(group\)\)/);
+  assert.match(sidebar, /const defaultSection = getAdminMenuGroupDefault\(group\)/);
+  assert.match(sidebar, /const defaultDefinition = getAdminMenuItem\(defaultSection\)/);
+  assert.match(sidebar, /defaultDefinition\?\.adminHandoff !== true/);
+  assert.match(sidebar, /activateSection\(nav, defaultSection\)/);
   assert.match(sidebar, /const selected = section !== 'command-home' && button\.dataset\.adminGlobalGroup === group/);
   assert.match(sidebar, /const displayedSection = group === activeGroup \? section : ''/);
+});
+
+test('handoff-backed default groups stay open without immediate navigation', () => {
+  assert.match(registry, /id: 'content'.*defaultSection: 'work'/s);
+  assert.match(registry, /id: 'work'.*href: 'https:\/\/ekodi\.kr\/work\/admin'.*adminHandoff: true/s);
+  const globalClick = sidebar.slice(sidebar.indexOf("const group = global.dataset.adminGlobalGroup || ''"), sidebar.indexOf("closeDrawer();", sidebar.indexOf("const group = global.dataset.adminGlobalGroup || ''")) + 14);
+  assert.match(globalClick, /nav\.dataset\.adminFocusedGroup = group/);
+  assert.match(globalClick, /defaultDefinition\?\.adminHandoff !== true/);
+  assert.match(globalClick, /activateSection\(nav, defaultSection\)/);
+  assert.match(globalClick, /delete nav\.dataset\.adminFocusedGroup/);
 });
 
 test('global menu labels use readable contrast on the dark primary sidebar', () => {

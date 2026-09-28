@@ -711,8 +711,12 @@ export function mountAdminSidebar(root = document, options = {}) {
     nav.dataset.adminFocusedGroup = group;
     const currentSection = activeSection(nav);
     if (currentSection === 'command-home' || getAdminMenuGroupForSection(currentSection) !== group) {
-      activateSection(nav, getAdminMenuGroupDefault(group));
-      delete nav.dataset.adminFocusedGroup;
+      const defaultSection = getAdminMenuGroupDefault(group);
+      const defaultDefinition = getAdminMenuItem(defaultSection);
+      if (defaultDefinition?.adminHandoff !== true) {
+        activateSection(nav, defaultSection);
+        delete nav.dataset.adminFocusedGroup;
+      }
     }
     closeDrawer();
     schedule();
