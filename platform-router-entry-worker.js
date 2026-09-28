@@ -25,6 +25,7 @@ import { isTradePartnerPath, tradePartnerPage, tradePartnerCss, tradePartnerScri
 import { isPublicWorkspacePath } from './workspace-route-policy.js';
 import { workspaceRouteFromPublicPath } from './workspace-route-policy.js';
 import { isInsurancePublicPath, routeInsurancePublic } from './insurance-public-route.js';
+import { independentServiceAdminPage } from './independent-service-admin-page.js';
 import { marketingProjectionForPath, proxyCanonicalMarketing } from './marketing-canonical-projection.js';
 import { routeCanonicalSurface } from './canonical-surface-router.js';
 import { handlePreviewRequest } from './preview-page.js';
@@ -357,6 +358,7 @@ async function routePlatform(request,env,ctx){
       const messengerApex=await routeMessengerApex(request,env,ctx);if(messengerApex)return messengerApex;
       const investApex=await routeInvestApex(request,env,ctx);if(investApex)return investApex;
       const investSite=routeInvestSite(request);if(investSite)return injectEkodiShell(investSite,'invest');
+      const independentAdmin=independentServiceAdminPage(url.pathname);if(independentAdmin)return injectEkodiShell(independentAdmin,'ekodi','admin');
       const taxPortal=await routeTaxPortalApex(request,env,ctx);if(taxPortal)return taxPortal;
       const contactResponse=await handleMailContactApi(request,env);if(contactResponse)return contactResponse;
       if(request.method==='GET'&&url.pathname==='/mail/contact')return injectEkodiShell(mailContactPage(),'mail');
