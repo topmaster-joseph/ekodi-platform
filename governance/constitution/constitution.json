@@ -335,7 +335,7 @@
     "marketing-publish-api.ekodi.kr": "https://ekodi.kr/api/v1/marketing/publish",
     "www.ekodi.kr": "https://ekodi.kr",
     "pay.ekodi.kr": "https://ekodi.kr/pay",
-    "trade.ekodi.kr": "https://ekodi.kr/ekodibiz/trade",
+    "trade.ekodi.kr": "https://ekodi.kr/ekoditrade",
     "mail.ekodi.kr": "https://ekodi.kr/my/mail",
     "live.ekodi.kr": "https://ekodi.kr/live",
     "biz.ekodi.kr": "https://ekodi.kr/ekodibiz",
@@ -353,7 +353,7 @@
     "admin.ekodi.kr": "https://ekodi.kr/admin",
     "auth.ekodi.kr": "https://ekodi.kr/auth",
     "api.ekodi.kr": "https://ekodi.kr/api",
-    "trade.biz.ekodi.kr": "https://ekodi.kr/ekodibiz/trade",
+    "trade.biz.ekodi.kr": "https://ekodi.kr/ekoditrade",
     "ins.ekodi.kr": "https://ekodi.kr/insurance"
   },
   "registeredCommonServicePaths": [
@@ -463,7 +463,7 @@
     "ai.ekodi.kr"
   ],
   "userSurfaceEngineSeparation": {
-    "canonicalMarketingProduct": "https://ekodi.kr/ekodibiz/marketing-ai",
+    "canonicalMarketingProduct": "https://ekodi.kr/ekodimarketing",
     "canonicalWorkspaceMarketingPattern": "https://ekodi.kr/{slug}/marketing",
     "marketingCore": "https://marketing.ekodi.kr",
     "aiGateway": "https://ai.ekodi.kr",

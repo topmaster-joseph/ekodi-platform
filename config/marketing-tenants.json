@@ -4,7 +4,7 @@
   "namespace": {
     "domain": "ai.ekodi.kr",
     "purpose": "AI gateway plus legacy execution aliases; customer/workspace identity stays on canonical ekodi.kr paths",
-    "productHub": "https://ekodi.kr/ekodibiz/marketing-ai",
+    "productHub": "https://ekodi.kr/ekodimarketing",
     "canonicalHost": "ekodi.kr",
     "engineDomain": "marketing.ekodi.kr",
     "aiGateway": "ai.ekodi.kr",
@@ -14,7 +14,7 @@
     "domain": "marketing.ekodi.kr",
     "project": "marketing-ai",
     "role": "common_engine",
-    "canonicalProductUrl": "https://ekodi.kr/ekodibiz/marketing-ai"
+    "canonicalProductUrl": "https://ekodi.kr/ekodimarketing"
   },
   "policy": {
     "organizationWorkspace": {
@@ -138,7 +138,7 @@
       "tenant": "ekodibiz",
       "name": "에코디비즈",
       "entryDomain": "ekodi.kr",
-      "entryUrl": "https://ekodi.kr/ekodibiz/marketing-ai",
+      "entryUrl": "https://ekodi.kr/ekodimarketing",
       "templateKey": "service_b2b",
       "role": "first_party_customer",
       "dedicatedEkodiDomain": false,

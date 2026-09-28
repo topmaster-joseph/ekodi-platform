@@ -127,7 +127,7 @@
   ],
   "userSurfaceTopologyPolicy": {
     "customerSpecificAiSubdomains": "forbidden_as_canonical",
-    "marketingProduct": "https://ekodi.kr/ekodibiz/marketing-ai",
+    "marketingProduct": "https://ekodi.kr/ekodimarketing",
     "workspaceMarketingPattern": "https://ekodi.kr/{slug}/marketing",
     "marketingCore": "https://marketing.ekodi.kr",
     "aiGateway": "https://ekodi.kr/ai",

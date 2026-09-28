@@ -40,7 +40,7 @@ export function isMarketingReturnOrigin(origin) {
 
 export function safeMarketingReturn(raw) {
   try {
-    const url = new URL(String(raw || 'https://ekodi.kr/ekodibiz/marketing-ai/'));
+    const url = new URL(String(raw || 'https://ekodi.kr/ekodimarketing/'));
     if (url.protocol !== 'https:' || url.username || url.password || !isMarketingReturnOrigin(url.origin)) return null;
     url.hash = '';
     return url.href;

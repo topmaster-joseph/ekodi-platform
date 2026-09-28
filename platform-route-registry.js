@@ -60,11 +60,11 @@ export const PLATFORM_LEGACY_HOST_PATHS=Object.freeze({
   [platformHost('marketing-connect-api')]:'/marketing-connect-api',[platformHost('marketing-publish-api')]:'/marketing-publish-api',
   [platformHost('pay')]:'/pay',[platformHost('pay.biz')]:'/ekodibiz/pay',[platformHost('live')]:'/live',[platformHost('live.biz')]:'/live/biz',
   [platformHost('live.church')]:'/live/church',[platformHost('live.lab')]:'/live/lab',[platformHost('cloud')]:'/cloud',[platformHost('trade')]:'/trade',
-  [platformHost('trade.biz')]:'/ekodibiz/trade',[platformHost('biz')]:'/ekodibiz',[platformHost('church')]:'/ekodichurch',[platformHost('lab')]:'/ekodilab',
+  [platformHost('trade.biz')]:'/ekoditrade',[platformHost('biz')]:'/ekodibiz',[platformHost('church')]:'/ekodichurch',[platformHost('lab')]:'/ekodilab',
   [platformHost('mall')]:'/ekodibiz/mall',[platformHost('mall.biz')]:'/ekodibiz/mall',[platformHost('mail')]:'/mail',[platformHost('mail.biz')]:'/mail',
   [platformHost('mail.church')]:'/mail',[platformHost('mail.lab')]:'/mail',[platformHost('mail.books')]:'/mail',[platformHost('mail.trade')]:'/mail',
-  [platformHost('messenger')]:'/messenger',[platformHost('invest')]:'/invest',[platformHost('tax')]:'/tax',[platformHost('cafe')]:'/cafe',
-  [platformHost('marketing')]:'/ekodibiz/marketing-ai',[platformHost('cgma')]:'/cgma',[platformHost('jadam')]:'/jadam',[platformHost('pizzamaru')]:'/pizzamaru',[platformHost('yogurt')]:'/yogurt',
+  [platformHost('messenger')]:'/messenger',[platformHost('invest')]:'/invest',[platformHost('tax')]:'/ekoditax',[platformHost('cafe')]:'/cafe',
+  [platformHost('marketing')]:'/ekodimarketing',[platformHost('cgma')]:'/cgma',[platformHost('jadam')]:'/jadam',[platformHost('pizzamaru')]:'/pizzamaru',[platformHost('yogurt')]:'/yogurt',
   [platformHost('jadam.ai')]:'/jadam/marketing',[platformHost('pizzamaru.ai')]:'/pizzamaru/marketing',[platformHost('yogurt.ai')]:'/yogurt/marketing',[platformHost('cgma.ai')]:'/cgma/marketing'
 });
 

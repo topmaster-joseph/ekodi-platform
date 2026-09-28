@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import test from 'node:test';
 import router from '../platform-router-entry-worker.js';
 
-test('Tax canonical surface is served from ekodi.kr/tax', async () => {
-  const response=await router.fetch(new Request('https://ekodi.kr/tax'),{},{});
+test('Tax canonical surface is served from ekodi.kr/ekoditax', async () => {
+  const response=await router.fetch(new Request('https://ekodi.kr/ekoditax'),{},{});
   assert.equal(response.status,200);
   assert.equal(response.headers.get('x-ekodi-route'),'tax-apex');
   const html=await response.text();
@@ -15,7 +15,7 @@ test('Tax canonical surface is served from ekodi.kr/tax', async () => {
 });
 
 test('Tax assets stay namespaced under the apex path', async () => {
-  const response=await router.fetch(new Request('https://ekodi.kr/tax/tax-portal.js'),{},{});
+  const response=await router.fetch(new Request('https://ekodi.kr/ekoditax/tax-portal.js'),{},{});
   assert.equal(response.status,200);
   assert.equal(response.headers.get('x-ekodi-route'),'tax-apex');
   assert.match(await response.text(),/https:\/\/ekodi\.kr\/auth\//);

@@ -65,12 +65,28 @@ const CGMA_SITE=Object.freeze({
 });
 const MESSENGER_HOST='messenger.ekodi.kr';
 const INVEST_HOST='invest.ekodi.kr';
-const TAX_APEX_PREFIX='/tax';
+const TAX_APEX_PREFIX='/ekoditax';
 const EKODIBIZ_PUBLIC_ROUTE=/^\/ekodibiz\/?$/i;
 const EKODIBIZ_API_PREFIX='/ekodibiz/api/';
 const EKODIBIZ_ASSET_PREFIX='/_ekodi/ekodibiz/';
 const EKODIBIZ_ASSETS=new Set(['style.css','site.js']);
 const EKODIBIZ_NAMESPACE_PREFIX='/ekodibiz/';
+const LEGACY_INDEPENDENT_SERVICE_ROUTES=Object.freeze([
+  Object.freeze({from:'/tax',to:'/ekoditax'}),
+  Object.freeze({from:'/ekodibiz/trade',to:'/ekoditrade'}),
+  Object.freeze({from:'/ekodibiz/marketing-ai',to:'/ekodimarketing'}),
+]);
+function legacyIndependentServiceRedirect(request){
+  const url=new URL(request.url);
+  for(const route of LEGACY_INDEPENDENT_SERVICE_ROUTES){
+    if(url.pathname===route.from||url.pathname===`${route.from}/`||url.pathname.startsWith(`${route.from}/`)){
+      const target=new URL(request.url);
+      target.pathname=route.to+url.pathname.slice(route.from.length);
+      return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'independent-service-canonical-handoff'}});
+    }
+  }
+  return null;
+}
 const WORKSPACE_ASSET_PREFIX='/_ekodi/space/';
 const EKODIMISSION_APEX_PREFIX='/ekodimission';
 const DEPLOYMENT_PROBE_PATH='/deployment-probe';
@@ -242,6 +258,7 @@ async function routeTaxPortalApex(request,env,ctx){
   const url=new URL(request.url);
   if(!['GET','HEAD'].includes(request.method))return null;
   if(!(url.pathname===TAX_APEX_PREFIX||url.pathname===`${TAX_APEX_PREFIX}/`||url.pathname.startsWith(`${TAX_APEX_PREFIX}/`)))return null;
+  if(url.pathname===`${TAX_APEX_PREFIX}/admin`||url.pathname.startsWith(`${TAX_APEX_PREFIX}/admin/`))return null;
   const internalPath=(url.pathname===TAX_APEX_PREFIX||url.pathname===`${TAX_APEX_PREFIX}/`)?'/':url.pathname.slice(TAX_APEX_PREFIX.length);
   const portal=taxPortalWorker.fetch(taxApexInternalRequest(request,internalPath),env,ctx);
   if(!portal)return null;
@@ -324,6 +341,7 @@ async function routePlatform(request,env,ctx){
     const host=resolvedHost(request,env);
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){const legacyIndependent=legacyIndependentServiceRedirect(request);if(legacyIndependent)return legacyIndependent;}
     if(host===PUBLIC_HOST&&url.pathname.startsWith(MALL_API_APEX_PREFIX)){const mallApi=await routeMallApiApex(request,env);if(mallApi)return mallApi;}
     if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/seonam-medi/')){const monitor=await handleSeonamMediMonitorApi(request,env);if(monitor)return monitor;const civic=await handleSeonamMediCivicApi(request,env);if(civic)return civic;}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isLegacySeonamMedPath(url.pathname))return redirectLegacySeonamMed(request);
