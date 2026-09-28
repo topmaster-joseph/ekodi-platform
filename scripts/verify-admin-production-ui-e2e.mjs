@@ -23,9 +23,20 @@ await context.addInitScript(({ token, email }) => {
 
 const page = await context.newPage();
 const pageErrors = [];
+const consoleErrors = [];
+const retiredApiRequests = [];
+const retiredApiHost = ['api','ekodi','kr'].join('.');
 page.on('pageerror', error => pageErrors.push(String(error?.message || error)));
+page.on('request', request => {
+  try {
+    if (new URL(request.url()).hostname === retiredApiHost) retiredApiRequests.push(request.url());
+  } catch {}
+});
 page.on('console', message => {
-  if (message.type() === 'error' && !/cloudflareinsights\.com\/beacon/i.test(message.text())) console.log(`[browser console] ${message.text()}`);
+  if (message.type() !== 'error' || /cloudflareinsights\.com\/beacon/i.test(message.text())) return;
+  const text = message.text();
+  consoleErrors.push(text);
+  console.log(`[browser console] ${text}`);
 });
 
 // Admin session validation is canonically served through the apex Core route.
@@ -369,6 +380,14 @@ console.log(`ADMIN_PRODUCTION_UI_E2E=${activeCount}/${expectedCount}`);
 console.log(`ADMIN_WORK_AREAS=${workAreas.join(',')}`);
 console.log(`ADMIN_FINGERPRINT=${assetVersion}`);
 for (const result of results) console.log(`PASS ${result.id} ${result.group} ${result.kind} ${result.detail}`);
+
+if (retiredApiRequests.length) {
+  throw new Error(`Retired API browser requests detected: ${[...new Set(retiredApiRequests)].join(' | ')}`);
+}
+const retiredApiConsole = consoleErrors.filter(message => message.includes(retiredApiHost));
+if (retiredApiConsole.length) {
+  throw new Error(`Retired API console references detected: ${[...new Set(retiredApiConsole)].join(' | ')}`);
+}
 
 const fatalErrors = pageErrors.filter(message => !/ResizeObserver loop/i.test(message));
 if (fatalErrors.length) {
