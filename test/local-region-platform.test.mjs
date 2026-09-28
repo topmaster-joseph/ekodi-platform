@@ -38,7 +38,10 @@ test('regional pages declare separate chrome subject and operating boundary',asy
   const adminHtml=await localRegionAdminPage(region).text();
   assert.match(publicHtml,/data-ekodi-site-subject="local-cheonggye"/);
   assert.match(publicHtml,/청계잇다/);
+  assert.match(publicHtml,/<link rel="canonical" href="https:\/\/ekodi\.kr\/cheonggye">/);
+  assert.match(publicHtml,/<meta property="og:url" content="https:\/\/ekodi\.kr\/cheonggye">/);
   assert.match(publicHtml,/href="\/cgma"/);
+  assert.doesNotMatch(adminHtml,/rel="canonical"/);
   assert.match(adminHtml,/청계잇다 관리자/);
   assert.match(adminHtml,/운영권 보유 단체/);
   assert.match(adminHtml,/서비스별 운영주체/);

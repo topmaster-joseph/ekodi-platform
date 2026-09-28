@@ -91,13 +91,15 @@ function adminHeader(region){
   return `<header class="site-header admin-header"><div class="site-header__inner"><a class="site-brand" href="/cheonggye/admin" aria-label="${esc(region.brand)} 관리자 홈"><span class="site-brand__mark">관리</span><span class="site-brand__text">${esc(region.brand)} 관리자</span></a><nav class="site-nav" aria-label="청계잇다 관리자 메뉴"><a href="/cheonggye/admin">통합현황</a><a href="/cheonggye/admin#operations" data-region-capability="tenant.operations.manage">운영권</a><a href="/cheonggye/admin/pass">청계패스</a><a href="/cheonggye/admin/forest">국민의숲</a><a href="/cheonggye/admin/access" data-region-capability="tenant.access.manage">사용자·권한</a><a href="/cgma/admin">상인회 관리</a><a class="site-nav__public" href="/cheonggye">사용자 화면</a></nav></div></header>`;
 }
 
-function document(region,title,body,admin=false){
+function document(region,title,body,admin=false,canonicalPath=null){
   const surface=admin?'admin':'public';
   const authAttrs=admin?' data-region-auth-pending="1"':'';
   const scripts=admin?'<script src="/cheonggye/local-region-admin-auth.js" defer></script>':'';
   const chrome=admin?adminHeader(region):publicHeader(region);
   const footer=admin?'':renderEkodiUserFooter();
-  return `<!doctype html><html lang="ko" data-ekodi-site-subject="${esc(region.siteSubject)}" data-ekodi-local-region="${esc(region.id)}" data-ekodi-region-surface="${surface}" data-ekodi-site-experience="local-conversational-adaptive-v1" data-ekodi-personalization="progressive-consent"${authAttrs}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title>${baseStyle()}</head><body>${chrome}${body}${footer}${scripts}</body></html>`;
+  const path=admin?'':(canonicalPath===null?String(region.publicPath||''):String(canonicalPath||''));
+  const canonical=path?`<link rel="canonical" href="https://ekodi.kr${esc(path)}"><meta property="og:url" content="https://ekodi.kr${esc(path)}">`:'';
+  return `<!doctype html><html lang="ko" data-ekodi-site-subject="${esc(region.siteSubject)}" data-ekodi-local-region="${esc(region.id)}" data-ekodi-region-surface="${surface}" data-ekodi-site-experience="local-conversational-adaptive-v1" data-ekodi-personalization="progressive-consent"${authAttrs}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title>${canonical}${baseStyle()}</head><body>${chrome}${body}${footer}${scripts}</body></html>`;
 }
 
 function publicCard(item){
@@ -169,7 +171,7 @@ function moduleAdminBody(region,module){
 
 export function localRegionModulePublicPage(region,module){
   if(!region||!module)return localRegionNotFoundPage(region,{path:'unknown'});
-  let response=document(region,`${module.label} | ${region.brand}`,modulePublicBody(region,module),false);
+  let response=document(region,`${module.label} | ${region.brand}`,modulePublicBody(region,module),false,module.publicPath);
   if(module.contentMode==='regional-ledger')response=response.replace('</body>','<script src="/cheonggye/local-region-module-public.js" defer></script></body>');
   return new Response(response,{status:200,headers:headers('local-region-module-public',{userChrome:true})});
 }
@@ -185,7 +187,7 @@ export function localRegionNotFoundPage(region,{admin=false,path=''}={}){
   const brand=region?.brand||'청계잇다';
   const home=admin?'/cheonggye/admin':'/cheonggye';
   const body=`<main><section class="hero"><div class="eyebrow">등록되지 않은 지역 경로</div><h1>페이지를 찾을 수 없습니다</h1><p class="lead">${esc(path||'요청한 경로')}는 ${esc(brand)}에 등록된 하위서비스가 아닙니다. 등록된 서비스만 운영 규칙에 따라 연결됩니다.</p><div class="hero-actions"><a href="${home}">돌아가기</a></div></section></main>`;
-  return new Response(document(region||{brand,siteSubject:'local-cheonggye',id:'local:cheonggye'},`페이지 없음 | ${brand}`,body,admin),{status:404,headers:headers('local-region-not-found',{userChrome:!admin})});
+  return new Response(document(region||{brand,siteSubject:'local-cheonggye',id:'local:cheonggye'},`페이지 없음 | ${brand}`,body,admin,''),{status:404,headers:headers('local-region-not-found',{userChrome:!admin})});
 }
 
 function headers(route,{userChrome=false}={}){

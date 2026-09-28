@@ -28,6 +28,8 @@ test('mnubiz public surface follows CSP-safe user-site UI contract', async()=>{
   assert.doesNotMatch(html,/>Community</);
   assert.doesNotMatch(html,/운영공간/);
   assert.doesNotMatch(html,/Workspace/);
+  assert.match(html,/<link rel="canonical" href="https:\/\/ekodi\.kr\/mnubiz">/);
+  assert.match(html,/<meta property="og:url" content="https:\/\/ekodi\.kr\/mnubiz">/);
   assert.equal(response.headers.get('x-ekodi-workspace'),'mnubiz');
 
   const cssResponse=mnubizPublicCss();
