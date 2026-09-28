@@ -9,7 +9,7 @@ const TENANTS = Object.freeze([
   {id:'pizzamaru',apiTenant:'pizzamaru',aliases:[],name:'\uD53C\uC790\uB9C8\uB8E8 \uBAA9\uD3EC\uB300\uC810',path:'/pizzamaru/live/',home:'/pizzamaru/',mode:'commerce',title:'\uD53C\uC790\uB9C8\uB8E8 LIVE',authSite:'pizzamaru'},
   {id:'yogurt',apiTenant:'yogurt',aliases:[],name:'\uC694\uAC70\uD2B8\uD37C\uD50C \uBAA9\uD3EC\uB300\uC810',path:'/yogurt/live/',home:'/yogurt/',mode:'commerce',title:'\uC694\uAC70\uD2B8\uD37C\uD50C \uBAA9\uD3EC\uB300\uC810',authSite:'yogurt'},
   {id:'ekodimall',apiTenant:'ekodimall',aliases:['mall'],name:'\uC5D0\uCF54\uB514\uBAB0',path:'/ekodimall/live/',home:'/ekodimall/',mode:'commerce',title:'\uC5D0\uCF54\uB514\uBAB0 LIVE',authSite:'mall'},
-  {id:'ekoditrade',apiTenant:'ekoditrade',aliases:['trade','ekodi-trade'],name:'\uC5D0\uCF54\uB514\uBB34\uC5ED',path:'/ekodibiz/trade/live/',home:'/ekodibiz/trade/',mode:'meeting',title:'\uC5D0\uCF54\uB514\uBB34\uC5ED LIVE',authSite:'trade'},
+  {id:'ekoditrade',apiTenant:'ekoditrade',aliases:['trade','ekodi-trade'],name:'\uC5D0\uCF54\uB514\uBB34\uC5ED',path:'/ekoditrade/live/',home:'/ekoditrade/',mode:'meeting',title:'\uC5D0\uCF54\uB514\uBB34\uC5ED LIVE',authSite:'trade'},
 ]);
 
 const lookup = new Map();
