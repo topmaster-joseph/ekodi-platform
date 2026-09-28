@@ -191,3 +191,13 @@ test('visible task navigation lazy-loads demand features before shared panel act
   assert.match(source, /visible navigation demand activation failed/);
   assert.match(source, /definition\?\.delegateSection[\s\S]*window\.EKODIAdminPanels\?\.activate\?\.\(section\)/);
 });
+
+
+test('redundant new-task and top context navigation stay internal-only', () => {
+  assert.match(sidebar, /commandEntry\.hidden = true/);
+  assert.match(sidebar, /commandEntry\.setAttribute\('aria-hidden', 'true'\)/);
+  assert.match(sidebar, /commandEntry\.style\.setProperty\('display', 'none', 'important'\)/);
+  assert.match(sidebar, /shell\.hidden = true/);
+  assert.match(sidebar, /shell\.setAttribute\('aria-hidden', 'true'\)/);
+  assert.match(sidebar, /shell\.style\.setProperty\('display', 'none', 'important'\)/);
+});
