@@ -100,7 +100,7 @@ test('canonical root services win before generic workspace slug classification',
   const site=await read('site-shell-worker.js');
   const {shellServiceForRootPath}=await import('../ekodi-shell-injector.js');
   assert.equal(shellServiceForRootPath('/ekodimall'),'mall');
-  assert.equal(shellServiceForRootPath('/ekodibiz/trade'),'trade');
+  assert.equal(shellServiceForRootPath('/trade'),'trade');
   const service=site.indexOf('const serviceId=rootUserService(pathname);');
   const workspace=site.indexOf('const workspaceSlug=workspaceSlugForPath(pathname);');
   assert.ok(service>=0&&workspace>=0&&service<workspace);
