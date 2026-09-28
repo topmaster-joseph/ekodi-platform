@@ -31,7 +31,7 @@ test('Finance namespace routes every tax endpoint through shared Tax service', a
 
 test('Tax portal is focused, FREE-FIRST and handles core tax workflows', async () => {
   const source = await read('tax-portal-worker.js');
-  for (const marker of ['EKODI Tax','세금 · 증빙','FREE-FIRST','기본 비용 0원 경로','세금계산서','공급자','거래처','발행대장']) {
+  for (const marker of ['EKODI Tax','세금 · 증빙','FREE-FIRST','FREE부터 실제 업무 시작','세금계산서','공급자','거래처','발행대장']) {
     assert.ok(source.includes(marker), `missing tax portal marker: ${marker}`);
   }
   assert.match(source, /\/api\/finance\/tax-profiles/);
@@ -99,7 +99,7 @@ test('shared deployment manifest verifies Tax portal', async () => {
 });
 
 test('changed JavaScript sources pass syntax checks', async () => {
-  for (const file of ['tax-service-worker.js','tax-portal-worker.js','finance-entry-worker.js','finance-monitor.js','platform-router-entry-worker.js','author-billing-admin.js','admin-demand-loader.js','admin-menu-registry.js','admin-menu-runtime.js','ekodibiz-admin-registry.js','auth-site/admin-auth.js']) {
+  for (const file of ['tax-member-service.js','tax-service-worker.js','tax-portal-worker.js','finance-entry-worker.js','finance-monitor.js','platform-router-entry-worker.js','author-billing-admin.js','admin-demand-loader.js','admin-menu-registry.js','admin-menu-runtime.js','ekodibiz-admin-registry.js','auth-site/admin-auth.js']) {
     execFileSync(process.execPath, ['--check', file], { cwd:new URL('..', import.meta.url), stdio:'pipe' });
   }
 });
