@@ -37,6 +37,13 @@
     roles: '역할·권한',
   };
 
+  const BULK_TEMPLATE_OPTIONS = Object.freeze([
+    ['member_active','회원 · 활성'],
+    ['viewer_active','조회·검수자 · 활성'],
+    ['client_viewer_active','조회·검수자 · 기존 · 활성'],
+    ['disable','현재 역할 유지 · 중지'],
+  ]);
+
   const CAPABILITY_LABELS = Object.freeze({
     '*': '전체 역할 권한',
     'tenant.dashboard.read': '대시보드 조회',
@@ -316,6 +323,7 @@
   let loading = false;
   let lastSuccessfulSyncAt = '';
   let selectedMemberKey = '';
+  const bulkSelectedKeys = new Set();
   const auditCache = new Map();
 
   function installShell() {
@@ -397,7 +405,12 @@
     body.className = 'client-hub-body';
     body.id = 'clientHubBody';
 
-    for (const control of [search, site, role, status]) control.addEventListener('input', renderActiveTab);
+    for (const control of [search, role, status]) control.addEventListener('input', renderActiveTab);
+    site.addEventListener('input', () => {
+      bulkSelectedKeys.clear();
+      selectedMemberKey = '';
+      renderActiveTab();
+    });
 
     section.append(head, summary, sync, tabs, toolbar, body);
     content.append(section);
@@ -422,6 +435,7 @@
   function setTab(tab) {
     if (!TAB_LABELS[tab]) return;
     activeTab = tab;
+    bulkSelectedKeys.clear();
     shell?.tabs.querySelectorAll('[data-client-tab]').forEach(node => node.classList.toggle('active', node.dataset.clientTab === tab));
     if (tab === 'pending') shell.status.value = 'pre_registered';
     else if (shell.status.value === 'pre_registered' && tab !== 'members') shell.status.value = '';
@@ -632,6 +646,115 @@
     return first;
   }
 
+  function bulkSelectionEnabled() {
+    return directory.authority?.scope === 'platform' && Boolean(shell?.site?.value);
+  }
+
+  function pruneBulkSelection(members) {
+    const allowed = new Set(members.filter(member => member.canManage !== false).map(memberSelectionKey));
+    for (const key of [...bulkSelectedKeys]) if (!allowed.has(key)) bulkSelectedKeys.delete(key);
+  }
+
+  function selectedBulkMembers(members) {
+    return members.filter(member => bulkSelectedKeys.has(memberSelectionKey(member)) && member.canManage !== false);
+  }
+
+  function renderBulkToolbar(members) {
+    const wrap = document.createElement('div');
+    wrap.className = 'client-bulk-toolbar';
+    const eligible = bulkSelectionEnabled();
+    if (!eligible) {
+      wrap.append(text('span', '일괄 변경은 최고관리자가 하나의 사이트 범위를 선택한 경우에만 사용할 수 있습니다.', 'client-bulk-note'));
+      return wrap;
+    }
+
+    pruneBulkSelection(members);
+    const selected = selectedBulkMembers(members);
+    const selectAllLabel = document.createElement('label');
+    selectAllLabel.className = 'client-bulk-selectall';
+    const selectAll = document.createElement('input');
+    selectAll.type = 'checkbox';
+    const manageableKeys = members.filter(member => member.canManage !== false).map(memberSelectionKey);
+    selectAll.checked = manageableKeys.length > 0 && manageableKeys.every(key => bulkSelectedKeys.has(key));
+    selectAll.indeterminate = !selectAll.checked && manageableKeys.some(key => bulkSelectedKeys.has(key));
+    selectAll.addEventListener('change', () => {
+      if (selectAll.checked) for (const key of manageableKeys) bulkSelectedKeys.add(key);
+      else for (const key of manageableKeys) bulkSelectedKeys.delete(key);
+      renderActiveTab();
+    });
+    selectAllLabel.append(selectAll, text('span', '표시된 사용자 선택'));
+
+    const count = text('strong', `${selected.length}명 선택`, 'client-bulk-count');
+    const template = document.createElement('select');
+    template.setAttribute('aria-label', '일괄 권한 템플릿');
+    template.append(selectOption('', '일괄 템플릿 선택'));
+    for (const [value,label] of BULK_TEMPLATE_OPTIONS) template.append(selectOption(value,label));
+
+    const preview = text('span', '역할·상태만 변경되며 목록 공개 설정은 유지됩니다.', 'client-bulk-preview');
+    const apply = button('일괄 적용', 'primary compact');
+    apply.disabled = true;
+    const result = document.createElement('div');
+    result.className = 'client-bulk-result';
+
+    template.addEventListener('change', () => {
+      const label = BULK_TEMPLATE_OPTIONS.find(item => item[0] === template.value)?.[1] || '';
+      preview.textContent = label
+        ? `적용 예정 · ${label} · 목록 공개 설정은 유지`
+        : '역할·상태만 변경되며 목록 공개 설정은 유지됩니다.';
+      apply.disabled = !selected.length || !template.value;
+    });
+
+    apply.addEventListener('click', async () => {
+      const current = selectedBulkMembers(members);
+      const label = BULK_TEMPLATE_OPTIONS.find(item => item[0] === template.value)?.[1] || template.value;
+      if (!current.length || !template.value) return;
+      const site = directory.tenants.find(item => item.slug === shell.site.value);
+      const confirmed = confirm([
+        `${site?.name || shell.site.value} · ${current.length}명`,
+        `일괄 템플릿: ${label}`,
+        '',
+        '역할·상태만 변경되고 목록 공개 설정은 유지됩니다.',
+        '보호된 일괄 작업으로 Google 추가 인증 후 실행됩니다.',
+      ].join('\n'));
+      if (!confirmed) return;
+
+      apply.disabled = true;
+      result.replaceChildren(text('span', '보호된 관리자 인증을 확인하는 중입니다…'));
+      try {
+        const elevate = window.EKODIAdminContext?.elevate;
+        if (typeof elevate !== 'function') throw new Error('보호된 관리자 추가 인증 기능을 불러오지 못했습니다.');
+        await elevate();
+        result.replaceChildren(text('span', '일괄 변경을 적용하는 중입니다…'));
+        const data = await request(`/api/customers/tenants/${encodeURIComponent(shell.site.value)}/access/bulk-template`, {
+          method:'POST',
+          body:JSON.stringify({
+            template:template.value,
+            emails:current.map(member => member.email),
+          }),
+        });
+        const rejected = Number(data.rejected || 0);
+        const changed = Number(data.changed || 0);
+        result.replaceChildren(
+          text('strong', `변경 ${changed}명`),
+          text('span', rejected ? ` · 제외 ${rejected}명 · 보호대상/정책 위반 사용자는 변경하지 않았습니다.` : ' · 완료'),
+        );
+        for (const member of current) auditCache.delete(auditKey(member));
+        bulkSelectedKeys.clear();
+        await loadDirectory(true);
+      } catch (error) {
+        result.replaceChildren(text('span', error.message, 'operations-error'));
+      } finally {
+        apply.disabled = !selectedBulkMembers(members).length || !template.value;
+      }
+    });
+
+    const controls = document.createElement('div');
+    controls.className = 'client-bulk-controls';
+    controls.append(selectAllLabel, count, template, apply);
+    wrap.append(controls, preview, result);
+    return wrap;
+  }
+
   function renderScopePane(forcePending = false) {
     const pane = document.createElement('aside');
     pane.className = 'client-scope-pane';
@@ -660,6 +783,7 @@
     all.append(text('strong', '전체 범위'), text('span', `${countFor('')}명`));
     all.addEventListener('click', () => {
       shell.site.value = '';
+      bulkSelectedKeys.clear();
       selectedMemberKey = '';
       renderActiveTab();
     });
@@ -675,6 +799,7 @@
       );
       item.addEventListener('click', () => {
         shell.site.value = tenant.slug;
+        bulkSelectedKeys.clear();
         selectedMemberKey = '';
         renderActiveTab();
       });
@@ -693,8 +818,28 @@
 
     const list = document.createElement('div');
     list.className = 'client-member-list';
+    const bulkEnabled = bulkSelectionEnabled();
     for (const member of members) {
       const key = memberSelectionKey(member);
+      const row = document.createElement('div');
+      row.className = 'client-member-row';
+      if (bulkEnabled) {
+        const selector = document.createElement('label');
+        selector.className = 'client-member-select';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = bulkSelectedKeys.has(key);
+        checkbox.disabled = member.canManage === false;
+        checkbox.setAttribute('aria-label', `${member.email} 일괄 변경 선택`);
+        checkbox.addEventListener('change', () => {
+          if (checkbox.checked) bulkSelectedKeys.add(key);
+          else bulkSelectedKeys.delete(key);
+          renderActiveTab();
+        });
+        selector.append(checkbox);
+        row.append(selector);
+      }
+
       const item = button('', `client-member-item${selected && key === memberSelectionKey(selected) ? ' active' : ''}`);
       const top = document.createElement('span');
       top.className = 'client-member-item-head';
@@ -714,7 +859,8 @@
         selectedMemberKey = key;
         renderActiveTab();
       });
-      list.append(item);
+      row.append(item);
+      list.append(row);
     }
     pane.append(list);
     return pane;
@@ -857,6 +1003,8 @@
       return;
     }
 
+    pruneBulkSelection(members);
+    if (directory.authority?.scope === 'platform') section.append(renderBulkToolbar(members));
     const selected = selectedMemberFrom(members);
     const workspace = document.createElement('div');
     workspace.className = 'client-iam-workspace';
