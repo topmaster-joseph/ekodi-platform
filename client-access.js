@@ -620,134 +620,6 @@
     return details;
   }
 
-  function labelCell(node, label) {
-    node.dataset.label = label;
-    return node;
-  }
-
-  function memberTable(members, { includeSite = true } = {}) {
-    const wrap = document.createElement('div');
-    wrap.className = 'client-table-wrap';
-    const table = document.createElement('table');
-    table.className = 'client-table';
-    const thead = document.createElement('thead');
-    const headRow = document.createElement('tr');
-    const labels = includeSite
-      ? ['사용자', '사이트·범위', '역할', '공개', '인증·상태', '최근 활동', '만료', '관리']
-      : ['사용자', '역할', '공개', '인증·상태', '최근 활동', '만료', '관리'];
-    for (const label of labels) headRow.append(text('th', label));
-    thead.append(headRow);
-    const tbody = document.createElement('tbody');
-
-    if (!members.length) {
-      const row = document.createElement('tr');
-      const cell = text('td', '표시할 사용자가 없습니다.');
-      cell.colSpan = labels.length;
-      row.append(cell);
-      tbody.append(row);
-    } else {
-      for (const member of members) {
-        const manageable = member.canManage !== false;
-        const row = document.createElement('tr');
-        const identity = labelCell(document.createElement('td'), '사용자');
-        identity.append(text('strong', member.displayName || member.email), text('small', member.email, 'email'));
-        if (member.githubUsername) identity.append(text('small', `GitHub · @${member.githubUsername}`));
-        row.append(identity);
-
-        if (includeSite) {
-          const site = labelCell(document.createElement('td'), '사이트·범위');
-          site.append(text('strong', member.tenant.name), text('small', member.tenant.domain, 'domain'));
-          row.append(site);
-        }
-
-        const roleCell = labelCell(document.createElement('td'), '역할');
-        const roleSelect = document.createElement('select');
-        roleSelect.setAttribute('aria-label', `${member.email} 역할`);
-        for (const [value,label] of USER_ROLE_OPTIONS) roleSelect.append(selectOption(value,label));
-        roleSelect.value = USER_ROLE_SET.has(member.role) ? member.role : 'member';
-        roleSelect.disabled = !manageable;
-        roleCell.append(roleSelect);
-
-        const visibilityCell = labelCell(document.createElement('td'), '공개');
-        const visibility = document.createElement('select');
-        visibility.setAttribute('aria-label', `${member.email} 공개 상태`);
-        visibility.append(selectOption('private','비공개'), selectOption('public','공개'));
-        visibility.value = member.visibility === 'public' ? 'public' : 'private';
-        visibility.disabled = !manageable;
-        visibilityCell.append(visibility);
-
-        const statusCell = labelCell(document.createElement('td'), '인증·상태');
-        statusCell.append(membershipBadge(member.status));
-        const statusSelect = document.createElement('select');
-        statusSelect.setAttribute('aria-label', `${member.email} 사용 상태`);
-        statusSelect.append(selectOption('active','활성'), selectOption('disabled','중지'));
-        statusSelect.value = member.status === 'disabled' ? 'disabled' : 'active';
-        statusSelect.disabled = !manageable;
-        statusCell.append(statusSelect);
-
-        const activityCell = labelCell(
-          text('td', formatDate(member.lastLoginAt, '아직 로그인 전')),
-          '최근 활동',
-        );
-        const expiryCell = labelCell(
-          text('td', member.expiresAt ? formatDate(member.expiresAt, '-') : '계속'),
-          '만료',
-        );
-
-        const manageCell = labelCell(document.createElement('td'), '관리');
-        if (manageable) {
-          const save = button('저장', 'primary compact');
-          save.addEventListener('click', async () => {
-            const next = {
-              role: roleSelect.value,
-              visibility: visibility.value,
-              status: statusSelect.value,
-            };
-            const changes = accessChangeSet(member, next);
-            if (!changes.length) {
-              const previous = save.textContent;
-              save.textContent = '변경 없음';
-              setTimeout(() => { save.textContent = previous; }, 1200);
-              return;
-            }
-            if (!confirmAccessChanges(member, changes)) return;
-            save.disabled = true;
-            try {
-              await request(`/api/customers/tenants/${encodeURIComponent(member.tenant.slug)}/access/update`, {
-                method:'POST',
-                body:JSON.stringify({
-                  email:member.email,
-                  role:next.role,
-                  visibility:visibility.value,
-                  status:next.status,
-                }),
-              });
-              auditCache.delete(auditKey(member));
-              await loadDirectory(true);
-            } catch (error) {
-              alert(error.message);
-            } finally {
-              save.disabled = false;
-            }
-          });
-          const actions = document.createElement('div');
-          actions.className = 'client-row-actions';
-          actions.append(save, revokeButton(member));
-          manageCell.append(actions);
-        } else {
-          manageCell.append(text('span', '이 범위는 조회만 가능합니다.', 'client-count-chip'));
-        }
-        manageCell.append(accessExplanation(member));
-
-        row.append(roleCell, visibilityCell, statusCell, activityCell, expiryCell, manageCell);
-        tbody.append(row);
-      }
-    }
-    table.append(thead, tbody);
-    wrap.append(table);
-    return wrap;
-  }
-
   function memberSelectionKey(member) {
     return `${member?.tenant?.slug || ''}|${String(member?.email || '').trim().toLowerCase()}`;
   }
@@ -1109,8 +981,18 @@
       text('h4', '사용자 등록'),
       createPreRegisterForm(tenant),
       text('h4', `이 사이트 사용자 · ${members.length}명`),
-      memberTable(members, { includeSite: false }),
     );
+
+    if (!members.length) {
+      detail.append(statePanel('empty', '등록된 사용자가 없습니다.', '위 등록 양식으로 Google 계정을 추가하면 이 사이트 범위의 접근권한을 관리할 수 있습니다.'));
+      return;
+    }
+
+    const selected = selectedMemberFrom(members);
+    const workspace = document.createElement('div');
+    workspace.className = 'client-site-member-workspace';
+    workspace.append(renderMemberList(members, selected), renderMemberDetail(selected));
+    detail.append(workspace);
   }
 
   function renderSitesView() {
