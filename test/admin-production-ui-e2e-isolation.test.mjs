@@ -88,3 +88,14 @@ test('synthetic production Admin UI verifier exercises the real bottom command c
   assert.match(text, /command-roundtrip/);
   assert.match(text, /expectedCount = menus\.length \+ 1/);
 });
+
+
+test('Admin production UI workflow validates verifier contracts on PRs and reserves live canary for postdeploy runs', async () => {
+  const workflow = await readFile(new URL('../.github/workflows/verify-admin-production-ui-e2e.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /Validate production verifier contract on pull requests/);
+  assert.match(workflow, /github\.event_name == 'pull_request'/);
+  assert.match(workflow, /github\.event_name != 'pull_request'/);
+  assert.match(workflow, /validate-canonical-api-execution\.mjs/);
+  assert.match(workflow, /apex-api-retirement\.test\.mjs/);
+  assert.match(workflow, /verify-admin-production-ui-e2e\.mjs/);
+});
