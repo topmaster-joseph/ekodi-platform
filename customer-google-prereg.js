@@ -1,4 +1,5 @@
 import authWorker, { isAllowedOrigin } from './auth-worker.js';
+import { handleAdminGoogleAuth } from './admin-google-auth.js';
 import { stringifyCapabilityList, validateAccessGrantInput, accessGrantExpired } from './access-governance.js';
 import { accessGrantManagementDecision, resolveTenantAccessAuthority, tenantGrantCapabilityDecision } from './tenant-access-authority.js';
 
@@ -27,6 +28,14 @@ const ROLE_LABELS = Object.freeze({
   external_vendor: '외부업체', external_developer: '외부개발자', client_admin: '점주/책임자 · 기존', client_editor: '마케팅담당자 · 기존', client_viewer: '조회·검수자 · 기존',
 });
 const ROLE_SET = new Set(Object.keys(ROLE_LABELS));
+
+const BULK_ACCESS_TEMPLATES = Object.freeze({
+  member_active: Object.freeze({ role:'member', enabled:1, label:'회원 · 활성' }),
+  viewer_active: Object.freeze({ role:'viewer', enabled:1, label:'조회·검수자 · 활성' }),
+  client_viewer_active: Object.freeze({ role:'client_viewer', enabled:1, label:'조회·검수자 · 기존 · 활성' }),
+  disable: Object.freeze({ role:null, enabled:0, label:'현재 역할 유지 · 중지' }),
+});
+const BULK_ACCESS_LIMIT = 50;
 
 function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase();
@@ -179,6 +188,28 @@ async function adminSession(request, env) {
   const response = await authWorker.fetch(new Request(url.toString(), { method: 'GET', headers: request.headers }), env);
   if (!response.ok) return null;
   return response.json();
+}
+
+async function requirePlatformElevation(request, env) {
+  const url = new URL(request.url);
+  url.pathname = '/api/admin-access/elevation';
+  url.search = '';
+  const response = await handleAdminGoogleAuth(new Request(url.toString(), {
+    method:'GET',
+    headers:request.headers,
+  }), env);
+  const data = await response.clone().json().catch(() => ({}));
+  if (!response.ok || data?.elevated !== true) {
+    return {
+      ok:false,
+      status:response.status >= 500 ? 503 : 403,
+      code:response.status >= 500 ? 'ACCESS_ELEVATION_UNAVAILABLE' : 'ELEVATION_REQUIRED',
+      error:response.status >= 500
+        ? '추가 인증 상태를 확인할 수 없습니다.'
+        : '일괄 권한 변경에는 Google 추가 인증이 필요합니다.',
+    };
+  }
+  return { ok:true, elevatedUntil:data.elevatedUntil || '' };
 }
 
 async function adminId(db, session) {
@@ -508,6 +539,121 @@ async function updateAccess(request, env, slug) {
   return json({ ok:true, email, tenant:tenant.slug, role:nextRole, enabled:Boolean(enabled), visibility }, 200, request, env);
 }
 
+
+async function bulkApplyAccessTemplate(request, env, slug) {
+  const tenant = await tenantBySlug(env.DB, slug);
+  if (!tenant || tenant.status !== 'active') return json({ error:'등록된 사이트가 아닙니다.' }, 404, request, env);
+
+  const authority = await resolveTenantAccessAuthority(request, env, { tenantSlug:slug });
+  if (!authority.ok) return json({ error:'이 사이트의 사용자·권한을 수정할 권한이 없습니다.', code:authority.code }, authority.status || 403, request, env);
+  if (authority.scope !== 'platform') {
+    return json({ error:'일괄 권한 변경은 최고관리자 플랫폼 범위에서만 사용할 수 있습니다.', code:'ACCESS_BULK_PLATFORM_ONLY' }, 403, request, env);
+  }
+
+  const elevation = await requirePlatformElevation(request, env);
+  if (!elevation.ok) return json({ error:elevation.error, code:elevation.code }, elevation.status, request, env);
+
+  const body = await readJson(request);
+  const templateId = String(body?.template || '').trim();
+  const template = BULK_ACCESS_TEMPLATES[templateId];
+  if (!template) return json({ error:'지원하지 않는 일괄 권한 템플릿입니다.', code:'ACCESS_BULK_TEMPLATE_INVALID' }, 400, request, env);
+
+  const emails = [...new Set((Array.isArray(body?.emails) ? body.emails : []).map(normalizeEmail).filter(validEmail))];
+  if (!emails.length) return json({ error:'변경할 사용자를 선택해 주세요.', code:'ACCESS_BULK_EMPTY' }, 400, request, env);
+  if (emails.length > BULK_ACCESS_LIMIT) {
+    return json({ error:`한 번에 최대 ${BULK_ACCESS_LIMIT}명까지 변경할 수 있습니다.`, code:'ACCESS_BULK_LIMIT', limit:BULK_ACCESS_LIMIT }, 400, request, env);
+  }
+
+  const session = { email:authority.email };
+  const updatedBy = await adminId(env.DB, session);
+  const results = [];
+  let changed = 0;
+
+  for (const email of emails) {
+    const existing = await env.DB.prepare(`SELECT role, enabled, last_verified_at, principal_type, github_username,
+        capabilities_json, denied_capabilities_json, expires_at, visibility
+      FROM customer_access_grants WHERE tenant_id = ? AND email = ?`)
+      .bind(tenant.id, email).first();
+
+    if (!existing) {
+      results.push({ email, ok:false, code:'ACCESS_NOT_FOUND' });
+      continue;
+    }
+
+    const nextRole = template.role || normalizeRole(existing.role);
+    const decision = accessGrantManagementDecision(authority, { email, role:existing.role }, { role:nextRole });
+    if (!decision.ok) {
+      results.push({ email, ok:false, code:decision.code });
+      continue;
+    }
+
+    const roleChanged = nextRole !== normalizeRole(existing.role);
+    const validated = validateAccessGrantInput({
+      role:nextRole,
+      principalType:existing.principal_type,
+      githubUsername:roleChanged ? '' : existing.github_username,
+      expiresAt:roleChanged ? '' : existing.expires_at,
+      capabilities:roleChanged ? [] : existing.capabilities_json,
+      deniedCapabilities:roleChanged ? [] : existing.denied_capabilities_json,
+    });
+    if (!validated.ok) {
+      results.push({ email, ok:false, code:validated.error });
+      continue;
+    }
+
+    const nextEnabled = template.enabled;
+    const sameRole = nextRole === normalizeRole(existing.role);
+    const sameEnabled = Number(existing.enabled) === Number(nextEnabled);
+    if (sameRole && sameEnabled) {
+      results.push({ email, ok:true, changed:false, role:nextRole, enabled:Boolean(nextEnabled) });
+      continue;
+    }
+
+    const now = new Date().toISOString();
+    const allowedJson = stringifyCapabilityList(validated.allowed);
+    const deniedJson = stringifyCapabilityList(validated.denied);
+    await env.DB.prepare(`UPDATE customer_access_grants
+      SET role=?, enabled=?, principal_type=?, github_username=?, capabilities_json=?, denied_capabilities_json=?,
+          expires_at=?, updated_at=?, updated_by=?
+      WHERE tenant_id=? AND email=?`)
+      .bind(nextRole, nextEnabled, validated.principalType, validated.githubUsername, allowedJson, deniedJson,
+        validated.expiresAt || null, now, updatedBy, tenant.id, email).run();
+
+    const after = {
+      role:nextRole,
+      enabled:nextEnabled,
+      principal_type:validated.principalType,
+      github_username:validated.githubUsername,
+      capabilities_json:allowedJson,
+      denied_capabilities_json:deniedJson,
+      expires_at:validated.expiresAt || null,
+      visibility:existing.visibility,
+    };
+    await writeGrantAudit(env.DB, tenant.id, email, session, 'grant.update', existing, after);
+    results.push({ email, ok:true, changed:true, role:nextRole, enabled:Boolean(nextEnabled) });
+    changed += 1;
+  }
+
+  await writeAdminAudit(env.DB, session, 'customer.access.bulk-template', tenant.domain, JSON.stringify({
+    tenant:tenant.slug,
+    template:templateId,
+    requested:emails.length,
+    changed,
+    rejected:results.filter(item => !item.ok).length,
+  }));
+
+  return json({
+    ok:true,
+    tenant:{ slug:tenant.slug, name:tenant.name },
+    template:{ id:templateId, label:template.label },
+    requested:emails.length,
+    changed,
+    rejected:results.filter(item => !item.ok).length,
+    elevatedUntil:elevation.elevatedUntil,
+    results,
+  }, 200, request, env);
+}
+
 async function listAccessUsers(request, env, slug) {
   const tenant = await tenantBySlug(env.DB, slug);
   if (!tenant) return json({ error: '등록된 사이트가 아닙니다.' }, 404, request, env);
@@ -624,6 +770,13 @@ export async function handleGoogleCustomerPreregistration(request, env) {
     const slug = normalizeTenant(auditMatch[1]);
     if (!slug) return json({ error: '등록된 고객사가 아닙니다.' }, 404, request, env);
     return listAccessAudit(request, env, slug);
+  }
+
+  const bulkTemplateMatch = path.match(/^\/api\/customers\/tenants\/([a-z0-9-]+)\/access\/bulk-template$/);
+  if (request.method === 'POST' && bulkTemplateMatch) {
+    const slug = normalizeTenant(bulkTemplateMatch[1]);
+    if (!slug) return json({ error:'등록된 고객사가 아닙니다.' }, 404, request, env);
+    return bulkApplyAccessTemplate(request, env, slug);
   }
 
   const revokeMatch = path.match(/^\/api\/customers\/tenants\/([a-z0-9-]+)\/access\/revoke$/);
