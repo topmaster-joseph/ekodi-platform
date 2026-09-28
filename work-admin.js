@@ -1,8 +1,8 @@
 (() => {
   // Build contract marker: data-section = 'work' is the dedicated left sidebar entry.
   const TOKEN_KEY = 'ekodi-auth-token';
-  const WORK_URL = 'https://work.ekodi.kr';
-  const AUTH_URL = 'https://auth.ekodi.kr/?site=work';
+  const WORK_URL = 'https://ekodi.kr/work';
+  const AUTH_URL = 'https://ekodi.kr/auth/?site=work';
   const ADMIN_API = 'https://renzehysxirjilvdxacv.supabase.co/functions/v1/work-admin-api';
 
   const text = value => String(value ?? '');
@@ -58,7 +58,7 @@
         verification_reason_required:'인증 변경 사유를 입력해 주세요.',
         admin_can_only_unpublish_or_close:'관리자는 공고를 직접 채용 승인하지 않고 비공개 또는 종료만 할 수 있습니다.',
       };
-      throw new Error(messages[data.error] || data.error || `WORK 관리자 API 오류 (${response.status})`);
+      throw new Error(messages[data.error] || data.error || `구인구직 관리자 API 오류 (${response.status})`);
     }
     return data;
   }
@@ -109,7 +109,7 @@
       navButton = el('button', '', 'nav work-nav');
       navButton.type = 'button';
       navButton.dataset.section = 'work';
-      navButton.append(document.createTextNode('W '), el('span', 'WORK'));
+      navButton.append(document.createTextNode('W '), el('span', '구인구직'));
       const services = nav.querySelector('[data-section="services"]');
       if (services) services.insertAdjacentElement('afterend', navButton);
       else nav.prepend(navButton);
@@ -121,26 +121,27 @@
     const layout = el('div', '', 'work-admin-layout');
     const main = el('div', '', 'work-admin-main');
     const rail = el('aside', '', 'work-admin-rail');
-    rail.setAttribute('aria-label', 'WORK 관리자 메뉴');
+    rail.setAttribute('aria-label', '구인구직 관리자 메뉴');
+    rail.dataset.adminContextRail = 'true';
 
     const head = el('header', '', 'work-admin-head');
     const headCopy = el('div');
-    headCopy.append(el('p', 'EKODI WORK · LIVE OPS', 'kicker'), el('h2', 'WORK 운영 관리'), el('p', '실제 채용공고·지원 흐름·사업장·프로필을 관리자 권한으로 안전하게 조회하고 운영 조치합니다.', 'operations-copy'));
+    headCopy.append(el('p', 'EKODI WORK · RECRUITING OPS', 'kicker'), el('h2', '구인구직 운영 관리'), el('p', '채용공고·지원자·사업장·구직 프로필을 관리자 권한으로 조회하고 필요한 운영 조치를 수행합니다.', 'operations-copy'));
     const headActions = el('div', '', 'work-admin-head-actions');
     const refreshAll = el('button', '↻ 새로고침', 'secondary');
     refreshAll.type = 'button';
-    headActions.append(refreshAll, actionLink('Open Work ↗', WORK_URL, 'primary'));
+    headActions.append(refreshAll, actionLink('구인구직 사이트 열기 ↗', WORK_URL, 'primary'));
     head.append(headCopy, headActions);
     main.append(head);
 
-    const status = el('p', 'WORK 운영 데이터를 불러올 준비가 되었습니다.', 'work-admin-status');
+    const status = el('p', '구인구직 운영 데이터를 불러올 준비가 되었습니다.', 'work-admin-status');
     status.setAttribute('role', 'status');
     main.append(status);
     const views = el('div', '', 'work-admin-views');
     main.append(views);
 
     const viewDefs = [
-      ['overview', 'Overview', '개요'],
+      ['overview', 'STATUS', '현황'],
       ['jobs', 'Jobs', '채용공고'],
       ['applicants', 'Applicants', '지원자'],
       ['profiles', 'Profiles', '프로필 · 사업장'],
@@ -156,7 +157,7 @@
     }
 
     // Overview
-    panels.overview.append(el('h3', 'WORK Overview', 'work-admin-view-title'), el('p', '가짜 지표 없이 운영 DB에서 집계한 현재 상태만 표시합니다.', 'work-admin-view-copy'));
+    panels.overview.append(el('h3', '구인구직 현황', 'work-admin-view-title'), el('p', '가짜 지표 없이 채용·지원 운영 DB에서 집계한 현재 상태만 표시합니다.', 'work-admin-view-copy'));
     const summaryGrid = el('div', '', 'work-admin-summary');
     const summaryNodes = {};
     [['profiles','회원 프로필'],['organizations','사업장'],['jobs','채용공고'],['applications','지원']].forEach(([key,label]) => {
@@ -200,7 +201,7 @@
     const securityRaw = el('pre', '보안 상태를 불러오지 않았습니다.', 'work-admin-raw');
     panels.security.append(securityGrid, securityRaw, actionLink('Google Auth ↗', AUTH_URL));
 
-    rail.append(el('p', 'WORK ADMIN', 'work-admin-rail-label'));
+    rail.append(el('p', '구인구직 관리자', 'work-admin-rail-label'));
     const railNav = el('nav', '', 'work-admin-rail-nav');
     const railButtons = [];
     viewDefs.forEach(([key, eyebrow, label], index) => {
@@ -213,7 +214,7 @@
     });
     rail.append(railNav);
     const railFooter = el('div', '', 'work-admin-rail-footer');
-    railFooter.append(el('small', 'PUBLIC'), actionLink('work.ekodi.kr ↗', WORK_URL, 'work-admin-public-link'));
+    railFooter.append(el('small', '공개 사이트'), actionLink('ekodi.kr/work ↗', WORK_URL, 'work-admin-public-link'));
     rail.append(railFooter);
 
     let activeView = 'overview';
@@ -228,7 +229,7 @@
     async function loadOverview(force = false) {
       if (!force && loaded.has('overview')) return;
       const serial = ++requestSerial;
-      setStatus('WORK 운영 현황을 집계하고 있습니다.', 'loading');
+      setStatus('구인구직 운영 현황을 집계하고 있습니다.', 'loading');
       try {
         const data = await api('/summary');
         if (serial !== requestSerial && activeView !== 'overview') return;
@@ -371,14 +372,14 @@
 
     async function loadSecurity(force = false) {
       if (!force && loaded.has('security')) return;
-      setStatus('WORK 운영 경계를 점검하고 있습니다.', 'loading');
+      setStatus('구인구직 운영 경계를 점검하고 있습니다.', 'loading');
       try {
         const data = await api('/security');
         securityGrid.replaceChildren();
         const health = data.serviceHealth || {};
         const cards = [
           ['ADMIN API', data.adminApi === 'authenticated' ? 'Authenticated' : 'Check', 'EKODI 관리자 세션 재검증'],
-          ['WORK SERVICE', health.ok === false ? 'Check' : (health.service || health.status || 'Online'), health.environment || health.dataMode || 'work.ekodi.kr/health'],
+          ['WORK SERVICE', health.ok === false ? 'Check' : (health.service || health.status || 'Online'), health.environment || health.dataMode || 'ekodi.kr/work/health'],
           ['DATABASE', (data.database || []).every(item => item.reachable) ? 'Reachable' : 'Check', `${(data.database || []).filter(item => item.reachable).length}/${(data.database || []).length} Work tables`],
           ['RLS CONTRACT', data.policyContract === 'repository-validated' ? 'CI Verified' : 'Check', '스키마·권한 계약 검증'],
         ];
@@ -428,9 +429,9 @@
       });
       document.querySelectorAll('.sidebar .nav[data-section]').forEach(item => item.classList.toggle('active', item.dataset.section === 'work'));
       const title = document.querySelector('#pageTitle');
-      if (title) title.textContent = 'WORK';
+      if (title) title.textContent = '구인구직';
       document.querySelector('.sidebar')?.classList.remove('open');
-      const next = location.pathname === '/work' || location.pathname === '/work/' ? '/work' : '#work';
+      const next = '/work/admin';
       history.replaceState(null, '', next);
       switchWorkView(activeView);
     }
@@ -439,10 +440,10 @@
     layout.append(main, rail);
     section.append(layout);
     content.append(section);
-    const campusWorkButton = document.querySelector('[data-campus-service="work.ekodi.kr"]');
+    const campusWorkButton = document.querySelector('[data-campus-service="ekodi.kr/work"]');
     if (campusWorkButton) campusWorkButton.dataset.campusSection = 'work';
     window.dispatchEvent(new CustomEvent('ekodi-feature-installed'));
-    if (location.pathname === '/work' || location.pathname === '/work/' || location.hash === '#work') activate();
+    if (location.pathname === '/work/admin' || location.pathname.startsWith('/work/admin/') || location.hash === '#work') activate();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, { once:true });

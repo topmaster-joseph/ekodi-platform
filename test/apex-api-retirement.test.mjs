@@ -51,7 +51,7 @@ test('public EKODI API is apex-only and the legacy Worker domain is explicitly r
   assert.equal(apiTarget.directHealth,undefined);
   assert.ok(apiTarget.apexExpect.includes('"canonicalApiBase":"https://ekodi.kr/api"'));
   assert.match(retirementWorkflow,/wrangler\.api\.toml/);
-  assert.match(retirementWorkflow,/wrangler\.community\.toml wrangler\.social\.toml wrangler\.energy\.toml wrangler\.api\.toml/);
+  assert.match(retirementWorkflow,/wrangler\.community\.toml wrangler\.social\.toml wrangler\.energy\.toml wrangler\.work\.toml wrangler\.api\.toml/);
 });
 
 

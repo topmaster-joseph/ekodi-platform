@@ -47,7 +47,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'admins', group: 'people', icon: '♙', labels: { ko: '관리자 계정·권한', en: 'Administrator Accounts & Access' }, superAdminOnly: true },
   { id: 'ai-membership', group: 'people', icon: '◈', labels: { ko: '역할·등급·가입 승인', en: 'Roles, Grades & Approvals' } },
 
-  { id: 'work', group: 'content', icon: 'W', labels: { ko: '작업·운영', en: 'Work & Operations' } },
+  { id: 'work', group: 'content', icon: 'W', labels: { ko: '구인구직·채용', en: 'Jobs & Recruiting' }, href: 'https://ekodi.kr/work/admin', adminHandoff: true },
   { id: 'communication', group: 'content', icon: '✉', labels: { ko: '일정·알림·메시지', en: 'Schedules, Alerts & Messages' } },
   { id: 'community', group: 'content', icon: '◌', labels: { ko: '행사·신청·예약', en: 'Events, Applications & Reservations' } },
   { id: 'books', group: 'content', icon: 'B', labels: { ko: '전체 게시물·미디어', en: 'Posts & Media' } },

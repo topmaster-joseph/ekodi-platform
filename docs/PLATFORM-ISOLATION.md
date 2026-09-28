@@ -20,7 +20,7 @@ EKODI 생태계의 각 사이트와 서비스는 단순 페이지가 아니라 �
 
 - EKODI Mall: Cloudflare Pages 전용 빌드/배포
 - EKODI Books: 전용 Worker와 `books.ekodi.kr`
-- EKODI Work: 전용 Worker와 `work.ekodi.kr`
+- EKODI Work: 전용 Worker를 내부 실행 경계로 유지하고 공개 진입은 `ekodi.kr/work`로 통합
 - EKODI Social: 전용 Worker와 `social.ekodi.kr`
 - EKODI Energy AI: 전용 Worker, 전용 `energy/**` 소스, `ekodi-energy-staging.topmaster-joseph.workers.dev` 스테이징. 운영 도메인은 검증 후 `energy.ekodi.kr`로 승격
 - Finance API: 전용 Worker와 `finance-ekodi.kr/api`

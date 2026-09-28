@@ -347,6 +347,17 @@ async function routePlatform(request,env,ctx){
     }
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isChurchMemberHomePath(url.pathname))return churchMemberHomePage(request);
     if(host===PUBLIC_HOST&&isEkodiMissionSpacePath(url.pathname))return routeEkodiMissionSpace(request,env);
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&(url.pathname==='/work/admin'||url.pathname.startsWith('/work/admin/'))){
+      const internal=new URL(request.url);
+      const suffix=url.pathname.slice('/work/admin'.length);
+      internal.pathname=`/admin/content/work${suffix}`;
+      const upstream=await legacyPlatformRouter.fetch(new Request(internal.toString(),{method:request.method,headers:request.headers,redirect:'manual'}),env,ctx);
+      const response=new Response(upstream.body,upstream);
+      response.headers.set('x-ekodi-canonical-service-admin','work');
+      response.headers.set('x-ekodi-canonical-path','/work/admin');
+      response.headers.set('cache-control','no-store');
+      return response;
+    }
     const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
     if(canonical)return canonical;
 

@@ -8,10 +8,12 @@ on:
       - 'wrangler.community.toml'
       - 'wrangler.social.toml'
       - 'wrangler.energy.toml'
+      - 'wrangler.work.toml'
       - 'wrangler.api.toml'
       - 'deploy/manifests/community.worker.json'
       - 'deploy/manifests/social.worker.json'
       - 'deploy/manifests/energy.worker.json'
+      - 'deploy/manifests/work.worker.json'
       - 'config/ecosystem-services.json'
       - '.github/workflows/retire-public-subdomains-wave1.yml'
   push:
@@ -22,10 +24,12 @@ on:
       - 'wrangler.community.toml'
       - 'wrangler.social.toml'
       - 'wrangler.energy.toml'
+      - 'wrangler.work.toml'
       - 'wrangler.api.toml'
       - 'deploy/manifests/community.worker.json'
       - 'deploy/manifests/social.worker.json'
       - 'deploy/manifests/energy.worker.json'
+      - 'deploy/manifests/work.worker.json'
       - 'config/ecosystem-services.json'
       - '.github/workflows/retire-public-subdomains-wave1.yml'
   workflow_dispatch:
@@ -51,7 +55,7 @@ jobs:
           set -euo pipefail
           node --check scripts/retire-worker-custom-domains.mjs
           node scripts/retire-worker-custom-domains.mjs --config config/retire-public-subdomains-wave1.json --dry-run
-          for f in wrangler.community.toml wrangler.social.toml wrangler.energy.toml wrangler.api.toml; do
+          for f in wrangler.community.toml wrangler.social.toml wrangler.energy.toml wrangler.work.toml wrangler.api.toml; do
             if grep -Fq '[[routes]]' "$f" || grep -Fq 'custom_domain = true' "$f"; then
               echo "Public custom-domain declaration remains in $f"
               exit 1

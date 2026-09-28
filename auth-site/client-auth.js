@@ -24,7 +24,7 @@ const realms={
   media:{name:'EKODI Media',returnTo:'https://media.ekodi.kr/',open:true,kind:'media'},
   social:{name:'EKODI Social',returnTo:'https://social.ekodi.kr/',open:true,kind:'social'},
   energy:{name:'Energy AI',returnTo:'https://energy.ekodi.kr/',open:true,kind:'energy'},
-  work:{name:'EKODI Work',returnTo:'https://work.ekodi.kr/',open:true,kind:'work'},
+  work:{name:'에코디워크 · 구인구직',returnTo:'https://ekodi.kr/work',origins:['https://ekodi.kr'],open:true,kind:'work'},
   messenger:{name:'EKODI Messenger',returnTo:'https://ekodi.kr/messenger',open:true,kind:'messenger'},
   invest:{name:'EKODI Investment',returnTo:'https://invest.ekodi.kr/',open:true,kind:'invest'},
   support:{name:'EKODI Support AI',returnTo:'https://ekodi.kr/support/',open:true,kind:'support'},

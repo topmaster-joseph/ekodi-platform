@@ -58,7 +58,7 @@
     security:{label:'Security',icon:'◆',styles:['admin-secret-generator.css'],scripts:['admin-secret-generator.js'],real:'[data-section="security"]',hashes:['#security'],insert:'after-health'},
     deployments:{label:'Deployments',icon:'↑',styles:['release-control-admin.css'],scripts:['release-control-admin.js'],real:'[data-section="deployments"]',hashes:['#deployments','#release'],insert:'after-security'},
     work: {
-      label: 'WORK', icon: 'W',
+      label: '구인구직', icon: 'W',
       styles: ['work-admin.css'],
       scripts: ['work-admin.js'],
       real: '[data-section="work"]',

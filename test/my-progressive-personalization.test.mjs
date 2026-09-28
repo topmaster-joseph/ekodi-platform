@@ -9,7 +9,7 @@ import {
 
 const SERVICES=[
   {id:'support',name:'Support',url:'https://ekodi.kr/support/',order:1},
-  {id:'work',name:'Work',url:'https://work.ekodi.kr/',order:2},
+  {id:'work',name:'Work',url:'https://ekodi.kr/work',order:2},
   {id:'marketing',name:'Marketing',url:'https://marketing.ekodi.kr/',order:3},
 ];
 const NOW=new Date('2026-09-04T17:10:00+09:00');

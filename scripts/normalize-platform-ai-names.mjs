@@ -122,7 +122,7 @@ const adminScopeEntries = [
   "    { domain:'publishing.ekodi.kr', name:'출판', group:'Knowledge & Content', role:'출판상담·제작·대행·유통', aliases:['출판','publishing'] },",
   "    { domain:'author.ekodi.kr', name:'크리에이터 AI', group:'Knowledge & Content', role:'글·창작 전반 AI 지원', aliases:['크리에이터 ai','작가ai','creator ai','author'] },",
   "    { domain:'my.ekodi.kr', name:'마이 에코디', group:'Work & Life', role:'개인 활동·서비스 허브', aliases:['마이 에코디','my ekodi','my'] },",
-  "    { domain:'work.ekodi.kr', name:'에코디 워크', group:'Work & Life', role:'업무·프로젝트 실행 공간', aliases:['워크','업무','work'] },",
+  "    { domain:'ekodi.kr/work', name:'에코디 워크', group:'Work & Life', role:'업무·프로젝트 실행 공간', aliases:['워크','업무','work'] },",
   "    { domain:'energy.ekodi.kr', name:'에너지 AI', group:'Work & Life', role:'전기·에너지 상태 분석·제안', aliases:['에너지 ai','에너지','energy'] },",
   "    { domain:'ekodi.kr/insurance', url:'https://ekodi.kr/insurance', name:'에코디보험', group:'Work & Life', role:'보험 진단·관리·청구 허브', aliases:['보험','insurance','ins'] },",
   "    { domain:'messenger.ekodi.kr', name:'에코디 메신저', group:'Communication & Cloud', role:'사람·AI·공간 대화 연결', aliases:['메신저','messenger'] },",

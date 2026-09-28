@@ -52,12 +52,21 @@ function normalizeDetailSegments(value){
 function pathFor(section,detailSegments=[]){
   const normalized=normalizeSection(section);
   if(!normalized||normalized===COMMAND_HOME)return'/admin/';
+  if(normalized==='work'){
+    const detail=normalizeDetailSegments(detailSegments);
+    const base='/work/admin';
+    return detail.length?`${base}/${detail.map(encodeURIComponent).join('/')}`:base;
+  }
   const base=`/admin/${SECTION_GROUP[normalized]}/${normalized}`;
   const detail=normalizeDetailSegments(detailSegments);
   return detail.length?`${base}/${detail.map(encodeURIComponent).join('/')}`:base;
 }
 function routeFromPath(pathname){
   const parts=String(pathname||'').split('/').filter(Boolean);
+  if(parts[0]==='work'&&parts[1]==='admin'){
+    const detailSegments=normalizeDetailSegments(parts.slice(2));
+    return Object.freeze({section:'work',group:'content',detailSegments:Object.freeze(detailSegments)});
+  }
   if(parts[0]!=='admin')return null;
   if(parts.length===1)return Object.freeze({section:COMMAND_HOME,group:'home',detailSegments:Object.freeze([])});
   const group=String(parts[1]||'').toLowerCase();
