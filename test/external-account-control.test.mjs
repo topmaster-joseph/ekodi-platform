@@ -53,6 +53,25 @@ test('super admin infrastructure summary exposes account roles without secrets',
   } finally { globalThis.fetch = originalFetch; }
 });
 
+test('workspace summary projects manage permissions from the canonical workspace role', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async url => {
+    const href=String(url);
+    if(href.includes('/auth/v1/user'))return new Response(JSON.stringify({id:'u1',email:'manager@example.com'}),{status:200,headers:{'content-type':'application/json'}});
+    if(href.includes('current_site_activity_contexts'))return new Response(JSON.stringify([{tenant_id:'t1',tenant:'jadam',workspace_name:'Jadam',authorization_role:'manager'}]),{status:200,headers:{'content-type':'application/json'}});
+    return new Response(JSON.stringify([]),{status:200,headers:{'content-type':'application/json'}});
+  };
+  const DB={prepare:()=>({all:async()=>({results:[]})})};
+  try{
+    const request=new Request('https://ekodi.kr/api/control/external-accounts/summary?workspace=jadam',{headers:{authorization:'Bearer session'}});
+    const response=await handleExternalAccountControl(request,{MY_SUPABASE_URL:'https://example.supabase.co',MY_SUPABASE_PUBLISHABLE_KEY:'public-key',DB});
+    assert.equal(response.status,200);
+    const body=await response.json();
+    assert.deepEqual(body.permissions,{view:true,manage:true,register:true,update:true,secretMaterial:false});
+    assert.equal(body.workspace,'jadam');
+  }finally{globalThis.fetch=originalFetch}
+});
+
 test('registration rejects direct secret material before persistence', async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async url => String(url).includes('/auth/v1/user')
@@ -100,6 +119,18 @@ test('external account admin reuses mail OAuth instead of collecting Gmail secre
   assert.doesNotMatch(source, /name="password"/);
 });
 
+
+test('workspace admins inherit connection settings without platform infrastructure exposure', () => {
+  const runtime=read('admin-menu-runtime.js');
+  assert.match(runtime,/data-admin-link="workspace-connections"/);
+  assert.match(runtime,/data-panel~="workspace-connections"/);
+  assert.match(runtime,/summary\?workspace=/);
+  assert.match(runtime,/body\.workspaceSlug=currentContext\.id/);
+  assert.match(runtime,/비밀번호·API Token·Secret·OAuth Token 원문은 입력하지 않습니다/);
+  assert.match(runtime,/currentContext\.type==='workspace'/);
+  assert.doesNotMatch(runtime,/CLOUDFLARE_AUXILIARY_API_TOKEN/);
+  assert.doesNotMatch(runtime,/CLOUDFLARE_API_TOKEN/);
+});
 
 test('account center separates infrastructure, work accounts, channels and services', () => {
   const source = read('external-account-admin.js');
