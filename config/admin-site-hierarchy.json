@@ -119,13 +119,6 @@
       "navigationProfile": "role-projected-site-admin"
     },
     {
-      "id": "trade",
-      "publicPath": "/trade",
-      "adminPath": "/trade/admin",
-      "parentId": "platform",
-      "navigationProfile": "role-projected-site-admin"
-    },
-    {
       "id": "invest",
       "publicPath": "/invest",
       "adminPath": "/invest/admin",
