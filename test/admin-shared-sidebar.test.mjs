@@ -75,7 +75,8 @@ test('global navigation remains synchronized to the active panel and opens an ax
   assert.match(sidebar, /const defaultDefinition = getAdminMenuItem\(defaultSection\)/);
   assert.match(sidebar, /defaultDefinition\?\.adminHandoff !== true/);
   assert.match(sidebar, /activateSection\(nav, defaultSection\)/);
-  assert.match(sidebar, /const selected = section !== 'command-home' && button\.dataset\.adminGlobalGroup === group/);
+  assert.match(sidebar, /const selected = section === 'command-home' && !focusedGroup/);
+  assert.match(sidebar, /const selected = button\.dataset\.adminGlobalGroup === group && \(section !== 'command-home' \|\| Boolean\(focusedGroup\)\)/);
   assert.match(sidebar, /const displayedSection = group === activeGroup \? section : ''/);
 });
 
@@ -87,6 +88,8 @@ test('handoff-backed default groups stay open without immediate navigation', () 
   assert.match(globalClick, /defaultDefinition\?\.adminHandoff !== true/);
   assert.match(globalClick, /activateSection\(nav, defaultSection\)/);
   assert.match(globalClick, /delete nav\.dataset\.adminFocusedGroup/);
+  assert.match(sidebar, /const selected = section === 'command-home' && !focusedGroup/);
+  assert.match(sidebar, /section !== 'command-home' \|\| Boolean\(focusedGroup\)/);
 });
 
 test('global menu labels use readable contrast on the dark primary sidebar', () => {
