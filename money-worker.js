@@ -22,7 +22,7 @@ function runtimeConfig(env){const readiness=buildIntegrationReadiness(env);retur
   autonomousFinancialExecution:false,
   humanGateRequired:true,
   sensitiveCredentialCollection:false,
-  persistence:'none-v2-readiness',
+  persistence:'none-v3-readiness',
   apiStatus:'integration-readiness',
   integrationVersion:readiness.version,
   canonicalPath:'/money',
@@ -58,7 +58,7 @@ export default{async fetch(request,env){
     const p=await body(request);if(!p||hasSensitiveKeys(p))return json({error:'invalid_or_sensitive_revoke_payload'},400);
     const provider=providerFor(p.providerId);if(!provider)return json({error:'provider_not_found'},404);
     logSecurity('consent-revocation-requested',{providerId:provider.id});
-    return json({ok:true,providerId:provider.id,revoked:true,activeConnection:false,persistence:'none-v2-readiness',message:'현재 V2 준비단계에는 영구 저장된 금융 연결정보가 없어 즉시 비활성 상태로 확인됩니다.'});
+    return json({ok:true,providerId:provider.id,revoked:true,activeConnection:false,persistence:'none-v3-readiness',message:'현재 V3 준비단계에는 영구 저장된 금융 연결정보가 없어 즉시 비활성 상태로 확인됩니다.'});
   }
   if(url.pathname==='/api/connect/begin'&&request.method==='POST'){
     const p=await body(request);if(!p||hasSensitiveKeys(p))return json({error:'invalid_or_sensitive_connection_payload'},400);
