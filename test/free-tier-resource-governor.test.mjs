@@ -77,3 +77,17 @@ test('AWS remains optional and plan-dependent until measured telemetry exists',(
   assert.equal(governor.providers.aws.highestUsagePercent,null);
   assert.equal(governor.providers.aws.automaticPaidUpgrade,false);
 });
+
+test('resource governor publishes adaptive infrastructure decision from measured quota snapshots',()=>{
+  const now=Date.parse('2026-09-16T00:00:00Z');
+  const governor=buildFreeTierResourceGovernor({
+    now,
+    snapshots:[
+      {provider:'cloudflare',metric:'workers_requests_month',period_start:'2026-09',observed_value:4000000,free_limit:10000000,source:'workers-analytics',observed_at:'2026-09-16T00:00:00Z'}
+    ]
+  });
+  assert.equal(governor.adaptiveInfrastructure.policyId,'EKODI-ADAPTIVE-INFRA-001');
+  assert.equal(governor.adaptiveInfrastructure.mode,'save');
+  assert.equal(governor.adaptiveInfrastructure.serviceActions.S0.staleFallbackAllowed,false);
+  assert.equal(governor.adaptiveInfrastructure.serviceActions.S3.action,'batch-auxiliary');
+});

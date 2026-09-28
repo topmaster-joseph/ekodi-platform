@@ -1,4 +1,5 @@
 import { evaluateFreeTierQuota, freeTierState } from './free-tier-quota-guard.js';
+import { buildAdaptiveInfrastructureDecision } from './adaptive-resource-orchestrator.js';
 
 const MB=1024*1024;
 const GB=1024*1024*1024;
@@ -107,6 +108,7 @@ export function evaluateResourceMetric(row,{now=Date.now(),staleAfterHours=26}={
     state:percent==null?'unknown':capacityFull?'capacity_full':freeTierState(percent),
     action:capacityFull?(definition?.fullAction||'block_new_resource'):percent==null?'telemetry_missing':evaluateFreeTierQuota({percent}).action,
     measured,stale,source:String(row?.source||''),observedAt,
+    periodStart:String(row?.period_start||''),
   });
 }
 
@@ -149,12 +151,17 @@ export function buildFreeTierResourceGovernor({snapshots=[],states=[],now=Date.n
       }:null,
     });
   }
+  const adaptiveInfrastructure=buildAdaptiveInfrastructureDecision({
+    metrics:evaluated,
+    now,
+  });
   return Object.freeze({
     schemaVersion:2,
     generatedAt:new Date(now).toISOString(),
     measuredTelemetryOnly:true,
     staleAfterHours,
     automaticPaidUpgrade:false,
+    adaptiveInfrastructure,
     providers:Object.freeze(providers),
   });
 }

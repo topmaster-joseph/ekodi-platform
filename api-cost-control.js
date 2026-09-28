@@ -228,6 +228,7 @@ export async function handleApiCostControl(request, env = {}) {
       },
       sponsoredAi: allowance,
       resourceGovernor: { ...resourceGovernor, ledgerAvailable: quotaLedger.available, catalog: FREE_TIER_RESOURCE_CATALOG },
+      adaptiveInfrastructure: resourceGovernor.adaptiveInfrastructure,
       providers,
       series,
       policy: {
