@@ -13,10 +13,12 @@ test('delegated admins use task-first navigation without changing authority',asy
     read('store-portfolio-admin-page.js'),
   ]);
 
-  assert.match(workspace,/label:'홈'/);
-  assert.match(workspace,/label:'소통 · 홍보'/);
-  assert.match(workspace,/label:'운영 · 재무'/);
-  assert.match(workspace,/label:'사이트 · 권한'/);
+  assert.match(workspace,/label:'운영'/);
+  assert.match(workspace,/label:'고객 · 업무'/);
+  assert.match(workspace,/label:'마케팅'/);
+  assert.match(workspace,/label:'경영'/);
+  assert.match(workspace,/label:'운영도구'/);
+  assert.match(workspace,/label:'사이트 관리'/);
   assert.match(workspace,/label:'오늘 할 일'/);
   assert.match(workspace,/label:'소통 · 콘텐츠'/);
   assert.match(workspace,/label:'업무 처리'/);
