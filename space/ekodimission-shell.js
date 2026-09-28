@@ -85,6 +85,7 @@
     const language=document.createElement('label');
     language.className='mission-language';
     language.dataset.missionLanguageControl='';
+    language.hidden=true;
     language.setAttribute('title','언어 선택');
     const select=document.createElement('select');
     select.setAttribute('aria-label','언어 선택');
@@ -114,6 +115,8 @@
       const normalize=value=>aliases.get(String(value||'').trim().toLowerCase())||'';
       const available=languages.filter(item=>published.has(item.locale));
       if(!available.some(item=>item.locale===sourceLocale))available.unshift({locale:sourceLocale,short:'한국어',label:'한국어'});
+      const languageControl=select.closest('[data-mission-language-control]');
+      if(languageControl)languageControl.hidden=available.length<=1;
       select.replaceChildren(...available.map(item=>{
         const option=document.createElement('option');
         option.value=item.locale;
