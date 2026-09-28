@@ -115,3 +115,8 @@ service = "ekodi-social-staging"
 
 
 
+
+
+[[services]]
+binding = "MALL_API"
+service = "ekodi-mall-api-staging"
