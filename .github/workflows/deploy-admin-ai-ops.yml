@@ -1,6 +1,11 @@
 name: Verify Admin AI Ops
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-admin-ai-ops.yml'
+      - 'test/admin-deploy-report.test.mjs'
   pull_request:
     paths:
       - '.github/workflows/deploy-admin-ai-ops.yml'
@@ -126,7 +131,7 @@ jobs:
 
   verify_production:
     needs: validate
-    if: ${{ always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')) }}
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
