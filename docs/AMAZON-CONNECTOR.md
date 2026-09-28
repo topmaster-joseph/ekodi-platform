@@ -70,3 +70,5 @@ A paid-feature switch does not by itself authorize spending. A currently valid f
 The policy engine classifies execution into levels 0-5: free only, free tier, credit, micro-paid, monthly-paid, and persistent-paid. Live SP-API mutation remains separately disabled until the production adapter gate is explicitly enabled.
 
 Release approval is tracked by the protected PR `constitution-approved` label after explicit platform-owner authorization.
+
+Constitution approval evidence: PR label `constitution-approved` records the owner's approval for the protected free-tier policy extension.
