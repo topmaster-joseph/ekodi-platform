@@ -22,12 +22,12 @@ test('trade partner and trade admin routes are apex workspace routes',async()=>{
   assert.ok(router.includes("isTradePartnerPath(url.pathname))return injectEkodiTenantReadability(tradePartnerPage())"));
   assert.ok(portal.includes('export function isTradePartnerPath'));
   assert.ok(portal.includes('(?:trade|ekodibiz\\/trade)'));
-  assert.ok(admin.includes('/trade\\/admin'));
+  assert.ok(admin.includes("standaloneTrade?'/trade/admin'"));
   for(const asset of ['/workspace-trade-admin.js','/workspace-trade-portal.css','/workspace-trade-portal.js'])assert.ok(wrangler.includes(`"${asset}"`),asset);
   assert.match(wrangler,/pattern = "ekodi\.kr\/trade\*"[\s\S]*zone_name = "ekodi\.kr"/);
   const probe=JSON.parse(manifestText).worker.requests.find(x=>x.url==='https://ekodi.kr/trade');
   assert.equal(probe?.candidateVerify,false);
-  assert.match(probe?.candidateVerifyReason||'',/run_worker_first bootstrap/);
+  assert.match(probe?.candidateVerifyReason||'',/canonical \/trade route/);
   assert.ok(probe?.expect?.includes('PRIVATE TRADE WORKSPACE'));
   assert.ok(probe?.headerExpect?.includes('x-ekodi-route: trade-partner-workspace'));
 });
@@ -129,7 +129,7 @@ test('trade products expose separate buyer admin, supplier collaboration and con
   assert.ok(admin.includes('에코디 구매·운영'));
   assert.ok(admin.includes('공급자 협업'));
   assert.ok(admin.includes('소비자 구매'));
-  assert.ok(admin.includes('/trade/products/'));
+  assert.ok(admin.includes("publicBase=standaloneTrade?'/trade'"));
   assert.ok(portal.includes('/products\\/([^/]+)\\/supplier'));
   assert.ok(portal.includes('requestedProductCode'));
   assert.ok(publicPage.includes('CONSUMER PRODUCT'));
