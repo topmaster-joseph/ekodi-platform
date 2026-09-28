@@ -692,7 +692,7 @@
 
     const preview = text('span', '역할·상태만 변경되며 목록 공개 설정은 유지됩니다.', 'client-bulk-preview');
     const apply = button('일괄 적용', 'primary compact');
-    apply.disabled = !selected.length;
+    apply.disabled = true;
     const result = document.createElement('div');
     result.className = 'client-bulk-result';
 
