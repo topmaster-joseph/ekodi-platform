@@ -16,7 +16,9 @@
     "admin-demand-loader.js",
     "admin-assist-bootstrap.js",
     "admin-authenticated-shell.js",
-    "mall.js"
+    "mall.js",
+    "common-services-admin.js",
+    "admin-provider-control.js"
   ],
   "serverRuntimeFiles": [
     "ai-control-worker.js"
@@ -25,7 +27,9 @@
     "monitor-status.json"
   ],
   "fingerprintRequiredAssets": [
-    "admin-ai-control-plane.js"
+    "admin-ai-control-plane.js",
+    "common-services-admin.js",
+    "admin-provider-control.js"
   ],
   "csp": {
     "retiredHostAllowed": false,
