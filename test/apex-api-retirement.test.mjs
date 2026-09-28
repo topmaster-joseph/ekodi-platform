@@ -74,19 +74,27 @@ test('canonical apex API execution policy blocks retired browser and Admin host 
   }
 
   const controlPlane=read('admin-ai-control-plane.js');
+  const commonServices=read('common-services-admin.js');
+  const providerControl=read('admin-provider-control.js');
   const aiControl=read('ai-control-worker.js');
   const postbuild=read('scripts/admin-performance-postbuild.mjs');
   const e2e=read('scripts/admin-authenticated-e2e.mjs');
+  const productionE2e=read('scripts/verify-admin-production-ui-e2e.mjs');
   const pkg=JSON.parse(read('package.json'));
   const monitor=JSON.parse(read('monitor-status.json'));
   const api=monitor.sites.find(item=>item.id==='api');
 
   assert.match(controlPlane,/const API='https:\/\/ekodi\.kr'/);
+  assert.match(commonServices,/const CONTROL='https:\/\/ekodi\.kr'/);
+  assert.match(providerControl,/const API='https:\/\/ekodi\.kr'/);
   assert.match(aiControl,/clean\(env\.CONTROL_API_URL\)\|\|'https:\/\/ekodi\.kr'/);
   assert.match(postbuild,/admin-ai-control-plane\.js/);
   assert.match(e2e,/retiredApiRequests/);
   assert.match(e2e,/Retired API browser requests detected/);
   assert.match(e2e,/Retired API console references detected/);
+  assert.match(productionE2e,/retiredApiRequests/);
+  assert.match(productionE2e,/Retired API browser requests detected/);
+  assert.match(productionE2e,/Retired API console references detected/);
   assert.match(pkg.scripts.precheck,/validate-canonical-api-execution\.mjs/);
   assert.equal(api.domain,'ekodi.kr');
   assert.equal(api.url,'https://ekodi.kr/api/health');
