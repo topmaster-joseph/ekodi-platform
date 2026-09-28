@@ -134,10 +134,36 @@ test('trade products expose separate buyer admin, supplier collaboration and con
   assert.ok(portal.includes('requestedProductCode'));
   assert.ok(publicPage.includes('CONSUMER PRODUCT'));
   assert.ok(publicPage.includes('에코디몰에서 구매하기'));
-  assert.ok(publicPage.includes('/ekodimall?trade_product='));
+  assert.ok(!publicPage.includes('/ekodimall?trade_product='));
+  assert.ok(publicPage.includes("sale_status==='available'&&p.mall_public_url"));
+  assert.ok(publicPage.includes('판매 준비 중'));
   assert.ok(router.includes('tradeProductPublicRoute'));
   assert.ok(router.includes('tradeProductPublicPage'));
 });
+test('trade public catalog separates consumer-safe data and guards checkout readiness',async()=>{
+  const [sql,admin,publicPage]=await Promise.all([
+    read('supabase/migrations/20260928071500_trade_product_public_catalog.sql'),
+    read('workspace-trade-admin-page.js'),
+    read('trade-product-public-page.js')
+  ]);
+  assert.ok(sql.includes('public.trade_product_public_profiles'));
+  assert.ok(sql.includes('enable row level security'));
+  assert.ok(sql.includes("to anon"));
+  assert.ok(sql.includes("publication_status='published'"));
+  assert.ok(sql.includes('trade_product_public_profiles_available_requires_checkout'));
+  assert.ok(sql.includes("sale_status <> 'available'"));
+  assert.ok(sql.includes('list_price_krw is not null and mall_public_url is not null'));
+  assert.ok(admin.includes('tradePublicProfileForm'));
+  assert.ok(admin.includes('소비자 공개 · 판매 설정'));
+  assert.ok(admin.includes('에코디몰 구매 URL'));
+  assert.ok(admin.includes("saleStatus==='available'&&(!price||!mallUrl)"));
+  assert.ok(publicPage.includes('trade_product_public_profiles'));
+  assert.ok(publicPage.includes("sale_status==='available'&&p.mall_public_url"));
+  assert.ok(publicPage.includes('에코디몰에서 구매하기'));
+  assert.ok(publicPage.includes('판매 준비 중'));
+  assert.ok(!publicPage.includes('/ekodimall?trade_product='));
+});
+
 test('trade admin uses shared two-level UI and canonical apex auth',async()=>{
   const [workspaceAdmin,tradeAdmin]=await Promise.all([read('workspace-admin-page.js'),read('workspace-trade-admin-page.js')]);
   assert.ok(workspaceAdmin.includes("tradeAdminMatch=clean.match(/^\\/(?:trade\\/admin|[^/]+\\/trade\\/admin)"));
