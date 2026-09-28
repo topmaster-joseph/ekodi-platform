@@ -113,6 +113,9 @@ test('live production proof is daily quota-gated instead of consuming AI budget 
   const workflow = fs.readFileSync(new URL('../.github/workflows/verify-ekodi-orchestrator-live-e2e.yml', import.meta.url), 'utf8');
   assert.match(workflow, /schedule:/);
   assert.match(workflow, /cron: '15 0 \* \* \*'/);
+  assert.match(workflow, /cron: '45 0 \* \* \*'/);
+  assert.match(workflow, /already_proven_today/);
+  assert.match(workflow, /provider_diversity >= 1/);
   assert.doesNotMatch(workflow, /workflow_run:/);
   assert.doesNotMatch(workflow, /workflows: \['Deploy Control API'\]/);
   assert.match(workflow, /ai_provider_daily_budget/);
