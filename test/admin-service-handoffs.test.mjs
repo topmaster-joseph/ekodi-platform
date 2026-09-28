@@ -17,6 +17,7 @@ const handoffSource=fs.readFileSync(path.join(root,'admin-service-handoffs.js'),
 const HIERARCHY_TO_CATALOG=Object.freeze({
   ekodibiz:'biz',
   ekodimall:'mall',
+  ekodibooks:'books',
   'ekodibiz-trade':'trade',
   ekodichurch:'church',
   cgma:'cgma',
