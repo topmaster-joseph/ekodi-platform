@@ -86,9 +86,9 @@ test('Tax belongs to the EKODIBIZ dedicated admin menu, not global navigation', 
   assert.match(registry, /id: 'tax'/);
   assert.match(registry, /id: 'tax'[^\n]*internal: true/);
   assert.match(bizRegistry, /id: 'tax'/);
-  assert.match(bizRegistry, /adminHref: '\\/tax\\/admin'/);
+  assert.ok(bizRegistry.includes("adminHref: '/tax/admin'"));
   assert.match(bizRegistry, /\^\\\/tax/);
-  assert.match(portal, /id=\"adminEntry\"[\\s\\S]*관리자센터/);
+  assert.ok(portal.includes('id="adminEntry"') && portal.includes('관리자센터'));
 });
 
 test('shared deployment manifest verifies Tax portal', async () => {
