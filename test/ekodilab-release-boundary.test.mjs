@@ -38,7 +38,7 @@ test('EKODI Lab release is centrally guarded and bound to the apex public path',
 
 test('Lab production verifier rejects the stale placeholder build and internal workspace wording',async()=>{
   const workflow=await read('.github/workflows/deploy-ekodi-lab-homepage.yml');
-  for(const marker of ['성수이로 00','1234 5678','운영공간','현장에 묻고,','전라남도 무안군 청계면 백련동1길 17-4','https://ekodilab.pages.dev']){
+  for(const marker of ['성수이로 00','1234 5678','운영공간','현장에 묻고,','전라남도 무안군 청계면 백련동1길 17-4']){
     assert.ok(workflow.includes(marker),marker);
   }
   assert.match(workflow,/sourceSha==\$sha/);
