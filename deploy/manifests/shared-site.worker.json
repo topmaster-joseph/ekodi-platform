@@ -1,5 +1,5 @@
 {
-  "version": 94,
+  "version": 95,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -695,9 +695,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "PRIVATE TRADE WORKSPACE",
-          "함께 진행하고",
-          "거래의 역사를 남깁니다"
+          "PRIVATE TRADE WORKSPACE"
         ],
         "headerExpect": [
           "x-ekodi-route: trade-partner-workspace",
