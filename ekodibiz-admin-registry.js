@@ -1,6 +1,6 @@
 const EKODIBIZ_ADMIN_SCOPE_DEFINITIONS = [
   {
-    id: 'common', label: '에코디비즈 공통', shortLabel: '공통',
+    id: 'common', label: '에코디비즈', shortLabel: '비즈',
     description: '에코디비즈 전체 공통 운영·서비스·설정을 관리합니다.',
     adminHref: '/ekodibiz/admin', publicHref: '/ekodibiz', kind: 'workspace',
   },
@@ -25,9 +25,9 @@ const EKODIBIZ_ADMIN_SCOPE_DEFINITIONS = [
     adminHref: '/tax', publicHref: '/tax', kind: 'service',
   },
   {
-    id: 'books', label: '에코디서점', shortLabel: '서점',
+    id: 'books', label: '에코디북스', shortLabel: '북스',
     description: '출판물·상담·출판대행·가격·기능 노출을 관리합니다.',
-    adminHref: '/admin/services/books?source=ekodibiz', publicHref: '/books', kind: 'service',
+    adminHref: '/books/admin', publicHref: '/books', kind: 'workspace',
   },
   {
     id: 'lab', label: '에코디연구소', shortLabel: '연구소',
@@ -50,7 +50,7 @@ export function ekodiBizAdminScopeForPath(pathname = '') {
   if (/^\/ekodibiz\/trade\/admin(?:\/|$)/i.test(path)) return 'trade';
   if (/^\/ekodibiz\/invest\/admin(?:\/|$)/i.test(path)) return 'invest';
   if (/^\/tax(?:\/|$)/i.test(path)) return 'tax';
-  if (/^\/admin\/services\/books(?:\/|$)/i.test(path)) return 'books';
+  if (/^\/books\/admin(?:\/|$)/i.test(path)) return 'books';
   if (/^\/(?:ekodi-lab|ekodilab)\/admin(?:\/|$)/i.test(path)) return 'lab';
   if (/^\/ekodibiz\/admin(?:\/|$)/i.test(path)) return 'common';
   return '';
