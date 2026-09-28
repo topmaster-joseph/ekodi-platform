@@ -66,7 +66,7 @@ function displayNameHint(note='') {
   return value.startsWith('display-name:') ? value.slice('display-name:'.length).trim() : '';
 }
 
-function effectiveCapabilityProjection(row) {
+export function projectEffectiveMemberCapabilities(row) {
   const roleCapabilities = tenantAdminCapabilitiesForRole(row?.role);
   const explicitCapabilities = effectiveAccessCapabilities(row);
   const denied = new Set([
@@ -86,7 +86,7 @@ function effectiveCapabilityProjection(row) {
 function publicMember(row, authority) {
   const status = accessStatus(row);
   const coreRole = canonicalCoreRole(row.role);
-  const capabilityProjection = effectiveCapabilityProjection(row);
+  const capabilityProjection = projectEffectiveMemberCapabilities(row);
   return {
     userId: row.user_id == null ? null : Number(row.user_id),
     email: row.email,
