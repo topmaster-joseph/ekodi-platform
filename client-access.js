@@ -527,7 +527,12 @@
     const capabilityList = document.createElement('div');
     capabilityList.className = 'client-capability-list';
     if (!capabilities.length) capabilityList.append(text('span', '추가 관리 권한 없음', 'client-capability muted'));
-    else for (const capability of capabilities) capabilityList.append(text('span', capabilityLabel(capability), 'client-capability'));
+    else for (const capability of capabilities) {
+      const label = capability === '*' && member.capabilityMode === 'all_except_denied'
+        ? '전체 역할 권한 · 명시적 차단 제외'
+        : capabilityLabel(capability);
+      capabilityList.append(text('span', label, 'client-capability'));
+    }
     capabilityBlock.append(capabilityList);
 
     const denied = Array.isArray(member.deniedCapabilities) ? member.deniedCapabilities : [];
@@ -541,6 +546,47 @@
       deniedBlock.append(deniedList);
       capabilityBlock.append(deniedBlock);
     }
+
+    const checker = document.createElement('div');
+    checker.className = 'client-capability-check';
+    checker.append(text('strong', '권한 확인'));
+    const checkerControls = document.createElement('div');
+    checkerControls.className = 'client-capability-check-controls';
+    const capabilitySelect = document.createElement('select');
+    capabilitySelect.setAttribute('aria-label', `${member.email} 확인할 권한`);
+    capabilitySelect.append(selectOption('', '확인할 권한 선택'));
+    for (const [capability, label] of Object.entries(CAPABILITY_LABELS)) {
+      if (capability === '*') continue;
+      capabilitySelect.append(selectOption(capability, label));
+    }
+    const capabilityButton = button('확인', 'secondary compact');
+    capabilityButton.disabled = true;
+    const capabilityResult = document.createElement('div');
+    capabilityResult.className = 'client-capability-check-result';
+    capabilitySelect.addEventListener('change', () => {
+      capabilityButton.disabled = !capabilitySelect.value;
+      capabilityResult.replaceChildren();
+    });
+    capabilityButton.addEventListener('click', async () => {
+      const capability = capabilitySelect.value;
+      if (!capability) return;
+      capabilityButton.disabled = true;
+      capabilityButton.textContent = '확인 중…';
+      capabilityResult.replaceChildren();
+      try {
+        const data = await request(`/api/customers/tenants/${encodeURIComponent(member.tenant.slug)}/access/evaluate?email=${encodeURIComponent(member.email)}&capability=${encodeURIComponent(capability)}`);
+        const status = text('strong', data.allowed ? '허용' : '차단', `client-capability-decision ${data.allowed ? 'allowed' : 'denied'}`);
+        const reason = text('span', data.reasonLabel || '현재 정책 기준으로 판정했습니다.');
+        capabilityResult.append(status, reason);
+      } catch (error) {
+        capabilityResult.append(text('span', error.message, 'operations-error'));
+      } finally {
+        capabilityButton.disabled = !capabilitySelect.value;
+        capabilityButton.textContent = '확인';
+      }
+    });
+    checkerControls.append(capabilitySelect, capabilityButton);
+    checker.append(checkerControls, capabilityResult);
 
     const audit = document.createElement('div');
     audit.className = 'client-audit';
@@ -569,7 +615,7 @@
     });
     audit.append(auditButton, auditBody);
 
-    details.append(summary, explanation, facts, capabilityBlock, audit);
+    details.append(summary, explanation, facts, capabilityBlock, checker, audit);
     return details;
   }
 
