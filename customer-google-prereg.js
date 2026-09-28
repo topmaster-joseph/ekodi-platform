@@ -1,6 +1,6 @@
 import authWorker, { isAllowedOrigin } from './auth-worker.js';
 import { stringifyCapabilityList, validateAccessGrantInput, accessGrantExpired } from './access-governance.js';
-import { accessGrantManagementDecision, resolveTenantAccessAuthority } from './tenant-access-authority.js';
+import { accessGrantManagementDecision, resolveTenantAccessAuthority, tenantGrantCapabilityDecision } from './tenant-access-authority.js';
 
 const TENANTS = Object.freeze([
   { slug: 'ekodibiz', name: '에코디비즈', domain: 'ekodi.kr/ekodibiz', realm: 'ekodibiz-client' },
@@ -59,6 +59,24 @@ function normalizeVisibility(value) {
 function validEmail(email) {
   return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
+
+function normalizeCapability(value) {
+  const capability = String(value || '').trim().toLowerCase();
+  return capability.length <= 160 && /^[a-z0-9][a-z0-9._:-]{0,159}$/.test(capability) ? capability : '';
+}
+
+const CAPABILITY_DECISION_LABELS = Object.freeze({
+  CAPABILITY_REQUIRED: '확인할 권한을 선택해 주세요.',
+  GRANT_NOT_FOUND: '등록된 접근권한이 없습니다.',
+  GRANT_DISABLED: '접근권한이 중지되어 있습니다.',
+  GRANT_EXPIRED: '접근권한이 만료되었습니다.',
+  GRANT_INACTIVE: '현재 활성 접근권한이 아닙니다.',
+  EXPLICIT_DENY: '명시적으로 차단된 권한입니다.',
+  ROLE_WILDCARD: '역할의 전체 권한 범위에 포함되며 명시적 차단 대상이 아닙니다.',
+  ROLE_ALLOW: '현재 역할에 포함된 권한입니다.',
+  EXPLICIT_ALLOW: '이 멤버십에 명시적으로 추가된 권한입니다.',
+  NOT_GRANTED: '현재 역할 또는 개별 권한에 포함되지 않습니다.',
+});
 
 function cors(origin, env) {
   const headers = {
@@ -262,6 +280,38 @@ export function sanitizedGrantAuditChanges(beforeRaw, afterRaw) {
     });
   }
   return changes;
+}
+
+async function evaluateAccessCapability(request, env, slug) {
+  const tenant = await tenantBySlug(env.DB, slug);
+  if (!tenant || tenant.status !== 'active') return json({ error: '등록된 사이트가 아닙니다.' }, 404, request, env);
+  const authority = await resolveTenantAccessAuthority(request, env, { tenantSlug: slug });
+  if (!authority.ok) return json({ error: '이 사이트의 사용자·권한을 확인할 권한이 없습니다.', code: authority.code }, authority.status || 403, request, env);
+
+  const url = new URL(request.url);
+  const email = normalizeEmail(url.searchParams.get('email'));
+  const capability = normalizeCapability(url.searchParams.get('capability'));
+  if (!validEmail(email)) return json({ error: '권한을 확인할 이메일을 입력해 주세요.' }, 400, request, env);
+  if (!capability) return json({ error: CAPABILITY_DECISION_LABELS.CAPABILITY_REQUIRED, code: 'CAPABILITY_REQUIRED' }, 400, request, env);
+
+  const grant = await env.DB.prepare(`SELECT role, enabled, principal_type, github_username,
+      capabilities_json, denied_capabilities_json, expires_at
+    FROM customer_access_grants
+    WHERE tenant_id = ? AND lower(trim(email)) = ?`)
+    .bind(tenant.id, email).first();
+
+  const decision = tenantGrantCapabilityDecision(grant || null, capability);
+  const reason = decision.reason || 'NOT_GRANTED';
+  return json({
+    tenant: { slug: tenant.slug, name: tenant.name },
+    email,
+    role: grant?.role || '',
+    roleLabel: grant?.role ? (ROLE_LABELS[grant.role] || grant.role) : '',
+    capability: decision.capability || capability,
+    allowed: Boolean(decision.allowed),
+    reason,
+    reasonLabel: CAPABILITY_DECISION_LABELS[reason] || '현재 정책 기준으로 확인할 수 없습니다.',
+  }, 200, request, env);
 }
 
 async function listAccessAudit(request, env, slug) {
@@ -560,6 +610,13 @@ export async function handleGoogleCustomerPreregistration(request, env) {
     const slug = normalizeTenant(preregisterMatch[1]);
     if (!slug) return json({ error: '등록된 고객사가 아닙니다.' }, 404, request, env);
     return preregister(request, env, slug);
+  }
+
+  const evaluateMatch = path.match(/^\/api\/customers\/tenants\/([a-z0-9-]+)\/access\/evaluate$/);
+  if (request.method === 'GET' && evaluateMatch) {
+    const slug = normalizeTenant(evaluateMatch[1]);
+    if (!slug) return json({ error: '등록된 고객사가 아닙니다.' }, 404, request, env);
+    return evaluateAccessCapability(request, env, slug);
   }
 
   const auditMatch = path.match(/^\/api\/customers\/tenants\/([a-z0-9-]+)\/access\/audit$/);

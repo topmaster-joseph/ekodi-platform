@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { projectEffectiveMemberCapabilities } from '../customer-member-directory.js';
+import { tenantGrantCapabilityDecision } from '../tenant-access-authority.js';
 import { sanitizedGrantAuditChanges } from '../customer-google-prereg.js';
 
 const [ui, css, directory, prereg] = await Promise.all([
@@ -42,8 +43,7 @@ test('directory includes capability source columns and sanitized projections', (
   assert.match(directory, /effectiveCapabilities:/);
   assert.match(directory, /deniedCapabilities:/);
   assert.match(directory, /schemaVersion:\s*6/);
-  assert.match(directory, /tenantAdminCapabilitiesForRole/);
-  assert.match(directory, /effectiveAccessCapabilities/);
+  assert.match(directory, /tenantGrantCapabilityProjection/);
 });
 
 test('audit history endpoint is tenant-authority scoped and sanitized', () => {
@@ -75,4 +75,66 @@ test('user access UI renders verified capabilities and lazy scoped audit history
   assert.match(css, /\.client-capability-list/);
   assert.match(css, /\.client-audit-item/);
   assert.match(css, /overflow-wrap:anywhere/);
+});
+
+
+test('capability decision applies explicit deny before wildcard or role allow', () => {
+  const wildcard = {
+    role: 'admin',
+    enabled: 1,
+    capabilities_json: '[]',
+    denied_capabilities_json: JSON.stringify(['tenant.finance.read']),
+  };
+  assert.deepEqual(
+    tenantGrantCapabilityDecision(wildcard, 'tenant.finance.read').allowed,
+    false,
+  );
+  assert.equal(
+    tenantGrantCapabilityDecision(wildcard, 'tenant.dashboard.read').reason,
+    'ROLE_WILDCARD',
+  );
+
+  const viewer = {
+    role: 'viewer',
+    enabled: 1,
+    capabilities_json: JSON.stringify(['tenant.preview.read']),
+    denied_capabilities_json: JSON.stringify(['tenant.sales.read']),
+  };
+  assert.equal(tenantGrantCapabilityDecision(viewer, 'tenant.worship.manage').reason, 'ROLE_ALLOW');
+  assert.equal(tenantGrantCapabilityDecision(viewer, 'tenant.preview.read').reason, 'EXPLICIT_ALLOW');
+  assert.equal(tenantGrantCapabilityDecision(viewer, 'tenant.sales.read').reason, 'EXPLICIT_DENY');
+});
+
+test('capability decision denies disabled and expired grants', () => {
+  assert.equal(
+    tenantGrantCapabilityDecision({ role:'admin', enabled:0 }, 'tenant.dashboard.read').reason,
+    'GRANT_DISABLED',
+  );
+  assert.equal(
+    tenantGrantCapabilityDecision({
+      role:'admin',
+      enabled:1,
+      expires_at:'2000-01-01T00:00:00.000Z',
+    }, 'tenant.dashboard.read', new Date('2026-09-28T00:00:00.000Z')).reason,
+    'GRANT_EXPIRED',
+  );
+});
+
+test('capability evaluator endpoint is scoped and returns sanitized decision fields', () => {
+  assert.match(prereg, /\/access\\\/evaluate/);
+  assert.match(prereg, /evaluateAccessCapability/);
+  assert.match(prereg, /tenantGrantCapabilityDecision/);
+  assert.match(prereg, /resolveTenantAccessAuthority/);
+  assert.match(prereg, /reasonLabel/);
+  assert.doesNotMatch(prereg, /policyObject/);
+});
+
+test('Admin checker asks the server for a capability decision instead of guessing locally', () => {
+  assert.match(ui, /권한 확인/);
+  assert.match(ui, /확인할 권한 선택/);
+  assert.match(ui, /\/access\/evaluate\?email=/);
+  assert.match(ui, /data\.allowed \? '허용' : '차단'/);
+  assert.match(ui, /data\.reasonLabel/);
+  assert.match(css, /\.client-capability-check-controls/);
+  assert.match(css, /@media\(max-width:700px\)\{\.client-capability-check-controls/);
 });

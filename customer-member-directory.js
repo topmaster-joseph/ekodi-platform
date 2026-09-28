@@ -1,8 +1,7 @@
 import { isAllowedOrigin } from './auth-worker.js';
-import { accessGrantManageable, resolveTenantAccessAuthority } from './tenant-access-authority.js';
+import { accessGrantManageable, resolveTenantAccessAuthority, tenantGrantCapabilityProjection } from './tenant-access-authority.js';
 import { canonicalCoreRole } from './ekodi-principal.js';
-import { accessGrantExpired, accessRolePreset, effectiveAccessCapabilities, parseCapabilityList } from './access-governance.js';
-import { tenantAdminCapabilitiesForRole } from './tenant-admin-policy.js';
+import { accessGrantExpired } from './access-governance.js';
 import { ensureCustomerAccessSchema } from './customer-google-prereg.js';
 
 const ROLE_LABELS = Object.freeze({
@@ -67,20 +66,7 @@ function displayNameHint(note='') {
 }
 
 export function projectEffectiveMemberCapabilities(row) {
-  const roleCapabilities = tenantAdminCapabilitiesForRole(row?.role);
-  const explicitCapabilities = effectiveAccessCapabilities(row);
-  const denied = new Set([
-    ...(accessRolePreset(row?.role)?.denied || []),
-    ...parseCapabilityList(row?.denied_capabilities_json),
-  ]);
-  const combined = [...new Set([...roleCapabilities, ...explicitCapabilities])];
-  const effective = combined.includes('*')
-    ? ['*']
-    : combined.filter(capability => !denied.has(capability));
-  return {
-    effectiveCapabilities: effective,
-    deniedCapabilities: [...denied].sort(),
-  };
+  return tenantGrantCapabilityProjection(row);
 }
 
 function publicMember(row, authority) {
@@ -104,6 +90,7 @@ function publicMember(row, authority) {
     joinedAt: row.grant_created_at,
     lastLoginAt: row.last_verified_at || row.last_login_at || '',
     identityProvider: 'google',
+    capabilityMode: capabilityProjection.mode,
     effectiveCapabilities: capabilityProjection.effectiveCapabilities,
     deniedCapabilities: capabilityProjection.deniedCapabilities,
     canManage: accessGrantManageable(authority, row),
