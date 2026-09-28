@@ -88,6 +88,7 @@ function sectionFromLocation(loc=window.location){
   if(pathSection===COMMAND_HOME&&String(params.get('service')||'').trim())return'engine-all';
   const hash=normalizeSection(loc.hash);
   if(hash)return hash;
+  if(pathSection===COMMAND_HOME&&/^\/admin\/?$/.test(String(loc.pathname||''))&&loc===window.location&&window.matchMedia?.('(max-width:760px)').matches)return'platform-overview';
   return pathSection;
 }
 function legacyHashFor(section){
@@ -113,7 +114,7 @@ function navigationTarget(section,loc=window.location,detailSegments=null){
   return canonicalUrl(section,loc,detail||[]);
 }
 window.EKODIAdminRoutes=Object.freeze({
-  version:'1.6.0',
+  version:'1.7.0',
   groups:Object.freeze({...GROUP_DEFAULT}),
   normalizeSection,
   normalizeDetailSegments,

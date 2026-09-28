@@ -76,8 +76,8 @@ if(responsiveStyle.includes('position:sticky!important'))fail('responsive.css mu
 if(!rootIndex.includes('.site-header{position:fixed;top:0;left:0;right:0;width:100%'))fail('ekodi.kr mobile site header must be fixed');
 if(!rootIndex.includes('body{padding-top:calc(var(--ekodi-home-header-height) + env(safe-area-inset-top,0px))}'))fail('ekodi.kr content must be offset below the fixed mobile header');
 if(/<script\b/i.test(rootIndex))fail('ekodi.kr root must preserve its zero-JavaScript contract');
-if(!adminStyle.includes('.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}'))fail('admin mobile content must be offset below the fixed topbar');
-if(!adminStyle.includes('.topbar{position:fixed!important;top:0!important;left:0!important;right:0!important;width:100%!important'))fail('admin mobile topbar must remain fixed across control-center pages');
+if(!adminStyle.includes('.app>main{padding-top:0;min-width:0;max-width:100vw}'))fail('admin mobile workspace must not reserve a legacy fixed-header spacer');
+if(!adminStyle.includes('.topbar{position:sticky!important;top:0!important;left:auto!important;right:auto!important;width:100%!important'))fail('admin mobile topbar must remain sticky inside the admin workspace');
 
 if(!authRouter.includes('manifestService'))fail('Auth Router lost manifest-backed service discovery');
 if(!authRouter.includes('isRegistryUserService'))fail('Auth Router lost registry-driven universal identity routing');

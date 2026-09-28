@@ -38,6 +38,9 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.equal(adminShell.includes('#ekodiAdminLocale'),true);
   assert.equal(adminShell.includes('const VERSION=2'),true);
   assert.match(adminShell,/position:sticky!important/);
+  assert.match(adminShell,/ADMIN-MOBILE-SHELL-003/);
+  assert.match(adminShell,/\.ekodi-admin-shell-main\{padding-top:0!important/);
+  assert.match(adminShell,/min-height:calc\(56px \+ env\(safe-area-inset-top,0px\)\)!important/);
   assert.match(adminShell,/#pageTitle\{display:block!important/);
   assert.doesNotMatch(adminShell,/ekodi-admin-header-title-hidden\{display:none/);
   assert.match(adminShell,/parentElement\?\.hidden\)node\.parentElement\.hidden=false/);
@@ -54,6 +57,11 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.equal(adminSidebar.includes("role-projected-sidebar-v4"),true);
   assert.match(adminSidebar,/nav\[data-ekodi-admin-nav-mode="primary"\] > \.nav\{display:none!important\}/);
   assert.match(adminSidebar,/const closeDrawer = \(\) =>/);
+  assert.match(adminSidebar,/MOBILE_NAV_CLASS = 'admin-mobile-primary-nav'/);
+  assert.match(adminSidebar,/DRAWER_SCRIM_CLASS = 'admin-mobile-drawer-scrim'/);
+  assert.match(adminSidebar,/dataset\.adminMobileGroup=item\.id/);
+  assert.match(adminSidebar,/dataset\.adminMobileMore='true'/);
+  assert.match(adminSidebar,/const setDrawerOpen = open =>/);
   assert.match(adminSidebar,/menuButton\.addEventListener\('click',toggleDrawer\)/);
   assert.equal(adminSidebar.includes("display:flex!important;align-items:center;gap:8px"),true);
   assert.equal(adminSidebar.includes("renderSidebarDetails(nav, globals, group, displayedSection || section, locale)"),true);

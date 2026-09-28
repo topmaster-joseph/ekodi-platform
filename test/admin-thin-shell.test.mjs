@@ -118,13 +118,17 @@ test('secondary hydration never has a forced requestIdleCallback deadline', asyn
   assert.match(loader, /timeRemaining\(\) < 6/);
 });
 
-test('normal login opens EKODI command console without auto-opening Campus or internal workspaces', async () => {
+test('desktop root keeps command console while mobile root opens the operational overview', async () => {
   const menu = await read('admin-menu-layout.js');
   const registry = await read('admin-menu-registry.js');
+  const routes = await read('admin-canonical-routes.js');
   assert.match(menu, /window\.__EKODIAdminMenuLayoutReady=\(async\(\)=>\{/);
   assert.match(menu, /let requestedSection = ''/);
   assert.match(menu, /const initialSection\s*=\s*explicitAdminSection\(\)/);
   assert.match(menu, /const explicitAdminSection=\(\)=>adminRoutes\(\)\?\.sectionFromLocation/);
+  assert.match(routes, /window\.matchMedia\?\.\('\(max-width:760px\)'\)\.matches/);
+  assert.match(routes, /return'platform-overview'/);
+  assert.match(routes, /version:'1\.7\.0'/);
   assert.match(menu, /else if\s*\(initialSection\)\s*\{[\s\S]*requestedSection\s*=\s*initialSection[\s\S]*queueMicrotask/);
   assert.match(menu, /if\(initialSection===COMMAND_HOME\)activateCommandHome\(\)/);
   assert.match(menu, /else activateCommandHome\(\)/);
