@@ -5,10 +5,11 @@ import { readFile } from 'node:fs/promises';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 
 test('EKODI Lab release is centrally guarded and bound to the apex public path',async()=>{
-  const [workflow,manifestText,guardrails]=await Promise.all([
+  const [workflow,manifestText,guardrails,controller]=await Promise.all([
     read('.github/workflows/deploy-ekodi-lab-homepage.yml'),
     read('deploy/manifests/ekodilab.pages.json'),
     read('scripts/validate-deployment-guardrails.mjs'),
+    read('scripts/guarded-pages-release.mjs'),
   ]);
   const manifest=JSON.parse(manifestText);
   assert.equal(manifest.targets.length,1);
@@ -34,6 +35,9 @@ test('EKODI Lab release is centrally guarded and bound to the apex public path',
   assert.match(guardrails,/deploy-ekodi-lab-homepage\.yml/);
   assert.match(guardrails,/sites\/ekodi-lab/);
   assert.match(guardrails,/ekodilab\.pages\.json/);
+  assert.match(controller,/ekodi_release_gate/);
+  assert.match(controller,/propagation check/);
+  assert.match(controller,/did not converge after/);
 });
 
 test('Lab production verifier rejects the stale placeholder build and internal workspace wording',async()=>{

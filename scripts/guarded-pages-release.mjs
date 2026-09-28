@@ -116,21 +116,35 @@ async function fetchText(url, label, attempts = 18) {
   throw new Error(`${label} did not become healthy: ${last}`);
 }
 
-async function verify(url, target, phase) {
-  const text = await fetchText(url, `${target.name || target.project} ${phase}`);
+async function verify(url, target, phase, attempts = 18) {
+  const label = `${target.name || target.project} ${phase}`;
   const expected = Array.isArray(target.expect) ? target.expect : [];
-  for (const marker of expected) {
-    if (!text.includes(marker)) {
-      throw new Error(`${target.name || target.project} ${phase} is missing marker: ${marker}`);
-    }
-  }
   const forbidden = Array.isArray(target.forbid) ? target.forbid : [];
-  for (const marker of forbidden) {
-    if (text.includes(marker)) {
-      throw new Error(`${target.name || target.project} ${phase} contains forbidden marker: ${marker}`);
+  let lastMismatch = '';
+  for (let index = 1; index <= attempts; index += 1) {
+    try {
+      const verificationUrl = new URL(url);
+      verificationUrl.searchParams.set('ekodi_release_gate', `${runId}-${attempt}-${index}`);
+      const text = await fetchText(verificationUrl.toString(), label, 1);
+      const missing = expected.filter(marker => !text.includes(marker));
+      const presentForbidden = forbidden.filter(marker => text.includes(marker));
+      if (!missing.length && !presentForbidden.length) {
+        console.log(`✅ ${label} verified: ${url}`);
+        return;
+      }
+      lastMismatch = [
+        missing.length ? `missing: ${missing.join(', ')}` : '',
+        presentForbidden.length ? `forbidden: ${presentForbidden.join(', ')}` : '',
+      ].filter(Boolean).join(' | ');
+    } catch (error) {
+      lastMismatch = error?.message || String(error);
+    }
+    if (index < attempts) {
+      console.log(`${label} propagation check ${index}/${attempts} not converged: ${lastMismatch}`);
+      await new Promise(resolve => setTimeout(resolve, 4000));
     }
   }
-  console.log(`✅ ${target.name || target.project} ${phase} verified: ${url}`);
+  throw new Error(`${label} did not converge after ${attempts} checks: ${lastMismatch}`);
 }
 
 function deploy(target, branch) {
