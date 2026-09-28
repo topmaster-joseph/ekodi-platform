@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   if (window.EKODIProviderControl) return;
-  const API='https://api.ekodi.kr', TOKEN_KEY='ekodi-auth-token';
+  const API='https://ekodi.kr', TOKEN_KEY='ekodi-auth-token';
   const ENVIRONMENTS=['production','staging','development'];
   const AI_ADMIN='/api/ai-modules/v1/providers/admin';
   const SUPABASE_DEFAULTS=[
