@@ -16,13 +16,13 @@ test('Campus first screen renders the full site catalog with direct operational 
   assert.match(js, /자담치킨 목포대점/);
   assert.match(js, /피자마루 목포대점/);
   assert.match(js, /요거트퍼플 목포대점/);
-  assert.match(js, /makeButton\('Manage'/);
-  assert.match(js, /makeButton\('Status'/);
-  assert.match(js, /link\.textContent = 'Open ↗'/);
+  assert.match(js, /makeSurfaceLink\('관리자'|makeButton\('Manage'/);
+  assert.match(js, /makeButton\('상태'/);
+  assert.match(js, /makeSurfaceLink\('사용자'/);
 });
 
 test('Campus always keeps pre-open platforms visible and prevents dead planned links', () => {
-  for (const domain of ['my.ekodi.kr', 'ekodi.kr/insurance', 'edu.ekodi.kr', 'media.ekodi.kr']) {
+  for (const domain of ['my.ekodi.kr', 'ekodi.kr/insurance', 'ekodi.kr/education', 'ekodi.kr/media']) {
     assert.match(js, new RegExp(domain.replaceAll('.', '\\.')));
   }
   assert.match(js, /domain: 'ekodi\.kr\/insurance'[\s\S]*url: 'https:\/\/ekodi\.kr\/insurance'[\s\S]*lifecycle: 'beta'/);
@@ -37,7 +37,7 @@ test('Campus always keeps pre-open platforms visible and prevents dead planned l
 });
 
 test('Campus includes verified ecosystem services that were missing from the old view', () => {
-  for (const domain of ['author.ekodi.kr', 'work.ekodi.kr', 'energy.ekodi.kr', 'business.ekodi.kr']) {
+  for (const domain of ['author.ekodi.kr', 'ekodi.kr/work', 'energy.ekodi.kr', 'business.ekodi.kr']) {
     assert.match(js, new RegExp(domain.replaceAll('.', '\\.')));
   }
   assert.match(js, /업무·생활/);
