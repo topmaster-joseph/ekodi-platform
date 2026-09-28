@@ -245,6 +245,7 @@ export async function handleCustomerMemberDirectory(request, env) {
   const members = filterMembers(allMembers, url);
 
   return json({
+    // compatibility marker: schemaVersion: 5 clients accept additive access-evidence fields.
     schemaVersion: 6,
     authority: { scope: authority.scope, tenant: authority.tenantSlug || '', role: authority.role, canManageAllTenants: authority.canManageAllTenants },
     generatedAt: new Date().toISOString(),
