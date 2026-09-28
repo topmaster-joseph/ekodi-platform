@@ -1,6 +1,6 @@
 import { ekodiBizAdminScopeSnapshot } from './ekodibiz-admin-registry.js';
 function tradeAdminClient(ADMIN_HUB){
-  const route=location.pathname.replace(/\/+$/,'').match(/^\/([^/]+)\/trade\/admin(?:\/([^/]+))?$/i);
+  const route=location.pathname.replace(/\/+$/,'').match(/^\/([^/]+)\/trade\/admin(?:\/([^/]+))?(?:\/.*)?$/i);
   if(!route)return;
   const workspaceUrlSlug=route[1].toLowerCase();
   const workspace=workspaceUrlSlug==='ekodibiz'?'ekoditrade':workspaceUrlSlug;
