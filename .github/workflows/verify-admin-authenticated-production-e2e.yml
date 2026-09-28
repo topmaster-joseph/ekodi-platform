@@ -127,7 +127,7 @@ jobs:
             artifacts/admin-authenticated-e2e/service-modules-direct-route.json
             artifacts/admin-authenticated-e2e/service-modules-*.png
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 7
 
       - name: Revoke short-lived E2E session
         if: always() && env.E2E_TOKEN_HASH != '' && env.E2E_AUTH_DB_ID != ''
