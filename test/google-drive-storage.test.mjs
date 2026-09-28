@@ -225,3 +225,18 @@ test('Google storage automatically reconnects only when Google credentials requi
   assert.match(cheonggyeAdmin, /GOOGLE_REAUTH_REQUIRED/);
   assert.match(cheonggyeAdmin, /Google Sheet 시스템 연결을 복구해야 합니다/);
 });
+
+
+test('YouTube broker callback never drops the operator into Storage UI', () => {
+  assert.match(control, /function marketingYouTubeCallbackRedirect/);
+  assert.match(control, /target\.searchParams\.set\('state',String\(marketingState\|\|''\)\)/);
+  assert.match(control, /if\(ticket\)target\.searchParams\.set\('ticket'/);
+  assert.match(control, /if\(error\)target\.searchParams\.set\('error'/);
+  assert.match(control, /YOUTUBE_REFRESH_TOKEN_MISSING/);
+  assert.match(control, /YOUTUBE_TARGET_ACCOUNT_MISMATCH/);
+  assert.match(control, /YOUTUBE_OAUTH_BROKER_CALLBACK_FAILED/);
+  const branch = control.match(/if\(payload\.purpose==='marketing_youtube'\)\{([\s\S]*?)\n    \}\n    const hash/);
+  assert.ok(branch, 'marketing YouTube callback branch must exist before Drive callback handling');
+  assert.doesNotMatch(branch[1], /adminRedirect\(|return html\(/);
+  assert.match(branch[1], /marketingYouTubeCallbackRedirect\(/);
+});
