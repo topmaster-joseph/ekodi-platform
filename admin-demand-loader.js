@@ -63,7 +63,7 @@
       scripts: ['work-admin.js'],
       real: '[data-section="work"]',
       hashes: ['#work'],
-      paths: ['/work', '/work/'],
+      paths: ['/work/admin', '/work/admin/'],
       insert: 'after-services',
     },
     clients: { label:'고객 사이트', icon:'C', styles:['client-access.css'], scripts:['client-access.js'], real:'[data-section="clients"]', hashes:['#clients'] },
