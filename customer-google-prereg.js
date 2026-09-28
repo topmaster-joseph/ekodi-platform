@@ -231,8 +231,6 @@ function parseAuditJson(value) {
 }
 
 function sanitizedAuditValue(field, value) {
-  if (field === 'enabled') return Number(value) === 1 ? '활성' : '중지';
-  if (field === 'visibility') return normalizeVisibility(value) === 'public' ? '공개' : '비공개';
   if (field === 'capabilities_json' || field === 'denied_capabilities_json') {
     try {
       const parsed = Array.isArray(value) ? value : JSON.parse(String(value || '[]'));
@@ -241,11 +239,13 @@ function sanitizedAuditValue(field, value) {
       return [];
     }
   }
-  if (value == null) return '';
+  if (value == null || value === '') return '';
+  if (field === 'enabled') return Number(value) === 1 ? '활성' : '중지';
+  if (field === 'visibility') return normalizeVisibility(value) === 'public' ? '공개' : '비공개';
   return String(value).slice(0, 240);
 }
 
-function sanitizedAuditChanges(beforeRaw, afterRaw) {
+export function sanitizedGrantAuditChanges(beforeRaw, afterRaw) {
   const before = parseAuditJson(beforeRaw);
   const after = parseAuditJson(afterRaw);
   const fields = Object.keys(AUDIT_FIELD_LABELS);
