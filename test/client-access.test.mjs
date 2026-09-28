@@ -101,10 +101,41 @@ test('canonical direct route loads the directory and refresh keeps scope visible
   assert.match(source, /member\.canManage !== false/);
 });
 
-test('mobile access table reflows into labelled cards rather than a squeezed desktop table', () => {
-  assert.match(source, /node\.dataset\.label = label/);
+test('member management uses a three-pane IAM workspace instead of inline table editors', () => {
+  assert.match(source, /function renderScopePane/);
+  assert.match(source, /function renderMemberList/);
+  assert.match(source, /function renderMemberDetail/);
+  assert.match(source, /client-iam-workspace/);
+  assert.match(source, /selectedMemberKey/);
+  assert.match(source, /renderMemberList\(members, selected\)/);
+  assert.match(source, /renderMemberDetail\(selected\)/);
+  const memberView = source.slice(source.indexOf('function renderMemberView'), source.indexOf('function renderTenantCards'));
+  assert.doesNotMatch(memberView, /memberTable\(/);
+  assert.doesNotMatch(source, /function memberTable/);
+});
+
+test('scope pane filters the center list while preserving pending and role filters', () => {
+  assert.match(source, /shell\.site\.value = tenant\.slug/);
+  assert.match(source, /shell\.site\.value = ''/);
+  assert.match(source, /forcePending \? 'pre_registered' : shell\.status\.value/);
+  assert.match(source, /selectedMemberFrom\(members\)/);
+  assert.match(source, /memberSelectionKey/);
+});
+
+test('selected member detail preserves read-only authority and reviewed mutations', () => {
+  assert.match(source, /const manageable = member\.canManage !== false/);
+  assert.match(source, /현재 관리자 권한에서는 이 멤버십을 조회만 할 수 있습니다/);
+  assert.match(source, /변경 저장/);
+  assert.match(source, /confirmAccessChanges\(member, changes\)/);
+  assert.match(source, /accessExplanation\(member\)/);
+});
+
+test('mobile IAM workspace stacks scope, list and detail without horizontal table dependency', () => {
+  assert.match(css, /\.client-iam-workspace\{display:grid/);
   assert.match(css, /@media\(max-width:700px\)/);
-  assert.match(css, /\.client-table thead\{display:none\}/);
-  assert.match(css, /content:attr\(data-label\)/);
+  assert.match(css, /\.client-iam-workspace\{display:grid;grid-template-columns:1fr\}/);
+  assert.match(css, /\.client-scope-pane\{display:flex/);
+  assert.match(css, /\.client-member-detail\{order:3/);
+  assert.match(css, /\.client-site-member-workspace\{grid-template-columns:1fr\}/);
   assert.match(css, /\.client-access-summary\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
 });
