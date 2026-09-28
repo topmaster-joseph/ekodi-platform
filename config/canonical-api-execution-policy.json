@@ -29,7 +29,7 @@
   "fingerprintRequiredAssets": [
     "admin-ai-control-plane.js",
     "common-services-admin.js",
-    "admin-provider-control.js"
+    "ai-ops-admin.js"
   ],
   "csp": {
     "retiredHostAllowed": false,
