@@ -111,6 +111,9 @@ test('account center separates infrastructure, work accounts, channels and servi
 });
 
 test('external account admin changes trigger the canonical shared-site production owner', () => {
+  const control = read('.github/workflows/deploy-control-api.yml');
+  assert.match(control, /- 'external-account-control\.js'/);
+  assert.match(control, /- 'cloudflare-account-pool\.js'/);
   const workflow = read('.github/workflows/deploy-site-core.yml');
   assert.match(workflow, /- 'external-account-admin\.js'/);
   assert.match(workflow, /- 'test\/external-account-control\.test\.mjs'/);
