@@ -23,9 +23,11 @@ test('Platform Admin uses seven explicit control areas with active direct-task n
     "'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'ai-module-spec', 'audit-records']",
   ]) assert.ok(sidebar.includes(marker), marker);
   assert.match(sidebar, /admin-context-tabs-shell/);
-  assert.match(sidebar, /display:flex!important/);
   assert.match(sidebar, /admin-command-entry/);
-  assert.match(sidebar, /dataset\.adminCommandHome = 'true'/);
+  assert.match(sidebar, /commandEntry\.hidden = true/);
+  assert.match(sidebar, /commandEntry\.style\.setProperty\('display', 'none', 'important'\)/);
+  assert.match(sidebar, /shell\.hidden = true/);
+  assert.match(sidebar, /shell\.style\.setProperty\('display', 'none', 'important'\)/);
   assert.match(sidebar, /activateSection\(nav, 'command-home'\)/);
     assert.match(sidebar, /role-projected-sidebar-v4/);
   assert.match(sidebar, /renderSidebarDetails\(nav, globals, group, displayedSection \|\| section, locale\)/);
