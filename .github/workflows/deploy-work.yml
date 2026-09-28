@@ -61,7 +61,7 @@ jobs:
           grep -Fq 'DATA_ENABLED = "true"' wrangler.work.toml
           ! grep -Fq 'work.ekodi.kr' wrangler.work.toml
           ! grep -Fq 'custom_domain = true' wrangler.work.toml
-          grep -Fq "work:{name:'EKODI Work'" auth-site/client-auth.js
+          grep -Fq "work:{name:'에코디워크 · 구인구직'" auth-site/client-auth.js
           grep -Fq "isRegistryUserService||trustedEkodiReturn" auth-site/auth-router.js
       - name: Verify Cloudflare credentials
         run: |
@@ -75,7 +75,7 @@ jobs:
             code=$(curl -sS -o /tmp/work-client-auth.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/auth/client-auth.js' || true)
             router=$(curl -sS -o /tmp/work-auth-router.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/auth/auth-router.js' || true)
             if [[ "$code" == "200" ]] && [[ "$router" == "200" ]] \
-              && grep -Fq "work:{name:'EKODI Work'" /tmp/work-client-auth.js \
+              && grep -Fq "work:{name:'에코디워크 · 구인구직'" /tmp/work-client-auth.js \
               && grep -Fq "returnTo:'https://ekodi.kr/work'" /tmp/work-client-auth.js \
               && grep -Fq "isRegistryUserService||trustedEkodiReturn" /tmp/work-auth-router.js; then
               echo 'Central Work auth realm is live.'
