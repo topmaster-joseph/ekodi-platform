@@ -40,3 +40,17 @@ test('admin home keeps the conversation-first surface but raises readable type s
   assert.match(css, /\.ekodi-assist-bubble\{font-size:15px/);
   assert.match(css, /\.ekodi-assist-command\{font-size:15px/);
 });
+
+test('all admin surfaces inherit compact readable density and left-anchored work content', async () => {
+  const [engine, workbench] = await Promise.all([
+    read('admin-design-engine.css'),
+    read('admin-conversation-workbench.css'),
+  ]);
+  assert.match(engine, /ADMIN-READABILITY-004/);
+  assert.match(engine, /margin-left:0!important/);
+  assert.match(engine, /line-height:1\.48!important/);
+  assert.match(workbench, /justify-content:center!important/);
+  assert.match(workbench, /min-width:156px!important/);
+  assert.match(workbench, /text-overflow:clip!important/);
+});
+
