@@ -77,6 +77,6 @@ test('all EKODI-branded business and item sites expose independent public/admin 
   for(const id of expected){const item=byId.get(id);assert.ok(item, id);assert.equal(item.kind,'site',id);assert.equal(item.siteRelation,'user',id);assert.equal(canonicalServiceAdminPath(item.basePath),item.basePath+'/admin',id);}
   assert.equal(byId.get('trade').basePath,'/trade');
   assert.equal(byId.get('invest').basePath,'/invest');
-  assert.equal(byId.get('publishing').name,'에코디출판');
+  assert.equal(byId.get('publishing').basePath,'/publishing');
   assert.equal(byId.get('education').name,'에코디교육');
 });
