@@ -22,9 +22,9 @@ V1 cannot:
 - transfer money, close an account, cancel/change automatic payment, sign, withdraw, or make a payment;
 - treat AI output as a substitute for a user's informed decision or a financial institution's eligibility check.
 
-## V2 integration-readiness layer
+## V3 integration-readiness layer
 
-V2 adds a regulated connection layer without pretending that uncontracted financial APIs are live.
+V3 adds a regulated connection layer without pretending that uncontracted financial APIs are live.
 
 Provider states:
 - `accountinfo`: available as an official handoff. EKODI does not receive the user's financial credentials or AccountInfo session.
@@ -48,7 +48,7 @@ The Worker returns `409 financial_execution_disabled` for `/api/execution`. This
 
 ## Data boundary
 
-The V2 readiness phase persists no financial planning payload, OAuth token, financial account identifier or financial credential. Browser UI uses demonstration aliases and relationship metadata only.
+The V3 readiness phase persists no financial planning payload, OAuth token, financial account identifier or financial credential. Browser UI uses demonstration aliases and relationship metadata only.
 
 The Worker may emit privacy-minimized security events containing only event type, provider id, action label, scope count and timestamp. Those events must not contain account numbers, card numbers, resident-registration numbers, tokens, secrets, balances or transaction content.
 
@@ -71,3 +71,10 @@ A live Open Banking adapter must not be activated merely by adding a client id. 
 Even after read APIs are enabled, transfer, withdrawal, account closure and autopay modification remain separately gated high-impact actions.
 
 No consumer browser session or AI-provider session may be used as a substitute for an authorized financial API.
+
+
+## Canonical route and Finance bridge
+
+The public EKODI Money address is `https://ekodi.kr/money`. The Money Worker has no EKODI public custom-domain route of its own; the apex Shared Site Worker reaches it only through the declared `MONEY` service binding. The Money Worker may read the Finance banking health endpoint through its `FINANCE` service binding to display whether EKODI tenant banking is connected. That bridge is health/readiness only: it cannot list tenant accounts, read transaction payloads, approve transfers, or execute transfers.
+
+KFTC Open Banking read access remains disabled until contract approval, the exact canonical OAuth redirect URI, replay-safe state storage, encrypted token storage, consent storage, approved read scopes, and a server-side provider adapter are all present. The separate Finance transfer gate remains disabled unless its own reviewed executor and human-confirmation requirements are satisfied.

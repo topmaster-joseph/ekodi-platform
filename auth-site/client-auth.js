@@ -29,7 +29,7 @@ const realms={
   invest:{name:'EKODI Investment',returnTo:'https://invest.ekodi.kr/',open:true,kind:'invest'},
   support:{name:'EKODI Support AI',returnTo:'https://ekodi.kr/support/',open:true,kind:'support'},
   publishing:{name:'Publishing',returnTo:'https://publishing.ekodi.kr/',open:true,kind:'publishing'},
-  money:{name:'EKODI Money',returnTo:'https://money.ekodi.kr/',open:true,kind:'money'},
+  money:{name:'EKODI Money',returnTo:'https://ekodi.kr/money/',origins:['https://ekodi.kr'],open:true,kind:'money'},
   mail:{name:'EKODI Mail',returnTo:'https://ekodi.kr/mail',open:true,kind:'mail'},
   live:{name:'EKODI Live',returnTo:'https://ekodi.kr/live',open:true,kind:'live'},
   cloud:{name:'EKODI Cloud',returnTo:'https://cloud.ekodi.kr/',open:true,kind:'cloud'},

@@ -1,3 +1,4 @@
+import { kftcOpenBankingReadiness } from './kftc-openbanking.js';
 export const MONEY_CONSENT_VERSION='2026-08-24.v1';
 
 export const MONEY_PROVIDERS=Object.freeze([
@@ -23,7 +24,7 @@ export const MONEY_PROVIDERS=Object.freeze([
     contractRequired:true,
     oauth:true,
     officialUrl:'https://openapi.kftc.or.kr/service/openBanking',
-    capabilities:['balance-inquiry','transaction-history','account-holder-check','cards','insurance','loans','deposit-transfer','withdrawal-transfer'],
+    capabilities:['balance-inquiry','transaction-history','account-holder-check','recipient-check'],
     execution:'disabled-until-contract-and-human-gate',
     note:'이용기관 신청·계약과 사용자 OAuth 인증/동의가 완료된 뒤 서버측 어댑터를 활성화합니다.'
   }),
@@ -54,14 +55,16 @@ const ALLOWED_SCOPES=new Set([
 
 export function providerFor(id){return MONEY_PROVIDERS.find(provider=>provider.id===String(id||''))||null;}
 
-export function normalizeScopes(scopes=[]){
-  return [...new Set((Array.isArray(scopes)?scopes:[]).map(value=>String(value||'').trim()).filter(scope=>ALLOWED_SCOPES.has(scope)))];
+export function normalizeScopes(scopes=[],providerId=''){
+  const provider=String(providerId||'');
+  const kftcAllowed=new Set(['accounts:read','balances:read','transactions:read']);
+  return [...new Set((Array.isArray(scopes)?scopes:[]).map(value=>String(value||'').trim()).filter(scope=>ALLOWED_SCOPES.has(scope)&&(provider!=='kftc-openbanking'||kftcAllowed.has(scope))))];
 }
 
 export function buildConsentPreview(providerId,scopes=[]){
   const provider=providerFor(providerId);
   if(!provider)return {ok:false,error:'provider_not_found'};
-  const normalized=normalizeScopes(scopes);
+  const normalized=normalizeScopes(scopes,providerId);
   return {
     ok:true,
     provider:{id:provider.id,name:provider.name,state:provider.state,liveAccess:provider.liveAccess},
@@ -77,17 +80,24 @@ export function buildConsentPreview(providerId,scopes=[]){
 }
 
 export function buildIntegrationReadiness(env={}){
-  const openBankingConfigured=env.KFTC_OPENBANKING_ENABLED==='true'&&Boolean(env.KFTC_OPENBANKING_CLIENT_ID)&&Boolean(env.KFTC_OPENBANKING_REDIRECT_URI)&&env.OAUTH_STATE_STORE_READY==='true';
+  const kftc=kftcOpenBankingReadiness(env);
+  const kftcState=kftc.readReady?'read-only-live':!kftc.contractApproved?'contract-required':!kftc.configurationReady?'security-configuration-required':'adapter-required';
   return {
-    version:2,
+    version:3,
     stage:'integration-readiness',
     providers:MONEY_PROVIDERS.map(provider=>({
       ...provider,
-      liveAccess:provider.id==='kftc-openbanking'?openBankingConfigured:false,
-      state:provider.id==='kftc-openbanking'&&openBankingConfigured?'configured-awaiting-approval':provider.state
+      liveAccess:provider.id==='kftc-openbanking'?kftc.readReady:false,
+      state:provider.id==='kftc-openbanking'?kftcState:provider.state
     })),
-    openBankingConfigured,
-    oauthStateStoreReady:env.OAUTH_STATE_STORE_READY==='true',
+    openBankingConfigured:kftc.configurationReady,
+    openBankingReadReady:kftc.readReady,
+    oauthStateStoreReady:kftc.oauthStateStoreReady,
+    tokenEncryptionReady:kftc.tokenEncryptionReady,
+    consentStoreReady:kftc.consentStoreReady,
+    contractApproved:kftc.contractApproved,
+    approvedReadScopes:kftc.approvedReadScopes,
+    canonicalRedirectUri:kftc.canonicalRedirectUri,
     financialExecution:false,
     autonomousFinancialExecution:false,
     sensitiveCredentialCollection:false

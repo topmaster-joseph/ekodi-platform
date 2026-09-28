@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { classifyAccount, buildCleanupPlan, buildFinancialCleanupBrief, requiresHumanGate } from '../money/core.js';
 import { buildConsentPreview, buildIntegrationReadiness, providerFor, securityEvent } from '../money/integrations.js';
+import { KFTC_OPENBANKING, kftcOpenBankingReadiness } from '../money/kftc-openbanking.js';
 
 test('inactive unlinked account is cleanup candidate',()=>{
   const r=classifyAccount({id:'a',institution:'A',alias:'old',balance:50000,inactiveDays:400,autoDebits:[]});
@@ -42,16 +44,21 @@ test('official accountinfo handoff remains available without live API access',()
   assert.equal(provider.liveAccess,false);
 });
 
-test('open banking remains disabled until contract and oauth state infrastructure are ready',()=>{
-  const readiness=buildIntegrationReadiness({KFTC_OPENBANKING_ENABLED:'true',KFTC_OPENBANKING_CLIENT_ID:'client',KFTC_OPENBANKING_REDIRECT_URI:'https://money.ekodi.kr/callback'});
-  assert.equal(readiness.openBankingConfigured,false);
-  const configured=buildIntegrationReadiness({KFTC_OPENBANKING_ENABLED:'true',KFTC_OPENBANKING_CLIENT_ID:'client',KFTC_OPENBANKING_REDIRECT_URI:'https://money.ekodi.kr/callback',OAUTH_STATE_STORE_READY:'true'});
+test('open banking requires contract, canonical redirect, security stores, approved scopes and server adapter',()=>{
+  const incomplete=buildIntegrationReadiness({KFTC_OPENBANKING_ENABLED:'true',KFTC_OPENBANKING_CLIENT_ID:'client',KFTC_OPENBANKING_REDIRECT_URI:KFTC_OPENBANKING.canonicalRedirectUri,OAUTH_STATE_STORE_READY:'true'});
+  assert.equal(incomplete.openBankingConfigured,false);
+  const configuredEnv={KFTC_OPENBANKING_ENABLED:'true',KFTC_OPENBANKING_CONTRACT_APPROVED:'true',KFTC_OPENBANKING_CLIENT_ID:'client',KFTC_OPENBANKING_REDIRECT_URI:KFTC_OPENBANKING.canonicalRedirectUri,OAUTH_STATE_STORE_READY:'true',TOKEN_ENCRYPTION_READY:'true',CONSENT_STORE_READY:'true',KFTC_OPENBANKING_APPROVED_READ_SCOPES:'accounts:read,balances:read,transactions:read'};
+  const configured=buildIntegrationReadiness(configuredEnv);
   assert.equal(configured.openBankingConfigured,true);
-  assert.equal(configured.financialExecution,false);
+  assert.equal(configured.openBankingReadReady,false);
+  const bound=buildIntegrationReadiness({...configuredEnv,KFTC_OPENBANKING_ADAPTER:{fetch:async()=>new Response('{}')}});
+  assert.equal(bound.openBankingReadReady,true);
+  assert.equal(bound.financialExecution,false);
+  assert.equal(kftcOpenBankingReadiness(configuredEnv).transferReady,false);
 });
 
 test('consent preview accepts read scopes only and separates execution',()=>{
-  const preview=buildConsentPreview('kftc-openbanking',['accounts:read','transactions:read','payment:write','accounts:read']);
+  const preview=buildConsentPreview('kftc-openbanking',['accounts:read','transactions:read','cards:read','payment:write','accounts:read']);
   assert.equal(preview.ok,true);
   assert.deepEqual(preview.scopes,['accounts:read','transactions:read']);
   assert.equal(preview.humanGateRequired,true);
@@ -63,4 +70,17 @@ test('security event contains metadata only',()=>{
   assert.equal(event.providerId,'kftc-openbanking');
   assert.equal(event.scopeCount,1);
   assert.equal('accountNumber' in event,false);
+});
+
+
+test('Money production contract is apex-only and Finance bridge is read-only',async()=>{
+  const files=await Promise.all(['wrangler.money.toml','deploy/manifests/money.worker.json','.github/workflows/deploy-money.yml','config/ecosystem-services.json','auth-site/client-auth.js','ekodi-service-manifest.js','platform-boundaries.json','governance/constitution/constitution.json','platform-route-registry.js'].map(async path=>[path,await readFile(new URL('../'+path,import.meta.url),'utf8')]));
+  const retired=['money','ekodi','kr'].join('.');
+  for(const [path,source] of files)assert.equal(source.includes(retired),false,`${path} must not retain the retired Money public host`);
+  const prod=files.find(([path])=>path==='wrangler.money.toml')[1];
+  assert.match(prod,/workers_dev = true/);assert.doesNotMatch(prod,/\[\[routes\]\]/);assert.match(prod,/binding = "FINANCE"[\s\S]*service = "ekodi-finance-api"/);
+  const manifest=JSON.parse(files.find(([path])=>path==='deploy/manifests/money.worker.json')[1]);
+  assert.ok(manifest.worker.requests.some(item=>item.url==='https://ekodi.kr/money/'));assert.ok(manifest.worker.requests.some(item=>item.url==='https://ekodi.kr/money/api/finance-bridge'));
+  const worker=await readFile(new URL('../money-worker.js',import.meta.url),'utf8');
+  assert.match(worker,/finance\.internal\/api\/finance\/banking\/health/);assert.doesNotMatch(worker,/finance\.internal\/api\/finance\/banking\/(?:accounts|transactions|transfers)/);assert.match(worker,/financialExecution:false/);
 });
