@@ -169,3 +169,12 @@ test('Admin entry stays Worker-first while Admin static modules remain asset-fir
     assert.equal(wrangler.includes(`"${ordinaryStatic}"`), false, `${ordinaryStatic} should use Static Assets asset-first delivery`);
   }
 });
+
+test('production budget exposes adaptive infrastructure outputs without changing billing automatically',async()=>{
+  const source=await readFile('scripts/cloudflare-production-budget.mjs','utf8');
+  assert.match(source,/buildAdaptiveInfrastructureDecision/);
+  assert.match(source,/adaptive_mode/);
+  assert.match(source,/adaptive_burn_rate/);
+  assert.match(source,/adaptive\.blockNonessential/);
+  assert.match(source,/automaticPurchase:\s*false/);
+});
