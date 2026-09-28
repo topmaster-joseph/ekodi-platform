@@ -4,7 +4,7 @@
     {
       "name": "EKODI Lab",
       "project": "ekodilab",
-      "directory": "lab-source",
+      "directory": "sites/ekodi-lab",
       "productionUrl": "https://ekodilab.pages.dev/",
       "expect": [
         "에코디연구소",
