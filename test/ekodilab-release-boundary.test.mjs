@@ -32,7 +32,7 @@ test('EKODI Lab release is centrally guarded and bound to the apex public path',
   assert.doesNotMatch(workflow,/Configure EKODI DNS|Attach custom domains/);
 
   assert.match(guardrails,/deploy-ekodi-lab-homepage\.yml/);
-  assert.match(guardrails,/sites\\/ekodi-lab/);
+  assert.match(guardrails,/sites\/ekodi-lab/);
   assert.match(guardrails,/ekodilab\.pages\.json/);
 });
 
