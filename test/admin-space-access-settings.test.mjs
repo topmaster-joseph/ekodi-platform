@@ -24,10 +24,12 @@ test('user settings show only user roles and edit visibility per space',async()=
   const source=await read('client-access.js');
   assert.match(source,/USER_ROLE_OPTIONS/);
   assert.match(source,/USER_ROLE_SET\.has\(member\.role\)/);
-  assert.match(source,/사용자설정/);
+  assert.match(source,/사용자·접근 관리/);
   assert.match(source,/비공개/);
   assert.match(source,/visibility:visibility\.value/);
   assert.match(source,/access\/update/);
+  assert.match(source,/member\.canManage !== false/);
+  assert.match(source,/플랫폼 전체 권한으로 자동 확장되지 않습니다/);
   assert.doesNotMatch(source,/for \(const \[value, label\] of ROLE_OPTIONS\) role\.append/);
 });
 

@@ -28,11 +28,11 @@ test('customer member hub uses one authenticated directory endpoint instead of N
   assert.doesNotMatch(source, /\/api\/customer\/(signup|register|login|accept-invite)/);
 });
 
-test('Clients UI separates all members, site memberships, pending Google auth and roles', () => {
-  assert.match(source, /전체 회원/);
-  assert.match(source, /사이트별/);
+test('Clients UI separates users, scoped sites, pending Google auth and roles', () => {
+  assert.match(source, /전체 사용자/);
+  assert.match(source, /사이트·공간/);
   assert.match(source, /인증 대기/);
-  assert.match(source, /권한별/);
+  assert.match(source, /역할·권한/);
   assert.match(source, /모든 사이트/);
   assert.match(source, /모든 권한/);
   assert.match(css, /\.client-tabs/);
@@ -79,4 +79,32 @@ test('Clients reuses the shared sidebar button and mounts based on panel readine
   assert.match(source, /let navButton = nav\.querySelector\('\[data-section="clients"\]'\)/);
   assert.match(source, /if \(!navButton\) \{/);
   assert.doesNotMatch(source, /document\.querySelector\('\[data-section="clients"\]'\)\) return null/);
+});
+
+
+test('access center never leaves loading, empty, auth and error states ambiguous', () => {
+  assert.match(source, /REQUEST_TIMEOUT_MS = 8000/);
+  assert.match(source, /new AbortController\(\)/);
+  assert.match(source, /function statePanel/);
+  assert.match(source, /statePanel\(\s*'loading'/);
+  assert.match(source, /사용자·접근 정보를 불러오지 못했습니다/);
+  assert.match(source, /다시 확인/);
+  assert.match(source, /lastSuccessfulSyncAt/);
+  assert.match(css, /\.client-state/);
+  assert.match(css, /\.client-syncbar/);
+});
+
+test('canonical direct route loads the directory and refresh keeps scope visible', () => {
+  assert.ok(source.includes("const directRoute = /^\\/admin\\/people\\/users-access\\/?$/.test(location.pathname)"));
+  assert.match(source, /queueMicrotask\(\(\) => loadDirectory\(\)\)/);
+  assert.match(source, /사이트 멤버십 권한은 플랫폼 전체 권한으로 자동 확장되지 않습니다/);
+  assert.match(source, /member\.canManage !== false/);
+});
+
+test('mobile access table reflows into labelled cards rather than a squeezed desktop table', () => {
+  assert.match(source, /node\.dataset\.label = label/);
+  assert.match(css, /@media\(max-width:700px\)/);
+  assert.match(css, /\.client-table thead\{display:none\}/);
+  assert.match(css, /content:attr\(data-label\)/);
+  assert.match(css, /\.client-access-summary\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
 });
