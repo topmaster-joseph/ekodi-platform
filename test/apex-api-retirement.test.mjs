@@ -67,7 +67,7 @@ test('canonical apex API execution policy blocks retired browser and Admin host 
   assert.equal(policy.csp.wideningToRetiredHostForbidden,true);
   assert.ok(policy.enforcement.includes('scripts/verify-admin-production-ui-e2e.mjs'));
   assert.ok(policy.fingerprintRequiredAssets.includes('common-services-admin.js'));
-  assert.ok(policy.fingerprintRequiredAssets.includes('admin-provider-control.js'));
+  assert.ok(policy.fingerprintRequiredAssets.includes('ai-ops-admin.js'));
 
   for(const file of policy.browserRuntimeFiles){
     assert.equal(read(file).includes(retired),false,`${file} must not contain retired API host`);
@@ -93,7 +93,7 @@ test('canonical apex API execution policy blocks retired browser and Admin host 
   assert.match(aiControl,/clean\(env\.CONTROL_API_URL\)\|\|'https:\/\/ekodi\.kr'/);
   assert.match(postbuild,/admin-ai-control-plane\.js/);
   assert.match(postbuild,/common-services-admin\.js/);
-  assert.match(postbuild,/admin-provider-control\.js/);
+  assert.match(postbuild,/ai-ops-admin\.js/);
   assert.match(e2e,/retiredApiRequests/);
   assert.match(e2e,/Retired API browser requests detected/);
   assert.match(e2e,/Retired API console references detected/);
