@@ -315,6 +315,7 @@
   let loaded = false;
   let loading = false;
   let lastSuccessfulSyncAt = '';
+  let selectedMemberKey = '';
   const auditCache = new Map();
 
   function installShell() {
@@ -747,6 +748,208 @@
     return wrap;
   }
 
+  function memberSelectionKey(member) {
+    return `${member?.tenant?.slug || ''}|${String(member?.email || '').trim().toLowerCase()}`;
+  }
+
+  function selectedMemberFrom(members) {
+    const current = members.find(member => memberSelectionKey(member) === selectedMemberKey);
+    if (current) return current;
+    const first = members[0] || null;
+    selectedMemberKey = first ? memberSelectionKey(first) : '';
+    return first;
+  }
+
+  function renderScopePane(forcePending = false) {
+    const pane = document.createElement('aside');
+    pane.className = 'client-scope-pane';
+    pane.setAttribute('aria-label', '접근 범위');
+    const head = document.createElement('div');
+    head.className = 'client-pane-head';
+    head.append(text('strong', '범위'), text('small', '사이트·공간'));
+    pane.append(head);
+
+    const q = shell.search.value.trim().toLowerCase();
+    const role = shell.role.value;
+    const status = forcePending ? 'pre_registered' : shell.status.value;
+    const countFor = slug => directory.members.filter(member => {
+      if (!USER_ROLE_SET.has(member.role)) return false;
+      if (slug && member.tenant.slug !== slug) return false;
+      if (role && member.role !== role) return false;
+      if (status && member.status !== status) return false;
+      if (q) {
+        const haystack = `${member.displayName} ${member.email} ${member.githubUsername || ''} ${member.tenant.name} ${member.tenant.domain} ${member.roleLabel || ''}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    }).length;
+
+    const all = button('', `client-scope-item${shell.site.value ? '' : ' active'}`);
+    all.append(text('strong', '전체 범위'), text('span', `${countFor('')}명`));
+    all.addEventListener('click', () => {
+      shell.site.value = '';
+      selectedMemberKey = '';
+      renderActiveTab();
+    });
+    pane.append(all);
+
+    for (const tenant of directory.tenants) {
+      const count = countFor(tenant.slug);
+      const item = button('', `client-scope-item${shell.site.value === tenant.slug ? ' active' : ''}`);
+      item.append(
+        text('strong', tenant.name),
+        text('small', tenant.domain),
+        text('span', `${count}명 · 대기 ${tenant.googlePending || 0}`),
+      );
+      item.addEventListener('click', () => {
+        shell.site.value = tenant.slug;
+        selectedMemberKey = '';
+        renderActiveTab();
+      });
+      pane.append(item);
+    }
+    return pane;
+  }
+
+  function renderMemberList(members, selected) {
+    const pane = document.createElement('div');
+    pane.className = 'client-member-pane';
+    const head = document.createElement('div');
+    head.className = 'client-pane-head';
+    head.append(text('strong', '사용자'), text('small', `${members.length}개 접근권한`));
+    pane.append(head);
+
+    const list = document.createElement('div');
+    list.className = 'client-member-list';
+    for (const member of members) {
+      const key = memberSelectionKey(member);
+      const item = button('', `client-member-item${selected && key === memberSelectionKey(selected) ? ' active' : ''}`);
+      const top = document.createElement('span');
+      top.className = 'client-member-item-head';
+      top.append(
+        text('strong', member.displayName || member.email),
+        membershipBadge(member.status),
+      );
+      const scope = document.createElement('span');
+      scope.className = 'client-member-meta';
+      scope.append(
+        text('span', member.email),
+        text('span', member.tenant.name),
+        text('span', member.roleLabel || ROLE_LABELS[member.role] || member.role),
+      );
+      item.append(top, scope, text('small', `최근 활동 · ${formatDate(member.lastLoginAt, '아직 로그인 전')}`));
+      item.addEventListener('click', () => {
+        selectedMemberKey = key;
+        renderActiveTab();
+      });
+      list.append(item);
+    }
+    pane.append(list);
+    return pane;
+  }
+
+  function renderMemberDetail(member) {
+    const pane = document.createElement('aside');
+    pane.className = 'client-member-detail';
+    pane.setAttribute('aria-label', '선택 사용자 접근 상세');
+    if (!member) {
+      pane.append(statePanel('empty', '사용자를 선택해 주세요.', '왼쪽 목록에서 사용자를 선택하면 현재 범위, 역할, 유효권한과 변경기록을 확인할 수 있습니다.'));
+      return pane;
+    }
+
+    const manageable = member.canManage !== false;
+    const head = document.createElement('div');
+    head.className = 'client-member-detail-head';
+    const identity = document.createElement('div');
+    identity.append(
+      text('p', 'MEMBERSHIP · EFFECTIVE ACCESS', 'kicker'),
+      text('h3', member.displayName || member.email),
+      text('small', member.email),
+    );
+    head.append(identity, membershipBadge(member.status));
+
+    const scopeCard = document.createElement('div');
+    scopeCard.className = 'client-detail-summary';
+    scopeCard.append(
+      text('span', '사이트·범위'),
+      text('strong', member.tenant.name),
+      text('small', member.tenant.domain),
+      text('span', `최근 활동 · ${formatDate(member.lastLoginAt, '아직 로그인 전')}`),
+      text('span', `만료 · ${member.expiresAt ? formatDate(member.expiresAt, '-') : '계속'}`),
+    );
+
+    const editor = document.createElement('div');
+    editor.className = 'client-member-editor';
+    const roleLabel = text('label', '역할');
+    const roleSelect = document.createElement('select');
+    roleSelect.setAttribute('aria-label', `${member.email} 역할`);
+    for (const [value,label] of USER_ROLE_OPTIONS) roleSelect.append(selectOption(value,label));
+    roleSelect.value = USER_ROLE_SET.has(member.role) ? member.role : 'member';
+    roleSelect.disabled = !manageable;
+    roleLabel.append(roleSelect);
+
+    const visibilityLabel = text('label', '목록 공개');
+    const visibility = document.createElement('select');
+    visibility.setAttribute('aria-label', `${member.email} 공개 상태`);
+    visibility.append(selectOption('private','비공개'), selectOption('public','공개'));
+    visibility.value = member.visibility === 'public' ? 'public' : 'private';
+    visibility.disabled = !manageable;
+    visibilityLabel.append(visibility);
+
+    const statusLabel = text('label', '사용 상태');
+    const statusSelect = document.createElement('select');
+    statusSelect.setAttribute('aria-label', `${member.email} 사용 상태`);
+    statusSelect.append(selectOption('active','활성'), selectOption('disabled','중지'));
+    statusSelect.value = normalizedEditableStatus(member);
+    statusSelect.disabled = !manageable;
+    statusLabel.append(statusSelect);
+    editor.append(roleLabel, visibilityLabel, statusLabel);
+
+    const actions = document.createElement('div');
+    actions.className = 'client-detail-actions';
+    if (manageable) {
+      const save = button('변경 저장', 'primary compact');
+      save.addEventListener('click', async () => {
+        const next = { role:roleSelect.value, visibility:visibility.value, status:statusSelect.value };
+        const changes = accessChangeSet(member, next);
+        if (!changes.length) {
+          const previous = save.textContent;
+          save.textContent = '변경 없음';
+          setTimeout(() => { save.textContent = previous; }, 1200);
+          return;
+        }
+        if (!confirmAccessChanges(member, changes)) return;
+        save.disabled = true;
+        try {
+          await request(`/api/customers/tenants/${encodeURIComponent(member.tenant.slug)}/access/update`, {
+            method:'POST',
+            body:JSON.stringify({
+              email:member.email,
+              role:next.role,
+              visibility:next.visibility,
+              status:next.status,
+            }),
+          });
+          auditCache.delete(auditKey(member));
+          selectedMemberKey = memberSelectionKey(member);
+          await loadDirectory(true);
+        } catch (error) {
+          alert(error.message);
+        } finally {
+          save.disabled = false;
+        }
+      });
+      actions.append(save, revokeButton(member));
+    } else {
+      actions.append(text('span', '현재 관리자 권한에서는 이 멤버십을 조회만 할 수 있습니다.', 'client-readonly-note'));
+    }
+
+    const evidence = accessExplanation(member);
+    evidence.open = true;
+    pane.append(head, scopeCard, editor, actions, evidence);
+    return pane;
+  }
+
   function renderMemberView(forcePending = false) {
     const members = filteredMembers(forcePending);
     const section = document.createElement('div');
@@ -761,13 +964,16 @@
 
     if (!members.length) {
       if (hasActiveFilters(forcePending)) {
-        section.append(statePanel(
-          'empty',
-          '조건에 맞는 사용자가 없습니다.',
-          '검색어 또는 사이트·역할·상태 필터를 변경해 다시 확인할 수 있습니다.',
-          '필터 초기화',
-          resetFilters,
-        ));
+        section.append(
+          renderScopePane(forcePending),
+          statePanel(
+            'empty',
+            '조건에 맞는 사용자가 없습니다.',
+            '검색어 또는 범위·역할·상태 필터를 변경해 다시 확인할 수 있습니다.',
+            '필터 초기화',
+            resetFilters,
+          ),
+        );
       } else if (forcePending) {
         section.append(statePanel('empty', '인증 대기 사용자가 없습니다.', '현재 Google 인증을 기다리는 일반 사용자 멤버십이 없습니다.'));
       } else if (!userMembers().length) {
@@ -775,9 +981,19 @@
       } else {
         section.append(statePanel('empty', '표시할 사용자가 없습니다.', '현재 범위에서 표시 가능한 사용자 멤버십이 없습니다.'));
       }
-    } else {
-      section.append(memberTable(members));
+      shell.body.replaceChildren(section);
+      return;
     }
+
+    const selected = selectedMemberFrom(members);
+    const workspace = document.createElement('div');
+    workspace.className = 'client-iam-workspace';
+    workspace.append(
+      renderScopePane(forcePending),
+      renderMemberList(members, selected),
+      renderMemberDetail(selected),
+    );
+    section.append(workspace);
     shell.body.replaceChildren(section);
   }
 
