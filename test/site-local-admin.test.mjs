@@ -13,6 +13,7 @@ test('site admins use each managed site canonical path plus /admin', async () =>
   assert.equal(isWorkspaceAdminPath('/admin/ekodimall/'), false);
   assert.equal(isWorkspaceAdminPath('/ekodibiz/admin/ekodimall'), false);
   assert.equal(isWorkspaceAdminPath('/ekodibiz/mall/admin/'), false);
+  assert.equal(isWorkspaceAdminPath('/trade/admin/publishing'), true);
   assert.equal(isWorkspaceAdminPath('/jadam/admin/'), true);
   assert.equal(isWorkspaceAdminPath('/admin/'), false);
   const js = await workspaceAdminScript().text();
