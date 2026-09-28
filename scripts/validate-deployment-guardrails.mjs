@@ -129,6 +129,16 @@ requireText('.github/workflows/sync-marketing-ai.yml', ['guarded-pages-release.m
 requireText('.github/workflows/deploy-jadam-marketing-ai.yml', ['guarded-pages-release.mjs', 'marketing-ai.pages.json']);
 forbidText('.github/workflows/deploy-jadam-marketing-ai.yml', ['pages deploy', 'Configure EKODI DNS', 'Attach custom domains']);
 
+requireText('.github/workflows/deploy-ekodi-lab-homepage.yml', [
+  'guarded-pages-release.mjs',
+  'ekodilab.pages.json',
+  'topmaster-joseph/ekodi-site',
+  'AI_CONTROL_GITHUB_TASK_TOKEN',
+  'lab-release.json',
+  'https://ekodi.kr/ekodilab',
+]);
+forbidText('.github/workflows/deploy-ekodi-lab-homepage.yml', ['wrangler pages deploy', 'pages deploy .', 'Configure EKODI DNS', 'Attach custom domains']);
+
 const full = requireText('.github/workflows/deploy.yml', ['verification-only-no-production-write']);
 for (const needle of ['wrangler@', 'npm run deploy:', 'd1 migrations apply', 'secret put']) if (full.includes(needle)) fail('.github/workflows/deploy.yml', `full-ecosystem workflow must remain verification-only: ${needle}`);
 
