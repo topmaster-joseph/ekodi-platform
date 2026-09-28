@@ -136,6 +136,11 @@ export function renderMnuBizPublicPage(){
 <title>${esc(name)} · EKODI</title>
 <meta name="description" content="국립목포대학교 경영 동문을 연결하고 소식·행사·진로·사업 경험을 나누는 동문 네트워크">
 <meta name="robots" content="index,follow">
+<link rel="canonical" href="https://ekodi.kr/mnubiz">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${esc(name)} · EKODI">
+<meta property="og:description" content="국립목포대학교 경영 동문을 연결하고 소식·행사·진로·사업 경험을 나누는 동문 네트워크">
+<meta property="og:url" content="https://ekodi.kr/mnubiz">
 <link rel="stylesheet" href="/mnubiz/assets/site.css?v=20260925-1">
 </head><body>
 <header class="site-header mnubiz-header" role="banner">
