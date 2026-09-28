@@ -249,6 +249,19 @@ jobs:
       - name: Deploy staging Mall API
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.staging.runtime.toml
 
+      - name: Ensure persistent staging Amazon credential key
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} secret list --config api/wrangler.staging.runtime.toml > /tmp/mall-stage-secret-list.txt
+          if grep -Fq 'AMAZON_CREDENTIAL_KEY' /tmp/mall-stage-secret-list.txt; then
+            echo 'Amazon staging credential key already exists; keeping it unchanged.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            openssl rand -hex 32 | npx --yes wrangler@${WRANGLER_VERSION} secret put AMAZON_CREDENTIAL_KEY --config api/wrangler.staging.runtime.toml >/dev/null
+            echo 'Generated the persistent Amazon staging credential encryption key directly in Cloudflare without exposing its value.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          rm -f /tmp/mall-stage-secret-list.txt
+
       - name: Ensure narrow staging Access bypasses
         shell: bash
         run: node scripts/ensure-staging-access.mjs
@@ -269,6 +282,7 @@ jobs:
               && grep -Fq '"commerceEventSchemaReady":true' /tmp/mall-stage-health.json \
               && grep -Fq '"amazonCostSchemaReady":true' /tmp/mall-stage-health.json \
               && grep -Fq '"amazonConnectionSchemaReady":true' /tmp/mall-stage-health.json \
+              && grep -Fq '"vaultReady":true' /tmp/mall-stage-health.json \
               && grep -Fq '"commerceOsVersion":1' /tmp/mall-stage-health.json \
               && grep -Fq '"environment":"staging"' /tmp/mall-stage-health.json \
               && grep -Fq '"version":3' /tmp/mall-stage-health.json \
@@ -468,6 +482,20 @@ jobs:
         if: steps.production_scope.outputs.api_changed == 'true'
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.runtime.toml
 
+      - name: Ensure persistent production Amazon credential key
+        if: steps.production_scope.outputs.api_changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} secret list --config api/wrangler.runtime.toml > /tmp/mall-prod-secret-list.txt
+          if grep -Fq 'AMAZON_CREDENTIAL_KEY' /tmp/mall-prod-secret-list.txt; then
+            echo 'Amazon production credential key already exists; keeping it unchanged.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            openssl rand -hex 32 | npx --yes wrangler@${WRANGLER_VERSION} secret put AMAZON_CREDENTIAL_KEY --config api/wrangler.runtime.toml >/dev/null
+            echo 'Generated the persistent Amazon production credential encryption key directly in Cloudflare without exposing its value.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          rm -f /tmp/mall-prod-secret-list.txt
+
       - name: Verify production API before Pages promotion
         if: steps.production_scope.outputs.api_changed == 'true'
         shell: bash
@@ -488,6 +516,8 @@ jobs:
               && grep -Fq '"verificationSchemaReady":true' /tmp/mall-api.json \
               && grep -Fq '"commerceEventSchemaReady":true' /tmp/mall-api.json \
               && grep -Fq '"amazonCostSchemaReady":true' /tmp/mall-api.json \
+              && grep -Fq '"amazonConnectionSchemaReady":true' /tmp/mall-api.json \
+              && grep -Fq '"vaultReady":true' /tmp/mall-api.json \
               && grep -Fq '"commerceOsVersion":1' /tmp/mall-api.json \
               && grep -Fq '"environment":"production"' /tmp/mall-api.json \
               && grep -Fq '"version":3' /tmp/mall-api.json \
