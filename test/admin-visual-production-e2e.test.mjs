@@ -15,7 +15,7 @@ test('post-deploy Admin visual E2E is automatic only for visual-contract changes
   assert.match(workflow, /steps\.changes\.outputs\.admin_visual == 'true'/);
   assert.match(workflow, /node scripts\/admin-assist-canonical-e2e\.mjs/);
   assert.match(workflow, /admin-home-visual\.png/);
-  assert.match(workflow, /retention-days: 30/);
+  assert.match(workflow, /retention-days: 7/);
 });
 
 test('automatic visual E2E keeps its session short-lived and always revokes it', async () => {

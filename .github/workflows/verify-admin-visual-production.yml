@@ -125,7 +125,7 @@ jobs:
             artifacts/admin-authenticated-e2e/admin-home-visual.png
             artifacts/admin-authenticated-e2e/assist-canonical-failure.png
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 7
 
       - name: Revoke short-lived E2E session
         if: always() && env.E2E_AUTH_DB_ID != '' && env.E2E_TOKEN_HASH != ''
