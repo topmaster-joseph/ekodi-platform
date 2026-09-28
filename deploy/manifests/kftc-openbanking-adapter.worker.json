@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-kftc-openbanking-adapter",
+    "config": "wrangler.kftc-openbanking.toml",
+    "requests": [
+      {
+        "url": "https://ekodi-kftc-openbanking-adapter.topmaster-joseph.workers.dev/health",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "\"service\":\"ekodi-kftc-openbanking-adapter\"",
+          "\"mode\":\"read-only\"",
+          "\"liveReadEnabled\":false",
+          "\"oauthFlowReady\":false",
+          "\"financialExecution\":false",
+          "\"transferExecution\":false",
+          "\"rawAccountNumberCollection\":false"
+        ]
+      }
+    ]
+  }
+}

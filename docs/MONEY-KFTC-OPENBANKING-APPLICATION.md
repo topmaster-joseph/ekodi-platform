@@ -77,3 +77,19 @@ After these items are complete, `KFTC_OPENBANKING_ENABLED=true` may be considere
 ## Separate high-impact gate
 
 Even after inquiry APIs are live, money movement and other high-impact financial actions remain separately disabled. Transfer, withdrawal, payment, account closure, autopay changes and signing require an additional reviewed human-confirmation architecture and must not be inferred from read-access approval.
+
+
+## Read-only adapter foundation (2026-09-28)
+
+EKODI now has a separate KFTC read-adapter boundary prepared for the official Open Banking contract.
+
+- Worker: `ekodi-kftc-openbanking-adapter`
+- Production public surface: none; the `workers.dev` endpoint is technical verification only.
+- Canonical product entry remains `https://ekodi.kr/money`.
+- Storage: existing EKODI D1 receives adapter-specific tables only; Money itself gets no direct DB binding.
+- OAuth tokens and 24-digit fintech use numbers are stored only inside AES-GCM ciphertext.
+- Raw account numbers are not collected by this adapter.
+- Balance and transaction normalization follows the official KFTC read APIs.
+- Transfer/deposit/withdraw endpoints are intentionally absent.
+- `KFTC_OPENBANKING_CONTRACT_APPROVED`, `KFTC_OPENBANKING_LIVE_READ_ENABLED`, encryption key, internal service token, Client ID/Secret and issued bank-transaction prefix must all be configured before read calls can become live.
+- User-facing OAuth remains fail-closed until the contracted API specification and approved app parameters are locked. The adapter returns a non-live response rather than guessing provider parameters.

@@ -1,0 +1,22 @@
+name = "ekodi-kftc-openbanking-adapter"
+main = "kftc-openbanking-adapter-worker.js"
+compatibility_date = "2026-09-28"
+workers_dev = true
+preview_urls = false
+
+[vars]
+ENVIRONMENT = "production"
+KFTC_OPENBANKING_REDIRECT_URI = "https://ekodi.kr/money/oauth/kftc/callback"
+KFTC_OPENBANKING_CONTRACT_APPROVED = "false"
+KFTC_OPENBANKING_LIVE_READ_ENABLED = "false"
+KFTC_CONNECTION_IMPORT_ENABLED = "false"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-auth"
+database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
+migrations_dir = "migrations"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
