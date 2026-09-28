@@ -29,6 +29,8 @@ test('trade partner and trade admin routes are apex workspace routes',async()=>{
   assert.equal(probe?.candidateVerify,false);
   assert.match(probe?.candidateVerifyReason||'',/run_worker_first bootstrap/);
   assert.ok(probe?.expect?.includes('PRIVATE TRADE WORKSPACE'));
+  assert.ok(!probe?.expect?.includes('함께 진행하고'));
+  assert.ok(!probe?.expect?.includes('거래의 역사를 남깁니다'));
   assert.ok(probe?.headerExpect?.includes('x-ekodi-route: trade-partner-workspace'));
 });
 
