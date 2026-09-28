@@ -57,7 +57,7 @@ test('site channel directory resolves to each canonical local administrator inst
     ['mission','/ekodimission/admin/publishing'],
     ['biz','/ekodibiz/admin/publishing'],
     ['mall','/ekodimall/admin/channel-settings'],
-    ['trade','/ekodibiz/trade/admin/publishing'],
+    ['trade','/trade/admin/publishing'],
     ['cheonggye-local','/cheonggye/admin/publishing'],
     ['cmpmyi','/cmpmyi/admin/panel/publishing'],
     ['cgma','/cgma/admin/publishing'],
