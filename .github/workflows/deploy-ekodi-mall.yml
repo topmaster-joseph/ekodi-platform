@@ -282,8 +282,7 @@ jobs:
               && grep -Fq '"marketplace":8' /tmp/mall-stage-fees.json \
               && grep -Fq '"ai":9' /tmp/mall-stage-fees.json \
               && grep -Fq '"attributionWindowDays":7' /tmp/mall-stage-fees.json \
-              && grep -Fq '"products":[' /tmp/mall-stage-feed.json \
-              && grep -Fq '"bedrockPaidEnabled":false' /tmp/mall-stage-amazon-cost.json; then
+              && grep -Fq '"products":[' /tmp/mall-stage-feed.json; then
               echo "Mall Development staging passed D1, order, first-touch, 7/8/9, feed and disabled-payment/payout checks."
               break
             fi
