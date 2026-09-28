@@ -12,6 +12,7 @@ export const MARKETING_CANONICAL_PROJECTIONS = Object.freeze(PROJECTIONS.map(ite
 
 export function marketingProjectionForPath(pathname){
   const path=String(pathname||'');
+  if(path==='/ekodimarketing/admin'||path.startsWith('/ekodimarketing/admin/'))return null;
   return MARKETING_CANONICAL_PROJECTIONS.find(item=>path===item.prefix||path===`${item.prefix}/`||path.startsWith(`${item.prefix}/`))||null;
 }
 
