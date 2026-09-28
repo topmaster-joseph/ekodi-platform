@@ -1,0 +1,149 @@
+name: Deploy EKODI Lab Homepage
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '37 */4 * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-ekodi-lab-homepage.yml'
+      - 'deploy/manifests/ekodilab.pages.json'
+      - 'scripts/guarded-pages-release.mjs'
+      - 'scripts/validate-deployment-guardrails.mjs'
+      - 'test/ekodilab-release-boundary.test.mjs'
+  pull_request:
+    paths:
+      - '.github/workflows/deploy-ekodi-lab-homepage.yml'
+      - 'deploy/manifests/ekodilab.pages.json'
+      - 'scripts/validate-deployment-guardrails.mjs'
+      - 'test/ekodilab-release-boundary.test.mjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-lab-homepage-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Lab release boundary
+        run: |
+          set -euo pipefail
+          node --test test/ekodilab-release-boundary.test.mjs
+          node scripts/validate-deployment-guardrails.mjs
+          node -e "const m=require('./deploy/manifests/ekodilab.pages.json'); if(m.targets?.length!==1||m.targets[0].project!=='ekodilab') process.exit(1)"
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      LAB_GITHUB_TOKEN: ${{ secrets.AI_CONTROL_GITHUB_TASK_TOKEN }}
+      WRANGLER_VERSION: '4.119.0'
+    steps:
+      - name: Checkout EKODI release controller
+        uses: actions/checkout@v7
+        with:
+          path: .ekodi-control
+          persist-credentials: false
+
+      - name: Verify deployment credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$LAB_GITHUB_TOKEN"
+
+      - name: Checkout private EKODI Lab source
+        uses: actions/checkout@v7
+        with:
+          repository: topmaster-joseph/ekodi-site
+          ref: main
+          path: lab-source
+          token: ${{ env.LAB_GITHUB_TOKEN }}
+          persist-credentials: false
+
+      - name: Capture and validate Lab source
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_sha="$(git -C lab-source rev-parse HEAD)"
+          echo "sha=$source_sha" >> "$GITHUB_OUTPUT"
+          echo "LAB_SOURCE_SHA=$source_sha" >> "$GITHUB_ENV"
+          for file in index.html privacy.html 404.html robots.txt sitemap.xml og-image.svg; do
+            test -s "lab-source/$file"
+          done
+          grep -Fq '<link rel="canonical" href="https://ekodi.kr/ekodilab">' lab-source/index.html
+          grep -Fq 'https://ekodi.kr/ekodilab/og-image.svg' lab-source/index.html
+          grep -Fq 'https://ekodi.kr/ekodichurch' lab-source/index.html
+          grep -Fq 'https://ekodi.kr/ekodibiz' lab-source/index.html
+          grep -Fq 'https://ekodi.kr/community' lab-source/index.html
+          grep -Fq 'https://ekodi.kr/ekodilab/sitemap.xml' lab-source/robots.txt
+          grep -Fq '<loc>https://ekodi.kr/ekodilab/</loc>' lab-source/sitemap.xml
+          grep -Fq '@media(max-width:700px)' lab-source/index.html
+          if grep -Eq '성수이로 00|1234 5678|https://lab\.ekodi\.kr|https://ekodi-church\.pages\.dev|https://ekodicommunity\.pages\.dev|https://ekodibiz\.kr/' lab-source/index.html lab-source/robots.txt lab-source/sitemap.xml; then
+            echo 'Lab source contains placeholder or retired public address.'
+            exit 1
+          fi
+          printf '{"contract":"ekodi.lab-release.v1","sourceRepository":"topmaster-joseph/ekodi-site","sourceSha":"%s"}\n' "$source_sha" > lab-source/lab-release.json
+
+      - name: Decide whether production needs this Lab source revision
+        id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          current="$(curl -fsSL --connect-timeout 5 --max-time 15 'https://ekodi.kr/ekodilab/lab-release.json' || true)"
+          if printf '%s' "$current" | jq -e --arg sha "$LAB_SOURCE_SHA" '.contract=="ekodi.lab-release.v1" and .sourceSha==$sha' >/dev/null 2>&1; then
+            echo 'deploy_needed=false' >> "$GITHUB_OUTPUT"
+            echo "Lab production already carries source $LAB_SOURCE_SHA"
+          else
+            echo 'deploy_needed=true' >> "$GITHUB_OUTPUT"
+            echo "Lab production needs source $LAB_SOURCE_SHA"
+          fi
+
+      - name: Guarded preview and production promotion
+        if: steps.plan.outputs.deploy_needed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .ekodi-control/scripts/guarded-pages-release.mjs \
+            --manifest .ekodi-control/deploy/manifests/ekodilab.pages.json \
+            --root "$GITHUB_WORKSPACE" \
+            --wrangler-version "$WRANGLER_VERSION"
+
+      - name: Verify canonical Lab production
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=0
+          for attempt in $(seq 1 18); do
+            root_code="$(curl -sS -o /tmp/lab.html -w '%{http_code}' --connect-timeout 5 --max-time 20 "https://ekodi.kr/ekodilab?release=$LAB_SOURCE_SHA" || true)"
+            marker_code="$(curl -sS -o /tmp/lab-release.json -w '%{http_code}' --connect-timeout 5 --max-time 20 "https://ekodi.kr/ekodilab/lab-release.json?release=$LAB_SOURCE_SHA" || true)"
+            if [[ "$root_code" == 200 && "$marker_code" == 200 ]] \
+              && grep -Fq '현장에 묻고,' /tmp/lab.html \
+              && grep -Fq 'https://ekodi.kr/ekodilab' /tmp/lab.html \
+              && grep -Fq '전라남도 무안군 청계면 백련동1길 17-4' /tmp/lab.html \
+              && ! grep -Eq '성수이로 00|1234 5678|운영공간|https://lab\.ekodi\.kr|https://ekodi-church\.pages\.dev|https://ekodicommunity\.pages\.dev|https://ekodibiz\.kr/' /tmp/lab.html \
+              && jq -e --arg sha "$LAB_SOURCE_SHA" '.contract=="ekodi.lab-release.v1" and .sourceSha==$sha' /tmp/lab-release.json >/dev/null; then
+              ok=1
+              break
+            fi
+            sleep 5
+          done
+          test "$ok" = 1
+          echo "EKODI Lab canonical production verified at source $LAB_SOURCE_SHA."
