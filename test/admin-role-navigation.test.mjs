@@ -31,7 +31,7 @@ test('delegated managers use site-owned task menus rather than a reduced platfor
   assert.ok(profile.mustNotShow.includes('global deployment'));
   assert.ok(profile.mustNotShow.includes('global AI policy'));
   assert.ok(profile.mustNotShow.includes('platform-wide administrators'));
-  assert.deepEqual(policy.domainProjections.workspace['delegated-manager'], ['홈','소통·홍보','운영·재무','사이트·권한']);
+  assert.deepEqual(policy.domainProjections.workspace['delegated-manager'], ['운영','고객·업무','마케팅','경영','운영도구','사이트 관리']);
   assert.deepEqual(policy.domainProjections.store['delegated-manager'], ['현황','주문·매출','메뉴·재고','고객·리뷰','홍보·채널','운영·설정']);
   assert.deepEqual(policy.domainProjections.church['delegated-manager'], ['현황','교인·돌봄','예배·사역','기록·AI','사이트·권한']);
 });
@@ -65,9 +65,12 @@ test('tenant admin implementations render distinct delegated and local navigatio
   assert.match(churchAdmin, /출석 · 교인/);
   assert.match(workspaceAdmin, /const standardRootGroups=/);
   assert.match(workspaceAdmin, /const localRootGroups=/);
-  assert.match(workspaceAdmin, /소통 · 홍보/);
-  assert.match(workspaceAdmin, /운영 · 재무/);
-  assert.match(workspaceAdmin, /사이트 · 권한/);
+  assert.match(workspaceAdmin, /label:'운영'/);
+  assert.match(workspaceAdmin, /label:'고객 · 업무'/);
+  assert.match(workspaceAdmin, /label:'마케팅'/);
+  assert.match(workspaceAdmin, /label:'경영'/);
+  assert.match(workspaceAdmin, /label:'운영도구'/);
+  assert.match(workspaceAdmin, /label:'사이트 관리'/);
   assert.match(workspaceAdmin, /오늘 할 일/);
   assert.match(workspaceAdmin, /소통 · 콘텐츠/);
   assert.match(workspaceAdmin, /업무 처리/);
