@@ -3,7 +3,8 @@
   "version": "4.3.1",
   "private": true,
   "type": "module",
-  "scripts": {\n    "validate:ekodibiz-membership": "node scripts/validate-ekodibiz-membership-packaging.mjs",
+  "scripts": {
+    "validate:ekodibiz-membership": "node scripts/validate-ekodibiz-membership-packaging.mjs",
     "constitution:check": "node scripts/constitution-check.mjs",
     "normalize:display-names": "node scripts/normalize-platform-ai-names.mjs",
     "generate:user-services": "node scripts/generate-user-service-registry.mjs",
