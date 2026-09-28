@@ -83,7 +83,16 @@ test('global menu labels use readable contrast on the dark primary sidebar', () 
   assert.match(sidebar, /\.admin-global-nav\{[^}]*color:#dbe8f6!important/);
   assert.match(sidebar, /\.admin-global-nav\.active\{[^}]*background:#174b7b[^}]*color:#fff!important/);
   assert.match(sidebar, /\.admin-global-nav span\{color:inherit!important;opacity:1!important\}/);
-  assert.match(sidebar, /font-size:15px;font-weight:780/);
+  assert.match(sidebar, /font-size:14px;font-weight:780/);
+});
+
+test('Services & AI uses flat direct engine links and suppresses duplicate top tabs', () => {
+  assert.match(sidebar, /FLAT_DETAIL_GROUPS = new Set\(\['services'\]\)/);
+  assert.match(sidebar, /services: \['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'\]/);
+  assert.match(sidebar, /details\.dataset\.adminFlatDetails = flatDetails \? 'true' : 'false'/);
+  assert.match(sidebar, /const suppressContextTabs = FLAT_DETAIL_GROUPS\.has\(group\)/);
+  assert.match(sidebar, /const hideContextTabs = suppressContextTabs \|\| singleEquivalent/);
+  assert.match(sidebar, /data-admin-flat-details="true"/);
 });
 
 test('context tabs keep only useful navigation chrome and collapse single-context whitespace', () => {

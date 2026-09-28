@@ -47,6 +47,10 @@ function tenantKeyCandidates(value) {
   return [...new Set(aliases[key] || [key])].filter(Boolean);
 }
 
+function canonicalTenantKey(value) {
+  return tenantKeyCandidates(value)[0] || clean(value,120).toLowerCase();
+}
+
 async function platformTenantSubject(env, key) {
   if (!env?.DB) return null;
   for (const candidate of tenantKeyCandidates(key)) {
@@ -103,11 +107,13 @@ export async function resolveChannelAutomationSubject(env, actor, type, key) {
     if(actor.platformAdmin&&actor.adminRole==='super_admin'){
       const tenant=await platformTenantSubject(env,key);
       if(!tenant)return null;
-      return { type:'tenant', key:String(tenant.slug), workspaceId:String(tenant.id), workspaceSlug:String(tenant.slug), ownerType:'workspace', ownerKey:String(tenant.id), role:'super_admin', writable:true, workspaceKind:'organization', workspaceName:String(tenant.name||tenant.slug) };
+      const canonical=canonicalTenantKey(key||tenant.slug);
+      return { type:'tenant', key:canonical, workspaceId:String(tenant.id), workspaceSlug:canonical, ownerType:'workspace', ownerKey:String(tenant.id), role:'super_admin', writable:true, workspaceKind:'organization', workspaceName:String(tenant.name||tenant.slug) };
     }
     const context = workspaceMatch(actor, key);
     if (!context) return null;
-    return { type:'tenant', key:context.workspaceSlug, workspaceId:context.workspaceId, workspaceSlug:context.workspaceSlug, ownerType:'workspace', ownerKey:context.workspaceId, role:context.authorizationRole, writable:context.canManage, workspaceKind:context.workspaceKind, workspaceName:context.workspaceName };
+    const canonical=canonicalTenantKey(key||context.workspaceSlug);
+    return { type:'tenant', key:canonical, workspaceId:context.workspaceId, workspaceSlug:canonical, ownerType:'workspace', ownerKey:context.workspaceId, role:context.authorizationRole, writable:context.canManage, workspaceKind:context.workspaceKind, workspaceName:context.workspaceName };
   }
   if (requested !== 'store') return null;
   const storeId = clean(key, 100);
@@ -117,9 +123,11 @@ export async function resolveChannelAutomationSubject(env, actor, type, key) {
   if(actor.platformAdmin&&actor.adminRole==='super_admin'){
     const tenant=await platformTenantSubject(env,store.tenant_slug);
     if(!tenant)return null;
-    return { type:'store', key:String(store.store_id), workspaceId:String(tenant.id), workspaceSlug:String(tenant.slug), ownerType:'workspace', ownerKey:String(tenant.id), role:'super_admin', writable:true, workspaceKind:'organization', workspaceName:String(tenant.name||tenant.slug) };
+    const canonical=canonicalTenantKey(store.tenant_slug||tenant.slug);
+    return { type:'store', key:String(store.store_id), workspaceId:String(tenant.id), workspaceSlug:canonical, ownerType:'workspace', ownerKey:String(tenant.id), role:'super_admin', writable:true, workspaceKind:'organization', workspaceName:String(tenant.name||tenant.slug) };
   }
   const context = workspaceMatch(actor, store.tenant_slug);
   if (!context) return null;
-  return { type:'store', key:String(store.store_id), workspaceId:context.workspaceId, workspaceSlug:context.workspaceSlug, ownerType:'workspace', ownerKey:context.workspaceId, role:context.authorizationRole, writable:context.canManage, workspaceKind:context.workspaceKind, workspaceName:context.workspaceName };
+  const canonical=canonicalTenantKey(store.tenant_slug||context.workspaceSlug);
+  return { type:'store', key:String(store.store_id), workspaceId:context.workspaceId, workspaceSlug:canonical, ownerType:'workspace', ownerKey:context.workspaceId, role:context.authorizationRole, writable:context.canManage, workspaceKind:context.workspaceKind, workspaceName:context.workspaceName };
 }

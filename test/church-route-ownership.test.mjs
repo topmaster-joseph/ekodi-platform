@@ -8,12 +8,15 @@ test('Church route contract avoids the ambiguous no-slash wildcard and verifies 
   assert.equal(CHURCH_ROUTE_CONTRACT.retiredGateway,'ekodi.kr/ekodichurch*');
   assert.equal(CHURCH_ROUTE_CONTRACT.gateway,'ekodi-church-path-gateway');
   assert.equal(CHURCH_ROUTE_CONTRACT.sharedSite,'shy-thunder-39a4');
-  assert.deepEqual(CHURCH_ROUTE_CONTRACT.memberRoutes,['ekodi.kr/ekodichurch/my','ekodi.kr/ekodichurch/my/*']);
+  assert.deepEqual(CHURCH_ROUTE_CONTRACT.memberRedirectRoutes,['ekodi.kr/ekodichurch/my']);
+  assert.deepEqual(CHURCH_ROUTE_CONTRACT.retiredMemberRoutes,['ekodi.kr/ekodichurch/my/*']);
   assert.equal(CHURCH_ROUTE_CONTRACT.publicUrl,'https://ekodi.kr/ekodichurch/');
   assert.equal(CHURCH_ROUTE_CONTRACT.memberUrl,'https://ekodi.kr/ekodichurch/my');
+  assert.equal(CHURCH_ROUTE_CONTRACT.memberCanonicalUrl,'https://ekodi.kr/ekodichurch/my/');
+  assert.deepEqual(CHURCH_ROUTE_CONTRACT.memberDeepPages.map(x=>x.marker),['MY GIVING','MY ATTENDANCE']);
   assert.equal(CHURCH_ROUTE_CONTRACT.adminUrl,'https://ekodi.kr/ekodichurch/admin');
   assert.equal(CHURCH_ROUTE_CONTRACT.publicRoute,'church-public-path');
-  assert.equal(CHURCH_ROUTE_CONTRACT.memberRoute,'church-member-home');
+  assert.equal(CHURCH_ROUTE_CONTRACT.memberRoute,'church-member-canonical-redirect');
   assert.equal(CHURCH_ROUTE_CONTRACT.adminRoute,'church-pastor-admin');
 });
 
@@ -69,22 +72,42 @@ test('Shared Site release probes stay aligned with the canonical Church public U
 
 
 
-test('Church member home has explicit Shared Site route precedence without capturing legacy mypage',async()=>{
+test('Church member root canonicalizes in Shared Site while descendants stay with Church Pages',async()=>{
   const wrangler=await readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
   assert.match(wrangler,/pattern = "ekodi\.kr\/ekodichurch\/my"/);
-  assert.match(wrangler,/pattern = "ekodi\.kr\/ekodichurch\/my\/\*"/);
+  assert.doesNotMatch(wrangler,/pattern = "ekodi\.kr\/ekodichurch\/my\/\*"/);
   assert.doesNotMatch(wrangler,/pattern = "ekodi\.kr\/ekodichurch\/my\*"/);
   const source=await readFile(new URL('../scripts/ensure-church-route-ownership.mjs',import.meta.url),'utf8');
-  assert.match(source,/memberRoutes/);
-  assert.match(source,/CHURCH_ROUTE_CONTRACT\.sharedSite/);
-  assert.match(source,/Church member route missing after repair/);
+  assert.match(source,/memberRedirectRoutes/);
+  assert.match(source,/retiredMemberRoutes/);
+  assert.match(source,/Released Church member descendant route to Pages gateway/);
+  assert.match(source,/MY GIVING/);
+  assert.match(source,/MY ATTENDANCE/);
+  assert.match(source,/YOGURT PURPLE/);
 });
 
-test('Shared Site manifest guards the dedicated Church member home',async()=>{
+test('Shared Site manifest guards only the Church member canonical redirect',async()=>{
   const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
   const member=manifest.worker.requests.find(item=>item.url===CHURCH_ROUTE_CONTRACT.memberUrl);
-  assert.ok(member,'Church member home probe missing');
-  assert.deepEqual(member.statuses,[200]);
+  assert.ok(member,'Church member canonical redirect probe missing');
+  assert.deepEqual(member.statuses,[308]);
+  assert.ok(member.headerExpect?.includes('location: '+CHURCH_ROUTE_CONTRACT.memberCanonicalUrl));
   assert.ok(member.headerExpect?.includes('x-ekodi-route: '+CHURCH_ROUTE_CONTRACT.memberRoute));
   assert.ok(member.headerExpect?.includes('x-ekodi-authority-scope: user'));
+  assert.equal(member.expect,undefined);
+});
+
+
+test('pre-candidate Church route repair defers exact member response verification',async()=>{
+  const source=await readFile(new URL('../scripts/ensure-church-route-ownership.mjs',import.meta.url),'utf8');
+  const start=source.indexOf('export async function ensureChurchRouteOwnership');
+  const end=source.indexOf('if(process.argv[1]',start);
+  const ensureBody=source.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.doesNotMatch(ensureBody,/await verifyRedirect\(/);
+  assert.match(ensureBody,/canonical redirect response verification deferred to guarded candidate deployment/);
+  const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const member=manifest.worker.requests.find(item=>item.url===CHURCH_ROUTE_CONTRACT.memberUrl);
+  assert.deepEqual(member?.statuses,[308]);
+  assert.ok(member?.headerExpect?.includes('location: '+CHURCH_ROUTE_CONTRACT.memberCanonicalUrl));
 });

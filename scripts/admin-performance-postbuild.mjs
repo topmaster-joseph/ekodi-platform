@@ -288,7 +288,7 @@ if (!finalAiOpsVisualCss.includes('admin-conversation-workbench.css: final visua
 }
 for (const requiredVisualContract of [
   'body.admin-compact{',
-  '--ekodi-assist-left:272px',
+  '--ekodi-assist-left:228px',
   'body.admin-compact.admin-command-home.admin-command-active .ekodi-assist{',
   'body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-rail{',
   'body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-composer{',

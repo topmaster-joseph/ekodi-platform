@@ -642,17 +642,12 @@
       {
         "url": "https://ekodi.kr/ekodichurch/my",
         "statuses": [
-          200
+          308
         ],
         "redirect": "manual",
-        "expect": [
-          "에코디교회 마이페이지",
-          "data-ekodi-surface=\"church-member-home\"",
-          "My EKODI",
-          "교회 관리자"
-        ],
         "headerExpect": [
-          "x-ekodi-route: church-member-home",
+          "location: https://ekodi.kr/ekodichurch/my/",
+          "x-ekodi-route: church-member-canonical-redirect",
           "x-ekodi-authority-scope: user",
           "cache-control: no-store"
         ],

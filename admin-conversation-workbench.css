@@ -6,8 +6,8 @@ body.admin-compact{
   color-scheme:light;
   background:#fff!important;
   color:#1f1f1f!important;
-  --ekodi-admin-sidebar-width:272px;
-  --ekodi-assist-left:272px;
+  --ekodi-admin-sidebar-width:228px;
+  --ekodi-assist-left:228px;
   --ekodi-admin-canvas:#ffffff;
   --ekodi-admin-sidebar:#f7f8fc;
   --ekodi-admin-hover:#eceff5;
@@ -23,20 +23,20 @@ body.admin-compact .app{
 }
 body.admin-compact .sidebar{
   width:auto!important;
-  padding:12px 10px 10px!important;
+  padding:8px 8px 8px!important;
   border-right:0!important;
   background:var(--ekodi-admin-sidebar)!important;
   color:var(--ekodi-admin-text)!important;
   display:flex!important;
   flex-direction:column!important;
-  gap:8px!important;
+  gap:5px!important;
 }
 body.admin-compact .sidebar nav{
   flex:1 1 auto!important;
   min-height:0!important;
   overflow-y:auto!important;
   overflow-x:hidden!important;
-  padding:2px 2px 12px!important;
+  padding:0 0 8px!important;
   gap:2px!important;
   scrollbar-width:thin;
   scrollbar-color:#c9cdd4 transparent;
@@ -46,11 +46,11 @@ body.admin-compact .admin-command-entry{
   align-items:center!important;
   gap:10px!important;
   width:100%!important;
-  min-height:44px!important;
-  margin:2px 0 8px!important;
-  padding:9px 12px!important;
+  min-height:40px!important;
+  margin:0 0 5px!important;
+  padding:7px 10px!important;
   border:0!important;
-  border-radius:16px!important;
+  border-radius:12px!important;
   background:#e8f0fe!important;
   color:#174ea6!important;
   font:inherit!important;
@@ -77,11 +77,11 @@ body.admin-compact.admin-command-home .admin-command-entry{
   color:#0b57d0!important;
 }
 body.admin-compact .admin-global-nav{
-  min-height:44px!important;
-  padding:9px 11px!important;
-  gap:11px!important;
+  min-height:40px!important;
+  padding:6px 9px!important;
+  gap:9px!important;
   border:0!important;
-  border-radius:14px!important;
+  border-radius:10px!important;
   background:transparent!important;
   color:#34373b!important;
   font-size:14px!important;
@@ -106,18 +106,31 @@ body.admin-compact .admin-global-nav.active b{
 body.admin-compact .admin-global-details{
   display:grid!important;
   gap:2px!important;
-  margin:2px 0 8px 30px!important;
-  padding:0 4px 2px!important;
+  margin:0 0 6px 26px!important;
+  padding:0 2px 2px!important;
 }
 body.admin-compact .admin-detail-item{
-  min-height:36px!important;
-  padding:7px 10px!important;
+  min-height:34px!important;
+  padding:5px 8px!important;
   border:0!important;
-  border-radius:12px!important;
+  border-radius:9px!important;
   background:transparent!important;
   color:#4a4d52!important;
   font-size:13px!important;
   font-weight:560!important;
+}
+body.admin-compact .admin-global-details[data-admin-flat-details="true"]{
+  margin:0 0 6px!important;
+  padding:0!important;
+}
+body.admin-compact .admin-global-details[data-admin-flat-details="true"] .admin-detail-item{
+  min-height:38px!important;
+  padding:6px 9px!important;
+  border-radius:10px!important;
+  font-weight:650!important;
+}
+body.admin-compact .admin-global-details[data-admin-flat-details="true"] .admin-detail-item b{
+  min-width:22px!important;
 }
 body.admin-compact .admin-detail-item:hover{
   background:#eef1f6!important;
@@ -413,11 +426,11 @@ body.admin-compact .ekodi-assist-bootstrap-send{
 html body.admin-compact.ekodi-admin-design-engine{
   background:#fff!important;
   color:#1f1f1f!important;
-  --ekodi-admin-sidebar-width:272px;
-  --ekodi-assist-left:272px;
+  --ekodi-admin-sidebar-width:228px;
+  --ekodi-assist-left:228px;
 }
 html body.admin-compact.ekodi-admin-design-engine .app{
-  grid-template-columns:272px minmax(0,1fr)!important;
+  grid-template-columns:228px minmax(0,1fr)!important;
   background:#fff!important;
 }
 html body.admin-compact.ekodi-admin-design-engine .app>main,
@@ -427,7 +440,7 @@ html body.admin-compact.ekodi-admin-design-engine .content{
   color:#1f1f1f!important;
 }
 html body.admin-compact.ekodi-admin-design-engine .sidebar{
-  width:272px!important;
+  width:228px!important;
   padding:12px 10px 10px!important;
   background:#f7f8fc!important;
   color:#1f1f1f!important;
@@ -495,7 +508,7 @@ html body.admin-compact.ekodi-admin-design-engine .side-bottom .ghost{
   color:#5f6368!important;
 }
 html body.admin-compact.ekodi-admin-design-engine.admin-command-home.admin-command-active .ekodi-assist{
-  left:272px!important;
+  left:228px!important;
   top:0!important;
   right:0!important;
   bottom:var(--ekodi-command-dock,92px)!important;
