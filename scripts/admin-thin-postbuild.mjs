@@ -84,6 +84,7 @@ await writeFile(`${dist}admin-shell.html`, html);
 
 const finalCompactJs = await text(`${dist}admin-compact.js`);
 const finalCompactCss = await text(`${dist}admin-compact.css`);
+const finalSidebar = await text(`${dist}admin-sidebar.js`);
 const finalLazyFeatures = await text(`${dist}admin-lazy-features.js`);
 const finalAiOpsCss = await text(`${dist}ai-ops-admin.css`);
 const finalCampus = await text(`${dist}campus-actions.js`);
@@ -110,6 +111,12 @@ if (!finalCompactCss.includes('left:var(--ekodi-assist-left,260px)') || !finalCo
 if (!finalLazyFeatures.includes('ekodiAssistDock') || !finalLazyFeatures.includes('/api/control/messenger/inbox') || !finalLazyFeatures.includes('/api/control/ai/actions')) {
   throw new Error('Full EKODI Assist runtime was not attached to the secured lazy asset');
 }
+for (const marker of ['/api/control/ai/assist','/api/control/ai/v8/pulse','/api/control/ai/actions','handoffCommand','EXTERNAL_SECRET_RE']) {
+  if (!finalLazyFeatures.includes(marker)) throw new Error(`EKODI Assist execution path missing after postbuild: ${marker}`);
+}
+for (const marker of ["commandEntry.hidden = true","commandEntry.style.setProperty('display', 'none', 'important')","shell.hidden = true","shell.style.setProperty('display', 'none', 'important')"]) {
+  if (!finalSidebar.includes(marker)) throw new Error(`Admin single-navigation suppression missing after postbuild: ${marker}`);
+}
 if (!finalLazyFeatures.includes('ekodi-admin-command-history-v1') || !finalLazyFeatures.includes('ekodiAssistHistory') || !finalLazyFeatures.includes('ekodiAssistComposer')) {
   throw new Error('EKODI Assist recent-command history or fixed composer runtime is missing');
 }
@@ -118,6 +125,9 @@ if (!finalAiOpsCss.includes('.ekodi-assist-launcher') || !finalAiOpsCss.includes
 }
 if (!finalAiOpsCss.includes('EKODI Admin conversation-first workbench v1') || !finalAiOpsCss.includes('final visual authority')) {
   throw new Error('Conversation-first workbench must be the final Admin Assist visual authority');
+}
+if (!finalAiOpsCss.includes('ADMIN-CLUTTER-005') || !finalAiOpsCss.includes('.admin-context-tabs-shell') || !finalAiOpsCss.includes('display:none!important')) {
+  throw new Error('Admin redundant new-task/top-context suppression was lost during postbuild');
 }
 if (!finalAiOpsCss.includes('.ekodi-assist-rail{width:286px') || !finalAiOpsCss.includes('.ekodi-assist-chat-scroll') || !finalAiOpsCss.includes('.ekodi-assist-composer-wrap')) {
   throw new Error('EKODI Assist fixed recent-command rail, scrollable conversation, or bottom composer layout is missing');
