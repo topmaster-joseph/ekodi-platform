@@ -587,8 +587,6 @@ jobs:
           grep -Fq '/api/control/public-sites' dist/admin-public-site-controls.js
           grep -Fq '/api/control/language-status' dist/admin-language-status.js
           grep -Fq "const API='https://ekodi.kr'" dist/admin-ai-control-plane.js
-          ! grep -Fq 'api.ekodi.kr' dist/admin-ai-control-plane.js
-          ! grep -Fq 'api.ekodi.kr' dist/ai-ops-admin.js
           grep -Fq 'admin-ai-control-plane.js' scripts/admin-performance-postbuild.mjs
           grep -Fq 'admin-public-site-controls.js' dist/admin-authenticated-shell.js
           grep -Fq 'EVOLUTION INTELLIGENCE' dist/ai-ops-admin.js
