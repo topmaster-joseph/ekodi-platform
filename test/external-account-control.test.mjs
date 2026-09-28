@@ -67,8 +67,71 @@ test('workspace summary projects manage permissions from the canonical workspace
     const response=await handleExternalAccountControl(request,{MY_SUPABASE_URL:'https://example.supabase.co',MY_SUPABASE_PUBLISHABLE_KEY:'public-key',DB});
     assert.equal(response.status,200);
     const body=await response.json();
-    assert.deepEqual(body.permissions,{view:true,manage:true,register:true,update:true,secretMaterial:false});
+    assert.deepEqual(body.permissions,{view:true,manage:true,register:true,update:true,reassign:false,audit:true,secretMaterial:false});
     assert.equal(body.workspace,'jadam');
+  }finally{globalThis.fetch=originalFetch}
+});
+
+test('super admin can reassign a generic connection only to a canonical tenant and audit the change', async () => {
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async url=>String(url).includes('/auth/v1/user')
+    ? new Response(JSON.stringify({id:'u1',email:'topmaster.joseph@gmail.com'}),{status:200,headers:{'content-type':'application/json'}})
+    : new Response(JSON.stringify([]),{status:200,headers:{'content-type':'application/json'}});
+  const calls=[];
+  const row={
+    id:'xac_1',workspace_id:'old-id',workspace_slug:'jadam',provider:'other',service_key:'delivery',
+    provider_account_id:'merchant-1',display_name:'Old',login_hint:'',connection_mode:'delegated',status:'active',
+    scopes_json:'[]',capabilities_json:'[]',authority_ref:'',last_verified_at:null,last_error:''
+  };
+  const DB={prepare(sql){return{bind(...args){return{
+    first:async()=>{
+      if(sql.includes('FROM external_account_connections'))return row;
+      if(sql.includes('FROM customer_tenants WHERE slug=?'))return args[0]==='pizzamaru'?{id:'tenant-pizza',slug:'pizzamaru',name:'PizzaMaru'}:null;
+      return null;
+    },
+    run:async()=>{calls.push({sql,args});return{success:true}},
+    all:async()=>({results:[]})
+  }} ,all:async()=>({results:[]})}}};
+  try{
+    const request=new Request('https://ekodi.kr/api/control/external-accounts/accounts/xac_1',{
+      method:'PATCH',headers:{authorization:'Bearer session','content-type':'application/json'},
+      body:JSON.stringify({workspaceSlug:'pizzamaru',displayName:'Pizza Delivery',status:'active'})
+    });
+    const response=await handleExternalAccountControl(request,{
+      MY_SUPABASE_URL:'https://example.supabase.co',
+      MY_SUPABASE_PUBLISHABLE_KEY:'public-key',
+      ADMIN_GOOGLE_BOOTSTRAP_EMAILS:'topmaster.joseph@gmail.com',
+      DB
+    });
+    assert.equal(response.status,200);
+    const body=await response.json();
+    assert.equal(body.workspace,'pizzamaru');
+    assert.ok(calls.some(x=>x.sql.includes('UPDATE external_account_connections SET workspace_id=?,workspace_slug=?')&&x.args[0]==='tenant-pizza'&&x.args[1]==='pizzamaru'));
+    assert.ok(calls.some(x=>x.sql.includes('INSERT INTO external_account_audit')&&x.args.includes('connection.reassign')));
+    assert.ok(calls.some(x=>x.sql.includes('INSERT INTO external_account_audit')&&x.args.includes('connection.update')));
+  }finally{globalThis.fetch=originalFetch}
+});
+
+test('non-super workspace manager cannot reassign a connection to another workspace', async () => {
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async url=>{
+    const href=String(url);
+    if(href.includes('/auth/v1/user'))return new Response(JSON.stringify({id:'u1',email:'manager@example.com'}),{status:200,headers:{'content-type':'application/json'}});
+    if(href.includes('current_site_activity_contexts'))return new Response(JSON.stringify([{tenant_id:'t1',tenant:'jadam',workspace_name:'Jadam',authorization_role:'manager'}]),{status:200,headers:{'content-type':'application/json'}});
+    return new Response(JSON.stringify([]),{status:200,headers:{'content-type':'application/json'}});
+  };
+  const DB={prepare(sql){return{bind(){return{
+    first:async()=>sql.includes('external_account_connections')?{id:'xac_1',workspace_id:'t1',workspace_slug:'jadam',provider:'other',service_key:'general',provider_account_id:'a',display_name:'A',login_hint:'',connection_mode:'delegated',status:'active',scopes_json:'[]',capabilities_json:'[]',authority_ref:'',last_verified_at:null,last_error:''}:null,
+    run:async()=>({success:true}),all:async()=>({results:[]})
+  }},all:async()=>({results:[]})}}};
+  try{
+    const request=new Request('https://ekodi.kr/api/control/external-accounts/accounts/xac_1',{
+      method:'PATCH',headers:{authorization:'Bearer session','content-type':'application/json'},
+      body:JSON.stringify({workspaceSlug:'pizzamaru'})
+    });
+    const response=await handleExternalAccountControl(request,{MY_SUPABASE_URL:'https://example.supabase.co',MY_SUPABASE_PUBLISHABLE_KEY:'public-key',DB});
+    assert.equal(response.status,403);
+    assert.equal((await response.json()).error,'workspace_reassign_super_admin_required');
   }finally{globalThis.fetch=originalFetch}
 });
 
@@ -130,6 +193,20 @@ test('workspace admins inherit connection settings without platform infrastructu
   assert.match(runtime,/currentContext\.type==='workspace'/);
   assert.doesNotMatch(runtime,/CLOUDFLARE_AUXILIARY_API_TOKEN/);
   assert.doesNotMatch(runtime,/CLOUDFLARE_API_TOKEN/);
+});
+
+test('account center uses canonical workspace choices and audited soft revoke management', () => {
+  const source=read('external-account-admin.js');
+  assert.match(source,/data-xac-register-workspace/);
+  assert.match(source,/data-xac-edit-form/);
+  assert.match(source,/수정·배정/);
+  assert.match(source,/연결을 해제 상태로 전환/);
+  assert.match(source,/status:'revoked'/);
+  assert.match(source,/data-xac-audit-list/);
+  assert.match(source,/계정 변경 이력/);
+  assert.match(source,/workspaceOptions\(data\)/);
+  assert.doesNotMatch(source,/운영주체 slug<input/);
+  assert.doesNotMatch(source,/method:'DELETE'/);
 });
 
 test('account center separates infrastructure, work accounts, channels and services', () => {
