@@ -12,12 +12,12 @@ test('EKODIBIZ admin hub registers common and independent service management sco
   assert.equal(ekodiBizAdminScopeForPath('/ekodimall/admin/channel-settings'),'mall');
   assert.equal(ekodiBizAdminScopeForPath('/admin/ekodimall/channel-settings'),'');
   assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/mall/admin/channels'),'');
-  assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/trade/admin/access'),'trade');
+  assert.equal(ekodiBizAdminScopeForPath('/ekoditrade/admin/access'),'trade');
   assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/invest/admin/ir'),'invest');
   assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='invest')?.publicHref,'/ekodibiz/invest');
-  assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='tax')?.adminHref,'/tax');
-  assert.equal(ekodiBizAdminScopeForPath('/tax'),'tax');
-  assert.equal(ekodiBizAdminScopeForPath('/tax/invoices'),'tax');
+  assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='tax')?.adminHref,'/ekoditax/admin');
+  assert.equal(ekodiBizAdminScopeForPath('/ekoditax/admin'),'tax');
+  assert.equal(ekodiBizAdminScopeForPath('/ekoditax/admin/invoices'),'tax');
   assert.equal(ekodiBizAdminScopeForPath('/ekodi-lab/admin'),'lab');
 });
 
