@@ -23,7 +23,10 @@ create table if not exists public.trade_product_public_profiles (
   constraint trade_product_public_profiles_publication_status check (publication_status in ('draft','published')),
   constraint trade_product_public_profiles_price_check check (list_price_krw is null or list_price_krw >= 0),
   constraint trade_product_public_profiles_mall_url_https check (mall_public_url is null or mall_public_url ~ '^https://'),
-  constraint trade_product_public_profiles_image_url_https check (image_url is null or image_url ~ '^https://')
+  constraint trade_product_public_profiles_image_url_https check (image_url is null or image_url ~ '^https://'),
+  constraint trade_product_public_profiles_available_requires_checkout check (
+    sale_status <> 'available' or (list_price_krw is not null and mall_public_url is not null)
+  )
 );
 
 alter table public.trade_product_public_profiles enable row level security;
