@@ -129,3 +129,46 @@ test('Mall deploy workflow provisions Amazon vault keys without exposing values'
   assert.match(workflow,/"vaultReady":true/);
   assert.doesNotMatch(workflow,/echo\s+["']?\$\{?AMAZON_CREDENTIAL_KEY/i);
 });
+
+
+test('Amazon read-only sync schema stores no buyer PII', async () => {
+  const sql = await readFile(new URL('../sites/ekodi-mall/api/migrations/0015_amazon_readonly_sync.sql', import.meta.url),'utf8');
+  assert.match(sql,/CREATE TABLE IF NOT EXISTS amazon_sync_runs/);
+  assert.match(sql,/CREATE TABLE IF NOT EXISTS amazon_listing_cache/);
+  assert.match(sql,/CREATE TABLE IF NOT EXISTS amazon_inventory_cache/);
+  assert.match(sql,/CREATE TABLE IF NOT EXISTS amazon_order_cache/);
+  assert.doesNotMatch(sql,/buyer_email|buyer_name|shipping_address|recipient/i);
+});
+
+test('Amazon read-only adapter uses GET for SP-API and POST only for LWA token exchange', async () => {
+  const adapter = await readFile(new URL('../sites/ekodi-mall/api/amazon-sp-api-readonly.js', import.meta.url),'utf8');
+  assert.match(adapter,/readAmazonListings/);
+  assert.match(adapter,/readAmazonInventory/);
+  assert.match(adapter,/readAmazonOrders/);
+  assert.match(adapter,/https:\/\/api\.amazon\.com\/auth\/o2\/token/);
+  assert.match(adapter,/method:'POST'/);
+  assert.match(adapter,/async function amazonSpApiGet|export async function amazonSpApiGet/);
+  assert.match(adapter,/method:'GET'/);
+  assert.doesNotMatch(adapter,/method:'PUT'|method:'PATCH'|method:'DELETE'/);
+  assert.doesNotMatch(adapter,/\/listings\/2021-08-01\/items\/[^\n]+method:'POST'/);
+});
+
+test('Amazon read-only sync API is operator scoped and mutation disabled', async () => {
+  const sync = await readFile(new URL('../sites/ekodi-mall/api/amazon-readonly-sync.js', import.meta.url),'utf8');
+  const entry = await readFile(new URL('../sites/ekodi-mall/api/entry.js', import.meta.url),'utf8');
+  assert.match(sync,/authorizeVerificationOperations/);
+  assert.match(sync,/\/api\/amazon\/sync\/read-only/);
+  assert.match(sync,/\/api\/amazon\/read-model/);
+  assert.match(sync,/mutationEnabled:false/);
+  assert.match(entry,/handleAmazonReadonlyRequest/);
+  assert.match(entry,/amazonReadSyncSchemaReady/);
+});
+
+test('Mall release requires Amazon read-only schema readiness', async () => {
+  const workflow = await readFile(new URL('../.github/workflows/deploy-ekodi-mall.yml', import.meta.url),'utf8');
+  assert.match(workflow,/amazon_sync_runs/);
+  assert.match(workflow,/amazon_listing_cache/);
+  assert.match(workflow,/amazon_inventory_cache/);
+  assert.match(workflow,/amazon_order_cache/);
+  assert.match(workflow,/"amazonReadSyncSchemaReady":true/);
+});
