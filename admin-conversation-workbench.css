@@ -839,3 +839,76 @@ html body.admin-compact .ekodi-assist-execution-row .ekodi-assist-send{
 @media(prefers-reduced-motion:reduce){
   html body.admin-compact.ekodi-admin-design-engine .sidebar{transition:none!important}
 }
+
+/* ADMIN-READABILITY-004 · final rendered workbench authority.
+ * The work area starts from the left edge of the right canvas.
+ * The persistent EKODI command composer remains centered and exposes the selected target without clipping.
+ */
+html body.admin-compact.ekodi-admin-design-engine .content{
+  width:100%!important;
+  max-width:1480px!important;
+  margin-left:0!important;
+  margin-right:auto!important;
+  padding-top:18px!important;
+}
+html body.admin-compact.ekodi-admin-design-engine .content [data-panel][data-admin-list-layout="single"]{
+  margin-left:0!important;
+  margin-right:auto!important;
+}
+html body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(p,li,dd){
+  line-height:1.48!important;
+}
+html body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(small,label){
+  line-height:1.35!important;
+}
+html body.admin-compact .ekodi-assist-bootstrap{
+  display:flex!important;
+  justify-content:center!important;
+  align-items:flex-end!important;
+  right:0!important;
+}
+html body.admin-compact .ekodi-assist-bootstrap-form[data-execution-ready="true"]{
+  width:min(760px,calc(100% - 32px))!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+html body.admin-compact .ekodi-assist-bootstrap-actions{
+  justify-content:center!important;
+}
+html body.admin-compact .ekodi-assist-bootstrap-target-label{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:6px!important;
+  min-width:0!important;
+  white-space:nowrap!important;
+}
+html body.admin-compact .ekodi-assist-bootstrap-target{
+  width:auto!important;
+  min-width:156px!important;
+  max-width:none!important;
+  padding:0 34px 0 12px!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  white-space:nowrap!important;
+}
+html body.admin-compact .ekodi-assist-bootstrap-form[data-execution-ready="true"] .ekodi-assist-bootstrap-send{
+  margin-left:0!important;
+}
+@media(max-width:760px){
+  html body.admin-compact .ekodi-assist-bootstrap{
+    left:0!important;
+    padding-inline:10px!important;
+  }
+  html body.admin-compact .ekodi-assist-bootstrap-form[data-execution-ready="true"]{
+    width:100%!important;
+  }
+  html body.admin-compact .ekodi-assist-bootstrap-actions{
+    justify-content:space-between!important;
+  }
+  html body.admin-compact .ekodi-assist-bootstrap-target{
+    min-width:132px!important;
+    padding-right:30px!important;
+  }
+}
+
