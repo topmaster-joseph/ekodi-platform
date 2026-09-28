@@ -23,7 +23,7 @@ test('site rows keep bounded manage, status and public-open actions', () => {
   assert.ok(campus.includes('function focusService(domain)'));
   assert.ok(campus.includes('dataset.campusAction') && campus.includes('dataset.campusTarget'));
   assert.ok(campus.includes("makeSurfaceLink('관리자'") || campus.includes("makeButton('Manage'"));
-  assert.ok(campus.includes("makeButton('Status'"));
+  assert.ok(campus.includes("makeButton('상태'"));
   assert.ok(campus.includes("link.target = '_blank'"));
   assert.ok(campus.includes("link.rel = 'noopener'"));
 });
