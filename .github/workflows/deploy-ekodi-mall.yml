@@ -483,18 +483,34 @@ jobs:
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.runtime.toml
 
       - name: Ensure persistent production Amazon credential key
-        if: steps.production_scope.outputs.api_changed == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@${WRANGLER_VERSION} secret list --config api/wrangler.runtime.toml > /tmp/mall-prod-secret-list.txt
+          npx --yes wrangler@${WRANGLER_VERSION} secret list --name ekodi-mall-api > /tmp/mall-prod-secret-list.txt
           if grep -Fq 'AMAZON_CREDENTIAL_KEY' /tmp/mall-prod-secret-list.txt; then
             echo 'Amazon production credential key already exists; keeping it unchanged.' >> "$GITHUB_STEP_SUMMARY"
           else
-            openssl rand -hex 32 | npx --yes wrangler@${WRANGLER_VERSION} secret put AMAZON_CREDENTIAL_KEY --config api/wrangler.runtime.toml >/dev/null
+            openssl rand -hex 32 | npx --yes wrangler@${WRANGLER_VERSION} secret put AMAZON_CREDENTIAL_KEY --name ekodi-mall-api >/dev/null
             echo 'Generated the persistent Amazon production credential encryption key directly in Cloudflare without exposing its value.' >> "$GITHUB_STEP_SUMMARY"
           fi
           rm -f /tmp/mall-prod-secret-list.txt
+
+      - name: Verify production Amazon vault readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            code=$(curl -sS -o /tmp/mall-amazon-vault.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ekodimall/api/amazon/status' || true)
+            if [ "$code" = "200" ] \
+              && grep -Fq '"connectionSchemaReady":true' /tmp/mall-amazon-vault.json \
+              && grep -Fq '"vaultReady":true' /tmp/mall-amazon-vault.json; then
+              echo 'Amazon production credential vault is ready.'
+              exit 0
+            fi
+            sleep 5
+          done
+          cat /tmp/mall-amazon-vault.json || true
+          exit 1
 
       - name: Verify production API before Pages promotion
         if: steps.production_scope.outputs.api_changed == 'true'
