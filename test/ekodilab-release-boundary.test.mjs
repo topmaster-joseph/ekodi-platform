@@ -14,7 +14,7 @@ test('EKODI Lab release is centrally guarded and bound to the apex public path',
   assert.equal(manifest.targets.length,1);
   const target=manifest.targets[0];
   assert.equal(target.project,'ekodilab');
-  assert.equal(target.directory,'lab-source');
+  assert.equal(target.directory,'sites/ekodi-lab');
   assert.equal(target.productionUrl,'https://ekodilab.pages.dev/');
   for(const marker of ['에코디연구소','현장에 묻고,','https://ekodi.kr/ekodilab','EKODI LAB'])assert.ok(target.expect.includes(marker),marker);
   for(const marker of ['성수이로 00','1234 5678','https://ekodilab.pages.dev'])assert.ok(target.forbid.includes(marker),marker);
@@ -32,7 +32,7 @@ test('EKODI Lab release is centrally guarded and bound to the apex public path',
   assert.doesNotMatch(workflow,/Configure EKODI DNS|Attach custom domains/);
 
   assert.match(guardrails,/deploy-ekodi-lab-homepage\.yml/);
-  assert.match(guardrails,/AI_CONTROL_GITHUB_TASK_TOKEN/);
+  assert.match(guardrails,/sites\\/ekodi-lab/);
   assert.match(guardrails,/ekodilab\.pages\.json/);
 });
 
