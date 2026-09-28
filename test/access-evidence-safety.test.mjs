@@ -138,3 +138,43 @@ test('Admin checker asks the server for a capability decision instead of guessin
   assert.match(css, /\.client-capability-check-controls/);
   assert.match(css, /@media\(max-width:700px\)\{\.client-capability-check-controls/);
 });
+
+
+test('bulk access templates are server-defined, platform-only and elevation protected', () => {
+  assert.match(prereg, /BULK_ACCESS_TEMPLATES/);
+  assert.match(prereg, /member_active:\s*Object\.freeze\(\{ role:'member', enabled:1/);
+  assert.match(prereg, /viewer_active:\s*Object\.freeze\(\{ role:'viewer', enabled:1/);
+  assert.match(prereg, /client_viewer_active:\s*Object\.freeze\(\{ role:'client_viewer', enabled:1/);
+  assert.match(prereg, /disable:\s*Object\.freeze\(\{ role:null, enabled:0/);
+  assert.match(prereg, /BULK_ACCESS_LIMIT = 50/);
+  assert.match(prereg, /authority\.scope !== 'platform'/);
+  assert.match(prereg, /ACCESS_BULK_PLATFORM_ONLY/);
+  assert.match(prereg, /requirePlatformElevation/);
+  assert.match(prereg, /ELEVATION_REQUIRED/);
+  assert.match(prereg, /handleAdminGoogleAuth/);
+});
+
+test('bulk access applies policy per target and keeps visibility outside the template mutation', () => {
+  assert.match(prereg, /accessGrantManagementDecision\(authority, \{ email, role:existing\.role \}, \{ role:nextRole \}\)/);
+  assert.match(prereg, /validateAccessGrantInput/);
+  assert.match(prereg, /visibility:existing\.visibility/);
+  assert.match(prereg, /writeGrantAudit\(env\.DB, tenant\.id, email, session, 'grant\.update'/);
+  assert.match(prereg, /results\.push\(\{ email, ok:false, code:decision\.code \}\)/);
+  assert.match(prereg, /ACCESS_BULK_LIMIT/);
+  assert.match(prereg, /\/access\\\/bulk-template/);
+});
+
+test('Admin bulk UI requires a single site, explicit preview, confirmation and Google elevation', () => {
+  assert.match(ui, /function bulkSelectionEnabled/);
+  assert.match(ui, /directory\.authority\?\.scope === 'platform'/);
+  assert.match(ui, /Boolean\(shell\?\.site\?\.value\)/);
+  assert.match(ui, /일괄 템플릿 선택/);
+  assert.match(ui, /목록 공개 설정은 유지/);
+  assert.match(ui, /Google 추가 인증/);
+  assert.match(ui, /window\.EKODIAdminContext\?\.elevate/);
+  assert.match(ui, /\/access\/bulk-template/);
+  assert.match(ui, /bulkSelectedKeys\.clear\(\)/);
+  assert.match(css, /\.client-bulk-toolbar/);
+  assert.match(css, /\.client-bulk-controls/);
+  assert.match(css, /@media\(max-width:700px\)[\s\S]*\.client-bulk-controls\{grid-template-columns:1fr\}/);
+});
