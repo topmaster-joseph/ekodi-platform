@@ -18,7 +18,7 @@ import { isOrganizationAdminPath, organizationAdminPage, organizationAdminCss, o
 import { legacyAdminAliasTarget } from './admin-address-policy.js';
 import { isStoreAdminPathShape, resolveStoreAdminRoute, storeAdminPage, storeAdminCss, storeAdminScript } from './store-admin-engine.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
-import { churchMemberHomePage, churchMemberHomeCss, isChurchMemberHomePath } from './church-member-home-page.js';
+import { churchMemberHomePage, isChurchMemberHomePath } from './church-member-home-page.js';
 import { isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
 import { workspaceTradeAdminScript } from './workspace-trade-admin-page.js';
 import { isTradePartnerPath, tradePartnerPage, tradePartnerCss, tradePartnerScript } from './workspace-trade-portal.js';
@@ -344,7 +344,6 @@ async function routePlatform(request,env,ctx){
         if(!liveTenant.dedicated)return tenantLivePage(liveTenant);
       }
     }
-    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&url.pathname==='/church-member-home.css')return churchMemberHomeCss();
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isChurchMemberHomePath(url.pathname))return churchMemberHomePage(request);
     if(host===PUBLIC_HOST&&isEkodiMissionSpacePath(url.pathname))return routeEkodiMissionSpace(request,env);
     const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
