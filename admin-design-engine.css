@@ -177,3 +177,44 @@ body.admin-compact.ekodi-admin-design-engine .section-head h2,
 body.admin-compact.ekodi-admin-design-engine .content [data-panel] h2{
   font-size:clamp(22px,1.35rem + .35vw,26px)!important;
 }
+
+/* EKODI Admin readable-density authority v4 · ADMIN-READABILITY-004
+ * Canonical platform / tenant / service admin rule:
+ * tighter vertical rhythm, left-anchored work content, readable line length.
+ */
+body.admin-compact.ekodi-admin-design-engine .sidebar nav{
+  gap:1px!important;
+}
+body.admin-compact.ekodi-admin-design-engine .admin-global-nav{
+  min-height:36px!important;
+  padding:4px 8px!important;
+  line-height:1.2!important;
+}
+body.admin-compact.ekodi-admin-design-engine .admin-detail-item,
+body.admin-compact.ekodi-admin-design-engine .admin-detail-more{
+  min-height:31px!important;
+  padding-block:4px!important;
+  line-height:1.2!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content{
+  margin-left:0!important;
+  margin-right:auto!important;
+  padding-top:18px!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content>[data-panel],
+body.admin-compact.ekodi-admin-design-engine .content [data-panel]{
+  margin-left:0!important;
+  margin-right:auto!important;
+  text-align:left!important;
+}
+body.admin-compact.ekodi-admin-design-engine .section-head,
+body.admin-compact.ekodi-admin-design-engine .section-head>*{
+  text-align:left!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(p,li,dd){
+  line-height:1.48!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(small,label,button,select,input,textarea){
+  line-height:1.35!important;
+}
+
