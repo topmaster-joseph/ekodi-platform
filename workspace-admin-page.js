@@ -35,24 +35,25 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   const PLATFORM_ADMIN_INTENT_MAX_AGE_MS=10*60*1000;
       const AUTH_URL='https://ekodi.kr/auth/';
   const clean=location.pathname.replace(/\/+$/,'');
-  const tradeAdminMatch=clean.match(/^\/[^/]+\/trade\/admin(?:\/([^/]+)(?:\/[^/]+)*)?$/i);
+  const tradeAdminMatch=clean.match(/^\/(?:trade\/admin|[^/]+\/trade\/admin)(?:\/([^/]+)(?:\/[^/]+)*)?$/i);
   const tradeAdminRoute=Boolean(tradeAdminMatch);
   if(tradeAdminRoute&&!['publishing','marketing','channels'].includes(String(tradeAdminMatch?.[1]||'').toLowerCase()))return;
   const standaloneMall=clean.match(/^\/ekodimall\/admin(?:\/([^/]+)(?:\/[^/]+)*)?$/i);
   const genericService=clean.match(/^\/([^/]+)\/([^/]+)\/admin(?:\/([^/]+)(?:\/[^/]+)*)?$/i);
   const root=clean.match(/^\/([^/]+)\/admin(?:\/([^/]+)(?:\/[^/]+)*)?$/i);
   const mall=Boolean(standaloneMall);
-  const workspace=(standaloneMall?'ekodibiz':genericService?.[1]||root?.[1]||'ekodibiz').toLowerCase();
-  const service=mall?'mall':(genericService?.[2]?.toLowerCase()||null);
+  const standaloneTrade=/^\/trade\/admin(?:\/|$)/i.test(clean);
+  const workspace=(standaloneMall?'ekodibiz':standaloneTrade?'ekoditrade':genericService?.[1]||root?.[1]||'ekodibiz').toLowerCase();
+  const service=mall?'mall':standaloneTrade?'trade':(genericService?.[2]?.toLowerCase()||null);
   const MISSION_DEFAULT_ACTIVITY='260926-chuseok-open-table';
   const defaultSection='overview';
-  const rawSection=standaloneMall?.[1]||(genericService?.[3]||root?.[2]||defaultSection);
+  const rawSection=standaloneMall?.[1]||(tradeAdminMatch?.[1]||genericService?.[3]||root?.[2]||defaultSection);
   const section=(rawSection==='channel-settings'?'channels':rawSection).toLowerCase();
   const CHANNEL_TARGETS=new Map((CHANNEL_CATALOG||[]).map(target=>[target.id,target]));
   const CHANNEL_PROVIDERS=Object.freeze(Object.fromEntries((CHANNEL_CATALOG||[]).map(target=>[target.id,target])));
   const CHANNEL_AUTH_PATHS=Object.freeze({youtube:'/v1/connect/youtube/start',meta:'/v1/connect/meta/start',threads:'/v1/connect/threads/start'});
   const base=`/${workspace}`;
-  const adminBase=standaloneMall?'/ekodimall/admin':service==='mall'?'/ekodimall/admin':service?`${base}/${service}/admin`:`${base}/admin`;
+  const adminBase=standaloneMall?'/ekodimall/admin':standaloneTrade?'/trade/admin':service==='mall'?'/ekodimall/admin':service==='trade'?'/trade/admin':service?`${base}/${service}/admin`:`${base}/admin`;
   const sectionHref=key=>key==='overview'?`${adminBase}/overview`:`${adminBase}/${key==='channels'?'channel-settings':key}`;
   const $=id=>document.getElementById(id);
   const CHANNEL_OAUTH_RESULT_KEY='ekodi-channel-oauth-result-v1';
@@ -165,7 +166,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   function applyWorkspaceContext(context){workspaceContext=context;workspaceRole=String(context?.role||'').trim().toLowerCase();renderNav(workspaceRole);renderAdminScopeSwitcher(workspaceRole);publishTenantContext()}
   function canonicalSubjectKey(){
     if(service==='mall')return 'ekodimall';
-    if(service==='trade')return 'ekoditrade';
+    if(service==='trade'||workspace==='ekoditrade'||workspace==='trade')return 'ekoditrade';
     const root=workspace==='ekodibiz'?'ekodi-biz':workspace;
     const aliases={'ekodi-biz':'ekodi-biz','ekodichurch':'ekodi-church','ekodi-church':'ekodi-church','ekodilab':'ekodi-lab','ekodi-lab':'ekodi-lab','cheonggye':'cheonggye-local'};
     const raw=String(workspaceContext?.slug||root).trim().toLowerCase();
@@ -212,7 +213,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   }
   function workspaceSlugs(){
     if(service==='mall')return new Set(['ekodimall']);
-    if(service==='trade')return new Set(['ekoditrade','ekodi-trade','ekodibiz-trade']);
+    if(service==='trade'||workspace==='ekoditrade'||workspace==='trade')return new Set(['ekoditrade','ekodi-trade','ekodibiz-trade','trade']);
     const values=new Set([workspace,preferredWorkspaceSlug()]);
     if(workspace==='ekodibiz')values.add('ekodi-biz');
     if(workspace==='ekodi-biz')values.add('ekodibiz');
