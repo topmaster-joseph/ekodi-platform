@@ -39,8 +39,8 @@ jobs:
           test -f dist/control-center.html
           test -f dist/control-center.css
           test -f dist/admin-demand-loader.js
-          grep -Fq 'position:fixed!important' dist/control-center.css
-          grep -Fq '.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}' dist/control-center.css
+          grep -Fq '.app>main{padding-top:0;min-width:0;max-width:100vw}' dist/control-center.css
+          grep -Fq '.topbar{position:sticky!important;top:0!important;left:auto!important;right:auto!important;width:100%!important' dist/control-center.css
           grep -Fq "styles: ['marketing-ai-admin.css']" dist/admin-demand-loader.js
           grep -Fq "scripts: ['marketing-ai-admin.js']" dist/admin-demand-loader.js
           if grep -Fq '<script src="marketing-ai-admin.js"' dist/control-center.html; then
