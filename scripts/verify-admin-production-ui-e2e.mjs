@@ -274,6 +274,20 @@ for (const [id, group] of menus) {
     continue;
   }
 
+  if (id === 'work' && definition?.adminHandoff === true) {
+    const source = page.locator('.admin-context-source .nav[data-section="work"]');
+    const href = await source.getAttribute('href');
+    const expected = new URL(definition.href, ADMIN_URL);
+    if (!href || new URL(href, ADMIN_URL).href !== expected.href) throw new Error(`Work admin handoff href is invalid: ${href || '(missing)'}`);
+    if (expected.href !== 'https://ekodi.kr/work/admin') throw new Error(`Work admin handoff target drifted: ${expected.href}`);
+    if (!page.url().startsWith(ADMIN_URL)) throw new Error(`Work handoff verifier is not on canonical Admin: ${page.url()}`);
+    const response = await context.request.get(expected.href, { maxRedirects: 5, timeout: 20000 });
+    if (response.status() < 200 || response.status() >= 400) throw new Error(`Work admin handoff endpoint returned ${response.status()}`);
+    results.push({ id, group, kind: 'handoff', ok: true, detail: expected.href });
+    console.log(`[PROD-E2E] ${id}: ok handoff-link ${expected.href}`);
+    continue;
+  }
+
   if (definition?.href && definition.adminHandoff !== true) {
     const expected = new URL(definition.href, ADMIN_URL);
     const source = page.locator(`.admin-context-source .nav[data-section="${id}"]`);
