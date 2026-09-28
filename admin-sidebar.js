@@ -81,7 +81,7 @@ body.admin-compact{--admin-readable:#172033;--admin-secondary:#66768a;--admin-bo
 .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .nav{display:none!important}
 .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .admin-context-source{display:none!important}
 .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .admin-global-navs{display:grid!important}
-.sidebar nav[data-ekodi-admin-nav-mode="primary"] > .admin-command-entry{display:flex!important}
+.sidebar nav[data-ekodi-admin-nav-mode="primary"] > .admin-command-entry{display:none!important}
 body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:2px!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-width:thin}
 body.admin-compact .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .nav{display:none!important}
 body.admin-compact .${GLOBAL_CLASS}{display:grid;gap:2px;margin:3px 0 6px}
@@ -200,6 +200,10 @@ function ensureContainers(nav, root = document) {
     commandEntry.append(icon, label);
     nav.insertBefore(commandEntry, globals);
   }
+  commandEntry.hidden = true;
+  commandEntry.setAttribute('aria-hidden', 'true');
+  commandEntry.tabIndex = -1;
+  commandEntry.style.setProperty('display', 'none', 'important');
 
   let source = nav.querySelector(`:scope>.${SOURCE_CLASS}`);
   if (!source) {
@@ -227,6 +231,11 @@ function ensureContainers(nav, root = document) {
     const topbar = main.querySelector(':scope>.topbar');
     if (topbar) topbar.insertAdjacentElement('afterend', shell);
     else main.prepend(shell);
+  }
+  if (shell) {
+    shell.hidden = true;
+    shell.setAttribute('aria-hidden', 'true');
+    shell.style.setProperty('display', 'none', 'important');
   }
   return { globals, source, shell, commandEntry };
 }
