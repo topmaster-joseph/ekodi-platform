@@ -50,9 +50,11 @@ function installStyle(){
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-header-account-hidden{display:none!important}
     @media(min-width:761px){html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-topbar{display:none!important}}
     @media(max-width:760px){
-      html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-topbar{position:sticky!important;top:0!important;left:auto!important;right:auto!important;width:auto!important;min-height:56px!important;z-index:1200!important;box-sizing:border-box!important;padding:max(8px,env(safe-area-inset-top,0px)) 12px 8px!important;background:#fff!important;color:var(--ekodi-admin-text)!important;border-bottom:1px solid var(--ekodi-admin-line)!important;box-shadow:none!important}
-      html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-topbar .menu{color:var(--ekodi-admin-text)!important;background:#fff!important;border:1px solid var(--ekodi-admin-line)!important;border-radius:12px!important;width:42px!important;height:42px!important}
-      html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-topbar #pageTitle{display:block!important;color:var(--ekodi-admin-text)!important;font-size:16px!important;line-height:1.3!important;margin:0!important}
+      /* ADMIN-MOBILE-SHELL-003: sticky topbar owns its space; legacy fixed-header spacers are forbidden. */
+      html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main{padding-top:0!important;width:100%!important;max-width:100vw!important;min-width:0!important}
+      html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-topbar{position:sticky!important;top:0!important;left:auto!important;right:auto!important;width:100%!important;min-height:calc(56px + env(safe-area-inset-top,0px))!important;z-index:1200!important;box-sizing:border-box!important;padding:env(safe-area-inset-top,0px) 12px 0!important;background:#fff!important;color:var(--ekodi-admin-text)!important;border-bottom:1px solid var(--ekodi-admin-line)!important;box-shadow:none!important}
+      html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-topbar .menu{color:var(--ekodi-admin-text)!important;background:#fff!important;border:1px solid var(--ekodi-admin-line)!important;border-radius:12px!important;width:44px!important;height:44px!important;min-width:44px!important}
+      html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-topbar #pageTitle{display:block!important;color:var(--ekodi-admin-text)!important;font-size:16px!important;line-height:1.3!important;margin:0!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
     }
   `;
   (document.head||document.documentElement).append(style);

@@ -19,6 +19,14 @@ const TABS_SHELL_CLASS = 'admin-context-tabs-shell';
 const TABS_CLASS = 'admin-context-tabs';
 const DETAILS_CLASS = 'admin-global-details';
 const MORE_CLASS = 'admin-detail-more';
+const MOBILE_NAV_CLASS = 'admin-mobile-primary-nav';
+const DRAWER_SCRIM_CLASS = 'admin-mobile-drawer-scrim';
+const MOBILE_PRIMARY_GROUPS = Object.freeze([
+  { id:'summary', icon:'◉', ko:'홈', en:'Home' },
+  { id:'sites', icon:'▦', ko:'사이트', en:'Sites' },
+  { id:'services', icon:'◇', ko:'서비스', en:'Services' },
+  { id:'status', icon:'↑', ko:'운영', en:'Ops' },
+]);
 const FLAT_DETAIL_GROUPS = new Set(['services']);
 const PRIMARY_SECTIONS = Object.freeze({
   summary: ['platform-overview'],
@@ -227,6 +235,82 @@ function isPlatformSuperAdminSurface(){
   return /^\/admin(?:\/|$)/.test(String(window.location?.pathname||''));
 }
 
+function ensureMobilePrimaryNav(root=document){
+  const doc=root?.nodeType===9?root:(root?.ownerDocument||document);
+  let mobile=doc.querySelector(`.${MOBILE_NAV_CLASS}`);
+  if(!mobile){
+    mobile=doc.createElement('nav');
+    mobile.className=MOBILE_NAV_CLASS;
+    mobile.dataset.adminMobilePrimary='true';
+    mobile.setAttribute('aria-label','모바일 관리자 핵심 메뉴');
+    for(const item of MOBILE_PRIMARY_GROUPS){
+      const button=doc.createElement('button');
+      button.type='button';
+      button.dataset.adminMobileGroup=item.id;
+      const icon=doc.createElement('b');
+      icon.setAttribute('aria-hidden','true');
+      icon.textContent=item.icon;
+      const label=doc.createElement('span');
+      button.append(icon,label);
+      mobile.append(button);
+    }
+    const more=doc.createElement('button');
+    more.type='button';
+    more.dataset.adminMobileMore='true';
+    more.setAttribute('aria-expanded','false');
+    const moreIcon=doc.createElement('b');
+    moreIcon.setAttribute('aria-hidden','true');
+    moreIcon.textContent='☰';
+    const moreLabel=doc.createElement('span');
+    more.append(moreIcon,moreLabel);
+    mobile.append(more);
+    doc.body?.append(mobile);
+  }
+  return mobile;
+}
+
+function ensureDrawerScrim(root=document){
+  const doc=root?.nodeType===9?root:(root?.ownerDocument||document);
+  let scrim=doc.querySelector(`.${DRAWER_SCRIM_CLASS}`);
+  if(!scrim){
+    scrim=doc.createElement('div');
+    scrim.className=DRAWER_SCRIM_CLASS;
+    scrim.dataset.adminDrawerScrim='true';
+    scrim.setAttribute('aria-hidden','true');
+    scrim.hidden=true;
+    doc.body?.append(scrim);
+  }
+  return scrim;
+}
+
+function syncMobilePrimaryNav(nav,locale,group,drawerOpen=false){
+  const mobile=ensureMobilePrimaryNav(nav?.ownerDocument||document);
+  const primaryIds=new Set(MOBILE_PRIMARY_GROUPS.map(item=>item.id));
+  for(const item of MOBILE_PRIMARY_GROUPS){
+    const button=mobile.querySelector(`[data-admin-mobile-group="${item.id}"]`);
+    if(!button)continue;
+    const label=item[locale]||item.ko;
+    const span=button.querySelector('span');
+    if(span)span.textContent=label;
+    button.setAttribute('aria-label',label);
+    const selected=!drawerOpen&&group===item.id;
+    button.classList.toggle('active',selected);
+    button.setAttribute('aria-current',selected?'page':'false');
+  }
+  const more=mobile.querySelector('[data-admin-mobile-more]');
+  if(more){
+    const label=locale==='en'?'More':'더보기';
+    const span=more.querySelector('span');
+    if(span)span.textContent=label;
+    more.setAttribute('aria-label',locale==='en'?'Open all administrator menus':'전체 관리자 메뉴 열기');
+    more.setAttribute('aria-expanded',drawerOpen?'true':'false');
+    const selected=drawerOpen||(!primaryIds.has(group)&&group!=='home');
+    more.classList.toggle('active',selected);
+    more.setAttribute('aria-current',selected&&!drawerOpen?'page':'false');
+  }
+  return mobile;
+}
+
 function globalButtons(globals, locale) {
   const existing = new Map([...globals.querySelectorAll('[data-admin-global-group]')].map(node => [node.dataset.adminGlobalGroup, node]));
   for (const group of ADMIN_MENU_GROUPS) {
@@ -390,6 +474,7 @@ function syncWorkbenchState(nav, locale, preferredSection = '') {
   else globals.querySelector(`:scope>.${DETAILS_CLASS}`)?.remove();
   nav.dataset.adminGlobalGroup = group;
   nav.dataset.adminRoleNavigation = isPlatformSuperAdminSurface() ? 'platform-super-admin' : 'delegated-manager';
+  syncMobilePrimaryNav(nav, locale, group, Boolean(nav.closest('.sidebar')?.classList.contains('open')));
 }
 
 function activateSection(nav, section) {
@@ -521,22 +606,55 @@ export function mountAdminSidebar(root = document, options = {}) {
 
   const sidebar = nav.closest('.sidebar');
   const menuButton = root.querySelector?.('#menuButton') || document.querySelector('#menuButton');
-  const closeDrawer = () => {
-    sidebar?.classList.remove('open');
-    menuButton?.setAttribute('aria-expanded','false');
+  const mobilePrimary = ensureMobilePrimaryNav(root);
+  const drawerScrim = ensureDrawerScrim(root);
+  const mobileMedia = window.matchMedia?.('(max-width:760px)');
+  const setDrawerOpen = open => {
+    const allowed=Boolean(open&&mobileMedia?.matches);
+    sidebar?.classList.toggle('open',allowed);
+    document.body?.classList.toggle('admin-mobile-drawer-open',allowed);
+    if(drawerScrim){
+      drawerScrim.hidden=!allowed;
+      drawerScrim.setAttribute('aria-hidden',allowed?'false':'true');
+    }
+    menuButton?.setAttribute('aria-expanded',allowed?'true':'false');
+    syncMobilePrimaryNav(nav, readAdminSidebarLocale(), nav.dataset.adminGlobalGroup||getAdminMenuGroupForSection(activeSection(nav)), allowed);
+    return allowed;
   };
+  const closeDrawer = () => setDrawerOpen(false);
   const toggleDrawer = event => {
     event?.preventDefault?.();
     if(!sidebar)return;
-    const open=sidebar.classList.toggle('open');
-    menuButton?.setAttribute('aria-expanded',open?'true':'false');
+    setDrawerOpen(!sidebar.classList.contains('open'));
   };
   if(menuButton){
     if(!sidebar?.id)sidebar.id='ekodiAdminSidebar';
     menuButton.setAttribute('aria-controls',sidebar?.id||'ekodiAdminSidebar');
-    menuButton.setAttribute('aria-expanded',sidebar?.classList.contains('open')?'true':'false');
+    menuButton.setAttribute('aria-expanded','false');
+    menuButton.setAttribute('aria-label',readAdminSidebarLocale()==='en'?'Open administrator menu':'관리자 메뉴 열기');
     menuButton.addEventListener('click',toggleDrawer);
   }
+  const mobilePrimaryClick = event => {
+    const more=event.target.closest?.('[data-admin-mobile-more]');
+    if(more){
+      event.preventDefault();
+      setDrawerOpen(!sidebar?.classList.contains('open'));
+      return;
+    }
+    const button=event.target.closest?.('[data-admin-mobile-group]');
+    if(!button)return;
+    event.preventDefault();
+    delete nav.dataset.adminFocusedGroup;
+    activateSection(nav,getAdminMenuGroupDefault(button.dataset.adminMobileGroup));
+    closeDrawer();
+  };
+  const scrimClick = () => closeDrawer();
+  const escapeDrawer = event => { if(event.key==='Escape'&&sidebar?.classList.contains('open'))closeDrawer(); };
+  const viewportChanged = () => { if(!mobileMedia?.matches)closeDrawer(); };
+  mobilePrimary?.addEventListener('click',mobilePrimaryClick);
+  drawerScrim?.addEventListener('click',scrimClick);
+  window.addEventListener('keydown',escapeDrawer);
+  mobileMedia?.addEventListener?.('change',viewportChanged);
 
   let queued = false;
   let syncing = false;
@@ -630,7 +748,12 @@ export function mountAdminSidebar(root = document, options = {}) {
       observer.disconnect();
       root.removeEventListener?.('click', contextClick, true);
       menuButton?.removeEventListener('click',toggleDrawer);
+      mobilePrimary?.removeEventListener('click',mobilePrimaryClick);
+      drawerScrim?.removeEventListener('click',scrimClick);
+      window.removeEventListener('keydown',escapeDrawer);
+      mobileMedia?.removeEventListener?.('change',viewportChanged);
       window.removeEventListener('ekodi-admin-section-changed', sectionChanged);
+      closeDrawer();
       mounted.delete(nav);
     },
   });

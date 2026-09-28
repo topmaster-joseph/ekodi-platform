@@ -5,12 +5,12 @@ import vm from 'node:vm';
 
 const source=fs.readFileSync(new URL('../admin-canonical-routes.js',import.meta.url),'utf8');
 
-function routesFor({pathname='/admin/',search='',hash=''}={}){
+function routesFor({pathname='/admin/',search='',hash='',mobile=false}={}){
   const location={
     href:`https://ekodi.kr${pathname}${search}${hash}`,
     hostname:'ekodi.kr',pathname,search,hash,
   };
-  const window={location};
+  const window={location,matchMedia:()=>({matches:mobile})};
   vm.runInNewContext(source,{window,URL,URLSearchParams,Object,Set,String});
   return window.EKODIAdminRoutes;
 }
@@ -26,6 +26,17 @@ test('Admin roots resolve to command home while child routes remain independent'
   assert.equal(routes.sectionFromPath('/admin/services/insurance'),'insurance');
   assert.equal(routes.sectionFromPath('/admin/operations/finance'),'finance');
   assert.equal(routes.pathFor('finance'),'/admin/content/finance');
+});
+
+test('mobile admin root opens platform overview while explicit command home stays addressable',()=>{
+  let routes=routesFor({mobile:true});
+  assert.equal(routes.sectionFromPath('/admin/'),'command-home');
+  assert.equal(routes.sectionFromLocation(),'platform-overview');
+  routes=routesFor({pathname:'/admin/home',mobile:true});
+  assert.equal(routes.sectionFromPath('/admin/home'),'command-home');
+  assert.equal(routes.sectionFromLocation(),'command-home');
+  routes=routesFor({mobile:false});
+  assert.equal(routes.sectionFromLocation(),'command-home');
 });
 
 test('service, legacy query and hash routes override command root for downstream compatibility',()=>{
