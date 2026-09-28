@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '15 0 * * *'
+    - cron: '45 0 * * *'
   push:
     branches: [main]
     paths:
@@ -50,8 +51,8 @@ jobs:
           budget_db=''
           while IFS= read -r db; do
             [ -n "$db" ] || continue
-            schema=$(cf_query "$db" "SELECT name FROM sqlite_master WHERE type='table' AND name='ai_provider_daily_budget'" || true)
-            if echo "$schema" | jq -e '.success == true and ([.result[]?.results[]?.name] | index("ai_provider_daily_budget") != null)' >/dev/null 2>&1; then
+            schema=$(cf_query "$db" "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('ai_provider_daily_budget','ai_command_runs')" || true)
+            if echo "$schema" | jq -e '.success == true and ([.result[]?.results[]?.name] | (index("ai_provider_daily_budget") != null and index("ai_command_runs") != null))' >/dev/null 2>&1; then
               budget_db="$db"
               break
             fi
@@ -69,37 +70,52 @@ jobs:
           proof_calls=1
           operational_reserve=6
           remaining=$(( limit - used ))
-          if (( remaining >= proof_calls + operational_reserve )); then
+          proof_today=$(cf_query "$budget_db" "SELECT COUNT(*) AS count FROM ai_command_runs WHERE task_id LIKE 'proof_orch_%' AND provider_diversity >= 1 AND completed_at >= '${day}T00:00:00.000Z'" || true)
+          proven=$(echo "$proof_today" | jq -r '.result[]?.results[0]?.count // 0' | head -1)
+          [[ "$proven" =~ ^[0-9]+$ ]]
+
+          if (( proven > 0 )); then
+            allowed=false
+            reason=already_proven_today
+          elif (( remaining >= proof_calls + operational_reserve )); then
             allowed=true
+            reason=budget_available
           else
             allowed=false
+            reason=operational_reserve_protected
           fi
 
           echo "allowed=$allowed" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
           echo "used=$used" >> "$GITHUB_OUTPUT"
           echo "limit=$limit" >> "$GITHUB_OUTPUT"
           echo "remaining=$remaining" >> "$GITHUB_OUTPUT"
-          echo "Workers AI proof budget: used=$used limit=$limit remaining=$remaining required=$proof_calls reserve=$operational_reserve allowed=$allowed" >> "$GITHUB_STEP_SUMMARY"
+          echo "proven=$proven" >> "$GITHUB_OUTPUT"
+          echo "Workers AI proof budget: used=$used limit=$limit remaining=$remaining required=$proof_calls reserve=$operational_reserve provenToday=$proven allowed=$allowed reason=$reason" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Record quota-gated proof deferral
         if: steps.budget.outputs.allowed != 'true'
         shell: bash
         run: |
           set -euo pipefail
-          jq -n             --arg day "$(date -u +%F)"             --argjson used "${{ steps.budget.outputs.used }}"             --argjson limit "${{ steps.budget.outputs.limit }}"             --argjson remaining "${{ steps.budget.outputs.remaining }}"             '{
+          jq -n             --arg day "$(date -u +%F)"             --arg reason "${{ steps.budget.outputs.reason }}"             --argjson used "${{ steps.budget.outputs.used }}"             --argjson limit "${{ steps.budget.outputs.limit }}"             --argjson remaining "${{ steps.budget.outputs.remaining }}"             '{
               schemaVersion:1,
               proof:"ekodi-orchestrator-live-production-e2e",
-              proofStatus:"quota_gated",
-              externalProofSatisfied:false,
+              proofStatus:($reason == "already_proven_today" ? "already_proven" : "quota_gated"),
+              externalProofSatisfied:($reason == "already_proven_today"),
               productionMutationPerformed:false,
               provider:"cloudflare-workers-ai",
               budget:{day:$day,used:$used,limit:$limit,remaining:$remaining},
-              reason:"workers_ai_operational_reserve_protected"
+              reason:$reason
             }' > "$RUNNER_TEMP/ekodi-orchestrator-proof.json"
           {
             echo '## EKODI Orchestrator live production proof'
             echo
-            echo '- Result: quota-gated; external provider proof was not claimed.'
+            if [ "${{ steps.budget.outputs.reason }}" = "already_proven_today" ]; then
+              echo '- Result: already proven today; duplicate external provider call skipped.'
+            else
+              echo '- Result: quota-gated; external provider proof was not claimed.'
+            fi
             echo "- Workers AI usage: ${{ steps.budget.outputs.used }}/${{ steps.budget.outputs.limit }}"
             echo "- Remaining: ${{ steps.budget.outputs.remaining }}"
             echo '- EKODI Core remains provider-independent; operational reserve was preserved.'
