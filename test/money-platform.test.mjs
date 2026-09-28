@@ -84,3 +84,13 @@ test('Money production contract is apex-only and Finance bridge is read-only',as
   const worker=await readFile(new URL('../money-worker.js',import.meta.url),'utf8');
   assert.match(worker,/finance\.internal\/api\/finance\/banking\/health/);assert.doesNotMatch(worker,/finance\.internal\/api\/finance\/banking\/(?:accounts|transactions|transfers)/);assert.match(worker,/financialExecution:false/);
 });
+
+
+test('Money V3 public and health copy do not expose stale V2 readiness labels',async()=>{
+  const worker=await readFile(new URL('../money-worker.js',import.meta.url),'utf8');
+  const page=await readFile(new URL('../money/index.html',import.meta.url),'utf8');
+  assert.match(worker,/persistence:'none-v3-readiness'/);
+  assert.doesNotMatch(worker,/none-v2-readiness/);
+  assert.match(page,/V3는 공인 API 연동/);
+  assert.doesNotMatch(page,/V2는 공인 API 연동/);
+});
