@@ -62,7 +62,8 @@ jobs:
           ! grep -Fq 'work.ekodi.kr' wrangler.work.toml
           ! grep -Fq 'custom_domain = true' wrangler.work.toml
           grep -Fq "work:{name:'에코디워크 · 구인구직'" auth-site/client-auth.js
-          grep -Fq "isRegistryUserService||trustedEkodiReturn" auth-site/auth-router.js
+          grep -Fq "isRegistryUserService" auth-site/auth-router.js
+          grep -Fq "trustedEkodiReturn" auth-site/auth-router.js
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
@@ -77,7 +78,8 @@ jobs:
             if [[ "$code" == "200" ]] && [[ "$router" == "200" ]] \
               && grep -Fq "work:{name:'에코디워크 · 구인구직'" /tmp/work-client-auth.js \
               && grep -Fq "returnTo:'https://ekodi.kr/work'" /tmp/work-client-auth.js \
-              && grep -Fq "isRegistryUserService||trustedEkodiReturn" /tmp/work-auth-router.js; then
+              && grep -Fq "isRegistryUserService" /tmp/work-auth-router.js \
+              && grep -Fq "trustedEkodiReturn" /tmp/work-auth-router.js; then
               echo 'Central Work auth realm is live.'
               break
             fi
