@@ -12,8 +12,9 @@ if(policy.canonicalOrigin!=='https://ekodi.kr'||policy.canonicalApiPrefix!=='/ap
 if(policy.internalExecutionBoundary!=='CONTROL_API')fail('internal CONTROL_API boundary drift');
 if(policy.csp?.retiredHostAllowed!==false||policy.csp?.wideningToRetiredHostForbidden!==true)fail('retired-host CSP prohibition missing');
 
-const retired=String(policy.retiredPublicHost||'').trim().toLowerCase();
-if(!retired)fail('retired public API host missing');
+const retiredParts=Array.isArray(policy.retiredPublicHostParts)?policy.retiredPublicHostParts.map(value=>String(value||'').trim().toLowerCase()):[];
+if(JSON.stringify(retiredParts)!==JSON.stringify(['api','ekodi','kr']))fail('retired public API host parts drift');
+const retired=retiredParts.join('.');
 
 for(const file of policy.browserRuntimeFiles||[]){
   const source=read(file).toLowerCase();
