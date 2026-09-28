@@ -11,7 +11,7 @@ test('Mall admin exposes operator-first direct navigation', () => {
   assert.ok(source.includes("const mallLocalGroups=["));
   assert.ok(source.includes("function groupsForRole(role=workspaceRole)"));
   assert.ok(source.includes("if(service==='mall')"));
-  assert.ok(source.includes("adminBase=standaloneMall?'/ekodimall/admin':service==='mall'?'/ekodimall/admin'"));
+  assert.ok(source.includes("adminBase=standaloneMall?'/ekodimall/admin':standaloneTrade?'/trade/admin':service==='mall'?'/ekodimall/admin'"));
   assert.equal(direct.includes("['sales','영업장부']"), false);
   assert.equal(direct.includes("['automation','자동화']"), false);
   assert.equal(direct.includes("['amazon','Amazon']"), false);
