@@ -83,7 +83,7 @@ jobs:
           node scripts/validate-free-tier-optimization.mjs
           node scripts/validate-adaptive-infrastructure.mjs
           node scripts/validate-supabase-free-project-capacity.mjs
-          node --test test/free-tier-resource-governor.test.mjs test/free-tier-resource-collector.test.mjs test/free-tier-resource-proof.test.mjs test/free-tier-supabase-oidc-contract.test.mjs test/supabase-free-project-capacity-guard.test.mjs
+          node --test test/free-tier-resource-governor.test.mjs test/free-tier-resource-collector.test.mjs test/free-tier-resource-proof.test.mjs test/free-tier-supabase-oidc-contract.test.mjs test/supabase-free-project-capacity-guard.test.mjs test/adaptive-resource-orchestrator.test.mjs
 
   collect:
     if: github.event_name != 'pull_request'
