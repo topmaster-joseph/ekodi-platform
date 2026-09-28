@@ -459,12 +459,12 @@ function syncWorkbenchState(nav, locale, preferredSection = '') {
   const group = ADMIN_MENU_GROUPS.some(item => item.id === focusedGroup) ? focusedGroup : activeGroup;
   const displayedSection = group === activeGroup ? section : '';
   if (commandEntry) {
-    const selected = section === 'command-home';
+    const selected = section === 'command-home' && !focusedGroup;
     commandEntry.classList.toggle('active', selected);
     commandEntry.setAttribute('aria-current', selected ? 'page' : 'false');
   }
   for (const button of globals.querySelectorAll('[data-admin-global-group]')) {
-    const selected = section !== 'command-home' && button.dataset.adminGlobalGroup === group;
+    const selected = button.dataset.adminGlobalGroup === group && (section !== 'command-home' || Boolean(focusedGroup));
     button.classList.toggle('active', selected);
     button.setAttribute('aria-current', selected ? 'page' : 'false');
     button.setAttribute('aria-expanded', selected ? 'true' : 'false');
