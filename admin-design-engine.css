@@ -37,7 +37,7 @@ body.admin-compact.ekodi-admin-design-engine .sidebar nav{
 }
 body.admin-compact.ekodi-admin-design-engine .sidebar nav::-webkit-scrollbar{width:8px}
 body.admin-compact.ekodi-admin-design-engine .admin-global-nav{
-  min-height:48px!important;
+  min-height:40px!important;
   border-radius:11px!important;
   color:#dbe8f6!important;
 }
@@ -53,6 +53,11 @@ body.admin-compact.ekodi-admin-design-engine .admin-global-nav.active{
 }
 body.admin-compact.ekodi-admin-design-engine .admin-global-nav b{color:#8fb5d6!important}
 body.admin-compact.ekodi-admin-design-engine .admin-global-nav.active b{color:#d9ecff!important}
+body.admin-compact.ekodi-admin-design-engine .admin-global-details[data-admin-flat-details="true"]{
+  margin-left:0!important;
+  padding-left:0!important;
+  border-left:0!important;
+}
 body.admin-compact.ekodi-admin-design-engine .admin-context-tabs-shell{
   position:sticky!important;
   top:0!important;

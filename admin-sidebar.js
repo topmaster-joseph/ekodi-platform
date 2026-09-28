@@ -19,11 +19,12 @@ const TABS_SHELL_CLASS = 'admin-context-tabs-shell';
 const TABS_CLASS = 'admin-context-tabs';
 const DETAILS_CLASS = 'admin-global-details';
 const MORE_CLASS = 'admin-detail-more';
+const FLAT_DETAIL_GROUPS = new Set(['services']);
 const PRIMARY_SECTIONS = Object.freeze({
   summary: ['platform-overview'],
   sites: ['sites-all', 'sites-business', 'sites-clients', 'sites-community', 'sites-core', 'sites-preparing'],
   people: ['users-access', 'admins', 'ai-membership', 'security'],
-  services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration'],
+  services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'],
   content: ['work', 'communication', 'community', 'books', 'social'],
   status: ['health', 'deployments', 'aiops', 'devices', 'api-cost'],
   'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'ai-module-spec', 'audit-records'],
@@ -68,26 +69,29 @@ function ensureStyle() {
   style.textContent = `
 body.admin-compact{--admin-readable:#172033;--admin-secondary:#66768a;--admin-border:#d9e2ec;--admin-soft:#f4f7fb;--admin-active:#eaf3ff}
 /* Primary-nav safety is independent of the compact class so lazy feature hydration can never leak technical menu rows. */
-.sidebar nav[data-ekodi-admin-nav-mode="primary"]{display:flex!important;flex-direction:column!important;gap:4px!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-width:thin}
+.sidebar nav[data-ekodi-admin-nav-mode="primary"]{display:flex!important;flex-direction:column!important;gap:2px!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-width:thin}
 .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .nav{display:none!important}
 .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .admin-context-source{display:none!important}
 .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .admin-global-navs{display:grid!important}
 .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .admin-command-entry{display:flex!important}
-body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:4px!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-width:thin}
+body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:2px!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-width:thin}
 body.admin-compact .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .nav{display:none!important}
-body.admin-compact .${GLOBAL_CLASS}{display:grid;gap:5px;margin:6px 0 10px}
-body.admin-compact .admin-global-nav{display:flex;align-items:center;gap:11px;width:100%;min-height:48px;padding:10px 12px;border:1px solid transparent;border-radius:11px;background:transparent;color:#dbe8f6!important;font:inherit;font-size:15px;font-weight:780;line-height:1.25;text-align:left;cursor:pointer;box-shadow:none!important;transition:background .12s ease,border-color .12s ease!important;opacity:1!important}
+body.admin-compact .${GLOBAL_CLASS}{display:grid;gap:2px;margin:3px 0 6px}
+body.admin-compact .admin-global-nav{display:flex;align-items:center;gap:9px;width:100%;min-height:40px;padding:6px 10px;border:1px solid transparent;border-radius:9px;background:transparent;color:#dbe8f6!important;font:inherit;font-size:14px;font-weight:780;line-height:1.25;text-align:left;cursor:pointer;box-shadow:none!important;transition:background .12s ease,border-color .12s ease!important;opacity:1!important}
 body.admin-compact .admin-global-nav span{color:inherit!important;opacity:1!important}
 body.admin-compact .admin-global-nav:hover{border-color:#274d73;background:#102c49;color:#fff!important}
 body.admin-compact .admin-global-nav.active{border-color:#2d6fac;background:#174b7b;color:#fff!important}
-body.admin-compact .admin-global-nav b{display:inline-grid;place-items:center;min-width:24px;color:#8fb5d6!important;font-size:14px;font-weight:850;letter-spacing:-.03em;opacity:1!important}
+body.admin-compact .admin-global-nav b{display:inline-grid;place-items:center;min-width:22px;color:#8fb5d6!important;font-size:13px;font-weight:850;letter-spacing:-.03em;opacity:1!important}
 body.admin-compact .admin-global-nav.active b{color:#d9ecff!important}
-body.admin-compact .${DETAILS_CLASS}{display:grid!important;gap:3px;margin:-1px 4px 7px 32px;padding:4px 0 6px 8px;border-left:1px solid #294b6b}
-body.admin-compact .admin-detail-item{display:flex;align-items:center;gap:8px;width:100%;min-height:34px;margin:0;padding:6px 8px;border:1px solid transparent;border-radius:8px;background:transparent;color:#506174;font:inherit;font-size:13px;font-weight:700;text-align:left;cursor:pointer}
+body.admin-compact .${DETAILS_CLASS}{display:grid!important;gap:2px;margin:0 2px 5px 28px;padding:2px 0 4px 6px;border-left:1px solid #294b6b}
+body.admin-compact .admin-detail-item{display:flex;align-items:center;gap:8px;width:100%;min-height:34px;margin:0;padding:5px 8px;border:1px solid transparent;border-radius:8px;background:transparent;color:#506174;font:inherit;font-size:13px;font-weight:700;text-align:left;cursor:pointer}
 body.admin-compact .admin-detail-item:hover{border-color:#dbe7ef;background:#f2f7fb;color:#173b57}
 body.admin-compact .admin-detail-item.active{border-color:#bfd5ee;background:#edf4ff;color:#0b5cab}
 body.admin-compact .admin-detail-item b{display:inline-grid;place-items:center;min-width:19px;color:#6d8194;font-size:10px;font-weight:850}
 body.admin-compact .admin-detail-item.active b{color:#155eef}
+body.admin-compact .${DETAILS_CLASS}[data-admin-flat-details="true"]{margin:0 0 6px!important;padding:0!important;border-left:0!important;gap:2px!important}
+body.admin-compact .${DETAILS_CLASS}[data-admin-flat-details="true"] .admin-detail-item{min-height:38px!important;padding:6px 10px!important;border-radius:9px!important;font-weight:720!important}
+body.admin-compact .${DETAILS_CLASS}[data-admin-flat-details="true"] .admin-detail-item b{min-width:22px!important}
 body.admin-compact .${MORE_CLASS}{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:32px;margin:2px 0 0;padding:5px 8px;border:0;border-radius:8px;background:transparent;color:#748294;font:inherit;font-size:12px;font-weight:760;cursor:pointer}
 body.admin-compact .${MORE_CLASS}:hover{background:#f2f7fb;color:#173b57}
 body.admin-compact .${MORE_CLASS} b{font-size:11px;font-weight:800}
@@ -255,6 +259,7 @@ function renderSidebarDetails(nav, globals, group, section, locale) {
     details.setAttribute('aria-label', locale === 'en' ? 'Admin submenu' : '관리자 하위 메뉴');
   }
   const ids = availableIds(nav, group);
+  const flatDetails = FLAT_DETAIL_GROUPS.has(group);
   const primaryOrder = PRIMARY_SECTIONS[group] || [];
   const primarySet = new Set(primaryOrder);
   const primary = primaryOrder.filter(id => ids.includes(id));
@@ -292,6 +297,7 @@ function renderSidebarDetails(nav, globals, group, section, locale) {
     nodes.push(more);
   }
   details.dataset.adminDetailGroup = group;
+  details.dataset.adminFlatDetails = flatDetails ? 'true' : 'false';
   details.replaceChildren(...nodes);
   details.hidden = nodes.length === 0;
   const active = [...globals.querySelectorAll('[data-admin-global-group]')].find(button => button.dataset.adminGlobalGroup === group);
@@ -330,9 +336,11 @@ function renderContextTabs(nav, shell, group, section, locale) {
   const groupLabel = getAdminMenuGroupLabel(group, locale);
   if (title) title.textContent = groupLabel;
   const ids = availableIds(nav, group);
+  const suppressContextTabs = FLAT_DETAIL_GROUPS.has(group);
   const singleEquivalent = ids.length === 1 && getAdminMenuLabel(ids[0], locale) === groupLabel;
-  shell.dataset.adminSingleContext = singleEquivalent ? 'true' : 'false';
-  tabs.hidden = singleEquivalent;
+  const hideContextTabs = suppressContextTabs || singleEquivalent;
+  shell.dataset.adminSingleContext = hideContextTabs ? 'true' : 'false';
+  tabs.hidden = hideContextTabs;
   const signature = `${locale}|${group}|${ids.join(',')}`;
   if (tabs.dataset.renderSignature !== signature) {
     tabs.dataset.renderSignature = signature;
