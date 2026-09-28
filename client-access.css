@@ -74,6 +74,7 @@
 .client-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:16px}
 .client-detail-head h3{margin:3px 0 4px}
 .client-access-detail h4{margin:18px 0 9px}
+.client-site-member-workspace{display:grid;grid-template-columns:minmax(250px,.85fr) minmax(320px,1.15fr);gap:12px;align-items:start;min-width:0}
 .client-invite-form{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(220px,1.3fr) minmax(145px,.6fr) minmax(120px,.5fr) auto;gap:9px;align-items:end;padding:13px;border:1px solid var(--admin-border,#d9e2ec);border-radius:10px;background:#f8fafc}
 .client-invite-form label{display:grid;gap:6px;font-size:12px;color:var(--admin-secondary,#66768a)}
 .client-invite-result{grid-column:1/-1;margin:0;display:grid;gap:7px}
@@ -131,6 +132,8 @@
   .client-member-list{max-height:520px}
   .client-access-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
   .client-access-layout{grid-template-columns:1fr}
+  .client-site-member-workspace{grid-template-columns:1fr}
+  .client-site-member-workspace .client-member-detail{position:static;max-height:none}
   .client-detail-head{flex-direction:column}
   .client-detail-head .secondary{width:100%;text-align:center}
 }
