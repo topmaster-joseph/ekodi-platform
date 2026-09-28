@@ -11,6 +11,8 @@ const cloudflareBudget = fs.readFileSync('scripts/cloudflare-production-budget.m
 const proofEvaluator = fs.readFileSync('scripts/evaluate-free-tier-resource-proof.mjs','utf8');
 const supabaseCapacityGuard = fs.readFileSync('scripts/validate-supabase-free-project-capacity.mjs','utf8');
 const adminVisualWorkflow = fs.readFileSync('.github/workflows/verify-admin-production-ui-e2e.yml','utf8');
+const adminVisualProductionWorkflow = fs.readFileSync('.github/workflows/verify-admin-visual-production.yml','utf8');
+const adminAuthenticatedProductionWorkflow = fs.readFileSync('.github/workflows/verify-admin-authenticated-production-e2e.yml','utf8');
 const failures=[];
 const expect=(condition,message)=>{if(!condition)failures.push(message)};
 
@@ -120,6 +122,10 @@ expect(collectorWorkflow.includes('supabase-free-project-capacity-guard.test.mjs
 expect(adminVisualWorkflow.includes('name: admin-production-ui-e2e-${{ github.run_id }}-${{ github.run_attempt }}'),'Admin UI evidence artifact contract missing');
 expect(adminVisualWorkflow.includes('retention-days: 7'),'large Admin UI visual evidence must expire after seven days');
 expect(!adminVisualWorkflow.includes('retention-days: 30'),'large Admin UI visual evidence must not retain the old 30-day window');
+expect(adminVisualProductionWorkflow.includes('retention-days: 7'),'Admin visual production evidence must expire after seven days');
+expect(!adminVisualProductionWorkflow.includes('retention-days: 30'),'Admin visual production evidence must not retain the old 30-day window');
+expect(adminAuthenticatedProductionWorkflow.includes('retention-days: 7'),'Authenticated Admin visual evidence must expire after seven days');
+expect(!adminAuthenticatedProductionWorkflow.includes('retention-days: 14'),'Authenticated Admin visual evidence must not retain the old 14-day window');
 expect(!/BEGIN TRANSACTION|SAVEPOINT|lines\.push\('COMMIT;'\)/.test(collector),'remote D1 collector must not emit explicit transaction statements');
 
 if(failures.length){
