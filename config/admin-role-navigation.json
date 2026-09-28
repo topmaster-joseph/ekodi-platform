@@ -45,7 +45,7 @@
   },
   "domainProjections": {
     "workspace": {
-      "delegated-manager": ["홈","소통·홍보","운영·재무","사이트·권한"],
+      "delegated-manager": ["운영","고객·업무","마케팅","경영","운영도구","사이트 관리"],
       "local-operator": ["오늘 할 일","소통·콘텐츠","업무처리"]
     },
     "store": {

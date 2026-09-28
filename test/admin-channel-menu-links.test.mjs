@@ -11,7 +11,7 @@ test('channel and autopost navigation is named consistently across administrator
   assert.equal(getAdminMenuLabel('social','ko'),'방송·채널·자동게시');
 
   const workspace = await (await workspaceAdminScript()).text();
-  assert.match(workspace,/소통 · 홍보/);
+  assert.match(workspace,/label:'마케팅'/);
   assert.match(workspace,/마케팅 AI/);
   assert.match(workspace,/채널·자동게시/);
   assert.match(workspace,/오늘 할 일/);
