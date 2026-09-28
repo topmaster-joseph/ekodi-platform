@@ -140,13 +140,17 @@ test('Amazon read-only sync schema stores no buyer PII', async () => {
   assert.doesNotMatch(sql,/buyer_email|buyer_name|shipping_address|recipient/i);
 });
 
-test('Amazon read-only adapter exposes only GET SP-API operations', async () => {
+test('Amazon read-only adapter uses GET for SP-API and POST only for LWA token exchange', async () => {
   const adapter = await readFile(new URL('../sites/ekodi-mall/api/amazon-sp-api-readonly.js', import.meta.url),'utf8');
   assert.match(adapter,/readAmazonListings/);
   assert.match(adapter,/readAmazonInventory/);
   assert.match(adapter,/readAmazonOrders/);
+  assert.match(adapter,/https:\/\/api\.amazon\.com\/auth\/o2\/token/);
+  assert.match(adapter,/method:'POST'/);
+  assert.match(adapter,/async function amazonSpApiGet|export async function amazonSpApiGet/);
   assert.match(adapter,/method:'GET'/);
-  assert.doesNotMatch(adapter,/method:'POST'|method:'PUT'|method:'PATCH'|method:'DELETE'/);
+  assert.doesNotMatch(adapter,/method:'PUT'|method:'PATCH'|method:'DELETE'/);
+  assert.doesNotMatch(adapter,/\/listings\/2021-08-01\/items\/[^\n]+method:'POST'/);
 });
 
 test('Amazon read-only sync API is operator scoped and mutation disabled', async () => {
