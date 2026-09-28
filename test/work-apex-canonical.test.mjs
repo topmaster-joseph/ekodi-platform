@@ -55,6 +55,10 @@ test('Work user, auth and admin entry points use canonical apex paths', async ()
   assert.match(adminUi, /const WORK_URL = 'https:\/\/ekodi\.kr\/work'/);
   assert.match(adminUi, /const AUTH_URL = 'https:\/\/ekodi\.kr\/auth\/\?site=work'/);
   assert.match(adminUi, /구인구직 운영 관리/);
+  const adminRuntime = await read('admin-menu-runtime.js');
+  const demandLoader = await read('admin-demand-loader.js');
+  assert.match(adminRuntime, /https:\/\/ekodi\.kr\/work\/admin/);
+  assert.match(demandLoader, /paths: \['\/work\/admin', '\/work\/admin\/'\]/);
   assert.match(campus, /domain: 'ekodi\.kr\/work'/);
   assert.match(my, /\['work','에코디워크 · 구인구직','https:\/\/ekodi\.kr\/work'\]/);
   assert.match(business, /https:\/\/ekodi\.kr\/work/);
