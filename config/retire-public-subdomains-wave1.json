@@ -50,6 +50,15 @@
         "ekodi-energy-ai",
         "\"controlEnabled\":false"
       ]
+    },
+    {
+      "label": "work",
+      "service": "ekodi-work",
+      "apexHealth": "https://ekodi.kr/work/",
+      "apexExpect": [
+        "EKODI Work",
+        "LOCAL WORKFORCE OS"
+      ]
     }
   ]
 }

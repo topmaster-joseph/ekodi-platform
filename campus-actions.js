@@ -17,7 +17,7 @@
     { type: '무역', name: '에코디 트레이딩', domain: 'trade.ekodi.kr', section: 'organization', fallback: 'services', group: 'business' },
     { type: '결제', name: '에코디 페이', domain: 'pay.ekodi.kr', section: 'finance', fallback: 'services', group: 'business' },
     { type: 'My', name: '마이 에코디', domain: 'my.ekodi.kr', section: 'services', group: 'worklife' },
-    { type: '워크', name: '에코디 워크', domain: 'work.ekodi.kr', section: 'work', fallback: 'services', group: 'worklife' },
+    { type: '구인구직', name: '에코디워크 · 구인구직', domain: 'ekodi.kr/work', url: 'https://ekodi.kr/work', label: 'ekodi.kr/work', section: 'work', fallback: 'services', group: 'worklife' },
     { type: '에너지', name: '에너지 AI', domain: 'energy.ekodi.kr', section: 'services', group: 'worklife' },
     { type: '보험', name: '에코디보험', domain: 'ekodi.kr/insurance', url: 'https://ekodi.kr/insurance', label: 'ekodi.kr/insurance', section: 'services', group: 'worklife', lifecycle: 'beta' },
     { type: '메일', name: '에코디 메일', domain: 'mail.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },

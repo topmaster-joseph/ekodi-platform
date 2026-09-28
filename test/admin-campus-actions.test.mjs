@@ -37,7 +37,7 @@ test('Campus always keeps pre-open platforms visible and prevents dead planned l
 });
 
 test('Campus includes verified ecosystem services that were missing from the old view', () => {
-  for (const domain of ['author.ekodi.kr', 'work.ekodi.kr', 'energy.ekodi.kr', 'business.ekodi.kr']) {
+  for (const domain of ['author.ekodi.kr', 'ekodi.kr/work', 'energy.ekodi.kr', 'business.ekodi.kr']) {
     assert.match(js, new RegExp(domain.replaceAll('.', '\\.')));
   }
   assert.match(js, /업무·생활/);

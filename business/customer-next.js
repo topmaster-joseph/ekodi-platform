@@ -34,7 +34,7 @@ const NEXT_STEP_PROBLEMS={
     title:'필요한 사람이나 업체를 연결합니다.',
     body:'직원·전문가·협력업체가 필요한 상황을 정리하고, 공개나 매칭은 사람의 확인을 거쳐 진행합니다.',
     value:'목표: 탐색시간 절감 · 적합한 연결',price:'필요조건 정리 무료 · 실제 연결·성사 시 과금',
-    links:{default:'https://work.ekodi.kr',jadam:'https://work.ekodi.kr'}
+    links:{default:'https://ekodi.kr/work',jadam:'https://ekodi.kr/work'}
   },
   unsure:{
     label:'잘 모르겠어요. 한번 봐주세요',icon:'?',action:'prepare_sales_summary',

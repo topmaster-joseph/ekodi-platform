@@ -262,6 +262,9 @@
     },
     "work": {
       "kind": "independent-platform",
+      "publicName": "에코디워크 · 구인구직",
+      "canonicalPath": "https://ekodi.kr/work",
+      "adminCanonicalPath": "https://ekodi.kr/work/admin",
       "source": [
         "work/**",
         "work-worker.js",
@@ -271,7 +274,7 @@
         "tests/work-db-integration.sql"
       ],
       "domains": [
-        "work.ekodi.kr",
+        "ekodi.kr",
         "ekodi-work-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-work.yml",
@@ -279,7 +282,8 @@
         "Supabase Auth",
         "central auth hub"
       ],
-      "database": "Supabase work_* table namespace"
+      "database": "Supabase work_* table namespace",
+      "note": "Public Work and recruiting entry is apex-only at ekodi.kr/work. The dedicated Work Worker remains an internal service-binding execution boundary; no retired Work subdomain compatibility redirect is permitted."
     },
     "education": {
       "kind": "independent-platform",

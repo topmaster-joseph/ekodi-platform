@@ -31,7 +31,7 @@ This diagram is a navigation aid, not a mandatory funnel. A person may start at 
 ### Career
 
 - Existing platform: EKODI Work
-- Canonical host: `work.ekodi.kr`
+- Canonical route: `https://ekodi.kr/work`
 - State: active
 - Responsibility: talent profile, job discovery, recruiting, applications and employer workflow
 - Do not create a duplicate Career database or a second recruiting platform.

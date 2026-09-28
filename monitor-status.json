@@ -295,9 +295,9 @@
     },
     {
       "id": "work",
-      "name": "EKODI Work",
-      "domain": "work.ekodi.kr",
-      "url": "https://work.ekodi.kr/",
+      "name": "에코디워크 · 구인구직",
+      "domain": "ekodi.kr/work",
+      "url": "https://ekodi.kr/work",
       "status": "offline",
       "httpStatus": 429,
       "responseTime": 189,

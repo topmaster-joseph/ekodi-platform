@@ -218,3 +218,30 @@ body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(small,
   line-height:1.35!important;
 }
 
+/* ADMIN-READABILITY-005 · contextual admin rail readability
+ * Side/context rails are operational navigation, not decorative surfaces.
+ * Enforce readable type, high contrast, and minimum interaction targets across every Admin surface.
+ */
+body.admin-compact.ekodi-admin-design-engine [data-admin-context-rail="true"]{
+  background:#f7faf9!important;
+  color:#172033!important;
+  border-color:#d7e4df!important;
+  color-scheme:light!important;
+}
+body.admin-compact.ekodi-admin-design-engine [data-admin-context-rail="true"] :where(a,button,strong){
+  color:#172033!important;
+}
+body.admin-compact.ekodi-admin-design-engine [data-admin-context-rail="true"] :where(small,.muted){
+  color:#5d6f69!important;
+}
+body.admin-compact.ekodi-admin-design-engine [data-admin-context-rail="true"] :where(button,[role="button"],a){
+  min-height:44px!important;
+  line-height:1.4!important;
+}
+body.admin-compact.ekodi-admin-design-engine [data-admin-context-rail="true"] :where(button,[role="button"]){
+  font-size:14px!important;
+}
+body.admin-compact.ekodi-admin-design-engine [data-admin-context-rail="true"] small{
+  font-size:11px!important;
+  line-height:1.4!important;
+}
