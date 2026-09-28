@@ -30,6 +30,11 @@ test('workspace and trade admins expose scope handoff only through full authorit
   const tradeScript=await (await workspaceTradeAdminScript()).text();
   assert.match(html,/id="adminScopeSwitcher"/);
   assert.match(rootScript,/hasFullWorkspaceAdminScope/);
+  assert.match(rootScript,/관리 사이트 전환/);
+  assert.match(rootScript,/admin-scope-select/);
+  assert.match(rootScript,/label:'경영'/);
+  assert.match(rootScript,/label:'사이트 관리'/);
+  assert.doesNotMatch(rootScript,/label:'운영 · 재무'/);
   assert.match(rootScript,/\['tax','세금 · 증빙'\]/);
   assert.match(rootScript,/isBizWorkspace&&section==='tax'/);
   assert.match(rootScript,/roleCapabilities\(role\)\.includes\('\*'\)/);
