@@ -37,6 +37,52 @@
     roles: '역할·권한',
   };
 
+  const CAPABILITY_LABELS = Object.freeze({
+    '*': '전체 역할 권한',
+    'tenant.dashboard.read': '대시보드 조회',
+    'tenant.site.manage': '사이트 설정',
+    'tenant.language.manage': '언어 설정',
+    'tenant.catalog.read': '상품·서비스 조회',
+    'tenant.orders.read': '주문 조회',
+    'tenant.customers.insights': '고객 현황',
+    'tenant.reviews.manage': '리뷰 관리',
+    'tenant.sales.read': '매출 조회',
+    'tenant.inventory.manage': '재고 관리',
+    'tenant.marketing.manage': '마케팅 관리',
+    'tenant.supply-network.manage': '공급망 관리',
+    'tenant.member-roster.manage': '회원명부 관리',
+    'tenant.operations.manage': '운영 관리',
+    'tenant.finance.read': '재정 조회',
+    'tenant.finance.manage': '재정 관리',
+    'tenant.offerings.manage': '헌금 관리',
+    'tenant.receipts.manage': '증빙 관리',
+    'tenant.confirmations.manage': '확인업무 관리',
+    'tenant.connections.manage': '연동 관리',
+    'tenant.access.manage': '사용자·권한 관리',
+    'tenant.people.read': '구성원 조회',
+    'tenant.attendance.manage': '출석 관리',
+    'tenant.activity.manage': '활동 관리',
+    'tenant.worship.manage': '예배 관리',
+    'tenant.care.manage': '돌봄 관리',
+    'tenant.calendar.manage': '일정 관리',
+    'tenant.ministry.manage': '사역 관리',
+    'tenant.reports.manage': '보고 관리',
+    'tenant.ai.assist': 'AI 보조',
+    'tenant.developer.inspect': '개발 점검',
+    'tenant.site.source.read': '사이트 소스 조회',
+    'tenant.preview.read': '미리보기',
+    'tenant.logs.read': '로그 조회',
+    'tenant.test.run': '테스트 실행',
+    'tenant.pr.create': 'PR 생성',
+    'tenant.integration.inspect': '연동 점검',
+    'tenant.integration.test': '연동 테스트',
+  });
+  const AUDIT_ACTION_LABELS = Object.freeze({
+    'grant.create': '권한 등록',
+    'grant.update': '권한 변경',
+    'grant.revoke': '권한 회수',
+  });
+
   function adminToken() {
     return sessionStorage.getItem('ekodi-auth-token') || '';
   }
@@ -111,6 +157,93 @@
     return option;
   }
 
+  function capabilityLabel(value) {
+    const key = String(value || '').trim();
+    return CAPABILITY_LABELS[key] || key || '확인 필요';
+  }
+
+  function auditKey(member) {
+    return `${member?.tenant?.slug || ''}|${String(member?.email || '').toLowerCase()}`;
+  }
+
+  function normalizedEditableStatus(member) {
+    return member?.status === 'disabled' ? 'disabled' : 'active';
+  }
+
+  function accessChangeSet(member, next) {
+    const current = {
+      role: member.role,
+      visibility: member.visibility === 'public' ? 'public' : 'private',
+      status: normalizedEditableStatus(member),
+    };
+    const labels = { role:'역할', visibility:'목록 공개', status:'사용 상태' };
+    const valueLabel = (field, value) => {
+      if (field === 'role') return ROLE_LABELS[value] || value;
+      if (field === 'visibility') return value === 'public' ? '공개' : '비공개';
+      if (field === 'status') return value === 'disabled' ? '중지' : '활성';
+      return value;
+    };
+    return Object.keys(current)
+      .filter(field => current[field] !== next[field])
+      .map(field => ({
+        field,
+        label: labels[field],
+        before: valueLabel(field, current[field]),
+        after: valueLabel(field, next[field]),
+      }));
+  }
+
+  function confirmAccessChanges(member, changes) {
+    if (!changes.length) return false;
+    const lines = changes.map(change => `• ${change.label}: ${change.before} → ${change.after}`);
+    return confirm([
+      `${member.email} · ${member.tenant.name}`,
+      '다음 접근권한 변경을 적용할까요?',
+      '',
+      ...lines,
+      '',
+      '변경 내용은 권한 감사기록에 남습니다.',
+    ].join('\n'));
+  }
+
+  function auditValueText(value) {
+    if (Array.isArray(value)) return value.length ? value.map(capabilityLabel).join(', ') : '없음';
+    const textValue = String(value ?? '').trim();
+    return textValue || '없음';
+  }
+
+  function renderAuditHistory(container, history = []) {
+    container.replaceChildren();
+    if (!history.length) {
+      container.append(text('span', '최근 권한 변경기록이 없습니다.', 'client-audit-empty'));
+      return;
+    }
+    for (const item of history) {
+      const article = document.createElement('article');
+      article.className = 'client-audit-item';
+      const head = document.createElement('div');
+      head.className = 'client-audit-head';
+      head.append(
+        text('strong', AUDIT_ACTION_LABELS[item.action] || item.action || '권한 변경'),
+        text('time', formatDate(item.createdAt, '시각 확인 필요')),
+      );
+      const actor = text('small', `변경자 · ${item.actorEmail || '기록 없음'}`);
+      article.append(head, actor);
+      const changes = Array.isArray(item.changes) ? item.changes : [];
+      if (!changes.length) {
+        article.append(text('p', '세부 변경항목 없음'));
+      } else {
+        const list = document.createElement('div');
+        list.className = 'client-audit-changes';
+        for (const change of changes) {
+          list.append(text('span', `${change.label || change.field} · ${auditValueText(change.before)} → ${auditValueText(change.after)}`));
+        }
+        article.append(list);
+      }
+      container.append(article);
+    }
+  }
+
   function dateAfter(days) {
     const date = new Date();
     date.setDate(date.getDate() + days);
@@ -182,6 +315,7 @@
   let loaded = false;
   let loading = false;
   let lastSuccessfulSyncAt = '';
+  const auditCache = new Map();
 
   function installShell() {
     const nav = document.querySelector('.sidebar nav');
@@ -358,6 +492,7 @@
           method: 'POST',
           body: JSON.stringify({ email: member.email }),
         });
+        auditCache.delete(auditKey(member));
         await loadDirectory(true);
       } catch (error) {
         alert(error.message);
@@ -372,7 +507,7 @@
     const details = document.createElement('details');
     details.className = 'client-access-explain';
     const summary = document.createElement('summary');
-    summary.textContent = '접근 근거';
+    summary.textContent = '접근 근거·변경기록';
     const explanation = text(
       'p',
       `이 접근은 ${member.tenant.name} 범위의 ${member.roleLabel || ROLE_LABELS[member.role] || member.role} 멤버십에서 적용됩니다. 플랫폼 전체 권한으로 자동 확장되지 않습니다.`,
@@ -384,7 +519,57 @@
       text('span', `등록 · ${formatDate(member.joinedAt, '기록 없음')}`),
       text('span', `최근 활동 · ${formatDate(member.lastLoginAt, '아직 로그인 전')}`),
     );
-    details.append(summary, explanation, facts);
+
+    const capabilityBlock = document.createElement('div');
+    capabilityBlock.className = 'client-capability-block';
+    capabilityBlock.append(text('strong', '현재 유효 권한'));
+    const capabilities = Array.isArray(member.effectiveCapabilities) ? member.effectiveCapabilities : [];
+    const capabilityList = document.createElement('div');
+    capabilityList.className = 'client-capability-list';
+    if (!capabilities.length) capabilityList.append(text('span', '추가 관리 권한 없음', 'client-capability muted'));
+    else for (const capability of capabilities) capabilityList.append(text('span', capabilityLabel(capability), 'client-capability'));
+    capabilityBlock.append(capabilityList);
+
+    const denied = Array.isArray(member.deniedCapabilities) ? member.deniedCapabilities : [];
+    if (denied.length) {
+      const deniedBlock = document.createElement('div');
+      deniedBlock.className = 'client-capability-denied';
+      deniedBlock.append(text('strong', '명시적 차단'));
+      const deniedList = document.createElement('div');
+      deniedList.className = 'client-capability-list';
+      for (const capability of denied) deniedList.append(text('span', capabilityLabel(capability), 'client-capability denied'));
+      deniedBlock.append(deniedList);
+      capabilityBlock.append(deniedBlock);
+    }
+
+    const audit = document.createElement('div');
+    audit.className = 'client-audit';
+    const auditButton = button('최근 권한 변경 보기', 'secondary compact');
+    const auditBody = document.createElement('div');
+    auditBody.className = 'client-audit-body';
+    auditButton.addEventListener('click', async () => {
+      auditButton.disabled = true;
+      const key = auditKey(member);
+      try {
+        let history = auditCache.get(key);
+        if (!history) {
+          auditButton.textContent = '변경기록 확인 중…';
+          const data = await request(`/api/customers/tenants/${encodeURIComponent(member.tenant.slug)}/access/audit?email=${encodeURIComponent(member.email)}&limit=8`);
+          history = Array.isArray(data.history) ? data.history : [];
+          auditCache.set(key, history);
+        }
+        renderAuditHistory(auditBody, history);
+        auditButton.textContent = '변경기록 새로고침';
+      } catch (error) {
+        auditBody.replaceChildren(text('span', error.message, 'operations-error'));
+        auditButton.textContent = '다시 확인';
+      } finally {
+        auditButton.disabled = false;
+      }
+    });
+    audit.append(auditButton, auditBody);
+
+    details.append(summary, explanation, facts, capabilityBlock, audit);
     return details;
   }
 
@@ -466,17 +651,31 @@
         if (manageable) {
           const save = button('저장', 'primary compact');
           save.addEventListener('click', async () => {
+            const next = {
+              role: roleSelect.value,
+              visibility: visibility.value,
+              status: statusSelect.value,
+            };
+            const changes = accessChangeSet(member, next);
+            if (!changes.length) {
+              const previous = save.textContent;
+              save.textContent = '변경 없음';
+              setTimeout(() => { save.textContent = previous; }, 1200);
+              return;
+            }
+            if (!confirmAccessChanges(member, changes)) return;
             save.disabled = true;
             try {
               await request(`/api/customers/tenants/${encodeURIComponent(member.tenant.slug)}/access/update`, {
                 method:'POST',
                 body:JSON.stringify({
                   email:member.email,
-                  role:roleSelect.value,
+                  role:next.role,
                   visibility:visibility.value,
-                  status:statusSelect.value,
+                  status:next.status,
                 }),
               });
+              auditCache.delete(auditKey(member));
               await loadDirectory(true);
             } catch (error) {
               alert(error.message);
@@ -616,6 +815,7 @@
           ? '기존 계정의 이 사이트 권한을 최신 설정으로 반영했습니다.'
           : '등록 완료. 같은 이메일의 Google 계정으로 로그인하면 이 사이트 범위에서만 활성화됩니다.';
         status.append(text('strong', message), text('small', `목록 ${account.visibility === 'public' ? '공개' : '비공개'} · Google 계정은 통합 식별되고 사이트별 권한만 추가됩니다.`));
+        auditCache.delete(`${tenant.slug}|${email.value.trim().toLowerCase()}`);
         form.reset();
         visibility.value = 'private';
         await loadDirectory(true);

@@ -210,6 +210,92 @@ function publicAccessRow(row) {
   };
 }
 
+const AUDIT_FIELD_LABELS = Object.freeze({
+  role: '역할',
+  enabled: '사용 상태',
+  principal_type: '계정 유형',
+  github_username: 'GitHub',
+  capabilities_json: '추가 허용 권한',
+  denied_capabilities_json: '명시적 차단 권한',
+  expires_at: '만료',
+  visibility: '목록 공개',
+});
+
+function parseAuditJson(value) {
+  try {
+    const parsed = JSON.parse(String(value || '{}'));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function sanitizedAuditValue(field, value) {
+  if (field === 'capabilities_json' || field === 'denied_capabilities_json') {
+    try {
+      const parsed = Array.isArray(value) ? value : JSON.parse(String(value || '[]'));
+      return [...new Set((Array.isArray(parsed) ? parsed : []).map(item => String(item || '').trim()).filter(Boolean))].slice(0, 40);
+    } catch {
+      return [];
+    }
+  }
+  if (value == null || value === '') return '';
+  if (field === 'enabled') return Number(value) === 1 ? '활성' : '중지';
+  if (field === 'visibility') return normalizeVisibility(value) === 'public' ? '공개' : '비공개';
+  return String(value).slice(0, 240);
+}
+
+export function sanitizedGrantAuditChanges(beforeRaw, afterRaw) {
+  const before = parseAuditJson(beforeRaw);
+  const after = parseAuditJson(afterRaw);
+  const fields = Object.keys(AUDIT_FIELD_LABELS);
+  const changes = [];
+  for (const field of fields) {
+    const beforeValue = sanitizedAuditValue(field, before[field]);
+    const afterValue = sanitizedAuditValue(field, after[field]);
+    if (JSON.stringify(beforeValue) === JSON.stringify(afterValue)) continue;
+    changes.push({
+      field,
+      label: AUDIT_FIELD_LABELS[field],
+      before: beforeValue,
+      after: afterValue,
+    });
+  }
+  return changes;
+}
+
+async function listAccessAudit(request, env, slug) {
+  const tenant = await tenantBySlug(env.DB, slug);
+  if (!tenant || tenant.status !== 'active') return json({ error: '등록된 사이트가 아닙니다.' }, 404, request, env);
+  const authority = await resolveTenantAccessAuthority(request, env, { tenantSlug: slug });
+  if (!authority.ok) return json({ error: '이 사이트의 사용자·권한 변경기록을 조회할 권한이 없습니다.', code: authority.code }, authority.status || 403, request, env);
+
+  const url = new URL(request.url);
+  const email = normalizeEmail(url.searchParams.get('email'));
+  if (!validEmail(email)) return json({ error: '변경기록을 확인할 이메일을 입력해 주세요.' }, 400, request, env);
+  const requestedLimit = Number.parseInt(url.searchParams.get('limit') || '10', 10);
+  const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 20) : 10;
+
+  const rows = await env.DB.prepare(`SELECT action, actor_email, before_json, after_json, created_at
+    FROM customer_access_grant_audit
+    WHERE tenant_id = ? AND lower(trim(email)) = ?
+    ORDER BY id DESC
+    LIMIT ?`).bind(tenant.id, email, limit).all();
+
+  const history = (rows.results || []).map(row => ({
+    action: String(row.action || '').slice(0, 80),
+    actorEmail: normalizeEmail(row.actor_email),
+    createdAt: row.created_at || '',
+    changes: sanitizedAuditChanges(row.before_json, row.after_json),
+  }));
+
+  return json({
+    tenant: { slug: tenant.slug, name: tenant.name },
+    email,
+    history,
+  }, 200, request, env);
+}
+
 async function preregister(request, env, slug) {
   const tenant = await tenantBySlug(env.DB, slug);
   if (!tenant || tenant.status !== 'active') return json({ error: '등록된 사이트가 아닙니다.' }, 404, request, env);
@@ -474,6 +560,13 @@ export async function handleGoogleCustomerPreregistration(request, env) {
     const slug = normalizeTenant(preregisterMatch[1]);
     if (!slug) return json({ error: '등록된 고객사가 아닙니다.' }, 404, request, env);
     return preregister(request, env, slug);
+  }
+
+  const auditMatch = path.match(/^\/api\/customers\/tenants\/([a-z0-9-]+)\/access\/audit$/);
+  if (request.method === 'GET' && auditMatch) {
+    const slug = normalizeTenant(auditMatch[1]);
+    if (!slug) return json({ error: '등록된 고객사가 아닙니다.' }, 404, request, env);
+    return listAccessAudit(request, env, slug);
   }
 
   const revokeMatch = path.match(/^\/api\/customers\/tenants\/([a-z0-9-]+)\/access\/revoke$/);

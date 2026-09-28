@@ -62,6 +62,22 @@
 .client-access-explain summary{min-height:32px!important;color:#0b5cab;cursor:pointer;font-weight:600}
 .client-access-explain p{margin:6px 0;color:var(--admin-secondary,#66768a);line-height:1.5}
 .client-access-facts{display:grid;gap:3px;color:var(--admin-secondary,#66768a);font-size:11px}
+.client-capability-block,.client-capability-denied,.client-audit{display:grid;gap:7px;margin-top:10px;min-width:0}
+.client-capability-block>strong,.client-capability-denied>strong{font-size:11px;color:var(--admin-readable,#172033)}
+.client-capability-list{display:flex;gap:6px;flex-wrap:wrap;min-width:0}
+.client-capability{display:inline-flex;align-items:center;max-width:100%;padding:4px 7px;border:1px solid #c7dbef;border-radius:999px;background:#f4f9ff;color:#264c73;font-size:10px;line-height:1.35;overflow-wrap:anywhere}
+.client-capability.muted{border-color:#d9e2ec;background:#f8fafc;color:var(--admin-secondary,#66768a)}
+.client-capability.denied{border-color:#f0c4c0;background:#fff5f4;color:#9f2d22}
+.client-audit-body{display:grid;gap:7px;min-width:0}
+.client-audit-empty{font-size:11px;color:var(--admin-secondary,#66768a)}
+.client-audit-item{display:grid;gap:5px;padding:9px;border:1px solid #e1e8f0;border-radius:8px;background:#fbfdff;min-width:0}
+.client-audit-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;min-width:0}
+.client-audit-head strong{font-size:11px}
+.client-audit-head time{font-size:10px;color:var(--admin-secondary,#66768a);white-space:nowrap}
+.client-audit-item small{font-size:10px;color:var(--admin-secondary,#66768a);overflow-wrap:anywhere}
+.client-audit-item p{margin:0;font-size:10px;color:var(--admin-secondary,#66768a)}
+.client-audit-changes{display:grid;gap:3px;font-size:10px;color:#475569;min-width:0}
+.client-audit-changes span{overflow-wrap:anywhere;word-break:break-word}
 .client-role-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .client-role-card{border:1px solid var(--admin-border,#d9e2ec);border-radius:10px;background:#fff;color:inherit;padding:14px;text-align:left;display:grid;gap:5px;cursor:pointer}
 .client-role-card:hover{border-color:#b7d4f6;background:#f8fbff}
@@ -100,6 +116,11 @@
   .client-table select{min-width:0}
   .client-row-actions{align-items:stretch}
   .client-row-actions button{flex:1 1 120px}
+  .client-access-explain{min-width:0}
+  .client-capability-list{gap:5px}
+  .client-capability{white-space:normal}
+  .client-audit-head{flex-direction:column}
+  .client-audit-head time{white-space:normal}
 }
 @media(max-width:420px){
   .client-access-summary{gap:8px}

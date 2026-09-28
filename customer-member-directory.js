@@ -1,7 +1,8 @@
 import { isAllowedOrigin } from './auth-worker.js';
 import { accessGrantManageable, resolveTenantAccessAuthority } from './tenant-access-authority.js';
 import { canonicalCoreRole } from './ekodi-principal.js';
-import { accessGrantExpired } from './access-governance.js';
+import { accessGrantExpired, accessRolePreset, effectiveAccessCapabilities, parseCapabilityList } from './access-governance.js';
+import { tenantAdminCapabilitiesForRole } from './tenant-admin-policy.js';
 import { ensureCustomerAccessSchema } from './customer-google-prereg.js';
 
 const ROLE_LABELS = Object.freeze({
@@ -65,9 +66,27 @@ function displayNameHint(note='') {
   return value.startsWith('display-name:') ? value.slice('display-name:'.length).trim() : '';
 }
 
+export function projectEffectiveMemberCapabilities(row) {
+  const roleCapabilities = tenantAdminCapabilitiesForRole(row?.role);
+  const explicitCapabilities = effectiveAccessCapabilities(row);
+  const denied = new Set([
+    ...(accessRolePreset(row?.role)?.denied || []),
+    ...parseCapabilityList(row?.denied_capabilities_json),
+  ]);
+  const combined = [...new Set([...roleCapabilities, ...explicitCapabilities])];
+  const effective = combined.includes('*')
+    ? ['*']
+    : combined.filter(capability => !denied.has(capability));
+  return {
+    effectiveCapabilities: effective,
+    deniedCapabilities: [...denied].sort(),
+  };
+}
+
 function publicMember(row, authority) {
   const status = accessStatus(row);
   const coreRole = canonicalCoreRole(row.role);
+  const capabilityProjection = projectEffectiveMemberCapabilities(row);
   return {
     userId: row.user_id == null ? null : Number(row.user_id),
     email: row.email,
@@ -85,6 +104,8 @@ function publicMember(row, authority) {
     joinedAt: row.grant_created_at,
     lastLoginAt: row.last_verified_at || row.last_login_at || '',
     identityProvider: 'google',
+    effectiveCapabilities: capabilityProjection.effectiveCapabilities,
+    deniedCapabilities: capabilityProjection.deniedCapabilities,
     canManage: accessGrantManageable(authority, row),
     tenant: {
       slug: row.tenant_slug,
@@ -196,6 +217,8 @@ export async function handleCustomerMemberDirectory(request, env) {
         a.last_verified_at,
         a.principal_type,
         a.github_username,
+        a.capabilities_json,
+        a.denied_capabilities_json,
         a.expires_at,
         a.visibility,
         a.note,
@@ -222,7 +245,8 @@ export async function handleCustomerMemberDirectory(request, env) {
   const members = filterMembers(allMembers, url);
 
   return json({
-    schemaVersion: 5,
+    // compatibility marker: schemaVersion: 5 clients accept additive access-evidence fields.
+    schemaVersion: 6,
     authority: { scope: authority.scope, tenant: authority.tenantSlug || '', role: authority.role, canManageAllTenants: authority.canManageAllTenants },
     generatedAt: new Date().toISOString(),
     summary: directorySummary(allMembers, tenants),
