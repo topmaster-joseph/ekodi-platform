@@ -28,7 +28,7 @@ function tradeAdminClient(ADMIN_HUB){
   function setHeader(){
     $('workspaceName').textContent='에코디비즈';$('scopeLabel').textContent='에코디비즈';$('serviceName').textContent='무역거래 관리';
     $('breadcrumb').textContent='에코디비즈 / 무역거래 / ADMIN';$('publicLink').href=`/${workspaceUrlSlug}/trade`;$('publicLink').textContent='관계자 화면';    const nav=$('adminNav');nav.replaceChildren();
-    [['overview','홈'],['companies','거래처'],['publishing','채널 · 게시'],['access','권한']].forEach(([key,label])=>{
+    [['overview','홈'],['companies','공급사'],['products','제품'],['pipeline','도입진행'],['publishing','채널 · 게시'],['access','권한']].forEach(([key,label])=>{
       const a=document.createElement('a');a.href=sectionHref(key);a.dataset.adminGroup=key;a.textContent=label;
       if(key===section)a.classList.add('active');nav.append(a);
     });
@@ -109,6 +109,64 @@ function tradeAdminClient(ADMIN_HUB){
     const apply=()=>{const q=String($('tradeAdminSearch')?.value||'').trim().toLowerCase(),role=$('tradeAdminRole')?.value||'',status=$('tradeAdminStatus')?.value||'';const filtered=admins.filter(a=>(!q||String(a.email||'').toLowerCase().includes(q))&&(!role||a.role===role)&&(!status||a.status===status));$('tradeAdminRows').innerHTML=adminRows(filtered);bindRows();};
     $('tradeAdminSearch')?.addEventListener('input',apply);$('tradeAdminRole')?.addEventListener('change',apply);$('tradeAdminStatus')?.addEventListener('change',apply);bindAdminForm();if(editing)document.querySelector('.editor-shell')?.scrollIntoView({block:'nearest'});state('전체관리자');
   }
+  async function loadCompanyEngagements(company){
+    const data=await api(`/trade/partner/companies/${company.id}/engagements`);
+    return {company,access:data.access,engagements:Array.isArray(data.engagements)?data.engagements:[]};
+  }
+  async function loadAllEngagements(){
+    const rows=[];
+    for(const company of companies){
+      try{rows.push(await loadCompanyEngagements(company));}
+      catch(error){console.warn('trade engagement load failed',company.id,error);}
+    }
+    return rows;
+  }
+  function phaseLabel(value){
+    const map={supplier_check:'공급사 확인',sample:'샘플',certification:'인증',contract:'계약',import:'수입',sales_ready:'판매준비',sales:'영업·판매',after_sales:'A/S'};
+    return map[String(value||'').toLowerCase()]||value||'미지정';
+  }
+  function productStatusLabel(value){
+    const map={prospecting:'검토',negotiating:'협의',contracted:'계약',in_progress:'진행',on_hold:'보류',completed:'완료',cancelled:'종료'};
+    return map[value]||value||'-';
+  }
+  function productEditor(companyId=''){
+    if(!access?.can_write)return '';
+    const options=companies.filter(c=>c.status!=='archived').map(c=>`<option value="${esc(c.id)}" ${c.id===companyId?'selected':''}>${esc(c.display_name)}</option>`).join('');
+    return `<section class="editor-shell"><h2>제품 · 사업 등록</h2><p class="empty">공급사별 제품을 하나의 거래 진행건으로 등록하고 계약·인증·샘플·수입·영업 진행을 함께 관리합니다.</p><form id="tradeProductForm" class="trade-form"><div class="trade-grid"><label>공급사<select name="companyId" required>${options}</select></label><label>제품 코드<input name="code" maxlength="80" required placeholder="YUANFENG-3KW"></label><label>제품명<input name="title" maxlength="240" required placeholder="Yuanfeng 엔진예열기 3.0kW"></label><label>현재 단계<select name="phase"><option value="supplier_check">공급사 확인</option><option value="sample">샘플</option><option value="certification">인증</option><option value="contract">계약</option><option value="import">수입</option><option value="sales_ready">판매준비</option><option value="sales">영업·판매</option><option value="after_sales">A/S</option></select></label><label>상태<select name="status"><option value="prospecting">검토</option><option value="negotiating">협의</option><option value="contracted">계약</option><option value="in_progress">진행</option><option value="on_hold">보류</option><option value="completed">완료</option></select></label><label>목표일<input name="targetAt" type="date"></label><label class="wide">요약<textarea name="summary" rows="4" maxlength="6000" placeholder="제품 사양, 한국 판매 목표, 주요 협의사항"></textarea></label></div><div class="actions"><button class="button primary" type="submit">제품 등록</button></div><p class="trade-flash" id="tradeProductFlash"></p></form></section>`;
+  }
+  function bindProductEditor(){
+    const form=$('tradeProductForm');if(!form)return;
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();const fd=new FormData(form);const target=fd.get('targetAt');
+      try{
+        state('제품 저장 중');
+        await api(`/trade/partner/companies/${fd.get('companyId')}/engagements`,{method:'POST',body:{code:fd.get('code'),title:fd.get('title'),summary:fd.get('summary'),status:fd.get('status'),phase:fd.get('phase'),targetAt:target?new Date(`${target}T12:00:00+09:00`).toISOString():null}});
+        await renderProducts();state('제품 등록 완료');
+      }catch(error){$('tradeProductFlash').textContent=`저장 실패: ${error.message}`;state('확인 필요');}
+    });
+  }
+  async function renderProducts(){
+    sectionTitle('제품 관리','공급사별 제품과 한국 판매 프로젝트를 한 화면에서 관리합니다.');
+    accessSummary();state('제품 불러오는 중');
+    const groups=await loadAllEngagements();
+    const products=groups.flatMap(group=>group.engagements.map(item=>({...item,company:group.company})));
+    const rows=products.length?`<div class="table-wrap"><table><thead><tr><th>공급사</th><th>제품</th><th>단계</th><th>상태</th><th>목표일</th><th>공급자 공유</th></tr></thead><tbody>${products.map(p=>`<tr><td><strong>${esc(p.company.display_name)}</strong><br><small>${esc(p.company.country_code||p.company.slug)}</small></td><td><strong>${esc(p.title)}</strong><br><small>${esc(p.code)}</small></td><td><span class="tag">${esc(phaseLabel(p.phase))}</span></td><td>${esc(productStatusLabel(p.status))}</td><td>${p.target_at?esc(new Date(p.target_at).toLocaleDateString('ko-KR')):'-'}</td><td><a class="button" href="/${workspaceUrlSlug}/trade">공급자 업무공간</a></td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">등록된 제품이 없습니다. 공급사를 등록한 뒤 첫 제품을 등록해 주세요.</p>';
+    $('mainPanel').innerHTML=`<section><div class="panel-head"><div><h2>전체 제품</h2><p class="empty">제품은 공급사에 연결되며 공급자는 자신의 회사 범위 안에서 해당 진행건과 공유기록만 확인합니다.</p></div></div>${rows}</section>${productEditor(companies[0]?.id||'')}`;
+    bindProductEditor();state(`제품 ${products.length}건`);
+  }
+  async function renderPipeline(){
+    sectionTitle('도입 진행','계약·샘플·인증·수입·판매 준비를 제품별로 추적합니다.');
+    accessSummary();state('진행현황 불러오는 중');
+    const groups=await loadAllEngagements();
+    const products=groups.flatMap(group=>group.engagements.map(item=>({...item,company:group.company})));
+    const steps=['supplier_check','sample','certification','contract','import','sales_ready','sales','after_sales'];
+    const cards=steps.map(step=>{
+      const list=products.filter(p=>String(p.phase||'').toLowerCase()===step);
+      return `<article class="role-card"><strong>${esc(phaseLabel(step))} · ${list.length}건</strong><p>${list.length?list.slice(0,4).map(p=>esc(p.title)+' · '+esc(p.company.display_name)).join('<br>'):'현재 제품 없음'}</p></article>`;
+    }).join('');
+    $('mainPanel').innerHTML=`<section><h2>제품 도입 8단계</h2><p class="empty">① 공급사 확인 → ② 샘플 → ③ 인증 → ④ 계약 → ⑤ 수입 → ⑥ 판매준비 → ⑦ 영업·판매 → ⑧ A/S. 각 단계의 상세 협의와 문서는 공급자 업무공간의 공유·공식 기록으로 남깁니다.</p><div class="role-guide">${cards}</div></section><section style="margin-top:18px"><h2>운영 원칙</h2><div class="service-list"><div class="service-row"><div><strong>에코디비즈 총괄 중간관리자</strong><p>전체 공급사·제품·단계를 조회하고 제품 등록, 진행상태 조정, 공급자 권한·공유 범위를 관리합니다.</p></div><a href="${base}/products">제품 관리</a></div><div class="service-row"><div><strong>제품 공급자</strong><p>자기 회사와 연결된 제품·거래만 보고 진행기록·문서·요청사항을 공유합니다. 다른 공급사 정보와 에코디 내부기록은 보이지 않습니다.</p></div><a href="/${workspaceUrlSlug}/trade">공급자 업무공간</a></div></div></section>`;
+    state(`제품 ${products.length}건`);
+  }
   function renderOverview(){
     sectionTitle('운영 홈','내 거래 범위와 다음 관리 행동을 한눈에 확인합니다.');accessSummary();
     const visible=companies.length,active=companies.filter(c=>c.status==='active').length;
@@ -123,7 +181,7 @@ function tradeAdminClient(ADMIN_HUB){
       $('workspaceLogout')?.addEventListener('click',async()=>{try{await sb.auth.signOut();}finally{location.assign(base);}});
       await consumeHandoff();const session=await currentSession();if(!session){authRequired();return;}
       await loadContext();renderAdminScopeSwitcher();await loadCompanies();if(section==='access')await loadAdmins();
-      if(section==='companies')renderCompanies();else if(section==='access')renderAccess();else renderOverview();
+      if(section==='companies')renderCompanies();else if(section==='products')await renderProducts();else if(section==='pipeline')await renderPipeline();else if(section==='access')renderAccess();else renderOverview();
     }catch(error){
       console.error('trade admin bootstrap',error);if(error.status===401||error.message==='login_required'){authRequired();return;}
       sectionTitle('무역거래 관리자','현재 계정의 에코디비즈 무역 권한을 확인합니다.');$('summaryCards').innerHTML=card('접근','제한됨','권한 확인');
