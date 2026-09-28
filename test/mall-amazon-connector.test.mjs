@@ -113,3 +113,17 @@ test('Amazon runtime status never returns encrypted credential material', async 
   assert.equal(status.connection.clientSecret,undefined);
   assert.equal(status.connection.refreshToken,undefined);
 });
+
+
+test('Mall deploy workflow provisions Amazon vault keys without exposing values', async () => {
+  const workflow = await readFile(new URL('../.github/workflows/deploy-ekodi-mall.yml', import.meta.url),'utf8');
+  assert.match(workflow,/Ensure persistent staging Amazon credential key/);
+  assert.match(workflow,/Ensure persistent production Amazon credential key/);
+  assert.match(workflow,/secret list --config api\/wrangler\.staging\.runtime\.toml/);
+  assert.match(workflow,/secret put AMAZON_CREDENTIAL_KEY --config api\/wrangler\.staging\.runtime\.toml/);
+  assert.match(workflow,/secret list --config api\/wrangler\.runtime\.toml/);
+  assert.match(workflow,/secret put AMAZON_CREDENTIAL_KEY --config api\/wrangler\.runtime\.toml/);
+  assert.match(workflow,/openssl rand -hex 32/);
+  assert.match(workflow,/"vaultReady":true/);
+  assert.doesNotMatch(workflow,/echo\s+["']?\$\{?AMAZON_CREDENTIAL_KEY/i);
+});
