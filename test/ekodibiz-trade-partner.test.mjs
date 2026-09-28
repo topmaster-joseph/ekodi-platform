@@ -121,6 +121,23 @@ test('trade manager and supplier product workspaces are separated by responsibil
   assert.ok(portal.includes('자기 회사에 연결된 제품·사업만 확인'));
 });
 
+test('trade products expose separate buyer admin, supplier collaboration and consumer purchase surfaces',async()=>{
+  const [admin,portal,publicPage,router]=await Promise.all([
+    read('workspace-trade-admin-page.js'),read('workspace-trade-portal.js'),read('trade-product-public-page.js'),read('platform-router-entry-worker.js')
+  ]);
+  assert.ok(admin.includes('제품 하위관리'));
+  assert.ok(admin.includes('에코디 구매·운영'));
+  assert.ok(admin.includes('공급자 협업'));
+  assert.ok(admin.includes('소비자 구매'));
+  assert.ok(admin.includes('/trade/products/'));
+  assert.ok(portal.includes('/products\\/([^/]+)\\/supplier'));
+  assert.ok(portal.includes('requestedProductCode'));
+  assert.ok(publicPage.includes('CONSUMER PRODUCT'));
+  assert.ok(publicPage.includes('에코디몰에서 구매하기'));
+  assert.ok(publicPage.includes('/ekodimall?trade_product='));
+  assert.ok(router.includes('tradeProductPublicRoute'));
+  assert.ok(router.includes('tradeProductPublicPage'));
+});
 test('trade admin uses shared two-level UI and canonical apex auth',async()=>{
   const [workspaceAdmin,tradeAdmin]=await Promise.all([read('workspace-admin-page.js'),read('workspace-trade-admin-page.js')]);
   assert.ok(workspaceAdmin.includes("tradeAdminMatch=clean.match(/^\\/[^/]+\\/trade\\/admin"));
