@@ -72,3 +72,26 @@ The policy engine classifies execution into levels 0-5: free only, free tier, cr
 Release approval is tracked by the protected PR `constitution-approved` label after explicit platform-owner authorization.
 
 Constitution approval evidence: PR label `constitution-approved` records the owner's approval for the protected free-tier policy extension.
+
+
+## Seller Central connection manager
+Canonical surface: `/ekodimall/admin/amazon`
+
+The administrator can:
+- save Seller Central/SP-API LWA credentials
+- test the connection in read-only mode
+- discover marketplace participations
+- remove the saved connection
+- keep paid execution disabled independently from account connectivity
+
+Stored credential fields are encrypted with AES-GCM using a Worker-only `AMAZON_CREDENTIAL_KEY`. D1 stores only ciphertext, IV and non-secret metadata. Client Secret, Refresh Token and access tokens are never returned to the browser.
+
+Connection API:
+- `GET /api/amazon/connection`: operator-only safe metadata
+- `PUT /api/amazon/connection`: operator-only encrypted credential save/update
+- `POST /api/amazon/connection/test`: operator-only read-only LWA + Sellers API verification
+- `DELETE /api/amazon/connection`: operator-only credential/cache removal
+
+If `AMAZON_CREDENTIAL_KEY` is absent, credential storage fails closed with `AMAZON_CREDENTIAL_KEY_MISSING`; existing cost-policy/status endpoints remain available.
+
+Read-only verification uses the Amazon Sellers API marketplace participations endpoint. External listing, pricing, inventory, order, fulfillment or settlement mutations remain disabled until a separately verified live adapter is explicitly enabled.
