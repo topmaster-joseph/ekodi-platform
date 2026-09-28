@@ -99,7 +99,7 @@ jobs:
           grep -Fq 'https://ekodi.kr/ekodilab/sitemap.xml' lab-source/robots.txt
           grep -Fq '<loc>https://ekodi.kr/ekodilab/</loc>' lab-source/sitemap.xml
           grep -Fq '@media(max-width:700px)' lab-source/index.html
-          if grep -Eq '성수이로 00|1234 5678|https://lab\.ekodi\.kr|https://ekodi-church\.pages\.dev|https://ekodicommunity\.pages\.dev|https://ekodibiz\.kr/' lab-source/index.html lab-source/robots.txt lab-source/sitemap.xml; then
+          if grep -Eq '성수이로 00|1234 5678|https://lab\.ekodi\.kr|https://ekodilab\.pages\.dev|https://ekodi-church\.pages\.dev|https://ekodicommunity\.pages\.dev|https://ekodibiz\.kr/' lab-source/index.html lab-source/robots.txt lab-source/sitemap.xml; then
             echo 'Lab source contains placeholder or retired public address.'
             exit 1
           fi
@@ -141,7 +141,7 @@ jobs:
               && grep -Fq '현장에 묻고,' /tmp/lab.html \
               && grep -Fq 'https://ekodi.kr/ekodilab' /tmp/lab.html \
               && grep -Fq '전라남도 무안군 청계면 백련동1길 17-4' /tmp/lab.html \
-              && ! grep -Eq '성수이로 00|1234 5678|운영공간|https://lab\.ekodi\.kr|https://ekodi-church\.pages\.dev|https://ekodicommunity\.pages\.dev|https://ekodibiz\.kr/' /tmp/lab.html \
+              && ! grep -Eq '성수이로 00|1234 5678|운영공간|https://lab\.ekodi\.kr|https://ekodilab\.pages\.dev|https://ekodi-church\.pages\.dev|https://ekodicommunity\.pages\.dev|https://ekodibiz\.kr/' /tmp/lab.html \
               && jq -e --arg sha "$LAB_SOURCE_SHA" '.contract=="ekodi.lab-release.v1" and .sourceSha==$sha' /tmp/lab-release.json >/dev/null; then
               ok=1
               break
