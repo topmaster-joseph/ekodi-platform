@@ -17,7 +17,7 @@ test('EKODI Lab release is centrally guarded and bound to the apex public path',
   assert.equal(target.directory,'lab-source');
   assert.equal(target.productionUrl,'https://ekodilab.pages.dev/');
   for(const marker of ['에코디연구소','현장에 묻고,','https://ekodi.kr/ekodilab','EKODI LAB'])assert.ok(target.expect.includes(marker),marker);
-  for(const marker of ['성수이로 00','1234 5678'])assert.ok(target.forbid.includes(marker),marker);
+  for(const marker of ['성수이로 00','1234 5678','https://ekodilab.pages.dev'])assert.ok(target.forbid.includes(marker),marker);
 
   assert.match(workflow,/repository: topmaster-joseph\/ekodi-site/);
   assert.match(workflow,/AI_CONTROL_GITHUB_TASK_TOKEN/);
