@@ -60,14 +60,19 @@ page.on('pageerror', error => pageErrors.push(String(error?.stack || error?.mess
 page.on('console', message => {
   if (message.type() === 'error') consoleErrors.push(message.text());
 });
+page.on('request', request => {
+  try {
+    const url = new URL(request.url());
+    if (url.hostname === retiredApiHost) {
+      retiredApiRequests.push(`${request.method()} ${request.url()}`);
+    }
+  } catch {}
+});
 page.on('requestfailed', request => {
   try {
     const url = new URL(request.url());
     if (url.hostname === 'admin.ekodi.kr' && /\.(?:js|css)(?:$|\?)/.test(url.pathname + url.search)) {
       failedAdminAssets.push(`${request.method()} ${request.url()} :: ${request.failure()?.errorText || 'failed'}`);
-    }
-    if (url.hostname === retiredApiHost) {
-      retiredApiRequests.push(`${request.method()} ${request.url()} :: ${request.failure()?.errorText || 'failed'}`);
     }
   } catch {}
 });
