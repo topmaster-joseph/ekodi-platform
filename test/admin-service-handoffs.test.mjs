@@ -69,3 +69,14 @@ test('campus service names hand off to canonical owner admin instead of duplicat
   assert.match(handoffSource,/legacy==='my\.ekodi\.kr'\)row\.hidden=true/);
   assert.doesNotMatch(handoffSource,/(?:href|adminUrl)\s*=\s*['"`]https?:\/\/my\.ekodi\.kr/);
 });
+
+
+test('all EKODI-branded business and item sites expose independent public/admin paths',()=>{
+  const expected=['church','mission','bible','social','cafe','biz','mall','trade','invest','money','pay','books','publishing','journal','lab','education','work','insurance','messenger','mail','live','cloud','media'];
+  const byId=new Map(ADMIN_SERVICE_CATALOG.map(item=>[item.id,item]));
+  for(const id of expected){const item=byId.get(id);assert.ok(item, id);assert.equal(item.kind,'site',id);assert.equal(item.siteRelation,'user',id);assert.equal(canonicalServiceAdminPath(item.basePath),item.basePath+'/admin',id);}
+  assert.equal(byId.get('trade').basePath,'/trade');
+  assert.equal(byId.get('invest').basePath,'/invest');
+  assert.equal(byId.get('publishing').name,'에코디출판');
+  assert.equal(byId.get('education').name,'에코디교육');
+});
