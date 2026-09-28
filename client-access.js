@@ -671,7 +671,7 @@
                 body:JSON.stringify({
                   email:member.email,
                   role:next.role,
-                  visibility:next.visibility,
+                  visibility:visibility.value,
                   status:next.status,
                 }),
               });
