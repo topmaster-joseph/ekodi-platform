@@ -121,7 +121,7 @@ test('live production proof is daily quota-gated instead of consuming AI budget 
   assert.match(workflow, /ai_provider_daily_budget/);
   assert.match(workflow, /proof_calls=1/);
   assert.match(workflow, /operational_reserve=6/);
-  assert.match(workflow, /proofStatus:\(\$reason == "already_proven_today" \? "already_proven" : "quota_gated"\)/);
+  assert.match(workflow, /proofStatus:\(if \$reason == "already_proven_today" then "already_proven" else "quota_gated" end\)/);
   assert.match(workflow, /externalProofSatisfied:\(\$reason == "already_proven_today"\)/);
   assert.match(workflow, /name IN \('ai_provider_daily_budget','ai_command_runs'\)/);
   assert.match(workflow, /configuredProviders/);

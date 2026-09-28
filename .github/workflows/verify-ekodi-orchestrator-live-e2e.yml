@@ -101,7 +101,7 @@ jobs:
           jq -n             --arg day "$(date -u +%F)"             --arg reason "${{ steps.budget.outputs.reason }}"             --argjson used "${{ steps.budget.outputs.used }}"             --argjson limit "${{ steps.budget.outputs.limit }}"             --argjson remaining "${{ steps.budget.outputs.remaining }}"             '{
               schemaVersion:1,
               proof:"ekodi-orchestrator-live-production-e2e",
-              proofStatus:($reason == "already_proven_today" ? "already_proven" : "quota_gated"),
+              proofStatus:(if $reason == "already_proven_today" then "already_proven" else "quota_gated" end),
               externalProofSatisfied:($reason == "already_proven_today"),
               productionMutationPerformed:false,
               provider:"cloudflare-workers-ai",
