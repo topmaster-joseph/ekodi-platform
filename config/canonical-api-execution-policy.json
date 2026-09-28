@@ -1,0 +1,48 @@
+{
+  "policyId": "CANONICAL-APEX-API-001",
+  "status": "enforced",
+  "mode": "mandatory",
+  "canonicalOrigin": "https://ekodi.kr",
+  "canonicalApiPrefix": "/api",
+  "canonicalApiBase": "https://ekodi.kr/api",
+  "internalExecutionBoundary": "CONTROL_API",
+  "retiredPublicHost": "api.ekodi.kr",
+  "browserRuntimeFiles": [
+    "admin-ai-control-plane.js",
+    "ai-operations-center-admin.js",
+    "system-health-admin.js",
+    "admin-lazy-features.js",
+    "mission-control-admin.js",
+    "domains-hub.js",
+    "admin-demand-loader.js",
+    "admin-assist-bootstrap.js",
+    "admin-authenticated-shell.js",
+    "mall.js"
+  ],
+  "serverRuntimeFiles": [
+    "ai-control-worker.js"
+  ],
+  "generatedStateFiles": [
+    "monitor-status.json"
+  ],
+  "fingerprintRequiredAssets": [
+    "admin-ai-control-plane.js"
+  ],
+  "csp": {
+    "retiredHostAllowed": false,
+    "wideningToRetiredHostForbidden": true,
+    "sameOriginApiPreferred": true
+  },
+  "exceptions": {
+    "historicalMigrationEvidenceAllowed": true,
+    "constitutionalLegacyMappingAllowed": true,
+    "runtimeUseAllowed": false
+  },
+  "enforcement": [
+    "scripts/validate-canonical-api-execution.mjs",
+    "test/apex-api-retirement.test.mjs",
+    "scripts/admin-authenticated-e2e.mjs",
+    ".github/workflows/deploy-site-core.yml"
+  ],
+  "rule": "Browser and Admin runtime traffic for the central EKODI API must use the canonical apex /api path. The retired api.ekodi.kr public host must never be restored through CSP widening, runtime fetches, UI routing, monitoring targets, or stale Admin fingerprinting."
+}
