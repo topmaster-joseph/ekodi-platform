@@ -227,6 +227,7 @@ test('Google storage automatically reconnects only when Google credentials requi
 });
 
 
+// Regression guard: YouTube OAuth must return to the channel center, never Storage UI.
 test('YouTube broker callback never drops the operator into Storage UI', () => {
   assert.match(control, /function marketingYouTubeCallbackRedirect/);
   assert.match(control, /target\.searchParams\.set\('state',String\(marketingState\|\|''\)\)/);
