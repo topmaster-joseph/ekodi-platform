@@ -23,6 +23,7 @@ test('all canonical Marketing paths resolve to hidden execution origins',()=>{
     assert.equal(marketingProjectionForPath(`${path}/asset.js`)?.sourceOrigin,origin);
   }
   assert.equal(marketingProjectionForPath('/jadam'),null);
+  assert.equal(marketingProjectionForPath('/ekodimarketing/admin'),null);
 });
 
 test('HTML projection keeps navigation and assets on the canonical EKODI path',()=>{
