@@ -152,17 +152,17 @@ async function deleteNotice(env,auth,id){
 
 async function listAdminContent(env,auth){
   if(!can(auth,CONTENT_CAP))return json({ok:false,error:'content_forbidden'},403);
-  const rows=await env.DB.prepare(`SELECT id,title,url,resolved_url,publisher,published_at,query_label,review_state,first_seen_at,last_seen_at
+  const rows=await env.DB.prepare(`SELECT id,title,url,resolved_url,publisher,published_at,query_label,review_state,publish_category,first_seen_at,last_seen_at
     FROM seonam_medi_monitor_items ORDER BY COALESCE(published_at,first_seen_at) DESC LIMIT 150`).all();
-  return json({ok:true,items:(rows.results||[]).map(row=>({id:Number(row.id),title:row.title,url:row.resolved_url||row.url,publisher:row.publisher||'',publishedAt:row.published_at||row.first_seen_at,queryLabel:row.query_label||'',reviewState:String(row.review_state||'').startsWith('published_')?'published':CONTENT_STATES.has(row.review_state)?row.review_state:'candidate',category:row.review_state==='published_official'?'official':'news'}))});
+  return json({ok:true,items:(rows.results||[]).map(row=>({id:Number(row.id),title:row.title,url:row.resolved_url||row.url,publisher:row.publisher||'',publishedAt:row.published_at||row.first_seen_at,queryLabel:row.query_label||'',reviewState:row.review_state==='verified'?'published':CONTENT_STATES.has(row.review_state)?row.review_state:'candidate',category:row.publish_category==='official'?'official':'news'}))});
 }
 async function updateAdminContent(request,env,auth,id){
   if(!can(auth,CONTENT_CAP))return json({ok:false,error:'content_forbidden'},403);
   const existing=await env.DB.prepare('SELECT id,title FROM seonam_medi_monitor_items WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
   const body=await request.json().catch(()=>null),state=clean(body?.state,40),category=clean(body?.category,40);
   if(!CONTENT_STATES.has(state)||!CONTENT_CATEGORIES.has(category))return json({ok:false,error:'invalid_content_review'},400);
-  const stored=state==='published'?'published_'+category:state;
-  await env.DB.prepare('UPDATE seonam_medi_monitor_items SET review_state=? WHERE id=?').bind(stored,id).run();
+  const stored=state==='published'?'verified':state;
+  await env.DB.prepare('UPDATE seonam_medi_monitor_items SET review_state=?,publish_category=? WHERE id=?').bind(stored,category,id).run();
   await audit(env,auth,'review','web_content',id,{state,category,title:existing.title});return json({ok:true,id,state,category});
 }
 
