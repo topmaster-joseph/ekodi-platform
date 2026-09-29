@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODIBIZ-FREE-TO-PAID-001",
+  "status": "enforced",
+  "scope": {
+    "root": "/ekodibiz",
+    "appliesTo": "all_ekodibiz_user_sites_subsites_and_services",
+    "inheritance": "mandatory_unless_stricter_legal_security_or_provider_cost_rule",
+    "adminSeparation": true
+  },
+  "guest": {
+    "default": "safe_public_introduction",
+    "privateData": false,
+    "writeActions": false,
+    "loginWallForPublicIntroduction": false
+  },
+  "freeMember": {
+    "default": "meaningful_core_use",
+    "requiresLoginForPrivateState": true,
+    "retainUserOwnedDataAfterLimit": true,
+    "manualOrLowCostFallbackPreferred": true,
+    "serviceSpecificLimitsRequired": true
+  },
+  "paidValue": {
+    "principle": "convenience_scale_automation_integration_not_artificial_core_lockout",
+    "eligibleGates": [
+      "higher_usage",
+      "automation",
+      "batch_operations",
+      "multiple_businesses_or_workspaces",
+      "team_and_role_management",
+      "external_paid_provider_cost",
+      "advanced_integrations",
+      "premium_ai_or_compute"
+    ],
+    "forbiddenGates": [
+      "previously_created_user_owned_data",
+      "basic_account_access",
+      "artificially_broken_free_workflow"
+    ]
+  },
+  "billing": {
+    "allowedModels": ["subscription","metered","mixed"],
+    "approvedPriceCatalogRequired": true,
+    "automaticPaidUpgrade": false,
+    "explicitConsentRequired": true
+  },
+  "conversion": {
+    "contextualOnly": true,
+    "showAtNeedMoment": true,
+    "darkPatternsForbidden": true,
+    "examples": [
+      "quota_near_limit",
+      "repeat_work_detected",
+      "automation_requested",
+      "batch_requested",
+      "team_requested",
+      "additional_business_requested"
+    ]
+  },
+  "serviceContract": {
+    "requiredFields": [
+      "guest_projection",
+      "free_core_capabilities",
+      "free_limits",
+      "paid_capabilities",
+      "upgrade_triggers",
+      "admin_boundary",
+      "fallback_behavior"
+    ]
+  }
+}

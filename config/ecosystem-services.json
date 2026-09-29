@@ -258,6 +258,21 @@
       "status": "beta"
     },
     {
+      "id": "tax",
+      "name": "세금·증빙",
+      "nameEn": "EKODI Tax",
+      "descriptionKo": "사업자의 세금계산서 작성, 거래처, 발행대장을 관리하는 세금업무 공간",
+      "descriptionEn": "Tax workspace for business invoices, customers, and issue records",
+      "url": "https://ekodi.kr/tax",
+      "label": "ekodi.kr/tax",
+      "icon": "business",
+      "category": "business-growth",
+      "order": 86,
+      "homepage": false,
+      "productionVerified": false,
+      "status": "beta"
+    },
+    {
       "id": "money",
       "name": "에코디 머니",
       "nameEn": "EKODI Money",

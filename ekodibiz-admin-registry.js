@@ -22,7 +22,7 @@ const EKODIBIZ_ADMIN_SCOPE_DEFINITIONS = [
   {
     id: 'tax', label: '세금·증빙', shortLabel: '세금',
     description: '에코디비즈 전자세금계산서·공급자·거래처·발행대장을 관리합니다.',
-    adminHref: '/tax', publicHref: '/tax', kind: 'service',
+    adminHref: '/tax/admin', publicHref: '/tax', kind: 'service',
   },
   {
     id: 'books', label: '에코디북스', shortLabel: '북스',

@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODIBIZ-TAX-MEMBERSHIP-001",
+  "status": "enforced",
+  "scope": {
+    "service": "tax",
+    "canonicalPath": "/tax",
+    "adminPath": "/tax/admin",
+    "inheritance": "all_tax_subpages_and_subservices"
+  },
+  "guest": {
+    "mode": "public_introduction",
+    "privateData": false,
+    "writeActions": false,
+    "primaryAction": "sign_in"
+  },
+  "free": {
+    "planId": "free",
+    "businesses": 1,
+    "monthlyInvoiceDrafts": 5,
+    "customers": 50,
+    "manualHometaxIssue": true,
+    "ledger": true,
+    "pdfExport": true,
+    "automation": false,
+    "bulkImport": false,
+    "teamUsers": 1
+  },
+  "paid": {
+    "plans": [
+      {
+        "id": "biz",
+        "label": "BIZ",
+        "capabilities": [
+          "higher_invoice_volume",
+          "unlimited_customers",
+          "repeat_and_scheduled_workflows",
+          "bulk_import",
+          "ekodi_business_integrations"
+        ]
+      },
+      {
+        "id": "biz_pro",
+        "label": "BIZ PRO",
+        "capabilities": [
+          "multiple_businesses",
+          "team_users",
+          "role_management",
+          "advanced_automation",
+          "accounting_and_api_integrations",
+          "advanced_ai_assistance"
+        ]
+      }
+    ],
+    "meteredOption": true,
+    "priceCatalogRequiredBeforeCheckout": true,
+    "automaticPaidUpgrade": false
+  },
+  "conversion": {
+    "principle": "sell_time_saving_not_core_access",
+    "showUpgradeWhenNeedOccurs": true,
+    "triggers": [
+      "free_monthly_quota_near_limit",
+      "repeat_customer_detected",
+      "repeat_invoice_pattern_detected",
+      "automation_requested",
+      "bulk_import_requested",
+      "multiple_business_requested",
+      "team_member_requested"
+    ],
+    "darkPatternsForbidden": true
+  },
+  "safety": {
+    "taxLegalTruthRemainsWithOfficialRecords": true,
+    "humanApprovalBeforeIssue": true,
+    "freeManualFallbackMustRemainAvailable": true,
+    "paidProviderOutageMustNotBlockCoreLedger": true
+  }
+}
