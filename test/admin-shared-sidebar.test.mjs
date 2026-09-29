@@ -47,12 +47,14 @@ test('left navigation is a reusable shared module backed only by the registry', 
   assert.match(layout, /const ORDER=Object\.freeze\(adminMenuOrder\(\)\)/);
 });
 
-test('contextual subservices render as a sticky top tab strip and source nav stays hidden', () => {
+test('legacy contextual subservice nodes stay hidden while source nav remains internal', () => {
   assert.match(sidebar, /SOURCE_CLASS = 'admin-context-source'/);
   assert.match(sidebar, /TABS_SHELL_CLASS = 'admin-context-tabs-shell'/);
   assert.match(sidebar, /TABS_CLASS = 'admin-context-tabs'/);
   assert.match(sidebar, /data-admin-context-section/);
   assert.match(sidebar, /position:sticky/);
+  assert.match(sidebar, /commandEntry\.hidden = true/);
+  assert.match(sidebar, /shell\.hidden = true/);
   assert.match(sidebar, /backdrop-filter:none/);
   assert.doesNotMatch(sidebar, /RECENT_KEY|FAVORITES_KEY|data-admin-quick-section/);
 });

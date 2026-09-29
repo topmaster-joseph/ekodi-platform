@@ -201,11 +201,7 @@ async function resolveMenuTrigger(id, group) {
     return detail;
   }
 
-  const contextTab = page.locator(`button.admin-context-tab[data-admin-context-section="${id}"]`).first();
-  await contextTab.waitFor({ state: 'attached', timeout: 10_000 });
-  if (await contextTab.isVisible().catch(() => false)) return contextTab;
-
-  throw new Error(`${id}: no visible sidebar navigation trigger after selecting work area ${group}`);
+  throw new Error(`${id}: no visible left-navigation trigger after selecting work area ${group}`);
 }
 
 const results = [];
@@ -261,8 +257,6 @@ for (const [id, group] of menus) {
     selectedWorkArea = group;
   }
 
-  const contextTab = page.locator(`button.admin-context-tab[data-admin-context-section="${id}"]`).first();
-  await contextTab.waitFor({ state: 'attached', timeout: 10000 });
   const definition = getAdminMenuItem(id);
 
   if (id === 'tax') {
@@ -320,7 +314,7 @@ for (const [id, group] of menus) {
   }
 
   if (id !== 'command-home') {
-    const alreadyActive = await contextTab.evaluate(node => node.getAttribute('aria-selected') === 'true' || node.classList.contains('active'));
+    const alreadyActive = await page.evaluate(section => window.EKODIAdminPanels?.current?.() === section, id);
     if (!alreadyActive) {
       const trigger = await resolveMenuTrigger(id, group);
       await dispatchClick(trigger);
@@ -333,14 +327,12 @@ for (const [id, group] of menus) {
       const body = document.body;
       const panel = document.querySelector('#ekodiAssistPanel');
       const dock = document.querySelector('#ekodiAssistDock');
-      const tab = document.querySelector('button.admin-context-tab[data-admin-context-section="command-home"]');
       if (!body?.classList.contains('admin-command-home') || !body.classList.contains('admin-command-active')) return false;
       if (!dock || !panel || panel.hidden) return false;
       const style = getComputedStyle(panel);
       const rect = panel.getBoundingClientRect();
       const text = String(panel.innerText || panel.textContent || '').replace(/\s+/g, ' ').trim();
-      const selected = tab?.getAttribute('aria-selected') === 'true' || tab?.classList.contains('active');
-      return selected && text.length > 0 && style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+      return window.EKODIAdminPanels?.current?.() === 'command-home' && text.length > 0 && style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
     }, null, { timeout: 12000 });
     const command = await page.evaluate(() => {
       const panel = document.querySelector('#ekodiAssistPanel');
