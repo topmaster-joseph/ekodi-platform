@@ -23,7 +23,7 @@ mkdir "%EKODI_POS_REMOVE_DIR%" >nul 2>&1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
   "$ErrorActionPreference='Stop';" ^
   "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;" ^
-  "$uri='https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/agents/windows-pos/uninstall-pos-agent.ps1';" ^
+  "$uri='https://ekodi.kr/cmpmyi/admin/agent/download/uninstall-pos-agent.ps1';" ^
   "$out=Join-Path $env:EKODI_POS_REMOVE_DIR 'uninstall-pos-agent.ps1';" ^
   "Invoke-WebRequest -UseBasicParsing -Uri $uri -OutFile $out -TimeoutSec 30;" ^
   "$script=Get-Content -LiteralPath $out -Raw -Encoding UTF8;" ^
