@@ -166,6 +166,7 @@ function maintenanceHtml(site){
   return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>:root{color-scheme:light dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{margin:0;min-height:100dvh;display:grid;place-items:center;background:radial-gradient(circle at top,#f3f8ff,#e9edf3 52%,#dde4ee);color:#152033}main{width:min(92vw,560px);padding:42px 28px;border:1px solid rgba(80,105,135,.18);border-radius:28px;background:rgba(255,255,255,.78);box-shadow:0 22px 70px rgba(25,50,80,.14);text-align:center;backdrop-filter:blur(16px)}.eyebrow{display:inline-flex;gap:8px;align-items:center;padding:6px 12px;border-radius:999px;background:#edf5ff;color:#35628e;font-size:13px;font-weight:700;letter-spacing:.04em}h1{margin:18px 0 10px;font-size:clamp(28px,5vw,42px);line-height:1.12;letter-spacing:-.04em}p{margin:0 auto;color:#536273;font-size:17px;line-height:1.65;word-break:keep-all}a{display:inline-flex;margin-top:26px;padding:13px 18px;border-radius:14px;background:#163454;color:#fff;text-decoration:none;font-weight:800}footer{margin-top:28px;color:#8390a1;font-size:12px}</style></head><body><main><div class="eyebrow">${escapeHtml(site.eyebrow||'CGMA')}</div><h1>${title}</h1><p>${message}</p>${showButton?`<a href="${escapeHtml(redirectUrl)}" rel="noopener noreferrer">임시 안내 페이지 보기</a>`:''}<footer>${escapeHtml(site.domain||'cgma.or.kr')}</footer></main></body></html>`;
 }
 function maintenanceResponse(site,status=200){return new Response(maintenanceHtml(site),{status,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin','x-robots-tag':'noindex, nofollow, noarchive','x-ekodi-public-site-mode':'maintenance'}})}
+function privatePublicSiteResponse(route='public-site-private'){return new Response('Not Found',{status:404,headers:{'cache-control':'no-store','x-content-type-options':'nosniff','x-robots-tag':'noindex, nofollow, noarchive','x-ekodi-route':route,'x-ekodi-public-site-mode':'private'}})}
 async function ensurePublicSiteControlSchema(env){
   if(!env?.DB)return;
   const now=new Date().toISOString();
@@ -207,6 +208,7 @@ function cgmaCanonicalRedirect(request){
 }
 async function routeCgmaPublic(request,env){
   const site=await readCgmaSiteControl(env);
+  if(site.publicStatus==='private')return privatePublicSiteResponse('cgma-private');
   if(site.publicStatus!=='maintenance')return cgmaCanonicalRedirect(request);
   const redirectUrl=validPublicRedirectUrl(site.maintenanceRedirectUrl);
   if(site.maintenanceDisplayType==='url'&&redirectUrl&&site.redirectMode==='auto')return new Response(null,{status:302,headers:{location:redirectUrl,'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-public-site-mode':'maintenance-auto-redirect'}});
@@ -333,7 +335,7 @@ function legacyStoreGatewayRedirect(request){const url=new URL(request.url);if(u
 
 async function livePublicStatus(env,tenant){
   if(!env?.DB?.prepare)return'public';
-  try{const row=await env.DB.prepare('SELECT public_status FROM public_site_controls WHERE site_id = ? LIMIT 1').bind('live-'+String(tenant?.apiTenant||'').toLowerCase()).first();return row?.public_status==='maintenance'?'maintenance':'public'}catch{return'public'}
+  try{const row=await env.DB.prepare('SELECT public_status FROM public_site_controls WHERE site_id = ? LIMIT 1').bind('live-'+String(tenant?.apiTenant||'').toLowerCase()).first();return['public','private','maintenance'].includes(row?.public_status)?row.public_status:'public'}catch{return'public'}
 }
 function liveShell(response,surface=''){return typeof HTMLRewriter==='function'?injectEkodiShell(response,'live',surface):response}
 
@@ -387,7 +389,9 @@ async function routePlatform(request,env,ctx){
       if(liveAdminTenant)return tenantLiveAdminPage(liveAdminTenant);
       const liveTenant=realtimeTenantFromPath(url.pathname);
       if(liveTenant){
-        if(await livePublicStatus(env,liveTenant)==='maintenance')return liveShell(liveServiceMaintenancePage(liveTenant));
+        const liveStatus=await livePublicStatus(env,liveTenant);
+        if(liveStatus==='private')return privatePublicSiteResponse('live-private');
+        if(liveStatus==='maintenance')return liveShell(liveServiceMaintenancePage(liveTenant));
         if(!liveTenant.dedicated)return tenantLivePage(liveTenant);
       }
     }
