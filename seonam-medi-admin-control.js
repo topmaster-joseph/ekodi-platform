@@ -22,6 +22,7 @@ const safeOrder=value=>Math.max(0,Math.min(9999,Number.parseInt(String(value??0)
 
 async function ensureSchema(db){
   await ensureCustomerAccessSchema(db);
+  try{await db.prepare("ALTER TABLE seonam_medi_monitor_items ADD COLUMN publish_category TEXT NOT NULL DEFAULT 'news'").run()}catch{}
   await db.exec(`CREATE TABLE IF NOT EXISTS seonam_medi_notices (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
