@@ -582,15 +582,15 @@
     const panel = document.createElement('section'); panel.id = 'deviceControlPanel'; panel.className = 'section ekodi-device-panel hidden-panel'; panel.dataset.panel = 'devices';
     panel.innerHTML = `
       <div class="device-panel-head">
-        <div><p class="kicker">REMOTE WORK & DEVICE MANAGEMENT · LOCAL COMPUTERS · DEVICES</p><h2>로컬컴퓨터·기기</h2><p>현재 연결 상태와 이용현황을 먼저 보고, 문제가 있는 기기만 빠르게 찾아 조치합니다. 원격 작업·연결·자동작업·고급 설정은 필요할 때 펼쳐 사용합니다.</p></div>
+        <div><p class="kicker">EXECUTION INFRASTRUCTURE · DEVICES</p><h2>실행 인프라</h2><p>기기 연결·원격 작업·자동복구 상태를 한눈에 확인하고, 문제가 있는 항목부터 바로 조치합니다.</p></div>
         <div class="device-head-actions"><span id="deviceGeneratedAt">연결 상태 확인 전</span><button type="button" class="secondary" id="refreshDevices">↻ 새로고침</button></div>
       </div>
       <div class="device-metrics" aria-label="기기 핵심 현황">
-        <article><small>등록 기기</small><strong id="deviceMetricTotal">—</strong><span>전체 자산</span></article>
-        <article><small>현재 온라인</small><strong id="deviceMetricOnline">—</strong><span>Agent 응답 기준</span></article>
+        <article><small>등록</small><strong id="deviceMetricTotal">—</strong><span>전체 자산</span></article>
+        <article><small>온라인</small><strong id="deviceMetricOnline">—</strong><span>Agent 응답 기준</span></article>
         <article><small>확인 필요</small><strong id="deviceMetricIssues">—</strong><span>오프라인·지연·건강 저하</span></article>
-        <article><small>평균 건강점수</small><strong id="deviceMetricHealth">—</strong><span>진단 가능한 기기 기준</span></article>
-        <article><small>배정 대기</small><strong id="deviceMetricQueued">—</strong><span>자동 작업 큐</span></article>
+        <article><small>건강도</small><strong id="deviceMetricHealth">—</strong><span>진단 가능한 기기 기준</span></article>
+        <article><small>배정 대기</small><strong id="deviceMetricQueued">—</strong><span>작업 큐</span></article>
       </div>
       <div class="device-attention-summary" id="deviceAttentionSummary" data-state="good"><div><strong>기기 상태를 확인하는 중입니다.</strong><span>문제가 있는 기기를 우선 표시합니다.</span></div></div>
       <div class="device-type-filters" id="deviceTypeFilters" aria-label="기기 유형 필터"></div>

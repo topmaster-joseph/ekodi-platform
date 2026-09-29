@@ -83,3 +83,202 @@ body.admin-compact .device-enrollment-box,body.admin-compact .device-security-no
 body.admin-compact .device-remote-summary-card,body.admin-compact .device-remote-process-list>div{background:#f8fafc!important;border-color:#e1e8ef!important;color:#26384e!important}
 body.admin-compact .device-remote-note,body.admin-compact .device-remote-summary-card span,body.admin-compact .device-remote-process-list span{color:#66768a!important;opacity:1!important}
 @media(max-width:680px){.device-remote-result{grid-template-columns:1fr}.device-remote-process-list>div{grid-template-columns:1fr 1fr}.device-remote-process-list strong{grid-column:1/-1}}
+
+
+/* EKODI Admin execution infrastructure readability · list-first v4 */
+body.admin-compact .ekodi-device-panel{
+  width:min(100%,1680px)!important;
+  max-width:none!important;
+  margin:0!important;
+  gap:12px!important;
+}
+body.admin-compact .device-panel-head{
+  align-items:center!important;
+  gap:14px!important;
+  padding:0 0 2px!important;
+}
+body.admin-compact .device-panel-head .kicker{
+  display:none!important;
+}
+body.admin-compact .device-panel-head h2{
+  margin:0 0 3px!important;
+  font-size:24px!important;
+  line-height:1.2!important;
+}
+body.admin-compact .device-panel-head p{
+  margin:0!important;
+  max-width:none!important;
+  font-size:13px!important;
+  line-height:1.45!important;
+}
+body.admin-compact .device-head-actions{
+  gap:7px!important;
+  white-space:nowrap!important;
+}
+body.admin-compact .device-head-actions button{
+  min-height:34px!important;
+  padding:0 12px!important;
+}
+body.admin-compact .device-metrics{
+  display:grid!important;
+  grid-template-columns:repeat(5,minmax(110px,1fr))!important;
+  gap:7px!important;
+}
+body.admin-compact .device-metrics article{
+  min-height:76px!important;
+  padding:10px 12px!important;
+  gap:2px!important;
+  border-radius:10px!important;
+}
+body.admin-compact .device-metrics small{
+  font-size:11px!important;
+  font-weight:700!important;
+}
+body.admin-compact .device-metrics strong{
+  font-size:24px!important;
+  line-height:1.05!important;
+}
+body.admin-compact .device-metrics span{
+  font-size:10px!important;
+  line-height:1.3!important;
+}
+body.admin-compact .device-attention-summary{
+  min-height:48px!important;
+  padding:9px 12px!important;
+  border-radius:10px!important;
+}
+body.admin-compact .device-attention-summary strong{
+  font-size:13px!important;
+}
+body.admin-compact .device-attention-summary span{
+  font-size:11px!important;
+}
+body.admin-compact .device-attention-items button{
+  min-height:34px!important;
+  padding:5px 8px!important;
+}
+body.admin-compact .device-type-filters{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  gap:6px!important;
+}
+body.admin-compact .device-type-filter{
+  min-width:88px!important;
+  min-height:34px!important;
+  padding:5px 8px!important;
+  grid-template-columns:auto auto auto!important;
+  justify-content:start!important;
+  border-radius:8px!important;
+}
+body.admin-compact .device-type-filter>span{
+  font-size:13px!important;
+}
+body.admin-compact .device-type-filter strong{
+  font-size:11px!important;
+}
+body.admin-compact .device-type-filter small{
+  font-size:10px!important;
+}
+body.admin-compact .ekodi-device-list{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:8px!important;
+}
+body.admin-compact .ekodi-device-card{
+  padding:12px 14px!important;
+  gap:9px!important;
+  border-radius:11px!important;
+}
+body.admin-compact .ekodi-device-head{
+  align-items:center!important;
+}
+body.admin-compact .ekodi-device-head strong{
+  font-size:14px!important;
+}
+body.admin-compact .ekodi-device-head small{
+  font-size:11px!important;
+}
+body.admin-compact .device-platform-mark{
+  width:30px!important;
+  height:30px!important;
+  border-radius:8px!important;
+  font-size:15px!important;
+}
+body.admin-compact .device-state{
+  padding:4px 8px!important;
+  font-size:11px!important;
+}
+body.admin-compact .ekodi-device-meta{
+  grid-template-columns:repeat(6,minmax(90px,1fr))!important;
+  gap:5px!important;
+}
+body.admin-compact .ekodi-device-meta span{
+  min-height:42px!important;
+  padding:6px 8px!important;
+  border-radius:7px!important;
+}
+body.admin-compact .ekodi-device-meta small{
+  font-size:9px!important;
+}
+body.admin-compact .ekodi-device-meta strong{
+  font-size:11px!important;
+}
+body.admin-compact .device-health{
+  padding:8px 10px!important;
+  gap:10px!important;
+}
+body.admin-compact .device-score{
+  min-width:74px!important;
+}
+body.admin-compact .device-score strong{
+  font-size:23px!important;
+}
+body.admin-compact .device-health-stats{
+  gap:5px!important;
+}
+body.admin-compact .device-recommendation{
+  min-height:36px!important;
+  padding:6px 8px!important;
+}
+body.admin-compact .device-primary-actions,
+body.admin-compact .device-ops-grid,
+body.admin-compact .device-command-grid{
+  gap:5px!important;
+}
+body.admin-compact .device-ops-grid button,
+body.admin-compact .device-command-grid button{
+  min-height:34px!important;
+  font-size:11px!important;
+}
+body.admin-compact .device-details>summary{
+  min-height:36px!important;
+  padding:7px 9px!important;
+  font-size:12px!important;
+}
+body.admin-compact .device-setup-tools>summary{
+  min-height:44px!important;
+  padding:9px 12px!important;
+}
+body.admin-compact .device-job-console,
+body.admin-compact .device-enrollment-box,
+body.admin-compact .device-security-note,
+body.admin-compact .device-enrollment-result{
+  border-radius:11px!important;
+  padding:12px!important;
+}
+@media (min-width:1400px){
+  body.admin-compact .ekodi-device-panel{
+    padding-right:8px!important;
+  }
+}
+@media (max-width:1100px){
+  body.admin-compact .device-metrics{grid-template-columns:repeat(3,minmax(110px,1fr))!important}
+  body.admin-compact .ekodi-device-meta{grid-template-columns:repeat(3,minmax(90px,1fr))!important}
+}
+@media (max-width:720px){
+  body.admin-compact .device-panel-head{align-items:stretch!important;flex-direction:column!important}
+  body.admin-compact .device-head-actions{justify-content:flex-start!important}
+  body.admin-compact .device-metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  body.admin-compact .ekodi-device-meta{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  body.admin-compact .device-type-filter{min-width:auto!important;flex:1 1 calc(50% - 6px)!important}
+}
