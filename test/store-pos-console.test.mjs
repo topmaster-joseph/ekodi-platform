@@ -44,12 +44,13 @@ test('Store Admin exposes the POS console without weakening store scope',async()
   assert.doesNotMatch(script,/POS·배달·포장 프로그램 상태를 한눈에 보고 한 번 눌러 전환합니다/);
   assert.match(script,/Windows 전환/);
   assert.match(script,/Agent 실행 · 중지 안내/);
-  assert.match(script,/setup-pos-agent\.cmd/);
-  assert.match(script,/install-pos-agent\.ps1/);
+  assert.match(script,/\/cmpmyi\/admin\/agent\/download\/setup-pos-agent\.cmd/);
+  assert.match(script,/\/cmpmyi\/admin\/agent\/download\/install-pos-agent\.ps1/);
   assert.match(script,/원클릭 설치/);
   assert.match(script,/명령어를 직접 입력하지 마세요/);
-  assert.match(script,/start-pos-agent\.cmd/);
-  assert.match(script,/stop-pos-agent\.cmd/);
+  assert.match(script,/\/cmpmyi\/admin\/agent\/download\/start-pos-agent\.cmd/);
+  assert.match(script,/\/cmpmyi\/admin\/agent\/download\/stop-pos-agent\.cmd/);
+  assert.doesNotMatch(script,/raw\.githubusercontent\.com\/topmaster-joseph\/ekodi-platform\/main\/agents\/windows-pos/);
   assert.match(script,/웹 POS 통합화면은 계속 사용할 수 있고/);
   assert.match(script,/webSection:'delivery'/);
   assert.match(script,/webSection:'orders'/);
