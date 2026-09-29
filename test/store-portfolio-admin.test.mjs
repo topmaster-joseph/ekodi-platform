@@ -210,12 +210,15 @@ test('guarded release probes canonical store admins and redirect-only aggregate 
   const byUrl=new Map(manifest.worker.requests.map(row=>[row.url,row]));
   assert.deepEqual(byUrl.get('https://ekodi.kr/cmpmyi/admin')?.statuses,[200]);
   assert.ok(byUrl.get('https://ekodi.kr/cmpmyi/admin')?.expect.includes('cmpmyiStoreSelect'));
+  assert.ok(byUrl.get('https://ekodi.kr/cmpmyi/admin')?.expect.includes('POS 통합화면'));
+  assert.ok(byUrl.get('https://ekodi.kr/cmpmyi/admin')?.expect.includes('연결관리'));
+  assert.ok(byUrl.get('https://ekodi.kr/cmpmyi/admin')?.expect.includes('채널 · 자동게시'));
   const shellRuntimeProbe=byUrl.get('https://ekodi.kr/cmpmyi/admin/shell.js');
   assert.deepEqual(shellRuntimeProbe?.statuses,[200]);
   assert.ok(shellRuntimeProbe?.expect.includes('cmpmyiStoreSelect'));
   assert.ok(shellRuntimeProbe?.expect.includes('ekodi-cmpmyi-direct-brand'));
   assert.deepEqual(byUrl.get('https://ekodi.kr/cmpmyi/admin/agent')?.statuses,[200]);
-  assert.ok(byUrl.get('https://ekodi.kr/cmpmyi/admin/agent')?.expect.includes('POS Agent 관리'));
+  assert.ok(byUrl.get('https://ekodi.kr/cmpmyi/admin/agent')?.expect.includes('/cmpmyi/admin/panel/agent'));
   assert.deepEqual(byUrl.get('https://ekodi.kr/cmpmyi/admin/panel/agent')?.statuses,[200]);
   assert.ok(byUrl.get('https://ekodi.kr/cmpmyi/admin/panel/agent')?.expect.includes('원클릭 설치 다운로드'));
   assert.deepEqual(byUrl.get('https://ekodi.kr/cmpmyi/admin/panel/overview')?.statuses,[200]);
