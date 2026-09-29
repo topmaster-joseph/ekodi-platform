@@ -112,7 +112,9 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(header,/dataset\.ekodiHeaderScope='service-local'/);
   assert.match(header,/data-ekodi-operating-space-label/);
   assert.match(header,/function shouldShowOperatingSpaceLabel\(\)/);
-  assert.match(header,/surface\(\)==='workspace'&&isIndividualSite\(\)/);
+  assert.match(header,/function canonicalPublicUserSurface\(\)/);
+  assert.match(header,/host!=='ekodi\.kr'/);
+  assert.match(header,/surface\(\)==='workspace'&&isIndividualSite\(\)&&!canonicalPublicUserSurface\(\)/);
   assert.match(header,/ensureOperatingSpaceLabel/);
   assert.match(header,/const existing=header\.querySelector/);
   assert.match(header,/badge\.textContent='운영공간'/);

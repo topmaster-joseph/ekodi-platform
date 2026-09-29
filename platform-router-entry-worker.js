@@ -203,6 +203,15 @@ async function routePublicWorkspace(request,env){
     const branded=injectEkodiTenantReadability(routed);
     return progressiveHome?injectEkodiProgressiveHome(branded):branded;
   }
+  const upstreamSurface=String(routed.headers.get('x-ekodi-surface')||routed.headers.get('x-ekodi-user-ui-surface')||'').trim().toLowerCase();
+  if(upstreamSurface==='public'){
+    routed.headers.set('x-ekodi-public-surface','workspace-public-site');
+    return progressiveHome?injectEkodiProgressiveHome(routed):routed;
+  }
+  if(routed.headers.get('x-ekodi-route')==='space-organization'){
+    routed.headers.set('x-ekodi-public-surface','organization-public-site');
+    return injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','public',{progressiveHome,contextKind:'public',existingHeader:true});
+  }
   return injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace',{progressiveHome,contextKind:'workspace'});
 }
 
@@ -438,8 +447,8 @@ async function routePlatform(request,env,ctx){
                   :(exactModuleRoute?(localRegionRoute.admin?localRegionModuleAdminPage(localRegionRoute.region,regionalModule):localRegionModulePublicPage(localRegionRoute.region,regionalModule))
                     :(rootRoute?(localRegionRoute.admin?localRegionAdminPage(localRegionRoute.region):localRegionPublicPage(localRegionRoute.region))
                       :localRegionNotFoundPage(localRegionRoute.region,{admin:localRegionRoute.admin,path:url.pathname}))))));
-          const surface=localRegionRoute.admin?'admin':'workspace';
-          const response=injectEkodiShell(page,'space',surface,{contextKind:'workspace'});
+          const surface=localRegionRoute.admin?'admin':'public';
+          const response=injectEkodiShell(page,'space',surface,{contextKind:localRegionRoute.admin?'workspace':'public'});
           return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;
         }
         if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
