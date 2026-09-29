@@ -13,7 +13,7 @@
 <label class="wide"><span>추가비용 안내</span><input name="fee_note" maxlength="300"></label>
 <label><span>출발</span><input name="departure" maxlength="200"></label>
 <label><span>복귀</span><input name="return" maxlength="200"></label>
-<label class="wide"><span>예배</span><input name="worship" maxlength="200"></label>
+
 <label class="wide"><span>10월 3일 일정</span><textarea name="schedule_1" rows="3" maxlength="1500"></textarea></label>
 <label class="wide"><span>10월 4일 일정</span><textarea name="schedule_2" rows="3" maxlength="1500"></textarea></label>
 <label class="wide"><span>숙소 1순위</span><textarea name="lodging_1" rows="2" maxlength="800"></textarea></label>
