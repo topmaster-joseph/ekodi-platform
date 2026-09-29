@@ -19,8 +19,23 @@ function parseRss(xml,key,label){
   const now=Date.now(),floor=now-RECENT_DAYS*86400000;
   return [...String(xml||'').matchAll(/<item>([\s\S]*?)<\/item>/gi)].slice(0,MAX_ITEMS_PER_QUERY).map(match=>{
     const block=match[1];const title=tag(block,'title');const url=tag(block,'link');const publishedRaw=tag(block,'pubDate');const publisher=sourceTag(block)||'Google News';const publishedMs=Date.parse(publishedRaw);
-    return {queryKey:key,queryLabel:label,title,url,publisher,publishedAt:Number.isFinite(publishedMs)?new Date(publishedMs).toISOString():null,publishedMs,resolvedUrl:'',mediaType:'',mediaUrl:'',mediaSource:'',mediaPublishedAt:'',mediaState:'none'};
+    return {queryKey:key,queryLabel:label,title,url,publisher,publishedAt:Number.isFinite(publishedMs)?new Date(publishedMs).toISOString():null,publishedMs,resolvedUrl:'',mediaType:'',mediaUrl:'',mediaSource:'',mediaPublishedAt:'',mediaState:'none',sourceType:'news',summaryText:''};
   }).filter(item=>item.title&&/^https:\/\//i.test(item.url)&&(!Number.isFinite(item.publishedMs)||item.publishedMs>=floor));
+}
+function stripMarkup(value){return clean(String(value||'').replace(/<[^>]+>/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>'),1200)}
+function naverBlogConfigured(env){return Boolean(env?.NAVER_CLIENT_ID&&env?.NAVER_CLIENT_SECRET)}
+function naverBlogDate(value){const raw=String(value||'');if(!/^\d{8}$/.test(raw))return null;const iso=raw.slice(0,4)+'-'+raw.slice(4,6)+'-'+raw.slice(6,8)+'T00:00:00+09:00';const ms=Date.parse(iso);return Number.isFinite(ms)?new Date(ms).toISOString():null}
+async function fetchNaverBlogItems(env,query){
+  if(!naverBlogConfigured(env))return [];
+  const endpoint=new URL('https://openapi.naver.com/v1/search/blog.json');endpoint.searchParams.set('query',query.q);endpoint.searchParams.set('display',String(MAX_ITEMS_PER_QUERY));endpoint.searchParams.set('sort','date');
+  const response=await fetch(endpoint,{headers:{'X-Naver-Client-Id':env.NAVER_CLIENT_ID,'X-Naver-Client-Secret':env.NAVER_CLIENT_SECRET,'user-agent':'EKODI-SeonamMedi-Monitor/1.2'}});
+  if(!response.ok)throw new Error('Naver HTTP '+response.status);
+  const payload=await response.json();const floor=Date.now()-RECENT_DAYS*86400000;
+  return (Array.isArray(payload?.items)?payload.items:[]).map(row=>{
+    const title=stripMarkup(row.title);const url=httpsUrl(row.link);const publishedAt=naverBlogDate(row.postdate);const publishedMs=publishedAt?Date.parse(publishedAt):NaN;
+    let publisher='네이버 블로그';try{publisher=new URL(url).hostname==='blog.naver.com'?'네이버 블로그':new URL(url).hostname}catch{}
+    return {queryKey:query.key,queryLabel:query.label,title,url,publisher,publishedAt,publishedMs,resolvedUrl:url,mediaType:'',mediaUrl:'',mediaSource:'',mediaPublishedAt:'',mediaState:'none',sourceType:'blog',summaryText:stripMarkup(row.description)};
+  }).filter(item=>item.title&&item.url&&(!Number.isFinite(item.publishedMs)||item.publishedMs>=floor));
 }
 function metaValue(html,key){
   const escaped=String(key).replace(/[.*+?^$()|[\]\\]/g,'\\$&');
@@ -55,12 +70,12 @@ async function insertItem(env,item,seenAt){
   const fingerprint=await digest(item.title+'\n'+item.url);
   const existing=await env.DB.prepare('SELECT id FROM seonammedi_monitor_items WHERE fingerprint=? LIMIT 1').bind(fingerprint).first();
   if(existing?.id){
-    await env.DB.prepare('UPDATE seonammedi_monitor_items SET last_seen_at=?,publisher=?,published_at=COALESCE(?,published_at),query_key=?,query_label=?,resolved_url=CASE WHEN ?<>\'\' THEN ? ELSE resolved_url END,media_type=CASE WHEN ?<>\'\' THEN ? ELSE media_type END,media_url=CASE WHEN ?<>\'\' THEN ? ELSE media_url END,media_source=CASE WHEN ?<>\'\' THEN ? ELSE media_source END,media_published_at=CASE WHEN ?<>\'\' THEN ? ELSE media_published_at END,media_state=CASE WHEN ?=\'candidate\' THEN \'candidate\' ELSE media_state END WHERE id=?')
-      .bind(seenAt,item.publisher,item.publishedAt,item.queryKey,item.queryLabel,item.resolvedUrl,item.resolvedUrl,item.mediaType,item.mediaType,item.mediaUrl,item.mediaUrl,item.mediaSource,item.mediaSource,item.mediaPublishedAt,item.mediaPublishedAt,item.mediaState,existing.id).run();
+    await env.DB.prepare('UPDATE seonammedi_monitor_items SET last_seen_at=?,publisher=?,published_at=COALESCE(?,published_at),query_key=?,query_label=?,resolved_url=CASE WHEN ?<>\'\' THEN ? ELSE resolved_url END,media_type=CASE WHEN ?<>\'\' THEN ? ELSE media_type END,media_url=CASE WHEN ?<>\'\' THEN ? ELSE media_url END,media_source=CASE WHEN ?<>\'\' THEN ? ELSE media_source END,media_published_at=CASE WHEN ?<>\'\' THEN ? ELSE media_published_at END,media_state=CASE WHEN ?=\'candidate\' THEN \'candidate\' ELSE media_state END,source_type=?,summary_text=CASE WHEN ?<>\'\' THEN ? ELSE summary_text END WHERE id=?')
+      .bind(seenAt,item.publisher,item.publishedAt,item.queryKey,item.queryLabel,item.resolvedUrl,item.resolvedUrl,item.mediaType,item.mediaType,item.mediaUrl,item.mediaUrl,item.mediaSource,item.mediaSource,item.mediaPublishedAt,item.mediaPublishedAt,item.mediaState,item.sourceType||'web',item.summaryText||'',item.summaryText||'',existing.id).run();
     return false;
   }
-  await env.DB.prepare("INSERT INTO seonammedi_monitor_items (fingerprint,title,url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,resolved_url,media_type,media_url,media_source,media_published_at,media_state) VALUES (?,?,?,?,?,?,?,'source_only',?,?,?,?,?,?,?,?)")
-    .bind(fingerprint,item.title,item.url,item.publisher,item.publishedAt,item.queryKey,item.queryLabel,seenAt,seenAt,item.resolvedUrl,item.mediaType,item.mediaUrl,item.mediaSource,item.mediaPublishedAt,item.mediaState).run();
+  await env.DB.prepare("INSERT INTO seonammedi_monitor_items (fingerprint,title,url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,resolved_url,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text) VALUES (?,?,?,?,?,?,?,'source_only',?,?,?,?,?,?,?,?,?)")
+    .bind(fingerprint,item.title,item.url,item.publisher,item.publishedAt,item.queryKey,item.queryLabel,seenAt,seenAt,item.resolvedUrl,item.mediaType,item.mediaUrl,item.mediaSource,item.mediaPublishedAt,item.mediaState,item.sourceType||'web',item.summaryText||'').run();
   return true;
 }
 export async function runSeonamMediDailyCheck(env,{scheduledAt=null,force=false}={}){
@@ -88,7 +103,13 @@ export async function runSeonamMediDailyCheck(env,{scheduledAt=null,force=false}
         if(mediaBudget>0){item=await enrichMedia(item);mediaBudget-=1;if(item.mediaState==='candidate')mediaCandidates+=1}
         if(await insertItem(env,item,startedAt))added+=1;
       }
-    }catch(error){errors.push(query.key+':'+clean(error?.message||error,160))}
+    }catch(error){errors.push(query.key+':news:'+clean(error?.message||error,160))}
+    if(naverBlogConfigured(env)){
+      try{
+        const blogItems=await fetchNaverBlogItems(env,query);checked+=1;seen+=blogItems.length;
+        for(let item of blogItems){if(mediaBudget>0){item=await enrichMedia(item);mediaBudget-=1;if(item.mediaState==='candidate')mediaCandidates+=1}if(await insertItem(env,item,startedAt))added+=1}
+      }catch(error){errors.push(query.key+':blog:'+clean(error?.message||error,160))}
+    }
   }
   const completedAt=new Date().toISOString();const status=errors.length?(checked?'partial':'failed'):'ok';
   await env.DB.prepare('UPDATE seonammedi_monitor_runs SET completed_at=?,status=?,sources_checked=?,items_seen=?,new_items=?,error_summary=? WHERE id=?')
@@ -102,9 +123,9 @@ export async function handleSeonamMediMonitorApi(request,env){
   try{
     const [lastRun,rows,mediaCount]=await Promise.all([
       env.DB.prepare('SELECT id,started_at,completed_at,status,sources_checked,items_seen,new_items,error_summary FROM seonammedi_monitor_runs ORDER BY id DESC LIMIT 1').first(),
-      env.DB.prepare("SELECT title,url,resolved_url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,media_type,media_url,media_source,media_published_at,media_state FROM seonammedi_monitor_items WHERE datetime(last_seen_at)>=datetime('now','-7 days') ORDER BY COALESCE(published_at,first_seen_at) DESC LIMIT 24").all(),
+      env.DB.prepare("SELECT title,url,resolved_url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text FROM seonammedi_monitor_items WHERE datetime(last_seen_at)>=datetime('now','-7 days') ORDER BY COALESCE(published_at,first_seen_at) DESC LIMIT 48").all(),
       env.DB.prepare("SELECT count(*) AS count FROM seonammedi_monitor_items WHERE datetime(last_seen_at)>=datetime('now','-7 days') AND media_state='candidate' AND media_type IN ('photo','video')").first()
     ]);
-    return json({ok:true,siteOwned:true,aiProvider:false,schedule:'daily 08:00 Asia/Seoul',scheduler:'existing-control-cron',lastRun:lastRun||null,mediaCandidateCount:Number(mediaCount?.count||0),items:rows?.results||[]});
+    return json({ok:true,siteOwned:true,aiProvider:false,schedule:'daily 08:00 Asia/Seoul',scheduler:'existing-control-cron',channels:{news:true,naverBlog:naverBlogConfigured(env)},lastRun:lastRun||null,mediaCandidateCount:Number(mediaCount?.count||0),items:rows?.results||[]});
   }catch(error){return json({ok:false,error:'monitor_schema_unavailable',message:'사이트 자동점검 저장소 준비 중입니다.',lastRun:null,items:[]},503,'no-store')}
 }
