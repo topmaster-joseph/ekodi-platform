@@ -80,7 +80,6 @@ body.admin-compact{--admin-readable:#172033;--admin-secondary:#66768a;--admin-bo
 .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .nav{display:none!important}
 .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .admin-context-source{display:none!important}
 .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .admin-global-navs{display:grid!important}
-.sidebar nav[data-ekodi-admin-nav-mode="primary"] > .admin-command-entry{display:none!important}
 body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:2px!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-width:thin}
 body.admin-compact .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .nav{display:none!important}
 body.admin-compact .${GLOBAL_CLASS}{display:grid;gap:2px;margin:3px 0 6px}
@@ -103,17 +102,6 @@ body.admin-compact .${MORE_CLASS}{display:flex;align-items:center;justify-conten
 body.admin-compact .${MORE_CLASS}:hover{background:#f2f7fb;color:#173b57}
 body.admin-compact .${MORE_CLASS} b{font-size:11px;font-weight:800}
 body.admin-compact .${SOURCE_CLASS}{display:none!important}
-/* Keep the compact context row only when it carries actual multi-context navigation. */
-body.admin-compact .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display:flex!important;align-items:center;gap:8px;min-height:50px;padding:4px 14px;border-bottom:1px solid var(--admin-border);background:rgba(255,255,255,.98);color:#172033;box-shadow:0 3px 12px rgba(38,58,78,.035)!important;backdrop-filter:blur(12px)!important}
-body.admin-compact .admin-context-title{display:none!important}
-body.admin-compact .${TABS_CLASS}{display:flex;align-items:center;gap:5px;min-width:0;overflow-x:auto;scrollbar-width:none}
-body.admin-compact .${TABS_CLASS}::-webkit-scrollbar{display:none}
-body.admin-compact .${TABS_SHELL_CLASS}[data-admin-single-context="true"]{display:none!important}
-body.admin-compact .${TABS_SHELL_CLASS}[data-admin-single-context="true"] .${TABS_CLASS}{display:none!important}
-body.admin-compact .admin-context-tab{flex:0 0 auto;min-height:40px;padding:0 13px;border:1px solid transparent;border-radius:10px;background:transparent;color:#52667b;font:inherit;font-size:14px;font-weight:760;line-height:1.35;white-space:nowrap;cursor:pointer;box-shadow:none!important;transition:background .12s ease,border-color .12s ease!important}
-body.admin-compact .admin-context-tab:hover{border-color:#d5e6ef;background:#f2f7fb;color:#173b57}
-body.admin-compact .admin-context-tab.active{border-color:#aecdec;background:#eaf3ff;color:#0b5cab;font-weight:850}
-body.admin-compact .admin-capability-shortcut{display:none!important}
 body.admin-compact .content{padding:12px 16px 28px!important;max-width:1680px!important;margin:0 auto!important}
 body.admin-compact .content .hero{margin-bottom:12px!important;padding:14px 16px!important;box-shadow:none!important;backdrop-filter:none!important}
 body.admin-compact .content .section,body.admin-compact .content .module,body.admin-compact .content .architecture,body.admin-compact .content .arch-zone{box-shadow:none!important;backdrop-filter:none!important}
