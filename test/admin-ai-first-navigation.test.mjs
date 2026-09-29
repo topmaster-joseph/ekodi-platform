@@ -48,7 +48,7 @@ test('human-facing Admin menu has one canonical order inside seven EKODI areas',
     'users-access','security','admins','ai-membership',
     'engine-all','engine-core','engine-common','engine-operations','engine-professional','engine-ai','engine-integration','engine-preview',
     'work','communication','community','books','devotional','social','finance',
-    'health','deployments','aiops','devices','api-cost','architecture','maturity',
+    'health','deployments','aiops','devices','pos-agent','api-cost','architecture','maturity',
     'public-site-controls','language-status','ai-module-spec','storage','ai-settings','audit-records',
   ]);
   assert.ok(layout.includes('const ORDER=Object.freeze(adminMenuOrder());'));
