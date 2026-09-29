@@ -41,6 +41,8 @@ test('regional pages declare separate chrome subject and operating boundary',asy
   assert.match(publicHtml,/<link rel="canonical" href="https:\/\/ekodi\.kr\/cheonggye">/);
   assert.match(publicHtml,/<meta property="og:url" content="https:\/\/ekodi\.kr\/cheonggye">/);
   assert.match(publicHtml,/href="\/cgma"/);
+  assert.doesNotMatch(publicHtml,/href="\/my\//);
+  assert.doesNotMatch(publicHtml,/내 에코디/);
   assert.doesNotMatch(adminHtml,/rel="canonical"/);
   assert.match(adminHtml,/청계잇다 관리자/);
   assert.match(adminHtml,/운영권 보유 단체/);
@@ -86,7 +88,10 @@ test('Cheonggye public experience is local-first, readable, communicative and pe
   assert.match(html,/청계 지역 공통 플랫폼/);
   assert.match(html,/오늘, 청계에서 무엇을 하시나요\?/);
   assert.match(html,/청계에 말하기/);
-  assert.match(html,/나에게 맞게 보기/);
+  assert.match(html,/필요한 정보부터 간단하게/);
+  assert.match(html,/로그인하지 않아도 기본 지역정보를 사용할 수 있습니다/);
+  assert.doesNotMatch(html,/href="\/my\//);
+  assert.doesNotMatch(html,/내 에코디/);
   assert.match(html,/data-ekodi-personalization="progressive-consent"/);
   assert.match(html,/data-audiences=/);
   assert.match(html,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
