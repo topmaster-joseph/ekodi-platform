@@ -177,7 +177,16 @@ function operatingSpaceTarget(header){
   if(!header)return null;
   return header.querySelector('[data-ekodi-header-site-name],[data-ekodi-site-name],.brand-title,.site-title,[data-ekodi-header-title],.header-title')||findHomeAnchor(header)||findCenter(header)||null;
 }
-function shouldShowOperatingSpaceLabel(){return surface()==='workspace'&&isIndividualSite();}
+function canonicalPublicUserSurface(){
+  const host=String(location.hostname||'').toLowerCase();
+  const path=String(location.pathname||'/').toLowerCase();
+  if(host!=='ekodi.kr')return false;
+  for(const prefix of ['/my','/admin','/auth','/api','/mcp','/webhooks','/health','/w/']){
+    if(path===prefix.replace(/\/$/,'')||path.startsWith(prefix))return false;
+  }
+  return true;
+}
+function shouldShowOperatingSpaceLabel(){return surface()==='workspace'&&isIndividualSite()&&!canonicalPublicUserSurface();}
 function ensureOperatingSpaceLabel(header,target=operatingSpaceTarget(header)){
   if(!header)return null;
   const existing=header.querySelector(`[${OPERATING_SCOPE_ATTR}]`);
