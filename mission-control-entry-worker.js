@@ -36,7 +36,7 @@ import { handleLocalCommerceControl } from './local-commerce-control.js';
 import { handleExternalAccountControl } from './external-account-control.js';
 import { handleRealtimeControl, runRealtimeRecordingRetention } from './realtime-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
-import { runSeonamMediDailyCheck } from './seonam-medi-monitor.js';
+import { runSeonamMediDailyCheck } from './seonammedi-monitor.js';
 
 function errorResponse(message, code) {
   return applyApiSecurityHeaders(new Response(JSON.stringify({ error:message, code }), {
@@ -370,7 +370,7 @@ export default {
     if (customerSchedule?.reporting?.ran) return customerSchedule;
     const scheduledAt = new Date(Number(controller?.scheduledTime || Date.now()));
     const seonamMediDaily = scheduledAt.getUTCHours() === 23
-      ? runSeonamMediDailyCheck(env,{scheduledAt:scheduledAt.toISOString()}).catch(error => { console.error('Seonam Medi daily monitor error', error); return { ok:false, error:'seonam_medi_daily_monitor_failed' }; })
+      ? runSeonamMediDailyCheck(env,{scheduledAt:scheduledAt.toISOString()}).catch(error => { console.error('Seonam Medi daily monitor error', error); return { ok:false, error:'seonammedi_daily_monitor_failed' }; })
       : null;
     const authorBilling = runAuthorBillingSchedule(env).catch(error => { console.error('Author billing schedule error', error); return { processed:0, error:'author_billing_schedule_failed' }; });
     const messengerOutbox = drainMessengerOutbox(env, { limit:20 }).catch(error => { console.error('Messenger outbox schedule error', error); return { processed:0, failed:1, error:'messenger_outbox_schedule_failed' }; });
