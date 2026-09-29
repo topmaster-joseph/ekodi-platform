@@ -1,1 +1,90 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>서남권 국립의대 소통센터 관리</title><meta http-equiv="refresh" content="0;url=https://ekodi.kr/admin/?route=workspace&source=seonammedi"></head><body><p><a href="https://ekodi.kr/admin/?route=workspace&source=seonammedi">EKODI 관리자에서 관리하기</a></p></body></html>
+<!doctype html>
+<html lang="ko" data-seonam-admin>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>서남권 국립의대 소통센터 관리</title>
+  <link rel="stylesheet" href="/seonammedi/admin/admin.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/seonammedi/admin/"><strong>서남권 국립의대 소통센터</strong><span>관리자</span></a>
+  <div class="top-actions"><span id="adminIdentity">권한 확인 중</span><a href="/seonammedi/" target="_blank" rel="noopener">공개페이지</a><button id="changeAccount" type="button">계정 변경</button></div>
+</header>
+<div class="layout">
+  <aside class="sidebar" aria-label="관리 메뉴">
+    <button class="active" data-panel-target="dashboard" type="button">운영홈</button>
+    <button data-panel-target="content" type="button">웹검색 게시검토</button>
+    <button data-panel-target="notices" type="button">공지</button>
+    <button data-panel-target="channels" type="button">채널</button>
+    <button data-panel-target="organization" type="button">조직</button>
+    <button data-panel-target="access" type="button">권한 안내</button>
+  </aside>
+  <main id="main">
+    <section class="panel-page active" data-panel="dashboard">
+      <div class="heading"><div><p class="eyebrow">SITE ADMIN</p><h1>운영홈</h1><p>공개 페이지에 필요한 정보만 관리합니다.</p></div><button id="refreshAll" type="button" class="secondary">새로고침</button></div>
+      <div class="metrics">
+        <article><span>공개상태</span><strong id="publicStatus">확인 중</strong><small>공개여부 변경은 최고관리자 정책과 연동</small></article>
+        <article><span>게시검토</span><strong id="contentCount">-</strong><small>웹검색 후보</small></article>
+        <article><span>공지</span><strong id="noticeCount">-</strong><small>초안 포함</small></article>
+        <article><span>채널</span><strong id="channelCount">-</strong><small>숨김 포함</small></article>
+      </div>
+      <section class="card"><h2>관리 범위</h2><p id="scopeSummary">권한을 확인하고 있습니다.</p><div class="quick"><button type="button" data-go="content">웹검색 게시검토</button><button type="button" data-go="notices">공지 관리</button><button type="button" data-go="channels">채널 관리</button><a href="/seonammedi/" target="_blank" rel="noopener">사이트 확인</a></div></section>
+    </section>
+
+
+    <section class="panel-page" data-panel="content" hidden>
+      <div class="heading"><div><p class="eyebrow">WEB SEARCH REVIEW</p><h1>웹검색 게시검토</h1><p>일일점검으로 수집된 공식기록·관련보도 후보를 확인한 뒤 체크하여 공개합니다. 미승인 후보는 공개페이지에 표시되지 않습니다.</p></div><button id="reloadContent" type="button" class="secondary">새로고침</button></div>
+      <section class="card list-card"><div class="card-head"><h2>수집 후보</h2><span class="muted">분류 선택 → 게시 체크</span></div><div id="contentList" class="item-list"></div><p id="contentMessage" class="message" role="status"></p></section>
+    </section>
+
+    <section class="panel-page" data-panel="notices" hidden>
+      <div class="heading"><div><p class="eyebrow">NOTICE BOARD</p><h1>공지 관리</h1><p>공개 페이지의 공지 게시판을 작성·수정·삭제합니다.</p></div></div>
+      <div class="two-col">
+        <form id="noticeForm" class="card form-card">
+          <input type="hidden" name="id">
+          <h2 id="noticeFormTitle">공지 작성</h2>
+          <label>제목<input name="title" maxlength="180" required></label>
+          <label>내용<textarea name="body" maxlength="10000" rows="10"></textarea></label>
+          <div class="form-row"><label>상태<select name="status"><option value="published">공개</option><option value="draft">초안</option></select></label><label class="check"><input type="checkbox" name="pinned"> 상단 고정</label></div>
+          <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="noticeReset" class="secondary">새 글</button></div>
+          <p id="noticeMessage" class="message" role="status"></p>
+        </form>
+        <section class="card list-card"><div class="card-head"><h2>공지 목록</h2><button type="button" id="reloadNotices" class="secondary">새로고침</button></div><div id="noticeList" class="item-list"></div></section>
+      </div>
+    </section>
+
+    <section class="panel-page" data-panel="channels" hidden>
+      <div class="heading"><div><p class="eyebrow">CHANNEL HUB</p><h1>채널 관리</h1><p>YouTube·Instagram·Facebook 등 관련 채널 원문 링크를 연결합니다.</p></div></div>
+      <div class="two-col">
+        <form id="channelForm" class="card form-card">
+          <input type="hidden" name="id">
+          <h2 id="channelFormTitle">채널 추가</h2>
+          <label>플랫폼<select name="platform"><option value="youtube">YouTube</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="blog">블로그</option><option value="website">웹사이트</option><option value="other">기타</option></select></label>
+          <label>표시 이름<input name="name" maxlength="160" required></label>
+          <label>링크<input name="url" type="url" inputmode="url" placeholder="https://..." required></label>
+          <label>구분<select name="category"><option value="official">공식채널</option><option value="related-org">관련기관</option><option value="media">언론·자료</option><option value="civic">시민·단체</option><option value="other">기타</option></select></label>
+          <div class="form-row"><label>정렬<input name="sortOrder" type="number" min="0" max="9999" value="0"></label><label class="check"><input type="checkbox" name="official"> 공식 표시</label><label class="check"><input type="checkbox" name="visible" checked> 사이트 표시</label></div>
+          <label>설명<input name="note" maxlength="500"></label>
+          <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="channelReset" class="secondary">새 채널</button></div>
+          <p id="channelMessage" class="message" role="status"></p>
+        </form>
+        <section class="card list-card"><div class="card-head"><h2>연결 채널</h2><button type="button" id="reloadChannels" class="secondary">새로고침</button></div><div id="channelList" class="item-list"></div></section>
+      </div>
+    </section>
+
+    <section class="panel-page" data-panel="organization" hidden>
+      <div class="heading"><div><p class="eyebrow">ORGANIZATION</p><h1>조직</h1><p>조직 구성과 소개 내용은 추후 등록합니다.</p></div></div>
+      <section class="card placeholder"><strong>추후 공개 예정</strong><p>헤더의 조직 메뉴와 공개 섹션은 먼저 준비되어 있으며, 조직도·역할·연락 창구는 확정 후 등록합니다.</p></section>
+    </section>
+
+    <section class="panel-page" data-panel="access" hidden>
+      <div class="heading"><div><p class="eyebrow">ACCESS SCOPE</p><h1>권한 안내</h1><p>사이트 범위를 넘어서는 권한은 제공하지 않습니다.</p></div></div>
+      <section class="card"><dl class="access-list"><div><dt>로그인 계정</dt><dd id="accessEmail">-</dd></div><div><dt>역할</dt><dd id="accessRole">-</dd></div><div><dt>웹검색 게시검토</dt><dd id="accessContent">-</dd></div><div><dt>공지 관리</dt><dd id="accessNotice">-</dd></div><div><dt>채널 관리</dt><dd id="accessChannel">-</dd></div></dl></section>
+    </section>
+  </main>
+</div>
+<script type="module" src="/seonammedi/admin/admin.js"></script>
+</body>
+</html>
