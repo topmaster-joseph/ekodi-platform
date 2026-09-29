@@ -54,7 +54,8 @@ const renderStatusDetail=(key,d)=>{
     body='<div class="status-detail-list">'+statusSourceRows(rows,'현재 연결된 공식 자료가 없습니다.')+'</div>';target='#news';targetLabel='공식자료 영역 보기';
   }else if(key==='news'){
     const approved=((latestMonitorData&&latestMonitorData.items)||[]).filter(s=>s.review_state==='published_news').map(s=>({title:s.title,url:s.resolved_url||s.url,publisher:s.publisher,date:kstDate(s.published_at||s.first_seen_at),kind:'관리자 승인 · 관련보도'}));
-    const rows=[...approved,...(d.sources||[]).filter(s=>/(보도|언론)/.test(String(s.kind||'')))].slice(0,8);
+    const raw=[...approved,...(d.sources||[]).filter(s=>/(보도|언론|공식|당사자)/.test(String(s.kind||'')))];
+    const seen=new Set(),rows=raw.filter(s=>{const key=String(s.url||'').replace(/[?#].*$/,'')||String(s.title||'').replace(/\s+/g,' ').trim().toLowerCase();if(!key||seen.has(key))return false;seen.add(key);return true}).slice(0,8);
     label='RELATED NEWS & SOURCES';title='관련보도·자료';description='같은 사건의 자료와 보도를 중복 없이 묶어 확인하고 원문으로 이동할 수 있습니다.';
     body='<div class="status-detail-list">'+statusSourceRows(rows,'현재 연결된 관련 보도가 없습니다.')+'</div>';target='#news';targetLabel='관련기사 전체 보기';
   }else if(key==='notice'){
