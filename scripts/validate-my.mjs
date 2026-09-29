@@ -147,6 +147,8 @@ must('digitalCardAdmin','get_my_contact_exchanges');
 must('digitalCardClient','navigator.contacts');
 must('digitalCardMigration','private.person_digital_cards');
 must('digitalCardMigration','private.person_contact_exchanges');
+must('digitalCardMigration','private.person_contact_exchange_rate_limits');
+must('digitalCardMigration','contact_exchange_rate_limited');
 must('digitalCardMigration','privacy_consent_required');
 must('worker','centralAiEntitlements:true');
 must('worker',"aiEntitlementManager:'/my/'");
