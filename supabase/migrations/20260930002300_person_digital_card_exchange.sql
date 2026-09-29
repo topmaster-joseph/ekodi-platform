@@ -32,8 +32,18 @@ create table if not exists private.person_contact_exchanges (
 create index if not exists person_contact_exchanges_receiver_recent_idx
   on private.person_contact_exchanges(receiver_person_id,last_shared_at desc);
 
+create table if not exists private.person_contact_exchange_rate_limits (
+  receiver_person_id uuid not null references public.people(id) on delete cascade,
+  ip_hash text not null,
+  window_started_at timestamptz not null default now(),
+  request_count integer not null default 1 check (request_count > 0),
+  updated_at timestamptz not null default now(),
+  primary key(receiver_person_id,ip_hash)
+);
+
 revoke all on table private.person_digital_cards from public, anon, authenticated;
 revoke all on table private.person_contact_exchanges from public, anon, authenticated;
+revoke all on table private.person_contact_exchange_rate_limits from public, anon, authenticated;
 
 create or replace function public.get_my_digital_card()
 returns jsonb
@@ -223,6 +233,10 @@ declare
   v_email_person uuid;
   v_sender uuid;
   v_exchange uuid;
+  v_headers jsonb:=coalesce(nullif(current_setting('request.headers',true),''),'{}')::jsonb;
+  v_ip text;
+  v_ip_hash text;
+  v_rate private.person_contact_exchange_rate_limits%rowtype;
 begin
   if coalesce(p_privacy_consent,false) is not true then raise exception 'privacy_consent_required'; end if;
   if v_handle !~ '^[a-z0-9][a-z0-9._-]{2,39}$' then raise exception 'invalid_handle'; end if;
@@ -241,6 +255,23 @@ begin
      and c.exchange_enabled=true
    limit 1;
   if v_receiver is null then raise exception 'contact_exchange_unavailable'; end if;
+
+  v_ip:=left(trim(split_part(coalesce(v_headers->>'x-forwarded-for',v_headers->>'cf-connecting-ip','unknown'),',',1)),128);
+  if v_ip='' then v_ip:='unknown'; end if;
+  v_ip_hash:=md5(v_ip);
+  insert into private.person_contact_exchange_rate_limits as limits(
+    receiver_person_id,ip_hash,window_started_at,request_count,updated_at
+  ) values (
+    v_receiver,v_ip_hash,now(),1,now()
+  )
+  on conflict(receiver_person_id,ip_hash) do update
+    set window_started_at=case when limits.window_started_at<=now()-interval '1 minute' then now() else limits.window_started_at end,
+        request_count=case when limits.window_started_at<=now()-interval '1 minute' then 1 else limits.request_count+1 end,
+        updated_at=now()
+  returning * into v_rate;
+  if v_rate.request_count>8 then raise exception 'contact_exchange_rate_limited'; end if;
+  delete from private.person_contact_exchange_rate_limits
+   where receiver_person_id=v_receiver and updated_at<now()-interval '1 day';
 
   if v_phone<>'' then perform pg_advisory_xact_lock(hashtextextended('contact-exchange-phone:'||v_phone,0)); end if;
   if v_email<>'' then perform pg_advisory_xact_lock(hashtextextended('contact-exchange-email:'||v_email,0)); end if;
