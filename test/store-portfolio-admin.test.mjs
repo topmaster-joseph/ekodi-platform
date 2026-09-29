@@ -65,7 +65,7 @@ test('cmpmyi admin keeps only three common tasks and places all other work under
 
 test('cmpmyi POS Agent manager provides local status, same-domain lifecycle downloads and store links',async()=>{
   assert.equal(CMPMYI_COMMON_MENU.some(([key])=>key==='agent'),false);
-  const posPanel=await storePortfolioAdminPanelPage('pos').then(response=>response.text());
+  const posPanel=await storePortfolioAdminPanelPage('pos').text();
   assert.match(posPanel,/Agent 설치·관리/);
   assert.match(posPanel,/href="\/cmpmyi\/admin\/agent"/);
   const response=storePortfolioAdminPanelPage('agent');
