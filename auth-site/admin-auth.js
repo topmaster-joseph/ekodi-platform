@@ -56,6 +56,10 @@ function requestGoogleCredential(config,challenge){
 }
 async function waitForPreopenedBridge(timeoutMs=6000){
   if(preopenedBridgeWindow)return preopenedBridgeWindow;
+  try{
+    const named=window.open('','ekodi_google_origin_bridge');
+    if(named&&!named.closed){preopenedBridgeWindow=named;return named}
+  }catch{}
   let timeout=0;
   try{
     return await Promise.race([preopenedBridgeReady,new Promise((_,reject)=>{timeout=setTimeout(()=>reject(Object.assign(new Error('google_preopened_bridge_not_ready'),{code:'GOOGLE_PREOPENED_BRIDGE_NOT_READY'})),timeoutMs)})]);

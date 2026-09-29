@@ -70,7 +70,7 @@
     window.addEventListener('message',onStartMessage);
     notifyReady();
     readyTimer=setInterval(notifyReady,250);
-    waitTimeout=setTimeout(()=>{if(!started){finishReady();fail('관리자 인증 연결 시간이 초과되었습니다. 창을 닫고 다시 시도해 주세요.')}},15000);
+    waitTimeout=setTimeout(()=>{if(!started){status.textContent='EKODI 관리자 인증 요청을 계속 기다리고 있습니다.';notifyReady()}},120000);
     return;
   }
 
