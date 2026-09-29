@@ -31,7 +31,7 @@ const COMMON_VIEWS=Object.freeze({
   },
   pos:{
     label:'POS 통합화면',
-    description:'세 브랜드의 POS·외부 주문 프로그램을 매장별로 선택하고, 해당 POS PC에서 한 번 터치 전환 화면을 엽니다.',
+    description:'세 브랜드의 웹 운영 화면을 기본으로 사용하고, 필요할 때 해당 POS PC의 Windows 프로그램 전환을 Agent로 보조합니다.',
     sections:[['pos','POS 통합화면'],['orders','주문 · 채널'],['connections','연결관리']],
   },
   delivery:{
