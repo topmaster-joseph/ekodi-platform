@@ -1,16 +1,27 @@
 (()=>{
-  const eventSlug='260926-chuseok-open-table';
-  const applicationRecordKey='260926-chuseok-open-table';
-  const url='https://ekodi.kr/ekodimission/apply/260926-open-table';
-  const api=`/ekodimission/api/activities/${applicationRecordKey}/applications`;
-  const invite=`이번 추석, 함께 밥 먹을 사람이 필요하다면 에코디 열린식탁으로 오세요. 국적과 나이, 신앙과 관계없이 누구나 환영합니다. 2026년 9월 26일 토요일 오후 4시, 자담치킨에서 기다리겠습니다. ${url}`;
+  const defaultEvent=Object.freeze({
+    eventSlug:'260926-chuseok-open-table',
+    applicationRecordKey:'260926-chuseok-open-table',
+    url:'https://ekodi.kr/ekodimission/apply/260926-open-table',
+    title:'2026 에코디 추석 열린식탁',
+    text:'빈자리를 식탁으로, 낯선 이를 이웃으로.',
+    invite:'이번 추석, 함께 밥 먹을 사람이 필요하다면 에코디 열린식탁으로 오세요. 국적과 나이, 신앙과 관계없이 누구나 환영합니다. 2026년 9월 26일 토요일 오후 4시, 자담치킨에서 기다리겠습니다.'
+  });
+  const form=document.querySelector('[data-event-application]');
+  const meta=document.querySelector('[data-event-meta]');
+  const applicationRecordKey=String(form?.querySelector('[name="eventKey"]')?.value||defaultEvent.applicationRecordKey);
+  const url=String(meta?.dataset.eventUrl||defaultEvent.url);
+  const title=String(meta?.dataset.eventTitle||defaultEvent.title);
+  const shareText=String(meta?.dataset.eventText||defaultEvent.text);
+  const invite=String(meta?.dataset.eventInvite||defaultEvent.invite)+' '+url;
+  const api=`/ekodimission/api/activities/${encodeURIComponent(applicationRecordKey)}/applications`;
   const shareStatus=m=>document.querySelectorAll('[data-share-status]').forEach(el=>el.textContent=m);
   async function copy(v,m){try{await navigator.clipboard.writeText(v)}catch{const t=document.createElement('textarea');t.value=v;document.body.append(t);t.select();document.execCommand('copy');t.remove()}shareStatus(m)}
   document.addEventListener('click',async e=>{
-    if(e.target.closest('[data-share-event]')){if(navigator.share){try{await navigator.share({title:'2026 에코디 추석 열린식탁',text:'빈자리를 식탁으로, 낯선 이를 이웃으로.',url});shareStatus('공유 창을 열었습니다.')}catch(err){if(err?.name!=='AbortError')await copy(url,'행사 링크를 복사했습니다.')}}else await copy(url,'행사 링크를 복사했습니다.');return}
+    if(e.target.closest('[data-share-event]')){if(navigator.share){try{await navigator.share({title,text:shareText,url});shareStatus('공유 창을 열었습니다.')}catch(err){if(err?.name!=='AbortError')await copy(url,'행사 링크를 복사했습니다.')}}else await copy(url,'행사 링크를 복사했습니다.');return}
     if(e.target.closest('[data-copy-invite]'))await copy(invite,'초대문을 복사했습니다.');
   });
-  const form=document.querySelector('[data-event-application]');if(!form)return;
+  if(!form)return;
   const status=form.querySelector('[data-application-status]');const submit=form.querySelector('button[type="submit"]');
   form.addEventListener('submit',async e=>{
     e.preventDefault();status.textContent='';status.dataset.state='';
