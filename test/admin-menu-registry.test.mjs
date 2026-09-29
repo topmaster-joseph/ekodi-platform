@@ -59,7 +59,8 @@ test('every public admin subservice belongs to one canonical area', () => {
   assert.equal(getAdminMenuGroupForSection('pos-agent'), 'status');
   assert.equal(getAdminMenuCategory('pos-agent'), 'status');
   const posAgent = ADMIN_MENU_REGISTRY.find(item => item.id === 'pos-agent');
-  assert.equal(posAgent?.href, 'https://github.com/topmaster-joseph/ekodi-platform/tree/main/agents/windows-pos');
+  assert.equal(posAgent?.href, 'https://ekodi.kr/cmpmyi/admin/agent');
+  assert.equal(posAgent?.adminHandoff, true);
   assert.equal(posAgent?.superAdminOnly, true);
   assert.ok(adminMenuOrder().includes('pos-agent'));
   const execution = ADMIN_MENU_REGISTRY.find(item => item.id === 'devices');
