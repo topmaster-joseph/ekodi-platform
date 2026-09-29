@@ -1,8 +1,10 @@
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 (()=>{
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const PLATFORM_TOKEN_KEY='ekodi-auth-token';
 const SESSION_KEY='ekodi-seonam-admin-session';
+const sb=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
 const state={me:null,content:[],notices:[],channels:[]};
 const $=id=>document.getElementById(id);
 const qs=(sel,root=document)=>root.querySelector(sel);
@@ -34,7 +36,9 @@ async function userToken(){
 }
 async function token(){
   const platform=sessionStorage.getItem(PLATFORM_TOKEN_KEY)||'';if(platform)return platform;
-  return userToken();
+  const handoff=await userToken();if(handoff)return handoff;
+  const {data:{session}}=await sb.auth.getSession();
+  return session?.access_token||'';
 }
 async function api(path,options={}){
   const bearer=await token();if(!bearer){location.replace(authUrl());throw new Error('로그인이 필요합니다.')}
@@ -143,7 +147,7 @@ $('channelForm').addEventListener('submit',async event=>{
   try{await api(id?'/api/seonammedi/admin/channels/'+id:'/api/seonammedi/admin/channels',{method:id?'PUT':'POST',body:JSON.stringify(payload)});text(msg,'저장했습니다.');resetChannel();await loadChannels()}catch(error){msg.classList.add('error');text(msg,error.message)}
 });
 $('reloadContent').addEventListener('click',()=>loadContent().catch(()=>{}));$('noticeReset').addEventListener('click',resetNotice);$('channelReset').addEventListener('click',resetChannel);$('reloadNotices').addEventListener('click',()=>loadNotices().catch(()=>{}));$('reloadChannels').addEventListener('click',()=>loadChannels().catch(()=>{}));
-$('refreshAll').addEventListener('click',()=>init(true));$('changeAccount').addEventListener('click',()=>{sessionStorage.removeItem(PLATFORM_TOKEN_KEY);clearSession();location.assign(authUrl())});
+$('refreshAll').addEventListener('click',()=>init(true));$('changeAccount').addEventListener('click',async()=>{sessionStorage.removeItem(PLATFORM_TOKEN_KEY);clearSession();try{await sb.auth.signOut()}catch{}location.assign(authUrl())});
 
 async function init(refresh=false){
   try{
