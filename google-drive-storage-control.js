@@ -72,6 +72,14 @@ function adminRedirect(returnTo = ADMIN_RETURN_PATH) {
   const location = new URL(safeAdminReturnPath(returnTo), ADMIN_ORIGIN).toString();
   return new Response(null, { status:303, headers:{ location, 'cache-control':'no-store', 'referrer-policy':'no-referrer' } });
 }
+function marketingYouTubeCallbackRedirect(marketingState,{ticket='',error='',description=''}={}) {
+  const target=new URL(MARKETING_YOUTUBE_CALLBACK);
+  target.searchParams.set('state',String(marketingState||''));
+  if(ticket)target.searchParams.set('ticket',String(ticket));
+  if(error)target.searchParams.set('error',String(error));
+  if(description)target.searchParams.set('error_description',String(description).slice(0,240));
+  return new Response(null,{status:303,headers:{location:target.toString(),'cache-control':'no-store','referrer-policy':'no-referrer'}});
+}
 
 function splitList(value) { return String(value || '').split(',').map(v => v.trim().toLowerCase()).filter(Boolean); }
 function primaryDomains(env) {
@@ -469,20 +477,22 @@ export async function handleGoogleDriveStorageControl(request, env) {
     if(payload.purpose==='marketing_youtube'){
       try{
         const token=await tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),code,grant_type:'authorization_code',redirect_uri:redirectUri});
-        if(!token.access_token||!token.refresh_token)return html('YouTube 장기 연결 토큰을 받지 못했습니다. 다시 연결해 주세요.');
+        if(!token.access_token||!token.refresh_token)return marketingYouTubeCallbackRedirect(payload.marketingState,{error:'YOUTUBE_REFRESH_TOKEN_MISSING',description:'YouTube 장기 연결 토큰을 받지 못했습니다. 다시 연결해 주세요.'});
         const targetAccount=String(payload.targetAccount||'').trim().toLowerCase();
         const profileResponse=await fetch(GOOGLE_USERINFO,{headers:{authorization:`Bearer ${token.access_token}`}});
         const profile=await profileResponse.json().catch(()=>({}));
         const authorizedEmail=profileResponse.ok?String(profile.email||'').trim().toLowerCase():'';
-        if(targetAccount&&authorizedEmail!==targetAccount)return html(`YouTube 연결 대상 계정은 ${targetAccount}입니다. 해당 Google 계정으로 다시 인증해 주세요.`);
+        if(targetAccount&&authorizedEmail!==targetAccount)return marketingYouTubeCallbackRedirect(payload.marketingState,{error:'YOUTUBE_TARGET_ACCOUNT_MISMATCH',description:`YouTube 연결 대상 계정은 ${targetAccount}입니다. 해당 Google 계정으로 다시 인증해 주세요.`});
         const ticket=b64url(crypto.getRandomValues(new Uint8Array(32)));
         const encrypted=await encryptCredential(env,{access_token:String(token.access_token),refresh_token:String(token.refresh_token),expires_in:Number(token.expires_in||0),authorized_email:authorizedEmail,target_account:targetAccount});
         const now=new Date(), exp=new Date(now.getTime()+5*60*1000);
         await env.DB.prepare('DELETE FROM storage_google_oauth_tickets WHERE expires_at<=?').bind(now.toISOString()).run();
         await env.DB.prepare('INSERT INTO storage_google_oauth_tickets(ticket_hash,credential_ciphertext,credential_iv,expires_at,created_at) VALUES(?,?,?,?,?)').bind(await nonceHash(ticket),encrypted.ciphertext,encrypted.iv,exp.toISOString(),now.toISOString()).run();
-        const target=new URL(MARKETING_YOUTUBE_CALLBACK); target.searchParams.set('state',String(payload.marketingState||'')); target.searchParams.set('ticket',ticket);
-        return new Response(null,{status:303,headers:{location:target.toString(),'cache-control':'no-store','referrer-policy':'no-referrer'}});
-      }catch(error){console.error('Marketing YouTube OAuth broker callback failed',error);return html('YouTube 채널 연결 중 오류가 발생했습니다.');}
+        return marketingYouTubeCallbackRedirect(payload.marketingState,{ticket});
+      }catch(error){
+        console.error('Marketing YouTube OAuth broker callback failed',error);
+        return marketingYouTubeCallbackRedirect(payload.marketingState,{error:String(error?.code||'YOUTUBE_OAUTH_BROKER_CALLBACK_FAILED'),description:String(error?.message||'YouTube 채널 연결 중 오류가 발생했습니다.')});
+      }
     }
     const hash = await nonceHash(payload.nonce);
     const stateRow = await env.DB.prepare('SELECT * FROM storage_oauth_states WHERE nonce_hash=? AND expires_at>?').bind(hash,new Date().toISOString()).first();
