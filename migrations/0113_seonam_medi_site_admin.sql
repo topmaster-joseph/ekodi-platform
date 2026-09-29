@@ -1,6 +1,4 @@
 -- 서남권 국립의대 시민소통센터 사이트 범위 관리자와 게시판/채널 관리 권한.
-ALTER TABLE seonam_medi_monitor_items ADD COLUMN publish_category TEXT NOT NULL DEFAULT 'news';
-
 INSERT OR IGNORE INTO customer_tenants(slug,name,domain,status,created_at)
 VALUES('seonam-medi','서남권 국립의대 시민소통센터','ekodi.kr/seonam-medi','active','2026-09-29T06:40:00.000Z');
 
