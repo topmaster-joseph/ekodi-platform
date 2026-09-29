@@ -57,6 +57,9 @@ test('public person pages are a public projection of My EKODI, not a second admi
   assert.match(digitalCardClient,/navigator\.contacts/);
   assert.match(digitalCardMigration,/create table if not exists private\.person_digital_cards/);
   assert.match(digitalCardMigration,/create table if not exists private\.person_contact_exchanges/);
+  assert.match(digitalCardMigration,/create table if not exists private\.person_contact_exchange_rate_limits/);
+  assert.match(digitalCardMigration,/contact_exchange_rate_limited/);
+  assert.match(digitalCardMigration,/request_count>8/);
   assert.match(digitalCardMigration,/grant execute on function public\.submit_person_contact_exchange/);
   assert.match(digitalCardMigration,/p_privacy_consent boolean default false/);
   assert.doesNotMatch(digitalCardMigration,/grant select[^;]*private\.person_contact_exchanges/i);
