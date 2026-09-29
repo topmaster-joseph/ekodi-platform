@@ -79,7 +79,7 @@ test('workspace summary projects manage permissions from the canonical workspace
     const response=await handleExternalAccountControl(request,{MY_SUPABASE_URL:'https://example.supabase.co',MY_SUPABASE_PUBLISHABLE_KEY:'public-key',DB});
     assert.equal(response.status,200);
     const body=await response.json();
-    assert.deepEqual(body.permissions,{view:true,manage:true,register:true,update:true,reassign:false,audit:true,secretMaterial:false});
+    assert.deepEqual(body.permissions,{view:true,manage:true,register:true,update:true,reassign:false,audit:true,recordVerification:true,secretMaterial:false});
     assert.equal(body.workspace,'jadam');
   }finally{globalThis.fetch=originalFetch}
 });
