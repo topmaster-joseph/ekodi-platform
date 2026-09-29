@@ -257,28 +257,35 @@ jobs:
           node-version: '24'
       - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
-      - name: Select Supabase deployment credential
+      - name: Ensure digital card contact-exchange schema
         shell: bash
         run: |
           set -euo pipefail
+          endpoint="$MY_SUPABASE_URL/rest/v1/rpc/person_digital_card"
+          probe_code=$(curl -sS -o /tmp/digital-card-preflight.json -w '%{http_code}' \
+            -X POST "$endpoint" \
+            -H "apikey: $MY_SUPABASE_PUBLISHABLE_KEY" \
+            -H 'Content-Type: application/json' \
+            --data '{"p_handle":"ekodi-card-probe"}' || true)
+          if [[ "$probe_code" == '200' ]] && grep -Eq '"ok"[[:space:]]*:[[:space:]]*false' /tmp/digital-card-preflight.json; then
+            echo 'Digital card schema already exists; management credential is not required for this deployment.'
+            exit 0
+          fi
+
           token="${TOKEN_A:-}"
           [ -n "$token" ] || token="${TOKEN_B:-}"
           [ -n "$token" ] || token="${TOKEN_C:-}"
           [ -n "$token" ] || token="${TOKEN_D:-}"
           if [ -z "$token" ]; then
-            echo 'No Supabase production deployment credential is configured.'
+            echo 'Digital card schema is missing and no Supabase production deployment credential is configured.'
             exit 1
           fi
           echo "::add-mask::$token"
-          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
-      - name: Apply digital card contact-exchange schema
-        shell: bash
-        run: |
-          set -euo pipefail
+
           jq -Rs '{query:.,read_only:false}' "$DIGITAL_CARD_MIGRATION" > /tmp/digital-card-migration.json
           code=$(curl -sS -o /tmp/digital-card-migration-result.json -w '%{http_code}' \
             -X POST "https://api.supabase.com/v1/projects/renzehysxirjilvdxacv/database/query" \
-            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H "Authorization: Bearer $token" \
             -H 'Content-Type: application/json' \
             --data-binary @/tmp/digital-card-migration.json)
           if [ "$code" != '201' ]; then
