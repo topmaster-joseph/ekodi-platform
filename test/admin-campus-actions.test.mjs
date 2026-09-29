@@ -10,15 +10,19 @@ const demand = await readFile(new URL('../admin-demand-loader.js', import.meta.u
 const postbuild = await readFile(new URL('../scripts/admin-thin-postbuild.mjs', import.meta.url), 'utf8');
 const registry = await readFile(new URL('../admin-menu-registry.js', import.meta.url), 'utf8');
 
-test('Campus first screen renders the full site catalog with direct operational actions', () => {
+test('Campus category view renders site-name launchers that open admin menus', () => {
   assert.match(js, /사이트 관리 ·/);
   assert.match(js, /청계면상인회/);
   assert.match(js, /자담치킨 목포대점/);
   assert.match(js, /피자마루 목포대점/);
   assert.match(js, /요거트퍼플 목포대점/);
-  assert.match(js, /makeButton\('Manage'/);
-  assert.match(js, /makeButton\('Status'/);
-  assert.match(js, /link\.textContent = 'Open ↗'/);
+  assert.match(js, /function makeAdminLauncher/);
+  assert.match(js, /button\.dataset\.campusAction = 'manage'/);
+  assert.match(js, /button\.dataset\.campusTarget = site\.section/);
+  assert.match(js, /관리자 메뉴 열기/);
+  assert.match(css, /\.campus-site-launcher/);
+  assert.match(css, /\.campus-group-head\{display:none!important\}/);
+  assert.match(css, /\.campus-homepage-controls\{display:none!important\}/);
 });
 
 test('Campus always keeps pre-open platforms visible and prevents dead planned links', () => {
@@ -41,7 +45,7 @@ test('Campus includes verified ecosystem services that were missing from the old
     assert.match(js, new RegExp(domain.replaceAll('.', '\\.')));
   }
   assert.match(js, /업무·생활/);
-  assert.match(js, /에코디 생태계의 전체 사이트와 EKODI\.KR 첫화면 공개 설정을 한 목록에서 관리합니다/);
+  assert.match(js, /상단 분류를 선택한 뒤 사이트 버튼을 누르면 해당 관리자 메뉴로 바로 이동합니다/);
 });
 
 test('Campus reconciles the canonical homepage registry so the two old lists cannot drift', () => {
@@ -70,7 +74,7 @@ test('Campus groups related services into a compact two-column layout', () => {
   assert.doesNotMatch(js, /wrapper\.replaceChildren\(tabs, grid\)/);
   assert.match(js, /className = 'campus-group-card'/);
   assert.match(js, /className = 'campus-site-item'/);
-  assert.match(css, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css, /grid-template-columns:repeat\(auto-fit,minmax\(190px,1fr\)\)/);
   assert.match(css, /\.campus-group-card/);
   assert.match(css, /\.campus-site-item/);
 });
