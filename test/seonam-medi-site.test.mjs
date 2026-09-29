@@ -26,6 +26,8 @@ test('seonam-medi private mode blocks public content and search indexing while k
   assert.equal(hidden.status,404);assert.equal(hidden.headers.get('x-ekodi-public-site-mode'),'private');assert.match(hidden.headers.get('x-robots-tag')||'',/noindex/);
   const admin=await platformRouter.fetch(new Request('https://ekodi.kr/seonam-medi/admin/'),env,{});
   assert.equal(admin.status,200);assert.equal(admin.headers.get('x-ekodi-route'),'seonam-medi-static');assert.match(admin.headers.get('x-robots-tag')||'',/noindex/);
+  const publicApi=await platformRouter.fetch(new Request('https://ekodi.kr/api/seonam-medi/notices'),env,{});
+  assert.equal(publicApi.status,404);assert.equal(publicApi.headers.get('x-ekodi-public-site-mode'),'private');assert.match(publicApi.headers.get('x-robots-tag')||'',/noindex/);
 });
 
 test('seonam-medi visibility is registered in the common public-site control catalog',async()=>{
