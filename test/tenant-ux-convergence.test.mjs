@@ -52,7 +52,10 @@ test('delegated admins use task-first navigation without changing authority',asy
   assert.match(portfolio,/\['orders','주문 · 채널'\]/);
   assert.match(portfolio,/\['reviews','리뷰'\]/);
   assert.match(portfolio,/\['marketing','Marketing AI'\]/);
-  assert.match(portfolio,/브랜드 관리자 전체 메뉴/);
+  assert.match(portfolio,/매장 선택/);
+  assert.match(portfolio,/cmpmyiStoreSelect/);
+  assert.match(portfolio,/common-store-split/);
+  assert.doesNotMatch(portfolio,/브랜드 관리자 전체 메뉴/);
 });
 
 test('shared shells enforce readable public and delegated-admin geometry',async()=>{
