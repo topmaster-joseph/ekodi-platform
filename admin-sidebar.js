@@ -15,9 +15,7 @@ const mounted = new WeakMap();
 const RETIRED_MENU_SECTIONS = new Set(['overview']);
 const GLOBAL_CLASS = 'admin-global-navs';
 const SOURCE_CLASS = 'admin-context-source';
-const TABS_SHELL_CLASS = 'admin-context-tabs-shell';
-const TABS_CLASS = 'admin-context-tabs';
-// LEFT-NAV-AUTHORITY-006: visible Admin navigation is left-side direct work only; context tabs are compatibility state, never an interaction fallback.
+// LEFT-NAV-AUTHORITY-006: visible Admin navigation is left-side direct work only.
 const DETAILS_CLASS = 'admin-global-details';
 const MORE_CLASS = 'admin-detail-more';
 const MOBILE_NAV_CLASS = 'admin-mobile-primary-nav';
@@ -82,7 +80,6 @@ body.admin-compact{--admin-readable:#172033;--admin-secondary:#66768a;--admin-bo
 .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .nav{display:none!important}
 .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .admin-context-source{display:none!important}
 .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .admin-global-navs{display:grid!important}
-.sidebar nav[data-ekodi-admin-nav-mode="primary"] > .admin-command-entry{display:none!important}
 body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:2px!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-width:thin}
 body.admin-compact .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .nav{display:none!important}
 body.admin-compact .${GLOBAL_CLASS}{display:grid;gap:2px;margin:3px 0 6px}
@@ -105,17 +102,6 @@ body.admin-compact .${MORE_CLASS}{display:flex;align-items:center;justify-conten
 body.admin-compact .${MORE_CLASS}:hover{background:#f2f7fb;color:#173b57}
 body.admin-compact .${MORE_CLASS} b{font-size:11px;font-weight:800}
 body.admin-compact .${SOURCE_CLASS}{display:none!important}
-/* Keep the compact context row only when it carries actual multi-context navigation. */
-body.admin-compact .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display:flex!important;align-items:center;gap:8px;min-height:50px;padding:4px 14px;border-bottom:1px solid var(--admin-border);background:rgba(255,255,255,.98);color:#172033;box-shadow:0 3px 12px rgba(38,58,78,.035)!important;backdrop-filter:blur(12px)!important}
-body.admin-compact .admin-context-title{display:none!important}
-body.admin-compact .${TABS_CLASS}{display:flex;align-items:center;gap:5px;min-width:0;overflow-x:auto;scrollbar-width:none}
-body.admin-compact .${TABS_CLASS}::-webkit-scrollbar{display:none}
-body.admin-compact .${TABS_SHELL_CLASS}[data-admin-single-context="true"]{display:none!important}
-body.admin-compact .${TABS_SHELL_CLASS}[data-admin-single-context="true"] .${TABS_CLASS}{display:none!important}
-body.admin-compact .admin-context-tab{flex:0 0 auto;min-height:40px;padding:0 13px;border:1px solid transparent;border-radius:10px;background:transparent;color:#52667b;font:inherit;font-size:14px;font-weight:760;line-height:1.35;white-space:nowrap;cursor:pointer;box-shadow:none!important;transition:background .12s ease,border-color .12s ease!important}
-body.admin-compact .admin-context-tab:hover{border-color:#d5e6ef;background:#f2f7fb;color:#173b57}
-body.admin-compact .admin-context-tab.active{border-color:#aecdec;background:#eaf3ff;color:#0b5cab;font-weight:850}
-body.admin-compact .admin-capability-shortcut{display:none!important}
 body.admin-compact .content{padding:12px 16px 28px!important;max-width:1680px!important;margin:0 auto!important}
 body.admin-compact .content .hero{margin-bottom:12px!important;padding:14px 16px!important;box-shadow:none!important;backdrop-filter:none!important}
 body.admin-compact .content .section,body.admin-compact .content .module,body.admin-compact .content .architecture,body.admin-compact .content .arch-zone{box-shadow:none!important;backdrop-filter:none!important}
@@ -152,7 +138,7 @@ body.admin-compact #campusPanel .campus-homepage-notice{margin-bottom:9px!import
 body.admin-compact #campusPanel .campus-homepage-notice>span{width:30px!important;height:30px!important;flex-basis:30px!important;font-size:14px!important}
 body.admin-compact #campusPanel .campus-homepage-notice strong{font-size:13px!important}body.admin-compact #campusPanel .campus-homepage-notice small{font-size:12px!important;line-height:1.45!important}
 @media(max-width:1480px){body.admin-compact #campusSiteGroups .campus-groups-grid{grid-template-columns:minmax(0,1fr)!important}}
-@media(max-width:760px){body.admin-compact .admin-global-navs{gap:3px;margin:4px 0 8px}body.admin-compact .admin-command-entry{min-height:42px!important;padding:8px 10px!important;margin-bottom:6px!important}body.admin-compact .admin-global-nav{min-height:42px;padding:8px 10px;font-size:14px}body.admin-compact .${TABS_SHELL_CLASS}{top:0;min-height:46px;padding:3px 8px;gap:5px}body.admin-compact .admin-context-title{display:none!important}body.admin-compact .admin-context-tab{min-height:42px;padding:0 10px;font-size:15px}body.admin-compact .admin-capability-shortcut{display:none!important}body.admin-compact .content{padding:8px 8px 20px!important}body.admin-compact #campusPanel .campus-toolbar{padding:13px!important}body.admin-compact #campusSiteGroups .campus-site-item{padding:11px!important}body.admin-compact #campusSiteGroups .campus-row-action{min-height:44px!important;font-size:14px!important}}
+@media(max-width:760px){body.admin-compact .admin-global-navs{gap:3px;margin:4px 0 8px}body.admin-compact .admin-global-nav{min-height:42px;padding:8px 10px;font-size:14px}body.admin-compact .content{padding:8px 8px 20px!important}body.admin-compact #campusPanel .campus-toolbar{padding:13px!important}body.admin-compact #campusSiteGroups .campus-site-item{padding:11px!important}body.admin-compact #campusSiteGroups .campus-row-action{min-height:44px!important;font-size:14px!important}}
 `;
   document.head.append(style);
 }
@@ -188,23 +174,8 @@ function ensureContainers(nav, root = document) {
     nav.prepend(globals);
   }
 
-  let commandEntry = nav.querySelector(':scope>.admin-command-entry');
-  if (!commandEntry) {
-    commandEntry = document.createElement('button');
-    commandEntry.type = 'button';
-    commandEntry.className = 'admin-command-entry';
-    commandEntry.dataset.adminCommandHome = 'true';
-    const icon = document.createElement('b');
-    icon.setAttribute('aria-hidden', 'true');
-    icon.textContent = '+';
-    const label = document.createElement('span');
-    commandEntry.append(icon, label);
-    nav.insertBefore(commandEntry, globals);
-  }
-  commandEntry.hidden = true;
-  commandEntry.setAttribute('aria-hidden', 'true');
-  commandEntry.tabIndex = -1;
-  commandEntry.style.setProperty('display', 'none', 'important');
+  // Retired visible chrome must not survive hydration or partial page replacement.
+  nav.querySelector(':scope>.admin-command-entry')?.remove();
 
   let source = nav.querySelector(`:scope>.${SOURCE_CLASS}`);
   if (!source) {
@@ -218,27 +189,8 @@ function ensureContainers(nav, root = document) {
   for (const legacy of [...nav.querySelectorAll(':scope>.admin-context-nav,:scope>.admin-nav-assist')]) legacy.remove();
 
   const main = root.querySelector?.('#app main') || root.querySelector?.('main');
-  let shell = main?.querySelector(`:scope>.${TABS_SHELL_CLASS}`) || null;
-  if (main && !shell) {
-    shell = document.createElement('div');
-    shell.className = TABS_SHELL_CLASS;
-    shell.dataset.adminContextHeader = 'true';
-    const title = document.createElement('div');
-    title.className = 'admin-context-title';
-    const tabs = document.createElement('div');
-    tabs.className = TABS_CLASS;
-    tabs.setAttribute('role', 'tablist');
-    shell.append(title, tabs);
-    const topbar = main.querySelector(':scope>.topbar');
-    if (topbar) topbar.insertAdjacentElement('afterend', shell);
-    else main.prepend(shell);
-  }
-  if (shell) {
-    shell.hidden = true;
-    shell.setAttribute('aria-hidden', 'true');
-    shell.style.setProperty('display', 'none', 'important');
-  }
-  return { globals, source, shell, commandEntry };
+  main?.querySelector(':scope>.admin-context-tabs-shell')?.remove();
+  return { globals, source };
 }
 
 function isPlatformSuperAdminSurface(){
@@ -422,64 +374,20 @@ function availableIds(nav, group) {
   });
 }
 
-function renderContextTabs(nav, shell, group, section, locale) {
-  if (!shell) return;
-  const title = shell.querySelector('.admin-context-title');
-  const tabs = shell.querySelector(`.${TABS_CLASS}`);
-  if (!tabs) return;
-  const groupLabel = getAdminMenuGroupLabel(group, locale);
-  if (title) title.textContent = groupLabel;
-  const ids = availableIds(nav, group);
-  const suppressContextTabs = FLAT_DETAIL_GROUPS.has(group);
-  const singleEquivalent = ids.length === 1 && getAdminMenuLabel(ids[0], locale) === groupLabel;
-  const hideContextTabs = suppressContextTabs || singleEquivalent;
-  shell.dataset.adminSingleContext = hideContextTabs ? 'true' : 'false';
-  tabs.hidden = hideContextTabs;
-  const signature = `${locale}|${group}|${ids.join(',')}`;
-  if (tabs.dataset.renderSignature !== signature) {
-    tabs.dataset.renderSignature = signature;
-    const nodes = ids.map(id => {
-      const button = document.createElement('button');
-      button.type = 'button'; button.className = 'admin-context-tab';
-      button.dataset.adminContextSection = id; button.setAttribute('role', 'tab');
-      button.textContent = getAdminMenuLabel(id, locale); return button;
-    });
-    tabs.replaceChildren(...nodes);
-  }
-  for (const button of tabs.querySelectorAll('[data-admin-context-section]')) {
-    const selected = button.dataset.adminContextSection === section;
-    button.classList.toggle('active', selected);
-    button.setAttribute('aria-selected', selected ? 'true' : 'false');
-  }
-}
-
 function syncWorkbenchState(nav, locale, preferredSection = '') {
-  const { globals, shell, commandEntry } = ensureContainers(nav);
+  const { globals } = ensureContainers(nav);
   globalButtons(globals, locale);
-  if (commandEntry) {
-    const label = commandEntry.querySelector('span');
-    const text = locale === 'en' ? 'New task' : '새 작업';
-    if (label && label.textContent !== text) label.textContent = text;
-    commandEntry.setAttribute('aria-label', locale === 'en' ? 'Start a new EKODI task' : '에코디 새 작업 시작');
-  }
-  if (shell) shell.querySelector('[data-admin-capability-shortcut]')?.remove();
   const section = preferredSection || activeSection(nav);
   const activeGroup = getAdminMenuGroupForSection(section);
   const focusedGroup = String(nav.dataset.adminFocusedGroup || '').trim();
   const group = ADMIN_MENU_GROUPS.some(item => item.id === focusedGroup) ? focusedGroup : activeGroup;
   const displayedSection = group === activeGroup ? section : '';
-  if (commandEntry) {
-    const selected = section === 'command-home' && !focusedGroup;
-    commandEntry.classList.toggle('active', selected);
-    commandEntry.setAttribute('aria-current', selected ? 'page' : 'false');
-  }
   for (const button of globals.querySelectorAll('[data-admin-global-group]')) {
     const selected = button.dataset.adminGlobalGroup === group && (section !== 'command-home' || Boolean(focusedGroup));
     button.classList.toggle('active', selected);
     button.setAttribute('aria-current', selected ? 'page' : 'false');
     button.setAttribute('aria-expanded', selected ? 'true' : 'false');
   }
-  renderContextTabs(nav, shell, group, displayedSection, locale);
   if (isPlatformSuperAdminSurface()) renderSidebarDetails(nav, globals, group, displayedSection || section, locale);
   else globals.querySelector(`:scope>.${DETAILS_CLASS}`)?.remove();
   nav.dataset.adminGlobalGroup = group;
@@ -687,15 +595,6 @@ export function mountAdminSidebar(root = document, options = {}) {
   observer.observe(nav, { childList: true, subtree: false });
 
   nav.addEventListener('click', event => {
-    const commandEntry = event.target.closest('[data-admin-command-home]');
-    if (commandEntry) {
-      event.preventDefault();
-      delete nav.dataset.adminFocusedGroup;
-      activateSection(nav, 'command-home');
-      closeDrawer();
-      schedule();
-      return;
-    }
     const more = event.target.closest('[data-admin-detail-more]');
     if (more) {
       event.preventDefault();
@@ -732,23 +631,6 @@ export function mountAdminSidebar(root = document, options = {}) {
     schedule();
   }, true);
 
-  // Post-auth runtime may replace <main>. Delegate contextual-tab clicks from the
-  // stable mount root so newly rendered tab strips never lose navigation handlers.
-  const contextClick = event => {
-    const tab = event.target.closest?.('[data-admin-context-section]');
-    if (!tab) return;
-    event.preventDefault();
-    if (tab.dataset.adminContextSection === 'openai') {
-      const source = activeSection(nav);
-      if (source && source !== 'openai') try { sessionStorage.setItem('ekodi-openai-source-section', source); } catch {}
-    }
-    delete nav.dataset.adminFocusedGroup;
-    activateSection(nav, tab.dataset.adminContextSection);
-    closeDrawer();
-    schedule();
-  };
-  root.addEventListener?.('click', contextClick, true);
-
   window.addEventListener('ekodi-nav-changed', schedule);
   window.addEventListener('ekodi-feature-installed', schedule);
   const sectionChanged = () => { delete nav.dataset.adminFocusedGroup; schedule(); };
@@ -760,7 +642,6 @@ export function mountAdminSidebar(root = document, options = {}) {
     order: () => adminMenuOrder(),
     destroy: () => {
       observer.disconnect();
-      root.removeEventListener?.('click', contextClick, true);
       menuButton?.removeEventListener('click',toggleDrawer);
       mobilePrimary?.removeEventListener('click',mobilePrimaryClick);
       drawerScrim?.removeEventListener('click',scrimClick);
