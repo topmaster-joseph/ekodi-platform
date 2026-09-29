@@ -52,6 +52,17 @@ test('synthetic production Admin UI verifier validates tax handoff without navig
   assert.doesNotMatch(text, /taxNavigationPattern|taxRequestPending|taxCommitPending/);
 });
 
+test('synthetic production Admin UI verifier verifies every protected admin handoff as an endpoint instead of waiting for a local panel', async () => {
+  const text = await source();
+  assert.match(text, /definition\?\.href && definition\.adminHandoff === true/);
+  assert.match(text, /admin handoff endpoint returned/);
+  assert.match(text, /kind:'handoff'/);
+  assert.match(text, /ok handoff-link/);
+  const handoffBranch = text.indexOf('definition?.href && definition.adminHandoff === true');
+  const panelWait = text.indexOf('window.EKODIAdminPanels?.current?.() === section');
+  assert.ok(handoffBranch >= 0 && panelWait > handoffBranch, 'protected handoffs must exit before local panel assertions');
+});
+
 test('synthetic production Admin UI verifier follows direct registry href menus through a popup contract', async () => {
   const text = await source();
   assert.match(text, /getAdminMenuItem/);
