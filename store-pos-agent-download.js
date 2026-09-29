@@ -16,7 +16,8 @@ const FILES=Object.freeze({
 function fileFromPath(pathname){
   const path=String(pathname||'');
   if(!path.startsWith(DOWNLOAD_PREFIX))return'';
-  const name=decodeURIComponent(path.slice(DOWNLOAD_PREFIX.length));
+  let name='';
+  try{name=decodeURIComponent(path.slice(DOWNLOAD_PREFIX.length))}catch{return''}
   if(!name||name.includes('/')||name.includes('\\')||name==='.'||name==='..')return'';
   return Object.prototype.hasOwnProperty.call(FILES,name)?name:'';
 }
