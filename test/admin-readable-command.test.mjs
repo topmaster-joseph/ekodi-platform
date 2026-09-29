@@ -18,9 +18,9 @@ test('all authenticated Admin surfaces inherit the EKODI readability base', asyn
 });
 
 test('shared Admin legibility floor protects feature panels from dense local CSS', async () => {
-  const css = await read('admin-readability-base.css');
+  const css = await read('admin-design-engine.css');
   assert.match(css, /ADMIN-READABILITY-006/);
-  assert.match(css, /\[data-panel\]:not\(\.campus-preview-page\) :where\(p,li,dd\)\{[\s\S]*?font-size:14px!important/);
+  assert.match(css, /body\.admin-compact\.ekodi-admin-design-engine \.content \[data-panel\]:not\(\.campus-preview-page\) :where\(p,li,dd\)\{[\s\S]*?font-size:14px!important/);
   assert.match(css, /:where\(small,\.muted,\.subtle,\[class\$="-meta"\],\[class\$="-note"\],\[class\$="-status"\]\)\{[\s\S]*?font-size:12px!important/);
   assert.match(css, /:where\(button,\[role="button"\],summary,a\)\{[\s\S]*?font-size:14px!important/);
   assert.match(css, /@media\(max-width:760px\)[\s\S]*?font-size:15px!important/);
