@@ -43,8 +43,8 @@ test('cmpmyi admin keeps only three common controls and places all other menus u
   assert.match(html,/class="portfolio-sidebar"/);
   assert.match(html,/data-cmpmyi-navigation="common-store-split"/);
   assert.doesNotMatch(html,/<details class="brand-group"/);
-  assert.match(html,//cmpmyi/admin/shell.js/);
-  assert.match(html,/src="/cmpmyi/admin/panel/pos"/);
+  assert.match(html,/\/cmpmyi\/admin\/shell\.js/);
+  assert.match(html,/src="\/cmpmyi\/admin\/panel\/pos"/);
 
   const runtime=await storePortfolioAdminShellScript().text();
   assert.match(runtime,/ekodi-cmpmyi-selected-store/);
@@ -146,6 +146,11 @@ test('router serves cmpmyi common panels and same-origin embedded canonical stor
   const panel=await platformEntry.fetch(new Request('https://ekodi.kr/cmpmyi/admin/panel/customer'),{},{});
   assert.equal(panel.status,200);
   assert.equal(panel.headers.get('x-ekodi-route'),'cmpmyi-store-portfolio-panel');
+  const shellScript=await platformEntry.fetch(new Request('https://ekodi.kr/cmpmyi/admin/shell.js'),{},{});
+  assert.equal(shellScript.status,200);
+  assert.match(shellScript.headers.get('content-type')||'',/text\/javascript/);
+  assert.match(await shellScript.text(),/cmpmyiStoreSelect/);
+
   const panelScript=await platformEntry.fetch(new Request('https://ekodi.kr/cmpmyi/admin/panel.js'),{},{});
   assert.equal(panelScript.status,200);
   assert.match(panelScript.headers.get('content-type')||'',/text\/javascript/);
