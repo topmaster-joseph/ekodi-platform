@@ -1,10 +1,9 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 (()=>{
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const PLATFORM_TOKEN_KEY='ekodi-auth-token';
 const SESSION_KEY='ekodi-seonam-admin-session';
-const sb=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
+const CENTRAL_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token';
 const state={me:null,content:[],notices:[],channels:[]};
 const $=id=>document.getElementById(id);
 const qs=(sel,root=document)=>root.querySelector(sel);
@@ -34,17 +33,29 @@ async function userToken(){
   if(!session.refreshToken){clearSession();return''}
   try{const data=await supabaseAuth('/auth/v1/token?grant_type=refresh_token',{refresh_token:session.refreshToken});session=normalizeSession(data,session);saveSession(session);return session.accessToken}catch{clearSession();return''}
 }
+function centralSessionToken(){
+  try{
+    const raw=localStorage.getItem(CENTRAL_SESSION_KEY)||'';
+    if(!raw)return'';
+    const parsed=JSON.parse(raw);
+    const session=parsed?.currentSession||parsed?.session||parsed;
+    const access=String(session?.access_token||'');
+    const expires=Number(session?.expires_at||0);
+    if(!access)return'';
+    if(expires&&expires<=Math.floor(Date.now()/1000)+30)return'';
+    return access;
+  }catch{return''}
+}
 async function token(){
   const platform=sessionStorage.getItem(PLATFORM_TOKEN_KEY)||'';if(platform)return platform;
   const handoff=await userToken();if(handoff)return handoff;
-  const {data:{session}}=await sb.auth.getSession();
-  return session?.access_token||'';
+  return centralSessionToken();
 }
 async function api(path,options={}){
   const bearer=await token();if(!bearer){location.replace(authUrl());throw new Error('로그인이 필요합니다.')}
   const headers=new Headers(options.headers||{});headers.set('authorization','Bearer '+bearer);if(options.body&&!headers.has('content-type'))headers.set('content-type','application/json');
   const response=await fetch(path,{...options,headers,cache:'no-store'});const data=await response.json().catch(()=>({}));
-  if(response.status===401){sessionStorage.removeItem(PLATFORM_TOKEN_KEY);clearSession();location.replace(authUrl());throw new Error('로그인이 만료되었습니다.')}
+  if(response.status===401){sessionStorage.removeItem(PLATFORM_TOKEN_KEY);clearSession();try{localStorage.removeItem(CENTRAL_SESSION_KEY)}catch{}location.replace(authUrl());throw new Error('로그인이 만료되었습니다.')}
   if(!response.ok)throw Object.assign(new Error(data.error||'요청을 처리하지 못했습니다.'),{status:response.status,data});return data;
 }
 function showPanel(name){
@@ -147,7 +158,7 @@ $('channelForm').addEventListener('submit',async event=>{
   try{await api(id?'/api/seonammedi/admin/channels/'+id:'/api/seonammedi/admin/channels',{method:id?'PUT':'POST',body:JSON.stringify(payload)});text(msg,'저장했습니다.');resetChannel();await loadChannels()}catch(error){msg.classList.add('error');text(msg,error.message)}
 });
 $('reloadContent').addEventListener('click',()=>loadContent().catch(()=>{}));$('noticeReset').addEventListener('click',resetNotice);$('channelReset').addEventListener('click',resetChannel);$('reloadNotices').addEventListener('click',()=>loadNotices().catch(()=>{}));$('reloadChannels').addEventListener('click',()=>loadChannels().catch(()=>{}));
-$('refreshAll').addEventListener('click',()=>init(true));$('changeAccount').addEventListener('click',async()=>{sessionStorage.removeItem(PLATFORM_TOKEN_KEY);clearSession();try{await sb.auth.signOut()}catch{}location.assign(authUrl())});
+$('refreshAll').addEventListener('click',()=>init(true));$('changeAccount').addEventListener('click',()=>{sessionStorage.removeItem(PLATFORM_TOKEN_KEY);clearSession();try{localStorage.removeItem(CENTRAL_SESSION_KEY)}catch{}location.assign(authUrl())});
 
 async function init(refresh=false){
   try{
