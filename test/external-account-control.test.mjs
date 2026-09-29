@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { handleExternalAccountControl, EXTERNAL_ACCOUNT_PROVIDER_REGISTRY } from '../external-account-control.js';
+import { handleExternalAccountControl, EXTERNAL_ACCOUNT_PROVIDER_REGISTRY, EXTERNAL_ACCOUNT_HEALTH_POLICY, deriveExternalAccountHealth } from '../external-account-control.js';
 
 const root = new URL('../', import.meta.url);
 const read = name => fs.readFileSync(new URL(name, root), 'utf8');
@@ -13,6 +13,18 @@ test('external account center keeps provider ownership separate', () => {
   assert.match(migration, /authority_ref/);
   assert.match(migration, /credential_ref/);
   assert.doesNotMatch(migration, /password/i);
+});
+
+test('connection health never treats unverified delegated accounts as automatically healthy', () => {
+  assert.deepEqual(EXTERNAL_ACCOUNT_HEALTH_POLICY,{freshDays:7,staleDays:30,manualConnectionsRequireHumanVerification:true});
+  const base={source:'external_registry',status:'active',connectionMode:'delegated',credentialBound:false,lastVerifiedAt:null,lastError:''};
+  assert.equal(deriveExternalAccountHealth(base).state,'manual_required');
+  const recent=new Date(Date.now()-24*60*60*1000).toISOString();
+  assert.equal(deriveExternalAccountHealth({...base,lastVerifiedAt:recent}).state,'healthy_manual');
+  const stale=new Date(Date.now()-20*24*60*60*1000).toISOString();
+  assert.equal(deriveExternalAccountHealth({...base,lastVerifiedAt:stale}).state,'stale_manual');
+  assert.equal(deriveExternalAccountHealth({...base,status:'reconnect_required'}).state,'reconnect_required');
+  assert.equal(deriveExternalAccountHealth({...base,status:'error',lastError:'token expired'}).attention,true);
 });
 
 test('control route requires central authentication', async () => {
@@ -67,7 +79,7 @@ test('workspace summary projects manage permissions from the canonical workspace
     const response=await handleExternalAccountControl(request,{MY_SUPABASE_URL:'https://example.supabase.co',MY_SUPABASE_PUBLISHABLE_KEY:'public-key',DB});
     assert.equal(response.status,200);
     const body=await response.json();
-    assert.deepEqual(body.permissions,{view:true,manage:true,register:true,update:true,reassign:false,audit:true,secretMaterial:false});
+    assert.deepEqual(body.permissions,{view:true,manage:true,register:true,update:true,reassign:false,audit:true,recordVerification:true,secretMaterial:false});
     assert.equal(body.workspace,'jadam');
   }finally{globalThis.fetch=originalFetch}
 });
@@ -195,6 +207,19 @@ test('workspace admins inherit connection settings without platform infrastructu
   assert.doesNotMatch(runtime,/CLOUDFLARE_API_TOKEN/);
 });
 
+test('account health is visible in central and workspace admin surfaces', () => {
+  const center=read('external-account-admin.js');
+  const runtime=read('admin-menu-runtime.js');
+  assert.match(center,/healthText/);
+  assert.match(center,/확인 기록/);
+  assert.match(center,/최근 검증/);
+  assert.match(center,/data\.stats\?\.healthy/);
+  assert.match(runtime,/workspaceConnectionHealthText/);
+  assert.match(runtime,/recordWorkspaceConnectionVerification/);
+  assert.match(runtime,/data\.stats\?\.healthy/);
+  assert.doesNotMatch(center,/자동 정상/);
+});
+
 test('account center uses canonical workspace choices and audited soft revoke management', () => {
   const source=read('external-account-admin.js');
   assert.match(source,/data-xac-register-workspace/);
@@ -204,6 +229,7 @@ test('account center uses canonical workspace choices and audited soft revoke ma
   assert.match(source,/status:'revoked'/);
   assert.match(source,/data-xac-audit-list/);
   assert.match(source,/계정 변경 이력/);
+  assert.match(source,/connection\.verify/);
   assert.match(source,/workspaceOptions\(data\)/);
   assert.doesNotMatch(source,/운영주체 slug<input/);
   assert.doesNotMatch(source,/method:'DELETE'/);
