@@ -109,7 +109,7 @@ jobs:
           node --check my-worker.js
           node --check my/app.js
           node --check my/public-profile.js
-          node --check person-digital-card.js
+          node --check my/person-digital-card.js
           node --check my/digital-card-admin.js
           node --check my/digital-card.js
           node --check my/docs/docs.js
