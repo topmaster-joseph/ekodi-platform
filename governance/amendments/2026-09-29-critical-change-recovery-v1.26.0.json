@@ -1,0 +1,43 @@
+{
+  "amendmentId": "CRITICAL-CHANGE-RECOVERY-20260929",
+  "constitutionVersion": "1.26.0",
+  "approvedAt": "2026-09-29",
+  "changeClass": "C2",
+  "taskId": "critical-change-recovery-10-20260929",
+  "summary": "Require protected handling of mass deletion and large structural changes, with verified pre-change recovery points and the newest ten recovery points retained for controlled restoration.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly approved building the critical-change protection rule, specifically requested recovery to approximately the latest ten change points even after a change completes, and then directed implementation to continue.",
+  "implementation": [
+    "classify mass site deletion and platform-wide structural changes as critical changes",
+    "block direct production mutation for critical scope",
+    "require a verified pre-change restore point, isolated validation, staging verification and super-administrator approval",
+    "retain the newest ten verified recovery-point records in the recovery control plane",
+    "make restoration itself a critical change with a pre-restore recovery point and post-restore verification",
+    "require separate approval for permanent purge or irreversible deletion",
+    "bind recovery metadata to source commit/release references and affected D1 recovery coordinates"
+  ],
+  "mandatoryRules": [
+    "critical destructive or platform-wide structural requests never directly mutate production",
+    "a verified restore point is mandatory before critical production mutation",
+    "the recovery control plane exposes the newest ten verified recovery points",
+    "restore execution requires super-administrator approval and must preserve an undo path where the platform supports one",
+    "permanent deletion requires a distinct approval from ordinary change approval",
+    "AI workers may not bypass branch isolation, CI, staging or guarded release"
+  ],
+  "validation": [
+    "test/critical-change-control.test.mjs",
+    "EKODI Constitution Check",
+    "EKODI AI Orchestration Gate",
+    "CI",
+    "EKODI Parallel Change Conflict Guard"
+  ],
+  "rollback": "Revert the critical-change control module, governor additions and deployment-policy amendment through the guarded release path; preserve existing recovery records and do not perform destructive cleanup as part of rollback.",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalEvidence": {
+    "explicitOwnerInstruction": true,
+    "ownerInstructionDate": "2026-09-29",
+    "pullRequest": 2950,
+    "requiredPullRequestLabel": "constitution-approved",
+    "approvalLabel": "constitution-approved"
+  }
+}
