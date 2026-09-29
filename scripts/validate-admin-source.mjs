@@ -87,8 +87,11 @@ for (const marker of ['Mobile admin shell authority v3','transform:translateX(-1
 for (const marker of ["MOBILE_NAV_CLASS = 'admin-mobile-primary-nav'","DRAWER_SCRIM_CLASS = 'admin-mobile-drawer-scrim'","const setDrawerOpen = open =>"]) {
   if (!mobileSidebar.includes(marker)) violations.push(`admin-sidebar.js: missing ADMIN-MOBILE-SHELL-003 navigation marker: ${marker}`);
 }
-for (const marker of ["commandEntry.hidden = true","commandEntry.style.setProperty('display', 'none', 'important')","shell.hidden = true","shell.style.setProperty('display', 'none', 'important')"]) {
-  if (!mobileSidebar.includes(marker)) violations.push(`admin-sidebar.js: missing ADMIN-CLUTTER-005 single-navigation marker: ${marker}`);
+for (const marker of ["nav.querySelector(':scope>.admin-command-entry')?.remove()","main?.querySelector(':scope>.admin-context-tabs-shell')?.remove()"]) {
+  if (!mobileSidebar.includes(marker)) violations.push(`admin-sidebar.js: missing structural navigation retirement marker: ${marker}`);
+}
+for (const retiredCreation of ["commandEntry = document.createElement('button')","shell = document.createElement('div')","dataset.adminCommandHome"]) {
+  if (mobileSidebar.includes(retiredCreation)) violations.push(`admin-sidebar.js: retired navigation DOM creation survived: ${retiredCreation}`);
 }
 for (const marker of ['ADMIN-CLUTTER-005','.admin-command-entry,','.admin-context-tabs-shell','display:none!important']) {
   if (!mobileWorkbench.includes(marker)) violations.push(`admin-conversation-workbench.css: missing ADMIN-CLUTTER-005 visual marker: ${marker}`);
