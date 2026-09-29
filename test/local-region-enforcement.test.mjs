@@ -106,3 +106,19 @@ test('production probe manifest covers every Cheonggye subservice public and adm
     assert.ok(urls.has('https://ekodi.kr'+module.adminPath),module.id+' admin probe missing');
   }
 });
+
+test('generic Cheonggye production probes match the user-facing renderer instead of admin copy',async()=>{
+  const manifest=JSON.parse(await fs.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const requests=manifest.worker?.requests||[];
+  for(const module of region.modules.filter(item=>item.contentMode==='regional-ledger')){
+    const probe=requests.find(item=>item.url==='https://ekodi.kr'+module.publicPath);
+    const html=await localRegionModulePublicPage(region,module).text();
+    assert.ok(probe,module.id+' public probe missing');
+    assert.ok(probe.expect?.includes(module.label),module.id+' public probe must verify its service label');
+    assert.ok(probe.expect?.includes('지역 공개정보'),module.id+' public probe must verify the public ledger');
+    assert.ok(probe.expect?.includes('local-region-module-public.js'),module.id+' public probe must verify the public client');
+    assert.equal(probe.expect?.includes('운영 기준'),false,module.id+' public probe must not require admin-only copy');
+    assert.equal(probe.expect?.includes('청계면상인회'),false,module.id+' public probe must not require an organization label absent from the generic renderer');
+    for(const marker of probe.expect||[])assert.ok(html.includes(marker),module.id+' production marker not rendered: '+marker);
+  }
+});
