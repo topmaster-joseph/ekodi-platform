@@ -4,14 +4,10 @@ import { readFile } from 'node:fs/promises';
 
 const sidebar = await readFile(new URL('../admin-sidebar.js', import.meta.url), 'utf8');
 
-test('hidden compatibility context nodes stay stable while left navigation owns interaction', () => {
-  assert.match(sidebar, /const signature = `\$\{locale\}\|\$\{group\}\|\$\{ids\.join\(','\)\}`/);
-  assert.doesNotMatch(sidebar, /const signature = `\$\{locale\}\|\$\{group\}\|\$\{section\}\|/);
-  assert.match(sidebar, /if \(tabs\.dataset\.renderSignature !== signature\)/);
-  assert.match(sidebar, /tabs\.replaceChildren\(\.\.\.nodes\)/);
-  assert.match(sidebar, /for \(const button of tabs\.querySelectorAll\('\[data-admin-context-section\]'\)\)/);
-  assert.match(sidebar, /button\.dataset\.adminContextSection === section/);
-  assert.match(sidebar, /button\.setAttribute\('aria-selected', selected \? 'true' : 'false'\)/);
-  assert.match(sidebar, /shell\.hidden = true/);
-  assert.match(sidebar, /shell\.style\.setProperty\('display', 'none', 'important'\)/);
+test('retired contextual top tabs are removed while left navigation owns interaction', () => {
+  assert.match(sidebar, /LEFT-NAV-AUTHORITY-006/);
+  assert.match(sidebar, /main\?\.querySelector\(':scope>\.admin-context-tabs-shell'\)\?\.remove\(\)/);
+  assert.doesNotMatch(sidebar, /function renderContextTabs/);
+  assert.doesNotMatch(sidebar, /data-admin-context-section/);
+  assert.doesNotMatch(sidebar, /contextClick/);
 });
