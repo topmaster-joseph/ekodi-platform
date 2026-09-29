@@ -374,7 +374,7 @@ async function routePlatform(request,env,ctx){
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
     if(host===PUBLIC_HOST&&url.pathname.startsWith(MALL_API_APEX_PREFIX)){const mallApi=await routeMallApiApex(request,env);if(mallApi)return mallApi;}
-    if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/seonam-medi/')){const admin=await handleSeonamMediAdminApi(request,env);if(admin)return admin;const monitor=await handleSeonamMediMonitorApi(request,env);if(monitor)return monitor;const civic=await handleSeonamMediCivicApi(request,env);if(civic)return civic;}
+    if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/seonam-medi/')){if(!url.pathname.startsWith('/api/seonam-medi/admin/')){const site=await readSeonamMediSiteControl(env);if(site.publicStatus==='private')return privatePublicSiteResponse('seonam-medi-api-private');}const admin=await handleSeonamMediAdminApi(request,env);if(admin)return admin;const monitor=await handleSeonamMediMonitorApi(request,env);if(monitor)return monitor;const civic=await handleSeonamMediCivicApi(request,env);if(civic)return civic;}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isLegacySeonamMedPath(url.pathname))return redirectLegacySeonamMed(request);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isSeonamMediPath(url.pathname))return routeSeonamMediStatic(request,env);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isPyeonggongmokPath(url.pathname))return routePyeonggongmokStatic(request,env);
