@@ -38,6 +38,8 @@ EKODI Store Console이 **현재 POS PC에서 실행 중인 Windows 프로그램�
 powershell -NoProfile -ExecutionPolicy Bypass -File .\install-pos-agent.ps1
 ```
 
+> 일반 매장 설치에서는 위 개발용 명령 대신 관리자 화면의 `setup-pos-agent.ps1` 통합 설치 파일을 사용하면 됩니다.
+
 처음 설치한 뒤 실제 POS 프로그램의 프로세스 이름과 창 제목을 확인하려면 다음 진단만 실행합니다. 이 스크립트는 어떤 프로그램도 실행·종료·전환하지 않습니다.
 
 ```powershell
