@@ -63,7 +63,7 @@ test('workspace and store admin surfaces both expose the same user-access workfl
   assert.match(store,/\['members','사용자 · 권한'\]/);
   assert.match(store,/async function memberAccessPanel\(\)/);
   assert.match(store,/siteAccess\('\/directory\?tenant='/);
-  assert.match(store,/overview\|site\|members\|chrome/);
+  assert.match(store,/overview\|pos\|site\|members\|chrome/);
 });
 
 test('super-admin separates user settings from administrator settings while sharing site access registry',()=>{
