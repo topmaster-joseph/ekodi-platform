@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "name": "EKODI Design Engine",
   "asOf": "2026-09-22",
   "principle": "Evidence defines reusable UX rules; EKODI identity, service DNA and EKODIAN character remain first-party layers.",
@@ -278,6 +278,21 @@
       "contentOverlapForbidden": true,
       "humanPathRequired": true,
       "highRiskActions": "existing approval and audit boundaries remain authoritative"
+    },
+    "directNavigationContract": {
+      "id": "ADMIN-DIRECT-NAV-006",
+      "leftTaskIsFinalDestination": true,
+      "duplicateRightSideReselectionForbidden": true,
+      "contextTabsAreOptionalRefinement": true,
+      "aggregateExceptions": [
+        "dashboard",
+        "overview",
+        "comparison",
+        "monitoring",
+        "incident-status"
+      ],
+      "integratedHubDefault": "remember-last-target-or-open-valid-default-workspace",
+      "verification": "production-e2e-must-click-visible-left-menu-without-hidden-context-tab-fallback"
     }
   },
   "user": {
