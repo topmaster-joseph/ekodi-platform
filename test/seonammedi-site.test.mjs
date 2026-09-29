@@ -45,6 +45,10 @@ test('seonammedi admin stays site-local before and after Google authentication',
   assert.doesNotMatch(adminJs,/cdn\.jsdelivr\.net|createClient\(/);
   assert.match(auth,/site==='portal'.*\/seonammedi\/admin/s);
   assert.match(router,/handleSeonamMediAdminApi/);
+  assert.match(adminJs,/\/api\/seonammedi\/admin\/auth\/exchange/);
+  assert.match(adminJs,/\/api\/seonammedi\/admin\/auth\/refresh/);
+  assert.match(await readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),/admin\/auth\/exchange/);
+  assert.match(await readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),/admin\/auth\/refresh/);
   assert.match(migration,/ohwon69@gmail\.com/);
   assert.match(migration,/board_admin/);
   assert.match(migration,/seonammedi\.notice\.manage/);
