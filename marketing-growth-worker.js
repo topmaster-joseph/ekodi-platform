@@ -442,13 +442,34 @@ async function threadsCallback(request, env) {
 
 async function youtubeCallback(request, env) {
   const url = new URL(request.url);
-  const state = await consumeOAuthState(env,url.searchParams.get('state') || '',YOUTUBE_PROVIDER);
+  const legacyTicket = clean(url.searchParams.get('ticket'),512);
+  let marketingState = String(url.searchParams.get('state') || '');
+  let brokerTicket = legacyTicket;
+  let brokerError = '';
+  if (!legacyTicket) {
+    try {
+      const brokerResult = await env.GOOGLE_OAUTH_BROKER.finishYouTubeOAuth({
+        state:marketingState,
+        code:String(url.searchParams.get('code') || ''),
+        error:String(url.searchParams.get('error') || ''),
+      });
+      marketingState = String(brokerResult?.marketingState || '');
+      brokerTicket = clean(brokerResult?.ticket,512);
+      brokerError = clean(brokerResult?.error,160);
+    } catch (error) {
+      return new Response('Invalid or expired Google OAuth state',{status:400});
+    }
+  }
+  const state = await consumeOAuthState(env,marketingState,YOUTUBE_PROVIDER);
   if (!state) return new Response('Invalid or expired OAuth state',{status:400});
-  if (url.searchParams.get('error')) { const error=new Error(clean(url.searchParams.get('error_description') || url.searchParams.get('error'),160)); await markRegistryFailure(env,state,error); return redirectResult(state.return_url,{ekodi_connect:'error',provider:'youtube',reason:error.message}); }
+  if (brokerError) {
+    const error=new Error(brokerError);
+    await markRegistryFailure(env,state,error);
+    return redirectResult(state.return_url,{ekodi_connect:'error',provider:'youtube',reason:error.message});
+  }
   try {
-    const ticket = clean(url.searchParams.get('ticket'),512);
-    if (!ticket) throw new Error('GOOGLE_OAUTH_TICKET_REQUIRED');
-    const tokenData = await env.GOOGLE_OAUTH_BROKER.consumeYouTubeTicket({ticket});
+    if (!brokerTicket) throw new Error('GOOGLE_OAUTH_TICKET_REQUIRED');
+    const tokenData = await env.GOOGLE_OAUTH_BROKER.consumeYouTubeTicket({ticket:brokerTicket});
     const accessToken = String(tokenData.access_token || tokenData.accessToken || '');
     const refreshToken = String(tokenData.refresh_token || tokenData.refreshToken || '');
     const authorizedEmail = clean(tokenData.authorized_email || tokenData.authorizedEmail,180).trim().toLowerCase();
