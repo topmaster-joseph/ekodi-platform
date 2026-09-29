@@ -154,7 +154,7 @@ async function listAdminContent(env,auth){
   if(!can(auth,CONTENT_CAP))return json({ok:false,error:'content_forbidden'},403);
   const rows=await env.DB.prepare(`SELECT id,title,url,resolved_url,publisher,published_at,query_label,review_state,first_seen_at,last_seen_at
     FROM seonam_medi_monitor_items ORDER BY COALESCE(published_at,first_seen_at) DESC LIMIT 150`).all();
-  return json({ok:true,items:(rows.results||[]).map(row=>({id:Number(row.id),title:row.title,url:row.resolved_url||row.url,publisher:row.publisher||'',publishedAt:row.published_at||row.first_seen_at,queryLabel:row.query_label||'',reviewState:CONTENT_STATES.has(row.review_state)?row.review_state:'candidate',category:row.review_state==='published_official'?'official':row.review_state==='published_news'?'news':'news'}))});
+  return json({ok:true,items:(rows.results||[]).map(row=>({id:Number(row.id),title:row.title,url:row.resolved_url||row.url,publisher:row.publisher||'',publishedAt:row.published_at||row.first_seen_at,queryLabel:row.query_label||'',reviewState:String(row.review_state||'').startsWith('published_')?'published':CONTENT_STATES.has(row.review_state)?row.review_state:'candidate',category:row.review_state==='published_official'?'official':'news'}))});
 }
 async function updateAdminContent(request,env,auth,id){
   if(!can(auth,CONTENT_CAP))return json({ok:false,error:'content_forbidden'},403);
