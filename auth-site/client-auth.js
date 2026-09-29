@@ -18,7 +18,7 @@ const realms={
   pay:{name:'EKODI Pay',returnTo:'https://pay.ekodi.kr/',open:true,kind:'pay'},
   books:{name:'EKODI Books',returnTo:'https://books.ekodi.kr/',open:true,kind:'books'},
   lab:{name:'EKODI Lab',returnTo:'https://lab.ekodi.kr/',open:true,kind:'lab'},
-  mission:{name:'EKODI Mission',returnTo:'https://ekodi.kr/ekodimission/',origins:['https://ekodi.kr'],open:true,kind:'mission'},
+  mission:{name:'EKODI Mission',returnTo:'https://ekodi.kr/ekodimission/',adminReturnTo:'https://ekodi.kr/ekodimission/admin',origins:['https://ekodi.kr'],open:true,kind:'mission'},
   edu:{name:'EKODI Education',returnTo:'https://edu.ekodi.kr/',open:true,kind:'edu'},
   learn:{name:'EKODI Learning Fabric',returnTo:'https://ekodi.kr/learn',origins:['https://ekodi.kr'],open:true,kind:'learn',operatingModel:'public-service'},
   media:{name:'EKODI Media',returnTo:'https://media.ekodi.kr/',open:true,kind:'media'},
@@ -73,7 +73,7 @@ const baseConfig=realms[site]||manifestConfig||implicitEkodiRealm(site)||realms.
 const config={...baseConfig,operatingModel:manifestConfig?.operatingModel||baseConfig.operatingModel||'',userAccessPolicy:manifestConfig?.userAccessPolicy||baseConfig.userAccessPolicy||null};
 const commonServiceEntry=config.operatingModel==='shared-service';
 function safeReturn(raw){
-  const fallback=new URL(config.returnTo);
+  const fallback=new URL(config.kind==='mission'&&DIRECT_LOGIN&&config.adminReturnTo?config.adminReturnTo:config.returnTo);
   if(!raw)return fallback.href;
   try{
     const target=new URL(raw);
@@ -81,7 +81,8 @@ function safeReturn(raw){
     const hostname=target.hostname.toLowerCase();
     const cgmaPlatform=config.kind==='cgma-client'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/'));
     const internalEkodi=config.kind==='cgma-client'?cgmaPlatform:(hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr'));
-    if(target.protocol!=='https:'||target.username||target.password||(!allowedOrigins.has(target.origin)&&!internalEkodi))return fallback.href;
+    const missionPath=config.kind!=='mission'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')));
+    if(target.protocol!=='https:'||target.username||target.password||(!allowedOrigins.has(target.origin)&&!internalEkodi)||!missionPath)return fallback.href;
     target.hash='';
     return target.href;
   }catch{return fallback.href}
