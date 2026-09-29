@@ -19,6 +19,10 @@ const files={
   deviceCareJs:'my/device-care.js',
   deviceCareCss:'my/device-care.css',
   worker:'my-worker.js',
+  digitalCardServer:'person-digital-card.js',
+  digitalCardAdmin:'my/digital-card-admin.js',
+  digitalCardClient:'my/digital-card.js',
+  digitalCardMigration:'supabase/migrations/20260930002300_person_digital_card_exchange.sql',
   prod:'wrangler.my.toml',
   staging:'wrangler.my.staging.toml',
   auth:'auth-site/client-auth.js',
@@ -133,6 +137,17 @@ must('worker',"privacy:'private-first'");
 must('worker','ACCESS_CONTEXT_TAG');
 must('worker','/access-context.js');
 must('worker','accessContextGuidance:true');
+must('worker',"digitalCardPath:'/{handle}/card'");
+must('worker','contactExchange:true');
+must('digitalCardServer','routePersonDigitalCard');
+must('digitalCardServer','submit_person_contact_exchange');
+must('digitalCardServer','CARD_EXCHANGE_RATE_LIMITER');
+must('digitalCardAdmin','set_my_digital_card');
+must('digitalCardAdmin','get_my_contact_exchanges');
+must('digitalCardClient','navigator.contacts');
+must('digitalCardMigration','private.person_digital_cards');
+must('digitalCardMigration','private.person_contact_exchanges');
+must('digitalCardMigration','privacy_consent_required');
 must('worker','centralAiEntitlements:true');
 must('worker',"aiEntitlementManager:'/my/'");
 mustNot('prod','my.ekodi.kr');
