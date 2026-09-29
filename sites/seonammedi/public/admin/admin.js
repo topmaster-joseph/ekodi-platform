@@ -16,9 +16,10 @@ function storedSession(){try{const value=JSON.parse(sessionStorage.getItem(SESSI
 function saveSession(value){sessionStorage.setItem(SESSION_KEY,JSON.stringify(value))}
 function clearSession(){sessionStorage.removeItem(SESSION_KEY)}
 async function supabaseAuth(pathname,body){
-  const response=await fetch(SUPABASE_URL+pathname,{method:'POST',headers:{apikey:SUPABASE_KEY,'content-type':'application/json'},body:JSON.stringify(body),cache:'no-store'});
+  const bridge=pathname.includes('refresh_token')?'/api/seonammedi/admin/auth/refresh':'/api/seonammedi/admin/auth/exchange';
+  const response=await fetch(bridge,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),cache:'no-store'});
   const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw Object.assign(new Error(data.msg||data.error_description||data.error||('auth_'+response.status)),{status:response.status});
+  if(!response.ok)throw Object.assign(new Error(data.msg||data.error_description||data.error||('auth_'+response.status)),{status:response.status,data});
   return data;
 }
 function normalizeSession(data,current={}){return{accessToken:data.access_token||'',refreshToken:data.refresh_token||current.refreshToken||'',expiresAt:Number(data.expires_at||0)||Math.floor(Date.now()/1000)+Number(data.expires_in||3600),user:{id:data.user?.id||current.user?.id||'',email:data.user?.email||current.user?.email||''}}}
