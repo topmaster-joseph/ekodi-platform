@@ -1,4 +1,4 @@
-const API_PATH='/api/seonam-medi/voices';
+const API_PATH='/api/seonammedi/voices';
 const CATEGORIES=new Set(['question','proposal','experience','factcheck','tip','other']);
 const clean=(value,max)=>String(value??'').trim().slice(0,max);
 const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
@@ -9,7 +9,10 @@ async function fingerprint(request){
   return [...new Uint8Array(digest)].map(value=>value.toString(16).padStart(2,'0')).join('');
 }
 async function ensureSchema(db){
-  await db.exec(`CREATE TABLE IF NOT EXISTS seonam_med_civic_voices (
+  const legacy=await db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='seonam_med_civic_voices'").first().catch(()=>null);
+  const canonical=await db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='seonammedi_civic_voices'").first().catch(()=>null);
+  if(legacy?.name&&!canonical?.name)await db.exec('ALTER TABLE seonam_med_civic_voices RENAME TO seonammedi_civic_voices;');
+  await db.exec(`CREATE TABLE IF NOT EXISTS seonammedi_civic_voices (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     category TEXT NOT NULL,
     display_name TEXT NOT NULL DEFAULT '',
@@ -22,15 +25,15 @@ async function ensureSchema(db){
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
-  CREATE INDEX IF NOT EXISTS idx_seonam_med_civic_voices_created ON seonam_med_civic_voices(created_at);
-  CREATE INDEX IF NOT EXISTS idx_seonam_med_civic_voices_review ON seonam_med_civic_voices(review_status,created_at);`);
+  CREATE INDEX IF NOT EXISTS idx_seonammedi_civic_voices_created ON seonammedi_civic_voices(created_at);
+  CREATE INDEX IF NOT EXISTS idx_seonammedi_civic_voices_review ON seonammedi_civic_voices(review_status,created_at);`);
 }
 export async function handleSeonamMediCivicApi(request,env){
   const url=new URL(request.url);
   if(url.pathname!==API_PATH)return null;
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{allow:'POST, OPTIONS','cache-control':'no-store'}});
   if(request.method!=='POST')return json({ok:false,error:'method_not_allowed'},405);
-  if(env?.ENVIRONMENT==='production'&&request.headers.get('origin')!=='https://ekodi.kr')return json({ok:false,error:'origin_not_allowed'},403);
+  if(env?.ENVIRONMENT==='production'){const origin=request.headers.get('origin')||'';const allowed=new Set(['https://ekodi.kr','https://seonammedi.kr','https://www.seonammedi.kr','https://xn--3e0b8b58jw4co4mnpll3k.kr','https://www.xn--3e0b8b58jw4co4mnpll3k.kr']);if(!allowed.has(origin))return json({ok:false,error:'origin_not_allowed'},403);}
   if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable',message:'의견 접수 저장소를 사용할 수 없습니다.'},503);
   const contentLength=Number(request.headers.get('content-length')||0);
   if(contentLength>16384)return json({ok:false,error:'payload_too_large'},413);
@@ -46,10 +49,10 @@ export async function handleSeonamMediCivicApi(request,env){
   if(body?.privacyConsent!==true)return json({ok:false,error:'privacy_consent_required',message:'개인정보 처리 동의가 필요합니다.'},400);
   await ensureSchema(env.DB);
   const requestFingerprint=await fingerprint(request);
-  const recent=await env.DB.prepare(`SELECT count(*) AS count FROM seonam_med_civic_voices WHERE request_fingerprint=? AND unixepoch(created_at)>=unixepoch('now')-3600`).bind(requestFingerprint).first();
+  const recent=await env.DB.prepare(`SELECT count(*) AS count FROM seonammedi_civic_voices WHERE request_fingerprint=? AND unixepoch(created_at)>=unixepoch('now')-3600`).bind(requestFingerprint).first();
   if(Number(recent?.count||0)>=8)return json({ok:false,error:'rate_limited',message:'잠시 후 다시 접수해 주세요.'},429);
   const now=new Date().toISOString();
-  const result=await env.DB.prepare(`INSERT INTO seonam_med_civic_voices
+  const result=await env.DB.prepare(`INSERT INTO seonammedi_civic_voices
     (category,display_name,contact,message,public_consent,privacy_consent,review_status,request_fingerprint,created_at,updated_at)
     VALUES (?,?,?,?,?,1,'received',?,?,?)`)
     .bind(category,displayName,contact,message,publicConsent,requestFingerprint,now,now).run();
