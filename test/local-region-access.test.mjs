@@ -55,6 +55,12 @@ test('Cheonggye Pass public remains public while admin is scoped by auth',async(
   const publicHtml=await regionalCommerceProgramPublicPage(region,program).text();
   const adminHtml=await regionalCommerceProgramAdminPage(region,program).text();
   assert.doesNotMatch(publicHtml,/local-region-admin-auth\.js/);
+  assert.match(publicHtml,/<link rel="canonical" href="https:\/\/ekodi\.kr\/cheonggye\/pass">/);
+  assert.match(publicHtml,/<meta property="og:url" content="https:\/\/ekodi\.kr\/cheonggye\/pass">/);
+  assert.match(publicHtml,/서비스 준비 중/);
+  assert.doesNotMatch(publicHtml,/외부 연동 준비|공급자 미선정|표준 어댑터|직접 DB 접근|운영관리/);
+  assert.doesNotMatch(publicHtml,/\/cheonggye\/admin/);
+  assert.doesNotMatch(adminHtml,/rel="canonical"/);
   assert.match(adminHtml,/data-region-auth-pending="1"/);
   assert.match(adminHtml,/local-region-admin-auth\.js/);
   assert.match(adminHtml,/data-region-capability="tenant\.integration\.inspect"/);
