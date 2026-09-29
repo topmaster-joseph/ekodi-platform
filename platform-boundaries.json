@@ -31,7 +31,6 @@
       "source": [
         "my/**",
         "my-worker.js",
-        "person-digital-card.js",
         "wrangler.my.toml",
         "wrangler.my.staging.toml"
       ],
@@ -44,7 +43,7 @@
         "Supabase Auth",
         "central auth hub"
       ],
-      "database": "Supabase person/workspace views, private digital-card/contact-exchange data, and person-scoped portfolio data"
+      "database": "Supabase person/workspace views and person-scoped portfolio data"
     },
     "management": {
       "kind": "management-platform-core",
