@@ -3,6 +3,7 @@ import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 import { routeIntent } from './capability-intent-runtime.js';
 import capabilityRegistry from './config/capability-registry.json' with { type: 'json' };
 import workspacePacks from './config/workspace-packs.json' with { type: 'json' };
+import { routePersonDigitalCard } from './person-digital-card.js';
 
 const WORKSPACE_KEY_RE=/^[a-z]+:[a-zA-Z0-9:_-]+$/;
 const SERVICE_ID_RE=/^[a-z][a-z0-9-]*$/;
@@ -288,6 +289,8 @@ async function routedMyHome(request,env,route=null){
 export default{
   async fetch(request,env){
     const url=new URL(request.url);
+    const digitalCardResponse=await routePersonDigitalCard(request,env);
+    if(digitalCardResponse)return digitalCardResponse;
     const publicHandle=parsePublicPersonPath(url.pathname);
     if(publicHandle)return servePublicProfile(request,env,publicHandle);
     const canonicalAsset=CANONICAL_MY_ASSET_ALIASES.get(url.pathname);
@@ -308,7 +311,7 @@ export default{
     if(url.pathname==='/life-channels.json')return json(env,{version:1,policy:'opt-in-least-privilege',proactiveLevels:['quiet','balanced','active'],outboundDefault:'human-approval',channels:[{id:'email',availability:'connector-ready'},{id:'sms',availability:'mobile-bridge-required'},{id:'kakao',availability:'official-api-limited'},{id:'instagram',availability:'provider-permission'},{id:'facebook',availability:'provider-permission'},{id:'slack',availability:'connector-ready'}]});
     if(url.pathname==='/health'){
       const cfg=runtimeConfig(env);
-      return json(env,{ok:true,service:'ekodi-my',product:'my-ekodi',identity:'person-scoped',creatorPortfolio:true,personalBrandMarketing:true,publicPersonPage:true,publicPersonPath:'/@{handle}',publicPersonManagement:'/my/#account',universalMembership:true,centralAiEntitlements:true,aiEntitlementManager:'/my/',ekodiShell:true,contextModel:'person-space-role',manifestDrivenServices:true,privateWorkspaceRouting:true,privateWorkspacePath:'/w/{workspace_key}/{service}',accessContextGuidance:true,lifeChannels:true,proactiveUserAi:true,progressivePersonalization:true,characterIdentityPersonalization:true,characterPortraitStorage:'local-device-only',intentOs:true,intentPlanContract:'ekodi.intent-plan.v1',intentExecutionBridge:true,intentExecutionContract:'ekodi.intent-execution.v1',capabilityRegistry:'universal-v3',personalizationPolicy:'detect-suggest-consent-activate-learn-fade',personalizationAuthority:'presentation-only',humanGatedOutbound:true,approvalHub:true,approvalPath:'/approvals/',documentWorkspace:true,documentPath:'/docs/',documentCapability:'core.documents',documentContract:'ekodi.documents.v2',documentHwpx:true,documentVersionHistory:true,documentStorage:'person-scoped-rls',documentFormats:{import:['txt','markdown','html','docx','hwpx'],export:['docx','hwpx','html','markdown','txt','pdf']},personalFinanceControl:true,personalFinanceBoundary:'dedicated-d1',serviceManifestVersion:EKODI_SERVICE_MANIFEST.version,visibleServices:visibleServices().length,privacy:'private-first',dataMode:cfg.dataMode,dataEnabled:cfg.dataEnabled});
+      return json(env,{ok:true,service:'ekodi-my',product:'my-ekodi',identity:'person-scoped',creatorPortfolio:true,personalBrandMarketing:true,publicPersonPage:true,publicPersonPath:'/@{handle}',digitalCard:true,digitalCardPath:'/{handle}/card',digitalCardQrPath:'/{handle}/qr',contactExchange:true,publicPersonManagement:'/my/#account',universalMembership:true,centralAiEntitlements:true,aiEntitlementManager:'/my/',ekodiShell:true,contextModel:'person-space-role',manifestDrivenServices:true,privateWorkspaceRouting:true,privateWorkspacePath:'/w/{workspace_key}/{service}',accessContextGuidance:true,lifeChannels:true,proactiveUserAi:true,progressivePersonalization:true,characterIdentityPersonalization:true,characterPortraitStorage:'local-device-only',intentOs:true,intentPlanContract:'ekodi.intent-plan.v1',intentExecutionBridge:true,intentExecutionContract:'ekodi.intent-execution.v1',capabilityRegistry:'universal-v3',personalizationPolicy:'detect-suggest-consent-activate-learn-fade',personalizationAuthority:'presentation-only',humanGatedOutbound:true,approvalHub:true,approvalPath:'/approvals/',documentWorkspace:true,documentPath:'/docs/',documentCapability:'core.documents',documentContract:'ekodi.documents.v2',documentHwpx:true,documentVersionHistory:true,documentStorage:'person-scoped-rls',documentFormats:{import:['txt','markdown','html','docx','hwpx'],export:['docx','hwpx','html','markdown','txt','pdf']},personalFinanceControl:true,personalFinanceBoundary:'dedicated-d1',serviceManifestVersion:EKODI_SERVICE_MANIFEST.version,visibleServices:visibleServices().length,privacy:'private-first',dataMode:cfg.dataMode,dataEnabled:cfg.dataEnabled});
     }
     if(url.pathname==='/approvals')return Response.redirect(new URL('/approvals/',request.url).toString(),307);
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/workspaces/workspace?source=my',307);
