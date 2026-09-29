@@ -10,6 +10,7 @@ test('CMPMYI POS Agent download gateway exposes only fixed lifecycle files',()=>
   assert.equal(isStorePosAgentDownloadPath('/cmpmyi/admin/agent/download/remove-pos-agent.cmd'),true);
   assert.equal(isStorePosAgentDownloadPath('/cmpmyi/admin/agent/download/not-allowed.exe'),false);
   assert.equal(isStorePosAgentDownloadPath('/cmpmyi/admin/agent/download/../secret'),false);
+  assert.equal(isStorePosAgentDownloadPath('/cmpmyi/admin/agent/download/%E0%A4%A'),false);
 });
 
 test('CMPMYI POS Agent download gateway returns attachment headers without accepting arbitrary sources',async()=>{
