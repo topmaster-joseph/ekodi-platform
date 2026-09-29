@@ -13,7 +13,7 @@ export const PLATFORM_SYSTEM_PATHS=Object.freeze(['/api','/mcp','/webhooks','/he
 
 export const PLATFORM_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'shell',prefix:'/shell',binding:'SHELL',basePathAware:true}),
-  Object.freeze({id:'mission-application',prefix:'/ekodimission/api/activities/260926-chuseok-open-table/applications',binding:'SPACE',preservePrefix:true,basePathAware:true}),
+  Object.freeze({id:'mission-application',prefix:'/ekodimission/api/activities',binding:'SPACE',preservePrefix:true,basePathAware:true}),
   Object.freeze({id:'ai',prefix:'/ai',binding:'AI',virtualHost:platformHost('ai')}),
   Object.freeze({id:'author',prefix:'/author',binding:'AUTHOR',virtualHost:platformHost('author')}),
   Object.freeze({id:'bible',prefix:'/bible',binding:'BIBLE',basePathAware:true}),
