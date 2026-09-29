@@ -24,6 +24,18 @@ test('device admin shows status and attention before setup controls', async () =
   assert.match(source, /확인 필요 \$\{issues\.length\}대/);
   assert.match(source, /세부 관리 · 고급 작업/);
   assert.match(source, /LOCAL COMPUTERS · DEVICES/);
+  assert.doesNotMatch(source, /id="deviceMetric(?:Total|Online|Issues|Health|Queued)">—/);
+  assert.match(source, /setDeviceLoadState\('loading'\)/);
+  assert.match(source, /조회 실패/);
+  assert.match(source, /data-device-retry/);
+  assert.match(source, /미측정/);
+});
+
+test('device browser diagnostics run automatically without server upload', async () => {
+  const source = await read('device-browser-diagnostics.js');
+  assert.match(source, /자동 진단 준비/);
+  assert.match(source, /queueMicrotask\(\(\) => diagnoseButton\.click\(\)\)/);
+  assert.match(source, /서버 업로드 없음/);
 });
 
 test('shared admin design engine carries the information hierarchy across admin surfaces', async () => {
@@ -55,4 +67,3 @@ test('all admin surfaces inherit compact readable density and left-anchored work
   assert.match(workbench, /min-width:156px!important/);
   assert.match(workbench, /text-overflow:clip!important/);
 });
-
