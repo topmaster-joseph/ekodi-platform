@@ -17,6 +17,25 @@ test('all authenticated Admin surfaces inherit the EKODI readability base', asyn
   assert.match(css, /:focus-visible/);
 });
 
+test('shared Admin legibility floor protects feature panels from dense local CSS', async () => {
+  const css = await read('admin-design-engine.css');
+  assert.match(css, /ADMIN-READABILITY-006/);
+  assert.match(css, /body\.admin-compact\.ekodi-admin-design-engine \.content \[data-panel\]:not\(\.campus-preview-page\) :where\(p,li,dd\)\{[\s\S]*?font-size:14px!important/);
+  assert.match(css, /:where\(small,\.muted,\.subtle,\[class\$="-meta"\],\[class\$="-note"\],\[class\$="-status"\]\)\{[\s\S]*?font-size:12px!important/);
+  assert.match(css, /:where\(button,\[role="button"\],summary,a\)\{[\s\S]*?font-size:14px!important/);
+  assert.match(css, /@media\(max-width:760px\)[\s\S]*?font-size:15px!important/);
+});
+
+test('Work recruiting Admin keeps operational text above the common minimum', async () => {
+  const css = await read('work-admin.css');
+  assert.match(css, /WORK-RECRUITING-READABILITY-003/);
+  assert.match(css, /\.work-admin-view-copy\{[\s\S]*?font-size:14px!important/);
+  assert.match(css, /\.work-admin-table td\{[\s\S]*?font-size:14px!important/);
+  assert.match(css, /\.work-admin-cell-main strong\{[^}]*font-size:14px!important/);
+  assert.match(css, /\.work-admin-row-actions button\{font-size:13px!important\}/);
+  assert.match(css, /\.work-admin-rail-button small\{[\s\S]*?font-size:12px!important/);
+});
+
 test('service-level tabs remain readable on desktop and mobile', async () => {
   const css = await read('admin-ui-principles.css');
   assert.match(css, /\.marketing-ai-console-tabs button\{[\s\S]*?min-height:40px!important[\s\S]*?font-size:14px!important/);

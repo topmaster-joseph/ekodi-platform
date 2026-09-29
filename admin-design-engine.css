@@ -245,3 +245,36 @@ body.admin-compact.ekodi-admin-design-engine [data-admin-context-rail="true"] sm
   font-size:11px!important;
   line-height:1.4!important;
 }
+
+/* ADMIN-READABILITY-006 · common post-auth Admin legibility floor
+ * Applies through the shared post-auth Design Engine to every platform, tenant, service and subsite Admin panel.
+ * Functional labels, status text and body copy must remain readable even when a feature ships denser local CSS.
+ * Miniature previews are intentionally excluded because they are visual previews, not administrator controls.
+ */
+body.admin-compact.ekodi-admin-design-engine .content [data-panel]:not(.campus-preview-page) :where(p,li,dd){
+  font-size:14px!important;
+  line-height:1.5!important;
+  color:var(--ekodi-admin-subtext)!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel]:not(.campus-preview-page) :where(small,.muted,.subtle,[class$="-meta"],[class$="-note"],[class$="-status"]){
+  font-size:12px!important;
+  line-height:1.45!important;
+  color:var(--ekodi-admin-muted)!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel]:not(.campus-preview-page) :where(button,[role="button"],summary,a){
+  font-size:14px!important;
+  line-height:1.35!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel]:not(.campus-preview-page) :where(.badge,[class$="-badge"]){
+  font-size:12px!important;
+  line-height:1.35!important;
+  font-weight:750!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel]:not(.campus-preview-page) :where(h4,h5,h6){
+  color:var(--ekodi-admin-text)!important;
+}
+@media(max-width:760px){
+  body.admin-compact.ekodi-admin-design-engine .content [data-panel]:not(.campus-preview-page) :where(p,li,dd){font-size:15px!important}
+  body.admin-compact.ekodi-admin-design-engine .content [data-panel]:not(.campus-preview-page) :where(button,[role="button"],summary,a){font-size:15px!important}
+  body.admin-compact.ekodi-admin-design-engine .content [data-panel]:not(.campus-preview-page) :where(small,.muted,.subtle,[class$="-meta"],[class$="-note"],[class$="-status"],.badge,[class$="-badge"]){font-size:12px!important}
+}
