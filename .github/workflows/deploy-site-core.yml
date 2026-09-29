@@ -75,6 +75,8 @@ on:
       - 'sites/seonammedi/public/**'
       - 'seonammedi-monitor.js'
       - 'seonammedi-civic-control.js'
+      - 'seonammedi-admin-control.js'
+      - 'migrations/0113_seonammedi_site_admin.sql'
       - 'test/seonammedi-site.test.mjs'
       - 'test/insurance-public-route.test.mjs'
       - 'test/discovery-layer.test.mjs'
