@@ -216,7 +216,7 @@ export async function handleSeonamMediAdminApi(request,env){
   if(match&&request.method==='PUT')return updateNotice(request,env,auth,Number(match[1]));
   if(match&&request.method==='DELETE')return deleteNotice(env,auth,Number(match[1]));
   if(url.pathname===PREFIX+'/admin/content'&&request.method==='GET')return listAdminContent(env,auth);
-  let contentMatch=url.pathname.match(/^\\/api\\/seonam-medi\\/admin\\/content\\/(\\d+)$/);
+  let contentMatch=url.pathname.match(/^\/api\/seonam-medi\/admin\/content\/(\d+)$/);
   if(contentMatch&&request.method==='PUT')return updateAdminContent(request,env,auth,Number(contentMatch[1]));
   if(url.pathname===PREFIX+'/admin/channels'&&request.method==='GET')return listAdminChannels(env,auth);
   if(url.pathname===PREFIX+'/admin/channels'&&request.method==='POST')return createChannel(request,env,auth);
