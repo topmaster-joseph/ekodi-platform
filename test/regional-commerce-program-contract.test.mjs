@@ -51,4 +51,6 @@ test('Cheonggye Pass routes are claimed before generic regional fallback',async(
   assert.ok(passProbe);
   assert.ok(passProbe.expect.includes('서비스 준비 중'));
   assert.equal(passProbe.expect.includes('외부 연동 준비'),false);
+  assert.ok(passProbe.expect.includes('참여점포'));
+  assert.equal(passProbe.expect.includes('가맹점'),false);
 });
