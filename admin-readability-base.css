@@ -39,3 +39,37 @@ body.admin-compact #userAiMembershipPanel .uam-error{font-size:14px!important;li
 /* Preserve miniature site previews as previews; readability rules target the admin controls around them. */
 body.admin-compact .campus-preview-page,body.admin-compact .campus-preview-page *{text-rendering:auto}
 @media(max-width:760px){body.admin-compact{font-size:16px!important}body.admin-compact .topbar h1{font-size:21px!important}body.admin-compact .nav{min-height:48px!important}body.admin-compact .nav span{font-size:15px!important}body.admin-compact .content h2{font-size:22px!important}body.admin-compact .content h3{font-size:18px!important}body.admin-compact .content [data-panel] th{font-size:13px!important}body.admin-compact .content [data-panel] td{font-size:14px!important}body.admin-compact .content [data-panel] input:not([type="checkbox"]):not([type="radio"]),body.admin-compact .content [data-panel] select,body.admin-compact .content [data-panel] textarea{font-size:16px!important;min-height:46px!important}body.admin-compact #userAiMembershipPanel .uam-head h2{font-size:26px!important}body.admin-compact #userAiMembershipPanel .uam-head p{font-size:15px!important}body.admin-compact #userAiMembershipPanel .uam-note{font-size:13px!important}}
+
+
+/* ADMIN-READABILITY-006 · common Admin legibility floor
+ * Applies to every authenticated platform, tenant, service and subsite Admin panel.
+ * Functional labels, status text and body copy must remain readable even when a feature ships denser local CSS.
+ * Miniature previews are intentionally excluded because they are visual previews, not administrator controls.
+ */
+body.admin-compact .content [data-panel]:not(.campus-preview-page) :where(p,li,dd){
+  font-size:14px!important;
+  line-height:1.5!important;
+  color:var(--ekodi-admin-subtext)!important;
+}
+body.admin-compact .content [data-panel]:not(.campus-preview-page) :where(small,.muted,.subtle,[class$="-meta"],[class$="-note"],[class$="-status"]){
+  font-size:12px!important;
+  line-height:1.45!important;
+  color:var(--ekodi-admin-muted)!important;
+}
+body.admin-compact .content [data-panel]:not(.campus-preview-page) :where(button,[role="button"],summary,a){
+  font-size:14px!important;
+  line-height:1.35!important;
+}
+body.admin-compact .content [data-panel]:not(.campus-preview-page) :where(.badge,[class$="-badge"]){
+  font-size:12px!important;
+  line-height:1.35!important;
+  font-weight:750!important;
+}
+body.admin-compact .content [data-panel]:not(.campus-preview-page) :where(h4,h5,h6){
+  color:var(--ekodi-admin-text)!important;
+}
+@media(max-width:760px){
+  body.admin-compact .content [data-panel]:not(.campus-preview-page) :where(p,li,dd){font-size:15px!important}
+  body.admin-compact .content [data-panel]:not(.campus-preview-page) :where(button,[role="button"],summary,a){font-size:15px!important}
+  body.admin-compact .content [data-panel]:not(.campus-preview-page) :where(small,.muted,.subtle,[class$="-meta"],[class$="-note"],[class$="-status"],.badge,[class$="-badge"]){font-size:12px!important}
+}
