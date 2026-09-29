@@ -2018,7 +2018,11 @@
           "원출처 링크",
           "후원·회계 공개"
         ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "headerExpect": [
+          "x-ekodi-route: seonam-medi-static",
+          "x-robots-tag: index, follow"
+        ]
       },
       {
         "url": "https://ekodi.kr/seonam-medi/app.js",
