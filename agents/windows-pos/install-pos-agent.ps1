@@ -74,8 +74,18 @@ try {
   $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $arguments
   $trigger = New-ScheduledTaskTrigger -AtLogOn -User $userName
   $principal = New-ScheduledTaskPrincipal -UserId $userName -LogonType Interactive -RunLevel Highest
-  $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartCount 5 -RestartInterval (New-TimeSpan -Seconds 20) -ExecutionTimeLimit ([TimeSpan]::Zero)
-  Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
+  $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartCount 5 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero)
+  try {
+    Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
+  } catch {
+    if ($_.Exception.HResult -eq -2147216616 -or $_.Exception.Message -match '0x80041318|XML.*범위|XML.*out of range|formatted or out of range') {
+      Write-Host 'Task Scheduler rejected the restart interval. Retrying with compatibility-safe settings.' -ForegroundColor Yellow
+      $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero)
+      Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
+    } else {
+      throw
+    }
+  }
 
   if (-not $NoStart) {
     Start-ScheduledTask -TaskName $TaskName
