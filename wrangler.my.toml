@@ -12,6 +12,13 @@ SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 AUTH_URL = "https://auth.ekodi.kr/?site=my"
 
+[[ratelimits]]
+name = "CARD_EXCHANGE_RATE_LIMITER"
+namespace_id = "3905"
+[ratelimits.simple]
+limit = 8
+period = 60
+
 [assets]
 directory = "./my"
 binding = "ASSETS"

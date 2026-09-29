@@ -54,7 +54,10 @@
           "core.documents",
           "ekodi.documents.v2",
           "documentHwpx",
-          "documentVersionHistory"
+          "documentVersionHistory",
+          "digitalCard",
+          "digitalCardPath",
+          "contactExchange"
         ]
       },
       {
@@ -116,6 +119,20 @@
           "HWPX",
           "버전",
           "./docs.js?v=20260909-docs-ai-6"
+        ]
+      },
+      {
+        "url": "https://ekodi-my.topmaster-joseph.workers.dev/ekodi-card-probe/card",
+        "statuses": [
+          404
+        ],
+        "redirect": "manual",
+        "expect": [
+          "디지털 명함이 아직 공개되지 않았습니다."
+        ],
+        "headerExpect": [
+          "x-ekodi-surface-context: person-digital-card",
+          "x-robots-tag: noindex, nofollow, noarchive"
         ]
       }
     ]

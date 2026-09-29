@@ -109,6 +109,7 @@ async function save(event){
     const profile=await rpc('set_my_public_profile',payload);
     apply(profile);
     status(profile?.visibility==='public'?'저장되었습니다. 공개 페이지에 반영됩니다.':'저장되었습니다. 현재는 비공개입니다.','success');
+    window.dispatchEvent(new CustomEvent('ekodi:public-profile-updated',{detail:profile}));
   }catch(error){status(error?.message||'저장하지 못했습니다.','error')}
   finally{setDisabled(false);if(fields.save)fields.save.textContent=label}
 }

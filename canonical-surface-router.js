@@ -8,6 +8,7 @@ const SYSTEM_PATHS=PLATFORM_SYSTEM_PATHS;
 const PUBLIC_EXECUTION_SURFACES=PLATFORM_EXECUTION_SURFACES;
 const CANONICAL_HOST_PATHS=PLATFORM_LEGACY_HOST_PATHS;
 const PUBLIC_PERSON_PATH_RE=/^\/@[a-z0-9][a-z0-9._-]{2,39}\/?$/;
+const PERSON_DIGITAL_CARD_PATH_RE=/^\/[a-z0-9][a-z0-9._-]{2,39}\/(?:card(?:\.vcf|\/exchange)?|qr)\/?$/;
 const PERSONAL_FINANCE_CONTROL_PATH='/api/control/personal-finance';
 const PUBLIC_CONTROL_PREVIEW_PATH='/api/public/preview/map';
 const PUBLIC_CONTROL_PREVIEW_CACHE='public, max-age=15, s-maxage=30, stale-while-revalidate=60';
@@ -264,6 +265,7 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
   }
   const executionSurface=executionSurfaceForPath(path);if(executionSurface){const response=await proxyExecutionSurface(request,env,executionSurface,legacyFetch,externalFetch);return executionSurface.id==='lab'?injectEkodiTenantReadability(response):response;}
   if(PUBLIC_PERSON_PATH_RE.test(path))return proxyBinding(request,env?.MY,'','person-public-profile');
+  if(PERSON_DIGITAL_CARD_PATH_RE.test(path))return proxyBinding(request,env?.MY,'','person-digital-card');
   if(path===SURFACE_PREFIXES.my)return canonicalSlashRedirect(request,SURFACE_PREFIXES.my);
   if(path.startsWith(`${SURFACE_PREFIXES.my}/`))return proxyBinding(request,env?.MY,SURFACE_PREFIXES.my,'my');
   if(path===SURFACE_PREFIXES.auth)return canonicalSlashRedirect(request,SURFACE_PREFIXES.auth);
