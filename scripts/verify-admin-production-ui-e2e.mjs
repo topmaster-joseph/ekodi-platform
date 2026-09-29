@@ -153,10 +153,8 @@ const workbenchState = await page.evaluate(() => {
     navIndependentScroll: nav?.dataset.ekodiIndependentScroll || '',
     workspaceOverflowY: style(workspace)?.overflowY || '',
     workspaceScrollOwner: workspace?.dataset.ekodiScrollOwner || '',
-    contextTabsPosition: style(contextTabs)?.position || '',
-    contextTabsTop: style(contextTabs)?.top || '',
-    contextTabsDisplay: style(contextTabs)?.display || '',
-    commandEntryDisplay: style(nav?.querySelector('.admin-command-entry'))?.display || '',
+    contextTabsCount: contextTabs ? 1 : 0,
+    commandEntryCount: nav?.querySelector('.admin-command-entry') ? 1 : 0,
     sidebarTop: sidebarRect ? Math.round(sidebarRect.top) : null,
     designAudit: document.documentElement.dataset.ekodiDesignAudit || '',
     designEngine: document.documentElement.dataset.ekodiDesignEngine || '',
@@ -166,8 +164,8 @@ if (workbenchState.topOffset > 0.5) throw new Error(`Admin top offset leaked int
 if (workbenchState.bodyOverflowY !== 'hidden' || workbenchState.appOverflowY !== 'hidden') throw new Error(`Admin frame must be scroll-locked: ${JSON.stringify(workbenchState)}`);
 if (workbenchState.sidebarOverflowY !== 'hidden' || !['auto','scroll'].includes(workbenchState.navOverflowY) || workbenchState.navIndependentScroll !== 'platform-admin') throw new Error(`Admin role-projected sidebar scroll contract failed: ${JSON.stringify(workbenchState)}`);
 if (!['auto','scroll'].includes(workbenchState.workspaceOverflowY) || workbenchState.workspaceScrollOwner !== 'workspace') throw new Error(`Admin workspace content scroll contract failed: ${JSON.stringify(workbenchState)}`);
-if (workbenchState.contextTabsPosition !== 'sticky' || workbenchState.sidebarTop !== 0) throw new Error(`Admin fixed workbench geometry failed: ${JSON.stringify(workbenchState)}`);
-if (workbenchState.contextTabsDisplay !== 'none' || workbenchState.commandEntryDisplay !== 'none') throw new Error(`Admin redundant navigation chrome is visible: ${JSON.stringify(workbenchState)}`);
+if (workbenchState.sidebarTop !== 0) throw new Error(`Admin fixed workbench geometry failed: ${JSON.stringify(workbenchState)}`);
+if (workbenchState.contextTabsCount !== 0 || workbenchState.commandEntryCount !== 0) throw new Error(`Admin retired navigation DOM still exists: ${JSON.stringify(workbenchState)}`);
 if (!workbenchState.designEngine || workbenchState.designAudit === 'fail') throw new Error(`Admin Design Engine did not activate cleanly: ${JSON.stringify(workbenchState)}`);
 console.log(`ADMIN_WORKBENCH=${JSON.stringify(workbenchState)}`);
 await page.screenshot({ path:path.join(artifactsDir,'admin-workbench.png'), fullPage:false });
