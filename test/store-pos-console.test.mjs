@@ -37,7 +37,7 @@ test('Store Admin exposes the POS console without weakening store scope',async()
 });
 
 test('Windows POS Agent is loopback-only and focus is explicit-user-action only',()=>{
-  assert.match(agent,/\^http:\/\/\(127\\\.0\\\.0\\\.1\|localhost\):\\d\+\/$/);
+  assert.ok(agent.includes("$prefix -notmatch '^http://(127\\.0\\.0\\.1|localhost):\\d+/$'"));
   assert.match(agent,/Access-Control-Allow-Private-Network/);
   assert.match(agent,/https:\/\/ekodi\.kr/);
   assert.match(agent,/focusMode = 'explicit_user_action_only'/);
