@@ -27,7 +27,7 @@ const EKODIBIZ_ADMIN_SCOPE_DEFINITIONS = [
   {
     id: 'books', label: '에코디북스', shortLabel: '북스',
     description: '출판물·상담·출판대행·가격·기능 노출을 관리합니다.',
-    adminHref: '/books/admin?source=ekodibiz', publicHref: '/books', kind: 'workspace',
+    adminHref: '/admin/?route=books&source=ekodibiz', publicHref: '/books', kind: 'workspace',
   },
   {
     id: 'lab', label: '에코디연구소', shortLabel: '연구소',

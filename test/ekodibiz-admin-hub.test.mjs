@@ -18,7 +18,7 @@ test('EKODIBIZ admin hub registers common and independent service management sco
   assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='invest')?.publicHref,'/ekodibiz/invest');
   assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='tax')?.adminHref,'/tax');
   assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='books')?.label,'에코디북스');
-  assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='books')?.adminHref,'/books/admin?source=ekodibiz');
+  assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='books')?.adminHref,'/admin/?route=books&source=ekodibiz');
   assert.equal(ekodiBizAdminScopeForPath('/books/admin/catalog'),'books');
   assert.equal(ekodiBizAdminScopeForPath('/tax'),'tax');
   assert.equal(ekodiBizAdminScopeForPath('/tax/invoices'),'tax');
@@ -32,7 +32,7 @@ test('Tax and Books preserve the single EKODIBIZ site-switch pattern',async()=>{
   assert.match(tax,/id="ekodibizSiteSwitcher"/);
   assert.match(tax,/사이트 전환/);
   assert.match(tax,/scope\.id==='tax'/);
-  assert.match(registry,/\/books\/admin\?source=ekodibiz/);
+  assert.match(registry,/\/admin\/\?route=books&source=ekodibiz/);
 });
 
 test('workspace and trade admins expose scope handoff only through full authority',async()=>{
