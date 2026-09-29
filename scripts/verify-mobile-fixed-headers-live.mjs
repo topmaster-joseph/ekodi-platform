@@ -61,12 +61,15 @@ async function audit(){
   need(adminCss,'admin','.app>main{padding-top:0;min-width:0;max-width:100vw}',errors);
   need(adminCss,'admin','.topbar{position:sticky!important;top:0!important;left:auto!important;right:auto!important;width:100%!important',errors);
   http(shell,'ekodi.kr/shell/shell.js',errors);
-  for(const marker of ['ekodi-mobile-fixed-header-style','data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important'])need(shell,'shell',marker,errors);
+  for(const marker of ['ekodi-mobile-fixed-header-style','data-ekodi-mobile-header-spacer','ResizeObserver'])need(shell,'shell',marker,errors);
   http(mobileHeader,'ekodi.kr/shell/mobile-fixed-header.js',errors);
-  for(const marker of ['data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important'])need(mobileHeader,'mobile-header-asset',marker,errors);
+  for(const marker of ['data-ekodi-mobile-header-spacer','ResizeObserver'])need(mobileHeader,'mobile-header-asset',marker,errors);
   http(readabilityCss,'ekodi.kr/shell/user-ui-shell.css',errors);
   need(readabilityCss,'tenant-readability-css','Brand-neutral tenant readability v1',errors);
   need(readabilityCss,'tenant-readability-css','data-ekodi-tenant-readability="v1"',errors);
+  need(readabilityCss,'tenant-readability-css','CSP-safe runtime convergence v1',errors);
+  need(readabilityCss,'tenant-readability-css','.ekodi-mobile-fixed-header',errors);
+  need(readabilityCss,'tenant-readability-css','position:fixed!important',errors);
   http(liveManifest,'ekodi.kr/shell/manifest.json',errors);
   let productionManifest=null;
   try{productionManifest=JSON.parse(liveManifest.text)}catch{errors.push('shell-manifest:invalid-json')}

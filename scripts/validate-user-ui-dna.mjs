@@ -177,10 +177,14 @@ if(shell?.footer?.languageChoice!=='forbidden'||shell?.language?.placement!=='he
 if(shell?.language?.controlGeometry!=='pill'||shell?.language?.visibleIcon!==false||shell?.language?.visibleLabel!==false){
   errors.push('Shared header language control must be pill-shaped with no visible globe icon or Language label.');
 }
-for(const marker of ['ekodi_locale','data-ekodi-language-control','ekodi:locale-change','document.documentElement.lang','ko-KR','zh-CN','ekodi-user-language-style','appearance:none!important','FALLBACK_LOCALE','removeFooterLanguageControls','LEGACY_LANGUAGE_WIDGET_SELECTOR','data-ekodi-language-notice','isLocaleReady','visibleLanguages','refreshRuntimeReadiness','/api/i18n/v1']){
+for(const marker of ['ekodi_locale','data-ekodi-language-control','ekodi:locale-change','document.documentElement.lang','ko-KR','zh-CN','ekodi-user-language-style','FALLBACK_LOCALE','removeFooterLanguageControls','LEGACY_LANGUAGE_WIDGET_SELECTOR','data-ekodi-language-notice','isLocaleReady','visibleLanguages','refreshRuntimeReadiness','/api/i18n/v1']){
   if(!userLanguageSource.includes(marker))errors.push(`Shared user language runtime lost required marker: ${marker}`);
 }
 if(userLanguageSource.includes('function placeFooterControl'))errors.push('Shared user language runtime must not render a footer language selector.');
+if(userLanguageSource.includes("createElement('style')"))errors.push('Shared user language runtime must not inject inline style blocks under strict CSP.');
+for(const marker of ['.ekodi-user-language[data-ekodi-language-control]','appearance:none!important','-webkit-text-fill-color:#20362b!important','.ekodi-mobile-fixed-header','CSP-safe runtime convergence v1']){
+  if(!userUiStyle.includes(marker))errors.push(`Shared CSP-safe user UI stylesheet lost runtime marker: ${marker}`);
+}
 if(userUiStyle.includes('[data-ekodi-language-placement=\"footer\"]'))errors.push('Shared user UI stylesheet must not preserve footer language selector placement.');
 if(shell?.ambientAudio?.owner!=='shared-shell'||shell?.ambientAudio?.runtime!=='shell/ccm-mr-player.js'||shell?.ambientAudio?.contentOverlapForbidden!==true||shell?.ambientAudio?.adminExcluded!==true){
   errors.push('Shared ambient audio control must be Shell-owned, avoid content overlap and exclude admin surfaces.');

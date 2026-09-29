@@ -26,3 +26,6 @@
 @media(max-width:760px){.ekodi-main-ekodian{--ekodi-character-width:clamp(92px,28vw,126px);max-width:126px!important;opacity:.91}.ekodi-main-ekodian[data-ekodi-character-size="compact"]{--ekodi-character-width:clamp(76px,22vw,104px);max-width:104px!important}.ekodi-main-ekodian[data-ekodi-character-size="mini"]{--ekodi-character-width:68px;max-width:68px!important;opacity:.86}}
 @media(max-width:420px){.ekodi-main-ekodian{--ekodi-character-width:88px;max-width:88px!important;opacity:.88}.ekodi-main-ekodian[data-ekodi-character-size="compact"]{--ekodi-character-width:74px;max-width:74px!important}.ekodi-main-ekodian[data-ekodi-character-size="mini"]{--ekodi-character-width:62px;max-width:62px!important;opacity:.84}}
 @media(prefers-reduced-motion:reduce){.ekodi-main-ekodian{transition:none!important}.ekodi-main-ekodian .ekodian-body{animation:none!important}}
+
+/* Runtime measurement is represented with data state, not an inline visibility style. */
+.ekodi-main-ekodian[data-ekodi-character-measuring="true"]{visibility:hidden!important}

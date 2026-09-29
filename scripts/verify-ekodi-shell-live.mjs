@@ -123,7 +123,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
     'window.EKODIShell','내 공간 · My EKODI','EKODI 다음 행동','suggestedServices','모든 서비스 보기','ekodi:public-experience',
     'window.EKODIUserUIHeader','window.EKODIUserUIFooter','__EKODI_USER_AI_ENTRY__','AI로 하기','window.EKODIMediaMeetingAdapter','https://ekodi.kr/social/api/media/youtube/status','window.__EKODI_USER_FOOTER_CONFIG__','user-footer.json','window.EKODICharacterRegistry','window.EKODICharacterIdentityRegistry','ekodi.ekodian-identity.v1','window.EKODIUserCharacter',
     'window.EKODIAdminUIShell','ekodi-admin-ui-shell-style','.side-brand','ekodi:admin-shell-ready',
-    'ekodi-mobile-fixed-header-style','data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important',
+    'ekodi-mobile-fixed-header-style','data-ekodi-mobile-header-spacer','ResizeObserver',
     'window.EKODIMessage','window.EKODIIllustration','ekodiIllustrationSystem','window.EKODIServiceDesign','ekodiDesignInheritance','--ekodi-service-accent',
     '__EKODI_ECOSYSTEM_LINK_COMPAT',"'ekodibiz.kr':'biz'",'window.__EKODI_LANGUAGE_REGISTRY__','https://ekodi.kr/api/i18n/v1','visibleLanguages','removeFooterLanguageControls','TRAFFIC_TELEMETRY','globalPrivacyControl','sendTrafficBeacon'
   ],failures);
@@ -150,7 +150,8 @@ for(let attempt=1;attempt<=attempts;attempt++){
   includesAll(styleResult.text,'workspace',['data-ekodi-shell-surface="workspace"','data-ekodi-document-surface'],failures);
   includesAll(userUiStyleResult.text,'user-ui-style',[
     '.ekodi-user-ui-header','.ekodi-user-ui-footer','.ekodi-user-ui-footer__copy','--ekodi-user-footer-background','[data-ekodi-user-header-spacer]',
-    '--ekodi-user-canvas-max: 1240px','--ekodi-user-content-inline-size','--ekodi-user-content-left','[data-ekodi-user-layout="centered-v1"]','margin-inline: auto;'
+    '--ekodi-user-canvas-max: 1240px','--ekodi-user-content-inline-size','--ekodi-user-content-left','[data-ekodi-user-layout="centered-v1"]','margin-inline: auto;',
+    'CSP-safe runtime convergence v1','.ekodi-mobile-fixed-header','.ekodi-user-language[data-ekodi-language-control]','position:fixed!important'
   ],failures);
 
   const statuses=results.map(item=>item.status).join('/');

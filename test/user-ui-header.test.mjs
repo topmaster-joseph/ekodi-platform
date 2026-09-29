@@ -28,9 +28,10 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(header,/async function siteChrome\(\)/);
   assert.match(header,/USER_SURFACES=new Set\(\['public','workspace'\]\)/);
   assert.match(header,/DISABLED_MODES=new Set\(\['off','hidden','immersive'\]\)/);
-  assert.match(header,/position:fixed!important/);
-  assert.match(header,/left:50%!important/);
-  assert.match(header,/text-align:center!important/);
+  assert.doesNotMatch(header,/createElement\('style'\)/);
+  assert.match(sharedCss,/\.ekodi-user-ui-header\s*\{[^}]*position:\s*fixed\s*!important/s);
+  assert.match(sharedCss,/\.ekodi-user-ui-header \.ekodi-user-ui-header-center\s*\{[^}]*left:\s*50%\s*!important/s);
+  assert.match(sharedCss,/\.ekodi-user-ui-header \.ekodi-user-ui-header-center\s*\{[^}]*text-align:\s*center\s*!important/s);
   assert.match(header,/data-ekodi-user-header-spacer/);
   assert.match(header,/--ekodi-user-header-height/);
   assert.match(header,/window\.EKODIUserUIHeader/);
@@ -67,6 +68,8 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(legacyMobileHeader,/function isAdminSurface\(\)/);
   assert.match(legacyMobileHeader,/isAdminSurface\(\)\)\{detach\(\);return;\}/);
   assert.match(legacyMobileHeader,/attributeFilter:\['data-ekodi-shell-surface'\]/);
+  assert.doesNotMatch(legacyMobileHeader,/createElement\('style'\)/);
+  assert.match(sharedCss,/\.ekodi-mobile-fixed-header\s*\{[^}]*position:fixed!important/s);
 
   assert.match(footerClient,/const VERSION=7/);
   assert.match(footerClient,/workspace-api\.ekodi\.kr\/v1\/site-chrome\/public/);
@@ -97,12 +100,13 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.doesNotMatch(userLanguage,/function placeFooterControl/);
   assert.match(userLanguage,/removeFooterLanguageControls/);
   assert.doesNotMatch(userLanguage,/icon\.textContent='🌐'/);
-  assert.match(userLanguage,/border-radius:999px/);
+  assert.doesNotMatch(userLanguage,/createElement\('style'\)/);
+  assert.match(sharedCss,/\.ekodi-user-language\[data-ekodi-language-control\][^}]*border-radius:999px!important/);
   assert.match(userLanguage,/data-ekodi-language-notice/);
   assert.match(userLanguage,/isLocaleReady/);
   assert.match(injector,/data-ekodi-ready-locales/);
   assert.match(injector,/x-ekodi-ready-locales/);
-  assert.match(userLanguage,/-webkit-text-fill-color:#20362b!important/);
+  assert.match(sharedCss,/-webkit-text-fill-color:#20362b!important/);
   assert.match(header,/data-ekodi-header-home/);
   assert.match(header,/serviceHomeUrl/);
   assert.match(header,/isIndividualSite/);
