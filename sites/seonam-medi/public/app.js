@@ -175,3 +175,23 @@ async function loadPublicManagedContent(){
   }
 }
 loadPublicManagedContent().catch(()=>{});
+
+async function loadCivicContent(){
+  try{
+    const response=await fetch('/api/seonam-medi/content',{cache:'no-store'});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.ok)throw new Error('content');
+    const notices=el('noticePublicList');
+    if(notices)notices.innerHTML=(data.notices||[]).length?(data.notices||[]).map(item=>'<article class="source notice-public-item">'+(item.pinned?'<span class="chip">상단고정</span>':'')+'<strong>'+escapeHtml(item.title)+'</strong>'+(item.body?'<p>'+escapeHtml(item.body)+'</p>':'')+'<small>'+escapeHtml(kstDate(item.publishedAt||item.updatedAt))+'</small></article>').join(''):'<p class="muted">등록된 공지가 없습니다.</p>';
+    const channels=el('channelPublicList');
+    if(channels){
+      const labels={youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',blog:'블로그',website:'웹사이트',other:'기타'};
+      const cats={official:'공식채널','related-org':'관련기관',media:'언론·자료',civic:'시민·단체',other:'기타'};
+      channels.innerHTML=(data.channels||[]).length?(data.channels||[]).map(item=>'<a class="channel-card" href="'+safeUrl(item.url)+'" target="_blank" rel="noopener noreferrer"><div class="channel-meta"><span>'+escapeHtml(labels[item.platform]||item.platform)+'</span><span>'+escapeHtml(cats[item.category]||item.category)+'</span>'+(item.official?'<span>공식</span>':'')+'</div><strong>'+escapeHtml(item.name)+'</strong><small>'+escapeHtml(item.note||'원문 채널 보기')+'</small></a>').join(''):'<p class="muted">등록된 채널이 없습니다.</p>';
+    }
+  }catch{
+    if(el('noticePublicList'))el('noticePublicList').innerHTML='<p class="muted">공지를 불러오지 못했습니다.</p>';
+    if(el('channelPublicList'))el('channelPublicList').innerHTML='<p class="muted">채널을 불러오지 못했습니다.</p>';
+  }
+}
+loadCivicContent();
