@@ -25,6 +25,16 @@ test('CMPMYI POS Agent download gateway returns attachment headers without accep
   assert.equal(await response.text(),'@echo off');
 });
 
+test('CMPMYI POS Agent download gateway supports HEAD without a response body',async()=>{
+  const response=await storePosAgentDownload(
+    new Request('https://ekodi.kr/cmpmyi/admin/agent/download/README.md',{method:'HEAD'}),
+    async(_url,options)=>new Response(null,{status:200,headers:{'content-length':'12','x-method':options?.method||''}})
+  );
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get('content-disposition'),'attachment; filename="README.md"');
+  assert.equal(await response.text(),'');
+});
+
 test('CMPMYI POS Agent download gateway fails closed when source fetch fails',async()=>{
   const response=await storePosAgentDownload(
     new Request('https://ekodi.kr/cmpmyi/admin/agent/download/remove-pos-agent.cmd'),
