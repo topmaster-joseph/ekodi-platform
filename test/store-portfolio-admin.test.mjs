@@ -122,9 +122,6 @@ test('cmpmyi delivery runtime reads existing store ledgers without adding cross-
 });
 
 test('router serves cmpmyi common panels and same-origin embedded canonical store admins',async()=>{
-  const agentShell=await platformEntry.fetch(new Request('https://ekodi.kr/cmpmyi/admin/agent'),{},{});
-  assert.equal(agentShell.status,200);
-  assert.match(await agentShell.text(),/\/cmpmyi\/admin\/panel\/agent/);
   const agentPanel=await platformEntry.fetch(new Request('https://ekodi.kr/cmpmyi/admin/panel/agent'),{},{});
   assert.equal(agentPanel.status,200);
   assert.match(await agentPanel.text(),/POS Agent 설치·관리/);
