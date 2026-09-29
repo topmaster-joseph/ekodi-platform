@@ -17,3 +17,5 @@
 .status-detail .source{padding:13px 14px}
 .status-monitor-summary{margin:0 0 12px}
 @media(max-width:760px){.status-card{min-height:0}.status-detail{padding:16px}.status-detail-head{flex-direction:column;gap:10px}.status-detail-link{white-space:normal}}
+
+.public-post-list{display:grid;gap:12px}.public-post{display:grid;grid-template-columns:112px minmax(0,1fr);gap:16px;padding:16px 0;border-top:1px solid rgba(40,58,78,.12)}.public-post:first-child{border-top:0}.public-post-date{font-weight:800;font-variant-numeric:tabular-nums}.public-post h3{margin:0 0 6px;font-size:17px;line-height:1.45}.public-post p{margin:0 0 8px;line-height:1.6}.public-post-meta{display:flex;flex-wrap:wrap;gap:6px}.source-type,.verify-state{display:inline-flex;padding:4px 8px;border-radius:999px;background:rgba(68,91,116,.08);font-size:12px;font-weight:700}.public-post a{font-weight:800;text-decoration:none}.public-post a:hover{text-decoration:underline}@media(max-width:700px){.public-post{grid-template-columns:1fr;gap:6px}}
