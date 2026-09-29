@@ -11,10 +11,10 @@ test('cmpmyi admin provides fixed common and brand navigation with a right works
   assert.equal(response.status,200);
   assert.equal(response.headers.get('x-ekodi-route'),'cmpmyi-store-portfolio-admin');
   assert.deepEqual(CMPMYI_STORES.map(x=>x.slug),['jadam','pizzamaru','yogurt']);
-  for(const section of ['delivery','menu','orders','sales','inventory','customers','reviews','marketing','publishing','work','finance','connections','site','members']){
+  for(const section of ['pos','delivery','menu','orders','sales','inventory','customers','reviews','marketing','publishing','work','finance','connections','site','members']){
     assert.ok(CMPMYI_ADMIN_SECTIONS.some(([key])=>key===section),`missing ${section}`);
   }
-  for(const view of ['overview','delivery','menu','orders','sales','customer','marketing','publishing','operations','connections']){
+  for(const view of ['overview','pos','delivery','menu','orders','sales','customer','marketing','publishing','operations','connections']){
     assert.ok(CMPMYI_COMMON_MENU.some(([key])=>key===view),`missing common view ${view}`);
     assert.ok(html.includes(`/cmpmyi/admin/panel/${view}`));
   }
@@ -32,7 +32,7 @@ test('cmpmyi admin provides fixed common and brand navigation with a right works
   for(const store of CMPMYI_STORES){
     assert.ok(html.includes(store.name));
     assert.ok(html.includes(`/${store.slug}/admin?embed=cmpmyi`));
-    for(const section of ['delivery','menu','orders','connections']){
+    for(const section of ['pos','delivery','menu','orders','connections']){
       assert.ok(html.includes(`/${store.slug}/admin/${section}?embed=cmpmyi`));
     }
   }
