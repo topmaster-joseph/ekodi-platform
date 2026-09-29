@@ -103,8 +103,8 @@ async function loadMonitor(){
     const run=data.lastRun;
     badge.textContent=run?.completed_at?'사이트 자동점검: '+new Date(run.completed_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'사이트 자동점검: 첫 실행 대기';
     summary.textContent=run?('최근 점검 '+(run.status==='ok'?'정상':run.status==='partial'?'일부 확인':'확인 필요')+' · 출처 '+run.sources_checked+'개 · 신규 '+run.new_items+'건 · 사진·영상 근거 후보 '+Number(data.mediaCandidateCount||0)+'건'):'첫 자동점검은 매일 08:00에 실행됩니다.';
-    const rows=(data.items||[]).slice(0,12);window.__SEONAM_MONITOR_ITEMS=data.items||[];attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS);
-    list.innerHTML=rows.length?rows.map(item=>`<article class="source"><a href="${safeUrl(item.resolved_url||item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title||'')}</a><small>${escapeHtml(item.publisher||'출처 확인 중')} · 자동수집 ${item.source_type==='blog'?'블로그':'보도'}${item.media_type?' · '+(item.media_type==='video'?'영상 근거 후보':'사진 근거 후보'):''} · 원문 확인 필요</small></article>`).join(''):'<p class="muted">최근 7일 내 새로 수집된 공개 자료가 없습니다.</p>';
+    const rows=(data.items||[]).slice(0,18);window.__SEONAM_MONITOR_ITEMS=data.items||[];attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS);
+    list.innerHTML=rows.length?rows.map(item=>`<article class="source"><a href="${safeUrl(item.resolved_url||item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title||'')}</a>${item.summary_text?'<p>'+escapeHtml(item.summary_text)+'</p>':''}<small>${escapeHtml(item.publisher||'출처 확인 중')} · 자동수집 ${item.source_type==='blog'?'블로그':'보도'}${item.media_type?' · '+(item.media_type==='video'?'영상 근거 후보':'사진 근거 후보'):''} · ${item.source_type==='blog'?'개인·온라인 게시물 / 공식자료 교차확인 필요':'원문 확인 필요'}</small></article>`).join(''):'<p class="muted">최근 7일 내 새로 수집된 공개 자료가 없습니다.</p>';
     refreshStatusDetail();
   }catch(error){
     latestMonitorData=null;
