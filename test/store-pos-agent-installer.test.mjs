@@ -6,6 +6,8 @@ const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const install=read('agents/windows-pos/install-pos-agent.ps1');
 const uninstall=read('agents/windows-pos/uninstall-pos-agent.ps1');
 const diagnose=read('agents/windows-pos/diagnose-pos-targets.ps1');
+const start=read('agents/windows-pos/start-pos-agent.cmd');
+const stop=read('agents/windows-pos/stop-pos-agent.cmd');
 const readme=read('agents/windows-pos/README.md');
 
 test('POS Agent installer keeps the local control boundary and interactive user session',()=>{
@@ -37,6 +39,16 @@ test('POS target diagnostics are read-only and uninstall supports config preserv
   assert.match(uninstall,/Configuration preserved/);
 });
 
+
+test('POS Agent start and stop helpers only control the fixed scheduled task',()=>{
+  assert.match(start,/Start-ScheduledTask -TaskName 'EKODI POS Agent'/);
+  assert.match(start,/127\.0\.0\.1:17831\/v1\/health/);
+  assert.match(stop,/Stop-ScheduledTask -TaskName 'EKODI POS Agent'/);
+  assert.match(stop,/Automatic start at the next Windows logon remains enabled/);
+  assert.doesNotMatch(start+stop,/Invoke-Expression|\biex\b|Invoke-WebRequest|Start-BitsTransfer|curl\.exe/i);
+  assert.doesNotMatch(start+stop,/Unregister-ScheduledTask|Disable-ScheduledTask|Remove-Item/i);
+});
+
 test('POS Agent README documents install, diagnostics, upgrade and explicit-user focus safety',()=>{
-  for(const phrase of ['install-pos-agent.ps1','diagnose-pos-targets.ps1','uninstall-pos-agent.ps1','기존 설정은 유지','자동실행 금지','사용자가 직접']) assert.match(readme,new RegExp(phrase));
+  for(const phrase of ['install-pos-agent.ps1','start-pos-agent.cmd','stop-pos-agent.cmd','diagnose-pos-targets.ps1','uninstall-pos-agent.ps1','기존 설정은 유지','자동실행 금지','사용자가 직접','다음 Windows 로그인 시 자동 시작 설정은 유지']) assert.match(readme,new RegExp(phrase));
 });
