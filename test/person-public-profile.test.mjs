@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { routeCanonicalSurface } from '../canonical-surface-router.js';
+import myWorker from '../my-worker.js';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
@@ -11,12 +12,16 @@ function binding(body='ok',type='text/plain'){
 }
 
 test('public person pages are a public projection of My EKODI, not a second admin surface',async()=>{
-  const [home,control,worker,migration,userHeader]=await Promise.all([
+  const [home,control,worker,migration,userHeader,digitalCardServer,digitalCardAdmin,digitalCardClient,digitalCardMigration]=await Promise.all([
     read('my/index.html'),
     read('my/public-profile.js'),
     read('my-worker.js'),
     read('supabase/migrations/20260923085000_person_public_profiles.sql'),
     read('shell/user-ui-header.js'),
+    read('person-digital-card.js'),
+    read('my/digital-card-admin.js'),
+    read('my/digital-card.js'),
+    read('supabase/migrations/20260930002300_person_digital_card_exchange.sql'),
   ]);
   assert.match(home,/개인 관리공간 · 나만 보는 곳/);
   assert.match(home,/id="publicProfileForm"/);
@@ -41,6 +46,20 @@ test('public person pages are a public projection of My EKODI, not a second admi
   assert.match(userHeader,/운영공간/);
   assert.match(userHeader,/data-ekodi-operating-space-label/);
   assert.match(userHeader,/badge\.textContent='운영공간'/);
+  assert.match(home,/id="digitalCardForm"/);
+  assert.match(home,/id="contactExchangeInbox"/);
+  assert.match(worker,/routePersonDigitalCard/);
+  assert.match(worker,/digitalCardPath:'\/\{handle\}\/card'/);
+  assert.match(digitalCardServer,/submit_person_contact_exchange/);
+  assert.match(digitalCardServer,/CARD_EXCHANGE_RATE_LIMITER/);
+  assert.match(digitalCardAdmin,/set_my_digital_card/);
+  assert.match(digitalCardAdmin,/get_my_contact_exchanges/);
+  assert.match(digitalCardClient,/navigator\.contacts/);
+  assert.match(digitalCardMigration,/create table if not exists private\.person_digital_cards/);
+  assert.match(digitalCardMigration,/create table if not exists private\.person_contact_exchanges/);
+  assert.match(digitalCardMigration,/grant execute on function public\.submit_person_contact_exchange/);
+  assert.match(digitalCardMigration,/p_privacy_consent boolean default false/);
+  assert.doesNotMatch(digitalCardMigration,/grant select[^;]*private\.person_contact_exchanges/i);
 });
 
 test('canonical apex preserves /@handle while handing the public page to My service ownership',async()=>{
@@ -70,4 +89,23 @@ test('invalid @ paths are not claimed by the person profile router',async()=>{
   const response=await routeCanonicalSurface(new Request('https://ekodi.kr/@x'),{MY:my});
   assert.equal(response,null);
   assert.equal(my.calls.length,0);
+});
+
+
+test('canonical apex hands person digital-card paths to My EKODI',async()=>{
+  for(const path of ['/joseph/card','/joseph/card.vcf','/joseph/card/exchange','/joseph/qr']){
+    const my=binding('<html>card</html>','text/html');
+    const method=path.endsWith('/exchange')?'POST':'GET';
+    const response=await routeCanonicalSurface(new Request('https://ekodi.kr'+path,{method,headers:method==='POST'?{'content-type':'application/json'}:undefined,body:method==='POST'?'{}':undefined}),{MY:my});
+    assert.ok(response);
+    assert.equal(my.calls.length,1);
+    assert.equal(my.calls[0].pathname,path);
+    assert.equal(response.headers.get('x-ekodi-canonical-surface'),'person-digital-card');
+  }
+});
+
+test('person QR alias redirects to the digital card with QR attribution',async()=>{
+  const response=await myWorker.fetch(new Request('https://ekodi.kr/joseph/qr'),{});
+  assert.equal(response.status,307);
+  assert.equal(response.headers.get('location'),'https://ekodi.kr/joseph/card?utm_source=qr');
 });
