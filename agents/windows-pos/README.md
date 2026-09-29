@@ -12,6 +12,26 @@ EKODI Store Console이 **현재 POS PC에서 실행 중인 Windows 프로그램�
 
 ## 설치
 
+### 권장: 원클릭 설치
+
+관리자 화면의 **POS 통합화면 → Agent 실행 · 중지 안내 → 원클릭 설치 (.cmd)** 를 사용합니다. 파일을 저장한 뒤 우클릭 → **관리자 권한으로 실행**하면 필요한 공식 Agent 파일을 같은 GitHub 저장소에서 임시 폴더로 내려받고 기존 설치 스크립트를 실행합니다.
+
+`setup-pos-agent.cmd`는 다음 파일만 고정된 공식 저장소 경로에서 내려받습니다.
+
+- `install-pos-agent.ps1`
+- `EKODI-POS-Agent.ps1`
+- `pos-agent.config.example.json`
+- `diagnose-pos-targets.ps1`
+- `start-pos-agent.cmd`
+- `stop-pos-agent.cmd`
+- `uninstall-pos-agent.ps1`
+
+설치 전 패키지의 핵심 안전 마커를 확인하며, 실제 Agent 설치기는 기존과 동일하게 loopback-only 설정과 `https://ekodi.kr` 허용 Origin을 검증합니다.
+
+### 고급: PowerShell 수동 설치
+
+수동 설치를 사용할 때는 **현재 PowerShell 폴더에 install-pos-agent.ps1만 있는 것으로는 부족합니다.** 위 파일들이 같은 폴더에 있어야 하며, PowerShell의 현재 위치도 해당 폴더여야 합니다. 예를 들어 프롬프트가 `C:\Users\JG_Series>`인데 파일이 다운로드 폴더에 있다면 `-File .\install-pos-agent.ps1`은 “파일이 없습니다”로 실패합니다.
+
 권장 방식은 POS PC에서 관리자 PowerShell을 한 번 열고 설치 스크립트를 실행하는 것입니다. 설치기는 기존 `pos-agent.config.json`을 보존하고, 새 Agent를 구문검사한 뒤 교체하며, 현재 Windows 사용자로 로그인할 때 자동 시작되는 `EKODI POS Agent` 예약 작업을 등록합니다. 창 전환은 로그인한 사용자의 대화형 세션에서만 정상 동작하므로 SYSTEM 계정으로 실행하지 않습니다.
 
 ```powershell
@@ -54,7 +74,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\uninstall-pos-agent.ps1
 
 - `start-pos-agent.cmd` — 이미 설치된 `EKODI POS Agent` 예약 작업을 즉시 시작하고 loopback 상태를 확인합니다. 설치 전에는 동작하지 않습니다.
 - `stop-pos-agent.cmd` — 현재 실행 중인 Agent 예약 작업만 중지합니다. **다음 Windows 로그인 시 자동 시작 설정은 유지**됩니다.
-- 처음 설치할 때는 반드시 `install-pos-agent.ps1`을 관리자 PowerShell에서 한 번 실행해야 합니다.
+- 처음 설치는 관리자 화면의 `setup-pos-agent.cmd` 원클릭 설치를 권장합니다. 고급 수동 설치에서는 `install-pos-agent.ps1`을 사용합니다.
 - 실행/중지 파일에서 권한 거부가 나오면 파일을 우클릭해 **관리자 권한으로 실행**합니다.
 - 완전 제거는 `uninstall-pos-agent.ps1`을 사용합니다.
 
