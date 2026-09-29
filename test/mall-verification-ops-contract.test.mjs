@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [api, entry, html, js, redirects, headers, deploy, siteWorker, productionVerifier] = await Promise.all([
+const [api, entry, html, js, redirects, headers, deploy, siteWorker, productionVerifier, mallWrangler] = await Promise.all([
   readFile(new URL('../sites/ekodi-mall/api/verification.js', import.meta.url), 'utf8'),
   readFile(new URL('../sites/ekodi-mall/api/entry.js', import.meta.url), 'utf8'),
   readFile(new URL('../sites/ekodi-mall/assets/verification-ops.html', import.meta.url), 'utf8'),
@@ -11,12 +11,14 @@ const [api, entry, html, js, redirects, headers, deploy, siteWorker, productionV
   readFile(new URL('../sites/ekodi-mall/_headers', import.meta.url), 'utf8'),
   readFile(new URL('../.github/workflows/deploy-ekodi-mall.yml', import.meta.url), 'utf8'),
   readFile(new URL('../site-worker.js', import.meta.url), 'utf8'),
-  readFile(new URL('../.github/workflows/verify-ekodi-mall-production.yml', import.meta.url), 'utf8')
+  readFile(new URL('../.github/workflows/verify-ekodi-mall-production.yml', import.meta.url), 'utf8'),
+  readFile(new URL('../sites/ekodi-mall/api/wrangler.toml', import.meta.url), 'utf8')
 ]);
 
 test('verification operations use server-validated Google allowlist auth without browser ops secrets', () => {
   assert.ok(api.includes('MALL_OPERATIONS_EMAILS'));
   assert.ok(api.includes('authorizeVerificationOperations'));
+  assert.ok(mallWrangler.includes('MALL_OPERATIONS_EMAILS = "topmaster.joseph@gmail.com,joseph@ekodi.kr"'));
   assert.ok(api.includes('mall-ops:' + '$' + '{email}'));
   assert.ok(js.includes('authorization'));
   assert.ok(!js.includes('x-ekodi-mall-ops-token'));
