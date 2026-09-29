@@ -50,8 +50,8 @@ test('channel workspace follows status quick-action list detail ordering on ever
   for(const store of CMPMYI_STORES){
     const page=await storeAdminPage({...store,id:store.slug,brand:store.short,pathname:'/'+store.slug+'/admin/publishing'}).text();
     assert.match(page,/채널 · 자동게시/);
-    assert.match(page,/store-admin\.css\?v=20260929-pos-web-first-v2/);
-    assert.match(page,/store-admin\.js\?v=20260929-pos-web-first-v2/);
+    assert.match(page,/store-admin\.css\?v=20260929-pos-web-first-v3/);
+    assert.match(page,/store-admin\.js\?v=20260929-pos-web-first-v3/);
   }
 });
 
