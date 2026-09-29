@@ -28,7 +28,7 @@
         const set=(sel,val)=>document.querySelectorAll(sel).forEach(el=>{if(val!==undefined&&val!==null)el.textContent=String(val)});
         set('[data-trip-title]',c.title);set('[data-trip-theme]',c.theme);set('[data-trip-summary]',c.summary);
         set('[data-trip-capacity]',c.capacity);set('[data-trip-fee]',Number(c.fee_krw||0).toLocaleString('ko-KR')+'원');set('[data-trip-fee-note]',c.fee_note);
-        set('[data-trip-departure]',c.departure);set('[data-trip-return]',c.return);set('[data-trip-worship]',c.worship);set('[data-trip-notice]',c.notice);
+        set('[data-trip-departure]',c.departure);set('[data-trip-return]',c.return);set('[data-trip-notice]',c.notice);
         const schedule=Array.isArray(c.schedule)?c.schedule:[];set('[data-trip-schedule-1]',schedule[0]?.text);set('[data-trip-schedule-2]',schedule[1]?.text);
         const lodging=Array.isArray(c.lodging)?c.lodging:[];for(let i=0;i<2;i++){const l=lodging[i]||{};set(`[data-trip-lodging-${i+1}-name]`,l.name);set(`[data-trip-lodging-${i+1}-detail]`,[l.room,l.capacity,l.note].filter(Boolean).join(' · '))}
       }).catch(()=>{});
