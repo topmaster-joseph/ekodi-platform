@@ -14,7 +14,7 @@ test('cmpmyi admin provides fixed common and brand navigation with a right works
   for(const section of ['pos','delivery','menu','orders','sales','inventory','customers','reviews','marketing','publishing','work','finance','connections','site','members']){
     assert.ok(CMPMYI_ADMIN_SECTIONS.some(([key])=>key===section),`missing ${section}`);
   }
-  for(const view of ['overview','pos','delivery','menu','orders','sales','customer','marketing','publishing','operations','connections']){
+  for(const view of ['overview','pos','agent','delivery','menu','orders','sales','customer','marketing','publishing','operations','connections']){
     assert.ok(CMPMYI_COMMON_MENU.some(([key])=>key===view),`missing common view ${view}`);
     assert.ok(html.includes(`/cmpmyi/admin/panel/${view}`));
   }
@@ -36,6 +36,35 @@ test('cmpmyi admin provides fixed common and brand navigation with a right works
       assert.ok(html.includes(`/${store.slug}/admin/${section}?embed=cmpmyi`));
     }
   }
+  const agentShell=await storePortfolioAdminPage('agent').text();
+  assert.match(agentShell,/src="\/cmpmyi\/admin\/panel\/agent"/);
+});
+
+test('cmpmyi POS Agent manager provides local status, same-domain lifecycle downloads and store links',async()=>{
+  assert.ok(CMPMYI_COMMON_MENU.some(([key,label])=>key==='agent'&&label==='POS Agent 관리'));
+  const response=storePortfolioAdminPanelPage('agent');
+  const html=await response.text();
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get('x-frame-options'),'SAMEORIGIN');
+  const csp=response.headers.get('content-security-policy')||'';
+  assert.match(csp,/connect-src 'self' http:\/\/127\.0\.0\.1:17831 http:\/\/localhost:17831/);
+  assert.match(html,/data-cmpmyi-pos-agent-manager="v1"/);
+  assert.match(html,/이 POS PC의 Agent 상태/);
+  assert.match(html,/id="posAgentCheck"/);
+  for(const file of ['setup-pos-agent.cmd','remove-pos-agent.cmd','start-pos-agent.cmd','stop-pos-agent.cmd','diagnose-pos-targets.ps1','uninstall-pos-agent.ps1']){
+    assert.match(html,new RegExp('/cmpmyi/admin/agent/download/'+file.replaceAll('.','\\.')));
+  }
+  for(const slug of ['jadam','pizzamaru','yogurt'])assert.match(html,new RegExp('/'+slug+'/admin/pos'));
+  assert.match(html,/브라우저 보안상 웹페이지가 Windows 설치·삭제 파일을 자동 실행할 수는 없습니다/);
+  assert.match(html,/127\.0\.0\.1/);
+  assert.match(html,/\/cmpmyi\/admin\/panel\.js/);
+
+  const runtime=await storePortfolioAdminPanelScript().text();
+  assert.match(runtime,/ekodiStorePortfolioPanel==='agent'/);
+  assert.match(runtime,/127\.0\.0\.1:17831\/v1\/health/);
+  assert.match(runtime,/X-EKODI-Store/);
+  assert.match(runtime,/Agent 미연결/);
+  assert.doesNotMatch(runtime,/\/v1\/focus[\s\S]*ekodiStorePortfolioPanel==='agent'/);
 });
 
 test('cmpmyi common panel stays same-origin frameable and exposes brand handoffs',async()=>{
@@ -93,6 +122,13 @@ test('cmpmyi delivery runtime reads existing store ledgers without adding cross-
 });
 
 test('router serves cmpmyi common panels and same-origin embedded canonical store admins',async()=>{
+  const agentShell=await platformEntry.fetch(new Request('https://ekodi.kr/cmpmyi/admin/agent'),{},{});
+  assert.equal(agentShell.status,200);
+  assert.match(await agentShell.text(),/\/cmpmyi\/admin\/panel\/agent/);
+  const agentPanel=await platformEntry.fetch(new Request('https://ekodi.kr/cmpmyi/admin/panel/agent'),{},{});
+  assert.equal(agentPanel.status,200);
+  assert.match(await agentPanel.text(),/POS Agent 설치·관리/);
+
   const panel=await platformEntry.fetch(new Request('https://ekodi.kr/cmpmyi/admin/panel/customer'),{},{});
   assert.equal(panel.status,200);
   assert.equal(panel.headers.get('x-ekodi-route'),'cmpmyi-store-portfolio-panel');
@@ -132,6 +168,9 @@ test('super administrator navigation keeps only the cmpmyi hub as the aggregate 
   const item=ADMIN_MENU_REGISTRY.find(row=>row.id==='cmpmyi');
   assert.ok(item);assert.equal(item.group,'sites');assert.equal(item.superAdminOnly,true);assert.equal(item.internal,true);
   assert.equal(item.href,'https://ekodi.kr/cmpmyi/admin');
+  const posAgent=ADMIN_MENU_REGISTRY.find(row=>row.id==='pos-agent');
+  assert.equal(posAgent?.href,'https://ekodi.kr/cmpmyi/admin/agent');
+  assert.equal(posAgent?.adminHandoff,true);
   const router=readFileSync(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
   assert.match(router,/storePortfolioAdminPage/);
   assert.match(router,/storePortfolioAdminPanelPage/);
