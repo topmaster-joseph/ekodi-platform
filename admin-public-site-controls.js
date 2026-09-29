@@ -86,7 +86,7 @@ function ensurePanel() {
       <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
         <div>
           <h2>공개·점검 전환</h2>
-          <p class="muted">사이트별 공개·비공개·점검 상태를 전환합니다. 공개 상태에서는 검색엔진 색인을 허용하고, 비공개·점검 상태에서는 색인을 차단합니다.</p>
+          <p class="muted">사이트 목록을 다시 만들지 않고, 공개 주소의 정상 공개·점검 모드만 전환하던 기존 제어에 비공개 상태를 추가합니다. 공개는 검색엔진 색인을 허용하고, 비공개·점검 상태는 색인을 차단합니다.</p>
         </div>
         <button type="button" class="btn" data-public-site-refresh>새로고침</button>
       </div>
