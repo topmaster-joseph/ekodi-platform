@@ -125,3 +125,27 @@ if(voiceForm)voiceForm.addEventListener('submit',async event=>{
   status.textContent='접수 중…';
   try{const response=await fetch('/api/seonammedi/voices',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.message||'접수하지 못했습니다.');status.textContent=body.message||'접수되었습니다.';voiceForm.reset()}catch(error){status.textContent=error.message||'접수하지 못했습니다.'}
 });
+
+
+function bindSeonamMediAdminDirectLogin(){
+  const adminLink=document.querySelector('a[href="/seonammedi/admin/"]');
+  if(!adminLink||adminLink.dataset.directGoogleBound==='true')return;
+  adminLink.dataset.directGoogleBound='true';
+  adminLink.addEventListener('click',event=>{
+    if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+    const returnTo=new URL('/seonammedi/admin/',location.origin);
+    const auth=new URL('/auth/',location.origin);
+    auth.searchParams.set('site','admin');
+    auth.searchParams.set('direct','1');
+    auth.searchParams.set('return_to',returnTo.href);
+    const bridge=new URL('/auth/google-origin-bridge?wait=1',location.origin);
+    let popup=null;
+    try{popup=window.open(bridge.href,'ekodi_google_origin_bridge','popup,width=520,height=680,resizable=yes,scrollbars=yes')}catch{}
+    if(!popup)return;
+    event.preventDefault();
+    auth.searchParams.set('bridge','preopened');
+    try{popup.focus()}catch{}
+    location.assign(auth.href);
+  });
+}
+bindSeonamMediAdminDirectLogin();
