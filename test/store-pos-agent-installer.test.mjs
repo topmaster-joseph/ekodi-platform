@@ -33,6 +33,14 @@ test('POS Agent installer keeps the local control boundary and interactive user 
   assert.doesNotMatch(install,/https:\/\/(?!ekodi\.kr)/i);
 });
 
+test('POS Agent scheduled task restart interval stays within Windows Task Scheduler XML limits',()=>{
+  assert.match(install,/RestartInterval \(New-TimeSpan -Minutes 1\)/);
+  assert.doesNotMatch(install,/RestartInterval \(New-TimeSpan -Seconds 20\)/);
+  assert.match(install,/0x80041318/);
+  assert.match(install,/compatibility-safe settings/);
+  assert.match(install,/New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit \(\[TimeSpan\]::Zero\)/);
+});
+
 test('POS Agent upgrade preserves local target configuration and rolls back the agent file on failure',()=>{
   assert.match(install,/if \(-not \(Test-Path -LiteralPath \$targetConfig\)\)/);
   assert.match(install,/Copy-Item -LiteralPath \$targetAgent -Destination \$backupAgent -Force/);
