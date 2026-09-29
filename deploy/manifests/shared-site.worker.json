@@ -1,5 +1,5 @@
 {
-  "version": 99,
+  "version": 100,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -2011,7 +2011,7 @@
           "청계패스",
           "서비스 준비 중",
           "상품권",
-          "가맹점"
+          "참여점포"
         ],
         "headerExpect": [
           "x-ekodi-route: regional-commerce-program-public",
