@@ -42,18 +42,23 @@ const attachMonitorMedia=items=>{
   }
 };
 let latestMonitorData=null;
+let latestNotices=[];
 const statusSourceRows=(rows,emptyText)=>rows.length?rows.map(s=>'<article class="source status-source"><a href="'+safeUrl(s.url)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(s.title||'자료')+'</a><small>'+escapeHtml([s.publisher,s.date,s.kind].filter(Boolean).join(' · '))+'</small></article>').join(''):'<p class="muted">'+escapeHtml(emptyText)+'</p>';
 const renderStatusDetail=(key,d)=>{
   const panel=el('statusDetail');if(!panel)return;
   let label='CURRENT STATUS',title='',description='',body='',target='#status',targetLabel='관련 내용 보기';
   if(key==='official'){
-    const rows=(d.sources||[]).filter(s=>/(공식|당사자)/.test(String(s.kind||''))).slice(0,8);
+    const approved=((latestMonitorData&&latestMonitorData.items)||[]).filter(s=>s.review_state==='published_official').map(s=>({title:s.title,url:s.resolved_url||s.url,publisher:s.publisher,date:kstDate(s.published_at||s.first_seen_at),kind:'관리자 승인 · 공식기록'}));
+    const rows=[...approved,...(d.sources||[]).filter(s=>/(공식|당사자)/.test(String(s.kind||'')))].slice(0,8);
     label='OFFICIAL RECORD';title='공식 기록';description='정부·지자체·대학·비대위 등 자료의 주체와 성격을 구분해 원문 기준으로 확인할 수 있습니다.';
     body='<div class="status-detail-list">'+statusSourceRows(rows,'현재 연결된 공식 자료가 없습니다.')+'</div>';target='#news';targetLabel='공식자료 영역 보기';
   }else if(key==='news'){
-    const rows=(d.sources||[]).filter(s=>/(보도|언론)/.test(String(s.kind||''))).slice(0,8);
+    const approved=((latestMonitorData&&latestMonitorData.items)||[]).filter(s=>s.review_state==='published_news').map(s=>({title:s.title,url:s.resolved_url||s.url,publisher:s.publisher,date:kstDate(s.published_at||s.first_seen_at),kind:'관리자 승인 · 관련보도'}));
+    const rows=[...approved,...(d.sources||[]).filter(s=>/(보도|언론)/.test(String(s.kind||'')))].slice(0,8);
     label='RELATED NEWS';title='관련 보도';description='기사 제목·언론사·보도일을 확인하고 원문으로 바로 이동할 수 있습니다.';
     body='<div class="status-detail-list">'+statusSourceRows(rows,'현재 연결된 관련 보도가 없습니다.')+'</div>';target='#news';targetLabel='관련기사 전체 보기';
+  }else if(key==='notice'){
+    const rows=latestNotices.filter(x=>x.pinned).slice(0,8);label='IMPORTANT NOTICE';title='주요공지';description='관리자가 주요공지로 지정한 내용을 확인할 수 있습니다.';body=rows.length?'<div class="status-detail-list">'+rows.map(x=>'<article class="source"><strong>'+escapeHtml(x.title||'공지')+'</strong><small>'+escapeHtml(managedDate(x.publishedAt||x.updatedAt))+'</small><p>'+escapeHtml(x.body||'')+'</p></article>').join('')+'</div>':'<p class="muted">현재 등록된 주요공지가 없습니다.</p>';target='#notices';targetLabel='공지 전체 보기';
   }else if(key==='daily'){
     const run=latestMonitorData&&latestMonitorData.lastRun;
     const rows=((latestMonitorData&&latestMonitorData.items)||[]).slice(0,6);
@@ -72,7 +77,8 @@ const refreshStatusDetail=()=>{const active=el('statusCards')?.querySelector('.s
 async function load(){const r=await fetch('/seonam-medi/data.json',{cache:'no-store'});if(!r.ok)throw new Error('data');const d=await r.json();window.__SEONAM_MEDI_DATA=d;
 el('lastUpdated').textContent='최종 업데이트 '+d.updatedAt;
 const statusCards=el('statusCards');
-statusCards.innerHTML=d.status.map((x,i)=>{const key=x.key||['official','news','daily'][i]||('status-'+i);return `<button type="button" class="card status-card" data-status="${escapeHtml(key)}" aria-expanded="false" aria-controls="statusDetail"><span class="status-card-copy"><strong class="status-card-title">${escapeHtml(x.title)}</strong><span class="status-card-text">${escapeHtml(x.text)}</span></span><span class="status-card-action">내용 보기 <span aria-hidden="true">→</span></span></button>`}).join('');
+const statusItems=[...d.status,{key:'notice',title:'주요공지',text:'중요한 안내와 공지를 확인합니다.'}];
+statusCards.innerHTML=statusItems.map((x,i)=>{const key=x.key||['official','news','daily'][i]||('status-'+i);return `<button type="button" class="card status-card" data-status="${escapeHtml(key)}" aria-expanded="false" aria-controls="statusDetail"><span class="status-card-copy"><strong class="status-card-title">${escapeHtml(x.title)}</strong><span class="status-card-text">${escapeHtml(x.text)}</span></span><span class="status-card-action">내용 보기 <span aria-hidden="true">→</span></span></button>`}).join('');
 statusCards.addEventListener('click',event=>{const button=event.target.closest('.status-card');if(!button)return;if(button.getAttribute('aria-expanded')==='true'){closeStatusDetail();return}renderStatusDetail(button.dataset.status,d)});
 const cats=['전체',...new Set(d.timeline.map(x=>x.category))];
 el('timelineFilters').innerHTML=cats.map((c,i)=>`<button data-cat="${c}" class="${i===0?'active':''}">${c}</button>`).join('');
@@ -124,6 +130,7 @@ async function loadPublicManagedContent(){
     fetch('/api/seonam-medi/channels',{cache:'no-store'}).then(async response=>response.ok?response.json():Promise.reject(new Error('channels')))
   ]);
   if(noticeHost){
+    latestNotices=noticeResult.status==='fulfilled'&&Array.isArray(noticeResult.value?.items)?noticeResult.value.items:[];
     noticeHost.replaceChildren();
     if(noticeResult.status!=='fulfilled'||!Array.isArray(noticeResult.value?.items)||!noticeResult.value.items.length){
       noticeHost.append(publicEmpty('등록된 공지가 없습니다.'));
@@ -141,6 +148,7 @@ async function loadPublicManagedContent(){
       }
     }
   }
+  refreshStatusDetail();
   if(channelHost){
     channelHost.replaceChildren();
     if(channelResult.status!=='fulfilled'||!Array.isArray(channelResult.value?.items)||!channelResult.value.items.length){
