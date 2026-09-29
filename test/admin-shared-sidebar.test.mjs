@@ -118,7 +118,7 @@ test('Services & AI uses flat direct engine links with no duplicate top navigati
 test('retired top navigation leaves the workspace readable without duplicate chrome', () => {
   assert.doesNotMatch(sidebar, /TABS_SHELL_CLASS|TABS_CLASS/);
   assert.doesNotMatch(sidebar, /data-admin-context-section/);
-  assert.doesNotMatch(sidebar, /\.admin-context-tab/);
+  assert.doesNotMatch(sidebar, /\.admin-context-tab\{/);
   assert.match(sidebar, /main\?\.querySelector\(':scope>\.admin-context-tabs-shell'\)\?\.remove\(\)/);
   assert.match(sidebar, /\.content\{padding:12px 16px 28px!important/);
 });
