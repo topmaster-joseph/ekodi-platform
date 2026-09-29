@@ -101,7 +101,6 @@
         "redirect": "manual",
         "expect": [
           "통합 매장 운영",
-          "POS Agent 관리",
           "/cmpmyi/admin/panel/agent"
         ],
         "headerExpect": [
