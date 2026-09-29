@@ -17,6 +17,7 @@ const GLOBAL_CLASS = 'admin-global-navs';
 const SOURCE_CLASS = 'admin-context-source';
 const TABS_SHELL_CLASS = 'admin-context-tabs-shell';
 const TABS_CLASS = 'admin-context-tabs';
+// LEFT-NAV-AUTHORITY-006: visible Admin navigation is left-side direct work only; context tabs are compatibility state, never an interaction fallback.
 const DETAILS_CLASS = 'admin-global-details';
 const MORE_CLASS = 'admin-detail-more';
 const MOBILE_NAV_CLASS = 'admin-mobile-primary-nav';

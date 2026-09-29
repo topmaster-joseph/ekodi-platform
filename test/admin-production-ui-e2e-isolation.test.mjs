@@ -64,15 +64,16 @@ test('synthetic production Admin UI verifier follows direct registry href menus 
 });
 
 
-test('synthetic production Admin UI verifier allows an already-active group default without a visible submenu trigger', async () => {
+test('synthetic production Admin UI verifier requires visible left navigation and never falls back to hidden context tabs', async () => {
   const text = await source();
   assert.match(text, /async function resolveMenuTrigger\(id, group\)/);
   assert.match(text, /admin-detail-item\[data-admin-detail-section=/);
   assert.match(text, /data-admin-detail-more=/);
-  assert.match(text, /contextTab\.waitFor\(\{ state: 'attached', timeout: 10000 \}\)/);
-  assert.match(text, /const alreadyActive = await contextTab\.evaluate/);
+  assert.match(text, /no visible left-navigation trigger/);
+  assert.match(text, /const alreadyActive = await page\.evaluate\(section => window\.EKODIAdminPanels\?\.current\?\.\(\) === section, id\)/);
   assert.match(text, /if \(!alreadyActive\) \{\s*const trigger = await resolveMenuTrigger\(id, group\);\s*await dispatchClick\(trigger\);\s*\}/);
-  assert.doesNotMatch(text, /contextTab\.waitFor\(\{ state: 'visible'/);
+  assert.doesNotMatch(text, /contextTab\.waitFor/);
+  assert.doesNotMatch(text, /const alreadyActive = await contextTab\.evaluate/);
 });
 
 
