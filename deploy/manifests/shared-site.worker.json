@@ -2161,8 +2161,6 @@
         "redirect": "manual",
         "expect": [
           "기관·단체·지역안내",
-          "운영 기준",
-          "청계면상인회",
           "지역 공개정보",
           "local-region-module-public.js"
         ],
@@ -2202,8 +2200,6 @@
         "redirect": "manual",
         "expect": [
           "상점·상권",
-          "운영 기준",
-          "청계면상인회",
           "지역 공개정보",
           "local-region-module-public.js"
         ],
@@ -2243,8 +2239,6 @@
         "redirect": "manual",
         "expect": [
           "지역행사·프로그램",
-          "운영 기준",
-          "청계면상인회",
           "지역 공개정보",
           "local-region-module-public.js"
         ],
@@ -2284,8 +2278,6 @@
         "redirect": "manual",
         "expect": [
           "구인구직",
-          "운영 기준",
-          "청계면상인회",
           "지역 공개정보",
           "local-region-module-public.js"
         ],
@@ -2325,8 +2317,6 @@
         "redirect": "manual",
         "expect": [
           "나눔마켓",
-          "운영 기준",
-          "청계면상인회",
           "지역 공개정보",
           "local-region-module-public.js"
         ],
@@ -2366,8 +2356,6 @@
         "redirect": "manual",
         "expect": [
           "지역방송·라이브",
-          "운영 기준",
-          "청계면상인회",
           "지역 공개정보",
           "local-region-module-public.js"
         ],
@@ -2407,8 +2395,6 @@
         "redirect": "manual",
         "expect": [
           "주민참여·제안",
-          "운영 기준",
-          "청계면상인회",
           "지역 공개정보",
           "local-region-module-public.js"
         ],
