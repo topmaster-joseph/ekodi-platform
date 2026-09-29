@@ -23,6 +23,22 @@ const SECTIONS=Object.freeze([
   ['members','권한 · 구성원'],
 ]);
 
+const STORE_MENU_SECTIONS=Object.freeze([
+  ['','운영 홈'],
+  ['delivery','배달플랫폼'],
+  ['menu','메뉴 · 가격'],
+  ['orders','주문 · 채널'],
+  ['sales','매출'],
+  ['inventory','재고'],
+  ['customers','고객'],
+  ['reviews','리뷰'],
+  ['marketing','Marketing AI'],
+  ['work','매장업무'],
+  ['finance','비용 · 정산'],
+  ['site','사용자 사이트'],
+  ['members','권한 · 구성원'],
+]);
+
 const COMMON_VIEWS=Object.freeze({
   overview:{
     label:'통합 대시보드',
@@ -31,8 +47,8 @@ const COMMON_VIEWS=Object.freeze({
   },
   pos:{
     label:'POS 통합화면',
-    description:'세 브랜드의 웹 운영 화면을 기본으로 사용하고, 필요할 때 해당 POS PC의 Windows 프로그램 전환을 Agent로 보조합니다.',
-    sections:[['pos','POS 통합화면'],['orders','주문 · 채널'],['connections','연결관리']],
+    description:'세 브랜드의 POS 운영 화면을 같은 위치에서 전환하고, 필요할 때 해당 POS PC의 Windows 프로그램 전환을 Agent로 보조합니다.',
+    sections:[['pos','POS 통합화면']],
   },
   delivery:{
     label:'배달플랫폼 통합관리',
@@ -65,9 +81,9 @@ const COMMON_VIEWS=Object.freeze({
     sections:[['marketing','Marketing AI']],
   },
   publishing:{
-    label:'채널 · 자동게시 통합관리',
-    description:'세 브랜드의 채널 상태를 같은 위치에서 선택하고, 실제 계정·OAuth·예약게시·자동게시 관리는 브랜드별 권한 경계에서 실행합니다.',
-    sections:[['publishing','채널 · 자동게시'],['connections','연결관리'],['marketing','Marketing AI']],
+    label:'채널 · 자동게시',
+    description:'세 브랜드의 계정·OAuth·예약게시·자동게시 화면을 같은 위치에서 브랜드별 권한 경계로 전환합니다.',
+    sections:[['publishing','채널 · 자동게시']],
   },
   operations:{
     label:'매장 운영',
@@ -80,25 +96,16 @@ const COMMON_VIEWS=Object.freeze({
     sections:[],
   },
   connections:{
-    label:'연결 · 사이트 · 권한',
-    description:'브랜드별 외부 연결, 사용자 사이트, 구성원 권한을 관리합니다.',
-    sections:[['connections','연결관리'],['site','사용자 사이트'],['members','권한 · 구성원']],
+    label:'연결관리',
+    description:'세 브랜드의 POS·배달플랫폼·외부 서비스 연결 상태와 연결 설정을 같은 위치에서 전환합니다.',
+    sections:[['connections','연결관리']],
   },
 });
 
 const COMMON_MENU=Object.freeze([
-  ['overview','통합 대시보드'],
   ['pos','POS 통합화면'],
-  ['agent','POS Agent 관리'],
-  ['delivery','배달플랫폼'],
-  ['menu','메뉴 · 가격'],
-  ['orders','주문 · 채널'],
-  ['sales','매출'],
-  ['customer','고객 · 리뷰'],
-  ['marketing','Marketing AI'],
+  ['connections','연결관리'],
   ['publishing','채널 · 자동게시'],
-  ['operations','매장 운영'],
-  ['connections','연결 · 권한'],
 ]);
 
 const DELIVERY_PLATFORMS=Object.freeze(['배달의민족','쿠팡이츠','요기요','땡겨요','먹깨비','당근 주문','네이버 주문']);
@@ -131,26 +138,22 @@ a{color:inherit}.top{
 .side-intro strong{display:block;margin-top:2px;font-size:13px}.side-intro span{display:block;margin-top:2px;color:#879189;font-size:8.5px;line-height:1.4}
 .menu-title{display:flex;align-items:center;justify-content:space-between;padding:5px 6px 4px}
 .menu-title strong{font-size:12px;color:#324339}.menu-title small{font-size:10px;color:#879189}
-.common-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;margin-bottom:6px}.common-nav a{
-  min-width:0;padding:7px 8px;border:1px solid #e6ebe5;border-radius:7px;background:#fff;text-decoration:none;color:#405047;font-size:12px;font-weight:760;
+.common-nav{display:grid;grid-template-columns:1fr;gap:3px;margin-bottom:7px}.common-nav a{
+  min-width:0;padding:8px 9px;border:1px solid #e1e8e1;border-radius:8px;background:#fff;text-decoration:none;color:#32473a;font-size:12px;font-weight:820;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap
 }
 .common-nav a:hover,.common-nav a:focus{background:#eef6f0;border-color:#cbdccd;color:#17492b;outline:none}
-.common-nav a:first-child{grid-column:1/-1;background:var(--green);border-color:var(--green);color:#fff}
-.brand-group{border-top:1px solid #edf1ec;padding:4px 3px 0;margin-top:3px}
-.brand-group>summary{list-style:none;cursor:pointer}.brand-group>summary::-webkit-details-marker{display:none}
-.brand-head{display:flex;align-items:center;gap:7px;margin:0;padding:5px 4px;border-radius:7px}
-.brand-head:hover,.brand-head:focus{background:#f5f8f5;outline:none}
-.brand-mark{width:24px;height:24px;border-radius:7px;background:#edf4ef;color:#31543e;display:grid;place-items:center;font-size:8px;font-weight:900;flex:0 0 auto}
-.brand-head>div{min-width:0;flex:1}.brand-head strong{display:block;font-size:12px}.brand-head span{display:block;color:#879189;font-size:10px;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.brand-caret{margin-left:auto;color:#748178;font-size:14px;line-height:1;transform:rotate(0deg);transition:transform .15s ease}.brand-group[open] .brand-caret{transform:rotate(90deg)}
-.brand-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;padding:3px 0 2px}
-.brand-links a{
+.store-picker{border-top:1px solid #e8ede7;margin-top:7px;padding-top:6px}
+.store-picker-label{display:grid;gap:5px;padding:0 4px 6px}.store-picker-label span{font-size:11px;font-weight:900;color:#324339}
+.store-picker select{width:100%;min-height:36px;border:1px solid #d8e1d9;border-radius:8px;background:#fff;color:#20382a;padding:7px 30px 7px 9px;font:inherit;font-size:12px;font-weight:820}
+.store-selected-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:1px 4px 5px;padding-top:5px;border-top:1px solid #edf1ec}.store-selected-head strong{font-size:12px}.store-selected-head small{font-size:9px;color:#879189}
+.store-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;padding:0 3px 2px}
+.store-links[hidden]{display:none}.store-links a{
   min-width:0;padding:6px 7px;border:1px solid #e4e9e3;border-radius:7px;background:#fff;
   color:#48584e;text-decoration:none;font-size:11px;font-weight:730;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
 }
-.brand-links a:hover,.brand-links a:focus{background:#eef6f0;border-color:#cbdccd;color:#17492b;outline:none}
-.brand-links a:first-child{grid-column:1/-1;background:#f3f8f4;color:#17492b;border-color:#d5e4d8;font-weight:900}
+.store-links a:hover,.store-links a:focus{background:#eef6f0;border-color:#cbdccd;color:#17492b;outline:none}
+.store-links a:first-child{grid-column:1/-1;background:#f3f8f4;color:#17492b;border-color:#d5e4d8;font-weight:900}
 .portfolio-sidebar-note{margin:8px 4px 0;padding-top:7px;border-top:1px solid #edf1ec;color:#8a948c;font-size:10px;line-height:1.4}
 .workspace{min-width:0;background:#f3f6f3;padding:6px}
 .panel-frame{
@@ -160,19 +163,19 @@ a{color:inherit}.top{
 @media(max-width:980px){
   .app{grid-template-columns:236px minmax(0,1fr)}
   .portfolio-sidebar{padding-left:6px;padding-right:6px}
-  .brand-links{grid-template-columns:1fr}
-  .brand-links a:first-child{grid-column:auto}
+  .store-links{grid-template-columns:1fr}
+  .store-links a:first-child{grid-column:auto}
 }
 @media(max-width:760px){
   .top{height:52px;padding:0 9px}.brand small{display:none}.top-actions a{font-size:10px;padding:6px 8px}
   .app{display:block}.portfolio-sidebar{position:relative;top:auto;width:100%;height:auto;max-height:none;border-right:0;border-bottom:1px solid var(--line)}
-  .common-nav{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .brand-links{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .common-nav{grid-template-columns:1fr}
+  .store-links{grid-template-columns:repeat(2,minmax(0,1fr))}
   .workspace{padding:5px}.panel-frame{height:76vh;min-height:460px}
 }
 @media(max-width:390px){
-  .common-nav,.brand-links{grid-template-columns:1fr}
-  .brand-links a:first-child{grid-column:auto}
+  .common-nav,.store-links{grid-template-columns:1fr}
+  .store-links a:first-child{grid-column:auto}
 }`;
 
 const PANEL_STYLE=`:root{
@@ -192,7 +195,7 @@ h1{margin:0 0 4px;font-size:24px;letter-spacing:-.04em;line-height:1.18}p{margin
 .actions a:hover{background:#eff6f0;color:#17492b;border-color:#cddfd1}.actions a:first-child{background:#1f5b36;color:#fff;border-color:#1f5b36}
 .help{margin-top:9px;padding:10px 11px;background:#fff;border:1px solid var(--line);border-radius:10px;color:#768279;font-size:11px;line-height:1.5}
 .delivery-overview{margin-bottom:14px;padding:14px 15px;border:1px solid #d7e3d8;border-radius:13px;background:#f8fbf8}.delivery-overview strong{display:block;font-size:13px;margin-bottom:5px}.delivery-overview p{font-size:11px}.delivery-platforms{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.delivery-platform{display:inline-flex;align-items:center;padding:6px 8px;border:1px solid #dfe7df;border-radius:999px;background:#fff;color:#4b5b50;font-size:9.5px;font-weight:800}.delivery-card-note{margin:-3px 0 10px;padding:8px 9px;border-radius:8px;background:#f5f8f5;color:#758078;font-size:9.5px;line-height:1.5}.delivery-card .actions{grid-template-columns:repeat(2,minmax(0,1fr))}.delivery-card .actions a:first-child{grid-column:1/-1}.delivery-card .actions a:nth-child(2){background:#eef6f0;color:#17492b;border-color:#cddfd1}.delivery-safety{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}.delivery-safety div{padding:10px;border:1px solid #e1e7df;border-radius:9px;background:#fff}.delivery-safety b{display:block;font-size:10px;margin-bottom:3px}.delivery-safety span{display:block;color:#7a867e;font-size:11px;line-height:1.45}.delivery-live-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding-top:11px;border-top:1px solid #e1e8e1}.delivery-live-toolbar span{font-size:10px;color:#607068;font-weight:750}.delivery-live-toolbar-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.delivery-live-toolbar button,.delivery-live-toolbar a{border:1px solid #cbd9cd;border-radius:8px;background:#fff;color:#285239;padding:7px 9px;font-size:10px;font-weight:800;text-decoration:none;cursor:pointer}.delivery-live-toolbar button[aria-pressed="true"]{background:#174e2d;color:#fff;border-color:#174e2d}.delivery-summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-top:10px}.delivery-summary-grid[hidden]{display:none}.delivery-summary-grid div{padding:9px 10px;border:1px solid #e0e7df;border-radius:9px;background:#fff}.delivery-summary-grid small{display:block;color:#7d8880;font-size:8.5px}.delivery-summary-grid b{display:block;margin-top:3px;color:#20382a;font-size:13px}.delivery-live{margin:0 0 11px;padding:10px;border:1px solid #e0e7df;border-radius:9px;background:#fbfcfb}.delivery-live-state{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}.delivery-live-state b{font-size:10px}.delivery-live-state span{font-size:8.5px;color:#768178}.delivery-live-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.delivery-live-metrics a{display:block;padding:7px;border-radius:7px;background:#f4f7f4;color:inherit;text-decoration:none;border:1px solid transparent}.delivery-live-metrics a:hover,.delivery-live-metrics a:focus-visible{background:#edf5ef;border-color:#c9ddce;outline:none}.delivery-live-metrics a.is-issue{background:#fff7f4;border-color:#efd2c8}.delivery-live-metrics small{display:block;color:#7d8880;font-size:8px}.delivery-live-metrics strong{display:block;margin-top:2px;font-size:11px;color:#243a2b}.delivery-card[data-issues-only="hidden"]{display:none}.delivery-live-error{color:#9a3f34;font-size:9.5px;line-height:1.5}.delivery-live-muted{color:#7a867e;font-size:9.5px;line-height:1.5}.delivery-live-login{display:inline-flex;margin-top:7px;padding:7px 9px;border:1px solid #cbd9cd;border-radius:8px;background:#fff;color:#285239;text-decoration:none;font-size:9.5px;font-weight:800}
-.direct-workspace{background:#fff;border:1px solid var(--line);border-radius:11px;overflow:hidden}.direct-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 9px;border-bottom:1px solid var(--line);background:#fbfcfb}.direct-toolbar-group{display:flex;align-items:center;gap:5px;flex-wrap:wrap}.direct-toolbar-group>span{font-size:9px;font-weight:900;color:#768279;margin-right:2px}.direct-toolbar button{border:1px solid #dce4dc;border-radius:7px;background:#fff;color:#425248;padding:6px 8px;font-size:10px;font-weight:800;cursor:pointer}.direct-toolbar button.is-active,.direct-toolbar button[aria-pressed="true"]{background:#1f5b36;color:#fff;border-color:#1f5b36}.direct-frame{display:block;width:100%;height:calc(100vh - 132px);min-height:600px;border:0;background:#fff}
+.direct-workspace{background:#fff;border:1px solid var(--line);border-radius:11px;overflow:hidden}.direct-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 9px;border-bottom:1px solid var(--line);background:#fbfcfb}.direct-toolbar-group{display:flex;align-items:center;gap:5px;flex-wrap:wrap}.direct-toolbar-group>span{font-size:9px;font-weight:900;color:#768279;margin-right:2px}.direct-toolbar button{border:1px solid #dce4dc;border-radius:7px;background:#fff;color:#425248;padding:6px 8px;font-size:10px;font-weight:800;cursor:pointer}.direct-toolbar button.is-active,.direct-toolbar button[aria-pressed="true"]{background:#1f5b36;color:#fff;border-color:#1f5b36}.direct-frame{display:block;width:100%;height:calc(100vh - 132px);min-height:600px;border:0;background:#fff}.direct-tool-link{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:6px 9px;border:1px solid #cbd9cd;border-radius:7px;background:#fff;color:#285239;text-decoration:none;font-size:10px;font-weight:850;white-space:nowrap}
 .agent-manager{display:grid;gap:10px}.agent-status{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 13px;border:1px solid #cfe0d2;border-radius:11px;background:#f8fbf8}.agent-status-copy{min-width:0}.agent-status-copy b{display:block;font-size:13px}.agent-status-copy span{display:block;margin-top:3px;color:#66746b;font-size:11px;line-height:1.5}.agent-status button{flex:0 0 auto;border:1px solid #c6d9ca;border-radius:8px;background:#fff;color:#285239;padding:8px 10px;font-size:11px;font-weight:850;cursor:pointer}.agent-status[data-state="online"]{background:#edf7ef;border-color:#bcd8c2}.agent-status[data-state="offline"]{background:#fff8f4;border-color:#ecd7cb}.agent-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.agent-card{padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff}.agent-card h2{margin:0 0 4px;font-size:14px}.agent-card p{font-size:11px}.agent-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.agent-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:8px 10px;border:1px solid #cfddd1;border-radius:8px;background:#fff;color:#274c34;text-decoration:none;font-size:11px;font-weight:850}.agent-actions a.primary{background:#1f5b36;border-color:#1f5b36;color:#fff}.agent-actions a.danger{background:#fff6f2;border-color:#e7cabc;color:#8d3b2f}.agent-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.agent-step{padding:10px;border:1px solid #e0e7df;border-radius:9px;background:#fff}.agent-step b{display:block;font-size:11px;margin-bottom:3px}.agent-step span{display:block;color:#748078;font-size:10px;line-height:1.45}.agent-store-links{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.agent-store-links a{padding:7px 9px;border:1px solid #dce4dc;border-radius:8px;background:#fff;color:#365342;text-decoration:none;font-size:10px;font-weight:800}.agent-note{padding:10px 11px;border:1px solid #e1e6df;border-radius:9px;background:#fbfcfb;color:#6e7a72;font-size:10.5px;line-height:1.55}
 @media(max-width:900px){.agent-grid{grid-template-columns:1fr}.agent-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.grid{grid-template-columns:1fr}.head{display:block}.badge{display:inline-block;margin-top:10px}.delivery-safety{grid-template-columns:1fr}.delivery-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.direct-toolbar{align-items:flex-start;flex-direction:column}.direct-frame{height:72vh;min-height:520px}}
 @media(max-width:390px){body{padding:10px}h1{font-size:22px}.direct-frame{min-height:500px}}`;
@@ -206,11 +209,30 @@ function commonHref(view){
   return `/cmpmyi/admin/panel/${view}`;
 }
 
-function brandMenu(store){
-  return `<details class="brand-group" aria-label="${store.short} 관리자 메뉴">
-    <summary class="brand-head"><span class="brand-mark">${store.mark}</span><div><strong>${store.short}</strong><span>${store.name}</span></div><span class="brand-caret" aria-hidden="true">›</span></summary>
-    <nav class="brand-links">${SECTIONS.map(([section,label])=>`<a href="${adminHref(store,section)}" target="cmpmyi-panel">${label}</a>`).join('')}</nav>
-  </details>`;
+function storeMenu(store,index){
+  return `<nav class="store-links" data-store-menu="${store.slug}" aria-label="${store.short} 매장별 메뉴"${index===0?'':' hidden'}>${STORE_MENU_SECTIONS.map(([section,label])=>`<a href="${adminHref(store,section)}" target="cmpmyi-panel">${label}</a>`).join('')}</nav>`;
+}
+
+function portfolioShellClient(){
+  const select=document.getElementById('cmpmyiStoreSelect');
+  const name=document.getElementById('cmpmyiSelectedStoreName');
+  const menus=[...document.querySelectorAll('[data-store-menu]')];
+  const brandKey='ekodi-cmpmyi-direct-brand';
+  if(!select||!menus.length)return;
+  const labels={jadam:'자담치킨 목포대점',pizzamaru:'피자마루 목포대점',yogurt:'요거트퍼플 목포대점'};
+  const valid=value=>menus.some(menu=>menu.dataset.storeMenu===value);
+  function activate(value,persist=true){
+    const slug=valid(value)?value:'jadam';
+    select.value=slug;
+    menus.forEach(menu=>{menu.hidden=menu.dataset.storeMenu!==slug});
+    if(name)name.textContent=labels[slug]||slug;
+    if(persist){try{localStorage.setItem(brandKey,slug)}catch{}}
+  }
+  let initial=select.value||'jadam';
+  try{const saved=localStorage.getItem(brandKey);if(valid(saved))initial=saved}catch{}
+  select.addEventListener('change',()=>activate(select.value,true));
+  window.addEventListener('storage',event=>{if(event.key===brandKey&&valid(event.newValue))activate(event.newValue,false)});
+  activate(initial,false);
 }
 
 function panelCard(store,view){
@@ -227,8 +249,10 @@ function directWorkspace(view,key){
   const primary=view.sections[0]?.[0]||'';
   const brandButtons=STORES.map((store,index)=>`<button type="button" class="direct-brand${index===0?' is-active':''}" data-direct-brand="${store.slug}" aria-pressed="${index===0?'true':'false'}">${store.short}</button>`).join('');
   const taskButtons=view.sections.map(([section,label],index)=>`<button type="button" class="direct-task${index===0?' is-active':''}" data-direct-section="${section}" aria-pressed="${index===0?'true':'false'}">${label}</button>`).join('');
+  const taskGroup=view.sections.length>1?`<div class="direct-toolbar-group"><span>업무</span>${taskButtons}</div>`:'';
+  const agentLink=key==='pos'?'<a class="direct-tool-link" href="/cmpmyi/admin/agent" target="_top">Agent 설치·관리</a>':'';
   return `<section class="direct-workspace" data-cmpmyi-direct-workspace="${key}" data-default-section="${primary}">
-    <div class="direct-toolbar"><div class="direct-toolbar-group"><span>브랜드</span>${brandButtons}</div><div class="direct-toolbar-group"><span>업무</span>${taskButtons}</div></div>
+    <div class="direct-toolbar"><div class="direct-toolbar-group"><span>매장</span>${brandButtons}</div>${taskGroup}${agentLink}</div>
     <iframe class="direct-frame" title="${view.label} 실제 관리화면" src="${adminHref(STORES[0],primary)}"></iframe>
   </section>`;
 }
@@ -297,6 +321,7 @@ function portfolioPanelClient(){
     }
     brandButtons.forEach(button=>button.addEventListener('click',()=>{brand=button.dataset.directBrand||brand;try{localStorage.setItem(brandKey,brand)}catch{}sync()}));
     taskButtons.forEach(button=>button.addEventListener('click',()=>{section=button.dataset.directSection??section;try{localStorage.setItem(sectionKey,section)}catch{}sync()}));
+    window.addEventListener('storage',event=>{if(event.key===brandKey&&validBrand(event.newValue)){brand=event.newValue;sync()}});
     sync();
     return;
   }
@@ -500,7 +525,7 @@ function portfolioPanelClient(){
   load();
   setInterval(()=>{if(document.visibilityState==='visible')load()},300000);
 }
-export function storePortfolioAdminPage(initialView='overview'){
+export function storePortfolioAdminPage(initialView='pos'){
   const startView=COMMON_VIEWS[String(initialView||'overview').toLowerCase()]?String(initialView||'overview').toLowerCase():'overview';
   const html=`<!doctype html><html lang="ko" data-ekodi-store-portfolio="cmpmyi" data-ekodi-authority-scope="platform-entry">
   <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>통합 매장 운영 · EKODI</title><style>${SHELL_STYLE}</style></head>
@@ -511,17 +536,21 @@ export function storePortfolioAdminPage(initialView='overview'){
     </header>
     <div class="app">
       <aside class="portfolio-sidebar" aria-label="통합 매장 관리자 메뉴" data-cmpmyi-navigation="left-fixed">
-        <div class="side-intro"><small>3 BRAND ADMIN</small><strong>통합 관리자</strong><span>공통 업무와 브랜드별 메뉴를 왼쪽에서 바로 선택합니다.</span></div>
-        <div class="menu-title"><strong>공통관리</strong><small>3개 브랜드</small></div>
+        <div class="side-intro"><small>3 BRAND ADMIN</small><strong>통합 관리자</strong><span>공통업무 3개만 위에 두고, 나머지는 선택한 매장의 전용 메뉴에서 바로 엽니다.</span></div>
+        <div class="menu-title"><strong>공통관리</strong><small>3개 브랜드 공통</small></div>
         <nav class="common-nav">${COMMON_MENU.map(([view,label])=>`<a href="${commonHref(view)}" target="cmpmyi-panel">${label}</a>`).join('')}</nav>
-        <div class="menu-title"><strong>브랜드 관리자 전체 메뉴</strong><small>직접 이동</small></div>
-        ${STORES.map(brandMenu).join('')}
-        <p class="portfolio-sidebar-note">각 브랜드의 데이터와 권한은 독립적으로 유지됩니다. 통합 화면은 해당 브랜드의 정식 관리자 화면을 오른쪽 작업영역에 표시합니다.</p>
+        <section class="store-picker" data-cmpmyi-store-picker="v1">
+          <label class="store-picker-label" for="cmpmyiStoreSelect"><span>매장 선택</span><select id="cmpmyiStoreSelect" aria-label="매장 선택">${STORES.map((store,index)=>`<option value="${store.slug}"${index===0?' selected':''}>${store.name}</option>`).join('')}</select></label>
+          <div class="store-selected-head"><strong id="cmpmyiSelectedStoreName">${STORES[0].name}</strong><small>매장별 메뉴</small></div>
+          ${STORES.map(storeMenu).join('')}
+        </section>
+        <p class="portfolio-sidebar-note">POS 통합화면·연결관리·채널 자동게시만 공통관리로 유지합니다. 주문·매출·메뉴·재고·고객·리뷰·마케팅·정산·사이트·권한은 선택한 매장 범위에서 실행합니다.</p>
       </aside>
       <main class="workspace">
         <iframe class="panel-frame" name="cmpmyi-panel" title="통합 매장 관리자 작업영역" src="${commonHref(startView)}"></iframe>
       </main>
     </div>
+    <script src="/cmpmyi/admin/shell.js" defer></script>
   </body></html>`;
   return new Response(html,{headers:{
     'content-type':'text/html; charset=utf-8',
@@ -561,6 +590,7 @@ export function storePortfolioAdminPanelPage(viewName='overview'){
   }});
 }
 
+export function storePortfolioAdminShellScript(){return new Response(`(${portfolioShellClient.toString()})();`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}})}
 export function storePortfolioAdminPanelScript(){return new Response(`(${portfolioPanelClient.toString()})();`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}})}
 
-export { STORES as CMPMYI_STORES, SECTIONS as CMPMYI_ADMIN_SECTIONS, COMMON_MENU as CMPMYI_COMMON_MENU };
+export { STORES as CMPMYI_STORES, SECTIONS as CMPMYI_ADMIN_SECTIONS, STORE_MENU_SECTIONS as CMPMYI_STORE_MENU_SECTIONS, COMMON_MENU as CMPMYI_COMMON_MENU };
