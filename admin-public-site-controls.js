@@ -5,6 +5,7 @@ const API = 'https://ekodi.kr/api/control/public-sites';
 const SECTION = 'public-site-controls';
 const LABELS = {
   public: '정상 공개',
+  private: '비공개',
   maintenance: '임시페이지',
   default: '기본 안내 화면',
   url: '지정 주소 연결',
@@ -85,7 +86,7 @@ function ensurePanel() {
       <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
         <div>
           <h2>공개·점검 전환</h2>
-          <p class="muted">사이트 목록을 다시 만들지 않고, 공개 주소의 정상 공개·점검 모드만 전환합니다.</p>
+          <p class="muted">사이트 목록을 다시 만들지 않고, 공개 주소의 정상 공개·점검 모드만 전환하던 기존 제어에 비공개 상태를 추가합니다. 공개는 검색엔진 색인을 허용하고, 비공개·점검 상태는 색인을 차단합니다.</p>
         </div>
         <button type="button" class="btn" data-public-site-refresh>새로고침</button>
       </div>
@@ -116,8 +117,9 @@ function siteForm(site) {
       </div>
       <label>공개 상태
         <select name="publicStatus">
-          <option value="public">정상 공개</option>
-          <option value="maintenance">임시페이지</option>
+          <option value="public">정상 공개 · 검색 허용</option>
+          <option value="private">비공개 · 검색 차단</option>
+          <option value="maintenance">점검중 · 검색 차단</option>
         </select>
       </label>
       <label>임시페이지 방식
@@ -145,7 +147,7 @@ function siteForm(site) {
         <button type="submit" class="btn primary">저장</button>
         <a class="btn" href="${surfaceInfo(site).url}" target="_blank" rel="noopener noreferrer">사이트 확인</a>
       </div>
-      <small class="muted">지정 주소 연결은 http 또는 https 주소만 허용합니다. 기본값은 방문자가 길을 잃지 않도록 버튼 이동입니다.</small>
+      <small class="muted">검색 노출은 공개 상태와 자동 연동됩니다. 공개는 index/follow, 비공개·점검중은 noindex/nofollow가 강제됩니다. 지정 주소 연결은 http 또는 https 주소만 허용합니다.</small>
     </form>
   `);
 }

@@ -102,7 +102,7 @@ export async function handleSeonamMediMonitorApi(request,env){
   try{
     const [lastRun,rows,mediaCount]=await Promise.all([
       env.DB.prepare('SELECT id,started_at,completed_at,status,sources_checked,items_seen,new_items,error_summary FROM seonam_medi_monitor_runs ORDER BY id DESC LIMIT 1').first(),
-      env.DB.prepare("SELECT title,url,resolved_url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,media_type,media_url,media_source,media_published_at,media_state FROM seonam_medi_monitor_items WHERE datetime(last_seen_at)>=datetime('now','-7 days') ORDER BY COALESCE(published_at,first_seen_at) DESC LIMIT 24").all(),
+      env.DB.prepare("SELECT title,url,resolved_url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,media_type,media_url,media_source,media_published_at,media_state FROM seonam_medi_monitor_items WHERE datetime(last_seen_at)>=datetime('now','-7 days') AND review_state='verified' ORDER BY COALESCE(published_at,first_seen_at) DESC LIMIT 24").all(),
       env.DB.prepare("SELECT count(*) AS count FROM seonam_medi_monitor_items WHERE datetime(last_seen_at)>=datetime('now','-7 days') AND media_state='candidate' AND media_type IN ('photo','video')").first()
     ]);
     return json({ok:true,siteOwned:true,aiProvider:false,schedule:'daily 08:00 Asia/Seoul',scheduler:'existing-control-cron',lastRun:lastRun||null,mediaCandidateCount:Number(mediaCount?.count||0),items:rows?.results||[]});
