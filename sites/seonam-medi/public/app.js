@@ -55,7 +55,7 @@ const renderStatusDetail=(key,d)=>{
   }else if(key==='news'){
     const approved=((latestMonitorData&&latestMonitorData.items)||[]).filter(s=>s.review_state==='published_news').map(s=>({title:s.title,url:s.resolved_url||s.url,publisher:s.publisher,date:kstDate(s.published_at||s.first_seen_at),kind:'관리자 승인 · 관련보도'}));
     const rows=[...approved,...(d.sources||[]).filter(s=>/(보도|언론)/.test(String(s.kind||'')))].slice(0,8);
-    label='RELATED NEWS';title='관련 보도';description='기사 제목·언론사·보도일을 확인하고 원문으로 바로 이동할 수 있습니다.';
+    label='RELATED NEWS & SOURCES';title='관련보도·자료';description='같은 사건의 자료와 보도를 중복 없이 묶어 확인하고 원문으로 이동할 수 있습니다.';
     body='<div class="status-detail-list">'+statusSourceRows(rows,'현재 연결된 관련 보도가 없습니다.')+'</div>';target='#news';targetLabel='관련기사 전체 보기';
   }else if(key==='notice'){
     const rows=latestNotices.filter(x=>x.pinned).slice(0,8);label='IMPORTANT NOTICE';title='주요공지';description='관리자가 주요공지로 지정한 내용을 확인할 수 있습니다.';body=rows.length?'<div class="status-detail-list">'+rows.map(x=>'<article class="source"><strong>'+escapeHtml(x.title||'공지')+'</strong><small>'+escapeHtml(managedDate(x.publishedAt||x.updatedAt))+'</small><p>'+escapeHtml(x.body||'')+'</p></article>').join('')+'</div>':'<p class="muted">현재 등록된 주요공지가 없습니다.</p>';target='#notices';targetLabel='공지 전체 보기';
@@ -77,7 +77,8 @@ const refreshStatusDetail=()=>{const active=el('statusCards')?.querySelector('.s
 async function load(){const r=await fetch('/seonam-medi/data.json',{cache:'no-store'});if(!r.ok)throw new Error('data');const d=await r.json();window.__SEONAM_MEDI_DATA=d;
 el('lastUpdated').textContent='최종 업데이트 '+d.updatedAt;
 const statusCards=el('statusCards');
-const statusItems=[...d.status,{key:'notice',title:'주요공지',text:'중요한 안내와 공지를 확인합니다.'}];
+const baseStatus=d.status.filter((x,i)=>(x.key||['official','news','daily'][i])!=='daily').map((x,i)=>{const key=x.key||['official','news'][i];return key==='news'?{...x,title:'관련보도·자료',text:'같은 사건의 공식자료와 관련보도를 묶어 핵심내용과 원문 링크를 확인합니다.'}:x});
+const statusItems=[...baseStatus,{key:'notice',title:'주요공지',text:'중요한 안내와 공지를 확인합니다.'}];
 statusCards.innerHTML=statusItems.map((x,i)=>{const key=x.key||['official','news','daily'][i]||('status-'+i);return `<button type="button" class="card status-card" data-status="${escapeHtml(key)}" aria-expanded="false" aria-controls="statusDetail"><span class="status-card-copy"><strong class="status-card-title">${escapeHtml(x.title)}</strong><span class="status-card-text">${escapeHtml(x.text)}</span></span><span class="status-card-action">내용 보기 <span aria-hidden="true">→</span></span></button>`}).join('');
 statusCards.addEventListener('click',event=>{const button=event.target.closest('.status-card');if(!button)return;if(button.getAttribute('aria-expanded')==='true'){closeStatusDetail();return}renderStatusDetail(button.dataset.status,d)});
 const cats=['전체',...new Set(d.timeline.map(x=>x.category))];
@@ -96,15 +97,15 @@ async function loadMonitor(){
     if(!response.ok||!data.ok)throw new Error(data.message||'점검 상태를 불러오지 못했습니다.');
     const run=data.lastRun;
     badge.textContent=run?.completed_at?'사이트 자동점검: '+new Date(run.completed_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'사이트 자동점검: 첫 실행 대기';
-    summary.textContent=run?('최근 점검 '+(run.status==='ok'?'정상':run.status==='partial'?'일부 확인':'확인 필요')+' · 출처 '+run.sources_checked+'개 · 신규 '+run.new_items+'건 · 사진·영상 근거 후보 '+Number(data.mediaCandidateCount||0)+'건'):'첫 자동점검은 매일 08:00에 실행됩니다.';
+    if(summary)summary.textContent=run?('최근 점검 '+(run.status==='ok'?'정상':run.status==='partial'?'일부 확인':'확인 필요')+' · 출처 '+run.sources_checked+'개 · 신규 '+run.new_items+'건 · 사진·영상 근거 후보 '+Number(data.mediaCandidateCount||0)+'건'):'첫 자동점검은 매일 08:00에 실행됩니다.';
     const rows=(data.items||[]).slice(0,12);window.__SEONAM_MONITOR_ITEMS=data.items||[];attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS);
-    list.innerHTML=rows.length?rows.map(item=>`<article class="source"><a href="${safeUrl(item.resolved_url||item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title||'')}</a><small>${escapeHtml(item.publisher||'출처 확인 중')} · 자동수집 보도${item.media_type?' · '+(item.media_type==='video'?'영상 근거 후보':'사진 근거 후보'):''} · 원문 확인 필요</small></article>`).join(''):'<p class="muted">최근 7일 내 새로 수집된 보도가 없습니다.</p>';
+    if(list)list.innerHTML=rows.length?rows.map(item=>`<article class="source"><a href="${safeUrl(item.resolved_url||item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title||'')}</a><small>${escapeHtml(item.publisher||'출처 확인 중')} · 자동수집 보도${item.media_type?' · '+(item.media_type==='video'?'영상 근거 후보':'사진 근거 후보'):''} · 원문 확인 필요</small></article>`).join(''):'<p class="muted">최근 7일 내 새로 수집된 보도가 없습니다.</p>';
     refreshStatusDetail();
   }catch(error){
     latestMonitorData=null;
     badge.textContent='사이트 자동점검: 준비 중';
-    summary.textContent=error.message||'점검 상태를 불러오지 못했습니다.';
-    list.innerHTML='';
+    if(summary)summary.textContent=error.message||'점검 상태를 불러오지 못했습니다.';
+    if(list)list.innerHTML='';
     refreshStatusDetail();
   }
 }
