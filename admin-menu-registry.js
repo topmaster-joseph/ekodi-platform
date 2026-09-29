@@ -87,7 +87,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'personal-finance', group: 'services', icon: '₩', managementArea: 'professional-services', labels: { ko: '개인재무', en: 'Personal Finance' }, internal: true },
   { id: 'invest', group: 'services', icon: 'I', managementArea: 'professional-services', labels: { ko: '투자 AI', en: 'Invest AI' }, internal: true },
   { id: 'marketing-ai', group: 'services', icon: 'M', labels: { ko: '마케팅AI', en: 'Marketing AI' }, internal: true },
-  { id: 'supply-network', group: 'services', icon: 'N', managementArea: 'professional-services', labels: { ko: '판매·공급망', en: 'Sales & Supply Network' }, internal: true },
+  { id: 'supply-network', group: 'services', icon: 'N', managementArea: 'professional-services', labels: { ko: '판매·공급망 엔진', en: 'Sales & Supply Network Engine' } },
   { id: 'insurance', group: 'services', icon: 'I', labels: { ko: '보험', en: 'Insurance' }, internal: true },
   { id: 'capabilities', group: 'services', icon: '⚡', labels: { ko: 'Capability Center', en: 'Capability Center' }, internal: true },
   { id: 'openai', group: 'services', icon: 'O', labels: { ko: 'OpenAI 작업공간', en: 'OpenAI' }, providerWorkspace: true, internal: true },
