@@ -65,6 +65,8 @@ export function validateMissionShellSource(source){
     "api/i18n/v1/catalog?service=mission",
     "languages.filter(item=>published.has(item.locale))",
     "select.setAttribute('aria-label','언어 선택')",
+    "language.hidden=true",
+    "languageControl.hidden=available.length<=1",
     "nav.replaceChildren(...links,language)",
   ])if(!source.includes(marker))errors.push(`missing ${marker}`);
   for(const href of REQUIRED_MISSION_LINKS)if(!source.includes(href))errors.push(`missing navigation target ${href}`);
