@@ -60,6 +60,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'deployments', group: 'status', icon: '↑', labels: { ko: '배포·작업 대기', en: 'Deployments & Work Queue' } },
   { id: 'aiops', group: 'status', icon: 'AI', labels: { ko: '장애·오류·경고', en: 'Incidents, Errors & Warnings' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
   { id: 'devices', group: 'status', icon: 'D', labels: { ko: '실행 인프라', en: 'Execution Infrastructure' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
+  { id: 'pos-agent', group: 'status', icon: 'POS', labels: { ko: 'POS Agent 설치·관리', en: 'POS Agent Install & Management' }, href: 'https://github.com/topmaster-joseph/ekodi-platform/tree/main/agents/windows-pos', superAdminOnly: true, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
   { id: 'api-cost', group: 'status', icon: '₩', labels: { ko: '사용량·비용', en: 'Usage & Cost' } },
   { id: 'architecture', group: 'status', icon: '◇', labels: { ko: '시스템 구조', en: 'System Structure' } },
   { id: 'maturity', group: 'status', icon: 'M5', labels: { ko: '플랫폼 성숙도', en: 'Platform Maturity' }, superAdminOnly: true },
@@ -117,7 +118,7 @@ const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   'sites-all':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',campus:'sites',clients:'sites','site-chrome':'sites',cmpmyi:'sites',organization:'sites',workspace:'sites',
   'users-access':'access',security:'access',admins:'access','ai-membership':'access',
   work:'content',communication:'content',community:'content',books:'content',devotional:'content',social:'content',finance:'content',tax:'content',
-  health:'status',deployments:'status',aiops:'status',devices:'status','api-cost':'status',architecture:'status',maturity:'status',services:'status',
+  health:'status',deployments:'status',aiops:'status',devices:'status','pos-agent':'status','api-cost':'status',architecture:'status',maturity:'status',services:'status',
   'public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'settings','audit-records':'settings',policies:'settings',
   'common-services':'catalog',confirmations:'catalog','life-ai':'catalog','personal-finance':'catalog',invest:'catalog','marketing-ai':'catalog','supply-network':'catalog',insurance:'catalog',capabilities:'catalog',openai:'catalog',
 });
