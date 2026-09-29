@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { storePortfolioAdminPage, storePortfolioAdminPanelPage, storePortfolioAdminPanelScript, CMPMYI_STORES, CMPMYI_ADMIN_SECTIONS, CMPMYI_COMMON_MENU } from '../store-portfolio-admin-page.js';
+import { storePortfolioAdminPage, storePortfolioAdminPanelPage, storePortfolioAdminPanelScript, storePortfolioAdminShellScript, CMPMYI_STORES, CMPMYI_ADMIN_SECTIONS, CMPMYI_STORE_MENU_SECTIONS, CMPMYI_COMMON_MENU } from '../store-portfolio-admin-page.js';
 import platformEntry from '../platform-router-entry-worker.js';
 import { storeAdminPage } from '../store-admin-engine.js';
 import { ADMIN_MENU_REGISTRY } from '../admin-menu-registry.js';
 
-test('cmpmyi admin provides fixed common and brand navigation with a right workspace',async()=>{
+test('cmpmyi admin keeps only three common tasks and places all other work under the selected store',async()=>{
   const response=storePortfolioAdminPage();const html=await response.text();
   assert.equal(response.status,200);
   assert.equal(response.headers.get('x-ekodi-route'),'cmpmyi-store-portfolio-admin');
@@ -14,34 +14,60 @@ test('cmpmyi admin provides fixed common and brand navigation with a right works
   for(const section of ['pos','delivery','menu','orders','sales','inventory','customers','reviews','marketing','publishing','work','finance','connections','site','members']){
     assert.ok(CMPMYI_ADMIN_SECTIONS.some(([key])=>key===section),`missing ${section}`);
   }
-  for(const view of ['overview','pos','agent','delivery','menu','orders','sales','customer','marketing','publishing','operations','connections']){
-    assert.ok(CMPMYI_COMMON_MENU.some(([key])=>key===view),`missing common view ${view}`);
-    assert.ok(html.includes(`/cmpmyi/admin/panel/${view}`));
-  }
+  assert.deepEqual(CMPMYI_COMMON_MENU,[
+    ['pos','POS 통합화면'],
+    ['connections','연결관리'],
+    ['publishing','채널 · 자동게시'],
+  ]);
+  const storeKeys=CMPMYI_STORE_MENU_SECTIONS.map(([key])=>key);
+  for(const section of ['','delivery','menu','orders','sales','inventory','customers','reviews','marketing','work','finance','site','members'])assert.ok(storeKeys.includes(section),`missing store menu ${section}`);
+  for(const commonOnly of ['pos','connections','publishing'])assert.equal(storeKeys.includes(commonOnly),false,`${commonOnly} must stay common-only`);
+
   assert.match(html,/공통관리/);
-  assert.match(html,/브랜드 관리자 전체 메뉴/);
+  assert.match(html,/3개 브랜드 공통/);
+  assert.match(html,/data-cmpmyi-store-picker="v1"/);
+  assert.match(html,/id="cmpmyiStoreSelect"/);
+  assert.match(html,/id="cmpmyiSelectedStoreName"/);
+  assert.match(html,/매장별 메뉴/);
+  assert.match(html,/src="\/cmpmyi\/admin\/panel\/pos"/);
   assert.match(html,/name="cmpmyi-panel"/);
   assert.match(html,/target="cmpmyi-panel"/);
   assert.match(html,/class="panel-frame"/);
   assert.match(html,/class="portfolio-sidebar"/);
   assert.match(html,/data-cmpmyi-navigation="left-fixed"/);
-  assert.match(html,/<details class="brand-group"/);
-  assert.match(html,/class="brand-caret"/);
-  assert.match(html,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(html,/\/cmpmyi\/admin\/shell\.js/);
+  assert.doesNotMatch(html,/<details class="brand-group"/);
+  assert.doesNotMatch(html,/브랜드 관리자 전체 메뉴/);
+  assert.doesNotMatch(html,/class="brand-caret"/);
+  assert.doesNotMatch(html,/class="common-nav"[\s\S]*\/cmpmyi\/admin\/panel\/delivery/);
+  assert.doesNotMatch(html,/class="common-nav"[\s\S]*\/cmpmyi\/admin\/panel\/overview/);
+  assert.doesNotMatch(html,/class="common-nav"[\s\S]*\/cmpmyi\/admin\/panel\/agent/);
   assert.doesNotMatch(html,/class="sidebar"/);
+
   for(const store of CMPMYI_STORES){
     assert.ok(html.includes(store.name));
-    assert.ok(html.includes(`/${store.slug}/admin?embed=cmpmyi`));
-    for(const section of ['pos','delivery','menu','orders','connections']){
+    assert.match(html,new RegExp(`data-store-menu="${store.slug}"`));
+    for(const section of ['delivery','menu','orders','sales','inventory','customers','reviews','marketing','work','finance','site','members']){
       assert.ok(html.includes(`/${store.slug}/admin/${section}?embed=cmpmyi`));
     }
   }
+
+  const shellRuntime=await storePortfolioAdminShellScript().text();
+  assert.match(shellRuntime,/ekodi-cmpmyi-direct-brand/);
+  assert.match(shellRuntime,/cmpmyiStoreSelect/);
+  assert.match(shellRuntime,/data-store-menu/);
+  assert.match(shellRuntime,/localStorage\.setItem\(brandKey,slug\)/);
+  assert.match(shellRuntime,/window\.addEventListener\('storage'/);
+
   const agentShell=await storePortfolioAdminPage('agent').text();
   assert.match(agentShell,/src="\/cmpmyi\/admin\/panel\/agent"/);
 });
 
 test('cmpmyi POS Agent manager provides local status, same-domain lifecycle downloads and store links',async()=>{
-  assert.ok(CMPMYI_COMMON_MENU.some(([key,label])=>key==='agent'&&label==='POS Agent 관리'));
+  assert.equal(CMPMYI_COMMON_MENU.some(([key])=>key==='agent'),false);
+  const posPanel=await storePortfolioAdminPanelPage('pos').then(response=>response.text());
+  assert.match(posPanel,/Agent 설치·관리/);
+  assert.match(posPanel,/href="\/cmpmyi\/admin\/agent"/);
   const response=storePortfolioAdminPanelPage('agent');
   const html=await response.text();
   assert.equal(response.status,200);
@@ -126,6 +152,11 @@ test('router serves cmpmyi common panels and same-origin embedded canonical stor
   assert.equal(agentPanel.status,200);
   assert.match(await agentPanel.text(),/POS Agent 설치·관리/);
 
+  const shellScript=await platformEntry.fetch(new Request('https://ekodi.kr/cmpmyi/admin/shell.js'),{},{});
+  assert.equal(shellScript.status,200);
+  assert.match(shellScript.headers.get('content-type')||'',/text\/javascript/);
+  assert.match(await shellScript.text(),/cmpmyiStoreSelect/);
+
   const panel=await platformEntry.fetch(new Request('https://ekodi.kr/cmpmyi/admin/panel/customer'),{},{});
   assert.equal(panel.status,200);
   assert.equal(panel.headers.get('x-ekodi-route'),'cmpmyi-store-portfolio-panel');
@@ -178,6 +209,11 @@ test('guarded release probes canonical store admins and redirect-only aggregate 
   const manifest=JSON.parse(readFileSync(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
   const byUrl=new Map(manifest.worker.requests.map(row=>[row.url,row]));
   assert.deepEqual(byUrl.get('https://ekodi.kr/cmpmyi/admin')?.statuses,[200]);
+  assert.ok(byUrl.get('https://ekodi.kr/cmpmyi/admin')?.expect.includes('cmpmyiStoreSelect'));
+  const shellRuntimeProbe=byUrl.get('https://ekodi.kr/cmpmyi/admin/shell.js');
+  assert.deepEqual(shellRuntimeProbe?.statuses,[200]);
+  assert.ok(shellRuntimeProbe?.expect.includes('cmpmyiStoreSelect'));
+  assert.ok(shellRuntimeProbe?.expect.includes('ekodi-cmpmyi-direct-brand'));
   assert.deepEqual(byUrl.get('https://ekodi.kr/cmpmyi/admin/agent')?.statuses,[200]);
   assert.ok(byUrl.get('https://ekodi.kr/cmpmyi/admin/agent')?.expect.includes('POS Agent 관리'));
   assert.deepEqual(byUrl.get('https://ekodi.kr/cmpmyi/admin/panel/agent')?.statuses,[200]);
