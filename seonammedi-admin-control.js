@@ -4,6 +4,8 @@ import { accessGrantIsActive, effectiveAccessCapabilities } from './access-gover
 import { ensureCustomerAccessSchema } from './customer-google-prereg.js';
 
 const PREFIX='/api/seonammedi';
+const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const TENANT_SLUG='seonammedi';
 const NOTICE_CAP='seonammedi.notice.manage';
 const CHANNEL_CAP='seonammedi.channel.manage';
@@ -16,6 +18,31 @@ const CHANNEL_CATEGORIES=new Set(['official','related-org','media','civic','othe
 const clean=(value,max=4000)=>String(value??'').trim().slice(0,max);
 const lower=value=>clean(value,320).toLowerCase();
 const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
+async function authBridge(request,mode){
+  const body=await request.json().catch(()=>null);
+  const tokenHash=clean(body?.token_hash,8192);
+  const refreshToken=clean(body?.refresh_token,8192);
+  if(mode==='exchange'&&!tokenHash)return json({ok:false,error:'token_hash_required'},400);
+  if(mode==='refresh'&&!refreshToken)return json({ok:false,error:'refresh_token_required'},400);
+  const endpoint=mode==='refresh'?'/auth/v1/token?grant_type=refresh_token':'/auth/v1/verify';
+  const payload=mode==='refresh'?{refresh_token:refreshToken}:{token_hash:tokenHash,type:clean(body?.type,40)||'email'};
+  const upstream=await fetch(SUPABASE_URL+endpoint,{
+    method:'POST',
+    headers:{apikey:SUPABASE_PUBLISHABLE_KEY,'content-type':'application/json'},
+    body:JSON.stringify(payload),
+    signal:AbortSignal.timeout(10000),
+  }).catch(()=>null);
+  if(!upstream)return json({ok:false,error:'auth_upstream_unavailable'},503);
+  const data=await upstream.json().catch(()=>({}));
+  if(!upstream.ok)return json({ok:false,error:data?.msg||data?.error_description||data?.error||('auth_'+upstream.status)},upstream.status);
+  return json({
+    access_token:data.access_token||'',
+    refresh_token:data.refresh_token||'',
+    expires_at:data.expires_at||0,
+    expires_in:data.expires_in||0,
+    user:data.user?{id:data.user.id||'',email:data.user.email||''}:null
+  });
+}
 const validHttps=value=>{try{const url=new URL(String(value||''));return url.protocol==='https:'?url.toString():''}catch{return''}};
 const safeBool=value=>value===true||value===1||value==='1';
 const safeOrder=value=>Math.max(0,Math.min(9999,Number.parseInt(String(value??0),10)||0));
@@ -201,6 +228,8 @@ async function deleteChannel(env,auth,id){
 
 export async function handleSeonamMediAdminApi(request,env){
   const url=new URL(request.url);
+  if(url.pathname===PREFIX+'/admin/auth/exchange'&&request.method==='POST')return authBridge(request,'exchange');
+  if(url.pathname===PREFIX+'/admin/auth/refresh'&&request.method==='POST')return authBridge(request,'refresh');
   if(url.pathname===PREFIX+'/content'&&request.method==='GET'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
     await ensureSchema(env.DB);
