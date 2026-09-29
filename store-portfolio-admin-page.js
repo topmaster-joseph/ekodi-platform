@@ -530,7 +530,7 @@ function portfolioPanelClient(){
 }
 export function storePortfolioAdminPage(initialView='pos'){
   const requested=String(initialView||'pos').toLowerCase();
-  const startView=COMMON_MENU.some(([view])=>view===requested)?requested:'pos';
+  const startView=COMMON_VIEWS[requested]?requested:'pos';
   const initialStore=STORES[0];
   const html=`<!doctype html><html lang="ko" data-ekodi-store-portfolio="cmpmyi" data-ekodi-authority-scope="platform-entry">
   <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>통합 매장 운영 · EKODI</title><style>${SHELL_STYLE}</style></head>
