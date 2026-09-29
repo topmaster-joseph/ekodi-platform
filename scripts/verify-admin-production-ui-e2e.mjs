@@ -201,11 +201,7 @@ async function resolveMenuTrigger(id, group) {
     return detail;
   }
 
-  const contextTab = page.locator(`button.admin-context-tab[data-admin-context-section="${id}"]`).first();
-  await contextTab.waitFor({ state: 'attached', timeout: 10_000 });
-  if (await contextTab.isVisible().catch(() => false)) return contextTab;
-
-  throw new Error(`${id}: no visible sidebar navigation trigger after selecting work area ${group}`);
+  throw new Error(`${id}: no visible left-navigation trigger after selecting work area ${group}`);
 }
 
 const results = [];
@@ -261,8 +257,6 @@ for (const [id, group] of menus) {
     selectedWorkArea = group;
   }
 
-  const contextTab = page.locator(`button.admin-context-tab[data-admin-context-section="${id}"]`).first();
-  await contextTab.waitFor({ state: 'attached', timeout: 10000 });
   const definition = getAdminMenuItem(id);
 
   if (id === 'tax') {
