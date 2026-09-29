@@ -168,9 +168,9 @@ function installEkodiBizSourceHub() {
     document.head.append(style);
   }
   const main=document.querySelector('#app main')||document.querySelector('main'); if(!main)return;
-  const host=existing||document.createElement('nav'); host.className='ekodibiz-admin-hub'; host.dataset.ekodibizAdminHub='true'; host.setAttribute('aria-label','에코디비즈 사이트 전환'); host.replaceChildren();
-  const label=document.createElement('strong'); label.textContent='사이트 전환'; host.append(label);
-  const select=document.createElement('select');select.setAttribute('aria-label','에코디비즈 관리 사이트 전환');
+  const host=existing||document.createElement('nav'); host.className='ekodibiz-admin-hub admin-scope-switcher'; host.dataset.ekodibizAdminHub='true'; host.dataset.ekodibizSiteSwitch='true'; host.dataset.adminScopeCurrent='books'; host.setAttribute('aria-label','관리 사이트 전환'); host.replaceChildren();
+  const label=document.createElement('strong'); label.className='admin-scope-label'; label.textContent='사이트 전환'; host.append(label);
+  const select=document.createElement('select');select.className='admin-scope-select';select.setAttribute('aria-label','관리 사이트 전환');
   for(const scope of EKODIBIZ_ADMIN_SCOPES){const option=document.createElement('option');option.value=scope.adminHref;option.textContent=scope.label;option.title=scope.description||scope.label;option.selected=scope.id==='books';select.append(option)}
   select.addEventListener('change',()=>{if(select.value)location.assign(select.value)});host.append(select);
   if(!existing)main.prepend(host);
