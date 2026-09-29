@@ -303,6 +303,13 @@ for(const route of ['/api','/webhooks','/mcp','/health','static-assets']) if(!ca
 if(canonicalUrlQuery.trackingQueryMayNotDefineIdentityAuthorizationOrRouting!==true) fail('tracking query parameters must never define identity, authorization or routing');
 if(canonicalUrlQuery.appliesToLegacyHumanEntryAliases!==true) fail('canonical URL query hygiene must cover legacy human-entry aliases');
 
+const universalFree=constitution.universalFreeIdentityPolicy||{};
+if(universalFree.id!=='UNIVERSAL-FREE-IDENTITY-001'||universalFree.status!=='enforced') fail('universal FREE identity policy must remain enforced');
+if(universalFree.scope!=='all-current-and-future-registry-user-services') fail('universal FREE identity scope drifted');
+for(const key of ['singleGoogleLoginCreatesCanonicalPerson','canonicalPersonReceivesUniversalFree','repeatSignupPerServiceForbidden','registryServicesAutomaticallyInherit','centralSessionReuseRequired','reauthenticationOnlyWhenSessionOrSecurityRequires']) if(universalFree[key]!==true) fail(`universal FREE identity rule missing: ${key}`);
+if(universalFree.authenticationReturn?.exactInitiatingSiteReturnRequired!==true||universalFree.authenticationReturn?.crossServiceFallbackForbidden!==true||universalFree.authenticationReturn?.genericMyEkodiFallbackForbidden!==true) fail('universal FREE login must return to the initiating site without cross-service fallback');
+for(const key of ['freeMembershipDoesNotGrantPaidFeatures','freeMembershipDoesNotGrantTenantOrWorkspaceMembership','freeMembershipDoesNotGrantSiteAdmin','freeMembershipDoesNotGrantPlatformAdmin','siteAdminAuthorityMayNotPropagateAcrossSites']) if(universalFree.privilegeSeparation?.[key]!==true) fail(`universal FREE privilege separation missing: ${key}`);
+
 const authReturn=constitution.authenticationReturnContinuityPolicy||{};
 if(authReturn.id!=='AUTH-RETURN-CONTINUITY-001'||authReturn.status!=='active') fail('authentication return continuity policy must remain active');
 if(authReturn.exactPreLoginReturnPreferred!==true||authReturn.initiatingSiteContextMustBePreserved!==true) fail('authentication must preserve the initiating site and exact trusted pre-login target');
