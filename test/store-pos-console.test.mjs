@@ -75,6 +75,7 @@ test('Windows POS Agent is loopback-only and focus is explicit-user-action only'
 test('POS Agent example config exposes only the fixed Store Console target IDs',()=>{
   assert.equal(config.listenerPrefix,'http://127.0.0.1:17831/');
   assert.deepEqual(config.allowedOrigins,['https://ekodi.kr']);
+  assert.deepEqual(config.allowedStores,['jadam','pizzamaru','yogurt']);
   const ids=config.targets.map(row=>row.id);
   assert.deepEqual(ids,['vpos','mukkebi','ddangyo','naver_order','smartcon','delivery','takeout','reservation']);
   assert.ok(config.targets.every(row=>row.allowLaunch===false));
