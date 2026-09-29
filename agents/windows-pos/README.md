@@ -90,6 +90,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\uninstall-pos-agent.ps1
 - 실행/중지 파일에서 권한 거부가 나오면 파일을 우클릭해 **관리자 권한으로 실행**합니다.
 - 완전 제거는 CMPMYI 관리화면의 `remove-pos-agent.cmd` 원클릭 삭제를 권장하며, 고급 수동 제거에는 `uninstall-pos-agent.ps1`을 사용합니다.
 
+## Windows 예약 작업 오류 0x80041318
+
+일부 POS PC에서 설치 중 `Register-ScheduledTask`가 `HRESULT 0x80041318` 또는 “작업 XML 형식이 잘못되었거나 범위를 벗어난 값” 오류를 낼 수 있습니다. Windows Task Scheduler의 실패 재시작 간격은 **최소 1분**이어야 하므로 Agent 설치기는 1분 간격을 사용합니다. 그래도 구형 환경이 재시작 설정을 거부하면 설치기가 재시작 옵션을 제외한 호환 설정으로 한 번 자동 재시도합니다.
+
+이 오류가 난 기존 원클릭 설치 창은 닫고, 관리자 POS 통합화면에서 **원클릭 설치 (.cmd)** 를 다시 내려받아 실행하면 됩니다. 별도 제거 작업은 필요하지 않습니다.
+
 ## 설정 기준
 
 `processNames`와 `windowTitleContains` 중 하나 이상이 있으면 상태 확인 대상으로 간주합니다. 브라우저 기반 주문 서비스가 하나의 Chrome 창에서 여러 탭으로만 열려 있으면 탭 단위 전환이 안정적이지 않습니다. 그런 서비스는 별도 Chrome 앱/바로가기 창으로 실행한 뒤 해당 창 제목이나 바로가기 경로를 매핑하는 방식이 더 안정적입니다.
