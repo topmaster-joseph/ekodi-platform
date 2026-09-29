@@ -55,16 +55,35 @@ test('channel workspace follows status quick-action list detail ordering on ever
   }
 });
 
-test('cmpmyi exposes channel publishing as a first-class common view for all three brands',async()=>{
+test('cmpmyi channel publishing opens the real management workspace without a second card click',async()=>{
   assert.ok(CMPMYI_COMMON_MENU.some(([key,label])=>key==='publishing'&&label==='채널 · 자동게시'));
   const shell=await storePortfolioAdminPage().text();
   assert.match(shell,/\/cmpmyi\/admin\/panel\/publishing/);
   const panel=await storePortfolioAdminPanelPage('publishing').text();
   assert.match(panel,/채널 · 자동게시 통합관리/);
-  for(const store of CMPMYI_STORES){
-    assert.ok(panel.includes('/'+store.slug+'/admin/publishing?embed=cmpmyi'));
-    assert.ok(panel.includes('/'+store.slug+'/admin/connections?embed=cmpmyi'));
-  }
+  assert.match(panel,/data-cmpmyi-direct-workspace="publishing"/);
+  assert.match(panel,/class="direct-frame"/);
+  assert.match(panel,/\/jadam\/admin\/publishing\?embed=cmpmyi/);
+  assert.match(panel,/data-direct-brand="jadam"/);
+  assert.match(panel,/data-direct-brand="pizzamaru"/);
+  assert.match(panel,/data-direct-brand="yogurt"/);
+  assert.match(panel,/data-direct-section="publishing"/);
+  assert.match(panel,/data-direct-section="connections"/);
+  assert.match(panel,/data-direct-section="marketing"/);
+  assert.doesNotMatch(panel,/aria-label="채널 · 자동게시 통합관리 브랜드 선택"/);
+  assert.match(panel,/중간 선택 카드를 없앴습니다/);
+  assert.match(panel,/\/cmpmyi\/admin\/panel\.js/);
+});
+
+test('cmpmyi direct workspace remembers brand and task while keeping canonical store admin boundaries',async()=>{
+  const script=await (await storePortfolioAdminPanelPage('publishing')).text();
+  assert.match(script,/실제 관리화면/);
+  const runtime=await (await import('../store-portfolio-admin-page.js')).storePortfolioAdminPanelScript().text();
+  assert.match(runtime,/ekodi-cmpmyi-direct-brand/);
+  assert.match(runtime,/ekodi-cmpmyi-direct-section:/);
+  assert.match(runtime,/data-cmpmyi-direct-workspace/);
+  assert.match(runtime,/frame\.setAttribute\('src',next\)/);
+  assert.match(runtime,/\?embed=cmpmyi/);
 });
 
 test('forced execution rule is documented as a release-blocking shared contract',async()=>{

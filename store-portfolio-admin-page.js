@@ -186,8 +186,9 @@ h1{margin:0 0 4px;font-size:24px;letter-spacing:-.04em;line-height:1.18}p{margin
 .actions a:hover{background:#eff6f0;color:#17492b;border-color:#cddfd1}.actions a:first-child{background:#1f5b36;color:#fff;border-color:#1f5b36}
 .help{margin-top:9px;padding:10px 11px;background:#fff;border:1px solid var(--line);border-radius:10px;color:#768279;font-size:11px;line-height:1.5}
 .delivery-overview{margin-bottom:14px;padding:14px 15px;border:1px solid #d7e3d8;border-radius:13px;background:#f8fbf8}.delivery-overview strong{display:block;font-size:13px;margin-bottom:5px}.delivery-overview p{font-size:11px}.delivery-platforms{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.delivery-platform{display:inline-flex;align-items:center;padding:6px 8px;border:1px solid #dfe7df;border-radius:999px;background:#fff;color:#4b5b50;font-size:9.5px;font-weight:800}.delivery-card-note{margin:-3px 0 10px;padding:8px 9px;border-radius:8px;background:#f5f8f5;color:#758078;font-size:9.5px;line-height:1.5}.delivery-card .actions{grid-template-columns:repeat(2,minmax(0,1fr))}.delivery-card .actions a:first-child{grid-column:1/-1}.delivery-card .actions a:nth-child(2){background:#eef6f0;color:#17492b;border-color:#cddfd1}.delivery-safety{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}.delivery-safety div{padding:10px;border:1px solid #e1e7df;border-radius:9px;background:#fff}.delivery-safety b{display:block;font-size:10px;margin-bottom:3px}.delivery-safety span{display:block;color:#7a867e;font-size:11px;line-height:1.45}.delivery-live-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding-top:11px;border-top:1px solid #e1e8e1}.delivery-live-toolbar span{font-size:10px;color:#607068;font-weight:750}.delivery-live-toolbar-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.delivery-live-toolbar button,.delivery-live-toolbar a{border:1px solid #cbd9cd;border-radius:8px;background:#fff;color:#285239;padding:7px 9px;font-size:10px;font-weight:800;text-decoration:none;cursor:pointer}.delivery-live-toolbar button[aria-pressed="true"]{background:#174e2d;color:#fff;border-color:#174e2d}.delivery-summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-top:10px}.delivery-summary-grid[hidden]{display:none}.delivery-summary-grid div{padding:9px 10px;border:1px solid #e0e7df;border-radius:9px;background:#fff}.delivery-summary-grid small{display:block;color:#7d8880;font-size:8.5px}.delivery-summary-grid b{display:block;margin-top:3px;color:#20382a;font-size:13px}.delivery-live{margin:0 0 11px;padding:10px;border:1px solid #e0e7df;border-radius:9px;background:#fbfcfb}.delivery-live-state{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}.delivery-live-state b{font-size:10px}.delivery-live-state span{font-size:8.5px;color:#768178}.delivery-live-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.delivery-live-metrics a{display:block;padding:7px;border-radius:7px;background:#f4f7f4;color:inherit;text-decoration:none;border:1px solid transparent}.delivery-live-metrics a:hover,.delivery-live-metrics a:focus-visible{background:#edf5ef;border-color:#c9ddce;outline:none}.delivery-live-metrics a.is-issue{background:#fff7f4;border-color:#efd2c8}.delivery-live-metrics small{display:block;color:#7d8880;font-size:8px}.delivery-live-metrics strong{display:block;margin-top:2px;font-size:11px;color:#243a2b}.delivery-card[data-issues-only="hidden"]{display:none}.delivery-live-error{color:#9a3f34;font-size:9.5px;line-height:1.5}.delivery-live-muted{color:#7a867e;font-size:9.5px;line-height:1.5}.delivery-live-login{display:inline-flex;margin-top:7px;padding:7px 9px;border:1px solid #cbd9cd;border-radius:8px;background:#fff;color:#285239;text-decoration:none;font-size:9.5px;font-weight:800}
-@media(max-width:900px){.grid{grid-template-columns:1fr}.head{display:block}.badge{display:inline-block;margin-top:10px}.delivery-safety{grid-template-columns:1fr}.delivery-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:390px){body{padding:16px}h1{font-size:24px}}`;
+.direct-workspace{background:#fff;border:1px solid var(--line);border-radius:11px;overflow:hidden}.direct-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 9px;border-bottom:1px solid var(--line);background:#fbfcfb}.direct-toolbar-group{display:flex;align-items:center;gap:5px;flex-wrap:wrap}.direct-toolbar-group>span{font-size:9px;font-weight:900;color:#768279;margin-right:2px}.direct-toolbar button{border:1px solid #dce4dc;border-radius:7px;background:#fff;color:#425248;padding:6px 8px;font-size:10px;font-weight:800;cursor:pointer}.direct-toolbar button.is-active,.direct-toolbar button[aria-pressed="true"]{background:#1f5b36;color:#fff;border-color:#1f5b36}.direct-frame{display:block;width:100%;height:calc(100vh - 132px);min-height:600px;border:0;background:#fff}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.head{display:block}.badge{display:inline-block;margin-top:10px}.delivery-safety{grid-template-columns:1fr}.delivery-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.direct-toolbar{align-items:flex-start;flex-direction:column}.direct-frame{height:72vh;min-height:520px}}
+@media(max-width:390px){body{padding:10px}h1{font-size:22px}.direct-frame{min-height:500px}}`;
 
 function adminHref(store,section='',embedded=true){
   const base=`/${store.slug}/admin${section?'/'+section:''}`;
@@ -215,6 +216,16 @@ function deliveryPanelCard(store,view){
   return `<article class="card delivery-card" data-delivery-brand="${store.slug}"><div class="card-head"><span class="mark">${store.mark}</span><div><h2>${store.name}</h2><small>${store.short} · 배달 운영</small></div></div><p class="delivery-card-note">연결상태·주문·매출·정산·리뷰는 이 브랜드의 실제 관리자 원장에서 확인합니다. 다른 브랜드 데이터는 함께 수정되지 않습니다.</p><div class="delivery-live" data-delivery-live="${store.slug}"><div class="delivery-live-muted">로그인 권한과 실데이터를 확인하고 있습니다.</div></div><div class="actions">${actions}</div></article>`;
 }
 
+function directWorkspace(view,key){
+  const primary=view.sections[0]?.[0]||'';
+  const brandButtons=STORES.map((store,index)=>`<button type="button" class="direct-brand${index===0?' is-active':''}" data-direct-brand="${store.slug}" aria-pressed="${index===0?'true':'false'}">${store.short}</button>`).join('');
+  const taskButtons=view.sections.map(([section,label],index)=>`<button type="button" class="direct-task${index===0?' is-active':''}" data-direct-section="${section}" aria-pressed="${index===0?'true':'false'}">${label}</button>`).join('');
+  return `<section class="direct-workspace" data-cmpmyi-direct-workspace="${key}" data-default-section="${primary}">
+    <div class="direct-toolbar"><div class="direct-toolbar-group"><span>브랜드</span>${brandButtons}</div><div class="direct-toolbar-group"><span>업무</span>${taskButtons}</div></div>
+    <iframe class="direct-frame" title="${view.label} 실제 관리화면" src="${adminHref(STORES[0],primary)}"></iframe>
+  </section>`;
+}
+
 function deliveryOverview(){
   return `<section class="delivery-overview" data-cmpmyi-delivery-control="brand-handoff"><strong>3개 브랜드 · 7개 배달/주문 채널을 한곳에서 관리</strong><p>여기서는 브랜드와 업무를 빠르게 선택합니다. 가격·품절·게시·주문 변경은 선택한 브랜드 관리자에서 권한을 다시 확인하고 사람 승인과 공식 Adapter를 거쳐 실행합니다.</p><div class="delivery-platforms">${DELIVERY_PLATFORMS.map(label=>`<span class="delivery-platform">${label}</span>`).join('')}</div><div class="delivery-safety"><div><b>1 · 상태 확인</b><span>브랜드별 연결·동기화·가격차이·주문·정산·리뷰를 확인합니다.</span></div><div><b>2 · 변경 선택</b><span>메뉴·가격·품절 등 변경할 업무와 배달앱을 선택합니다.</span></div><div><b>3 · 승인 후 실행</b><span>브랜드 권한과 Human Gate를 확인한 뒤 연결된 공식 Adapter만 실행합니다.</span></div></div><div class="delivery-live-toolbar"><span id="deliveryLiveState">실데이터 권한 확인 중</span><div class="delivery-live-toolbar-actions"><button id="deliveryIssuesOnly" type="button" aria-pressed="false">이상 브랜드만 보기</button><button id="deliveryRefresh" type="button">실데이터 새로고침</button></div></div><div class="delivery-summary-grid" id="deliveryPortfolioSummary" hidden aria-label="배달플랫폼 통합 실데이터 요약"></div></section>`;
 }
@@ -222,6 +233,33 @@ function deliveryOverview(){
 
 function portfolioPanelClient(){
   const root=document.documentElement;
+  const directHost=document.querySelector('[data-cmpmyi-direct-workspace]');
+  if(directHost){
+    const frame=directHost.querySelector('.direct-frame');
+    const brandButtons=[...directHost.querySelectorAll('[data-direct-brand]')];
+    const taskButtons=[...directHost.querySelectorAll('[data-direct-section]')];
+    const brandKey='ekodi-cmpmyi-direct-brand';
+    const view=directHost.dataset.cmpmyiDirectWorkspace||'common';
+    const sectionKey='ekodi-cmpmyi-direct-section:'+view;
+    const validBrand=value=>brandButtons.some(button=>button.dataset.directBrand===value);
+    const validSection=value=>taskButtons.some(button=>button.dataset.directSection===value);
+    let brand='jadam',section=directHost.dataset.defaultSection||'';
+    try{
+      const savedBrand=localStorage.getItem(brandKey);if(validBrand(savedBrand))brand=savedBrand;
+      const savedSection=localStorage.getItem(sectionKey);if(validSection(savedSection))section=savedSection;
+    }catch{}
+    function sync(){
+      brandButtons.forEach(button=>{const active=button.dataset.directBrand===brand;button.classList.toggle('is-active',active);button.setAttribute('aria-pressed',String(active))});
+      taskButtons.forEach(button=>{const active=button.dataset.directSection===section;button.classList.toggle('is-active',active);button.setAttribute('aria-pressed',String(active))});
+      const suffix=section?'/'+section:'';
+      const next='/'+brand+'/admin'+suffix+'?embed=cmpmyi';
+      if(frame&&frame.getAttribute('src')!==next)frame.setAttribute('src',next);
+    }
+    brandButtons.forEach(button=>button.addEventListener('click',()=>{brand=button.dataset.directBrand||brand;try{localStorage.setItem(brandKey,brand)}catch{}sync()}));
+    taskButtons.forEach(button=>button.addEventListener('click',()=>{section=button.dataset.directSection??section;try{localStorage.setItem(sectionKey,section)}catch{}sync()}));
+    sync();
+    return;
+  }
   if(root.dataset.ekodiStorePortfolioPanel!=='delivery')return;
   const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
   const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -420,14 +458,15 @@ export function storePortfolioAdminPage(){
 export function storePortfolioAdminPanelPage(viewName='overview'){
   const key=String(viewName||'overview').toLowerCase();
   const view=COMMON_VIEWS[key]||COMMON_VIEWS.overview;
+  const direct=!['overview','delivery'].includes(key);
   const html=`<!doctype html><html lang="ko" data-ekodi-store-portfolio-panel="${key}">
   <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>${view.label} · 통합 매장 운영</title><style>${PANEL_STYLE}</style></head>
   <body>
-    <section class="head"><div><p class="eyebrow">CMPMYI · COMMON MANAGEMENT</p><h1>${view.label}</h1><p>${view.description}</p></div><span class="badge">${key==='delivery'?'통합 확인 → 브랜드별 안전 실행':'브랜드 선택 → 오른쪽에서 계속 관리'}</span></section>
+    <section class="head"><div><p class="eyebrow">CMPMYI · COMMON MANAGEMENT</p><h1>${view.label}</h1><p>${view.description}</p></div><span class="badge">${key==='delivery'?'통합 확인 → 브랜드별 안전 실행':direct?'왼쪽 메뉴 → 실제 관리화면 바로 실행':'통합 현황'}</span></section>
     ${key==='delivery'?deliveryOverview():''}
-    <section class="grid" aria-label="${view.label} 브랜드 선택">${STORES.map(store=>key==='delivery'?deliveryPanelCard(store,view):panelCard(store,view)).join('')}</section>
-    <div class="help">${key==='delivery'?'통합화면은 브랜드 간 데이터를 합쳐 쓰지 않습니다. 변경 요청은 반드시 선택한 브랜드의 고유 관리자 URL에서 수행하고, 연결되지 않은 플랫폼은 실행 대상에서 제외합니다.':'통합관리 메뉴는 세 브랜드의 동일 업무를 빠르게 찾는 공통 진입점입니다. 실제 수정·저장·권한 검사는 각 브랜드 관리자 범위에서 수행됩니다.'}</div>
-    ${key==='delivery'?'<script src="/cmpmyi/admin/panel.js" defer></script>':''}
+    ${direct?directWorkspace(view,key):`<section class="grid" aria-label="${view.label} 브랜드 선택">${STORES.map(store=>key==='delivery'?deliveryPanelCard(store,view):panelCard(store,view)).join('')}</section>`}
+    <div class="help">${key==='delivery'?'통합화면은 브랜드 간 데이터를 합쳐 쓰지 않습니다. 변경 요청은 반드시 선택한 브랜드의 고유 관리자 URL에서 수행하고, 연결되지 않은 플랫폼은 실행 대상에서 제외합니다.':direct?'중간 선택 카드를 없앴습니다. 왼쪽 메뉴를 누르면 마지막으로 선택한 브랜드의 실제 관리자 화면이 즉시 열리며, 상단의 브랜드·업무 전환만 사용합니다.':'통합 대시보드는 세 브랜드의 주요 관리 진입점을 요약합니다.'}</div>
+    ${key==='delivery'||direct?'<script src="/cmpmyi/admin/panel.js" defer></script>':''}
   </body></html>`;
   return new Response(html,{headers:{
     'content-type':'text/html; charset=utf-8',
