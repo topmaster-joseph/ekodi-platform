@@ -77,7 +77,7 @@ test('ADMIN-DIRECT-NAV-006 makes the visible left task the final destination wit
   assert.equal(config.admin.directNavigationContract.leftTaskIsFinalDestination, true);
   assert.equal(config.admin.directNavigationContract.duplicateRightSideReselectionForbidden, true);
   assert.match(verifier, /resolveMenuTrigger/);
-  assert.doesNotMatch(verifier, /admin-context-tab\\[data-admin-context-section/);
+  assert.equal(verifier.includes('admin-context-tab[data-admin-context-section'), false);
   assert.match(cmpmyi, /data-cmpmyi-direct-workspace/);
   assert.match(cmpmyi, /중간 선택 카드를 없앴습니다/);
 });
