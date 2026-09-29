@@ -14,7 +14,7 @@ const readme=read('agents/windows-pos/README.md');
 test('one-click POS Agent setup is fixed to the official package and elevates explicitly',()=>{
   assert.match(setup,/raw\.githubusercontent\.com\/topmaster-joseph\/ekodi-platform\/main\/agents\/windows-pos/);
   for(const name of ['install-pos-agent.ps1','EKODI-POS-Agent.ps1','pos-agent.config.example.json','diagnose-pos-targets.ps1','start-pos-agent.cmd','stop-pos-agent.cmd','uninstall-pos-agent.ps1']) assert.match(setup,new RegExp(name.replaceAll('.','\\.')));
-  assert.match(setup,/Start-Process -FilePath '%~f0'.*-Verb RunAs/);
+  assert.match(setup,/Start-Process -FilePath '%ComSpec%'.*-Verb RunAs/);
   assert.match(setup,/listenerPrefix must remain loopback-only/);
   assert.match(setup,/explicit_user_action_only/);
   assert.doesNotMatch(setup,/Invoke-Expression|\biex\b/i);
