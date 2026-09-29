@@ -2,9 +2,9 @@
   'use strict';
   if (window.EKODIAdminAIGovernor) return;
 
-  const VERSION='1.1.0';
+  const VERSION='1.2.0';
   const RISK={LOW:'low',MEDIUM:'medium',HIGH:'high',CRITICAL:'critical'};
-  const HUMAN_GATE=new Set(['production_secret','dns_change','data_delete','permission_change','force_push','repository_delete','production_rollback','high_cost_ai','paid_ai']);
+  const HUMAN_GATE=new Set(['production_secret','dns_change','data_delete','permission_change','force_push','repository_delete','production_rollback','mass_site_delete','structural_change','critical_restore','high_cost_ai','paid_ai']);
   const FREE_FIRST=Object.freeze(['deterministic_rule','internal_api','cached_context','free_ai','low_cost_ai','premium_ai']);
 
   function normalize(input){return String(input||'').trim().toLowerCase()}
@@ -44,6 +44,9 @@
       ['dns_change',['dns change','dns 변경','도메인 변경']],
       ['data_delete',['data delete','데이터 삭제','db delete']],
       ['permission_change',['permission change','권한 변경']],
+      ['mass_site_delete',['delete all sites','remove all sites','all sites delete','모든 사이트 삭제','전체 사이트 삭제','사이트 전부 삭제','사이트 모두 삭제']],
+      ['structural_change',['architecture change','structural change','platform-wide migration','전체 구조 변경','대규모 구조 변경','도메인 체계 변경','경로 체계 변경','인증 체계 변경']],
+      ['critical_restore',['restore point','restore production','복구지점','복원 실행','시점 복구']],
       ['production_rollback',['production rollback','프로덕션 rollback','운영 롤백']],
     ];
     for(const [candidate,words] of checks){if(containsAny(text,words)){risk=RISK.CRITICAL;gate=candidate;break}}
@@ -72,7 +75,7 @@
     const risk=assessRisk(request,{type:options.actionType,target:options.target,estimatedCostKrw:Number(options.estimatedCostKrw||0),paidCommitment:options.paidCommitment,explicitDelegatedBudget:options.explicitDelegatedBudget});
     return Object.freeze({
       version:VERSION,request:String(request||''),context,execution,risk,
-      policy:{freeFirst:FREE_FIRST,automaticPaidBudgetKrw:0,paidApiAutoEscalation:false,paidApiRequiresExplicitDelegatedBudget:true,expandBeyondLiteralRequest:true,minimumNecessaryChange:true,postActionVerification:true,structuredReport:true},
+      policy:{freeFirst:FREE_FIRST,automaticPaidBudgetKrw:0,paidApiAutoEscalation:false,paidApiRequiresExplicitDelegatedBudget:true,expandBeyondLiteralRequest:true,minimumNecessaryChange:true,postActionVerification:true,structuredReport:true,criticalChangeRestorePoints:10,criticalChangeRequiresPreRestorePoint:true,criticalChangeRequiresStaging:true,permanentDeleteRequiresSeparateApproval:true},
       next:risk.humanApprovalRequired?'request_human_approval':'execute_then_verify'
     });
   }
