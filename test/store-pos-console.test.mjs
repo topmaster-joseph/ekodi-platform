@@ -21,7 +21,7 @@ test('Store Admin exposes the POS console without weakening store scope',async()
   const html=await response.text();
   assert.equal(response.status,200);
   assert.match(html,/<h1 id="pageTitle">POS 통합화면<\/h1>/);
-  assert.match(html,/20260929-pos-web-first-v2/);
+  assert.match(html,/20260929-pos-web-first-v3/);
   const csp=response.headers.get('content-security-policy')||'';
   assert.match(csp,/http:\/\/127\.0\.0\.1:17831/);
   assert.match(csp,/http:\/\/localhost:17831/);
@@ -33,7 +33,7 @@ test('Store Admin exposes the POS console without weakening store scope',async()
   assert.match(script,/data-pos-web/);
   assert.match(script,/웹 사용 가능/);
   assert.match(script,/Agent 없이 사용할 수 있고/);
-  assert.match(script,/Agent 창을 별도로 열어 둘 필요는 없습니다/);
+  assert.match(script,/Agent 창을 별도로 열어 둘 필요는 없습니다/);\n  assert.match(script,/웹 주문·배달 운영 화면을 기본으로 사용하고/);\n  assert.doesNotMatch(script,/POS·배달·포장 프로그램 상태를 한눈에 보고 한 번 눌러 전환합니다/);
   assert.match(script,/Windows 전환/);
   assert.match(script,/Agent 실행 · 중지 안내/);
   assert.match(script,/install-pos-agent\.ps1/);
