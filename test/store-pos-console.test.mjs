@@ -35,6 +35,11 @@ test('Store Admin exposes the POS console without weakening store scope',async()
   assert.match(script,/Agent 없이 사용할 수 있고/);
   assert.match(script,/Agent 창을 별도로 열어 둘 필요는 없습니다/);
   assert.match(script,/Windows 전환/);
+  assert.match(script,/Agent 실행 · 중지 안내/);
+  assert.match(script,/install-pos-agent\.ps1/);
+  assert.match(script,/start-pos-agent\.cmd/);
+  assert.match(script,/stop-pos-agent\.cmd/);
+  assert.match(script,/웹 POS 통합화면은 계속 사용할 수 있고/);
   assert.match(script,/webSection:'delivery'/);
   assert.match(script,/webSection:'orders'/);
   assert.match(script,/\/v1\/health/);
