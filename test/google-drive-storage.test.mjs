@@ -99,8 +99,11 @@ test('Google OAuth callback cutover is dual-stack, state-pinned, and apex-ready'
   assert.match(control, /MARKETING_YOUTUBE_CALLBACK = 'https:\/\/ekodi\.kr\/marketing-connect-api\/oauth\/youtube\/callback'/);
 });
 
-test('Storage brokers Marketing YouTube OAuth through the already-authorized Drive callback without exposing the client secret', () => {
+test('Storage broker keeps the Google client secret while Marketing owns the YouTube callback', () => {
   assert.match(control, /MARKETING_YOUTUBE_CALLBACK/);
+  assert.match(control, /marketingYouTubeRedirectUri/);
+  assert.match(control, /finishMarketingYouTubeOAuth/);
+  assert.match(control, /ALLOWED_MARKETING_GOOGLE_REDIRECT_URIS/);
   assert.match(control, /purpose:'marketing_youtube'/);
   assert.match(control, /storage_google_oauth_tickets/);
   assert.match(control, /startMarketingYouTubeOAuth/);
@@ -109,12 +112,16 @@ test('Storage brokers Marketing YouTube OAuth through the already-authorized Dri
   assert.match(control, /'openid','email'/);
   assert.match(control, /targetAccount:String\(accountHint/);
   assert.match(control, /GOOGLE_USERINFO/);
-  assert.match(control, /authorized_email:authorizedEmail/);
+  assert.match(control, /authorized_email:String\(authorizedEmail/);
   assert.match(control, /access_token:String\(token\.access_token\)/);
   assert.match(worker, /startYouTubeOAuth/);
+  assert.match(worker, /finishYouTubeOAuth/);
   assert.match(worker, /consumeYouTubeTicket/);
   assert.match(worker, /refreshAccessToken/);
   assert.doesNotMatch(config, /GOOGLE_DRIVE_CLIENT_SECRET\s*=\s*".+"/);
+  const startBlock = control.slice(control.indexOf('export async function startMarketingYouTubeOAuth'), control.indexOf('export async function finishMarketingYouTubeOAuth'));
+  assert.match(startBlock, /marketingYouTubeRedirectUri\(env\)/);
+  assert.doesNotMatch(startBlock, /googleOAuthRedirectUri\(env\)/);
 });
 
 test('Admin Worker proxies Storage through a Cloudflare service binding', () => {
