@@ -443,10 +443,11 @@ async function threadsCallback(request, env) {
 async function youtubeCallback(request, env) {
   const url = new URL(request.url);
   const legacyTicket = clean(url.searchParams.get('ticket'),512);
+  const legacyBrokerError = clean(url.searchParams.get('broker_error'),160);
   let marketingState = String(url.searchParams.get('state') || '');
   let brokerTicket = legacyTicket;
-  let brokerError = '';
-  if (!legacyTicket) {
+  let brokerError = legacyBrokerError;
+  if (!legacyTicket && !legacyBrokerError) {
     try {
       const brokerResult = await env.GOOGLE_OAUTH_BROKER.finishYouTubeOAuth({
         state:marketingState,
