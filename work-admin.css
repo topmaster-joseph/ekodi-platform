@@ -65,7 +65,7 @@ body.admin-compact .work-nav.active{background:#0d382e;color:#c9fff0;border-colo
 @media(max-width:980px){body.admin-compact .work-admin-layout{grid-template-columns:1fr}body.admin-compact .work-admin-rail{grid-row:1;border-left:0;border-bottom:1px solid #21453c}body.admin-compact .work-admin-rail-nav{grid-template-columns:repeat(5,minmax(0,1fr))}body.admin-compact .work-admin-rail-button{padding:9px 7px}body.admin-compact .work-admin-rail-footer{display:none}body.admin-compact .work-admin-summary,body.admin-compact .work-admin-security-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){body.admin-compact .work-admin-head{align-items:flex-start;flex-direction:column}body.admin-compact .work-admin-head-actions{width:100%;flex-wrap:wrap}body.admin-compact .work-admin-rail-nav{grid-template-columns:1fr 1fr}body.admin-compact .work-admin-summary,body.admin-compact .work-admin-security-grid{grid-template-columns:1fr}body.admin-compact .work-admin-toolbar{grid-template-columns:1fr}body.admin-compact .work-admin-pipeline{grid-template-columns:repeat(2,minmax(0,1fr))}body.admin-compact .work-admin-subhead{align-items:flex-start;flex-direction:column;gap:4px}}
 
-/* WORK-RECRUITING-READABILITY-002
+/* WORK-RECRUITING-READABILITY-003
  * Recruiting Admin uses the shared readable light control-plane grammar.
  * The former near-black rail and 7–11px operational text are intentionally retired.
  */
@@ -91,14 +91,14 @@ body.admin-compact .work-admin-head h2{
 }
 body.admin-compact .work-admin-head .operations-copy{
   color:#5b6b7d!important;
-  font-size:13px!important;
+  font-size:14px!important;
   line-height:1.5!important;
 }
 body.admin-compact .work-admin-status{
   border-color:#d9e2ec!important;
   background:#f7f9fc!important;
   color:#536579!important;
-  font-size:12px!important;
+  font-size:13px!important;
   line-height:1.45!important;
 }
 body.admin-compact .work-admin-status[data-state="loading"]{color:#7c5b12!important;border-color:#ead7a4!important;background:#fffaf0!important}
@@ -111,7 +111,7 @@ body.admin-compact .work-admin-view-title{
 }
 body.admin-compact .work-admin-view-copy{
   color:#5b6b7d!important;
-  font-size:13px!important;
+  font-size:14px!important;
   line-height:1.5!important;
 }
 body.admin-compact .work-admin-info-card{
@@ -121,7 +121,7 @@ body.admin-compact .work-admin-info-card{
 }
 body.admin-compact .work-admin-info-card small{
   color:#477264!important;
-  font-size:11px!important;
+  font-size:12px!important;
   line-height:1.35!important;
   letter-spacing:.04em!important;
 }
@@ -131,50 +131,50 @@ body.admin-compact .work-admin-info-card strong{
 }
 body.admin-compact .work-admin-info-card p{
   color:#607083!important;
-  font-size:12px!important;
+  font-size:13px!important;
   line-height:1.45!important;
 }
 body.admin-compact .work-admin-pipeline article{
   border-color:#d9e2ec!important;
   background:#f8fafc!important;
 }
-body.admin-compact .work-admin-pipeline small{color:#607083!important;font-size:11px!important;line-height:1.35!important}
+body.admin-compact .work-admin-pipeline small{color:#607083!important;font-size:12px!important;line-height:1.35!important}
 body.admin-compact .work-admin-pipeline strong{color:#172033!important;font-size:16px!important}
 body.admin-compact .work-admin-overview-detail h4,
 body.admin-compact .work-admin-subhead h4{color:#172033!important;font-size:14px!important}
 body.admin-compact .work-admin-subhead{border-top-color:#d9e2ec!important}
-body.admin-compact .work-admin-subhead span{color:#607083!important;font-size:11px!important}
+body.admin-compact .work-admin-subhead span{color:#607083!important;font-size:12px!important}
 body.admin-compact .work-admin-toolbar>input,
 body.admin-compact .work-admin-toolbar>select{
   min-height:40px!important;
   border-color:#cbd5e1!important;
   background:#fff!important;
   color:#172033!important;
-  font-size:13px!important;
+  font-size:14px!important;
 }
 body.admin-compact .work-admin-table-wrap{border-color:#d9e2ec!important;background:#fff!important}
 body.admin-compact .work-admin-table th{
   background:#f1f5f9!important;
   color:#475569!important;
-  font-size:11px!important;
+  font-size:12px!important;
   line-height:1.4!important;
 }
 body.admin-compact .work-admin-table td{
   color:#334155!important;
-  font-size:12px!important;
+  font-size:14px!important;
   line-height:1.45!important;
 }
-body.admin-compact .work-admin-cell-main strong{color:#172033!important;font-size:12px!important}
-body.admin-compact .work-admin-cell-main small{color:#64748b!important;font-size:11px!important}
-body.admin-compact .work-admin-row-actions button{font-size:11px!important}
+body.admin-compact .work-admin-cell-main strong{color:#172033!important;font-size:14px!important}
+body.admin-compact .work-admin-cell-main small{color:#64748b!important;font-size:12px!important}
+body.admin-compact .work-admin-row-actions button{font-size:13px!important}
 body.admin-compact .work-admin-message{color:#526477!important;font-size:12px!important}
 body.admin-compact .work-admin-empty{color:#64748b!important}
-body.admin-compact .work-admin-muted{color:#64748b!important;font-size:11px!important}
+body.admin-compact .work-admin-muted{color:#64748b!important;font-size:12px!important}
 body.admin-compact .work-admin-raw{
   border-color:#d9e2ec!important;
   background:#f8fafc!important;
   color:#475569!important;
-  font-size:11px!important;
+  font-size:12px!important;
   line-height:1.5!important;
 }
 body.admin-compact .work-admin-rail{
@@ -200,7 +200,7 @@ body.admin-compact .work-admin-rail-button{
 }
 body.admin-compact .work-admin-rail-button small{
   color:#64748b!important;
-  font-size:11px!important;
+  font-size:12px!important;
   line-height:1.3!important;
   letter-spacing:.04em!important;
 }
@@ -230,7 +230,7 @@ body.admin-compact .work-admin-rail-footer{
 }
 body.admin-compact .work-admin-rail-footer>small{
   color:#64748b!important;
-  font-size:11px!important;
+  font-size:12px!important;
 }
 body.admin-compact .work-admin-public-link{
   display:inline-flex!important;
