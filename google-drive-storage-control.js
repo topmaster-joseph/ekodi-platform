@@ -90,9 +90,18 @@ function stateGoogleOAuthRedirectUri(payload, env) {
   const pinned = String(payload?.redirectUri || '').trim();
   return ALLOWED_GOOGLE_REDIRECT_URIS.has(pinned) ? pinned : googleOAuthRedirectUri(env);
 }
+function marketingYouTubeDirectCallbackEnabled(env) { return String(env.MARKETING_YOUTUBE_DIRECT_CALLBACK_ENABLED || '').trim().toLowerCase() === 'true'; }
 function marketingYouTubeRedirectUri(env) {
+  if (!marketingYouTubeDirectCallbackEnabled(env)) return googleOAuthRedirectUri(env);
   const configured = String(env.MARKETING_YOUTUBE_OAUTH_REDIRECT_URI || MARKETING_YOUTUBE_CALLBACK).trim();
   return ALLOWED_MARKETING_GOOGLE_REDIRECT_URIS.has(configured) ? configured : MARKETING_YOUTUBE_CALLBACK;
+}
+function marketingYouTubeResultRedirect(marketingState,{ticket='',error=''}={}) {
+  const target=new URL(MARKETING_YOUTUBE_CALLBACK);
+  target.searchParams.set('state',String(marketingState||''));
+  if(ticket) target.searchParams.set('ticket',String(ticket));
+  if(error) target.searchParams.set('broker_error',String(error).slice(0,160));
+  return new Response(null,{status:303,headers:{location:target.toString(),'cache-control':'no-store','referrer-policy':'no-referrer'}});
 }
 function ready(env) { return Boolean(googleClientId(env) && env.GOOGLE_DRIVE_CLIENT_SECRET && env.STORAGE_CREDENTIAL_KEY && env.DB); }
 function b64url(bytes) {
@@ -505,20 +514,15 @@ export async function handleGoogleDriveStorageControl(request, env) {
     if(payload.purpose==='marketing_youtube'){
       try{
         const token=await tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),code,grant_type:'authorization_code',redirect_uri:redirectUri});
-        if(!token.access_token||!token.refresh_token)return html('YouTube 장기 연결 토큰을 받지 못했습니다. 다시 연결해 주세요.');
+        if(!token.access_token||!token.refresh_token)return marketingYouTubeResultRedirect(payload.marketingState,{error:'YOUTUBE_REFRESH_TOKEN_MISSING'});
         const targetAccount=String(payload.targetAccount||'').trim().toLowerCase();
         const profileResponse=await fetch(GOOGLE_USERINFO,{headers:{authorization:`Bearer ${token.access_token}`}});
         const profile=await profileResponse.json().catch(()=>({}));
         const authorizedEmail=profileResponse.ok?String(profile.email||'').trim().toLowerCase():'';
-        if(targetAccount&&authorizedEmail!==targetAccount)return html(`YouTube 연결 대상 계정은 ${targetAccount}입니다. 해당 Google 계정으로 다시 인증해 주세요.`);
-        const ticket=b64url(crypto.getRandomValues(new Uint8Array(32)));
-        const encrypted=await encryptCredential(env,{access_token:String(token.access_token),refresh_token:String(token.refresh_token),expires_in:Number(token.expires_in||0),authorized_email:authorizedEmail,target_account:targetAccount});
-        const now=new Date(), exp=new Date(now.getTime()+5*60*1000);
-        await env.DB.prepare('DELETE FROM storage_google_oauth_tickets WHERE expires_at<=?').bind(now.toISOString()).run();
-        await env.DB.prepare('INSERT INTO storage_google_oauth_tickets(ticket_hash,credential_ciphertext,credential_iv,expires_at,created_at) VALUES(?,?,?,?,?)').bind(await nonceHash(ticket),encrypted.ciphertext,encrypted.iv,exp.toISOString(),now.toISOString()).run();
-        const target=new URL(MARKETING_YOUTUBE_CALLBACK); target.searchParams.set('state',String(payload.marketingState||'')); target.searchParams.set('ticket',ticket);
-        return new Response(null,{status:303,headers:{location:target.toString(),'cache-control':'no-store','referrer-policy':'no-referrer'}});
-      }catch(error){console.error('Marketing YouTube OAuth broker callback failed',error);return html('YouTube 채널 연결 중 오류가 발생했습니다.');}
+        if(targetAccount&&authorizedEmail!==targetAccount)return marketingYouTubeResultRedirect(payload.marketingState,{error:'YOUTUBE_TARGET_ACCOUNT_MISMATCH'});
+        const ticket=await createMarketingYouTubeTicket(env,{token,targetAccount,authorizedEmail});
+        return marketingYouTubeResultRedirect(payload.marketingState,{ticket});
+      }catch(error){console.error('Marketing YouTube OAuth broker callback failed',error);return marketingYouTubeResultRedirect(payload.marketingState,{error:String(error?.code||error?.message||'YOUTUBE_OAUTH_BROKER_FAILED')});}
     }
     const hash = await nonceHash(payload.nonce);
     const stateRow = await env.DB.prepare('SELECT * FROM storage_oauth_states WHERE nonce_hash=? AND expires_at>?').bind(hash,new Date().toISOString()).first();
