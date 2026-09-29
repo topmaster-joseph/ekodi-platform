@@ -10,6 +10,7 @@ const campusUrl = 'https://ekodi.kr/admin/home/campus';
 const authEntryUrl = `${canonicalBaseUrl}?route=finance#ekodi_admin_token=${token}`;
 const assistApiUrl = 'https://ekodi.kr/api/control/ai/assist';
 const prompt = 'EKODI E2E 확인: "정상"이라고 한 단어로 답해줘.';
+const EXPECTED_DESKTOP_SIDEBAR_WIDTH = 228;
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
 const reportPath = path.join(artifactsDir, 'assist-canonical.json');
 await fs.mkdir(artifactsDir, { recursive: true });
@@ -71,6 +72,9 @@ try {
     const rail = document.querySelector('.ekodi-assist-rail');
     const composer = document.querySelector('#ekodiAssistBootstrap .ekodi-assist-bootstrap-form');
     const welcome = document.querySelector('.ekodi-assist-welcome');
+    const contextTabs = document.querySelector('.admin-context-tabs-shell');
+    const commandEntry = document.querySelector('.admin-command-entry');
+    const target = document.querySelector('#ekodiAssistBootstrapTarget');
     const bodyStyle = getComputedStyle(document.body);
     return {
       colorScheme: bodyStyle.colorScheme,
@@ -81,6 +85,10 @@ try {
       composerBackground: composer ? getComputedStyle(composer).backgroundColor : null,
       composerRadius: composer ? getComputedStyle(composer).borderRadius : null,
       welcomeText: welcome ? String(welcome.textContent || '').trim() : '',
+      contextTabsDisplay: contextTabs ? getComputedStyle(contextTabs).display : null,
+      commandEntryDisplay: commandEntry ? getComputedStyle(commandEntry).display : null,
+      targetValue: target ? String(target.value || '').trim() : '',
+      targetWidth: target ? Math.round(target.getBoundingClientRect().width) : null,
       assistLeft: assist ? Math.round(assist.getBoundingClientRect().left) : null,
       sidebarWidth: sidebar ? Math.round(sidebar.getBoundingClientRect().width) : null,
       sidebarRight: sidebar ? Math.round(sidebar.getBoundingClientRect().right) : null,
@@ -97,8 +105,14 @@ try {
   if (visual?.sidebarBackground !== 'rgb(247, 248, 252)') {
     throw new Error(`Admin sidebar light surface mismatch: ${visual?.sidebarBackground || 'missing'}`);
   }
-  if (Number(visual?.sidebarWidth) !== 272) {
-    throw new Error(`Admin sidebar width mismatch: ${visual?.sidebarWidth || 'missing'}`);
+  if (Number(visual?.sidebarWidth) !== EXPECTED_DESKTOP_SIDEBAR_WIDTH) {
+    throw new Error(`Admin sidebar width mismatch: ${visual?.sidebarWidth || 'missing'} expected=${EXPECTED_DESKTOP_SIDEBAR_WIDTH}`);
+  }
+  if (visual?.contextTabsDisplay !== 'none' || visual?.commandEntryDisplay !== 'none') {
+    throw new Error(`Admin redundant navigation chrome is visible: contextTabs=${visual?.contextTabsDisplay || 'missing'} commandEntry=${visual?.commandEntryDisplay || 'missing'}`);
+  }
+  if (visual?.targetValue !== 'EKODI' || Number(visual?.targetWidth || 0) < 150) {
+    throw new Error(`Admin bottom command target is clipped or incorrect: target=${visual?.targetValue || 'missing'} width=${visual?.targetWidth || 0}`);
   }
   if (visual?.railDisplay !== 'none') {
     throw new Error(`Admin home recent-command rail must be hidden: ${visual?.railDisplay || 'missing'}`);
