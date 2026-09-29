@@ -1,8 +1,10 @@
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
 (()=>{
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-const SESSION_KEY='ekodi-seonam-medi-admin-session';
 const PLATFORM_TOKEN_KEY='ekodi-auth-token';
+const sb=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{detectSessionInUrl:true,persistSession:true,autoRefreshToken:true}});
 const state={me:null,notices:[],channels:[]};
 const $=id=>document.getElementById(id);
 const qs=(sel,root=document)=>root.querySelector(sel);
@@ -10,35 +12,18 @@ const qsa=(sel,root=document)=>[...root.querySelectorAll(sel)];
 const text=(node,value)=>{if(node)node.textContent=String(value??'')};
 const dateText=value=>{if(!value)return'';try{return new Date(value).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}catch{return String(value)}};
 
-function storedSession(){try{const v=JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null');return v?.accessToken?v:null}catch{return null}}
-function saveSession(v){sessionStorage.setItem(SESSION_KEY,JSON.stringify(v))}
-function clearLocal(){sessionStorage.removeItem(SESSION_KEY)}
-async function supabaseAuth(path,body){
-  const response=await fetch(SUPABASE_URL+path,{method:'POST',headers:{apikey:SUPABASE_KEY,'content-type':'application/json'},body:JSON.stringify(body),cache:'no-store'});
-  const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.msg||data.error_description||data.error||'로그인 확인 실패');return data;
+function authUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','portal');u.searchParams.set('direct','1');u.searchParams.set('return_to',location.origin+'/seonam-medi/admin/');return u.href}
+async function token(){
+  const platform=sessionStorage.getItem(PLATFORM_TOKEN_KEY)||'';if(platform)return platform;
+  const {data}=await sb.auth.getSession();return data?.session?.access_token||'';
 }
-function normalizeSession(data,current={}){return{accessToken:data.access_token||'',refreshToken:data.refresh_token||current.refreshToken||'',expiresAt:Number(data.expires_at||0)||Math.floor(Date.now()/1000)+Number(data.expires_in||3600),user:{id:data.user?.id||current.user?.id||'',email:data.user?.email||current.user?.email||''}}}
-async function exchangeHandoff(){
-  const params=new URLSearchParams(location.hash.slice(1)),hash=params.get('ekodi_token');if(!hash)return storedSession();
-  const data=await supabaseAuth('/auth/v1/verify',{token_hash:hash,type:params.get('ekodi_type')||'email'});const session=normalizeSession(data);
-  if(!session.accessToken)throw new Error('로그인 전달 정보를 확인하지 못했습니다.');saveSession(session);history.replaceState(null,'',location.pathname+location.search);return session;
-}
-async function userToken(){
-  let session=await exchangeHandoff();if(!session?.accessToken)return'';
-  const now=Math.floor(Date.now()/1000);if(!session.expiresAt||session.expiresAt>now+60)return session.accessToken;
-  if(!session.refreshToken){clearLocal();return''}
-  try{const data=await supabaseAuth('/auth/v1/token?grant_type=refresh_token',{refresh_token:session.refreshToken});session=normalizeSession(data,session);saveSession(session);return session.accessToken}catch{clearLocal();return''}
-}
-function authUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','seonam-medi');u.searchParams.set('direct','1');u.searchParams.set('return_to',location.origin+'/seonam-medi/admin/');return u.href}
-async function token(){return sessionStorage.getItem(PLATFORM_TOKEN_KEY)||await userToken()}
 async function api(path,options={}){
   const bearer=await token();if(!bearer){location.replace(authUrl());throw new Error('로그인이 필요합니다.')}
   const headers=new Headers(options.headers||{});headers.set('authorization','Bearer '+bearer);if(options.body&&!headers.has('content-type'))headers.set('content-type','application/json');
   const response=await fetch(path,{...options,headers,cache:'no-store'});const data=await response.json().catch(()=>({}));
-  if(response.status===401){clearLocal();sessionStorage.removeItem(PLATFORM_TOKEN_KEY);location.replace(authUrl());throw new Error('로그인이 만료되었습니다.')}
+  if(response.status===401){sessionStorage.removeItem(PLATFORM_TOKEN_KEY);await sb.auth.signOut().catch(()=>{});location.replace(authUrl());throw new Error('로그인이 만료되었습니다.')}
   if(!response.ok)throw Object.assign(new Error(data.error||'요청을 처리하지 못했습니다.'),{status:response.status,data});return data;
 }
-
 function showPanel(name){
   qsa('[data-panel]').forEach(node=>{const active=node.dataset.panel===name;node.hidden=!active;node.classList.toggle('active',active)});
   qsa('[data-panel-target]').forEach(node=>node.classList.toggle('active',node.dataset.panelTarget===name));
@@ -122,7 +107,7 @@ $('channelForm').addEventListener('submit',async event=>{
   try{await api(id?'/api/seonam-medi/admin/channels/'+id:'/api/seonam-medi/admin/channels',{method:id?'PUT':'POST',body:JSON.stringify(payload)});text(msg,'저장했습니다.');resetChannel();await loadChannels()}catch(error){msg.classList.add('error');text(msg,error.message)}
 });
 $('noticeReset').addEventListener('click',resetNotice);$('channelReset').addEventListener('click',resetChannel);$('reloadNotices').addEventListener('click',()=>loadNotices().catch(()=>{}));$('reloadChannels').addEventListener('click',()=>loadChannels().catch(()=>{}));
-$('refreshAll').addEventListener('click',()=>init(true));$('changeAccount').addEventListener('click',()=>{clearLocal();sessionStorage.removeItem(PLATFORM_TOKEN_KEY);location.assign(authUrl())});
+$('refreshAll').addEventListener('click',()=>init(true));$('changeAccount').addEventListener('click',async()=>{sessionStorage.removeItem(PLATFORM_TOKEN_KEY);await sb.auth.signOut().catch(()=>{});location.assign(authUrl())});
 
 async function init(refresh=false){
   try{
