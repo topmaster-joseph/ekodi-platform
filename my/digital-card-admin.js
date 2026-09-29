@@ -161,5 +161,6 @@ fields.addAffiliation.addEventListener('click',()=>{
 });
 form.addEventListener('submit',save);
 window.addEventListener('ekodi:my-session',()=>void refresh());
+window.addEventListener('ekodi:public-profile-updated',event=>showCardLink(event.detail||{}));
 void refresh();
 })();
