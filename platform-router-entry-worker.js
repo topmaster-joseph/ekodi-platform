@@ -53,6 +53,7 @@ import { regionalCommerceProgramFromLocalRoute } from './regional-commerce-progr
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
 import { handleSeonamMediCivicApi } from './seonam-medi-civic-control.js';
+import { handleSeonamMediAdminApi } from './seonam-medi-admin-control.js';
 import { handleSeonamMediMonitorApi } from './seonam-medi-monitor.js';
 
 const PUBLIC_HOST='ekodi.kr';
@@ -63,6 +64,14 @@ const CGMA_SITE=Object.freeze({
   domain:'cgma.or.kr',
   title:'현재 사이트 개발중입니다',
   message:'더 좋은 서비스로 준비 중입니다.'
+});
+const SEONAM_MEDI_SITE=Object.freeze({
+  id:'seonam-medi',
+  workspaceId:'seonam-medi',
+  domain:'ekodi.kr/seonam-medi',
+  eyebrow:'SEONAM MEDI',
+  title:'서남권 국립의대 시민소통센터',
+  message:'시민소통센터는 현재 점검 중입니다.'
 });
 const MESSENGER_HOST='messenger.ekodi.kr';
 const INVEST_HOST='invest.ekodi.kr';
@@ -98,7 +107,31 @@ function isCgmaRoot(pathname){return /^\/cgma\/?$/i.test(String(pathname||''));}
 function isSeonamMediPath(pathname){const path=String(pathname||'');return path===SEONAM_MEDI_PREFIX||path.startsWith(SEONAM_MEDI_PREFIX+'/');}
 function isLegacySeonamMedPath(pathname){const path=String(pathname||'');return path===SEONAM_MED_LEGACY_PREFIX||path.startsWith(SEONAM_MED_LEGACY_PREFIX+'/');}
 function redirectLegacySeonamMed(request){const source=new URL(request.url);const target=new URL(request.url);target.pathname=source.pathname.replace(/^\/seonam-med(?=\/|$)/,'/seonam-medi');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'seonam-medi-canonical'}});}
-async function routeSeonamMediStatic(request,env){if(!env?.ASSETS?.fetch)return new Response('Site assets unavailable',{status:503,headers:{'cache-control':'no-store'}});const source=new URL(request.url);const target=new URL(request.url);if(source.pathname===SEONAM_MEDI_PREFIX)target.pathname=SEONAM_MEDI_PREFIX+'/';const upstream=await env.ASSETS.fetch(new Request(target.toString(),request));const out=new Response(upstream.body,upstream);out.headers.set('x-ekodi-route','seonam-medi-static');out.headers.set('x-content-type-options','nosniff');if((out.headers.get('content-type')||'').includes('text/html'))out.headers.set('cache-control','no-store');return out;}
+async function routeSeonamMediStatic(request,env){
+  if(!env?.ASSETS?.fetch)return new Response('Site assets unavailable',{status:503,headers:{'cache-control':'no-store'}});
+  const source=new URL(request.url);
+  const isAdmin=source.pathname===SEONAM_MEDI_PREFIX+'/admin'||source.pathname.startsWith(SEONAM_MEDI_PREFIX+'/admin/');
+  const site=await readSeonamMediSiteControl(env);
+  if(!isAdmin&&site.publicStatus==='private')return new Response('Not Found',{status:404,headers:{'cache-control':'no-store','x-content-type-options':'nosniff','x-robots-tag':'noindex, nofollow, noarchive','x-ekodi-route':'seonam-medi-private','x-ekodi-public-site-mode':'private'}});
+  if(!isAdmin&&site.publicStatus==='maintenance'){
+    const redirectUrl=validPublicRedirectUrl(site.maintenanceRedirectUrl);
+    if(site.maintenanceDisplayType==='url'&&redirectUrl&&site.redirectMode==='auto')return new Response(null,{status:302,headers:{location:redirectUrl,'cache-control':'no-store','x-content-type-options':'nosniff','x-robots-tag':'noindex, nofollow, noarchive','x-ekodi-route':'seonam-medi-maintenance','x-ekodi-public-site-mode':'maintenance-auto-redirect'}});
+    const response=maintenanceResponse(site);
+    response.headers.set('x-ekodi-route','seonam-medi-maintenance');
+    return response;
+  }
+  const target=new URL(request.url);
+  if(source.pathname===SEONAM_MEDI_PREFIX)target.pathname=SEONAM_MEDI_PREFIX+'/';
+  const upstream=await env.ASSETS.fetch(new Request(target.toString(),request));
+  const out=new Response(upstream.body,upstream);
+  out.headers.set('x-ekodi-route','seonam-medi-static');
+  out.headers.set('x-content-type-options','nosniff');
+  if((out.headers.get('content-type')||'').includes('text/html')){
+    out.headers.set('cache-control','no-store');
+    out.headers.set('x-robots-tag',isAdmin?'noindex, nofollow, noarchive':'index, follow, max-image-preview:large');
+  }
+  return out;
+}
 function isPyeonggongmokPath(pathname){const path=String(pathname||'');return path===PYEONGGONGMOK_PREFIX||path.startsWith(PYEONGGONGMOK_PREFIX+'/');}
 async function routePyeonggongmokStatic(request,env){if(!env?.ASSETS?.fetch)return new Response('Site assets unavailable',{status:503,headers:{'cache-control':'no-store'}});const source=new URL(request.url);const target=new URL(request.url);if(source.pathname===PYEONGGONGMOK_PREFIX)target.pathname=PYEONGGONGMOK_PREFIX+'/';const upstream=await env.ASSETS.fetch(new Request(target.toString(),request));const out=new Response(upstream.body,upstream);out.headers.set('x-ekodi-route','pyeonggongmok-static');out.headers.set('x-content-type-options','nosniff');if((out.headers.get('content-type')||'').includes('text/html'))out.headers.set('cache-control','no-store');return out;}
 
@@ -131,16 +164,30 @@ function maintenanceHtml(site){
   const message=escapeHtml(site.maintenanceMessage||site.message||CGMA_SITE.message);
   const redirectUrl=validPublicRedirectUrl(site.maintenanceRedirectUrl);
   const showButton=site.maintenanceDisplayType==='url'&&redirectUrl&&site.redirectMode!=='auto';
-  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>:root{color-scheme:light dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{margin:0;min-height:100dvh;display:grid;place-items:center;background:radial-gradient(circle at top,#f3f8ff,#e9edf3 52%,#dde4ee);color:#152033}main{width:min(92vw,560px);padding:42px 28px;border:1px solid rgba(80,105,135,.18);border-radius:28px;background:rgba(255,255,255,.78);box-shadow:0 22px 70px rgba(25,50,80,.14);text-align:center;backdrop-filter:blur(16px)}.eyebrow{display:inline-flex;gap:8px;align-items:center;padding:6px 12px;border-radius:999px;background:#edf5ff;color:#35628e;font-size:13px;font-weight:700;letter-spacing:.04em}h1{margin:18px 0 10px;font-size:clamp(28px,5vw,42px);line-height:1.12;letter-spacing:-.04em}p{margin:0 auto;color:#536273;font-size:17px;line-height:1.65;word-break:keep-all}a{display:inline-flex;margin-top:26px;padding:13px 18px;border-radius:14px;background:#163454;color:#fff;text-decoration:none;font-weight:800}footer{margin-top:28px;color:#8390a1;font-size:12px}</style></head><body><main><div class="eyebrow">CGMA</div><h1>${title}</h1><p>${message}</p>${showButton?`<a href="${escapeHtml(redirectUrl)}" rel="noopener noreferrer">임시 안내 페이지 보기</a>`:''}<footer>cgma.or.kr</footer></main></body></html>`;
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>:root{color-scheme:light dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{margin:0;min-height:100dvh;display:grid;place-items:center;background:radial-gradient(circle at top,#f3f8ff,#e9edf3 52%,#dde4ee);color:#152033}main{width:min(92vw,560px);padding:42px 28px;border:1px solid rgba(80,105,135,.18);border-radius:28px;background:rgba(255,255,255,.78);box-shadow:0 22px 70px rgba(25,50,80,.14);text-align:center;backdrop-filter:blur(16px)}.eyebrow{display:inline-flex;gap:8px;align-items:center;padding:6px 12px;border-radius:999px;background:#edf5ff;color:#35628e;font-size:13px;font-weight:700;letter-spacing:.04em}h1{margin:18px 0 10px;font-size:clamp(28px,5vw,42px);line-height:1.12;letter-spacing:-.04em}p{margin:0 auto;color:#536273;font-size:17px;line-height:1.65;word-break:keep-all}a{display:inline-flex;margin-top:26px;padding:13px 18px;border-radius:14px;background:#163454;color:#fff;text-decoration:none;font-weight:800}footer{margin-top:28px;color:#8390a1;font-size:12px}</style></head><body><main><div class="eyebrow">${escapeHtml(site.eyebrow||'CGMA')}</div><h1>${title}</h1><p>${message}</p>${showButton?`<a href="${escapeHtml(redirectUrl)}" rel="noopener noreferrer">임시 안내 페이지 보기</a>`:''}<footer>${escapeHtml(site.domain||'cgma.or.kr')}</footer></main></body></html>`;
 }
-function maintenanceResponse(site,status=200){return new Response(maintenanceHtml(site),{status,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin','x-ekodi-public-site-mode':'maintenance'}})}
+function maintenanceResponse(site,status=200){return new Response(maintenanceHtml(site),{status,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin','x-robots-tag':'noindex, nofollow, noarchive','x-ekodi-public-site-mode':'maintenance'}})}
+function privatePublicSiteResponse(route='public-site-private'){return new Response('Not Found',{status:404,headers:{'cache-control':'no-store','x-content-type-options':'nosniff','x-robots-tag':'noindex, nofollow, noarchive','x-ekodi-route':route,'x-ekodi-public-site-mode':'private'}})}
 async function ensurePublicSiteControlSchema(env){
   if(!env?.DB)return;
   const now=new Date().toISOString();
   await env.DB.batch([
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS public_site_controls (site_id TEXT PRIMARY KEY,workspace_id TEXT NOT NULL,domain TEXT NOT NULL UNIQUE,public_status TEXT NOT NULL DEFAULT 'maintenance',maintenance_display_type TEXT NOT NULL DEFAULT 'default',maintenance_redirect_url TEXT NOT NULL DEFAULT '',maintenance_title TEXT NOT NULL DEFAULT '현재 사이트 개발중입니다',maintenance_message TEXT NOT NULL DEFAULT '더 좋은 서비스로 준비 중입니다.',redirect_mode TEXT NOT NULL DEFAULT 'button',updated_at TEXT NOT NULL,updated_by INTEGER)`),
-    env.DB.prepare(`INSERT OR IGNORE INTO public_site_controls (site_id,workspace_id,domain,public_status,maintenance_display_type,maintenance_redirect_url,maintenance_title,maintenance_message,redirect_mode,updated_at) VALUES ('cgma','cgma','cgma.or.kr','maintenance','default','','현재 사이트 개발중입니다','더 좋은 서비스로 준비 중입니다.','button',?)`).bind(now)
+    env.DB.prepare(`INSERT OR IGNORE INTO public_site_controls (site_id,workspace_id,domain,public_status,maintenance_display_type,maintenance_redirect_url,maintenance_title,maintenance_message,redirect_mode,updated_at) VALUES ('cgma','cgma','cgma.or.kr','maintenance','default','','현재 사이트 개발중입니다','더 좋은 서비스로 준비 중입니다.','button',?)`).bind(now),
+    env.DB.prepare(`INSERT OR IGNORE INTO public_site_controls (site_id,workspace_id,domain,public_status,maintenance_display_type,maintenance_redirect_url,maintenance_title,maintenance_message,redirect_mode,updated_at) VALUES ('seonam-medi','seonam-medi','ekodi.kr/seonam-medi','public','default','','서남권 국립의대 시민소통센터','시민소통센터는 현재 점검 중입니다.','button',?)`).bind(now)
   ]);
+}
+async function readSeonamMediSiteControl(env){
+  const fallback={...SEONAM_MEDI_SITE,publicStatus:'public',maintenanceDisplayType:'default',maintenanceRedirectUrl:'',maintenanceTitle:SEONAM_MEDI_SITE.title,maintenanceMessage:SEONAM_MEDI_SITE.message,redirectMode:'button'};
+  if(!env?.DB)return fallback;
+  try{
+    await ensurePublicSiteControlSchema(env);
+    const row=await env.DB.prepare('SELECT * FROM public_site_controls WHERE site_id = ? LIMIT 1').bind('seonam-medi').first();
+    return{...fallback,publicStatus:row?.public_status||'public',maintenanceDisplayType:row?.maintenance_display_type||'default',maintenanceRedirectUrl:row?.maintenance_redirect_url||'',maintenanceTitle:row?.maintenance_title||SEONAM_MEDI_SITE.title,maintenanceMessage:row?.maintenance_message||SEONAM_MEDI_SITE.message,redirectMode:row?.redirect_mode||'button'};
+  }catch(error){
+    console.error('SEONAM MEDI public site control fallback',error);
+    return fallback;
+  }
 }
 async function readCgmaSiteControl(env){
   if(!env?.DB)return{...CGMA_SITE,publicStatus:'maintenance',maintenanceDisplayType:'default',maintenanceRedirectUrl:'',maintenanceTitle:CGMA_SITE.title,maintenanceMessage:CGMA_SITE.message,redirectMode:'button'};
@@ -162,6 +209,7 @@ function cgmaCanonicalRedirect(request){
 }
 async function routeCgmaPublic(request,env){
   const site=await readCgmaSiteControl(env);
+  if(site.publicStatus==='private')return privatePublicSiteResponse('cgma-private');
   if(site.publicStatus!=='maintenance')return cgmaCanonicalRedirect(request);
   const redirectUrl=validPublicRedirectUrl(site.maintenanceRedirectUrl);
   if(site.maintenanceDisplayType==='url'&&redirectUrl&&site.redirectMode==='auto')return new Response(null,{status:302,headers:{location:redirectUrl,'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-public-site-mode':'maintenance-auto-redirect'}});
@@ -288,7 +336,7 @@ function legacyStoreGatewayRedirect(request){const url=new URL(request.url);if(u
 
 async function livePublicStatus(env,tenant){
   if(!env?.DB?.prepare)return'public';
-  try{const row=await env.DB.prepare('SELECT public_status FROM public_site_controls WHERE site_id = ? LIMIT 1').bind('live-'+String(tenant?.apiTenant||'').toLowerCase()).first();return row?.public_status==='maintenance'?'maintenance':'public'}catch{return'public'}
+  try{const row=await env.DB.prepare('SELECT public_status FROM public_site_controls WHERE site_id = ? LIMIT 1').bind('live-'+String(tenant?.apiTenant||'').toLowerCase()).first();return['public','private','maintenance'].includes(row?.public_status)?row.public_status:'public'}catch{return'public'}
 }
 function liveShell(response,surface=''){return typeof HTMLRewriter==='function'?injectEkodiShell(response,'live',surface):response}
 
@@ -326,7 +374,7 @@ async function routePlatform(request,env,ctx){
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
     if(host===PUBLIC_HOST&&url.pathname.startsWith(MALL_API_APEX_PREFIX)){const mallApi=await routeMallApiApex(request,env);if(mallApi)return mallApi;}
-    if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/seonam-medi/')){const monitor=await handleSeonamMediMonitorApi(request,env);if(monitor)return monitor;const civic=await handleSeonamMediCivicApi(request,env);if(civic)return civic;}
+    if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/seonam-medi/')){if(!url.pathname.startsWith('/api/seonam-medi/admin/')){const site=await readSeonamMediSiteControl(env);if(site.publicStatus==='private')return privatePublicSiteResponse('seonam-medi-api-private');}const admin=await handleSeonamMediAdminApi(request,env);if(admin)return admin;const monitor=await handleSeonamMediMonitorApi(request,env);if(monitor)return monitor;const civic=await handleSeonamMediCivicApi(request,env);if(civic)return civic;}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isLegacySeonamMedPath(url.pathname))return redirectLegacySeonamMed(request);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isSeonamMediPath(url.pathname))return routeSeonamMediStatic(request,env);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isPyeonggongmokPath(url.pathname))return routePyeonggongmokStatic(request,env);
@@ -342,7 +390,9 @@ async function routePlatform(request,env,ctx){
       if(liveAdminTenant)return tenantLiveAdminPage(liveAdminTenant);
       const liveTenant=realtimeTenantFromPath(url.pathname);
       if(liveTenant){
-        if(await livePublicStatus(env,liveTenant)==='maintenance')return liveShell(liveServiceMaintenancePage(liveTenant));
+        const liveStatus=await livePublicStatus(env,liveTenant);
+        if(liveStatus==='private')return privatePublicSiteResponse('live-private');
+        if(liveStatus==='maintenance')return liveShell(liveServiceMaintenancePage(liveTenant));
         if(!liveTenant.dedicated)return tenantLivePage(liveTenant);
       }
     }

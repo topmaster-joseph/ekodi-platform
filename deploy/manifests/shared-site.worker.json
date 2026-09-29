@@ -2072,6 +2072,29 @@
           "원출처 링크",
           "후원·회계 공개"
         ],
+        "rollbackVerify": false,
+        "headerExpect": [
+          "x-ekodi-route: seonam-medi-static",
+          "x-robots-tag: index, follow"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/seonam-medi/admin/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "서남권 국립의대 시민소통센터",
+          "공지 관리",
+          "채널 관리",
+          "조직",
+          "권한 안내"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: seonam-medi-static",
+          "x-robots-tag: noindex"
+        ],
         "rollbackVerify": false
       },
       {

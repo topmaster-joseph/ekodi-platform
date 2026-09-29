@@ -7,6 +7,7 @@ import { ensureCustomerAccessSchema } from './customer-google-prereg.js';
 const ROLE_LABELS = Object.freeze({
   owner: '사이트 책임관리자',
   admin: '사이트 관리자',
+  board_admin: '게시판 관리자',
   manager: '운영책임자',
   marketer: '마케팅담당자',
   accountant: '회계담당자',
