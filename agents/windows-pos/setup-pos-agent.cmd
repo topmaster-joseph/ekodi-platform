@@ -20,7 +20,7 @@ echo [EKODI] Downloading the official POS Agent package...
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
   "$ErrorActionPreference='Stop';" ^
   "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;" ^
-  "$base='https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/agents/windows-pos';" ^
+  "$base='https://ekodi.kr/cmpmyi/admin/agent/download';" ^
   "$dir=$env:EKODI_POS_SETUP_DIR;" ^
   "$files=@('install-pos-agent.ps1','EKODI-POS-Agent.ps1','pos-agent.config.example.json','diagnose-pos-targets.ps1','start-pos-agent.cmd','stop-pos-agent.cmd','uninstall-pos-agent.ps1');" ^
   "foreach($name in $files){$uri=$base+'/'+$name;$out=Join-Path $dir $name;Invoke-WebRequest -UseBasicParsing -Uri $uri -OutFile $out -TimeoutSec 30};" ^
