@@ -1,5 +1,5 @@
 {
-  "version": 98,
+  "version": 99,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -2009,7 +2009,7 @@
         "redirect": "manual",
         "expect": [
           "청계패스",
-          "외부 연동 준비",
+          "서비스 준비 중",
           "상품권",
           "가맹점"
         ],
