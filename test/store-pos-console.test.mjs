@@ -21,7 +21,13 @@ test('Store Admin exposes the POS console without weakening store scope',async()
   const html=await response.text();
   assert.equal(response.status,200);
   assert.match(html,/<h1 id="pageTitle">POS 통합화면<\/h1>/);
-  assert.match(html,/20260929-pos-web-first-v3/);
+  assert.match(html,/20260929-pos-web-first-v4/);
+  assert.match(html,/EKODI POS Agent 준비/);
+  assert.match(html,/원클릭 설치 \(\.cmd\)/);
+  assert.match(html,/setup-pos-agent\.cmd/);
+  assert.match(html,/start-pos-agent\.cmd/);
+  assert.match(html,/stop-pos-agent\.cmd/);
+  assert.match(html,/운영 데이터를 불러오고 있습니다.*설치 버튼/s);
   const csp=response.headers.get('content-security-policy')||'';
   assert.match(csp,/http:\/\/127\.0\.0\.1:17831/);
   assert.match(csp,/http:\/\/localhost:17831/);
