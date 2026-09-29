@@ -51,13 +51,14 @@ function adminBody(){
   </main>`;
 }
 
-function responseDocument(region,title,body,{admin=false,active='home'}={}){
+function responseDocument(region,title,body,{admin=false,active='home',canonicalPath=''}={}){
   const auth=admin?' data-region-auth-pending="1"':'';
   const scripts=admin
     ?'<script src="/cheonggye/local-region-admin-auth.js" defer></script><script src="/cheonggye/local-region-forest-admin.js" defer></script>'
     :'<script src="/cheonggye/local-region-forest-public.js" defer></script>';
   const footer=admin?'':renderEkodiUserFooter();
-  return `<!doctype html><html lang="ko" data-ekodi-site-subject="${esc(region.siteSubject)}" data-ekodi-local-region="${esc(region.id)}" data-ekodi-region-surface="${admin?'admin':'public'}" data-ekodi-site-experience="local-conversational-adaptive-v1"${auth}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="청계면 국민의숲 프로젝트 추진이력과 참여 기록"><title>${esc(title)}</title>${style()}</head><body>${nav(active,admin)}${body}${footer}${scripts}</body></html>`;
+  const canonical=!admin&&canonicalPath?`<link rel="canonical" href="https://ekodi.kr${esc(canonicalPath)}"><meta property="og:url" content="https://ekodi.kr${esc(canonicalPath)}">`:'';
+  return `<!doctype html><html lang="ko" data-ekodi-site-subject="${esc(region.siteSubject)}" data-ekodi-local-region="${esc(region.id)}" data-ekodi-region-surface="${admin?'admin':'public'}" data-ekodi-site-experience="local-conversational-adaptive-v1"${auth}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="청계면 국민의숲 프로젝트 추진이력과 참여 기록"><title>${esc(title)}</title>${canonical}${style()}</head><body>${nav(active,admin)}${body}${footer}${scripts}</body></html>`;
 }
 
 function headers(route,{userChrome=false}={}){
@@ -68,7 +69,8 @@ function headers(route,{userChrome=false}={}){
 
 export function localRegionForestPublicPage(region,segments=[]){
   const active=viewKey(segments);
-  return new Response(responseDocument(region,'청계면 국민의숲 | 청계잇다',publicBody(),{active}),{status:200,headers:headers('local-region-forest-public',{userChrome:true})});
+  const canonicalPath=active==='home'?'/cheonggye/forest':'/cheonggye/forest/'+active;
+  return new Response(responseDocument(region,'청계면 국민의숲 | 청계잇다',publicBody(),{active,canonicalPath}),{status:200,headers:headers('local-region-forest-public',{userChrome:true})});
 }
 
 export function localRegionForestAdminPage(region){
