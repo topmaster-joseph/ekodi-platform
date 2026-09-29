@@ -63,5 +63,6 @@ test('command home remains available on the super-admin surface only',async()=>{
   assert.match(registry,/id: 'command-home'/);
   assert.match(layout,/const COMMAND_HOME='command-home'/);
   assert.match(layout,/function activateCommandHome\(\)/);
-  assert.match(sidebar,/dataset\.adminCommandHome = 'true'/);
+  assert.doesNotMatch(sidebar,/dataset\.adminCommandHome/);
+  assert.match(sidebar,/nav\.querySelector\(':scope>\.admin-command-entry'\)\?\.remove\(\)/);
 });
