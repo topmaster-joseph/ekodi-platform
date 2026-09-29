@@ -3,7 +3,7 @@ import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 import { routeIntent } from './capability-intent-runtime.js';
 import capabilityRegistry from './config/capability-registry.json' with { type: 'json' };
 import workspacePacks from './config/workspace-packs.json' with { type: 'json' };
-import { routePersonDigitalCard } from './person-digital-card.js';
+import { routePersonDigitalCard } from './my/person-digital-card.js';
 
 const WORKSPACE_KEY_RE=/^[a-z]+:[a-zA-Z0-9:_-]+$/;
 const SERVICE_ID_RE=/^[a-z][a-z0-9-]*$/;
