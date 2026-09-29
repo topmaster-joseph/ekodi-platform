@@ -181,6 +181,10 @@ test('guarded release probes canonical store admins and redirect-only aggregate 
   const manifest=JSON.parse(readFileSync(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
   const byUrl=new Map(manifest.worker.requests.map(row=>[row.url,row]));
   assert.deepEqual(byUrl.get('https://ekodi.kr/cmpmyi/admin')?.statuses,[200]);
+  assert.deepEqual(byUrl.get('https://ekodi.kr/cmpmyi/admin/agent')?.statuses,[200]);
+  assert.ok(byUrl.get('https://ekodi.kr/cmpmyi/admin/agent')?.expect.includes('POS Agent 관리'));
+  assert.deepEqual(byUrl.get('https://ekodi.kr/cmpmyi/admin/panel/agent')?.statuses,[200]);
+  assert.ok(byUrl.get('https://ekodi.kr/cmpmyi/admin/panel/agent')?.expect.includes('원클릭 설치 다운로드'));
   assert.deepEqual(byUrl.get('https://ekodi.kr/cmpmyi/admin/panel/overview')?.statuses,[200]);
   assert.ok(byUrl.get('https://ekodi.kr/cmpmyi/admin/panel/overview')?.headerExpect.includes('x-frame-options: SAMEORIGIN'));
   const liveRuntime=byUrl.get('https://ekodi.kr/cmpmyi/admin/panel.js');
