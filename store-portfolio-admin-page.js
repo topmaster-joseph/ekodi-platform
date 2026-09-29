@@ -23,6 +23,8 @@ const SECTIONS=Object.freeze([
   ['members','권한 · 구성원'],
 ]);
 
+const STORE_MENU=Object.freeze(SECTIONS.filter(([section])=>!['pos','publishing','connections'].includes(section)));
+
 const COMMON_VIEWS=Object.freeze({
   overview:{
     label:'통합 대시보드',
@@ -31,8 +33,8 @@ const COMMON_VIEWS=Object.freeze({
   },
   pos:{
     label:'POS 통합화면',
-    description:'세 브랜드의 웹 운영 화면을 기본으로 사용하고, 필요할 때 해당 POS PC의 Windows 프로그램 전환을 Agent로 보조합니다.',
-    sections:[['pos','POS 통합화면'],['orders','주문 · 채널'],['connections','연결관리']],
+    description:'세 브랜드의 POS 통합화면만 공통관리에서 빠르게 전환합니다. Agent 설치·실행·중지는 이 화면 안의 Agent 관리 바로가기에서 처리합니다.',
+    sections:[['pos','POS 통합화면']],
   },
   delivery:{
     label:'배달플랫폼 통합관리',
@@ -65,9 +67,9 @@ const COMMON_VIEWS=Object.freeze({
     sections:[['marketing','Marketing AI']],
   },
   publishing:{
-    label:'채널 · 자동게시 통합관리',
-    description:'세 브랜드의 채널 상태를 같은 위치에서 선택하고, 실제 계정·OAuth·예약게시·자동게시 관리는 브랜드별 권한 경계에서 실행합니다.',
-    sections:[['publishing','채널 · 자동게시'],['connections','연결관리'],['marketing','Marketing AI']],
+    label:'채널 · 자동게시',
+    description:'세 브랜드의 계정·OAuth·예약게시·자동게시 화면만 공통관리에서 빠르게 전환합니다.',
+    sections:[['publishing','채널 · 자동게시']],
   },
   operations:{
     label:'매장 운영',
@@ -80,25 +82,16 @@ const COMMON_VIEWS=Object.freeze({
     sections:[],
   },
   connections:{
-    label:'연결 · 사이트 · 권한',
-    description:'브랜드별 외부 연결, 사용자 사이트, 구성원 권한을 관리합니다.',
-    sections:[['connections','연결관리'],['site','사용자 사이트'],['members','권한 · 구성원']],
+    label:'연결관리',
+    description:'세 브랜드의 POS·배달플랫폼·외부 서비스 연결관리 화면만 공통관리에서 빠르게 전환합니다.',
+    sections:[['connections','연결관리']],
   },
 });
 
 const COMMON_MENU=Object.freeze([
-  ['overview','통합 대시보드'],
   ['pos','POS 통합화면'],
-  ['agent','POS Agent 관리'],
-  ['delivery','배달플랫폼'],
-  ['menu','메뉴 · 가격'],
-  ['orders','주문 · 채널'],
-  ['sales','매출'],
-  ['customer','고객 · 리뷰'],
-  ['marketing','Marketing AI'],
+  ['connections','연결관리'],
   ['publishing','채널 · 자동게시'],
-  ['operations','매장 운영'],
-  ['connections','연결 · 권한'],
 ]);
 
 const DELIVERY_PLATFORMS=Object.freeze(['배달의민족','쿠팡이츠','요기요','땡겨요','먹깨비','당근 주문','네이버 주문']);
@@ -137,20 +130,16 @@ a{color:inherit}.top{
 }
 .common-nav a:hover,.common-nav a:focus{background:#eef6f0;border-color:#cbdccd;color:#17492b;outline:none}
 .common-nav a:first-child{grid-column:1/-1;background:var(--green);border-color:var(--green);color:#fff}
-.brand-group{border-top:1px solid #edf1ec;padding:4px 3px 0;margin-top:3px}
-.brand-group>summary{list-style:none;cursor:pointer}.brand-group>summary::-webkit-details-marker{display:none}
-.brand-head{display:flex;align-items:center;gap:7px;margin:0;padding:5px 4px;border-radius:7px}
-.brand-head:hover,.brand-head:focus{background:#f5f8f5;outline:none}
-.brand-mark{width:24px;height:24px;border-radius:7px;background:#edf4ef;color:#31543e;display:grid;place-items:center;font-size:8px;font-weight:900;flex:0 0 auto}
-.brand-head>div{min-width:0;flex:1}.brand-head strong{display:block;font-size:12px}.brand-head span{display:block;color:#879189;font-size:10px;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.brand-caret{margin-left:auto;color:#748178;font-size:14px;line-height:1;transform:rotate(0deg);transition:transform .15s ease}.brand-group[open] .brand-caret{transform:rotate(90deg)}
-.brand-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;padding:3px 0 2px}
-.brand-links a{
-  min-width:0;padding:6px 7px;border:1px solid #e4e9e3;border-radius:7px;background:#fff;
-  color:#48584e;text-decoration:none;font-size:11px;font-weight:730;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
-}
+.store-picker{margin:2px 3px 7px;padding:8px;border:1px solid #dce5dd;border-radius:9px;background:#f8faf8}
+.store-picker label{display:block;margin-bottom:5px;color:#607067;font-size:10px;font-weight:850}
+.store-picker select{width:100%;min-height:38px;border:1px solid #cfdacf;border-radius:8px;background:#fff;color:#23372a;padding:7px 9px;font:inherit;font-size:12px;font-weight:800}
+.selected-store{display:flex;align-items:center;gap:7px;margin:2px 4px 5px;padding:5px 4px}
+.selected-store .brand-mark{width:24px;height:24px;border-radius:7px;background:#edf4ef;color:#31543e;display:grid;place-items:center;font-size:8px;font-weight:900;flex:0 0 auto}
+.selected-store strong{display:block;font-size:12px}.selected-store span{display:block;color:#879189;font-size:10px;margin-top:1px}
+.brand-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;padding:0 3px 2px}
+.brand-links a{min-width:0;padding:7px 8px;border:1px solid #e4e9e3;border-radius:7px;background:#fff;color:#48584e;text-decoration:none;font-size:11px;font-weight:730;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .brand-links a:hover,.brand-links a:focus{background:#eef6f0;border-color:#cbdccd;color:#17492b;outline:none}
-.brand-links a:first-child{grid-column:1/-1;background:#f3f8f4;color:#17492b;border-color:#d5e4d8;font-weight:900}
+.brand-links a[data-store-section=""]{grid-column:1/-1;background:#f3f8f4;color:#17492b;border-color:#d5e4d8;font-weight:900}
 .portfolio-sidebar-note{margin:8px 4px 0;padding-top:7px;border-top:1px solid #edf1ec;color:#8a948c;font-size:10px;line-height:1.4}
 .workspace{min-width:0;background:#f3f6f3;padding:6px}
 .panel-frame{
@@ -161,7 +150,7 @@ a{color:inherit}.top{
   .app{grid-template-columns:236px minmax(0,1fr)}
   .portfolio-sidebar{padding-left:6px;padding-right:6px}
   .brand-links{grid-template-columns:1fr}
-  .brand-links a:first-child{grid-column:auto}
+  
 }
 @media(max-width:760px){
   .top{height:52px;padding:0 9px}.brand small{display:none}.top-actions a{font-size:10px;padding:6px 8px}
@@ -172,7 +161,7 @@ a{color:inherit}.top{
 }
 @media(max-width:390px){
   .common-nav,.brand-links{grid-template-columns:1fr}
-  .brand-links a:first-child{grid-column:auto}
+  
 }`;
 
 const PANEL_STYLE=`:root{
@@ -206,11 +195,46 @@ function commonHref(view){
   return `/cmpmyi/admin/panel/${view}`;
 }
 
-function brandMenu(store){
-  return `<details class="brand-group" aria-label="${store.short} 관리자 메뉴">
-    <summary class="brand-head"><span class="brand-mark">${store.mark}</span><div><strong>${store.short}</strong><span>${store.name}</span></div><span class="brand-caret" aria-hidden="true">›</span></summary>
-    <nav class="brand-links">${SECTIONS.map(([section,label])=>`<a href="${adminHref(store,section)}" target="cmpmyi-panel">${label}</a>`).join('')}</nav>
-  </details>`;
+function selectedStoreMenu(store=STORES[0]){
+  return `<div class="selected-store" id="selectedStoreSummary"><span class="brand-mark" data-selected-store-mark>${store.mark}</span><div><strong data-selected-store-name>${store.short}</strong><span data-selected-store-full>${store.name}</span></div></div>
+    <nav class="brand-links" id="selectedStoreMenu" aria-label="${store.short} 매장 메뉴">${STORE_MENU.map(([section,label])=>`<a href="${adminHref(store,section)}" target="cmpmyi-panel" data-store-section="${section}">${label}</a>`).join('')}</nav>`;
+}
+
+function portfolioShellClient(){
+  const select=document.getElementById('cmpmyiStoreSelect');
+  const menu=document.getElementById('selectedStoreMenu');
+  const frame=document.querySelector('iframe[name="cmpmyi-panel"]');
+  const name=document.querySelector('[data-selected-store-name]');
+  const full=document.querySelector('[data-selected-store-full]');
+  const mark=document.querySelector('[data-selected-store-mark]');
+  if(!select||!menu)return;
+  const stores={
+    jadam:{short:'자담치킨',name:'자담치킨 목포대점',mark:'JD'},
+    pizzamaru:{short:'피자마루',name:'피자마루 목포대점',mark:'PM'},
+    yogurt:{short:'요거트퍼플',name:'요거트퍼플 목포대점',mark:'YP'}
+  };
+  const key='ekodi-cmpmyi-selected-store';
+  const valid=slug=>Boolean(stores[slug]);
+  function apply(slug,{navigate=false}={}){
+    if(!valid(slug))slug='jadam';
+    const store=stores[slug];
+    select.value=slug;
+    if(name)name.textContent=store.short;
+    if(full)full.textContent=store.name;
+    if(mark)mark.textContent=store.mark;
+    menu.setAttribute('aria-label',store.short+' 매장 메뉴');
+    menu.querySelectorAll('[data-store-section]').forEach(link=>{
+      const section=link.dataset.storeSection||'';
+      link.href='/'+slug+'/admin'+(section?'/'+section:'')+'?embed=cmpmyi';
+    });
+    try{localStorage.setItem(key,slug)}catch{}
+    if(navigate&&frame)frame.src='/'+slug+'/admin?embed=cmpmyi';
+  }
+  let initial='jadam';
+  try{const saved=localStorage.getItem(key);if(valid(saved))initial=saved}catch{}
+  apply(initial);
+  select.addEventListener('change',()=>apply(select.value,{navigate:true}));
+  menu.addEventListener('click',()=>{try{localStorage.setItem(key,select.value)}catch{}});
 }
 
 function panelCard(store,view){
@@ -264,6 +288,10 @@ function agentManagementPanel(){
     <div class="agent-card"><h2>매장 POS 바로가기</h2><p>설치가 끝난 각 POS PC에서 해당 매장 POS 통합화면을 열고 Agent 상태 확인 및 Windows 프로그램 전환을 사용합니다.</p><div class="agent-store-links">${stores}</div></div>
     <div class="agent-note">브라우저 보안상 웹페이지가 Windows 설치·삭제 파일을 자동 실행할 수는 없습니다. 다운로드한 <strong>.cmd</strong> 파일을 해당 POS PC에서 직접 실행해야 하며, Windows가 관리자 권한을 요청하면 내용을 확인한 뒤 허용합니다. Agent는 계속 <strong>127.0.0.1</strong>에만 연결됩니다.</div>
   </section>`;
+}
+
+function posAgentShortcut(){
+  return `<div class="agent-note"><strong>POS Agent 설치·실행·중지</strong>는 POS 통합화면의 보조 기능으로 유지합니다. <a href="/cmpmyi/admin/panel/agent">Agent 설치·관리 열기</a></div>`;
 }
 
 function deliveryOverview(){
@@ -500,8 +528,10 @@ function portfolioPanelClient(){
   load();
   setInterval(()=>{if(document.visibilityState==='visible')load()},300000);
 }
-export function storePortfolioAdminPage(initialView='overview'){
-  const startView=COMMON_VIEWS[String(initialView||'overview').toLowerCase()]?String(initialView||'overview').toLowerCase():'overview';
+export function storePortfolioAdminPage(initialView='pos'){
+  const requested=String(initialView||'pos').toLowerCase();
+  const startView=COMMON_VIEWS[requested]?requested:'pos';
+  const initialStore=STORES[0];
   const html=`<!doctype html><html lang="ko" data-ekodi-store-portfolio="cmpmyi" data-ekodi-authority-scope="platform-entry">
   <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>통합 매장 운영 · EKODI</title><style>${SHELL_STYLE}</style></head>
   <body>
@@ -510,18 +540,20 @@ export function storePortfolioAdminPage(initialView='overview'){
       <div class="top-actions"><a href="/cmpmyi" target="_blank" rel="noopener">통합 사용자페이지</a></div>
     </header>
     <div class="app">
-      <aside class="portfolio-sidebar" aria-label="통합 매장 관리자 메뉴" data-cmpmyi-navigation="left-fixed">
-        <div class="side-intro"><small>3 BRAND ADMIN</small><strong>통합 관리자</strong><span>공통 업무와 브랜드별 메뉴를 왼쪽에서 바로 선택합니다.</span></div>
-        <div class="menu-title"><strong>공통관리</strong><small>3개 브랜드</small></div>
+      <aside class="portfolio-sidebar" aria-label="통합 매장 관리자 메뉴" data-cmpmyi-navigation="common-store-split">
+        <div class="side-intro"><small>3 BRAND ADMIN</small><strong>통합 관리자</strong><span>공통 기능은 3개만 두고, 나머지는 선택한 매장의 전용 메뉴에서 관리합니다.</span></div>
+        <div class="menu-title"><strong>공통관리</strong><small>3개 브랜드 공통</small></div>
         <nav class="common-nav">${COMMON_MENU.map(([view,label])=>`<a href="${commonHref(view)}" target="cmpmyi-panel">${label}</a>`).join('')}</nav>
-        <div class="menu-title"><strong>브랜드 관리자 전체 메뉴</strong><small>직접 이동</small></div>
-        ${STORES.map(brandMenu).join('')}
-        <p class="portfolio-sidebar-note">각 브랜드의 데이터와 권한은 독립적으로 유지됩니다. 통합 화면은 해당 브랜드의 정식 관리자 화면을 오른쪽 작업영역에 표시합니다.</p>
+        <div class="menu-title"><strong>매장 선택</strong><small>전용 메뉴</small></div>
+        <div class="store-picker"><label for="cmpmyiStoreSelect">관리할 매장</label><select id="cmpmyiStoreSelect" aria-label="관리할 매장 선택">${STORES.map(store=>`<option value="${store.slug}">${store.name}</option>`).join('')}</select></div>
+        ${selectedStoreMenu(initialStore)}
+        <p class="portfolio-sidebar-note">POS 통합화면 · 연결관리 · 채널 자동게시는 공통관리에서 전환합니다. 그 밖의 운영·주문·메뉴·매출·고객·마케팅·정산·권한 메뉴는 선택한 매장 범위에서만 열립니다.</p>
       </aside>
       <main class="workspace">
         <iframe class="panel-frame" name="cmpmyi-panel" title="통합 매장 관리자 작업영역" src="${commonHref(startView)}"></iframe>
       </main>
     </div>
+    <script src="/cmpmyi/admin/shell.js" defer></script>
   </body></html>`;
   return new Response(html,{headers:{
     'content-type':'text/html; charset=utf-8',
@@ -529,11 +561,13 @@ export function storePortfolioAdminPage(initialView='overview'){
     'x-content-type-options':'nosniff',
     'x-frame-options':'DENY',
     'referrer-policy':'strict-origin-when-cross-origin',
-    'content-security-policy':"default-src 'self'; style-src 'self' 'unsafe-inline'; frame-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+    'content-security-policy':"default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
     'x-ekodi-route':'cmpmyi-store-portfolio-admin',
     'x-ekodi-authority-scope':'platform-entry'
   }});
 }
+
+export function storePortfolioAdminShellScript(){return new Response(`(${portfolioShellClient.toString()})();`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}})}
 
 export function storePortfolioAdminPanelPage(viewName='overview'){
   const key=String(viewName||'overview').toLowerCase();
@@ -545,6 +579,7 @@ export function storePortfolioAdminPanelPage(viewName='overview'){
   <body>
     <section class="head"><div><p class="eyebrow">CMPMYI · COMMON MANAGEMENT</p><h1>${view.label}</h1><p>${view.description}</p></div><span class="badge">${key==='delivery'?'통합 확인 → 브랜드별 안전 실행':direct?'왼쪽 메뉴 → 실제 관리화면 바로 실행':'통합 현황'}</span></section>
     ${key==='delivery'?deliveryOverview():''}
+    ${key==='pos'?posAgentShortcut():''}
     ${isAgent?agentManagementPanel():(direct?directWorkspace(view,key):`<section class="grid" aria-label="${view.label} 브랜드 선택">${STORES.map(store=>key==='delivery'?deliveryPanelCard(store,view):panelCard(store,view)).join('')}</section>`)}
     <div class="help">${isAgent?'여러 POS PC에서 같은 관리페이지를 사용합니다. 설치·삭제는 반드시 현재 보고 있는 해당 Windows POS PC에서 직접 실행하며, 중앙 웹페이지가 임의로 PC 프로그램을 실행하지 않습니다.':key==='delivery'?'통합화면은 브랜드 간 데이터를 합쳐 쓰지 않습니다. 변경 요청은 반드시 선택한 브랜드의 고유 관리자 URL에서 수행하고, 연결되지 않은 플랫폼은 실행 대상에서 제외합니다.':direct?'중간 선택 카드를 없앴습니다. 왼쪽 메뉴를 누르면 마지막으로 선택한 브랜드의 실제 관리자 화면이 즉시 열리며, 상단의 브랜드·업무 전환만 사용합니다.':'통합 대시보드는 세 브랜드의 주요 관리 진입점을 요약합니다.'}</div>
     ${key==='delivery'||isAgent||direct?'<script src="/cmpmyi/admin/panel.js" defer></script>':''}
@@ -563,4 +598,4 @@ export function storePortfolioAdminPanelPage(viewName='overview'){
 
 export function storePortfolioAdminPanelScript(){return new Response(`(${portfolioPanelClient.toString()})();`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}})}
 
-export { STORES as CMPMYI_STORES, SECTIONS as CMPMYI_ADMIN_SECTIONS, COMMON_MENU as CMPMYI_COMMON_MENU };
+export { STORES as CMPMYI_STORES, SECTIONS as CMPMYI_ADMIN_SECTIONS, STORE_MENU as CMPMYI_STORE_MENU, COMMON_MENU as CMPMYI_COMMON_MENU };

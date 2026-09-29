@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { storePortfolioAdminPage, storePortfolioAdminPanelPage, storePortfolioAdminPanelScript, CMPMYI_STORES, CMPMYI_ADMIN_SECTIONS, CMPMYI_COMMON_MENU } from '../store-portfolio-admin-page.js';
+import { storePortfolioAdminPage, storePortfolioAdminPanelPage, storePortfolioAdminPanelScript, storePortfolioAdminShellScript, CMPMYI_STORES, CMPMYI_ADMIN_SECTIONS, CMPMYI_STORE_MENU, CMPMYI_COMMON_MENU } from '../store-portfolio-admin-page.js';
 import platformEntry from '../platform-router-entry-worker.js';
 import { storeAdminPage } from '../store-admin-engine.js';
 import { ADMIN_MENU_REGISTRY } from '../admin-menu-registry.js';
 
-test('cmpmyi admin provides fixed common and brand navigation with a right workspace',async()=>{
+test('cmpmyi admin keeps only three common controls and places all other menus under the store selector',async()=>{
   const response=storePortfolioAdminPage();const html=await response.text();
   assert.equal(response.status,200);
   assert.equal(response.headers.get('x-ekodi-route'),'cmpmyi-store-portfolio-admin');
@@ -14,34 +14,51 @@ test('cmpmyi admin provides fixed common and brand navigation with a right works
   for(const section of ['pos','delivery','menu','orders','sales','inventory','customers','reviews','marketing','publishing','work','finance','connections','site','members']){
     assert.ok(CMPMYI_ADMIN_SECTIONS.some(([key])=>key===section),`missing ${section}`);
   }
-  for(const view of ['overview','pos','agent','delivery','menu','orders','sales','customer','marketing','publishing','operations','connections']){
-    assert.ok(CMPMYI_COMMON_MENU.some(([key])=>key===view),`missing common view ${view}`);
-    assert.ok(html.includes(`/cmpmyi/admin/panel/${view}`));
+  assert.deepEqual(CMPMYI_COMMON_MENU,[
+    ['pos','POS 통합화면'],
+    ['connections','연결관리'],
+    ['publishing','채널 · 자동게시'],
+  ]);
+  assert.ok(CMPMYI_STORE_MENU.every(([section])=>!['pos','connections','publishing'].includes(section)));
+  for(const section of ['','delivery','menu','orders','sales','inventory','customers','reviews','marketing','work','finance','site','members']){
+    assert.ok(CMPMYI_STORE_MENU.some(([key])=>key===section),`missing selected-store menu ${section||'overview'}`);
+  }
+  for(const view of ['pos','connections','publishing'])assert.ok(html.includes(`/cmpmyi/admin/panel/${view}`));
+  for(const hidden of ['overview','agent','delivery','menu','orders','sales','customer','marketing','operations']){
+    assert.equal(CMPMYI_COMMON_MENU.some(([key])=>key===hidden),false,`unexpected common menu ${hidden}`);
   }
   assert.match(html,/공통관리/);
-  assert.match(html,/브랜드 관리자 전체 메뉴/);
+  assert.match(html,/매장 선택/);
+  assert.match(html,/id="cmpmyiStoreSelect"/);
+  assert.match(html,/id="selectedStoreMenu"/);
+  assert.match(html,/data-store-section="delivery"/);
+  assert.match(html,/data-store-section="menu"/);
+  assert.match(html,/data-store-section="orders"/);
+  assert.doesNotMatch(html,/data-store-section="pos"/);
+  assert.doesNotMatch(html,/data-store-section="connections"/);
+  assert.doesNotMatch(html,/data-store-section="publishing"/);
   assert.match(html,/name="cmpmyi-panel"/);
   assert.match(html,/target="cmpmyi-panel"/);
   assert.match(html,/class="panel-frame"/);
   assert.match(html,/class="portfolio-sidebar"/);
-  assert.match(html,/data-cmpmyi-navigation="left-fixed"/);
-  assert.match(html,/<details class="brand-group"/);
-  assert.match(html,/class="brand-caret"/);
-  assert.match(html,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
-  assert.doesNotMatch(html,/class="sidebar"/);
-  for(const store of CMPMYI_STORES){
-    assert.ok(html.includes(store.name));
-    assert.ok(html.includes(`/${store.slug}/admin?embed=cmpmyi`));
-    for(const section of ['pos','delivery','menu','orders','connections']){
-      assert.ok(html.includes(`/${store.slug}/admin/${section}?embed=cmpmyi`));
-    }
-  }
-  const agentShell=await storePortfolioAdminPage('agent').text();
-  assert.match(agentShell,/src="\/cmpmyi\/admin\/panel\/agent"/);
+  assert.match(html,/data-cmpmyi-navigation="common-store-split"/);
+  assert.doesNotMatch(html,/<details class="brand-group"/);
+  assert.match(html,/\/cmpmyi\/admin\/shell\.js/);
+  assert.match(html,/src="\/cmpmyi\/admin\/panel\/pos"/);
+
+  const runtime=await storePortfolioAdminShellScript().text();
+  assert.match(runtime,/ekodi-cmpmyi-selected-store/);
+  assert.match(runtime,/cmpmyiStoreSelect/);
+  assert.match(runtime,/data-store-section/);
+  assert.match(runtime,/\?embed=cmpmyi/);
+  assert.match(runtime,/frame\.src='\/'\+slug\+'\/admin\?embed=cmpmyi'/);
 });
 
 test('cmpmyi POS Agent manager provides local status, same-domain lifecycle downloads and store links',async()=>{
-  assert.ok(CMPMYI_COMMON_MENU.some(([key,label])=>key==='agent'&&label==='POS Agent 관리'));
+  assert.equal(CMPMYI_COMMON_MENU.some(([key])=>key==='agent'),false);
+  const posPanel=await storePortfolioAdminPanelPage('pos').text();
+  assert.match(posPanel,/POS Agent 설치·실행·중지/);
+  assert.match(posPanel,/\/cmpmyi\/admin\/panel\/agent/);
   const response=storePortfolioAdminPanelPage('agent');
   const html=await response.text();
   assert.equal(response.status,200);
@@ -129,6 +146,11 @@ test('router serves cmpmyi common panels and same-origin embedded canonical stor
   const panel=await platformEntry.fetch(new Request('https://ekodi.kr/cmpmyi/admin/panel/customer'),{},{});
   assert.equal(panel.status,200);
   assert.equal(panel.headers.get('x-ekodi-route'),'cmpmyi-store-portfolio-panel');
+  const shellScript=await platformEntry.fetch(new Request('https://ekodi.kr/cmpmyi/admin/shell.js'),{},{});
+  assert.equal(shellScript.status,200);
+  assert.match(shellScript.headers.get('content-type')||'',/text\/javascript/);
+  assert.match(await shellScript.text(),/cmpmyiStoreSelect/);
+
   const panelScript=await platformEntry.fetch(new Request('https://ekodi.kr/cmpmyi/admin/panel.js'),{},{});
   assert.equal(panelScript.status,200);
   assert.match(panelScript.headers.get('content-type')||'',/text\/javascript/);
