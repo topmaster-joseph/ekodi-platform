@@ -80,6 +80,7 @@ function audit() {
     const app = document.querySelector('#app');
     const workspace = app?.querySelector('main');
     const contextTabs = workspace?.querySelector(':scope>.admin-context-tabs-shell');
+    const commandEntry = document.querySelector('.sidebar nav > .admin-command-entry');
     const bodyOverflowY = getComputedStyle(document.body).overflowY;
     const appOverflowY = app ? getComputedStyle(app).overflowY : '';
     const workspaceOverflowY = workspace ? getComputedStyle(workspace).overflowY : '';
@@ -87,7 +88,8 @@ function audit() {
     if (app && appOverflowY !== 'hidden') violations.push(`admin app frame must not own scrolling; overflow-y=${appOverflowY}`);
     if (workspace && !['auto','scroll'].includes(workspaceOverflowY)) violations.push(`workspace must own vertical scrolling; overflow-y=${workspaceOverflowY}`);
     if (workspace?.dataset.ekodiScrollOwner !== 'workspace') violations.push('workspace scroll owner marker is missing');
-    if (!contextTabs) violations.push('contextual top tabs must exist between primary navigation and workspace content');
+    if (contextTabs) violations.push('retired contextual top tabs must not exist');
+    if (commandEntry) violations.push('retired new-task sidebar entry must not exist');
   }
 
   const detail = Object.freeze({
