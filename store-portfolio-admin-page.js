@@ -6,6 +6,7 @@ const STORES=Object.freeze([
 
 const SECTIONS=Object.freeze([
   ['','운영 홈'],
+  ['pos','POS 통합화면'],
   ['delivery','배달플랫폼'],
   ['menu','메뉴 · 가격'],
   ['orders','주문 · 채널'],
@@ -27,6 +28,11 @@ const COMMON_VIEWS=Object.freeze({
     label:'통합 대시보드',
     description:'세 브랜드의 주요 운영 메뉴와 상태 확인 경로를 한 화면에서 엽니다.',
     sections:[['','운영 홈'],['delivery','배달플랫폼'],['orders','주문 · 채널'],['sales','매출']],
+  },
+  pos:{
+    label:'POS 통합화면',
+    description:'세 브랜드의 POS·외부 주문 프로그램을 매장별로 선택하고, 해당 POS PC에서 한 번 터치 전환 화면을 엽니다.',
+    sections:[['pos','POS 통합화면'],['orders','주문 · 채널'],['connections','연결관리']],
   },
   delivery:{
     label:'배달플랫폼 통합관리',
@@ -77,6 +83,7 @@ const COMMON_VIEWS=Object.freeze({
 
 const COMMON_MENU=Object.freeze([
   ['overview','통합 대시보드'],
+  ['pos','POS 통합화면'],
   ['delivery','배달플랫폼'],
   ['menu','메뉴 · 가격'],
   ['orders','주문 · 채널'],
