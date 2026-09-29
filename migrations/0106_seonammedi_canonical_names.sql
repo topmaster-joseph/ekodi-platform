@@ -1,0 +1,2 @@
+ALTER TABLE seonam_medi_monitor_runs RENAME TO seonammedi_monitor_runs;
+ALTER TABLE seonam_medi_monitor_items RENAME TO seonammedi_monitor_items;
