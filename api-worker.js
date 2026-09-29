@@ -229,12 +229,15 @@ async function handlePublicDomainRequest(request, env) {
   await ensureControlCatalog(env.DB);
   const row = await env.DB.prepare('SELECT * FROM public_site_controls WHERE domain = ?').bind(host).first();
   const site = normalizePublicSiteRow(row, catalog);
+  if (site.publicStatus === 'private') {
+    return siteHtml('<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>Not Found</title></head><body>Not Found</body></html>', 404, { 'x-robots-tag': 'noindex, nofollow, noarchive' });
+  }
   if (site.publicStatus !== 'maintenance') return null;
   const redirectUrl = validPublicRedirectUrl(site.maintenanceRedirectUrl);
   if (site.maintenanceDisplayType === 'url' && redirectUrl && site.redirectMode === 'auto') {
-    return Response.redirect(redirectUrl, 302);
+    return new Response(null, { status: 302, headers: { location: redirectUrl, 'cache-control': 'no-store', 'x-robots-tag': 'noindex, nofollow, noarchive' } });
   }
-  return siteHtml(maintenancePage(site));
+  return siteHtml(maintenancePage(site), 200, { 'x-robots-tag': 'noindex, nofollow, noarchive' });
 }
 
 async function probeEnvironmentService(environment, target) {
