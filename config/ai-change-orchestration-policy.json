@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 9,
+  "schemaVersion": 10,
   "policyId": "AI-ORCHESTRATE-001",
   "status": "enforced",
   "controlPlane": "EKODI AI",
@@ -68,7 +68,38 @@
     ],
     "nonTerminalFailuresRequireAutomaticRecovery": true,
     "validationFailureAction": "diagnose-repair-rerun-continue",
-    "parallelConflictAction": "cross-review-select-winner-retire-or-refresh-overlap-rerun-continue"
+    "parallelConflictAction": "cross-review-select-winner-retire-or-refresh-overlap-rerun-continue",
+    "recurrentFailureRootCauseEnforcement": {
+      "policyId": "RECURRENT-ROOT-CAUSE-001",
+      "status": "enforced",
+      "trigger": "same-or-equivalent-failure-repeats-or-requires-second-recovery",
+      "immediateRecoveryAndRootCauseRepairInParallel": true,
+      "rules": {
+        "restoreCurrentFlowFirst": true,
+        "openRootCauseTrackAutomatically": true,
+        "identifySharedSystemicCause": true,
+        "preferCentralFixOverRepeatedLocalPatch": true,
+        "addRegressionGuardAfterRepair": true,
+        "verifyAgainstKnownRecurrenceCases": true,
+        "propagateFixToSharedEngineOrPolicyWhenApplicable": true,
+        "continueOriginalDeliveryAfterRecovery": true,
+        "doNotMarkCompleteUntilRecurrenceGuardVerified": true,
+        "preserveSecurityConstitutionAndHumanGates": true
+      },
+      "evidenceRequired": [
+        "failure-signature",
+        "root-cause",
+        "systemic-fix",
+        "regression-test-or-validator",
+        "verification-result"
+      ],
+      "escalationOnlyWhen": [
+        "human_authority_required",
+        "irreversible_or_high_impact",
+        "ambiguous_side_effect",
+        "safe_root_cause_fix_exhausted"
+      ]
+    }
   },
   "consultationDecision": {
     "policyId": "AI-CONSULT-001",
