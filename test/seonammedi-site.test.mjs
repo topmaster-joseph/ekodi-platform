@@ -24,3 +24,20 @@ test('seonammedi source changes are wired to both Shared Site and Control API re
 
 
 test('seonammedi branding is canonical and legacy public paths are deleted',async()=>{const html=await readFile(new URL('index.html',root),'utf8');assert.match(html,/서남권 국립의대 소통센터/);assert.doesNotMatch(html,/시민소통센터/);assert.match(html,/\/seonammedi\/app\.css/);});
+
+
+test('seonammedi admin uses direct Google auth and returns to its dedicated admin surface',async()=>{
+  const [adminHtml,adminAuth]=await Promise.all([
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('../auth-site/admin-auth.js',import.meta.url),'utf8'),
+  ]);
+  assert.match(adminHtml,/서남권 국립의대 소통센터 관리자/);
+  assert.match(adminHtml,/site','admin'/);
+  assert.match(adminHtml,/direct','1'/);
+  assert.match(adminHtml,/\/seonammedi\/admin\//);
+  assert.match(adminHtml,/ekodi_admin_token/);
+  assert.doesNotMatch(adminHtml,/route=workspace/);
+  assert.match(adminAuth,/\/seonammedi\/admin/);
+  assert.match(adminAuth,/promptDirectGoogle/);
+  assert.match(adminAuth,/accounts\.google\.com\/gsi\/client/);
+});
