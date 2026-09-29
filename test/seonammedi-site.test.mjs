@@ -20,7 +20,48 @@ test('seonammedi static headers allow its first-party CSS, JS and API calls',asy
 test('seonammedi daily monitoring reuses the existing Control API cron instead of adding a sixth Cloudflare trigger',async()=>{const [siteWrangler,apiWrangler,mission,monitor,router]=await Promise.all([readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8'),readFile(new URL('../wrangler.api.toml',import.meta.url),'utf8'),readFile(new URL('../mission-control-entry-worker.js',import.meta.url),'utf8'),readFile(new URL('../seonammedi-monitor.js',import.meta.url),'utf8'),readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8')]);assert.doesNotMatch(siteWrangler,/\[triggers\]/);assert.match(apiWrangler,/crons = \["\*\/10 \* \* \* \*"\]/);assert.match(mission,/runSeonamMediDailyCheck/);assert.match(mission,/getUTCHours\(\) === 23/);assert.match(monitor,/status:'already_checked'/);assert.match(monitor,/existing-control-cron/);assert.doesNotMatch(router,/async scheduled\(_controller,env,ctx\)/);});
 
 
-test('seonammedi source changes are wired to both Shared Site and Control API releases',async()=>{const [shared,control,manifestText]=await Promise.all([readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8'),readFile(new URL('../.github/workflows/deploy-control-api.yml',import.meta.url),'utf8'),readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8')]);for(const marker of ["sites/seonammedi/public/**","seonammedi-monitor.js","seonammedi-civic-control.js","test/seonammedi-site.test.mjs"])assert.ok(shared.includes(marker),marker);for(const marker of ["seonammedi-monitor.js","seonammedi-civic-control.js","test/seonammedi-site.test.mjs"])assert.ok(control.split(marker).length>=3,marker);const manifest=JSON.parse(manifestText);const urls=new Set(manifest.worker.requests.map(item=>item.url));for(const url of ['https://ekodi.kr/seonammedi/','https://ekodi.kr/seonammedi/app.js','https://ekodi.kr/seonammedi/data.json','https://ekodi.kr/seonam-medi','https://ekodi.kr/seonam-med'])assert.ok(urls.has(url),url);const legacy=manifest.worker.requests.filter(item=>['https://ekodi.kr/seonam-medi','https://ekodi.kr/seonam-med'].includes(item.url));assert.ok(legacy.every(item=>item.statuses.includes(404)));});
+test('seonammedi source changes are wired to both Shared Site and Control API releases',async()=>{const [shared,control,manifestText]=await Promise.all([readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8'),readFile(new URL('../.github/workflows/deploy-control-api.yml',import.meta.url),'utf8'),readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8')]);for(const marker of ["sites/seonammedi/public/**","seonammedi-monitor.js","seonammedi-civic-control.js","seonammedi-admin-control.js","migrations/0113_seonammedi_site_admin.sql","test/seonammedi-site.test.mjs"])assert.ok(shared.includes(marker),marker);for(const marker of ["seonammedi-monitor.js","seonammedi-civic-control.js","seonammedi-admin-control.js","migrations/0113_seonammedi_site_admin.sql","test/seonammedi-site.test.mjs"])assert.ok(control.split(marker).length>=3,marker);const manifest=JSON.parse(manifestText);const urls=new Set(manifest.worker.requests.map(item=>item.url));for(const url of ['https://ekodi.kr/seonammedi/','https://ekodi.kr/seonammedi/app.js','https://ekodi.kr/seonammedi/data.json','https://ekodi.kr/seonam-medi','https://ekodi.kr/seonam-med'])assert.ok(urls.has(url),url);const legacy=manifest.worker.requests.filter(item=>['https://ekodi.kr/seonam-medi','https://ekodi.kr/seonam-med'].includes(item.url));assert.ok(legacy.every(item=>item.statuses.includes(404)));});
 
 
 test('seonammedi branding is canonical and legacy public paths are deleted',async()=>{const html=await readFile(new URL('index.html',root),'utf8');assert.match(html,/서남권 국립의대 소통센터/);assert.doesNotMatch(html,/시민소통센터/);assert.match(html,/\/seonammedi\/app\.css/);});
+
+
+test('seonammedi admin stays site-local before and after Google authentication',async()=>{
+  const [adminHtml,adminJs,auth,router,migration,manifestText]=await Promise.all([
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('admin/admin.js',root),'utf8'),
+    readFile(new URL('../auth-site/auth.js',import.meta.url),'utf8'),
+    readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8'),
+    readFile(new URL('../migrations/0113_seonammedi_site_admin.sql',import.meta.url),'utf8'),
+    readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8')
+  ]);
+  assert.match(adminHtml,/data-seonam-admin/);
+  assert.match(adminHtml,/운영홈/);
+  assert.doesNotMatch(adminHtml,/admin\/sites\/workspace|route=workspace&source=seonammedi|http-equiv="refresh"/);
+  assert.match(adminJs,/site','portal'/);
+  assert.match(adminJs,/return_to',location\.origin\+'\/seonammedi\/admin\/'/);
+  assert.match(adminJs,/CENTRAL_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token'/);
+  assert.match(adminJs,/localStorage\.getItem\(CENTRAL_SESSION_KEY\)/);
+  assert.doesNotMatch(adminJs,/cdn\.jsdelivr\.net|createClient\(/);
+  assert.match(auth,/site==='portal'.*\/seonammedi\/admin/s);
+  assert.match(router,/handleSeonamMediAdminApi/);
+  assert.match(migration,/ohwon69@gmail\.com/);
+  assert.match(migration,/board_admin/);
+  assert.match(migration,/seonammedi\.notice\.manage/);
+  assert.match(migration,/seonammedi\.channel\.manage/);
+  assert.doesNotMatch(migration,/seonammedi\.content\.manage/);
+  assert.match(await readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),/CONTENT_CAP='seonammedi\.content\.manage'/);
+  const manifest=JSON.parse(manifestText);
+  const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/seonammedi/admin/');
+  assert.ok(probe);
+  assert.ok(probe.forbid.includes('/admin/sites/workspace'));
+});
+
+test('seonammedi admin route is served locally with noindex instead of redirecting to platform admin',async()=>{
+  const env={ENVIRONMENT:'production',ASSETS:{fetch:async request=>new Response('<!doctype html><title>local admin</title>',{status:200,headers:{'content-type':'text/html; charset=utf-8'}})}};
+  const response=await platformRouter.fetch(new Request('https://ekodi.kr/seonammedi/admin/'),env,{});
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get('x-ekodi-route'),'seonammedi-static');
+  assert.match(response.headers.get('x-robots-tag')||'',/noindex/);
+  assert.equal(response.headers.get('location'),null);
+});
