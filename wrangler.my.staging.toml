@@ -9,6 +9,13 @@ DATA_ENABLED = "false"
 DATA_MODE = "isolated-staging"
 AUTH_URL = "https://auth.ekodi.kr/?site=my"
 
+[[ratelimits]]
+name = "CARD_EXCHANGE_RATE_LIMITER"
+namespace_id = "3905"
+[ratelimits.simple]
+limit = 8
+period = 60
+
 [assets]
 directory = "./my"
 binding = "ASSETS"
