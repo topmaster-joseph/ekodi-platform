@@ -5,14 +5,18 @@
   ],
   "allowedStores": [
     "jadam",
-    "pizzamaru"
+    "pizzamaru",
+    "yogurt"
   ],
   "targets": [
     {
       "id": "vpos",
       "label": "POS",
       "processNames": [],
-      "windowTitleContains": ["POS · 테이블주문", "VPOS"],
+      "windowTitleContains": [
+        "POS · 테이블주문",
+        "VPOS"
+      ],
       "launchPath": "",
       "allowLaunch": false,
       "launchWaitMs": 6000
@@ -21,7 +25,9 @@
       "id": "mukkebi",
       "label": "먹깨비",
       "processNames": [],
-      "windowTitleContains": ["먹깨비"],
+      "windowTitleContains": [
+        "먹깨비"
+      ],
       "launchPath": "",
       "allowLaunch": false,
       "launchWaitMs": 6000
@@ -30,7 +36,9 @@
       "id": "ddangyo",
       "label": "땡겨요",
       "processNames": [],
-      "windowTitleContains": ["땡겨요"],
+      "windowTitleContains": [
+        "땡겨요"
+      ],
       "launchPath": "",
       "allowLaunch": false,
       "launchWaitMs": 6000
@@ -39,7 +47,9 @@
       "id": "naver_order",
       "label": "네이버 주문",
       "processNames": [],
-      "windowTitleContains": ["네이버 주문"],
+      "windowTitleContains": [
+        "네이버 주문"
+      ],
       "launchPath": "",
       "allowLaunch": false,
       "launchWaitMs": 6000
@@ -48,7 +58,10 @@
       "id": "smartcon",
       "label": "스마트콘",
       "processNames": [],
-      "windowTitleContains": ["SMART CON", "스마트콘"],
+      "windowTitleContains": [
+        "SMART CON",
+        "스마트콘"
+      ],
       "launchPath": "",
       "allowLaunch": false,
       "launchWaitMs": 6000
