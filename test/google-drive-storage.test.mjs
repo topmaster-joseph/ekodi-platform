@@ -112,7 +112,7 @@ test('Storage broker keeps the Google client secret while Marketing owns the You
   assert.match(control, /'openid','email'/);
   assert.match(control, /targetAccount:String\(accountHint/);
   assert.match(control, /GOOGLE_USERINFO/);
-  assert.match(control, /authorized_email:authorizedEmail/);
+  assert.match(control, /authorized_email:String\(authorizedEmail/);
   assert.match(control, /access_token:String\(token\.access_token\)/);
   assert.match(worker, /startYouTubeOAuth/);
   assert.match(worker, /finishYouTubeOAuth/);
