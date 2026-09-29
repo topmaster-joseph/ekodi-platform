@@ -81,7 +81,7 @@
         "url": "https://ekodi.kr/ekodimission/activities",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["MISSION ACTIVITIES","/ekodimission/apply/260926-open-table","16:00–18:00","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
+        "expect": ["MISSION ACTIVITIES","/ekodimission/apply/261003-autumn-trip","/ekodimission/apply/260926-open-table","16:00–18:00","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
@@ -98,6 +98,30 @@
         "redirect": "manual",
         "expect": ["한가위 열린식탁 & 나눔마켓","16:00–18:00","자담치킨 목포대점","신청하기","data-event-application","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/site.js","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-site-class: brand-site","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/apply/261003-autumn-trip",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["2026 에코디선교회","가을 공동체 여행","1인 100,000원","추가 발생 비용은 에코디선교회","data-event-application","261003-autumn-community-trip","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/site.js","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
+        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-site-class: brand-site","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/edit/261003-autumn-trip",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["가을 공동체 여행 공동편집","data-collab-editor","/ekodimission/assets/collab.js","/ekodimission/assets/collab.css"],
+        "headerExpect": ["x-ekodi-route: ekodimission-collab","x-ekodi-independent-site: true","x-ekodi-publication-status: private-edit","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/api/activities/261003-autumn-community-trip/content",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["261003-autumn-community-trip","100000","에코디선교회"],
+        "headerExpect": ["x-ekodi-route: api","cache-control: no-store"],
         "rollbackVerify": false
       },
       {
