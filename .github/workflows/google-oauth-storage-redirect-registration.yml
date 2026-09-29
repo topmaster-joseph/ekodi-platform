@@ -1,14 +1,16 @@
-name: Verify Storage Google OAuth Redirect Registration
+name: Verify Google OAuth Redirect Registration
 
 on:
   pull_request:
     paths:
       - 'wrangler.storage.toml'
+      - 'google-drive-storage-control.js'
       - '.github/workflows/google-oauth-storage-redirect-registration.yml'
   push:
     branches: [main]
     paths:
       - 'wrangler.storage.toml'
+      - 'google-drive-storage-control.js'
       - '.github/workflows/google-oauth-storage-redirect-registration.yml'
   workflow_dispatch:
 
@@ -51,6 +53,15 @@ jobs:
           }
 
           probe_redirect canonical "$canonical_redirect"
+
+          marketing_youtube_redirect='https://ekodi.kr/marketing-connect-api/oauth/youtube/callback'
+          grep -Fq "MARKETING_YOUTUBE_CALLBACK = '${marketing_youtube_redirect}'" google-drive-storage-control.js
+          direct_callback_enabled="$(sed -n 's/^MARKETING_YOUTUBE_DIRECT_CALLBACK_ENABLED = "\(.*\)"$/\1/p' wrangler.storage.toml | head -n 1)"
+          if [ "$direct_callback_enabled" = 'true' ]; then
+            probe_redirect marketing-youtube "$marketing_youtube_redirect"
+          else
+            echo "Marketing YouTube direct callback is staged; current production continues through the registered broker callback."
+          fi
 
           legacy_host='drive'
           legacy_host+='.'
