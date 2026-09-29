@@ -114,8 +114,11 @@ if (!finalLazyFeatures.includes('ekodiAssistDock') || !finalLazyFeatures.include
 for (const marker of ['/api/control/ai/assist','/api/control/ai/v8/pulse','/api/control/ai/actions','handoffCommand','EXTERNAL_SECRET_RE']) {
   if (!finalLazyFeatures.includes(marker)) throw new Error(`EKODI Assist execution path missing after postbuild: ${marker}`);
 }
-for (const marker of ["commandEntry.hidden = true","commandEntry.style.setProperty('display', 'none', 'important')","shell.hidden = true","shell.style.setProperty('display', 'none', 'important')"]) {
-  if (!finalSidebar.includes(marker)) throw new Error(`Admin single-navigation suppression missing after postbuild: ${marker}`);
+for (const marker of ["nav.querySelector(':scope>.admin-command-entry')?.remove()","main?.querySelector(':scope>.admin-context-tabs-shell')?.remove()"]) {
+  if (!finalSidebar.includes(marker)) throw new Error(`Admin retired-navigation structural cleanup missing after postbuild: ${marker}`);
+}
+for (const retiredCreation of ["commandEntry = document.createElement('button')","shell = document.createElement('div')","dataset.adminCommandHome"]) {
+  if (finalSidebar.includes(retiredCreation)) throw new Error(`Admin retired navigation DOM creation survived postbuild: ${retiredCreation}`);
 }
 if (!finalLazyFeatures.includes('ekodi-admin-command-history-v1') || !finalLazyFeatures.includes('ekodiAssistHistory') || !finalLazyFeatures.includes('ekodiAssistComposer')) {
   throw new Error('EKODI Assist recent-command history or fixed composer runtime is missing');
