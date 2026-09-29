@@ -113,3 +113,55 @@ if(voiceForm)voiceForm.addEventListener('submit',async event=>{
   status.textContent='접수 중…';
   try{const response=await fetch('/api/seonam-medi/voices',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.message||'접수하지 못했습니다.');status.textContent=body.message||'접수되었습니다.';voiceForm.reset()}catch(error){status.textContent=error.message||'접수하지 못했습니다.'}
 });
+
+
+function managedDate(value){if(!value)return'';try{return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value))}catch{return''}}
+function publicEmpty(textValue){const p=document.createElement('p');p.className='muted';p.textContent=textValue;return p}
+async function loadPublicManagedContent(){
+  const noticeHost=el('noticePublicList'),channelHost=el('channelPublicList');
+  const [noticeResult,channelResult]=await Promise.allSettled([
+    fetch('/api/seonam-medi/notices',{cache:'no-store'}).then(async response=>response.ok?response.json():Promise.reject(new Error('notices'))),
+    fetch('/api/seonam-medi/channels',{cache:'no-store'}).then(async response=>response.ok?response.json():Promise.reject(new Error('channels')))
+  ]);
+  if(noticeHost){
+    noticeHost.replaceChildren();
+    if(noticeResult.status!=='fulfilled'||!Array.isArray(noticeResult.value?.items)||!noticeResult.value.items.length){
+      noticeHost.append(publicEmpty('등록된 공지가 없습니다.'));
+    }else{
+      for(const item of noticeResult.value.items){
+        const article=document.createElement('article');article.className='notice-card';
+        const head=document.createElement('div');head.className='notice-head';
+        const title=document.createElement('h3');title.textContent=item.title||'공지';
+        const meta=document.createElement('div');meta.className='notice-meta';
+        if(item.pinned){const badge=document.createElement('span');badge.className='notice-pin';badge.textContent='상단고정';meta.append(badge)}
+        const date=document.createElement('time');date.textContent=managedDate(item.publishedAt||item.updatedAt);meta.append(date);
+        head.append(title,meta);article.append(head);
+        if(item.body){const body=document.createElement('p');body.className='notice-body';body.textContent=item.body;article.append(body)}
+        noticeHost.append(article);
+      }
+    }
+  }
+  if(channelHost){
+    channelHost.replaceChildren();
+    if(channelResult.status!=='fulfilled'||!Array.isArray(channelResult.value?.items)||!channelResult.value.items.length){
+      channelHost.append(publicEmpty('등록된 관련 채널이 없습니다.'));
+    }else{
+      const platformLabel={youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',blog:'블로그',website:'웹사이트',other:'기타'};
+      const categoryLabel={official:'공식채널','related-org':'관련기관',media:'언론·자료',civic:'시민·단체',other:'기타'};
+      for(const item of channelResult.value.items){
+        const article=document.createElement('article');article.className='channel-card';
+        const top=document.createElement('div');top.className='channel-card-top';
+        const labels=document.createElement('div');labels.className='channel-labels';
+        const platform=document.createElement('span');platform.textContent=platformLabel[item.platform]||item.platform||'채널';labels.append(platform);
+        const category=document.createElement('span');category.textContent=categoryLabel[item.category]||'기타';labels.append(category);
+        if(item.official){const official=document.createElement('span');official.className='official';official.textContent='공식';labels.append(official)}
+        top.append(labels);
+        const link=document.createElement('a');link.href=safeUrl(item.url);link.target='_blank';link.rel='noopener noreferrer';link.textContent=item.name||'채널 보기';
+        article.append(top,link);
+        if(item.note){const note=document.createElement('p');note.textContent=item.note;article.append(note)}
+        channelHost.append(article);
+      }
+    }
+  }
+}
+loadPublicManagedContent().catch(()=>{});
