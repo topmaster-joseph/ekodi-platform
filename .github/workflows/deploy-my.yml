@@ -155,48 +155,6 @@ jobs:
           node-version: '24'
       - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
-      - name: Select Supabase deployment credential
-        shell: bash
-        run: |
-          set -euo pipefail
-          token="${TOKEN_A:-}"
-          [ -n "$token" ] || token="${TOKEN_B:-}"
-          [ -n "$token" ] || token="${TOKEN_C:-}"
-          [ -n "$token" ] || token="${TOKEN_D:-}"
-          if [ -z "$token" ]; then
-            echo 'No Supabase production deployment credential is configured.'
-            exit 1
-          fi
-          echo "::add-mask::$token"
-          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
-      - name: Apply digital card contact-exchange schema
-        shell: bash
-        run: |
-          set -euo pipefail
-          jq -Rs '{query:.,read_only:false}' "$DIGITAL_CARD_MIGRATION" > /tmp/digital-card-migration.json
-          code=$(curl -sS -o /tmp/digital-card-migration-result.json -w '%{http_code}' \
-            -X POST "https://api.supabase.com/v1/projects/renzehysxirjilvdxacv/database/query" \
-            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            -H 'Content-Type: application/json' \
-            --data-binary @/tmp/digital-card-migration.json)
-          if [ "$code" != '201' ]; then
-            echo "Digital card migration failed with HTTP $code."
-            cat /tmp/digital-card-migration-result.json
-            exit 1
-          fi
-      - name: Verify digital card database contract
-        shell: bash
-        run: |
-          set -euo pipefail
-          endpoint="$MY_SUPABASE_URL/rest/v1/rpc/person_digital_card"
-          code=$(curl -sS -o /tmp/digital-card-probe.json -w '%{http_code}' \
-            -X POST "$endpoint" \
-            -H "apikey: $MY_SUPABASE_PUBLISHABLE_KEY" \
-            -H 'Content-Type: application/json' \
-            --data '{"p_handle":"ekodi-card-probe"}')
-          [ "$code" = '200' ]
-          grep -Eq '"ok"[[:space:]]*:[[:space:]]*false' /tmp/digital-card-probe.json
-          echo 'Digital card schema and anonymous public projection are ready.'
       - name: Generate universal user-service registry
         run: npm run generate:user-services
       - name: Verify Development staging boundary
@@ -298,6 +256,48 @@ jobs:
           node-version: '24'
       - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Select Supabase deployment credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-}"
+          [ -n "$token" ] || token="${TOKEN_B:-}"
+          [ -n "$token" ] || token="${TOKEN_C:-}"
+          [ -n "$token" ] || token="${TOKEN_D:-}"
+          if [ -z "$token" ]; then
+            echo 'No Supabase production deployment credential is configured.'
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Apply digital card contact-exchange schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -Rs '{query:.,read_only:false}' "$DIGITAL_CARD_MIGRATION" > /tmp/digital-card-migration.json
+          code=$(curl -sS -o /tmp/digital-card-migration-result.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/renzehysxirjilvdxacv/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/digital-card-migration.json)
+          if [ "$code" != '201' ]; then
+            echo "Digital card migration failed with HTTP $code."
+            cat /tmp/digital-card-migration-result.json
+            exit 1
+          fi
+      - name: Verify digital card database contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="$MY_SUPABASE_URL/rest/v1/rpc/person_digital_card"
+          code=$(curl -sS -o /tmp/digital-card-probe.json -w '%{http_code}' \
+            -X POST "$endpoint" \
+            -H "apikey: $MY_SUPABASE_PUBLISHABLE_KEY" \
+            -H 'Content-Type: application/json' \
+            --data '{"p_handle":"ekodi-card-probe"}')
+          [ "$code" = '200' ]
+          grep -Eq '"ok"[[:space:]]*:[[:space:]]*false' /tmp/digital-card-probe.json
+          echo 'Digital card schema and anonymous public projection are ready.'
       - name: Generate universal user-service registry
         run: npm run generate:user-services
       - name: Verify Cloudflare credentials
