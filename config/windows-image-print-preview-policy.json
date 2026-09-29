@@ -1,11 +1,11 @@
 {
   "id": "EKODI-WINDOWS-IMAGE-PRINT-PREVIEW-001",
-  "version": 1,
+  "version": 2,
   "status": "enforced",
   "scope": [
     "managed-windows-pc"
   ],
-  "intent": "Image right-click Print must open the Windows photo print preview/layout flow before final submission to a printer.",
+  "intent": "On EKODI-managed Windows PCs, image right-click Print must open the Windows photo print preview/layout flow before final printer submission unless an explicit local restore opt-out is recorded.",
   "desiredState": {
     "association": "SystemFileAssociations\\image\\shell\\print",
     "previewDropTargetClsid": "{60fd46de-f830-4894-a628-6fa81bc0190d}",
@@ -21,7 +21,9 @@
     "autoReconcileEnabledAfterRepair": true,
     "reconcileCadenceSeconds": 10,
     "foregroundWindowControl": false,
-    "arbitraryShell": false
+    "arbitraryShell": false,
+    "autoReconcileEnabledByDefault": true,
+    "restoreCreatesPersistentOptOut": true
   },
   "safety": {
     "userHiveOnly": true,
