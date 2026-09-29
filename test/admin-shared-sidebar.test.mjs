@@ -57,6 +57,7 @@ test('retired new-task and contextual top navigation are structurally removed', 
   assert.doesNotMatch(sidebar, /RECENT_KEY|FAVORITES_KEY|data-admin-quick-section/);
 });
 
+
 test('global navigation remains synchronized to the active panel and opens an axis in one click', () => {
   const activeNavIndex = sidebar.indexOf("find(item => item.classList.contains('active'))");
   const requestedPanelIndex = sidebar.indexOf('window.EKODIAdminPanels?.current?.()');
@@ -75,10 +76,11 @@ test('global navigation remains synchronized to the active panel and opens an ax
   assert.match(sidebar, /const defaultDefinition = getAdminMenuItem\(defaultSection\)/);
   assert.match(sidebar, /defaultDefinition\?\.adminHandoff !== true/);
   assert.match(sidebar, /activateSection\(nav, defaultSection\)/);
-  assert.match(sidebar, /const selected = section === 'command-home' && !focusedGroup/);
+  assert.doesNotMatch(sidebar, /dataset\.adminCommandHome/);
   assert.match(sidebar, /const selected = button\.dataset\.adminGlobalGroup === group && \(section !== 'command-home' \|\| Boolean\(focusedGroup\)\)/);
   assert.match(sidebar, /const displayedSection = group === activeGroup \? section : ''/);
 });
+
 
 test('handoff-backed default groups stay open without immediate navigation', () => {
   assert.match(registry, /id: 'content'.*defaultSection: 'work'/s);
@@ -88,7 +90,7 @@ test('handoff-backed default groups stay open without immediate navigation', () 
   assert.match(globalClick, /defaultDefinition\?\.adminHandoff !== true/);
   assert.match(globalClick, /activateSection\(nav, defaultSection\)/);
   assert.match(globalClick, /delete nav\.dataset\.adminFocusedGroup/);
-  assert.match(sidebar, /const selected = section === 'command-home' && !focusedGroup/);
+  assert.doesNotMatch(sidebar, /dataset\.adminCommandHome/);
   assert.match(sidebar, /section !== 'command-home' \|\| Boolean\(focusedGroup\)/);
 });
 
@@ -102,25 +104,25 @@ test('global menu labels use readable contrast on the dark primary sidebar', () 
   assert.match(sidebar, /font-size:14px;font-weight:780/);
 });
 
-test('Services & AI uses flat direct engine links and suppresses duplicate top tabs', () => {
+
+test('Services & AI uses flat direct engine links with no duplicate top navigation', () => {
   assert.match(sidebar, /FLAT_DETAIL_GROUPS = new Set\(\['services'\]\)/);
   assert.match(sidebar, /services: \['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'\]/);
   assert.match(sidebar, /details\.dataset\.adminFlatDetails = flatDetails \? 'true' : 'false'/);
-  assert.match(sidebar, /const suppressContextTabs = FLAT_DETAIL_GROUPS\.has\(group\)/);
-  assert.match(sidebar, /const hideContextTabs = suppressContextTabs \|\| singleEquivalent/);
   assert.match(sidebar, /data-admin-flat-details="true"/);
+  assert.doesNotMatch(sidebar, /function renderContextTabs/);
+  assert.doesNotMatch(sidebar, /data-admin-context-section/);
 });
 
-test('context tabs keep only useful navigation chrome and collapse single-context whitespace', () => {
-  assert.match(sidebar, /\.\$\{TABS_SHELL_CLASS\}\{[^}]*min-height:50px[^}]*padding:4px 14px[^}]*background:rgba\(255,255,255,\.98\)/);
-  assert.match(sidebar, /\.admin-context-title\{display:none!important\}/);
-  assert.match(sidebar, /\.\$\{TABS_SHELL_CLASS\}\[data-admin-single-context="true"\]\{display:none!important\}/);
-  assert.match(sidebar, /\.admin-context-tab\{[^}]*min-height:40px[^}]*font-size:14px[^}]*line-height:1\.35/);
-  assert.match(sidebar, /\.admin-context-tab\.active\{[^}]*background:#eaf3ff[^}]*color:#0b5cab/);
-  assert.match(sidebar, /\.admin-capability-shortcut\{display:none!important\}/);
+
+test('retired top navigation leaves the workspace readable without duplicate chrome', () => {
+  assert.doesNotMatch(sidebar, /TABS_SHELL_CLASS|TABS_CLASS/);
+  assert.doesNotMatch(sidebar, /data-admin-context-section/);
+  assert.doesNotMatch(sidebar, /\.admin-context-tab/);
+  assert.match(sidebar, /main\?\.querySelector\(':scope>\.admin-context-tabs-shell'\)\?\.remove\(\)/);
   assert.match(sidebar, /\.content\{padding:12px 16px 28px!important/);
-  assert.match(sidebar, /@media\(max-width:760px\)[^`]*\.admin-context-tab\{min-height:42px[^}]*font-size:15px/);
 });
+
 test('site-management workbench keeps operational text above miniature-preview density', () => {
   assert.match(sidebar, /#campusPanel \.campus-toolbar p:not\(\.kicker\)\{font-size:14px!important/);
   assert.match(sidebar, /#campusSiteGroups \.campus-group-head h3\{font-size:17px!important/);
@@ -140,11 +142,11 @@ test('menu labels and tab state are repaired when features are installed or sect
   assert.doesNotMatch(sidebar, /subtree: true/);
 });
 
-test('context tabs keep working when the authenticated shell replaces main', () => {
-  assert.match(sidebar, /const contextClick = event =>/);
-  assert.match(sidebar, /root\.addEventListener\?\.\('click', contextClick, true\)/);
-  assert.match(sidebar, /root\.removeEventListener\?\.\('click', contextClick, true\)/);
-  assert.doesNotMatch(sidebar, /main\?\.addEventListener\('click',[\s\S]*data-admin-context-section/);
+
+test('authenticated shell replacement cannot recreate retired top navigation', () => {
+  assert.doesNotMatch(sidebar, /const contextClick = event =>/);
+  assert.doesNotMatch(sidebar, /data-admin-context-section/);
+  assert.match(sidebar, /main\?\.querySelector\(':scope>\.admin-context-tabs-shell'\)\?\.remove\(\)/);
 });
 
 test('internal operational capabilities stay off the global work areas as direct items', () => {
@@ -169,16 +171,19 @@ test('shared menu ES modules are published and cache-busted with the admin relea
 });
 
 
+
 test('platform-super-admin sidebar expands only the active area with direct task links', () => {
   assert.ok(sidebar.includes("DETAILS_CLASS = 'admin-global-details'"));
   assert.ok(sidebar.includes("function isPlatformSuperAdminSurface()"));
   assert.ok(sidebar.includes("renderSidebarDetails(nav, globals, group, displayedSection || section, locale)"));
-  assert.ok(sidebar.includes("else globals.querySelector(`:scope>.${DETAILS_CLASS}`)?.remove()"));
-  assert.ok(sidebar.includes("TABS_SHELL_CLASS = 'admin-context-tabs-shell'"));
-  assert.ok(sidebar.includes("data-admin-context-section"));
+  assert.ok(sidebar.includes("else globals.querySelector(\`:scope>.\${DETAILS_CLASS}\`)?.remove()"));
+  assert.ok(!sidebar.includes('TABS_SHELL_CLASS'));
+  assert.ok(!sidebar.includes('data-admin-context-section'));
+  assert.ok(sidebar.includes("main?.querySelector(':scope>.admin-context-tabs-shell')?.remove()"));
   assert.ok(sidebar.includes("role-projected-sidebar-v4"));
   assert.ok(sidebar.includes("overflow-y:auto!important"));
 });
+
 test('visible task navigation lazy-loads demand features before shared panel activation', () => {
   const activateStart = sidebar.indexOf('function activateSection');
   const activateEnd = sidebar.indexOf('export function createAdminSidebarItem', activateStart);
