@@ -109,6 +109,22 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/ekodimission/edit/261003-autumn-trip",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["가을 공동체 여행 공동편집","data-collab-editor","/ekodimission/assets/collab.js","/ekodimission/assets/collab.css"],
+        "headerExpect": ["x-ekodi-route: ekodimission-collab","x-ekodi-independent-site: true","x-ekodi-publication-status: private-edit","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/api/activities/261003-autumn-community-trip/content",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["261003-autumn-community-trip","100000","에코디선교회"],
+        "headerExpect": ["x-ekodi-route: api","cache-control: no-store"],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/ekodimission/activities/260925-chuseok-open-table",
         "statuses": [308],
         "redirect": "manual",
