@@ -57,7 +57,7 @@ test('existing first stores are compatibility profiles on one Store Admin Engine
   assert.match(script,/문자주문 상태 반영/);
   assert.doesNotMatch(script,/STORE_SMS_INGRESS_TOKEN|CHANNEL_SMS_TOKEN/);
   assert.doesNotMatch(script,/\/api\/store\/menu/);
-  assert.match(script,/POS_AGENT_URL/);assert.match(script,/127\.0\.0\.1:17831/);assert.match(script,/\/v1\/focus/);assert.match(script,/data-pos-target/);assert.match(script,/사용자가 <strong>바로 전환<\/strong>을 누를 때만/);
+  assert.match(script,/POS_AGENT_URL/);assert.match(script,/127\.0\.0\.1:17831/);assert.match(script,/\/v1\/focus/);assert.match(script,/data-pos-target/);assert.match(script,/웹 운영 화면을 기본/);assert.match(script,/Agent 실행 · 중지 안내/);
 });
 
 test('server-rendered Store Admin headings and brand chrome follow the shared three-brand standard',async()=>{
