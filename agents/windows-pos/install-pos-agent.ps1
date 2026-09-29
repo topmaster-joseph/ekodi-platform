@@ -78,7 +78,7 @@ try {
   try {
     Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
   } catch {
-    if ($_.Exception.HResult -eq -2147219688 -or $_.Exception.Message -match '0x80041318|XML.*범위|XML.*out of range|formatted or out of range') {
+    if ($_.Exception.HResult -eq -2147216616 -or $_.Exception.Message -match '0x80041318|XML.*범위|XML.*out of range|formatted or out of range') {
       Write-Host 'Task Scheduler rejected the restart interval. Retrying with compatibility-safe settings.' -ForegroundColor Yellow
       $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero)
       Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
