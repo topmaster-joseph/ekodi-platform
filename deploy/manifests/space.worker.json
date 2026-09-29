@@ -104,7 +104,7 @@
         "url": "https://ekodi.kr/ekodimission/apply/261003-autumn-trip",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["2026 에코디선교회","가을 공동체 여행","data-trip-fee","data-trip-fee-note","data-event-application","261003-autumn-community-trip","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/site.js","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
+        "expect": ["2026 가을 공동체 여행","data-trip-fee","data-trip-fee-note","data-event-application","261003-autumn-community-trip","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/site.js","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-site-class: brand-site","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
@@ -120,7 +120,7 @@
         "url": "https://ekodi.kr/ekodimission/api/activities/261003-autumn-community-trip/content",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["261003-autumn-community-trip","100000","에코디선교회"],
+        "expect": ["261003-autumn-community-trip","50000","15","함께 걷고, 함께 쉬고, 함께 나누다"],
         "headerExpect": ["x-ekodi-route: api","cache-control: no-store"],
         "rollbackVerify": false
       },
