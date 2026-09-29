@@ -60,6 +60,7 @@ async function loadClientAuth(){
 if(site==='admin')await import('./admin-auth.js?v=20260918-canonical-origin-2');
 else if(site==='author')await import('./author-auth.js?v=20260816-author-ai-1');
 else if(site==='business')await import('./business-auth.js?v=20260826-free-fallback-1');
+else if(site==='mission')await loadClientAuth();
 else if(privateClientSites.has(site))await loadClientAuth();
 else if(site==='marketing'&&params.get('review')!=='1'&&!targetedWorkspace)await loadMarketingAuth();
 else{
