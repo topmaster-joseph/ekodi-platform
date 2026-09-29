@@ -12,22 +12,41 @@ EKODI Store Console이 **현재 POS PC에서 실행 중인 Windows 프로그램�
 
 ## 설치
 
-1. 이 폴더의 `pos-agent.config.example.json`을 같은 폴더의 `pos-agent.config.json`으로 복사합니다.
-2. 실제 POS PC에서 각 프로그램의 **프로세스 이름(확장자 제외)** 또는 **창 제목 일부**를 확인해 대상별로 입력합니다.
-3. 필요할 때만 `launchPath`에 설치 프로그램 또는 Windows 바로가기(`.lnk`)의 고정 경로를 넣고 `allowLaunch`를 `true`로 바꿉니다.
-4. PowerShell에서 다음을 실행합니다.
+권장 방식은 POS PC에서 관리자 PowerShell을 한 번 열고 설치 스크립트를 실행하는 것입니다. 설치기는 기존 `pos-agent.config.json`을 보존하고, 새 Agent를 구문검사한 뒤 교체하며, 현재 Windows 사용자로 로그인할 때 자동 시작되는 `EKODI POS Agent` 예약 작업을 등록합니다. 창 전환은 로그인한 사용자의 대화형 세션에서만 정상 동작하므로 SYSTEM 계정으로 실행하지 않습니다.
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\EKODI-POS-Agent.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\install-pos-agent.ps1
 ```
 
-Windows가 `Access denied`로 로컬 리스너 시작을 막는 경우, 관리자 PowerShell에서 **한 번만** 아래와 같이 정확한 loopback URL을 현재 사용자에게 예약한 뒤 에이전트는 일반 사용자로 실행합니다.
+처음 설치한 뒤 실제 POS 프로그램의 프로세스 이름과 창 제목을 확인하려면 다음 진단만 실행합니다. 이 스크립트는 어떤 프로그램도 실행·종료·전환하지 않습니다.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\diagnose-pos-targets.ps1
+```
+
+그 결과를 보고 `%ProgramData%\EKODI\POSAgent\pos-agent.config.json`의 각 대상에 **프로세스 이름(확장자 제외)** 또는 **안정적인 창 제목 일부**를 입력합니다. 필요할 때만 `launchPath`에 설치 프로그램 또는 Windows 바로가기(`.lnk`)의 고정 경로를 넣고 `allowLaunch`를 `true`로 바꿉니다. 기본값은 자동실행 금지입니다.
+
+설정 변경 뒤에는 Windows 작업 스케줄러에서 `EKODI POS Agent`를 다시 시작하거나, 로그아웃 후 로그인합니다. 설치 스크립트를 다시 실행하면 Agent 파일만 안전하게 업그레이드하고 기존 설정은 유지합니다.
+
+수동 시험이 필요하면 설치 폴더에서 다음처럼 직접 실행할 수 있습니다.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\EKODI-POS-Agent.ps1 -ConfigPath .\pos-agent.config.json
+```
+
+Windows가 `Access denied`로 로컬 리스너 시작을 막는 특수 환경에서는 관리자 PowerShell에서 **한 번만** 아래와 같이 정확한 loopback URL을 현재 사용자에게 예약할 수 있습니다.
 
 ```powershell
 netsh http add urlacl url=http://127.0.0.1:17831/ user="$env:USERDOMAIN\$env:USERNAME"
 ```
 
 브라우저가 처음 연결할 때 로컬 네트워크 접근 권한을 묻는 경우 `ekodi.kr`의 POS 통합화면 사용을 위해 허용합니다.
+
+제거할 때는 관리자 PowerShell에서 다음을 실행합니다. 설정을 남기려면 `-KeepConfig`를 추가합니다.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\uninstall-pos-agent.ps1
+```
 
 ## 설정 기준
 
