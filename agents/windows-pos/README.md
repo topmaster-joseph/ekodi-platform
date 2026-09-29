@@ -48,6 +48,16 @@ netsh http add urlacl url=http://127.0.0.1:17831/ user="$env:USERDOMAIN\$env:USE
 powershell -NoProfile -ExecutionPolicy Bypass -File .\uninstall-pos-agent.ps1
 ```
 
+## 실행 · 중지 파일
+
+관리자 화면의 **POS 통합화면**에서 실행/중지 안내와 파일 링크를 제공합니다. 파일을 내려받아 실행할 수 있으며, 브라우저가 Windows 프로그램을 직접 실행하거나 종료하지는 않습니다.
+
+- `start-pos-agent.cmd` — 이미 설치된 `EKODI POS Agent` 예약 작업을 즉시 시작하고 loopback 상태를 확인합니다. 설치 전에는 동작하지 않습니다.
+- `stop-pos-agent.cmd` — 현재 실행 중인 Agent 예약 작업만 중지합니다. **다음 Windows 로그인 시 자동 시작 설정은 유지**됩니다.
+- 처음 설치할 때는 반드시 `install-pos-agent.ps1`을 관리자 PowerShell에서 한 번 실행해야 합니다.
+- 실행/중지 파일에서 권한 거부가 나오면 파일을 우클릭해 **관리자 권한으로 실행**합니다.
+- 완전 제거는 `uninstall-pos-agent.ps1`을 사용합니다.
+
 ## 설정 기준
 
 `processNames`와 `windowTitleContains` 중 하나 이상이 있으면 상태 확인 대상으로 간주합니다. 브라우저 기반 주문 서비스가 하나의 Chrome 창에서 여러 탭으로만 열려 있으면 탭 단위 전환이 안정적이지 않습니다. 그런 서비스는 별도 Chrome 앱/바로가기 창으로 실행한 뒤 해당 창 제목이나 바로가기 경로를 매핑하는 방식이 더 안정적입니다.

@@ -9,6 +9,7 @@ const config=JSON.parse(readFileSync(new URL('../agents/windows-pos/pos-agent.co
 test('Store Admin exposes the POS console without weakening store scope',async()=>{
   assert.equal(isStoreAdminPathShape('/jadam/admin/pos'),true);
   assert.equal(isStoreAdminPathShape('/pizzamaru/admin/pos'),true);
+  assert.equal(isStoreAdminPathShape('/yogurt/admin/pos'),true);
   const response=storeAdminPage({
     slug:'jadam',
     name:'자담치킨 목포대점',
@@ -20,7 +21,7 @@ test('Store Admin exposes the POS console without weakening store scope',async()
   const html=await response.text();
   assert.equal(response.status,200);
   assert.match(html,/<h1 id="pageTitle">POS 통합화면<\/h1>/);
-  assert.match(html,/20260929-pos-console-v1/);
+  assert.match(html,/20260929-pos-web-first-v2/);
   const csp=response.headers.get('content-security-policy')||'';
   assert.match(csp,/http:\/\/127\.0\.0\.1:17831/);
   assert.match(csp,/http:\/\/localhost:17831/);
@@ -29,11 +30,22 @@ test('Store Admin exposes the POS console without weakening store scope',async()
   assert.match(script,/EKODI Store Console/);
   assert.match(script,/POS_AGENT_URL/);
   assert.match(script,/data-pos-target/);
+  assert.match(script,/data-pos-web/);
+  assert.match(script,/웹 사용 가능/);
+  assert.match(script,/Agent 없이 사용할 수 있고/);
+  assert.match(script,/Agent 창을 별도로 열어 둘 필요는 없습니다/);
+  assert.match(script,/Windows 전환/);
+  assert.match(script,/Agent 실행 · 중지 안내/);
+  assert.match(script,/install-pos-agent\.ps1/);
+  assert.match(script,/start-pos-agent\.cmd/);
+  assert.match(script,/stop-pos-agent\.cmd/);
+  assert.match(script,/웹 POS 통합화면은 계속 사용할 수 있고/);
+  assert.match(script,/webSection:'delivery'/);
+  assert.match(script,/webSection:'orders'/);
   assert.match(script,/\/v1\/health/);
   assert.match(script,/\/v1\/focus/);
   assert.match(script,/method:'POST'/);
-  assert.match(script,/자동으로 화면을 가로채지 않으며/);
-  assert.match(script,/바로 전환/);
+  assert.match(script,/posWebHref/);
 });
 
 test('Windows POS Agent is loopback-only and focus is explicit-user-action only',()=>{
