@@ -51,10 +51,10 @@ CREATE INDEX IF NOT EXISTS idx_seonam_med_content_audit_time
 
 INSERT INTO customer_access_grants
   (tenant_id,email,role,enabled,created_at,created_by,last_verified_at,principal_type,github_username,
-   capabilities_json,denied_capabilities_json,expires_at,note,visibility,updated_at,updated_by)
+   capabilities_json,denied_capabilities_json,expires_at,note,updated_at,updated_by)
 SELECT id,'ohwon69@gmail.com','staff',1,'2026-09-29T08:35:00.000Z',NULL,NULL,'member','',
        '["seonam.board.manage","seonam.channel.manage"]','[]',NULL,
-       'seonam-medi notice/channel administrator','private','2026-09-29T08:35:00.000Z',NULL
+       'seonam-medi notice/channel administrator','2026-09-29T08:35:00.000Z',NULL
 FROM customer_tenants WHERE slug='seonam-medi'
 ON CONFLICT(tenant_id,email) DO UPDATE SET
   role='staff',
@@ -63,5 +63,4 @@ ON CONFLICT(tenant_id,email) DO UPDATE SET
   denied_capabilities_json='[]',
   expires_at=NULL,
   note='seonam-medi notice/channel administrator',
-  visibility='private',
   updated_at='2026-09-29T08:35:00.000Z';
