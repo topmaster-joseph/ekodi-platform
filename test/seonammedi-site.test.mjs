@@ -40,13 +40,17 @@ test('seonammedi admin stays site-local before and after Google authentication',
   assert.doesNotMatch(adminHtml,/admin\/sites\/workspace|route=workspace&source=seonammedi|http-equiv="refresh"/);
   assert.match(adminJs,/site','portal'/);
   assert.match(adminJs,/return_to',location\.origin\+'\/seonammedi\/admin\/'/);
-  assert.match(adminJs,/sb\.auth\.getSession\(\)/);
+  assert.match(adminJs,/CENTRAL_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token'/);
+  assert.match(adminJs,/localStorage\.getItem\(CENTRAL_SESSION_KEY\)/);
+  assert.doesNotMatch(adminJs,/cdn\.jsdelivr\.net|createClient\(/);
   assert.match(auth,/site==='portal'.*\/seonammedi\/admin/s);
   assert.match(router,/handleSeonamMediAdminApi/);
   assert.match(migration,/ohwon69@gmail\.com/);
   assert.match(migration,/board_admin/);
   assert.match(migration,/seonammedi\.notice\.manage/);
   assert.match(migration,/seonammedi\.channel\.manage/);
+  assert.doesNotMatch(migration,/seonammedi\.content\.manage/);
+  assert.match(await readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),/CONTENT_CAP='seonammedi\.content\.manage'/);
   const manifest=JSON.parse(manifestText);
   const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/seonammedi/admin/');
   assert.ok(probe);
