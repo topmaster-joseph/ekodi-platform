@@ -52,6 +52,7 @@ test('Mission admin auth is pinned to Mission-local client routing',()=>{
   assert.ok(client.includes("mission:{name:'EKODI Mission',returnTo:'https://ekodi.kr/ekodimission/',adminReturnTo:'https://ekodi.kr/ekodimission/admin'"));
   assert.ok(client.includes("config.kind==='mission'&&DIRECT_LOGIN&&config.adminReturnTo?config.adminReturnTo:config.returnTo"));
   assert.ok(client.includes("const missionPath=config.kind!=='mission'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')))"));
+  assert.equal(client.includes("adminReturnTo:'https://ekodi.kr/admin"),false);
 });
 
 
