@@ -66,7 +66,7 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.match(adminSidebar,/dataset\.adminMobileMore='true'/);
   assert.match(adminSidebar,/const setDrawerOpen = open =>/);
   assert.match(adminSidebar,/menuButton\.addEventListener\('click',toggleDrawer\)/);
-  assert.equal(adminSidebar.includes("display:flex!important;align-items:center;gap:8px"),true);
+  assert.equal(adminSidebar.includes("display:flex;align-items:center;gap:9px"),true);
   assert.equal(adminSidebar.includes("renderSidebarDetails(nav, globals, group, displayedSection || section, locale)"),true);
   assert.equal(adminDesign.includes('background:#0b1f36!important'),true);
   assert.equal(adminDesign.includes('background:#f6f8fb!important'),true);
