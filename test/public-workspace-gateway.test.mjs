@@ -33,7 +33,11 @@ test('canonical public workspace paths use the isolated Space service binding',a
   assert.ok(router.includes("import { isPublicWorkspacePath } from './workspace-route-policy.js'"));
   assert.match(router,/env\?\.SPACE\?\.fetch/);
   assert.ok(router.includes("routed.headers.set('x-ekodi-workspace-gateway','space-service-binding')"));
-  assert.ok(router.includes("injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace')"));
+  assert.ok(router.includes("if(upstreamSurface==='public')"));
+  assert.ok(router.includes("x-ekodi-public-surface','workspace-public-site"));
+  assert.ok(router.includes("x-ekodi-route')==='space-organization'"));
+  assert.ok(router.includes("injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','public'"));
+  assert.ok(router.includes("injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace'"));
   assert.match(router,/safeWorkspaceReturnTo/);
   assert.ok(router.includes("const DEPLOYMENT_PROBE_PATH='/deployment-probe'"));
   assert.match(router,/routeDeploymentProbe[\s\S]*workspaceUpstreamRequest\(request,'\/'\)/);
@@ -89,4 +93,14 @@ test('workspace shell assets and auth handoff stay inside the apex gateway',asyn
   assert.match(router,/rewriteWorkspaceShellAssets/);
   assert.match(router,/workspaceAuthRedirect/);
   assert.ok(router.includes("target.origin!=='https://ekodi.kr'"));
+});
+
+
+test('canonical public workspace roots cannot be reclassified as visible operating-space UI',async()=>{
+  const router=await read('platform-router-entry-worker.js');
+  const header=await read('shell/user-ui-header.js');
+  assert.match(router,/upstreamSurface==='public'/);
+  assert.match(router,/space-organization'[\s\S]*'space','public'/);
+  assert.match(header,/canonicalPublicUserSurface/);
+  assert.match(header,/!canonicalPublicUserSurface\(\)/);
 });
