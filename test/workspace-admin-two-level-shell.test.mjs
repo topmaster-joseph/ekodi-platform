@@ -43,7 +43,7 @@ test('Mission admin root stays on overview and applicant roster opens from its m
   assert.match(script,/MISSION_DEFAULT_ACTIVITY='260926-chuseok-open-table'/);
   assert.match(script,/const defaultSection='overview'/);
   assert.match(script,/activities\.some\(a=>a\.activity_key===MISSION_DEFAULT_ACTIVITY\)/);
-  assert.match(script,/href="\$\{adminBase\}\/activities">관리<\/a>/);
+  assert.match(script,/href="\$\{adminBase\}\/activities">신청자 보기<\/a>/);
   assert.match(script,/\['activities','행사 · 신청자'\]/);
   assert.match(script,/\/ekodimission\/apply\/260926-open-table/);
   assert.match(script,/activityCheckinFilter/);
