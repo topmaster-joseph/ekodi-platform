@@ -1,1 +1,23 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>서남권 국립의대 소통센터 관리</title><meta http-equiv="refresh" content="0;url=https://ekodi.kr/admin/?route=workspace&source=seonammedi"></head><body><p><a href="https://ekodi.kr/admin/?route=workspace&source=seonammedi">EKODI 관리자에서 관리하기</a></p></body></html>
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>서남권 국립의대 소통센터 관리자 로그인</title>
+  <script>
+    (() => {
+      const destination = 'https://ekodi.kr/seonammedi/admin/';
+      const auth = new URL('https://ekodi.kr/auth/');
+      auth.searchParams.set('site', 'seonammedi');
+      auth.searchParams.set('direct', '1');
+      auth.searchParams.set('return_to', destination);
+      location.replace(auth.toString());
+    })();
+  </script>
+</head>
+<body>
+  <p>Google 관리자 인증으로 이동합니다.</p>
+  <noscript><a href="https://ekodi.kr/auth/?site=seonammedi&amp;direct=1&amp;return_to=https%3A%2F%2Fekodi.kr%2Fseonammedi%2Fadmin%2F">Google로 관리자 로그인</a></noscript>
+</body>
+</html>
