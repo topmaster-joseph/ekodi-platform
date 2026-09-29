@@ -21,6 +21,18 @@
     if(e.target.closest('[data-share-event]')){if(navigator.share){try{await navigator.share({title,text:shareText,url});shareStatus('공유 창을 열었습니다.')}catch(err){if(err?.name!=='AbortError')await copy(url,'행사 링크를 복사했습니다.')}}else await copy(url,'행사 링크를 복사했습니다.');return}
     if(e.target.closest('[data-copy-invite]'))await copy(invite,'초대문을 복사했습니다.');
   });
+  const tripNodes=document.querySelectorAll('[data-trip-content]');
+  if(tripNodes.length){
+    fetch('/ekodimission/api/activities/261003-autumn-community-trip/content',{headers:{accept:'application/json'},credentials:'same-origin'})
+      .then(r=>r.ok?r.json():null).then(data=>{const c=data?.content;if(!c)return;
+        const set=(sel,val)=>document.querySelectorAll(sel).forEach(el=>{if(val!==undefined&&val!==null)el.textContent=String(val)});
+        set('[data-trip-title]',c.title);set('[data-trip-theme]',c.theme);set('[data-trip-summary]',c.summary);
+        set('[data-trip-capacity]',c.capacity);set('[data-trip-fee]',Number(c.fee_krw||0).toLocaleString('ko-KR')+'원');set('[data-trip-fee-note]',c.fee_note);
+        set('[data-trip-departure]',c.departure);set('[data-trip-return]',c.return);set('[data-trip-worship]',c.worship);set('[data-trip-notice]',c.notice);
+        const schedule=Array.isArray(c.schedule)?c.schedule:[];set('[data-trip-schedule-1]',schedule[0]?.text);set('[data-trip-schedule-2]',schedule[1]?.text);
+        const lodging=Array.isArray(c.lodging)?c.lodging:[];for(let i=0;i<2;i++){const l=lodging[i]||{};set(`[data-trip-lodging-${i+1}-name]`,l.name);set(`[data-trip-lodging-${i+1}-detail]`,[l.room,l.capacity,l.note].filter(Boolean).join(' · '))}
+      }).catch(()=>{});
+  }
   if(!form)return;
   const status=form.querySelector('[data-application-status]');const submit=form.querySelector('button[type="submit"]');
   form.addEventListener('submit',async e=>{
