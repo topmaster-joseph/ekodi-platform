@@ -76,6 +76,11 @@ test('production verification submits the real bottom command on canonical ekodi
   assert.match(probe,/admin-command-home/);
   assert.match(probe,/admin-command-active/);
   assert.match(probe,/rgb\(247, 248, 252\)/);
+  assert.match(probe,/EXPECTED_DESKTOP_SIDEBAR_WIDTH = 228/);
+  assert.match(probe,/contextTabsDisplay/);
+  assert.match(probe,/commandEntryDisplay/);
+  assert.match(probe,/targetValue !== 'EKODI'/);
+  assert.match(probe,/targetWidth \|\| 0\) < 150/);
   assert.match(probe,/composerRadius !== '30px'/);
   assert.match(probe,/radial-gradient/);
   assert.match(probe,/workbench\/sidebar alignment mismatch/);
