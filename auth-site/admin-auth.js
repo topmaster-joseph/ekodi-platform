@@ -44,49 +44,6 @@ function waitForBridgeCredential(popup,challenge,state){
     const watch=setInterval(()=>{try{if(popup.closed)finish(Object.assign(new Error('google_bridge_closed'),{code:'GOOGLE_BRIDGE_CLOSED'}))}catch{}},500);
   })
 }
-function loadGoogleLibrary(){
-  if(window.google?.accounts?.id)return Promise.resolve();
-  return new Promise((resolve,reject)=>{
-    const existing=document.querySelector('script[data-ekodi-google-identity]');
-    if(existing){
-      if(window.google?.accounts?.id){resolve();return}
-      existing.addEventListener('load',resolve,{once:true});
-      existing.addEventListener('error',()=>reject(new Error('google_library_failed')),{once:true});
-      return;
-    }
-    const script=document.createElement('script');
-    script.src='https://accounts.google.com/gsi/client';script.async=true;script.defer=true;script.dataset.ekodiGoogleIdentity='true';
-    const timer=setTimeout(()=>reject(new Error('google_library_timeout')),7000);
-    script.addEventListener('load',()=>{clearTimeout(timer);resolve()},{once:true});
-    script.addEventListener('error',()=>{clearTimeout(timer);reject(new Error('google_library_failed'))},{once:true});
-    document.head.append(script);
-  });
-}
-async function promptDirectGoogle(config,challenge){
-  await loadGoogleLibrary();
-  return new Promise((resolve,reject)=>{
-    let settled=false;
-    const finish=(error,data)=>{if(settled)return;settled=true;error?reject(error):resolve(data)};
-    try{
-      window.google.accounts.id.disableAutoSelect?.();
-      window.google.accounts.id.initialize({
-        client_id:config.clientId,
-        nonce:challenge.nonce,
-        auto_select:false,
-        use_fedcm_for_button:true,
-        button_auto_select:false,
-        ux_mode:'popup',
-        context:'signin',
-        callback:response=>response?.credential?finish(null,{credential:response.credential}):finish(Object.assign(new Error('google_direct_no_credential'),{code:'GOOGLE_DIRECT_NO_CREDENTIAL'})),
-      });
-      window.google.accounts.id.prompt(notification=>{
-        if(notification?.isNotDisplayed?.()||notification?.isSkippedMoment?.()){
-          finish(Object.assign(new Error('google_direct_prompt_unavailable'),{code:'GOOGLE_DIRECT_PROMPT_UNAVAILABLE'}));
-        }
-      });
-    }catch(error){finish(error)}
-  });
-}
 function requestGoogleCredential(config,challenge){
   const state=newBridgeState();
   const target=new URL('/auth/google-origin-bridge',GOOGLE_BRIDGE_ORIGIN);
@@ -196,19 +153,7 @@ async function prepare(){
       }
     }
     renderOriginBridgeButton(host,config,challenge);
-    if(directEntry){
-      notice('등록된 관리자 Google 계정 선택창을 여는 중입니다.');
-      try{
-        const proof=await promptDirectGoogle(config,challenge);
-        await completeGoogleLogin(proof.credential,challenge);
-        return;
-      }catch(error){
-        console.warn('admin direct Google prompt fallback',error);
-        clearDirectFallback('Google 계정 선택창을 바로 열 수 없습니다. 아래 Google 로그인 버튼으로 계속해 주세요.');
-      }
-    }else{
-      clearDirectFallback('등록된 관리자 Google 계정을 선택해 주세요. Google 인증창에서 계정을 선택하면 관리자 화면으로 자동 이동합니다.');
-    }
+    clearDirectFallback('등록된 관리자 Google 계정을 선택해 주세요. Google 인증창에서 계정을 선택하면 관리자 화면으로 자동 이동합니다.');
   }catch(e){console.error('admin central auth',e);if(directEntry)directBridgeRoot.dataset.adminDirectBridge='fallback';notice(preparationFailureMessage(e),'error');show('googleRetry',true)}
 }
 $('googleRetry').addEventListener('click',prepare);
