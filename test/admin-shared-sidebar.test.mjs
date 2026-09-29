@@ -47,15 +47,13 @@ test('left navigation is a reusable shared module backed only by the registry', 
   assert.match(layout, /const ORDER=Object\.freeze\(adminMenuOrder\(\)\)/);
 });
 
-test('legacy contextual subservice nodes stay hidden while source nav remains internal', () => {
+test('retired new-task and contextual top navigation are structurally removed', () => {
   assert.match(sidebar, /SOURCE_CLASS = 'admin-context-source'/);
-  assert.match(sidebar, /TABS_SHELL_CLASS = 'admin-context-tabs-shell'/);
-  assert.match(sidebar, /TABS_CLASS = 'admin-context-tabs'/);
-  assert.match(sidebar, /data-admin-context-section/);
-  assert.match(sidebar, /position:sticky/);
-  assert.match(sidebar, /commandEntry\.hidden = true/);
-  assert.match(sidebar, /shell\.hidden = true/);
-  assert.match(sidebar, /backdrop-filter:none/);
+  assert.match(sidebar, /nav\.querySelector\(':scope>\.admin-command-entry'\)\?\.remove\(\)/);
+  assert.match(sidebar, /main\?\.querySelector\(':scope>\.admin-context-tabs-shell'\)\?\.remove\(\)/);
+  assert.doesNotMatch(sidebar, /dataset\.adminCommandHome/);
+  assert.doesNotMatch(sidebar, /data-admin-context-section/);
+  assert.doesNotMatch(sidebar, /function renderContextTabs/);
   assert.doesNotMatch(sidebar, /RECENT_KEY|FAVORITES_KEY|data-admin-quick-section/);
 });
 
@@ -195,11 +193,8 @@ test('visible task navigation lazy-loads demand features before shared panel act
 });
 
 
-test('redundant new-task and top context navigation stay internal-only', () => {
-  assert.match(sidebar, /commandEntry\.hidden = true/);
-  assert.match(sidebar, /commandEntry\.setAttribute\('aria-hidden', 'true'\)/);
-  assert.match(sidebar, /commandEntry\.style\.setProperty\('display', 'none', 'important'\)/);
-  assert.match(sidebar, /shell\.hidden = true/);
-  assert.match(sidebar, /shell\.setAttribute\('aria-hidden', 'true'\)/);
-  assert.match(sidebar, /shell\.style\.setProperty\('display', 'none', 'important'\)/);
+test('redundant new-task and top context navigation cannot be recreated', () => {
+  assert.doesNotMatch(sidebar, /commandEntry = document\.createElement/);
+  assert.doesNotMatch(sidebar, /shell = document\.createElement/);
+  assert.doesNotMatch(sidebar, /dataset\.adminCommandHome/);
 });
