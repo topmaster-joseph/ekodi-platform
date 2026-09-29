@@ -2611,6 +2611,22 @@
           "cache-control: no-store"
         ],
         "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodi-card-probe/card",
+        "statuses": [
+          404
+        ],
+        "redirect": "manual",
+        "expect": [
+          "디지털 명함이 아직 공개되지 않았습니다."
+        ],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: person-digital-card",
+          "x-ekodi-canonical-path: /",
+          "x-ekodi-surface-context: person-digital-card",
+          "x-robots-tag: noindex, nofollow, noarchive"
+        ]
       }
     ]
   }
