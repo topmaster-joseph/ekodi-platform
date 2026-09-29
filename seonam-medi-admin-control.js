@@ -7,6 +7,9 @@ const PREFIX='/api/seonam-medi';
 const TENANT_SLUG='seonam-medi';
 const NOTICE_CAP='seonam.notice.manage';
 const CHANNEL_CAP='seonam.channel.manage';
+const CONTENT_CAP='seonam.notice.manage';
+const CONTENT_STATES=new Set(['candidate','published','rejected']);
+const CONTENT_CATEGORIES=new Set(['official','news']);
 const PLATFORMS=new Set(['youtube','instagram','facebook','blog','website','other']);
 const CHANNEL_CATEGORIES=new Set(['official','related-org','media','civic','other']);
 
@@ -111,7 +114,7 @@ async function listPublicChannels(env){
 
 async function adminMe(request,env,auth){
   const site=await env.DB.prepare('SELECT public_status,updated_at FROM public_site_controls WHERE site_id=? LIMIT 1').bind(TENANT_SLUG).first().catch(()=>null);
-  return json({ok:true,email:auth.email,role:auth.role,platform:Boolean(auth.platform),capabilities:auth.capabilities||[],permissions:{notices:can(auth,NOTICE_CAP),channels:can(auth,CHANNEL_CAP)},publicStatus:site?.public_status||'public',publicStatusUpdatedAt:site?.updated_at||''});
+  return json({ok:true,email:auth.email,role:auth.role,platform:Boolean(auth.platform),capabilities:auth.capabilities||[],permissions:{notices:can(auth,NOTICE_CAP),channels:can(auth,CHANNEL_CAP),content:can(auth,CONTENT_CAP)},publicStatus:site?.public_status||'public',publicStatusUpdatedAt:site?.updated_at||''});
 }
 
 async function listAdminNotices(env,auth){
@@ -144,6 +147,23 @@ async function deleteNotice(env,auth,id){
   if(!can(auth,NOTICE_CAP))return json({ok:false,error:'notice_forbidden'},403);
   const existing=await env.DB.prepare('SELECT id,title FROM seonam_medi_notices WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
   await env.DB.prepare('DELETE FROM seonam_medi_notices WHERE id=?').bind(id).run();await audit(env,auth,'delete','notice',id,{title:existing.title});return json({ok:true,id});
+}
+
+
+async function listAdminContent(env,auth){
+  if(!can(auth,CONTENT_CAP))return json({ok:false,error:'content_forbidden'},403);
+  const rows=await env.DB.prepare(`SELECT id,title,url,resolved_url,publisher,published_at,query_label,review_state,first_seen_at,last_seen_at
+    FROM seonam_medi_monitor_items ORDER BY COALESCE(published_at,first_seen_at) DESC LIMIT 150`).all();
+  return json({ok:true,items:(rows.results||[]).map(row=>({id:Number(row.id),title:row.title,url:row.resolved_url||row.url,publisher:row.publisher||'',publishedAt:row.published_at||row.first_seen_at,queryLabel:row.query_label||'',reviewState:CONTENT_STATES.has(row.review_state)?row.review_state:'candidate',category:row.review_state==='published_official'?'official':row.review_state==='published_news'?'news':'news'}))});
+}
+async function updateAdminContent(request,env,auth,id){
+  if(!can(auth,CONTENT_CAP))return json({ok:false,error:'content_forbidden'},403);
+  const existing=await env.DB.prepare('SELECT id,title FROM seonam_medi_monitor_items WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
+  const body=await request.json().catch(()=>null),state=clean(body?.state,40),category=clean(body?.category,40);
+  if(!CONTENT_STATES.has(state)||!CONTENT_CATEGORIES.has(category))return json({ok:false,error:'invalid_content_review'},400);
+  const stored=state==='published'?'published_'+category:state;
+  await env.DB.prepare('UPDATE seonam_medi_monitor_items SET review_state=? WHERE id=?').bind(stored,id).run();
+  await audit(env,auth,'review','web_content',id,{state,category,title:existing.title});return json({ok:true,id,state,category});
 }
 
 async function listAdminChannels(env,auth){
@@ -195,6 +215,9 @@ export async function handleSeonamMediAdminApi(request,env){
   let match=url.pathname.match(/^\/api\/seonam-medi\/admin\/notices\/(\d+)$/);
   if(match&&request.method==='PUT')return updateNotice(request,env,auth,Number(match[1]));
   if(match&&request.method==='DELETE')return deleteNotice(env,auth,Number(match[1]));
+  if(url.pathname===PREFIX+'/admin/content'&&request.method==='GET')return listAdminContent(env,auth);
+  let contentMatch=url.pathname.match(/^\\/api\\/seonam-medi\\/admin\\/content\\/(\\d+)$/);
+  if(contentMatch&&request.method==='PUT')return updateAdminContent(request,env,auth,Number(contentMatch[1]));
   if(url.pathname===PREFIX+'/admin/channels'&&request.method==='GET')return listAdminChannels(env,auth);
   if(url.pathname===PREFIX+'/admin/channels'&&request.method==='POST')return createChannel(request,env,auth);
   match=url.pathname.match(/^\/api\/seonam-medi\/admin\/channels\/(\d+)$/);
@@ -203,4 +226,4 @@ export async function handleSeonamMediAdminApi(request,env){
   return json({ok:false,error:'not_found'},404);
 }
 
-export const SEONAM_MEDI_ADMIN_CAPABILITIES=Object.freeze({notices:NOTICE_CAP,channels:CHANNEL_CAP});
+export const SEONAM_MEDI_ADMIN_CAPABILITIES=Object.freeze({notices:NOTICE_CAP,channels:CHANNEL_CAP,content:CONTENT_CAP});
