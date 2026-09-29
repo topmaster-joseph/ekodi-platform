@@ -3,6 +3,7 @@ import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 import { routeIntent } from './capability-intent-runtime.js';
 import capabilityRegistry from './config/capability-registry.json' with { type: 'json' };
 import workspacePacks from './config/workspace-packs.json' with { type: 'json' };
+import { handleGovernmentDocuments } from './government-documents.js';
 
 const WORKSPACE_KEY_RE=/^[a-z]+:[a-zA-Z0-9:_-]+$/;
 const SERVICE_ID_RE=/^[a-z][a-z0-9-]*$/;
@@ -313,6 +314,8 @@ export default{
     if(url.pathname==='/approvals')return Response.redirect(new URL('/approvals/',request.url).toString(),307);
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/workspaces/workspace?source=my',307);
     if(url.pathname==='/docs')return Response.redirect(new URL('/docs/',request.url).toString(),307);
+    if(url.pathname==='/documents/government')return Response.redirect(new URL('/documents/government/',request.url).toString(),307);
+    if(url.pathname==='/documents/government/')return handleGovernmentDocuments(request);
     if(url.pathname==='/creator'||url.pathname==='/creator/')return Response.redirect('https://author.ekodi.kr/',307);
     if(url.pathname==='/personal-brand'||url.pathname==='/personal-brand/')return Response.redirect(personalBrandUrl(),307);
     if(url.pathname==='/app.js')return manifestDrivenApp(request,env);
