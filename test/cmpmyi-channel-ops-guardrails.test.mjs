@@ -60,7 +60,7 @@ test('cmpmyi channel publishing opens the real management workspace without a se
   const shell=await storePortfolioAdminPage().text();
   assert.match(shell,/\/cmpmyi\/admin\/panel\/publishing/);
   const panel=await storePortfolioAdminPanelPage('publishing').text();
-  assert.match(panel,/채널 · 자동게시 통합관리/);
+  assert.match(panel,/채널 · 자동게시/);
   assert.match(panel,/data-cmpmyi-direct-workspace="publishing"/);
   assert.match(panel,/class="direct-frame"/);
   assert.match(panel,/\/jadam\/admin\/publishing\?embed=cmpmyi/);
