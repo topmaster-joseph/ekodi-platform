@@ -79,6 +79,10 @@ test('customer APIs keep their dedicated entry layer behind security-wrapped Mis
   assert.ok(missionEntry.includes('if (customerSchedule?.reporting?.ran) return customerSchedule'));
 });
 
-test('all customer production origins are explicitly allowed', () => {
-  for (const [, domain] of expected) assert.ok(wrangler.includes(`https://${domain}`), `${domain} origin missing`);
+test('production Control CORS uses the canonical apex plus constitution-owned customer domain only', () => {
+  assert.match(wrangler, /ALLOWED_ORIGINS = "https:\/\/ekodi\.kr,https:\/\/cgma\.or\.kr"/);
+  for (const [slug, domain] of expected) {
+    if (slug === 'cgma') continue;
+    assert.equal(wrangler.includes(`https://${domain}`), false, `${slug} legacy tenant host must not remain in production Control CORS`);
+  }
 });
