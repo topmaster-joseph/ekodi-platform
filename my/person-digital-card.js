@@ -160,6 +160,7 @@ function rpcErrorMessage(raw){
   if(value.includes('invalid_email'))return'이메일 주소를 확인해 주세요.';
   if(value.includes('invalid_phone'))return'휴대전화 번호를 확인해 주세요.';
   if(value.includes('contact_exchange_unavailable'))return'현재 이 명함에서는 연락처 교환을 받을 수 없습니다.';
+  if(value.includes('contact_exchange_rate_limited'))return'연락처 교환 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.';
   if(value.includes('contact_identity_conflict'))return'휴대전화와 이메일이 서로 다른 기존 연락처와 연결되어 있어 자동 병합하지 않았습니다.';
   return'연락처를 전달하지 못했습니다.';
 }
@@ -190,7 +191,11 @@ async function submitExchange(request,env,handle){
     method:'POST',headers:{apikey:cfg.key,'content-type':'application/json','cache-control':'no-store'},body:JSON.stringify(payload),
   });
   const data=await response.json().catch(()=>null);
-  if(!response.ok)return json({ok:false,error:rpcErrorMessage(data?.message||data?.error)},400);
+  if(!response.ok){
+    const raw=String(data?.message||data?.error||'');
+    const status=raw.toLowerCase().includes('contact_exchange_rate_limited')?429:400;
+    return json({ok:false,error:rpcErrorMessage(raw)},status,status===429?{'retry-after':'60'}:{});
+  }
   return json({ok:true,message:'연락처가 명함 소유자에게 전달되었습니다.'});
 }
 
