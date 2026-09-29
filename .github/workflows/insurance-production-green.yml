@@ -228,7 +228,7 @@ jobs:
           [assets]
           directory = "./public"
           binding = "ASSETS"
-          run_worker_first = [ "/", "/health", "/advisor", "/advisor/", "/admin", "/admin/" ]
+          run_worker_first = [ "/", "/health", "/advisor", "/advisor/", "/admin", "/admin/", "/guide/*", "/advisor/guide/*" ]
 
           [observability.logs]
           enabled = true
@@ -244,18 +244,25 @@ jobs:
           health=$(curl -fsS "$ui/health")
           root=$(curl -fsS "$ui/")
           advisor=$(curl -fsS "$ui/advisor")
+          guide=$(curl -fsS "$ui/guide/car-insurance/en")
           bridge=$(curl -fsS "$ui/server-bridge.js")
           admin_headers=$(curl -sS -D - -o /dev/null "$ui/admin")
+          legacy_guide_headers=$(curl -sS -D - -o /dev/null "$ui/advisor/guide/car-insurance/en")
           printf '%s' "$health" | grep -Fq '"environment":"production"'
           printf '%s' "$health" | grep -Fq '"mode":"production-cloudflare-d1-free"'
+          printf '%s' "$health" | grep -Fq '"publicMultilingualCarGuide":true'
           printf '%s' "$root" | grep -Fq 'EKODI Insurance'
           printf '%s' "$advisor" | grep -Fq '보험설계사 개인 안내·상담 페이지'
+          printf '%s' "$guide" | grep -Fq 'Public Car Insurance Guide'
+          printf '%s' "$guide" | grep -Fq 'Liability Insurance'
           if printf '%s' "$root" | grep -Fq 'STAGING'; then echo 'Staging label leaked into production Green HTML'; exit 1; fi
           printf '%s' "$bridge" | grep -Fq 'ekodi-insurance-api-green.topmaster-joseph.workers.dev'
           printf '%s' "$bridge" | grep -Fq 'serverConsultationPanel'
           printf '%s' "$admin_headers" | grep -Eqi '^HTTP/.* 302'
           printf '%s' "$admin_headers" | grep -Eqi '^location: https://admin\.ekodi\.kr/'
-          echo 'Production Green UI verified. No production custom domain was changed.'
+          printf '%s' "$legacy_guide_headers" | grep -Eqi '^HTTP/.* 302'
+          printf '%s' "$legacy_guide_headers" | grep -Eqi '^location: https://ekodi-insurance-green\.topmaster-joseph\.workers\.dev/guide/car-insurance/en'
+          echo 'Production Green UI and public multilingual guide verified. No production custom domain was changed.'
 
       - name: Green readiness summary
         run: |
@@ -266,6 +273,7 @@ jobs:
             echo '- Stable production encryption secret: validated without disclosure'
             echo '- Synthetic encrypted handoff/list/detail/revoke: validated'
             echo '- Green UI production mode: validated'
+            echo '- Public multilingual car guide canonical + legacy redirect: validated'
             echo '- admin route: central Admin redirect validated'
             echo '- Production custom domains: **NOT CHANGED**'
             echo '- Next gate: explicit cutover workflow after Green review'
