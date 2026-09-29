@@ -2537,6 +2537,30 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/seonammedi/admin/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "서남권 국립의대 소통센터",
+          "운영홈",
+          "공지",
+          "채널",
+          "조직"
+        ],
+        "forbid": [
+          "/admin/sites/workspace",
+          "route=workspace&source=seonammedi"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: seonammedi-static",
+          "x-robots-tag: noindex, nofollow, noarchive",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/seonammedi/app.js",
         "statuses": [
           200
