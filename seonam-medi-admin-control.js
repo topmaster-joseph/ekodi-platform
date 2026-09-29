@@ -201,6 +201,14 @@ async function deleteChannel(env,auth,id){
 
 export async function handleSeonamMediAdminApi(request,env){
   const url=new URL(request.url);
+  if(url.pathname===PREFIX+'/content'&&request.method==='GET'){
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
+    await ensureSchema(env.DB);
+    const [noticesResponse,channelsResponse]=await Promise.all([listPublicNotices(env),listPublicChannels(env)]);
+    const noticesBody=await noticesResponse.json().catch(()=>({items:[]}));
+    const channelsBody=await channelsResponse.json().catch(()=>({items:[]}));
+    return json({ok:true,notices:noticesBody.items||[],channels:channelsBody.items||[]});
+  }
   if(url.pathname===PREFIX+'/notices'&&request.method==='GET'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return listPublicNotices(env);
   }
