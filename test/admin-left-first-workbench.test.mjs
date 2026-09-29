@@ -62,3 +62,22 @@ test('Integrated overview removes duplicate singleton tab and keeps health cards
   assert.match(healthCss, /\.core-health-grid article\[data-state="ok"\] b/);
 });
 
+
+
+test('ADMIN-DIRECT-NAV-006 makes the visible left task the final destination without duplicate reselection', async () => {
+  const [principles, design, verifier, cmpmyi] = await Promise.all([
+    read('ADMIN_UI_PRINCIPLES.md'),
+    read('config/design-engine.json'),
+    read('scripts/verify-admin-production-ui-e2e.mjs'),
+    read('store-portfolio-admin-page.js'),
+  ]);
+  assert.match(principles, /ADMIN-DIRECT-NAV-006/);
+  assert.match(principles, /왼쪽에서 이미 선택한 동일 업무·브랜드·서비스를 오른쪽 카드나 버튼으로 다시 선택/);
+  const config = JSON.parse(design);
+  assert.equal(config.admin.directNavigationContract.leftTaskIsFinalDestination, true);
+  assert.equal(config.admin.directNavigationContract.duplicateRightSideReselectionForbidden, true);
+  assert.match(verifier, /resolveMenuTrigger/);
+  assert.equal(verifier.includes('admin-context-tab[data-admin-context-section'), false);
+  assert.match(cmpmyi, /data-cmpmyi-direct-workspace/);
+  assert.match(cmpmyi, /중간 선택 카드를 없앴습니다/);
+});

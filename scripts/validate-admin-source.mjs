@@ -55,8 +55,13 @@ for (const path of ['/admin.html','/control-center','/control-center/','/control
 if (!worker.includes('RETIRED_ADMIN_PATHS.has(url.pathname)')) violations.push('site-worker.js: retired admin 404 gate missing');
 
 const adminPrinciples = readFileSync(join(root, 'ADMIN_UI_PRINCIPLES.md'), 'utf8');
-for (const marker of ['공개 사이트의 고정 헤더용 body 상단 여백', '좌측 전역 사이드바는 데스크톱에서 뷰포트에 고정', '최고관리자 좌측 사이드바는 선택 영역의 핵심 직접업무가 잘리지 않도록 필요 시 독립 세로 스크롤을 허용한다', '로그인 1회 · 권한은 조용히 확인 · 외부 OAuth는 최초 연결/복구 시만', '이미 `active`인 외부 채널 계정은 관리자 로그인 후 저장된 중앙 Vault 연결을 재사용', 'ADMIN-MOBILE-SHELL-003', '홈 · 사이트 · 서비스 · 운영 · 더보기']) {
+for (const marker of ['공개 사이트의 고정 헤더용 body 상단 여백', '좌측 전역 사이드바는 데스크톱에서 뷰포트에 고정', '최고관리자 좌측 사이드바는 선택 영역의 핵심 직접업무가 잘리지 않도록 필요 시 독립 세로 스크롤을 허용한다', '로그인 1회 · 권한은 조용히 확인 · 외부 OAuth는 최초 연결/복구 시만', '이미 `active`인 외부 채널 계정은 관리자 로그인 후 저장된 중앙 Vault 연결을 재사용', 'ADMIN-MOBILE-SHELL-003', '홈 · 사이트 · 서비스 · 운영 · 더보기', 'ADMIN-DIRECT-NAV-006', '왼쪽 업무메뉴는 최종 작업목적지다']) {
   if (!adminPrinciples.includes(marker)) violations.push(`ADMIN_UI_PRINCIPLES.md: missing admin viewport contract marker: ${marker}`);
+}
+const designEngine = JSON.parse(readFileSync(join(root, 'config/design-engine.json'), 'utf8'));
+const directNavigation = designEngine?.admin?.directNavigationContract || {};
+if (directNavigation.id !== 'ADMIN-DIRECT-NAV-006' || directNavigation.leftTaskIsFinalDestination !== true || directNavigation.duplicateRightSideReselectionForbidden !== true) {
+  violations.push('config/design-engine.json: missing ADMIN-DIRECT-NAV-006 direct destination contract');
 }
 const workspaceAdmin = readFileSync(join(root, 'workspace-admin-page.js'), 'utf8');
 for (const marker of [
