@@ -33,3 +33,9 @@
 #statusCards.grid{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media(max-width:900px){#statusCards.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){#statusCards.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.status-card{padding:14px;gap:10px}.status-card-title{font-size:15px}.status-card-text{font-size:12px}.status-card-action{font-size:11px}}
+
+.channel-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.channel-card{display:grid;gap:8px;padding:16px;border:1px solid #dce3ea;border-radius:14px;background:#fff;text-decoration:none;color:inherit}
+.channel-card strong{font-size:15px}.channel-card small{color:#6d7c8a}.channel-meta{display:flex;gap:6px;flex-wrap:wrap}.channel-meta span{font-size:10px;padding:3px 7px;border-radius:999px;background:#edf3f8;color:#47627b}
+.notice-public-item{display:grid;gap:5px}.notice-public-item strong{font-size:15px}.notice-public-item p{margin:0;color:#526273;white-space:pre-wrap}.notice-public-item small{color:#748393}
+@media(max-width:760px){.channel-grid{grid-template-columns:1fr}}
