@@ -21,7 +21,7 @@ test('Store Admin exposes the POS console without weakening store scope',async()
   const html=await response.text();
   assert.equal(response.status,200);
   assert.match(html,/<h1 id="pageTitle">POS 통합화면<\/h1>/);
-  assert.match(html,/20260929-pos-web-first-v4/);
+  assert.match(html,/20260929-pos-web-first-v5/);
   assert.match(html,/EKODI POS Agent 준비/);
   assert.match(html,/원클릭 설치 \(\.cmd\)/);
   assert.match(html,/setup-pos-agent\.cmd/);
@@ -57,6 +57,10 @@ test('Store Admin exposes the POS console without weakening store scope',async()
   assert.match(script,/\/v1\/focus/);
   assert.match(script,/method:'POST'/);
   assert.match(script,/posWebHref/);
+  assert.match(script,/if\(section==='pos'\)/);
+  assert.match(script,/state\.connector=\{connectors:\[\]\}/);
+  assert.match(script,/pos_agent_timeout/);
+  assert.match(script,/timeoutMs:8000/);
 });
 
 test('Windows POS Agent is loopback-only and focus is explicit-user-action only',()=>{
