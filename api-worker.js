@@ -50,6 +50,18 @@ const LIVE_PUBLIC_SITE_CATALOG = realtimeTenantList().map(tenant => ({
 
 const PUBLIC_SITE_CATALOG = [
   {
+    id: 'seonam-medi',
+    workspaceId: 'seonam-medi',
+    name: '서남권 국립의대 시민소통센터',
+    domain: 'ekodi.kr/seonam-medi',
+    defaultPublicStatus: 'public',
+    defaultMaintenanceDisplayType: 'default',
+    defaultMaintenanceRedirectUrl: '',
+    defaultMaintenanceTitle: '서남권 국립의대 시민소통센터',
+    defaultMaintenanceMessage: '시민소통센터는 현재 점검 중입니다.',
+    defaultRedirectMode: 'button'
+  },
+  {
     id: 'cgma',
     workspaceId: 'cgma',
     name: '청계면상인회',
@@ -68,7 +80,7 @@ const SERVICE_BY_ID = new Map(SERVICE_CATALOG.map(service => [service.id, servic
 const PUBLIC_SITE_BY_ID = new Map(PUBLIC_SITE_CATALOG.map(site => [site.id, site]));
 const PUBLIC_SITE_BY_DOMAIN = new Map(PUBLIC_SITE_CATALOG.map(site => [site.domain, site]));
 const VALID_STATES = new Set(['planned', 'active', 'paused']);
-const VALID_PUBLIC_STATUSES = new Set(['public', 'maintenance']);
+const VALID_PUBLIC_STATUSES = new Set(['public', 'private', 'maintenance']);
 const VALID_MAINTENANCE_DISPLAY_TYPES = new Set(['default', 'url']);
 const VALID_REDIRECT_MODES = new Set(['button', 'auto']);
 const CONTROL_PREFIX = '/api/control';
@@ -716,7 +728,7 @@ async function handleControl(request, env) {
     const publicStatus = String(body.publicStatus || catalog.defaultPublicStatus).trim();
     const displayType = String(body.maintenanceDisplayType || catalog.defaultMaintenanceDisplayType).trim();
     const redirectMode = String(body.redirectMode || catalog.defaultRedirectMode).trim();
-    if (!VALID_PUBLIC_STATUSES.has(publicStatus)) return controlJson({ error: '공개 상태는 public 또는 maintenance 중 하나여야 합니다.' }, 400, auth.response.headers);
+    if (!VALID_PUBLIC_STATUSES.has(publicStatus)) return controlJson({ error: '공개 상태는 public, private 또는 maintenance 중 하나여야 합니다.' }, 400, auth.response.headers);
     if (!VALID_MAINTENANCE_DISPLAY_TYPES.has(displayType)) return controlJson({ error: '임시페이지 방식은 default 또는 url 중 하나여야 합니다.' }, 400, auth.response.headers);
     if (!VALID_REDIRECT_MODES.has(redirectMode)) return controlJson({ error: '연결 방식은 button 또는 auto 중 하나여야 합니다.' }, 400, auth.response.headers);
     const title = String(body.maintenanceTitle || catalog.defaultMaintenanceTitle).trim().slice(0, 80) || catalog.defaultMaintenanceTitle;
