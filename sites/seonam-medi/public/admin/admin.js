@@ -29,7 +29,7 @@ async function userToken(){
   if(!session.refreshToken){clearLocal();return''}
   try{const data=await supabaseAuth('/auth/v1/token?grant_type=refresh_token',{refresh_token:session.refreshToken});session=normalizeSession(data,session);saveSession(session);return session.accessToken}catch{clearLocal();return''}
 }
-function authUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','portal');u.searchParams.set('direct','1');u.searchParams.set('return_to',location.origin+'/seonam-medi/admin/');return u.href}
+function authUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','seonam-medi');u.searchParams.set('direct','1');u.searchParams.set('return_to',location.origin+'/seonam-medi/admin/');return u.href}
 async function token(){return sessionStorage.getItem(PLATFORM_TOKEN_KEY)||await userToken()}
 async function api(path,options={}){
   const bearer=await token();if(!bearer){location.replace(authUrl());throw new Error('로그인이 필요합니다.')}
