@@ -76,7 +76,7 @@ test('cmpmyi channel publishing opens the real management workspace without a se
 });
 
 test('cmpmyi direct workspace remembers brand and task while keeping canonical store admin boundaries',async()=>{
-  const script=await storePortfolioAdminPanelPage('publishing').then(r=>r.text());
+  const script=await (await storePortfolioAdminPanelPage('publishing')).text();
   assert.match(script,/실제 관리화면/);
   const runtime=await (await import('../store-portfolio-admin-page.js')).storePortfolioAdminPanelScript().text();
   assert.match(runtime,/ekodi-cmpmyi-direct-brand/);
