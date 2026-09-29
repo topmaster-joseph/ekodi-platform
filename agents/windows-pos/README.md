@@ -68,21 +68,33 @@ netsh http add urlacl url=http://127.0.0.1:17831/ user="$env:USERDOMAIN\$env:USE
 powershell -NoProfile -ExecutionPolicy Bypass -File .\uninstall-pos-agent.ps1
 ```
 
+## CMPMYI 관리자에서 설치 · 삭제
+
+여러 POS PC에 반복 설치할 때는 `https://ekodi.kr/cmpmyi/admin/agent`의 **POS Agent 설치·관리** 화면을 사용합니다. 최고관리자 메뉴의 **운영·배포·장애 → POS Agent 설치·관리**도 이 화면으로 연결됩니다.
+
+- `setup-pos-agent.cmd` — 처음 설치 또는 업그레이드를 위한 원클릭 설치 파일입니다.
+- `remove-pos-agent.cmd` — 예약 작업과 설치 폴더를 완전히 제거하는 원클릭 삭제 파일입니다. 실행 전에 확인을 받습니다.
+- `start-pos-agent.cmd` / `stop-pos-agent.cmd` — 설치는 유지한 채 현재 Agent만 시작하거나 중지합니다.
+- `diagnose-pos-targets.ps1` — 실제 POS 프로그램의 프로세스 이름과 창 제목을 읽기 전용으로 확인합니다.
+- 관리화면은 현재 POS PC의 `http://127.0.0.1:17831/v1/health`를 확인해 Agent 버전·설정 대상·실행 대상을 표시합니다.
+
+브라우저 보안상 웹페이지가 내려받은 Windows 설치·삭제 파일을 자동 실행할 수는 없습니다. 다운로드한 `.cmd` 파일은 **해당 POS PC에서 직접 실행**하며, Windows 관리자 권한 요청을 확인한 뒤 허용합니다.
+
 ## 실행 · 중지 파일
 
-관리자 화면의 **POS 통합화면**에서 실행/중지 안내와 파일 링크를 제공합니다. 파일을 내려받아 실행할 수 있으며, 브라우저가 Windows 프로그램을 직접 실행하거나 종료하지는 않습니다.
+관리자 화면의 **POS 통합화면**과 CMPMYI **POS Agent 설치·관리** 화면에서 실행/중지 안내와 파일 링크를 제공합니다. 파일을 내려받아 실행할 수 있으며, 브라우저가 Windows 프로그램을 직접 실행하거나 종료하지는 않습니다.
 
 - `start-pos-agent.cmd` — 이미 설치된 `EKODI POS Agent` 예약 작업을 즉시 시작하고 loopback 상태를 확인합니다. 설치 전에는 동작하지 않습니다.
 - `stop-pos-agent.cmd` — 현재 실행 중인 Agent 예약 작업만 중지합니다. **다음 Windows 로그인 시 자동 시작 설정은 유지**됩니다.
 - 처음 설치는 관리자 화면의 `setup-pos-agent.cmd` 원클릭 설치를 권장합니다. 고급 수동 설치에서는 `install-pos-agent.ps1`을 사용합니다.
 - 실행/중지 파일에서 권한 거부가 나오면 파일을 우클릭해 **관리자 권한으로 실행**합니다.
-- 완전 제거는 `uninstall-pos-agent.ps1`을 사용합니다.
+- 완전 제거는 CMPMYI 관리화면의 `remove-pos-agent.cmd` 원클릭 삭제를 권장하며, 고급 수동 제거에는 `uninstall-pos-agent.ps1`을 사용합니다.
 
 ## 설정 기준
 
 `processNames`와 `windowTitleContains` 중 하나 이상이 있으면 상태 확인 대상으로 간주합니다. 브라우저 기반 주문 서비스가 하나의 Chrome 창에서 여러 탭으로만 열려 있으면 탭 단위 전환이 안정적이지 않습니다. 그런 서비스는 별도 Chrome 앱/바로가기 창으로 실행한 뒤 해당 창 제목이나 바로가기 경로를 매핑하는 방식이 더 안정적입니다.
 
-`allowedStores`는 이 PC에서 사용할 EKODI 매장 slug만 넣습니다. 같은 POS PC가 자담치킨과 피자마루를 함께 운영한다면 예시처럼 두 slug를 둘 수 있습니다.
+`allowedStores`는 이 PC에서 사용할 EKODI 매장 slug만 넣습니다. 기본 예시는 자담치킨(`jadam`)·피자마루(`pizzamaru`)·요거트퍼플(`yogurt`) 3개 1호점 운영공간을 허용하며, 전용 POS라면 실제 사용하는 매장만 남겨 범위를 줄일 수 있습니다.
 
 ## 로컬 API
 
