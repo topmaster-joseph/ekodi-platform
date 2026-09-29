@@ -19,7 +19,9 @@
     "descendantPattern": "https://ekodi.kr/{slug}/{service}",
     "adminPattern": "https://ekodi.kr/{slug}/admin",
     "featureSubdomainCreationForbidden": true,
-    "legacyAliasesAreCompatibilityOnly": true
+    "legacyAliasesAreCompatibilityOnly": false,
+    "legacySubdomainsMustBeRemoved": true,
+    "allWorkspaceSitesRequireCanonicalPath": true
   },
   "mandatoryContracts": [
     "canonical-apex-path",
@@ -94,10 +96,7 @@
   "exceptions": {
     "constitutionalBoundaryOnly": true,
     "requiresExplicitRegisteredBoundary": true,
-    "pendingCanonicalStates": [
-      "hold_existing_url_pending_canonical_decision",
-      "preparing_keep_existing"
-    ],
+    "pendingCanonicalStates": [],
     "silentExceptionForbidden": true
   },
   "enforcement": {
@@ -106,6 +105,7 @@
       "test/site-execution-enforcement.test.mjs"
     ],
     "orchestrationGate": ".github/workflows/ekodi-ai-orchestration-gate.yml",
-    "packageScript": "validate:site-execution"
+    "packageScript": "validate:site-execution",
+    "noPendingCanonicalSubdomainExceptions": true
   }
 }
