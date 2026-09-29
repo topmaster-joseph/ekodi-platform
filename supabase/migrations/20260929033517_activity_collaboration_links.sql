@@ -12,7 +12,7 @@ create table if not exists public.activity_collab_documents (
   unique(workspace_slug, activity_key)
 );
 alter table public.activity_collab_documents enable row level security;
-revoke all on public.activity_collab_documents from anon, authenticated;
+revoke all on public.activity_collab_documents from anon, authenticated, service_role;
 
 create table if not exists public.activity_collab_shares (
   id uuid primary key default gen_random_uuid(),
@@ -26,7 +26,7 @@ create table if not exists public.activity_collab_shares (
   last_used_at timestamptz
 );
 alter table public.activity_collab_shares enable row level security;
-revoke all on public.activity_collab_shares from anon, authenticated;
+revoke all on public.activity_collab_shares from anon, authenticated, service_role;
 
 create table if not exists public.activity_collab_revisions (
   id bigint generated always as identity primary key,
@@ -39,7 +39,7 @@ create table if not exists public.activity_collab_revisions (
 );
 create index if not exists activity_collab_revisions_doc_rev_idx on public.activity_collab_revisions(document_id, revision desc);
 alter table public.activity_collab_revisions enable row level security;
-revoke all on public.activity_collab_revisions from anon, authenticated;
+revoke all on public.activity_collab_revisions from anon, authenticated, service_role;
 
 create or replace function public.activity_collab_share_snapshot(p_token text)
 returns jsonb language plpgsql security definer set search_path=public,pg_temp as $$
