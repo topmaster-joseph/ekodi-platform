@@ -94,7 +94,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\uninstall-pos-agent.ps1
 
 `processNames`와 `windowTitleContains` 중 하나 이상이 있으면 상태 확인 대상으로 간주합니다. 브라우저 기반 주문 서비스가 하나의 Chrome 창에서 여러 탭으로만 열려 있으면 탭 단위 전환이 안정적이지 않습니다. 그런 서비스는 별도 Chrome 앱/바로가기 창으로 실행한 뒤 해당 창 제목이나 바로가기 경로를 매핑하는 방식이 더 안정적입니다.
 
-`allowedStores`는 이 PC에서 사용할 EKODI 매장 slug만 넣습니다. 같은 POS PC가 자담치킨과 피자마루를 함께 운영한다면 예시처럼 두 slug를 둘 수 있습니다.
+`allowedStores`는 이 PC에서 사용할 EKODI 매장 slug만 넣습니다. 기본 예시는 자담치킨(`jadam`)·피자마루(`pizzamaru`)·요거트퍼플(`yogurt`) 3개 1호점 운영공간을 허용하며, 전용 POS라면 실제 사용하는 매장만 남겨 범위를 줄일 수 있습니다.
 
 ## 로컬 API
 
