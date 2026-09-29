@@ -68,8 +68,8 @@ test('cmpmyi channel publishing opens the real management workspace without a se
   assert.match(panel,/data-direct-brand="pizzamaru"/);
   assert.match(panel,/data-direct-brand="yogurt"/);
   assert.match(panel,/data-direct-section="publishing"/);
-  assert.match(panel,/data-direct-section="connections"/);
-  assert.match(panel,/data-direct-section="marketing"/);
+  assert.doesNotMatch(panel,/data-direct-section="connections"/);
+  assert.doesNotMatch(panel,/data-direct-section="marketing"/);
   assert.doesNotMatch(panel,/aria-label="채널 · 자동게시 통합관리 브랜드 선택"/);
   assert.match(panel,/중간 선택 카드를 없앴습니다/);
   assert.match(panel,/\/cmpmyi\/admin\/panel\.js/);
