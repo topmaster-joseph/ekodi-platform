@@ -26,10 +26,11 @@ test('seonammedi source changes are wired to both Shared Site and Control API re
 test('seonammedi branding is canonical and legacy public paths are deleted',async()=>{const html=await readFile(new URL('index.html',root),'utf8');assert.match(html,/서남권 국립의대 소통센터/);assert.doesNotMatch(html,/시민소통센터/);assert.match(html,/\/seonammedi\/app\.css/);});
 
 
-test('seonammedi admin uses direct Google auth and returns to its dedicated admin surface',async()=>{
-  const [adminHtml,adminAuth]=await Promise.all([
+test('seonammedi admin preopens canonical Google chooser and returns to its dedicated admin surface',async()=>{
+  const [adminHtml,adminAuth,app]=await Promise.all([
     readFile(new URL('admin/index.html',root),'utf8'),
     readFile(new URL('../auth-site/admin-auth.js',import.meta.url),'utf8'),
+    readFile(new URL('app.js',root),'utf8'),
   ]);
   assert.match(adminHtml,/서남권 국립의대 소통센터 관리자/);
   assert.match(adminHtml,/site','admin'/);
@@ -38,6 +39,9 @@ test('seonammedi admin uses direct Google auth and returns to its dedicated admi
   assert.match(adminHtml,/ekodi_admin_token/);
   assert.doesNotMatch(adminHtml,/route=workspace/);
   assert.match(adminAuth,/\/seonammedi\/admin/);
-  assert.match(adminAuth,/promptDirectGoogle/);
-  assert.match(adminAuth,/accounts\.google\.com\/gsi\/client/);
+  assert.doesNotMatch(adminAuth,/google\.accounts\.id\.initialize/);
+  assert.match(app,/google-origin-bridge\?wait=1/);
+  assert.match(app,/window\.open\(bridge\.href,'ekodi_google_origin_bridge'/);
+  assert.match(app,/auth\.searchParams\.set\('bridge','preopened'\)/);
+  assert.match(app,/auth\.searchParams\.set\('return_to',returnTo\.href\)/);
 });
