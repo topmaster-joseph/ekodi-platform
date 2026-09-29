@@ -1,0 +1,244 @@
+name: Deploy EKODI KFTC Open Banking Adapter
+
+on:
+  workflow_dispatch:
+    inputs:
+      promote_production:
+        description: 'Promote the verified KFTC read adapter to Production'
+        required: false
+        default: false
+        type: boolean
+  issues:
+    types: [labeled]
+  pull_request:
+    paths:
+      - 'kftc-openbanking-adapter-worker.js'
+      - 'money/kftc-credential-vault.js'
+      - 'wrangler.kftc-openbanking.toml'
+      - 'migrations/20260928_kftc_openbanking_read_adapter.sql'
+      - 'test/kftc-openbanking-adapter.test.mjs'
+      - 'docs/MONEY-KFTC-OPENBANKING-APPLICATION.md'
+      - 'deploy/manifests/kftc-openbanking-adapter.worker.json'
+      - '.github/workflows/deploy-kftc-openbanking-adapter.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'kftc-openbanking-adapter-worker.js'
+      - 'money/kftc-credential-vault.js'
+      - 'wrangler.kftc-openbanking.toml'
+      - 'migrations/20260928_kftc_openbanking_read_adapter.sql'
+      - 'test/kftc-openbanking-adapter.test.mjs'
+      - 'docs/MONEY-KFTC-OPENBANKING-APPLICATION.md'
+      - 'deploy/manifests/kftc-openbanking-adapter.worker.json'
+      - '.github/workflows/deploy-kftc-openbanking-adapter.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-kftc-openbanking-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.127.1'
+
+jobs:
+  validate:
+    if: >-
+      github.event_name != 'issues' ||
+      (github.event.issue.user.login == 'topmaster-joseph' &&
+       github.event.label.name == 'kftc-adapter-release' &&
+       startsWith(github.event.issue.title, '[EKODI RELEASE] KFTC adapter production '))
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate audited issue release intent
+        if: github.event_name == 'issues'
+        shell: bash
+        env:
+          RELEASE_BODY: ${{ github.event.issue.body }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$RELEASE_BODY" | grep -Fxq 'service: kftc-openbanking-adapter'
+          printf '%s\n' "$RELEASE_BODY" | grep -Fxq 'confirmation: PROMOTE_EKODI_KFTC_ADAPTER_PRODUCTION'
+          printf '%s\n' "$RELEASE_BODY" | grep -Fxq "target_sha: $RELEASE_SHA"
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Validate KFTC adapter contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check kftc-openbanking-adapter-worker.js
+          node --check money/kftc-credential-vault.js
+          node --test test/kftc-openbanking-adapter.test.mjs
+          node scripts/validate-additive-migrations.mjs migrations
+          grep -Fq 'KFTC_OPENBANKING_CONTRACT_APPROVED = "false"' wrangler.kftc-openbanking.toml
+          grep -Fq 'KFTC_OPENBANKING_LIVE_READ_ENABLED = "false"' wrangler.kftc-openbanking.toml
+          ! grep -Eqi '(access_token|refresh_token|fintech_use_num|account_num)[[:space:]]+TEXT' migrations/20260928_kftc_openbanking_read_adapter.sql
+          ! grep -Eq 'transfer/(deposit|withdraw)' kftc-openbanking-adapter-worker.js
+
+  staging:
+    needs: validate
+    if: github.event_name != 'issues' || github.event.label.name == 'kftc-adapter-release'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    environment: development
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Resolve isolated staging D1
+        id: staging_d1
+        shell: bash
+        run: |
+          set -euo pipefail
+          list_db() {
+            npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=Array.isArray(j)?j:(j.result||[]);const x=a.find(v=>v.name==='ekodi-auth-staging');if(x)process.stdout.write(x.uuid||x.id||'')})"
+          }
+          DB_ID=$(list_db)
+          if [ -z "$DB_ID" ]; then
+            npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-auth-staging --location apac
+            DB_ID=$(list_db)
+          fi
+          test -n "$DB_ID"
+          echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
+      - name: Build staging config
+        env:
+          DB_ID: ${{ steps.staging_d1.outputs.database_id }}
+        run: |
+          cat > wrangler.kftc-openbanking.staging.runtime.toml <<EOF
+          name = "ekodi-kftc-openbanking-adapter-staging"
+          main = "kftc-openbanking-adapter-worker.js"
+          compatibility_date = "2026-09-28"
+          workers_dev = true
+          preview_urls = false
+          [vars]
+          ENVIRONMENT = "staging"
+          KFTC_OPENBANKING_REDIRECT_URI = "https://ekodi.kr/money/oauth/kftc/callback"
+          KFTC_OPENBANKING_CONTRACT_APPROVED = "false"
+          KFTC_OPENBANKING_LIVE_READ_ENABLED = "false"
+          KFTC_CONNECTION_IMPORT_ENABLED = "false"
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "ekodi-auth-staging"
+          database_id = "$DB_ID"
+          migrations_dir = "migrations"
+          [observability.logs]
+          enabled = true
+          invocation_logs = true
+          EOF
+      - name: Apply migrations to isolated staging D1
+        run: bash scripts/apply-d1-migrations-with-retry.sh DB wrangler.kftc-openbanking.staging.runtime.toml "$WRANGLER_VERSION"
+      - name: Deploy isolated staging adapter
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.kftc-openbanking.staging.runtime.toml
+      - name: Verify staging fail-closed health
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://ekodi-kftc-openbanking-adapter-staging.ekodi-development.workers.dev'
+          for attempt in $(seq 1 18); do
+            protected=$(curl -sS -D /tmp/kftc-access.headers -o /tmp/kftc-access.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url/health" || true)
+            if [[ "$protected" == '302' || "$protected" == '403' ]] && grep -Eiq 'Cloudflare-Access|cloudflareaccess\.com' /tmp/kftc-access.headers /tmp/kftc-access.html; then
+              npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.kftc-openbanking.staging.runtime.toml --json > /tmp/kftc-stage-deployments.json
+              echo 'KFTC adapter staging is deployed and correctly protected by Cloudflare Access.'
+              exit 0
+            fi
+            health_code=$(curl -sS -o /tmp/kftc-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url/health" || true)
+            sync_code=$(curl -sS -o /tmp/kftc-sync.json -w '%{http_code}' -X POST -H 'content-type: application/json' --data '{}' "$url/sync" || true)
+            if [[ "$health_code" == '200' && "$sync_code" == '503' ]] \
+              && grep -Fq '"service":"ekodi-kftc-openbanking-adapter"' /tmp/kftc-health.json \
+              && grep -Fq '"liveReadEnabled":false' /tmp/kftc-health.json \
+              && grep -Fq '"financialExecution":false' /tmp/kftc-health.json \
+              && grep -Fq '"rawAccountNumberCollection":false' /tmp/kftc-health.json \
+              && grep -Fq 'internal_auth_unconfigured' /tmp/kftc-sync.json; then
+              exit 0
+            fi
+            sleep 3
+          done
+          cat /tmp/kftc-health.json 2>/dev/null || true
+          cat /tmp/kftc-sync.json 2>/dev/null || true
+          exit 1
+
+  production:
+    needs: [validate, staging]
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.promote_production == true && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'issues' && github.event.issue.user.login == 'topmaster-joseph' && github.event.label.name == 'kftc-adapter-release' && startsWith(github.event.issue.title, '[EKODI RELEASE] KFTC adapter production '))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate audited issue release intent
+        if: github.event_name == 'issues'
+        shell: bash
+        env:
+          RELEASE_BODY: ${{ github.event.issue.body }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$RELEASE_BODY" | grep -Fxq 'service: kftc-openbanking-adapter'
+          printf '%s\n' "$RELEASE_BODY" | grep -Fxq 'confirmation: PROMOTE_EKODI_KFTC_ADAPTER_PRODUCTION'
+          printf '%s\n' "$RELEASE_BODY" | grep -Fxq "target_sha: $RELEASE_SHA"
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Verify Production Cloudflare boundary
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test "$CLOUDFLARE_ACCOUNT_ID" != '46aad4738793fbaca88574832a2ccc0f'
+      - name: Capture production D1 Time Travel bookmark
+        id: d1_bookmark
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 time-travel info ekodi-auth --config wrangler.kftc-openbanking.toml --json > /tmp/kftc-d1-bookmark.json
+          BOOKMARK=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('/tmp/kftc-d1-bookmark.json','utf8'));const walk=x=>{if(!x||typeof x!=='object')return '';if(typeof x.bookmark==='string')return x.bookmark;for(const v of Object.values(x)){const r=walk(v);if(r)return r}return ''};process.stdout.write(walk(j))")
+          test -n "$BOOKMARK"
+          echo "bookmark=$BOOKMARK" >> "$GITHUB_OUTPUT"
+      - name: Apply production D1 migration
+        run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.kftc-openbanking.toml "$WRANGLER_VERSION"
+      - name: Build candidate at 0%, verify, then promote
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/kftc-openbanking-adapter.worker.json
+      - name: Verify production remains fail-closed without KFTC contract secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://ekodi-kftc-openbanking-adapter.topmaster-joseph.workers.dev'
+          health=$(curl -fsS --retry 6 --retry-delay 2 --connect-timeout 5 --max-time 15 "$url/health")
+          printf '%s' "$health" | grep -Fq '"service":"ekodi-kftc-openbanking-adapter"'
+          printf '%s' "$health" | grep -Fq '"liveReadEnabled":false'
+          printf '%s' "$health" | grep -Fq '"financialExecution":false'
+          printf '%s' "$health" | grep -Fq '"transferExecution":false'
+          code=$(curl -sS -o /tmp/kftc-prod-sync.json -w '%{http_code}' -X POST -H 'content-type: application/json' --data '{}' "$url/sync")
+          echo "production /sync HTTP $code"
+          cat /tmp/kftc-prod-sync.json
+          test "$code" = '503'
+          grep -Fq 'internal_auth_unconfigured' /tmp/kftc-prod-sync.json
+      - name: Record recovery point
+        env:
+          BOOKMARK: ${{ steps.d1_bookmark.outputs.bookmark }}
+        run: |
+          echo "KFTC adapter D1 bookmark before migration: $BOOKMARK" >> "$GITHUB_STEP_SUMMARY"
+          echo "Live KFTC read and all financial execution remain disabled." >> "$GITHUB_STEP_SUMMARY"
