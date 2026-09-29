@@ -18,6 +18,7 @@ create table if not exists private.person_contact_exchanges (
   id uuid primary key default gen_random_uuid(),
   receiver_person_id uuid not null references public.people(id) on delete cascade,
   sender_person_id uuid not null references public.people(id) on delete cascade,
+  sender_name text not null,
   affiliation text not null default '',
   title text not null default '',
   website text not null default '',
@@ -281,19 +282,20 @@ begin
     on conflict(kind,normalized_value) do update set value=excluded.value,updated_at=now();
   end if;
 
-  insert into private.person_contact_exchanges(
-    receiver_person_id,sender_person_id,affiliation,title,website,source_channel,privacy_consent
+  insert into private.person_contact_exchanges as existing(
+    receiver_person_id,sender_person_id,sender_name,affiliation,title,website,source_channel,privacy_consent
   ) values (
-    v_receiver,v_sender,v_affiliation,v_title,v_website,v_source,true
+    v_receiver,v_sender,v_name,v_affiliation,v_title,v_website,v_source,true
   )
   on conflict(receiver_person_id,sender_person_id) do update
-    set affiliation=excluded.affiliation,
+    set sender_name=excluded.sender_name,
+        affiliation=excluded.affiliation,
         title=excluded.title,
         website=excluded.website,
         source_channel=excluded.source_channel,
         privacy_consent=true,
         last_shared_at=now(),
-        share_count=private.person_contact_exchanges.share_count+1
+        share_count=existing.share_count+1
   returning id into v_exchange;
 
   return jsonb_build_object('ok',true,'exchange_id',v_exchange);
@@ -329,7 +331,7 @@ begin
   )
   select coalesce(jsonb_agg(jsonb_build_object(
     'id',r.id,
-    'name',p.display_name,
+    'name',r.sender_name,
     'phone',coalesce(phone.value,''),
     'email',coalesce(email.value,''),
     'affiliation',r.affiliation,
