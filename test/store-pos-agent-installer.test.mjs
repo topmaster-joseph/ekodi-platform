@@ -13,13 +13,13 @@ const remove=read('agents/windows-pos/remove-pos-agent.cmd');
 const readme=read('agents/windows-pos/README.md');
 
 test('one-click POS Agent setup is fixed to the official package and elevates explicitly',()=>{
-  assert.match(setup,/raw\.githubusercontent\.com\/topmaster-joseph\/ekodi-platform\/main\/agents\/windows-pos/);
+  assert.match(setup,/https:\/\/ekodi\.kr\/cmpmyi\/admin\/agent\/download/);
   for(const name of ['install-pos-agent.ps1','EKODI-POS-Agent.ps1','pos-agent.config.example.json','diagnose-pos-targets.ps1','start-pos-agent.cmd','stop-pos-agent.cmd','uninstall-pos-agent.ps1']) assert.match(setup,new RegExp(name.replaceAll('.','\\.')));
   assert.match(setup,/Start-Process -FilePath '%ComSpec%'.*-Verb RunAs/);
   assert.match(setup,/listenerPrefix must remain loopback-only/);
   assert.match(setup,/explicit_user_action_only/);
   assert.doesNotMatch(setup,/Invoke-Expression|\biex\b/i);
-  assert.doesNotMatch(setup,/https:\/\/(?!raw\.githubusercontent\.com\/topmaster-joseph\/ekodi-platform\/main\/agents\/windows-pos)/i);
+  assert.doesNotMatch(setup,/raw\.githubusercontent\.com|github\.com\/topmaster-joseph/i);
 });
 
 test('POS Agent installer keeps the local control boundary and interactive user session',()=>{
@@ -54,7 +54,7 @@ test('POS target diagnostics are read-only and uninstall supports config preserv
 
 test('one-click POS Agent removal is fixed to the official uninstall script and asks before deleting',()=>{
   assert.match(remove,/choice \/C YN/);
-  assert.match(remove,/raw\.githubusercontent\.com\/topmaster-joseph\/ekodi-platform\/main\/agents\/windows-pos\/uninstall-pos-agent\.ps1/);
+  assert.match(remove,/https:\/\/ekodi\.kr\/cmpmyi\/admin\/agent\/download\/uninstall-pos-agent\.ps1/);
   assert.match(remove,/Start-Process -FilePath '%ComSpec%'.*-Verb RunAs/);
   assert.match(remove,/EKODI POS Agent removed/);
   assert.doesNotMatch(remove,/Invoke-Expression|\biex\b/i);
