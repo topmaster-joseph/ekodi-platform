@@ -1,5 +1,5 @@
 {
-  "version": 96,
+  "version": 97,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -83,6 +83,11 @@
         "redirect": "manual",
         "expect": [
           "통합 매장 운영",
+          "POS 통합화면",
+          "연결관리",
+          "채널 · 자동게시",
+          "cmpmyiStoreSelect",
+          "매장별 메뉴",
           "자담치킨 목포대점",
           "피자마루 목포대점",
           "요거트퍼플 목포대점"
@@ -94,6 +99,24 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/cmpmyi/admin/shell.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "cmpmyiStoreSelect",
+          "ekodi-cmpmyi-direct-brand",
+          "data-store-menu",
+          "localStorage"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/cmpmyi/admin/agent",
         "statuses": [
           200
@@ -101,8 +124,8 @@
         "redirect": "manual",
         "expect": [
           "통합 매장 운영",
-          "POS Agent 관리",
-          "/cmpmyi/admin/panel/agent"
+          "/cmpmyi/admin/panel/agent",
+          "cmpmyiStoreSelect"
         ],
         "headerExpect": [
           "x-ekodi-route: cmpmyi-store-portfolio-admin",
