@@ -103,9 +103,9 @@ test('shared admin navigation exposes seven canonical areas with top contextual 
   assert.match(registry, /id: 'devices', group: 'status'/);
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
   assert.match(sidebar, /admin-global-navs/);
-  assert.match(sidebar, /admin-context-tabs-shell/);
-  assert.match(sidebar, /admin-context-tabs/);
-  assert.match(sidebar, /data-admin-context-section/);
+  assert.doesNotMatch(sidebar, /data-admin-context-section/);
+  assert.doesNotMatch(sidebar, /dataset\.adminCommandHome/);
+  assert.match(sidebar, /main\?\.querySelector\(':scope>\.admin-context-tabs-shell'\)\?\.remove\(\)/);
   assert.doesNotMatch(sidebar, /shortcut\.textContent = locale === 'en' \? '⚡ Capabilities' : '⚡ 기능'/);
   assert.match(sidebar, /admin-context-source/);
   assert.match(sidebar, /adminMenuGovernance = 'role-projected-sidebar-v4'/);
