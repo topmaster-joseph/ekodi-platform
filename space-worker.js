@@ -112,6 +112,22 @@ async function routeMissionCollabPage(request,env){
   response.headers.set('x-ekodi-independent-site','true');response.headers.set('x-ekodi-workspace','ekodimission');response.headers.set('x-ekodi-publication-status','private-edit');response.headers.set('x-robots-tag','noindex, nofollow, noarchive');return response;
 }
 
+async function routeMissionActivityArchive(request,env,activityKey){
+  if(!['GET','HEAD'].includes(request.method))return withHeaders(env,new Response('Method Not Allowed',{status:405}),'ekodimission-archive');
+  const result=await missionSupabaseRpc(env,'activity_public_archive_snapshot',{p_workspace_slug:'ekodimission',p_activity_key:activityKey});
+  const data=result?.data;
+  if(!result.ok||!data?.ok){
+    const status=data?.error==='not_ended'?404:404;
+    return withHeaders(env,new Response('Not Found',{status}),'ekodimission-archive');
+  }
+  const esc=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const media=Array.isArray(data.media)?data.media:[];
+  const cards=media.length?media.map(item=>'<a class="service-card" href="'+esc(item.url)+'" target="_blank" rel="noopener noreferrer"><p class="eyebrow">'+esc(String(item.type||'media').toUpperCase())+'</p><h2>'+esc(item.title||'사진·영상 보기')+'</h2><p>외부 저장소에서 보기 →</p></a>').join(''):'<article class="service-card"><h2>사진·영상 정리 중</h2><p>관련 사진과 영상 링크가 등록되면 이곳에 자동으로 표시됩니다.</p></article>';
+  const html='<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="index,follow"><title>'+esc(data.activity?.title||'행사 결과')+' · 사진·영상</title><link rel="stylesheet" href="/ekodimission/assets/site.css"><link rel="stylesheet" href="/ekodimission/assets/shell.css"><script src="/ekodimission/assets/shell.js" defer></script></head><body><header class="mission-site-header"><a class="mission-brand" href="/ekodimission"><span class="mission-brand-mark">E</span><span><strong>에코디선교회</strong><small>EKODI MISSION</small></span></a><nav aria-label="주요 메뉴" data-mission-nav></nav></header><main class="subpage"><a class="back" href="/ekodimission/activities">← 활동</a><section class="sub-hero"><p class="eyebrow">ACTIVITY ARCHIVE</p><h1>'+esc(data.activity?.title||'행사 결과')+'</h1><p>'+esc(data.activity?.venue||'')+'</p></section><section class="service-grid">'+cards+'</section></main></body></html>';
+  const headers={'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-robots-tag':'index, follow'};
+  return withHeaders(env,new Response(request.method==='HEAD'?null:html,{status:200,headers}),'ekodimission-archive');
+}
+
 async function routeMissionAdminActivityRpc(request,env){
   if(request.method!=='POST')return json(env,{error:'method_not_allowed',message:'POST 요청만 허용됩니다.'},405);
   if(env.DATA_ENABLED!=='true'||!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return json(env,{error:'activity_gateway_unavailable',message:'행사 관리 데이터 연결을 확인해 주세요.'},503);
@@ -134,7 +150,7 @@ async function routeMissionAdminActivityRpc(request,env){
   }
 }
 async function routeEkodiMission(request,env){
-  const url=new URL(request.url);const pathname=normalizedMissionPath(url.pathname);if(pathname===MISSION_ADMIN_ACTIVITY_RPC_API)return routeMissionAdminActivityRpc(request,env);if(pathname===MISSION_TRIP_CONTENT_API)return routeMissionTripContent(request,env);if(pathname===MISSION_COLLAB_API)return routeMissionCollabApi(request,env);if(pathname===MISSION_TRIP_COLLAB_PATH)return routeMissionCollabPage(request,env);const shareMatch=pathname.match(MISSION_SHARE_PATH_RE);
+  const url=new URL(request.url);const pathname=normalizedMissionPath(url.pathname);if(pathname===MISSION_ADMIN_ACTIVITY_RPC_API)return routeMissionAdminActivityRpc(request,env);if(pathname===MISSION_TRIP_CONTENT_API)return routeMissionTripContent(request,env);if(pathname===MISSION_COLLAB_API)return routeMissionCollabApi(request,env);if(pathname===MISSION_TRIP_COLLAB_PATH)return routeMissionCollabPage(request,env);const archiveMatch=pathname.match(/^\/ekodimission\/activities\/([a-z0-9-]+)\/archive$/);if(archiveMatch)return routeMissionActivityArchive(request,env,archiveMatch[1]);const shareMatch=pathname.match(MISSION_SHARE_PATH_RE);
   if(shareMatch)return routeMissionShare(request,env,shareMatch[1]);
   if(MISSION_EVENT_LEGACY_PATHS.has(pathname)){const target=new URL(MISSION_EVENT_PATH+url.search,'https://ekodi.kr');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-route':'ekodimission-event-canonical','x-ekodi-publication-status':'published'}});}
   if(pathname==='/ekodimission/live'){
