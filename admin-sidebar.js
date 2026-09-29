@@ -15,9 +15,7 @@ const mounted = new WeakMap();
 const RETIRED_MENU_SECTIONS = new Set(['overview']);
 const GLOBAL_CLASS = 'admin-global-navs';
 const SOURCE_CLASS = 'admin-context-source';
-const TABS_SHELL_CLASS = 'admin-context-tabs-shell';
-const TABS_CLASS = 'admin-context-tabs';
-// LEFT-NAV-AUTHORITY-006: visible Admin navigation is left-side direct work only; context tabs are compatibility state, never an interaction fallback.
+// LEFT-NAV-AUTHORITY-006: visible Admin navigation is left-side direct work only.
 const DETAILS_CLASS = 'admin-global-details';
 const MORE_CLASS = 'admin-detail-more';
 const MOBILE_NAV_CLASS = 'admin-mobile-primary-nav';
@@ -188,23 +186,8 @@ function ensureContainers(nav, root = document) {
     nav.prepend(globals);
   }
 
-  let commandEntry = nav.querySelector(':scope>.admin-command-entry');
-  if (!commandEntry) {
-    commandEntry = document.createElement('button');
-    commandEntry.type = 'button';
-    commandEntry.className = 'admin-command-entry';
-    commandEntry.dataset.adminCommandHome = 'true';
-    const icon = document.createElement('b');
-    icon.setAttribute('aria-hidden', 'true');
-    icon.textContent = '+';
-    const label = document.createElement('span');
-    commandEntry.append(icon, label);
-    nav.insertBefore(commandEntry, globals);
-  }
-  commandEntry.hidden = true;
-  commandEntry.setAttribute('aria-hidden', 'true');
-  commandEntry.tabIndex = -1;
-  commandEntry.style.setProperty('display', 'none', 'important');
+  // Retired visible chrome must not survive hydration or partial page replacement.
+  nav.querySelector(':scope>.admin-command-entry')?.remove();
 
   let source = nav.querySelector(`:scope>.${SOURCE_CLASS}`);
   if (!source) {
@@ -218,27 +201,8 @@ function ensureContainers(nav, root = document) {
   for (const legacy of [...nav.querySelectorAll(':scope>.admin-context-nav,:scope>.admin-nav-assist')]) legacy.remove();
 
   const main = root.querySelector?.('#app main') || root.querySelector?.('main');
-  let shell = main?.querySelector(`:scope>.${TABS_SHELL_CLASS}`) || null;
-  if (main && !shell) {
-    shell = document.createElement('div');
-    shell.className = TABS_SHELL_CLASS;
-    shell.dataset.adminContextHeader = 'true';
-    const title = document.createElement('div');
-    title.className = 'admin-context-title';
-    const tabs = document.createElement('div');
-    tabs.className = TABS_CLASS;
-    tabs.setAttribute('role', 'tablist');
-    shell.append(title, tabs);
-    const topbar = main.querySelector(':scope>.topbar');
-    if (topbar) topbar.insertAdjacentElement('afterend', shell);
-    else main.prepend(shell);
-  }
-  if (shell) {
-    shell.hidden = true;
-    shell.setAttribute('aria-hidden', 'true');
-    shell.style.setProperty('display', 'none', 'important');
-  }
-  return { globals, source, shell, commandEntry };
+  main?.querySelector(':scope>.admin-context-tabs-shell')?.remove();
+  return { globals, source };
 }
 
 function isPlatformSuperAdminSurface(){
@@ -422,64 +386,20 @@ function availableIds(nav, group) {
   });
 }
 
-function renderContextTabs(nav, shell, group, section, locale) {
-  if (!shell) return;
-  const title = shell.querySelector('.admin-context-title');
-  const tabs = shell.querySelector(`.${TABS_CLASS}`);
-  if (!tabs) return;
-  const groupLabel = getAdminMenuGroupLabel(group, locale);
-  if (title) title.textContent = groupLabel;
-  const ids = availableIds(nav, group);
-  const suppressContextTabs = FLAT_DETAIL_GROUPS.has(group);
-  const singleEquivalent = ids.length === 1 && getAdminMenuLabel(ids[0], locale) === groupLabel;
-  const hideContextTabs = suppressContextTabs || singleEquivalent;
-  shell.dataset.adminSingleContext = hideContextTabs ? 'true' : 'false';
-  tabs.hidden = hideContextTabs;
-  const signature = `${locale}|${group}|${ids.join(',')}`;
-  if (tabs.dataset.renderSignature !== signature) {
-    tabs.dataset.renderSignature = signature;
-    const nodes = ids.map(id => {
-      const button = document.createElement('button');
-      button.type = 'button'; button.className = 'admin-context-tab';
-      button.dataset.adminContextSection = id; button.setAttribute('role', 'tab');
-      button.textContent = getAdminMenuLabel(id, locale); return button;
-    });
-    tabs.replaceChildren(...nodes);
-  }
-  for (const button of tabs.querySelectorAll('[data-admin-context-section]')) {
-    const selected = button.dataset.adminContextSection === section;
-    button.classList.toggle('active', selected);
-    button.setAttribute('aria-selected', selected ? 'true' : 'false');
-  }
-}
-
 function syncWorkbenchState(nav, locale, preferredSection = '') {
-  const { globals, shell, commandEntry } = ensureContainers(nav);
+  const { globals } = ensureContainers(nav);
   globalButtons(globals, locale);
-  if (commandEntry) {
-    const label = commandEntry.querySelector('span');
-    const text = locale === 'en' ? 'New task' : '새 작업';
-    if (label && label.textContent !== text) label.textContent = text;
-    commandEntry.setAttribute('aria-label', locale === 'en' ? 'Start a new EKODI task' : '에코디 새 작업 시작');
-  }
-  if (shell) shell.querySelector('[data-admin-capability-shortcut]')?.remove();
   const section = preferredSection || activeSection(nav);
   const activeGroup = getAdminMenuGroupForSection(section);
   const focusedGroup = String(nav.dataset.adminFocusedGroup || '').trim();
   const group = ADMIN_MENU_GROUPS.some(item => item.id === focusedGroup) ? focusedGroup : activeGroup;
   const displayedSection = group === activeGroup ? section : '';
-  if (commandEntry) {
-    const selected = section === 'command-home' && !focusedGroup;
-    commandEntry.classList.toggle('active', selected);
-    commandEntry.setAttribute('aria-current', selected ? 'page' : 'false');
-  }
   for (const button of globals.querySelectorAll('[data-admin-global-group]')) {
     const selected = button.dataset.adminGlobalGroup === group && (section !== 'command-home' || Boolean(focusedGroup));
     button.classList.toggle('active', selected);
     button.setAttribute('aria-current', selected ? 'page' : 'false');
     button.setAttribute('aria-expanded', selected ? 'true' : 'false');
   }
-  renderContextTabs(nav, shell, group, displayedSection, locale);
   if (isPlatformSuperAdminSurface()) renderSidebarDetails(nav, globals, group, displayedSection || section, locale);
   else globals.querySelector(`:scope>.${DETAILS_CLASS}`)?.remove();
   nav.dataset.adminGlobalGroup = group;
@@ -687,15 +607,6 @@ export function mountAdminSidebar(root = document, options = {}) {
   observer.observe(nav, { childList: true, subtree: false });
 
   nav.addEventListener('click', event => {
-    const commandEntry = event.target.closest('[data-admin-command-home]');
-    if (commandEntry) {
-      event.preventDefault();
-      delete nav.dataset.adminFocusedGroup;
-      activateSection(nav, 'command-home');
-      closeDrawer();
-      schedule();
-      return;
-    }
     const more = event.target.closest('[data-admin-detail-more]');
     if (more) {
       event.preventDefault();
@@ -732,23 +643,6 @@ export function mountAdminSidebar(root = document, options = {}) {
     schedule();
   }, true);
 
-  // Post-auth runtime may replace <main>. Delegate contextual-tab clicks from the
-  // stable mount root so newly rendered tab strips never lose navigation handlers.
-  const contextClick = event => {
-    const tab = event.target.closest?.('[data-admin-context-section]');
-    if (!tab) return;
-    event.preventDefault();
-    if (tab.dataset.adminContextSection === 'openai') {
-      const source = activeSection(nav);
-      if (source && source !== 'openai') try { sessionStorage.setItem('ekodi-openai-source-section', source); } catch {}
-    }
-    delete nav.dataset.adminFocusedGroup;
-    activateSection(nav, tab.dataset.adminContextSection);
-    closeDrawer();
-    schedule();
-  };
-  root.addEventListener?.('click', contextClick, true);
-
   window.addEventListener('ekodi-nav-changed', schedule);
   window.addEventListener('ekodi-feature-installed', schedule);
   const sectionChanged = () => { delete nav.dataset.adminFocusedGroup; schedule(); };
@@ -760,7 +654,6 @@ export function mountAdminSidebar(root = document, options = {}) {
     order: () => adminMenuOrder(),
     destroy: () => {
       observer.disconnect();
-      root.removeEventListener?.('click', contextClick, true);
       menuButton?.removeEventListener('click',toggleDrawer);
       mobilePrimary?.removeEventListener('click',mobilePrimaryClick);
       drawerScrim?.removeEventListener('click',scrimClick);
