@@ -71,5 +71,21 @@
     "manager": "https://ekodi.kr/my/",
     "sourceOfTruth": "service_subscriptions_and_workspace_access",
     "owningServiceRemainsFinalExecutionGate": true
+  },
+  "enforcedLoginInheritance": {
+    "policyId": "UNIVERSAL-FREE-IDENTITY-001",
+    "status": "enforced",
+    "singleGoogleLoginCreatesCanonicalPerson": true,
+    "canonicalPersonReceivesUniversalFree": true,
+    "allRegistryUserServicesInheritUniversalFree": true,
+    "repeatSignupPerServiceForbidden": true,
+    "centralSessionReuseAcrossRegistryServices": true,
+    "reauthenticationOnlyWhenSessionOrSecurityRequires": true,
+    "exactInitiatingSiteReturnRequired": true,
+    "crossServicePostLoginFallbackForbidden": true,
+    "paidEntitlementsRemainServiceSpecific": true,
+    "tenantAndWorkspaceAuthorizationRemainSeparate": true,
+    "siteAdminAuthorityPropagationForbidden": true,
+    "platformAdminAuthorityPropagationForbidden": true
   }
 }

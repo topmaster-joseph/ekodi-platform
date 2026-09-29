@@ -18,7 +18,7 @@ const surfaceVerification = json('config/surface-system-verification-policy.json
 const executionFabric = json('config/autonomous-execution-fabric-policy.json');
 const remoteComputer = json('config/remote-computer-execution-policy.json');
 
-if (constitution.version !== '1.26.0') fail('constitution version must be 1.26.0 with Mandatory Automatic Execution Lifecycle enforcement plus all prior approved amendments');
+if (constitution.version !== '1.26.1') fail('constitution version must be 1.26.1 with Universal FREE Identity enforcement plus all prior approved amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
 for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','capability-before-service-enforced','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding','guest-open-public-user-surfaces','self-verifying-all-surface-system-evidence','ekodi-owned-virtualization-first','authentication-return-continuity','canonical-human-url-without-tracking-query','evidence-gated-ai-claims','evidence-gated-external-knowledge','automatic-execution-background-only-enforced']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
@@ -302,6 +302,13 @@ for(const key of ['return_to','code','state','page','q','filter']) if(!canonical
 for(const route of ['/api','/webhooks','/mcp','/health','static-assets']) if(!canonicalUrlQuery.excludedSystemRoutes?.includes(route)) fail(`canonical URL system-route exclusion missing: ${route}`);
 if(canonicalUrlQuery.trackingQueryMayNotDefineIdentityAuthorizationOrRouting!==true) fail('tracking query parameters must never define identity, authorization or routing');
 if(canonicalUrlQuery.appliesToLegacyHumanEntryAliases!==true) fail('canonical URL query hygiene must cover legacy human-entry aliases');
+
+const universalFree=constitution.universalFreeIdentityPolicy||{};
+if(universalFree.id!=='UNIVERSAL-FREE-IDENTITY-001'||universalFree.status!=='enforced') fail('universal FREE identity policy must remain enforced');
+if(universalFree.scope!=='all-current-and-future-registry-user-services') fail('universal FREE identity scope drifted');
+for(const key of ['singleGoogleLoginCreatesCanonicalPerson','canonicalPersonReceivesUniversalFree','repeatSignupPerServiceForbidden','registryServicesAutomaticallyInherit','centralSessionReuseRequired','reauthenticationOnlyWhenSessionOrSecurityRequires']) if(universalFree[key]!==true) fail(`universal FREE identity rule missing: ${key}`);
+if(universalFree.authenticationReturn?.exactInitiatingSiteReturnRequired!==true||universalFree.authenticationReturn?.crossServiceFallbackForbidden!==true||universalFree.authenticationReturn?.genericMyEkodiFallbackForbidden!==true) fail('universal FREE login must return to the initiating site without cross-service fallback');
+for(const key of ['freeMembershipDoesNotGrantPaidFeatures','freeMembershipDoesNotGrantTenantOrWorkspaceMembership','freeMembershipDoesNotGrantSiteAdmin','freeMembershipDoesNotGrantPlatformAdmin','siteAdminAuthorityMayNotPropagateAcrossSites']) if(universalFree.privilegeSeparation?.[key]!==true) fail(`universal FREE privilege separation missing: ${key}`);
 
 const authReturn=constitution.authenticationReturnContinuityPolicy||{};
 if(authReturn.id!=='AUTH-RETURN-CONTINUITY-001'||authReturn.status!=='active') fail('authentication return continuity policy must remain active');

@@ -25,6 +25,22 @@ if (policy.myEkodi?.canonicalUrl !== 'https://ekodi.kr/my/' || policy.myEkodi?.c
 if (policy.capabilityEntitlements?.sameCapabilitySameSubjectAcrossSurfaces !== true || policy.capabilityEntitlements?.duplicatePurchaseForSameCapabilityForbidden !== true) fail('same-subject capability sharing rule missing');
 if (policy.capabilityEntitlements?.siteAddonsRemainSiteScoped !== true || policy.capabilityEntitlements?.manager !== 'https://ekodi.kr/my/') fail('site add-on or manager boundary changed');
 if (policy.automaticInheritance?.enabledForFutureRegistryServices !== true) fail('future service inheritance must stay enabled');
+const forcedLogin=policy.enforcedLoginInheritance||{};
+if (forcedLogin.policyId !== 'UNIVERSAL-FREE-IDENTITY-001' || forcedLogin.status !== 'enforced') fail('universal FREE login inheritance must remain enforced');
+for (const key of [
+  'singleGoogleLoginCreatesCanonicalPerson',
+  'canonicalPersonReceivesUniversalFree',
+  'allRegistryUserServicesInheritUniversalFree',
+  'repeatSignupPerServiceForbidden',
+  'centralSessionReuseAcrossRegistryServices',
+  'reauthenticationOnlyWhenSessionOrSecurityRequires',
+  'exactInitiatingSiteReturnRequired',
+  'crossServicePostLoginFallbackForbidden',
+  'paidEntitlementsRemainServiceSpecific',
+  'tenantAndWorkspaceAuthorizationRemainSeparate',
+  'siteAdminAuthorityPropagationForbidden',
+  'platformAdminAuthorityPropagationForbidden',
+]) if (forcedLogin[key] !== true) fail(`forced login inheritance rule missing: ${key}`);
 
 for (const id of expectedIds) {
   if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(id)) fail(`invalid service id ${id}`);

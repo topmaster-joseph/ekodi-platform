@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.26.0
+# EKODI Platform Constitution v1.26.1
 
-Effective: 2026-09-27
+Effective: 2026-09-29
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 
@@ -113,6 +113,16 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Provider groups or accounts may synchronize with EKODI but cannot become the authorization source of truth.
 - Protected requests resolve authentication, tenant, authorization, rate policy and input validity before business logic.
 - `Workspace` is the canonical operating-context term. Legacy `Space` terminology may remain only as a compatibility surface during migration and must not create a second identity, authority or routing model.
+
+## 3A-0. Universal FREE Identity Constitution
+- A verified first Google sign-in from any registered EKODI user service creates or resolves exactly one canonical EKODI Person and establishes the ecosystem-wide FREE entitlement.
+- Registered user services inherit this FREE entitlement automatically. Per-service repeat signup is forbidden.
+- A valid central EKODI session is reused across registered user services; Google reauthentication is requested only when session validity or security policy requires it.
+- Authentication returns to the exact trusted initiating site and path. Cross-service fallback and generic My EKODI fallback are forbidden.
+- Universal FREE never grants or upgrades paid features, tenant/workspace membership, site administrator authority or platform administrator authority.
+- Site administrator authority is site-scoped and cannot propagate to another site without an explicit EKODI membership/capability grant for that target site.
+- These conditions apply to current and future user services and are merge-blocking through `validate:membership` and `validate:constitution`.
+- Machine-readable authority: `governance/constitution/constitution.json` -> `universalFreeIdentityPolicy` and `config/universal-membership.json` -> `enforcedLoginInheritance`.
 
 ## 3A. Authentication Return Continuity Constitution
 - Authentication is a temporary identity boundary, never a navigation destination. After successful sign-in, the user returns to the exact trusted page that initiated login whenever a valid `return_to` exists.
