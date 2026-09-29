@@ -395,6 +395,7 @@
         "redirect": "manual",
         "expect": [
           "EKODI REALTIME",
+          "mission-live-intro",
           "class=\"mission-site-header\"",
           "data-mission-nav",
           "/ekodimission/assets/shell.css",
