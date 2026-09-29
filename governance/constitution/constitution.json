@@ -1129,5 +1129,36 @@
       "test/automatic-execution-constitution.test.mjs",
       "test/hybrid-execution-contract.test.mjs"
     ]
+  },
+  "universalFreeIdentityPolicy": {
+    "id": "UNIVERSAL-FREE-IDENTITY-001",
+    "status": "enforced",
+    "scope": "all-current-and-future-registry-user-services",
+    "singleGoogleLoginCreatesCanonicalPerson": true,
+    "canonicalPersonReceivesUniversalFree": true,
+    "repeatSignupPerServiceForbidden": true,
+    "registryServicesAutomaticallyInherit": true,
+    "centralSessionReuseRequired": true,
+    "reauthenticationOnlyWhenSessionOrSecurityRequires": true,
+    "authenticationReturn": {
+      "exactInitiatingSiteReturnRequired": true,
+      "crossServiceFallbackForbidden": true,
+      "genericMyEkodiFallbackForbidden": true
+    },
+    "privilegeSeparation": {
+      "freeMembershipDoesNotGrantPaidFeatures": true,
+      "freeMembershipDoesNotGrantTenantOrWorkspaceMembership": true,
+      "freeMembershipDoesNotGrantSiteAdmin": true,
+      "freeMembershipDoesNotGrantPlatformAdmin": true,
+      "siteAdminAuthorityMayNotPropagateAcrossSites": true
+    },
+    "enforcement": [
+      "config/universal-membership.json",
+      "universal-membership.js",
+      "auth-site/auth.js",
+      "scripts/validate-universal-membership.mjs",
+      "scripts/validate-constitution.mjs",
+      "system-verification"
+    ]
   }
 }
