@@ -6,7 +6,7 @@ const LOCALE_KEY = 'ekodi-admin-locale';
 const LOCALE_COOKIE = 'ekodi_admin_locale';
 const CONTEXT_KEY = 'ekodi-admin-context-v1';
 const CENTRAL_ADMIN_AUTH = 'https://ekodi.kr/auth/';
-const ADMIN_HANDOFF_ALLOWED_TARGETS = new Set(['https://ekodi.kr/tax','https://ekodi.kr/work/admin']);
+const ADMIN_HANDOFF_ALLOWED_TARGETS = new Set(['https://ekodi.kr/tax','https://ekodi.kr/work/admin','https://ekodi.kr/cmpmyi/admin/agent']);
 const ROLES = ['super_admin', 'operator', 'viewer'];
 const SPACE_ADMIN_ROLES = Object.freeze([
   ['owner','책임관리자'],
