@@ -53,4 +53,24 @@ test('workspace and trade admins expose scope handoff only through full authorit
   assert.match(tradeScript,/사이트 전환/);
   assert.match(tradeScript,/admin-scope-select/);
   assert.match(tradeScript,/option\.selected=scope\.id==='trade'/);
+  assert.match(html,/data-ekodibiz-site-switch/);
+  assert.match(rootScript,/dataset\.adminScopeCurrent=current/);
+  assert.match(tradeScript,/dataset\.adminScopeCurrent='trade'/);
+});
+
+test('all EKODIBIZ admin surfaces share one site-switch contract',async()=>{
+  const [invest,tax,runtime]=await Promise.all([
+    readFile(new URL('../ekodibiz-invest-admin-page.js',import.meta.url),'utf8'),
+    readFile(new URL('../tax-portal-worker.js',import.meta.url),'utf8'),
+    readFile(new URL('../admin-menu-runtime.js',import.meta.url),'utf8'),
+  ]);
+  for(const source of [invest,tax,runtime]){
+    assert.match(source,/admin-scope-switcher/);
+    assert.match(source,/admin-scope-select/);
+    assert.match(source,/admin-scope-label/);
+    assert.match(source,/관리 사이트 전환/);
+  }
+  assert.match(invest,/data-admin-scope-current="invest"/);
+  assert.match(tax,/data-admin-scope-current="tax"/);
+  assert.match(runtime,/dataset\.adminScopeCurrent='books'/);
 });
