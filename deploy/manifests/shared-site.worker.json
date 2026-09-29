@@ -1,5 +1,5 @@
 {
-  "version": 95,
+  "version": 96,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -90,6 +90,43 @@
         "headerExpect": [
           "x-ekodi-route: cmpmyi-store-portfolio-admin",
           "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cmpmyi/admin/agent",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "통합 매장 운영",
+          "POS Agent 관리",
+          "/cmpmyi/admin/panel/agent"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: cmpmyi-store-portfolio-admin",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cmpmyi/admin/panel/agent",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "POS Agent 설치·관리",
+          "원클릭 설치 다운로드",
+          "원클릭 삭제 다운로드",
+          "posAgentCheck",
+          "127.0.0.1"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: cmpmyi-store-portfolio-panel",
+          "cache-control: no-store",
+          "x-frame-options: SAMEORIGIN"
         ],
         "rollbackVerify": false
       },
