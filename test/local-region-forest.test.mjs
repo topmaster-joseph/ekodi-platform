@@ -20,6 +20,9 @@ test('forest public and admin pages expose project-first surfaces',async()=>{
   assert.match(publicHtml,/data-forest-history/);
   assert.match(publicHtml,/local-region-forest-public\.js/);
   assert.match(publicHtml,/href="\/cheonggye\/forest\/history"/);
+  assert.match(publicHtml,/<link rel="canonical" href="https:\/\/ekodi\.kr\/cheonggye\/forest\/history">/);
+  assert.match(publicHtml,/<meta property="og:url" content="https:\/\/ekodi\.kr\/cheonggye\/forest\/history">/);
+  assert.doesNotMatch(adminHtml,/rel="canonical"/);
   assert.match(adminHtml,/국민의숲 이력관리/);
   assert.match(adminHtml,/data-forest-record-form/);
   assert.match(adminHtml,/local-region-admin-auth\.js/);
