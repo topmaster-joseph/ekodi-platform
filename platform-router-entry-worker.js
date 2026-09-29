@@ -53,6 +53,7 @@ import { regionalCommerceProgramFromLocalRoute } from './regional-commerce-progr
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
 import { handleSeonamMediCivicApi } from './seonam-medi-civic-control.js';
+import { handleSeonamMediAdminApi } from './seonam-medi-admin-control.js';
 import { handleSeonamMediMonitorApi } from './seonam-medi-monitor.js';
 
 const PUBLIC_HOST='ekodi.kr';
@@ -373,7 +374,7 @@ async function routePlatform(request,env,ctx){
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
     if(host===PUBLIC_HOST&&url.pathname.startsWith(MALL_API_APEX_PREFIX)){const mallApi=await routeMallApiApex(request,env);if(mallApi)return mallApi;}
-    if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/seonam-medi/')){const monitor=await handleSeonamMediMonitorApi(request,env);if(monitor)return monitor;const civic=await handleSeonamMediCivicApi(request,env);if(civic)return civic;}
+    if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/seonam-medi/')){const admin=await handleSeonamMediAdminApi(request,env);if(admin)return admin;const monitor=await handleSeonamMediMonitorApi(request,env);if(monitor)return monitor;const civic=await handleSeonamMediCivicApi(request,env);if(civic)return civic;}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isLegacySeonamMedPath(url.pathname))return redirectLegacySeonamMed(request);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isSeonamMediPath(url.pathname))return routeSeonamMediStatic(request,env);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isPyeonggongmokPath(url.pathname))return routePyeonggongmokStatic(request,env);
