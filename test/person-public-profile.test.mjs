@@ -96,7 +96,7 @@ test('canonical apex hands person digital-card paths to My EKODI',async()=>{
   for(const path of ['/joseph/card','/joseph/card.vcf','/joseph/card/exchange','/joseph/qr']){
     const my=binding('<html>card</html>','text/html');
     const method=path.endsWith('/exchange')?'POST':'GET';
-    const response=await routeCanonicalSurface(new Request('https://ekodi.kr'+path,{method,headers:method==='POST'?{'content-type':'application/json'}:undefined,body:method==='POST'?'{}':undefined}),{MY:my});
+    const response=await routeCanonicalSurface(new Request('https://ekodi.kr'+path,{method}),{MY:my});
     assert.ok(response);
     assert.equal(my.calls.length,1);
     assert.equal(my.calls[0].pathname,path);
