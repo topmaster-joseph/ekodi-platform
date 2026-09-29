@@ -98,3 +98,10 @@ test('Cheonggye public experience is local-first, readable, communicative and pe
   assert.match(html,/font-size:16px;line-height:1\.65/);
   assert.doesNotMatch(html,/>Space</);
 });
+
+
+test('Cheonggye public routes are injected as public shell surfaces',async()=>{
+  const router=await fs.readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
+  assert.match(router,/const surface=localRegionRoute\.admin\?'admin':'public'/);
+  assert.match(router,/contextKind:localRegionRoute\.admin\?'workspace':'public'/);
+});
