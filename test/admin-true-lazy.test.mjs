@@ -120,7 +120,8 @@ test('tax admin subservice reuses the authenticated admin session through an exp
   const runtime = await read('admin-menu-runtime.js');
   const taxPortal = await read('tax-portal-worker.js');
   assert.match(registry, /id: 'tax'[\s\S]*href: 'https:\/\/ekodi\.kr\/tax'[\s\S]*adminHandoff: true/);
-  assert.match(runtime, /ADMIN_HANDOFF_ALLOWED_TARGETS = new Set\(\['https:\/\/ekodi\.kr\/tax','https:\/\/ekodi\.kr\/work\/admin'\]\)/);
+  assert.match(runtime, /ADMIN_HANDOFF_ALLOWED_TARGETS = new Set\(\['https:\/\/ekodi\.kr\/tax','https:\/\/ekodi\.kr\/work\/admin','https:\/\/ekodi\.kr\/cmpmyi\/admin\/agent'\]\)/);
+  assert.match(runtime,/https:\/\/ekodi\.kr\/cmpmyi\/admin\/agent/);
   assert.match(runtime, /definition\.adminHandoff === true/);
   assert.match(runtime, /new URLSearchParams\(\{ ekodi_admin_token: currentToken \}\)/);
   assert.match(runtime, /auth\.searchParams\.set\('direct', '1'\)/);

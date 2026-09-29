@@ -130,6 +130,60 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/jadam/admin/pos",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "POS 통합화면",
+          "EKODI POS Agent 준비",
+          "원클릭 설치 (.cmd)",
+          "setup-pos-agent.cmd"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: jadam-store-admin",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/pizzamaru/admin/pos",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "POS 통합화면",
+          "EKODI POS Agent 준비",
+          "원클릭 설치 (.cmd)",
+          "setup-pos-agent.cmd"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: pizzamaru-store-admin",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/yogurt/admin/pos",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "POS 통합화면",
+          "EKODI POS Agent 준비",
+          "원클릭 설치 (.cmd)",
+          "setup-pos-agent.cmd"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: yogurt-store-admin",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/jadam/admin/menu?embed=cmpmyi",
         "statuses": [
           200
