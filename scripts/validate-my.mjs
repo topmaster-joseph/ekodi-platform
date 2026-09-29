@@ -19,7 +19,7 @@ const files={
   deviceCareJs:'my/device-care.js',
   deviceCareCss:'my/device-care.css',
   worker:'my-worker.js',
-  digitalCardServer:'person-digital-card.js',
+  digitalCardServer:'my/person-digital-card.js',
   digitalCardAdmin:'my/digital-card-admin.js',
   digitalCardClient:'my/digital-card.js',
   digitalCardMigration:'supabase/migrations/20260930002300_person_digital_card_exchange.sql',
