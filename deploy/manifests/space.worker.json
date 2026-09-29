@@ -104,7 +104,7 @@
         "url": "https://ekodi.kr/ekodimission/apply/261003-autumn-trip",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["2026 에코디선교회","가을 공동체 여행","1인 100,000원","추가 발생 비용은 에코디선교회","data-event-application","261003-autumn-community-trip","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/site.js","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
+        "expect": ["2026 에코디선교회","가을 공동체 여행","data-trip-fee","data-trip-fee-note","data-event-application","261003-autumn-community-trip","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/site.js","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-site-class: brand-site","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
