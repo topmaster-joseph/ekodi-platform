@@ -57,7 +57,7 @@ test('Cheonggye home links every registered regional subservice',async()=>{
   assert.match(html,/우리동네/);
 });
 
-test('generic Cheonggye subservice surfaces expose ownership and source boundaries',async()=>{
+test('generic Cheonggye public subservices stay user-facing while admin retains operating boundaries',async()=>{
   for(const module of region.modules.filter(item=>!['commerce-pass','forest'].includes(item.id))){
     const publicResponse=localRegionModulePublicPage(region,module);
     const adminResponse=localRegionModuleAdminPage(region,module);
@@ -72,7 +72,11 @@ test('generic Cheonggye subservice surfaces expose ownership and source boundari
     assert.ok(publicHtml.includes('<meta property="og:url" content="https://ekodi.kr'+module.publicPath+'">'));
     assert.ok(adminHtml.includes('data-ekodi-local-module="'+module.id+'"'));
     assert.doesNotMatch(adminHtml,/rel="canonical"/);
-    assert.match(publicHtml,/조직 내부정보의 소유경계를 분리/);
+    assert.match(publicHtml,/청계잇다 · 지역서비스/);
+    assert.match(publicHtml,/이용 안내/);
+    assert.match(publicHtml,/개인정보와 단체 내부정보는 공개 화면에 표시하지 않습니다/);
+    assert.doesNotMatch(publicHtml,/운영 기준|주 운영단체|소스정책|감사이력|운영관리|관리자 권한/);
+    assert.ok(!publicHtml.includes('href="'+module.adminPath+'"'),module.id+' public page must not expose admin link');
     assert.match(adminHtml,/강제 실행 계약/);
     assert.match(adminHtml,/조직 내부 원본은 복제하지 않고/);
   }
