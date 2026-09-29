@@ -31,6 +31,7 @@ import { routeCanonicalSurface } from './canonical-surface-router.js';
 import { handlePreviewRequest } from './preview-page.js';
 import { storeGatewayPage } from './store-gateway-page.js';
 import { storePortfolioAdminPage, storePortfolioAdminPanelPage, storePortfolioAdminPanelScript } from './store-portfolio-admin-page.js';
+import { isStorePosAgentDownloadPath, storePosAgentDownload } from './store-pos-agent-download.js';
 import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { isLearningPath, learningPage, learningScript, learningStyles } from './learning-page.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
@@ -364,6 +365,7 @@ async function routePlatform(request,env,ctx){
     if(CGMA_HOSTS.has(host)&&['GET','HEAD'].includes(request.method))return routeCgmaPublic(request,env);
 
     if(host===PUBLIC_HOST){
+      if(['GET','HEAD'].includes(request.method)&&isStorePosAgentDownloadPath(url.pathname))return storePosAgentDownload(request);
       if(['GET','HEAD'].includes(request.method)&&isCgmaRoot(url.pathname)){const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx);return injectEkodiProgressiveHome(injectEkodiTenantReadability(legacyResponse));}
       const mailApex=routeMailApex(request);if(mailApex)return mailApex;
       const messengerApex=await routeMessengerApex(request,env,ctx);if(messengerApex)return messengerApex;
@@ -392,6 +394,7 @@ async function routePlatform(request,env,ctx){
         if(cmpmyiPanel)return storePortfolioAdminPanelPage(cmpmyiPanel[1]);
         if(url.pathname==='/cmpmyi/admin'||url.pathname==='/cmpmyi/admin/')return injectEkodiShell(storePortfolioAdminPage(),'business','admin');
         if(url.pathname==='/cmpmyi/admin/overview'||url.pathname==='/cmpmyi/admin/overview/')return injectEkodiShell(storePortfolioAdminPage(),'business','admin');
+        if(url.pathname==='/cmpmyi/admin/agent'||url.pathname==='/cmpmyi/admin/agent/')return injectEkodiShell(storePortfolioAdminPage('agent'),'business','admin');
         if(isStoreAdminPathShape(url.pathname)){
           const storeRoute=await resolveStoreAdminRoute(url.pathname);
           if(storeRoute){
