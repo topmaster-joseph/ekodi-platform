@@ -114,7 +114,7 @@
         "platform products share a persistent shell",
         "left navigation is fixed to the product frame",
         "do not build a third navigation tier inside the side navigation",
-        "use page-level tabs for deeper context",
+        "use local tabs only inside a workspace when they do not duplicate global or left-side task navigation",
         "responsive behavior changes placement rather than shrinking controls into illegibility"
       ]
     }
@@ -138,7 +138,7 @@
       "운영·배포·장애",
       "설정·보안·감사"
     ],
-    "layout": "fixed-role-projected-sidebar + synchronized-context-tabs + scrolling-workspace + bottom-command-composer",
+    "layout": "fixed-role-projected-sidebar + scrolling-workspace + bottom-command-composer",
     "desktopPrimarySidebarScroll": true,
     "workspaceScroll": true,
     "pageTopOffsetPx": 0,
@@ -224,8 +224,8 @@
       {
         "level": 2,
         "owner": "role-context",
-        "surface": "active-left-direct-tasks + synchronized-workspace-top-tabs",
-        "rule": "platform super admin sees active-area direct tasks; delegated and local admins use their own task-oriented canonical admin menus"
+        "surface": "active-left-direct-tasks",
+        "rule": "platform super admin and delegated/local admins use left-side direct task navigation only; no duplicate workspace-top navigation"
       },
       {
         "level": 3,
@@ -238,14 +238,14 @@
       "body": "locked",
       "app": "locked",
       "primarySidebar": "independent-when-needed-on-platform-admin",
-      "contextNavigation": "not-a-separate-scroll-owner",
+      "contextNavigation": "retired",
       "workspace": "single-vertical-scroll-owner",
       "nestedScroll": "tables-and-explicit-data-views-only"
     },
     "pageAnatomy": [
       "platform super admin left navigation: seven explicit control areas with active-area direct task links",
       "delegated/local admin navigation: role- and domain-specific direct task links only",
-      "context tabs: synchronized second-level functions for the active area where useful",
+      "workspace header: title + purpose + status/actions only; no duplicate navigation",
       "workspace header: title + purpose + status + primary actions",
       "optional KPI/status summary",
       "primary workbench",
