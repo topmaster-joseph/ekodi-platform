@@ -9,6 +9,7 @@ test('EKODI central social connector exposes login-only YouTube OAuth and vault 
     read('marketing-ai-channel-manager.js'), read('wrangler.marketing-growth.toml'),
   ]);
   assert.match(growth,/startYouTubeOAuth/);
+  assert.match(growth,/finishYouTubeOAuth/);
   assert.match(growth,/consumeYouTubeTicket/);
   assert.match(growth,/oauth\/youtube\/callback/);
   assert.match(growth,/GOOGLE_OAUTH_BROKER/);
@@ -39,6 +40,8 @@ test('EKODI central social connector exposes login-only YouTube OAuth and vault 
   assert.match(ui,/const API = '\/marketing-connect-api'/);
   assert.doesNotMatch(ui,/https:\/\/marketing-connect-api\.ekodi\.kr/);
   assert.match(broker,/MARKETING_YOUTUBE_CALLBACK = 'https:\/\/ekodi\.kr\/marketing-connect-api\/oauth\/youtube\/callback'/);
+  assert.match(broker,/finishMarketingYouTubeOAuth/);
+  assert.match(broker,/marketingYouTubeRedirectUri/);
   assert.doesNotMatch(config,/`r`n/);
   assert.match(config,/MALL_PROMOTION_AUTOMATION_ENABLED = "true"\r?\nALLOWED_ORIGINS =/);
   assert.match(config,/GOOGLE_CLIENT_ID/);
