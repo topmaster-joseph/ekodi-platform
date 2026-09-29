@@ -18,7 +18,7 @@ test('public person pages are a public projection of My EKODI, not a second admi
     read('my-worker.js'),
     read('supabase/migrations/20260923085000_person_public_profiles.sql'),
     read('shell/user-ui-header.js'),
-    read('person-digital-card.js'),
+    read('my/person-digital-card.js'),
     read('my/digital-card-admin.js'),
     read('my/digital-card.js'),
     read('supabase/migrations/20260930002300_person_digital_card_exchange.sql'),
