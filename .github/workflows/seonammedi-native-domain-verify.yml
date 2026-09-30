@@ -167,6 +167,45 @@ jobs:
           echo "topology_dispatch_http=$code"
           test "$code" = "204" || { cat /tmp/dispatch.json || true; exit 1; }
 
+      - name: Post-deploy root, admin, DNS and TLS verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > artifacts/postdeploy.txt
+          check_redirect() {
+            url="$1"; expected="$2"
+            rm -f /tmp/post-h
+            curl -sS -o /dev/null -D /tmp/post-h --connect-timeout 10 --max-time 20 "$url"
+            code=$(awk 'toupper($1) ~ /^HTTP\\// {c=$2} END {print c+0}' /tmp/post-h)
+            location=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\\r$/, ""); print; exit}' /tmp/post-h)
+            echo "URL=$url HTTP=$code LOCATION=$location" | tee -a artifacts/postdeploy.txt
+            test "$code" = "301"
+            test "$location" = "$expected"
+          }
+
+          check_redirect "https://seonammedi.kr/" "https://ekodi.kr/seonammedi/"
+          check_redirect "https://seonammedi.kr/admin/" "https://ekodi.kr/seonammedi/admin/"
+          check_redirect "https://seonammedi.kr/notice?id=7" "https://ekodi.kr/seonammedi/notice?id=7"
+          check_redirect "https://xn--3e0b8b58jw4co4mnpll3k.kr/" "https://ekodi.kr/seonammedi/"
+          check_redirect "https://xn--3e0b8b58jw4co4mnpll3k.kr/admin/" "https://ekodi.kr/seonammedi/admin/"
+
+          for host in seonammedi.kr xn--3e0b8b58jw4co4mnpll3k.kr; do
+            echo "HOST=$host" | tee -a artifacts/postdeploy.txt
+            echo "A=$(dig +short A "$host" | paste -sd, -)" | tee -a artifacts/postdeploy.txt
+            echo "AAAA=$(dig +short AAAA "$host" | paste -sd, -)" | tee -a artifacts/postdeploy.txt
+            cert=$(echo | openssl s_client -connect "$host:443" -servername "$host" 2>/dev/null | openssl x509 -noout -subject -issuer -dates)
+            printf '%s\n' "$cert" | tee -a artifacts/postdeploy.txt
+          done
+
+          api='https://api.cloudflare.com/client/v4'
+          for zone in seonammedi.kr xn--3e0b8b58jw4co4mnpll3k.kr; do
+            zid=$(curl -fsS "$api/zones?name=$zone&account.id=$CLOUDFLARE_ACCOUNT_ID"               -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | jq -r '.result[0].id')
+            test -n "$zid"
+            curl -fsS "$api/zones/$zid/dns_records?name=$zone&per_page=100"               -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" |
+              jq -c --arg z "$zone" '{zone:$z,records:[.result[]|{type,name,content,proxied}]}' |
+              tee -a artifacts/postdeploy.txt
+          done
+
       - name: Publish sanitized summary
         shell: bash
         run: |
