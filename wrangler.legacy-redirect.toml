@@ -18,3 +18,13 @@ custom_domain = true
 pattern = "ekodimall.kr"
 zone_name = "ekodimall.kr"
 custom_domain = true
+
+[[routes]]
+pattern = "seonammedi.kr"
+zone_name = "seonammedi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "xn--3e0b8b58jw4co4mnpll3k.kr"
+zone_name = "xn--3e0b8b58jw4co4mnpll3k.kr"
+custom_domain = true
