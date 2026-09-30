@@ -16,6 +16,7 @@
   <aside class="sidebar" aria-label="관리 메뉴">
     <button class="active" data-panel-target="dashboard" type="button">운영홈</button>
     <button data-panel-target="timeline" type="button">활동이력</button>
+    <button data-panel-target="voices" type="button">시민의 목소리</button>
     <button data-panel-target="content" type="button" hidden>웹검색 게시검토</button>
     <button data-panel-target="notices" type="button">공지</button>
     <button data-panel-target="channels" type="button">채널</button>
@@ -29,13 +30,22 @@
         <article><span>공개상태</span><strong id="publicStatus">확인 중</strong><small>공개여부 변경은 최고관리자 정책과 연동</small></article>
         <article><span>게시검토</span><strong id="contentCount">-</strong><small>웹검색 후보</small></article>
         <article><span>활동이력</span><strong id="timelineCount">-</strong><small>비공개 포함</small></article>
+        <article><span>시민의 목소리</span><strong id="voiceCount">-</strong><small>접수·검토·공개 포함</small></article>
         <article><span>공지</span><strong id="noticeCount">-</strong><small>초안 포함</small></article>
         <article><span>채널</span><strong id="channelCount">-</strong><small>숨김 포함</small></article>
       </div>
-      <section class="card"><h2>관리 범위</h2><p id="scopeSummary">권한을 확인하고 있습니다.</p><div class="quick"><button type="button" data-go="timeline">활동이력 관리</button><button type="button" data-go="content">웹검색 게시검토</button><button type="button" data-go="notices">공지 관리</button><button type="button" data-go="channels">채널 관리</button><a href="/seonammedi/" target="_blank" rel="noopener">사이트 확인</a></div></section>
+      <section class="card"><h2>관리 범위</h2><p id="scopeSummary">권한을 확인하고 있습니다.</p><div class="quick"><button type="button" data-go="timeline">활동이력 관리</button><button type="button" data-go="voices">시민의 목소리 관리</button><button type="button" data-go="content">웹검색 게시검토</button><button type="button" data-go="notices">공지 관리</button><button type="button" data-go="channels">채널 관리</button><a href="/seonammedi/" target="_blank" rel="noopener">사이트 확인</a></div></section>
     </section>
 
 
+
+    <section class="panel-page" data-panel="voices" hidden>
+      <div class="heading"><div><p class="eyebrow">CITIZEN VOICES</p><h1>시민의 목소리 관리</h1><p>시민이 접수한 의견·질문·제보를 확인하고 처리 상태와 공개 여부를 관리합니다. 연락처는 관리자에게만 표시됩니다.</p></div><button id="reloadVoices" type="button" class="secondary">새로고침</button></div>
+      <section class="card list-card">
+        <div class="card-head"><h2>접수 목록</h2><div class="voice-tools"><select id="voiceStatusFilter" aria-label="상태 필터"><option value="all">전체 상태</option><option value="received">접수됨</option><option value="reviewing">검토중</option><option value="answered">답변완료</option><option value="published">공개</option><option value="archived">보관</option></select></div></div>
+        <div id="voiceList" class="item-list"></div><p id="voiceMessage" class="message" role="status"></p>
+      </section>
+    </section>
 
     <section class="panel-page" data-panel="timeline" hidden>
       <div class="heading"><div><p class="eyebrow">ACTIVITY HISTORY</p><h1>활동이력 관리</h1><p>기존 활동이력이 모두 사전 등록되어 있습니다. 새 이력을 추가하거나 수정하고, 공개 여부를 선택할 수 있습니다.</p></div></div>
@@ -102,7 +112,7 @@
 
     <section class="panel-page" data-panel="access" hidden>
       <div class="heading"><div><p class="eyebrow">ACCESS SCOPE</p><h1>권한 안내</h1><p>사이트 범위를 넘어서는 권한은 제공하지 않습니다.</p></div></div>
-      <section class="card"><dl class="access-list"><div><dt>로그인 계정</dt><dd id="accessEmail">-</dd></div><div><dt>역할</dt><dd id="accessRole">-</dd></div><div><dt>활동이력 관리</dt><dd id="accessTimeline">-</dd></div><div><dt>웹검색 게시검토</dt><dd id="accessContent">-</dd></div><div><dt>공지 관리</dt><dd id="accessNotice">-</dd></div><div><dt>채널 관리</dt><dd id="accessChannel">-</dd></div></dl></section>
+      <section class="card"><dl class="access-list"><div><dt>로그인 계정</dt><dd id="accessEmail">-</dd></div><div><dt>역할</dt><dd id="accessRole">-</dd></div><div><dt>활동이력 관리</dt><dd id="accessTimeline">-</dd></div><div><dt>시민의 목소리 관리</dt><dd id="accessVoices">-</dd></div><div><dt>웹검색 게시검토</dt><dd id="accessContent">-</dd></div><div><dt>공지 관리</dt><dd id="accessNotice">-</dd></div><div><dt>채널 관리</dt><dd id="accessChannel">-</dd></div></dl></section>
     </section>
   </main>
 </div>
