@@ -111,3 +111,20 @@ test('timeline admin is seeded, permissioned and public materials use central ca
   assert.match(migration,/seonammedi\.timeline\.manage/);
   assert.ok(Array.isArray(parsed.timeline)&&parsed.timeline.length>=20);
 });
+
+
+test('seonammedi civic voices are manageable from the site admin without exposing contact publicly',async()=>{
+  const [control,adminHtml,adminJs]=await Promise.all([
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+    readFile(new URL('../sites/seonammedi/public/admin/index.html',import.meta.url),'utf8'),
+    readFile(new URL('../sites/seonammedi/public/admin/admin.js',import.meta.url),'utf8')
+  ]);
+  assert.match(control,/VOICE_CAP='seonammedi\.voice\.manage'/);
+  assert.match(control,/admin\/voices/);
+  assert.match(control,/public_consent_required/);
+  assert.match(control,/DELETE/);
+  assert.match(adminHtml,/시민의 목소리 관리/);
+  assert.match(adminHtml,/id="voiceList"/);
+  assert.match(adminJs,/관리자 전용 연락처/);
+  assert.match(adminJs,/publicConsent/);
+});
