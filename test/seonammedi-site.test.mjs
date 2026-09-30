@@ -14,6 +14,8 @@ test('Shared Site router serves seonammedi assets before generic workspace routi
   assert.equal(css.status,200);assert.equal(css.headers.get('x-ekodi-route'),'seonammedi-static');assert.match(await css.text(),/\/seonammedi\/app\.css/);
   const js=await platformRouter.fetch(new Request('https://ekodi.kr/seonammedi/app.js'),env,{});
   assert.equal(js.status,200);assert.equal(js.headers.get('x-ekodi-route'),'seonammedi-static');
+  const minutes=await platformRouter.fetch(new Request('https://ekodi.kr/seonammedi/minutes/'),env,{});
+  assert.equal(minutes.status,200);assert.equal(minutes.headers.get('x-ekodi-route'),'seonammedi-static');assert.equal(minutes.headers.get('x-robots-tag'),'noindex, nofollow, noarchive');
   for(const deletedPath of ['/seonam-medi','/seonam-med']){const old=await platformRouter.fetch(new Request('https://ekodi.kr'+deletedPath+'/app.css?v=1'),env,{});assert.equal(old.status,404);assert.equal(old.headers.get('x-ekodi-route'),'seonammedi-deleted');}
 });
 
