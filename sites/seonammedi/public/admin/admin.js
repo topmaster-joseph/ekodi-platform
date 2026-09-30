@@ -99,25 +99,59 @@ $('statusForm')?.addEventListener('submit',async event=>{
   try{text($('statusPageMessage'),'저장 중…');await api('/api/seonammedi/admin/pages/status',{method:'PUT',body:JSON.stringify({data:{items},visible:true})});text($('statusPageMessage'),'사용자 페이지에 반영할 현재상황을 저장했습니다.')}catch(error){text($('statusPageMessage'),error.message)}
 });
 
-function orgLinesToData(form){
-  const level=(name,field)=>({name,members:lines(form.elements[field].value)});
-  const committees=lines(form.elements.committees.value).map(row=>{const [name,...rest]=row.split('|');return{name:(name||'').trim(),lead:rest.join('|').trim()}}).filter(x=>x.name);
-  const participants=lines(form.elements.participants.value).map(row=>{const [name,representative,url]=row.split('|').map(x=>(x||'').trim());return{name,representative,url,visible:true}}).filter(x=>x.name);
-  return{levels:[level('대표자회의','representatives'),level('상임공동대표단','standing'),level('집행위원회','executive')],committees,participants,participantSort:'ko-KR',publicOnly:true};
+const ORG_GROUPS=[
+  {key:'integrated',label:'통합 대책위'},
+  {key:'civic',label:'시민단체연대'},
+  {key:'mokpo',label:'목포대'}
+];
+function normalizeOrgGroups(org={}){
+  if(Array.isArray(org.groups)&&org.groups.length){
+    const byKey=new Map(org.groups.map(group=>[group.key,group]));
+    return ORG_GROUPS.map(meta=>({key:meta.key,label:meta.label,...(byKey.get(meta.key)||{})}));
+  }
+  return ORG_GROUPS.map((meta,index)=>index===0?{key:meta.key,label:meta.label,levels:org.levels||[],committees:org.committees||[],participants:org.participants||[]}:{key:meta.key,label:meta.label,levels:[],committees:[],participants:[]});
 }
+function orgGroupFromForm(form,key,label){
+  const level=(name,suffix)=>({name,members:lines(form.elements[key+'_'+suffix].value)});
+  const committees=lines(form.elements[key+'_committees'].value).map(row=>{const [name,...rest]=row.split('|');return{name:(name||'').trim(),lead:rest.join('|').trim()}}).filter(x=>x.name);
+  const participants=lines(form.elements[key+'_participants'].value).map(row=>{const [name,representative,url]=row.split('|').map(x=>(x||'').trim());return{name,representative,url,visible:true}}).filter(x=>x.name);
+  return{key,label,levels:[level('대표자회의','representatives'),level('상임공동대표단','standing'),level('집행위원회','executive')],committees,participants,participantSort:'ko-KR',publicOnly:true};
+}
+function orgLinesToData(form){
+  const groups=ORG_GROUPS.map(meta=>orgGroupFromForm(form,meta.key,meta.label));
+  const integrated=groups[0];
+  return{groups,levels:integrated.levels,committees:integrated.committees,participants:integrated.participants,participantSort:'ko-KR',publicOnly:true};
+}
+function fillOrgGroup(form,group){
+  const key=group.key,levels=group.levels||[];
+  const members=name=>(levels.find(x=>x.name===name)?.members||[]).join('\n');
+  form.elements[key+'_representatives'].value=members('대표자회의');
+  form.elements[key+'_standing'].value=members('상임공동대표단');
+  form.elements[key+'_executive'].value=members('집행위원회');
+  form.elements[key+'_committees'].value=(group.committees||[]).map(x=>[x.name,x.lead].filter(Boolean).join(' | ')).join('\n');
+  form.elements[key+'_participants'].value=(group.participants||[]).map(x=>[x.name,x.representative,x.url].filter(Boolean).join(' | ')).join('\n');
+}
+function showOrgAdminTab(key){
+  qsa('[data-org-admin-panel]').forEach(panel=>panel.hidden=panel.dataset.orgAdminPanel!==key);
+  qsa('[data-org-admin-tab]').forEach(button=>{
+    const active=button.dataset.orgAdminTab===key;
+    button.classList.toggle('active',active);
+    button.setAttribute('aria-selected',active?'true':'false');
+  });
+  const form=$('organizationForm');if(form)form.elements.orgKey.value=key;
+}
+qsa('[data-org-admin-tab]').forEach(button=>button.addEventListener('click',()=>showOrgAdminTab(button.dataset.orgAdminTab)));
 async function loadOrganization(){
   if(!state.me?.permissions?.pages)return;
   const [managed,base]=await Promise.all([api('/api/seonammedi/admin/pages/organization'),baseData()]);
   const org=managed.item?.data&&Object.keys(managed.item.data).length?managed.item.data:(base.organization||{});
-  const form=$('organizationForm'),levels=org.levels||[];
-  const members=name=>(levels.find(x=>x.name===name)?.members||[]).join('\n');
-  form.elements.representatives.value=members('대표자회의');form.elements.standing.value=members('상임공동대표단');form.elements.executive.value=members('집행위원회');
-  form.elements.committees.value=(org.committees||[]).map(x=>[x.name,x.lead].filter(Boolean).join(' | ')).join('\n');
-  form.elements.participants.value=(org.participants||[]).map(x=>[x.name,x.representative,x.url].filter(Boolean).join(' | ')).join('\n');
+  const form=$('organizationForm');
+  normalizeOrgGroups(org).forEach(group=>fillOrgGroup(form,group));
+  showOrgAdminTab(form.elements.orgKey.value||'integrated');
   text($('organizationMessage'),'');
 }
 $('organizationForm')?.addEventListener('submit',async event=>{
-  event.preventDefault();try{text($('organizationMessage'),'저장 중…');await api('/api/seonammedi/admin/pages/organization',{method:'PUT',body:JSON.stringify({data:orgLinesToData(event.currentTarget),visible:true})});text($('organizationMessage'),'조직 정보를 저장했습니다.')}catch(error){text($('organizationMessage'),error.message)}
+  event.preventDefault();try{text($('organizationMessage'),'저장 중…');await api('/api/seonammedi/admin/pages/organization',{method:'PUT',body:JSON.stringify({data:orgLinesToData(event.currentTarget),visible:true})});text($('organizationMessage'),'통합 대책위·시민단체연대·목포대 조직 정보를 저장했습니다.')}catch(error){text($('organizationMessage'),error.message)}
 });
 
 const moneyText=value=>new Intl.NumberFormat('ko-KR').format(Number(value||0))+'원';
