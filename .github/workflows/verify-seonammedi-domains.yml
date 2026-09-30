@@ -58,9 +58,9 @@ jobs:
             echo "$name http=$code"
             test "$code" = '200'
             ! grep -Eiq '^x-robots-tag:.*noindex' /tmp/bot-h
-            ! grep -Eiq '<meta[^>]+name=["'"']robots["'"'][^>]+content=["'"'][^"'"']*noindex' /tmp/bot-body
+            ! grep -Fiq '<meta name="robots" content="noindex' /tmp/bot-body
             grep -Fq '<link rel="canonical" href="https://ekodi.kr/seonammedi/">' /tmp/bot-body
-            grep -Eiq '<meta[^>]+name=["'"']robots["'"'][^>]+content=["'"'][^"'"']*index' /tmp/bot-body
+            grep -Fq '<meta name="robots" content="index, follow, max-image-preview:large">' /tmp/bot-body
           }
           check_bot 'googlebot' 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'
           check_bot 'bingbot' 'Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)'
