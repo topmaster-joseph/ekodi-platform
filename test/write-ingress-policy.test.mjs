@@ -21,6 +21,7 @@ test('durable write ingress policy is enforced and queue-first in production',as
   assert.equal(policy.ingress.directDatabaseWriteForbiddenForBurstEligiblePublicWrites,true);
   assert.equal(policy.ingress.successRequiresDurableAcceptance,true);
   assert.equal(policy.failure.falseSuccessForbidden,true);
+  assert.equal(policy.rollout.firstReferenceImplementation,'seonammedi_citizen_voice');
   assert.equal(traffic.writePlane.publicBurstEligibleWrites,'queue-first');
   assert.equal(traffic.writePlane.productionDirectDatabaseWrite,'forbidden');
   assert.match(wrangler,/binding = "EKODI_WRITE_QUEUE"/);
