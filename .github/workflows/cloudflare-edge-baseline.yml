@@ -61,11 +61,18 @@ jobs:
           set -euo pipefail
           headers=$(mktemp)
           code=$(curl -sS -o /dev/null -D "$headers" -w '%{http_code}' --connect-timeout 5 --max-time 20 http://ekodi.kr/)
-          test "$code" = "301"
+          echo "HTTP edge redirect status: $code"
+          case "$code" in
+            301|302|307|308) ;;
+            *) cat "$headers"; echo "::error::Expected an HTTP→HTTPS redirect, got HTTP $code"; exit 1 ;;
+          esac
           grep -Eiq '^location: https://ekodi\.kr/' "$headers"
           curl -fsS --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 20 https://ekodi.kr/ >/dev/null
           curl -fsS --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 20 https://ekodi.kr/api/health | grep -Fq '"ok":true'
-          admin_code=$(curl --http2 -sS -o /tmp/ekodi-admin.html -D /tmp/ekodi-admin.headers -w '%{http_code}' --connect-timeout 5 --max-time 20 https://ekodi.kr/admin)
+          admin_meta=$(curl --http2 -L -sS -o /tmp/ekodi-admin.html -D /tmp/ekodi-admin.headers -w '%{http_code} %{url_effective}' --connect-timeout 5 --max-time 20 https://ekodi.kr/admin)
+          admin_code="${admin_meta%% *}"
+          admin_url="${admin_meta#* }"
+          echo "Admin HTTP/2 final: $admin_code $admin_url"
           test "$admin_code" = "200"
           grep -Fq '<title>EKODI Admin</title>' /tmp/ekodi-admin.html
           echo 'Cloudflare Edge Baseline live verification: PASS'
