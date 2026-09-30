@@ -1,4 +1,4 @@
-name: Onboard SeonamMedi Cloudflare Zones
+name: Grant Cloudflare Zone Create Permission
 
 on:
   push:
@@ -12,160 +12,107 @@ permissions:
   contents: read
 
 concurrency:
-  group: seonammedi-zone-onboarding
+  group: ekodi-cloudflare-zone-create-grant
   cancel-in-progress: false
 
 jobs:
-  onboard:
+  grant:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
       CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CF_TOKEN_ID: 70e86092b1fa0d0a191afe31b83cca56
       ZONE_WRITE_GROUP_ID: e6d2666161e84845a636613608cee8d5
-      ZONE_READ_GROUP_ID: c8fed203ed3043cba015a93ad1616f1f
     steps:
-      - name: Create zones with ephemeral least-privilege token
+      - name: Grant persistent Zone Write permission
         shell: bash
         run: |
           set -euo pipefail
           test -n "$CF_API_TOKEN"
           test -n "$CF_ACCOUNT_ID"
           python - <<'PY'
-          import json, os, sys, urllib.request, urllib.parse, urllib.error
-          from datetime import datetime, timezone, timedelta
+          import json, os, urllib.request, urllib.error
 
-          API = 'https://api.cloudflare.com/client/v4'
-          OWNER = os.environ['CF_API_TOKEN']
-          ACCOUNT = os.environ['CF_ACCOUNT_ID']
-          ZONE_WRITE = os.environ['ZONE_WRITE_GROUP_ID']
-          ZONE_READ = os.environ['ZONE_READ_GROUP_ID']
-          temp_id = None
-          temp_value = None
+          API='https://api.cloudflare.com/client/v4'
+          ACCOUNT=os.environ['CF_ACCOUNT_ID']
+          TOKEN_ID=os.environ['CF_TOKEN_ID']
+          BEARER=os.environ['CF_API_TOKEN']
+          ZONE_WRITE=os.environ['ZONE_WRITE_GROUP_ID']
 
-          def api_call(path, token, method='GET', body=None):
-              data = None if body is None else json.dumps(body).encode('utf-8')
-              req = urllib.request.Request(API + path, data=data, method=method)
-              req.add_header('Authorization', 'Bearer ' + token)
-              req.add_header('Content-Type', 'application/json')
+          def request(path, method='GET', body=None):
+              data=None if body is None else json.dumps(body).encode('utf-8')
+              req=urllib.request.Request(API+path, data=data, method=method)
+              req.add_header('Authorization','Bearer '+BEARER)
+              req.add_header('Content-Type','application/json')
               try:
-                  with urllib.request.urlopen(req, timeout=30) as resp:
-                      raw = resp.read().decode('utf-8')
-                      return resp.status, json.loads(raw) if raw else {}
-              except urllib.error.HTTPError as exc:
-                  raw = exc.read().decode('utf-8', 'replace')
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      raw=r.read().decode('utf-8')
+                      return r.status, json.loads(raw) if raw else {}
+              except urllib.error.HTTPError as e:
+                  raw=e.read().decode('utf-8','replace')
                   try:
-                      payload = json.loads(raw) if raw else {}
+                      payload=json.loads(raw) if raw else {}
                   except Exception:
-                      payload = {'errors': [{'message': raw[:500]}]}
-                  return exc.code, payload
+                      payload={'errors':[{'message':raw[:500]}]}
+                  return e.code,payload
 
-          def require_ok(code, payload, label):
-              if code not in (200, 201):
-                  print(label + '_http=' + str(code))
-                  print(label + '_errors=' + json.dumps(payload.get('errors') or [], ensure_ascii=False))
-                  raise RuntimeError(label + ' failed')
+          def require(code,payload,label):
+              if code != 200:
+                  print(label+'_http='+str(code))
+                  print(label+'_errors='+json.dumps(payload.get('errors') or [],ensure_ascii=False))
+                  raise SystemExit(1)
 
-          summary = []
-          try:
-              expires = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(timespec='seconds').replace('+00:00','Z')
-              token_body = {
-                  'name': 'EKODI SeonamMedi Zone Onboarding 2026-09-30',
-                  'policies': [{
-                      'effect': 'allow',
-                      'permission_groups': [
-                          {'id': ZONE_WRITE},
-                          {'id': ZONE_READ},
-                      ],
-                      'resources': {
-                          f'com.cloudflare.api.account.{ACCOUNT}': {
-                              'com.cloudflare.api.account.zone.*': '*'
-                          }
-                      },
-                  }],
-                  'expires_on': expires,
-              }
-              code, payload = api_call(f'/accounts/{ACCOUNT}/tokens', OWNER, 'POST', token_body)
-              print('ephemeral_token_create_http=' + str(code))
-              require_ok(code, payload, 'ephemeral_token_create')
-              result = payload.get('result') or {}
-              temp_id = str(result.get('id') or '')
-              temp_value = str(result.get('value') or '')
-              if not temp_id or not temp_value:
-                  raise RuntimeError('Cloudflare temporary token response missing id/value')
-              print('ephemeral_token_created=true')
+          code,payload=request(f'/accounts/{ACCOUNT}/tokens/{TOKEN_ID}')
+          require(code,payload,'token_read')
+          token=payload.get('result') or {}
+          policies=token.get('policies') or []
 
-              for display in ['seonammedi.kr', '서남권국립의대.kr']:
-                  ascii_name = display.encode('idna').decode('ascii')
-                  query = urllib.parse.urlencode({
-                      'name': ascii_name,
-                      'account.id': ACCOUNT,
-                      'per_page': 50,
-                  })
-                  code, payload = api_call('/zones?' + query, temp_value)
-                  print('zone_lookup=' + display + ' http=' + str(code))
-                  require_ok(code, payload, 'zone_lookup')
-                  rows = payload.get('result') or []
-                  created = False
-                  if rows:
-                      zone_id = str(rows[0].get('id') or '')
-                  else:
-                      zone_body = {
-                          'name': ascii_name,
-                          'account': {'id': ACCOUNT},
-                          'type': 'full',
-                          'jump_start': True,
+          already=any(
+              ZONE_WRITE == str(pg.get('id') or '')
+              for p in policies
+              for pg in (p.get('permission_groups') or [])
+          )
+
+          if already:
+              print('zone_write_already_present=true')
+          else:
+              policies.append({
+                  'effect':'allow',
+                  'permission_groups':[{'id':ZONE_WRITE}],
+                  'resources':{
+                      f'com.cloudflare.api.account.{ACCOUNT}':{
+                          'com.cloudflare.api.account.zone.*':'*'
                       }
-                      code, payload = api_call('/zones', temp_value, 'POST', zone_body)
-                      print('zone_create=' + display + ' http=' + str(code))
-                      require_ok(code, payload, 'zone_create')
-                      zone_id = str((payload.get('result') or {}).get('id') or '')
-                      created = True
-                  if not zone_id:
-                      raise RuntimeError('zone id missing for ' + display)
-
-                  code, payload = api_call('/zones/' + zone_id, temp_value)
-                  require_ok(code, payload, 'zone_get')
-                  zone = payload.get('result') or {}
-                  ns = zone.get('name_servers') or []
-                  row = {
-                      'display': display,
-                      'ascii': ascii_name,
-                      'status': str(zone.get('status') or ''),
-                      'zone_id': zone_id,
-                      'ns1': str(ns[0] if len(ns) > 0 else ''),
-                      'ns2': str(ns[1] if len(ns) > 1 else ''),
-                      'created': created,
                   }
-                  summary.append(row)
+              })
 
-              print('--- zone onboarding summary ---')
-              for row in summary:
-                  print('domain=' + row['display'])
-                  print('cloudflare_name=' + row['ascii'])
-                  print('status=' + row['status'])
-                  print('zone_id=' + row['zone_id'])
-                  print('nameserver_1=' + row['ns1'])
-                  print('nameserver_2=' + row['ns2'])
-                  print('created=' + str(row['created']).lower())
+              update={
+                  'name':token.get('name') or 'EKODI GitHub Deploy',
+                  'policies':policies,
+                  'status':token.get('status') or 'active'
+              }
+              for key in ('condition','expires_on','not_before'):
+                  if token.get(key) is not None:
+                      update[key]=token[key]
 
-              summary_path = os.environ.get('GITHUB_STEP_SUMMARY')
-              if summary_path:
-                  with open(summary_path, 'a', encoding='utf-8') as out:
-                      out.write('## SeonamMedi Cloudflare Zone Onboarding\n\n')
-                      out.write('| Domain | Cloudflare name | Status | Nameserver 1 | Nameserver 2 | Created now |\n')
-                      out.write('|---|---|---|---|---|---|\n')
-                      for row in summary:
-                          out.write(f"| {row['display']} | {row['ascii']} | {row['status']} | {row['ns1']} | {row['ns2']} | {str(row['created']).lower()} |\n")
-                      out.write('\nRegistrar nameservers were not changed by this workflow.\n')
-                      out.write('The ephemeral Zone token is deleted on workflow exit.\n')
-          finally:
-              if temp_id:
-                  code, payload = api_call(f'/accounts/{ACCOUNT}/tokens/{temp_id}', OWNER, 'DELETE')
-                  if code == 200:
-                      print('ephemeral_token_deleted=true')
-                  else:
-                      print('ephemeral_token_delete_http=' + str(code))
-                      print('ephemeral_token_delete_errors=' + json.dumps(payload.get('errors') or [], ensure_ascii=False))
-                      raise RuntimeError('failed to delete temporary Cloudflare token')
+              code,payload=request(f'/accounts/{ACCOUNT}/tokens/{TOKEN_ID}','PUT',update)
+              require(code,payload,'token_update')
+              print('zone_write_added=true')
+
+          code,payload=request(f'/accounts/{ACCOUNT}/tokens/{TOKEN_ID}')
+          require(code,payload,'token_verify')
+          verified=any(
+              ZONE_WRITE == str(pg.get('id') or '')
+              for p in ((payload.get('result') or {}).get('policies') or [])
+              for pg in (p.get('permission_groups') or [])
+          )
+          print('zone_write_verified='+str(verified).lower())
+          if not verified:
+              raise SystemExit('Zone Write permission verification failed')
+
+          code,zones=request('/zones?account.id='+ACCOUNT+'&per_page=5')
+          require(code,zones,'zone_list_verify')
+          print('zone_list_verify_http=200')
+          print('zone_count_visible='+str(len(zones.get('result') or [])))
           PY
