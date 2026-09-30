@@ -4,7 +4,7 @@ const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const PLATFORM_TOKEN_KEY='ekodi-auth-token';
 const SESSION_KEY='ekodi-seonam-admin-session';
 const CENTRAL_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token';
-const state={me:null,content:[],timeline:[],notices:[],channels:[]};
+const state={me:null,content:[],timeline:[],notices:[],voices:[],channels:[]};
 const $=id=>document.getElementById(id);
 const qs=(sel,root=document)=>root.querySelector(sel);
 const qsa=(sel,root=document)=>[...root.querySelectorAll(sel)];
@@ -70,14 +70,14 @@ function button(label,handler,cls=''){const b=document.createElement('button');b
 function empty(label){const p=document.createElement('p');p.className='empty';p.textContent=label;return p}
 
 function updateDashboard(){
-    text($('contentCount'),state.content.length);text($('timelineCount'),state.timeline.length);text($('noticeCount'),state.notices.length);text($('channelCount'),state.channels.length);
+    text($('contentCount'),state.content.length);text($('timelineCount'),state.timeline.length);text($('noticeCount'),state.notices.length);text($('voiceCount'),state.voices.length);text($('channelCount'),state.channels.length);
   const me=state.me;if(!me)return;
   const statusLabel=me.publicStatus==='public'?'공개':me.publicStatus==='private'?'비공개':'점검중';text($('publicStatus'),statusLabel);
-  const perms=[];if(me.permissions?.timeline)perms.push('활동이력');if(me.permissions?.content)perms.push('웹검색 게시검토');if(me.permissions?.notices)perms.push('공지');if(me.permissions?.channels)perms.push('채널');
+  const perms=[];if(me.permissions?.timeline)perms.push('활동이력');if(me.permissions?.content)perms.push('웹검색 게시검토');if(me.permissions?.notices)perms.push('공지');if(me.permissions?.voices)perms.push('시민의 목소리');if(me.permissions?.channels)perms.push('채널');
   text($('scopeSummary'),me.platform?'최고관리자 권한으로 이 사이트를 관리하고 있습니다.':(perms.length?perms.join('·')+' 관리 권한만 부여된 사이트 범위 관리자입니다.':'조회 권한만 있습니다.'));
   text($('adminIdentity'),me.email||'');text($('accessEmail'),me.email||'-');text($('accessRole'),me.platform?'최고관리자':'게시판 관리자');
-  text($('accessTimeline'),me.permissions?.timeline?'등록·수정·게시여부 선택 가능':'권한 없음');text($('accessContent'),me.permissions?.content?'분류·게시여부 선택 가능':'권한 없음');text($('accessNotice'),me.permissions?.notices?'작성·수정·삭제 가능':'권한 없음');text($('accessChannel'),me.permissions?.channels?'추가·수정·숨김·삭제 가능':'권한 없음');
-  qs('[data-panel-target="timeline"]').hidden=!me.permissions?.timeline;qs('[data-panel-target="content"]').hidden=!me.permissions?.content;qs('[data-panel-target="notices"]').hidden=!me.permissions?.notices;qs('[data-panel-target="channels"]').hidden=!me.permissions?.channels;
+  text($('accessTimeline'),me.permissions?.timeline?'등록·수정·게시여부 선택 가능':'권한 없음');text($('accessContent'),me.permissions?.content?'분류·게시여부 선택 가능':'권한 없음');text($('accessNotice'),me.permissions?.notices?'작성·수정·삭제 가능':'권한 없음');text($('accessVoice'),me.permissions?.voices?'열람·상태변경·삭제 가능':'권한 없음');text($('accessChannel'),me.permissions?.channels?'추가·수정·숨김·삭제 가능':'권한 없음');
+  qs('[data-panel-target="timeline"]').hidden=!me.permissions?.timeline;qs('[data-panel-target="content"]').hidden=!me.permissions?.content;qs('[data-panel-target="notices"]').hidden=!me.permissions?.notices;qs('[data-panel-target="voices"]').hidden=!me.permissions?.voices;qs('[data-panel-target="channels"]').hidden=!me.permissions?.channels;
 }
 
 
@@ -147,6 +147,36 @@ function renderNotices(){
 }
 async function loadNotices(){if(!state.me?.permissions?.notices)return;const data=await api('/api/seonammedi/admin/notices');state.notices=data.items||[];renderNotices();updateDashboard()}
 
+
+function voiceCategoryLabel(value){return({question:'질문',proposal:'정책제안',experience:'의료경험',factcheck:'사실확인',tip:'제보',other:'기타'})[value]||value}
+function voiceStatusLabel(value){return({received:'접수',reviewing:'검토중',answered:'답변완료',published:'공개',hidden:'숨김'})[value]||value}
+async function updateVoiceStatus(item,status){
+  try{text($('voiceMessage'),'저장 중…');await api('/api/seonammedi/admin/voices/'+item.id,{method:'PUT',body:JSON.stringify({reviewStatus:status})});text($('voiceMessage'),'처리상태를 반영했습니다.');await loadVoices()}catch(error){text($('voiceMessage'),error.message)}
+}
+async function deleteVoice(item){
+  if(!confirm('이 시민의 목소리 접수 건을 삭제할까요? 삭제 후 복구할 수 없습니다.'))return;
+  try{await api('/api/seonammedi/admin/voices/'+item.id,{method:'DELETE'});text($('voiceMessage'),'삭제했습니다.');await loadVoices()}catch(error){text($('voiceMessage'),error.message)}
+}
+function renderVoices(){
+  const host=$('voiceAdminList');if(!host)return;host.replaceChildren();
+  const filter=$('voiceStatusFilter')?.value||'all';
+  const rows=filter==='all'?state.voices:state.voices.filter(item=>item.reviewStatus===filter);
+  if(!rows.length){host.append(empty('조건에 맞는 접수 내역이 없습니다.'));return}
+  for(const item of rows){
+    const article=document.createElement('article');article.className='item voice-item';
+    const head=document.createElement('div');head.className='item-head';
+    const left=document.createElement('div');const title=document.createElement('div');title.className='item-title';title.textContent=voiceCategoryLabel(item.category)+' · '+(item.displayName||'익명');
+    const meta=document.createElement('div');meta.className='item-meta';meta.textContent=[dateText(item.createdAt),item.contact?'연락처 있음':'연락처 없음',item.publicConsent?'공개동의':'비공개'].join(' · ');left.append(title,meta);
+    const flags=document.createElement('div');flags.append(tag(voiceStatusLabel(item.reviewStatus),item.reviewStatus==='published'?'live':''));head.append(left,flags);article.append(head);
+    const body=document.createElement('p');body.className='item-body';body.textContent=item.message;article.append(body);
+    if(item.contact){const contact=document.createElement('div');contact.className='voice-private';contact.textContent='연락처: '+item.contact;article.append(contact)}
+    const actions=document.createElement('div');actions.className='item-actions';
+    for(const [value,label] of [['received','접수'],['reviewing','검토중'],['answered','답변완료'],['published','공개'],['hidden','숨김']]) actions.append(button(label,()=>updateVoiceStatus(item,value),item.reviewStatus===value?'primary':''));
+    actions.append(button('삭제',()=>deleteVoice(item),'danger'));article.append(actions);host.append(article);
+  }
+}
+async function loadVoices(){if(!state.me?.permissions?.voices)return;const data=await api('/api/seonammedi/admin/voices');state.voices=data.items||[];renderVoices();updateDashboard()}
+
 function resetChannel(){
   const form=$('channelForm');form.reset();form.elements.id.value='';form.elements.platform.value='youtube';form.elements.category.value='official';form.elements.sortOrder.value='0';form.elements.visible.checked=true;text($('channelFormTitle'),'채널 추가');text($('channelMessage'),'');
 }
@@ -187,13 +217,13 @@ $('channelForm').addEventListener('submit',async event=>{
   const msg=$('channelMessage');msg.classList.remove('error');text(msg,'저장 중…');
   try{await api(id?'/api/seonammedi/admin/channels/'+id:'/api/seonammedi/admin/channels',{method:id?'PUT':'POST',body:JSON.stringify(payload)});text(msg,'저장했습니다.');resetChannel();await loadChannels()}catch(error){msg.classList.add('error');text(msg,error.message)}
 });
-$('reloadTimeline').addEventListener('click',()=>loadTimeline().catch(()=>{}));$('timelineReset').addEventListener('click',resetTimeline);$('reloadContent').addEventListener('click',()=>loadContent().catch(()=>{}));$('noticeReset').addEventListener('click',resetNotice);$('channelReset').addEventListener('click',resetChannel);$('reloadNotices').addEventListener('click',()=>loadNotices().catch(()=>{}));$('reloadChannels').addEventListener('click',()=>loadChannels().catch(()=>{}));
+$('reloadTimeline').addEventListener('click',()=>loadTimeline().catch(()=>{}));$('timelineReset').addEventListener('click',resetTimeline);$('reloadContent').addEventListener('click',()=>loadContent().catch(()=>{}));$('noticeReset').addEventListener('click',resetNotice);$('channelReset').addEventListener('click',resetChannel);$('reloadNotices').addEventListener('click',()=>loadNotices().catch(()=>{}));$('reloadVoices').addEventListener('click',()=>loadVoices().catch(()=>{}));$('voiceStatusFilter').addEventListener('change',renderVoices);$('reloadChannels').addEventListener('click',()=>loadChannels().catch(()=>{}));
 $('refreshAll').addEventListener('click',()=>init(true));$('changeAccount').addEventListener('click',()=>{sessionStorage.removeItem(PLATFORM_TOKEN_KEY);clearSession();try{localStorage.removeItem(CENTRAL_SESSION_KEY)}catch{}location.assign(authUrl())});
 
 async function init(refresh=false){
   try{
     state.me=await api('/api/seonammedi/admin/me');updateDashboard();
-    await Promise.all([state.me.permissions?.timeline?loadTimeline():Promise.resolve(),state.me.permissions?.content?loadContent():Promise.resolve(),state.me.permissions?.notices?loadNotices():Promise.resolve(),state.me.permissions?.channels?loadChannels():Promise.resolve()]);
+    await Promise.all([state.me.permissions?.timeline?loadTimeline():Promise.resolve(),state.me.permissions?.content?loadContent():Promise.resolve(),state.me.permissions?.notices?loadNotices():Promise.resolve(),state.me.permissions?.voices?loadVoices():Promise.resolve(),state.me.permissions?.channels?loadChannels():Promise.resolve()]);
     if(refresh)text($('scopeSummary'),state.me.platform?'최고관리자 권한으로 최신 상태를 확인했습니다.':'게시판 관리자 권한으로 최신 상태를 확인했습니다.');
   }catch(error){
     if(error.status===403){const main=$('main');main.replaceChildren();const box=document.createElement('section');box.className='card placeholder';const h=document.createElement('strong');h.textContent='관리 권한이 없습니다';const p=document.createElement('p');p.textContent='이 Google 계정에는 서남권 국립의대 소통센터 관리 권한이 등록되어 있지 않습니다.';const a=document.createElement('a');a.href=authUrl();a.textContent='다른 Google 계정으로 로그인';box.append(h,p,a);main.append(box);return}
