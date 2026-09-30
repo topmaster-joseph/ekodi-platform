@@ -71,6 +71,7 @@ test('seonammedi admin route is served locally with noindex instead of redirecti
 });
 
 
+// Organization tab regression remains compatible with the current SeonamMedi release baseline.
 test('organization uses representative council and supports 가나다 participant organizations',async()=>{
   const [html,app,data]=await Promise.all([readFile(new URL('../sites/seonammedi/public/index.html',import.meta.url),'utf8'),readFile(new URL('../sites/seonammedi/public/app.js',import.meta.url),'utf8'),readFile(new URL('../sites/seonammedi/public/data.json',import.meta.url),'utf8')]);
   const parsed=JSON.parse(data);
