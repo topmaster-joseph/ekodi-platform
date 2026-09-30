@@ -46,7 +46,7 @@ requireTrue(/supplyNetwork:'tenant\.supply-network\.manage'/.test(tenantPolicy),
 requireTrue(/memberRoster:'tenant\.member-roster\.manage'/.test(tenantPolicy), 'tenant member-roster capability is required');
 requireTrue(/sourcing:TENANT_ADMIN_CAPABILITIES\.supplyNetwork/.test(workspace), 'Mall sourcing must use the tenant supply-network capability');
 requireTrue(/member:TENANT_ADMIN_CAPABILITIES\.memberRoster/.test(workspace), 'association member admin must use tenant member-roster capability');
-requireTrue(/sourcing:\['제휴·소싱'/.test(workspace), 'Mall owner UI must label the operational projection as 제휴·소싱');
+requireTrue(/sourcing:\['판매채널 · 공급망'/.test(workspace), 'Mall owner UI must label the operational projection as 판매채널 · 공급망');
 requireTrue(workspace.includes('공통 판매·공급망 엔진'), 'Mall owner UI must identify the shared 판매·공급망 professional engine');
 requireTrue(workspace.includes("workspace==='cgma'") && workspace.includes('/cgma-member-admin.js'), 'CGMA member admin must be projected from its workspace');
 requireTrue(!workspace.includes('/api/affiliate/accounts'), 'workspace admin must not access central affiliate account credentials');

@@ -63,6 +63,7 @@ test('top-level EKODIMALL admin is parsed as the Mall service surface', async ()
   assert.ok(js.includes('판매채널'));
   assert.ok(js.includes('AI 영업'));
   assert.ok(!js.includes('Google 계정으로 관리자 확인'));
-  assert.ok(!js.includes('상품 · 공급'));
+  assert.ok(js.includes('상품 · 공급'));
+  assert.ok(js.includes('자동운영'));
   assert.match(js,/mallDirectSections/);
 });

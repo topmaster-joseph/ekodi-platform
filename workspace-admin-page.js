@@ -103,7 +103,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     try{applyChannelOAuthResult(JSON.parse(event.newValue))}catch{}
   });
   const fmt=n=>new Intl.NumberFormat('ko-KR').format(Number(n||0));
-  const meta={chrome:['헤더 · 푸터','이 사이트의 헤더와 푸터 기본정보를 관리합니다. 저장하면 이 사이트에만 반영됩니다.'],overview:['운영 홈','지금 확인할 상태와 다음 행동을 한눈에 봅니다.'],sales:['영업장부','게시 → 유입 → 상품조회 → 제휴클릭 → 전환을 실제 이벤트로 확인합니다.'],products:['상품관리','공개 쇼핑몰 상품과 판매처 연결을 관리합니다.'],sourcing:['제휴·소싱','아고다·쿠팡 등 이 쇼핑몰이 사용할 제휴처와 실제 적용 여부를 관리합니다.'],amazon:['Amazon 연결','Seller Central, 상품·가격·재고·주문·FBA 및 선택형 AWS 연결 상태를 관리합니다.'],marketing:['마케팅 AI','콘텐츠 생성, UTM, 캠페인과 게시 준비를 관리합니다.'],channels:['채널설정','게시 채널 연결, 운영설정과 자동게시 상태를 한곳에서 관리합니다.'],automation:['자동화','콘텐츠 생성과 예약게시 자동화 준비 상태를 확인합니다.'],growth:['AI 자동영업','아고다·쿠팡 상품의 추천·게시·유입·전환 현황과 자동 배분 설정을 관리합니다.'],analytics:['성과·학습','판매·채널·캠페인 성과와 AI 학습 결과를 확인합니다.'],mall:['에코디몰','에코디비즈가 운영하는 쇼핑몰 서비스입니다.'],work:['업무','업무 서비스 상태를 확인합니다.'],finance:['통장 · 재무','연결계좌, 거래내역, 이체요청·승인과 재무 상태를 기관 범위에서 관리합니다.'],tax:['세금 · 증빙','에코디비즈 전자세금계산서·공급자·거래처·발행대장을 관리합니다.'],confirmations:['지급·수령 확인','지급과 수령을 분리 관리하고 필요할 때 같은 거래번호로 연결합니다.'],languages:['다국어 번역·게시','이 사이트의 번역 진행 상태와 실제 게시 여부를 관리합니다.'],members:['사용자 · 권한','운영공간 로컬 역할과 권한을 관리합니다.'],design:['사이트 설정','디자인과 다국어 등 고객 화면의 표시 설정을 관리합니다.'],publishing:['채널·자동게시','이 운영공간의 SNS 계정 연결, OAuth 인증, 예약·반복 게시와 자동게시 상태를 관리합니다.'],mail:['메일','도메인 메일 주소, Gmail 전달, DNS 인증 상태를 관리합니다.'],activities:['활동 · 참가자','활동별 신청·대기·확정·참석·불참·취소와 체크인, 역할, 동반자, 후속관리를 한 화면에서 관리합니다.'],status:['상태 · 배포','이 운영공간의 현재 접근·공개·권한 상태와 플랫폼 배포 확인 경로를 한눈에 봅니다.'],records:['설정 · 기록','운영공간 권한 경계, 변경·감사 기록과 관련 관리 화면을 확인합니다.'],member:['정회원','청계면상인회 소속 정회원 명단을 이 운영공간에서 관리합니다.']};
+  const meta={chrome:['헤더 · 푸터','이 사이트의 헤더와 푸터 기본정보를 관리합니다. 저장하면 이 사이트에만 반영됩니다.'],overview:['운영 홈','지금 확인할 상태와 다음 행동을 한눈에 봅니다.'],sales:['영업장부','게시 → 유입 → 상품조회 → 제휴클릭 → 전환을 실제 이벤트로 확인합니다.'],products:['상품관리','공개 쇼핑몰 상품과 판매처 연결을 관리합니다.'],sourcing:['판매채널 · 공급망','공통 판매·공급망 엔진에 등록된 제휴처 가운데 에코디몰에서 실제 사용할 판매채널과 적용 여부를 관리합니다.'],amazon:['Amazon 연결','Seller Central, 상품·가격·재고·주문·FBA 및 선택형 AWS 연결 상태를 관리합니다.'],marketing:['마케팅 AI','콘텐츠 생성, UTM, 캠페인과 게시 준비를 관리합니다.'],channels:['채널설정','게시 채널 연결, 운영설정과 자동게시 상태를 한곳에서 관리합니다.'],automation:['자동화','콘텐츠 생성과 예약게시 자동화 준비 상태를 확인합니다.'],growth:['AI 자동영업','아고다·쿠팡 상품의 추천·게시·유입·전환 현황과 자동 배분 설정을 관리합니다.'],analytics:['성과·학습','판매·채널·캠페인 성과와 AI 학습 결과를 확인합니다.'],mall:['에코디몰','에코디비즈가 운영하는 쇼핑몰 서비스입니다.'],work:['업무','업무 서비스 상태를 확인합니다.'],finance:['통장 · 재무','연결계좌, 거래내역, 이체요청·승인과 재무 상태를 기관 범위에서 관리합니다.'],tax:['세금 · 증빙','에코디비즈 전자세금계산서·공급자·거래처·발행대장을 관리합니다.'],confirmations:['지급·수령 확인','지급과 수령을 분리 관리하고 필요할 때 같은 거래번호로 연결합니다.'],languages:['다국어 번역·게시','이 사이트의 번역 진행 상태와 실제 게시 여부를 관리합니다.'],members:['사용자 · 권한','운영공간 로컬 역할과 권한을 관리합니다.'],design:['사이트 설정','디자인과 다국어 등 고객 화면의 표시 설정을 관리합니다.'],publishing:['채널·자동게시','이 운영공간의 SNS 계정 연결, OAuth 인증, 예약·반복 게시와 자동게시 상태를 관리합니다.'],mail:['메일','도메인 메일 주소, Gmail 전달, DNS 인증 상태를 관리합니다.'],activities:['활동 · 참가자','활동별 신청·대기·확정·참석·불참·취소와 체크인, 역할, 동반자, 후속관리를 한 화면에서 관리합니다.'],status:['상태 · 배포','이 운영공간의 현재 접근·공개·권한 상태와 플랫폼 배포 확인 경로를 한눈에 봅니다.'],records:['설정 · 기록','운영공간 권한 경계, 변경·감사 기록과 관련 관리 화면을 확인합니다.'],member:['정회원','청계면상인회 소속 정회원 명단을 이 운영공간에서 관리합니다.']};
   const isBizWorkspace=service==='mall'||workspace==='ekodi-biz'||workspace==='ekodibiz';
   const serviceSections=workspace==='cgma'?[['confirmations','지급·수령 확인']]:[['mail','메일'],['confirmations','지급·수령 확인'],['work','업무'],['finance','재무']];
   if(isBizWorkspace)serviceSections.push(['tax','세금 · 증빙'],['mall','에코디몰']);
@@ -126,19 +126,21 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   const specialistRootGroups=[{id:'specialist',label:'외부 전문작업',sections:[['overview','운영 홈'],['status','운영 상태']]}];
   const adminHubScopes=Array.isArray(ADMIN_HUB?.scopes)?ADMIN_HUB.scopes:[];
   const adminHubSource=new URLSearchParams(location.search).get('source')||'';
-  const mallDirectSections=[['overview','홈'],['products','상품'],['sourcing','공급·제휴'],['amazon','Amazon'],['analytics','주문·매출'],['channels','채널'],['growth','AI 영업'],['confirmations','지급·수령'],['design','설정']];
+  const mallDirectSections=[['overview','홈'],['products','상품'],['sourcing','판매채널 · 공급망'],['amazon','Amazon'],['analytics','주문 · 성과'],['channels','게시채널'],['growth','자동운영'],['confirmations','지급 · 수령'],['design','몰 설정']];
   const mallDelegatedGroups=[
     {id:'home',label:'홈',sections:[['overview','운영 홈']]},
-    {id:'catalog',label:'상품 관리',sections:[['products','상품'],['sourcing','공급·제휴'],['amazon','Amazon']]},
-    {id:'sales',label:'판매 · 채널',sections:[['analytics','주문·매출'],['channels','채널'],['confirmations','지급·수령']]},
-    {id:'growth',label:'홍보 · 자동영업',sections:[['growth','AI 영업']]},
-    {id:'settings',label:'설정',sections:[['design','사이트 설정']]}
+    {id:'catalog',label:'상품 · 공급',sections:[['products','상품'],['sourcing','판매채널 · 공급망'],['amazon','Amazon']]},
+    {id:'sales',label:'판매 · 채널',sections:[['analytics','주문 · 성과'],['channels','게시채널']]},
+    {id:'automation',label:'자동운영',sections:[['growth','AI 자동영업']]},
+    {id:'settlement',label:'지급 · 수령',sections:[['confirmations','지급 · 수령']]},
+    {id:'settings',label:'설정',sections:[['design','몰 설정']]}
   ];
   const mallLocalGroups=[
-    {id:'today',label:'오늘 판매',sections:[['overview','운영 홈'],['analytics','주문 · 매출']]},
-    {id:'catalog',label:'상품 처리',sections:[['products','상품'],['amazon','Amazon']]},
-    {id:'growth',label:'홍보 · 채널',sections:[['channels','채널'],['growth','AI 영업']]},
-    {id:'settlement',label:'지급 · 수령',sections:[['confirmations','지급 · 수령']]}
+    {id:'today',label:'오늘 판매',sections:[['overview','운영 홈'],['analytics','주문 · 성과']]},
+    {id:'catalog',label:'상품 · 공급',sections:[['products','상품'],['sourcing','판매채널 · 공급망'],['amazon','Amazon']]},
+    {id:'growth',label:'홍보 · 자동운영',sections:[['channels','게시채널'],['growth','AI 자동영업']]},
+    {id:'settlement',label:'지급 · 수령',sections:[['confirmations','지급 · 수령']]},
+    {id:'settings',label:'설정',sections:[['design','몰 설정']]}
   ];
 
   let workspaceContext=null;
@@ -147,7 +149,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   const roleCapabilities=role=>POLICY.roleCapabilities[String(role||'').trim().toLowerCase()]||[];
   const navigationProfile=role=>POLICY.roleNavigationProfiles?.[String(role||'').trim().toLowerCase()]||'local-operator';
   const hasFullWorkspaceAdminScope=role=>roleCapabilities(role).includes('*');
-  function renderAdminScopeSwitcher(role=workspaceRole){const host=$('adminScopeSwitcher');if(!host)return;host.replaceChildren();if(!(isBizWorkspace||adminHubSource==='ekodibiz')||!hasFullWorkspaceAdminScope(role)||!adminHubScopes.length){host.hidden=true;return}host.hidden=false;host.dataset.adminScopeCurrent=current;const label=document.createElement('span');label.className='admin-scope-label';label.textContent='사이트 전환';host.append(label);const current=service==='mall'?'mall':workspace==='ekodi-lab'?'lab':'common';const select=document.createElement('select');select.className='admin-scope-select';select.setAttribute('aria-label','관리 사이트 전환');for(const scope of adminHubScopes){const option=document.createElement('option');option.value=scope.adminHref;option.textContent=scope.label;option.dataset.adminScope=scope.id;option.title=scope.description||scope.label;option.selected=scope.id===current;select.append(option)}select.onchange=()=>{if(select.value&&select.value!==location.pathname+location.search)location.assign(select.value)};host.append(select)}
+  function renderAdminScopeSwitcher(role=workspaceRole){const host=$('adminScopeSwitcher');if(!host)return;host.replaceChildren();if(!(isBizWorkspace||adminHubSource==='ekodibiz')||!hasFullWorkspaceAdminScope(role)||!adminHubScopes.length){host.hidden=true;return}const current=service==='mall'?'mall':workspace==='ekodi-lab'?'lab':'common';host.hidden=false;host.dataset.adminScopeCurrent=current;const label=document.createElement('span');label.className='admin-scope-label';label.textContent='사이트 전환';host.append(label);const select=document.createElement('select');select.className='admin-scope-select';select.setAttribute('aria-label','관리 사이트 전환');for(const scope of adminHubScopes){const option=document.createElement('option');option.value=scope.adminHref;option.textContent=scope.label;option.dataset.adminScope=scope.id;option.title=scope.description||scope.label;option.selected=scope.id===current;select.append(option)}select.onchange=()=>{if(select.value&&select.value!==location.pathname+location.search)location.assign(select.value)};host.append(select)}
   const canSection=(key,role=workspaceRole)=>{if(key==='tax'&&!isBizWorkspace)return false;const capability=SECTION_CAPABILITY[key];const allowed=roleCapabilities(role);return Boolean(capability&&(allowed.includes('*')||allowed.includes(capability)));};
   function groupsForRole(role=workspaceRole){
     const profile=navigationProfile(role);
@@ -469,8 +471,8 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       let affiliate=null;
       if(platformAdminToken()){try{affiliate=await affiliateAdminSnapshot()}catch(e){if(e.status!==401)throw e}}
       const sources=workspaceData.sources||[],summary=workspaceData.summary||{};
-      $('summaryCards').innerHTML=[card('대상 판매처',String(summary.total||sources.length),'국내·글로벌·중국·공식몰'),card('선택',String(summary.selected||0),'이 몰의 연결 대상'),card('운영 가능',String(summary.effective||0),'글로벌 안전 게이트 통과'),card('연결 대기',String(summary.pending||0),'승인·추적·상품 공급 확인 필요')].join('');
-      $('mainPanel').innerHTML=`<h2>제휴·소싱 연결설정</h2><p class="empty">공통 판매·공급망 엔진을 사용해 아고다와 쿠팡 파트너스를 포함한 이 몰의 판매처를 선택합니다. 선택만으로 제휴가 활성화되지는 않으며, 제휴 승인·추적링크·상품/가격 공급·추천 허용이 모두 확인된 경로만 실제 고객 추천과 자동영업에 사용됩니다.</p>${affiliate?affiliateAdminConsole(affiliate):affiliateAdminLocked()}<h2 style="margin-top:18px">대상 제휴몰 · 공식몰 · 해외 판매처</h2><form id="affiliateWorkspaceSourcesForm"><div class="service-list">${sources.map(workspaceSourceRow).join('')||'<p class="empty">등록된 대상 판매처가 없습니다.</p>'}</div><div class="actions"><button class="button primary" type="submit">연결 대상 설정 저장</button><a class="button" href="/admin#supply-network" target="_blank" rel="noopener">중앙 판매·공급망 보기</a></div></form><p class="empty">판매처별 ON/OFF는 이 화면에서 관리하고, 자동게시 채널·일일 한도는 AI 자동영업과 판매채널 화면에서 관리합니다. 애터미는 공식몰 참조 전용으로 유지하며, Secret/API Key는 관리자 화면에 표시하지 않고 서버 설정 상태만 확인합니다.</p>`;
+      $('summaryCards').innerHTML=[card('연결 후보',String(summary.total||sources.length),'공통 엔진에 등록된 판매처'),card('몰 사용',String(summary.selected||0),'에코디몰에서 ON'),card('실사용 가능',String(summary.effective||0),'승인·추적·상품공급 검증 완료'),card('조치 필요',String(summary.pending||0),'승인·연동·상품공급 확인 필요')].join('');
+      $('mainPanel').innerHTML=`<h2>에코디몰 판매채널 · 공급망 설정</h2><p class="empty">플랫폼 공통 판매·공급망 엔진에 등록된 Provider 가운데 에코디몰이 실제 사용할 판매채널만 선택합니다. 여기의 ON/OFF는 플랫폼 연동 자체가 아니라 에코디몰 사용 여부입니다. 제휴 승인·추적링크·상품/가격 공급·추천 허용이 모두 확인된 경로만 고객 노출과 자동영업에 사용됩니다.</p>${affiliate?affiliateAdminConsole(affiliate):affiliateAdminLocked()}<h2 style="margin-top:18px">대상 제휴몰 · 공식몰 · 해외 판매처</h2><form id="affiliateWorkspaceSourcesForm"><div class="service-list">${sources.map(workspaceSourceRow).join('')||'<p class="empty">등록된 대상 판매처가 없습니다.</p>'}</div><div class="actions"><button class="button primary" type="submit">에코디몰 사용 설정 저장</button><a class="button" href="/admin/services/supply-network" target="_blank" rel="noopener">플랫폼 공급망 엔진 ↗</a></div></form><p class="empty">역할 분리: 플랫폼 관리자는 Provider·Adapter·Secret을 공통 엔진에서 관리하고, 에코디몰 관리자는 이 화면에서 사용 여부와 운영정책만 결정합니다. 자동게시 채널·일일 한도는 자동운영에서 관리하며 Secret/API Key는 이 화면에 표시하지 않습니다.</p>`;
       bindAffiliateAdmin('sourcing');
       const form=$('affiliateWorkspaceSourcesForm');
       if(form)form.onsubmit=async e=>{e.preventDefault();state('연결 대상 저장 중');const fd=new FormData(form),selections=sources.map(item=>({routeKey:item.routeKey,enabled:fd.has('route:'+item.routeKey)}));await workspaceAffiliateApi('/workspace/sources',{method:'PUT',body:JSON.stringify({selections})});state('저장됨');await affiliateSourcingPanel()};
