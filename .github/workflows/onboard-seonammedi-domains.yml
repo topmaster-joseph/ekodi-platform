@@ -25,212 +25,147 @@ jobs:
       ZONE_WRITE_GROUP_ID: e6d2666161e84845a636613608cee8d5
       ZONE_READ_GROUP_ID: c8fed203ed3043cba015a93ad1616f1f
     steps:
-      - name: Verify production Cloudflare credential
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "$CF_API_TOKEN" || { echo 'Missing CLOUDFLARE_API_TOKEN'; exit 1; }
-          test -n "$CF_ACCOUNT_ID" || { echo 'Missing CLOUDFLARE_ACCOUNT_ID'; exit 1; }
-
       - name: Create zones with ephemeral least-privilege token
         shell: bash
         run: |
           set -euo pipefail
-          umask 077
-          api='https://api.cloudflare.com/client/v4'
-          owner_auth=(-H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json')
-          temp_id_file=/tmp/seonammedi-temp-token-id
-          temp_value_file=/tmp/seonammedi-temp-token-value
-          summary=/tmp/seonammedi-zone-summary.tsv
-          : > "$summary"
-
-          cleanup() {
-            local original_rc=$?
-            trap - EXIT
-            local cleanup_rc=0
-            if [ -s "$temp_id_file" ]; then
-              local token_id
-              token_id=$(cat "$temp_id_file")
-              local code
-              code=$(curl -sS -o /tmp/token-delete.json -w '%{http_code}' -X DELETE                 "${owner_auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/tokens/$token_id" || true)
-              if [ "$code" = '200' ]; then
-                echo 'ephemeral_token_deleted=true'
-              else
-                echo "ephemeral_token_delete_http=$code"
-                python - <<'PY' || true
-import json
-try:
-    d=json.load(open('/tmp/token-delete.json'))
-    print('cleanup_errors=', d.get('errors') or [])
-except Exception:
-    pass
-PY
-                cleanup_rc=97
-              fi
-            fi
-            rm -f "$temp_id_file" "$temp_value_file"
-            if [ "$cleanup_rc" -ne 0 ]; then exit "$cleanup_rc"; fi
-            exit "$original_rc"
-          }
-          trap cleanup EXIT
-
-          expires=$(python - <<'PY'
-from datetime import datetime, timezone, timedelta
-print((datetime.now(timezone.utc)+timedelta(minutes=15)).isoformat(timespec='seconds').replace('+00:00','Z'))
-PY
-          )
-
-          payload=$(EXPIRES="$expires" python - <<'PY'
-import json, os
-account=os.environ['CF_ACCOUNT_ID']
-print(json.dumps({
-  'name':'EKODI SeonamMedi Zone Onboarding 2026-09-30',
-  'policies':[{
-    'effect':'allow',
-    'permission_groups':[
-      {'id':os.environ['ZONE_WRITE_GROUP_ID']},
-      {'id':os.environ['ZONE_READ_GROUP_ID']}
-    ],
-    'resources':{
-      f'com.cloudflare.api.account.{account}':{
-        'com.cloudflare.api.account.zone.*':'*'
-      }
-    }
-  }],
-  'expires_on':os.environ['EXPIRES'],
-  'status':'active'
-}))
-PY
-          )
-
-          create_code=$(curl -sS -o /tmp/token-create.json -w '%{http_code}' -X POST             "${owner_auth[@]}" --data "$payload" "$api/accounts/$CF_ACCOUNT_ID/tokens")
-          echo "ephemeral_token_create_http=$create_code"
-          if [ "$create_code" != '200' ] && [ "$create_code" != '201' ]; then
-            python - <<'PY'
-import json
-d=json.load(open('/tmp/token-create.json'))
-print('token_create_errors=', d.get('errors') or [])
-PY
-            exit 10
-          fi
-
+          test -n "$CF_API_TOKEN"
+          test -n "$CF_ACCOUNT_ID"
           python - <<'PY'
-import json, os
-d=json.load(open('/tmp/token-create.json')).get('result') or {}
-tid=str(d.get('id') or '')
-value=str(d.get('value') or '')
-if not tid or not value:
-    raise SystemExit('Cloudflare token response missing id/value')
-open('/tmp/seonammedi-temp-token-id','w').write(tid)
-open('/tmp/seonammedi-temp-token-value','w').write(value)
-os.chmod('/tmp/seonammedi-temp-token-id',0o600)
-os.chmod('/tmp/seonammedi-temp-token-value',0o600)
-PY
-          echo 'ephemeral_token_created=true'
+          import json, os, sys, urllib.request, urllib.parse, urllib.error
+          from datetime import datetime, timezone, timedelta
 
-          temp_token=$(cat "$temp_value_file")
-          temp_auth=(-H "Authorization: Bearer $temp_token" -H 'Content-Type: application/json')
+          API = 'https://api.cloudflare.com/client/v4'
+          OWNER = os.environ['CF_API_TOKEN']
+          ACCOUNT = os.environ['CF_ACCOUNT_ID']
+          ZONE_WRITE = os.environ['ZONE_WRITE_GROUP_ID']
+          ZONE_READ = os.environ['ZONE_READ_GROUP_ID']
+          temp_id = None
+          temp_value = None
 
-          python - <<'PY' > /tmp/seonammedi-domains.tsv
-domains=['seonammedi.kr','서남권국립의대.kr']
-for display in domains:
-    print(display+'\t'+display.encode('idna').decode('ascii'))
-PY
+          def api_call(path, token, method='GET', body=None):
+              data = None if body is None else json.dumps(body).encode('utf-8')
+              req = urllib.request.Request(API + path, data=data, method=method)
+              req.add_header('Authorization', 'Bearer ' + token)
+              req.add_header('Content-Type', 'application/json')
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as resp:
+                      raw = resp.read().decode('utf-8')
+                      return resp.status, json.loads(raw) if raw else {}
+              except urllib.error.HTTPError as exc:
+                  raw = exc.read().decode('utf-8', 'replace')
+                  try:
+                      payload = json.loads(raw) if raw else {}
+                  except Exception:
+                      payload = {'errors': [{'message': raw[:500]}]}
+                  return exc.code, payload
 
-          while IFS=$'\t' read -r display domain; do
-            [ -n "$domain" ] || continue
-            echo "checking_domain=$display ascii=$domain"
+          def require_ok(code, payload, label):
+              if code not in (200, 201):
+                  print(label + '_http=' + str(code))
+                  print(label + '_errors=' + json.dumps(payload.get('errors') or [], ensure_ascii=False))
+                  raise RuntimeError(label + ' failed')
 
-            list_code=$(curl -sS -o /tmp/zone-list.json -w '%{http_code}'               "${temp_auth[@]}" "$api/zones?name=$domain&account.id=$CF_ACCOUNT_ID&per_page=50")
-            echo "zone_list_http=$list_code"
-            [ "$list_code" = '200' ] || {
-              python - <<'PY'
-import json
-d=json.load(open('/tmp/zone-list.json'))
-print('zone_list_errors=', d.get('errors') or [])
-PY
-              exit 20
-            }
+          summary = []
+          try:
+              expires = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(timespec='seconds').replace('+00:00','Z')
+              token_body = {
+                  'name': 'EKODI SeonamMedi Zone Onboarding 2026-09-30',
+                  'policies': [{
+                      'effect': 'allow',
+                      'permission_groups': [
+                          {'id': ZONE_WRITE},
+                          {'id': ZONE_READ},
+                      ],
+                      'resources': {
+                          f'com.cloudflare.api.account.{ACCOUNT}': {
+                              'com.cloudflare.api.account.zone.*': '*'
+                          }
+                      },
+                  }],
+                  'expires_on': expires,
+              }
+              code, payload = api_call(f'/accounts/{ACCOUNT}/tokens', OWNER, 'POST', token_body)
+              print('ephemeral_token_create_http=' + str(code))
+              require_ok(code, payload, 'ephemeral_token_create')
+              result = payload.get('result') or {}
+              temp_id = str(result.get('id') or '')
+              temp_value = str(result.get('value') or '')
+              if not temp_id or not temp_value:
+                  raise RuntimeError('Cloudflare temporary token response missing id/value')
+              print('ephemeral_token_created=true')
 
-            zone_id=$(python - <<'PY'
-import json
-rows=json.load(open('/tmp/zone-list.json')).get('result') or []
-print(rows[0].get('id','') if rows else '')
-PY
-            )
+              for display in ['seonammedi.kr', '서남권국립의대.kr']:
+                  ascii_name = display.encode('idna').decode('ascii')
+                  query = urllib.parse.urlencode({
+                      'name': ascii_name,
+                      'account.id': ACCOUNT,
+                      'per_page': 50,
+                  })
+                  code, payload = api_call('/zones?' + query, temp_value)
+                  print('zone_lookup=' + display + ' http=' + str(code))
+                  require_ok(code, payload, 'zone_lookup')
+                  rows = payload.get('result') or []
+                  created = False
+                  if rows:
+                      zone_id = str(rows[0].get('id') or '')
+                  else:
+                      zone_body = {
+                          'name': ascii_name,
+                          'account': {'id': ACCOUNT},
+                          'type': 'full',
+                          'jump_start': True,
+                      }
+                      code, payload = api_call('/zones', temp_value, 'POST', zone_body)
+                      print('zone_create=' + display + ' http=' + str(code))
+                      require_ok(code, payload, 'zone_create')
+                      zone_id = str((payload.get('result') or {}).get('id') or '')
+                      created = True
+                  if not zone_id:
+                      raise RuntimeError('zone id missing for ' + display)
 
-            created=false
-            if [ -z "$zone_id" ]; then
-              zone_payload=$(DOMAIN="$domain" python - <<'PY'
-import json, os
-print(json.dumps({
-  'name':os.environ['DOMAIN'],
-  'account':{'id':os.environ['CF_ACCOUNT_ID']},
-  'type':'full',
-  'jump_start':True
-}))
-PY
-              )
-              zone_code=$(curl -sS -o /tmp/zone-create.json -w '%{http_code}' -X POST                 "${temp_auth[@]}" --data "$zone_payload" "$api/zones")
-              echo "zone_create_http=$zone_code"
-              if [ "$zone_code" != '200' ] && [ "$zone_code" != '201' ]; then
-                python - <<'PY'
-import json
-d=json.load(open('/tmp/zone-create.json'))
-print('zone_create_errors=', d.get('errors') or [])
-PY
-                exit 21
-              fi
-              zone_id=$(python - <<'PY'
-import json
-print((json.load(open('/tmp/zone-create.json')).get('result') or {}).get('id',''))
-PY
-              )
-              created=true
-            fi
+                  code, payload = api_call('/zones/' + zone_id, temp_value)
+                  require_ok(code, payload, 'zone_get')
+                  zone = payload.get('result') or {}
+                  ns = zone.get('name_servers') or []
+                  row = {
+                      'display': display,
+                      'ascii': ascii_name,
+                      'status': str(zone.get('status') or ''),
+                      'zone_id': zone_id,
+                      'ns1': str(ns[0] if len(ns) > 0 else ''),
+                      'ns2': str(ns[1] if len(ns) > 1 else ''),
+                      'created': created,
+                  }
+                  summary.append(row)
 
-            [ -n "$zone_id" ] || { echo "zone_id_missing=$display"; exit 22; }
-            get_code=$(curl -sS -o /tmp/zone.json -w '%{http_code}'               "${temp_auth[@]}" "$api/zones/$zone_id")
-            [ "$get_code" = '200' ] || { echo "zone_get_http=$get_code"; exit 23; }
+              print('--- zone onboarding summary ---')
+              for row in summary:
+                  print('domain=' + row['display'])
+                  print('cloudflare_name=' + row['ascii'])
+                  print('status=' + row['status'])
+                  print('zone_id=' + row['zone_id'])
+                  print('nameserver_1=' + row['ns1'])
+                  print('nameserver_2=' + row['ns2'])
+                  print('created=' + str(row['created']).lower())
 
-            DISPLAY="$display" ASCII="$domain" CREATED="$created" python - <<'PY' | tee /tmp/one-zone.tsv
-import json, os
-z=json.load(open('/tmp/zone.json')).get('result') or {}
-ns=z.get('name_servers') or []
-row=[
-  os.environ['DISPLAY'],
-  os.environ['ASCII'],
-  str(z.get('status') or ''),
-  str(z.get('id') or ''),
-  str(ns[0] if len(ns)>0 else ''),
-  str(ns[1] if len(ns)>1 else ''),
-  os.environ['CREATED']
-]
-print('\t'.join(row))
-PY
-            cat /tmp/one-zone.tsv >> "$summary"
-          done < /tmp/seonammedi-domains.tsv
-
-          echo '--- zone onboarding summary ---'
-          while IFS=$'\t' read -r display ascii status zone_id ns1 ns2 created; do
-            echo "domain=$display"
-            echo "cloudflare_name=$ascii"
-            echo "status=$status"
-            echo "zone_id=$zone_id"
-            echo "nameserver_1=$ns1"
-            echo "nameserver_2=$ns2"
-            echo "created=$created"
-          done < "$summary"
-
-          {
-            echo '## SeonamMedi Cloudflare Zone Onboarding'
-            echo
-            echo '| Domain | Cloudflare name | Status | Nameserver 1 | Nameserver 2 | Created now |'
-            echo '|---|---|---|---|---|---|'
-            while IFS=$'\t' read -r display ascii status zone_id ns1 ns2 created; do
-              echo "| $display | $ascii | $status | $ns1 | $ns2 | $created |"
-            done < "$summary"
-            echo
-            echo 'Registrar nameservers were not changed by this workflow.'
-            echo 'The ephemeral Zone token is deleted on workflow exit.'
-          } >> "$GITHUB_STEP_SUMMARY"
+              summary_path = os.environ.get('GITHUB_STEP_SUMMARY')
+              if summary_path:
+                  with open(summary_path, 'a', encoding='utf-8') as out:
+                      out.write('## SeonamMedi Cloudflare Zone Onboarding\n\n')
+                      out.write('| Domain | Cloudflare name | Status | Nameserver 1 | Nameserver 2 | Created now |\n')
+                      out.write('|---|---|---|---|---|---|\n')
+                      for row in summary:
+                          out.write(f"| {row['display']} | {row['ascii']} | {row['status']} | {row['ns1']} | {row['ns2']} | {str(row['created']).lower()} |\n")
+                      out.write('\nRegistrar nameservers were not changed by this workflow.\n')
+                      out.write('The ephemeral Zone token is deleted on workflow exit.\n')
+          finally:
+              if temp_id:
+                  code, payload = api_call(f'/accounts/{ACCOUNT}/tokens/{temp_id}', OWNER, 'DELETE')
+                  if code == 200:
+                      print('ephemeral_token_deleted=true')
+                  else:
+                      print('ephemeral_token_delete_http=' + str(code))
+                      print('ephemeral_token_delete_errors=' + json.dumps(payload.get('errors') or [], ensure_ascii=False))
+                      raise RuntimeError('failed to delete temporary Cloudflare token')
+          PY
