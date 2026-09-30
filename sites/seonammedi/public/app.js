@@ -157,13 +157,31 @@ siteReady.finally(()=>loadMonitor());
 
 
 const voiceForm=el('voiceForm');
-if(voiceForm)voiceForm.addEventListener('submit',async event=>{
-  event.preventDefault();
-  const status=el('voiceStatus');const form=new FormData(voiceForm);
-  const payload={category:form.get('category'),name:form.get('name'),contact:form.get('contact'),message:form.get('message'),website:form.get('website'),publicConsent:form.get('publicConsent')==='on',privacyConsent:form.get('privacyConsent')==='on'};
-  status.textContent='접수 중…';
-  try{const response=await fetch('/api/seonammedi/voices',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});const body=await response.json().catch(()=>({}));if(!response.ok){const detail=body.message||body.error||body.code||('HTTP '+response.status);throw new Error('접수하지 못했습니다. '+detail)}status.textContent=body.message||'접수되었습니다.';voiceForm.reset()}catch(error){status.textContent=error.message||'접수하지 못했습니다. 잠시 후 다시 시도해 주세요.'}
-});
+if(voiceForm){
+  const status=el('voiceStatus'),submitButton=voiceForm.querySelector('button[type="submit"]');
+  voiceForm.addEventListener('input',()=>{status.textContent=''});
+  voiceForm.addEventListener('submit',async event=>{
+    event.preventDefault();
+    if(submitButton?.disabled)return;
+    const form=new FormData(voiceForm);
+    const payload={category:form.get('category'),name:form.get('name'),contact:form.get('contact'),message:form.get('message'),publicConsent:form.get('publicConsent')==='on',privacyConsent:form.get('privacyConsent')==='on'};
+    if(!String(payload.message||'').trim()){status.textContent='내용을 입력해 주세요.';return}
+    if(!payload.privacyConsent){status.textContent='개인정보 처리 동의가 필요합니다.';return}
+    if(submitButton)submitButton.disabled=true;
+    status.textContent='접수 중…';
+    try{
+      const response=await fetch('/api/seonammedi/voices',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+      const body=await response.json().catch(()=>({}));
+      if(!response.ok||body.ok!==true||!body.submissionId){const detail=body.message||body.error||body.code||('HTTP '+response.status);throw new Error('접수하지 못했습니다. '+detail)}
+      voiceForm.reset();
+      status.textContent=body.message||'접수되었습니다.';
+    }catch(error){
+      status.textContent=error.message||'접수하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+    }finally{
+      if(submitButton)submitButton.disabled=false;
+    }
+  });
+}
 
 
 const viewAliases={status:'status',monitor:'status',organization:'organization',timeline:'timeline',notices:'notices',materials:'materials',news:'materials','public-posts':'materials',voices:'voices',finance:'finance'};
