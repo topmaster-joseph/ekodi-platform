@@ -6,6 +6,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const output = `${root}dist/`;
 export const OPS_HEALTH_PATH = '/ops/health.json';
 export const EKODI_AI_DISCOVERY_PATH = '/.well-known/ekodi.json';
+export const INDEXNOW_KEY = '71e02f2845cadeb6112d86368c1ffc48e4b8ec31';
 export const EKODI_AI_DISCOVERY = Object.freeze({
   schema_version: '1.1',
   name: 'EKODI',
@@ -83,13 +84,15 @@ export async function emitDiscoveryAssets() {
     writeFile(`${output}robots.txt`, robotsText),
     writeFile(`${output}sitemap.xml`, renderSitemapXml()),
     writeFile(`${output}llms.txt`, renderLlmsTxt()),
+    writeFile(`${output}${INDEXNOW_KEY}.txt`, `${INDEXNOW_KEY}\n`),
     writeFile(`${wellKnownDir}ekodi.json`, `${JSON.stringify(EKODI_AI_DISCOVERY, null, 2)}\n`),
   ]);
-  const [robots, sitemap, llms, aiDiscoveryText] = await Promise.all([
+  const [robots, sitemap, llms, aiDiscoveryText, indexNowKeyText] = await Promise.all([
     readFile(`${output}robots.txt`, 'utf8'),
     readFile(`${output}sitemap.xml`, 'utf8'),
     readFile(`${output}llms.txt`, 'utf8'),
     readFile(`${wellKnownDir}ekodi.json`, 'utf8'),
+    readFile(`${output}${INDEXNOW_KEY}.txt`, 'utf8'),
   ]);
   if (!robots.includes('Sitemap: https://ekodi.kr/sitemap.xml')) throw new Error('Discovery robots sitemap marker missing');
   if (!robots.includes('User-agent: OAI-SearchBot')) throw new Error('OAI search crawler policy missing');
@@ -97,6 +100,7 @@ export async function emitDiscoveryAssets() {
   if (!robots.includes(`User-agent: ChatGPT-User\nAllow: ${OPS_HEALTH_PATH}\nDisallow: /`)) throw new Error('ChatGPT-User health-only restriction missing');
   if (sitemap.includes('/admin') || sitemap.includes('/api/') || sitemap.includes('/preview/dev')) throw new Error('Private surface leaked into sitemap');
   if (!llms.includes('Canonical site: https://ekodi.kr/')) throw new Error('LLM discovery canonical marker missing');
+  if (indexNowKeyText.trim() !== INDEXNOW_KEY) throw new Error('IndexNow key file invalid');
   const aiDiscovery = JSON.parse(aiDiscoveryText);
   if (aiDiscovery.canonical_origin !== 'https://ekodi.kr') throw new Error('EKODI AI discovery canonical origin missing');
   if (!aiDiscovery.aliases?.includes('EKODI') || !aiDiscovery.aliases?.includes('에코디')) throw new Error('EKODI AI discovery aliases missing');
