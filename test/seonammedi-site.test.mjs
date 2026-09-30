@@ -128,3 +128,17 @@ test('seonammedi civic voices are manageable from the site admin without exposin
   assert.match(adminJs,/관리자 전용 연락처/);
   assert.match(adminJs,/publicConsent/);
 });
+
+
+test('seonammedi admin utilities live above the left menu and content starts near the top',async()=>{
+  const [html,css]=await Promise.all([
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('admin/admin.css',root),'utf8')
+  ]);
+  assert.match(html,/class="sidebar-tools"/);
+  assert.match(html,/id="adminIdentity"/);
+  assert.match(html,/class="sidebar-menu"/);
+  assert.doesNotMatch(html,/class="top-actions"/);
+  assert.match(css,/main\{padding:8px 18px 24px/);
+  assert.match(css,/\.sidebar-tools/);
+});
