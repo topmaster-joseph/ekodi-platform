@@ -115,18 +115,17 @@ if(materialFilters&&materialList){
   renderMaterials('전체');
   materialFilters.addEventListener('click',event=>{const button=event.target.closest('button');if(!button)return;[...materialFilters.children].forEach(x=>x.classList.remove('active'));button.classList.add('active');renderMaterials(button.dataset.materialCat)});
 }
-const org=d.organization||{};
-const chart=el('organizationChart');
-if(chart){
-  const levels=(org.levels||[]).map(level=>'<article class="org-level"><strong>'+escapeHtml(level.name)+'</strong>'+(Array.isArray(level.members)&&level.members.length?'<p>'+level.members.map(escapeHtml).join(' · ')+'</p>':'')+'</article>').join('');
-  const committees=(org.committees||[]).map(item=>'<article class="org-committee"><strong>'+escapeHtml(item.name)+'</strong><span>'+escapeHtml(item.lead||'담당자 확인 중')+'</span></article>').join('');
-  chart.innerHTML='<div class="org-levels">'+levels+'</div><div class="org-committees">'+committees+'</div>';
-}
-const participantHost=el('participantOrganizations');
-if(participantHost){
-  const participants=(org.participants||[]).filter(item=>item&&item.visible!==false).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko-KR'));
-  participantHost.innerHTML=participants.length?participants.map(item=>'<article class="participant-item"><strong>'+escapeHtml(item.name||'')+'</strong>'+(item.representative?'<span>대표 '+escapeHtml(item.representative)+'</span>':'')+(item.url?'<a href="'+safeUrl(item.url)+'" target="_blank" rel="noopener noreferrer">연결</a>':'')+'</article>').join(''):'<p class="muted">공개 등록된 참여단체가 없습니다.</p>';
-}
+const orgRoot=d.organization||{};
+const orgGroups=Array.isArray(orgRoot.groups)?orgRoot.groups.filter(group=>group&&group.public!==false):[];
+let activeOrg=orgGroups.find(group=>group.id===orgRoot.defaultGroup)||orgGroups[0]||orgRoot;
+const chart=el('organizationChart'),participantHost=el('participantOrganizations');
+const renderOrganization=group=>{
+  activeOrg=group||activeOrg;
+  if(chart){const levels=(activeOrg.levels||[]).map(level=>'<article class="org-level"><strong>'+escapeHtml(level.name)+'</strong>'+(Array.isArray(level.members)&&level.members.length?'<p>'+level.members.map(escapeHtml).join(' · ')+'</p>':'')+'</article>').join('');const committees=(activeOrg.committees||[]).map(item=>'<article class="org-committee"><strong>'+escapeHtml(item.name)+'</strong><span>'+escapeHtml(item.lead||'담당자 확인 중')+'</span></article>').join('');chart.innerHTML=(levels||committees)?'<div class="org-levels">'+levels+'</div><div class="org-committees">'+committees+'</div>':'<p class="muted">확정된 조직 구성은 관리자 등록 후 공개합니다.</p>'}
+  if(participantHost){const participants=(activeOrg.participants||[]).filter(item=>item&&item.visible!==false).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko-KR'));participantHost.innerHTML=participants.length?participants.map(item=>'<article class="participant-item"><strong>'+escapeHtml(item.name||'')+'</strong>'+(item.representative?'<span>대표 '+escapeHtml(item.representative)+'</span>':'')+(item.url?'<a href="'+safeUrl(item.url)+'" target="_blank" rel="noopener noreferrer">연결</a>':'')+'</article>').join(''):'<p class="muted">공개 등록된 참여단체가 없습니다.</p>'}
+};
+const tabs=el('organizationTabs');if(tabs&&orgGroups.length){tabs.innerHTML=orgGroups.map((group,index)=>'<button type="button" data-org-id="'+escapeHtml(group.id)+'" class="'+(group.id===activeOrg.id?'active':'')+'">'+escapeHtml(group.shortName||group.name)+'</button>').join('');tabs.addEventListener('click',event=>{const button=event.target.closest('button[data-org-id]');if(!button)return;const group=orgGroups.find(item=>item.id===button.dataset.orgId);if(!group)return;tabs.querySelectorAll('button').forEach(node=>node.classList.toggle('active',node===button));renderOrganization(group)})}
+renderOrganization(activeOrg);
 el('raised').textContent=money(d.finance.raised);el('spent').textContent=money(d.finance.spent);el('balance').textContent=money(d.finance.balance)}
 const siteReady=load().catch(()=>{el('lastUpdated').textContent='데이터를 불러오지 못했습니다.'});
 async function loadMonitor(){
