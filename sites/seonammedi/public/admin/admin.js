@@ -58,9 +58,18 @@ async function api(path,options={}){
   if(response.status===401){sessionStorage.removeItem(PLATFORM_TOKEN_KEY);clearSession();try{localStorage.removeItem(CENTRAL_SESSION_KEY)}catch{}location.replace(authUrl());throw new Error('로그인이 만료되었습니다.')}
   if(!response.ok)throw Object.assign(new Error(data.error||'요청을 처리하지 못했습니다.'),{status:response.status,data});return data;
 }
+const organizationMeta={
+  'civic-coalition':'시민단체 연합 대책위원회 · 대표자회의 → 상임공동대표단 → 집행위원회 → 5개 위원회',
+  'mokpo-university':'목포대학교 대책위원회 · 확정 조직 자료 등록 전',
+  'unified-2026-09-30':'통합 대책위원회 · 2026년 9월 30일 · 확정 조직 자료 등록 전'
+};
+let activeOrganizationId='unified-2026-09-30';
+function selectOrganization(id){if(!organizationMeta[id])return;activeOrganizationId=id;document.querySelectorAll('#adminOrganizationTabs [data-org-id]').forEach(button=>button.classList.toggle('active',button.dataset.orgId===id));const summary=$('adminOrganizationSummary');if(summary)summary.textContent=organizationMeta[id]}
+
 function showPanel(name){
   qsa('[data-panel]').forEach(node=>{const active=node.dataset.panel===name;node.hidden=!active;node.classList.toggle('active',active)});
-  qsa('[data-panel-target]').forEach(node=>node.classList.toggle('active',node.dataset.panelTarget===name));
+  document.querySelectorAll('#adminOrganizationTabs [data-org-id]').forEach(button=>button.addEventListener('click',()=>selectOrganization(button.dataset.orgId)));
+qsa('[data-panel-target]').forEach(node=>node.classList.toggle('active',node.dataset.panelTarget===name));
 }
 qsa('[data-panel-target]').forEach(button=>button.addEventListener('click',()=>showPanel(button.dataset.panelTarget)));
 qsa('[data-go]').forEach(button=>button.addEventListener('click',()=>showPanel(button.dataset.go)));

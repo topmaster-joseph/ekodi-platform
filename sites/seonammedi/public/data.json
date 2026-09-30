@@ -351,44 +351,88 @@
     "verification": "수치·법적 상태·정부 결정 등 확인 가능한 사실은 공식 문서 또는 복수의 신뢰할 수 있는 출처로 교차확인한 뒤 상태를 표시한다."
   },
   "organization": {
-    "levels": [
+    "groups": [
       {
-        "name": "대표자회의",
-        "members": []
+        "id": "unified-2026-09-30",
+        "name": "통합 대책위원회",
+        "shortName": "통합 대책위원회",
+        "foundedDate": "2026-09-30",
+        "public": true,
+        "levels": [],
+        "committees": [],
+        "participants": [],
+        "participantSort": "ko-KR",
+        "publicOnly": true,
+        "memberOrganizationIds": []
       },
       {
-        "name": "상임공동대표단",
-        "members": []
+        "id": "civic-coalition",
+        "name": "시민단체 연합 대책위원회",
+        "shortName": "시민단체 연합",
+        "foundedDate": "",
+        "public": true,
+        "levels": [
+          {
+            "name": "대표자회의",
+            "members": []
+          },
+          {
+            "name": "상임공동대표단",
+            "members": []
+          },
+          {
+            "name": "집행위원회",
+            "members": []
+          }
+        ],
+        "committees": [
+          {
+            "name": "총무위원회",
+            "lead": "문지영"
+          },
+          {
+            "name": "행사위원회",
+            "lead": "박현경"
+          },
+          {
+            "name": "조직위원회",
+            "lead": "정윤채"
+          },
+          {
+            "name": "홍보소통위원회",
+            "lead": "오원옥"
+          },
+          {
+            "name": "기획위원회",
+            "lead": "여인두"
+          }
+        ],
+        "participants": [],
+        "participantSort": "ko-KR",
+        "publicOnly": true,
+        "memberOrganizationIds": []
       },
       {
-        "name": "집행위원회",
-        "members": []
+        "id": "mokpo-university",
+        "name": "목포대학교 대책위원회",
+        "shortName": "목포대학교",
+        "foundedDate": "",
+        "public": true,
+        "levels": [],
+        "committees": [],
+        "participants": [],
+        "participantSort": "ko-KR",
+        "publicOnly": true,
+        "memberOrganizationIds": []
       }
     ],
-    "committees": [
-      {
-        "name": "총무위원회",
-        "lead": "문지영"
-      },
-      {
-        "name": "행사위원회",
-        "lead": "박현경"
-      },
-      {
-        "name": "조직위원회",
-        "lead": "정윤채"
-      },
-      {
-        "name": "홍보소통위원회",
-        "lead": "오원옥"
-      },
-      {
-        "name": "기획위원회",
-        "lead": "여인두"
-      }
-    ],
-    "participants": [],
-    "participantSort": "ko-KR",
-    "publicOnly": true
+    "defaultGroup": "unified-2026-09-30",
+    "model": {
+      "allowAdditionalOrganizations": true,
+      "multiMembership": true,
+      "unifiedCommitteeId": "unified-2026-09-30",
+      "membershipRule": "기관·단체는 독립 조직으로 등록할 수 있으며 동시에 통합 대책위원회 참여기관으로 연결할 수 있다.",
+      "displayRule": "개별 조직 정보와 통합 대책위원회 참여 관계를 분리 저장한다."
+    }
   }
 }
