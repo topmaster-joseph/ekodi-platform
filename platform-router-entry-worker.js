@@ -52,7 +52,7 @@ import { localRegionOperationsAdminScript } from './local-region-operations-admi
 import { regionalCommerceProgramFromLocalRoute } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
-import { handleSeonamMediCivicApi } from './seonammedi-civic-control.js';
+import { handleSeonamMediCivicApi, consumeSeonamMediVoiceMessage } from './seonammedi-civic-control.js';
 import { handleSeonamMediAdminApi } from './seonammedi-admin-control.js';
 import { handleSeonamMediMonitorApi } from './seonammedi-monitor.js';
 
@@ -502,5 +502,17 @@ export default {
     if(canonicalQueryRedirect)return applyPlatformSecurityHeaders(canonicalQueryRedirect,request);
     const response=await routePlatform(request,env,ctx);
     return applyPlatformSecurityHeaders(response,request);
+  },
+  async queue(batch,env){
+    for(const message of batch.messages){
+      try{
+        const handled=await consumeSeonamMediVoiceMessage(message.body,env);
+        if(!handled)throw new Error('unknown_write_ingress_kind');
+        message.ack();
+      }catch(error){
+        console.error('EKODI durable write consumer failed',error);
+        message.retry();
+      }
+    }
   },
 };
