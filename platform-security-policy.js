@@ -125,7 +125,13 @@ export function applyPlatformSecurityHeaders(response,request){
   headers.set('X-Permitted-Cross-Domain-Policies','none');
   headers.set('Origin-Agent-Cluster','?1');
   if(!headers.has('Referrer-Policy'))headers.set('Referrer-Policy',info.sensitive?'no-referrer':'strict-origin-when-cross-origin');
-  if(!headers.has('X-Frame-Options'))headers.set('X-Frame-Options','DENY');
+  const responseCsp=String(headers.get('Content-Security-Policy')||'');
+  const firstPartyAdminEmbed=url.hostname.toLowerCase()==='ekodi.kr'
+    && url.searchParams.get('embed')==='admin'
+    && /^\/ekodimall\/(?:assets\/)?free-ops(?:\.html)?\/?$/i.test(url.pathname)
+    && /(?:^|;)\s*frame-ancestors\s+https:\/\/ekodi\.kr(?:\s*;|$)/i.test(responseCsp);
+  if(firstPartyAdminEmbed)headers.delete('X-Frame-Options');
+  else if(!headers.has('X-Frame-Options'))headers.set('X-Frame-Options','DENY');
   if(!headers.has('Permissions-Policy')){
     headers.set('Permissions-Policy',info.live
       ? 'camera=(self), microphone=(self), display-capture=(self), geolocation=(), usb=()'
