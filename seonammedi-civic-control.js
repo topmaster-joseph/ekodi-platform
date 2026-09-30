@@ -10,6 +10,8 @@ async function fingerprint(request){
   return [...new Uint8Array(digest)].map(value=>value.toString(16).padStart(2,'0')).join('');
 }
 async function ensureSchema(db){
+  const canonical=await db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='seonammedi_civic_voices'").first().catch(()=>null);
+  if(canonical?.name)return;
   const legacy=await db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='seonam_med_civic_voices'").first().catch(()=>null);
   await db.exec(`CREATE TABLE IF NOT EXISTS seonammedi_civic_voices (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
