@@ -156,7 +156,7 @@ test('seonammedi admin utilities live above the left menu and content starts nea
 
 test('seonammedi public and admin menus keep the agreed content-first order',async()=>{
   const [html,adminHtml]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('admin/index.html',root),'utf8')]);
-  const publicOrder=['현재상황','활동이력','조직','공지','관련자료','시민의목소리','후원·회계'];
+  const publicOrder=['현재상황','활동이력','조직','공지','관련자료','시민의목소리','채널','후원·회계'];
   let cursor=-1;for(const label of publicOrder){const next=html.indexOf('>'+label+'</a>',cursor+1);assert.ok(next>cursor,'public menu order: '+label);cursor=next}
   assert.doesNotMatch(html,/data-view-link="channels">채널<\/a>/);
   const adminOrder=['운영홈','현재상황','활동이력','조직','공지','관련자료','시민의 목소리','후원·회계','내부 회의록','채널','권한·관리자'];
