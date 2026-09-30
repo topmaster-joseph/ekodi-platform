@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { handleExternalAccountControl, EXTERNAL_ACCOUNT_PROVIDER_REGISTRY, EXTERNAL_ACCOUNT_HEALTH_POLICY, deriveExternalAccountHealth } from '../external-account-control.js';
+import { handleExternalAccountControl, EXTERNAL_ACCOUNT_PROVIDER_REGISTRY, EXTERNAL_ACCOUNT_HEALTH_POLICY, deriveExternalAccountHealth, summarizeExternalAccountHealth, externalAccountHealthRunDay } from '../external-account-control.js';
 
 const root = new URL('../', import.meta.url);
 const read = name => fs.readFileSync(new URL(name, root), 'utf8');
@@ -25,6 +25,36 @@ test('connection health never treats unverified delegated accounts as automatica
   assert.equal(deriveExternalAccountHealth({...base,lastVerifiedAt:stale}).state,'stale_manual');
   assert.equal(deriveExternalAccountHealth({...base,status:'reconnect_required'}).state,'reconnect_required');
   assert.equal(deriveExternalAccountHealth({...base,status:'error',lastError:'token expired'}).attention,true);
+});
+
+test('daily health audit uses KST day boundaries and compact evidence counts', () => {
+  assert.equal(externalAccountHealthRunDay('2026-09-30T22:59:00Z'),'2026-10-01');
+  assert.equal(externalAccountHealthRunDay('2026-09-30T14:59:00Z'),'2026-09-30');
+  const summary=summarizeExternalAccountHealth([
+    {status:'active',provider:'google',health:{state:'healthy',attention:false}},
+    {status:'active',provider:'other',health:{state:'manual_required',attention:true}},
+    {status:'reconnect_required',provider:'meta',health:{state:'reconnect_required',attention:true}},
+    {status:'error',provider:'meta',health:{state:'error',attention:true}}
+  ]);
+  assert.equal(summary.total,4);
+  assert.equal(summary.healthy,1);
+  assert.equal(summary.attention,3);
+  assert.equal(summary.manual,1);
+  assert.equal(summary.reconnectRequired,1);
+  assert.equal(summary.errors,1);
+});
+
+test('daily health audit reuses the existing Control cron and stores no credentials', () => {
+  const mission=read('mission-control-entry-worker.js');
+  const migration=read('migrations/0119_external_account_health_runs.sql');
+  const workflow=read('.github/workflows/deploy-control-api.yml');
+  assert.match(mission,/runExternalAccountHealthAudit/);
+  assert.match(mission,/getUTCHours\(\) === 23/);
+  assert.match(mission,/externalAccountHealthDaily/);
+  assert.match(migration,/external_account_health_runs/);
+  assert.match(migration,/UNIQUE\(run_day, workspace_slug\)/);
+  assert.doesNotMatch(migration,/password|access_token|refresh_token|credential_ref/i);
+  assert.ok((workflow.match(/migrations\/0119_external_account_health_runs\.sql/g)||[]).length>=2);
 });
 
 test('control route requires central authentication', async () => {
@@ -205,6 +235,18 @@ test('workspace admins inherit connection settings without platform infrastructu
   assert.match(runtime,/currentContext\.type==='workspace'/);
   assert.doesNotMatch(runtime,/CLOUDFLARE_AUXILIARY_API_TOKEN/);
   assert.doesNotMatch(runtime,/CLOUDFLARE_API_TOKEN/);
+});
+
+test('automatic health snapshot is visible in central and workspace admin surfaces', () => {
+  const center=read('external-account-admin.js');
+  const runtime=read('admin-menu-runtime.js');
+  const control=read('external-account-control.js');
+  assert.match(center,/data-xac-auto-health/);
+  assert.match(center,/마지막 자동점검/);
+  assert.match(runtime,/automaticHealth/);
+  assert.match(runtime,/자동점검/);
+  assert.match(control,/automaticHealth/);
+  assert.match(control,/daily-kst-morning/);
 });
 
 test('account health is visible in central and workspace admin surfaces', () => {
