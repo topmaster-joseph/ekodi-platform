@@ -13,7 +13,6 @@
   const DESIGNS={
     church:{accent:'#2f5a47',accent2:'#d8c79a',warm:'#b99146',leaf:'#6f8f6d',paper:'#fbf7ea',ink:'#20372d',radius:'2px',softRadius:'2px',density:'low',motion:'still',mood:'sanctuary'},
     community:{accent:'#6f936d',accent2:'#d6b35f',warm:'#d19a58',leaf:'#3f684f',paper:'#fffaf0',ink:'#31463a',radius:'28px',softRadius:'999px',density:'medium',motion:'gentle',mood:'neighborhood-commons'},
-    seonammedi:{accent:'#245f7a',accent2:'#77aebc',warm:'#d2a24f',leaf:'#638b78',paper:'#f7fbfc',ink:'#24343d',radius:'10px',softRadius:'8px',density:'medium-high',motion:'measured',mood:'civic-record-center'},
     cafe:{accent:'#9b6b47',accent2:'#246b78',warm:'#d7a764',leaf:'#73876d',paper:'#fff8ed',ink:'#30424a',radius:'34px',softRadius:'24px',density:'low-medium',motion:'drift',mood:'harbor-commons'},
     books:{accent:'#15335a',accent2:'#7f2538',warm:'#b49a6b',leaf:'#65716a',paper:'#fbf6ea',ink:'#1d2a39',radius:'0px',softRadius:'2px',density:'medium-high',motion:'page',mood:'academic-press'},
     publishing:{accent:'#a05f3f',accent2:'#477f7d',warm:'#c7834c',leaf:'#748d75',paper:'#fff8eb',ink:'#2c2a27',radius:'8px',softRadius:'4px',density:'medium-high',motion:'proof',mood:'publisher-workroom'},
