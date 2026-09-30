@@ -63,21 +63,6 @@
       "status": "live"
     },
     {
-      "id": "seonammedi",
-      "name": "서남권 국립의대 소통센터",
-      "nameEn": "Seonam National Medical School Communication Center",
-      "descriptionKo": "공식자료·활동이력·시민 의견을 공개하는 소통센터",
-      "descriptionEn": "Public information, activity records, and citizen communication",
-      "url": "https://ekodi.kr/seonammedi/",
-      "label": "ekodi.kr/seonammedi",
-      "icon": "community",
-      "category": "community-ministry",
-      "order": 25,
-      "homepage": true,
-      "productionVerified": true,
-      "status": "live"
-    },
-    {
       "id": "social",
       "name": "에코디 소셜",
       "nameEn": "EKODI Social",
