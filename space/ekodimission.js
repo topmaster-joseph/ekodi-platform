@@ -14,7 +14,7 @@
   const title=String(meta?.dataset.eventTitle||defaultEvent.title);
   const shareText=String(meta?.dataset.eventText||defaultEvent.text);
   const invite=String(meta?.dataset.eventInvite||defaultEvent.invite)+' '+url;
-  const api=`/ekodimission/api/activities/${encodeURIComponent(applicationRecordKey)}/applications`;
+  const api=`/ekodimission/api/activities/${encodeURIComponent(applicationRecordKey)}/applications`;\n  const registrationApi=`/ekodimission/api/activities/${encodeURIComponent(applicationRecordKey)}/registration`;
   const shareStatus=m=>document.querySelectorAll('[data-share-status]').forEach(el=>el.textContent=m);
   async function copy(v,m){try{await navigator.clipboard.writeText(v)}catch{const t=document.createElement('textarea');t.value=v;document.body.append(t);t.select();document.execCommand('copy');t.remove()}shareStatus(m)}
   document.addEventListener('click',async e=>{
@@ -35,6 +35,21 @@
   }
   if(!form)return;
   const status=form.querySelector('[data-application-status]');const submit=form.querySelector('button[type="submit"]');
+  const closeApplication=(data={})=>{
+    for(const el of form.querySelectorAll('input,textarea,select,button[type="submit"]'))el.disabled=true;
+    if(submit){submit.textContent='신청 마감';submit.setAttribute('aria-disabled','true')}
+    status.dataset.state='closed';status.textContent='일정이 종료되어 신청이 마감되었습니다.';
+    if(data.archive_url){
+      let link=form.querySelector('[data-event-archive-link]');
+      if(!link){link=document.createElement('a');link.dataset.eventArchiveLink='';link.className='button secondary';link.style.marginTop='10px';status.insertAdjacentElement('afterend',link)}
+      link.href=data.archive_url;link.textContent='사진·영상 결과 보기';
+    }
+    document.querySelectorAll('a[href="#apply"]').forEach(link=>{link.href=data.archive_url||'#apply';link.textContent=data.archive_url?'사진·영상 결과':'신청 마감';});
+  };
+  fetch(registrationApi,{headers:{accept:'application/json'},credentials:'same-origin'})
+    .then(r=>r.ok?r.json():null)
+    .then(data=>{if(data?.ok&&!data.registration_open)closeApplication(data)})
+    .catch(()=>{});
   form.addEventListener('submit',async e=>{
     e.preventDefault();status.textContent='';status.dataset.state='';
     if(!form.reportValidity())return;
