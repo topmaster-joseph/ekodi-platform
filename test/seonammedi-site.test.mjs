@@ -111,3 +111,25 @@ test('timeline admin is seeded, permissioned and public materials use central ca
   assert.match(migration,/seonammedi\.timeline\.manage/);
   assert.ok(Array.isArray(parsed.timeline)&&parsed.timeline.length>=20);
 });
+
+
+test('seonammedi citizen voice admin is site-local, permissioned and compact',async()=>{
+  const [adminHtml,adminJs,adminCss,control,app,migration]=await Promise.all([
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('admin/admin.js',root),'utf8'),
+    readFile(new URL('admin/admin.css',root),'utf8'),
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('../migrations/0116_seonammedi_voice_admin.sql',import.meta.url),'utf8')
+  ]);
+  assert.match(adminHtml,/data-panel-target="voices"/);
+  assert.match(adminHtml,/data-panel="voices"/);
+  assert.match(adminHtml,/class="sidebar-tools"/);
+  assert.match(adminJs,/\/api\/seonammedi\/admin\/voices/);
+  assert.match(control,/VOICE_CAP='seonammedi\.voice\.manage'/);
+  assert.match(control,/deleteVoice/);
+  assert.match(migration,/seonammedi\.voice\.manage/);
+  assert.match(app,/submitButton\.disabled=true/);
+  assert.match(app,/body\.ok!==true/);
+  assert.match(adminCss,/main\{padding:10px 18px 24px/);
+});
