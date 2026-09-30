@@ -26,8 +26,73 @@ const validHttps=value=>{try{const url=new URL(String(value||''));return url.pro
 const safeBool=value=>value===true||value===1||value==='1';
 const safeOrder=value=>Math.max(0,Math.min(9999,Number.parseInt(String(value??0),10)||0));
 
+async function addColumnIfMissing(db,table,column,definition){
+  const columns=await db.prepare('PRAGMA table_info('+table+')').all().catch(()=>({results:[]}));
+  if((columns.results||[]).some(row=>row.name===column))return;
+  try{await db.prepare('ALTER TABLE '+table+' ADD COLUMN '+column+' '+definition).run()}catch(error){
+    const message=String(error?.message||error||'');
+    if(!/duplicate column name/i.test(message))throw error;
+  }
+}
+
+async function ensurePublicContentSchema(db){
+  await db.exec(`CREATE TABLE IF NOT EXISTS seonammedi_notices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL DEFAULT '',
+    body TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'draft',
+    pinned INTEGER NOT NULL DEFAULT 0,
+    published_at TEXT,
+    created_by TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT ''
+  );
+  CREATE TABLE IF NOT EXISTS seonammedi_channels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    platform TEXT NOT NULL DEFAULT 'other',
+    name TEXT NOT NULL DEFAULT '',
+    url TEXT NOT NULL DEFAULT '',
+    category TEXT NOT NULL DEFAULT 'other',
+    official INTEGER NOT NULL DEFAULT 0,
+    visible INTEGER NOT NULL DEFAULT 1,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    note TEXT NOT NULL DEFAULT '',
+    created_by TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT ''
+  );
+  CREATE TABLE IF NOT EXISTS seonammedi_timeline (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    legacy_key TEXT UNIQUE,
+    event_date TEXT NOT NULL DEFAULT '',
+    category TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL DEFAULT '',
+    summary TEXT NOT NULL DEFAULT '',
+    evidence TEXT NOT NULL DEFAULT '',
+    links_json TEXT NOT NULL DEFAULT '[]',
+    media_json TEXT NOT NULL DEFAULT '[]',
+    monitor_keywords_json TEXT NOT NULL DEFAULT '[]',
+    status TEXT NOT NULL DEFAULT 'published',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_by TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT ''
+  );`);
+  const repair=[
+    ['seonammedi_notices','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','body',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','status',"TEXT NOT NULL DEFAULT 'draft'"],['seonammedi_notices','pinned','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','published_at','TEXT'],['seonammedi_notices','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','updated_at',"TEXT NOT NULL DEFAULT ''"],
+    ['seonammedi_channels','platform',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','name',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','url',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','category',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','official','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','visible','INTEGER NOT NULL DEFAULT 1'],['seonammedi_channels','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','note',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','updated_at',"TEXT NOT NULL DEFAULT ''"],
+    ['seonammedi_timeline','legacy_key','TEXT'],['seonammedi_timeline','event_date',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','category',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','summary',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','evidence',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','links_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','media_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','monitor_keywords_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','status',"TEXT NOT NULL DEFAULT 'published'"],['seonammedi_timeline','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_timeline','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','updated_at',"TEXT NOT NULL DEFAULT ''"]
+  ];
+  for(const [table,column,definition] of repair)await addColumnIfMissing(db,table,column,definition);
+  await db.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_seonammedi_timeline_legacy_key ON seonammedi_timeline(legacy_key)').run();
+  await db.prepare('CREATE INDEX IF NOT EXISTS idx_seonammedi_notices_public ON seonammedi_notices(status,pinned,published_at,updated_at)').run();
+  await db.prepare('CREATE INDEX IF NOT EXISTS idx_seonammedi_channels_public ON seonammedi_channels(visible,sort_order,id)').run();
+  await db.prepare('CREATE INDEX IF NOT EXISTS idx_seonammedi_timeline_public ON seonammedi_timeline(status,sort_order,id)').run();
+}
+
 async function ensureSchema(db){
   try{await db.prepare("ALTER TABLE seonammedi_monitor_items ADD COLUMN publish_category TEXT NOT NULL DEFAULT 'news'").run()}catch{}
+  await ensurePublicContentSchema(db);
   await db.exec(`CREATE TABLE IF NOT EXISTS seonammedi_notices (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
@@ -164,13 +229,13 @@ function publicChannel(row){return{id:Number(row.id),platform:row.platform,name:
 function adminChannel(row){return{...publicChannel(row),visible:Boolean(row.visible),createdBy:row.created_by,createdAt:row.created_at,updatedAt:row.updated_at}}
 
 async function listPublicNotices(env){
-  await ensureSchema(env.DB);
+  await ensurePublicContentSchema(env.DB);
   const rows=await env.DB.prepare(`SELECT id,title,body,pinned,published_at,updated_at FROM seonammedi_notices
     WHERE status='published' ORDER BY pinned DESC,COALESCE(published_at,updated_at) DESC,id DESC LIMIT 40`).all();
   return json({ok:true,items:(rows.results||[]).map(publicNotice)});
 }
 async function listPublicChannels(env){
-  await ensureSchema(env.DB);
+  await ensurePublicContentSchema(env.DB);
   const rows=await env.DB.prepare(`SELECT id,platform,name,url,category,official,note,sort_order FROM seonammedi_channels
     WHERE visible=1 ORDER BY official DESC,sort_order ASC,id ASC LIMIT 80`).all();
   return json({ok:true,items:(rows.results||[]).map(publicChannel)});
@@ -286,7 +351,7 @@ function timelineRow(row,admin=false){
   return item;
 }
 async function listPublicTimeline(env){
-  await ensureSchema(env.DB);
+  await ensurePublicContentSchema(env.DB);
   await ensureTimelineSeed(env.DB);
   const rows=await env.DB.prepare("SELECT * FROM seonammedi_timeline WHERE status='published' ORDER BY sort_order ASC,id ASC LIMIT 300").all();
   return json({ok:true,items:(rows.results||[]).map(row=>timelineRow(row,false))});
