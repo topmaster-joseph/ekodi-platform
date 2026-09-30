@@ -75,6 +75,10 @@ on:
       - 'sites/seonammedi/public/**'
       - 'seonammedi-monitor.js'
       - 'seonammedi-civic-control.js'
+      - 'write-ingress.js'
+      - 'config/write-ingress-policy.json'
+      - 'scripts/validate-write-ingress-policy.mjs'
+      - 'test/write-ingress-policy.test.mjs'
       - 'seonammedi-admin-control.js'
       - 'migrations/0113_seonammedi_site_admin.sql'
       - 'migrations/0116_seonammedi_full_menu_admin.sql'
@@ -549,6 +553,24 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+
+      - name: Ensure durable write queues
+        shell: bash
+        run: |
+          set -euo pipefail
+          ensure_queue() {
+            name="$1"
+            if npx --yes wrangler@4.119.0 queues list 2>/dev/null | grep -Fq "$name"; then
+              echo "Queue already exists: $name"
+              return
+            fi
+            npx --yes wrangler@4.119.0 queues create "$name"
+          }
+          ensure_queue ekodi-write-ingress
+          ensure_queue ekodi-write-ingress-dlq
+
+      - name: Enforce durable write ingress policy
+        run: node scripts/validate-write-ingress-policy.mjs
 
       - name: Read Production Cloudflare quota Source of Truth
         id: quota
