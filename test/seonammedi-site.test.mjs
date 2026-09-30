@@ -105,7 +105,9 @@ test('timeline admin is seeded, permissioned and public materials use central ca
   assert.match(adminHtml,/id="timelineForm"/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/timeline/);
   assert.match(control,/TIMELINE_CAP='seonammedi\.timeline\.manage'/);
-  assert.match(control,/TIMELINE_SEED=/);\n  assert.match(control,/async function ensureTimelineSeed\\(db\\)/);\n  assert.match(control,/await ensureTimelineSeed\\(env\\.DB\\)/);
+  assert.match(control,/TIMELINE_SEED=/);
+  assert.match(control,/async function ensureTimelineSeed\(db\)/);
+  assert.match(control,/await ensureTimelineSeed\(env\.DB\)/);
   assert.match(control,/status='published'/);
   assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_timeline/);
   assert.match(migration,/seonammedi\.timeline\.manage/);
