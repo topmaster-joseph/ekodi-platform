@@ -1,7 +1,6 @@
 import authWorker from './auth-worker.js';
 import { principalFromSupabaseRequest } from './ekodi-principal.js';
 import { accessGrantIsActive, effectiveAccessCapabilities } from './access-governance.js';
-import { ensureCustomerAccessSchema } from './customer-google-prereg.js';
 
 const PREFIX='/api/seonammedi';
 const TENANT_SLUG='seonammedi';
@@ -24,7 +23,6 @@ const safeBool=value=>value===true||value===1||value==='1';
 const safeOrder=value=>Math.max(0,Math.min(9999,Number.parseInt(String(value??0),10)||0));
 
 async function ensureSchema(db){
-  await ensureCustomerAccessSchema(db);
   try{await db.prepare("ALTER TABLE seonammedi_monitor_items ADD COLUMN publish_category TEXT NOT NULL DEFAULT 'news'").run()}catch{}
   await db.exec(`CREATE TABLE IF NOT EXISTS seonammedi_notices (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
