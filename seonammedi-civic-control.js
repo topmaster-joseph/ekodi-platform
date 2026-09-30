@@ -34,6 +34,7 @@ async function ensureSchema(db){
 async function health(db){
   if(!db?.prepare)return json({ok:false,storage:'unavailable',canonicalTable:false,legacyTable:false},503);
   try{
+    await ensureSchema(db);
     const canonical=await db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='seonammedi_civic_voices'").first();
     const legacy=await db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='seonam_med_civic_voices'").first().catch(()=>null);
     return json({ok:Boolean(canonical?.name),storage:'d1',canonicalTable:Boolean(canonical?.name),legacyTable:Boolean(legacy?.name)});

@@ -2566,6 +2566,22 @@
         "bodyIncludes": []
       },
       {
+        "url": "https://ekodi.kr/api/seonammedi/voices/health",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"ok\":true",
+          "\"storage\":\"d1\"",
+          "\"canonicalTable\":true"
+        ],
+        "rollbackVerify": false,
+        "bodyIncludes": [
+          "\"canonicalTable\":true"
+        ]
+      },
+      {
         "url": "https://ekodi.kr/seonammedi/data.json",
         "statuses": [
           200
