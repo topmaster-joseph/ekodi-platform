@@ -100,4 +100,5 @@ test('Mall product management projects the real public affiliate catalog instead
   assert.match(workspace,/플랫폼 공급망 엔진/);
   assert.match(workspace,/여기의 ON\/OFF는 플랫폼 연동 자체가 아니라 에코디몰 사용 여부/);
   assert.match(workspace,/\['sourcing','판매채널 · 공급망'\]/);
+  assert.match(workspace,/에코디몰 사용 설정 저장/);
 });
