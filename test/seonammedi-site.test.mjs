@@ -169,3 +169,16 @@ test('seonammedi full public-menu administration covers status organization mate
   assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_finance_entries/);
   assert.match(migration,/seonammedi\.finance\.manage/);
 });
+
+
+test('SeonamMedi Control routes defer candidate verification until Shared Site binding is active',async()=>{
+  const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/control-api.worker.json',import.meta.url),'utf8'));
+  const rows=manifest.worker.requests.filter(item=>String(item.url||'').includes('/api/seonammedi/'));
+  const byUrl=new Map(rows.map(item=>[item.url,item]));
+  for(const suffix of ['notices','channels','timeline','page-data']){
+    const item=byUrl.get('https://ekodi.kr/api/seonammedi/'+suffix);
+    assert.ok(item,'missing '+suffix);
+    assert.equal(item.candidateVerify,false);
+    assert.match(item.candidateVerifyReason,/Shared Site service binding/);
+  }
+});
