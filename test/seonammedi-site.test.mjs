@@ -13,7 +13,7 @@ test('Shared Site router serves seonammedi assets before generic workspace routi
   for(const deletedPath of ['/seonam-medi','/seonam-med']){const old=await platformRouter.fetch(new Request('https://ekodi.kr'+deletedPath+'/app.css?v=1'),env,{});assert.equal(old.status,404);assert.equal(old.headers.get('x-ekodi-route'),'seonammedi-deleted');}
 });
 
-test('site daily monitor is runtime-owned, source-only and media-evidence aware',async()=>{const [monitor,migration,mediaMigration,canonicalMigration,sourceMigration,app,data]=await Promise.all([readFile(new URL('../seonammedi-monitor.js',import.meta.url),'utf8'),readFile(new URL('../migrations/0104_seonam_medi_monitor.sql',import.meta.url),'utf8'),readFile(new URL('../migrations/0105_seonam_medi_media_evidence.sql',import.meta.url),'utf8'),readFile(new URL('../migrations/0106_seonammedi_canonical_names.sql',import.meta.url),'utf8'),readFile(new URL('../migrations/0107_seonammedi_source_metadata.sql',import.meta.url),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('data.json',root),'utf8')]);assert.match(monitor,/runSeonamMediDailyCheck/);assert.match(monitor,/aiProvider:false/);assert.match(monitor,/source_only/);assert.match(monitor,/news\.google\.com\/rss\/search/);assert.match(monitor,/enrichMedia/);assert.match(monitor,/og:video/);assert.match(monitor,/og:image/);assert.match(monitor,/mediaCandidateCount/);assert.match(monitor,/openapi\.naver\.com\/v1\/search\/blog\.json/);assert.match(monitor,/NAVER_CLIENT_ID/);assert.match(monitor,/sourceType:'blog'/);assert.match(migration,/seonam_medi_monitor_runs/);assert.match(migration,/seonam_medi_monitor_items/);assert.match(canonicalMigration,/CREATE TABLE IF NOT EXISTS seonammedi_monitor_runs/);assert.match(canonicalMigration,/CREATE TABLE IF NOT EXISTS seonammedi_monitor_items/);assert.match(canonicalMigration,/INSERT OR IGNORE INTO seonammedi_monitor_runs/);assert.match(canonicalMigration,/INSERT OR IGNORE INTO seonammedi_monitor_items/);assert.doesNotMatch(canonicalMigration,/RENAME TO|DROP TABLE/);assert.match(sourceMigration,/source_type/);assert.match(sourceMigration,/summary_text/);assert.match(mediaMigration,/media_type/);assert.match(mediaMigration,/media_state/);assert.match(app,/attachMonitorMedia/);assert.match(app,/monitorMatches/);assert.match(app,/원문 확인 필요/);const parsed=JSON.parse(data);assert.ok(parsed.timeline.some(row=>Array.isArray(row.monitorKeywords)&&row.monitorKeywords.length));assert.match(parsed.mediaPolicy.autoLinkRule,/근거자료 후보/);assert.ok(Array.isArray(parsed.publicPosts)&&parsed.publicPosts.length>=5);assert.ok(parsed.publicPosts.every(item=>item.date&&item.sourceType&&item.summary&&item.url));assert.match(app,/publicPostFilters/);});
+test('site daily monitor is runtime-owned, source-only and media-evidence aware',async()=>{const [monitor,migration,mediaMigration,canonicalMigration,sourceMigration,app,data]=await Promise.all([readFile(new URL('../seonammedi-monitor.js',import.meta.url),'utf8'),readFile(new URL('../migrations/0104_seonam_medi_monitor.sql',import.meta.url),'utf8'),readFile(new URL('../migrations/0105_seonam_medi_media_evidence.sql',import.meta.url),'utf8'),readFile(new URL('../migrations/0106_seonammedi_canonical_names.sql',import.meta.url),'utf8'),readFile(new URL('../migrations/0107_seonammedi_source_metadata.sql',import.meta.url),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('data.json',root),'utf8')]);assert.match(monitor,/runSeonamMediDailyCheck/);assert.match(monitor,/aiProvider:false/);assert.match(monitor,/source_only/);assert.match(monitor,/news\.google\.com\/rss\/search/);assert.match(monitor,/enrichMedia/);assert.match(monitor,/og:video/);assert.match(monitor,/og:image/);assert.match(monitor,/mediaCandidateCount/);assert.match(monitor,/openapi\.naver\.com\/v1\/search\/blog\.json/);assert.match(monitor,/NAVER_CLIENT_ID/);assert.match(monitor,/sourceType:'blog'/);assert.match(migration,/seonam_medi_monitor_runs/);assert.match(migration,/seonam_medi_monitor_items/);assert.match(canonicalMigration,/CREATE TABLE IF NOT EXISTS seonammedi_monitor_runs/);assert.match(canonicalMigration,/CREATE TABLE IF NOT EXISTS seonammedi_monitor_items/);assert.match(canonicalMigration,/INSERT OR IGNORE INTO seonammedi_monitor_runs/);assert.match(canonicalMigration,/INSERT OR IGNORE INTO seonammedi_monitor_items/);assert.doesNotMatch(canonicalMigration,/RENAME TO|DROP TABLE/);assert.match(sourceMigration,/source_type/);assert.match(sourceMigration,/summary_text/);assert.match(mediaMigration,/media_type/);assert.match(mediaMigration,/media_state/);assert.match(app,/attachMonitorMedia/);assert.match(app,/monitorMatches/);assert.match(app,/원문 확인 필요/);const parsed=JSON.parse(data);assert.ok(parsed.timeline.some(row=>Array.isArray(row.monitorKeywords)&&row.monitorKeywords.length));assert.match(parsed.mediaPolicy.autoLinkRule,/근거자료 후보/);assert.ok(Array.isArray(parsed.publicPosts)&&parsed.publicPosts.length>=5);assert.ok(parsed.publicPosts.every(item=>item.date&&item.sourceType&&item.summary&&item.url));assert.match(app,/materialFilters/);});
 
 test('seonammedi static headers allow its first-party CSS, JS and API calls',async()=>{const headers=await readFile(new URL('../_headers',import.meta.url),'utf8');assert.match(headers,/\/seonammedi\/\*/);assert.match(headers,/style-src 'self'/);assert.match(headers,/script-src 'self'/);assert.match(headers,/connect-src 'self'/);assert.doesNotMatch(headers,/\/seonammedi\*[\s\S]{0,300}script-src 'none'/);});
 
@@ -77,4 +77,33 @@ test('organization uses representative council and supports 가나다 participan
   assert.ok(Array.isArray(parsed.organization.participants));
   assert.match(app,/organization:'organization'/);
   assert.match(app,/localeCompare\(String\(b\.name\|\|''\),'ko-KR'\)/);
+});
+
+
+test('timeline admin is seeded, permissioned and public materials use central categories',async()=>{
+  const [html,app,adminHtml,adminJs,control,migration,data]=await Promise.all([
+    readFile(new URL('index.html',root),'utf8'),
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('admin/admin.js',root),'utf8'),
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+    readFile(new URL('../migrations/0114_seonammedi_timeline_admin.sql',import.meta.url),'utf8'),
+    readFile(new URL('data.json',root),'utf8')
+  ]);
+  const parsed=JSON.parse(data);
+  assert.match(html,/id="materialFilters"/);
+  assert.match(html,/id="materialList"/);
+  assert.match(app,/공식자료/);
+  assert.match(app,/관련보도/);
+  assert.match(app,/시민·온라인자료/);
+  assert.match(app,/\/api\/seonammedi\/timeline/);
+  assert.match(adminHtml,/data-panel-target="timeline"/);
+  assert.match(adminHtml,/id="timelineForm"/);
+  assert.match(adminJs,/\/api\/seonammedi\/admin\/timeline/);
+  assert.match(control,/TIMELINE_CAP='seonammedi\.timeline\.manage'/);
+  assert.match(control,/TIMELINE_SEED=/);
+  assert.match(control,/status='published'/);
+  assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_timeline/);
+  assert.match(migration,/seonammedi\.timeline\.manage/);
+  assert.ok(Array.isArray(parsed.timeline)&&parsed.timeline.length>=20);
 });
