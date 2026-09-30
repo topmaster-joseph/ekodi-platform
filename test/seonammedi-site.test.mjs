@@ -107,6 +107,7 @@ test('timeline admin is seeded, permissioned and public materials use central ca
   assert.match(control,/TIMELINE_CAP='seonammedi\.timeline\.manage'/);
   assert.match(control,/TIMELINE_SEED=/);
   assert.match(control,/async function ensureTimelineSeed\(db\)/);
+  assert.match(control,/ensureTimelineSeed\(db\)[\s\S]*CREATE TABLE IF NOT EXISTS seonammedi_seed_state/);
   assert.match(control,/async function addColumnIfMissing\(db,table,column,definition\)/);
   assert.match(control,/async function ensurePublicContentSchema\(db\)/);
   assert.match(control,/SELECT '\+column\+' FROM '\+table\+' LIMIT 0/);
