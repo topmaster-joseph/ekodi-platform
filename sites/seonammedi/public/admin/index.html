@@ -25,6 +25,7 @@
     <button data-panel-target="voices" type="button">시민의 목소리</button>
     <button data-panel-target="content" type="button" hidden>관련자료</button>
     <button data-panel-target="notices" type="button">공지</button>
+    <button data-panel-target="minutes" type="button">내부 회의록</button>
     <button data-panel-target="channels" type="button">채널</button>
     <button data-panel-target="finance" type="button">후원·회계</button>
     <button data-panel-target="access" type="button">권한 안내</button>
@@ -118,6 +119,23 @@
       </div>
     </section>
 
+    <section class="panel-page" data-panel="minutes" hidden>
+      <div class="heading"><div><p class="eyebrow">INTERNAL MINUTES</p><h1>내부 회의록</h1><p>관리자가 작성하고, 공유 링크를 받은 사람은 성명을 입력한 뒤 열람할 수 있습니다. 확인자는 회의록 하단에 표시됩니다.</p></div></div>
+      <div class="two-col">
+        <form id="minutesForm" class="card form-card">
+          <input type="hidden" name="id">
+          <h2 id="minutesFormTitle">회의록 작성</h2>
+          <div class="form-row"><label>회의일시<input name="meetingAt" type="datetime-local" required></label><label>회의명<input name="title" maxlength="220" required></label></div>
+          <label>참석자<textarea name="attendees" rows="3" maxlength="2000" placeholder="쉼표 또는 줄바꿈으로 구분"></textarea></label>
+          <label>회의 내용<textarea name="body" rows="14" maxlength="30000" required placeholder="안건, 논의내용, 결정사항, 후속조치 등을 기록"></textarea></label>
+          <div class="form-row"><label>공유 상태<select name="status"><option value="shared">링크 열람 가능</option><option value="closed">열람 중지</option></select></label><label class="check"><input type="checkbox" name="showViewers" checked> 하단에 확인자 표시</label></div>
+          <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="minutesReset" class="secondary">새 회의록</button></div>
+          <p id="minutesMessage" class="message" role="status"></p>
+        </form>
+        <section class="card list-card"><div class="card-head"><h2>회의록 목록</h2><button type="button" id="reloadMinutes" class="secondary">새로고침</button></div><div id="minutesList" class="item-list"></div></section>
+      </div>
+    </section>
+
     <section class="panel-page" data-panel="channels" hidden>
       <div class="heading"><div><p class="eyebrow">CHANNEL HUB</p><h1>채널 관리</h1><p>YouTube·Instagram·Facebook 등 관련 채널 원문 링크를 연결합니다.</p></div></div>
       <div class="two-col">
@@ -159,5 +177,6 @@
   </main>
 </div>
 <script type="module" src="/seonammedi/admin/admin.js"></script>
+<script type="module" src="/seonammedi/admin/admin-minutes.js"></script>
 </body>
 </html>
