@@ -75,9 +75,14 @@ on:
       - 'sites/seonammedi/public/**'
       - 'seonammedi-monitor.js'
       - 'seonammedi-civic-control.js'
+      - 'write-ingress.js'
+      - 'config/write-ingress-policy.json'
+      - 'scripts/validate-write-ingress-policy.mjs'
+      - 'test/write-ingress-policy.test.mjs'
       - 'seonammedi-admin-control.js'
       - 'migrations/0113_seonammedi_site_admin.sql'
       - 'migrations/0116_seonammedi_full_menu_admin.sql'
+      - 'migrations/0118_seonammedi_voice_durable_ingress.sql'
       - 'test/seonammedi-site.test.mjs'
       - 'test/insurance-public-route.test.mjs'
       - 'test/discovery-layer.test.mjs'
@@ -464,7 +469,7 @@ jobs:
       - name: Validate current shared site and admin sources
         run: |
           set -euo pipefail
-          for f in site-worker.js seonammedi-monitor.js seonammedi-civic-control.js sites/seonammedi/public/app.js tenant-live-page.js tenant-live.js tenant-live-admin-page.js learning-page.js invest-site-system.js invest-personal-control.js invest-admin.js platform-router-entry-worker.js platform-security-policy.js canonical-surface-router.js store-gateway-page.js store-portfolio-admin-page.js preview-page.js insurance-public-route.js sites/ekodi-insurance/public/advisor.js sites/ekodi-insurance/public/server-bridge.js marketing-canonical-projection.js workspace-admin-page.js tenant-finance-admin.js organization-admin-page.js tenant-admin-policy.js store-admin-engine.js church-pastor-admin-page.js church-member-home-page.js church-reports-admin.js workspace-trade-admin-page.js workspace-trade-portal.js mail-user-page.js mail-contact.js mail-admin-page.js tax-portal-worker.js tax-business-registry.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-provider-control.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-bootstrap.js auth-site/auth-entry.js auth-site/auth-workspace-target.js auth-site/client-auth.js marketing-ai-admin.js admin-authenticated-shell.js external-account-admin.js admin-assist-bootstrap.js admin-assist-dock.js admin-readable-command.js admin-central-handoff.js finance-monitor.js admin-demand-loader.js admin-public-site-controls.js client-access.js social-admin.js books-admin.js books-finance-admin.js books-distribution-admin.js books-pipeline-admin.js books-pipeline-bridge.js books-royalty-admin.js author-billing-admin.js ai-ops-admin.js devotional-admin.js ai-management-admin.js ai-module-spec-admin.js communication-admin.js openai-workspace-admin.js common-services-admin.js storage-admin.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js ekodibiz-admin-registry.js admin-design-engine.js campus-actions.js discovery-layer.js scripts/discovery-build.mjs scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/cloudflare-production-budget.mjs scripts/cloudflare-quota-guard-lib.mjs scripts/ensure-church-route-ownership.mjs scripts/admin-authenticated-e2e.mjs scripts/admin-assist-canonical-e2e.mjs scripts/admin-readable-command-postbuild.mjs scripts/admin-authenticated-e2e-retry.mjs scripts/admin-authenticated-e2e-menu-worker.mjs scripts/verify-ekodimission-admin-production-e2e.mjs scripts/validate-user-ui-dna.mjs scripts/validate-design-engine.mjs admin-language-status.js; do
+          for f in site-worker.js seonammedi-monitor.js seonammedi-civic-control.js write-ingress.js scripts/validate-write-ingress-policy.mjs sites/seonammedi/public/app.js tenant-live-page.js tenant-live.js tenant-live-admin-page.js learning-page.js invest-site-system.js invest-personal-control.js invest-admin.js platform-router-entry-worker.js platform-security-policy.js canonical-surface-router.js store-gateway-page.js store-portfolio-admin-page.js preview-page.js insurance-public-route.js sites/ekodi-insurance/public/advisor.js sites/ekodi-insurance/public/server-bridge.js marketing-canonical-projection.js workspace-admin-page.js tenant-finance-admin.js organization-admin-page.js tenant-admin-policy.js store-admin-engine.js church-pastor-admin-page.js church-member-home-page.js church-reports-admin.js workspace-trade-admin-page.js workspace-trade-portal.js mail-user-page.js mail-contact.js mail-admin-page.js tax-portal-worker.js tax-business-registry.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-provider-control.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-bootstrap.js auth-site/auth-entry.js auth-site/auth-workspace-target.js auth-site/client-auth.js marketing-ai-admin.js admin-authenticated-shell.js external-account-admin.js admin-assist-bootstrap.js admin-assist-dock.js admin-readable-command.js admin-central-handoff.js finance-monitor.js admin-demand-loader.js admin-public-site-controls.js client-access.js social-admin.js books-admin.js books-finance-admin.js books-distribution-admin.js books-pipeline-admin.js books-pipeline-bridge.js books-royalty-admin.js author-billing-admin.js ai-ops-admin.js devotional-admin.js ai-management-admin.js ai-module-spec-admin.js communication-admin.js openai-workspace-admin.js common-services-admin.js storage-admin.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js ekodibiz-admin-registry.js admin-design-engine.js campus-actions.js discovery-layer.js scripts/discovery-build.mjs scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/cloudflare-production-budget.mjs scripts/cloudflare-quota-guard-lib.mjs scripts/ensure-church-route-ownership.mjs scripts/admin-authenticated-e2e.mjs scripts/admin-assist-canonical-e2e.mjs scripts/admin-readable-command-postbuild.mjs scripts/admin-authenticated-e2e-retry.mjs scripts/admin-authenticated-e2e-menu-worker.mjs scripts/verify-ekodimission-admin-production-e2e.mjs scripts/validate-user-ui-dna.mjs scripts/validate-design-engine.mjs admin-language-status.js; do
             node --check "$f"
           done
           node --test test/local-region-platform.test.mjs test/local-region-operations.test.mjs test/local-region-enforcement.test.mjs test/local-region-content-ledger.test.mjs
@@ -549,6 +554,24 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+
+      - name: Ensure durable write queues
+        shell: bash
+        run: |
+          set -euo pipefail
+          ensure_queue() {
+            name="$1"
+            if npx --yes wrangler@4.119.0 queues list 2>/dev/null | grep -Fq "$name"; then
+              echo "Queue already exists: $name"
+              return
+            fi
+            npx --yes wrangler@4.119.0 queues create "$name"
+          }
+          ensure_queue ekodi-write-ingress
+          ensure_queue ekodi-write-ingress-dlq
+
+      - name: Enforce durable write ingress policy
+        run: node scripts/validate-write-ingress-policy.mjs
 
       - name: Read Production Cloudflare quota Source of Truth
         id: quota
