@@ -179,6 +179,7 @@ test('seonammedi full public-menu administration covers status organization mate
 });
 
 
+// Production read-path stability fix keeps public API reads free of request-time DDL.
 test('SeonamMedi Control routes defer candidate verification until Shared Site binding is active',async()=>{
   const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/control-api.worker.json',import.meta.url),'utf8'));
   const rows=manifest.worker.requests.filter(item=>String(item.url||'').includes('/api/seonammedi/'));
