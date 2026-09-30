@@ -182,4 +182,9 @@ const combined=Object.values(content).join('\n');
 for(const secretLike of ['sk-proj-','sk-svcacct-','SUPABASE_SERVICE_ROLE_KEY="',"SUPABASE_SERVICE_ROLE_KEY='"]){
   if(combined.includes(secretLike))throw new Error(`My EKODI validation failed: secret-like material ${secretLike}`);
 }
+for(const required of ['MY EKODI · ACTION HUB','무엇을 하시겠어요?','이어서 하기','최근 활동','내 활동']){
+  if(!content.index.includes(required))throw new Error(`My EKODI validation failed: action hub marker missing: ${required}`);
+}
+if(!content.index.includes('personal-action-command'))throw new Error('My EKODI validation failed: action command must remain visible on the first screen');
+
 console.log('My EKODI validation passed: USER UI, common-service access context, universal membership, multi-device Free Device Care with browser-only safety boundaries, User AI, Shell-synced Workspace context, isolated staging, central auth and guarded production rollout are present.');
