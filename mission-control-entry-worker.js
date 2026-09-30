@@ -33,7 +33,7 @@ import { handleEkodiMcpGateway, handleEkodiMcpMetadata } from './ekodi-mcp-gatew
 import { handleDevotionalControl } from './devotional-control.js';
 import { handleLearningControl } from './learning-control.js';
 import { handleLocalCommerceControl } from './local-commerce-control.js';
-import { handleExternalAccountControl } from './external-account-control.js';
+import { handleExternalAccountControl, runExternalAccountHealthAudit } from './external-account-control.js';
 import { handleRealtimeControl, runRealtimeRecordingRetention } from './realtime-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 import { runSeonamMediDailyCheck } from './seonammedi-monitor.js';
@@ -372,6 +372,9 @@ export default {
     const seonamMediDaily = scheduledAt.getUTCHours() === 23
       ? runSeonamMediDailyCheck(env,{scheduledAt:scheduledAt.toISOString()}).catch(error => { console.error('Seonam Medi daily monitor error', error); return { ok:false, error:'seonammedi_daily_monitor_failed' }; })
       : null;
+    const externalAccountHealthDaily = scheduledAt.getUTCHours() === 23
+      ? runExternalAccountHealthAudit(env,{scheduledAt:scheduledAt.toISOString()}).catch(error => { console.error('External account daily health error', error); return { ok:false, error:'external_account_daily_health_failed' }; })
+      : null;
     const authorBilling = runAuthorBillingSchedule(env).catch(error => { console.error('Author billing schedule error', error); return { processed:0, error:'author_billing_schedule_failed' }; });
     const messengerOutbox = drainMessengerOutbox(env, { limit:20 }).catch(error => { console.error('Messenger outbox schedule error', error); return { processed:0, failed:1, error:'messenger_outbox_schedule_failed' }; });
     const commandPulse = runEkodiPulseSchedule(env, { limit:1 }).catch(error => { console.error('EKODI v8 Pulse schedule error', error); return { ok:false, error:'ekodi_v8_pulse_failed' }; });
@@ -391,9 +394,11 @@ export default {
       ctx.waitUntil(recordingRetention);
       ctx.waitUntil(wakeOrchestration);
       if (seonamMediDaily) ctx.waitUntil(seonamMediDaily);
+      if (externalAccountHealthDaily) ctx.waitUntil(externalAccountHealthDaily);
     }
     const background = [authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration];
     if (seonamMediDaily) background.push(seonamMediDaily);
+    if (externalAccountHealthDaily) background.push(externalAccountHealthDaily);
     return customerSchedule || Promise.all(background);
   },
 };
