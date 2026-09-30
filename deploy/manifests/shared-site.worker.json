@@ -2518,10 +2518,13 @@
         "expect": [
           "서남권 국립의대 소통센터",
           "사이트 일일점검",
-          "시민·온라인 공개자료",
+          "관련자료",
           "후원·회계 공개"
         ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "bodyIncludes": [
+          "관련자료"
+        ]
       },
       {
         "url": "https://ekodi.kr/seonammedi/admin/",
@@ -2555,11 +2558,28 @@
         "redirect": "manual",
         "expect": [
           "attachMonitorMedia",
-          "publicPostFilters",
+          "materialFilters",
           "/api/seonammedi/monitor",
           "원문 확인 필요"
         ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "bodyIncludes": []
+      },
+      {
+        "url": "https://ekodi.kr/api/seonammedi/voices/health",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"ok\":true",
+          "\"storage\":\"d1\"",
+          "\"canonicalTable\":true"
+        ],
+        "rollbackVerify": false,
+        "bodyIncludes": [
+          "\"canonicalTable\":true"
+        ]
       },
       {
         "url": "https://ekodi.kr/seonammedi/data.json",

@@ -4,6 +4,7 @@ const STANDARD_BODY_LIMIT = 8 * 1024 * 1024;
 const LARGE_MEDIA_BODY_LIMIT = 32 * 1024 * 1024;
 const MAX_QUERY_LENGTH = 8192;
 const PUBLIC_CACHEABLE_API_PATHS = new Set(['/api/public/preview/map']);
+const SELF_PROTECTED_PUBLIC_WRITE_PATHS = new Set(['/api/seonammedi/voices']);
 const encoder = new TextEncoder();
 
 function classifyPath(pathname=''){
@@ -14,8 +15,9 @@ function classifyPath(pathname=''){
   const live=path==='/live'||path.startsWith('/live/')||path.includes('/live/');
   const media=/\/(?:upload|uploads|media|recording|recordings)(?:\/|$)/.test(path);
   const publicCacheableApi=api&&PUBLIC_CACHEABLE_API_PATHS.has(path);
-  const sensitive=admin||auth||api;
-  return {admin,auth,api,live,media,sensitive,publicCacheableApi,surface:admin?'admin':auth?'auth':api?'api':live?'live':'public'};
+  const selfProtectedPublicWrite=SELF_PROTECTED_PUBLIC_WRITE_PATHS.has(path);
+  const sensitive=(admin||auth||api)&&!selfProtectedPublicWrite;
+  return {admin,auth,api,live,media,sensitive,publicCacheableApi,selfProtectedPublicWrite,surface:admin?'admin':auth?'auth':api?'api':live?'live':'public'};
 }
 
 async function digest(value){
@@ -101,6 +103,10 @@ export async function enforcePlatformRequestSecurity(request,env={}){
 
   const result=await limiterResult(env.PLATFORM_PUBLIC_WRITE_RATE_LIMITER,method+':public:'+identity);
   if(!result.available){
+    if(pathInfo.selfProtectedPublicWrite){
+      console.warn('EKODI self-protected public write proceeding with application safeguards',{path:url.pathname,ray:request.headers.get('cf-ray')||''});
+      return null;
+    }
     if(String(env.ENVIRONMENT||'').toLowerCase()==='production'){
       console.error('EKODI public write edge protection unavailable',{path:url.pathname,ray:request.headers.get('cf-ray')||''});
       return securityError('보안 보호장치가 일시적으로 사용할 수 없습니다.','PLATFORM_SECURITY_UNAVAILABLE',503,'30');
@@ -154,4 +160,5 @@ export const PLATFORM_SECURITY_CONSTANTS=Object.freeze({
   LARGE_MEDIA_BODY_LIMIT,
   MAX_QUERY_LENGTH,
   PUBLIC_CACHEABLE_API_PATHS:Object.freeze([...PUBLIC_CACHEABLE_API_PATHS]),
+  SELF_PROTECTED_PUBLIC_WRITE_PATHS:Object.freeze([...SELF_PROTECTED_PUBLIC_WRITE_PATHS]),
 });

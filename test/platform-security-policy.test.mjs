@@ -31,6 +31,13 @@ test('public writes use a separate limiter',async()=>{
   assert.equal((await response.json()).code,'PLATFORM_PUBLIC_WRITE_RATE_LIMITED');
 });
 
+test('seonammedi civic intake falls back to its application safeguards when the paid edge limiter is unavailable',async()=>{
+  const request=new Request('https://ekodi.kr/api/seonammedi/voices',{method:'POST',headers:{'cf-connecting-ip':'203.0.113.12'},body:'{}'});
+  const response=await enforcePlatformRequestSecurity(request,{ENVIRONMENT:'production'});
+  assert.equal(response,null);
+  assert.ok(PLATFORM_SECURITY_CONSTANTS.SELF_PROTECTED_PUBLIC_WRITE_PATHS.includes('/api/seonammedi/voices'));
+});
+
 test('oversized regular mutations are blocked while media gets the larger ceiling',async()=>{
   const oversized=new Request('https://ekodi.kr/feedback',{method:'POST',headers:{'content-length':String(PLATFORM_SECURITY_CONSTANTS.STANDARD_BODY_LIMIT+1)}});
   assert.equal((await enforcePlatformRequestSecurity(oversized,{ENVIRONMENT:'test'})).status,413);
