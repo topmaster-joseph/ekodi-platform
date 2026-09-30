@@ -54,3 +54,13 @@ test('Space release probe follows the published autumn trip content instead of s
   assert.equal(probe.expect?.includes('100000'),false);
   assert.equal(probe.expect?.includes('에코디선교회'),false);
 });
+
+
+test('autumn trip static page matches the published 50k 15-person content',async()=>{
+  const page=await readFile(new URL('../space/ekodimission-autumn-trip-apply.page',import.meta.url),'utf8');
+  assert.ok(page.includes('data-trip-fee>50,000원</span>'));
+  assert.ok(page.includes('data-trip-capacity>15</span>'));
+  assert.ok(page.includes('참가비는 1인 5만원이며 추가비용은 후원으로 충당합니다.'));
+  assert.equal(page.includes('data-trip-fee>100,000원</span>'),false);
+  assert.equal(page.includes('예배'),false);
+});
