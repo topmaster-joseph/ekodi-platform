@@ -52,7 +52,7 @@ INSERT INTO customer_access_grants(
 )
 SELECT id,'ohwon69@gmail.com','board_admin',1,CURRENT_TIMESTAMP,NULL,NULL,
   'member','',
-  '["seonammedi.notice.manage","seonammedi.channel.manage","seonammedi.timeline.manage"]',
+  '["seonammedi.notice.manage","seonammedi.channel.manage"]',
   '["tenant.access.manage","tenant.finance.read","tenant.finance.manage","platform.admin","platform.production.deploy"]',
   NULL,'display-name:서남권 국립의대 소통센터 게시판 관리자',CURRENT_TIMESTAMP,NULL
 FROM customer_tenants
@@ -60,7 +60,7 @@ WHERE slug='seonammedi'
 ON CONFLICT(tenant_id,email) DO UPDATE SET
   role='board_admin',
   enabled=1,
-  capabilities_json='["seonammedi.notice.manage","seonammedi.channel.manage","seonammedi.timeline.manage"]',
+  capabilities_json='["seonammedi.notice.manage","seonammedi.channel.manage"]',
   denied_capabilities_json='["tenant.access.manage","tenant.finance.read","tenant.finance.manage","platform.admin","platform.production.deploy"]',
   note='display-name:서남권 국립의대 소통센터 게시판 관리자',
   updated_at=CURRENT_TIMESTAMP;
