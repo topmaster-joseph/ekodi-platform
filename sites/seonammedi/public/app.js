@@ -91,6 +91,18 @@ if(postFilters&&postList){
   renderPublicPosts('전체');
   postFilters.addEventListener('click',event=>{const button=event.target.closest('button');if(!button)return;[...postFilters.children].forEach(x=>x.classList.remove('active'));button.classList.add('active');renderPublicPosts(button.dataset.publicKind)});
 }
+const org=d.organization||{};
+const chart=el('organizationChart');
+if(chart){
+  const levels=(org.levels||[]).map(level=>'<article class="org-level"><strong>'+escapeHtml(level.name)+'</strong>'+(Array.isArray(level.members)&&level.members.length?'<p>'+level.members.map(escapeHtml).join(' · ')+'</p>':'')+'</article>').join('');
+  const committees=(org.committees||[]).map(item=>'<article class="org-committee"><strong>'+escapeHtml(item.name)+'</strong><span>'+escapeHtml(item.lead||'담당자 확인 중')+'</span></article>').join('');
+  chart.innerHTML='<div class="org-levels">'+levels+'</div><div class="org-committees">'+committees+'</div>';
+}
+const participantHost=el('participantOrganizations');
+if(participantHost){
+  const participants=(org.participants||[]).filter(item=>item&&item.visible!==false).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko-KR'));
+  participantHost.innerHTML=participants.length?participants.map(item=>'<article class="participant-item"><strong>'+escapeHtml(item.name||'')+'</strong>'+(item.representative?'<span>대표 '+escapeHtml(item.representative)+'</span>':'')+(item.url?'<a href="'+safeUrl(item.url)+'" target="_blank" rel="noopener noreferrer">연결</a>':'')+'</article>').join(''):'<p class="muted">공개 등록된 참여단체가 없습니다.</p>';
+}
 el('raised').textContent=money(d.finance.raised);el('spent').textContent=money(d.finance.spent);el('balance').textContent=money(d.finance.balance)}
 const siteReady=load().catch(()=>{el('lastUpdated').textContent='데이터를 불러오지 못했습니다.'});
 async function loadMonitor(){
@@ -127,7 +139,7 @@ if(voiceForm)voiceForm.addEventListener('submit',async event=>{
 });
 
 
-const viewAliases={status:'status',monitor:'status',timeline:'timeline',notices:'notices',materials:'materials',news:'materials','public-posts':'materials',voices:'voices',finance:'finance'};
+const viewAliases={status:'status',monitor:'status',organization:'organization',timeline:'timeline',notices:'notices',materials:'materials',news:'materials','public-posts':'materials',voices:'voices',finance:'finance'};
 function showView(view,{updateHash=false}={}){
   const key=viewAliases[view]||'';
   document.querySelectorAll('[data-view-section]').forEach(section=>{section.hidden=section.dataset.viewSection!==key});
