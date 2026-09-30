@@ -10,10 +10,17 @@
 <body>
 <header class="topbar">
   <a class="brand" href="/seonammedi/admin/"><strong>서남권 국립의대 소통센터</strong><span>관리자</span></a>
-  <div class="top-actions"><span id="adminIdentity">권한 확인 중</span><a href="/seonammedi/" target="_blank" rel="noopener">공개페이지</a><button id="changeAccount" type="button">계정 변경</button></div>
 </header>
 <div class="layout">
   <aside class="sidebar" aria-label="관리 메뉴">
+    <div class="sidebar-tools" aria-label="관리자 빠른 메뉴">
+      <span id="adminIdentity">권한 확인 중</span>
+      <div class="sidebar-tool-actions">
+        <a href="/seonammedi/" target="_blank" rel="noopener">공개페이지</a>
+        <button id="changeAccount" type="button">계정 변경</button>
+      </div>
+    </div>
+    <div class="sidebar-menu">
     <button class="active" data-panel-target="dashboard" type="button">운영홈</button>
     <button data-panel-target="timeline" type="button">활동이력</button>
     <button data-panel-target="content" type="button" hidden>웹검색 게시검토</button>
@@ -21,6 +28,7 @@
     <button data-panel-target="channels" type="button">채널</button>
     <button data-panel-target="organization" type="button">조직</button>
     <button data-panel-target="access" type="button">권한 안내</button>
+    </div>
   </aside>
   <main id="main">
     <section class="panel-page active" data-panel="dashboard">
