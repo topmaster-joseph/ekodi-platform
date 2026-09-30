@@ -1,0 +1,7 @@
+(()=>{
+const p=new URLSearchParams(location.search),token=p.get('token')||'';
+const form=document.getElementById('viewerForm'),msg=document.getElementById('msg'),gate=document.getElementById('gate'),article=document.getElementById('minutes');
+const text=(id,v)=>document.getElementById(id).textContent=String(v??'');
+if(!token){msg.textContent='유효한 공유 링크가 필요합니다.';form.querySelector('button').disabled=true;return}
+form.addEventListener('submit',async e=>{e.preventDefault();msg.textContent='확인 중...';const name=new FormData(form).get('name');try{const r=await fetch('/api/seonammedi/minutes/'+encodeURIComponent(token)+'/viewers',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name}),cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.error||'확인 실패');text('title',d.minutes.title);text('meta',new Date(d.minutes.meetingAt).toLocaleString('ko-KR'));text('attendees',d.minutes.attendees||'-');document.getElementById('body').textContent=d.minutes.body||'';text('viewers',d.minutes.showViewers?(d.viewers||[]).map(v=>v.name).join(' · '):'확인자 목록 비공개');gate.hidden=true;article.hidden=false}catch(err){msg.textContent=err.message==='not_found'?'열람할 수 없는 회의록입니다.':('확인 실패: '+err.message)}})
+})();

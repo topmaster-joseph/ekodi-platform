@@ -11,6 +11,8 @@ const TIMELINE_CAP='seonammedi.timeline.manage';
 const VOICE_CAP='seonammedi.voice.manage';
 const PAGE_CAP='seonammedi.page.manage';
 const FINANCE_CAP='seonammedi.finance.manage';
+const MINUTES_CAP='seonammedi.page.manage';
+const MINUTES_STATES=new Set(['shared','closed']);
 const VOICE_STATES=new Set(['received','reviewing','answered','published','archived']);
 const TIMELINE_STATES=new Set(['draft','published']);
 const TIMELINE_SEED=[{"legacyKey":"seed-001","date":"1990.05","category":"장기연혁","title":"목포대 의과대학 신설 건의 시작","summary":"목포시 공식 추진사항은 국립목포대가 1990년 5월 정부에 의대 신설을 건의하기 시작했다고 정리합니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":0},{"legacyKey":"seed-002","date":"2007","category":"장기연혁","title":"의대 신설 관련 대통령 공약 반영","summary":"목포시 공식 추진사항은 2007년 제17대 대통령 선거 과정에서 목포대 의대 신설이 공약에 반영됐다고 기록합니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":1},{"legacyKey":"seed-003","date":"2012","category":"장기연혁","title":"의대 신설 관련 공약·지역 서명운동","summary":"목포시 공식자료는 2012년 제18대 대통령 선거 공약 반영을 기록하고, 국립목포대 총장백서는 같은 해 도민결의대회와 서명운동 추진 이력을 소개합니다.","evidence":"공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":2},{"legacyKey":"seed-004","date":"2018.07–2019.11","category":"정부·대학","title":"목포대 의과대학 설립 타당성 연구용역","summary":"목포시 공식 추진사항은 교육부 주관 타당성 연구용역이 이 기간 진행됐다고 정리합니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":3},{"legacyKey":"seed-005","date":"2023.01.19","category":"정부·대학","title":"권역별 국립대학교 의과대학 설립 공동 포럼","summary":"국립목포대 연혁에 공동 포럼 개최와 공동건의문 발표가 기록돼 있습니다.","evidence":"국립목포대 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":4},{"legacyKey":"seed-006","date":"2024.03.14","category":"정부·대학","title":"전남 국립의대 신설 추진 발표","summary":"목포시 공식 추진사항은 당시 정부가 전남 국립의대 신설 추진을 발표했다고 기록합니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":5},{"legacyKey":"seed-007","date":"2024.11.15","category":"정부·대학","title":"목포대·순천대 대학통합을 통한 국립의대 추진 합의","summary":"목포시 공식 추진사항에 양 대학 총장의 통합 추진 합의가 기록돼 있습니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":6},{"legacyKey":"seed-008","date":"2024.11.22","category":"정부·대학","title":"통합대학교 국립의대 정부 추천","summary":"목포시 공식 추진사항은 전라남도가 통합대학교 국립의과대학을 정부에 추천했다고 기록합니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":7},{"legacyKey":"seed-009","date":"2025.05.26","category":"정부·대학","title":"통합의대 설립 공동준비위원회 출범","summary":"양 대학 공동준비위원회 출범 이력이 목포시 공식 추진사항에 포함돼 있습니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":8},{"legacyKey":"seed-010","date":"2026.02.10","category":"정부·대학","title":"의사인력 양성규모 발표","summary":"목포시 공식 추진사항은 보건복지부 발표와 함께 의대 없는 지역 신설 시 2030년 개교·정원 100명 고려 내용을 기록합니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":9},{"legacyKey":"seed-011","date":"2026.07.02","category":"정부·대학","title":"국립의대 신설 중재안 제안","summary":"전남광주대전환기획위가 목포대·순천대의 국립의대 신설과 관련한 중재안을 제안한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":10},{"legacyKey":"seed-012","date":"2026.07.14","category":"정부·대학","title":"양 대학 자율협의·통합신청서 제출 요구","summary":"전남광주대전환기획위가 양 대학 회신 결과를 발표하고 자율 협의를 통한 통합신청서 제출을 요구한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":11},{"legacyKey":"seed-013","date":"2026.07.20","category":"정부·대학","title":"지역 완결형 필수·공공의료체계 권고안","summary":"전남광주대전환기획위가 지역 완결형 필수·공공의료체계 구축 권고안을 발표한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":12},{"legacyKey":"seed-014","date":"2026.07.27","category":"정부·대학","title":"공공의료혁신추진단 구성 발표","summary":"전남광주통합특별시가 공공의료혁신추진단 구성과 초광역 통합의료벨트 구축을 발표한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":13},{"legacyKey":"seed-015","date":"2026.08.02","category":"정부·대학","title":"통합 국립의대 긴급 조정회의","summary":"통합 국립의대 설립 및 초광역 통합의료벨트 구축을 위한 긴급 조정회의가 열린 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":14},{"legacyKey":"seed-016","date":"2026.08.06","category":"정부·대학","title":"교육부, 지역 의대 신설 추진계획서 제출 요청","summary":"교육부가 지역 의과대학 신설 추진계획서 제출을 요청한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":15},{"legacyKey":"seed-017","date":"2026.08.20","category":"정부·대학","title":"의과대학 신설 추진계획서 교육부 제출","summary":"전남광주통합특별시가 의과대학 신설 추진계획서를 교육부에 제출한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":16},{"legacyKey":"seed-018","date":"2026.08.26","category":"정부·대학","title":"교육부, 지역 의대 신설 추진계획서 재제출 요청","summary":"교육부가 지역 의과대학 신설 추진계획서 재제출을 요청한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":17},{"legacyKey":"seed-019","date":"2026.08.30","category":"후보대학 선정","title":"전남광주특별시 국립의대 후보대학 선정 결과 발표","summary":"전남광주특별시는 순천대를 후보대학으로 선정했으며 보도된 평가점수는 순천대 89.15점, 목포대 87.85점입니다.","evidence":"공식발표·언론보도","links":[{"label":"후보대학 선정 보도","source":"뉴시스","url":"https://www.newsis.com/view/NISX20260830_0003768417"}],"media":[{"type":"photo","label":"후보대학 선정 관련 현장·발표 사진이 포함된 보도","source":"뉴시스","date":"2026-08-30","url":"https://www.newsis.com/view/NISX20260830_0003768417"}],"monitorKeywords":["후보대학","순천대","선정","목포대"],"sortOrder":18},{"legacyKey":"seed-020","date":"2026.09.21","category":"비대위 활동","title":"서울 상경투쟁 및 기자회견·공개서한 일정","summary":"비대위 참가자 자료집에는 국회 소통관·국회 정문·정당 당사·청와대 앞 기자회견과 공개서한 전달 일정이 포함돼 있습니다. 각 일정의 완료 여부는 후속 현장자료와 보도로 계속 확인합니다.","evidence":"비대위 현장자료","links":[{"label":"국회 기자회견 보도","source":"청년의사","url":"https://www.docdocdoc.co.kr/news/articleView.html?idxno=3042961"}],"media":[{"type":"photo","label":"국회 기자회견 사진이 포함된 보도","source":"청년의사 · 사진출처 국회인터넷의사중계시스템","date":"2026-09-21","url":"https://www.docdocdoc.co.kr/news/articleView.html?idxno=3042961"}],"monitorKeywords":["국회","기자회견","비상대책위원회","상경","공개서한"],"sortOrder":19}];
@@ -157,6 +159,28 @@ async function ensureSchema(db){
     updated_by TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS seonammedi_minutes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    share_token TEXT NOT NULL UNIQUE,
+    meeting_at TEXT NOT NULL,
+    title TEXT NOT NULL,
+    attendees TEXT NOT NULL DEFAULT '',
+    body TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'closed',
+    show_viewers INTEGER NOT NULL DEFAULT 1,
+    created_by TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_seonammedi_minutes_token ON seonammedi_minutes(share_token,status);
+  CREATE TABLE IF NOT EXISTS seonammedi_minute_viewers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    minute_id INTEGER NOT NULL,
+    viewer_name TEXT NOT NULL,
+    viewed_at TEXT NOT NULL,
+    FOREIGN KEY(minute_id) REFERENCES seonammedi_minutes(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_seonammedi_minute_viewers_minute ON seonammedi_minute_viewers(minute_id,viewed_at,id);
   CREATE TABLE IF NOT EXISTS seonammedi_finance_entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     entry_date TEXT NOT NULL,
@@ -465,6 +489,66 @@ async function deleteChannel(env,auth,id){
   await env.DB.prepare('DELETE FROM seonammedi_channels WHERE id=?').bind(id).run();await audit(env,auth,'delete','channel',id,{name:existing.name});return json({ok:true,id});
 }
 
+
+function minuteRow(row,admin=false){
+  const base={id:Number(row.id),meetingAt:row.meeting_at,title:row.title||'',attendees:row.attendees||'',body:row.body||'',status:MINUTES_STATES.has(row.status)?row.status:'closed',showViewers:Boolean(row.show_viewers),viewerCount:Number(row.viewer_count||0)};
+  if(admin)base.shareToken=row.share_token;
+  return base;
+}
+function minuteInput(body,existing={}){
+  const meetingAt=clean(body?.meetingAt??existing.meeting_at,80),title=clean(body?.title??existing.title,220),attendees=clean(body?.attendees??existing.attendees,2000),text=clean(body?.body??existing.body,30000);
+  const rawStatus=clean(body?.status??existing.status,20),status=MINUTES_STATES.has(rawStatus)?rawStatus:'closed';
+  const showViewers=body?.showViewers===undefined?Boolean(existing.show_viewers??1):Boolean(body.showViewers);
+  if(!meetingAt||!title||!text)return null;
+  return{meetingAt,title,attendees,body:text,status,showViewers};
+}
+function newShareToken(){
+  try{return crypto.randomUUID().replace(/-/g,'')+crypto.randomUUID().replace(/-/g,'')}catch{return String(Date.now())+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)}
+}
+async function listAdminMinutes(env,auth){
+  if(!can(auth,MINUTES_CAP))return json({ok:false,error:'minutes_forbidden'},403);
+  await ensureSchema(env.DB);
+  const rows=await env.DB.prepare(`SELECT m.*,COUNT(v.id) viewer_count FROM seonammedi_minutes m LEFT JOIN seonammedi_minute_viewers v ON v.minute_id=m.id GROUP BY m.id ORDER BY m.meeting_at DESC,m.id DESC LIMIT 300`).all();
+  return json({ok:true,items:(rows.results||[]).map(r=>minuteRow(r,true))});
+}
+async function createMinute(request,env,auth){
+  if(!can(auth,MINUTES_CAP))return json({ok:false,error:'minutes_forbidden'},403);
+  const body=await request.json().catch(()=>null),value=minuteInput(body);if(!value)return json({ok:false,error:'invalid_minutes'},400);
+  const now=new Date().toISOString(),token=newShareToken();
+  const result=await env.DB.prepare(`INSERT INTO seonammedi_minutes(share_token,meeting_at,title,attendees,body,status,show_viewers,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)`)
+    .bind(token,value.meetingAt,value.title,value.attendees,value.body,value.status,value.showViewers?1:0,auth.email,now,now).run();
+  const id=Number(result?.meta?.last_row_id||0);await audit(env,auth,'create','minutes',id,{title:value.title,status:value.status});return json({ok:true,id,shareToken:token},201);
+}
+async function updateMinute(request,env,auth,id){
+  if(!can(auth,MINUTES_CAP))return json({ok:false,error:'minutes_forbidden'},403);
+  const existing=await env.DB.prepare('SELECT * FROM seonammedi_minutes WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
+  const body=await request.json().catch(()=>null),value=minuteInput(body,existing);if(!value)return json({ok:false,error:'invalid_minutes'},400);
+  const now=new Date().toISOString();
+  await env.DB.prepare(`UPDATE seonammedi_minutes SET meeting_at=?,title=?,attendees=?,body=?,status=?,show_viewers=?,updated_at=? WHERE id=?`)
+    .bind(value.meetingAt,value.title,value.attendees,value.body,value.status,value.showViewers?1:0,now,id).run();
+  await audit(env,auth,'update','minutes',id,{title:value.title,status:value.status});return json({ok:true,id,shareToken:existing.share_token});
+}
+async function deleteMinute(env,auth,id){
+  if(!can(auth,MINUTES_CAP))return json({ok:false,error:'minutes_forbidden'},403);
+  const existing=await env.DB.prepare('SELECT id,title FROM seonammedi_minutes WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
+  await env.DB.prepare('DELETE FROM seonammedi_minute_viewers WHERE minute_id=?').bind(id).run();
+  await env.DB.prepare('DELETE FROM seonammedi_minutes WHERE id=?').bind(id).run();
+  await audit(env,auth,'delete','minutes',id,{title:existing.title});return json({ok:true,id});
+}
+async function publicMinuteView(request,env,token){
+  if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
+  await ensureSchema(env.DB);
+  const row=await env.DB.prepare("SELECT * FROM seonammedi_minutes WHERE share_token=? AND status='shared' LIMIT 1").bind(token).first();
+  if(!row)return json({ok:false,error:'not_found'},404);
+  if(request.method==='GET')return json({ok:true,requiresName:true,title:row.title,meetingAt:row.meeting_at});
+  if(request.method!=='POST')return json({ok:false,error:'method_not_allowed'},405);
+  const body=await request.json().catch(()=>null),name=clean(body?.name,80);if(!name)return json({ok:false,error:'name_required'},400);
+  const now=new Date().toISOString();
+  await env.DB.prepare('INSERT INTO seonammedi_minute_viewers(minute_id,viewer_name,viewed_at) VALUES(?,?,?)').bind(Number(row.id),name,now).run();
+  const viewers=row.show_viewers?await env.DB.prepare('SELECT viewer_name,viewed_at FROM seonammedi_minute_viewers WHERE minute_id=? ORDER BY id ASC LIMIT 500').bind(Number(row.id)).all():{results:[]};
+  return json({ok:true,minutes:minuteRow(row,false),viewers:(viewers.results||[]).map(v=>({name:v.viewer_name,viewedAt:v.viewed_at}))});
+}
+
 export async function handleSeonamMediAdminApi(request,env){
   const url=new URL(request.url);
   if(url.pathname===PREFIX+'/page-data'&&request.method==='GET'){if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return listPublicPageData(env);}
@@ -485,6 +569,8 @@ export async function handleSeonamMediAdminApi(request,env){
   if(url.pathname===PREFIX+'/channels'&&request.method==='GET'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return listPublicChannels(env);
   }
+  const publicMinutes=url.pathname.match(/^\/api\/seonammedi\/minutes\/([A-Za-z0-9_-]{20,160})\/viewers$/);
+  if(publicMinutes)return publicMinuteView(request,env,publicMinutes[1]);
   if(!url.pathname.startsWith(PREFIX+'/admin/'))return null;
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{allow:'GET, POST, PUT, DELETE, OPTIONS','cache-control':'no-store'}});
   const auth=await authority(request,env);if(!auth.ok)return json({ok:false,error:auth.error},auth.status||403);
@@ -497,6 +583,11 @@ export async function handleSeonamMediAdminApi(request,env){
   let financeMatch=url.pathname.match(/^\/api\/seonammedi\/admin\/finance\/(\d+)$/);
   if(financeMatch&&request.method==='PUT')return updateFinance(request,env,auth,Number(financeMatch[1]));
   if(financeMatch&&request.method==='DELETE')return deleteFinance(env,auth,Number(financeMatch[1]));
+  if(url.pathname===PREFIX+'/admin/minutes'&&request.method==='GET')return listAdminMinutes(env,auth);
+  if(url.pathname===PREFIX+'/admin/minutes'&&request.method==='POST')return createMinute(request,env,auth);
+  let minutesMatch=url.pathname.match(/^\/api\/seonammedi\/admin\/minutes\/(\d+)$/);
+  if(minutesMatch&&request.method==='PUT')return updateMinute(request,env,auth,Number(minutesMatch[1]));
+  if(minutesMatch&&request.method==='DELETE')return deleteMinute(env,auth,Number(minutesMatch[1]));
   if(url.pathname===PREFIX+'/admin/notices'&&request.method==='GET')return listAdminNotices(env,auth);
   if(url.pathname===PREFIX+'/admin/notices'&&request.method==='POST')return createNotice(request,env,auth);
   let match=url.pathname.match(/^\/api\/seonammedi\/admin\/notices\/(\d+)$/);
@@ -522,4 +613,4 @@ export async function handleSeonamMediAdminApi(request,env){
   return json({ok:false,error:'not_found'},404);
 }
 
-export const SEONAM_MEDI_ADMIN_CAPABILITIES=Object.freeze({notices:NOTICE_CAP,channels:CHANNEL_CAP,content:CONTENT_CAP,timeline:TIMELINE_CAP,voices:VOICE_CAP,pages:PAGE_CAP,finance:FINANCE_CAP});
+export const SEONAM_MEDI_ADMIN_CAPABILITIES=Object.freeze({notices:NOTICE_CAP,channels:CHANNEL_CAP,content:CONTENT_CAP,timeline:TIMELINE_CAP,voices:VOICE_CAP,pages:PAGE_CAP,finance:FINANCE_CAP,minutes:MINUTES_CAP});
