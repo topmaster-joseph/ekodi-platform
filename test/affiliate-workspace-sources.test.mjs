@@ -18,8 +18,9 @@ test('Mall affiliate source selection is tenant scoped and fail-closed', async (
   assert.match(api, /effectiveEnabled:selected && ready/);
   assert.match(api, /\/workspace\/sources/);
   assert.match(workspace, /workspaceAffiliateApi\('\/workspace\/sources'/);
-  assert.match(workspace, /연결 대상 설정 저장/);
-  assert.match(workspace, /애터미는 공식몰 참조 전용/);
+  assert.match(workspace, /에코디몰 사용 설정 저장/);
+  assert.match(workspace, /플랫폼 관리자는 Provider·Adapter·Secret을 공통 엔진에서 관리/);
+  assert.match(workspace, /Secret\/API Key는 이 화면에 표시하지 않습니다/);
   assert.match(migration, /affiliate_workspace_source_audit/);
 });
 

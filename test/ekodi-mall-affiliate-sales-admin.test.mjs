@@ -13,9 +13,10 @@ test('affiliate hubs identify direct and network merchant fields', async () => {
 
 test('Mall admin explains affiliate source controls and automatic sales status surfaces', async () => {
   const source = await read('workspace-admin-page.js');
-  assert.match(source, /아고다와 쿠팡 파트너스/);
+  assert.match(source, /플랫폼 공통 판매·공급망 엔진에 등록된 Provider/);
   assert.match(source, /아고다 · 쿠팡 자동영업 설정/);
-  assert.match(source, /판매처별 적용 상태는 공급·제휴에서/);
+  assert.match(source, /여기의 ON\/OFF는 플랫폼 연동 자체가 아니라 에코디몰 사용 여부/);
+  assert.match(source, /자동게시 채널·일일 한도는 자동운영에서 관리/);
   assert.match(source, /최근 자동영업 활동/);
   assert.match(source, /오늘 자동게시/);
 });
