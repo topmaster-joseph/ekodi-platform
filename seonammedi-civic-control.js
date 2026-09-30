@@ -56,7 +56,7 @@ export async function handleSeonamMediCivicApi(request,env){
   const contentLength=Number(request.headers.get('content-length')||0);
   if(contentLength>16384)return json({ok:false,error:'payload_too_large'},413);
   let body;try{body=await request.json()}catch{return json({ok:false,error:'invalid_json'},400)}
-  if(clean(body?.website,200))return json({ok:true,message:'의견이 접수되었습니다.'});
+  if(clean(body?.website,200))return json({ok:false,error:'spam_trap_triggered',message:'입력값을 다시 확인해 주세요.'},400);
   const category=clean(body?.category||'other',24).toLowerCase();
   const displayName=clean(body?.name,80);
   const contact=clean(body?.contact,160);
