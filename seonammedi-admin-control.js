@@ -512,14 +512,40 @@ function minuteInput(body,existing={}){
 function newShareToken(){
   try{return crypto.randomUUID().replace(/-/g,'')+crypto.randomUUID().replace(/-/g,'')}catch{return String(Date.now())+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)}
 }
+async function ensureMinutesSchema(db){
+  await db.exec(`CREATE TABLE IF NOT EXISTS seonammedi_minutes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    share_token TEXT NOT NULL UNIQUE,
+    meeting_at TEXT NOT NULL,
+    title TEXT NOT NULL,
+    attendees TEXT NOT NULL DEFAULT '',
+    body TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'closed',
+    show_viewers INTEGER NOT NULL DEFAULT 1,
+    created_by TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_seonammedi_minutes_token ON seonammedi_minutes(share_token,status);
+  CREATE TABLE IF NOT EXISTS seonammedi_minute_viewers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    minute_id INTEGER NOT NULL,
+    viewer_name TEXT NOT NULL,
+    viewed_at TEXT NOT NULL,
+    FOREIGN KEY(minute_id) REFERENCES seonammedi_minutes(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_seonammedi_minute_viewers_minute ON seonammedi_minute_viewers(minute_id,viewed_at,id);`);
+}
+
 async function listAdminMinutes(env,auth){
   if(!can(auth,MINUTES_CAP))return json({ok:false,error:'minutes_forbidden'},403);
-  await ensureSchema(env.DB);
+  await ensureMinutesSchema(env.DB);
   const rows=await env.DB.prepare(`SELECT m.*,COUNT(v.id) viewer_count FROM seonammedi_minutes m LEFT JOIN seonammedi_minute_viewers v ON v.minute_id=m.id GROUP BY m.id ORDER BY m.meeting_at DESC,m.id DESC LIMIT 300`).all();
   return json({ok:true,items:(rows.results||[]).map(r=>minuteRow(r,true))});
 }
 async function createMinute(request,env,auth){
   if(!can(auth,MINUTES_CAP))return json({ok:false,error:'minutes_forbidden'},403);
+  await ensureMinutesSchema(env.DB);
   const body=await request.json().catch(()=>null),value=minuteInput(body);if(!value)return json({ok:false,error:'invalid_minutes'},400);
   const now=new Date().toISOString(),token=newShareToken();
   const result=await env.DB.prepare(`INSERT INTO seonammedi_minutes(share_token,meeting_at,title,attendees,body,status,show_viewers,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)`)
@@ -528,6 +554,7 @@ async function createMinute(request,env,auth){
 }
 async function updateMinute(request,env,auth,id){
   if(!can(auth,MINUTES_CAP))return json({ok:false,error:'minutes_forbidden'},403);
+  await ensureMinutesSchema(env.DB);
   const existing=await env.DB.prepare('SELECT * FROM seonammedi_minutes WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
   const body=await request.json().catch(()=>null),value=minuteInput(body,existing);if(!value)return json({ok:false,error:'invalid_minutes'},400);
   const now=new Date().toISOString();
@@ -537,6 +564,7 @@ async function updateMinute(request,env,auth,id){
 }
 async function deleteMinute(env,auth,id){
   if(!can(auth,MINUTES_CAP))return json({ok:false,error:'minutes_forbidden'},403);
+  await ensureMinutesSchema(env.DB);
   const existing=await env.DB.prepare('SELECT id,title FROM seonammedi_minutes WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
   await env.DB.prepare('DELETE FROM seonammedi_minute_viewers WHERE minute_id=?').bind(id).run();
   await env.DB.prepare('DELETE FROM seonammedi_minutes WHERE id=?').bind(id).run();
@@ -544,7 +572,7 @@ async function deleteMinute(env,auth,id){
 }
 async function publicMinuteView(request,env,token){
   if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
-  await ensureSchema(env.DB);
+  await ensureMinutesSchema(env.DB);
   const row=await env.DB.prepare("SELECT * FROM seonammedi_minutes WHERE share_token=? AND status='shared' LIMIT 1").bind(token).first();
   if(!row)return json({ok:false,error:'not_found'},404);
   if(request.method==='GET')return json({ok:true,requiresName:true,title:row.title,meetingAt:row.meeting_at});
