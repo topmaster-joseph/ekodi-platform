@@ -111,3 +111,17 @@ test('timeline admin is seeded, permissioned and public materials use central ca
   assert.match(migration,/seonammedi\.timeline\.manage/);
   assert.ok(Array.isArray(parsed.timeline)&&parsed.timeline.length>=20);
 });
+
+
+test('organization keeps three committees independent',async()=>{
+  const [html,adminHtml,dataText]=await Promise.all([
+    readFile(new URL('../sites/seonammedi/public/index.html',import.meta.url),'utf8'),
+    readFile(new URL('../sites/seonammedi/public/admin/index.html',import.meta.url),'utf8'),
+    readFile(new URL('../sites/seonammedi/public/data.json',import.meta.url),'utf8')
+  ]);
+  const data=JSON.parse(dataText);const groups=data.organization.groups;
+  assert.deepEqual(groups.map(x=>x.id),['civic-coalition','mokpo-university','unified-2026-09-30']);
+  assert.equal(groups[0].levels[0].name,'대표자회의');
+  assert.equal(groups[1].levels.length,0);assert.equal(groups[2].levels.length,0);
+  assert.match(html,/id="organizationTabs"/);assert.match(adminHtml,/id="adminOrganizationTabs"/);
+});
