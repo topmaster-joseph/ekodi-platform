@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {EKODI_TECH_SCOUT_POLICY} from '../ekodi-technology-scout.js';
+test('technology scout remains EKODI-owned and approval gated',()=>{assert.equal(EKODI_TECH_SCOUT_POLICY.owner,'EKODI');assert.equal(EKODI_TECH_SCOUT_POLICY.externalProviders,'sources-only');assert.equal(EKODI_TECH_SCOUT_POLICY.automaticProductionMutation,false);assert.equal(EKODI_TECH_SCOUT_POLICY.humanDecisionRequired,true);assert.ok(EKODI_TECH_SCOUT_POLICY.categories.includes('security'));});
