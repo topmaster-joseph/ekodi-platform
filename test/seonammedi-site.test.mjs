@@ -201,4 +201,7 @@ test('seonammedi voice form only reports success after a persisted submission id
   assert.match(app,/body\.ok!==true\|\|!body\.submissionId/);
   assert.match(app,/submitButton\.disabled=true/);
   assert.match(civic,/spam_trap_triggered/);
+  assert.match(civic,/submission_key/);
+  assert.match(civic,/deduplicated:true/);
+  assert.match(app,/crypto\.randomUUID\(\)/);
 });
