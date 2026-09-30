@@ -69,7 +69,11 @@ const renderStatusDetail=(key,d)=>{
 };
 const closeStatusDetail=()=>{const panel=el('statusDetail');if(panel)panel.hidden=true;el('statusCards')?.querySelectorAll('.status-card').forEach(button=>button.setAttribute('aria-expanded','false'))};
 const refreshStatusDetail=()=>{const active=el('statusCards')?.querySelector('.status-card[aria-expanded="true"]');if(active&&window.__SEONAM_MEDI_DATA)renderStatusDetail(active.dataset.status,window.__SEONAM_MEDI_DATA)};
-async function load(){const r=await fetch('/seonammedi/data.json',{cache:'no-store'});if(!r.ok)throw new Error('data');const d=await r.json();window.__SEONAM_MEDI_DATA=d;
+async function load(){
+const [r,timelineResponse]=await Promise.all([fetch('/seonammedi/data.json',{cache:'no-store'}),fetch('/api/seonammedi/timeline',{cache:'no-store'}).catch(()=>null)]);
+if(!r.ok)throw new Error('data');const d=await r.json();
+if(timelineResponse?.ok){const timelineBody=await timelineResponse.json().catch(()=>({}));if(Array.isArray(timelineBody.items))d.timeline=timelineBody.items}
+window.__SEONAM_MEDI_DATA=d;
 el('lastUpdated').textContent='최종 업데이트 '+d.updatedAt;
 const statusCards=el('statusCards');
 statusCards.innerHTML=d.status.map((x,i)=>{const key=x.key||['official','news','daily'][i]||('status-'+i);return `<button type="button" class="card status-card" data-status="${escapeHtml(key)}" aria-expanded="false" aria-controls="statusDetail"><span class="status-card-copy"><strong class="status-card-title">${escapeHtml(x.title)}</strong><span class="status-card-text">${escapeHtml(x.text)}</span></span><span class="status-card-action">내용 보기 <span aria-hidden="true">→</span></span></button>`}).join('');
@@ -78,18 +82,38 @@ const cats=['전체',...new Set(d.timeline.map(x=>x.category))];
 el('timelineFilters').innerHTML=cats.map((c,i)=>`<button data-cat="${c}" class="${i===0?'active':''}">${c}</button>`).join('');
 const render=cat=>{const rows=cat==='전체'?d.timeline:d.timeline.filter(x=>x.category===cat);el('timelineList').innerHTML=rows.map(x=>`<article class="timeline-item" data-event-date="${x.date}"><div class="timeline-date">${x.date}</div><div><h3>${x.title}</h3><p>${x.summary}</p><div class="chips"><span class="chip">${x.category}</span><span class="chip">${x.evidence}</span></div>${evidenceBlock(x)}</div></article>`).join('')};
 render('전체');el('timelineFilters').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;[...el('timelineFilters').children].forEach(x=>x.classList.remove('active'));b.classList.add('active');render(b.dataset.cat);attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS||[])});
-el('sourceList').innerHTML=d.sources.map(s=>`<article class="source"><a href="${safeUrl(s.url)}" target="_blank" rel="noopener noreferrer">${s.title}</a><small>${s.publisher} · ${s.date} · ${s.kind}</small></article>`).join('');
-const publicPosts=Array.isArray(d.publicPosts)?d.publicPosts:[];
-const publicKinds=['전체',...new Set(publicPosts.map(x=>x.sourceType).filter(Boolean))];
-const postFilters=el('publicPostFilters'),postList=el('publicPostList');
-if(postFilters&&postList){
-  postFilters.innerHTML=publicKinds.map((kind,i)=>`<button data-public-kind="${escapeHtml(kind)}" class="${i===0?'active':''}">${escapeHtml(kind)}</button>`).join('');
-  const renderPublicPosts=kind=>{
-    const rows=(kind==='전체'?publicPosts:publicPosts.filter(x=>x.sourceType===kind)).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)));
-    postList.innerHTML=rows.length?rows.map(item=>`<article class="public-post"><div class="public-post-date">${escapeHtml(item.date||'날짜 확인 중')}</div><div><h3><a href="${safeUrl(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title||'공개 게시물')}</a></h3><p>${escapeHtml(item.summary||'요약 준비 중')}</p><div class="public-post-meta"><span class="source-type">${escapeHtml(item.sourceType||'온라인자료')}</span><span class="source-type">${escapeHtml(item.publisher||'작성주체 확인 중')}</span><span class="verify-state">${escapeHtml(item.verification||'원문 확인 필요')}</span></div></div></article>`).join(''):'<p class="muted">표시할 공개 게시물이 없습니다.</p>';
+const materialItems=[
+  ...(Array.isArray(d.sources)?d.sources:[]).map(item=>({
+    category:/(공식|당사자)/.test(String(item.kind||''))?'공식자료':'관련보도',
+    date:item.date||'',
+    title:item.title||'자료',
+    publisher:item.publisher||'',
+    subtype:item.kind||'자료',
+    summary:'',
+    verification:'',
+    url:item.url||''
+  })),
+  ...(Array.isArray(d.publicPosts)?d.publicPosts:[]).map(item=>({
+    category:'시민·온라인자료',
+    date:item.date||'',
+    title:item.title||'공개 게시물',
+    publisher:item.publisher||'',
+    subtype:item.sourceType||'온라인자료',
+    summary:item.summary||'',
+    verification:item.verification||'원문 확인 필요',
+    url:item.url||''
+  }))
+];
+const materialCats=['전체','공식자료','관련보도','시민·온라인자료'];
+const materialFilters=el('materialFilters'),materialList=el('materialList');
+if(materialFilters&&materialList){
+  materialFilters.innerHTML=materialCats.map((cat,i)=>`<button data-material-cat="${escapeHtml(cat)}" class="${i===0?'active':''}">${escapeHtml(cat)}</button>`).join('');
+  const renderMaterials=cat=>{
+    const rows=(cat==='전체'?materialItems:materialItems.filter(item=>item.category===cat)).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+    materialList.innerHTML=rows.length?rows.map(item=>`<article class="material-item"><div class="material-date">${escapeHtml(item.date||'날짜 확인 중')}</div><div><h3><a href="${safeUrl(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a></h3>${item.summary?'<p>'+escapeHtml(item.summary)+'</p>':''}<div class="public-post-meta"><span class="source-type">${escapeHtml(item.category)}</span><span class="source-type">${escapeHtml(item.subtype)}</span>${item.publisher?'<span class="source-type">'+escapeHtml(item.publisher)+'</span>':''}${item.verification?'<span class="verify-state">'+escapeHtml(item.verification)+'</span>':''}</div></div></article>`).join(''):'<p class="muted">표시할 관련자료가 없습니다.</p>';
   };
-  renderPublicPosts('전체');
-  postFilters.addEventListener('click',event=>{const button=event.target.closest('button');if(!button)return;[...postFilters.children].forEach(x=>x.classList.remove('active'));button.classList.add('active');renderPublicPosts(button.dataset.publicKind)});
+  renderMaterials('전체');
+  materialFilters.addEventListener('click',event=>{const button=event.target.closest('button');if(!button)return;[...materialFilters.children].forEach(x=>x.classList.remove('active'));button.classList.add('active');renderMaterials(button.dataset.materialCat)});
 }
 const org=d.organization||{};
 const chart=el('organizationChart');
