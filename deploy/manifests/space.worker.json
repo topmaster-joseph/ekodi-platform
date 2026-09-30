@@ -81,7 +81,7 @@
         "url": "https://ekodi.kr/ekodimission/activities",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["MISSION ACTIVITIES","/ekodimission/apply/261003-autumn-trip","/ekodimission/apply/260926-open-table","16:00–18:00","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
+        "expect": ["MISSION ACTIVITIES","/ekodimission/apply/261003-autumn-trip","/ekodimission/activities/260926-chuseok-open-table/archive","16:00–18:00","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
@@ -104,7 +104,7 @@
         "url": "https://ekodi.kr/ekodimission/apply/261003-autumn-trip",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["2026 에코디선교회","가을 공동체 여행","data-trip-fee","data-trip-fee-note","data-event-application","261003-autumn-community-trip","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/site.js","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
+        "expect": ["2026 가을 공동체 여행","data-trip-fee","data-trip-fee-note","data-event-application","261003-autumn-community-trip","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/site.js","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-site-class: brand-site","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
@@ -120,8 +120,24 @@
         "url": "https://ekodi.kr/ekodimission/api/activities/261003-autumn-community-trip/content",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["261003-autumn-community-trip","50000","2026 가을 공동체 여행"],
+        "expect": ["261003-autumn-community-trip","50000","15","2026 가을 공동체 여행"],
         "headerExpect": ["x-ekodi-route: api","cache-control: no-store"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/api/activities/260926-chuseok-open-table/registration",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["260926-chuseok-open-table","registration_open", "false","archive_url"],
+        "headerExpect": ["x-ekodi-route: api","cache-control: no-store"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/activities/260926-chuseok-open-table/archive",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["ACTIVITY ARCHIVE","2026 에코디 추석 열린식탁","사진·영상"],
+        "headerExpect": ["x-ekodi-route: ekodimission-archive","x-ekodi-independent-site: true","x-ekodi-publication-status: published","cache-control: no-store"],
         "rollbackVerify": false
       },
       {
