@@ -109,7 +109,9 @@ test('timeline admin is seeded, permissioned and public materials use central ca
   assert.match(control,/async function ensureTimelineSeed\(db\)/);
   assert.match(control,/async function addColumnIfMissing\(db,table,column,definition\)/);
   assert.match(control,/async function ensurePublicContentSchema\(db\)/);
-  assert.match(control,/PRAGMA table_info/);
+  assert.match(control,/SELECT '\+column\+' FROM '\+table\+' LIMIT 0/);
+  assert.match(control,/SELECT id FROM seonammedi_timeline WHERE legacy_key=\\?/);
+  assert.doesNotMatch(control,/CREATE UNIQUE INDEX IF NOT EXISTS idx_seonammedi_timeline_legacy_key/);
   assert.match(control,/await ensureTimelineSeed\(env\.DB\)/);
   assert.match(control,/status='published'/);
   assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_timeline/);

@@ -27,8 +27,7 @@ const safeBool=value=>value===true||value===1||value==='1';
 const safeOrder=value=>Math.max(0,Math.min(9999,Number.parseInt(String(value??0),10)||0));
 
 async function addColumnIfMissing(db,table,column,definition){
-  const columns=await db.prepare('PRAGMA table_info('+table+')').all().catch(()=>({results:[]}));
-  if((columns.results||[]).some(row=>row.name===column))return;
+  try{await db.prepare('SELECT '+column+' FROM '+table+' LIMIT 0').all();return}catch{}
   try{await db.prepare('ALTER TABLE '+table+' ADD COLUMN '+column+' '+definition).run()}catch(error){
     const message=String(error?.message||error||'');
     if(!/duplicate column name/i.test(message))throw error;
@@ -84,7 +83,6 @@ async function ensurePublicContentSchema(db){
     ['seonammedi_timeline','legacy_key','TEXT'],['seonammedi_timeline','event_date',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','category',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','summary',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','evidence',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','links_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','media_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','monitor_keywords_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','status',"TEXT NOT NULL DEFAULT 'published'"],['seonammedi_timeline','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_timeline','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','updated_at',"TEXT NOT NULL DEFAULT ''"]
   ];
   for(const [table,column,definition] of repair)await addColumnIfMissing(db,table,column,definition);
-  await db.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_seonammedi_timeline_legacy_key ON seonammedi_timeline(legacy_key)').run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_seonammedi_notices_public ON seonammedi_notices(status,pinned,published_at,updated_at)').run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_seonammedi_channels_public ON seonammedi_channels(visible,sort_order,id)').run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_seonammedi_timeline_public ON seonammedi_timeline(status,sort_order,id)').run();
@@ -184,7 +182,9 @@ async function ensureTimelineSeed(db){
   if(applied?.applied_at)return;
   const now=new Date().toISOString();
   for(const item of TIMELINE_SEED){
-    await db.prepare(`INSERT OR IGNORE INTO seonammedi_timeline(
+    const existing=await db.prepare('SELECT id FROM seonammedi_timeline WHERE legacy_key=? LIMIT 1').bind(item.legacyKey).first().catch(()=>null);
+    if(existing?.id)continue;
+    await db.prepare(`INSERT INTO seonammedi_timeline(
       legacy_key,event_date,category,title,summary,evidence,links_json,media_json,monitor_keywords_json,status,sort_order,created_by,created_at,updated_at
     ) VALUES(?,?,?,?,?,?,?,?,?,'published',?,'system-seed',?,?)`)
       .bind(item.legacyKey,item.date,item.category,item.title,item.summary,item.evidence,JSON.stringify(item.links||[]),JSON.stringify(item.media||[]),JSON.stringify(item.monitorKeywords||[]),item.sortOrder,now,now).run();
