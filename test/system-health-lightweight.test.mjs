@@ -32,3 +32,13 @@ test('System Health is bundled after authentication into an existing admin asset
   assert.match(build, /system-health-admin\.js/);
   assert.match(build, /release-control-admin\.js/);
 });
+
+
+test('System Health resolves Cloudflare analytics from the canonical ekodi.kr zone', async () => {
+  const collector = await readFile('scripts/collect-system-health.mjs', 'utf8');
+  assert.match(collector, /EKODI_CLOUDFLARE_ZONE/);
+  assert.match(collector, /'ekodi\.kr'/);
+  assert.match(collector, /\/zones\?/);
+  assert.doesNotMatch(collector, /admin\.ekodi\.kr/);
+  assert.doesNotMatch(collector, /workers\/domains/);
+});
