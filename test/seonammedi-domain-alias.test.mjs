@@ -20,7 +20,7 @@ test('SeonamMedi standalone domains redirect to the canonical EKODI path', async
 });
 
 test('SeonamMedi Cloudflare custom domains are declared in punycode-safe form', async () => {
-  const wrangler = await readFile(new URL('../wrangler.legacy-redirect.toml', import.meta.url), 'utf8');
+  const wrangler = await readFile(new URL('../wrangler.seonammedi-redirect.toml', import.meta.url), 'utf8');
   assert.match(wrangler, /pattern = "seonammedi\.kr"[\s\S]*zone_name = "seonammedi\.kr"/);
   assert.match(wrangler, /pattern = "xn--3e0b8b58jw4co4mnpll3k\.kr"[\s\S]*zone_name = "xn--3e0b8b58jw4co4mnpll3k\.kr"/);
 });
