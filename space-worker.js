@@ -22,7 +22,7 @@ const MISSION_TRIP_CONTENT_API=`/ekodimission/api/activities/${MISSION_TRIP_RECO
 const MISSION_TRIP_COLLAB_PATH='/ekodimission/edit/261003-autumn-trip';
 const MISSION_COLLAB_API='/ekodimission/api/collab';
 const MISSION_ADMIN_ACTIVITY_RPC_API='/ekodimission/api/admin/activity-rpc';
-const MISSION_ADMIN_ACTIVITY_RPCS=new Set(['activity_admin_snapshot','activity_admin_update_participation','activity_admin_add_participant','activity_admin_share_status','activity_admin_create_share','activity_admin_revoke_share']);
+const MISSION_ADMIN_ACTIVITY_RPCS=new Set(['activity_admin_snapshot','activity_admin_update_participation','activity_admin_add_participant','activity_admin_share_status','activity_admin_create_share','activity_admin_revoke_share','activity_admin_upsert_media_link']);
 const MISSION_SHARE_PATH_RE=/^\/ekodimission\/share\/([A-Za-z0-9_-]{32,200})$/;
 const EKODIMISSION_PAGES=new Map([['/ekodimission','/ekodimission.page'],['/ekodimission/vision','/ekodimission-vision.page'],['/ekodimission/activities','/ekodimission-activities.page'],[MISSION_EVENT_PATH,'/ekodimission-open-table-apply.page'],['/ekodimission/apply/261003-autumn-trip','/ekodimission-autumn-trip-apply.page'],['/ekodimission/prayer','/ekodimission-prayer.page'],['/ekodimission/participate','/ekodimission-participate.page'],['/ekodimission/partners','/ekodimission-partners.page'],['/ekodimission/stories','/ekodimission-stories.page'],['/ekodimission/give','/ekodimission-give.page'],['/ekodimission/transparency','/ekodimission-transparency.page'],['/ekodimission/contact','/ekodimission-contact.page']]);
 const EKODIMISSION_ASSETS=new Map([['/ekodimission/assets/site.css','/ekodimission.css'],['/ekodimission/assets/site.js','/ekodimission.js'],['/ekodimission/assets/shell.css','/ekodimission-shell.css'],['/ekodimission/assets/shell.js','/ekodimission-shell.js'],['/ekodimission/assets/mission-table-hero.svg','/mission-table-hero.svg'],['/ekodimission/assets/open-table-hero-260926.svg','/open-table-hero-260926.svg'],['/ekodimission/assets/open-table-meal-260925.jpg','/open-table-meal-260925.jpg'],['/ekodimission/assets/share.css','/ekodimission-share.css'],['/ekodimission/assets/collab.css','/ekodimission-collab.css'],['/ekodimission/assets/collab.js','/ekodimission-collab.js']]);
@@ -112,6 +112,25 @@ async function routeMissionCollabPage(request,env){
   response.headers.set('x-ekodi-independent-site','true');response.headers.set('x-ekodi-workspace','ekodimission');response.headers.set('x-ekodi-publication-status','private-edit');response.headers.set('x-robots-tag','noindex, nofollow, noarchive');return response;
 }
 
+async function routeMissionActivityRegistration(request,env,activityKey){
+  if(!['GET','HEAD'].includes(request.method))return json(env,{error:'method_not_allowed'},405);
+  const result=await missionSupabaseRpc(env,'activity_public_registration_status',{p_workspace_slug:'ekodimission',p_activity_key:activityKey});
+  if(!result.ok||!result.data?.ok)return json(env,{ok:false,error:'activity_not_found'},404);
+  return json(env,result.data,200);
+}
+async function routeMissionActivityArchive(request,env,activityKey){
+  if(!['GET','HEAD'].includes(request.method))return withHeaders(env,new Response('Method Not Allowed',{status:405}),'ekodimission-archive');
+  const result=await missionSupabaseRpc(env,'activity_public_archive_snapshot',{p_workspace_slug:'ekodimission',p_activity_key:activityKey});
+  const data=result?.data;
+  if(!result.ok||!data?.ok)return withHeaders(env,new Response('Not Found',{status:404}),'ekodimission-archive');
+  const esc=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const media=Array.isArray(data.media)?data.media:[];
+  const cards=media.length?media.map(item=>'<a class="service-card" href="'+esc(item.url)+'" target="_blank" rel="noopener noreferrer"><p class="eyebrow">'+esc(String(item.type||'media').toUpperCase())+'</p><h2>'+esc(item.title||'사진·영상 보기')+'</h2><p>외부 저장소에서 보기 →</p></a>').join(''):'<article class="service-card"><h2>사진·영상 정리 중</h2><p>관련 사진과 영상 링크가 등록되면 이곳에 자동으로 표시됩니다.</p></article>';
+  const html='<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="index,follow"><title>'+esc(data.activity?.title||'행사 결과')+' · 사진·영상</title><link rel="stylesheet" href="/ekodimission/assets/site.css"><link rel="stylesheet" href="/ekodimission/assets/shell.css"><script src="/ekodimission/assets/shell.js" defer></script></head><body><header class="mission-site-header"><a class="mission-brand" href="/ekodimission"><span class="mission-brand-mark">E</span><span><strong>에코디선교회</strong><small>EKODI MISSION</small></span></a><nav aria-label="주요 메뉴" data-mission-nav></nav></header><main class="subpage"><a class="back" href="/ekodimission/activities">← 활동</a><section class="sub-hero"><p class="eyebrow">ACTIVITY ARCHIVE</p><h1>'+esc(data.activity?.title||'행사 결과')+'</h1><p>'+esc(data.activity?.venue||'')+'</p></section><section class="service-grid">'+cards+'</section></main></body></html>';
+  const response=withHeaders(env,new Response(request.method==='HEAD'?null:html,{status:200,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-robots-tag':'index, follow'}}),'ekodimission-archive');
+  return brandSiteResponse(response);
+}
+
 async function routeMissionAdminActivityRpc(request,env){
   if(request.method!=='POST')return json(env,{error:'method_not_allowed',message:'POST 요청만 허용됩니다.'},405);
   if(env.DATA_ENABLED!=='true'||!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return json(env,{error:'activity_gateway_unavailable',message:'행사 관리 데이터 연결을 확인해 주세요.'},503);
@@ -134,7 +153,7 @@ async function routeMissionAdminActivityRpc(request,env){
   }
 }
 async function routeEkodiMission(request,env){
-  const url=new URL(request.url);const pathname=normalizedMissionPath(url.pathname);if(pathname===MISSION_ADMIN_ACTIVITY_RPC_API)return routeMissionAdminActivityRpc(request,env);if(pathname===MISSION_TRIP_CONTENT_API)return routeMissionTripContent(request,env);if(pathname===MISSION_COLLAB_API)return routeMissionCollabApi(request,env);if(pathname===MISSION_TRIP_COLLAB_PATH)return routeMissionCollabPage(request,env);const shareMatch=pathname.match(MISSION_SHARE_PATH_RE);
+  const url=new URL(request.url);const pathname=normalizedMissionPath(url.pathname);if(pathname===MISSION_ADMIN_ACTIVITY_RPC_API)return routeMissionAdminActivityRpc(request,env);if(pathname===MISSION_TRIP_CONTENT_API)return routeMissionTripContent(request,env);if(pathname===MISSION_COLLAB_API)return routeMissionCollabApi(request,env);if(pathname===MISSION_TRIP_COLLAB_PATH)return routeMissionCollabPage(request,env);const registrationMatch=pathname.match(MISSION_ACTIVITY_REGISTRATION_RE);if(registrationMatch)return routeMissionActivityRegistration(request,env,registrationMatch[1]);const archiveMatch=pathname.match(MISSION_ACTIVITY_ARCHIVE_RE);if(archiveMatch)return routeMissionActivityArchive(request,env,archiveMatch[1]);const shareMatch=pathname.match(MISSION_SHARE_PATH_RE);
   if(shareMatch)return routeMissionShare(request,env,shareMatch[1]);
   if(MISSION_EVENT_LEGACY_PATHS.has(pathname)){const target=new URL(MISSION_EVENT_PATH+url.search,'https://ekodi.kr');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-route':'ekodimission-event-canonical','x-ekodi-publication-status':'published'}});}
   if(pathname==='/ekodimission/live'){
