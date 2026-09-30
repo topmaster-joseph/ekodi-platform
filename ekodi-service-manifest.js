@@ -19,7 +19,6 @@ const SERVICES = [
   {id:'management',name:'경영플랫폼',shortName:'경영AI',url:'https://management.ekodi.kr/',group:'business',defaultSurface:'public',workspaceKinds:['person','business','organization','community','project'],capabilities:['management','orchestration','module-selection','menu','orders','reviews'],sso:true,targetable:true,openSso:true,order:15,state:'preparing',shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1},
   {id:'marketing',name:'Marketing AI',shortName:'Marketing',url:'https://ekodi.kr/ekodibiz/marketing-ai',engineUrl:'https://marketing.ekodi.kr/',group:'business',defaultSurface:'public',workspaceKinds:['person','business','organization','church','community','project'],capabilities:['marketing','content','publishing','analytics'],sso:true,targetable:true,order:20,shellIntegration:'static-script'},
   {id:'community',name:'커뮤니티',shortName:'Community',url:'https://ekodi.kr/community',group:'community',defaultSurface:'public',workspaceKinds:['person','community','church','organization','project'],capabilities:['community','groups','messages','events','prayer'],sso:true,targetable:true,order:30,shellIntegration:'worker-injected'},
-  {id:'seonammedi',name:'서남권 국립의대 소통센터',shortName:'서남권의대',url:'https://ekodi.kr/seonammedi/',group:'community',defaultSurface:'public',workspaceKinds:['person','community','organization','project'],capabilities:['public-information','timeline','notices','organization','citizen-voices','transparency'],sso:true,targetable:false,order:35,state:'live',shellIntegration:'worker-injected',onboardingVersion:1},
   {id:'church',name:'에코디교회',shortName:'Church',url:'https://ekodi.kr/ekodichurch',group:'ministry',defaultSurface:'public',workspaceKinds:['church','organization','person'],capabilities:['church','worship','groups','pastoral','events'],sso:true,targetable:true,order:40,shellIntegration:'shared-proxy'},
   {id:'mission',name:'에코디선교회',shortName:'Mission',url:'https://ekodi.kr/ekodimission',group:'ministry',defaultSurface:'public',workspaceKinds:['organization','church','community','person','project'],capabilities:['mission','hospitality','activities','partnerships','giving-information','prayer','realtime','transparency','contact'],sso:true,targetable:false,order:42,state:'preparing',shellIntegration:'external-build',onboardingVersion:1},
   {id:'bible',name:'에코디 말씀대화',shortName:'말씀대화',url:'https://ekodi.kr/bible',group:'ministry',defaultSurface:'public',workspaceKinds:['person','church','community','organization'],capabilities:['scripture','scripture-reader','scripture-search','conversation','reflection','journey','practice','groups'],sso:true,targetable:true,openSso:true,order:45,state:'live',shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1},
@@ -69,8 +68,8 @@ const canonicalKey=value=>{
 };
 
 export const EKODI_SERVICE_MANIFEST = Object.freeze({
-  version: 23,
-  updatedAt: '2026-10-01',
+  version: 22,
+  updatedAt: '2026-09-24',
   identityModel: 'person-space-role',
   authorityModel: 'platform-admin-is-separate-from-tenant-activity',
   shellVersion: 6,
