@@ -897,6 +897,31 @@ jobs:
           exit "$failed"
 
 
+      - name: Notify search engines via IndexNow
+        if: steps.quota.outputs.skip_nonessential != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          key=$(node --input-type=module -e "import('./scripts/discovery-build.mjs').then(m=>process.stdout.write(m.INDEXNOW_KEY))")
+          page='https://ekodi.kr/seonammedi/'
+          encoded=$(node -p "encodeURIComponent(process.argv[1])" "$page")
+          failed=0
+          for spec in \
+            "naver:https://searchadvisor.naver.com/indexnow?url=$encoded&key=$key" \
+            "bing:https://www.bing.com/indexnow?url=$encoded&key=$key" \
+            "global:https://api.indexnow.org/indexnow?url=$encoded&key=$key"; do
+            name="${spec%%:*}"
+            endpoint="${spec#*:}"
+            code=$(curl -sS -o "/tmp/indexnow-$name.body" -w '%{http_code}' --retry 2 --retry-delay 2 --connect-timeout 10 --max-time 30 "$endpoint" || true)
+            echo "IndexNow $name HTTP $code"
+            if [ "$code" != '200' ] && [ "$code" != '202' ]; then
+              cat "/tmp/indexnow-$name.body" || true
+              failed=1
+            fi
+          done
+          exit "$failed"
+
+
   native_surface_verification_desktop:
     name: EKODI Native Surface Verification · Desktop
     needs: deploy
