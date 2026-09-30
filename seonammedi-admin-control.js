@@ -87,16 +87,6 @@ async function ensureSchema(db){
   CREATE INDEX IF NOT EXISTS idx_seonammedi_admin_audit_created ON seonammedi_admin_audit(created_at);
   INSERT OR IGNORE INTO customer_tenants(slug,name,domain,status,created_at)
     VALUES('seonammedi','서남권 국립의대 소통센터','ekodi.kr/seonammedi','active',CURRENT_TIMESTAMP);`);
-  const seeded=await db.prepare("SELECT seed_key FROM seonammedi_seed_state WHERE seed_key='timeline-v1' LIMIT 1").first();
-  if(!seeded){
-    const now=new Date().toISOString();
-    for(const item of TIMELINE_SEED){
-      await db.prepare(`INSERT OR IGNORE INTO seonammedi_timeline(legacy_key,event_date,category,title,summary,evidence,links_json,media_json,monitor_keywords_json,status,sort_order,created_by,created_at,updated_at)
-        VALUES(?,?,?,?,?,?,?,?,?,'published',?,'system-seed',?,?)`)
-        .bind(item.legacyKey,item.date,item.category,item.title,item.summary,item.evidence,JSON.stringify(item.links),JSON.stringify(item.media),JSON.stringify(item.monitorKeywords),item.sortOrder,now,now).run();
-    }
-    await db.prepare("INSERT OR IGNORE INTO seonammedi_seed_state(seed_key,applied_at) VALUES('timeline-v1',?)").bind(now).run();
-  }
 }
 
 async function platformSession(request,env){
