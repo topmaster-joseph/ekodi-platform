@@ -4,7 +4,7 @@ import test from 'node:test';
 
 const source = readFileSync(new URL('../scripts/admin-authenticated-e2e-menu-worker.mjs', import.meta.url), 'utf8');
 
-test('authenticated Admin E2E activates only the target demand menu before contextual navigation', () => {
+test('authenticated Admin E2E activates only the target demand menu before left navigation', () => {
   assert.doesNotMatch(source, /stage\('ready-demand'\)/);
   assert.match(source, /async function prepareTargetDemand\(\)/);
   assert.match(source, /\[data-demand-feature\]\[data-section=/);
@@ -16,13 +16,13 @@ test('authenticated Admin E2E activates only the target demand menu before conte
 });
 
 
-test('authenticated Admin E2E uses the visible left submenu when contextual tabs are intentionally hidden', () => {
+test('authenticated Admin E2E uses only the visible left submenu after contextual tabs are retired', () => {
   assert.match(source, /async function resolveMenuTrigger\(\)/);
   assert.match(source, /admin-detail-item\[data-admin-detail-section=/);
   assert.match(source, /data-admin-detail-more=/);
-  assert.match(source, /no visible sidebar navigation trigger/);
+  assert.match(source, /no visible left-navigation trigger/);
   assert.match(source, /stage\('sidebar-trigger'\)/);
-  assert.doesNotMatch(source, /await tab\.waitFor\(\{ state: 'visible'/);
+  assert.doesNotMatch(source, /admin-context-tab/);
 });
 
 test('authenticated Admin E2E resolves aliased demand-loader keys from the placeholder instead of menu ids', () => {
