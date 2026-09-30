@@ -737,7 +737,17 @@ jobs:
           fi
           if [ "${FORCE_SYNC:-false}" = 'true' ]; then config_changed=true; fi
           if [ "$needs_sync" = 'true' ] || [ "$config_changed" = 'true' ]; then
-            npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
+            # Before the new Worker version is promoted, the currently active
+            # production script may not yet expose the Queue consumer handler.
+            # Synchronize domains with a pre-candidate config that omits only
+            # the consumer trigger; the full consumer trigger is attached
+            # immediately after guarded promotion below.
+            awk '
+              /^\[\[queues\.consumers\]\]$/ { skip=1; next }
+              skip && /^\[/ { skip=0 }
+              !skip { print }
+            ' wrangler.site.toml > /tmp/wrangler.site.pre-candidate.toml
+            npx --yes wrangler@4.119.0 triggers deploy --config /tmp/wrangler.site.pre-candidate.toml
             payload=$(read_domains)
           fi
           root_host='ekodi.kr'
@@ -756,6 +766,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
+
+      - name: Finalize durable write queue consumer trigger
+        if: steps.quota.outputs.skip_nonessential != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The guarded release above has now promoted code containing the
+          # queue(batch, env) handler, so attaching the consumer is safe.
+          npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
+          npx --yes wrangler@4.119.0 queues list | grep -Fq 'ekodi-write-ingress'
+          npx --yes wrangler@4.119.0 queues list | grep -Fq 'ekodi-write-ingress-dlq'
+          echo 'durableWriteQueueConsumer=attached'
 
       - name: Verify EKODI Mission LIVE production shell contract
         if: steps.quota.outputs.skip_nonessential != 'true'
