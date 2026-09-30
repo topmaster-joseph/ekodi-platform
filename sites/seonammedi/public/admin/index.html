@@ -15,12 +15,14 @@
 <div class="layout">
   <aside class="sidebar" aria-label="관리 메뉴">
     <button class="active" data-panel-target="dashboard" type="button">운영홈</button>
+    <button data-panel-target="status" type="button">현재상황</button>
+    <button data-panel-target="organization" type="button">조직</button>
     <button data-panel-target="timeline" type="button">활동이력</button>
     <button data-panel-target="voices" type="button">시민의 목소리</button>
-    <button data-panel-target="content" type="button" hidden>웹검색 게시검토</button>
+    <button data-panel-target="content" type="button" hidden>관련자료</button>
     <button data-panel-target="notices" type="button">공지</button>
     <button data-panel-target="channels" type="button">채널</button>
-    <button data-panel-target="organization" type="button">조직</button>
+    <button data-panel-target="finance" type="button">후원·회계</button>
     <button data-panel-target="access" type="button">권한 안내</button>
   </aside>
   <main id="main">
@@ -34,10 +36,35 @@
         <article><span>공지</span><strong id="noticeCount">-</strong><small>초안 포함</small></article>
         <article><span>채널</span><strong id="channelCount">-</strong><small>숨김 포함</small></article>
       </div>
-      <section class="card"><h2>관리 범위</h2><p id="scopeSummary">권한을 확인하고 있습니다.</p><div class="quick"><button type="button" data-go="timeline">활동이력 관리</button><button type="button" data-go="voices">시민의 목소리 관리</button><button type="button" data-go="content">웹검색 게시검토</button><button type="button" data-go="notices">공지 관리</button><button type="button" data-go="channels">채널 관리</button><a href="/seonammedi/" target="_blank" rel="noopener">사이트 확인</a></div></section>
+      <section class="card"><h2>관리 범위</h2><p id="scopeSummary">권한을 확인하고 있습니다.</p><div class="quick"><button type="button" data-go="status">현재상황</button><button type="button" data-go="organization">조직</button><button type="button" data-go="timeline">활동이력</button><button type="button" data-go="notices">공지</button><button type="button" data-go="content">관련자료</button><button type="button" data-go="voices">시민의 목소리</button><button type="button" data-go="finance">후원·회계</button><button type="button" data-go="channels">채널</button><a href="/seonammedi/" target="_blank" rel="noopener">사이트 확인</a></div></section>
     </section>
 
 
+
+    <section class="panel-page" data-panel="status" hidden>
+      <div class="heading"><div><p class="eyebrow">CURRENT STATUS</p><h1>현재상황 관리</h1><p>사용자 페이지의 현재상황 카드 제목과 설명을 직접 관리합니다.</p></div></div>
+      <form id="statusForm" class="card form-card">
+        <div class="form-row"><label>공식 기록 제목<input name="officialTitle" maxlength="120"></label><label>관련 보도 제목<input name="newsTitle" maxlength="120"></label><label>일일 점검 제목<input name="dailyTitle" maxlength="120"></label></div>
+        <label>공식 기록 설명<textarea name="officialText" rows="4" maxlength="2000"></textarea></label>
+        <label>관련 보도 설명<textarea name="newsText" rows="4" maxlength="2000"></textarea></label>
+        <label>일일 점검 설명<textarea name="dailyText" rows="4" maxlength="2000"></textarea></label>
+        <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="reloadStatusPage" class="secondary">다시 불러오기</button></div>
+        <p id="statusPageMessage" class="message" role="status"></p>
+      </form>
+    </section>
+
+    <section class="panel-page" data-panel="organization" hidden>
+      <div class="heading"><div><p class="eyebrow">ORGANIZATION</p><h1>조직 관리</h1><p>조직단계, 위원회, 참여단체를 줄 단위로 관리합니다.</p></div></div>
+      <form id="organizationForm" class="card form-card">
+        <label>대표자회의 구성<textarea name="representatives" rows="4" placeholder="한 줄에 한 명"></textarea></label>
+        <label>상임공동대표단 구성<textarea name="standing" rows="4" placeholder="한 줄에 한 명"></textarea></label>
+        <label>집행위원회 구성<textarea name="executive" rows="4" placeholder="한 줄에 한 명"></textarea></label>
+        <label>위원회<textarea name="committees" rows="6" placeholder="총무위원회 | 문지영&#10;행사위원회 | 박현경"></textarea></label>
+        <label>참여단체<textarea name="participants" rows="8" placeholder="단체명 | 대표자 | https://..."></textarea></label>
+        <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="reloadOrganization" class="secondary">다시 불러오기</button></div>
+        <p id="organizationMessage" class="message" role="status"></p>
+      </form>
+    </section>
 
     <section class="panel-page" data-panel="voices" hidden>
       <div class="heading"><div><p class="eyebrow">CITIZEN VOICES</p><h1>시민의 목소리 관리</h1><p>시민이 접수한 의견·질문·제보를 확인하고 처리 상태와 공개 여부를 관리합니다. 연락처는 관리자에게만 표시됩니다.</p></div><button id="reloadVoices" type="button" class="secondary">새로고침</button></div>
@@ -105,14 +132,27 @@
       </div>
     </section>
 
-    <section class="panel-page" data-panel="organization" hidden>
-      <div class="heading"><div><p class="eyebrow">ORGANIZATION</p><h1>조직</h1><p>조직 구성과 소개 내용은 추후 등록합니다.</p></div></div>
-      <section class="card placeholder"><strong>추후 공개 예정</strong><p>헤더의 조직 메뉴와 공개 섹션은 먼저 준비되어 있으며, 조직도·역할·연락 창구는 확정 후 등록합니다.</p></section>
+    <section class="panel-page" data-panel="finance" hidden>
+      <div class="heading"><div><p class="eyebrow">TRANSPARENCY</p><h1>후원·회계 관리</h1><p>수입·지출 내역을 등록하면 사용자 페이지의 누적 모금·지출·잔액이 자동 계산됩니다.</p></div><button id="reloadFinance" type="button" class="secondary">새로고침</button></div>
+      <div class="two-col">
+        <form id="financeForm" class="card form-card">
+          <input type="hidden" name="id">
+          <h2 id="financeFormTitle">회계내역 추가</h2>
+          <div class="form-row"><label>일자<input name="date" type="date" required></label><label>구분<select name="type"><option value="income">수입</option><option value="expense">지출</option></select></label><label>금액<input name="amount" type="number" min="0" step="1" required></label></div>
+          <label>목적·내용<input name="purpose" maxlength="500" required></label>
+          <label>관련 행사<input name="event" maxlength="300"></label>
+          <div class="form-row"><label>증빙<select name="evidenceStatus"><option value="none">미등록</option><option value="held">증빙보유</option><option value="verified">확인완료</option></select></label><label class="check"><input type="checkbox" name="visible" checked> 사용자페이지 공개</label></div>
+          <label>공개 메모<textarea name="note" rows="4" maxlength="1000"></textarea></label>
+          <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="financeReset" class="secondary">새 내역</button></div>
+          <p id="financeMessage" class="message" role="status"></p>
+        </form>
+        <section class="card list-card"><div class="card-head"><h2>회계내역</h2><span id="financeSummary" class="muted">합계 계산 중</span></div><div id="financeList" class="item-list"></div></section>
+      </div>
     </section>
 
     <section class="panel-page" data-panel="access" hidden>
       <div class="heading"><div><p class="eyebrow">ACCESS SCOPE</p><h1>권한 안내</h1><p>사이트 범위를 넘어서는 권한은 제공하지 않습니다.</p></div></div>
-      <section class="card"><dl class="access-list"><div><dt>로그인 계정</dt><dd id="accessEmail">-</dd></div><div><dt>역할</dt><dd id="accessRole">-</dd></div><div><dt>활동이력 관리</dt><dd id="accessTimeline">-</dd></div><div><dt>시민의 목소리 관리</dt><dd id="accessVoices">-</dd></div><div><dt>웹검색 게시검토</dt><dd id="accessContent">-</dd></div><div><dt>공지 관리</dt><dd id="accessNotice">-</dd></div><div><dt>채널 관리</dt><dd id="accessChannel">-</dd></div></dl></section>
+      <section class="card"><dl class="access-list"><div><dt>로그인 계정</dt><dd id="accessEmail">-</dd></div><div><dt>역할</dt><dd id="accessRole">-</dd></div><div><dt>현재상황·조직 관리</dt><dd id="accessPages">-</dd></div><div><dt>활동이력 관리</dt><dd id="accessTimeline">-</dd></div><div><dt>시민의 목소리 관리</dt><dd id="accessVoices">-</dd></div><div><dt>후원·회계 관리</dt><dd id="accessFinance">-</dd></div><div><dt>웹검색 게시검토</dt><dd id="accessContent">-</dd></div><div><dt>공지 관리</dt><dd id="accessNotice">-</dd></div><div><dt>채널 관리</dt><dd id="accessChannel">-</dd></div></dl></section>
     </section>
   </main>
 </div>
