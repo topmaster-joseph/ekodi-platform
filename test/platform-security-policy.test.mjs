@@ -56,6 +56,7 @@ test('Mall Free Ops admin embed keeps the narrow first-party framing exception',
     'x-frame-options':'DENY',
   }}),embedRequest);
   assert.equal(embedResponse.headers.get('x-frame-options'),null);
+  assert.equal(embedResponse.headers.get('x-ekodi-security-surface'),'public');
   assert.match(embedResponse.headers.get('content-security-policy')||'',/frame-ancestors https:\/\/ekodi\.kr/);
 
   const publicRequest=new Request('https://ekodi.kr/ekodimall/assets/free-ops');

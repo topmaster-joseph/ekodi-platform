@@ -3,7 +3,7 @@ name: Verify Admin Free Ops Embed
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ['EKODI Mall · Stage and Deploy', 'Deploy Admin & Auth Site']
+    workflows: ['EKODI Mall · Stage and Deploy', 'Deploy Admin & Auth Site', 'Deploy EKODI Shared Site Core']
     types: [completed]
 
 permissions:
