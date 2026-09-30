@@ -57,9 +57,9 @@ test('checkSite treats an expected protected auth response as healthy', async ()
 
 test('monitor covers official services, shared infrastructure, Connect dependencies, Marketing AI tenants, private/public sites and legacy aliases', () => {
   const byId = new Map(SITE_DEFINITIONS.map(site => [site[0], site]));
-  assert.equal(byId.get('auth')?.[2], 'auth.ekodi.kr');
-  assert.equal(byId.get('auth-client-js')?.[3], 'https://auth.ekodi.kr/client-auth.js');
-  assert.equal(byId.get('auth-router-js')?.[3], 'https://auth.ekodi.kr/auth-router.js');
+  assert.equal(byId.get('auth')?.[2], 'ekodi.kr/auth');
+  assert.equal(byId.get('auth-client-js')?.[3], 'https://ekodi.kr/auth/client-auth.js');
+  assert.equal(byId.get('auth-router-js')?.[3], 'https://ekodi.kr/auth/auth-router.js');
   assert.equal(byId.get('ai-gateway')?.[2], 'ai.ekodi.kr');
   assert.equal(byId.get('shell-js')?.[3], 'https://ekodi.kr/shell/shell.js');
   assert.equal(byId.get('community-health')?.[3], 'https://ekodi.kr/community/health');
