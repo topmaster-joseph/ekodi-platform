@@ -89,6 +89,20 @@ async function ensureSchema(db){
     VALUES('seonammedi','서남권 국립의대 소통센터','ekodi.kr/seonammedi','active',CURRENT_TIMESTAMP);`);
 }
 
+async function ensureTimelineSeed(db){
+  const seedKey='timeline-v1';
+  const applied=await db.prepare('SELECT applied_at FROM seonammedi_seed_state WHERE seed_key=? LIMIT 1').bind(seedKey).first();
+  if(applied?.applied_at)return;
+  const now=new Date().toISOString();
+  for(const item of TIMELINE_SEED){
+    await db.prepare(`INSERT OR IGNORE INTO seonammedi_timeline(
+      legacy_key,event_date,category,title,summary,evidence,links_json,media_json,monitor_keywords_json,status,sort_order,created_by,created_at,updated_at
+    ) VALUES(?,?,?,?,?,?,?,?,?,'published',?,'system-seed',?,?)`)
+      .bind(item.legacyKey,item.date,item.category,item.title,item.summary,item.evidence,JSON.stringify(item.links||[]),JSON.stringify(item.media||[]),JSON.stringify(item.monitorKeywords||[]),item.sortOrder,now,now).run();
+  }
+  await db.prepare('INSERT OR REPLACE INTO seonammedi_seed_state(seed_key,applied_at) VALUES(?,?)').bind(seedKey,now).run();
+}
+
 async function platformSession(request,env){
   const url=new URL(request.url);url.pathname='/api/session';url.search='';
   const response=await authWorker.fetch(new Request(url.toString(),{method:'GET',headers:request.headers}),env);
@@ -185,11 +199,13 @@ function timelineRow(row,admin=false){
 }
 async function listPublicTimeline(env){
   await ensureSchema(env.DB);
+  await ensureTimelineSeed(env.DB);
   const rows=await env.DB.prepare("SELECT * FROM seonammedi_timeline WHERE status='published' ORDER BY sort_order ASC,id ASC LIMIT 300").all();
   return json({ok:true,items:(rows.results||[]).map(row=>timelineRow(row,false))});
 }
 async function listAdminTimeline(env,auth){
   if(!can(auth,TIMELINE_CAP))return json({ok:false,error:'timeline_forbidden'},403);
+  await ensureTimelineSeed(env.DB);
   const rows=await env.DB.prepare('SELECT * FROM seonammedi_timeline ORDER BY sort_order ASC,id ASC LIMIT 500').all();
   return json({ok:true,items:(rows.results||[]).map(row=>timelineRow(row,true))});
 }
