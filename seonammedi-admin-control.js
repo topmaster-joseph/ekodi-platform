@@ -8,6 +8,8 @@ const NOTICE_CAP='seonammedi.notice.manage';
 const CHANNEL_CAP='seonammedi.channel.manage';
 const CONTENT_CAP='seonammedi.content.manage';
 const TIMELINE_CAP='seonammedi.timeline.manage';
+const VOICE_CAP='seonammedi.voice.manage';
+const VOICE_STATES=new Set(['received','reviewing','answered','published','archived']);
 const TIMELINE_STATES=new Set(['draft','published']);
 const TIMELINE_SEED=[{"legacyKey":"seed-001","date":"1990.05","category":"장기연혁","title":"목포대 의과대학 신설 건의 시작","summary":"목포시 공식 추진사항은 국립목포대가 1990년 5월 정부에 의대 신설을 건의하기 시작했다고 정리합니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":0},{"legacyKey":"seed-002","date":"2007","category":"장기연혁","title":"의대 신설 관련 대통령 공약 반영","summary":"목포시 공식 추진사항은 2007년 제17대 대통령 선거 과정에서 목포대 의대 신설이 공약에 반영됐다고 기록합니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":1},{"legacyKey":"seed-003","date":"2012","category":"장기연혁","title":"의대 신설 관련 공약·지역 서명운동","summary":"목포시 공식자료는 2012년 제18대 대통령 선거 공약 반영을 기록하고, 국립목포대 총장백서는 같은 해 도민결의대회와 서명운동 추진 이력을 소개합니다.","evidence":"공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":2},{"legacyKey":"seed-004","date":"2018.07–2019.11","category":"정부·대학","title":"목포대 의과대학 설립 타당성 연구용역","summary":"목포시 공식 추진사항은 교육부 주관 타당성 연구용역이 이 기간 진행됐다고 정리합니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":3},{"legacyKey":"seed-005","date":"2023.01.19","category":"정부·대학","title":"권역별 국립대학교 의과대학 설립 공동 포럼","summary":"국립목포대 연혁에 공동 포럼 개최와 공동건의문 발표가 기록돼 있습니다.","evidence":"국립목포대 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":4},{"legacyKey":"seed-006","date":"2024.03.14","category":"정부·대학","title":"전남 국립의대 신설 추진 발표","summary":"목포시 공식 추진사항은 당시 정부가 전남 국립의대 신설 추진을 발표했다고 기록합니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":5},{"legacyKey":"seed-007","date":"2024.11.15","category":"정부·대학","title":"목포대·순천대 대학통합을 통한 국립의대 추진 합의","summary":"목포시 공식 추진사항에 양 대학 총장의 통합 추진 합의가 기록돼 있습니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":6},{"legacyKey":"seed-008","date":"2024.11.22","category":"정부·대학","title":"통합대학교 국립의대 정부 추천","summary":"목포시 공식 추진사항은 전라남도가 통합대학교 국립의과대학을 정부에 추천했다고 기록합니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":7},{"legacyKey":"seed-009","date":"2025.05.26","category":"정부·대학","title":"통합의대 설립 공동준비위원회 출범","summary":"양 대학 공동준비위원회 출범 이력이 목포시 공식 추진사항에 포함돼 있습니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":8},{"legacyKey":"seed-010","date":"2026.02.10","category":"정부·대학","title":"의사인력 양성규모 발표","summary":"목포시 공식 추진사항은 보건복지부 발표와 함께 의대 없는 지역 신설 시 2030년 개교·정원 100명 고려 내용을 기록합니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":9},{"legacyKey":"seed-011","date":"2026.07.02","category":"정부·대학","title":"국립의대 신설 중재안 제안","summary":"전남광주대전환기획위가 목포대·순천대의 국립의대 신설과 관련한 중재안을 제안한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":10},{"legacyKey":"seed-012","date":"2026.07.14","category":"정부·대학","title":"양 대학 자율협의·통합신청서 제출 요구","summary":"전남광주대전환기획위가 양 대학 회신 결과를 발표하고 자율 협의를 통한 통합신청서 제출을 요구한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":11},{"legacyKey":"seed-013","date":"2026.07.20","category":"정부·대학","title":"지역 완결형 필수·공공의료체계 권고안","summary":"전남광주대전환기획위가 지역 완결형 필수·공공의료체계 구축 권고안을 발표한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":12},{"legacyKey":"seed-014","date":"2026.07.27","category":"정부·대학","title":"공공의료혁신추진단 구성 발표","summary":"전남광주통합특별시가 공공의료혁신추진단 구성과 초광역 통합의료벨트 구축을 발표한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":13},{"legacyKey":"seed-015","date":"2026.08.02","category":"정부·대학","title":"통합 국립의대 긴급 조정회의","summary":"통합 국립의대 설립 및 초광역 통합의료벨트 구축을 위한 긴급 조정회의가 열린 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":14},{"legacyKey":"seed-016","date":"2026.08.06","category":"정부·대학","title":"교육부, 지역 의대 신설 추진계획서 제출 요청","summary":"교육부가 지역 의과대학 신설 추진계획서 제출을 요청한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":15},{"legacyKey":"seed-017","date":"2026.08.20","category":"정부·대학","title":"의과대학 신설 추진계획서 교육부 제출","summary":"전남광주통합특별시가 의과대학 신설 추진계획서를 교육부에 제출한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":16},{"legacyKey":"seed-018","date":"2026.08.26","category":"정부·대학","title":"교육부, 지역 의대 신설 추진계획서 재제출 요청","summary":"교육부가 지역 의과대학 신설 추진계획서 재제출을 요청한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":17},{"legacyKey":"seed-019","date":"2026.08.30","category":"후보대학 선정","title":"전남광주특별시 국립의대 후보대학 선정 결과 발표","summary":"전남광주특별시는 순천대를 후보대학으로 선정했으며 보도된 평가점수는 순천대 89.15점, 목포대 87.85점입니다.","evidence":"공식발표·언론보도","links":[{"label":"후보대학 선정 보도","source":"뉴시스","url":"https://www.newsis.com/view/NISX20260830_0003768417"}],"media":[{"type":"photo","label":"후보대학 선정 관련 현장·발표 사진이 포함된 보도","source":"뉴시스","date":"2026-08-30","url":"https://www.newsis.com/view/NISX20260830_0003768417"}],"monitorKeywords":["후보대학","순천대","선정","목포대"],"sortOrder":18},{"legacyKey":"seed-020","date":"2026.09.21","category":"비대위 활동","title":"서울 상경투쟁 및 기자회견·공개서한 일정","summary":"비대위 참가자 자료집에는 국회 소통관·국회 정문·정당 당사·청와대 앞 기자회견과 공개서한 전달 일정이 포함돼 있습니다. 각 일정의 완료 여부는 후속 현장자료와 보도로 계속 확인합니다.","evidence":"비대위 현장자료","links":[{"label":"국회 기자회견 보도","source":"청년의사","url":"https://www.docdocdoc.co.kr/news/articleView.html?idxno=3042961"}],"media":[{"type":"photo","label":"국회 기자회견 사진이 포함된 보도","source":"청년의사 · 사진출처 국회인터넷의사중계시스템","date":"2026-09-21","url":"https://www.docdocdoc.co.kr/news/articleView.html?idxno=3042961"}],"monitorKeywords":["국회","기자회견","비상대책위원회","상경","공개서한"],"sortOrder":19}];
 const CONTENT_STATES=new Set(['candidate','published','rejected']);
@@ -108,7 +110,7 @@ async function authority(request,env){
     FROM customer_access_grants WHERE tenant_id=? AND lower(trim(email))=? LIMIT 1`).bind(tenant.id,lower(principal.email)).first();
   if(!accessGrantIsActive(grant))return {ok:false,status:403,error:'access_forbidden'};
   const capabilities=effectiveAccessCapabilities(grant);
-  if(!capabilities.includes(NOTICE_CAP)&&!capabilities.includes(CHANNEL_CAP)&&!capabilities.includes(CONTENT_CAP)&&!capabilities.includes(TIMELINE_CAP))return {ok:false,status:403,error:'access_forbidden'};
+  if(!capabilities.includes(NOTICE_CAP)&&!capabilities.includes(CHANNEL_CAP)&&!capabilities.includes(CONTENT_CAP)&&!capabilities.includes(TIMELINE_CAP)&&!capabilities.includes(VOICE_CAP))return {ok:false,status:403,error:'access_forbidden'};
   return {ok:true,email:lower(principal.email),role:clean(grant.role,80)||'staff',platform:false,capabilities};
 }
 
@@ -138,7 +140,7 @@ async function listPublicChannels(env){
 
 async function adminMe(request,env,auth){
   const site=await env.DB.prepare('SELECT public_status,updated_at FROM public_site_controls WHERE site_id=? LIMIT 1').bind(TENANT_SLUG).first().catch(()=>null);
-  return json({ok:true,email:auth.email,role:auth.role,platform:Boolean(auth.platform),capabilities:auth.capabilities||[],permissions:{notices:can(auth,NOTICE_CAP),channels:can(auth,CHANNEL_CAP),content:can(auth,CONTENT_CAP),timeline:can(auth,TIMELINE_CAP)},publicStatus:site?.public_status||'public',publicStatusUpdatedAt:site?.updated_at||''});
+  return json({ok:true,email:auth.email,role:auth.role,platform:Boolean(auth.platform),capabilities:auth.capabilities||[],permissions:{notices:can(auth,NOTICE_CAP),channels:can(auth,CHANNEL_CAP),content:can(auth,CONTENT_CAP),timeline:can(auth,TIMELINE_CAP),voices:can(auth,VOICE_CAP)||can(auth,CONTENT_CAP)},publicStatus:site?.public_status||'public',publicStatusUpdatedAt:site?.updated_at||''});
 }
 
 async function listAdminNotices(env,auth){
@@ -224,6 +226,28 @@ async function deleteTimeline(env,auth,id){
   await env.DB.prepare('DELETE FROM seonammedi_timeline WHERE id=?').bind(id).run();await audit(env,auth,'delete','timeline',id,{title:existing.title});return json({ok:true,id});
 }
 
+function voiceRow(row){return{id:Number(row.id),category:row.category,displayName:row.display_name||'',contact:row.contact||'',message:row.message||'',publicConsent:Boolean(row.public_consent),privacyConsent:Boolean(row.privacy_consent),status:VOICE_STATES.has(row.review_status)?row.review_status:'received',createdAt:row.created_at,updatedAt:row.updated_at}}
+function canManageVoices(auth){return can(auth,VOICE_CAP)||can(auth,CONTENT_CAP)}
+async function listAdminVoices(env,auth){
+  if(!canManageVoices(auth))return json({ok:false,error:'voice_forbidden'},403);
+  const rows=await env.DB.prepare('SELECT id,category,display_name,contact,message,public_consent,privacy_consent,review_status,created_at,updated_at FROM seonammedi_civic_voices ORDER BY id DESC LIMIT 300').all();
+  return json({ok:true,items:(rows.results||[]).map(voiceRow)});
+}
+async function updateAdminVoice(request,env,auth,id){
+  if(!canManageVoices(auth))return json({ok:false,error:'voice_forbidden'},403);
+  const existing=await env.DB.prepare('SELECT * FROM seonammedi_civic_voices WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
+  const body=await request.json().catch(()=>null),status=clean(body?.status??existing.review_status,40);
+  if(!VOICE_STATES.has(status))return json({ok:false,error:'invalid_voice_status'},400);
+  if(status==='published'&&!safeBool(existing.public_consent))return json({ok:false,error:'public_consent_required',message:'공개 동의가 없는 의견은 공개할 수 없습니다.'},400);
+  const now=new Date().toISOString();await env.DB.prepare('UPDATE seonammedi_civic_voices SET review_status=?,updated_at=? WHERE id=?').bind(status,now,id).run();
+  await audit(env,auth,'status','civic_voice',id,{status,category:existing.category});return json({ok:true,id,status});
+}
+async function deleteAdminVoice(env,auth,id){
+  if(!canManageVoices(auth))return json({ok:false,error:'voice_forbidden'},403);
+  const existing=await env.DB.prepare('SELECT id,category,display_name FROM seonammedi_civic_voices WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
+  await env.DB.prepare('DELETE FROM seonammedi_civic_voices WHERE id=?').bind(id).run();await audit(env,auth,'delete','civic_voice',id,{category:existing.category,displayName:existing.display_name||''});return json({ok:true,id});
+}
+
 async function listAdminContent(env,auth){
   if(!can(auth,CONTENT_CAP))return json({ok:false,error:'content_forbidden'},403);
   const rows=await env.DB.prepare(`SELECT id,title,url,resolved_url,publisher,published_at,query_label,review_state,publish_category,first_seen_at,last_seen_at
@@ -305,6 +329,10 @@ export async function handleSeonamMediAdminApi(request,env){
   let timelineMatch=url.pathname.match(/^\/api\/seonammedi\/admin\/timeline\/(\d+)$/);
   if(timelineMatch&&request.method==='PUT')return updateTimeline(request,env,auth,Number(timelineMatch[1]));
   if(timelineMatch&&request.method==='DELETE')return deleteTimeline(env,auth,Number(timelineMatch[1]));
+  if(url.pathname===PREFIX+'/admin/voices'&&request.method==='GET')return listAdminVoices(env,auth);
+  let voiceMatch=url.pathname.match(/^\/api\/seonammedi\/admin\/voices\/(\d+)$/);
+  if(voiceMatch&&request.method==='PUT')return updateAdminVoice(request,env,auth,Number(voiceMatch[1]));
+  if(voiceMatch&&request.method==='DELETE')return deleteAdminVoice(env,auth,Number(voiceMatch[1]));
   if(url.pathname===PREFIX+'/admin/content'&&request.method==='GET')return listAdminContent(env,auth);
   let contentMatch=url.pathname.match(/^\/api\/seonammedi\/admin\/content\/(\d+)$/);
   if(contentMatch&&request.method==='PUT')return updateAdminContent(request,env,auth,Number(contentMatch[1]));
@@ -316,4 +344,4 @@ export async function handleSeonamMediAdminApi(request,env){
   return json({ok:false,error:'not_found'},404);
 }
 
-export const SEONAM_MEDI_ADMIN_CAPABILITIES=Object.freeze({notices:NOTICE_CAP,channels:CHANNEL_CAP,content:CONTENT_CAP,timeline:TIMELINE_CAP});
+export const SEONAM_MEDI_ADMIN_CAPABILITIES=Object.freeze({notices:NOTICE_CAP,channels:CHANNEL_CAP,content:CONTENT_CAP,timeline:TIMELINE_CAP,voices:VOICE_CAP});
