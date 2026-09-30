@@ -111,3 +111,13 @@ test('timeline admin is seeded, permissioned and public materials use central ca
   assert.match(migration,/seonammedi\.timeline\.manage/);
   assert.ok(Array.isArray(parsed.timeline)&&parsed.timeline.length>=20);
 });
+
+
+test('managed content reads rely on migrations instead of request-time schema DDL',async()=>{
+  const control=await readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8');
+  assert.doesNotMatch(control,/ensureCustomerAccessSchema/);
+  assert.doesNotMatch(control,/async function ensureSchema/);
+  assert.match(control,/publicStorageRead/);
+  assert.match(control,/timeline_storage_read_failed/);
+  assert.match(control,/ensureContentCategoryColumn/);
+});
