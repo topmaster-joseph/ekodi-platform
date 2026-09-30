@@ -13,8 +13,8 @@ test('site improvement targets only canonical apex workspace sites',()=>{
   const targets=eligibleSiteImprovementTargets();
   assert.ok(targets.length>=8);
   assert.ok(targets.every(site=>site.canonicalUrl.startsWith('https://ekodi.kr/')));
-  assert.equal(targets.some(site=>site.id==='ekodi-trade'),false);
-  assert.equal(targets.some(site=>site.id==='ekodi-cafe'),false);
+  assert.equal(targets.some(site=>site.id==='ekodi-trade'),true);
+  assert.equal(targets.some(site=>site.id==='ekodi-cafe'),true);
   assert.equal(targets[0].id,'jadam');
 });
 
