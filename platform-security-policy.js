@@ -101,6 +101,13 @@ export async function enforcePlatformRequestSecurity(request,env={}){
     return null;
   }
 
+  if(pathInfo.selfProtectedPublicWrite){
+    const surge=await limiterResult(env.SEONAMMEDI_VOICE_SURGE_LIMITER,'POST:seonammedi:voices:global');
+    if(surge.available&&!surge.allowed){
+      console.warn('EKODI SeonamMedi voice surge shield engaged',{path:url.pathname,ray:request.headers.get('cf-ray')||''});
+      return securityError('현재 의견 접수가 집중되고 있습니다. 잠시 후 다시 시도해 주세요.','SEONAMMEDI_VOICE_SURGE_LIMITED',429,'15');
+    }
+  }
   const result=await limiterResult(env.PLATFORM_PUBLIC_WRITE_RATE_LIMITER,method+':public:'+identity);
   if(!result.available){
     if(pathInfo.selfProtectedPublicWrite){
