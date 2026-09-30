@@ -9,6 +9,9 @@ on:
       - '.github/workflows/verify-seonammedi-domains.yml'
       - 'wrangler.seonammedi-redirect.toml'
       - 'legacy-redirect.js'
+      - 'sites/seonammedi/public/**'
+      - 'discovery-layer.js'
+      - 'scripts/discovery-build.mjs'
   workflow_dispatch:
 
 permissions:
@@ -43,3 +46,26 @@ jobs:
           }
           verify "seonammedi.kr" "/domain-check?source=verify" "https://ekodi.kr/seonammedi/domain-check?source=verify"
           verify "xn--3e0b8b58jw4co4mnpll3k.kr" "/admin/?source=verify" "https://ekodi.kr/seonammedi/admin/?source=verify"
+
+      - name: Verify search-bot indexability
+        shell: bash
+        run: |
+          set -euo pipefail
+          check_bot() {
+            name="$1"; ua="$2"
+            rm -f /tmp/bot-h /tmp/bot-body
+            code=$(curl -sS -D /tmp/bot-h -o /tmp/bot-body -A "$ua" --connect-timeout 10 --max-time 30 -w '%{http_code}' 'https://ekodi.kr/seonammedi/')
+            echo "$name http=$code"
+            test "$code" = '200'
+            ! grep -Eiq '^x-robots-tag:.*noindex' /tmp/bot-h
+            ! grep -Eiq '<meta[^>]+name=["'"']robots["'"'][^>]+content=["'"'][^"'"']*noindex' /tmp/bot-body
+            grep -Fq '<link rel="canonical" href="https://ekodi.kr/seonammedi/">' /tmp/bot-body
+            grep -Eiq '<meta[^>]+name=["'"']robots["'"'][^>]+content=["'"'][^"'"']*index' /tmp/bot-body
+          }
+          check_bot 'googlebot' 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'
+          check_bot 'bingbot' 'Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)'
+          check_bot 'naver-yeti' 'Mozilla/5.0 (compatible; Yeti/1.1; +http://naver.me/spd)'
+          robots=$(curl -fsS --connect-timeout 10 --max-time 30 'https://ekodi.kr/robots.txt')
+          grep -Fq 'Sitemap: https://ekodi.kr/sitemap.xml' <<< "$robots"
+          sitemap=$(curl -fsS --connect-timeout 10 --max-time 30 'https://ekodi.kr/sitemap.xml')
+          grep -Fq '<loc>https://ekodi.kr/seonammedi</loc>' <<< "$sitemap"
