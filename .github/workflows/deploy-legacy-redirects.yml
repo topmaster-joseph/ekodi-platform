@@ -51,7 +51,7 @@ jobs:
         run: |
           set -u
           failed=0
-          for spec in "ekodichurch.kr:ekodi.kr/ekodichurch" "ekodilab.kr:ekodi.kr/ekodilab" "ekodimall.kr:mall.ekodi.kr" "seonammedi.kr:ekodi.kr/seonammedi" "xn--3e0b8b58jw4co4mnpll3k.kr:ekodi.kr/seonammedi"; do
+          for spec in "ekodichurch.kr:ekodi.kr/ekodichurch" "ekodilab.kr:ekodi.kr/ekodilab" "ekodimall.kr:ekodi.kr/ekodimall" "seonammedi.kr:ekodi.kr/seonammedi" "xn--3e0b8b58jw4co4mnpll3k.kr:ekodi.kr/seonammedi"; do
             old="${spec%%:*}"; new="${spec#*:}"; code=000; location=""
             for attempt in $(seq 1 12); do
               curl -sS -o /dev/null -D /tmp/headers --connect-timeout 10 --max-time 20 "https://$old/domain-check?source=legacy" || true
