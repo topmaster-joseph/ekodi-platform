@@ -353,6 +353,18 @@
   "organization": {
     "groups": [
       {
+        "id": "unified-2026-09-30",
+        "name": "통합 대책위원회",
+        "shortName": "통합 대책위원회",
+        "foundedDate": "2026-09-30",
+        "public": true,
+        "levels": [],
+        "committees": [],
+        "participants": [],
+        "participantSort": "ko-KR",
+        "publicOnly": true
+      },
+      {
         "id": "civic-coalition",
         "name": "시민단체 연합 대책위원회",
         "shortName": "시민단체 연합",
@@ -409,20 +421,8 @@
         "participants": [],
         "participantSort": "ko-KR",
         "publicOnly": true
-      },
-      {
-        "id": "unified-2026-09-30",
-        "name": "통합 대책위원회",
-        "shortName": "통합 대책위원회",
-        "foundedDate": "2026-09-30",
-        "public": true,
-        "levels": [],
-        "committees": [],
-        "participants": [],
-        "participantSort": "ko-KR",
-        "publicOnly": true
       }
     ],
-    "defaultGroup": "civic-coalition"
+    "defaultGroup": "unified-2026-09-30"
   }
 }
