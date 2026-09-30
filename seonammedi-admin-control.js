@@ -71,6 +71,21 @@ async function ensureSchema(db){
     updated_at TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_seonammedi_timeline_public ON seonammedi_timeline(status,sort_order,id);
+  CREATE TABLE IF NOT EXISTS seonammedi_civic_voices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category TEXT NOT NULL,
+    display_name TEXT NOT NULL DEFAULT '',
+    contact TEXT NOT NULL DEFAULT '',
+    message TEXT NOT NULL,
+    public_consent INTEGER NOT NULL DEFAULT 0,
+    privacy_consent INTEGER NOT NULL DEFAULT 1,
+    review_status TEXT NOT NULL DEFAULT 'received',
+    request_fingerprint TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_seonammedi_civic_voices_created ON seonammedi_civic_voices(created_at);
+  CREATE INDEX IF NOT EXISTS idx_seonammedi_civic_voices_review ON seonammedi_civic_voices(review_status,created_at);
   CREATE TABLE IF NOT EXISTS seonammedi_seed_state (
     seed_key TEXT PRIMARY KEY,
     applied_at TEXT NOT NULL
