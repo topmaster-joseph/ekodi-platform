@@ -103,11 +103,7 @@ async function resolveMenuTrigger() {
     return detail;
   }
 
-  const context = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`).first();
-  await context.waitFor({ state: 'attached', timeout: interactionReadyTimeoutMs });
-  if (await context.isVisible().catch(() => false)) return context;
-
-  throw new Error(`${menuId}: no visible sidebar navigation trigger after selecting work area ${group}`);
+  throw new Error(`${menuId}: no visible left-navigation trigger after selecting work area ${group}`);
 }
 
 async function visiblePanelState() {
@@ -117,7 +113,7 @@ async function visiblePanelState() {
       const style = getComputedStyle(node);
       return ids.includes(section) && !node.hidden && !node.classList.contains('hidden-panel') && style.display !== 'none' && style.visibility !== 'hidden';
     });
-    const tab = document.querySelector(`button.admin-context-tab[data-admin-context-section="${section}"]`);
+    const detail = document.querySelector(`button.admin-detail-item[data-admin-detail-section="${section}"]`);
     const text = String(panel?.innerText || '').replace(/\s+/g, ' ').trim();
     const busy = panel ? [panel, ...panel.querySelectorAll('[aria-busy="true"],.loading,.spinner')].filter(node => {
       if (!node.matches('[aria-busy="true"],.loading,.spinner')) return false;
@@ -126,7 +122,7 @@ async function visiblePanelState() {
     }).length : 0;
     return {
       panelFound: Boolean(panel), textLength: text.length, busy,
-      selected: tab?.getAttribute('aria-selected') === 'true' || tab?.classList.contains('active') || false,
+      selected: window.EKODIAdminPanels?.current?.() === section || detail?.getAttribute('aria-current') === 'page' || detail?.classList.contains('active') || false,
       pageTitle: document.querySelector('#pageTitle')?.textContent?.trim() || '',
       currentSection: window.EKODIAdminPanels?.current?.() || '', hash: location.hash,
     };
@@ -458,26 +454,23 @@ async function verifyCommandWorkbench(started) {
     const dock = document.querySelector('#ekodiAssistDock');
     const panel = document.querySelector('#ekodiAssistPanel');
     const chat = document.querySelector('#ekodiAssistChat[data-ekodi-main-conversation="true"]');
-    const tab = document.querySelector('button.admin-context-tab[data-admin-context-section="command-home"]');
     if (window.EKODIAdminPanels?.current?.() !== 'command-home') return false;
     if (!body?.classList.contains('admin-command-home') || !body.classList.contains('admin-command-active')) return false;
     if (!dock || !panel || !chat || panel.hidden) return false;
     const panelStyle = getComputedStyle(panel);
     const chatStyle = getComputedStyle(chat);
-    const selected = tab?.getAttribute('aria-selected') === 'true' || tab?.classList.contains('active');
-    return selected && panelStyle.display !== 'none' && panelStyle.visibility !== 'hidden' && chatStyle.display !== 'none' && chatStyle.visibility !== 'hidden';
+    return panelStyle.display !== 'none' && panelStyle.visibility !== 'hidden' && chatStyle.display !== 'none' && chatStyle.visibility !== 'hidden';
   }, null, { timeout: 10_000 });
   const state = await page.evaluate(() => {
     const panel = document.querySelector('#ekodiAssistPanel');
     const chat = document.querySelector('#ekodiAssistChat[data-ekodi-main-conversation="true"]');
-    const tab = document.querySelector('button.admin-context-tab[data-admin-context-section="command-home"]');
     const text = String(panel?.innerText || '').replace(/\s+/g, ' ').trim();
     const panelRect = panel?.getBoundingClientRect();
     const chatRect = chat?.getBoundingClientRect();
     return {
       commandWorkbench: Boolean(panel && chat),
       textLength: text.length,
-      selected: tab?.getAttribute('aria-selected') === 'true' || tab?.classList.contains('active') || false,
+      selected: window.EKODIAdminPanels?.current?.() === 'command-home',
       currentSection: window.EKODIAdminPanels?.current?.() || '',
       pathname: location.pathname,
       panelWidth: panelRect?.width || 0,
@@ -585,21 +578,16 @@ try {
   const directDefinition = getAdminMenuItem(menuId);
   if (menuId === 'command-home') {
     stage('command-home');
-    const context = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
-    await context.waitFor({ state: 'attached', timeout: interactionReadyTimeoutMs });
+    await page.waitForFunction(() => window.EKODIAdminPanels?.current?.() === 'command-home', null, { timeout: interactionReadyTimeoutMs });
     await verifyCommandWorkbench(started);
   } else {
     stage('sidebar-trigger');
     const trigger = await resolveMenuTrigger();
-    const context = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
-    await context.waitFor({ state: 'attached', timeout: interactionReadyTimeoutMs });
     if (directDefinition?.href && !directDefinition.adminHandoff) {
       stage('registry-link');
       await verifyRegistryHref(trigger, started);
     } else {
-      const aria = await context.getAttribute('aria-selected');
-      const classes = String(await context.getAttribute('class') || '');
-      let alreadyActive = aria === 'true' || classes.split(/\s+/).includes('active');
+      let alreadyActive = await page.evaluate(section => window.EKODIAdminPanels?.current?.() === section, menuId);
       if (alreadyActive) {
         stage('active-panel-check');
         const activeState = await visiblePanelState();
