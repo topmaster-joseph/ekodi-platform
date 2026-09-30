@@ -12,7 +12,7 @@
 <header class="site-header">
   <a class="brand" href="/seonammedi/"><strong>서남권 국립의대 소통센터</strong><small>서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널</small></a>
   <nav aria-label="주요 메뉴">
-    <a href="#status">현재상황</a><a href="#timeline">활동이력</a><a href="#news">관련자료</a><a href="#public-posts">시민·온라인자료</a><a href="#voices">시민의목소리</a><a href="#finance">후원·회계</a>
+    <a href="#status" data-view-link="status">현재상황</a><a href="#timeline" data-view-link="timeline">활동이력</a><a href="#notices" data-view-link="notices">공지</a><a href="#materials" data-view-link="materials">관련자료</a><a href="#voices" data-view-link="voices">시민의목소리</a><a href="#finance" data-view-link="finance">후원·회계</a>
   </nav>
 </header>
 <main>
@@ -23,39 +23,47 @@
   <div class="meta"><span id="lastUpdated">업데이트 확인 중</span><span id="monitorBadge">사이트 자동점검: 확인 중</span></div>
 </section>
 
-<section id="status" class="section">
+<section id="status" class="section" data-view-section="status" hidden>
   <div class="section-head"><div><p class="eyebrow">CURRENT STATUS</p><h2>현재 진행상황</h2></div><span class="badge">출처 검증형</span></div>
   <div id="statusCards" class="grid"></div>
   <div id="statusDetail" class="status-detail" role="region" aria-live="polite" tabindex="-1" hidden></div>
 </section>
 
-<section id="monitor" class="section">
+<section id="monitor" class="section" data-view-section="status" hidden>
   <div class="section-head"><div><p class="eyebrow">SITE DAILY CHECK</p><h2>사이트 일일점검</h2></div><span class="badge">매일 08:00 · 사이트 자체 실행</span></div>
   <p class="note">이 영역은 ChatGPT 예약작업이 아니라 EKODI 사이트 런타임이 직접 수집합니다. 자동수집 항목은 관련 보도·자료 링크이며, 사건 사실이나 평가를 자동 확정하지 않습니다.</p>
   <div id="monitorSummary" class="monitor-summary">점검 상태를 불러오는 중입니다.</div>
   <div id="monitorList" class="source-list"></div>
 </section>
 
-<section id="timeline" class="section">
+<section id="timeline" class="section" data-view-section="timeline" hidden>
   <div class="section-head"><div><p class="eyebrow">HISTORY</p><h2>1990년부터 이어진 관련 활동이력</h2><p class="note">각 활동에 확인 가능한 원문·사진·영상이 있으면 해당 사건 카드에 근거자료로 자동 연결합니다. 사진·영상은 복제보다 원출처 링크를 우선하고 게시 주체와 날짜를 함께 표시합니다.</p></div></div>
   <div class="filters" id="timelineFilters"></div>
   <div id="timelineList" class="timeline"></div>
 </section>
 
-<section id="news" class="section">
-  <div class="section-head"><div><p class="eyebrow">NEWS & SOURCES</p><h2>관련기사·공식자료</h2></div></div>
-  <p class="note">동일 사건의 중복 보도는 묶고, 보도와 당사자 주장을 사실 확정과 구분합니다.</p>
-  <div id="sourceList" class="source-list"></div>
+<section id="notices" class="section" data-view-section="notices" hidden>
+  <div class="section-head"><div><p class="eyebrow">NOTICE</p><h2>공지</h2></div><span class="badge">관리자 게시</span></div>
+  <p class="note">소통센터의 주요 공지와 안내를 최신순으로 확인합니다.</p>
+  <div id="noticeList" class="notice-list"><p class="muted">공지를 불러오는 중입니다.</p></div>
 </section>
 
-<section id="public-posts" class="section">
-  <div class="section-head"><div><p class="eyebrow">PUBLIC POSTS & SOCIAL SOURCES</p><h2>시민·온라인 공개자료</h2></div><span class="badge">출처유형 분리</span></div>
-  <p class="note">네이버 블로그·카페·유튜브·SNS 등 공개 게시물을 날짜별로 정리합니다. 개인의 주장·해석은 공식 사실과 구분하고, 확인 가능한 수치·사건은 공식자료와 교차확인 상태를 표시합니다.</p>
-  <div class="filters" id="publicPostFilters"></div>
-  <div id="publicPostList" class="public-post-list"></div>
+<section id="materials" class="section" data-view-section="materials" hidden>
+  <div class="section-head"><div><p class="eyebrow">NEWS · SOURCES · PUBLIC POSTS</p><h2>관련자료</h2></div><span class="badge">공식·언론·시민자료 구분</span></div>
+  <div class="material-block">
+    <h3>관련기사·공식자료</h3>
+    <p class="note">동일 사건의 중복 보도는 묶고, 보도와 당사자 주장을 사실 확정과 구분합니다.</p>
+    <div id="sourceList" class="source-list"></div>
+  </div>
+  <div class="material-block">
+    <h3>시민·온라인 공개자료</h3>
+    <p class="note">네이버 블로그·카페·유튜브·SNS 등 공개 게시물을 날짜별로 정리합니다. 개인의 주장·해석은 공식 사실과 구분하고, 확인 가능한 수치·사건은 공식자료와 교차확인 상태를 표시합니다.</p>
+    <div class="filters" id="publicPostFilters"></div>
+    <div id="publicPostList" class="public-post-list"></div>
+  </div>
 </section>
 
-<section id="voices" class="section split">
+<section id="voices" class="section split" data-view-section="voices" hidden>
   <div>
     <p class="eyebrow">CITIZEN VOICES</p><h2>시민의 목소리</h2>
     <p>시민 의견·질문·제보·정책제안·의료경험을 수렴하고 관련 쟁점에 연결하는 구조로 운영합니다.</p>
@@ -74,7 +82,7 @@
   </form>
 </section>
 
-<section id="finance" class="section">
+<section id="finance" class="section" data-view-section="finance" hidden>
   <div class="section-head"><div><p class="eyebrow">TRANSPARENCY</p><h2>후원·회계 공개</h2></div></div>
   <div class="money-grid">
     <article><span>누적 모금</span><strong id="raised">자료 입력 전</strong></article>
