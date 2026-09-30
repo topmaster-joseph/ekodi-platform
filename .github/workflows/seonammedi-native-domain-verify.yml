@@ -1,0 +1,130 @@
+name: SeonamMedi Native Domain Verification
+
+on:
+  push:
+    branches:
+      - ai/chatgpt/seonammedi-native-verify-20260930
+    paths:
+      - '.github/workflows/seonammedi-native-domain-verify.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  native-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Enforce EKODI native virtualization contract
+        run: |
+          set -euo pipefail
+          node --check virtualization-router.js
+          node scripts/validate-virtualization-routing.mjs
+          node scripts/validate-background-browser-worker.mjs
+
+      - name: Install isolated Chromium runtime
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Build SeonamMedi browser verification task
+        run: |
+          mkdir -p artifacts
+          cat > artifacts/browser-task.json <<'JSON'
+          {
+            "taskId": "seonammedi-native-verify",
+            "path": "/seonammedi/",
+            "deviceProfile": "desktop",
+            "allowMutation": false,
+            "timeoutMs": 120000,
+            "actions": [
+              {"type":"snapshot"},
+              {"type":"screenshot","name":"seonammedi-public","fullPage":true},
+              {"type":"goto","path":"/seonammedi/admin/"},
+              {"type":"snapshot"},
+              {"type":"screenshot","name":"seonammedi-admin","fullPage":true}
+            ]
+          }
+          JSON
+
+      - name: Run EKODI-owned isolated browser
+        env:
+          EKODI_BROWSER_TASK_FILE: artifacts/browser-task.json
+          EKODI_BROWSER_ARTIFACT_DIR: artifacts/native-browser
+        run: node scripts/ekodi-background-browser-worker.mjs
+
+      - name: Validate native browser evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(find artifacts/native-browser -name result.json -print -quit)
+          test -n "$result"
+          jq -e '.ok == true and .mode == "ekodi-owned-background-browser" and .canonicalOrigin == "https://ekodi.kr" and .headless == true and .ephemeralContext == true and .activeUserProfileReused == false and .hostInputInjection == false and .allowMutation == false' "$result" >/dev/null
+          jq -e '.pageErrors | length == 0' "$result" >/dev/null
+          jq -e '.screenshots | length >= 2' "$result" >/dev/null
+
+      - name: Inspect authoritative nameservers
+        id: dns
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq dnsutils >/dev/null
+          {
+            echo "seonammedi.kr"
+            dig +short NS seonammedi.kr | sort
+            echo "xn--3e0b8b58jw4co4mnpll3k.kr"
+            dig +short NS xn--3e0b8b58jw4co4mnpll3k.kr | sort
+          } | tee artifacts/ns-status.txt
+
+      - name: Inspect Cloudflare zone status
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          api='https://api.cloudflare.com/client/v4'
+          for zone in seonammedi.kr xn--3e0b8b58jw4co4mnpll3k.kr; do
+            raw=$(curl -fsS --retry 2 --retry-delay 1 \
+              "$api/zones?name=$zone&account.id=$CLOUDFLARE_ACCOUNT_ID" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+            echo "$raw" | jq -e '.success == true' >/dev/null
+            echo "$raw" | jq -c --arg z "$zone" '{
+              zone:$z,
+              found:(.result|length>0),
+              status:(.result[0].status // "missing"),
+              nameservers:(.result[0].name_servers // []),
+              originalNameservers:(.result[0].original_name_servers // [])
+            }' >> artifacts/cloudflare-zones.jsonl
+          done
+
+      - name: Publish sanitized summary
+        shell: bash
+        run: |
+          {
+            echo '## SeonamMedi EKODI-native verification'
+            echo
+            echo '### Native browser'
+            result=$(find artifacts/native-browser -name result.json -print -quit)
+            jq -r '"- OK: \(.ok)\n- Mode: \(.mode)\n- Final URL: \(.finalUrl)\n- Headless: \(.headless)\n- Ephemeral: \(.ephemeralContext)\n- Page errors: \(.pageErrors|length)\n- Screenshots: \(.screenshots|length)"' "$result"
+            echo
+            echo '### Public authoritative NS'
+            sed 's/^/- /' artifacts/ns-status.txt
+            echo
+            echo '### Cloudflare zones'
+            jq -r '"- \(.zone): status=\(.status), assignedNS=\(.nameservers|join(",")), originalNS=\(.originalNameservers|join(","))"' artifacts/cloudflare-zones.jsonl
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: seonammedi-native-domain-verify-${{ github.run_id }}
+          path: artifacts
+          retention-days: 3
