@@ -223,3 +223,23 @@ test('seonammedi public managed reads are migration-backed and never run request
   const adminContent=body('async function listAdminContent','async function listAdminChannels');
   assert.match(adminContent,/ensureContentCategoryColumn\(env\.DB\)/);
 });
+
+
+test('seonammedi exposes seeded related channels on public and admin surfaces',async()=>{
+  const [html,app,adminHtml,migration]=await Promise.all([
+    readFile(new URL('index.html',root),'utf8'),
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('../migrations/0118_seonammedi_channel_seed.sql',import.meta.url),'utf8')
+  ]);
+  assert.match(html,/data-view-link="channels"/);
+  assert.match(html,/id="channels"[^>]*data-view-section="channels"/);
+  assert.match(html,/id="publicChannelList"/);
+  assert.match(app,/\/api\/seonammedi\/channels/);
+  assert.match(app,/channels:'channels'/);
+  assert.match(adminHtml,/data-panel-target="channels"/);
+  assert.match(adminHtml,/채널 관리/);
+  assert.match(migration,/instagram\.com\/wonokoh/);
+  assert.match(migration,/youtube\.com\/@Mokpo-tv/);
+  assert.match(migration,/WHERE NOT EXISTS/);
+});
