@@ -2,6 +2,9 @@ name: Verify Authenticated Admin Production E2E
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - ai/chatgpt/authenticated-admin-live-verify-20261001
 permissions:
   contents: read
 
