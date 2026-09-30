@@ -362,7 +362,8 @@
         "committees": [],
         "participants": [],
         "participantSort": "ko-KR",
-        "publicOnly": true
+        "publicOnly": true,
+        "memberOrganizationIds": []
       },
       {
         "id": "civic-coalition",
@@ -408,7 +409,8 @@
         ],
         "participants": [],
         "participantSort": "ko-KR",
-        "publicOnly": true
+        "publicOnly": true,
+        "memberOrganizationIds": []
       },
       {
         "id": "mokpo-university",
@@ -420,9 +422,17 @@
         "committees": [],
         "participants": [],
         "participantSort": "ko-KR",
-        "publicOnly": true
+        "publicOnly": true,
+        "memberOrganizationIds": []
       }
     ],
-    "defaultGroup": "unified-2026-09-30"
+    "defaultGroup": "unified-2026-09-30",
+    "model": {
+      "allowAdditionalOrganizations": true,
+      "multiMembership": true,
+      "unifiedCommitteeId": "unified-2026-09-30",
+      "membershipRule": "기관·단체는 독립 조직으로 등록할 수 있으며 동시에 통합 대책위원회 참여기관으로 연결할 수 있다.",
+      "displayRule": "개별 조직 정보와 통합 대책위원회 참여 관계를 분리 저장한다."
+    }
   }
 }
