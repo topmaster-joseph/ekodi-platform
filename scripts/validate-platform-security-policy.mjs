@@ -13,6 +13,8 @@ const [policy,router,wrangler,pkgRaw,deploy]=await Promise.all([
 for(const marker of [
   'PLATFORM_SENSITIVE_RATE_LIMITER',
   'PLATFORM_PUBLIC_WRITE_RATE_LIMITER',
+  'SEONAMMEDI_VOICE_SURGE_LIMITER',
+  'SEONAMMEDI_VOICE_SURGE_LIMITED',
   'PLATFORM_METHOD_BLOCKED',
   'PLATFORM_QUERY_TOO_LARGE',
   'PLATFORM_BODY_TOO_LARGE',
@@ -32,6 +34,8 @@ for(const marker of [
   'name = "PLATFORM_PUBLIC_WRITE_RATE_LIMITER"',
   'namespace_id = "3902"',
   'namespace_id = "3903"',
+  'name = "SEONAMMEDI_VOICE_SURGE_LIMITER"',
+  'namespace_id = "3904"',
 ]) assert(wrangler.includes(marker),`shared site limiter binding missing: ${marker}`);
 
 const pkg=JSON.parse(pkgRaw);
