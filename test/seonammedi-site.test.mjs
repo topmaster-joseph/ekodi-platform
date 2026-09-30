@@ -187,6 +187,7 @@ test('seonammedi full public-menu administration covers status organization mate
 });
 
 
+// Production read-path stability fix keeps public API reads free of request-time DDL.
 test('SeonamMedi Control routes defer candidate verification until Shared Site binding is active',async()=>{
   const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/control-api.worker.json',import.meta.url),'utf8'));
   const rows=manifest.worker.requests.filter(item=>String(item.url||'').includes('/api/seonammedi/'));
@@ -197,4 +198,24 @@ test('SeonamMedi Control routes defer candidate verification until Shared Site b
     assert.equal(item.candidateVerify,false);
     assert.match(item.candidateVerifyReason,/Shared Site service binding/);
   }
+});
+
+
+test('seonammedi public managed reads are migration-backed and never run request-time DDL',async()=>{
+  const control=await readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8');
+  const body=(start,end)=>control.slice(control.indexOf(start),control.indexOf(end));
+  const notices=body('async function listPublicNotices','async function listPublicChannels');
+  const channels=body('async function listPublicChannels','async function adminMe');
+  const pageData=body('async function listPublicPageData','function canManagePages');
+  const timeline=body('async function listPublicTimeline','async function listAdminTimeline');
+  const authority=body('async function authority','function can(auth,cap)');
+  for(const fn of [notices,channels,pageData,timeline,authority]){
+    assert.doesNotMatch(fn,/ensureSchema\(|ensurePublicContentSchema\(|CREATE TABLE|ALTER TABLE|CREATE INDEX/);
+  }
+  assert.match(control,/async function publicStorageRead\(resource,read\)/);
+  assert.match(control,/resource\+'_storage_read_failed'/);
+  const handler=control.slice(control.indexOf('export async function handleSeonamMediAdminApi'));
+  for(const resource of ['page-data','content','timeline','notices','channels'])assert.match(handler,new RegExp("publicStorageRead\\('"+resource+"'"));
+  const adminContent=body('async function listAdminContent','async function listAdminChannels');
+  assert.match(adminContent,/ensureContentCategoryColumn\(env\.DB\)/);
 });
