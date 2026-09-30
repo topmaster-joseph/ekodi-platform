@@ -1,0 +1,48 @@
+{
+  "version": "1.0.0",
+  "policyId": "EKODI-DURABLE-WRITE-INGRESS-001",
+  "status": "enforced",
+  "appliesRecursivelyToAllServices": true,
+  "objective": "Absorb burst writes without coupling public request latency to database write latency.",
+  "scope": {
+    "requiredFor": ["public_forms", "applications", "citizen_feedback", "orders", "reservations", "non_financial_user_generated_content"],
+    "excludedUntilSeparateHumanGate": ["payments", "bank_transfers", "legally_binding_signatures", "destructive_admin_actions"]
+  },
+  "ingress": {
+    "productionQueueRequired": true,
+    "directDatabaseWriteForbiddenForBurstEligiblePublicWrites": true,
+    "successRequiresDurableAcceptance": true,
+    "idempotencyKeyRequired": true,
+    "rateLimitBeforeQueue": true,
+    "maxPayloadBytes": 16384,
+    "queueBinding": "EKODI_WRITE_QUEUE",
+    "queueName": "ekodi-write-ingress",
+    "deadLetterQueueName": "ekodi-write-ingress-dlq"
+  },
+  "consumer": {
+    "maxBatchSize": 50,
+    "maxBatchTimeoutSeconds": 1,
+    "maxRetries": 5,
+    "deadLetterRequired": true,
+    "databaseWriteIsConsumerOwned": true,
+    "duplicateDeliveryMustBeSafe": true
+  },
+  "surge": {
+    "signals": ["requests_per_second", "p95_latency_ms", "error_rate_percent", "d1_query_latency_ms", "queue_backlog", "provider_429_1027"],
+    "preserveFirst": ["public_read", "auth", "forms", "orders", "admin_control"],
+    "shedFirst": ["crawler", "analytics_detail", "background_ai", "noncritical_probes"],
+    "queueBackpressureRequiredAtL3": true
+  },
+  "failure": {
+    "queueUnavailableInProduction": "fail_closed_503",
+    "queueFullOrRejected": "retry_after_without_false_success",
+    "consumerFailure": "retry_then_dead_letter",
+    "databaseFailure": "retain_queue_message_and_retry",
+    "falseSuccessForbidden": true
+  },
+  "rollout": {
+    "firstReferenceImplementation": "seonammedi_citizen_voice",
+    "expandByAdapterNotCopyPaste": true,
+    "productionVerificationRequired": true
+  }
+}
