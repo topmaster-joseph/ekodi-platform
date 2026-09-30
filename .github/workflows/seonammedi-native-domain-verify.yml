@@ -86,6 +86,27 @@ jobs:
             dig +short NS xn--3e0b8b58jw4co4mnpll3k.kr | sort
           } | tee artifacts/ns-status.txt
 
+      - name: Trigger Cloudflare activation recheck for pending IDN zone
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          zone='xn--3e0b8b58jw4co4mnpll3k.kr'
+          raw=$(curl -fsS "$api/zones?name=$zone&account.id=$CLOUDFLARE_ACCOUNT_ID" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          id=$(echo "$raw" | jq -r '.result[0].id // empty')
+          status=$(echo "$raw" | jq -r '.result[0].status // "missing"')
+          echo "before_status=$status" | tee artifacts/activation-check.txt
+          if [ "$status" = "pending" ] && [ -n "$id" ]; then
+            code=$(curl -sS -o /tmp/activation.json -w '%{http_code}' -X PUT \
+              "$api/zones/$id/activation_check" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+            echo "activation_http=$code" | tee -a artifacts/activation-check.txt
+            jq -c '{success,errors,messages,result}' /tmp/activation.json | tee -a artifacts/activation-check.txt
+          else
+            echo "activation_skipped=true" | tee -a artifacts/activation-check.txt
+          fi
+
       - name: Inspect public HTTPS behavior
         shell: bash
         run: |
