@@ -2,3 +2,5 @@
 .content-review-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.content-review-controls select{min-width:110px;padding:7px 9px;border:1px solid #cbd5df;border-radius:9px;background:#fff}.content-review-controls .check{display:flex;align-items:center;gap:5px;white-space:nowrap}@media(max-width:700px){.content-review-controls{width:100%;justify-content:flex-start}.content-review-controls select{flex:1}}
 
 .voice-tools select,.item-actions select{border:1px solid #cfd9e3;border-radius:8px;padding:6px 8px;background:#fff;color:#34445a;font:inherit;font-size:11px}.voice-private{margin-top:8px;padding:8px 10px;border-radius:8px;background:#f2f5f8;color:#526477;font-size:11px}.voice-item .item-body{font-size:13px;line-height:1.65}
+
+.org-admin-tabs{margin:0 0 10px}.org-admin-tabs button.active{background:#183b5b;color:#fff;border-color:#183b5b}.org-admin-panel{display:grid;gap:11px}.org-admin-panel h2{margin:0 0 2px;font-size:15px}
