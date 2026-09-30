@@ -2536,6 +2536,7 @@
           "서남권 국립의대 소통센터",
           "운영홈",
           "공지",
+          "내부 회의록",
           "채널",
           "조직"
         ],
@@ -2548,6 +2549,28 @@
           "x-robots-tag: noindex, nofollow, noarchive",
           "cache-control: no-store"
         ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/seonammedi/minutes/",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["내부 회의록 확인","확인자 성명","열람 기록으로 저장"],
+        "headerExpect": ["x-ekodi-route: seonammedi-static","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/seonammedi/minutes/minutes.js",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["/api/seonammedi/minutes/","viewerForm"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/seonammedi/admin/admin-minutes.js",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["/api/seonammedi/admin/minutes","shareToken","링크복사"],
         "rollbackVerify": false
       },
       {
