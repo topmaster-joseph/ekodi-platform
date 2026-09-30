@@ -30,6 +30,7 @@
       hashes: ['#ai-ops', '#aiops'],
       insert: 'after-campus',
     },
+    'technology-scout':{scripts:['technology-scout-admin.js'],real:'[data-section="technology-scout"]',hashes:['#technology-scout'],paths:['/admin/services/technology-scout']},
     'ai-settings':{label:'AI',icon:'⚙',styles:['ai-management-admin.css'],scripts:['ai-management-admin.js'],real:'[data-section="ai-settings"]'},
     confirmations:{scripts:['confirmation-admin.js'],real:'[data-section="confirmations"]'},
     openai:{label:'OpenAI',icon:'O',styles:['openai-workspace-admin.css'],scripts:['openai-workspace-admin.js'],real:'[data-section="openai"]',hashes:['#openai']},

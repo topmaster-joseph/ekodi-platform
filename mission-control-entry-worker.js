@@ -37,6 +37,8 @@ import { handleExternalAccountControl } from './external-account-control.js';
 import { handleRealtimeControl, runRealtimeRecordingRetention } from './realtime-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 import { runSeonamMediDailyCheck } from './seonammedi-monitor.js';
+import { runEkodiDailyTechnologyScout } from './ekodi-technology-scout.js';
+import { handleTechnologyScoutControl } from './technology-scout-control.js';
 
 function errorResponse(message, code) {
   return applyApiSecurityHeaders(new Response(JSON.stringify({ error:message, code }), {
@@ -354,7 +356,8 @@ export default {
     }
 
     if (path.startsWith('/api/control/ai/')) {
-      try { const response = await handleAgentMissionControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      try { const scoutControl = await handleTechnologyScoutControl(request, env, identity); if (scoutControl) return userAiResponse(scoutControl);
+      const response = await handleAgentMissionControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('AI Mission Control error', error); return errorResponse('AI Mission Control 처리 중 오류가 발생했습니다.', 'AI_MISSION_CONTROL_ERROR'); }
     }
 

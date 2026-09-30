@@ -134,7 +134,7 @@ const ADMIN_ASSETS = new Set([
   '/device-browser-diagnostics.js',
   '/ai-ops-admin.css',
   '/ai-ops-admin.js',
-  '/ai-operations-center-admin.js',
+  '/ai-operations-center-admin.js','/technology-scout-admin.js',
   '/common-services-admin.css',
   '/common-services-admin.js',
   '/confirmation-admin.css',
