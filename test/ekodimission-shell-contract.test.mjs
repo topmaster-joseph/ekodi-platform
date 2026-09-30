@@ -41,3 +41,15 @@ test('mission page registry parser rejects unsupported route expressions instead
   const worker=`const MISSION_EVENT_SLUG='x';const EKODIMISSION_PAGES=new Map([[SOME_NEW_ROUTE,'/new.page']]);`;
   assert.throws(()=>missionPageEntries(worker),/No EKODI Mission pages discovered|Unsupported/);
 });
+
+
+test('Space release probe follows the published autumn trip content instead of stale draft values',async()=>{
+  const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/space.worker.json',import.meta.url),'utf8'));
+  const probe=(manifest.worker?.requests||[]).find(item=>item.url==='https://ekodi.kr/ekodimission/api/activities/261003-autumn-community-trip/content');
+  assert.ok(probe);
+  assert.ok(probe.expect?.includes('261003-autumn-community-trip'));
+  assert.ok(probe.expect?.includes('50000'));
+  assert.ok(probe.expect?.includes('2026 가을 공동체 여행'));
+  assert.equal(probe.expect?.includes('100000'),false);
+  assert.equal(probe.expect?.includes('에코디선교회'),false);
+});
