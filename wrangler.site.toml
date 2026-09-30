@@ -117,6 +117,13 @@ namespace_id = "3903"
 limit = 120
 period = 60
 
+[[ratelimits]]
+name = "SEONAMMEDI_VOICE_SURGE_LIMITER"
+namespace_id = "3904"
+[ratelimits.simple]
+limit = 200
+period = 10
+
 [assets]
 directory = "./dist"
 binding = "ASSETS"
