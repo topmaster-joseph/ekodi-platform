@@ -432,6 +432,35 @@
     if (detailNode) detailNode.textContent = detail;
   }
 
+  const CANONICAL_SERVICE_PATHS = Object.freeze({
+    root: 'ekodi.kr',
+    admin: 'ekodi.kr/admin',
+    api: 'ekodi.kr/api',
+    biz: 'ekodi.kr/ekodibiz',
+    marketing: 'ekodi.kr/marketing',
+    church: 'ekodi.kr/ekodichurch',
+    lab: 'ekodi.kr/ekodilab',
+    'client-cgma': 'ekodi.kr/cgma',
+    'client-jadam': 'ekodi.kr/jadam',
+    'client-pizzamaru': 'ekodi.kr/pizzamaru',
+    'client-yogurt': 'ekodi.kr/yogurt',
+  });
+
+  function canonicalServiceDisplay(service) {
+    const id = String(service?.id || '').trim();
+    if (CANONICAL_SERVICE_PATHS[id]) return CANONICAL_SERVICE_PATHS[id];
+    const raw = String(service?.canonicalUrl || service?.url || service?.domain || '').trim();
+    if (!raw) return '';
+    try {
+      const url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+      if (url.hostname === 'ekodi.kr') return `ekodi.kr${url.pathname === '/' ? '' : url.pathname.replace(/\/$/, '')}`;
+      if (url.hostname.endsWith('.ekodi.kr')) return 'ekodi.kr';
+      return `${url.hostname}${url.pathname === '/' ? '' : url.pathname.replace(/\/$/, '')}`;
+    } catch {
+      return raw;
+    }
+  }
+
   function fleetState(service) {
     const state = service?.status || service?.latest?.status || '';
     if (state === 'online') return 'ok';
@@ -485,9 +514,9 @@
 
       const identity = document.createElement('div');
       const name = document.createElement('strong');
-      name.textContent = service.name || service.domain || service.id;
+      name.textContent = service.name || service.id;
       const domain = document.createElement('small');
-      domain.textContent = service.domain || '';
+      domain.textContent = canonicalServiceDisplay(service);
       identity.append(name, domain);
 
       const meta = document.createElement('div');
@@ -503,7 +532,7 @@
       const cell = document.createElement('span');
       cell.className = 'health-state-cell';
       cell.dataset.state = state;
-      cell.title = `${service.name || service.domain || service.id} · ${latency.textContent}`;
+      cell.title = `${service.name || service.id} · ${canonicalServiceDisplay(service)} · ${latency.textContent}`;
       const cellLabel = document.createElement('b');
       cellLabel.textContent = String(service.name || service.id).replace(/^client-/, '').slice(0, 10);
       cell.append(cellLabel);
