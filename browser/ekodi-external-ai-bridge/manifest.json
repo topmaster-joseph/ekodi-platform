@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "EKODI External AI Bridge",
+  "version": "0.1.0",
+  "description": "사용자가 EKODI 관리자에서 선택한 1회 명령만 외부 AI 새 탭의 입력칸에 채웁니다. 자동 전송·답변 수집·자격증명 접근은 하지 않습니다.",
+  "permissions": [
+    "tabs",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://ekodi.kr/admin/*",
+    "https://chatgpt.com/*",
+    "https://claude.ai/*",
+    "https://gemini.google.com/*",
+    "https://chat.qwen.ai/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://ekodi.kr/admin/*"
+      ],
+      "js": [
+        "admin-bridge.js"
+      ],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://claude.ai/*",
+        "https://gemini.google.com/*",
+        "https://chat.qwen.ai/*"
+      ],
+      "js": [
+        "provider-bridge.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "EKODI External AI Bridge"
+  }
+}

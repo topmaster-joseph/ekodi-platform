@@ -1,0 +1,9 @@
+-- China marketplace affiliate candidates. All begin blocked from recommendation.
+INSERT OR IGNORE INTO affiliate_merchant_routes
+(route_key, merchant_key, merchant_name, market_country, settlement_currency, affiliate_mode, network_key, network_name, affiliate_status, tracking_status, catalog_status, recommendation_enabled, program_url, notes, created_at, updated_at)
+VALUES
+('taobao-network-taobao-alliance','taobao','淘宝 타오바오','CN','CNY','network','taobao_alliance','淘宝联盟 / Alimama','candidate','not_ready','not_ready',0,'https://pub.alimama.com/','공식 淘宝联盟 개발자/API 권한 확인 후 승격. 직접 계약이 있으면 direct 경로를 별도로 등록.',datetime('now'),datetime('now')),
+('tmall-network-taobao-alliance','tmall','天猫 티몰','CN','CNY','network','taobao_alliance','淘宝联盟 / Alimama','candidate','not_ready','not_ready',0,'https://pub.alimama.com/','淘宝联盟 경유 후보. 실제 Tmall 프로그램 및 추적 권한 확인 전 추천 금지.',datetime('now'),datetime('now')),
+('jd-network-jd-union','jd','京东 징둥','CN','CNY','network','jd_union','京东联盟','candidate','not_ready','not_ready',0,'https://jos.jd.com/jdunion','京东联盟/JOS 추적링크와 상품 API 권한 확인 후 승격.',datetime('now'),datetime('now')),
+('aliexpress-network-affiliate','aliexpress','AliExpress','CN','USD','network','aliexpress_affiliate','AliExpress Affiliate','candidate','not_ready','not_ready',0,'https://portals.aliexpress.com/','Affiliate Portal 가입·승인·추적링크·상품 가격 공급 확인 후 승격. 정산 통화는 실제 계정 조건에 맞게 수정.',datetime('now'),datetime('now')),
+('pinduoduo-network-duoduo-jinbao','pinduoduo','拼多多 핀둬둬','CN','CNY','network','duoduo_jinbao','多多进宝','candidate','not_ready','not_ready',0,'','多多进宝 CPS/接口 권한과 한국 운영 주체의 참여 가능 여부를 확인한 뒤 승격.',datetime('now'),datetime('now'));

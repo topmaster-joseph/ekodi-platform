@@ -1,0 +1,27 @@
+name = "ekodi-church-history"
+main = "church-history-worker.js"
+compatibility_date = "2026-09-15"
+workers_dev = false
+preview_urls = false
+
+[vars]
+ENVIRONMENT = "production"
+ALLOWED_ORIGINS = "https://ekodi.kr"
+
+[[routes]]
+pattern = "ekodi.kr/ekodichurch/history*"
+zone_name = "ekodi.kr"
+
+[[routes]]
+pattern = "ekodi.kr/ekodichurch/admin/history*"
+zone_name = "ekodi.kr"
+
+[[routes]]
+pattern = "ekodi.kr/api/church/admin/history*"
+zone_name = "ekodi.kr"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-auth"
+database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
+migrations_dir = "migrations"

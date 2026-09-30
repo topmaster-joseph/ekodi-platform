@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "1.0.0",
+  "modelId": "ekodi-international-platform-maturity",
+  "title": "EKODI International Platform Maturity Model",
+  "effectiveDate": "2026-09-11",
+  "purpose": "Measure implementation maturity against internationally recognized management, security, privacy, resilience, AI and software quality standards without implying certification.",
+  "disclaimer": "Scores are EKODI internal evidence-based maturity scores. They are not ISO/IEC certification results and must never be presented as certification.",
+  "scale": [
+    {"level": 0, "name": "Not established", "definition": "No repeatable control or evidence."},
+    {"level": 1, "name": "Initial", "definition": "Ad hoc practice exists but ownership and evidence are incomplete."},
+    {"level": 2, "name": "Managed", "definition": "Documented practice and responsible owner exist; execution is partially repeatable."},
+    {"level": 3, "name": "Defined", "definition": "Platform-wide standard process, evidence and verification are established."},
+    {"level": 4, "name": "Measured", "definition": "Controls are continuously measured with thresholds, audit evidence and corrective action."},
+    {"level": 5, "name": "Optimizing", "definition": "Closed-loop improvement is evidence-driven, predictive where justified, independently reviewable and continuously improved."}
+  ],
+  "domains": [
+    {
+      "id": "ai-management",
+      "name": "AI management and governance",
+      "standard": "ISO/IEC 42001:2023",
+      "weight": 14,
+      "target": 5,
+      "focus": ["AI policy", "roles and accountability", "risk and opportunity", "AI lifecycle controls", "monitoring", "continual improvement"]
+    },
+    {
+      "id": "ai-risk",
+      "name": "AI risk management",
+      "standard": "ISO/IEC 23894:2023",
+      "weight": 10,
+      "target": 5,
+      "focus": ["AI risk context", "risk identification", "analysis", "treatment", "monitoring", "traceability"]
+    },
+    {
+      "id": "information-security",
+      "name": "Information security management",
+      "standard": "ISO/IEC 27001:2022",
+      "weight": 15,
+      "target": 5,
+      "focus": ["ISMS governance", "risk treatment", "access control", "operations security", "incident handling", "audit and improvement"]
+    },
+    {
+      "id": "cloud-security",
+      "name": "Cloud security controls",
+      "standard": "ISO/IEC 27017:2026",
+      "weight": 10,
+      "target": 5,
+      "focus": ["shared responsibility", "cloud configuration", "tenant isolation", "logging", "privileged access", "cloud operations"]
+    },
+    {
+      "id": "privacy",
+      "name": "Privacy information management",
+      "standard": "ISO/IEC 27701:2025 and ISO/IEC 27018:2025",
+      "weight": 12,
+      "target": 5,
+      "focus": ["PII inventory", "lawful purpose", "data minimization", "retention", "processor/controller accountability", "cloud PII protection"]
+    },
+    {
+      "id": "service-management",
+      "name": "IT service management",
+      "standard": "ISO/IEC 20000-1:2018",
+      "weight": 12,
+      "target": 5,
+      "focus": ["service portfolio", "SLA/SLO", "incident and problem management", "change and release", "service reporting", "continual improvement"]
+    },
+    {
+      "id": "business-continuity",
+      "name": "Business continuity and resilience",
+      "standard": "ISO 22301:2019",
+      "weight": 10,
+      "target": 5,
+      "focus": ["BIA", "RTO/RPO", "continuity plans", "backup and recovery", "exercise", "post-incident improvement"]
+    },
+    {
+      "id": "process-capability",
+      "name": "Process capability",
+      "standard": "ISO/IEC 33020:2019",
+      "weight": 8,
+      "target": 5,
+      "focus": ["process performance", "management", "definition", "measurement", "innovation"]
+    },
+    {
+      "id": "software-quality",
+      "name": "Software product quality",
+      "standard": "ISO/IEC 25010:2023",
+      "weight": 9,
+      "target": 5,
+      "focus": ["functional suitability", "performance efficiency", "compatibility", "interaction capability", "reliability", "security", "maintainability", "flexibility", "safety"]
+    }
+  ],
+  "governance": {
+    "assessmentRule": "Every score must cite repository evidence, a measurable control, or an explicit gap. Unsupported score increases are forbidden.",
+    "changeRule": "Assessment changes are pull-request reviewed and append an immutable history snapshot.",
+    "certificationRule": "Only an accredited external certification may be described as certified.",
+    "targetRule": "Level 5 is a continual-improvement target, not a one-time completion badge."
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "2026-09-08-one-domain-multiple-security-realms-v1.9.0",
+  "constitutionVersion": "1.9.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-08",
+  "changeClass": "C3",
+  "taskId": "ekodi-one-domain-surfaces-20260908",
+  "summary": "Make ekodi.kr the canonical human, user, administrator, authentication and system path surface while preserving existing subdomain runtimes only as justified internal, emergency or compatibility execution boundaries.",
+  "approvalBasis": "The platform owner explicitly approved the one-domain model and instructed end-to-end implementation, verification, deployment and operation.",
+  "migrationPlan": "Introduce apex path routing first, keep legacy runtimes reachable behind service bindings, migrate first-party links and admin navigation, then redirect or retain legacy hosts according to compatibility evidence.",
+  "securityModel": "One domain, multiple security realms. /admin, /auth, /api, /mcp and /webhooks retain distinct authorization, CSP, token, audit, rate-limit and protocol controls despite sharing the canonical host.",
+  "rollback": "Disable canonical surface routing in the apex entry worker and restore legacy subdomain entrypoints. Existing service workers and emergency entries remain available during rollout.",
+  "verificationPolicy": "Constitution, route contract, auth/admin/my/API/MCP tests, build, staging, conflict guard, guarded main promotion and production real-host probes must pass."
+}

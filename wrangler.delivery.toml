@@ -1,0 +1,25 @@
+name = "ekodi-delivery-hub-ai"
+main = "delivery-worker.js"
+compatibility_date = "2026-08-28"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "ekodi.kr/delivery*"
+zone_name = "ekodi.kr"
+
+[vars]
+DATA_MODE = "production"
+AUTH_URL = "https://auth.ekodi.kr/?site=delivery"
+SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
+EXECUTION_ENABLED = "false"
+
+[assets]
+directory = "./delivery"
+binding = "ASSETS"
+run_worker_first = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true

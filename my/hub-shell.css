@@ -1,0 +1,21 @@
+/* My EKODI personal-hub shell: keep the default surface small and context-first. */
+.personal-hub{margin-top:10px}
+.personal-hub-head{align-items:flex-end}
+.personal-hub-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.personal-hub-card,.personal-hub-more{min-height:178px;border:1px solid rgba(53,66,57,.13);border-radius:20px;background:rgba(255,255,255,.9);box-shadow:0 10px 28px rgba(35,49,40,.045);color:inherit;text-decoration:none}
+.personal-hub-card{display:flex;flex-direction:column;gap:10px;padding:22px}
+.personal-hub-card small,.personal-hub-more small{font-size:10px;letter-spacing:.13em;font-weight:800;color:#728075}
+.personal-hub-card strong,.personal-hub-more strong{font-size:20px}
+.personal-hub-card span,.personal-hub-more span{font-size:13px;line-height:1.6;color:#68746b}
+.personal-hub-card:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(35,49,40,.075)}
+.personal-hub-more{padding:0;overflow:hidden}
+.personal-hub-more summary{list-style:none;cursor:pointer;display:flex;min-height:176px;flex-direction:column;gap:10px;padding:22px}
+.personal-hub-more summary::-webkit-details-marker{display:none}
+.personal-hub-more[open] summary{min-height:auto;border-bottom:1px solid rgba(53,66,57,.1)}
+.personal-hub-more-links{display:flex;flex-wrap:wrap;gap:8px;padding:14px 18px 18px}
+.personal-hub-more-links a{padding:8px 10px;border-radius:999px;background:#f1f5f1;color:#304338;text-decoration:none;font-size:12px;font-weight:700}
+.my-secondary-feature{display:none}
+.my-secondary-feature:target{display:block;scroll-margin-top:92px}
+#platforms,#workspaces,#account{scroll-margin-top:92px}
+@media(max-width:900px){.personal-hub-grid{grid-template-columns:1fr 1fr}.personal-hub-head{align-items:flex-start}}
+@media(max-width:560px){.personal-hub-grid{grid-template-columns:1fr}.personal-hub-card,.personal-hub-more{min-height:132px}.personal-hub-more summary{min-height:130px}.topbar nav a:first-child{display:none}}

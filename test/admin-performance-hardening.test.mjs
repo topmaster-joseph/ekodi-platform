@@ -1,0 +1,227 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
+
+test('central admin handoff reveals a safe static shell once and validates session in background', async () => {
+  const handoff = await read('admin-central-handoff.js');
+  assert.match(handoff, /ekodi_admin_token/);
+  assert.match(handoff, /const becameVisible = app\.hidden/);
+  assert.match(handoff, /if \(!becameVisible\) return/);
+  assert.match(handoff, /showApp\(safeSession\.get\(EK\), '인증 세션 확인 중'\)/);
+  assert.match(handoff, /updateSessionState\(result\.email/);
+  assert.match(handoff, /AbortController/);
+  assert.match(handoff, /\/api\/session/);
+  assert.match(handoff, /ekodi-session-validated/);
+  assert.match(handoff, /admin-perf-diagnostics\.js/);
+  assert.match(handoff, /new URLSearchParams\(location\.search\)\.has\('perf'\)/);
+  assert.doesNotMatch(handoff, /PerformanceObserver/);
+  assert.doesNotMatch(handoff, /MutationObserver/);
+  assert.doesNotMatch(handoff, /setInterval\(/);
+  assert.doesNotMatch(handoff, /paymentKeyStatusPanel|passwordResetForm|installPasswordResetUI/);
+});
+
+test('detailed diagnostics are standalone and only observe when explicitly loaded', async () => {
+  const diagnostics = await read('admin-perf-diagnostics.js');
+  assert.match(diagnostics, /PerformanceObserver/);
+  assert.match(diagnostics, /longtask/);
+  assert.match(diagnostics, /layout-shift/);
+  assert.match(diagnostics, /durationThreshold:16/);
+  assert.match(diagnostics, /window\.EKODIAdminPerf/);
+  assert.doesNotMatch(diagnostics, /fetch\(/);
+  assert.doesNotMatch(diagnostics, /setInterval\(/);
+});
+
+test('authenticated startup is observer-free and entry routes converge through the central handoff', async () => {
+  const [shell, handoff] = await Promise.all([
+    read('admin-authenticated-shell.js'),
+    read('admin-central-handoff.js'),
+  ]);
+  assert.match(shell, /window\.addEventListener\('ekodi-authenticated',\s*onStateChange\)/);
+  assert.doesNotMatch(shell, /new MutationObserver/);
+  assert.match(shell, /const requestedHash=location\.hash/);
+  assert.match(shell, /history\.replaceState/);
+  assert.match(handoff, /function normalizeEntryRoute\(\)/);
+  assert.match(handoff, /function normalizeRoute\(v\)/);
+  assert.match(handoff, /history\.replaceState/);
+  assert.doesNotMatch(shell, /loadStyle\('control-center-ops\.css'\)/);
+  assert.doesNotMatch(shell, /loadStyle\('control-center-finance\.css'\)/);
+  assert.doesNotMatch(shell, /loadScript\('control-center\.js'\)/);
+  assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
+  const critical = shell.match(/const criticalPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
+  const deferred = shell.match(/const deferredPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
+  for (const asset of ['admin-compact.js', 'admin-menu-layout.js', 'admin-demand-loader.js']) assert.match(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
+  for (const asset of ['google-admin-auth.js', 'ekodi-message-ui.js', 'control-center.js', 'campus-actions.js', 'device-control-admin.js', 'ai-ops-admin.js']) assert.doesNotMatch(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
+  for (const asset of ['google-admin-auth.js', 'ekodi-message-ui.js']) assert.match(deferred, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
+  assert.match(shell, /announceReady\(\);loadDeferredEnhancements\(\)/);
+});
+
+test('menu routing is event-driven with no persistent mutation observer', async () => {
+  const menu = await read('admin-menu-layout.js');
+  assert.doesNotMatch(menu, /new MutationObserver/);
+  assert.match(menu, /ekodi-nav-changed/);
+  assert.match(menu, /ekodi-feature-installed/);
+  assert.match(menu, /function reconcileNavigation/);
+  assert.doesNotMatch(menu, /setInterval\(/);
+});
+
+test('demand loader uses transient observation, background priority and input-aware secondary hydration', async () => {
+  const loader = await read('admin-demand-loader.js');
+  assert.match(loader, /const observer = new MutationObserver/);
+  assert.match(loader, /observer\.disconnect\(\)/);
+  assert.match(loader, /scheduler\?\.postTask/);
+  assert.match(loader, /priority:'background'/);
+  assert.match(loader, /navigator\.scheduling\?\.isInputPending/);
+  assert.match(loader, /requestIdleCallback\(callback\)/);
+  assert.doesNotMatch(loader, /requestIdleCallback\(callback, \{ timeout/);
+  assert.match(loader, /campus-actions\.css/);
+  assert.match(loader, /campus-actions\.js/);
+  assert.match(loader, /system-health-admin\.js/);
+  assert.match(loader, /device-control-admin\.js/);
+  assert.match(loader, /ekodi-nav-changed/);
+  assert.doesNotMatch(loader, /setInterval\(/);
+  assert.doesNotMatch(loader, /observer\.observe\(app/);
+});
+
+test('postbuild removes retired first-path assets, versions the current graph and enforces final JS/CSS budgets', async () => {
+  const perf = await read('scripts/admin-performance-postbuild.mjs');
+  assert.match(perf, /control-center-ops\\\.css/);
+  assert.match(perf, /admin-finance\\\.css/);
+  assert.match(perf, /control-center\\\.js/);
+  assert.match(perf, /admin-shell\.css/);
+  assert.match(perf, /createHash\('sha256'\)/);
+  assert.match(perf, /assetVersion/);
+  assert.match(perf, /\['requestedFeature','reqFeature'\]/);
+  assert.match(perf, /TDZ self-call/);
+  assert.match(perf, /moduleImportVersions/);
+  assert.match(perf, /demandReferencedAssets/);
+  assert.match(perf, /demandRuntimeForVersion\.matchAll/);
+  assert.match(perf, /normalizeVersionedAdminAsset/);
+  assert.match(perf, /demandReferencedAssets\.includes\('social-admin\.js'\)/);
+  assert.match(perf, /demandReferencedAssets\.includes\('social-admin\.css'\)/);
+  assert.match(perf, /\.\.\.staticVersionInputs, \.\.\.demandReferencedAssets/);
+  assert.match(perf, /unicodeSafeAdminScripts = \['system-health-admin\.js', 'admin-lazy-features\.js'\]/);
+  assert.match(perf, /escapeNonAsciiForTransport/);
+  assert.match(perf, /Admin Unicode-safe serialization failed/);
+  assert.match(perf, /admin-menu-registry\.js/);
+  assert.match(perf, /admin-sidebar\.js/);
+  assert.match(perf, /admin-menu-runtime\.js/);
+  assert.match(perf, /first-path JavaScript budget exceeded/);
+  assert.match(perf, /first-path CSS budget exceeded/);
+  assert.match(perf, /AI command CSS leaked into startup compact CSS/);
+  assert.match(perf, /Finance monitor still contains perpetual polling/);
+  assert.match(perf, /Admin conversation workbench lost final visual precedence/);
+  assert.match(perf, /Admin conversation visual contract missing/);
+  assert.match(perf, /admin-conversation-workbench\.css: final visual authority/);
+  assert.match(perf, /--ekodi-assist-left:228px/);
+  assert.match(perf, /content-visibility:auto/);
+  assert.match(perf, /backdrop-filter:none!important/);
+  assert.match(perf, /admin mobile flow/);
+  assert.match(perf, /position:sticky!important/);
+  assert.match(perf, /background:#fff!important/);
+  assert.match(perf, /\.topbar \.menu\{color:#172033!important/);
+  assert.match(perf, /\.app>main\{padding-top:0!important\}/);
+  assert.match(perf, /\.topbar \.kicker\{display:none!important\}/);
+  assert.ok(perf.includes('const adminMirrorDir = \`${dist}admin/\`;'));
+  assert.match(perf, /existingAdminMirrorEntries = await readdir/);
+  assert.match(perf, /\.\.\.existingAdminMirrorAssets, \.\.\.versionInputs/);
+  assert.ok(perf.includes('copyFile(path, \`${adminMirrorDir}index.html\`)'));
+  for (const asset of ['admin-compact.js','remote-power-admin.js','remote-power-admin.css','admin-design-engine.css','admin-lazy-features.js','ai-ops-admin.css']) {
+    assert.match(perf, new RegExp(asset.replaceAll('.', '\\.')));
+  }
+});
+
+test('generated Admin menu rejects self-initializing TDZ bindings before release', async () => {
+  const [postbuild, compact] = await Promise.all([
+    read('scripts/admin-performance-postbuild.mjs'),
+    read('admin-menu-layout.compact.js'),
+  ]);
+  assert.match(postbuild, /menuSelfInitializingIdentifier/);
+  assert.match(postbuild, /Admin menu compact runtime contains TDZ self-initialization/);
+  assert.doesNotMatch(compact, /\b(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*\1\b/);
+});
+
+test('admin readability is first-path without consuming the compact CSS budget, while AI command styling stays lazy', async () => {
+  const readable = await read('scripts/admin-readable-command-postbuild.mjs');
+  assert.match(readable, /admin-readability-base\.css/);
+  assert.match(readable, /appendFile\(`\$\{output\}admin-shell\.css`/);
+  assert.doesNotMatch(readable, /appendFile\(`\$\{output\}admin-compact\.css`/);
+  assert.match(readable, /appendFile\(`\$\{output\}ai-ops-admin\.css`/);
+  assert.match(readable, /admin-readable-command\.css/);
+});
+
+test('versioned admin assets receive immutable cache headers while unversioned requests revalidate', async () => {
+  const worker = await read('site-worker.js');
+  assert.match(worker, /function adminAssetCacheControl\(url\)/);
+  assert.match(worker, /url\.searchParams\.has\('v'\)/);
+  assert.match(worker, /max-age=31536000, immutable/);
+  assert.match(worker, /max-age=0, must-revalidate/);
+  assert.match(worker, /admin-perf-diagnostics\.js/);
+});
+
+test('shared admin menu modules use the secured immutable admin asset route', async () => {
+  const [worker, wrangler] = await Promise.all([read('site-worker.js'), read('wrangler.site.toml')]);
+  for (const asset of ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js', 'ekodibiz-admin-registry.js']) {
+    assert.match(worker, new RegExp(`/${asset.replaceAll('.', '\\.')}`));
+  }
+  for (const asset of ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js']) {
+    assert.match(wrangler, new RegExp(`/${asset.replaceAll('.', '\\.')}`));
+  }
+  assert.match(wrangler, /"\/ekodibiz\*"/);
+  assert.doesNotMatch(wrangler, /"\/ekodibiz-admin-registry\.js"/);
+});
+
+test('versioned admin startup graph runs Worker-first so cache policy is not bypassed by static asset headers', async () => {
+  const wrangler = await read('wrangler.site.toml');
+  for (const asset of [
+    '/admin-shell.css',
+    '/admin-central-handoff.js',
+    '/admin-authenticated-shell.js',
+    '/admin-compact.js',
+    '/admin-compact.css',
+    '/admin-menu-layout.js',
+    '/admin-menu-registry.js',
+    '/admin-sidebar.js',
+    '/admin-menu-runtime.js',
+    '/admin-demand-loader.js',
+    '/admin-perf-diagnostics.js',
+    '/admin-lazy-features.js',
+    '/system-health-admin.js',
+    '/system-health-admin.css',
+  ]) assert.match(wrangler, new RegExp(asset.replaceAll('.', '\\.').replaceAll('/', '\\/')));
+  assert.match(wrangler, /run_worker_first\s*=\s*\[[\s\S]*"\/ai"/);
+  assert.match(wrangler, /run_worker_first\s*=\s*\[[\s\S]*"\/ai\/\*"/);
+  assert.doesNotMatch(wrangler, /"\/ai\*"/);
+  assert.doesNotMatch(wrangler, /"\/ai-ops-admin\.css"/);
+});
+
+test('Admin runtime publishes and versions its EKODIBIZ scope-registry dependency', async () => {
+  const [build, postbuild, runtime, workflow] = await Promise.all([
+    read('scripts/build.mjs'), read('scripts/admin-performance-postbuild.mjs'), read('admin-menu-runtime.js'), read('.github/workflows/deploy-site-core.yml'),
+  ]);
+  assert.match(build, /ekodibiz-admin-registry\.js/);
+  assert.match(postbuild, /sharedAdminMenuModules[^\n]*ekodibiz-admin-registry\.js/);
+  assert.match(postbuild, /admin-menu-runtime\.js'\s*,\s*\['admin-menu-registry\.js', 'ekodibiz-admin-registry\.js'\]/);
+  assert.match(runtime, /from '.\/ekodibiz-admin-registry\.js'/);
+  assert.match(workflow, /dist\/ekodibiz-admin-registry\.js/);
+});
+
+test('shared-site release watches final Admin postbuild and conversation workbench sources', async () => {
+  const workflow = await read('.github/workflows/deploy-site-core.yml');
+  for (const source of [
+    'scripts/admin-performance-postbuild.mjs',
+    'admin-conversation-workbench.css',
+    'test/admin-performance-hardening.test.mjs',
+    'test/admin-conversation-workbench.test.mjs',
+  ]) assert.match(workflow, new RegExp(source.replaceAll('.', '\\.')));
+});
+
+test('build ordering runs readable layer before the final performance guard', async () => {
+  const pkg = JSON.parse(await read('package.json'));
+  const build = pkg.scripts.build;
+  const readableIndex = build.indexOf('admin-readable-command-postbuild.mjs');
+  const perfIndex = build.indexOf('admin-performance-postbuild.mjs');
+  assert.ok(readableIndex >= 0 && perfIndex > readableIndex, 'performance postbuild must run after every startup-affecting postbuild');
+  assert.match(pkg.scripts.check, /admin-performance-postbuild\.mjs/);
+});

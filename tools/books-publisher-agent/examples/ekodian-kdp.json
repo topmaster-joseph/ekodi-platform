@@ -1,0 +1,40 @@
+{
+  "title": "In Search of the EKODIan",
+  "subtitle": "The Hidden Biblical Portrait of God’s People",
+  "description": "What if church is not primarily a place we attend, but a people learning to embody the gospel wherever they are?\n\nIn Search of the EKODIan follows the Bible’s larger story to recover four ancient words for contemporary Christian life: Ecclesia, Koinonia, Diaspora, and Jubilee. Together they describe a people called and gathered, a community that shares burdens, a dispersed people who become bridges in unfamiliar places, and a way of life that makes room for restoration and new beginnings.\n\nWritten from a pastoral and public-theology perspective, the book moves from Sunday worship to Monday choices. Each chapter pairs a theological insight with questions for reflection and small, repeatable practices. The goal is not simply to know more, but to learn to love more faithfully in ordinary life.",
+  "author": "Jeong Chan Gyun",
+  "publisher": "EKODI BOOKS",
+  "series": "EKODI ORIGINAL",
+  "seriesNumber": "1",
+  "language": "English",
+  "publicationDate": "2026-08-17",
+  "bookId": { "mode": "ggkey" },
+  "currency": "USD",
+  "price": 5.99,
+  "territory": "WORLD",
+  "keywords": [
+    "public theology Christian life",
+    "ecclesiology church community",
+    "missional church discipleship",
+    "Christian community koinonia",
+    "diaspora theology mission",
+    "jubilee biblical justice",
+    "practical theology spiritual formation"
+  ],
+  "categories": [
+    "Religion & Spirituality / Christianity / Ecclesiology or Church",
+    "Religion & Spirituality / Christianity / Christian Living / Spiritual Growth",
+    "Religion & Spirituality / Christianity / Social Issues / General"
+  ],
+  "epubPath": "./files/In_Search_of_the_EKODIan_KDP_RC1.epub",
+  "coverPath": "./files/In_Search_of_the_EKODIan_KDP_Cover_FINAL.jpg",
+  "kdp": {
+    "rightsOwned": true,
+    "aiGeneratedTranslation": true,
+    "aiGeneratedText": false,
+    "aiGeneratedImages": false,
+    "royaltyPlan": "70%",
+    "drm": true,
+    "select": true
+  }
+}

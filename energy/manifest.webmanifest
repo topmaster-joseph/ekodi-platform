@@ -1,0 +1,10 @@
+{
+  "name": "EKODI Energy AI",
+  "short_name": "Energy AI",
+  "description": "전기·태양광·ESS·EV를 함께 살피는 EKODI 에너지 관리자",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1720",
+  "theme_color": "#0b1720",
+  "lang": "ko"
+}

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+<title id="title">한 식탁이 세상을 바꿉니다</title><desc id="desc">따뜻한 햇살 아래 식탁과 밥, 반찬, 꽃을 표현한 에코디선교회 일러스트</desc>
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#dce8d8"/><stop offset=".48" stop-color="#f0eadb"/><stop offset="1" stop-color="#d7c39f"/></linearGradient>
+<linearGradient id="table" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#a8794d"/><stop offset="1" stop-color="#775233"/></linearGradient>
+<filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#172019" flood-opacity=".16"/></filter>
+</defs>
+<rect width="1200" height="760" rx="48" fill="url(#bg)"/>
+<circle cx="1040" cy="110" r="180" fill="#fff9dd" opacity=".65"/><circle cx="1110" cy="170" r="110" fill="#fff" opacity=".24"/>
+<g opacity=".5" fill="#5f7b5a"><circle cx="105" cy="110" r="38"/><circle cx="155" cy="72" r="24"/><circle cx="80" cy="170" r="56"/><circle cx="1130" cy="310" r="52"/></g>
+<rect x="0" y="480" width="1200" height="280" fill="url(#table)"/>
+<g filter="url(#shadow)">
+<ellipse cx="720" cy="535" rx="145" ry="42" fill="#6c4a2f"/><path d="M585 535h270l-28 105H613z" fill="#8a603f"/><ellipse cx="720" cy="530" rx="122" ry="30" fill="#f7f2e7"/><g fill="#fff"><circle cx="670" cy="522" r="26"/><circle cx="710" cy="510" r="30"/><circle cx="748" cy="522" r="26"/></g>
+<ellipse cx="940" cy="565" rx="120" ry="32" fill="#5f4a36"/><path d="M825 565h230l-25 82H850z" fill="#795f46"/><ellipse cx="940" cy="560" rx="100" ry="24" fill="#d84d31"/><g fill="#f2b43a"><circle cx="900" cy="556" r="16"/><circle cx="950" cy="566" r="18"/><circle cx="986" cy="550" r="14"/></g>
+<ellipse cx="490" cy="565" rx="110" ry="30" fill="#466249"/><path d="M388 565h204l-22 75H410z" fill="#59745a"/><ellipse cx="490" cy="560" rx="92" ry="22" fill="#6f9b67"/><g fill="#315c46"><circle cx="455" cy="554" r="14"/><circle cx="500" cy="548" r="18"/><circle cx="532" cy="565" r="13"/></g>
+</g>
+<g transform="translate(1010 350)"><path d="M0 160c0-92 20-150 20-150" stroke="#6a7f53" stroke-width="10" fill="none"/><path d="M20 75c-48-24-66-47-80-77M20 48c42-28 58-52 70-80" stroke="#6a7f53" stroke-width="8" fill="none"/><g fill="#fff9e8" stroke="#cda95a" stroke-width="3"><circle cx="-58" cy="-2" r="18"/><circle cx="86" cy="-30" r="18"/><circle cx="8" cy="8" r="20"/></g><rect x="-35" y="140" width="110" height="95" rx="18" fill="#efe8d6" stroke="#b79d78" stroke-width="4"/></g>
+<g fill="#173c2b"><text x="92" y="170" font-family="system-ui, sans-serif" font-size="48" font-weight="700">한 식탁이,</text><text x="92" y="232" font-family="system-ui, sans-serif" font-size="48" font-weight="700">세상을 바꿉니다.</text></g>
+<line x1="92" y1="276" x2="235" y2="276" stroke="#315c46" stroke-width="4"/><text x="92" y="325" font-family="system-ui, sans-serif" font-size="20" font-weight="700" letter-spacing="5" fill="#315c46">SMALL STEPS, BIG NEIGHBORS.</text>
+</svg>

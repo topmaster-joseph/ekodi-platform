@@ -1,0 +1,53 @@
+name: Validate Admin Storage Workspace
+
+on:
+  pull_request:
+    paths: &storage_admin_paths
+      - 'storage-admin.js'
+      - 'storage-admin.css'
+      - 'admin-demand-loader.js'
+      - 'site-worker.js'
+      - 'wrangler.site.toml'
+      - 'scripts/admin-system-map-postbuild.mjs'
+      - 'test/google-drive-storage.test.mjs'
+      - '.github/workflows/deploy-storage-admin.yml'
+  push:
+    branches: [main]
+    paths: *storage_admin_paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Storage remains demand-loaded and same-origin
+        run: |
+          set -euo pipefail
+          node --check storage-admin.js
+          node --check site-worker.js
+          node --check admin-demand-loader.js
+          node --test test/google-drive-storage.test.mjs
+          npm run build
+          test -f dist/storage-admin.js
+          test -f dist/storage-admin.css
+          grep -Fq "const API='/storage/api/control/storage/google'" dist/storage-admin.js
+          ! grep -Fq "const API='/api/control/storage/google'" dist/storage-admin.js
+          ! grep -Fq 'drive.ekodi.kr/api/control/storage/google' dist/storage-admin.js
+          grep -Fq 'storage:' dist/admin-demand-loader.js
+          grep -Eq "scripts:[[:space:]]*\['storage-admin.js'\]" dist/admin-demand-loader.js
+          grep -Eq "h:[[:space:]]*\['#storage'\]" dist/admin-demand-loader.js
+          ! grep -Fq '<script src="storage-admin.js"' dist/admin-shell.html
+          grep -Fq 'binding = "STORAGE"' wrangler.site.toml
+          grep -Fq 'service = "ekodi-storage-control"' wrangler.site.toml
+          demand_bytes=$(wc -c < dist/admin-demand-loader.js)
+          test "$demand_bytes" -le 14100
+      - name: Verify single production owner policy
+        run: node scripts/validate-deployment-guardrails.mjs

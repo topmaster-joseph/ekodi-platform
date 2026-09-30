@@ -1,0 +1,59 @@
+﻿name: Validate Admin First Paint Guard
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: &first_paint_paths
+      - 'admin-central-handoff.js'
+      - 'admin-authenticated-shell.js'
+      - 'admin-shell.html'
+      - 'admin-shell.css'
+      - 'admin-compact.js'
+      - '.github/workflows/deploy-admin-first-paint.yml'
+  push:
+    branches: [main]
+    paths: *first_paint_paths
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate admin first-paint contract
+        run: |
+          set -euo pipefail
+          node --check admin-central-handoff.js
+          node --check admin-authenticated-shell.js
+          grep -Fq "function announceReady(){if(app)app.style.visibility=''" admin-authenticated-shell.js
+          grep -Fq "document.documentElement.dataset.ekodiAdminReady='loading'" admin-authenticated-shell.js
+          grep -Fq 'for(const src of criticalPostAuthScripts)' admin-authenticated-shell.js
+          grep -Fq 'await loadScript(src)' admin-authenticated-shell.js
+          grep -Fq 'announceReady();loadDeferredEnhancements()' admin-authenticated-shell.js
+
+      - name: Build and verify first-paint assets
+        run: |
+          set -euo pipefail
+          npm run build
+          test -s dist/admin-central-handoff.js
+          test -s dist/admin-authenticated-shell.js
+          test -s dist/admin-shell.html
+          test -s dist/admin-shell.css
+          test -s dist/admin-compact.js
+          # The build/postbuild pipeline enforces first-path byte budgets,
+          # no startup polling, no document-wide observers and immutable fingerprinting.
+          # Validate only the canonical public Admin shell artifact here.
+          grep -Fq 'admin-authenticated-shell.js?v=' dist/admin-shell.html
+          grep -Fq 'admin-central-handoff.js?v=' dist/admin-shell.html
+          grep -Fq 'admin-shell.css?v=' dist/admin-shell.html
+          grep -Fq 'data-ekodi-postauth="admin-compact.js admin-menu-layout.js admin-demand-loader.js"' dist/admin-shell.html
+
+      - name: Verify repository deployment ownership policy
+        run: node scripts/validate-deployment-guardrails.mjs

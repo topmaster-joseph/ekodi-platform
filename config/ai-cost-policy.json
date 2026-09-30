@@ -1,0 +1,30 @@
+{
+  "version": "1.0.0",
+  "policyId": "AI-COST-001",
+  "status": "enforced",
+  "principle": "free-first-never-free-only",
+  "automaticPaidBudgetKrw": 0,
+  "paidApiAutoEscalation": false,
+  "paidApiRequiresExplicitDelegatedBudget": true,
+  "paidProviderHealthChecksDefault": false,
+  "unknownCostRequiresExplicitDelegatedBudget": true,
+  "zeroMarginalCostClasses": [
+    "free-preferred",
+    "chatgpt-plan-included",
+    "google-free-quota",
+    "claude-subscription",
+    "account-managed",
+    "core-only"
+  ],
+  "paidCostClasses": [
+    "paid-opt-in",
+    "metered-paid"
+  ],
+  "freeExhaustedFallback": [
+    "alternate-zero-cost",
+    "core-only",
+    "retry-later"
+  ],
+  "consumerWebAutomationAllowed": false,
+  "coreFallbackRequired": true
+}

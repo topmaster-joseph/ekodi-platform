@@ -1,0 +1,104 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  buildWorkflowResearchEvidence,
+  collectResearchEvidence,
+} from '../scripts/collect-autonomous-research-evidence.mjs';
+
+const program = {
+  id: 'adr_example',
+  signal: {
+    target: 'github-workflow:Example Guard',
+    evidenceRefs: ['https://github.com/example/repo/actions/runs/1'],
+  },
+};
+
+const runs = [
+  { databaseId: 1, workflowName: 'Example Guard', conclusion: 'failure', createdAt: '2026-09-11T00:00:00Z', url: 'https://github.com/example/repo/actions/runs/1' },
+  { databaseId: 2, workflowName: 'Example Guard', conclusion: 'failure', createdAt: '2026-09-11T01:00:00Z', url: 'https://github.com/example/repo/actions/runs/2' },
+  { databaseId: 3, workflowName: 'Example Guard', conclusion: 'timed_out', createdAt: '2026-09-11T02:00:00Z', url: 'https://github.com/example/repo/actions/runs/3' },
+  { databaseId: 4, workflowName: 'Example Guard', conclusion: 'success', createdAt: '2026-09-11T03:00:00Z', url: 'https://github.com/example/repo/actions/runs/4' },
+  { databaseId: 6, workflowName: 'Example Guard', conclusion: 'success', createdAt: '2026-09-11T04:00:00Z', url: 'https://github.com/example/repo/actions/runs/6' },
+  { databaseId: 5, workflowName: 'Other Guard', conclusion: 'failure', createdAt: '2026-09-11T05:00:00Z', url: 'https://github.com/example/repo/actions/runs/5' },
+];
+
+const jobsByRunId = {
+  1: [{ name: 'policy', conclusion: 'failure', steps: [{ name: 'validate branch', conclusion: 'failure' }] }],
+  2: [{ name: 'policy', conclusion: 'failure', steps: [{ name: 'validate branch', conclusion: 'failure' }] }],
+  3: [{ name: 'policy', conclusion: 'timed_out', steps: [{ name: 'validate branch', conclusion: 'timed_out' }] }],
+};
+
+test('collector localizes repeated failures to workflow jobs and steps', () => {
+  const evidence = buildWorkflowResearchEvidence(program, runs, jobsByRunId);
+  assert.equal(evidence.failedRuns, 3);
+  assert.equal(evidence.recoveredRuns, 2);
+  assert.deepEqual(evidence.failedJobs, ['policy']);
+  assert.deepEqual(evidence.failedSteps, ['validate branch']);
+  assert.equal(evidence.recurrence.repeatedJob, true);
+  assert.equal(evidence.recurrence.repeatedStep, true);
+  assert.equal(evidence.reproducible, true);
+  assert.equal(evidence.productionMutationPerformed, false);
+  assert.equal(evidence.authorityExpanded, false);
+});
+
+test('collector proves operational recovery only after consecutive healthy runs following the last failure', () => {
+  const evidence = buildWorkflowResearchEvidence(program, runs, jobsByRunId);
+  assert.equal(evidence.recovery.lastFailureAt, '2026-09-11T02:00:00Z');
+  assert.equal(evidence.recovery.healthyRunsAfterLastFailure, 2);
+  assert.equal(evidence.recovery.consecutiveHealthyRuns, 2);
+  assert.equal(evidence.recovery.resolvedOperationally, true);
+});
+
+test('one healthy run is not enough to close a repeated failure as recovered', () => {
+  const partialRuns = runs.filter(run => run.databaseId !== 6);
+  const evidence = buildWorkflowResearchEvidence(program, partialRuns, jobsByRunId);
+  assert.equal(evidence.recovery.healthyRunsAfterLastFailure, 1);
+  assert.equal(evidence.recovery.consecutiveHealthyRuns, 1);
+  assert.equal(evidence.recovery.resolvedOperationally, false);
+});
+
+test('collector keeps evidence scoped to the discovered workflow target', () => {
+  const evidence = buildWorkflowResearchEvidence(program, runs, jobsByRunId);
+  assert.equal(evidence.workflowName, 'Example Guard');
+  assert.equal(evidence.observations, 5);
+  assert.equal(evidence.evidenceRefs.some(ref => ref.endsWith('/5')), false);
+});
+
+test('research evidence report is keyed by stable discovery research id', () => {
+  const report = collectResearchEvidence({ cycle: { researchPrograms: [program] } }, runs, jobsByRunId);
+  assert.equal(report.researchPrograms, 1);
+  assert.ok(report.evidenceByResearchId.adr_example);
+  assert.equal(report.evidenceByResearchId.adr_example.reproducible, true);
+  assert.equal(report.evidenceByResearchId.adr_example.recovery.resolvedOperationally, true);
+  assert.equal(report.productionMutationPerformed, false);
+  assert.equal(report.authorityExpanded, false);
+});
+
+test('service-scoped discovery target continues into isolated research evidence', () => {
+  const serviceProgram = {
+    id: 'adr_church_deploy',
+    signal: {
+      serviceId: 'church',
+      target: 'service:church:github-workflow:Deploy EKODI Church',
+      evidenceRefs: ['https://github.com/example/repo/actions/runs/10'],
+    },
+  };
+  const serviceRuns = [
+    { databaseId: 10, serviceId: 'church', workflowName: 'Deploy EKODI Church', conclusion: 'failure', createdAt: '2026-09-14T00:00:00Z', url: 'https://github.com/example/repo/actions/runs/10' },
+    { databaseId: 11, serviceId: 'church', workflowName: 'Deploy EKODI Church', conclusion: 'failure', createdAt: '2026-09-14T01:00:00Z', url: 'https://github.com/example/repo/actions/runs/11' },
+    { databaseId: 12, serviceId: 'church', workflowName: 'Deploy EKODI Church', conclusion: 'failure', createdAt: '2026-09-14T02:00:00Z', url: 'https://github.com/example/repo/actions/runs/12' },
+    { databaseId: 13, serviceId: 'biz', workflowName: 'Deploy EKODI Church', conclusion: 'failure', createdAt: '2026-09-14T03:00:00Z', url: 'https://github.com/example/repo/actions/runs/13' },
+  ];
+  const evidence = buildWorkflowResearchEvidence(serviceProgram, serviceRuns, {});
+  assert.equal(evidence.serviceId, 'church');
+  assert.equal(evidence.workflowName, 'Deploy EKODI Church');
+  assert.equal(evidence.target, 'service:church:github-workflow:Deploy EKODI Church');
+  assert.equal(evidence.failedRuns, 3);
+  assert.equal(evidence.evidenceRefs.some(ref => ref.endsWith('/13')), false);
+
+  const report = collectResearchEvidence({ cycle: { researchPrograms: [serviceProgram] } }, serviceRuns, {});
+  assert.equal(report.subservices.length, 1);
+  assert.equal(report.subservices[0].serviceId, 'church');
+  assert.equal(report.subservices[0].researchPrograms, 1);
+  assert.equal(report.subservices[0].failedRuns, 3);
+});

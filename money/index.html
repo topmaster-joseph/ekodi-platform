@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#071522">
+  <title>EKODI Money · 금융생활 정리 AI</title>
+  <meta name="description" content="흩어진 계좌와 자동이체를 발견하고, 안전한 정리 순서를 제안하는 EKODI 금융생활 정리 서비스">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="page-shell">
+    <section class="hero card">
+      <div class="eyebrow">EKODI MONEY · FINANCIAL CLEANUP</div>
+      <div class="hero-grid">
+        <div>
+          <h1>흩어진 금융관계부터<br>가볍게 정리합니다.</h1>
+          <p class="lead">계좌를 보여주는 데서 멈추지 않고, 무엇을 유지하고 무엇을 정리할지 순서를 제안합니다. 실제 이체·해지·변경은 언제나 본인이 공인 금융채널에서 최종 승인합니다.</p>
+          <div class="actions">
+            <a class="primary link-button" href="https://ekodi.kr/my/#money">My EKODI에서 나의 재무 열기</a>
+            <a class="secondary" href="https://www.payinfo.or.kr/main/main.do" target="_blank" rel="noopener noreferrer">어카운트인포에서 확인</a>
+          </div>
+        </div>
+        <div class="trust-panel" aria-label="안전 원칙">
+          <span class="status-pill">V3 · 금융연동 준비층</span>
+          <strong>연결은 준비하되, 권한은 앞서가지 않습니다.</strong>
+          <p>공식 연결 → 동의 → 최소조회 → 정리추천 → 사용자 확인 → 공인 금융망 실행</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="summary-grid" id="summary" aria-live="polite"></section>
+
+    <section class="card integrations-card">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">REGULATED CONNECTION LAYER</span>
+          <h2>금융 연결 준비 상태</h2>
+        </div>
+        <span id="integration-status" class="status-line">연동상태 확인 중</span>
+      </div>
+      <p class="section-copy">실제 금융 API는 계약·보안검토·사용자 동의가 모두 충족된 기관만 활성화합니다. 준비되지 않은 연결은 버튼이 있어도 실행되지 않습니다.</p>
+      <div id="integrations" class="integration-grid" aria-live="polite"></div>
+      <div id="consent-detail" aria-live="polite"></div>
+    </section>
+
+    <section class="two-col">
+      <article class="card">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">FINANCIAL RELATIONSHIP MAP</span>
+            <h2>정리할 것</h2>
+          </div>
+          <a class="ghost" href="https://ekodi.kr/my/#money">실제 원장 열기</a>
+        </div>
+        <div id="findings" class="stack"></div>
+      </article>
+
+      <article class="card">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">SAFE ORDER</span>
+            <h2>정리 순서</h2>
+          </div>
+        </div>
+        <div id="plan" class="timeline"></div>
+      </article>
+    </section>
+
+    <section class="card callout">
+      <div>
+        <span class="eyebrow">OFFICIAL HANDOFF</span>
+        <h2>공인 금융망에서 최종 실행</h2>
+        <p>계좌·카드·자동이체 조회와 조건에 맞는 계좌해지·잔고이전은 금융결제원 계좌정보통합관리서비스에서 직접 확인할 수 있습니다.</p>
+      </div>
+      <div class="actions compact">
+        <a class="primary link-button" href="https://www.payinfo.or.kr/main/main.do" target="_blank" rel="noopener noreferrer">계좌·자동이체 확인하기</a>
+        <a class="secondary" href="https://ekodi.kr/my/">My EKODI</a>
+        <a class="secondary" href="https://ekodi.kr/auth/?site=money&return_to=https%3A%2F%2Fekodi.kr%2Fmoney%2F">EKODI 로그인</a>
+      </div>
+    </section>
+
+    <section class="card policy-card">
+      <span class="eyebrow">HUMAN GATE</span>
+      <h2>금융행위는 반드시 사람이 결정합니다.</h2>
+      <p>EKODI Money는 계좌번호·비밀번호·주민등록번호를 이 화면에 입력받지 않습니다. V3는 공인 API 연동을 위한 동의·철회·기관 어댑터·보안 이벤트 구조를 준비하며, 실제 금융 실행권한은 계속 분리합니다.</p>
+    </section>
+  </main>
+  <script src="/config.js"></script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

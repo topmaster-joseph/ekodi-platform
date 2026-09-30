@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "assessmentId": "ekodi-maturity-2026-09-11",
+  "assessmentDate": "2026-09-11",
+  "assessor": "EKODI internal evidence review",
+  "scope": "EKODI platform repository and currently documented operating controls",
+  "certificationStatus": "not-claimed",
+  "note": "This is an internal maturity baseline, not an ISO/IEC certification audit.",
+  "domains": [
+    {"id":"ai-management","score":4.0,"confidence":"high"},
+    {"id":"ai-risk","score":3.6,"confidence":"medium-high"},
+    {"id":"information-security","score":3.8,"confidence":"high"},
+    {"id":"cloud-security","score":3.6,"confidence":"medium-high"},
+    {"id":"privacy","score":2.9,"confidence":"medium"},
+    {"id":"service-management","score":3.4,"confidence":"medium-high"},
+    {"id":"business-continuity","score":3.3,"confidence":"medium-high"},
+    {"id":"process-capability","score":3.8,"confidence":"high"},
+    {"id":"software-quality","score":3.9,"confidence":"high"}
+  ],
+  "snapshotPolicy": "Append-only historical record. Details and evidence remain in the matching current assessment revision and Git history."
+}

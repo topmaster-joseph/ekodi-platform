@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "policyId": "subject-capability-entitlement-v1",
+  "managerUrl": "https://ekodi.kr/my/",
+  "subjectModel": {
+    "personal": "person",
+    "organization": "workspace",
+    "workspaceStorageType": "tenant",
+    "sameIdentityMayUseManySubjects": true
+  },
+  "capabilitySharing": {
+    "sameCapabilitySameSubjectAcrossSurfaces": true,
+    "duplicatePurchaseForSameCapabilityForbidden": true,
+    "siteAddonsRemainSiteScoped": true,
+    "entitlementKeySource": "capability_id_or_specialist_service"
+  },
+  "accessLevels": [
+    {
+      "id": "basic",
+      "label": "기본",
+      "rank": 10
+    },
+    {
+      "id": "additional",
+      "label": "추가",
+      "rank": 20
+    },
+    {
+      "id": "advanced",
+      "label": "고급",
+      "rank": 30
+    },
+    {
+      "id": "automation",
+      "label": "자동화",
+      "rank": 40
+    }
+  ],
+  "authenticatedMemberDefaultLevel": "additional",
+  "paidPlanLevels": {
+    "marketing": {
+      "free": "basic",
+      "flex": "additional",
+      "plus": "additional",
+      "pro": "advanced",
+      "auto": "automation"
+    }
+  },
+  "managementRoles": [
+    "store_owner",
+    "tenant_admin",
+    "platform_admin",
+    "accounting_manager",
+    "hq_manager",
+    "client_admin"
+  ],
+  "billing": {
+    "ledger": "service_subscriptions",
+    "paidCatalogOwnedByService": true,
+    "entitlementDecisionCentralized": true,
+    "owningServiceRemainsFinalExecutionGate": true
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "id": "EKODI-CONSTITUTION-2026-09-22-NATIVE-VIRTUALIZATION-V1.19.0",
+  "date": "2026-09-22",
+  "status": "approved",
+  "constitutionVersion": "1.19.0",
+  "approvedBy": "topmaster-joseph",
+  "changeClass": "C2",
+  "title": "EKODI-owned virtualization sovereignty",
+  "summary": "Require EKODI-owned browser/runtime/desktop virtualization to be the default whenever virtualization is needed, while treating external virtualization or computer-use providers as audited, temporary and replaceable fallback adapters only.",
+  "approvalBasis": "The platform owner explicitly instructed EKODI on 2026-09-22 to make it a mandatory rule that when virtualization is needed, EKODI should develop, complete and use its own virtualization service rather than normalize an external service as the default.",
+  "adds": [
+    "constitutional principle ekodi-owned-virtualization-first",
+    "VIRTUALIZATION-SOVEREIGNTY-001",
+    "native-first surface verification harness",
+    "native-first browser-e2e execution-fabric selection",
+    "audited external fallback with native capability gap registration"
+  ],
+  "externalFallbackPolicy": {
+    "role": "temporary-replaceable-fallback-only",
+    "allowedOnlyFor": [
+      "native-capability-not-production-ready",
+      "native-capability-unavailable",
+      "required-capability-not-yet-implemented",
+      "native-capacity-or-runtime-failure"
+    ],
+    "auditRequired": true,
+    "securityOrIsolationReductionForbidden": true,
+    "paidAutoUpgradeForbidden": true
+  },
+  "rollbackPlan": "Revert this amendment and the associated constitutional/policy/validator changes through the guarded C2 change path. Do not weaken existing security, isolation, audit, provider-independence or production-release gates during rollback."
+}

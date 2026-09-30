@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#173f35"><meta name="robots" content="noindex,nofollow">
+  <meta name="description" content="EKODI Mall 단계형 무재고 소싱 및 공급자 직배송 관리">
+  <link rel="stylesheet" href="/assets/styles.css"><link rel="stylesheet" href="/assets/platform.css"><title>Sourcing Lab | EKODI MALL</title>
+</head>
+<body>
+  <div class="notice" id="sourcingStatus">Google 판매자 로그인 후 소싱 후보를 관리할 수 있습니다.</div>
+  <header class="header"><a class="brand" href="/"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a><nav><a href="/#shop">MARKET</a><a href="/seller/">SELLER</a><a href="/sourcing">SOURCING</a></nav></header>
+  <main class="seller-main">
+    <section class="seller-hero seller-hero-v2"><div><p class="eyebrow">EKODI SOURCING LAB · SAFE BY DESIGN</p><h1>재고 없이 소싱하되<br>권한 없는 자동구매는 하지 않습니다</h1><p class="detail-desc">외부몰은 참고·제휴 경로로, 실제 EKODI 직배송은 계약된 공급업체로 분리합니다. Auto Source는 가격·수수료·배송비·최소마진을 계산해 가장 안전한 후보를 고르되 현재는 Dry-run입니다.</p><div class="cta"><button class="btn primary" id="sourcingLogin" type="button">Google 판매자 로그인</button><button class="smallbtn" id="sourcingLogout" type="button" hidden>로그아웃</button><a class="btn ghost" href="/seller/">Seller Studio</a></div></div><div class="seller-console"><div class="console-top"><span>SOURCING ENGINE</span><b>V1</b></div><div class="console-grid"><article><small>PHASE 1</small><strong>외부 참고·제휴</strong><span>사용 가능</span></article><article><small>PHASE 2</small><strong>계약 직배송</strong><span>승인 필요</span></article><article><small>PHASE 3</small><strong>Auto Source</strong><span>Dry-run</span></article><article><small>PHASE 4</small><strong>Auto Order</strong><span>잠금</span></article></div></div></section>
+
+    <section class="seller-modules"><div class="heading"><div><p class="eyebrow">REALISTIC ROLLOUT</p><h2>한 번에 자동화하지 않고<br>책임과 권한을 단계별로 엽니다</h2></div></div><div class="module-grid" id="phaseGrid"><article><span>1 · EXTERNAL</span><h3>참고·제휴</h3><p>옥션 등 일반몰은 원본 URL 참고 또는 외부 결제로 연결. 상품정보 대량복제·자동구매는 하지 않습니다.</p></article><article><span>2 · DROPSHIP</span><h3>계약 공급자</h3><p>공급계약과 개인정보 처리 조건이 승인된 공급자만 고객에게 직접 발송할 수 있습니다.</p></article><article><span>3 · AUTO SOURCE</span><h3>마진 비교</h3><p>판매가에서 7·8·9 수수료, 공급가, 배송비를 차감해 최적 공급처를 서버가 Dry-run으로 선정합니다.</p></article><article><span>4 · AUTO ORDER</span><h3>승인 API만</h3><p>공식 주문 API, 계약, 고객정보 처리권한, 전역 안전게이트가 모두 있어야 자동발주가 열립니다.</p></article></div></section>
+
+    <section class="studio-shell" id="sourceRegister"><div class="studio-intro"><div><p class="eyebrow">SOURCE REGISTRY</p><h2>소싱 후보 등록</h2><p>외부몰의 상세정보를 복사하지 않습니다. 원본 URL과 내부 관리명, 원가·배송비 등 운영에 필요한 최소 정보만 저장합니다.</p></div><div class="readiness-card"><small>회원 상태</small><strong id="sourcingMember">로그인 필요</strong><p id="sourcingPolicy">공급처 정책을 확인합니다.</p></div></div>
+      <div class="studio-grid"><form id="sourceForm" class="studio-form" autocomplete="off">
+        <fieldset><legend>1 · Provider</legend><label>공급처 유형<select name="providerId" id="providerSelect" required></select></label><label>원본/공급처 URL<input name="sourceUrl" type="url" placeholder="https://..." required></label><label>내부 관리명<input name="internalLabel" maxlength="160" placeholder="예: 캠핑의자 후보 A"></label><label>공급처 SKU·참조번호<input name="sourceRef" maxlength="160" placeholder="선택"></label></fieldset>
+        <fieldset><legend>2 · Economics</legend><label>공급가<input name="costAmount" type="number" min="0" step="100" inputmode="numeric" placeholder="미확정이면 비움"></label><label>배송비<input name="shippingAmount" type="number" min="0" step="100" value="0" inputmode="numeric"></label><label>재고상태<select name="stockState"><option value="unknown">확인 전</option><option value="in_stock">재고 있음</option><option value="out_of_stock">품절</option></select></label></fieldset>
+        <div class="studio-buttons"><button class="btn primary" type="submit">소싱 후보 등록</button></div>
+      </form><aside class="studio-preview-wrap"><div class="studio-preview-head"><div><p class="eyebrow">REGISTERED SOURCES</p><h2>내 소싱 후보</h2></div><button class="smallbtn" id="reloadSources" type="button">새로고침</button></div><div id="sourceList" class="studio-preview"><article class="studio-preview-block"><small>EMPTY</small><h3>로그인 후 확인</h3><p>서버에 등록된 공급처 후보를 불러옵니다.</p></article></div></aside></div>
+    </section>
+
+    <section class="studio-shell" id="autoSource"><div class="studio-intro"><div><p class="eyebrow">AUTO SOURCE · DRY-RUN</p><h2>상품과 공급처를 연결하고<br>마진을 서버에서 비교</h2><p>가장 싼 곳이 아니라 수수료·배송비·계약상태·개인정보 권한까지 통과한 후보만 선택합니다.</p></div><div class="readiness-card"><small>자동발주</small><strong>OFF</strong><p>추천과 검증만 수행합니다.</p></div></div>
+      <div class="studio-grid"><form id="planForm" class="studio-form" autocomplete="off">
+        <fieldset><legend>1 · Product & Source</legend><label>내 상품<select name="productId" id="productSelect" required></select></label><label>연결할 소싱 후보<select name="sourceId" id="sourceSelect" required></select></label><label>우선순위<input name="priority" type="number" min="1" max="999" value="100"></label></fieldset>
+        <fieldset><legend>2 · Margin Gate</legend><label>예상 판매경로 수수료<select name="feeRatePercent"><option value="9">AI 판매 9% · 보수적 기본</option><option value="8">Mall 유입 8%</option><option value="7">직접공유 7%</option></select></label><label>최소 마진액<input name="minMarginAmount" type="number" min="0" step="100" value="0"></label><label>최소 마진율 %<input name="minMarginPercent" type="number" min="0" max="100" step="0.1" value="0"></label></fieldset>
+        <div class="studio-buttons"><button class="btn ghost" id="linkSource" type="button">상품에 공급처 연결</button><button class="btn primary" type="submit">Auto Source Dry-run</button></div>
+      </form><aside class="studio-preview-wrap"><div class="studio-preview-head"><div><p class="eyebrow">DECISION</p><h2>소싱 판정</h2></div></div><div id="planResult" class="studio-preview"><article class="studio-preview-block"><small>READY</small><h3>아직 실행하지 않았습니다.</h3><p>상품과 공급처를 연결한 뒤 Dry-run을 실행하세요.</p></article></div></aside></div>
+    </section>
+
+    <section class="seller-safety"><p class="eyebrow">BOUNDARY</p><h2>옥션 같은 일반몰과<br>계약 공급자는 같은 취급을 하지 않습니다</h2><p>일반 쇼핑몰은 참고·외부이동 경로로 제한합니다. EKODI에서 결제받고 공급자가 고객에게 직접 보내는 Dropship은 공급계약, 반품·CS 책임, 개인정보 처리 조건이 검증된 공급자에게만 허용합니다.</p></section>
+  </main>
+  <footer class="footer compact"><div class="bottom"><span>© 2026 EKODI MALL · Sourcing Lab</span><a href="/seller/">Seller Studio</a></div></footer>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script><script src="/assets/sourcing-lab.js" defer></script>
+</body>
+</html>

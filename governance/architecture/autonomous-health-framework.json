@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "effectiveDate": "2026-09-10",
+  "status": "active",
+  "targetGeneration": 10,
+  "name": "EKODI Autonomous Health Framework",
+  "purpose": "Keep Generation 10 lightweight, observable, resilient, scalable, explainable, and continuously learnable without bypassing human sovereignty or deployment guardrails.",
+  "loop": ["observe", "assess", "predict", "act", "verify", "learn"],
+  "principles": {
+    "lightweightCore": true,
+    "observableEverything": true,
+    "gracefulDegradation": true,
+    "providerReplaceability": true,
+    "humanSovereignty": true,
+    "costAwareElasticity": true,
+    "verificationFirst": true,
+    "directProductionMutation": false,
+    "aiInvocationIsOptional": true
+  },
+  "indices": {
+    "EHI": {"name": "Health Index", "weight": 0.24},
+    "ESI": {"name": "Scalability Index", "weight": 0.18},
+    "ERI": {"name": "Reliability Index", "weight": 0.18},
+    "EAI": {"name": "Autonomy Index", "weight": 0.14},
+    "E2I": {"name": "Experience Index", "weight": 0.12},
+    "ECRI": {"name": "Crisis Resilience Index", "weight": 0.14}
+  },
+  "selfCheckDomains": [
+    "traffic_elasticity",
+    "performance",
+    "capacity",
+    "graceful_degradation",
+    "queue_backpressure",
+    "reliability",
+    "data_integrity",
+    "cost_resilience",
+    "dependency_risk",
+    "observability",
+    "security",
+    "recovery_readiness",
+    "ai_autonomy",
+    "user_experience",
+    "learning"
+  ],
+  "trafficSurge": {
+    "ratioBands": {
+      "normalMax": 2,
+      "elevatedMax": 5,
+      "highMax": 10
+    },
+    "protectiveThresholds": {
+      "cpuPct": 80,
+      "memoryPct": 85,
+      "dbPoolPct": 75,
+      "p95LatencyMs": 1200,
+      "errorRatePct": 2
+    },
+    "preferredActions": [
+      "scale_out_reversible",
+      "increase_safe_cache_reuse",
+      "protect_db_connection_budget",
+      "enable_queue_backpressure",
+      "defer_noncritical_jobs",
+      "defer_heavy_ai_work",
+      "preserve_critical_user_paths",
+      "watch_cost_ceiling",
+      "verify_then_scale_in"
+    ]
+  },
+  "actionGuardrails": {
+    "LOW": "automatic_when_reversible_and_verified",
+    "MEDIUM": "automatic_only_when_policy_allows_reversible_and_verified",
+    "HIGH": "human_approval_required",
+    "alwaysAudit": true,
+    "rollbackRequiredForMutation": true
+  },
+  "architectureReview": {
+    "classification": ["KEEP", "SIMPLIFY", "MERGE", "EXTRACT", "DELETE", "REPLACE"],
+    "optimizationOrder": [
+      "remove_unnecessary_work",
+      "prefer_rules_cache_or_sql_before_ai",
+      "reduce_cross_service_coupling",
+      "reduce_provider_lock_in",
+      "reduce_runtime_and_cost",
+      "improve_observability",
+      "prove_recovery_and_rollback"
+    ]
+  },
+  "transparencyContract": {
+    "requiredFields": [
+      "observedAt",
+      "state",
+      "coveragePct",
+      "indices",
+      "evidence",
+      "proposedActions",
+      "guardrailDecisions",
+      "verificationStatus"
+    ],
+    "forbidFabricatedScoresWhenEvidenceMissing": true
+  }
+}

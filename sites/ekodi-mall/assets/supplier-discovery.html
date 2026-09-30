@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#173f35"><meta name="robots" content="noindex,nofollow">
+  <meta name="description" content="EKODI Mall 공급업체 발굴·증거평가·연락준비·파일럿 Preflight 운영 콘솔">
+  <link rel="stylesheet" href="/assets/styles.css"><link rel="stylesheet" href="/assets/platform.css"><link rel="stylesheet" href="/assets/supplier-ops.css">
+  <title>Supplier Discovery | EKODI MALL</title>
+</head>
+<body>
+  <div class="notice" id="discoveryStatus">운영자 Google 로그인 후 공급자 후보를 관리할 수 있습니다.</div>
+  <header class="header"><a class="brand" href="/"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a><nav><a href="/supplier-ops">SUPPLIER OPS</a><a href="/sourcing">SOURCING</a><a href="/fulfillment">FULFILLMENT</a></nav></header>
+  <main class="ops-main">
+    <section class="ops-hero">
+      <div><p class="eyebrow">SUPPLIER DISCOVERY · EVIDENCE FIRST</p><h1>인기상품을 좇기보다<br>실제로 직배송할 수 있는 공급자를 찾습니다</h1><p>공개 URL은 후보를 발견하는 단서일 뿐입니다. 신원·직배송·상품권리·마진·재고·반품·소량 파일럿 근거를 확인한 뒤에만 Supplier Partner로 전환합니다.</p><div class="cta"><button class="btn primary" id="discoveryLogin" type="button">운영자 Google 로그인</button><button class="smallbtn" id="discoveryLogout" type="button" hidden>로그아웃</button><button class="smallbtn" id="discoveryReload" type="button">새로고침</button></div></div>
+      <div class="ops-gates"><article><small>AUTO OUTREACH</small><strong>OFF</strong></article><article><small>PAYMENT</small><strong>OFF</strong></article><article><small>PII RELEASE</small><strong>OFF</strong></article><article><small>AUTO ORDER</small><strong>OFF</strong></article></div>
+    </section>
+
+    <section class="ops-summary" id="discoverySummary"><article><small>CANDIDATES</small><strong>0</strong></article><article><small>DUE DILIGENCE</small><strong>0</strong></article><article><small>CONVERTED</small><strong>0</strong></article><article><small>PREFLIGHT</small><strong>0</strong></article></section>
+
+    <section class="ops-grid">
+      <article class="ops-panel">
+        <div class="ops-panel-head"><div><p class="eyebrow">1 · DISCOVER</p><h2>후보 등록</h2></div></div>
+        <form id="candidateCreateForm" class="ops-form">
+          <label>Candidate Code<input name="candidateCode" placeholder="muan-onion-supplier" required></label>
+          <label>후보명<input name="displayName" required></label><label>법인/사업체명<input name="legalName"></label>
+          <label>공개 HTTPS URL<input name="websiteUrl" type="url" placeholder="https://supplier.example.com"></label>
+          <label>발견경로<select name="discoverySource"><option value="manual">수동</option><option value="public_web">공개 웹</option><option value="referral">추천</option><option value="trade_show">전시/상담회</option><option value="government_directory">공공 디렉터리</option><option value="marketplace_reference">일반몰 참고</option></select></label>
+          <label>발견 근거<input name="discoveryRef" placeholder="검색/문서/상담 참조"></label><label>카테고리<input name="category"></label><label>지역<input name="region"></label><label>공개 연락채널 참조<input name="publicContactRef" placeholder="홈페이지 문의 URL 등"></label>
+          <button class="btn primary" type="submit">후보 등록</button>
+        </form>
+      </article>
+
+      <article class="ops-panel">
+        <div class="ops-panel-head"><div><p class="eyebrow">2 · SCORE</p><h2>증거 기반 평가</h2></div><select id="candidateSelect"><option value="">후보 선택</option></select></div>
+        <form id="assessmentForm" class="ops-form">
+          <label>사업자 신원<select name="businessIdentityStatus"><option value="unknown">확인 전</option><option value="confirmed">확인</option><option value="rejected">불일치</option></select></label>
+          <label>직배송 가능<select name="directShipStatus"><option value="unknown">확인 전</option><option value="yes">가능</option><option value="no">불가</option></select></label>
+          <label>예상 마진율 %<input name="marginPercentEstimate" type="number" min="0" max="100" step="0.1"></label>
+          <label>재고 신뢰도<select name="stockReliability"><option value="unknown">확인 전</option><option value="low">낮음</option><option value="medium">보통</option><option value="high">높음</option></select></label>
+          <label>반품·CS<select name="returnsCsStatus"><option value="unknown">확인 전</option><option value="partial">부분 준비</option><option value="ready">준비</option><option value="rejected">부적합</option></select></label>
+          <label>소량 Pilot<select name="pilotSupportStatus"><option value="unknown">확인 전</option><option value="yes">가능</option><option value="no">불가</option></select></label>
+          <label>연동 가능성<select name="integrationCapability"><option value="unknown">확인 전</option><option value="manual">수동</option><option value="feed">Feed</option><option value="api">공식 API</option></select></label>
+          <label>상품권리<select name="rightsClarity"><option value="unknown">확인 전</option><option value="clear">명확</option><option value="restricted">제한</option></select></label>
+          <label>공개 연락채널<input name="publicContactRef"></label>
+          <button class="btn primary" type="submit">평가·점수 재계산</button>
+        </form>
+        <p class="ops-hint" id="candidateReadiness">후보를 선택하세요.</p>
+        <div class="ops-transition"><select id="candidateTransition"><option value="">다음 상태</option></select><button class="smallbtn" id="transitionCandidate" type="button">상태 전환</button><button class="smallbtn" id="convertCandidate" type="button">Partner 전환</button></div>
+      </article>
+
+      <article class="ops-panel">
+        <div class="ops-panel-head"><div><p class="eyebrow">3 · EVIDENCE</p><h2>근거 검토</h2></div></div>
+        <form id="evidenceForm" class="ops-form"><label>유형<select name="evidenceType"><option value="business_identity">사업자 신원</option><option value="dropship">직배송</option><option value="rights">상품권리</option><option value="pricing">공급가/마진</option><option value="stock">재고</option><option value="returns">반품</option><option value="cs">CS</option><option value="pii">개인정보</option><option value="api">API</option><option value="contact">연락처</option><option value="other">기타</option></select></label><label>공개 HTTPS 근거 URL<input name="evidenceUrl" type="url" required></label><label>요약<textarea name="summary" rows="3" placeholder="원문 전체 복제 대신 확인내용만 요약"></textarea></label><button class="btn primary" type="submit">근거 추가</button></form>
+        <div class="ops-divider">근거 판정</div>
+        <form id="evidenceReviewForm" class="ops-form compact"><label>근거<select name="evidenceId" id="evidenceSelect"><option value="">근거 선택</option></select></label><label>판정<select name="decision"><option value="confirmed">확인</option><option value="rejected">부적합</option></select></label><label>신뢰도<input name="confidence" type="number" min="0" max="100" value="80"></label><button class="btn ghost" type="submit">판정 저장</button></form>
+      </article>
+
+      <article class="ops-panel">
+        <div class="ops-panel-head"><div><p class="eyebrow">4 · OUTREACH</p><h2>연락 준비</h2></div></div>
+        <form id="outreachDraftForm" class="ops-form"><label>채널<select name="channel"><option value="email">Email</option><option value="webform">Web form</option><option value="phone">Phone</option><option value="kakao">Kakao</option><option value="other">Other</option></select></label><label>공개 연락처 참조<input name="publicContactRef"></label><button class="btn primary" type="submit">연락 초안 생성</button></form>
+        <p class="ops-hint">자동 발송은 하지 않습니다. 실제 연락 후 아래 상태를 기록해야 후보를 contacted로 넘길 수 있습니다.</p>
+        <form id="outreachStatusForm" class="ops-form compact"><label>연락 작업<select name="outreachId" id="outreachSelect"><option value="">작업 선택</option></select></label><label>상태<select name="status"><option value="ready">발송 준비</option><option value="contacted">실제 연락함</option><option value="responded">응답 받음</option><option value="closed">종료</option><option value="cancelled">취소</option></select></label><label>응답 참조<input name="responseRef"></label><button class="btn ghost" type="submit">연락 기록 저장</button></form>
+        <pre id="outreachPreview" class="ops-hint">연락 초안이 여기에 표시됩니다.</pre>
+      </article>
+
+      <article class="ops-panel ops-wide">
+        <div class="ops-panel-head"><div><p class="eyebrow">5 · PILOT PREFLIGHT</p><h2>발주 전 최종 점검</h2></div></div>
+        <form id="preflightForm" class="ops-map-form"><label>Partner · SKU · 상품<select name="optionKey" id="preflightOption"><option value="">파일럿 구성 선택</option></select></label><label>판매경로<select name="scenarioSource"><option value="marketplace">Mall 8%</option><option value="direct">판매자 직접 7%</option><option value="ai">AI 9%</option></select></label><label>수량<input name="quantity" type="number" min="1" max="99" value="1"></label><button class="btn primary" type="submit">Preflight 실행</button></form>
+        <p class="ops-hint" id="preflightResult">계약·SKU·재고 최신성·상품상태·실제 수수료·최소마진을 검사합니다. 통과해도 실제 거래 스위치는 자동으로 켜지지 않습니다.</p>
+        <div class="ops-table-wrap"><table class="ops-table"><thead><tr><th>후보</th><th>상태</th><th>점수</th><th>Risk</th><th>Blockers</th><th>Partner</th></tr></thead><tbody id="candidateRows"><tr><td colspan="6">등록된 후보가 없습니다.</td></tr></tbody></table></div>
+      </article>
+    </section>
+  </main>
+  <footer class="footer compact"><div class="bottom"><span>© 2026 EKODI MALL · Supplier Discovery</span><span>Evidence opens gates, not guesses</span></div></footer>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script><script src="/assets/supplier-discovery.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+name: Validate EKODI Tax Routing
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: &tax_paths
+      - 'tax-invoice-worker.js'
+      - 'tax-invoice-free-first-worker.js'
+      - 'tax-service-worker.js'
+      - 'tax-portal-worker.js'
+      - 'tax-local-fallback.js'
+      - 'tax-hometax-ledger.js'
+      - 'tax-hometax-ledger-service.js'
+      - 'tax-business-registry.js'
+      - 'tax-business-registry-service.js'
+      - 'platform-router-entry-worker.js'
+      - 'finance-entry-worker.js'
+      - 'finance-monitor.js'
+      - 'admin-menu-registry.js'
+      - 'admin-menu-runtime.js'
+      - 'admin-demand-loader.js'
+      - 'author-billing-admin.js'
+      - 'auth-site/admin-auth.js'
+      - 'wrangler.site.toml'
+      - 'migrations/*finance_multi_tax_suppliers.sql'
+      - 'migrations/*finance_hometax_ledger.sql'
+      - 'migrations/*finance_tax_business_registry.sql'
+      - 'test/tax-professional-service.test.mjs'
+      - 'test/tax-local-fallback.test.mjs'
+      - 'test/tax-finance-service-binding.test.mjs'
+      - 'test/tax-hometax-ledger.test.mjs'
+      - 'test/tax-business-registry.test.mjs'
+      - '.github/workflows/deploy-tax-invoice-routing.yml'
+  push:
+    branches: [main]
+    paths: *tax_paths
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate professional Tax boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in tax-invoice-worker.js tax-invoice-free-first-worker.js tax-service-worker.js tax-portal-worker.js tax-local-fallback.js tax-hometax-ledger.js tax-hometax-ledger-service.js tax-business-registry.js tax-business-registry-service.js platform-router-entry-worker.js finance-entry-worker.js finance-monitor.js admin-menu-registry.js admin-menu-runtime.js auth-site/admin-auth.js; do node --check "$f"; done
+          node --test test/tax-professional-service.test.mjs test/tax-local-fallback.test.mjs test/tax-finance-service-binding.test.mjs test/tax-hometax-ledger.test.mjs test/tax-business-registry.test.mjs
+          node scripts/validate-additive-migrations.mjs migrations
+          grep -Fq 'TAX_INVOICE_AUTOMATION_ENABLED' tax-invoice-free-first-worker.js
+          grep -Fq 'FREE_FIRST_AUTOMATION_DISABLED' tax-invoice-free-first-worker.js
+          grep -Fq "defaultChannel: 'HOMETAX_MANUAL'" tax-invoice-free-first-worker.js
+          grep -Fq 'multiSupplier:true' tax-service-worker.js
+          grep -Fq 'EKODI Tax' tax-portal-worker.js
+          grep -Fq 'injectTaxLocalFallback' platform-router-entry-worker.js
+          grep -Fq 'injectTaxHometaxLedger' platform-router-entry-worker.js
+          grep -Fq 'injectTaxBusinessRegistry' platform-router-entry-worker.js
+          grep -Fq 'routeTaxFinance' platform-router-entry-worker.js
+          grep -Fq 'binding = "FINANCE"' wrangler.site.toml
+          grep -Fq 'service = "ekodi-finance-api"' wrangler.site.toml
+          grep -Fq 'https://ekodi.kr/tax' admin-menu-registry.js
+          ! grep -Fq 'tax.ekodi.kr' wrangler.site.toml
+      - name: Verify single production owner policy
+        run: node scripts/validate-deployment-guardrails.mjs

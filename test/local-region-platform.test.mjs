@@ -1,0 +1,107 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import {localRegionBySlug,localRegionFromPath,localRegionRegistrySnapshot} from '../local-region-registry.js';
+import {localRegionPublicPage,localRegionAdminPage} from '../local-region-page.js';
+
+test('Cheonggye is an independent regional identity and keeps CGMA as delegated operator',()=>{
+  const region=localRegionBySlug('cheonggye');
+  assert.equal(region.id,'local:cheonggye');
+  assert.equal(region.publicPath,'/cheonggye');
+  assert.equal(region.adminPath,'/cheonggye/admin');
+  assert.equal(region.siteSubject,'local-cheonggye');
+  assert.equal(region.initialOperatorId,'cgma');
+  assert.equal(region.operators.cgma.publicPath,'/cgma');
+  assert.equal(region.operators.cgma.adminPath,'/cgma/admin');
+  assert.equal(region.operators.cgma.tenantSlug,'cgma');
+  assert.equal(region.operators.cgma.operatingRights.scope,'all-region-modules');
+  assert.equal(region.operators.cgma.operatingRights.accessMode,'delegated-operations');
+  assert.equal(region.operators.cgma.operatingRights.moduleIds.length,region.modules.length);
+  assert.equal(region.transferPolicy.dataMovement,'none');
+  assert.equal(region.transferPolicy.allowPerModuleTransfer,true);
+  assert.equal(region.transferPolicy.allowCoOperation,true);
+  const pass=region.modules.find(module=>module.id==='commerce-pass');
+  assert.equal(pass?.leadOperatorId,'cgma');
+  assert.equal(pass?.financialMode,'external-settlement-required');
+});
+
+test('regional path resolver claims public and admin surfaces without changing CGMA route',()=>{
+  assert.equal(localRegionFromPath('/cheonggye')?.admin,false);
+  assert.equal(localRegionFromPath('/cheonggye/events')?.region.id,'local:cheonggye');
+  assert.equal(localRegionFromPath('/cheonggye/admin')?.admin,true);
+  assert.equal(localRegionFromPath('/cgma'),null);
+});
+
+test('regional pages declare separate chrome subject and operating boundary',async()=>{
+  const region=localRegionBySlug('cheonggye');
+  const publicHtml=await localRegionPublicPage(region).text();
+  const adminHtml=await localRegionAdminPage(region).text();
+  assert.match(publicHtml,/data-ekodi-site-subject="local-cheonggye"/);
+  assert.match(publicHtml,/청계잇다/);
+  assert.match(publicHtml,/<link rel="canonical" href="https:\/\/ekodi\.kr\/cheonggye">/);
+  assert.match(publicHtml,/<meta property="og:url" content="https:\/\/ekodi\.kr\/cheonggye">/);
+  assert.match(publicHtml,/href="\/cgma"/);
+  assert.doesNotMatch(publicHtml,/href="\/my\//);
+  assert.doesNotMatch(publicHtml,/내 에코디/);
+  assert.doesNotMatch(adminHtml,/rel="canonical"/);
+  assert.match(adminHtml,/청계잇다 관리자/);
+  assert.match(adminHtml,/운영권 보유 단체/);
+  assert.match(adminHtml,/서비스별 운영주체/);
+  assert.match(adminHtml,/청계면상인회 운영권 적용/);
+  assert.match(adminHtml,/href="\/cheonggye\/admin\/pass"/);
+  assert.match(adminHtml,/href="\/cheonggye\/admin\/access"/);
+  assert.match(adminHtml,/청계면상인회/);
+  assert.match(adminHtml,/데이터는 이동·복사하지 않고/);
+  assert.match(adminHtml,/href="\/cgma\/admin"/);
+});
+
+test('router claims local region before generic workspace and admin matchers',async()=>{
+  const router=await fs.readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
+  const local=router.indexOf('localRegionFromPath(url.pathname)');
+  const admin=router.indexOf('isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname)');
+  const workspace=router.indexOf('isPublicWorkspacePath(url.pathname)&&!isEkodiBizOwnedPath(url.pathname)');
+  assert.ok(local>0);
+  assert.ok(admin>local,'regional admin must resolve before generic workspace admin');
+  assert.ok(workspace>local,'regional public route must resolve before generic workspace gateway');
+});
+
+test('shared worker forces Cheonggye through regional router',async()=>{
+  const wrangler=await fs.readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
+  assert.match(wrangler,/"\/cheonggye\*"/);
+});
+
+test('regional registry is reusable for additional regions',()=>{
+  const snapshot=localRegionRegistrySnapshot();
+  assert.ok(Array.isArray(snapshot));
+  assert.equal(snapshot[0].governanceModel,'delegated-multi-operator');
+  assert.ok(snapshot[0].modules.every(module=>module.leadOperatorId&&Array.isArray(module.operatorIds)));
+});
+
+
+test('Cheonggye public experience is local-first, readable, communicative and personalization-ready',async()=>{
+  const region=localRegionBySlug('cheonggye');
+  const response=localRegionPublicPage(region);
+  const html=await response.text();
+  assert.equal(response.headers.get('x-ekodi-user-chrome'),'v1');
+  assert.equal(response.headers.get('x-ekodi-site-experience'),'local-conversational-adaptive-v1');
+  assert.match(html,/class="site-header"/);
+  assert.match(html,/청계 지역 공통 플랫폼/);
+  assert.match(html,/오늘, 청계에서 무엇을 하시나요\?/);
+  assert.match(html,/청계에 말하기/);
+  assert.match(html,/필요한 정보부터 간단하게/);
+  assert.match(html,/로그인하지 않아도 기본 지역정보를 사용할 수 있습니다/);
+  assert.doesNotMatch(html,/href="\/my\//);
+  assert.doesNotMatch(html,/내 에코디/);
+  assert.match(html,/data-ekodi-personalization="progressive-consent"/);
+  assert.match(html,/data-audiences=/);
+  assert.match(html,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(html,/font-size:16px;line-height:1\.65/);
+  assert.doesNotMatch(html,/>Space</);
+});
+
+
+test('Cheonggye public routes are injected as public shell surfaces',async()=>{
+  const router=await fs.readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
+  assert.match(router,/const surface=localRegionRoute\.admin\?'admin':'public'/);
+  assert.match(router,/contextKind:localRegionRoute\.admin\?'workspace':'public'/);
+});

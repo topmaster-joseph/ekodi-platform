@@ -1,0 +1,15 @@
+name = "ekodi-publishing"
+main = "publishing-worker.js"
+compatibility_date = "2026-08-24"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "publishing.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[assets]
+directory = "./publishing"
+binding = "ASSETS"
+run_worker_first = true

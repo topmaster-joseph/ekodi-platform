@@ -1,0 +1,11 @@
+html[data-ekodi-shell="v2"] .workspace-control{position:relative;border-color:var(--ekodi-shell-border,#24425e);background:color-mix(in srgb,var(--ekodi-shell-surface,#0b1d2e) 96%,transparent);box-shadow:0 10px 28px rgba(7,21,34,.14);color:var(--ekodi-shell-text,#f4f7fb);overflow:hidden}
+html[data-ekodi-shell="v2"] .workspace-control::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--ekodi-shell-accent,#7cc7ff)}
+html[data-ekodi-shell="v2"] .workspace-control label{color:var(--ekodi-shell-muted,#9fb1c3);padding-left:2px}
+html[data-ekodi-shell="v2"] .workspace-control select{color:var(--ekodi-shell-text,#f4f7fb);background:transparent}
+html[data-ekodi-shell="v2"] .workspace-control select:focus-visible{outline:2px solid var(--ekodi-shell-accent,#8ec8ff);outline-offset:3px;border-radius:7px}
+html[data-ekodi-shell="v2"] .workspace-control select option{color:#17231d;background:#fff}
+html[data-ekodi-shell="v2"] .workspace-button.selected{border-color:var(--ekodi-shell-accent,#4c765c);box-shadow:0 0 0 3px color-mix(in srgb,var(--ekodi-shell-accent,#4c765c) 16%,transparent)}
+html[data-ekodi-shell="v2"] .workspace-button.selected .workspace-icon{background:var(--ekodi-shell-accent,#213d2d);color:#071522}
+html[data-ekodi-shell="v2"] .workspace-button:focus-visible{outline:2px solid var(--ekodi-shell-accent,#8ec8ff);outline-offset:3px}
+@media(max-width:540px){html[data-ekodi-shell="v2"] .workspace-control{border-radius:14px;min-height:44px}html[data-ekodi-shell="v2"] .workspace-control select{min-height:32px}}
+@media(prefers-reduced-motion:reduce){html[data-ekodi-shell="v2"] .workspace-control,html[data-ekodi-shell="v2"] .workspace-button{transition:none!important}}

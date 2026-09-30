@@ -1,0 +1,25 @@
+.insurance-practice-card{border-color:rgba(32,112,84,.28)}
+.insurance-practice-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+.insurance-practice-head p{margin:0 0 4px;color:#69b69b;font-size:9px;font-weight:900;letter-spacing:.12em}
+.insurance-practice-head h3{margin:0;color:#f2f7fb}
+.insurance-practice-head span{color:#8da7bd;font-size:9px}
+.insurance-practice-head select{min-width:190px;height:36px;border:1px solid rgba(105,151,192,.28);border-radius:9px;background:#071d31;color:#e8f1f8;padding:0 9px}
+.insurance-practice-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}
+.insurance-practice-summary article{display:grid;gap:4px;padding:10px;border-radius:10px;background:rgba(8,29,48,.52);border:1px solid rgba(105,151,192,.15)}
+.insurance-practice-summary small{color:#819bb1;font-size:8px}.insurance-practice-summary strong{color:#eef6fb;font-size:12px}
+.insurance-practice-columns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.insurance-practice-columns>section{padding:10px;border:1px solid rgba(105,151,192,.16);border-radius:10px;background:rgba(8,29,48,.35)}
+.insurance-practice-columns h4{margin:0 0 8px;color:#dceaf4;font-size:10px}
+.insurance-practice-row{display:flex;justify-content:space-between;gap:9px;padding:8px 0;border-top:1px solid rgba(105,151,192,.13)}
+.insurance-practice-row:first-child{border-top:0}.insurance-practice-row>div{display:grid;gap:2px}.insurance-practice-row strong{color:#edf5fb;font-size:10px}
+.insurance-practice-row span,.insurance-practice-row small{color:#819bb1;font-size:8px}.insurance-practice-row a,.insurance-practice-row button{border:0;background:none;color:#80bff2;font-size:8px;font-weight:800;text-decoration:none;cursor:pointer;padding:0}
+.insurance-practice-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.insurance-practice-actions details{border:1px solid rgba(105,151,192,.16);border-radius:10px;background:rgba(8,29,48,.35);padding:9px}
+.insurance-practice-actions summary{cursor:pointer;color:#dceaf4;font-size:9px;font-weight:800}
+.insurance-practice-actions form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
+.insurance-practice-actions label{display:grid;gap:4px;color:#9db4c9;font-size:8px;font-weight:800}
+.insurance-practice-actions input,.insurance-practice-actions select{height:34px;border:1px solid rgba(105,151,192,.28);border-radius:8px;background:#071d31;color:#e8f1f8;padding:0 8px;font:inherit}
+.insurance-practice-actions .check{display:flex;align-items:center;gap:6px}.insurance-practice-actions .check input{width:15px;height:15px}
+.insurance-practice-actions button{grid-column:1/-1;border:1px solid rgba(105,151,192,.32);border-radius:8px;background:#16466e;color:#fff;padding:8px 10px;font-size:9px;font-weight:800;cursor:pointer}
+@media(max-width:800px){.insurance-practice-head{display:grid}.insurance-practice-head select{width:100%}.insurance-practice-summary{grid-template-columns:1fr 1fr}.insurance-practice-columns,.insurance-practice-actions{grid-template-columns:1fr}}
+@media(max-width:520px){.insurance-practice-summary{grid-template-columns:1fr}.insurance-practice-actions form{grid-template-columns:1fr}.insurance-practice-actions button{grid-column:1}}

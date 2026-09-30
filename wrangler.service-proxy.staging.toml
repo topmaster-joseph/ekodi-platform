@@ -1,0 +1,12 @@
+name = "ekodi-service-proxy-shell-staging"
+main = "service-proxy.js"
+compatibility_date = "2026-08-18"
+workers_dev = true
+preview_urls = false
+
+[vars]
+ENVIRONMENT = "staging"
+
+[observability.logs]
+enabled = true
+invocation_logs = true

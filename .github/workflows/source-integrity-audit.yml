@@ -1,0 +1,77 @@
+name: Low-load Source Integrity Audit
+
+on:
+  schedule:
+    # 03:37 KST. Static checks run in GitHub; production probes are capped and pressure-gated.
+    - cron: '37 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ekodi-source-integrity-audit
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Determine incremental audit window
+        id: window
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          head="$(git rev-parse HEAD)"
+          runs_url="$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/workflows/source-integrity-audit.yml/runs?branch=main&status=success&per_page=20"
+          if ! curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "$runs_url" > /tmp/source-audit-runs.json; then
+            printf '%s\n' '{"workflow_runs":[]}' > /tmp/source-audit-runs.json
+          fi
+          base="$(python3 - "$head" <<'PY'
+          import json, sys
+          head=sys.argv[1]
+          try: runs=json.load(open('/tmp/source-audit-runs.json')).get('workflow_runs') or []
+          except Exception: runs=[]
+          for run in runs:
+              sha=str(run.get('head_sha') or '').strip()
+              if sha and sha != head:
+                  print(sha); break
+          PY
+          )"
+          if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then base="$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)"; fi
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "head=$head" >> "$GITHUB_OUTPUT"
+      - name: Apply production pressure guard
+        id: pressure
+        shell: bash
+        run: |
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs=require('node:fs'); let live=true;
+          try { const d=JSON.parse(fs.readFileSync('monitor-status.json','utf8')); const sites=Array.isArray(d.sites)?d.sites:[]; const times=sites.map(s=>Number(s.responseTime)).filter(Number.isFinite); const avg=times.length?times.reduce((a,b)=>a+b,0)/times.length:0; if(Number(d.summary?.offline||0)>0 || Number(d.summary?.degraded||0)>=3 || avg>1700) live=false; } catch {}
+          console.log(`live=${live?'1':'0'}`);
+          NODE
+      - name: Review changed source and connected references
+        env:
+          AUDIT_BASE_SHA: ${{ steps.window.outputs.base }}
+          AUDIT_HEAD_SHA: ${{ steps.window.outputs.head }}
+          AUDIT_LIVE_PROBES: ${{ steps.pressure.outputs.live }}
+          AUDIT_MAX_PROBES: '10'
+        run: node scripts/source-integrity-audit.mjs
+      - name: Publish audit report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-integrity-${{ github.run_id }}
+          path: .source-integrity-report.json
+          if-no-files-found: ignore
+          retention-days: 14

@@ -1,0 +1,29 @@
+name = "ekodi-experience"
+main = "experience-worker.js"
+compatibility_date = "2026-09-03"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "exp.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "try.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "dev.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[assets]
+directory = "./experience"
+binding = "ASSETS"
+run_worker_first = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true

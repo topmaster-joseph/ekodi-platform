@@ -1,0 +1,432 @@
+{
+  "version": 7,
+  "name": "EKODI Design Engine",
+  "asOf": "2026-09-22",
+  "principle": "Evidence defines reusable UX rules; EKODI identity, service DNA and EKODIAN character remain first-party layers.",
+  "constructionStandard": {
+    "scope": "all-ekodi-sites-subservices-and-admin-surfaces",
+    "inheritance": "mandatory-default",
+    "dimensions": [
+      "ease",
+      "locality",
+      "readability",
+      "originality",
+      "intuitiveness"
+    ],
+    "modes": [
+      "communication-first",
+      "personalization"
+    ],
+    "completionGate": "a surface is not complete when any required dimension or mode is materially missing",
+    "sharedCoreRule": "share accessibility, interaction grammar, security and responsive semantics; preserve site-specific identity and task context",
+    "exceptionPolicy": "exceptions must be explicit, evidence-based and may not reduce accessibility, security, authority boundaries or task clarity",
+    "responsiveContentContract": {
+      "required": true,
+      "scope": "all-natural-language-copy-and-primary-layouts-on-user-and-admin-surfaces",
+      "authoring": {
+        "semanticWordOrEojeolWrapping": true,
+        "arbitraryInWordSplitForbidden": true,
+        "layoutOnlyHardLineBreakForbidden": true,
+        "headlineCopyMustSurviveResponsiveReflow": true,
+        "technicalIdentifierException": "explicit-break-anywhere-only"
+      },
+      "typography": {
+        "naturalLanguageWordBreak": "keep-all",
+        "overflowGuard": "break-word",
+        "technicalIdentifierOverflow": "anywhere-explicit-only",
+        "headingTextWrap": "balance",
+        "bodyTextWrap": "pretty",
+        "hyphenation": "none"
+      },
+      "layout": {
+        "viewportAdaptive": true,
+        "primaryLayoutFixedViewportAssumptionForbidden": true,
+        "reflowBeforeFontShrink": true,
+        "flexibleChildrenMinWidthZero": true,
+        "pageHorizontalOverflowForbidden": true,
+        "mediaMustStayInsideViewport": true,
+        "primaryTouchTargetFloorPx": 44
+      },
+      "verification": {
+        "viewportWidths": [
+          320,
+          390,
+          768,
+          1366,
+          1440
+        ],
+        "checks": [
+          "no-arbitrary-word-or-eojeol-splitting",
+          "no-layout-only-hard-line-breaks",
+          "no-horizontal-page-overflow",
+          "no-clipped-or-overlapped-primary-copy",
+          "controls-and-grids-reflow-without-losing-meaning"
+        ]
+      },
+      "developmentGate": "design, copywriting and implementation must apply and verify this contract before completion"
+    }
+  },
+  "evidence": {
+    "publicUser": {
+      "awardProgram": "The Webby Awards 2026",
+      "sampleUnit": "award placement; entries may overlap across categories",
+      "categories": [
+        {
+          "id": "best-user-experience",
+          "placements": 15,
+          "weight": 0.35,
+          "source": "https://winners.webbyawards.com/winners/websites-and-mobile-sites/features-design/best-user-experience",
+          "adopt": [
+            "useful functionality is visually legible",
+            "interaction supports the user's goal",
+            "novelty never obscures the task"
+          ]
+        },
+        {
+          "id": "best-navigation-structure",
+          "placements": 9,
+          "weight": 0.3,
+          "source": "https://winners.webbyawards.com/winners/websites-and-mobile-sites/features-design/best-navigationstructure",
+          "adopt": [
+            "information architecture is predictable",
+            "navigation depth stays understandable",
+            "orientation survives responsive layout"
+          ]
+        },
+        {
+          "id": "best-visual-design-aesthetic",
+          "placements": 14,
+          "weight": 0.35,
+          "source": "https://winners.webbyawards.com/winners/websites-and-mobile-sites/features-design/best-visual-design-aesthetic",
+          "adopt": [
+            "visual identity is emotionally distinct",
+            "art direction reinforces service meaning",
+            "aesthetic choices do not break accessibility"
+          ]
+        }
+      ],
+      "placementTotal": 38
+    },
+    "admin": {
+      "reference": "IBM Carbon Design System UI Shell",
+      "source": "https://carbondesignsystem.com/components/UI-shell-left-panel/usage/",
+      "adopt": [
+        "platform products share a persistent shell",
+        "left navigation is fixed to the product frame",
+        "do not build a third navigation tier inside the side navigation",
+        "use local tabs only inside a workspace when they do not duplicate global or left-side task navigation",
+        "responsive behavior changes placement rather than shrinking controls into illegibility"
+      ]
+    }
+  },
+  "admin": {
+    "primaryAxes": [
+      "summary",
+      "sites",
+      "people",
+      "services",
+      "content",
+      "status",
+      "settings-records"
+    ],
+    "primaryAxisLabelsKo": [
+      "플랫폼 전체현황",
+      "사이트·브랜드",
+      "사용자·관리자·권한",
+      "서비스·AI",
+      "콘텐츠·행사·소통",
+      "운영·배포·장애",
+      "설정·보안·감사"
+    ],
+    "layout": "fixed-role-projected-sidebar + scrolling-workspace + bottom-command-composer",
+    "desktopPrimarySidebarScroll": true,
+    "workspaceScroll": true,
+    "pageTopOffsetPx": 0,
+    "viewportChecks": [
+      "1366x768",
+      "1366x600",
+      "390x844"
+    ],
+    "character": {
+      "mode": "contextual-assistant",
+      "persistentFloating": false,
+      "contentOverlapForbidden": true,
+      "allowedRoles": [
+        "guide",
+        "empty-state",
+        "error",
+        "onboarding",
+        "completion",
+        "assistant"
+      ],
+      "motion": "respect-prefers-reduced-motion"
+    },
+    "generation": 8,
+    "experienceStandard": {
+      "inheritsConstructionStandard": true,
+      "priorityOrder": [
+        "ease",
+        "readability",
+        "intuitiveness",
+        "communication-first",
+        "personalization",
+        "locality",
+        "originality"
+      ],
+      "communicationFirst": {
+        "required": true,
+        "rule": "operators must always have a plain-language deterministic path to understand state, act, ask for help and recover without depending on AI"
+      },
+      "personalization": {
+        "required": true,
+        "mode": "role-task-context-within-authority",
+        "authorizationUnaffected": true,
+        "rule": "adapt information density, defaults and assistance to explicit role, task and context without changing authority"
+      }
+    },
+    "regions": [
+      {
+        "id": "primary-navigation",
+        "placement": "left",
+        "owner": "global-registry",
+        "persistent": true,
+        "scrollOwner": false
+      },
+      {
+        "id": "workspace-header",
+        "placement": "content-top",
+        "owner": "active-service",
+        "persistent": false,
+        "scrollOwner": false
+      },
+      {
+        "id": "workspace",
+        "placement": "center-right",
+        "owner": "active-service",
+        "persistent": false,
+        "scrollOwner": true
+      },
+      {
+        "id": "command-composer",
+        "placement": "workspace-bottom",
+        "owner": "ekodi-assist",
+        "persistent": true,
+        "scrollOwner": false
+      }
+    ],
+    "navigationLevels": [
+      {
+        "level": 1,
+        "owner": "global",
+        "surface": "fixed-left-sidebar",
+        "rule": "seven-platform-control-areas-for-platform-super-admin"
+      },
+      {
+        "level": 2,
+        "owner": "role-context",
+        "surface": "active-left-direct-tasks",
+        "rule": "platform super admin and delegated/local admins use left-side direct task navigation only; no duplicate workspace-top navigation"
+      },
+      {
+        "level": 3,
+        "owner": "service",
+        "surface": "workspace-controls",
+        "rule": "tabs-filters-drawers-and-local-actions-only"
+      }
+    ],
+    "scrollContract": {
+      "body": "locked",
+      "app": "locked",
+      "primarySidebar": "independent-when-needed-on-platform-admin",
+      "contextNavigation": "retired",
+      "workspace": "single-vertical-scroll-owner",
+      "nestedScroll": "tables-and-explicit-data-views-only"
+    },
+    "pageAnatomy": [
+      "platform super admin left navigation: seven explicit control areas with active-area direct task links",
+      "delegated/local admin navigation: role- and domain-specific direct task links only",
+      "workspace header: title + purpose + status/actions only; no duplicate navigation",
+      "workspace header: title + purpose + status + primary actions",
+      "optional KPI/status summary",
+      "primary workbench",
+      "persistent bottom EKODI command composer",
+      "detail drawer or modal only when needed"
+    ],
+    "densityProfiles": {
+      "standard": "readable default",
+      "compact": "high-information workbench without shrinking below readability floor",
+      "lowHeight": "reduce spacing and secondary chrome before hiding required functions",
+      "mobile": "reflow hierarchy; keep touch targets and meaning"
+    },
+    "serviceThemeScope": {
+      "allowed": [
+        "accent token",
+        "service badge",
+        "service-specific data visualization semantics"
+      ],
+      "forbidden": [
+        "replacement global navigation",
+        "replacement shell geometry",
+        "dark/light shell fork",
+        "duplicated layout CSS"
+      ]
+    },
+    "aiInterface": {
+      "role": "contextual coworker",
+      "default": "persistent-bottom-composer",
+      "persistentFloating": false,
+      "contentOverlapForbidden": true,
+      "humanPathRequired": true,
+      "highRiskActions": "existing approval and audit boundaries remain authoritative"
+    },
+    "directNavigationContract": {
+      "id": "ADMIN-DIRECT-NAV-006",
+      "leftTaskIsFinalDestination": true,
+      "duplicateRightSideReselectionForbidden": true,
+      "contextTabsAreOptionalRefinement": true,
+      "aggregateExceptions": [
+        "dashboard",
+        "overview",
+        "comparison",
+        "monitoring",
+        "incident-status"
+      ],
+      "integratedHubDefault": "remember-last-target-or-open-valid-default-workspace",
+      "verification": "production-e2e-must-click-visible-left-menu-without-hidden-context-tab-fallback"
+    }
+  },
+  "user": {
+    "universalSitePrinciples": {
+      "scope": "all-user-facing-sites-and-subservices",
+      "inheritsConstructionStandard": true,
+      "priority": "service-goal-first; shared platform chrome must never displace local or service identity",
+      "dimensions": {
+        "ease": {
+          "ko": "용이성",
+          "rules": [
+            "one obvious primary purpose per screen",
+            "progressive disclosure before dense menus",
+            "minimum 44px touch targets for primary interactive controls",
+            "no essential task may depend on hover, hidden gestures or AI",
+            "reduce steps, duplicate choices and repeated explanations"
+          ]
+        },
+        "locality": {
+          "ko": "지역성·현장성",
+          "rules": [
+            "lead with the service, organization or region identity rather than generic platform labels",
+            "use local names, people, places, events and operating context where the site has a local mission",
+            "shared EKODI relationship remains visible but secondary to the active site's identity"
+          ]
+        },
+        "readability": {
+          "ko": "가독성",
+          "rules": [
+            "body text remains at least 16px on mobile unless it is metadata",
+            "normal text contrast targets WCAG AA 4.5:1",
+            "line-height remains at least 1.5 for reading copy",
+            "Korean and other natural-language words must not be arbitrarily split",
+            "content hierarchy must remain legible without relying on color alone"
+          ]
+        },
+        "originality": {
+          "ko": "독창성",
+          "rules": [
+            "each site keeps a distinct visual family through palette, typography, geometry, density and hero composition",
+            "do not clone another EKODI site's page composition as a shortcut",
+            "novel visual treatment must never reduce task clarity or accessibility"
+          ]
+        },
+        "intuitiveness": {
+          "ko": "직관성",
+          "rules": [
+            "navigation labels describe user goals in plain language",
+            "interactive cards and controls must visibly look interactive",
+            "status, next action and return path stay obvious",
+            "essential meaning uses text with icons rather than icon-only controls"
+          ]
+        }
+      },
+      "communicationFirst": {
+        "required": true,
+        "rule": "Public experiences should provide a clear human-language route to ask, participate, propose, contact or receive help when that interaction belongs to the service.",
+        "patterns": [
+          "intent-first quick actions",
+          "plain-language prompts",
+          "contextual help inside content flow",
+          "feedback or participation path owned by the service"
+        ],
+        "assistant": {
+          "userInitiated": true,
+          "persistentFloating": false,
+          "contentOverlapForbidden": true,
+          "humanPathRequired": true
+        }
+      },
+      "personalization": {
+        "mode": "progressive-consent-based",
+        "anonymousBaseline": "fully-usable",
+        "allowedContext": [
+          "signed-in person context",
+          "active service or workspace",
+          "explicit role",
+          "language",
+          "user-chosen interests",
+          "recent in-service activity"
+        ],
+        "sensitiveInferenceForbidden": true,
+        "authorizationUnaffected": true,
+        "presentationOnlyByDefault": true,
+        "explainableAndReversible": true
+      }
+    },
+    "layout": "shared-header + service-owned-content + shared-footer",
+    "sharedSources": [
+      "config/user-ui-dna.json",
+      "config/user-ui-shell.json",
+      "shell/theme.json"
+    ],
+    "serviceIdentityMustVary": [
+      "palette",
+      "headline typography",
+      "geometry",
+      "information density",
+      "hero composition",
+      "motion character",
+      "card language"
+    ],
+    "character": {
+      "mode": "service-opt-in-contextual-guide",
+      "persistentFloating": false,
+      "contentOverlapForbidden": true,
+      "allowedRoles": [
+        "guide",
+        "story",
+        "empty-state",
+        "onboarding",
+        "completion"
+      ],
+      "defaultPlacement": "content-slot",
+      "fallback": "fully-usable-without-character",
+      "motion": "respect-prefers-reduced-motion"
+    }
+  },
+  "defectPromotion": {
+    "repeatThreshold": 2,
+    "promoteToSharedGuardrail": [
+      "top whitespace",
+      "sidebar scroll",
+      "font size",
+      "button size",
+      "card spacing",
+      "mobile clipping",
+      "character overlap",
+      "duplicate shared chrome",
+      "arbitrary word or eojeol splitting",
+      "manual line-break layout hacks",
+      "horizontal viewport overflow",
+      "fixed-width mobile overflow",
+      "responsive text clipping or overlap"
+    ]
+  }
+}

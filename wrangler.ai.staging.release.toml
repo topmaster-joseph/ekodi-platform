@@ -1,0 +1,34 @@
+name = "ekodi-ai-control-staging"
+main = ".release/ai-control/worker.js"
+no_bundle = true
+compatibility_date = "2026-09-01"
+workers_dev = true
+preview_urls = false
+
+[vars]
+ENVIRONMENT = "development"
+AI_CONTROL_MODE = "free-first-staging"
+AI_TASK_EXECUTION_ENABLED = "false"
+AI_GITHUB_ORCHESTRATION_ENABLED = "false"
+AI_CONTROL_CALLER_REGISTRY_JSON = '[{"id":"ekodi-mall","secretBinding":"MALL_INGRESS_KEY"}]'
+AUTH_URL = "https://ekodi.kr/auth/?site=ai&return_to=https%3A%2F%2Fekodi.kr%2Fai%2F"
+GEMINI_MODEL = "gemini-3.7-flash"
+AI_WORKER_PROVIDERS = ""
+EKODI_PROVIDER_WORKERS_AI_ENABLED = "false"
+EKODI_WORKERS_AI_DAILY_CALL_LIMIT = "4"
+EKODI_PROVIDER_OPENROUTER_FREE_ENABLED = "true"
+EKODI_OPENROUTER_FREE_DAILY_CALL_LIMIT = "45"
+EKODI_PROVIDER_GROQ_FREE_ENABLED = "false"
+EKODI_GROQ_FREE_DAILY_CALL_LIMIT = "900"
+
+[ai]
+binding = "AI"
+
+[assets]
+directory = "./.release/ai-control/assets"
+binding = "ASSETS"
+run_worker_first = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true

@@ -1,0 +1,21 @@
+name = "ekodi-space-staging"
+main = "space-worker.js"
+compatibility_date = "2026-08-28"
+workers_dev = true
+preview_urls = false
+
+[vars]
+DATA_ENABLED = "false"
+DATA_MODE = "isolated-staging"
+SUPABASE_URL = ""
+SUPABASE_PUBLISHABLE_KEY = ""
+AUTH_URL = "https://auth.ekodi.kr/?site=space"
+
+[assets]
+directory = "./space"
+binding = "ASSETS"
+run_worker_first = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true

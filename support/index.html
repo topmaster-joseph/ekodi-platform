@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="에코디 기회AI는 지원금, 보조금, 장학금, 공모, 복지, 민간지원, 후원을 하나의 프로필로 연결합니다.">
+  <title>에코디 기회AI | EKODI Opportunity</title>
+  <link rel="stylesheet" href="/support/styles.css">
+  <link rel="stylesheet" href="/support/account.css">
+  <script src="/support/config.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <aside id="ekodiAccount" class="ekodi-account" data-state="loading" aria-live="polite">
+    <strong id="ekodiAccountText">계정 확인 중</strong>
+    <small id="ekodiAccountDetail">EKODI 중앙 로그인 상태를 확인합니다.</small>
+    <button id="ekodiAccountAction" type="button" hidden></button>
+  </aside>
+
+  <header class="hero">
+    <p class="eyebrow">EKODI SUPPORT · OPPORTUNITY FIRST</p>
+    <div id="activeServicePill" class="service-pill">에코디 기회AI</div>
+    <h1 id="heroTitle">필요를 말하면,<br>맞는 기회를 연결합니다.</h1>
+    <p id="heroDescription" class="hero-copy">지원금·보조금·장학금·공모·복지·민간지원·후원을 각각의 전문서비스로 운영하면서, 한 사람의 필요와 이력을 하나의 흐름으로 연결합니다.</p>
+    <div class="need-box">
+      <label class="sr-only" for="needInput">지원이 필요한 상황</label>
+      <input id="needInput" placeholder="예: 대학원 장학금이 필요해요 / 냉난방기 교체 지원을 찾고 있어요">
+      <button id="discover" type="button">내 기회 찾기</button>
+    </div>
+    <p class="micro">공식 출처를 우선하며, 신청·서명·협약·결제·정산은 사용자의 최종 확인 없이 실행하지 않습니다.</p>
+  </header>
+
+  <section class="grid stats" aria-label="기회 요약">
+    <article><strong id="matchCount">-</strong><span>우선 검토 기회</span></article>
+    <article><strong id="soonCount">-</strong><span>7일 이내 마감</span></article>
+    <article><strong id="stage">발굴</strong><span>현재 진행 단계</span></article>
+  </section>
+
+  <section class="section" aria-labelledby="servicesTitle">
+    <div class="section-head">
+      <p class="eyebrow">SPECIALIST NETWORK</p>
+      <h2 id="servicesTitle">전문서비스는 나누고, 기회는 연결합니다</h2>
+      <p>각 서비스는 서로 다른 자격조건과 판단규칙을 사용합니다. EKODI 로그인 신원은 공통으로 이어지고, 지원조건은 필요한 최소정보만 서비스별로 관리합니다.</p>
+    </div>
+    <div id="serviceGrid" class="service-grid"></div>
+  </section>
+
+  <section class="two align-start">
+    <article class="panel profile-panel">
+      <p class="eyebrow">MINIMUM SUPPORT PROFILE</p>
+      <h2>한 번 입력하고 함께 사용</h2>
+      <p>전문서비스마다 같은 지원조건을 다시 쓰지 않도록 공통 최소정보를 이 브라우저에서 공유합니다. 중앙 계정에는 자동 저장하지 않습니다.</p>
+      <label>나의 유형
+        <select id="profileType">
+          <option value="">선택하지 않음</option><option>개인</option><option>학생</option><option>청년</option><option>사업자</option><option>기관·단체</option><option>교회</option><option>후원자</option>
+        </select>
+      </label>
+      <label>지역
+        <input id="region" placeholder="예: 전남, 목포, 전국">
+      </label>
+      <label>관심 키워드
+        <input id="interests" placeholder="예: 소상공인, AI, 장학금, 청년">
+      </label>
+      <label class="consent-choice">
+        <input id="proactiveBenefits" type="checkbox">
+        <span><strong>받을 수 있는 혜택을 먼저 알려주세요</strong><small>위에 직접 입력한 최소정보만 사용합니다. 이용기록·외부정보·민감정보는 이 동의에 포함되지 않습니다.</small></span>
+      </label>
+      <button id="saveProfile" type="button">기본조건 저장</button>
+      <div id="profileStatus" class="result compact" aria-live="polite"></div>
+    </article>
+
+    <article class="panel">
+      <p class="eyebrow">CONNECTED CORE</p>
+      <h2>Opportunity Core</h2>
+      <div class="flow-list">
+        <div><strong>1. 필요</strong><span>직접 제공한 정보와 동의된 변화만 파악</span></div>
+        <div><strong>2. 자격</strong><span>전문서비스별 규칙으로 검토</span></div>
+        <div><strong>3. 근거</strong><span>공식 공고와 출처 연결</span></div>
+        <div><strong>4. 확인</strong><span>불확실하면 추측 대신 최소 질문</span></div>
+        <div><strong>5. 실행</strong><span>신청 준비부터 선정 이후까지 관리</span></div>
+      </div>
+    </article>
+  </section>
+
+  <section class="two align-start">
+    <article class="panel">
+      <p class="eyebrow">OFFICIAL FEED</p>
+      <h2>공식 데이터 연결</h2>
+      <p>현재 연결된 공식 원천과 각 전문서비스의 데이터 준비상태를 확인합니다. 연결되지 않은 영역에 임의 공고를 만들지 않습니다.</p>
+      <button id="refreshSources" type="button">연결상태 확인</button>
+      <div id="sourceStatus" class="result" aria-live="polite"></div>
+    </article>
+    <article class="panel">
+      <p class="eyebrow">PROACTIVE BRIEF</p>
+      <h2>나에게 열린 기회</h2>
+      <p id="briefIntro">공식 공고에서 적합도와 마감 임박도를 계산해 먼저 볼 기회를 정리합니다.</p>
+      <button id="buildBrief" type="button">기회 브리프 갱신</button>
+      <div id="briefResult" class="result" aria-live="polite"></div>
+    </article>
+  </section>
+
+  <section class="panel workspace">
+    <p class="eyebrow">GRANT WORKSPACE</p>
+    <h2>신청·수행 사업실</h2>
+    <p>찾는 데서 끝내지 않고 신청 준비, 선정, 협약, 수행, 결과보고, 정산까지 한 흐름으로 이어갑니다.</p>
+    <div class="form-row">
+      <label>기회·사업명<input id="projectName" value="새 지원기회"></label>
+      <label>현재 단계<select id="stageSelect"></select></label>
+    </div>
+    <button id="saveProject" type="button">사업실 저장</button>
+    <div id="actions" class="result"></div>
+  </section>
+
+  <section class="two align-start tools">
+    <article class="panel">
+      <p class="eyebrow">OFFICIAL SOURCE</p>
+      <h2>공고·지침 변경분석</h2>
+      <label>기존 지침<textarea id="previousGuidance" rows="5" placeholder="이전 공고·지침 내용을 붙여넣으세요."></textarea></label>
+      <label>새 지침<textarea id="currentGuidance" rows="5" placeholder="새 공문·FAQ·지침 내용을 붙여넣으세요."></textarea></label>
+      <button id="analyze" type="button">변경 분석</button>
+      <pre id="changeResult"></pre>
+    </article>
+    <article class="panel">
+      <p class="eyebrow">FORM ENGINE</p>
+      <h2>공식 양식 준비</h2>
+      <p>원본 양식을 우선하고, 공통 프로필에서 채울 수 있는 항목과 사람 검수가 필요한 항목을 구분합니다.</p>
+      <button id="previewForm" type="button">자동채움 검토</button>
+      <div id="formResult" class="result"></div>
+    </article>
+  </section>
+
+  <section class="panel human-gate">
+    <p class="eyebrow">HUMAN GATE</p>
+    <h2>중요 행동은 사람이 최종 결정합니다</h2>
+    <p>AI는 찾아주고, 비교하고, 준비하고, 놓치지 않도록 돕습니다. 제출·서명·협약·결제·사업비 변경·정산은 최종 승인 후 진행합니다.</p>
+    <div class="chips"><span>공식자료 우선</span><span>출처 추적</span><span>전문규칙 분리</span><span>최소 프로필</span><span>최종 승인</span></div>
+  </section>
+</main>
+<script type="module" src="/support/account.js"></script>
+<script type="module" src="/support/app.js"></script>
+</body>
+</html>

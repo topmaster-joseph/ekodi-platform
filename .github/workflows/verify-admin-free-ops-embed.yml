@@ -1,0 +1,98 @@
+name: Verify Admin Free Ops Embed
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['EKODI Mall · Stage and Deploy', 'Deploy Admin & Auth Site', 'Deploy EKODI Shared Site Core']
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-admin-free-ops-embed
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify live Admin and Mall framing contract with bounded retries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          fetch_final() {
+            url="$1"
+            headers="$2"
+            body="$3"
+            effective_file="$4"
+            meta=$(curl -sS -L -o "$body" -w '%{http_code}|%{url_effective}' --connect-timeout 5 --max-time 15 "$url" || true)
+            code="${meta%%|*}"
+            effective="${meta#*|}"
+            printf '%s' "$effective" > "$effective_file"
+            if [ -n "$effective" ]; then
+              curl -sS -D "$headers" -o /dev/null --connect-timeout 5 --max-time 15 "$effective" || true
+            else
+              : > "$headers"
+            fi
+            printf '%s' "$code"
+          }
+
+          for attempt in $(seq 1 3); do
+            free_code=$(fetch_final 'https://ekodi.kr/ekodimall/free-ops?embed=admin' /tmp/free-headers /tmp/free-body /tmp/free-url)
+            root_code=$(fetch_final 'https://ekodi.kr/ekodimall/' /tmp/mall-headers /tmp/mall-body /tmp/mall-url)
+            admin_code=$(fetch_final 'https://ekodi.kr/admin/' /tmp/admin-headers /tmp/admin-body /tmp/admin-url)
+            asset_code=$(fetch_final 'https://ekodi.kr/admin/release-control-admin.js' /tmp/admin-asset-headers /tmp/admin-asset /tmp/admin-asset-url)
+
+            free_ok=false
+            root_ok=false
+            admin_ok=false
+            asset_ok=false
+
+            if [ "$free_code" = '200' ] \
+              && grep -Eiq '^content-security-policy:.*frame-ancestors https://ekodi\.kr([;[:space:]]|$)' /tmp/free-headers \
+              && ! grep -Eiq '^x-frame-options:[[:space:]]*DENY' /tmp/free-headers \
+              && ! grep -Eiq '^content-security-policy:.*frame-ancestors '\''none'\''' /tmp/free-headers; then
+              free_ok=true
+            fi
+
+            if [ "$root_code" = '200' ] \
+              && grep -Eiq '^x-frame-options:[[:space:]]*DENY' /tmp/mall-headers \
+              && grep -Eiq '^content-security-policy:.*frame-ancestors '\''none'\''' /tmp/mall-headers; then
+              root_ok=true
+            fi
+
+            if [ "$admin_code" = '200' ] \
+              && grep -Eiq '^content-security-policy:.*frame-src[^;]*https://ekodi\.kr([;[:space:]]|$)' /tmp/admin-headers \
+              && grep -Eiq '^content-security-policy:.*frame-ancestors '\''none'\''' /tmp/admin-headers; then
+              admin_ok=true
+            fi
+
+            if [ "$asset_code" = '200' ] \
+              && grep -Fq "https://ekodi.kr/ekodimall/free-ops?embed=admin" /tmp/admin-asset \
+              && grep -Fq "dataset.section = 'mall-free-ops'" /tmp/admin-asset; then
+              asset_ok=true
+            fi
+
+            if [ "$free_ok" = true ] && [ "$root_ok" = true ] && [ "$admin_ok" = true ] && [ "$asset_ok" = true ]; then
+              echo "Admin Free Ops live embed contract verified at $(cat /tmp/free-url)."
+              exit 0
+            fi
+
+            echo "attempt=$attempt/3 free=$free_code/$free_ok url=$(cat /tmp/free-url) mall=$root_code/$root_ok admin=$admin_code/$admin_ok asset=$asset_code/$asset_ok"
+            sleep 5
+          done
+
+          echo '--- Free Ops effective URL ---'
+          cat /tmp/free-url || true
+          echo
+          echo '--- Free Ops final headers ---'
+          cat /tmp/free-headers || true
+          echo '--- Mall root headers ---'
+          cat /tmp/mall-headers || true
+          echo '--- Admin headers ---'
+          cat /tmp/admin-headers || true
+          exit 1

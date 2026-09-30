@@ -1,0 +1,730 @@
+import { adminMenuOrder, getAdminMenuItem, getAdminMenuLabel, normalizeAdminLocale } from './admin-menu-registry.js';
+import { EKODIBIZ_ADMIN_SCOPES } from './ekodibiz-admin-registry.js';
+
+const API = 'https://ekodi.kr';
+const LOCALE_KEY = 'ekodi-admin-locale';
+const LOCALE_COOKIE = 'ekodi_admin_locale';
+const CONTEXT_KEY = 'ekodi-admin-context-v1';
+const CENTRAL_ADMIN_AUTH = 'https://ekodi.kr/auth/';
+const ADMIN_HANDOFF_ALLOWED_TARGETS = new Set(['https://ekodi.kr/tax','https://ekodi.kr/work/admin','https://ekodi.kr/cmpmyi/admin/agent']);
+const ROLES = ['super_admin', 'operator', 'viewer'];
+const SPACE_ADMIN_ROLES = Object.freeze([
+  ['owner','책임관리자'],
+  ['admin','관리자'],
+  ['manager','운영책임자'],
+  ['staff','실무담당자'],
+  ['marketer','마케팅담당자'],
+  ['accountant','회계담당자'],
+  ['store_owner','점주/책임자'],
+  ['hq_manager','본사담당자'],
+  ['marketing_manager','마케팅담당자 · 점포'],
+  ['accounting_manager','회계담당자 · 점포'],
+  ['senior_pastor','담임목사/책임관리자'],
+  ['pastor','목회자'],
+  ['care_staff','돌봄담당자'],
+  ['external_vendor','외부업체'],
+  ['external_developer','외부개발자'],
+]);
+const SPACE_ADMIN_ROLE_SET = new Set(SPACE_ADMIN_ROLES.map(item => item[0]));
+const SPACE_ADMIN_MANAGE_PATHS = Object.freeze({
+  'cheonggye-local':'/cheonggye/admin',
+  'cheonggye-pass':'/cheonggye/admin/pass',
+  cgma:'/cgma/admin',
+});
+let locale = readLocale();
+let panelInstalled = false;
+let currentSession = null;
+let sessionLoadPromise = null;
+let contextOptions = [];
+let currentContext = Object.freeze({ type:'platform', id:'global', label:'EKODI Platform' });
+let contextInstallPromise = null;
+let elevationPromise = null;
+let workspaceConnectionPanelInstalled = false;
+let workspaceConnectionLoadSeq = 0;
+
+function token() { return sessionStorage.getItem('ekodi-auth-token') || ''; }
+function adminHandoffTarget(value) {
+  try {
+    const target = new URL(String(value || ''));
+    if (target.protocol !== 'https:' || target.username || target.password) return null;
+    target.hash = '';
+    return ADMIN_HANDOFF_ALLOWED_TARGETS.has(target.href) ? target : null;
+  } catch {
+    return null;
+  }
+}
+function adminSubserviceDestination(definition) {
+  const target = adminHandoffTarget(definition?.href);
+  if (!target) return '';
+  const currentToken = token();
+  if (currentToken) {
+    target.hash = new URLSearchParams({ ekodi_admin_token: currentToken }).toString();
+    return target.href;
+  }
+  const auth = new URL(CENTRAL_ADMIN_AUTH);
+  auth.searchParams.set('site', 'admin');
+  auth.searchParams.set('direct', '1');
+  auth.searchParams.set('return_to', target.href);
+  return auth.href;
+}
+function t(ko, en) { return locale === 'en' ? en : ko; }
+function sectionOf(item) {
+  if (item?.dataset?.deviceControlNav === 'true') return 'devices';
+  const raw = String(item?.dataset?.section || item?.dataset?.lazySection || '').trim();
+  return raw === 'marketing' ? 'marketing-ai' : raw;
+}
+function readLocale() {
+  const cookie = document.cookie.split(';').map(v => v.trim()).find(v => v.startsWith(`${LOCALE_COOKIE}=`));
+  if (cookie) return normalizeAdminLocale(decodeURIComponent(cookie.split('=').slice(1).join('=')));
+  try { return normalizeAdminLocale(localStorage.getItem(LOCALE_KEY) || document.documentElement.lang || navigator.language); }
+  catch { return 'ko'; }
+}
+function saveLocale(value) {
+  locale = normalizeAdminLocale(value);
+  try { localStorage.setItem(LOCALE_KEY, locale); } catch {}
+  if (location.hostname === 'ekodi.kr' || location.hostname.endsWith('.ekodi.kr')) {
+    document.cookie = `${LOCALE_COOKIE}=${locale}; Path=/; Domain=.ekodi.kr; Max-Age=31536000; SameSite=Lax; Secure`;
+  }
+  document.documentElement.lang = locale;
+}
+async function api(path, options = {}) {
+  const headers = new Headers(options.headers || {});
+  if (token()) headers.set('authorization', `Bearer ${token()}`);
+  if (options.body && !headers.has('content-type')) headers.set('content-type', 'application/json');
+  const response = await fetch(`${API}${path}`, { ...options, headers, cache: 'no-store' });
+  let data = {};
+  try { data = await response.json(); } catch {}
+  if (!response.ok) {
+    const error = new Error(data.error || `API 요청 실패 (${response.status})`);
+    error.code = data.code || '';
+    error.status = response.status;
+    throw error;
+  }
+  return data;
+}
+function loadCurrentSession() {
+  if (currentSession) return Promise.resolve(currentSession);
+  if (sessionLoadPromise) return sessionLoadPromise;
+  sessionLoadPromise = api('/api/session')
+    .then(session => { currentSession = session; return session; })
+    .finally(() => { sessionLoadPromise = null; });
+  return sessionLoadPromise;
+}
+function navItems() {
+  return document.querySelectorAll('.sidebar nav .nav[data-section],.sidebar nav .nav[data-lazy-section],.sidebar nav .nav[data-device-control-nav]');
+}
+function applyMenuLabels() {
+  document.documentElement.lang = locale;
+  for (const item of navItems()) {
+    const id = sectionOf(item);
+    if (!getAdminMenuItem(id)) continue;
+    let span = item.querySelector('span');
+    if (!span) { span = document.createElement('span'); item.append(span); }
+    span.textContent = getAdminMenuLabel(id, locale);
+    item.dataset.adminMenuRegistry = 'true';
+  }
+  const active = [...navItems()].find(item => item.classList.contains('active'));
+  const id = sectionOf(active);
+  const title = document.querySelector('#pageTitle');
+  if (title && id && getAdminMenuItem(id)) title.textContent = getAdminMenuLabel(id, locale);
+  const logout = document.querySelector('#logoutButton');
+  if (logout) logout.textContent = t('로그아웃', 'Logout');
+  const menuButton = document.querySelector('#menuButton');
+  if (menuButton) menuButton.setAttribute('aria-label', t('메뉴 열기', 'Open menu'));
+}
+function removeLocaleControl() {
+  document.querySelector('#ekodiAdminLocaleWrap')?.remove();
+  const legacySelect = document.querySelector('#ekodiAdminLocale');
+  if (legacySelect) legacySelect.closest('label')?.remove();
+}
+function roleLabel(role) {
+  return ({ super_admin: t('최고관리자', 'Super Admin'), operator: t('운영관리자', 'Operator'), viewer: t('조회관리자', 'Viewer') })[role] || role;
+}
+function fillRoles(select, selected = 'operator') {
+  select.replaceChildren(...ROLES.map(role => {
+    const option = document.createElement('option'); option.value = role; option.textContent = roleLabel(role); option.selected = role === selected; return option;
+  }));
+}
+function installStyle() {
+  if (document.querySelector('#ekodi-admin-access-style')) return;
+  const style = document.createElement('style');
+  style.id = 'ekodi-admin-access-style';
+  style.textContent = `
+.ekodi-admin-access{display:grid;gap:18px}.ekodi-space-admins{display:grid;gap:12px;padding-top:8px;border-top:1px solid rgba(148,163,184,.18)}.ekodi-space-admin-toolbar{display:grid;grid-template-columns:minmax(220px,1fr) minmax(220px,1fr) auto;gap:10px;align-items:end}.ekodi-space-admin-toolbar label,.ekodi-space-admin-form label{display:grid;gap:6px}.ekodi-space-admin-toolbar select,.ekodi-space-admin-form input,.ekodi-space-admin-form select,.ekodi-space-admin-row select{min-height:38px;border-radius:9px;border:1px solid rgba(148,163,184,.28);background:rgba(15,23,42,.55);color:inherit;padding:7px 10px}.ekodi-space-admin-form{display:grid;grid-template-columns:minmax(180px,1fr) minmax(220px,1.2fr) 180px 140px 140px auto;gap:8px;align-items:end}.ekodi-space-admin-list{display:grid;gap:8px}.ekodi-space-admin-row{display:grid;grid-template-columns:minmax(220px,1.3fr) 180px 130px 130px auto;gap:8px;align-items:center;padding:12px;border:1px solid rgba(148,163,184,.2);border-radius:12px}.ekodi-space-admin-manage{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:7px 12px;border:1px solid rgba(56,189,248,.28);border-radius:9px;background:rgba(14,165,233,.08);color:#bfe8ff;text-decoration:none;font-size:12px;font-weight:800;white-space:nowrap}.ekodi-space-admin-manage[hidden]{display:none}.ekodi-admin-add{display:grid;grid-template-columns:minmax(220px,1fr) 180px auto;gap:10px;align-items:end}.ekodi-admin-add label{display:grid;gap:6px}.ekodi-admin-add input,.ekodi-admin-add select,.ekodi-admin-row select{min-height:38px;border-radius:9px;border:1px solid rgba(148,163,184,.28);background:rgba(15,23,42,.55);color:inherit;padding:7px 10px}.ekodi-admin-add button,.ekodi-admin-row button{min-height:38px;border-radius:9px;padding:7px 12px}.ekodi-admin-list{display:grid;gap:9px}.ekodi-admin-row{display:grid;grid-template-columns:minmax(220px,1.4fr) 170px 150px auto;gap:10px;align-items:center;padding:13px;border:1px solid rgba(148,163,184,.2);border-radius:12px}.ekodi-admin-id{display:grid;gap:4px}.ekodi-admin-id small{opacity:.65}.ekodi-admin-msg.error{color:#fca5a5}
+.ekodi-admin-context{position:sticky;top:0;z-index:38;display:flex;align-items:center;gap:9px;min-height:48px;padding:7px 16px;border-bottom:1px solid rgba(148,163,184,.18);background:rgba(7,21,34,.98)}.ekodi-admin-context label{display:flex;align-items:center;gap:8px;min-width:0}.ekodi-admin-context strong{font-size:11px;color:#aebed0;white-space:nowrap}.ekodi-admin-context select{min-width:230px;max-width:min(45vw,430px);min-height:34px;border:1px solid rgba(148,163,184,.26);border-radius:8px;background:#0b1d2e;color:#f4f8fc;padding:5px 30px 5px 9px;font:inherit;font-size:13px}.ekodi-admin-context-note{font-size:10px;color:#8498aa;white-space:nowrap}.ekodi-admin-context-badge{margin-left:auto;display:inline-flex;align-items:center;min-height:26px;padding:3px 8px;border:1px solid rgba(56,189,248,.22);border-radius:999px;color:#9edcff;font-size:10px;font-weight:800}
+.ekodi-privilege-overlay{position:fixed;inset:0;z-index:10050;display:grid;place-items:center;padding:18px;background:rgba(2,8,23,.72)}.ekodi-privilege-card{width:min(92vw,440px);display:grid;gap:13px;padding:22px;border:1px solid rgba(148,163,184,.28);border-radius:16px;background:#0b1d2e;color:#f4f8fc;box-shadow:0 24px 70px rgba(0,0,0,.35)}.ekodi-privilege-card h3{margin:0;font-size:19px}.ekodi-privilege-card p{margin:0;color:#aebed0;line-height:1.55}.ekodi-privilege-google{min-height:42px}.ekodi-privilege-actions{display:flex;justify-content:flex-end}.ekodi-privilege-actions button{min-height:36px;padding:7px 12px;border-radius:8px}.ekodi-privilege-state{min-height:18px;font-size:12px;color:#9edcff}
+.ekodi-workspace-connections{display:grid;gap:14px}.ekodi-workspace-connection-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.ekodi-workspace-connection-head h2{margin:2px 0 4px}.ekodi-workspace-connection-summary{display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));gap:8px}.ekodi-workspace-connection-summary article{padding:10px 12px;border:1px solid rgba(148,163,184,.2);border-radius:10px;background:rgba(15,23,42,.32)}.ekodi-workspace-connection-summary small{display:block;opacity:.7}.ekodi-workspace-connection-summary strong{font-size:18px}.ekodi-workspace-connection-list{display:grid;gap:8px}.ekodi-workspace-connection-row{display:grid;grid-template-columns:minmax(220px,1.4fr) 145px minmax(170px,.8fr) auto;gap:9px;align-items:center;padding:12px;border:1px solid rgba(148,163,184,.2);border-radius:11px}.ekodi-workspace-connection-id{display:grid;gap:3px}.ekodi-workspace-connection-id small{opacity:.68}.ekodi-workspace-connection-row select,.ekodi-workspace-connection-row input,.ekodi-workspace-connection-form input,.ekodi-workspace-connection-form select{min-height:36px;border-radius:8px;border:1px solid rgba(148,163,184,.26);background:rgba(15,23,42,.55);color:inherit;padding:6px 9px}.ekodi-workspace-connection-actions{display:flex;gap:6px;flex-wrap:wrap}.ekodi-workspace-connection-form{display:grid;grid-template-columns:150px 150px minmax(200px,1fr) minmax(180px,1fr) 170px auto;gap:8px;align-items:end}.ekodi-workspace-connection-form label{display:grid;gap:5px}.ekodi-workspace-connection-note{font-size:11px;opacity:.72}.ekodi-workspace-connection-health{display:inline-block;margin-top:4px;padding:2px 6px;border-radius:999px;border:1px solid rgba(251,191,36,.3);font-size:10px}.ekodi-workspace-connection-health.ok{border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.08)}.ekodi-workspace-connection-msg.error{color:#fca5a5}
+@media(max-width:760px){.ekodi-workspace-connection-summary{grid-template-columns:1fr 1fr 1fr}.ekodi-workspace-connection-row,.ekodi-workspace-connection-form{grid-template-columns:1fr}.ekodi-workspace-connection-head{align-items:stretch}.ekodi-workspace-connection-head button{align-self:flex-start}.ekodi-admin-add,.ekodi-admin-row,.ekodi-space-admin-toolbar,.ekodi-space-admin-form,.ekodi-space-admin-row{grid-template-columns:1fr}.ekodi-admin-context{padding:6px 10px;gap:6px}.ekodi-admin-context strong,.ekodi-admin-context-note{display:none}.ekodi-admin-context label{flex:1}.ekodi-admin-context select{min-width:0;width:100%;max-width:none}.ekodi-admin-context-badge{font-size:9px}}
+`;
+  document.head.append(style);
+}
+function installEkodiBizSourceHub() {
+  const source = new URL(location.href).searchParams.get('source') || '';
+  const existing = document.querySelector('[data-ekodibiz-admin-hub]');
+  if (source !== 'ekodibiz' || currentSession?.role !== 'super_admin') { existing?.remove(); return; }
+  if (!document.querySelector('#ekodibiz-admin-hub-style')) {
+    const style=document.createElement('style'); style.id='ekodibiz-admin-hub-style';
+    style.textContent='.ekodibiz-admin-hub{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:8px 16px;border-bottom:1px solid rgba(148,163,184,.22);background:#fff;color:#172033}.ekodibiz-admin-hub>strong{font-size:11px;color:#66768a;white-space:nowrap}.ekodibiz-admin-hub select{min-width:220px;min-height:36px;border:1px solid #dfe5ee;border-radius:8px;background:#fff;color:#405269;padding:7px 34px 7px 10px;font:inherit;font-size:12px;font-weight:760}@media(max-width:760px){.ekodibiz-admin-hub{padding:7px 10px}.ekodibiz-admin-hub>strong{margin-right:auto}.ekodibiz-admin-hub select{min-width:0;max-width:68vw;min-height:42px;font-size:13px}}';
+    document.head.append(style);
+  }
+  const main=document.querySelector('#app main')||document.querySelector('main'); if(!main)return;
+  const host=existing||document.createElement('nav'); host.className='ekodibiz-admin-hub admin-scope-switcher'; host.dataset.ekodibizAdminHub='true'; host.dataset.ekodibizSiteSwitch='true'; host.dataset.adminScopeCurrent='books'; host.setAttribute('aria-label','관리 사이트 전환'); host.replaceChildren();
+  const label=document.createElement('strong'); label.className='admin-scope-label'; label.textContent='사이트 전환'; host.append(label);
+  const select=document.createElement('select');select.className='admin-scope-select';select.setAttribute('aria-label','관리 사이트 전환');
+  for(const scope of EKODIBIZ_ADMIN_SCOPES){const option=document.createElement('option');option.value=scope.adminHref;option.textContent=scope.label;option.title=scope.description||scope.label;option.selected=scope.id==='books';select.append(option)}
+  select.addEventListener('change',()=>{if(select.value)location.assign(select.value)});host.append(select);
+  if(!existing)main.prepend(host);
+}
+
+function bindAdminHandoff(link, definition) {
+  if (!link || definition?.adminHandoff !== true || link.dataset.adminHandoffBound === 'true') return link;
+  link.dataset.adminHandoff = 'true';
+  link.dataset.adminHandoffBound = 'true';
+  link.removeAttribute('target');
+  link.addEventListener('click', event => {
+    event.preventDefault();
+    const destination = adminSubserviceDestination(definition);
+    if (!destination) {
+      console.error(`Blocked untrusted admin handoff target: ${definition.href}`);
+      return;
+    }
+    window.location.assign(destination);
+  });
+  return link;
+}
+function ensureExternalMenuItems() {
+  const nav = document.querySelector('.sidebar nav');
+  if (!nav) return;
+  for (const id of adminMenuOrder()) {
+    const definition = getAdminMenuItem(id);
+    if (!definition?.href) continue;
+    let link = nav.querySelector('.nav[data-section="'+id+'"]');
+    if (!link) {
+      link = document.createElement('a');
+      link.className = 'nav'; link.dataset.section = id; link.href = definition.href; link.rel = 'noopener';
+      link.append(document.createTextNode((definition.icon || '·')+' '));
+      const label = document.createElement('span'); label.textContent = getAdminMenuLabel(id, locale); link.append(label);
+      nav.append(link);
+    }
+    if (definition.adminHandoff === true) bindAdminHandoff(link, definition);
+    else link.target = '_blank';
+  }
+  window.dispatchEvent(new Event('ekodi-nav-changed'));
+}
+function ensureAdminNav() {
+  if (currentContext.type !== 'platform') return;
+  const nav = document.querySelector('.sidebar nav');
+  if (!nav) return;
+  let button = nav.querySelector('.nav[data-section="admins"]');
+  if (!button) {
+    button = document.createElement('button');
+    button.type = 'button'; button.className = 'nav'; button.dataset.section = 'admins';
+    button.innerHTML = '♜ <span></span>';
+    button.addEventListener('click', () => { window.EKODIAdminPanels?.activate?.('admins'); loadAccounts(); });
+    nav.append(button);
+    window.dispatchEvent(new Event('ekodi-nav-changed'));
+  }
+  button.querySelector('span').textContent = getAdminMenuLabel('admins', locale);
+}
+function ensureExternalAccountNav() {
+  if (currentContext.type !== 'platform' || currentSession?.role !== 'super_admin') return;
+  const nav = document.querySelector('.sidebar nav');
+  if (!nav) return;
+  let button = nav.querySelector('.nav[data-admin-link="external-accounts"]');
+  if (!button) {
+    button = document.createElement('button');
+    button.type = 'button'; button.className = 'nav'; button.dataset.adminLink = 'external-accounts';
+    button.innerHTML = '↗ <span></span>';
+    button.addEventListener('click', () => import('./external-account-admin.js').catch(console.error));
+    const admins = nav.querySelector('.nav[data-section="admins"]');
+    admins?.insertAdjacentElement('afterend', button) || nav.append(button);
+  }
+  button.querySelector('span').textContent = t('계정·연결', 'Accounts & Connections');
+}
+function workspaceConnectionMessage(text, error = false) {
+  const target = document.querySelector('[data-workspace-connection-message]');
+  if (!target) return;
+  target.textContent = text || '';
+  target.classList.toggle('error', error);
+}
+function workspaceConnectionManageTarget(account) {
+  const service = String(account?.serviceKey || '').toLowerCase();
+  if (service === 'gmail') return { panel:'communication', label:t('메일 관리','Mail') };
+  if (service === 'drive') return { panel:'storage', label:t('Drive 관리','Drive') };
+  if (['youtube','facebook','instagram','threads','tiktok'].includes(service)) return { panel:'social', label:t('채널 관리','Channels') };
+  if (service.includes('ads') || service.includes('marketing')) return { panel:'marketing-ai', label:t('마케팅 관리','Marketing') };
+  return null;
+}
+function workspaceConnectionHealthText(value){
+  return ({healthy:t('정상','Healthy'),healthy_manual:t('확인됨','Verified'),configured:t('구성됨','Configured'),aging:t('확인 권장','Review'),stale:t('검증 오래됨','Stale'),stale_manual:t('재확인 필요','Recheck'),manual_required:t('수동 확인 필요','Manual check'),unverified:t('미검증','Unverified'),pending:t('승인 대기','Pending'),reconnect_required:t('재연결 필요','Reconnect'),paused:t('중지','Paused'),revoked:t('해제','Revoked'),error:t('오류','Error'),unknown:t('상태 확인 필요','Check status')})[value]||value||'-';
+}
+function workspaceConnectionHealthOk(value){return ['healthy','healthy_manual','configured'].includes(String(value||''))}
+async function recordWorkspaceConnectionVerification(account){
+  if(currentContext.type!=='workspace'||account?.source!=='external_registry'||account?.status!=='active')return;
+  try{
+    await api(`/api/control/external-accounts/accounts/${encodeURIComponent(account.id)}`,{method:'PATCH',body:JSON.stringify({verified:true,lastError:''})});
+    workspaceConnectionMessage(t('현재 연결 상태를 확인한 기록을 저장했습니다.','Verification record saved.'));
+    await loadWorkspaceConnections();
+  }catch(error){workspaceConnectionMessage(error.message,true)}
+}
+function renderWorkspaceConnections(data) {
+  const panel = document.querySelector('[data-panel~="workspace-connections"]');
+  if (!panel || currentContext.type !== 'workspace') return;
+  panel.querySelector('[data-workspace-connection-title]').textContent = `${currentContext.label} · ${t('연결설정','Connections')}`;
+  const summary = panel.querySelector('[data-workspace-connection-summary]');
+  summary.replaceChildren();
+  [[t('전체','Total'),data.stats?.total||0],[t('정상','Healthy'),data.stats?.healthy||0],[t('확인 필요','Attention'),data.stats?.attention||0]].forEach(([label,value])=>{
+    const card=document.createElement('article'); const small=document.createElement('small'); small.textContent=label; const strong=document.createElement('strong'); strong.textContent=String(value); card.append(small,strong); summary.append(card);
+  });
+  const list = panel.querySelector('[data-workspace-connection-list]');
+  list.replaceChildren();
+  for (const account of data.accounts || []) {
+    const row=document.createElement('article'); row.className='ekodi-workspace-connection-row';
+    const id=document.createElement('div'); id.className='ekodi-workspace-connection-id';
+    const strong=document.createElement('strong'); strong.textContent=account.displayName||account.providerAccountId||account.serviceKey||'-';
+    const meta=document.createElement('small'); meta.textContent=`${account.provider||'-'} · ${account.serviceKey||'-'} · ${account.providerAccountId||''}`;
+    id.append(strong,meta);
+    const source=document.createElement('small'); source.textContent=account.source==='external_registry'?t('위임 연결','Delegated'):account.source||'-';
+    const statusWrap=document.createElement('div');
+    const health=document.createElement('span'); health.className=`ekodi-workspace-connection-health ${workspaceConnectionHealthOk(account.health?.state)?'ok':''}`; health.textContent=workspaceConnectionHealthText(account.health?.state);
+    statusWrap.append(health);
+    const actions=document.createElement('div'); actions.className='ekodi-workspace-connection-actions';
+    if (account.source==='external_registry' && data.permissions?.update) {
+      const select=document.createElement('select'); select.setAttribute('aria-label',t('연결 상태','Connection status'));
+      [['active',t('연결됨','Active')],['pending_authorization',t('승인 대기','Pending')],['paused',t('중지','Paused')],['reconnect_required',t('재연결 필요','Reconnect')],['revoked',t('해제','Revoked')],['error',t('오류','Error')]].forEach(([value,label])=>{const option=document.createElement('option');option.value=value;option.textContent=label;option.selected=value===account.status;select.append(option)});
+      statusWrap.prepend(select);
+      const save=document.createElement('button'); save.type='button'; save.className='secondary'; save.textContent=t('저장','Save');
+      save.addEventListener('click',async()=>{save.disabled=true;try{await api(`/api/control/external-accounts/accounts/${encodeURIComponent(account.id)}`,{method:'PATCH',body:JSON.stringify({status:select.value})});workspaceConnectionMessage(t('연결 상태를 저장했습니다.','Connection status saved.'));await loadWorkspaceConnections()}catch(error){workspaceConnectionMessage(error.message,true)}finally{save.disabled=false}});
+      actions.append(save);
+      if(account.status==='active'&&data.permissions?.recordVerification&&['manual_required','stale_manual','unverified','aging','stale'].includes(account.health?.state)){
+        const verify=document.createElement('button'); verify.type='button'; verify.className='primary'; verify.textContent=t('확인 기록','Verify');
+        verify.addEventListener('click',()=>recordWorkspaceConnectionVerification(account)); actions.append(verify);
+      }
+    } else {
+      const badge=document.createElement('span'); badge.textContent=({active:t('연결됨','Active'),connected:t('연결됨','Active'),pending_authorization:t('승인 대기','Pending'),reconnect_required:t('재연결 필요','Reconnect'),paused:t('중지','Paused'),error:t('오류','Error')})[account.status]||account.status||'-'; statusWrap.append(badge);
+    }
+    const target=workspaceConnectionManageTarget(account);
+    if(target){const manage=document.createElement('button');manage.type='button';manage.className='secondary';manage.textContent=target.label;manage.addEventListener('click',()=>window.EKODIAdminPanels?.activate?.(target.panel));actions.append(manage)}
+    row.append(id,source,statusWrap,actions); list.append(row);
+  }
+  if (!(data.accounts||[]).length) {
+    const empty=document.createElement('p'); empty.className='ekodi-workspace-connection-note'; empty.textContent=t('이 사이트에 연결된 외부계정이 없습니다.','No external accounts are connected to this workspace.'); list.append(empty);
+  }
+  const form=panel.querySelector('[data-workspace-connection-form]');
+  form.hidden = !data.permissions?.register;
+  panel.querySelector('[data-workspace-connection-readonly]').hidden = Boolean(data.permissions?.register);
+}
+async function loadWorkspaceConnections() {
+  if (currentContext.type !== 'workspace') return;
+  const seq=++workspaceConnectionLoadSeq;
+  workspaceConnectionMessage(t('연결 상태를 불러오는 중입니다.','Loading connections…'));
+  try {
+    const data=await api(`/api/control/external-accounts/summary?workspace=${encodeURIComponent(currentContext.id)}`);
+    if(seq!==workspaceConnectionLoadSeq||currentContext.type!=='workspace')return;
+    renderWorkspaceConnections(data);
+    workspaceConnectionMessage(`${t('연결 계정','Connections')} ${data.stats?.total||0} · ${t('정상','Healthy')} ${data.stats?.healthy||0} · ${t('확인 필요','Attention')} ${data.stats?.attention||0}`);
+  } catch(error) { if(seq===workspaceConnectionLoadSeq)workspaceConnectionMessage(error.message,true); }
+}
+async function registerWorkspaceConnection(event) {
+  event.preventDefault();
+  if (currentContext.type !== 'workspace') return;
+  const form=event.currentTarget; if(!form.checkValidity())return form.reportValidity();
+  const body=Object.fromEntries(new FormData(form));
+  body.workspaceSlug=currentContext.id;
+  try {
+    await api('/api/control/external-accounts/accounts',{method:'POST',body:JSON.stringify(body)});
+    form.reset(); workspaceConnectionMessage(t('연결 대상을 등록했습니다. 공급자 승인이나 OAuth가 필요한 경우 해당 관리화면에서 이어서 연결하세요.','Connection registered. Complete provider authorization where required.'));
+    await loadWorkspaceConnections();
+  } catch(error) { workspaceConnectionMessage(error.message,true); }
+}
+function ensureWorkspaceConnectionPanel() {
+  if (workspaceConnectionPanelInstalled) return document.querySelector('[data-panel~="workspace-connections"]');
+  const content=document.querySelector('.content'); if(!content)return null;
+  const section=document.createElement('section'); section.className='section ekodi-workspace-connections hidden-panel'; section.dataset.panel='workspace-connections'; section.hidden=true;
+  section.innerHTML=`<header class="ekodi-workspace-connection-head"><div><p class="kicker">SITE CONNECTIONS</p><h2 data-workspace-connection-title>연결설정</h2><p>이 사이트가 사용하는 업무계정·채널·외부서비스만 표시합니다. Cloudflare·Supabase·GitHub 같은 플랫폼 인프라와 Secret 원문은 이 화면에 노출하지 않습니다.</p></div><button type="button" class="secondary" data-workspace-connection-refresh>새로고침</button></header><div class="ekodi-workspace-connection-summary" data-workspace-connection-summary></div><div class="ekodi-workspace-connection-list" data-workspace-connection-list></div><section><h3>연결 등록</h3><form class="ekodi-workspace-connection-form" data-workspace-connection-form><label>공급자<select name="provider"><option value="google">Google</option><option value="meta">Meta</option><option value="kakao">Kakao</option><option value="naver">Naver</option><option value="microsoft">Microsoft</option><option value="other">기타</option></select></label><label>서비스<input name="serviceKey" required placeholder="youtube / pos / delivery"></label><label>계정 ID·이메일<input name="providerAccountId" required></label><label>표시 이름<input name="displayName"></label><label>연결 방식<select name="connectionMode"><option value="delegated">권한 위임</option><option value="oauth">OAuth</option><option value="official_handoff">공식 관리자 위임</option><option value="service_account_ref">서비스 계정 참조</option><option value="manual">수동 관리</option></select></label><button type="submit">등록</button></form><p class="ekodi-workspace-connection-note" data-workspace-connection-readonly hidden>현재 권한은 조회 전용입니다. 연결 등록·상태 변경은 이 사이트의 책임관리자 또는 운영관리자에게 요청하세요.</p><p class="ekodi-workspace-connection-note">비밀번호·API Token·Secret·OAuth Token 원문은 입력하지 않습니다.</p></section><p class="ekodi-workspace-connection-msg" data-workspace-connection-message role="status"></p>`;
+  content.append(section);
+  section.querySelector('[data-workspace-connection-refresh]').addEventListener('click',loadWorkspaceConnections);
+  section.querySelector('[data-workspace-connection-form]').addEventListener('submit',registerWorkspaceConnection);
+  workspaceConnectionPanelInstalled=true;
+  return section;
+}
+function ensureWorkspaceConnectionNav() {
+  const nav=document.querySelector('.sidebar nav'); if(!nav)return;
+  let button=nav.querySelector('.nav[data-admin-link="workspace-connections"]');
+  if(currentContext.type!=='workspace'){button?.remove();return}
+  ensureWorkspaceConnectionPanel();
+  if(!button){
+    button=document.createElement('button');button.type='button';button.className='nav';button.dataset.adminLink='workspace-connections';button.innerHTML='⌁ <span></span>';
+    button.addEventListener('click',()=>{window.EKODIAdminPanels?.activate?.('workspace-connections');void loadWorkspaceConnections()});
+    const settings=nav.querySelector('.nav[data-section="settings-records"],.nav[data-section="workspace"]');
+    settings?.insertAdjacentElement('afterend',button)||nav.append(button);
+  }
+  button.querySelector('span').textContent=t('연결설정','Connections');
+}
+function ensureAdminPanel() {
+  if (panelInstalled) return document.querySelector('[data-panel~="admins"]');
+  const content = document.querySelector('.content');
+  if (!content) return null;
+  installStyle();
+  const section = document.createElement('section');
+  section.className = 'section ekodi-admin-access hidden-panel'; section.dataset.panel = 'admins'; section.hidden = true;
+  section.innerHTML = '<div><p class="kicker">PLATFORM ACCESS</p><h2 data-admin-title></h2><p data-admin-copy></p></div><h3>플랫폼 전역 관리자</h3><form class="ekodi-admin-add" data-admin-form><label><span data-admin-email-label></span><input name="email" type="email" required placeholder="name@ekodi.kr"></label><label><span data-admin-role-label></span><select name="role"></select></label><button type="submit" data-admin-add-label></button></form><p class="ekodi-admin-msg" data-admin-message role="status"></p><div class="ekodi-admin-list" data-admin-list></div><div class="ekodi-space-admins" data-space-admins><div><p class="kicker">SPACE ADMINISTRATION</p><h3>사이트·공간 관리자</h3><p>사이트/공간을 선택하면 해당 공간의 관리자만 표시됩니다.</p></div><div class="ekodi-space-admin-toolbar"><label>사이트·공간<select data-space-admin-tenant></select></label><label>목록보기<select data-space-admin-visibility-filter><option value="">전체</option><option value="private">비공개</option><option value="public">공개</option></select></label><a class="ekodi-space-admin-manage" data-space-admin-manage hidden>운영관리 열기</a></div><form class="ekodi-space-admin-form" data-space-admin-form><label>이름<input name="displayName" type="text" maxlength="120"></label><label>Google 이메일<input name="email" type="email" required></label><label>역할<select name="role"></select></label><label>공개<select name="visibility"><option value="private">비공개</option><option value="public">공개</option></select></label><label>만료일<input name="expiresAt" type="date"></label><button type="submit">등록</button></form><p class="ekodi-admin-msg" data-space-admin-message role="status"></p><div class="ekodi-space-admin-list" data-space-admin-list></div></div>';
+  content.append(section);
+  fillRoles(section.querySelector('select[name="role"]'));
+  section.querySelector('[data-admin-form]').addEventListener('submit', addAccount);
+  fillSpaceAdminRoles(section.querySelector('[data-space-admin-form] select[name="role"]'));
+  section.querySelector('[data-space-admin-form]').addEventListener('submit', addSpaceAdmin);
+  section.querySelector('[data-space-admin-tenant]').addEventListener('change',()=>{syncSpaceAdminManageLink();void loadSpaceAdmins();});
+  section.querySelector('[data-space-admin-visibility-filter]').addEventListener('change', renderSpaceAdmins);
+  panelInstalled = true;
+  translateAdminPanel();
+  return section;
+}
+async function ensureAdminAccess() {
+  const session = await loadCurrentSession();
+  if (session?.role !== 'super_admin') return null;
+  const requestedContext = readRequestedContext();
+  if (currentContext.type !== 'platform' || (requestedContext && requestedContext !== 'platform:global')) return null;
+  ensureAdminNav();
+  ensureExternalAccountNav();
+  const panel = ensureAdminPanel();
+  applyMenuLabels();
+  if (panel) { void loadAccounts(); void ensureSpaceDirectory().then(loadSpaceAdmins).catch(error=>spaceAdminMessage(error.message,true)); }
+  return panel;
+}
+function setMessage(text, error = false) {
+  const node = document.querySelector('[data-admin-message]');
+  if (!node) return; node.textContent = text || ''; node.classList.toggle('error', error);
+}
+function translateAdminPanel() {
+  const panel = document.querySelector('[data-panel~="admins"]');
+  if (!panel) return;
+  panel.querySelector('[data-admin-title]').textContent = t('관리자설정', 'Administrator Settings');
+  panel.querySelector('[data-admin-copy]').textContent = t('플랫폼 전역 관리자와 사이트·공간별 관리자를 분리해 관리합니다.', 'Manage platform-wide and space-scoped administrators separately.');
+  panel.querySelector('[data-admin-email-label]').textContent = t('Google 관리자 이메일', 'Google admin email');
+  panel.querySelector('[data-admin-role-label]').textContent = t('플랫폼 권한', 'Platform role');
+  panel.querySelector('[data-admin-add-label]').textContent = t('관리자 추가', 'Add administrator');
+  const addRole = panel.querySelector('select[name="role"]'); if (addRole) fillRoles(addRole, addRole.value || 'operator');
+  if (panel.dataset.accounts) renderAccounts(JSON.parse(panel.dataset.accounts));
+}
+let spaceDirectory = null;
+let selectedSpaceAdmins = [];
+
+function fillSpaceAdminRoles(select, selected='admin') {
+  if (!select) return;
+  select.replaceChildren(...SPACE_ADMIN_ROLES.map(([value,label]) => {
+    const option=document.createElement('option');option.value=value;option.textContent=label;option.selected=value===selected;return option;
+  }));
+}
+function spaceAdminMessage(text,error=false){
+  const node=document.querySelector('[data-space-admin-message]');if(!node)return;node.textContent=text||'';node.classList.toggle('error',error);
+}
+function syncSpaceAdminManageLink(){
+  const select=document.querySelector('[data-space-admin-tenant]');
+  const link=document.querySelector('[data-space-admin-manage]');
+  if(!select||!link)return;
+  const tenant=select.value||'';
+  const href=SPACE_ADMIN_MANAGE_PATHS[tenant]||'';
+  if(!href){link.hidden=true;link.removeAttribute('href');return;}
+  const record=(spaceDirectory?.tenants||[]).find(item=>item.slug===tenant);
+  link.href=href;
+  link.hidden=false;
+  link.textContent=(record?.name||tenant)+' 운영관리';
+  link.setAttribute('aria-label',(record?.name||tenant)+' 운영관리 열기');
+}
+async function ensureSpaceDirectory(){
+  if(spaceDirectory)return spaceDirectory;
+  spaceDirectory=await api('/api/customers/directory');
+  const select=document.querySelector('[data-space-admin-tenant]');
+  if(select){
+    select.replaceChildren();
+    for(const tenant of spaceDirectory.tenants||[]){const option=document.createElement('option');option.value=tenant.slug;option.textContent=tenant.domain?tenant.name+' · '+tenant.domain:tenant.name;select.append(option);}
+    syncSpaceAdminManageLink();
+  }
+  return spaceDirectory;
+}
+function renderSpaceAdmins(){
+  const list=document.querySelector('[data-space-admin-list]');if(!list)return;
+  const visibilityFilter=document.querySelector('[data-space-admin-visibility-filter]')?.value||'';
+  const rows=selectedSpaceAdmins.filter(item=>!visibilityFilter||item.visibility===visibilityFilter);
+  list.replaceChildren();
+  if(!rows.length){const p=document.createElement('p');p.textContent='조건에 맞는 관리자가 없습니다.';list.append(p);return;}
+  for(const account of rows){
+    const row=document.createElement('article');row.className='ekodi-space-admin-row';
+    const id=document.createElement('div');id.className='ekodi-admin-id';id.innerHTML='<strong></strong><small></small>';id.querySelector('strong').textContent=account.displayName||account.email;id.querySelector('small').textContent=account.email;
+    const role=document.createElement('select');fillSpaceAdminRoles(role,account.role);
+    const visibility=document.createElement('select');
+    for(const item of [['private','비공개'],['public','공개']]){const option=document.createElement('option');option.value=item[0];option.textContent=item[1];visibility.append(option)}visibility.value=account.visibility==='public'?'public':'private';
+    const status=document.createElement('select');
+    for(const item of [['active','활성'],['disabled','중지']]){const option=document.createElement('option');option.value=item[0];option.textContent=item[1];status.append(option)}status.value=account.status==='disabled'?'disabled':'active';
+    const save=document.createElement('button');save.type='button';save.textContent='저장';
+    save.addEventListener('click',async()=>{const tenant=document.querySelector('[data-space-admin-tenant]')?.value||'';try{save.disabled=true;await api('/api/customers/tenants/'+encodeURIComponent(tenant)+'/access/update',{method:'POST',body:JSON.stringify({email:account.email,role:role.value,visibility:visibility.value,status:status.value})});spaceDirectory=null;await loadSpaceAdmins();spaceAdminMessage('저장했습니다.')}catch(error){spaceAdminMessage(error.message,true)}finally{save.disabled=false}});
+    row.append(id,role,visibility,status,save);list.append(row);
+  }
+}
+async function loadSpaceAdmins(){
+  try{
+    await ensureSpaceDirectory();
+    syncSpaceAdminManageLink();
+    const tenant=document.querySelector('[data-space-admin-tenant]')?.value||'';
+    if(!tenant){selectedSpaceAdmins=[];renderSpaceAdmins();return;}
+    const data=await api('/api/customers/tenants/'+encodeURIComponent(tenant)+'/users');
+    selectedSpaceAdmins=(data.users||[]).filter(item=>SPACE_ADMIN_ROLE_SET.has(item.role));
+    renderSpaceAdmins();
+    spaceAdminMessage('관리자 '+selectedSpaceAdmins.length+'명');
+  }catch(error){spaceAdminMessage(error.message,true);}
+}
+async function addSpaceAdmin(event){
+  event.preventDefault();const form=event.currentTarget;if(!form.checkValidity())return form.reportValidity();
+  const tenant=document.querySelector('[data-space-admin-tenant]')?.value||'';if(!tenant)return spaceAdminMessage('사이트·공간을 선택해 주세요.',true);
+  const data=new FormData(form);const role=String(data.get('role')||'admin');const external=['external_vendor','external_developer'].includes(role);
+  const expiresRaw=String(data.get('expiresAt')||'');const expiresAt=external&&expiresRaw?new Date(expiresRaw+'T23:59:59+09:00').toISOString():'';
+  if(external&&!expiresAt)return spaceAdminMessage('외부업체·외부개발자는 만료일을 지정해 주세요.',true);
+  if(role==='external_developer')return spaceAdminMessage('외부개발자는 GitHub 사용자명까지 필요한 전용 외부협력자 화면에서 등록해 주세요.',true);
+  const button=form.querySelector('button[type="submit"]');
+  try{
+    button.disabled=true;
+    await api('/api/customers/tenants/'+encodeURIComponent(tenant)+'/pre-register',{method:'POST',body:JSON.stringify({displayName:String(data.get('displayName')||'').trim(),email:String(data.get('email')||'').trim().toLowerCase(),role,visibility:String(data.get('visibility')||'private'),expiresAt})});
+    form.reset();fillSpaceAdminRoles(form.elements.role,'admin');spaceDirectory=null;await loadSpaceAdmins();spaceAdminMessage('공간 관리자를 등록했습니다.');
+  }catch(error){spaceAdminMessage(error.message,true)}finally{button.disabled=false}
+}
+
+function renderAccounts(accounts = []) {
+  const panel = ensureAdminPanel(); const list = panel?.querySelector('[data-admin-list]'); if (!list) return;
+  panel.dataset.accounts = JSON.stringify(accounts); list.replaceChildren();
+  for (const account of accounts) {
+    const row = document.createElement('article'); row.className = 'ekodi-admin-row';
+    const id = document.createElement('div'); id.className = 'ekodi-admin-id'; id.innerHTML = '<strong></strong><small></small>';
+    id.querySelector('strong').textContent = account.email;
+    id.querySelector('small').textContent = account.googleBound ? t('Google 연결됨', 'Google linked') : t('첫 Google 로그인 대기', 'Awaiting first Google login');
+    const role = document.createElement('select'); fillRoles(role, account.role);
+    const status = document.createElement('select');
+    for (const value of ['active','disabled']) { const option = document.createElement('option'); option.value = value; option.textContent = value === 'active' ? t('활성','Active') : t('비활성','Disabled'); option.selected = account.status === value; status.append(option); }
+    const save = document.createElement('button'); save.type = 'button'; save.textContent = t('저장','Save');
+    save.addEventListener('click', async () => {
+      try {
+        save.disabled = true;
+        await withPrivilege(() => api(`/api/admin-access/google-accounts/${account.id}`, { method:'PUT', body:JSON.stringify({ role:role.value, status:status.value }) }));
+        setMessage(t('권한을 저장했습니다.','Access saved.'));
+        await loadAccounts();
+      } catch (error) { setMessage(error.message, true); }
+      finally { save.disabled = false; }
+    });
+    row.append(id, role, status, save); list.append(row);
+  }
+}
+async function loadAccounts() {
+  try { setMessage(t('관리자 목록 확인 중…','Loading administrators…')); const data = await api('/api/admin-access/google-accounts'); renderAccounts(data.accounts || []); setMessage(t(`관리자 ${data.accounts?.length || 0}명`, `${data.accounts?.length || 0} administrators`)); }
+  catch (error) { setMessage(error.message, true); }
+}
+async function addAccount(event) {
+  event.preventDefault(); const form = event.currentTarget; if (!form.checkValidity()) return form.reportValidity();
+  const data = new FormData(form); const button = form.querySelector('button[type="submit"]');
+  try {
+    button.disabled = true;
+    await withPrivilege(() => api('/api/admin-access/google-accounts', { method:'POST', body:JSON.stringify({ email:String(data.get('email')).trim().toLowerCase(), role:String(data.get('role') || 'operator') }) }));
+    form.reset(); fillRoles(form.elements.role); setMessage(t('관리자를 등록했습니다.','Administrator added.')); await loadAccounts();
+  } catch (error) { setMessage(error.message, true); }
+  finally { button.disabled = false; }
+}
+
+function contextKey(context = currentContext) { return `${context.type}:${context.id}`; }
+function contextFromKey(key) {
+  const value = String(key || '').trim();
+  const separator = value.indexOf(':');
+  if (separator < 1) return null;
+  const type = value.slice(0, separator);
+  const id = value.slice(separator + 1);
+  return contextOptions.find(item => item.type === type && item.id === id) || null;
+}
+function readRequestedContext() {
+  const fromUrl = new URL(location.href).searchParams.get('context');
+  if (fromUrl) return fromUrl;
+  try { return sessionStorage.getItem(CONTEXT_KEY) || ''; } catch { return ''; }
+}
+function writeContextLocation(context) {
+  try { sessionStorage.setItem(CONTEXT_KEY, contextKey(context)); } catch {}
+  const url = new URL(location.href);
+  if (context.type === 'platform') url.searchParams.delete('context');
+  else url.searchParams.set('context', contextKey(context));
+  history.replaceState(history.state, '', `${url.pathname}${url.search}${url.hash}`);
+}
+function contextDisplayLabel(context) {
+  if (context.type === 'platform') return locale === 'en' ? '🌐 EKODI Platform' : '🌐 EKODI 플랫폼';
+  const prefix = context.type === 'workspace' ? '▣' : '◇';
+  return `${prefix} ${context.label}${context.meta ? ` · ${context.meta}` : ''}`;
+}
+function contextBadgeLabel(context) {
+  if (context.type === 'platform') return t('플랫폼 범위', 'Platform context');
+  if (context.type === 'workspace') return t('공간 범위', 'Workspace context');
+  return t('서비스 범위', 'Service context');
+}
+function syncPlatformOnlyNavigation() {
+  const admins = document.querySelector('.sidebar nav .nav[data-section="admins"]');
+  const externalAccounts = document.querySelector('.sidebar nav .nav[data-admin-link="external-accounts"]');
+  const workspaceConnections = document.querySelector('.sidebar nav .nav[data-admin-link="workspace-connections"]');
+  if (currentContext.type !== 'platform') {
+    const activeAdmins = admins?.classList.contains('active');
+    const activeConnections = workspaceConnections?.classList.contains('active') || document.querySelector('[data-panel~="workspace-connections"]:not([hidden])');
+    admins?.remove(); externalAccounts?.remove();
+    if(currentContext.type==='workspace')ensureWorkspaceConnectionNav();else workspaceConnections?.remove();
+    if (activeAdmins) window.EKODIAdminPanels?.activate?.(currentContext.type === 'workspace' ? 'workspace' : 'campus');
+    if (activeConnections && currentContext.type==='workspace') void loadWorkspaceConnections();
+    if (activeConnections && currentContext.type!=='workspace') window.EKODIAdminPanels?.activate?.('campus');
+    return;
+  }
+  workspaceConnections?.remove();
+  if (currentSession?.role === 'super_admin') { ensureAdminNav(); ensureExternalAccountNav(); }
+}
+function renderContextControl() {
+  document.querySelector('[data-ekodi-admin-context-control]')?.remove();
+  document.documentElement.dataset.ekodiAdminContextUi = 'hidden';
+}
+function setContext(next, { persist = true, announce = true } = {}) {
+  const context = typeof next === 'string' ? contextFromKey(next) : contextOptions.find(item => contextKey(item) === contextKey(next));
+  if (!context) return false;
+  currentContext = Object.freeze({ ...context });
+  document.documentElement.dataset.ekodiAdminContextType = currentContext.type;
+  document.documentElement.dataset.ekodiAdminContextId = currentContext.id;
+  if (persist) writeContextLocation(currentContext);
+  renderContextControl();
+  syncPlatformOnlyNavigation();
+  if (announce) window.dispatchEvent(new CustomEvent('ekodi-admin-context-changed', {
+    detail: { context:currentContext, authority:currentSession?.authority || null },
+  }));
+  return true;
+}
+async function loadContextOptions() {
+  const platform = { type:'platform', id:'global', label:'EKODI Platform', meta:'' };
+  const [directoryResult, serviceResult] = await Promise.allSettled([
+    api('/api/customers/directory'),
+    fetch('/ecosystem-services.json', { cache:'no-store', credentials:'same-origin' }).then(response => response.ok ? response.json() : Promise.reject(new Error(`service registry ${response.status}`))),
+  ]);
+  const workspaces = directoryResult.status === 'fulfilled'
+    ? (directoryResult.value.tenants || []).map(tenant => ({ type:'workspace', id:String(tenant.slug), label:String(tenant.name || tenant.slug), meta:String(tenant.domain || '') }))
+    : [];
+  const services = serviceResult.status === 'fulfilled'
+    ? (serviceResult.value.services || []).filter(service => service?.id && service?.name).map(service => ({ type:'service', id:String(service.id), label:String(locale === 'en' ? (service.nameEn || service.name) : service.name), meta:String(service.status || '') }))
+    : [];
+  contextOptions = [platform, ...workspaces, ...services];
+  return contextOptions;
+}
+async function installContextControl() {
+  if (!token()) return;
+  if (contextInstallPromise) return contextInstallPromise;
+  contextInstallPromise = (async () => {
+    renderContextControl();
+    await loadContextOptions();
+    const requested = contextFromKey(readRequestedContext()) || contextOptions[0];
+    setContext(requested, { persist:true, announce:false });
+    window.dispatchEvent(new CustomEvent('ekodi-admin-context-ready', { detail:{ context:currentContext, authority:currentSession?.authority || null } }));
+  })().catch(error => {
+    console.warn('[EKODI Admin] context runtime degraded', error);
+    contextOptions = [{ type:'platform', id:'global', label:'EKODI Platform', meta:'' }];
+    setContext(contextOptions[0], { persist:false, announce:false });
+  });
+  return contextInstallPromise;
+}
+
+function loadGoogleLibrary() {
+  if (window.google?.accounts?.id) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector('script[data-ekodi-google-identity]');
+    if (existing) {
+      existing.addEventListener('load', resolve, { once:true });
+      existing.addEventListener('error', reject, { once:true });
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.dataset.ekodiGoogleIdentity = 'true';
+    script.addEventListener('load', resolve, { once:true });
+    script.addEventListener('error', () => reject(new Error(t('Google 인증 라이브러리를 불러올 수 없습니다.', 'Could not load Google authentication.'))), { once:true });
+    document.head.append(script);
+  });
+}
+function closePrivilegeOverlay() { document.querySelector('[data-ekodi-privilege-overlay]')?.remove(); }
+async function requestElevation() {
+  if (elevationPromise) return elevationPromise;
+  elevationPromise = (async () => {
+    const status = await api('/api/admin-access/elevation').catch(() => ({ elevated:false }));
+    if (status.elevated) { currentSession = { ...(currentSession || {}), authority:status.authority || currentSession?.authority }; return status; }
+    const config = await api('/api/google/config');
+    if (!config.enabled || !config.clientId) throw new Error(t('보호된 작업을 위한 Google 추가 인증이 아직 연결되지 않았습니다.', 'Google reauthentication is not configured for privileged actions.'));
+    const challenge = await api('/api/google/challenge', { method:'POST' });
+    await loadGoogleLibrary();
+    closePrivilegeOverlay();
+    const overlay = document.createElement('div'); overlay.className = 'ekodi-privilege-overlay'; overlay.dataset.ekodiPrivilegeOverlay = 'true';
+    const card = document.createElement('section'); card.className = 'ekodi-privilege-card';
+    const heading = document.createElement('h3'); heading.textContent = t('보호된 작업 추가 인증', 'Confirm privileged action');
+    const copy = document.createElement('p'); copy.textContent = t('현재 로그인한 Google 계정으로 한 번 더 확인하면 15분 동안 보호된 관리자 작업을 수행할 수 있습니다. 인증 후 지금 화면에서 바로 이어집니다.', 'Verify once more with the current Google account. Privileged actions remain available for 15 minutes and continue on this screen.');
+    const googleHost = document.createElement('div'); googleHost.className = 'ekodi-privilege-google';
+    const state = document.createElement('div'); state.className = 'ekodi-privilege-state'; state.setAttribute('role','status');
+    const actions = document.createElement('div'); actions.className = 'ekodi-privilege-actions';
+    const cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'secondary'; cancel.textContent = t('취소','Cancel'); actions.append(cancel);
+    card.append(heading, copy, googleHost, state, actions); overlay.append(card); document.body.append(overlay);
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = (error, value) => {
+        if (settled) return; settled = true; closePrivilegeOverlay();
+        if (error) reject(error); else resolve(value);
+      };
+      cancel.addEventListener('click', () => finish(new Error(t('추가 인증을 취소했습니다.', 'Reauthentication cancelled.'))));
+      window.google.accounts.id.initialize({
+        client_id: config.clientId,
+        nonce: challenge.nonce,
+        auto_select: false,
+        callback: async response => {
+          state.textContent = t('Google 계정을 확인하는 중입니다…', 'Verifying Google account…');
+          try {
+            const result = await api('/api/admin-access/elevation', { method:'POST', body:JSON.stringify({ credential:response.credential, nonce:challenge.nonce }) });
+            currentSession = { ...(currentSession || {}), authority:result.authority || currentSession?.authority };
+            window.dispatchEvent(new CustomEvent('ekodi-admin-elevation-changed', { detail:result }));
+            finish(null, result);
+          } catch (error) { state.textContent = error.message; }
+        },
+      });
+      window.google.accounts.id.renderButton(googleHost, { type:'standard', theme:'outline', size:'large', text:'signin_with', shape:'rectangular', logo_alignment:'left', width:Math.min(360, Math.max(240, googleHost.clientWidth || 320)) });
+      try { window.google.accounts.id.prompt?.(); } catch {}
+    });
+  })().finally(() => { elevationPromise = null; });
+  return elevationPromise;
+}
+async function withPrivilege(operation) {
+  try { return await operation(); }
+  catch (error) {
+    if (error?.code !== 'ELEVATION_REQUIRED') throw error;
+    await requestElevation();
+    return operation();
+  }
+}
+
+function applyLocale() { removeLocaleControl(); applyMenuLabels(); translateAdminPanel(); renderContextControl(); }
+async function install() {
+  installStyle(); removeLocaleControl(); ensureExternalMenuItems(); applyMenuLabels();
+  if (!token()) return;
+  try {
+    currentSession = await loadCurrentSession();
+    installEkodiBizSourceHub();
+    if (currentSession.role === 'super_admin') ensureAdminPanel();
+    await installContextControl();
+    if (currentSession.role === 'super_admin' && currentContext.type === 'platform') { ensureAdminNav(); ensureExternalAccountNav(); ensureAdminPanel(); applyMenuLabels(); }
+    else { document.querySelector('.sidebar nav .nav[data-section="admins"]')?.remove(); document.querySelector('.sidebar nav .nav[data-admin-link="external-accounts"]')?.remove(); if(currentContext.type==='workspace')ensureWorkspaceConnectionNav(); }
+  } catch (error) { console.warn('[EKODI Admin] Admin OS runtime degraded', error); }
+}
+
+saveLocale(locale);
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, { once:true }); else install();
+window.addEventListener('ekodi-admin-ready', install);
+window.addEventListener('ekodi-nav-changed', applyMenuLabels);
+window.addEventListener('ekodi-feature-installed', applyMenuLabels);
+window.EKODIAdminMenu = Object.freeze({ locale: () => locale, setLocale: value => { saveLocale(value); applyLocale(); }, label: id => getAdminMenuLabel(id, locale), refreshAdminAccess: loadAccounts, ensureAdminAccess });
+window.EKODIAdminContext = Object.freeze({
+  current: () => currentContext,
+  authority: () => currentSession?.authority || null,
+  set: value => setContext(value),
+  refresh: async () => { await loadContextOptions(); setContext(contextFromKey(contextKey(currentContext)) || contextOptions[0]); return currentContext; },
+  elevate: requestElevation,
+  revokeElevation: async () => { const result = await api('/api/admin-access/elevation', { method:'DELETE' }); currentSession = { ...(currentSession || {}), authority:{ ...(currentSession?.authority || {}), elevated:false, elevatedUntil:null } }; window.dispatchEvent(new CustomEvent('ekodi-admin-elevation-changed', { detail:result })); return result; },
+});

@@ -1,0 +1,144 @@
+const release=String(process.env.GITHUB_SHA||Date.now()).slice(0,40);
+const attempts=Math.max(1,Math.min(30,Number(process.env.EKODI_MOBILE_HEADER_ATTEMPTS||6)));
+const delayMs=Math.max(0,Number(process.env.EKODI_MOBILE_HEADER_DELAY_MS||5000));
+const timeoutMs=Math.max(3000,Number(process.env.EKODI_MOBILE_HEADER_TIMEOUT_MS||15000));
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+
+function versioned(raw){
+  const url=new URL(raw);
+  url.searchParams.set('ekodi_mobile_header_release',release);
+  return url;
+}
+async function get(raw,{redirect='follow'}={}){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),timeoutMs);
+  try{
+    const response=await fetch(versioned(raw),{redirect,signal:controller.signal,headers:{'cache-control':'no-cache','pragma':'no-cache'}});
+    const text=await response.text();
+    return {ok:response.ok,status:response.status,text,headers:response.headers,url:response.url};
+  }catch(error){
+    return {ok:false,status:0,text:'',headers:new Headers(),url:String(raw),error:String(error?.message||error)};
+  }finally{clearTimeout(timer)}
+}
+const PUBLIC_HEADER_FORBIDDEN=['운영공간','operating space','workspace operating space','data-ekodi-operating-space-label'];
+function need(result,label,needle,errors){if(!result.text.includes(needle))errors.push(`${label}:missing:${needle}`)}
+function headerMarkup(result){return result.text.match(/<header\b[\s\S]*?<\/header>/i)?.[0]||''}
+function forbidPublicHeader(result,label,errors){
+  const header=headerMarkup(result).toLowerCase();
+  for(const needle of PUBLIC_HEADER_FORBIDDEN)if(header.includes(String(needle).toLowerCase()))errors.push(`${label}:forbidden-public-header:${needle}`);
+}
+function http(result,label,errors){if(!result.ok)errors.push(`${label}:http-${result.status||'network'}`)}
+function readabilityObserved(result){
+  const shellHeader=String(result.headers.get('x-ekodi-shell')||'').toLowerCase();
+  const userUiHeader=String(result.headers.get('x-ekodi-user-ui')||'').toLowerCase();
+  const tenantHeader=String(result.headers.get('x-ekodi-tenant-readability')||'').toLowerCase();
+  return shellHeader==='v2'
+    || userUiHeader==='v1'
+    || tenantHeader==='v1'
+    || result.text.includes('ekodi.kr/shell/shell.js')
+    || result.text.includes('data-ekodi-shell')
+    || result.text.includes('data-ekodi-user-ui')
+    || result.text.includes('data-ekodi-tenant-readability="v1"');
+}
+function requireReadability(result,label,errors){
+  if(!readabilityObserved(result))errors.push(`${label}:live-readability-not-observed`);
+}
+
+async function audit(){
+  const errors=[];
+  const [root,adminCss,shell,mobileHeader,readabilityCss,liveManifest]=await Promise.all([
+    get('https://ekodi.kr/'),
+    get('https://ekodi.kr/admin-shell.css'),
+    get('https://ekodi.kr/shell/shell.js'),
+    get('https://ekodi.kr/shell/mobile-fixed-header.js'),
+    get('https://ekodi.kr/shell/user-ui-shell.css'),
+    get('https://ekodi.kr/shell/manifest.json'),
+  ]);
+  http(root,'ekodi.kr',errors);
+  need(root,'ekodi.kr','.site-header{position:fixed;top:0;left:0;right:0;width:100%',errors);
+  need(root,'ekodi.kr','--ekodi-home-header-height',errors);
+  http(adminCss,'ekodi.kr/admin-shell.css',errors);
+  need(adminCss,'admin','.app>main{padding-top:0;min-width:0;max-width:100vw}',errors);
+  need(adminCss,'admin','.topbar{position:sticky!important;top:0!important;left:auto!important;right:auto!important;width:100%!important',errors);
+  http(shell,'ekodi.kr/shell/shell.js',errors);
+  for(const marker of ['ekodi-mobile-fixed-header-style','data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important'])need(shell,'shell',marker,errors);
+  http(mobileHeader,'ekodi.kr/shell/mobile-fixed-header.js',errors);
+  for(const marker of ['data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important'])need(mobileHeader,'mobile-header-asset',marker,errors);
+  http(readabilityCss,'ekodi.kr/shell/user-ui-shell.css',errors);
+  need(readabilityCss,'tenant-readability-css','Brand-neutral tenant readability v1',errors);
+  need(readabilityCss,'tenant-readability-css','data-ekodi-tenant-readability="v1"',errors);
+  http(liveManifest,'ekodi.kr/shell/manifest.json',errors);
+  let productionManifest=null;
+  try{productionManifest=JSON.parse(liveManifest.text)}catch{errors.push('shell-manifest:invalid-json')}
+  if(productionManifest?.services?.some(service=>service.shellIntegration==='pending'))errors.push('shell-manifest:pending-integration');
+
+  const canonicalUserSurfaces=[
+    ['ekodibiz','https://ekodi.kr/ekodibiz',true],
+    ['church','https://ekodi.kr/ekodichurch',true],
+    ['mnubiz','https://ekodi.kr/mnubiz',true],
+    ['my','https://ekodi.kr/my/',false],
+    ['business','https://ekodi.kr/business',false],
+    ['trade','https://ekodi.kr/ekodibiz/trade',true],
+    ['insurance','https://ekodi.kr/insurance',true],
+    ['lab','https://ekodi.kr/ekodilab',true],
+    ['mall','https://ekodi.kr/ekodimall',true],
+  ];
+  for(const [id,url,publicBrandSurface] of canonicalUserSurfaces){
+    const result=await get(url);
+    http(result,`service:${id}`,errors);
+    if(!result.ok)continue;
+    const shellHeader=String(result.headers.get('x-ekodi-shell')||'').toLowerCase();
+    const shellInBody=result.text.includes('ekodi.kr/shell/shell.js')||result.text.includes('data-ekodi-shell');
+    const tenantReadability=String(result.headers.get('x-ekodi-tenant-readability')||'').toLowerCase()==='v1'||result.text.includes('data-ekodi-tenant-readability="v1"');
+    if(!shellInBody&&shellHeader!=='v2'&&!tenantReadability)errors.push(`service:${id}:canonical-user-chrome-not-observed`);
+    if(publicBrandSurface){
+      forbidPublicHeader(result,`service:${id}`,errors);
+    }
+  }
+
+  const tenants=[
+    ['jadam','https://ekodi.kr/jadam','자담치킨 목포대점'],
+    ['pizzamaru','https://ekodi.kr/pizzamaru','피자마루 목포대점'],
+    ['yogurt','https://ekodi.kr/yogurt','요거트퍼플 목포대점'],
+  ];
+  for(const [id,url,label] of tenants){
+    const result=await get(url);
+    http(result,`tenant:${id}`,errors);
+    need(result,`tenant:${id}`,label,errors);
+    need(result,`tenant:${id}`,'data-ekodi-tenant-readability="v1"',errors);
+    need(result,`tenant:${id}`,'data-ekodi-fixed-header',errors);
+    need(result,`tenant:${id}`,'https://ekodi.kr/shell/mobile-fixed-header.js',errors);
+    forbidPublicHeader(result,`tenant:${id}`,errors);
+  }
+
+  const [cgmaRoot,cgmaAi,cgmaAdmin,cheonggyeRoot]=await Promise.all([
+    get('https://ekodi.kr/cgma'),
+    get('https://ekodi.kr/cgma/market-ai'),
+    get('https://ekodi.kr/cgma/admin'),
+    get('https://ekodi.kr/cheonggye'),
+  ]);
+  http(cgmaRoot,'cgma-root',errors);
+  need(cgmaRoot,'cgma-root','청계면상인회',errors);
+  requireReadability(cgmaRoot,'cgma-root',errors);
+  forbidPublicHeader(cgmaRoot,'cgma-root',errors);
+  http(cheonggyeRoot,'cheonggye-root',errors);
+  need(cheonggyeRoot,'cheonggye-root','청계잇다',errors);
+  forbidPublicHeader(cheonggyeRoot,'cheonggye-root',errors);
+  http(cgmaAi,'cgma-market-ai',errors);
+  need(cgmaAi,'cgma-market-ai','CHEONGGYE MARKETING AI',errors);
+  http(cgmaAdmin,'cgma-admin',errors);
+  need(cgmaAdmin,'cgma-admin','상인회 운영관리',errors);
+
+  return {errors,activeCount:canonicalUserSurfaces.length};
+}
+for(let attempt=1;attempt<=attempts;attempt++){
+  const {errors,activeCount}=await audit();
+  if(!errors.length){
+    console.log(`✅ EKODI live mobile/readability audit passed: root + admin + shared assets + ${activeCount} active services + canonical store/CGMA surfaces verified. release=${release}`);
+    process.exit(0);
+  }
+  console.log(`Mobile/readability live audit ${attempt}/${attempts}: ${errors.join(' | ')}`);
+  if(attempt<attempts)await sleep(delayMs);
+}
+console.error('❌ EKODI live mobile/readability audit failed after all bounded retries.');
+process.exit(1);

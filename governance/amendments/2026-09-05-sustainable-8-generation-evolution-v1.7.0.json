@@ -1,0 +1,50 @@
+{
+  "id": "2026-09-05-sustainable-8-generation-evolution-v1.7.0",
+  "constitutionVersion": "1.7.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-05",
+  "changeClass": "C2",
+  "taskId": "ekodi-8gen-sustainable-20260905",
+  "issue": 1002,
+  "pullRequest": 1004,
+  "summary": "Adopt Generation 8 Living Digital Commons as the EKODI north star while freezing the current deployment footprint as a sustainable convergence baseline and introducing evidence- and economics-based scale gates.",
+  "approvalBasis": "The platform owner explicitly requested that EKODI set the final target to Generation 8 and reform the current state for sustainability, with capacity and performance expansion deferred until revenue or other justified operational requirements support it.",
+  "integrationOrder": {
+    "approvedWinner": 1004,
+    "overlappingPullRequest": 893,
+    "reason": "PR 1004 is based on the current main architecture and advances the active constitution to v1.7.0. PR 893 was authored against an earlier v1.6.0 constitution baseline and must refresh after PR 1004 so Portable Cloud First can be preserved under the sustainable evolution constitution without regressing newer governance.",
+    "followUp": "Refresh or rebase PR 893 after PR 1004 is centrally merged, then revalidate cloud portability against Constitution v1.7.0 and the sustainable boundary/cost gates."
+  },
+  "currentState": {
+    "generation": 2,
+    "name": "Integrated Platform",
+    "next": "Generation 3 Capability Platform",
+    "scaleTier": "S0",
+    "operatingMode": "minimum-viable-shared-infrastructure"
+  },
+  "northStar": {
+    "generation": 8,
+    "name": "Living Digital Commons"
+  },
+  "preserves": [
+    "immutable workspace_id authority",
+    "modular-monolith-first deployment topology",
+    "provider independence",
+    "guarded production release",
+    "secure projection and least privilege",
+    "existing deployment boundaries during convergence"
+  ],
+  "adds": [
+    "eight-generation evidence-driven evolution model",
+    "S0 Seed, S1 Validated, S2 Growth and S3 Scale economics tiers",
+    "capability-first reuse before new service creation",
+    "shared-before-dedicated infrastructure rule",
+    "grandfathered deployment baseline with evidence gate for new boundaries",
+    "Workspace as canonical operating-context term with Space compatibility-only migration",
+    "revenue/funding/unit-economics signals for capacity decisions"
+  ],
+  "costPolicy": "Use free or lowest safe tiers first. Optimize root cause, cache, query and workload shape before paid capacity. Expand capacity when recurring revenue, committed funding, demonstrated operational value, or security/legal/reliability requirements justify the incremental cost.",
+  "migration": "No existing production deployment or DNS boundary is removed by this amendment. Existing boundaries remain operational and are reviewed for convergence before further expansion. Runtime Space aliases may remain until separately migrated without changing workspace_id.",
+  "rollback": "Revert the v1.7.0 constitution, machine-readable evolution model and validator changes to v1.6.1. Do not remove existing workspaces, aliases, deployment boundaries or provider integrations as part of rollback. No production DNS, data migration or destructive runtime change is authorized by this amendment itself."
+}

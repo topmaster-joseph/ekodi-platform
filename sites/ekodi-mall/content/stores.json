@@ -1,0 +1,28 @@
+[
+  {
+    "id": "store-ekodi-select",
+    "slug": "ekodi-select",
+    "name": "EKODI Select",
+    "operator": "에코디비즈",
+    "kind": "platform",
+    "badge": "PLATFORM SELECT",
+    "description": "생활·로컬·선물 상품을 에코디의 기준으로 큐레이션하는 플랫폼 운영 스토어입니다.",
+    "status": "베타 운영",
+    "published": true,
+    "featured": true,
+    "contactUrl": "https://ekodibiz.kr"
+  },
+  {
+    "id": "store-ekodi-books",
+    "slug": "ekodi-books",
+    "name": "EKODI Books",
+    "operator": "에코디비즈",
+    "kind": "brand",
+    "badge": "BOOKS & LEARNING",
+    "description": "책·연구·배움 콘텐츠를 소개하고 출판과 학습 경험을 연결하는 브랜드 스토어입니다.",
+    "status": "콘텐츠 준비",
+    "published": true,
+    "featured": true,
+    "contactUrl": "https://ekodibiz.kr"
+  }
+]

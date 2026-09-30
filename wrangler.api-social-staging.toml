@@ -1,0 +1,13 @@
+name = "ekodi-social-registry-staging"
+main = "customer-entry-worker.js"
+compatibility_date = "2026-08-14"
+workers_dev = true
+preview_urls = false
+
+[vars]
+ENVIRONMENT = "staging"
+ALLOWED_ORIGINS = "https://ekodi-platform.pages.dev"
+
+[observability.logs]
+enabled = true
+invocation_logs = true

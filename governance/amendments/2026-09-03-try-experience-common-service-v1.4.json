@@ -1,0 +1,25 @@
+{
+  "id": "EKODI-CONSTITUTION-2026-09-03-TRY-EXPERIENCE-COMMON-SERVICE-V1.4",
+  "date": "2026-09-03",
+  "class": "C2",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalSource": "explicit super-administrator instruction in conversation to use try.ekodi.kr as the EKODI Experience address and build it",
+  "constitutionVersion": "1.4.0",
+  "summary": "Register try.ekodi.kr as the independently deployed EKODI Experience common-service boundary for safe user and developer experience projections.",
+  "affectedAreas": [
+    "domain",
+    "common-service",
+    "experience",
+    "security",
+    "governance",
+    "deployment"
+  ],
+  "registeredBoundary": "try.ekodi.kr",
+  "boundaryReason": "independently operated public experience surface with synthetic data, Secure Projection and isolated release lifecycle; it does not identify a person, tenant or workspace",
+  "dataRule": "synthetic-only by default; no production customer data, secrets, source code or internal topology may be exposed",
+  "developerModeRule": "developer mode presents only abstract roles and relationships suitable for public disclosure, never implementation topology",
+  "workspaceRule": "workspace authority remains defined by immutable workspace_id and canonical ekodi.kr workspace paths",
+  "verificationPolicy": "constitution, boundary, Secure Projection, isolated staging, guarded production deployment and real try.ekodi.kr verification must pass",
+  "rollbackPlan": "remove the Experience Worker custom domain and service registration through the guarded pipeline; no canonical production data requires rollback because the service persists none"
+}

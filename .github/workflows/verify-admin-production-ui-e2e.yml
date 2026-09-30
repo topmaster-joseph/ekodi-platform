@@ -1,0 +1,56 @@
+name: Verify Admin Production UI E2E
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/verify-admin-production-ui-e2e.mjs'
+      - 'test/admin-production-ui-e2e-isolation.test.mjs'
+      - '.github/workflows/verify-admin-production-ui-e2e.yml'
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-admin-production-ui-e2e
+  cancel-in-progress: true
+
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate production verifier contract on pull requests
+        if: ${{ github.event_name == 'pull_request' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/validate-canonical-api-execution.mjs
+          node --test test/apex-api-retirement.test.mjs test/admin-production-ui-e2e-isolation.test.mjs
+      - name: Install isolated Chromium test runtime
+        if: ${{ github.event_name != 'pull_request' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+      - name: Verify production Admin menu paths
+        if: ${{ github.event_name != 'pull_request' }}
+        shell: bash
+        env:
+          ADMIN_URL: https://ekodi.kr/admin/
+        run: |
+          set -euo pipefail
+          node scripts/verify-admin-production-ui-e2e.mjs
+      - name: Upload authenticated Admin visual evidence
+        if: ${{ always() && github.event_name != 'pull_request' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-production-ui-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/admin-production-ui-e2e
+          if-no-files-found: warn
+          retention-days: 7

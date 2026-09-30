@@ -1,0 +1,92 @@
+{
+  "version": 3,
+  "worker": {
+    "name": "ekodibiz-revenue-os",
+    "config": "wrangler.ekodibiz.toml",
+    "requests": [
+      {
+        "url": "https://ekodi.kr/ekodibiz",
+        "statuses": [
+          200
+        ],
+        "redirect": "follow",
+        "expect": [
+          "EKODIBIZ",
+          "WHAT WE DO"
+        ],
+        "rollbackExpect": [
+          "EKODIBIZ",
+          "WHAT WE DO"
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "the canonical ekodi.kr gateway remains bound to the stable EKODIBIZ service during a 0% candidate smoke; verify the canonical service-binding path immediately after promotion"
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/api/health",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "ekodibiz-revenue-os",
+          "operational-mvp",
+          "approval-gated",
+          "durable-object-sqlite",
+          "rules-first-active",
+          "https://pay.ekodi.kr"
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "the canonical ekodi.kr gateway remains bound to the stable EKODIBIZ service during a 0% candidate smoke; verify this API immediately after promotion",
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/api/catalog",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "30일 자동홍보팩",
+          "온라인 개업팩",
+          "행사 완성팩"
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "the canonical ekodi.kr gateway remains bound to the stable EKODIBIZ service during a 0% candidate smoke; verify this API immediately after promotion",
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/api/runtime",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "discover",
+          "promote",
+          "payment",
+          "ad_spend",
+          "external_publish",
+          "growth_scout",
+          "finance_gatekeeper",
+          "anonymous-goal-only"
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "the canonical ekodi.kr gateway remains bound to the stable EKODIBIZ service during a 0% candidate smoke; verify this API immediately after promotion",
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/api/ops/status",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "growth_scout",
+          "offer_builder",
+          "ops_coordinator",
+          "finance_gatekeeper",
+          "rules-first"
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "the canonical ekodi.kr gateway remains bound to the stable EKODIBIZ service during a 0% candidate smoke; verify this API immediately after promotion",
+        "rollbackVerify": false
+      }
+    ]
+  }
+}

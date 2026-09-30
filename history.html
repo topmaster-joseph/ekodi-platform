@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="EKODI가 사람, 공동체, 사역, 지역, 비즈니스와 플랫폼 생태계로 이어져 온 흐름을 기록하는 공식 역사 페이지입니다.">
+<meta name="theme-color" content="#08110f">
+<link rel="canonical" href="https://ekodi.kr/history">
+<title>EKODI History | 에코디 역사</title>
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#07100e;
+  --bg-soft:#0b1714;
+  --panel:rgba(15,31,26,.78);
+  --panel-strong:#10221d;
+  --text:#eef7f1;
+  --muted:#93a79d;
+  --quiet:#64786e;
+  --line:rgba(148,186,164,.18);
+  --line-strong:rgba(158,211,179,.5);
+  --glow:#88c7a4;
+  --gold:#d8c38f;
+  --sky:#86b8c9;
+  --lavender:#a99bc3;
+  --header-h:76px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;background:var(--bg)}
+body{
+  margin:0;min-height:100dvh;color:var(--text);
+  font-family:system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif;
+  background:
+    radial-gradient(circle at 82% 4%,rgba(121,178,145,.1),transparent 28rem),
+    radial-gradient(circle at 12% 34%,rgba(107,151,168,.08),transparent 34rem),
+    linear-gradient(180deg,#07100e 0%,#091511 55%,#07100e 100%);
+  overflow-x:hidden;
+}
+a{color:inherit}
+button,summary{font:inherit}
+.site-header{
+  position:sticky;top:0;z-index:100;min-height:var(--header-h);display:flex;align-items:center;
+  padding-top:env(safe-area-inset-top);
+  border-bottom:1px solid rgba(175,216,192,.1);
+  background:rgba(6,14,12,.82);backdrop-filter:blur(18px) saturate(120%);
+}
+.header-inner{width:min(1540px,calc(100% - 44px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.brand{display:flex;align-items:baseline;gap:10px;text-decoration:none}
+.brand strong{font-size:23px;letter-spacing:.09em}.brand span{font-size:10px;letter-spacing:.2em;color:var(--quiet)}
+.nav{display:flex;align-items:center;gap:18px}.nav a{text-decoration:none;color:#a4b6ad;font-size:12px;font-weight:700;letter-spacing:.02em}
+.nav a:hover,.nav a:focus-visible{color:#fff;outline:none}.nav .home{padding:9px 12px;border:1px solid var(--line);border-radius:999px}
+main{padding-bottom:72px}
+.hero{width:min(1540px,calc(100% - 44px));margin:auto;padding:72px 0 54px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.55fr);gap:48px;align-items:end}
+.kicker{margin:0 0 18px;color:#8fb6a0;font-size:11px;font-weight:850;letter-spacing:.3em}
+h1{margin:0;font-size:clamp(48px,7vw,108px);line-height:.92;letter-spacing:-.065em;font-weight:780}
+h1 span{display:block;margin-top:18px;color:#9cb0a6;font-size:clamp(18px,2.3vw,31px);font-weight:520;line-height:1.3;letter-spacing:-.025em}
+.hero-note{max-width:430px;margin:0 0 6px;padding:18px 20px;border-left:1px solid var(--line-strong);color:#91a69b;font-size:13px;line-height:1.75}
+.hero-note strong{display:block;margin-bottom:5px;color:#dbe9e1;font-size:14px}.hero-note small{display:block;margin-top:8px;color:#62776c;font-size:10px}
+.legend{width:min(1540px,calc(100% - 44px));margin:0 auto 28px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.legend-label{margin-right:7px;color:#5f7569;font-size:10px;font-weight:800;letter-spacing:.16em}
+.tag{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border:1px solid var(--line);border-radius:999px;color:#aabbb2;font-size:10px;background:rgba(14,28,24,.54)}
+.tag::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--tag,#88c7a4);box-shadow:0 0 12px color-mix(in srgb,var(--tag,#88c7a4) 60%,transparent)}
+.tag.ecclesia{--tag:#d8c38f}.tag.koinonia{--tag:#88c7a4}.tag.diaspora{--tag:#86b8c9}.tag.jubilee{--tag:#a99bc3}
+.timeline-shell{position:relative;border-top:1px solid rgba(155,194,173,.08);border-bottom:1px solid rgba(155,194,173,.08);background:linear-gradient(180deg,rgba(11,24,20,.38),rgba(9,18,16,.58));overflow:hidden}
+.timeline-shell::before{content:"";position:absolute;inset:0;background-image:linear-gradient(90deg,rgba(132,169,148,.04) 1px,transparent 1px);background-size:140px 100%;pointer-events:none}
+.timeline-scroll{overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:x proximity;scrollbar-color:#355248 transparent;scrollbar-width:thin}
+.timeline{position:relative;min-width:1440px;width:max(100%,1440px);height:700px;padding:0 max(44px,calc((100vw - 1540px)/2));}
+.axis{position:absolute;left:0;right:0;top:348px;height:2px;background:linear-gradient(90deg,transparent 1%,rgba(146,185,164,.22) 5%,rgba(146,185,164,.62) 50%,rgba(146,185,164,.22) 95%,transparent 99%)}
+.axis::after{content:"";position:absolute;right:4.2%;top:-3px;width:8px;height:8px;border-radius:50%;background:#9ed1b4;box-shadow:0 0 24px rgba(146,211,174,.7)}
+.lane-label{position:absolute;left:max(44px,calc((100vw - 1540px)/2));font-size:12px;font-weight:850;letter-spacing:.19em;color:#71887c}
+.lane-label.top{top:46px}.lane-label.bottom{bottom:44px}
+.moment{position:absolute;width:245px;scroll-snap-align:center}
+.moment::before{content:"";position:absolute;left:18px;width:1px;background:linear-gradient(180deg,transparent,var(--line-strong),transparent)}
+.moment::after{content:"";position:absolute;left:14px;width:9px;height:9px;border-radius:50%;border:2px solid #86ad98;background:#0b1714;box-shadow:0 0 0 5px rgba(101,153,124,.07)}
+.moment.top{top:86px}.moment.top::before{top:182px;height:81px}.moment.top::after{top:258px}
+.moment.bottom{top:390px}.moment.bottom::before{top:-36px;height:69px}.moment.bottom::after{top:-42px}
+.moment:nth-of-type(1){left:10%}.moment:nth-of-type(2){left:28%}.moment:nth-of-type(3){left:47%}.moment:nth-of-type(4){left:66%}.moment:nth-of-type(5){left:84%}
+.year{display:flex;align-items:baseline;gap:8px;margin-bottom:10px;color:#e7f3ec}.year strong{font-size:26px;letter-spacing:-.04em}.year span{color:#60766b;font-size:9px;font-weight:800;letter-spacing:.12em}
+.card{position:relative;padding:16px 17px;border:1px solid rgba(141,182,159,.13);border-radius:16px;background:linear-gradient(145deg,rgba(17,34,29,.91),rgba(9,21,17,.87));box-shadow:0 16px 50px rgba(0,0,0,.18)}
+.card h2{margin:0;color:#dbe8e1;font-size:16px;line-height:1.35;letter-spacing:-.025em}.card p{margin:8px 0 0;color:#7f958a;font-size:11px;line-height:1.62}
+.card .mini-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:12px}.card .mini-tags span{padding:4px 6px;border-radius:999px;background:rgba(121,166,141,.08);color:#759083;font-size:8px}
+details{margin-top:12px;border-top:1px solid rgba(143,182,160,.09);padding-top:9px}summary{cursor:pointer;list-style:none;color:#91b5a2;font-size:10px;font-weight:800}summary::-webkit-details-marker{display:none}summary::after{content:" +";color:#5f786b}details[open] summary::after{content:" −"}.detail-copy{margin-top:8px;color:#80958a;font-size:10px;line-height:1.65}.detail-copy b{color:#bccfc5;font-weight:700}
+.archive-window{height:72px;margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.archive-window span{position:relative;border-radius:7px;border:1px solid rgba(156,189,171,.08);background:linear-gradient(145deg,rgba(135,167,150,.11),rgba(36,61,51,.18));overflow:hidden}.archive-window span::after{content:"ARCHIVE";position:absolute;left:5px;bottom:4px;color:#5d7468;font-size:6px;letter-spacing:.08em}
+.current .card{border-color:rgba(143,199,165,.32);box-shadow:0 16px 60px rgba(64,119,88,.12)}.current .year strong{color:#a7dbbc}.current::after{border-color:#a7dbbc;box-shadow:0 0 0 6px rgba(119,194,151,.1),0 0 22px rgba(119,194,151,.35)}
+.next .card{border-style:dashed;background:rgba(12,25,21,.46)}.next .year strong{font-size:20px;letter-spacing:.06em}.next .card h2{color:#a5b8ae}
+.history-note{width:min(1100px,calc(100% - 44px));margin:48px auto 0;padding:22px 24px;border:1px solid rgba(146,184,163,.11);border-radius:18px;background:rgba(12,26,22,.6);display:grid;grid-template-columns:1fr auto;gap:28px;align-items:center}
+.history-note strong{display:block;color:#d7e6de;font-size:14px}.history-note p{margin:6px 0 0;color:#7d9287;font-size:12px;line-height:1.65}.history-note a{white-space:nowrap;text-decoration:none;padding:10px 13px;border:1px solid var(--line);border-radius:999px;color:#a6bbb0;font-size:11px;font-weight:800}
+footer{width:min(1540px,calc(100% - 44px));margin:46px auto 0;padding-top:20px;border-top:1px solid rgba(150,184,165,.08);display:flex;justify-content:space-between;gap:20px;color:#53685d;font-size:10px}.future-line{letter-spacing:.16em}
+@media(max-width:760px){
+  :root{--header-h:66px}.header-inner{width:min(100% - 24px,620px)}.site-header{min-height:66px}.brand strong{font-size:20px}.brand span{display:none}.nav{gap:8px}.nav a:not(.home){display:none}.nav .home{font-size:11px}
+  .hero{width:min(100% - 28px,620px);padding:42px 0 32px;display:block}.hero-note{margin-top:28px;padding:14px 16px}.legend{width:min(100% - 28px,620px);margin-bottom:22px}.legend-label{width:100%;margin-bottom:2px}
+  .timeline-shell{overflow:visible}.timeline-scroll{overflow:visible}.timeline{min-width:0;width:min(100% - 28px,620px);height:auto;margin:auto;padding:28px 0 12px}.timeline-shell::before{background-size:100% 118px;background-image:linear-gradient(rgba(132,169,148,.035) 1px,transparent 1px)}
+  .axis{left:19px;right:auto;top:30px;bottom:30px;width:2px;height:auto;background:linear-gradient(180deg,rgba(146,185,164,.14),rgba(146,185,164,.62),rgba(146,185,164,.14))}.axis::after{right:-3px;top:auto;bottom:0}
+  .lane-label{position:relative;left:auto;top:auto!important;bottom:auto!important;margin:0 0 18px 44px;font-size:9px}.lane-label.bottom{margin-top:28px}
+  .moment,.moment.top,.moment.bottom,.moment:nth-of-type(1),.moment:nth-of-type(2),.moment:nth-of-type(3),.moment:nth-of-type(4),.moment:nth-of-type(5){position:relative;left:auto;top:auto;width:auto;margin:0 0 24px 44px}
+  .moment::before,.moment.top::before,.moment.bottom::before{left:-25px;top:13px;width:25px;height:1px;background:linear-gradient(90deg,var(--line-strong),transparent)}.moment::after,.moment.top::after,.moment.bottom::after{left:-30px;top:8px}
+  .year strong{font-size:22px}.card{padding:15px}.archive-window{height:64px}.history-note{width:min(100% - 28px,620px);grid-template-columns:1fr;padding:18px}.history-note a{width:max-content}footer{width:min(100% - 28px,620px);display:block}footer span{display:block;margin-top:6px}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="https://ekodi.kr/" aria-label="EKODI 홈으로"><strong>EKODI</strong><span>HISTORY ARCHIVE</span></a>
+    <nav class="nav" aria-label="역사 페이지 메뉴"><a href="#timeline">연혁</a><a href="#values">가치</a><a class="home" href="https://ekodi.kr/">생태계로 돌아가기</a></nav>
+  </div>
+</header>
+<main>
+  <section class="hero" aria-labelledby="history-title">
+    <div>
+      <p class="kicker">EKODI HISTORY · 살아 있는 기록</p>
+      <h1 id="history-title">시간이 쌓이고,<br>생태계가 되다<span>우리가 지나온 시간을 보존하고, 다음 연결을 준비합니다.</span></h1>
+    </div>
+    <p class="hero-note"><strong>연혁보다 더 깊은 기록</strong>사건을 나열하는 대신, 사람과 공동체의 움직임이 사역·지역·비즈니스·연구·플랫폼으로 이어지는 흐름을 한 시간축에 담습니다.<small>Verified records can be added progressively without changing the page structure.</small></p>
+  </section>
+
+  <div id="values" class="legend" aria-label="EKODI 역사 가치 범례">
+    <span class="legend-label">VALUE LAYERS</span>
+    <span class="tag ecclesia">Ecclesia</span><span class="tag koinonia">Koinonia</span><span class="tag diaspora">Diaspora</span><span class="tag jubilee">Jubilee</span>
+  </div>
+
+  <section id="timeline" class="timeline-shell" aria-label="EKODI 역사 타임라인">
+    <div class="timeline-scroll">
+      <div class="timeline">
+        <div class="axis" aria-hidden="true"></div>
+        <div class="lane-label top">사역과 활동 · MINISTRY &amp; MOVEMENT</div>
+
+        <article class="moment top">
+          <div class="year"><strong>BEGINNING</strong><span>ROOTS</span></div>
+          <div class="card">
+            <h2>사람에게서 시작된 길</h2>
+            <p>제도보다 사람, 기능보다 관계를 먼저 두었던 초기의 기록을 이 자리에 축적합니다.</p>
+            <div class="mini-tags"><span>Ecclesia</span><span>Koinonia</span></div>
+            <details><summary>기록 보기</summary><div class="detail-copy"><b>공식 원자료 우선</b><br>창립·사역·행사·공동체 기록은 날짜와 출처가 확인된 자료부터 순차적으로 연결합니다.</div></details>
+          </div>
+        </article>
+
+        <article class="moment bottom">
+          <div class="year"><strong>GROWTH</strong><span>BRANCHES</span></div>
+          <div class="card">
+            <h2>각자의 자리에서 자라다</h2>
+            <p>공동체, 지역, 사역과 생활의 필요가 서로 다른 가지를 만들고 독립적인 활동으로 확장됩니다.</p>
+            <div class="archive-window" aria-label="사진 아카이브 자리"><span></span><span></span><span></span></div>
+            <details><summary>기록 보기</summary><div class="detail-copy">사진·문서·영상이 등록되면 대표 기록을 카드 안에서 바로 열어볼 수 있도록 설계했습니다.</div></details>
+          </div>
+        </article>
+
+        <article class="moment top">
+          <div class="year"><strong>CONNECT</strong><span>NETWORK</span></div>
+          <div class="card">
+            <h2>독립성을 지키며 연결하다</h2>
+            <p>서로를 하나로 흡수하지 않고, 필요한 곳에서 협력하고 다시 각자의 자리로 돌아가는 연결을 기록합니다.</p>
+            <div class="mini-tags"><span>Koinonia</span><span>Diaspora</span><span>Jubilee</span></div>
+            <details><summary>기록 보기</summary><div class="detail-copy">조직·프로젝트·협력 기록은 각각의 주체와 경계를 보존하면서 하나의 시간축에서 교차하도록 구성합니다.</div></details>
+          </div>
+        </article>
+
+        <article class="moment bottom current">
+          <div class="year"><strong>2026</strong><span>ECOSYSTEM</span></div>
+          <div class="card">
+            <h2>EKODI 생태계로 전환</h2>
+            <p>EKODI의 여러 플랫폼을 하나의 입구에서 찾되, 각 서비스의 목적과 운영 경계를 지키는 생태계 구조를 정비합니다.</p>
+            <div class="mini-tags"><span>Independent platforms</span><span>Connected by choice</span></div>
+            <details open><summary>현재 기록</summary><div class="detail-copy"><b>EKODI Core 방향</b><br>공통 기반은 연결을 돕고, 사람과 개별 플랫폼의 선택권과 독립성을 보존하는 구조로 발전합니다.</div></details>
+          </div>
+        </article>
+
+        <article class="moment top next">
+          <div class="year"><strong>NEXT</strong><span>OPEN FUTURE</span></div>
+          <div class="card">
+            <h2>계속되는 역사</h2>
+            <p>완성된 연혁의 끝이 아니라, 다음 사람이 이어 쓸 수 있도록 열린 지점입니다.</p>
+            <div class="mini-tags"><span>Next chapter</span><span>Living archive</span></div>
+            <details><summary>다음 기록</summary><div class="detail-copy">새로운 사건과 성과는 검증 후 이 시간축에 자연스럽게 추가됩니다. 역사는 닫힌 박제가 아니라 계속 자라는 지층입니다.</div></details>
+          </div>
+        </article>
+
+        <div class="lane-label bottom">조직·플랫폼·성과 · ORGANIZATION &amp; PLATFORM</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="history-note" aria-label="역사 자료 운영 원칙">
+    <div><strong>공식 역사 자료는 검증된 기록부터</strong><p>현재 페이지는 역사 전시 구조를 먼저 구축한 버전입니다. 과거 연도·사진·문서·수상·프로젝트는 출처가 확인되는 순서대로 연결해 사실성과 아카이브 가치를 함께 지킵니다.</p></div>
+    <a href="https://ekodi.kr/">EKODI 생태계 보기</a>
+  </section>
+
+  <footer><strong>EKODI HISTORY</strong><span class="future-line">PAST · PRESENT · NEXT</span></footer>
+</main>
+</body>
+</html>

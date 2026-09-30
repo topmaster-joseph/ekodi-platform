@@ -1,0 +1,319 @@
+name: Deploy EKODI Church Homepage
+# Release reconciliation marker: church-operating-space-20260924
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-ekodi-church-homepage.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-church-homepage-production
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout Church source
+        uses: actions/checkout@v7
+        with:
+          repository: topmaster-joseph/ekodi-church
+          ref: main
+          path: church
+
+      - name: Capture Church source revision
+        shell: bash
+        run: echo "CHURCH_SOURCE_SHA=$(git -C church rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Checkout EKODI orchestration control
+        uses: actions/checkout@v7
+        with:
+          path: .ekodi-control
+
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/.ekodi-control/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+
+      - name: Validate Church source, privacy boundary and multilingual life hub
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          for file in index.html script.js live/index.html live/live.js live/host-intent.js live/live.css church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css church-online-status.js church-live-entry.css giving.js church-footer.css community-visual.css church-life-hub.js church-life-hub.css church-life-hub-i18n.js my/index.html my/app.js my/styles.css my/giving/index.html my/giving/app.js my/giving/styles.css my/attendance/index.html my/attendance/app.js my/attendance/styles.css; do
+            test -s "church/$file"
+          done
+          for file in script.js live/live.js live/host-intent.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-online-status.js giving.js church-life-hub.js church-life-hub-i18n.js my/app.js my/giving/app.js my/attendance/app.js; do
+            node --check "church/$file"
+          done
+          grep -Fq 'data-ekodi-life-hub' church/index.html
+          grep -Fq 'church-life-hub.js' church/index.html
+          grep -Fq 'church-life-hub.css' church/index.html
+          grep -Fq 'church-life-hub-i18n.js' church/index.html
+          grep -Fq 'church-i18n-extended.js' church/index.html
+          grep -Fq 'church-online-status.js' church/index.html
+          grep -Fq 'data-ekodi-church-live-entry' church/index.html
+          grep -Fq "AUTH_ATTEMPT_KEY='ekodi-live-auth-attempt'" church/live/live.js
+          grep -Fq 'refreshAuthToken' church/live/live.js
+          grep -Fq "searchParams.set('mode','studio')" church/live/host-intent.js
+          if grep -Fq 'location.replace(next.href)' church/live/host-intent.js; then echo 'LIVE host intent must not force a reload loop.'; exit 1; fi
+          grep -Fq 'api/realtime/live?tenant=ekodichurch' church/church-online-status.js
+          grep -Fq 'AbortController' church/church-online-status.js
+          grep -Fq "dataset.liveStatus='stale'" church/church-online-status.js
+          grep -Fq '에코디선교회' church/index.html
+          grep -Fq 'PRIVATE FIRST' church/index.html
+          grep -Fq 'localStorage' church/church-life-hub.js
+          grep -Fq '__EKODI_CHURCH_LIFE_HUB_I18N__' church/church-life-hub-i18n.js
+          grep -Fq 'href="/ekodichurch/my/' church/index.html
+          grep -Fq "href: '/ekodichurch/my/'" church/script.js
+          grep -Fq 'data-ekodi-header-actions' church/my/index.html
+          grep -Fq 'EKODI CHURCH · MY PAGE' church/my/index.html
+          if grep -Fq 'https://ekodi.kr/my/' church/my/index.html || grep -Eq '내 EKODI|MY EKODI|다른 EKODI 활동' church/my/index.html; then
+            echo 'Church member home must not hand off to My EKODI.'
+            exit 1
+          fi
+          if grep -Fq 'https://ekodi.kr/ekodichurch/my' church/index.html || grep -Fq 'https://ekodi.kr/ekodichurch/my' church/script.js; then
+            echo 'Church header member navigation must use a site-local path.'
+            exit 1
+          fi
+          grep -Fq 'clearAuthReturnFragment' church/my/app.js
+          grep -Fq '/ekodichurch/my/giving/' church/my/index.html
+          grep -Fq 'MY GIVING' church/my/giving/index.html
+          grep -Fq 'church-member-giving-api' church/my/giving/app.js
+          grep -Fq '무기명 헌금과 다른 교인의 내역은 개인 화면에 표시되지 않습니다.' church/my/giving/index.html
+          grep -Fq '/ekodichurch/my/attendance/' church/my/index.html
+          grep -Fq 'MY ATTENDANCE' church/my/attendance/index.html
+          grep -Fq '개인별 출결현황' church/my/attendance/index.html
+          grep -Fq 'church-member-attendance-api' church/my/attendance/app.js
+          grep -Fq '기록되지 않은 예배는 자동으로 결석 처리하지 않습니다.' church/my/attendance/index.html
+          grep -Fq '현재 연속출석' church/my/attendance/index.html
+          grep -Fq '월별 출결 흐름' church/my/attendance/index.html
+          grep -Fq 'current_streak' church/my/attendance/app.js
+          grep -Fq '<progress class="month-meter"' church/my/attendance/app.js
+          if grep -Fq '운영자 기능은 별도 관리자 화면에서 처리합니다.' church/my/index.html; then echo 'Member home must not expose internal operator guidance.'; exit 1; fi
+          grep -Fq 'https://ekodi.kr/privacy' church/index.html
+          grep -Fq 'https://ekodi.kr/terms' church/index.html
+          grep -Fq 'data-ekodi-character-identity="founder-pastor"' church/index.html
+          if grep -Fq 'data-ekodi-operating-space-label' church/index.html || grep -Fq '>운영공간<' church/index.html; then
+            echo 'Public Church source must not expose EKODI internal operating-space wording.'
+            exit 1
+          fi
+          grep -Fq "id:'founder-pastor'" church/church-character-identity.js
+          grep -Fq 'subjectAuthorized:true' church/church-character-identity.js
+          if grep -Eiq 'portraitUrl|face_embedding|biometric|data:image' church/church-character-identity.js; then
+            echo 'Church identity bridge must not carry portrait or biometric payload.'
+            exit 1
+          fi
+          (cd church && npm test)
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          class Audit(HTMLParser):
+              def __init__(self):
+                  super().__init__(); self.ids=[]; self.anchors=[]
+              def handle_starttag(self, tag, attrs):
+                  attrs=dict(attrs)
+                  if 'id' in attrs:self.ids.append(attrs['id'])
+                  href=attrs.get('href','')
+                  if href.startswith('#') and len(href)>1:self.anchors.append(href[1:])
+          source=Path('church/index.html').read_text(encoding='utf-8')
+          parser=Audit(); parser.feed(source)
+          duplicates=sorted({x for x in parser.ids if parser.ids.count(x)>1})
+          missing=sorted(set(parser.anchors)-set(parser.ids))
+          if duplicates: raise SystemExit(f'duplicate ids: {duplicates}')
+          if missing: raise SystemExit(f'missing anchor targets: {missing}')
+          print(f'anchor audit ok: {len(set(parser.anchors))} internal targets')
+          PY
+
+      - name: Prepare static Pages payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/ekodi-church-pages /tmp/ekodi-church-functions
+          mkdir -p /tmp/ekodi-church-pages
+          rsync -a --exclude='.git' --exclude='.github' church/ /tmp/ekodi-church-pages/
+          printf '{"contract":"ekodi.church-release.v1","sourceRepository":"topmaster-joseph/ekodi-church","sourceSha":"%s"}\n' "$CHURCH_SOURCE_SHA" > /tmp/ekodi-church-pages/church-release.json
+          cd /tmp/ekodi-church-pages
+          if [[ -d functions ]] && find functions -type f -print -quit | grep -q .; then
+            npx --yes wrangler@${WRANGLER_VERSION} pages functions build functions --outdir=/tmp/ekodi-church-functions
+            test -s /tmp/ekodi-church-functions/index.js
+          fi
+
+      - name: Deploy Church to Cloudflare Pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/ekodi-church-pages
+          npx --yes wrangler@${WRANGLER_VERSION} pages deploy . --project-name ekodi-church --branch main --commit-dirty=true
+
+      - name: Verify production life hub assets and exact release
+        shell: bash
+        run: |
+          set -euo pipefail
+          release="$CHURCH_SOURCE_SHA"
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/?release=${release}" || true)
+            member=$(curl -L -sS -o /tmp/church-my.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/my/?release=${release}" || true)
+            giving_member=$(curl -L -sS -o /tmp/church-my-giving.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/my/giving/?release=${release}" || true)
+            giving_member_js=$(curl -L -sS -o /tmp/church-my-giving.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/my/giving/app.js?release=${release}" || true)
+            attendance_member=$(curl -L -sS -o /tmp/church-my-attendance.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/my/attendance/?release=${release}" || true)
+            attendance_member_js=$(curl -L -sS -o /tmp/church-my-attendance.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/my/attendance/app.js?release=${release}" || true)
+            life=$(curl -L -sS -o /tmp/life.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-life-hub.js?release=${release}" || true)
+            life_i18n=$(curl -L -sS -o /tmp/life-i18n.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-life-hub-i18n.js?release=${release}" || true)
+            life_css=$(curl -L -sS -o /tmp/life.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-life-hub.css?release=${release}" || true)
+            online_status=$(curl -L -sS -o /tmp/church-online-status.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-online-status.js?release=${release}" || true)
+            live_css=$(curl -L -sS -o /tmp/church-live-entry.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-live-entry.css?release=${release}" || true)
+            live_js=$(curl -L -sS -o /tmp/church-live.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/live/live.js?release=${release}" || true)
+            live_intent=$(curl -L -sS -o /tmp/church-live-host-intent.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/live/host-intent.js?release=${release}" || true)
+            marker=$(curl -L -sS -o /tmp/church-release.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-release.json?release=${release}" || true)
+            if [[ "$root" == 200 && "$member" == 200 && "$giving_member" == 200 && "$giving_member_js" == 200 && "$attendance_member" == 200 && "$attendance_member_js" == 200 && "$life" == 200 && "$life_i18n" == 200 && "$life_css" == 200 && "$online_status" == 200 && "$live_css" == 200 && "$live_js" == 200 && "$live_intent" == 200 && "$marker" == 200 ]] \
+              && grep -Fq 'data-ekodi-life-hub' /tmp/church.html \
+              && ! grep -Fq 'data-ekodi-operating-space-label' /tmp/church.html \
+              && ! grep -Fq '운영공간' /tmp/church.html \
+              && ! grep -Fq '<em class="operating-space-label"' /tmp/church.html \
+              && grep -Fq 'EKODI CHURCH · MY PAGE' /tmp/church-my.html \
+              && grep -Fq 'data-ekodi-header-actions' /tmp/church-my.html \
+              && ! grep -Fq 'https://ekodi.kr/my/' /tmp/church-my.html \
+              && ! grep -Eq '내 EKODI|MY EKODI|다른 EKODI 활동' /tmp/church-my.html \
+              && grep -Fq 'MY GIVING' /tmp/church-my-giving.html \
+              && grep -Fq 'church-member-giving-api' /tmp/church-my-giving.js \
+              && grep -Fq 'MY ATTENDANCE' /tmp/church-my-attendance.html \
+              && grep -Fq '개인별 출결현황' /tmp/church-my-attendance.html \
+              && grep -Fq 'church-member-attendance-api' /tmp/church-my-attendance.js \
+              && grep -Fq '현재 연속출석' /tmp/church-my-attendance.html \
+              && grep -Fq '월별 출결 흐름' /tmp/church-my-attendance.html \
+              && grep -Fq 'current_streak' /tmp/church-my-attendance.js \
+              && ! grep -Fq '운영자 기능은 별도 관리자 화면에서 처리합니다.' /tmp/church-my.html \
+              && grep -Fq '에코디선교회' /tmp/church.html \
+              && grep -Fq 'church-i18n-extended.js' /tmp/church.html \
+              && grep -Fq 'localStorage' /tmp/life.js \
+              && grep -Fq '__EKODI_CHURCH_LIFE_HUB_I18N__' /tmp/life-i18n.js \
+              && grep -Fq 'api/realtime/live?tenant=ekodichurch' /tmp/church-online-status.js \
+              && grep -Fq 'AbortController' /tmp/church-online-status.js \
+              && grep -Fq "dataset.liveStatus='stale'" /tmp/church-online-status.js \
+              && grep -Fq 'nav-online[data-live="true"]' /tmp/church-live-entry.css \
+              && grep -Fq "AUTH_ATTEMPT_KEY='ekodi-live-auth-attempt'" /tmp/church-live.js \
+              && grep -Fq 'refreshAuthToken' /tmp/church-live.js \
+              && grep -Fq "searchParams.set('mode','studio')" /tmp/church-live-host-intent.js \
+              && ! grep -Fq 'location.replace(next.href)' /tmp/church-live-host-intent.js \
+              && jq -e --arg sha "$CHURCH_SOURCE_SHA" '.contract == "ekodi.church-release.v1" and .sourceSha == $sha' /tmp/church-release.json >/dev/null; then
+              echo 'Church production life hub assets and release SHA verified.'
+              break
+            fi
+            if [[ "$attempt" == 18 ]]; then
+              echo "Production did not converge: root=$root member=$member giving_member=$giving_member giving_member_js=$giving_member_js attendance_member=$attendance_member attendance_member_js=$attendance_member_js life=$life life_i18n=$life_i18n life_css=$life_css online_status=$online_status live_css=$live_css live_js=$live_js live_intent=$live_intent marker=$marker"
+              exit 1
+            fi
+            sleep 5
+          done
+
+      - name: Verify Church live-state API contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 5); do
+            code=$(curl -L -sS -o /tmp/church-live-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/realtime/live?tenant=ekodichurch' || true)
+            if [[ "$code" == 200 ]] && jq -e 'has("live") and (.live|type=="boolean") and ((.room // null) == null or (.room|type=="object"))' /tmp/church-live-api.json >/dev/null; then
+              echo 'Church live-state API contract verified.'
+              break
+            fi
+            if [[ "$attempt" == 5 ]]; then
+              echo "Church live-state API verification failed: HTTP $code"
+              cat /tmp/church-live-api.json || true
+              exit 1
+            fi
+            sleep 3
+          done
+
+      - name: Verify rendered nine-language church life hub
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$CHROME_BIN"
+          npm install --no-save --no-package-lock puppeteer-core@24.16.0
+          CHROME_BIN="$CHROME_BIN" node --input-type=module <<'NODE'
+          import puppeteer from 'puppeteer-core';
+          import assert from 'node:assert/strict';
+          const browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN,headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+          const locales=['ko-KR','en','zh-CN','ja','my','kac','vi','mn','id'];
+          const extended=new Set(['my','kac','vi','mn','id']);
+          const release=process.env.CHURCH_SOURCE_SHA;
+          try{
+            const page=await browser.newPage();
+            await page.setViewport({width:1440,height:1100});
+            for(const locale of locales){
+              await page.goto(`https://ekodi.kr/ekodichurch/?lang=${encodeURIComponent(locale)}&release=${release}`,{waitUntil:'domcontentloaded',timeout:30000});
+              await page.waitForFunction(expected=>document.documentElement.lang===expected&&window.__EKODI_CHURCH_LIFE_HUB_I18N__===true&&document.querySelector('[data-ekodi-life-hub]')&&document.querySelector('#life-reflection-form'),{timeout:25000},locale);
+              if(extended.has(locale)) await page.waitForFunction(expected=>window.EKODIChurchExtendedI18n?.getLocale?.()===expected,{timeout:20000},locale);
+              if(locale!=='ko-KR'){
+                await page.waitForFunction(expected=>{
+                  if(document.documentElement.lang!==expected)return false;
+                  const clone=document.body.cloneNode(true);
+                  clone.querySelectorAll('[data-ekodi-language-control]').forEach(node=>node.remove());
+                  return !/[가-힣]/.test(clone.innerText);
+                },{timeout:20000,polling:'raf'},locale);
+                await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+              }
+              const snapshot=await page.evaluate(()=>{
+                const clone=document.body.cloneNode(true);
+                clone.querySelectorAll('[data-ekodi-language-control]').forEach(node=>node.remove());
+                return {
+                  lang:document.documentElement.lang,
+                  hero:document.querySelector('.hero h1')?.innerText||'',
+                  life:document.querySelector('[data-ekodi-life-hub]')?.innerText||'',
+                  body:clone.innerText,
+                  options:[...document.querySelectorAll('[data-ekodi-language-control] select option')].map(o=>o.value)
+                };
+              });
+              assert.equal(snapshot.lang,locale);
+              assert.deepEqual(snapshot.options,['ko-KR','en','zh-CN','ja','my','kac','vi','mn','id']);
+              assert.ok(snapshot.life.length>200,`${locale} life hub is unexpectedly empty`);
+              if(locale==='ko-KR'){
+                assert.match(snapshot.hero,/부르심에서 교제로/);
+                assert.match(snapshot.life,/말씀이 일상이 되고/);
+              }else{
+                const match=snapshot.body.match(/.{0,25}[가-힣].{0,25}/);
+                if(match) console.error(`${locale} residual Hangul: ${match[0]}`);
+                assert.equal(Boolean(match),false,`${locale} still contains visible Korean outside language control`);
+              }
+            }
+            await page.goto(`https://ekodi.kr/ekodichurch/my/?lang=ko-KR&release=${release}`,{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForSelector('[data-ekodi-language-control]',{timeout:20000});
+            const memberHeader=await page.evaluate(()=>({
+              globalLinks:[...document.querySelectorAll('header a[href]')].map(a=>a.href).filter(href=>href==='https://ekodi.kr/'||href.startsWith('https://ekodi.kr/my')),
+              myPanel:Boolean([...document.querySelectorAll('main *')].some(node=>/다른 활동도 한 번에 이어보세요|내 EKODI 열기/.test(node.textContent||''))),
+              language:Boolean(document.querySelector('header [data-ekodi-language-control]'))
+            }));
+            assert.equal(memberHeader.language,true,'member header must show the shared rounded language selector');
+            assert.deepEqual(memberHeader.globalLinks,[],'member header must not expose EKODI root/My EKODI links');
+            assert.equal(memberHeader.myPanel,false,'member page must not render the My EKODI handoff panel');
+            console.log('Rendered life hub and local-only member header verified.');
+          }finally{
+            await browser.close();
+          }
+          NODE
+
+      - name: Verify linked EKODI services
+        shell: bash
+        run: |
+          set -euo pipefail
+          for target in 'https://ekodi.kr/ekodichurch/' 'https://ekodi.kr/ekodichurch/my/' 'https://ekodi.kr/community/' 'https://ekodi.kr/privacy' 'https://ekodi.kr/terms'; do
+            code=$(curl -L -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 20 "$target" || true)
+            case "$code" in 2*|3*) echo "link ok: $code $target" ;; *) echo "link failed: $code $target"; exit 1 ;; esac
+          done

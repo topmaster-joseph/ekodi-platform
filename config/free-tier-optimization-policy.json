@@ -1,0 +1,277 @@
+{
+  "schemaVersion": 3,
+  "policyId": "EKODI-FREE-TIER-001",
+  "status": "enforced",
+  "effectiveDate": "2026-09-28",
+  "referenceDate": "2026-09-28",
+  "principle": "paid-core-free-first-with-measured-overage-protection",
+  "automaticPaidUpgrade": false,
+  "requireMeasuredTelemetryBeforeUsagePercentClaims": true,
+  "thresholds": {
+    "warning": 70,
+    "conserve": 85,
+    "protect": 90,
+    "survival": 95,
+    "circuitBreaker": 100
+  },
+  "states": [
+    {
+      "id": "normal",
+      "minPercent": 0,
+      "maxPercentExclusive": 70
+    },
+    {
+      "id": "warning",
+      "minPercent": 70,
+      "maxPercentExclusive": 85
+    },
+    {
+      "id": "conserve",
+      "minPercent": 85,
+      "maxPercentExclusive": 90
+    },
+    {
+      "id": "protect",
+      "minPercent": 90,
+      "maxPercentExclusive": 95
+    },
+    {
+      "id": "survival",
+      "minPercent": 95,
+      "maxPercentExclusive": 100
+    },
+    {
+      "id": "circuit_breaker",
+      "minPercent": 100
+    }
+  ],
+  "providerRoles": {
+    "cloudflare": {
+      "role": "edge-delivery-and-bounded-compute",
+      "prefer": [
+        "static-assets-before-worker",
+        "cdn-cache",
+        "r2-for-large-noncanonical-objects",
+        "kv-for-low-write-config-and-feature-flags",
+        "d1-for-derived-edge-read-models",
+        "queues-for-bounded-async-work",
+        "turnstile-for-public-abuse-protection",
+        "workers-ai-for-lightweight-zero-cost-eligible-ai"
+      ],
+      "forbid": [
+        "worker-invocation-for-immutable-static-assets-without-explicit-security-need",
+        "d1-as-authoritative-replacement-for-supabase-when-supabase-is-source-of-truth",
+        "kv-as-high-frequency-heartbeat-or-log-ledger"
+      ]
+    },
+    "supabase": {
+      "role": "authoritative-relational-data-auth-and-rls",
+      "prefer": [
+        "postgres-source-of-truth",
+        "auth",
+        "rls",
+        "realtime-when-user-value-requires-it",
+        "direct-rls-protected-crud-before-edge-functions"
+      ],
+      "forbid": [
+        "large-binary-storage-when-r2-is-suitable",
+        "edge-function-hop-for-simple-rls-protected-crud",
+        "tenant-per-project-proliferation-without-isolation-need"
+      ]
+    },
+    "github": {
+      "role": "source-control-review-ci-and-release-orchestration",
+      "prefer": [
+        "public-repository-standard-hosted-runners-when-security-policy-allows",
+        "concurrency-cancel-in-progress",
+        "short-lived-artifacts",
+        "dependency-cache",
+        "isolated-self-hosted-runner-only-when-it-improves-capability-or-control"
+      ],
+      "forbid": [
+        "duplicate-ci-and-e2e-runs-for-the-same-release",
+        "long-lived-large-artifacts-when-r2-or-canonical-storage-is-more-appropriate",
+        "self-hosted-runner-on-privileged-production-host"
+      ]
+    },
+    "aws": {
+      "role": "optional-serverless-burst-backup-and-amazon-commerce-support",
+      "prefer": [
+        "serverless-and-event-driven-before-always-on-compute",
+        "lambda-for-bounded-amazon-connector-jobs-when-free-or-credit-covered",
+        "s3-or-glacier-only-when-lifecycle-and-egress-economics-beat-existing-storage",
+        "dynamodb-only-for-small-provider-local-state-not-ekodi-source-of-truth",
+        "sqs-and-sns-for-bounded-amazon-workflows-when-zero-cost-eligible",
+        "cloudfront-only-when-it-improves-cost-or-amazon-specific-delivery",
+        "aws-credits-before-paid-commitment"
+      ],
+      "forbid": [
+        "always-on-ec2-or-rds-as-ekodi-default-runtime",
+        "nat-gateway-without-explicit-cost-approval",
+        "unbounded-cross-region-data-transfer",
+        "duplicating-supabase-source-of-truth-into-dynamodb",
+        "automatic-paid-plan-or-reserved-commitment",
+        "paid-bedrock-fba-or-seller-plan-without-owner-approved-budget"
+      ]
+    }
+  },
+  "sourceOfTruth": {
+    "relationalBusinessData": "supabase-postgres",
+    "edgeDerivedState": "cloudflare-d1-or-kv-plan-aware",
+    "largePublicOrOperationalObjects": "cloudflare-r2",
+    "officialDurableOrganizationalArtifacts": "google-workspace-shared-drive-ekodi",
+    "sourceAndReleaseHistory": "github"
+  },
+  "protection": {
+    "warningActions": [
+      "notify-admin",
+      "increase-cache-efficiency",
+      "reduce-nonessential-probes"
+    ],
+    "conserveActions": [
+      "batch-background-work",
+      "suppress-duplicate-ci-e2e",
+      "prefer-zero-cost-provider"
+    ],
+    "protectActions": [
+      "block-nonessential-probes",
+      "stop-nonessential-worker-work",
+      "prefer-static-and-cache-paths",
+      "defer-low-priority-ai"
+    ],
+    "survivalActions": [
+      "preserve-auth-security-orders-and-admin-control",
+      "defer-nonessential-background-jobs"
+    ],
+    "circuitBreakerActions": [
+      "stop-retry-on-quota-errors",
+      "open-provider-circuit",
+      "use-safe-registered-fallback",
+      "notify-admin"
+    ],
+    "retryStopSignals": [
+      "1027",
+      "429",
+      "quota_exhausted",
+      "monthly_limit_reached",
+      "daily_limit_reached"
+    ]
+  },
+  "release": {
+    "requiredLifecycle": [
+      "Sandbox",
+      "CI",
+      "Staging",
+      "Guarded Release",
+      "Production Verification"
+    ],
+    "securityBoundaryMayNotBeWeakenedForCost": true,
+    "productionAccountMustNotBeConfusedWithDevelopment": true
+  },
+  "resourceGovernor": {
+    "version": 2,
+    "mode": "measured-telemetry-only",
+    "staleAfterHours": 26,
+    "capacityAndConsumptionSeparated": true,
+    "capacityRules": {
+      "supabase.active_projects": {
+        "fullAt": 2,
+        "action": "block-new-project-only",
+        "existingProjectsRemainAvailable": true
+      }
+    },
+    "providerTelemetry": {
+      "cloudflare": "Cloudflare Workers Analytics plus D1 Analytics; Billing API plan detection when readable, otherwise Free-safe limits",
+      "supabase": "Management API or direct project measurement; unknown values stay unknown",
+      "github": "repository/action metadata; public standard hosted runner minutes are free, storage remains plan-aware",
+      "aws": "AWS account billing/usage telemetry when explicitly connected; unknown limits and costs stay unknown and paid execution remains blocked by the Amazon cost gate"
+    },
+    "verifiedFreeLimitsReferenceDate": "2026-09-25",
+    "projectCreationPolicy": {
+      "supabase": "reuse-existing-projects-before-new-project",
+      "automaticPaidProjectCreation": false
+    },
+    "githubArtifactPolicy": {
+      "largeVisualEvidenceRetentionDays": 7,
+      "adminProductionUiEvidenceMaxDays": 7,
+      "durableReleaseEvidenceMayRemainLonger": true,
+      "automaticArtifactDeletion": false,
+      "usagePercentRequiresKnownPlanLimit": true
+    }
+  },
+  "deploymentContinuity": {
+    "policyId": "EKODI-DEPLOYMENT-FOUR-LAYER-001",
+    "priority": [
+      "runtime",
+      "guarded-deploy",
+      "cloud-control",
+      "owner"
+    ],
+    "guardedDeployTransport": "github-actions-wrangler-direct",
+    "cloudflareWorkersBuildsRequiredForGuardedDeploy": false,
+    "cloudControlIsSecondDeployLane": false,
+    "automaticPaidUpgrade": false,
+    "ownerApprovalRequiredFor": [
+      "provider-plan-change",
+      "paid-cost-commitment",
+      "limit-increase-request",
+      "account-or-billing-change",
+      "root-security-change",
+      "amazon-seller-paid-plan",
+      "amazon-fba-activation",
+      "aws-paid-service-activation",
+      "aws-commitment-or-reservation"
+    ]
+  },
+  "paidCore": {
+    "mode": "owner-activated-minimum-paid-core",
+    "cloudflareWorkersPaid": {
+      "minimumMonthlyUsd": 5,
+      "ownerActivationRequired": true,
+      "automaticPurchase": false,
+      "activationDetection": "cloudflare-billing-api-when-readable-else-free-safe",
+      "includedCapacity": {
+        "workersRequestsPerMonth": 10000000,
+        "d1RowsReadPerMonth": 25000000000,
+        "d1RowsWrittenPerMonth": 50000000,
+        "d1StorageBytes": 5368709120
+      },
+      "policy": "use-paid-capacity-for-continuity-but-continue-static-cache-r2-queue-and-supabase-optimization"
+    },
+    "nonessentialOverageGuard": {
+      "warningPercent": 70,
+      "protectPercent": 90,
+      "blockNonessentialAtOrAboveProtect": true,
+      "preserveAuthSecurityOrdersFinanceAndAdminControl": true
+    }
+  },
+  "cloudflareAccountPool": {
+    "policyId": "EKODI-CF-ACCOUNT-POOL-001",
+    "primary": "workers-paid-production-critical",
+    "auxiliary": "free-preferred-bounded-noncritical",
+    "productionCriticalFailoverToAuxiliary": false,
+    "appliesRecursivelyToAllServices": true
+  },
+  "adaptiveInfrastructure": {
+    "policyId": "EKODI-ADAPTIVE-INFRA-001",
+    "mode": "traffic-and-burn-rate-controlled",
+    "usageThresholds": {
+      "normalBelow": 60,
+      "saveAt": 60,
+      "protectAt": 75,
+      "surviveAt": 90
+    },
+    "burnRateThresholds": {
+      "normalBelow": 0.7,
+      "saveAt": 0.7,
+      "protectAt": 1,
+      "surviveAt": 1.5,
+      "minUsagePercentForEscalation": 2
+    },
+    "preserveS0Live": true,
+    "staleS0Fallback": false,
+    "criticalProductionFailoverToAuxiliary": false,
+    "appliesRecursivelyToAllServices": true,
+    "automaticPaidUpgrade": false
+  }
+}

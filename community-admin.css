@@ -1,0 +1,14 @@
+.community-admin{display:block}
+.community-admin[hidden],.community-admin.hidden-panel{display:none}
+.community-admin-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+.community-admin-head h2{margin:4px 0 8px}
+.community-admin-head p{margin:0}
+.community-admin-kicker{font-size:11px;font-weight:800;letter-spacing:.12em;opacity:.68}
+.community-admin-link{display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border:1px solid currentColor;border-radius:10px;text-decoration:none;white-space:nowrap}
+.community-admin-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+.community-admin-grid article{display:grid;gap:6px;padding:16px;border:1px solid rgba(127,127,127,.24);border-radius:14px}
+.community-admin-grid small{font-size:10px;font-weight:800;letter-spacing:.08em;opacity:.62}
+.community-admin-grid strong{font-size:15px}
+.community-admin-grid span,.community-admin-note{font-size:12px;line-height:1.55;opacity:.76}
+.community-admin-note{margin-top:14px}
+@media(max-width:860px){.community-admin-head{flex-direction:column}.community-admin-grid{grid-template-columns:1fr}}

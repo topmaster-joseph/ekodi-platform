@@ -1,0 +1,42 @@
+name: Validate Device Wake Admin
+
+on:
+  pull_request:
+    paths: &wake_admin_paths
+      - '.github/workflows/deploy-device-wake-admin.yml'
+      - 'device-wake-admin.js'
+      - 'device-browser-diagnostics.js'
+      - 'device-browser-diagnostics.css'
+  push:
+    branches: [main]
+    paths: *wake_admin_paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate isolated Wake Admin bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check device-browser-diagnostics.js
+          node --check device-wake-admin.js
+          npm run build
+          test -f dist/device-browser-diagnostics.js
+          grep -Fq '현재 관리자 브라우저 진단' dist/device-browser-diagnostics.js
+          grep -Fq '서버로 업로드하지 않습니다' dist/device-browser-diagnostics.js
+          grep -Fq '원격 전원 · 작업 자동복귀' dist/device-browser-diagnostics.js
+          grep -Fq '/api/control/wake' dist/device-browser-diagnostics.js
+          grep -Fq 'system.autoExecutionEligible === true' dist/device-browser-diagnostics.js
+          grep -Fq 'system.isPortable === false' dist/device-browser-diagnostics.js
+      - name: Verify single production owner policy
+        run: node scripts/validate-deployment-guardrails.mjs

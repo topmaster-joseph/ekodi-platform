@@ -1,0 +1,19 @@
+{
+  "version":"1.0.0",
+  "policyId":"EKODI-CONCURRENT-TRAFFIC-10K-001",
+  "status":"enforced",
+  "appliesRecursivelyToAllServices":true,
+  "objective":{"normalConcurrentUsers":100,"busyConcurrentUsers":1000,"surgeConcurrentUsers":10000,"stressTestConcurrentUsers":50000,"publicDatabaseBypassTargetPercent":95},
+  "signals":["concurrent_sessions","requests_per_second","p95_latency_ms","error_rate_percent","d1_query_latency_ms","queue_backlog","cache_hit_percent","provider_429_1027","ai_inflight"],
+  "tiers":[
+    {"id":"L1","maxConcurrentUsers":100,"cacheProfile":"standard","queueMode":"normal","backgroundJobs":"normal","aiMode":"normal"},
+    {"id":"L2","maxConcurrentUsers":1000,"cacheProfile":"enhanced","queueMode":"absorb-bursts","backgroundJobs":"defer-low-priority","aiMode":"quota-governed"},
+    {"id":"L3","maxConcurrentUsers":10000,"cacheProfile":"aggressive-safe","queueMode":"backpressure","backgroundJobs":"critical-only","aiMode":"strict-queue-and-quota"},
+    {"id":"PROTECT","maxConcurrentUsers":null,"cacheProfile":"maximum-safe","queueMode":"shed-noncritical","backgroundJobs":"paused","aiMode":"essential-only"}
+  ],
+  "promotion":{"requiresAny":["concurrency_threshold","rps_pressure","p95_latency_pressure","queue_pressure","provider_quota_pressure"],"doNotUseConcurrencyAlone":true},
+  "recovery":{"hysteresisRequired":true,"stableMinutes":10,"stepDownOneTierAtATime":true},
+  "dataPlane":{"publicReadPath":["cloudflare_cache","kv_or_snapshot","worker_if_dynamic","database_if_authoritative"],"singleD1HotspotForbidden":true,"workspaceShardable":true},
+  "media":{"canonicalOriginal":"google_drive","databaseStoresBytes":false,"databaseStores":["provider_file_id","drive_id","mime_type","bytes","checksum","visibility","delivery_url","thumbnail_url","service_id","workspace_id"],"publicDelivery":["cloudflare_cache","r2_when_hot_or_public","youtube_or_streaming_provider_for_large_video"],"driveHotPathApiCallsForbidden":true},
+  "failurePolicy":{"quotaStatuses":[429,1027],"circuitBreaker":true,"failClosedForProtectedData":true,"preserve":["public_read","auth","forms","orders","payments","admin_control"],"shedFirst":["crawler","analytics_detail","background_ai","noncritical_probes"]}
+}

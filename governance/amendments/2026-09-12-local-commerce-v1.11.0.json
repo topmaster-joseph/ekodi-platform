@@ -1,0 +1,17 @@
+{
+  "id": "2026-09-12-local-commerce-v1.11.0",
+  "constitutionVersion": "1.11.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-12",
+  "changeClass": "C2",
+  "taskId": "local-commerce-voucher-20260911",
+  "summary": "Register EKODI Local Commerce as a path-scoped responsible independent service for multi-tenant promotional vouchers, coupons, points, merchant redemption and human-reviewed settlement records.",
+  "approvalBasis": "The platform owner explicitly instructed EKODI, after reviewing the independent merchant-association, autonomous-district, institution and organization model, to collaborate through EKODI governance and complete the actual system through guarded deployment.",
+  "constitutionalInterpretation": "This amendment adds one evidence-backed service boundary without changing Generation 10, workspace identity authority, provider independence, human sovereignty, or the prohibition on autonomous high-impact financial execution.",
+  "authorityImpact": "None. Issuers operate only within their immutable workspace authority; EKODI AI receives no payment, settlement, or cross-tenant authority.",
+  "financialSafety": "MVP supports promotional voucher/coupon/point value only. Stored-value cash custody, autonomous money transfer and unlicensed prepaid-money execution remain disabled.",
+  "migrationPolicy": "Additive D1 local_commerce_* schema and path-scoped Worker rollout; existing services and workspace routes remain intact.",
+  "rollbackPlan": "Revert the Local Commerce Worker, Control API route, service registries and boundary records through the guarded release lane. The additive local_commerce_* tables may remain dormant without affecting existing services or moving money.",
+  "generationImpact": "None. Generation 10 Self-Architecture Optimization remains the current baseline and no Generation 11 promotion is implied."
+}

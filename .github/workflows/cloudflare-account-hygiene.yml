@@ -1,0 +1,111 @@
+name: Cloudflare Account Hygiene
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cloudflare-account-hygiene.yml'
+      - '.github/workflows/cloudflare-boundary-audit.yml'
+      - 'docs/operations/cloudflare-two-account-boundary.md'
+  schedule:
+    - cron: '17 18 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  development:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    environment: development
+    env:
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+    steps:
+      - name: Inventory Development Workers and D1
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          curl -fsS "${auth[@]}" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts" -o /tmp/workers.json
+          curl -fsS "${auth[@]}" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database" -o /tmp/d1.json
+          python - <<'PY'
+          import json, os
+          workers = json.load(open('/tmp/workers.json', encoding='utf-8'))
+          d1 = json.load(open('/tmp/d1.json', encoding='utf-8'))
+          if not workers.get('success'):
+              raise SystemExit(f"Cloudflare Workers API failed: {workers.get('errors')}")
+          if not d1.get('success'):
+              raise SystemExit(f"Cloudflare D1 API failed: {d1.get('errors')}")
+          worker_names = sorted(item['id'] for item in workers.get('result', []))
+          d1_names = sorted(item.get('name','') for item in d1.get('result', []) if item.get('name'))
+          staging_workers = [n for n in worker_names if n.endswith('-staging') or '-staging-' in n]
+          staging_d1 = [n for n in d1_names if 'staging' in n.lower()]
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as f:
+              f.write('## EKODI Development\n')
+              f.write(f'- Workers: **{len(worker_names)}**\n')
+              f.write(f'- Staging Workers: **{len(staging_workers)}**\n')
+              f.write(f'- D1 databases: **{len(d1_names)}**\n')
+              f.write(f'- Staging D1: **{len(staging_d1)}**\n')
+              if staging_workers:
+                  f.write('- Staging Worker inventory: `' + '`, `'.join(staging_workers) + '`\n')
+              if staging_d1:
+                  f.write('- Staging D1 inventory: `' + '`, `'.join(staging_d1) + '`\n')
+          print('Development Workers:', ', '.join(worker_names) or '(none)')
+          print('Development D1:', ', '.join(d1_names) or '(none)')
+          PY
+
+  production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Enforce zero Production staging Workers and D1
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$CLOUDFLARE_API_TOKEN"
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          curl -fsS "${auth[@]}" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts" -o /tmp/workers.json
+          curl -fsS "${auth[@]}" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database" -o /tmp/d1.json
+          python - <<'PY'
+          import json, os, sys
+          workers = json.load(open('/tmp/workers.json', encoding='utf-8'))
+          d1 = json.load(open('/tmp/d1.json', encoding='utf-8'))
+          if not workers.get('success'):
+              raise SystemExit(f"Cloudflare Workers API failed: {workers.get('errors')}")
+          if not d1.get('success'):
+              raise SystemExit(f"Cloudflare D1 API failed: {d1.get('errors')}")
+          worker_names = sorted(item['id'] for item in workers.get('result', []))
+          d1_names = sorted(item.get('name','') for item in d1.get('result', []) if item.get('name'))
+          worker_residue = [n for n in worker_names if n.endswith('-staging') or '-staging-' in n]
+          d1_residue = [n for n in d1_names if 'staging' in n.lower()]
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as f:
+              f.write('## EKODI Production\n')
+              f.write(f'- Workers: **{len(worker_names)}**\n')
+              f.write(f'- Staging Worker residue: **{len(worker_residue)}**\n')
+              f.write(f'- D1 databases: **{len(d1_names)}**\n')
+              f.write(f'- Staging D1 residue: **{len(d1_residue)}**\n')
+              if worker_residue:
+                  f.write('- ❌ Production staging Workers: `' + '`, `'.join(worker_residue) + '`\n')
+              if d1_residue:
+                  f.write('- ❌ Production staging D1: `' + '`, `'.join(d1_residue) + '`\n')
+              if not worker_residue and not d1_residue:
+                  f.write('- ✅ Production is staging-free for Workers and D1.\n')
+          print('Production Workers:', ', '.join(worker_names) or '(none)')
+          print('Production D1:', ', '.join(d1_names) or '(none)')
+          if worker_residue or d1_residue:
+              if worker_residue:
+                  print('::error::Production contains staging-named Workers: ' + ', '.join(worker_residue))
+              if d1_residue:
+                  print('::error::Production contains staging-named D1 databases: ' + ', '.join(d1_residue))
+              sys.exit(1)
+          print('PRODUCTION_STAGING_GUARD=PASS')
+          PY

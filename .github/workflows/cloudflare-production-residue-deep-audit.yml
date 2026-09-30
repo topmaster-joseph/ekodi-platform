@@ -1,0 +1,143 @@
+name: Cloudflare Production Residue Deep Audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cloudflare-production-residue-deep-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: development
+    env:
+      PROD_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PROD_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      DEV_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      DEV_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Deep-audit remaining Production staging Workers
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$PROD_ACCOUNT_ID"
+          test -n "$PROD_TOKEN"
+          test -n "$DEV_TOKEN"
+          test "$PROD_ACCOUNT_ID" != "$DEV_ACCOUNT_ID"
+
+          api='https://api.cloudflare.com/client/v4'
+          prod_auth=(-H "Authorization: Bearer $PROD_TOKEN" -H 'Content-Type: application/json')
+          dev_auth=(-H "Authorization: Bearer $DEV_TOKEN" -H 'Content-Type: application/json')
+
+          curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts" -o /tmp/prod.json
+          curl -fsS "${dev_auth[@]}" "$api/accounts/$DEV_ACCOUNT_ID/workers/scripts" -o /tmp/dev.json
+          curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/domains" -o /tmp/domains.json
+          curl -fsS "${prod_auth[@]}" "$api/zones?account.id=$PROD_ACCOUNT_ID&per_page=50" -o /tmp/zones.json
+          jq -e '.success == true' /tmp/prod.json >/dev/null
+          jq -e '.success == true' /tmp/dev.json >/dev/null
+          jq -e '.success == true' /tmp/domains.json >/dev/null
+          jq -e '.success == true' /tmp/zones.json >/dev/null
+
+          jq -r '.result[]?.id | select(endswith("-staging") or contains("-staging-"))' /tmp/prod.json | sort -u > /tmp/candidates.txt
+          : > /tmp/routes.ndjson
+          while IFS=$'\t' read -r zid zname; do
+            [[ -n "$zid" ]] || continue
+            curl -fsS "${prod_auth[@]}" "$api/zones/$zid/workers/routes" -o /tmp/routes.json
+            jq -e '.success == true' /tmp/routes.json >/dev/null
+            jq -c --arg zone "$zname" '.result[]? | {zone:$zone,pattern:.pattern,script:.script}' /tmp/routes.json >> /tmp/routes.ndjson
+          done < <(jq -r '.result[]? | [.id,.name] | @tsv' /tmp/zones.json)
+
+          mkdir -p /tmp/prod-settings /tmp/dev-settings /tmp/prod-cron /tmp/dev-cron
+          while IFS= read -r s; do
+            [[ -n "$s" ]] || continue
+            curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts/$s/settings" -o "/tmp/prod-settings/$s.json"
+          done < <(jq -r '.result[]?.id' /tmp/prod.json)
+
+          while IFS= read -r s; do
+            [[ -n "$s" ]] || continue
+            curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts/$s/schedules" -o "/tmp/prod-cron/$s.json" || echo '{"success":false,"result":[]}' > "/tmp/prod-cron/$s.json"
+            if jq -e --arg s "$s" '.result[]? | select(.id==$s)' /tmp/dev.json >/dev/null; then
+              curl -fsS "${dev_auth[@]}" "$api/accounts/$DEV_ACCOUNT_ID/workers/scripts/$s/settings" -o "/tmp/dev-settings/$s.json"
+              curl -fsS "${dev_auth[@]}" "$api/accounts/$DEV_ACCOUNT_ID/workers/scripts/$s/schedules" -o "/tmp/dev-cron/$s.json" || echo '{"success":false,"result":[]}' > "/tmp/dev-cron/$s.json"
+            else
+              echo '{"success":false,"result":{}}' > "/tmp/dev-settings/$s.json"
+              echo '{"success":false,"result":[]}' > "/tmp/dev-cron/$s.json"
+            fi
+          done < /tmp/candidates.txt
+
+          python - <<'PY'
+          import glob, json, os, subprocess
+
+          prod=json.load(open('/tmp/prod.json'))
+          dev=json.load(open('/tmp/dev.json'))
+          domains=json.load(open('/tmp/domains.json')).get('result') or []
+          prod_names={x.get('id') for x in prod.get('result') or []}
+          dev_names={x.get('id') for x in dev.get('result') or []}
+          candidates=[x.strip() for x in open('/tmp/candidates.txt') if x.strip()]
+          routes=[]
+          for line in open('/tmp/routes.ndjson'):
+              if line.strip(): routes.append(json.loads(line))
+          all_settings=[]
+          for path in glob.glob('/tmp/prod-settings/*.json'):
+              data=json.load(open(path)); all_settings.append(data.get('result') or {})
+
+          def bind_sig(data):
+              result=data.get('result') or {}
+              out=[]
+              for b in result.get('bindings') or []:
+                  out.append((str(b.get('name') or ''), str(b.get('type') or ''), str(b.get('service') or b.get('service_name') or '')))
+              return sorted(out)
+          def crons(data):
+              if data.get('success') is not True: return None
+              vals=[]
+              for x in data.get('result') or []:
+                  vals.append(x.get('cron') if isinstance(x,dict) else str(x))
+              return sorted(vals)
+          def domain_script(d): return d.get('service') or d.get('script') or d.get('service_name')
+          def repo_refs(name):
+              p=subprocess.run(['git','grep','-l','-F',name,'--',':(exclude).github/workflows/cloudflare-production-residue-deep-audit.yml',':(exclude).github/workflows/cloudflare-production-residue-safe-cleanup.yml',':(exclude).github/workflows/cloudflare-staging-residue-audit.yml',':(exclude).github/workflows/cloudflare-current-residue-inventory.yml'],text=True,capture_output=True)
+              return [x for x in p.stdout.splitlines() if x.strip()]
+
+          print('DEEP_AUDIT_START')
+          rows=[]
+          for s in candidates:
+              base=s.replace('-staging','')
+              exact=s in dev_names
+              development=(base+'-development') in dev_names
+              prod_base=base in prod_names
+              ps=json.load(open(f'/tmp/prod-settings/{s}.json'))
+              ds=json.load(open(f'/tmp/dev-settings/{s}.json'))
+              pcron=crons(json.load(open(f'/tmp/prod-cron/{s}.json')))
+              dcron=crons(json.load(open(f'/tmp/dev-cron/{s}.json')))
+              domains_s=[d.get('hostname') for d in domains if domain_script(d)==s]
+              routes_s=[r for r in routes if r.get('script')==s]
+              inbound=[]
+              for owner in all_settings:
+                  for b in owner.get('bindings') or []:
+                      if b.get('type')=='service' and (b.get('service') or b.get('service_name'))==s:
+                          inbound.append(str(b.get('name') or '?'))
+              pb=bind_sig(ps); db=bind_sig(ds) if exact else []
+              refs=repo_refs(s)
+              row={
+                'script':s,'prod_base':prod_base,'dev_exact':exact,'dev_development':development,
+                'custom_domains':domains_s,'routes':routes_s,'inbound':inbound,
+                'prod_bindings':pb,'dev_bindings':db,'binding_schema_match':bool(exact and pb==db),
+                'prod_crons':pcron,'dev_crons':dcron,'cron_match':bool(exact and pcron is not None and pcron==dcron),
+                'repo_refs':refs,
+              }
+              rows.append(row)
+              print(json.dumps(row,ensure_ascii=False))
+          print('DEEP_AUDIT_END')
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write('## Remaining Production staging deep audit\n\n')
+              f.write(f'Remaining: **{len(rows)}**\n\n')
+              f.write('| Worker | Prod base | Dev exact | Domain | Inbound | Bind schema | Cron | Repo refs |\n|---|---:|---:|---|---|---:|---:|---|\n')
+              for r in rows:
+                  f.write(f"| `{r['script']}` | {r['prod_base']} | {r['dev_exact']} | {', '.join(r['custom_domains']) or '-'} | {', '.join(r['inbound']) or '-'} | {r['binding_schema_match']} | {r['cron_match']} | {len(r['repo_refs'])} |\n")
+          PY

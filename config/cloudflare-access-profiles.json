@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "status": "prepared-for-split-token",
+  "legacySecret": "CLOUDFLARE_API_TOKEN",
+  "profiles": [
+    {
+      "id": "runtime-deploy",
+      "secret": "CLOUDFLARE_DEPLOY_TOKEN",
+      "purpose": "Guarded Worker and Pages code/assets promotion only",
+      "allow": ["workers-scripts-write", "workers-versions-write", "pages-write"],
+      "deny": ["dns-write", "zone-settings-write", "pages-domain-delete", "api-token-management"],
+      "manualOnly": false
+    },
+    {
+      "id": "stateful-release",
+      "secret": "CLOUDFLARE_STATEFUL_TOKEN",
+      "purpose": "Control/Finance guarded D1 migration and Worker candidate promotion",
+      "allow": ["workers-scripts-write", "workers-versions-write", "d1-write", "d1-time-travel-read"],
+      "deny": ["dns-write", "zone-settings-write", "pages-domain-delete", "api-token-management"],
+      "manualOnly": false
+    },
+    {
+      "id": "topology",
+      "secret": "CLOUDFLARE_TOPOLOGY_TOKEN",
+      "purpose": "Explicit DNS, custom-domain and route topology changes",
+      "allow": ["dns-write", "workers-routes-write", "pages-domain-write"],
+      "deny": ["d1-write", "api-token-management"],
+      "manualOnly": true
+    }
+  ],
+  "transitionRule": "Do not remove CLOUDFLARE_API_TOKEN fallback until all dedicated GitHub secrets exist and each guarded workflow passes staging and production verification with the dedicated profile."
+}

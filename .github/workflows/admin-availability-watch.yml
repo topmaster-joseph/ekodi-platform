@@ -1,0 +1,126 @@
+name: Admin Availability Watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/admin-availability-watch.yml'
+      - 'config/cloudflare-production-quota-guard.json'
+      - 'scripts/cloudflare-production-budget.mjs'
+      - 'scripts/post-deploy-canary.mjs'
+      - 'wrangler.site.toml'
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ekodi-admin-availability-watch
+  cancel-in-progress: true
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_DEVELOPMENT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEVELOPMENT_ACCOUNT_ID || '46aad4738793fbaca88574832a2ccc0f' }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+
+      - name: Inspect canonical Worker attachment without user traffic
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          domains=$(curl -fsS --retry 2 --retry-delay 2             "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4"             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          echo "$domains" | jq -e '.success == true' >/dev/null
+          echo "$domains" | jq -e '.result[] | select(.hostname == "ekodi.kr" and .service == "shy-thunder-39a4")' >/dev/null
+          echo 'Canonical ekodi.kr Worker attachment verified through Cloudflare API.'
+
+      - name: Read Production Cloudflare quota Source of Truth
+        id: quota
+        run: node scripts/cloudflare-production-budget.mjs --output=cloudflare-production-quota.json
+
+      - name: Run minimal Admin liveness probe only below protection threshold
+        id: canary
+        env:
+          EKODI_CF_QUOTA_STATE: ${{ steps.quota.outputs.state }}
+        run: node scripts/post-deploy-canary.mjs --scope=admin-monitor --output=admin-availability-canary.json
+
+      - name: Open or update quota alert
+        if: steps.quota.outputs.state != 'normal'
+        shell: bash
+        run: |
+          set -euo pipefail
+          title='Cloudflare Production quota guard alert'
+          body=$(cat <<EOF
+          CF-QUOTA-001 detected Production Worker usage at or above the warning threshold.
+
+          - state: ${{ steps.quota.outputs.state }}
+          - requests: ${{ steps.quota.outputs.requests }} / ${{ steps.quota.outputs.limit }}
+          - usage: ${{ steps.quota.outputs.percent }}%
+          - nonessential probes blocked: ${{ steps.quota.outputs.skip_nonessential }}
+          - workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          - observed: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+          At 90% or higher, scheduled user-facing probes are blocked. HTTP 429 or Cloudflare Error 1027 opens the canary circuit immediately; no retry storm is permitted.
+          EOF
+          )
+          existing=$(gh issue list --state open --search "$title in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then gh issue comment "$existing" --body "$body"; else gh issue create --title "$title" --body "$body"; fi
+
+      - name: Close recovered quota alert
+        if: steps.quota.outputs.state == 'normal'
+        shell: bash
+        run: |
+          set -euo pipefail
+          title='Cloudflare Production quota guard alert'
+          existing=$(gh issue list --state open --search "$title in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "Production usage returned below 70% at $(date -u +'%Y-%m-%dT%H:%M:%SZ'). Quota guard is normal."
+            gh issue close "$existing" --reason completed
+          fi
+
+      - name: Open or update Admin availability incident without extra probes
+        if: failure() && steps.quota.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          title='Admin availability incident: canonical EKODI Admin'
+          body=$(cat <<EOF
+          Quota-aware Admin monitor detected a failure without retrying the Production endpoint.
+
+          - quota state: ${{ steps.quota.outputs.state }}
+          - quota usage: ${{ steps.quota.outputs.percent }}%
+          - circuit open: ${{ steps.canary.outputs.circuit_open }}
+          - workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          - observed: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+          The monitor deliberately performs no follow-up curl after 429/Error 1027.
+          EOF
+          )
+          existing=$(gh issue list --state open --search "$title in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then gh issue comment "$existing" --body "$body"; else gh issue create --title "$title" --body "$body"; fi
+
+      - name: Preserve monitor evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: admin-quota-aware-monitor-${{ github.run_id }}
+          path: |
+            cloudflare-production-quota.json
+            admin-availability-canary.json
+          if-no-files-found: warn
+          retention-days: 14

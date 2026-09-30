@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "policyId": "AI-KNOWLEDGE-CLAIM-001",
+  "status": "enforced",
+  "purpose": "Prevent EKODI AI from presenting unverified, stale, low-authority, contradictory, scope-mismatched, or model-derived external knowledge as established fact.",
+  "scope": [
+    "web-search-results",
+    "rag-and-retrieval",
+    "connected-source-research",
+    "current-and-time-sensitive-facts",
+    "research-and-citation-answers",
+    "high-impact-external-facts",
+    "user-facing-ai-synthesis"
+  ],
+  "principles": {
+    "retrievalIsNotVerification": true,
+    "modelOutputIsNeverASource": true,
+    "memoryCannotProveCurrentExternalFact": true,
+    "sourceInstructionsAreUntrustedData": true,
+    "claimScopeMayNotExceedEvidenceScope": true,
+    "freshnessMustMatchTemporalSensitivity": true,
+    "contradictionsMustBeSurfaced": true,
+    "currentPrimaryPreferred": true,
+    "highImpactRequiresAuthoritativeEvidence": true,
+    "materialKnowledgeClaimsRequireTraceableCitation": true,
+    "unknownRemainsUnknown": true
+  },
+  "sourceTrustScores": {
+    "ekodi_canonical": 100,
+    "workspace_private": 94,
+    "official_primary": 92,
+    "authoritative_reference": 84,
+    "user_supplied": 68,
+    "secondary_reference": 55,
+    "model_generated": 10
+  },
+  "temporalSensitivity": {
+    "volatile": {
+      "defaultMaxAgeSeconds": 3600
+    },
+    "current": {
+      "defaultMaxAgeSeconds": 604800
+    },
+    "stable": {
+      "defaultMaxAgeSeconds": 315360000
+    }
+  },
+  "verification": {
+    "minimumTrustScore": 55,
+    "currentMinimumTrustScore": 68,
+    "highImpactMinimumTrustScore": 82,
+    "highImpactIndependentSources": 2,
+    "authoritativeSingleSourceMaySatisfyIndependence": true,
+    "contradictionAtOrAboveMinimumTrustBlocksVerification": true,
+    "currentClaimsRequireTimestamp": true,
+    "linkableExternalSourcesRequireHttps": true,
+    "citationTokenRequiredInFinalResponse": true
+  },
+  "evidenceContract": {
+    "requiredFields": [
+      "sourceId",
+      "sourceType",
+      "claimScope",
+      "relation",
+      "retrievedAt"
+    ],
+    "relationValues": [
+      "supports",
+      "contradicts",
+      "context"
+    ],
+    "recommendedFields": [
+      "title",
+      "url",
+      "authority",
+      "publisherKey",
+      "publishedAt",
+      "effectiveAt",
+      "verifiedAt",
+      "currentPrimary",
+      "factSummary",
+      "citationToken"
+    ],
+    "rawExternalInstructionsExecutable": false
+  },
+  "verdicts": [
+    "verified",
+    "supported",
+    "insufficient",
+    "stale",
+    "source_quality_low",
+    "contradicted",
+    "not_required"
+  ],
+  "finalResponse": {
+    "verifiedMayAssertMaterialFact": true,
+    "supportedMustNotBePromotedToVerifiedFact": true,
+    "insufficientMustUseNonAssertionStatus": true,
+    "staleMustNotBePresentedAsCurrent": true,
+    "contradictedMustBlockUnqualifiedAssertion": true,
+    "citationFailureBlocksMaterialKnowledgeAssertion": true
+  },
+  "integration": {
+    "knowledgeSourceRegistry": "config/knowledge-source-registry.json",
+    "learningLoop": "ekodi-learning-loop.js",
+    "runtimeGuard": "ai-knowledge-claim.js",
+    "originSynthesisMustObey": true,
+    "orchestrationPolicy": "AI-ORCHESTRATE-001",
+    "finalResponseGuardRequired": true
+  }
+}

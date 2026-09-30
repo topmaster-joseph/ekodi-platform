@@ -1,0 +1,44 @@
+name: Cloudflare Schedule Shape Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cloudflare-schedule-shape-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    environment: development
+    timeout-minutes: 5
+    env:
+      PROD_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PROD_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      DEV_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      DEV_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+    steps:
+      - name: Inspect normalized schedules
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          prod_auth=(-H "Authorization: Bearer $PROD_TOKEN")
+          dev_auth=(-H "Authorization: Bearer $DEV_TOKEN")
+          for pair in \
+            'ekodi-author-ai-staging|ekodi-author-ai-staging' \
+            'ekodi-business-staging|ekodi-business-staging' \
+            'ekodi-platform-staging|ekodi-platform-development'; do
+            prod="${pair%%|*}"
+            dev="${pair##*|}"
+            curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts/$prod/schedules" -o /tmp/prod.json
+            curl -fsS "${dev_auth[@]}" "$api/accounts/$DEV_ACCOUNT_ID/workers/scripts/$dev/schedules" -o /tmp/dev.json
+            echo "PAIR $prod -> $dev"
+            echo -n 'PROD_SHAPE '; jq -c '.result' /tmp/prod.json
+            echo -n 'DEV_SHAPE '; jq -c '.result' /tmp/dev.json
+            echo -n 'PROD_CRONS '; jq -c '[.result.schedules[]?.cron] | sort' /tmp/prod.json
+            echo -n 'DEV_CRONS '; jq -c '[.result.schedules[]?.cron] | sort' /tmp/dev.json
+          done

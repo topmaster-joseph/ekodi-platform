@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko-KR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>EKODI Journal</title>
+  <meta name="description" content="에코디의 정신, 실천, 기술, 공동체의 배움을 공개적으로 기록하는 저널">
+  <meta name="theme-color" content="#f6f5ef">
+  <link rel="canonical" href="https://journal.ekodi.kr/">
+  <link rel="alternate" type="application/rss+xml" title="EKODI Journal RSS" href="/feed.xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="journal-shell" id="journal-app">
+    <section class="journal-hero" aria-labelledby="journal-title">
+      <div class="journal-kicker">EKODI · LIVING RECORD</div>
+      <div class="journal-hero-grid">
+        <div>
+          <h1 id="journal-title">EKODI JOURNAL</h1>
+          <p class="journal-intro" data-copy="intro">말씀과 삶, 기술과 공동체 사이에서 무엇을 만들고 왜 그렇게 선택했는지를 기록합니다.</p>
+        </div>
+        <p class="journal-manifesto" data-copy="manifesto">기록은 기억을 넘어 책임이 됩니다. 성공뿐 아니라 질문, 실패, 수정, 검증의 흔적까지 남깁니다.</p>
+      </div>
+    </section>
+    <section class="journal-toolbar" aria-label="Journal controls">
+      <div class="journal-section-title">LATEST</div>
+      <div class="journal-controls">
+        <div class="journal-filters" id="journal-filters" aria-label="Categories"></div>
+        <label class="journal-search">
+          <span class="sr-only" data-copy="searchLabel">저널 검색</span>
+          <input id="journal-search" type="search" autocomplete="off" placeholder="검색">
+          <span aria-hidden="true">⌕</span>
+        </label>
+      </div>
+    </section>
+
+    <section id="journal-list-view" class="journal-list-view" aria-live="polite">
+      <div id="journal-list" class="journal-list"></div>
+      <p id="journal-empty" class="journal-empty" hidden data-copy="empty">조건에 맞는 글이 없습니다.</p>
+    </section>
+
+    <article id="journal-article-view" class="journal-article-view" hidden>
+      <a href="/" class="journal-back" data-copy="back">← 모든 글</a>
+      <div id="journal-article"></div>
+    </article>
+
+    <section class="journal-closing" aria-label="About EKODI Journal">
+      <div>
+        <span class="journal-closing-label" data-copy="why">WHY JOURNAL</span>
+        <h2 data-copy="closingTitle">생각을 저장하지 않고 흘려보냅니다.</h2>
+      </div>
+      <p data-copy="closingBody">에코디의 기록은 특정 조직 안에 가두기 위한 지식이 아니라, 다음 사람과 공동체가 더 자유롭게 시작할 수 있도록 건네는 공공의 흔적을 지향합니다.</p>
+      <a href="/feed.xml" class="journal-feed">RSS ↗</a>
+    </section>
+  </main>
+  <noscript>EKODI Journal은 목록과 글 보기를 위해 JavaScript가 필요합니다.</noscript>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

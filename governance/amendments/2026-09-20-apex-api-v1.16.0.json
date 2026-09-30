@@ -1,0 +1,36 @@
+{
+  "id": "2026-09-20-apex-api-v1.16.0",
+  "constitutionVersion": "1.16.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-20",
+  "changeClass": "C1",
+  "taskId": "apex-api-canonical-20260920",
+  "summary": "Retire the public legacy API hostname dependency and make https://ekodi.kr/api the single canonical public EKODI API base while keeping the Control Worker behind private service binding.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly instructed EKODI to continue with the https://ekodi.kr/api structure and complete the migration under EKODI orchestration.",
+  "constitutionalInterpretation": "This tightens the existing apex-path-only and zero-subdomain policy without expanding autonomous authority. Internal service boundaries, authentication, permissions, guarded release, rollback and production verification remain mandatory.",
+  "implementedCapabilities": [
+    "Canonical public API base https://ekodi.kr/api",
+    "Private CONTROL_API service-binding execution boundary",
+    "Removal of the legacy API custom-domain exposure",
+    "Apex health and API discovery endpoints",
+    "Runtime, admin, monitoring and release references migrated to apex API",
+    "Canonical MCP resource retained at https://ekodi.kr/mcp",
+    "Audited migration of legacy MCP authorization resource records",
+    "Zero-subdomain guard strengthened for migration-removal diffs"
+  ],
+  "authorityImpact": "None. No permission, identity, legal, financial or high-risk authority is expanded.",
+  "generationImpact": {
+    "currentGenerationRemains": 10,
+    "automaticPromotion": false,
+    "evidenceDrivenFutureEvolution": true
+  },
+  "deploymentImpact": "Control API remains the same internal Worker and D1 boundary, but public traffic enters through ekodi.kr/api via the Shared Site CONTROL_API service binding. The legacy API custom domain is removed only after guarded verification.",
+  "rollback": "If apex production verification fails, restore the previous Control Worker route only as an emergency rollback, repair the apex binding, then re-run guarded verification before retiring the legacy host again. No compatibility redirect is introduced.",
+  "approvalEvidence": {
+    "explicitOwnerInstruction": true,
+    "requiredPullRequestLabel": "constitution-approved",
+    "pullRequest": 2153,
+    "approvalLabel": "constitution-approved"
+  }
+}

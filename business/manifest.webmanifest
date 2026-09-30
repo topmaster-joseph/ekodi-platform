@@ -1,0 +1,10 @@
+{
+  "name": "EKODI Business OS",
+  "short_name": "Business OS",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#111827",
+  "lang": "ko",
+  "description": "소상공인과 조직을 위한 EKODI AI 경영 운영체계"
+}

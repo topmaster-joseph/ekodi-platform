@@ -1,0 +1,17 @@
+{
+  "id": "2026-09-08-bible-core-provider-boundary-v1.8.3",
+  "constitutionVersion": "1.8.3",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-08",
+  "changeClass": "C2",
+  "taskId": "ekodi-bible-core-v8-20260908",
+  "summary": "Register the provider-safe Bible Core inside the existing Bible Conversation boundary, including verbatim KRV1961 capability files and the current Access-protected development staging hostname, without creating a new deployment boundary.",
+  "approvalBasis": "The platform owner explicitly approved the Generation-8 Bible Core build and repeatedly instructed the work to continue through verification, deployment and live operation.",
+  "boundaryRule": "Bible Core remains owned by the existing bible.ekodi.kr Bible Conversation service. No new platform, database or deployment boundary is created.",
+  "scriptureRule": "KRV1961 may be served only as integrity-verified verbatim Scripture with attribution. Protected translations such as NKRV remain non-stored official-link-only providers unless a future licensed contract is approved.",
+  "aiRule": "AI output remains interpretation or assistance and may not alter, correct or paraphrase text presented as Scripture. The runtime policy remains aiMayAlterScripture=false.",
+  "stagingRule": "The development Worker remains Cloudflare Access protected. CI must prove the remote protection and deployment existence, then verify the identical staging runtime locally when unauthenticated remote content is intentionally unavailable.",
+  "verificationPolicy": "Constitution, Bible Core integrity, platform boundaries, architecture, security, deployment guardrails, Access-protected staging, guarded production release and real bible.ekodi.kr smoke verification must pass.",
+  "rollback": "Revert Bible Core source registration and reader/provider additions to the previous Bible Conversation implementation, redeploy through the guarded Bible workflow, and retain the existing Bible service, Supabase data and Access boundary unchanged. No destructive Scripture or user-data migration is permitted."
+}

@@ -1,0 +1,140 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
+
+test('delegated admins use task-first navigation without changing authority',async()=>{
+  const [workspace,store,church,trade,portfolio]=await Promise.all([
+    read('workspace-admin-page.js'),
+    read('store-admin-engine.js'),
+    read('church-pastor-admin-page.js'),
+    read('workspace-trade-admin-page.js'),
+    read('store-portfolio-admin-page.js'),
+  ]);
+
+  assert.match(workspace,/label:'운영'/);
+  assert.match(workspace,/label:'고객 · 업무'/);
+  assert.match(workspace,/label:'마케팅'/);
+  assert.match(workspace,/label:'경영'/);
+  assert.match(workspace,/label:'운영도구'/);
+  assert.match(workspace,/label:'사이트 관리'/);
+  assert.match(workspace,/label:'오늘 할 일'/);
+  assert.match(workspace,/label:'소통 · 콘텐츠'/);
+  assert.match(workspace,/label:'업무 처리'/);
+  assert.match(workspace,/mallDirectSections/);
+
+  assert.match(store,/label:'주문 · 배달'/);
+  assert.match(store,/label:'메뉴 · 재고'/);
+  assert.match(store,/label:'고객 · 리뷰'/);
+  assert.match(store,/label:'홍보 · 채널'/);
+  assert.match(store,/label:'매장 관리'/);
+  assert.match(store,/admin-nav-group-label/);assert.match(store,/admin-nav-head/);assert.match(store,/overflow-y:auto!important/);
+  assert.match(store,/dataset\.adminSection=key/);
+  assert.match(store,/root\.hidden=true/);
+
+  assert.match(church,/label:'교인 · 돌봄'/);
+  assert.match(church,/label:'예배 · 사역'/);
+  assert.match(church,/label:'기록 · AI'/);
+  assert.match(church,/label:'사이트 · 권한'/);
+  assert.match(church,/admin-nav-group-label/);
+  assert.match(church,/dataset\.adminSection=key/);
+
+  assert.match(trade,/\['overview','홈'\]/);
+  assert.match(trade,/\['companies','거래처'\]/);
+  assert.match(trade,/\['access','권한'\]/);
+  assert.match(trade,/const a=document\.createElement\('a'\);a\.href=sectionHref\(key\)/);
+  assert.match(trade,/sub\.hidden=true/);
+
+  assert.doesNotMatch(portfolio,/PORTFOLIO_ACTIONS/);
+  assert.match(portfolio,/\['delivery','배달플랫폼'\]/);
+  assert.match(portfolio,/\['menu','메뉴 · 가격'\]/);
+  assert.match(portfolio,/\['orders','주문 · 채널'\]/);
+  assert.match(portfolio,/\['reviews','리뷰'\]/);
+  assert.match(portfolio,/\['marketing','Marketing AI'\]/);
+  assert.match(portfolio,/매장 선택/);
+  assert.match(portfolio,/cmpmyiStoreSelect/);
+  assert.match(portfolio,/common-store-split/);
+  assert.doesNotMatch(portfolio,/브랜드 관리자 전체 메뉴/);
+});
+
+test('shared shells enforce readable public and delegated-admin geometry',async()=>{
+  const [userCss,workspaceCss,injector]=await Promise.all([
+    read('shell/user-ui-shell.css'),
+    read('shell/workspace.css'),
+    read('ekodi-shell-injector.js'),
+  ]);
+  assert.match(userCss,/Tenant readability convergence v2/);
+  assert.match(userCss,/line-height:1\.7/);
+  assert.match(userCss,/min-height:44px/);
+  assert.match(userCss,/text-wrap:balance/);
+  assert.match(workspaceCss,/Tenant \/ delegated admin readability convergence v2/);
+  assert.match(workspaceCss,/data-ekodi-authority-scope="tenant"/);
+  assert.match(workspaceCss,/--ekodi-tenant-admin-touch:44px/);
+  assert.match(injector,/SHELL_USER_UI_STYLE/);
+  assert.match(injector,/SHELL_WORKSPACE_STYLE/);
+});
+
+test('independent public tenant sites inherit readability without platform chrome',async()=>{
+  const [injector,router,userCss]=await Promise.all([
+    read('ekodi-shell-injector.js'),
+    read('platform-router-entry-worker.js'),
+    read('shell/user-ui-shell.css'),
+  ]);
+  assert.match(injector,/export function injectEkodiTenantReadability/);
+  assert.match(injector,/data-ekodi-tenant-readability/);
+  assert.match(injector,/SHELL_MOBILE_HEADER_SCRIPT/);
+  assert.match(injector,/data-ekodi-fixed-header/);
+  assert.match(router,/space-storefront'[\s\S]*injectEkodiTenantReadability/);
+  assert.match(router,/x-ekodi-independent-site'[\s\S]*injectEkodiTenantReadability/);
+  assert.match(router,/isCgmaRoot\(url\.pathname\)[\s\S]*injectEkodiTenantReadability/);
+  assert.match(userCss,/Brand-neutral tenant readability v1/);
+  assert.match(userCss,/data-ekodi-tenant-readability="v1"/);
+  assert.doesNotMatch(injector,/data-ekodi-tenant-readability[^\n]+My EKODI/);
+});
+
+test('multi-store public gateway avoids duplicate same-destination actions',async()=>{
+  const source=await read('store-gateway-page.js');
+  assert.match(source,/매장 보기/);
+  assert.match(source,/메뉴 · 가격 바로가기/);
+  assert.match(source,/\$\{store\.slug\}#menu/);
+  assert.doesNotMatch(source,/매장 정보 · 주문 · 배달/);
+});
+
+
+test('delegated admin navigation never requires a category click before reaching a task',async()=>{
+  const [workspace,store,church,trade]=await Promise.all([
+    read('workspace-admin-page.js'),
+    read('store-admin-engine.js'),
+    read('church-pastor-admin-page.js'),
+    read('workspace-trade-admin-page.js'),
+  ]);
+
+  assert.match(workspace,/groupsForRole\(role=workspaceRole\)/);
+  assert.match(workspace,/a\.dataset\.adminSection=key/);
+  assert.match(workspace,/a\.href=sectionHref\(key\)/);
+  assert.doesNotMatch(workspace,/a\.dataset\.adminGroup=group\.id/);
+  assert.doesNotMatch(workspace,/renderSecondaryNav\(activeGroup,role\)/);
+
+  assert.match(store,/admin-nav-group-label/);
+  assert.ok(store.includes("a.href=key==='overview'?ADMIN_BASE+'/overview':ADMIN_BASE+'/'+key"));
+  assert.doesNotMatch(store,/a\.dataset\.group=group\.id/);
+
+  assert.match(church,/admin-nav-group-label/);
+  assert.ok(church.includes("a.href=key==='overview'?base+'/overview':base+'/'+key"));
+
+  assert.match(trade,/a\.href=sectionHref\(key\)/);
+  assert.match(trade,/sub\.hidden=true/);
+});
+
+
+test('delegated admin navigation uses flat compact desktop rows without changing mobile touch targets',async()=>{
+  const css=await read('shell/workspace.css');
+  assert.match(css,/Tenant \/ delegated admin navigation density convergence v3/);
+  assert.match(css,/\.admin-nav-group-label[\s\S]*display:none!important/);
+  assert.match(css,/@media\(min-width:769px\)[\s\S]*\[data-ekodi-admin-nav\][\s\S]*gap:2px!important/);
+  assert.match(css,/min-height:38px!important/);
+  assert.match(css,/padding-block:6px!important/);
+  assert.match(css,/line-height:1\.25!important/);
+  assert.match(css,/@media\(max-width:768px\)[\s\S]*--ekodi-tenant-admin-touch:44px/);
+});

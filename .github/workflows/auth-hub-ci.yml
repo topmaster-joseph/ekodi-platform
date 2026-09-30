@@ -1,0 +1,122 @@
+name: Auth Hub CI
+on:
+  pull_request:
+    paths:
+      - 'auth-site/**'
+      - 'supabase/functions/identity-api/**'
+      - 'supabase/functions/business-handoff-api/**'
+      - 'site-worker.js'
+      - 'scripts/build.mjs'
+      - 'docs/AUTH-CENTER.md'
+      - 'deploy/manifests/shared-site.worker.json'
+      - 'test/admin-auth-cache-boundary.test.mjs'
+      - '.github/workflows/auth-hub-ci.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    name: Auth Hub Contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate central auth scripts
+        run: |
+          set -euo pipefail
+          node --check auth-site/auth.js
+          node --check auth-site/auth-bootstrap.js
+          node --check auth-site/auth-entry.js
+          node --check auth-site/auth-router.js
+          node --check auth-site/marketing-auth-hotfix.js
+          node --check auth-site/auth-workspace-target.js
+          node --check auth-site/admin-auth.js
+          node --check auth-site/client-auth.js
+          node --check auth-site/author-auth.js
+          node --check auth-site/business-auth.js
+          node --check site-worker.js
+          node --test test/admin-auth-cache-boundary.test.mjs
+      - name: Verify One Login and invisible auth contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq '/auth-bootstrap.js?v=20260923-return-continuity-1' auth-site/index.html
+          grep -Fq '/auth-entry.js?v=20260923-space-admin-return-2' auth-site/index.html
+          grep -Fq 'dataset.seamlessSso' auth-site/auth-bootstrap.js
+          grep -Fq "./auth-router.js?v=20260923-space-admin-return-2" auth-site/auth-entry.js
+          if grep -Eq '<script( [^>]*)?>[^<[:space:]]' auth-site/index.html; then
+            echo 'Central auth HTML must not contain inline executable JavaScript.'
+            exit 1
+          fi
+
+          grep -Fq 'manifestService' auth-site/auth-router.js
+          grep -Fq 'isRegistryUserService' auth-site/auth-router.js
+          grep -Fq "site==='portal'||isRegistryUserService" auth-site/auth-router.js
+          grep -Fq "business-auth.js?v=20260826-free-fallback-1" auth-site/auth-router.js
+          grep -Fq "client-auth.js?v=20260923-space-admin-return-2" auth-site/auth-router.js
+          grep -Fq 'targetableWorkspaceSites' auth-site/auth-router.js
+          grep -Fq 'privateClientSites' auth-site/auth-router.js
+
+          grep -Fq 'functions/v1/identity-api' auth-site/client-auth.js
+          grep -Fq '/session/handoff' auth-site/client-auth.js
+          grep -Fq 'sb.auth.getSession' auth-site/client-auth.js
+          grep -Fq 'session_timeout' auth-site/client-auth.js
+          grep -Fq 'google_library_timeout' auth-site/client-auth.js
+          grep -Fq 'supabase_cdn_timeout' auth-site/client-auth.js
+          grep -Fq 'supabase_fallback_timeout' auth-site/client-auth.js
+          grep -Fq 'use_fedcm_for_button:true' auth-site/client-auth.js
+          grep -Fq 'button_auto_select:false' auth-site/client-auth.js
+          grep -Fq "DIRECT_LOGIN=params.get('direct')==='1'" auth-site/client-auth.js
+          grep -Fq 'window.google.accounts.id.prompt' auth-site/client-auth.js
+          grep -Fq 'ekodi_token:proof.tokenHash' auth-site/client-auth.js
+          grep -Fq "function postLoginTarget()" auth-site/client-auth.js
+          grep -Fq "const target=new URL(RETURN_TO)" auth-site/client-auth.js
+          grep -Fq "isPlatformMy&&!['my','portal'].includes(site)" auth-site/client-auth.js
+          if grep -Fq "commonServiceEntry&&proof.platformAdmin!==true" auth-site/client-auth.js || grep -Fq "function myEntryTarget()" auth-site/client-auth.js; then
+            echo 'Universal identity auth must return to the initiating site and must not use My EKODI as a generic fallback.'
+            exit 1
+          fi
+          grep -Fq 'recoverableStaleSession' auth-site/client-auth.js
+          grep -Fq "sb.auth.signOut({scope:'local'})" auth-site/client-auth.js
+          grep -Fq "error.message==='session_identity_mismatch'" auth-site/client-auth.js
+          if grep -Fq 'onAuthStateChange(async' auth-site/client-auth.js || grep -Fq 'use_fedcm_for_prompt' auth-site/client-auth.js; then
+            echo 'Universal identity auth contains a known deadlock/deprecated pattern.'
+            exit 1
+          fi
+
+          grep -Fq 'functions/v1/business-handoff-api' auth-site/business-auth.js
+          grep -Fq 'functions/v1/identity-api' auth-site/business-auth.js
+          grep -Fq '/session/handoff' auth-site/business-auth.js
+          grep -Fq 'response.status===403' auth-site/business-auth.js
+          grep -Fq 'session_timeout' auth-site/business-auth.js
+          grep -Fq 'google_library_timeout' auth-site/business-auth.js
+          if grep -Fq 'onAuthStateChange(async' auth-site/business-auth.js; then
+            echo 'Business auth contains an async auth-state deadlock pattern.'
+            exit 1
+          fi
+
+          grep -Fq 'path==="/session/handoff"' supabase/functions/identity-api/index.ts
+          grep -Fq 'link.user.id!==user.id' supabase/functions/identity-api/index.ts
+          grep -Fq 'platformAdminForUser' supabase/functions/identity-api/index.ts
+          grep -Fq 'platform_admin' supabase/functions/identity-api/index.ts
+          grep -Fq '483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com' supabase/functions/identity-api/index.ts
+          ! grep -Fq '483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com' supabase/functions/identity-api/index.ts
+          grep -Fq 'business_os_snapshot' supabase/functions/business-handoff-api/index.ts
+          grep -Fq 'admin.auth.admin.generateLink' supabase/functions/business-handoff-api/index.ts
+
+          grep -Fq 'one-account-free-everywhere-pay-where-needed' docs/AUTH-CENTER.md
+          grep -Fq 'config/ecosystem-services.json' docs/AUTH-CENTER.md
+          grep -Fq 'lazy materialization' docs/AUTH-CENTER.md
+      - name: Probe public central identity challenge
+        shell: bash
+        env:
+          IDENTITY_URL: https://renzehysxirjilvdxacv.supabase.co/functions/v1/identity-api/challenge
+          PUBLISHABLE_KEY: sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
+        run: |
+          set -euo pipefail
+          good=$(curl -fsS -X POST "$IDENTITY_URL" -H 'Origin: https://ekodi.kr' -H "apikey: $PUBLISHABLE_KEY")
+          printf '%s' "$good" | grep -Eq '"nonce":"[a-f0-9]{48}"'
+          bad=$(curl -sS -o /tmp/bad-origin.json -w '%{http_code}' -X POST "$IDENTITY_URL" -H 'Origin: https://evil.example' -H "apikey: $PUBLISHABLE_KEY")
+          test "$bad" = '403'

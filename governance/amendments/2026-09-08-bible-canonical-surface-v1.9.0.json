@@ -1,0 +1,27 @@
+{
+  "id": "2026-09-08-bible-canonical-surface-v1.9.0",
+  "constitutionVersion": "1.9.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-08",
+  "changeClass": "C2",
+  "taskId": "bible-canonical-surface-20260908",
+  "summary": "Apply the approved v1.9.0 one-domain model to Bible Conversation: ekodi.kr/bible is the canonical human surface and bible.ekodi.kr remains a permanent compatibility execution alias.",
+  "approvalBasis": "The platform owner explicitly requested Constitution-compliant Generation 8 completion of the Bible domain structure and instructed end-to-end continuation.",
+  "preserves": [
+    "Constitution v1.9.0 one-domain, multiple-security-realms policy",
+    "independent ekodi-bible-conversation runtime and security boundary",
+    "KRV1961 embedded-verbatim Scripture integrity",
+    "NKRV official-link-only non-storage policy",
+    "aiMayAlterScripture=false"
+  ],
+  "canonical": {
+    "humanSurface": "https://ekodi.kr/bible",
+    "authSurface": "https://ekodi.kr/auth/?site=bible",
+    "adminSurface": "https://ekodi.kr/admin/operations/aiops",
+    "legacyAlias": "https://bible.ekodi.kr"
+  },
+  "executionBoundary": "The apex canonical-surface router owns /bible and delegates through the BIBLE service binding to ekodi-bible-conversation; the legacy host only redirects to the canonical path.",
+  "rollback": "Disable the apex Bible canonical-surface binding and restore the prior Bible entry routing while keeping the independent Bible runtime and Scripture/provider integrity rules unchanged.",
+  "verificationPolicy": "Bible Core and routing tests, Constitution and boundary validators, deployment guardrails, full repository regression, Worker dry-runs, PR staging, guarded merge and production real-host probes must pass."
+}

@@ -1,0 +1,106 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { isPublicWorkspacePath, isWorkspaceSlug } from '../workspace-route-policy.js';
+
+const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
+test('EKODI Mall root is reserved from generic Workspace routing',async()=>{
+  const [registry,wrangler,manifestText]=await Promise.all([
+    read('platform-route-registry.js'),
+    read('wrangler.site.toml'),
+    read('deploy/manifests/shared-site.worker.json'),
+  ]);
+  assert.equal(isWorkspaceSlug('ekodimall'),false);
+  assert.equal(isPublicWorkspacePath('/ekodimall'),false);
+  assert.equal(isPublicWorkspacePath('/ekodimall/find'),false);
+  assert.match(registry,/['"]ekodimall['"]/);
+  assert.ok(wrangler.includes('"/ekodimall*"'));
+  const manifest=JSON.parse(manifestText);
+  const rootMall=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/ekodimall');
+  assert.ok(rootMall);
+  assert.ok(rootMall.expect.includes('data-ekodi-service="mall"'));
+  assert.ok(rootMall.headerExpect.includes('x-ekodi-route: public-ekodi-mall'));
+  assert.ok(rootMall.headerExpect.includes('x-ekodi-edge: mall-path-gateway'));
+});
+test('canonical public workspace paths use the isolated Space service binding',async()=>{
+  const [router,wrangler,manifestText,stageWorkflow,stageWrangler]=await Promise.all([
+    read('platform-router-entry-worker.js'),
+    read('wrangler.site.toml'),
+    read('deploy/manifests/shared-site.worker.json'),
+    read('.github/workflows/stage-shared-site-shell.yml'),
+    read('wrangler.site-staging.toml'),
+  ]);
+  assert.ok(router.includes("import { isPublicWorkspacePath } from './workspace-route-policy.js'"));
+  assert.match(router,/env\?\.SPACE\?\.fetch/);
+  assert.ok(router.includes("routed.headers.set('x-ekodi-workspace-gateway','space-service-binding')"));
+  assert.ok(router.includes("if(upstreamSurface==='public')"));
+  assert.ok(router.includes("x-ekodi-public-surface','workspace-public-site"));
+  assert.ok(router.includes("x-ekodi-route')==='space-organization'"));
+  assert.ok(router.includes("injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','public'"));
+  assert.ok(router.includes("injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace'"));
+  assert.match(router,/safeWorkspaceReturnTo/);
+  assert.ok(router.includes("const DEPLOYMENT_PROBE_PATH='/deployment-probe'"));
+  assert.match(router,/routeDeploymentProbe[\s\S]*workspaceUpstreamRequest\(request,'\/'\)/);
+  assert.ok(router.includes('isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname)'));
+  assert.ok(router.includes("const EKODIBIZ_NAMESPACE_PREFIX='/ekodibiz/'"));
+  assert.match(router,/function isEkodiBizOwnedPath\(pathname\)[\s\S]*path\.startsWith\(EKODIBIZ_NAMESPACE_PREFIX\)/);
+  assert.ok(router.includes("isPublicWorkspacePath(url.pathname)&&!isEkodiBizOwnedPath(url.pathname)"));
+  const genericWorkspaceRoute=router.indexOf('isPublicWorkspacePath(url.pathname)&&!isEkodiBizOwnedPath(url.pathname)');
+  const finalLegacyRouter=router.lastIndexOf('const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx)');
+  assert.ok(genericWorkspaceRoute>0&&finalLegacyRouter>genericWorkspaceRoute,'EKODIBIZ-owned child services must fall through to the dedicated site router');
+  assert.match(router,/legacyOperatingSpacePath\(url\.pathname\)\)return ensureLegacyOperatingSpaceMarker\(injectEkodiTenantReadability\(legacyResponse\),request\.method==='GET'\)/);
+  assert.match(wrangler,/binding = "SPACE"[\s\S]*service = "ekodi-space"/);
+  for(const route of ['/deployment-probe','/_ekodi/space/*']){
+    assert.ok(wrangler.includes(`"${route}"`),route);
+  }
+  const workerFirstRoutes=[...wrangler.matchAll(/"([^"]+)"/g)].map(match=>match[1]);
+  const workerFirstCovers=path=>workerFirstRoutes.some(route=>route===path||(route.endsWith('*')&&path.startsWith(route.slice(0,-1))));
+  assert.ok(workerFirstCovers('/auth/start'),'/auth/start must remain Worker-first directly or through a covering route');
+  const manifest=JSON.parse(manifestText);
+  assert.ok(!manifest.worker.requests.some(item=>item.url==='https://ekodi.kr/deployment-probe'));
+  const spaceConfig=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/_ekodi/space/config.js');
+  assert.ok(spaceConfig);
+  assert.ok(spaceConfig.headerExpect.includes('x-ekodi-workspace-gateway: space-service-binding'));
+  const trade=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/ekodibiz/trade');
+  assert.equal(trade?.rollbackVerify,false);
+  assert.ok(stageWorkflow.includes("- 'platform-router-entry-worker.js'"));
+  assert.ok(stageWorkflow.includes("- 'deploy/manifests/shared-site.worker.json'"));
+  assert.ok(stageWorkflow.includes('node --check platform-router-entry-worker.js'));
+  assert.ok(stageWrangler.includes('binding = "SPACE"'));
+  assert.ok(stageWrangler.includes('service = "ekodi-space-staging"'));
+  assert.ok(stageWrangler.includes('binding = "EKODIBIZ"'));
+  assert.ok(stageWrangler.includes('service = "ekodibiz-revenue-os-staging"'));
+  assert.ok(stageWorkflow.includes("verify_public_path '/deployment-probe'"));
+  assert.ok(stageWorkflow.includes("verify_public_path '/ekodibiz/invest'"));
+  assert.ok(stageWorkflow.includes("verify_public_path '/ekodibiz/invest/admin'"));
+  for(const retiredKind of ['personal','o'+'rg','group','project']) assert.ok(!wrangler.includes(`\"/${retiredKind}/*\"`),retiredKind);
+});
+test('customer storefront and independent workspace responses receive readability only, not member chrome',async()=>{
+  const router=await read('platform-router-entry-worker.js');
+  assert.match(router,/space-storefront'[\s\S]*customer-storefront'[\s\S]*injectEkodiTenantReadability/);
+  assert.match(router,/x-ekodi-independent-site'[\s\S]*independent-workspace-site'[\s\S]*injectEkodiTenantReadability/);
+  assert.doesNotMatch(router,/space-storefront'[\s\S]{0,300}injectEkodiShell/);
+});
+
+test('workspace shell assets and auth handoff stay inside the apex gateway',async()=>{
+  const [router,jadam]=await Promise.all([
+    read('platform-router-entry-worker.js'),
+    read('jadam-storefront.js'),
+  ]);
+  assert.ok(router.includes("const WORKSPACE_ASSET_PREFIX='/_ekodi/space/'"));
+  assert.ok(router.includes("const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js','storefront.json','storefront.css','jadam-storefront.css'])"));
+  assert.ok(jadam.includes('href="/_ekodi/space/jadam-storefront.css'));
+  assert.match(router,/rewriteWorkspaceShellAssets/);
+  assert.match(router,/workspaceAuthRedirect/);
+  assert.ok(router.includes("target.origin!=='https://ekodi.kr'"));
+});
+
+
+test('canonical public workspace roots cannot be reclassified as visible operating-space UI',async()=>{
+  const router=await read('platform-router-entry-worker.js');
+  const header=await read('shell/user-ui-header.js');
+  assert.match(router,/upstreamSurface==='public'/);
+  assert.match(router,/space-organization'[\s\S]*'space','public'/);
+  assert.match(header,/canonicalPublicUserSurface/);
+  assert.match(header,/!canonicalPublicUserSurface\(\)/);
+});

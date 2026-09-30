@@ -1,0 +1,185 @@
+name: Deploy Creator AI
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'author/**'
+      - 'author-worker.js'
+      - 'wrangler.author.toml'
+      - 'wrangler.author.staging.toml'
+      - 'scripts/validate-author.mjs'
+      - 'deploy/manifests/author.worker.json'
+      - 'auth-site/author-auth.js'
+      - 'auth-site/auth-router.js'
+      - 'supabase/functions/author-*/**'
+      - 'supabase/functions/_shared/author-billing.ts'
+      - 'supabase/migrations/*author_*'
+      - 'supabase/migrations/*creator_*'
+      - 'test/author-ai-contract.test.mjs'
+      - 'test/author-billing-contract.test.mjs'
+      - '.github/workflows/deploy-author.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'author/**'
+      - 'author-worker.js'
+      - 'wrangler.author.toml'
+      - 'wrangler.author.staging.toml'
+      - 'scripts/validate-author.mjs'
+      - 'deploy/manifests/author.worker.json'
+      - 'auth-site/author-auth.js'
+      - 'auth-site/auth-router.js'
+      - 'supabase/functions/author-*/**'
+      - 'supabase/functions/_shared/author-billing.ts'
+      - 'supabase/migrations/*author_*'
+      - 'supabase/migrations/*creator_*'
+      - 'test/author-ai-contract.test.mjs'
+      - 'test/author-billing-contract.test.mjs'
+      - '.github/workflows/deploy-author.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-creator-ai-${{ github.event_name == 'pull_request' && 'staging' || 'production' }}
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Creator AI contracts
+        run: |
+          set -euo pipefail
+          node --check author-worker.js
+          node --check author/app.js
+          node --check author/billing.js
+          node --check auth-site/author-auth.js
+          node --check scripts/validate-author.mjs
+          node scripts/validate-author.mjs
+          node --test test/author-ai-contract.test.mjs test/author-billing-contract.test.mjs
+          grep -Fq 'reconcileAuthorBilling' supabase/functions/author-ai-api/index.ts
+          grep -Fq 'billing_verification_unavailable' supabase/functions/author-ai-api/index.ts
+          grep -Fq 'AUTHOR_BILLING_API_URL' supabase/functions/_shared/author-billing.ts
+          grep -Fq "paidAiBilling: 'server-verified'" author-worker.js
+          test -f deploy/manifests/author.worker.json
+
+  staging:
+    if: github.event_name == 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: development
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+    steps:
+      - uses: actions/checkout@v7
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Deploy isolated Creator AI staging
+        run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.author.staging.toml
+      - name: Verify staging shell and health
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://ekodi-author-ai-staging.ekodi-development.workers.dev'
+          for attempt in $(seq 1 18); do
+            root_code=$(curl -sS -D /tmp/creator-staging.headers -o /tmp/creator-staging.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/" || true)
+            access_location=$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/,""); gsub(/\r/,""); print}' /tmp/creator-staging.headers | tail -1)
+            if [[ "$root_code" == '302' && "$access_location" == https://*.cloudflareaccess.com/cdn-cgi/access/login/* ]]; then
+              echo 'Creator AI staging is deployed behind Cloudflare Access; source contracts and protected boundary are verified.'
+              exit 0
+            fi
+            health_code=$(curl -sS -o /tmp/creator-staging-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/health" || true)
+            billing_js_code=$(curl -sS -o /tmp/creator-billing.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/billing.js" || true)
+            if [[ "$root_code" == '200' && "$health_code" == '200' && "$billing_js_code" == '200' ]] \
+              && grep -Fq 'Creator AI' /tmp/creator-staging.html \
+              && grep -Fq 'Creator AI가 세상과 연결될 형태로 만듭니다' /tmp/creator-staging.html \
+              && grep -Fq '/billing.js' /tmp/creator-staging.html \
+              && grep -Fq 'ekodi-creator-ai' /tmp/creator-staging-health.json \
+              && grep -Fq '"myEkodiPortfolio":true' /tmp/creator-staging-health.json \
+              && grep -Fq '"paidAiBilling":"server-verified"' /tmp/creator-staging-health.json \
+              && grep -Fq '/api/author/billing/start' /tmp/creator-billing.js; then
+              echo 'Creator AI staging and paid-billing shell verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+
+  production:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Bootstrap first production Worker only when missing
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          status_output=$(npx wrangler@${WRANGLER_VERSION} deployments status --config wrangler.author.toml --json 2>&1)
+          status_code=$?
+          set -e
+          if [[ "$status_code" -eq 0 ]]; then
+            echo 'Creator AI production Worker already exists; bootstrap skipped.'
+            exit 0
+          fi
+          if grep -Eq 'code: 10007|does not exist|does not exist on your account' <<<"$status_output"; then
+            echo 'No production Creator AI Worker exists yet. Bootstrapping the exact staging-validated revision once.'
+            npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.author.toml
+            exit 0
+          fi
+          printf '%s\n' "$status_output"
+          echo 'Worker status check failed for a reason other than first-time absence; refusing bootstrap.'
+          exit "$status_code"
+      - name: Candidate at 0%, verify, promote and auto-rollback on failure
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/author.worker.json
+      - name: Deep verify Creator AI production hostname
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root_code=$(curl -L -sS -o /tmp/creator.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://author.ekodi.kr/' || true)
+            health_code=$(curl -sS -o /tmp/creator-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://author.ekodi.kr/health' || true)
+            billing_js_code=$(curl -sS -o /tmp/creator-billing.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://author.ekodi.kr/billing.js' || true)
+            if [[ "$root_code" == '200' && "$health_code" == '200' && "$billing_js_code" == '200' ]] \
+              && grep -Fq 'Creator AI' /tmp/creator.html \
+              && grep -Fq 'CREATOR APPROVED' /tmp/creator.html \
+              && grep -Fq '/billing.js' /tmp/creator.html \
+              && grep -Fq 'ekodi-creator-ai' /tmp/creator-health.json \
+              && grep -Fq '"paidAiBilling":"server-verified"' /tmp/creator-health.json \
+              && grep -Fq '/api/author/billing/start' /tmp/creator-billing.js; then
+              echo 'Creator AI production and paid-billing shell verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1

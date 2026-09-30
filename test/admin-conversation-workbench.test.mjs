@@ -1,0 +1,66 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
+
+test('Admin authenticated shell ships the conversation-first workbench skin', async () => {
+  const [shell, build, css, dock, bootstrap, thinPostbuild, menuLayout] = await Promise.all([
+    read('admin-authenticated-shell.js'),
+    read('scripts/build.mjs'),
+    read('admin-conversation-workbench.css'),
+    read('admin-assist-dock.js'),
+    read('admin-assist-bootstrap.js'),
+    read('scripts/admin-thin-postbuild.mjs'),
+    read('admin-menu-layout.js'),
+  ]);
+
+  assert.doesNotMatch(shell, /admin-conversation-workbench\.css/);
+  assert.match(build, /appendOutputSources\('admin-design-engine\.css'/);
+  assert.match(build, /path:'admin-conversation-workbench\.css'/);
+  assert.match(build, /marker:'EKODI Admin conversation-first workbench v1'/);
+  assert.match(css, /--ekodi-admin-sidebar-width:228px/);
+  assert.match(css, /--ekodi-assist-left:228px/);
+  assert.doesNotMatch(css, /data-ekodi-admin-ui/);
+  assert.match(css, /^body\.admin-compact\{/m);
+  assert.match(thinPostbuild, /final visual authority/);
+  assert.match(thinPostbuild, /conversationWorkbenchCss/);
+  assert.match(css, /\.admin-global-details\{[\s\S]*display:grid!important/);
+  assert.match(css, /\.admin-global-nav\{[\s\S]*min-height:40px!important[\s\S]*padding:6px 9px!important/);
+  assert.match(css, /\.admin-global-details\[data-admin-flat-details="true"\]\{[\s\S]*margin:0 0 6px!important/);
+  assert.match(css, /ADMIN-CLUTTER-005/);
+  assert.match(css, /\.admin-command-entry,[\s\S]*\.admin-context-tabs-shell\{[\s\S]*display:none!important/);
+  assert.match(css, /body\.admin-compact \.ekodi-assist-bootstrap-form/);
+  assert.match(css, /admin-command-home\.admin-command-active \.ekodi-assist-rail\{[\s\S]*display:none!important/);
+  assert.match(css, /admin-command-home\.admin-command-active \.ekodi-assist-quick\{[\s\S]*display:none!important/);
+  assert.match(css, /body\.admin-compact \.ekodi-assist-bootstrap-form/);
+  assert.match(css, /\[data-panel\]\[data-admin-list-layout="single"\]/);
+  assert.match(css, /grid-template-columns:minmax\(0,1fr\)!important/);
+  assert.match(menuLayout, /dataset\.adminListLayout='single'/);
+  assert.match(dock, /무엇을 관리하거나 실행할까요\?/);
+  assert.match(dock, /placeholder="에코디와 대화하기"/);
+  assert.match(bootstrap, /placeholder="에코디와 대화하기"/);
+});
+
+test('Admin conversation-first skin preserves mobile drawer and readable light surface', async () => {
+  const css = await read('admin-conversation-workbench.css');
+  assert.match(css, /color-scheme:light/);
+  assert.match(css, /background:var\(--ekodi-admin-sidebar\)!important/);
+  assert.match(css, /html body\.admin-compact\.ekodi-admin-design-engine\{/);
+  assert.match(css, /html body\.admin-compact\.ekodi-admin-design-engine \.sidebar\{[\s\S]*width:228px!important[\s\S]*background:#f7f8fc!important/);
+  assert.match(css, /html body\.admin-compact\.ekodi-admin-design-engine\.admin-command-home\.admin-command-active \.ekodi-assist\{[\s\S]*left:228px!important/);
+  assert.match(css, /@media\(max-width:760px\)/);
+  assert.match(css, /\.sidebar\.open/);
+  assert.match(css, /box-shadow:18px 0 54px/);
+  assert.match(css, /top:56px!important/);
+  assert.match(css, /margin:48px auto 0!important/);
+  assert.match(css, /Mobile admin shell authority v3/);
+  assert.match(css, /\.app>main,[\s\S]*padding-top:0!important/);
+  assert.match(css, /\.sidebar\{[\s\S]*transform:translateX\(-105%\)!important/);
+  assert.match(css, /\.sidebar\.open\{[\s\S]*transform:translateX\(0\)!important/);
+  assert.match(css, /\.admin-mobile-primary-nav\{[\s\S]*grid-template-columns:repeat\(5,minmax\(0,1fr\)\)!important/);
+  assert.match(css, /\.admin-mobile-drawer-scrim\{[\s\S]*z-index:1350!important/);
+  assert.match(css, /\.ekodi-assist-bootstrap-form\[data-execution-ready="true"\]\{[\s\S]*grid-template-columns:52px!important/);
+  assert.match(css, /\.ekodi-assist-bootstrap-plus::after\{[\s\S]*content:'AI'/);
+  assert.match(css, /admin-command-active \.ekodi-assist-bootstrap\{display:none!important/);
+});

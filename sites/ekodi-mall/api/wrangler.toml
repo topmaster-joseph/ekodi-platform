@@ -1,0 +1,48 @@
+name = "ekodi-mall-api"
+main = "entry.js"
+compatibility_date = "2026-08-14"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "mall-api.ekodi.kr"
+custom_domain = true
+
+[vars]
+ENVIRONMENT = "production"
+MALL_BASE_URL = "https://ekodi.kr/ekodimall"
+ALLOWED_ORIGINS = "https://ekodi.kr,https://ekodi-mall.pages.dev"
+SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
+MALL_OPERATIONS_EMAILS = "topmaster.joseph@gmail.com,joseph@ekodi.kr"
+PAYMENTS_ENABLED = "false"
+PAYMENT_PROVIDER = "toss"
+MALL_LEGAL_READINESS_REF = ""
+MALL_PRIVACY_READINESS_REF = ""
+MALL_REFUND_READINESS_REF = ""
+MALL_PAYOUT_READINESS_REF = ""
+TRANSACTION_REHEARSAL_ENABLED = "false"
+SOURCING_AUTO_ORDER_ENABLED = "false"
+BUYER_PII_RELEASE_ENABLED = "false"
+SUPPLIER_FORWARD_ENABLED = "false"
+DOMEMAE_LOOKUP_ENABLED = "false"
+
+# DOMEMAE_API_KEY, DOMEMAE_USER_ID, DOMEMAE_SESSION_ID are Worker secrets only.
+# Do not put provider credentials in this file, browser assets or D1.
+
+# Non-destructive compatibility declaration for the short-lived SQLite Durable
+# Object Mall API. The namespace remains provisioned, but current Mall traffic
+# is served by the D1 API in entry.js -> worker.js. Do not remove this live
+# export without an explicit, separately reviewed Durable Object lifecycle plan.
+[exports.MallCatalog]
+type = "durable-object"
+storage = "sqlite"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-mall"
+migrations_dir = "migrations"

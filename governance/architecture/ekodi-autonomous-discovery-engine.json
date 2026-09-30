@@ -1,0 +1,131 @@
+{
+  "version": "1.0.0",
+  "status": "active_under_generation_10",
+  "effectiveDate": "2026-09-11",
+  "name": "EKODI Autonomous Discovery Engine",
+  "northStar": "Within the values, mission, authority, budget, security, privacy and data boundaries set by the EKODI Platform Super Administrator, EKODI autonomously discovers what should improve, researches alternatives, experiments safely, recommends or evolves verified candidates, verifies the result, learns from evidence, and never expands its own sovereign authority.",
+  "principle": "Autonomous Research, Human-Governed Deployment",
+  "finalAuthority": "ekodi_platform_super_administrator",
+  "currentGeneration": 10,
+  "candidateGeneration": 11,
+  "candidateGenerationOfficialName": null,
+  "futureGenerationNamesPredeclared": false,
+  "loop": [
+    "observe",
+    "anticipate",
+    "discover",
+    "question",
+    "research",
+    "experiment",
+    "evaluate",
+    "recommend",
+    "governance_gate",
+    "evolve",
+    "verify",
+    "learn"
+  ],
+  "authorityLevels": {
+    "L0_observe": {
+      "mode": "autonomous",
+      "scope": ["read_only_observation", "trend_detection", "forecasting", "anomaly_detection"]
+    },
+    "L1_research": {
+      "mode": "autonomous",
+      "scope": ["problem_discovery", "research_question_generation", "hypothesis_generation", "alternative_analysis"]
+    },
+    "L2_experiment": {
+      "mode": "autonomous_when_bounded",
+      "requirements": ["isolated", "reversible", "delegated", "logged", "preflight_verified", "within_budget", "no_authority_expansion", "no_sensitive_data_expansion"]
+    },
+    "L3_evolution_candidate": {
+      "mode": "autonomous_proposal_only",
+      "scope": ["candidate_composition", "benchmark", "verification", "rollback_design"]
+    },
+    "L4_production_deployment": {
+      "mode": "human_governed",
+      "authority": "ekodi_platform_super_administrator",
+      "guardedReleaseRequired": true
+    }
+  },
+  "automaticResearchScope": [
+    "observe",
+    "anticipate",
+    "discover_problem",
+    "generate_research_question",
+    "generate_hypothesis",
+    "design_bounded_experiment",
+    "run_isolated_reversible_experiment",
+    "evaluate_evidence",
+    "recommend_candidate"
+  ],
+  "humanGovernedDeployment": {
+    "approvalRequiredFor": [
+      "production_change",
+      "shared_core_creation",
+      "permission_expansion",
+      "paid_cost_commitment",
+      "data_migration",
+      "destructive_change",
+      "security_boundary_change",
+      "production_dns_change",
+      "provider_lock_in",
+      "constitutional_change",
+      "authority_expansion"
+    ],
+    "directProductionMutation": false,
+    "directAuthorityExpansion": false,
+    "guardedReleasePipelineRequired": true,
+    "postDeploymentVerificationRequired": true,
+    "rollbackOrSafeDegradedPathRequired": true
+  },
+  "discoverySignals": [
+    "forecast_capacity_risk",
+    "repeated_error_pattern",
+    "repeated_human_intervention",
+    "cost_performance_drift",
+    "security_or_privacy_risk",
+    "architectural_complexity_growth",
+    "capability_gap",
+    "provider_or_standard_change",
+    "user_friction_pattern",
+    "cross_service_reuse_opportunity"
+  ],
+  "continuousCapabilityCertification": {
+    "enabled": true,
+    "candidateGeneration": 11,
+    "promotionIsAutomatic": false,
+    "safeFallbackGeneration": 10,
+    "minimumDimensionScorePct": 95,
+    "requiredDimensions": [
+      "autonomous_problem_discovery",
+      "research_question_generation",
+      "hypothesis_and_experiment_design",
+      "sandbox_isolation",
+      "reproducibility",
+      "evidence_quality",
+      "cost_control",
+      "security_authorization_integrity",
+      "rollout_rollback_proof",
+      "post_change_verification",
+      "learning_loop_closure"
+    ],
+    "requiredChecks": [
+      "stable_generation_10",
+      "no_authority_expansion",
+      "human_governed_production",
+      "rollback_or_safe_degraded_path",
+      "sustainable_cost_capacity",
+      "provider_independence"
+    ],
+    "readyState": "generation_11_candidate_ready_for_super_admin_review",
+    "notReadyState": "generation_10_safe_mode"
+  },
+  "nonNegotiables": [
+    "human_values_and_constitution_remain_sovereign",
+    "no_self_expansion_of_authority",
+    "no_hidden_high_impact_automation",
+    "no_direct_production_mutation_from_research",
+    "no_generation_promotion_without_evidence_and_super_admin_confirmation",
+    "every_execution_must_be_verifiable_and_auditable"
+  ]
+}

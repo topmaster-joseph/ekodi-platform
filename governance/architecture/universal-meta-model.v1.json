@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "modelId": "ekodi.universal-meta-model.v1",
+  "status": "enforced",
+  "effectiveDate": "2026-09-19",
+  "principle": "Names and organizational forms may change; stable entity identities, relationships, capabilities, provenance and lifecycle state survive transitions.",
+  "canonicalEntities": [
+    "Person",
+    "Organization",
+    "Workspace",
+    "Role",
+    "Capability",
+    "ServiceImplementation",
+    "Resource",
+    "Activity",
+    "Task",
+    "Knowledge",
+    "Transaction",
+    "Consent",
+    "Relationship",
+    "Evidence"
+  ],
+  "commonFields": [
+    "id",
+    "type",
+    "owner",
+    "source",
+    "version",
+    "effectiveDate",
+    "verificationState",
+    "lifecycleState",
+    "createdAt",
+    "updatedAt"
+  ],
+  "relationshipRules": {
+    "identityStableAcrossRename": true,
+    "mergeRequiresProvenance": true,
+    "splitRequiresProvenance": true,
+    "deleteUsesLifecycleBeforePhysicalRemoval": true,
+    "capabilityIdentityIndependentFromProvider": true,
+    "organizationIdentityIndependentFromDomain": true
+  },
+  "lifecycleStates": [
+    "draft",
+    "active",
+    "transitioning",
+    "inactive",
+    "archived",
+    "deprecated",
+    "removed"
+  ],
+  "verificationStates": [
+    "unverified",
+    "proposed",
+    "sandbox_verified",
+    "verified",
+    "production_verified",
+    "failed",
+    "superseded"
+  ],
+  "sourceOfTruthRule": "Current verified Source of Truth wins over historical snapshots; conflicts remain unresolved until evidence identifies the authoritative record.",
+  "compatibility": {
+    "legacyNamesMayAliasCanonicalIdentity": true,
+    "aliasMustNotCreateSecondAuthority": true
+  }
+}

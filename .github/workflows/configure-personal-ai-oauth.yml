@@ -1,0 +1,171 @@
+name: Configure EKODI Personal AI OAuth
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'auth-site/oauth-consent.html'
+      - 'auth-site/oauth-consent.js'
+      - 'ekodi-mcp-gateway.js'
+      - 'sovereign-capability-fabric.js'
+      - 'integration-connection-supervisor.js'
+      - 'supabase/migrations/*personal_ai_bridge*.sql'
+      - 'supabase/migrations/*ekodi_mcp*.sql'
+      - '.github/workflows/configure-personal-ai-oauth.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-personal-ai-oauth-production
+  cancel-in-progress: false
+
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_REF: renzehysxirjilvdxacv
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+    steps:
+      - name: Probe current OAuth server state
+        shell: bash
+        run: |
+          set -euo pipefail
+          discovery="https://$PROJECT_REF.supabase.co/.well-known/oauth-authorization-server/auth/v1"
+          code=$(curl -sS -o /tmp/discovery.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$discovery" || true)
+          if [[ "$code" == '200' ]] && python - <<'PY'
+          import json,sys
+          try:
+              d=json.load(open('/tmp/discovery.json'))
+          except Exception:
+              sys.exit(1)
+          sys.exit(0 if d.get('authorization_endpoint') and d.get('token_endpoint') else 1)
+          PY
+          then
+            echo 'OAUTH_READY=true' >> "$GITHUB_ENV"
+            echo 'OAUTH_STATE=ready' >> "$GITHUB_ENV"
+            echo 'OAuth server already ready; no management mutation needed.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'OAUTH_READY=false' >> "$GITHUB_ENV"
+            echo 'OAUTH_STATE=degraded' >> "$GITHUB_ENV"
+          fi
+      - name: Resolve management recovery credential
+        if: env.OAUTH_READY != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-}"
+          [[ -n "$token" ]] || token="${TOKEN_B:-}"
+          [[ -n "$token" ]] || token="${TOKEN_C:-}"
+          [[ -n "$token" ]] || token="${TOKEN_D:-}"
+          if [[ -z "$token" ]]; then
+            echo 'OAUTH_BOOTSTRAP_REQUIRED=true' >> "$GITHUB_ENV"
+            echo 'OAUTH_STATE=bootstrap_required' >> "$GITHUB_ENV"
+            echo '::warning::Supabase OAuth Server bootstrap requires one management credential. Automatic recovery will take over after bootstrap.'
+            {
+              echo '### Personal AI OAuth recovery'
+              echo '- State: `bootstrap_required`'
+              echo '- MCP Gateway and consent surface stay online.'
+              echo '- Automatic hourly recovery is armed; first management authorization is still required.'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo 'OAUTH_BOOTSTRAP_REQUIRED=false' >> "$GITHUB_ENV"
+          echo "SUPABASE_MGMT_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Configure bounded OAuth server
+        if: env.OAUTH_READY != 'true' && env.OAUTH_BOOTSTRAP_REQUIRED != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth"
+          payload='{"oauth_server_enabled":true,"oauth_server_allow_dynamic_registration":false,"oauth_server_authorization_path":"/oauth/consent","hook_custom_access_token_enabled":true,"hook_custom_access_token_uri":"pg-functions://postgres/public/ekodi_mcp_access_token_hook"}'
+          code='000'
+          for attempt in 1 2 3 4; do
+            code=$(curl -sS -D /tmp/auth.headers -o /tmp/auth.json -w '%{http_code}' -X PATCH "$api" \
+              --connect-timeout 5 --max-time 20 \
+              -H "Authorization: Bearer $SUPABASE_MGMT_TOKEN" \
+              -H 'Content-Type: application/json' --data "$payload" || true)
+            [[ "$code" == '200' ]] && break
+            if [[ "$code" == '429' || "$code" =~ ^5 ]]; then
+              retry=$(awk 'tolower($1)=="retry-after:" {gsub("\r", "", $2); print $2}' /tmp/auth.headers | tail -1)
+              sleep_for=${retry:-$((attempt * attempt))}
+              sleep "$sleep_for"
+              continue
+            fi
+            break
+          done
+          if [[ "$code" != '200' ]]; then
+            echo "OAuth recovery failed with HTTP $code" >&2
+            cat /tmp/auth.json >&2
+            exit 1
+          fi
+          echo 'OAUTH_READY=true' >> "$GITHUB_ENV"
+          echo 'OAUTH_STATE=recovered' >> "$GITHUB_ENV"
+
+      - name: Verify bounded OAuth configuration
+        if: env.OAUTH_READY == 'true' && env.SUPABASE_MGMT_TOKEN != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth"
+          curl -fsS "$api" -H "Authorization: Bearer $SUPABASE_MGMT_TOKEN" -o /tmp/check.json
+          python - <<'PY'
+          import json, sys
+          d=json.load(open('/tmp/check.json'))
+          expected={
+            'oauth_server_enabled': True,
+            'oauth_server_allow_dynamic_registration': False,
+            'oauth_server_authorization_path': '/oauth/consent',
+            'hook_custom_access_token_enabled': True,
+            'hook_custom_access_token_uri': 'pg-functions://postgres/public/ekodi_mcp_access_token_hook',
+          }
+          bad={k:(d.get(k),v) for k,v in expected.items() if d.get(k)!=v}
+          print('oauth_config_ok=', not bad)
+          if bad:
+              print('mismatch=', bad)
+              sys.exit(1)
+          PY
+      - name: Verify OAuth discovery and asymmetric signing
+        if: env.OAUTH_READY == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          discovery="https://$PROJECT_REF.supabase.co/.well-known/oauth-authorization-server/auth/v1"
+          jwks="https://$PROJECT_REF.supabase.co/auth/v1/.well-known/jwks.json"
+          for attempt in 1 2 3 4 5; do
+            if curl -fsS "$discovery" -o /tmp/discovery.json; then break; fi
+            sleep $((attempt * 2))
+          done
+          test -s /tmp/discovery.json
+          curl -fsS "$jwks" -o /tmp/jwks.json
+          python - <<'PY'
+          import json, sys
+          discovery=json.load(open('/tmp/discovery.json'))
+          jwks=json.load(open('/tmp/jwks.json'))
+          algs={key.get('alg') for key in jwks.get('keys',[]) if key.get('alg')}
+          print('authorization_endpoint=', discovery.get('authorization_endpoint'))
+          print('token_endpoint=', discovery.get('token_endpoint'))
+          print('jwks_algorithms=', sorted(algs))
+          if not discovery.get('authorization_endpoint') or not discovery.get('token_endpoint'):
+              sys.exit(1)
+          if not ({'ES256','RS256'} & algs):
+              sys.exit(1)
+          PY
+          {
+            echo '### Personal AI OAuth recovery'
+            echo "- State: \`${OAUTH_STATE:-ready}\`"
+            echo '- Discovery: verified'
+            echo '- Signing: asymmetric JWKS verified'
+            echo '- Dynamic registration: production policy remains OFF'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve bootstrap boundary
+        if: env.OAUTH_BOOTSTRAP_REQUIRED == 'true'
+        run: |
+          echo 'OAuth bootstrap remains intentionally human-authorized once; no unsafe credential extraction or silent consent bypass was attempted.'

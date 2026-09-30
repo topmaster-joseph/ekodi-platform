@@ -1,0 +1,48 @@
+name: Marketing Store Connectors Control Dispatch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'marketing-order-connectors.js'
+      - 'mission-control-entry-worker.js'
+      - 'security-edge.js'
+      - 'migrations/0025_marketing_store_connectors.sql'
+      - 'test/marketing-order-connectors-contract.test.mjs'
+      - '.github/workflows/marketing-store-connectors-dispatch.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: marketing-store-connectors-control-dispatch
+  cancel-in-progress: false
+
+jobs:
+  validate-and-dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate connector runtime contract
+        run: |
+          set -euo pipefail
+          node --check marketing-order-connectors.js
+          node --test test/marketing-order-connectors-contract.test.mjs
+          grep -Fq '/api/marketing/connectors/status' marketing-order-connectors.js
+          grep -Fq '/api/marketing/connectors/supabase-orders/sync' marketing-order-connectors.js
+          grep -Fq '/api/marketing/connectors/bridge/pair' marketing-order-connectors.js
+          grep -Fq '/api/marketing/connectors/bridge/ingest' marketing-order-connectors.js
+          grep -Fq 'externalWriteBack:false' marketing-order-connectors.js
+      - name: Dispatch guarded Control API workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run deploy-control-api.yml --ref main
+          echo 'Guarded Control API deployment dispatched for store connector change.'

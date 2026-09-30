@@ -1,0 +1,91 @@
+name: Traffic Intelligence Analytics
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '35 0 * * *'
+  pull_request:
+    paths:
+      - 'traffic-intelligence.js'
+      - 'traffic-intelligence-control.js'
+      - 'scripts/collect-traffic-intelligence.mjs'
+      - 'shell/shell.js'
+      - 'system-health-admin.js'
+      - 'system-health-admin.css'
+      - 'mission-control-entry-worker.js'
+      - 'migrations/0059_traffic_intelligence.sql'
+      - 'test/traffic-intelligence.test.mjs'
+      - '.github/workflows/traffic-intelligence-analytics.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'traffic-intelligence.js'
+      - 'traffic-intelligence-control.js'
+      - 'scripts/collect-traffic-intelligence.mjs'
+      - 'migrations/0059_traffic_intelligence.sql'
+      - '.github/workflows/traffic-intelligence-analytics.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-traffic-intelligence-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Traffic Intelligence contract
+        run: |
+          node --check traffic-intelligence.js
+          node --check traffic-intelligence-control.js
+          node --check scripts/collect-traffic-intelligence.mjs
+          node --check shell/shell.js
+          node --check system-health-admin.js
+          node --test test/traffic-intelligence.test.mjs
+
+  collect:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Collect previous UTC day by zone, host and traffic class
+        shell: bash
+        run: |
+          set -uo pipefail
+          sql_file="$RUNNER_TEMP/ekodi-traffic-intelligence.sql"
+          set +e
+          node scripts/collect-traffic-intelligence.mjs "$sql_file"
+          collector_status=$?
+          set -e
+          test -s "$sql_file" || { echo 'Traffic Intelligence SQL was not generated.'; exit 1; }
+          npx --yes wrangler@4.127.1 d1 execute ekodi-auth \
+            --remote \
+            --config wrangler.api.toml \
+            --file "$sql_file"
+          if [ "$collector_status" -ne 0 ]; then
+            echo 'Traffic Intelligence collection failed; the error state was persisted.'
+            exit "$collector_status"
+          fi
+
+      - name: Confirm privacy-preserving aggregate storage
+        shell: bash
+        run: |
+          grep -Fq 'traffic_intelligence_daily' migrations/0059_traffic_intelligence.sql
+          grep -Fq 'session_hash' migrations/0059_traffic_intelligence.sql
+          ! grep -Eqi '(client_ip|request_path|raw_log|user_agent)' migrations/0059_traffic_intelligence.sql
+          echo 'Verified: no raw IP, path or User-Agent is persisted.'

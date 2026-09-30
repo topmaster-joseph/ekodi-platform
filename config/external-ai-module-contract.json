@@ -1,0 +1,161 @@
+{
+  "version": "1.0.0",
+  "protocol": "https-json",
+  "executionPath": "/v1/execute",
+  "healthPath": "/v1/health",
+  "timeoutMsDefault": 12000,
+  "timeoutMsMax": 30000,
+  "requestEnvelope": {
+    "required": [
+      "contractVersion",
+      "requestId",
+      "moduleId",
+      "capability",
+      "context",
+      "input"
+    ],
+    "contextRequired": [
+      "spaceId",
+      "serviceId",
+      "actorId",
+      "role",
+      "capabilities",
+      "attestedBy"
+    ]
+  },
+  "responseEnvelope": {
+    "required": [
+      "contractVersion",
+      "requestId",
+      "ok"
+    ],
+    "successRequired": [
+      "output"
+    ],
+    "failureRequired": [
+      "error"
+    ]
+  },
+  "security": {
+    "executionTrust": "registered_ekodi_internal_caller",
+    "browserDirectExecution": false,
+    "providerMayAccessEkodiDatabaseDirectly": false,
+    "providerSecretsStayServerSide": true,
+    "tenantContextRequired": true,
+    "capabilityCheckRequired": true,
+    "capabilitiesMustBeAttestedByEkodiCaller": true,
+    "secureProjectionRequired": true,
+    "projectionPolicy": "purpose-bound-minimum-disclosure",
+    "projectionProfileDefault": "ai_minimum",
+    "canonicalActorIdMayLeaveEkodi": false,
+    "canonicalSpaceIdMayLeaveEkodi": false,
+    "personalDataDefault": "drop",
+    "sourceTopologyMayLeaveEkodi": false,
+    "providerMayReceiveEkodiStorageCredentials": false,
+    "providerMayAccessCanonicalStorageDirectly": false
+  },
+  "persistence": {
+    "providerReturnsOutputToEkodi": true,
+    "durableOutputRoute": "EKODI Storage Gateway",
+    "canonicalStore": "ekodi_managed_canonical_store",
+    "implementationHiddenFromProvider": true
+  },
+  "moduleManifestRequired": [
+    "id",
+    "name",
+    "version",
+    "endpoint",
+    "capabilities",
+    "secretBinding"
+  ],
+  "moduleIdPattern": "^[a-z0-9][a-z0-9._-]{2,63}$",
+  "guardrails": {
+    "policyVersion": "2026-09-08",
+    "capabilityGrant": {
+      "ttlSeconds": 60,
+      "singleCapability": true,
+      "singleUseIntent": true,
+      "providerCannotUseGrantAgainstEkodi": true
+    },
+    "dataMinimization": {
+      "secureProjectionRequired": true,
+      "canonicalIdentifiersPseudonymized": true,
+      "secretsProjected": false,
+      "sourceTopologyProjected": false,
+      "purposeBound": true
+    },
+    "idempotency": {
+      "header": "x-ekodi-idempotency-key",
+      "retryRequiresManifestOptIn": true,
+      "maxAttempts": 2
+    },
+    "providerDataUse": {
+      "retention": "transient",
+      "trainingAllowed": false,
+      "secondaryUseAllowed": false
+    },
+    "responseLimits": {
+      "maxBytesDefault": 1048576,
+      "maxBytesMax": 2097152
+    },
+    "failureIsolation": {
+      "timeoutRequired": true,
+      "circuitBreaker": "gateway-local-best-effort",
+      "coreServiceMustRemainAvailable": true
+    },
+    "audit": {
+      "requiredFields": [
+        "request_id",
+        "module_id",
+        "capability",
+        "space_id",
+        "service_id",
+        "actor_id",
+        "caller_id",
+        "provider_model",
+        "latency_ms",
+        "storage_status",
+        "guardrail_policy_version",
+        "error_code",
+        "status",
+        "created_at"
+      ]
+    }
+  },
+  "moduleManifestOptional": {
+    "retrySafe": "boolean; default false",
+    "retryMaxAttempts": "integer 1..2; used only when retrySafe=true",
+    "retryBackoffMs": "integer 0..2000",
+    "responseMaxBytes": "integer 1024..2097152",
+    "circuitBreakerThreshold": "integer 2..20",
+    "circuitBreakerCooldownMs": "integer 1000..120000"
+  },
+  "providerExecutionEnvelope": {
+    "required": [
+      "contractVersion",
+      "requestId",
+      "moduleId",
+      "capability",
+      "context",
+      "capabilityGrant",
+      "dataPolicy",
+      "input"
+    ],
+    "capabilityGrantRequired": [
+      "grantId",
+      "audience",
+      "capability",
+      "issuedAt",
+      "expiresAt",
+      "singleUseIntent",
+      "ekodiApiToken",
+      "attestedBy"
+    ],
+    "dataPolicyRequired": [
+      "retention",
+      "trainingAllowed",
+      "secondaryUseAllowed",
+      "canonicalStorageOwnedByEkodi"
+    ]
+  }
+}

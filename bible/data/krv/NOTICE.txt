@@ -1,0 +1,5 @@
+성경전서 개역한글판 (1961)
+표시: 대한성서공회 · 성경전서 개역한글판(1961)
+정책: 본문은 원문 그대로 제공하며 EKODI 또는 AI가 수정·교정·의역하지 않습니다.
+대한성서공회 저작권 안내: https://bskorea.or.kr/bbs/board.php?bo_table=copyright_faq&wr_id=5
+디지털 데이터 검증 출처: https://github.com/bluesaurel/Korean-Bible-1961-KRV@65cdce887b141581b45097163b4b224de4a332fa

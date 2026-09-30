@@ -1,0 +1,45 @@
+name: Validate EKODI History
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: &history_paths
+      - 'history.html'
+      - 'homepage-ambient.js'
+      - 'scripts/build.mjs'
+      - 'test/history-page.test.mjs'
+      - '.github/workflows/deploy-history.yml'
+  push:
+    branches: [main]
+    paths: *history_paths
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate History source and artifact contract
+        run: |
+          set -euo pipefail
+          node --check homepage-ambient.js
+          node --check scripts/build.mjs
+          node --test test/history-page.test.mjs
+          grep -Fq 'https://ekodi.kr/history' history.html
+          grep -Fq 'EKODI HISTORY' history.html
+          grep -Fq "'history.html'" scripts/build.mjs
+          grep -Fq "href = '/history'" homepage-ambient.js
+          npm run build
+          test -f dist/history.html
+          grep -Fq 'https://ekodi.kr/history' dist/history.html
+          grep -Fq 'EKODI HISTORY' dist/history.html
+          grep -Fq 'Ecclesia' dist/history.html
+          grep -Fq 'Jubilee' dist/history.html
+      - name: Verify single production owner policy
+        run: node scripts/validate-deployment-guardrails.mjs

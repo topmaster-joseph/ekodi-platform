@@ -1,0 +1,245 @@
+name: EKODI Autonomous Discovery Cycle
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
+  pull_request:
+    paths:
+      - 'ekodi-autonomous-discovery-engine.js'
+      - 'autonomous-discovery-service-registry.js'
+      - 'ekodi-autonomous-evolution-loop.js'
+      - 'autonomous-evolution-store.js'
+      - 'scripts/run-autonomous-discovery-cycle.mjs'
+      - 'scripts/collect-autonomous-research-evidence.mjs'
+      - 'scripts/run-autonomous-evolution-loop.mjs'
+      - 'scripts/run-autonomous-operations-cycle.mjs'
+      - 'test/autonomous-discovery-engine.test.mjs'
+      - 'test/autonomous-discovery-cycle.test.mjs'
+      - 'test/autonomous-discovery-subservices.test.mjs'
+      - 'test/autonomous-evolution-loop.test.mjs'
+      - 'test/autonomous-evolution-subservices.test.mjs'
+      - 'test/autonomous-research-evidence.test.mjs'
+      - 'test/autonomous-operations-cycle.test.mjs'
+      - 'config/ecosystem-services.json'
+      - 'config/autonomous-operations-policy.json'
+      - 'governance/architecture/ekodi-autonomous-discovery-engine.json'
+      - 'migrations/0080_autonomous_evolution_lifecycle.sql'
+      - '.github/workflows/autonomous-discovery-cycle.yml'
+      - '.github/workflows/monitor.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ekodi-autonomous-discovery-engine.js'
+      - 'autonomous-discovery-service-registry.js'
+      - 'ekodi-autonomous-evolution-loop.js'
+      - 'autonomous-evolution-store.js'
+      - 'scripts/run-autonomous-discovery-cycle.mjs'
+      - 'scripts/collect-autonomous-research-evidence.mjs'
+      - 'scripts/run-autonomous-evolution-loop.mjs'
+      - 'scripts/run-autonomous-operations-cycle.mjs'
+      - 'test/autonomous-operations-cycle.test.mjs'
+      - 'config/ecosystem-services.json'
+      - 'config/autonomous-operations-policy.json'
+      - 'governance/architecture/ekodi-autonomous-discovery-engine.json'
+      - 'migrations/0080_autonomous_evolution_lifecycle.sql'
+      - '.github/workflows/autonomous-discovery-cycle.yml'
+      - '.github/workflows/monitor.yml'
+
+permissions:
+  contents: read
+  actions: write
+  issues: write
+
+concurrency:
+  group: ekodi-autonomous-discovery-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate discovery, research, evolution and delegated operations lifecycle
+        run: |
+          node --check ekodi-autonomous-discovery-engine.js
+          node --check autonomous-discovery-service-registry.js
+          node --check ekodi-autonomous-evolution-loop.js
+          node --check autonomous-evolution-store.js
+          node --check scripts/run-autonomous-discovery-cycle.mjs
+          node --check scripts/collect-autonomous-research-evidence.mjs
+          node --check scripts/run-autonomous-evolution-loop.mjs
+          node --check scripts/run-autonomous-operations-cycle.mjs
+          node --test \
+            test/autonomous-discovery-engine.test.mjs \
+            test/autonomous-discovery-cycle.test.mjs \
+            test/autonomous-discovery-subservices.test.mjs \
+            test/autonomous-evolution-loop.test.mjs \
+            test/autonomous-evolution-subservices.test.mjs \
+            test/autonomous-research-evidence.test.mjs \
+            test/autonomous-operations-cycle.test.mjs
+
+  discover:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Collect recent GitHub Actions evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "repos/${GITHUB_REPOSITORY}/actions/runs?per_page=100" \
+            --jq '[.workflow_runs[] | {databaseId: .id, workflowName: .name, workflowPath: .path, status: .status, conclusion: .conclusion, createdAt: .created_at, url: .html_url, event: .event, runAttempt: .run_attempt}]' \
+            > "$RUNNER_TEMP/ekodi-workflow-runs.json"
+
+      - name: Run read-only discovery cycle across registered subservices
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/run-autonomous-discovery-cycle.mjs \
+            --runs "$RUNNER_TEMP/ekodi-workflow-runs.json" \
+            --services config/ecosystem-services.json \
+            --output "$RUNNER_TEMP/ekodi-autonomous-discovery-report.json" \
+            --summary "$RUNNER_TEMP/ekodi-autonomous-discovery-summary.md"
+          cat "$RUNNER_TEMP/ekodi-autonomous-discovery-summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Collect research evidence down to failed jobs and steps
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/collect-autonomous-research-evidence.mjs \
+            --discovery "$RUNNER_TEMP/ekodi-autonomous-discovery-report.json" \
+            --runs "$RUNNER_TEMP/ekodi-workflow-runs.json" \
+            --output "$RUNNER_TEMP/ekodi-autonomous-research-evidence.json" \
+            > /dev/null
+
+      - name: Run autonomous evolution lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/run-autonomous-evolution-loop.mjs \
+            --discovery "$RUNNER_TEMP/ekodi-autonomous-discovery-report.json" \
+            --evidence "$RUNNER_TEMP/ekodi-autonomous-research-evidence.json" \
+            --output "$RUNNER_TEMP/ekodi-autonomous-evolution-report.json" \
+            --summary "$RUNNER_TEMP/ekodi-autonomous-evolution-summary.md"
+          cat "$RUNNER_TEMP/ekodi-autonomous-evolution-summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce research and evolution authority boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const root = process.env.RUNNER_TEMP;
+          const discovery = JSON.parse(fs.readFileSync(root + '/ekodi-autonomous-discovery-report.json', 'utf8'));
+          const research = JSON.parse(fs.readFileSync(root + '/ekodi-autonomous-research-evidence.json', 'utf8'));
+          const evolution = JSON.parse(fs.readFileSync(root + '/ekodi-autonomous-evolution-report.json', 'utf8'));
+          const discoverySubserviceViolation = Array.isArray(discovery.subservices)
+            && discovery.subservices.some(service => service.productionMutationPerformed !== false || service.authorityExpanded !== false);
+          const evolutionSubserviceViolation = Array.isArray(evolution.subservices)
+            && evolution.subservices.some(service => service.productionMutationPerformed !== false || service.authorityExpanded !== false);
+          const violated = discovery.productionMutationPerformed !== false
+            || discovery.authorityExpanded !== false
+            || discovery.cycle?.productionMutationPerformed !== false
+            || discovery.cycle?.authorityExpanded !== false
+            || discoverySubserviceViolation
+            || research.productionMutationPerformed !== false
+            || research.authorityExpanded !== false
+            || evolution.productionMutationPerformed !== false
+            || evolution.authorityExpanded !== false
+            || evolution.automaticPromotionPerformed !== false
+            || evolutionSubserviceViolation;
+          if (violated) throw new Error('Autonomous evolution cycle crossed its delegated authority boundary');
+          NODE
+          echo 'Verified: platform and subservice autonomous research/evolution remain non-production-mutating, non-authority-expanding, and non-self-promoting.'
+
+      - name: Plan evolutionary internal autonomous operations
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/run-autonomous-operations-cycle.mjs \
+            --runs "$RUNNER_TEMP/ekodi-workflow-runs.json" \
+            --policy config/autonomous-operations-policy.json \
+            --evolution "$RUNNER_TEMP/ekodi-autonomous-evolution-report.json" \
+            --output "$RUNNER_TEMP/ekodi-autonomous-operations-report.json" \
+            --summary "$RUNNER_TEMP/ekodi-autonomous-operations-summary.md"
+          cat "$RUNNER_TEMP/ekodi-autonomous-operations-summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Execute bounded self-recovery for delegated read-only checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=$(jq '.safeRetries | length' "$RUNNER_TEMP/ekodi-autonomous-operations-report.json")
+          if [ "$count" -eq 0 ]; then
+            echo 'No bounded self-recovery retry is required.'
+            exit 0
+          fi
+          jq -r '.safeRetries[].runId' "$RUNNER_TEMP/ekodi-autonomous-operations-report.json" | while read -r run_id; do
+            test -n "$run_id"
+            echo "Re-running failed jobs once for delegated read-only workflow run $run_id"
+            gh api --method POST \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/rerun-failed-jobs"
+          done
+
+      - name: Maintain persistent autonomous-engineering attention lifecycle
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$RUNNER_TEMP/ekodi-autonomous-operations-report.json"
+          summary="$RUNNER_TEMP/ekodi-autonomous-operations-summary.md"
+          test -s "$report" || exit 0
+          title='EKODI autonomous operations: persistent engineering attention'
+          existing=$(gh issue list --state open --search "$title in:title" --json number --jq '.[0].number // empty')
+          count=$(jq '.attention | length' "$report")
+          if [ "$count" -eq 0 ]; then
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" --body 'EKODI internal autonomy verified that the persistent failure condition has cleared in the latest evidence window. Closing this attention item; future recurrence will be detected independently.'
+              gh issue close "$existing" --reason completed
+            fi
+            exit 0
+          fi
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          body_file="$RUNNER_TEMP/ekodi-autonomous-attention-body.md"
+          cat "$summary" > "$body_file"
+          printf '\n\nWorkflow evidence: %s\n\n%s\n' \
+            "$run_url" \
+            'This issue is generated by EKODI internal autonomy. It is an isolated-engineering handoff signal only and does not authorize permission expansion, destructive work, paid commitments, constitutional changes, automatic promotion, or direct production mutation.' \
+            >> "$body_file"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file "$body_file"
+          else
+            gh issue create --title "$title" --body-file "$body_file"
+          fi
+
+      - name: Upload autonomous evolution and operations evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-autonomous-evolution-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/ekodi-autonomous-discovery-report.json
+            ${{ runner.temp }}/ekodi-autonomous-research-evidence.json
+            ${{ runner.temp }}/ekodi-autonomous-evolution-report.json
+            ${{ runner.temp }}/ekodi-autonomous-operations-report.json
+            ${{ runner.temp }}/ekodi-autonomous-discovery-summary.md
+            ${{ runner.temp }}/ekodi-autonomous-evolution-summary.md
+            ${{ runner.temp }}/ekodi-autonomous-operations-summary.md
+          if-no-files-found: error
+          retention-days: 90

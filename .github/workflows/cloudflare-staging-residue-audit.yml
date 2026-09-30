@@ -1,0 +1,198 @@
+name: Cloudflare Staging Residue Audit
+
+# Proactive residue audit trigger: 2026-09-04
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cloudflare-staging-residue-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: development
+    env:
+      PROD_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PROD_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      DEV_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      DEV_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+    steps:
+      - name: Classify every Production staging residue
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$PROD_ACCOUNT_ID"
+          test -n "$PROD_TOKEN"
+          test -n "$DEV_TOKEN"
+          test "$PROD_ACCOUNT_ID" != "$DEV_ACCOUNT_ID"
+
+          api='https://api.cloudflare.com/client/v4'
+          prod_auth=(-H "Authorization: Bearer $PROD_TOKEN" -H 'Content-Type: application/json')
+          dev_auth=(-H "Authorization: Bearer $DEV_TOKEN" -H 'Content-Type: application/json')
+
+          curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts" -o /tmp/prod-workers.json
+          curl -fsS "${dev_auth[@]}" "$api/accounts/$DEV_ACCOUNT_ID/workers/scripts" -o /tmp/dev-workers.json
+          jq -e '.success == true' /tmp/prod-workers.json >/dev/null
+          jq -e '.success == true' /tmp/dev-workers.json >/dev/null
+          jq -r '.result[]?.id | select(endswith("-staging") or contains("-staging-"))' /tmp/prod-workers.json | sort > /tmp/candidates.txt
+
+          curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/domains" -o /tmp/domains.json
+          jq -e '.success == true' /tmp/domains.json >/dev/null
+          curl -fsS "${prod_auth[@]}" "$api/zones?account.id=$PROD_ACCOUNT_ID&per_page=50" -o /tmp/zones.json
+          jq -e '.success == true' /tmp/zones.json >/dev/null
+
+          : > /tmp/routes.ndjson
+          jq -r '.result[]? | [.id,.name] | @tsv' /tmp/zones.json > /tmp/zone-ids.txt
+          while IFS=$'\t' read -r zid zname; do
+            [[ -n "$zid" ]] || continue
+            curl -fsS "${prod_auth[@]}" "$api/zones/$zid/workers/routes" -o /tmp/zone-routes.json
+            jq -e '.success == true' /tmp/zone-routes.json >/dev/null
+            jq -c --arg zone "$zname" '.result[]? | {zone:$zone, pattern:.pattern, script:.script}' /tmp/zone-routes.json >> /tmp/routes.ndjson
+          done < /tmp/zone-ids.txt
+
+          mkdir -p /tmp/all-settings /tmp/candidate-settings /tmp/prod-schedules /tmp/dev-schedules
+          while IFS= read -r script; do
+            [[ -n "$script" ]] || continue
+            safe_name=$(printf '%s' "$script" | tr '/:' '__')
+            curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts/$script/settings" -o "/tmp/all-settings/$safe_name.json"
+            jq -e '.success == true' "/tmp/all-settings/$safe_name.json" >/dev/null
+          done < <(jq -r '.result[]?.id' /tmp/prod-workers.json)
+
+          declare -A mapped
+          mapped[ekodi-auth-api-staging]=ekodi-auth-api-development
+          mapped[ekodi-finance-api-staging]=ekodi-finance-api-development
+          mapped[ekodi-marketing-domain-api-staging]=ekodi-marketing-domain-api-development
+          mapped[ekodi-marketing-publishing-staging]=ekodi-marketing-publishing-development
+          mapped[ekodi-platform-staging]=ekodi-platform-development
+          mapped[ekodi-workspace-platform-api-staging]=ekodi-workspace-platform-api-development
+
+          schedules_ok=1
+          while IFS= read -r script; do
+            [[ -n "$script" ]] || continue
+            cp "/tmp/all-settings/$script.json" "/tmp/candidate-settings/$script.json"
+            if ! curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts/$script/schedules" -o "/tmp/prod-schedules/$script.json"; then
+              schedules_ok=0
+              echo '{"success":false,"result":[]}' > "/tmp/prod-schedules/$script.json"
+            fi
+            counterpart="$script"
+            if ! jq -e --arg s "$counterpart" '.result[] | select(.id == $s)' /tmp/dev-workers.json >/dev/null; then
+              counterpart="${mapped[$script]:-}"
+            fi
+            if [[ -n "$counterpart" ]] && jq -e --arg s "$counterpart" '.result[] | select(.id == $s)' /tmp/dev-workers.json >/dev/null; then
+              if ! curl -fsS "${dev_auth[@]}" "$api/accounts/$DEV_ACCOUNT_ID/workers/scripts/$counterpart/schedules" -o "/tmp/dev-schedules/$script.json"; then
+                schedules_ok=0
+                echo '{"success":false,"result":[]}' > "/tmp/dev-schedules/$script.json"
+              fi
+            else
+              echo '{"success":false,"result":[]}' > "/tmp/dev-schedules/$script.json"
+            fi
+          done < /tmp/candidates.txt
+
+          export SCHEDULES_OK="$schedules_ok"
+          python - <<'PY'
+          import json, os, glob
+
+          dev=json.load(open('/tmp/dev-workers.json', encoding='utf-8'))
+          domains=json.load(open('/tmp/domains.json', encoding='utf-8')).get('result', [])
+          dev_names={x.get('id') for x in dev.get('result', [])}
+          candidates=[x.strip() for x in open('/tmp/candidates.txt', encoding='utf-8') if x.strip()]
+          routes=[]
+          for line in open('/tmp/routes.ndjson', encoding='utf-8'):
+              line=line.strip()
+              if line: routes.append(json.loads(line))
+          schedules_ok=os.environ['SCHEDULES_OK']=='1'
+
+          mapped={
+            'ekodi-auth-api-staging':'ekodi-auth-api-development',
+            'ekodi-finance-api-staging':'ekodi-finance-api-development',
+            'ekodi-marketing-domain-api-staging':'ekodi-marketing-domain-api-development',
+            'ekodi-marketing-publishing-staging':'ekodi-marketing-publishing-development',
+            'ekodi-platform-staging':'ekodi-platform-development',
+            'ekodi-workspace-platform-api-staging':'ekodi-workspace-platform-api-development',
+          }
+
+          all_settings=[]
+          for path in glob.glob('/tmp/all-settings/*.json'):
+              data=json.load(open(path, encoding='utf-8'))
+              all_settings.append(data.get('result') or {})
+
+          def domain_script(d):
+              return d.get('service') or d.get('script') or d.get('service_name')
+
+          def crons(data):
+              if data.get('success') is not True:
+                  return None
+              result=data.get('result') or []
+              vals=[]
+              for x in result:
+                  if isinstance(x, dict):
+                      vals.append(x.get('cron') or x.get('schedule') or json.dumps(x,sort_keys=True))
+                  else:
+                      vals.append(str(x))
+              return sorted(vals)
+
+          rows=[]
+          for script in candidates:
+              settings=json.load(open(f'/tmp/candidate-settings/{script}.json', encoding='utf-8'))
+              result=settings.get('result') or {}
+              bindings=result.get('bindings') or []
+              risky=[{'name':b.get('name'),'type':b.get('type')} for b in bindings if b.get('type') not in ('assets','plain_text')]
+              dom=[d.get('hostname') for d in domains if domain_script(d)==script]
+              rte=[r for r in routes if r.get('script')==script]
+              inbound=[]
+              for owner in all_settings:
+                  for b in owner.get('bindings') or []:
+                      target=b.get('service') or b.get('service_name')
+                      if b.get('type')=='service' and target==script:
+                          inbound.append({'binding':b.get('name'), 'target':target})
+
+              counterpart=script if script in dev_names else mapped.get(script)
+              counterpart_ok=bool(counterpart and counterpart in dev_names)
+              relation='exact' if counterpart==script and counterpart_ok else ('mapped' if counterpart_ok else 'missing')
+              prod_sched=crons(json.load(open(f'/tmp/prod-schedules/{script}.json', encoding='utf-8')))
+              dev_sched=crons(json.load(open(f'/tmp/dev-schedules/{script}.json', encoding='utf-8'))) if counterpart_ok else None
+              schedule_match=bool(prod_sched is not None and dev_sched is not None and prod_sched==dev_sched)
+              safe=bool(counterpart_ok and not dom and not rte and not risky and not inbound and schedule_match)
+              rows.append({
+                'script':script,'safe':safe,'counterpart':counterpart if counterpart_ok else None,
+                'relation':relation,'domains':dom,'routes':rte,'risky_bindings':risky,
+                'inbound_service_bindings':inbound,'prod_crons':prod_sched,'dev_crons':dev_sched,
+                'schedule_match':schedule_match,
+              })
+
+          safe_exact=[r['script'] for r in rows if r['safe'] and r['relation']=='exact']
+          safe_mapped=[r['script'] for r in rows if r['safe'] and r['relation']=='mapped']
+          hold=[r['script'] for r in rows if not r['safe']]
+
+          print('REMAINING_COUNT='+str(len(rows)))
+          print('SAFE_EXACT='+','.join(safe_exact))
+          print('SAFE_MAPPED='+','.join(safe_mapped))
+          print('HOLD='+','.join(hold))
+          for r in rows:
+              print('CRON_COMPARE', r['script'], '=>', r['counterpart'], 'prod=',r['prod_crons'],'dev=',r['dev_crons'],'match=',r['schedule_match'],'safe=',r['safe'])
+          print(json.dumps(rows, ensure_ascii=False, indent=2))
+
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a',encoding='utf-8') as f:
+              f.write('## Cloudflare remaining Production staging residue\n\n')
+              f.write(f'- Remaining staging-named Workers: **{len(rows)}**\n')
+              f.write(f'- Safe exact counterparts with matching cron: **{len(safe_exact)}**\n')
+              f.write(f'- Safe mapped counterparts with matching cron: **{len(safe_mapped)}**\n')
+              f.write(f'- Hold / migration analysis: **{len(hold)}**\n')
+              f.write(f'- Schedule APIs readable: **{"yes" if schedules_ok else "partial"}**\n\n')
+              f.write('| Production residue | Dev counterpart | Cron | Decision |\n|---|---|---|---|\n')
+              for r in rows:
+                  reason=[]
+                  if r['domains']: reason.append('custom-domain')
+                  if r['routes']: reason.append('route')
+                  if r['risky_bindings']: reason.append('binding')
+                  if r['inbound_service_bindings']: reason.append('inbound-service')
+                  if not r['schedule_match']: reason.append('cron-mismatch')
+                  if r['relation']=='missing': reason.append('no-dev-counterpart')
+                  decision='SAFE' if r['safe'] else 'HOLD: '+(','.join(reason) or 'review')
+                  f.write(f"| `{r['script']}` | `{r['counterpart'] or '-'}` | `{r['prod_crons']} -> {r['dev_crons']}` | **{decision}** |\n")
+          PY

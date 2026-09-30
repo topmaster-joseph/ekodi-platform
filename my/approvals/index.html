@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="내가 처리할 결재와 요청한 결재를 한눈에 보는 My EKODI 결재함">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="ekodi-ui-type" content="USER">
+  <title>나의 결재 | My EKODI</title>
+  <link rel="stylesheet" href="/styles.css?v=20260821-user-ui-1">
+  <link rel="stylesheet" href="/user-ui.css?v=20260822-user-ai-1">
+  <link rel="stylesheet" href="/approvals/styles.css?v=20260904-approval-hub-1">
+</head>
+<body data-ekodi-ui="USER">
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="My EKODI 홈"><span class="mark">M</span><span><strong>My EKODI</strong><small>나의 에코디</small></span></a>
+    <nav aria-label="결재 메뉴"><a href="/">홈</a><a class="current" href="/approvals/">나의 결재</a><a href="/#workspaces">내 공간</a><a href="/#account">내 정보</a></nav>
+    <button id="authButton" class="ghost" type="button">Google로 시작</button>
+  </header>
+
+  <main class="approval-main">
+    <section class="approval-hero">
+      <div><p class="eyebrow">MY APPROVAL · DECISION INBOX</p><h1>결정할 것은 선명하게,<br>지나간 것은 한눈에.</h1><p class="lead">여러 공간의 결재를 한곳에 모으되 권한은 섞지 않습니다. AI는 맥락을 요약할 수 있지만 승인과 반려는 사람이 결정합니다.</p></div>
+      <aside class="approval-principle"><small>EKODI APPROVAL CORE</small><strong>통합된 보기 · 분리된 권한</strong><p>결재 기록과 실제 실행 결과도 서로 분리해 남깁니다.</p></aside>
+    </section>
+    <section id="loginGate" class="approval-gate" aria-live="polite">
+      <div><small>PRIVATE FIRST</small><h2>로그인 후 내 결재만 불러옵니다.</h2><p>내가 요청했거나 나에게 배정된 결재만 사람 단위 권한으로 조회됩니다.</p></div>
+      <button id="gateLoginButton" class="primary" type="button">Google로 시작</button>
+    </section>
+
+    <section id="approvalWorkspace" hidden>
+      <div class="approval-summary" aria-label="결재 요약">
+        <article class="summary-card action"><small>지금 처리</small><strong id="actionCount">0</strong><span>내 승인을 기다림</span></article>
+        <article class="summary-card due"><small>기한 임박</small><strong id="dueCount">0</strong><span>48시간 이내</span></article>
+        <article class="summary-card requested"><small>내가 요청</small><strong id="requestedCount">0</strong><span>전체 요청</span></article>
+        <article class="summary-card done"><small>결정 완료</small><strong id="doneCount">0</strong><span>승인 · 반려 · 취소</span></article>
+      </div>
+
+      <section class="approval-list-section">
+        <div class="section-head"><div><p class="eyebrow">DECISIONS</p><h2>나의 결재함</h2></div><p id="approvalStatus">결재 내역을 불러오는 중입니다.</p></div>
+        <div id="approvalFilters" class="approval-filters" role="group" aria-label="결재 필터">
+          <button class="chip active" data-filter="action" type="button">처리 필요</button>
+          <button class="chip" data-filter="requested" type="button">내가 요청</button>
+          <button class="chip" data-filter="pending" type="button">진행 중</button>
+          <button class="chip" data-filter="done" type="button">완료</button>
+          <button class="chip" data-filter="all" type="button">전체</button>
+        </div>
+        <div id="approvalList" class="approval-list" aria-live="polite"></div>
+      </section>
+    </section>
+    <dialog id="decisionDialog" class="decision-dialog">
+      <form id="decisionForm" method="dialog">
+        <input id="decisionApprovalId" type="hidden">
+        <input id="decisionValue" type="hidden">
+        <small id="decisionEyebrow">결재</small>
+        <h2 id="decisionTitle">결재 확인</h2>
+        <p id="decisionCopy">결정을 기록합니다.</p>
+        <label for="decisionComment">의견 <span>선택</span></label>
+        <textarea id="decisionComment" maxlength="1000" rows="4" placeholder="결정 이유나 전달할 내용을 남길 수 있습니다."></textarea>
+        <div class="dialog-actions"><button id="decisionCancel" class="secondary" type="button">닫기</button><button id="decisionSubmit" class="primary" type="submit">확인</button></div>
+      </form>
+    </dialog>
+  </main>
+
+  <footer><strong>My EKODI</strong><span>EKODI Approval Core · 사람 중심 권한 · 결정과 실행의 분리</span><a href="/">My EKODI ↗</a><a href="https://ekodi.kr/">EKODI ↗</a></footer>
+  <script src="/config.js"></script>
+  <script type="module" src="/approvals/app.js?v=20260904-approval-hub-1"></script>
+</body>
+</html>

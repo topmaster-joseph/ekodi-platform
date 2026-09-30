@@ -1,0 +1,20 @@
+.admin-browser-diagnostic{margin:18px 0;padding:20px;border:1px solid var(--line,#dfe6e2);border-radius:18px;background:var(--panel,#fff)}
+.admin-browser-diagnostic-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+.admin-browser-diagnostic-head h3{margin:3px 0 7px;font-size:18px}
+.admin-browser-diagnostic-head p{margin:0;color:var(--muted,#68766f);line-height:1.55}
+.admin-browser-diagnostic-head>span{flex:0 0 auto;font-size:12px;color:var(--muted,#68766f)}
+.admin-browser-diagnostic-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:15px}
+.admin-browser-diagnostic-actions small{color:var(--muted,#68766f);line-height:1.45}
+.admin-browser-diagnostic-result{display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;margin-top:16px;padding-top:16px;border-top:1px solid var(--line,#dfe6e2)}
+.admin-browser-score{display:flex;align-items:baseline;gap:5px;min-height:76px;padding:12px;border-radius:14px;background:rgba(0,0,0,.025)}
+.admin-browser-score strong{font-size:34px;line-height:1}
+.admin-browser-score span{font-size:12px;color:var(--muted,#68766f)}
+.admin-browser-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.admin-browser-stats span{display:flex;flex-direction:column;gap:4px;min-width:0;padding:10px;border-radius:12px;background:rgba(0,0,0,.025)}
+.admin-browser-stats small{font-size:11px;color:var(--muted,#68766f)}
+.admin-browser-stats b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.admin-browser-recommendations{grid-column:1/-1;display:grid;gap:6px}
+.admin-browser-recommendations p{margin:0;padding:9px 11px;border-radius:11px;background:rgba(0,0,0,.025);font-size:13px;line-height:1.45}
+@media(max-width:980px){.admin-browser-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){.admin-browser-diagnostic{padding:16px}.admin-browser-diagnostic-head{display:block}.admin-browser-diagnostic-head>span{display:block;margin-top:8px}.admin-browser-diagnostic-result{grid-template-columns:1fr}.admin-browser-stats{grid-template-columns:1fr 1fr}.admin-browser-score{min-height:auto}.admin-browser-recommendations{grid-column:auto}}
+@media(max-width:460px){.admin-browser-stats{grid-template-columns:1fr}.admin-browser-diagnostic-actions button{width:100%}}

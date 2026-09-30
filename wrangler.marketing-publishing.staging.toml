@@ -1,0 +1,18 @@
+name = "ekodi-marketing-publishing-staging"
+main = "marketing-publishing-worker.js"
+compatibility_date = "2026-08-18"
+workers_dev = true
+preview_urls = false
+
+[vars]
+ENVIRONMENT = "staging"
+ALLOW_MUTATIONS = "false"
+ALLOWED_ORIGINS = "https://ekodi.kr,https://ekodi-my-staging.topmaster-joseph.workers.dev,https://marketing.ekodi.kr,https://my.ekodi.kr"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+# Development-account staging is intentionally data-detached.
+# Production D1 remains bound only in wrangler.marketing-publishing.toml.
+# Read-only staging validates worker boot/health without crossing the dev/prod data boundary.

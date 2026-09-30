@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EXTERNAL-AI-LOCAL-BRIDGE-001",
+  "status": "enforced",
+  "owner": "EKODI Platform Super Administrator",
+  "purpose": "Explicit one-shot prefill of a user-selected external AI tab from the EKODI super-admin command composer.",
+  "scope": [
+    "platform-super-admin-command-composer"
+  ],
+  "providers": [
+    "chatgpt",
+    "claude",
+    "gemini",
+    "qwen"
+  ],
+  "userAgency": {
+    "explicitProviderSelectionRequired": true,
+    "installationRequiresUserOrManagedDeviceApproval": true,
+    "autoSubmit": false,
+    "responseCapture": false,
+    "existingTabMonitoring": false
+  },
+  "dataBoundary": {
+    "promptInUrl": false,
+    "serverPromptPersistence": false,
+    "cookieRead": false,
+    "credentialRead": false,
+    "clipboardRead": false,
+    "sessionStorageOnly": true,
+    "pendingTtlSeconds": 120,
+    "maximumPromptCharacters": 1800
+  },
+  "browserBoundary": {
+    "newTabsOnly": true,
+    "providerHostAllowlistRequired": true,
+    "arbitraryHostPermissionForbidden": true,
+    "backgroundRemoteControl": false,
+    "foregroundTakeover": false
+  },
+  "fallback": {
+    "bridgeAbsent": "open-provider-and-copy-prompt",
+    "bridgeFillFailure": "keep-provider-tab-open-and-preserve-copy-fallback",
+    "platformMustRemainUsable": true
+  },
+  "enforcement": {
+    "manifest": "browser/ekodi-external-ai-bridge/manifest.json",
+    "validator": "scripts/validate-external-ai-local-bridge.mjs",
+    "test": "test/external-ai-local-bridge.test.mjs"
+  }
+}

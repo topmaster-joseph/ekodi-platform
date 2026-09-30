@@ -1,0 +1,59 @@
+{
+  "version": "1.0.0",
+  "principle": "Service-first, AI-enhanced",
+  "scope": {
+    "includeAllEkodiSurfaces": true,
+    "surfaces": [
+      "root",
+      "auth",
+      "admin",
+      "my",
+      "marketing",
+      "creator",
+      "community",
+      "work",
+      "energy",
+      "insurance",
+      "publishing",
+      "books",
+      "business",
+      "church",
+      "social",
+      "mall"
+    ]
+  },
+  "defaultPolicy": {
+    "providerRequiredForCoreService": false,
+    "providerFailureMustNotFailCoreRequest": true,
+    "providerSecretsAllowedInBrowser": false,
+    "fallbackMode": "free_assist",
+    "finalFallbackMode": "core",
+    "providerTimeoutMs": 2500,
+    "circuitBreaker": true,
+    "userFacingProviderErrors": false,
+    "userNotice": "기본 모드로 계속 이용할 수 있습니다. AI 고급 기능은 잠시 사용할 수 없습니다."
+  },
+  "coreCapabilities": [
+    "authentication",
+    "authorization",
+    "navigation",
+    "read",
+    "create",
+    "update",
+    "save",
+    "search",
+    "file_access",
+    "publishing_queue",
+    "scheduled_jobs",
+    "membership",
+    "billing_state",
+    "admin_manual_controls",
+    "deployment_observation",
+    "backup_and_recovery"
+  ],
+  "releaseGate": {
+    "requiredEnvironment": "AI_PROVIDER=NONE",
+    "requiredTestScript": "test:ai-none",
+    "blockProductionOnFailure": true
+  }
+}

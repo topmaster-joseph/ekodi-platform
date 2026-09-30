@@ -1,0 +1,19 @@
+{
+  "id": "EKODI-CONSTITUTION-2026-09-04-V1.5.1-INVEST-COMMON-SERVICE",
+  "date": "2026-09-04",
+  "class": "C2",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalSource": "Explicit EKODI Platform Super Administrator instruction in the ChatGPT conversation to build, deploy and operate EKODI Invest with ekodi.kr/ekodibiz/invest and its site-local /admin surface while keeping invest.ekodi.kr independent.",
+  "constitutionVersion": "1.5.1",
+  "summary": "Register invest.ekodi.kr as the reusable common Invest Core while EKODIBIZ-specific investment business and administration remain under ekodi.kr/ekodibiz/invest and /admin.",
+  "affectedAreas": [
+    "common-service-boundaries",
+    "workspace-child-services",
+    "site-local-administration",
+    "investment-research-and-diligence",
+    "deployment-verification"
+  ],
+  "migrationPolicy": "Additive boundary registration only. Public orgless routing and immutable workspace_id authority remain unchanged; regulated financial execution stays outside EKODIBIZ Invest and requires authorized external financial actors.",
+  "rollbackPlan": "Revert the Invest boundary registration and EKODIBIZ Invest site routes while preserving the v1.5.0 orgless workspace routing constitution and existing independent Invest API data contracts."
+}

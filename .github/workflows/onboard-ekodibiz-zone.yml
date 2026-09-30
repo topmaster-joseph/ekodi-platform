@@ -1,0 +1,182 @@
+name: Prepare EKODIBIZ Zone Migration
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/onboard-ekodibiz-zone.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodibiz-zone-migration
+  cancel-in-progress: true
+
+jobs:
+  prepare-zone:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CF_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CF_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+
+      - name: Inventory current public DNS without changing it
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/ekodibiz-dns
+          for spec in \
+            'ekodibiz.kr:NS' \
+            'ekodibiz.kr:MX' \
+            'ekodibiz.kr:TXT' \
+            'ekodibiz.kr:A' \
+            'www.ekodibiz.kr:CNAME' \
+            'www.ekodibiz.kr:A' \
+            '_dmarc.ekodibiz.kr:TXT' \
+            'google._domainkey.ekodibiz.kr:TXT'; do
+            name="${spec%%:*}"
+            type="${spec#*:}"
+            out="/tmp/ekodibiz-dns/${name//./_}-$type.json"
+            curl -fsS --retry 2 --connect-timeout 5 --max-time 15 \
+              "https://dns.google/resolve?name=$name&type=$type" > "$out" || printf '{"Status":-1,"Answer":[]}' > "$out"
+            echo "===== $name $type ====="
+            python - "$out" <<'PY'
+          import json,sys
+          data=json.load(open(sys.argv[1]))
+          print('status=',data.get('Status'))
+          for row in data.get('Answer') or []:
+              print(row.get('name'), row.get('type'), row.get('TTL'), row.get('data'))
+          PY
+          done
+
+      - name: Create or locate Cloudflare zone
+        id: zone
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json')
+          curl -fsS "${auth[@]}" "$api/zones?name=ekodibiz.kr&account.id=$CF_ACCOUNT_ID" > /tmp/zone-list.json
+          zone_id=$(python - <<'PY'
+          import json
+          rows=json.load(open('/tmp/zone-list.json')).get('result') or []
+          print(rows[0]['id'] if rows else '')
+          PY
+          )
+          if [ -z "$zone_id" ]; then
+            echo 'Cloudflare zone not present. Creating a full DNS zone in pending state.'
+            payload=$(python - <<'PY'
+          import json,os
+          print(json.dumps({'name':'ekodibiz.kr','account':{'id':os.environ['CF_ACCOUNT_ID']},'type':'full','jump_start':True}))
+          PY
+            )
+            code=$(curl -sS -o /tmp/zone-create.json -w '%{http_code}' -X POST "${auth[@]}" --data "$payload" "$api/zones")
+            echo "zone_create_http=$code"
+            cat /tmp/zone-create.json
+            case "$code" in 200|201) ;; *) echo 'Cloudflare token/account cannot create this zone.'; exit 1;; esac
+            zone_id=$(python - <<'PY'
+          import json
+          print((json.load(open('/tmp/zone-create.json')).get('result') or {}).get('id',''))
+          PY
+            )
+          fi
+          test -n "$zone_id"
+          echo "zone_id=$zone_id" >> "$GITHUB_OUTPUT"
+          curl -fsS "${auth[@]}" "$api/zones/$zone_id" > /tmp/zone.json
+          python - <<'PY'
+          import json
+          z=json.load(open('/tmp/zone.json')).get('result') or {}
+          print('zone_status=',z.get('status'))
+          print('assigned_nameservers=',', '.join(z.get('name_servers') or []))
+          print('original_nameservers=',', '.join(z.get('original_name_servers') or []))
+          print('original_registrar=',z.get('original_registrar'))
+          PY
+
+      - name: Mirror current Workspace DNS into the pending Cloudflare zone
+        shell: bash
+        env:
+          ZONE_ID: ${{ steps.zone.outputs.zone_id }}
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json')
+          python - <<'PY' > /tmp/records-to-copy.json
+          import json,glob
+          out=[]
+          type_map={1:'A',5:'CNAME',15:'MX',16:'TXT'}
+          for path in glob.glob('/tmp/ekodibiz-dns/*.json'):
+              d=json.load(open(path))
+              for r in d.get('Answer') or []:
+                  typ=type_map.get(r.get('type'))
+                  if typ not in {'MX','TXT'}: continue
+                  name=(r.get('name') or '').rstrip('.')
+                  data=r.get('data') or ''
+                  row={'type':typ,'name':name,'ttl':3600}
+                  if typ=='MX':
+                      parts=data.split(None,1)
+                      if len(parts)!=2: continue
+                      row['priority']=int(parts[0]); row['content']=parts[1].rstrip('.')
+                  else:
+                      if len(data)>=2 and data[0]=='"' and data[-1]=='"': data=data[1:-1]
+                      row['content']=data.replace('" "','')
+                  if row not in out: out.append(row)
+          print(json.dumps(out,ensure_ascii=False))
+          PY
+          python - <<'PY'
+          import json
+          rows=json.load(open('/tmp/records-to-copy.json'))
+          print('workspace_records_to_preserve=',len(rows))
+          for r in rows: print(r)
+          PY
+          python - <<'PY' > /tmp/records.ndjson
+          import json
+          for r in json.load(open('/tmp/records-to-copy.json')): print(json.dumps(r))
+          PY
+          while IFS= read -r row; do
+            [ -n "$row" ] || continue
+            name=$(printf '%s' "$row" | python -c 'import json,sys; print(json.load(sys.stdin)["name"])')
+            type=$(printf '%s' "$row" | python -c 'import json,sys; print(json.load(sys.stdin)["type"])')
+            curl -fsS "${auth[@]}" "$api/zones/$ZONE_ID/dns_records?type=$type&name=$name&per_page=100" > /tmp/existing.json
+            content=$(printf '%s' "$row" | python -c 'import json,sys; print(json.load(sys.stdin)["content"])')
+            match=$(CONTENT="$content" python - <<'PY'
+          import json,os
+          rows=json.load(open('/tmp/existing.json')).get('result') or []
+          needle=os.environ['CONTENT'].rstrip('.')
+          print('1' if any(str(x.get('content','')).rstrip('.')==needle for x in rows) else '0')
+          PY
+            )
+            if [ "$match" = 1 ]; then
+              echo "preserved existing $type $name"
+              continue
+            fi
+            code=$(curl -sS -o /tmp/create-record.json -w '%{http_code}' -X POST "${auth[@]}" --data "$row" "$api/zones/$ZONE_ID/dns_records")
+            case "$code" in 200|201) echo "copied $type $name" ;; *) cat /tmp/create-record.json; echo "record copy failed: $type $name http=$code"; exit 1;; esac
+          done < /tmp/records.ndjson
+
+      - name: Migration readiness summary
+        shell: bash
+        env:
+          ZONE_ID: ${{ steps.zone.outputs.zone_id }}
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          curl -fsS -H "Authorization: Bearer $CF_API_TOKEN" "$api/zones/$ZONE_ID" > /tmp/final-zone.json
+          python - <<'PY'
+          import json
+          z=json.load(open('/tmp/final-zone.json')).get('result') or {}
+          print('EKODIBIZ DNS migration prepared.')
+          print('status:',z.get('status'))
+          print('Cloudflare nameservers:')
+          for ns in z.get('name_servers') or []: print(' -',ns)
+          print('Current/original nameservers:')
+          for ns in z.get('original_name_servers') or []: print(' -',ns)
+          print('Registrar detected by Cloudflare:',z.get('original_registrar'))
+          PY

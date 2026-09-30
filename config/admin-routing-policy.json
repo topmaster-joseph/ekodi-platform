@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "policyId": "ADMIN-ROUTING-001",
+  "status": "enforced",
+  "owner": "EKODI Platform Super Administrator",
+  "rule": "Every independent administrator menu, submenu and detail-management view has a unique directly addressable canonical URL. Reload, direct entry and authentication return must restore the same route and view state. URL hierarchy follows the owning site/service hierarchy. Pure action controls do not receive standalone URLs.",
+  "scope": [
+    "platform-super-admin",
+    "site-admin",
+    "intermediate-admin",
+    "sub-admin"
+  ],
+  "addressability": {
+    "independentMenuRequiresCanonicalUrl": true,
+    "independentSubmenuRequiresCanonicalUrl": true,
+    "independentDetailViewRequiresCanonicalUrl": true,
+    "directEntryRequired": true,
+    "reloadRestorationRequired": true,
+    "browserHistoryRequired": true,
+    "deepDetailSegmentsAllowed": true,
+    "canonicalIdentityUsesPath": true,
+    "hashOnlyRoutingForbiddenForCanonicalAdmin": true,
+    "actionButtonsRequireStandaloneUrl": false
+  },
+  "continuity": {
+    "authenticationReturnMustPreserveExactTrustedAdminPath": true,
+    "queryStateMaySupplementButMustNotReplaceCanonicalPath": true,
+    "fragmentStateMaySupplementButMustNotReplaceCanonicalPath": true
+  },
+  "hierarchy": {
+    "platformAdminPattern": "/admin/{area}/{menu}[/{subpath...}]",
+    "siteAdminPattern": "{registeredAdminRoot}/{menu}[/{subpath...}]",
+    "registeredAdminRootMustFollowSiteOrServiceHierarchy": true,
+    "parentAdminMayNotCreateAlternateChildAdminIdentity": true
+  },
+  "enforcement": {
+    "validator": "scripts/validate-admin-routing-policy.mjs",
+    "tests": [
+      "test/admin-route-addressability.test.mjs"
+    ],
+    "ciCommand": "npm run validate:admin-routes"
+  }
+}

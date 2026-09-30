@@ -1,0 +1,76 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+const fail = (message) => { throw new Error(`[universal-membership] ${message}`); };
+
+const registry = JSON.parse(read('config/ecosystem-services.json'));
+const policy = JSON.parse(read('config/universal-membership.json'));
+const services = Array.isArray(registry.services) ? registry.services.filter((service) => service?.userVisible !== false) : [];
+const reserved = new Set(policy.excludedInfrastructure || []);
+const expectedIds = services.map((service) => String(service.id || '').trim().toLowerCase());
+
+if (policy.policyId !== 'one-account-free-everywhere-pay-where-needed') fail('canonical policy id changed');
+if (policy.schemaVersion !== 2) fail('universal membership policy schema must be 2');
+if (policy.defaultEntitlement?.tier !== 'free') fail('default entitlement must remain FREE');
+if (policy.defaultEntitlement?.scope !== 'all_registry_user_services') fail('FREE must cover all registry user services');
+if (policy.guestAccess?.scope !== 'common_service_user_pages' || policy.guestAccess?.mode !== 'public_content') fail('guest user pages must keep public content visible');
+if (policy.guestAccess?.minimumTierForContent !== 'guest' || policy.guestAccess?.memberTierForPersonalization !== 'free' || policy.guestAccess?.identityProvider !== 'google') fail('public content must be guest-visible while personalization starts at Google FREE membership');
+if (policy.guestAccess?.publicPageDefault !== 'guest-open' || policy.guestAccess?.authenticationEffect !== 'enhance-not-replace') fail('public user pages must be guest-open and authentication must enhance rather than replace them');
+if (policy.guestAccess?.permissionFailureBehavior !== 'retain-safe-public-projection' || policy.guestAccess?.canonicalPublicLoginWallForbidden !== true) fail('permission failures may not replace canonical public user pages');
+if (policy.paidPlans?.scope !== 'service_specific' || policy.paidPlans?.upgradeIndependently !== true) fail('paid plans must remain service-specific');
+if (policy.myEkodi?.canonicalUrl !== 'https://ekodi.kr/my/' || policy.myEkodi?.centralAiEntitlementManagement !== true) fail('My EKODI must be the canonical AI entitlement manager');
+if (policy.capabilityEntitlements?.sameCapabilitySameSubjectAcrossSurfaces !== true || policy.capabilityEntitlements?.duplicatePurchaseForSameCapabilityForbidden !== true) fail('same-subject capability sharing rule missing');
+if (policy.capabilityEntitlements?.siteAddonsRemainSiteScoped !== true || policy.capabilityEntitlements?.manager !== 'https://ekodi.kr/my/') fail('site add-on or manager boundary changed');
+if (policy.automaticInheritance?.enabledForFutureRegistryServices !== true) fail('future service inheritance must stay enabled');
+const forcedLogin=policy.enforcedLoginInheritance||{};
+if (forcedLogin.policyId !== 'UNIVERSAL-FREE-IDENTITY-001' || forcedLogin.status !== 'enforced') fail('universal FREE login inheritance must remain enforced');
+for (const key of [
+  'singleGoogleLoginCreatesCanonicalPerson',
+  'canonicalPersonReceivesUniversalFree',
+  'allRegistryUserServicesInheritUniversalFree',
+  'repeatSignupPerServiceForbidden',
+  'centralSessionReuseAcrossRegistryServices',
+  'reauthenticationOnlyWhenSessionOrSecurityRequires',
+  'exactInitiatingSiteReturnRequired',
+  'crossServicePostLoginFallbackForbidden',
+  'paidEntitlementsRemainServiceSpecific',
+  'tenantAndWorkspaceAuthorizationRemainSeparate',
+  'siteAdminAuthorityPropagationForbidden',
+  'platformAdminAuthorityPropagationForbidden',
+]) if (forcedLogin[key] !== true) fail(`forced login inheritance rule missing: ${key}`);
+
+for (const id of expectedIds) {
+  if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(id)) fail(`invalid service id ${id}`);
+  if (reserved.has(id)) fail(`internal infrastructure leaked into user membership registry: ${id}`);
+}
+if (new Set(expectedIds).size !== expectedIds.length) fail('duplicate service ids');
+
+const serverModule = await import(`${pathToFileURL(path.join(root, 'generated/user-services.js')).href}?v=${Date.now()}`);
+const myModule = await import(`${pathToFileURL(path.join(root, 'my/user-services.js')).href}?v=${Date.now()}`);
+const serverIds = serverModule.USER_SERVICES.map((service) => service.id);
+const myIds = myModule.USER_SERVICES.map((service) => service.id);
+if (JSON.stringify(serverIds) !== JSON.stringify(expectedIds)) fail('generated server registry is stale; run npm run generate:user-services');
+if (JSON.stringify(myIds) !== JSON.stringify(expectedIds)) fail('generated My EKODI registry is stale; run npm run generate:user-services');
+
+const runtime = read('universal-membership.js');
+const missionEntry = read('mission-control-entry-worker.js');
+const myIndex = read('my/index.html');
+const mySummary = read('my/membership-summary.js');
+const entitlementEngine = read('ai-entitlement-engine.js');
+const entitlementPolicy = JSON.parse(read('config/ai-entitlement-policy.json'));
+if (!runtime.includes('/api/membership/portfolio')) fail('portfolio endpoint missing');
+if (!runtime.includes('/api/membership/entitlements')) fail('central AI entitlement endpoint missing');
+if (!runtime.includes('customer_access_grants') || !runtime.includes("workspace:")) fail('subject-aware workspace entitlement resolution missing');
+if (!runtime.includes('inherited: true')) fail('lazy inherited FREE projection missing');
+if (!runtime.includes('USER_SERVICE_ORIGINS')) fail('registry-driven CORS missing');
+if (!missionEntry.includes("path.startsWith('/api/membership/')") || !missionEntry.includes('handleUniversalMembership')) fail('Control API does not route membership through universal layer');
+if (!myIndex.includes('/membership-summary.js') || !myIndex.includes('/membership-summary.css')) fail('My EKODI membership summary assets missing');
+if (!mySummary.includes("https://ekodi.kr/api/membership/portfolio")) fail('My EKODI is not connected to portfolio endpoint');
+if (!mySummary.includes("https://ekodi.kr/api/membership/entitlements")) fail('My EKODI is not connected to central AI entitlements');
+if (!mySummary.includes('aiEntitlementSubject')) fail('My EKODI subject switcher missing');
+if (entitlementPolicy.managerUrl !== 'https://ekodi.kr/my/' || !entitlementEngine.includes('buildAiEntitlementSnapshot') || !entitlementEngine.includes('authorizeAiCapability')) fail('AI entitlement manager contract missing');
+
+console.log(`Universal membership contract OK: ${expectedIds.length} user services inherit FREE; paid tiers stay service-specific while exact AI capabilities are shared per subject across surfaces.`);

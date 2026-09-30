@@ -1,0 +1,16 @@
+{
+  "id": "2026-09-14-site-admin-hierarchy-v1.16.0",
+  "constitutionVersion": "1.16.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-14",
+  "changeClass": "C2",
+  "taskId": "admin-canonical-hierarchy-20260914",
+  "summary": "Make each independently managed EKODI site use its own public canonical path plus /admin, while higher administrators aggregate status and hand off without alternate child-admin URLs.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly directed EKODI to apply this rule consistently across the platform hierarchy and all child sites, including EKODI Mall.",
+  "canonicalRule": "managed-public-path-plus-/admin",
+  "platformControlPlane": "/admin",
+  "centralAggregationRole": "directory-observability-and-handoff-only",
+  "higherAdminChildAliases": "forbidden",
+  "authorizationAuthority": "Person + Workspace + Role + Capability"
+}

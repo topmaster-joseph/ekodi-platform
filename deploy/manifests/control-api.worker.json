@@ -1,0 +1,547 @@
+{
+  "version": 9,
+  "evidence": {
+    "generation": 10,
+    "ledger": "ai_production_evidence",
+    "sourceWorkflow": "Deploy Control API",
+    "appendOnly": true
+  },
+  "worker": {
+    "name": "ekodi-auth-api",
+    "config": "wrangler.api.toml",
+    "requests": [
+      {
+        "url": "https://ekodi.kr/api/public/preview/map?scope=ekodi&mode=platform",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"schemaVersion\":1",
+          "\"secrets\":false",
+          "\"personalData\":false",
+          "\"scope\":{\"id\":\"ekodi\""
+        ],
+        "headerExpect": [
+          "x-content-type-options: nosniff",
+          "cache-control: public"
+        ],
+        "candidateStatuses": [
+          200
+        ],
+        "candidateExpect": [
+          "\"schemaVersion\":1",
+          "\"secrets\":false",
+          "\"personalData\":false",
+          "\"scope\":{\"id\":\"ekodi\""
+        ],
+        "candidateHeaderExpect": [
+          "x-content-type-options: nosniff",
+          "cache-control: public"
+        ],
+        "candidateForbid": [],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/public/preview/map?scope=ekodibiz&mode=dev",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"scope\":{\"id\":\"ekodibiz\"",
+          "\"mode\":\"dev\"",
+          "\"sourcePaths\":false"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/health",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "\"ok\":true"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/ai-modules/v1/providers/health",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "\"ok\":true",
+          "ekodi.ai-provider.v1",
+          "\"providerIndependent\":true",
+          "\"secretValuesReturned\":false"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/operator",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "EKODI Operator",
+          "관리자 대화 조종석",
+          "중요 대화",
+          "상세 관리자"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-frame-options: DENY"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/operator.js",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "/api/control/messenger/inbox",
+          "/api/control/messenger/threads/",
+          "/api/google/challenge",
+          "/api/google/login"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/status",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "\"initialized\""
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/google/config",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "\"enabled\":true",
+          "483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com",
+          "\"identityOrigin\":\"https://ekodi.kr\""
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/google/challenge",
+        "method": "POST",
+        "headers": {
+          "origin": "https://ekodi.kr"
+        },
+        "statuses": [
+          201
+        ],
+        "expect": [
+          "\"nonce\":",
+          "\"expiresAt\":"
+        ],
+        "headerExpect": [
+          "access-control-allow-origin: https://ekodi.kr",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Canonical apex reaches Control API through the Shared Site service binding, so this end-to-end route is verified immediately after guarded promotion.",
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/books/public/config",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "\"digital-start\""
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "\"storefront\":\"ekodi-mall\"",
+          "\"providerKey\":\"coupang_partners\"",
+          "\"automationStatus\""
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/affiliate/public/click/999999999?storefront=ekodi-mall",
+        "statuses": [
+          404
+        ],
+        "expect": [
+          "상품을 찾을 수 없습니다."
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/social/registry",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "커뮤니티",
+          "community-youtube"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/control/social/registry",
+        "statuses": [
+          401
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/control/personal-finance",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "PF_ADMIN_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "x-ekodi-personal-finance-proxy: service-binding-v1",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Canonical Personal Finance is owned by the Shared Site PERSONAL_FINANCE binding; the Control API Personal Finance proxy is verified in isolated staging and unit contracts.",
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/control/ai/governance",
+        "statuses": [
+          401
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/control/ai/actions",
+        "statuses": [
+          401
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/customers/tenants",
+        "statuses": [
+          401
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/customers/directory",
+        "statuses": [
+          401
+        ],
+        "expect": [
+          "EKODI 관리자 인증이 필요합니다."
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/admin-access/google-accounts",
+        "statuses": [
+          401
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/books/admin/pipeline",
+        "statuses": [
+          401
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/church/admin/reports",
+        "statuses": [
+          401
+        ],
+        "expect": [
+          "목회자 인증이 필요합니다."
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/community/admin/reports",
+        "statuses": [
+          410
+        ],
+        "expect": [
+          "CHURCH_REPORTS_MOVED",
+          "에코디교회 목회자 관리자"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "REGION_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/actions",
+        "method": "POST",
+        "headers": {
+          "origin": "https://ekodi.kr",
+          "content-type": "application/json"
+        },
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "REGION_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/directory",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"module\":{\"id\":\"directory\"",
+          "\"items\":"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/directory/admin",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "REGION_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/commerce",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"module\":{\"id\":\"commerce\"",
+          "\"items\":"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/commerce/admin",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "REGION_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/events",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"module\":{\"id\":\"events\"",
+          "\"items\":"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/events/admin",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "REGION_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/jobs",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"module\":{\"id\":\"jobs\"",
+          "\"items\":"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/jobs/admin",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "REGION_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/sharing",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"module\":{\"id\":\"sharing\"",
+          "\"items\":"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/sharing/admin",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "REGION_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/broadcast",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"module\":{\"id\":\"broadcast\"",
+          "\"items\":"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/broadcast/admin",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "REGION_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/proposals",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"module\":{\"id\":\"proposals\"",
+          "\"items\":"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/proposals/admin",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "REGION_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "2026-09-13-completion-continuity-v1.14.0",
+  "constitutionVersion": "1.14.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-13",
+  "changeClass": "C2",
+  "taskId": "completion-continuity-20260913",
+  "summary": "Make temporary session, tool, connector, rate-limit and execution-window interruptions recoverable by default, requiring durable checkpoints, authorized fallback attempts, resume semantics and unchanged production-verification gates.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly instructed EKODI to continue and complete the previously requested Completion Continuity governance change.",
+  "evidence": [
+    "AI-COMPLETE-001 integration",
+    "recoverable-interruption checkpoint contract",
+    "authorized fallback-before-escalation rule",
+    "resume-from-checkpoint rule",
+    "production verification remains mandatory"
+  ],
+  "generationImpact": "None. Generation 10 remains the active baseline.",
+  "scaleImpact": "None. Current scale tier remains unchanged.",
+  "authorityImpact": "No authority expansion. Continuity may only use already-authorized execution paths and cannot bypass human, credential, security or production gates.",
+  "rollback": "Revert Constitution v1.14.0 Completion Continuity policy, AI-COMPLETE-001 schema v3 continuity fields, validator bindings and provider-neutral instruction text through the guarded repository path."
+}

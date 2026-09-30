@@ -1,0 +1,213 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+// Keep the mobile Site Management login-home contract inside the production Admin gate.
+const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
+const routePair = (source, hash, section) => source.includes(`['${hash}', '${section}']`) || source.includes(`${hash}:${section}`);
+
+test('post-auth startup contains only the minimal shell/navigation/demand loader', async () => {
+  const shell = await read('admin-authenticated-shell.js');
+  assert.match(shell, /const postAuthStyles = \['admin-compact\.css','admin-design-engine\.css','google-admin-auth\.css'\]/);
+  const criticalBlock = shell.match(/const criticalPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
+  const deferredBlock = shell.match(/const deferredPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
+  assert.match(criticalBlock, /'admin-compact\.js'/);
+  assert.match(criticalBlock, /'admin-menu-layout\.js'/);
+  assert.match(criticalBlock, /'admin-demand-loader\.js'/);
+  assert.ok(
+    criticalBlock.indexOf("'admin-menu-layout.js'") < criticalBlock.indexOf("'admin-demand-loader.js'"),
+    'canonical Admin navigation must mount before demand features can hydrate'
+  );
+  assert.doesNotMatch(criticalBlock, /google-admin-auth\.js|ekodi-message-ui\.js/);
+  assert.match(deferredBlock, /'google-admin-auth\.js'/);
+  assert.match(deferredBlock, /'ekodi-message-ui\.js'/);
+  assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
+  assert.match(shell, /assetUrl\(src\)/);
+  assert.match(shell, /async function waitForNavigationRuntime\(\)/);
+  assert.match(shell, /window\.__EKODIAdminMenuLayoutReady/);
+  assert.match(shell, /await waitForNavigationRuntime\(\)/);
+  assert.doesNotMatch(shell, /'campus-actions\.js'/);
+  assert.doesNotMatch(shell, /'campus-actions\.css'/);
+  assert.doesNotMatch(shell, /'control-center-features\.js'/);
+  assert.doesNotMatch(shell, /'device-control-admin\.js'/);
+  assert.doesNotMatch(shell, /'system-health-admin\.js'/);
+  assert.match(deferredBlock, /'admin-release-convergence\.js'/);
+  const convergence = await read('admin-release-convergence.js');
+  assert.match(convergence, /const RELEASE_CHECK_MS=60000/);
+  assert.match(convergence, /function versionFrom\(html\)/);
+  assert.match(convergence, /async function convergeAdminRelease\(force=false\)/);
+  assert.match(convergence, /fetch\('\/admin\/',\{cache:'no-store',credentials:'same-origin'\}\)/);
+  assert.match(convergence, /live&&live!==CURRENT_VERSION/);
+  assert.match(convergence, /location\.reload\(\)/);
+  assert.match(convergence, /addEventListener\('focus',\(\)=>\{void convergeAdminRelease\(\)\}\)/);
+});
+
+test('authenticated ADMIN UI declares the official 8th-gen workbench surface and tokens', async () => {
+  const shell = await read('admin-authenticated-shell.js');
+  assert.match(shell, /function applyOfficialAdminSurface\(\)/);
+  assert.match(shell, /root\.dataset\.ekodiShellSurface='admin'/);
+  assert.match(shell, /root\.dataset\.ekodiAdminUi='official'/);
+  assert.match(shell, /'--ekodi-ui-bg':'#f6f8fb'/);
+  assert.match(shell, /'--ekodi-ui-surface':'#ffffff'/);
+  assert.match(shell, /'--ekodi-ui-border':'#d9e2ec'/);
+  assert.match(shell, /'--ekodi-ui-text':'#172033'/);
+  assert.match(shell, /'--ekodi-ui-accent':'#155eef'/);
+  assert.match(shell, /nav\.dataset\.ekodiIndependentScroll='platform-admin'/);
+  assert.match(shell, /main\.dataset\.ekodiScrollOwner='workspace'/);
+  assert.match(shell, /nav\.style\.setProperty\('overflow-y','auto','important'\)/);
+  assert.doesNotMatch(shell, /nav\.style\.setProperty\('overflow-y','hidden','important'\)/);
+  assert.match(shell, /main\.style\.setProperty\('overflow-y','auto'\)/);
+  assert.match(shell, /applyOfficialAdminSurface\(\);/);
+  assert.match(shell, /pageTitle\.parentElement\.hidden=false/);
+  assert.doesNotMatch(shell, /pageTitle\.parentElement\.hidden=true/);
+});
+
+test('shared shell keeps account identity readable above logout', async () => {
+  const shell = await read('admin-authenticated-shell.js');
+  assert.match(shell, /profile\.classList\.add\('side-profile'\)/);
+  assert.match(shell, /s\(profile,\{display:'flex','min-width':'0',width:'100%'\},'important'\)/);
+  assert.match(shell, /s\(profile\.firstElementChild,\{display:'flex','min-width':'0',width:'100%','flex-direction':'column'\},'important'\)/);
+});
+
+test('Campus, Health and Device Control are explicit versioned demand-loaded features', async () => {
+  const loader = await read('admin-demand-loader.js');
+  assert.match(loader, /__EKODI_ADMIN_ASSET_VERSION__/);
+  assert.match(loader, /campus:\s*\{/);
+  assert.match(loader, /styles: \['campus-actions\.css'\]/);
+  assert.match(loader, /scripts: \['campus-actions\.js'\]/);
+  assert.match(loader, /health:\s*\{/);
+  assert.match(loader, /label: 'Health'/);
+  assert.match(loader, /styles: \['system-health-admin\.css'\]/);
+  assert.match(loader, /scripts: \['system-health-admin\.js'\]/);
+  assert.match(loader, /hashes: \['#health'\]/);
+  assert.match(loader, /insert: 'after-aiops'/);
+  assert.match(loader, /devices:\s*\{/);
+  assert.match(loader, /styles: \['device-control-admin\.css', 'remote-power-admin\.css'\]/);
+  assert.match(loader, /scripts: \['device-control-admin\.js', 'remote-power-admin\.js'\]/);
+  assert.match(loader, /hashes: \['#devices'\]/);
+  assert.match(loader, /assetUrl\(src\)/);
+  assert.doesNotMatch(loader, /document\.createElement\('button'\)/);
+  assert.doesNotMatch(loader, /label\.textContent = feature\.label/);
+  assert.match(loader, /window\.EKODIAdminSidebar\?\.sync\?\.\(document\)/);
+  const aiOps = loader.match(/aiops:\s*\{([\s\S]*?)\r?\n\s*\},\r?\n\s*(?:(?:['\"]?[a-z][a-z0-9-]*['\"]?)\s*:)/i)?.[1] || '';
+  assert.ok(aiOps, 'AI Ops feature block must be extractable');
+  assert.doesNotMatch(aiOps, /system-health-admin/);
+});
+
+test('standalone Health creates its own menu and fetches only on activation', async () => {
+  const health = await read('system-health-admin.js');
+  assert.match(health, /const SECTION = 'health'/);
+  assert.match(health, /button\.dataset\.section = SECTION/);
+  assert.match(health, /navLabel\.textContent = '시스템 건강'/);
+  assert.match(health, /section\.dataset\.panel = `\$\{SECTION\} platform-overview`/);
+  assert.match(health, /pageTitle\.textContent = '시스템 건강'/);
+  assert.match(health, /if \(location\.hash !== '#health'\)/);
+  assert.match(health, /button\.addEventListener\('click', activate\)/);
+  assert.match(health, /load\(false\)/);
+  assert.doesNotMatch(health, /IntersectionObserver/);
+  assert.doesNotMatch(health, /setInterval\(/);
+});
+
+test('secondary hydration never has a forced requestIdleCallback deadline', async () => {
+  const loader = await read('admin-demand-loader.js');
+  assert.match(loader, /navigator\.scheduling\?\.isInputPending/);
+  assert.match(loader, /scheduler\?\.postTask/);
+  assert.match(loader, /priority:'background'/);
+  assert.match(loader, /requestIdleCallback\(callback\)/);
+  assert.doesNotMatch(loader, /requestIdleCallback\(callback, \{ timeout/);
+  assert.match(loader, /timeRemaining\(\) < 6/);
+});
+
+test('desktop root keeps command console while mobile root opens the operational overview', async () => {
+  const menu = await read('admin-menu-layout.js');
+  const registry = await read('admin-menu-registry.js');
+  const routes = await read('admin-canonical-routes.js');
+  assert.match(menu, /window\.__EKODIAdminMenuLayoutReady=\(async\(\)=>\{/);
+  assert.match(menu, /let requestedSection = ''/);
+  assert.match(menu, /const initialSection\s*=\s*explicitAdminSection\(\)/);
+  assert.match(menu, /const explicitAdminSection=\(\)=>adminRoutes\(\)\?\.sectionFromLocation/);
+  assert.match(routes, /window\.matchMedia\?\.\('\(max-width:760px\)'\)\.matches/);
+  assert.match(routes, /return'platform-overview'/);
+  assert.match(routes, /version:'1\.7\.0'/);
+  assert.match(menu, /else if\s*\(initialSection\)\s*\{[\s\S]*requestedSection\s*=\s*initialSection[\s\S]*queueMicrotask/);
+  assert.match(menu, /if\(initialSection===COMMAND_HOME\)activateCommandHome\(\)/);
+  assert.match(menu, /else activateCommandHome\(\)/);
+  assert.doesNotMatch(menu, /requestedSection = 'campus';[\s\S]*requestDemand\('campus'\)/);
+  assert.match(menu, /\['campus','campus'\]/);
+  assert.match(menu, /EKODIAdminDemand\.activate\(demandKey\)/);
+  assert.doesNotMatch(menu, /requestedSection = 'overview';[\s\S]*activatePanel\('overview'\)/);
+  assert.ok(registry.indexOf("id: 'command-home'") < registry.indexOf("id: 'campus'"));
+  assert.ok(registry.indexOf("id: 'platform-overview'") < registry.indexOf("id: 'engine-all'"));
+  assert.ok(registry.indexOf("id: 'health'") < registry.indexOf("id: 'public-site-controls'"));
+  assert.match(registry, /id: 'storage'.*ko: '보관함·저장소'.*en: 'Archive & Storage'/);
+  assert.ok(routePair(menu, '#health', 'health'));
+  assert.doesNotMatch(menu, /requestedSection = 'aiops';\s*\n\s*preferAiOpsOnReady = true/);
+  assert.doesNotMatch(menu, /setInterval\(/);
+});
+
+test('admin menu governance uses seven platform control areas with role-projected direct tasks', async () => {
+  const registry = await read('admin-menu-registry.js');
+  const sidebar = await read('admin-sidebar.js');
+  assert.match(registry, /ADMIN_MENU_GROUPS/);
+  for (const group of ['summary', 'sites', 'people', 'services', 'content', 'status', 'settings-records']) {
+    assert.match(registry, new RegExp(`id: '${group}'`));
+  }
+  for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'ai', 'business', 'data', 'site-management', 'access', 'security-audit', 'settings']) {
+    assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
+  }
+  assert.match(registry, /id: 'campus', group: 'sites'/);
+  assert.match(registry, /id: 'work', group: 'content'/);
+  assert.match(registry, /id: 'clients', group: 'sites'/);
+  assert.match(registry, /id: 'common-services', group: 'services'/);
+  assert.match(registry, /id: 'community', group: 'content'/);
+  assert.match(registry, /id: 'ai-membership', group: 'people'/);
+  assert.match(registry, /id: 'books', group: 'content'/);
+  assert.match(registry, /id: 'devotional', group: 'content'/);
+  assert.match(registry, /id: 'life-ai', group: 'services'/);
+  assert.match(registry, /id: 'security', group: 'people'/);
+  assert.match(registry, /id: 'capabilities', group: 'services'/);
+  assert.match(registry, /id: 'devices', group: 'status'/);
+  assert.match(registry, /id: 'health', group: 'status'/);
+  assert.match(sidebar, /function pruneNonRegistryItems\(nav\)/);
+  assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
+  assert.match(sidebar, /GLOBAL_CLASS = 'admin-global-navs'/);
+  assert.match(sidebar, /SOURCE_CLASS = 'admin-context-source'/);
+  assert.doesNotMatch(sidebar, /TABS_SHELL_CLASS/);
+  assert.doesNotMatch(sidebar, /data-admin-context-section/);
+  assert.match(sidebar, /main\?\.querySelector\(':scope>\.admin-context-tabs-shell'\)\?\.remove\(\)/);
+  assert.doesNotMatch(sidebar, /shortcut\.textContent = locale === 'en' \? '⚡ Capabilities' : '⚡ 기능'/);
+  assert.match(sidebar, /nav\.dataset\.adminMenuGovernance = 'role-projected-sidebar-v4'/);
+  assert.match(sidebar, /item\.dataset\.adminMenuGroup = definition\.group/);
+  assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: false \}\)/);
+  assert.doesNotMatch(sidebar, /subtree: true/);
+  assert.doesNotMatch(sidebar, /innerHTML\s*=/);
+  assert.doesNotMatch(sidebar, /tabs\.dataset\.renderSignature/);
+  assert.match(sidebar, /nav\[data-ekodi-admin-nav-mode="primary"\] > \.nav/);
+  assert.match(sidebar, /closeDrawer\(\)/);
+  assert.match(sidebar, /aria-expanded/);
+});
+test('postbuild emits a purpose-built minimal compact runtime and strips legacy Admin chrome', async () => {
+  const pkg = JSON.parse(await read('package.json'));
+  const postbuild = await read('scripts/admin-thin-postbuild.mjs');
+  const perfPostbuild = await read('scripts/admin-performance-postbuild.mjs');
+  const shellHtml = await read('admin-shell.html');
+  assert.match(pkg.scripts.build, /admin-thin-postbuild\.mjs/);
+  assert.match(postbuild, /const minimalCompactJs =/);
+  assert.match(postbuild, /writeFile\(`\$\{dist\}admin-compact\.js`, minimalCompactJs\)/);
+  assert.match(postbuild, /writeFile\(`\$\{dist\}device-control-admin\.js`/);
+  assert.match(postbuild, /writeFile\(`\$\{dist\}device-control-admin\.css`/);
+  assert.match(postbuild, /writeFile\(`\$\{dist\}remote-power-admin\.js`/);
+  assert.match(postbuild, /writeFile\(`\$\{dist\}remote-power-admin\.css`/);
+  assert.match(perfPostbuild, /remote-power-admin\.js/);
+  assert.match(perfPostbuild, /remote-power-admin\.css/);
+  assert.match(postbuild, /Startup compact JS contains historical runtime/);
+  assert.match(postbuild, /section\.id = 'campusPanel'/);
+  assert.match(shellHtml, /data-ekodi-postauth="admin-compact\.js admin-menu-layout\.js admin-demand-loader\.js"/);
+  assert.match(postbuild, /brand side-brand/);
+  assert.match(postbuild, /scopeBadge/);
+  assert.match(postbuild, /Legacy Admin sidebar header or scope badge survived postbuild/);
+  const generated = postbuild.match(/const minimalCompactJs = `([\s\S]*?)`;\r?\nnew Function\(minimalCompactJs\)/)?.[1] || '';
+  assert.ok(generated, 'minimal compact runtime template must be extractable');
+  assert.doesNotMatch(generated, /setTimeout\(/);
+  assert.doesNotMatch(generated, /installCampus|installPolicies|WINDOWS_AGENT_URL|ekodiDevicePanel/);
+});

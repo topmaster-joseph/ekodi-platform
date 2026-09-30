@@ -1,0 +1,53 @@
+﻿name: Secure Projection Contract
+
+on:
+  pull_request:
+    paths:
+      - 'secure-projection.js'
+      - 'test/secure-projection.test.mjs'
+      - 'core-api.js'
+      - 'external-ai-module-gateway.js'
+      - 'openai-provider-adapter.js'
+      - 'claude-provider-adapter.js'
+      - 'gemini-provider-adapter.js'
+      - 'scripts/validate-security-baseline.mjs'
+      - 'config/external-ai-module-contract.json'
+      - '.github/workflows/secure-projection-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'secure-projection.js'
+      - 'test/secure-projection.test.mjs'
+      - 'core-api.js'
+      - 'external-ai-module-gateway.js'
+      - 'openai-provider-adapter.js'
+      - 'claude-provider-adapter.js'
+      - 'gemini-provider-adapter.js'
+      - 'scripts/validate-security-baseline.mjs'
+      - 'config/external-ai-module-contract.json'
+      - '.github/workflows/secure-projection-contract.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Secure Projection boundary
+        run: |
+          set -euo pipefail
+          node --check secure-projection.js
+          node --check core-api.js
+          node --check external-ai-module-gateway.js
+          node --check openai-provider-adapter.js
+          node --check claude-provider-adapter.js
+          node --check gemini-provider-adapter.js
+          node scripts/validate-security-baseline.mjs
+          node scripts/validate-storage-ai-contracts.mjs
+          node --test test/secure-projection.test.mjs

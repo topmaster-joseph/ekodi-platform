@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "targets": [
+    {
+      "name": "EKODI Lab",
+      "project": "ekodilab",
+      "directory": "sites/ekodi-lab",
+      "productionUrl": "https://ekodilab.pages.dev/",
+      "expect": [
+        "에코디연구소",
+        "현장에 묻고,",
+        "https://ekodi.kr/ekodilab",
+        "EKODI LAB"
+      ],
+      "forbid": [
+        "성수이로 00",
+        "1234 5678",
+        "https://ekodi-church.pages.dev",
+        "https://ekodicommunity.pages.dev",
+        "https://ekodibiz.kr/",
+        "https://ekodilab.pages.dev"
+      ]
+    }
+  ]
+}

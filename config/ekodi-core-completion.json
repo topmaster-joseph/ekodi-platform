@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "coreVersion": "1.0.0",
+  "status": "completed",
+  "completedOn": "2026-08-20",
+  "definition": "EKODI Core is complete only when architecture, identity, API, service boundaries, AI resilience, recovery, production regression, security, performance and rollback gates are all enforced and verifiable.",
+  "stages": [
+    { "stage": 1, "name": "core-architecture-contract", "status": "completed", "pullRequests": [343] },
+    { "stage": 2, "name": "shared-identity-organization-role", "status": "completed", "pullRequests": [345] },
+    { "stage": 3, "name": "versioned-core-api", "status": "completed", "pullRequests": [347] },
+    { "stage": 4, "name": "cross-platform-core-boundaries", "status": "completed", "pullRequests": [348] },
+    { "stage": 5, "name": "provider-independent-ai-gateway", "status": "completed", "pullRequests": [349] },
+    { "stage": 6, "name": "independent-backup-restore-observability", "status": "completed", "pullRequests": [350, 352] },
+    { "stage": 7, "name": "production-integration-completion", "status": "completed", "evidence": "verify-ekodi-core-completion workflow" }
+  ],
+  "gates": {
+    "core-contract-validation-passes": true,
+    "automated-tests-pass": true,
+    "shared-auth-and-organization-contracts-are-live": true,
+    "admin-can-observe-core-state": true,
+    "tenant-isolation-is-verified": true,
+    "ai-provider-outage-does-not-break-core-workflows": true,
+    "backup-and-restore-path-is-verified": true,
+    "production-hostname-regressions-pass": true,
+    "production-core-api-contract-is-live": true,
+    "protected-core-routes-fail-closed-without-auth": true,
+    "bounded-production-load-test-passes": true,
+    "automatic-worker-rollback-contract-is-enforced": true,
+    "d1-recovery-point-is-captured-before-control-release": true,
+    "security-baseline-is-enforced": true
+  },
+  "operationalRule": "A later change that breaks any completion gate makes the release invalid until the gate is restored. Completion is a continuously enforced state, not a one-time certificate."
+}

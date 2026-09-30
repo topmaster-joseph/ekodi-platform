@@ -1,0 +1,15 @@
+{
+  "id": "2026-09-09-admin-five-area-routing-v1.9.1",
+  "constitutionVersion": "1.9.1",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-09",
+  "changeClass": "C2",
+  "taskId": "20260909-admin-shell-route-consistency",
+  "summary": "Align EKODI Admin internal canonical paths with the same five management work areas shown in the administrator navigation, while keeping Workspace as the canonical identity term.",
+  "approvalBasis": "The platform owner explicitly instructed EKODI to hide the current-management-target line and to change administrator menu links together with their underlying subpaths so the Admin surface is consistent.",
+  "migrationPlan": "Promote /admin/home, /admin/operations, /admin/workspaces, /admin/services and /admin/system as canonical groups. Continue accepting legacy common, professional, space and earlier mismatched group paths in the browser router and immediately canonicalize them to the five-area route.",
+  "securityModel": "The route taxonomy changes presentation and navigation only. Person + Workspace + Role + Capability authorization, privileged elevation, audit, and the /admin security realm remain unchanged.",
+  "rollback": "Restore admin-canonical-routes.js group ownership and service handoff URLs from the prior release while retaining the apex /admin security boundary.",
+  "verificationPolicy": "Run constitution and architecture validation, Admin navigation and route contract tests, full repository checks, guarded staging/release, and real ekodi.kr/admin deep-route verification."
+}

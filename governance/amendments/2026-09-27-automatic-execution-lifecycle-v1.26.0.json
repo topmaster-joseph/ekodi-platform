@@ -1,0 +1,46 @@
+{
+  "amendmentId": "AUTOMATIC-EXECUTION-LIFECYCLE-20260927",
+  "constitutionVersion": "1.26.0",
+  "approvedAt": "2026-09-27",
+  "changeClass": "C2",
+  "taskId": "mandatory-background-automatic-execution-20260927",
+  "summary": "Make background-only automatic execution a mandatory, non-waivable EKODI constitutional rule across API checks, browser automation, remote-computer execution, isolated execution and future equivalent agent paths.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly instructed EKODI to make the completed background automatic-execution behavior a forced EKODI execution rule and to continue through full implementation, verification and governed release.",
+  "implementation": [
+    "AUTOMATIC-EXECUTION-LIFECYCLE-001 in governance/constitution/constitution.json",
+    "mandatory lifecycle binding in config/remote-computer-execution-policy.json",
+    "mandatory lifecycle binding in config/autonomous-execution-fabric-policy.json",
+    "mandatory lifecycle binding in config/virtualization-routing-policy.json",
+    "mandatory lifecycle binding in config/background-browser-worker-policy.json",
+    "CI hard gates in scripts/validate-constitution.mjs and scripts/validate-virtualization-routing.mjs",
+    "contract coverage in test/automatic-execution-constitution.test.mjs and existing Hybrid Execution tests"
+  ],
+  "mandatoryRules": [
+    "automatic execution defaults to background-only",
+    "automatic execution never creates or hijacks user-owned browser tabs or interactive desktop surfaces",
+    "EKODI-owned temporary automation surfaces auto-close on completion and terminal boundaries",
+    "AUTH_REQUIRED is recorded and closes the EKODI-owned surface without automatic interactive login",
+    "user-owned windows and tabs are preserved",
+    "background API checks are preferred over browser automation for machine-readable checks",
+    "foreground is limited to explicit human-required OAuth/provider consent, CAPTCHA/human verification, hardware-backed authentication or OS privileged consent",
+    "service-local, agent-local, provider-local, workspace-local and learning-loop waivers are forbidden"
+  ],
+  "validation": [
+    "scripts/validate-constitution.mjs",
+    "scripts/validate-virtualization-routing.mjs",
+    "test/automatic-execution-constitution.test.mjs",
+    "test/hybrid-execution-contract.test.mjs",
+    "EKODI Constitution Check",
+    "EKODI AI Orchestration Gate"
+  ],
+  "rollback": "Revert constitution v1.26.0 and its automatic-execution lifecycle policy/config bindings to v1.25.0 while preserving the already-deployed runtime safety behavior until the owner explicitly authorizes a replacement constitutional rule.",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalEvidence": {
+    "explicitOwnerInstruction": true,
+    "ownerInstructionDate": "2026-09-27",
+    "pullRequest": 2698,
+    "requiredPullRequestLabel": "constitution-approved",
+    "approvalLabel": "constitution-approved"
+  }
+}

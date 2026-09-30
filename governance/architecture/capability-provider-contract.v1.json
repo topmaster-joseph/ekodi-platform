@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "contractId": "ekodi.capability-provider.v1",
+  "status": "active",
+  "purpose": "Provider-neutral registration and runtime envelope for EKODI and external implementations of the same capability.",
+  "providerTypes": [
+    "ekodi-responsible",
+    "external-provider-responsible"
+  ],
+  "registration": {
+    "requiredFields": [
+      "implementationId",
+      "capabilityId",
+      "contractVersion",
+      "providerType",
+      "supportedOperations",
+      "authorizationModel",
+      "dataHandling",
+      "healthContract",
+      "timeoutPolicy",
+      "fallbackDeclaration"
+    ],
+    "rules": [
+      "implementationId is unique within one capability",
+      "capabilityId is stable across compatible implementations",
+      "supportedOperations are explicitly declared",
+      "external implementations never inherit EKODI private database access",
+      "provider-specific credentials remain behind the owning adapter or gateway"
+    ]
+  },
+  "requestEnvelope": {
+    "required": [
+      "request_id",
+      "capability_id",
+      "operation",
+      "context_projection",
+      "constraints"
+    ],
+    "optional": [
+      "trace_context",
+      "locale",
+      "deadline_ms",
+      "idempotency_key"
+    ],
+    "rules": [
+      "context_projection contains only the minimum purpose-bound data required for the operation",
+      "canonical secrets and reusable provider credentials are forbidden",
+      "workspace context is authorized by EKODI before an external implementation is invoked",
+      "high-impact actions carry explicit approval state when required by policy"
+    ]
+  },
+  "responseEnvelope": {
+    "required": [
+      "request_id",
+      "status"
+    ],
+    "optional": [
+      "result",
+      "evidence",
+      "warnings",
+      "usage",
+      "provider_metadata",
+      "retry_after_ms"
+    ],
+    "allowedStatus": [
+      "ok",
+      "partial",
+      "unavailable",
+      "rejected",
+      "error"
+    ],
+    "rules": [
+      "provider_metadata must not expose reusable credentials or private provider topology",
+      "evidence and provenance are retained when the capability requires verifiable outputs",
+      "partial and unavailable states are first-class results and may trigger fallback"
+    ]
+  },
+  "authorization": {
+    "scopeModel": "capability-and-operation-scoped",
+    "leastPrivilege": true,
+    "workspaceAuthority": "ekodi",
+    "externalProviderMayBecomeIdentityAuthority": false,
+    "directPrivateDatabaseAccessForExternalProviders": false
+  },
+  "resilience": {
+    "healthContractRequired": true,
+    "timeoutPolicyRequired": true,
+    "fallbackDeclarationRequired": true,
+    "circuitBreakerCompatible": true,
+    "safeDisconnectionRequired": true
+  },
+  "selection": {
+    "compatibleImplementationsMayCoexist": true,
+    "parallelExecutionMayBeAllowedByCapabilityPolicy": true,
+    "allowedSelectionAuthorities": [
+      "user",
+      "workspace-admin",
+      "ekodi-orchestrator-policy"
+    ]
+  }
+}

@@ -1,0 +1,231 @@
+name: EKODI Site Improvement Cloud Fallback
+run-name: site-improvement-${{ inputs.task_id }}-${{ inputs.site_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_id:
+        required: true
+        type: string
+      branch:
+        required: true
+        type: string
+      site_id:
+        required: true
+        type: string
+      site_name:
+        required: true
+        type: string
+      canonical_url:
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: site-improvement-${{ inputs.task_id }}
+  cancel-in-progress: false
+
+jobs:
+  improve:
+    runs-on: ubuntu-latest
+    environment: development
+    timeout-minutes: 35
+    env:
+      TARGET_BRANCH: ${{ inputs.branch }}
+      SITE_ID: ${{ inputs.site_id }}
+      SITE_NAME: ${{ inputs.site_name }}
+      CANONICAL_URL: ${{ inputs.canonical_url }}
+      TASK_ID: ${{ inputs.task_id }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate scheduler-owned inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import registry from './config/site-lifecycle-registry.json' with {type:'json'};
+          import policy from './config/site-execution-enforcement.json' with {type:'json'};
+          if(policy?.status!=='enforced'||policy?.scope?.allDescendantServicePaths!==true||policy?.scope?.siteOwnedAdmin!==true||policy?.inheritance?.mode!=='mandatory-recursive')throw new Error('recursive site execution policy unavailable');
+          const task=String(process.env.TASK_ID||'');
+          const branch=String(process.env.TARGET_BRANCH||'');
+          if(!/^task-[0-9]{14}-[a-z0-9]{4}$/i.test(task))throw new Error('invalid scheduler task id');
+          if(!/^ai\/generic\/[a-z0-9._-]+$/.test(branch))throw new Error('invalid isolated branch');
+          const sites=(registry.existingWorkspaceSites||[]).filter(x=>x?.class==='workspace_user_site'&&String(x?.canonicalUrl||'').startsWith('https://ekodi.kr/'));
+          const site=sites.find(x=>x.id===process.env.SITE_ID);
+          if(!site)throw new Error('site is not an eligible registered workspace');
+          if(String(site.name||site.id)!==process.env.SITE_NAME)throw new Error('site name mismatch');
+          if(String(site.canonicalUrl)!==process.env.CANONICAL_URL)throw new Error('canonical url mismatch');
+          NODE
+
+      - name: Prepare isolated branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'EKODI Autonomous Improvement'
+          git config user.email '213826185+topmaster-joseph@users.noreply.github.com'
+          if git fetch origin "$TARGET_BRANCH"; then
+            git switch -C "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
+          else
+            git switch -c "$TARGET_BRANCH" origin/main
+            git push -u origin "$TARGET_BRANCH"
+          fi
+
+      - name: Build bounded improvement prompt
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const p=[
+            'EKODI low-traffic daily site improvement task.',
+            `Target site: ${process.env.SITE_NAME} (${process.env.SITE_ID})`,
+            `Canonical production URL: ${process.env.CANONICAL_URL}`,
+            'Mandatory recursive policy SITE-EXECUTION-ENFORCEMENT-001 applies to the site root, every discoverable same-site descendant service path, and site-owned admin surface as one enforced scope. Child surfaces may tighten but never relax parent contracts.',
+            'Work only in the checked-out isolated branch. Do not commit, push, merge, deploy, or modify GitHub workflow files.',
+            'Deeply inspect the selected site and every discoverable same-site child surface before editing. Use repository evidence and safe public HTTP/browser evidence; do not guess.',
+            'Check links, user/admin/member/marketing paths, login-before/login-after continuity, mobile and desktop responsive layout, header/footer/menu consistency, readability, intuitiveness, usability, accessibility, tap targets, clipping, overlap, overflow, excessive whitespace, loading/error/empty states, and broken functionality.',
+            'Apply only bounded low-risk reversible fixes in the existing site/UI/service boundary. Prefer existing shared EKODI UI primitives when the defect is genuinely shared.',
+            'Canonical public routes remain under https://ekodi.kr paths. Do not create or restore feature subdomains.',
+            'Never modify identity, auth, OAuth, permissions, payment, billing, finance, credentials, secrets, security boundaries, DNS, governance, migrations, deployment configuration, AI control-plane code, or site registry policy.',
+            'Keep the diff minimal. If no safe verified defect exists, leave the working tree unchanged.',
+            'Run the narrowest relevant tests while working. The workflow will independently enforce scope and regression checks afterward.'
+          ].join('\n');
+          fs.writeFileSync(process.env.RUNNER_TEMP+'/site-improvement-prompt.txt',p);
+          NODE
+
+      - name: Mint short-lived GitHub OIDC token
+        id: oidc
+        shell: bash
+        run: |
+          set -euo pipefail
+          response=$(curl -fsS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=ekodi-site-improvement")
+          token=$(printf '%s' "$response" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);if(!j.value)process.exit(2);process.stdout.write(j.value)})")
+          echo "::add-mask::$token"
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+
+      - name: Exchange OIDC for EKODI short-lived broker token
+        id: broker_token
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          payload=$(node -e "process.stdout.write(JSON.stringify({taskId:process.env.TASK_ID}))")
+          response=$(curl -fsS -X POST \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data "$payload" \
+            https://ekodi.kr/ai/api/site-improvement/token)
+          token=$(printf '%s' "$response" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const t=String(j.token||'');if(!/^ekodi_[A-Za-z0-9_-]{40,96}$/.test(t))process.exit(2);process.stdout.write(t)})")
+          echo "::add-mask::$token"
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+
+      - name: Run Codex through EKODI short-lived broker in workspace-only sandbox
+        id: codex
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ steps.broker_token.outputs.token }}
+          responses-api-endpoint: https://ekodi.kr/ai/api/site-improvement/responses
+          permission-profile: ':workspace'
+          prompt-file: ${{ runner.temp }}/site-improvement-prompt.txt
+          effort: high
+
+      - name: Revoke EKODI short-lived broker token
+        if: always() && steps.broker_token.outputs.token != ''
+        shell: bash
+        env:
+          BROKER_TOKEN: ${{ steps.broker_token.outputs.token }}
+        run: |
+          set -euo pipefail
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $BROKER_TOKEN" \
+            https://ekodi.kr/ai/api/site-improvement/token/revoke >/dev/null
+
+      - name: Enforce deterministic bounded diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -N .
+          node --input-type=module <<'NODE'
+          import {execFileSync} from 'node:child_process';
+          const protectedFile=/^(?:\.github\/|migrations\/|supabase\/|governance\/|deploy\/|wrangler\.|platform-route-registry\.js$|CONSTITUTION\.md$|AI_DEVELOPMENT_POLICY\.md$|AGENTS(?:\.override)?\.md$|ai-control-(?:worker|core)\.js$|ekodi-site-improvement-(?:scheduler|oidc-broker)\.js$|config\/(?:site-lifecycle-registry|site-execution-enforcement|.*policy)\.json$|scripts\/validate-site-execution-enforcement\.mjs$)|(?:^|\/)(?:auth|oauth|billing|payment|payments|finance|money|credential|credentials|secret|secrets|security)(?:[./_-]|$)/i;
+          const raw=execFileSync('git',['diff','--numstat'],{encoding:'utf8'}).trim();
+          const files=raw?raw.split(/\r?\n/).map(line=>{const [a,d,...rest]=line.split('\t');return{filename:rest.join('\t'),additions:/^\d+$/.test(a)?Number(a):2000,deletions:/^\d+$/.test(d)?Number(d):2000};}):[];
+          const protectedFiles=files.filter(f=>protectedFile.test(f.filename)).map(f=>f.filename);
+          const changedLines=files.reduce((n,f)=>n+f.additions+f.deletions,0);
+          if(protectedFiles.length) throw new Error('protected boundary changed: '+protectedFiles.join(','));
+          if(files.length>25) throw new Error('diff file limit exceeded: '+files.length);
+          if(changedLines>1600) throw new Error('diff line limit exceeded: '+changedLines);
+          console.log(JSON.stringify({safe:true,fileCount:files.length,changedLines}));
+          NODE
+          git reset
+
+      - name: Stop cleanly when no safe change is needed
+        id: change
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$(git status --porcelain)" ]]; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            echo 'No safe source change was necessary.'
+          else
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        if: steps.change.outputs.changed == 'true'
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Run shared UI and route regression gates
+        if: steps.change.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run validate:site-execution
+          npm run validate:ui-surfaces
+          npm run validate:user-surfaces
+          npm run validate:shell
+
+      - name: Commit and push verified branch
+        if: steps.change.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          git commit -m "chore(site): daily low-traffic improvement for $SITE_ID"
+          git push origin "HEAD:$TARGET_BRANCH"
+
+      - name: Open bounded pull request
+        if: steps.change.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh pr view "$TARGET_BRANCH" --json number >/dev/null 2>&1; then
+            exit 0
+          fi
+          body=$(cat <<EOF
+          Automated EKODI low-traffic site improvement through the GitHub-hosted fallback lane.
+
+          - Site: **$SITE_NAME** ($SITE_ID)
+          - Canonical URL: $CANONICAL_URL
+          - Task: $TASK_ID
+          - Execution lane: github-hosted-native + OpenAI Codex workspace sandbox
+          - Direct production mutation: none
+
+          EKODI AI Control will independently re-check diff scope, CI status, guarded deployment and the canonical production surface before advancing the site cursor.
+          EOF
+          )
+          gh pr create --base main --head "$TARGET_BRANCH" --title "chore(site): daily low-traffic improvement for $SITE_NAME" --body "$body"

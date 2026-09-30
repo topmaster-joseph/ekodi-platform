@@ -1,0 +1,86 @@
+name: Verify Public Ops Health
+
+on:
+  workflow_run:
+    workflows:
+      - Deploy EKODI Shared Site Core
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-public-ops-health-${{ github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Resolve expected deployment SHA
+        id: expected
+        shell: bash
+        env:
+          WORKFLOW_RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          expected_sha="${WORKFLOW_RUN_SHA:-$DISPATCH_SHA}"
+          test -n "$expected_sha"
+          echo "sha=$expected_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Verify public deployment health artifact
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ steps.expected.outputs.sha }}
+        run: |
+          set -euo pipefail
+          health_url='https://ekodi.kr/ops/health.json'
+          for attempt in $(seq 1 24); do
+            code=$(curl -sS -D /tmp/ops-health.headers -o /tmp/ops-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$health_url" || true)
+            if [[ "$code" == '200' ]] \
+              && jq -e --arg sha "$EXPECTED_SHA" '
+                .schema_version == "1.0.0" and
+                .service == "ekodi" and
+                .status == "ok" and
+                .source == "deployment-artifact" and
+                .deploy.commit_sha == $sha and
+                .cloud_first.strategy == "cloud_first_provider_independent" and
+                .cloud_first.automatic_failover == true and
+                .cloud_first.usage_aware_failover == true and
+                .cloud_first.remote_desktop.skip_when_quota_remaining_percent_at_or_below == 0 and
+                .cloud_first.remote_desktop.quota_evasion_with_another_device_allowed == false and
+                .exposure.credentials == false and
+                .exposure.tokens == false and
+                .exposure.personal_data == false and
+                .exposure.internal_logs == false
+              ' /tmp/ops-health.json >/dev/null \
+              && grep -Fiq 'cache-control: no-store' /tmp/ops-health.headers; then
+              echo "Public operations health verified for $EXPECTED_SHA"
+              exit 0
+            fi
+            echo "Health artifact not current yet (attempt $attempt/24, HTTP $code)."
+            sleep 5
+          done
+          echo 'Public operations health did not converge to the deployed SHA.'
+          cat /tmp/ops-health.json 2>/dev/null || true
+          exit 1
+
+      - name: Verify crawler health-only exception
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 3 --retry-delay 2 https://ekodi.kr/robots.txt -o /tmp/robots.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          robots = Path('/tmp/robots.txt').read_text()
+          for agent in ('ChatGPT-User', 'GPTBot', 'Claude-User'):
+              expected = f'User-agent: {agent}\nAllow: /ops/health.json\nDisallow: /'
+              if expected not in robots:
+                  raise SystemExit(f'missing health-only crawler contract for {agent}')
+          print('Crawler health-only exception verified.')
+          PY

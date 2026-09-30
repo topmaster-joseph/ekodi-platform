@@ -1,0 +1,28 @@
+{
+  "id": "2026-09-10-generation-10-open-ended-evolution-v1.10.0",
+  "constitutionVersion": "1.10.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-10",
+  "changeClass": "C2",
+  "taskId": "g10-baseline-forward-readiness-20260910",
+  "summary": "Promote the canonical EKODI architectural baseline to Generation 10 Self-Architecture Optimization and replace the fixed Generation 8 terminal north star with open-ended evidence-driven evolution.",
+  "approvalBasis": "The platform owner explicitly instructed EKODI to confirm Generation 10 as the current baseline, verify readiness to advance further, and complete the governance update.",
+  "evidence": [
+    "merged 10G Capability Ecosystem Kernel",
+    "Generation 10 Self Automation Engine target",
+    "contract sandbox requiring functional benchmark evidence",
+    "verification-first Evolution Intelligence",
+    "guarded provider-neutral release policy"
+  ],
+  "forwardReadiness": {
+    "frameworkReady": true,
+    "futurePromotionEligible": false,
+    "firstCandidateGeneration": 11,
+    "futureNamesPredeclared": false
+  },
+  "scaleImpact": "None. EKODI remains S0 until independent scale evidence justifies promotion.",
+  "authorityImpact": "None. AI gains no sovereign authority and no direct production mutation path.",
+  "rollback": "Revert this amendment and the v1.10.0 generation metadata/validator changes through the guarded release path. Runtime Generation 10 kernels remain bounded and may continue operating without changing production authority.",
+  "pullRequest": 1392
+}

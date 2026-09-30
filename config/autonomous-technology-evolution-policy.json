@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "policyId": "AUTONOMOUS-TECH-EVOLUTION-001",
+  "status": "enforced",
+  "effectiveDate": "2026-09-18",
+  "currentGeneration": 10,
+  "scaleTier": "S0",
+  "principle": "discover-free-first-benchmark-before-adopt",
+  "sourceOfTruthPolicy": "config/platform-source-of-truth.json",
+  "authority": {
+    "finalAuthority": "ekodi_platform_super_administrator",
+    "automaticPaidActivation": false,
+    "automaticSecretCreationOrRotation": false,
+    "automaticPermissionExpansion": false,
+    "automaticProductionMutation": false,
+    "automaticProviderLockIn": false,
+    "automaticConstitutionalChange": false
+  },
+  "evaluation": {
+    "weights": {
+      "userValue": 30,
+      "compatibility": 20,
+      "costEfficiency": 20,
+      "security": 15,
+      "reversibility": 10,
+      "simplicity": 5
+    },
+    "thresholds": {
+      "sandboxCandidate": 85,
+      "assess": 70
+    },
+    "patchReleaseMaterialByDefault": false,
+    "unknownVersionChangeMaterial": true
+  },
+  "experiment": {
+    "defaultEnvironment": "isolated_task_branch_or_sandbox",
+    "productionSecretsAllowed": false,
+    "productionMutationAllowed": false,
+    "authorityExpansionAllowed": false,
+    "networkDefault": "deny-unless-source-collection-requires-egress",
+    "rollbackRequired": true,
+    "baselineComparisonRequired": true,
+    "sameTestSuiteBeforeAndAfter": true,
+    "securityIntegrityRequired": true,
+    "costEvidenceRequired": true,
+    "functionalProviderCredentialTrialsRequireExplicitExistingAuthorization": true
+  },
+  "schedule": {
+    "cadence": "weekly",
+    "timezoneReference": "UTC",
+    "purpose": "Avoid noisy trend chasing while detecting material standards/runtime/provider SDK changes early."
+  },
+  "trustedSourcePolicy": {
+    "officialSourcesOnly": true,
+    "allowBlogsAsAutomaticEvidence": false,
+    "allowAdvertisementsAsAutomaticEvidence": false,
+    "allowModelSelfClaimsAsAutomaticEvidence": false,
+    "allowCommunityOpinionAsAutomaticPromotionEvidence": false,
+    "allowedCollectors": ["github_release"]
+  },
+  "technologies": [
+    {
+      "id": "cloudflare-wrangler",
+      "name": "Cloudflare Workers SDK / Wrangler",
+      "category": "edge-runtime-tooling",
+      "source": {"kind": "github_release", "repository": "cloudflare/workers-sdk", "tagPattern": "^wrangler@(\\d+\\.\\d+\\.\\d+)$"},
+      "baselineVersion": "4.134.0",
+      "baselineObservedAt": "2026-09-17T15:48:22Z",
+      "patchReleaseMaterial": false,
+      "autonomousSandboxEligible": true,
+      "requiresProviderCredentialForFunctionalTrial": false,
+      "requiresPaidCommitment": false,
+      "metrics": {"userValue": 90, "compatibility": 95, "costEfficiency": 95, "security": 90, "reversibility": 95, "simplicity": 85}
+    },
+    {
+      "id": "opentelemetry-js",
+      "name": "OpenTelemetry JavaScript",
+      "category": "observability-standard",
+      "source": {"kind": "github_release", "repository": "open-telemetry/opentelemetry-js", "tagPattern": "^v(\\d+\\.\\d+\\.\\d+)$"},
+      "baselineVersion": "2.11.0",
+      "baselineObservedAt": "2026-08-31T16:43:14Z",
+      "patchReleaseMaterial": false,
+      "autonomousSandboxEligible": true,
+      "requiresProviderCredentialForFunctionalTrial": false,
+      "requiresPaidCommitment": false,
+      "metrics": {"userValue": 85, "compatibility": 90, "costEfficiency": 95, "security": 90, "reversibility": 95, "simplicity": 80}
+    },
+    {
+      "id": "mcp-typescript-sdk",
+      "name": "Model Context Protocol TypeScript SDK",
+      "category": "interoperability-standard",
+      "source": {"kind": "github_release", "repository": "modelcontextprotocol/typescript-sdk", "tagPattern": "^(\\d+\\.\\d+\\.\\d+)$"},
+      "baselineVersion": "1.30.0",
+      "baselineObservedAt": "2026-07-27T17:54:36Z",
+      "patchReleaseMaterial": false,
+      "autonomousSandboxEligible": true,
+      "requiresProviderCredentialForFunctionalTrial": false,
+      "requiresPaidCommitment": false,
+      "metrics": {"userValue": 90, "compatibility": 95, "costEfficiency": 95, "security": 90, "reversibility": 95, "simplicity": 85}
+    },
+    {
+      "id": "openai-node-sdk",
+      "name": "OpenAI Node SDK",
+      "category": "provider-adapter-sdk",
+      "source": {"kind": "github_release", "repository": "openai/openai-node", "tagPattern": "^v(\\d+\\.\\d+\\.\\d+)$"},
+      "baselineVersion": "7.18.0",
+      "baselineObservedAt": "2026-09-18T00:38:35Z",
+      "patchReleaseMaterial": false,
+      "autonomousSandboxEligible": false,
+      "requiresProviderCredentialForFunctionalTrial": true,
+      "requiresPaidCommitment": false,
+      "metrics": {"userValue": 80, "compatibility": 80, "costEfficiency": 70, "security": 88, "reversibility": 90, "simplicity": 80}
+    },
+    {
+      "id": "anthropic-typescript-sdk",
+      "name": "Anthropic TypeScript SDK",
+      "category": "provider-adapter-sdk",
+      "source": {"kind": "github_release", "repository": "anthropics/anthropic-sdk-typescript", "tagPattern": "^sdk-v(\\d+\\.\\d+\\.\\d+)$"},
+      "baselineVersion": "0.126.0",
+      "baselineObservedAt": "2026-09-15T17:34:12Z",
+      "patchReleaseMaterial": false,
+      "autonomousSandboxEligible": false,
+      "requiresProviderCredentialForFunctionalTrial": true,
+      "requiresPaidCommitment": false,
+      "metrics": {"userValue": 76, "compatibility": 76, "costEfficiency": 70, "security": 88, "reversibility": 90, "simplicity": 78}
+    },
+    {
+      "id": "google-genai-js",
+      "name": "Google Gen AI JavaScript SDK",
+      "category": "provider-adapter-sdk",
+      "source": {"kind": "github_release", "repository": "googleapis/js-genai", "tagPattern": "^v(\\d+\\.\\d+\\.\\d+)$"},
+      "baselineVersion": "2.23.0",
+      "baselineObservedAt": "2026-09-16T23:16:29Z",
+      "patchReleaseMaterial": false,
+      "autonomousSandboxEligible": false,
+      "requiresProviderCredentialForFunctionalTrial": true,
+      "requiresPaidCommitment": false,
+      "metrics": {"userValue": 82, "compatibility": 84, "costEfficiency": 90, "security": 88, "reversibility": 90, "simplicity": 82}
+    }
+  ]
+}

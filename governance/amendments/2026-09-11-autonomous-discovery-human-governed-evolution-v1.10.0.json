@@ -1,0 +1,37 @@
+{
+  "id": "2026-09-11-autonomous-discovery-human-governed-evolution-v1.10.0",
+  "constitutionVersion": "1.10.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-11",
+  "changeClass": "C1",
+  "taskId": "autonomous-discovery-engine-20260911",
+  "summary": "Implement the EKODI Autonomous Discovery Engine as the next evidence-driven capability layer under the existing Constitution v1.10.0: EKODI may autonomously discover improvement needs, formulate research questions, conduct bounded sandbox research and continuously self-evaluate, while production deployment and sovereign authority remain human-governed by the EKODI Platform Super Administrator.",
+  "approvalBasis": "The platform owner explicitly instructed EKODI to define its final form as a platform that, within values and authority set by the Super Administrator, autonomously discovers, researches, evolves and verifies its own evolution, and to build that model into the system.",
+  "constitutionalInterpretation": "This implementation does not amend Constitution v1.10.0. It operationalizes the authority already granted by Section 12 for low-risk autonomous observation, forecasting, scoring and bounded sandbox experiments, together with Section 13 open-ended evidence-driven generation evolution and Super Administrator-controlled promotion.",
+  "constitutionalFit": [
+    "Implements Section 12 verification-first intelligent evolution without widening autonomous production authority.",
+    "Implements Section 13 open-ended evidence-driven generation evolution without predeclaring an official Generation 11 name.",
+    "Preserves Sovereign -> Autonomous -> Agentic -> Services authority order and existing guarded production release controls."
+  ],
+  "implementedCapabilities": [
+    "Autonomous improvement-signal discovery before user-visible failure",
+    "Autonomous research-question and bounded experiment program generation",
+    "Autonomous sandbox research only when isolated, reversible, delegated, logged, preflight-verified and budget-bounded",
+    "Autonomous Research, Human-Governed Deployment enforcement",
+    "Read-only scheduled discovery cycle over existing operational evidence",
+    "Continuous Capability Certification for Generation 11 candidate readiness",
+    "Automatic fallback to Generation 10 safe mode when readiness evidence is incomplete",
+    "No automatic generation promotion and no self-expansion of authority"
+  ],
+  "generationImpact": {
+    "currentGenerationRemains": 10,
+    "candidateGenerationTest": 11,
+    "generation11OfficialName": null,
+    "automaticPromotion": false,
+    "promotionRequiresSuperAdministratorConfirmation": true
+  },
+  "authorityImpact": "None. The engine receives autonomous research authority only inside the already delegated low-risk and bounded sandbox scope. Production mutation, constitutional change and authority expansion remain human-gated.",
+  "scaleImpact": "None. No new deployment boundary, paid infrastructure, provider dependency or speculative capacity is introduced.",
+  "rollback": "Revert this implementation record together with ekodi-autonomous-discovery-engine.js, scripts/run-autonomous-discovery-cycle.mjs, .github/workflows/autonomous-discovery-cycle.yml, governance/architecture/ekodi-autonomous-discovery-engine.json, AUTONOMOUS_DISCOVERY_ENGINE.md and their tests. Existing Generation 10 Self Automation and Evolution Intelligence remain the safe baseline and no production authority is lost or widened by rollback."
+}

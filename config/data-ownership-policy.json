@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "policyId": "DATA-OWNERSHIP-001",
+  "status": "enforced",
+  "authorityMode": "reference-existing-authoritative-boundaries",
+  "authoritativeSources": {
+    "coreProtectedData": "config/core-data-boundaries.json",
+    "serviceOperationalData": "platform-boundaries.json",
+    "fileStorage": "config/storage-policy.json",
+    "architecture": "governance/architecture/ekodi-os-architecture.json"
+  },
+  "ownershipClasses": {
+    "canonicalIdentityAuthorization": {
+      "ownerBoundary": "control-api",
+      "rule": "identity, workspace authority, membership, role and permission truth remains EKODI-controlled"
+    },
+    "serviceOperational": {
+      "ownerBoundary": "declared-service-boundary",
+      "rule": "service operational state belongs to the owning declared boundary and crosses boundaries only by contract"
+    },
+    "externalProviderRaw": {
+      "ownerBoundary": "external-provider",
+      "rule": "raw provider data remains at the provider where practical; EKODI stores only purpose-bound projections and connection metadata"
+    },
+    "projectionCache": {
+      "ownerBoundary": "derived",
+      "canonical": false,
+      "rule": "cache, UI projection and analytics copies never become authority for identity, authorization or source records"
+    }
+  },
+  "rules": {
+    "directPrivateDatabaseCouplingAcrossIndependentServices": false,
+    "crossBoundaryContractRequired": true,
+    "providerCredentialsClientSideForbidden": true,
+    "projectionMayBecomeCanonicalAuthority": false,
+    "serviceDatabaseDeclarationRequired": true
+  }
+}

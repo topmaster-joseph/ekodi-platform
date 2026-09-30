@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "evidenceType": "generation-10-autonomous-execution-fabric-initial-runtime-proof",
+  "recordedAt": "2026-09-17T00:51:52Z",
+  "repository": "topmaster-joseph/ekodi-platform",
+  "sourcePullRequest": 1815,
+  "sourceHeadCommit": "1832c49937d4053de6962a64098b0d52e9316842",
+  "mergedBaselineCommit": "8ef407c7b96805cb7392db1aef895b9df34dcf4c",
+  "workflow": {
+    "name": "EKODI Autonomous Execution Fabric Runtime Proof",
+    "runId": 35168240417,
+    "runNumber": 1,
+    "conclusion": "success"
+  },
+  "jobs": [
+    {
+      "id": 105034067826,
+      "name": "runtime-contract",
+      "conclusion": "success",
+      "proved": [
+        "sovereign-authority-boundary",
+        "provider-independent-execution-contract",
+        "red-human-gate",
+        "production-control-plane-routing",
+        "unsafe-provider-rejection-and-failover"
+      ]
+    },
+    {
+      "id": 105034067984,
+      "name": "rootless-sandbox-proof",
+      "conclusion": "success",
+      "proved": [
+        "rootless-execution",
+        "no-inherited-production-secret-sentinel",
+        "network-isolation",
+        "read-only-root-filesystem",
+        "capabilities-dropped",
+        "workspace-only-artifact-output"
+      ]
+    }
+  ],
+  "artifact": {
+    "id": 10475876465,
+    "name": "ekodi-gen10-rootless-sandbox-proof-35168240417-1",
+    "digest": "sha256:af3195ee3ff43c5187e38e1374cf7aa8c01d9217861fae05ece31efbc2775d87",
+    "expiresAt": "2026-12-16T00:51:32Z"
+  },
+  "claimBoundary": {
+    "nonProductionIsolatedExecutionProven": true,
+    "autonomousProductionReadinessProven": false,
+    "remainingEvidenceRequired": [
+      "credential-scope-test-with-real-short-lived-broker",
+      "green-change-end-to-end-implementation-test",
+      "yellow-change-rollback-test",
+      "staging-verification-test",
+      "production-verification-test",
+      "automatic-recovery-test",
+      "durable-audit-trail-test",
+      "cost-budget-test"
+    ]
+  }
+}
