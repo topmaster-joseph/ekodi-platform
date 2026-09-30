@@ -65,3 +65,14 @@ test('seonammedi admin route is served locally with noindex instead of redirecti
   assert.match(response.headers.get('x-robots-tag')||'',/noindex/);
   assert.equal(response.headers.get('location'),null);
 });
+
+
+test('organization uses representative council and supports 가나다 participant organizations',async()=>{
+  const [html,app,data]=await Promise.all([readFile(new URL('../sites/seonammedi/public/index.html',import.meta.url),'utf8'),readFile(new URL('../sites/seonammedi/public/app.js',import.meta.url),'utf8'),readFile(new URL('../sites/seonammedi/public/data.json',import.meta.url),'utf8')]);
+  const parsed=JSON.parse(data);
+  assert.match(html,/id="organization"/);
+  assert.equal(parsed.organization.levels[0].name,'대표자회의');
+  assert.ok(parsed.organization.committees.some(x=>x.name==='홍보소통위원회'));
+  assert.ok(Array.isArray(parsed.organization.participants));
+  assert.match(app,/localeCompare\(String\(b\.name\|\|''\),'ko-KR'\)/);
+});
