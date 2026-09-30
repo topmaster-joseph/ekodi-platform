@@ -85,13 +85,14 @@ test('organization uses representative council and supports 가나다 participan
 
 
 test('timeline admin is seeded, permissioned and public materials use central categories',async()=>{
-  const [html,app,adminHtml,adminJs,control,migration,data]=await Promise.all([
+  const [html,app,adminHtml,adminJs,control,migration,seedMigration,data]=await Promise.all([
     readFile(new URL('index.html',root),'utf8'),
     readFile(new URL('app.js',root),'utf8'),
     readFile(new URL('admin/index.html',root),'utf8'),
     readFile(new URL('admin/admin.js',root),'utf8'),
     readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
     readFile(new URL('../migrations/0114_seonammedi_timeline_admin.sql',import.meta.url),'utf8'),
+    readFile(new URL('../migrations/0115_seonammedi_timeline_seed.sql',import.meta.url),'utf8'),
     readFile(new URL('data.json',root),'utf8')
   ]);
   const parsed=JSON.parse(data);
@@ -105,9 +106,21 @@ test('timeline admin is seeded, permissioned and public materials use central ca
   assert.match(adminHtml,/id="timelineForm"/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/timeline/);
   assert.match(control,/TIMELINE_CAP='seonammedi\.timeline\.manage'/);
-  assert.match(control,/TIMELINE_SEED=/);
   assert.match(control,/status='published'/);
+  assert.match(seedMigration,/seed-001/);
+  assert.match(seedMigration,/seed-020/);
+  assert.match(seedMigration,/'published'/);
   assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_timeline/);
   assert.match(migration,/seonammedi\.timeline\.manage/);
   assert.ok(Array.isArray(parsed.timeline)&&parsed.timeline.length>=20);
+});
+
+
+test('managed content reads rely on migrations instead of request-time schema DDL',async()=>{
+  const control=await readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8');
+  assert.doesNotMatch(control,/ensureCustomerAccessSchema/);
+  assert.doesNotMatch(control,/async function ensureSchema/);
+  assert.match(control,/publicStorageRead/);
+  assert.match(control,/resource\+'_storage_read_failed'/);
+  assert.match(control,/ensureContentCategoryColumn/);
 });
