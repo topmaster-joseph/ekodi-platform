@@ -120,8 +120,6 @@ test('organization keeps three committees independent',async()=>{
     readFile(new URL('../sites/seonammedi/public/data.json',import.meta.url),'utf8')
   ]);
   const data=JSON.parse(dataText);const groups=data.organization.groups;
-  assert.deepEqual(groups.map(x=>x.id),['civic-coalition','mokpo-university','unified-2026-09-30']);
-  assert.equal(groups[0].levels[0].name,'대표자회의');
-  assert.equal(groups[1].levels.length,0);assert.equal(groups[2].levels.length,0);
+  assert.deepEqual(groups.map(x=>x.id),['unified-2026-09-30','civic-coalition','mokpo-university']);\n  assert.equal(data.organization.defaultGroup,'unified-2026-09-30');\n  assert.equal(groups[1].levels[0].name,'대표자회의');\n  assert.equal(groups[0].levels.length,0);assert.equal(groups[2].levels.length,0);
   assert.match(html,/id="organizationTabs"/);assert.match(adminHtml,/id="adminOrganizationTabs"/);
 });
