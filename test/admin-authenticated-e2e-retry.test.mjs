@@ -22,9 +22,9 @@ test('authenticated Admin E2E isolates every menu in a fresh Chromium process an
   assert.match(source, /runCanonicalAssist\(\)/);
 });
 
-test('isolated worker skips redundant clicks only when the active context tab has a visible rendered panel', async () => {
+test('isolated worker skips redundant clicks only when the active Admin panel has a visible rendered panel', async () => {
   const source = await workerSource();
-  assert.match(source, /let alreadyActive = aria === 'true'/);
+  assert.match(source, /let alreadyActive = await page\.evaluate\(section => window\.EKODIAdminPanels\?\.current\?\.\(\) === section, menuId\)/);
   assert.match(source, /stage\('active-panel-check'\)/);
   assert.match(source, /const activeState = await visiblePanelState\(\)/);
   assert.match(source, /alreadyActive = Boolean\(activeState\.panelFound && activeState\.selected && activeState\.textLength >= 4\)/);
