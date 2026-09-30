@@ -38,6 +38,18 @@ test('seonammedi civic intake falls back to its application safeguards when the 
   assert.ok(PLATFORM_SECURITY_CONSTANTS.SELF_PROTECTED_PUBLIC_WRITE_PATHS.includes('/api/seonammedi/voices'));
 });
 
+test('seonammedi civic intake sheds aggregate surges before D1 writes',async()=>{
+  const request=new Request('https://ekodi.kr/api/seonammedi/voices',{method:'POST',headers:{'cf-connecting-ip':'203.0.113.13'},body:'{}'});
+  const response=await enforcePlatformRequestSecurity(request,{
+    ENVIRONMENT:'production',
+    SEONAMMEDI_VOICE_SURGE_LIMITER:limiter(false),
+    PLATFORM_PUBLIC_WRITE_RATE_LIMITER:limiter(true),
+  });
+  assert.equal(response.status,429);
+  assert.equal((await response.json()).code,'SEONAMMEDI_VOICE_SURGE_LIMITED');
+  assert.equal(response.headers.get('retry-after'),'15');
+});
+
 test('oversized regular mutations are blocked while media gets the larger ceiling',async()=>{
   const oversized=new Request('https://ekodi.kr/feedback',{method:'POST',headers:{'content-length':String(PLATFORM_SECURITY_CONSTANTS.STANDARD_BODY_LIMIT+1)}});
   assert.equal((await enforcePlatformRequestSecurity(oversized,{ENVIRONMENT:'test'})).status,413);
