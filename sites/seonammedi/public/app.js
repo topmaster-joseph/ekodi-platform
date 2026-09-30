@@ -49,17 +49,17 @@ const renderStatusDetail=(key,d)=>{
   if(key==='official'){
     const rows=(d.sources||[]).filter(s=>/(공식|당사자)/.test(String(s.kind||''))).slice(0,8);
     label='OFFICIAL RECORD';title='공식 기록';description='정부·지자체·대학·비대위 등 자료의 주체와 성격을 구분해 원문 기준으로 확인할 수 있습니다.';
-    body='<div class="status-detail-list">'+statusSourceRows(rows,'현재 연결된 공식 자료가 없습니다.')+'</div>';target='#news';targetLabel='공식자료 영역 보기';
+    body='<div class="status-detail-list">'+statusSourceRows(rows,'현재 연결된 공식 자료가 없습니다.')+'</div>';target='#materials';targetLabel='공식자료 영역 보기';
   }else if(key==='news'){
     const rows=(d.sources||[]).filter(s=>/(보도|언론)/.test(String(s.kind||''))).slice(0,8);
     label='RELATED NEWS';title='관련 보도';description='기사 제목·언론사·보도일을 확인하고 원문으로 바로 이동할 수 있습니다.';
-    body='<div class="status-detail-list">'+statusSourceRows(rows,'현재 연결된 관련 보도가 없습니다.')+'</div>';target='#news';targetLabel='관련기사 전체 보기';
+    body='<div class="status-detail-list">'+statusSourceRows(rows,'현재 연결된 관련 보도가 없습니다.')+'</div>';target='#materials';targetLabel='관련기사 전체 보기';
   }else if(key==='daily'){
     const run=latestMonitorData&&latestMonitorData.lastRun;
     const rows=((latestMonitorData&&latestMonitorData.items)||[]).slice(0,6);
     const summary=run?('최근 점검 '+(run.status==='ok'?'정상':run.status==='partial'?'일부 확인':'확인 필요')+' · 출처 '+Number(run.sources_checked||0)+'개 · 신규 '+Number(run.new_items||0)+'건 · 사진·영상 근거 후보 '+Number((latestMonitorData&&latestMonitorData.mediaCandidateCount)||0)+'건'):'자동점검 상태를 불러오는 중입니다.';
     label='DAILY CHECK';title='일일 점검';description='EKODI가 공개 자료를 확인해 새 항목과 근거자료 후보를 수집하고, 원문 확인이 필요한 상태를 구분해 표시합니다.';
-    body='<div class="monitor-summary status-monitor-summary">'+escapeHtml(summary)+'</div><div class="status-detail-list">'+statusSourceRows(rows.map(item=>({title:item.title||'수집 자료',url:item.resolved_url||item.url,publisher:item.publisher||'출처 확인 중',date:kstDate(item.published_at||item.media_published_at||item.first_seen_at),kind:'자동수집 · 원문 확인 필요'})),'최근 수집된 새 자료가 없습니다.')+'</div>';target='#monitor';targetLabel='일일점검 전체 보기';
+    body='<div class="monitor-summary status-monitor-summary">'+escapeHtml(summary)+'</div><div class="status-detail-list">'+statusSourceRows(rows.map(item=>({title:item.title||'수집 자료',url:item.resolved_url||item.url,publisher:item.publisher||'출처 확인 중',date:kstDate(item.published_at||item.media_published_at||item.first_seen_at),kind:'자동수집 · 원문 확인 필요'})),'최근 수집된 새 자료가 없습니다.')+'</div>';target='#status';targetLabel='일일점검 전체 보기';
   }else{
     const item=(d.status||[]).find(x=>x.key===key);title=item?.title||'현재 진행상황';description=item?.text||'';
   }
@@ -125,3 +125,54 @@ if(voiceForm)voiceForm.addEventListener('submit',async event=>{
   status.textContent='접수 중…';
   try{const response=await fetch('/api/seonammedi/voices',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.message||'접수하지 못했습니다.');status.textContent=body.message||'접수되었습니다.';voiceForm.reset()}catch(error){status.textContent=error.message||'접수하지 못했습니다.'}
 });
+
+
+const viewAliases={status:'status',monitor:'status',timeline:'timeline',notices:'notices',materials:'materials',news:'materials','public-posts':'materials',voices:'voices',finance:'finance'};
+function showView(view,{updateHash=false}={}){
+  const key=viewAliases[view]||'';
+  document.querySelectorAll('[data-view-section]').forEach(section=>{section.hidden=section.dataset.viewSection!==key});
+  document.querySelectorAll('[data-view-link]').forEach(link=>{
+    const active=link.dataset.viewLink===key;
+    if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
+  });
+  const hero=document.querySelector('.hero');
+  if(hero)hero.hidden=Boolean(key);
+  if(updateHash){
+    const next=key?'#'+key:location.pathname;
+    history.pushState({view:key},'',next);
+  }
+  if(key){
+    const first=document.querySelector('[data-view-section="'+CSS.escape(key)+'"]');
+    first?.scrollIntoView({block:'start'});
+  }else window.scrollTo({top:0});
+}
+function syncViewFromLocation(){
+  const raw=location.hash.replace(/^#/,'');
+  showView(raw,{updateHash:false});
+}
+document.querySelector('.site-header nav')?.addEventListener('click',event=>{
+  const link=event.target.closest('[data-view-link]');
+  if(!link)return;
+  event.preventDefault();
+  showView(link.dataset.viewLink,{updateHash:true});
+});
+window.addEventListener('popstate',syncViewFromLocation);
+syncViewFromLocation();
+
+async function loadNotices(){
+  const host=el('noticeList');if(!host)return;
+  try{
+    const response=await fetch('/api/seonammedi/notices',{cache:'no-store'});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.ok)throw new Error(data.message||'공지 목록을 불러오지 못했습니다.');
+    const rows=Array.isArray(data.items)?data.items:[];
+    host.innerHTML=rows.length?rows.map(item=>{
+      const date=item.published_at||item.updated_at||'';
+      const dateText=date?new Date(date).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):'';
+      return '<article class="notice-item"><h3>'+escapeHtml(item.title||'공지')+(item.pinned?'<span class="notice-pin">중요</span>':'')+'</h3><p>'+escapeHtml(item.body||'')+'</p><small>'+escapeHtml(dateText)+'</small></article>';
+    }).join(''):'<p class="muted">등록된 공지가 없습니다.</p>';
+  }catch(error){
+    host.innerHTML='<p class="muted">'+escapeHtml(error.message||'공지 목록을 불러오지 못했습니다.')+'</p>';
+  }
+}
+loadNotices();
