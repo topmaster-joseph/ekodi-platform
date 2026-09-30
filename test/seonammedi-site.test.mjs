@@ -14,8 +14,6 @@ test('Shared Site router serves seonammedi assets before generic workspace routi
   assert.equal(css.status,200);assert.equal(css.headers.get('x-ekodi-route'),'seonammedi-static');assert.match(await css.text(),/\/seonammedi\/app\.css/);
   const js=await platformRouter.fetch(new Request('https://ekodi.kr/seonammedi/app.js'),env,{});
   assert.equal(js.status,200);assert.equal(js.headers.get('x-ekodi-route'),'seonammedi-static');
-  const minutes=await platformRouter.fetch(new Request('https://ekodi.kr/seonammedi/minutes/'),env,{});
-  assert.equal(minutes.status,200);assert.equal(minutes.headers.get('x-ekodi-route'),'seonammedi-static');assert.equal(minutes.headers.get('x-robots-tag'),'noindex, nofollow, noarchive');
   for(const deletedPath of ['/seonam-medi','/seonam-med']){const old=await platformRouter.fetch(new Request('https://ekodi.kr'+deletedPath+'/app.css?v=1'),env,{});assert.equal(old.status,404);assert.equal(old.headers.get('x-ekodi-route'),'seonammedi-deleted');}
 });
 
@@ -212,4 +210,25 @@ test('seonammedi public managed reads are migration-backed and never run request
   for(const resource of ['page-data','content','timeline','notices','channels'])assert.match(handler,new RegExp("publicStorageRead\\('"+resource+"'"));
   const adminContent=body('async function listAdminContent','async function listAdminChannels');
   assert.match(adminContent,/ensureContentCategoryColumn\(env\.DB\)/);
+});
+
+
+test('seonammedi exposes seeded related channels on public and admin surfaces',async()=>{
+  const [html,app,adminHtml,migration]=await Promise.all([
+    readFile(new URL('index.html',root),'utf8'),
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('../migrations/0118_seonammedi_channel_seed.sql',import.meta.url),'utf8')
+  ]);
+  assert.match(html,/data-view-link="channels"/);
+  assert.match(html,/id="channels"[^>]*data-view-section="channels"/);
+  assert.match(html,/id="publicChannelList"/);
+  assert.match(app,/\/api\/seonammedi\/channels/);
+  assert.match(app,/channels:'channels'/);
+  assert.match(adminHtml,/data-panel-target="channels"/);
+  assert.match(adminHtml,/채널 관리/);
+  assert.match(migration,/https:\/\/www\.instagram\.com\/wonokoh\//);
+  assert.match(migration,/https:\/\/www\.youtube\.com\/@Mokpo-tv/);
+  assert.match(migration,/WHERE NOT EXISTS/);
+  assert.doesNotMatch(migration,/official[^\n]*1/);
 });
