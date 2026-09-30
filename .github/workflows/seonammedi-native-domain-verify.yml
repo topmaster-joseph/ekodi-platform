@@ -174,7 +174,13 @@ jobs:
           check_redirect() {
             url="$1"; expected="$2"
             meta=$(curl -sS -o /dev/null -w '%{http_code}\t%{redirect_url}' --connect-timeout 10 --max-time 20 "$url")
-            code=${meta%%
+            code=$(printf '%s' "$meta" | cut -f1)
+            location=$(printf '%s' "$meta" | cut -f2-)
+            echo "URL=$url HTTP=$code LOCATION=$location" | tee -a artifacts/postdeploy.txt
+            test "$code" = "301"
+            test "$location" = "$expected"
+          }
+
           check_redirect "https://seonammedi.kr/" "https://ekodi.kr/seonammedi/"
           check_redirect "https://seonammedi.kr/admin/" "https://ekodi.kr/seonammedi/admin/"
           check_redirect "https://seonammedi.kr/notice?id=7" "https://ekodi.kr/seonammedi/notice?id=7"
