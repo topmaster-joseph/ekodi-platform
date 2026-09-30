@@ -128,10 +128,13 @@
       "ownerKind": "business",
       "class": "workspace_user_site",
       "canonicalUrl": "https://ekodi.kr/ekodibiz",
-      "currentServiceUrl": "https://biz.ekodi.kr",
-      "migrationState": "retain_existing",
+      "currentServiceUrl": "https://ekodi.kr/ekodibiz",
+      "migrationState": "promoted",
       "runtime": "tenant_customer_site",
-      "action": "connect_core_preserve_public_surface"
+      "action": "canonical_path_only",
+      "legacyAliases": [
+        "https://biz.ekodi.kr"
+      ]
     },
     {
       "id": "ekodi-lab",
@@ -149,20 +152,28 @@
       "name": "EKODI Global Trading",
       "ownerKind": "business",
       "class": "workspace_user_site",
-      "currentUrl": "https://trade.ekodi.kr",
-      "migrationState": "hold_existing_url_pending_canonical_decision",
+      "migrationState": "promoted",
       "runtime": "tenant_customer_site",
-      "action": "connect_core_no_url_change"
+      "action": "canonical_path_only",
+      "canonicalUrl": "https://ekodi.kr/ekoditrade",
+      "currentServiceUrl": "https://ekodi.kr/ekoditrade",
+      "legacyAliases": [
+        "https://trade.ekodi.kr"
+      ]
     },
     {
       "id": "ekodi-cafe",
       "name": "에코디 카페",
       "ownerKind": "business",
       "class": "workspace_user_site",
-      "currentUrl": "https://cafe.ekodi.kr",
-      "migrationState": "preparing_keep_existing",
+      "migrationState": "promoted",
       "runtime": "tenant_customer_site",
-      "action": "connect_core_no_launch_claim"
+      "action": "canonical_path_only",
+      "canonicalUrl": "https://ekodi.kr/ekodicafe",
+      "currentServiceUrl": "https://ekodi.kr/ekodicafe",
+      "legacyAliases": [
+        "https://cafe.ekodi.kr"
+      ]
     }
   ],
   "servicePolicy": {
