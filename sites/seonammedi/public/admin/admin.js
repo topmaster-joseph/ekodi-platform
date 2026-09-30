@@ -1,6 +1,4 @@
 (()=>{
-const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
-const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const PLATFORM_TOKEN_KEY='ekodi-auth-token';
 const SESSION_KEY='ekodi-seonam-admin-session';
 const CENTRAL_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token';
@@ -16,9 +14,12 @@ function storedSession(){try{const value=JSON.parse(sessionStorage.getItem(SESSI
 function saveSession(value){sessionStorage.setItem(SESSION_KEY,JSON.stringify(value))}
 function clearSession(){sessionStorage.removeItem(SESSION_KEY)}
 async function supabaseAuth(pathname,body){
-  const response=await fetch(SUPABASE_URL+pathname,{method:'POST',headers:{apikey:SUPABASE_KEY,'content-type':'application/json'},body:JSON.stringify(body),cache:'no-store'});
+  const bridge=pathname.includes('refresh_token')?'/api/seonammedi/admin/auth/refresh':'/api/seonammedi/admin/auth/exchange';
+  let response;
+  try{response=await fetch(bridge,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),cache:'no-store'})}
+  catch{throw Object.assign(new Error('로그인 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.'),{status:503})}
   const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw Object.assign(new Error(data.msg||data.error_description||data.error||('auth_'+response.status)),{status:response.status});
+  if(!response.ok)throw Object.assign(new Error(data.msg||data.error_description||data.error||('auth_'+response.status)),{status:response.status,data});
   return data;
 }
 function normalizeSession(data,current={}){return{accessToken:data.access_token||'',refreshToken:data.refresh_token||current.refreshToken||'',expiresAt:Number(data.expires_at||0)||Math.floor(Date.now()/1000)+Number(data.expires_in||3600),user:{id:data.user?.id||current.user?.id||'',email:data.user?.email||current.user?.email||''}}}
@@ -54,7 +55,8 @@ async function token(){
 async function api(path,options={}){
   const bearer=await token();if(!bearer){location.replace(authUrl());throw new Error('로그인이 필요합니다.')}
   const headers=new Headers(options.headers||{});headers.set('authorization','Bearer '+bearer);if(options.body&&!headers.has('content-type'))headers.set('content-type','application/json');
-  const response=await fetch(path,{...options,headers,cache:'no-store'});const data=await response.json().catch(()=>({}));
+  let response;try{response=await fetch(path,{...options,headers,cache:'no-store'})}catch{throw Object.assign(new Error('서버에 연결하지 못했습니다. 새로고침 후 다시 시도해 주세요.'),{status:503})}
+  const data=await response.json().catch(()=>({}));
   if(response.status===401){sessionStorage.removeItem(PLATFORM_TOKEN_KEY);clearSession();try{localStorage.removeItem(CENTRAL_SESSION_KEY)}catch{}location.replace(authUrl());throw new Error('로그인이 만료되었습니다.')}
   if(!response.ok)throw Object.assign(new Error(data.error||'요청을 처리하지 못했습니다.'),{status:response.status,data});return data;
 }

@@ -243,3 +243,33 @@ test('seonammedi exposes seeded related channels on public and admin surfaces',a
   assert.match(migration,/youtube\.com\/@Mokpo-tv/);
   assert.match(migration,/WHERE NOT EXISTS/);
 });
+
+test('seonammedi admin auth handoff is same-origin and finance API is production-guarded',async()=>{
+  const [control,adminJs,manifestText]=await Promise.all([
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+    readFile(new URL('admin/admin.js',root),'utf8'),
+    readFile(new URL('../deploy/manifests/control-api.worker.json',import.meta.url),'utf8')
+  ]);
+  assert.match(control,/AUTH_EXCHANGE_PATH=PREFIX\+'\/admin\/auth\/exchange'/);
+  assert.match(control,/AUTH_REFRESH_PATH=PREFIX\+'\/admin\/auth\/refresh'/);
+  assert.match(control,/MY_SUPABASE_URL/);
+  assert.match(control,/MY_SUPABASE_PUBLISHABLE_KEY/);
+  assert.match(control,/auth_upstream_unavailable/);
+  assert.match(adminJs,/\/api\/seonammedi\/admin\/auth\/exchange/);
+  assert.match(adminJs,/\/api\/seonammedi\/admin\/auth\/refresh/);
+  assert.doesNotMatch(adminJs,/fetch\(SUPABASE_URL/);
+  const manifest=JSON.parse(manifestText);
+  const byUrl=new Map(manifest.worker.requests.map(item=>[item.url,item]));
+  const exchange=byUrl.get('https://ekodi.kr/api/seonammedi/admin/auth/exchange');
+  assert.ok(exchange);
+  assert.equal(exchange.method,'POST');
+  assert.deepEqual(exchange.statuses,[400]);
+  assert.ok(exchange.expect.includes('token_hash_required'));
+  assert.equal(exchange.candidateVerify,false);
+  const finance=byUrl.get('https://ekodi.kr/api/seonammedi/admin/finance');
+  assert.ok(finance);
+  assert.deepEqual(finance.statuses,[401]);
+  assert.ok(finance.expect.includes('authentication_required'));
+  assert.equal(finance.candidateVerify,false);
+});
+
