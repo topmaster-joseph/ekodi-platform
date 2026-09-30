@@ -17,26 +17,45 @@
       "physicalBoundary": "cloudflare-development-account",
       "productionDataAllowed": false,
       "purpose": "Build, preview, staging and destructive test workloads",
-      "allowedDataClasses": ["workspace-record", "private-document", "public-asset", "hot-metadata"]
+      "allowedDataClasses": [
+        "workspace-record",
+        "private-document",
+        "public-asset",
+        "hot-metadata"
+      ]
     },
     "production-core": {
       "physicalBoundary": "cloudflare-production-account",
       "logicalBoundary": "core-control-plane",
       "purpose": "Identity, authorization, billing, audit, workspace registry and protected shared APIs",
-      "allowedDataClasses": ["core-record", "workspace-record", "private-document", "hot-metadata", "audit-record"],
+      "allowedDataClasses": [
+        "core-record",
+        "workspace-record",
+        "private-document",
+        "hot-metadata",
+        "audit-record"
+      ],
       "publicAssetOrigin": false
     },
     "production-public": {
       "physicalBoundary": "cloudflare-production-account",
       "logicalBoundary": "public-delivery-plane",
       "purpose": "Public sites, static assets, cached public metadata and high-volume delivery",
-      "allowedDataClasses": ["public-asset", "public-metadata"],
+      "allowedDataClasses": [
+        "public-asset",
+        "public-metadata"
+      ],
       "coreDatabaseReachable": false
     },
     "isolated-workload": {
       "physicalBoundary": "dedicated-account-or-provider-when-threshold-reached",
       "purpose": "High-volume, high-risk or independently billed workloads",
-      "allowedDataClasses": ["workspace-record", "private-document", "public-asset", "hot-metadata"],
+      "allowedDataClasses": [
+        "workspace-record",
+        "private-document",
+        "public-asset",
+        "hot-metadata"
+      ],
       "activation": "explicit-capacity-or-risk-decision"
     }
   },
@@ -45,13 +64,23 @@
       "adapterKind": "database",
       "scope": "core",
       "defaultProvider": "d1-core",
-      "examples": ["identity", "authorization", "billing", "workspace-registry"]
+      "examples": [
+        "identity",
+        "authorization",
+        "billing",
+        "workspace-registry"
+      ]
     },
     "workspace-record": {
       "adapterKind": "database",
       "scope": "workspace",
       "defaultProvider": "d1-workspace",
-      "examples": ["tenant-state", "relationships", "workflow-state", "document-metadata"]
+      "examples": [
+        "tenant-state",
+        "relationships",
+        "workflow-state",
+        "document-metadata"
+      ]
     },
     "audit-record": {
       "adapterKind": "database",
@@ -63,13 +92,23 @@
       "adapterKind": "file",
       "scope": "workspace",
       "defaultProvider": "google-drive-workspace",
-      "examples": ["source-documents", "reports", "pdf", "office-documents", "private-media"]
+      "examples": [
+        "source-documents",
+        "reports",
+        "pdf",
+        "office-documents",
+        "private-media"
+      ]
     },
     "public-asset": {
       "adapterKind": "file",
       "scope": "public",
       "defaultProvider": "r2-public",
-      "examples": ["public-images", "downloads", "site-assets"]
+      "examples": [
+        "public-images",
+        "downloads",
+        "site-assets"
+      ]
     },
     "public-metadata": {
       "adapterKind": "cache",
@@ -80,7 +119,24 @@
       "adapterKind": "cache",
       "scope": "workspace",
       "defaultProvider": "kv-hot",
-      "examples": ["menus", "feature-flags", "service-catalog", "read-mostly-metadata"]
+      "examples": [
+        "menus",
+        "feature-flags",
+        "service-catalog",
+        "read-mostly-metadata"
+      ]
+    },
+    "durable-write-event": {
+      "adapterKind": "queue",
+      "scope": "workspace",
+      "defaultProvider": "queue-write",
+      "examples": [
+        "public-form-submission",
+        "application",
+        "citizen-feedback",
+        "reservation",
+        "order-intent"
+      ]
     }
   },
   "providers": {
@@ -122,6 +178,13 @@
       "provider": "cloudflare-kv-or-cache",
       "scope": "workspace-or-public",
       "portable": true
+    },
+    "queue-write": {
+      "adapterKind": "queue",
+      "provider": "cloudflare-queues",
+      "scope": "workspace",
+      "portable": true,
+      "deadLetterRequired": true
     }
   },
   "trafficProtection": {
@@ -132,7 +195,10 @@
     "queueNonInteractiveWork": true,
     "avoidFanoutOnInteractivePath": true,
     "providerTimeoutRequired": true,
-    "providerCircuitBreakerRecommended": true
+    "providerCircuitBreakerRecommended": true,
+    "burstEligiblePublicWritesQueueFirst": true,
+    "productionDirectDatabaseWritesForBurstEligiblePublicWrites": false,
+    "successRequiresDurableWriteAcceptance": true
   },
   "migrationRules": {
     "workspaceProviderMoveMustBeExplicit": true,
