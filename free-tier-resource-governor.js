@@ -112,7 +112,7 @@ export function evaluateResourceMetric(row,{now=Date.now(),staleAfterHours=26}={
   });
 }
 
-export function buildFreeTierResourceGovernor({snapshots=[],states=[],now=Date.now(),staleAfterHours=26}={}){
+export function buildFreeTierResourceGovernor({snapshots=[],states=[],runtimeSignals={},now=Date.now(),staleAfterHours=26}={}){
   const evaluated=latestSnapshots(snapshots).map(row=>evaluateResourceMetric(row,{now,staleAfterHours}));
   const stateByProvider=new Map((states||[]).map(row=>[String(row?.provider||'').toLowerCase(),row]));
   const providers={};
@@ -153,6 +153,7 @@ export function buildFreeTierResourceGovernor({snapshots=[],states=[],now=Date.n
   }
   const adaptiveInfrastructure=buildAdaptiveInfrastructureDecision({
     metrics:evaluated,
+    runtimeSignals,
     now,
   });
   return Object.freeze({

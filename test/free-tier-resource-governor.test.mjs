@@ -91,3 +91,26 @@ test('resource governor publishes adaptive infrastructure decision from measured
   assert.equal(governor.adaptiveInfrastructure.serviceActions.S0.staleFallbackAllowed,false);
   assert.equal(governor.adaptiveInfrastructure.serviceActions.S3.action,'batch-auxiliary');
 });
+
+
+test('resource governor forwards measured sustained traffic without treating concurrency alone as overload',()=>{
+  const governor=buildFreeTierResourceGovernor({
+    now:NOW,
+    snapshots:[],
+    runtimeSignals:{concurrentSessions:5000,sustainedWindow:'daily'}
+  });
+  assert.equal(governor.adaptiveInfrastructure.trafficCapacity.tier,'L3');
+  assert.equal(governor.adaptiveInfrastructure.trafficCapacity.dedicatedCapacityCandidate,true);
+  assert.equal(governor.adaptiveInfrastructure.mode,'normal');
+});
+
+test('resource governor escalates sustained high traffic only when independent pressure is measured',()=>{
+  const governor=buildFreeTierResourceGovernor({
+    now:NOW,
+    snapshots:[],
+    runtimeSignals:{concurrentSessions:5000,sustainedWindow:'weekly',queuePressure:true}
+  });
+  assert.equal(governor.adaptiveInfrastructure.trafficCapacity.tier,'L3');
+  assert.equal(governor.adaptiveInfrastructure.mode,'protect');
+  assert.equal(governor.adaptiveInfrastructure.blockNonessential,true);
+});
