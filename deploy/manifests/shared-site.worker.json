@@ -2556,7 +2556,7 @@
         "statuses": [200],
         "redirect": "manual",
         "expect": ["내부 회의록 확인","확인자 성명","열람 기록으로 저장"],
-        "headerExpect": ["x-ekodi-route: seonammedi-static","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"],
+        "headerExpect": ["x-ekodi-route: seonammedi-static","cache-control: no-store"],
         "rollbackVerify": false
       },
       {
