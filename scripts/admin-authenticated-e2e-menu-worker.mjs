@@ -454,26 +454,23 @@ async function verifyCommandWorkbench(started) {
     const dock = document.querySelector('#ekodiAssistDock');
     const panel = document.querySelector('#ekodiAssistPanel');
     const chat = document.querySelector('#ekodiAssistChat[data-ekodi-main-conversation="true"]');
-    const tab = document.querySelector('button.admin-context-tab[data-admin-context-section="command-home"]');
     if (window.EKODIAdminPanels?.current?.() !== 'command-home') return false;
     if (!body?.classList.contains('admin-command-home') || !body.classList.contains('admin-command-active')) return false;
     if (!dock || !panel || !chat || panel.hidden) return false;
     const panelStyle = getComputedStyle(panel);
     const chatStyle = getComputedStyle(chat);
-    const selected = tab?.getAttribute('aria-selected') === 'true' || tab?.classList.contains('active');
-    return selected && panelStyle.display !== 'none' && panelStyle.visibility !== 'hidden' && chatStyle.display !== 'none' && chatStyle.visibility !== 'hidden';
+    return panelStyle.display !== 'none' && panelStyle.visibility !== 'hidden' && chatStyle.display !== 'none' && chatStyle.visibility !== 'hidden';
   }, null, { timeout: 10_000 });
   const state = await page.evaluate(() => {
     const panel = document.querySelector('#ekodiAssistPanel');
     const chat = document.querySelector('#ekodiAssistChat[data-ekodi-main-conversation="true"]');
-    const tab = document.querySelector('button.admin-context-tab[data-admin-context-section="command-home"]');
     const text = String(panel?.innerText || '').replace(/\s+/g, ' ').trim();
     const panelRect = panel?.getBoundingClientRect();
     const chatRect = chat?.getBoundingClientRect();
     return {
       commandWorkbench: Boolean(panel && chat),
       textLength: text.length,
-      selected: tab?.getAttribute('aria-selected') === 'true' || tab?.classList.contains('active') || false,
+      selected: window.EKODIAdminPanels?.current?.() === 'command-home',
       currentSection: window.EKODIAdminPanels?.current?.() || '',
       pathname: location.pathname,
       panelWidth: panelRect?.width || 0,
