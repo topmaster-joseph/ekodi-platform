@@ -202,6 +202,12 @@ async function ensureSchema(db){
 
 async function ensureTimelineSeed(db){
   const seedKey='timeline-v1';
+  // Public timeline requests can reach this function without ensureSchema().
+  // Create the seed-state table here so recovery never fails on a fresh/partial DB.
+  await db.prepare(`CREATE TABLE IF NOT EXISTS seonammedi_seed_state (
+    seed_key TEXT PRIMARY KEY,
+    applied_at TEXT NOT NULL
+  )`).run();
   // Always reconcile the immutable legacy seed rows. The seed-state marker only
   // records completion; it must not prevent recovery when timeline rows were
   // cleared, partially migrated, or created after the marker was written.
