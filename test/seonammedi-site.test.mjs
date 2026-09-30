@@ -24,7 +24,7 @@ test('seonammedi static headers allow its first-party CSS, JS and API calls',asy
 test('seonammedi daily monitoring reuses the existing Control API cron instead of adding a sixth Cloudflare trigger',async()=>{const [siteWrangler,apiWrangler,mission,monitor,router]=await Promise.all([readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8'),readFile(new URL('../wrangler.api.toml',import.meta.url),'utf8'),readFile(new URL('../mission-control-entry-worker.js',import.meta.url),'utf8'),readFile(new URL('../seonammedi-monitor.js',import.meta.url),'utf8'),readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8')]);assert.doesNotMatch(siteWrangler,/\[triggers\]/);assert.match(apiWrangler,/crons = \["\*\/10 \* \* \* \*"\]/);assert.match(mission,/runSeonamMediDailyCheck/);assert.match(mission,/getUTCHours\(\) === 23/);assert.match(monitor,/status:'already_checked'/);assert.match(monitor,/existing-control-cron/);assert.doesNotMatch(router,/async scheduled\(_controller,env,ctx\)/);});
 
 
-test('seonammedi source changes are wired to both Shared Site and Control API releases',async()=>{const [shared,control,manifestText]=await Promise.all([readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8'),readFile(new URL('../.github/workflows/deploy-control-api.yml',import.meta.url),'utf8'),readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8')]);for(const marker of ["sites/seonammedi/public/**","seonammedi-monitor.js","seonammedi-civic-control.js","seonammedi-admin-control.js","migrations/0113_seonammedi_site_admin.sql","test/seonammedi-site.test.mjs"])assert.ok(shared.includes(marker),marker);for(const marker of ["seonammedi-monitor.js","seonammedi-civic-control.js","seonammedi-admin-control.js","migrations/0113_seonammedi_site_admin.sql","test/seonammedi-site.test.mjs"])assert.ok(control.split(marker).length>=3,marker);const manifest=JSON.parse(manifestText);const urls=new Set(manifest.worker.requests.map(item=>item.url));for(const url of ['https://ekodi.kr/seonammedi/','https://ekodi.kr/seonammedi/app.js','https://ekodi.kr/api/seonammedi/voices/health','https://ekodi.kr/seonammedi/data.json','https://ekodi.kr/seonam-medi','https://ekodi.kr/seonam-med'])assert.ok(urls.has(url),url);const legacy=manifest.worker.requests.filter(item=>['https://ekodi.kr/seonam-medi','https://ekodi.kr/seonam-med'].includes(item.url));assert.ok(legacy.every(item=>item.statuses.includes(404)));});
+test('seonammedi source changes are wired to both Shared Site and Control API releases',async()=>{const [shared,control,manifestText]=await Promise.all([readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8'),readFile(new URL('../.github/workflows/deploy-control-api.yml',import.meta.url),'utf8'),readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8')]);for(const marker of ["sites/seonammedi/public/**","seonammedi-monitor.js","seonammedi-civic-control.js","seonammedi-admin-control.js","migrations/0113_seonammedi_site_admin.sql","migrations/0116_seonammedi_full_menu_admin.sql","test/seonammedi-site.test.mjs"])assert.ok(shared.includes(marker),marker);for(const marker of ["seonammedi-monitor.js","seonammedi-civic-control.js","seonammedi-admin-control.js","migrations/0113_seonammedi_site_admin.sql","migrations/0116_seonammedi_full_menu_admin.sql","test/seonammedi-site.test.mjs"])assert.ok(control.split(marker).length>=3,marker);const manifest=JSON.parse(manifestText);const urls=new Set(manifest.worker.requests.map(item=>item.url));for(const url of ['https://ekodi.kr/seonammedi/','https://ekodi.kr/seonammedi/app.js','https://ekodi.kr/api/seonammedi/voices/health','https://ekodi.kr/seonammedi/data.json','https://ekodi.kr/seonam-medi','https://ekodi.kr/seonam-med'])assert.ok(urls.has(url),url);const legacy=manifest.worker.requests.filter(item=>['https://ekodi.kr/seonam-medi','https://ekodi.kr/seonam-med'].includes(item.url));assert.ok(legacy.every(item=>item.statuses.includes(404)));});
 
 
 test('seonammedi branding is canonical and legacy public paths are deleted',async()=>{const html=await readFile(new URL('index.html',root),'utf8');assert.match(html,/서남권 국립의대 소통센터/);assert.doesNotMatch(html,/시민소통센터/);assert.match(html,/\/seonammedi\/app\.css/);});
@@ -127,4 +127,31 @@ test('seonammedi civic voices are manageable from the site admin without exposin
   assert.match(adminHtml,/id="voiceList"/);
   assert.match(adminJs,/관리자 전용 연락처/);
   assert.match(adminJs,/publicConsent/);
+});
+
+
+test('seonammedi full public-menu administration covers status organization materials voices and finance',async()=>{
+  const [html,app,adminHtml,adminJs,control,migration]=await Promise.all([
+    readFile(new URL('index.html',root),'utf8'),
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('admin/admin.js',root),'utf8'),
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+    readFile(new URL('../migrations/0116_seonammedi_full_menu_admin.sql',import.meta.url),'utf8')
+  ]);
+  for(const label of ['현재상황','조직','활동이력','공지','관련자료','시민의 목소리','후원·회계'])assert.match(adminHtml,new RegExp(label));
+  assert.match(adminHtml,/id="statusForm"/);
+  assert.match(adminHtml,/id="organizationForm"/);
+  assert.match(adminHtml,/id="financeForm"/);
+  assert.match(adminJs,/\/api\/seonammedi\/admin\/pages\/status/);
+  assert.match(adminJs,/\/api\/seonammedi\/admin\/pages\/organization/);
+  assert.match(adminJs,/\/api\/seonammedi\/admin\/finance/);
+  assert.match(control,/PAGE_CAP='seonammedi\.page\.manage'/);
+  assert.match(control,/FINANCE_CAP='seonammedi\.finance\.manage'/);
+  assert.match(control,/\/api\/seonammedi\/page-data/);
+  assert.match(app,/\/api\/seonammedi\/page-data/);
+  assert.match(html,/id="financeList"/);
+  assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_page_sections/);
+  assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_finance_entries/);
+  assert.match(migration,/seonammedi\.finance\.manage/);
 });
