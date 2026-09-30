@@ -1,4 +1,4 @@
-name: Inspect Cloudflare Zone Create Capability
+name: Inspect Cloudflare Zone Permission Groups
 
 on:
   push:
@@ -11,10 +11,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: seonammedi-zone-onboarding
-  cancel-in-progress: false
-
 jobs:
   inspect:
     runs-on: ubuntu-latest
@@ -24,43 +20,28 @@ jobs:
       CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CF_TOKEN_ID: 70e86092b1fa0d0a191afe31b83cca56
     steps:
-      - name: Verify configured credential
+      - name: Inspect relevant permission groups
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$CF_API_TOKEN" || { echo 'Missing CLOUDFLARE_API_TOKEN'; exit 1; }
-          test -n "$CF_ACCOUNT_ID" || { echo 'Missing CLOUDFLARE_ACCOUNT_ID'; exit 1; }
-
-      - name: Inspect zone-create and token self-management capability
-        shell: bash
-        run: |
-          set -euo pipefail
+          test -n "$CF_API_TOKEN"
+          test -n "$CF_ACCOUNT_ID"
           api='https://api.cloudflare.com/client/v4'
           auth=(-H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json')
 
-          token_code=$(curl -sS -o /tmp/token.json -w '%{http_code}' "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/tokens/$CF_TOKEN_ID")
-          groups_code=$(curl -sS -o /tmp/groups.json -w '%{http_code}' "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/tokens/permission_groups")
-          echo "token_read_http=$token_code"
-          echo "permission_groups_http=$groups_code"
-          [ "$token_code" = '200' ] || { python -c "import json; print((json.load(open('/tmp/token.json')).get('errors') or []))"; exit 2; }
-          [ "$groups_code" = '200' ] || { python -c "import json; print((json.load(open('/tmp/groups.json')).get('errors') or []))"; exit 3; }
+          code=$(curl -sS -o /tmp/groups.json -w '%{http_code}' "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/tokens/permission_groups")
+          echo "permission_groups_http=$code"
+          [ "$code" = '200' ] || exit 1
 
           python - <<'PY'
           import json
-          token=(json.load(open('/tmp/token.json')).get('result') or {})
-          groups=(json.load(open('/tmp/groups.json')).get('result') or [])
-          by_id={g.get('id'):g for g in groups}
-          matches=[]
+          groups=json.load(open('/tmp/groups.json')).get('result') or []
           for g in groups:
+              name=str(g.get('name') or '')
               scopes=g.get('scopes') or []
-              if any('com.cloudflare.api.account.zone.create' in str(s) for s in scopes):
-                  matches.append(g)
-          print('zone_create_groups='+str(len(matches)))
-          for g in matches:
-              print('zone_create_group', g.get('name',''), g.get('id',''), 'scopes=', ','.join(g.get('scopes') or []))
-          print('current_token_name='+str(token.get('name') or ''))
-          for i,p in enumerate(token.get('policies') or []):
-              names=[by_id.get(pg.get('id'),{}).get('name',pg.get('id','')) for pg in (p.get('permission_groups') or [])]
-              resources=p.get('resources') or {}
-              print('policy',i,'effect=',p.get('effect'),'permissions=',','.join(names),'resources=',','.join(resources.keys()))
+              if 'zone' in name.lower() or 'dns' in name.lower():
+                  print('GROUP', name)
+                  print(' id=', g.get('id',''))
+                  print(' scopes=', ','.join(map(str,scopes)))
+                  print(' selectable=', g.get('is_selectable'))
           PY
