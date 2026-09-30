@@ -96,8 +96,22 @@
     </section>
 
     <section class="panel-page" data-panel="organization" hidden>
-      <div class="heading"><div><p class="eyebrow">ORGANIZATION</p><h1>조직</h1><p>조직 구성과 소개 내용은 추후 등록합니다.</p></div></div>
-      <section class="card placeholder"><strong>추후 공개 예정</strong><p>헤더의 조직 메뉴와 공개 섹션은 먼저 준비되어 있으며, 조직도·역할·연락 창구는 확정 후 등록합니다.</p></section>
+      <div class="heading"><div><p class="eyebrow">ORGANIZATION</p><h1>조직</h1><p>대표자회의·상임공동대표단·집행위원회·위원회 조직도와 참여단체를 관리합니다.</p></div></div>
+      <section class="card"><h2>현재 조직도</h2><p>대표자회의 → 상임공동대표단 → 집행위원회 → 총무위원회 · 행사위원회 · 조직위원회 · 홍보소통위원회 · 기획위원회</p></section>
+      <div class="two-col">
+        <form id="participantForm" class="card form-card">
+          <input type="hidden" name="id">
+          <h2 id="participantFormTitle">참여단체 추가</h2>
+          <label>단체명<input name="name" maxlength="180" required></label>
+          <label>대표자<input name="representative" maxlength="120"></label>
+          <label>링크<input name="url" type="url" inputmode="url" placeholder="https://..."></label>
+          <label>비고<input name="note" maxlength="500"></label>
+          <label class="check"><input type="checkbox" name="visible" checked> 공개페이지 표시</label>
+          <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="participantReset" class="secondary">새 단체</button></div>
+          <p id="participantMessage" class="message" role="status"></p>
+        </form>
+        <section class="card list-card"><div class="card-head"><h2>참여단체</h2><button type="button" id="reloadParticipants" class="secondary">새로고침</button></div><p class="muted">공개페이지에서는 단체명 기준 가나다순으로 자동 표시됩니다.</p><div id="participantList" class="item-list"></div></section>
+      </div>
     </section>
 
     <section class="panel-page" data-panel="access" hidden>
