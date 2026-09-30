@@ -3,8 +3,7 @@ import { writeFile } from 'node:fs/promises';
 const outputPath = process.argv[2] || '/tmp/ekodi-system-health.sql';
 const apiToken = String(process.env.CLOUDFLARE_API_TOKEN || '').trim();
 const accountId = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
-const serviceName = String(process.env.EKODI_SITE_WORKER_SERVICE || 'shy-thunder-39a4').trim();
-const canonicalHost = String(process.env.EKODI_CANONICAL_HOST || 'admin.ekodi.kr').trim();
+const canonicalZone = String(process.env.EKODI_CLOUDFLARE_ZONE || process.env.EKODI_CANONICAL_HOST || 'ekodi.kr').trim().toLowerCase();
 const cfApi = 'https://api.cloudflare.com/client/v4';
 const now = new Date();
 
@@ -69,11 +68,12 @@ async function cloudflare(path, init = {}) {
   return payload;
 }
 
-async function resolveZoneId() {
-  const payload = await cloudflare(`/accounts/${encodeURIComponent(accountId)}/workers/domains?service=${encodeURIComponent(serviceName)}`);
-  const item = (payload.result || []).find(entry => entry.hostname === canonicalHost && entry.service === serviceName);
-  if (!item?.zone_id) throw new Error(`Cloudflare zone ID를 ${canonicalHost} 연결정보에서 찾지 못했습니다.`);
-  return item.zone_id;
+async function resolveZone() {
+  const query = new URLSearchParams({ name: canonicalZone, status: 'active', 'account.id': accountId, per_page: '5' });
+  const payload = await cloudflare(`/zones?${query.toString()}`);
+  const item = (payload.result || []).find(entry => String(entry?.name || '').toLowerCase() === canonicalZone);
+  if (!item?.id) throw new Error(`Cloudflare 활성 Zone ${canonicalZone}을 계정에서 찾지 못했습니다.`);
+  return { id: String(item.id), name: String(item.name), status: String(item.status || 'unknown') };
 }
 
 async function queryDailyUsage(zoneId) {
@@ -115,8 +115,8 @@ async function main() {
   }
 
   try {
-    const zoneId = await resolveZoneId();
-    const rows = await queryDailyUsage(zoneId);
+    const zone = await resolveZone();
+    const rows = await queryDailyUsage(zone.id);
     const collectedAt = now.toISOString();
     const statements = [schemaSql()];
 
@@ -149,7 +149,7 @@ ON CONFLICT(day) DO UPDATE SET
     }
 
     statements.push(`INSERT INTO system_usage_state (source, status, last_attempt_at, last_success_at, message)
-VALUES ('cloudflare', 'ok', ${sqlText(collectedAt)}, ${sqlText(collectedAt)}, ${sqlText(`${rows.length}일 집계 완료`)})
+VALUES ('cloudflare', 'ok', ${sqlText(collectedAt)}, ${sqlText(collectedAt)}, ${sqlText(`${zone.name} Zone · ${zone.status} · ${rows.length}일 Cloudflare 집계 완료`)})
 ON CONFLICT(source) DO UPDATE SET
   status = excluded.status,
   last_attempt_at = excluded.last_attempt_at,
@@ -157,7 +157,7 @@ ON CONFLICT(source) DO UPDATE SET
   message = excluded.message;`);
     statements.push("DELETE FROM system_usage_daily WHERE day < date('now', '-90 day');");
     await writeFile(outputPath, `${statements.join('\n')}\n`, 'utf8');
-    console.log(`Prepared ${rows.length} Cloudflare daily aggregate rows (${outputPath}).`);
+    console.log(`Prepared ${rows.length} Cloudflare daily aggregate rows for ${zone.name} (${outputPath}).`);
   } catch (error) {
     const rawMessage = String(error?.message || error).slice(0, 400);
     const message = rawMessage.includes('zone.analytics.read')
