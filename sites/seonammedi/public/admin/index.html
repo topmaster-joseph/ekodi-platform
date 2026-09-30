@@ -15,6 +15,7 @@
 <div class="layout">
   <aside class="sidebar" aria-label="관리 메뉴">
     <button class="active" data-panel-target="dashboard" type="button">운영홈</button>
+    <button data-panel-target="timeline" type="button">활동이력</button>
     <button data-panel-target="content" type="button" hidden>웹검색 게시검토</button>
     <button data-panel-target="notices" type="button">공지</button>
     <button data-panel-target="channels" type="button">채널</button>
@@ -27,12 +28,32 @@
       <div class="metrics">
         <article><span>공개상태</span><strong id="publicStatus">확인 중</strong><small>공개여부 변경은 최고관리자 정책과 연동</small></article>
         <article><span>게시검토</span><strong id="contentCount">-</strong><small>웹검색 후보</small></article>
+        <article><span>활동이력</span><strong id="timelineCount">-</strong><small>비공개 포함</small></article>
         <article><span>공지</span><strong id="noticeCount">-</strong><small>초안 포함</small></article>
         <article><span>채널</span><strong id="channelCount">-</strong><small>숨김 포함</small></article>
       </div>
-      <section class="card"><h2>관리 범위</h2><p id="scopeSummary">권한을 확인하고 있습니다.</p><div class="quick"><button type="button" data-go="content">웹검색 게시검토</button><button type="button" data-go="notices">공지 관리</button><button type="button" data-go="channels">채널 관리</button><a href="/seonammedi/" target="_blank" rel="noopener">사이트 확인</a></div></section>
+      <section class="card"><h2>관리 범위</h2><p id="scopeSummary">권한을 확인하고 있습니다.</p><div class="quick"><button type="button" data-go="timeline">활동이력 관리</button><button type="button" data-go="content">웹검색 게시검토</button><button type="button" data-go="notices">공지 관리</button><button type="button" data-go="channels">채널 관리</button><a href="/seonammedi/" target="_blank" rel="noopener">사이트 확인</a></div></section>
     </section>
 
+
+
+    <section class="panel-page" data-panel="timeline" hidden>
+      <div class="heading"><div><p class="eyebrow">ACTIVITY HISTORY</p><h1>활동이력 관리</h1><p>기존 활동이력이 모두 사전 등록되어 있습니다. 새 이력을 추가하거나 수정하고, 공개 여부를 선택할 수 있습니다.</p></div></div>
+      <div class="two-col">
+        <form id="timelineForm" class="card form-card">
+          <input type="hidden" name="id">
+          <h2 id="timelineFormTitle">활동이력 추가</h2>
+          <div class="form-row"><label>일자<input name="date" maxlength="40" placeholder="2026.09.30" required></label><label>분류<input name="category" maxlength="80" placeholder="비대위 활동" required></label></div>
+          <label>제목<input name="title" maxlength="220" required></label>
+          <label>요약<textarea name="summary" maxlength="8000" rows="6"></textarea></label>
+          <label>근거 표시<input name="evidence" maxlength="500" placeholder="공식자료 · 언론보도 등"></label>
+          <div class="form-row"><label>정렬<input name="sortOrder" type="number" min="0" max="9999" value="0"></label><label>상태<select name="status"><option value="published">공개</option><option value="draft">비공개</option></select></label></div>
+          <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="timelineReset" class="secondary">새 이력</button></div>
+          <p id="timelineMessage" class="message" role="status"></p>
+        </form>
+        <section class="card list-card"><div class="card-head"><h2>활동이력 목록</h2><button type="button" id="reloadTimeline" class="secondary">새로고침</button></div><div id="timelineAdminList" class="item-list"></div></section>
+      </div>
+    </section>
 
     <section class="panel-page" data-panel="content" hidden>
       <div class="heading"><div><p class="eyebrow">WEB SEARCH REVIEW</p><h1>웹검색 게시검토</h1><p>일일점검으로 수집된 공식기록·관련보도 후보를 확인한 뒤 체크하여 공개합니다. 미승인 후보는 공개페이지에 표시되지 않습니다.</p></div><button id="reloadContent" type="button" class="secondary">새로고침</button></div>
@@ -81,7 +102,7 @@
 
     <section class="panel-page" data-panel="access" hidden>
       <div class="heading"><div><p class="eyebrow">ACCESS SCOPE</p><h1>권한 안내</h1><p>사이트 범위를 넘어서는 권한은 제공하지 않습니다.</p></div></div>
-      <section class="card"><dl class="access-list"><div><dt>로그인 계정</dt><dd id="accessEmail">-</dd></div><div><dt>역할</dt><dd id="accessRole">-</dd></div><div><dt>웹검색 게시검토</dt><dd id="accessContent">-</dd></div><div><dt>공지 관리</dt><dd id="accessNotice">-</dd></div><div><dt>채널 관리</dt><dd id="accessChannel">-</dd></div></dl></section>
+      <section class="card"><dl class="access-list"><div><dt>로그인 계정</dt><dd id="accessEmail">-</dd></div><div><dt>역할</dt><dd id="accessRole">-</dd></div><div><dt>활동이력 관리</dt><dd id="accessTimeline">-</dd></div><div><dt>웹검색 게시검토</dt><dd id="accessContent">-</dd></div><div><dt>공지 관리</dt><dd id="accessNotice">-</dd></div><div><dt>채널 관리</dt><dd id="accessChannel">-</dd></div></dl></section>
     </section>
   </main>
 </div>
