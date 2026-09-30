@@ -166,7 +166,7 @@ if(voiceForm)voiceForm.addEventListener('submit',async event=>{
 });
 
 
-const viewAliases={status:'status',monitor:'status',organization:'organization',timeline:'timeline',notices:'notices',materials:'materials',news:'materials','public-posts':'materials',voices:'voices',finance:'finance'};
+const viewAliases={status:'status',monitor:'status',organization:'organization',timeline:'timeline',notices:'notices',materials:'materials',news:'materials','public-posts':'materials',voices:'voices',channels:'channels',finance:'finance'};
 function showView(view,{updateHash=false}={}){
   const key=viewAliases[view]||'';
   document.querySelectorAll('[data-view-section]').forEach(section=>{section.hidden=section.dataset.viewSection!==key});
@@ -215,3 +215,22 @@ async function loadNotices(){
   }
 }
 loadNotices();
+
+const channelPlatformLabel=value=>({youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',blog:'블로그',website:'웹사이트',other:'기타'})[String(value||'').toLowerCase()]||'채널';
+const channelCategoryLabel=value=>({official:'공식', 'related-org':'관련기관', media:'미디어', civic:'시민·단체', other:'기타'})[String(value||'').toLowerCase()]||'관련';
+async function loadChannels(){
+  const host=el('publicChannelList');if(!host)return;
+  try{
+    const response=await fetch('/api/seonammedi/channels',{cache:'no-store'});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.ok)throw new Error(data.message||'채널 목록을 불러오지 못했습니다.');
+    const rows=Array.isArray(data.items)?data.items:[];
+    host.innerHTML=rows.length?rows.map(item=>{
+      const meta=[channelPlatformLabel(item.platform),channelCategoryLabel(item.category),item.official?'공식 확인':'관련 채널'].filter(Boolean).join(' · ');
+      return '<article class="channel-item"><div><span class="source-type">'+escapeHtml(meta)+'</span><h3>'+escapeHtml(item.name||'관련 채널')+'</h3>'+(item.note?'<p>'+escapeHtml(item.note)+'</p>':'')+'</div><a href="'+safeUrl(item.url)+'" target="_blank" rel="noopener noreferrer">원문 채널 보기 →</a></article>';
+    }).join(''):'<p class="muted">등록된 공개 채널이 없습니다.</p>';
+  }catch(error){
+    host.innerHTML='<p class="muted">'+escapeHtml(error.message||'채널 목록을 불러오지 못했습니다.')+'</p>';
+  }
+}
+loadChannels();
