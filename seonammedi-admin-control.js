@@ -180,8 +180,9 @@ async function ensureSchema(db){
 
 async function ensureTimelineSeed(db){
   const seedKey='timeline-v1';
-  const applied=await db.prepare('SELECT applied_at FROM seonammedi_seed_state WHERE seed_key=? LIMIT 1').bind(seedKey).first();
-  if(applied?.applied_at)return;
+  // Always reconcile the immutable legacy seed rows. The seed-state marker only
+  // records completion; it must not prevent recovery when timeline rows were
+  // cleared, partially migrated, or created after the marker was written.
   const now=new Date().toISOString();
   for(const item of TIMELINE_SEED){
     await db.prepare(`INSERT OR IGNORE INTO seonammedi_timeline(
