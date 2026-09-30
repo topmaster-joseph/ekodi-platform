@@ -1,0 +1,41 @@
+name: Verify SeonamMedi Domains
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-seonammedi-domains.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Install DNS tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq dnsutils >/dev/null
+      - name: Verify DNS HTTPS and canonical redirects
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_ns='kai.ns.cloudflare.com. meadow.ns.cloudflare.com.'
+          verify() {
+            host="$1"; path="$2"; expected="$3"
+            ns=$(dig +short NS "$host" | sort | tr '\n' ' ' | sed 's/[[:space:]]*$//')
+            echo "$host ns=$ns"
+            test "$ns" = "$expected_ns"
+            rm -f /tmp/h
+            curl -sS -o /dev/null -D /tmp/h --connect-timeout 10 --max-time 30 "https://$host$path"
+            code=$(awk 'toupper($1) ~ /^HTTP\// {c=$2} END {print c+0}' /tmp/h)
+            loc=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' /tmp/h)
+            echo "$host$path http=$code location=$loc"
+            test "$code" = "301"
+            test "$loc" = "$expected"
+          }
+          verify "seonammedi.kr" "/domain-check?source=verify" "https://ekodi.kr/seonammedi/domain-check?source=verify"
+          verify "xn--3e0b8b58jw4co4mnpll3k.kr" "/admin/?source=verify" "https://ekodi.kr/seonammedi/admin/?source=verify"
