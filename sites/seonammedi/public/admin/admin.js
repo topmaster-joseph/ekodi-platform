@@ -63,7 +63,7 @@ const organizationMeta={
   'mokpo-university':'목포대학교 대책위원회 · 확정 조직 자료 등록 전',
   'unified-2026-09-30':'통합 대책위원회 · 2026년 9월 30일 · 확정 조직 자료 등록 전'
 };
-let activeOrganizationId='civic-coalition';
+let activeOrganizationId='unified-2026-09-30';
 function selectOrganization(id){if(!organizationMeta[id])return;activeOrganizationId=id;document.querySelectorAll('#adminOrganizationTabs [data-org-id]').forEach(button=>button.classList.toggle('active',button.dataset.orgId===id));const summary=$('adminOrganizationSummary');if(summary)summary.textContent=organizationMeta[id]}
 
 function showPanel(name){
