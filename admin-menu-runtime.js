@@ -322,7 +322,9 @@ async function loadWorkspaceConnections() {
     const data=await api(`/api/control/external-accounts/summary?workspace=${encodeURIComponent(currentContext.id)}`);
     if(seq!==workspaceConnectionLoadSeq||currentContext.type!=='workspace')return;
     renderWorkspaceConnections(data);
-    workspaceConnectionMessage(`${t('연결 계정','Connections')} ${data.stats?.total||0} · ${t('정상','Healthy')} ${data.stats?.healthy||0} · ${t('확인 필요','Attention')} ${data.stats?.attention||0}`);
+    const auto=data.automaticHealth;
+    const autoText=auto?`${t('자동점검','Auto audit')} ${new Date(auto.createdAt).toLocaleString()} · ${t('재연결','Reconnect')} ${auto.reconnectRequired||0} · ${t('오류','Errors')} ${auto.errors||0}`:t('자동점검 기록 없음','No automatic audit yet');
+    workspaceConnectionMessage(`${t('연결 계정','Connections')} ${data.stats?.total||0} · ${t('정상','Healthy')} ${data.stats?.healthy||0} · ${t('확인 필요','Attention')} ${data.stats?.attention||0} · ${autoText}`);
   } catch(error) { if(seq===workspaceConnectionLoadSeq)workspaceConnectionMessage(error.message,true); }
 }
 async function registerWorkspaceConnection(event) {
