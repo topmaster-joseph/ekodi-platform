@@ -18,6 +18,12 @@ assert(storage.principles?.reuseCanonicalDriveConnection === true, 'Gateway must
 assert(storage.tiers?.canonical?.systemOfRecord === true, 'Canonical tier must be system of record');
 assert(storage.tiers?.operational?.systemOfRecord === false, 'Operational DB must not replace canonical durable store');
 assert(storage.tiers?.delivery?.systemOfRecord === false, 'R2 delivery tier must not replace canonical durable store');
+assert(storage.principles?.fileLikeDurableObjectsGoToDrive === true, 'File-like durable objects must go to Drive');
+assert(storage.principles?.r2MayBecomeSystemOfRecord === false, 'R2 must not become system of record without an explicit migration');
+assert(storage.constitutionAlignment?.fileLikeDurableStore === 'google_workspace_shared_drive', 'New file-like durable objects must stay on Shared Drive');
+assert(storage.constitutionAlignment?.newSystemObjectsPreferR2 === false, 'New durable file-like objects must not default to R2');
+assert(storage.constitutionAlignment?.newFileLikeDurableObjectsPreferDrive === true, 'New file-like durable objects must prefer Drive');
+assert(storage.constitutionAlignment?.r2SystemOfRecord === false, 'R2 must remain non-authoritative');
 assert(storage.canonicalFolderNames?.includes('01_CORE') && storage.canonicalFolderNames?.includes('99_BACKUP'), 'Canonical folder structure must be declared');
 assert(Array.isArray(storage.forbiddenPaths) && storage.forbiddenPaths.includes('external_ai -> google_drive_direct'), 'Direct external AI Drive access must be forbidden');
 assert(storage.forbiddenPaths.includes('parallel_google_credential_system -> canonical_drive'), 'Parallel Google credential systems must be forbidden');

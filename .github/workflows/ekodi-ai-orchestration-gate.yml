@@ -129,12 +129,16 @@ jobs:
           node --check scripts/validate-cloudflare-account-pool.mjs
           node --check scripts/validate-adaptive-infrastructure.mjs
           node --check scripts/validate-free-tier-optimization.mjs
+          node --check scripts/validate-concurrent-traffic-policy.mjs
+          node --check scripts/validate-storage-ai-contracts.mjs
           node --check scripts/evaluate-free-tier-resource-proof.mjs
           node --check scripts/validate-supabase-free-project-capacity.mjs
           node --check deployment-layer-router.js
           node --check scripts/validate-deployment-four-layer.mjs
           node --check scripts/resolve-deployment-four-layer.mjs
           node scripts/validate-free-tier-optimization.mjs
+          node scripts/validate-concurrent-traffic-policy.mjs
+          node scripts/validate-storage-ai-contracts.mjs
           node scripts/validate-adaptive-infrastructure.mjs
           node scripts/validate-cloudflare-account-pool.mjs
           node scripts/validate-supabase-free-project-capacity.mjs

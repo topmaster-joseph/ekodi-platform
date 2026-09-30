@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "policyId": "EKODI-CONCURRENT-TRAFFIC-10K-001",
   "status": "enforced",
   "appliesRecursivelyToAllServices": true,
@@ -132,5 +132,58 @@
     "idempotencyRequired": true,
     "deadLetterRequired": true,
     "queueBinding": "EKODI_WRITE_QUEUE"
+  },
+  "edgeSecurity": {
+    "rateLimiters": {
+      "publicWrite": "PLATFORM_PUBLIC_WRITE_RATE_LIMITER",
+      "sensitive": "PLATFORM_SENSITIVE_RATE_LIMITER",
+      "auth": "AUTH_RATE_LIMITER"
+    },
+    "blockedMethods": [
+      "TRACE",
+      "CONNECT"
+    ],
+    "requestBodyLimitsRequired": true,
+    "botAndWafAtCloudflareEdge": "preferred",
+    "turnstileForAnonymousPublicWrites": "preferred_when_enabled_or_abuse_detected",
+    "protectedDataFailsClosed": true,
+    "publicReadAssetFirst": true
+  },
+  "storage": {
+    "canonicalFileStore": "google_drive",
+    "r2Role": [
+      "cache",
+      "public_delivery",
+      "temporary_staging",
+      "web_mirror"
+    ],
+    "r2SystemOfRecord": false,
+    "driveHotPathApiCallsForbidden": true,
+    "serveHotPublicMediaFromEdgeOrR2": true
+  },
+  "quotaProtection": {
+    "warningPercent": 70,
+    "conservePercent": 85,
+    "protectPercent": 90,
+    "survivalPercent": 95,
+    "circuitBreakerPercent": 100,
+    "stopRetryStatuses": [
+      429,
+      1027
+    ],
+    "shedBeforeCore": [
+      "crawler",
+      "analytics_detail",
+      "background_ai",
+      "noncritical_probes"
+    ],
+    "preserveCore": [
+      "public_read",
+      "auth",
+      "forms",
+      "orders",
+      "payments",
+      "admin_control"
+    ]
   }
 }

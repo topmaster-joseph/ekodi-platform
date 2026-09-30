@@ -1,0 +1,44 @@
+{
+  "amendmentId": "DRIVE-FIRST-CLOUDFLARE-RESILIENCE-20261001",
+  "constitutionVersion": "1.26.1",
+  "approvedAt": "2026-10-01",
+  "changeClass": "C2",
+  "taskId": "cloudflare-drive-resilience-20261001",
+  "summary": "Keep Google Workspace Shared Drive EKODI as the canonical durable store for file-like records and final artifacts while using Cloudflare edge controls, cache, rate limiting, R2 delivery/staging and quota circuit breakers to absorb traffic and security pressure.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly instructed EKODI on 2026-10-01 to apply the proposed Cloudflare free/edge capabilities with Google Drive used especially for storage and with security and traffic protection.",
+  "implementation": [
+    "config/storage-policy.json Drive-canonical durable file contract",
+    "config/concurrent-traffic-policy.json 100/1000/10000 traffic tiers and edge protection contract",
+    "scripts/validate-storage-ai-contracts.mjs R2 non-authoritative guard",
+    "scripts/validate-concurrent-traffic-policy.mjs runtime/binding/quota cross-check",
+    ".github/workflows/ekodi-ai-orchestration-gate.yml mandatory PR/main validation"
+  ],
+  "mandatoryRules": [
+    "Google Workspace Shared Drive EKODI remains the canonical durable store for file-like records, documents, retained media and final artifacts",
+    "Cloudflare R2 is cache, delivery, temporary staging or web mirror only and is not the system of record",
+    "D1 or Supabase stores structured operational state and indexes rather than large file bytes",
+    "Google Drive API is excluded from public traffic hot paths; hot public delivery uses Cloudflare cache or R2 mirrors",
+    "public writes, sensitive writes and authentication use separate Cloudflare edge rate-limit contracts",
+    "70/85/90/95/100 percent quota stages progressively conserve, protect, survive and open a circuit breaker",
+    "429 and 1027 are stop-retry/circuit-breaker signals for nonessential work",
+    "auth, forms, orders, payments, admin control and safe public reads are preserved before noncritical probes, crawlers, detailed analytics and background AI"
+  ],
+  "validation": [
+    "Storage and External AI Contracts",
+    "Cloudflare Boundary Audit",
+    "EKODI AI Orchestration Gate",
+    "EKODI Constitution Check",
+    "CI"
+  ],
+  "rollback": "Revert the storage/traffic policy commits through the guarded PR path while preserving the existing Drive Storage Gateway, rate-limit bindings and production data. Do not migrate or delete canonical Drive content during rollback.",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalEvidence": {
+    "explicitOwnerInstruction": true,
+    "ownerInstructionDate": "2026-10-01",
+    "pullRequest": 3102,
+    "requiredPullRequestLabel": "constitution-approved",
+    "approvalLabel": "constitution-approved",
+    "ownerInstruction": "좋아 에코디랑 협의해서 적용해 특별히 저장은 구글드라이브를 활용하고 보안과 트래픽에 대비해서"
+  }
+}
