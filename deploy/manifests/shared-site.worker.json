@@ -2558,11 +2558,12 @@
         "redirect": "manual",
         "expect": [
           "attachMonitorMedia",
-          "publicPostFilters",
+          "materialFilters",
           "/api/seonammedi/monitor",
           "원문 확인 필요"
         ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "bodyIncludes": []
       },
       {
         "url": "https://ekodi.kr/seonammedi/data.json",
