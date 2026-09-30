@@ -120,7 +120,7 @@
         "url": "https://ekodi.kr/ekodimission/api/activities/261003-autumn-community-trip/content",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["261003-autumn-community-trip","100000","에코디선교회"],
+        "expect": ["261003-autumn-community-trip","50000","2026 가을 공동체 여행"],
         "headerExpect": ["x-ekodi-route: api","cache-control: no-store"],
         "rollbackVerify": false
       },
