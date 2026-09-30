@@ -159,12 +159,14 @@ siteReady.finally(()=>loadMonitor());
 const voiceForm=el('voiceForm');
 if(voiceForm){
   const status=el('voiceStatus'),submitButton=voiceForm.querySelector('button[type="submit"]');
-  voiceForm.addEventListener('input',()=>{status.textContent=''});
+  let pendingVoiceSubmissionKey='';
+  voiceForm.addEventListener('input',()=>{status.textContent='';pendingVoiceSubmissionKey=''});
   voiceForm.addEventListener('submit',async event=>{
     event.preventDefault();
     if(submitButton?.disabled)return;
     const form=new FormData(voiceForm);
-    const payload={category:form.get('category'),name:form.get('name'),contact:form.get('contact'),message:form.get('message'),publicConsent:form.get('publicConsent')==='on',privacyConsent:form.get('privacyConsent')==='on'};
+    if(!pendingVoiceSubmissionKey)pendingVoiceSubmissionKey=crypto.randomUUID();
+    const payload={category:form.get('category'),name:form.get('name'),contact:form.get('contact'),message:form.get('message'),publicConsent:form.get('publicConsent')==='on',privacyConsent:form.get('privacyConsent')==='on',submissionKey:pendingVoiceSubmissionKey};
     if(!String(payload.message||'').trim()){status.textContent='내용을 입력해 주세요.';return}
     if(!payload.privacyConsent){status.textContent='개인정보 처리 동의가 필요합니다.';return}
     if(submitButton)submitButton.disabled=true;
@@ -174,6 +176,7 @@ if(voiceForm){
       const body=await response.json().catch(()=>({}));
       if(!response.ok||body.ok!==true||!body.submissionId){const detail=body.message||body.error||body.code||('HTTP '+response.status);throw new Error('접수하지 못했습니다. '+detail)}
       voiceForm.reset();
+      pendingVoiceSubmissionKey='';
       status.textContent=body.message||'접수되었습니다.';
     }catch(error){
       status.textContent=error.message||'접수하지 못했습니다. 잠시 후 다시 시도해 주세요.';
