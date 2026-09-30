@@ -211,3 +211,5 @@ test('seonammedi public managed reads are migration-backed and never run request
   const adminContent=body('async function listAdminContent','async function listAdminChannels');
   assert.match(adminContent,/ensureContentCategoryColumn\(env\.DB\)/);
 });
+
+// Protected-base check refresh for #3079.
