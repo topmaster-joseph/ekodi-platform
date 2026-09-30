@@ -556,6 +556,8 @@
           "cache-control: no-store",
           "x-content-type-options: nosniff"
         ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Canonical SeonamMedi API reaches Control API through the Shared Site service binding; verify after guarded promotion.",
         "rollbackVerify": false
       },
       {
@@ -572,6 +574,8 @@
           "cache-control: no-store",
           "x-content-type-options: nosniff"
         ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Canonical SeonamMedi API reaches Control API through the Shared Site service binding; verify after guarded promotion.",
         "rollbackVerify": false
       },
       {
@@ -588,6 +592,18 @@
           "cache-control: no-store",
           "x-content-type-options: nosniff"
         ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Canonical SeonamMedi API reaches Control API through the Shared Site service binding; verify after guarded promotion.",
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/seonammedi/page-data",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["\"ok\":true", "\"finance\":"],
+        "headerExpect": ["cache-control: no-store","x-content-type-options: nosniff"],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Canonical SeonamMedi API reaches Control API through the Shared Site service binding; verify after guarded promotion.",
         "rollbackVerify": false
       }
     ]
