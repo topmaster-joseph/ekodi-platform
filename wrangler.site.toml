@@ -117,6 +117,18 @@ namespace_id = "3903"
 limit = 120
 period = 60
 
+
+[[queues.producers]]
+binding = "EKODI_WRITE_QUEUE"
+queue = "ekodi-write-ingress"
+
+[[queues.consumers]]
+queue = "ekodi-write-ingress"
+max_batch_size = 50
+max_batch_timeout = 1
+max_retries = 5
+dead_letter_queue = "ekodi-write-ingress-dlq"
+
 [assets]
 directory = "./dist"
 binding = "ASSETS"
