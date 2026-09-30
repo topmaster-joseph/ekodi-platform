@@ -166,6 +166,16 @@ test('seonammedi full public-menu administration covers status organization mate
   for(const label of ['현재상황','조직','활동이력','공지','관련자료','시민의 목소리','후원·회계'])assert.match(adminHtml,new RegExp(label));
   assert.match(adminHtml,/id="statusForm"/);
   assert.match(adminHtml,/id="organizationForm"/);
+  assert.match(adminHtml,/data-org-admin-tab="integrated"/);
+  assert.match(adminHtml,/data-org-admin-tab="civic"/);
+  assert.match(adminHtml,/data-org-admin-tab="mokpo"/);
+  assert.match(adminHtml,/통합 대책위/);
+  assert.match(adminHtml,/시민단체연대/);
+  assert.match(adminHtml,/목포대/);
+  assert.match(adminJs,/ORG_GROUPS/);
+  assert.match(adminJs,/groups,levels:integrated\.levels/);
+  assert.match(app,/ORG_GROUP_META/);
+  assert.match(app,/renderOrganizationGroup\('integrated'\)/);
   assert.match(adminHtml,/id="financeForm"/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/pages\/status/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/pages\/organization/);
