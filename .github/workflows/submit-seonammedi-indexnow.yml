@@ -1,0 +1,42 @@
+name: Submit SeonamMedi Search IndexNow
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ekodi-search-index-submit.mjs'
+      - '.github/workflows/submit-seonammedi-indexnow.yml'
+      - 'scripts/discovery-build.mjs'
+      - 'sites/seonammedi/public/**'
+      - 'discovery-layer.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-seonammedi-search-submit
+  cancel-in-progress: true
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Install isolated Chromium harness
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Verify public IndexNow key
+        run: |
+          set -euo pipefail
+          key=$(node --input-type=module -e "import('./scripts/discovery-build.mjs').then(m=>process.stdout.write(m.INDEXNOW_KEY))")
+          test -n "$key"
+          body=$(curl -fsS --retry 3 --retry-delay 2 "https://ekodi.kr/$key.txt")
+          test "$body" = "$key"
+      - name: Submit canonical SeonamMedi URL from EKODI isolated browser
+        run: node scripts/ekodi-search-index-submit.mjs
