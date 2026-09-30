@@ -189,3 +189,16 @@ test('SeonamMedi Control routes defer candidate verification until Shared Site b
     assert.match(item.candidateVerifyReason,/Shared Site service binding/);
   }
 });
+
+
+test('seonammedi voice form only reports success after a persisted submission id',async()=>{
+  const [html,app,civic]=await Promise.all([
+    readFile(new URL('index.html',root),'utf8'),
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('../seonammedi-civic-control.js',import.meta.url),'utf8')
+  ]);
+  assert.doesNotMatch(html,/name="website"/);
+  assert.match(app,/body\.ok!==true\|\|!body\.submissionId/);
+  assert.match(app,/submitButton\.disabled=true/);
+  assert.match(civic,/spam_trap_triggered/);
+});
