@@ -12,9 +12,11 @@ test('My EKODI root uses the calm custom landing without duplicate navigation',(
   assert.match(html,/data-ekodi-footer-profile="inherit"/);
   assert.doesNotMatch(html,/<nav aria-label="주요 메뉴">[^\n]*>오늘/);
   assert.doesNotMatch(html,/<nav aria-label="주요 메뉴">[^\n]*>내 에코디/);
-  assert.match(html,/>홈<\/a><a href="#platforms">내 서비스<\/a><a href="#workspaces">내 공간<\/a><a href="#account">내 정보<\/a>/);
+  assert.match(html,/>홈<\/a><a href="#platforms">내 서비스<\/a><a href="#memberHome">내 활동<\/a><a href="#account">내 정보<\/a>/);
   assert.match(html,/id="myHub"/);
-  assert.match(html,/hub-shell\.css\?v=20260922-personal-hub-v1/);
+  assert.match(html,/MY EKODI · ACTION HUB/);
+  assert.match(html,/무엇을 하시겠어요\?/);
+  assert.match(html,/hub-shell\.css\?v=20261001-action-hub-v1/);
   assert.match(hubCss,/\.my-secondary-feature\{display:none\}/);
   assert.match(html,/comfort-ui\.css\?v=20260906-context-home-v1/);
   assert.match(css,/word-break:keep-all/);

@@ -13,12 +13,12 @@
   <link rel="stylesheet" href="/my/membership-summary.css?v=20260924-central-ai-entitlement-1">
   <link rel="stylesheet" href="/my/personal-finance.css?v=20260905-personal-finance-1">
   <link rel="stylesheet" href="/my/comfort-ui.css?v=20260906-context-home-v1">
-  <link rel="stylesheet" href="/my/hub-shell.css?v=20260922-personal-hub-v1">
+  <link rel="stylesheet" href="/my/hub-shell.css?v=20261001-action-hub-v1">
 </head>
 <body data-ekodi-ui="USER" data-auth-state="guest" data-home-mode="home">
   <header class="topbar my-comfort-header">
     <a class="brand" href="#home" aria-label="My EKODI 홈"><span class="brand-leaf" aria-hidden="true"></span><span><strong>My EKODI</strong><small>나의 에코디</small></span></a>
-    <nav aria-label="주요 메뉴"><a href="#home">홈</a><a href="#platforms">내 서비스</a><a href="#workspaces">내 공간</a><a href="#account">내 정보</a></nav>
+    <nav aria-label="주요 메뉴"><a href="#home">홈</a><a href="#platforms">내 서비스</a><a href="#memberHome">내 활동</a><a href="#account">내 정보</a></nav>
     <div class="top-actions"><button id="authButton" class="ghost" type="button">Google로 시작</button></div>
   </header>
 
@@ -45,23 +45,35 @@
 
 
 
-    <section id="myHub" class="section personal-hub" aria-label="내 EKODI 빠른 이동">
-      <div class="section-head personal-hub-head"><div><p class="eyebrow">MY EKODI</p><h2>내 것만 간단하게</h2></div><p>세부 기능은 각 서비스에서 사용하고, 여기서는 내가 어디에 연결되어 있는지만 빠르게 확인합니다.</p></div>
-      <div class="personal-hub-grid">
-        <a class="personal-hub-card" href="#platforms"><small>01 · SERVICES</small><strong>내 서비스</strong><span>현재 이용하거나 참여 중인 EKODI 서비스로 이동합니다.</span></a>
-        <a class="personal-hub-card" href="#workspaces"><small>02 · SPACES</small><strong>내 공간</strong><span>교회·단체·사업장·프로젝트 등 내 공간을 선택합니다.</span></a>
-        <a class="personal-hub-card" href="#account"><small>03 · ACCOUNT</small><strong>내 정보</strong><span>대표 이름, 로그인 계정과 개인 설정을 확인합니다.</span></a>
-        <details class="personal-hub-more"><summary><small>04 · MORE</small><strong>필요할 때 더 보기</strong><span>AI·재무·문서·여정 등 선택 기능은 원할 때만 엽니다.</span></summary><div class="personal-hub-more-links"><a href="#recommendations">AI 제안</a><a href="#money">개인 재무</a><a href="/my/docs/">문서</a><a href="/my/journey/">나의 여정</a></div></details>
+    <section id="intent" class="intent-shelf intent-os personal-action-command" data-focus-surface="intent" aria-label="하고 싶은 일로 시작">
+      <div class="intent-copy"><p class="eyebrow">EKODI AI · ACTION FIRST</p><h2>무엇을 하시겠어요?</h2><p>서비스를 먼저 찾지 않아도 됩니다. 원하는 일을 말하면 현재 권한과 맥락 안에서 실행 가능한 다음 단계로 연결합니다.</p></div>
+      <form id="intentPlanForm" class="intent-plan-form">
+        <label class="intent-field"><span>하고 싶은 일</span><textarea id="intentPlanText" maxlength="1200" placeholder="예: 에코디교회 이번 주 자료 정리해줘" required></textarea></label>
+        <label class="intent-field intent-audience"><span>현재 맥락</span><select id="intentPlanAudience"><option value="person">개인</option><option value="business">사업</option><option value="organization">기관·단체</option><option value="community">공동체</option><option value="church">교회</option><option value="team">팀</option></select></label>
+        <button id="intentPlanSubmit" class="primary" type="submit">실행 시작</button>
+      </form>
+      <div class="intent-examples" aria-label="빠른 예시"><button type="button" data-intent-example="다음 상인회 행사를 준비하고 안내문과 홍보까지 도와줘">행사 준비</button><button type="button" data-intent-example="우리 매장의 고객 홍보와 매출 관리를 정리해줘">사업 운영</button><button type="button" data-intent-example="토요모임 말씀과 안내 콘텐츠를 준비해줘">교회·콘텐츠</button><button type="button" data-intent-example="책 원고를 정리하고 출판 준비까지 해줘">창작·출판</button></div>
+      <div class="intent-actions intent-legacy-signals" aria-label="빠른 관심 영역"><button type="button" data-intent-service="support">혜택·지원</button><button type="button" data-intent-service="work">일·진로</button><button type="button" data-intent-service="business">사업</button><button type="button" data-intent-service="author">글·콘텐츠</button><button type="button" data-intent-service="community">관계·생활</button><button type="button" data-finance-open>돈·재무</button><button type="button" data-intent-service="marketing">알리기</button>
+      <div id="intentPlanResult" class="intent-plan-result" aria-live="polite"><div class="intent-empty"><strong>원하는 결과부터 말해 주세요.</strong><p>EKODI는 Capability를 먼저 고르고 서비스와 AI는 그 다음에 선택합니다.</p></div></div>
+    </section>
+
+    <section id="myHub" class="section personal-hub action-hub" aria-label="My EKODI 개인 실행 허브">
+      <div class="section-head personal-hub-head"><div><p class="eyebrow">MY EKODI · ACTION HUB</p><h2>다음 행동부터</h2></div><p>기능을 나열하지 않고, 지금 할 일과 실제 연결된 서비스부터 보여줍니다.</p></div>
+      <div class="action-hub-links" aria-label="빠른 이동">
+        <a href="#platforms"><strong>내 서비스</strong><span>연결된 곳으로 바로 이동</span></a>
+        <a href="#memberHome"><strong>이어서 하기</strong><span>미완료·최근 맥락 확인</span></a>
+        <a href="#activity"><strong>최근 활동</strong><span>최근 작업 흐름 확인</span></a>
+        <a href="#account"><strong>내 정보</strong><span>계정·개인 설정 관리</span></a>
       </div>
     </section>
 
     <section id="memberHome" class="section member-context-home" aria-label="맞춤 홈" hidden>
       <div class="member-context-head">
-        <div><p class="eyebrow">NOW · CONTEXTUAL HOME</p><h2 id="memberFocusTitle">지금 필요한 것부터</h2><p id="memberFocusSummary">내 공간과 최근 맥락을 확인하고 있습니다.</p></div>
+        <div><p class="eyebrow">CONTINUE · NEXT ACTION</p><h2 id="memberFocusTitle">이어서 하기</h2><p id="memberFocusSummary">미완료 작업과 최근 맥락을 확인하고 있습니다.</p></div>
         <a class="member-intent-entry" href="#intentPlanText">하고 싶은 일을 말해보세요 <span aria-hidden="true">→</span></a>
       </div>
       <div id="memberFocusGrid" class="member-focus-grid" aria-live="polite"></div>
-      <nav class="member-context-nav" aria-label="맞춤 홈 바로가기"><a href="#recommendations">AI 제안</a><a href="#workspaces">내 공간</a><a href="#platforms">내 서비스</a><a href="#money">재무</a><a href="#account">내 정보</a></nav>
+      <nav class="member-context-nav" aria-label="맞춤 홈 바로가기"><a href="#platforms">내 서비스</a><a href="#activity">최근 활동</a><a href="#workspaces">내 공간</a><a href="#account">내 정보</a></nav>
     </section>
 
     <section id="recommendations" class="section assistant-section my-secondary-feature" data-focus-surface="recommendations">
@@ -79,18 +91,6 @@
       <div class="assistant-principles" aria-label="개인비서 작동 원칙"><span>지금 하면 좋은 것</span><span>미리 준비할 것</span><span>새로운 기회</span></div>
     </section>
 
-
-    <section id="intent" class="intent-shelf intent-os my-secondary-feature" data-focus-surface="intent" aria-label="하고 싶은 일로 시작">
-      <div class="intent-copy"><p class="eyebrow">INTENT OS · CAPABILITY FIRST</p><h2>무엇을 하고 싶으세요?</h2><p>서비스 이름을 찾지 않아도 됩니다. My EKODI가 의도를 먼저 읽고 등록된 Capability만 조합해 실행 계획을 만듭니다.</p></div>
-      <form id="intentPlanForm" class="intent-plan-form">
-        <label class="intent-field"><span>하고 싶은 일</span><textarea id="intentPlanText" maxlength="1200" placeholder="예: 다음 상인회 행사를 준비하고 안내문과 홍보까지 도와줘" required></textarea></label>
-        <label class="intent-field intent-audience"><span>현재 맥락</span><select id="intentPlanAudience"><option value="person">개인</option><option value="business">사업</option><option value="organization">기관·단체</option><option value="community">공동체</option><option value="church">교회</option><option value="team">팀</option></select></label>
-        <button id="intentPlanSubmit" class="primary" type="submit">계획 만들기</button>
-      </form>
-      <div class="intent-examples" aria-label="빠른 예시"><button type="button" data-intent-example="다음 상인회 행사를 준비하고 안내문과 홍보까지 도와줘">행사 준비</button><button type="button" data-intent-example="우리 매장의 고객 홍보와 매출 관리를 정리해줘">사업 운영</button><button type="button" data-intent-example="토요모임 말씀과 안내 콘텐츠를 준비해줘">교회·콘텐츠</button><button type="button" data-intent-example="책 원고를 정리하고 출판 준비까지 해줘">창작·출판</button></div>
-      <div class="intent-actions intent-legacy-signals" aria-label="빠른 관심 영역"><button type="button" data-intent-service="support">혜택·지원</button><button type="button" data-intent-service="work">일·진로</button><button type="button" data-intent-service="business">사업</button><button type="button" data-intent-service="author">글·콘텐츠</button><button type="button" data-intent-service="community">관계·생활</button><button type="button" data-finance-open>돈·재무</button><button type="button" data-intent-service="marketing">알리기</button>
-      <div id="intentPlanResult" class="intent-plan-result" aria-live="polite"><div class="intent-empty"><strong>원하는 결과부터 말해 주세요.</strong><p>EKODI는 Capability를 먼저 고르고 서비스와 AI는 그 다음에 선택합니다.</p></div></div>
-    </section>
 
     <section id="money" class="section finance-section my-secondary-feature" data-focus-surface="money">
       <div class="section-head finance-heading"><div><p class="eyebrow">PERSONAL FINANCE · PRIVATE LEDGER</p><h2>나의 재무</h2><p>자산·부채·거래를 실제 데이터로 정리하고, 근거가 연결된 제안만 받습니다. 개인재무 원장은 다른 Workspace와 분리되며 금융 실행은 자동으로 이루어지지 않습니다.</p></div><span id="financeStatus" class="finance-status">로그인 확인 중</span></div>
@@ -117,6 +117,15 @@
     <section id="workspaces" class="section workspace-section" data-focus-surface="workspaces">
       <div class="section-head"><div><p class="eyebrow">MY SPACES</p><h2>내 공간</h2></div><p>공간 선택은 여기 한 곳에서만 합니다. 선택한 공간은 다른 EKODI 서비스로 이동할 때 기본 컨텍스트로 이어집니다.</p></div>
       <div id="workspaceList" class="workspace-grid"><div class="empty"><strong>Workspace가 아직 연결되지 않았습니다.</strong><p>로그인 후 개인·사업장·교회·기관 공간을 불러옵니다.</p></div></div>
+    </section>
+
+    <section id="activity" class="section activity-overview" aria-label="최근 활동">
+      <div class="section-head"><div><p class="eyebrow">RECENT · CONTEXT</p><h2>최근 활동</h2></div><p>최근 사용한 서비스와 작업 흐름을 기준으로 다시 이어갈 곳을 보여줍니다.</p></div>
+      <div class="activity-overview-grid">
+        <a href="#creator"><strong>최근 작업</strong><span id="activityWorkHint">최근 작업을 확인합니다.</span></a>
+        <a href="#platforms"><strong>최근 서비스</strong><span>마지막으로 사용한 서비스 흐름을 이어갑니다.</span></a>
+        <a href="#workspaces"><strong>현재 공간</strong><span>선택한 Workspace 맥락을 확인합니다.</span></a>
+      </div>
     </section>
 
     <section class="summary" data-focus-companion="workspaces" aria-label="My EKODI 요약">
@@ -167,7 +176,7 @@
   <footer class="my-custom-footer" aria-label="My EKODI 안내">
     <div class="my-footer-inner">
       <div class="my-footer-brand"><span class="brand-leaf" aria-hidden="true"></span><div><strong>My EKODI</strong><p>내가 참여하는 공간과 서비스를 한곳에서 이어보는 개인 통합 홈입니다.</p></div></div>
-      <nav aria-label="My EKODI 바로가기"><a href="#platforms">내 서비스</a><a href="#workspaces">내 공간</a><a href="#account">내 정보</a></nav>
+      <nav aria-label="My EKODI 바로가기"><a href="#platforms">내 서비스</a><a href="#memberHome">내 활동</a><a href="#account">내 정보</a></nav>
       <p class="my-footer-note">좋은 생각이 모여, 더 좋은 하루가 됩니다.</p>
     </div>
     <div class="my-footer-credo"><strong>&#54632;&#44760;&#54616;&#51648;&#47564;, &#45824;&#49888; &#44208;&#51221;&#54616;&#51648; &#50506;&#49845;&#45768;&#45796;.</strong><span>My EKODI&#45716; &#45817;&#49888;&#51032; &#49440;&#53469;&#51012; &#51473;&#49900;&#50640; &#46160;&#44256; &#54596;&#50836;&#54620; &#51221;&#48372;&#50752; &#45796;&#51020; &#54665;&#46041;&#51012; &#50672;&#44208;&#54633;&#45768;&#45796;.</span></div>
