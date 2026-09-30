@@ -149,6 +149,7 @@ test('seonammedi admin utilities live above the left menu and content starts nea
 });
 
 
+// Keep public navigation and site-local admin navigation structurally aligned.
 test('seonammedi public and admin menus keep the same content-first order',async()=>{
   const [html,adminHtml]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('admin/index.html',root),'utf8')]);
   const publicOrder=['현재상황','활동이력','조직','공지','관련자료','시민의목소리','후원·회계'];
