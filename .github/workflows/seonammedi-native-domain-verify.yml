@@ -115,8 +115,7 @@ jobs:
           : > artifacts/http-status.txt
           for url in 'https://seonammedi.kr/' 'https://xn--3e0b8b58jw4co4mnpll3k.kr/'; do
             echo "URL=$url" >> artifacts/http-status.txt
-            curl -sS -o /dev/null -D /tmp/headers --connect-timeout 10 --max-time 20 "$url" || true
-            code=$(awk 'toupper($1) ~ /^HTTP\\// {c=$2} END {print c+0}' /tmp/headers 2>/dev/null || echo 0)
+            code=$(curl -sS -o /dev/null -D /tmp/headers -w '%{http_code}' --connect-timeout 10 --max-time 20 "$url" || echo 000)
             location=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\\r$/, ""); print; exit}' /tmp/headers 2>/dev/null || true)
             echo "HTTP=$code" >> artifacts/http-status.txt
             echo "LOCATION=$location" >> artifacts/http-status.txt
@@ -175,8 +174,7 @@ jobs:
           check_redirect() {
             url="$1"; expected="$2"
             rm -f /tmp/post-h
-            curl -sS -o /dev/null -D /tmp/post-h --connect-timeout 10 --max-time 20 "$url"
-            code=$(awk 'toupper($1) ~ /^HTTP\\// {c=$2} END {print c+0}' /tmp/post-h)
+            code=$(curl -sS -o /dev/null -D /tmp/post-h -w '%{http_code}' --connect-timeout 10 --max-time 20 "$url")
             location=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\\r$/, ""); print; exit}' /tmp/post-h)
             echo "URL=$url HTTP=$code LOCATION=$location" | tee -a artifacts/postdeploy.txt
             test "$code" = "301"
