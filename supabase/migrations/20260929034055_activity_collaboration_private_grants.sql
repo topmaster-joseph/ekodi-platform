@@ -1,1 +1,0 @@
--- Keep collaboration tables inaccessible through direct Data API roles.\nrevoke all on public.activity_collab_documents from anon, authenticated, service_role;\nrevoke all on public.activity_collab_shares from anon, authenticated, service_role;\nrevoke all on public.activity_collab_revisions from anon, authenticated, service_role;\n
