@@ -90,8 +90,20 @@ async function ensurePublicContentSchema(db){
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_seonammedi_timeline_public ON seonammedi_timeline(status,sort_order,id)').run();
 }
 
-async function ensureSchema(db){
+async function ensureContentCategoryColumn(db){
   try{await db.prepare("ALTER TABLE seonammedi_monitor_items ADD COLUMN publish_category TEXT NOT NULL DEFAULT 'news'").run()}catch{}
+}
+
+async function publicStorageRead(resource,read){
+  try{return await read()}
+  catch(error){
+    console.error('seonammedi public storage read failed',{resource,error:String(error?.message||error)});
+    return json({ok:false,error:resource+'_storage_read_failed'},503);
+  }
+}
+
+async function ensureSchema(db){
+  await ensureContentCategoryColumn(db);
   await ensurePublicContentSchema(db);
   await db.exec(`CREATE TABLE IF NOT EXISTS seonammedi_notices (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -233,7 +245,6 @@ async function platformSession(request,env){
 
 async function authority(request,env){
   if(!env?.DB?.prepare)return {ok:false,status:503,error:'storage_unavailable'};
-  await ensureSchema(env.DB);
   const session=await platformSession(request,env);
   if(session?.role==='super_admin')return {ok:true,email:lower(session.email),role:'super_admin',platform:true,capabilities:['*']};
   const principal=await principalFromSupabaseRequest(request);
@@ -260,13 +271,11 @@ function publicChannel(row){return{id:Number(row.id),platform:row.platform,name:
 function adminChannel(row){return{...publicChannel(row),visible:Boolean(row.visible),createdBy:row.created_by,createdAt:row.created_at,updatedAt:row.updated_at}}
 
 async function listPublicNotices(env){
-  await ensurePublicContentSchema(env.DB);
   const rows=await env.DB.prepare(`SELECT id,title,body,pinned,published_at,updated_at FROM seonammedi_notices
     WHERE status='published' ORDER BY pinned DESC,COALESCE(published_at,updated_at) DESC,id DESC LIMIT 40`).all();
   return json({ok:true,items:(rows.results||[]).map(publicNotice)});
 }
 async function listPublicChannels(env){
-  await ensurePublicContentSchema(env.DB);
   const rows=await env.DB.prepare(`SELECT id,platform,name,url,category,official,note,sort_order FROM seonammedi_channels
     WHERE visible=1 ORDER BY official DESC,sort_order ASC,id ASC LIMIT 80`).all();
   return json({ok:true,items:(rows.results||[]).map(publicChannel)});
@@ -282,7 +291,6 @@ const PAGE_KEYS=new Set(['status','organization']);
 const parseJsonObject=value=>{try{const parsed=JSON.parse(String(value||'{}'));return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{}}catch{return{}}};
 function pageRow(row){return{key:row.section_key,data:parseJsonObject(row.body_json),visible:Boolean(row.visible),updatedBy:row.updated_by||'',updatedAt:row.updated_at||''}}
 async function listPublicPageData(env){
-  await ensureSchema(env.DB);
   const [sections,finance]=await Promise.all([
     env.DB.prepare('SELECT section_key,body_json,visible,updated_by,updated_at FROM seonammedi_page_sections WHERE visible=1').all(),
     env.DB.prepare('SELECT id,entry_date,entry_type,amount,purpose,related_event,evidence_status,public_note FROM seonammedi_finance_entries WHERE visible=1 ORDER BY entry_date DESC,id DESC LIMIT 300').all()
@@ -382,8 +390,6 @@ function timelineRow(row,admin=false){
   return item;
 }
 async function listPublicTimeline(env){
-  await ensurePublicContentSchema(env.DB);
-  await ensureTimelineSeed(env.DB);
   const rows=await env.DB.prepare("SELECT * FROM seonammedi_timeline WHERE status='published' ORDER BY sort_order ASC,id ASC LIMIT 300").all();
   return json({ok:true,items:(rows.results||[]).map(row=>timelineRow(row,false))});
 }
@@ -450,12 +456,14 @@ async function deleteAdminVoice(env,auth,id){
 
 async function listAdminContent(env,auth){
   if(!can(auth,CONTENT_CAP))return json({ok:false,error:'content_forbidden'},403);
+  await ensureContentCategoryColumn(env.DB);
   const rows=await env.DB.prepare(`SELECT id,title,url,resolved_url,publisher,published_at,query_label,review_state,publish_category,first_seen_at,last_seen_at
     FROM seonammedi_monitor_items ORDER BY COALESCE(published_at,first_seen_at) DESC LIMIT 150`).all();
   return json({ok:true,items:(rows.results||[]).map(row=>({id:Number(row.id),title:row.title,url:row.resolved_url||row.url,publisher:row.publisher||'',publishedAt:row.published_at||row.first_seen_at,queryLabel:row.query_label||'',reviewState:row.review_state==='verified'?'published':CONTENT_STATES.has(row.review_state)?row.review_state:'candidate',category:row.publish_category==='official'?'official':'news'}))});
 }
 async function updateAdminContent(request,env,auth,id){
   if(!can(auth,CONTENT_CAP))return json({ok:false,error:'content_forbidden'},403);
+  await ensureContentCategoryColumn(env.DB);
   const existing=await env.DB.prepare('SELECT id,title FROM seonammedi_monitor_items WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
   const body=await request.json().catch(()=>null),state=clean(body?.state,40),category=clean(body?.category,40);
   if(!CONTENT_STATES.has(state)||!CONTENT_CATEGORIES.has(category))return json({ok:false,error:'invalid_content_review'},400);
@@ -558,23 +566,24 @@ async function publicMinuteView(request,env,token){
 
 export async function handleSeonamMediAdminApi(request,env){
   const url=new URL(request.url);
-  if(url.pathname===PREFIX+'/page-data'&&request.method==='GET'){if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return listPublicPageData(env);}
+  if(url.pathname===PREFIX+'/page-data'&&request.method==='GET'){if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return publicStorageRead('page-data',()=>listPublicPageData(env));}
   if(url.pathname===PREFIX+'/content'&&request.method==='GET'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
-    await ensureSchema(env.DB);
-    const [noticesResponse,channelsResponse]=await Promise.all([listPublicNotices(env),listPublicChannels(env)]);
-    const noticesBody=await noticesResponse.json().catch(()=>({items:[]}));
-    const channelsBody=await channelsResponse.json().catch(()=>({items:[]}));
-    return json({ok:true,notices:noticesBody.items||[],channels:channelsBody.items||[]});
+    return publicStorageRead('content',async()=>{
+      const [noticesResponse,channelsResponse]=await Promise.all([listPublicNotices(env),listPublicChannels(env)]);
+      const noticesBody=await noticesResponse.json().catch(()=>({items:[]}));
+      const channelsBody=await channelsResponse.json().catch(()=>({items:[]}));
+      return json({ok:true,notices:noticesBody.items||[],channels:channelsBody.items||[]});
+    });
   }
   if(url.pathname===PREFIX+'/timeline'&&request.method==='GET'){
-    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return listPublicTimeline(env);
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return publicStorageRead('timeline',()=>listPublicTimeline(env));
   }
   if(url.pathname===PREFIX+'/notices'&&request.method==='GET'){
-    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return listPublicNotices(env);
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return publicStorageRead('notices',()=>listPublicNotices(env));
   }
   if(url.pathname===PREFIX+'/channels'&&request.method==='GET'){
-    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return listPublicChannels(env);
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return publicStorageRead('channels',()=>listPublicChannels(env));
   }
   const publicMinutes=url.pathname.match(/^\/api\/seonammedi\/minutes\/([A-Za-z0-9_-]{20,160})\/viewers$/);
   if(publicMinutes)return publicMinuteView(request,env,publicMinutes[1]);
