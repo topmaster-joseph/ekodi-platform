@@ -48,6 +48,24 @@ test('shared edge adds security headers without disabling live capture',()=>{
   assert.equal(response.headers.get('x-ekodi-security-policy'),'platform-edge-v2');
 });
 
+test('Mall Free Ops admin embed keeps the narrow first-party framing exception',()=>{
+  const embedRequest=new Request('https://ekodi.kr/ekodimall/assets/free-ops?embed=admin');
+  const embedResponse=applyPlatformSecurityHeaders(new Response('<html></html>',{headers:{
+    'content-type':'text/html',
+    'content-security-policy':"default-src 'self'; frame-ancestors https://ekodi.kr; object-src 'none'",
+    'x-frame-options':'DENY',
+  }}),embedRequest);
+  assert.equal(embedResponse.headers.get('x-frame-options'),null);
+  assert.match(embedResponse.headers.get('content-security-policy')||'',/frame-ancestors https:\/\/ekodi\.kr/);
+
+  const publicRequest=new Request('https://ekodi.kr/ekodimall/assets/free-ops');
+  const publicResponse=applyPlatformSecurityHeaders(new Response('<html></html>',{headers:{
+    'content-type':'text/html',
+    'content-security-policy':"default-src 'self'; frame-ancestors https://ekodi.kr",
+  }}),publicRequest);
+  assert.equal(publicResponse.headers.get('x-frame-options'),'DENY');
+});
+
 test('admin and API documents are no-store and non-indexable',()=>{
   const request=new Request('https://ekodi.kr/admin/');
   const response=applyPlatformSecurityHeaders(new Response('<html></html>',{headers:{'content-type':'text/html'}}),request);
