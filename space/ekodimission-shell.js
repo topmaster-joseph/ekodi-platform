@@ -1,4 +1,5 @@
 (()=>{
+  // Deployment sync: keep the published language-visibility contract aligned with ekodi-space assets.
   const sourceLocale='ko-KR';
   const localeStorageKey='ekodi_user_locale';
   const localeCookieKey='ekodi_locale';
