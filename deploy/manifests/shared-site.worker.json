@@ -2521,7 +2521,11 @@
           "시민·온라인 공개자료",
           "후원·회계 공개"
         ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "bodyIncludes": [
+          "관련자료",
+          "materialFilters"
+        ]
       },
       {
         "url": "https://ekodi.kr/seonammedi/admin/",
