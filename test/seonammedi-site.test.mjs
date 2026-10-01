@@ -141,6 +141,20 @@ test('seonammedi civic voices are manageable from the site admin without exposin
   assert.match(adminJs,/publicConsent/);
 });
 
+test('seonammedi citizen voice admin keeps canonical super-admin access and visible load errors',async()=>{
+  const [control,adminJs]=await Promise.all([
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+    readFile(new URL('../sites/seonammedi/public/admin/admin.js',import.meta.url),'utf8')
+  ]);
+  assert.match(control,/SELECT role FROM admins WHERE lower\(trim\(email\)\)=\? LIMIT 1/);
+  assert.match(control,/lower\(platformAdmin\?\.role\)==='super_admin'/);
+  assert.match(control,/capabilities:\['\*'\]/);
+  assert.match(control,/bind\(tenant\.id,principalEmail\)\.first\(\)/);
+  assert.match(adminJs,/text\(\$\('adminIdentity'\),'연결 오류'\)/);
+  assert.match(adminJs,/voiceMessage\.classList\.add\('error'\)/);
+  assert.match(adminJs,/관리자 정보를 불러오지 못했습니다/);
+});
+
 
 test('seonammedi admin utilities live above the left menu and content starts near the top',async()=>{
   const [html,css]=await Promise.all([
