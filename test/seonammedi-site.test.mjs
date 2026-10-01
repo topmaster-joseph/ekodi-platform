@@ -103,7 +103,9 @@ test('timeline admin is seeded, permissioned and public materials use central ca
   assert.match(app,/관련보도/);
   assert.match(app,/시민·온라인자료/);
   assert.match(app,/\/api\/seonammedi\/timeline/);
-  assert.match(adminHtml,/data-panel-target="timeline"/);
+  assert.doesNotMatch(adminHtml,/data-panel-target="timeline"/);
+  assert.match(adminHtml,/data-panel-target="content"[^>]*>관련자료<\/button>/);
+  assert.match(adminHtml,/data-records-admin-tab="timeline"[^>]*>활동이력<\/button>/);
   assert.match(adminHtml,/id="timelineForm"/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/timeline/);
   assert.match(control,/TIMELINE_CAP='seonammedi\.timeline\.manage'/);
@@ -161,8 +163,12 @@ test('seonammedi public and admin menus keep the agreed content-first order',asy
   assert.match(html,/data-view-link="records">관련자료<\/a>/);
   assert.doesNotMatch(html,/data-view-link="timeline"|data-view-link="materials"/);
   assert.match(html,/data-view-section="records"/);
-  const adminOrder=['운영홈','사이트 점검','현재상황','활동이력','조직','공지','관련자료','시민의 목소리','후원·회계','내부 회의록','채널','권한·관리자'];
+  const adminOrder=['운영홈','사이트 점검','현재상황','조직','공지','관련자료','시민의 목소리','후원·회계','내부 회의록','채널','권한·관리자'];
   cursor=-1;for(const label of adminOrder){const next=adminHtml.indexOf('>'+label+'</button>',cursor+1);assert.ok(next>cursor,'admin menu order: '+label);cursor=next}
+  assert.doesNotMatch(adminHtml,/data-panel-target="timeline"/);
+  assert.match(adminHtml,/data-panel-target="content"[^>]*>관련자료<\/button>/);
+  assert.match(adminHtml,/data-records-admin-tab="timeline"[^>]*>활동이력<\/button>/);
+  assert.match(adminHtml,/data-records-admin-tab="review"[^>]*>웹검색 게시검토<\/button>/);
 });
 
 test('seonammedi full public-menu administration covers status organization materials voices and finance',async()=>{
