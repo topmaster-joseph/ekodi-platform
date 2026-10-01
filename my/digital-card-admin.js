@@ -3,6 +3,7 @@
 
 const cfg=window.EKODI_MY_CONFIG||{};
 const $=selector=>document.querySelector(selector);
+const PRESET_KEY='ekodi:digital-card:preset:v1';
 const form=$('#digitalCardForm');
 if(!form)return;
 
@@ -21,6 +22,13 @@ const fields={
   inboxStatus:$('#contactExchangeInboxStatus'),
 };
 
+function normalizeUrl(raw){
+  const value=String(raw||'').trim();if(!value)return'';
+  const candidate=/^[a-z][a-z0-9+.-]*:\/\//i.test(value)?value:`https://${value.replace(/^\/+/, '')}`;
+  try{const url=new URL(candidate);return ['http:','https:'].includes(url.protocol)?url.toString():''}catch{return value}
+}
+function loadPreset(){try{return JSON.parse(localStorage.getItem(PRESET_KEY)||'null')}catch{return null}}
+function savePreset(data){try{localStorage.setItem(PRESET_KEY,JSON.stringify({...data,savedAt:new Date().toISOString()}))}catch{}}
 function auth(){return window.EKODI_MY_AUTH||null}
 function token(){return String(auth()?.getAccessToken?.()||'')}
 function signedIn(){return Boolean(auth()?.isSignedIn?.()&&token())}
@@ -66,7 +74,7 @@ function collectAffiliations(){
     name:String(row.querySelector('[name="affiliationName"]')?.value||'').trim(),
     title:String(row.querySelector('[name="affiliationTitle"]')?.value||'').trim(),
     description:String(row.querySelector('[name="affiliationDescription"]')?.value||'').trim(),
-    url:String(row.querySelector('[name="affiliationUrl"]')?.value||'').trim(),
+    url:normalizeUrl(row.querySelector('[name="affiliationUrl"]')?.value||''),
     visible:Boolean(row.querySelector('[name="affiliationVisible"]')?.checked),
   })).filter(item=>item.name||item.title||item.description||item.url);
 }
@@ -108,7 +116,8 @@ function renderInbox(items=[]){
 }
 async function refresh(){
   if(!signedIn()){
-    setDisabled(true);renderAffiliations([]);renderInbox([]);showCardLink({});
+    const preset=loadPreset();
+    setDisabled(true);renderAffiliations(preset?.affiliations||[]);renderInbox([]);showCardLink({});
     setStatus('로그인하면 디지털 명함과 연락처 교환 기능을 관리할 수 있습니다.');
     fields.inboxStatus.textContent='로그인 후 받은 연락처를 확인할 수 있습니다.';
     return;
@@ -125,7 +134,8 @@ async function refresh(){
     fields.phonePublic.checked=Boolean(card.phone_public);
     fields.emailPublic.checked=Boolean(card.email_public);
     fields.exchangeEnabled.checked=Boolean(card.exchange_enabled);
-    renderAffiliations(card.affiliations);
+    const preset=loadPreset();
+    renderAffiliations(Array.isArray(card.affiliations)&&card.affiliations.length?card.affiliations:(preset?.affiliations||[]));
     showCardLink(profile);
     renderInbox(Array.isArray(inbox.items)?inbox.items:[]);
     fields.inboxStatus.textContent='상대방이 동의 후 보낸 연락처만 표시됩니다.';
@@ -141,14 +151,16 @@ async function save(event){
   if(affiliations.length>20){setStatus('소속은 최대 20개까지 등록할 수 있습니다.','error');return}
   const label=fields.save.textContent;setDisabled(true);fields.save.textContent='저장 중…';
   try{
+    const settings={
+      phone:String(fields.phone.value||'').trim(),email:String(fields.email.value||'').trim(),
+      phonePublic:Boolean(fields.phonePublic.checked),emailPublic:Boolean(fields.emailPublic.checked),
+      exchangeEnabled:Boolean(fields.exchangeEnabled.checked),affiliations,
+    };
     await rpc('set_my_digital_card',{
-      p_phone:String(fields.phone.value||'').trim(),
-      p_email:String(fields.email.value||'').trim(),
-      p_phone_public:Boolean(fields.phonePublic.checked),
-      p_email_public:Boolean(fields.emailPublic.checked),
-      p_exchange_enabled:Boolean(fields.exchangeEnabled.checked),
-      p_affiliations:affiliations,
+      p_phone:settings.phone,p_email:settings.email,p_phone_public:settings.phonePublic,
+      p_email_public:settings.emailPublic,p_exchange_enabled:settings.exchangeEnabled,p_affiliations:settings.affiliations,
     });
+    savePreset(settings);
     setStatus('디지털 명함 설정이 저장되었습니다.','success');
     showCardLink(await loadPublicProfile());
   }catch(error){setStatus(error.message||'명함 설정을 저장하지 못했습니다.','error')}
