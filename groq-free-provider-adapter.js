@@ -26,7 +26,7 @@ export function createGroqFreeProvider(env={},options={}){
   const enabled=['1','true','yes','on','enabled'].includes(clean(env.EKODI_PROVIDER_GROQ_FREE_ENABLED,20).toLowerCase());
   const available=Boolean(enabled&&key&&typeof fetchImpl==='function');
   return Object.freeze({
-    id:'groq-free',model,available,priority:25,costClass:'free-preferred',
+    id:'groq-free',model,available,priority:Math.max(1,Math.min(999,Math.floor(number(env.EKODI_GROQ_FREE_PRIORITY,30)))),costClass:'free-preferred',
     async invoke({prompt='' }={}){
       if(!available)throw new Error('groq_free_not_configured');
       const reservation=await reserveFreeDailyRequest(env,'groq-free',dailyLimit(env));
