@@ -56,3 +56,13 @@ test('all admin surfaces inherit compact readable density and left-anchored work
   assert.match(workbench, /text-overflow:clip!important/);
 });
 
+
+
+test('admin density v7 reduces desktop whitespace without shrinking mobile touch targets', async () => {
+  const css = await read('admin-design-engine.css');
+  assert.match(css, /ADMIN-DENSITY-007/);
+  assert.match(css, /--ekodi-density-gap:8px/);
+  assert.match(css, /table th,table td/);
+  assert.match(css, /min-height:34px!important/);
+  assert.match(css, /@media\(max-width:760px\)[\s\S]*min-height:42px!important/);
+});
