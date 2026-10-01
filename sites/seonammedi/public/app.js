@@ -145,7 +145,7 @@ function renderOrganizationGroup(key){
   }
   if(participantHost){
     const participants=(group.participants||[]).filter(item=>item&&item.visible!==false).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko-KR'));
-    participantHost.innerHTML=participants.length?participants.map(item=>'<article class="participant-item"><strong>'+escapeHtml(item.name||'')+'</strong>'+(item.representative?'<span>대표 '+escapeHtml(item.representative)+'</span>':'')+(item.url?'<a href="'+safeUrl(item.url)+'" target="_blank" rel="noopener noreferrer">연결</a>':'')+'</article>').join(''):'<p class="muted">공개 등록된 참여단체가 없습니다.</p>';
+    participantHost.innerHTML=participants.length?participants.map(item=>'<article class="participant-item"><strong>'+escapeHtml(item.name||'')+'</strong>'+(item.representative?'<span>대표 '+escapeHtml(item.representative)+'</span>':'')+(item.url?'<a href="'+safeUrl(item.url)+'" target="_blank" rel="noopener noreferrer">연결</a>':'')+'</article>').join(''):'<p class="muted">등록 준비중</p>';
   }
   if(orgTabs)[...orgTabs.querySelectorAll('button')].forEach(button=>{const active=button.dataset.orgGroup===group.key;button.classList.toggle('active',active);button.setAttribute('aria-selected',active?'true':'false')});
 }
