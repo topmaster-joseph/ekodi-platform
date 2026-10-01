@@ -2,15 +2,7 @@ name: EKODI Constitution Check
 
 on:
   pull_request:
-    paths:
-      - 'CONSTITUTION.md'
-      - 'governance/**'
-      - 'platform-boundaries.json'
-      - 'config/**'
-      - 'scripts/validate-constitution*.mjs'
-      - 'scripts/validate-ekodi-os-architecture.mjs'
-      - '.github/workflows/**'
-      - 'package.json'
+    branches: [main]
   push:
     branches: [main, development]
     paths:
