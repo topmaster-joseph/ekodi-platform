@@ -208,6 +208,19 @@ test('AI Ops provider control enforces white background and black text for reada
 });
 
 
+test('guarded free providers require explicit no-charge confirmation and Qwen has a safe Singapore base fallback',()=>{
+  const api=read('ai-provider-control.js');
+  const adapters=read('extended-free-provider-adapters.js');
+  const admin=read('admin-provider-control.js');
+  assert.match(api,/free_provider_guard_confirmation_required/);
+  assert.match(api,/EKODI_QWEN_FREE_QUOTA_ONLY_CONFIRMED/);
+  assert.match(api,/EKODI_CEREBRAS_FREE_TRIAL_ONLY/);
+  assert.match(adapters,/QWEN_DEFAULT_BASE_URL='https:\/\/dashscope-intl\.aliyuncs\.com\/compatible-mode\/v1'/);
+  assert.match(admin,/data-ai-field="freeGuardConfirmed"/);
+  assert.match(admin,/model\/settings\/api-key/);
+  assert.match(admin,/무료 전용 보호조건 확인/);
+});
+
 test('provider health classifier distinguishes Gemini API key and precondition failures',()=>{
   const source=read('ai-provider-control.js');
   const admin=read('admin-provider-control.js');
