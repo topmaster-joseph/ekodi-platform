@@ -240,4 +240,11 @@ export async function routePersonDigitalCard(request,env={}){
     if(!['GET','HEAD'].includes(request.method))return new Response('Method Not Allowed',{status:405,headers:{allow:'GET, HEAD'}});
     const context=contextFromUrl(url),share=await shareForHandle(env,match[1],context).catch(()=>null);
     if(!share){
- 
+      const html=setupHtml(null,match[1],'공개된 개인 프로필을 찾을 수 없습니다.');
+      return new Response(request.method==='HEAD'?null:html,{status:404,headers:publicCardHeaders({found:false,ready:false})});
+    }
+    const html=cardHtml(share,match[1]);
+    return new Response(request.method==='HEAD'?null:html,{status:200,headers:publicCardHeaders({found:true,ready:share.ready===true})});
+  }
+  return null;
+}
