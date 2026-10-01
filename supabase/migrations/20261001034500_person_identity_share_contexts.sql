@@ -463,7 +463,7 @@ begin
       and s.visibility='public'
       and (
         r.id is not null
-        or (s.show_profile_intro and (trim(coalesce(v_profile.headline,''))<>'' or trim(coalesce(v_profile.bio,''))<>''))
+        or (s.show_profile_intro and (trim(coalesce(v_profile.display_name,''))<>'' or trim(coalesce(v_profile.headline,''))<>'' or trim(coalesce(v_profile.bio,''))<>''))
         or (s.show_phone and trim(coalesce(v_card.phone,''))<>'')
         or (s.show_email and trim(coalesce(v_card.email,''))<>'')
         or (
@@ -495,7 +495,7 @@ begin
       and s.context_key=v_requested
       and (
         r.id is not null
-        or (s.show_profile_intro and (trim(coalesce(v_profile.headline,''))<>'' or trim(coalesce(v_profile.bio,''))<>''))
+        or (s.show_profile_intro and (trim(coalesce(v_profile.display_name,''))<>'' or trim(coalesce(v_profile.headline,''))<>'' or trim(coalesce(v_profile.bio,''))<>''))
         or (s.show_phone and trim(coalesce(v_card.phone,''))<>'')
         or (s.show_email and trim(coalesce(v_card.email,''))<>'')
         or (
@@ -515,7 +515,7 @@ begin
       and s.is_default
       and (
         r.id is not null
-        or (s.show_profile_intro and (trim(coalesce(v_profile.headline,''))<>'' or trim(coalesce(v_profile.bio,''))<>''))
+        or (s.show_profile_intro and (trim(coalesce(v_profile.display_name,''))<>'' or trim(coalesce(v_profile.headline,''))<>'' or trim(coalesce(v_profile.bio,''))<>''))
         or (s.show_phone and trim(coalesce(v_card.phone,''))<>'')
         or (s.show_email and trim(coalesce(v_card.email,''))<>'')
         or (
@@ -536,7 +536,7 @@ begin
         and s.visibility='public'
         and (
           r.id is not null
-          or (s.show_profile_intro and (trim(coalesce(v_profile.headline,''))<>'' or trim(coalesce(v_profile.bio,''))<>''))
+          or (s.show_profile_intro and (trim(coalesce(v_profile.display_name,''))<>'' or trim(coalesce(v_profile.headline,''))<>'' or trim(coalesce(v_profile.bio,''))<>''))
           or (s.show_phone and trim(coalesce(v_card.phone,''))<>'')
           or (s.show_email and trim(coalesce(v_card.email,''))<>'')
           or (
