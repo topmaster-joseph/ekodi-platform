@@ -100,7 +100,7 @@ test('provider admin presents compact explicit connection status without exposin
   assert.match(admin,/AI-PROVIDER-COMPACT-READABLE-20261001/);
   assert.match(admin,/Secret \$\{configured\?'연결':'미연결'\}/);
   assert.match(admin,/운영 \$\{operational\?'가동':'비가동'\}/);
-  assert.match(admin,/런타임 \$\{esc\(sync\)\}/);
+  assert.match(admin,/계정 자원 연결/);
   assert.match(admin,/aria-live="polite"/);
   assert.match(admin,/grid-template-columns:repeat\(3,minmax\(285px,1fr\)\)/);
   assert.match(admin,/min-height:30px/);
@@ -143,7 +143,7 @@ test('admin provider UI explains runtime sync failures instead of showing the ra
 
 test('provider status cards explain free and paid usage',()=>{
   const admin=read('admin-provider-control.js');
-  assert.match(admin,/무료 한도 우선 사용/);
+  assert.match(admin,/Gemini 무료 한도 우선/);
   assert.match(admin,/OpenRouter Free/);
   assert.match(admin,/Groq Free/);
   assert.match(admin,/명시적 예산\/승인 필요/);
