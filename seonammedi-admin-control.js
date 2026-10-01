@@ -332,23 +332,59 @@ function channelProviderUrl(item){
     const host=url.hostname.toLowerCase().replace(/^www\./,'');
     if(item.platform==='instagram'&&host==='instagram.com'){
       const handle=url.pathname.split('/').filter(Boolean)[0]||'';
-      if(handle&&!['accounts','explore','reels','direct'].includes(handle.toLowerCase()))return {kind:'instagram-profile',embedUrl:'https://www.instagram.com/'+encodeURIComponent(handle)+'/embed/'};
+      if(handle&&!['accounts','explore','reels','direct'].includes(handle.toLowerCase()))return {kind:'instagram-profile',handle,profileEmbedUrl:'https://www.instagram.com/'+encodeURIComponent(handle)+'/embed/'};
     }
     if(item.platform==='youtube'&&['youtube.com','youtu.be'].includes(host))return {kind:'youtube'};
   }catch{}
   return {kind:'generic'};
+}
+function instagramRecentItems(html){
+  const normalized=String(html||'').replace(/\\u002f/gi,'/').replace(/\\\//g,'/');
+  const seen=new Set(),items=[];
+  const add=(kind,shortcode)=>{
+    const type=kind==='reel'?'reel':'post';
+    const code=clean(shortcode,80);
+    if(!/^[A-Za-z0-9_-]{5,}$/.test(code))return;
+    const key=type+':'+code;if(seen.has(key))return;seen.add(key);
+    const url='https://www.instagram.com/'+(type==='reel'?'reel':'p')+'/'+encodeURIComponent(code)+'/';
+    items.push({type,url,embedUrl:url+'embed/'});
+  };
+  const urlPattern=/(?:https?:\/\/(?:www\.)?instagram\.com)?\/(p|reel)\/([A-Za-z0-9_-]{5,})\/?/gi;
+  let match;while(items.length<3&&(match=urlPattern.exec(normalized)))add(match[1],match[2]);
+  if(items.length<3){
+    const shortcodePattern=/"shortcode"\s*:\s*"([A-Za-z0-9_-]{5,})"/g;
+    while(items.length<3&&(match=shortcodePattern.exec(normalized)))add('p',match[1]);
+  }
+  return items.slice(0,3).map((item,index)=>({...item,label:'최근 공개 '+(item.type==='reel'?'릴스':'게시물')+' '+(index+1)}));
+}
+async function fetchChannelPreviewPage(url,userAgent,timeout=6000){
+  if(!url)return null;
+  try{return await fetch(url,{headers:{'user-agent':userAgent},redirect:'follow',signal:AbortSignal.timeout(timeout)})}catch{return null}
 }
 async function publicChannelPreview(env,id){
   const row=await env.DB.prepare(`SELECT id,platform,name,url,category,official,note,sort_order FROM seonammedi_channels
     WHERE id=? AND visible=1 LIMIT 1`).bind(id).first();
   if(!row)return json({ok:false,error:'not_found'},404);
   const item=publicChannel(row),provider=channelProviderUrl(item);
-  const preview={title:item.name,description:item.note||'',image:'',embedUrl:provider.embedUrl||'',mode:provider.embedUrl?'embed':'summary',platform:item.platform,sourceUrl:item.url};
+  const preview={title:item.name,description:item.note||'',image:'',embedUrl:'',mode:'summary',platform:item.platform,sourceUrl:item.url,recentItems:[]};
+  if(provider.kind==='instagram-profile'){
+    let page=await fetchChannelPreviewPage(item.url,'Mozilla/5.0 (compatible; EKODIChannelPreview/1.0; +https://ekodi.kr/seonammedi/)',6000);
+    if(!page?.ok&&provider.profileEmbedUrl)page=await fetchChannelPreviewPage(provider.profileEmbedUrl,'Mozilla/5.0 (compatible; EKODIChannelPreview/1.0; +https://ekodi.kr/seonammedi/)',5000);
+    const html=page?.ok?await page.text().catch(()=>''):'';
+    if(html){
+      preview.title=previewMeta(html,'og:title')||previewTitle(html)||preview.title;
+      preview.description=previewMeta(html,'og:description')||previewMeta(html,'description')||preview.description;
+      preview.image=validHttps(previewMeta(html,'og:image'));
+      preview.recentItems=instagramRecentItems(html);
+      if(preview.recentItems.length){
+        preview.mode='recent-embed';
+        preview.contentType='recent-posts';
+      }else preview.contentType='profile-summary';
+    }
+    return json({ok:true,item,preview});
+  }
   if(provider.kind!=='youtube')return json({ok:true,item,preview});
-  let page=null;
-  try{
-    page=await fetch(item.url,{headers:{'user-agent':'Mozilla/5.0 (compatible; EKODIChannelPreview/1.0; +https://ekodi.kr/seonammedi/)'},redirect:'follow',signal:AbortSignal.timeout(7000)});
-  }catch{}
+  const page=await fetchChannelPreviewPage(item.url,'Mozilla/5.0 (compatible; EKODIChannelPreview/1.0; +https://ekodi.kr/seonammedi/)',7000);
   if(!page?.ok)return json({ok:true,item,preview});
   const html=await page.text().catch(()=>'');
   preview.title=previewMeta(html,'og:title')||previewTitle(html)||preview.title;
@@ -373,8 +409,7 @@ async function publicChannelPreview(env,id){
     html.match(/youtube\.com\/channel\/(UC[A-Za-z0-9_-]{20,})/i)
   )?.[1]||'';
   if(channelId){
-    let feed=null;
-    try{feed=await fetch('https://www.youtube.com/feeds/videos.xml?channel_id='+encodeURIComponent(channelId),{headers:{'user-agent':'EKODIChannelPreview/1.0'},signal:AbortSignal.timeout(5000)})}catch{}
+    const feed=await fetchChannelPreviewPage('https://www.youtube.com/feeds/videos.xml?channel_id='+encodeURIComponent(channelId),'EKODIChannelPreview/1.0',5000);
     const xml=feed?.ok?await feed.text().catch(()=>''):'';
     const videoId=clean(xml.match(/<yt:videoId>([^<]+)<\/yt:videoId>/i)?.[1],40);
     if(/^[A-Za-z0-9_-]{11}$/.test(videoId)){

@@ -128,10 +128,10 @@ test('timeline admin is seeded, permissioned and public materials use central ca
 test('seonammedi channel renderer avoids blocked whole-page embeds and keeps iframe fallback',async()=>{
   const app=await readFile(new URL('app.js',root),'utf8');
   assert.match(app,/channelEmbedPolicy/);
-  assert.match(app,/instagram:'preview'/);
+  assert.match(app,/instagram:'recent-embed'/);
   assert.match(app,/facebook:'preview'/);
   assert.match(app,/youtube:'embed'/);
-  assert.match(app,/policy==='embed'\?safeUrl\(providerPreview\?\.embedUrl\|\|''\):'#'/);
+  assert.match(app,/channelPreviewEmbedUrl/);
   assert.match(app,/setTimeout\(\(\)=>/);
   assert.match(app,/4500/);
   assert.doesNotMatch(app,/providerPreview\?\.embedUrl\|\|\(!providerPreview\?url:''\)/);
@@ -310,6 +310,10 @@ test('seonammedi channel previews use provider-safe embeds and same-origin metad
   ]);
   assert.match(control,/channelPreviewMatch=url\.pathname\.match/);
   assert.ok(control.includes("instagram.com/'+encodeURIComponent(handle)+'/embed/"));
+  assert.match(control,/instagramRecentItems/);
+  assert.match(control,/profileEmbedUrl/);
+  assert.match(control,/preview\.recentItems=instagramRecentItems\(html\)/);
+  assert.match(control,/preview\.contentType='recent-posts'/);
   assert.match(control,/youtube-nocookie\.com\/embed\//);
   assert.match(control,/"videoId":"\(\[A-Za-z0-9_-\]\{11\}\)"/);
   assert.match(control,/preview\.contentType='latest-video'/);
@@ -318,7 +322,9 @@ test('seonammedi channel previews use provider-safe embeds and same-origin metad
   assert.match(control,/feeds\/videos\.xml\?channel_id=/);
   assert.match(control,/provider\.kind!=='youtube'/);
   assert.match(app,/channelPreviewSeq/);
-  assert.match(app,/providerPreview\?\.embedUrl/);
+  assert.match(app,/recentItems/);
+  assert.match(app,/channelPreviewEmbedUrl/);
+  assert.match(app,/최근 공개 콘텐츠/);
   assert.match(app,/frame\.src='about:blank'/);
 });
 
