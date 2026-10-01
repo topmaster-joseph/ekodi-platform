@@ -251,9 +251,15 @@ test('seonammedi exposes seeded related channels on public and admin surfaces',a
   ]);
   assert.match(html,/data-view-link="channels"/);
   assert.match(html,/id="channels"[^>]*data-view-section="channels"/);
-  assert.match(html,/id="publicChannelList"/);
+  assert.match(html,/id="publicChannelTabs"/);
+  assert.match(html,/id="channelPreview"/);
+  assert.match(html,/id="channelPreviewFrame"/);
   assert.match(app,/\/api\/seonammedi\/channels/);
   assert.match(app,/channels:'channels'/);
+  assert.match(app,/function showChannelPreview\(index\)/);
+  assert.match(app,/data-channel-index/);
+  assert.match(app,/ArrowLeft/);
+  assert.match(app,/showChannelPreview\(0\)/);
   assert.match(adminHtml,/data-panel-target="channels"/);
   assert.match(adminHtml,/채널 관리/);
   assert.match(migration,/instagram\.com\/wonokoh/);
