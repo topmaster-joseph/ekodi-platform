@@ -129,23 +129,25 @@ if(materialFilters&&materialList){
 const org=d.organization||{};
 const ORG_GROUP_META=[['bidae','비대위'],['mokpo','목포대'],['minhak','민학비대위']];
 const ORG_LEGACY_KEYS={bidae:'integrated',minhak:'civic'};
+const cleanOrgPublicText=value=>String(value||'').replace(/\s*\([^)]*위원회\s*겸임[^)]*\)/g,'').trim();
+const publicOrgStatusLabel=group=>group?.key!=='minhak'&&String(group?.statusLabel||'').trim()==='운영 중'?'':String(group?.statusLabel||'').trim();
 const orgGroups=Array.isArray(org.groups)&&org.groups.length
   ?ORG_GROUP_META.map(([key,label])=>{const legacyKey=ORG_LEGACY_KEYS[key];const found=org.groups.find(group=>group.key===key)||(legacyKey?org.groups.find(group=>group.key===legacyKey):null);return{...(found||{}),key,label}})
-  :ORG_GROUP_META.map(([key,label],index)=>index===0?{key,label,levels:org.levels||[],committees:org.committees||[],participants:org.participants||[]}:{key,label,status:key==='minhak'?'forming':'active',statusLabel:key==='minhak'?'구성 논의 중':'운영 중',levels:[],committees:[],participants:[]});
+  :ORG_GROUP_META.map(([key,label],index)=>index===0?{key,label,levels:org.levels||[],committees:org.committees||[],participants:org.participants||[]}:{key,label,status:key==='minhak'?'forming':'active',statusLabel:key==='minhak'?'구성 논의 중':'',levels:[],committees:[],participants:[]});
 const chart=el('organizationChart');
 const participantHost=el('participantOrganizations');
 const orgTabs=el('organizationTabs');
 function renderOrganizationGroup(key){
   const group=orgGroups.find(item=>item.key===key)||orgGroups[0];
   if(chart){
-    const status=group.statusLabel?'<p class="note org-status">'+escapeHtml(group.statusLabel)+'</p>':'';
-    const levels=(group.levels||[]).map(level=>'<article class="org-level"><strong>'+escapeHtml(level.name)+'</strong>'+(Array.isArray(level.members)&&level.members.length?'<p>'+level.members.map(escapeHtml).join(' · ')+'</p>':'')+'</article>').join('');
-    const committees=(group.committees||[]).map(item=>'<article class="org-committee"><strong>'+escapeHtml(item.name)+'</strong><span>'+escapeHtml(item.lead||'담당자 확인 중')+'</span></article>').join('');
+    const statusLabel=publicOrgStatusLabel(group);const status=statusLabel?'<p class="note org-status">'+escapeHtml(statusLabel)+'</p>':'';
+    const levels=(group.levels||[]).map(level=>'<article class="org-level"><strong>'+escapeHtml(level.name)+'</strong>'+(Array.isArray(level.members)&&level.members.length?'<p>'+level.members.map(cleanOrgPublicText).filter(Boolean).map(escapeHtml).join(' · ')+'</p>':'')+'</article>').join('');
+    const committees=(group.committees||[]).map(item=>'<article class="org-committee"><strong>'+escapeHtml(item.name)+'</strong><span>'+escapeHtml(cleanOrgPublicText(item.lead)||'담당자 확인 중')+'</span></article>').join('');
     chart.innerHTML=status+((levels||committees)?'<div class="org-levels">'+levels+'</div><div class="org-committees">'+committees+'</div>':'<p class="muted">등록된 조직 구성이 없습니다.</p>');
   }
   if(participantHost){
     const participants=(group.participants||[]).filter(item=>item&&item.visible!==false).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko-KR'));
-    participantHost.innerHTML=participants.length?participants.map(item=>'<article class="participant-item"><strong>'+escapeHtml(item.name||'')+'</strong>'+(item.representative?'<span>대표 '+escapeHtml(item.representative)+'</span>':'')+(item.url?'<a href="'+safeUrl(item.url)+'" target="_blank" rel="noopener noreferrer">연결</a>':'')+'</article>').join(''):'<p class="muted">공개 등록된 참여단체가 없습니다.</p>';
+    participantHost.innerHTML=participants.length?participants.map(item=>'<article class="participant-item"><strong>'+escapeHtml(item.name||'')+'</strong>'+(item.representative?'<span>대표 '+escapeHtml(item.representative)+'</span>':'')+(item.url?'<a href="'+safeUrl(item.url)+'" target="_blank" rel="noopener noreferrer">연결</a>':'')+'</article>').join(''):'<p class="muted">등록 준비중</p>';
   }
   if(orgTabs)[...orgTabs.querySelectorAll('button')].forEach(button=>{const active=button.dataset.orgGroup===group.key;button.classList.toggle('active',active);button.setAttribute('aria-selected',active?'true':'false')});
 }
