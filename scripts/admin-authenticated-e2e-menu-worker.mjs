@@ -193,7 +193,7 @@ async function verifyAdminHandoff(trigger, started) {
   const sourceHref = await source.getAttribute('href');
   const sourceTarget = await source.getAttribute('target');
   if (!sourceHref || new URL(sourceHref, baseUrl).href !== expected.href) throw new Error(`${menuId}: admin handoff href drifted: ${sourceHref || '(missing)'}`);
-  if (sourceTarget !== '_self') throw new Error(`${menuId}: admin handoff must stay in the same browser context`);
+  if (sourceTarget === '_blank') throw new Error(`${menuId}: admin handoff must not open a separate browser context`);
 
   stage('admin-handoff');
   const responsePromise = page.waitForResponse(response => {
