@@ -111,6 +111,20 @@
 .ekodi-ai-routes form{border-top:1px solid #dedede;padding-top:5px}
 .ekodi-ai-routes form:first-of-type{border-top:0}
 .ekodi-ai-provider-fields input[type=checkbox]{accent-color:#111}
+/* AIOPS-STRICT-WHITE-BLACK-READABILITY-20261002 */
+#aiOpsPanel{background:#fff!important;color:#000!important}
+#aiOpsPanel :where(section,article,form,details,summary,div,label,output){color:#000!important}
+#aiOpsPanel [data-ekodi-ai-provider-center],
+#aiOpsPanel [data-ekodi-unified-provider]{background:#fff!important;color:#000!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] :where(article,form,details,.ekodi-ai-provider-status-note,.ekodi-ai-no-secret,.ekodi-ai-cost-alert,.ekodi-ai-secret-manager-warning,.ekodi-ai-provider-meta span,.ekodi-ai-state,.ekodi-ai-chain-step),
+#aiOpsPanel [data-ekodi-unified-provider] :where(article,.ekodi-up-status){background:#fff!important;color:#000!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] :where(button,a,input,select),
+#aiOpsPanel [data-ekodi-unified-provider] :where(button,a,input,select){background:#fff!important;color:#000!important;border-color:#111!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] :where(p,small,span,label,output,summary,strong,h3,h4),
+#aiOpsPanel [data-ekodi-unified-provider] :where(p,small,span,label,output,summary,strong,h3,h4){color:#000!important;opacity:1!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] ::placeholder,
+#aiOpsPanel [data-ekodi-unified-provider] ::placeholder{color:#333!important;opacity:1!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-chain-step b{background:#fff!important;color:#000!important;border:1px solid #000!important}
 /* AI-PROVIDER-BLACK-TEXT-WHITE-BG-20261002 */
 #aiOpsPanel [data-ekodi-ai-provider-center],
 #aiOpsPanel [data-ekodi-ai-provider-center] *,
