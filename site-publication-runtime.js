@@ -363,7 +363,7 @@ export async function sitePublicationAuthority(request,env,site,{platformSession
 
 function siteApiHeaders(request){
   const headers=new Headers({'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','vary':'Origin'});
-  const origin=clean(request.headers.get('origin'),500);try{const u=new URL(origin);if(u.protocol==='https:')headers.set('access-control-allow-origin',origin)}catch{}
+  const origin=clean(request.headers.get('origin'),500);try{const u=new URL(origin);if(u.protocol==='https:'&&u.hostname==='ekodi.kr')headers.set('access-control-allow-origin',origin)}catch{}
   headers.set('access-control-allow-methods','GET,PUT,OPTIONS');headers.set('access-control-allow-headers','authorization,content-type');return headers;
 }
 const siteApiJson=(request,data,status=200)=>new Response(JSON.stringify(data),{status,headers:siteApiHeaders(request)});
