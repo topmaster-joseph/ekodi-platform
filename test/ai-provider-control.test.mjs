@@ -208,6 +208,19 @@ test('AI Ops provider control enforces white background and black text for reada
 });
 
 
+test('provider snapshot exposes explicit operational readiness fields',()=>{
+  const api=read('ai-provider-control.js');
+  const admin=read('admin-provider-control.js');
+  assert.match(api,/trafficEligible/);
+  assert.match(api,/verificationPassed/);
+  assert.match(api,/activationState/);
+  assert.match(api,/fallbackEligible:trafficEligible/);
+  assert.match(admin,/라우팅 가능/);
+  assert.match(admin,/런타임 /);
+  assert.match(admin,/검증 /);
+  assert.match(admin,/보호 /);
+});
+
 test('guarded free providers require explicit no-charge confirmation and Qwen has a safe Singapore base fallback',()=>{
   const api=read('ai-provider-control.js');
   const adapters=read('extended-free-provider-adapters.js');
