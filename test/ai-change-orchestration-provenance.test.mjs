@@ -10,7 +10,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const validator = path.join(root, 'scripts', 'validate-ekodi-ai-change-orchestration.mjs');
 const sha = '1111111111111111111111111111111111111111';
 
-function run(provenance, { message = 'squashed change', lookup = null } = {}) {
+function run(provenance, { message = 'squashed change', lookup = null, branch = 'main' } = {}) {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'ekodi-ai-provenance-'));
   const eventPath = path.join(temp, 'event.json');
   const provenancePath = path.join(temp, 'pulls.json');
@@ -24,7 +24,7 @@ function run(provenance, { message = 'squashed change', lookup = null } = {}) {
     env: {
       ...process.env,
       GITHUB_EVENT_NAME: 'push',
-      GITHUB_REF_NAME: 'main',
+      GITHUB_REF_NAME: branch,
       GITHUB_EVENT_PATH: eventPath,
       GITHUB_REPOSITORY: 'topmaster-joseph/ekodi-platform',
       GITHUB_RUN_ID: 'provenance-test',
@@ -157,6 +157,18 @@ test('rejects a direct main push with no associated PR', () => {
   const result = run([]);
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /direct push to main is forbidden/);
+});
+
+test('accepts a verified development integration merge from an EKODI AI branch', () => {
+  const result = run([validPr({ base: { ref: 'development' } })], { branch: 'development' });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /source=protected-development-pr-merge/);
+});
+
+test('rejects a direct development integration push with no associated PR', () => {
+  const result = run([], { branch: 'development' });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /direct push to development is forbidden/);
 });
 
 test('rejects provenance from an unmerged PR', () => {
