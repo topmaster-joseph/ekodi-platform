@@ -1,0 +1,83 @@
+(()=>{
+'use strict';
+
+const cfg=window.EKODI_MY_CONFIG||{};
+const $=selector=>document.querySelector(selector);
+const form=$('#digitalCardForm');
+if(!form)return;
+
+const fields={
+  phone:$('#digitalCardPhone'),
+  email:$('#digitalCardEmail'),
+  exchangeEnabled:$('#digitalCardExchangeEnabled'),
+  roles:$('#digitalCardRoles'),
+  contexts:$('#digitalCardContexts'),
+  addRole:$('#digitalCardAddRole'),
+  addContext:$('#digitalCardAddContext'),
+  save:$('#digitalCardSave'),
+  status:$('#digitalCardStatus'),
+  link:$('#digitalCardLink'),
+  qrLink:$('#digitalCardQrLink'),
+  inbox:$('#contactExchangeInbox'),
+  inboxStatus:$('#contactExchangeInboxStatus'),
+};
+let rowSequence=0;
+
+function auth(){return window.EKODI_MY_AUTH||null}
+function token(){return String(auth()?.getAccessToken?.()||'')}
+function signedIn(){return Boolean(auth()?.isSignedIn?.()&&token())}
+function nextKey(prefix){rowSequence+=1;return `${prefix}-${rowSequence}`}
+function normalizeKey(value,fallback='item'){
+  const key=String(value||'').trim().toLowerCase().replace(/[^a-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40);
+  return /^[a-z0-9]/.test(key)?key:nextKey(fallback);
+}
+function setStatus(text,kind=''){
+  fields.status.className=`profile-status${kind?` ${kind}`:''}`;
+  fields.status.textContent=text;
+}
+async function rpc(name,args={}){
+  const accessToken=token();
+  if(!accessToken||!cfg.supabaseUrl||!cfg.supabasePublishableKey)throw new Error('로그인이 필요합니다.');
+  const response=await fetch(`${String(cfg.supabaseUrl).replace(/\/$/,'')}/rest/v1/rpc/${name}`,{
+    method:'POST',
+    headers:{Authorization:`Bearer ${accessToken}`,apikey:cfg.supabasePublishableKey,'content-type':'application/json','cache-control':'no-store'},
+    body:JSON.stringify(args),
+  });
+  const data=await response.json().catch(()=>null);
+  if(!response.ok)throw new Error(String(data?.message||data?.error||'개인 공유 설정을 처리하지 못했습니다.'));
+  return data||{};
+}
+function smallButton(label){
+  const button=document.createElement('button');
+  button.type='button';button.className='text-button';button.textContent=label;
+  return button;
+}
+function roleRow(item={}){
+  const row=document.createElement('div');row.className='digital-card-affiliation digital-card-role';
+  const top=document.createElement('div');top.className='digital-card-affiliation-top';
+  const name=document.createElement('input');name.name='roleName';name.maxLength=120;name.placeholder='소속/역할명';name.value=String(item.name||'');
+  const title=document.createElement('input');title.name='roleTitle';title.maxLength=120;title.placeholder='직함';title.value=String(item.title||'');
+  const remove=smallButton('삭제');remove.addEventListener('click',()=>{row.remove();refreshRoleOptions()});
+  top.append(name,title,remove);
+  const key=document.createElement('input');key.name='roleKey';key.maxLength=40;key.autocapitalize='none';key.autocomplete='off';key.placeholder='공유용 ID (예: ekodi)';key.value=String(item.key||nextKey('role'));
+  const description=document.createElement('textarea');description.name='roleDescription';description.maxLength=800;description.rows=2;description.placeholder='이 역할에서 하는 일·소개';description.value=String(item.description||'');
+  const url=document.createElement('input');url.name='roleUrl';url.type='url';url.inputMode='url';url.maxLength=1000;url.placeholder='https://관련 링크';url.value=String(item.url||'');
+  const activeWrap=document.createElement('label');activeWrap.className='digital-card-check';
+  const active=document.createElement('input');active.type='checkbox';active.name='roleActive';active.checked=item.active!==false;
+  activeWrap.append(active,document.createTextNode(' 역할 사용'));
+  row.append(top,key,description,url,activeWrap);
+  key.addEventListener('change',()=>{key.value=normalizeKey(key.value,'role');refreshRoleOptions()});
+  name.addEventListener('input',refreshRoleOptions);
+  title.addEventListener('input',refreshRoleOptions);
+  return row;
+}
+function currentRoleOptions(){
+  return [...fields.roles.querySelectorAll('.digital-card-role')].map(row=>({
+    key:String(row.querySelector('[name="roleKey"]')?.value||'').trim().toLowerCase(),
+    label:[String(row.querySelector('[name="roleName"]')?.value||'').trim(),String(row.querySelector('[name="roleTitle"]')?.value||'').trim()].filter(Boolean).join(' · '),
+  })).filter(item=>item.key);
+}
+function refreshRoleOptions(){
+  const options=currentRoleOptions();
+  for(const select of fields.contexts.querySelectorAll('[name="contextRole"]')){
+    const selected=selec
