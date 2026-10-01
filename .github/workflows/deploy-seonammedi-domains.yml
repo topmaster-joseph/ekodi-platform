@@ -1,4 +1,4 @@
-name: Deploy SeonamMedi Domain Redirects (Manual Topology Change)
+name: Deploy SeonamMedi Domain Gateway (Manual Topology Change)
 # deployment-guardrail: topology-workflow-manual-only
 
 on:
@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ekodi-seonammedi-domain-redirect
+  group: ekodi-seonammedi-domain-gateway
   cancel-in-progress: false
 
 jobs:
@@ -46,27 +46,29 @@ jobs:
             echo "$zone active with expected Cloudflare delegation."
           done
 
-      - name: Deploy dedicated redirect Worker
+      - name: Deploy dedicated domain-preserving Worker
         run: npx --yes wrangler@4.119.0 deploy --config wrangler.seonammedi-redirect.toml
 
-      - name: Verify external redirects
+      - name: Verify external domain preservation
         shell: bash
         run: |
           set -u
           failed=0
           verify() {
-            old="$1"; path="$2"; expected="$3"; code=000; location=""
+            host="$1"; path="$2"; expected_upstream="$3"; code=000; location=""; mode=""; upstream=""
             for attempt in $(seq 1 24); do
               rm -f /tmp/headers
-              curl -sS -o /dev/null -D /tmp/headers --connect-timeout 10 --max-time 20 "https://$old$path" || true
+              curl -sS -o /dev/null -D /tmp/headers --connect-timeout 10 --max-time 20 "https://$host$path" || true
               code=$(awk 'toupper($1) ~ /^HTTP\// {c=$2} END {print c+0}' /tmp/headers 2>/dev/null || echo 0)
               location=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' /tmp/headers 2>/dev/null || true)
-              if [ "$code" = "301" ] && [ "$location" = "$expected" ]; then break; fi
+              mode=$(awk 'BEGIN{IGNORECASE=1} /^x-ekodi-domain-mode:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' /tmp/headers 2>/dev/null || true)
+              upstream=$(awk 'BEGIN{IGNORECASE=1} /^x-ekodi-upstream-path:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' /tmp/headers 2>/dev/null || true)
+              if [ "$code" = "200" ] && [ -z "$location" ] && [ "$mode" = "customer-domain-preserved" ] && [ "$upstream" = "$expected_upstream" ]; then break; fi
               sleep 5
             done
-            echo "$old$path http=$code location=$location"
-            if [ "$code" != "301" ] || [ "$location" != "$expected" ]; then failed=1; fi
+            echo "$host$path http=$code location=$location mode=$mode upstream=$upstream"
+            if [ "$code" != "200" ] || [ -n "$location" ] || [ "$mode" != "customer-domain-preserved" ] || [ "$upstream" != "$expected_upstream" ]; then failed=1; fi
           }
-          verify "seonammedi.kr" "/domain-check?source=ekodi" "https://ekodi.kr/seonammedi/domain-check?source=ekodi"
-          verify "xn--3e0b8b58jw4co4mnpll3k.kr" "/admin/?source=ekodi" "https://ekodi.kr/seonammedi/admin/?source=ekodi"
+          verify "seonammedi.kr" "/?source=ekodi" "/seonammedi/"
+          verify "xn--3e0b8b58jw4co4mnpll3k.kr" "/?source=ekodi" "/seonammedi/"
           exit "$failed"
