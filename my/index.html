@@ -116,28 +116,30 @@
       <p id="lifeChannelStatus" class="section-note">&#49444;&#51221;&#51008; &#51060; &#48652;&#46972;&#50864;&#51200;&#51032; My EKODI &#44060;&#51064; &#44277;&#44036;&#50640; &#51200;&#51109;&#46121;&#45768;&#45796;. &#48124;&#44048;&#54620; &#47700;&#49884;&#51648; &#50896;&#47928;&#51060;&#45208; &#51064;&#51613;&#51221;&#48372;&#45716; &#51200;&#51109;&#54616;&#51648; &#50506;&#49845;&#45768;&#45796;.</p>
     </section>
 
-    <section id="workspaces" class="section workspace-section my-tab-section" data-my-tab-section="services">
+    <nav class="services-subtabs my-tab-section" data-my-tab-section="services" aria-label="내 서비스 세부 메뉴">
+      <button type="button" data-services-tab="services" aria-selected="true">서비스</button>
+      <button type="button" data-services-tab="spaces">내 공간</button>
+      <button type="button" data-services-tab="status">현황</button>
+    </nav>
+
+    <section id="workspaces" class="section workspace-section my-tab-section" data-my-tab-section="services" data-services-panel="spaces">
       <div class="section-head"><div><p class="eyebrow">MY SPACES</p><h2>내 공간</h2></div><p>공간 선택은 여기 한 곳에서만 합니다. 선택한 공간은 다른 EKODI 서비스로 이동할 때 기본 컨텍스트로 이어집니다.</p></div>
       <div id="workspaceList" class="workspace-grid"><div class="empty"><strong>Workspace가 아직 연결되지 않았습니다.</strong><p>로그인 후 개인·사업장·교회·기관 공간을 불러옵니다.</p></div></div>
     </section>
 
     <section id="activity" class="section activity-overview my-tab-section" data-my-tab-section="activity" aria-label="최근 활동">
-      <div class="section-head"><div><p class="eyebrow">RECENT · CONTEXT</p><h2>최근 활동</h2></div><p>최근 사용한 서비스와 작업 흐름을 기준으로 다시 이어갈 곳을 보여줍니다.</p></div>
-      <div class="activity-overview-grid">
-        <a href="#creator"><strong>최근 작업</strong><span id="activityWorkHint">최근 작업을 확인합니다.</span></a>
-        <a href="#platforms"><strong>최근 서비스</strong><span>마지막으로 사용한 서비스 흐름을 이어갑니다.</span></a>
-        <a href="#workspaces"><strong>현재 공간</strong><span>선택한 Workspace 맥락을 확인합니다.</span></a>
-      </div>
+      <div class="section-head"><div><p class="eyebrow">RECENT · CONTEXT</p><h2>최근 활동</h2></div><p>실제 최근 작업·사용 신호·현재 공간을 기준으로 다시 이어갈 곳을 보여줍니다.</p></div>
+      <div id="activityTimeline" class="activity-timeline" aria-live="polite"><div class="empty"><strong>최근 활동을 확인하고 있습니다.</strong></div></div>
     </section>
 
-    <section class="summary my-tab-section" data-my-tab-section="services" aria-label="My EKODI 요약">
+    <section class="summary my-tab-section" data-my-tab-section="services" data-services-panel="status" aria-label="My EKODI 요약">
       <article><span id="workspaceCount">0</span><small>내 공간</small></article>
       <article><span id="serviceCount">0</span><small>연결 서비스</small></article>
       <article><span id="creatorCount">0</span><small>내 작업</small></article>
       <article><span id="paidCount">0</span><small>이용 플랜</small></article>
     </section>
 
-    <section id="platforms" class="section my-tab-section" data-my-tab-section="services">
+    <section id="platforms" class="section my-tab-section" data-my-tab-section="services" data-services-panel="services">
       <div class="section-head"><div><p class="eyebrow">MY PLATFORMS</p><h2>내가 꺼내 쓰는 EKODI</h2></div><p>현재 쓰는 것과 지금 관심이 생긴 것만 먼저 보여줍니다. 서비스 전체 목록은 내가 찾을 때만 엽니다.</p></div>
       <div id="platformList"><div class="empty"><strong>로그인하면 필요한 서비스만 나타납니다.</strong><p>연결 상태와 관심 신호를 바탕으로 꼭 필요한 만큼만 제안합니다.</p></div></div>
       <div class="service-discovery-control"><button id="discoverServicesButton" class="secondary" type="button" aria-expanded="false" hidden>필요한 서비스 찾기</button><span>전체 목록은 내가 원할 때만 펼칩니다.</span><details class="my-utility-discovery"><summary>개인 도구</summary><a class="text-link" href="/my/device-care/">내 PC</a></details></div>
