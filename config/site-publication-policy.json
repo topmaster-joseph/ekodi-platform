@@ -36,7 +36,8 @@
     "preserveApiOperationsWhenPrivate": true,
     "localOverrideForbidden": true,
     "auditEveryMutation": true,
-    "failOpenOnReadFailure": true
+    "failOpenOnReadFailure": true,
+    "readFailureDisposition": "fail-open-to-preserve-public-availability"
   },
   "ui": {
     "platformAdmin": "/admin#public-site-controls",
