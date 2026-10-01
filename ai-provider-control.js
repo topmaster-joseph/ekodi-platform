@@ -6,7 +6,8 @@ import { listOpenAiCostAlerts, loadFreeQuotaStates, quotaCapabilities, recordAiC
 import { createCloudflareWorkersAiProvider } from './cloudflare-workers-ai-provider-adapter.js';
 import { createOpenRouterFreeProvider } from './openrouter-free-provider-adapter.js';
 import { createGroqFreeProvider } from './groq-free-provider-adapter.js';
-import { createCerebrasFreeProvider, createQwenFreeProvider, createDeepSeekFreeCreditProvider, createHuggingFaceFreeCreditProvider } from './extended-free-provider-adapters.js';
+import { createCerebrasFreeProvider, createQwenFreeProvider, createDeepSeekFreeCreditProvider } from './extended-free-provider-adapters.js';
+import { createHuggingFaceProvider } from './huggingface-provider-adapter.js';
 
 const PREFIX='/api/ai-modules/v1/providers';
 const ADMIN_BASE=`${PREFIX}/admin`;
@@ -138,7 +139,7 @@ async function invokeProvider(env,id,model,system,input,maxOutputTokens=4096){
     return{text:result.text,provider:id,model:result.model||model||DEFAULTS[id].model,inputUnits:0,outputUnits:0,cachedUnits:0,quota:result.quota||null};
   }
   if(id==='huggingface-free-credit'){
-    const result=await createHuggingFaceFreeCreditProvider({...env,EKODI_HF_FREE_MODEL:model||DEFAULTS[id].model},{fetchImpl:globalThis.fetch}).invoke({prompt:[system,input].filter(Boolean).join('\n\n')});
+    const result=await createHuggingFaceProvider({...env,EKODI_HF_FREE_MODEL:model||DEFAULTS[id].model},{fetchImpl:globalThis.fetch}).invoke({prompt:[system,input].filter(Boolean).join('\n\n')});
     return{text:result.text,provider:id,model:result.model||model||DEFAULTS[id].model,inputUnits:0,outputUnits:0,cachedUnits:0,quota:result.quota||null};
   }
   throw new Error('unsupported_provider');
