@@ -38,6 +38,7 @@ on:
       - 'supabase/migrations/*my_personalization*.sql'
       - 'supabase/migrations/*person_public_profiles*.sql'
       - 'supabase/migrations/*person_digital_card*.sql'
+      - 'supabase/migrations/*person_identity_share*.sql'
       - 'test/person-public-profile.test.mjs'
       - '.github/workflows/deploy-my.yml'
   push:
@@ -91,6 +92,7 @@ concurrency:
 env:
   WRANGLER_VERSION: '4.119.0'
   DIGITAL_CARD_MIGRATION: supabase/migrations/20260930002300_person_digital_card_exchange.sql
+  IDENTITY_SHARE_MIGRATION: supabase/migrations/20261001034500_person_identity_share_contexts.sql
 
 jobs:
   validate:
@@ -112,6 +114,7 @@ jobs:
           node --check my/person-digital-card.js
           node --check my/digital-card-admin.js
           node --check my/digital-card.js
+          node --check my/digital-card-qr.js
           node --check my/docs/docs.js
           node --check my/approval-brief.js
           node --check my/approvals/app.js
@@ -135,6 +138,10 @@ jobs:
           test -f "$DIGITAL_CARD_MIGRATION"
           grep -Fq 'private.person_digital_cards' "$DIGITAL_CARD_MIGRATION"
           grep -Fq 'submit_person_contact_exchange' "$DIGITAL_CARD_MIGRATION"
+          test -f "$IDENTITY_SHARE_MIGRATION"
+          grep -Fq 'private.person_identity_roles' "$IDENTITY_SHARE_MIGRATION"
+          grep -Fq 'person_identity_share' "$IDENTITY_SHARE_MIGRATION"
+          grep -Fq 'submit_person_contact_exchange_v2' "$IDENTITY_SHARE_MIGRATION"
           node --test test/universal-membership-contract.test.mjs test/my-ekodi-contract.test.mjs test/my-private-workspace-routing.test.mjs test/my-manifest-services.test.mjs test/my-life-journey.test.mjs test/my-life-communication.test.mjs test/my-progressive-personalization.test.mjs test/my-docs-ai.test.mjs test/my-intent-os.test.mjs test/my-intent-execution-bridge.test.mjs test/person-public-profile.test.mjs
           test -f deploy/manifests/my.worker.json
 
@@ -306,6 +313,53 @@ jobs:
           [ "$code" = '200' ]
           grep -Eq '"ok"[[:space:]]*:[[:space:]]*false' /tmp/digital-card-probe.json
           echo 'Digital card schema and anonymous public projection are ready.'
+      - name: Ensure personal identity share-context schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="$MY_SUPABASE_URL/rest/v1/rpc/person_identity_share"
+          probe_code=$(curl -sS -o /tmp/identity-share-preflight.json -w '%{http_code}' \
+            -X POST "$endpoint" \
+            -H "apikey: $MY_SUPABASE_PUBLISHABLE_KEY" \
+            -H 'Content-Type: application/json' \
+            --data '{"p_handle":"ekodi-card-probe","p_context":null}' || true)
+          if [[ "$probe_code" == '200' ]] && grep -Eq '"ok"[[:space:]]*:[[:space:]]*false' /tmp/identity-share-preflight.json; then
+            echo 'Personal identity share-context schema already exists.'
+            exit 0
+          fi
+          token="${TOKEN_A:-}"
+          [ -n "$token" ] || token="${TOKEN_B:-}"
+          [ -n "$token" ] || token="${TOKEN_C:-}"
+          [ -n "$token" ] || token="${TOKEN_D:-}"
+          if [ -z "$token" ]; then
+            echo 'Personal identity share-context schema is missing and no Supabase production deployment credential is configured.'
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          jq -Rs '{query:.,read_only:false}' "$IDENTITY_SHARE_MIGRATION" > /tmp/identity-share-migration.json
+          code=$(curl -sS -o /tmp/identity-share-migration-result.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/renzehysxirjilvdxacv/database/query" \
+            -H "Authorization: Bearer $token" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/identity-share-migration.json)
+          if [ "$code" != '201' ]; then
+            echo "Personal identity share-context migration failed with HTTP $code."
+            cat /tmp/identity-share-migration-result.json
+            exit 1
+          fi
+      - name: Verify personal identity share-context database contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="$MY_SUPABASE_URL/rest/v1/rpc/person_identity_share"
+          code=$(curl -sS -o /tmp/identity-share-probe.json -w '%{http_code}' \
+            -X POST "$endpoint" \
+            -H "apikey: $MY_SUPABASE_PUBLISHABLE_KEY" \
+            -H 'Content-Type: application/json' \
+            --data '{"p_handle":"ekodi-card-probe","p_context":null}')
+          [ "$code" = '200' ]
+          grep -Eq '"ok"[[:space:]]*:[[:space:]]*false' /tmp/identity-share-probe.json
+          echo 'Personal identity share-context projection is ready.'
       - name: Generate universal user-service registry
         run: npm run generate:user-services
       - name: Verify Cloudflare credentials
