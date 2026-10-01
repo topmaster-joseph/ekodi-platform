@@ -102,7 +102,7 @@ test('provider admin presents compact explicit connection status without exposin
   assert.match(admin,/운영 \$\{operational\?'가동':'비가동'\}/);
   assert.match(admin,/런타임 \$\{esc\(sync\)\}/);
   assert.match(admin,/aria-live="polite"/);
-  assert.match(admin,/grid-template-columns:repeat\(2,minmax\(360px,1fr\)\)/);
+  assert.match(admin,/grid-template-columns:repeat\(3,minmax\(285px,1fr\)\)/);
   assert.match(admin,/min-height:30px/);
   assert.doesNotMatch(admin,/type="text"[^>]*data-ai-field="secret"/);
 });
@@ -144,7 +144,32 @@ test('admin provider UI explains runtime sync failures instead of showing the ra
 test('provider status cards explain free and paid usage',()=>{
   const admin=read('admin-provider-control.js');
   assert.match(admin,/무료 한도 우선 사용/);
-  assert.match(admin,/유료 API · 크레딧 필요/);
-  assert.match(admin,/지속 무료 사용 없음/);
+  assert.match(admin,/OpenRouter Free/);
+  assert.match(admin,/Groq Free/);
+  assert.match(admin,/명시적 예산\/승인 필요/);
   assert.match(admin,/ekodi-ai-provider-status-note/);
+});
+
+
+test('common provider contract exposes canonical free-first six-provider order',()=>{
+  assert.deepEqual(AI_PROVIDER_CONTROL_CONTRACT.providerOrder,[
+    'cloudflare-workers-ai','gemini','openrouter-free','groq-free','openai','anthropic'
+  ]);
+  const migration=read('migrations/0120_common_ai_provider_chain.sql');
+  assert.match(migration,/Cloudflare \/ 무료 자원/);
+  assert.match(migration,/\["gemini","openrouter-free","groq-free","openai","anthropic"\]/);
+  assert.match(migration,/OpenAI · 유료 승인/);
+  assert.match(migration,/Claude · 유료 승인/);
+});
+
+test('provider admin shows the canonical chain and secretless Cloudflare card contract',()=>{
+  const admin=read('admin-provider-control.js');
+  assert.match(admin,/Cloudflare \/ 무료 자원/);
+  assert.match(admin,/Gemini Free/);
+  assert.match(admin,/OpenRouter Free/);
+  assert.match(admin,/Groq Free/);
+  assert.match(admin,/OpenAI · 유료 승인/);
+  assert.match(admin,/Claude · 유료 승인/);
+  assert.match(admin,/API Key 없음/);
+  assert.match(admin,/canonicalFallbacks/);
 });
