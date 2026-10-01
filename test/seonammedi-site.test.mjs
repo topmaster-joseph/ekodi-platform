@@ -26,7 +26,7 @@ test('seonammedi static headers allow its first-party CSS, JS and API calls',asy
 test('seonammedi daily monitoring reuses the existing Control API cron instead of adding a sixth Cloudflare trigger',async()=>{const [siteWrangler,apiWrangler,mission,monitor,router]=await Promise.all([readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8'),readFile(new URL('../wrangler.api.toml',import.meta.url),'utf8'),readFile(new URL('../mission-control-entry-worker.js',import.meta.url),'utf8'),readFile(new URL('../seonammedi-monitor.js',import.meta.url),'utf8'),readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8')]);assert.doesNotMatch(siteWrangler,/\[triggers\]/);assert.match(apiWrangler,/crons = \["\*\/10 \* \* \* \*"\]/);assert.match(mission,/runSeonamMediDailyCheck/);assert.match(mission,/getUTCHours\(\) === 23/);assert.match(monitor,/status:'already_checked'/);assert.match(monitor,/existing-control-cron/);assert.doesNotMatch(router,/async scheduled\(_controller,env,ctx\)/);});
 
 
-test('seonammedi source changes are wired to both Shared Site and Control API releases',async()=>{const [shared,control,manifestText]=await Promise.all([readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8'),readFile(new URL('../.github/workflows/deploy-control-api.yml',import.meta.url),'utf8'),readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8')]);for(const marker of ["sites/seonammedi/public/**","seonammedi-monitor.js","seonammedi-civic-control.js","seonammedi-admin-control.js","migrations/0113_seonammedi_site_admin.sql","migrations/0116_seonammedi_full_menu_admin.sql","test/seonammedi-site.test.mjs"])assert.ok(shared.includes(marker),marker);for(const marker of ["seonammedi-monitor.js","seonammedi-civic-control.js","seonammedi-admin-control.js","migrations/0113_seonammedi_site_admin.sql","migrations/0116_seonammedi_full_menu_admin.sql","test/seonammedi-site.test.mjs"])assert.ok(control.split(marker).length>=3,marker);const manifest=JSON.parse(manifestText);const urls=new Set(manifest.worker.requests.map(item=>item.url));for(const url of ['https://ekodi.kr/seonammedi/','https://ekodi.kr/seonammedi/app.js','https://ekodi.kr/api/seonammedi/voices/health','https://ekodi.kr/seonammedi/data.json','https://ekodi.kr/seonam-medi','https://ekodi.kr/seonam-med'])assert.ok(urls.has(url),url);const publicProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/seonammedi/');assert.ok(publicProbe);assert.ok(!publicProbe.expect.includes('사이트 일일점검'));const adminProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/seonammedi/admin/');assert.ok(adminProbe);for(const label of ['사이트 점검','정적 상태','동적 상태'])assert.ok(adminProbe.expect.includes(label),label);const legacy=manifest.worker.requests.filter(item=>['https://ekodi.kr/seonam-medi','https://ekodi.kr/seonam-med'].includes(item.url));assert.ok(legacy.every(item=>item.statuses.includes(404)));});
+test('seonammedi source changes are wired to both Shared Site and Control API releases',async()=>{const [shared,control,manifestText]=await Promise.all([readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8'),readFile(new URL('../.github/workflows/deploy-control-api.yml',import.meta.url),'utf8'),readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8')]);for(const marker of ["sites/seonammedi/public/**","seonammedi-monitor.js","seonammedi-civic-control.js","seonammedi-admin-control.js","migrations/0113_seonammedi_site_admin.sql","migrations/0116_seonammedi_full_menu_admin.sql","test/seonammedi-site.test.mjs"])assert.ok(shared.includes(marker),marker);for(const marker of ["seonammedi-monitor.js","seonammedi-civic-control.js","seonammedi-admin-control.js","migrations/0113_seonammedi_site_admin.sql","migrations/0116_seonammedi_full_menu_admin.sql","test/seonammedi-site.test.mjs"])assert.ok(control.split(marker).length>=3,marker);const manifest=JSON.parse(manifestText);const urls=new Set(manifest.worker.requests.map(item=>item.url));for(const url of ['https://ekodi.kr/seonammedi/','https://ekodi.kr/seonammedi/app.js','https://ekodi.kr/api/seonammedi/voices/health','https://ekodi.kr/seonammedi/data.json','https://ekodi.kr/seonam-medi','https://ekodi.kr/seonam-med'])assert.ok(urls.has(url),url);const publicProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/seonammedi/');assert.ok(publicProbe);assert.ok(!publicProbe.expect.includes('사이트 일일점검'));const adminProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/seonammedi/admin/');assert.ok(adminProbe);for(const label of ['사이트 점검','정적 상태','동적 상태'])assert.ok(!adminProbe.expect.includes(label),label);const legacy=manifest.worker.requests.filter(item=>['https://ekodi.kr/seonam-medi','https://ekodi.kr/seonam-med'].includes(item.url));assert.ok(legacy.every(item=>item.statuses.includes(404)));});
 
 
 test('seonammedi branding is canonical and legacy public paths are deleted',async()=>{const html=await readFile(new URL('index.html',root),'utf8');assert.match(html,/서남권 국립의대 소통센터/);assert.doesNotMatch(html,/시민소통센터/);assert.match(html,/\/seonammedi\/app\.css/);});
@@ -163,7 +163,7 @@ test('seonammedi public and admin menus keep the agreed content-first order',asy
   assert.match(html,/data-view-link="records">관련자료<\/a>/);
   assert.doesNotMatch(html,/data-view-link="timeline"|data-view-link="materials"/);
   assert.match(html,/data-view-section="records"/);
-  const adminOrder=['운영홈','사이트 점검','현재상황','조직','공지','관련자료','시민의 목소리','후원·회계','내부 회의록','채널','권한·관리자'];
+  const adminOrder=['운영홈','현재상황','조직','공지','관련자료','시민의 목소리','후원·회계','내부 회의록','채널','권한·관리자'];
   cursor=-1;for(const label of adminOrder){const next=adminHtml.indexOf('>'+label+'</button>',cursor+1);assert.ok(next>cursor,'admin menu order: '+label);cursor=next}
   assert.doesNotMatch(adminHtml,/data-panel-target="timeline"/);
   assert.match(adminHtml,/data-panel-target="content"[^>]*>관련자료<\/button>/);
@@ -291,52 +291,8 @@ test('seonammedi admin auth handoff is same-origin and finance API is production
 });
 
 
-test('seonammedi automatic site checks are admin-only and split static from dynamic health',async()=>{
-  const [html,app,adminHtml,adminJs]=await Promise.all([
-    readFile(new URL('index.html',root),'utf8'),
-    readFile(new URL('app.js',root),'utf8'),
-    readFile(new URL('admin/index.html',root),'utf8'),
-    readFile(new URL('admin/admin.js',root),'utf8')
-  ]);
-  assert.doesNotMatch(html,/monitorBadge|id="monitor"|사이트 일일점검/);
-  assert.doesNotMatch(app,/siteReady\.finally\(\(\)=>loadMonitor\(\)\)/);
-  assert.match(adminHtml,/data-panel-target="site-health"/);
-  assert.match(adminHtml,/정적 상태/);
-  assert.match(adminHtml,/동적 상태/);
-  assert.match(adminHtml,/id="reloadSiteHealth"/);
-  assert.match(adminJs,/function loadSiteHealth\(\)/);
-  assert.match(adminJs,/\/api\/seonammedi\/monitor/);
-  assert.match(adminJs,/자동점검 정보는 관리자 화면에만 표시/);
-});
-
-test('seonammedi monitor D1 insert keeps column and value arity aligned',async()=>{
+test('seonammedi site admin delegates automatic checks to the platform super admin',async()=>{\n  const adminHtml=await readFile(new URL('admin/index.html',root),'utf8');\n  assert.doesNotMatch(adminHtml,/data-panel-target=\"site-health\"|>사이트 점검<|>정적 상태<|>동적 상태</);\n});\n\ntest('seonammedi monitor D1 insert keeps column and value arity aligned',async()=>{
   const monitor=await readFile(new URL('../seonammedi-monitor.js',import.meta.url),'utf8');
   assert.match(monitor,/INSERT INTO seonammedi_monitor_items \(fingerprint,title,url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,resolved_url,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text\) VALUES \(\?,\?,\?,\?,\?,\?,\?,'source_only',\?,\?,\?,\?,\?,\?,\?,\?,\?,\?\)/);
 });
 
-test('seonammedi dynamic health separates live response from previous run history',async()=>{
-  const [adminHtml,adminJs]=await Promise.all([
-    readFile(new URL('admin/index.html',root),'utf8'),
-    readFile(new URL('admin/admin.js',root),'utf8')
-  ]);
-  assert.match(adminHtml,/동적 현재 상태/);
-  assert.match(adminHtml,/과거 오류 기록이 현재 API 상태를 덮어쓰지 않습니다/);
-  assert.match(adminJs,/runHistoryState/);
-  assert.match(adminJs,/자동수집 API 현재 응답/);
-  assert.match(adminJs,/최근 자동점검 실행/);
-  assert.match(adminJs,/liveDynamicRows=dynamicRows\.filter\(x=>x\.label!=='최근 자동점검 실행'\)/);
-});
-
-test('seonammedi manual site health run is admin-only',async()=>{
-  const [control,adminHtml,adminJs]=await Promise.all([
-    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
-    readFile(new URL('admin/index.html',root),'utf8'),
-    readFile(new URL('admin/admin.js',root),'utf8')
-  ]);
-  assert.match(control,/admin\/monitor\/run/);
-  assert.match(control,/runSeonamMediDailyCheck\(env,\{scheduledAt:new Date\(\)\.toISOString\(\),force:true\}\)/);
-  assert.match(control,/health_forbidden/);
-  assert.match(adminHtml,/id="runSiteHealth"/);
-  assert.match(adminJs,/\/api\/seonammedi\/admin\/monitor\/run/);
-  assert.match(adminJs,/me\.permissions\?\.health/);
-});
