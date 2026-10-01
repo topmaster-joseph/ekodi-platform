@@ -395,6 +395,9 @@ async function init(refresh=false){
     if(refresh)text($('scopeSummary'),state.me.platform?'최고관리자 권한으로 최신 상태를 확인했습니다.':'게시판 관리자 권한으로 최신 상태를 확인했습니다.');
   }catch(error){
     if(error.status===403){const main=$('main');main.replaceChildren();const box=document.createElement('section');box.className='card placeholder';const h=document.createElement('strong');h.textContent='관리 권한이 없습니다';const p=document.createElement('p');p.textContent='이 Google 계정에는 서남권 국립의대 소통센터 관리 권한이 등록되어 있지 않습니다.';const a=document.createElement('a');a.href=authUrl();a.textContent='다른 Google 계정으로 로그인';box.append(h,p,a);main.append(box);return}
+    text($('adminIdentity'),'연결 오류');
+    text($('scopeSummary'),'관리자 정보를 불러오지 못했습니다. 새로고침하거나 계정을 다시 연결해 주세요.');
+    const voiceMessage=$('voiceMessage');if(voiceMessage){voiceMessage.classList.add('error');text(voiceMessage,error.data?.message||error.message||'관리자 정보를 불러오지 못했습니다. 다시 로그인해 주세요.')}
     console.error(error);
   }
 }
