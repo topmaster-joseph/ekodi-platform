@@ -4,8 +4,9 @@ const PANEL_ID = 'publicSiteControlsPanel';
 const API = 'https://ekodi.kr/api/control/public-sites';
 const SECTION = 'public-site-controls';
 const LABELS = {
-  public: '정상 공개',
-  maintenance: '임시페이지',
+  public: '공개',
+  private: '비공개',
+  maintenance: '점검화면',
   default: '기본 안내 화면',
   url: '지정 주소 연결',
   button: '버튼 이동',
@@ -41,7 +42,7 @@ async function api(path = '', options = {}) {
   if (token) headers.set('authorization', `Bearer ${token}`);
   const response = await fetch(`${API}${path}`, { ...options, headers, credentials: 'omit' });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || '공개·점검 전환을 처리하지 못했습니다.');
+  if (!response.ok) throw new Error(payload.error || '사이트 공개 설정을 처리하지 못했습니다.');
   return payload;
 }
 
@@ -53,7 +54,7 @@ function bindNavLink(link) {
   if (!link) return;
   link.dataset.adminLink = SECTION;
   link.dataset.section = SECTION;
-  if (!link.querySelector('span')) link.innerHTML = '<span>공개·점검 전환</span>';
+  if (!link.querySelector('span')) link.innerHTML = '<span>사이트 공개 설정</span>';
   if (link.dataset.publicSiteControlsBound === 'true') return;
   link.dataset.publicSiteControlsBound = 'true';
   link.addEventListener('click', event => {
@@ -69,7 +70,7 @@ function ensureNavLink() {
   if (!nav) return;
   let link = nav.querySelector('[data-admin-link="public-site-controls"], [data-section="public-site-controls"], [data-lazy-section="public-site-controls"]');
   if (!link) {
-    link = el('<button type="button" class="nav" data-admin-link="public-site-controls" data-section="public-site-controls"><span>공개·점검 전환</span></button>');
+    link = el('<button type="button" class="nav" data-admin-link="public-site-controls" data-section="public-site-controls"><span>사이트 공개 설정</span></button>');
     nav.appendChild(link);
   }
   bindNavLink(link);
@@ -84,8 +85,8 @@ function ensurePanel() {
     <section id="${PANEL_ID}" class="section" hidden data-panel="public-site-controls">
       <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
         <div>
-          <h2>공개·점검 전환</h2>
-          <p class="muted">사이트 목록을 다시 만들지 않고, 공개 주소의 정상 공개·점검 모드만 전환합니다.</p>
+          <h2>사이트 공개 설정</h2>
+          <p class="muted">전체 사용자·독립사이트의 공개 상태를 한곳에서 전환합니다. 신규 사이트는 기본 공개이며 비사이트 공개은 관리자 선택으로만 적용됩니다.</p>
         </div>
         <button type="button" class="btn" data-public-site-refresh>새로고침</button>
       </div>
@@ -114,49 +115,60 @@ function siteForm(site) {
         </div>
         <span data-public-site-status-badge style="padding:7px 10px;border-radius:999px;background:rgba(142,200,255,.14);height:max-content">${LABELS[site.publicStatus] || site.publicStatus}</span>
       </div>
-      <label>공개 상태
+      <label>사이트 공개 상태
         <select name="publicStatus">
-          <option value="public">정상 공개</option>
-          <option value="maintenance">임시페이지</option>
+          <option value="public">공개</option>
+          <option value="private">비공개</option>
+          <option value="maintenance">점검화면</option>
         </select>
       </label>
-      <label>임시페이지 방식
-        <select name="maintenanceDisplayType">
-          <option value="default">기본 안내 화면</option>
-          <option value="url">지정 주소 연결</option>
-        </select>
-      </label>
-      <label>제목
-        <input name="maintenanceTitle" type="text" maxlength="80" placeholder="현재 사이트 개발중입니다">
-      </label>
-      <label>안내문
-        <textarea name="maintenanceMessage" rows="3" maxlength="300" placeholder="더 좋은 서비스로 준비 중입니다."></textarea>
-      </label>
-      <label>지정 주소
-        <input name="maintenanceRedirectUrl" type="url" placeholder="https://ekodi.kr/cgma">
-      </label>
-      <label>연결 방식
-        <select name="redirectMode">
-          <option value="button">버튼 이동</option>
-          <option value="auto">자동 이동</option>
-        </select>
-      </label>
+      <details data-maintenance-options style="border:1px solid var(--ekodi-ui-border,#24425E);border-radius:12px;padding:10px 12px">
+        <summary style="cursor:pointer;font-weight:800">점검화면 상세설정</summary>
+        <div style="display:grid;gap:12px;margin-top:12px">
+          <label>점검화면 방식
+            <select name="maintenanceDisplayType">
+              <option value="default">기본 안내 화면</option>
+              <option value="url">지정 주소 연결</option>
+            </select>
+          </label>
+          <label>제목
+            <input name="maintenanceTitle" type="text" maxlength="80" placeholder="현재 사이트 준비 중입니다">
+          </label>
+          <label>안내문
+            <textarea name="maintenanceMessage" rows="3" maxlength="300" placeholder="현재 관리자 점검 또는 준비 중입니다."></textarea>
+          </label>
+          <label>지정 주소
+            <input name="maintenanceRedirectUrl" type="url" placeholder="https://ekodi.kr/">
+          </label>
+          <label>연결 방식
+            <select name="redirectMode">
+              <option value="button">버튼 이동</option>
+              <option value="auto">자동 이동</option>
+            </select>
+          </label>
+        </div>
+      </details>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button type="submit" class="btn primary">저장</button>
         <a class="btn" href="${surfaceInfo(site).url}" target="_blank" rel="noopener noreferrer">사이트 확인</a>
       </div>
-      <small class="muted">지정 주소 연결은 http 또는 https 주소만 허용합니다. 기본값은 방문자가 길을 잃지 않도록 버튼 이동입니다.</small>
+      <small class="muted">비공개는 일반 방문자와 검색로봇에 노출하지 않습니다. 관리자·인증·API 경로는 계속 사용할 수 있습니다.</small>
     </form>
   `);
 }
 
+function syncMaintenanceOptions(form) {
+  const details = form.querySelector('[data-maintenance-options]');
+  if (details) details.open = form.publicStatus.value === 'maintenance';
+}
 function fillForm(form, site) {
-  form.publicStatus.value = site.publicStatus || 'maintenance';
+  form.publicStatus.value = site.publicStatus || 'public';
   form.maintenanceDisplayType.value = site.maintenanceDisplayType || 'default';
   form.maintenanceTitle.value = site.maintenanceTitle || '현재 사이트 개발중입니다';
   form.maintenanceMessage.value = site.maintenanceMessage || '더 좋은 서비스로 준비 중입니다.';
   form.maintenanceRedirectUrl.value = site.maintenanceRedirectUrl || '';
   form.redirectMode.value = site.redirectMode || 'button';
+  syncMaintenanceOptions(form);
 }
 
 function render(panel, sites) {
@@ -166,6 +178,7 @@ function render(panel, sites) {
   sites.forEach(site => {
     const form = siteForm(site);
     fillForm(form, site);
+    form.publicStatus.addEventListener('change', () => syncMaintenanceOptions(form));
     form.addEventListener('submit', async event => {
       event.preventDefault();
       setMessage(panel, '저장 중입니다.');
@@ -182,7 +195,7 @@ function render(panel, sites) {
         fillForm(form, result.site);
         const badge = form.querySelector('[data-public-site-status-badge]');
         if (badge) badge.textContent = LABELS[result.site.publicStatus] || result.site.publicStatus;
-        setMessage(panel, `${surfaceInfo(result.site).label} 공개·점검 전환을 저장했습니다.`);
+        setMessage(panel, `${surfaceInfo(result.site).label} 사이트 공개 설정을 저장했습니다.`);
       } catch (error) {
         setMessage(panel, error.message || '저장하지 못했습니다.', true);
       }
@@ -194,11 +207,11 @@ function render(panel, sites) {
 async function load() {
   const panel = ensurePanel();
   if (!panel) return;
-  setMessage(panel, '공개·점검 전환을 불러오는 중입니다.');
+  setMessage(panel, '사이트 공개 설정을 불러오는 중입니다.');
   try {
     const data = await api();
     render(panel, data.sites || []);
-    setMessage(panel, '공개·점검 전환 상태를 확인했습니다.');
+    setMessage(panel, '사이트 공개 설정 상태를 확인했습니다.');
   } catch (error) {
     setMessage(panel, error.message || '설정을 불러오지 못했습니다.', true);
   }
@@ -213,7 +226,7 @@ function activate() {
   });
   document.querySelectorAll('.sidebar .nav').forEach(item => item.classList.toggle('active', isPublicSiteNav(item)));
   const title = document.querySelector('#pageTitle');
-  if (title) title.textContent = '공개·점검 전환';
+  if (title) title.textContent = '사이트 공개 설정';
   load();
 }
 

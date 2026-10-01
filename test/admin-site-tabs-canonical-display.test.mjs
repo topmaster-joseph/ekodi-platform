@@ -28,8 +28,8 @@ test('Admin uses canonical human-facing root paths while preserving runtime keys
 });
 test('Maintenance controls are clearly distinct from the canonical Site Management catalog', () => {
   assert.match(registry, /id: 'public-site-controls'[^\n]*group: 'settings-records'[^\n]*ko: '공통 UI·사이트 설정'/);
-  assert.match(maintenance, /사이트 목록을 다시 만들지 않고/);
-  assert.match(maintenance, /공개 주소의 정상 공개·점검 모드만 전환/);
+  assert.match(maintenance, /전체 사용자·독립사이트의 공개 상태를 한곳에서 전환/);
+  assert.match(maintenance, /신규 사이트는 기본 공개/);
   assert.match(maintenance, /surfaceInfo/);
   assert.doesNotMatch(maintenance, /\$\{site\.domain\}/);
   assert.doesNotMatch(maintenance, /\$\{result\.site\.domain\}/);

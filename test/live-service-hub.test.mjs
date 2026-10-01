@@ -48,11 +48,12 @@ test('central admin auth explicitly accepts /live/admin as a safe apex return',a
 });
 
 test('Control API derives Live visibility records from the shared realtime tenant registry',async()=>{
-  const source=await read('api-worker.js');
-  assert.match(source,/realtimeTenantList/);
-  assert.match(source,/LIVE_PUBLIC_SITE_CATALOG/);
-  assert.match(source,/defaultPublicStatus: 'public'/);
-  assert.match(source,/defaultMaintenanceTitle: '라이브 서비스 준비 중입니다'/);
+  const [api,runtime]=await Promise.all([read('api-worker.js'),read('site-publication-runtime.js')]);
+  assert.match(api,/listSitePublicationSettings/);
+  assert.match(runtime,/realtimeTenantList/);
+  assert.match(runtime,/realtimeLiveSites/);
+  assert.match(runtime,/defaultPublicStatus:'public'/);
+  assert.match(runtime,/defaultMaintenanceTitle:'라이브 서비스 준비 중입니다'/);
 });
 
 test('service manifest advertises canonical apex Live as an active public surface',async()=>{
