@@ -1,0 +1,46 @@
+{
+  "policyId": "SUPABASE-ENV-001",
+  "status": "enforced",
+  "productionProject": {
+    "projectRef": "renzehysxirjilvdxacv",
+    "logicalName": "ekodi-prod",
+    "currentSupabaseName": "ekodi-platform",
+    "purpose": "production",
+    "realUserDataAllowed": true,
+    "testOnlyDataRequired": false,
+    "directDevelopmentMutationAllowed": false
+  },
+  "developmentProject": {
+    "projectRef": "lxcxwbdwwojjkgybbqii",
+    "logicalName": "ekodi-dev",
+    "currentSupabaseName": "ekodi-church",
+    "purpose": "development",
+    "realUserDataAllowed": false,
+    "testOnlyDataRequired": true,
+    "productionCredentialAccessAllowed": false
+  },
+  "promotion": {
+    "source": "development",
+    "target": "production",
+    "schemaMovesForwardViaVersionedMigrations": true,
+    "productionDataCopiesBackToDevelopment": false,
+    "edgeFunctionsPromoteOnlyAfterDevelopmentVerification": true,
+    "productionMutationRequiresGuardedRelease": true,
+    "productionCompletionRequiresLiveVerification": true
+  },
+  "traffic": {
+    "cloudflareFirst": true,
+    "supabaseIsCanonicalDataPlane": true,
+    "publicReadsPreferEdgeCache": true,
+    "writesPreferGatewayAndQueueUnderPressure": true,
+    "realtimeSelective": true,
+    "directDatabaseConnectionsFromBrowsersForbidden": true
+  },
+  "security": {
+    "serviceRoleFrontendExposureForbidden": true,
+    "rlsRequiredForExposedTables": true,
+    "securityDefinerRpcMustBeReviewed": true,
+    "productionSecretsInDevelopmentForbidden": true,
+    "developmentSecretsInProductionForbidden": true
+  }
+}
