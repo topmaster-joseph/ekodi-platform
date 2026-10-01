@@ -49,11 +49,11 @@ const renderStatusDetail=(key,d)=>{
   if(key==='official'){
     const rows=(d.sources||[]).filter(s=>/(공식|당사자)/.test(String(s.kind||''))).slice(0,8);
     label='OFFICIAL RECORD';title='공식 기록';description='정부·지자체·대학·비대위 등 자료의 주체와 성격을 구분해 원문 기준으로 확인할 수 있습니다.';
-    body='<div class="status-detail-list">'+statusSourceRows(rows,'현재 연결된 공식 자료가 없습니다.')+'</div>';target='#records';targetLabel='활동·자료 보기';
+    body='<div class="status-detail-list">'+statusSourceRows(rows,'현재 연결된 공식 자료가 없습니다.')+'</div>';target='#records';targetLabel='관련자료 보기';
   }else if(key==='news'){
     const rows=(d.sources||[]).filter(s=>/(보도|언론)/.test(String(s.kind||''))).slice(0,8);
     label='RELATED NEWS';title='관련 보도';description='기사 제목·언론사·보도일을 확인하고 원문으로 바로 이동할 수 있습니다.';
-    body='<div class="status-detail-list">'+statusSourceRows(rows,'현재 연결된 관련 보도가 없습니다.')+'</div>';target='#records';targetLabel='활동·자료 보기';
+    body='<div class="status-detail-list">'+statusSourceRows(rows,'현재 연결된 관련 보도가 없습니다.')+'</div>';target='#records';targetLabel='관련자료 보기';
   }else if(key==='daily'){
     const run=latestMonitorData&&latestMonitorData.lastRun;
     const rows=((latestMonitorData&&latestMonitorData.items)||[]).slice(0,6);
