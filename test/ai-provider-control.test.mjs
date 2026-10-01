@@ -102,7 +102,7 @@ test('provider admin presents compact explicit connection status without exposin
   assert.match(admin,/운영 \$\{operational\?'가동':'비가동'\}/);
   assert.match(admin,/계정 자원 연결/);
   assert.match(admin,/aria-live="polite"/);
-  assert.match(admin,/grid-template-columns:repeat\(3,minmax\(285px,1fr\)\)/);
+  assert.match(admin,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(admin,/min-height:30px/);
   assert.doesNotMatch(admin,/type="text"[^>]*data-ai-field="secret"/);
 });
@@ -146,6 +146,9 @@ test('provider status cards explain free and paid usage',()=>{
   assert.match(admin,/Gemini 무료 한도 우선/);
   assert.match(admin,/OpenRouter Free/);
   assert.match(admin,/Groq Free/);
+  assert.match(admin,/Cerebras · 무료 체험/);
+  assert.match(admin,/Qwen · 무료 할당량/);
+  assert.match(admin,/DeepSeek · 무료 지급 크레딧/);
   assert.match(admin,/명시적 예산\/승인 필요/);
   assert.match(admin,/ekodi-ai-provider-status-note/);
 });
@@ -153,7 +156,7 @@ test('provider status cards explain free and paid usage',()=>{
 
 test('common provider contract exposes canonical free-first six-provider order',()=>{
   assert.deepEqual(AI_PROVIDER_CONTROL_CONTRACT.providerOrder,[
-    'cloudflare-workers-ai','gemini','openrouter-free','groq-free','openai','anthropic'
+    'cloudflare-workers-ai','gemini','openrouter-free','groq-free','cerebras-free','qwen-free','deepseek-free-credit','openai','anthropic'
   ]);
   const migration=read('migrations/0120_common_ai_provider_chain.sql');
   assert.match(migration,/Cloudflare \/ 무료 자원/);
@@ -168,8 +171,31 @@ test('provider admin shows the canonical chain and secretless Cloudflare card co
   assert.match(admin,/Gemini Free/);
   assert.match(admin,/OpenRouter Free/);
   assert.match(admin,/Groq Free/);
+  assert.match(admin,/Cerebras · 무료 체험/);
+  assert.match(admin,/Qwen · 무료 할당량/);
+  assert.match(admin,/DeepSeek · 무료 지급 크레딧/);
   assert.match(admin,/OpenAI · 유료 승인/);
   assert.match(admin,/Claude · 유료 승인/);
   assert.match(admin,/API Key 없음/);
   assert.match(admin,/canonicalFallbacks/);
+});
+
+
+test('extended free provider migration preserves guarded free-only ordering',()=>{
+  const migration=read('migrations/0121_extended_free_ai_provider_chain.sql');
+  assert.match(migration,/Cerebras · 무료 체험/);
+  assert.match(migration,/Qwen · 무료 할당량/);
+  assert.match(migration,/DeepSeek · 무료 지급 크레딧/);
+  assert.match(migration,/\["gemini","openrouter-free","groq-free","cerebras-free","qwen-free","deepseek-free-credit","openai","anthropic"\]/);
+  assert.match(migration,/topped_up_balance = 0/);
+});
+
+test('admin provider control exposes official sites and free-only confirmation guards',()=>{
+  const admin=read('admin-provider-control.js');
+  assert.match(admin,/cerebras\.ai\/inference/);
+  assert.match(admin,/alibabacloud\.com\/en\/product\/model-studio/);
+  assert.match(admin,/deepseek\.com/);
+  assert.match(admin,/free-only-confirmed/);
+  assert.match(admin,/Free Quota Only 설정 확인/);
+  assert.match(admin,/target="_blank"/);
 });
