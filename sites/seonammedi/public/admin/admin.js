@@ -78,7 +78,7 @@ function updateDashboard(){
   const perms=[];if(me.permissions?.timeline)perms.push('활동이력');if(me.permissions?.voices)perms.push('시민의 목소리');if(me.permissions?.content)perms.push('웹검색 게시검토');if(me.permissions?.notices)perms.push('공지');if(me.permissions?.channels)perms.push('채널');
   text($('scopeSummary'),me.platform?'최고관리자 권한으로 이 사이트를 관리하고 있습니다.':(perms.length?perms.join('·')+' 관리 권한만 부여된 사이트 범위 관리자입니다.':'조회 권한만 있습니다.'));
   text($('adminIdentity'),me.email||'');text($('accessEmail'),me.email||'-');text($('accessRole'),me.platform?'최고관리자':'게시판 관리자');
-  text($('accessPages'),me.permissions?.pages?'현재상황·조직 수정 가능':'권한 없음');text($('accessTimeline'),me.permissions?.timeline?'등록·수정·게시여부 선택 가능':'권한 없음');text($('accessVoices'),me.permissions?.voices?'접수내용 조회·상태변경·삭제 가능':'권한 없음');text($('accessFinance'),me.permissions?.finance?'회계내역 등록·수정·삭제 가능':'권한 없음');text($('accessContent'),me.permissions?.content?'분류·게시여부 선택 가능':'권한 없음');text($('accessNotice'),me.permissions?.notices?'작성·수정·삭제 가능':'권한 없음');text($('accessChannel'),me.permissions?.channels?'추가·수정·숨김·삭제 가능':'권한 없음');
+  text($('accessPages'),me.permissions?.pages?'현재상황·조직 수정 가능':'권한 없음');const runHealth=$('runSiteHealth');if(runHealth)runHealth.hidden=!me.permissions?.health;text($('accessTimeline'),me.permissions?.timeline?'등록·수정·게시여부 선택 가능':'권한 없음');text($('accessVoices'),me.permissions?.voices?'접수내용 조회·상태변경·삭제 가능':'권한 없음');text($('accessFinance'),me.permissions?.finance?'회계내역 등록·수정·삭제 가능':'권한 없음');text($('accessContent'),me.permissions?.content?'분류·게시여부 선택 가능':'권한 없음');text($('accessNotice'),me.permissions?.notices?'작성·수정·삭제 가능':'권한 없음');text($('accessChannel'),me.permissions?.channels?'추가·수정·숨김·삭제 가능':'권한 없음');
   qs('[data-panel-target="status"]').hidden=!me.permissions?.pages;qs('[data-panel-target="organization"]').hidden=!me.permissions?.pages;qs('[data-panel-target="timeline"]').hidden=!me.permissions?.timeline;qs('[data-panel-target="voices"]').hidden=!me.permissions?.voices;qs('[data-panel-target="content"]').hidden=!me.permissions?.content;qs('[data-panel-target="notices"]').hidden=!me.permissions?.notices;qs('[data-panel-target="channels"]').hidden=!me.permissions?.channels;qs('[data-panel-target="finance"]').hidden=!me.permissions?.finance;
 }
 
@@ -355,7 +355,20 @@ $('channelForm').addEventListener('submit',async event=>{
   try{await api(id?'/api/seonammedi/admin/channels/'+id:'/api/seonammedi/admin/channels',{method:id?'PUT':'POST',body:JSON.stringify(payload)});text(msg,'저장했습니다.');resetChannel();await loadChannels()}catch(error){msg.classList.add('error');text(msg,error.message)}
 });
 $('reloadTimeline').addEventListener('click',()=>loadTimeline().catch(()=>{}));$('reloadVoices').addEventListener('click',()=>loadVoices().catch(()=>{}));$('voiceStatusFilter').addEventListener('change',renderVoices);$('reloadStatusPage')?.addEventListener('click',()=>loadStatusPage().catch(()=>{}));$('reloadOrganization')?.addEventListener('click',()=>loadOrganization().catch(()=>{}));$('reloadFinance')?.addEventListener('click',()=>loadFinance().catch(()=>{}));$('financeReset')?.addEventListener('click',resetFinance);$('timelineReset').addEventListener('click',resetTimeline);$('reloadContent').addEventListener('click',()=>loadContent().catch(()=>{}));$('noticeReset').addEventListener('click',resetNotice);$('channelReset').addEventListener('click',resetChannel);$('reloadNotices').addEventListener('click',()=>loadNotices().catch(()=>{}));$('reloadChannels').addEventListener('click',()=>loadChannels().catch(()=>{}));
-$('reloadSiteHealth')?.addEventListener('click',()=>loadSiteHealth().catch(()=>{}));$('refreshAll').addEventListener('click',()=>init(true));$('changeAccount').addEventListener('click',()=>{sessionStorage.removeItem(PLATFORM_TOKEN_KEY);clearSession();try{localStorage.removeItem(CENTRAL_SESSION_KEY)}catch{}location.assign(authUrl())});
+$('reloadSiteHealth')?.addEventListener('click',()=>loadSiteHealth().catch(()=>{}));
+$('runSiteHealth')?.addEventListener('click',async()=>{
+  const button=$('runSiteHealth');if(!button)return;
+  const original=button.textContent;button.disabled=true;button.textContent='실행 중…';
+  try{
+    const data=await api('/api/seonammedi/admin/monitor/run',{method:'POST'});
+    const result=data?.result||{};
+    text($('monitorRunSummary'),'수동 실행 완료 · 출처 '+Number(result.checked||0)+'개 · 확인 '+Number(result.seen||0)+'건 · 신규 '+Number(result.added||0)+'건');
+    await loadSiteHealth();
+  }catch(error){
+    const summary=$('monitorRunSummary');if(summary)summary.textContent='자동점검 실행 실패 · '+error.message;
+  }finally{button.disabled=false;button.textContent=original}
+});
+$('refreshAll').addEventListener('click',()=>init(true));$('changeAccount').addEventListener('click',()=>{sessionStorage.removeItem(PLATFORM_TOKEN_KEY);clearSession();try{localStorage.removeItem(CENTRAL_SESSION_KEY)}catch{}location.assign(authUrl())});
 
 async function init(refresh=false){
   try{
