@@ -80,4 +80,72 @@ function currentRoleOptions(){
 function refreshRoleOptions(){
   const options=currentRoleOptions();
   for(const select of fields.contexts.querySelectorAll('[name="contextRole"]')){
-    const selected=selec
+    const selected=select.value;
+    select.replaceChildren(new Option('역할 연결 없음',''));
+    for(const item of options)select.append(new Option(item.label||item.key,item.key));
+    if([...select.options].some(option=>option.value===selected))select.value=selected;
+  }
+}
+function contextCheck(name,label,checked){
+  const wrap=document.createElement('label');wrap.className='digital-card-check digital-card-context-check';
+  const input=document.createElement('input');input.type='checkbox';input.name=name;input.checked=Boolean(checked);
+  wrap.append(input,document.createTextNode(` ${label}`));return wrap;
+}
+function contextRow(item={}){
+  const row=document.createElement('div');row.className='digital-card-context';
+  const top=document.createElement('div');top.className='digital-card-affiliation-top';
+  const label=document.createElement('input');label.name='contextLabel';label.maxLength=80;label.placeholder='공유모드 이름 (예: EKODI)';label.value=String(item.label||'');
+  const key=document.createElement('input');key.name='contextKey';key.maxLength=40;key.autocapitalize='none';key.autocomplete='off';key.placeholder='공유 ID (예: ekodi)';key.value=String(item.key||nextKey('context'));
+  const remove=smallButton('삭제');remove.addEventListener('click',()=>row.remove());
+  top.append(label,key,remove);
+  const role=document.createElement('select');role.name='contextRole';role.append(new Option('역할 연결 없음',''));
+  const options=currentRoleOptions();
+  for(const opt of options)role.append(new Option(opt.label||opt.key,opt.key));
+  role.value=String(item.role_key||'');
+  const checks=document.createElement('div');checks.className='digital-card-context-options';
+  const phone=contextCheck('contextPhone','휴대전화 공개',item.show_phone);
+  const email=contextCheck('contextEmail','이메일 공개',item.show_email);
+  const intro=contextCheck('contextIntro','공개 소개 표시',item.show_profile_intro!==false);
+  const links=contextCheck('contextLinks','대표 링크 표시',item.show_profile_links!==false);
+  const exchange=contextCheck('contextExchange','연락처 교환 허용',item.exchange_enabled!==false);
+  const visible=contextCheck('contextPublic','외부 공개',item.visibility==='public');
+  const isDefault=contextCheck('contextDefault','대표 공유모드',item.is_default);
+  isDefault.querySelector('input').addEventListener('change',event=>{
+    if(!event.currentTarget.checked)return;
+    for(const other of fields.contexts.querySelectorAll('[name="contextDefault"]'))if(other!==event.currentTarget)other.checked=false;
+  });
+  checks.append(phone,email,intro,links,exchange,visible,isDefault);
+  row.append(top,role,checks);
+  key.addEventListener('change',()=>{key.value=normalizeKey(key.value,'context')});
+  return row;
+}
+function renderRoles(items=[]){
+  fields.roles.replaceChildren();
+  for(const item of Array.isArray(items)?items:[])fields.roles.append(roleRow(item));
+}
+function renderContexts(items=[]){
+  fields.contexts.replaceChildren();
+  for(const item of Array.isArray(items)?items:[])fields.contexts.append(contextRow(item));
+}
+function collectRoles(){
+  return [...fields.roles.querySelectorAll('.digital-card-role')].map(row=>({
+    key:normalizeKey(row.querySelector('[name="roleKey"]')?.value,'role'),
+    name:String(row.querySelector('[name="roleName"]')?.value||'').trim(),
+    title:String(row.querySelector('[name="roleTitle"]')?.value||'').trim(),
+    description:String(row.querySelector('[name="roleDescription"]')?.value||'').trim(),
+    url:String(row.querySelector('[name="roleUrl"]')?.value||'').trim(),
+    active:Boolean(row.querySelector('[name="roleActive"]')?.checked),
+  })).filter(item=>item.name||item.title||item.description||item.url);
+}
+function collectContexts(){
+  return [...fields.contexts.querySelectorAll('.digital-card-context')].map(row=>({
+    key:normalizeKey(row.querySelector('[name="contextKey"]')?.value,'context'),
+    label:String(row.querySelector('[name="contextLabel"]')?.value||'').trim(),
+    role_key:String(row.querySelector('[name="contextRole"]')?.value||'').trim(),
+    show_phone:Boolean(row.querySelector('[name="contextPhone"]')?.checked),
+    show_email:Boolean(row.querySelector('[name="contextEmail"]')?.checked),
+    show_profile_intro:Boolean(row.querySelector('[name="contextIntro"]')?.checked),
+    show_profile_links:Boolean(row.querySelector('[name="contextLinks"]')?.checked),
+    exchange_enabled:Boolean(row.querySelector('[name="contextExchange"]')?.checked),
+    visibility:row.querySelector('[name="contextPublic"]')?.checked?'public':'private',
+    is_default:Boolean(row.qu
