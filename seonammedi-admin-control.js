@@ -317,12 +317,7 @@ async function listPublicChannels(env){
 }
 const decodePreviewText=value=>clean(String(value||'').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'),1200);
 const previewMeta=(html,key)=>{
-  const escaped=String(key).replace(/[.*+?^$\{\}()|[\]\\]/g,'\\async function listPublicChannels(env){
-  const rows=await env.DB.prepare(`SELECT id,platform,name,url,category,official,note,sort_order FROM seonammedi_channels
-    WHERE visible=1 ORDER BY official DESC,sort_order ASC,id ASC LIMIT 80`).all();
-  return json({ok:true,items:(rows.results||[]).map(publicChannel)});
-}
-');
+  const escaped=String(key).replace(/[.*+?^$\{\}()|[\]\\]/g,'\\$&');
   const patterns=[
     new RegExp('<meta[^>]+(?:property|name)=["\\\']'+escaped+'["\\\'][^>]+content=["\\\']([^"\\\']*)["\\\']','i'),
     new RegExp('<meta[^>]+content=["\\\']([^"\\\']*)["\\\'][^>]+(?:property|name)=["\\\']'+escaped+'["\\\']','i')
