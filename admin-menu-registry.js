@@ -1,7 +1,6 @@
 import './platform-maturity-admin.js';
 import './admin-service-handoffs.js';
 import './admin-context-shell-recovery.js';
-import './site-health-admin.js';
 
 export const ADMIN_MENU_GROUPS = Object.freeze([
   { id: 'summary', icon: '◉', defaultSection: 'platform-overview', labels: { ko: '플랫폼 전체현황', en: 'Platform Overview' } },
