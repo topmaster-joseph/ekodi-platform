@@ -27,3 +27,13 @@ test('collector records a readable analytics permission failure before exiting',
   assert.match(workflow, /set \+e[\s\S]*node scripts\/collect-system-health\.mjs[\s\S]*collector_status=\$\?[\s\S]*set -e/);
   assert.match(workflow, /wrangler@4\.119\.0 d1 execute ekodi-auth/);
 });
+
+
+test('collector resolves analytics by the canonical apex zone, never an admin subdomain binding', async () => {
+  const collector = await read('scripts/collect-system-health.mjs');
+  assert.match(collector, /EKODI_CANONICAL_HOST \|\| 'ekodi\.kr'/);
+  assert.match(collector, /\/zones\?name=/);
+  assert.match(collector, /account\.id=/);
+  assert.doesNotMatch(collector, /workers\/domains\?service=/);
+  assert.doesNotMatch(collector, /admin\.ekodi\.kr/);
+});
