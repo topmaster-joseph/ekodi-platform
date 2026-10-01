@@ -46,3 +46,17 @@ body[data-active-tab="account"] .my-custom-footer{margin-top:18px}
   .my-bottom-tabs a[aria-current="page"]{background:#edf3ee;color:#263b30}
   .my-tab-shell>.section,.my-tab-shell>.intent-shelf,.my-tab-shell>.welcome-shell{margin-bottom:12px}
 }
+
+
+/* Second-stage compaction: signed-in home stays action-first, account uses subtabs. */
+body[data-auth-state="member"][data-active-tab="home"] .comfort-hero,
+body[data-auth-state="member"][data-active-tab="home"] .action-hub{display:none!important}
+.account-subtabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 12px;padding:4px;border:1px solid rgba(53,66,57,.11);border-radius:15px;background:rgba(247,249,247,.9);scrollbar-width:none}
+.account-subtabs::-webkit-scrollbar{display:none}
+.account-subtabs button{flex:0 0 auto;border:0;border-radius:11px;background:transparent;padding:9px 12px;color:#657169;font:inherit;font-size:12px;font-weight:750;cursor:pointer}
+.account-subtabs button[aria-selected="true"]{background:#fff;color:#263b30;box-shadow:0 4px 12px rgba(35,49,40,.06)}
+[data-account-panel][hidden]{display:none!important}
+@media(max-width:720px){
+  .account-subtabs{position:sticky;top:108px;z-index:24;background:rgba(247,249,247,.96);backdrop-filter:blur(12px)}
+  .account-grid{grid-template-columns:1fr!important}
+}
