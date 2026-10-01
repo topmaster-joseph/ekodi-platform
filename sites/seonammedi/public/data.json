@@ -351,6 +351,81 @@
     "verification": "수치·법적 상태·정부 결정 등 확인 가능한 사실은 공식 문서 또는 복수의 신뢰할 수 있는 출처로 교차확인한 뒤 상태를 표시한다."
   },
   "organization": {
+    "groups": [
+      {
+        "key": "bidae",
+        "label": "비대위",
+        "status": "active",
+        "statusLabel": "운영 중",
+        "levels": [
+          {
+            "name": "대표자회의",
+            "members": []
+          },
+          {
+            "name": "상임공동대표단",
+            "members": []
+          },
+          {
+            "name": "집행위원회",
+            "members": [
+              "여인두 (기획위원회 겸임)"
+            ]
+          }
+        ],
+        "committees": [
+          {
+            "name": "총무위원회",
+            "lead": "문지영"
+          },
+          {
+            "name": "행사위원회",
+            "lead": "박현경"
+          },
+          {
+            "name": "조직위원회",
+            "lead": "정은채"
+          },
+          {
+            "name": "홍보소통위원회",
+            "lead": "오원옥"
+          },
+          {
+            "name": "기획위원회",
+            "lead": "여인두 (집행위원회 겸임)"
+          }
+        ],
+        "participants": [],
+        "participantSort": "ko-KR",
+        "publicOnly": true
+      },
+      {
+        "key": "mokpo",
+        "label": "목포대",
+        "status": "active",
+        "statusLabel": "운영 중",
+        "levels": [],
+        "committees": [],
+        "participants": [],
+        "participantSort": "ko-KR",
+        "publicOnly": true
+      },
+      {
+        "key": "minhak",
+        "label": "민학비대위",
+        "status": "forming",
+        "statusLabel": "구성 논의 중 · 2026.09.30 첫 만남",
+        "levels": [],
+        "committees": [],
+        "participants": [],
+        "participantSort": "ko-KR",
+        "publicOnly": true
+      }
+    ],
+    "participantSort": "ko-KR",
+    "publicOnly": true,
+    "schemaVersion": 2,
+    "schemaUpdatedAt": "2026-10-01T13:40:00+09:00",
     "levels": [
       {
         "name": "대표자회의",
@@ -362,7 +437,9 @@
       },
       {
         "name": "집행위원회",
-        "members": []
+        "members": [
+          "여인두 (기획위원회 겸임)"
+        ]
       }
     ],
     "committees": [
@@ -376,7 +453,7 @@
       },
       {
         "name": "조직위원회",
-        "lead": "정윤채"
+        "lead": "정은채"
       },
       {
         "name": "홍보소통위원회",
@@ -384,11 +461,9 @@
       },
       {
         "name": "기획위원회",
-        "lead": "여인두"
+        "lead": "여인두 (집행위원회 겸임)"
       }
     ],
-    "participants": [],
-    "participantSort": "ko-KR",
-    "publicOnly": true
+    "participants": []
   }
 }
