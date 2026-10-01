@@ -49,11 +49,11 @@ const renderStatusDetail=(key,d)=>{
   if(key==='official'){
     const rows=(d.sources||[]).filter(s=>/(공식|당사자)/.test(String(s.kind||''))).slice(0,8);
     label='OFFICIAL RECORD';title='공식 기록';description='정부·지자체·대학·비대위 등 자료의 주체와 성격을 구분해 원문 기준으로 확인할 수 있습니다.';
-    body='<div class="status-detail-list">'+statusSourceRows(rows,'현재 연결된 공식 자료가 없습니다.')+'</div>';target='#materials';targetLabel='공식자료 영역 보기';
+    body='<div class="status-detail-list">'+statusSourceRows(rows,'현재 연결된 공식 자료가 없습니다.')+'</div>';target='#records';targetLabel='관련자료 보기';
   }else if(key==='news'){
     const rows=(d.sources||[]).filter(s=>/(보도|언론)/.test(String(s.kind||''))).slice(0,8);
     label='RELATED NEWS';title='관련 보도';description='기사 제목·언론사·보도일을 확인하고 원문으로 바로 이동할 수 있습니다.';
-    body='<div class="status-detail-list">'+statusSourceRows(rows,'현재 연결된 관련 보도가 없습니다.')+'</div>';target='#materials';targetLabel='관련기사 전체 보기';
+    body='<div class="status-detail-list">'+statusSourceRows(rows,'현재 연결된 관련 보도가 없습니다.')+'</div>';target='#records';targetLabel='관련자료 보기';
   }else if(key==='daily'){
     const run=latestMonitorData&&latestMonitorData.lastRun;
     const rows=((latestMonitorData&&latestMonitorData.items)||[]).slice(0,6);
@@ -83,6 +83,9 @@ const cats=['전체',...new Set(d.timeline.map(x=>x.category))];
 el('timelineFilters').innerHTML=cats.map((c,i)=>`<button data-cat="${c}" class="${i===0?'active':''}">${c}</button>`).join('');
 const render=cat=>{const rows=cat==='전체'?d.timeline:d.timeline.filter(x=>x.category===cat);el('timelineList').innerHTML=rows.map(x=>`<article class="timeline-item" data-event-date="${x.date}"><div class="timeline-date">${x.date}</div><div><h3>${x.title}</h3><p>${x.summary}</p><div class="chips"><span class="chip">${x.category}</span><span class="chip">${x.evidence}</span></div>${evidenceBlock(x)}</div></article>`).join('')};
 render('전체');el('timelineFilters').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;[...el('timelineFilters').children].forEach(x=>x.classList.remove('active'));b.classList.add('active');render(b.dataset.cat);attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS||[])});
+const normalizeUrlKey=value=>{try{const u=new URL(String(value||''),location.origin);u.hash='';['utm_source','utm_medium','utm_campaign','utm_term','utm_content','fbclid','gclid'].forEach(k=>u.searchParams.delete(k));return u.href.replace(/\/$/,'')}catch{return String(value||'').trim().replace(/\/$/,'')}};
+const timelineEvidenceUrls=new Set((d.timeline||[]).flatMap(item=>[...(item.links||[]).map(link=>link.url),...(item.media||[]).map(media=>media.url)]).filter(Boolean).map(normalizeUrlKey));
+const seenMaterialKeys=new Set();
 const materialItems=[
   ...(Array.isArray(d.sources)?d.sources:[]).map(item=>({
     category:/(공식|당사자)/.test(String(item.kind||''))?'공식자료':'관련보도',
@@ -104,7 +107,14 @@ const materialItems=[
     verification:item.verification||'원문 확인 필요',
     url:item.url||''
   }))
-];
+].filter(item=>{
+  const urlKey=normalizeUrlKey(item.url);
+  if(urlKey&&timelineEvidenceUrls.has(urlKey))return false;
+  const titleKey=String(item.title||'').toLowerCase().replace(/\s+/g,' ').trim();
+  const key=urlKey||[item.date||'',titleKey,item.publisher||''].join('|');
+  if(!key||seenMaterialKeys.has(key))return false;
+  seenMaterialKeys.add(key);return true;
+});
 const materialCats=['전체','공식자료','관련보도','시민·온라인자료'];
 const materialFilters=el('materialFilters'),materialList=el('materialList');
 if(materialFilters&&materialList){
@@ -198,7 +208,7 @@ if(voiceForm){
 }
 
 
-const viewAliases={status:'status',monitor:'status',organization:'organization',timeline:'timeline',notices:'notices',materials:'materials',news:'materials','public-posts':'materials',voices:'voices',channels:'channels',finance:'finance'};
+const viewAliases={status:'status',monitor:'status',organization:'organization',records:'records',timeline:'records',materials:'records',news:'records','public-posts':'records',notices:'notices',voices:'voices',channels:'channels',finance:'finance'};
 function showView(view,{updateHash=false}={}){
   const key=viewAliases[view]||'';
   document.querySelectorAll('[data-view-section]').forEach(section=>{section.hidden=section.dataset.viewSection!==key});
