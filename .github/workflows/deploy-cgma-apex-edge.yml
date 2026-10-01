@@ -21,7 +21,7 @@ concurrency:
 env:
   WRANGLER_VERSION: '4.119.0'
   CGMA_SOURCE_REPO: topmaster-joseph/cheonggye-market
-  CGMA_SOURCE_REF: '6aa5716dfdea250b3a34c549f5dffaeba7d45bfb'
+  CGMA_SOURCE_REF: 'a1a00cfef892aac3b41d3a1d31138f2dab8eb118'
 
 jobs:
   validate:
@@ -108,7 +108,7 @@ jobs:
             rm -f "$body"
           }
           check_upstream 'https://cheonggye-market.pages.dev/' 'OFFICIAL ARCHIVE'
-          check_upstream 'https://cheonggye-market.pages.dev/admin' 'id="memberReview"'
+          check_upstream 'https://cheonggye-market.pages.dev/admin' 'data-admin-tab="today"'
           check_upstream 'https://cheonggye-market.pages.dev/member-admin' 'MOVED TO ADMIN CONSOLE'
           check_upstream 'https://cheonggye-market.pages.dev/api/resources' '"items"'
       - name: Deploy CGMA apex edge with central Production authority
@@ -166,7 +166,7 @@ jobs:
             return 1
           }
           check_cgma '/cgma' '청계면상인회 | 오늘도 청계에서 만나요' 'cgma-root-gateway'
-          check_cgma '/cgma/admin' 'id="memberReview"' 'cgma-root-gateway'
+          check_cgma '/cgma/admin' 'data-admin-tab="today"' 'cgma-root-gateway'
           check_cgma '/cgma/api/resources' '"items"' 'cgma-root-gateway'
           check_cgma '/cgma/admin/member' 'EKODI Workspace Admin' 'workspace-admin'
           check_cgma '/cgma/admin/publishing' 'EKODI Workspace Admin' 'workspace-admin'
