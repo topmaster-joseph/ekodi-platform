@@ -148,4 +148,76 @@ function collectContexts(){
     show_profile_links:Boolean(row.querySelector('[name="contextLinks"]')?.checked),
     exchange_enabled:Boolean(row.querySelector('[name="contextExchange"]')?.checked),
     visibility:row.querySelector('[name="contextPublic"]')?.checked?'public':'private',
-    is_default:Boolean(row.qu
+    is_default:Boolean(row.querySelector('[name="contextDefault"]')?.checked),
+  })).filter(item=>item.label);
+}
+function setDisabled(value){
+  for(const el of form.querySelectorAll('input,textarea,select,button'))el.disabled=value;
+}
+async function loadPublicProfile(){try{return await rpc('get_my_public_profile')}catch{return{}}}
+function showCardLinks(profile={}){
+  const handle=String(profile.handle||''),visible=profile.visibility==='public'&&handle;
+  for(const el of [fields.link,fields.qrLink])if(el)el.hidden=!visible;
+  if(visible){
+    fields.link.href=`https://ekodi.kr/${handle}/card`;
+    fields.link.textContent=`공유 페이지 · ekodi.kr/${handle}/card →`;
+    fields.qrLink.href=`https://ekodi.kr/${handle}/qr`;
+    fields.qrLink.textContent=`QR 공유센터 · ekodi.kr/${handle}/qr →`;
+  }
+}
+function renderInbox(items=[]){
+  fields.inbox.replaceChildren();
+  if(!items.length){
+    const empty=document.createElement('p');empty.className='digital-card-inbox-empty';empty.textContent='아직 받은 연락처가 없습니다.';
+    fields.inbox.append(empty);return;
+  }
+  for(const item of items){
+    const article=document.createElement('article');article.className='digital-card-contact-row';
+    const head=document.createElement('div');head.className='digital-card-contact-head';
+    const name=document.createElement('strong');name.textContent=String(item.name||'이름 없음');
+    const time=document.createElement('time');time.textContent=item.last_shared_at?new Date(item.last_shared_at).toLocaleString('ko-KR'):'';
+    head.append(name,time);
+    if(item.context_label){const badge=document.createElement('span');badge.className='digital-card-context-badge';badge.textContent=String(item.context_label);article.append(badge)}
+    const meta=document.createElement('p');meta.textContent=[item.affiliation,item.title].filter(Boolean).join(' · ')||'소속·직함 미입력';
+    const contact=document.createElement('p');contact.textContent=[item.phone,item.email].filter(Boolean).join(' · ')||'연락처 없음';
+    article.append(head,meta,contact);
+    if(item.website){const link=document.createElement('a');link.href=item.website;link.target='_blank';link.rel='noreferrer';link.className='text-link';link.textContent='관련 링크 →';article.append(link)}
+    fields.inbox.append(article);
+  }
+}
+async function refresh(){
+  if(!signedIn()){
+    setDisabled(true);renderRoles([]);renderContexts([]);renderInbox([]);showCardLinks({});
+    setStatus('로그인하면 개인 공유 설정을 관리할 수 있습니다.');
+    fields.inboxStatus.textContent='로그인 후 받은 연락처를 확인할 수 있습니다.';return;
+  }
+  setDisabled(true);setStatus('개인 공유 설정을 확인하고 있습니다.');
+  try{
+    const [card,profile,inbox]=await Promise.all([
+      rpc('get_my_identity_share_config'),loadPublicProfile(),rpc('get_my_contact_exchanges',{p_limit:50}),
+    ]);
+    fields.phone.value=String(card.phone||'');fields.email.value=String(card.email||'');
+    fields.exchangeEnabled.checked=Boolean(card.exchange_enabled);
+    renderRoles(card.roles);renderContexts(card.contexts);refreshRoleOptions();
+    showCardLinks(profile);renderInbox(Array.isArray(inbox.items)?inbox.items:[]);
+    fields.inboxStatus.textContent='공유모드가 자동 태그되어 어떤 관계로 연결됐는지 함께 표시됩니다.';
+    setStatus(profile?.visibility==='public'&&profile?.handle?'기본정보·역할·공유모드를 관리할 수 있습니다.':'먼저 공개 개인페이지의 아이디와 공개 상태를 설정해 주세요.');
+  }catch(error){renderRoles([]);renderContexts([]);renderInbox([]);setStatus(error.message||'개인 공유 설정을 불러오지 못했습니다.','error')}
+  finally{setDisabled(false)}
+}
+async function save(event){
+  event.preventDefault();if(!signedIn())return;
+  const roles=collectRoles(),contexts=collectContexts();
+  if(roles.length>20||contexts.length>20){setStatus('역할과 공유모드는 각각 최대 20개까지 등록할 수 있습니다.','error');return}
+  const roleKeys=roles.map(item=>item.key),contextKeys=contexts.map(item=>item.key);
+  if(new Set(roleKeys).size!==roleKeys.length||new Set(contextKeys).size!==contextKeys.length){setStatus('역할 ID와 공유 ID는 서로 중복될 수 없습니다.','error');return}
+  if(contexts.filter(item=>item.is_default).length>1){setStatus('대표 공유모드는 하나만 선택할 수 있습니다.','error');return}
+  const label=fields.save.textContent;setDisabled(true);fields.save.textContent='저장 중…';
+  try{
+    await rpc('set_my_identity_share_config',{
+      p_phone:String(fields.phone.value||'').trim(),p_email:String(fields.email.value||'').trim(),
+      p_exchange_enabled:Boolean(fields.exchangeEnabled.checked),p_roles:roles,p_contexts:contexts,
+    });
+    setStatus('개인정보 원장과 상황별 공유모드가 저장되었습니다.','success');showCardLinks(await loadPublicProfile());
+  }catch(error){setStatus(error.message||'공유 설정을 저장하지 못했습니다.','error')}
+  fina
