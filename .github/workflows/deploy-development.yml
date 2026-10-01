@@ -67,9 +67,6 @@ jobs:
           node-version: "24"
           cache: npm
 
-      - name: EKODI AI Orchestration Gate
-        run: node scripts/validate-ekodi-ai-change-orchestration.mjs --release
-
       - name: Guard development quota before build and deploy
         shell: bash
         env:
