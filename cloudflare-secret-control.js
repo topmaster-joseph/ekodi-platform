@@ -71,8 +71,12 @@ async function fingerprint(secret) {
   return [...new Uint8Array(digest)].slice(0, 8).map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
+function managerToken(env) {
+  return String(env.CLOUDFLARE_SECRET_MANAGER_TOKEN || env.CF_API_TOKEN || '').trim();
+}
+
 function cloudflareReady(env) {
-  return Boolean(env.CLOUDFLARE_SECRET_MANAGER_TOKEN && env.CLOUDFLARE_ACCOUNT_ID);
+  return Boolean(managerToken(env) && env.CLOUDFLARE_ACCOUNT_ID);
 }
 
 function maskId(value) {
@@ -89,7 +93,7 @@ function cfUrl(env, scriptName, suffix = '') {
 
 async function cfRequest(env, url, init = {}) {
   const headers = new Headers(init.headers || {});
-  headers.set('authorization', `Bearer ${env.CLOUDFLARE_SECRET_MANAGER_TOKEN}`);
+  headers.set('authorization', `Bearer ${managerToken(env)}`);
   headers.set('content-type', 'application/json');
   return fetch(url, { ...init, headers });
 }
