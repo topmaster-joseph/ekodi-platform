@@ -28,18 +28,20 @@ test('authenticated Admin E2E verifies direct registry href menus through isolat
   assert.match(source, /html\.includes\('통합 매장 운영'\)/);
 });
 
-test('authenticated Admin E2E verifies same-tab admin handoffs without treating them as panels', async () => {
+test('POS Agent is a native super-admin panel and never replaces the Admin shell', async () => {
   const posAgent = getAdminMenuItem('pos-agent');
-  assert.equal(posAgent?.href, 'https://ekodi.kr/cmpmyi/admin/agent');
-  assert.equal(posAgent?.adminHandoff, true);
-  const source = await workerSource();
-  assert.match(source, /async function verifyAdminHandoff\(trigger, started\)/);
-  assert.match(source, /definition\.adminHandoff !== true/);
-  assert.match(source, /sourceTarget === '_blank'/);
-  assert.match(source, /stage\('admin-handoff'\)/);
-  assert.match(source, /page\.waitForURL/);
-  assert.match(source, /adminHandoff:true/);
-  assert.match(source, /directDefinition\?\.href && directDefinition\.adminHandoff === true && menuId !== 'tax'/);
-  assert.match(source, /verifyAdminHandoff\(trigger, started\)/);
+  assert.equal(posAgent?.href, undefined);
+  assert.equal(posAgent?.adminHandoff, undefined);
+  assert.equal(posAgent?.superAdminOnly, true);
+  const [panel,shell,routes] = await Promise.all([
+    readFile(new URL('../pos-agent-admin.js', import.meta.url), 'utf8'),
+    readFile(new URL('../admin-authenticated-shell.js', import.meta.url), 'utf8'),
+    readFile(new URL('../admin-canonical-routes.js', import.meta.url), 'utf8'),
+  ]);
+  assert.match(panel,/section\.dataset\.panel=SECTION/);
+  assert.match(panel,/\/cmpmyi\/admin\/agent\/download\//);
+  assert.match(panel,/127\.0\.0\.1:17831/);
+  assert.match(shell,/pos-agent-admin\.js/);
+  assert.match(routes,/'pos-agent':'status'/);
 });
 

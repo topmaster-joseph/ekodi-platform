@@ -189,6 +189,10 @@ const ADMIN_ASSETS = new Set([
   '/author-billing-admin.js',
   '/system-health-admin.css',
   '/system-health-admin.js',
+  '/site-health-admin.css',
+  '/site-health-admin.js',
+  '/pos-agent-admin.css',
+  '/pos-agent-admin.js',
   '/storage-admin.css',
   '/storage-admin.js',
 ]);
