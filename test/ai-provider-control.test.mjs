@@ -244,6 +244,13 @@ test('provider health classifier distinguishes Gemini API key and precondition f
   assert.match(admin,/지역\/결제 설정 확인/);
 });
 
+test('provider UI distinguishes connected but disabled providers from missing API keys',()=>{
+  const admin=read('admin-provider-control.js');
+  assert.match(admin,/키는 연결됨 · 사용을 켜고 저장한 뒤 연결 확인/);
+  assert.match(admin,/키 연결됨 · 사용을 켜고 저장한 뒤 연결 확인/);
+  assert.match(admin,/p\?\.configured&&!p\?\.enabled/);
+});
+
 test('provider health UI explains Cloudflare quota, generic Gemini 400, and Claude 403',()=>{
   const admin=read('admin-provider-control.js');
   assert.match(admin,/workers_ai_daily_call_limit/);
