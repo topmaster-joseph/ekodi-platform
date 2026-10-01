@@ -218,3 +218,11 @@ test('provider health UI explains Cloudflare quota, generic Gemini 400, and Clau
   assert.match(admin,/anthropic_403_forbidden/);
   assert.match(admin,/Claude 요청 거부\(HTTP 403\)/);
 });
+
+
+test('provider check UI surfaces sanitized upstream diagnostics',()=>{
+  const admin=read('admin-provider-control.js');
+  assert.match(admin,/error\.providerMessage=data\.providerMessage/);
+  assert.match(admin,/error\.requestId=data\.requestId/);
+  assert.match(admin,/providerCheckErrorMessage\(e\)/);
+});
