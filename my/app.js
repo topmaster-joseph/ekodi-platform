@@ -94,6 +94,22 @@ function syncSurfaceState({scroll=false}={}){
   });
  }
 }
+let activeAccountTab='basic';
+function syncAccountTabs(){
+ document.querySelectorAll('[data-account-tab]').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.accountTab===activeAccountTab)));
+ document.querySelectorAll('[data-account-panel]').forEach(panel=>{panel.hidden=panel.dataset.accountPanel!==activeAccountTab});
+}
+function setAccountTab(tab){
+ if(!['basic','public','character','security'].includes(tab))tab='basic';
+ activeAccountTab=tab;syncAccountTabs();
+ try{sessionStorage.setItem('ekodi_my_account_tab',tab)}catch{}
+}
+function initAccountTabs(){
+ try{activeAccountTab=sessionStorage.getItem('ekodi_my_account_tab')||'basic'}catch{activeAccountTab='basic'}
+ syncAccountTabs();
+ document.querySelectorAll('[data-account-tab]').forEach(button=>button.addEventListener('click',()=>setAccountTab(button.dataset.accountTab||'basic')));
+}
+
 function authUi(){
  const label=session?'로그아웃':'Google로 시작';
  for(const b of [$('#authButton'),$('#accountAuthButton')])if(b){b.disabled=!enabled;b.textContent=enabled?label:'격리 스테이징'}
@@ -352,7 +368,9 @@ window.addEventListener('ekodi:personalization-signal',event=>{
  ephemeralSignals=[signal,...ephemeralSignals.filter(item=>!(item.service_id===signal.service_id&&item.source===signal.source&&item.signal_type===signal.signal_type))].slice(0,30);
  platformUi();
 });
-window.addEventListener('hashchange',()=>{syncSurfaceState({scroll:true});progressiveSurfaceUi()});
+window.addEventListener('hashchange',()=>{syncSurfaceState({scroll:true});progressiveSurfaceUi();if(location.hash==='#account')syncAccountTabs()});
+
+initAccountTabs();
 
 if(MISROUTED_SERVICE_RETURN){
  location.replace(MISROUTED_SERVICE_RETURN.href);
