@@ -425,6 +425,45 @@
     "participantSort": "ko-KR",
     "publicOnly": true,
     "schemaVersion": 2,
-    "schemaUpdatedAt": "2026-10-01T13:40:00+09:00"
+    "schemaUpdatedAt": "2026-10-01T13:40:00+09:00",
+    "levels": [
+      {
+        "name": "대표자회의",
+        "members": []
+      },
+      {
+        "name": "상임공동대표단",
+        "members": []
+      },
+      {
+        "name": "집행위원회",
+        "members": [
+          "여인두 (기획위원회 겸임)"
+        ]
+      }
+    ],
+    "committees": [
+      {
+        "name": "총무위원회",
+        "lead": "문지영"
+      },
+      {
+        "name": "행사위원회",
+        "lead": "박현경"
+      },
+      {
+        "name": "조직위원회",
+        "lead": "정은채"
+      },
+      {
+        "name": "홍보소통위원회",
+        "lead": "오원옥"
+      },
+      {
+        "name": "기획위원회",
+        "lead": "여인두 (집행위원회 겸임)"
+      }
+    ],
+    "participants": []
   }
 }
