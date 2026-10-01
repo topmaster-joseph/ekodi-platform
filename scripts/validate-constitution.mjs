@@ -394,6 +394,20 @@ if(knowledgeClaim.highImpactFactsRequireAuthoritativeEvidence!==true) fail('high
 if(knowledgeClaim.externalSourceInstructionsAreUntrustedData!==true) fail('external source instructions must remain untrusted data');
 if(knowledgeClaim.materialKnowledgeClaimsRequireTraceableCitation!==true||knowledgeClaim.deterministicFinalResponseGuardRequired!==true) fail('material external facts require traceable citations and deterministic final guard');
 
+
+const sitePublication=constitution.sitePublicationPolicy||{};
+if(sitePublication.id!=='EKODI-SITE-PUBLICATION-001'||sitePublication.status!=='enforced'||sitePublication.mode!=='mandatory') fail('site publication policy must remain mandatory and enforced');
+if(sitePublication.scope!=='all-current-and-future-public-user-and-independent-sites'||sitePublication.currentAndFutureSitesAutoInherit===false) fail('all current and future public/independent sites must inherit publication policy');
+if(sitePublication.newSiteDefault!=='public'||sitePublication.publicBeforeLogin!==true) fail('new user-facing sites must remain public by default and public before login');
+if(JSON.stringify(sitePublication.allowedStates)!==JSON.stringify(['public','private','maintenance'])) fail('site publication states must remain public/private/maintenance');
+if(sitePublication.explicitAdministratorChangeRequired!==true) fail('non-public site state must require explicit administrator selection');
+if(sitePublication.authority?.platformSuperAdministrator!=='all-sites'||sitePublication.authority?.siteAdministrator!=='own-site-only'||sitePublication.authority?.crossSitePropagation!=='forbidden') fail('site publication authority boundary drifted');
+if(sitePublication.privateAndMaintenance?.preserveAdminAccess!==true||sitePublication.privateAndMaintenance?.preserveAuthenticationAccess!==true||sitePublication.privateAndMaintenance?.preserveApiAccess!==true) fail('private/maintenance state must preserve admin/auth/API access');
+if(sitePublication.privateAndMaintenance?.robots!=='noindex-nofollow-noarchive') fail('non-public site states must remain noindex/nofollow/noarchive');
+if(sitePublication.routeRule?.publicPath!=='/{site}'||sitePublication.routeRule?.administratorPath!=='/{site}/admin'||sitePublication.routeRule?.administratorRouteNeverBlockedByPublicationState!==true) fail('site publication routing contract drifted');
+if(sitePublication.operationalRule?.currentAndFutureSitesAutoInherit!==true||sitePublication.operationalRule?.localOverrideForbidden!==true||sitePublication.operationalRule?.auditEveryMutation!==true) fail('site publication forced execution rule drifted');
+if(sitePublication.operationalRule?.readFailureDisposition!=='fail-open-to-preserve-public-availability') fail('site publication read failure must preserve public availability');
+
 const amendmentDir = path.join(root, 'governance/amendments');
 const amendments = fs.readdirSync(amendmentDir).filter(name => name.endsWith('.json')).map(name => json(`governance/amendments/${name}`));
 const activeAmendment = amendments.find(item => item.constitutionVersion === constitution.version && item.status === 'approved');
