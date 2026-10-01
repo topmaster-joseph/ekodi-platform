@@ -5,13 +5,18 @@ import { readFile } from 'node:fs/promises';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 
 test('platform super admin owns global site health with static and dynamic tabs',async()=>{
-  const [registry,sidebar,loader,layout,js,css,seonam]=await Promise.all([
-    read('admin-menu-registry.js'),read('admin-sidebar.js'),read('admin-demand-loader.js'),read('admin-menu-layout.js'),
-    read('site-health-admin.js'),read('site-health-admin.css'),read('sites/seonammedi/public/admin/index.html')
+  const [registry,sidebar,shell,js,css,seonam]=await Promise.all([
+    read('admin-menu-registry.js'),
+    read('admin-sidebar.js'),
+    read('admin-authenticated-shell.js'),
+    read('site-health-admin.js'),
+    read('site-health-admin.css'),
+    read('sites/seonammedi/public/admin/index.html')
   ]);
   assert.match(registry,/id: 'site-health'[^\n]*group: 'status'[^\n]*superAdminOnly: true/);
   assert.match(sidebar,/status: \['health', 'site-health', 'deployments'/);
-  assert.match(loader,/'site-health': \{[\s\S]*site-health-admin\.css[\s\S]*site-health-admin\.js/);
+  assert.match(shell,/deferredPostAuthScripts[\s\S]*site-health-admin\.js/);
+  assert.match(js,/section\.dataset\.panel=SECTION/);
   assert.match(js,/data-site-health-tab="dynamic"/);
   assert.match(js,/data-site-health-tab="static"/);
   assert.match(js,/\/api\/control\/overview/);
