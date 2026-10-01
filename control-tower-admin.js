@@ -19,6 +19,7 @@
     ['traffic','트래픽·보안'],
     ['cost','비용·인프라'],
   ]);
+  const TAB_IDS = new Set(TABS.map(([id]) => id));
   let mounted = false;
   let loadPromise = null;
   let snapshot = null;
@@ -101,6 +102,62 @@
     }
     document.querySelector(`.sidebar [data-section="${section}"]`)?.click();
   }
+  function routeTab() {
+    try {
+      const route = window.EKODIAdminRoutes?.routeFromPath?.(location.pathname);
+      if (route?.section !== 'platform-overview') return 'summary';
+      const candidate = String(route.detailSegments?.[0] || 'summary').toLowerCase();
+      return TAB_IDS.has(candidate) ? candidate : 'summary';
+    } catch { return 'summary'; }
+  }
+  function syncTabUrl(id) {
+    if (window.EKODIAdminPanels?.current?.() !== 'platform-overview') return;
+    const details = id === 'summary' ? [] : [id];
+    const target = window.EKODIAdminRoutes?.navigationTarget?.('platform-overview', location, details);
+    if (target && target !== location.pathname + location.search + location.hash) history.replaceState(history.state, '', target);
+  }
+  function activateTab(tower, id, sync = true) {
+    const next = TAB_IDS.has(id) ? id : 'summary';
+    tower.querySelectorAll('[data-ct-tab]').forEach(node => node.setAttribute('aria-selected', String(node.dataset.ctTab === next)));
+    tower.querySelectorAll('[data-ct-panel]').forEach(panel => { panel.hidden = panel.dataset.ctPanel !== next; });
+    tower.dataset.ctActiveTab = next;
+    if (sync) syncTabUrl(next);
+  }
+  function closeDrawer(tower) {
+    const drawer = tower?.querySelector('[data-ct-drawer]');
+    if (!drawer) return;
+    drawer.hidden = true;
+    drawer.replaceChildren();
+    document.documentElement.classList.remove('ct-drawer-open');
+  }
+  function openDrawer(tower, { eyebrow = '상세', title = '운영 상세', facts = [], action = null } = {}) {
+    const drawer = tower?.querySelector('[data-ct-drawer]');
+    if (!drawer) return;
+    drawer.replaceChildren();
+    const head = el('div','','ct-drawer-head');
+    const heading = el('div');
+    heading.append(el('small',eyebrow), el('h3',title));
+    const close = el('button','×','ct-drawer-close');
+    close.type = 'button';
+    close.setAttribute('aria-label','상세 닫기');
+    close.addEventListener('click', () => closeDrawer(tower));
+    head.append(heading,close);
+    const body = el('div','','ct-drawer-body');
+    for (const [label,value,tone=''] of facts) {
+      const row = el('div','','ct-drawer-fact');
+      row.append(el('span',label), el('strong',value || '—',tone ? `is-${tone}` : ''));
+      body.append(row);
+    }
+    if (action?.label && typeof action.run === 'function') {
+      const button = el('button',action.label,'ct-drawer-action');
+      button.type='button';
+      button.addEventListener('click',action.run);
+      body.append(button);
+    }
+    drawer.append(head,body);
+    drawer.hidden = false;
+    document.documentElement.classList.add('ct-drawer-open');
+  }
   function metric(label, value, note, tone = 'muted') {
     const card = el('article','',`ct-metric is-${tone}`);
     card.append(el('small',label), el('strong',String(value)), el('span',note));
@@ -171,11 +228,11 @@
     tabs.addEventListener('click', event => {
       const button = event.target.closest('[data-ct-tab]');
       if (!button) return;
-      const id = button.dataset.ctTab;
-      tabs.querySelectorAll('[data-ct-tab]').forEach(node => node.setAttribute('aria-selected',String(node === button)));
-      panels.querySelectorAll('[data-ct-panel]').forEach(panel => { panel.hidden = panel.dataset.ctPanel !== id; });
+      activateTab(tower,button.dataset.ctTab,true);
     });
     tower.querySelector('[data-ct-refresh]').addEventListener('click', () => load(true));
+    tower.addEventListener('keydown', event => { if (event.key === 'Escape') closeDrawer(tower); });
+    activateTab(tower,routeTab(),false);
     return tower;
   }
   function renderStatusbar(tower, summary) {
@@ -229,7 +286,18 @@
       meta.append(el('b',run.status === 'completed' ? (run.conclusion || '완료') : (run.status || '대기'),`ct-state is-${tone}`),el('small',timestamp(run.updated_at)));
       row.append(primary,meta);
       row.addEventListener('click', () => {
-        if (run.html_url) window.open(run.html_url,'_blank','noopener');
+        openDrawer(panel.closest('#'+MODULE_ID),{
+          eyebrow:'실행·배포',
+          title:workflow,
+          facts:[
+            ['작업',run.display_title || run.name || '배포 작업'],
+            ['상태',run.status === 'completed' ? (run.conclusion || '완료') : (run.status || '대기'),tone],
+            ['최근 갱신',timestamp(run.updated_at)],
+            ['브랜치',run.head_branch || '—'],
+            ['SHA',String(run.head_sha || '').slice(0,12) || '—'],
+          ],
+          action:run.html_url ? {label:'GitHub 실행 상세 열기 ↗',run:()=>window.open(run.html_url,'_blank','noopener')} : null
+        });
       });
       rows.append(row);
     }
@@ -243,7 +311,8 @@
     if (!summary.operational.length) rows.append(el('div','Control API에 표시할 서비스 상태가 없습니다.','ct-empty'));
     for (const item of summary.operational.slice(0,20)) {
       const tone = stateTone(serviceState(item));
-      const row = el('div','','ct-row ct-row-static');
+      const row = el('button','','ct-row');
+      row.type = 'button';
       const name = item.name || item.id || item.domain || '서비스';
       const detail = item.domain || item.url || item.group || '운영 서비스';
       const ms = item.latest?.responseMs ?? item.latest?.responseTime ?? item.responseMs;
@@ -252,6 +321,21 @@
       const meta = el('span');
       meta.append(el('b',stateLabel(serviceState(item)),`ct-state is-${tone}`),el('small',Number.isFinite(Number(ms)) ? Number(ms)+' ms' : '응답시간 —'));
       row.append(primary,meta);
+      row.addEventListener('click', () => {
+        const state = serviceState(item);
+        openDrawer(panel.closest('#'+MODULE_ID),{
+          eyebrow:'서비스',
+          title:name,
+          facts:[
+            ['상태',stateLabel(state),stateTone(state)],
+            ['주소',item.domain || item.url || '—'],
+            ['그룹',item.group || item.operationalState || '—'],
+            ['응답시간',Number.isFinite(Number(ms)) ? Number(ms)+' ms' : '—'],
+            ['최근 확인',timestamp(item.latest?.checkedAt || item.latest?.checked_at || item.updatedAt || item.updated_at)],
+          ],
+          action:{label:'전체 운영상태에서 보기 →',run:()=>navigate('health')}
+        });
+      });
       rows.append(row);
     }
     const action=el('button','전체 운영상태 상세 보기 →','ct-more'); action.type='button'; action.addEventListener('click',()=>navigate('health'));
@@ -305,7 +389,11 @@
   function setMode(sectionId = window.EKODIAdminPanels?.current?.() || '') {
     const section = document.getElementById(HEALTH_ID);
     if (!section) return;
-    section.classList.toggle('ct-overview-mode',sectionId === 'platform-overview');
+    const overview = sectionId === 'platform-overview';
+    section.classList.toggle('ct-overview-mode',overview);
+    const tower = section.querySelector('#'+MODULE_ID);
+    if (tower && overview) activateTab(tower,routeTab(),false);
+    if (tower && !overview) closeDrawer(tower);
   }
   async function load(force = false) {
     if (loadPromise && !force) return loadPromise;
@@ -359,6 +447,10 @@
   window.addEventListener('ekodi-admin-section-changed',event => {
     setMode(event.detail?.section || '');
     if (event.detail?.section === 'platform-overview' || event.detail?.section === 'health') load(false);
+  });
+  window.addEventListener('popstate',() => {
+    const tower = document.getElementById(MODULE_ID);
+    if (tower && window.EKODIAdminPanels?.current?.() === 'platform-overview') activateTab(tower,routeTab(),false);
   });
   window.EKODIControlTower = Object.freeze({ load, open:openOverview, snapshot:() => snapshot, mounted:() => mounted });
 })();
