@@ -155,6 +155,7 @@ async function invokeProvider(env,id,model,system,input,maxOutputTokens=4096){
 async function providerRow(env,id){return env.DB?env.DB.prepare('SELECT * FROM ai_provider_registry WHERE provider_id=?').bind(id).first():null}
 async function route(env,capability){const cap=CAPABILITIES.has(capability)?capability:'default';const row=env.DB?await env.DB.prepare('SELECT * FROM ai_provider_routes WHERE capability=?').bind(cap).first():null;const fallback=row?JSON.parse(row.fallback_json||'[]'):PROVIDER_ORDER.slice(1);return{capability:cap,primaryProvider:row?.primary_provider||PROVIDER_ORDER[0],fallbacks:Array.isArray(fallback)?fallback:[],modelOverride:row?.model_override||''}}
 async function recordCall(env,{capability,provider,model,status,responseMs,inputUnits=0,outputUnits=0,errorCode=''}){if(!env.DB)return;await env.DB.prepare('INSERT INTO ai_provider_calls (id,capability,provider_id,model,status,response_ms,input_units,output_units,error_code,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(),capability,provider,model||'',status,responseMs,inputUnits,outputUnits,clean(errorCode,160),new Date().toISOString()).run().catch(()=>{})}
+async function recordRoutingEvent(env,{capability,provider,eventType,reason='',position=0,previousProvider=''}){if(!env.DB)return;await env.DB.prepare('INSERT INTO ai_provider_routing_events (id,capability,provider_id,event_type,reason,position,previous_provider,created_at) VALUES (?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(),clean(capability,40)||'default',clean(provider,40),clean(eventType,40),clean(reason,160),Math.max(0,Number(position)||0),clean(previousProvider,40),new Date().toISOString()).run().catch(()=>{})}
 async function recordMeter(env,result,capability){if(!env.DB)return;await recordProviderUsage(env,{provider:result.provider,model:result.model,surface:`provider-gateway:${capability}`,funding:'ekodi-sponsored',requestId:crypto.randomUUID(),usage:{inputTokens:result.inputUnits,cachedInputTokens:result.cachedUnits||0,outputTokens:result.outputUnits,totalTokens:result.inputUnits+result.outputUnits}}).catch(()=>{})}
 async function verifySupabaseUser(request,env){const auth=clean(request.headers.get('authorization'),8192);if(!auth)return null;const base=clean(env.MY_SUPABASE_URL,400).replace(/\/$/,'');const key=clean(env.MY_SUPABASE_PUBLISHABLE_KEY,1000);if(!base||!key)return null;const response=await fetch(`${base}/auth/v1/user`,{headers:{authorization:auth,apikey:key},signal:AbortSignal.timeout(10000)});if(!response.ok)return null;const user=await response.json().catch(()=>null);return user?.id?user:null}
 async function budgetAllowed(env){if(!env.DB?.prepare)return clean(env.ENVIRONMENT,40).toLowerCase()!=='production';const allowance=await getSponsoredAiAllowance(env);return allowance.allowed!==false}
@@ -166,31 +167,69 @@ export async function invokeAiProviderCapability(env,{capability='default',syste
   const selected=await route(env,cap);
   const order=[selected.primaryProvider,...selected.fallbacks].filter((id,index,array)=>PROVIDERS.has(id)&&array.indexOf(id)===index);
   const attempted=[],blocked=[];
-  for(const id of order){
-    const row=await providerRow(env,id);
-    if(row&&Number(row.enabled)!==1)continue;
+  for(let position=0;position<order.length;position++){
+    const id=order[position],row=await providerRow(env,id),previousProvider=attempted.at(-1)||'';
+    if(row&&Number(row.enabled)!==1){blocked.push(id);await recordRoutingEvent(env,{capability:cap,provider:id,eventType:'blocked',reason:'disabled',position,previousProvider});continue}
     const cost=providerCostEligibility(id,governance);
-    if(!cost.eligible){blocked.push(id);continue;}
-    if(await freeQuotaBlocked(env,id)){blocked.push(id);continue;}
-    if(providerHealthBlocksTraffic(row)){blocked.push(id);continue;}
+    if(!cost.eligible){blocked.push(id);await recordRoutingEvent(env,{capability:cap,provider:id,eventType:'blocked',reason:clean(cost.blockedBy||'cost-policy',160),position,previousProvider});continue}
+    if(await freeQuotaBlocked(env,id)){blocked.push(id);await recordRoutingEvent(env,{capability:cap,provider:id,eventType:'blocked',reason:'free-quota-exhausted',position,previousProvider});continue}
+    if(providerHealthBlocksTraffic(row)){blocked.push(id);await recordRoutingEvent(env,{capability:cap,provider:id,eventType:'blocked',reason:'health-circuit-open',position,previousProvider});continue}
     const binding=row?.secret_binding||DEFAULTS[id]?.binding;
-    if(!providerConfigured(env,id,binding))continue;
+    if(!providerConfigured(env,id,binding)){blocked.push(id);await recordRoutingEvent(env,{capability:cap,provider:id,eventType:'blocked',reason:'credential-not-configured',position,previousProvider});continue}
     const model=selected.modelOverride||row?.default_model||DEFAULTS[id]?.model||'';
     const started=Date.now();attempted.push(id);
+    await recordRoutingEvent(env,{capability:cap,provider:id,eventType:previousProvider?'fallback-attempt':'attempt',reason:previousProvider?'previous-provider-failed':'primary-route',position,previousProvider});
     try{
       const result=await invokeProvider(env,id,model,safeSystem,safeInput,Math.max(64,Math.min(8192,Number(maxOutputTokens)||4096)));
       await recordGatewayFreeQuota(env,id,{ok:true,quota:result.quota||null});
       await recordCall(env,{capability:cap,provider:id,model:result.model,status:'completed',responseMs:Date.now()-started,inputUnits:result.inputUnits,outputUnits:result.outputUnits});
+      await recordRoutingEvent(env,{capability:cap,provider:id,eventType:'selected',reason:'completed',position,previousProvider});
       await recordMeter(env,result,cap);
       return Object.freeze({ok:true,capability:cap,text:result.text,provider:result.provider,model:result.model,usage:Object.freeze({inputUnits:result.inputUnits,outputUnits:result.outputUnits})});
     }catch(error){
+      const code=clean(error?.message||error,160);
       await recordGatewayFreeQuota(env,id,{ok:false,error});
-      await recordCall(env,{capability:cap,provider:id,model,status:'failed',responseMs:Date.now()-started,errorCode:clean(error?.message||error,160)});
+      await recordCall(env,{capability:cap,provider:id,model,status:'failed',responseMs:Date.now()-started,errorCode:code});
+      await recordRoutingEvent(env,{capability:cap,provider:id,eventType:'attempt-failed',reason:code,position,previousProvider});
     }
   }
   const error=new Error('provider_unavailable');error.attempted=attempted;error.blocked=blocked;throw error;
 }
-async function runGateway(request,env){if(request.method==='OPTIONS'){const headers=corsHeaders(request,env);if(!headers.get('access-control-allow-origin'))return json(request,env,{error:'origin_forbidden'},403);return new Response(null,{status:204,headers})}if(request.method!=='POST')return json(request,env,{error:'method_not_allowed'},405);const user=await verifySupabaseUser(request,env);if(!user)return json(request,env,{error:'authentication_required'},401);if(!await budgetAllowed(env))return json(request,env,{error:'budget_limit_reached'},429);const body=await request.json().catch(()=>({}));const capability=CAPABILITIES.has(clean(body?.capability,40))?clean(body.capability,40):'default';const system=clean(body?.system,12000),input=clean(body?.input,120000),maxOutputTokens=Math.max(64,Math.min(8192,Number(body?.maxOutputTokens)||4096));if(!input)return json(request,env,{error:'input_required'},400);const selected=await route(env,capability);const order=[selected.primaryProvider,...selected.fallbacks].filter((id,index,array)=>PROVIDERS.has(id)&&array.indexOf(id)===index);const attempted=[],blocked=[];for(const id of order){const row=await providerRow(env,id);if(row&&Number(row.enabled)!==1)continue;const cost=providerCostEligibility(id,{});if(!cost.eligible){blocked.push(id);continue;}if(await freeQuotaBlocked(env,id)){blocked.push(id);continue;}if(providerHealthBlocksTraffic(row)){blocked.push(id);continue;}const binding=row?.secret_binding||DEFAULTS[id]?.binding;if(!providerConfigured(env,id,binding))continue;const model=selected.modelOverride||row?.default_model||DEFAULTS[id]?.model||'';const started=Date.now();attempted.push(id);try{const result=await invokeProvider(env,id,model,system,input,maxOutputTokens);await recordGatewayFreeQuota(env,id,{ok:true,quota:result.quota||null});await recordCall(env,{capability,provider:id,model:result.model,status:'completed',responseMs:Date.now()-started,inputUnits:result.inputUnits,outputUnits:result.outputUnits});await recordMeter(env,result,capability);return json(request,env,{ok:true,contract:'ekodi.ai-provider.v1',text:result.text,provider:{id:result.provider,model:result.model},usage:{inputUnits:result.inputUnits,outputUnits:result.outputUnits}},200)}catch(error){await recordGatewayFreeQuota(env,id,{ok:false,error});await recordCall(env,{capability,provider:id,model,status:'failed',responseMs:Date.now()-started,errorCode:clean(error?.message||error,160)})}}return json(request,env,{error:'provider_unavailable',attempted,blocked},503)}
+async function runGateway(request,env){
+  if(request.method==='OPTIONS'){const headers=corsHeaders(request,env);if(!headers.get('access-control-allow-origin'))return json(request,env,{error:'origin_forbidden'},403);return new Response(null,{status:204,headers})}
+  if(request.method!=='POST')return json(request,env,{error:'method_not_allowed'},405);
+  const user=await verifySupabaseUser(request,env);if(!user)return json(request,env,{error:'authentication_required'},401);
+  if(!await budgetAllowed(env))return json(request,env,{error:'budget_limit_reached'},429);
+  const body=await request.json().catch(()=>({})),capability=CAPABILITIES.has(clean(body?.capability,40))?clean(body.capability,40):'default',system=clean(body?.system,12000),input=clean(body?.input,120000),maxOutputTokens=Math.max(64,Math.min(8192,Number(body?.maxOutputTokens)||4096));
+  if(!input)return json(request,env,{error:'input_required'},400);
+  const selected=await route(env,capability),order=[selected.primaryProvider,...selected.fallbacks].filter((id,index,array)=>PROVIDERS.has(id)&&array.indexOf(id)===index),attempted=[],blocked=[];
+  for(let position=0;position<order.length;position++){
+    const id=order[position],row=await providerRow(env,id),previousProvider=attempted.at(-1)||'';
+    if(row&&Number(row.enabled)!==1){blocked.push(id);await recordRoutingEvent(env,{capability,provider:id,eventType:'blocked',reason:'disabled',position,previousProvider});continue}
+    const cost=providerCostEligibility(id,{});
+    if(!cost.eligible){blocked.push(id);await recordRoutingEvent(env,{capability,provider:id,eventType:'blocked',reason:clean(cost.blockedBy||'cost-policy',160),position,previousProvider});continue}
+    if(await freeQuotaBlocked(env,id)){blocked.push(id);await recordRoutingEvent(env,{capability,provider:id,eventType:'blocked',reason:'free-quota-exhausted',position,previousProvider});continue}
+    if(providerHealthBlocksTraffic(row)){blocked.push(id);await recordRoutingEvent(env,{capability,provider:id,eventType:'blocked',reason:'health-circuit-open',position,previousProvider});continue}
+    const binding=row?.secret_binding||DEFAULTS[id]?.binding;
+    if(!providerConfigured(env,id,binding)){blocked.push(id);await recordRoutingEvent(env,{capability,provider:id,eventType:'blocked',reason:'credential-not-configured',position,previousProvider});continue}
+    const model=selected.modelOverride||row?.default_model||DEFAULTS[id]?.model||'',started=Date.now();attempted.push(id);
+    await recordRoutingEvent(env,{capability,provider:id,eventType:previousProvider?'fallback-attempt':'attempt',reason:previousProvider?'previous-provider-failed':'primary-route',position,previousProvider});
+    try{
+      const result=await invokeProvider(env,id,model,system,input,maxOutputTokens);
+      await recordGatewayFreeQuota(env,id,{ok:true,quota:result.quota||null});
+      await recordCall(env,{capability,provider:id,model:result.model,status:'completed',responseMs:Date.now()-started,inputUnits:result.inputUnits,outputUnits:result.outputUnits});
+      await recordRoutingEvent(env,{capability,provider:id,eventType:'selected',reason:'completed',position,previousProvider});
+      await recordMeter(env,result,capability);
+      return json(request,env,{ok:true,contract:'ekodi.ai-provider.v1',text:result.text,provider:{id:result.provider,model:result.model},usage:{inputUnits:result.inputUnits,outputUnits:result.outputUnits}},200)
+    }catch(error){
+      const code=clean(error?.message||error,160);
+      await recordGatewayFreeQuota(env,id,{ok:false,error});
+      await recordCall(env,{capability,provider:id,model,status:'failed',responseMs:Date.now()-started,errorCode:code});
+      await recordRoutingEvent(env,{capability,provider:id,eventType:'attempt-failed',reason:code,position,previousProvider});
+    }
+  }
+  return json(request,env,{error:'provider_unavailable',attempted,blocked},503)
+}
 async function syncProviderRuntime(env,id,{enabled,priority,model,freeGuardConfirmed=false}){const bindings=RUNTIME_BINDINGS[id];if(!bindings)throw new Error('unknown_provider');const freeGuardBinding=DEFAULTS[id]?.freeGuardBinding||'',existingFreeGuard=providerFreeGuardConfigured(env,id);if(enabled&&freeGuardBinding&&!freeGuardConfirmed&&!existingFreeGuard)throw new Error('free_provider_guard_confirmation_required');const pairs=[['AI_MULTI_PROVIDER_ENABLED','true'],[bindings.enabled,enabled?'true':'false'],[bindings.priority,String(priority)],[bindings.model,model]];if(freeGuardBinding)pairs.push([freeGuardBinding,enabled&&(freeGuardConfirmed||existingFreeGuard)?'true':'false']);for(const[name,value]of pairs)await putRuntimeSecret(env,name,value)}
 async function updateProvider(request,env,session,id){
   if(request.headers.get('x-ekodi-confirm-impact')!=='ai-provider-runtime-update')return json(request,env,{error:'confirmation_required',code:'AI_PROVIDER_CONFIRMATION_REQUIRED'},428);
