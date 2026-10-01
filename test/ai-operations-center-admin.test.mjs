@@ -64,3 +64,13 @@ test('provider cards expose direct key setup links and block health checks until
   assert.match(adminProviderControl, /data-ai-action="check" \$\{configured\?'':'disabled'\}/);
   assert.match(adminProviderControl, /API Key 연결 필요/);
 });
+
+
+test('provider key entry survives secret-manager bootstrap failures and surfaces the exact setup path', () => {
+  assert.match(adminProviderControl, /providerControlErrorMessage/);
+  assert.match(adminProviderControl, /Secret Manager 연결 필요/);
+  assert.match(adminProviderControl, /CLOUDFLARE_SECRET_MANAGER_TOKEN/);
+  assert.match(adminProviderControl, /dash\.cloudflare\.com\/profile\/api-tokens/);
+  assert.match(adminProviderControl, /github\.com\/topmaster-joseph\/ekodi-platform\/settings\/secrets\/actions/);
+  assert.doesNotMatch(adminProviderControl, /catch\(e\)\{input\.value=''\;message\(card,e\.message,true\)\}/);
+});
