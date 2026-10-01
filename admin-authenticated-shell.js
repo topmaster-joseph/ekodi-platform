@@ -5,9 +5,9 @@ const ASSET_VERSION='__EKODI_ADMIN_ASSET_VERSION__';
 const app=document.querySelector('#app');
 const loginScreen=document.querySelector('#loginScreen');
 const loginLink=document.querySelector('#centralAdminLogin');
-const postAuthStyles = ['admin-compact.css','admin-design-engine.css','google-admin-auth.css','control-tower-admin.css'];
+const postAuthStyles = ['admin-compact.css','admin-design-engine.css','google-admin-auth.css'];
 const criticalPostAuthScripts = ['admin-compact.js','admin-menu-layout.js','admin-demand-loader.js'];
-const deferredPostAuthScripts = ['ekodi-message-ui.js','google-admin-auth.js','admin-public-site-controls.js','admin-release-convergence.js','control-tower-admin.js'];
+const deferredPostAuthScripts = ['ekodi-message-ui.js','google-admin-auth.js','admin-public-site-controls.js','admin-release-convergence.js'];
 let started=false;
 function token(){try{return sessionStorage.getItem(TOKEN_KEY)||''}catch{return''}}
 function authenticated(){return Boolean(token() && app && !app.hidden)}
