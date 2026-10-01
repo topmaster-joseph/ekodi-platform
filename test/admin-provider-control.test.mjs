@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 const source = await readFile(new URL('../admin-provider-control.js', import.meta.url), 'utf8');
 const build = await readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
 const release = await readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8');
+const productionVerifier = await readFile(new URL('../scripts/verify-admin-provider-control-production.mjs', import.meta.url), 'utf8');
 
 test('provider control covers Cloudflare GitHub and Supabase', () => {
   for (const marker of ['cloudflare','github','supabase','EKODIProviderControl']) assert.ok(source.includes(marker), marker);
