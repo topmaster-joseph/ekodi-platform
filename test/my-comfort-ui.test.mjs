@@ -27,6 +27,15 @@ test('My EKODI root uses the calm custom landing without duplicate navigation',(
   assert.match(css,/word-break:keep-all/);
 });
 
+test('My EKODI keeps signed-in home compact and groups account settings into subtabs',()=>{
+  assert.match(hubCss,/body\[data-auth-state="member"\]\[data-active-tab="home"\] \.comfort-hero/);
+  assert.match(html,/class="account-subtabs"/);
+  for(const tab of ['basic','public','character','security'])assert.match(html,new RegExp(`data-account-tab="${tab}"`));
+  assert.match(html,/data-account-panel="public"/);
+  assert.match(html,/data-account-panel="character"/);
+  assert.match(html,/data-account-panel="security"/);
+});
+
 test('My EKODI separates customized footer guidance from the shared legal footer',()=>{
   assert.match(html,/class="my-custom-footer"/);
   assert.match(html,/class="my-footer-credo"/);
