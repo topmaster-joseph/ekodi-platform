@@ -333,7 +333,7 @@ function renderNotices(){
 async function loadNotices(){if(!state.me?.permissions?.notices)return;const data=await api('/api/seonammedi/admin/notices');state.notices=data.items||[];renderNotices();updateDashboard()}
 
 function resetChannel(){
-  const form=$('channelForm');form.reset();form.elements.id.value='';form.elements.platform.value='youtube';form.elements.category.value='official';form.elements.sortOrder.value='0';form.elements.visible.checked=true;text($('channelFormTitle'),'채널 추가');text($('channelMessage'),'');
+  const form=$('channelForm');form.reset();form.elements.id.value='';form.elements.platform.value='youtube';form.elements.category.value='official';form.elements.sortOrder.value='0';form.elements.visible.checked=false;text($('channelFormTitle'),'채널 추가');text($('channelMessage'),'');
 }
 function editChannel(item){
   const form=$('channelForm');form.elements.id.value=item.id;form.elements.platform.value=item.platform||'other';form.elements.name.value=item.name||'';form.elements.url.value=item.url||'';form.elements.category.value=item.category||'other';form.elements.sortOrder.value=String(item.sortOrder||0);form.elements.official.checked=Boolean(item.official);form.elements.visible.checked=Boolean(item.visible);form.elements.note.value=item.note||'';text($('channelFormTitle'),'채널 수정');showPanel('channels');form.elements.name.focus();
@@ -350,7 +350,7 @@ function renderChannels(){
     const article=document.createElement('article');article.className='item';const head=document.createElement('div');head.className='item-head';
     const left=document.createElement('div');const a=document.createElement('a');a.className='item-title';a.href=item.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=item.name;
     const meta=document.createElement('div');meta.className='item-meta';meta.textContent=platformLabel(item.platform)+' · '+categoryLabel(item.category);left.append(a,meta);
-    const flags=document.createElement('div');if(item.official)flags.append(tag('공식','official'));flags.append(tag(item.visible?'표시':'숨김',item.visible?'live':''));head.append(left,flags);article.append(head);
+    const flags=document.createElement('div');if(item.official)flags.append(tag('공식','official'));flags.append(tag(item.visible?'공개 승인':'공개 대기',item.visible?'live':''));head.append(left,flags);article.append(head);
     if(item.note){const p=document.createElement('p');p.className='item-body';p.textContent=item.note;article.append(p)}
     const actions=document.createElement('div');actions.className='item-actions';actions.append(button('수정',()=>editChannel(item)),button('삭제',()=>deleteChannel(item),'danger'));article.append(actions);host.append(article);
   }
