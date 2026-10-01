@@ -36,6 +36,14 @@ test('My EKODI keeps signed-in home compact and groups account settings into sub
   assert.match(html,/data-account-panel="security"/);
 });
 
+test('My EKODI compacts services with subtabs and renders activity from real context',()=>{
+  assert.match(html,/class="services-subtabs/);
+  for(const tab of ['services','spaces','status'])assert.match(html,new RegExp(`data-services-tab="${tab}"`));
+  assert.match(html,/id="activityTimeline"/);
+  assert.match(hubCss,/\.activity-timeline/);
+  assert.match(hubCss,/\[data-services-panel\]\[hidden\]/);
+});
+
 test('My EKODI separates customized footer guidance from the shared legal footer',()=>{
   assert.match(html,/class="my-custom-footer"/);
   assert.match(html,/class="my-footer-credo"/);
