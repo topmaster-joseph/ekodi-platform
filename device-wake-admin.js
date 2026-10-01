@@ -89,7 +89,7 @@
       const online = device.status === 'online';
       const wakeReady = eligible && profile?.enabled && gateway?.status === 'online' && !online;
       return `<article class="device-wake-card" data-wake-device="${esc(device.id)}">
-        <div class="device-wake-card-head"><div class="device-wake-card-title"><div><strong>${esc(device.label || device.hostname || device.id)}</strong><small>${esc(device.hostname || device.id)}</small></div><span class="device-wake-state ${online ? 'online' : 'offline'}">${online ? '온라인' : '오프라인'}</span><span class="device-wake-state ${eligible ? 'online' : 'offline'}">${eligible ? 'Wake 허용 가능' : '휴대형 제외'}</span></div></div>
+        <div class="device-wake-card-head"><div class="device-wake-card-title"><div><strong>${esc(device.label || device.hostname || device.id)}</strong><small>${esc(device.hostname || device.id)}</small></div><span class="device-wake-state ${online ? 'online' : 'offline'}">${online ? '온라인' : '오프라인'}</span><span class="device-wake-state ${eligible ? 'online' : 'offline'}">${eligible ? 'Wake 허용 가능' : '노트북/휴대형 제외'}</span></div></div>
         <form class="device-wake-form" data-wake-profile-form>
           <label class="wide">Gateway<select name="gatewayId"${eligible ? '' : ' disabled'}>${gatewayOptions(wake, profile?.gatewayId || '')}</select></label>
           <label>MAC 주소<input name="macAddress" placeholder="AA:BB:CC:DD:EE:FF" value="${esc(profile?.macAddress || '')}"${eligible ? '' : ' disabled'}></label>
