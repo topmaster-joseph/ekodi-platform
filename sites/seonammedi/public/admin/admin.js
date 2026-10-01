@@ -121,19 +121,24 @@ async function loadSiteHealth(){
   let monitorBody={};try{monitorBody=monitor.response?await monitor.response.clone().json():{}}catch{}
   const lastRun=monitorBody?.lastRun||null,completed=lastRun?.completed_at?new Date(lastRun.completed_at):null;
   const ageHours=completed&&Number.isFinite(completed.getTime())?(Date.now()-completed.getTime())/36e5:null;
-  let runState=monitor.state;if(runState==='ok'&&lastRun){if(lastRun.status==='failed')runState='error';else if(lastRun.status==='partial'||(ageHours!==null&&ageHours>30))runState='warn'}
+  let runHistoryState='ok';
+  if(!lastRun)runHistoryState='warn';
+  else if(lastRun.status==='failed')runHistoryState='error';
+  else if(lastRun.status==='partial'||(ageHours!==null&&ageHours>30))runHistoryState='warn';
   const dynamicRows=[
     {label:'현재상황·회계 API',state:pageData.state,detail:pageData.detail},
     {label:'공지 API',state:notices.state,detail:notices.detail},
     {label:'채널 API',state:channels.state,detail:channels.detail},
-    {label:'자동수집 API',state:runState,detail:lastRun?('최근 실행 '+(completed?completed.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'시간 미확인')):monitor.detail}
+    {label:'자동수집 API 현재 응답',state:monitor.state,detail:monitor.detail},
+    {label:'최근 자동점검 실행',state:runHistoryState,detail:lastRun?((completed?completed.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'시간 미확인')+' · '+(lastRun.status||'상태 미확인')):'실행 기록 없음'}
   ];
   healthSummary('dynamicHealthList',dynamicRows);
   const staticState=staticRows.some(x=>x.state==='error')?'error':staticRows.some(x=>x.state==='warn')?'warn':'ok';
-  const dynamicState=dynamicRows.some(x=>x.state==='error')?'error':dynamicRows.some(x=>x.state==='warn')?'warn':'ok';
+  const liveDynamicRows=dynamicRows.filter(x=>x.label!=='최근 자동점검 실행');
+  const dynamicState=liveDynamicRows.some(x=>x.state==='error')?'error':liveDynamicRows.some(x=>x.state==='warn')?'warn':'ok';
   text($('staticHealthStatus'),healthStateLabel(staticState));text($('dynamicHealthStatus'),healthStateLabel(dynamicState));
   text($('siteHealthCheckedAt'),new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour12:false}));
-  const runBadge=$('monitorRunBadge');if(runBadge){runBadge.className='tag '+(runState==='ok'?'live':runState==='warn'?'warn':'error');runBadge.textContent=healthStateLabel(runState)}
+  const runBadge=$('monitorRunBadge');if(runBadge){runBadge.className='tag '+(runHistoryState==='ok'?'live':runHistoryState==='warn'?'warn':'error');runBadge.textContent=healthStateLabel(runHistoryState)}
   const summary=$('monitorRunSummary');if(summary)summary.textContent=lastRun?('최근 실행 '+(completed?completed.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'-')+' · 출처 '+Number(lastRun.sources_checked||0)+'개 · 확인 '+Number(lastRun.items_seen||0)+'건 · 신규 '+Number(lastRun.new_items||0)+'건'+(lastRun.error_summary?' · 오류 '+lastRun.error_summary:'')):'아직 자동점검 실행 기록이 없습니다.';
   const recent=$('monitorRecentItems');if(recent){recent.replaceChildren();const rows=Array.isArray(monitorBody?.items)?monitorBody.items.slice(0,8):[];if(!rows.length)recent.append(empty('최근 자동수집 항목이 없습니다.'));else for(const item of rows){const article=document.createElement('article');article.className='item';const title=document.createElement('div');title.className='item-title';title.textContent=item.title||'수집 항목';const meta=document.createElement('div');meta.className='item-meta';meta.textContent=[item.publisher,item.published_at?new Date(item.published_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'',item.review_state].filter(Boolean).join(' · ');article.append(title,meta);recent.append(article)}}
 }
