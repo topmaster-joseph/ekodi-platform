@@ -88,27 +88,10 @@ export function createDeepSeekFreeCreditProvider(env={},options={}){
   });
 }
 
-export function createHuggingFaceFreeCreditProvider(env={},options={}){
-  const key=clean(env.HF_TOKEN||env.HUGGINGFACE_TOKEN,8192),model=clean(env.EKODI_HF_FREE_MODEL||env.HF_MODEL,180)||'openai/gpt-oss-120b:cheapest',fetchImpl=options.fetchImpl||globalThis.fetch;
-  const available=Boolean(enabled(env.EKODI_PROVIDER_HF_FREE_ENABLED)&&key&&typeof fetchImpl==='function');
-  return Object.freeze({
-    id:'huggingface-free-credit',model,available,priority:55,costClass:'free-preferred',
-    async invoke({prompt=''}={}){
-      if(!available)throw new Error('huggingface_free_credit_not_configured');
-      const reservation=await reserveFreeDailyRequest(env,'huggingface-free-credit',safeLimit(env.EKODI_HF_FREE_DAILY_CALL_LIMIT,50,200));
-      const input=await safePrompt(prompt,'ekodi-huggingface-free-credit');
-      const response=await fetchImpl('https://router.huggingface.co/v1/chat/completions',{method:'POST',headers:{authorization:`Bearer ${key}`,'content-type':'application/json'},body:JSON.stringify({model,messages:[{role:'user',content:input}],temperature:0.2,max_tokens:1024}),signal:AbortSignal.timeout(60000)});
-      const data=await response.json().catch(()=>({}));
-      if(!response.ok){const error=detailCode('huggingface',response,data);if([402,403,429].includes(response.status))error.quota={state:response.status===429?'throttled':'exhausted'};throw error}
-      const text=chatOutput(data);if(!text)throw new Error('huggingface_free_credit_empty_response');
-      return Object.freeze({text,model,quota:Object.freeze({remainingRequests:reservation.remaining,remainingTokens:null,resetAt:reservation.resetAt})});
-    }
-  });
-}
+export { createHuggingFaceProvider, createHuggingFaceFreeCreditProvider } from './huggingface-provider-adapter.js';
 
 export const EXTENDED_FREE_PROVIDER_DEFAULTS=Object.freeze({
   cerebras:Object.freeze({model:'qwen-3.8-27b',dailySafetyLimit:100}),
   qwen:Object.freeze({model:'qwen3.7-plus',dailySafetyLimit:150}),
   deepseek:Object.freeze({model:'deepseek-flash',dailySafetyLimit:100}),
-  huggingface:Object.freeze({model:'openai/gpt-oss-120b:cheapest',dailySafetyLimit:50}),
 });

@@ -579,6 +579,24 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/api/seonammedi/channels/1/preview",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"ok\":true",
+          "\"preview\":"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Provider-aware SeonamMedi channel preview is backed by Control API and verified after guarded promotion.",
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/api/seonammedi/timeline",
         "statuses": [
           200

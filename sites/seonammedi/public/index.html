@@ -93,7 +93,8 @@
     </div>
     <div class="channel-preview-frame-wrap">
       <iframe id="channelPreviewFrame" class="channel-preview-frame" title="관련 채널 미리보기" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
-      <div class="channel-preview-note">외부 채널이 이 화면 안에서 열리지 않으면 오른쪽 위의 <strong>원문 채널 열기</strong>를 이용해 주세요.</div>
+      <div id="channelPreviewFallback" class="channel-preview-fallback" hidden></div>
+      <div class="channel-preview-note">채널 제공자가 화면 삽입을 제한하면 EKODI가 공개 채널 정보를 같은 화면에 대신 표시합니다. 원문은 오른쪽 위 버튼으로 열 수 있습니다.</div>
     </div>
   </div>
 </section>

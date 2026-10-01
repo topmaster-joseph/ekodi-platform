@@ -49,13 +49,13 @@ function centralSessionToken(){
 }
 async function token(){
   const platform=sessionStorage.getItem(PLATFORM_TOKEN_KEY)||'';if(platform)return platform;
-  const handoff=await userToken();if(handoff)return handoff;
+  try{const handoff=await userToken();if(handoff)return handoff}catch(error){if(Number(error?.status||0)<500)throw error}
   return centralSessionToken();
 }
 async function api(path,options={}){
-  const bearer=await token();if(!bearer){location.replace(authUrl());throw new Error('로그인이 필요합니다.')}
-  const headers=new Headers(options.headers||{});headers.set('authorization','Bearer '+bearer);if(options.body&&!headers.has('content-type'))headers.set('content-type','application/json');
-  let response;try{response=await fetch(path,{...options,headers,cache:'no-store'})}catch{throw Object.assign(new Error('서버에 연결하지 못했습니다. 새로고침 후 다시 시도해 주세요.'),{status:503})}
+  const bearer=await token();
+  const headers=new Headers(options.headers||{});if(bearer)headers.set('authorization','Bearer '+bearer);if(options.body&&!headers.has('content-type'))headers.set('content-type','application/json');
+  let response;try{response=await fetch(path,{...options,headers,cache:'no-store',credentials:'same-origin'})}catch{throw Object.assign(new Error('서버에 연결하지 못했습니다. 새로고침 후 다시 시도해 주세요.'),{status:503})}
   const data=await response.json().catch(()=>({}));
   if(response.status===401){sessionStorage.removeItem(PLATFORM_TOKEN_KEY);clearSession();try{localStorage.removeItem(CENTRAL_SESSION_KEY)}catch{}location.replace(authUrl());throw new Error('로그인이 만료되었습니다.')}
   if(!response.ok)throw Object.assign(new Error(data.error||'요청을 처리하지 못했습니다.'),{status:response.status,data});return data;
@@ -390,7 +390,7 @@ $('refreshAll').addEventListener('click',()=>init(true));$('changeAccount').addE
 
 async function init(refresh=false){
   try{
-    state.me=await api('/api/seonammedi/admin/me');updateDashboard();
+    state.me=await api('/api/seonammedi/admin/me');if(location.hash.includes('ekodi_token='))history.replaceState(null,'',location.pathname+location.search);updateDashboard();
     await Promise.all([loadSiteHealth(),state.me.permissions?.pages?loadStatusPage():Promise.resolve(),state.me.permissions?.pages?loadOrganization():Promise.resolve(),state.me.permissions?.timeline?loadTimeline():Promise.resolve(),state.me.permissions?.voices?loadVoices():Promise.resolve(),state.me.permissions?.content?loadContent():Promise.resolve(),state.me.permissions?.notices?loadNotices():Promise.resolve(),state.me.permissions?.channels?loadChannels():Promise.resolve(),state.me.permissions?.finance?loadFinance():Promise.resolve()]);
     if(refresh)text($('scopeSummary'),state.me.platform?'최고관리자 권한으로 최신 상태를 확인했습니다.':'게시판 관리자 권한으로 최신 상태를 확인했습니다.');
   }catch(error){
