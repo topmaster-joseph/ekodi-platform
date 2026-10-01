@@ -9,8 +9,10 @@ const PROGRAMS=Object.freeze({
     providerId:null,
     providerStatus:'unassigned',
     adapterVersion:'v1',
-    publicPath:'/cheonggye/pass',
-    adminPath:'/cheonggye/admin/pass',
+    publicPath:'/cheonggyepass',
+    adminPath:'/cheonggyepass/admin',
+    regionalEntryPath:'/cheonggye/pass',
+    regionalAdminEntryPath:'/cheonggye/admin/pass',
     capabilities:[
       'catalog',
       'merchant-enrollment',
@@ -29,6 +31,15 @@ const PROGRAMS=Object.freeze({
 
 export function regionalCommerceProgramById(id){
   return PROGRAMS[String(id||'').trim().toLowerCase()]||null;
+}
+
+export function regionalCommerceProgramFromPath(pathname){
+  const path=String(pathname||'').split(/[?#]/)[0].replace(/\/+$/,'')||'/';
+  const program=regionalCommerceProgramById('cheonggye-pass');
+  if(path===program.publicPath||path===program.adminPath||path.startsWith(program.adminPath+'/')){
+    return Object.freeze({program,admin:path===program.adminPath||path.startsWith(program.adminPath+'/'),canonical:true});
+  }
+  return null;
 }
 
 export function regionalCommerceProgramFromLocalRoute(route){
