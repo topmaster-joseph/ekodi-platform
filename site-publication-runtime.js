@@ -234,7 +234,8 @@ function pageLike(pathname){
 }
 function hostMatches(site,host){
   let canonicalHost='';try{canonicalHost=new URL(site.canonicalUrl).hostname.toLowerCase()}catch{}
-  return host===canonicalHost||site.aliases.includes(host)||clean(site.publicDomain,255).toLowerCase()===host;
+  const storedDomain=clean(site.domain,255).toLowerCase().split('/')[0];
+  return host===canonicalHost||site.aliases.includes(host)||(storedDomain&&storedDomain===host);
 }
 
 async function tenantSiteForFirstSegment(env,path){
@@ -245,11 +246,22 @@ async function tenantSiteForFirstSegment(env,path){
   return normalizeCatalogSite({id:row.slug,workspaceId:row.slug,name:row.name,canonicalUrl:'https://ekodi.kr'+pathForTenant(row.slug)+'/',canonicalPath:pathForTenant(row.slug),tenantId:row.id,tenantSlug:row.slug,authoritySiteKey:row.slug,domain:row.domain||''},'customer-tenant');
 }
 
+async function tenantSiteForDomain(env,host){
+  if(!env?.DB?.prepare||!host)return null;
+  let rows;try{rows=await env.DB.prepare("SELECT id,slug,name,domain,status FROM customer_tenants WHERE status='active' AND domain IS NOT NULL AND trim(domain)<>''").all()}catch{return null}
+  const row=(rows.results||[]).find(item=>String(item.domain||'').trim().toLowerCase().replace(/^https?:\/\//,'').split('/')[0]===host);
+  if(!row)return null;
+  const canonicalPath=pathForTenant(row.slug);
+  return normalizeCatalogSite({id:row.slug,workspaceId:row.slug,name:row.name,canonicalUrl:'https://ekodi.kr'+canonicalPath+'/',canonicalPath,tenantId:row.id,tenantSlug:row.slug,authoritySiteKey:row.slug,domain:row.domain||''},'customer-tenant');
+}
+
 export async function resolvePublicationSiteForRequest(request,env,{admin=false}={}){
   const url=new URL(request.url),host=requestHost(request),path=trimPath(url.pathname);
   let catalog=staticSitePublicationCatalog();
   if(host==='ekodi.kr'){
     const dynamic=await tenantSiteForFirstSegment(env,path);if(dynamic)catalog=[dynamic,...catalog];
+  }else{
+    const dynamic=await tenantSiteForDomain(env,host);if(dynamic)catalog=[dynamic,...catalog];
   }
   const candidates=catalog.filter(site=>{
     if(site.exactRoot)return host==='ekodi.kr'&&path==='/';
