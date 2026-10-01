@@ -220,4 +220,12 @@ async function save(event){
     });
     setStatus('개인정보 원장과 상황별 공유모드가 저장되었습니다.','success');showCardLinks(await loadPublicProfile());
   }catch(error){setStatus(error.message||'공유 설정을 저장하지 못했습니다.','error')}
-  fina
+  finally{setDisabled(false);fields.save.textContent=label}
+}
+fields.addRole.addEventListener('click',()=>{if(fields.roles.children.length>=20)return setStatus('역할은 최대 20개까지 등록할 수 있습니다.','error');fields.roles.append(roleRow({active:true}));refreshRoleOptions()});
+fields.addContext.addEventListener('click',()=>{if(fields.contexts.children.length>=20)return setStatus('공유모드는 최대 20개까지 등록할 수 있습니다.','error');fields.contexts.append(contextRow({show_profile_intro:true,show_profile_links:true,exchange_enabled:true,visibility:'private'}))});
+form.addEventListener('submit',save);
+window.addEventListener('ekodi:my-session',()=>void refresh());
+window.addEventListener('ekodi:public-profile-updated',event=>showCardLinks(event.detail||{}));
+void refresh();
+})();
