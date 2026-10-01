@@ -279,7 +279,7 @@
     root.id = ROOT_ID;
     root.innerHTML = `
       <div class="aic-head">
-        <div><span class="aic-kicker">EKODI AI CONTROL PLANE</span><h3>AI 운영센터</h3><p>에코디가 통제권을 유지한 채 전문 에이전트, Cloudflare·Gemini·OpenRouter·Groq·OpenAI·Claude, 모델·Fallback, Human Gate와 운영기록을 한곳에서 관리합니다.</p></div>
+        <div><span class="aic-kicker">EKODI AI CONTROL PLANE</span><h3>AI 운영센터</h3><p>에코디가 통제권을 유지한 채 전문 에이전트, Cloudflare·Gemini·OpenRouter·Groq·Cerebras·Qwen·DeepSeek·OpenAI·Claude, 모델·Fallback, Human Gate와 운영기록을 한곳에서 관리합니다.</p></div>
         <div class="aic-head-actions"><button class="aic-btn" type="button" data-aic-jump="health">상태·관측</button><button class="aic-btn" type="button" data-aic-jump="api-cost">API·비용</button><button class="aic-btn" type="button" data-aic-jump="openai">OpenAI 작업공간</button><button class="aic-btn primary" type="button" data-aic-refresh>↻ 동기화</button></div>
       </div>
       <nav class="aic-tabs" aria-label="AI 운영센터 세부메뉴">${TABS.map(([id, label], index) => `<button class="aic-tab ${index === 0 ? 'is-active' : ''}" type="button" data-aic-tab="${id}">${label}</button>`).join('')}</nav>
