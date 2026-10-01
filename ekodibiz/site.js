@@ -179,15 +179,11 @@ function applyLocale({persist=false,announce=false}={}){
   document.querySelectorAll('[data-i18n]').forEach(el=>{const value=t[el.dataset.i18n];if(value!=null)el.textContent=value});
   document.querySelectorAll('[data-i18n-html]').forEach(el=>{const value=t[el.dataset.i18nHtml];if(value!=null)el.innerHTML=value});
   document.querySelectorAll('[data-i18n-aria]').forEach(el=>{const value=t[el.dataset.i18nAria];if(value!=null)el.setAttribute('aria-label',value)});
-  $('#languageSelect').value=locale;$('#businessInquiry').href=gmailHref(t.generalSubject);
+  $('#businessInquiry').href=gmailHref(t.generalSubject);
   $('#footerEmail')?.setAttribute('href',gmailHref(t.generalSubject));renderRoute(false);
   if(persist)persistLocale();
   if(announce)window.dispatchEvent(new CustomEvent('ekodi:locale-change',{detail:{locale,source:'ekodibiz'}}));
 }
-$('#languageSelect').addEventListener('change',event=>{
-  const next=normalizeLocale(event.target.value);if(!next||next===locale)return;
-  locale=next;applyLocale({persist:true,announce:true});
-});
 window.addEventListener('ekodi:locale-change',event=>{
   const next=normalizeLocale(event.detail?.locale);if(!next||next===locale)return;
   locale=next;applyLocale({persist:true,announce:false});
