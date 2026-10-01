@@ -21,6 +21,7 @@ on:
       - 'ai-cost-policy.js'
       - 'ai-free-quota.js'
       - 'groq-free-provider-adapter.js'
+      - 'extended-free-provider-adapters.js'
       - 'openrouter-free-provider-adapter.js'
       - 'ai-commons.js'
       - 'ai-commons-admin.js'
@@ -75,6 +76,7 @@ on:
       - 'migrations/0095_ai_free_quota_decisions.sql'
       - 'migrations/0096_activate_ai_provider_pool.sql'
       - 'migrations/0120_common_ai_provider_chain.sql'
+      - 'migrations/0121_extended_free_ai_provider_chain.sql'
       - 'migrations/0109_low_traffic_site_improvement.sql'
       - 'migrations/0110_site_improvement_broker_tokens.sql'
       - 'deploy/manifests/ai-control.worker.json'
@@ -102,6 +104,7 @@ on:
       - 'ai-cost-policy.js'
       - 'ai-free-quota.js'
       - 'groq-free-provider-adapter.js'
+      - 'extended-free-provider-adapters.js'
       - 'openrouter-free-provider-adapter.js'
       - 'ai-commons.js'
       - 'ai-commons-admin.js'
@@ -156,6 +159,7 @@ on:
       - 'migrations/0095_ai_free_quota_decisions.sql'
       - 'migrations/0096_activate_ai_provider_pool.sql'
       - 'migrations/0120_common_ai_provider_chain.sql'
+      - 'migrations/0121_extended_free_ai_provider_chain.sql'
       - 'migrations/0109_low_traffic_site_improvement.sql'
       - 'migrations/0110_site_improvement_broker_tokens.sql'
       - 'deploy/manifests/ai-control.worker.json'
@@ -209,6 +213,7 @@ jobs:
           node --check ai-free-quota.js
           node --check groq-free-provider-adapter.js
           node --check openrouter-free-provider-adapter.js
+          node --check extended-free-provider-adapters.js
           node --check ai-control-worker.js
           node --check ekodi-site-improvement-scheduler.js
           node --check ekodi-site-improvement-oidc-broker.js
@@ -280,6 +285,11 @@ jobs:
           test -f migrations/0088_ai_commons_sources.sql
           test -f migrations/0096_activate_ai_provider_pool.sql
           test -f migrations/0120_common_ai_provider_chain.sql
+          test -f migrations/0121_extended_free_ai_provider_chain.sql
+          grep -Fq "'cerebras-free', 'Cerebras · 무료 체험'" migrations/0121_extended_free_ai_provider_chain.sql
+          grep -Fq "'qwen-free', 'Qwen · 무료 할당량'" migrations/0121_extended_free_ai_provider_chain.sql
+          grep -Fq "'deepseek-free-credit', 'DeepSeek · 무료 지급 크레딧'" migrations/0121_extended_free_ai_provider_chain.sql
+          grep -Fq '"cerebras-free","qwen-free","deepseek-free-credit","openai","anthropic"' migrations/0121_extended_free_ai_provider_chain.sql
           grep -Fq "'cloudflare-workers-ai', 'Cloudflare / 무료 자원'" migrations/0120_common_ai_provider_chain.sql
           grep -Fq "'openrouter-free', 'OpenRouter Free'" migrations/0120_common_ai_provider_chain.sql
           grep -Fq "'groq-free', 'Groq Free'" migrations/0120_common_ai_provider_chain.sql
