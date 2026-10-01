@@ -148,3 +148,32 @@ test('provider status cards explain free and paid usage',()=>{
   assert.match(admin,/지속 무료 사용 없음/);
   assert.match(admin,/ekodi-ai-provider-status-note/);
 });
+
+
+test('central provider contract includes both free failover providers in governed order',()=>{
+  assert.deepEqual(AI_PROVIDER_CONTROL_CONTRACT.providers,['gemini','openrouter','groq','openai','anthropic']);
+  const source=read('ai-provider-control.js');
+  assert.match(source,/openrouter:\{name:'OpenRouter Free',model:'openrouter\/free'/);
+  assert.match(source,/groq:\{name:'Groq Free',model:'openai\/gpt-oss-20b'/);
+  assert.match(source,/primaryProvider:row\?\.primary_provider\|\|'gemini'/);
+  assert.match(source,/\['openrouter','groq','openai','anthropic'\]/);
+});
+
+test('OpenRouter and Groq health probes use their free API endpoints',async()=>{
+  const originalFetch=globalThis.fetch;
+  const calls=[];
+  globalThis.fetch=async(url)=>{
+    calls.push(String(url));
+    return new Response(JSON.stringify({model:'free-test',choices:[{message:{content:'EKODI_PROVIDER_OK'}}],usage:{prompt_tokens:2,completion_tokens:1}}),{status:200,headers:{'content-type':'application/json'}});
+  };
+  try{
+    for(const [provider,keyName,key] of [['openrouter','OPENROUTER_API_KEY','or-key-1234567890123456'],['groq','GROQ_API_KEY','gsk-key-1234567890123456']]){
+      const row={provider_id:provider,enabled:1,priority:20,default_model:provider==='openrouter'?'openrouter/free':'openai/gpt-oss-20b',secret_binding:keyName,health_status:'unknown',last_checked_at:null};
+      const DB={prepare(sql){const stmt={bind(){return this},async all(){if(sql.startsWith('SELECT * FROM ai_provider_registry'))return{results:[row]};return{results:[]}},async run(){return{meta:{changes:1}}}};return stmt}};
+      const result=await runAiProviderHealthSchedule({DB,[keyName]:key},{now:Date.parse('2026-10-02T00:00:00Z')});
+      assert.equal(result.results[0].status,'healthy');
+    }
+    assert.ok(calls.some(url=>url.includes('openrouter.ai/api/v1/chat/completions')));
+    assert.ok(calls.some(url=>url.includes('api.groq.com/openai/v1/chat/completions')));
+  }finally{globalThis.fetch=originalFetch}
+});
