@@ -6,6 +6,7 @@ const center = readFileSync(new URL('../ai-operations-center-admin.js', import.m
 const menu = readFileSync(new URL('../admin-menu-registry.js', import.meta.url), 'utf8');
 const build = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
 const providerControl = readFileSync(new URL('../ai-provider-control.js', import.meta.url), 'utf8');
+const adminProviderControl = readFileSync(new URL('../admin-provider-control.js', import.meta.url), 'utf8');
 const agentControl = readFileSync(new URL('../ai-agent-control.js', import.meta.url), 'utf8');
 
 test('AI operations center source parses as JavaScript', () => {
@@ -56,10 +57,10 @@ test('human-gated agent actions use the existing mission control decision endpoi
 
 
 test('provider cards expose direct key setup links and block health checks until a secret is connected', () => {
-  assert.match(center, /aistudio\.google\.com\/app\/apikey/);
-  assert.match(center, /platform\.openai\.com\/api-keys/);
-  assert.match(center, /console\.anthropic\.com\/settings\/keys/);
-  assert.match(center, /providerActionHint/);
-  assert.match(center, /data-ai-action="check" \$\{configured\?'':'disabled'\}/);
-  assert.match(center, /API Key 연결 필요/);
+  assert.match(adminProviderControl, /aistudio\.google\.com\/app\/apikey/);
+  assert.match(adminProviderControl, /platform\.openai\.com\/api-keys/);
+  assert.match(adminProviderControl, /console\.anthropic\.com\/settings\/keys/);
+  assert.match(adminProviderControl, /providerActionHint/);
+  assert.match(adminProviderControl, /data-ai-action="check" \$\{configured\?'':'disabled'\}/);
+  assert.match(adminProviderControl, /API Key 연결 필요/);
 });
