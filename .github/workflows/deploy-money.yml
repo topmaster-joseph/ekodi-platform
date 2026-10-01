@@ -6,13 +6,17 @@ on:
     paths:
       - 'money/**'
       - 'money-worker.js'
+      - 'kftc-openbanking-adapter-worker.js'
       - 'ekodi-service-manifest.js'
       - 'config/ecosystem-services.json'
       - 'platform-boundaries.json'
       - 'shell/theme.json'
       - 'test/money-platform.test.mjs'
+      - 'test/kftc-openbanking-adapter.test.mjs'
       - 'wrangler.money.toml'
       - 'wrangler.money.staging.toml'
+      - 'wrangler.kftc-openbanking-adapter.toml'
+      - 'wrangler.kftc-openbanking-adapter.staging.toml'
       - 'deploy/manifests/money.worker.json'
       - '.github/workflows/deploy-money.yml'
   push:
@@ -54,12 +58,13 @@ jobs:
         run: |
           set -euo pipefail
           node --check money-worker.js
+          node --check kftc-openbanking-adapter-worker.js
           node --check money/core.js
           node --check money/integrations.js
           node --check money/kftc-openbanking.js
           node --check money/app.js
           node --check ekodi-service-manifest.js
-          node --test test/money-platform.test.mjs
+          node --test test/money-platform.test.mjs test/kftc-openbanking-adapter.test.mjs
           node scripts/validate-platform-boundaries.mjs
           node scripts/validate-ai-mission-governance.mjs
           node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/money.worker.json','utf8'))"
@@ -80,6 +85,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
       STAGING_URL: https://ekodi-money-staging.ekodi-development.workers.dev
+      ADAPTER_STAGING_URL: https://ekodi-kftc-openbanking-adapter-staging.ekodi-development.workers.dev
     steps:
       - uses: actions/checkout@v7
       - name: EKODI AI Orchestration Gate
@@ -88,7 +94,27 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-      - name: Deploy isolated staging
+      - name: Deploy fail-closed KFTC adapter staging
+        run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.kftc-openbanking-adapter.staging.toml
+      - name: Verify KFTC adapter staging safety
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            code=$(curl -sS -D /tmp/kftc-adapter.headers -o /tmp/kftc-adapter-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$ADAPTER_STAGING_URL/health" || true)
+            if [[ "$code" == '200' ]] && grep -Fq '"service":"ekodi-kftc-openbanking-adapter"' /tmp/kftc-adapter-health.json && grep -Fq '"ready":false' /tmp/kftc-adapter-health.json && grep -Fq '"transferExecution":false' /tmp/kftc-adapter-health.json; then
+              exit 0
+            fi
+            if [[ "$code" == '302' || "$code" == '403' ]] && grep -Eiq 'Cloudflare-Access|cloudflareaccess\.com' /tmp/kftc-adapter.headers /tmp/kftc-adapter-health.json; then
+              npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.kftc-openbanking-adapter.staging.toml --json > /tmp/kftc-adapter-deployments.json
+              echo 'KFTC adapter staging is deployed and protected by Cloudflare Access; fail-closed runtime defaults are enforced by the validated config and adapter contract tests.'
+              exit 0
+            fi
+            sleep 3
+          done
+          cat /tmp/kftc-adapter.headers || true
+          cat /tmp/kftc-adapter-health.json || true
+          exit 1
+      - name: Deploy isolated Money staging
         run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.money.staging.toml
       - name: Verify staging
         run: |
@@ -103,13 +129,15 @@ jobs:
             root=$(curl -L -sS -D /tmp/money-headers -o /tmp/money.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             health=$(curl -sS -o /tmp/money-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
             integrations=$(curl -sS -o /tmp/money-integrations.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/integrations" || true)
+            adapter_health=$(curl -sS -o /tmp/money-kftc-adapter.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/kftc-adapter-health" || true)
             gate=$(curl -sS -o /tmp/money-gate.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'content-type: application/json' -d '{"action":"close-account"}' "$STAGING_URL/api/action-gate" || true)
             blocked=$(curl -sS -o /tmp/money-connect.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'content-type: application/json' -d '{"providerId":"kftc-openbanking","scopes":["accounts:read"]}' "$STAGING_URL/api/connect/begin" || true)
-            if [[ "$root" == '200' && "$health" == '200' && "$integrations" == '200' && "$gate" == '200' && "$blocked" == '503' ]] && grep -Fq 'V3 · 금융연동 준비층' /tmp/money.html && grep -Fq '"service":"ekodi-money"' /tmp/money-health.json && grep -Fq '"apiStatus":"integration-readiness"' /tmp/money-health.json && grep -Fq '"dataMode":"isolated-staging"' /tmp/money-health.json && grep -Fq '"id":"accountinfo"' /tmp/money-integrations.json && grep -Fq '"id":"kftc-openbanking"' /tmp/money-integrations.json && grep -Fq '"financialExecution":false' /tmp/money-integrations.json && grep -Fq '"humanGateRequired":true' /tmp/money-gate.json && grep -Fq '"provider_not_live"' /tmp/money-connect.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/money-headers; then exit 0; fi
+            if [[ "$root" == '200' && "$health" == '200' && "$integrations" == '200' && "$adapter_health" == '200' && "$gate" == '200' && "$blocked" == '503' ]] && grep -Fq 'V3 · 금융연동 준비층' /tmp/money.html && grep -Fq '"service":"ekodi-money"' /tmp/money-health.json && grep -Fq '"apiStatus":"integration-readiness"' /tmp/money-health.json && grep -Fq '"dataMode":"isolated-staging"' /tmp/money-health.json && grep -Fq '"id":"accountinfo"' /tmp/money-integrations.json && grep -Fq '"id":"kftc-openbanking"' /tmp/money-integrations.json && grep -Fq '"openBankingReadReady":false' /tmp/money-integrations.json && grep -Fq '"service":"ekodi-kftc-openbanking-adapter"' /tmp/money-kftc-adapter.json && grep -Fq '"ready":false' /tmp/money-kftc-adapter.json && grep -Fq '"transferExecution":false' /tmp/money-kftc-adapter.json && grep -Fq '"financialExecution":false' /tmp/money-integrations.json && grep -Fq '"humanGateRequired":true' /tmp/money-gate.json && grep -Fq '"provider_not_live"' /tmp/money-connect.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/money-headers; then exit 0; fi
             sleep 4
           done
           cat /tmp/money-health.json || true
           cat /tmp/money-integrations.json || true
+          cat /tmp/money-kftc-adapter.json || true
           cat /tmp/money-connect.json || true
           exit 1
 
@@ -137,6 +165,11 @@ jobs:
             if [[ "$attempt" == '24' ]]; then exit 1; fi
             sleep 5
           done
+      - name: Deploy internal fail-closed KFTC adapter
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.kftc-openbanking-adapter.toml
+          npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.kftc-openbanking-adapter.toml --json > /tmp/kftc-adapter-production.json
       - name: Bootstrap or guarded release
         run: |
           set -euo pipefail
@@ -158,16 +191,18 @@ jobs:
             health=$(curl -sS -o /tmp/money-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/money/health' || true)
             integrations=$(curl -sS -o /tmp/money-integrations.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/money/api/integrations' || true)
             finance_bridge=$(curl -sS -o /tmp/money-finance-bridge.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/money/api/finance-bridge' || true)
+            adapter_health=$(curl -sS -o /tmp/money-kftc-adapter.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/money/api/kftc-adapter-health' || true)
             exec_code=$(curl -sS -o /tmp/money-exec.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -X POST 'https://ekodi.kr/money/api/execution' || true)
             openbanking=$(curl -sS -o /tmp/money-openbanking.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'content-type: application/json' -d '{"providerId":"kftc-openbanking","scopes":["accounts:read"]}' 'https://ekodi.kr/money/api/connect/begin' || true)
             admin=$(curl -sS -o /dev/null -D /tmp/money-admin-headers -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/money/admin' || true)
-            if [[ "$root" == '200' && "$health" == '200' && "$integrations" == '200' && "$finance_bridge" == '200' && "$exec_code" == '409' && "$openbanking" == '503' ]] && grep -Fq 'V3 · 금융연동 준비층' /tmp/money.html && grep -Fq '"dataMode":"production"' /tmp/money-health.json && grep -Fq '"apiStatus":"integration-readiness"' /tmp/money-health.json && grep -Fq '"integrationVersion":3' /tmp/money-health.json && grep -Fq '"canonicalPath":"/money"' /tmp/money-health.json && grep -Fq '"financialExecution":false' /tmp/money-health.json && grep -Fq '"autonomousFinancialExecution":false' /tmp/money-health.json && grep -Fq '"id":"accountinfo"' /tmp/money-integrations.json && grep -Fq '"id":"kftc-openbanking"' /tmp/money-integrations.json && grep -Fq '"openBankingReadReady":false' /tmp/money-integrations.json && grep -Fq '"service":"ekodi-finance-banking"' /tmp/money-finance-bridge.json && grep -Fq '"financialExecution":false' /tmp/money-finance-bridge.json && grep -Fq '"financial_execution_disabled"' /tmp/money-exec.json && grep -Fq '"provider_not_live"' /tmp/money-openbanking.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/money-headers && grep -Eiq '^location: https://ekodi\.kr/admin/\?focus=money' /tmp/money-admin-headers; then exit 0; fi
+            if [[ "$root" == '200' && "$health" == '200' && "$integrations" == '200' && "$finance_bridge" == '200' && "$adapter_health" == '200' && "$exec_code" == '409' && "$openbanking" == '503' ]] && grep -Fq 'V3 · 금융연동 준비층' /tmp/money.html && grep -Fq '"dataMode":"production"' /tmp/money-health.json && grep -Fq '"apiStatus":"integration-readiness"' /tmp/money-health.json && grep -Fq '"integrationVersion":3' /tmp/money-health.json && grep -Fq '"canonicalPath":"/money"' /tmp/money-health.json && grep -Fq '"financialExecution":false' /tmp/money-health.json && grep -Fq '"autonomousFinancialExecution":false' /tmp/money-health.json && grep -Fq '"id":"accountinfo"' /tmp/money-integrations.json && grep -Fq '"id":"kftc-openbanking"' /tmp/money-integrations.json && grep -Fq '"openBankingReadReady":false' /tmp/money-integrations.json && grep -Fq '"service":"ekodi-finance-banking"' /tmp/money-finance-bridge.json && grep -Fq '"financialExecution":false' /tmp/money-finance-bridge.json && grep -Fq '"service":"ekodi-kftc-openbanking-adapter"' /tmp/money-kftc-adapter.json && grep -Fq '"connected":true' /tmp/money-kftc-adapter.json && grep -Fq '"ready":false' /tmp/money-kftc-adapter.json && grep -Fq '"transferExecution":false' /tmp/money-kftc-adapter.json && grep -Fq '"financial_execution_disabled"' /tmp/money-exec.json && grep -Fq '"provider_not_live"' /tmp/money-openbanking.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/money-headers && grep -Eiq '^location: https://ekodi\.kr/admin/\?focus=money' /tmp/money-admin-headers; then exit 0; fi
             sleep 5
           done
           cat /tmp/money-health.json || true
           cat /tmp/money-integrations.json || true
           cat /tmp/money-openbanking.json || true
           cat /tmp/money-finance-bridge.json || true
+          cat /tmp/money-kftc-adapter.json || true
           exit 1
       - name: Publish production verification status
         if: always()

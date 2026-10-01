@@ -30,6 +30,25 @@ function runtimeConfig(env){const readiness=buildIntegrationReadiness(env);retur
   openBankingReadReady:readiness.openBankingReadReady
 }}
 function logSecurity(type,detail={}){console.log(JSON.stringify(securityEvent(type,detail)));}
+async function kftcAdapterHealth(env){
+  if(!env?.KFTC_OPENBANKING_ADAPTER?.fetch)return json({ok:false,connected:false,service:'ekodi-kftc-openbanking-adapter',ready:false,transferExecution:false,error:'adapter_binding_unavailable'},503);
+  try{
+    const upstream=await env.KFTC_OPENBANKING_ADAPTER.fetch(new Request('https://kftc-adapter.internal/health',{method:'GET',headers:{accept:'application/json'}}));
+    const data=await upstream.json().catch(()=>({}));
+    if(!upstream.ok)return json({ok:false,connected:true,service:'ekodi-kftc-openbanking-adapter',ready:false,transferExecution:false,error:'adapter_health_unavailable'},502);
+    return json({
+      ok:true,connected:true,service:'ekodi-kftc-openbanking-adapter',
+      ready:Boolean(data.ready),contractApproved:Boolean(data.contractApproved),
+      liveReadEnabled:Boolean(data.liveReadEnabled),clientConfigured:Boolean(data.clientConfigured),
+      bankTranPrefixConfigured:Boolean(data.bankTranPrefixConfigured),tokenStoreConnected:Boolean(data.tokenStoreConnected),
+      balanceInquiry:Boolean(data.balanceInquiry),transactionHistory:Boolean(data.transactionHistory),
+      transferExecution:false
+    });
+  }catch(error){
+    console.error('money kftc adapter health failed',error);
+    return json({ok:false,connected:false,service:'ekodi-kftc-openbanking-adapter',ready:false,transferExecution:false,error:'adapter_health_unavailable'},502);
+  }
+}
 async function financeBankingBridge(env){
   if(!env?.FINANCE?.fetch)return json({ok:false,connected:false,service:'ekodi-finance-banking',financialExecution:false,error:'finance_binding_unavailable'},503);
   try{
@@ -48,6 +67,7 @@ export default{async fetch(request,env){
   if(url.pathname==='/config.js')return new Response(`window.EKODI_MONEY_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
   if(url.pathname==='/api/integrations'&&request.method==='GET')return json(buildIntegrationReadiness(env));
   if(url.pathname==='/api/finance-bridge'&&request.method==='GET')return financeBankingBridge(env);
+  if(url.pathname==='/api/kftc-adapter-health'&&request.method==='GET')return kftcAdapterHealth(env);
   if(url.pathname==='/api/consent/preview'&&request.method==='POST'){
     const p=await body(request);if(!p||hasSensitiveKeys(p))return json({error:'invalid_or_sensitive_consent_payload'},400);
     const preview=buildConsentPreview(p.providerId,p.scopes);if(!preview.ok)return json(preview,404);

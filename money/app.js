@@ -66,15 +66,17 @@ function renderProviders(readiness){
 async function loadIntegrations(){
   const status=document.querySelector('#integration-status');
   try{
-    const [integration,finance]=await Promise.all([
+    const [integration,finance,kftcAdapter]=await Promise.all([
       api('/api/integrations',{method:'GET',headers:{}}),
-      api('/api/finance-bridge',{method:'GET',headers:{}})
+      api('/api/finance-bridge',{method:'GET',headers:{}}),
+      api('/api/kftc-adapter-health',{method:'GET',headers:{}})
     ]);
     if(!integration.response.ok)throw new Error('integration_status_unavailable');
     renderProviders(integration.data);
     const openBanking=integration.data.openBankingReadReady?'오픈뱅킹: 조회 전용 연결됨':integration.data.contractApproved?'오픈뱅킹: 승인 후 보안연결 준비':'오픈뱅킹: 계약 전 안전 대기';
     const financeState=finance.response.ok&&finance.data.connected?(finance.data.readerConnected?'EKODI 금융관리: 은행조회 연결':'EKODI 금융관리: 은행조회 연결 대기'):'EKODI 금융관리: 상태 확인 필요';
-    if(status)status.textContent=`${openBanking} · ${financeState}`;
+    const adapterState=kftcAdapter.response.ok&&kftcAdapter.data.connected?(kftcAdapter.data.ready?'KFTC 어댑터: 조회 준비 완료':'KFTC 어댑터: 안전 대기'):'KFTC 어댑터: 상태 확인 필요';
+    if(status)status.textContent=`${openBanking} · ${adapterState} · ${financeState}`;
   }catch{
     if(status)status.textContent='연동상태를 불러오지 못했습니다. 금융 실행 기능은 계속 차단되어 있습니다.';
   }

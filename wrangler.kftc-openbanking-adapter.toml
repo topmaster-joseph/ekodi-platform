@@ -1,0 +1,15 @@
+name = "ekodi-kftc-openbanking-adapter"
+main = "kftc-openbanking-adapter-worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = false
+preview_urls = false
+
+[vars]
+KFTC_CONTRACT_APPROVED = "false"
+KFTC_LIVE_READ_ENABLED = "false"
+KFTC_CLIENT_ID = ""
+KFTC_BANK_TRAN_ID_PREFIX = ""
+
+[observability.logs]
+enabled = true
+invocation_logs = true
