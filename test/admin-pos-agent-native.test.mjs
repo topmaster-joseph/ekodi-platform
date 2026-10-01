@@ -20,7 +20,7 @@ test('POS Agent install management remains a native super-admin status panel',as
     read('site-worker.js'),
   ]);
   assert.match(js,/const SECTION='pos-agent'/);
-  assert.match(js,/data\.panel=SECTION/);
+  assert.match(js,/section\.dataset\.panel=SECTION/);
   assert.match(js,/setup-pos-agent\.cmd/);
   assert.match(js,/remove-pos-agent\.cmd/);
   assert.match(js,/diagnose-pos-targets\.ps1/);
