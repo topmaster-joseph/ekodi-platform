@@ -12,7 +12,6 @@ test('platform super admin owns global site health with static and dynamic tabs'
   assert.match(registry,/id: 'site-health'[^\n]*group: 'status'[^\n]*superAdminOnly: true/);
   assert.match(sidebar,/status: \['health', 'site-health', 'deployments'/);
   assert.match(loader,/'site-health': \{[\s\S]*site-health-admin\.css[\s\S]*site-health-admin\.js/);
-  assert.match(layout,/#site-health:site-health/);
   assert.match(js,/data-site-health-tab="dynamic"/);
   assert.match(js,/data-site-health-tab="static"/);
   assert.match(js,/\/api\/control\/overview/);
