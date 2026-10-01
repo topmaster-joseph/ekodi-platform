@@ -288,3 +288,10 @@ body.admin-compact #ekodiSystemHealth .system-health-footnote{
   body.admin-compact #ekodiSystemHealth .system-health-chart{min-height:170px!important}
   body.admin-compact #ekodiSystemHealth .system-health-svg{height:170px!important}
 }
+
+.system-health-local-nav{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin:6px 0 2px;padding:4px;border:1px solid rgba(148,163,184,.16);border-radius:10px;background:rgba(148,163,184,.06)}
+.system-health-local-nav button{min-height:30px;padding:5px 10px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--muted,#64748b);font:inherit;font-size:11px;font-weight:750;line-height:1.15;cursor:pointer}
+.system-health-local-nav button:hover{background:rgba(148,163,184,.1);color:inherit}
+.system-health-local-nav button.is-active{border-color:rgba(59,130,246,.24);background:rgba(59,130,246,.1);color:inherit}
+body.admin-compact #ekodiSystemHealth [data-health-anchor]{scroll-margin-top:76px}
+@media(max-width:760px){.system-health-local-nav{position:sticky;top:56px;z-index:8;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;background:var(--admin-surface,#fff)}.system-health-local-nav::-webkit-scrollbar{display:none}.system-health-local-nav button{flex:0 0 auto;min-height:34px;font-size:12px}}
