@@ -1,5 +1,5 @@
 {
-  "version": 15,
+  "version": 16,
   "name": "EKODI User UI Shell",
   "parentPolicy": "config/user-ui-dna.json",
   "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family, with persistent common chrome limited to one shared header and one shared footer.",
@@ -37,7 +37,9 @@
     "firstPaintVisualContinuity": true,
     "documentLoadAmbientVariation": true,
     "transientCharacterFlashForbidden": true,
-    "publicSiteOperationalRoleLabelsForbidden": true
+    "publicSiteOperationalRoleLabelsForbidden": true,
+    "singlePublishedLocaleHidesLanguageControl": true,
+    "languageControlHiddenUntilReadinessResolved": true
   },
   "header": {
     "owner": "shared-shell",
@@ -125,7 +127,11 @@
     "adminView": "read-only per-site language readiness status; no manual publish toggles",
     "controlGeometry": "pill",
     "visibleIcon": false,
-    "visibleLabel": false
+    "visibleLabel": false,
+    "controlVisibility": "visible only when at least two locales are published for the current service",
+    "firstPaint": "hidden until runtime language readiness resolves",
+    "singleLocaleBehavior": "no selector, label, icon, placeholder, or reserved header gap",
+    "failureBehavior": "stay hidden and fall back to ko-KR when readiness metadata is unavailable"
   },
   "mediaMeetingAdapter": {
     "owner": "shared-shell",
