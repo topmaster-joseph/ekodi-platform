@@ -9,6 +9,7 @@ on:
       - 'openai-provider-adapter.js'
       - 'anthropic-provider-adapter.js'
       - 'gemini-orchestrator-provider-adapter.js'
+      - 'huggingface-provider-adapter.js'
       - 'test/ai-control-provider-router.test.mjs'
       - 'ai-commons.js'
       - 'ai-control/**'
@@ -43,6 +44,7 @@ jobs:
           node --check ai-control-worker.js
           node --check ai-control-provider-router.js
           node --check gemini-orchestrator-provider-adapter.js
+          node --check huggingface-provider-adapter.js
           node --test test/ai-control-provider-router.test.mjs
           node --check site-worker.js
           node --test test/ai-runtime-boundary.test.mjs
