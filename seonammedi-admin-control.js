@@ -281,14 +281,17 @@ async function authority(request,env){
   if(session?.role==='super_admin')return {ok:true,email:lower(session.email),role:'super_admin',platform:true,capabilities:['*']};
   const principal=await principalFromSupabaseRequest(request);
   if(!principal?.email)return {ok:false,status:401,error:'authentication_required'};
+  const principalEmail=lower(principal.email);
+  const platformAdmin=await env.DB.prepare('SELECT role FROM admins WHERE lower(trim(email))=? LIMIT 1').bind(principalEmail).first().catch(()=>null);
+  if(lower(platformAdmin?.role)==='super_admin')return {ok:true,email:principalEmail,role:'super_admin',platform:true,capabilities:['*']};
   const tenant=await env.DB.prepare('SELECT id,status FROM customer_tenants WHERE slug=? LIMIT 1').bind(TENANT_SLUG).first();
   if(!tenant||tenant.status!=='active')return {ok:false,status:404,error:'tenant_not_found'};
   const grant=await env.DB.prepare(`SELECT role,enabled,principal_type,capabilities_json,denied_capabilities_json,expires_at
-    FROM customer_access_grants WHERE tenant_id=? AND lower(trim(email))=? LIMIT 1`).bind(tenant.id,lower(principal.email)).first();
+    FROM customer_access_grants WHERE tenant_id=? AND lower(trim(email))=? LIMIT 1`).bind(tenant.id,principalEmail).first();
   if(!accessGrantIsActive(grant))return {ok:false,status:403,error:'access_forbidden'};
   const capabilities=effectiveAccessCapabilities(grant);
   if(!capabilities.includes(NOTICE_CAP)&&!capabilities.includes(CHANNEL_CAP)&&!capabilities.includes(CONTENT_CAP)&&!capabilities.includes(TIMELINE_CAP)&&!capabilities.includes(VOICE_CAP)&&!capabilities.includes(PAGE_CAP)&&!capabilities.includes(FINANCE_CAP))return {ok:false,status:403,error:'access_forbidden'};
-  return {ok:true,email:lower(principal.email),role:clean(grant.role,80)||'staff',platform:false,capabilities};
+  return {ok:true,email:principalEmail,role:clean(grant.role,80)||'staff',platform:false,capabilities};
 }
 
 function can(auth,cap){return Boolean(auth?.ok&&(auth.platform||auth.capabilities?.includes('*')||auth.capabilities?.includes(cap)))}
