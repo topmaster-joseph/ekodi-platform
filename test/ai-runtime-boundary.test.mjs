@@ -54,7 +54,7 @@ test('production verifier follows the AI Commons public/member boundary contract
 
 
 test('provider-control changes redeploy the AI runtime to keep Worker versions aligned',()=>{
-  const workflow=readFileSync(new URL('../.github/workflows/deploy-ai-control.yml', import.meta.url),'utf8');
+  const workflow=read('.github/workflows/deploy-ai-control.yml');
   const count=(workflow.match(/ai-provider-control\.js/g)||[]).length;
   assert.ok(count>=2,'pull_request and push filters must both include ai-provider-control.js');
 });
