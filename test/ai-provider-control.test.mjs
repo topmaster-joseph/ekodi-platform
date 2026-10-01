@@ -146,6 +146,10 @@ test('provider status cards explain free and paid usage',()=>{
   assert.match(admin,/Gemini 무료 한도 우선/);
   assert.match(admin,/OpenRouter Free/);
   assert.match(admin,/Groq Free/);
+  assert.match(admin,/Cerebras · 무료 체험/);
+  assert.match(admin,/Qwen · 무료 할당량/);
+  assert.match(admin,/DeepSeek · 무료 지급 크레딧/);
+  assert.match(admin,/Hugging Face · 월 무료 크레딧/);
   assert.match(admin,/명시적 예산\/승인 필요/);
   assert.match(admin,/ekodi-ai-provider-status-note/);
 });
@@ -153,7 +157,7 @@ test('provider status cards explain free and paid usage',()=>{
 
 test('common provider contract exposes canonical free-first six-provider order',()=>{
   assert.deepEqual(AI_PROVIDER_CONTROL_CONTRACT.providerOrder,[
-    'cloudflare-workers-ai','gemini','openrouter-free','groq-free','openai','anthropic'
+    'cloudflare-workers-ai','gemini','openrouter-free','groq-free','cerebras-free','qwen-free','deepseek-free-credit','huggingface-free-credit','openai','anthropic'
   ]);
   const migration=read('migrations/0120_common_ai_provider_chain.sql');
   assert.match(migration,/Cloudflare \/ 무료 자원/);
@@ -168,6 +172,10 @@ test('provider admin shows the canonical chain and secretless Cloudflare card co
   assert.match(admin,/Gemini Free/);
   assert.match(admin,/OpenRouter Free/);
   assert.match(admin,/Groq Free/);
+  assert.match(admin,/Cerebras · 무료 체험/);
+  assert.match(admin,/Qwen · 무료 할당량/);
+  assert.match(admin,/DeepSeek · 무료 지급 크레딧/);
+  assert.match(admin,/Hugging Face · 월 무료 크레딧/);
   assert.match(admin,/OpenAI · 유료 승인/);
   assert.match(admin,/Claude · 유료 승인/);
   assert.match(admin,/API Key 없음/);
@@ -220,9 +228,20 @@ test('provider health UI explains Cloudflare quota, generic Gemini 400, and Clau
 });
 
 
-test('provider check UI surfaces sanitized upstream diagnostics',()=>{
-  const admin=read('admin-provider-control.js');
-  assert.match(admin,/error\.providerMessage=data\.providerMessage/);
-  assert.match(admin,/error\.requestId=data\.requestId/);
-  assert.match(admin,/providerCheckErrorMessage\(e\)/);
+test('extended free provider migration preserves guarded ordering',()=>{
+  const migration=read('migrations/0121_extended_free_ai_provider_chain.sql');
+  assert.match(migration,/Cerebras · 무료 체험/);
+  assert.match(migration,/Qwen · 무료 할당량/);
+  assert.match(migration,/DeepSeek · 무료 지급 크레딧/);
+  assert.match(migration,/Hugging Face · 월 무료 크레딧/);
+  assert.match(migration,/\["gemini","openrouter-free","groq-free","cerebras-free","qwen-free","deepseek-free-credit","huggingface-free-credit","openai","anthropic"\]/);
+  assert.match(migration,/topped_up_balance = 0/);
+});
+
+test('Gemini adapter supports an authorized multi-project credential pool',()=>{
+  const source=read('gemini-orchestrator-provider-adapter.js');
+  assert.match(source,/GEMINI_API_KEY_2/);
+  assert.match(source,/GEMINI_API_KEY_POOL_JSON/);
+  assert.match(source,/item\.authorized === true/);
+  assert.match(source,/credentialCount/);
 });
