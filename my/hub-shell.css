@@ -33,6 +33,7 @@
 .workspace-compact strong{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
 .workspace-compact b{font-size:11px;color:#748078}
 .my-bottom-tabs{display:none}
+body[data-auth-state="guest"] .my-desktop-tabs,body[data-auth-state="guest"] .my-bottom-tabs{display:none!important}
 body[data-active-tab="services"] .my-custom-footer,
 body[data-active-tab="activity"] .my-custom-footer,
 body[data-active-tab="account"] .my-custom-footer{margin-top:18px}
