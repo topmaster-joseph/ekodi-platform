@@ -21,7 +21,16 @@ async function convergeAdminRelease(force=false){
     .finally(()=>{pending=null});
   return pending;
 }
+function loadControlTower(){
+  if(!authenticated()||document.querySelector('script[data-ekodi-control-tower]'))return;
+  const version=CURRENT_VERSION?'?v='+encodeURIComponent(CURRENT_VERSION):'';
+  if(!document.querySelector('link[data-ekodi-control-tower]')){
+    const style=document.createElement('link');style.rel='stylesheet';style.href='/admin/control-tower-admin.css'+version;style.dataset.ekodiControlTower='style';document.head.append(style);
+  }
+  const script=document.createElement('script');script.src='/admin/control-tower-admin.js'+version;script.defer=true;script.dataset.ekodiControlTower='runtime';document.body.append(script);
+}
 window.EKODIAdminReleaseConvergence=Object.freeze({check:convergeAdminRelease,currentVersion:CURRENT_VERSION});
+loadControlTower();
 window.addEventListener('focus',()=>{void convergeAdminRelease()});
 window.addEventListener('pageshow',event=>{if(event.persisted)void convergeAdminRelease(true)});
 window.addEventListener('ekodi-nav-changed',()=>{void convergeAdminRelease()});
