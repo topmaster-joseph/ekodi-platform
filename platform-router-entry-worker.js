@@ -39,7 +39,7 @@ import { realtimeTenantAdminFromPath, realtimeTenantFromPath } from './realtime-
 import { managementCameraPage, tenantLivePage } from './tenant-live-page.js';
 import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from './tenant-live-admin-page.js';
 import { liveServiceAdminPage, liveServiceMaintenancePage, liveServicePage } from './live-service-page.js';
-import { localRegionFromPath, localRegionModuleFromRoute } from './local-region-registry.js';
+import { localRegionBySlug, localRegionFromPath, localRegionModuleFromRoute } from './local-region-registry.js';
 import { localRegionPublicPage, localRegionAdminPage, localRegionAccessAdminPage, localRegionModulePublicPage, localRegionModuleAdminPage, localRegionNotFoundPage } from './local-region-page.js';
 import { localRegionForestPublicPage, localRegionForestAdminPage } from './local-region-forest-page.js';
 import { localRegionForestPublicScript } from './local-region-forest-public.js';
@@ -49,7 +49,7 @@ import { localRegionModuleAdminScript } from './local-region-module-admin.js';
 import { localRegionAdminAuthScript } from './local-region-admin-auth.js';
 import { localRegionAccessAdminScript } from './local-region-access-admin.js';
 import { localRegionOperationsAdminScript } from './local-region-operations-admin.js';
-import { regionalCommerceProgramFromLocalRoute } from './regional-commerce-program-registry.js';
+import { regionalCommerceProgramFromLocalRoute, regionalCommerceProgramFromPath } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
 import { handleSeonamMediCivicApi, consumeSeonamMediVoiceMessage } from './seonammedi-civic-control.js';
@@ -125,6 +125,38 @@ function workspaceAuthRedirect(request){
   const target=new URL('https://ekodi.kr/auth/');target.searchParams.set('site','space');target.searchParams.set('return_to',returnTo.toString());
   return new Response(null,{status:302,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-workspace-gateway':'auth-handoff'}});
 }
+function escapeHtml(value){return String(value||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function validPublicRedirectUrl(value){
+  const raw=String(value||'').trim();if(!raw)return'';
+  try{const url=new URL(raw);if(!['https:','http:'].includes(url.protocol))return'';return url.toString()}catch{return''}
+}
+function maintenanceHtml(site){
+  const title=escapeHtml(site.maintenanceTitle||site.title||CGMA_SITE.title);
+  const message=escapeHtml(site.maintenanceMessage||site.message||CGMA_SITE.message);
+  const redirectUrl=validPublicRedirectUrl(site.maintenanceRedirectUrl);
+  const showButton=site.maintenanceDisplayType==='url'&&redirectUrl&&site.redirectMode!=='auto';
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>:root{color-scheme:light dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{margin:0;min-height:100dvh;display:grid;place-items:center;background:radial-gradient(circle at top,#f3f8ff,#e9edf3 52%,#dde4ee);color:#152033}main{width:min(92vw,560px);padding:42px 28px;border:1px solid rgba(80,105,135,.18);border-radius:28px;background:rgba(255,255,255,.78);box-shadow:0 22px 70px rgba(25,50,80,.14);text-align:center;backdrop-filter:blur(16px)}.eyebrow{display:inline-flex;gap:8px;align-items:center;padding:6px 12px;border-radius:999px;background:#edf5ff;color:#35628e;font-size:13px;font-weight:700;letter-spacing:.04em}h1{margin:18px 0 10px;font-size:clamp(28px,5vw,42px);line-height:1.12;letter-spacing:-.04em}p{margin:0 auto;color:#536273;font-size:17px;line-height:1.65;word-break:keep-all}a{display:inline-flex;margin-top:26px;padding:13px 18px;border-radius:14px;background:#163454;color:#fff;text-decoration:none;font-weight:800}footer{margin-top:28px;color:#8390a1;font-size:12px}</style></head><body><main><div class="eyebrow">CGMA</div><h1>${title}</h1><p>${message}</p>${showButton?`<a href="${escapeHtml(redirectUrl)}" rel="noopener noreferrer">임시 안내 페이지 보기</a>`:''}<footer>cgma.or.kr</footer></main></body></html>`;
+}
+function maintenanceResponse(site,status=200){return new Response(maintenanceHtml(site),{status,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin','x-ekodi-public-site-mode':'maintenance'}})}
+async function ensurePublicSiteControlSchema(env){
+  if(!env?.DB)return;
+  const now=new Date().toISOString();
+  await env.DB.batch([
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS public_site_controls (site_id TEXT PRIMARY KEY,workspace_id TEXT NOT NULL,domain TEXT NOT NULL UNIQUE,public_status TEXT NOT NULL DEFAULT 'maintenance',maintenance_display_type TEXT NOT NULL DEFAULT 'default',maintenance_redirect_url TEXT NOT NULL DEFAULT '',maintenance_title TEXT NOT NULL DEFAULT '현재 사이트 개발중입니다',maintenance_message TEXT NOT NULL DEFAULT '더 좋은 서비스로 준비 중입니다.',redirect_mode TEXT NOT NULL DEFAULT 'button',updated_at TEXT NOT NULL,updated_by INTEGER)`),
+    env.DB.prepare(`INSERT OR IGNORE INTO public_site_controls (site_id,workspace_id,domain,public_status,maintenance_display_type,maintenance_redirect_url,maintenance_title,maintenance_message,redirect_mode,updated_at) VALUES ('cgma','cgma','cgma.or.kr','maintenance','default','','현재 사이트 개발중입니다','더 좋은 서비스로 준비 중입니다.','button',?)`).bind(now)
+  ]);
+}
+async function readCgmaSiteControl(env){
+  if(!env?.DB)return{...CGMA_SITE,publicStatus:'maintenance',maintenanceDisplayType:'default',maintenanceRedirectUrl:'',maintenanceTitle:CGMA_SITE.title,maintenanceMessage:CGMA_SITE.message,redirectMode:'button'};
+  try{
+    await ensurePublicSiteControlSchema(env);
+    const row=await env.DB.prepare('SELECT * FROM public_site_controls WHERE site_id = ? OR domain = ? ORDER BY site_id = ? DESC LIMIT 1').bind('cgma','cgma.or.kr','cgma').first();
+    return{...CGMA_SITE,publicStatus:row?.public_status||'maintenance',maintenanceDisplayType:row?.maintenance_display_type||'default',maintenanceRedirectUrl:row?.maintenance_redirect_url||'',maintenanceTitle:row?.maintenance_title||CGMA_SITE.title,maintenanceMessage:row?.maintenance_message||CGMA_SITE.message,redirectMode:row?.redirect_mode||'button'};
+  }catch(error){
+    console.error('CGMA public site control fallback',error);
+    return{...CGMA_SITE,publicStatus:'maintenance',maintenanceDisplayType:'default',maintenanceRedirectUrl:'',maintenanceTitle:CGMA_SITE.title,maintenanceMessage:CGMA_SITE.message,redirectMode:'button'};
+  }
+}
 function cgmaCanonicalRedirect(request){
   const source=new URL(request.url);
   const target=new URL('https://ekodi.kr/cgma');
@@ -132,8 +164,13 @@ function cgmaCanonicalRedirect(request){
   target.search=source.search;
   return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-public-site-mode':'public-redirect'}});
 }
-async function routeCgmaPublic(request){return cgmaCanonicalRedirect(request);}
-
+async function routeCgmaPublic(request,env){
+  const site=await readCgmaSiteControl(env);
+  if(site.publicStatus!=='maintenance')return cgmaCanonicalRedirect(request);
+  const redirectUrl=validPublicRedirectUrl(site.maintenanceRedirectUrl);
+  if(site.maintenanceDisplayType==='url'&&redirectUrl&&site.redirectMode==='auto')return new Response(null,{status:302,headers:{location:redirectUrl,'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-public-site-mode':'maintenance-auto-redirect'}});
+  return maintenanceResponse(site);
+}
 async function routeWorkspaceAsset(request,env){
   if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
   const url=new URL(request.url);const asset=url.pathname.slice(WORKSPACE_ASSET_PREFIX.length);if(!WORKSPACE_ASSETS.has(asset))return new Response('Not Found',{status:404,headers:{'cache-control':'no-store'}});
@@ -157,26 +194,34 @@ async function routeDeploymentProbe(request,env){
   const upstream=await env.SPACE.fetch(workspaceUpstreamRequest(request,'/'));const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','space-service-binding');
   return injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace');
 }
+function injectCgmaRegionalLinks(response){
+  const type=String(response.headers.get('content-type')||'').toLowerCase();
+  if(!type.includes('text/html'))return response;
+  const html='<section data-ekodi-cheonggye-links="v1" style="width:min(1120px,calc(100% - 28px));margin:18px auto 30px;padding:16px;border:1px solid #d8dfd9;border-radius:18px;background:#fffdf8;color:#16312a;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-serif"><div style="font-size:12px;font-weight:900;letter-spacing:.08em;color:#52645e">청계 연결</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px"><strong style="margin-right:4px">지역과 혜택을 함께 연결합니다.</strong><a href="/cheonggye" style="display:inline-flex;min-height:38px;align-items:center;padding:0 12px;border-radius:999px;background:#174837;color:#fff;text-decoration:none;font-size:13px;font-weight:800">청계잇다</a><a href="/cheonggyepass" style="display:inline-flex;min-height:38px;align-items:center;padding:0 12px;border-radius:999px;background:#eef3f0;color:#174837;text-decoration:none;font-size:13px;font-weight:800">청계패스</a></div></section>';
+  return new HTMLRewriter().on('body',{element:e=>e.append(html,{html:true})}).transform(response);
+}
 async function routePublicWorkspace(request,env){
   if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
-  const progressiveHome=isWorkspaceProgressiveHome(new URL(request.url).pathname);
+  const workspacePath=new URL(request.url).pathname;
+  const progressiveHome=isWorkspaceProgressiveHome(workspacePath);
+  const finalize=response=>isCgmaRoot(workspacePath)?injectCgmaRegionalLinks(response):response;
   const upstream=await env.SPACE.fetch(request);const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','space-service-binding');
-  if(routed.headers.get('x-ekodi-route')==='space-storefront'){routed.headers.set('x-ekodi-public-surface','customer-storefront');const branded=injectEkodiTenantReadability(routed);return progressiveHome?injectEkodiProgressiveHome(branded):branded;}
+  if(routed.headers.get('x-ekodi-route')==='space-storefront'){routed.headers.set('x-ekodi-public-surface','customer-storefront');const branded=injectEkodiTenantReadability(routed);return finalize(progressiveHome?injectEkodiProgressiveHome(branded):branded);}
   if(routed.headers.get('x-ekodi-independent-site')==='true'){
     routed.headers.set('x-ekodi-public-surface','independent-workspace-site');
     const branded=injectEkodiTenantReadability(routed);
-    return progressiveHome?injectEkodiProgressiveHome(branded):branded;
+    return finalize(progressiveHome?injectEkodiProgressiveHome(branded):branded);
   }
   const upstreamSurface=String(routed.headers.get('x-ekodi-surface')||routed.headers.get('x-ekodi-user-ui-surface')||'').trim().toLowerCase();
   if(upstreamSurface==='public'){
     routed.headers.set('x-ekodi-public-surface','workspace-public-site');
-    return progressiveHome?injectEkodiProgressiveHome(routed):routed;
+    return finalize(progressiveHome?injectEkodiProgressiveHome(routed):routed);
   }
   if(routed.headers.get('x-ekodi-route')==='space-organization'){
     routed.headers.set('x-ekodi-public-surface','organization-public-site');
-    return injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','public',{progressiveHome,contextKind:'public',existingHeader:true});
+    return finalize(injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','public',{progressiveHome,contextKind:'public',existingHeader:true}));
   }
-  return injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace',{progressiveHome,contextKind:'workspace'});
+  return finalize(injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace',{progressiveHome,contextKind:'workspace'}));
 }
 
 function isEkodiMissionSpacePath(pathname){
@@ -394,6 +439,14 @@ async function routePlatform(request,env,ctx){
         if(/^\/cheonggye\/admin\/publishing\/?$/i.test(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
         if(url.pathname==='/ekodi-church'||url.pathname.startsWith('/ekodi-church/')){const target=new URL(request.url);target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});}
         if(isChurchPastorAdminPath(url.pathname))return injectEkodiShell(churchPastorAdminPage(),'church','admin');
+        const directCommerceProgram=regionalCommerceProgramFromPath(url.pathname);
+        if(directCommerceProgram){
+          const region=localRegionBySlug('cheonggye');
+          const page=directCommerceProgram.admin?regionalCommerceProgramAdminPage(region,directCommerceProgram.program):regionalCommerceProgramPublicPage(region,directCommerceProgram.program);
+          const surface=directCommerceProgram.admin?'admin':'public';
+          const response=injectEkodiShell(page,'space',surface,{contextKind:directCommerceProgram.admin?'workspace':'public'});
+          return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;
+        }
         const localRegionRoute=localRegionFromPath(url.pathname);
         if(localRegionRoute){
           const commerceProgram=regionalCommerceProgramFromLocalRoute(localRegionRoute);

@@ -5,8 +5,8 @@
       "id": "cheonggye-pass",
       "regionId": "local:cheonggye",
       "publicName": "청계패스",
-      "publicPath": "/cheonggye/pass",
-      "adminPath": "/cheonggye/admin/pass",
+      "publicPath": "/cheonggyepass",
+      "adminPath": "/cheonggyepass/admin",
       "mode": "hybrid",
       "providerId": null,
       "providerStatus": "unassigned",
@@ -32,7 +32,9 @@
         "providerMayAccessPrivateEkodiDatabase": false,
         "financialExecutionEnabledBeforeProviderApproval": false,
         "merchantPrivateDataProjection": "minimum-required-only"
-      }
+      },
+      "regionalEntryPath": "/cheonggye/pass",
+      "regionalAdminEntryPath": "/cheonggye/admin/pass"
     }
   ]
 }
