@@ -195,4 +195,8 @@ for(const required of ['account-subtabs','data-account-tab="basic"','data-accoun
   if(!content.html.includes(required))throw new Error(`My EKODI validation failed: account subtab marker missing: ${required}`);
 }
 
+for(const required of ['services-subtabs','data-services-tab="services"','data-services-tab="spaces"','data-services-tab="status"','activityTimeline']){
+  if(!content.html.includes(required))throw new Error(`My EKODI validation failed: service subtab marker missing: ${required}`);
+}
+
 console.log('My EKODI validation passed: USER UI, common-service access context, universal membership, multi-device Free Device Care with browser-only safety boundaries, User AI, Shell-synced Workspace context, isolated staging, central auth and guarded production rollout are present.');
