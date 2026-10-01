@@ -191,4 +191,8 @@ for(const required of ['my-desktop-tabs','my-bottom-tabs','workspaceCompact','da
   if(!content.html.includes(required))throw new Error(`My EKODI validation failed: tab shell marker missing: ${required}`);
 }
 
+for(const required of ['account-subtabs','data-account-tab="basic"','data-account-tab="public"','data-account-tab="character"','data-account-tab="security"']){
+  if(!content.html.includes(required))throw new Error(`My EKODI validation failed: account subtab marker missing: ${required}`);
+}
+
 console.log('My EKODI validation passed: USER UI, common-service access context, universal membership, multi-device Free Device Care with browser-only safety boundaries, User AI, Shell-synced Workspace context, isolated staging, central auth and guarded production rollout are present.');
