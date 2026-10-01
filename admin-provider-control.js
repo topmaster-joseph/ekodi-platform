@@ -51,6 +51,27 @@
 .ekodi-ai-routes{margin-top:8px}.ekodi-ai-routes h4{margin:0 0 4px}.ekodi-ai-routes form{gap:6px;margin:5px 0}.ekodi-ai-cost-alerts{gap:6px;margin:7px 0}.ekodi-ai-cost-alert{padding:8px 9px;border-radius:9px}.ekodi-ai-cost-alert p{margin:2px 0;font-size:11px;line-height:1.3}
 @media(max-width:1180px){.ekodi-ai-provider-grid{grid-template-columns:1fr}.ekodi-ai-provider-statuses{max-width:68%}}
 @media(max-width:700px){.ekodi-ai-provider-statuses{max-width:none;justify-content:flex-start}.ekodi-ai-provider-head{display:grid;grid-template-columns:1fr}.ekodi-ai-provider-fields{grid-template-columns:68px 84px minmax(150px,1fr)}.ekodi-ai-summary{grid-template-columns:1fr 1fr!important}.ekodi-ai-provider-actions{flex-wrap:wrap}}
+/* AI-PROVIDER-MONOCHROME-20261001 */
+.ekodi-ai-provider-center,.ekodi-unified-provider{background:#fff!important;color:#111!important;border-color:#bdbdbd!important;box-shadow:none!important}
+.ekodi-ai-provider-center :where(h3,h4,strong),.ekodi-unified-provider :where(h3,strong){color:#111!important}
+.ekodi-ai-provider-center :where(p,small,label,span),.ekodi-unified-provider :where(small,label,.ekodi-up-note){color:#444}
+.ekodi-ai-summary article,.ekodi-up-status{background:#f3f3f3!important;border:1px solid #d7d7d7!important;color:#111!important}
+.ekodi-ai-provider-card{background:#fafafa!important;border:1px solid #c9c9c9!important;color:#111!important}
+.ekodi-ai-provider-card:hover{border-color:#777!important}
+.ekodi-ai-provider-center input,.ekodi-ai-provider-center select,.ekodi-up-grid select{background:#fff!important;color:#111!important;border-color:#b8b8b8!important;box-shadow:none!important}
+.ekodi-ai-provider-center input:focus,.ekodi-ai-provider-center select:focus,.ekodi-up-grid select:focus{outline:2px solid #111!important;outline-offset:1px;border-color:#111!important}
+.ekodi-ai-provider-actions button,.ekodi-ai-provider-title button,.ekodi-ai-routes button,.ekodi-ai-cost-actions button{background:#111!important;color:#fff!important;border:1px solid #111!important;box-shadow:none!important}
+.ekodi-ai-provider-actions button:hover,.ekodi-ai-provider-title button:hover,.ekodi-ai-routes button:hover,.ekodi-ai-cost-actions button:hover{background:#fff!important;color:#111!important}
+.ekodi-ai-provider-actions button[data-ai-action="check"]{background:#fff!important;color:#111!important}
+.ekodi-ai-state{background:#fff!important;color:#111!important;border-color:#777!important}
+.ekodi-ai-state.ok{background:#111!important;color:#fff!important;border-color:#111!important}
+.ekodi-ai-state.warn{background:#fff!important;color:#111!important;border-color:#111!important;border-style:dashed!important}
+.ekodi-ai-provider-meta span{background:#ececec!important;color:#222!important;opacity:1!important}
+.ekodi-ai-provider-meta .warn{background:#111!important;color:#fff!important}
+.ekodi-ai-cost-alert{background:#f5f5f5!important;border-color:#777!important;color:#111!important}
+.ekodi-ai-routes form{border-top:1px solid #dedede;padding-top:5px}
+.ekodi-ai-routes form:first-of-type{border-top:0}
+.ekodi-ai-provider-fields input[type=checkbox]{accent-color:#111}
 `;document.head.appendChild(s)}
   function message(card,text,error=false){const out=card.querySelector('[data-ai-message]');if(out){out.textContent=text;out.dataset.error=error?'true':'false'}}
   function bindInfra(root){root.querySelectorAll('[data-up]').forEach(el=>el.addEventListener('change',()=>{const key=el.dataset.up,patch={[key]:el.value};if(key==='provider')Object.assign(patch,{account:'',scope:'',runtime:''});setSelection(patch)}))}
