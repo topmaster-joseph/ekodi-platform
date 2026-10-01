@@ -106,12 +106,13 @@ const ORG_GROUPS=[
   {key:'mokpo',label:'목포대',status:'active',statusLabel:'운영 중'},
   {key:'minhak',label:'민학비대위',status:'forming',statusLabel:'구성 논의 중 · 2026.09.30 첫 만남'}
 ];
+const ORG_LEGACY_KEYS={bidae:'integrated',minhak:'civic'};
 function normalizeOrgGroups(org={}){
   if(Array.isArray(org.groups)&&org.groups.length){
     const byKey=new Map(org.groups.map(group=>[group.key,group]));
-    return ORG_GROUPS.map(meta=>({key:meta.key,label:meta.label,...(byKey.get(meta.key)||{})}));
+    return ORG_GROUPS.map(meta=>{const found=byKey.get(meta.key)||byKey.get(ORG_LEGACY_KEYS[meta.key]);return{...(found||{}),key:meta.key,label:meta.label,status:found?.status||meta.status,statusLabel:found?.statusLabel||meta.statusLabel,levels:found?.levels||[],committees:found?.committees||[],participants:found?.participants||[]}});
   }
-  return ORG_GROUPS.map(meta=>({key:meta.key,label:meta.label,status:meta.status,statusLabel:meta.statusLabel,levels:[],committees:[],participants:[]}));
+  return ORG_GROUPS.map(meta=>meta.key==='bidae'?{key:meta.key,label:meta.label,status:meta.status,statusLabel:meta.statusLabel,levels:org.levels||[],committees:org.committees||[],participants:org.participants||[]}:{key:meta.key,label:meta.label,status:meta.status,statusLabel:meta.statusLabel,levels:[],committees:[],participants:[]});
 }
 function orgGroupFromForm(form,key,label){
   const level=(name,suffix)=>({name,members:lines(form.elements[key+'_'+suffix].value)});
@@ -122,7 +123,8 @@ function orgGroupFromForm(form,key,label){
 }
 function orgLinesToData(form){
   const groups=ORG_GROUPS.map(meta=>orgGroupFromForm(form,meta.key,meta.label));
-  return{groups,participantSort:'ko-KR',publicOnly:true};
+  const bidae=groups.find(group=>group.key==='bidae')||groups[0];
+  return{groups,levels:bidae.levels,committees:bidae.committees,participants:bidae.participants,participantSort:'ko-KR',publicOnly:true,schemaVersion:2};
 }
 function fillOrgGroup(form,group){
   const key=group.key,levels=group.levels||[];
