@@ -127,19 +127,21 @@ if(materialFilters&&materialList){
   materialFilters.addEventListener('click',event=>{const button=event.target.closest('button');if(!button)return;[...materialFilters.children].forEach(x=>x.classList.remove('active'));button.classList.add('active');renderMaterials(button.dataset.materialCat)});
 }
 const org=d.organization||{};
-const ORG_GROUP_META=[['integrated','통합 대책위'],['civic','시민단체연대'],['mokpo','목포대']];
+const ORG_GROUP_META=[['bidae','비대위'],['mokpo','목포대'],['minhak','민학비대위']];
+const ORG_LEGACY_KEYS={bidae:'integrated',minhak:'civic'};
 const orgGroups=Array.isArray(org.groups)&&org.groups.length
-  ?ORG_GROUP_META.map(([key,label])=>({key,label,...(org.groups.find(group=>group.key===key)||{})}))
-  :ORG_GROUP_META.map(([key,label],index)=>index===0?{key,label,levels:org.levels||[],committees:org.committees||[],participants:org.participants||[]}:{key,label,levels:[],committees:[],participants:[]});
+  ?ORG_GROUP_META.map(([key,label])=>{const legacyKey=ORG_LEGACY_KEYS[key];const found=org.groups.find(group=>group.key===key)||(legacyKey?org.groups.find(group=>group.key===legacyKey):null);return{...(found||{}),key,label}})
+  :ORG_GROUP_META.map(([key,label],index)=>index===0?{key,label,levels:org.levels||[],committees:org.committees||[],participants:org.participants||[]}:{key,label,status:key==='minhak'?'forming':'active',statusLabel:key==='minhak'?'구성 논의 중':'운영 중',levels:[],committees:[],participants:[]});
 const chart=el('organizationChart');
 const participantHost=el('participantOrganizations');
 const orgTabs=el('organizationTabs');
 function renderOrganizationGroup(key){
   const group=orgGroups.find(item=>item.key===key)||orgGroups[0];
   if(chart){
+    const status=group.statusLabel?'<p class="note org-status">'+escapeHtml(group.statusLabel)+'</p>':'';
     const levels=(group.levels||[]).map(level=>'<article class="org-level"><strong>'+escapeHtml(level.name)+'</strong>'+(Array.isArray(level.members)&&level.members.length?'<p>'+level.members.map(escapeHtml).join(' · ')+'</p>':'')+'</article>').join('');
     const committees=(group.committees||[]).map(item=>'<article class="org-committee"><strong>'+escapeHtml(item.name)+'</strong><span>'+escapeHtml(item.lead||'담당자 확인 중')+'</span></article>').join('');
-    chart.innerHTML=(levels||committees)?'<div class="org-levels">'+levels+'</div><div class="org-committees">'+committees+'</div>':'<p class="muted">등록된 조직 구성이 없습니다.</p>';
+    chart.innerHTML=status+((levels||committees)?'<div class="org-levels">'+levels+'</div><div class="org-committees">'+committees+'</div>':'<p class="muted">등록된 조직 구성이 없습니다.</p>');
   }
   if(participantHost){
     const participants=(group.participants||[]).filter(item=>item&&item.visible!==false).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko-KR'));
@@ -151,7 +153,7 @@ if(orgTabs){
   orgTabs.innerHTML=orgGroups.map((group,index)=>'<button type="button" data-org-group="'+escapeHtml(group.key)+'" class="'+(index===0?'active':'')+'" role="tab" aria-selected="'+(index===0?'true':'false')+'">'+escapeHtml(group.label)+'</button>').join('');
   orgTabs.addEventListener('click',event=>{const button=event.target.closest('button[data-org-group]');if(button)renderOrganizationGroup(button.dataset.orgGroup)});
 }
-renderOrganizationGroup('integrated');
+renderOrganizationGroup('bidae');
 el('raised').textContent=money(d.finance.raised);el('spent').textContent=money(d.finance.spent);el('balance').textContent=money(d.finance.balance);
 const financeHost=el('financeList');if(financeHost){const rows=Array.isArray(d.finance.entries)?d.finance.entries:[];financeHost.innerHTML=rows.length?rows.map(item=>'<article class="material-item"><div class="material-date">'+escapeHtml(item.date||'')+'</div><div><h3>'+escapeHtml((item.type==='income'?'수입 ':'지출 ')+money(Number(item.amount||0)))+'</h3><p>'+escapeHtml(item.purpose||'')+'</p><div class="public-post-meta">'+(item.event?'<span class="source-type">'+escapeHtml(item.event)+'</span>':'')+'<span class="source-type">'+escapeHtml(item.evidenceStatus==='verified'?'증빙 확인완료':item.evidenceStatus==='held'?'증빙 보유':'증빙 미등록')+'</span></div>'+(item.note?'<p>'+escapeHtml(item.note)+'</p>':'')+'</div></article>').join(''):'<p class="muted">공개된 회계내역이 없습니다.</p>'}}
 
