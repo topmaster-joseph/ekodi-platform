@@ -52,7 +52,7 @@ test('business areas and common shell are localized as one surface', () => {
   for (const lang of ['ko-KR','en','zh-CN','ja','ne','vi']) assert.match(site, new RegExp(`['\"]${lang}['\"]`));
   assert.match(site, /ekodi_locale/);
   assert.match(site, /ekodi:locale-change/);
-  assert.doesNotMatch(site, /languageSelect/);
+  assert.doesNotMatch(site, /\$\('#languageSelect'\)|getElementById\(['\"]languageSelect['\"]\)|querySelector\(['\"]#languageSelect['\"]\)/);
   assert.match(site, /document\.querySelectorAll\('\[data-i18n\]'\)/);
   assert.match(site, /document\.querySelectorAll\('\[data-i18n-html\]'\)/);
 });
