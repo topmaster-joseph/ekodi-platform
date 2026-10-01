@@ -132,4 +132,47 @@ function qrHtml(share,handle){
   const key=clean(selected?.key,40),label=clean(selected?.label,80);
   const target=key?`https://ekodi.kr/${handle}/card?context=${encodeURIComponent(key)}&utm_source=qr`:`https://ekodi.kr/${handle}/card?utm_source=qr`;
   const selector=contextsHtml(contexts,handle,key,'qr');
-  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>${escapeHtml(name)} · QR 공유센터</title><style>${baseStyles()}.qr-shell{display:grid;justify-items:center;gap:16px;padding:22px;border:1px solid var(--line);border-radius:20px;background:#fff}.qr-code{width:min(76vw,360px);aspect-ratio:1;padding:14px;border:1px solid var(--line);border-radius:18px;background:#fff}.qr-code canvas,.qr-code img,.qr-code svg{display:block!important;width:100%!important;height:100%!important}.qr-title{text-align:center}.qr-title h2{margin:0;font-size:24px}.qr-title p{margin:5px 0 0;color:var(--muted)}.qr-target{width:100%;padding:11px;border-radius:11px;background:#f6f8f5;color:#51635
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>${escapeHtml(name)} · QR 공유센터</title><style>${baseStyles()}.qr-shell{display:grid;justify-items:center;gap:16px;padding:22px;border:1px solid var(--line);border-radius:20px;background:#fff}.qr-code{width:min(76vw,360px);aspect-ratio:1;padding:14px;border:1px solid var(--line);border-radius:18px;background:#fff}.qr-code canvas,.qr-code img,.qr-code svg{display:block!important;width:100%!important;height:100%!important}.qr-title{text-align:center}.qr-title h2{margin:0;font-size:24px}.qr-title p{margin:5px 0 0;color:var(--muted)}.qr-target{width:100%;padding:11px;border-radius:11px;background:#f6f8f5;color:#516359;font-size:11px;overflow-wrap:anywhere}.qr-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;width:100%}.qr-actions a,.qr-actions button{min-height:44px;border-radius:12px;border:1px solid #cad6cc;background:#fff;color:var(--ink);font:inherit;font-weight:800;text-decoration:none;display:flex;align-items:center;justify-content:center;cursor:pointer}.qr-actions .primary{background:var(--green);color:#fff}@media(max-width:560px){.qr-actions{grid-template-columns:1fr 1fr}.qr-actions .primary{grid-column:1/-1}}</style></head><body><header><span class="handle">@${escapeHtml(handle)}</span><span class="surface">QR 공유센터</span></header><main><p class="eyebrow">SHARE QR</p><h1 class="name">${escapeHtml(name)}</h1>${contexts.length>1?selector:''}<section class="qr-shell"><div class="qr-title"><h2>${escapeHtml(label||'기본 공유')}</h2><p>${key?'이 공유모드로 바로 연결됩니다.':'받는 사람이 관계를 선택합니다.'}</p></div><div id="qrCode" class="qr-code" data-target="${escapeHtml(target)}" aria-label="디지털 명함 QR코드"></div><div class="qr-target">${escapeHtml(target)}</div><div class="qr-actions"><a class="primary" href="${escapeHtml(target)}">명함 열기</a><button id="copyQrLink" type="button">링크 복사</button><button id="downloadQr" type="button">QR 저장</button></div><span id="qrStatus" role="status" aria-live="polite"></span></section></main><footer>QR에는 선택된 명함 링크만 포함되며 개인정보 자체는 QR 이미지에 직접 저장하지 않습니다.</footer><script src="/my/vendor/qrcode.min.js?v=20261001-local-1" defer></script><script src="/my/digital-card-qr.js?v=20261001-contexts-1" defer></script></body></html>`;
+}
+function vcardEscape(value){return String(value??'').replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;')}
+function vcard(share,handle){
+  const name=clean(share?.display_name,120)||handle;
+  const role=share?.role&&typeof share.role==='object'?share.role:null;
+  const selected=share?.selected_context&&typeof share.selected_context==='object'?share.selected_context:null;
+  const key=clean(selected?.key,40);
+  const lines=['BEGIN:VCARD','VERSION:3.0',`FN:${vcardEscape(name)}`,`N:;${vcardEscape(name)};;;`];
+  if(role?.name)lines.push(`ORG:${vcardEscape(clean(role.name,120))}`);
+  if(role?.title)lines.push(`TITLE:${vcardEscape(clean(role.title,120))}`);
+  if(share?.phone)lines.push(`TEL;TYPE=CELL:${vcardEscape(clean(share.phone,40))}`);
+  if(share?.email)lines.push(`EMAIL:${vcardEscape(clean(share.email,254))}`);
+  lines.push(`URL:https://ekodi.kr/${handle}/card${key?`?context=${encodeURIComponent(key)}`:''}`);
+  if(role?.description)lines.push(`NOTE:${vcardEscape(clean(role.description,800))}`);
+  else if(share?.headline)lines.push(`NOTE:${vcardEscape(clean(share.headline,160))}`);
+  lines.push('END:VCARD','');
+  return lines.join('\r\n');
+}
+function exchangeOriginAllowed(request,env){
+  const origin=clean(request.headers.get('origin'),300);
+  if(!origin||origin==='https://ekodi.kr')return true;
+  return env.DATA_MODE!=='production'&&/^https:\/\/[^/]+\.workers\.dev$/i.test(origin);
+}
+async function exchangeRateLimit(request,env,handle){
+  const binding=env.CARD_EXCHANGE_RATE_LIMITER;
+  if(!binding?.limit)return env.DATA_MODE==='production'?{available:false,allowed:false}:{available:true,allowed:true};
+  const ip=clean(request.headers.get('cf-connecting-ip')||request.headers.get('x-forwarded-for')?.split(',')[0]||'unknown',128);
+  try{const result=await binding.limit({key:`card-exchange:${handle}:${ip}`});return{available:true,allowed:result?.success!==false}}catch(error){console.error('Digital card rate limiter unavailable',error);return{available:false,allowed:false}}
+}
+function rpcErrorMessage(raw){
+  const value=String(raw||'').toLowerCase();
+  if(value.includes('privacy_consent_required'))return'개인정보 전달 동의가 필요합니다.';
+  if(value.includes('contact_required'))return'휴대전화 또는 이메일 중 하나는 필요합니다.';
+  if(value.includes('invalid_email'))return'이메일 주소를 확인해 주세요.';
+  if(value.includes('invalid_phone'))return'휴대전화 번호를 확인해 주세요.';
+  if(value.includes('contact_exchange_unavailable'))return'현재 선택한 공유모드에서는 연락처를 교환할 수 없습니다.';
+  if(value.includes('contact_exchange_rate_limited'))return'연락처 교환 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.';
+  if(value.includes('contact_identity_conflict'))return'휴대전화와 이메일이 서로 다른 기존 연락처와 연결되어 있어 자동 병합하지 않았습니다.';
+  return'연락처를 전달하지 못했습니다.';
+}
+async function submitExchange(request,env,handle){
+  if(request.method!=='POST')return json({ok:false,error:'허용되지 않은 요청입니다.'},405,{allow:'POST'});
+  if(!exchangeOriginAllowed(request,env))return json({ok:false,error:'허용되지 않은 요
