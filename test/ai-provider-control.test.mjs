@@ -106,3 +106,31 @@ test('provider admin presents compact explicit connection status without exposin
   assert.match(admin,/min-height:30px/);
   assert.doesNotMatch(admin,/type="text"[^>]*data-ai-field="secret"/);
 });
+
+test('runtime secret sync retries transient Cloudflare failures and reports the failing worker without the value',async()=>{
+  const { putProviderRuntimeSecret, describeProviderRuntimeSyncFailure }=await import('../ai-provider-control.js');
+  const env={CLOUDFLARE_SECRET_MANAGER_TOKEN:'manager-token',CLOUDFLARE_ACCOUNT_ID:'acct',AI_PROVIDER_RUNTIME_SCRIPTS:'worker-a,worker-b'};
+  const original=globalThis.fetch,calls=[];
+  try{
+    let flaky=1;
+    globalThis.fetch=async(url,init)=>{calls.push({url:String(url),body:init.body});if(String(url).includes('worker-a')&&flaky-->0)return new Response(JSON.stringify({success:false,errors:[{code:10013}]}),{status:500});return new Response(JSON.stringify({success:true}),{status:200})};
+    assert.deepEqual(await putProviderRuntimeSecret(env,'EKODI_PROVIDER_ANTHROPIC_MODEL','claude-sonnet-5-5'),['worker-a','worker-b']);
+    assert.equal(calls.length,3);
+    calls.length=0;
+    globalThis.fetch=async url=>{calls.push(String(url));if(String(url).includes('worker-b'))return new Response(JSON.stringify({success:false,errors:[{code:10215,message:'latest version not deployed'}]}),{status:400});return new Response(JSON.stringify({success:true}),{status:200})};
+    const error=await putProviderRuntimeSecret(env,'ANTHROPIC_API_KEY','sk-ant-secret-value-123456').catch(e=>e);
+    assert.equal(calls.length,2,'non-transient 4xx must not be retried');
+    const failure=describeProviderRuntimeSyncFailure(error);
+    assert.deepEqual(failure,{reason:'worker_latest_version_not_deployed',target:'worker-b',status:400,cfCode:10215,updatedTargets:['worker-a']});
+    assert.equal(JSON.stringify(failure).includes('sk-ant'),false);
+    assert.equal(describeProviderRuntimeSyncFailure(Object.assign(new Error('x'),{scriptName:'w',status:403})).reason,'secret_manager_permission_denied');
+    assert.equal(describeProviderRuntimeSyncFailure(new Error('provider_runtime_sync_unavailable')).reason,'secret_manager_not_configured');
+  }finally{globalThis.fetch=original}
+});
+
+test('admin provider UI explains runtime sync failures instead of showing the raw code',()=>{
+  const ui=read('admin-provider-control.js');
+  assert.match(ui,/code==='provider_runtime_sync_failed'/);
+  assert.match(ui,/worker_latest_version_not_deployed/);
+  assert.match(ui,/renderAll\(\)\}catch\(e\)\{message\(card,providerControlErrorMessage\(e\),true\)\}/);
+});
