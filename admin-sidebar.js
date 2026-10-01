@@ -33,7 +33,7 @@ const PRIMARY_SECTIONS = Object.freeze({
   people: ['users-access', 'admins', 'ai-membership', 'security'],
   services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'],
   content: ['work', 'communication', 'community', 'books', 'social'],
-  status: ['health', 'deployments', 'aiops', 'devices', 'api-cost'],
+  status: ['health', 'site-health', 'deployments', 'aiops', 'devices', 'api-cost'],
   'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'ai-module-spec', 'audit-records'],
 });
 
