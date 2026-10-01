@@ -17,6 +17,19 @@
   const keyOf=value=>{try{const u=new URL(normalizeUrl(value));return (u.hostname+u.pathname.replace(/\/+$/,'')).toLowerCase()}catch{return String(value||'').toLowerCase()}};
 
   function panel(){return document.getElementById('ekodiGlobalSiteHealth')}
+  function ensureStyle(){
+    if(document.querySelector('link[data-site-health-style]'))return;
+    const link=document.createElement('link');link.rel='stylesheet';link.href='/admin/site-health-admin.css';link.dataset.siteHealthStyle='true';document.head.appendChild(link);
+  }
+  function ensureButton(){
+    const nav=document.querySelector('.sidebar nav');if(!nav)return null;
+    let button=nav.querySelector('[data-section="site-health"]');
+    if(button)return button;
+    button=document.createElement('button');button.type='button';button.className='nav';button.dataset.section='site-health';button.innerHTML='✓ <span>사이트 자동점검</span>';
+    const health=nav.querySelector('[data-section="health"],[data-demand-feature="health"]');
+    if(health)health.insertAdjacentElement('afterend',button);else nav.append(button);
+    return button;
+  }
   function ensurePanel(){
     if(panel())return panel();
     const host=document.querySelector('.content'); if(!host)return null;
@@ -149,8 +162,8 @@
     </article>`).join('');
   }
   function init(){
-    const root=ensurePanel();if(!root)return;
-    const button=document.querySelector('[data-section="site-health"]');
+    ensureStyle();const button=ensureButton();const root=ensurePanel();if(!root)return;
+    
     button?.addEventListener('click',()=>{window.EKODIAdminPanels?.activate?.(SECTION);if(!catalog.length)load(false);});
     if(location.pathname==='/admin/status/site-health'||location.hash==='#site-health')load(false);
     window.addEventListener('ekodi-nav-changed',()=>{const b=document.querySelector('[data-section="site-health"]');if(b&&!b.dataset.siteHealthBound){b.dataset.siteHealthBound='true';b.addEventListener('click',()=>{if(!catalog.length)load(false)})}});
