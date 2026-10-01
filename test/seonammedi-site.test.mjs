@@ -304,3 +304,17 @@ test('seonammedi monitor D1 insert keeps column and value arity aligned',async()
   const monitor=await readFile(new URL('../seonammedi-monitor.js',import.meta.url),'utf8');
   assert.match(monitor,/INSERT INTO seonammedi_monitor_items \(fingerprint,title,url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,resolved_url,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text\) VALUES \(\?,\?,\?,\?,\?,\?,\?,'source_only',\?,\?,\?,\?,\?,\?,\?,\?,\?,\?\)/);
 });
+
+test('seonammedi manual site health run is admin-only',async()=>{
+  const [control,adminHtml,adminJs]=await Promise.all([
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('admin/admin.js',root),'utf8')
+  ]);
+  assert.match(control,/admin\/monitor\/run/);
+  assert.match(control,/runSeonamMediDailyCheck\(env,\{scheduledAt:new Date\(\)\.toISOString\(\),force:true\}\)/);
+  assert.match(control,/health_forbidden/);
+  assert.match(adminHtml,/id="runSiteHealth"/);
+  assert.match(adminJs,/\/api\/seonammedi\/admin\/monitor\/run/);
+  assert.match(adminJs,/me\.permissions\?\.health/);
+});
