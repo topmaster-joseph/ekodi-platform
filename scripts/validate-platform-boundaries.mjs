@@ -27,8 +27,12 @@ if (/^\s*push\s*:/m.test(fullDeploy)) failures.push('Full ecosystem deploy must 
 const mallDeploy = await read('.github/workflows/deploy-ekodi-mall.yml');
 if (!mallDeploy.includes('sites/ekodi-mall/**')) failures.push('Mall workflow must remain path-isolated to sites/ekodi-mall/**');
 
+const sharedSiteDeploy = await read('.github/workflows/deploy-site-core.yml');
+for (const source of ['site-publication-runtime.js', 'config/site-publication-policy.json', 'test/site-publication-policy.test.mjs']) {
+  if (!sharedSiteDeploy.includes(source)) failures.push(`Shared Site workflow must watch ${source}`);
+}
 const controlDeploy = await read('.github/workflows/deploy-control-api.yml');
-for (const source of ['api-worker.js', 'customer-entry-worker.js', 'books-control.js', 'books-finance-control.js', 'affiliate-control.js', 'migrations/**']) {
+for (const source of ['api-worker.js', 'site-publication-runtime.js', 'config/site-publication-policy.json', 'test/site-publication-policy.test.mjs', 'customer-entry-worker.js', 'books-control.js', 'books-finance-control.js', 'affiliate-control.js', 'migrations/**']) {
   if (!controlDeploy.includes(source)) failures.push(`Control API workflow must watch ${source}`);
 }
 
