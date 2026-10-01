@@ -13,6 +13,9 @@ test('AI control official providers execute only through the shared registry ada
   assert.doesNotMatch(source,/generativelanguage\.googleapis\.com/);
   assert.match(source,/createOpenRouterFreeProvider/);
   assert.match(source,/createGroqFreeProvider/);
+  assert.match(source,/createCerebrasFreeProvider/);
+  assert.match(source,/createQwenFreeProvider/);
+  assert.match(source,/createDeepSeekFreeCreditProvider/);
 });
 
 test('managed enable flags affect official providers without removing the free provider pool',()=>{
@@ -143,4 +146,39 @@ test('provider secret sync never promotes an unapproved latest Worker version on
   assert.doesNotMatch(source,/workers\/scripts\/.*deployments/);
   assert.doesNotMatch(source,/percentage:100/);
   assert.match(source,/providerMessage/);
+});
+
+
+test('extended free provider capabilities stay fail-closed until their free-only guards are satisfied',()=>{
+  const caps=providerCapabilities({
+    CEREBRAS_API_KEY:'test-cerebras',
+    EKODI_PROVIDER_CEREBRAS_FREE_ENABLED:'true',
+    QWEN_API_KEY:'test-qwen',
+    QWEN_BASE_URL:'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+    EKODI_PROVIDER_QWEN_FREE_ENABLED:'true',
+    DEEPSEEK_API_KEY:'test-deepseek',
+    EKODI_PROVIDER_DEEPSEEK_FREE_ENABLED:'true',
+  });
+  assert.equal(caps.cerebrasFree,false);
+  assert.equal(caps.qwenFree,false);
+  assert.equal(caps.deepseekFreeCredit,true);
+
+  const guarded=providerCapabilities({
+    CEREBRAS_API_KEY:'test-cerebras',
+    EKODI_PROVIDER_CEREBRAS_FREE_ENABLED:'true',
+    EKODI_CEREBRAS_FREE_TRIAL_ONLY:'true',
+    QWEN_API_KEY:'test-qwen',
+    QWEN_BASE_URL:'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+    EKODI_PROVIDER_QWEN_FREE_ENABLED:'true',
+    EKODI_QWEN_FREE_QUOTA_ONLY_CONFIRMED:'true',
+  });
+  assert.equal(guarded.cerebrasFree,true);
+  assert.equal(guarded.qwenFree,true);
+});
+
+test('provider status includes guarded free providers before paid APIs',()=>{
+  const rows=providerStatus({});
+  assert.deepEqual(rows.map(item=>item.id).slice(0,7),[
+    'cloudflare-workers-ai','gemini-free','openrouter-free','groq-free','cerebras-free','qwen-free','deepseek-free-credit'
+  ]);
 });
