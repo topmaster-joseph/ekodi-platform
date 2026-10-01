@@ -886,7 +886,11 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   $('workspaceLogout')?.addEventListener('click',()=>{suppressWorkspaceSsoRecovery();clearSession();location.assign(adminBase)});
   async function boot(){setup();acceptPlatformAdminHandoff();try{await exchangeCentralToken()}catch{clearSession();return loginPanel('통합인증 연결에 실패했습니다. 다시 로그인해 주세요.')}if(!(await accessToken())){if(platformAdminToken()){markPlatformAdminIntent();platformAdminSessionToken=''}if(beginWorkspaceSsoRecovery())return;if(section==='channels'||section==='publishing'||section==='marketing')return channelPreAuth();return loginPanel(hasPlatformAdminIntent()?'1단계 운영공간 로그인 후 플랫폼 관리자 인증으로 자동 이어집니다.':'중앙 EKODI 로그인 상태가 없거나 만료되었습니다. 관리자 로그인을 진행해 주세요.')}state('권한 확인 중');let context;try{context=await loadWorkspaceContext()}catch(e){if(e.status===401){clearSession();return loginPanel()}$('summaryCards').innerHTML=[card('운영공간',workspaceLabel(),'권한 확인 필요')].join('');$('mainPanel').innerHTML=`<h2>권한 확인 실패</h2><p class="empty">${e.message}</p>`;return state('확인 필요')}if(!context)return deniedPanel();applyWorkspaceContext(context);if(!roleCapabilities(workspaceRole).length)return deniedPanel();const missionReturn=consumeMissionReturn();if(missionReturn){location.replace(missionReturn);return}if(!canSection(section))return permissionPanel();if(service==='mall'&&section==='sourcing'&&hasPlatformAdminIntent()&&!platformAdminToken()){clearPlatformAdminIntent();state('플랫폼 관리자 인증으로 연결 중');location.assign(platformAdminAuthUrl());return}return render()}
 
-  boot();
+  boot().catch(error=>{
+    const message=String(error?.message||error||'관리자 화면 초기화에 실패했습니다.');
+    try{$('summaryCards').innerHTML=[card('관리자 화면','초기화 실패','자동 복구 가능'),card('운영공간',workspaceLabel(),'tenant scoped')].join('')}catch{}
+    try{$('mainPanel').innerHTML=`<h2>관리자 화면을 불러오지 못했습니다</h2><p class="empty">${ae(message)}</p><div class="actions"><button class="button primary" id="workspaceBootRetry" type="button">다시 시도</button><a class="button" href="${ae(workspaceAuthUrl())}">관리자 재인증</a><a class="button" href="${ae(workspacePublicUrl())}" target="_blank" rel="noopener">사용자 화면</a></div><p class="empty">새로고침 없이 다시 시도할 수 있으며, 반복 실패 시 관리자 재인증으로 복구합니다.</p>`;state('초기화 확인 필요');$('workspaceBootRetry')?.addEventListener('click',()=>location.reload(),{once:true})}catch{}
+  });
 }
 
 
