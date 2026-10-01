@@ -1,0 +1,50 @@
+{
+  "amendmentId": "UNIVERSAL-SITE-PUBLICATION-20261001",
+  "constitutionVersion": "1.26.1",
+  "approvedAt": "2026-10-01",
+  "changeClass": "C2",
+  "taskId": "universal-site-publication-forced-rule-20261001",
+  "summary": "Make every current and future public user site and independent site public by default, while allowing explicit public/private/maintenance switching from the site administrator surface and the EKODI platform super-administrator surface through one central publication-state source.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly instructed EKODI on 2026-10-01 to apply this to all EKODI user and independent sites as a forced execution rule and to make publication status selectable from both the site administrator page and the platform super-administrator page.",
+  "implementation": [
+    "EKODI-SITE-PUBLICATION-001 in governance/constitution/constitution.json",
+    "config/site-publication-policy.json",
+    "site-publication-runtime.js central policy/runtime",
+    "api-worker.js platform and site-admin control API",
+    "platform-router-entry-worker.js publication enforcement and site-admin control injection",
+    "admin-public-site-controls.js platform super-admin selector",
+    "test/site-publication-policy.test.mjs",
+    "scripts/validate-constitution.mjs merge-blocking constitutional validation"
+  ],
+  "mandatoryRules": [
+    "all current and future public user and independent sites automatically inherit the rule",
+    "new sites default to public and remain accessible before login",
+    "public, private and maintenance are the only publication states",
+    "private or maintenance requires an explicit authorized administrator choice",
+    "the platform super administrator may manage all sites while a site administrator may manage only that site",
+    "publication state never blocks administrator, authentication or API routes",
+    "private and maintenance responses are noindex, nofollow and noarchive",
+    "all publication mutations are audited and local override is forbidden",
+    "publication-state read failure preserves public availability rather than taking the site offline"
+  ],
+  "validation": [
+    "test/site-publication-policy.test.mjs",
+    "scripts/validate-constitution.mjs",
+    "EKODI Constitution Check",
+    "Validate Admin Runtime Contract",
+    "EKODI Parallel Change Conflict Guard",
+    "EKODI Zero-Subdomain Guard",
+    "CI"
+  ],
+  "rollback": "Revert this amendment and the universal publication runtime through the guarded C2 path while preserving currently stored site publication states. Do not silently change a site from an administrator-selected private or maintenance state during rollback.",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalEvidence": {
+    "explicitOwnerInstruction": true,
+    "ownerInstructionDate": "2026-10-01",
+    "requiredPullRequestLabel": "constitution-approved",
+    "approvalLabel": "constitution-approved",
+    "ownerInstruction": "좋아 에코디와 협의해서 에코디 전체 사용자 및 독립사이트에 강제실행규칙으로 설정하고 사이트 공개여부를 해당 관리자페이지와 최고관리자페이지에서 간단히 설정 선택 전환할 수 있게 해줘.",
+    "pullRequest": 3147
+  }
+}
