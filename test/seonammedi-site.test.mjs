@@ -153,6 +153,10 @@ test('seonammedi citizen voice admin keeps canonical super-admin access and visi
   assert.match(adminJs,/text\(\$\('adminIdentity'\),'연결 오류'\)/);
   assert.match(adminJs,/voiceMessage\.classList\.add\('error'\)/);
   assert.match(adminJs,/관리자 정보를 불러오지 못했습니다/);
+  assert.match(adminJs,/if\(Number\(error\?\.status\|\|0\)<500\)throw error/);
+  assert.match(adminJs,/if\(bearer\)headers\.set\('authorization','Bearer '\+bearer\)/);
+  assert.match(adminJs,/credentials:'same-origin'/);
+  assert.match(adminJs,/location\.hash\.includes\('ekodi_token='\).*history\.replaceState/);
 });
 
 
