@@ -93,3 +93,16 @@ test('provider control exposes human-only paid decision alerts without auto esca
   assert.match(admin,/유료 설정 검토/);
   assert.doesNotMatch(admin,/자동 결제/);
 });
+
+
+test('provider admin presents compact explicit connection status without exposing secrets',()=>{
+  const admin=read('admin-provider-control.js');
+  assert.match(admin,/AI-PROVIDER-COMPACT-READABLE-20261001/);
+  assert.match(admin,/Secret \$\{configured\?'연결':'미연결'\}/);
+  assert.match(admin,/운영 \$\{operational\?'가동':'비가동'\}/);
+  assert.match(admin,/런타임 \$\{esc\(sync\)\}/);
+  assert.match(admin,/aria-live="polite"/);
+  assert.match(admin,/grid-template-columns:repeat\(2,minmax\(360px,1fr\)\)/);
+  assert.match(admin,/min-height:30px/);
+  assert.doesNotMatch(admin,/type="text"[^>]*data-ai-field="secret"/);
+});
