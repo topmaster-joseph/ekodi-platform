@@ -293,7 +293,7 @@ function resetNotice(){
   const form=$('noticeForm');form.reset();form.elements.id.value='';form.elements.status.value='published';text($('noticeFormTitle'),'공지 작성');text($('noticeMessage'),'');
 }
 function editNotice(item){
-  const form=$('noticeForm');form.elements.id.value=item.id;form.elements.title.value=item.title||'';form.elements.body.value=item.body||'';form.elements.status.value=item.status||'draft';form.elements.pinned.checked=Boolean(item.pinned);text($('noticeFormTitle'),'공지 수정');showPanel('notices');form.elements.title.focus();
+  const form=$('noticeForm');form.elements.id.value=item.id;form.elements.title.value=item.title||'';form.elements.body.value=item.body||'';form.elements.status.value=item.status||'draft';form.elements.pinned.checked=Boolean(item.pinned);form.elements.imageUrl.value=item.imageUrl||'';form.elements.kind.value=item.kind||'notice';form.elements.featured.checked=Boolean(item.featured);form.elements.eventStart.value=item.eventStart?String(item.eventStart).slice(0,16):'';form.elements.eventEnd.value=item.eventEnd?String(item.eventEnd).slice(0,16):'';text($('noticeFormTitle'),'공지 수정');showPanel('notices');form.elements.title.focus();
 }
 async function deleteNotice(item){
   if(!confirm('이 공지를 삭제할까요?'))return;
@@ -306,7 +306,7 @@ function renderNotices(){
     const head=document.createElement('div');head.className='item-head';
     const left=document.createElement('div');const titleNode=document.createElement('div');titleNode.className='item-title';titleNode.textContent=item.title;
     const meta=document.createElement('div');meta.className='item-meta';meta.textContent=dateText(item.publishedAt||item.updatedAt);left.append(titleNode,meta);
-    const flags=document.createElement('div');flags.append(tag(item.status==='published'?'공개':'초안',item.status==='published'?'live':''));if(item.pinned)flags.append(tag('상단고정'));
+    const flags=document.createElement('div');flags.append(tag(item.status==='published'?'공개':'초안',item.status==='published'?'live':''));if(item.pinned)flags.append(tag('상단고정'));if(item.featured)flags.append(tag('첫화면','live'));if(item.kind==='event')flags.append(tag('행사'));
     head.append(left,flags);article.append(head);
     if(item.body){const body=document.createElement('p');body.className='item-body';body.textContent=item.body.length>500?item.body.slice(0,500)+'…':item.body;article.append(body)}
     const actions=document.createElement('div');actions.className='item-actions';actions.append(button('수정',()=>editNotice(item)),button('삭제',()=>deleteNotice(item),'danger'));article.append(actions);host.append(article);
@@ -345,7 +345,7 @@ $('timelineForm').addEventListener('submit',async event=>{
   try{await api(id?'/api/seonammedi/admin/timeline/'+id:'/api/seonammedi/admin/timeline',{method:id?'PUT':'POST',body:JSON.stringify(payload)});text(msg,'저장했습니다.');resetTimeline();await loadTimeline()}catch(error){msg.classList.add('error');text(msg,error.message)}
 });
 $('noticeForm').addEventListener('submit',async event=>{
-  event.preventDefault();const form=event.currentTarget,id=form.elements.id.value;const payload={title:form.elements.title.value,body:form.elements.body.value,status:form.elements.status.value,pinned:form.elements.pinned.checked};
+  event.preventDefault();const form=event.currentTarget,id=form.elements.id.value;const payload={title:form.elements.title.value,body:form.elements.body.value,status:form.elements.status.value,pinned:form.elements.pinned.checked,imageUrl:form.elements.imageUrl.value,kind:form.elements.kind.value,featured:form.elements.featured.checked,eventStart:form.elements.eventStart.value,eventEnd:form.elements.eventEnd.value};
   const msg=$('noticeMessage');msg.classList.remove('error');text(msg,'저장 중…');
   try{await api(id?'/api/seonammedi/admin/notices/'+id:'/api/seonammedi/admin/notices',{method:id?'PUT':'POST',body:JSON.stringify(payload)});text(msg,'저장했습니다.');resetNotice();await loadNotices()}catch(error){msg.classList.add('error');text(msg,error.message)}
 });
