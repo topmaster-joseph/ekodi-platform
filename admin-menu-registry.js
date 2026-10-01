@@ -57,7 +57,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'tax', group: 'content', icon: 'T', labels: { ko: '세금·증빙', en: 'Tax & Evidence' }, href: 'https://ekodi.kr/tax', adminHandoff: true, internal: true },
 
   { id: 'health', group: 'status', icon: '◉', labels: { ko: '전체 운영상태', en: 'Overall Operational Health' } },
-  { id: 'deployments', group: 'status', icon: '↑', labels: { ko: '배포·작업 대기', en: 'Deployments & Work Queue' } },
+  { id: 'deployments', group: 'status', icon: '↑', labels: { ko: '배포·변경 이력', en: 'Deployments & Change History' } },
   { id: 'aiops', group: 'status', icon: 'AI', labels: { ko: '장애·오류·경고', en: 'Incidents, Errors & Warnings' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
   { id: 'devices', group: 'status', icon: 'D', labels: { ko: '실행 인프라', en: 'Execution Infrastructure' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
   { id: 'pos-agent', group: 'status', icon: 'POS', labels: { ko: 'POS Agent 설치·관리', en: 'POS Agent Install & Management' }, href: 'https://ekodi.kr/cmpmyi/admin/agent', adminHandoff: true, superAdminOnly: true, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
