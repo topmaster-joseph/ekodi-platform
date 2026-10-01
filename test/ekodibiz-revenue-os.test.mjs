@@ -47,10 +47,12 @@ test('business areas and common shell are localized as one surface', () => {
   for (const area of ['software','solar','mall','consulting','trade','publishing','ai-ops','marketing','invest']) assert.match(html, new RegExp(`data-business="${area}"`));
   assert.match(html, /data-site-shell="header"/);
   assert.match(html, /data-site-shell="footer"/);
-  assert.match(html, /id="languageSelect"/);
+  assert.doesNotMatch(html, /id="languageSelect"|class="language"/);
   assert.match(site, /document\.documentElement\.lang=locale/);
   for (const lang of ['ko-KR','en','zh-CN','ja','ne','vi']) assert.match(site, new RegExp(`['\"]${lang}['\"]`));
   assert.match(site, /ekodi_locale/);
+  assert.match(site, /ekodi:locale-change/);
+  assert.doesNotMatch(site, /\$\('#languageSelect'\)|getElementById\(['\"]languageSelect['\"]\)|querySelector\(['\"]#languageSelect['\"]\)/);
   assert.match(site, /document\.querySelectorAll\('\[data-i18n\]'\)/);
   assert.match(site, /document\.querySelectorAll\('\[data-i18n-html\]'\)/);
 });
