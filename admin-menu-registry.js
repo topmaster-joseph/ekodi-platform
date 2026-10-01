@@ -57,6 +57,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'tax', group: 'content', icon: 'T', labels: { ko: '세금·증빙', en: 'Tax & Evidence' }, href: 'https://ekodi.kr/tax', adminHandoff: true, internal: true },
 
   { id: 'health', group: 'status', icon: '◉', labels: { ko: '전체 운영상태', en: 'Overall Operational Health' } },
+  { id: 'site-health', group: 'status', icon: '✓', labels: { ko: '사이트 자동점검', en: 'Site Health Checks' }, superAdminOnly: true },
   { id: 'deployments', group: 'status', icon: '↑', labels: { ko: '배포·작업 대기', en: 'Deployments & Work Queue' } },
   { id: 'aiops', group: 'status', icon: 'AI', labels: { ko: '장애·오류·경고', en: 'Incidents, Errors & Warnings' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
   { id: 'devices', group: 'status', icon: 'D', labels: { ko: '실행 인프라', en: 'Execution Infrastructure' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
@@ -118,7 +119,7 @@ const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   'sites-all':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',campus:'sites',clients:'sites','site-chrome':'sites',cmpmyi:'sites',organization:'sites',workspace:'sites',
   'users-access':'access',security:'access',admins:'access','ai-membership':'access',
   work:'content',communication:'content',community:'content',books:'content',devotional:'content',social:'content',finance:'content',tax:'content',
-  health:'status',deployments:'status',aiops:'status',devices:'status','pos-agent':'status','api-cost':'status',architecture:'status',maturity:'status',services:'status',
+  health:'status','site-health':'status',deployments:'status',aiops:'status',devices:'status','pos-agent':'status','api-cost':'status',architecture:'status',maturity:'status',services:'status',
   'public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'settings','audit-records':'settings',policies:'settings',
   'common-services':'catalog',confirmations:'catalog','life-ai':'catalog','personal-finance':'catalog',invest:'catalog','marketing-ai':'catalog','supply-network':'catalog',insurance:'catalog',capabilities:'catalog',openai:'catalog',
 });
