@@ -67,6 +67,24 @@ jobs:
           node-version: "24"
           cache: npm
 
+      - name: Capture development change scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA" > "$RUNNER_TEMP/ekodi-changed-files.txt"
+
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          path: .ekodi-control
+          fetch-depth: 1
+
+      - name: EKODI AI Orchestration Gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EKODI_CHANGED_FILES_PATH: ${{ runner.temp }}/ekodi-changed-files.txt
+        run: node "$GITHUB_WORKSPACE/.ekodi-control/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+
       - name: Guard development quota before build and deploy
         shell: bash
         env:
