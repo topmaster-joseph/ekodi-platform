@@ -10,7 +10,7 @@ function clean(value,max=1000){return String(value??'').replace(/\0/g,'').trim()
 function escapeHtml(value){return String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function safeUrl(value){
   const raw=clean(value,1000);if(!raw)return'';
-  const candidate=/^[a-z][a-z0-9+.-]*:\/\//i.test(raw)?raw:`https://${raw.replace(/^\\/+/, '')}`;
+  const candidate=/^[a-z][a-z0-9+.-]*:\/\//i.test(raw)?raw:`https://${raw.replace(/^\/+/, '')}`;
   try{const url=new URL(candidate);return ['https:','http:'].includes(url.protocol)?url.toString():''}catch{return''}
 }
 function dataConfig(env={}){
