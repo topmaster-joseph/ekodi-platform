@@ -33,9 +33,9 @@ A service must not create persistent platform-level chrome for account identity,
 
 The shared visual architecture has three persistent responsibilities:
 
-1. **Common header**: stable current-site identity/context, site-local home behavior, the rounded language selector, service-local account actions only when applicable, mobile-safe fixed positioning, and accessibility behavior. Individual sites do not carry EKODI-root or My-EKODI jump links.
+1. **Common header**: stable current-site identity/context, site-local home behavior, a rounded language selector **only when at least two locales are published for the current service**, service-local account actions only when applicable, mobile-safe fixed positioning, and accessibility behavior. With one published locale, the control is absent with no placeholder or reserved gap. Individual sites do not carry EKODI-root or My-EKODI jump links.
 2. **Service content**: the widest practical work canvas. Task-specific controls stay local to the task and must not become global floating chrome.
-3. **Common footer**: stable EKODI identity, policy/ecosystem links, language affordance where applicable, and shared closing navigation.
+3. **Common footer**: stable EKODI identity, policy/ecosystem links, and shared closing navigation. Language selection is header-only and never duplicated in the footer.
 
 The canonical declarative theme source is `shell/theme.json`. `shell/shell.js` may publish theme/context APIs and events, but it must not require a visible floating selector in order to provide those APIs.
 
