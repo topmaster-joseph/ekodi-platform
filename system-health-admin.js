@@ -73,7 +73,14 @@
       </div>
     </div>
 
-    <div class="core-health-overall" data-core-overall data-state="pending">
+    <nav class="system-health-local-nav" aria-label="플랫폼 통합현황 바로가기">
+      <button type="button" data-health-jump="core" class="is-active">핵심</button>
+      <button type="button" data-health-jump="flow">연결</button>
+      <button type="button" data-health-jump="code">코드</button>
+      <button type="button" data-health-jump="traffic">트래픽</button>
+    </nav>
+
+    <div data-health-anchor="core" class="core-health-overall" data-core-overall data-state="pending">
       <span class="system-health-dot" aria-hidden="true"></span>
       <div><small>플랫폼 핵심 상태</small><strong data-core-overall-label>확인 전</strong><span data-core-status>통합현황을 열면 핵심 운영 상태를 확인합니다.</span></div>
       <time data-core-checked-at>—</time>
@@ -86,7 +93,7 @@
       <article data-core-card="ai" data-state="pending"><div><small>AI 독립성</small><b data-core-badge="ai">확인 전</b></div><strong data-core-value="ai">—</strong><span data-core-detail="ai">외부 AI 장애와 Core 운영 분리</span></article>
     </div>
 
-    <div class="system-health-divider"><span>운영 연결 상태</span></div>
+    <div class="system-health-divider" data-health-anchor="flow"><span>운영 연결 상태</span></div>
     <div class="health-diagram-grid" aria-label="시스템 흐름 및 병목 다이어그램">
       <article class="health-diagram-card health-path-card">
         <div class="health-diagram-head"><div><small>REQUEST PATH</small><strong>서비스 연결 흐름</strong></div><span>현재 상태</span></div>
@@ -128,7 +135,7 @@
       </div>
     </div>
 
-    <div class="system-health-divider"><span>코드 · 구조 건강</span></div>
+    <div class="system-health-divider" data-health-anchor="code"><span>코드 · 구조 건강</span></div>
     <div class="code-health-overall" data-code-health-overall data-state="pending">
       <div class="code-health-score"><small>건강점수</small><strong data-code-health-score>—</strong><span>/ 100</span></div>
       <div class="code-health-summary"><small>코드 · 구조 · 배포 · 보안 · 문서</small><strong data-code-health-label>확인 전</strong><span data-code-health-detail>정기 건강검사 스냅샷을 불러옵니다.</span></div>
@@ -141,7 +148,7 @@
       <p class="code-health-policy">자동 수정하지 않습니다. 관찰 → 원인분석 → 수정안 → 테스트·영향검증 → 관리자 승인 → 가역적 적용 → 운영 재검증 순서를 지킵니다.</p>
     </div>
 
-    <div class="system-health-divider"><span>트래픽 분류</span></div>
+    <div class="system-health-divider" data-health-anchor="traffic"><span>트래픽 분류</span></div>
     <div class="traffic-intelligence-toolbar">
       <div><strong>실사용 · 검색 · 내부자동화 · 기타봇 분리</strong><small data-traffic-intelligence-status>분류 집계를 확인합니다.</small></div>
       <label>사이트 <select data-traffic-site><option value="">전체 사이트</option></select></label>
@@ -783,6 +790,14 @@
     loaded = false;
     load(true);
   });
+
+  section.querySelectorAll('[data-health-jump]').forEach(jump => jump.addEventListener('click', () => {
+    const key = jump.dataset.healthJump;
+    const target = section.querySelector(`[data-health-anchor="${key}"]`);
+    if (!target) return;
+    section.querySelectorAll('[data-health-jump]').forEach(item => item.classList.toggle('is-active', item === jump));
+    target.scrollIntoView({ behavior:'smooth', block:'start' });
+  }));
 
   refresh.addEventListener('click', () => load(true));
   button.addEventListener('click', activate);
