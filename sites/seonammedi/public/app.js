@@ -244,22 +244,39 @@ document.querySelector('.site-header nav')?.addEventListener('click',event=>{
 window.addEventListener('popstate',syncViewFromLocation);
 syncViewFromLocation();
 
+const NOTICE_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token';
+let publicNotices=[];
+function noticeToken(){try{const raw=localStorage.getItem(NOTICE_SESSION_KEY)||'';if(!raw)return'';const parsed=JSON.parse(raw);const session=parsed?.currentSession||parsed?.session||parsed;const access=String(session?.access_token||'');const expires=Number(session?.expires_at||0);return access&&(!expires||expires>Math.floor(Date.now()/1000)+30)?access:''}catch{return''}}
+function noticeLoginUrl(){const u=new URL('/auth/',location.origin);u.searchParams.set('site','portal');u.searchParams.set('direct','1');u.searchParams.set('return_to',location.origin+'/seonammedi/?compose=notice#notices');return u.href}
+function noticePermalink(id){return location.origin+'/seonammedi/?notice='+encodeURIComponent(id)+'#notices'}
+function noticeDate(item){const raw=item.publishedAt||item.updatedAt||'';return raw?new Date(raw).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):''}
+function noticeCard(item){const image=item.imageUrl?'<img src="'+escapeHtml(item.imageUrl)+'" alt="" loading="lazy">':'';return '<article class="notice-item" data-notice-id="'+item.id+'"><a class="notice-open" href="'+noticePermalink(item.id)+'">'+image+'<div><h3>'+escapeHtml(item.title||'공지')+(item.pinned?'<span class="notice-pin">중요</span>':'')+'</h3><p>'+escapeHtml(item.body||'')+'</p><small>'+escapeHtml(noticeDate(item))+'</small></div></a></article>'}
+function showNoticeDetail(item){
+  const detail=el('noticeDetail');if(!detail)return;const image=item.imageUrl?'<img src="'+escapeHtml(item.imageUrl)+'" alt="" class="notice-detail-image">':'';
+  detail.innerHTML='<button type="button" class="notice-back">목록</button>'+image+'<h3>'+escapeHtml(item.title||'공지')+'</h3><p>'+escapeHtml(item.body||'')+'</p><small>'+escapeHtml(noticeDate(item))+'</small><div class="notice-detail-actions"><button type="button" class="notice-share">공유</button></div>';
+  detail.hidden=false;el('noticeList').hidden=true;
+  detail.querySelector('.notice-back')?.addEventListener('click',()=>{detail.hidden=true;el('noticeList').hidden=false;history.replaceState(null,'',location.pathname+'#notices')});
+  detail.querySelector('.notice-share')?.addEventListener('click',async()=>{const url=noticePermalink(item.id);try{if(navigator.share)await navigator.share({title:item.title||'공지',text:item.body||'',url});else{await navigator.clipboard.writeText(url);alert('게시물 링크를 복사했습니다.')}}catch{}});
+}
+function renderFeaturedNotice(rows){const recent=[...rows].sort((a,b)=>String(b.publishedAt||b.updatedAt||'').localeCompare(String(a.publishedAt||a.updatedAt||'')));const item=recent.find(row=>row.imageUrl)||recent[0];const card=el('featuredNotice');if(!card||!item)return;card.href=noticePermalink(item.id);el('featuredNoticeTitle').textContent=item.title||'최근 게시글';const image=el('featuredNoticeImage');if(item.imageUrl){image.src=item.imageUrl;image.hidden=false}else image.hidden=true;card.hidden=false}
 async function loadNotices(){
   const host=el('noticeList');if(!host)return;
   try{
-    const response=await fetch('/api/seonammedi/notices',{cache:'no-store'});
-    const data=await response.json().catch(()=>({}));
+    const response=await fetch('/api/seonammedi/notices',{cache:'no-store'});const data=await response.json().catch(()=>({}));
     if(!response.ok||!data.ok)throw new Error(data.message||'공지 목록을 불러오지 못했습니다.');
-    const rows=Array.isArray(data.items)?data.items:[];
-    host.innerHTML=rows.length?rows.map(item=>{
-      const date=item.published_at||item.updated_at||'';
-      const dateText=date?new Date(date).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):'';
-      return '<article class="notice-item"><h3>'+escapeHtml(item.title||'공지')+(item.pinned?'<span class="notice-pin">중요</span>':'')+'</h3><p>'+escapeHtml(item.body||'')+'</p><small>'+escapeHtml(dateText)+'</small></article>';
-    }).join(''):'<p class="muted">등록된 공지가 없습니다.</p>';
-  }catch(error){
-    host.innerHTML='<p class="muted">'+escapeHtml(error.message||'공지 목록을 불러오지 못했습니다.')+'</p>';
-  }
+    publicNotices=Array.isArray(data.items)?data.items:[];host.innerHTML=publicNotices.length?publicNotices.map(noticeCard).join(''):'<p class="muted">등록된 공지가 없습니다.</p>';renderFeaturedNotice(publicNotices);
+    const wanted=Number(new URLSearchParams(location.search).get('notice')||0);const selected=publicNotices.find(item=>item.id===wanted);if(selected){showView('notices');showNoticeDetail(selected)}
+  }catch(error){host.innerHTML='<p class="muted">'+escapeHtml(error.message||'공지 목록을 불러오지 못했습니다.')+'</p>'}
 }
+const noticeWriteButton=el('noticeWriteButton'),noticeCompose=el('noticeComposeForm');
+noticeWriteButton?.addEventListener('click',()=>{if(!noticeToken()){location.assign(noticeLoginUrl());return}noticeCompose.hidden=false;noticeWriteButton.hidden=true;noticeCompose.querySelector('input[name="title"]')?.focus()});
+el('noticeComposeCancel')?.addEventListener('click',()=>{noticeCompose.hidden=true;noticeWriteButton.hidden=false});
+noticeCompose?.addEventListener('submit',async event=>{
+  event.preventDefault();const message=el('noticeComposeMessage'),token=noticeToken();if(!token){location.assign(noticeLoginUrl());return}
+  const form=new FormData(noticeCompose);message.textContent='게시 중입니다…';
+  try{const response=await fetch('/api/seonammedi/notices',{method:'POST',headers:{authorization:'Bearer '+token},body:form,cache:'no-store'});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'게시하지 못했습니다.');noticeCompose.reset();noticeCompose.hidden=true;noticeWriteButton.hidden=false;message.textContent='게시했습니다.';await loadNotices();const item=publicNotices.find(row=>row.id===Number(data.id));if(item){history.replaceState(null,'',noticePermalink(item.id));showNoticeDetail(item)}}catch(error){message.textContent=error.message||'게시하지 못했습니다.'}
+});
+if(new URLSearchParams(location.search).get('compose')==='notice'&&noticeToken()){showView('notices');noticeCompose.hidden=false;noticeWriteButton.hidden=true}
 loadNotices();
 
 const channelPlatformLabel=value=>({youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',blog:'블로그',website:'웹사이트',other:'기타'})[String(value||'').toLowerCase()]||'채널';

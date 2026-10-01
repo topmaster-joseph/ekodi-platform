@@ -29,6 +29,10 @@
   <h1>사실은 출처와 함께,<br>의견은 주체를 밝혀 기록합니다.</h1>
   <p>정부·국회·법원·지자체·대학·언론·시민사회 자료를 구분해 정리하고, 비대위 공식입장과 외부 의견이 혼동되지 않도록 표시합니다.</p>
   <div class="meta"><span id="lastUpdated">업데이트 확인 중</span></div>
+  <a id="featuredNotice" class="featured-notice" href="#notices" hidden>
+    <img id="featuredNoticeImage" alt="" loading="eager">
+    <span><small>최근 게시글</small><strong id="featuredNoticeTitle"></strong><em>게시글 보기</em></span>
+  </a>
 </section>
 
 <section id="status" class="section" data-view-section="status" hidden>
@@ -53,8 +57,15 @@
 </section>
 
 <section id="notices" class="section" data-view-section="notices" hidden>
-  <div class="section-head"><div><p class="eyebrow">NOTICE</p><h2>공지</h2></div><span class="badge">관리자 게시</span></div>
-  <p class="note">소통센터의 주요 공지와 안내를 최신순으로 확인합니다.</p>
+  <div class="section-head"><div><p class="eyebrow">NOTICE BOARD</p><h2>공지</h2></div><button id="noticeWriteButton" class="notice-write-button" type="button">게시글 작성</button></div>
+  <p class="note">Google 계정으로 로그인한 등록 사용자는 사진과 글을 게시할 수 있습니다. 게시물은 개별 링크로 열고 공유할 수 있습니다.</p>
+  <form id="noticeComposeForm" class="notice-compose" hidden>
+    <label>제목<input name="title" maxlength="180" required placeholder="제목을 입력하세요"></label>
+    <label>내용<textarea name="body" maxlength="10000" rows="6" placeholder="내용을 입력하세요"></textarea></label>
+    <label>사진<input name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"><small>JPG·PNG·WEBP·GIF, 최대 8MB</small></label>
+    <div class="form-actions"><button type="submit">게시하기</button><button id="noticeComposeCancel" type="button" class="secondary">취소</button><span id="noticeComposeMessage" class="muted" role="status"></span></div>
+  </form>
+  <div id="noticeDetail" class="notice-detail" hidden></div>
   <div id="noticeList" class="notice-list"><p class="muted">공지를 불러오는 중입니다.</p></div>
 </section>
 
