@@ -156,7 +156,7 @@ test('provider status cards explain free and paid usage',()=>{
 
 test('common provider contract exposes canonical free-first six-provider order',()=>{
   assert.deepEqual(AI_PROVIDER_CONTROL_CONTRACT.providerOrder,[
-    'cloudflare-workers-ai','gemini','openrouter-free','groq-free','cerebras-free','qwen-free','deepseek-free-credit','openai','anthropic'
+    'cloudflare-workers-ai','gemini','openrouter-free','groq-free','cerebras-free','qwen-free','deepseek-free-credit','huggingface-free-credit','openai','anthropic'
   ]);
   const migration=read('migrations/0120_common_ai_provider_chain.sql');
   assert.match(migration,/Cloudflare \/ 무료 자원/);
@@ -174,6 +174,7 @@ test('provider admin shows the canonical chain and secretless Cloudflare card co
   assert.match(admin,/Cerebras · 무료 체험/);
   assert.match(admin,/Qwen · 무료 할당량/);
   assert.match(admin,/DeepSeek · 무료 지급 크레딧/);
+  assert.match(admin,/Hugging Face · 월 무료 크레딧/);
   assert.match(admin,/OpenAI · 유료 승인/);
   assert.match(admin,/Claude · 유료 승인/);
   assert.match(admin,/API Key 없음/);
@@ -186,7 +187,8 @@ test('extended free provider migration preserves guarded free-only ordering',()=
   assert.match(migration,/Cerebras · 무료 체험/);
   assert.match(migration,/Qwen · 무료 할당량/);
   assert.match(migration,/DeepSeek · 무료 지급 크레딧/);
-  assert.match(migration,/\["gemini","openrouter-free","groq-free","cerebras-free","qwen-free","deepseek-free-credit","openai","anthropic"\]/);
+  assert.match(migration,/Hugging Face · 월 무료 크레딧/);
+  assert.match(migration,/\["gemini","openrouter-free","groq-free","cerebras-free","qwen-free","deepseek-free-credit","huggingface-free-credit","openai","anthropic"\]/);
   assert.match(migration,/topped_up_balance = 0/);
 });
 
@@ -235,4 +237,13 @@ test('provider health classifier distinguishes Gemini API key and precondition f
   assert.match(source,/failed_precondition/);
   assert.match(admin,/API 키가 유효하지 않거나 차단됨/);
   assert.match(admin,/지역\/결제 설정 확인/);
+});
+
+
+test('Gemini adapter supports an authorized multi-project credential pool',()=>{
+  const source=read('gemini-orchestrator-provider-adapter.js');
+  assert.match(source,/GEMINI_API_KEY_2/);
+  assert.match(source,/GEMINI_API_KEY_POOL_JSON/);
+  assert.match(source,/item\.authorized === true/);
+  assert.match(source,/credentialCount/);
 });
