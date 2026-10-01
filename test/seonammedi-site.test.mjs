@@ -291,7 +291,12 @@ test('seonammedi admin auth handoff is same-origin and finance API is production
 });
 
 
-test('seonammedi site admin delegates automatic checks to the platform super admin',async()=>{\n  const adminHtml=await readFile(new URL('admin/index.html',root),'utf8');\n  assert.doesNotMatch(adminHtml,/data-panel-target=\"site-health\"|>사이트 점검<|>정적 상태<|>동적 상태</);\n});\n\ntest('seonammedi monitor D1 insert keeps column and value arity aligned',async()=>{
+test('seonammedi site admin delegates automatic checks to the platform super admin',async()=>{
+  const adminHtml=await readFile(new URL('admin/index.html',root),'utf8');
+  assert.doesNotMatch(adminHtml,/data-panel-target="site-health"|>사이트 점검<|>정적 상태<|>동적 상태/);
+});
+
+test('seonammedi monitor D1 insert keeps column and value arity aligned',async()=>{
   const monitor=await readFile(new URL('../seonammedi-monitor.js',import.meta.url),'utf8');
   assert.match(monitor,/INSERT INTO seonammedi_monitor_items \(fingerprint,title,url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,resolved_url,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text\) VALUES \(\?,\?,\?,\?,\?,\?,\?,'source_only',\?,\?,\?,\?,\?,\?,\?,\?,\?,\?\)/);
 });
