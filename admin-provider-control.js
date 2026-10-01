@@ -21,6 +21,7 @@
     {id:'cerebras-free',label:'Cerebras · 무료 체험',tier:'free'},
     {id:'qwen-free',label:'Qwen · 무료 할당량',tier:'free'},
     {id:'deepseek-free-credit',label:'DeepSeek · 무료 지급 크레딧',tier:'free'},
+    {id:'huggingface-free-credit',label:'Hugging Face · 월 무료 크레딧',tier:'free'},
     {id:'openai',label:'OpenAI · 유료 승인',tier:'paid'},
     {id:'anthropic',label:'Claude · 유료 승인',tier:'paid'},
   ]);
@@ -33,10 +34,11 @@
     'cerebras-free':'신규 계정 무료 체험 크레딧만 사용 · 무료 체험 전용 확인 후 활성화',
     'qwen-free':'Alibaba Model Studio 무료 할당량만 사용 · Free Quota Only 설정 확인 후 활성화',
     'deepseek-free-credit':'DeepSeek granted_balance만 사용 · 충전 잔액이 있으면 무료 경로를 자동 차단',
+    'huggingface-free-credit':'Hugging Face 월 무료 크레딧 범위만 사용 · 소진 시 다음 경로로 전환',
     openai:'유료 API · 명시적 예산/승인 필요 · 자동 유료전환 없음',
     anthropic:'Claude 유료 API · 명시적 예산/승인 필요 · 자동 유료전환 없음',
   });
-  const AI_SITE_LINKS=Object.freeze({'cloudflare-workers-ai':'https://www.cloudflare.com/developer-platform/products/workers-ai/','gemini':'https://ai.google.dev/','openrouter-free':'https://openrouter.ai/','groq-free':'https://groq.com/','cerebras-free':'https://www.cerebras.ai/inference','qwen-free':'https://www.alibabacloud.com/en/product/model-studio','deepseek-free-credit':'https://www.deepseek.com/','openai':'https://openai.com/','anthropic':'https://www.anthropic.com/'});
+  const AI_SITE_LINKS=Object.freeze({'cloudflare-workers-ai':'https://www.cloudflare.com/developer-platform/products/workers-ai/','gemini':'https://ai.google.dev/','openrouter-free':'https://openrouter.ai/','groq-free':'https://groq.com/','cerebras-free':'https://www.cerebras.ai/inference','qwen-free':'https://www.alibabacloud.com/en/product/model-studio','deepseek-free-credit':'https://www.deepseek.com/','huggingface-free-credit':'https://huggingface.co/docs/inference-providers/','openai':'https://openai.com/','anthropic':'https://www.anthropic.com/'});
   const AI_KEY_LINKS=Object.freeze({
     openai:'https://platform.openai.com/api-keys',
     gemini:'https://aistudio.google.com/app/apikey',
@@ -45,6 +47,7 @@
     'cerebras-free':'https://cloud.cerebras.ai/',
     'qwen-free':'https://modelstudio.console.alibabacloud.com/',
     'deepseek-free-credit':'https://platform.deepseek.com/api_keys',
+    'huggingface-free-credit':'https://huggingface.co/settings/tokens',
     anthropic:'https://platform.claude.com/settings/keys',
   });
   const CAP_LABELS={default:'기본',documents:'문서 AI',admin:'관리자 AI',marketing:'Marketing AI'};
@@ -58,7 +61,7 @@
   function ensureSelection(){const current=inventory?.[selection.provider]||{};if(!current.accounts?.some(x=>x.id===selection.account))selection.account=current.accounts?.[0]?.id||'';const scopes=current.scopes||[];if(!scopes.some(x=>x.id===selection.scope))selection.scope=scopes[0]?.id||'';const runtimes=current.runtimes||[];if(!runtimes.some(x=>x.id===selection.runtime))selection.runtime=runtimes[0]?.id||''}
   function setSelection(patch={}){selection={...selection,...patch};ensureSelection();renderAll();return snapshot()}
   function snapshot(){return JSON.parse(JSON.stringify({selection,inventory,aiState,definitions:DEFINITIONS,environments:ENVIRONMENTS}))}
-  function providerCheckErrorMessage(error){const detail=String(error?.providerMessage||'').trim();const requestId=String(error?.requestId||'').trim();if(detail)return `${detail}${requestId?` 쨌 ?붿껌 ${requestId}`:''}`;return String(error?.message||error||'Provider ?뺤씤 ?ㅽ뙣')}
+  function providerCheckErrorMessage(error){const detail=String(error?.providerMessage||'').trim();const requestId=String(error?.requestId||'').trim();if(detail)return `${detail}${requestId?` · 요청 ${requestId}`:''}`;return String(error?.message||error||'Provider 확인 실패')}
   function providerControlErrorMessage(error){const code=String(error?.message||error||'').trim();if(code==='secret_manager_not_configured'||code==='provider_runtime_sync_unavailable')return'Cloudflare Secret Manager 연결이 먼저 필요합니다. API Key는 지우지 않았습니다. Secret Manager 설정 후 다시 키 연결을 누르세요.';if(code==='secret_connect_failed'||code==='provider_runtime_sync_failed'){const reasons={worker_latest_version_not_deployed:'대상 Worker에 배포되지 않은 최신 버전(카나리·롤백 잔여)이 있어 Cloudflare가 Secret 변경을 거부했습니다. 해당 Worker를 100% 배포 상태로 정리한 뒤 다시 시도하세요.',secret_manager_permission_denied:'Secret Manager 토큰에 Workers Scripts 편집 권한이 없거나 만료되었습니다.',runtime_worker_not_found:'대상 Worker를 찾지 못했습니다. AI_PROVIDER_RUNTIME_SCRIPTS 설정을 확인하세요.',cloudflare_rate_limited:'Cloudflare API 호출 한도에 걸렸습니다. 1분 뒤 다시 시도하세요.',cloudflare_unreachable:'Cloudflare API에 연결하지 못했습니다. 잠시 뒤 다시 시도하세요.',secret_manager_not_configured:'Cloudflare Secret Manager 연결이 먼저 필요합니다.'};const head=code==='secret_connect_failed'?'Worker Secret 등록 실패':'런타임 동기화 실패';const where=error?.target?` · 대상 ${error.target}${error.status?` (HTTP ${error.status})`:''}`:'';const done=error?.updatedTargets?.length?` · 반영됨: ${error.updatedTargets.join(', ')}`:'';return`${head}: ${reasons[error?.reason]||'Cloudflare Secret 쓰기 실패'}${where}${done}`}return code||'Provider 작업에 실패했습니다.'}
   function secretManagerBanner(){if(aiState?.control?.runtimeSyncReady!==false)return'';return '<aside class="ekodi-ai-secret-manager-warning"><strong>Secret Manager 연결 필요</strong><span>현재 Provider API Key를 Worker Secret으로 저장할 수 없습니다.</span><div><a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener">Cloudflare API Token 설정 ↗</a><a href="https://github.com/topmaster-joseph/ekodi-platform/settings/secrets/actions" target="_blank" rel="noopener">GitHub Actions Secret 설정 ↗</a></div><small>GitHub Secret 이름: CLOUDFLARE_SECRET_MANAGER_TOKEN · 설정 후 배포하면 이 경고가 자동으로 사라집니다.</small></aside>'}
   function healthNote(p){const code=String(p?.lastError||'').toLowerCase();if(!code)return'';if(code.includes('secret_not_configured')||code.includes('not_configured'))return'API Key 연결 필요';if(code.includes('gemini_400_api_key_invalid')||code.includes('invalid_api_key')||code.includes('authentication'))return'API 키가 유효하지 않거나 차단됨 · 새 키 발급 필요';if(code.includes('gemini_400_failed_precondition'))return'Gemini 프로젝트 사전조건 확인 필요 · 지역/결제 설정 확인';if(code.includes('gemini_400_invalid_argument'))return'Gemini 요청 형식 또는 프로젝트 설정 확인 필요';if(code.includes('credit_balance_exhausted'))return'크레딧 잔액 소진';if(code.includes('spend_limit')||code.includes('insufficient_quota')||code.includes('quota_exceeded'))return'사용한도·크레딧 확인 필요';return code.slice(0,80)}
