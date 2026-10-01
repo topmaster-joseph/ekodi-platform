@@ -258,3 +258,17 @@ test('Gemini adapter supports an authorized multi-project credential pool',()=>{
   assert.match(source,/item\.authorized === true/);
   assert.match(source,/credentialCount/);
 });
+
+
+test('provider diagnostic checks do not collapse expected free-provider failures into opaque HTTP 502',()=>{
+  const api=read('ai-provider-control.js');
+  const admin=read('admin-provider-control.js');
+  assert.match(api,/error\.status=Number\(status\)\|\|0/);
+  assert.match(api,/function providerCheckDiagnostic/);
+  assert.match(api,/providerHttpStatus/);
+  assert.match(api,/diagnostic\},200/);
+  assert.match(admin,/function providerCheckResultMessage/);
+  assert.match(admin,/무료 한도 소진/);
+  assert.match(admin,/Provider HTTP/);
+  assert.match(admin,/자동 우회\/재시도 가능/);
+});
