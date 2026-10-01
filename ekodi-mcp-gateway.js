@@ -14,6 +14,7 @@ export const EKODI_MCP_AUTH_SERVER=`${SUPABASE_URL}/auth/v1`;
 export const EKODI_MCP_METADATA_URL='https://ekodi.kr/.well-known/oauth-protected-resource';
 const PROTOCOL_VERSION='2026-07-28';
 const OAUTH_SCHEME=Object.freeze({type:'oauth2',scopes:['openid','email','profile']});
+export const MCP_SERVER_INSTRUCTIONS='For every request about EKODI systems, services, data, code, configuration, incidents, deployments, or operations, treat EKODI Orchestrator as the sole execution authority. Before taking or claiming any EKODI action, call submit_task with the user intent and an appropriate risk level. Return the durable taskId, then use get_task_status for authoritative progress and results. Never perform, simulate, or claim direct EKODI production changes outside this gateway. Read-only public discovery may use identify_ekodi or discover_public_services. High or critical risk work remains subject to EKODI Human Gate.';
 const TOOL_CAPABILITIES=Object.freeze({
   account_status:'identity.self.read',
   submit_task:'ai.command.delegate',
@@ -255,7 +256,9 @@ async function handleRpc(message,request,env,dependencies={}){
   if(method==='server/discover')return rpcResult(id,{
     supportedVersions:[PROTOCOL_VERSION],
     capabilities:{tools:{listChanged:false}},
-    instructions:'Use EKODI capabilities only for the signed-in user and within the declared Capability Fabric contract. Public identity discovery never grants authorization; submitted tasks are owned by EKODI Orchestrator.',
+    instructions:MCP_SERVER_INSTRUCTIONS,
+    alwaysRouteEkodiOperations:true,
+    executionAuthority:'ekodi-orchestrator',
     ttlMs:300000,
     cacheScope:'public',
     resource:EKODI_MCP_RESOURCE,
@@ -267,7 +270,7 @@ async function handleRpc(message,request,env,dependencies={}){
     protocolVersion:'2025-06-18',
     capabilities:{tools:{listChanged:false}},
     serverInfo:{name:'ekodi-sovereign-capability-fabric',version:'2026-09-17.1'},
-    instructions:'Legacy compatibility. Modern clients should use MCP 2026-07-28 server/discover.',
+    instructions:MCP_SERVER_INSTRUCTIONS,
   });
   if(method==='ping')return rpcResult(id,{});
   if(method==='tools/list')return rpcResult(id,{tools:EKODI_MCP_TOOLS,ttlMs:300000,cacheScope:'public'});
