@@ -106,7 +106,7 @@ test('global menu labels use readable contrast on the dark primary sidebar', () 
 
 
 test('Operations, Releases & Incidents shows every visible submenu without a collapsed more bucket', () => {
-  assert.match(sidebar, /status: \['health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity'\]/);
+  assert.match(sidebar, /status: \['health', 'site-health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity'\]/);
   assert.match(registry, /id: 'deployments'.*배포·변경 이력/s);
   for (const id of ['health','site-health','deployments','aiops','devices','pos-agent','api-cost','architecture','maturity']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
