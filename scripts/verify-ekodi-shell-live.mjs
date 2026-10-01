@@ -114,6 +114,8 @@ for(let attempt=1;attempt<=attempts;attempt++){
     if(Number(languageRegistry.version)<1)failures.push(`language-registry:version:${languageRegistry.version||'missing'}`);
     if(!Array.isArray(languageRegistry.languages)||languageRegistry.languages.length<6)failures.push('language-registry:languages');
     if(languageRegistry.policy?.visibility!=='published-only')failures.push(`language-registry:visibility:${languageRegistry.policy?.visibility||'missing'}`);
+    if(languageRegistry.policy?.selectorVisibility!=='published-count-gte-2')failures.push(`language-registry:selectorVisibility:${languageRegistry.policy?.selectorVisibility||'missing'}`);
+    if(languageRegistry.policy?.selectorFirstPaint!=='hidden-until-readiness-resolved')failures.push(`language-registry:selectorFirstPaint:${languageRegistry.policy?.selectorFirstPaint||'missing'}`);
   }
   if(theme){
     if(theme.publicExperience?.rotation!=='weekly-deterministic')failures.push(`theme:rotation:${theme.publicExperience?.rotation||'missing'}`);
@@ -143,7 +145,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
   if(shellResult.headers?.get?.('x-ekodi-illustration-system')!=='v1')failures.push(`shell:illustration-header:${shellResult.headers?.get?.('x-ekodi-illustration-system')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-service-design')!=='v1')failures.push(`shell:service-design-header:${shellResult.headers?.get?.('x-ekodi-service-design')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-link-compat')!=='v1')failures.push(`shell:link-compat-header:${shellResult.headers?.get?.('x-ekodi-link-compat')||'missing'}`);
-  includesAll(userLanguageResult.text,'user-language',['const VERSION=8','removeFooterLanguageControls','LEGACY_LANGUAGE_WIDGET_SELECTOR','data-ekodi-language-placement="header"'],failures);
+  includesAll(userLanguageResult.text,'user-language',['const VERSION=8','removeFooterLanguageControls','LEGACY_LANGUAGE_WIDGET_SELECTOR','data-ekodi-language-placement="header"','function languageChoiceAvailable(){return visibleLanguages().length>1;}','if(!languageChoiceAvailable()){document.querySelector(\'[data-ekodi-language-placement="header"]\')?.remove();return;}'],failures);
   if(userLanguageResult.text.includes('function placeFooterControl'))failures.push('user-language:footer-selector-renderer-present');
   if(userLanguageResult.text.includes('data-ekodi-language-placement="footer"'))failures.push('user-language:footer-placement-present');
   if(userUiStyleResult.text.includes('data-ekodi-language-placement="footer"'))failures.push('user-ui-style:footer-language-placement-present');

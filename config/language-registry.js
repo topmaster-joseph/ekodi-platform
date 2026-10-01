@@ -1,6 +1,8 @@
 const SOURCE_LOCALE='ko-KR';
 const POLICY=Object.freeze({
   visibility:'published-only',
+  selectorVisibility:'published-count-gte-2',
+  selectorFirstPaint:'hidden-until-readiness-resolved',
   sourceChange:'mark-non-source-locales-stale-and-queue-translation',
   translation:'provider-routed-internal-automation',
   validation:'key-parity-protected-token-content-safety-and-catalog-integrity',
@@ -101,7 +103,7 @@ export function renderLanguageRegistryBootstrap(){
   const browser={
     version:1,
     sourceLocale:SOURCE_LOCALE,
-    policy:{visibility:POLICY.visibility},
+    policy:{visibility:POLICY.visibility,selectorVisibility:POLICY.selectorVisibility,selectorFirstPaint:POLICY.selectorFirstPaint},
     languages:LANGUAGES.map(language=>({
       locale:language.locale,
       aliases:language.aliases,

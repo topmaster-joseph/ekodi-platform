@@ -27,3 +27,19 @@ test('authenticated Admin E2E verifies direct registry href menus through isolat
   assert.match(source, /x-ekodi-route.*cmpmyi-store-portfolio-admin/);
   assert.match(source, /html\.includes\('통합 매장 운영'\)/);
 });
+
+test('authenticated Admin E2E verifies same-tab admin handoffs without treating them as panels', async () => {
+  const posAgent = getAdminMenuItem('pos-agent');
+  assert.equal(posAgent?.href, 'https://ekodi.kr/cmpmyi/admin/agent');
+  assert.equal(posAgent?.adminHandoff, true);
+  const source = await workerSource();
+  assert.match(source, /async function verifyAdminHandoff\(trigger, started\)/);
+  assert.match(source, /definition\.adminHandoff !== true/);
+  assert.match(source, /sourceTarget === '_blank'/);
+  assert.match(source, /stage\('admin-handoff'\)/);
+  assert.match(source, /page\.waitForURL/);
+  assert.match(source, /adminHandoff:true/);
+  assert.match(source, /directDefinition\?\.href && directDefinition\.adminHandoff === true && menuId !== 'tax'/);
+  assert.match(source, /verifyAdminHandoff\(trigger, started\)/);
+});
+

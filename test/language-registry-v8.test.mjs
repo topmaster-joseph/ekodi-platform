@@ -22,6 +22,9 @@ test('one central language registry owns platform language definitions',()=>{
   assert.equal(normalizePlatformLocale('KO'),'ko-KR');
   assert.equal(normalizePlatformLocale('zh-Hans'),'zh-CN');
   assert.equal(normalizePlatformLocale('mya'),'my');
+  assert.equal(EKODI_LANGUAGE_REGISTRY.policy.visibility,'published-only');
+  assert.equal(EKODI_LANGUAGE_REGISTRY.policy.selectorVisibility,'published-count-gte-2');
+  assert.equal(EKODI_LANGUAGE_REGISTRY.policy.selectorFirstPaint,'hidden-until-readiness-resolved');
   assert.match(renderLanguageRegistryBootstrap(),/__EKODI_LANGUAGE_REGISTRY__/);
 });
 test('public selectors expose only published locales and default new site languages to queued',()=>{
@@ -66,7 +69,8 @@ test('shell and injector consume the registry instead of per-service language ar
   assert.match(worker,/\/language-registry\.json/);
   assert.match(runtime,/const VERSION=8/);
   assert.match(runtime,/visibleLanguages/);
-  assert.match(runtime,/languageChoiceAvailable/);
+  assert.match(runtime,/function languageChoiceAvailable\(\)\{return visibleLanguages\(\)\.length>1;\}/);
+  assert.match(runtime,/if\(!languageChoiceAvailable\(\)\)\{document\.querySelector\('\[data-ekodi-language-placement="header"\]'\)\?\.remove\(\);return;\}/);
   assert.match(runtime,/select\.replaceChildren/);
   assert.match(runtime,/border-radius:999px/);
   assert.match(runtime,/wrap\.append\(textNode,select\)/);

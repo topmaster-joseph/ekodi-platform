@@ -26,8 +26,10 @@ const paid=v=>['standard','basic','pro','enterprise'].includes(String(v||'').toL
 const storedWorkspace=()=>{try{return localStorage.getItem('ekodi_my_active_workspace')||''}catch{return''}};
 const rememberWorkspace=value=>{try{if(value)localStorage.setItem('ekodi_my_active_workspace',value);else localStorage.removeItem('ekodi_my_active_workspace')}catch{}};
 const serviceDefinition=id=>SERVICES.find(([sid])=>sid===id)||null;
-const FOCUS_HASHES=new Map([['#recommendations','recommendations'],['#intent','intent'],['#intentPlanText','intent'],['#money','money'],['#workspaces','workspaces'],['#platforms','platforms'],['#account','account'],['#creator','creator'],['#personal-brand','personal-brand'],['#journey-preview','journey-preview'],['#life-channels','life-channels']]);
+const FOCUS_HASHES=new Map([['#recommendations','recommendations'],['#money','money'],['#creator','creator'],['#personal-brand','personal-brand'],['#journey-preview','journey-preview'],['#life-channels','life-channels']]);
+const TAB_HASHES=new Map([['#home','home'],['#intent','home'],['#intentPlanText','home'],['#platforms','services'],['#workspaces','services'],['#activity','activity'],['#memberHome','activity'],['#account','account']]);
 const focusSurfaceKey=()=>FOCUS_HASHES.get(location.hash)||'';
+const activeTabKey=()=>TAB_HASHES.get(location.hash)||(focusSurfaceKey()?'focus':'home');
 function requestedReturnTarget(){
  const raw=new URLSearchParams(location.search).get('return_to');
  if(!raw)return null;
@@ -70,15 +72,80 @@ async function handoff(){
  if(error)throw error;
 }
 function syncSurfaceState({scroll=false}={}){
- const signedIn=Boolean(session?.access_token),key=signedIn?focusSurfaceKey():'';
+ const signedIn=Boolean(session?.access_token),key=signedIn?focusSurfaceKey():'',tab=signedIn?activeTabKey():'home';
  document.body.dataset.authState=signedIn?'member':'guest';
  document.body.dataset.homeMode=signedIn&&key?'focus':'home';
- const home=$('#memberHome');if(home)home.hidden=!signedIn||Boolean(key);
+ document.body.dataset.activeTab=tab;
+ document.querySelectorAll('[data-my-tab-section]').forEach(section=>{section.hidden=signedIn?section.dataset.myTabSection!==tab:section.dataset.myTabSection!=='home'});
+ const memberHome=$('#memberHome');if(memberHome)memberHome.hidden=!signedIn||tab!=='home';
  document.querySelectorAll('[data-focus-surface]').forEach(section=>{section.hidden=!signedIn||section.dataset.focusSurface!==key});
  document.querySelectorAll('[data-focus-companion]').forEach(section=>{section.hidden=!signedIn||section.dataset.focusCompanion!==key});
+ document.querySelectorAll('[data-my-tab-link]').forEach(link=>{
+  const selected=link.dataset.myTabLink===tab;
+  link.setAttribute('aria-selected',String(selected));
+  if(selected)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
+ });
  const context=$('#memberContextLine');if(context)context.hidden=!signedIn;
- if(scroll&&key)requestAnimationFrame(()=>{const target=location.hash==='#intentPlanText'?$('#intentPlanText'):document.getElementById(key);target?.scrollIntoView({behavior:'smooth',block:'start'})});
+ const compact=$('#workspaceCompact');if(compact)compact.hidden=!signedIn;
+ if(scroll){
+  requestAnimationFrame(()=>{
+   const target=location.hash==='#intentPlanText'?$('#intentPlanText'):(key?document.getElementById(key):document.querySelector(`[data-my-tab-section="${tab}"]:not([hidden])`));
+   target?.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+ }
 }
+let activeAccountTab='basic';
+function syncAccountTabs(){
+ document.querySelectorAll('[data-account-tab]').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.accountTab===activeAccountTab)));
+ document.querySelectorAll('[data-account-panel]').forEach(panel=>{panel.hidden=panel.dataset.accountPanel!==activeAccountTab});
+}
+function setAccountTab(tab){
+ if(!['basic','public','character','security'].includes(tab))tab='basic';
+ activeAccountTab=tab;syncAccountTabs();
+ try{sessionStorage.setItem('ekodi_my_account_tab',tab)}catch{}
+}
+function initAccountTabs(){
+ try{activeAccountTab=sessionStorage.getItem('ekodi_my_account_tab')||'basic'}catch{activeAccountTab='basic'}
+ syncAccountTabs();
+ document.querySelectorAll('[data-account-tab]').forEach(button=>button.addEventListener('click',()=>setAccountTab(button.dataset.accountTab||'basic')));
+}
+
+let activeServicesTab='services';
+function syncServiceTabs(){
+ document.querySelectorAll('[data-services-tab]').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.servicesTab===activeServicesTab)));
+ document.querySelectorAll('[data-services-panel]').forEach(panel=>{panel.hidden=panel.dataset.servicesPanel!==activeServicesTab});
+}
+function setServicesTab(tab){
+ if(!['services','spaces','status'].includes(tab))tab='services';
+ activeServicesTab=tab;syncServiceTabs();
+ try{sessionStorage.setItem('ekodi_my_services_tab',tab)}catch{}
+}
+function initServiceTabs(){
+ try{activeServicesTab=sessionStorage.getItem('ekodi_my_services_tab')||'services'}catch{activeServicesTab='services'}
+ syncServiceTabs();
+ document.querySelectorAll('[data-services-tab]').forEach(button=>button.addEventListener('click',()=>setServicesTab(button.dataset.servicesTab||'services')));
+}
+function recentActivityUi(){
+ const host=$('#activityTimeline');if(!host)return;
+ if(!session){host.innerHTML='<div class="empty"><strong>로그인하면 최근 활동을 확인할 수 있습니다.</strong></div>';return}
+ const rows=[];
+ const current=activeWorkspace();
+ if(items[0])rows.push({kind:'작업',title:items[0].title||'최근 작업',body:'최근에 수정한 작업을 이어갑니다.',href:'#creator',time:items[0].updated_at||''});
+ const signals=[...personalizationSignals,...ephemeralSignals].filter(signal=>signal?.service_id&&knownService(signal.service_id)).sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+ const seen=new Set();
+ for(const signal of signals){
+  if(seen.has(signal.service_id))continue;seen.add(signal.service_id);
+  const service=serviceDefinition(signal.service_id);if(!service)continue;
+  rows.push({kind:'서비스',title:service[1],body:'최근 사용·관심 신호에서 이어갈 수 있습니다.',href:serviceRoute(service[0],service[2]),time:signal.created_at||''});
+  if(rows.length>=4)break;
+ }
+ if(current)rows.push({kind:'공간',title:current.workspace_name||'현재 공간',body:'현재 선택된 Workspace 맥락입니다.',href:'#workspaces',time:''});
+ const primary=[...personalizationView().pinned,...personalizationView().active][0];
+ if(primary&&!rows.some(row=>row.href===serviceRoute(primary.id,primary.url)))rows.push({kind:'서비스',title:primary.name,body:'현재 사용 중인 서비스입니다.',href:serviceRoute(primary.id,primary.url),time:''});
+ if(!rows.length){host.innerHTML='<div class="empty"><strong>아직 표시할 최근 활동이 없습니다.</strong><p>서비스를 사용하거나 작업을 만들면 여기에 이어서 할 항목이 나타납니다.</p></div>';return}
+ host.innerHTML=rows.slice(0,5).map(row=>`<a class="activity-item" href="${esc(row.href)}"><small>${esc(row.kind)}</small><span><strong>${esc(row.title)}</strong><span>${esc(row.body)}</span></span><b aria-hidden="true">→</b></a>`).join('');
+}
+
 function authUi(){
  const label=session?'로그아웃':'Google로 시작';
  for(const b of [$('#authButton'),$('#accountAuthButton')])if(b){b.disabled=!enabled;b.textContent=enabled?label:'격리 스테이징'}
@@ -148,7 +215,7 @@ function workspaceDestination(workspace){
 function setActiveWorkspace(key){
  const selected=uniqueWorkspaces().find(w=>w.workspace_key===key);
  if(!selected)return null;
- activeWorkspaceKey=key;rememberWorkspace(key);identityUi();workspaceUi();platformUi();return selected;
+ activeWorkspaceKey=key;rememberWorkspace(key);identityUi();workspaceUi();platformUi();recentActivityUi();return selected;
 }
 function enterWorkspace(key){
  setActiveWorkspace(key);
@@ -165,6 +232,9 @@ function identityUi(){
  const heroLead=$('#heroLead'),contextLine=$('#memberContextLine');
  if(heroLead)heroLead.textContent=session?(current?`${current.workspace_name||'내 공간'}의 맥락을 기준으로 필요한 것만 보여드립니다.`:'내 활동을 기준으로 필요한 것만 보여드립니다.'):'로그인하면 내 공간과 필요한 기능만 연결해 보여드립니다.';
  if(contextLine){contextLine.hidden=!session;contextLine.textContent=current?`현재 · ${current.workspace_name||'내 공간'} · ${plan(current.plan)}`:'현재 · 개인 맥락'}
+ const compact=$('#workspaceCompact'),compactLabel=$('#workspaceCompactLabel');
+ if(compact)compact.hidden=!session;
+ if(compactLabel)compactLabel.textContent=current?.workspace_name||'개인';
 
 }
 function memberHomeUi(){
@@ -262,7 +332,7 @@ function platformUi(){
  host.innerHTML=sections.join('');
  if(toggle){toggle.hidden=false;toggle.textContent=discoveryOpen?'서비스 목록 닫기':'필요한 서비스 찾기';toggle.setAttribute('aria-expanded',String(discoveryOpen))}
  if(discovery){discovery.hidden=!discoveryOpen;discovery.innerHTML=discoveryOpen?`<div class="platform-grid discovery-grid">${view.available.map(item=>serviceCard(item,{discovery:true})).join('')||'<div class="empty"><strong>추가로 둘러볼 서비스가 없습니다.</strong></div>'}</div>`:''}
- bindPersonalizationActions();progressiveSurfaceUi();memberHomeUi();
+ bindPersonalizationActions();progressiveSurfaceUi();memberHomeUi();recentActivityUi();
  window.dispatchEvent(new CustomEvent('ekodi:personalization-rendered',{detail:{recommended:view.recommended.map(({id,name})=>({id,name})),active:primary.map(({id})=>id)}}));
 }
 function portfolioUi(){
@@ -303,7 +373,7 @@ async function loadPortfolio(){
  if(error)throw error;items=data||[];
 }
 async function loadAll(){
- await Promise.all([loadAccess(),loadPortfolio(),loadProfile(),loadPersonalization()]);ensureActiveWorkspace();identityUi();profileUi();summaryUi();workspaceUi();platformUi();portfolioUi();memberHomeUi();syncSurfaceState();progressiveSurfaceUi();
+ await Promise.all([loadAccess(),loadPortfolio(),loadProfile(),loadPersonalization()]);ensureActiveWorkspace();identityUi();profileUi();summaryUi();workspaceUi();platformUi();portfolioUi();memberHomeUi();recentActivityUi();syncSurfaceState();progressiveSurfaceUi();
 }
 async function saveProfile(event){
  event.preventDefault();
@@ -334,7 +404,11 @@ window.addEventListener('ekodi:personalization-signal',event=>{
  ephemeralSignals=[signal,...ephemeralSignals.filter(item=>!(item.service_id===signal.service_id&&item.source===signal.source&&item.signal_type===signal.signal_type))].slice(0,30);
  platformUi();
 });
-window.addEventListener('hashchange',()=>{syncSurfaceState({scroll:true});progressiveSurfaceUi()});
+window.addEventListener('hashchange',()=>{syncSurfaceState({scroll:true});progressiveSurfaceUi();if(location.hash==='#account')syncAccountTabs();if(location.hash==='#platforms'||location.hash==='#workspaces')syncServiceTabs();if(location.hash==='#activity')recentActivityUi()});
+
+initAccountTabs();
+initServiceTabs();
+const compactWorkspace=$('#workspaceCompact');if(compactWorkspace)compactWorkspace.addEventListener('click',()=>setServicesTab('spaces'));
 
 if(MISROUTED_SERVICE_RETURN){
  location.replace(MISROUTED_SERVICE_RETURN.href);

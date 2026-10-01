@@ -236,8 +236,11 @@ test('My EKODI keeps the guest entry sparse and turns the signed-in root into a 
   assert.match(html,/data-auth-state="guest"/);
   assert.match(html,/id="memberHome"/);
   assert.match(html,/data-focus-surface="recommendations"/);
-  assert.match(html,/data-focus-surface="workspaces"/);
+  assert.match(html,/data-my-tab-section="services"/);
+  assert.match(html,/data-my-tab-section="activity"/);
+  assert.match(html,/data-my-tab-section="account"/);
   assert.match(app,/FOCUS_HASHES/);
+  assert.match(app,/TAB_HASHES/);
   assert.match(app,/function syncSurfaceState/);
   assert.match(app,/function memberHomeUi/);
   assert.match(app,/document\.body\.dataset\.homeMode/);

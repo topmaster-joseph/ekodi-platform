@@ -184,6 +184,45 @@ async function verifyStorage(tab, alreadyActive, started) {
   results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, ...state });
 }
 
+async function verifyAdminHandoff(trigger, started) {
+  const definition = getAdminMenuItem(menuId);
+  if (!definition?.href || definition.adminHandoff !== true) throw new Error(`${menuId}: admin handoff contract missing`);
+  const expected = new URL(definition.href, baseUrl);
+  const source = page.locator(`.sidebar nav .nav[data-section="${menuId}"]`).first();
+  await source.waitFor({ state:'attached', timeout:5_000 });
+  const sourceHref = await source.getAttribute('href');
+  const sourceTarget = await source.getAttribute('target');
+  if (!sourceHref || new URL(sourceHref, baseUrl).href !== expected.href) throw new Error(`${menuId}: admin handoff href drifted: ${sourceHref || '(missing)'}`);
+  if (sourceTarget === '_blank') throw new Error(`${menuId}: admin handoff must not open a separate browser context`);
+
+  stage('admin-handoff');
+  const responsePromise = page.waitForResponse(response => {
+    try {
+      const url = new URL(response.url());
+      return response.request().resourceType() === 'document'
+        && url.origin === expected.origin
+        && url.pathname.replace(/\/+$/, '') === expected.pathname.replace(/\/+$/, '');
+    } catch { return false; }
+  }, { timeout:12_000 }).catch(() => null);
+
+  await clickFast(trigger);
+  try {
+    await page.waitForURL(url => url.origin === expected.origin
+      && url.pathname.replace(/\/+$/, '') === expected.pathname.replace(/\/+$/, ''), { waitUntil:'commit', timeout:12_000 });
+  } catch (error) {
+    const actual = new URL(page.url());
+    if (actual.origin !== expected.origin || actual.pathname.replace(/\/+$/, '') !== expected.pathname.replace(/\/+$/, '')) throw error;
+  }
+  const response = await responsePromise;
+  if (response && (response.status() < 200 || response.status() >= 400)) throw new Error(`${menuId}: admin handoff destination returned HTTP ${response.status()}`);
+  const destination = new URL(page.url());
+  results.push({
+    id:menuId, group, ok:true, durationMs:Date.now()-started,
+    adminHandoff:true, destination:destination.href,
+    status:response?.status() ?? null,
+  });
+}
+
 async function verifyTax(tab, alreadyActive, started) {
   stage('tax-handoff');
   const writeVerification = process.env.E2E_TAX_WRITE_VERIFY === '1';
@@ -586,6 +625,8 @@ try {
     if (directDefinition?.href && !directDefinition.adminHandoff) {
       stage('registry-link');
       await verifyRegistryHref(trigger, started);
+    } else if (directDefinition?.href && directDefinition.adminHandoff === true && menuId !== 'tax') {
+      await verifyAdminHandoff(trigger, started);
     } else {
       let alreadyActive = await page.evaluate(section => window.EKODIAdminPanels?.current?.() === section, menuId);
       if (alreadyActive) {
