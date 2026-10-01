@@ -43,7 +43,7 @@ test('User access delegates to the unified site member directory', () => {
 
 test('Status owns AI operations, execution infrastructure and observability surfaces', () => {
   const byId = new Map(ADMIN_MENU_REGISTRY.map(item => [item.id, item]));
-  for (const id of ['aiops', 'devices', 'health', 'api-cost', 'deployments']) {
+  for (const id of ['aiops', 'devices', 'health', 'site-health', 'api-cost', 'deployments']) {
     assert.equal(byId.get(id)?.group, 'status', `${id} must live in Status & Releases`);
     assert.notEqual(byId.get(id)?.internal, true, `${id} must remain directly accessible`);
   }
