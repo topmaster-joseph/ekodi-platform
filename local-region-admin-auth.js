@@ -6,7 +6,7 @@ function clientMain(){
   const root=document.documentElement;
   if(root.dataset.ekodiRegionSurface!=='admin')return;
   const path=location.pathname.replace(/\/+$/,'');
-  const pass=path==='/cheonggye/admin/pass'||path.startsWith('/cheonggye/admin/pass/');
+  const pass=path==='/cheonggye/admin/pass'||path.startsWith('/cheonggye/admin/pass/')||path==='/cheonggyepass/admin'||path.startsWith('/cheonggyepass/admin/');
   const scope=pass?'cheonggye-pass':'cheonggye-local';
 
   function storedSession(){try{const value=JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null');return value?.accessToken?value:null}catch{return null}}
@@ -48,7 +48,7 @@ function clientMain(){
     const response=await fetch('/api/local-access/'+scope+'/me',{headers:{authorization:'Bearer '+token},cache:'no-store'});
     const data=await response.json().catch(()=>({}));
     if(response.status===401){clearSession();sessionStorage.removeItem(ADMIN_TOKEN_KEY);location.replace(authUrl());return}
-    if(!response.ok){showMessage('관리 권한이 없습니다',data.error||'이 이메일에는 해당 관리공간 권한이 등록되어 있지 않습니다.',[{href:pass?'/cheonggye/pass':'/cheonggye',label:'사용자 페이지'},{href:authUrl(),label:'다른 Google 계정으로 로그인'}]);root.dataset.regionAuthPending='0';return}
+    if(!response.ok){showMessage('관리 권한이 없습니다',data.error||'이 이메일에는 해당 관리공간 권한이 등록되어 있지 않습니다.',[{href:pass?'/cheonggyepass':'/cheonggye',label:'사용자 페이지'},{href:authUrl(),label:'다른 Google 계정으로 로그인'}]);root.dataset.regionAuthPending='0';return}
     root.dataset.regionAuthReady='1';root.dataset.regionAuthPending='0';root.dataset.regionRole=data.role||'';root.dataset.regionAccessScope=data.scope?.slug||scope;root.dataset.regionCanManageAccess=data.canManageAccess?'1':'0';root.dataset.regionEmail=data.email||'';
     root.__EKODI_REGION_ACCESS__=Object.freeze(data);
     document.querySelectorAll('[data-region-capability]').forEach(node=>{const cap=node.dataset.regionCapability||'';const allowed=(data.capabilities||[]).includes('*')||(data.capabilities||[]).includes(cap);node.hidden=!allowed});
