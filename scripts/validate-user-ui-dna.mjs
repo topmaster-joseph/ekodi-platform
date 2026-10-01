@@ -168,6 +168,12 @@ const expectedLocales=EKODI_LANGUAGE_REGISTRY.languages.map(language=>language.l
 if(shell?.language?.owner!=='shared-shell'||shell?.language?.runtime!=='shell/user-language.js'||shell?.language?.adminExcluded!==true){
   errors.push('Shared user language selector must be owned by the User UI Shell and exclude admin surfaces.');
 }
+if(shell?.principles?.singlePublishedLocaleHidesLanguageControl!==true||shell?.principles?.languageControlHiddenUntilReadinessResolved!==true){
+  errors.push('LANG-UI-001 requires the language control to stay hidden until at least two published locales are ready.');
+}
+if(shell?.language?.controlVisibility!=='visible only when at least two locales are published for the current service'||shell?.language?.firstPaint!=='hidden until runtime language readiness resolves'){
+  errors.push('LANG-UI-001 language visibility contract is missing or drifted.');
+}
 if(!expectedLocales.every(locale=>shell?.language?.supported?.includes(locale))){
   errors.push('Shared user language selector must inherit every registered platform locale from the central Language Registry.');
 }
@@ -180,6 +186,8 @@ if(shell?.language?.controlGeometry!=='pill'||shell?.language?.visibleIcon!==fal
 for(const marker of ['ekodi_locale','data-ekodi-language-control','ekodi:locale-change','document.documentElement.lang','ko-KR','zh-CN','ekodi-user-language-style','appearance:none!important','FALLBACK_LOCALE','removeFooterLanguageControls','LEGACY_LANGUAGE_WIDGET_SELECTOR','data-ekodi-language-notice','isLocaleReady','visibleLanguages','refreshRuntimeReadiness','/api/i18n/v1']){
   if(!userLanguageSource.includes(marker))errors.push(`Shared user language runtime lost required marker: ${marker}`);
 }
+if(!userLanguageSource.includes('function languageChoiceAvailable(){return visibleLanguages().length>1;}'))errors.push('LANG-UI-001 runtime must expose language choice only for 2+ ready locales.');
+if(!userLanguageSource.includes('if(!languageChoiceAvailable()){document.querySelector(\'[data-ekodi-language-placement="header"]\')?.remove();return;}'))errors.push('LANG-UI-001 runtime must remove the header language control for a single ready locale.');
 if(userLanguageSource.includes('function placeFooterControl'))errors.push('Shared user language runtime must not render a footer language selector.');
 if(userUiStyle.includes('[data-ekodi-language-placement=\"footer\"]'))errors.push('Shared user UI stylesheet must not preserve footer language selector placement.');
 if(shell?.ambientAudio?.owner!=='shared-shell'||shell?.ambientAudio?.runtime!=='shell/ccm-mr-player.js'||shell?.ambientAudio?.contentOverlapForbidden!==true||shell?.ambientAudio?.adminExcluded!==true){
