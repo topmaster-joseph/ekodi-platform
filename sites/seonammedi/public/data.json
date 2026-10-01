@@ -424,6 +424,7 @@
     ],
     "participantSort": "ko-KR",
     "publicOnly": true,
-    "schemaVersion": 2
+    "schemaVersion": 2,
+    "schemaUpdatedAt": "2026-10-01T13:40:00+09:00"
   }
 }
