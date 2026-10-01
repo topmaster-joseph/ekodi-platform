@@ -272,3 +272,11 @@ test('provider diagnostic checks do not collapse expected free-provider failures
   assert.match(admin,/Provider HTTP/);
   assert.match(admin,/자동 우회\/재시도 가능/);
 });
+
+
+test('provider UI distinguishes connected but disabled providers from missing API keys',()=>{
+  const admin=read('admin-provider-control.js');
+  assert.match(admin,/키는 연결됨 · 사용을 켜고 저장한 뒤 연결 확인/);
+  assert.match(admin,/키 연결됨 · 사용을 켜고 저장한 뒤 연결 확인/);
+  assert.match(admin,/p\?\.configured&&!p\?\.enabled/);
+});
