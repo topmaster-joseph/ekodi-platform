@@ -35,7 +35,7 @@ test('authenticated Admin E2E verifies same-tab admin handoffs without treating 
   const source = await workerSource();
   assert.match(source, /async function verifyAdminHandoff\(trigger, started\)/);
   assert.match(source, /definition\.adminHandoff !== true/);
-  assert.match(source, /sourceTarget !== '_self'/);
+  assert.match(source, /sourceTarget === '_blank'/);
   assert.match(source, /stage\('admin-handoff'\)/);
   assert.match(source, /page\.waitForURL/);
   assert.match(source, /adminHandoff:true/);
