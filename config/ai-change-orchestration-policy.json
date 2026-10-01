@@ -156,7 +156,10 @@
     },
     "requiredStatusCheck": "EKODI AI Orchestration Gate",
     "forcePush": false,
-    "branchDeletion": false
+    "branchDeletion": false,
+    "integrationBranches": [
+      "development"
+    ]
   },
   "mutationBoundary": {
     "orchestrationGateRequiredBeforeMutation": true,
