@@ -28,8 +28,8 @@ test('AI operations center uses the existing provider-neutral control contracts'
   assert.match(center, /\/api\/ai-modules\/v1\/providers\/admin/);
   assert.match(center, /\/api\/control\/ai\/governance/);
   assert.match(center, /\/api\/control\/ai\/actions\?limit=30/);
-  assert.match(center, /OpenAI·Gemini·Anthropic/);
-  assert.match(providerControl, /PROVIDERS=new Set\(\['openai','gemini','anthropic'\]\)/);
+  assert.match(center, /Cloudflare → Gemini Free → OpenRouter Free → Groq Free → OpenAI 승인 → Claude 승인/);
+  assert.match(providerControl, /PROVIDERS=new Set\(\['gemini','openrouter','groq','openai','anthropic'\]\)/);
 });
 
 test('provider mutations require the server confirmation contracts', () => {
@@ -59,7 +59,7 @@ test('human-gated agent actions use the existing mission control decision endpoi
 test('provider cards expose direct key setup links and block health checks until a secret is connected', () => {
   assert.match(adminProviderControl, /aistudio\.google\.com\/app\/apikey/);
   assert.match(adminProviderControl, /platform\.openai\.com\/api-keys/);
-  assert.match(adminProviderControl, /console\.anthropic\.com\/settings\/keys/);
+  assert.match(adminProviderControl, /platform\.claude\.com\/settings\/keys/);
   assert.match(adminProviderControl, /providerActionHint/);
   assert.match(adminProviderControl, /data-ai-action="check" \$\{configured\?'':'disabled'\}/);
   assert.match(adminProviderControl, /API Key 연결 필요/);
@@ -73,4 +73,9 @@ test('provider key entry survives secret-manager bootstrap failures and surfaces
   assert.match(adminProviderControl, /dash\.cloudflare\.com\/profile\/api-tokens/);
   assert.match(adminProviderControl, /github\.com\/topmaster-joseph\/ekodi-platform\/settings\/secrets\/actions/);
   assert.doesNotMatch(adminProviderControl, /catch\(e\)\{input\.value=''\;message\(card,e\.message,true\)\}/);
+});
+
+
+test('free-first execution chain is visible in the AI operations center',()=>{
+  for(const marker of ['cloudflare-workers-ai','OpenRouter Free','Groq Free','유료 승인','자동 Failover','Human Gate']) assert.match(center,new RegExp(marker));
 });
