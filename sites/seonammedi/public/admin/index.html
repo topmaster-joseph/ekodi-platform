@@ -51,8 +51,8 @@
       <div class="heading"><div><p class="eyebrow">CURRENT STATUS</p><h1>현재상황 관리</h1><p>사용자 페이지의 현재상황 카드 제목과 설명을 직접 관리합니다.</p></div></div>
       <form id="statusForm" class="card form-card">
         <div class="form-row"><label>공식 기록 제목<input name="officialTitle" maxlength="120"></label><label>관련 보도 제목<input name="newsTitle" maxlength="120"></label></div>
-        <label>공식 기록 설명<textarea name="officialText" rows="4" maxlength="2000"></textarea></label>
-        <label>관련 보도 설명<textarea name="newsText" rows="4" maxlength="2000"></textarea></label>
+        <label>공식 기록 설명<textarea name="officialText" rows="3" maxlength="2000"></textarea></label>
+        <label>관련 보도 설명<textarea name="newsText" rows="3" maxlength="2000"></textarea></label>
         <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="reloadStatusPage" class="secondary">다시 불러오기</button></div>
         <p id="statusPageMessage" class="message" role="status"></p>
       </form>
@@ -69,32 +69,31 @@
         <input type="hidden" name="orgKey" value="bidae">
         <div class="org-admin-panel" data-org-admin-panel="bidae">
           <h2>비대위 조직도</h2>
-          <label>상태<input name="bidae_status" maxlength="160" value="운영 중"></label>
-          <label>대표자회의 구성<textarea name="bidae_representatives" rows="4" placeholder="한 줄에 한 명"></textarea></label>
-          <label>상임공동대표단 구성<textarea name="bidae_standing" rows="4" placeholder="한 줄에 한 명"></textarea></label>
-          <label>집행위원회 구성<textarea name="bidae_executive" rows="4" placeholder="한 줄에 한 명"></textarea></label>
-          <label>위원회<textarea name="bidae_committees" rows="6" placeholder="기획위원회 | 여인두 (집행위원회 겸임)"></textarea></label>
-          <label>참여단체<textarea name="bidae_participants" rows="8" placeholder="단체명 | 대표자 | https://..."></textarea></label>
+          <label>대표자회의 구성<textarea name="bidae_representatives" rows="3" placeholder="한 줄에 한 명"></textarea></label>
+          <label>상임공동대표단 구성<textarea name="bidae_standing" rows="3" placeholder="한 줄에 한 명"></textarea></label>
+          <label>집행위원회 구성<textarea name="bidae_executive" rows="3" placeholder="한 줄에 한 명"></textarea></label>
+          <label>위원회<textarea name="bidae_committees" rows="3" placeholder="기획위원회 | 여인두"></textarea></label>
+          <label>참여단체<textarea name="bidae_participants" rows="5" placeholder="단체명 | 대표자 | https://..."></textarea></label>
         </div>
         <div class="org-admin-panel" data-org-admin-panel="mokpo" hidden>
           <h2>목포대 조직도</h2>
-          <label>상태<input name="mokpo_status" maxlength="160" value="운영 중"></label>
-          <label>대표자회의 구성<textarea name="mokpo_representatives" rows="4"></textarea></label>
-          <label>상임공동대표단 구성<textarea name="mokpo_standing" rows="4"></textarea></label>
-          <label>집행위원회 구성<textarea name="mokpo_executive" rows="4"></textarea></label>
-          <label>위원회<textarea name="mokpo_committees" rows="6"></textarea></label>
-          <label>참여단체<textarea name="mokpo_participants" rows="8"></textarea></label>
+          <label>대표자회의 구성<textarea name="mokpo_representatives" rows="3"></textarea></label>
+          <label>상임공동대표단 구성<textarea name="mokpo_standing" rows="3"></textarea></label>
+          <label>집행위원회 구성<textarea name="mokpo_executive" rows="3"></textarea></label>
+          <label>위원회<textarea name="mokpo_committees" rows="4"></textarea></label>
+          <label>참여단체<textarea name="mokpo_participants" rows="5"></textarea></label>
         </div>
         <div class="org-admin-panel" data-org-admin-panel="minhak" hidden>
           <h2>민학비대위 조직도</h2>
           <label>상태<input name="minhak_status" maxlength="160" value="구성 논의 중 · 2026.09.30 첫 만남"></label>
-          <label>대표자회의 구성<textarea name="minhak_representatives" rows="4"></textarea></label>
-          <label>상임공동대표단 구성<textarea name="minhak_standing" rows="4"></textarea></label>
-          <label>집행위원회 구성<textarea name="minhak_executive" rows="4"></textarea></label>
-          <label>위원회<textarea name="minhak_committees" rows="6"></textarea></label>
-          <label>참여단체<textarea name="minhak_participants" rows="8"></textarea></label>
+          <label>대표자회의 구성<textarea name="minhak_representatives" rows="3"></textarea></label>
+          <label>상임공동대표단 구성<textarea name="minhak_standing" rows="3"></textarea></label>
+          <label>집행위원회 구성<textarea name="minhak_executive" rows="3"></textarea></label>
+          <label>위원회<textarea name="minhak_committees" rows="4"></textarea></label>
+          <label>참여단체<textarea name="minhak_participants" rows="5"></textarea></label>
         </div>
-        <div class="actions"><button type="submit" class="primary">전체 조직 저장</button><button type="button" id="reloadOrganization" class="secondary">다시 불러오기</button></div>
+        <p class="muted org-save-note">현재 선택한 조직만 저장하며 다른 조직의 정보는 그대로 유지합니다.</p>
+        <div class="actions"><button type="submit" id="saveOrganization" class="primary">현재 조직 저장</button><button type="button" id="reloadOrganization" class="secondary">다시 불러오기</button></div>
         <p id="organizationMessage" class="message" role="status"></p>
       </form>
     </section>
@@ -121,7 +120,7 @@
             <h2 id="timelineFormTitle">활동이력 추가</h2>
             <div class="form-row"><label>일자<input name="date" maxlength="40" placeholder="2026.09.30" required></label><label>분류<input name="category" maxlength="80" placeholder="비대위 활동" required></label></div>
             <label>제목<input name="title" maxlength="220" required></label>
-            <label>요약<textarea name="summary" maxlength="8000" rows="6"></textarea></label>
+            <label>요약<textarea name="summary" maxlength="8000" rows="4"></textarea></label>
             <label>근거 표시<input name="evidence" maxlength="500" placeholder="공식자료 · 언론보도 등"></label>
             <div class="form-row"><label>정렬<input name="sortOrder" type="number" min="0" max="9999" value="0"></label><label>상태<select name="status"><option value="published">공개</option><option value="draft">비공개</option></select></label></div>
             <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="timelineReset" class="secondary">새 이력</button></div>
@@ -196,7 +195,7 @@
           <div class="form-row"><label>일자<input name="date" type="date" required></label><label>구분<select name="type"><option value="income">수입</option><option value="expense">지출</option></select></label><label>금액<input name="amount" type="number" min="0" step="1" required></label></div>
           <label>목적·내용<input name="purpose" maxlength="500" required></label><label>관련 행사<input name="event" maxlength="300"></label>
           <div class="form-row"><label>증빙<select name="evidenceStatus"><option value="none">미등록</option><option value="held">증빙보유</option><option value="verified">확인완료</option></select></label><label class="check"><input type="checkbox" name="visible" checked> 사용자페이지 공개</label></div>
-          <label>공개 메모<textarea name="note" rows="4" maxlength="1000"></textarea></label>
+          <label>공개 메모<textarea name="note" rows="3" maxlength="1000"></textarea></label>
           <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="financeReset" class="secondary">새 내역</button></div><p id="financeMessage" class="message" role="status"></p>
         </form>
         <section class="card list-card"><div class="card-head"><h2>회계내역</h2><span id="financeSummary" class="muted">합계 계산 중</span></div><div id="financeList" class="item-list"></div></section>
