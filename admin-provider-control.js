@@ -13,13 +13,15 @@
     github:{label:'GitHub',specialist:'development',levels:['계정 / 조직','Repository','Branch / Environment','환경','Actions Secret']},
     supabase:{label:'Supabase',specialist:'data',levels:['조직','Project','Edge Function / DB','환경','Project Secret']},
   });
-  const AI_LABELS={openai:'OpenAI',gemini:'Google Gemini',anthropic:'Anthropic'};
+  const AI_LABELS={gemini:'Google Gemini',openrouter:'OpenRouter Free',groq:'Groq Free',openai:'OpenAI',anthropic:'Anthropic'};
   const AI_STATUS_NOTES=Object.freeze({
     gemini:'무료 한도 우선 사용 · 한도 소진 시 다른 무료 경로로 전환',
+    openrouter:'무료 모델 라우터 · 무료 한도 내 우선 사용 · 한도 소진 시 다음 무료 경로',
+    groq:'무료 개발자 한도 우선 사용 · 한도 소진 시 다음 경로로 전환',
     openai:'유료 API · 크레딧 필요 · 자동 유료전환 없음',
     anthropic:'유료 API · 지속 무료 사용 없음 · 결제/사용한도 필요',
   });
-  const AI_KEY_LINKS=Object.freeze({openai:'https://platform.openai.com/api-keys',gemini:'https://aistudio.google.com/app/apikey',anthropic:'https://console.anthropic.com/settings/keys'});
+  const AI_KEY_LINKS=Object.freeze({gemini:'https://aistudio.google.com/app/apikey',openrouter:'https://openrouter.ai/settings/keys',groq:'https://console.groq.com/keys',openai:'https://platform.openai.com/api-keys',anthropic:'https://platform.claude.com/settings/keys'});
   const CAP_LABELS={default:'기본',documents:'문서 AI',admin:'관리자 AI',marketing:'Marketing AI'};
   let inventory=null,aiState={providers:[],routes:[],control:{},alerts:[],freeQuotaStates:{}},selection={provider:'cloudflare',account:'',scope:'',runtime:'',environment:'production'};
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
