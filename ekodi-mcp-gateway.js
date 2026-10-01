@@ -144,8 +144,11 @@ export const EKODI_MCP_TOOLS=Object.freeze([
 function textResult(text,structuredContent={},meta={}){
   return {content:[{type:'text',text}],structuredContent,_meta:meta};
 }
+function authChallengeValue(reason='invalid_token'){
+  return `Bearer resource_metadata="${EKODI_MCP_METADATA_URL}", error="${reason}"`;
+}
 function authChallenge(reason='invalid_token'){
-  const challenge=`Bearer resource_metadata="${EKODI_MCP_METADATA_URL}", error="${reason}"`;
+  const challenge=authChallengeValue(reason);
   return textResult('EKODI 계정 연결이 필요합니다.',{authenticated:false},{'mcp/www_authenticate':[challenge]});
 }
 function mcpRequestProtocolVersion(message,request){
@@ -299,15 +302,33 @@ export function handleEkodiMcpMetadata(request){
   if(request.method!=='GET'&&request.method!=='HEAD')return mcpJson(request,{error:'method_not_allowed'},405,{allow:'GET, HEAD'});
   return mcpJson(request,mcpProtectedResourceMetadata());
 }
+async function transportAuthFailure(message,request,dependencies={}){
+  if(String(message?.method||'')!=='tools/call')return null;
+  const name=String(message?.params?.name||'');
+  const tool=EKODI_MCP_TOOLS.find(item=>item.name===name);
+  const requiresOauth=tool?.securitySchemes?.some(scheme=>scheme?.type==='oauth2');
+  if(!requiresOauth)return null;
+  const auth=await validateMcpBearer(request,dependencies);
+  if(auth.ok)return null;
+  const modern=modernMcpRequest(message,request);
+  return {reason:auth.reason||'invalid_token',body:rpcResult(message?.id??null,authChallenge(auth.reason),{modern})};
+}
+
 export async function handleEkodiMcpGateway(request,env,dependencies={}){
   if(request.method==='GET')return mcpJson(request,{error:'streaming_get_not_supported',transport:'stateless-streamable-http'},405,{allow:'POST'});
   if(request.method!=='POST')return mcpJson(request,{error:'method_not_allowed'},405,{allow:'POST'});
   let payload=null;
   try{payload=await request.json()}catch{return mcpJson(request,rpcError(null,-32700,'Parse error'),400)}
   if(Array.isArray(payload)){
+    for(const item of payload){
+      const failure=await transportAuthFailure(item,request,dependencies);
+      if(failure)return mcpJson(request,[failure.body],401,{'www-authenticate':authChallengeValue(failure.reason)});
+    }
     const output=(await Promise.all(payload.map(item=>handleRpc(item,request,env,dependencies)))).filter(Boolean);
     return output.length?mcpJson(request,output):mcpEmpty(request,202);
   }
+  const failure=await transportAuthFailure(payload,request,dependencies);
+  if(failure)return mcpJson(request,failure.body,401,{'www-authenticate':authChallengeValue(failure.reason)});
   const result=await handleRpc(payload,request,env,dependencies);
   return result?mcpJson(request,result):mcpEmpty(request,202);
 }

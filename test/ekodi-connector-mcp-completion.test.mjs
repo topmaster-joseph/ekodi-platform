@@ -64,20 +64,24 @@ test('modern MCP responses carry required resultType while legacy responses stay
   assert.equal(Object.hasOwn(legacyListBody.result,'resultType'),false);
 });
 
-test('modern OAuth challenge is a complete MCP result',async()=>{
+test('modern OAuth challenge is a complete MCP result with wire-level 401',async()=>{
   const request=new Request('https://ekodi.kr/mcp',{method:'POST',headers:{'content-type':'application/json','MCP-Protocol-Version':'2026-07-28'},body:JSON.stringify({
     jsonrpc:'2.0',id:44,method:'tools/call',params:{name:'submit_task',arguments:{intent:'must not execute'},_meta:MODERN_META},
   })});
-  const body=await (await handleEkodiMcpGateway(request,{})).json();
+  const response=await handleEkodiMcpGateway(request,{});
+  assert.equal(response.status,401);
+  assert.match(response.headers.get('www-authenticate')||'',/resource_metadata="https:\/\/ekodi\.kr\/\.well-known\/oauth-protected-resource"/);
+  const body=await response.json();
   assert.equal(body.result.resultType,'complete');
   assert.equal(body.result.structuredContent.authenticated,false);
   assert.match(body.result._meta['mcp/www_authenticate'][0],/oauth-protected-resource/);
 });
 
-test('unauthenticated task submission gets an OAuth challenge and never reaches DB',async()=>{
+test('unauthenticated task submission gets HTTP 401 OAuth challenge and never reaches DB',async()=>{
   const request=new Request('https://ekodi.kr/mcp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:7,method:'tools/call',params:{name:'submit_task',arguments:{intent:'must not execute'}}})});
   const response=await handleEkodiMcpGateway(request,{});
-  assert.equal(response.status,200);
+  assert.equal(response.status,401);
+  assert.match(response.headers.get('www-authenticate')||'',/error="missing_token"/);
   const body=await response.json();
   assert.equal(body.result.structuredContent.authenticated,false);
   assert.match(body.result._meta['mcp/www_authenticate'][0],/oauth-protected-resource/);

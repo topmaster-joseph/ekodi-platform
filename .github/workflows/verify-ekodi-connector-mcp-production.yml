@@ -33,8 +33,8 @@ jobs:
             oauth_code=$(curl -sS -o /tmp/ekodi-oauth.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/.well-known/oauth-protected-resource' || true)
             tools_code=$(curl -sS -o /tmp/ekodi-tools.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'content-type: application/json' --data-binary '{"jsonrpc":"2.0","id":1848,"method":"tools/list","params":{}}' 'https://ekodi.kr/mcp' || true)
             identify_code=$(curl -sS -o /tmp/ekodi-identify.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'content-type: application/json' --data-binary '{"jsonrpc":"2.0","id":1849,"method":"tools/call","params":{"name":"identify_ekodi","arguments":{}}}' 'https://ekodi.kr/mcp' || true)
-            unauth_code=$(curl -sS -o /tmp/ekodi-unauth.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'content-type: application/json' --data-binary '{"jsonrpc":"2.0","id":1850,"method":"tools/call","params":{"name":"submit_task","arguments":{"intent":"production auth-boundary probe"}}}' 'https://ekodi.kr/mcp' || true)
-            if [ "$discovery_code" = 200 ] && [ "$oauth_code" = 200 ] && [ "$tools_code" = 200 ] && [ "$identify_code" = 200 ] && [ "$unauth_code" = 200 ]; then
+            unauth_code=$(curl -sS -D /tmp/ekodi-unauth.headers -o /tmp/ekodi-unauth.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'content-type: application/json' --data-binary '{"jsonrpc":"2.0","id":1850,"method":"tools/call","params":{"name":"submit_task","arguments":{"intent":"production auth-boundary probe"}}}' 'https://ekodi.kr/mcp' || true)
+            if [ "$discovery_code" = 200 ] && [ "$oauth_code" = 200 ] && [ "$tools_code" = 200 ] && [ "$identify_code" = 200 ] && [ "$unauth_code" = 401 ]; then
               if node <<'NODE'
           const fs=require('fs');
           const discovery=JSON.parse(fs.readFileSync('/tmp/ekodi-discovery.json','utf8'));
@@ -57,8 +57,10 @@ jobs:
           if(!String(unauth?._meta?.['mcp/www_authenticate']?.[0]||'').includes('oauth-protected-resource'))process.exit(1);
           NODE
               then
-                passed=true
-                break
+                if grep -Eiq '^www-authenticate:.*oauth-protected-resource' /tmp/ekodi-unauth.headers; then
+                  passed=true
+                  break
+                fi
               fi
             fi
             echo "Connector/MCP production verification pending ($attempt/8 discovery=$discovery_code oauth=$oauth_code tools=$tools_code identify=$identify_code unauth=$unauth_code)"
