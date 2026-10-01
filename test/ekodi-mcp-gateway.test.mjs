@@ -5,6 +5,7 @@ import {
   EKODI_MCP_RESOURCE,
   EKODI_MCP_LEGACY_RESOURCES,
   EKODI_MCP_TOOLS,
+  MCP_SERVER_INSTRUCTIONS,
   callEkodiMcpTool,
   handleEkodiMcpGateway,
   mcpProtectedResourceMetadata,
@@ -158,4 +159,20 @@ test('stateless MCP 2026-07-28 discovers and lists Fabric-backed tools',async()=
   assert.ok(listBody.result.tools.some(tool=>tool.name==='submit_task'));
   assert.ok(listBody.result.tools.filter(tool=>tool.securitySchemes[0].type==='oauth2').every(tool=>tool.ekodiCapability));
   assert.ok(listBody.result.tools.every(tool=>!JSON.stringify(tool).includes('apiKey')));
+});
+
+
+test('MCP server instructions force every EKODI operation through the Orchestrator',async()=>{
+  assert.match(MCP_SERVER_INSTRUCTIONS,/every request about EKODI systems/);
+  assert.match(MCP_SERVER_INSTRUCTIONS,/sole execution authority/);
+  assert.match(MCP_SERVER_INSTRUCTIONS,/call submit_task/);
+  assert.match(MCP_SERVER_INSTRUCTIONS,/use get_task_status/);
+  assert.match(MCP_SERVER_INSTRUCTIONS,/Never perform, simulate, or claim direct EKODI production changes/);
+
+  const request=new Request('https://ekodi.kr/mcp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:91,method:'server/discover',params:{}})});
+  const response=await handleEkodiMcpGateway(request,{});
+  const body=await response.json();
+  assert.equal(body.result.instructions,MCP_SERVER_INSTRUCTIONS);
+  assert.equal(body.result.alwaysRouteEkodiOperations,true);
+  assert.equal(body.result.executionAuthority,'ekodi-orchestrator');
 });
