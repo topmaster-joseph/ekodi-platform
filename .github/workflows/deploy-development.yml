@@ -124,6 +124,14 @@ jobs:
             echo "::error::Retired Development Google OAuth client found in active config."
             exit 1
           fi
+          node - <<'NODE'
+          const fs = require('fs');
+          const cfg = JSON.parse(fs.readFileSync('wrangler.development.jsonc', 'utf8'));
+          if (cfg.vars?.ENVIRONMENT !== 'development') throw new Error('Development router ENVIRONMENT must be development');
+          if (cfg.vars?.GOOGLE_CLIENT_ID !== '483044030492-qvk96u0rvptsshat0pi8g522puq9ju16.apps.googleusercontent.com') throw new Error('Development router Google client mismatch');
+          if (cfg.vars?.GOOGLE_IDENTITY_ORIGIN !== 'https://ekodi-platform-development.ekodi-development.workers.dev') throw new Error('Development router Google identity origin mismatch');
+          if (!cfg.services?.some(x => x.binding === 'CONTROL_API' && x.service === 'ekodi-auth-api-development')) throw new Error('Development router CONTROL_API binding missing');
+          NODE
 
       - name: Verify development Cloudflare credentials
         shell: bash
