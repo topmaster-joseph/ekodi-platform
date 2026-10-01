@@ -28,8 +28,8 @@ test('AI operations center uses the existing provider-neutral control contracts'
   assert.match(center, /\/api\/ai-modules\/v1\/providers\/admin/);
   assert.match(center, /\/api\/control\/ai\/governance/);
   assert.match(center, /\/api\/control\/ai\/actions\?limit=30/);
-  assert.match(center, /OpenAI·Gemini·Anthropic/);
-  assert.match(providerControl, /PROVIDERS=new Set\(\['openai','gemini','anthropic'\]\)/);
+  assert.match(center, /Cloudflare·Gemini·OpenRouter·Groq·OpenAI·Claude/);
+  assert.match(providerControl, /PROVIDER_ORDER=Object\.freeze\(\['cloudflare-workers-ai','gemini','openrouter-free','groq-free','openai','anthropic'\]\)/);
 });
 
 test('provider mutations require the server confirmation contracts', () => {
@@ -59,7 +59,7 @@ test('human-gated agent actions use the existing mission control decision endpoi
 test('provider cards expose direct key setup links and block health checks until a secret is connected', () => {
   assert.match(adminProviderControl, /aistudio\.google\.com\/app\/apikey/);
   assert.match(adminProviderControl, /platform\.openai\.com\/api-keys/);
-  assert.match(adminProviderControl, /console\.anthropic\.com\/settings\/keys/);
+  assert.match(adminProviderControl, /platform\.claude\.com\/settings\/keys/);
   assert.match(adminProviderControl, /providerActionHint/);
   assert.match(adminProviderControl, /data-ai-action="check" \$\{configured\?'':'disabled'\}/);
   assert.match(adminProviderControl, /API Key 연결 필요/);
