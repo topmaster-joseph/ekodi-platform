@@ -20,3 +20,29 @@
 #platforms,#workspaces,#account,#memberHome,#activity,#intent{scroll-margin-top:92px}
 @media(max-width:900px){.action-hub-links{grid-template-columns:1fr 1fr}.personal-hub-head{align-items:flex-start}.activity-overview-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:560px){.personal-action-command{padding:16px;margin-top:8px;border-radius:18px}.action-hub-links,.activity-overview-grid{grid-template-columns:1fr}.action-hub-links a,.activity-overview-grid a{padding:13px 15px}.topbar nav a:first-child{display:none}}
+
+
+/* Tab shell: keep My EKODI on one task surface instead of a long vertical catalog. */
+.my-tab-section[hidden]{display:none!important}
+.my-desktop-tabs{display:flex;align-items:center;gap:4px}
+.my-desktop-tabs a{position:relative;padding:9px 12px;border-radius:999px;text-decoration:none}
+.my-desktop-tabs a[aria-selected="true"]{background:rgba(48,67,56,.08);font-weight:800}
+.workspace-compact{position:sticky;top:62px;z-index:26;display:flex;align-items:center;gap:7px;width:max-content;max-width:calc(100% - 28px);margin:8px auto 0;padding:8px 12px;border:1px solid rgba(53,66,57,.12);border-radius:999px;background:rgba(255,255,255,.94);backdrop-filter:blur(12px);color:inherit;text-decoration:none;box-shadow:0 6px 18px rgba(35,49,40,.05)}
+.workspace-compact[hidden]{display:none!important}
+.workspace-compact span{font-size:11px;color:#748078}
+.workspace-compact strong{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.workspace-compact b{font-size:11px;color:#748078}
+.my-bottom-tabs{display:none}
+body[data-auth-state="guest"] .my-desktop-tabs,body[data-auth-state="guest"] .my-bottom-tabs{display:none!important}
+body[data-active-tab="services"] .my-custom-footer,
+body[data-active-tab="activity"] .my-custom-footer,
+body[data-active-tab="account"] .my-custom-footer{margin-top:18px}
+@media(max-width:720px){
+  body{padding-bottom:74px!important}
+  .my-desktop-tabs{display:none!important}
+  .workspace-compact{top:58px;margin-top:6px}
+  .my-bottom-tabs{position:fixed;left:10px;right:10px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:80;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:6px;border:1px solid rgba(53,66,57,.13);border-radius:18px;background:rgba(255,255,255,.96);backdrop-filter:blur(16px);box-shadow:0 14px 34px rgba(35,49,40,.14)}
+  .my-bottom-tabs a{display:flex;align-items:center;justify-content:center;min-height:44px;padding:8px 4px;border-radius:13px;color:#657169;text-decoration:none;font-size:12px;font-weight:700}
+  .my-bottom-tabs a[aria-current="page"]{background:#edf3ee;color:#263b30}
+  .my-tab-shell>.section,.my-tab-shell>.intent-shelf,.my-tab-shell>.welcome-shell{margin-bottom:12px}
+}

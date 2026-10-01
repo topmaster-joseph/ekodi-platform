@@ -26,8 +26,10 @@ const paid=v=>['standard','basic','pro','enterprise'].includes(String(v||'').toL
 const storedWorkspace=()=>{try{return localStorage.getItem('ekodi_my_active_workspace')||''}catch{return''}};
 const rememberWorkspace=value=>{try{if(value)localStorage.setItem('ekodi_my_active_workspace',value);else localStorage.removeItem('ekodi_my_active_workspace')}catch{}};
 const serviceDefinition=id=>SERVICES.find(([sid])=>sid===id)||null;
-const FOCUS_HASHES=new Map([['#recommendations','recommendations'],['#intent','intent'],['#intentPlanText','intent'],['#money','money'],['#workspaces','workspaces'],['#platforms','platforms'],['#account','account'],['#creator','creator'],['#personal-brand','personal-brand'],['#journey-preview','journey-preview'],['#life-channels','life-channels']]);
+const FOCUS_HASHES=new Map([['#recommendations','recommendations'],['#money','money'],['#creator','creator'],['#personal-brand','personal-brand'],['#journey-preview','journey-preview'],['#life-channels','life-channels']]);
+const TAB_HASHES=new Map([['#home','home'],['#intent','home'],['#intentPlanText','home'],['#platforms','services'],['#workspaces','services'],['#activity','activity'],['#memberHome','activity'],['#account','account']]);
 const focusSurfaceKey=()=>FOCUS_HASHES.get(location.hash)||'';
+const activeTabKey=()=>TAB_HASHES.get(location.hash)||(focusSurfaceKey()?'focus':'home');
 function requestedReturnTarget(){
  const raw=new URLSearchParams(location.search).get('return_to');
  if(!raw)return null;
@@ -70,14 +72,27 @@ async function handoff(){
  if(error)throw error;
 }
 function syncSurfaceState({scroll=false}={}){
- const signedIn=Boolean(session?.access_token),key=signedIn?focusSurfaceKey():'';
+ const signedIn=Boolean(session?.access_token),key=signedIn?focusSurfaceKey():'',tab=signedIn?activeTabKey():'home';
  document.body.dataset.authState=signedIn?'member':'guest';
  document.body.dataset.homeMode=signedIn&&key?'focus':'home';
- const home=$('#memberHome');if(home)home.hidden=!signedIn||Boolean(key);
+ document.body.dataset.activeTab=tab;
+ document.querySelectorAll('[data-my-tab-section]').forEach(section=>{section.hidden=signedIn?section.dataset.myTabSection!==tab:section.dataset.myTabSection!=='home'});
+ const memberHome=$('#memberHome');if(memberHome)memberHome.hidden=!signedIn||tab!=='home';
  document.querySelectorAll('[data-focus-surface]').forEach(section=>{section.hidden=!signedIn||section.dataset.focusSurface!==key});
  document.querySelectorAll('[data-focus-companion]').forEach(section=>{section.hidden=!signedIn||section.dataset.focusCompanion!==key});
+ document.querySelectorAll('[data-my-tab-link]').forEach(link=>{
+  const selected=link.dataset.myTabLink===tab;
+  link.setAttribute('aria-selected',String(selected));
+  if(selected)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
+ });
  const context=$('#memberContextLine');if(context)context.hidden=!signedIn;
- if(scroll&&key)requestAnimationFrame(()=>{const target=location.hash==='#intentPlanText'?$('#intentPlanText'):document.getElementById(key);target?.scrollIntoView({behavior:'smooth',block:'start'})});
+ const compact=$('#workspaceCompact');if(compact)compact.hidden=!signedIn;
+ if(scroll){
+  requestAnimationFrame(()=>{
+   const target=location.hash==='#intentPlanText'?$('#intentPlanText'):(key?document.getElementById(key):document.querySelector(`[data-my-tab-section="${tab}"]:not([hidden])`));
+   target?.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+ }
 }
 function authUi(){
  const label=session?'로그아웃':'Google로 시작';
@@ -165,6 +180,9 @@ function identityUi(){
  const heroLead=$('#heroLead'),contextLine=$('#memberContextLine');
  if(heroLead)heroLead.textContent=session?(current?`${current.workspace_name||'내 공간'}의 맥락을 기준으로 필요한 것만 보여드립니다.`:'내 활동을 기준으로 필요한 것만 보여드립니다.'):'로그인하면 내 공간과 필요한 기능만 연결해 보여드립니다.';
  if(contextLine){contextLine.hidden=!session;contextLine.textContent=current?`현재 · ${current.workspace_name||'내 공간'} · ${plan(current.plan)}`:'현재 · 개인 맥락'}
+ const compact=$('#workspaceCompact'),compactLabel=$('#workspaceCompactLabel');
+ if(compact)compact.hidden=!session;
+ if(compactLabel)compactLabel.textContent=current?.workspace_name||'개인';
 
 }
 function memberHomeUi(){
