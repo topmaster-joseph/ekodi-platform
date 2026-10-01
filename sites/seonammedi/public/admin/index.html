@@ -136,7 +136,9 @@
           <h2 id="noticeFormTitle">공지 작성</h2>
           <label>제목<input name="title" maxlength="180" required></label>
           <label>내용<textarea name="body" maxlength="10000" rows="10"></textarea></label>
-          <div class="form-row"><label>상태<select name="status"><option value="published">공개</option><option value="draft">초안</option></select></label><label class="check"><input type="checkbox" name="pinned"> 상단 고정</label></div>
+          <label>대표 이미지 URL<input name="imageUrl" type="url" inputmode="url" placeholder="https://... (포스터·대표 이미지)"></label>
+          <div class="form-row"><label>구분<select name="kind"><option value="notice">공지</option><option value="event">행사·일정</option></select></label><label>행사 시작<input name="eventStart" type="datetime-local"></label><label>행사 종료<input name="eventEnd" type="datetime-local"></label></div>
+          <div class="form-row"><label>상태<select name="status"><option value="published">공개</option><option value="draft">초안</option></select></label><label class="check"><input type="checkbox" name="pinned"> 상단 고정</label><label class="check"><input type="checkbox" name="featured"> 홈페이지 첫 화면 노출</label></div>
           <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="noticeReset" class="secondary">새 글</button></div>
           <p id="noticeMessage" class="message" role="status"></p>
         </form>

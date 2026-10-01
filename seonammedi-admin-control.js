@@ -111,7 +111,7 @@ async function ensurePublicContentSchema(db){
     updated_at TEXT NOT NULL DEFAULT ''
   );`);
   const repair=[
-    ['seonammedi_notices','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','body',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','status',"TEXT NOT NULL DEFAULT 'draft'"],['seonammedi_notices','pinned','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','published_at','TEXT'],['seonammedi_notices','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','updated_at',"TEXT NOT NULL DEFAULT ''"],
+    ['seonammedi_notices','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','body',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','status',"TEXT NOT NULL DEFAULT 'draft'"],['seonammedi_notices','pinned','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','published_at','TEXT'],['seonammedi_notices','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','updated_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','image_url',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','notice_kind',"TEXT NOT NULL DEFAULT 'notice'"],['seonammedi_notices','featured','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','event_start','TEXT'],['seonammedi_notices','event_end','TEXT'],
     ['seonammedi_channels','platform',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','name',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','url',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','category',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','official','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','visible','INTEGER NOT NULL DEFAULT 1'],['seonammedi_channels','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','note',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','updated_at',"TEXT NOT NULL DEFAULT ''"],
     ['seonammedi_timeline','legacy_key','TEXT'],['seonammedi_timeline','event_date',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','category',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','summary',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','evidence',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','links_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','media_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','monitor_keywords_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','status',"TEXT NOT NULL DEFAULT 'published'"],['seonammedi_timeline','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_timeline','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','updated_at',"TEXT NOT NULL DEFAULT ''"]
   ];
@@ -296,13 +296,13 @@ async function audit(env,auth,action,type,id,detail={}){
     .bind(auth.email,action,type,id||null,JSON.stringify(detail),new Date().toISOString()).run()}catch{}
 }
 
-function publicNotice(row){return{id:Number(row.id),title:row.title,body:row.body,pinned:Boolean(row.pinned),publishedAt:row.published_at||row.updated_at,updatedAt:row.updated_at}}
+function publicNotice(row){return{id:Number(row.id),title:row.title,body:row.body,pinned:Boolean(row.pinned),publishedAt:row.published_at||row.updated_at,updatedAt:row.updated_at,imageUrl:row.image_url||'',kind:row.notice_kind==='event'?'event':'notice',featured:Boolean(row.featured),eventStart:row.event_start||'',eventEnd:row.event_end||''}}
 function adminNotice(row){return{...publicNotice(row),status:row.status,createdBy:row.created_by,createdAt:row.created_at}}
 function publicChannel(row){return{id:Number(row.id),platform:row.platform,name:row.name,url:row.url,category:row.category,official:Boolean(row.official),note:row.note||'',sortOrder:Number(row.sort_order||0)}}
 function adminChannel(row){return{...publicChannel(row),visible:Boolean(row.visible),createdBy:row.created_by,createdAt:row.created_at,updatedAt:row.updated_at}}
 
 async function listPublicNotices(env){
-  const rows=await env.DB.prepare(`SELECT id,title,body,pinned,published_at,updated_at FROM seonammedi_notices
+  const rows=await env.DB.prepare(`SELECT id,title,body,pinned,published_at,updated_at,image_url,notice_kind,featured,event_start,event_end FROM seonammedi_notices
     WHERE status='published' ORDER BY pinned DESC,COALESCE(published_at,updated_at) DESC,id DESC LIMIT 40`).all();
   return json({ok:true,items:(rows.results||[]).map(publicNotice)});
 }
@@ -388,22 +388,22 @@ async function listAdminNotices(env,auth){
 async function createNotice(request,env,auth){
   if(!can(auth,NOTICE_CAP))return json({ok:false,error:'notice_forbidden'},403);
   const body=await request.json().catch(()=>null);const title=clean(body?.title,180),copy=clean(body?.body,10000);
-  const status=body?.status==='published'?'published':'draft';const pinned=safeBool(body?.pinned)?1:0;
+  const status=body?.status==='published'?'published':'draft';const pinned=safeBool(body?.pinned)?1:0;const imageUrl=validHttps(body?.imageUrl);const noticeKind=body?.kind==='event'?'event':'notice';const featured=safeBool(body?.featured)?1:0;const eventStart=clean(body?.eventStart,40)||null;const eventEnd=clean(body?.eventEnd,40)||null;
   if(!title)return json({ok:false,error:'title_required'},400);
   const now=new Date().toISOString();const publishedAt=status==='published'?now:null;
-  const result=await env.DB.prepare('INSERT INTO seonammedi_notices(title,body,status,pinned,published_at,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)')
-    .bind(title,copy,status,pinned,publishedAt,auth.email,now,now).run();
-  const id=Number(result?.meta?.last_row_id||0);await audit(env,auth,'create','notice',id,{status,pinned:Boolean(pinned)});
+  const result=await env.DB.prepare('INSERT INTO seonammedi_notices(title,body,status,pinned,published_at,created_by,created_at,updated_at,image_url,notice_kind,featured,event_start,event_end) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)')
+    .bind(title,copy,status,pinned,publishedAt,auth.email,now,now,imageUrl,noticeKind,featured,eventStart,eventEnd).run();
+  const id=Number(result?.meta?.last_row_id||0);await audit(env,auth,'create','notice',id,{status,pinned:Boolean(pinned),featured:Boolean(featured),kind:noticeKind});
   return json({ok:true,id},201);
 }
 async function updateNotice(request,env,auth,id){
   if(!can(auth,NOTICE_CAP))return json({ok:false,error:'notice_forbidden'},403);
   const existing=await env.DB.prepare('SELECT * FROM seonammedi_notices WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
   const body=await request.json().catch(()=>null);const title=clean(body?.title??existing.title,180),copy=clean(body?.body??existing.body,10000);
-  const status=body?.status==='published'?'published':'draft';const pinned=safeBool(body?.pinned)?1:0;if(!title)return json({ok:false,error:'title_required'},400);
+  const status=body?.status==='published'?'published':'draft';const pinned=safeBool(body?.pinned)?1:0;const imageUrl=validHttps(body?.imageUrl??existing.image_url);const noticeKind=(body?.kind??existing.notice_kind)==='event'?'event':'notice';const featured=body?.featured===undefined?Number(existing.featured||0):(safeBool(body.featured)?1:0);const eventStart=clean(body?.eventStart??existing.event_start,40)||null;const eventEnd=clean(body?.eventEnd??existing.event_end,40)||null;if(!title)return json({ok:false,error:'title_required'},400);
   const now=new Date().toISOString();const publishedAt=status==='published'?(existing.published_at||now):null;
-  await env.DB.prepare('UPDATE seonammedi_notices SET title=?,body=?,status=?,pinned=?,published_at=?,updated_at=? WHERE id=?')
-    .bind(title,copy,status,pinned,publishedAt,now,id).run();
+  await env.DB.prepare('UPDATE seonammedi_notices SET title=?,body=?,status=?,pinned=?,published_at=?,updated_at=?,image_url=?,notice_kind=?,featured=?,event_start=?,event_end=? WHERE id=?')
+    .bind(title,copy,status,pinned,publishedAt,now,imageUrl,noticeKind,featured,eventStart,eventEnd,id).run();
   await audit(env,auth,'update','notice',id,{status,pinned:Boolean(pinned)});return json({ok:true,id});
 }
 async function deleteNotice(env,auth,id){

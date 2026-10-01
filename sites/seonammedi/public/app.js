@@ -231,20 +231,29 @@ window.addEventListener('popstate',syncViewFromLocation);
 syncViewFromLocation();
 
 async function loadNotices(){
-  const host=el('noticeList');if(!host)return;
+  const host=el('noticeList'),spotlight=el('homeSpotlight');
   try{
-    const response=await fetch('/api/seonammedi/notices',{cache:'no-store'});
-    const data=await response.json().catch(()=>({}));
+    const response=await fetch('/api/seonammedi/notices',{cache:'no-store'}),data=await response.json().catch(()=>({}));
     if(!response.ok||!data.ok)throw new Error(data.message||'공지 목록을 불러오지 못했습니다.');
     const rows=Array.isArray(data.items)?data.items:[];
-    host.innerHTML=rows.length?rows.map(item=>{
-      const date=item.published_at||item.updated_at||'';
-      const dateText=date?new Date(date).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):'';
-      return '<article class="notice-item"><h3>'+escapeHtml(item.title||'공지')+(item.pinned?'<span class="notice-pin">중요</span>':'')+'</h3><p>'+escapeHtml(item.body||'')+'</p><small>'+escapeHtml(dateText)+'</small></article>';
+    if(host)host.innerHTML=rows.length?rows.map(item=>{
+      const date=item.publishedAt||item.updatedAt||'',dateText=date?new Date(date).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):'';
+      return '<article class="notice-item" id="notice-'+item.id+'">'+(item.imageUrl?'<img class="notice-image" src="'+escapeHtml(item.imageUrl)+'" alt="">':'')+'<h3>'+escapeHtml(item.title||'공지')+(item.pinned?'<span class="notice-pin">중요</span>':'')+'</h3><p>'+escapeHtml(item.body||'')+'</p><div class="notice-foot"><small>'+escapeHtml(dateText)+'</small><button type="button" class="notice-share" data-share-notice="'+item.id+'">공유</button></div></article>';
     }).join(''):'<p class="muted">등록된 공지가 없습니다.</p>';
-  }catch(error){
-    host.innerHTML='<p class="muted">'+escapeHtml(error.message||'공지 목록을 불러오지 못했습니다.')+'</p>';
-  }
+    const now=Date.now(),featured=rows.filter(item=>item.featured&&item.imageUrl&&(!item.eventEnd||new Date(item.eventEnd).getTime()>=now)).sort((a,b)=>{
+      if(a.kind!==b.kind)return a.kind==='event'?-1:1;
+      const ae=a.eventStart?new Date(a.eventStart).getTime():Infinity,be=b.eventStart?new Date(b.eventStart).getTime():Infinity;return ae-be;
+    }).slice(0,4);
+    if(spotlight){
+      spotlight.hidden=!featured.length;
+      spotlight.innerHTML=featured.map(item=>'<a class="spotlight-card" href="#notice-'+item.id+'" data-notice-id="'+item.id+'"><img src="'+escapeHtml(item.imageUrl)+'" alt="'+escapeHtml(item.title||'공지')+'"><span><b>'+(item.kind==='event'?'행사':'공지')+'</b>'+escapeHtml(item.title||'')+'</span></a>').join('');
+      document.querySelector('.hero')?.classList.toggle('has-spotlight',featured.length>0);
+    }
+    const openNotice=id=>{showView('notices',{updateHash:false});requestAnimationFrame(()=>{const node=el('notice-'+id);node?.scrollIntoView({behavior:'smooth',block:'center'});node?.classList.add('notice-focus');setTimeout(()=>node?.classList.remove('notice-focus'),1800)})};
+    spotlight?.querySelectorAll('[data-notice-id]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();history.pushState({},'','#notice-'+a.dataset.noticeId);openNotice(a.dataset.noticeId)}));
+    host?.querySelectorAll('[data-share-notice]').forEach(button=>button.addEventListener('click',async()=>{const item=rows.find(x=>String(x.id)===button.dataset.shareNotice);if(!item)return;const url=location.origin+location.pathname+'#notice-'+item.id;try{if(navigator.share)await navigator.share({title:item.title,text:item.body?.slice(0,120)||'',url});else{await navigator.clipboard.writeText(url);button.textContent='링크 복사됨';setTimeout(()=>button.textContent='공유',1500)}}catch{}}));
+    const match=location.hash.match(/^#notice-(\d+)$/);if(match)openNotice(match[1]);
+  }catch(error){if(host)host.innerHTML='<p class="muted">'+escapeHtml(error.message||'공지 목록을 불러오지 못했습니다.')+'</p>'}
 }
 loadNotices();
 
