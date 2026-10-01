@@ -6,6 +6,7 @@ import {evaluateAiCostEligibility} from './ai-cost-policy.js';
 import {createCloudflareWorkersAiProvider} from './cloudflare-workers-ai-provider-adapter.js';
 import {createGroqFreeProvider} from './groq-free-provider-adapter.js';
 import {createOpenRouterFreeProvider} from './openrouter-free-provider-adapter.js';
+import {createCerebrasFreeProvider,createQwenFreeProvider,createDeepSeekFreeCreditProvider} from './extended-free-provider-adapters.js';
 import {createEkodiAiProviderRegistry} from './ekodi-ai-provider-registry.js';
 
 const clean=value=>String(value??'').trim();
@@ -49,6 +50,9 @@ export function providerCapabilities(env={},nodeProviders=[]){
     geminiFree:registry.get('gemini')?.available===true,
     openrouterFree:enabled(env.EKODI_PROVIDER_OPENROUTER_FREE_ENABLED,true)&&Boolean(clean(env.OPENROUTER_API_KEY)),
     groqFree:enabled(env.EKODI_PROVIDER_GROQ_FREE_ENABLED,false)&&Boolean(clean(env.GROQ_API_KEY)),
+    cerebrasFree:enabled(env.EKODI_PROVIDER_CEREBRAS_FREE_ENABLED,false)&&enabled(env.EKODI_CEREBRAS_FREE_TRIAL_ONLY,false)&&Boolean(clean(env.CEREBRAS_API_KEY)),
+    qwenFree:enabled(env.EKODI_PROVIDER_QWEN_FREE_ENABLED,false)&&enabled(env.EKODI_QWEN_FREE_QUOTA_ONLY_CONFIRMED,false)&&Boolean(clean(env.QWEN_API_KEY||env.DASHSCOPE_API_KEY))&&Boolean(clean(env.QWEN_BASE_URL)),
+    deepseekFreeCredit:enabled(env.EKODI_PROVIDER_DEEPSEEK_FREE_ENABLED,false)&&Boolean(clean(env.DEEPSEEK_API_KEY)),
     nodeProviders:[...new Set((nodeProviders||[]).map(v=>clean(v).toLowerCase()).filter(Boolean))],
     openaiApi:registry.get('openai')?.available===true,
     anthropicApi:registry.get('anthropic')?.available===true,
@@ -65,6 +69,9 @@ export function providerStatus(env={},nodeProviders=[]){
   push({id:'gemini-free',kind:'official-api',costClass:providerCostClass('gemini-free'),available:gemini?.available===true,configured:directConfigured(env,'gemini-free'),model:gemini?.model||clean(env.GEMINI_MODEL)||'gemini-3.7-flash'});
   push({id:'openrouter-free',kind:'official-api',costClass:providerCostClass('openrouter-free'),available:capabilities.openrouterFree,configured:capabilities.openrouterFree,model:clean(env.EKODI_OPENROUTER_FREE_MODEL)||'openrouter/free'});
   push({id:'groq-free',kind:'official-api',costClass:providerCostClass('groq-free'),available:capabilities.groqFree,configured:capabilities.groqFree,model:clean(env.EKODI_GROQ_FREE_MODEL)||'openai/gpt-oss-20b'});
+  push({id:'cerebras-free',kind:'official-api',costClass:providerCostClass('cerebras-free'),available:capabilities.cerebrasFree,configured:capabilities.cerebrasFree,model:clean(env.EKODI_CEREBRAS_FREE_MODEL)||'qwen-3.8-27b'});
+  push({id:'qwen-free',kind:'official-api',costClass:providerCostClass('qwen-free'),available:capabilities.qwenFree,configured:capabilities.qwenFree,model:clean(env.EKODI_QWEN_FREE_MODEL)||'qwen3.7-plus'});
+  push({id:'deepseek-free-credit',kind:'official-api',costClass:providerCostClass('deepseek-free-credit'),available:capabilities.deepseekFreeCredit,configured:capabilities.deepseekFreeCredit,model:clean(env.EKODI_DEEPSEEK_FREE_MODEL)||'deepseek-flash'});
   for(const id of capabilities.nodeProviders){const providerId=`node:${id}`;push({id:providerId,kind:'account-cli',costClass:providerCostClass(providerId),available:true,configured:true,model:'account-managed'});}
   push({id:'openai-api',kind:'official-api',costClass:providerCostClass('openai-api'),available:openai?.available===true,configured:directConfigured(env,'openai-api'),model:openai?.model||clean(env.OPENAI_MODEL)||'gpt-5.6-luna'});
   push({id:'anthropic-api',kind:'official-api',costClass:providerCostClass('anthropic-api'),available:anthropic?.available===true,configured:directConfigured(env,'anthropic-api'),model:anthropic?.model||clean(env.ANTHROPIC_MODEL)||'claude-sonnet-5'});
@@ -113,6 +120,18 @@ export async function invokeProviderWithMeta(env,providerId,prompt,task,role){
   }
   if(providerId==='groq-free'){
     const result=await createGroqFreeProvider(env).invoke({prompt});
+    return Object.freeze({text:result.text,quota:result.quota||null});
+  }
+  if(providerId==='cerebras-free'){
+    const result=await createCerebrasFreeProvider(env).invoke({prompt});
+    return Object.freeze({text:result.text,quota:result.quota||null});
+  }
+  if(providerId==='qwen-free'){
+    const result=await createQwenFreeProvider(env).invoke({prompt});
+    return Object.freeze({text:result.text,quota:result.quota||null});
+  }
+  if(providerId==='deepseek-free-credit'){
+    const result=await createDeepSeekFreeCreditProvider(env).invoke({prompt});
     return Object.freeze({text:result.text,quota:result.quota||null});
   }
   if(providerId==='openai-api'||providerId==='anthropic-api'){const result=await invokeDirectProvider(env,providerId,prompt,task,role);return Object.freeze({text:result.text,quota:null,usage:result.usage||null});}
