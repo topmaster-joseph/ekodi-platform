@@ -108,3 +108,16 @@ test('AI Ops full workspace uses monochrome state hierarchy', async () => {
   assert.match(css, /\.ekodi-provider-dot\.warn\{background:#fff!important;border:2px solid #111!important/);
   assert.match(css, /\.ai-chat-message\.user \.ai-chat-bubble\{border-left:4px solid #111!important/);
 });
+
+
+test('Chief AI command handoff is bounded and traceable when the control plane stalls', async () => {
+  const js = await read('admin-readable-command.js');
+  assert.match(js, /REQUEST_TIMEOUT_MS = 8000/);
+  assert.match(js, /AbortController/);
+  assert.match(js, /ORCHESTRATOR_TIMEOUT/);
+  assert.match(js, /Promise\.allSettled/);
+  assert.match(js, /x-idempotency-key/);
+  assert.match(js, /commandId/);
+  assert.match(js, /receipt_unknown/);
+  assert.match(js, /작업번호/);
+});

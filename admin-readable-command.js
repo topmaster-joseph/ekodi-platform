@@ -9,8 +9,15 @@
   const SPECIALIST_QUESTION_RE = /(어떤\s*ai|무슨\s*ai|누가\s*담당|담당\s*ai|전문\s*ai가\s*누구|council)/i;
   const ROLE_HANDOFF_RE = /(담당은[^\n]*Site AI|Site AI가\s*1차\s*책임|어느\s*사이트인지\s*함께\s*말씀|원하는\s*방향을\s*말씀|해당\s*Site AI\s*기준|담당\s*AI를\s*선택|전문\s*AI를\s*(사용|선택|이용))/i;
 
+  const REQUEST_TIMEOUT_MS = 8000;
+
   let pending = null;
   let lastUserInput = '';
+
+  function commandId() {
+    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+    return `cmd-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
 
   function token() {
     try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; }
@@ -50,40 +57,71 @@
   async function postAction(payload) {
     const currentToken = token();
     if (!currentToken) throw new Error('관리자 인증 세션이 없습니다.');
-    const response = await fetch(`${API}/api/control/ai/actions`, {
-      method:'POST',
-      cache:'no-store',
-      headers:{ authorization:`Bearer ${currentToken}`, 'content-type':'application/json' },
-      body:JSON.stringify(payload),
-    });
-    let data = {};
-    try { data = await response.json(); } catch {}
-    if (!response.ok) throw new Error(data.error || `AI 운영 요청 실패 (${response.status})`);
-    return data;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const response = await fetch(`${API}/api/control/ai/actions`, {
+        method:'POST',
+        cache:'no-store',
+        signal:controller.signal,
+        headers:{
+          authorization:`Bearer ${currentToken}`,
+          'content-type':'application/json',
+          'x-idempotency-key':`${payload.payload?.commandId || 'admin'}:${payload.actionType}`,
+        },
+        body:JSON.stringify(payload),
+      });
+      let data = {};
+      try { data = await response.json(); } catch {}
+      if (!response.ok) throw new Error(data.error || `AI 운영 요청 실패 (${response.status})`);
+      return data;
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        const timeoutError = new Error('오케스트레이터 응답 제한시간 초과');
+        timeoutError.code = 'ORCHESTRATOR_TIMEOUT';
+        throw timeoutError;
+      }
+      throw error;
+    } finally {
+      window.clearTimeout(timeout);
+    }
   }
 
   async function orchestrate(text) {
     const target = scope();
     const specialists = specialistsFor(text);
-    const health = await postAction({
-      agentId:'chief', actionType:'service.health_check', area:'health_checks', target,
-      rationale:`관리자 요청 자동 사전점검: ${String(text).slice(0, 700)}`,
-      payload:{ target, source:'admin-chief-orchestrator', specialists },
-      reversible:true, delegated:true, preflightVerified:true,
-    });
+    const requestId = commandId();
+    const common = { target, source:'admin-chief-orchestrator', specialists, commandId:requestId, requestedAt:new Date().toISOString() };
 
-    let queued = null;
-    try {
-      queued = await postAction({
+    // Persist the command and run the health preflight concurrently. The UI must
+    // never wait indefinitely for one control-plane dependency.
+    const [queuedResult, healthResult] = await Promise.allSettled([
+      postAction({
         agentId:'chief', actionType:'ui.change_request', area:'bounded_admin_change', target,
         rationale:`관리자 요청 실행 큐: ${String(text).slice(0, 900)}`,
-        payload:{ target, source:'admin-chief-orchestrator', specialists, request:String(text).slice(0, 1200) },
-        reversible:true, delegated:true, preflightVerified:Boolean(health?.ok),
-      });
-    } catch (error) {
-      queued = { ok:false, status:'queue_failed', error:error.message || '실행 큐 등록 실패' };
-    }
-    return { health, queued, specialists };
+        payload:{ ...common, request:String(text).slice(0, 1200) },
+        reversible:true, delegated:true, preflightVerified:false,
+      }),
+      postAction({
+        agentId:'chief', actionType:'service.health_check', area:'health_checks', target,
+        rationale:`관리자 요청 자동 사전점검: ${String(text).slice(0, 700)}`,
+        payload:common,
+        reversible:true, delegated:true, preflightVerified:true,
+      }),
+    ]);
+
+    const normalizeFailure = (result, fallback) => {
+      if (result.status === 'fulfilled') return result.value;
+      const timedOut = result.reason?.code === 'ORCHESTRATOR_TIMEOUT';
+      return {
+        ok:false,
+        status:timedOut ? 'receipt_unknown' : fallback,
+        error:result.reason?.message || fallback,
+      };
+    };
+    const queued = normalizeFailure(queuedResult, 'queue_failed');
+    const health = normalizeFailure(healthResult, 'preflight_failed');
+    return { health, queued, specialists, requestId };
   }
 
   function applyFlatLayout() {
@@ -105,13 +143,14 @@
     const internal = result?.specialists?.length ? result.specialists.join(' · ') : 'Platform · Release';
     const healthOk = Boolean(result?.health?.ok);
     const queueStatus = String(result?.queued?.status || '');
-    const queueReady = ['ready_for_executor','verified','executing'].includes(queueStatus);
+    const queueReady = ['ready_for_executor','verified','executing','awaiting_human','assist_only'].includes(queueStatus);
+    const receiptUnknown = queueStatus === 'receipt_unknown';
 
     if (layout) {
-      return `요청은 제가 맡았습니다. 전문 기능 선택을 관리자에게 넘기지 않습니다.\n\n내부 검토 경로: ${internal}\n자동 상태·영향 점검: ${healthOk ? '완료' : '확인 필요'}\n화면 조치: 오른쪽 보조 화면과 선택 상세를 기본 화면에서 제거하고, AI 운영대화를 메인 상단에 두며 사이트 상태는 그 아래 한 열로 단순화했습니다.\n실행 기록: ${queueReady ? '감사 가능한 실행 큐에 등록' : '실행 큐 상태 확인 필요'}\n\n앞으로 같은 종류의 요청은 제가 필요한 전문 기능을 내부에서 조정하고, 가능한 조치를 먼저 한 뒤 결과를 보고합니다.`;
+      return `요청은 제가 맡았습니다. 전문 기능 선택을 관리자에게 넘기지 않습니다.\n\n내부 검토 경로: ${internal}\n자동 상태·영향 점검: ${healthOk ? '완료' : '확인 필요'}\n화면 조치: 오른쪽 보조 화면과 선택 상세를 기본 화면에서 제거하고, AI 운영대화를 메인 상단에 두며 사이트 상태는 그 아래 한 열로 단순화했습니다.\n작업번호: ${result?.requestId || '발급 실패'}\n실행 기록: ${queueReady ? '감사 가능한 실행 큐에 등록' : receiptUnknown ? '응답 지연으로 접수 여부 확인 필요' : '실행 큐 상태 확인 필요'}\n\n앞으로 같은 종류의 요청은 제가 필요한 전문 기능을 내부에서 조정하고, 가능한 조치를 먼저 한 뒤 결과를 보고합니다.`;
     }
 
-    return `요청은 제가 맡았습니다. 어떤 전문 AI를 사용할지 관리자에게 다시 선택시키지 않습니다.\n\n내부 검토 경로: ${internal}\n자동 상태·영향 점검: ${healthOk ? '완료' : '확인 필요'}\n실행 기록: ${queueReady ? '감사 가능한 실행 큐에 등록' : '실행 큐 상태 확인 필요'}\n\n현재 자동 실행기가 실제로 처리한 범위만 완료로 보고하며, 실행기가 없는 코드 변경은 완료했다고 꾸미지 않습니다.`;
+    return `요청은 제가 맡았습니다. 어떤 전문 AI를 사용할지 관리자에게 다시 선택시키지 않습니다.\n\n내부 검토 경로: ${internal}\n자동 상태·영향 점검: ${healthOk ? '완료' : '확인 필요'}\n작업번호: ${result?.requestId || '발급 실패'}\n실행 기록: ${queueReady ? '감사 가능한 실행 큐에 등록' : receiptUnknown ? '응답 지연으로 접수 여부 확인 필요' : '실행 큐 상태 확인 필요'}\n\n현재 자동 실행기가 실제로 처리한 범위만 완료로 보고하며, 실행기가 없는 코드 변경은 완료했다고 꾸미지 않습니다.`;
   }
 
   function neutralizeRoleHandoff(messages) {
