@@ -112,4 +112,24 @@ function cardHtml(share,handle){
   const exchangeSection=exchangeEnabled?`
   <section class="exchange" id="exchange">
     <div class="exchange-head"><div><p class="section-label">CONTACT EXCHANGE</p><h2>서로 연락처 교환</h2></div><button id="contactPicker" class="secondary" type="button">내 폰에서 불러오기</button></div>
-    <p class="exchange-copy">${selectedLabel?`‘${escapeHtml(sel
+    <p class="exchange-copy">${selectedLabel?`‘${escapeHtml(selectedLabel)}’ 관계로`:''} 연락처를 교환합니다. 내 정보를 확인하고 필요한 내용만 수정한 뒤 보내세요.</p>
+    <form id="exchangeForm" data-handle="${escapeHtml(handle)}">
+      <input type="hidden" name="contextKey" value="${escapeHtml(selectedKey)}">
+      <div class="two"><label>이름<input name="name" autocomplete="name" maxlength="80" required></label><label>휴대전화<input name="phone" autocomplete="tel" inputmode="tel" maxlength="40"></label></div>
+      <div class="two"><label>이메일<input name="email" type="email" autocomplete="email" maxlength="254"></label><label>소속<input name="affiliation" autocomplete="organization" maxlength="160"></label></div>
+      <div class="two"><label>직함<input name="title" autocomplete="organization-title" maxlength="160"></label><label>대표 링크<input name="website" type="url" autocomplete="url" inputmode="url" maxlength="1000"></label></div>
+      <label class="trap" aria-hidden="true">확인용<input name="bot_field" tabindex="-1" autocomplete="off"></label>
+      <label class="consent"><input name="privacyConsent" type="checkbox" required><span>연락처 교환을 위해 위 정보를 명함 소유자에게 전달하는 데 동의합니다.</span></label>
+      <div class="exchange-actions"><button id="exchangeSubmit" class="primary" type="submit">확인 후 연락처 보내기</button><span id="exchangeStatus" role="status" aria-live="polite"></span></div>
+    </form>
+  </section>`:'';
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="${escapeHtml(description)}"><meta name="robots" content="index,follow,max-image-preview:large"><link rel="canonical" href="${canonical}"><meta property="og:type" content="profile"><meta property="og:title" content="${escapeHtml(displayName)}${selectedLabel?` · ${escapeHtml(selectedLabel)}`:''}"><meta property="og:description" content="${escapeHtml(description)}"><meta property="og:url" content="${escapeHtml(currentUrl)}"><title>${escapeHtml(displayName)}${selectedLabel?` · ${escapeHtml(selectedLabel)}`:''}</title><style>${baseStyles()}</style></head><body><header><span class="handle">@${escapeHtml(handle)}</span><span class="surface">EKODI PERSONAL IDENTITY</span></header><main><p class="eyebrow">SHARE CONTEXT${selectedLabel?` · ${escapeHtml(selectedLabel)}`:''}</p><h1 class="name">${escapeHtml(displayName)}</h1>${headline?`<p class="headline">${escapeHtml(headline)}</p>`:''}${bio?`<p class="bio">${escapeHtml(bio)}</p>`:''}${contexts.length>1?selector:''}${roleHtml(share.role)}<div class="actions"><a class="primary" href="${escapeHtml(vcardUrl)}">내 연락처 저장</a>${exchangeEnabled?'<a href="#exchange">서로 연락처 교환</a>':`<a href="/@${escapeHtml(handle)}">프로필 보기</a>`}<a class="qr-action" href="${escapeHtml(qrUrl)}">QR 보기</a><button id="shareCard" type="button">명함 공유</button></div>${contactActions?`<div class="contact-quick">${contactActions}</div>`:''}${linksHtml(share.links)}${exchangeSection}</main><footer>기본정보는 한 번만 저장하며, 현재 공유모드에서 허용한 정보만 표시됩니다.</footer><script src="/my/digital-card.js?v=20261001-contexts-1" defer></script></body></html>`;
+}
+function qrHtml(share,handle){
+  if(!share?.ready)return setupHtml(share,handle,'QR로 공유할 공개 정보가 아직 없습니다.');
+  const name=clean(share.display_name,120)||handle,contexts=Array.isArray(share.contexts)?share.contexts:[];
+  const selected=share.selected_context&&typeof share.selected_context==='object'?share.selected_context:null;
+  const key=clean(selected?.key,40),label=clean(selected?.label,80);
+  const target=key?`https://ekodi.kr/${handle}/card?context=${encodeURIComponent(key)}&utm_source=qr`:`https://ekodi.kr/${handle}/card?utm_source=qr`;
+  const selector=contextsHtml(contexts,handle,key,'qr');
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>${escapeHtml(name)} · QR 공유센터</title><style>${baseStyles()}.qr-shell{display:grid;justify-items:center;gap:16px;padding:22px;border:1px solid var(--line);border-radius:20px;background:#fff}.qr-code{width:min(76vw,360px);aspect-ratio:1;padding:14px;border:1px solid var(--line);border-radius:18px;background:#fff}.qr-code canvas,.qr-code img,.qr-code svg{display:block!important;width:100%!important;height:100%!important}.qr-title{text-align:center}.qr-title h2{margin:0;font-size:24px}.qr-title p{margin:5px 0 0;color:var(--muted)}.qr-target{width:100%;padding:11px;border-radius:11px;background:#f6f8f5;color:#51635
