@@ -13,6 +13,7 @@ test('AI control official providers execute only through the shared registry ada
   assert.doesNotMatch(source,/generativelanguage\.googleapis\.com/);
   assert.match(source,/createOpenRouterFreeProvider/);
   assert.match(source,/createGroqFreeProvider/);
+  assert.match(source,/huggingface-free-credit/);
 });
 
 test('managed enable flags affect official providers without removing the free provider pool',()=>{
@@ -29,6 +30,12 @@ test('managed enable flags affect official providers without removing the free p
     EKODI_PROVIDER_GEMINI_ENABLED:'true',
   });
   assert.equal(enabled.geminiFree,true);
+
+  const huggingface=providerCapabilities({
+    HF_TOKEN:'test-huggingface-token-value',
+    EKODI_PROVIDER_HF_FREE_ENABLED:'true',
+  });
+  assert.equal(huggingface.huggingfaceFreeCredit,true);
 });
 
 test('provider status uses registry model overrides and separates configured from enabled',()=>{
@@ -143,4 +150,44 @@ test('provider secret sync never promotes an unapproved latest Worker version on
   assert.doesNotMatch(source,/workers\/scripts\/.*deployments/);
   assert.doesNotMatch(source,/percentage:100/);
   assert.match(source,/providerMessage/);
+});
+
+
+test('Hugging Face is a standalone routed provider with quota metadata',async()=>{
+  const originalFetch=globalThis.fetch;
+  const calls=[];
+  globalThis.fetch=async(url,init={})=>{
+    calls.push({url:String(url),init});
+    return new Response(JSON.stringify({
+      choices:[{message:{content:'huggingface-adapter-ok'}}],
+      usage:{prompt_tokens:3,completion_tokens:2,total_tokens:5},
+    }),{status:200,headers:{'content-type':'application/json'}});
+  };
+  try{
+    const env={
+      ENVIRONMENT:'development',
+      HF_TOKEN:'test-huggingface-token-value',
+      EKODI_PROVIDER_HF_FREE_ENABLED:'true',
+      EKODI_HF_FREE_MODEL:'openai/gpt-oss-120b:cheapest',
+    };
+    const rows=providerStatus(env);
+    const huggingface=rows.find(item=>item.id==='huggingface-free-credit');
+    assert.equal(huggingface.configured,true);
+    assert.equal(huggingface.available,true);
+    assert.equal(huggingface.costClass,'free-preferred');
+
+    const output=await invokeProvider(
+      env,
+      'huggingface-free-credit',
+      'hugging face routing proof',
+      {id:'task-hf-1',title:'hugging face adapter proof',origin:{provider:'ekodi'}},
+      'reviewer',
+    );
+    assert.equal(output,'huggingface-adapter-ok');
+    assert.equal(calls.length,1);
+    assert.equal(calls[0].url,'https://router.huggingface.co/v1/chat/completions');
+    assert.equal(JSON.parse(calls[0].init.body).model,'openai/gpt-oss-120b:cheapest');
+  }finally{
+    globalThis.fetch=originalFetch;
+  }
 });
