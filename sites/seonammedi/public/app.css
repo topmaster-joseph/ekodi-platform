@@ -34,3 +34,14 @@
 .channel-item p{margin:0;color:#65707c}
 .channel-item>a{flex:0 0 auto;font-weight:700;text-decoration:none}
 @media (max-width:720px){.channel-item{align-items:flex-start;flex-direction:column}.channel-item>a{width:100%;padding-top:4px}}
+
+
+/* Footer: preserve the admin link while keeping the public statement as two deliberate lines. */
+footer>p{margin:0;min-width:0;line-height:1.65}
+footer>p strong{display:block;color:inherit}
+footer>a{flex:0 0 auto;white-space:nowrap;word-break:keep-all;writing-mode:horizontal-tb}
+@media(max-width:700px){
+  footer{padding:22px 20px 34px;align-items:flex-start;gap:14px}
+  footer>p{flex:1 1 auto;font-size:14px;line-height:1.6}
+  footer>a{min-width:2.5em;text-align:right;line-height:1.6}
+}
