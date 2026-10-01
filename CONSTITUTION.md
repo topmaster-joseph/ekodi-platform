@@ -1,8 +1,16 @@
-# EKODI Platform Constitution v1.26.1
+# EKODI Platform Constitution v1.27.0
 
 Effective: 2026-09-29
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
+
+## Language Control Visibility — LANG-UI-001
+- On every current and future **user-facing public/workspace surface**, the language control is hidden when the current service has only one published locale. A language selector becomes visible only when **two or more locales are actually published and selectable** for that service.
+- The source locale (`ko-KR`) remains the mandatory fallback, but a single Korean option, language label, icon, placeholder, or reserved empty header gap must never be rendered merely to indicate that Korean is active.
+- The language control is **hidden before first paint and while readiness is unresolved**. Metadata/API failure is fail-closed for UI visibility: keep the control hidden and safely use the source locale.
+- Unpublished, queued, translating, validating, stale, blocked, or release-ready locales are not selectable and must not cause the control to appear.
+- This rule is inherited by all subordinate user routes and independent service shells. Service-local overrides that expose a one-option language selector are forbidden. Admin language-management screens are outside this user-surface rule.
+- CI, shell-contract validation, staging checks, and production verification must reject regressions of this rule.
 
 ## 0. Supreme Ecosystem Attributes Constitution
 - The following **21 Supreme Attributes** are the highest non-optional quality constraints of the EKODI ecosystem and bind Generation 10 and every future generation: **Independence, Modularity, Scalability, Standardization, Consistency, Collaboration, Agility, Creativity, Security, Evolvability, Adaptability, Replaceability, Reversibility, Resilience, Observability, Verifiability, Interoperability, Data Sovereignty, Autonomous Operations, Economic Sustainability, Simplicity**.
