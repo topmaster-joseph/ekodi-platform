@@ -41,6 +41,7 @@ test('regional pages declare separate chrome subject and operating boundary',asy
   assert.match(publicHtml,/<link rel="canonical" href="https:\/\/ekodi\.kr\/cheonggye">/);
   assert.match(publicHtml,/<meta property="og:url" content="https:\/\/ekodi\.kr\/cheonggye">/);
   assert.match(publicHtml,/href="\/cgma"/);
+  assert.match(publicHtml,/href="\/cheonggyepass"/);
   assert.doesNotMatch(publicHtml,/href="\/my\//);
   assert.doesNotMatch(publicHtml,/내 에코디/);
   assert.doesNotMatch(adminHtml,/rel="canonical"/);
@@ -102,6 +103,14 @@ test('Cheonggye public experience is local-first, readable, communicative and pe
 
 test('Cheonggye public routes are injected as public shell surfaces',async()=>{
   const router=await fs.readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
+  assert.match(router,/regionalCommerceProgramFromPath\(url\.pathname\)/);
   assert.match(router,/const surface=localRegionRoute\.admin\?'admin':'public'/);
   assert.match(router,/contextKind:localRegionRoute\.admin\?'workspace':'public'/);
+});
+
+test('CGMA public home receives reciprocal links to Cheonggye and Cheonggye Pass',async()=>{
+  const router=await fs.readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
+  assert.match(router,/data-ekodi-cheonggye-links=\\"v1\\"/);
+  assert.match(router,/href=\\"\/cheonggye\\"/);
+  assert.match(router,/href=\\"\/cheonggyepass\\"/);
 });
