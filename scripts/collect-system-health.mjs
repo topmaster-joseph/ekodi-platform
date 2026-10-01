@@ -3,8 +3,16 @@ import { writeFile } from 'node:fs/promises';
 const outputPath = process.argv[2] || '/tmp/ekodi-system-health.sql';
 const apiToken = String(process.env.CLOUDFLARE_API_TOKEN || '').trim();
 const accountId = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
-const serviceName = String(process.env.EKODI_SITE_WORKER_SERVICE || 'shy-thunder-39a4').trim();
-const canonicalHost = String(process.env.EKODI_CANONICAL_HOST || 'admin.ekodi.kr').trim();
+const canonicalHost = String(process.env.EKODI_CANONICAL_HOST || 'ekodi.kr').trim();
+const canonicalZoneName = (() => {
+  const raw = canonicalHost || 'ekodi.kr';
+  try {
+    const url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    return url.hostname.toLowerCase();
+  } catch {
+    return raw.replace(/^https?:\/\//i, '').split('/')[0].toLowerCase() || 'ekodi.kr';
+  }
+})();
 const cfApi = 'https://api.cloudflare.com/client/v4';
 const now = new Date();
 
@@ -70,10 +78,10 @@ async function cloudflare(path, init = {}) {
 }
 
 async function resolveZoneId() {
-  const payload = await cloudflare(`/accounts/${encodeURIComponent(accountId)}/workers/domains?service=${encodeURIComponent(serviceName)}`);
-  const item = (payload.result || []).find(entry => entry.hostname === canonicalHost && entry.service === serviceName);
-  if (!item?.zone_id) throw new Error(`Cloudflare zone ID를 ${canonicalHost} 연결정보에서 찾지 못했습니다.`);
-  return item.zone_id;
+  const payload = await cloudflare(`/zones?name=${encodeURIComponent(canonicalZoneName)}&status=active&account.id=${encodeURIComponent(accountId)}&per_page=20`);
+  const item = (payload.result || []).find(entry => String(entry?.name || '').toLowerCase() === canonicalZoneName);
+  if (!item?.id) throw new Error(`Cloudflare zone ID를 ${canonicalZoneName} Zone 목록에서 찾지 못했습니다.`);
+  return String(item.id);
 }
 
 async function queryDailyUsage(zoneId) {
