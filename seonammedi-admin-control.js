@@ -365,7 +365,13 @@ async function publicChannelPreview(env,id){
     preview.videoId=pageVideoId;
     return json({ok:true,item,preview});
   }
-  const channelId=(html.match(/"(?:channelId|externalId)":"(UC[A-Za-z0-9_-]{20,})"/)||html.match(/youtube\.com\/channel\/(UC[A-Za-z0-9_-]{20,})/))?.[1]||'';
+  const channelId=(
+    html.match(/<meta[^>]+itemprop=["']channelId["'][^>]+content=["'](UC[A-Za-z0-9_-]{20,})["']/i)||
+    html.match(/<meta[^>]+content=["'](UC[A-Za-z0-9_-]{20,})["'][^>]+itemprop=["']channelId["']/i)||
+    html.match(/"(?:channelId|externalId|browseId)":"(UC[A-Za-z0-9_-]{20,})"/)||
+    html.match(/feeds\/videos\.xml\?channel_id=(UC[A-Za-z0-9_-]{20,})/i)||
+    html.match(/youtube\.com\/channel\/(UC[A-Za-z0-9_-]{20,})/i)
+  )?.[1]||'';
   if(channelId){
     let feed=null;
     try{feed=await fetch('https://www.youtube.com/feeds/videos.xml?channel_id='+encodeURIComponent(channelId),{headers:{'user-agent':'EKODIChannelPreview/1.0'},signal:AbortSignal.timeout(5000)})}catch{}
