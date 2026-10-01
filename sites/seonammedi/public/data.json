@@ -423,6 +423,7 @@
       }
     ],
     "participantSort": "ko-KR",
-    "publicOnly": true
+    "publicOnly": true,
+    "schemaVersion": 2
   }
 }
