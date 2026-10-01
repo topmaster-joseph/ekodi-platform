@@ -30,6 +30,7 @@ import { handleStorageGateway } from './storage-gateway.js';
 import { handleExternalAiModuleGateway } from './external-ai-module-gateway.js';
 import { runAiProviderHealthSchedule } from './ai-provider-control.js';
 import { handleEkodiMcpGateway, handleEkodiMcpMetadata } from './ekodi-mcp-gateway.js';
+import { handleOrchestratorReleaseReceipt } from './ekodi-orchestrator-task-adapter.js';
 import { handleDevotionalControl } from './devotional-control.js';
 import { handleLearningControl } from './learning-control.js';
 import { handleLocalCommerceControl } from './local-commerce-control.js';
@@ -169,6 +170,11 @@ export default {
     if (path === '/mcp') {
       try { return applyApiSecurityHeaders(await handleEkodiMcpGateway(request, env)); }
       catch (error) { console.error('EKODI MCP gateway error', error); return errorResponse('EKODI MCP 처리 중 오류가 발생했습니다.', 'MCP_GATEWAY_ERROR'); }
+    }
+
+    if (path === '/api/orchestrator/release-receipt') {
+      try { return applyApiSecurityHeaders(await handleOrchestratorReleaseReceipt(request, env)); }
+      catch (error) { console.error('EKODI Orchestrator release receipt error', error); return errorResponse('EKODI Orchestrator 릴리스 영수증 확인 중 오류가 발생했습니다.', 'ORCHESTRATOR_RELEASE_RECEIPT_ERROR'); }
     }
 
     if (path === '/api/telemetry/visit') {
