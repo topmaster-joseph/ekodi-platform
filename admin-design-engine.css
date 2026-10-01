@@ -333,3 +333,122 @@ body.admin-compact.ekodi-admin-design-engine .admin-detail-items{
   body.admin-compact.ekodi-admin-design-engine .admin-detail-more{min-height:40px!important;padding-block:6px!important}
   body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(p,li,dd){line-height:1.34!important}
 }
+
+
+/* ADMIN-DENSITY-007 · compact information architecture
+ * Desktop: reduce empty canvas and vertical travel.
+ * Mobile: preserve readable type and touch targets while keeping cards/lists visually tight.
+ */
+body.admin-compact.ekodi-admin-design-engine .content [data-panel]{
+  --ekodi-density-gap:8px;
+  --ekodi-density-pad:10px;
+  --ekodi-density-radius:9px;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(
+  .section,.architecture,.panel,.card,.summary-card,.status-card,.metric-card,
+  [class$="-card"],[class$="-panel"],[class$="-block"],[class$="-section"]
+){
+  margin-top:8px!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(
+  .section,.architecture,.panel,.card,.summary-card,.status-card,.metric-card,
+  [class$="-card"],[class$="-panel"],[class$="-block"]
+){
+  padding:10px!important;
+  border-radius:9px!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(
+  .grid,.cards,.metrics,.list,.rows,.items,
+  [class$="-grid"],[class$="-list"],[class$="-rows"],[class$="-items"]
+){
+  gap:8px!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(
+  .section-head,.panel-head,.card-head,.toolbar,.actions,
+  [class$="-head"],[class$="-toolbar"],[class$="-actions"]
+){
+  gap:8px!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(
+  .section-head,.panel-head,.card-head,
+  [class$="-head"]
+){
+  margin-bottom:8px!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(
+  table th,table td
+){
+  padding-block:7px!important;
+  padding-inline:9px!important;
+  line-height:1.3!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(
+  input,select,textarea
+){
+  min-height:34px!important;
+  padding:6px 9px!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] textarea{
+  min-height:76px!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(
+  button,.button,.btn,[role="button"],summary
+){
+  min-height:34px!important;
+  padding-block:6px!important;
+  padding-inline:10px!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(
+  .row,.item,.list-item,.record-row,.status-row,
+  [class$="-row"],[class$="-item"]
+){
+  min-height:0!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(
+  .row,.item,.list-item,.record-row,.status-row,
+  [class$="-row"],[class$="-item"]
+):not(button):not(a){
+  padding-block:7px!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(p){
+  margin-block:4px!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(h2,h3,h4){
+  margin-top:0!important;
+  margin-bottom:5px!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] details{
+  margin-block:6px!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] details>summary{
+  min-height:36px!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(.kicker,.eyebrow,[class$="-eyebrow"]){
+  margin-bottom:2px!important;
+}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(.badge,[class$="-badge"],[class$="-chip"]){
+  padding:3px 6px!important;
+}
+@media(max-width:760px){
+  body.admin-compact.ekodi-admin-design-engine .content [data-panel]{
+    --ekodi-density-gap:6px;
+    --ekodi-density-pad:9px;
+  }
+  body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(
+    .section,.architecture,.panel,.card,.summary-card,.status-card,.metric-card,
+    [class$="-card"],[class$="-panel"],[class$="-block"]
+  ){padding:9px!important}
+  body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(
+    .grid,.cards,.metrics,.list,.rows,.items,
+    [class$="-grid"],[class$="-list"],[class$="-rows"],[class$="-items"]
+  ){gap:6px!important}
+  body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(
+    button,.button,.btn,[role="button"],summary
+  ){min-height:42px!important;padding-block:8px!important}
+  body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(
+    input,select
+  ){min-height:42px!important}
+  body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(
+    table th,table td
+  ){padding-block:8px!important;padding-inline:8px!important}
+}
