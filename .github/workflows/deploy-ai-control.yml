@@ -7,6 +7,7 @@ on:
     paths:
       - 'ai-control/**'
       - 'ai-control-*.js'
+      - 'ai-provider-control.js'
       - 'ekodi-site-improvement-scheduler.js'
       - 'ekodi-site-improvement-oidc-broker.js'
       - '.github/workflows/site-improvement-cloud.yml'
@@ -86,6 +87,7 @@ on:
     paths:
       - 'ai-control/**'
       - 'ai-control-*.js'
+      - 'ai-provider-control.js'
       - 'ekodi-site-improvement-scheduler.js'
       - 'ekodi-site-improvement-oidc-broker.js'
       - '.github/workflows/site-improvement-cloud.yml'

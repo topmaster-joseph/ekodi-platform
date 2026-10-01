@@ -137,12 +137,10 @@ test('orchestrator Claude invocation executes through the shared Anthropic adapt
 });
 
 
-test('provider secret sync recovers from Cloudflare versioned-worker HTTP 400 without exposing secret values',()=>{
+test('provider secret sync never promotes an unapproved latest Worker version on HTTP 400',()=>{
   const source=read('ai-provider-control.js');
-  assert.match(source,/\/workers\/workers\/\$\{encodeURIComponent\(scriptName\)\}\/versions\/latest/);
-  assert.match(source,/\/workers\/scripts\/\$\{encodeURIComponent\(scriptName\)\}\/deployments/);
-  assert.match(source,/application\/merge-patch\+json/);
-  assert.match(source,/percentage:100/);
-  assert.match(source,/status===400\|\|cfCode===10215/);
+  assert.doesNotMatch(source,/workers\/workers\/.*versions\/latest/);
+  assert.doesNotMatch(source,/workers\/scripts\/.*deployments/);
+  assert.doesNotMatch(source,/percentage:100/);
   assert.match(source,/providerMessage/);
 });

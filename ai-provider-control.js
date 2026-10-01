@@ -31,22 +31,10 @@ function runtimeScriptNames(env={}){const configured=split(env.AI_PROVIDER_RUNTI
 function runtimeManagerToken(env={}){return clean(env.CLOUDFLARE_SECRET_MANAGER_TOKEN||env.CF_API_TOKEN,8192)}
 function runtimeSyncReady(env={}){return Boolean(runtimeManagerToken(env)&&clean(env.CLOUDFLARE_ACCOUNT_ID,240))}
 function secretUrl(env,scriptName){return `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(clean(env.CLOUDFLARE_ACCOUNT_ID,240))}/workers/scripts/${encodeURIComponent(scriptName)}/secrets`}
-function versionLatestUrl(env,scriptName){return `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(clean(env.CLOUDFLARE_ACCOUNT_ID,240))}/workers/workers/${encodeURIComponent(scriptName)}/versions/latest`}
-function deploymentsUrl(env,scriptName){return `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(clean(env.CLOUDFLARE_ACCOUNT_ID,240))}/workers/scripts/${encodeURIComponent(scriptName)}/deployments`}
 const RUNTIME_SECRET_ATTEMPTS=3;
 function runtimeSecretDelay(attempt){return new Promise(resolve=>setTimeout(resolve,400*attempt))}
 function runtimeSecretRetryable(status,cfCode){return status===429||status>=500||cfCode===10013}
 function runtimeSecretFailure(scriptName,status,cfCode,updated,cfMessage=''){const error=new Error(`runtime_secret_${scriptName}_${status}`);error.scriptName=scriptName;error.status=status;error.cfCode=cfCode;error.cfMessage=clean(cfMessage,240);error.updatedTargets=[...updated];return error}
-async function patchAndDeployRuntimeSecret(env,scriptName,name,value,updated){
-  const auth={authorization:`Bearer ${runtimeManagerToken(env)}`};
-  const patched=await fetch(versionLatestUrl(env,scriptName),{method:'PATCH',headers:{...auth,'content-type':'application/merge-patch+json'},body:JSON.stringify({env:{[name]:{type:'secret_text',text:String(value)}},annotations:{'workers/message':`EKODI provider secret update: ${name}`,'workers/tag':'ekodi-provider-secret'}})});
-  const patchData=await patched.json().catch(()=>({}));
-  const versionId=clean(patchData?.result?.id,80);
-  if(!patched.ok||patchData?.success===false||!versionId){throw runtimeSecretFailure(scriptName,patched.status,Number(patchData?.errors?.[0]?.code)||0,updated,patchData?.errors?.[0]?.message||'version_secret_patch_failed')}
-  const deployed=await fetch(deploymentsUrl(env,scriptName),{method:'POST',headers:{...auth,'content-type':'application/json'},body:JSON.stringify({strategy:'percentage',versions:[{version_id:versionId,percentage:100}],annotations:{'workers/message':`EKODI provider secret activation: ${name}`,'workers/triggered_by':'ekodi-provider-control'}})});
-  const deployData=await deployed.json().catch(()=>({}));
-  if(!deployed.ok||deployData?.success===false){throw runtimeSecretFailure(scriptName,deployed.status,Number(deployData?.errors?.[0]?.code)||0,updated,deployData?.errors?.[0]?.message||'version_secret_deploy_failed')}
-}
 async function putRuntimeSecret(env,name,value){
   if(!runtimeSyncReady(env))throw new Error('provider_runtime_sync_unavailable');
   const updated=[];
@@ -59,14 +47,7 @@ async function putRuntimeSecret(env,name,value){
         const data=await response.json().catch(()=>({}));
         if(response.ok&&data?.success!==false){failure=null;break}
         status=response.status;cfCode=Number(data?.errors?.[0]?.code)||0;cfMessage=clean(data?.errors?.[0]?.message,240);
-        if(status===400||cfCode===10215){
-          await patchAndDeployRuntimeSecret(env,scriptName,name,value,updated);
-          failure=null;break;
-        }
-      }catch(error){
-        if(error?.scriptName)throw error;
-        status=0;
-      }
+      }catch{status=0}
       failure=runtimeSecretFailure(scriptName,status,cfCode,updated,cfMessage);
       if(status&&!runtimeSecretRetryable(status,cfCode))break;
       if(attempt<RUNTIME_SECRET_ATTEMPTS)await runtimeSecretDelay(attempt);
