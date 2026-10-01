@@ -35,6 +35,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Fetch PR base branch for contract tests
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}"
+
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
