@@ -305,6 +305,19 @@ test('seonammedi monitor D1 insert keeps column and value arity aligned',async()
   assert.match(monitor,/INSERT INTO seonammedi_monitor_items \(fingerprint,title,url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,resolved_url,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text\) VALUES \(\?,\?,\?,\?,\?,\?,\?,'source_only',\?,\?,\?,\?,\?,\?,\?,\?,\?,\?\)/);
 });
 
+test('seonammedi dynamic health separates live response from previous run history',async()=>{
+  const [adminHtml,adminJs]=await Promise.all([
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('admin/admin.js',root),'utf8')
+  ]);
+  assert.match(adminHtml,/동적 현재 상태/);
+  assert.match(adminHtml,/과거 오류 기록이 현재 API 상태를 덮어쓰지 않습니다/);
+  assert.match(adminJs,/runHistoryState/);
+  assert.match(adminJs,/자동수집 API 현재 응답/);
+  assert.match(adminJs,/최근 자동점검 실행/);
+  assert.match(adminJs,/liveDynamicRows=dynamicRows\.filter\(x=>x\.label!=='최근 자동점검 실행'\)/);
+});
+
 test('seonammedi manual site health run is admin-only',async()=>{
   const [control,adminHtml,adminJs]=await Promise.all([
     readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
