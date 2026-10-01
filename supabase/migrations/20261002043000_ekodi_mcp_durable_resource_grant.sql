@@ -9,7 +9,9 @@ create table if not exists public.ekodi_mcp_oauth_grants (
     check (resource = 'https://ekodi.kr/mcp')
 );
 
-revoke all on table public.ekodi_mcp_oauth_grants from public, anon, authenticated;
+alter table public.ekodi_mcp_oauth_grants enable row level security;
+
+revoke all on table public.ekodi_mcp_oauth_grants from public, anon, authenticated, service_role;
 grant select, insert, update, delete on table public.ekodi_mcp_oauth_grants to supabase_auth_admin;
 
 create or replace function public.capture_ekodi_mcp_oauth_consent()
