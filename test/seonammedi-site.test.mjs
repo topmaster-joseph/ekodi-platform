@@ -368,3 +368,17 @@ test('seonammedi monitor D1 insert keeps column and value arity aligned',async()
   assert.match(monitor,/INSERT INTO seonammedi_monitor_items \(fingerprint,title,url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,resolved_url,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text\) VALUES \(\?,\?,\?,\?,\?,\?,\?,'source_only',\?,\?,\?,\?,\?,\?,\?,\?,\?,\?\)/);
 });
 
+
+
+test('seonammedi notices are an authenticated public board with image and sharing support',async()=>{
+  const [control,html,app,css,auth,migration,apiConfig]=await Promise.all([
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('app.css',root),'utf8'),readFile(new URL('../auth-site/auth.js',import.meta.url),'utf8'),readFile(new URL('../migrations/0122_seonammedi_public_notice_board.sql',import.meta.url),'utf8'),readFile(new URL('../wrangler.api.toml',import.meta.url),'utf8')
+  ]);
+  assert.match(control,/createPublicNotice/);assert.match(control,/principalFromSupabaseRequest\(request\)/);
+  assert.match(control,/image_too_large/);assert.match(control,/LIVE_RECORDINGS_BUCKET\.put/);assert.match(control,/noticeImageMatch/);
+  assert.match(html,/id="noticeComposeForm"/);assert.match(html,/id="featuredNotice"/);assert.match(html,/사진과 글을 게시/);
+  assert.match(app,/navigator\.share/);assert.match(app,/noticePermalink/);assert.match(app,/FormData\(noticeCompose\)/);assert.match(app,/NOTICE_SESSION_KEY/);
+  assert.match(app,/const recent=\[\.\.\.rows\]\.sort/);assert.match(css,/\.featured-notice/);assert.match(css,/\.notice-detail/);
+  assert.match(auth,/target\.pathname==='\/seonammedi'/);assert.match(migration,/image_key/);assert.match(apiConfig,/binding = "LIVE_RECORDINGS_BUCKET"/);
+});
