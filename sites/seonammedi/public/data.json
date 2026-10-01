@@ -356,7 +356,7 @@
         "key": "bidae",
         "label": "비대위",
         "status": "active",
-        "statusLabel": "운영 중",
+        "statusLabel": "",
         "levels": [
           {
             "name": "대표자회의",
@@ -369,7 +369,7 @@
           {
             "name": "집행위원회",
             "members": [
-              "여인두 (기획위원회 겸임)"
+              "여인두"
             ]
           }
         ],
@@ -392,7 +392,7 @@
           },
           {
             "name": "기획위원회",
-            "lead": "여인두 (집행위원회 겸임)"
+            "lead": "여인두"
           }
         ],
         "participants": [],
@@ -403,7 +403,7 @@
         "key": "mokpo",
         "label": "목포대",
         "status": "active",
-        "statusLabel": "운영 중",
+        "statusLabel": "",
         "levels": [],
         "committees": [],
         "participants": [],
@@ -425,7 +425,7 @@
     "participantSort": "ko-KR",
     "publicOnly": true,
     "schemaVersion": 2,
-    "schemaUpdatedAt": "2026-10-01T13:40:00+09:00",
+    "schemaUpdatedAt": "2026-10-02T06:18:00+09:00",
     "levels": [
       {
         "name": "대표자회의",
@@ -438,7 +438,7 @@
       {
         "name": "집행위원회",
         "members": [
-          "여인두 (기획위원회 겸임)"
+          "여인두"
         ]
       }
     ],
@@ -461,7 +461,7 @@
       },
       {
         "name": "기획위원회",
-        "lead": "여인두 (집행위원회 겸임)"
+        "lead": "여인두"
       }
     ],
     "participants": []
