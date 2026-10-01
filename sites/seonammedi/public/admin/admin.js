@@ -171,8 +171,8 @@ $('statusForm')?.addEventListener('submit',async event=>{
 });
 
 const ORG_GROUPS=[
-  {key:'bidae',label:'비대위',status:'active',statusLabel:'운영 중'},
-  {key:'mokpo',label:'목포대',status:'active',statusLabel:'운영 중'},
+  {key:'bidae',label:'비대위',status:'active',statusLabel:''},
+  {key:'mokpo',label:'목포대',status:'active',statusLabel:''},
   {key:'minhak',label:'민학비대위',status:'forming',statusLabel:'구성 논의 중 · 2026.09.30 첫 만남'}
 ];
 const ORG_LEGACY_KEYS={bidae:'integrated',minhak:'civic'};
@@ -187,7 +187,7 @@ function orgGroupFromForm(form,key,label){
   const level=(name,suffix)=>({name,members:lines(form.elements[key+'_'+suffix].value)});
   const committees=lines(form.elements[key+'_committees'].value).map(row=>{const [name,...rest]=row.split('|');return{name:(name||'').trim(),lead:rest.join('|').trim()}}).filter(x=>x.name);
   const participants=lines(form.elements[key+'_participants'].value).map(row=>{const [name,representative,url]=row.split('|').map(x=>(x||'').trim());return{name,representative,url,visible:true}}).filter(x=>x.name);
-  const meta=ORG_GROUPS.find(item=>item.key===key)||{};const statusLabel=form.elements[key+'_status']?.value.trim()||meta.statusLabel||'';
+  const meta=ORG_GROUPS.find(item=>item.key===key)||{};const statusLabel=meta.statusLabel||'';
   return{key,label,status:meta.status||'active',statusLabel,levels:[level('대표자회의','representatives'),level('상임공동대표단','standing'),level('집행위원회','executive')],committees,participants,participantSort:'ko-KR',publicOnly:true};
 }
 function orgLinesToData(form){
@@ -198,7 +198,6 @@ function orgLinesToData(form){
 function fillOrgGroup(form,group){
   const key=group.key,levels=group.levels||[];
   const members=name=>(levels.find(x=>x.name===name)?.members||[]).join('\n');
-  if(form.elements[key+'_status'])form.elements[key+'_status'].value=group.statusLabel||ORG_GROUPS.find(item=>item.key===key)?.statusLabel||'';
   form.elements[key+'_representatives'].value=members('대표자회의');
   form.elements[key+'_standing'].value=members('상임공동대표단');
   form.elements[key+'_executive'].value=members('집행위원회');
@@ -225,7 +224,18 @@ async function loadOrganization(){
   text($('organizationMessage'),'');
 }
 $('organizationForm')?.addEventListener('submit',async event=>{
-  event.preventDefault();try{text($('organizationMessage'),'저장 중…');await api('/api/seonammedi/admin/pages/organization',{method:'PUT',body:JSON.stringify({data:orgLinesToData(event.currentTarget),visible:true})});text($('organizationMessage'),'비대위·목포대·민학비대위 조직 정보를 저장했습니다.')}catch(error){text($('organizationMessage'),error.message)}
+  event.preventDefault();const form=event.currentTarget;const activeKey=form.elements.orgKey.value||'bidae';
+  try{
+    text($('organizationMessage'),'저장 중…');
+    const [managed,base]=await Promise.all([api('/api/seonammedi/admin/pages/organization'),baseData()]);
+    const source=managed.item?.data&&Object.keys(managed.item.data).length?managed.item.data:(base.organization||{});
+    const groups=normalizeOrgGroups(source).map(group=>group.key===activeKey?orgGroupFromForm(form,group.key,group.label):group);
+    const bidae=groups.find(group=>group.key==='bidae')||groups[0];
+    const data={groups,levels:bidae.levels,committees:bidae.committees,participants:bidae.participants,participantSort:'ko-KR',publicOnly:true,schemaVersion:2};
+    await api('/api/seonammedi/admin/pages/organization',{method:'PUT',body:JSON.stringify({data,visible:true})});
+    state.baseData=null;
+    text($('organizationMessage'),(ORG_GROUPS.find(item=>item.key===activeKey)?.label||'현재 조직')+' 정보를 저장했습니다.');
+  }catch(error){text($('organizationMessage'),error.message)}
 });
 
 const moneyText=value=>new Intl.NumberFormat('ko-KR').format(Number(value||0))+'원';
