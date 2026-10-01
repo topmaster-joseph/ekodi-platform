@@ -175,4 +175,69 @@ function rpcErrorMessage(raw){
 }
 async function submitExchange(request,env,handle){
   if(request.method!=='POST')return json({ok:false,error:'허용되지 않은 요청입니다.'},405,{allow:'POST'});
-  if(!exchangeOriginAllowed(request,env))return json({ok:false,error:'허용되지 않은 요
+  if(!exchangeOriginAllowed(request,env))return json({ok:false,error:'허용되지 않은 요청 출처입니다.'},403);
+  const declared=Number(request.headers.get('content-length')||0);
+  if(Number.isFinite(declared)&&declared>MAX_BODY_BYTES)return json({ok:false,error:'요청 내용이 너무 깁니다.'},413);
+  const limited=await exchangeRateLimit(request,env,handle);
+  if(!limited.available)return json({ok:false,error:'보호 장치가 잠시 응답하지 않습니다.'},503,{'retry-after':'30'});
+  if(!limited.allowed)return json({ok:false,error:'연락처 교환 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.'},429,{'retry-after':'60'});
+  let raw='';try{raw=await request.text()}catch{return json({ok:false,error:'요청을 읽지 못했습니다.'},400)}
+  if(encoder.encode(raw).byteLength>MAX_BODY_BYTES)return json({ok:false,error:'요청 내용이 너무 깁니다.'},413);
+  let body={};try{body=JSON.parse(raw||'{}')}catch{return json({ok:false,error:'요청 형식을 확인해 주세요.'},400)}
+  if(clean(body?.bot_field,120))return json({ok:true,message:'연락처가 전달되었습니다.'});
+  if(body?.privacyConsent!==true)return json({ok:false,error:'개인정보 전달 동의가 필요합니다.'},400);
+  const name=clean(body?.name,80),phone=clean(body?.phone,40),email=clean(body?.email,254).toLowerCase(),contextKey=clean(body?.contextKey,40).toLowerCase();
+  if(!name)return json({ok:false,error:'이름을 확인해 주세요.'},400);
+  if(!phone&&!email)return json({ok:false,error:'휴대전화 또는 이메일 중 하나는 필요합니다.'},400);
+  if(!CONTEXT_RE.test(contextKey))return json({ok:false,error:'공유모드를 다시 선택해 주세요.'},400);
+  const cfg=dataConfig(env);if(!cfg.enabled)return json({ok:false,error:'연락처 저장 기능을 사용할 수 없습니다.'},503);
+  const payload={
+    p_handle:handle,p_name:name,p_phone:phone,p_email:email,
+    p_affiliation:clean(body?.affiliation,160),p_title:clean(body?.title,160),
+    p_website:clean(body?.website,1000),p_privacy_consent:true,
+    p_source_channel:body?.source==='qr'?'qr':'card',p_context_key:contextKey,
+  };
+  const response=await fetch(`${cfg.url}/rest/v1/rpc/submit_person_contact_exchange_v2`,{
+    method:'POST',headers:{apikey:cfg.key,'content-type':'application/json','cache-control':'no-store'},body:JSON.stringify(payload),
+  });
+  const data=await response.json().catch(()=>null);
+  if(!response.ok){
+    const rpcRaw=String(data?.message||data?.error||'');
+    const status=rpcRaw.toLowerCase().includes('contact_exchange_rate_limited')?429:400;
+    return json({ok:false,error:rpcErrorMessage(rpcRaw)},status,status===429?{'retry-after':'60'}:{});
+  }
+  return json({ok:true,message:'연락처가 명함 소유자에게 전달되었습니다.',context_label:data?.context_label||''});
+}
+export async function routePersonDigitalCard(request,env={}){
+  const url=new URL(request.url);
+  let match=url.pathname.match(EXCHANGE_RE);
+  if(match)return submitExchange(request,env,match[1]);
+
+  match=url.pathname.match(QR_RE);
+  if(match){
+    if(!['GET','HEAD'].includes(request.method))return new Response('Method Not Allowed',{status:405,headers:{allow:'GET, HEAD'}});
+    const context=contextFromUrl(url),share=await shareForHandle(env,match[1],context).catch(()=>null);
+    if(!share){
+      const html=setupHtml(null,match[1],'공개된 개인 프로필을 찾을 수 없습니다.');
+      return new Response(request.method==='HEAD'?null:html,{status:404,headers:publicCardHeaders({found:false,ready:false,qr:true})});
+    }
+    const html=qrHtml(share,match[1]);
+    return new Response(request.method==='HEAD'?null:html,{status:200,headers:{...publicCardHeaders({found:true,ready:share.ready===true,qr:true}),'x-ekodi-surface-context':'person-digital-card-qr-center'}});
+  }
+
+  match=url.pathname.match(VCARD_RE);
+  if(match){
+    if(!['GET','HEAD'].includes(request.method))return new Response('Method Not Allowed',{status:405,headers:{allow:'GET, HEAD'}});
+    const context=contextFromUrl(url),share=await shareForHandle(env,match[1],context).catch(()=>null);
+    if(!share||share.ready!==true||!share.selected_context){
+      return new Response(request.method==='HEAD'?null:'공유모드를 선택해 주세요.',{status:409,headers:{...commonHeaders('text/plain; charset=utf-8'),'cache-control':'no-store','x-robots-tag':'noindex, nofollow'}});
+    }
+    return new Response(request.method==='HEAD'?null:vcard(share,match[1]),{headers:{...commonHeaders('text/vcard; charset=utf-8'),'cache-control':'public, max-age=45','content-disposition':`attachment; filename="${match[1]}.vcf"`,'x-robots-tag':'noindex, nofollow'}});
+  }
+
+  match=url.pathname.match(CARD_RE);
+  if(match){
+    if(!['GET','HEAD'].includes(request.method))return new Response('Method Not Allowed',{status:405,headers:{allow:'GET, HEAD'}});
+    const context=contextFromUrl(url),share=await shareForHandle(env,match[1],context).catch(()=>null);
+    if(!share){
+ 
