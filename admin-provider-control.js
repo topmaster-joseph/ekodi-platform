@@ -185,6 +185,26 @@
 #aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-meta span,
 #aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-state,
 #aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-chain-step{font-size:11px!important;font-weight:750!important}
+/* AI-PROVIDER-COMPACT-GRID-ENFORCE-20261002 */
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-grid{display:grid!important;grid-template-columns:repeat(3,minmax(280px,1fr))!important;gap:6px!important;align-items:start!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-card{padding:8px!important;margin:0!important;min-width:0!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-fields{grid-template-columns:46px 62px minmax(0,1fr)!important;gap:4px!important;margin-top:4px!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-secret-row{grid-template-columns:minmax(0,1fr) auto!important;gap:4px!important;margin-top:4px!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-actions{gap:3px!important;flex-wrap:nowrap!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-actions button,
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-actions a{padding:3px 6px!important;min-height:29px!important;white-space:nowrap!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-status-note{padding:3px 5px!important;margin-top:3px!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-card-foot{margin-top:3px!important}
+@media(max-width:1320px){
+  #aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-grid{grid-template-columns:repeat(2,minmax(300px,1fr))!important}
+}
+@media(max-width:900px){
+  #aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-grid{grid-template-columns:1fr!important}
+}
+@media(max-width:700px){
+  #aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-secret-row{grid-template-columns:1fr!important}
+  #aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-actions{flex-wrap:wrap!important}
+}
 `;document.head.appendChild(s)}
   function message(card,text,error=false){const out=card.querySelector('[data-ai-message]');if(out){out.textContent=text;out.dataset.error=error?'true':'false'}}
   function bindInfra(root){root.querySelectorAll('[data-up]').forEach(el=>el.addEventListener('change',()=>{const key=el.dataset.up,patch={[key]:el.value};if(key==='provider')Object.assign(patch,{account:'',scope:'',runtime:''});setSelection(patch)}))}
