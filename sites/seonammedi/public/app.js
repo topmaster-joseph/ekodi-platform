@@ -262,17 +262,56 @@ loadNotices();
 
 const channelPlatformLabel=value=>({youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',blog:'블로그',website:'웹사이트',other:'기타'})[String(value||'').toLowerCase()]||'채널';
 const channelCategoryLabel=value=>({official:'공식','related-org':'관련기관',media:'미디어',civic:'시민·단체',other:'기타'})[String(value||'').toLowerCase()]||'관련';
+let publicChannels=[];
+function showChannelPreview(index){
+  const item=publicChannels[index];if(!item)return;
+  const preview=el('channelPreview'),frame=el('channelPreviewFrame'),title=el('channelPreviewTitle'),metaHost=el('channelPreviewMeta'),open=el('channelPreviewOpen');
+  const url=safeUrl(item.url);
+  const meta=[channelPlatformLabel(item.platform),channelCategoryLabel(item.category),item.official?'공식 확인':'관련 채널'].filter(Boolean).join(' · ');
+  if(title)title.textContent=item.name||'관련 채널';
+  if(metaHost)metaHost.textContent=meta;
+  if(open){open.href=url;open.setAttribute('aria-label',(item.name||'관련 채널')+' 원문 채널 열기')}
+  if(frame){
+    frame.title=(item.name||'관련 채널')+' 미리보기';
+    if(frame.src!==url)frame.src=url;
+  }
+  if(preview)preview.hidden=false;
+  el('publicChannelTabs')?.querySelectorAll('[data-channel-index]').forEach(button=>{
+    const active=Number(button.dataset.channelIndex)===index;
+    button.classList.toggle('active',active);
+    button.setAttribute('aria-selected',active?'true':'false');
+    button.tabIndex=active?0:-1;
+  });
+}
 async function loadChannels(){
-  const host=el('publicChannelList');if(!host)return;
+  const host=el('publicChannelTabs');if(!host)return;
   try{
     const response=await fetch('/api/seonammedi/channels',{cache:'no-store'});
     const data=await response.json().catch(()=>({}));
     if(!response.ok||!data.ok)throw new Error(data.message||'채널 목록을 불러오지 못했습니다.');
-    const rows=Array.isArray(data.items)?data.items:[];
-    host.innerHTML=rows.length?rows.map(item=>{
-      const meta=[channelPlatformLabel(item.platform),channelCategoryLabel(item.category),item.official?'공식 확인':'관련 채널'].filter(Boolean).join(' · ');
-      return '<article class="channel-item"><div><span class="source-type">'+escapeHtml(meta)+'</span><h3>'+escapeHtml(item.name||'관련 채널')+'</h3>'+(item.note?'<p>'+escapeHtml(item.note)+'</p>':'')+'</div><a href="'+safeUrl(item.url)+'" target="_blank" rel="noopener noreferrer">원문 채널 보기 →</a></article>';
-    }).join(''):'<p class="muted">등록된 공개 채널이 없습니다.</p>';
-  }catch(error){host.innerHTML='<p class="muted">'+escapeHtml(error.message||'채널 목록을 불러오지 못했습니다.')+'</p>'}
+    publicChannels=(Array.isArray(data.items)?data.items:[]).filter(item=>safeUrl(item.url)!=='#');
+    if(!publicChannels.length){
+      host.innerHTML='<span class="muted">등록된 공개 채널이 없습니다.</span>';
+      const preview=el('channelPreview');if(preview)preview.hidden=true;
+      return;
+    }
+    host.innerHTML=publicChannels.map((item,index)=>{
+      const platform=channelPlatformLabel(item.platform);
+      return '<button type="button" class="channel-tab'+(index===0?' active':'')+'" role="tab" aria-selected="'+(index===0?'true':'false')+'" tabindex="'+(index===0?'0':'-1')+'" data-channel-index="'+index+'"><span>'+escapeHtml(platform)+'</span><strong>'+escapeHtml(item.name||'관련 채널')+'</strong></button>';
+    }).join('');
+    host.addEventListener('click',event=>{const button=event.target.closest('[data-channel-index]');if(button)showChannelPreview(Number(button.dataset.channelIndex))});
+    host.addEventListener('keydown',event=>{
+      const buttons=[...host.querySelectorAll('[data-channel-index]')];if(!buttons.length||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+      event.preventDefault();
+      const current=Math.max(0,buttons.findIndex(button=>button.getAttribute('aria-selected')==='true'));
+      const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:(current+(event.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length;
+      showChannelPreview(next);buttons[next]?.focus();
+    });
+    showChannelPreview(0);
+  }catch(error){
+    publicChannels=[];
+    host.innerHTML='<span class="muted">'+escapeHtml(error.message||'채널 목록을 불러오지 못했습니다.')+'</span>';
+    const preview=el('channelPreview');if(preview)preview.hidden=true;
+  }
 }
 loadChannels();
