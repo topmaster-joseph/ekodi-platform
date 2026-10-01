@@ -17,6 +17,27 @@ function text(value, max = 12_000) {
   return String(value ?? '').trim().slice(0, max);
 }
 
+function geminiKeyPool(env = {}) {
+  const rows = [];
+  const seen = new Set();
+  const add = (key, label = '', projectId = '') => {
+    const value = text(key, 8192);
+    if (!value || seen.has(value)) return;
+    seen.add(value);
+    rows.push(Object.freeze({ key: value, label: text(label, 120), projectId: text(projectId, 160) }));
+  };
+  add(env.GEMINI_API_KEY || env.GOOGLE_AI_API_KEY, 'primary', env.GEMINI_PROJECT_ID || '');
+  for (let slot = 2; slot <= 5; slot += 1) add(env[`GEMINI_API_KEY_${slot}`], `slot-${slot}`, env[`GEMINI_PROJECT_ID_${slot}`] || '');
+  try {
+    const parsed = JSON.parse(text(env.GEMINI_API_KEY_POOL_JSON, 32000) || '[]');
+    if (Array.isArray(parsed)) for (const item of parsed) {
+      if (typeof item === 'string') add(item, 'pool', '');
+      else if (item && typeof item === 'object' && item.authorized === true) add(item.key, item.label || item.ownerLabel || 'pool', item.projectId || '');
+    }
+  } catch {}
+  return Object.freeze(rows);
+}
+
 async function budgetGuard(env) {
   if (!env.DB?.prepare) {
     if (String(env.ENVIRONMENT || '').toLowerCase() === 'production') throw new Error('AI_USAGE_METER_UNAVAILABLE');
@@ -52,7 +73,8 @@ function normalizeUsage(raw = {}) {
 }
 
 export function createGeminiOrchestratorProvider(env = {}, options = {}) {
-  const apiKey = text(env.GEMINI_API_KEY || env.GOOGLE_AI_API_KEY, 512);
+  const keyPool = geminiKeyPool(env);
+  const apiKey = keyPool[0]?.key || '';
   const model = text(env.GEMINI_ORCHESTRATOR_MODEL || env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL, 120) || DEFAULT_GEMINI_MODEL;
   const fetchImpl = options.fetchImpl || globalThis.fetch;
   const available = Boolean(apiKey && typeof fetchImpl === 'function');
@@ -111,7 +133,7 @@ export function createGeminiOrchestratorProvider(env = {}, options = {}) {
           usage,
         }).catch(() => {});
       }
-      return Object.freeze({ text: output, model, responseId: String(response.headers?.get?.('x-request-id') || ''), usage });
+      return Object.freeze({ text: output, model, responseId: String(response.headers?.get?.('x-request-id') || ''), usage, credential: Object.freeze({ label: selectedCredential?.label || '', projectId: selectedCredential?.projectId || '' }) });
     },
   });
 }
@@ -120,7 +142,8 @@ export function getGeminiOrchestratorProviderStatus(env = {}) {
   const provider = createGeminiOrchestratorProvider(env);
   return Object.freeze({
     id: provider.id,
-    configured: Boolean(text(env.GEMINI_API_KEY || env.GOOGLE_AI_API_KEY, 512)),
+    configured: geminiKeyPool(env).length > 0,
+    credentialCount: geminiKeyPool(env).length,
     available: provider.available,
     model: provider.model,
   });
