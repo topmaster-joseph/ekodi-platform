@@ -86,6 +86,7 @@ on:
       - 'migrations/0113_seonammedi_site_admin.sql'
       - 'migrations/0116_seonammedi_full_menu_admin.sql'
       - 'migrations/0118_seonammedi_voice_durable_ingress.sql'
+      - 'migrations/0122_seonammedi_channel_preview_url.sql'
       - 'test/seonammedi-site.test.mjs'
       - 'test/insurance-public-route.test.mjs'
       - 'test/discovery-layer.test.mjs'
