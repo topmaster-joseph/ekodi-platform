@@ -242,6 +242,72 @@ async function trafficSnapshot(env,at=new Date()){
   }
 }
 
+export async function siteImprovementStatusSnapshot(env={},options={}){
+  const store=db(env);
+  const at=options.now instanceof Date?options.now:new Date(options.now||Date.now());
+  const window=siteImprovementWindow(at);
+  const enabled=String(env.EKODI_SITE_IMPROVEMENT_ENABLED||'true').toLowerCase()!=='false';
+  const sites=eligibleSiteImprovementTargets();
+  const maxActive=integer(env.EKODI_SITE_IMPROVEMENT_MAX_ACTIVE_AI_JOBS,2,1,20);
+  const base={
+    ok:Boolean(store),
+    enabled,
+    evaluatedAt:at.toISOString(),
+    policyVersion:SITE_IMPROVEMENT_POLICY.version,
+    cadence:SITE_IMPROVEMENT_POLICY.cadence,
+    window,
+    siteCount:sites.length,
+    maxActiveAiJobs:maxActive,
+  };
+  if(!store)return Object.freeze({...base,eligibleNow:false,reason:'state_store_unavailable',traffic:null,server:null,currentRun:null,previousActiveRun:null,recentRuns:Object.freeze([]),nextSite:null,state:null});
+  try{
+    const cycleKey=window.cycleKey;
+    const [traffic,server,state,currentRun,previousActive,recent,busy]=await Promise.all([
+      trafficSnapshot(env,at),
+      serverResourceSnapshot(env,at,window.serverLoadCapPercent),
+      store.prepare("SELECT * FROM ekodi_site_improvement_state WHERE id='singleton'").first(),
+      store.prepare('SELECT * FROM ekodi_site_improvement_runs WHERE run_day=?').bind(cycleKey).first(),
+      store.prepare("SELECT * FROM ekodi_site_improvement_runs WHERE run_day<>? AND state IN ('claimed','queued','running','cloud_dispatched','pr_open','deployment_verifying') ORDER BY updated_at DESC LIMIT 1").bind(cycleKey).first(),
+      store.prepare("SELECT * FROM ekodi_site_improvement_runs ORDER BY evaluated_at DESC LIMIT 12").all(),
+      store.prepare("SELECT COUNT(*) AS n FROM ai_control_jobs WHERE state IN ('queued','leased','running')").first().catch(()=>({n:0})),
+    ]);
+    const activeJobs=Number(busy?.n||0);
+    const cursor=((Number(state?.cursor_index)||0)%Math.max(1,sites.length)+Math.max(1,sites.length))%Math.max(1,sites.length);
+    const nextSite=sites.length?sites[cursor]:null;
+    const mapRun=row=>row?Object.freeze({
+      runDay:clean(row.run_day,80),siteId:clean(row.site_id,120),siteName:clean(row.site_name,180),canonicalUrl:clean(row.canonical_url,500),
+      state:clean(row.state,80),attempts:Number(row.attempts||0),taskId:clean(row.task_id,180),branch:clean(row.branch,300),
+      pullRequestNumber:Number(row.pull_request_number||0)||null,deploymentState:clean(row.deployment_state,120),
+      recentSessions:Number(row.recent_sessions||0),recentVisits:Number(row.recent_visits||0),error:clean(row.error,500),
+      evaluatedAt:clean(row.evaluated_at,80),startedAt:clean(row.started_at,80),completedAt:clean(row.completed_at,80),updatedAt:clean(row.updated_at,80),
+      evidence:parseJson(row.evidence_json,{}),
+    }):null;
+    const retryEligible=Boolean(currentRun&&currentRun.state==='failed'&&!clean(currentRun.task_id,180)&&Number(currentRun.attempts||0)<2);
+    let eligibleNow=true,reason='eligible_now';
+    if(!enabled){eligibleNow=false;reason='disabled'}
+    else if(!sites.length){eligibleNow=false;reason='no_eligible_sites'}
+    else if(previousActive){eligibleNow=false;reason='previous_site_still_active'}
+    else if(currentRun&&!retryEligible){eligibleNow=false;reason='slot_already_claimed'}
+    else if(!traffic?.quiet){eligibleNow=false;reason=traffic?.reason||'traffic_not_quiet'}
+    else if(server?.applicable&&!server?.allowed){eligibleNow=false;reason=server.reason||'server_load_above_slot_limit'}
+    else if(activeJobs>=maxActive){eligibleNow=false;reason='ai_execution_queue_busy'}
+    else if(server?.applicable===false){reason='eligible_cloud_fallback'}
+    else if(retryEligible){reason='eligible_retry'}
+    return Object.freeze({
+      ...base,eligibleNow,reason,retryEligible,activeAiJobs:activeJobs,traffic,server,
+      currentRun:mapRun(currentRun),previousActiveRun:mapRun(previousActive),
+      recentRuns:Object.freeze((recent.results||[]).map(mapRun)),
+      nextSite,
+      state:state?Object.freeze({
+        cursorIndex:Number(state.cursor_index||0),lastSiteId:clean(state.last_site_id,120),lastTaskId:clean(state.last_task_id,180),
+        lastCompletedAt:clean(state.last_completed_at,80),lastEvaluatedAt:clean(state.last_evaluated_at,80),updatedAt:clean(state.updated_at,80),
+      }):null,
+    });
+  }catch(error){
+    return Object.freeze({...base,eligibleNow:false,reason:'site_improvement_status_unavailable',error:clean(error?.message||error,300),traffic:null,server:null,currentRun:null,previousActiveRun:null,recentRuns:Object.freeze([]),nextSite:null,state:null});
+  }
+}
+
 export async function claimLowTrafficSiteImprovement(env={},options={}){
   const store=db(env);if(!store)return Object.freeze({claimed:false,reason:'state_store_unavailable'});
   if(String(env.EKODI_SITE_IMPROVEMENT_ENABLED||'true').toLowerCase()==='false')return Object.freeze({claimed:false,reason:'disabled'});
