@@ -262,6 +262,7 @@ loadNotices();
 
 const channelPlatformLabel=value=>({youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',blog:'블로그',website:'웹사이트',other:'기타'})[String(value||'').toLowerCase()]||'채널';
 const channelCategoryLabel=value=>({official:'공식','related-org':'관련기관',media:'미디어',civic:'시민·단체',other:'기타'})[String(value||'').toLowerCase()]||'관련';
+const channelEmbedPolicy=platform=>({youtube:'embed',instagram:'preview',facebook:'preview',blog:'preview',website:'preview',other:'preview'})[String(platform||'').toLowerCase()]||'preview';
 let publicChannels=[];
 let channelPreviewSeq=0;
 function renderChannelFallback(item,data={}){
@@ -269,7 +270,11 @@ function renderChannelFallback(item,data={}){
   const title=escapeHtml(data.title||item.name||'관련 채널');
   const description=escapeHtml(data.description||item.note||'등록된 공개 채널입니다.');
   const image=safeUrl(data.image||'');
-  host.innerHTML='<div class="channel-preview-summary">'+(image!=='#'?'<img src="'+image+'" alt="" loading="lazy">':'')+'<div><span class="source-type">'+escapeHtml(channelPlatformLabel(item.platform))+'</span><h4>'+title+'</h4><p>'+description+'</p><small>채널 제공자가 전체 페이지의 직접 삽입을 제한해 공개 채널 정보로 표시합니다.</small></div></div>';
+  const platform=channelPlatformLabel(item.platform);
+  const hint=channelEmbedPolicy(item.platform)==='embed'
+    ?'채널 미리보기를 불러오지 못해 공개 채널 정보로 표시합니다.'
+    :'이 채널은 외부 사이트 전체 화면 삽입을 제한하므로 안전한 미리보기와 원문 링크로 표시합니다.';
+  host.innerHTML='<div class="channel-preview-summary">'+(image!=='#'?'<img src="'+image+'" alt="" loading="lazy">':'')+'<div><span class="source-type">'+escapeHtml(platform)+'</span><h4>'+title+'</h4><p>'+description+'</p><small>'+escapeHtml(hint)+'</small></div></div>';
   host.hidden=false;
 }
 async function showChannelPreview(index){
@@ -277,6 +282,8 @@ async function showChannelPreview(index){
   const seq=++channelPreviewSeq;
   const preview=el('channelPreview'),frame=el('channelPreviewFrame'),fallback=el('channelPreviewFallback'),title=el('channelPreviewTitle'),metaHost=el('channelPreviewMeta'),open=el('channelPreviewOpen');
   const url=safeUrl(item.url);
+  const platform=String(item.platform||'').toLowerCase();
+  const policy=channelEmbedPolicy(platform);
   const meta=[channelPlatformLabel(item.platform),channelCategoryLabel(item.category),item.official?'공식 확인':'관련 채널'].filter(Boolean).join(' · ');
   if(title)title.textContent=item.name||'관련 채널';
   if(metaHost)metaHost.textContent=meta;
@@ -291,7 +298,7 @@ async function showChannelPreview(index){
     button.tabIndex=active?0:-1;
   });
   let providerPreview=null;
-  if(['instagram','youtube'].includes(String(item.platform||'').toLowerCase())){
+  if(['instagram','youtube','facebook'].includes(platform)){
     try{
       const response=await fetch('/api/seonammedi/channels/'+encodeURIComponent(item.id)+'/preview',{cache:'no-store'});
       const body=await response.json().catch(()=>({}));
@@ -299,12 +306,21 @@ async function showChannelPreview(index){
     }catch{}
   }
   if(seq!==channelPreviewSeq)return;
-  const embedUrl=safeUrl(providerPreview?.embedUrl||(!providerPreview?url:''));
+  const embedUrl=policy==='embed'?safeUrl(providerPreview?.embedUrl||''):'#';
   if(embedUrl!=='#'&&frame){
+    let settled=false;
+    const fallbackTimer=setTimeout(()=>{
+      if(settled||seq!==channelPreviewSeq)return;
+      frame.hidden=true;frame.src='about:blank';renderChannelFallback(item,providerPreview||{});
+    },4500);
+    frame.onload=()=>{settled=true;clearTimeout(fallbackTimer)};
+    frame.onerror=()=>{settled=true;clearTimeout(fallbackTimer);frame.hidden=true;frame.src='about:blank';renderChannelFallback(item,providerPreview||{})};
     frame.src=embedUrl;
     frame.hidden=false;
     if(fallback)fallback.hidden=true;
-  }else renderChannelFallback(item,providerPreview||{});
+  }else{
+    renderChannelFallback(item,providerPreview||{});
+  }
 }
 async function loadChannels(){
   const host=el('publicChannelTabs');if(!host)return;

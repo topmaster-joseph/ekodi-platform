@@ -125,6 +125,18 @@ test('timeline admin is seeded, permissioned and public materials use central ca
 });
 
 
+test('seonammedi channel renderer avoids blocked whole-page embeds and keeps iframe fallback',async()=>{
+  const app=await readFile(new URL('app.js',root),'utf8');
+  assert.match(app,/channelEmbedPolicy/);
+  assert.match(app,/instagram:'preview'/);
+  assert.match(app,/facebook:'preview'/);
+  assert.match(app,/youtube:'embed'/);
+  assert.match(app,/policy==='embed'\?safeUrl\(providerPreview\?\.embedUrl\|\|''\):'#'/);
+  assert.match(app,/setTimeout\(\(\)=>/);
+  assert.match(app,/4500/);
+  assert.doesNotMatch(app,/providerPreview\?\.embedUrl\|\|\(!providerPreview\?url:''\)/);
+});
+
 test('seonammedi civic voices are manageable from the site admin without exposing contact publicly',async()=>{
   const [control,adminHtml,adminJs]=await Promise.all([
     readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
