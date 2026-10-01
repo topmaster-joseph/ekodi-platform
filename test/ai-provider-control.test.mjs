@@ -224,5 +224,5 @@ test('provider check UI surfaces sanitized upstream diagnostics',()=>{
   const admin=read('admin-provider-control.js');
   assert.match(admin,/error\.providerMessage=data\.providerMessage/);
   assert.match(admin,/error\.requestId=data\.requestId/);
-  assert.match(admin,/e\.providerMessage/);
+  assert.match(admin,/providerCheckErrorMessage\(e\)/);
 });
