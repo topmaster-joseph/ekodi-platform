@@ -70,7 +70,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\uninstall-pos-agent.ps1
 
 ## CMPMYI 관리자에서 설치 · 삭제
 
-여러 POS PC에 반복 설치할 때는 `https://ekodi.kr/cmpmyi/admin/agent`의 **POS Agent 설치·관리** 화면을 사용합니다. 최고관리자 메뉴의 **운영·배포·장애 → POS Agent 설치·관리**도 이 화면으로 연결됩니다.
+여러 POS PC에 반복 설치할 때는 `https://ekodi.kr/cmpmyi/admin/panel/agent`의 **POS Agent 설치·관리** 화면을 사용합니다. 최고관리자 메뉴의 **운영·배포·장애 → POS Agent 설치·관리**도 이 직접 관리화면으로 연결됩니다. 설치 파일 다운로드 주소는 기존 `/cmpmyi/admin/agent/download/*`를 유지합니다.
 
 - `setup-pos-agent.cmd` — 처음 설치 또는 업그레이드를 위한 원클릭 설치 파일입니다.
 - `remove-pos-agent.cmd` — 예약 작업과 설치 폴더를 완전히 제거하는 원클릭 삭제 파일입니다. 실행 전에 확인을 받습니다.
