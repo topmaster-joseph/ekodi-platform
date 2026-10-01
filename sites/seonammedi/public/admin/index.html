@@ -21,10 +21,9 @@
     <button class="active" data-panel-target="dashboard" type="button">운영홈</button>
     <button data-panel-target="site-health" type="button">사이트 점검</button>
     <button data-panel-target="status" type="button">현재상황</button>
-    <button data-panel-target="timeline" type="button">활동이력</button>
     <button data-panel-target="organization" type="button">조직</button>
     <button data-panel-target="notices" type="button">공지</button>
-    <button data-panel-target="content" type="button" hidden>관련자료</button>
+    <button data-panel-target="content" type="button">관련자료</button>
     <button data-panel-target="voices" type="button">시민의 목소리</button>
     <button data-panel-target="finance" type="button">후원·회계</button>
     <button data-panel-target="minutes" type="button">내부 회의록</button>
@@ -43,7 +42,7 @@
         <article><span>공지</span><strong id="noticeCount">-</strong><small>초안 포함</small></article>
         <article><span>채널</span><strong id="channelCount">-</strong><small>숨김 포함</small></article>
       </div>
-      <section class="card"><h2>관리 범위</h2><p id="scopeSummary">권한을 확인하고 있습니다.</p><div class="quick"><button type="button" data-go="site-health">사이트 점검</button><button type="button" data-go="status">현재상황</button><button type="button" data-go="timeline">활동이력</button><button type="button" data-go="organization">조직</button><button type="button" data-go="notices">공지</button><button type="button" data-go="content">관련자료</button><button type="button" data-go="voices">시민의 목소리</button><button type="button" data-go="finance">후원·회계</button><button type="button" data-go="minutes">내부 회의록</button><button type="button" data-go="channels">채널</button><a href="/seonammedi/" target="_blank" rel="noopener">사이트 확인</a></div></section>
+      <section class="card"><h2>관리 범위</h2><p id="scopeSummary">권한을 확인하고 있습니다.</p><div class="quick"><button type="button" data-go="site-health">사이트 점검</button><button type="button" data-go="status">현재상황</button><button type="button" data-go="organization">조직</button><button type="button" data-go="notices">공지</button><button type="button" data-go="content">관련자료</button><button type="button" data-go="voices">시민의 목소리</button><button type="button" data-go="finance">후원·회계</button><button type="button" data-go="minutes">내부 회의록</button><button type="button" data-go="channels">채널</button><a href="/seonammedi/" target="_blank" rel="noopener">사이트 확인</a></div></section>
     </section>
 
     <section class="panel-page" data-panel="site-health" hidden>
@@ -133,27 +132,33 @@
       </section>
     </section>
 
-    <section class="panel-page" data-panel="timeline" hidden>
-      <div class="heading"><div><p class="eyebrow">ACTIVITY HISTORY</p><h1>활동이력 관리</h1><p>기존 활동이력이 모두 사전 등록되어 있습니다. 새 이력을 추가하거나 수정하고, 공개 여부를 선택할 수 있습니다.</p></div></div>
-      <div class="two-col">
-        <form id="timelineForm" class="card form-card">
-          <input type="hidden" name="id">
-          <h2 id="timelineFormTitle">활동이력 추가</h2>
-          <div class="form-row"><label>일자<input name="date" maxlength="40" placeholder="2026.09.30" required></label><label>분류<input name="category" maxlength="80" placeholder="비대위 활동" required></label></div>
-          <label>제목<input name="title" maxlength="220" required></label>
-          <label>요약<textarea name="summary" maxlength="8000" rows="6"></textarea></label>
-          <label>근거 표시<input name="evidence" maxlength="500" placeholder="공식자료 · 언론보도 등"></label>
-          <div class="form-row"><label>정렬<input name="sortOrder" type="number" min="0" max="9999" value="0"></label><label>상태<select name="status"><option value="published">공개</option><option value="draft">비공개</option></select></label></div>
-          <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="timelineReset" class="secondary">새 이력</button></div>
-          <p id="timelineMessage" class="message" role="status"></p>
-        </form>
-        <section class="card list-card"><div class="card-head"><h2>활동이력 목록</h2><button type="button" id="reloadTimeline" class="secondary">새로고침</button></div><div id="timelineAdminList" class="item-list"></div></section>
-      </div>
-    </section>
-
     <section class="panel-page" data-panel="content" hidden>
-      <div class="heading"><div><p class="eyebrow">WEB SEARCH REVIEW</p><h1>웹검색 게시검토</h1><p>일일점검으로 수집된 공식기록·관련보도 후보를 확인한 뒤 체크하여 공개합니다. 미승인 후보는 공개페이지에 표시되지 않습니다.</p></div><button id="reloadContent" type="button" class="secondary">새로고침</button></div>
-      <section class="card list-card"><div class="card-head"><h2>수집 후보</h2><span class="muted">분류 선택 → 게시 체크</span></div><div id="contentList" class="item-list"></div><p id="contentMessage" class="message" role="status"></p></section>
+      <div class="heading"><div><p class="eyebrow">ACTIVITY · SOURCES</p><h1>관련자료 관리</h1><p>활동이력과 공식자료·관련보도 후보를 한 화면에서 분류하고 관리합니다.</p></div></div>
+      <div class="quick records-admin-tabs" role="tablist" aria-label="관련자료 관리 구분">
+        <button type="button" class="active" data-records-admin-tab="timeline" role="tab" aria-selected="true">활동이력</button>
+        <button type="button" data-records-admin-tab="review" role="tab" aria-selected="false">웹검색 게시검토</button>
+      </div>
+      <div data-records-admin-panel="timeline">
+        <div class="heading"><div><p class="eyebrow">ACTIVITY HISTORY</p><h1>활동이력 관리</h1><p>기존 활동이력이 모두 사전 등록되어 있습니다. 새 이력을 추가하거나 수정하고, 공개 여부를 선택할 수 있습니다.</p></div></div>
+        <div class="two-col">
+          <form id="timelineForm" class="card form-card">
+            <input type="hidden" name="id">
+            <h2 id="timelineFormTitle">활동이력 추가</h2>
+            <div class="form-row"><label>일자<input name="date" maxlength="40" placeholder="2026.09.30" required></label><label>분류<input name="category" maxlength="80" placeholder="비대위 활동" required></label></div>
+            <label>제목<input name="title" maxlength="220" required></label>
+            <label>요약<textarea name="summary" maxlength="8000" rows="6"></textarea></label>
+            <label>근거 표시<input name="evidence" maxlength="500" placeholder="공식자료 · 언론보도 등"></label>
+            <div class="form-row"><label>정렬<input name="sortOrder" type="number" min="0" max="9999" value="0"></label><label>상태<select name="status"><option value="published">공개</option><option value="draft">비공개</option></select></label></div>
+            <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="timelineReset" class="secondary">새 이력</button></div>
+            <p id="timelineMessage" class="message" role="status"></p>
+          </form>
+          <section class="card list-card"><div class="card-head"><h2>활동이력 목록</h2><button type="button" id="reloadTimeline" class="secondary">새로고침</button></div><div id="timelineAdminList" class="item-list"></div></section>
+        </div>
+      </div>
+      <div data-records-admin-panel="review" hidden>
+        <div class="heading"><div><p class="eyebrow">WEB SEARCH REVIEW</p><h1>웹검색 게시검토</h1><p>일일점검으로 수집된 공식기록·관련보도 후보를 확인한 뒤 체크하여 공개합니다. 미승인 후보는 공개페이지에 표시되지 않습니다.</p></div><button id="reloadContent" type="button" class="secondary">새로고침</button></div>
+        <section class="card list-card"><div class="card-head"><h2>수집 후보</h2><span class="muted">분류 선택 → 게시 체크</span></div><div id="contentList" class="item-list"></div><p id="contentMessage" class="message" role="status"></p></section>
+      </div>
     </section>
 
     <section class="panel-page" data-panel="notices" hidden>
