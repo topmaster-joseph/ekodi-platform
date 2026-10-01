@@ -54,6 +54,10 @@ test('MCP tool surface keeps reads safe and exposes bounded authenticated mutati
   assert.equal(submit.annotations.readOnlyHint,false);
   assert.equal(submit.annotations.destructiveHint,false);
   assert.deepEqual(submit.inputSchema.required,['intent']);
+  assert.equal(submit.inputSchema.properties.deploymentRequested.type,'boolean');
+  assert.equal(submit.inputSchema.properties.deploymentRequested.default,false);
+  assert.equal(submit.inputSchema.properties.agent.maxLength,32);
+  assert.match(submit.description,/only authorized branchRef/);
 
   const status=tool('get_task_status');
   assert.equal(status.securitySchemes[0].type,'oauth2');
@@ -166,6 +170,8 @@ test('MCP server instructions force every EKODI operation through the Orchestrat
   assert.match(MCP_SERVER_INSTRUCTIONS,/every request about EKODI systems/);
   assert.match(MCP_SERVER_INSTRUCTIONS,/sole execution authority/);
   assert.match(MCP_SERVER_INSTRUCTIONS,/call submit_task/);
+  assert.match(MCP_SERVER_INSTRUCTIONS,/deploymentRequested=true/);
+  assert.match(MCP_SERVER_INSTRUCTIONS,/returned branchRef exactly/);
   assert.match(MCP_SERVER_INSTRUCTIONS,/use get_task_status/);
   assert.match(MCP_SERVER_INSTRUCTIONS,/Never perform, simulate, or claim direct EKODI production changes/);
 
