@@ -188,7 +188,7 @@ test('super administrator navigation keeps only the cmpmyi hub as the aggregate 
   assert.ok(item);assert.equal(item.group,'sites');assert.equal(item.superAdminOnly,true);assert.equal(item.internal,true);
   assert.equal(item.href,'https://ekodi.kr/cmpmyi/admin');
   const posAgent=ADMIN_MENU_REGISTRY.find(row=>row.id==='pos-agent');
-  assert.equal(posAgent?.href,'https://ekodi.kr/cmpmyi/admin/agent');
+  assert.equal(posAgent?.href,'https://ekodi.kr/cmpmyi/admin/panel/agent');
   assert.equal(posAgent?.adminHandoff,true);
   const router=readFileSync(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
   assert.match(router,/storePortfolioAdminPage/);
