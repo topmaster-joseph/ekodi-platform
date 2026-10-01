@@ -174,16 +174,16 @@ test('seonammedi full public-menu administration covers status organization mate
   for(const label of ['현재상황','조직','활동이력','공지','관련자료','시민의 목소리','후원·회계'])assert.match(adminHtml,new RegExp(label));
   assert.match(adminHtml,/id="statusForm"/);
   assert.match(adminHtml,/id="organizationForm"/);
-  assert.match(adminHtml,/data-org-admin-tab="integrated"/);
-  assert.match(adminHtml,/data-org-admin-tab="civic"/);
+  assert.match(adminHtml,/data-org-admin-tab="bidae"/);
   assert.match(adminHtml,/data-org-admin-tab="mokpo"/);
-  assert.match(adminHtml,/통합 대책위/);
-  assert.match(adminHtml,/시민단체연대/);
-  assert.match(adminHtml,/목포대/);
+  assert.match(adminHtml,/data-org-admin-tab="minhak"/);
+  assert.match(adminHtml,/비대위/);
+  assert.match(adminHtml,/민학비대위/);
+  assert.match(adminHtml,/구성 논의 중/);
   assert.match(adminJs,/ORG_GROUPS/);
-  assert.match(adminJs,/groups,levels:integrated\.levels/);
+  assert.match(adminJs,/statusLabel/);
   assert.match(app,/ORG_GROUP_META/);
-  assert.match(app,/renderOrganizationGroup\('integrated'\)/);
+  assert.match(app,/renderOrganizationGroup\('bidae'\)/);
   assert.match(adminHtml,/id="financeForm"/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/pages\/status/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/pages\/organization/);
@@ -281,3 +281,10 @@ test('seonammedi admin auth handoff is same-origin and finance API is production
   assert.equal(finance.candidateVerify,false);
 });
 
+
+
+test('seonammedi organization reflects 2026-10-01 bidae structure',async()=>{
+  const [data,app,adminHtml]=await Promise.all([readFile(new URL('data.json',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('admin/index.html',root),'utf8')]);
+  const org=JSON.parse(data).organization;assert.deepEqual(org.groups.map(x=>x.key),['bidae','mokpo','minhak']);
+  const bidae=org.groups[0],minhak=org.groups[2];assert.ok(bidae.levels.find(x=>x.name==='집행위원회').members.some(x=>x.includes('여인두')));assert.ok(bidae.committees.some(x=>x.name==='기획위원회'&&x.lead.includes('여인두')));assert.equal(minhak.status,'forming');assert.match(minhak.statusLabel,/2026\.09\.30/);assert.match(app,/org-status/);assert.match(adminHtml,/name="minhak_status"/);
+});
