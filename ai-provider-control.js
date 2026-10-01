@@ -5,12 +5,12 @@ import { listOpenAiCostAlerts, loadFreeQuotaStates, quotaCapabilities, recordAiC
 import { createCloudflareWorkersAiProvider } from './cloudflare-workers-ai-provider-adapter.js';
 import { createOpenRouterFreeProvider } from './openrouter-free-provider-adapter.js';
 import { createGroqFreeProvider } from './groq-free-provider-adapter.js';
-import { createCerebrasFreeProvider, createQwenFreeProvider, createDeepSeekFreeCreditProvider } from './extended-free-provider-adapters.js';
+import { createCerebrasFreeProvider, createQwenFreeProvider, createDeepSeekFreeCreditProvider, createHuggingFaceFreeCreditProvider } from './extended-free-provider-adapters.js';
 
 const PREFIX='/api/ai-modules/v1/providers';
 const ADMIN_BASE=`${PREFIX}/admin`;
 const GATEWAY=`${PREFIX}/generate`;
-const PROVIDER_ORDER=Object.freeze(['cloudflare-workers-ai','gemini','openrouter-free','groq-free','cerebras-free','qwen-free','deepseek-free-credit','openai','anthropic']);
+const PROVIDER_ORDER=Object.freeze(['cloudflare-workers-ai','gemini','openrouter-free','groq-free','cerebras-free','qwen-free','deepseek-free-credit','huggingface-free-credit','openai','anthropic']);
 const PROVIDERS=new Set(PROVIDER_ORDER);
 const CAPABILITIES=new Set(['default','documents','admin','marketing','translation']);
 const DEFAULTS=Object.freeze({
@@ -21,6 +21,7 @@ const DEFAULTS=Object.freeze({
   'cerebras-free':{name:'Cerebras · 무료 체험',model:'qwen-3.8-27b',binding:'CEREBRAS_API_KEY',costClass:'free-preferred'},
   'qwen-free':{name:'Qwen · 무료 할당량',model:'qwen3.7-plus',binding:'QWEN_API_KEY',costClass:'free-preferred'},
   'deepseek-free-credit':{name:'DeepSeek · 무료 지급 크레딧',model:'deepseek-flash',binding:'DEEPSEEK_API_KEY',costClass:'free-preferred'},
+  'huggingface-free-credit':{name:'Hugging Face · 월 무료 크레딧',model:'openai/gpt-oss-120b:cheapest',binding:'HF_TOKEN',costClass:'free-preferred'},
   openai:{name:'OpenAI · 유료 승인',model:'gpt-5.6-terra',binding:'OPENAI_API_KEY',costClass:'paid-opt-in'},
   anthropic:{name:'Claude · 유료 승인',model:'claude-sonnet-5',binding:'ANTHROPIC_API_KEY',costClass:'paid-opt-in'},
 });
@@ -33,6 +34,7 @@ const RUNTIME_BINDINGS=Object.freeze({
   'cerebras-free':{enabled:'EKODI_PROVIDER_CEREBRAS_FREE_ENABLED',priority:'EKODI_PROVIDER_CEREBRAS_FREE_PRIORITY',model:'EKODI_CEREBRAS_FREE_MODEL'},
   'qwen-free':{enabled:'EKODI_PROVIDER_QWEN_FREE_ENABLED',priority:'EKODI_PROVIDER_QWEN_FREE_PRIORITY',model:'EKODI_QWEN_FREE_MODEL'},
   'deepseek-free-credit':{enabled:'EKODI_PROVIDER_DEEPSEEK_FREE_ENABLED',priority:'EKODI_PROVIDER_DEEPSEEK_FREE_PRIORITY',model:'EKODI_DEEPSEEK_FREE_MODEL'},
+  'huggingface-free-credit':{enabled:'EKODI_PROVIDER_HF_FREE_ENABLED',priority:'EKODI_PROVIDER_HF_FREE_PRIORITY',model:'EKODI_HF_FREE_MODEL'},
   openai:{enabled:'EKODI_PROVIDER_OPENAI_ENABLED',priority:'EKODI_PROVIDER_OPENAI_PRIORITY',model:'EKODI_PROVIDER_OPENAI_MODEL'},
   anthropic:{enabled:'EKODI_PROVIDER_ANTHROPIC_ENABLED',priority:'EKODI_PROVIDER_ANTHROPIC_PRIORITY',model:'EKODI_PROVIDER_ANTHROPIC_MODEL'},
 });
@@ -133,6 +135,10 @@ async function invokeProvider(env,id,model,system,input,maxOutputTokens=4096){
   }
   if(id==='deepseek-free-credit'){
     const result=await createDeepSeekFreeCreditProvider({...env,EKODI_DEEPSEEK_FREE_MODEL:model||DEFAULTS[id].model},{fetchImpl:globalThis.fetch}).invoke({prompt:[system,input].filter(Boolean).join('\n\n')});
+    return{text:result.text,provider:id,model:result.model||model||DEFAULTS[id].model,inputUnits:0,outputUnits:0,cachedUnits:0,quota:result.quota||null};
+  }
+  if(id==='huggingface-free-credit'){
+    const result=await createHuggingFaceFreeCreditProvider({...env,EKODI_HF_FREE_MODEL:model||DEFAULTS[id].model},{fetchImpl:globalThis.fetch}).invoke({prompt:[system,input].filter(Boolean).join('\n\n')});
     return{text:result.text,provider:id,model:result.model||model||DEFAULTS[id].model,inputUnits:0,outputUnits:0,cachedUnits:0,quota:result.quota||null};
   }
   throw new Error('unsupported_provider');
