@@ -68,3 +68,18 @@ test('Cloudflare standalone-domain deployment uses the preserving gateway', asyn
   assert.match(wrangler, /main = "seonammedi-domain-gateway\.js"/);
   assert.doesNotMatch(wrangler, /main = "legacy-redirect\.js"/);
 });
+
+
+test('SeonamMedi release guards verify preserved domains instead of legacy redirects', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const deploy = await readFile(new URL('../.github/workflows/deploy-seonammedi-domains.yml', import.meta.url), 'utf8');
+  const verify = await readFile(new URL('../.github/workflows/verify-seonammedi-domains.yml', import.meta.url), 'utf8');
+
+  for (const workflow of [deploy, verify]) {
+    assert.match(workflow, /customer-domain-preserved/);
+    assert.match(workflow, /x-ekodi-domain-mode/i);
+    assert.match(workflow, /x-ekodi-upstream-path/i);
+    assert.doesNotMatch(workflow, /test "\$code" = "301"/);
+  }
+  assert.match(verify, /seonammedi-domain-gateway\.js/);
+});
