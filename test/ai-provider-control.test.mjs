@@ -198,3 +198,13 @@ test('AI Ops provider control enforces white background and black text for reada
   assert.match(admin,/::placeholder\{color:#333!important;opacity:1!important\}/);
   assert.match(admin,/background:#fff!important;color:#000!important;border-color:#111!important/);
 });
+
+
+test('provider health classifier distinguishes Gemini API key and precondition failures',()=>{
+  const source=read('ai-provider-control.js');
+  const admin=read('admin-provider-control.js');
+  assert.match(source,/API_KEY_INVALID/);
+  assert.match(source,/failed_precondition/);
+  assert.match(admin,/API 키가 유효하지 않거나 차단됨/);
+  assert.match(admin,/지역\/결제 설정 확인/);
+});
