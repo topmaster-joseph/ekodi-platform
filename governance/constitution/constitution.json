@@ -1160,5 +1160,52 @@
       "scripts/validate-constitution.mjs",
       "system-verification"
     ]
+  },
+  "sitePublicationPolicy": {
+    "id": "EKODI-SITE-PUBLICATION-001",
+    "status": "enforced",
+    "mode": "mandatory",
+    "scope": "all-current-and-future-public-user-and-independent-sites",
+    "stateSource": "public_site_controls",
+    "newSiteDefault": "public",
+    "allowedStates": [
+      "public",
+      "private",
+      "maintenance"
+    ],
+    "explicitAdministratorChangeRequired": true,
+    "publicBeforeLogin": true,
+    "authority": {
+      "platformSuperAdministrator": "all-sites",
+      "siteAdministrator": "own-site-only",
+      "crossSitePropagation": "forbidden"
+    },
+    "privateAndMaintenance": {
+      "robots": "noindex-nofollow-noarchive",
+      "preserveAdminAccess": true,
+      "preserveAuthenticationAccess": true,
+      "preserveApiAccess": true
+    },
+    "routeRule": {
+      "publicPath": "/{site}",
+      "administratorPath": "/{site}/admin",
+      "administratorRouteNeverBlockedByPublicationState": true
+    },
+    "operationalRule": {
+      "currentAndFutureSitesAutoInherit": true,
+      "localOverrideForbidden": true,
+      "auditEveryMutation": true,
+      "readFailureDisposition": "fail-open-to-preserve-public-availability"
+    },
+    "enforcement": [
+      "config/site-publication-policy.json",
+      "site-publication-runtime.js",
+      "api-worker.js",
+      "platform-router-entry-worker.js",
+      "admin-public-site-controls.js",
+      "test/site-publication-policy.test.mjs",
+      "scripts/validate-constitution.mjs",
+      "system-verification"
+    ]
   }
 }
