@@ -16,7 +16,7 @@
   const AI_LABELS={openai:'OpenAI',gemini:'Google Gemini',anthropic:'Anthropic'};
   const AI_STATUS_NOTES=Object.freeze({
     gemini:'무료 한도 우선 사용 · 한도 소진 시 다른 무료 경로로 전환',
-    openai:'유료 API · 크레딧 필요 · 자동 결제 사용 안 함',
+    openai:'유료 API · 크레딧 필요 · 자동 유료전환 없음',
     anthropic:'유료 API · 지속 무료 사용 없음 · 결제/사용한도 필요',
   });
   const AI_KEY_LINKS=Object.freeze({openai:'https://platform.openai.com/api-keys',gemini:'https://aistudio.google.com/app/apikey',anthropic:'https://console.anthropic.com/settings/keys'});
