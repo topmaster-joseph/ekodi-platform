@@ -42,7 +42,8 @@
     "canonical-human-url-without-tracking-query",
     "evidence-gated-ai-claims",
     "evidence-gated-external-knowledge",
-    "automatic-execution-background-only-enforced"
+    "automatic-execution-background-only-enforced",
+    "public-by-default-site-publication-control"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
