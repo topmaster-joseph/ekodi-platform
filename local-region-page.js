@@ -28,7 +28,7 @@ function publicLinks(region){
       tag:presentation.tag||'지역',
       desc:presentation.desc||module.summary,
       audiences:presentation.audiences||'resident student merchant organization',
-      href:module.publicPath,
+      href:module.id==='commerce-pass'?'/cheonggyepass':module.publicPath,
     }];
   }));
   return [
@@ -115,7 +115,7 @@ function publicBody(region){
   <section class="section" id="local-services"><div class="section-head"><div><h2>지역 서비스</h2><p class="section-note">주민·상인·학생·기관이 함께 쓰되, 각 서비스는 필요한 정보부터 짧고 분명하게 보여줍니다.</p></div></div><div class="grid">${publicLinks(region).map(publicCard).join('')}</div></section>
   <section class="section personal" data-personalization-surface="local-cheonggye"><div class="personal__main"><strong>필요한 정보부터 간단하게</strong><p>청계잇다는 로그인하지 않아도 기본 지역정보를 사용할 수 있습니다. 맞춤 기능이 제공되는 경우에도 각 지역서비스 안에서 필요한 설정만 안내합니다.</p></div><div class="personal__aside"><strong>이용 원칙</strong><p>민감한 정보를 추정하지 않고, 공개 정보와 개인·단체의 비공개 정보는 구분해서 다룹니다.</p></div></section>
   <section class="section" id="participate"><div class="talk"><div><strong>청계에 말하기</strong><p>지역 제안·행사·상권·생활정보는 관련 지역서비스와 연결합니다. 필요한 의견과 제안을 쉽게 남길 수 있는 흐름을 우선합니다.</p></div><a class="button" href="#proposal">참여·제안 보기</a></div></section>
-  <section class="section" id="local-organizations"><div class="section-head"><div><h2>함께하는 지역 조직</h2><p class="section-note">지역의 기관·단체와 연결해 필요한 공개정보와 참여 기회를 안내합니다.</p></div></div><div class="org"><div><strong>청계면상인회</strong><div class="muted">지역 상권과 상인 네트워크를 연결하는 참여 조직입니다.</div></div><a class="button" href="/cgma">상인회 보기</a></div></section>
+  <section class="section" id="local-organizations"><div class="section-head"><div><h2>함께하는 지역 조직</h2><p class="section-note">지역의 기관·단체와 연결해 필요한 공개정보와 참여 기회를 안내합니다.</p></div></div><div class="org"><div><strong>청계면상인회</strong><div class="muted">지역 상권과 상인 네트워크를 연결하는 참여 조직입니다.</div></div><a class="button" href="/cgma">상인회 보기</a></div><div class="org" style="margin-top:10px"><div><strong>청계패스</strong><div class="muted">참여점포·쿠폰·포인트·지역혜택을 연결하는 독립 지역서비스입니다.</div></div><a class="button" href="/cheonggyepass">청계패스 보기</a></div></section>
   </main>`;
 }
 

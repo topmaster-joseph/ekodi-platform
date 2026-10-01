@@ -1,5 +1,5 @@
 {
-  "version": 100,
+  "version": 101,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -2003,6 +2003,26 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/cheonggyepass",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "청계패스",
+          "서비스 준비 중",
+          "참여점포",
+          "청계면상인회 보기",
+          "청계잇다에서 지역정보 보기"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: regional-commerce-program-public",
+          "x-ekodi-shell: v2",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/cheonggye/pass",
         "statuses": [
           200
@@ -2018,6 +2038,27 @@
           "x-ekodi-route: regional-commerce-program-public",
           "x-ekodi-shell: v2",
           "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggyepass/admin",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "청계패스 운영관리",
+          "외부 공급자",
+          "직접 DB 접근",
+          "외주사 연동 계약",
+          "local-region-admin-auth.js",
+          "사용자 화면"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: regional-commerce-program-admin",
+          "x-ekodi-shell: v2",
+          "cache-control: no-store"
         ],
         "rollbackVerify": false
       },
@@ -2553,24 +2594,45 @@
       },
       {
         "url": "https://ekodi.kr/seonammedi/minutes/",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["내부 회의록 확인","확인자 성명","열람 기록으로 저장"],
-        "headerExpect": ["x-ekodi-route: seonammedi-static","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"],
+        "expect": [
+          "내부 회의록 확인",
+          "확인자 성명",
+          "열람 기록으로 저장"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: seonammedi-static",
+          "x-robots-tag: noindex, nofollow, noarchive",
+          "cache-control: no-store"
+        ],
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/seonammedi/minutes/minutes.js",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["/api/seonammedi/minutes/","viewerForm"],
+        "expect": [
+          "/api/seonammedi/minutes/",
+          "viewerForm"
+        ],
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/seonammedi/admin/admin-minutes.js",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["/api/seonammedi/admin/minutes","shareToken","링크복사"],
+        "expect": [
+          "/api/seonammedi/admin/minutes",
+          "shareToken",
+          "링크복사"
+        ],
         "rollbackVerify": false
       },
       {
