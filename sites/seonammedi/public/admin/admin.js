@@ -4,7 +4,7 @@ const SESSION_KEY='ekodi-seonam-admin-session';
 const CENTRAL_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token';
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-const state={me:null,content:[],timeline:[],voices:[],notices:[],channels:[],finance:[],baseData:null};
+const state={me:null,content:[],timeline:[],voices:[],notices:[],channels:[],finance:[],baseData:null,organization:null};
 const $=id=>document.getElementById(id);
 const qs=(sel,root=document)=>root.querySelector(sel);
 const qsa=(sel,root=document)=>[...root.querySelectorAll(sel)];
@@ -183,38 +183,43 @@ $('statusForm')?.addEventListener('submit',async event=>{
 });
 
 const ORG_GROUPS=[
-  {key:'bidae',label:'비대위',status:'active',statusLabel:'운영 중'},
-  {key:'mokpo',label:'목포대',status:'active',statusLabel:'운영 중'},
+  {key:'bidae',label:'비대위',status:'active',statusLabel:''},
+  {key:'mokpo',label:'목포대',status:'active',statusLabel:''},
   {key:'minhak',label:'민학비대위',status:'forming',statusLabel:'구성 논의 중 · 2026.09.30 첫 만남'}
 ];
 const ORG_LEGACY_KEYS={bidae:'integrated',minhak:'civic'};
+const cleanOrgRoleText=value=>String(value||'').replace(/\s*\([^)]*위원회\s*겸임[^)]*\)/g,'').trim();
+const normalizeOrgStatusLabel=(key,value,fallback='')=>{
+  const label=String(value??fallback??'').trim();
+  return key!=='minhak'&&label==='운영 중'?'':label;
+};
 function normalizeOrgGroups(org={}){
   if(Array.isArray(org.groups)&&org.groups.length){
     const byKey=new Map(org.groups.map(group=>[group.key,group]));
-    return ORG_GROUPS.map(meta=>{const found=byKey.get(meta.key)||byKey.get(ORG_LEGACY_KEYS[meta.key]);return{...(found||{}),key:meta.key,label:meta.label,status:found?.status||meta.status,statusLabel:found?.statusLabel||meta.statusLabel,levels:found?.levels||[],committees:found?.committees||[],participants:found?.participants||[]}});
+    return ORG_GROUPS.map(meta=>{const found=byKey.get(meta.key)||byKey.get(ORG_LEGACY_KEYS[meta.key]);return{...(found||{}),key:meta.key,label:meta.label,status:found?.status||meta.status,statusLabel:normalizeOrgStatusLabel(meta.key,found?.statusLabel,meta.statusLabel),levels:found?.levels||[],committees:found?.committees||[],participants:found?.participants||[]}});
   }
   return ORG_GROUPS.map(meta=>meta.key==='bidae'?{key:meta.key,label:meta.label,status:meta.status,statusLabel:meta.statusLabel,levels:org.levels||[],committees:org.committees||[],participants:org.participants||[]}:{key:meta.key,label:meta.label,status:meta.status,statusLabel:meta.statusLabel,levels:[],committees:[],participants:[]});
 }
 function orgGroupFromForm(form,key,label){
-  const level=(name,suffix)=>({name,members:lines(form.elements[key+'_'+suffix].value)});
-  const committees=lines(form.elements[key+'_committees'].value).map(row=>{const [name,...rest]=row.split('|');return{name:(name||'').trim(),lead:rest.join('|').trim()}}).filter(x=>x.name);
+  const level=(name,suffix)=>({name,members:lines(form.elements[key+'_'+suffix].value).map(cleanOrgRoleText).filter(Boolean)});
+  const committees=lines(form.elements[key+'_committees'].value).map(row=>{const [name,...rest]=row.split('|');return{name:(name||'').trim(),lead:cleanOrgRoleText(rest.join('|'))}}).filter(x=>x.name);
   const participants=lines(form.elements[key+'_participants'].value).map(row=>{const [name,representative,url]=row.split('|').map(x=>(x||'').trim());return{name,representative,url,visible:true}}).filter(x=>x.name);
-  const meta=ORG_GROUPS.find(item=>item.key===key)||{};const statusLabel=form.elements[key+'_status']?.value.trim()||meta.statusLabel||'';
+  const meta=ORG_GROUPS.find(item=>item.key===key)||{};const statusLabel=normalizeOrgStatusLabel(key,form.elements[key+'_status']?.value,meta.statusLabel||'');
   return{key,label,status:meta.status||'active',statusLabel,levels:[level('대표자회의','representatives'),level('상임공동대표단','standing'),level('집행위원회','executive')],committees,participants,participantSort:'ko-KR',publicOnly:true};
 }
-function orgLinesToData(form){
-  const groups=ORG_GROUPS.map(meta=>orgGroupFromForm(form,meta.key,meta.label));
+function orgDataWithGroup(org,key,nextGroup){
+  const groups=normalizeOrgGroups(org).map(group=>group.key===key?nextGroup:group);
   const bidae=groups.find(group=>group.key==='bidae')||groups[0];
-  return{groups,levels:bidae.levels,committees:bidae.committees,participants:bidae.participants,participantSort:'ko-KR',publicOnly:true,schemaVersion:2};
+  return{...org,groups,levels:bidae.levels,committees:bidae.committees,participants:bidae.participants,participantSort:'ko-KR',publicOnly:true,schemaVersion:2};
 }
 function fillOrgGroup(form,group){
   const key=group.key,levels=group.levels||[];
-  const members=name=>(levels.find(x=>x.name===name)?.members||[]).join('\n');
+  const members=name=>(levels.find(x=>x.name===name)?.members||[]).map(cleanOrgRoleText).filter(Boolean).join('\n');
   if(form.elements[key+'_status'])form.elements[key+'_status'].value=group.statusLabel||ORG_GROUPS.find(item=>item.key===key)?.statusLabel||'';
   form.elements[key+'_representatives'].value=members('대표자회의');
   form.elements[key+'_standing'].value=members('상임공동대표단');
   form.elements[key+'_executive'].value=members('집행위원회');
-  form.elements[key+'_committees'].value=(group.committees||[]).map(x=>[x.name,x.lead].filter(Boolean).join(' | ')).join('\n');
+  form.elements[key+'_committees'].value=(group.committees||[]).map(x=>[x.name,cleanOrgRoleText(x.lead)].filter(Boolean).join(' | ')).join('\n');
   form.elements[key+'_participants'].value=(group.participants||[]).map(x=>[x.name,x.representative,x.url].filter(Boolean).join(' | ')).join('\n');
 }
 function showOrgAdminTab(key){
@@ -231,13 +236,29 @@ async function loadOrganization(){
   if(!state.me?.permissions?.pages)return;
   const [managed,base]=await Promise.all([api('/api/seonammedi/admin/pages/organization'),baseData()]);
   const org=managed.item?.data&&Object.keys(managed.item.data).length?managed.item.data:(base.organization||{});
+  state.organization=org;
   const form=$('organizationForm');
   normalizeOrgGroups(org).forEach(group=>fillOrgGroup(form,group));
   showOrgAdminTab(form.elements.orgKey.value||'bidae');
   text($('organizationMessage'),'');
 }
 $('organizationForm')?.addEventListener('submit',async event=>{
-  event.preventDefault();try{text($('organizationMessage'),'저장 중…');await api('/api/seonammedi/admin/pages/organization',{method:'PUT',body:JSON.stringify({data:orgLinesToData(event.currentTarget),visible:true})});text($('organizationMessage'),'비대위·목포대·민학비대위 조직 정보를 저장했습니다.')}catch(error){text($('organizationMessage'),error.message)}
+  event.preventDefault();
+  const form=event.currentTarget,key=form.elements.orgKey.value||'bidae';
+  const meta=ORG_GROUPS.find(item=>item.key===key)||ORG_GROUPS[0];
+  const save=$('saveOrganization');if(save)save.disabled=true;
+  try{
+    text($('organizationMessage'),meta.label+' 저장 중…');
+    const latest=await api('/api/seonammedi/admin/pages/organization');
+    const source=latest.item?.data&&Object.keys(latest.item.data).length?latest.item.data:(state.organization||{});
+    const data=orgDataWithGroup(source,key,orgGroupFromForm(form,key,meta.label));
+    await api('/api/seonammedi/admin/pages/organization',{method:'PUT',body:JSON.stringify({data,visible:true})});
+    state.organization=data;
+    normalizeOrgGroups(data).forEach(group=>fillOrgGroup(form,group));
+    showOrgAdminTab(key);
+    text($('organizationMessage'),meta.label+' 조직 정보를 저장했습니다. 다른 조직 데이터는 유지했습니다.');
+  }catch(error){text($('organizationMessage'),error.message)}
+  finally{if(save)save.disabled=false}
 });
 
 const moneyText=value=>new Intl.NumberFormat('ko-KR').format(Number(value||0))+'원';
