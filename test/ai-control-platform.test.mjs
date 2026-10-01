@@ -14,7 +14,7 @@ test('coding work requests an isolated branch and is forced into parallel develo
 test('parallel plan preserves origin and scores the remaining suppliers dynamically',()=>{
   const task=normalizeTaskInput({prompt:'review this',mode:'parallel'});
   const plan=buildExecutionPlan(task,{geminiFree:true,nodeProviders:['codex','gemini-cli'],openaiApi:true,anthropicApi:true,workerProviders:['claude']});
-  assert.deepEqual(plan.map(item=>item.providerId),['node:codex','gemini-free','node:gemini-cli']);
+  assert.deepEqual(plan.map(item=>item.providerId),['gemini-free','node:codex','node:gemini-cli']);
   assert.equal(plan.length,3);
   assert.equal(plan[0].role,'origin-primary');
   assert.ok(plan.every(item=>Number.isFinite(item.routerScore)));
@@ -30,7 +30,7 @@ test('stored collaboration ceiling limits collaborators while preserving origin'
 test('legacy default requests still fan out in parallel instead of primary-review',()=>{
   const task=normalizeTaskInput({prompt:'이 설계를 상호 검토해줘'});
   const plan=buildExecutionPlan(task,{geminiFree:true,nodeProviders:['codex'],openaiApi:true});
-  assert.deepEqual(plan.map(({providerId,role})=>({providerId,role})),[{providerId:'node:codex',role:'origin-primary'},{providerId:'gemini-free',role:'parallel-2'}]);
+  assert.deepEqual(plan.map(({providerId,role})=>({providerId,role})),[{providerId:'gemini-free',role:'origin-primary'},{providerId:'node:codex',role:'parallel-2'}]);
   assert.ok(plan.every(item=>Number.isFinite(item.routerScore)));
 });
 
@@ -116,4 +116,40 @@ test('known paid API cost class cannot be relabeled as free by runtime profiles'
     providerProfiles:{'openai-api':{costClass:'account-managed'}},
   });
   assert.deepEqual(plan,[]);
+});
+
+
+test('free-first provider chain keeps paid APIs behind all zero-marginal routes',()=>{
+  assert.deepEqual(AI_CONTROL_POLICY.providerOrder.slice(0,9),[
+    'cloudflare-workers-ai',
+    'gemini-free',
+    'openrouter-free',
+    'groq-free',
+    'node:codex',
+    'node:gemini-cli',
+    'node:claude-code',
+    'openai-api',
+    'anthropic-api',
+  ]);
+  const task=normalizeTaskInput({prompt:'일반 분석'});
+  const plan=buildExecutionPlan(task,{
+    cloudflareWorkersAi:true,
+    geminiFree:true,
+    openrouterFree:true,
+    groqFree:true,
+    nodeProviders:['codex'],
+    openaiApi:true,
+    anthropicApi:true,
+  });
+  assert.equal(plan[0].providerId,'cloudflare-workers-ai');
+  assert.equal(plan.some(item=>item.providerId==='openai-api'),false);
+  assert.equal(plan.some(item=>item.providerId==='anthropic-api'),false);
+});
+
+test('paid provider order is OpenAI then Anthropic only after explicit delegated budget',()=>{
+  const task=normalizeTaskInput({prompt:'유료 API 검증',governance:{paidCommitment:true,explicitDelegatedBudget:true}});
+  const available=availableProviderIds({openaiApi:true,anthropicApi:true},task);
+  assert.deepEqual(available,['openai-api','anthropic-api']);
+  const plan=buildExecutionPlan(task,{openaiApi:true,anthropicApi:true});
+  assert.equal(plan[0].providerId,'openai-api');
 });
