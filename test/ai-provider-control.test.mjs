@@ -189,3 +189,12 @@ test('provider check UI shows upstream diagnostics instead of opaque HTTP 502',(
   assert.match(admin,/function providerCheckErrorMessage/);
   assert.match(admin,/message\(card,providerCheckErrorMessage\(e\),true\)/);
 });
+
+
+test('AI Ops provider control enforces white background and black text for readability',()=>{
+  const admin=read('admin-provider-control.js');
+  assert.match(admin,/AIOPS-STRICT-WHITE-BLACK-READABILITY-20261002/);
+  assert.match(admin,/#aiOpsPanel\{background:#fff!important;color:#000!important\}/);
+  assert.match(admin,/::placeholder\{color:#333!important;opacity:1!important\}/);
+  assert.match(admin,/background:#fff!important;color:#000!important;border-color:#111!important/);
+});
