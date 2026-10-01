@@ -44,6 +44,7 @@
     "ownerInstructionDate": "2026-10-01",
     "requiredPullRequestLabel": "constitution-approved",
     "approvalLabel": "constitution-approved",
-    "ownerInstruction": "좋아 에코디와 협의해서 에코디 전체 사용자 및 독립사이트에 강제실행규칙으로 설정하고 사이트 공개여부를 해당 관리자페이지와 최고관리자페이지에서 간단히 설정 선택 전환할 수 있게 해줘."
+    "ownerInstruction": "좋아 에코디와 협의해서 에코디 전체 사용자 및 독립사이트에 강제실행규칙으로 설정하고 사이트 공개여부를 해당 관리자페이지와 최고관리자페이지에서 간단히 설정 선택 전환할 수 있게 해줘.",
+    "pullRequest": 3147
   }
 }
