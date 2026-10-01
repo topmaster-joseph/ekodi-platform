@@ -1,5 +1,6 @@
 name: Deploy EKODI AI Control Plane
 # Production redeploy trigger: promote the verified AI Commons public-contract hardening from current main.
+# Canonical six-provider chain migration is a release-triggered production contract.
 
 on:
   workflow_dispatch:
