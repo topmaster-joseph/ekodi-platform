@@ -1,6 +1,7 @@
 import { reserveFreeDailyRequest } from './ai-free-quota.js';
 import { projectForExternalAi } from './secure-projection.js';
 
+// Standalone adapter; selection authority remains with the EKODI router/orchestrator.
 const DEFAULT_MODEL='openai/gpt-oss-120b:cheapest';
 const DEFAULT_DAILY_LIMIT=50;
 const MAX_DAILY_LIMIT=200;
