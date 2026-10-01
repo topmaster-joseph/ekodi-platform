@@ -1,5 +1,5 @@
 import { isAllowedOrigin } from './auth-worker.js';
-import { accessGrantManageable, resolveTenantAccessAuthority, tenantGrantCapabilityProjection } from './tenant-access-authority.js';
+import { accessGrantAssignableRoles, accessGrantManageable, resolveTenantAccessAuthority, tenantGrantCapabilityProjection } from './tenant-access-authority.js';
 import { canonicalCoreRole } from './ekodi-principal.js';
 import { accessGrantExpired } from './access-governance.js';
 import { ensureCustomerAccessSchema } from './customer-google-prereg.js';
@@ -65,6 +65,10 @@ function displayNameHint(note='') {
   return value.startsWith('display-name:') ? value.slice('display-name:'.length).trim() : '';
 }
 
+function assignableRoleDirectory(authority,target={}) {
+  return accessGrantAssignableRoles(authority,target).map(role=>({ role, label: ROLE_LABELS[role] || role }));
+}
+
 export function projectEffectiveMemberCapabilities(row) {
   return tenantGrantCapabilityProjection(row);
 }
@@ -94,6 +98,7 @@ function publicMember(row, authority) {
     effectiveCapabilities: capabilityProjection.effectiveCapabilities,
     deniedCapabilities: capabilityProjection.deniedCapabilities,
     canManage: accessGrantManageable(authority, row),
+    assignableRoles: assignableRoleDirectory(authority, row),
     tenant: {
       slug: row.tenant_slug,
       name: row.tenant_name,
@@ -232,9 +237,15 @@ export async function handleCustomerMemberDirectory(request, env) {
   const members = filterMembers(allMembers, url);
 
   return json({
-    // compatibility marker: schemaVersion: 5 clients accept additive access-evidence fields.
-    schemaVersion: 6,
-    authority: { scope: authority.scope, tenant: authority.tenantSlug || '', role: authority.role, canManageAllTenants: authority.canManageAllTenants },
+    // compatibility marker: additive hierarchy metadata for site-local admin management.
+    schemaVersion: 7,
+    authority: {
+      scope: authority.scope,
+      tenant: authority.tenantSlug || '',
+      role: authority.role,
+      canManageAllTenants: authority.canManageAllTenants,
+      assignableRoles: assignableRoleDirectory(authority),
+    },
     generatedAt: new Date().toISOString(),
     summary: directorySummary(allMembers, tenants),
     tenants,

@@ -42,7 +42,7 @@ test('directory includes capability source columns and sanitized projections', (
   assert.match(directory, /a\.denied_capabilities_json/);
   assert.match(directory, /effectiveCapabilities:/);
   assert.match(directory, /deniedCapabilities:/);
-  assert.match(directory, /schemaVersion:\s*6/);
+  assert.match(directory, /schemaVersion:\s*7/);
   assert.match(directory, /tenantGrantCapabilityProjection/);
 });
 

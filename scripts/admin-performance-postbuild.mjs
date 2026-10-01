@@ -40,7 +40,7 @@ for (const [from,to] of [
   ['loadedStyles','cssCache'],
   ['stylesLoaded','cssReady'],
   ['TOKEN_KEY','TK'],
-  ['secondaryStyles','secCss'],
+  ['secondaryStyles','ss'],
   ['waitFor','wait'],
   ['pending','pnd'],
   ['hashes','h'],
@@ -102,7 +102,8 @@ if (finance.includes('setInterval(')) throw new Error('Finance monitor still con
 const cssPath = `${dist}admin-shell.css`;
 let css = await readFile(cssPath, 'utf8');
 const perfCss = `\n/* admin performance guards */\n.section,.architecture{content-visibility:auto;contain-intrinsic-size:280px}\n@media(max-width:760px){.topbar{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:#091321f2}.section,.architecture{contain-intrinsic-size:360px}}\n@media(prefers-reduced-motion:reduce){[data-panel],.sidebar{transition:none!important;scroll-behavior:auto!important}}\n`;
-if (!css.includes('admin performance guards')) css += perfCss;
+if (!css.includes('content-visibility:auto;contain-intrinsic-size:280px')) css += perfCss;
+css = css.replace(/\/\*[\s\S]*?\*\//g, '');
 await writeFile(cssPath, css);
 
 // Mobile Admin owns its header inside the workspace scroll container. Keep it sticky
@@ -110,7 +111,8 @@ await writeFile(cssPath, css);
 const compactCssPath = `${dist}admin-compact.css`;
 let compactCss = await readFile(compactCssPath, 'utf8');
 const mobileCss = `\n/* admin mobile flow */\n@media(max-width:760px){body.admin-compact .app>main{padding-top:0!important}body.admin-compact .topbar{position:sticky!important;top:0!important;left:auto!important;right:auto!important;width:auto!important;height:auto!important;min-height:56px!important;padding:8px 12px!important;box-sizing:border-box!important;z-index:1200!important;background:#fff!important;color:#172033!important;border-bottom:1px solid #d9e3ec!important;box-shadow:none!important}body.admin-compact .topbar .menu{color:#172033!important;background:#fff!important;border:1px solid #d9e3ec!important;border-radius:12px!important;width:42px!important;height:42px!important}body.admin-compact .topbar .kicker{display:none!important}body.admin-compact .topbar h1{display:block!important;color:#172033!important;font-size:16px!important;line-height:1.3!important;margin:0!important}body.admin-compact .content{padding:12px 12px 32px!important}}\n`;
-if (!compactCss.includes('admin mobile flow')) compactCss += mobileCss;
+if (!compactCss.includes('body.admin-compact .app>main{padding-top:0!important}')) compactCss += mobileCss;
+compactCss = compactCss.replace(/\/\*[\s\S]*?\*\//g, '');
 await writeFile(compactCssPath, compactCss);
 
 // Compact the generated compact runtime without changing JavaScript semantics.
@@ -204,6 +206,7 @@ for (const [from,to] of [
   ['updateSessionState','updateState'],
   ['loadPerfDiagnostics','loadPerf'],
   ['validateSession','validate'],
+  ['safeSession','ss'],
 ]) compactHandoff = compactHandoff.replaceAll(from, to);
 await writeFile(handoffPath, compactHandoff);
 

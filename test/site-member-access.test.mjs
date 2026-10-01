@@ -41,7 +41,8 @@ test('member directory is filtered at the database query for tenant administrato
   assert.match(directory,/tenantScope/);
   assert.match(directory,/WHERE t\.slug = \?/);
   assert.match(directory,/canManage: accessGrantManageable/);
-  assert.match(directory,/authority: \{ scope: authority\.scope/);
+  assert.match(directory,/authority:\s*\{/);
+  assert.match(directory,/assignableRoles: assignableRoleDirectory\(authority\)/);
 });
 
 test('site access mutation accepts dynamic registered tenant slugs and enforces protected-role rules',()=>{
