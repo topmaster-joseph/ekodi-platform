@@ -6,7 +6,7 @@ import {loadAiCollaborationPolicy} from './ai-collaboration-settings.js';
 import { LOCAL_EXECUTION_POLICY, compareLocalExecutionCandidates, localExecutionPolicySnapshot, normalizeLocalResource } from './local-execution-policy.js';
 import capabilityRegistry from './config/capability-registry.json' with { type: 'json' };
 import {AI_COMMONS_POLICY,adminIdeaView,canFinalPublish,executionCatalogSnapshot,memberIdeaView,normalizeAiIdeaInput,publicRequestView,rankCommonCapabilities,rankPublicExecutionServices,requestSimilarity,resolveExecutionServiceEntry,suggestedIdeaState} from './ai-commons.js';
-import {attachSiteImprovementTask,buildSiteImprovementPrompt,claimLowTrafficSiteImprovement,completeSiteImprovementNodeJob,dispatchCloudSiteImprovement,failSiteImprovementClaim,failSiteImprovementTask,markSiteImprovementRunning,reconcileSiteImprovementRelease} from './ekodi-site-improvement-scheduler.js';
+import {attachSiteImprovementTask,buildSiteImprovementPrompt,claimLowTrafficSiteImprovement,completeSiteImprovementNodeJob,dispatchCloudSiteImprovement,failSiteImprovementClaim,failSiteImprovementTask,markSiteImprovementRunning,reconcileSiteImprovementRelease,siteImprovementStatusSnapshot} from './ekodi-site-improvement-scheduler.js';
 import {handleSiteImprovementResponsesBroker} from './ekodi-site-improvement-oidc-broker.js';
 
 const clean=value=>String(value??'').trim();
@@ -526,6 +526,19 @@ export default{async fetch(request,env,ctx){
     });
     const weights=collaboration.policy?.router?.weights||AI_ROUTER_SCORE_POLICY.weights;
     return json({ok:true,platform:'ai-control',config:config(env),providers,costPolicy:collaboration.policy?.resources?.funding||null,freeQuotaPolicy:{id:AI_FREE_QUOTA_POLICY.policyId,version:AI_FREE_QUOTA_POLICY.version,paidAutoEscalation:false},freePool,costAlerts,routerScorePolicy:{version:AI_ROUTER_SCORE_POLICY.version,weights,historyWindowHours:AI_ROUTER_SCORE_POLICY.historyWindowHours,recentHealthWindowHours:AI_ROUTER_SCORE_POLICY.recentHealthWindowHours},collaboration:{revision:collaboration.revision||0,source:collaboration.source||'defaults',maxParallelCollaborators:Number(collaboration.policy?.governance?.maxParallelCollaborators)||4},stateStore:dbReady(env)?'ready':'unavailable',onlineNodeProviders:nodes,authoritySource:auth.source||'admin'});
+  }
+  if(request.method==='GET'&&url.pathname==='/api/site-improvement/status'){
+    const auth=await requireAdmin(request,env,'ai:read');if(auth.error)return auth.error;
+    if(clean(auth.user?.role).toLowerCase()!=='super_admin')return json({error:'super_admin_required'},403);
+    const snapshot=await siteImprovementStatusSnapshot(env);
+    return json(snapshot.ok?{...snapshot,authoritySource:auth.source||'admin'}:snapshot,snapshot.ok?200:503);
+  }
+  if(request.method==='POST'&&url.pathname==='/api/site-improvement/evaluate'){
+    const auth=await requireAdmin(request,env,'ai:operate');if(auth.error)return auth.error;
+    if(clean(auth.user?.role).toLowerCase()!=='super_admin')return json({error:'super_admin_required'},403);
+    const result=await runScheduledSiteImprovement(env);
+    const status=await siteImprovementStatusSnapshot(env);
+    return json({ok:true,result,status});
   }
   if(url.pathname==='/api/auth/exchange')return json({error:'service_local_auth_retired',adminUrl:config(env).adminUrl},410);
   if(request.method==='POST'&&url.pathname==='/api/node/enroll')return enrollNode(request,env);
