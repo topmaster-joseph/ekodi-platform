@@ -26,78 +26,77 @@
   });
 
   if (architectureHost) {
+    const compactStyle = document.createElement('style');
+    compactStyle.id = 'ekodiArchitectureCompactStyles';
+    compactStyle.textContent = `
+      .architecture[data-panel~="architecture"]{max-width:none!important;padding-right:10px}
+      .ekodi-structure-overview{display:grid;gap:8px;color:#182033}
+      .structure-overview-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid #dde4ec;border-radius:12px;background:#fff}
+      .structure-overview-head h2{margin:1px 0 3px;font-size:20px;line-height:1.2}.structure-overview-head p{margin:0;font-size:10px;line-height:1.35;color:#667085}
+      .structure-overview-head .kicker{font-size:8px;font-weight:800;letter-spacing:.08em;color:#5b6b7f}.structure-overview-badge{flex:0 0 auto;padding:5px 8px;border:1px solid #d7e0ea;border-radius:999px;background:#f7f9fc;font-size:9px;font-weight:800;color:#344054}
+      .architecture-tabs{display:flex;gap:4px;flex-wrap:wrap;padding:5px;border:1px solid #dde4ec;border-radius:10px;background:#f8fafc;position:sticky;top:0;z-index:6}.architecture-tabs button{height:29px;padding:0 10px;border:0;border-radius:7px;background:transparent;color:#475467;font-size:10px;font-weight:750;cursor:pointer}.architecture-tabs button.active{background:#fff;color:#1557b0;box-shadow:0 1px 3px rgba(15,23,42,.12)}
+      .architecture-tab-panel[hidden]{display:none!important}.architecture-tab-panel{display:grid;gap:7px}
+      .structure-core-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}.structure-core-card{padding:8px;border:1px solid #dde4ec;border-radius:9px;background:#fff;min-width:0}.structure-core-card small{display:block;font-size:8px;font-weight:800;color:#667085}.structure-core-card strong{display:block;margin-top:2px;font-size:11px;line-height:1.2;overflow-wrap:anywhere}.structure-core-card span{display:block;margin-top:2px;font-size:8px;line-height:1.25;color:#667085}
+      .structure-flow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;align-items:stretch}.structure-flow>div{padding:7px 8px;border:1px solid #dde4ec;border-radius:8px;background:#fbfcfe}.structure-flow small{display:block;font-size:7px;font-weight:800;color:#667085}.structure-flow strong{display:block;margin-top:1px;font-size:10px}.structure-flow span{display:block;margin-top:2px;font-size:8px;color:#667085;line-height:1.2}
+      .structure-layer-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.structure-layer-grid article{padding:7px 8px;border:1px solid #e1e6ed;border-radius:8px;background:#fff}.structure-layer-grid small{display:block;font-size:7px;color:#667085}.structure-layer-grid strong{display:block;font-size:10px;margin-top:1px}.structure-layer-grid span{display:block;font-size:8px;color:#667085;line-height:1.2;margin-top:1px}
+      .structure-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.structure-card,.structure-principles>div,.structure-vision{padding:8px 9px;border:1px solid #dde4ec;border-radius:9px;background:#fff}.structure-card small,.structure-vision small,.structure-principles small{font-size:7px;font-weight:800;color:#667085}.structure-card h3,.structure-vision h3{font-size:11px;margin:2px 0}.structure-card p,.structure-vision p,.structure-principles span{font-size:8px;line-height:1.3;color:#667085;margin:0}
+      .structure-principles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.structure-principles strong{display:block;font-size:10px;margin:1px 0}
+      .structure-section-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.structure-section-head h3{font-size:12px;margin:1px 0}.structure-section-head p{font-size:8px;margin:0;color:#667085}.structure-service-registry{padding:8px;border:1px solid #dde4ec;border-radius:9px;background:#fff}
+      .structure-service-group h4{margin:6px 0 4px;font-size:9px}.structure-service-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}.structure-service-card{padding:6px 7px;border:1px solid #e1e6ed;border-radius:7px;text-decoration:none;color:inherit;background:#fbfcfe}.structure-service-card strong{font-size:9px}.structure-service-card small,.structure-service-card span{display:block;font-size:7px;color:#667085;line-height:1.2}
+      @media(max-width:1100px){.structure-core-grid,.structure-flow{grid-template-columns:repeat(3,minmax(0,1fr))}.structure-service-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      @media(max-width:680px){.structure-overview-head{display:block}.structure-overview-badge{display:inline-flex;margin-top:6px}.architecture-tabs{top:0;overflow-x:auto;flex-wrap:nowrap}.architecture-tabs button{white-space:nowrap}.structure-core-grid,.structure-flow,.structure-layer-grid,.structure-columns,.structure-principles,.structure-service-grid{grid-template-columns:1fr 1fr}.architecture[data-panel~="architecture"]{padding-right:0}}
+      @media(max-width:430px){.structure-core-grid,.structure-flow,.structure-layer-grid,.structure-columns,.structure-principles,.structure-service-grid{grid-template-columns:1fr}}
+    `;
+    document.head.append(compactStyle);
     architectureHost.innerHTML = `
       <div class="ekodi-structure-overview">
         <div class="structure-overview-head">
-          <div>
-            <p class="kicker">EKODI ECOSYSTEM</p>
-            <h2>에코디 시스템 구조 개요</h2>
-            <p>에코디는 여러 홈페이지의 묶음이 아니라 하나의 인증·데이터·운영 기반 위에 전문 공간이 연결되는 생태계형 플랫폼입니다.</p>
-          </div>
+          <div><p class="kicker">EKODI ECOSYSTEM</p><h2>에코디 시스템 구조 개요</h2><p>인증·데이터·운영 기반을 공유하고, 각 전문 공간은 독립적으로 책임지는 구조입니다.</p></div>
           <div class="structure-overview-badge">공간은 분리하되 기반은 공유한다</div>
         </div>
-
-        <div class="structure-flow" aria-label="에코디 시스템 기본 흐름">
-          <div><small>ROOT</small><strong>ekodi.kr</strong><span>생태계 허브 · 정문</span></div><b>›</b>
-          <div><small>IDENTITY</small><strong>ekodi.kr/auth</strong><span>Google 인증 · 권한</span></div><b>›</b>
-          <div><small>SPACES</small><strong>전문 서비스 공간</strong><span>Church · Biz · Lab · Trade · 고객공간</span></div><b>›</b>
-          <div><small>PERSONAL</small><strong>ekodi.kr/my</strong><span>나의 활동 · 서비스 · 여정</span></div>
-        </div>
-
-        <div class="structure-layer-grid" aria-label="에코디 공통 플랫폼 계층">
-          <article><small>01 · 생태계 허브</small><strong>ekodi.kr</strong><span>전체 입구와 정체성</span></article>
-          <article><small>02 · 전문 서비스 공간</small><strong>Church · Biz · Lab · Trade</strong><span>분야별 서비스와 고객별 공간</span></article>
-          <article><small>03 · 사용자 공간</small><strong>ekodi.kr/my</strong><span>개인 중심 활동과 서비스</span></article>
-          <article><small>04 · 통합 인증</small><strong>ekodi.kr/auth</strong><span>Google 인증 · 회원 · 권한</span></article>
-          <article><small>05 · 통합 관리자</small><strong>ekodi.kr/admin</strong><span>회원 · 권한 · CRM · 운영 관제</span></article>
-          <article><small>06 · AI 계층</small><strong>공통 AI + 전문 AI</strong><span>상담 · 분석 · 자동화 · 맞춤 서비스</span></article>
-          <article><small>07 · 데이터 계층</small><strong>D1 + Supabase/PostgreSQL</strong><span>공통 운영 원장과 서비스별 데이터</span></article>
-          <article><small>08 · 파일 · 콘텐츠</small><strong>Google Drive + Cloudflare R2</strong><span>원본 보관 · 웹 파일 · 백업 복제</span></article>
-          <article><small>09 · 실행 · 배포</small><strong>Cloudflare</strong><span>Pages · Workers · DNS · Edge</span></article>
-          <article><small>10 · 기준 저장소</small><strong>GitHub</strong><span>코드 · 버전 · 변경이력 · 복구 기준</span></article>
-          <article><small>11 · 업무 인프라</small><strong>Google Workspace</strong><span>메일 · Drive · 문서 · 협업</span></article>
-        </div>
-
-        <div class="structure-columns">
-          <article class="structure-card">
-            <small>USER VIEW</small><h3>사용자는 시스템을 몰라도 됩니다</h3>
-            <p>로그인하면 자신에게 허용된 공간만 보이고, 서비스 종류·서버 구조·권한 체계를 사용자가 따로 이해할 필요가 없도록 합니다.</p>
-            <div class="structure-mini-flow"><span>ekodi.kr</span><b>›</b><span>Google 로그인</span><b>›</b><span>ekodi.kr/auth</span><b>›</b><span>허용된 공간</span><b>›</b><span>ekodi.kr/my</span></div>
-          </article>
-          <article class="structure-card">
-            <small>ADMIN VIEW</small><h3>ekodi.kr/admin은 관제탑입니다</h3>
-            <p>회원 · 인증/권한 · 공간 · 고객 · CRM · 콘텐츠 · AI · 이용량 · 결제 · 파일 · 시스템 상태 · 로그를 하나의 운영 관점에서 연결합니다.</p>
-            <div class="structure-tags"><span>회원</span><span>권한</span><span>공간</span><span>CRM</span><span>AI</span><span>결제</span><span>파일</span><span>상태</span><span>로그</span></div>
-          </article>
-        </div>
-
-        <div class="structure-columns">
-          <article class="structure-card">
-            <small>INTERNAL ECOSYSTEM</small><h3>내부 생태계</h3>
-            <p>EKODI · Church · Biz · Lab · Trade · Publishing · Cafe 등은 공통 기반을 공유하면서 각 공간의 책임과 배포 경계를 유지합니다.</p>
-          </article>
-          <article class="structure-card">
-            <small>EXTERNAL CUSTOMERS</small><h3>외부 고객 전문공간</h3>
-            <p>Jadam · PizzaMaru · CGMA 등 고객 서비스는 승인된 사용자와 관계자에게 필요한 데이터·CRM·전문 AI만 노출하는 독립 공간으로 운영합니다.</p>
-          </article>
-        </div>
-
-        <div class="structure-principles">
-          <div><small>운영 계약</small><strong>Person + Space + Role + Capability</strong><span>누가 · 어느 공간에서 · 어떤 역할로 · 무엇을 할 수 있는지</span></div>
-          <div><small>성장 경험</small><strong>Identity + Space + Data + AI + Journey</strong><span>사람이 공간에서 활동하고 데이터가 쌓이며 AI가 다음 여정을 돕는 구조</span></div>
-        </div>
-
-        <div class="structure-vision">
-          <small>LONG-TERM DIRECTION</small>
-          <h3>에코디 생태계 OS</h3>
-          <p>새 서비스마다 서버와 인증을 다시 만드는 대신, 공통 기반에 새로운 ‘공간’을 꽂는 플러그인형 구조로 확장합니다. 교회·비즈니스·교육·연구·출판·상권·기업 맞춤형 AI가 같은 뿌리 위에서 서로 독립적으로 움직이는 것이 목표입니다.</p>
-        </div>
-
-        <section class="structure-service-registry" aria-labelledby="structureServiceRegistryTitle">
-          <div class="structure-section-head"><div><small>SERVICE REGISTRY</small><h3 id="structureServiceRegistryTitle">에코디 서비스 공간</h3><p>서비스 기준정보에서 자동으로 읽습니다.</p></div><span data-structure-service-count>—</span></div>
-          <div class="structure-service-groups" data-structure-service-groups><p class="operations-loading">서비스 기준정보를 읽는 중입니다.</p></div>
+        <nav class="architecture-tabs" aria-label="시스템 구조 보기">
+          <button type="button" class="active" data-architecture-tab="overview">전체 구조</button>
+          <button type="button" data-architecture-tab="user">사용자</button>
+          <button type="button" data-architecture-tab="admin">관리자</button>
+          <button type="button" data-architecture-tab="data">데이터·인프라</button>
+          <button type="button" data-architecture-tab="services">서비스 공간</button>
+        </nav>
+        <section class="architecture-tab-panel" data-architecture-panel="overview">
+          <div class="structure-core-grid" aria-label="핵심 구조">
+            <article class="structure-core-card"><small>ROOT</small><strong>ekodi.kr</strong><span>생태계 허브 · 정문</span></article>
+            <article class="structure-core-card"><small>IDENTITY</small><strong>/auth</strong><span>Google 인증 · 권한</span></article>
+            <article class="structure-core-card"><small>SPACES</small><strong>전문 공간</strong><span>서비스 · 고객별 독립 책임</span></article>
+            <article class="structure-core-card"><small>PERSONAL</small><strong>/my</strong><span>개인 활동 · 서비스 여정</span></article>
+            <article class="structure-core-card"><small>ADMIN</small><strong>/admin</strong><span>통합 관제 · 운영 통제</span></article>
+            <article class="structure-core-card"><small>INFRA</small><strong>Cloud + Data</strong><span>배포 · 저장 · 관측</span></article>
+          </div>
+          <div class="structure-flow" aria-label="에코디 연결 구조">
+            <div><small>01</small><strong>사용자</strong><span>공개 페이지 · 로그인</span></div><div><small>02</small><strong>인증</strong><span>Google · 역할 · 권한</span></div><div><small>03</small><strong>서비스 공간</strong><span>Church · Biz · Trade 등</span></div><div><small>04</small><strong>관리자</strong><span>사이트 관리자 · 최고관리자</span></div><div><small>05</small><strong>데이터</strong><span>D1 · Supabase · Drive · R2</span></div><div><small>06</small><strong>배포·관측</strong><span>GitHub · Cloudflare · Monitor</span></div>
+          </div>
+          <div class="structure-principles"><div><small>운영 계약</small><strong>Person + Space + Role + Capability</strong><span>누가 · 어느 공간에서 · 어떤 역할로 · 무엇을 할 수 있는지</span></div><div><small>성장 경험</small><strong>Identity + Space + Data + AI + Journey</strong><span>활동 데이터와 AI가 다음 여정을 돕는 구조</span></div></div>
+        </section>
+        <section class="architecture-tab-panel" data-architecture-panel="user" hidden>
+          <article class="structure-card"><small>USER VIEW</small><h3>사용자는 시스템을 몰라도 됩니다</h3><p>로그인 전 공개 서비스를 이용하고, 로그인 후에는 해당 사이트의 로컬 마이페이지와 허용된 기능으로 바로 연결됩니다.</p></article>
+          <div class="structure-layer-grid"><article><small>공개</small><strong>로그인 전 접근</strong><span>관리자 제외 사용자 서비스 공개</span></article><article><small>인증</small><strong>ekodi.kr/auth</strong><span>통합 인증 · 회원 · 권한</span></article><article><small>개인화</small><strong>사이트 로컬 마이페이지</strong><span>현재 서비스 문맥 유지</span></article></div>
+        </section>
+        <section class="architecture-tab-panel" data-architecture-panel="admin" hidden>
+          <article class="structure-card"><small>ADMIN VIEW</small><h3>ekodi.kr/admin은 통합 관제탑입니다</h3><p>회원 · 권한 · 고객 · 콘텐츠 · AI · 데이터 · 배포 · 장애 · 로그를 하나의 운영 관점에서 연결합니다.</p></article>
+          <div class="structure-layer-grid"><article><small>최고관리자</small><strong>/admin</strong><span>플랫폼 전역 정책 · 상태 · 배포</span></article><article><small>사이트 관리자</small><strong>/{site}/admin</strong><span>사이트별 업무 · 콘텐츠 · 권한</span></article><article><small>라우팅</small><strong>고유 URL</strong><span>새로고침 · 직접 진입 상태 복원</span></article></div>
+        </section>
+        <section class="architecture-tab-panel" data-architecture-panel="data" hidden>
+          <div class="structure-layer-grid"><article><small>CORE DB</small><strong>D1</strong><span>회원 · 권한 · 운영 원장</span></article><article><small>SERVICE DATA</small><strong>Supabase / PostgreSQL</strong><span>서비스별 관계형 데이터</span></article><article><small>FILES</small><strong>Google Drive + R2</strong><span>원본 · 웹 파일 · 백업</span></article><article><small>SOURCE</small><strong>GitHub</strong><span>코드 · 버전 · 복구 기준</span></article><article><small>RUNTIME</small><strong>Cloudflare</strong><span>Pages · Workers · DNS · Edge</span></article><article><small>OBSERVE</small><strong>Monitoring</strong><span>상태 · 응답 · 장애 · 복구 확인</span></article></div>
+        </section>
+        <section class="architecture-tab-panel" data-architecture-panel="services" hidden>
+          <section class="structure-service-registry" aria-labelledby="structureServiceRegistryTitle"><div class="structure-section-head"><div><small>SERVICE REGISTRY</small><h3 id="structureServiceRegistryTitle">에코디 서비스 공간</h3><p>서비스 기준정보에서 자동으로 읽습니다.</p></div><span data-structure-service-count>—</span></div><div class="structure-service-groups" data-structure-service-groups><p class="operations-loading">서비스 기준정보를 읽는 중입니다.</p></div></section>
         </section>
       </div>`;
+    const tabButtons = [...architectureHost.querySelectorAll('[data-architecture-tab]')];
+    const tabPanels = [...architectureHost.querySelectorAll('[data-architecture-panel]')];
+    tabButtons.forEach(button => button.addEventListener('click', () => {
+      const key = button.dataset.architectureTab;
+      tabButtons.forEach(item => item.classList.toggle('active', item === button));
+      tabPanels.forEach(panelNode => { panelNode.hidden = panelNode.dataset.architecturePanel !== key; });
+    }));
   }
 
   const panel = document.createElement('article');
