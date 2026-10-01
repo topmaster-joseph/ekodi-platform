@@ -14,6 +14,14 @@ test('admin system structure overview reads canonical structure, services and mo
   assert.match(mapJs, /\.architecture\[data-panel~="architecture"\]/);
   assert.match(mapJs, /에코디 시스템 구조 개요/);
   assert.match(mapJs, /Identity \+ Space \+ Data \+ AI \+ Journey/);
+  assert.match(mapJs, /data-architecture-tab="overview"/);
+  assert.match(mapJs, /data-architecture-tab="user"/);
+  assert.match(mapJs, /data-architecture-tab="admin"/);
+  assert.match(mapJs, /data-architecture-tab="data"/);
+  assert.match(mapJs, /data-architecture-tab="services"/);
+  assert.match(mapJs, /architecture-tab-panel/);
+  assert.match(mapJs, /structure-core-grid/);
+  assert.match(mapJs, /공간은 분리하되 기반은 공유한다/);
   assert.match(mapJs, /fetch\('\/platform-boundaries\.json'/);
   assert.match(mapJs, /fetch\('\/monitor-status\.json'/);
   assert.match(mapJs, /fetch\('\/ecosystem-services\.json'/);
