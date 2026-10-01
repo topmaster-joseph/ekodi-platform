@@ -208,3 +208,13 @@ test('provider health classifier distinguishes Gemini API key and precondition f
   assert.match(admin,/API 키가 유효하지 않거나 차단됨/);
   assert.match(admin,/지역\/결제 설정 확인/);
 });
+
+test('provider health UI explains Cloudflare quota, generic Gemini 400, and Claude 403',()=>{
+  const admin=read('admin-provider-control.js');
+  assert.match(admin,/workers_ai_daily_call_limit/);
+  assert.match(admin,/오늘 무료\/포함 호출 한도 소진/);
+  assert.match(admin,/gemini_400_400/);
+  assert.match(admin,/Gemini 요청 거부\(HTTP 400\)/);
+  assert.match(admin,/anthropic_403_forbidden/);
+  assert.match(admin,/Claude 요청 거부\(HTTP 403\)/);
+});
