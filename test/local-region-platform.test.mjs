@@ -110,7 +110,7 @@ test('Cheonggye public routes are injected as public shell surfaces',async()=>{
 
 test('CGMA public home receives reciprocal links to Cheonggye and Cheonggye Pass',async()=>{
   const router=await fs.readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
-  assert.match(router,/data-ekodi-cheonggye-links=\\"v1\\"/);
-  assert.match(router,/href=\\"\/cheonggye\\"/);
-  assert.match(router,/href=\\"\/cheonggyepass\\"/);
+    assert.match(router,/data-ekodi-cheonggye-links="v1"/);
+    assert.match(router,/href="\/cheonggye"/);
+    assert.match(router,/href="\/cheonggyepass"/);
 });
