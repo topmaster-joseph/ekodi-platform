@@ -30,6 +30,7 @@
     openai:'유료 API · 명시적 예산/승인 필요 · 자동 유료전환 없음',
     anthropic:'Claude 유료 API · 명시적 예산/승인 필요 · 자동 유료전환 없음',
   });
+  const AI_SITE_LINKS=Object.freeze({'cloudflare-workers-ai':'https://www.cloudflare.com/developer-platform/products/workers-ai/','gemini':'https://ai.google.dev/','openrouter-free':'https://openrouter.ai/','groq-free':'https://groq.com/','openai':'https://openai.com/','anthropic':'https://www.anthropic.com/'});
   const AI_KEY_LINKS=Object.freeze({
     openai:'https://platform.openai.com/api-keys',
     gemini:'https://aistudio.google.com/app/apikey',
@@ -65,7 +66,7 @@
     const operational=p.health==='healthy',note=healthNote(p),configured=Boolean(p.configured),requiresSecret=p.requiresSecret!==false,keyUrl=AI_KEY_LINKS[p.id]||'',hint=providerActionHint(p),statusNote=AI_STATUS_NOTES[p.id]||'';
     const secretState=requiresSecret?`Secret ${configured?'연결':'미연결'}`:(configured?'계정 자원 연결':'계정 자원 미연결');
     return`<article class="ekodi-ai-provider-card" data-ai-provider="${esc(p.id)}">
-      <div class="ekodi-ai-provider-head"><div class="ekodi-ai-provider-identity"><small>${esc(p.id)}</small><h4>${esc(p.name||AI_LABELS[p.id]||p.id)}</h4></div><div class="ekodi-ai-provider-statuses" aria-label="${esc(p.name||p.id)} 연결 상태"><span class="ekodi-ai-state ${configured?'ok':'warn'}">${esc(secretState)}</span><span class="ekodi-ai-state ${operational?'ok':'warn'}">운영 ${operational?'가동':'비가동'}</span></div></div>
+      <div class="ekodi-ai-provider-head"><div class="ekodi-ai-provider-identity"><small>${esc(p.id)}</small><h4>${siteUrl?`<a class="ekodi-ai-provider-site" href="${esc(siteUrl)}" target="_blank" rel="noopener noreferrer">${esc(p.name||AI_LABELS[p.id]||p.id)} ↗</a>`:esc(p.name||AI_LABELS[p.id]||p.id)}</h4></div><div class="ekodi-ai-provider-statuses" aria-label="${esc(p.name||p.id)} 연결 상태"><span class="ekodi-ai-state ${configured?'ok':'warn'}">${esc(secretState)}</span><span class="ekodi-ai-state ${operational?'ok':'warn'}">운영 ${operational?'가동':'비가동'}</span></div></div>
       ${statusNote?`<div class="ekodi-ai-provider-status-note">${esc(statusNote)}</div>`:''}
       <div class="ekodi-ai-provider-fields"><label><span>사용</span><input data-ai-field="enabled" type="checkbox" ${p.enabled?'checked':''}></label><label><span>순위</span><input data-ai-field="priority" type="number" min="1" max="999" value="${Number(p.priority||100)}"></label><label><span>기본 모델</span><input data-ai-field="model" value="${esc(p.model||'')}"></label></div>
       ${requiresSecret?`<div class="ekodi-ai-secret-row"><label class="ekodi-ai-secret"><span>API Key</span><input data-ai-field="secret" type="password" autocomplete="new-password" placeholder="${configured?'새 키 입력 시 기존 Secret 교체':'새 키 입력 후 Worker Secret으로 이동'}"></label><div class="ekodi-ai-provider-actions">${keyUrl?`<a class="ekodi-ai-key-link" href="${esc(keyUrl)}" target="_blank" rel="noopener">키 발급 ↗</a>`:''}<button type="button" data-ai-action="secret">${configured?'키 교체':'키 연결'}</button><button type="button" data-ai-action="save">저장</button><button type="button" data-ai-action="check" ${configured?'':'disabled'}>확인</button></div></div>`:`<div class="ekodi-ai-secret-row no-secret"><div class="ekodi-ai-no-secret"><strong>API Key 없음</strong><span>Cloudflare AI binding / 계정 자원 사용</span></div><div class="ekodi-ai-provider-actions"><button type="button" data-ai-action="save">저장</button><button type="button" data-ai-action="check" ${configured?'':'disabled'}>확인</button></div></div>`}
@@ -121,3 +122,9 @@
   window.EKODIProviderControl=Object.freeze({VERSION:'1.1.0',FEATURE_VERSION:'2.1.0',DEFINITIONS,ENVIRONMENTS,load,setSelection,snapshot});
   window.addEventListener('ekodi-authenticated',load);queueMicrotask(load);
 })();
+
+/* AI-PROVIDER-TWO-COLUMN-20261002 */
+.ekodi-ai-provider-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+.ekodi-ai-provider-site{color:#111!important;text-decoration:none;border-bottom:1px solid #999}
+.ekodi-ai-provider-site:hover{border-bottom-color:#111}
+@media(max-width:780px){.ekodi-ai-provider-grid{grid-template-columns:1fr!important}}
