@@ -191,8 +191,20 @@ export async function listSitePublicationSettings(env){
 
 export async function getSitePublicationSetting(env,siteId){
   const id=normalizedId(siteId);if(!id)return null;
-  const sites=await listSitePublicationSettings(env);
-  return sites.find(site=>site.id===id)||null;
+  const catalog=await sitePublicationCatalog(env),site=catalog.find(item=>item.id===id);
+  if(!site)return null;
+  if(!env?.DB?.prepare)return normalizeSitePublicationRow(null,site);
+  let row;try{row=await env.DB.prepare('SELECT * FROM public_site_controls WHERE site_id=? LIMIT 1').bind(id).first()}catch{return normalizeSitePublicationRow(null,site)}
+  if(!row){
+    const now=new Date().toISOString();
+    try{
+      await env.DB.prepare(`INSERT OR IGNORE INTO public_site_controls
+        (site_id,workspace_id,domain,public_status,maintenance_display_type,maintenance_redirect_url,maintenance_title,maintenance_message,redirect_mode,updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(site.id,site.workspaceId,site.domain,'public','default','',site.defaultMaintenanceTitle,site.defaultMaintenanceMessage,'button',now).run();
+      row=await env.DB.prepare('SELECT * FROM public_site_controls WHERE site_id=? LIMIT 1').bind(id).first();
+    }catch{return normalizeSitePublicationRow(null,site)}
+  }
+  return normalizeSitePublicationRow(row,site);
 }
 
 function validRedirect(value){
@@ -204,8 +216,8 @@ export async function putSitePublicationSetting(env,siteId,input={},updatedBy=nu
   const current=await getSitePublicationSetting(env,siteId);if(!current)return{ok:false,status:404,error:'site_not_found'};
   const status=clean(input.publicStatus||current.publicStatus,20).toLowerCase();
   if(!STATUS_SET.has(status))return{ok:false,status:400,error:'invalid_publication_status'};
-  const displayType=input.maintenanceDisplayType==='url'?'url':'default';
-  const redirectMode=input.redirectMode==='auto'?'auto':'button';
+  const displayType=input.maintenanceDisplayType==null?current.maintenanceDisplayType:(input.maintenanceDisplayType==='url'?'url':'default');
+  const redirectMode=input.redirectMode==null?current.redirectMode:(input.redirectMode==='auto'?'auto':'button');
   const redirectUrl=validRedirect(input.maintenanceRedirectUrl??current.maintenanceRedirectUrl);
   if(status==='maintenance'&&displayType==='url'&&!redirectUrl)return{ok:false,status:400,error:'maintenance_redirect_required'};
   const title=clean(input.maintenanceTitle??current.maintenanceTitle,80)||current.defaultMaintenanceTitle;
@@ -257,18 +269,17 @@ async function tenantSiteForDomain(env,host){
 
 export async function resolvePublicationSiteForRequest(request,env,{admin=false}={}){
   const url=new URL(request.url),host=requestHost(request),path=trimPath(url.pathname);
-  let catalog=staticSitePublicationCatalog();
-  if(host==='ekodi.kr'){
-    const dynamic=await tenantSiteForFirstSegment(env,path);if(dynamic)catalog=[dynamic,...catalog];
-  }else{
-    const dynamic=await tenantSiteForDomain(env,host);if(dynamic)catalog=[dynamic,...catalog];
-  }
-  const candidates=catalog.filter(site=>{
+  const matches=site=>{
     if(site.exactRoot)return host==='ekodi.kr'&&path==='/';
     if(hostMatches(site,host)&&host!=='ekodi.kr')return true;
     if(host!=='ekodi.kr')return false;
     return path===site.canonicalPath||path.startsWith(site.canonicalPath+'/');
-  }).sort((a,b)=>b.canonicalPath.length-a.canonicalPath.length);
+  };
+  let candidates=staticSitePublicationCatalog().filter(matches).sort((a,b)=>b.canonicalPath.length-a.canonicalPath.length);
+  if(!candidates.length){
+    const dynamic=host==='ekodi.kr'?await tenantSiteForFirstSegment(env,path):await tenantSiteForDomain(env,host);
+    if(dynamic&&matches(dynamic))candidates=[dynamic];
+  }
   const site=candidates[0];if(!site)return null;
   const relative=host==='ekodi.kr'?relativePath(path,site.canonicalPath):path;
   const isAdmin=adminOrProtectedRelative(relative)&&(/^\/admin(?:\/|$)/i.test(relative));
