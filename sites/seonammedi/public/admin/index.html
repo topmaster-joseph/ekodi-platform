@@ -19,6 +19,7 @@
     </div>
     <div class="sidebar-menu">
     <button class="active" data-panel-target="dashboard" type="button">운영홈</button>
+    <button data-panel-target="site-health" type="button">사이트 점검</button>
     <button data-panel-target="status" type="button">현재상황</button>
     <button data-panel-target="timeline" type="button">활동이력</button>
     <button data-panel-target="organization" type="button">조직</button>
@@ -42,18 +43,45 @@
         <article><span>공지</span><strong id="noticeCount">-</strong><small>초안 포함</small></article>
         <article><span>채널</span><strong id="channelCount">-</strong><small>숨김 포함</small></article>
       </div>
-      <section class="card"><h2>관리 범위</h2><p id="scopeSummary">권한을 확인하고 있습니다.</p><div class="quick"><button type="button" data-go="status">현재상황</button><button type="button" data-go="timeline">활동이력</button><button type="button" data-go="organization">조직</button><button type="button" data-go="notices">공지</button><button type="button" data-go="content">관련자료</button><button type="button" data-go="voices">시민의 목소리</button><button type="button" data-go="finance">후원·회계</button><button type="button" data-go="minutes">내부 회의록</button><button type="button" data-go="channels">채널</button><a href="/seonammedi/" target="_blank" rel="noopener">사이트 확인</a></div></section>
+      <section class="card"><h2>관리 범위</h2><p id="scopeSummary">권한을 확인하고 있습니다.</p><div class="quick"><button type="button" data-go="site-health">사이트 점검</button><button type="button" data-go="status">현재상황</button><button type="button" data-go="timeline">활동이력</button><button type="button" data-go="organization">조직</button><button type="button" data-go="notices">공지</button><button type="button" data-go="content">관련자료</button><button type="button" data-go="voices">시민의 목소리</button><button type="button" data-go="finance">후원·회계</button><button type="button" data-go="minutes">내부 회의록</button><button type="button" data-go="channels">채널</button><a href="/seonammedi/" target="_blank" rel="noopener">사이트 확인</a></div></section>
     </section>
 
+    <section class="panel-page" data-panel="site-health" hidden>
+      <div class="heading">
+        <div><p class="eyebrow">SITE HEALTH</p><h1>사이트 점검</h1><p>배포로 정해지는 정적 상태와 실행 중 계속 변하는 동적 상태를 분리해 확인합니다.</p></div>
+        <button id="reloadSiteHealth" type="button" class="secondary">지금 점검</button>
+      </div>
+      <div class="health-summary">
+        <article class="card health-summary-card"><span>정적 상태</span><strong id="staticHealthStatus">확인 중</strong><small>경로·자산·메타데이터·공개/관리 분리</small></article>
+        <article class="card health-summary-card"><span>동적 상태</span><strong id="dynamicHealthStatus">확인 중</strong><small>API·데이터·자동수집·최근 실행</small></article>
+        <article class="card health-summary-card"><span>최근 확인</span><strong id="siteHealthCheckedAt">-</strong><small>관리자 화면에서 직접 재확인 가능</small></article>
+      </div>
+      <div class="health-grid">
+        <section class="card">
+          <div class="card-head"><div><p class="eyebrow">STATIC</p><h2>정적 상태</h2></div><span class="tag">배포 기준</span></div>
+          <p class="health-note">코드·라우팅·자산·메타데이터처럼 배포 후 다음 변경 전까지 유지되는 항목입니다.</p>
+          <div id="staticHealthList" class="health-list"><p class="empty">확인 중입니다.</p></div>
+        </section>
+        <section class="card">
+          <div class="card-head"><div><p class="eyebrow">DYNAMIC</p><h2>동적 상태</h2></div><span class="tag live">실시간 기준</span></div>
+          <p class="health-note">API 응답, 콘텐츠 데이터, 자동수집 실행처럼 시간에 따라 달라지는 운영 항목입니다.</p>
+          <div id="dynamicHealthList" class="health-list"><p class="empty">확인 중입니다.</p></div>
+        </section>
+      </div>
+      <section class="card health-monitor-card">
+        <div class="card-head"><div><p class="eyebrow">AUTOMATIC CHECK</p><h2>자동점검 실행 기록</h2></div><span id="monitorRunBadge" class="tag">확인 중</span></div>
+        <p id="monitorRunSummary" class="health-note">최근 자동점검 기록을 불러오는 중입니다.</p>
+        <div id="monitorRecentItems" class="item-list"></div>
+      </section>
+    </section>
 
 
     <section class="panel-page" data-panel="status" hidden>
       <div class="heading"><div><p class="eyebrow">CURRENT STATUS</p><h1>현재상황 관리</h1><p>사용자 페이지의 현재상황 카드 제목과 설명을 직접 관리합니다.</p></div></div>
       <form id="statusForm" class="card form-card">
-        <div class="form-row"><label>공식 기록 제목<input name="officialTitle" maxlength="120"></label><label>관련 보도 제목<input name="newsTitle" maxlength="120"></label><label>일일 점검 제목<input name="dailyTitle" maxlength="120"></label></div>
+        <div class="form-row"><label>공식 기록 제목<input name="officialTitle" maxlength="120"></label><label>관련 보도 제목<input name="newsTitle" maxlength="120"></label></div>
         <label>공식 기록 설명<textarea name="officialText" rows="4" maxlength="2000"></textarea></label>
         <label>관련 보도 설명<textarea name="newsText" rows="4" maxlength="2000"></textarea></label>
-        <label>일일 점검 설명<textarea name="dailyText" rows="4" maxlength="2000"></textarea></label>
         <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="reloadStatusPage" class="secondary">다시 불러오기</button></div>
         <p id="statusPageMessage" class="message" role="status"></p>
       </form>
