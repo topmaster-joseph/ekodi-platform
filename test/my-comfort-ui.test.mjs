@@ -44,6 +44,13 @@ test('My EKODI compacts services with subtabs and renders activity from real con
   assert.match(hubCss,/\[data-services-panel\]\[hidden\]/);
 });
 
+test('My EKODI keeps current workspace in the header and compacts the signed-in command surface',()=>{
+  assert.match(html,/class="top-actions"><a id="workspaceCompact"/);
+  assert.match(hubCss,/\.top-actions \.workspace-compact\{position:static/);
+  assert.match(hubCss,/body\[data-auth-state="member"\] \.personal-action-command\{display:grid/);
+  assert.match(hubCss,/\.intent-examples\{display:none\}/);
+});
+
 test('My EKODI separates customized footer guidance from the shared legal footer',()=>{
   assert.match(html,/class="my-custom-footer"/);
   assert.match(html,/class="my-footer-credo"/);
