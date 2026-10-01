@@ -8,6 +8,7 @@ on:
     paths:
       - '.github/workflows/verify-seonammedi-domains.yml'
       - 'wrangler.seonammedi-redirect.toml'
+      - 'seonammedi-domain-gateway.js'
       - 'legacy-redirect.js'
       - 'sites/seonammedi/public/**'
       - 'discovery-layer.js'
@@ -26,13 +27,13 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq dnsutils >/dev/null
-      - name: Verify DNS HTTPS and canonical redirects
+      - name: Verify DNS HTTPS and preserved customer domains
         shell: bash
         run: |
           set -euo pipefail
           expected_ns='kai.ns.cloudflare.com. meadow.ns.cloudflare.com.'
           verify() {
-            host="$1"; path="$2"; expected="$3"
+            host="$1"; path="$2"; expected_upstream="$3"
             ns=$(dig +short NS "$host" | sort | tr '\n' ' ' | sed 's/[[:space:]]*$//')
             echo "$host ns=$ns"
             test "$ns" = "$expected_ns"
@@ -40,12 +41,16 @@ jobs:
             curl -sS -o /dev/null -D /tmp/h --connect-timeout 10 --max-time 30 "https://$host$path"
             code=$(awk 'toupper($1) ~ /^HTTP\// {c=$2} END {print c+0}' /tmp/h)
             loc=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' /tmp/h)
-            echo "$host$path http=$code location=$loc"
-            test "$code" = "301"
-            test "$loc" = "$expected"
+            mode=$(awk 'BEGIN{IGNORECASE=1} /^x-ekodi-domain-mode:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' /tmp/h)
+            upstream=$(awk 'BEGIN{IGNORECASE=1} /^x-ekodi-upstream-path:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' /tmp/h)
+            echo "$host$path http=$code location=$loc mode=$mode upstream=$upstream"
+            test "$code" = "200"
+            test -z "$loc"
+            test "$mode" = "customer-domain-preserved"
+            test "$upstream" = "$expected_upstream"
           }
-          verify "seonammedi.kr" "/domain-check?source=verify" "https://ekodi.kr/seonammedi/domain-check?source=verify"
-          verify "xn--3e0b8b58jw4co4mnpll3k.kr" "/admin/?source=verify" "https://ekodi.kr/seonammedi/admin/?source=verify"
+          verify "seonammedi.kr" "/?source=verify" "/seonammedi/"
+          verify "xn--3e0b8b58jw4co4mnpll3k.kr" "/?source=verify" "/seonammedi/"
 
       - name: Verify search-bot indexability
         shell: bash
