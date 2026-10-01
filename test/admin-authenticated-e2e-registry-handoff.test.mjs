@@ -38,7 +38,7 @@ test('POS Agent is a native super-admin panel and never replaces the Admin shell
     readFile(new URL('../admin-authenticated-shell.js', import.meta.url), 'utf8'),
     readFile(new URL('../admin-canonical-routes.js', import.meta.url), 'utf8'),
   ]);
-  assert.match(panel,/data\.panel=SECTION/);
+  assert.match(panel,/section\.dataset\.panel=SECTION/);
   assert.match(panel,/\/cmpmyi\/admin\/agent\/download\//);
   assert.match(panel,/127\.0\.0\.1:17831/);
   assert.match(shell,/pos-agent-admin\.js/);
