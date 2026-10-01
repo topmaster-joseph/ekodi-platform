@@ -732,8 +732,9 @@ jobs:
           receipt_code=$(curl -sS "${curl_retry[@]}" -o /tmp/orchestrator-release-receipt.json -w '%{http_code}' --get 'https://ekodi.kr/api/orchestrator/release-receipt' --data-urlencode "taskId=${receipt_task}" --data-urlencode "branchRef=${receipt_branch}")
           test "$receipt_code" = '404'
           node -e "const b=require('/tmp/orchestrator-release-receipt.json');if(b?.authorized!==false||b?.reason!=='not_found'||JSON.stringify(b).includes('requester'))process.exit(1)"
-          mcp_unauth=$(curl -fsS "${curl_retry[@]}" -H 'content-type: application/json' --data-binary '{"jsonrpc":"2.0","id":902,"method":"tools/call","params":{"name":"ekodi_delegate_command","arguments":{"goal":"production boundary probe","risk":"normal"}}}' 'https://ekodi.kr/mcp')
-          printf '%s' "$mcp_unauth" > /tmp/mcp-unauth.json
+          mcp_unauth_code=$(curl -sS "${curl_retry[@]}" -D /tmp/mcp-unauth.headers -o /tmp/mcp-unauth.json -w '%{http_code}' -H 'content-type: application/json' --data-binary '{"jsonrpc":"2.0","id":902,"method":"tools/call","params":{"name":"ekodi_delegate_command","arguments":{"goal":"production boundary probe","risk":"normal"}}}' 'https://ekodi.kr/mcp')
+          test "$mcp_unauth_code" = '401'
+          grep -Eiq '^www-authenticate:.*oauth-protected-resource' /tmp/mcp-unauth.headers
           node -e "const b=require('/tmp/mcp-unauth.json');const r=b?.result;if(r?.structuredContent?.authenticated!==false||!String(r?._meta?.['mcp/www_authenticate']?.[0]||'').includes('oauth-protected-resource'))process.exit(1)"
           printf '%s' "$health" | grep -q '"ok":true'
           printf '%s' "$ai_modules" | grep -q '"directProviderStorageAccess":false'

@@ -105,6 +105,19 @@ test('canonical MCP responses advertise only the apex resource',async()=>{
   assert.equal(canonical.headers.get('x-ekodi-mcp-legacy-endpoint'),null);
 });
 
+test('protected tools use HTTP 401 challenge while public tools remain callable without OAuth',async()=>{
+  const protectedRequest=new Request('https://ekodi.kr/mcp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:71,method:'tools/call',params:{name:'account_status',arguments:{}}})});
+  const protectedResponse=await handleEkodiMcpGateway(protectedRequest,{});
+  assert.equal(protectedResponse.status,401);
+  assert.match(protectedResponse.headers.get('www-authenticate')||'',/oauth-protected-resource/);
+
+  const publicRequest=new Request('https://ekodi.kr/mcp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:72,method:'tools/call',params:{name:'identify_ekodi',arguments:{}}})});
+  const publicResponse=await handleEkodiMcpGateway(publicRequest,{});
+  assert.equal(publicResponse.status,200);
+  const publicBody=await publicResponse.json();
+  assert.equal(publicBody.result.structuredContent.canonicalOrigin,'https://ekodi.kr');
+});
+
 test('authenticated tool advertises OAuth challenge when connection is missing',async()=>{
   const result=await callEkodiMcpTool('ekodi_my_identity',{},new Request('https://ekodi.kr/mcp'),{});
   assert.equal(result.structuredContent.authenticated,false);
