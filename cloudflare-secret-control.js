@@ -6,6 +6,7 @@ const ALLOWED_BYTES = new Set([32, 48, 64]);
 const BINDING_NAME = /^[A-Za-z_$][A-Za-z0-9_$]{0,127}$/;
 const RESERVED_NAMES = new Set([
   'CLOUDFLARE_SECRET_MANAGER_TOKEN',
+  'CF_API_TOKEN',
   'CLOUDFLARE_API_TOKEN',
   'CLOUDFLARE_ACCOUNT_ID',
 ]);
@@ -71,8 +72,12 @@ async function fingerprint(secret) {
   return [...new Uint8Array(digest)].slice(0, 8).map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
+function secretManagerToken(env = {}) {
+  return String(env.CLOUDFLARE_SECRET_MANAGER_TOKEN || env.CF_API_TOKEN || '').trim();
+}
+
 function cloudflareReady(env) {
-  return Boolean(env.CLOUDFLARE_SECRET_MANAGER_TOKEN && env.CLOUDFLARE_ACCOUNT_ID);
+  return Boolean(secretManagerToken(env) && env.CLOUDFLARE_ACCOUNT_ID);
 }
 
 function maskId(value) {
@@ -89,7 +94,7 @@ function cfUrl(env, scriptName, suffix = '') {
 
 async function cfRequest(env, url, init = {}) {
   const headers = new Headers(init.headers || {});
-  headers.set('authorization', `Bearer ${env.CLOUDFLARE_SECRET_MANAGER_TOKEN}`);
+  headers.set('authorization', `Bearer ${secretManagerToken(env)}`);
   headers.set('content-type', 'application/json');
   return fetch(url, { ...init, headers });
 }
