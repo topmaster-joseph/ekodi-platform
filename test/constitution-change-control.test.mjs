@@ -72,6 +72,8 @@ const commitChange = async (cwd, target, { withAmendment = true } = {}) => {
 };
 
 const runGate = (cwd, approved) => run(cwd, process.execPath, ['scripts/validate-constitution-change.mjs'], {
+  // Keep this unit test independent from the outer GitHub PR target branch.
+  GITHUB_BASE_REF: '',
   EKODI_BASE_REF: 'main',
   EKODI_CONSTITUTION_APPROVED: approved ? 'true' : 'false',
 });
