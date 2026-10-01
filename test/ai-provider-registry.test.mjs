@@ -28,5 +28,5 @@ test('provider status never exposes credentials', () => {
   assert.equal(serialized.includes('test-cerebras-secret'), false);
   assert.equal(serialized.includes('test-qwen-secret'), false);
   assert.equal(serialized.includes('test-deepseek-secret'), false);
-  assert.deepEqual(status.map(item => item.id), ['cloudflare-workers-ai', 'gemini', 'openrouter-free', 'groq-free', 'openai', 'anthropic']);
+  assert.deepEqual(status.map(item => item.id), ['cloudflare-workers-ai', 'gemini', 'openrouter-free', 'groq-free', 'cerebras-free', 'qwen-free', 'deepseek-free-credit', 'openai', 'anthropic']);
 });

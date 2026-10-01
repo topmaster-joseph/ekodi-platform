@@ -199,3 +199,21 @@ test('admin provider control exposes official sites and free-only confirmation g
   assert.match(admin,/Free Quota Only 설정 확인/);
   assert.match(admin,/target="_blank"/);
 });
+
+
+test('provider health probes allocate enough output budget for thinking-era models and preserve safe provider diagnostics',()=>{
+  const api=read('ai-provider-control.js');
+  assert.match(api,/id==='anthropic'\?512:id==='gemini'\?256:64/);
+  assert.match(api,/error\.providerMessage=message/);
+  assert.match(api,/providerMessage:clean\(error\?\.providerMessage,320\)/);
+  assert.match(api,/requestId:clean\(error\?\.requestId,120\)/);
+});
+
+
+test('provider check UI shows upstream diagnostics instead of opaque HTTP 502',()=>{
+  const admin=read('admin-provider-control.js');
+  assert.match(admin,/error\.providerMessage=data\.providerMessage/);
+  assert.match(admin,/error\.requestId=data\.requestId/);
+  assert.match(admin,/function providerCheckErrorMessage/);
+  assert.match(admin,/message\(card,providerCheckErrorMessage\(e\),true\)/);
+});
