@@ -37,3 +37,261 @@ body.admin-compact #ekodiSystemHealth .health-flow-node[data-state="error"]{bord
 body.admin-compact #ekodiSystemHealth .system-health-chart-empty-grid{border-color:#cbd5e1;background-color:#fff}
 @media(max-width:760px){body.admin-compact #ekodiSystemHealth .system-health-head{align-items:stretch;flex-direction:column}body.admin-compact #ekodiSystemHealth .system-health-actions{width:100%;justify-content:flex-start}}
 
+
+
+/* Platform overview compact-density contract · 2026-10-01
+ * Keep the operational hierarchy visible while reducing vertical travel.
+ * Scoped to System Health so other admin workspaces keep their own density.
+ */
+body.admin-compact #ekodiSystemHealth{
+  --health-gap:8px;
+  --health-pad:10px;
+}
+body.admin-compact #ekodiSystemHealth .system-health-head{
+  gap:10px!important;
+  margin-bottom:8px!important;
+}
+body.admin-compact #ekodiSystemHealth .system-health-head h2{
+  font-size:22px!important;
+  line-height:1.2!important;
+}
+body.admin-compact #ekodiSystemHealth .operations-copy{
+  margin-top:3px!important;
+  font-size:12px!important;
+  line-height:1.35!important;
+}
+body.admin-compact #ekodiSystemHealth .system-health-actions,
+body.admin-compact #ekodiSystemHealth .system-health-metric-switch{
+  gap:5px!important;
+}
+body.admin-compact #ekodiSystemHealth .system-health-actions :is(button,.ghost,.secondary),
+body.admin-compact #ekodiSystemHealth .system-health-metric-switch :is(button,.ghost){
+  min-height:32px!important;
+  padding:5px 9px!important;
+  font-size:12px!important;
+  line-height:1.2!important;
+}
+body.admin-compact #ekodiSystemHealth :is(.system-health-overall,.core-health-overall){
+  gap:8px!important;
+  margin-top:8px!important;
+  padding:9px 11px!important;
+  border-radius:10px!important;
+}
+body.admin-compact #ekodiSystemHealth :is(.system-health-overall,.core-health-overall) strong{
+  margin:1px 0!important;
+  font-size:14px!important;
+  line-height:1.25!important;
+}
+body.admin-compact #ekodiSystemHealth :is(.system-health-overall,.core-health-overall) :is(small,span,time){
+  font-size:11px!important;
+  line-height:1.3!important;
+}
+body.admin-compact #ekodiSystemHealth .core-health-grid{
+  gap:8px!important;
+  margin:8px 0!important;
+}
+body.admin-compact #ekodiSystemHealth .core-health-grid article{
+  gap:4px!important;
+  padding:9px 10px!important;
+  border-radius:10px!important;
+}
+body.admin-compact #ekodiSystemHealth .core-health-grid article>strong{
+  font-size:16px!important;
+  line-height:1.15!important;
+}
+body.admin-compact #ekodiSystemHealth .core-health-grid article>span{
+  font-size:11px!important;
+  line-height:1.3!important;
+}
+body.admin-compact #ekodiSystemHealth .system-health-divider{
+  gap:7px!important;
+  margin:6px 0 0!important;
+  font-size:10px!important;
+  line-height:1.2!important;
+}
+body.admin-compact #ekodiSystemHealth :is(.core-health-columns,.health-diagram-grid,.health-traffic-diagrams,.traffic-intelligence-columns){
+  gap:8px!important;
+  margin-top:8px!important;
+  margin-bottom:10px!important;
+}
+body.admin-compact #ekodiSystemHealth :is(.core-health-card,.health-diagram-card,.system-health-chart-card,.code-health-debt-card){
+  padding:10px!important;
+  border-radius:10px!important;
+}
+body.admin-compact #ekodiSystemHealth :is(.core-health-card-head,.health-diagram-head){
+  gap:7px!important;
+  margin-bottom:7px!important;
+}
+body.admin-compact #ekodiSystemHealth :is(.core-health-card-head,.health-diagram-head) strong{
+  font-size:13px!important;
+  line-height:1.25!important;
+}
+body.admin-compact #ekodiSystemHealth :is(.core-health-card-head,.health-diagram-head) small{
+  font-size:10px!important;
+}
+body.admin-compact #ekodiSystemHealth .core-health-fleet{
+  gap:4px!important;
+}
+body.admin-compact #ekodiSystemHealth .core-health-fleet-row{
+  gap:7px!important;
+  padding:6px 8px!important;
+  border-radius:8px!important;
+}
+body.admin-compact #ekodiSystemHealth .core-health-fleet-row strong{
+  font-size:12px!important;
+  line-height:1.2!important;
+}
+body.admin-compact #ekodiSystemHealth .core-health-fleet-row small,
+body.admin-compact #ekodiSystemHealth .core-health-fleet-row>div:last-child span{
+  font-size:10px!important;
+  line-height:1.2!important;
+}
+body.admin-compact #ekodiSystemHealth .core-health-facts>div{
+  grid-template-columns:92px minmax(0,1fr)!important;
+  gap:6px!important;
+  padding:6px 0!important;
+}
+body.admin-compact #ekodiSystemHealth .core-health-facts :is(dt,dd){
+  font-size:11px!important;
+  line-height:1.25!important;
+}
+body.admin-compact #ekodiSystemHealth .health-flow{
+  gap:4px!important;
+}
+body.admin-compact #ekodiSystemHealth .health-flow-node{
+  min-height:58px!important;
+  gap:2px!important;
+  padding:7px!important;
+  border-radius:9px!important;
+}
+body.admin-compact #ekodiSystemHealth .health-flow-node strong{
+  font-size:11px!important;
+  line-height:1.2!important;
+}
+body.admin-compact #ekodiSystemHealth .health-flow-node span{
+  font-size:10px!important;
+  line-height:1.2!important;
+}
+body.admin-compact #ekodiSystemHealth .health-state-matrix{
+  gap:4px!important;
+  margin-top:7px!important;
+}
+body.admin-compact #ekodiSystemHealth .health-state-cell{
+  min-height:24px!important;
+  padding:3px!important;
+  border-radius:6px!important;
+}
+body.admin-compact #ekodiSystemHealth :is(.health-bottlenecks,.health-checkpoints,.core-health-latency-chart){
+  gap:5px!important;
+}
+body.admin-compact #ekodiSystemHealth .core-health-latency-chart{
+  margin-top:8px!important;
+  padding-top:8px!important;
+}
+body.admin-compact #ekodiSystemHealth :is(.core-health-latency-row,.health-bottleneck-row){
+  gap:6px!important;
+}
+body.admin-compact #ekodiSystemHealth .code-health-overall{
+  gap:10px!important;
+  margin:8px 0!important;
+  padding:10px!important;
+  border-radius:10px!important;
+}
+body.admin-compact #ekodiSystemHealth .code-health-score strong{
+  font-size:24px!important;
+}
+body.admin-compact #ekodiSystemHealth .code-health-grid{
+  gap:6px!important;
+  margin-bottom:8px!important;
+}
+body.admin-compact #ekodiSystemHealth .code-health-grid article{
+  gap:4px!important;
+  padding:8px!important;
+  border-radius:8px!important;
+}
+body.admin-compact #ekodiSystemHealth .code-health-debt{
+  gap:5px!important;
+}
+body.admin-compact #ekodiSystemHealth .code-health-debt article{
+  gap:7px!important;
+  padding:6px 7px!important;
+  border-radius:8px!important;
+}
+body.admin-compact #ekodiSystemHealth .code-health-policy{
+  margin-top:7px!important;
+  padding-top:7px!important;
+  line-height:1.3!important;
+}
+body.admin-compact #ekodiSystemHealth .traffic-intelligence-toolbar{
+  gap:8px!important;
+  margin:8px 0!important;
+}
+body.admin-compact #ekodiSystemHealth .traffic-intelligence-toolbar select{
+  min-height:30px!important;
+}
+body.admin-compact #ekodiSystemHealth .traffic-intelligence-grid{
+  gap:7px!important;
+}
+body.admin-compact #ekodiSystemHealth .traffic-intelligence-grid article{
+  padding:9px 10px!important;
+  border-radius:9px!important;
+}
+body.admin-compact #ekodiSystemHealth .traffic-intelligence-grid strong{
+  margin:4px 0 3px!important;
+  font-size:18px!important;
+  line-height:1.1!important;
+}
+body.admin-compact #ekodiSystemHealth .traffic-intelligence-meta{
+  gap:10px!important;
+  margin:6px 0 8px!important;
+}
+body.admin-compact #ekodiSystemHealth :is(.traffic-intelligence-site-row,.traffic-intelligence-country-row){
+  gap:7px!important;
+  padding:6px 8px!important;
+  border-radius:7px!important;
+}
+body.admin-compact #ekodiSystemHealth .system-health-metrics{
+  gap:7px!important;
+  margin:8px 0 10px!important;
+}
+body.admin-compact #ekodiSystemHealth .system-health-metrics article{
+  padding:9px 10px!important;
+  border-radius:9px!important;
+}
+body.admin-compact #ekodiSystemHealth .system-health-metrics strong{
+  margin:4px 0 3px!important;
+  font-size:18px!important;
+}
+body.admin-compact #ekodiSystemHealth .system-health-chart-toolbar{
+  gap:8px!important;
+  margin-bottom:6px!important;
+}
+body.admin-compact #ekodiSystemHealth .system-health-chart{
+  min-height:190px!important;
+}
+body.admin-compact #ekodiSystemHealth .system-health-svg{
+  height:190px!important;
+}
+body.admin-compact #ekodiSystemHealth .system-health-footnote{
+  margin-top:5px!important;
+  font-size:10px!important;
+  line-height:1.3!important;
+}
+@media(max-width:760px){
+  body.admin-compact #ekodiSystemHealth{
+    --health-gap:6px;
+    --health-pad:8px;
+  }
+  body.admin-compact #ekodiSystemHealth .system-health-head h2{font-size:20px!important}
+  body.admin-compact #ekodiSystemHealth :is(.core-health-grid,.system-health-metrics,.traffic-intelligence-grid){gap:6px!important}
+  body.admin-compact #ekodiSystemHealth :is(.core-health-card,.health-diagram-card,.system-health-chart-card,.code-health-debt-card){padding:8px!important}
+  body.admin-compact #ekodiSystemHealth .system-health-chart{min-height:170px!important}
+  body.admin-compact #ekodiSystemHealth .system-health-svg{height:170px!important}
+}
+
+.system-health-local-nav{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin:6px 0 2px;padding:4px;border:1px solid rgba(148,163,184,.16);border-radius:10px;background:rgba(148,163,184,.06)}
+.system-health-local-nav button{min-height:30px;padding:5px 10px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--muted,#64748b);font:inherit;font-size:11px;font-weight:750;line-height:1.15;cursor:pointer}
+.system-health-local-nav button:hover{background:rgba(148,163,184,.1);color:inherit}
+.system-health-local-nav button.is-active{border-color:rgba(59,130,246,.24);background:rgba(59,130,246,.1);color:inherit}
+body.admin-compact #ekodiSystemHealth [data-health-anchor]{scroll-margin-top:76px}
+@media(max-width:760px){.system-health-local-nav{position:sticky;top:56px;z-index:8;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;background:var(--admin-surface,#fff)}.system-health-local-nav::-webkit-scrollbar{display:none}.system-health-local-nav button{flex:0 0 auto;min-height:34px;font-size:12px}}
