@@ -42,9 +42,9 @@ create table if not exists private.person_share_contexts (
   constraint person_share_contexts_key_format check (context_key ~ '^[a-z0-9][a-z0-9_-]{0,39}$'),
   constraint person_share_contexts_label_length check (length(label) between 1 and 80),
   constraint person_share_contexts_person_key_unique unique(person_id, context_key),
-  constraint person_share_contexts_role_owner_fk
-    foreign key(person_id, role_id)
-    references private.person_identity_roles(person_id, id)
+  constraint person_share_contexts_role_fk
+    foreign key(role_id)
+    references private.person_identity_roles(id)
     on delete set null
 );
 
@@ -155,6 +155,7 @@ as $$
 declare
   v_person uuid:=private.current_person_id();
   v_card private.person_digital_cards%rowtype;
+  v_has_card boolean:=false;
   v_roles jsonb;
   v_contexts jsonb;
 begin
@@ -165,6 +166,7 @@ begin
   select * into v_card
   from private.person_digital_cards
   where person_id=v_person;
+  v_has_card:=found;
 
   select coalesce(jsonb_agg(jsonb_build_object(
     'key',r.role_key,
@@ -197,12 +199,12 @@ begin
   where s.person_id=v_person;
 
   return jsonb_build_object(
-    'phone',case when found then coalesce(v_card.phone,'') else '' end,
-    'email',case when found then coalesce(v_card.email,'') else '' end,
-    'exchange_enabled',case when found then coalesce(v_card.exchange_enabled,false) else false end,
+    'phone',case when v_has_card then coalesce(v_card.phone,'') else '' end,
+    'email',case when v_has_card then coalesce(v_card.email,'') else '' end,
+    'exchange_enabled',case when v_has_card then coalesce(v_card.exchange_enabled,false) else false end,
     'roles',coalesce(v_roles,'[]'::jsonb),
     'contexts',coalesce(v_contexts,'[]'::jsonb),
-    'updated_at',case when found then v_card.updated_at else null end
+    'updated_at',case when v_has_card then v_card.updated_at else null end
   );
 end
 $$;
@@ -661,8 +663,7 @@ begin
   v_exchange:=(v_result->>'exchange_id')::uuid;
   update private.person_contact_exchanges
   set context_key=v_context_key,
-      context_label=v_context_label,
-      updated_at=coalesce(updated_at,now())
+      context_label=v_context_label
   where id=v_exchange;
 
   return v_result || jsonb_build_object(
