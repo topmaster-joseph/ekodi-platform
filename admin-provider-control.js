@@ -18,6 +18,10 @@
     {id:'gemini',label:'Gemini Free',tier:'free'},
     {id:'openrouter-free',label:'OpenRouter Free',tier:'free'},
     {id:'groq-free',label:'Groq Free',tier:'free'},
+    {id:'cerebras-free',label:'Cerebras · 무료 체험',tier:'free'},
+    {id:'qwen-free',label:'Qwen · 무료 할당량',tier:'free'},
+    {id:'deepseek-free-credit',label:'DeepSeek · 무료 지급 크레딧',tier:'free'},
+    {id:'huggingface-free-credit',label:'Hugging Face · 월 무료 크레딧',tier:'free'},
     {id:'openai',label:'OpenAI · 유료 승인',tier:'paid'},
     {id:'anthropic',label:'Claude · 유료 승인',tier:'paid'},
   ]);
@@ -26,7 +30,11 @@
     'cloudflare-workers-ai':'Cloudflare 계정의 무료/포함 자원을 가장 먼저 사용 · API Key 불필요',
     gemini:'Gemini 무료 한도 우선 · 소진 시 OpenRouter Free로 전환',
     'openrouter-free':'무료 모델 라우팅 · 안전 한도 소진 시 Groq Free로 전환',
-    'groq-free':'무료 한도 우선 · 소진 시 유료 Provider는 승인 전까지 사용하지 않음',
+    'groq-free':'무료 한도 우선 · 소진 시 Cerebras 무료 체험으로 전환',
+    'cerebras-free':'신규 계정 무료 체험 크레딧만 사용 · 무료 체험 전용 확인 후 활성화',
+    'qwen-free':'Alibaba Model Studio 무료 할당량만 사용 · Free Quota Only 설정 확인 후 활성화',
+    'deepseek-free-credit':'DeepSeek granted_balance만 사용 · 충전 잔액이 있으면 무료 경로를 자동 차단',
+    'huggingface-free-credit':'Hugging Face 월 무료 크레딧 범위만 사용 · 소진 시 다음 경로로 전환',
     openai:'유료 API · 명시적 예산/승인 필요 · 자동 유료전환 없음',
     anthropic:'Claude 유료 API · 명시적 예산/승인 필요 · 자동 유료전환 없음',
   });
@@ -35,6 +43,10 @@
     gemini:'https://aistudio.google.com/app/apikey',
     'openrouter-free':'https://openrouter.ai/settings/keys',
     'groq-free':'https://console.groq.com/keys',
+    'cerebras-free':'https://cloud.cerebras.ai/',
+    'qwen-free':'https://modelstudio.console.alibabacloud.com/',
+    'deepseek-free-credit':'https://platform.deepseek.com/api_keys',
+    'huggingface-free-credit':'https://huggingface.co/settings/tokens',
     anthropic:'https://platform.claude.com/settings/keys',
   });
   const CAP_LABELS={default:'기본',documents:'문서 AI',admin:'관리자 AI',marketing:'Marketing AI'};
