@@ -31,7 +31,7 @@
     return node;
   }
   function stateLabel(state) {
-    return ({ok:'정상',good:'정상',healthy:'정상',warning:'주의',warn:'주의',degraded:'주의',error:'장애',failed:'장애',offline:'장애',pending:'확인 중',unknown:'확인 필요'})[String(state || '').toLowerCase()] || '확인 필요';
+    return ({ok:'정상',good:'정상',healthy:'정상',active:'정상',success:'정상',warning:'주의',warn:'주의',degraded:'주의',error:'장애',failed:'장애',offline:'장애',pending:'확인 중',unknown:'확인 필요'})[String(state || '').toLowerCase()] || '확인 필요';
   }
   function stateTone(state) {
     const value = String(state || '').toLowerCase();
@@ -153,6 +153,7 @@
       <aside class="ct-drawer" data-ct-drawer hidden aria-live="polite"></aside>
     `;
     section.prepend(tower);
+    for (const child of [...section.children]) if (child !== tower) child.classList.add('ct-health-detail');
     const tabs = tower.querySelector('.ct-tabs');
     const panels = tower.querySelector('.ct-panels');
     for (const [id,label] of TABS) {
@@ -222,7 +223,11 @@
       const tone = run.status === 'completed' ? (run.conclusion === 'success' ? 'ok' : 'bad') : 'warn';
       const row = el('button','','ct-row');
       row.type = 'button';
-      row.innerHTML = `<span><strong>${workflow}</strong><small>${run.display_title || run.name || '배포 작업'}</small></span><span><b class="ct-state is-${tone}">${run.status === 'completed' ? (run.conclusion || '완료') : (run.status || '대기')}</b><small>${timestamp(run.updated_at)}</small></span>`;
+      const primary = el('span');
+      primary.append(el('strong',workflow),el('small',run.display_title || run.name || '배포 작업'));
+      const meta = el('span');
+      meta.append(el('b',run.status === 'completed' ? (run.conclusion || '완료') : (run.status || '대기'),`ct-state is-${tone}`),el('small',timestamp(run.updated_at)));
+      row.append(primary,meta);
       row.addEventListener('click', () => {
         if (run.html_url) window.open(run.html_url,'_blank','noopener');
       });
@@ -242,7 +247,11 @@
       const name = item.name || item.id || item.domain || '서비스';
       const detail = item.domain || item.url || item.group || '운영 서비스';
       const ms = item.latest?.responseMs ?? item.latest?.responseTime ?? item.responseMs;
-      row.innerHTML = `<span><strong>${name}</strong><small>${detail}</small></span><span><b class="ct-state is-${tone}">${stateLabel(serviceState(item))}</b><small>${Number.isFinite(Number(ms)) ? Number(ms)+' ms' : '응답시간 —'}</small></span>`;
+      const primary = el('span');
+      primary.append(el('strong',name),el('small',detail));
+      const meta = el('span');
+      meta.append(el('b',stateLabel(serviceState(item)),`ct-state is-${tone}`),el('small',Number.isFinite(Number(ms)) ? Number(ms)+' ms' : '응답시간 —'));
+      row.append(primary,meta);
       rows.append(row);
     }
     const action=el('button','전체 운영상태 상세 보기 →','ct-more'); action.type='button'; action.addEventListener('click',()=>navigate('health'));
@@ -293,22 +302,29 @@
     renderCost(tower.querySelector('[data-ct-panel="cost"]'));
     tower.querySelector('[data-ct-updated]').textContent = `최근 확인 ${new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}`;
   }
+  function setMode(sectionId = window.EKODIAdminPanels?.current?.() || '') {
+    const section = document.getElementById(HEALTH_ID);
+    if (!section) return;
+    section.classList.toggle('ct-overview-mode',sectionId === 'platform-overview');
+  }
   async function load(force = false) {
     if (loadPromise && !force) return loadPromise;
     const section = document.getElementById(HEALTH_ID);
-    if (!section) return null;
-    const tower = ensureTower(section);
-    const refresh = tower.querySelector('[data-ct-refresh]');
-    refresh.disabled = true;
+    const tower = section ? ensureTower(section) : null;
+    const refresh = tower?.querySelector('[data-ct-refresh]');
+    if (refresh) refresh.disabled = true;
     loadPromise = Promise.allSettled([getOverview(),getRuns()]).then(results => {
       const overview = results[0].status === 'fulfilled' ? results[0].value : {};
       const runs = results[1].status === 'fulfilled' ? results[1].value : [];
-      render(tower,overview,runs);
+      const summary = summarize(overview,runs);
+      snapshot = { overview,runs,summary };
+      renderDock(summary);
+      if (tower) render(tower,overview,runs);
       const errors = results.filter(item => item.status === 'rejected').map(item => item.reason?.message).filter(Boolean);
-      if (errors.length) tower.querySelector('[data-ct-updated]').textContent = `일부 원본 확인 필요 · ${errors.join(' · ')}`;
+      if (tower && errors.length) tower.querySelector('[data-ct-updated]').textContent = `일부 원본 확인 필요 · ${errors.join(' · ')}`;
       return snapshot;
     }).finally(() => {
-      refresh.disabled = false;
+      if (refresh) refresh.disabled = false;
       loadPromise = null;
     });
     return loadPromise;
@@ -317,12 +333,13 @@
     const section = document.getElementById(HEALTH_ID);
     if (!section) return false;
     ensureTower(section);
+    setMode();
     load(false);
     mounted = true;
-    if (window.EKODIAdminPanels?.current?.() === 'platform-overview') window.EKODIAdminPanels.activate('platform-overview');
     return true;
   }
   function watch() {
+    load(false);
     if (enhance()) return;
     const root = document.querySelector('.content') || document.body;
     const observer = new MutationObserver(() => {
@@ -340,6 +357,7 @@
   window.addEventListener('ekodi-feature-installed',watch);
   window.addEventListener('ekodi-admin-ready',watch);
   window.addEventListener('ekodi-admin-section-changed',event => {
+    setMode(event.detail?.section || '');
     if (event.detail?.section === 'platform-overview' || event.detail?.section === 'health') load(false);
   });
   window.EKODIControlTower = Object.freeze({ load, open:openOverview, snapshot:() => snapshot, mounted:() => mounted });
