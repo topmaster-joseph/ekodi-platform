@@ -1,7 +1,7 @@
 import { AI_COST_POLICY } from './ai-cost-policy.js';
 
 const clean=value=>String(value??'').trim();
-const FREE_PROVIDER_IDS=Object.freeze(['cloudflare-workers-ai','gemini-free','openrouter-free','groq-free','cerebras-free','qwen-free','deepseek-free-credit']);
+const FREE_PROVIDER_IDS=Object.freeze(['cloudflare-workers-ai','gemini-free','openrouter-free','groq-free','cerebras-free','qwen-free','deepseek-free-credit','huggingface-free-credit']);
 const FREE_PROVIDER_SET=new Set(FREE_PROVIDER_IDS);
 
 export const AI_FREE_QUOTA_POLICY=Object.freeze({
@@ -18,6 +18,7 @@ export const AI_FREE_QUOTA_POLICY=Object.freeze({
     'cerebras-free':100,
     'qwen-free':150,
     'deepseek-free-credit':100,
+    'huggingface-free-credit':50,
   }),
 });
 
@@ -32,6 +33,7 @@ export function configuredFreeProviderIds(capabilities={}){
   if(capabilities.cerebrasFree)ids.push('cerebras-free');
   if(capabilities.qwenFree)ids.push('qwen-free');
   if(capabilities.deepseekFreeCredit)ids.push('deepseek-free-credit');
+  if(capabilities.huggingfaceFreeCredit)ids.push('huggingface-free-credit');
   return ids;
 }
 
