@@ -80,3 +80,32 @@ body[data-auth-state="member"][data-active-tab="home"] .action-hub{display:none!
   .activity-item{grid-template-columns:1fr auto}
   .activity-item small{grid-column:1 / -1;justify-self:start}
 }
+
+
+/* Fourth-stage compaction: current space belongs in the header; signed-in command is one compact work surface. */
+.top-actions{display:flex;align-items:center;gap:8px}
+.top-actions .workspace-compact{position:static;z-index:auto;margin:0;box-shadow:none;background:rgba(255,255,255,.72)}
+body[data-auth-state="member"] .personal-action-command{display:grid;grid-template-columns:minmax(210px,.7fr) minmax(0,1.5fr);gap:14px;align-items:end;padding:16px 18px;border-radius:18px}
+body[data-auth-state="member"] .personal-action-command .intent-copy{align-self:center}
+body[data-auth-state="member"] .personal-action-command .intent-copy>p:not(.eyebrow){display:none}
+body[data-auth-state="member"] .personal-action-command .intent-copy h2{margin:2px 0 0;font-size:clamp(20px,2vw,28px)}
+body[data-auth-state="member"] .personal-action-command .intent-plan-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,170px) auto;gap:8px;align-items:end;margin:0}
+body[data-auth-state="member"] .personal-action-command .intent-field{margin:0}
+body[data-auth-state="member"] .personal-action-command textarea{min-height:46px!important;height:46px!important;resize:none}
+body[data-auth-state="member"] .personal-action-command select,
+body[data-auth-state="member"] .personal-action-command .primary{min-height:46px}
+body[data-auth-state="member"] .personal-action-command .intent-examples{display:none}
+body[data-auth-state="member"] .personal-action-command .intent-plan-result:has(.intent-empty){display:none}
+body[data-auth-state="member"] .member-context-home{margin-top:10px!important}
+@media(max-width:900px){
+  body[data-auth-state="member"] .personal-action-command{grid-template-columns:1fr}
+}
+@media(max-width:720px){
+  .top-actions .workspace-compact span{display:none}
+  .top-actions .workspace-compact{max-width:150px;padding:7px 9px}
+  .top-actions .workspace-compact strong{max-width:105px}
+  body[data-auth-state="member"] .personal-action-command{margin-left:14px;margin-right:14px;padding:14px}
+  body[data-auth-state="member"] .personal-action-command .intent-plan-form{grid-template-columns:1fr auto}
+  body[data-auth-state="member"] .personal-action-command .intent-field:first-child{grid-column:1 / -1}
+  body[data-auth-state="member"] .personal-action-command .intent-audience{min-width:0}
+}
