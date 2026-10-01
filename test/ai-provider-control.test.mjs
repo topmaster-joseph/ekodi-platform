@@ -99,7 +99,8 @@ test('provider admin presents compact explicit connection status without exposin
   const admin=read('admin-provider-control.js');
   assert.match(admin,/AI-PROVIDER-COMPACT-READABLE-20261001/);
   assert.match(admin,/Secret \$\{configured\?'연결':'미연결'\}/);
-  assert.match(admin,/운영 \$\{operational\?'가동':'비가동'\}/);
+  assert.match(admin,/검증 \$\{operational\?'통과':'필요'\}/);
+  assert.match(admin,/라우팅 \$\{trafficEligible\?'가능':'대기'\}/);
   assert.match(admin,/계정 자원 연결/);
   assert.match(admin,/aria-live="polite"/);
   assert.match(admin,/grid-template-columns:repeat\(3,minmax\(285px,1fr\)\)/);
