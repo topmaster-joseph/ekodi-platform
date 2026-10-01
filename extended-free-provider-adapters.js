@@ -18,6 +18,7 @@ const detailCode=(prefix,response,data)=>{
   return error;
 };
 const chatOutput=data=>clean(data?.choices?.[0]?.message?.content,40000);
+const QWEN_DEFAULT_BASE_URL='https://dashscope-intl.aliyuncs.com/compatible-mode/v1';
 
 export function createCerebrasFreeProvider(env={},options={}){
   const key=clean(env.CEREBRAS_API_KEY,8192),model=clean(env.EKODI_CEREBRAS_FREE_MODEL||env.CEREBRAS_MODEL,180)||'qwen-3.8-27b',fetchImpl=options.fetchImpl||globalThis.fetch;
@@ -40,7 +41,7 @@ export function createCerebrasFreeProvider(env={},options={}){
 
 export function createQwenFreeProvider(env={},options={}){
   const key=clean(env.QWEN_API_KEY||env.DASHSCOPE_API_KEY,8192),model=clean(env.EKODI_QWEN_FREE_MODEL||env.QWEN_MODEL,180)||'qwen3.7-plus',fetchImpl=options.fetchImpl||globalThis.fetch;
-  const base=clean(env.QWEN_BASE_URL,1000).replace(/\/+$/,'');
+  const base=(clean(env.QWEN_BASE_URL,1000)||QWEN_DEFAULT_BASE_URL).replace(/\/+$/,'');
   const freeOnly=enabled(env.EKODI_QWEN_FREE_QUOTA_ONLY_CONFIRMED);
   const available=Boolean(enabled(env.EKODI_PROVIDER_QWEN_FREE_ENABLED)&&freeOnly&&key&&base&&typeof fetchImpl==='function');
   return Object.freeze({
