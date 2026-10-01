@@ -103,7 +103,9 @@ test('timeline admin is seeded, permissioned and public materials use central ca
   assert.match(app,/관련보도/);
   assert.match(app,/시민·온라인자료/);
   assert.match(app,/\/api\/seonammedi\/timeline/);
-  assert.match(adminHtml,/data-panel-target="timeline"/);
+  assert.doesNotMatch(adminHtml,/data-panel-target="timeline"/);
+  assert.match(adminHtml,/data-panel-target="content"[^>]*>관련자료<\/button>/);
+  assert.match(adminHtml,/data-records-admin-tab="timeline"[^>]*>활동이력<\/button>/);
   assert.match(adminHtml,/id="timelineForm"/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/timeline/);
   assert.match(control,/TIMELINE_CAP='seonammedi\.timeline\.manage'/);
