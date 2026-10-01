@@ -105,6 +105,14 @@ test('global menu labels use readable contrast on the dark primary sidebar', () 
 });
 
 
+test('Operations, Releases & Incidents shows every visible submenu without a collapsed more bucket', () => {
+  assert.match(sidebar, /status: \['health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity'\]/);
+  assert.match(registry, /id: 'deployments'.*배포·변경 이력/s);
+  for (const id of ['health','deployments','aiops','devices','pos-agent','api-cost','architecture','maturity']) {
+    assert.match(registry, new RegExp(`id: '${id}'`));
+  }
+});
+
 test('Services & AI uses flat direct engine links with no duplicate top navigation', () => {
   assert.match(sidebar, /FLAT_DETAIL_GROUPS = new Set\(\['services'\]\)/);
   assert.match(sidebar, /services: \['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'\]/);
