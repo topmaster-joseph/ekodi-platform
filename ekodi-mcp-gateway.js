@@ -148,7 +148,18 @@ function authChallenge(reason='invalid_token'){
   const challenge=`Bearer resource_metadata="${EKODI_MCP_METADATA_URL}", error="${reason}"`;
   return textResult('EKODI 계정 연결이 필요합니다.',{authenticated:false},{'mcp/www_authenticate':[challenge]});
 }
-function rpcResult(id,result){return {jsonrpc:'2.0',id,result}}
+function mcpRequestProtocolVersion(message,request){
+  const meta=message?.params?._meta;
+  const envelopeVersion=String(meta?.['io.modelcontextprotocol/protocolVersion']||'').trim();
+  const headerVersion=String(request?.headers?.get?.('MCP-Protocol-Version')||'').trim();
+  return envelopeVersion||headerVersion;
+}
+function modernMcpRequest(message,request){return mcpRequestProtocolVersion(message,request)===PROTOCOL_VERSION}
+function stampCompleteResult(result,modern=false){
+  if(!modern||!result||typeof result!=='object'||Array.isArray(result)||Object.hasOwn(result,'resultType'))return result;
+  return {resultType:'complete',...result};
+}
+function rpcResult(id,result,{modern=false}={}){return {jsonrpc:'2.0',id,result:stampCompleteResult(result,modern)}}
 function rpcError(id,code,message,data){return {jsonrpc:'2.0',id,error:{code,message,...(data?{data}: {})}}}
 
 async function internalJson(response){
@@ -253,6 +264,7 @@ export async function callEkodiMcpTool(name,args,request,env,dependencies={}){
 async function handleRpc(message,request,env,dependencies={}){
   const id=message?.id??null;
   const method=String(message?.method||'');
+  const modern=modernMcpRequest(message,request);
   if(method==='server/discover')return rpcResult(id,{
     supportedVersions:[PROTOCOL_VERSION],
     capabilities:{tools:{listChanged:false}},
@@ -265,19 +277,19 @@ async function handleRpc(message,request,env,dependencies={}){
     discovery:'https://ekodi.kr/.well-known/ekodi.json',
     fabric:SOVEREIGN_CAPABILITY_FABRIC,
     _meta:{'io.modelcontextprotocol/serverInfo':{name:'ekodi-sovereign-capability-fabric',version:'2026-09-17.1'}},
-  });
+  },{modern:true});
   if(method==='initialize')return rpcResult(id,{
-    protocolVersion:'2025-06-18',
+    protocolVersion:modern?PROTOCOL_VERSION:'2025-06-18',
     capabilities:{tools:{listChanged:false}},
     serverInfo:{name:'ekodi-sovereign-capability-fabric',version:'2026-09-17.1'},
     instructions:MCP_SERVER_INSTRUCTIONS,
-  });
-  if(method==='ping')return rpcResult(id,{});
-  if(method==='tools/list')return rpcResult(id,{tools:EKODI_MCP_TOOLS,ttlMs:300000,cacheScope:'public'});
+  },{modern});
+  if(method==='ping')return rpcResult(id,{}, {modern});
+  if(method==='tools/list')return rpcResult(id,{tools:EKODI_MCP_TOOLS,ttlMs:300000,cacheScope:'public'},{modern});
   if(method==='tools/call'){
     const name=String(message?.params?.name||'');
     const result=await callEkodiMcpTool(name,message?.params?.arguments||{},request,env,dependencies);
-    return rpcResult(id,result);
+    return rpcResult(id,result,{modern});
   }
   if(method.startsWith('notifications/'))return null;
   return rpcError(id,-32601,'Method not found');
