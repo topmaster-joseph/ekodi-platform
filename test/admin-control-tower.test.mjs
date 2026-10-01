@@ -28,13 +28,15 @@ test('control tower keeps provider details secondary and does not create a paral
   assert.match(tower, /Supabase·Cloudflare·외부 API 연결 원본/);
 });
 
-test('authenticated admin shell and build ship the Control Tower assets', async () => {
-  const [shell,build] = await Promise.all([
+test('authenticated admin shell keeps first path thin while convergence loads Control Tower assets', async () => {
+  const [shell,convergence,build] = await Promise.all([
     read('admin-authenticated-shell.js'),
+    read('admin-release-convergence.js'),
     read('scripts/build.mjs'),
   ]);
-  assert.match(shell, /control-tower-admin\.css/);
-  assert.match(shell, /control-tower-admin\.js/);
+  assert.doesNotMatch(shell, /control-tower-admin\.(?:css|js)/);
+  assert.match(convergence, /control-tower-admin\.css/);
+  assert.match(convergence, /control-tower-admin\.js/);
   assert.match(build, /control-tower-admin\.css/);
   assert.match(build, /control-tower-admin\.js/);
 });
