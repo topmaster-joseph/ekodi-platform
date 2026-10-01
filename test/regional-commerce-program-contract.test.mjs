@@ -17,6 +17,10 @@ test('Cheonggye Pass may use an external provider without provider ownership of 
   assert.equal(contract.providerReplaceable,true);
   assert.equal(contract.directDatabaseAccess,false);
   assert.equal(contract.credentials,'server-side-vault-only');
+  assert.equal(contract.publicPath,'/cheonggyepass');
+  assert.equal(contract.adminPath,'/cheonggyepass/admin');
+  assert.equal(raw.regionalEntryPath,'/cheonggye/pass');
+  assert.equal(raw.regionalAdminEntryPath,'/cheonggye/admin/pass');
   assert.equal(raw.initialOperatorId,'cgma');
   assert.equal(raw.rules.providerMayOwnRegionalIdentity,false);
   assert.equal(raw.rules.financialExecutionEnabledBeforeProviderApproval,false);
@@ -40,14 +44,17 @@ test('external adapter requirements avoid private database coupling',()=>{
 
 test('Cheonggye Pass routes are claimed before generic regional fallback',async()=>{
   const router=await fs.readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
+  assert.match(router,/regionalCommerceProgramFromPath\(url\.pathname\)/);
   assert.match(router,/regionalCommerceProgramFromLocalRoute\(localRegionRoute\)/);
   assert.match(router,/regionalCommerceProgramAdminPage/);
   assert.match(router,/regionalCommerceProgramPublicPage/);
   const manifest=JSON.parse(await fs.readFile(new URL('../deploy\/manifests\/shared-site.worker.json',import.meta.url),'utf8'));
   const urls=new Set(manifest.worker.requests.map(item=>item.url));
+  assert.ok(urls.has('https://ekodi.kr/cheonggyepass'));
+  assert.ok(urls.has('https://ekodi.kr/cheonggyepass/admin'));
   assert.ok(urls.has('https://ekodi.kr/cheonggye/pass'));
   assert.ok(urls.has('https://ekodi.kr/cheonggye/admin/pass'));
-  const passProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/cheonggye/pass');
+  const passProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/cheonggyepass');
   assert.ok(passProbe);
   assert.ok(passProbe.expect.includes('서비스 준비 중'));
   assert.ok(passProbe.expect.includes('참여점포'));
