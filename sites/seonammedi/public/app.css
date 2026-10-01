@@ -51,7 +51,17 @@
 .channel-preview-summary h4{margin:8px 0 6px;font-size:22px}
 .channel-preview-summary p{margin:0 0 10px;color:#526273}
 .channel-preview-summary small{color:#738291}
+.channel-preview-fallback-content{width:min(760px,100%)}
+.channel-recent-list{margin-top:20px;padding-top:18px;border-top:1px solid #e0e6ec}
+.channel-recent-list>strong{display:block;margin-bottom:10px;font-size:13px}
+.channel-recent-list>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.channel-recent-list a{display:flex;min-width:0;flex-direction:column;gap:4px;padding:11px 12px;border:1px solid #dce3ea;border-radius:12px;color:#15202b;text-decoration:none;background:#fff}
+.channel-recent-list a:hover{border-color:#8797a8}
+.channel-recent-list span{font-size:10px;color:#607080}
+.channel-recent-list b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.channel-recent-list small{font-size:11px;color:#145a8d}
+
 .channel-preview-note{padding:9px 12px;border-top:1px solid #dce3ea;color:#607080;background:#f8fafc;font-size:12px}
-@media (max-width:720px){.channel-tabs{margin-inline:-2px}.channel-preview-head{align-items:flex-start;flex-direction:column;gap:8px}.channel-preview-head>a{width:100%}.channel-preview-frame{height:68vh;min-height:460px}.channel-preview-fallback{min-height:260px;padding:20px}.channel-preview-summary{grid-template-columns:72px minmax(0,1fr);gap:14px}.channel-preview-summary img{width:72px;height:72px;border-radius:14px}.channel-preview-summary h4{font-size:18px}}
+@media (max-width:720px){.channel-recent-list>div{grid-template-columns:1fr}.channel-tabs{margin-inline:-2px}.channel-preview-head{align-items:flex-start;flex-direction:column;gap:8px}.channel-preview-head>a{width:100%}.channel-preview-frame{height:68vh;min-height:460px}.channel-preview-fallback{min-height:260px;padding:20px}.channel-preview-summary{grid-template-columns:72px minmax(0,1fr);gap:14px}.channel-preview-summary img{width:72px;height:72px;border-radius:14px}.channel-preview-summary h4{font-size:18px}}
 
 .records-materials{border-top:0;padding-top:8px}
