@@ -22,6 +22,18 @@ if(shareButton){
 function value(name,next){
   const input=form?.elements?.[name];if(input&&next)input.value=String(next).trim();
 }
+function normalizeWebsite(raw){
+  const value=String(raw||'').trim();if(!value)return'';
+  const candidate=/^[a-z][a-z0-9+.-]*:\/\//i.test(value)?value:`https://${value.replace(/^\/+/, '')}`;
+  try{const url=new URL(candidate);return ['http:','https:'].includes(url.protocol)?url.toString():''}catch{return''}
+}
+function normalizeWebsiteField(){
+  const input=form?.elements?.website;if(!input)return true;
+  const raw=String(input.value||'').trim();if(!raw){input.setCustomValidity('');return true}
+  const normalized=normalizeWebsite(raw);
+  if(!normalized){input.setCustomValidity('웹사이트 주소를 확인해 주세요.');return false}
+  input.value=normalized;input.setCustomValidity('');return true;
+}
 async function pickContact(){
   if(!navigator.contacts?.select){picker.hidden=true;return}
   try{
@@ -40,8 +52,12 @@ if(picker){
   else picker.addEventListener('click',pickContact);
 }
 if(form){
+  const website=form.elements?.website;
+  website?.addEventListener('blur',normalizeWebsiteField);
+  website?.addEventListener('input',()=>website.setCustomValidity(''));
   form.addEventListener('submit',async event=>{
     event.preventDefault();
+    normalizeWebsiteField();
     if(!form.reportValidity())return;
     const fd=new FormData(form);
     const payload={
