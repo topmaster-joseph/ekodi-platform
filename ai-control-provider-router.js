@@ -14,6 +14,7 @@ const DIRECT_PROVIDER_IDS=Object.freeze({
   'gemini-free':'gemini',
   'openai-api':'openai',
   'anthropic-api':'anthropic',
+  'huggingface-free-credit':'huggingface-free-credit',
 });
 
 function enabled(value,fallback=false){const raw=clean(value).toLowerCase();if(!raw)return fallback;return ['1','true','yes','on','enabled'].includes(raw)}
@@ -35,6 +36,7 @@ function directConfigured(env={},providerId=''){
   if(providerId==='gemini-free')return Boolean(clean(env.GEMINI_API_KEY||env.GOOGLE_AI_API_KEY));
   if(providerId==='openai-api')return Boolean(clean(env.OPENAI_API_KEY));
   if(providerId==='anthropic-api')return Boolean(clean(env.ANTHROPIC_API_KEY));
+  if(providerId==='huggingface-free-credit')return Boolean(clean(env.HF_TOKEN||env.HUGGINGFACE_TOKEN));
   return false;
 }
 
@@ -49,6 +51,7 @@ export function providerCapabilities(env={},nodeProviders=[]){
     geminiFree:registry.get('gemini')?.available===true,
     openrouterFree:enabled(env.EKODI_PROVIDER_OPENROUTER_FREE_ENABLED,true)&&Boolean(clean(env.OPENROUTER_API_KEY)),
     groqFree:enabled(env.EKODI_PROVIDER_GROQ_FREE_ENABLED,false)&&Boolean(clean(env.GROQ_API_KEY)),
+    huggingfaceFreeCredit:registry.get('huggingface-free-credit')?.available===true,
     nodeProviders:[...new Set((nodeProviders||[]).map(v=>clean(v).toLowerCase()).filter(Boolean))],
     openaiApi:registry.get('openai')?.available===true,
     anthropicApi:registry.get('anthropic')?.available===true,
@@ -60,11 +63,12 @@ export function providerCapabilities(env={},nodeProviders=[]){
 export function providerStatus(env={},nodeProviders=[]){
   const capabilities=providerCapabilities(env,nodeProviders);const providers=[];const registry=directProviderRegistry(env);
   const push=item=>{const override=item.id.startsWith('worker:')?capabilities.providerProfiles?.[item.id]?.costClass:'';const costClass=override||item.costClass;providers.push({...item,costClass,automaticEligible:evaluateAiCostEligibility({costClass},{}).eligible})};
-  const gemini=registry.get('gemini'),openai=registry.get('openai'),anthropic=registry.get('anthropic');
+  const gemini=registry.get('gemini'),huggingface=registry.get('huggingface-free-credit'),openai=registry.get('openai'),anthropic=registry.get('anthropic');
   push({id:'cloudflare-workers-ai',kind:'account-ai',costClass:providerCostClass('cloudflare-workers-ai'),available:capabilities.cloudflareWorkersAi,configured:capabilities.cloudflareWorkersAi,model:clean(env.EKODI_WORKERS_AI_MODEL)||'@cf/meta/llama-3.1-8b-instruct-fast'});
   push({id:'gemini-free',kind:'official-api',costClass:providerCostClass('gemini-free'),available:gemini?.available===true,configured:directConfigured(env,'gemini-free'),model:gemini?.model||clean(env.GEMINI_MODEL)||'gemini-3.7-flash'});
   push({id:'openrouter-free',kind:'official-api',costClass:providerCostClass('openrouter-free'),available:capabilities.openrouterFree,configured:capabilities.openrouterFree,model:clean(env.EKODI_OPENROUTER_FREE_MODEL)||'openrouter/free'});
   push({id:'groq-free',kind:'official-api',costClass:providerCostClass('groq-free'),available:capabilities.groqFree,configured:capabilities.groqFree,model:clean(env.EKODI_GROQ_FREE_MODEL)||'openai/gpt-oss-20b'});
+  push({id:'huggingface-free-credit',kind:'official-api',costClass:providerCostClass('huggingface-free-credit'),available:huggingface?.available===true,configured:directConfigured(env,'huggingface-free-credit'),model:huggingface?.model||clean(env.EKODI_HF_FREE_MODEL||env.HF_MODEL)||'openai/gpt-oss-120b:cheapest'});
   for(const id of capabilities.nodeProviders){const providerId=`node:${id}`;push({id:providerId,kind:'account-cli',costClass:providerCostClass(providerId),available:true,configured:true,model:'account-managed'});}
   push({id:'openai-api',kind:'official-api',costClass:providerCostClass('openai-api'),available:openai?.available===true,configured:directConfigured(env,'openai-api'),model:openai?.model||clean(env.OPENAI_MODEL)||'gpt-5.6-luna'});
   push({id:'anthropic-api',kind:'official-api',costClass:providerCostClass('anthropic-api'),available:anthropic?.available===true,configured:directConfigured(env,'anthropic-api'),model:anthropic?.model||clean(env.ANTHROPIC_MODEL)||'claude-sonnet-5'});
@@ -115,6 +119,7 @@ export async function invokeProviderWithMeta(env,providerId,prompt,task,role){
     const result=await createGroqFreeProvider(env).invoke({prompt});
     return Object.freeze({text:result.text,quota:result.quota||null});
   }
+  if(providerId==='huggingface-free-credit'){const result=await invokeDirectProvider(env,providerId,prompt,task,role);return Object.freeze({text:result.text,quota:result.quota||null,usage:result.usage||null});}
   if(providerId==='openai-api'||providerId==='anthropic-api'){const result=await invokeDirectProvider(env,providerId,prompt,task,role);return Object.freeze({text:result.text,quota:null,usage:result.usage||null});}
   if(providerId.startsWith('node:'))throw new Error('node_provider_requires_queue');
   if(providerId.startsWith('worker:'))return Object.freeze({text:await invokeWorker(env,providerId.slice(7),prompt,task,role),quota:null});

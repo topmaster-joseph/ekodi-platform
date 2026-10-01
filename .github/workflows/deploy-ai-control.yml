@@ -21,6 +21,7 @@ on:
       - 'ai-free-quota.js'
       - 'groq-free-provider-adapter.js'
       - 'extended-free-provider-adapters.js'
+      - 'huggingface-provider-adapter.js'
       - 'openrouter-free-provider-adapter.js'
       - 'ai-commons.js'
       - 'ai-commons-admin.js'
@@ -212,6 +213,7 @@ jobs:
           node --check ai-free-quota.js
           node --check groq-free-provider-adapter.js
           node --check extended-free-provider-adapters.js
+          node --check huggingface-provider-adapter.js
           node --check openrouter-free-provider-adapter.js
           node --check ai-control-worker.js
           node --check ekodi-site-improvement-scheduler.js
