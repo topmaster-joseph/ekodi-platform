@@ -4,18 +4,23 @@ on:
   pull_request:
     paths:
       - 'config/ekodi-environments.json'
+      - 'config/supabase-environment-boundary.json'
       - 'EKODI_ENVIRONMENT_CONTRACT.md'
-      - 'supabase/migrations/**'
+      - 'docs/operations/supabase-development-production-boundary.md'
+      - 'scripts/validate-supabase-environment-boundary.mjs'
+      - 'supabase/**'
       - '.github/workflows/environment-contract.yml'
+      - '.github/workflows/supabase-environment-boundary.yml'
       - '.github/workflows/supabase-free-plan-liveness.yml'
   push:
     branches: [main, development]
     paths:
       - 'config/ekodi-environments.json'
+      - 'config/supabase-environment-boundary.json'
       - 'EKODI_ENVIRONMENT_CONTRACT.md'
-      - 'supabase/migrations/**'
+      - 'scripts/validate-supabase-environment-boundary.mjs'
+      - 'supabase/**'
       - '.github/workflows/environment-contract.yml'
-      - '.github/workflows/supabase-free-plan-liveness.yml'
   workflow_dispatch:
 
 permissions:
@@ -27,58 +32,66 @@ concurrency:
 
 jobs:
   validate:
+    name: EKODI DEV PROD Contract
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
 
       - name: Validate canonical environment mapping
         shell: bash
         run: |
           set -euo pipefail
+          node scripts/validate-supabase-environment-boundary.mjs
           python - <<'PY'
           import json
           from pathlib import Path
-
-          path = Path('config/ekodi-environments.json')
-          data = json.loads(path.read_text())
-
-          assert data['canonicalRepository'] == 'topmaster-joseph/ekodi-platform'
+          data = json.loads(Path('config/ekodi-environments.json').read_text())
           prod = data['environments']['production']
           dev = data['environments']['development']
 
-          assert prod['git']['branch'] == 'main'
-          assert prod['git']['githubEnvironment'] == 'production'
+          assert data['canonicalRepository'] == 'topmaster-joseph/ekodi-platform'
+          assert prod['git'] == {'branch': 'main', 'githubEnvironment': 'production'}
           assert dev['git']['branch'] == 'development'
           assert dev['git']['githubEnvironment'] == 'development'
-          assert prod['supabase']['currentProjectRef'] != dev['supabase']['currentProjectRef']
-          assert prod['supabase']['logicalName'] == 'ekodi-platform'
-          assert dev['supabase']['logicalName'] == 'ekodi-platform-dev'
-
-          expected_schemas = {
-              'core', 'identity', 'tenancy', 'shared', 'church', 'church_private',
-              'market', 'commerce', 'community', 'work', 'content', 'ai',
-              'audit', 'private', 'api'
-          }
-          assert expected_schemas.issubset(set(data['postgres']['targetSchemas']))
-          assert data['liveness']['supabase']['method'] == 'read-only-rpc'
-          assert data['liveness']['supabase']['writesAllowed'] is False
-          assert data['liveness']['cloudflare']['syntheticKeepalive'] is False
+          assert prod['supabase']['logicalName'] == 'ekodi-prod'
+          assert prod['supabase']['currentProjectRef'] == 'renzehysxirjilvdxacv'
+          assert dev['supabase']['logicalName'] == 'ekodi-dev'
+          assert dev['supabase']['currentProjectRef'] == 'lxcxwbdwwojjkgybbqii'
+          assert dev['supabase']['realUserDataAllowed'] is False
+          assert dev['supabase']['productionCredentialAccessAllowed'] is False
+          assert data['promotion']['directPushToMainAllowed'] is False
+          assert data['promotion']['directDevelopmentMutationOfProductionAllowed'] is False
+          assert data['traffic']['targetConcurrentUsers'] == 100000
+          assert data['legacyDrain']['noNewProductionDependencies'] is True
+          assert data['legacyDrain']['destructiveCleanupAllowedBeforeDependencyProof'] is False
           PY
 
-      - name: Validate liveness migration and workflow safety
+      - name: Enforce cross-environment project-ref boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -d supabase/development ]; then
+            ! grep -R --line-number --fixed-strings 'renzehysxirjilvdxacv' supabase/development
+          fi
+          if [ -d supabase/production ]; then
+            ! grep -R --line-number --fixed-strings 'lxcxwbdwwojjkgybbqii' supabase/production
+          fi
+
+      - name: Validate liveness safety
         shell: bash
         run: |
           set -euo pipefail
           migration='supabase/migrations/20260906143000_add_ekodi_platform_keepalive_rpc.sql'
-          workflow='.github/workflows/supabase-free-plan-liveness.yml'
+          liveness='.github/workflows/supabase-free-plan-liveness.yml'
           test -f "$migration"
-          test -f "$workflow"
+          test -f "$liveness"
           grep -Fq 'security invoker' "$migration"
           grep -Fq 'select true' "$migration"
-          grep -Fq 'revoke all on function public.ekodi_keepalive() from public' "$migration"
-          grep -Fiq 'three small read-only requests per day' "$workflow"
-          ! grep -Eiq 'service[_-]?role|database[_-]?password|postgresql://' "$workflow" || {
+          ! grep -Eiq 'service[_-]?role|database[_-]?password|postgresql://' "$liveness" || {
             echo '::error::Privileged database credentials are forbidden in the liveness workflow.'
             exit 1
           }
@@ -87,8 +100,9 @@ jobs:
         run: |
           {
             echo '### EKODI environment contract'
-            echo '- GitHub main -> production'
-            echo '- GitHub development / PR staging -> development boundary'
-            echo '- Supabase liveness is read-only'
-            echo '- Cloudflare synthetic keepalive is disabled'
+            echo '- main / production -> ekodi-prod'
+            echo '- development / PR staging -> ekodi-dev'
+            echo '- production data never copies back to development'
+            echo '- Cloudflare-first scaling target: 100,000 concurrent users'
+            echo '- legacy ekodi-church dependencies are drain-only; no new production dependency'
           } >> "$GITHUB_STEP_SUMMARY"
