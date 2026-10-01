@@ -28,8 +28,8 @@ test('AI operations center uses the existing provider-neutral control contracts'
   assert.match(center, /\/api\/ai-modules\/v1\/providers\/admin/);
   assert.match(center, /\/api\/control\/ai\/governance/);
   assert.match(center, /\/api\/control\/ai\/actions\?limit=30/);
-  assert.match(center, /Cloudflare·Gemini·OpenRouter·Groq·OpenAI·Claude/);
-  assert.match(providerControl, /PROVIDER_ORDER=Object\.freeze\(\['cloudflare-workers-ai','gemini','openrouter-free','groq-free','openai','anthropic'\]\)/);
+  assert.match(center, /Cloudflare·Gemini·OpenRouter·Groq·Cerebras·Qwen·DeepSeek·OpenAI·Claude/);
+  assert.match(providerControl, /PROVIDER_ORDER=Object\.freeze\(\['cloudflare-workers-ai','gemini','openrouter-free','groq-free','cerebras-free','qwen-free','deepseek-free-credit','openai','anthropic'\]\)/);
 });
 
 test('provider mutations require the server confirmation contracts', () => {
