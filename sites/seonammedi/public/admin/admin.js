@@ -2,6 +2,8 @@
 const PLATFORM_TOKEN_KEY='ekodi-auth-token';
 const SESSION_KEY='ekodi-seonam-admin-session';
 const CENTRAL_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token';
+const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const state={me:null,content:[],timeline:[],voices:[],notices:[],channels:[],finance:[],baseData:null};
 const $=id=>document.getElementById(id);
 const qs=(sel,root=document)=>root.querySelector(sel);
@@ -15,12 +17,22 @@ function saveSession(value){sessionStorage.setItem(SESSION_KEY,JSON.stringify(va
 function clearSession(){sessionStorage.removeItem(SESSION_KEY)}
 async function supabaseAuth(pathname,body){
   const bridge=pathname.includes('refresh_token')?'/api/seonammedi/admin/auth/refresh':'/api/seonammedi/admin/auth/exchange';
-  let response;
-  try{response=await fetch(bridge,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),cache:'no-store'})}
-  catch{throw Object.assign(new Error('로그인 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.'),{status:503})}
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw Object.assign(new Error(data.msg||data.error_description||data.error||('auth_'+response.status)),{status:response.status,data});
-  return data;
+  let response=null,data={};
+  try{
+    response=await fetch(bridge,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),cache:'no-store'});
+    data=await response.json().catch(()=>({}));
+  }catch{}
+  if(response?.ok)return data;
+  if(response&&response.status<500)throw Object.assign(new Error(data.msg||data.error_description||data.error||('auth_'+response.status)),{status:response.status,data});
+  try{
+    const direct=await fetch(SUPABASE_URL+pathname,{method:'POST',headers:{apikey:SUPABASE_PUBLISHABLE_KEY,'content-type':'application/json'},body:JSON.stringify(body),cache:'no-store'});
+    const directData=await direct.json().catch(()=>({}));
+    if(!direct.ok)throw Object.assign(new Error(directData.msg||directData.error_description||directData.error||('auth_'+direct.status)),{status:direct.status,data:directData});
+    return directData;
+  }catch(error){
+    if(error?.status)throw error;
+    throw Object.assign(new Error('로그인 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.'),{status:503});
+  }
 }
 function normalizeSession(data,current={}){return{accessToken:data.access_token||'',refreshToken:data.refresh_token||current.refreshToken||'',expiresAt:Number(data.expires_at||0)||Math.floor(Date.now()/1000)+Number(data.expires_in||3600),user:{id:data.user?.id||current.user?.id||'',email:data.user?.email||current.user?.email||''}}}
 async function exchangeHandoff(){
