@@ -99,7 +99,8 @@ test('provider admin presents compact explicit connection status without exposin
   const admin=read('admin-provider-control.js');
   assert.match(admin,/AI-PROVIDER-COMPACT-READABLE-20261001/);
   assert.match(admin,/Secret \$\{configured\?'연결':'미연결'\}/);
-  assert.match(admin,/운영 \$\{operational\?'가동':'비가동'\}/);
+  assert.match(admin,/검증 \$\{operational\?'통과':'필요'\}/);
+  assert.match(admin,/라우팅 \$\{trafficEligible\?'가능':'대기'\}/);
   assert.match(admin,/계정 자원 연결/);
   assert.match(admin,/aria-live="polite"/);
   assert.match(admin,/grid-template-columns:repeat\(3,minmax\(285px,1fr\)\)/);
@@ -208,6 +209,19 @@ test('AI Ops provider control enforces white background and black text for reada
 });
 
 
+test('provider snapshot exposes explicit operational readiness fields',()=>{
+  const api=read('ai-provider-control.js');
+  const admin=read('admin-provider-control.js');
+  assert.match(api,/trafficEligible/);
+  assert.match(api,/verificationPassed/);
+  assert.match(api,/activationState/);
+  assert.match(api,/fallbackEligible:trafficEligible/);
+  assert.match(admin,/라우팅 가능/);
+  assert.match(admin,/런타임 /);
+  assert.match(admin,/검증 /);
+  assert.match(admin,/보호 /);
+});
+
 test('guarded free providers require explicit no-charge confirmation and Qwen has a safe Singapore base fallback',()=>{
   const api=read('ai-provider-control.js');
   const adapters=read('extended-free-provider-adapters.js');
@@ -228,6 +242,13 @@ test('provider health classifier distinguishes Gemini API key and precondition f
   assert.match(source,/failed_precondition/);
   assert.match(admin,/API 키가 유효하지 않거나 차단됨/);
   assert.match(admin,/지역\/결제 설정 확인/);
+});
+
+test('provider UI distinguishes connected but disabled providers from missing API keys',()=>{
+  const admin=read('admin-provider-control.js');
+  assert.match(admin,/키는 연결됨 · 사용을 켜고 저장한 뒤 연결 확인/);
+  assert.match(admin,/키 연결됨 · 사용을 켜고 저장한 뒤 연결 확인/);
+  assert.match(admin,/p\?\.configured&&!p\?\.enabled/);
 });
 
 test('provider health UI explains Cloudflare quota, generic Gemini 400, and Claude 403',()=>{
@@ -257,4 +278,18 @@ test('Gemini adapter supports an authorized multi-project credential pool',()=>{
   assert.match(source,/GEMINI_API_KEY_POOL_JSON/);
   assert.match(source,/item\.authorized === true/);
   assert.match(source,/credentialCount/);
+});
+
+
+test('provider diagnostic checks do not collapse expected free-provider failures into opaque HTTP 502',()=>{
+  const api=read('ai-provider-control.js');
+  const admin=read('admin-provider-control.js');
+  assert.match(api,/error\.status=Number\(status\)\|\|0/);
+  assert.match(api,/function providerCheckDiagnostic/);
+  assert.match(api,/providerHttpStatus/);
+  assert.match(api,/diagnostic\},200/);
+  assert.match(admin,/function providerCheckResultMessage/);
+  assert.match(admin,/무료 한도 소진/);
+  assert.match(admin,/Provider HTTP/);
+  assert.match(admin,/자동 우회\/재시도 가능/);
 });

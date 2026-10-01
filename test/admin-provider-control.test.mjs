@@ -51,8 +51,10 @@ test('provider source changes trigger and verify the canonical Shared Site produ
 });
 
 
-test('provider UI distinguishes configured from operational and surfaces safe billing guidance', () => {
-  assert.ok(source.includes('Operational'));
+test('provider UI distinguishes connection, verification, and routing readiness while surfacing safe billing guidance', () => {
+  assert.ok(source.includes('실호출 검증'));
+  assert.ok(source.includes('라우팅 가능'));
   assert.ok(source.includes('크레딧 잔액 소진'));
-  assert.ok(source.includes("p.health==='healthy'"));
+  assert.ok(source.includes('verificationPassed'));
+  assert.ok(source.includes('trafficEligible'));
 });
