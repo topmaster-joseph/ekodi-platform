@@ -60,10 +60,20 @@ async function api(path,options={}){
   if(response.status===401){sessionStorage.removeItem(PLATFORM_TOKEN_KEY);clearSession();try{localStorage.removeItem(CENTRAL_SESSION_KEY)}catch{}location.replace(authUrl());throw new Error('로그인이 만료되었습니다.')}
   if(!response.ok)throw Object.assign(new Error(data.error||'요청을 처리하지 못했습니다.'),{status:response.status,data});return data;
 }
-function showPanel(name){
-  qsa('[data-panel]').forEach(node=>{const active=node.dataset.panel===name;node.hidden=!active;node.classList.toggle('active',active)});
-  qsa('[data-panel-target]').forEach(node=>node.classList.toggle('active',node.dataset.panelTarget===name));
+function selectRecordsAdminTab(name='timeline'){
+  const tabs=qsa('[data-records-admin-tab]'),panels=qsa('[data-records-admin-panel]');
+  if(!tabs.length||!panels.length)return;
+  const allowed=name==='review'?'review':'timeline';
+  tabs.forEach(tab=>{const active=tab.dataset.recordsAdminTab===allowed;tab.classList.toggle('active',active);tab.setAttribute('aria-selected',active?'true':'false')});
+  panels.forEach(panel=>{panel.hidden=panel.dataset.recordsAdminPanel!==allowed});
 }
+function showPanel(name){
+  const target=name==='timeline'?'content':name;
+  qsa('[data-panel]').forEach(node=>{const active=node.dataset.panel===target;node.hidden=!active;node.classList.toggle('active',active)});
+  qsa('[data-panel-target]').forEach(node=>node.classList.toggle('active',node.dataset.panelTarget===target));
+  if(target==='content'&&name==='timeline')selectRecordsAdminTab('timeline');
+}
+qsa('[data-records-admin-tab]').forEach(button=>button.addEventListener('click',()=>selectRecordsAdminTab(button.dataset.recordsAdminTab)));
 qsa('[data-panel-target]').forEach(button=>button.addEventListener('click',()=>showPanel(button.dataset.panelTarget)));
 qsa('[data-go]').forEach(button=>button.addEventListener('click',()=>showPanel(button.dataset.go)));
 
@@ -79,7 +89,7 @@ function updateDashboard(){
   text($('scopeSummary'),me.platform?'최고관리자 권한으로 이 사이트를 관리하고 있습니다.':(perms.length?perms.join('·')+' 관리 권한만 부여된 사이트 범위 관리자입니다.':'조회 권한만 있습니다.'));
   text($('adminIdentity'),me.email||'');text($('accessEmail'),me.email||'-');text($('accessRole'),me.platform?'최고관리자':'게시판 관리자');
   text($('accessPages'),me.permissions?.pages?'현재상황·조직 수정 가능':'권한 없음');const runHealth=$('runSiteHealth');if(runHealth)runHealth.hidden=!me.permissions?.health;text($('accessTimeline'),me.permissions?.timeline?'등록·수정·게시여부 선택 가능':'권한 없음');text($('accessVoices'),me.permissions?.voices?'접수내용 조회·상태변경·삭제 가능':'권한 없음');text($('accessFinance'),me.permissions?.finance?'회계내역 등록·수정·삭제 가능':'권한 없음');text($('accessContent'),me.permissions?.content?'분류·게시여부 선택 가능':'권한 없음');text($('accessNotice'),me.permissions?.notices?'작성·수정·삭제 가능':'권한 없음');text($('accessChannel'),me.permissions?.channels?'추가·수정·숨김·삭제 가능':'권한 없음');
-  qs('[data-panel-target="status"]').hidden=!me.permissions?.pages;qs('[data-panel-target="organization"]').hidden=!me.permissions?.pages;qs('[data-panel-target="timeline"]').hidden=!me.permissions?.timeline;qs('[data-panel-target="voices"]').hidden=!me.permissions?.voices;qs('[data-panel-target="content"]').hidden=!me.permissions?.content;qs('[data-panel-target="notices"]').hidden=!me.permissions?.notices;qs('[data-panel-target="channels"]').hidden=!me.permissions?.channels;qs('[data-panel-target="finance"]').hidden=!me.permissions?.finance;
+  qs('[data-panel-target="status"]').hidden=!me.permissions?.pages;qs('[data-panel-target="organization"]').hidden=!me.permissions?.pages;qs('[data-panel-target="voices"]').hidden=!me.permissions?.voices;qs('[data-panel-target="content"]').hidden=!(me.permissions?.timeline||me.permissions?.content);qs('[data-panel-target="notices"]').hidden=!me.permissions?.notices;qs('[data-panel-target="channels"]').hidden=!me.permissions?.channels;qs('[data-panel-target="finance"]').hidden=!me.permissions?.finance;
 }
 
 
@@ -258,7 +268,7 @@ function resetTimeline(){
   const form=$('timelineForm');form.reset();form.elements.id.value='';form.elements.status.value='published';form.elements.sortOrder.value=String(state.timeline.length);text($('timelineFormTitle'),'활동이력 추가');text($('timelineMessage'),'');
 }
 function editTimeline(item){
-  const form=$('timelineForm');form.elements.id.value=item.id;form.elements.date.value=item.date||'';form.elements.category.value=item.category||'';form.elements.title.value=item.title||'';form.elements.summary.value=item.summary||'';form.elements.evidence.value=item.evidence||'';form.elements.sortOrder.value=String(item.sortOrder??0);form.elements.status.value=item.status||'draft';text($('timelineFormTitle'),'활동이력 수정');showPanel('timeline');form.elements.title.focus();
+  const form=$('timelineForm');form.elements.id.value=item.id;form.elements.date.value=item.date||'';form.elements.category.value=item.category||'';form.elements.title.value=item.title||'';form.elements.summary.value=item.summary||'';form.elements.evidence.value=item.evidence||'';form.elements.sortOrder.value=String(item.sortOrder??0);form.elements.status.value=item.status||'draft';text($('timelineFormTitle'),'활동이력 수정');showPanel('content');selectRecordsAdminTab('timeline');form.elements.title.focus();
 }
 async function deleteTimeline(item){
   if(!confirm('이 활동이력을 삭제할까요?'))return;
