@@ -60,37 +60,40 @@
     </section>
 
     <section class="panel-page" data-panel="organization" hidden>
-      <div class="heading"><div><p class="eyebrow">ORGANIZATION</p><h1>조직 관리</h1><p>사용자 페이지와 동일하게 통합 대책위·시민단체연대·목포대 조직도를 구분해 관리합니다.</p></div></div>
+      <div class="heading"><div><p class="eyebrow">ORGANIZATION</p><h1>조직 관리</h1><p>사용자 페이지와 동일하게 비대위·목포대·민학비대위 조직도를 구분해 관리합니다. 미확정 조직은 구성 논의 중 상태로 표시합니다.</p></div></div>
       <div class="quick org-admin-tabs" role="tablist" aria-label="조직 구분">
-        <button type="button" class="active" data-org-admin-tab="integrated" role="tab" aria-selected="true">통합 대책위</button>
-        <button type="button" data-org-admin-tab="civic" role="tab" aria-selected="false">시민단체연대</button>
+        <button type="button" class="active" data-org-admin-tab="bidae" role="tab" aria-selected="true">비대위</button>
+        <button type="button" data-org-admin-tab="minhak" role="tab" aria-selected="false">민학비대위</button>
         <button type="button" data-org-admin-tab="mokpo" role="tab" aria-selected="false">목포대</button>
       </div>
       <form id="organizationForm" class="card form-card">
         <input type="hidden" name="orgKey" value="integrated">
-        <div class="org-admin-panel" data-org-admin-panel="integrated">
-          <h2>통합 대책위 조직도</h2>
-          <label>대표자회의 구성<textarea name="integrated_representatives" rows="4" placeholder="한 줄에 한 명"></textarea></label>
-          <label>상임공동대표단 구성<textarea name="integrated_standing" rows="4" placeholder="한 줄에 한 명"></textarea></label>
-          <label>집행위원회 구성<textarea name="integrated_executive" rows="4" placeholder="한 줄에 한 명"></textarea></label>
-          <label>위원회<textarea name="integrated_committees" rows="6" placeholder="총무위원회 | 문지영&#10;행사위원회 | 박현경"></textarea></label>
-          <label>참여단체<textarea name="integrated_participants" rows="8" placeholder="단체명 | 대표자 | https://..."></textarea></label>
-        </div>
-        <div class="org-admin-panel" data-org-admin-panel="civic" hidden>
-          <h2>시민단체연대 조직도</h2>
-          <label>대표자회의 구성<textarea name="civic_representatives" rows="4" placeholder="한 줄에 한 명"></textarea></label>
-          <label>상임공동대표단 구성<textarea name="civic_standing" rows="4" placeholder="한 줄에 한 명"></textarea></label>
-          <label>집행위원회 구성<textarea name="civic_executive" rows="4" placeholder="한 줄에 한 명"></textarea></label>
-          <label>위원회<textarea name="civic_committees" rows="6" placeholder="총무위원회 | 담당자"></textarea></label>
-          <label>참여단체<textarea name="civic_participants" rows="8" placeholder="단체명 | 대표자 | https://..."></textarea></label>
+        <div class="org-admin-panel" data-org-admin-panel="bidae">
+          <h2>비대위 조직도</h2>
+          <label>상태<input name="bidae_status" maxlength="160" value="운영 중"></label>
+          <label>대표자회의 구성<textarea name="bidae_representatives" rows="4" placeholder="한 줄에 한 명"></textarea></label>
+          <label>상임공동대표단 구성<textarea name="bidae_standing" rows="4" placeholder="한 줄에 한 명"></textarea></label>
+          <label>집행위원회 구성<textarea name="bidae_executive" rows="4" placeholder="한 줄에 한 명"></textarea></label>
+          <label>위원회<textarea name="bidae_committees" rows="6" placeholder="기획위원회 | 여인두 (집행위원회 겸임)"></textarea></label>
+          <label>참여단체<textarea name="bidae_participants" rows="8" placeholder="단체명 | 대표자 | https://..."></textarea></label>
         </div>
         <div class="org-admin-panel" data-org-admin-panel="mokpo" hidden>
           <h2>목포대 조직도</h2>
-          <label>대표자회의 구성<textarea name="mokpo_representatives" rows="4" placeholder="한 줄에 한 명"></textarea></label>
-          <label>상임공동대표단 구성<textarea name="mokpo_standing" rows="4" placeholder="한 줄에 한 명"></textarea></label>
-          <label>집행위원회 구성<textarea name="mokpo_executive" rows="4" placeholder="한 줄에 한 명"></textarea></label>
-          <label>위원회<textarea name="mokpo_committees" rows="6" placeholder="위원회 | 담당자"></textarea></label>
-          <label>참여단체<textarea name="mokpo_participants" rows="8" placeholder="부서·기관명 | 대표자 | https://..."></textarea></label>
+          <label>상태<input name="mokpo_status" maxlength="160" value="운영 중"></label>
+          <label>대표자회의 구성<textarea name="mokpo_representatives" rows="4"></textarea></label>
+          <label>상임공동대표단 구성<textarea name="mokpo_standing" rows="4"></textarea></label>
+          <label>집행위원회 구성<textarea name="mokpo_executive" rows="4"></textarea></label>
+          <label>위원회<textarea name="mokpo_committees" rows="6"></textarea></label>
+          <label>참여단체<textarea name="mokpo_participants" rows="8"></textarea></label>
+        </div>
+        <div class="org-admin-panel" data-org-admin-panel="minhak" hidden>
+          <h2>민학비대위 조직도</h2>
+          <label>상태<input name="minhak_status" maxlength="160" value="구성 논의 중 · 2026.09.30 첫 만남"></label>
+          <label>대표자회의 구성<textarea name="minhak_representatives" rows="4"></textarea></label>
+          <label>상임공동대표단 구성<textarea name="minhak_standing" rows="4"></textarea></label>
+          <label>집행위원회 구성<textarea name="minhak_executive" rows="4"></textarea></label>
+          <label>위원회<textarea name="minhak_committees" rows="6"></textarea></label>
+          <label>참여단체<textarea name="minhak_participants" rows="8"></textarea></label>
         </div>
         <div class="actions"><button type="submit" class="primary">전체 조직 저장</button><button type="button" id="reloadOrganization" class="secondary">다시 불러오기</button></div>
         <p id="organizationMessage" class="message" role="status"></p>
