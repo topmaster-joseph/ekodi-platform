@@ -139,3 +139,12 @@ test('admin provider UI explains runtime sync failures instead of showing the ra
   assert.match(ui,/worker_latest_version_not_deployed/);
   assert.match(ui,/renderAll\(\)\}catch\(e\)\{message\(card,providerControlErrorMessage\(e\),true\)\}/);
 });
+
+
+test('provider status cards explain free and paid usage',()=>{
+  const admin=read('admin-provider-control.js');
+  assert.match(admin,/무료 한도 우선 사용/);
+  assert.match(admin,/유료 API · 크레딧 필요/);
+  assert.match(admin,/지속 무료 사용 없음/);
+  assert.match(admin,/ekodi-ai-provider-status-note/);
+});
