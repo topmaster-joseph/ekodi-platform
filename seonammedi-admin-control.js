@@ -1,6 +1,7 @@
 import authWorker from './auth-worker.js';
 import { principalFromSupabaseRequest } from './ekodi-principal.js';
 import { accessGrantIsActive, effectiveAccessCapabilities } from './access-governance.js';
+import { runSeonamMediDailyCheck } from './seonammedi-monitor.js';
 
 const PREFIX='/api/seonammedi';
 const AUTH_EXCHANGE_PATH=PREFIX+'/admin/auth/exchange';
@@ -314,7 +315,7 @@ async function listPublicChannels(env){
 
 async function adminMe(request,env,auth){
   const site=await env.DB.prepare('SELECT public_status,updated_at FROM public_site_controls WHERE site_id=? LIMIT 1').bind(TENANT_SLUG).first().catch(()=>null);
-  return json({ok:true,email:auth.email,role:auth.role,platform:Boolean(auth.platform),capabilities:auth.capabilities||[],permissions:{notices:can(auth,NOTICE_CAP),channels:can(auth,CHANNEL_CAP),content:can(auth,CONTENT_CAP),timeline:can(auth,TIMELINE_CAP),voices:can(auth,VOICE_CAP)||can(auth,CONTENT_CAP),pages:can(auth,PAGE_CAP)||can(auth,CONTENT_CAP),finance:can(auth,FINANCE_CAP)},publicStatus:site?.public_status||'public',publicStatusUpdatedAt:site?.updated_at||''});
+  return json({ok:true,email:auth.email,role:auth.role,platform:Boolean(auth.platform),capabilities:auth.capabilities||[],permissions:{notices:can(auth,NOTICE_CAP),channels:can(auth,CHANNEL_CAP),content:can(auth,CONTENT_CAP),timeline:can(auth,TIMELINE_CAP),voices:can(auth,VOICE_CAP)||can(auth,CONTENT_CAP),pages:can(auth,PAGE_CAP)||can(auth,CONTENT_CAP),finance:can(auth,FINANCE_CAP),health:can(auth,PAGE_CAP)||can(auth,CONTENT_CAP)},publicStatus:site?.public_status||'public',publicStatusUpdatedAt:site?.updated_at||''});
 }
 
 
@@ -624,6 +625,12 @@ export async function handleSeonamMediAdminApi(request,env){
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{allow:'GET, POST, PUT, DELETE, OPTIONS','cache-control':'no-store'}});
   const auth=await authority(request,env);if(!auth.ok)return json({ok:false,error:auth.error},auth.status||403);
   if(url.pathname===PREFIX+'/admin/me'&&request.method==='GET')return adminMe(request,env,auth);
+  if(url.pathname===PREFIX+'/admin/monitor/run'&&request.method==='POST'){
+    if(!(can(auth,PAGE_CAP)||can(auth,CONTENT_CAP)))return json({ok:false,error:'health_forbidden'},403);
+    const result=await runSeonamMediDailyCheck(env,{scheduledAt:new Date().toISOString(),force:true});
+    await audit(env,auth,'run','monitor',result?.runId||null,{status:result?.status||'',checked:Number(result?.checked||0),seen:Number(result?.seen||0),added:Number(result?.added||0)});
+    return json({ok:Boolean(result?.ok),result},result?.ok===false?502:200);
+  }
   let pageMatch=url.pathname.match(/^\/api\/seonammedi\/admin\/pages\/(status|organization)$/);
   if(pageMatch&&request.method==='GET')return getAdminPage(env,auth,pageMatch[1]);
   if(pageMatch&&request.method==='PUT')return putAdminPage(request,env,auth,pageMatch[1]);
