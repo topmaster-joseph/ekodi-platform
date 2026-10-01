@@ -1,3 +1,4 @@
+// FREE-PROVIDER-EXPANSION-20261002: guarded free-first pool + authorized Gemini project pool.
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 import { getSponsoredAiAllowance, recordProviderUsage } from './api-usage-meter.js';
 import { AI_COST_POLICY, evaluateAiCostEligibility } from './ai-cost-policy.js';
