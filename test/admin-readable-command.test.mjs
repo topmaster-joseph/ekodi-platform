@@ -96,3 +96,15 @@ test('base readability is first-path while AI orchestration stays lazy and perfo
   assert.match(postbuild, /admin-lazy-features\.js/);
   assert.doesNotMatch(postbuild, /control-center\.html/);
 });
+
+
+test('AI Ops full workspace uses monochrome state hierarchy', async () => {
+  const css = await read('admin-readable-command.css');
+  assert.match(css, /AIOPS-FULL-MONOCHROME-20261001/);
+  assert.match(css, /#aiOpsPanel[\s\S]*?--ai-mono-ink:#111/);
+  assert.match(css, /\.ai-fleet-row\.healthy \.ai-state-dot\{background:#111!important/);
+  assert.match(css, /\.ai-fleet-row\.attention \.ai-state-dot\{background:#fff!important;border:2px solid #111!important/);
+  assert.match(css, /\.aic-tab\.is-active\{background:#111!important;color:#fff!important/);
+  assert.match(css, /\.ekodi-provider-dot\.warn\{background:#fff!important;border:2px solid #111!important/);
+  assert.match(css, /\.ai-chat-message\.user \.ai-chat-bubble\{border-left:4px solid #111!important/);
+});

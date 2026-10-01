@@ -89,3 +89,140 @@ body.admin-compact .campus-site-item.is-planned{opacity:.78!important}
 
 @media(max-width:1100px){body.admin-compact .campus-site-item{grid-template-columns:minmax(0,1fr) auto!important;gap:9px 14px!important}body.admin-compact .campus-site-domain{grid-column:1!important}body.admin-compact .campus-row-actions{grid-column:2!important;grid-row:1 / span 2!important}}
 @media(max-width:760px){body.admin-compact #campusPanel .campus-toolbar{padding:16px!important}body.admin-compact #campusPanel .campus-toolbar h2{font-size:22px!important}body.admin-compact #campusPanel .campus-toolbar p:not(.kicker){font-size:14px!important}body.admin-compact #campusSiteGroups,body.admin-compact .campus-groups-grid{gap:14px!important}body.admin-compact .campus-groups-wrap{padding:10px!important}body.admin-compact .campus-group-head{min-height:0!important;padding:14px!important}body.admin-compact .campus-group-head h3{font-size:17px!important}body.admin-compact .campus-site-item{grid-template-columns:1fr!important;gap:10px!important;min-height:0!important;padding:14px!important}body.admin-compact .campus-site-identity strong{font-size:16px!important}body.admin-compact .campus-site-domain{grid-column:auto!important;font-size:14px!important}body.admin-compact .campus-row-actions{grid-column:auto!important;grid-row:auto!important;justify-content:stretch!important}body.admin-compact .campus-row-action{flex:1 1 0!important;min-height:44px!important;font-size:14px!important}}
+
+
+/* AIOPS-FULL-MONOCHROME-20261001
+   AI Ops 전체 화면은 색상 대신 명도·선·채움으로 상태를 구분한다. */
+body.admin-compact #aiOpsPanel{
+  --ai-mono-ink:#111;
+  --ai-mono-text:#222;
+  --ai-mono-muted:#666;
+  --ai-mono-line:#c9c9c9;
+  --ai-mono-soft:#f3f3f3;
+  --ai-mono-softer:#fafafa;
+  --ai-mono-white:#fff;
+  color:var(--ai-mono-text)!important
+}
+body.admin-compact #aiOpsPanel :where(.ai-ops-head,.ai-ops-block,.ai-fleet-block,.ai-selected-detail,.ai-evolution-block,.ekodi-control-plane-card,#aiOperationsCenter,.ekodi-ai-provider-center,.ekodi-unified-provider,.ai-chief-chat){
+  background:var(--ai-mono-white)!important;
+  color:var(--ai-mono-text)!important;
+  border-color:var(--ai-mono-line)!important;
+  box-shadow:none!important
+}
+body.admin-compact #aiOpsPanel :where(h2,h3,h4,strong,b){color:var(--ai-mono-ink)!important}
+body.admin-compact #aiOpsPanel :where(p,small,.muted,.subtle,.ai-ops-auto,.aic-note,.ekodi-provider-note,.ai-chat-foot){color:var(--ai-mono-muted)!important}
+body.admin-compact #aiOpsPanel .ai-ops-metrics article{
+  background:var(--ai-mono-soft)!important;
+  border-color:var(--ai-mono-line)!important;
+  border-radius:10px!important;
+  box-shadow:none!important
+}
+body.admin-compact #aiOpsPanel .ai-ops-metrics article :where(strong,small,span){color:var(--ai-mono-ink)!important}
+body.admin-compact #aiOpsPanel .ai-ops-metrics article.good,
+body.admin-compact #aiOpsPanel .ai-ops-metrics article.warn,
+body.admin-compact #aiOpsPanel .ai-ops-metrics article.danger,
+body.admin-compact #aiOpsPanel .ai-ops-metrics article.muted{border-style:solid!important}
+body.admin-compact #aiOpsPanel .ai-ops-metrics article.warn,
+body.admin-compact #aiOpsPanel .ai-ops-metrics article.danger{border-width:2px!important}
+body.admin-compact #aiOpsPanel .ai-fleet-scroll,
+body.admin-compact #aiOpsPanel .ai-chat-messages{
+  background:var(--ai-mono-softer)!important;
+  border-color:#ddd!important;
+  scrollbar-color:#666 #eee!important
+}
+body.admin-compact #aiOpsPanel .ai-fleet-row{
+  background:#fff!important;
+  border-color:#d4d4d4!important;
+  color:#222!important;
+  box-shadow:none!important;
+  transform:none!important
+}
+body.admin-compact #aiOpsPanel .ai-fleet-row:hover,
+body.admin-compact #aiOpsPanel .ai-fleet-row.focused{background:#f5f5f5!important;border-color:#777!important}
+body.admin-compact #aiOpsPanel .ai-fleet-row.selected{background:#eee!important;border-color:#111!important;box-shadow:inset 4px 0 #111!important}
+body.admin-compact #aiOpsPanel .ai-fleet-row td,
+body.admin-compact #aiOpsPanel .ai-fleet-row td:nth-child(3),
+body.admin-compact #aiOpsPanel .ai-fleet-row td:nth-child(6),
+body.admin-compact #aiOpsPanel .ai-fleet-site strong,
+body.admin-compact #aiOpsPanel .ai-owner{color:#222!important}
+body.admin-compact #aiOpsPanel .ai-fleet-site small,
+body.admin-compact #aiOpsPanel .ai-fleet-row td::before{color:#666!important}
+body.admin-compact #aiOpsPanel .ai-state-dot{
+  width:9px!important;height:9px!important;border-radius:2px!important;
+  background:#888!important;box-shadow:none!important
+}
+body.admin-compact #aiOpsPanel .ai-fleet-row.healthy .ai-state-dot{background:#111!important}
+body.admin-compact #aiOpsPanel .ai-fleet-row.attention .ai-state-dot{background:#fff!important;border:2px solid #111!important}
+body.admin-compact #aiOpsPanel .ai-fleet-row.critical .ai-state-dot{background:#111!important;border:2px double #fff!important;outline:1px solid #111!important}
+body.admin-compact #aiOpsPanel .ai-status-pill,
+body.admin-compact #aiOpsPanel .aic-status{
+  background:#fff!important;color:#111!important;border:1px solid #777!important
+}
+body.admin-compact #aiOpsPanel :where(.ai-status-pill.healthy,.aic-status.healthy){background:#111!important;color:#fff!important;border-color:#111!important}
+body.admin-compact #aiOpsPanel :where(.ai-status-pill.attention,.ai-status-pill.standby,.aic-status.unconfigured){background:#fff!important;color:#111!important;border:1px dashed #111!important}
+body.admin-compact #aiOpsPanel :where(.ai-status-pill.critical,.aic-status.error,.aic-status.awaiting_human){background:#111!important;color:#fff!important;border:2px double #fff!important;outline:1px solid #111!important}
+body.admin-compact #aiOpsPanel :where(input:not([type="checkbox"]):not([type="radio"]),select,textarea){
+  background:#fff!important;color:#111!important;border-color:#aaa!important;box-shadow:none!important
+}
+body.admin-compact #aiOpsPanel :where(input,select,textarea):focus{
+  outline:2px solid #111!important;outline-offset:1px!important;border-color:#111!important;box-shadow:none!important
+}
+body.admin-compact #aiOpsPanel input[type="checkbox"]{accent-color:#111!important}
+body.admin-compact #aiOpsPanel :where(button,.primary,.secondary,.ghost,.aic-btn,.ekodi-provider-retry){
+  box-shadow:none!important
+}
+body.admin-compact #aiOpsPanel :where(.primary,.ai-chat-send,.aic-btn.primary,.ekodi-provider-retry){
+  background:#111!important;color:#fff!important;border-color:#111!important
+}
+body.admin-compact #aiOpsPanel :where(.secondary,.ghost,.aic-btn:not(.primary),.ai-chat-quick button){
+  background:#fff!important;color:#111!important;border-color:#999!important
+}
+body.admin-compact #aiOpsPanel :where(button,.primary,.secondary,.ghost,.aic-btn,.ekodi-provider-retry):hover:not(:disabled){
+  background:#fff!important;color:#111!important;border-color:#111!important
+}
+body.admin-compact #aiOpsPanel .ai-chat-head,
+body.admin-compact #aiOpsPanel .aic-tabs{
+  background:#f2f2f2!important;border-color:#ccc!important
+}
+body.admin-compact #aiOpsPanel .ai-chat-bubble,
+body.admin-compact #aiOpsPanel .ai-chat-message.user .ai-chat-bubble{
+  background:#fff!important;color:#222!important;border-color:#ccc!important
+}
+body.admin-compact #aiOpsPanel .ai-chat-message.user .ai-chat-bubble{border-left:4px solid #111!important}
+body.admin-compact #aiOpsPanel .ai-chat-text{color:#222!important}
+body.admin-compact #aiOpsPanel .ai-auto-action-status{
+  background:#f3f3f3!important;color:#222!important;border-color:#aaa!important
+}
+body.admin-compact #aiOpsPanel #aiOperationsCenter{
+  background:#fff!important;border:1px solid #bbb!important;border-radius:12px!important
+}
+body.admin-compact #aiOpsPanel .aic-tab{background:#fff!important;color:#333!important;border:1px solid transparent!important}
+body.admin-compact #aiOpsPanel .aic-tab.is-active{background:#111!important;color:#fff!important;border-color:#111!important}
+body.admin-compact #aiOpsPanel :where(.aic-card,.aic-row){
+  background:#fafafa!important;color:#222!important;border-color:#ccc!important;box-shadow:none!important
+}
+body.admin-compact #aiOpsPanel :where(.aic-card small,.aic-card span,.aic-row small,.aic-row span){color:#555!important}
+body.admin-compact #aiOpsPanel .aic-pill{background:#fff!important;color:#111!important;border-color:#999!important}
+body.admin-compact #aiOpsPanel :where(.ekodi-control-plane-card,.ekodi-provider-context){
+  background:#fff!important;border-color:#bbb!important;color:#222!important
+}
+body.admin-compact #aiOpsPanel .ekodi-provider-grid{gap:7px!important}
+body.admin-compact #aiOpsPanel :where(.ekodi-provider-tile,.ekodi-provider-diagnostic){
+  background:#f5f5f5!important;color:#222!important;border:1px solid #ccc!important
+}
+body.admin-compact #aiOpsPanel .ekodi-provider-dot{
+  width:9px!important;height:9px!important;border-radius:2px!important;background:#111!important
+}
+body.admin-compact #aiOpsPanel .ekodi-provider-dot.warn{background:#fff!important;border:2px solid #111!important}
+body.admin-compact #aiOpsPanel .ekodi-provider-dot.error{background:#111!important;border:2px double #fff!important;outline:1px solid #111!important}
+body.admin-compact #aiOpsPanel .ekodi-provider-dot.loading{background:#888!important}
+body.admin-compact #aiOpsPanel :where(.ai-evolution-card,.ai-evolution-empty){
+  background:#fafafa!important;color:#222!important;border-color:#ccc!important
+}
+body.admin-compact #aiOpsPanel .ai-evolution-card.high{border:2px solid #777!important}
+body.admin-compact #aiOpsPanel .ai-evolution-card.gate{background:#f1f1f1!important;border:2px double #111!important}
+body.admin-compact #aiOpsPanel :where(.ai-evolution-card-top strong,.ai-evolution-card-top b,.ai-evidence-links a,.ai-evidence-missing){color:#111!important}
+@media(max-width:760px){
+  body.admin-compact #aiOpsPanel :where(.ai-ops-metrics,.aic-grid){gap:6px!important}
+  body.admin-compact #aiOpsPanel :where(.aic-head,.aic-body,.ekodi-control-plane-card){padding:10px!important}
+}
