@@ -105,16 +105,24 @@ const materialItems=[
     url:item.url||''
   }))
 ];
-const materialCats=['전체','공식자료','관련보도','시민·온라인자료'];
-const materialFilters=el('materialFilters'),materialList=el('materialList');
-if(materialFilters&&materialList){
+const materialCats=['활동이력','공식자료','관련보도','시민·온라인자료'];
+const materialFilters=el('materialFilters'),materialList=el('materialList'),timelineGroup=el('timelineGroup');
+if(materialFilters&&materialList&&timelineGroup){
   materialFilters.innerHTML=materialCats.map((cat,i)=>`<button data-material-cat="${escapeHtml(cat)}" class="${i===0?'active':''}">${escapeHtml(cat)}</button>`).join('');
   const renderMaterials=cat=>{
-    const rows=(cat==='전체'?materialItems:materialItems.filter(item=>item.category===cat)).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+    const rows=materialItems.filter(item=>item.category===cat).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)));
     materialList.innerHTML=rows.length?rows.map(item=>`<article class="material-item"><div class="material-date">${escapeHtml(item.date||'날짜 확인 중')}</div><div><h3><a href="${safeUrl(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a></h3>${item.summary?'<p>'+escapeHtml(item.summary)+'</p>':''}<div class="public-post-meta"><span class="source-type">${escapeHtml(item.category)}</span><span class="source-type">${escapeHtml(item.subtype)}</span>${item.publisher?'<span class="source-type">'+escapeHtml(item.publisher)+'</span>':''}${item.verification?'<span class="verify-state">'+escapeHtml(item.verification)+'</span>':''}</div></div></article>`).join(''):'<p class="muted">표시할 관련자료가 없습니다.</p>';
   };
-  renderMaterials('전체');
-  materialFilters.addEventListener('click',event=>{const button=event.target.closest('button');if(!button)return;[...materialFilters.children].forEach(x=>x.classList.remove('active'));button.classList.add('active');renderMaterials(button.dataset.materialCat)});
+  const selectMaterialCategory=cat=>{
+    const activity=cat==='활동이력';
+    timelineGroup.hidden=!activity;
+    materialList.hidden=activity;
+    [...materialFilters.children].forEach(button=>button.classList.toggle('active',button.dataset.materialCat===cat));
+    if(activity)attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS||[]);else renderMaterials(cat);
+  };
+  window.__SEONAM_SET_MATERIAL_CATEGORY=selectMaterialCategory;
+  selectMaterialCategory('활동이력');
+  materialFilters.addEventListener('click',event=>{const button=event.target.closest('button[data-material-cat]');if(!button)return;selectMaterialCategory(button.dataset.materialCat)});
 }
 const org=d.organization||{};
 const ORG_GROUP_META=[['integrated','통합 대책위'],['civic','시민단체연대'],['mokpo','목포대']];
@@ -198,7 +206,7 @@ if(voiceForm){
 }
 
 
-const viewAliases={status:'status',monitor:'status',organization:'organization',timeline:'timeline',notices:'notices',materials:'materials',news:'materials','public-posts':'materials',voices:'voices',channels:'channels',finance:'finance'};
+const viewAliases={status:'status',monitor:'status',organization:'organization',timeline:'materials',notices:'notices',materials:'materials',news:'materials','public-posts':'materials',voices:'voices',channels:'channels',finance:'finance'};
 function showView(view,{updateHash=false}={}){
   const key=viewAliases[view]||'';
   document.querySelectorAll('[data-view-section]').forEach(section=>{section.hidden=section.dataset.viewSection!==key});
