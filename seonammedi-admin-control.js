@@ -76,6 +76,8 @@ async function ensurePublicContentSchema(db){
     status TEXT NOT NULL DEFAULT 'draft',
     pinned INTEGER NOT NULL DEFAULT 0,
     published_at TEXT,
+    image_key TEXT NOT NULL DEFAULT '',
+    image_type TEXT NOT NULL DEFAULT '',
     created_by TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL DEFAULT ''
@@ -112,7 +114,7 @@ async function ensurePublicContentSchema(db){
     updated_at TEXT NOT NULL DEFAULT ''
   );`);
   const repair=[
-    ['seonammedi_notices','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','body',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','status',"TEXT NOT NULL DEFAULT 'draft'"],['seonammedi_notices','pinned','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','published_at','TEXT'],['seonammedi_notices','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','updated_at',"TEXT NOT NULL DEFAULT ''"],
+    ['seonammedi_notices','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','body',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','status',"TEXT NOT NULL DEFAULT 'draft'"],['seonammedi_notices','pinned','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','published_at','TEXT'],['seonammedi_notices','image_key',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','image_type',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','updated_at',"TEXT NOT NULL DEFAULT ''"],
     ['seonammedi_channels','platform',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','name',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','url',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','category',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','official','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','visible','INTEGER NOT NULL DEFAULT 1'],['seonammedi_channels','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','note',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','updated_at',"TEXT NOT NULL DEFAULT ''"],
     ['seonammedi_timeline','legacy_key','TEXT'],['seonammedi_timeline','event_date',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','category',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','summary',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','evidence',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','links_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','media_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','monitor_keywords_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','status',"TEXT NOT NULL DEFAULT 'published'"],['seonammedi_timeline','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_timeline','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','updated_at',"TEXT NOT NULL DEFAULT ''"]
   ];
@@ -144,6 +146,8 @@ async function ensureSchema(db){
     status TEXT NOT NULL DEFAULT 'draft',
     pinned INTEGER NOT NULL DEFAULT 0,
     published_at TEXT,
+    image_key TEXT NOT NULL DEFAULT '',
+    image_type TEXT NOT NULL DEFAULT '',
     created_by TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
@@ -300,15 +304,41 @@ async function audit(env,auth,action,type,id,detail={}){
     .bind(auth.email,action,type,id||null,JSON.stringify(detail),new Date().toISOString()).run()}catch{}
 }
 
-function publicNotice(row){return{id:Number(row.id),title:row.title,body:row.body,pinned:Boolean(row.pinned),publishedAt:row.published_at||row.updated_at,updatedAt:row.updated_at}}
+function publicNotice(row){const id=Number(row.id);return{id,title:row.title,body:row.body,pinned:Boolean(row.pinned),imageUrl:row.image_key?PREFIX+'/notices/'+id+'/image':'',publishedAt:row.published_at||row.updated_at,updatedAt:row.updated_at}}
 function adminNotice(row){return{...publicNotice(row),status:row.status,createdBy:row.created_by,createdAt:row.created_at}}
 function publicChannel(row){return{id:Number(row.id),platform:row.platform,name:row.name,url:row.url,category:row.category,official:Boolean(row.official),note:row.note||'',sortOrder:Number(row.sort_order||0)}}
 function adminChannel(row){return{...publicChannel(row),visible:Boolean(row.visible),createdBy:row.created_by,createdAt:row.created_at,updatedAt:row.updated_at}}
 
 async function listPublicNotices(env){
-  const rows=await env.DB.prepare(`SELECT id,title,body,pinned,published_at,updated_at FROM seonammedi_notices
+  const rows=await env.DB.prepare(`SELECT id,title,body,pinned,published_at,updated_at,image_key,image_type FROM seonammedi_notices
     WHERE status='published' ORDER BY pinned DESC,COALESCE(published_at,updated_at) DESC,id DESC LIMIT 40`).all();
   return json({ok:true,items:(rows.results||[]).map(publicNotice)});
+}
+async function publicNoticeImage(env,id){
+  const row=await env.DB.prepare("SELECT image_key,image_type,status FROM seonammedi_notices WHERE id=? LIMIT 1").bind(id).first();
+  if(!row||row.status!=='published'||!row.image_key)return new Response('not_found',{status:404});
+  if(!env?.LIVE_RECORDINGS_BUCKET?.get)return new Response('storage_unavailable',{status:503});
+  const object=await env.LIVE_RECORDINGS_BUCKET.get(row.image_key);if(!object)return new Response('not_found',{status:404});
+  return new Response(object.body,{status:200,headers:{'content-type':row.image_type||object.httpMetadata?.contentType||'application/octet-stream','cache-control':'public, max-age=86400','x-content-type-options':'nosniff'}});
+}
+async function createPublicNotice(request,env){
+  const principal=await principalFromSupabaseRequest(request);if(!principal?.email)return json({ok:false,error:'authentication_required'},401);
+  const form=await request.formData().catch(()=>null);if(!form)return json({ok:false,error:'invalid_form'},400);
+  const title=clean(form.get('title'),180),copy=clean(form.get('body'),10000);if(!title)return json({ok:false,error:'title_required'},400);
+  const image=form.get('image');let imageKey='',imageType='';
+  if(image&&typeof image==='object'&&Number(image.size||0)>0){
+    if(!env?.LIVE_RECORDINGS_BUCKET?.put)return json({ok:false,error:'image_storage_unavailable'},503);
+    if(Number(image.size)>8*1024*1024)return json({ok:false,error:'image_too_large'},413);
+    imageType=String(image.type||'').toLowerCase();if(!['image/jpeg','image/png','image/webp','image/gif'].includes(imageType))return json({ok:false,error:'unsupported_image_type'},415);
+    const ext=imageType==='image/jpeg'?'jpg':imageType.split('/')[1];imageKey='seonammedi/notices/'+crypto.randomUUID()+'.'+ext;
+    await env.LIVE_RECORDINGS_BUCKET.put(imageKey,await image.arrayBuffer(),{httpMetadata:{contentType:imageType}});
+  }
+  const now=new Date().toISOString();
+  try{
+    const result=await env.DB.prepare('INSERT INTO seonammedi_notices(title,body,status,pinned,published_at,image_key,image_type,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)')
+      .bind(title,copy,'published',0,now,imageKey,imageType,principal.email,now,now).run();
+    return json({ok:true,id:Number(result?.meta?.last_row_id||0)},201);
+  }catch(error){if(imageKey)await env.LIVE_RECORDINGS_BUCKET?.delete?.(imageKey).catch(()=>{});throw error}
 }
 async function listPublicChannels(env){
   const rows=await env.DB.prepare(`SELECT id,platform,name,url,category,official,note,sort_order FROM seonammedi_channels
@@ -724,6 +754,13 @@ export async function handleSeonamMediAdminApi(request,env){
   }
   if(url.pathname===PREFIX+'/notices'&&request.method==='GET'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return publicStorageRead('notices',()=>listPublicNotices(env));
+  }
+  if(url.pathname===PREFIX+'/notices'&&request.method==='POST'){
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return createPublicNotice(request,env);
+  }
+  const noticeImageMatch=url.pathname.match(/^\/api\/seonammedi\/notices\/(\d+)\/image$/);
+  if(noticeImageMatch&&request.method==='GET'){
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return publicNoticeImage(env,Number(noticeImageMatch[1]));
   }
   if(url.pathname===PREFIX+'/channels'&&request.method==='GET'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return publicStorageRead('channels',()=>listPublicChannels(env));
