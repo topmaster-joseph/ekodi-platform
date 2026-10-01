@@ -30,7 +30,7 @@ test('authenticated Admin E2E verifies direct registry href menus through isolat
 
 test('authenticated Admin E2E verifies same-tab admin handoffs without treating them as panels', async () => {
   const posAgent = getAdminMenuItem('pos-agent');
-  assert.equal(posAgent?.href, 'https://ekodi.kr/cmpmyi/admin/agent');
+  assert.equal(posAgent?.href, 'https://ekodi.kr/cmpmyi/admin/panel/agent');
   assert.equal(posAgent?.adminHandoff, true);
   const source = await workerSource();
   assert.match(source, /async function verifyAdminHandoff\(trigger, started\)/);
