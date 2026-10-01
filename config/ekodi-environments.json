@@ -1,11 +1,12 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "canonicalRepository": "topmaster-joseph/ekodi-platform",
   "principles": {
     "oneCanonicalRepository": true,
     "sharedDatabaseByDefault": true,
     "dedicatedDatabaseWhenJustified": true,
-    "productionDataNeverCopiedRawToNonProduction": true
+    "productionDataNeverCopiedRawToNonProduction": true,
+    "environmentIsolationIsNotTrafficSharding": true
   },
   "environments": {
     "production": {
@@ -17,10 +18,11 @@
         "environment": "production"
       },
       "supabase": {
-        "logicalName": "ekodi-platform",
+        "logicalName": "ekodi-prod",
         "currentProjectRef": "renzehysxirjilvdxacv",
-        "currentProjectName": "cheonggye-market",
-        "state": "transition-to-canonical-platform"
+        "currentProjectName": "ekodi-platform",
+        "state": "canonical-platform-active",
+        "realUserDataAllowed": true
       }
     },
     "development": {
@@ -33,10 +35,13 @@
         "environment": "development-staging"
       },
       "supabase": {
-        "logicalName": "ekodi-platform-dev",
+        "logicalName": "ekodi-dev",
         "currentProjectRef": "lxcxwbdwwojjkgybbqii",
         "currentProjectName": "ekodi-church",
-        "state": "transition-until-church-data-is-safely-migrated"
+        "state": "development-active-with-legacy-drain",
+        "validationMode": "remote-dev-plus-ephemeral-local-ci",
+        "realUserDataAllowed": false,
+        "productionCredentialAccessAllowed": false
       }
     }
   },
@@ -65,6 +70,22 @@
       "api"
     ]
   },
+  "promotion": {
+    "path": "short-lived-branch -> pull-request -> development -> guarded-main -> production -> live-verification",
+    "versionedMigrationsRequired": true,
+    "developmentVerificationRequired": true,
+    "productionLiveVerificationRequired": true,
+    "directPushToMainAllowed": false,
+    "directDevelopmentMutationOfProductionAllowed": false
+  },
+  "traffic": {
+    "cloudflareFirst": true,
+    "publicReadsPreferEdgeCache": true,
+    "queueWritesUnderPressure": true,
+    "selectiveRealtime": true,
+    "targetConcurrentUsers": 100000,
+    "databaseConcurrencyMustNotTrackUserConcurrencyOneToOne": true
+  },
   "liveness": {
     "supabase": {
       "enabled": true,
@@ -76,5 +97,11 @@
     "cloudflare": {
       "syntheticKeepalive": false
     }
+  },
+  "legacyDrain": {
+    "projectRef": "lxcxwbdwwojjkgybbqii",
+    "noNewProductionDependencies": true,
+    "existingProductionDependenciesMustBeMigratedOrRetired": true,
+    "destructiveCleanupAllowedBeforeDependencyProof": false
   }
 }
