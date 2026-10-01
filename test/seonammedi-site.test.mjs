@@ -373,7 +373,7 @@ test('seonammedi monitor D1 insert keeps column and value arity aligned',async()
 test('seonammedi notices are an authenticated public board with image and sharing support',async()=>{
   const [control,html,app,css,auth,migration,apiConfig]=await Promise.all([
     readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),
-    readFile(new URL('app.css',root),'utf8'),readFile(new URL('../auth-site/auth.js',import.meta.url),'utf8'),readFile(new URL('../migrations/0122_seonammedi_public_notice_board.sql',import.meta.url),'utf8'),readFile(new URL('../wrangler.api.toml',import.meta.url),'utf8')
+    readFile(new URL('app.css',root),'utf8'),readFile(new URL('../auth-site/auth.js',import.meta.url),'utf8'),readFile(new URL('../migrations/0123_seonammedi_public_notice_board.sql',import.meta.url),'utf8'),readFile(new URL('../wrangler.api.toml',import.meta.url),'utf8')
   ]);
   assert.match(control,/createPublicNotice/);assert.match(control,/principalFromSupabaseRequest\(request\)/);
   assert.match(control,/image_too_large/);assert.match(control,/LIVE_RECORDINGS_BUCKET\.put/);assert.match(control,/noticeImageMatch/);
