@@ -264,7 +264,15 @@ loadNotices();
 
 const channelPlatformLabel=value=>({youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',blog:'블로그',website:'웹사이트',other:'기타'})[String(value||'').toLowerCase()]||'채널';
 const channelCategoryLabel=value=>({official:'공식','related-org':'관련기관',media:'미디어',civic:'시민·단체',other:'기타'})[String(value||'').toLowerCase()]||'관련';
-const channelEmbedPolicy=platform=>({youtube:'embed',instagram:'preview',facebook:'preview',blog:'preview',website:'preview',other:'preview'})[String(platform||'').toLowerCase()]||'preview';
+const channelEmbedPolicy=platform=>({youtube:'embed',instagram:'recent-embed',facebook:'preview',blog:'preview',website:'preview',other:'preview'})[String(platform||'').toLowerCase()]||'preview';
+const channelPreviewEmbedUrl=(policy,data={})=>{
+  if(policy==='embed')return safeUrl(data.embedUrl||'');
+  if(policy==='recent-embed'){
+    const latest=Array.isArray(data.recentItems)?data.recentItems[0]:null;
+    return safeUrl(latest?.embedUrl||'');
+  }
+  return '#';
+};
 let publicChannels=[];
 let channelPreviewSeq=0;
 function renderChannelFallback(item,data={}){
@@ -273,10 +281,16 @@ function renderChannelFallback(item,data={}){
   const description=escapeHtml(data.description||item.note||'등록된 공개 채널입니다.');
   const image=safeUrl(data.image||'');
   const platform=channelPlatformLabel(item.platform);
+  const recentItems=(Array.isArray(data.recentItems)?data.recentItems:[]).filter(row=>safeUrl(row?.url)!=='#').slice(0,3);
+  const recentHtml=recentItems.length
+    ?'<div class="channel-recent-list"><strong>최근 공개 콘텐츠</strong><div>'+recentItems.map((row,index)=>'<a href="'+safeUrl(row.url)+'" target="_blank" rel="noopener noreferrer"><span>'+escapeHtml(row.type==='reel'?'릴스':'게시물')+'</span><b>'+escapeHtml(row.label||('최근 콘텐츠 '+(index+1)))+'</b><small>Instagram에서 보기 →</small></a>').join('')+'</div></div>'
+    :'';
   const hint=channelEmbedPolicy(item.platform)==='embed'
     ?'채널 미리보기를 불러오지 못해 공개 채널 정보로 표시합니다.'
-    :'이 채널은 외부 사이트 전체 화면 삽입을 제한하므로 안전한 미리보기와 원문 링크로 표시합니다.';
-  host.innerHTML='<div class="channel-preview-summary">'+(image!=='#'?'<img src="'+image+'" alt="" loading="lazy">':'')+'<div><span class="source-type">'+escapeHtml(platform)+'</span><h4>'+title+'</h4><p>'+description+'</p><small>'+escapeHtml(hint)+'</small></div></div>';
+    :channelEmbedPolicy(item.platform)==='recent-embed'
+      ?'최근 공개 게시물을 자동으로 확인하며, 직접 표시가 제한되면 원문 링크로 안전하게 전환합니다.'
+      :'이 채널은 외부 사이트 전체 화면 삽입을 제한하므로 안전한 미리보기와 원문 링크로 표시합니다.';
+  host.innerHTML='<div class="channel-preview-fallback-content"><div class="channel-preview-summary">'+(image!=='#'?'<img src="'+image+'" alt="" loading="lazy">':'')+'<div><span class="source-type">'+escapeHtml(platform)+'</span><h4>'+title+'</h4><p>'+description+'</p><small>'+escapeHtml(hint)+'</small></div></div>'+recentHtml+'</div>';
   host.hidden=false;
 }
 async function showChannelPreview(index){
@@ -308,7 +322,7 @@ async function showChannelPreview(index){
     }catch{}
   }
   if(seq!==channelPreviewSeq)return;
-  const embedUrl=policy==='embed'?safeUrl(providerPreview?.embedUrl||''):'#';
+  const embedUrl=channelPreviewEmbedUrl(policy,providerPreview||{});
   if(embedUrl!=='#'&&frame){
     let settled=false;
     const fallbackTimer=setTimeout(()=>{
@@ -324,6 +338,7 @@ async function showChannelPreview(index){
     renderChannelFallback(item,providerPreview||{});
   }
 }
+
 async function loadChannels(){
   const host=el('publicChannelTabs');if(!host)return;
   try{
