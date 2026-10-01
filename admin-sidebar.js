@@ -33,7 +33,7 @@ const PRIMARY_SECTIONS = Object.freeze({
   people: ['users-access', 'admins', 'ai-membership', 'security'],
   services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'],
   content: ['work', 'communication', 'community', 'books', 'social'],
-  status: ['health', 'deployments', 'aiops', 'devices', 'api-cost'],
+  status: ['health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity'],
   'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'ai-module-spec', 'audit-records'],
 });
 
@@ -83,14 +83,14 @@ body.admin-compact{--admin-readable:#172033;--admin-secondary:#66768a;--admin-bo
 body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:2px!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-width:thin}
 body.admin-compact .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .nav{display:none!important}
 body.admin-compact .${GLOBAL_CLASS}{display:grid;gap:2px;margin:3px 0 6px}
-body.admin-compact .admin-global-nav{display:flex;align-items:center;gap:9px;width:100%;min-height:40px;padding:6px 10px;border:1px solid transparent;border-radius:9px;background:transparent;color:#dbe8f6!important;font:inherit;font-size:14px;font-weight:780;line-height:1.25;text-align:left;cursor:pointer;box-shadow:none!important;transition:background .12s ease,border-color .12s ease!important;opacity:1!important}
+body.admin-compact .admin-global-nav{display:flex;align-items:center;gap:7px;width:100%;min-height:34px;padding:4px 8px;border:1px solid transparent;border-radius:9px;background:transparent;color:#dbe8f6!important;font:inherit;font-size:14px;font-weight:780;line-height:1.25;text-align:left;cursor:pointer;box-shadow:none!important;transition:background .12s ease,border-color .12s ease!important;opacity:1!important}
 body.admin-compact .admin-global-nav span{color:inherit!important;opacity:1!important}
 body.admin-compact .admin-global-nav:hover{border-color:#274d73;background:#102c49;color:#fff!important}
 body.admin-compact .admin-global-nav.active{border-color:#2d6fac;background:#174b7b;color:#fff!important}
 body.admin-compact .admin-global-nav b{display:inline-grid;place-items:center;min-width:22px;color:#8fb5d6!important;font-size:13px;font-weight:850;letter-spacing:-.03em;opacity:1!important}
 body.admin-compact .admin-global-nav.active b{color:#d9ecff!important}
-body.admin-compact .${DETAILS_CLASS}{display:grid!important;gap:2px;margin:0 2px 5px 28px;padding:2px 0 4px 6px;border-left:1px solid #294b6b}
-body.admin-compact .admin-detail-item{display:flex;align-items:center;gap:8px;width:100%;min-height:34px;margin:0;padding:5px 8px;border:1px solid transparent;border-radius:8px;background:transparent;color:#506174;font:inherit;font-size:13px;font-weight:700;text-align:left;cursor:pointer}
+body.admin-compact .${DETAILS_CLASS}{display:grid!important;gap:1px;margin:0 1px 3px 22px;padding:1px 0 2px 4px;border-left:1px solid #294b6b}
+body.admin-compact .admin-detail-item{display:flex;align-items:center;gap:6px;width:100%;min-height:28px;margin:0;padding:3px 6px;border:1px solid transparent;border-radius:8px;background:transparent;color:#506174;font:inherit;font-size:12.5px;font-weight:700;line-height:1.12;text-align:left;cursor:pointer}
 body.admin-compact .admin-detail-item:hover{border-color:#dbe7ef;background:#f2f7fb;color:#173b57}
 body.admin-compact .admin-detail-item.active{border-color:#bfd5ee;background:#edf4ff;color:#0b5cab}
 body.admin-compact .admin-detail-item b{display:inline-grid;place-items:center;min-width:19px;color:#6d8194;font-size:10px;font-weight:850}
@@ -98,7 +98,7 @@ body.admin-compact .admin-detail-item.active b{color:#155eef}
 body.admin-compact .${DETAILS_CLASS}[data-admin-flat-details="true"]{margin:0 0 6px!important;padding:0!important;border-left:0!important;gap:2px!important}
 body.admin-compact .${DETAILS_CLASS}[data-admin-flat-details="true"] .admin-detail-item{min-height:38px!important;padding:6px 10px!important;border-radius:9px!important;font-weight:720!important}
 body.admin-compact .${DETAILS_CLASS}[data-admin-flat-details="true"] .admin-detail-item b{min-width:22px!important}
-body.admin-compact .${MORE_CLASS}{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:32px;margin:2px 0 0;padding:5px 8px;border:0;border-radius:8px;background:transparent;color:#748294;font:inherit;font-size:12px;font-weight:760;cursor:pointer}
+body.admin-compact .${MORE_CLASS}{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:28px;margin:1px 0 0;padding:3px 6px;border:0;border-radius:8px;background:transparent;color:#748294;font:inherit;font-size:12px;font-weight:760;cursor:pointer}
 body.admin-compact .${MORE_CLASS}:hover{background:#f2f7fb;color:#173b57}
 body.admin-compact .${MORE_CLASS} b{font-size:11px;font-weight:800}
 body.admin-compact .${SOURCE_CLASS}{display:none!important}
@@ -138,7 +138,7 @@ body.admin-compact #campusPanel .campus-homepage-notice{margin-bottom:9px!import
 body.admin-compact #campusPanel .campus-homepage-notice>span{width:30px!important;height:30px!important;flex-basis:30px!important;font-size:14px!important}
 body.admin-compact #campusPanel .campus-homepage-notice strong{font-size:13px!important}body.admin-compact #campusPanel .campus-homepage-notice small{font-size:12px!important;line-height:1.45!important}
 @media(max-width:1480px){body.admin-compact #campusSiteGroups .campus-groups-grid{grid-template-columns:minmax(0,1fr)!important}}
-@media(max-width:760px){body.admin-compact .admin-global-navs{gap:3px;margin:4px 0 8px}body.admin-compact .admin-global-nav{min-height:42px;padding:8px 10px;font-size:14px}body.admin-compact .content{padding:8px 8px 20px!important}body.admin-compact #campusPanel .campus-toolbar{padding:13px!important}body.admin-compact #campusSiteGroups .campus-site-item{padding:11px!important}body.admin-compact #campusSiteGroups .campus-row-action{min-height:44px!important;font-size:14px!important}}
+@media(max-width:760px){body.admin-compact .admin-global-navs{gap:2px;margin:3px 0 5px}body.admin-compact .admin-global-nav{min-height:38px;padding:6px 8px;font-size:13px}body.admin-compact .content{padding:8px 8px 20px!important}body.admin-compact #campusPanel .campus-toolbar{padding:13px!important}body.admin-compact #campusSiteGroups .campus-site-item{padding:11px!important}body.admin-compact #campusSiteGroups .campus-row-action{min-height:44px!important;font-size:14px!important}}
 `;
   document.head.append(style);
 }
