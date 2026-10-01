@@ -10,7 +10,8 @@ function clean(value,max=1000){return String(value??'').replace(/\0/g,'').trim()
 function escapeHtml(value){return String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function safeUrl(value){
   const raw=clean(value,1000);if(!raw)return'';
-  try{const url=new URL(raw);return ['https:','http:'].includes(url.protocol)?url.toString():''}catch{return''}
+  const candidate=/^[a-z][a-z0-9+.-]*:\/\//i.test(raw)?raw:`https://${raw.replace(/^\\/+/, '')}`;
+  try{const url=new URL(candidate);return ['https:','http:'].includes(url.protocol)?url.toString():''}catch{return''}
 }
 function dataConfig(env={}){
   const enabled=env.DATA_ENABLED==='true'&&Boolean(env.SUPABASE_URL&&env.SUPABASE_PUBLISHABLE_KEY);
@@ -84,7 +85,7 @@ function cardHtml(card,handle){
     <form id="exchangeForm" data-handle="${escapeHtml(handle)}">
       <div class="two"><label>이름<input name="name" autocomplete="name" maxlength="80" required></label><label>휴대전화<input name="phone" autocomplete="tel" inputmode="tel" maxlength="40"></label></div>
       <div class="two"><label>이메일<input name="email" type="email" autocomplete="email" maxlength="254"></label><label>소속<input name="affiliation" autocomplete="organization" maxlength="160"></label></div>
-      <div class="two"><label>직함<input name="title" autocomplete="organization-title" maxlength="160"></label><label>대표 링크<input name="website" type="url" autocomplete="url" inputmode="url" maxlength="1000"></label></div>
+      <div class="two"><label>직함<input name="title" autocomplete="organization-title" maxlength="160"></label><label>대표 링크<input name="website" type="text" autocomplete="url" inputmode="url" maxlength="1000" placeholder="ekodi.kr 또는 https://ekodi.kr"></label></div>
       <label class="trap" aria-hidden="true">확인용<input name="bot_field" tabindex="-1" autocomplete="off"></label>
       <label class="consent"><input name="privacyConsent" type="checkbox" required><span>연락처 교환을 위해 위 정보를 명함 소유자에게 전달하는 데 동의합니다.</span></label>
       <div class="exchange-actions"><button id="exchangeSubmit" class="primary" type="submit">확인 후 연락처 보내기</button><span id="exchangeStatus" role="status" aria-live="polite"></span></div>
@@ -122,7 +123,7 @@ ${linksHtml(card?.links)}
 ${exchangeSection}
 </main>
 <footer>공개 정보는 명함 소유자가 My EKODI에서 직접 선택해 관리합니다.</footer>
-<script src="/my/digital-card.js?v=20260930-contact-exchange-1" defer></script>
+<script src="/my/digital-card.js?v=20261001-url-normalize-1" defer></script>
 </body></html>`;
 }
 function notFoundHtml(handle){
