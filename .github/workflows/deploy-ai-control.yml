@@ -289,7 +289,8 @@ jobs:
           grep -Fq "'cerebras-free', 'Cerebras · 무료 체험'" migrations/0121_extended_free_ai_provider_chain.sql
           grep -Fq "'qwen-free', 'Qwen · 무료 할당량'" migrations/0121_extended_free_ai_provider_chain.sql
           grep -Fq "'deepseek-free-credit', 'DeepSeek · 무료 지급 크레딧'" migrations/0121_extended_free_ai_provider_chain.sql
-          grep -Fq '"cerebras-free","qwen-free","deepseek-free-credit","openai","anthropic"' migrations/0121_extended_free_ai_provider_chain.sql
+          grep -Fq "'huggingface-free-credit', 'Hugging Face · 월 무료 크레딧'" migrations/0121_extended_free_ai_provider_chain.sql
+          grep -Fq '"cerebras-free","qwen-free","deepseek-free-credit","huggingface-free-credit","openai","anthropic"' migrations/0121_extended_free_ai_provider_chain.sql
           grep -Fq "'cloudflare-workers-ai', 'Cloudflare / 무료 자원'" migrations/0120_common_ai_provider_chain.sql
           grep -Fq "'openrouter-free', 'OpenRouter Free'" migrations/0120_common_ai_provider_chain.sql
           grep -Fq "'groq-free', 'Groq Free'" migrations/0120_common_ai_provider_chain.sql
