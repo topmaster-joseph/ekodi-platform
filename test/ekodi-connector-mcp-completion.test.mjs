@@ -34,6 +34,46 @@ test('public identity tool resolves EKODI without granting authorization',async(
   assert.equal(result.structuredContent.orchestratorIsExecutionAuthority,true);
 });
 
+const MODERN_META={
+  'io.modelcontextprotocol/protocolVersion':'2026-07-28',
+  'io.modelcontextprotocol/clientInfo':{name:'ekodi-contract-test',version:'1.0.0'},
+  'io.modelcontextprotocol/clientCapabilities':{},
+};
+
+test('modern MCP responses carry required resultType while legacy responses stay compatible',async()=>{
+  const modernList=new Request('https://ekodi.kr/mcp',{method:'POST',headers:{'content-type':'application/json','MCP-Protocol-Version':'2026-07-28'},body:JSON.stringify({
+    jsonrpc:'2.0',id:41,method:'tools/list',params:{_meta:MODERN_META},
+  })});
+  const modernListBody=await (await handleEkodiMcpGateway(modernList,{})).json();
+  assert.equal(modernListBody.result.resultType,'complete');
+  assert.equal(modernListBody.result.ttlMs,300000);
+  assert.equal(modernListBody.result.cacheScope,'public');
+  assert.ok(modernListBody.result.tools.some(item=>item.name==='submit_task'));
+
+  const modernInit=new Request('https://ekodi.kr/mcp',{method:'POST',headers:{'content-type':'application/json','MCP-Protocol-Version':'2026-07-28'},body:JSON.stringify({
+    jsonrpc:'2.0',id:42,method:'initialize',params:{_meta:MODERN_META},
+  })});
+  const modernInitBody=await (await handleEkodiMcpGateway(modernInit,{})).json();
+  assert.equal(modernInitBody.result.resultType,'complete');
+  assert.equal(modernInitBody.result.protocolVersion,'2026-07-28');
+
+  const legacyList=new Request('https://ekodi.kr/mcp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({
+    jsonrpc:'2.0',id:43,method:'tools/list',params:{},
+  })});
+  const legacyListBody=await (await handleEkodiMcpGateway(legacyList,{})).json();
+  assert.equal(Object.hasOwn(legacyListBody.result,'resultType'),false);
+});
+
+test('modern OAuth challenge is a complete MCP result',async()=>{
+  const request=new Request('https://ekodi.kr/mcp',{method:'POST',headers:{'content-type':'application/json','MCP-Protocol-Version':'2026-07-28'},body:JSON.stringify({
+    jsonrpc:'2.0',id:44,method:'tools/call',params:{name:'submit_task',arguments:{intent:'must not execute'},_meta:MODERN_META},
+  })});
+  const body=await (await handleEkodiMcpGateway(request,{})).json();
+  assert.equal(body.result.resultType,'complete');
+  assert.equal(body.result.structuredContent.authenticated,false);
+  assert.match(body.result._meta['mcp/www_authenticate'][0],/oauth-protected-resource/);
+});
+
 test('unauthenticated task submission gets an OAuth challenge and never reaches DB',async()=>{
   const request=new Request('https://ekodi.kr/mcp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:7,method:'tools/call',params:{name:'submit_task',arguments:{intent:'must not execute'}}})});
   const response=await handleEkodiMcpGateway(request,{});
