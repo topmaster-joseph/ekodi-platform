@@ -39,7 +39,7 @@ import { realtimeTenantAdminFromPath, realtimeTenantFromPath } from './realtime-
 import { managementCameraPage, tenantLivePage } from './tenant-live-page.js';
 import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from './tenant-live-admin-page.js';
 import { liveServiceAdminPage, liveServiceMaintenancePage, liveServicePage } from './live-service-page.js';
-import { localRegionFromPath, localRegionModuleFromRoute } from './local-region-registry.js';
+import { localRegionBySlug, localRegionFromPath, localRegionModuleFromRoute } from './local-region-registry.js';
 import { localRegionPublicPage, localRegionAdminPage, localRegionAccessAdminPage, localRegionModulePublicPage, localRegionModuleAdminPage, localRegionNotFoundPage } from './local-region-page.js';
 import { localRegionForestPublicPage, localRegionForestAdminPage } from './local-region-forest-page.js';
 import { localRegionForestPublicScript } from './local-region-forest-public.js';
@@ -49,7 +49,7 @@ import { localRegionModuleAdminScript } from './local-region-module-admin.js';
 import { localRegionAdminAuthScript } from './local-region-admin-auth.js';
 import { localRegionAccessAdminScript } from './local-region-access-admin.js';
 import { localRegionOperationsAdminScript } from './local-region-operations-admin.js';
-import { regionalCommerceProgramFromLocalRoute } from './regional-commerce-program-registry.js';
+import { regionalCommerceProgramFromLocalRoute, regionalCommerceProgramFromPath } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
 import { handleSeonamMediCivicApi, consumeSeonamMediVoiceMessage } from './seonammedi-civic-control.js';
@@ -430,6 +430,14 @@ async function routePlatform(request,env,ctx){
         if(/^\/cheonggye\/admin\/publishing\/?$/i.test(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
         if(url.pathname==='/ekodi-church'||url.pathname.startsWith('/ekodi-church/')){const target=new URL(request.url);target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});}
         if(isChurchPastorAdminPath(url.pathname))return injectEkodiShell(churchPastorAdminPage(),'church','admin');
+        const directCommerceProgram=regionalCommerceProgramFromPath(url.pathname);
+        if(directCommerceProgram){
+          const region=localRegionBySlug('cheonggye');
+          const page=directCommerceProgram.admin?regionalCommerceProgramAdminPage(region,directCommerceProgram.program):regionalCommerceProgramPublicPage(region,directCommerceProgram.program);
+          const surface=directCommerceProgram.admin?'admin':'public';
+          const response=injectEkodiShell(page,'space',surface,{contextKind:directCommerceProgram.admin?'workspace':'public'});
+          return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;
+        }
         const localRegionRoute=localRegionFromPath(url.pathname);
         if(localRegionRoute){
           const commerceProgram=regionalCommerceProgramFromLocalRoute(localRegionRoute);
