@@ -56,3 +56,10 @@ test('provider UI distinguishes configured from operational and surfaces safe bi
   assert.ok(source.includes('크레딧 잔액 소진'));
   assert.ok(source.includes("p.health==='healthy'"));
 });
+
+
+test('provider UI gives Anthropic billing guidance without exposing secret values', () => {
+  assert.ok(source.includes('Anthropic API 크레딧·사용한도 확인 필요'));
+  assert.ok(source.includes('https://platform.claude.com/settings/billing'));
+  assert.ok(source.includes('결제·잔액 ↗'));
+});
