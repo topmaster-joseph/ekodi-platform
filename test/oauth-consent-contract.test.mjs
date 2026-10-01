@@ -10,6 +10,8 @@ const authSurface=await readFile(new URL('canonical-surface-router.js',root),'ut
 const build=await readFile(new URL('scripts/build.mjs',root),'utf8');
 
 test('OAuth consent screen is served from the central auth boundary',()=>{
+  assert.match(authSurface,/path==='\/oauth\/consent'/);
+  assert.match(authSurface,/authUrl\.pathname=.*oauth\/consent/);
   assert.match(authSurface,/stripped==='\/oauth\/consent'/);
   assert.match(authSurface,/assetPath='\/oauth-consent';routeName='oauth-consent'/);
   assert.match(build,/auth-site\/oauth-consent\.html/);

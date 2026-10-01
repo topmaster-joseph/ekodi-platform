@@ -250,6 +250,11 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     const page=mailContactPage();
     return typeof HTMLRewriter==='function'?injectEkodiShell(page,'mail'):page;
   }
+  if(['GET','HEAD'].includes(request.method)&&(path==='/oauth/consent'||path==='/oauth/consent/')){
+    const authUrl=new URL(request.url);
+    authUrl.pathname=`${SURFACE_PREFIXES.auth}/oauth/consent`;
+    return serveCanonicalAuth(cloneRequest(request,authUrl),env);
+  }
   if(['GET','HEAD'].includes(request.method)&&(path==='/connect'||path==='/connect/')){
     const target=new URL('/auth/',request.url);
     target.searchParams.set('site','ai');
