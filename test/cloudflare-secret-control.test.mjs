@@ -11,6 +11,7 @@ test('server generates cryptographic random values and never uses deployment tok
   assert.match(control, /crypto\.getRandomValues\(bytes\)/);
   assert.doesNotMatch(control, /Math\.random/);
   assert.match(control, /CLOUDFLARE_SECRET_MANAGER_TOKEN/);
+  assert.match(control, /env\.CF_API_TOKEN/);
   assert.doesNotMatch(control, /env\.CLOUDFLARE_API_TOKEN/);
   assert.match(control, /valueReturned:false/);
 });
