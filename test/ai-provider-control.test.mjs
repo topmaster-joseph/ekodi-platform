@@ -173,3 +173,11 @@ test('provider admin shows the canonical chain and secretless Cloudflare card co
   assert.match(admin,/API Key 없음/);
   assert.match(admin,/canonicalFallbacks/);
 });
+
+test('provider health probes allocate enough output budget for thinking-era models and preserve safe provider diagnostics',()=>{
+  const api=read('ai-provider-control.js');
+  assert.match(api,/id==='anthropic'\?512:id==='gemini'\?256:64/);
+  assert.match(api,/error\.providerMessage=message/);
+  assert.match(api,/providerMessage:clean\(error\?\.providerMessage,320\)/);
+  assert.match(api,/requestId:clean\(error\?\.requestId,120\)/);
+});
