@@ -3,11 +3,6 @@ name: EKODI Dependency Security
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'package.json'
-      - 'package-lock.json'
-      - 'npm-shrinkwrap.json'
-      - '.github/workflows/**'
 
 permissions:
   contents: read
@@ -26,7 +21,7 @@ jobs:
         run: |
           set -euo pipefail
           npm audit --audit-level=high --package-lock-only
-      - name: Require immutable pins for new supply-chain actions
+      - name: Require immutable pins for supply-chain actions
         shell: bash
         run: |
           set -euo pipefail
