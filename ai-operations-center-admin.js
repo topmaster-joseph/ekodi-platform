@@ -12,6 +12,14 @@
     ['routing', '협업·라우팅'],
     ['audit', '승인·감사'],
   ];
+  const FREE_FIRST_CHAIN = Object.freeze([
+    {id:'cloudflare-workers-ai',label:'Cloudflare Workers AI',kind:'built-in',cost:'무료 자원'},
+    {id:'gemini',label:'Gemini Free',kind:'provider',cost:'무료 우선'},
+    {id:'openrouter',label:'OpenRouter Free',kind:'provider',cost:'무료 우선'},
+    {id:'groq',label:'Groq Free',kind:'provider',cost:'무료 우선'},
+    {id:'openai',label:'OpenAI',kind:'provider',cost:'유료 승인'},
+    {id:'anthropic',label:'Claude / Anthropic',kind:'provider',cost:'유료 승인'},
+  ]);
   const state = { governance: null, provider: null, actions: [], active: 'overview', error: '', loading: false };
 
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
@@ -90,7 +98,7 @@
     return `
       <div class="aic-grid">
         <article class="aic-card"><small>AGENTS</small><strong>${agents.length || 0}개</strong><span>헌법·미션 거버넌스에 등록된 전문 에이전트</span></article>
-        <article class="aic-card"><small>PROVIDERS</small><strong>${providers.length || 0}개 · 정상 ${healthy}</strong><span>OpenAI 포함 교체 가능한 AI 공급자</span></article>
+        <article class="aic-card"><small>PROVIDERS</small><strong>${providers.length || 0}개 · 정상 ${healthy}</strong><span>Gemini·OpenRouter·Groq·OpenAI·Claude 중앙 Provider</span></article>
         <article class="aic-card"><small>CAPABILITY ROUTES</small><strong>${routes.length || 0}개</strong><span>업무별 Primary + Fallback 라우팅</span></article>
         <article class="aic-card"><small>HUMAN GATE</small><strong>${awaiting}건 대기</strong><span>사람의 결정 없이는 진행하지 않는 고영향 작업</span></article>
       </div>`;
@@ -102,6 +110,15 @@
     return `${summaryCards()}
       <section class="aic-section"><div class="aic-section-head"><h4>운영 원칙</h4><span class="aic-note">EKODI가 통제권을 갖고 공급자는 교체 가능한 실행 자원으로 사용</span></div>
         <div class="aic-policy">${tiers.map(item => `<span class="aic-pill">${esc(item)}</span>`).join('') || '<span class="aic-pill">거버넌스 로딩 중</span>'}</div>
+      </section>
+      <section class="aic-section"><div class="aic-section-head"><h4>무료 우선 실행 체인</h4><span class="aic-note">무료 경로가 모두 불가할 때만 유료 Provider를 관리자 승인 대상으로 올립니다.</span></div>
+        <div class="aic-list">${FREE_FIRST_CHAIN.map((step,index)=>{
+          const item=(provider?.providers||[]).find(candidate=>candidate.id===step.id);
+          const builtIn=step.kind==='built-in';
+          const ready=builtIn?true:Boolean(item?.enabled&&item?.configured&&item?.health!=='error'&&item?.health!=='unconfigured');
+          const detail=builtIn?'AI binding · Secret 불필요':item?(item.configured?`${item.health||'unknown'} · ${item.model||''}`:'API Key 미연결'):'Registry 반영 대기';
+          return `<article class="aic-row"><div class="aic-name"><strong>${index+1}. ${esc(step.label)}</strong><small>${esc(step.id)}</small></div><div><span class="aic-status ${ready?'healthy':builtIn?'':'unconfigured'}">${ready?'사용 가능':'연결 필요'}</span></div><div><strong>${esc(step.cost)}</strong></div><div><span>${esc(detail)}</span></div><div><span class="aic-status">${index<4?'자동 Failover':'Human Gate'}</span></div></article>`;
+        }).join('')}</div>
       </section>
       <div class="aic-split">
         <section class="aic-section aic-card"><small>PROVIDER CONTROL</small><strong>${provider?.control?.runtimeSyncReady ? '런타임 동기화 준비됨' : '런타임 동기화 점검 필요'}</strong><span>모델·우선순위·활성화 변경은 서버측 런타임과 동기화되며 감사기록을 남깁니다.</span></section>
@@ -279,7 +296,7 @@
     root.id = ROOT_ID;
     root.innerHTML = `
       <div class="aic-head">
-        <div><span class="aic-kicker">EKODI AI CONTROL PLANE</span><h3>AI 운영센터</h3><p>에코디가 통제권을 유지한 채 전문 에이전트, OpenAI·Gemini·Anthropic, 모델·Fallback, Human Gate와 운영기록을 한곳에서 관리합니다.</p></div>
+        <div><span class="aic-kicker">EKODI AI CONTROL PLANE</span><h3>AI 운영센터</h3><p>Cloudflare → Gemini Free → OpenRouter Free → Groq Free → OpenAI 승인 → Claude 승인 순으로 무료 우선 실행하고, 모델·Fallback·Human Gate와 운영기록을 한곳에서 관리합니다.</p></div>
         <div class="aic-head-actions"><button class="aic-btn" type="button" data-aic-jump="health">상태·관측</button><button class="aic-btn" type="button" data-aic-jump="api-cost">API·비용</button><button class="aic-btn" type="button" data-aic-jump="openai">OpenAI 작업공간</button><button class="aic-btn primary" type="button" data-aic-refresh>↻ 동기화</button></div>
       </div>
       <nav class="aic-tabs" aria-label="AI 운영센터 세부메뉴">${TABS.map(([id, label], index) => `<button class="aic-tab ${index === 0 ? 'is-active' : ''}" type="button" data-aic-tab="${id}">${label}</button>`).join('')}</nav>
