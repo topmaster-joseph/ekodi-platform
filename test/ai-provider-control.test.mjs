@@ -217,3 +217,22 @@ test('provider check UI shows upstream diagnostics instead of opaque HTTP 502',(
   assert.match(admin,/function providerCheckErrorMessage/);
   assert.match(admin,/message\(card,providerCheckErrorMessage\(e\),true\)/);
 });
+
+
+test('AI Ops provider control enforces white background and black text for readability',()=>{
+  const admin=read('admin-provider-control.js');
+  assert.match(admin,/AIOPS-STRICT-WHITE-BLACK-READABILITY-20261002/);
+  assert.match(admin,/#aiOpsPanel\{background:#fff!important;color:#000!important\}/);
+  assert.match(admin,/::placeholder\{color:#333!important;opacity:1!important\}/);
+  assert.match(admin,/background:#fff!important;color:#000!important;border-color:#111!important/);
+});
+
+
+test('provider health classifier distinguishes Gemini API key and precondition failures',()=>{
+  const source=read('ai-provider-control.js');
+  const admin=read('admin-provider-control.js');
+  assert.match(source,/API_KEY_INVALID/);
+  assert.match(source,/failed_precondition/);
+  assert.match(admin,/API 키가 유효하지 않거나 차단됨/);
+  assert.match(admin,/지역\/결제 설정 확인/);
+});
