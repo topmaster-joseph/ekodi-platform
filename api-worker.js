@@ -11,7 +11,7 @@ import { listSiteChromeSettings, putSiteChromeSettings } from './site-chrome-run
 import { platformMaturityProjection } from './platform-maturity-control.js';
 import { handleLearningControl } from './learning-control.js';
 import { buildEkodiOwnerReport, latestEkodiOwnerReport, listEkodiOwnerReports, persistEkodiOwnerReport } from './ekodi-owner-report.js';
-import { realtimeTenantList } from './realtime-tenant-registry.js';
+import { ensureSitePublicationRows, getSitePublicationSetting, handleSitePublicationApi, listSitePublicationSettings, putSitePublicationSetting, sitePublicationGuard } from './site-publication-runtime.js';
 import { handleAdminConfirmations, handleConfirmationPublic, handleWorkspaceConfirmations } from './payment-receipt-confirmation-control.js';
 
 // Provider service registry only. Customer organizations and their sites are managed as
@@ -35,42 +35,7 @@ const SERVICE_CATALOG = [
   { id: 'social', name: 'EKODI Social', domain: 'social.ekodi.kr', url: 'https://social.ekodi.kr/health', group: 'platform', defaultState: 'active', defaultMonitor: true }
 ];
 
-const LIVE_PUBLIC_SITE_CATALOG = realtimeTenantList().map(tenant => ({
-  id: `live-${String(tenant.apiTenant || tenant.id).toLowerCase()}`,
-  workspaceId: tenant.workspace || tenant.apiTenant || tenant.id,
-  name: `${tenant.name} Live`,
-  domain: `ekodi.kr${tenant.path.replace(/\/$/, '')}`,
-  defaultPublicStatus: 'public',
-  defaultMaintenanceDisplayType: 'default',
-  defaultMaintenanceRedirectUrl: '',
-  defaultMaintenanceTitle: '라이브 서비스 준비 중입니다',
-  defaultMaintenanceMessage: '현재 이 Live 서비스는 관리자 검수 또는 준비 상태입니다.',
-  defaultRedirectMode: 'button'
-}));
-
-const PUBLIC_SITE_CATALOG = [
-  {
-    id: 'cgma',
-    workspaceId: 'cgma',
-    name: '청계면상인회',
-    domain: 'cgma.or.kr',
-    defaultPublicStatus: 'maintenance',
-    defaultMaintenanceDisplayType: 'default',
-    defaultMaintenanceRedirectUrl: '',
-    defaultMaintenanceTitle: '현재 사이트 개발중입니다',
-    defaultMaintenanceMessage: '더 좋은 서비스로 준비 중입니다.',
-    defaultRedirectMode: 'button'
-  },
-  ...LIVE_PUBLIC_SITE_CATALOG
-];
-
-const SERVICE_BY_ID = new Map(SERVICE_CATALOG.map(service => [service.id, service]));
-const PUBLIC_SITE_BY_ID = new Map(PUBLIC_SITE_CATALOG.map(site => [site.id, site]));
-const PUBLIC_SITE_BY_DOMAIN = new Map(PUBLIC_SITE_CATALOG.map(site => [site.domain, site]));
 const VALID_STATES = new Set(['planned', 'active', 'paused']);
-const VALID_PUBLIC_STATUSES = new Set(['public', 'maintenance']);
-const VALID_MAINTENANCE_DISPLAY_TYPES = new Set(['default', 'url']);
-const VALID_REDIRECT_MODES = new Set(['button', 'auto']);
 const CONTROL_PREFIX = '/api/control';
 const PUBLIC_SITE_PREFIX = `${CONTROL_PREFIX}/public-sites`;
 const DEVELOPMENT_WORKER = 'https://ekodi-platform-development.ekodi-development.workers.dev';
@@ -185,44 +150,8 @@ async function ensureControlCatalog(db) {
   catch (error) { controlCatalogSeedPromise = null; throw error; }
 }
 
-function normalizePublicSiteRow(row, fallback) {
-  return {
-    id: row?.site_id || fallback.id,
-    workspaceId: row?.workspace_id || fallback.workspaceId,
-    name: fallback.name,
-    domain: row?.domain || fallback.domain,
-    publicStatus: row?.public_status || fallback.defaultPublicStatus,
-    maintenanceDisplayType: row?.maintenance_display_type || fallback.defaultMaintenanceDisplayType,
-    maintenanceRedirectUrl: row?.maintenance_redirect_url || fallback.defaultMaintenanceRedirectUrl,
-    maintenanceTitle: row?.maintenance_title || fallback.defaultMaintenanceTitle,
-    maintenanceMessage: row?.maintenance_message || fallback.defaultMaintenanceMessage,
-    redirectMode: row?.redirect_mode || fallback.defaultRedirectMode,
-    updatedAt: row?.updated_at || '',
-    updatedBy: row?.updated_by || null
-  };
-}
-
 async function publicSiteSnapshot(env) {
-  await ensureControlCatalog(env.DB);
-  const rows = await env.DB.prepare('SELECT * FROM public_site_controls').all();
-  const byId = new Map(rows.results.map(row => [row.site_id, row]));
-  return PUBLIC_SITE_CATALOG.map(site => normalizePublicSiteRow(byId.get(site.id), site));
-}
-
-async function handlePublicDomainRequest(request, env) {
-  if (!env.DB) return null;
-  const host = new URL(request.url).hostname.toLowerCase();
-  const catalog = PUBLIC_SITE_BY_DOMAIN.get(host);
-  if (!catalog) return null;
-  await ensureControlCatalog(env.DB);
-  const row = await env.DB.prepare('SELECT * FROM public_site_controls WHERE domain = ?').bind(host).first();
-  const site = normalizePublicSiteRow(row, catalog);
-  if (site.publicStatus !== 'maintenance') return null;
-  const redirectUrl = validPublicRedirectUrl(site.maintenanceRedirectUrl);
-  if (site.maintenanceDisplayType === 'url' && redirectUrl && site.redirectMode === 'auto') {
-    return Response.redirect(redirectUrl, 302);
-  }
-  return siteHtml(maintenancePage(site));
+  return listSitePublicationSettings(env);
 }
 
 async function probeEnvironmentService(environment, target) {
