@@ -56,3 +56,19 @@ test('provider UI distinguishes configured from operational and surfaces safe bi
   assert.ok(source.includes('크레딧 잔액 소진'));
   assert.ok(source.includes("p.health==='healthy'"));
 });
+
+
+test('provider cards link official provider sites in new tabs and use two-column layout', () => {
+  for (const marker of [
+    'https://www.cloudflare.com/developer-platform/products/workers-ai/',
+    'https://ai.google.dev/',
+    'https://openrouter.ai/',
+    'https://groq.com/',
+    'https://openai.com/',
+    'https://www.anthropic.com/'
+  ]) assert.ok(source.includes(marker), marker);
+  assert.ok(source.includes('target="_blank"'));
+  assert.ok(source.includes('AI-PROVIDER-TWO-COLUMN-20261002'));
+  assert.match(source, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/);
+  assert.match(source, /@media\(max-width:780px\).*grid-template-columns:1fr!important/s);
+});
