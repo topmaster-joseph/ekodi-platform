@@ -268,9 +268,12 @@ test('seonammedi exposes seeded related channels on public and admin surfaces',a
   assert.match(html,/id="publicChannelTabs"/);
   assert.match(html,/id="channelPreview"/);
   assert.match(html,/id="channelPreviewFrame"/);
+  assert.match(html,/id="channelPreviewFallback"/);
   assert.match(app,/\/api\/seonammedi\/channels/);
+  assert.match(app,/\/preview/);
   assert.match(app,/channels:'channels'/);
-  assert.match(app,/function showChannelPreview\(index\)/);
+  assert.match(app,/async function showChannelPreview\(index\)/);
+  assert.match(app,/renderChannelFallback/);
   assert.match(app,/data-channel-index/);
   assert.match(app,/ArrowLeft/);
   assert.match(app,/showChannelPreview\(0\)/);
@@ -279,6 +282,21 @@ test('seonammedi exposes seeded related channels on public and admin surfaces',a
   assert.match(migration,/instagram\.com\/wonokoh/);
   assert.match(migration,/youtube\.com\/@Mokpo-tv/);
   assert.match(migration,/WHERE NOT EXISTS/);
+});
+
+test('seonammedi channel previews use provider-safe embeds and same-origin metadata fallback',async()=>{
+  const [control,app]=await Promise.all([
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+    readFile(new URL('app.js',root),'utf8')
+  ]);
+  assert.match(control,/channels\\\/(\\d\+)\\\/preview/);
+  assert.match(control,/instagram\.com\/'+encodeURIComponent\(handle\)+'\/embed\//);
+  assert.match(control,/youtube-nocookie\.com\/embed\//);
+  assert.match(control,/feeds\/videos\.xml\?channel_id=/);
+  assert.match(control,/provider\.kind!=='youtube'/);
+  assert.match(app,/channelPreviewSeq/);
+  assert.match(app,/providerPreview\?\.embedUrl/);
+  assert.match(app,/frame\.src='about:blank'/);
 });
 
 test('seonammedi admin auth handoff is same-origin and finance API is production-guarded',async()=>{
