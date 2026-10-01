@@ -68,6 +68,6 @@ test('provider cards link official provider sites in new tabs and use two-column
     'https://www.anthropic.com/'
   ]) assert.ok(source.includes(marker), marker);
   assert.ok(source.includes('target="_blank"'));
-  assert.match(source, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/);
-  assert.match(source, /@media\(max-width:780px\).*grid-template-columns:1fr!important/s);
+  assert.ok(source.includes('grid-template-columns:repeat(2,minmax(0,1fr));gap:8px'));
+  assert.match(source, /@media\(max-width:780px\).*grid-template-columns:1fr/s);
 });
