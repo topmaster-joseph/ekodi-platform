@@ -289,8 +289,8 @@ test('seonammedi channel previews use provider-safe embeds and same-origin metad
     readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
     readFile(new URL('app.js',root),'utf8')
   ]);
-  assert.match(control,/channels\\\/(\\d\+)\\\/preview/);
-  assert.match(control,/instagram\.com\/'+encodeURIComponent\(handle\)+'\/embed\//);
+  assert.match(control,/channelPreviewMatch=url\.pathname\.match/);
+  assert.ok(control.includes("instagram.com/'+encodeURIComponent(handle)+'/embed/"));
   assert.match(control,/youtube-nocookie\.com\/embed\//);
   assert.match(control,/feeds\/videos\.xml\?channel_id=/);
   assert.match(control,/provider\.kind!=='youtube'/);
