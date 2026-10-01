@@ -196,7 +196,7 @@ async function routeDeploymentProbe(request,env){
 function injectCgmaRegionalLinks(response){
   const type=String(response.headers.get('content-type')||'').toLowerCase();
   if(!type.includes('text/html'))return response;
-  const html='<section data-ekodi-cheonggye-links="v1" style="width:min(1120px,calc(100% - 28px));margin:18px auto 30px;padding:16px;border:1px solid #d8dfd9;border-radius:18px;background:#fffdf8;color:#16312a;font-family:system-ui,-apple-system,BlinkMacSystemFont,\\"Noto Sans KR\\",sans-serif"><div style="font-size:12px;font-weight:900;letter-spacing:.08em;color:#52645e">청계 연결</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px"><strong style="margin-right:4px">지역과 혜택을 함께 연결합니다.</strong><a href="/cheonggye" style="display:inline-flex;min-height:38px;align-items:center;padding:0 12px;border-radius:999px;background:#174837;color:#fff;text-decoration:none;font-size:13px;font-weight:800">청계잇다</a><a href="/cheonggyepass" style="display:inline-flex;min-height:38px;align-items:center;padding:0 12px;border-radius:999px;background:#eef3f0;color:#174837;text-decoration:none;font-size:13px;font-weight:800">청계패스</a></div></section>';
+  const html='<section data-ekodi-cheonggye-links="v1" style="width:min(1120px,calc(100% - 28px));margin:18px auto 30px;padding:16px;border:1px solid #d8dfd9;border-radius:18px;background:#fffdf8;color:#16312a;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-serif"><div style="font-size:12px;font-weight:900;letter-spacing:.08em;color:#52645e">청계 연결</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px"><strong style="margin-right:4px">지역과 혜택을 함께 연결합니다.</strong><a href="/cheonggye" style="display:inline-flex;min-height:38px;align-items:center;padding:0 12px;border-radius:999px;background:#174837;color:#fff;text-decoration:none;font-size:13px;font-weight:800">청계잇다</a><a href="/cheonggyepass" style="display:inline-flex;min-height:38px;align-items:center;padding:0 12px;border-radius:999px;background:#eef3f0;color:#174837;text-decoration:none;font-size:13px;font-weight:800">청계패스</a></div></section>';
   return new HTMLRewriter().on('body',{element:e=>e.append(html,{html:true})}).transform(response);
 }
 async function routePublicWorkspace(request,env){
@@ -209,7 +209,7 @@ async function routePublicWorkspace(request,env){
   if(routed.headers.get('x-ekodi-independent-site')==='true'){
     routed.headers.set('x-ekodi-public-surface','independent-workspace-site');
     const branded=injectEkodiTenantReadability(routed);
-    return progressiveHome?injectEkodiProgressiveHome(branded):branded;
+    return finalize(progressiveHome?injectEkodiProgressiveHome(branded):branded);
   }
   const upstreamSurface=String(routed.headers.get('x-ekodi-surface')||routed.headers.get('x-ekodi-user-ui-surface')||'').trim().toLowerCase();
   if(upstreamSurface==='public'){
