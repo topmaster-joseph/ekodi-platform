@@ -19,7 +19,7 @@ test('Platform Admin uses seven explicit control areas with active direct-task n
     "people: ['users-access', 'admins', 'ai-membership', 'security']",
     "services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview']",
     "content: ['work', 'communication', 'community', 'books', 'social']",
-    "status: ['health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity']",
+    "status: ['health', 'site-health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity']",
     "'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'ai-module-spec', 'audit-records']",
   ]) assert.ok(sidebar.includes(marker), marker);
   assert.match(sidebar, /nav\.querySelector\(':scope>\.admin-command-entry'\)\?\.remove\(\)/);
