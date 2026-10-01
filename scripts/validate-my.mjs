@@ -187,4 +187,8 @@ for(const required of ['MY EKODI · ACTION HUB','무엇을 하시겠어요?','�
 }
 if(!content.html.includes('personal-action-command'))throw new Error('My EKODI validation failed: action command must remain visible on the first screen');
 
+for(const required of ['my-desktop-tabs','my-bottom-tabs','workspaceCompact','data-my-tab-section="home"','data-my-tab-section="services"','data-my-tab-section="activity"','data-my-tab-section="account"']){
+  if(!content.html.includes(required))throw new Error(`My EKODI validation failed: tab shell marker missing: ${required}`);
+}
+
 console.log('My EKODI validation passed: USER UI, common-service access context, universal membership, multi-device Free Device Care with browser-only safety boundaries, User AI, Shell-synced Workspace context, isolated staging, central auth and guarded production rollout are present.');
