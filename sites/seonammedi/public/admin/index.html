@@ -177,6 +177,7 @@
           <label>플랫폼<select name="platform"><option value="youtube">YouTube</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="blog">블로그</option><option value="website">웹사이트</option><option value="other">기타</option></select></label>
           <label>표시 이름<input name="name" maxlength="160" required></label>
           <label>링크<input name="url" type="url" inputmode="url" placeholder="https://..." required></label>
+          <label>화면 내 미리보기 URL <span class="muted">(선택)</span><input name="previewUrl" type="url" inputmode="url" placeholder="YouTube 영상 링크 또는 https://..."><small class="muted">자동 미리보기가 어려운 채널에 사용합니다. YouTube는 영상 링크를 넣으면 같은 화면에 안전한 플레이어로 표시합니다.</small></label>
           <label>구분<select name="category"><option value="official">공식채널</option><option value="related-org">관련기관</option><option value="media">언론·자료</option><option value="civic">시민·단체</option><option value="other">기타</option></select></label>
           <div class="form-row"><label>정렬<input name="sortOrder" type="number" min="0" max="9999" value="0"></label><label class="check"><input type="checkbox" name="official"> 공식 표시</label><label class="check"><input type="checkbox" name="visible" checked> 사이트 표시</label></div>
           <label>설명<input name="note" maxlength="500"></label>
