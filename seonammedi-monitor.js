@@ -74,7 +74,7 @@ async function insertItem(env,item,seenAt){
       .bind(seenAt,item.publisher,item.publishedAt,item.queryKey,item.queryLabel,item.resolvedUrl,item.resolvedUrl,item.mediaType,item.mediaType,item.mediaUrl,item.mediaUrl,item.mediaSource,item.mediaSource,item.mediaPublishedAt,item.mediaPublishedAt,item.mediaState,item.sourceType||'web',item.summaryText||'',item.summaryText||'',existing.id).run();
     return false;
   }
-  await env.DB.prepare("INSERT INTO seonammedi_monitor_items (fingerprint,title,url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,resolved_url,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text) VALUES (?,?,?,?,?,?,?,'source_only',?,?,?,?,?,?,?,?,?)")
+  await env.DB.prepare("INSERT INTO seonammedi_monitor_items (fingerprint,title,url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,resolved_url,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text) VALUES (?,?,?,?,?,?,?,'source_only',?,?,?,?,?,?,?,?,?,?)")
     .bind(fingerprint,item.title,item.url,item.publisher,item.publishedAt,item.queryKey,item.queryLabel,seenAt,seenAt,item.resolvedUrl,item.mediaType,item.mediaUrl,item.mediaSource,item.mediaPublishedAt,item.mediaState,item.sourceType||'web',item.summaryText||'').run();
   return true;
 }

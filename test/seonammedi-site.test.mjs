@@ -299,3 +299,8 @@ test('seonammedi automatic site checks are admin-only and split static from dyna
   assert.match(adminJs,/\/api\/seonammedi\/monitor/);
   assert.match(adminJs,/자동점검 정보는 관리자 화면에만 표시/);
 });
+
+test('seonammedi monitor D1 insert keeps column and value arity aligned',async()=>{
+  const monitor=await readFile(new URL('../seonammedi-monitor.js',import.meta.url),'utf8');
+  assert.match(monitor,/INSERT INTO seonammedi_monitor_items \(fingerprint,title,url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,resolved_url,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text\) VALUES \(\?,\?,\?,\?,\?,\?,\?,'source_only',\?,\?,\?,\?,\?,\?,\?,\?,\?,\?\)/);
+});
