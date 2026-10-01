@@ -86,7 +86,7 @@ function ensurePanel() {
       <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
         <div>
           <h2>사이트 공개 설정</h2>
-          <p class="muted">전체 사용자·독립사이트의 공개 상태를 한곳에서 전환합니다. 신규 사이트는 기본 공개이며 비사이트 공개은 관리자 선택으로만 적용됩니다.</p>
+          <p class="muted">전체 사용자·독립사이트의 공개 상태를 한곳에서 전환합니다. 신규 사이트는 기본 공개이며 비공개·점검 상태는 관리자 선택으로만 적용됩니다.</p>
         </div>
         <button type="button" class="btn" data-public-site-refresh>새로고침</button>
       </div>
