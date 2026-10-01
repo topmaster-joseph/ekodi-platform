@@ -135,3 +135,14 @@ test('orchestrator Claude invocation executes through the shared Anthropic adapt
     globalThis.fetch=originalFetch;
   }
 });
+
+
+test('provider secret sync recovers from Cloudflare versioned-worker HTTP 400 without exposing secret values',()=>{
+  const source=read('ai-provider-control.js');
+  assert.match(source,/\/workers\/workers\/\$\{encodeURIComponent\(scriptName\)\}\/versions\/latest/);
+  assert.match(source,/\/workers\/scripts\/\$\{encodeURIComponent\(scriptName\)\}\/deployments/);
+  assert.match(source,/application\/merge-patch\+json/);
+  assert.match(source,/percentage:100/);
+  assert.match(source,/status===400\|\|cfCode===10215/);
+  assert.match(source,/providerMessage/);
+});
