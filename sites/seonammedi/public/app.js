@@ -118,9 +118,10 @@ if(materialFilters&&materialList){
 }
 const org=d.organization||{};
 const ORG_GROUP_META=[['bidae','비대위'],['mokpo','목포대'],['minhak','민학비대위']];
+const ORG_LEGACY_KEYS={bidae:'integrated',minhak:'civic'};
 const orgGroups=Array.isArray(org.groups)&&org.groups.length
-  ?ORG_GROUP_META.map(([key,label])=>({key,label,...(org.groups.find(group=>group.key===key)||{})}))
-  :ORG_GROUP_META.map(([key,label],index)=>index===0?{key,label,levels:org.levels||[],committees:org.committees||[],participants:org.participants||[]}:{key,label,levels:[],committees:[],participants:[]});
+  ?ORG_GROUP_META.map(([key,label])=>{const legacyKey=ORG_LEGACY_KEYS[key];const found=org.groups.find(group=>group.key===key)||(legacyKey?org.groups.find(group=>group.key===legacyKey):null);return{...(found||{}),key,label}})
+  :ORG_GROUP_META.map(([key,label],index)=>index===0?{key,label,levels:org.levels||[],committees:org.committees||[],participants:org.participants||[]}:{key,label,status:key==='minhak'?'forming':'active',statusLabel:key==='minhak'?'구성 논의 중':'운영 중',levels:[],committees:[],participants:[]});
 const chart=el('organizationChart');
 const participantHost=el('participantOrganizations');
 const orgTabs=el('organizationTabs');
