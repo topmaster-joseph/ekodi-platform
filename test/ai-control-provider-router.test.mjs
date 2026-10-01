@@ -95,3 +95,43 @@ test('provider control synchronizes credentials to both runtime workers without 
   assert.match(source,/valueReturned:false/);
   assert.doesNotMatch(source,/valueReturned:true/);
 });
+
+
+test('Anthropic provider status uses the same Claude Sonnet default as the shared adapter',()=>{
+  const rows=providerStatus({
+    ANTHROPIC_API_KEY:'test-anthropic-key',
+    EKODI_PROVIDER_ANTHROPIC_ENABLED:'true',
+  });
+  const anthropic=rows.find(item=>item.id==='anthropic-api');
+  assert.equal(anthropic.configured,true);
+  assert.equal(anthropic.available,true);
+  assert.equal(anthropic.model,'claude-sonnet-5');
+});
+
+test('orchestrator Claude invocation executes through the shared Anthropic adapter contract',async()=>{
+  const originalFetch=globalThis.fetch;
+  const calls=[];
+  globalThis.fetch=async(url,init={})=>{
+    calls.push({url:String(url),init});
+    return new Response(JSON.stringify({
+      id:'msg_test',
+      model:'claude-sonnet-5',
+      content:[{type:'text',text:'claude-adapter-ok'}],
+      usage:{input_tokens:4,output_tokens:3},
+    }),{status:200,headers:{'content-type':'application/json'}});
+  };
+  try{
+    const output=await invokeProvider({
+      ENVIRONMENT:'development',
+      ANTHROPIC_API_KEY:'test-anthropic-key',
+      EKODI_PROVIDER_ANTHROPIC_ENABLED:'true',
+    },'anthropic-api','claude routing proof',{id:'task-claude-1',title:'claude adapter proof',origin:{provider:'ekodi'}},'reviewer');
+    assert.equal(output,'claude-adapter-ok');
+    assert.equal(calls.length,1);
+    assert.match(calls[0].url,/api\.anthropic\.com\/v1\/messages/);
+    assert.equal(calls[0].init.headers['anthropic-version'],'2023-06-01');
+    assert.equal(JSON.parse(calls[0].init.body).model,'claude-sonnet-5');
+  }finally{
+    globalThis.fetch=originalFetch;
+  }
+});

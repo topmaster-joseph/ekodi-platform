@@ -67,7 +67,7 @@ export function providerStatus(env={},nodeProviders=[]){
   push({id:'groq-free',kind:'official-api',costClass:providerCostClass('groq-free'),available:capabilities.groqFree,configured:capabilities.groqFree,model:clean(env.EKODI_GROQ_FREE_MODEL)||'openai/gpt-oss-20b'});
   for(const id of capabilities.nodeProviders){const providerId=`node:${id}`;push({id:providerId,kind:'account-cli',costClass:providerCostClass(providerId),available:true,configured:true,model:'account-managed'});}
   push({id:'openai-api',kind:'official-api',costClass:providerCostClass('openai-api'),available:openai?.available===true,configured:directConfigured(env,'openai-api'),model:openai?.model||clean(env.OPENAI_MODEL)||'gpt-5.6-luna'});
-  push({id:'anthropic-api',kind:'official-api',costClass:providerCostClass('anthropic-api'),available:anthropic?.available===true,configured:directConfigured(env,'anthropic-api'),model:anthropic?.model||clean(env.ANTHROPIC_MODEL)||'claude-haiku-4-5-20251001'});
+  push({id:'anthropic-api',kind:'official-api',costClass:providerCostClass('anthropic-api'),available:anthropic?.available===true,configured:directConfigured(env,'anthropic-api'),model:anthropic?.model||clean(env.ANTHROPIC_MODEL)||'claude-sonnet-5'});
   for(const id of capabilities.workerProviders){const providerId=`worker:${id}`;push({id:providerId,kind:'external-worker',costClass:providerCostClass(providerId),available:true,configured:true,model:'provider-managed'});}
   return providers;
 }
