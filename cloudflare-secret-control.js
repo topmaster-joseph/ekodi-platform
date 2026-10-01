@@ -1,3 +1,4 @@
+// SECRET-MANAGER-BOOTSTRAP-REFRESH-20261002: retrigger governed runtime credential provisioning after provider sync failure.
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 
 const BASE_PATH = '/api/control/secrets';
