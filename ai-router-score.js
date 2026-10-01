@@ -45,7 +45,7 @@ const COST_SCORES=Object.freeze({
 
 export function providerCostClass(providerId=''){
   const id=clean(providerId);
-  if(['cloudflare-workers-ai','gemini-free','openrouter-free','groq-free'].includes(id))return'free-preferred';
+  if(['cloudflare-workers-ai','gemini-free','openrouter-free','groq-free','huggingface-free-credit'].includes(id))return'free-preferred';
   if(id==='node:codex')return'chatgpt-plan-included';
   if(id==='node:gemini-cli')return'google-free-quota';
   if(id==='node:claude-code')return'claude-subscription';
@@ -66,7 +66,7 @@ export function inferTaskTraits(task={}){
 
 function baseProfile(providerId){
   const id=clean(providerId);
-  const direct=['cloudflare-workers-ai','gemini-free','openrouter-free','groq-free','openai-api','anthropic-api'].includes(id);
+  const direct=['cloudflare-workers-ai','gemini-free','openrouter-free','groq-free','huggingface-free-credit','openai-api','anthropic-api'].includes(id);
   const node=id.startsWith('node:');
   const worker=id.startsWith('worker:');
   const skills=node
