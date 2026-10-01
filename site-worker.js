@@ -566,7 +566,7 @@ async function proxyAdminPersonalFinance(request, env) {
 async function proxyAdminCommonServiceAi(request, env) {
   const url = new URL(request.url);
   const suffix = url.pathname.slice(ADMIN_COMMON_SERVICE_AI_PREFIX.length);
-  if (!/^(?:status|session|tasks(?:\/[a-z0-9._~-]+(?:\/(?:run|approve))?)?|nodes(?:\/pair)?)$/i.test(suffix)) {
+  if (!/^(?:status|session|tasks(?:\/[a-z0-9._~-]+(?:\/(?:run|approve))?)?|nodes(?:\/pair)?|site-improvement\/(?:status|evaluate))$/i.test(suffix)) {
     return withHostSecurity(new Response(JSON.stringify({error:'NOT_FOUND'}), {status:404,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}}), ADMIN_CSP, 'no-store', 'admin-common-service-ai-proxy');
   }
   if (!env.AI?.fetch) return withHostSecurity(new Response(JSON.stringify({error:'AI_BINDING_UNAVAILABLE'}), {status:503,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}}), ADMIN_CSP, 'no-store', 'admin-common-service-ai-proxy');
