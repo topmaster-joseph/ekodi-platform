@@ -73,6 +73,7 @@ on:
       - 'migrations/0094_ai_provider_daily_budget.sql'
       - 'migrations/0095_ai_free_quota_decisions.sql'
       - 'migrations/0096_activate_ai_provider_pool.sql'
+      - 'migrations/0120_common_ai_provider_chain.sql'
       - 'migrations/0109_low_traffic_site_improvement.sql'
       - 'migrations/0110_site_improvement_broker_tokens.sql'
       - 'deploy/manifests/ai-control.worker.json'
@@ -153,6 +154,7 @@ on:
       - 'migrations/0094_ai_provider_daily_budget.sql'
       - 'migrations/0095_ai_free_quota_decisions.sql'
       - 'migrations/0096_activate_ai_provider_pool.sql'
+      - 'migrations/0120_common_ai_provider_chain.sql'
       - 'migrations/0109_low_traffic_site_improvement.sql'
       - 'migrations/0110_site_improvement_broker_tokens.sql'
       - 'deploy/manifests/ai-control.worker.json'
@@ -276,6 +278,9 @@ jobs:
           test -f migrations/0087_ai_commons_governance.sql
           test -f migrations/0088_ai_commons_sources.sql
           test -f migrations/0096_activate_ai_provider_pool.sql
+          test -f migrations/0120_common_ai_provider_chain.sql
+          grep -Fq "'cloudflare-workers-ai', 'Cloudflare / 무료 자원'" migrations/0120_common_ai_provider_chain.sql
+          grep -Fq '"gemini","openrouter-free","groq-free","openai","anthropic"' migrations/0120_common_ai_provider_chain.sql
           test -f migrations/0109_low_traffic_site_improvement.sql
           test -f migrations/0110_site_improvement_broker_tokens.sql
           test -f deploy/manifests/ai-control.worker.json
