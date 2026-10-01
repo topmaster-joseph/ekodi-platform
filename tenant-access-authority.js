@@ -15,6 +15,34 @@ export const SITE_ASSIGNABLE_ROLES=Object.freeze([
   'external_vendor','external_developer','pastor','care_staff',
 ]);
 
+const HIERARCHICAL_ADMIN_TENANTS=new Set(['cgma','cheonggye-local','cheonggye-pass']);
+const ROLE_MANAGEMENT_RANK=Object.freeze({
+  super_admin:1000,platform_admin:950,
+  owner:900,store_owner:900,tenant_admin:900,workspace_admin:900,client_admin:900,senior_pastor:900,
+  admin:800,
+  hq_manager:700,manager:700,
+  marketing_manager:600,accounting_manager:600,pastor:600,
+  marketer:500,accountant:500,staff:500,care_staff:500,client_editor:500,
+  external_vendor:400,external_developer:400,
+  viewer:300,client_viewer:300,
+  member:200,
+});
+const roleManagementRank=role=>ROLE_MANAGEMENT_RANK[normalize(role)]||0;
+const usesHierarchicalAdminPolicy=authority=>HIERARCHICAL_ADMIN_TENANTS.has(normalize(authority?.tenantSlug));
+
+export function accessGrantAssignableRoles(authority,target={}){
+  if(!authority?.ok)return Object.freeze([]);
+  if(authority.scope==='platform')return Object.freeze(['owner',...SITE_ASSIGNABLE_ROLES]);
+  if(!usesHierarchicalAdminPolicy(authority))return Object.freeze([...SITE_ASSIGNABLE_ROLES]);
+  const targetEmail=normalize(target.email);
+  const targetRole=normalize(target.role);
+  if(targetEmail&&targetEmail===normalize(authority.email))return Object.freeze([]);
+  if(targetRole&&SITE_RESPONSIBILITY_ROLES.includes(targetRole))return Object.freeze([]);
+  const actorRank=roleManagementRank(authority.role);
+  if(targetRole&&actorRank<=roleManagementRank(targetRole))return Object.freeze([]);
+  return Object.freeze(SITE_ASSIGNABLE_ROLES.filter(role=>actorRank>roleManagementRank(role)));
+}
+
 export function tenantRoleCanManageAccess(role){
   const allowed=TENANT_ADMIN_ROLE_CAPABILITIES[normalize(role)]||[];
   return allowed.includes('*')||allowed.includes(TENANT_ADMIN_CAPABILITIES.access);
@@ -148,6 +176,15 @@ export function accessGrantManagementDecision(authority,target={},next={}){
   }
   if(nextRole&&!SITE_ASSIGNABLE_ROLES.includes(nextRole)){
     return Object.freeze({ok:false,code:'ACCESS_ROLE_ASSIGN_FORBIDDEN'});
+  }
+  if(usesHierarchicalAdminPolicy(authority)){
+    const actorRank=roleManagementRank(authority.role);
+    if(targetRole&&actorRank<=roleManagementRank(targetRole)){
+      return Object.freeze({ok:false,code:'ACCESS_PEER_OR_HIGHER_ROLE_PROTECTED'});
+    }
+    if(nextRole&&actorRank<=roleManagementRank(nextRole)){
+      return Object.freeze({ok:false,code:'ACCESS_ROLE_LEVEL_TOO_HIGH'});
+    }
   }
   return Object.freeze({ok:true});
 }

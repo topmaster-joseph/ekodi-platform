@@ -49,7 +49,7 @@ test('unified directory exposes visibility and external vendor role',async()=>{
   assert.match(source,/external_vendor: '외부업체'/);
   assert.match(source,/a\.visibility/);
   assert.match(source,/visibility: row\.visibility === 'public' \? 'public' : 'private'/);
-  assert.match(source,/schemaVersion: 5/);
+  assert.match(source,/schemaVersion: 7/);
 });
 
 
