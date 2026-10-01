@@ -19,7 +19,7 @@ test('multi-provider registry is opt-in so existing callers keep their current p
   assert.deepEqual(status.orchestration.configuredProviders.map(provider => provider.id), ['supplied']);
 });
 
-test('opt-in registry exposes the governed six-provider chain without exposing credentials', () => {
+test('opt-in registry exposes the governed provider chain without exposing credentials', () => {
   const gateway = buildCoreAiGateway({
     AI_MULTI_PROVIDER_ENABLED: 'true',
     OPENAI_API_KEY: 'openai-test-secret',
@@ -28,7 +28,7 @@ test('opt-in registry exposes the governed six-provider chain without exposing c
   }, []);
   const status = gateway.status();
   assert.equal(status.multiProviderEnabled, true);
-  assert.deepEqual(status.orchestration.configuredProviders.map(provider => provider.id), ['cloudflare-workers-ai', 'gemini', 'openrouter-free', 'groq-free', 'openai', 'anthropic']);
+  assert.deepEqual(status.orchestration.configuredProviders.map(provider => provider.id), ['cloudflare-workers-ai', 'gemini', 'openrouter-free', 'groq-free', 'huggingface-free-credit', 'openai', 'anthropic']);
   const serialized = JSON.stringify(status);
   assert.equal(serialized.includes('openai-test-secret'), false);
   assert.equal(serialized.includes('anthropic-test-secret'), false);
