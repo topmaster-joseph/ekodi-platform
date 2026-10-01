@@ -8,6 +8,7 @@ const resourceBoundSql=await readFile(new URL('../supabase/migrations/2026090600
 const activeConsentSql=await readFile(new URL('../supabase/migrations/20260906010000_ekodi_mcp_active_consent_audience.sql',import.meta.url),'utf8');
 const leastPrivilegeSql=await readFile(new URL('../supabase/migrations/20260906011000_ekodi_oauth_least_privilege.sql',import.meta.url),'utf8');
 const canonicalResourceSql=await readFile(new URL('../supabase/migrations/20260908193000_ekodi_mcp_canonical_resource.sql',import.meta.url),'utf8');
+const durableGrantSql=await readFile(new URL('../supabase/migrations/20261002043000_ekodi_mcp_durable_resource_grant.sql',import.meta.url),'utf8');
 
 test('canonical identity projection is authenticated-only and person based',()=>{
   assert.match(identitySql,/create or replace function public\.current_ekodi_identity\(\)/i);
@@ -47,4 +48,21 @@ test('canonical MCP resource migration preserves approved legacy consent but emi
   assert.match(canonicalResourceSql,/claims := jsonb_set\(claims, '\{aud\}', to_jsonb\('https:\/\/ekodi\.kr\/mcp'::text\)/i);
   assert.match(canonicalResourceSql,/v_jwt->>'aud'.*https:\/\/ekodi\.kr\/mcp.*https:\/\/api\.ekodi\.kr\/mcp/is);
   assert.match(canonicalResourceSql,/revoke execute on function public\.ekodi_mcp_access_token_hook\(jsonb\) from authenticated, anon, public/i);
+});
+
+test('MCP OAuth resource grant survives authorization-code consumption without broadening consent',()=>{
+  assert.match(durableGrantSql,/create table if not exists public\.ekodi_mcp_oauth_grants/i);
+  assert.match(durableGrantSql,/check \(resource = 'https:\/\/ekodi\.kr\/mcp'\)/i);
+  assert.match(durableGrantSql,/create trigger ekodi_capture_mcp_oauth_consent/i);
+  assert.match(durableGrantSql,/after insert or update of revoked_at or delete on auth\.oauth_consents/i);
+  assert.match(durableGrantSql,/from auth\.oauth_authorizations oa/i);
+  assert.match(durableGrantSql,/oa\.resource = 'https:\/\/ekodi\.kr\/mcp'/i);
+  assert.match(durableGrantSql,/oa\.expires_at > now\(\)/i);
+  assert.match(durableGrantSql,/from public\.ekodi_mcp_oauth_grants g/i);
+  assert.match(durableGrantSql,/from auth\.oauth_consents c/i);
+  assert.match(durableGrantSql,/g\.revoked_at is null/i);
+  assert.match(durableGrantSql,/c\.revoked_at is null/i);
+  assert.match(durableGrantSql,/claims := jsonb_set\(claims, '\{aud\}', to_jsonb\('https:\/\/ekodi\.kr\/mcp'::text\)/i);
+  assert.match(durableGrantSql,/revoke all on table public\.ekodi_mcp_oauth_grants from public, anon, authenticated/i);
+  assert.match(durableGrantSql,/revoke execute on function public\.capture_ekodi_mcp_oauth_consent\(\) from authenticated, anon, public/i);
 });
