@@ -69,7 +69,8 @@ jobs:
             .github/workflows/redeploy-control-on-central-core.yml \
             .github/workflows/github-governance-audit.yml \
             .github/workflows/reliability-validation.yml \
-            .github/workflows/verify-ekodi-orchestrator-live-e2e.yml
+            .github/workflows/verify-ekodi-orchestrator-live-e2e.yml \
+            .github/workflows/supabase-environment-boundary.yml
       - name: Enforce traffic-ready data plane
         run: |
           node --check data-plane.js
@@ -81,6 +82,8 @@ jobs:
           node --check scripts/run-reliability-validation.mjs
           node scripts/run-reliability-validation.mjs --validate-only
           node --test test/reliability-validation.test.mjs
+      - name: Validate Supabase DEV PROD boundary
+        run: node scripts/validate-supabase-environment-boundary.mjs
       - name: Run static policy and code checks
         env:
           EKODI_ORCHESTRATION_STATIC_POLICY: '1'
