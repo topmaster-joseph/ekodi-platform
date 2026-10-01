@@ -40,3 +40,34 @@ test('authenticated admin shell keeps first path thin while convergence loads Co
   assert.match(build, /control-tower-admin\.css/);
   assert.match(build, /control-tower-admin\.js/);
 });
+
+
+test('control tower tabs use canonical detail paths and restore state from the route', async () => {
+  const [tower,routes] = await Promise.all([
+    read('control-tower-admin.js'),
+    read('admin-canonical-routes.js'),
+  ]);
+  assert.match(routes, /pathFor\(section,detailSegments=\[\]\)/);
+  assert.match(routes, /\/admin\/\$\{SECTION_GROUP\[normalized\]\}\/\$\{normalized\}/);
+  assert.match(tower, /routeTab\(\)/);
+  assert.match(tower, /navigationTarget\?\.\('platform-overview', location, details\)/);
+  assert.match(tower, /history\.replaceState\(history\.state, '', target\)/);
+  assert.match(tower, /window\.addEventListener\('popstate'/);
+});
+
+test('control tower exposes a compact right drawer without weakening the fixed sidebar contract', async () => {
+  const [tower,css,workbench,e2e] = await Promise.all([
+    read('control-tower-admin.js'),
+    read('control-tower-admin.css'),
+    read('admin-conversation-workbench.css'),
+    read('scripts/verify-admin-production-ui-e2e.mjs'),
+  ]);
+  assert.match(tower, /function openDrawer/);
+  assert.match(tower, /function closeDrawer/);
+  assert.match(tower, /data-ct-drawer/);
+  assert.match(css, /\.ct-drawer\{position:fixed/);
+  assert.match(css, /width:min\(420px,92vw\)/);
+  assert.match(workbench, /\.sidebar\{[\s\S]*position:fixed!important/);
+  assert.match(e2e, /sidebarTop !== 0/);
+  assert.match(e2e, /sidebarOverflowY !== 'hidden'/);
+});
