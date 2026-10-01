@@ -1,72 +1,73 @@
 # EKODI Environment Contract
 
-Status: adopted architecture contract. Production Supabase is canonicalized as `ekodi-platform`. `ekodi-church` is a legacy integration project and is explicitly not a development database.
+Status: enforced architecture contract.
 
-## 1. Canonical source and promotion path
+EKODI uses one canonical GitHub repository and two Supabase projects as **environment boundaries**. They are not production traffic-sharding peers.
 
-`topmaster-joseph/ekodi-platform` is the canonical platform repository.
-
-- `main` is the production source.
-- `development` is the persistent development source already used by the Cloudflare development deployment.
-- Short-lived AI/feature branches merge through pull requests.
-- Pull-request staging uses the existing GitHub `development` environment and isolated Cloudflare staging resources.
-- Production changes are promoted only after CI, migration, staging, and smoke checks pass.
-
-The intended end-to-end mapping is:
+## 1. Canonical mapping
 
 | Layer | Production | Development / Staging |
 | --- | --- | --- |
-| GitHub | `main` + `production` environment | `development` + `development` environment; PR staging uses the same non-production boundary |
-| Cloudflare | production account/resources | development/staging account/resources |
-| Supabase | canonical `ekodi-platform` | logical `ekodi-platform-dev`; dedicated remote DB not yet provisioned, CI uses ephemeral local Supabase |
+| GitHub | `main` + `production` environment | `development` + `development` environment; short-lived `ai/*` branches through PR |
+| Cloudflare | production resources | development/staging resources |
+| Supabase | `renzehysxirjilvdxacv` / logical `ekodi-prod` | `lxcxwbdwwojjkgybbqii` / logical `ekodi-dev` |
 
-## 2. Supabase transition mapping
+Provider display names may lag the logical roles. The production project is currently named `ekodi-platform`; the development project is currently named `ekodi-church`. Logical roles are governed by repository policy, not by display name.
 
-The two existing free Supabase projects are retained while data is reorganized without destructive cutover.
+## 2. Promotion path
 
-- Production `ekodi-platform` maps to project ref `renzehysxirjilvdxacv`; its canonical display name is `ekodi-platform` as of 2026-09-06.
-- Development logical target `ekodi-platform-dev` is intentionally not mapped to any remote Supabase project yet; CI uses an ephemeral local Supabase until a cost-gated development branch/project is explicitly approved.
-- Project ref `lxcxwbdwwojjkgybbqii` (`ekodi-church`) is classified as `ekodi-church-legacy`, is never an allowed development database, and remains online only while legacy Edge Function/runtime dependencies are drained and verified.
+`short-lived branch -> PR -> local/CI checks -> ekodi-dev -> development/staging smoke/E2E -> guarded main -> ekodi-prod -> production smoke -> live verification`
 
-Display-name changes and service-data consolidation are separate operations. A rename must never be treated as a data migration.
+Rules:
 
-## 3. PostgreSQL isolation policy
+- No AI, developer, workflow, or external provider may mutate production as a development shortcut.
+- Production schema changes are versioned and must be exercised in development first.
+- Production completion means the live service is verified, not merely merged or deployed.
+- The `development` branch and GitHub `development` environment may access only development credentials.
+- The `main` branch and GitHub `production` environment are the only repository path allowed to obtain production deployment credentials.
 
-EKODI uses one shared production PostgreSQL platform by default. A new tenant or ordinary service does not receive a new Supabase project merely because it is a new service.
+## 3. Data isolation
 
-Isolation is layered:
+Production contains real member, organization, mission, trade, commerce, audit, church and other live state.
 
-1. PostgreSQL schema boundary by domain.
-2. `tenant_id` / organization ownership for shared service data.
-3. Row Level Security for user and tenant access.
-4. Cloudflare Worker / API capability checks before sensitive server-side operations.
+Development must use synthetic fixtures or explicitly anonymized non-reversible data. Raw production personal, contact, payment, pastoral or other sensitive records must never be copied into development.
 
-Target domain schemas are `core`, `identity`, `tenancy`, `shared`, `church`, `church_private`, `market`, `commerce`, `community`, `work`, `content`, `ai`, `audit`, `private`, and `api`.
+Schema moves forward from development to production. Production data never synchronizes backward into development.
 
-Sensitive church pastoral data belongs in a stricter private boundary. Raw production personal data must not be copied into non-production. Development uses synthetic or explicitly anonymized data.
+## 4. Existing `ekodi-church` transition
 
-A dedicated database is an exception justified by material scale, legal/contractual isolation, unusually sensitive data, operational blast-radius requirements, or a clear independent lifecycle.
+Project `lxcxwbdwwojjkgybbqii` now has logical role `ekodi-dev`, but it still contains legacy church/Cloudflare probe functions from its former role.
 
-## 4. Free-plan liveness policy
+This is a controlled drain, not a destructive rename:
 
-A provider-specific keepalive is allowed only when the provider can suspend an otherwise healthy free resource because of inactivity.
+1. No new production dependency may target this project.
+2. Existing production dependencies must be migrated to `ekodi-prod` or retired.
+3. Legacy tables/functions remain until dependency absence is proven.
+4. Destructive cleanup is forbidden until that proof is recorded.
+5. Church production state belongs to the production project under schema/API/RLS boundaries unless a later legal/compliance requirement justifies physical separation.
 
-For Supabase Free projects, EKODI uses `public.ekodi_keepalive()` as a minimal read-only liveness RPC. The function returns a constant and does not read or write business, tenant, personal, church, or market data. The scheduled probe runs three times per day for each active free project.
+## 5. PostgreSQL isolation
 
-Artificial writes, fake users, dummy transactions, or touching business tables solely to create activity are prohibited.
+Ordinary services do not receive separate Supabase projects. Isolation is layered by domain schema, tenant/organization ownership, RLS, and Cloudflare/API capability checks.
 
-Cloudflare resources do not receive synthetic database traffic merely for appearance of activity. Normal health checks may still run for availability monitoring.
+Target domain schemas include `core`, `identity`, `tenancy`, `shared`, `church`, `church_private`, `market`, `commerce`, `community`, `work`, `content`, `ai`, `audit`, `private`, and `api`.
 
-## 5. Credential policy
+## 6. Traffic and scale
 
-Only Supabase publishable keys may be used by the read-only liveness probe. Service-role, secret, database password, OAuth secret, and Cloudflare privileged tokens must never be committed to the repository or exposed to browser code.
+DEV/PROD separation protects data and blast radius. Production scale is handled through Cloudflare WAF/cache/rate limiting, stateless Workers/Gateway, queue-based pressure relief, bounded Supabase queries/pooling, selective Realtime, and later compute/read scaling when measurements justify it.
 
-The liveness RPC must remain data-independent. If it is ever changed to read tenant or business data, the public/publishable invocation grant must be removed and the design reviewed again.
+The architecture target is 100 -> 1,000 -> 10,000 -> 100,000 concurrent users without making user concurrency equal database concurrency.
 
-## 6. Production safety gates
+## 7. Credential and security policy
 
-The target release flow is:
+- Service-role/secret keys never appear in browser code or the repository.
+- Development credentials cannot mutate production.
+- Production credentials cannot be exposed to PR or development jobs.
+- RLS is required for browser-exposed tables.
+- SECURITY DEFINER RPCs require explicit review.
+- Supabase Security/Performance Advisor regressions block promotion when material.
+- Destructive database changes require explicit guarded handling.
 
-`short-lived branch -> PR -> local/CI database migration checks -> development or PR staging -> smoke/E2E -> main -> production migration/deploy -> production smoke check`
+## 8. Free-plan liveness
 
-The repository should enforce `main` through branch protection/rulesets requiring pull requests and the relevant CI checks. This contract is additive and does not itself authorize destructive consolidation of the current `ekodi-church` project.
+Supabase free-resource liveness may use only the minimal read-only `public.ekodi_keepalive()` RPC. Artificial writes, fake users, dummy transactions, or business-table touches for keepalive are forbidden.
