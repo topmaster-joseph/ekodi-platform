@@ -315,6 +315,63 @@ async function listPublicChannels(env){
     WHERE visible=1 ORDER BY official DESC,sort_order ASC,id ASC LIMIT 80`).all();
   return json({ok:true,items:(rows.results||[]).map(publicChannel)});
 }
+const decodePreviewText=value=>clean(String(value||'').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'),1200);
+const previewMeta=(html,key)=>{
+  const escaped=String(key).replace(/[.*+?^$\{\}()|[\]\\]/g,'\\async function listPublicChannels(env){
+  const rows=await env.DB.prepare(`SELECT id,platform,name,url,category,official,note,sort_order FROM seonammedi_channels
+    WHERE visible=1 ORDER BY official DESC,sort_order ASC,id ASC LIMIT 80`).all();
+  return json({ok:true,items:(rows.results||[]).map(publicChannel)});
+}
+');
+  const patterns=[
+    new RegExp('<meta[^>]+(?:property|name)=["\\\']'+escaped+'["\\\'][^>]+content=["\\\']([^"\\\']*)["\\\']','i'),
+    new RegExp('<meta[^>]+content=["\\\']([^"\\\']*)["\\\'][^>]+(?:property|name)=["\\\']'+escaped+'["\\\']','i')
+  ];
+  for(const pattern of patterns){const match=String(html||'').match(pattern);if(match?.[1])return decodePreviewText(match[1])}
+  return '';
+};
+const previewTitle=html=>decodePreviewText(String(html||'').match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]||'');
+function channelProviderUrl(item){
+  try{
+    const url=new URL(item.url);
+    const host=url.hostname.toLowerCase().replace(/^www\./,'');
+    if(item.platform==='instagram'&&host==='instagram.com'){
+      const handle=url.pathname.split('/').filter(Boolean)[0]||'';
+      if(handle&&!['accounts','explore','reels','direct'].includes(handle.toLowerCase()))return {kind:'instagram-profile',embedUrl:'https://www.instagram.com/'+encodeURIComponent(handle)+'/embed/'};
+    }
+    if(item.platform==='youtube'&&['youtube.com','youtu.be'].includes(host))return {kind:'youtube'};
+  }catch{}
+  return {kind:'generic'};
+}
+async function publicChannelPreview(env,id){
+  const row=await env.DB.prepare(`SELECT id,platform,name,url,category,official,note,sort_order FROM seonammedi_channels
+    WHERE id=? AND visible=1 LIMIT 1`).bind(id).first();
+  if(!row)return json({ok:false,error:'not_found'},404);
+  const item=publicChannel(row),provider=channelProviderUrl(item);
+  const preview={title:item.name,description:item.note||'',image:'',embedUrl:provider.embedUrl||'',mode:provider.embedUrl?'embed':'summary',platform:item.platform,sourceUrl:item.url};
+  if(provider.kind!=='youtube')return json({ok:true,item,preview});
+  let page=null;
+  try{
+    page=await fetch(item.url,{headers:{'user-agent':'Mozilla/5.0 (compatible; EKODIChannelPreview/1.0; +https://ekodi.kr/seonammedi/)'},redirect:'follow',signal:AbortSignal.timeout(7000)});
+  }catch{}
+  if(!page?.ok)return json({ok:true,item,preview});
+  const html=await page.text().catch(()=>'');
+  preview.title=previewMeta(html,'og:title')||previewTitle(html)||preview.title;
+  preview.description=previewMeta(html,'og:description')||previewMeta(html,'description')||preview.description;
+  preview.image=validHttps(previewMeta(html,'og:image'));
+  const channelId=(html.match(/"(?:channelId|externalId)":"(UC[A-Za-z0-9_-]{20,})"/)||html.match(/youtube\.com\/channel\/(UC[A-Za-z0-9_-]{20,})/))?.[1]||'';
+  if(channelId){
+    let feed=null;
+    try{feed=await fetch('https://www.youtube.com/feeds/videos.xml?channel_id='+encodeURIComponent(channelId),{headers:{'user-agent':'EKODIChannelPreview/1.0'},signal:AbortSignal.timeout(5000)})}catch{}
+    const xml=feed?.ok?await feed.text().catch(()=>''):'';
+    const videoId=clean(xml.match(/<yt:videoId>([^<]+)<\/yt:videoId>/i)?.[1],40);
+    if(/^[A-Za-z0-9_-]{6,20}$/.test(videoId)){
+      preview.embedUrl='https://www.youtube-nocookie.com/embed/'+videoId+'?rel=0';
+      preview.mode='embed';
+    }
+  }
+  return json({ok:true,item,preview});
+}
 
 async function adminMe(request,env,auth){
   const site=await env.DB.prepare('SELECT public_status,updated_at FROM public_site_controls WHERE site_id=? LIMIT 1').bind(TENANT_SLUG).first().catch(()=>null);
@@ -621,6 +678,11 @@ export async function handleSeonamMediAdminApi(request,env){
   }
   if(url.pathname===PREFIX+'/channels'&&request.method==='GET'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return publicStorageRead('channels',()=>listPublicChannels(env));
+  }
+  const channelPreviewMatch=url.pathname.match(/^\/api\/seonammedi\/channels\/(\d+)\/preview$/);
+  if(channelPreviewMatch&&request.method==='GET'){
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
+    return publicStorageRead('channel-preview',()=>publicChannelPreview(env,Number(channelPreviewMatch[1])));
   }
   const publicMinutes=url.pathname.match(/^\/api\/seonammedi\/minutes\/([A-Za-z0-9_-]{20,160})\/viewers$/);
   if(publicMinutes)return publicMinuteView(request,env,publicMinutes[1]);
