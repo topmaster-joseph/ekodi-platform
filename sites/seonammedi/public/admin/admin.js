@@ -102,31 +102,32 @@ $('statusForm')?.addEventListener('submit',async event=>{
 });
 
 const ORG_GROUPS=[
-  {key:'integrated',label:'통합 대책위'},
-  {key:'civic',label:'시민단체연대'},
-  {key:'mokpo',label:'목포대'}
+  {key:'bidae',label:'비대위',status:'active',statusLabel:'운영 중'},
+  {key:'mokpo',label:'목포대',status:'active',statusLabel:'운영 중'},
+  {key:'minhak',label:'민학비대위',status:'forming',statusLabel:'구성 논의 중 · 2026.09.30 첫 만남'}
 ];
 function normalizeOrgGroups(org={}){
   if(Array.isArray(org.groups)&&org.groups.length){
     const byKey=new Map(org.groups.map(group=>[group.key,group]));
     return ORG_GROUPS.map(meta=>({key:meta.key,label:meta.label,...(byKey.get(meta.key)||{})}));
   }
-  return ORG_GROUPS.map((meta,index)=>index===0?{key:meta.key,label:meta.label,levels:org.levels||[],committees:org.committees||[],participants:org.participants||[]}:{key:meta.key,label:meta.label,levels:[],committees:[],participants:[]});
+  return ORG_GROUPS.map(meta=>({key:meta.key,label:meta.label,status:meta.status,statusLabel:meta.statusLabel,levels:[],committees:[],participants:[]}));
 }
 function orgGroupFromForm(form,key,label){
   const level=(name,suffix)=>({name,members:lines(form.elements[key+'_'+suffix].value)});
   const committees=lines(form.elements[key+'_committees'].value).map(row=>{const [name,...rest]=row.split('|');return{name:(name||'').trim(),lead:rest.join('|').trim()}}).filter(x=>x.name);
   const participants=lines(form.elements[key+'_participants'].value).map(row=>{const [name,representative,url]=row.split('|').map(x=>(x||'').trim());return{name,representative,url,visible:true}}).filter(x=>x.name);
-  return{key,label,levels:[level('대표자회의','representatives'),level('상임공동대표단','standing'),level('집행위원회','executive')],committees,participants,participantSort:'ko-KR',publicOnly:true};
+  const meta=ORG_GROUPS.find(item=>item.key===key)||{};const statusLabel=form.elements[key+'_status']?.value.trim()||meta.statusLabel||'';
+  return{key,label,status:meta.status||'active',statusLabel,levels:[level('대표자회의','representatives'),level('상임공동대표단','standing'),level('집행위원회','executive')],committees,participants,participantSort:'ko-KR',publicOnly:true};
 }
 function orgLinesToData(form){
   const groups=ORG_GROUPS.map(meta=>orgGroupFromForm(form,meta.key,meta.label));
-  const integrated=groups[0];
-  return{groups,levels:integrated.levels,committees:integrated.committees,participants:integrated.participants,participantSort:'ko-KR',publicOnly:true};
+  return{groups,participantSort:'ko-KR',publicOnly:true};
 }
 function fillOrgGroup(form,group){
   const key=group.key,levels=group.levels||[];
   const members=name=>(levels.find(x=>x.name===name)?.members||[]).join('\n');
+  if(form.elements[key+'_status'])form.elements[key+'_status'].value=group.statusLabel||ORG_GROUPS.find(item=>item.key===key)?.statusLabel||'';
   form.elements[key+'_representatives'].value=members('대표자회의');
   form.elements[key+'_standing'].value=members('상임공동대표단');
   form.elements[key+'_executive'].value=members('집행위원회');
@@ -149,11 +150,11 @@ async function loadOrganization(){
   const org=managed.item?.data&&Object.keys(managed.item.data).length?managed.item.data:(base.organization||{});
   const form=$('organizationForm');
   normalizeOrgGroups(org).forEach(group=>fillOrgGroup(form,group));
-  showOrgAdminTab(form.elements.orgKey.value||'integrated');
+  showOrgAdminTab(form.elements.orgKey.value||'bidae');
   text($('organizationMessage'),'');
 }
 $('organizationForm')?.addEventListener('submit',async event=>{
-  event.preventDefault();try{text($('organizationMessage'),'저장 중…');await api('/api/seonammedi/admin/pages/organization',{method:'PUT',body:JSON.stringify({data:orgLinesToData(event.currentTarget),visible:true})});text($('organizationMessage'),'통합 대책위·시민단체연대·목포대 조직 정보를 저장했습니다.')}catch(error){text($('organizationMessage'),error.message)}
+  event.preventDefault();try{text($('organizationMessage'),'저장 중…');await api('/api/seonammedi/admin/pages/organization',{method:'PUT',body:JSON.stringify({data:orgLinesToData(event.currentTarget),visible:true})});text($('organizationMessage'),'비대위·목포대·민학비대위 조직 정보를 저장했습니다.')}catch(error){text($('organizationMessage'),error.message)}
 });
 
 const moneyText=value=>new Intl.NumberFormat('ko-KR').format(Number(value||0))+'원';
