@@ -53,3 +53,13 @@ test('human-gated agent actions use the existing mission control decision endpoi
   assert.match(agentControl, /decision은 approve 또는 reject/);
   assert.match(agentControl, /ACTION_NOT_AWAITING_HUMAN/);
 });
+
+
+test('provider cards expose direct key setup links and block health checks until a secret is connected', () => {
+  assert.match(center, /aistudio\.google\.com\/app\/apikey/);
+  assert.match(center, /platform\.openai\.com\/api-keys/);
+  assert.match(center, /console\.anthropic\.com\/settings\/keys/);
+  assert.match(center, /providerActionHint/);
+  assert.match(center, /data-ai-action="check" \$\{configured\?'':'disabled'\}/);
+  assert.match(center, /API Key 연결 필요/);
+});
