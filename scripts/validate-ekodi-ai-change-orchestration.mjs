@@ -107,11 +107,18 @@ const sha = text(process.env.GITHUB_SHA || git(['rev-parse', 'HEAD']) || 'unknow
 const actor = text(process.env.GITHUB_ACTOR || event.sender?.login || 'local');
 const defaultBranch = policy.sourceControl.defaultBranch || 'main';
 const allowedPrefixes = policy.sourceControl.allowedChangeBranchPrefixes || ['ai/'];
+const integrationBranches = Array.isArray(policy.sourceControl.integrationBranches)
+  ? policy.sourceControl.integrationBranches.map(text).filter(Boolean)
+  : [];
 
 function branchAllowed(branch) {
   return allowedPrefixes.some(prefix => text(branch).startsWith(prefix));
 }
 function currentChangedFiles() {
+  const projectedPath = text(process.env.EKODI_CHANGED_FILES_PATH);
+  if (projectedPath && fs.existsSync(projectedPath)) {
+    return fs.readFileSync(projectedPath, 'utf8').split(/\r?\n/).map(text).filter(Boolean);
+  }
   const base = event.pull_request?.base?.sha;
   if (base) {
     const out = git(['diff', '--name-only', `${base}...${sha}`]);
@@ -176,7 +183,7 @@ function candidatePullRequestNumbers() {
   }
   return [...numbers];
 }
-function isVerifiedMergedPr(pr, { shaBound = false } = {}) {
+function isVerifiedMergedPr(pr, { shaBound = false, targetBranch = defaultBranch } = {}) {
   const reportedMergeSha = text(pr?.merge_commit_sha);
   const shaVerified = shaBound
     ? (!reportedMergeSha || reportedMergeSha === sha)
@@ -184,7 +191,7 @@ function isVerifiedMergedPr(pr, { shaBound = false } = {}) {
   return Boolean(pr)
     && text(pr?.state) === 'closed'
     && Boolean(pr?.merged_at)
-    && text(pr?.base?.ref) === defaultBranch
+    && text(pr?.base?.ref) === targetBranch
     && shaVerified
     && branchAllowed(pr?.head?.ref);
 }
@@ -219,7 +226,7 @@ async function loadPullRequestByNumber(number) {
   const apiBase = text(process.env.GITHUB_API_URL || 'https://api.github.com').replace(/\/+$/, '');
   return fetchGithubJson(`${apiBase}/repos/${repository}/pulls/${encodeURIComponent(number)}`, `GitHub PR #${number}`, { allowNotFound: true });
 }
-async function verifiedMainPrMerge() {
+async function verifiedBranchPrMerge(targetBranch) {
   const fixtureMode = Boolean(text(process.env.EKODI_GITHUB_PR_PROVENANCE) || text(process.env.EKODI_GITHUB_PR_LOOKUP));
   const attempts = fixtureMode ? 1 : boundedInteger(process.env.EKODI_GITHUB_PROVENANCE_ATTEMPTS, 10, 1, 12);
   const retryBaseMs = boundedInteger(process.env.EKODI_GITHUB_PROVENANCE_RETRY_MS, 1000, 0, 5000);
@@ -230,7 +237,7 @@ async function verifiedMainPrMerge() {
     for (const number of candidateNumbers) {
       try {
         const pr = await loadPullRequestByNumber(number);
-        if (isVerifiedMergedPr(pr)) return true;
+        if (isVerifiedMergedPr(pr, { targetBranch })) return true;
       } catch (error) {
         lastError = error?.message || String(error);
       }
@@ -238,7 +245,7 @@ async function verifiedMainPrMerge() {
 
     try {
       const pulls = await loadAssociatedPullRequests();
-      if (pulls.some(pr => isVerifiedMergedPr(pr, { shaBound: true }))) return true;
+      if (pulls.some(pr => isVerifiedMergedPr(pr, { shaBound: true, targetBranch }))) return true;
     } catch (error) {
       lastError = error?.message || String(error);
     }
@@ -264,8 +271,12 @@ if (staticPolicyMode) {
   if (!branchAllowed(intentBranch)) fail(`change branch must enter through EKODI AI namespace (${allowedPrefixes.join(', ')}): ${intentBranch || 'missing'}`);
   source = `pull-request:${event.pull_request?.number || 'unknown'}`;
 } else if (eventName === 'push' && text(process.env.GITHUB_REF_NAME) === defaultBranch) {
-  if (!await verifiedMainPrMerge()) fail(`direct push to ${defaultBranch} is forbidden; merge an EKODI AI orchestrated PR instead.`);
-  source = 'protected-main-pr-merge';
+  if (!await verifiedBranchPrMerge(defaultBranch)) fail(`direct push to ${defaultBranch} is forbidden; merge an EKODI AI orchestrated PR instead.`);
+  source = `protected-${defaultBranch}-pr-merge`;
+} else if (eventName === 'push' && integrationBranches.includes(text(process.env.GITHUB_REF_NAME))) {
+  const integrationBranch = text(process.env.GITHUB_REF_NAME);
+  if (!await verifiedBranchPrMerge(integrationBranch)) fail(`direct push to ${integrationBranch} is forbidden for mutation workflows; merge an EKODI AI orchestrated PR instead.`);
+  source = `protected-${integrationBranch}-pr-merge`;
 } else if (eventName === 'push') {
   if (!branchAllowed(text(process.env.GITHUB_REF_NAME))) fail('non-main change pushes must use an EKODI AI branch namespace.');
   source = 'ai-branch-push-routed-through-ekodi-ai';
