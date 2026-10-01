@@ -311,6 +311,8 @@ test('seonammedi channel previews use provider-safe embeds and same-origin metad
   assert.match(control,/channelPreviewMatch=url\.pathname\.match/);
   assert.ok(control.includes("instagram.com/'+encodeURIComponent(handle)+'/embed/"));
   assert.match(control,/youtube-nocookie\.com\/embed\//);
+  assert.match(control,/"videoId":"\(\[A-Za-z0-9_-\]\{11\}\)"/);
+  assert.match(control,/preview\.contentType='latest-video'/);
   assert.match(control,/feeds\/videos\.xml\?channel_id=/);
   assert.match(control,/provider\.kind!=='youtube'/);
   assert.match(app,/channelPreviewSeq/);

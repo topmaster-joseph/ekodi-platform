@@ -354,15 +354,28 @@ async function publicChannelPreview(env,id){
   preview.title=previewMeta(html,'og:title')||previewTitle(html)||preview.title;
   preview.description=previewMeta(html,'og:description')||previewMeta(html,'description')||preview.description;
   preview.image=validHttps(previewMeta(html,'og:image'));
+  const pageVideoId=clean(
+    (html.match(/"videoId":"([A-Za-z0-9_-]{11})"/)||html.match(/watch\?v=([A-Za-z0-9_-]{11})/))?.[1],
+    20
+  );
+  if(/^[A-Za-z0-9_-]{11}$/.test(pageVideoId)){
+    preview.embedUrl='https://www.youtube-nocookie.com/embed/'+pageVideoId+'?rel=0';
+    preview.mode='embed';
+    preview.contentType='latest-video';
+    preview.videoId=pageVideoId;
+    return json({ok:true,item,preview});
+  }
   const channelId=(html.match(/"(?:channelId|externalId)":"(UC[A-Za-z0-9_-]{20,})"/)||html.match(/youtube\.com\/channel\/(UC[A-Za-z0-9_-]{20,})/))?.[1]||'';
   if(channelId){
     let feed=null;
     try{feed=await fetch('https://www.youtube.com/feeds/videos.xml?channel_id='+encodeURIComponent(channelId),{headers:{'user-agent':'EKODIChannelPreview/1.0'},signal:AbortSignal.timeout(5000)})}catch{}
     const xml=feed?.ok?await feed.text().catch(()=>''):'';
     const videoId=clean(xml.match(/<yt:videoId>([^<]+)<\/yt:videoId>/i)?.[1],40);
-    if(/^[A-Za-z0-9_-]{6,20}$/.test(videoId)){
+    if(/^[A-Za-z0-9_-]{11}$/.test(videoId)){
       preview.embedUrl='https://www.youtube-nocookie.com/embed/'+videoId+'?rel=0';
       preview.mode='embed';
+      preview.contentType='latest-video';
+      preview.videoId=videoId;
     }
   }
   return json({ok:true,item,preview});
