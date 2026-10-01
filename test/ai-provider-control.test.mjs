@@ -181,3 +181,11 @@ test('provider health probes allocate enough output budget for thinking-era mode
   assert.match(api,/providerMessage:clean\(error\?\.providerMessage,320\)/);
   assert.match(api,/requestId:clean\(error\?\.requestId,120\)/);
 });
+
+test('provider check UI shows upstream diagnostics instead of opaque HTTP 502',()=>{
+  const admin=read('admin-provider-control.js');
+  assert.match(admin,/error\.providerMessage=data\.providerMessage/);
+  assert.match(admin,/error\.requestId=data\.requestId/);
+  assert.match(admin,/function providerCheckErrorMessage/);
+  assert.match(admin,/message\(card,providerCheckErrorMessage\(e\),true\)/);
+});
