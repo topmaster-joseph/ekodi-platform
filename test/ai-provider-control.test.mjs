@@ -293,3 +293,20 @@ test('provider diagnostic checks do not collapse expected free-provider failures
   assert.match(admin,/Provider HTTP/);
   assert.match(admin,/자동 우회\/재시도 가능/);
 });
+
+
+test('provider routing evidence records fallback and block reasons for operators',()=>{
+  const api=read('ai-provider-control.js');
+  const admin=read('admin-provider-control.js');
+  const migration=read('migrations/0122_ai_provider_routing_evidence.sql');
+  assert.match(api,/ai_provider_routing_events/);
+  assert.match(api,/fallback-attempt/);
+  assert.match(api,/free-quota-exhausted/);
+  assert.match(api,/health-circuit-open/);
+  assert.match(api,/credential-not-configured/);
+  assert.match(api,/routingEvents/);
+  assert.match(admin,/최근 라우팅 기록/);
+  assert.match(admin,/성공·실패·fallback·제외 이유/);
+  assert.match(migration,/CREATE TABLE IF NOT EXISTS ai_provider_routing_events/);
+  assert.match(migration,/previous_provider/);
+});
