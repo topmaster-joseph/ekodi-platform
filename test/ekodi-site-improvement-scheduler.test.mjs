@@ -117,3 +117,24 @@ test('site improvement capacity gate uses live server resources and excludes API
   assert.match(source,/apiUsageExcluded:true/);
   assert.doesNotMatch(source,/remaining_requests|remaining_tokens/);
 });
+
+
+test('superadmin site-improvement status and evaluate controls preserve scheduler gates',async()=>{
+  const [scheduler,worker,siteWorker,admin]=await Promise.all([
+    readFile(new URL('../ekodi-site-improvement-scheduler.js',import.meta.url),'utf8'),
+    readFile(new URL('../ai-control-worker.js',import.meta.url),'utf8'),
+    readFile(new URL('../site-worker.js',import.meta.url),'utf8'),
+    readFile(new URL('../common-services-admin.js',import.meta.url),'utf8'),
+  ]);
+  assert.match(scheduler,/export async function siteImprovementStatusSnapshot/);
+  assert.match(scheduler,/serverResourceSnapshot\(env,at,window\.serverLoadCapPercent\)/);
+  assert.match(scheduler,/trafficSnapshot\(env,at\)/);
+  assert.match(worker,/\/api\/site-improvement\/status/);
+  assert.match(worker,/\/api\/site-improvement\/evaluate/);
+  assert.match(worker,/super_admin_required/);
+  assert.match(worker,/runScheduledSiteImprovement\(env\)/);
+  assert.match(siteWorker,/site-improvement\\\/\(\?:status\|evaluate\)/);
+  assert.match(admin,/commonAiImprovementEvaluate/);
+  assert.match(admin,/ai\/site-improvement\/status/);
+  assert.match(admin,/ai\/site-improvement\/evaluate/);
+});
