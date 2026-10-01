@@ -52,7 +52,9 @@ test('open banking requires contract, canonical redirect, security stores, appro
   assert.equal(configured.openBankingConfigured,true);
   assert.equal(configured.openBankingReadReady,false);
   const bound=buildIntegrationReadiness({...configuredEnv,KFTC_OPENBANKING_ADAPTER:{fetch:async()=>new Response('{}')}});
-  assert.equal(bound.openBankingReadReady,true);
+  assert.equal(bound.openBankingReadReady,false);
+  const explicitlyReady=buildIntegrationReadiness({...configuredEnv,KFTC_OPENBANKING_ADAPTER:{fetch:async()=>new Response('{}')},KFTC_OPENBANKING_ADAPTER_READY:'true'});
+  assert.equal(explicitlyReady.openBankingReadReady,true);
   assert.equal(bound.financialExecution,false);
   assert.equal(kftcOpenBankingReadiness(configuredEnv).transferReady,false);
 });
@@ -78,9 +80,9 @@ test('Money production contract is apex-only and Finance bridge is read-only',as
   const retired=['money','ekodi','kr'].join('.');
   for(const [path,source] of files)assert.equal(source.includes(retired),false,`${path} must not retain the retired Money public host`);
   const prod=files.find(([path])=>path==='wrangler.money.toml')[1];
-  assert.match(prod,/workers_dev = true/);assert.doesNotMatch(prod,/\[\[routes\]\]/);assert.match(prod,/binding = "FINANCE"[\s\S]*service = "ekodi-finance-api"/);
+  assert.match(prod,/workers_dev = true/);assert.doesNotMatch(prod,/\[\[routes\]\]/);assert.match(prod,/binding = "FINANCE"[\s\S]*service = "ekodi-finance-api"/);assert.match(prod,/binding = "KFTC_OPENBANKING_ADAPTER"[\s\S]*service = "ekodi-kftc-openbanking-adapter"/);
   const manifest=JSON.parse(files.find(([path])=>path==='deploy/manifests/money.worker.json')[1]);
-  assert.ok(manifest.worker.requests.some(item=>item.url==='https://ekodi.kr/money/'));assert.ok(manifest.worker.requests.some(item=>item.url==='https://ekodi.kr/money/api/finance-bridge'));
+  assert.ok(manifest.worker.requests.some(item=>item.url==='https://ekodi.kr/money/'));assert.ok(manifest.worker.requests.some(item=>item.url==='https://ekodi.kr/money/api/finance-bridge'));assert.ok(manifest.worker.requests.some(item=>item.url==='https://ekodi.kr/money/api/kftc-adapter-health'));
   const worker=await readFile(new URL('../money-worker.js',import.meta.url),'utf8');
   assert.match(worker,/finance\.internal\/api\/finance\/banking\/health/);assert.doesNotMatch(worker,/finance\.internal\/api\/finance\/banking\/(?:accounts|transactions|transfers)/);assert.match(worker,/financialExecution:false/);
 });

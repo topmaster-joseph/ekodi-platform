@@ -10,10 +10,15 @@ DATA_MODE = "production"
 AUTH_URL = "https://ekodi.kr/auth/?site=money&return_to=https%3A%2F%2Fekodi.kr%2Fmoney%2F"
 ACCOUNTINFO_URL = "https://www.payinfo.or.kr/main/main.do"
 KFTC_OPENBANKING_REDIRECT_URI = "https://ekodi.kr/money/oauth/kftc/callback"
+KFTC_OPENBANKING_ADAPTER_READY = "false"
 
 [[services]]
 binding = "FINANCE"
 service = "ekodi-finance-api"
+
+[[services]]
+binding = "KFTC_OPENBANKING_ADAPTER"
+service = "ekodi-kftc-openbanking-adapter"
 
 [assets]
 directory = "./money"

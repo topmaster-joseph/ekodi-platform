@@ -99,6 +99,20 @@
           "\"connected\":true",
           "\"financialExecution\":false"
         ]
+      },
+      {
+        "url": "https://ekodi.kr/money/api/kftc-adapter-health",
+        "statuses": [
+          200
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "KFTC adapter health is verified after Money promotion through the production service binding.",
+        "expect": [
+          "\"service\":\"ekodi-kftc-openbanking-adapter\"",
+          "\"connected\":true",
+          "\"ready\":false",
+          "\"transferExecution\":false"
+        ]
       }
     ]
   }
