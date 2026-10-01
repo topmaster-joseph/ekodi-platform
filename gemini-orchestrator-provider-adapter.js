@@ -17,6 +17,30 @@ function text(value, max = 12_000) {
   return String(value ?? '').trim().slice(0, max);
 }
 
+function geminiKeyPool(env = {}) {
+  const rows = [];
+  const seen = new Set();
+  const add = (key, label = '', projectId = '') => {
+    const value = text(key, 8192);
+    if (!value || seen.has(value)) return;
+    seen.add(value);
+    rows.push(Object.freeze({ key: value, label: text(label, 120), projectId: text(projectId, 160) }));
+  };
+  add(env.GEMINI_API_KEY || env.GOOGLE_AI_API_KEY, 'primary', env.GEMINI_PROJECT_ID || '');
+  add(env.GEMINI_API_KEY_2, 'slot-2', env.GEMINI_PROJECT_ID_2 || '');
+  add(env.GEMINI_API_KEY_3, 'slot-3', env.GEMINI_PROJECT_ID_3 || '');
+  add(env.GEMINI_API_KEY_4, 'slot-4', env.GEMINI_PROJECT_ID_4 || '');
+  add(env.GEMINI_API_KEY_5, 'slot-5', env.GEMINI_PROJECT_ID_5 || '');
+  try {
+    const parsed = JSON.parse(text(env.GEMINI_API_KEY_POOL_JSON, 32000) || '[]');
+    if (Array.isArray(parsed)) for (const item of parsed) {
+      if (typeof item === 'string') add(item, 'pool', '');
+      else if (item && typeof item === 'object' && item.authorized === true) add(item.key, item.label || item.ownerLabel || 'pool', item.projectId || '');
+    }
+  } catch {}
+  return Object.freeze(rows);
+}
+
 async function budgetGuard(env) {
   if (!env.DB?.prepare) {
     if (String(env.ENVIRONMENT || '').toLowerCase() === 'production') throw new Error('AI_USAGE_METER_UNAVAILABLE');
@@ -52,7 +76,8 @@ function normalizeUsage(raw = {}) {
 }
 
 export function createGeminiOrchestratorProvider(env = {}, options = {}) {
-  const apiKey = text(env.GEMINI_API_KEY || env.GOOGLE_AI_API_KEY, 512);
+  const keyPool = geminiKeyPool(env);
+  const apiKey = keyPool[0]?.key || '';
   const model = text(env.GEMINI_ORCHESTRATOR_MODEL || env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL, 120) || DEFAULT_GEMINI_MODEL;
   const fetchImpl = options.fetchImpl || globalThis.fetch;
   const available = Boolean(apiKey && typeof fetchImpl === 'function');
@@ -73,31 +98,43 @@ export function createGeminiOrchestratorProvider(env = {}, options = {}) {
         salt: crypto.randomUUID(),
       });
       const endpoint = `${GEMINI_BASE_URL}/${encodeURIComponent(model)}:generateContent`;
-      const response = await fetchImpl(endpoint, {
-        method: 'POST',
-        headers: {
-          'x-goog-api-key': apiKey,
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM }] },
-          contents: [{ role: 'user', parts: [{ text: buildInput(taskName, projected) }] }],
-          generationConfig: { maxOutputTokens: 1_500 },
-        }),
-      });
+      let response = null;
       let data = null;
-      try { data = await response.json(); } catch {}
-      if (!response.ok) {
+      let selectedCredential = null;
+      let lastError = null;
+      for (const credential of keyPool) {
+        selectedCredential = credential;
+        response = await fetchImpl(endpoint, {
+          method: 'POST',
+          headers: {
+            'x-goog-api-key': credential.key,
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: SYSTEM }] },
+            contents: [{ role: 'user', parts: [{ text: buildInput(taskName, projected) }] }],
+            generationConfig: { maxOutputTokens: 1_500 },
+          }),
+        });
+        data = null;
+        try { data = await response.json(); } catch {}
+        if (response.ok) {
+          lastError = null;
+          break;
+        }
         const error = new Error(`GEMINI_HTTP_${response.status}`);
         error.status = response.status;
         const retryAfter = Number(response.headers?.get?.('retry-after'));
         if (Number.isFinite(retryAfter) && retryAfter > 0) error.retryAfterSeconds = retryAfter;
+        const detail = text(data?.error?.message, 1200).toLowerCase();
         if (response.status === 429) {
-          const detail = text(data?.error?.message, 1200).toLowerCase();
           error.quota = Object.freeze({ state: /daily|per day|requests per day|\brpd\b|daily[_ -]?limit|quota[_ -]?exhausted/.test(detail) ? 'exhausted' : 'throttled' });
         }
-        throw error;
+        lastError = error;
+        const credentialSpecific = response.status === 401 || response.status === 403 || response.status === 429 || (response.status === 400 && /api.?key|credential|quota/.test(detail));
+        if (!credentialSpecific) break;
       }
+      if (!response?.ok) throw lastError || new Error('GEMINI_PROVIDER_UNAVAILABLE');
       const output = extractText(data);
       if (!output) throw new Error('GEMINI_EMPTY_RESPONSE');
       const usage = normalizeUsage(data?.usageMetadata || {});
@@ -111,7 +148,7 @@ export function createGeminiOrchestratorProvider(env = {}, options = {}) {
           usage,
         }).catch(() => {});
       }
-      return Object.freeze({ text: output, model, responseId: String(response.headers?.get?.('x-request-id') || ''), usage });
+      return Object.freeze({ text: output, model, responseId: String(response.headers?.get?.('x-request-id') || ''), usage, credential: Object.freeze({ label: selectedCredential?.label || '', projectId: selectedCredential?.projectId || '' }) });
     },
   });
 }
@@ -120,7 +157,8 @@ export function getGeminiOrchestratorProviderStatus(env = {}) {
   const provider = createGeminiOrchestratorProvider(env);
   return Object.freeze({
     id: provider.id,
-    configured: Boolean(text(env.GEMINI_API_KEY || env.GOOGLE_AI_API_KEY, 512)),
+    configured: geminiKeyPool(env).length > 0,
+    credentialCount: geminiKeyPool(env).length,
     available: provider.available,
     model: provider.model,
   });
