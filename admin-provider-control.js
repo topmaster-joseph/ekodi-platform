@@ -110,6 +110,66 @@
 .ekodi-ai-routes form{border-top:1px solid #dedede;padding-top:5px}
 .ekodi-ai-routes form:first-of-type{border-top:0}
 .ekodi-ai-provider-fields input[type=checkbox]{accent-color:#111}
+/* AI-PROVIDER-BLACK-TEXT-WHITE-BG-20261002 */
+#aiOpsPanel [data-ekodi-ai-provider-center],
+#aiOpsPanel [data-ekodi-ai-provider-center] *,
+#aiOpsPanel [data-ekodi-unified-provider],
+#aiOpsPanel [data-ekodi-unified-provider] *{color:#000!important}
+#aiOpsPanel [data-ekodi-ai-provider-center],
+#aiOpsPanel [data-ekodi-ai-provider-center] article,
+#aiOpsPanel [data-ekodi-ai-provider-center] form,
+#aiOpsPanel [data-ekodi-ai-provider-center] details,
+#aiOpsPanel [data-ekodi-ai-provider-center] input,
+#aiOpsPanel [data-ekodi-ai-provider-center] select,
+#aiOpsPanel [data-ekodi-ai-provider-center] button,
+#aiOpsPanel [data-ekodi-ai-provider-center] a,
+#aiOpsPanel [data-ekodi-ai-provider-center] span,
+#aiOpsPanel [data-ekodi-unified-provider],
+#aiOpsPanel [data-ekodi-unified-provider] article,
+#aiOpsPanel [data-ekodi-unified-provider] input,
+#aiOpsPanel [data-ekodi-unified-provider] select,
+#aiOpsPanel [data-ekodi-unified-provider] button,
+#aiOpsPanel [data-ekodi-unified-provider] a{background:#fff!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] button,
+#aiOpsPanel [data-ekodi-ai-provider-center] a,
+#aiOpsPanel [data-ekodi-unified-provider] button,
+#aiOpsPanel [data-ekodi-unified-provider] a{border:1px solid #111!important;color:#000!important;font-weight:800!important;text-decoration:none!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] button:hover:not(:disabled),
+#aiOpsPanel [data-ekodi-ai-provider-center] a:hover,
+#aiOpsPanel [data-ekodi-unified-provider] button:hover,
+#aiOpsPanel [data-ekodi-unified-provider] a:hover{background:#f2f2f2!important;color:#000!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] button:disabled{color:#666!important;background:#f7f7f7!important;border-color:#aaa!important;opacity:1!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-card,
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-summary article,
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-status-note,
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-no-secret,
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-cost-alert,
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-secret-manager-warning,
+#aiOpsPanel [data-ekodi-unified-provider] .ekodi-up-status{background:#fff!important;border-color:#aaa!important;box-shadow:none!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-state,
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-state.ok,
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-state.warn,
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-meta span,
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-meta .warn,
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-chain-step,
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-chain-step b{background:#fff!important;color:#000!important;border-color:#111!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-state.ok{border-style:solid!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-state.warn{border-style:dashed!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] :where(p,small,label,span,output,summary,strong,h3,h4){color:#000!important;opacity:1!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] input,
+#aiOpsPanel [data-ekodi-ai-provider-center] select{color:#000!important;background:#fff!important;border:1px solid #888!important;font-weight:650!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] input::placeholder{color:#444!important;opacity:1!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] input:focus,
+#aiOpsPanel [data-ekodi-ai-provider-center] select:focus{outline:2px solid #000!important;outline-offset:1px!important;border-color:#000!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-title p,
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-status-note,
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-card output{font-size:12px!important;line-height:1.35!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-card h4{font-size:14px!important;font-weight:800!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-fields label,
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-secret{font-size:12px!important;font-weight:750!important}
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-provider-meta span,
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-state,
+#aiOpsPanel [data-ekodi-ai-provider-center] .ekodi-ai-chain-step{font-size:11px!important;font-weight:750!important}
 `;document.head.appendChild(s)}
   function message(card,text,error=false){const out=card.querySelector('[data-ai-message]');if(out){out.textContent=text;out.dataset.error=error?'true':'false'}}
   function bindInfra(root){root.querySelectorAll('[data-up]').forEach(el=>el.addEventListener('change',()=>{const key=el.dataset.up,patch={[key]:el.value};if(key==='provider')Object.assign(patch,{account:'',scope:'',runtime:''});setSelection(patch)}))}
