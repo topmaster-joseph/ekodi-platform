@@ -506,9 +506,9 @@ export default {
     const publicationGuard=await sitePublicationGuard(request,env);
     if(publicationGuard)return applyPlatformSecurityHeaders(publicationGuard,request);
     const adminPublicationSite=await resolvePublicationSiteForRequest(request,env,{admin:true});
-    const response=await routePlatform(request,env,ctx);
-    const decorated=adminPublicationSite?injectSitePublicationAdmin(response,adminPublicationSite):response;
-    return applyPlatformSecurityHeaders(decorated,request);
+    let response=await routePlatform(request,env,ctx);
+    if(adminPublicationSite)response=injectSitePublicationAdmin(response,adminPublicationSite);
+    return applyPlatformSecurityHeaders(response,request);
   },
   async queue(batch,env){
     for(const message of batch.messages){
