@@ -55,6 +55,7 @@ import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './
 import { handleSeonamMediCivicApi, consumeSeonamMediVoiceMessage } from './seonammedi-civic-control.js';
 import { handleSeonamMediAdminApi } from './seonammedi-admin-control.js';
 import { handleSeonamMediMonitorApi } from './seonammedi-monitor.js';
+import { injectSitePublicationAdmin, resolvePublicationSiteForRequest, sitePublicationAdminAsset, sitePublicationGuard } from './site-publication-runtime.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const CGMA_HOSTS=new Set(['cgma.or.kr','www.cgma.or.kr']);
@@ -516,7 +517,13 @@ export default {
     if(guard)return applyPlatformSecurityHeaders(guard,request);
     const canonicalQueryRedirect=canonicalTrackingQueryRedirect(request);
     if(canonicalQueryRedirect)return applyPlatformSecurityHeaders(canonicalQueryRedirect,request);
-    const response=await routePlatform(request,env,ctx);
+    const publicationAsset=sitePublicationAdminAsset(request);
+    if(publicationAsset)return applyPlatformSecurityHeaders(publicationAsset,request);
+    const publicationGuard=await sitePublicationGuard(request,env);
+    if(publicationGuard)return applyPlatformSecurityHeaders(publicationGuard,request);
+    const adminPublicationSite=await resolvePublicationSiteForRequest(request,env,{admin:true});
+    let response=await routePlatform(request,env,ctx);
+    if(adminPublicationSite)response=injectSitePublicationAdmin(response,adminPublicationSite);
     return applyPlatformSecurityHeaders(response,request);
   },
   async queue(batch,env){
