@@ -22,7 +22,7 @@ export function createOpenRouterFreeProvider(env={},options={}){
   const enabled=['1','true','yes','on','enabled'].includes(clean(env.EKODI_PROVIDER_OPENROUTER_FREE_ENABLED,20).toLowerCase());
   const available=Boolean(enabled&&key&&typeof fetchImpl==='function');
   return Object.freeze({
-    id:'openrouter-free',model,available,priority:20,costClass:'free-preferred',
+    id:'openrouter-free',model,available,priority:Math.max(1,Math.min(999,Math.floor(number(env.EKODI_OPENROUTER_FREE_PRIORITY,20)))),costClass:'free-preferred',
     async invoke({prompt='' }={}){
       if(!available)throw new Error('openrouter_free_not_configured');
       const reservation=await reserveFreeDailyRequest(env,'openrouter-free',dailyLimit(env));
