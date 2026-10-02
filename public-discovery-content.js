@@ -101,7 +101,7 @@ async function ledgerItems(env){
 }
 
 async function seonamNoticeItems(env){
-  if(!env?.DB||!await tableExists(env.DB,'seonammedi_notices'))return [];
+  if(!env?.DB)return [];
   try{
     const rows=await env.DB.prepare(`SELECT id,title,body,notice_kind,published_at,updated_at
       FROM seonammedi_notices WHERE status='published' ORDER BY COALESCE(published_at,updated_at) DESC LIMIT 1000`).all();
@@ -127,7 +127,7 @@ export async function collectPublicDiscoveryItems(env){
 }
 
 async function seonamNoticePage(env,id){
-  if(!env?.DB||!await tableExists(env.DB,'seonammedi_notices'))return null;
+  if(!env?.DB)return null;
   const row=await env.DB.prepare(`SELECT id,title,body,notice_kind,published_at,updated_at,image_key,image_keys_json
     FROM seonammedi_notices WHERE id=? AND status='published' LIMIT 1`).bind(id).first().catch(()=>null);
   if(!row)return null;

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { collectPublicDiscoveryItems } from '../public-discovery-content.js';
 import { buildEkodiPublicRegistry, ekodiDynamicSitemapResponse, ekodiDynamicLlmsResponse } from '../public-discovery-registry.js';
 
@@ -82,4 +83,12 @@ test('dynamic sitemap and llms are generated from central registry',async()=>{
   assert.match(text,/자담치킨 공개 서비스/);
   assert.match(text,/공개 공지/);
   assert.equal(llms.headers.get('x-ekodi-route'),'dynamic-public-llms');
+});
+
+
+test('wrangler routes dynamic discovery artifacts through Worker first',async()=>{
+  const config=await readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
+  assert.match(config,/run_worker_first\s*=\s*\[[^\]]*"\/sitemap\.xml"/s);
+  assert.match(config,/run_worker_first\s*=\s*\[[^\]]*"\/llms\.txt"/s);
+  assert.match(config,/run_worker_first\s*=\s*\[[^\]]*"\/public-registry\.json"/s);
 });
