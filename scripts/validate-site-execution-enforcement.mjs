@@ -1,7 +1,8 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 
 const readJson=async path=>JSON.parse((await readFile(new URL(`../${path}`,import.meta.url),'utf8')).replace(/^\uFEFF/,''));
 const read=async path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
+const walkJs=async dir=>{const out=[];for(const entry of await readdir(dir,{withFileTypes:true})){const child=new URL(entry.name+(entry.isDirectory()?'/':''),dir);if(entry.isDirectory())out.push(...await walkJs(child));else if(entry.isFile()&&entry.name.endsWith('.js'))out.push(child)}return out};
 
 const [policy,registry,pkg,scheduler,workflow,liveVerifier]=await Promise.all([
   readJson('config/site-execution-enforcement.json'),
@@ -15,7 +16,12 @@ const [policy,registry,pkg,scheduler,workflow,liveVerifier]=await Promise.all([
 const failures=[];
 const fail=message=>failures.push(message);
 
-if(policy.schemaVersion!==2||policy.policyId!=='SITE-EXECUTION-ENFORCEMENT-001'||policy.status!=='enforced')fail('site execution policy must remain enforced schema v2');
+if(policy.schemaVersion!==3||policy.policyId!=='SITE-EXECUTION-ENFORCEMENT-001'||policy.status!=='enforced')fail('site execution policy must remain enforced schema v3');
+const authEntry=policy.authenticationEntry||{};
+if(authEntry.policyId!=='SITE-CENTRAL-AUTH-ENTRY-001'||authEntry.status!=='enforced')fail('central site auth-entry policy must remain enforced');
+if(authEntry.centralEntry!=='https://ekodi.kr/auth/')fail('site auth entry must remain the canonical EKODI auth path');
+if(authEntry.siteLocalAuthPathForbidden!==true||authEntry.exactInitiatingReturnRequired!==true)fail('site-local auth routes must be forbidden and exact initiating return required');
+if(authEntry.futureSitesAutoInherit!==true||authEntry.perSiteOptOutAllowed!==false)fail('central auth entry must auto-inherit to future sites with no per-site opt-out');
 const scopePolicy=policy.changeScopeClassification||{};
 if(scopePolicy.policyId!=='SITE-CHANGE-SCOPE-001'||scopePolicy.status!=='enforced')fail('site change scope classification must remain enforced');
 for(const key of ['platform_common','shared_service_engine','site_specific'])if(!scopePolicy.classes?.[key])fail(`missing site change scope class: ${key}`);
@@ -80,6 +86,13 @@ if(canonicalCount<1)fail('no canonical workspace sites are covered by enforcemen
 if(!liveVerifier.includes('PUBLIC_HEADER_FORBIDDEN'))fail('live verifier must enforce the public-header forbidden-label set');
 for(const label of policy.publicHeader?.forbiddenLabels||[])if(!liveVerifier.includes(label))fail(`live verifier missing public-header forbidden label: ${label}`);
 if(!liveVerifier.includes('data-ekodi-operating-space-label'))fail('live verifier must reject the legacy operating-space marker from public headers');
+
+const siteScripts=await walkJs(new URL('../sites/',import.meta.url));
+const localAuthPattern=/new URL\(\s*['"]\/auth\/['"]\s*,\s*location\.origin\s*\)/;
+for(const scriptUrl of siteScripts){
+  const source=await readFile(scriptUrl,'utf8');
+  if(localAuthPattern.test(source))fail(\`${scriptUrl.pathname.split('/').slice(-4).join('/')}: site-local /auth/ entry is forbidden; use https://ekodi.kr/auth/ and preserve return_to\`);
+}
 
 if(registry.workspaceServicePolicy?.canonicalPattern!==policy.canonicalAddressing?.descendantPattern)fail('workspace service canonical pattern must match recursive enforcement policy');
 if(policy.canonicalAddressing?.adminPattern!=='https://ekodi.kr/{slug}/admin')fail('site admin canonical pattern drifted');
