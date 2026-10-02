@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS seonammedi_channel_previews (
 CREATE INDEX IF NOT EXISTS idx_seonammedi_channel_previews_updated
   ON seonammedi_channel_previews(updated_at);
 
--- Current verified public Instagram post for @wonokoh.
+-- Current verified public Instagram post for @wonokoh. Keep this seed replaceable from the admin channel editor.
 -- Administrators can replace this from the channel editor when a newer post should be pinned.
 INSERT INTO seonammedi_channel_previews(channel_id,preview_url,updated_at)
 SELECT c.id,'https://www.instagram.com/wonokoh/p/Dd8q1vCSlhT/',CURRENT_TIMESTAMP
