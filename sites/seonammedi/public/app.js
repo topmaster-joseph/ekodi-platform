@@ -342,7 +342,7 @@ const channelPreviewEmbedUrl=(policy,data={})=>{
   if(policy==='embed')return safeUrl(data.embedUrl||'');
   if(policy==='recent-embed'){
     const latest=Array.isArray(data.recentItems)?data.recentItems[0]:null;
-    return safeUrl(latest?.embedUrl||'');
+    return safeUrl(latest?.embedUrl||data.embedUrl||'');
   }
   if(policy==='provider-embed')return safeUrl(data.embedUrl||'');
   return '#';
