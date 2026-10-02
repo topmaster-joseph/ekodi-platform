@@ -285,6 +285,7 @@ if(voiceForm){
       voiceForm.reset();
       status.textContent=body.message||'등록되었습니다.';
       await loadPublicVoices();
+      if(body.queued){setTimeout(loadPublicVoices,900);setTimeout(loadPublicVoices,2500)}
     }catch(error){
       status.textContent=error.message||'등록하지 못했습니다. 잠시 후 다시 시도해 주세요.';
     }finally{
