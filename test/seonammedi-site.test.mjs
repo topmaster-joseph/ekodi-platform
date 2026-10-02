@@ -612,3 +612,10 @@ test('seonammedi notice composer places attachments before body, compresses to 5
   assert.match(app,/첨부 사진을 본문에 함께 표시합니다/);
   assert.match(control,/image\.size\|\|0\)>5\*1024\*1024/);
 });
+
+
+test('seonammedi admin current-status opens directly on activity history without duplicate summary editor',async()=>{
+  const adminHtml=await readFile(new URL('admin/index.html',root),'utf8');
+  assert.doesNotMatch(adminHtml,/CURRENT STATUS|<h1>현재상황 관리<\/h1>|id="statusForm"/);
+  assert.match(adminHtml,/data-panel="status"[\s\S]*?data-records-admin-panel="timeline"[\s\S]*?<h1>활동이력 관리<\/h1>/);
+});
