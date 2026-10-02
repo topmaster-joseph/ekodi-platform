@@ -320,7 +320,7 @@ test('seonammedi exposes seeded related channels on public and admin surfaces',a
   assert.match(app,/renderChannelFallback/);
   assert.match(app,/data-channel-index/);
   assert.match(app,/ArrowLeft/);
-  assert.match(app,/showChannelPreview\(0\)/);
+  assert.match(app,/renderChannelPlatformTabs/);assert.match(app,/showChannelPreview\(publicChannels\.indexOf\(rows\[0\]\)\)/);
   assert.match(adminHtml,/data-panel-target="channels"/);
   assert.match(adminHtml,/채널 관리/);
   assert.match(migration,/instagram\.com\/wonokoh/);
