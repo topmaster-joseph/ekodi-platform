@@ -316,9 +316,10 @@ function noticeLoginUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchPara
 function noticePermalink(id){return location.origin+'/seonammedi/notices/'+encodeURIComponent(id)}
 function noticeDate(item){const raw=item.publishedAt||item.updatedAt||'';return raw?new Date(raw).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):''}
 function noticeCard(item){const image=item.imageUrl?'<img src="'+escapeHtml(item.imageUrl)+'" alt="" loading="lazy">':'<span class="notice-thumb-empty">공지</span>';return '<article class="notice-item" data-notice-id="'+item.id+'"><a class="notice-open" href="'+noticePermalink(item.id)+'">'+image+'<div class="notice-row-copy"><h3>'+escapeHtml(item.title||'공지')+(item.pinned?'<span class="notice-pin">중요</span>':'')+'</h3><p>'+escapeHtml(item.body||'')+'</p></div><small class="notice-row-date">'+escapeHtml(noticeDate(item))+'</small></a></article>'}
+function noticeSessionEmail(){try{const raw=localStorage.getItem('ekodi.supabase.session')||localStorage.getItem(NOTICE_SESSION_KEY)||'{}';const parsed=JSON.parse(raw);const session=parsed?.currentSession||parsed?.session||parsed;return String(session?.user?.email||parsed?.user?.email||'').toLowerCase()}catch{return''}}
 function showNoticeDetail(item){
   const detail=el('noticeDetail');if(!detail)return;const images=(item.imageUrls?.length?item.imageUrls:(item.imageUrl?[item.imageUrl]:[])).map(url=>'<img src="'+escapeHtml(url)+'" alt="" class="notice-detail-image" loading="lazy">').join('');
-  const mine=noticeToken()&&String(item.createdBy||'').toLowerCase()===String(JSON.parse(localStorage.getItem('ekodi.supabase.session')||'{}')?.user?.email||'').toLowerCase();
+  const mine=noticeToken()&&String(item.createdBy||'').toLowerCase()===noticeSessionEmail();
   detail.innerHTML='<button type="button" class="notice-back">목록</button><div class="notice-detail-images">'+images+'</div><h3>'+escapeHtml(item.title||'공지')+'</h3><p>'+escapeHtml(item.body||'')+'</p><small>'+escapeHtml(noticeDate(item))+'</small><div class="notice-detail-actions"><button type="button" class="notice-share">공유</button>'+(mine?'<button type="button" class="notice-delete">삭제</button>':'')+'</div>';
   detail.hidden=false;el('noticeList').hidden=true;
   detail.querySelector('.notice-back')?.addEventListener('click',()=>{detail.hidden=true;el('noticeList').hidden=false;history.replaceState(null,'',location.pathname+'#notices')});
@@ -329,7 +330,7 @@ function renderFeaturedNotice(rows){
   const host=el('homeSpotlight');if(!host)return;const now=Date.now(),recent=[...rows].sort((a,b)=>String(b.publishedAt||b.updatedAt||'').localeCompare(String(a.publishedAt||a.updatedAt||'')));
   const activeEvents=recent.filter(item=>item.kind==='event'&&(!item.eventEnd||new Date(item.eventEnd).getTime()>=now));
   const priority=recent.filter(item=>item.featured&&item.kind!=='event'),latestNotices=recent.filter(item=>item.kind!=='event');
-  const selected=[];for(const item of [...activeEvents,...priority,...latestNotices])if(!selected.some(x=>x.id===item.id))selected.push(item);const items=selected.slice(0,4);
+  const selected=[];const add=item=>{if(item&&!selected.some(x=>x.id===item.id))selected.push(item)};if(activeEvents.length&&latestNotices.length){add(activeEvents[0]);add(priority[0]||latestNotices[0])}for(const item of [...activeEvents,...priority,...latestNotices])add(item);const items=selected.slice(0,4);
   host.hidden=!items.length;host.innerHTML=items.map(item=>'<a class="spotlight-card" href="'+noticePermalink(item.id)+'">'+(item.imageUrl?'<img src="'+escapeHtml(item.imageUrl)+'" alt="" loading="eager">':'<span class="spotlight-placeholder">공지</span>')+'<span class="spotlight-copy"><small>'+(item.kind==='event'?'행사·일정':'최근 게시글')+'</small><strong>'+escapeHtml(item.title||'공지')+'</strong><em>게시글 보기</em></span></a>').join('');
   document.querySelector('.hero')?.classList.toggle('has-spotlight',items.length>0);
 }
