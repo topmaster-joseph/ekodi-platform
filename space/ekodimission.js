@@ -18,9 +18,27 @@
   const registrationApi=`/ekodimission/api/activities/${encodeURIComponent(applicationRecordKey)}/registration`;
   const shareStatus=m=>document.querySelectorAll('[data-share-status]').forEach(el=>el.textContent=m);
   async function copy(v,m){try{await navigator.clipboard.writeText(v)}catch{const t=document.createElement('textarea');t.value=v;document.body.append(t);t.select();document.execCommand('copy');t.remove()}shareStatus(m)}
+  const paymentSheet=document.querySelector('[data-mission-pay-sheet]');
+  const paymentStatus=()=>paymentSheet?.querySelector('[data-mission-pay-status]');
+  const paymentAmount=()=>String(document.querySelector('[data-trip-fee]')?.textContent||'50,000원').trim();
+  const paymentAccount=()=>String(document.querySelector('[data-mission-pay-account]')?.textContent||'100-033-234271').trim();
+  const showPayment=()=>{
+    if(!paymentSheet)return;
+    paymentSheet.hidden=false;
+    document.body.classList.add('mission-pay-open');
+    paymentSheet.querySelector('[data-mission-pay-amount]').textContent=paymentAmount();
+    paymentSheet.querySelector('[data-mission-pay-account]').textContent=paymentAccount();
+    setTimeout(()=>paymentSheet.querySelector('[data-mission-copy-account]')?.focus(),0);
+  };
+  const hidePayment=()=>{if(!paymentSheet)return;paymentSheet.hidden=true;document.body.classList.remove('mission-pay-open')};
+  const copyPayment=async(value,message)=>{await copy(value,message);const el=paymentStatus();if(el)el.textContent=message};
   document.addEventListener('click',async e=>{
     if(e.target.closest('[data-share-event]')){if(navigator.share){try{await navigator.share({title,text:shareText,url});shareStatus('공유 창을 열었습니다.')}catch(err){if(err?.name!=='AbortError')await copy(url,'행사 링크를 복사했습니다.')}}else await copy(url,'행사 링크를 복사했습니다.');return}
-    if(e.target.closest('[data-copy-invite]'))await copy(invite,'초대문을 복사했습니다.');
+    if(e.target.closest('[data-copy-invite]')){await copy(invite,'초대문을 복사했습니다.');return}
+    if(e.target.closest('[data-mission-pay-open]')){showPayment();return}
+    if(e.target.closest('[data-mission-pay-close]')){hidePayment();return}
+    if(e.target.closest('[data-mission-copy-account]')){await copyPayment(paymentAccount().replace(/-/g,''),'계좌번호를 복사했습니다.');return}
+    if(e.target.closest('[data-mission-copy-payment]')){await copyPayment('참가비 '+paymentAmount()+' · 신한은행 '+paymentAccount(),'납부 금액과 계좌를 복사했습니다.');return}
   });
   const tripNodes=document.querySelectorAll('[data-trip-content]');
   if(tripNodes.length){
@@ -51,6 +69,7 @@
     .then(r=>r.ok?r.json():null)
     .then(data=>{if(data?.ok&&!data.registration_open)closeApplication(data)})
     .catch(()=>{});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!paymentSheet?.hidden)hidePayment()});
   form.addEventListener('submit',async e=>{
     e.preventDefault();status.textContent='';status.dataset.state='';
     if(!form.reportValidity())return;
@@ -61,9 +80,11 @@
       const response=await fetch(api,{method:'POST',headers:{'content-type':'application/json','accept':'application/json'},body:JSON.stringify(payload),credentials:'same-origin'});
       const result=await response.json().catch(()=>({}));
       if(!response.ok||!result.ok||!result.applicationId)throw new Error(result.message||'신청 저장을 확인하지 못했습니다. 다시 신청해 주세요.');
-      status.dataset.state='success';status.textContent='신청이 완료되었습니다. 같은 연락처로 다시 신청하면 내용이 업데이트됩니다.';
+      status.dataset.state='success';status.textContent='신청이 완료되었습니다. 아직 참가비를 납부하지 않았다면 바로 납부해 주세요.';
       try{const bus=new BroadcastChannel('ekodi-mission-applications-v1');bus.postMessage({activityKey:applicationRecordKey,applicationId:result.applicationId,at:Date.now()});bus.close()}catch{}
       submit.textContent='신청 완료';
+      const after=document.createElement('button');after.type='button';after.className='apply-submit mission-pay-after';after.dataset.missionPayOpen='';after.textContent='참가비 바로 납부하기';status.insertAdjacentElement('afterend',after);
+      setTimeout(()=>after.focus(),0);
     }catch(error){status.dataset.state='error';status.textContent=error?.message||'신청을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.';submit.disabled=false;submit.textContent='다시 신청하기';}
   });
 })();
