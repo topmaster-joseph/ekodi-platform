@@ -100,6 +100,20 @@ for (const preserved of ['orchestration-gate','human-gates','security-boundaries
   if (!(minorIssueRecovery.preserve || []).includes(preserved)) fail(`minor issue recovery must preserve: ${preserved}`);
 }
 
+const systemwideSelfRecovery = policy.execution?.systemwideSelfRecovery || {};
+if (systemwideSelfRecovery.policyId !== 'SYSTEMWIDE-SELF-RECOVERY-001' || systemwideSelfRecovery.status !== 'enforced') fail('systemwide self recovery policy must remain enforced.');
+for (const key of ['externalFailureIsNotTerminalByDefault','safeAlternativeRequiredBeforeEscalation','automaticProviderOrLaneFailover','automaticRetryWithBackoff','circuitBreakerRequired','degradedModeAllowedWhenSafe','rootCauseRemovalForRecurringIncidents','userInterruptionForbiddenForResolvableFailure','completionRequiresVerifiedRecoveryOrExplicitTerminalWait']) {
+  if (systemwideSelfRecovery[key] !== true) fail(`systemwide self recovery rule must remain true: ${key}`);
+}
+if (systemwideSelfRecovery.defaultDisposition !== 'self-resolve-and-continue') fail('systemwide failures must default to self resolution and continuation.');
+const requiredSystemwideLoop = ['detect','isolate-impact','diagnose','attempt-primary-repair','discover-safe-alternatives','switch-or-retry','verify','reverify','resume-parent-work'];
+if (JSON.stringify(systemwideSelfRecovery.requiredLoop || []) !== JSON.stringify(requiredSystemwideLoop)) fail('systemwide self recovery loop drifted.');
+for (const preserved of ['security-boundaries','human-gates','data-integrity','audit-trail','orchestration-gate','guarded-release','production-verification']) {
+  if (!(systemwideSelfRecovery.preserve || []).includes(preserved)) fail(`systemwide self recovery must preserve: ${preserved}`);
+}
+const requiredSystemwideEscalations = ['human-authority-required','high-impact-or-irreversible','ambiguous-side-effect','security-or-data-integrity-risk','all-safe-alternatives-exhausted','higher-order-rule-conflict'];
+if (JSON.stringify(systemwideSelfRecovery.escalateOnlyWhen || []) !== JSON.stringify(requiredSystemwideEscalations)) fail('systemwide self recovery escalation boundary drifted.');
+
 const executionFallback = policy.executionFallback || {};
 if (executionFallback.enabled !== true) fail('automatic execution fallback must remain enabled.');
 if (executionFallback.decisionOwner !== policy.orchestrator) fail('execution fallback decision owner must remain the EKODI orchestrator.');
