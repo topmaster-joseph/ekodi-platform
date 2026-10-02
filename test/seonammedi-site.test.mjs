@@ -520,7 +520,7 @@ test('seonammedi notices are an authenticated public board with image and sharin
     readFile(new URL('app.css',root),'utf8'),readFile(new URL('../auth-site/auth.js',import.meta.url),'utf8'),readFile(new URL('../migrations/0122_seonammedi_public_notice_board.sql',import.meta.url),'utf8'),readFile(new URL('../wrangler.api.toml',import.meta.url),'utf8')
   ]);
   assert.match(control,/createPublicNotice/);assert.match(control,/principalFromSupabaseRequest\(request\)/);
-  assert.match(control,/image_too_large/);assert.match(control,/LIVE_RECORDINGS_BUCKET\.put/);assert.match(control,/noticeImageMatch/);
+  assert.match(control,/image_too_large/);assert.match(control,/storeNoticeImageInDrive/);assert.match(control,/binding = "STORAGE"|STORAGE/);assert.match(control,/noticeImageMatch/);
   assert.match(html,/id="noticeComposeForm"/);assert.match(html,/id="homeSpotlight"/);assert.match(html,/사진과 글을 게시/);
   assert.match(app,/navigator\.share/);assert.match(app,/noticePermalink/);assert.match(app,/FormData\(noticeCompose\)/);assert.match(app,/NOTICE_SESSION_KEY/);
   assert.match(app,/recent=\[\.\.\.rows\]\.sort/);assert.match(css,/\.home-spotlight/);assert.match(css,/\.notice-detail/);
@@ -646,4 +646,25 @@ test('seonammedi notice list actions use server-authorized canManage without exp
   assert.match(control,/async function listPublicNotices\(request,env\)/);
   assert.match(control,/canManage:Boolean\(admin\)\|\|Boolean\(email&&lower\(row\.created_by\)===email\)/);
   assert.doesNotMatch(control,/eventEnd:row\.event_end\|\|'',createdBy:row\.created_by\|\|''/);
+});
+
+
+test('seonammedi admin notice Drive storage and five-image flow',async()=>{
+  const [control,adminJs,adminHtml]=await Promise.all([
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+    readFile(new URL('admin/admin.js',root),'utf8'),
+    readFile(new URL('admin/index.html',root),'utf8')
+  ]);
+  assert.match(control,/async function storeNoticeImage\(env,image,principal\)/);
+  assert.match(control,/storeNoticeImageInDrive\(env,image,\{email:principal\?\.email\|\|''\}\)/);
+  assert.match(control,/form\.getAll\('images'\)/);
+  assert.match(control,/if\(images\.length>5\)/);
+  assert.match(control,/image_keys_json/);
+  assert.match(control,/storeNoticeImage\(env,image,auth\)/);
+  assert.match(adminJs,/compressAdminNoticeImage/);
+  assert.match(adminJs,/ADMIN_NOTICE_IMAGE_MAX_BYTES=5\*1024\*1024/);
+  assert.match(adminJs,/payload\.append\('images',file,file\.name\)/);
+  assert.match(adminHtml,/id="adminNoticeImages"/);
+  assert.match(adminHtml,/사진 최대 5장/);
+  assert.doesNotMatch(adminHtml,/최대 8MB/);
 });
