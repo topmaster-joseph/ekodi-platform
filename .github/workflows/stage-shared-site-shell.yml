@@ -51,6 +51,7 @@ on:
       - 'scripts/attest-worker-release-artifact.mjs'
       - 'test/worker-release-artifact-attestation.test.mjs'
       - 'test/discovery-layer.test.mjs'
+      - 'test/public-discovery-runtime.test.mjs'
       - 'scripts/build.mjs'
       - '.github/workflows/stage-shared-site-shell.yml'
 
@@ -112,11 +113,12 @@ jobs:
           node --check marketing-canonical-projection.js
           node --check ekodi-shell-injector.js
           node --check discovery-layer.js
+          node --check public-discovery-runtime.js
           node --check scripts/discovery-build.mjs
           node --check scripts/ops-health-build.mjs
           node --check scripts/attest-worker-release-artifact.mjs
           node --test test/worker-release-artifact-attestation.test.mjs
-          node --test test/marketing-canonical-projection.test.mjs test/insurance-public-route.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/discovery-layer.test.mjs test/learning-page.test.mjs test/learning-routing-contract.test.mjs
+          node --test test/marketing-canonical-projection.test.mjs test/insurance-public-route.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/discovery-layer.test.mjs test/public-discovery-runtime.test.mjs test/learning-page.test.mjs test/learning-routing-contract.test.mjs
           npm run build
           cp auth-site/auth-workspace-target.js dist/auth-workspace-target.js
           test -f dist/insurance/index.html
