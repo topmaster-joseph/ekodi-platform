@@ -85,6 +85,21 @@ if (knowledgeClaimIntegrity.policyId !== 'AI-KNOWLEDGE-CLAIM-001' || knowledgeCl
 for (const key of ['retrievalIsNotVerification','memoryCannotProveCurrentExternalFact','modelOutputIsNeverASource','freshnessMustMatchTemporalSensitivity','contradictionsMustBeSurfaced','claimScopeMustMatchEvidenceScope','materialKnowledgeCitationRequired','finalResponseGuardRequired']) {
   if (knowledgeClaimIntegrity[key] !== true) fail(`knowledge claim integrity orchestration rule must remain true: ${key}`);
 }
+const minorIssueRecovery = policy.execution?.minorIssueAutonomousRecovery || {};
+if (minorIssueRecovery.policyId !== 'MINOR-ISSUE-AUTO-RESOLVE-001' || minorIssueRecovery.status !== 'enforced') fail('minor issue autonomous recovery policy must remain enforced.');
+for (const key of ['appliesPlatformWide','futureComponentsAutoInherit','automaticAlternativeRequired','automaticRetryRequired','rootCauseRemovalWhenRepeated','noUserInterruptionForResolvableMinorIssue','completionRequiresVerifiedResolutionOrExplicitTerminalWait']) {
+  if (minorIssueRecovery[key] !== true) fail(`minor issue autonomous recovery rule must remain true: ${key}`);
+}
+if (minorIssueRecovery.classificationOwner !== policy.orchestrator) fail('minor issue classification must remain owned by the EKODI orchestrator.');
+if (minorIssueRecovery.defaultDisposition !== 'resolve-without-user-interruption') fail('resolvable minor issues must default to autonomous resolution without user interruption.');
+const requiredMinorLoop = ['detect','diagnose','select-safe-primary-fix','discover-safe-alternative-if-primary-blocked','execute','verify','retry-or-switch-alternative','reverify','continue-parent-task'];
+if (JSON.stringify(minorIssueRecovery.requiredLoop || []) !== JSON.stringify(requiredMinorLoop)) fail('minor issue autonomous recovery loop drifted.');
+const requiredMinorEscalations = ['human-authority-required','high-impact-or-irreversible','ambiguous-side-effect','all-registered-safe-alternatives-exhausted','higher-order-rule-conflict'];
+if (JSON.stringify(minorIssueRecovery.escalateOnlyWhen || []) !== JSON.stringify(requiredMinorEscalations)) fail('minor issue escalation boundary drifted.');
+for (const preserved of ['orchestration-gate','human-gates','security-boundaries','audit-trail','guarded-release','production-verification']) {
+  if (!(minorIssueRecovery.preserve || []).includes(preserved)) fail(`minor issue recovery must preserve: ${preserved}`);
+}
+
 const executionFallback = policy.executionFallback || {};
 if (executionFallback.enabled !== true) fail('automatic execution fallback must remain enabled.');
 if (executionFallback.decisionOwner !== policy.orchestrator) fail('execution fallback decision owner must remain the EKODI orchestrator.');
