@@ -303,11 +303,13 @@ function noticePermalink(id){return location.origin+'/seonammedi/?notice='+encod
 function noticeDate(item){const raw=item.publishedAt||item.updatedAt||'';return raw?new Date(raw).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):''}
 function noticeCard(item){const image=item.imageUrl?'<img src="'+escapeHtml(item.imageUrl)+'" alt="" loading="lazy">':'';return '<article class="notice-item" data-notice-id="'+item.id+'"><a class="notice-open" href="'+noticePermalink(item.id)+'">'+image+'<div><h3>'+escapeHtml(item.title||'공지')+(item.pinned?'<span class="notice-pin">중요</span>':'')+'</h3><p>'+escapeHtml(item.body||'')+'</p><small>'+escapeHtml(noticeDate(item))+'</small></div></a></article>'}
 function showNoticeDetail(item){
-  const detail=el('noticeDetail');if(!detail)return;const image=item.imageUrl?'<img src="'+escapeHtml(item.imageUrl)+'" alt="" class="notice-detail-image">':'';
-  detail.innerHTML='<button type="button" class="notice-back">목록</button>'+image+'<h3>'+escapeHtml(item.title||'공지')+'</h3><p>'+escapeHtml(item.body||'')+'</p><small>'+escapeHtml(noticeDate(item))+'</small><div class="notice-detail-actions"><button type="button" class="notice-share">공유</button></div>';
+  const detail=el('noticeDetail');if(!detail)return;const images=(item.imageUrls?.length?item.imageUrls:(item.imageUrl?[item.imageUrl]:[])).map(url=>'<img src="'+escapeHtml(url)+'" alt="" class="notice-detail-image" loading="lazy">').join('');
+  const mine=noticeToken()&&String(item.createdBy||'').toLowerCase()===String(JSON.parse(localStorage.getItem('ekodi.supabase.session')||'{}')?.user?.email||'').toLowerCase();
+  detail.innerHTML='<button type="button" class="notice-back">목록</button><div class="notice-detail-images">'+images+'</div><h3>'+escapeHtml(item.title||'공지')+'</h3><p>'+escapeHtml(item.body||'')+'</p><small>'+escapeHtml(noticeDate(item))+'</small><div class="notice-detail-actions"><button type="button" class="notice-share">공유</button>'+(mine?'<button type="button" class="notice-delete">삭제</button>':'')+'</div>';
   detail.hidden=false;el('noticeList').hidden=true;
   detail.querySelector('.notice-back')?.addEventListener('click',()=>{detail.hidden=true;el('noticeList').hidden=false;history.replaceState(null,'',location.pathname+'#notices')});
   detail.querySelector('.notice-share')?.addEventListener('click',async()=>{const url=noticePermalink(item.id);try{if(navigator.share)await navigator.share({title:item.title||'공지',text:item.body||'',url});else{await navigator.clipboard.writeText(url);alert('게시물 링크를 복사했습니다.')}}catch{}});
+  detail.querySelector('.notice-delete')?.addEventListener('click',async()=>{if(!confirm('이 게시물을 삭제하시겠습니까?'))return;const response=await fetch('/api/seonammedi/notices/'+item.id,{method:'DELETE',headers:{authorization:'Bearer '+noticeToken()},cache:'no-store'});if(response.ok){history.replaceState(null,'',location.pathname+'#notices');detail.hidden=true;el('noticeList').hidden=false;await loadNotices()}else alert('삭제하지 못했습니다.')});
 }
 function renderFeaturedNotice(rows){
   const host=el('homeSpotlight');if(!host)return;const now=Date.now(),recent=[...rows].sort((a,b)=>String(b.publishedAt||b.updatedAt||'').localeCompare(String(a.publishedAt||a.updatedAt||'')));
@@ -326,13 +328,16 @@ async function loadNotices(){
     const wanted=Number(new URLSearchParams(location.search).get('notice')||0);const selected=publicNotices.find(item=>item.id===wanted);if(selected){showView('notices');showNoticeDetail(selected)}
   }catch(error){host.innerHTML='<p class="muted">'+escapeHtml(error.message||'공지 목록을 불러오지 못했습니다.')+'</p>'}
 }
+let noticeSelectedFiles=[];
+function renderNoticeImagePreview(){const host=el('noticeImagePreview');if(!host)return;host.innerHTML=noticeSelectedFiles.map((file,index)=>'<div><img src="'+URL.createObjectURL(file)+'" alt=""><button type="button" data-remove-image="'+index+'" aria-label="사진 삭제">삭제</button></div>').join('');host.querySelectorAll('[data-remove-image]').forEach(button=>button.addEventListener('click',()=>{noticeSelectedFiles.splice(Number(button.dataset.removeImage),1);renderNoticeImagePreview()}))}
+el('noticeImages')?.addEventListener('change',event=>{noticeSelectedFiles=[...event.target.files].slice(0,5);if(event.target.files.length>5)alert('사진은 최대 5장까지 등록할 수 있습니다.');renderNoticeImagePreview()});
 const noticeWriteButton=el('noticeWriteButton'),noticeCompose=el('noticeComposeForm');
 noticeWriteButton?.addEventListener('click',()=>{if(!noticeToken()){location.assign(noticeLoginUrl());return}noticeCompose.hidden=false;noticeWriteButton.hidden=true;noticeCompose.querySelector('input[name="title"]')?.focus()});
 el('noticeComposeCancel')?.addEventListener('click',()=>{noticeCompose.hidden=true;noticeWriteButton.hidden=false});
 noticeCompose?.addEventListener('submit',async event=>{
   event.preventDefault();const message=el('noticeComposeMessage'),token=noticeToken();if(!token){location.assign(noticeLoginUrl());return}
-  const form=new FormData(noticeCompose);message.textContent='게시 중입니다…';
-  try{const response=await fetch('/api/seonammedi/notices',{method:'POST',headers:{authorization:'Bearer '+token},body:form,cache:'no-store'});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'게시하지 못했습니다.');noticeCompose.reset();noticeCompose.hidden=true;noticeWriteButton.hidden=false;message.textContent='게시했습니다.';await loadNotices();const item=publicNotices.find(row=>row.id===Number(data.id));if(item){history.replaceState(null,'',noticePermalink(item.id));showNoticeDetail(item)}}catch(error){message.textContent=error.message||'게시하지 못했습니다.'}
+  const form=new FormData(noticeCompose);form.delete('images');for(const file of noticeSelectedFiles)form.append('images',file,file.name);message.textContent='게시 중입니다…';
+  try{const response=await fetch('/api/seonammedi/notices',{method:'POST',headers:{authorization:'Bearer '+token},body:form,cache:'no-store'});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'게시하지 못했습니다.');noticeCompose.reset();noticeSelectedFiles=[];renderNoticeImagePreview();noticeCompose.hidden=true;noticeWriteButton.hidden=false;message.textContent='게시했습니다.';await loadNotices();const item=publicNotices.find(row=>row.id===Number(data.id));if(item){history.replaceState(null,'',noticePermalink(item.id));showNoticeDetail(item)}}catch(error){message.textContent=error.message||'게시하지 못했습니다.'}
 });
 if(new URLSearchParams(location.search).get('compose')==='notice'&&noticeToken()){showView('notices');noticeCompose.hidden=false;noticeWriteButton.hidden=true}
 loadNotices();
