@@ -286,3 +286,10 @@ test('EKODI Mission browser script is valid JavaScript and does not contain esca
   assert.doesNotMatch(script,/;\\n\s+const registrationApi/);
   assert.doesNotThrow(()=>new Function(script));
 });
+
+
+test('Mission application success broadcasts applicant changes to same-origin admin tabs',async()=>{
+  const script=await readFile(new URL('../space/ekodimission.js',import.meta.url),'utf8');
+  assert.match(script,/new BroadcastChannel\('ekodi-mission-applications-v1'\)/);
+  assert.match(script,/applicationId:result\.applicationId/);
+});
