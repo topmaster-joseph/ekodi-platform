@@ -335,7 +335,7 @@ function renderVoices(){
     const actions=document.createElement('div');actions.className='item-actions';const select=document.createElement('select');for(const [value,label] of [['received','접수됨'],['reviewing','검토중'],['answered','답변완료'],['published','공개'],['archived','보관']]){const option=document.createElement('option');option.value=value;option.textContent=label;option.selected=item.status===value;if(value==='published'&&!item.publicConsent)option.disabled=true;select.append(option)}select.addEventListener('change',()=>updateVoiceStatus(item,select.value));actions.append(select,button('수정',()=>editVoice(item)),button('삭제',()=>deleteVoice(item),'danger'));article.append(actions);host.append(article);
   }
 }
-async function loadVoices(){if(!state.me?.permissions?.voices)return;const data=await api('/api/seonammedi/admin/voices');state.voices=data.items||[];renderVoices();updateDashboard()}
+async function loadVoices(){if(!state.me?.permissions?.voices)return;const data=await api('/api/seonammedi/admin/voices');state.voices=data.items||[];const editor=$('voiceEditForm');const editingId=Number(editor?.elements?.id?.value||0);if(!editingId||!state.voices.some(item=>Number(item.id)===editingId))closeVoiceEditor();renderVoices();updateDashboard()}
 $('voiceEditForm')?.addEventListener('submit',async event=>{
   event.preventDefault();const form=event.currentTarget,id=Number(form.elements.id.value||0);if(!id)return;
   const payload={category:form.elements.category.value,displayName:form.elements.displayName.value,contact:form.elements.contact.value,message:form.elements.message.value,status:form.elements.status.value};

@@ -614,3 +614,18 @@ test('seonammedi notice composer places attachments before body, compresses to 5
   assert.match(app,/첨부 사진을 본문에 함께 표시합니다/);
   assert.match(control,/image\.size\|\|0\)>5\*1024\*1024/);
 });
+
+
+test('seonammedi citizen voices opens list first and keeps edit form hidden until an item is selected',async()=>{
+  const [html,js,css]=await Promise.all([
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('admin/admin.js',root),'utf8'),
+    readFile(new URL('admin/admin.css',root),'utf8')
+  ]);
+  const listIndex=html.indexOf('id="voiceList"');
+  const formIndex=html.indexOf('id="voiceEditForm"');
+  assert.ok(listIndex>-1&&formIndex>-1&&listIndex<formIndex);
+  assert.match(html,/id="voiceEditForm"[^>]*hidden/);
+  assert.match(js,/if\(!editingId\|\|!state\.voices\.some\(item=>Number\(item\.id\)===editingId\)\)closeVoiceEditor\(\)/);
+  assert.match(css,/\[hidden\]\{display:none!important\}/);
+});
