@@ -7,20 +7,59 @@ const picker=document.getElementById('contactPicker');
 const status=document.getElementById('exchangeStatus');
 const submit=document.getElementById('exchangeSubmit');
 
+function shareData(){
+  return {title:document.title,text:document.querySelector('.headline')?.textContent||document.querySelector('.name')?.textContent||'',url:location.href.split('#')[0]};
+}
+function shareNotice(text){
+  const original=shareButton?.textContent;if(!shareButton)return;
+  shareButton.textContent=text;setTimeout(()=>{shareButton.textContent=original},1800);
+}
+async function copyShareUrl(url){
+  try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(url);return true}}catch{}
+  try{
+    const input=document.createElement('textarea');input.value=url;input.setAttribute('readonly','');input.style.position='fixed';input.style.opacity='0';
+    document.body.append(input);input.select();const ok=document.execCommand('copy');input.remove();return ok;
+  }catch{return false}
+}
+function openDesktopShare(data){
+  document.getElementById('desktopSharePanel')?.remove();
+  const panel=document.createElement('div');panel.id='desktopSharePanel';panel.className='desktop-share-panel';panel.setAttribute('role','dialog');panel.setAttribute('aria-label','명함 공유');
+  const title=document.createElement('strong');title.textContent='명함 공유';
+  const url=document.createElement('input');url.value=data.url;url.readOnly=true;url.setAttribute('aria-label','명함 주소');
+  const actions=document.createElement('div');actions.className='desktop-share-actions';
+  const copy=document.createElement('button');copy.type='button';copy.textContent='링크 복사';
+  const email=document.createElement('a');email.textContent='이메일';email.href='mailto:?subject='+encodeURIComponent(data.title)+'&body='+encodeURIComponent((data.text?data.text+'\\n\\n':'')+data.url);
+  const qr=document.createElement('a');qr.textContent='QR로 열기';qr.href=location.pathname.replace(/\/card\/?$/,'/qr');qr.target='_blank';qr.rel='noreferrer';
+  const close=document.createElement('button');close.type='button';close.textContent='닫기';
+  for(const el of [copy,email,qr,close])el.className='desktop-share-action';
+  copy.addEventListener('click',async()=>{if(await copyShareUrl(data.url)){copy.textContent='복사됨';shareNotice('주소 복사됨')}else{url.focus();url.select();copy.textContent='주소를 선택했습니다'}});
+  close.addEventListener('click',()=>panel.remove());
+  panel.addEventListener('click',event=>{if(event.target===panel)panel.remove()});
+  actions.append(copy,email,qr,close);panel.append(title,url,actions);document.body.append(panel);url.focus();url.select();
+}
 if(shareButton){
   shareButton.addEventListener('click',async()=>{
-    const data={title:document.title,text:document.querySelector('.headline')?.textContent||document.querySelector('.name')?.textContent||'',url:location.href.split('#')[0]};
-    try{
-      if(navigator.share)await navigator.share(data);
-      else{
-        await navigator.clipboard?.writeText(data.url);
-        const original=shareButton.textContent;shareButton.textContent='주소 복사됨';setTimeout(()=>{shareButton.textContent=original},1600);
-      }
-    }catch{}
+    const data=shareData();
+    if(navigator.share){
+      try{await navigator.share(data);return}catch(error){if(error?.name==='AbortError')return}
+    }
+    openDesktopShare(data);
   });
 }
 function value(name,next){
   const input=form?.elements?.[name];if(input&&next)input.value=String(next).trim();
+}
+function normalizeWebsite(raw){
+  const value=String(raw||'').trim();if(!value)return'';
+  const candidate=/^[a-z][a-z0-9+.-]*:\/\//i.test(value)?value:`https://${value.replace(/^\/+/, '')}`;
+  try{const url=new URL(candidate);return ['http:','https:'].includes(url.protocol)?url.toString():''}catch{return''}
+}
+function normalizeWebsiteField(){
+  const input=form?.elements?.website;if(!input)return true;
+  const raw=String(input.value||'').trim();if(!raw){input.setCustomValidity('');return true}
+  const normalized=normalizeWebsite(raw);
+  if(!normalized){input.setCustomValidity('웹사이트 주소를 확인해 주세요.');return false}
+  input.value=normalized;input.setCustomValidity('');return true;
 }
 async function pickContact(){
   if(!navigator.contacts?.select){picker.hidden=true;return}
@@ -40,8 +79,12 @@ if(picker){
   else picker.addEventListener('click',pickContact);
 }
 if(form){
+  const website=form.elements?.website;
+  website?.addEventListener('blur',normalizeWebsiteField);
+  website?.addEventListener('input',()=>website.setCustomValidity(''));
   form.addEventListener('submit',async event=>{
     event.preventDefault();
+    normalizeWebsiteField();
     if(!form.reportValidity())return;
     const fd=new FormData(form);
     const payload={
