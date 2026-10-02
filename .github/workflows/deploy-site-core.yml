@@ -51,6 +51,7 @@ on:
       - 'invest-admin.js'
       - 'invest-admin.css'
       - 'platform-router-entry-worker.js'
+      - 'site-publication-runtime.js'
       - 'platform-security-policy.js'
       - 'scripts/validate-platform-security-policy.mjs'
       - 'test/platform-security-policy.test.mjs'
