@@ -4,7 +4,7 @@
   "productionProject": {
     "projectRef": "renzehysxirjilvdxacv",
     "logicalName": "ekodi-prod",
-    "currentSupabaseName": "ekodi-platform",
+    "currentSupabaseName": "ekodi-platform-prod",
     "purpose": "production",
     "realUserDataAllowed": true,
     "testOnlyDataRequired": false,
@@ -13,7 +13,7 @@
   "developmentProject": {
     "projectRef": "lxcxwbdwwojjkgybbqii",
     "logicalName": "ekodi-dev",
-    "currentSupabaseName": "ekodi-church",
+    "currentSupabaseName": "ekodi-platform-dev",
     "purpose": "development",
     "realUserDataAllowed": false,
     "testOnlyDataRequired": true,
