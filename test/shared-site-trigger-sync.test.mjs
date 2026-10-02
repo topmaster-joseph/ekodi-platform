@@ -14,7 +14,7 @@ test('shared-site production deploy repairs Cloudflare custom-domain triggers on
 });
 
 test('shared-site deploy watches site publication runtime changes', () => {
-  assert.match(workflow, /- 'site-publication-runtime\\.js'/);
+  assert.match(workflow, /- 'site-publication-runtime\.js'/);
 });
 
 test('canonical public entry is apex-only while Admin and Auth are path-owned', () => {
