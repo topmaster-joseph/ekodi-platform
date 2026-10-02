@@ -4,17 +4,22 @@
   "status": "enforced",
   "owner": "ekodi-orchestrator",
   "constitutionalPolicy": "VIRTUALIZATION-SOVEREIGNTY-001",
-  "rule": "use-ekodi-owned-virtualization-when-eligible-native-capability-is-healthy",
+  "rule": "browser-and-surface-validation-must-use-ekodi-native-routes-in-fixed-order-before-any-external-fallback",
   "taskClasses": {
     "browser-ui-validation": [
-      "ekodi-background-browser-worker"
+      "ekodi-background-browser-worker",
+      "ekodi-native-remote-computer",
+      "autonomous-execution-fabric"
     ],
     "synthetic-surface-verification": [
       "ekodi-background-browser-worker",
+      "ekodi-native-remote-computer",
       "autonomous-execution-fabric"
     ],
     "isolated-browser-execution": [
-      "ekodi-background-browser-worker"
+      "ekodi-background-browser-worker",
+      "ekodi-native-remote-computer",
+      "autonomous-execution-fabric"
     ],
     "isolated-desktop-execution": [
       "ekodi-native-remote-computer"
@@ -53,7 +58,9 @@
       "healthy",
       "capability-matches-task"
     ],
-    "externalFallbackRole": "temporary-replaceable-fallback-only"
+    "externalFallbackRole": "temporary-replaceable-fallback-only",
+    "nativeBrowserOrderEnforced": true,
+    "externalBrowserServiceDefaultForbidden": true
   },
   "externalFallback": {
     "allowedReasons": [
@@ -68,13 +75,19 @@
     "securityEquivalentOrStrongerRequired": true,
     "paidUpgradeForbidden": true,
     "providerLockInForbidden": true,
-    "fallbackDecisionMustBeMachineReadable": true
+    "fallbackDecisionMustBeMachineReadable": true,
+    "browserFallbackAdditionalRequirements": [
+      "ekodi-background-browser-worker-failure-evidence",
+      "ekodi-native-remote-computer-failure-evidence",
+      "autonomous-execution-fabric-failure-evidence"
+    ]
   },
   "recovery": {
     "successfulFallbackCreatesOrUpdatesNativeGap": true,
     "correctableNativeGapMustNotInterruptUserWorkflow": true,
     "nativeCapabilityMustBeRetriedOnNextEligibleExecution": true,
-    "fallbackMustNotBecomeDefaultByHistory": true
+    "fallbackMustNotBecomeDefaultByHistory": true,
+    "externalBrowserFallbackMustCreateNativeRecoveryTask": true
   },
   "constitutionalPolicies": [
     "VIRTUALIZATION-SOVEREIGNTY-001",

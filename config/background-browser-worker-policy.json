@@ -59,15 +59,28 @@
     "pageErrorsCaptured": true,
     "requestFailuresCaptured": true,
     "initialRuntimeProof": "evidence/runtime/background-browser-worker/2026-09-22-initial-proof.json",
-    "runtimeProven": true
+    "runtimeProven": true,
+    "httpErrorResponsesCaptured": true,
+    "httpErrorResponseFields": [
+      "url",
+      "status",
+      "statusText",
+      "resourceType"
+    ]
   },
   "provider": {
     "runtime": "playwright-chromium",
     "orchestration": "ekodi-owned",
     "underlyingComputeReplaceable": true,
     "externalBrowserServiceRequired": false,
-    "externalFallbackForThisWorker": "forbidden-while-runtime-healthy",
-    "mustIdentifyAsNativeInEvidence": true
+    "externalFallbackForThisWorker": "forbidden-unless-all-native-browser-routes-unusable-with-audited-failure-evidence",
+    "mustIdentifyAsNativeInEvidence": true,
+    "nativeBrowserPriority": [
+      "ekodi-background-browser-worker",
+      "ekodi-native-remote-computer",
+      "autonomous-execution-fabric"
+    ],
+    "externalProviderDefault": "forbidden"
   },
   "routingPolicy": "config/virtualization-routing-policy.json",
   "constitutionalPolicy": "AUTOMATIC-EXECUTION-LIFECYCLE-001",
@@ -79,6 +92,7 @@
     "authRequiredDisposition": "record-and-close",
     "authRequiredMustNotOpenInteractiveLogin": true,
     "preserveUserOwnedWindowsAndTabs": true,
-    "localOverrideForbidden": true
+    "localOverrideForbidden": true,
+    "externalFallbackDisposition": "native-failure-evidence-required-and-retry-native-next-execution"
   }
 }

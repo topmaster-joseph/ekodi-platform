@@ -1,5 +1,5 @@
 {
-  "version": "1.27.0",
+  "version": "1.27.1",
   "effectiveDate": "2026-10-02",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -43,7 +43,8 @@
     "evidence-gated-ai-claims",
     "evidence-gated-external-knowledge",
     "automatic-execution-background-only-enforced",
-    "public-by-default-site-publication-control"
+    "public-by-default-site-publication-control",
+    "native-browser-execution-order-enforced"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -1241,5 +1242,42 @@
       "scripts/validate-constitution.mjs",
       "system-verification"
     ]
+  },
+  "browserVirtualizationExecutionPolicy": {
+    "id": "NATIVE-BROWSER-EXECUTION-ORDER-001",
+    "status": "enforced",
+    "mode": "mandatory",
+    "owner": "ekodi-orchestrator",
+    "taskClasses": [
+      "browser-ui-validation",
+      "synthetic-surface-verification",
+      "isolated-browser-execution"
+    ],
+    "nativeOrder": [
+      "ekodi-background-browser-worker",
+      "ekodi-native-remote-computer",
+      "autonomous-execution-fabric"
+    ],
+    "externalBrowserDefault": "forbidden",
+    "externalFallbackAllowedOnlyWhen": "all-eligible-native-routes-unusable",
+    "externalFallbackRequires": [
+      "machine-readable-native-failure-evidence-for-every-eligible-route",
+      "audit-id",
+      "native-capability-gap-record",
+      "security-equivalent-or-stronger",
+      "no-paid-auto-upgrade",
+      "native-recovery-task",
+      "retry-native-on-next-eligible-execution"
+    ],
+    "runtimeEvidence": [
+      "http-4xx-5xx-response-url-status-resource-type",
+      "console-errors",
+      "page-errors",
+      "request-failures",
+      "screenshots"
+    ],
+    "localOverrideForbidden": true,
+    "serviceOrAgentWaiverForbidden": true,
+    "policyRegressionBlocksCi": true
   }
 }
