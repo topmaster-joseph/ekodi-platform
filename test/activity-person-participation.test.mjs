@@ -68,5 +68,5 @@ test('Workspace Admin exposes one-screen activity participant operations',async(
   assert.ok(source.includes("section==='activities'"));
   assert.ok(css.includes('grid-template-columns:40px minmax(0,1fr) auto'));
   assert.ok(css.includes('.activity-table-wrap td:nth-child(6){grid-column:1/-1}'));
-  assert.match(source,/<th class="activity-seq-head" scope="col">연번<\/th><th scope="col">신청자<\/th>/);
+  assert.match(source,/<th class="activity-seq-head" scope="col">연번<\/th><th scope="col"><label><input id="activitySelectAll" type="checkbox"> 신청자<\/label><\/th>/);
 });
