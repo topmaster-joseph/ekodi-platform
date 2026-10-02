@@ -525,6 +525,48 @@ async function fetchChannelPreviewPage(url,userAgent,timeout=6000){
   if(!url)return null;
   try{return await fetch(url,{headers:{'user-agent':userAgent},redirect:'follow',signal:AbortSignal.timeout(timeout)})}catch{return null}
 }
+
+function decodeXmlText(value){
+  return String(value||'').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim();
+}
+function youtubeRecentItems(xml){
+  const items=[];const entryPattern=/<entry>([\s\S]*?)<\/entry>/gi;let match;
+  while(items.length<3&&(match=entryPattern.exec(String(xml||'')))){
+    const entry=match[1];
+    const videoId=clean(entry.match(/<yt:videoId>([^<]+)<\/yt:videoId>/i)?.[1],40);
+    if(!/^[A-Za-z0-9_-]{11}$/.test(videoId))continue;
+    const title=decodeXmlText(entry.match(/<title>([\s\S]*?)<\/title>/i)?.[1]||'최근 영상');
+    const published=clean(entry.match(/<published>([^<]+)<\/published>/i)?.[1],80);
+    items.push({
+      type:'video',
+      videoId,
+      title,
+      publishedAt:published,
+      url:'https://www.youtube.com/watch?v='+videoId,
+      embedUrl:'https://www.youtube-nocookie.com/embed/'+videoId+'?rel=0',
+      image:'https://i.ytimg.com/vi/'+videoId+'/hqdefault.jpg',
+      label:'최근 영상 '+(items.length+1)
+    });
+  }
+  return items;
+}
+async function resolveYouTubeChannelId(item,html=''){
+  const fromHtml=String(html||'').match(/<meta[^>]+itemprop=["']channelId["'][^>]+content=["'](UC[A-Za-z0-9_-]{20,})["']/i)
+    ||String(html||'').match(/<meta[^>]+content=["'](UC[A-Za-z0-9_-]{20,})["'][^>]+itemprop=["']channelId["']/i)
+    ||String(html||'').match(/"(?:channelId|externalId|browseId)":"(UC[A-Za-z0-9_-]{20,})"/)
+    ||String(html||'').match(/feeds\/videos\.xml\?channel_id=(UC[A-Za-z0-9_-]{20,})/i)
+    ||String(html||'').match(/youtube\.com\/channel\/(UC[A-Za-z0-9_-]{20,})/i);
+  if(fromHtml?.[1])return fromHtml[1];
+  try{
+    const aboutUrl=new URL(item.url);aboutUrl.search='';aboutUrl.hash='';aboutUrl.pathname=aboutUrl.pathname.replace(/\/$/,'')+'/about';
+    const aboutPage=await fetchChannelPreviewPage(aboutUrl.href,CHANNEL_BROWSER_UA,6500);
+    const aboutHtml=aboutPage?.ok?await aboutPage.text().catch(()=>''):'';
+    return (aboutHtml.match(/"(?:channelId|externalId|browseId)":"(UC[A-Za-z0-9_-]{20,})"/)
+      ||aboutHtml.match(/youtube\.com\/channel\/(UC[A-Za-z0-9_-]{20,})/i)
+      ||aboutHtml.match(/feeds\/videos\.xml\?channel_id=(UC[A-Za-z0-9_-]{20,})/i))?.[1]||'';
+  }catch{return ''}
+}
+
 async function publicChannelPreview(env,id){
   const row=await env.DB.prepare(`SELECT c.id,c.platform,c.name,c.url,COALESCE(p.preview_url,'') preview_url,c.category,c.official,c.note,c.sort_order
     FROM seonammedi_channels c LEFT JOIN seonammedi_channel_previews p ON p.channel_id=c.id
@@ -532,7 +574,11 @@ async function publicChannelPreview(env,id){
   if(!row)return json({ok:false,error:'not_found'},404);
   const item=publicChannel(row),provider=channelProviderUrl(item),explicitEmbed=explicitChannelEmbed(item);
   const preview={title:item.name,description:item.note||'',image:'',embedUrl:explicitEmbed,mode:explicitEmbed?'embed':'summary',platform:item.platform,sourceUrl:item.url,recentItems:[]};
-  if(explicitEmbed){preview.contentType='explicit-preview';return json({ok:true,item,preview})}
+  if(explicitEmbed&&item.platform!=='instagram'){preview.contentType='explicit-preview';return json({ok:true,item,preview})}
+  if(explicitEmbed&&item.platform==='instagram'){
+    preview.recentItems=[{type:'post',url:item.previewUrl,embedUrl:explicitEmbed,label:'최근 공개 게시물 1'}];
+    preview.contentType='explicit-preview';
+  }
   if(provider.kind==='instagram-profile'){
     const userAgent=CHANNEL_BROWSER_UA;
     const page=await fetchChannelPreviewPage(item.url,userAgent,6000);
@@ -551,7 +597,7 @@ async function publicChannelPreview(env,id){
       preview.description=previewMeta(html,'og:description')||previewMeta(html,'description')||preview.description;
       preview.image=validHttps(previewMeta(html,'og:image'));
     }
-    preview.recentItems=recentItems;
+    preview.recentItems=[...(preview.recentItems||[]),...recentItems.filter(row=>!(preview.recentItems||[]).some(existing=>existing.url===row.url))].slice(0,3);
     if(preview.recentItems.length){
       preview.mode='recent-embed';
       preview.contentType='recent-posts';
@@ -609,25 +655,25 @@ async function publicChannelPreview(env,id){
     preview.mode='embed';
     preview.contentType='latest-video';
     preview.videoId=pageVideoId;
-    return json({ok:true,item,preview});
   }
-  const channelId=(
-    html.match(/<meta[^>]+itemprop=["']channelId["'][^>]+content=["'](UC[A-Za-z0-9_-]{20,})["']/i)||
-    html.match(/<meta[^>]+content=["'](UC[A-Za-z0-9_-]{20,})["'][^>]+itemprop=["']channelId["']/i)||
-    html.match(/"(?:channelId|externalId|browseId)":"(UC[A-Za-z0-9_-]{20,})"/)||
-    html.match(/feeds\/videos\.xml\?channel_id=(UC[A-Za-z0-9_-]{20,})/i)||
-    html.match(/youtube\.com\/channel\/(UC[A-Za-z0-9_-]{20,})/i)
-  )?.[1]||'';
+  const channelId=await resolveYouTubeChannelId(item,html);
   if(channelId){
     const feed=await fetchChannelPreviewPage('https://www.youtube.com/feeds/videos.xml?channel_id='+encodeURIComponent(channelId),'EKODIChannelPreview/1.0',5000);
     const xml=feed?.ok?await feed.text().catch(()=>''):'';
-    const videoId=clean(xml.match(/<yt:videoId>([^<]+)<\/yt:videoId>/i)?.[1],40);
-    if(/^[A-Za-z0-9_-]{11}$/.test(videoId)){
-      preview.embedUrl='https://www.youtube-nocookie.com/embed/'+videoId+'?rel=0';
-      preview.mode='embed';
-      preview.contentType='latest-video';
-      preview.videoId=videoId;
+    preview.recentItems=youtubeRecentItems(xml);
+    if(preview.recentItems.length){
+      preview.embedUrl=preview.recentItems[0].embedUrl;
+      preview.mode='recent-embed';
+      preview.contentType='recent-videos';
+      preview.videoId=preview.recentItems[0].videoId;
     }
+  }
+  if(!preview.recentItems.length&&/^[A-Za-z0-9_-]{11}$/.test(pageVideoId)){
+    preview.recentItems=[{type:'video',videoId:pageVideoId,title:'최근 영상',url:'https://www.youtube.com/watch?v='+pageVideoId,embedUrl:'https://www.youtube-nocookie.com/embed/'+pageVideoId+'?rel=0',image:'https://i.ytimg.com/vi/'+pageVideoId+'/hqdefault.jpg',label:'최근 영상 1'}];
+    preview.embedUrl=preview.recentItems[0].embedUrl;
+    preview.mode='embed';
+    preview.contentType='latest-video';
+    preview.videoId=pageVideoId;
   }
   return json({ok:true,item,preview});
 }
