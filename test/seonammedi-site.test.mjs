@@ -576,3 +576,5 @@ test('seonammedi activity history always renders in descending date order across
   assert.match(app,/const timelineDescending=\(a,b\)=>timelineDateKey\(b\.date\)-timelineDateKey\(a\.date\)/);
   assert.match(app,/\(cat==='전체'\?d\.timeline:d\.timeline\.filter\([^;]+\)\)\.slice\(\)\.sort\(timelineDescending\)/);
 });
+
+// descending activity-history order is enforced for every public category filter
