@@ -424,8 +424,9 @@ function renderChannelFallback(item,data={}){
   host.innerHTML='<div class="channel-preview-fallback-content"><div class="channel-preview-summary">'+(image!=='#'?'<img src="'+image+'" alt="" loading="lazy">':'')+'<div><span class="source-type">'+escapeHtml(platform)+'</span><h4>'+title+'</h4><p>'+description+'</p><small>'+escapeHtml(hint)+'</small></div></div>'+recentHtml+'</div>';
   host.hidden=false;
 }
-async function showChannelPreview(index){
+async function showChannelPreview(index,{updateRoute=true}={}){
   const item=publicChannels[index];if(!item)return;
+  if(updateRoute)writeChannelRoute(item);
   const seq=++channelPreviewSeq;
   const preview=el('channelPreview'),frame=el('channelPreviewFrame'),fallback=el('channelPreviewFallback'),title=el('channelPreviewTitle'),metaHost=el('channelPreviewMeta'),open=el('channelPreviewOpen');
   const url=safeUrl(item.url);
