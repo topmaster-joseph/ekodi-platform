@@ -38,6 +38,8 @@ import { handleExternalAccountControl, runExternalAccountHealthAudit } from './e
 import { handleRealtimeControl, runRealtimeRecordingRetention } from './realtime-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 import { runSeonamMediDailyCheck } from './seonammedi-monitor.js';
+import { runEkodiDailyTechnologyScout } from './ekodi-technology-scout.js';
+import { handleTechnologyScoutControl } from './technology-scout-control.js';
 
 function errorResponse(message, code) {
   return applyApiSecurityHeaders(new Response(JSON.stringify({ error:message, code }), {
@@ -354,6 +356,11 @@ export default {
       catch (error) { console.error('Device Control error', error); return errorResponse('Device Control 처리 중 오류가 발생했습니다.', 'DEVICE_CONTROL_ERROR'); }
     }
 
+    if (path.startsWith('/api/control/technology-scout')) {
+      try { const response = await handleTechnologyScoutControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Technology Scout control error', error); return errorResponse('기술·트렌드 스카우트 처리 중 오류가 발생했습니다.', 'TECH_SCOUT_CONTROL_ERROR'); }
+    }
+
     if (path.startsWith('/api/control/ai/v8')) {
       try { const response = await handleEkodiV8CommandControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('EKODI v8 Command Control error', error); return errorResponse('EKODI v8 Command Control 처리 중 오류가 발생했습니다.', 'V8_COMMAND_CONTROL_ERROR'); }
@@ -378,6 +385,9 @@ export default {
     const seonamMediDaily = scheduledAt.getUTCHours() === 23
       ? runSeonamMediDailyCheck(env,{scheduledAt:scheduledAt.toISOString()}).catch(error => { console.error('Seonam Medi daily monitor error', error); return { ok:false, error:'seonammedi_daily_monitor_failed' }; })
       : null;
+    const technologyScoutDaily = scheduledAt.getUTCHours() === 23
+      ? runEkodiDailyTechnologyScout(env,{trigger:'ekodi-cron',scheduledAt:scheduledAt.toISOString()}).catch(error => { console.error('Technology Scout daily error', error); return { ok:false, error:'technology_scout_daily_failed' }; })
+      : null;
     const externalAccountHealthDaily = scheduledAt.getUTCHours() === 23
       ? runExternalAccountHealthAudit(env,{scheduledAt:scheduledAt.toISOString()}).catch(error => { console.error('External account daily health error', error); return { ok:false, error:'external_account_daily_health_failed' }; })
       : null;
@@ -400,10 +410,12 @@ export default {
       ctx.waitUntil(recordingRetention);
       ctx.waitUntil(wakeOrchestration);
       if (seonamMediDaily) ctx.waitUntil(seonamMediDaily);
+      if (technologyScoutDaily) ctx.waitUntil(technologyScoutDaily);
       if (externalAccountHealthDaily) ctx.waitUntil(externalAccountHealthDaily);
     }
     const background = [authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration];
     if (seonamMediDaily) background.push(seonamMediDaily);
+    if (technologyScoutDaily) background.push(technologyScoutDaily);
     if (externalAccountHealthDaily) background.push(externalAccountHealthDaily);
     return customerSchedule || Promise.all(background);
   },
