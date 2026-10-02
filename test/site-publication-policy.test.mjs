@@ -66,6 +66,8 @@ test('site publication runtime remains reusable while seonammedi omits the site-
   assert.doesNotMatch(adminHtml,/data-ekodi-site-publication-slot|사이트 공개여부/);
   assert.match(runtime,/document\.querySelector\('\[data-ekodi-site-publication-slot\]'\)/);
   assert.match(runtime,/ekodi-site-publication-inline/);
+  assert.match(runtime,/if\(!slot\)return/);
+  assert.doesNotMatch(runtime,/target\.prepend\(bar\)/);
   assert.match(runtime,/if\(slot\)select\.onchange=persist/);
   assert.match(adminCss,/\.sidebar-home-row/);
 });
