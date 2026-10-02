@@ -655,7 +655,6 @@ async function publicChannelPreview(env,id){
     preview.mode='embed';
     preview.contentType='latest-video';
     preview.videoId=pageVideoId;
-    return json({ok:true,item,preview});
   }
   const channelId=await resolveYouTubeChannelId(item,html);
   if(channelId){
@@ -679,7 +678,7 @@ async function publicChannelPreview(env,id){
   return json({ok:true,item,preview});
 }
 
-async function adminMeasync function adminMe(request,env,auth){
+async function adminMe(request,env,auth){
   const site=await env.DB.prepare('SELECT public_status,updated_at FROM public_site_controls WHERE site_id=? LIMIT 1').bind(TENANT_SLUG).first().catch(()=>null);
   return json({ok:true,email:auth.email,role:auth.role,platform:Boolean(auth.platform),capabilities:auth.capabilities||[],permissions:{notices:can(auth,NOTICE_CAP),channels:can(auth,CHANNEL_CAP),content:can(auth,CONTENT_CAP),timeline:can(auth,TIMELINE_CAP),voices:can(auth,VOICE_CAP)||can(auth,CONTENT_CAP),pages:can(auth,PAGE_CAP)||can(auth,CONTENT_CAP),finance:can(auth,FINANCE_CAP),health:can(auth,PAGE_CAP)||can(auth,CONTENT_CAP)},publicStatus:site?.public_status||'public',publicStatusUpdatedAt:site?.updated_at||''});
 }
