@@ -2,8 +2,8 @@ create table if not exists public.public_discovery_registry (
   id uuid primary key default gen_random_uuid(),
   source_type text not null check (source_type in ('site','subsite','post','article','event','product','service','local_business','other')),
   source_key text not null,
-  canonical_url text not null unique check (canonical_url ~ '^https://ekodi\\.kr(?:/|$)'),
-  parent_url text null check (parent_url is null or parent_url ~ '^https://ekodi\\.kr(?:/|$)'),
+  canonical_url text not null unique check (canonical_url ~ '^https://ekodi\.kr(?:/|$)'),
+  parent_url text null check (parent_url is null or parent_url ~ '^https://ekodi\.kr(?:/|$)'),
   title text not null check (char_length(title) between 1 and 240),
   description text not null default '' check (char_length(description) <= 1000),
   schema_type text not null default 'WebPage' check (char_length(schema_type) between 1 and 80),
@@ -73,7 +73,7 @@ set search_path = public
 as $$
 begin
   if p_canonical_url is null
-     or p_canonical_url !~ '^https://ekodi\\.kr(?:/|$)'
+     or p_canonical_url !~ '^https://ekodi\.kr(?:/|$)'
      or public.discovery_private_path(p_canonical_url)
   then
     delete from public.public_discovery_registry
