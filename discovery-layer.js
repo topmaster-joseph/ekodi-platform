@@ -87,11 +87,11 @@ function routeFromPublicationSite(site, services) {
     asset: null,
     kind: service ? schemaKindForService(service) : (site.discoveryKind || 'organization'),
     publicationState: 'public',
-    changefreq: 'weekly',
-    priority: path === '/' ? '1.0' : '0.7',
-    label: service?.nameEn || site.name,
-    title: service ? `${service.name} | EKODI` : `${site.name} | EKODI`,
-    description: service?.descriptionKo || service?.descriptionEn || `${site.name}의 EKODI 공식 공개 페이지입니다.`,
+    changefreq: site.discoveryChangefreq || 'weekly',
+    priority: site.discoveryPriority || (path === '/' ? '1.0' : '0.7'),
+    label: site.discoveryLabel || service?.nameEn || site.name,
+    title: site.discoveryTitle || (service ? `${service.name} | EKODI` : `${site.name} | EKODI`),
+    description: site.discoveryDescription || service?.descriptionKo || service?.descriptionEn || `${site.name}의 EKODI 공식 공개 페이지입니다.`,
     source: site.source || 'site-publication',
   });
 }
