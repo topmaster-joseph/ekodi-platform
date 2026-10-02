@@ -141,7 +141,7 @@ jobs:
           grep -Fq 'User-agent: GPTBot' dist/robots.txt
           grep -Fq 'Disallow: /' dist/robots.txt
           grep -Fq '<loc>https://ekodi.kr/</loc>' dist/sitemap.xml
-          grep -Fq 'Canonical host: https://ekodi.kr' dist/llms.txt
+          grep -Fq 'Canonical site: https://ekodi.kr/' dist/llms.txt
           grep -Fq 'data-ekodi-discovery="v2"' dist/index.html
 
       - name: Materialize immutable production release artifact
