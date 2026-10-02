@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "policyId": "SITE-EXECUTION-ENFORCEMENT-001",
   "status": "enforced",
   "sourceOfSites": "config/site-lifecycle-registry.json",
@@ -107,5 +107,46 @@
     ],
     "orchestrationGate": ".github/workflows/ekodi-ai-orchestration-gate.yml",
     "packageScript": "validate:site-execution"
+  },
+  "changeScopeClassification": {
+    "policyId": "SITE-CHANGE-SCOPE-001",
+    "status": "enforced",
+    "classes": {
+      "platform_common": {
+        "appliesTo": "all-current-and-future-sites",
+        "implementationOwner": "shared-registry-shell-or-common-runtime",
+        "perSiteCopyForbidden": true,
+        "examples": [
+          "canonical-routing",
+          "public-access-default",
+          "shared-header-footer-behavior",
+          "language-readiness",
+          "auth-return-continuity",
+          "responsive-accessibility",
+          "common-admin-addressability"
+        ]
+      },
+      "shared_service_engine": {
+        "appliesTo": "all-sites-using-that-engine",
+        "implementationOwner": "shared-service-engine",
+        "perSiteOverride": "tighten-only",
+        "examples": [
+          "notice-board",
+          "social-channel-preview",
+          "broadcast",
+          "commerce",
+          "finance"
+        ]
+      },
+      "site_specific": {
+        "appliesTo": "named-site-only",
+        "implementationOwner": "site-module",
+        "promotionToCommonRequiredWhenReusableAcrossSites": true
+      }
+    },
+    "classificationRequiredBeforeImplementation": true,
+    "commonDefectMustBeFixedAtCommonOwner": true,
+    "futureSitesAutoInheritPlatformCommon": true,
+    "validatorMustRejectCommonRuleImplementedOnlyAsPerSitePatch": true
   }
 }
