@@ -37,6 +37,8 @@ test('durable write ingress policy is enforced and queue-first in production',as
   assert.match(router,/message\.retry\(\)/);
   assert.match(workflow,/Ensure durable write queues/);
   assert.match(workflow,/wrangler\.site\.pre-candidate\.toml/);
+  assert.doesNotMatch(workflow,/\/tmp\/wrangler\.site\.pre-candidate\.toml/);
+  assert.match(workflow,/> \.wrangler\.site\.pre-candidate\.toml/);
   assert.match(workflow,/Finaliz[e] durable write queue consumer trigger/);
   assert.ok(workflow.indexOf('Candidate at 0%, verify routes, promote and auto-rollback on failure') < workflow.indexOf('Finalize durable write queue consumer trigger'));
   assert.match(workflow,/validate-write-ingress-policy\.mjs/);
