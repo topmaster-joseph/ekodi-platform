@@ -15,8 +15,8 @@ test('My EKODI root uses the calm custom landing without duplicate navigation',(
   assert.match(html,/data-my-tab-link="home"[\s\S]*href="#platforms"[\s\S]*href="#activity"[\s\S]*href="#account"/);
   assert.match(html,/id="myHub"/);
   assert.match(html,/MY EKODI · ACTION HUB/);
-  assert.match(html,/무엇을 원하세요\\?/);
-  assert.match(html,/hub-shell\\.css\\?v=20261002-wayfinder-v1/);
+  assert.match(html,/무엇을 원하세요\?/);
+  assert.match(html,/hub-shell\.css\?v=20261002-wayfinder-v1/);
   assert.match(html,/class="my-bottom-tabs"/);
   assert.match(html,/id="workspaceCompact"/);
   assert.match(html,/data-my-tab-section="services"/);
