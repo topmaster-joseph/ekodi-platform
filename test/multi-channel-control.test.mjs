@@ -31,14 +31,15 @@ test('OAuth connection ledger remains multi-resource and supports scoped soft di
   assert.match(worker, /reconnectable:true/);
 });
 
-test('central admin exposes site-by-site channel handoffs plus the platform connection ledger', () => {
+test('central admin exposes all site/service Social Hub handoffs plus the platform connection ledger', () => {
   assert.match(registry, /id: 'social'/);
   assert.match(registry, /채널·자동게시/);
   assert.match(loader, /social: \{ label:'채널·자동게시'/);
   assert.match(admin, /MULTI-CHANNEL CONTROL CENTER/);
-  assert.match(admin, /사용자 사이트별 채널관리/);
+  assert.match(admin, /전체 사이트·서비스 채널관리/);
   assert.match(admin, /loadChannelAdminDirectory/);
-  assert.match(admin, /canonicalServiceChannelAdminUrl/);
+  assert.match(admin, /socialManagedServices/);
+  assert.match(admin, /canonicalServiceSocialAdminUrl/);
   assert.match(admin, /dataset\.siteChannelAdmin=site\.id/);
   assert.match(admin, /사이트 채널센터 ↗/);
   assert.match(admin, /최고관리자에서 관리/);

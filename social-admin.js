@@ -94,10 +94,10 @@
 
   async function loadChannelAdminDirectory() {
     const catalog = await import('./admin-service-catalog.js');
-    return catalog.channelAdminServices().map(item => ({
+    return catalog.socialManagedServices().map(item => ({
       ...item,
       publicUrl: catalog.canonicalServiceUrl(item.basePath),
-      channelAdminUrl: catalog.canonicalServiceChannelAdminUrl(item),
+      channelAdminUrl: catalog.canonicalServiceSocialAdminUrl(item),
     }));
   }
 
@@ -121,7 +121,7 @@
     section.dataset.panel = 'social'; section.id = 'socialAdmin';
     const head = el('div', '', 'social-admin-head');
     const copy = el('div');
-    copy.append(el('p','MULTI-CHANNEL CONTROL CENTER','kicker'), el('h2','사이트별 채널센터'), el('p','각 사이트 관리자는 자기 사이트 채널센터에서 계정 등록·OAuth 연결·자동게시 설정을 관리합니다. 최고관리자는 개별 사이트를 선택해 동일한 원장을 조회·등록·수정하고, 통합 허브에서는 하위 사이트 채널센터를 한곳에서 확인합니다. OAuth 비밀값은 암호화 Vault에만 보관됩니다.','operations-copy'));
+    copy.append(el('p','MULTI-CHANNEL CONTROL CENTER','kicker'), el('h2','사이트·서비스 Social Hub'), el('p','모든 현재·미래 EKODI 사이트와 서비스는 중앙 Social Hub 정책을 자동 상속합니다. 게시 기능이 준비된 사이트는 자체 채널센터에서 같은 원장을 사용하고, 그 외 서비스는 중앙 허브로 자동 폴백합니다. 비밀번호는 저장하지 않으며 OAuth 비밀값은 암호화 Vault에만 보관됩니다.','operations-copy'));
     const actions = el('div','','social-admin-actions');
     const open = el('a','Open Social ↗','secondary'); open.href='https://social.ekodi.kr'; open.target='_blank'; open.rel='noopener';
     const refresh = el('button','↻ Refresh','secondary'); refresh.type='button';
@@ -131,7 +131,7 @@
     const siteDirectoryPanel = el('section','','social-site-directory');
     siteDirectoryPanel.dataset.siteChannelDirectory='true';
     const siteDirectoryHead = el('div','','social-channel-head');
-    siteDirectoryHead.append(el('h3','사용자 사이트별 채널관리'),el('span','각 사이트의 canonical 관리자 화면과 동일한 원장'));
+    siteDirectoryHead.append(el('h3','전체 사이트·서비스 채널관리'),el('span','모든 현재·미래 서비스가 중앙 Social Hub 정책을 자동 상속'));
     const siteDirectoryStatus = el('p','사용자 사이트 관리자 목록을 불러오는 중입니다.','social-admin-status');
     siteDirectoryStatus.setAttribute('role','status');
     const siteDirectoryList = el('div','','social-site-directory-list');
@@ -147,12 +147,12 @@
           const card=el('article','','social-site-directory-card');
           card.dataset.siteChannelAdmin=site.id;
           const copy=el('div','','social-site-directory-copy');
-          const kind=site.siteRelation==='customer-partner'?'고객·파트너 사이트':site.kind==='site'?'사용자 사이트':'운영공간';
+          const kind=site.siteRelation==='customer-partner'?'고객·파트너 사이트':site.kind==='site'?'사용자 사이트':'플랫폼 서비스';
           copy.append(el('small',kind),el('strong',site.name),el('span',site.channelAdminUrl.replace('https://ekodi.kr','')));
           const controls=el('div','','social-site-directory-actions');
           const publicLink=el('a','사용자페이지 ↗','secondary');
           publicLink.href=site.publicUrl; publicLink.target='_blank'; publicLink.rel='noopener';
-          const adminLink=el('a','사이트 채널센터 ↗','primary');
+          const adminLink=el('a',site.socialAdminMode==='local-channel-center'?'사이트 채널센터 ↗':'중앙 Social Hub ↗','primary');
           adminLink.href=site.channelAdminUrl; adminLink.dataset.siteChannelAdminUrl=site.id;
           controls.append(publicLink,adminLink);
           if(site.channelSubjectKey){
@@ -164,7 +164,7 @@
           card.append(copy,controls);
           siteDirectoryList.append(card);
         }
-        siteDirectoryStatus.textContent=`${sites.length}개 사이트 · 개별 사이트는 최고관리자와 같은 원장을 사용하며, 통합 허브는 하위 사이트 채널센터를 모아 보여줍니다.`;
+        siteDirectoryStatus.textContent=`${sites.length}개 사이트·서비스 · 게시 기능이 준비된 사이트는 로컬 채널센터를 사용하고, 나머지는 중앙 Social Hub에서 동일 정책·권한·감사 원장을 상속합니다.`;
         siteDirectoryStatus.dataset.state='ready';
       } catch(error) {
         siteDirectoryStatus.textContent=`사이트별 관리자 목록을 불러오지 못했습니다: ${error.message}`;

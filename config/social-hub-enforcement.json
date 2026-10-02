@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "policyId": "SOCIAL-HUB-ENFORCEMENT-001",
+  "status": "enforced",
+  "owner": "EKODI Orchestrator",
+  "canonicalAdminPath": "/admin/content/social",
+  "scope": {
+    "rootPlatform": true,
+    "allCurrentSites": true,
+    "allCurrentServices": true,
+    "allDescendantSitesAndServices": true,
+    "futureSitesAndServicesAutoInherit": true,
+    "perSiteOrServiceOptOutAllowed": false
+  },
+  "sourceOfServices": "admin-service-catalog.js",
+  "inheritance": {
+    "mode": "mandatory-recursive",
+    "localChannelCenterMayTightenButNotRelax": true,
+    "missingLocalChannelCenterFallsBackToCentralHub": true,
+    "sharedEnginePreferredOverPerSiteImplementation": true
+  },
+  "accountSecurity": {
+    "passwordStorageForbidden": true,
+    "oauthOrOfficialApiPreferred": true,
+    "tokensNeverExposedToBrowserOrPublicApi": true,
+    "secretsStoredOnlyInEncryptedVaultOrPlatformSecretStore": true,
+    "serviceRoleOrPrivilegedSecretsForbiddenInPublicClients": true,
+    "disconnectMustRevokeOrDisposeStoredCredentials": true
+  },
+  "authorization": {
+    "roles": [
+      "platform_superadmin",
+      "site_admin",
+      "content_manager",
+      "viewer"
+    ],
+    "leastPrivilege": true,
+    "platformAccountConnectDisconnectRestricted": true,
+    "siteManagersLimitedToAuthorizedSubjects": true,
+    "authorizationFromIdentityWorkspaceRoleCapabilityNotUrl": true
+  },
+  "publishing": {
+    "modes": [
+      "direct",
+      "approval_required",
+      "scheduled",
+      "read_only"
+    ],
+    "originalContentSingleSource": true,
+    "providerSpecificTransformationAllowed": true,
+    "idempotencyRequired": true,
+    "duplicatePublishForbidden": true,
+    "retryWithBackoff": true,
+    "terminalFailureRequiresVisibleAdminState": true
+  },
+  "dataModel": {
+    "centralAccountRegistry": true,
+    "subjectBindings": true,
+    "channelSiteBindings": true,
+    "connectionLedger": true,
+    "auditLog": true,
+    "revisionConflictProtection": true
+  },
+  "observability": {
+    "requiredStates": [
+      "active",
+      "warning",
+      "reauth_required",
+      "api_limited",
+      "publish_failed"
+    ],
+    "tokenExpiryVisibleWithoutSecretValue": true,
+    "lastSyncVisible": true,
+    "providerErrorVisible": true,
+    "auditActorActionSubjectTimestampRequired": true
+  },
+  "providerPolicy": {
+    "initialOfficialProviders": [
+      "youtube",
+      "facebook",
+      "instagram",
+      "threads"
+    ],
+    "extensibleProviders": [
+      "tiktok",
+      "linkedin",
+      "kakao",
+      "blog",
+      "other"
+    ],
+    "providerSpecificCapabilityDetection": true,
+    "unsupportedCapabilityMustDegradeGracefully": true
+  },
+  "enforcement": {
+    "validator": "scripts/validate-social-hub-enforcement.mjs",
+    "test": "test/social-hub-enforcement.test.mjs",
+    "packageScript": "validate:social-governance",
+    "orchestrationGate": ".github/workflows/ekodi-ai-orchestration-gate.yml"
+  }
+}
