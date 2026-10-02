@@ -1,4 +1,4 @@
-import { DISCOVERY_ORIGIN, DISCOVERY_PUBLIC_ROUTES, canonicalUrl, renderLlmsTxt } from './discovery-layer.js';
+import { DISCOVERY_ORIGIN, DISCOVERY_PRIVATE_PREFIXES, DISCOVERY_PUBLIC_ROUTES, canonicalUrl, decorateDiscoveryResponse, publicDiscoveryRoute, renderLlmsTxt } from './discovery-layer.js';
 import { listSitePublicationSettings } from './site-publication-runtime.js';
 
 const CACHE_TTL_MS = 60_000;
@@ -14,11 +14,21 @@ function normalizedPath(value = '/') {
   const path = ('/' + raw.replace(/^\/+|\/+$/g,'')).replace(/\/{2,}/g,'/');
   return path === '/' ? '/' : path.replace(/\/+$/,'');
 }
+function isPrivateDiscoveryPath(pathname='/') {
+  const path=normalizedPath(pathname).toLowerCase();
+  if (DISCOVERY_PRIVATE_PREFIXES.some(prefix => {
+    const p=normalizedPath(prefix).toLowerCase();
+    return path===p || path.startsWith(p+'/');
+  })) return true;
+  return path.split('/').some(segment => ['admin','api','auth','oauth','preview','my'].includes(segment));
+}
 function recordPath(record) {
   try {
     const url = new URL(record?.canonical_url || '');
     if (url.origin !== DISCOVERY_ORIGIN) return '';
-    return normalizedPath(url.pathname);
+    const path=normalizedPath(url.pathname);
+    if (isPrivateDiscoveryPath(path)) return '';
+    return path;
   } catch { return ''; }
 }
 function routeFromRecord(record) {
@@ -122,7 +132,7 @@ function projectionResponse(body, contentType, request) {
 async function effectivePublicationProjection(env, records) {
   let settings = [];
   try { settings = await listSitePublicationSettings(env); } catch {}
-  if (!settings.length) return { staticRoutes: DISCOVERY_PUBLIC_ROUTES, records };
+  if (!settings.length) return { staticRoutes: DISCOVERY_PUBLIC_ROUTES, records, settings: [] };
 
   const normalized = settings.map(site => ({
     path: normalizedPath(site.canonicalPath || '/'),
@@ -141,6 +151,7 @@ async function effectivePublicationProjection(env, records) {
       const path = recordPath(record);
       return path && isPublicPath(path);
     }),
+    settings,
   };
 }
 
@@ -191,6 +202,36 @@ function jsonLdForRecord(record) {
     ],
   };
 }
+function publicDescendantAllowed(pathname,effective) {
+  const path=normalizedPath(pathname);
+  if(isPrivateDiscoveryPath(path))return false;
+  const settings=[...(effective?.settings||[])].sort((a,b)=>normalizedPath(b.canonicalPath||'/').length-normalizedPath(a.canonicalPath||'/').length);
+  const site=settings.find(item=>{
+    const root=normalizedPath(item.canonicalPath||'/');
+    return root!=='/' && (path===root || path.startsWith(root+'/'));
+  });
+  if(site)return String(site.publicStatus||'public').toLowerCase()==='public';
+  const route=[...(effective?.staticRoutes||[])].filter(item=>item.path!=='/').sort((a,b)=>b.path.length-a.path.length).find(item=>path===item.path||path.startsWith(item.path+'/'));
+  return Boolean(route);
+}
+function fallbackRecordFromHtml(source,requestUrl) {
+  const path=normalizedPath(requestUrl.pathname);
+  const titleMatch=String(source).match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const descriptionMatch=String(source).match(/<meta\b(?=[^>]*\bname=(['"])description\1)[^>]*\bcontent=(['"])(.*?)\2[^>]*>/i);
+  const title=clean(titleMatch?.[1]?.replace(/<[^>]+>/g,' '),240)||'EKODI';
+  const description=clean(descriptionMatch?.[3],1000)||`${title}의 EKODI 공개 페이지입니다.`;
+  return {
+    canonical_url: DISCOVERY_ORIGIN+(path==='/'?'/':path),
+    title,
+    description,
+    schema_type:'WebPage',
+    language:'ko',
+    source_type:'subsite',
+    source_key:path,
+    modified_at:'',
+    public_payload:{},
+  };
+}
 function insertHead(source, markup) {
   return source.includes('</head>') ? source.replace('</head>', markup + '\n</head>') : source;
 }
@@ -210,10 +251,12 @@ export async function decorateRegistryDiscoveryResponse(response, request, env) 
   const canonical = DISCOVERY_ORIGIN + (normalizedPath(requestUrl.pathname) === '/' ? '/' : normalizedPath(requestUrl.pathname));
   const records = await fetchPublicDiscoveryRecords(env);
   const effective = await effectivePublicationProjection(env, records);
-  const record = effective.records.find(item => clean(item.canonical_url,2048).replace(/\/+$/,'') === canonical.replace(/\/+$/,''));
-  if (!record) return response;
+  let record = effective.records.find(item => clean(item.canonical_url,2048).replace(/\/+$/,'') === canonical.replace(/\/+$/,''));
+  if (!record && publicDiscoveryRoute(requestUrl.pathname)) return decorateDiscoveryResponse(response, requestUrl.pathname);
+  if (!record && !publicDescendantAllowed(requestUrl.pathname,effective)) return response;
 
   let source = await response.text();
+  if (!record) record=fallbackRecordFromHtml(source,requestUrl);
   if (!source.includes('</head>') || /<meta\b[^>]*name=(['"])robots\1[^>]*content=(['"])[^'"]*noindex/i.test(source)) return new Response(source,{status:response.status,statusText:response.statusText,headers:response.headers});
   if (source.includes('data-ekodi-discovery=')) return new Response(source,{status:response.status,statusText:response.statusText,headers:response.headers});
 
