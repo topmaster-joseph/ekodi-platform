@@ -293,3 +293,37 @@ test('Mission application success broadcasts applicant changes to same-origin ad
   assert.match(script,/new BroadcastChannel\('ekodi-mission-applications-v1'\)/);
   assert.match(script,/applicationId:result\.applicationId/);
 });
+
+
+test('every valid public Mission event application endpoint accepts anonymous submissions without login coupling',async()=>{
+  const dataEnv={...env,DATA_ENABLED:'true',SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'publishable-test'};
+  const originalFetch=globalThis.fetch;
+  let upstreamPayload=null,upstreamHeaders=null;
+  globalThis.fetch=async(input,init)=>{
+    assert.equal(String(input),'https://example.supabase.co/rest/v1/rpc/mission_submit_event_application');
+    upstreamPayload=JSON.parse(init.body);
+    upstreamHeaders=init.headers;
+    return new Response(JSON.stringify({ok:true,application_id:'00000000-0000-0000-0000-000000000777'}),{status:200,headers:{'content-type':'application/json'}});
+  };
+  try{
+    const response=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/api/activities/261231-public-community-event/applications',{
+      method:'POST',
+      headers:{origin:'https://ekodi.kr','content-type':'application/json'},
+      body:JSON.stringify({name:'일반사용자',phone:'010-2222-3333',partySize:1,privacyConsent:true})
+    }),dataEnv);
+    assert.equal(response.status,200);
+    const body=await response.json();
+    assert.equal(body.ok,true);
+    assert.equal(body.eventKey,'261231-public-community-event');
+    assert.equal(upstreamPayload.p_event_key,'261231-public-community-event');
+    assert.equal(upstreamHeaders.authorization,undefined);
+    assert.equal(upstreamHeaders.apikey,'publishable-test');
+  }finally{globalThis.fetch=originalFetch}
+});
+
+test('Mission public application routing is generic, not hardcoded to individual events',async()=>{
+  const source=await readFile(new URL('../space-worker.js',import.meta.url),'utf8');
+  assert.match(source,/MISSION_ACTIVITY_APPLICATION_RE/);
+  assert.match(source,/missionApplicationMatch\[1\]/);
+  assert.doesNotMatch(source,/normalizedMissionPath\(url\.pathname\)===MISSION_TRIP_APPLICATION_API\)return submitMissionEventApplication/);
+});
