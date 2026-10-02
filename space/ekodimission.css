@@ -77,3 +77,23 @@ main{padding:0 1.25rem 3rem}
 .mission-pay-note{margin:.85rem 0 0;color:var(--muted);font-size:.8rem}.mission-pay-status{min-height:1.2rem;margin:.45rem 0 0;font-weight:800;color:var(--accent);font-size:.82rem}
 body.mission-pay-open{overflow:hidden}
 @media(max-width:560px){.mission-pay-sheet{align-items:end;padding:.65rem}.mission-pay-card{border-radius:1.1rem 1.1rem .8rem .8rem}.mission-pay-actions{grid-template-columns:1fr}.mission-pay-actions .button:last-child{grid-column:auto}}
+
+/* Mission activities: compact list + scalable year/month archive filters */
+.mission-activity-index{padding:0 0 3rem}
+.mission-activity-index-head{display:flex;align-items:end;justify-content:space-between;gap:1rem;padding-bottom:1rem;border-bottom:1px solid var(--line)}
+.mission-activity-index-head h2{margin:.15rem 0 0;font-family:Georgia,serif;font-size:clamp(1.8rem,3.5vw,2.8rem)}
+.mission-activity-filters{display:flex;gap:.55rem;flex-wrap:wrap}
+.mission-activity-filters label{display:grid;gap:.25rem;font-size:.7rem;font-weight:800;color:var(--muted)}
+.mission-activity-filters select{min-height:38px;padding:.45rem 2rem .45rem .7rem;border:1px solid var(--line);border-radius:.7rem;background:var(--card);color:var(--ink);font:inherit;font-size:.82rem;font-weight:800}
+.mission-activity-list{display:grid}
+.mission-activity-row{display:grid;grid-template-columns:84px minmax(0,1fr) auto;gap:1rem;align-items:center;padding:1rem 0;border-bottom:1px solid var(--line)}
+.mission-activity-row[hidden]{display:none!important}
+.mission-activity-row time{display:grid;line-height:1.1}.mission-activity-row time strong{font-family:Georgia,serif;font-size:1.45rem}.mission-activity-row time span{margin-top:.18rem;color:var(--muted);font-size:.72rem}
+.mission-activity-row-copy{min-width:0}.mission-activity-row-copy h3{margin:.18rem 0 .25rem;font-size:1.15rem}.mission-activity-row-copy p{margin:0;color:var(--muted);font-size:.86rem}
+.mission-activity-row-meta{display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;color:var(--muted);font-size:.72rem;font-weight:800}
+.mission-status{display:inline-flex;align-items:center;min-height:24px;padding:.15rem .5rem;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.mission-status.upcoming{background:var(--ink);border-color:var(--ink);color:#fff}.mission-status.completed{color:var(--muted)}
+.mission-activity-detail-button{display:inline-flex;align-items:center;justify-content:center;gap:.35rem;min-height:38px;padding:.55rem .8rem;border:1px solid var(--ink);border-radius:999px;color:var(--ink);text-decoration:none;font-size:.8rem;font-weight:900;white-space:nowrap}
+.mission-activity-detail-button:hover,.mission-activity-detail-button:focus-visible{background:var(--ink);color:#fff}
+.mission-activity-empty{margin:1rem 0 0;padding:1rem;border:1px dashed var(--line);border-radius:.8rem;color:var(--muted);text-align:center}
+@media(max-width:700px){.mission-activity-index-head{align-items:flex-start;flex-direction:column}.mission-activity-filters{width:100%}.mission-activity-filters label{flex:1}.mission-activity-filters select{width:100%}.mission-activity-row{grid-template-columns:62px minmax(0,1fr);gap:.75rem}.mission-activity-detail-button{grid-column:2;justify-self:start}.mission-activity-row-copy p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}}
