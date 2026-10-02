@@ -339,7 +339,7 @@ async function loadNotices(){
     const response=await fetch('/api/seonammedi/notices',{cache:'no-store'});const data=await response.json().catch(()=>({}));
     if(!response.ok||!data.ok)throw new Error(data.message||'공지 목록을 불러오지 못했습니다.');
     publicNotices=Array.isArray(data.items)?data.items:[];host.innerHTML=publicNotices.length?publicNotices.map(noticeCard).join(''):'<p class="muted">등록된 공지가 없습니다.</p>';renderFeaturedNotice(publicNotices);
-    const wanted=Number(new URLSearchParams(location.search).get('notice')||0);const selected=publicNotices.find(item=>item.id===wanted);if(selected){showView('notices');showNoticeDetail(selected)}
+    const pathMatch=location.pathname.match(/^\/seonammedi\/notices\/(\d+)\/?$/);const wanted=Number(pathMatch?.[1]||new URLSearchParams(location.search).get('notice')||0);const selected=publicNotices.find(item=>item.id===wanted);if(selected){showView('notices');showNoticeDetail(selected)}
   }catch(error){host.innerHTML='<p class="muted">'+escapeHtml(error.message||'공지 목록을 불러오지 못했습니다.')+'</p>'}
 }
 let noticeSelectedFiles=[];
