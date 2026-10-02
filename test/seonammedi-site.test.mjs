@@ -22,7 +22,7 @@ test('seonammedi records the post-August-30 bidaewee activity chronology',async(
   const parsed=JSON.parse(dataText);
   const rows=parsed.timeline.filter(row=>row.category==='비대위 활동'&&row.date>='2026.08.31');
   const dates=rows.map(row=>row.date);
-  for(const date of ['2026.09.04','2026.09.05','2026.09.07','2026.09.08','2026.09.09','2026.09.14','2026.09.21','2026.09.22'])assert.ok(dates.includes(date),date);
+  for(const date of ['2026.09.02','2026.09.03','2026.09.04','2026.09.05','2026.09.07','2026.09.08','2026.09.09','2026.09.14','2026.09.21','2026.09.22'])assert.ok(dates.includes(date),date);
   assert.ok(rows.every(row=>Array.isArray(row.links)&&row.links.length>=1));
   assert.match(control,/seed-bidaewee-20260904/);
   assert.match(control,/seed-bidaewee-20260922/);
