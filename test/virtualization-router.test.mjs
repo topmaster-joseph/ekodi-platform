@@ -47,7 +47,7 @@ test('external fallback is rejected when native failure evidence is incomplete',
   });
   assert.equal(result.ok,false);
   assert.equal(result.code,'EXTERNAL_FALLBACK_NATIVE_FAILURE_EVIDENCE_REQUIRED');
-  assert.deepEqual(result.details.missingEvidence,['autonomous-execution-fabric']);
+  assert.deepEqual(result.details.missingEvidence,['ekodi-native-remote-computer','autonomous-execution-fabric']);
 });
 
 test('audited external fallback is allowed only after every eligible native route is unusable',()=>{
@@ -113,7 +113,7 @@ test('paid or security-weaker fallback is fail-closed',()=>{
 
 test('known task classes expose native EKODI ownership paths',()=>{
   assert.equal(nativeVirtualizationRequired('browser-ui-validation'),true);
-  assert.deepEqual(eligibleNativeVirtualizationProviders('browser-ui-validation'),['ekodi-background-browser-worker']);
+  assert.deepEqual(eligibleNativeVirtualizationProviders('browser-ui-validation'),['ekodi-background-browser-worker','ekodi-native-remote-computer','autonomous-execution-fabric']);
   assert.deepEqual(eligibleNativeVirtualizationProviders('computer-use-automation'),['ekodi-native-remote-computer']);
 });
 
@@ -121,14 +121,22 @@ test('known task classes expose native EKODI ownership paths',()=>{
 test('browser external fallback is rejected unless it proves background-only surface isolation',()=>{
   const common={
     taskClass:'browser-ui-validation',
-    nativeProviders:[{id:'ekodi-background-browser-worker',state:'unavailable',healthy:false,ownership:'ekodi'}],
+    nativeProviders:[
+      {id:'ekodi-background-browser-worker',state:'unavailable',healthy:false,ownership:'ekodi'},
+      {id:'ekodi-native-remote-computer',state:'unavailable',healthy:false,ownership:'ekodi'},
+      {id:'autonomous-execution-fabric',state:'unavailable',healthy:false,ownership:'ekodi'},
+    ],
     externalFallback:{
       reason:'native-capability-unavailable',
       auditId:'audit-bg',
       nativeCapabilityGapRecord:'gap-bg',
       securityEquivalentOrStronger:true,
       paidUpgrade:false,
-      nativeFailures:[{id:'ekodi-background-browser-worker',reason:'native-capability-unavailable'}],
+      nativeFailures:[
+        {id:'ekodi-background-browser-worker',reason:'native-capability-unavailable'},
+        {id:'ekodi-native-remote-computer',reason:'native-capability-unavailable'},
+        {id:'autonomous-execution-fabric',reason:'native-capability-unavailable'},
+      ],
     },
   };
   const foreground=selectVirtualizationProvider({
@@ -155,4 +163,17 @@ test('browser external fallback is rejected unless it proves background-only sur
   assert.equal(background.ok,true);
   assert.equal(background.providerId,'isolated-browser');
   assert.deepEqual(background.surfaceContract,BACKGROUND_BROWSER_SURFACE_CONTRACT);
+});
+
+test('browser tasks recover through EKODI native providers before any external fallback',()=>{
+  const firstRecovery=selectVirtualizationProvider({taskClass:'browser-ui-validation',nativeProviders:[
+    {id:'ekodi-background-browser-worker',state:'unavailable',healthy:false,ownership:'ekodi'},
+    {id:'ekodi-native-remote-computer',state:'ready',healthy:true,ownership:'ekodi'},
+    {id:'autonomous-execution-fabric',state:'ready',healthy:true,ownership:'ekodi'}]});
+  assert.equal(firstRecovery.providerId,'ekodi-native-remote-computer');
+  const secondRecovery=selectVirtualizationProvider({taskClass:'browser-ui-validation',nativeProviders:[
+    {id:'ekodi-background-browser-worker',state:'unavailable',healthy:false,ownership:'ekodi'},
+    {id:'ekodi-native-remote-computer',state:'unavailable',healthy:false,ownership:'ekodi'},
+    {id:'autonomous-execution-fabric',state:'runtime-proven',healthy:true,ownership:'ekodi'}]});
+  assert.equal(secondRecovery.providerId,'autonomous-execution-fabric');
 });
