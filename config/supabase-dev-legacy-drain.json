@@ -1,0 +1,38 @@
+{
+  "policyId": "SUPABASE-DEV-LEGACY-DRAIN-001",
+  "status": "enforced",
+  "developmentProjectRef": "lxcxwbdwwojjkgybbqii",
+  "developmentProjectName": "ekodi-platform-dev",
+  "productionProjectRef": "renzehysxirjilvdxacv",
+  "productionProjectName": "ekodi-platform-prod",
+  "retirementMode": "410-tombstone",
+  "preservedFunctions": [
+    "church-pastor-api",
+    "ekodi-resource-telemetry",
+    "free-tier-usage"
+  ],
+  "retiredFunctions": [
+    "ekodi-church-preview",
+    "ekodi-youtube-debug",
+    "ekodi-cloudflare-deployer",
+    "cloudflare-mcp-oauth-probe",
+    "cloudflare-oauth-register",
+    "cloudflare-oauth-callback",
+    "cloudflare-oauth-start",
+    "cloudflare-worker-oauth-callback",
+    "cloudflare-worker-oauth-start",
+    "ekodi-mime-probe",
+    "ekodi-storage-probe",
+    "ekodi-storage-publish",
+    "ekodi-svg-probe",
+    "ekodi-mall-cloud-probe",
+    "ekodi-mall-cloudflare-oauth-start",
+    "ekodi-mall-cloudflare-oauth-callback"
+  ],
+  "rules": {
+    "noNewProductionDependenciesOnDevelopment": true,
+    "retiredFunctionsMustReturnGone": true,
+    "destructiveDeletionRequiresDependencyProof": true,
+    "productionDataCopyToDevelopmentForbidden": true
+  }
+}

@@ -4,10 +4,12 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const policyPath = path.join(root, 'config', 'supabase-environment-boundary.json');
+const legacyDrainPath = path.join(root, 'config', 'supabase-dev-legacy-drain.json');
 const failures = [];
 const expect = (condition, message) => { if (!condition) failures.push(message); };
 
 expect(fs.existsSync(policyPath), 'missing config/supabase-environment-boundary.json');
+expect(fs.existsSync(legacyDrainPath), 'missing config/supabase-dev-legacy-drain.json');
 
 if (failures.length === 0) {
   const policy = JSON.parse(fs.readFileSync(policyPath, 'utf8'));
@@ -21,7 +23,9 @@ if (failures.length === 0) {
   const security = policy.security || {};
 
   expect(prod.projectRef === 'renzehysxirjilvdxacv', 'production project ref drifted');
+  expect(prod.currentSupabaseName === 'ekodi-platform-prod', 'production Supabase name drifted');
   expect(dev.projectRef === 'lxcxwbdwwojjkgybbqii', 'development project ref drifted');
+  expect(dev.currentSupabaseName === 'ekodi-platform-dev', 'development Supabase name drifted');
   expect(prod.projectRef !== dev.projectRef, 'development and production must be different projects');
   expect(prod.purpose === 'production', 'production project role mismatch');
   expect(dev.purpose === 'development', 'development project role mismatch');
@@ -49,6 +53,29 @@ if (failures.length === 0) {
   expect(security.securityDefinerRpcMustBeReviewed === true, 'SECURITY DEFINER RPC review must remain required');
   expect(security.productionSecretsInDevelopmentForbidden === true, 'production secrets must remain forbidden in development');
   expect(security.developmentSecretsInProductionForbidden === true, 'development secrets must remain forbidden in production');
+}
+
+if (failures.length === 0) {
+  const legacy = JSON.parse(fs.readFileSync(legacyDrainPath, 'utf8'));
+  expect(legacy.policyId === 'SUPABASE-DEV-LEGACY-DRAIN-001', 'legacy drain policy id drifted');
+  expect(legacy.status === 'enforced', 'legacy drain policy must remain enforced');
+  expect(legacy.developmentProjectRef === 'lxcxwbdwwojjkgybbqii', 'legacy drain development ref drifted');
+  expect(legacy.developmentProjectName === 'ekodi-platform-dev', 'legacy drain development name drifted');
+  expect(legacy.productionProjectRef === 'renzehysxirjilvdxacv', 'legacy drain production ref drifted');
+  expect(legacy.productionProjectName === 'ekodi-platform-prod', 'legacy drain production name drifted');
+  expect(legacy.retirementMode === '410-tombstone', 'retired development functions must remain fail-closed tombstones');
+  const preserved = new Set(legacy.preservedFunctions || []);
+  const retired = new Set(legacy.retiredFunctions || []);
+  expect(preserved.size === 3, 'unexpected preserved development Edge Function set');
+  for (const required of ['church-pastor-api','ekodi-resource-telemetry','free-tier-usage']) {
+    expect(preserved.has(required), `missing preserved development function: ${required}`);
+  }
+  expect(retired.size === 16, 'unexpected retired development Edge Function set');
+  for (const name of preserved) expect(!retired.has(name), `function cannot be both preserved and retired: ${name}`);
+  expect(legacy.rules?.noNewProductionDependenciesOnDevelopment === true, 'new production dependencies on development must remain forbidden');
+  expect(legacy.rules?.retiredFunctionsMustReturnGone === true, 'retired functions must remain fail-closed');
+  expect(legacy.rules?.destructiveDeletionRequiresDependencyProof === true, 'destructive deletion must require dependency proof');
+  expect(legacy.rules?.productionDataCopyToDevelopmentForbidden === true, 'production data copy to development must remain forbidden');
 }
 
 if (failures.length) {
