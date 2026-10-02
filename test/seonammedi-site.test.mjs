@@ -130,11 +130,36 @@ test('seonammedi channel renderer avoids blocked whole-page embeds and keeps ifr
   assert.match(app,/channelEmbedPolicy/);
   assert.match(app,/instagram:'recent-embed'/);
   assert.match(app,/facebook:'preview'/);
+  assert.match(app,/tiktok:'provider-embed'/);
   assert.match(app,/youtube:'embed'/);
   assert.match(app,/channelPreviewEmbedUrl/);
   assert.match(app,/setTimeout\(\(\)=>/);
   assert.match(app,/4500/);
   assert.doesNotMatch(app,/providerPreview\?\.embedUrl\|\|\(!providerPreview\?url:''\)/);
+});
+
+test('seonammedi social channel hub groups channels by platform and supports TikTok admin visibility',async()=>{
+  const [html,app,adminHtml,adminJs,control]=await Promise.all([
+    readFile(new URL('index.html',root),'utf8'),
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('admin/admin.js',root),'utf8'),
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8')
+  ]);
+  assert.match(html,/id="publicChannelAccounts"/);
+  assert.match(html,/소셜 플랫폼 선택/);
+  assert.match(app,/\['all','전체'\]/);
+  assert.match(app,/\['facebook','Facebook'\]/);
+  assert.match(app,/\['instagram','Instagram'\]/);
+  assert.match(app,/\['tiktok','TikTok'\]/);
+  assert.match(app,/\['youtube','YouTube'\]/);
+  assert.match(app,/data-channel-platform/);
+  assert.match(adminHtml,/<option value="tiktok">TikTok<\/option>/);
+  assert.match(adminHtml,/사이트 표시 ON/);
+  assert.match(adminJs,/toggleChannelVisibility/);
+  assert.match(adminJs,/tiktok:'TikTok'/);
+  assert.match(control,/PLATFORMS=new Set\(\['youtube','instagram','facebook','tiktok'/);
+  assert.match(control,/player\/v1/);
 });
 
 test('seonammedi civic voices are manageable from the site admin without exposing contact publicly',async()=>{
