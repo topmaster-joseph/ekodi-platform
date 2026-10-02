@@ -91,7 +91,6 @@ async function ensurePublicContentSchema(db){
     platform TEXT NOT NULL DEFAULT 'other',
     name TEXT NOT NULL DEFAULT '',
     url TEXT NOT NULL DEFAULT '',
-    preview_url TEXT NOT NULL DEFAULT '',
     category TEXT NOT NULL DEFAULT 'other',
     official INTEGER NOT NULL DEFAULT 0,
     visible INTEGER NOT NULL DEFAULT 1,
@@ -120,7 +119,7 @@ async function ensurePublicContentSchema(db){
   );`);
   const repair=[
     ['seonammedi_notices','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','body',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','status',"TEXT NOT NULL DEFAULT 'draft'"],['seonammedi_notices','pinned','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','published_at','TEXT'],['seonammedi_notices','image_key',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','image_type',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','notice_kind',"TEXT NOT NULL DEFAULT 'notice'"],['seonammedi_notices','featured','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','event_start','TEXT'],['seonammedi_notices','event_end','TEXT'],['seonammedi_notices','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','updated_at',"TEXT NOT NULL DEFAULT ''"],
-    ['seonammedi_channels','platform',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','name',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','url',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','preview_url',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','category',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','official','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','visible','INTEGER NOT NULL DEFAULT 1'],['seonammedi_channels','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','note',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','updated_at',"TEXT NOT NULL DEFAULT ''"],
+    ['seonammedi_channels','platform',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','name',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','url',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','category',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','official','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','visible','INTEGER NOT NULL DEFAULT 1'],['seonammedi_channels','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','note',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','updated_at',"TEXT NOT NULL DEFAULT ''"],
     ['seonammedi_timeline','legacy_key','TEXT'],['seonammedi_timeline','event_date',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','category',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','summary',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','evidence',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','links_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','media_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','monitor_keywords_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','status',"TEXT NOT NULL DEFAULT 'published'"],['seonammedi_timeline','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_timeline','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','updated_at',"TEXT NOT NULL DEFAULT ''"]
   ];
   for(const [table,column,definition] of repair)await addColumnIfMissing(db,table,column,definition);
@@ -347,9 +346,9 @@ async function createPublicNotice(request,env){
   }catch(error){if(imageKey)await env.LIVE_RECORDINGS_BUCKET?.delete?.(imageKey).catch(()=>{});throw error}
 }
 async function listPublicChannels(env){
-  await ensurePublicContentSchema(env.DB);
-  const rows=await env.DB.prepare(`SELECT id,platform,name,url,preview_url,category,official,note,sort_order FROM seonammedi_channels
-    WHERE visible=1 ORDER BY official DESC,sort_order ASC,id ASC LIMIT 80`).all();
+  const rows=await env.DB.prepare(`SELECT c.id,c.platform,c.name,c.url,COALESCE(p.preview_url,'') preview_url,c.category,c.official,c.note,c.sort_order
+    FROM seonammedi_channels c LEFT JOIN seonammedi_channel_previews p ON p.channel_id=c.id
+    WHERE c.visible=1 ORDER BY c.official DESC,c.sort_order ASC,c.id ASC LIMIT 80`).all();
   return json({ok:true,items:(rows.results||[]).map(publicChannel)});
 }
 const decodePreviewText=value=>clean(String(value||'').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'),1200);
@@ -420,9 +419,9 @@ async function fetchChannelPreviewPage(url,userAgent,timeout=6000){
   try{return await fetch(url,{headers:{'user-agent':userAgent},redirect:'follow',signal:AbortSignal.timeout(timeout)})}catch{return null}
 }
 async function publicChannelPreview(env,id){
-  await ensurePublicContentSchema(env.DB);
-  const row=await env.DB.prepare(`SELECT id,platform,name,url,preview_url,category,official,note,sort_order FROM seonammedi_channels
-    WHERE id=? AND visible=1 LIMIT 1`).bind(id).first();
+  const row=await env.DB.prepare(`SELECT c.id,c.platform,c.name,c.url,COALESCE(p.preview_url,'') preview_url,c.category,c.official,c.note,c.sort_order
+    FROM seonammedi_channels c LEFT JOIN seonammedi_channel_previews p ON p.channel_id=c.id
+    WHERE c.id=? AND c.visible=1 LIMIT 1`).bind(id).first();
   if(!row)return json({ok:false,error:'not_found'},404);
   const item=publicChannel(row),provider=channelProviderUrl(item),explicitEmbed=explicitChannelEmbed(item);
   const preview={title:item.name,description:item.note||'',image:'',embedUrl:explicitEmbed,mode:explicitEmbed?'embed':'summary',platform:item.platform,sourceUrl:item.url,recentItems:[]};
@@ -732,7 +731,9 @@ async function updateAdminContent(request,env,auth,id){
 
 async function listAdminChannels(env,auth){
   if(!can(auth,CHANNEL_CAP))return json({ok:false,error:'channel_forbidden'},403);
-  const rows=await env.DB.prepare('SELECT * FROM seonammedi_channels ORDER BY sort_order ASC,id ASC LIMIT 150').all();
+  const rows=await env.DB.prepare(`SELECT c.*,COALESCE(p.preview_url,'') preview_url
+    FROM seonammedi_channels c LEFT JOIN seonammedi_channel_previews p ON p.channel_id=c.id
+    ORDER BY c.sort_order ASC,c.id ASC LIMIT 150`).all();
   return json({ok:true,items:(rows.results||[]).map(adminChannel)});
 }
 function channelInput(body,existing={}){
@@ -745,21 +746,28 @@ function channelInput(body,existing={}){
 async function createChannel(request,env,auth){
   if(!can(auth,CHANNEL_CAP))return json({ok:false,error:'channel_forbidden'},403);
   const body=await request.json().catch(()=>null),value=channelInput(body);if(!value)return json({ok:false,error:'invalid_channel'},400);
-  const now=new Date().toISOString();const result=await env.DB.prepare(`INSERT INTO seonammedi_channels(platform,name,url,preview_url,category,official,visible,sort_order,note,created_by,created_at,updated_at)
-    VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).bind(value.platform,value.name,value.url,value.previewUrl,value.category,value.official,value.visible,value.sortOrder,value.note,auth.email,now,now).run();
-  const id=Number(result?.meta?.last_row_id||0);await audit(env,auth,'create','channel',id,{platform:value.platform,name:value.name});return json({ok:true,id},201);
+  const now=new Date().toISOString();const result=await env.DB.prepare(`INSERT INTO seonammedi_channels(platform,name,url,category,official,visible,sort_order,note,created_by,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?)`).bind(value.platform,value.name,value.url,value.category,value.official,value.visible,value.sortOrder,value.note,auth.email,now,now).run();
+  const id=Number(result?.meta?.last_row_id||0);
+  if(value.previewUrl)await env.DB.prepare(`INSERT INTO seonammedi_channel_previews(channel_id,preview_url,updated_at) VALUES(?,?,?)
+    ON CONFLICT(channel_id) DO UPDATE SET preview_url=excluded.preview_url,updated_at=excluded.updated_at`).bind(id,value.previewUrl,now).run();
+  await audit(env,auth,'create','channel',id,{platform:value.platform,name:value.name});return json({ok:true,id},201);
 }
 async function updateChannel(request,env,auth,id){
   if(!can(auth,CHANNEL_CAP))return json({ok:false,error:'channel_forbidden'},403);
   const existing=await env.DB.prepare('SELECT * FROM seonammedi_channels WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
   const body=await request.json().catch(()=>null),value=channelInput(body,existing);if(!value)return json({ok:false,error:'invalid_channel'},400);
-  const now=new Date().toISOString();await env.DB.prepare(`UPDATE seonammedi_channels SET platform=?,name=?,url=?,preview_url=?,category=?,official=?,visible=?,sort_order=?,note=?,updated_at=? WHERE id=?`)
-    .bind(value.platform,value.name,value.url,value.previewUrl,value.category,value.official,value.visible,value.sortOrder,value.note,now,id).run();
+  const now=new Date().toISOString();await env.DB.prepare(`UPDATE seonammedi_channels SET platform=?,name=?,url=?,category=?,official=?,visible=?,sort_order=?,note=?,updated_at=? WHERE id=?`)
+    .bind(value.platform,value.name,value.url,value.category,value.official,value.visible,value.sortOrder,value.note,now,id).run();
+  if(value.previewUrl)await env.DB.prepare(`INSERT INTO seonammedi_channel_previews(channel_id,preview_url,updated_at) VALUES(?,?,?)
+    ON CONFLICT(channel_id) DO UPDATE SET preview_url=excluded.preview_url,updated_at=excluded.updated_at`).bind(id,value.previewUrl,now).run();
+  else await env.DB.prepare('DELETE FROM seonammedi_channel_previews WHERE channel_id=?').bind(id).run();
   await audit(env,auth,'update','channel',id,{platform:value.platform,name:value.name,visible:Boolean(value.visible)});return json({ok:true,id});
 }
 async function deleteChannel(env,auth,id){
   if(!can(auth,CHANNEL_CAP))return json({ok:false,error:'channel_forbidden'},403);
   const existing=await env.DB.prepare('SELECT id,name FROM seonammedi_channels WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
+  await env.DB.prepare('DELETE FROM seonammedi_channel_previews WHERE channel_id=?').bind(id).run();
   await env.DB.prepare('DELETE FROM seonammedi_channels WHERE id=?').bind(id).run();await audit(env,auth,'delete','channel',id,{name:existing.name});return json({ok:true,id});
 }
 
