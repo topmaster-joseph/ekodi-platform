@@ -261,7 +261,7 @@ function showStatusTab(tab){
     renderMaterialsForStatus?.(isNews?'관련보도':'공식자료');
   }
 }
-el('statusTabs')?.addEventListener('click',event=>{const button=event.target.closest('[data-status-tab]');if(button)showStatusTab(button.dataset.statusTab)});
+document.querySelectorAll('.status-tabs').forEach(tabs=>tabs.addEventListener('click',event=>{const button=event.target.closest('[data-status-tab]');if(button)showStatusTab(button.dataset.statusTab)}));
 const viewAliases={status:'status',monitor:'status',organization:'organization',records:'status',timeline:'status',materials:'status',news:'status','public-posts':'status',notices:'notices',voices:'voices',channels:'channels',finance:'finance'};
 function showView(view,{updateHash=false}={}){
   const key=viewAliases[view]||'';
