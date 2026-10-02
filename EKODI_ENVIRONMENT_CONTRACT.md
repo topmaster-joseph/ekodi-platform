@@ -12,7 +12,7 @@ EKODI uses one canonical GitHub repository and two Supabase projects as **enviro
 | Cloudflare | production resources | development/staging resources |
 | Supabase | `renzehysxirjilvdxacv` / logical `ekodi-prod` | `lxcxwbdwwojjkgybbqii` / logical `ekodi-dev` |
 
-Provider display names may lag the logical roles. The production project is currently named `ekodi-platform`; the development project is currently named `ekodi-church`. Logical roles are governed by repository policy, not by display name.
+Provider display names may lag the logical roles. The production project is named `ekodi-platform-prod`; the development project is named `ekodi-platform-dev`. Logical roles remain governed by repository policy and the immutable project refs.
 
 ## 2. Promotion path
 
@@ -34,9 +34,9 @@ Development must use synthetic fixtures or explicitly anonymized non-reversible 
 
 Schema moves forward from development to production. Production data never synchronizes backward into development.
 
-## 4. Existing `ekodi-church` transition
+## 4. Existing development-project transition
 
-Project `lxcxwbdwwojjkgybbqii` now has logical role `ekodi-dev`, but it still contains legacy church/Cloudflare probe functions from its former role.
+Project `lxcxwbdwwojjkgybbqii` is now named `ekodi-platform-dev` with logical role `ekodi-dev`, but it still contains legacy church/Cloudflare probe functions from its former role.
 
 This is a controlled drain, not a destructive rename:
 
