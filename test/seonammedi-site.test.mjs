@@ -468,6 +468,7 @@ test('seonammedi channel preview exposes up to three recent items for YouTube an
   assert.match(control,/function youtubeRecentItems\(xml\)/);
   assert.match(control,/items\.length<3/);
   assert.match(control,/resolveYouTubeChannelId/);
+  assert.match(control,/social\/api\/media\/youtube\/status\?handle=/);
   assert.match(control,/contentType='recent-videos'/);
 });
 
