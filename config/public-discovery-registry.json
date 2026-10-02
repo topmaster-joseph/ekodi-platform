@@ -3,9 +3,21 @@
   "policy": {
     "id": "EKODI-DISCOVERY-001",
     "description": "All unrestricted public EKODI sites, sub-sites, posts, events, products and services are projected to SEO/AEO/GEO from the central Public Registry. Admin, auth, API, personal/private, preview and preparing surfaces are excluded by default.",
-    "publicStates": ["public", "published", "live"],
-    "excludedStates": ["private", "draft", "preparing", "planned", "preview", "archived"],
-    "canonicalOrigin": "https://ekodi.kr"
+    "publicStates": [
+      "public",
+      "published",
+      "live"
+    ],
+    "excludedStates": [
+      "private",
+      "draft",
+      "preparing",
+      "planned",
+      "preview",
+      "archived"
+    ],
+    "canonicalOrigin": "https://ekodi.kr",
+    "projectionVersion": 3
   },
   "basePages": [
     {
