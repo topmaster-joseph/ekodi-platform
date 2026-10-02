@@ -612,3 +612,16 @@ test('seonammedi notice composer places attachments before body, compresses to 5
   assert.match(app,/첨부 사진을 본문에 함께 표시합니다/);
   assert.match(control,/image\.size\|\|0\)>5\*1024\*1024/);
 });
+
+
+test('seonammedi notice list actions use server-authorized canManage without exposing author email',async()=>{
+  const [app,control]=await Promise.all([
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8')
+  ]);
+  assert.match(app,/function noticeOwnedByCurrentUser\(item\)\{return Boolean\(noticeToken\(\)&&item\?\.canManage\)\}/);
+  assert.match(app,/fetch\('\/api\/seonammedi\/notices',\{cache:'no-store',headers:token\?\{authorization:'Bearer '\+token\}:\{\}\}\)/);
+  assert.match(control,/async function listPublicNotices\(request,env\)/);
+  assert.match(control,/canManage:Boolean\(admin\)\|\|Boolean\(email&&lower\(row\.created_by\)===email\)/);
+  assert.doesNotMatch(control,/eventEnd:row\.event_end\|\|'',createdBy:row\.created_by\|\|''/);
+});
