@@ -63,7 +63,7 @@
   <form id="noticeComposeForm" class="notice-compose" hidden>
     <label>제목<input name="title" maxlength="180" required placeholder="제목을 입력하세요"></label>
     <label>내용<textarea name="body" maxlength="10000" rows="6" placeholder="내용을 입력하세요"></textarea></label>
-    <label>사진<input name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"><small>JPG·PNG·WEBP·GIF, 최대 8MB</small></label>
+    <label>사진 (최대 5장)<input id="noticeImages" name="images" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple><small>JPG·PNG·WEBP·GIF, 장당 최대 8MB · 선택 후 개별 삭제 가능</small></label><div id="noticeImagePreview" class="notice-image-preview" aria-live="polite"></div>
     <div class="form-actions"><button type="submit">게시하기</button><button id="noticeComposeCancel" type="button" class="secondary">취소</button><span id="noticeComposeMessage" class="muted" role="status"></span></div>
   </form>
   <div id="noticeDetail" class="notice-detail" hidden></div>
