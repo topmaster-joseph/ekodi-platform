@@ -798,7 +798,8 @@ export async function handleSeonamMediAdminApi(request,env){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return publicStorageRead('timeline',()=>listPublicTimeline(env));
   }
   if(url.pathname===PREFIX+'/notices'&&request.method==='GET'){
-    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return publicStorageRead('notices',()=>listPublicNotices(env));
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
+    return publicStorageRead('notices',async()=>{await ensurePublicContentSchema(env.DB);return listPublicNotices(env)});
   }
   if(url.pathname===PREFIX+'/notices'&&request.method==='POST'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return createPublicNotice(request,env);
