@@ -27,7 +27,9 @@ test('workspace admin uses direct left navigation and opens leaf sections in the
   assert.match(script,/boot\(\)\.catch\(error=>/);
   assert.match(script,/workspaceBootRetry/);
   assert.match(script,/관리자 화면을 불러오지 못했습니다/);
-  assert.match(script,/admin-nav-group-label/);
+  assert.match(script,/admin-nav-accordion-toggle/);
+  assert.match(script,/label:'공통 메뉴'/);
+  assert.match(script,/label:'전용 메뉴'/);
   assert.match(script,/ekodiAdminNavigationProfile/);
   assert.match(script,/a\.dataset\.adminSection=key/);
   assert.match(script,/a\.href=sectionHref\(key\)/);
