@@ -134,6 +134,7 @@ test('seonammedi channel renderer avoids blocked whole-page embeds and keeps ifr
   assert.match(app,/tiktok:'provider-embed'/);
   assert.match(app,/youtube:'embed'/);
   assert.match(app,/channelPreviewEmbedUrl/);
+  assert.match(app,/latest\?\.embedUrl\|\|data\.embedUrl/);
   assert.match(app,/setTimeout\(\(\)=>/);
   assert.match(app,/4500/);
   assert.doesNotMatch(app,/providerPreview\?\.embedUrl\|\|\(!providerPreview\?url:''\)/);
