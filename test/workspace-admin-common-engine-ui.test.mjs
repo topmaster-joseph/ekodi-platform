@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   workspaceAdminCss,
   workspaceAdminPage,
+  workspaceAdminScript,
   workspaceAdminSectionsForRole,
 } from '../workspace-admin-page.js';
 
@@ -24,6 +25,17 @@ test('workspace admin removes duplicate heading chrome and strongly marks active
   assert.match(css, /\.sidebar nav\{display:grid;gap:1px/);
   assert.match(css, /\.sidebar nav a\{[^}]*padding:6px 9px/);
   assert.match(css, /\.admin-nav-group-label\{[^}]*margin:5px 8px 1px/);
+  assert.match(css, /\.admin-nav-accordion-toggle\{/);
+  assert.match(css, /\.admin-nav-accordion-panel\[hidden\]\{display:none!important\}/);
+});
+
+test('workspace admin separates common and site menus with one-open accordion behavior', async () => {
+  const response = workspaceAdminScript();
+  const script = await response.text();
+  assert.match(script, /label:'공통 메뉴'/);
+  assert.match(script, /label:'전용 메뉴'/);
+  assert.match(script, /admin-nav-accordion-toggle/);
+  assert.match(script, /otherButton\?\.setAttribute\('aria-expanded',isCurrent\?'true':'false'\)/);
 });
 
 test('role capability engine keeps lower admin menus scoped', () => {
