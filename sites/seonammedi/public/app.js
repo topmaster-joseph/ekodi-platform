@@ -117,18 +117,45 @@ const materialItems=[
   if(!key||seenMaterialKeys.has(key))return false;
   seenMaterialKeys.add(key);return true;
 });
-const materialCats=['전체','공식자료','관련보도','시민·온라인자료'];
+const officialDetailCategory=item=>{
+  const corpus=[item.publisher,item.subtype,item.title].filter(Boolean).join(' ');
+  if(/비대위|대책위|당사자|공식입장|기자회견문/.test(corpus))return'비대위·당사자';
+  if(/국립목포대학교|목포대|순천대|대학교|대학/.test(corpus))return'대학';
+  if(/국회|법원|교육부|보건복지부|정부|전라남도|전남|목포시|지자체|시청|도청/.test(corpus))return'정부·지자체·국회';
+  return'기타 공식기록';
+};
+const newsDetailCategory=item=>{
+  const corpus=[item.publisher,item.subtype,item.title].filter(Boolean).join(' ');
+  if(/일지|경과/.test(corpus))return'경과·일지';
+  if(/기자회견|집회|현장|행사/.test(corpus))return'현장·행사 보도';
+  if(/인터뷰|기고|해설|분석|쟁점/.test(corpus))return'해설·분석';
+  return'일반보도';
+};
+for(const item of materialItems){
+  item.detailCategory=item.category==='공식자료'?officialDetailCategory(item):item.category==='관련보도'?newsDetailCategory(item):'시민·온라인자료';
+}
+const MATERIAL_DETAIL_CATS={
+  '관련보도':['전체','일반보도','경과·일지','현장·행사 보도','해설·분석'],
+  '공식자료':['전체','정부·지자체·국회','대학','비대위·당사자','기타 공식기록']
+};
 const materialFilters=el('materialFilters'),materialList=el('materialList');
 let renderMaterialsForStatus=null;
+let activeMaterialTopCategory='관련보도';
 if(materialFilters&&materialList){
-  materialFilters.innerHTML=materialCats.map((cat,i)=>`<button data-material-cat="${escapeHtml(cat)}" class="${i===0?'active':''}">${escapeHtml(cat)}</button>`).join('');
-  const renderMaterials=cat=>{
-    const rows=(cat==='전체'?materialItems:materialItems.filter(item=>item.category===cat)).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)));
-    materialList.innerHTML=rows.length?rows.map(item=>`<article class="material-item"><div class="material-date">${escapeHtml(item.date||'날짜 확인 중')}</div><div><h3><a href="${safeUrl(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a></h3>${item.summary?'<p>'+escapeHtml(item.summary)+'</p>':''}<div class="public-post-meta"><span class="source-type">${escapeHtml(item.category)}</span><span class="source-type">${escapeHtml(item.subtype)}</span>${item.publisher?'<span class="source-type">'+escapeHtml(item.publisher)+'</span>':''}${item.verification?'<span class="verify-state">'+escapeHtml(item.verification)+'</span>':''}</div></div></article>`).join(''):'<p class="muted">표시할 관련자료가 없습니다.</p>';
+  const renderMaterialFilters=topCategory=>{
+    activeMaterialTopCategory=topCategory;
+    const categories=MATERIAL_DETAIL_CATS[topCategory]||['전체'];
+    materialFilters.innerHTML=categories.map((cat,i)=>`<button data-material-detail="${escapeHtml(cat)}" class="${i===0?'active':''}">${escapeHtml(cat)}</button>`).join('');
+    materialFilters.setAttribute('aria-label',(topCategory==='관련보도'?'관련보도':'공식기록')+' 세부 분류');
+    const label=el('statusMaterialFilterLabel');if(label)label.textContent=(topCategory==='관련보도'?'관련보도':'공식기록')+' 세부 분류';
   };
-  renderMaterialsForStatus=renderMaterials;
+  const renderMaterials=(topCategory,detailCategory='전체')=>{
+    const rows=materialItems.filter(item=>item.category===topCategory&&(detailCategory==='전체'||item.detailCategory===detailCategory)).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+    materialList.innerHTML=rows.length?rows.map(item=>`<article class="material-item"><div class="material-date">${escapeHtml(item.date||'날짜 확인 중')}</div><div><h3><a href="${safeUrl(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a></h3>${item.summary?'<p>'+escapeHtml(item.summary)+'</p>':''}<div class="public-post-meta"><span class="source-type">${escapeHtml(item.detailCategory)}</span><span class="source-type">${escapeHtml(item.subtype)}</span>${item.publisher?'<span class="source-type">'+escapeHtml(item.publisher)+'</span>':''}${item.verification?'<span class="verify-state">'+escapeHtml(item.verification)+'</span>':''}</div></div></article>`).join(''):'<p class="muted">해당 분류에 표시할 자료가 없습니다.</p>';
+  };
+  renderMaterialsForStatus=topCategory=>{renderMaterialFilters(topCategory);renderMaterials(topCategory,'전체')};
   showStatusTab(activeStatusTab);
-  materialFilters.addEventListener('click',event=>{const button=event.target.closest('button');if(!button)return;[...materialFilters.children].forEach(x=>x.classList.remove('active'));button.classList.add('active');renderMaterials(button.dataset.materialCat)});
+  materialFilters.addEventListener('click',event=>{const button=event.target.closest('button[data-material-detail]');if(!button)return;[...materialFilters.children].forEach(x=>x.classList.remove('active'));button.classList.add('active');renderMaterials(activeMaterialTopCategory,button.dataset.materialDetail)});
 }
 const org=d.organization||{};
 const ORG_GROUP_META=[['bidae','비대위'],['mokpo','목포대'],['minhak','민학비대위']];
