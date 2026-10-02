@@ -309,7 +309,11 @@ try{
 
   checks.rootUrl=new URL(page.url()).pathname==='/ekodimission/admin';
   checks.rootTitle=(await page.locator('#pageTitle').textContent())?.includes('운영 홈')||false;
-  const activityEntry=page.locator('#mainPanel a[href="/ekodimission/admin/activities"]').first();
+  const activityEntry=page.locator('a[href="/ekodimission/admin/activities"]').first();
+  if(!(await activityEntry.isVisible())){
+    const siteToggle=page.locator('[data-admin-nav-bucket="site"] .admin-nav-accordion-toggle').first();
+    if(await siteToggle.count())await siteToggle.click();
+  }
   await activityEntry.waitFor({state:'visible'});
   checks.activityEntryVisible=await activityEntry.isVisible();
   await activityEntry.click();
