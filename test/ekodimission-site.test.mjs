@@ -279,3 +279,10 @@ test('Mission browser submit ignores accidental honeypot autofill and requires a
   assert.match(script,/website:''/);
   assert.match(script,/!result\.applicationId/);
 });
+
+
+test('EKODI Mission browser script is valid JavaScript and does not contain escaped source newlines',async()=>{
+  const script=await readFile(new URL('../space/ekodimission.js',import.meta.url),'utf8');
+  assert.doesNotMatch(script,/;\\n\s+const registrationApi/);
+  assert.doesNotThrow(()=>new Function(script));
+});
