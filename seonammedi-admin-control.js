@@ -78,6 +78,8 @@ async function ensurePublicContentSchema(db){
     published_at TEXT,
     image_key TEXT NOT NULL DEFAULT '',
     image_type TEXT NOT NULL DEFAULT '',
+    image_keys_json TEXT NOT NULL DEFAULT '[]',
+    image_types_json TEXT NOT NULL DEFAULT '[]',
     notice_kind TEXT NOT NULL DEFAULT 'notice',
     featured INTEGER NOT NULL DEFAULT 0,
     event_start TEXT,
@@ -118,7 +120,7 @@ async function ensurePublicContentSchema(db){
     updated_at TEXT NOT NULL DEFAULT ''
   );`);
   const repair=[
-    ['seonammedi_notices','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','body',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','status',"TEXT NOT NULL DEFAULT 'draft'"],['seonammedi_notices','pinned','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','published_at','TEXT'],['seonammedi_notices','image_key',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','image_type',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','notice_kind',"TEXT NOT NULL DEFAULT 'notice'"],['seonammedi_notices','featured','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','event_start','TEXT'],['seonammedi_notices','event_end','TEXT'],['seonammedi_notices','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','updated_at',"TEXT NOT NULL DEFAULT ''"],
+    ['seonammedi_notices','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','body',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','status',"TEXT NOT NULL DEFAULT 'draft'"],['seonammedi_notices','pinned','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','published_at','TEXT'],['seonammedi_notices','image_key',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','image_type',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','image_keys_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_notices','image_types_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_notices','notice_kind',"TEXT NOT NULL DEFAULT 'notice'"],['seonammedi_notices','featured','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','event_start','TEXT'],['seonammedi_notices','event_end','TEXT'],['seonammedi_notices','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','updated_at',"TEXT NOT NULL DEFAULT ''"],
     ['seonammedi_channels','platform',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','name',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','url',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','category',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','official','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','visible','INTEGER NOT NULL DEFAULT 1'],['seonammedi_channels','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','note',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','updated_at',"TEXT NOT NULL DEFAULT ''"],
     ['seonammedi_timeline','legacy_key','TEXT'],['seonammedi_timeline','event_date',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','category',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','summary',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','evidence',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','links_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','media_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','monitor_keywords_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','status',"TEXT NOT NULL DEFAULT 'published'"],['seonammedi_timeline','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_timeline','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','updated_at',"TEXT NOT NULL DEFAULT ''"]
   ];
@@ -309,7 +311,8 @@ async function audit(env,auth,action,type,id,detail={}){
     .bind(auth.email,action,type,id||null,JSON.stringify(detail),new Date().toISOString()).run()}catch{}
 }
 
-function publicNotice(row){const id=Number(row.id);return{id,title:row.title,body:row.body,pinned:Boolean(row.pinned),imageUrl:row.image_key?PREFIX+'/notices/'+id+'/image':'',publishedAt:row.published_at||row.updated_at,updatedAt:row.updated_at,kind:row.notice_kind==='event'?'event':'notice',featured:Boolean(row.featured),eventStart:row.event_start||'',eventEnd:row.event_end||''}}
+function noticeImageKeys(row){try{const keys=JSON.parse(String(row.image_keys_json||'[]'));if(Array.isArray(keys)&&keys.length)return keys.filter(Boolean).slice(0,5)}catch{}return row.image_key?[row.image_key]:[]}
+function publicNotice(row){const id=Number(row.id),keys=noticeImageKeys(row);return{id,title:row.title,body:row.body,pinned:Boolean(row.pinned),imageUrl:keys.length?PREFIX+'/notices/'+id+'/image/0':'',imageUrls:keys.map((_,index)=>PREFIX+'/notices/'+id+'/image/'+index),publishedAt:row.published_at||row.updated_at,updatedAt:row.updated_at,kind:row.notice_kind==='event'?'event':'notice',featured:Boolean(row.featured),eventStart:row.event_start||'',eventEnd:row.event_end||'',createdBy:row.created_by||''}}
 function adminNotice(row){return{...publicNotice(row),status:row.status,createdBy:row.created_by,createdAt:row.created_at}}
 function publicChannel(row){return{id:Number(row.id),platform:row.platform,name:row.name,url:row.url,previewUrl:row.preview_url||'',category:row.category,official:Boolean(row.official),note:row.note||'',sortOrder:Number(row.sort_order||0)}}
 function adminChannel(row){return{...publicChannel(row),visible:Boolean(row.visible),createdBy:row.created_by,createdAt:row.created_at,updatedAt:row.updated_at}}
@@ -320,7 +323,7 @@ async function noticePublicProjection(env){
   const optional=(name,fallback)=>columns.has(name)?name:fallback+' AS '+name;
   return [
     'id','title','body','pinned','published_at','updated_at',
-    optional('image_key',"''"),optional('image_type',"''"),
+    optional('image_key',"''"),optional('image_type',"''"),optional('image_keys_json',"'[]'"),optional('image_types_json',"'[]'"),optional('created_by',"''"),
     optional('notice_kind',"'notice'"),optional('featured','0'),
     optional('event_start','NULL'),optional('event_end','NULL')
   ].join(',');
@@ -352,10 +355,11 @@ async function storeNoticeImageInDrive(env,image,principal){
   if(!response.ok||!data?.file?.id)throw new Error(data?.code||'image_storage_unavailable');
   return {key:'gdrive:'+String(data.file.id),type};
 }
-async function publicNoticeImage(env,id){
-  const row=await env.DB.prepare("SELECT image_key,image_type,status FROM seonammedi_notices WHERE id=? LIMIT 1").bind(id).first();
-  if(!row||row.status!=='published'||!row.image_key)return new Response('not_found',{status:404});
-  const key=String(row.image_key||'');
+async function publicNoticeImage(env,id,index=0){
+  const row=await env.DB.prepare("SELECT image_key,image_type,image_keys_json,image_types_json,status FROM seonammedi_notices WHERE id=? LIMIT 1").bind(id).first();
+  if(!row||row.status!=='published')return new Response('not_found',{status:404});
+  const keys=noticeImageKeys(row);if(index<0||index>=keys.length)return new Response('not_found',{status:404});
+  const key=String(keys[index]||'');
   if(key.startsWith('gdrive:')){
     const fileId=key.slice(7);
     if(!env?.STORAGE?.fetch)return new Response('storage_unavailable',{status:503});
@@ -368,20 +372,36 @@ async function publicNoticeImage(env,id){
   const object=await env.LIVE_RECORDINGS_BUCKET.get(key);if(!object)return new Response('not_found',{status:404});
   return new Response(object.body,{status:200,headers:{'content-type':row.image_type||object.httpMetadata?.contentType||'application/octet-stream','cache-control':'public, max-age=86400','x-content-type-options':'nosniff'}});
 }
+async function deleteNoticeDriveKey(env,key){
+  const value=String(key||'');if(!value.startsWith('gdrive:')||!env?.STORAGE?.fetch)return;
+  await env.STORAGE.fetch(new Request('https://storage.internal/api/storage/v1/delete-file',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({fileId:value.slice(7)})})).catch(()=>{});
+}
 async function createPublicNotice(request,env){
   const principal=await principalFromSupabaseRequest(request);if(!principal?.email)return json({ok:false,error:'authentication_required'},401);
   const form=await request.formData().catch(()=>null);if(!form)return json({ok:false,error:'invalid_form'},400);
   const title=clean(form.get('title'),180),copy=clean(form.get('body'),10000);if(!title)return json({ok:false,error:'title_required'},400);
-  const image=form.get('image');let imageKey='',imageType='';
-  if(image&&typeof image==='object'&&Number(image.size||0)>0){
-    try{const stored=await storeNoticeImageInDrive(env,image,principal);imageKey=stored.key;imageType=stored.type}
-    catch(error){const code=String(error?.message||'image_storage_unavailable');return json({ok:false,error:code},code==='image_too_large'?413:code==='unsupported_image_type'?415:503)}
-  }
-  const now=new Date().toISOString();
-  const result=await env.DB.prepare('INSERT INTO seonammedi_notices(title,body,status,pinned,published_at,image_key,image_type,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)')
-    .bind(title,copy,'published',0,now,imageKey,imageType,principal.email,now,now).run();
-  return json({ok:true,id:Number(result?.meta?.last_row_id||0)},201);
+  const images=form.getAll('images').filter(image=>image&&typeof image==='object'&&Number(image.size||0)>0);
+  const legacy=form.get('image');if(!images.length&&legacy&&typeof legacy==='object'&&Number(legacy.size||0)>0)images.push(legacy);
+  if(images.length>5)return json({ok:false,error:'too_many_images'},400);
+  const stored=[];try{for(const image of images)stored.push(await storeNoticeImageInDrive(env,image,principal))}
+  catch(error){for(const item of stored)await deleteNoticeDriveKey(env,item.key);const code=String(error?.message||'image_storage_unavailable');return json({ok:false,error:code},code==='image_too_large'?413:code==='unsupported_image_type'?415:503)}
+  const keys=stored.map(item=>item.key),types=stored.map(item=>item.type),now=new Date().toISOString();
+  try{
+    const result=await env.DB.prepare('INSERT INTO seonammedi_notices(title,body,status,pinned,published_at,image_key,image_type,image_keys_json,image_types_json,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)')
+      .bind(title,copy,'published',0,now,keys[0]||'',types[0]||'',JSON.stringify(keys),JSON.stringify(types),principal.email,now,now).run();
+    return json({ok:true,id:Number(result?.meta?.last_row_id||0)},201);
+  }catch(error){for(const item of stored)await deleteNoticeDriveKey(env,item.key);throw error}
 }
+async function deletePublicNotice(request,env,id){
+  const principal=await principalFromSupabaseRequest(request);if(!principal?.email)return json({ok:false,error:'authentication_required'},401);
+  const row=await env.DB.prepare('SELECT id,created_by,image_key,image_keys_json FROM seonammedi_notices WHERE id=?').bind(id).first();if(!row)return json({ok:false,error:'not_found'},404);
+  const email=lower(principal.email),admin=await env.DB.prepare("SELECT role FROM admins WHERE lower(trim(email))=? AND role='super_admin' LIMIT 1").bind(email).first().catch(()=>null);
+  if(lower(row.created_by)!==email&&!admin)return json({ok:false,error:'delete_forbidden'},403);
+  await env.DB.prepare('DELETE FROM seonammedi_notices WHERE id=?').bind(id).run();
+  for(const key of noticeImageKeys(row))await deleteNoticeDriveKey(env,key);
+  return json({ok:true,id});
+}
+
 async function listPublicChannels(env){
   const rows=await env.DB.prepare(`SELECT c.id,c.platform,c.name,c.url,COALESCE(p.preview_url,'') preview_url,c.category,c.official,c.note,c.sort_order
     FROM seonammedi_channels c LEFT JOIN seonammedi_channel_previews p ON p.channel_id=c.id
@@ -896,9 +916,13 @@ export async function handleSeonamMediAdminApi(request,env){
   if(url.pathname===PREFIX+'/notices'&&request.method==='POST'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return createPublicNotice(request,env);
   }
-  const noticeImageMatch=url.pathname.match(/^\/api\/seonammedi\/notices\/(\d+)\/image$/);
+  const noticeDeleteMatch=url.pathname.match(/^\/api\/seonammedi\/notices\/(\d+)$/);
+  if(noticeDeleteMatch&&request.method==='DELETE'){
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return deletePublicNotice(request,env,Number(noticeDeleteMatch[1]));
+  }
+  const noticeImageMatch=url.pathname.match(/^\/api\/seonammedi\/notices\/(\d+)\/image(?:\/(\d+))?$/);
   if(noticeImageMatch&&request.method==='GET'){
-    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return publicNoticeImage(env,Number(noticeImageMatch[1]));
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return publicNoticeImage(env,Number(noticeImageMatch[1]),Number(noticeImageMatch[2]||0));
   }
   if(url.pathname===PREFIX+'/channels'&&request.method==='GET'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return publicStorageRead('channels',()=>listPublicChannels(env));
