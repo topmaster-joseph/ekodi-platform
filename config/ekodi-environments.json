@@ -20,7 +20,7 @@
       "supabase": {
         "logicalName": "ekodi-prod",
         "currentProjectRef": "renzehysxirjilvdxacv",
-        "currentProjectName": "ekodi-platform",
+        "currentProjectName": "ekodi-platform-prod",
         "state": "canonical-platform-active",
         "realUserDataAllowed": true
       }
@@ -37,7 +37,7 @@
       "supabase": {
         "logicalName": "ekodi-dev",
         "currentProjectRef": "lxcxwbdwwojjkgybbqii",
-        "currentProjectName": "ekodi-church",
+        "currentProjectName": "ekodi-platform-dev",
         "state": "development-active-with-legacy-drain",
         "validationMode": "remote-dev-plus-ephemeral-local-ci",
         "realUserDataAllowed": false,
