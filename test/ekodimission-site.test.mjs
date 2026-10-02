@@ -341,3 +341,16 @@ test('EKODI Mission default fee account is Shinhan 100-033-234271 and is shown o
   assert.match(page,/100-033-234271/);
   assert.match(page,/data-mission-default-account/);
 });
+
+
+test('Mission trip exposes pay-now buttons before and after application with default Shinhan account',async()=>{
+  const page=await readFile(new URL('../space/ekodimission-autumn-trip-apply.page',import.meta.url),'utf8');
+  const script=await readFile(new URL('../space/ekodimission.js',import.meta.url),'utf8');
+  assert.match(page,/data-mission-pay-open/);
+  assert.match(page,/100-033-234271/);
+  assert.match(page,/신한 SOL 열기/);
+  assert.match(script,/참가비 바로 납부하기/);
+  assert.match(script,/data\.missionPayOpen/);
+  assert.match(script,/계좌번호를 복사했습니다/);
+  assert.match(script,/신청이 완료되었습니다\. 아직 참가비를 납부하지 않았다면 바로 납부해 주세요/);
+});
