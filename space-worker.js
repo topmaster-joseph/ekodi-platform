@@ -26,6 +26,7 @@ const MISSION_ADMIN_ACTIVITY_RPCS=new Set(['activity_admin_snapshot','activity_a
 const MISSION_SHARE_PATH_RE=/^\/ekodimission\/share\/([A-Za-z0-9_-]{32,200})$/;
 const MISSION_ACTIVITY_ARCHIVE_RE=/^\/ekodimission\/activities\/([a-z0-9-]+)\/archive$/;
 const MISSION_ACTIVITY_REGISTRATION_RE=/^\/ekodimission\/api\/activities\/([a-z0-9-]+)\/registration$/;
+const MISSION_ACTIVITY_APPLICATION_RE=/^\/ekodimission\/api\/activities\/([0-9]{6}-[a-z0-9][a-z0-9-]{2,79})\/applications$/;
 const EKODIMISSION_PAGES=new Map([['/ekodimission','/ekodimission.page'],['/ekodimission/vision','/ekodimission-vision.page'],['/ekodimission/activities','/ekodimission-activities.page'],[MISSION_EVENT_PATH,'/ekodimission-open-table-apply.page'],['/ekodimission/apply/261003-autumn-trip','/ekodimission-autumn-trip-apply.page'],['/ekodimission/prayer','/ekodimission-prayer.page'],['/ekodimission/participate','/ekodimission-participate.page'],['/ekodimission/partners','/ekodimission-partners.page'],['/ekodimission/stories','/ekodimission-stories.page'],['/ekodimission/give','/ekodimission-give.page'],['/ekodimission/transparency','/ekodimission-transparency.page'],['/ekodimission/contact','/ekodimission-contact.page']]);
 const EKODIMISSION_ASSETS=new Map([['/ekodimission/assets/site.css','/ekodimission.css'],['/ekodimission/assets/site.js','/ekodimission.js'],['/ekodimission/assets/shell.css','/ekodimission-shell.css'],['/ekodimission/assets/shell.js','/ekodimission-shell.js'],['/ekodimission/assets/mission-table-hero.svg','/mission-table-hero.svg'],['/ekodimission/assets/open-table-hero-260926.svg','/open-table-hero-260926.svg'],['/ekodimission/assets/open-table-meal-260925.jpg','/open-table-meal-260925.jpg'],['/ekodimission/assets/share.css','/ekodimission-share.css'],['/ekodimission/assets/collab.css','/ekodimission-collab.css'],['/ekodimission/assets/collab.js','/ekodimission-collab.js']]);
 function normalizedMissionPath(pathname){const clean=String(pathname||'').replace(/\/+$/,'');return clean||'/'}
@@ -306,8 +307,8 @@ export default{
       const target=new URL(url.pathname+url.search,'https://ekodi.kr');
       return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-alias':'space.ekodi.kr'}});
     };
-    if(normalizedMissionPath(url.pathname)===MISSION_EVENT_APPLICATION_API)return submitMissionEventApplication(request,env);
-    if(normalizedMissionPath(url.pathname)===MISSION_TRIP_APPLICATION_API)return submitMissionEventApplication(request,env,MISSION_TRIP_RECORD_KEY,MISSION_TRIP_RECORD_KEY);
+    const missionApplicationMatch=normalizedMissionPath(url.pathname).match(MISSION_ACTIVITY_APPLICATION_RE);
+    if(missionApplicationMatch)return submitMissionEventApplication(request,env,missionApplicationMatch[1],missionApplicationMatch[1]);
     if(normalizedMissionPath(url.pathname)===MISSION_TRIP_CONTENT_API)return routeMissionTripContent(request,env);
     if(normalizedMissionPath(url.pathname)===MISSION_COLLAB_API)return routeMissionCollabApi(request,env);
     if(normalizedMissionPath(url.pathname)===MISSION_ADMIN_ACTIVITY_RPC_API)return routeEkodiMission(request,env);
