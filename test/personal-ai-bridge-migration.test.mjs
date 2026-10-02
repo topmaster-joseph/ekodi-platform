@@ -9,6 +9,7 @@ const activeConsentSql=await readFile(new URL('../supabase/migrations/2026090601
 const leastPrivilegeSql=await readFile(new URL('../supabase/migrations/20260906011000_ekodi_oauth_least_privilege.sql',import.meta.url),'utf8');
 const canonicalResourceSql=await readFile(new URL('../supabase/migrations/20260908193000_ekodi_mcp_canonical_resource.sql',import.meta.url),'utf8');
 const durableGrantSql=await readFile(new URL('../supabase/migrations/20261002043000_ekodi_mcp_durable_resource_grant.sql',import.meta.url),'utf8');
+const consentFallbackSql=await readFile(new URL('../supabase/migrations/20261002211500_ekodi_mcp_consent_fallback_identity.sql',import.meta.url),'utf8');
 
 test('canonical identity projection is authenticated-only and person based',()=>{
   assert.match(identitySql,/create or replace function public\.current_ekodi_identity\(\)/i);
@@ -65,4 +66,17 @@ test('MCP OAuth resource grant survives authorization-code consumption without b
   assert.match(durableGrantSql,/claims := jsonb_set\(claims, '\{aud\}', to_jsonb\('https:\/\/ekodi\.kr\/mcp'::text\)/i);
   assert.match(durableGrantSql,/revoke all on table public\.ekodi_mcp_oauth_grants from public, anon, authenticated/i);
   assert.match(durableGrantSql,/revoke execute on function public\.capture_ekodi_mcp_oauth_consent\(\) from authenticated, anon, public/i);
+});
+
+
+test('MCP identity fallback authorizes only active consent bound to durable canonical grant',()=>{
+  assert.match(consentFallbackSql,/create or replace function public\.current_ekodi_mcp_identity\(\)/i);
+  assert.match(consentFallbackSql,/from public\.ekodi_mcp_oauth_grants g/i);
+  assert.match(consentFallbackSql,/join auth\.oauth_consents c/i);
+  assert.match(consentFallbackSql,/g\.resource = 'https:\/\/ekodi\.kr\/mcp'/i);
+  assert.match(consentFallbackSql,/g\.revoked_at is null/i);
+  assert.match(consentFallbackSql,/c\.revoked_at is null/i);
+  assert.match(consentFallbackSql,/g\.user_id = v_user_id/i);
+  assert.match(consentFallbackSql,/g\.client_id = v_client_id/i);
+  assert.match(consentFallbackSql,/grant execute on function public\.current_ekodi_mcp_identity\(\) to anon, authenticated/i);
 });

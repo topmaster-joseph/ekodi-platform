@@ -73,10 +73,19 @@ export async function validateMcpBearer(request,{fetchImpl=fetch}={}){
   const user=await response.json();
   const audience=(Array.isArray(claims.aud)?claims.aud:[claims.aud]).filter(Boolean).map(String);
   if(!claims.client_id)return {ok:false,reason:'oauth_client_required'};
-  const resourceAudience=ACCEPTED_MCP_RESOURCES.find(resource=>audience.includes(resource));
-  if(!resourceAudience)return {ok:false,reason:'invalid_audience'};
   if(String(claims.sub||'')!==String(user?.id||''))return {ok:false,reason:'subject_mismatch'};
-  return {ok:true,token,user,claims,resourceAudience,legacyAudience:resourceAudience!==EKODI_MCP_RESOURCE};
+  const resourceAudience=ACCEPTED_MCP_RESOURCES.find(resource=>audience.includes(resource));
+  if(resourceAudience)return {ok:true,token,user,claims,resourceAudience,legacyAudience:resourceAudience!==EKODI_MCP_RESOURCE,fallbackAuthorization:false};
+  if(!audience.includes('authenticated'))return {ok:false,reason:'invalid_audience'};
+  const consentResponse=await fetchImpl(`${SUPABASE_URL}/rest/v1/rpc/current_ekodi_mcp_identity`,{
+    method:'POST',
+    headers:{apikey:SUPABASE_PUBLISHABLE_KEY,authorization:`Bearer ${token}`,'content-type':'application/json'},
+    body:'{}',
+  }).catch(()=>null);
+  if(!consentResponse?.ok)return {ok:false,reason:'invalid_audience'};
+  const consent=await consentResponse.json().catch(()=>null);
+  if(consent?.authorized!==true)return {ok:false,reason:'insufficient_mcp_authorization'};
+  return {ok:true,token,user,claims,resourceAudience:EKODI_MCP_RESOURCE,legacyAudience:false,fallbackAuthorization:true};
 }
 export const EKODI_MCP_TOOLS=Object.freeze([
   ...EKODI_MCP_EXTENSION_TOOLS,
