@@ -674,3 +674,30 @@ test('seonammedi admin notice Drive storage and five-image flow',async()=>{
   assert.match(adminHtml,/사진 최대 5장/);
   assert.doesNotMatch(adminHtml,/최대 8MB/);
 });
+
+
+test('seonammedi citizen voices publish immediately, render publicly, accept replies, and remain admin-moderatable',async()=>{
+  const [civic,control,html,app,security,migration,adminJs]=await Promise.all([
+    readFile(new URL('../seonammedi-civic-control.js',import.meta.url),'utf8'),
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+    readFile(new URL('index.html',root),'utf8'),
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('../platform-security-policy.js',import.meta.url),'utf8'),
+    readFile(new URL('../migrations/0126_seonammedi_civic_voice_replies.sql',import.meta.url),'utf8'),
+    readFile(new URL('admin/admin.js',root),'utf8')
+  ]);
+  assert.match(civic,/review_status[^\n]+published/);
+  assert.match(civic,/async function listPublicVoices/);
+  assert.match(civic,/async function createPublicReply/);
+  assert.match(civic,/REPLY_PATH/);
+  assert.match(html,/id="publicVoiceList"/);
+  assert.match(html,/등록 즉시 아래 시민의견 목록에 공개/);
+  assert.doesNotMatch(html,/name="publicConsent"/);
+  assert.match(app,/loadPublicVoices/);
+  assert.match(app,/data-voice-reply/);
+  assert.match(app,/\/api\/seonammedi\/voices\/'\+voiceId\+'\/replies/);
+  assert.match(control,/deleteAdminVoiceReply/);
+  assert.match(adminJs,/답글 삭제/);
+  assert.match(security,/SELF_PROTECTED_PUBLIC_WRITE_PATTERNS/);
+  assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_civic_voice_replies/);
+});
