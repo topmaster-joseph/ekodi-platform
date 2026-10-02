@@ -78,6 +78,10 @@ async function ensurePublicContentSchema(db){
     published_at TEXT,
     image_key TEXT NOT NULL DEFAULT '',
     image_type TEXT NOT NULL DEFAULT '',
+    notice_kind TEXT NOT NULL DEFAULT 'notice',
+    featured INTEGER NOT NULL DEFAULT 0,
+    event_start TEXT,
+    event_end TEXT,
     created_by TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL DEFAULT ''
@@ -114,12 +118,13 @@ async function ensurePublicContentSchema(db){
     updated_at TEXT NOT NULL DEFAULT ''
   );`);
   const repair=[
-    ['seonammedi_notices','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','body',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','status',"TEXT NOT NULL DEFAULT 'draft'"],['seonammedi_notices','pinned','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','published_at','TEXT'],['seonammedi_notices','image_key',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','image_type',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','updated_at',"TEXT NOT NULL DEFAULT ''"],
+    ['seonammedi_notices','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','body',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','status',"TEXT NOT NULL DEFAULT 'draft'"],['seonammedi_notices','pinned','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','published_at','TEXT'],['seonammedi_notices','image_key',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','image_type',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','notice_kind',"TEXT NOT NULL DEFAULT 'notice'"],['seonammedi_notices','featured','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','event_start','TEXT'],['seonammedi_notices','event_end','TEXT'],['seonammedi_notices','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','updated_at',"TEXT NOT NULL DEFAULT ''"],
     ['seonammedi_channels','platform',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','name',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','url',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','category',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','official','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','visible','INTEGER NOT NULL DEFAULT 1'],['seonammedi_channels','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','note',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','updated_at',"TEXT NOT NULL DEFAULT ''"],
     ['seonammedi_timeline','legacy_key','TEXT'],['seonammedi_timeline','event_date',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','category',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','summary',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','evidence',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','links_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','media_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','monitor_keywords_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','status',"TEXT NOT NULL DEFAULT 'published'"],['seonammedi_timeline','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_timeline','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','updated_at',"TEXT NOT NULL DEFAULT ''"]
   ];
   for(const [table,column,definition] of repair)await addColumnIfMissing(db,table,column,definition);
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_seonammedi_notices_public ON seonammedi_notices(status,pinned,published_at,updated_at)').run();
+  await db.prepare('CREATE INDEX IF NOT EXISTS idx_seonammedi_notices_spotlight ON seonammedi_notices(status,featured,notice_kind,event_start,event_end,published_at)').run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_seonammedi_channels_public ON seonammedi_channels(visible,sort_order,id)').run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_seonammedi_timeline_public ON seonammedi_timeline(status,sort_order,id)').run();
 }
@@ -304,13 +309,13 @@ async function audit(env,auth,action,type,id,detail={}){
     .bind(auth.email,action,type,id||null,JSON.stringify(detail),new Date().toISOString()).run()}catch{}
 }
 
-function publicNotice(row){const id=Number(row.id);return{id,title:row.title,body:row.body,pinned:Boolean(row.pinned),imageUrl:row.image_key?PREFIX+'/notices/'+id+'/image':'',publishedAt:row.published_at||row.updated_at,updatedAt:row.updated_at}}
+function publicNotice(row){const id=Number(row.id);return{id,title:row.title,body:row.body,pinned:Boolean(row.pinned),imageUrl:row.image_key?PREFIX+'/notices/'+id+'/image':'',publishedAt:row.published_at||row.updated_at,updatedAt:row.updated_at,kind:row.notice_kind==='event'?'event':'notice',featured:Boolean(row.featured),eventStart:row.event_start||'',eventEnd:row.event_end||''}}
 function adminNotice(row){return{...publicNotice(row),status:row.status,createdBy:row.created_by,createdAt:row.created_at}}
 function publicChannel(row){return{id:Number(row.id),platform:row.platform,name:row.name,url:row.url,category:row.category,official:Boolean(row.official),note:row.note||'',sortOrder:Number(row.sort_order||0)}}
 function adminChannel(row){return{...publicChannel(row),visible:Boolean(row.visible),createdBy:row.created_by,createdAt:row.created_at,updatedAt:row.updated_at}}
 
 async function listPublicNotices(env){
-  const rows=await env.DB.prepare(`SELECT id,title,body,pinned,published_at,updated_at,image_key,image_type FROM seonammedi_notices
+  const rows=await env.DB.prepare(`SELECT id,title,body,pinned,published_at,updated_at,image_key,image_type,notice_kind,featured,event_start,event_end FROM seonammedi_notices
     WHERE status='published' ORDER BY pinned DESC,COALESCE(published_at,updated_at) DESC,id DESC LIMIT 40`).all();
   return json({ok:true,items:(rows.results||[]).map(publicNotice)});
 }
@@ -525,26 +530,43 @@ async function listAdminNotices(env,auth){
   const rows=await env.DB.prepare('SELECT * FROM seonammedi_notices ORDER BY pinned DESC,updated_at DESC,id DESC LIMIT 100').all();
   return json({ok:true,items:(rows.results||[]).map(adminNotice)});
 }
+async function noticeAdminPayload(request,existing={}){
+  const type=String(request.headers.get('content-type')||'').toLowerCase();let input={},image=null;
+  if(type.includes('multipart/form-data')){const form=await request.formData().catch(()=>null);if(!form)return null;for(const key of ['title','body','status','kind','eventStart','eventEnd'])input[key]=form.get(key);input.pinned=form.get('pinned')==='true'||form.get('pinned')==='on';input.featured=form.get('featured')==='true'||form.get('featured')==='on';image=form.get('image')}
+  else input=await request.json().catch(()=>null);
+  if(!input)return null;
+  const value={title:clean(input.title??existing.title,180),body:clean(input.body??existing.body,10000),status:input.status==='published'?'published':'draft',pinned:safeBool(input.pinned)?1:0,kind:(input.kind??existing.notice_kind)==='event'?'event':'notice',featured:input.featured===undefined?Number(existing.featured||0):(safeBool(input.featured)?1:0),eventStart:clean(input.eventStart??existing.event_start,40)||null,eventEnd:clean(input.eventEnd??existing.event_end,40)||null,image};
+  return value;
+}
+async function storeNoticeImage(env,image){
+  if(!image||typeof image!=='object'||Number(image.size||0)<=0)return null;
+  if(!env?.LIVE_RECORDINGS_BUCKET?.put)throw Object.assign(new Error('image_storage_unavailable'),{status:503});
+  if(Number(image.size)>8*1024*1024)throw Object.assign(new Error('image_too_large'),{status:413});
+  const imageType=String(image.type||'').toLowerCase();if(!['image/jpeg','image/png','image/webp','image/gif'].includes(imageType))throw Object.assign(new Error('unsupported_image_type'),{status:415});
+  const ext=imageType==='image/jpeg'?'jpg':imageType.split('/')[1],imageKey='seonammedi/notices/'+crypto.randomUUID()+'.'+ext;
+  await env.LIVE_RECORDINGS_BUCKET.put(imageKey,await image.arrayBuffer(),{httpMetadata:{contentType:imageType}});return{imageKey,imageType};
+}
 async function createNotice(request,env,auth){
   if(!can(auth,NOTICE_CAP))return json({ok:false,error:'notice_forbidden'},403);
-  const body=await request.json().catch(()=>null);const title=clean(body?.title,180),copy=clean(body?.body,10000);
-  const status=body?.status==='published'?'published':'draft';const pinned=safeBool(body?.pinned)?1:0;
-  if(!title)return json({ok:false,error:'title_required'},400);
-  const now=new Date().toISOString();const publishedAt=status==='published'?now:null;
-  const result=await env.DB.prepare('INSERT INTO seonammedi_notices(title,body,status,pinned,published_at,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)')
-    .bind(title,copy,status,pinned,publishedAt,auth.email,now,now).run();
-  const id=Number(result?.meta?.last_row_id||0);await audit(env,auth,'create','notice',id,{status,pinned:Boolean(pinned)});
-  return json({ok:true,id},201);
+  const body=await noticeAdminPayload(request);if(!body)return json({ok:false,error:'invalid_request'},400);if(!body.title)return json({ok:false,error:'title_required'},400);
+  let stored=null;try{stored=await storeNoticeImage(env,body.image)}catch(error){return json({ok:false,error:error.message||'image_upload_failed'},error.status||500)}
+  const now=new Date().toISOString(),publishedAt=body.status==='published'?now:null;
+  try{const result=await env.DB.prepare('INSERT INTO seonammedi_notices(title,body,status,pinned,published_at,image_key,image_type,notice_kind,featured,event_start,event_end,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+    .bind(body.title,body.body,body.status,body.pinned,publishedAt,stored?.imageKey||'',stored?.imageType||'',body.kind,body.featured,body.eventStart,body.eventEnd,auth.email,now,now).run();
+    const id=Number(result?.meta?.last_row_id||0);await audit(env,auth,'create','notice',id,{status:body.status,pinned:Boolean(body.pinned),featured:Boolean(body.featured),kind:body.kind});return json({ok:true,id},201)
+  }catch(error){if(stored?.imageKey)await env.LIVE_RECORDINGS_BUCKET?.delete?.(stored.imageKey).catch(()=>{});throw error}
 }
 async function updateNotice(request,env,auth,id){
   if(!can(auth,NOTICE_CAP))return json({ok:false,error:'notice_forbidden'},403);
   const existing=await env.DB.prepare('SELECT * FROM seonammedi_notices WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
-  const body=await request.json().catch(()=>null);const title=clean(body?.title??existing.title,180),copy=clean(body?.body??existing.body,10000);
-  const status=body?.status==='published'?'published':'draft';const pinned=safeBool(body?.pinned)?1:0;if(!title)return json({ok:false,error:'title_required'},400);
-  const now=new Date().toISOString();const publishedAt=status==='published'?(existing.published_at||now):null;
-  await env.DB.prepare('UPDATE seonammedi_notices SET title=?,body=?,status=?,pinned=?,published_at=?,updated_at=? WHERE id=?')
-    .bind(title,copy,status,pinned,publishedAt,now,id).run();
-  await audit(env,auth,'update','notice',id,{status,pinned:Boolean(pinned)});return json({ok:true,id});
+  const body=await noticeAdminPayload(request,existing);if(!body)return json({ok:false,error:'invalid_request'},400);if(!body.title)return json({ok:false,error:'title_required'},400);
+  let stored=null;try{stored=await storeNoticeImage(env,body.image)}catch(error){return json({ok:false,error:error.message||'image_upload_failed'},error.status||500)}
+  const now=new Date().toISOString(),publishedAt=body.status==='published'?(existing.published_at||now):null,imageKey=stored?.imageKey||existing.image_key||'',imageType=stored?.imageType||existing.image_type||'';
+  try{await env.DB.prepare('UPDATE seonammedi_notices SET title=?,body=?,status=?,pinned=?,published_at=?,updated_at=?,image_key=?,image_type=?,notice_kind=?,featured=?,event_start=?,event_end=? WHERE id=?')
+    .bind(body.title,body.body,body.status,body.pinned,publishedAt,now,imageKey,imageType,body.kind,body.featured,body.eventStart,body.eventEnd,id).run();
+    if(stored?.imageKey&&existing.image_key&&existing.image_key!==stored.imageKey)await env.LIVE_RECORDINGS_BUCKET?.delete?.(existing.image_key).catch(()=>{});
+    await audit(env,auth,'update','notice',id,{status:body.status,pinned:Boolean(body.pinned),featured:Boolean(body.featured),kind:body.kind});return json({ok:true,id})
+  }catch(error){if(stored?.imageKey)await env.LIVE_RECORDINGS_BUCKET?.delete?.(stored.imageKey).catch(()=>{});throw error}
 }
 async function deleteNotice(env,auth,id){
   if(!can(auth,NOTICE_CAP))return json({ok:false,error:'notice_forbidden'},403);

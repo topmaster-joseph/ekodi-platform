@@ -377,8 +377,8 @@ test('seonammedi notices are an authenticated public board with image and sharin
   ]);
   assert.match(control,/createPublicNotice/);assert.match(control,/principalFromSupabaseRequest\(request\)/);
   assert.match(control,/image_too_large/);assert.match(control,/LIVE_RECORDINGS_BUCKET\.put/);assert.match(control,/noticeImageMatch/);
-  assert.match(html,/id="noticeComposeForm"/);assert.match(html,/id="featuredNotice"/);assert.match(html,/사진과 글을 게시/);
+  assert.match(html,/id="noticeComposeForm"/);assert.match(html,/id="homeSpotlight"/);assert.match(html,/사진과 글을 게시/);
   assert.match(app,/navigator\.share/);assert.match(app,/noticePermalink/);assert.match(app,/FormData\(noticeCompose\)/);assert.match(app,/NOTICE_SESSION_KEY/);
-  assert.match(app,/const recent=\[\.\.\.rows\]\.sort/);assert.match(css,/\.featured-notice/);assert.match(css,/\.notice-detail/);
+  assert.match(app,/recent=\[\.\.\.rows\]\.sort/);assert.match(css,/\.home-spotlight/);assert.match(css,/\.notice-detail/);
   assert.match(auth,/target\.pathname==='\/seonammedi'/);assert.match(migration,/image_key/);assert.match(apiConfig,/binding = "LIVE_RECORDINGS_BUCKET"/);
 });
