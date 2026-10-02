@@ -628,3 +628,17 @@ test('seonammedi notice list actions use server-authorized canManage without exp
   assert.match(control,/canManage:Boolean\(admin\)\|\|Boolean\(email&&lower\(row\.created_by\)===email\)/);
   assert.doesNotMatch(control,/eventEnd:row\.event_end\|\|'',createdBy:row\.created_by\|\|''/);
 });
+
+
+test('seonammedi admin notice images use canonical Google Drive storage',async()=>{
+  const [control,adminHtml]=await Promise.all([
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+    readFile(new URL('admin/index.html',root),'utf8')
+  ]);
+  assert.match(control,/async function storeNoticeImage\(env,image,principal\)/);
+  assert.match(control,/storeNoticeImageInDrive\(env,image,\{email:principal\?\.email\|\|''\}\)/);
+  assert.match(control,/storeNoticeImage\(env,body\.image,auth\)/);
+  assert.doesNotMatch(control,/async function storeNoticeImage\(env,image\)[\s\S]{0,500}LIVE_RECORDINGS_BUCKET\.put/);
+  assert.match(adminHtml,/최대 5MB/);
+  assert.doesNotMatch(adminHtml,/최대 8MB/);
+});
