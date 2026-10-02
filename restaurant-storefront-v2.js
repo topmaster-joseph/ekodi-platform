@@ -264,7 +264,28 @@ export async function renderRestaurantStorefrontPage(request, env, resolved, slu
   const title = chromeHeader.siteName || page.name || `${meta.brand} ${meta.branch}`;
   const theme = meta.theme;
   const mobileOrder = primaryOrder || '#order';
-  const html = `<!doctype html><html lang="ko" data-restaurant-theme="${escapeHtml(theme)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="${escapeHtml(description)}"><meta name="robots" content="index,follow"><title>${escapeHtml(title)} | 메뉴 · 가격 · 주문</title><link rel="stylesheet" href="/_ekodi/space/restaurant-storefront.css?v=20260911-v1"></head><body><main class="rs">
+  const canonical=`https://ekodi.kr/${slug}`;
+  const locationLabel='국립목포대학교 후문 · 전남 무안군 청계면';
+  const searchDescription=`${locationLabel} ${meta.brand} ${meta.branch}. 메뉴·가격·전화·영업시간·지도와 배달주문 정보를 한 화면에서 확인하세요.`;
+  const entity={
+    '@context':'https://schema.org',
+    '@type':'Restaurant',
+    '@id':canonical+'#restaurant',
+    name:title,
+    url:canonical,
+    description:searchDescription,
+    servesCuisine:meta.category,
+    menu:canonical+'#menu',
+    areaServed:{'@type':'Place',name:locationLabel},
+    brand:{'@type':'Brand',name:meta.brand,url:meta.official},
+    ...(image?{image}:{}),
+    ...(phone?{telephone:phone}:{}),
+    ...(address?{address:{'@type':'PostalAddress',streetAddress:address,addressCountry:'KR'}}:{}),
+    ...(hours?{openingHours:hours}:{}),
+    ...(map?{hasMap:map}:{})
+  };
+  const entityJson=JSON.stringify(entity).replaceAll('<','\\u003c');
+  const html = `<!doctype html><html lang="ko" data-restaurant-theme="${escapeHtml(theme)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="${escapeHtml(searchDescription)}"><meta name="robots" content="index,follow"><link rel="canonical" href="${canonical}"><meta property="og:type" content="website"><meta property="og:site_name" content="${escapeHtml(meta.brand)} ${escapeHtml(meta.branch)}"><meta property="og:title" content="${escapeHtml(title)} | 목포대 후문 ${escapeHtml(meta.category)} · 메뉴 · 배달주문"><meta property="og:description" content="${escapeHtml(searchDescription)}"><meta property="og:url" content="${canonical}">${image?`<meta property="og:image" content="${escapeHtml(image)}">`:''}<meta name="twitter:card" content="summary_large_image"><title>${escapeHtml(title)} | 목포대 후문 ${escapeHtml(meta.category)} · 메뉴 · 배달주문</title><script type="application/ld+json" data-store-entity="${slug}">${entityJson}</script><link rel="stylesheet" href="/_ekodi/space/restaurant-storefront.css?v=20260911-v1"></head><body><main class="rs">
 <header class="rs-top"><div class="rs-shell"><a class="rs-logo" href="${escapeHtml(chromeHeader.homeUrl||'/'+slug)}"><span class="rs-logo-mark">${escapeHtml(meta.mark)}</span><span class="rs-logo-copy"><b>${escapeHtml(chromeHeader.siteName||meta.brand)}</b><small>${escapeHtml(chromeHeader.tagline||`${meta.branch} · ${meta.kicker}`)}</small></span></a><nav class="rs-nav"><a href="#menu">대표메뉴</a>${slug==='yogurt'?'<a href="#all-menu">전체메뉴</a>':''}<a href="#order">배달주문</a><a href="#store">매장안내</a>${officialMenu ? `<a href="${escapeHtml(officialMenu)}" target="_blank" rel="noopener noreferrer">본사 메뉴</a>` : ''}${phone ? `<a class="rs-call" href="${escapeHtml(telUrl(phone))}">전화 주문</a>` : ''}</nav></div></header>
 <section class="rs-hero"><div class="rs-hero-grid"><div class="rs-hero-copy"><p class="rs-kicker">${escapeHtml(meta.kicker)}</p><h1><span>${escapeHtml(meta.brand)}</span><strong>${escapeHtml(meta.branch)}</strong></h1><p class="rs-lead">${escapeHtml(description)}</p><div class="rs-actions">${action(telUrl(phone), '전화하기', 'primary')}${action(map, '길찾기', '', true)}${action(primaryOrder || '#order', '배달앱 주문 보기', 'accent', Boolean(primaryOrder?.startsWith('http')))}</div></div><div class="rs-hero-media${image ? '' : ' no-image'}">${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(meta.brand)} 대표 메뉴" referrerpolicy="no-referrer">` : '<div class="rs-art"></div>'}<div class="rs-hero-statement"><small>${escapeHtml(meta.category)} · ${escapeHtml(meta.branch)}</small><strong>${escapeHtml(meta.promo)}</strong><em>${escapeHtml(meta.heroLine)}</em></div></div></div></section>
 <section class="rs-features"><div class="rs-shell rs-feature-grid"><div class="rs-feature"><i>✓</i><span><b>브랜드 메뉴</b><small>본사·매장 확인 데이터를 기준으로 표시</small></span></div><div class="rs-feature"><i>↺</i><span><b>검증값 우선</b><small>확인되지 않은 가격은 임의 생성하지 않음</small></span></div><div class="rs-feature"><i>₩</i><span><b>앱별 가격 비교</b><small>연결된 배달앱의 확인 가격을 한눈에</small></span></div><div class="rs-feature"><i>→</i><span><b>주문 바로 연결</b><small>검증된 목포대점 링크를 우선 활성화</small></span></div></div></section>
