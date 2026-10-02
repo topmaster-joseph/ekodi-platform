@@ -1,7 +1,7 @@
 const TASK_NATIVE_ORDER = Object.freeze({
-  'browser-ui-validation': ['ekodi-background-browser-worker'],
-  'synthetic-surface-verification': ['ekodi-background-browser-worker','autonomous-execution-fabric'],
-  'isolated-browser-execution': ['ekodi-background-browser-worker'],
+  'browser-ui-validation': ['ekodi-background-browser-worker','ekodi-native-remote-computer','autonomous-execution-fabric'],
+  'synthetic-surface-verification': ['ekodi-background-browser-worker','ekodi-native-remote-computer','autonomous-execution-fabric'],
+  'isolated-browser-execution': ['ekodi-background-browser-worker','ekodi-native-remote-computer','autonomous-execution-fabric'],
   'isolated-desktop-execution': ['ekodi-native-remote-computer'],
   'computer-use-automation': ['ekodi-native-remote-computer'],
   'isolated-engineering-execution': ['autonomous-execution-fabric'],

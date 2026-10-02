@@ -18,7 +18,10 @@ test('EKODI background browser policy is native, canonical-origin and isolated',
   assert.equal(policy.networkSafety.mutationGrantDefault,false);
   assert.equal(policy.provider.externalBrowserServiceRequired,false);
   assert.equal(policy.routingPolicy,'config/virtualization-routing-policy.json');
-  assert.equal(policy.provider.externalFallbackForThisWorker,'forbidden-while-runtime-healthy');
+  assert.equal(policy.provider.externalFallbackForThisWorker,'forbidden-unless-all-native-browser-routes-unusable-with-audited-failure-evidence');
+  assert.equal(policy.provider.externalProviderDefault,'forbidden');
+  assert.deepEqual(policy.provider.nativeBrowserPriority,['ekodi-background-browser-worker','ekodi-native-remote-computer','autonomous-execution-fabric']);
+  assert.equal(policy.evidence.httpErrorResponsesCaptured,true);
 });
 
 test('task protocol rejects external origins and raw execution surfaces',()=>{
@@ -47,6 +50,9 @@ test('worker uses Playwright isolated context without arbitrary JS task executio
   assert.match(source,/pageErrors\.push\(\{/);
   assert.match(source,/stack:clean\(err\?\.stack/);
   assert.match(source,/block-non-idempotent-http|blockedMutations/);
+  assert.match(source,/page\.on\('response'/);
+  assert.match(source,/httpErrorResponses/);
+  assert.match(source,/status>=400/);
   assert.doesNotMatch(source,/child_process|exec\(|spawn\(|powershell|cmd\.exe|SendKeys|SetCursorPos/);
   assert.doesNotMatch(source,/item\.code|action\.code|rawJavascript/);
 });
@@ -63,7 +69,7 @@ test('shared-site guarded release invokes native browser verification after prod
   assert.match(workerWorkflow,/\.pageErrors \| length == 0/);
   assert.match(source,/url:clean\(page\.url\(\),500\)/);
   assert.match(workerWorkflow,/github\.event_name == 'pull_request'[\s\S]*'\/,\/my\/,\/admin\/'/);
-  assert.match(workerWorkflow,/uses:\s*actions\/upload-artifact@v4\n\s*if:\s*always\(\)/);
+  assert.match(workerWorkflow,/uses:\s*actions\/upload-artifact@v4\r?\n\s*if:\s*always\(\)/);
   assert.match(workerWorkflow,/device_profile:/);
   assert.match(workerWorkflow,/group:\s*ekodi-background-browser-worker-\$\{\{ github\.ref \}\}-\$\{\{ inputs\.device_profile \|\| 'desktop' \}\}/);
   assert.match(sharedRelease,/native_surface_verification_desktop:/);

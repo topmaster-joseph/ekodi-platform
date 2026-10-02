@@ -24,7 +24,7 @@ const browser = JSON.parse(browserText);
 const policy = constitution.automaticExecutionLifecyclePolicy;
 
 test('constitution makes automatic execution background-only mandatory and non-waivable', () => {
-  assert.equal(constitution.version, '1.27.0');
+  assert.equal(constitution.version, '1.27.1');
   assert.ok(constitution.principles.includes('automatic-execution-background-only-enforced'));
   assert.equal(policy.id, 'AUTOMATIC-EXECUTION-LIFECYCLE-001');
   assert.equal(policy.status, 'enforced');
@@ -96,4 +96,17 @@ test('automatic execution policy and its validators are constitutionally protect
     'test/automatic-execution-constitution.test.mjs',
   ];
   for (const path of required) assert.ok(constitution.changeControl.protectedPaths.includes(path), path);
+});
+
+test('constitution forces EKODI-native browser execution order before external fallback', () => {
+  const native = constitution.browserVirtualizationExecutionPolicy;
+  assert.equal(native.id, 'NATIVE-BROWSER-EXECUTION-ORDER-001');
+  assert.equal(native.status, 'enforced');
+  assert.equal(native.mode, 'mandatory');
+  assert.deepEqual(native.nativeOrder, ['ekodi-background-browser-worker','ekodi-native-remote-computer','autonomous-execution-fabric']);
+  assert.equal(native.externalBrowserDefault, 'forbidden');
+  assert.equal(native.externalFallbackAllowedOnlyWhen, 'all-eligible-native-routes-unusable');
+  assert.equal(native.localOverrideForbidden, true);
+  assert.equal(native.serviceOrAgentWaiverForbidden, true);
+  assert.equal(native.policyRegressionBlocksCi, true);
 });

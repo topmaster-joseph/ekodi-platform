@@ -18,6 +18,15 @@ if(routing.selection?.nativeFirst!==true||routing.selection?.externalForbiddenWh
 if(routing.selection?.externalFallbackRequiresAllEligibleNativeUnusable!==true||routing.selection?.failClosedWhenNoEligibleProvider!==true) fail('external fallback must require all eligible native routes to be unusable and otherwise fail closed');
 for(const task of ['browser-ui-validation','synthetic-surface-verification','isolated-browser-execution','isolated-desktop-execution','computer-use-automation','isolated-engineering-execution']) if(!Array.isArray(routing.taskClasses?.[task])||routing.taskClasses[task].length===0) fail(`native task mapping missing: ${task}`);
 if(routing.taskClasses?.['browser-ui-validation']?.[0]!=='ekodi-background-browser-worker') fail('browser UI validation must default to EKODI background browser worker');
+const expectedBrowserOrder=['ekodi-background-browser-worker','ekodi-native-remote-computer','autonomous-execution-fabric'];
+for(const task of ['browser-ui-validation','synthetic-surface-verification','isolated-browser-execution']) if(JSON.stringify(routing.taskClasses?.[task]||[])!==JSON.stringify(expectedBrowserOrder)) fail(`${task} must enforce EKODI native browser order`);
+if(routing.selection?.nativeBrowserOrderEnforced!==true||routing.selection?.externalBrowserServiceDefaultForbidden!==true) fail('native browser order/external default prohibition missing');
+if(routing.externalFallback?.browserFallbackAdditionalRequirements?.length!==3) fail('browser fallback must require all three native failure evidence records');
+if(routing.recovery?.externalBrowserFallbackMustCreateNativeRecoveryTask!==true) fail('external browser fallback must create a native recovery task');
+if(browser.provider?.externalProviderDefault!=='forbidden') fail('background browser external provider default must be forbidden');
+if(JSON.stringify(browser.provider?.nativeBrowserPriority||[])!==JSON.stringify(expectedBrowserOrder)) fail('background browser native priority drifted');
+if(browser.evidence?.httpErrorResponsesCaptured!==true) fail('background browser must capture HTTP 4xx/5xx response evidence');
+if(JSON.stringify(surface.execution?.virtualizationProviderPolicy?.nativeBrowserOrder||[])!==JSON.stringify(expectedBrowserOrder)) fail('surface verification native browser order drifted');
 if(routing.taskClasses?.['computer-use-automation']?.[0]!=='ekodi-native-remote-computer') fail('computer-use automation must default to EKODI native remote computer');
 for(const reason of ['native-capability-not-production-ready','native-capability-unavailable','required-capability-not-yet-implemented','native-capacity-or-runtime-failure']) if(!routing.externalFallback?.allowedReasons?.includes(reason)) fail(`external fallback reason missing: ${reason}`);
 for(const flag of ['auditIdRequired','nativeCapabilityGapRecordRequired','allEligibleNativeFailureEvidenceRequired','securityEquivalentOrStrongerRequired','paidUpgradeForbidden','providerLockInForbidden','fallbackDecisionMustBeMachineReadable']) if(routing.externalFallback?.[flag]!==true) fail(`external fallback guard missing: ${flag}`);

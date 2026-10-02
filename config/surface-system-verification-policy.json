@@ -41,8 +41,8 @@
       "nativeFirst": true,
       "nativeCapabilities": [
         "ekodi-background-browser-worker",
-        "autonomous-execution-fabric:browser-e2e",
-        "ekodi-native-remote-computer"
+        "ekodi-native-remote-computer",
+        "autonomous-execution-fabric:browser-e2e"
       ],
       "externalProviderRole": "temporary-replaceable-fallback-only",
       "fallbackAllowedOnlyWhen": [
@@ -58,7 +58,16 @@
       "routingPolicy": "config/virtualization-routing-policy.json",
       "externalFallbackForbiddenWhenEligibleNativeHealthy": true,
       "externalFallbackRequiresAllEligibleNativeUnusable": true,
-      "fallbackMustRetryNativeOnNextEligibleExecution": true
+      "fallbackMustRetryNativeOnNextEligibleExecution": true,
+      "nativeBrowserOrder": [
+        "ekodi-background-browser-worker",
+        "ekodi-native-remote-computer",
+        "autonomous-execution-fabric"
+      ],
+      "externalProviderDefault": "forbidden",
+      "externalFallbackForbiddenWhenAnyEligibleNativeHealthy": true,
+      "externalFallbackRequiresMachineReadableFailureEvidence": true,
+      "externalFallbackRequiresNativeRecoveryTask": true
     }
   },
   "syntheticActors": [
@@ -165,7 +174,9 @@
       "result",
       "virtualization_provider",
       "virtualization_fallback_reason",
-      "native_capability_gap"
+      "native_capability_gap",
+      "http_error_responses",
+      "native_browser_execution_order"
     ]
   },
   "states": {

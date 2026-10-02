@@ -94,7 +94,7 @@ export async function runTask(rawTask, options={}){
     acceptDownloads:false,
   });
   const page=await context.newPage();
-  const consoleErrors=[],pageErrors=[],requestFailures=[],blockedMutations=[];
+  const consoleErrors=[],pageErrors=[],requestFailures=[],httpErrorResponses=[],blockedMutations=[];
   page.on('console',msg=>{ if(msg.type()==='error') consoleErrors.push(clean(msg.text(),500)); });
   page.on('pageerror',err=>pageErrors.push({
     name:clean(err?.name||'Error',120),
@@ -103,6 +103,10 @@ export async function runTask(rawTask, options={}){
     url:clean(page.url(),500),
   }));
   page.on('requestfailed',req=>requestFailures.push({url:clean(req.url(),500),failure:clean(req.failure()?.errorText,200)}));
+  page.on('response',res=>{
+    const status=res.status();
+    if(status>=400) httpErrorResponses.push({url:clean(res.url(),500),status,statusText:clean(res.statusText(),120),resourceType:clean(res.request().resourceType(),80)});
+  });
 
   await page.route('**/*',async route=>{
     const req=route.request();
@@ -210,6 +214,7 @@ export async function runTask(rawTask, options={}){
       consoleErrors:consoleErrors.slice(0,20),
       pageErrors:pageErrors.slice(0,20),
       requestFailures:requestFailures.slice(0,20),
+      httpErrorResponses:httpErrorResponses.slice(0,40),
     };
     await fs.writeFile(path.join(taskDir,'result.json'),JSON.stringify(report,null,2));
     return report;
