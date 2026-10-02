@@ -1,0 +1,145 @@
+{
+  "version": 1,
+  "policy": {
+    "id": "EKODI-DISCOVERY-001",
+    "description": "All unrestricted public EKODI sites, sub-sites, posts, events, products and services are projected to SEO/AEO/GEO from the central Public Registry. Admin, auth, API, personal/private, preview and preparing surfaces are excluded by default.",
+    "publicStates": [
+      "public",
+      "published",
+      "live"
+    ],
+    "excludedStates": [
+      "private",
+      "draft",
+      "preparing",
+      "planned",
+      "preview",
+      "archived"
+    ],
+    "canonicalOrigin": "https://ekodi.kr",
+    "projectionVersion": 3
+  },
+  "basePages": [
+    {
+      "id": "ekodi-root",
+      "path": "/",
+      "kind": "website",
+      "publicationState": "public",
+      "asset": "index.html",
+      "changefreq": "weekly",
+      "priority": "1.0",
+      "label": "EKODI Ecosystem",
+      "title": "EKODI | 에코디 생태계 · EKODI Ecosystem",
+      "description": "지금 사용할 수 있는 EKODI 플랫폼을 한눈에 만나는 연결 생태계."
+    },
+    {
+      "id": "ekodi-history",
+      "path": "/history",
+      "kind": "article",
+      "publicationState": "public",
+      "asset": "history.html",
+      "changefreq": "monthly",
+      "priority": "0.5",
+      "label": "EKODI History",
+      "title": "EKODI History | 에코디 연혁",
+      "description": "EKODI 생태계의 주요 흐름과 발전 과정을 확인합니다."
+    },
+    {
+      "id": "privacy",
+      "path": "/privacy",
+      "kind": "webpage",
+      "publicationState": "public",
+      "asset": "privacy.html",
+      "changefreq": "yearly",
+      "priority": "0.3",
+      "label": "Privacy Policy",
+      "title": "개인정보처리방침 | EKODI",
+      "description": "EKODI 서비스의 개인정보 처리 원칙과 정책을 안내합니다."
+    },
+    {
+      "id": "terms",
+      "path": "/terms",
+      "kind": "webpage",
+      "publicationState": "public",
+      "asset": "terms.html",
+      "changefreq": "yearly",
+      "priority": "0.3",
+      "label": "Terms of Service",
+      "title": "이용약관 | EKODI",
+      "description": "EKODI 서비스 이용약관을 안내합니다."
+    }
+  ],
+  "sites": [
+    {
+      "id": "cmpmyi",
+      "path": "/cmpmyi",
+      "kind": "service",
+      "publicationState": "public",
+      "changefreq": "weekly",
+      "priority": "0.8",
+      "label": "Mokpo Store Gateway",
+      "title": "목포대점 통합 게이트 | EKODI",
+      "description": "자담치킨, 피자마루, 요거트퍼플 목포대점을 한 화면에서 선택합니다."
+    },
+    {
+      "id": "jadam",
+      "path": "/jadam",
+      "kind": "restaurant",
+      "publicationState": "public",
+      "changefreq": "daily",
+      "priority": "0.9",
+      "label": "자담치킨 목포대점 · Jadam Chicken",
+      "title": "자담치킨 목포대점 | 목포대 후문 치킨 · 메뉴 · 배달주문",
+      "description": "국립목포대학교 후문·전남 무안군 청계면 자담치킨 목포대점의 메뉴·가격·전화·영업시간·지도·배달주문 안내."
+    },
+    {
+      "id": "pizzamaru",
+      "path": "/pizzamaru",
+      "kind": "restaurant",
+      "publicationState": "public",
+      "changefreq": "daily",
+      "priority": "0.9",
+      "label": "피자마루 목포대점 · PizzaMaru",
+      "title": "피자마루 목포대점 | 목포대 후문 피자 · 메뉴 · 배달주문",
+      "description": "국립목포대학교 후문·전남 무안군 청계면 피자마루 목포대점의 메뉴·가격·전화·영업시간·지도·배달주문 안내."
+    },
+    {
+      "id": "yogurt",
+      "path": "/yogurt",
+      "kind": "foodEstablishment",
+      "publicationState": "public",
+      "changefreq": "daily",
+      "priority": "0.9",
+      "label": "요거트퍼플 목포대점 · Yogurt Purple",
+      "title": "요거트퍼플 목포대점 | 목포대 후문 디저트 · 메뉴 · 배달주문",
+      "description": "국립목포대학교 후문·전남 무안군 청계면 요거트퍼플 목포대점의 메뉴·가격·전화·영업시간·지도·배달주문 안내."
+    },
+    {
+      "id": "seonammedi",
+      "path": "/seonammedi",
+      "kind": "organization",
+      "publicationState": "public",
+      "changefreq": "daily",
+      "priority": "0.9",
+      "label": "Seonam National Medical School Communication Center",
+      "title": "서남권 국립의대 소통센터 | SEONAM MEDI",
+      "description": "서남권 국립의대 관련 공식자료, 활동이력, 관련보도, 시민 의견과 공개 정보를 확인하는 소통센터입니다."
+    }
+  ],
+  "resources": [],
+  "privatePrefixes": [
+    "/admin",
+    "/api/",
+    "/auth/",
+    "/oauth/",
+    "/cgma/oauth/",
+    "/workspace-admin",
+    "/preview/",
+    "/my/",
+    "/ekodimall/admin",
+    "/ekodimall/api",
+    "/ekodimall/verification-ops",
+    "/seonammedi/admin",
+    "/api/seonammedi/"
+  ]
+}
