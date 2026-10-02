@@ -136,6 +136,7 @@ export async function storeEkodiDurableRecord(env, record = {}, options = {}) {
       createdBy: record.createdBy,
       retentionClass: record.retentionClass,
       sourceModuleId: record.sourceModuleId || 'ekodi',
+      subfolderPath: record.subfolderPath || '',
     });
     await audit(env, { ...record, storageRoute: result.storageRoute }, requestId, result, 'stored');
     return {
