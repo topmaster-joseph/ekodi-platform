@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.26.1
+# EKODI Platform Constitution v1.27.0
 
-Effective: 2026-09-29
+Effective: 2026-10-02
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 
@@ -95,7 +95,11 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 ## 2A. Public User Surface Constitution
 - Every canonical public user page is **guest-open by default**. A person must be able to reach and read the safe public projection without signing in.
 - Authentication **enhances rather than replaces** the public experience. After sign-in, membership tier, workspace relationship, role and capability may add, personalize, enable or reorder content and actions, but they must not turn the canonical public page into a login wall.
-- Authentication and authorization remain mandatory for private data, personal state, workspace-internal data, write actions, applications, payments, uploads, protected downloads, operator tools and administrator capabilities.
+- Authentication and authorization remain mandatory for private data, personal state, workspace-internal data, private or restricted writes, restricted applications, payments, uploads, protected downloads, operator tools, administrator capabilities, privilege-changing actions and account-security actions.
+- **Every current and future EKODI user-facing service, Workspace public site and independently operated EKODI site inherits the same public-access rule.** A service, tenant, workspace, module or AI agent may not locally replace the guest-open default with a login wall.
+- **Explicitly public, purpose-bound actions are a controlled exception to the protected-write rule and are guest-open by default.** This includes public event applications, public reservation requests, public inquiries, public feedback/opinion and public interest registration when the action is explicitly classified as public.
+- Public guest actions must validate input, apply abuse protection, minimize purpose-bound data, obtain required consent, verify server-side persistence before reporting success, and must never grant membership, role, privilege, payment authority, protected-data access or cross-workspace private write authority.
+- Authentication may enhance an explicitly public action with prefill, history, status tracking or member benefits, but it may not be required solely to submit that public action.
 - A `401`, `403` or private-data lookup failure from a protected capability must degrade the interface back to the safe public projection. It must not replace a canonical public page with an access-denied, unavailable-workspace or equivalent permission screen.
 - A private or closed surface is an exception, not a default. It requires explicit policy classification. Its canonical public root still returns a safe public landing or privacy notice without disclosing private existence, membership or data; protected content stays server-side.
 - `guest_hidden` and equivalent visibility controls may hide discovery or explicitly private content, but they may not gate or replace the canonical public user-page shell.
@@ -105,7 +109,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Each top-level site entry or browser reload may select one **pre-approved, subtle background/ambient variation** within the active site's existing visual family. The selection is document-load scoped: it remains stable for the lifetime of that document and must not change again because of timers, ordinary clicks, scrolling, client-side interaction or authentication hydration.
 - Per-load variation may change only low-impact ambient color tokens. It must not change service identity, information architecture, content order, navigation position, control geometry, font scale, contrast floor, authorization meaning or functional state. Random hues outside the approved site palette are forbidden; shared variation strength is capped by the machine policy and accessibility contrast remains mandatory.
 - The shared Shell owns the provider-independent document-load seed, common ambient tokens and visual-ready signal. Services and subordinate user pages inherit the same contract rather than implementing independent randomizers. Reduced-motion/accessibility preferences and a safe fixed fallback remain mandatory.
-- Machine-readable authority: `governance/constitution/constitution.json` -> `publicUserSurfacePolicy` and `config/service-workspace-policy.json` -> `publicUserSurfaceDefault`.
+- Machine-readable authority: `governance/constitution/constitution.json` -> `publicUserSurfacePolicy` / `publicInteractionPolicy`, `config/service-workspace-policy.json` -> `publicUserSurfaceDefault` / `publicInteractionDefault`, and runtime contract `workspace-route-policy.js` -> `PUBLIC_USER_ACCESS_CONTRACT`.
 
 ## 3. Identity and Tenant Constitution
 - EKODI `user_id` is canonical. Google, Microsoft, email and future identities are linked identities.
