@@ -1,10 +1,4 @@
--- Citizen voices are published immediately; replies are public and contact data stays private.
-UPDATE seonammedi_civic_voices
-SET public_consent=1,
-    review_status='published',
-    updated_at=COALESCE(updated_at,created_at)
-WHERE review_status<>'archived';
-
+-- New citizen voices are published immediately by the intake path; historical moderation states remain unchanged.
 CREATE TABLE IF NOT EXISTS seonammedi_civic_voice_replies (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   voice_id INTEGER NOT NULL,
