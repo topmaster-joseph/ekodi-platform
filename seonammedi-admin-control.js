@@ -320,8 +320,8 @@ async function audit(env,auth,action,type,id,detail={}){
 }
 
 function noticeImageKeys(row){try{const keys=JSON.parse(String(row.image_keys_json||'[]'));if(Array.isArray(keys)&&keys.length)return keys.filter(Boolean).slice(0,5)}catch{}return row.image_key?[row.image_key]:[]}
-function publicNotice(row){const id=Number(row.id),keys=noticeImageKeys(row);return{id,title:row.title,body:row.body,pinned:Boolean(row.pinned),imageUrl:keys.length?PREFIX+'/notices/'+id+'/image/0':'',imageUrls:keys.map((_,index)=>PREFIX+'/notices/'+id+'/image/'+index),publishedAt:row.published_at||row.updated_at,updatedAt:row.updated_at,kind:row.notice_kind==='event'?'event':'notice',featured:Boolean(row.featured),eventStart:row.event_start||'',eventEnd:row.event_end||'',createdBy:row.created_by||''}}
-function adminNotice(row){return{...publicNotice(row),status:row.status,createdBy:row.created_by,createdAt:row.created_at}}
+function publicNotice(row,{canManage=false}={}){const id=Number(row.id),keys=noticeImageKeys(row);return{id,title:row.title,body:row.body,pinned:Boolean(row.pinned),imageUrl:keys.length?PREFIX+'/notices/'+id+'/image/0':'',imageUrls:keys.map((_,index)=>PREFIX+'/notices/'+id+'/image/'+index),publishedAt:row.published_at||row.updated_at,updatedAt:row.updated_at,kind:row.notice_kind==='event'?'event':'notice',featured:Boolean(row.featured),eventStart:row.event_start||'',eventEnd:row.event_end||'',canManage:Boolean(canManage)}}
+function adminNotice(row){return{...publicNotice(row,{canManage:true}),status:row.status,createdBy:row.created_by,createdAt:row.created_at}}
 function publicChannel(row){return{id:Number(row.id),platform:row.platform,name:row.name,url:row.url,previewUrl:row.preview_url||'',category:row.category,official:Boolean(row.official),note:row.note||'',sortOrder:Number(row.sort_order||0)}}
 function adminChannel(row){return{...publicChannel(row),visible:Boolean(row.visible),createdBy:row.created_by,createdAt:row.created_at,updatedAt:row.updated_at}}
 
@@ -336,17 +336,20 @@ async function noticePublicProjection(env){
     optional('event_start','NULL'),optional('event_end','NULL')
   ].join(',');
 }
-async function listPublicNotices(env){
+async function listPublicNotices(request,env){
   const projection=await noticePublicProjection(env);
   const rows=await env.DB.prepare(`SELECT ${projection} FROM seonammedi_notices
     WHERE status='published' ORDER BY pinned DESC,COALESCE(published_at,updated_at) DESC,id DESC LIMIT 40`).all();
-  return json({ok:true,items:(rows.results||[]).map(publicNotice)});
+  const principal=await principalFromSupabaseRequest(request).catch(()=>null);
+  const email=lower(principal?.email||'');
+  const admin=email?await env.DB.prepare("SELECT role FROM admins WHERE lower(trim(email))=? AND role='super_admin' LIMIT 1").bind(email).first().catch(()=>null):null;
+  return json({ok:true,items:(rows.results||[]).map(row=>publicNotice(row,{canManage:Boolean(admin)||Boolean(email&&lower(row.created_by)===email)}))});
 }
 async function storeNoticeImageInDrive(env,image,principal){
   if(!env?.STORAGE?.fetch)throw new Error('image_storage_unavailable');
   const type=String(image.type||'').toLowerCase();
   if(!['image/jpeg','image/png','image/webp','image/gif'].includes(type))throw new Error('unsupported_image_type');
-  if(Number(image.size||0)>8*1024*1024)throw new Error('image_too_large');
+  if(Number(image.size||0)>5*1024*1024)throw new Error('image_too_large');
   const ext=type==='image/jpeg'?'jpg':type.split('/')[1];
   const bytes=new Uint8Array(await image.arrayBuffer());
   let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);
@@ -472,8 +475,11 @@ function explicitChannelEmbed(item){
     }
     if(item.platform==='instagram'&&host==='instagram.com'){
       const parts=url.pathname.split('/').filter(Boolean);
-      if(['p','reel'].includes(parts[0])&&/^[A-Za-z0-9_-]{5,}$/.test(parts[1]||'')){
-        return 'https://www.instagram.com/'+parts[0]+'/'+encodeURIComponent(parts[1])+'/embed/';
+      const kindIndex=parts.findIndex(part=>['p','reel'].includes(part));
+      const kind=kindIndex>=0?parts[kindIndex]:'';
+      const shortcode=kindIndex>=0?parts[kindIndex+1]||'':'';
+      if(kind&&/^[A-Za-z0-9_-]{5,}$/.test(shortcode)){
+        return 'https://www.instagram.com/'+kind+'/'+encodeURIComponent(shortcode)+'/embed/';
       }
     }
   }catch{}
@@ -519,6 +525,48 @@ async function fetchChannelPreviewPage(url,userAgent,timeout=6000){
   if(!url)return null;
   try{return await fetch(url,{headers:{'user-agent':userAgent},redirect:'follow',signal:AbortSignal.timeout(timeout)})}catch{return null}
 }
+
+function decodeXmlText(value){
+  return String(value||'').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim();
+}
+function youtubeRecentItems(xml){
+  const items=[];const entryPattern=/<entry>([\s\S]*?)<\/entry>/gi;let match;
+  while(items.length<3&&(match=entryPattern.exec(String(xml||'')))){
+    const entry=match[1];
+    const videoId=clean(entry.match(/<yt:videoId>([^<]+)<\/yt:videoId>/i)?.[1],40);
+    if(!/^[A-Za-z0-9_-]{11}$/.test(videoId))continue;
+    const title=decodeXmlText(entry.match(/<title>([\s\S]*?)<\/title>/i)?.[1]||'최근 영상');
+    const published=clean(entry.match(/<published>([^<]+)<\/published>/i)?.[1],80);
+    items.push({
+      type:'video',
+      videoId,
+      title,
+      publishedAt:published,
+      url:'https://www.youtube.com/watch?v='+videoId,
+      embedUrl:'https://www.youtube-nocookie.com/embed/'+videoId+'?rel=0',
+      image:'https://i.ytimg.com/vi/'+videoId+'/hqdefault.jpg',
+      label:'최근 영상 '+(items.length+1)
+    });
+  }
+  return items;
+}
+async function resolveYouTubeChannelId(item,html=''){
+  const fromHtml=String(html||'').match(/<meta[^>]+itemprop=["']channelId["'][^>]+content=["'](UC[A-Za-z0-9_-]{20,})["']/i)
+    ||String(html||'').match(/<meta[^>]+content=["'](UC[A-Za-z0-9_-]{20,})["'][^>]+itemprop=["']channelId["']/i)
+    ||String(html||'').match(/"(?:channelId|externalId|browseId)":"(UC[A-Za-z0-9_-]{20,})"/)
+    ||String(html||'').match(/feeds\/videos\.xml\?channel_id=(UC[A-Za-z0-9_-]{20,})/i)
+    ||String(html||'').match(/youtube\.com\/channel\/(UC[A-Za-z0-9_-]{20,})/i);
+  if(fromHtml?.[1])return fromHtml[1];
+  try{
+    const aboutUrl=new URL(item.url);aboutUrl.search='';aboutUrl.hash='';aboutUrl.pathname=aboutUrl.pathname.replace(/\/$/,'')+'/about';
+    const aboutPage=await fetchChannelPreviewPage(aboutUrl.href,CHANNEL_BROWSER_UA,6500);
+    const aboutHtml=aboutPage?.ok?await aboutPage.text().catch(()=>''):'';
+    return (aboutHtml.match(/"(?:channelId|externalId|browseId)":"(UC[A-Za-z0-9_-]{20,})"/)
+      ||aboutHtml.match(/youtube\.com\/channel\/(UC[A-Za-z0-9_-]{20,})/i)
+      ||aboutHtml.match(/feeds\/videos\.xml\?channel_id=(UC[A-Za-z0-9_-]{20,})/i))?.[1]||'';
+  }catch{return ''}
+}
+
 async function publicChannelPreview(env,id){
   const row=await env.DB.prepare(`SELECT c.id,c.platform,c.name,c.url,COALESCE(p.preview_url,'') preview_url,c.category,c.official,c.note,c.sort_order
     FROM seonammedi_channels c LEFT JOIN seonammedi_channel_previews p ON p.channel_id=c.id
@@ -526,7 +574,11 @@ async function publicChannelPreview(env,id){
   if(!row)return json({ok:false,error:'not_found'},404);
   const item=publicChannel(row),provider=channelProviderUrl(item),explicitEmbed=explicitChannelEmbed(item);
   const preview={title:item.name,description:item.note||'',image:'',embedUrl:explicitEmbed,mode:explicitEmbed?'embed':'summary',platform:item.platform,sourceUrl:item.url,recentItems:[]};
-  if(explicitEmbed){preview.contentType='explicit-preview';return json({ok:true,item,preview})}
+  if(explicitEmbed&&item.platform!=='instagram'){preview.contentType='explicit-preview';return json({ok:true,item,preview})}
+  if(explicitEmbed&&item.platform==='instagram'){
+    preview.recentItems=[{type:'post',url:item.previewUrl,embedUrl:explicitEmbed,label:'최근 공개 게시물 1'}];
+    preview.contentType='explicit-preview';
+  }
   if(provider.kind==='instagram-profile'){
     const userAgent=CHANNEL_BROWSER_UA;
     const page=await fetchChannelPreviewPage(item.url,userAgent,6000);
@@ -545,7 +597,7 @@ async function publicChannelPreview(env,id){
       preview.description=previewMeta(html,'og:description')||previewMeta(html,'description')||preview.description;
       preview.image=validHttps(previewMeta(html,'og:image'));
     }
-    preview.recentItems=recentItems;
+    preview.recentItems=[...(preview.recentItems||[]),...recentItems.filter(row=>!(preview.recentItems||[]).some(existing=>existing.url===row.url))].slice(0,3);
     if(preview.recentItems.length){
       preview.mode='recent-embed';
       preview.contentType='recent-posts';
@@ -603,25 +655,25 @@ async function publicChannelPreview(env,id){
     preview.mode='embed';
     preview.contentType='latest-video';
     preview.videoId=pageVideoId;
-    return json({ok:true,item,preview});
   }
-  const channelId=(
-    html.match(/<meta[^>]+itemprop=["']channelId["'][^>]+content=["'](UC[A-Za-z0-9_-]{20,})["']/i)||
-    html.match(/<meta[^>]+content=["'](UC[A-Za-z0-9_-]{20,})["'][^>]+itemprop=["']channelId["']/i)||
-    html.match(/"(?:channelId|externalId|browseId)":"(UC[A-Za-z0-9_-]{20,})"/)||
-    html.match(/feeds\/videos\.xml\?channel_id=(UC[A-Za-z0-9_-]{20,})/i)||
-    html.match(/youtube\.com\/channel\/(UC[A-Za-z0-9_-]{20,})/i)
-  )?.[1]||'';
+  const channelId=await resolveYouTubeChannelId(item,html);
   if(channelId){
     const feed=await fetchChannelPreviewPage('https://www.youtube.com/feeds/videos.xml?channel_id='+encodeURIComponent(channelId),'EKODIChannelPreview/1.0',5000);
     const xml=feed?.ok?await feed.text().catch(()=>''):'';
-    const videoId=clean(xml.match(/<yt:videoId>([^<]+)<\/yt:videoId>/i)?.[1],40);
-    if(/^[A-Za-z0-9_-]{11}$/.test(videoId)){
-      preview.embedUrl='https://www.youtube-nocookie.com/embed/'+videoId+'?rel=0';
-      preview.mode='embed';
-      preview.contentType='latest-video';
-      preview.videoId=videoId;
+    preview.recentItems=youtubeRecentItems(xml);
+    if(preview.recentItems.length){
+      preview.embedUrl=preview.recentItems[0].embedUrl;
+      preview.mode='recent-embed';
+      preview.contentType='recent-videos';
+      preview.videoId=preview.recentItems[0].videoId;
     }
+  }
+  if(!preview.recentItems.length&&/^[A-Za-z0-9_-]{11}$/.test(pageVideoId)){
+    preview.recentItems=[{type:'video',videoId:pageVideoId,title:'최근 영상',url:'https://www.youtube.com/watch?v='+pageVideoId,embedUrl:'https://www.youtube-nocookie.com/embed/'+pageVideoId+'?rel=0',image:'https://i.ytimg.com/vi/'+pageVideoId+'/hqdefault.jpg',label:'최근 영상 1'}];
+    preview.embedUrl=preview.recentItems[0].embedUrl;
+    preview.mode='embed';
+    preview.contentType='latest-video';
+    preview.videoId=pageVideoId;
   }
   return json({ok:true,item,preview});
 }
@@ -700,42 +752,46 @@ async function listAdminNotices(env,auth){
   return json({ok:true,items:(rows.results||[]).map(adminNotice)});
 }
 async function noticeAdminPayload(request,existing={}){
-  const type=String(request.headers.get('content-type')||'').toLowerCase();let input={},image=null;
-  if(type.includes('multipart/form-data')){const form=await request.formData().catch(()=>null);if(!form)return null;for(const key of ['title','body','status','kind','eventStart','eventEnd'])input[key]=form.get(key);input.pinned=form.get('pinned')==='true'||form.get('pinned')==='on';input.featured=form.get('featured')==='true'||form.get('featured')==='on';image=form.get('image')}
+  const type=String(request.headers.get('content-type')||'').toLowerCase();let input={},images=[];
+  if(type.includes('multipart/form-data')){const form=await request.formData().catch(()=>null);if(!form)return null;for(const key of ['title','body','status','kind','eventStart','eventEnd'])input[key]=form.get(key);input.pinned=form.get('pinned')==='true'||form.get('pinned')==='on';input.featured=form.get('featured')==='true'||form.get('featured')==='on';images=form.getAll('images').filter(image=>image&&typeof image==='object'&&Number(image.size||0)>0);const legacy=form.get('image');if(!images.length&&legacy&&typeof legacy==='object'&&Number(legacy.size||0)>0)images=[legacy]}
   else input=await request.json().catch(()=>null);
-  if(!input)return null;
-  const value={title:clean(input.title??existing.title,180),body:clean(input.body??existing.body,10000),status:input.status==='published'?'published':'draft',pinned:safeBool(input.pinned)?1:0,kind:(input.kind??existing.notice_kind)==='event'?'event':'notice',featured:input.featured===undefined?Number(existing.featured||0):(safeBool(input.featured)?1:0),eventStart:clean(input.eventStart??existing.event_start,40)||null,eventEnd:clean(input.eventEnd??existing.event_end,40)||null,image};
-  return value;
+  if(!input)return null;if(images.length>5)return {...input,error:'too_many_images'};
+  return{title:clean(input.title??existing.title,180),body:clean(input.body??existing.body,10000),status:input.status==='published'?'published':'draft',pinned:safeBool(input.pinned)?1:0,kind:(input.kind??existing.notice_kind)==='event'?'event':'notice',featured:input.featured===undefined?Number(existing.featured||0):(safeBool(input.featured)?1:0),eventStart:clean(input.eventStart??existing.event_start,40)||null,eventEnd:clean(input.eventEnd??existing.event_end,40)||null,images};
 }
-async function storeNoticeImage(env,image){
+async function storeNoticeImage(env,image,principal){
   if(!image||typeof image!=='object'||Number(image.size||0)<=0)return null;
-  if(!env?.LIVE_RECORDINGS_BUCKET?.put)throw Object.assign(new Error('image_storage_unavailable'),{status:503});
-  if(Number(image.size)>8*1024*1024)throw Object.assign(new Error('image_too_large'),{status:413});
-  const imageType=String(image.type||'').toLowerCase();if(!['image/jpeg','image/png','image/webp','image/gif'].includes(imageType))throw Object.assign(new Error('unsupported_image_type'),{status:415});
-  const ext=imageType==='image/jpeg'?'jpg':imageType.split('/')[1],imageKey='seonammedi/notices/'+crypto.randomUUID()+'.'+ext;
-  await env.LIVE_RECORDINGS_BUCKET.put(imageKey,await image.arrayBuffer(),{httpMetadata:{contentType:imageType}});return{imageKey,imageType};
+  try{
+    const stored=await storeNoticeImageInDrive(env,image,{email:principal?.email||''});
+    return{imageKey:stored.key,imageType:stored.type};
+  }catch(error){
+    const code=String(error?.message||'image_storage_unavailable');
+    const status=code==='image_too_large'?413:code==='unsupported_image_type'?415:503;
+    throw Object.assign(new Error(code),{status});
+  }
 }
 async function createNotice(request,env,auth){
   if(!can(auth,NOTICE_CAP))return json({ok:false,error:'notice_forbidden'},403);
-  const body=await noticeAdminPayload(request);if(!body)return json({ok:false,error:'invalid_request'},400);if(!body.title)return json({ok:false,error:'title_required'},400);
-  let stored=null;try{stored=await storeNoticeImage(env,body.image)}catch(error){return json({ok:false,error:error.message||'image_upload_failed'},error.status||500)}
-  const now=new Date().toISOString(),publishedAt=body.status==='published'?now:null;
-  try{const result=await env.DB.prepare('INSERT INTO seonammedi_notices(title,body,status,pinned,published_at,image_key,image_type,notice_kind,featured,event_start,event_end,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
-    .bind(body.title,body.body,body.status,body.pinned,publishedAt,stored?.imageKey||'',stored?.imageType||'',body.kind,body.featured,body.eventStart,body.eventEnd,auth.email,now,now).run();
-    const id=Number(result?.meta?.last_row_id||0);await audit(env,auth,'create','notice',id,{status:body.status,pinned:Boolean(body.pinned),featured:Boolean(body.featured),kind:body.kind});return json({ok:true,id},201)
-  }catch(error){if(stored?.imageKey)await env.LIVE_RECORDINGS_BUCKET?.delete?.(stored.imageKey).catch(()=>{});throw error}
+  const body=await noticeAdminPayload(request);if(!body)return json({ok:false,error:'invalid_request'},400);if(body.error)return json({ok:false,error:body.error},400);if(!body.title)return json({ok:false,error:'title_required'},400);
+  const stored=[];try{for(const image of body.images)stored.push(await storeNoticeImage(env,image,auth))}catch(error){for(const item of stored)if(item?.imageKey)await deleteNoticeDriveKey(env,item.imageKey);return json({ok:false,error:error.message||'image_upload_failed'},error.status||500)}
+  const keys=stored.map(x=>x?.imageKey).filter(Boolean),types=stored.map(x=>x?.imageType||''),now=new Date().toISOString(),publishedAt=body.status==='published'?now:null;
+  try{const result=await env.DB.prepare('INSERT INTO seonammedi_notices(title,body,status,pinned,published_at,image_key,image_type,image_keys_json,image_types_json,notice_kind,featured,event_start,event_end,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+    .bind(body.title,body.body,body.status,body.pinned,publishedAt,keys[0]||'',types[0]||'',JSON.stringify(keys),JSON.stringify(types),body.kind,body.featured,body.eventStart,body.eventEnd,auth.email,now,now).run();
+    const id=Number(result?.meta?.last_row_id||0);await audit(env,auth,'create','notice',id,{status:body.status,pinned:Boolean(body.pinned),featured:Boolean(body.featured),kind:body.kind,images:keys.length});return json({ok:true,id},201)
+  }catch(error){for(const item of stored)if(item?.imageKey)await deleteNoticeDriveKey(env,item.imageKey);throw error}
 }
 async function updateNotice(request,env,auth,id){
   if(!can(auth,NOTICE_CAP))return json({ok:false,error:'notice_forbidden'},403);
   const existing=await env.DB.prepare('SELECT * FROM seonammedi_notices WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
-  const body=await noticeAdminPayload(request,existing);if(!body)return json({ok:false,error:'invalid_request'},400);if(!body.title)return json({ok:false,error:'title_required'},400);
-  let stored=null;try{stored=await storeNoticeImage(env,body.image)}catch(error){return json({ok:false,error:error.message||'image_upload_failed'},error.status||500)}
-  const now=new Date().toISOString(),publishedAt=body.status==='published'?(existing.published_at||now):null,imageKey=stored?.imageKey||existing.image_key||'',imageType=stored?.imageType||existing.image_type||'';
-  try{await env.DB.prepare('UPDATE seonammedi_notices SET title=?,body=?,status=?,pinned=?,published_at=?,updated_at=?,image_key=?,image_type=?,notice_kind=?,featured=?,event_start=?,event_end=? WHERE id=?')
-    .bind(body.title,body.body,body.status,body.pinned,publishedAt,now,imageKey,imageType,body.kind,body.featured,body.eventStart,body.eventEnd,id).run();
-    if(stored?.imageKey&&existing.image_key&&existing.image_key!==stored.imageKey)await env.LIVE_RECORDINGS_BUCKET?.delete?.(existing.image_key).catch(()=>{});
-    await audit(env,auth,'update','notice',id,{status:body.status,pinned:Boolean(body.pinned),featured:Boolean(body.featured),kind:body.kind});return json({ok:true,id})
-  }catch(error){if(stored?.imageKey)await env.LIVE_RECORDINGS_BUCKET?.delete?.(stored.imageKey).catch(()=>{});throw error}
+  const body=await noticeAdminPayload(request,existing);if(!body)return json({ok:false,error:'invalid_request'},400);if(body.error)return json({ok:false,error:body.error},400);if(!body.title)return json({ok:false,error:'title_required'},400);
+  const oldKeys=noticeImageKeys(existing);let oldTypes=[];try{oldTypes=JSON.parse(String(existing.image_types_json||'[]'))}catch{}if(!Array.isArray(oldTypes)||!oldTypes.length)oldTypes=existing.image_type?[existing.image_type]:[];
+  const stored=[];try{for(const image of body.images)stored.push(await storeNoticeImage(env,image,auth))}catch(error){for(const item of stored)if(item?.imageKey)await deleteNoticeDriveKey(env,item.imageKey);return json({ok:false,error:error.message||'image_upload_failed'},error.status||500)}
+  const keys=body.images.length?stored.map(x=>x?.imageKey).filter(Boolean):oldKeys,types=body.images.length?stored.map(x=>x?.imageType||''):oldTypes;
+  const now=new Date().toISOString(),publishedAt=body.status==='published'?(existing.published_at||now):null;
+  try{await env.DB.prepare('UPDATE seonammedi_notices SET title=?,body=?,status=?,pinned=?,published_at=?,updated_at=?,image_key=?,image_type=?,image_keys_json=?,image_types_json=?,notice_kind=?,featured=?,event_start=?,event_end=? WHERE id=?')
+    .bind(body.title,body.body,body.status,body.pinned,publishedAt,now,keys[0]||'',types[0]||'',JSON.stringify(keys),JSON.stringify(types),body.kind,body.featured,body.eventStart,body.eventEnd,id).run();
+    if(body.images.length)for(const key of oldKeys)await deleteNoticeDriveKey(env,key);
+    await audit(env,auth,'update','notice',id,{status:body.status,pinned:Boolean(body.pinned),featured:Boolean(body.featured),kind:body.kind,images:keys.length});return json({ok:true,id})
+  }catch(error){for(const item of stored)if(item?.imageKey)await deleteNoticeDriveKey(env,item.imageKey);throw error}
 }
 async function deleteNotice(env,auth,id){
   if(!can(auth,NOTICE_CAP))return json({ok:false,error:'notice_forbidden'},403);
@@ -951,7 +1007,7 @@ export async function handleSeonamMediAdminApi(request,env){
   if(url.pathname===PREFIX+'/content'&&request.method==='GET'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
     return publicStorageRead('content',async()=>{
-      const [noticesResponse,channelsResponse]=await Promise.all([listPublicNotices(env),listPublicChannels(env)]);
+      const [noticesResponse,channelsResponse]=await Promise.all([listPublicNotices(request,env),listPublicChannels(env)]);
       const noticesBody=await noticesResponse.json().catch(()=>({items:[]}));
       const channelsBody=await channelsResponse.json().catch(()=>({items:[]}));
       return json({ok:true,notices:noticesBody.items||[],channels:channelsBody.items||[]});
@@ -962,7 +1018,7 @@ export async function handleSeonamMediAdminApi(request,env){
   }
   if(url.pathname===PREFIX+'/notices'&&request.method==='GET'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
-    return publicStorageRead('notices',()=>listPublicNotices(env));
+    return publicStorageRead('notices',()=>listPublicNotices(request,env));
   }
   if(url.pathname===PREFIX+'/notices'&&request.method==='POST'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return createPublicNotice(request,env);

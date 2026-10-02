@@ -283,7 +283,7 @@ test('seonammedi public and admin menus keep the agreed content-first order',asy
   assert.doesNotMatch(html,/<h2>현재상황<\/h2>|CURRENT STATUS|출처 검증형/);
   assert.match(html,/data-status-tab="news"[^>]*>관련보도<\/button>/);
   assert.match(html,/data-status-tab="official"[^>]*>공식기록<\/button>/);
-  assert.match(html,/data-view-link="status">활동이력<\/a>/);
+  assert.match(html,/href="#timeline" data-view-link="status">활동이력<\/a>/);
   assert.match(html,/id="timeline"[^>]*class="section activity-list-only"/);
   assert.doesNotMatch(html,/id="timeline"[\s\S]*?<div class="section-head">[\s\S]*?<h2>활동이력<\/h2>/);
   assert.doesNotMatch(html,/id="timeline"[\s\S]*?id="statusTabs"/);
@@ -320,6 +320,8 @@ test('seonammedi full public-menu administration covers status organization mate
   assert.match(app,/ORG_GROUP_META/);
   assert.match(app,/renderOrganizationGroup\('bidae'\)/);
   assert.match(app,/function showStatusTab\(tab\)/);
+  assert.match(app,/const canonicalViewHash=\{status:'timeline'/);
+  assert.match(app,/canonicalViewHash\[key\]\|\|key/);
   assert.match(app,/renderMaterialsForStatus\?\.\(isNews\?'관련보도':'공식자료'\)/);
   assert.match(adminHtml,/id="financeForm"/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/pages\/status/);
@@ -426,7 +428,7 @@ test('seonammedi channel previews use provider-safe embeds and same-origin metad
   assert.match(control,/profileEmbedUrl/);
   assert.match(control,/let recentItems=instagramRecentItems\(html\)/);
   assert.match(control,/recentItems=instagramRecentItems\(embedHtml\)/);
-  assert.match(control,/preview\.recentItems=recentItems/);
+  assert.match(control,/preview\.recentItems=\[\.\.\.\(preview\.recentItems\|\|\[\]\),\.\.\.recentItems\.filter/);
   assert.match(control,/preview\.contentType='recent-posts'/);
   assert.match(control,/preview\.embedUrl=provider\.profileEmbedUrl/);
   assert.match(control,/preview\.contentType='profile'/);
@@ -439,7 +441,8 @@ test('seonammedi channel previews use provider-safe embeds and same-origin metad
   assert.match(control,/provider\.kind!=='youtube'/);
   assert.match(control,/function explicitChannelEmbed\(item\)/);
   assert.match(control,/item\.platform==='instagram'/);
-  assert.match(control,/\['p','reel'\]\.includes\(parts\[0\]\)/);
+  assert.match(control,/findIndex\(part=>\['p','reel'\]\.includes\(part\)\)/);
+  assert.match(control,/const shortcode=kindIndex>=0\?parts\[kindIndex\+1\]/);
   assert.match(control,/preview\.contentType='explicit-preview'/);
   assert.match(control,/preview_url/);
   assert.match(control,/CHANNEL_BROWSER_UA/);
@@ -449,6 +452,25 @@ test('seonammedi channel previews use provider-safe embeds and same-origin metad
   assert.match(app,/최근 공개 콘텐츠/);
   assert.match(app,/frame\.src='about:blank'/);
 });
+
+test('seonammedi channel preview exposes up to three recent items for YouTube and social channels',async()=>{
+  const [app,html,css,control]=await Promise.all([
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('index.html',root),'utf8'),
+    readFile(new URL('app.css',root),'utf8'),
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8')
+  ]);
+  assert.match(html,/id="channelPreviewRecent"/);
+  assert.match(app,/function renderChannelRecent\(item,data=\{\}\)/);
+  assert.match(app,/slice\(0,3\)/);
+  assert.match(app,/data-channel-recent-index/);
+  assert.match(css,/\.channel-recent-grid\{display:grid;grid-template-columns:repeat\(3/);
+  assert.match(control,/function youtubeRecentItems\(xml\)/);
+  assert.match(control,/items\.length<3/);
+  assert.match(control,/resolveYouTubeChannelId/);
+  assert.match(control,/contentType='recent-videos'/);
+});
+
 
 test('seonammedi admin auth handoff is same-origin and finance API is production-guarded',async()=>{
   const [control,adminJs,manifestText]=await Promise.all([
@@ -498,7 +520,7 @@ test('seonammedi notices are an authenticated public board with image and sharin
     readFile(new URL('app.css',root),'utf8'),readFile(new URL('../auth-site/auth.js',import.meta.url),'utf8'),readFile(new URL('../migrations/0122_seonammedi_public_notice_board.sql',import.meta.url),'utf8'),readFile(new URL('../wrangler.api.toml',import.meta.url),'utf8')
   ]);
   assert.match(control,/createPublicNotice/);assert.match(control,/principalFromSupabaseRequest\(request\)/);
-  assert.match(control,/image_too_large/);assert.match(control,/LIVE_RECORDINGS_BUCKET\.put/);assert.match(control,/noticeImageMatch/);
+  assert.match(control,/image_too_large/);assert.match(control,/storeNoticeImageInDrive/);assert.match(control,/binding = "STORAGE"|STORAGE/);assert.match(control,/noticeImageMatch/);
   assert.match(html,/id="noticeComposeForm"/);assert.match(html,/id="homeSpotlight"/);assert.match(html,/사진과 글을 게시/);
   assert.match(app,/navigator\.share/);assert.match(app,/noticePermalink/);assert.match(app,/FormData\(noticeCompose\)/);assert.match(app,/NOTICE_SESSION_KEY/);
   assert.match(app,/recent=\[\.\.\.rows\]\.sort/);assert.match(css,/\.home-spotlight/);assert.match(css,/\.notice-detail/);
@@ -581,3 +603,68 @@ test('seonammedi activity history always renders in descending date order across
 });
 
 // descending activity-history order is enforced for every public category filter
+
+
+test('seonammedi notice list exposes edit and delete actions for the signed-in author',async()=>{
+  const [app,css]=await Promise.all([
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('app.css',root),'utf8')
+  ]);
+  assert.match(app,/data-notice-edit/);
+  assert.match(app,/data-notice-delete/);
+  assert.match(app,/async function deleteNotice\(item\)/);
+  assert.match(app,/querySelectorAll\('\[data-notice-edit\]'\)/);
+  assert.match(app,/querySelectorAll\('\[data-notice-delete\]'\)/);
+  assert.match(css,/\.notice-row-actions/);
+});
+
+
+test('seonammedi notice composer places attachments before body, compresses to 5MB, and renders images inline',async()=>{
+  const [html,app,control]=await Promise.all([
+    readFile(new URL('index.html',root),'utf8'),
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8')
+  ]);
+  assert.ok(html.indexOf('id="noticeImages"')<html.indexOf('name="body"'));
+  assert.match(html,/장당 5MB 이하로 자동 최적화/);
+  assert.match(app,/NOTICE_IMAGE_MAX_BYTES=5\*1024\*1024/);
+  assert.match(app,/async function compressNoticeImage\(file\)/);
+  assert.match(app,/canvas\.toBlob\(resolve,'image\/webp',quality\)/);
+  assert.match(app,/notice-detail-body/);
+  assert.match(app,/첨부 사진을 본문에 함께 표시합니다/);
+  assert.match(control,/image\.size\|\|0\)>5\*1024\*1024/);
+});
+
+
+test('seonammedi notice list actions use server-authorized canManage without exposing author email',async()=>{
+  const [app,control]=await Promise.all([
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8')
+  ]);
+  assert.match(app,/function noticeOwnedByCurrentUser\(item\)\{return Boolean\(noticeToken\(\)&&item\?\.canManage\)\}/);
+  assert.match(app,/fetch\('\/api\/seonammedi\/notices',\{cache:'no-store',headers:token\?\{authorization:'Bearer '\+token\}:\{\}\}\)/);
+  assert.match(control,/async function listPublicNotices\(request,env\)/);
+  assert.match(control,/canManage:Boolean\(admin\)\|\|Boolean\(email&&lower\(row\.created_by\)===email\)/);
+  assert.doesNotMatch(control,/eventEnd:row\.event_end\|\|'',createdBy:row\.created_by\|\|''/);
+});
+
+
+test('seonammedi admin notice Drive storage and five-image flow',async()=>{
+  const [control,adminJs,adminHtml]=await Promise.all([
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+    readFile(new URL('admin/admin.js',root),'utf8'),
+    readFile(new URL('admin/index.html',root),'utf8')
+  ]);
+  assert.match(control,/async function storeNoticeImage\(env,image,principal\)/);
+  assert.match(control,/storeNoticeImageInDrive\(env,image,\{email:principal\?\.email\|\|''\}\)/);
+  assert.match(control,/form\.getAll\('images'\)/);
+  assert.match(control,/if\(images\.length>5\)/);
+  assert.match(control,/image_keys_json/);
+  assert.match(control,/storeNoticeImage\(env,image,auth\)/);
+  assert.match(adminJs,/compressAdminNoticeImage/);
+  assert.match(adminJs,/ADMIN_NOTICE_IMAGE_MAX_BYTES=5\*1024\*1024/);
+  assert.match(adminJs,/payload\.append\('images',file,file\.name\)/);
+  assert.match(adminHtml,/id="adminNoticeImages"/);
+  assert.match(adminHtml,/사진 최대 5장/);
+  assert.doesNotMatch(adminHtml,/최대 8MB/);
+});

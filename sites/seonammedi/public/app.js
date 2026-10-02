@@ -269,6 +269,7 @@ function showStatusTab(tab){
 }
 document.querySelectorAll('.status-tabs').forEach(tabs=>tabs.addEventListener('click',event=>{const button=event.target.closest('[data-status-tab]');if(button)showStatusTab(button.dataset.statusTab)}));
 const viewAliases={status:'status',monitor:'status',organization:'organization',records:'status',timeline:'status',materials:'status',news:'status','public-posts':'status',notices:'notices',voices:'voices',channels:'channels',finance:'finance'};
+const canonicalViewHash={status:'timeline',organization:'organization',notices:'notices',voices:'voices',channels:'channels',finance:'finance'};
 function showView(view,{updateHash=false}={}){
   const key=viewAliases[view]||'';
   document.querySelectorAll('[data-view-section]').forEach(section=>{section.hidden=section.dataset.viewSection!==key});
@@ -279,7 +280,7 @@ function showView(view,{updateHash=false}={}){
   const hero=document.querySelector('.hero');
   if(hero)hero.hidden=Boolean(key);
   if(updateHash){
-    const next=key?'#'+key:location.pathname;
+    const next=key?'#'+(canonicalViewHash[key]||key):location.pathname;
     history.pushState({view:key},'',next);
   }
   if(key==='status')showStatusTab(activeStatusTab);
@@ -307,7 +308,7 @@ let publicNotices=[];
 function noticeToken(){try{const raw=localStorage.getItem(NOTICE_SESSION_KEY)||'';if(!raw)return'';const parsed=JSON.parse(raw);const session=parsed?.currentSession||parsed?.session||parsed;const access=String(session?.access_token||'');const expires=Number(session?.expires_at||0);return access&&(!expires||expires>Math.floor(Date.now()/1000)+30)?access:''}catch{return''}}
 function noticeSession(){try{const raw=localStorage.getItem(NOTICE_SESSION_KEY)||'';if(!raw)return null;const parsed=JSON.parse(raw);return parsed?.currentSession||parsed?.session||parsed||null}catch{return null}}
 function noticeCurrentEmail(){return String(noticeSession()?.user?.email||'').trim().toLowerCase()}
-function noticeOwnedByCurrentUser(item){const email=noticeCurrentEmail();return Boolean(noticeToken()&&email&&email===String(item?.createdBy||'').trim().toLowerCase())}
+function noticeOwnedByCurrentUser(item){return Boolean(noticeToken()&&item?.canManage)}
 async function consumeNoticeHandoff(){
   const params=new URLSearchParams(location.hash.replace(/^#/,''));
   const tokenHash=params.get('ekodi_token');if(!tokenHash)return false;
@@ -324,16 +325,31 @@ async function consumeNoticeHandoff(){
 function noticeLoginUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','portal');u.searchParams.set('direct','1');u.searchParams.set('return_to',location.origin+'/seonammedi/?compose=notice#notices');return u.href}
 function noticePermalink(id){return location.origin+'/seonammedi/notices/'+encodeURIComponent(id)}
 function noticeDate(item){const raw=item.publishedAt||item.updatedAt||'';return raw?new Date(raw).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):''}
-function noticeCard(item){const image=item.imageUrl?'<img src="'+escapeHtml(item.imageUrl)+'" alt="" loading="lazy">':'<span class="notice-thumb-empty">공지</span>';return '<article class="notice-item" data-notice-id="'+item.id+'"><a class="notice-open" href="'+noticePermalink(item.id)+'">'+image+'<div class="notice-row-copy"><h3>'+escapeHtml(item.title||'공지')+(item.pinned?'<span class="notice-pin">중요</span>':'')+'</h3><p>'+escapeHtml(item.body||'')+'</p></div><small class="notice-row-date">'+escapeHtml(noticeDate(item))+'</small></a></article>'}
+function noticeCard(item){
+  const image=item.imageUrl?'<img src="'+escapeHtml(item.imageUrl)+'" alt="" loading="lazy">':'<span class="notice-thumb-empty">공지</span>';
+  const mine=noticeOwnedByCurrentUser(item);
+  const actions=mine?'<div class="notice-row-actions"><button type="button" data-notice-edit="'+item.id+'">수정</button><button type="button" data-notice-delete="'+item.id+'">삭제</button></div>':'';
+  return '<article class="notice-item" data-notice-id="'+item.id+'"><a class="notice-open" href="'+noticePermalink(item.id)+'">'+image+'<div class="notice-row-copy"><h3>'+escapeHtml(item.title||'공지')+(item.pinned?'<span class="notice-pin">중요</span>':'')+'</h3><p>'+escapeHtml(item.body||'')+'</p></div><small class="notice-row-date">'+escapeHtml(noticeDate(item))+'</small></a>'+actions+'</article>'
+}
+async function deleteNotice(item){
+  if(!noticeOwnedByCurrentUser(item)||!confirm('이 게시물을 삭제하시겠습니까?'))return false;
+  const response=await fetch('/api/seonammedi/notices/'+item.id,{method:'DELETE',headers:{authorization:'Bearer '+noticeToken()},cache:'no-store'});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok){alert(data.error==='delete_forbidden'?'작성자만 삭제할 수 있습니다.':'삭제하지 못했습니다.');return false}
+  history.replaceState(null,'',location.pathname+'#notices');
+  const detail=el('noticeDetail');if(detail)detail.hidden=true;
+  const list=el('noticeList');if(list)list.hidden=false;
+  await loadNotices();return true;
+}
 function showNoticeDetail(item){
   const detail=el('noticeDetail');if(!detail)return;const images=(item.imageUrls?.length?item.imageUrls:(item.imageUrl?[item.imageUrl]:[])).map(url=>'<img src="'+escapeHtml(url)+'" alt="" class="notice-detail-image" loading="lazy">').join('');
   const mine=noticeOwnedByCurrentUser(item);
-  detail.innerHTML='<button type="button" class="notice-back">목록</button><div class="notice-detail-images">'+images+'</div><h3>'+escapeHtml(item.title||'공지')+'</h3><p>'+escapeHtml(item.body||'')+'</p><small>'+escapeHtml(noticeDate(item))+'</small><div class="notice-detail-actions"><button type="button" class="notice-share">공유</button>'+(mine?'<button type="button" class="notice-edit">수정</button><button type="button" class="notice-delete">삭제</button>':'')+'</div>';
+  detail.innerHTML='<button type="button" class="notice-back">목록</button><h3>'+escapeHtml(item.title||'공지')+'</h3><div class="notice-detail-body"><p>'+escapeHtml(item.body||'')+'</p>'+(images?'<div class="notice-detail-images">'+images+'</div>':'')+'</div><small>'+escapeHtml(noticeDate(item))+'</small><div class="notice-detail-actions"><button type="button" class="notice-share">공유</button>'+(mine?'<button type="button" class="notice-edit">수정</button><button type="button" class="notice-delete">삭제</button>':'')+'</div>';
   detail.hidden=false;el('noticeList').hidden=true;
   detail.querySelector('.notice-back')?.addEventListener('click',()=>{detail.hidden=true;el('noticeList').hidden=false;history.replaceState(null,'',location.pathname+'#notices')});
   detail.querySelector('.notice-share')?.addEventListener('click',async()=>{const url=noticePermalink(item.id);try{if(navigator.share)await navigator.share({title:item.title||'공지',text:item.body||'',url});else{await navigator.clipboard.writeText(url);alert('게시물 링크를 복사했습니다.')}}catch{}});
   detail.querySelector('.notice-edit')?.addEventListener('click',()=>beginNoticeEdit(item));
-  detail.querySelector('.notice-delete')?.addEventListener('click',async()=>{if(!confirm('이 게시물을 삭제하시겠습니까?'))return;const response=await fetch('/api/seonammedi/notices/'+item.id,{method:'DELETE',headers:{authorization:'Bearer '+noticeToken()},cache:'no-store'});const data=await response.json().catch(()=>({}));if(response.ok){history.replaceState(null,'',location.pathname+'#notices');detail.hidden=true;el('noticeList').hidden=false;await loadNotices()}else alert(data.error==='delete_forbidden'?'작성자만 삭제할 수 있습니다.':'삭제하지 못했습니다.')});
+  detail.querySelector('.notice-delete')?.addEventListener('click',()=>deleteNotice(item));
 }
 function renderFeaturedNotice(rows){
   const host=el('homeSpotlight');if(!host)return;const now=Date.now(),recent=[...rows].sort((a,b)=>String(b.publishedAt||b.updatedAt||'').localeCompare(String(a.publishedAt||a.updatedAt||'')));
@@ -346,16 +362,44 @@ function renderFeaturedNotice(rows){
 async function loadNotices(){
   const host=el('noticeList');if(!host)return;
   try{
-    const response=await fetch('/api/seonammedi/notices',{cache:'no-store'});const data=await response.json().catch(()=>({}));
+    const token=noticeToken();const response=await fetch('/api/seonammedi/notices',{cache:'no-store',headers:token?{authorization:'Bearer '+token}:{}});const data=await response.json().catch(()=>({}));
     if(!response.ok||!data.ok)throw new Error(data.message||'공지 목록을 불러오지 못했습니다.');
     publicNotices=Array.isArray(data.items)?data.items:[];host.innerHTML=publicNotices.length?publicNotices.map(noticeCard).join(''):'<p class="muted">등록된 공지가 없습니다.</p>';renderFeaturedNotice(publicNotices);
+    host.querySelectorAll('[data-notice-edit]').forEach(button=>button.addEventListener('click',()=>{const item=publicNotices.find(row=>Number(row.id)===Number(button.dataset.noticeEdit));if(item)beginNoticeEdit(item)}));
+    host.querySelectorAll('[data-notice-delete]').forEach(button=>button.addEventListener('click',()=>{const item=publicNotices.find(row=>Number(row.id)===Number(button.dataset.noticeDelete));if(item)deleteNotice(item)}));
     const pathMatch=location.pathname.match(/^\/seonammedi\/notices\/(\d+)\/?$/);const wanted=Number(pathMatch?.[1]||new URLSearchParams(location.search).get('notice')||0);const selected=publicNotices.find(item=>Number(item.id)===wanted);if(selected){showView('notices');showNoticeDetail(selected)}
   }catch(error){host.innerHTML='<p class="muted">'+escapeHtml(error.message||'공지 목록을 불러오지 못했습니다.')+'</p>'}
 }
+const NOTICE_IMAGE_MAX_BYTES=5*1024*1024;
+const NOTICE_IMAGE_MAX_DIMENSION=2400;
 let noticeSelectedFiles=[];
 let noticeEditingId=0;
 let noticeExistingImages=[];
 let noticeKeptImageIndexes=new Set();
+const noticeFileFromBlob=(blob,name)=>new File([blob],name,{type:blob.type||'image/webp',lastModified:Date.now()});
+async function compressNoticeImage(file){
+  if(!file||Number(file.size||0)<=NOTICE_IMAGE_MAX_BYTES)return file;
+  let bitmap;
+  try{bitmap=await createImageBitmap(file)}catch{throw new Error('이 사진은 자동 압축할 수 없습니다. 5MB 이하 파일로 다시 선택해 주세요.')}
+  const ratio=Math.min(1,NOTICE_IMAGE_MAX_DIMENSION/Math.max(bitmap.width,bitmap.height));
+  let width=Math.max(1,Math.round(bitmap.width*ratio)),height=Math.max(1,Math.round(bitmap.height*ratio));
+  const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d',{alpha:true});
+  if(!ctx){bitmap.close?.();throw new Error('사진 압축을 준비하지 못했습니다.')}
+  let blob=null;
+  for(let round=0;round<5;round++){
+    canvas.width=width;canvas.height=height;ctx.clearRect(0,0,width,height);ctx.drawImage(bitmap,0,0,width,height);
+    for(const quality of [0.86,0.74,0.62,0.5]){
+      blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',quality));
+      if(blob&&blob.size<=NOTICE_IMAGE_MAX_BYTES)break;
+    }
+    if(blob&&blob.size<=NOTICE_IMAGE_MAX_BYTES)break;
+    width=Math.max(1,Math.round(width*0.82));height=Math.max(1,Math.round(height*0.82));
+  }
+  bitmap.close?.();
+  if(!blob||blob.size>NOTICE_IMAGE_MAX_BYTES)throw new Error('사진을 5MB 이하로 줄이지 못했습니다. 더 작은 사진을 선택해 주세요.');
+  const base=String(file.name||'notice-image').replace(/\.[^.]+$/,'');
+  return noticeFileFromBlob(blob,base+'.webp');
+}
 function resetNoticeEditor(){
   noticeEditingId=0;noticeSelectedFiles=[];noticeExistingImages=[];noticeKeptImageIndexes=new Set();noticeCompose?.reset();renderNoticeImagePreview();
   const submit=noticeCompose?.querySelector('button[type="submit"]');if(submit)submit.textContent='게시하기';
@@ -377,9 +421,18 @@ function beginNoticeEdit(item){
   const message=el('noticeComposeMessage');if(message)message.textContent='게시글을 수정 중입니다.';
   renderNoticeImagePreview();noticeCompose.hidden=false;noticeWriteButton.hidden=true;el('noticeDetail').hidden=true;noticeCompose.scrollIntoView({block:'start'});noticeCompose.elements.title.focus();
 }
-el('noticeImages')?.addEventListener('change',event=>{
-  const remaining=Math.max(0,5-noticeKeptImageIndexes.size),files=[...event.target.files];noticeSelectedFiles=files.slice(0,remaining);
-  if(files.length>remaining)alert('사진은 기존 사진을 포함해 최대 5장까지 등록할 수 있습니다.');renderNoticeImagePreview();
+el('noticeImages')?.addEventListener('change',async event=>{
+  const input=event.currentTarget,remaining=Math.max(0,5-noticeKeptImageIndexes.size),files=[...input.files].slice(0,remaining);
+  if(input.files.length>remaining)alert('사진은 기존 사진을 포함해 최대 5장까지 등록할 수 있습니다.');
+  const message=el('noticeComposeMessage');if(message)message.textContent=files.length?'사진을 5MB 이하로 최적화하는 중입니다…':'';
+  try{
+    noticeSelectedFiles=[];
+    for(const file of files)noticeSelectedFiles.push(await compressNoticeImage(file));
+    if(message)message.textContent=noticeSelectedFiles.length?'첨부 사진을 본문에 함께 표시합니다.':'';
+  }catch(error){
+    noticeSelectedFiles=[];input.value='';if(message)message.textContent=error.message||'사진을 처리하지 못했습니다.';
+  }
+  renderNoticeImagePreview();
 });
 const noticeWriteButton=el('noticeWriteButton'),noticeCompose=el('noticeComposeForm');
 noticeWriteButton?.addEventListener('click',()=>{if(!noticeToken()){location.assign(noticeLoginUrl());return}resetNoticeEditor();noticeCompose.hidden=false;noticeWriteButton.hidden=true;noticeCompose.querySelector('input[name="title"]')?.focus()});
@@ -392,7 +445,7 @@ noticeCompose?.addEventListener('submit',async event=>{
   message.textContent=editingId?'수정 저장 중입니다…':'게시 중입니다…';
   try{
     const response=await fetch(url,{method,headers:{authorization:'Bearer '+token},body:form,cache:'no-store'});const data=await response.json().catch(()=>({}));
-    if(!response.ok){const messages={REQUEST_BODY_TOO_LARGE:'사진 용량이 너무 큽니다. 사진은 장당 8MB 이하, 최대 5장까지 등록할 수 있습니다.',too_many_images:'사진은 최대 5장까지 등록할 수 있습니다.',image_too_large:'사진 한 장의 크기는 최대 8MB입니다.',image_storage_unavailable:'사진 저장소에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.',edit_forbidden:'작성자만 수정할 수 있습니다.'};throw new Error(messages[data.error]||data.error||(editingId?'수정하지 못했습니다.':'게시하지 못했습니다.'))}
+    if(!response.ok){const messages={REQUEST_BODY_TOO_LARGE:'사진 용량이 너무 큽니다. 사진은 장당 5MB 이하, 최대 5장까지 등록할 수 있습니다.',too_many_images:'사진은 최대 5장까지 등록할 수 있습니다.',image_too_large:'사진 한 장의 크기는 최대 5MB입니다.',image_storage_unavailable:'사진 저장소에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.',edit_forbidden:'작성자만 수정할 수 있습니다.'};throw new Error(messages[data.error]||data.error||(editingId?'수정하지 못했습니다.':'게시하지 못했습니다.'))}
     resetNoticeEditor();noticeCompose.hidden=true;noticeWriteButton.hidden=false;message.textContent=editingId?'수정했습니다.':'게시했습니다.';await loadNotices();const item=publicNotices.find(row=>row.id===Number(data.id));if(item){history.replaceState(null,'',noticePermalink(item.id));showNoticeDetail(item)}
   }catch(error){message.textContent=error.message||(editingId?'수정하지 못했습니다.':'게시하지 못했습니다.')}
 });
@@ -450,6 +503,27 @@ function renderChannelFallback(item,data={}){
   host.innerHTML='<div class="channel-preview-fallback-content"><div class="channel-preview-summary">'+(image!=='#'?'<img src="'+image+'" alt="" loading="lazy">':'')+'<div><span class="source-type">'+escapeHtml(platform)+'</span><h4>'+title+'</h4><p>'+description+'</p><small>'+escapeHtml(hint)+'</small></div></div>'+recentHtml+'</div>';
   host.hidden=false;
 }
+function renderChannelRecent(item,data={}){
+  const host=el('channelPreviewRecent');if(!host)return;
+  const rows=(Array.isArray(data.recentItems)?data.recentItems:[]).filter(row=>safeUrl(row?.url)!=='#').slice(0,3);
+  if(!rows.length){host.hidden=true;host.innerHTML='';return}
+  const platform=String(item.platform||'').toLowerCase();
+  const heading=platform==='youtube'?'최근 영상':'최근 게시물';
+  host.innerHTML='<div class="channel-recent-head"><strong>'+heading+' '+rows.length+'개</strong><span>선택하면 이 화면에서 바로 확인합니다.</span></div><div class="channel-recent-grid">'+rows.map((row,index)=>{
+    const image=safeUrl(row.image||'');
+    const title=escapeHtml(row.title||row.label||heading+' '+(index+1));
+    const meta=escapeHtml(row.publishedAt?new Date(row.publishedAt).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):(row.label||''));
+    return '<a href="'+safeUrl(row.url)+'" target="_blank" rel="noopener noreferrer" data-channel-recent-index="'+index+'">'+(image!=='#'?'<img src="'+image+'" alt="" loading="lazy">':'<span class="channel-recent-placeholder">'+escapeHtml(channelPlatformLabel(item.platform))+'</span>')+'<b>'+title+'</b><small>'+meta+'</small></a>';
+  }).join('')+'</div>';
+  host.hidden=false;
+  host.onclick=event=>{
+    const card=event.target.closest('[data-channel-recent-index]');if(!card)return;
+    const row=rows[Number(card.dataset.channelRecentIndex)];const embed=safeUrl(row?.embedUrl||'');
+    const frame=el('channelPreviewFrame');
+    if(embed!=='#'&&frame){event.preventDefault();frame.src=embed;frame.hidden=false;el('channelPreviewFallback').hidden=true;frame.scrollIntoView({block:'nearest'})}
+  };
+}
+
 async function showChannelPreview(index){
   const item=publicChannels[index];if(!item)return;
   const seq=++channelPreviewSeq;
@@ -462,6 +536,7 @@ async function showChannelPreview(index){
   if(metaHost)metaHost.textContent=meta;
   if(open){open.href=url;open.setAttribute('aria-label',(item.name||'관련 채널')+' 원문 채널 열기')}
   if(frame){frame.hidden=true;frame.src='about:blank';frame.title=(item.name||'관련 채널')+' 미리보기'}
+  const recentHost=el('channelPreviewRecent');if(recentHost){recentHost.hidden=true;recentHost.innerHTML=''}
   if(fallback){fallback.hidden=false;fallback.innerHTML='<p class="muted">채널 화면을 준비 중입니다.</p>'}
   if(preview)preview.hidden=false;
   el('publicChannelAccounts')?.querySelectorAll('[data-channel-index]').forEach(button=>{
@@ -479,6 +554,7 @@ async function showChannelPreview(index){
     }catch{}
   }
   if(seq!==channelPreviewSeq)return;
+  renderChannelRecent(item,providerPreview||{});
   const embedUrl=channelPreviewEmbedUrl(policy,providerPreview||{});
   if(embedUrl!=='#'&&frame){
     let settled=false;
@@ -624,3 +700,5 @@ async function initPublicAdminControls(){
   }catch{}
 }
 initPublicAdminControls();
+
+// EKODI release marker: notice-list authorized edit/delete actions verified on merged main.
