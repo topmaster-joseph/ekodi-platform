@@ -81,6 +81,7 @@ if(statusCards){
   statusCards.innerHTML=d.status.filter(x=>x?.key!=='daily').map((x,i)=>{const key=x.key||['official','news'][i]||('status-'+i);return `<button type="button" class="card status-card" data-status="${escapeHtml(key)}" aria-expanded="false" aria-controls="statusDetail"><span class="status-card-copy"><strong class="status-card-title">${escapeHtml(x.title)}</strong><span class="status-card-text">${escapeHtml(x.text)}</span></span><span class="status-card-action">내용 보기 <span aria-hidden="true">→</span></span></button>`}).join('');
   statusCards.addEventListener('click',event=>{const button=event.target.closest('.status-card');if(!button)return;if(button.getAttribute('aria-expanded')==='true'){closeStatusDetail();return}renderStatusDetail(button.dataset.status,d)});
 }
+// Canonical public activity-history filter labels/order.
 const timelineCategoryLabel=value=>String(value||'').trim()==='비대위 활동'?'비대위 활동이력':String(value||'').trim();
 const cats=['전체','비대위 활동이력','장기현안','정부·대학','후보대학 선정'];
 el('timelineFilters').innerHTML=cats.map((c,i)=>`<button data-cat="${escapeHtml(c)}" class="${i===0?'active':''}">${escapeHtml(c)}</button>`).join('');
