@@ -42,24 +42,11 @@
         <article><span>공지</span><strong id="noticeCount">-</strong><small>초안 포함</small></article>
         <article><span>소통채널</span><strong id="channelCount">-</strong><small>숨김 포함</small></article>
       </div>
-      <section class="card"><h2>관리 범위</h2><p id="scopeSummary">권한을 확인하고 있습니다.</p><div class="quick"><button type="button" data-go="status">현재상황</button><button type="button" data-go="channels">소통채널</button><button type="button" data-go="voices">시민의견</button><button type="button" data-go="finance">회계</button><button type="button" data-go="notices">공지</button><button type="button" data-go="organization">조직</button><button type="button" data-go="minutes">내부 회의록</button><a href="/seonammedi/" target="_blank" rel="noopener">사이트 확인</a></div></section>
+      <section class="card"><h2>관리 범위</h2><p id="scopeSummary">권한을 확인하고 있습니다.</p><div class="quick"><button type="button" data-go="status">활동이력</button><button type="button" data-go="channels">소통채널</button><button type="button" data-go="voices">시민의견</button><button type="button" data-go="finance">회계</button><button type="button" data-go="notices">공지</button><button type="button" data-go="organization">조직</button><button type="button" data-go="minutes">내부 회의록</button><a href="/seonammedi/" target="_blank" rel="noopener">사이트 확인</a></div></section>
     </section>
 
     <section class="panel-page" data-panel="status" hidden>
-      <div class="heading"><div><p class="eyebrow">CURRENT STATUS</p><h1>현재상황 관리</h1><p>활동이력·관련보도·공식기록을 구분해 관리합니다.</p></div></div>
-      <form id="statusForm" class="card form-card">
-        <div class="form-row"><label>공식 기록 제목<input name="officialTitle" maxlength="120"></label><label>관련 보도 제목<input name="newsTitle" maxlength="120"></label></div>
-        <label>공식 기록 설명<textarea name="officialText" rows="4" maxlength="2000"></textarea></label>
-        <label>관련 보도 설명<textarea name="newsText" rows="4" maxlength="2000"></textarea></label>
-        <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="reloadStatusPage" class="secondary">다시 불러오기</button></div>
-        <p id="statusPageMessage" class="message" role="status"></p>
-      </form>
-      <div class="heading"><div><p class="eyebrow">ACTIVITY · SOURCES</p><h2>활동이력·관련보도·공식기록</h2><p>현재상황의 세 분류가 사용자 화면과 같은 기준으로 보이도록 관리합니다.</p></div></div>
-      <div class="quick records-admin-tabs" role="tablist" aria-label="현재상황 근거자료 구분">
-        <button type="button" class="active" data-records-admin-tab="timeline" role="tab" aria-selected="true">활동이력</button>
-        <button type="button" data-records-admin-tab="review" role="tab" aria-selected="false">자료검토</button>
-      </div>
-      <div data-records-admin-panel="timeline">
+      <div class="heading"><div><p class="eyebrow">ACTIVITY HISTORY</p><h1>활동이력 관리</h1><p>활동이력을 추가·수정·삭제하고 최신순으로 관리합니다.</p></div></div>
         <div class="heading"><div><p class="eyebrow">ACTIVITY HISTORY</p><h1>활동이력 관리</h1><p>기존 활동이력이 모두 사전 등록되어 있습니다. 새 이력을 추가하거나 수정하고, 공개 여부를 선택할 수 있습니다.</p></div></div>
         <div class="two-col">
           <form id="timelineForm" class="card form-card">
@@ -75,10 +62,6 @@
           </form>
           <section class="card list-card"><div class="card-head"><h2>활동이력 목록</h2><button type="button" id="reloadTimeline" class="secondary">새로고침</button></div><div id="timelineAdminList" class="item-list"></div></section>
         </div>
-      </div>
-      <div data-records-admin-panel="review" hidden>
-        <div class="heading"><div><p class="eyebrow">WEB SEARCH REVIEW</p><h1>웹검색 게시검토</h1><p>일일점검으로 수집된 공식기록·관련보도 후보를 확인한 뒤 체크하여 공개합니다. 미승인 후보는 공개페이지에 표시되지 않습니다.</p></div><button id="reloadContent" type="button" class="secondary">새로고침</button></div>
-        <section class="card list-card"><div class="card-head"><h2>수집 후보</h2><span class="muted">분류 선택 → 게시 체크</span></div><div id="contentList" class="item-list"></div><p id="contentMessage" class="message" role="status"></p></section>
       </div>
     </section>
 
