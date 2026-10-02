@@ -262,7 +262,7 @@ function showStatusTab(tab){
   }
 }
 el('statusTabs')?.addEventListener('click',event=>{const button=event.target.closest('[data-status-tab]');if(button)showStatusTab(button.dataset.statusTab)});
-const viewAliases={status:'status',monitor:'status',organization:'organization',records:'status',timeline:'status',materials:'status',news:'status','public-posts':'status',notices:'notices',voices:'voices',channels:'channels',finance:'finance'};
+const viewAliases={timeline:'timeline',status:'timeline',monitor:'timeline',organization:'organization',records:'timeline',materials:'timeline',news:'timeline','public-posts':'timeline',notices:'notices',voices:'voices',channels:'channels',finance:'finance'};
 function showView(view,{updateHash=false}={}){
   const key=viewAliases[view]||'';
   document.querySelectorAll('[data-view-section]').forEach(section=>{section.hidden=section.dataset.viewSection!==key});
@@ -276,7 +276,7 @@ function showView(view,{updateHash=false}={}){
     const next=key?'#'+key:location.pathname;
     history.pushState({view:key},'',next);
   }
-  if(key==='status')showStatusTab(activeStatusTab);
+  if(key==='timeline'){const timeline=el('timeline');if(timeline)timeline.hidden=false}
   if(key){
     const first=document.querySelector('[data-view-section="'+CSS.escape(key)+'"]');
     first?.scrollIntoView({block:'start'});
