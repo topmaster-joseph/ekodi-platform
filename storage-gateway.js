@@ -2,7 +2,7 @@ import { canonicalDriveStatus, deleteCanonicalDriveFile, readCanonicalDriveFile,
 
 const STORAGE_PREFIX = '/api/storage/v1';
 const STORAGE_CONTROL_ORIGIN = 'https://drive.ekodi.kr';
-const MAX_INLINE_BYTES = 8 * 1024 * 1024;
+const MAX_INLINE_BYTES = 50 * 1024 * 1024;
 const RETENTION_CLASSES = new Set(['temporary', 'operational', 'business_record', 'permanent']);
 const encoder = new TextEncoder();
 
