@@ -1,0 +1,44 @@
+{
+  "amendmentId": "PLATFORM-PUBLIC-ACCESS-FORCED-RULE-20261002",
+  "constitutionVersion": "1.27.0",
+  "approvedAt": "2026-10-02",
+  "changeClass": "C2",
+  "taskId": "platform-public-access-forced-rule-20261002",
+  "summary": "Make guest-open public access and explicitly public safe actions a mandatory inherited rule for every current and future EKODI user-facing service, workspace public site and independent EKODI site, while preserving authentication for private, paid, privileged, operator and administrator capabilities.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly instructed on 2026-10-02 that the rule must apply not only to EKODI Mission but to every EKODI Platform user and independent site as a common forced execution rule.",
+  "implementation": [
+    "PUBLIC-USER-SURFACE-001 inheritance expansion in governance/constitution/constitution.json",
+    "PUBLIC-INTERACTION-001 safe public action contract in governance/constitution/constitution.json",
+    "inherited publicInteractionDefault in config/service-workspace-policy.json",
+    "runtime decision contract in workspace-route-policy.js",
+    "merge-blocking checks in scripts/validate-constitution.mjs and scripts/validate-user-surfaces.mjs",
+    "runtime regression tests in test/public-user-access-policy.test.mjs",
+    "operational wording in CONSTITUTION.md"
+  ],
+  "mandatoryRules": [
+    "all current and future canonical public user sites are guest-open by default",
+    "independent EKODI sites and workspace public sites inherit the same rule without service-local override",
+    "explicitly public event applications, reservation requests, inquiries, feedback/opinion and interest registration do not require login",
+    "login may enhance public actions with prefill, history, status or member benefits but may not be required solely for submission",
+    "private data, restricted writes/applications, payments, uploads, protected downloads, operator/admin, privilege-changing and account-security actions remain authenticated",
+    "public guest actions require input validation, abuse protection, data minimization, required consent and verified persistence before success",
+    "public guest actions may never grant privilege, expose protected data or write across private workspace boundaries"
+  ],
+  "validation": [
+    "scripts/validate-constitution.mjs",
+    "scripts/validate-user-surfaces.mjs",
+    "test/public-user-access-policy.test.mjs",
+    "EKODI Constitution Check",
+    "CI"
+  ],
+  "rollback": "Revert Constitution v1.27.0, workspace inheritance metadata, runtime public access contract and related validators through the guarded C2 path to v1.26.1. Preserve existing public pages and already-safe anonymous application flows while rollback is evaluated; do not introduce broad public writes or weaken admin/private protections.",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalEvidence": {
+    "explicitOwnerInstruction": true,
+    "ownerInstructionDate": "2026-10-02",
+    "requiredPullRequestLabel": "constitution-approved",
+    "approvalLabel": "constitution-approved",
+    "ownerInstruction": "에코디선교회 뿐만 아니라 에코디플랫폼의 모든 사용자, 독립 사이트의 공통 강제실행규칙으로 설정해줘"
+  }
+}

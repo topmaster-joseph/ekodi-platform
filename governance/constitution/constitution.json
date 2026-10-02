@@ -1,6 +1,6 @@
 {
-  "version": "1.26.1",
-  "effectiveDate": "2026-09-29",
+  "version": "1.27.0",
+  "effectiveDate": "2026-10-02",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -634,13 +634,15 @@
       "private-data",
       "personal-state",
       "workspace-internal-data",
-      "write",
-      "application",
+      "private-write",
+      "restricted-application",
       "payment",
       "upload",
       "protected-download",
       "operator",
-      "admin"
+      "admin",
+      "privilege-changing-action",
+      "account-security"
     ],
     "insufficientPrivilegeBehavior": "retain-safe-public-projection",
     "explicitPrivateException": {
@@ -716,6 +718,37 @@
         ]
       },
       "fallback": "service-native-fixed-visuals"
+    },
+    "inheritanceScope": "all-current-and-future-user-facing-services-workspaces-and-independent-sites",
+    "serviceLocalOverrideAllowed": false,
+    "publicInteractionPolicy": {
+      "id": "PUBLIC-INTERACTION-001",
+      "status": "enforced",
+      "scope": "all-current-and-future-user-facing-services-workspaces-and-independent-sites",
+      "defaultForExplicitlyPublicActions": "guest-open",
+      "authenticationRequiredForExplicitlyPublicActions": false,
+      "authenticatedUserEffect": "prefill-status-and-benefits-only",
+      "safePublicActionClasses": [
+        "event-application",
+        "public-reservation-request",
+        "public-inquiry",
+        "public-feedback",
+        "public-opinion",
+        "public-interest-registration"
+      ],
+      "explicitPublicClassificationRequired": true,
+      "serviceLocalOverrideAllowed": false,
+      "privilegeGrantForbidden": true,
+      "crossWorkspacePrivateWriteForbidden": true,
+      "protectedDataDisclosureForbidden": true,
+      "paymentAndMemberOnlyActionsExcluded": true,
+      "serverPersistenceVerificationRequired": true,
+      "falseSuccessResponseForbidden": true,
+      "inputValidationRequired": true,
+      "abuseProtectionRequired": true,
+      "purposeBoundDataMinimizationRequired": true,
+      "consentRequiredWhenPersonalDataCollected": true,
+      "adminAndOperatorSurfacesRemainProtected": true
     }
   },
   "surfaceSystemVerificationPolicy": {

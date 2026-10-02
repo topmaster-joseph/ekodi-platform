@@ -226,13 +226,15 @@
       "private-data",
       "personal-state",
       "workspace-internal-data",
-      "write",
-      "application",
+      "private-write",
+      "restricted-application",
       "payment",
       "upload",
       "protected-download",
       "operator",
-      "admin"
+      "admin",
+      "privilege-changing-action",
+      "account-security"
     ],
     "explicitPrivateException": {
       "allowed": true,
@@ -258,6 +260,31 @@
         "preserveServiceVisualFamily": true
       },
       "implementationOwner": "shared-shell"
+    },
+    "inheritanceScope": "all-current-and-future-user-facing-services-workspaces-and-independent-sites",
+    "serviceLocalOverrideAllowed": false,
+    "publicInteractionDefault": {
+      "policyId": "PUBLIC-INTERACTION-001",
+      "defaultForExplicitlyPublicActions": "guest-open",
+      "authenticationRequired": false,
+      "safePublicActionClasses": [
+        "event-application",
+        "public-reservation-request",
+        "public-inquiry",
+        "public-feedback",
+        "public-opinion",
+        "public-interest-registration"
+      ],
+      "explicitPublicClassificationRequired": true,
+      "serviceLocalOverrideAllowed": false,
+      "privilegeGrantForbidden": true,
+      "protectedDataDisclosureForbidden": true,
+      "serverPersistenceVerificationRequired": true,
+      "falseSuccessResponseForbidden": true,
+      "inputValidationRequired": true,
+      "abuseProtectionRequired": true,
+      "purposeBoundDataMinimizationRequired": true,
+      "consentRequiredWhenPersonalDataCollected": true
     }
   },
   "authenticationReturnPolicy": {

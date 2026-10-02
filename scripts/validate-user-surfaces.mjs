@@ -12,7 +12,15 @@ const constitution=json('governance/constitution/constitution.json');
 const publicUserSurface=constitution.publicUserSurfacePolicy||{};
 if(publicUserSurface.defaultAccess!=='guest-open'||publicUserSurface.canonicalPublicLoginWallForbidden!==true) fail('constitutional guest-open public user surface policy missing');
 if(publicUserSurface.permissionFailureReplacesPublicPage!==false) fail('public page must survive protected capability permission failures');
+if(publicUserSurface.inheritanceScope!=='all-current-and-future-user-facing-services-workspaces-and-independent-sites'||publicUserSurface.serviceLocalOverrideAllowed!==false) fail('all current/future user and independent sites must inherit guest-open access');
+const publicInteraction=publicUserSurface.publicInteractionPolicy||{};
+if(publicInteraction.id!=='PUBLIC-INTERACTION-001'||publicInteraction.defaultForExplicitlyPublicActions!=='guest-open'||publicInteraction.authenticationRequiredForExplicitlyPublicActions!==false) fail('public safe actions must be guest-open');
+if(publicInteraction.serviceLocalOverrideAllowed!==false||publicInteraction.serverPersistenceVerificationRequired!==true||publicInteraction.falseSuccessResponseForbidden!==true) fail('public interaction enforcement weakened');
+
 if(workspace.publicUserSurfaceDefault?.defaultAccess!=='guest-open'||workspace.publicUserSurfaceDefault?.loginEffect!=='enhance-not-replace') fail('workspace public user surface default missing');
+if(workspace.publicUserSurfaceDefault?.inheritanceScope!=='all-current-and-future-user-facing-services-workspaces-and-independent-sites'||workspace.publicUserSurfaceDefault?.serviceLocalOverrideAllowed!==false) fail('workspace public access inheritance scope missing');
+if(workspace.publicUserSurfaceDefault?.publicInteractionDefault?.policyId!=='PUBLIC-INTERACTION-001'||workspace.publicUserSurfaceDefault?.publicInteractionDefault?.authenticationRequired!==false) fail('workspace public interaction default missing');
+
 for(const visibility of workspace.visibilityPolicies||[]) if(visibility.id!=='guest_visible'&&visibility.mayReplaceCanonicalPublicRoot!==false) fail(`${visibility.id} can replace canonical public root`);
 if(workspace.userSurfaceTopologyPolicy?.customerSpecificAiSubdomains!=='forbidden_as_canonical') fail('workspace AI subdomain canonical policy missing');
 if(workspace.userSurfaceTopologyPolicy?.examples?.jadamMarketing!==canon.jadam) fail('workspace Jadam marketing canonical drift');
@@ -21,6 +29,8 @@ if(ecosystem?.url!=='https://ekodi.kr/ekodibiz/marketing-ai') fail('ecosystem Ma
 const manifest=read('ekodi-service-manifest.js');
 if(!manifest.includes("url:'https://ekodi.kr/ekodibiz/marketing-ai'")) fail('service manifest Marketing URL drift');
 if(!manifest.includes("engineUrl:'https://marketing.ekodi.kr/'")) fail('service manifest Marketing engine metadata missing');
+const routePolicy=read('workspace-route-policy.js');
+if(!routePolicy.includes('PUBLIC_USER_ACCESS_CONTRACT')||!routePolicy.includes("interactionPolicyId:'PUBLIC-INTERACTION-001'")||!routePolicy.includes("serviceLocalOverrideAllowed:false")) fail('runtime public access contract missing');
 const shell=read('shell/shell.js');
 const spaceApp=read('space/app.js');
 if(!shell.includes('canonicalPublicUserSurface()')||!shell.includes('if(isPublicSurface()||canonicalPublicUserSurface())return false')) fail('shared Shell can still gate a canonical public user page');
