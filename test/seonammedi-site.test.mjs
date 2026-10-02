@@ -147,6 +147,8 @@ test('timeline admin is seeded, permissioned and public materials use central ca
   assert.match(control,/SELECT id FROM seonammedi_timeline WHERE legacy_key=\\?/);
   assert.doesNotMatch(control,/CREATE UNIQUE INDEX IF NOT EXISTS idx_seonammedi_timeline_legacy_key/);
   assert.match(control,/await ensureTimelineSeed\(env\.DB\)/);
+  assert.match(control,/async function listPublicTimeline\(env\)\{[\s\S]*await ensureTimelineSeed\(env\.DB\)/);
+  assert.match(control,/UPDATE seonammedi_timeline SET[\s\S]*WHERE id=\?/);
   assert.match(control,/status='published'/);
   assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_timeline/);
   assert.match(migration,/seonammedi\.timeline\.manage/);
