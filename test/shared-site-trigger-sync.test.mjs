@@ -13,6 +13,10 @@ test('shared-site production deploy repairs Cloudflare custom-domain triggers on
   assert.match(workflow, /Verified Cloudflare Worker domain/);
 });
 
+test('shared-site deploy watches site publication runtime changes', () => {
+  assert.match(workflow, /- 'site-publication-runtime\.js'/);
+});
+
 test('canonical public entry is apex-only while Admin and Auth are path-owned', () => {
   const custom = wrangler.split('[[routes]]').slice(1)
     .filter(block => /custom_domain\s*=\s*true/.test(block))
