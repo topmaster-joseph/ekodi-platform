@@ -124,6 +124,7 @@ async function ensurePublicContentSchema(db){
   ];
   for(const [table,column,definition] of repair)await addColumnIfMissing(db,table,column,definition);
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_seonammedi_notices_public ON seonammedi_notices(status,pinned,published_at,updated_at)').run();
+  await db.prepare('CREATE INDEX IF NOT EXISTS idx_seonammedi_notices_spotlight ON seonammedi_notices(status,featured,notice_kind,event_start,event_end,published_at)').run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_seonammedi_channels_public ON seonammedi_channels(visible,sort_order,id)').run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_seonammedi_timeline_public ON seonammedi_timeline(status,sort_order,id)').run();
 }
