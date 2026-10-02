@@ -161,9 +161,29 @@ export async function renderJadamStorefrontPage(request,env,resolved,slug='jadam
   const firstOrder=PROVIDERS.map(provider=>channels.get(provider.id)?.order_url).find(Boolean)||'';
   const map=mapUrl(title,address);
   const description='목포대 후문 자담치킨 목포대점의 메뉴·가격을 확인하고 검증된 배달앱 주문 경로로 연결합니다.';
+  const canonical='https://ekodi.kr/jadam';
+  const searchDescription='국립목포대학교 후문·전남 무안군 청계면 자담치킨 목포대점. 메뉴·가격·전화·영업시간·지도와 검증된 배달앱 주문 경로를 확인하세요.';
+  const entity={
+    '@context':'https://schema.org',
+    '@type':'Restaurant',
+    '@id':canonical+'#restaurant',
+    name:title,
+    url:canonical,
+    description:searchDescription,
+    servesCuisine:['치킨','Korean Fried Chicken'],
+    menu:canonical+'#menu',
+    areaServed:{'@type':'Place',name:'국립목포대학교 후문 · 전남 무안군 청계면'},
+    brand:{'@type':'Brand',name:'자담치킨',url:OFFICIAL.home},
+    image:OFFICIAL.hero,
+    ...(phone?{telephone:phone}:{}),
+    ...(address?{address:{'@type':'PostalAddress',streetAddress:address,addressCountry:'KR'}}:{}),
+    ...(hours?{openingHours:hours}:{}),
+    ...(map?{hasMap:map}:{})
+  };
+  const entityJson=JSON.stringify(entity).replaceAll('<','\\u003c');
   const orderAction=firstOrder?`<a class="jd-btn order" href="${e(firstOrder)}" target="_blank" rel="noopener noreferrer">배달앱 주문하기</a>`:'<a class="jd-btn order" href="#order">배달앱 주문 보기</a>';
   const mobileOrder=firstOrder?`<a href="${e(firstOrder)}" target="_blank" rel="noopener noreferrer">주문</a>`:'<a href="#order">주문</a>';
-  return new Response(`<!doctype html><html lang="ko" data-store-page="jadam" data-jadam-menu-images="brand-official"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="${e(description)}"><meta name="robots" content="index,follow"><title>${e(title)} | 메뉴 · 가격 · 배달주문</title><link rel="stylesheet" href="/_ekodi/space/jadam-storefront.css?v=20260910-hq-menu-v1"></head><body><main class="jd-page">
+  return new Response(`<!doctype html><html lang="ko" data-store-page="jadam" data-jadam-menu-images="brand-official"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="${e(searchDescription)}"><meta name="robots" content="index,follow"><link rel="canonical" href="${canonical}"><meta property="og:type" content="website"><meta property="og:site_name" content="자담치킨 목포대점"><meta property="og:title" content="${e(title)} | 목포대 후문 치킨 · 메뉴 · 배달주문"><meta property="og:description" content="${e(searchDescription)}"><meta property="og:url" content="${canonical}"><meta property="og:image" content="${e(OFFICIAL.hero)}"><meta name="twitter:card" content="summary_large_image"><title>${e(title)} | 목포대 후문 치킨 · 메뉴 · 배달주문</title><script type="application/ld+json" data-store-entity="jadam">${entityJson}</script><link rel="stylesheet" href="/_ekodi/space/jadam-storefront.css?v=20260910-hq-menu-v1"></head><body><main class="jd-page">
 <header class="jd-top"><div class="jd-top-in"><a class="jd-logo" href="${e(chromeHeader.homeUrl||'/jadam')}"><img src="${e(OFFICIAL.logo)}" alt="자담치킨"><span>${e(chromeHeader.tagline||title)}</span></a><nav class="jd-nav"><a href="#menu">메뉴·가격</a><a href="#order">배달주문</a><a href="#store">매장안내</a><a href="${e(OFFICIAL.menu)}" target="_blank" rel="noopener noreferrer">본사 메뉴</a></nav><a class="jd-head-call" href="${e(tel(phone))}">전화 주문</a></div></header>
 <section class="jd-hero"><div class="jd-hero-copy"><p class="jd-kicker">자연을 담은 건강한 치킨</p><h1><span>자담치킨</span><strong>목포대점</strong></h1><p class="jd-lead">국립목포대학교 후문 · 메뉴와 주문을 한 화면에서</p><div class="jd-facts"><span>📍 <b>${e(address)}</b></span><span>☎ <b>${e(phone)}</b></span><span>🕒 <b>${e(hours)}</b></span></div><div class="jd-actions"><a class="jd-btn primary" href="${e(tel(phone))}">전화하기</a><a class="jd-btn" href="${e(map)}" target="_blank" rel="noopener noreferrer">길찾기</a>${orderAction}</div></div><div class="jd-hero-media" role="img" aria-label="자담치킨 공식 브랜드 이미지"></div></section>
 <section class="jd-values"><div class="jd-values-in"><div class="jd-value"><i>🌿</i><div><b>자담치킨 브랜드 메뉴</b><span>본사 메뉴정보를 기준으로 확인</span></div></div><div class="jd-value"><i>✓</i><div><b>검증값 우선</b><span>목포대점 데이터가 있으면 자동 우선</span></div></div><div class="jd-value"><i>₩</i><div><b>앱별 가격 비교</b><span>확인된 플랫폼 가격만 노출</span></div></div><div class="jd-value"><i>🛵</i><div><b>주문 바로 연결</b><span>검증된 목포대점 링크만 활성화</span></div></div></div></section>
