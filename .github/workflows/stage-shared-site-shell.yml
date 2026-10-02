@@ -44,7 +44,7 @@ on:
       - 'hub.html'
       - 'wrangler.site.toml'
       - 'wrangler.site-staging.toml'
-      - 'discovery-layer.js'
+      - 'discovery-layer.js'\n      - 'config/public-discovery-registry.json'\n      - 'site-publication-runtime.js'
       - 'scripts/discovery-build.mjs'
       - 'scripts/ccm-mr-postbuild.mjs'
       - 'scripts/ops-health-build.mjs'
@@ -132,7 +132,7 @@ jobs:
           grep -Fq 'Disallow: /' dist/robots.txt
           grep -Fq '<loc>https://ekodi.kr/</loc>' dist/sitemap.xml
           grep -Fq 'Canonical site: https://ekodi.kr/' dist/llms.txt
-          grep -Fq 'data-ekodi-discovery="v2"' dist/index.html
+          grep -Fq 'data-ekodi-discovery="v3"' dist/index.html
 
       - name: Materialize immutable production release artifact
         id: release_artifact
