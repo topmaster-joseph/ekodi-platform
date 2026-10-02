@@ -311,7 +311,7 @@ async function audit(env,auth,action,type,id,detail={}){
 
 function publicNotice(row){const id=Number(row.id);return{id,title:row.title,body:row.body,pinned:Boolean(row.pinned),imageUrl:row.image_key?PREFIX+'/notices/'+id+'/image':'',publishedAt:row.published_at||row.updated_at,updatedAt:row.updated_at,kind:row.notice_kind==='event'?'event':'notice',featured:Boolean(row.featured),eventStart:row.event_start||'',eventEnd:row.event_end||''}}
 function adminNotice(row){return{...publicNotice(row),status:row.status,createdBy:row.created_by,createdAt:row.created_at}}
-function publicChannel(row){return{id:Number(row.id),platform:row.platform,name:row.name,url:row.url,category:row.category,official:Boolean(row.official),note:row.note||'',sortOrder:Number(row.sort_order||0)}}
+function publicChannel(row){return{id:Number(row.id),platform:row.platform,name:row.name,url:row.url,previewUrl:row.preview_url||'',category:row.category,official:Boolean(row.official),note:row.note||'',sortOrder:Number(row.sort_order||0)}}
 function adminChannel(row){return{...publicChannel(row),visible:Boolean(row.visible),createdBy:row.created_by,createdAt:row.created_at,updatedAt:row.updated_at}}
 
 async function listPublicNotices(env){
@@ -346,8 +346,9 @@ async function createPublicNotice(request,env){
   }catch(error){if(imageKey)await env.LIVE_RECORDINGS_BUCKET?.delete?.(imageKey).catch(()=>{});throw error}
 }
 async function listPublicChannels(env){
-  const rows=await env.DB.prepare(`SELECT id,platform,name,url,category,official,note,sort_order FROM seonammedi_channels
-    WHERE visible=1 ORDER BY official DESC,sort_order ASC,id ASC LIMIT 80`).all();
+  const rows=await env.DB.prepare(`SELECT c.id,c.platform,c.name,c.url,COALESCE(p.preview_url,'') preview_url,c.category,c.official,c.note,c.sort_order
+    FROM seonammedi_channels c LEFT JOIN seonammedi_channel_previews p ON p.channel_id=c.id
+    WHERE c.visible=1 ORDER BY c.official DESC,c.sort_order ASC,c.id ASC LIMIT 80`).all();
   return json({ok:true,items:(rows.results||[]).map(publicChannel)});
 }
 const decodePreviewText=value=>clean(String(value||'').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'),1200);
@@ -361,6 +362,22 @@ const previewMeta=(html,key)=>{
   return '';
 };
 const previewTitle=html=>decodePreviewText(String(html||'').match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]||'');
+const CHANNEL_BROWSER_UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36';
+function explicitChannelEmbed(item){
+  const explicit=validHttps(item.previewUrl);
+  if(!explicit||item.platform!=='youtube')return '';
+  try{
+    const url=new URL(explicit),host=url.hostname.toLowerCase().replace(/^www\./,'');
+    let videoId='';
+    if(host==='youtu.be')videoId=url.pathname.split('/').filter(Boolean)[0]||'';
+    else if(['youtube.com','m.youtube.com','music.youtube.com','youtube-nocookie.com'].includes(host)){
+      videoId=url.searchParams.get('v')||'';
+      if(!videoId){const parts=url.pathname.split('/').filter(Boolean);if(['embed','shorts','live'].includes(parts[0]))videoId=parts[1]||'';}
+    }
+    if(/^[A-Za-z0-9_-]{11}$/.test(videoId))return 'https://www.youtube-nocookie.com/embed/'+videoId+'?rel=0';
+  }catch{}
+  return '';
+}
 function channelProviderUrl(item){
   try{
     const url=new URL(item.url);
@@ -402,13 +419,15 @@ async function fetchChannelPreviewPage(url,userAgent,timeout=6000){
   try{return await fetch(url,{headers:{'user-agent':userAgent},redirect:'follow',signal:AbortSignal.timeout(timeout)})}catch{return null}
 }
 async function publicChannelPreview(env,id){
-  const row=await env.DB.prepare(`SELECT id,platform,name,url,category,official,note,sort_order FROM seonammedi_channels
-    WHERE id=? AND visible=1 LIMIT 1`).bind(id).first();
+  const row=await env.DB.prepare(`SELECT c.id,c.platform,c.name,c.url,COALESCE(p.preview_url,'') preview_url,c.category,c.official,c.note,c.sort_order
+    FROM seonammedi_channels c LEFT JOIN seonammedi_channel_previews p ON p.channel_id=c.id
+    WHERE c.id=? AND c.visible=1 LIMIT 1`).bind(id).first();
   if(!row)return json({ok:false,error:'not_found'},404);
-  const item=publicChannel(row),provider=channelProviderUrl(item);
-  const preview={title:item.name,description:item.note||'',image:'',embedUrl:'',mode:'summary',platform:item.platform,sourceUrl:item.url,recentItems:[]};
+  const item=publicChannel(row),provider=channelProviderUrl(item),explicitEmbed=explicitChannelEmbed(item);
+  const preview={title:item.name,description:item.note||'',image:'',embedUrl:explicitEmbed,mode:explicitEmbed?'embed':'summary',platform:item.platform,sourceUrl:item.url,recentItems:[]};
+  if(explicitEmbed){preview.contentType='explicit-preview';return json({ok:true,item,preview})}
   if(provider.kind==='instagram-profile'){
-    const userAgent='Mozilla/5.0 (compatible; EKODIChannelPreview/1.0; +https://ekodi.kr/seonammedi/)';
+    const userAgent=CHANNEL_BROWSER_UA;
     const page=await fetchChannelPreviewPage(item.url,userAgent,6000);
     let html=page?.ok?await page.text().catch(()=>''):'';
     let recentItems=instagramRecentItems(html);
@@ -433,7 +452,7 @@ async function publicChannelPreview(env,id){
     return json({ok:true,item,preview});
   }
   if(['facebook','tiktok'].includes(provider.kind)){
-    const page=await fetchChannelPreviewPage(item.url,'Mozilla/5.0 (compatible; EKODIChannelPreview/1.0; +https://ekodi.kr/seonammedi/)',6500);
+    const page=await fetchChannelPreviewPage(item.url,CHANNEL_BROWSER_UA,6500);
     const html=page?.ok?await page.text().catch(()=>''):'';
     if(html){
       preview.title=previewMeta(html,'og:title')||previewTitle(html)||preview.title;
@@ -451,7 +470,7 @@ async function publicChannelPreview(env,id){
     return json({ok:true,item,preview});
   }
   if(provider.kind!=='youtube')return json({ok:true,item,preview});
-  const page=await fetchChannelPreviewPage(item.url,'Mozilla/5.0 (compatible; EKODIChannelPreview/1.0; +https://ekodi.kr/seonammedi/)',7000);
+  const page=await fetchChannelPreviewPage(item.url,CHANNEL_BROWSER_UA,7000);
   if(!page?.ok)return json({ok:true,item,preview});
   const html=await page.text().catch(()=>'');
   preview.title=previewMeta(html,'og:title')||previewTitle(html)||preview.title;
@@ -466,7 +485,7 @@ async function publicChannelPreview(env,id){
       const videosUrl=new URL(item.url);
       videosUrl.search='';videosUrl.hash='';
       videosUrl.pathname=videosUrl.pathname.replace(/\/$/,'')+'/videos';
-      const videosPage=await fetchChannelPreviewPage(videosUrl.href,'Mozilla/5.0 (compatible; EKODIChannelPreview/1.0; +https://ekodi.kr/seonammedi/)',6500);
+      const videosPage=await fetchChannelPreviewPage(videosUrl.href,CHANNEL_BROWSER_UA,6500);
       const videosHtml=videosPage?.ok?await videosPage.text().catch(()=>''):'';
       pageVideoId=clean(
         (videosHtml.match(/"videoId":"([A-Za-z0-9_-]{11})"/)||videosHtml.match(/watch\?v=([A-Za-z0-9_-]{11})/))?.[1],
@@ -712,21 +731,27 @@ async function updateAdminContent(request,env,auth,id){
 
 async function listAdminChannels(env,auth){
   if(!can(auth,CHANNEL_CAP))return json({ok:false,error:'channel_forbidden'},403);
-  const rows=await env.DB.prepare('SELECT * FROM seonammedi_channels ORDER BY sort_order ASC,id ASC LIMIT 150').all();
+  const rows=await env.DB.prepare(`SELECT c.*,COALESCE(p.preview_url,'') preview_url
+    FROM seonammedi_channels c LEFT JOIN seonammedi_channel_previews p ON p.channel_id=c.id
+    ORDER BY c.sort_order ASC,c.id ASC LIMIT 150`).all();
   return json({ok:true,items:(rows.results||[]).map(adminChannel)});
 }
 function channelInput(body,existing={}){
   const platform=clean(body?.platform??existing.platform,40).toLowerCase(),name=clean(body?.name??existing.name,160),url=validHttps(body?.url??existing.url);
+  const previewRaw=body?.previewUrl??existing.preview_url??'',previewUrl=previewRaw?validHttps(previewRaw):'';
   const category=clean(body?.category??existing.category,40).toLowerCase();
-  if(!PLATFORMS.has(platform)||!name||!url||!CHANNEL_CATEGORIES.has(category))return null;
-  return{platform,name,url,category,official:safeBool(body?.official)?1:0,visible:body?.visible===undefined?Number(existing.visible??1):(safeBool(body.visible)?1:0),sortOrder:safeOrder(body?.sortOrder??existing.sort_order),note:clean(body?.note??existing.note,500)};
+  if(!PLATFORMS.has(platform)||!name||!url||!CHANNEL_CATEGORIES.has(category)||(previewRaw&&!previewUrl))return null;
+  return{platform,name,url,previewUrl,category,official:safeBool(body?.official)?1:0,visible:body?.visible===undefined?Number(existing.visible??1):(safeBool(body.visible)?1:0),sortOrder:safeOrder(body?.sortOrder??existing.sort_order),note:clean(body?.note??existing.note,500)};
 }
 async function createChannel(request,env,auth){
   if(!can(auth,CHANNEL_CAP))return json({ok:false,error:'channel_forbidden'},403);
   const body=await request.json().catch(()=>null),value=channelInput(body);if(!value)return json({ok:false,error:'invalid_channel'},400);
   const now=new Date().toISOString();const result=await env.DB.prepare(`INSERT INTO seonammedi_channels(platform,name,url,category,official,visible,sort_order,note,created_by,created_at,updated_at)
     VALUES(?,?,?,?,?,?,?,?,?,?,?)`).bind(value.platform,value.name,value.url,value.category,value.official,value.visible,value.sortOrder,value.note,auth.email,now,now).run();
-  const id=Number(result?.meta?.last_row_id||0);await audit(env,auth,'create','channel',id,{platform:value.platform,name:value.name});return json({ok:true,id},201);
+  const id=Number(result?.meta?.last_row_id||0);
+  if(value.previewUrl)await env.DB.prepare(`INSERT INTO seonammedi_channel_previews(channel_id,preview_url,updated_at) VALUES(?,?,?)
+    ON CONFLICT(channel_id) DO UPDATE SET preview_url=excluded.preview_url,updated_at=excluded.updated_at`).bind(id,value.previewUrl,now).run();
+  await audit(env,auth,'create','channel',id,{platform:value.platform,name:value.name});return json({ok:true,id},201);
 }
 async function updateChannel(request,env,auth,id){
   if(!can(auth,CHANNEL_CAP))return json({ok:false,error:'channel_forbidden'},403);
@@ -734,11 +759,15 @@ async function updateChannel(request,env,auth,id){
   const body=await request.json().catch(()=>null),value=channelInput(body,existing);if(!value)return json({ok:false,error:'invalid_channel'},400);
   const now=new Date().toISOString();await env.DB.prepare(`UPDATE seonammedi_channels SET platform=?,name=?,url=?,category=?,official=?,visible=?,sort_order=?,note=?,updated_at=? WHERE id=?`)
     .bind(value.platform,value.name,value.url,value.category,value.official,value.visible,value.sortOrder,value.note,now,id).run();
+  if(value.previewUrl)await env.DB.prepare(`INSERT INTO seonammedi_channel_previews(channel_id,preview_url,updated_at) VALUES(?,?,?)
+    ON CONFLICT(channel_id) DO UPDATE SET preview_url=excluded.preview_url,updated_at=excluded.updated_at`).bind(id,value.previewUrl,now).run();
+  else await env.DB.prepare('DELETE FROM seonammedi_channel_previews WHERE channel_id=?').bind(id).run();
   await audit(env,auth,'update','channel',id,{platform:value.platform,name:value.name,visible:Boolean(value.visible)});return json({ok:true,id});
 }
 async function deleteChannel(env,auth,id){
   if(!can(auth,CHANNEL_CAP))return json({ok:false,error:'channel_forbidden'},403);
   const existing=await env.DB.prepare('SELECT id,name FROM seonammedi_channels WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
+  await env.DB.prepare('DELETE FROM seonammedi_channel_previews WHERE channel_id=?').bind(id).run();
   await env.DB.prepare('DELETE FROM seonammedi_channels WHERE id=?').bind(id).run();await audit(env,auth,'delete','channel',id,{name:existing.name});return json({ok:true,id});
 }
 
