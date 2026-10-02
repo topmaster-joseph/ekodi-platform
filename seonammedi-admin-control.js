@@ -331,11 +331,41 @@ async function listPublicNotices(env){
     WHERE status='published' ORDER BY pinned DESC,COALESCE(published_at,updated_at) DESC,id DESC LIMIT 40`).all();
   return json({ok:true,items:(rows.results||[]).map(publicNotice)});
 }
+async function storeNoticeImageInDrive(env,image,principal){
+  if(!env?.STORAGE?.fetch)throw new Error('image_storage_unavailable');
+  const type=String(image.type||'').toLowerCase();
+  if(!['image/jpeg','image/png','image/webp','image/gif'].includes(type))throw new Error('unsupported_image_type');
+  if(Number(image.size||0)>8*1024*1024)throw new Error('image_too_large');
+  const ext=type==='image/jpeg'?'jpg':type.split('/')[1];
+  const bytes=new Uint8Array(await image.arrayBuffer());
+  let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);
+  const response=await env.STORAGE.fetch(new Request('https://storage.internal/api/storage/v1/records',{
+    method:'POST',headers:{'content-type':'application/json','x-request-id':crypto.randomUUID()},
+    body:JSON.stringify({
+      spaceId:'seonammedi',serviceId:'community',storageRoute:'community',recordType:'notice_image',
+      createdBy:principal.email,retentionClass:'permanent',sourceModuleId:'seonammedi-notice',
+      title:`notice-${Date.now()}.${ext}`,mimeType:type,contentBase64:btoa(binary),
+      subfolderPath:'SeonamMedi/Notices'
+    })
+  }));
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data?.file?.id)throw new Error(data?.code||'image_storage_unavailable');
+  return {key:'gdrive:'+String(data.file.id),type};
+}
 async function publicNoticeImage(env,id){
   const row=await env.DB.prepare("SELECT image_key,image_type,status FROM seonammedi_notices WHERE id=? LIMIT 1").bind(id).first();
   if(!row||row.status!=='published'||!row.image_key)return new Response('not_found',{status:404});
+  const key=String(row.image_key||'');
+  if(key.startsWith('gdrive:')){
+    const fileId=key.slice(7);
+    if(!env?.STORAGE?.fetch)return new Response('storage_unavailable',{status:503});
+    const response=await env.STORAGE.fetch(new Request('https://storage.internal/api/storage/v1/files/'+encodeURIComponent(fileId),{method:'GET'}));
+    if(!response.ok)return new Response(response.body,{status:response.status,headers:response.headers});
+    const headers=new Headers(response.headers);headers.set('cache-control','public, max-age=86400');headers.set('x-content-type-options','nosniff');
+    return new Response(response.body,{status:200,headers});
+  }
   if(!env?.LIVE_RECORDINGS_BUCKET?.get)return new Response('storage_unavailable',{status:503});
-  const object=await env.LIVE_RECORDINGS_BUCKET.get(row.image_key);if(!object)return new Response('not_found',{status:404});
+  const object=await env.LIVE_RECORDINGS_BUCKET.get(key);if(!object)return new Response('not_found',{status:404});
   return new Response(object.body,{status:200,headers:{'content-type':row.image_type||object.httpMetadata?.contentType||'application/octet-stream','cache-control':'public, max-age=86400','x-content-type-options':'nosniff'}});
 }
 async function createPublicNotice(request,env){
@@ -344,18 +374,13 @@ async function createPublicNotice(request,env){
   const title=clean(form.get('title'),180),copy=clean(form.get('body'),10000);if(!title)return json({ok:false,error:'title_required'},400);
   const image=form.get('image');let imageKey='',imageType='';
   if(image&&typeof image==='object'&&Number(image.size||0)>0){
-    if(!env?.LIVE_RECORDINGS_BUCKET?.put)return json({ok:false,error:'image_storage_unavailable'},503);
-    if(Number(image.size)>8*1024*1024)return json({ok:false,error:'image_too_large'},413);
-    imageType=String(image.type||'').toLowerCase();if(!['image/jpeg','image/png','image/webp','image/gif'].includes(imageType))return json({ok:false,error:'unsupported_image_type'},415);
-    const ext=imageType==='image/jpeg'?'jpg':imageType.split('/')[1];imageKey='seonammedi/notices/'+crypto.randomUUID()+'.'+ext;
-    await env.LIVE_RECORDINGS_BUCKET.put(imageKey,await image.arrayBuffer(),{httpMetadata:{contentType:imageType}});
+    try{const stored=await storeNoticeImageInDrive(env,image,principal);imageKey=stored.key;imageType=stored.type}
+    catch(error){const code=String(error?.message||'image_storage_unavailable');return json({ok:false,error:code},code==='image_too_large'?413:code==='unsupported_image_type'?415:503)}
   }
   const now=new Date().toISOString();
-  try{
-    const result=await env.DB.prepare('INSERT INTO seonammedi_notices(title,body,status,pinned,published_at,image_key,image_type,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)')
-      .bind(title,copy,'published',0,now,imageKey,imageType,principal.email,now,now).run();
-    return json({ok:true,id:Number(result?.meta?.last_row_id||0)},201);
-  }catch(error){if(imageKey)await env.LIVE_RECORDINGS_BUCKET?.delete?.(imageKey).catch(()=>{});throw error}
+  const result=await env.DB.prepare('INSERT INTO seonammedi_notices(title,body,status,pinned,published_at,image_key,image_type,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)')
+    .bind(title,copy,'published',0,now,imageKey,imageType,principal.email,now,now).run();
+  return json({ok:true,id:Number(result?.meta?.last_row_id||0)},201);
 }
 async function listPublicChannels(env){
   const rows=await env.DB.prepare(`SELECT c.id,c.platform,c.name,c.url,COALESCE(p.preview_url,'') preview_url,c.category,c.official,c.note,c.sort_order
