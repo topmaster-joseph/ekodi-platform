@@ -1,0 +1,22 @@
+{
+  "policyId": "EKODIMISSION-DEFAULT-FEE-ACCOUNT-001",
+  "status": "enforced",
+  "scope": "all-ekodimission-activities-and-participant-fees",
+  "bank": "신한은행",
+  "accountNumber": "100-033-234271",
+  "displayAccountNumber": "100-033-234271",
+  "defaultUsage": [
+    "participant-fee",
+    "activity-fee",
+    "event-fee",
+    "membership-activity-payment"
+  ],
+  "overridePolicy": {
+    "defaultOverrideAllowed": false,
+    "explicitOwnerOrSuperAdminInstructionRequired": true
+  },
+  "notes": [
+    "에코디선교회 활동의 기본 입금계좌는 항상 이 계좌를 사용한다.",
+    "개별 행사에서 다른 계좌를 사용하려면 최고관리자 또는 소유자의 명시적 지시가 필요하다."
+  ]
+}
