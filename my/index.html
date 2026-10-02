@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="/my/membership-summary.css?v=20260924-central-ai-entitlement-1">
   <link rel="stylesheet" href="/my/personal-finance.css?v=20260905-personal-finance-1">
   <link rel="stylesheet" href="/my/comfort-ui.css?v=20260906-context-home-v1">
-  <link rel="stylesheet" href="/my/hub-shell.css?v=20261001-tab-shell-v1">
+  <link rel="stylesheet" href="/my/hub-shell.css?v=20261002-wayfinder-v1">
 </head>
 <body data-ekodi-ui="USER" data-auth-state="guest" data-home-mode="home">
   <header class="topbar my-comfort-header">
@@ -45,16 +45,115 @@
 
 
 
-    <section id="intent" class="intent-shelf intent-os personal-action-command my-tab-section" data-my-tab-section="home" aria-label="하고 싶은 일로 시작">
-      <div class="intent-copy"><p class="eyebrow">EKODI AI · ACTION FIRST</p><h2>무엇을 하시겠어요?</h2><p>서비스를 먼저 찾지 않아도 됩니다. 원하는 일을 말하면 현재 권한과 맥락 안에서 실행 가능한 다음 단계로 연결합니다.</p></div>
-      <form id="intentPlanForm" class="intent-plan-form">
-        <label class="intent-field"><span>하고 싶은 일</span><textarea id="intentPlanText" maxlength="1200" placeholder="예: 에코디교회 이번 주 자료 정리해줘" required></textarea></label>
-        <label class="intent-field intent-audience"><span>현재 맥락</span><select id="intentPlanAudience"><option value="person">개인</option><option value="business">사업</option><option value="organization">기관·단체</option><option value="community">공동체</option><option value="church">교회</option><option value="team">팀</option></select></label>
-        <button id="intentPlanSubmit" class="primary" type="submit">실행 시작</button>
+    <section id="memberHero" class="member-experience my-tab-section" data-my-tab-section="home" data-member-only hidden aria-label="My EKODI 개인 실행 안내">
+      <div class="member-experience-copy">
+        <p class="member-experience-kicker">MY EKODI · PERSONAL ACTION HUB</p>
+        <h1><span id="memberGreetingName">안녕하세요.</span><br><strong>오늘 필요한 일부터.</strong></h1>
+        <p>한 번에 모든 기능을 펼치지 않습니다. 아래 이정표에서 갈 곳을 고르면 지금 필요한 내용만 보여드립니다.</p>
+        <nav class="home-wayfinder" aria-label="My EKODI 이정표">
+          <button type="button" data-home-view="intent" aria-pressed="true"><span>✦</span><strong>AI로 시작</strong><small>원하는 일을 말하기</small></button>
+          <button type="button" data-home-view="continue" aria-pressed="false"><span>↻</span><strong>이어서 하기</strong><small>최근 맥락 이어가기</small></button>
+          <a href="#platforms"><span>▦</span><strong>내 서비스</strong><small>연결된 곳 보기</small></a>
+          <a href="#activity"><span>◷</span><strong>내 활동</strong><small>최근 흐름 보기</small></a>
+        </nav>
+      </div>
+      <div class="ekodian-guide">
+        <div class="ekodian-speech"><strong>에코디언</strong><span>필요한 다음 단계만<br>하나씩 보여드릴게요.</span></div>
+        <svg class="ekodian-hero-art" viewBox="0 0 360 300" role="img" aria-label="노트북 옆에서 안내하는 에코디언 캐릭터">
+          <defs>
+            <linearGradient id="hoodieGradient" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#f8fbff"/><stop offset="1" stop-color="#dbeaff"/></linearGradient>
+            <linearGradient id="hairGradient" x1="0" x2="1"><stop offset="0" stop-color="#3a291f"/><stop offset=".55" stop-color="#6d4a31"/><stop offset="1" stop-color="#2e211c"/></linearGradient>
+            <linearGradient id="skinGradient" x1="0" x2=".8" y1="0" y2="1"><stop offset="0" stop-color="#fff1e4"/><stop offset="1" stop-color="#efbd98"/></linearGradient>
+            <linearGradient id="laptopGradient" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#e8f2ff"/><stop offset="1" stop-color="#a9bfd8"/></linearGradient>
+            <filter id="softShadow" x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="9" flood-color="#33557f" flood-opacity=".18"/></filter>
+            <filter id="faceShadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#6c4538" flood-opacity=".12"/></filter>
+          </defs>
+          <ellipse cx="190" cy="274" rx="126" ry="18" fill="#b6cce8" opacity=".22"/>
+          <g filter="url(#softShadow)">
+            <path d="M115 205c12-42 37-65 76-65 42 0 72 23 86 69l-12 55H108z" fill="url(#hoodieGradient)" stroke="#bfd1e5" stroke-width="2"/>
+            <path d="M135 205c12 16 28 24 50 24 24 0 43-8 58-25" fill="none" stroke="#b2c9df" stroke-width="3" stroke-linecap="round"/>
+            <path d="M174 206l12 17 12-17" fill="none" stroke="#7da0c2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M183 224v31" stroke="#9ab4ce" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M200 224v31" stroke="#9ab4ce" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M219 229c7 0 13 5 13 12s-6 13-13 13-13-6-13-13 6-12 13-12z" fill="#5ea86c"/>
+            <path d="M219 232c-6 4-8 10-6 17 7-1 12-5 14-12-2-3-5-5-8-5z" fill="#f6fff6" opacity=".92"/>
+          </g>
+          <g filter="url(#faceShadow)">
+            <ellipse cx="190" cy="126" rx="63" ry="67" fill="url(#skinGradient)"/>
+            <ellipse cx="130" cy="139" rx="11" ry="16" fill="#efbd98"/>
+            <ellipse cx="250" cy="139" rx="11" ry="16" fill="#efbd98"/>
+            <path d="M129 111c1-55 32-83 73-80 42 4 64 37 53 86-11-18-25-29-43-35-22 18-48 26-77 20z" fill="url(#hairGradient)"/>
+            <path d="M137 87c12-26 30-39 54-41-6 19-18 34-36 45 18-6 36-19 52-40 5 19 3 34-4 46 13-8 25-20 35-37 9 17 13 37 10 58-10-17-23-29-39-35-23 17-49 25-78 20z" fill="#513725" opacity=".92"/>
+            <path d="M241 57c8-12 18-17 31-16-2 13-9 22-22 28z" fill="#4f9159"/>
+            <path d="M248 58c7-5 13-8 20-9" stroke="#d6efd3" stroke-width="2" stroke-linecap="round"/>
+            <ellipse cx="164" cy="126" rx="15" ry="18" fill="#fff"/>
+            <ellipse cx="216" cy="126" rx="15" ry="18" fill="#fff"/>
+            <ellipse cx="165" cy="129" rx="9" ry="12" fill="#342821"/>
+            <ellipse cx="215" cy="129" rx="9" ry="12" fill="#342821"/>
+            <circle cx="168" cy="125" r="3.4" fill="#fff"/>
+            <circle cx="218" cy="125" r="3.4" fill="#fff"/>
+            <path d="M177 158c8 7 18 7 26 0" fill="none" stroke="#b76c62" stroke-width="3" stroke-linecap="round"/>
+            <ellipse cx="145" cy="151" rx="14" ry="7" fill="#ef8e92" opacity=".28"/>
+            <ellipse cx="234" cy="151" rx="14" ry="7" fill="#ef8e92" opacity=".28"/>
+          </g>
+          <g filter="url(#softShadow)">
+            <path d="M84 211h184l-17 58H101z" fill="url(#laptopGradient)" stroke="#8fa8c2" stroke-width="2"/>
+            <path d="M99 269h168c5 0 9 4 9 8H91c0-4 3-8 8-8z" fill="#8fa6bd"/>
+            <path d="M172 235c8-7 20-7 28 0-1 9-6 15-14 18-8-3-13-9-14-18z" fill="#5d9e68" opacity=".85"/>
+            <path d="M184 239c-4 4-5 8-4 12 5-1 9-4 11-9-2-2-4-3-7-3z" fill="#f7fff7"/>
+          </g>
+        </svg>
+        <div class="ekodian-guide-badge"><span></span> EKODIAN · GUIDE</div>
+      </div>
+    </section>
+
+    <section id="intent" class="intent-shelf intent-os personal-action-command my-tab-section" data-my-tab-section="home" data-home-panel="intent" aria-label="하고 싶은 일로 시작">
+      <div class="intent-command-head">
+        <div><p class="eyebrow">EKODI AI · STEP BY STEP</p><h2>무엇을 원하세요?</h2><p>목적을 고르고, 맥락을 선택한 다음 실행합니다. 지금 단계에 필요한 것만 표시합니다.</p></div>
+        <div class="intent-stage-track" aria-label="실행 단계">
+          <button type="button" data-intent-step-marker="goal" aria-current="step"><b>1</b><span>원하는 일</span></button>
+          <button type="button" data-intent-step-marker="context"><b>2</b><span>현재 맥락</span></button>
+          <button type="button" data-intent-step-marker="execute"><b>3</b><span>실행 확인</span></button>
+        </div>
+      </div>
+      <form id="intentPlanForm" class="intent-plan-form progressive-intent-form" data-intent-stage="goal">
+        <section class="intent-step-panel" data-intent-panel="goal">
+          <div class="intent-prompt-shell">
+            <span class="intent-prompt-star" aria-hidden="true">✦</span>
+            <label class="intent-prompt-field" for="intentPlanText"><span class="sr-only">하고 싶은 일</span><textarea id="intentPlanText" maxlength="1200" placeholder="무엇을 원하세요? 예: 이번 주 주일자료 준비해줘" required></textarea></label>
+            <button id="intentPlanNext" class="intent-next" type="button">다음 <span aria-hidden="true">→</span></button>
+          </div>
+          <div class="intent-examples" aria-label="빠른 예시">
+            <button type="button" data-intent-example="이번 주 주일자료를 준비하고 설교원고·주보·PPT까지 정리해줘">주일자료 준비</button>
+            <button type="button" data-intent-example="행사 신청자를 확인하고 미확인 항목을 정리해줘">신청자 정리</button>
+            <button type="button" data-intent-example="최근 시민의견에서 확인할 항목을 보여줘">시민의견 확인</button>
+            <button type="button" data-intent-example="오늘 일정과 이어서 할 일을 요약해줘">일정 요약</button>
+          </div>
+        </section>
+        <section class="intent-step-panel" data-intent-panel="context" hidden>
+          <div class="intent-step-copy"><small>STEP 2</small><h3>어느 맥락에서 할까요?</h3><p>선택한 공간과 권한 범위 안에서만 다음 단계를 준비합니다.</p></div>
+          <div class="intent-context-grid" role="group" aria-label="현재 맥락 선택">
+            <button type="button" data-intent-audience-choice="person"><span>개인</span><small>나의 일정·문서·생활</small></button>
+            <button type="button" data-intent-audience-choice="business"><span>사업</span><small>매장·홍보·운영</small></button>
+            <button type="button" data-intent-audience-choice="organization"><span>기관·단체</span><small>조직·행사·업무</small></button>
+            <button type="button" data-intent-audience-choice="community"><span>공동체</span><small>지역·모임·소통</small></button>
+            <button type="button" data-intent-audience-choice="church"><span>교회</span><small>예배·사역·자료</small></button>
+            <button type="button" data-intent-audience-choice="team"><span>팀</span><small>협업·업무·프로젝트</small></button>
+          </div>
+          <div class="intent-step-actions"><button id="intentPlanContextBack" class="secondary" type="button">← 이전</button></div>
+        </section>
+        <section class="intent-step-panel" data-intent-panel="execute" hidden>
+          <div class="intent-review-card">
+            <small>STEP 3 · 실행 전 확인</small>
+            <strong id="intentReviewGoal">원하는 일을 확인합니다.</strong>
+            <span id="intentReviewContext">현재 맥락을 선택해 주세요.</span>
+          </div>
+          <div class="intent-step-actions"><button id="intentPlanExecuteBack" class="secondary" type="button">← 이전</button><button id="intentPlanSubmit" class="primary intent-execute" type="submit">실행 시작 <span aria-hidden="true">→</span></button></div>
+        </section>
+        <select id="intentPlanAudience" hidden aria-hidden="true"><option value="person">개인</option><option value="business">사업</option><option value="organization">기관·단체</option><option value="community">공동체</option><option value="church">교회</option><option value="team">팀</option></select>
       </form>
-      <div class="intent-examples" aria-label="빠른 예시"><button type="button" data-intent-example="다음 상인회 행사를 준비하고 안내문과 홍보까지 도와줘">행사 준비</button><button type="button" data-intent-example="우리 매장의 고객 홍보와 매출 관리를 정리해줘">사업 운영</button><button type="button" data-intent-example="토요모임 말씀과 안내 콘텐츠를 준비해줘">교회·콘텐츠</button><button type="button" data-intent-example="책 원고를 정리하고 출판 준비까지 해줘">창작·출판</button></div>
-      <div class="intent-actions intent-legacy-signals" aria-label="빠른 관심 영역"><button type="button" data-intent-service="support">혜택·지원</button><button type="button" data-intent-service="work">일·진로</button><button type="button" data-intent-service="business">사업</button><button type="button" data-intent-service="author">글·콘텐츠</button><button type="button" data-intent-service="community">관계·생활</button><button type="button" data-finance-open>돈·재무</button><button type="button" data-intent-service="marketing">알리기</button>
-      <div id="intentPlanResult" class="intent-plan-result" aria-live="polite"><div class="intent-empty"><strong>원하는 결과부터 말해 주세요.</strong><p>EKODI는 Capability를 먼저 고르고 서비스와 AI는 그 다음에 선택합니다.</p></div></div>
+      <div id="intentPlanResult" class="intent-plan-result" aria-live="polite" hidden></div>
+      <div class="intent-result-actions" data-intent-result-actions hidden><button id="intentPlanReset" class="secondary" type="button">새 요청 시작</button></div>
     </section>
 
     <section id="myHub" class="section personal-hub action-hub my-tab-section" data-my-tab-section="home" aria-label="My EKODI 개인 실행 허브">
@@ -67,7 +166,7 @@
       </div>
     </section>
 
-    <section id="memberHome" class="section member-context-home my-tab-section" data-my-tab-section="home" aria-label="맞춤 홈" hidden>
+    <section id="memberHome" class="section member-context-home my-tab-section" data-my-tab-section="home" data-home-panel="continue" aria-label="맞춤 홈" hidden>
       <div class="member-context-head">
         <div><p class="eyebrow">CONTINUE · NEXT ACTION</p><h2 id="memberFocusTitle">이어서 하기</h2><p id="memberFocusSummary">미완료 작업과 최근 맥락을 확인하고 있습니다.</p></div>
         <a class="member-intent-entry" href="#intentPlanText">하고 싶은 일을 말해보세요 <span aria-hidden="true">→</span></a>
@@ -192,11 +291,11 @@
     <div class="my-footer-credo"><strong>&#54632;&#44760;&#54616;&#51648;&#47564;, &#45824;&#49888; &#44208;&#51221;&#54616;&#51648; &#50506;&#49845;&#45768;&#45796;.</strong><span>My EKODI&#45716; &#45817;&#49888;&#51032; &#49440;&#53469;&#51012; &#51473;&#49900;&#50640; &#46160;&#44256; &#54596;&#50836;&#54620; &#51221;&#48372;&#50752; &#45796;&#51020; &#54665;&#46041;&#51012; &#50672;&#44208;&#54633;&#45768;&#45796;.</span></div>
   </footer>
   <script src="/my/config.js"></script>
-  <script type="module" src="/my/app.js?v=20260906-context-home-v1"></script>
+  <script type="module" src="/my/app.js?v=20261002-wayfinder-v1"></script>
   <script type="module" src="/my/public-profile.js?v=20260923-public-person-v1"></script>
   <script type="module" src="/my/digital-card-admin.js?v=20260930-digital-card-1"></script>
   <script type="module" src="/my/character-identity.js?v=20260906-ekodian-personal-v1"></script>
-  <script type="module" src="/my/intent-navigator.js?v=20260906-intent-os-1"></script>
+  <script type="module" src="/my/intent-navigator.js?v=20261002-wayfinder-v1"></script>
   <script type="module" src="/my/workspace-selector-sync.js?v=20260822-shell-sync-1"></script>
   <script type="module" src="/my/user-ai-ui.js?v=20260906-context-home-v1"></script>
   <script type="module" src="/my/membership-summary.js?v=20260924-central-ai-entitlement-1"></script>
