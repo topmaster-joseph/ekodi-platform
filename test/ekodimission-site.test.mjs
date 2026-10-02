@@ -259,3 +259,23 @@ test('mission production smoke covers every published subservice route',async()=
 test('mission authentication and service registry use only the canonical ekodi.kr path',async()=>{
   const files=await Promise.all(['../auth-site/auth.js','../auth-site/client-auth.js','../auth-site/auth-workspace-target.js','../service-registry.json','../supabase/functions/access-api/index.ts'].map(path=>readFile(new URL(path,import.meta.url),'utf8')));for(const source of files)assert.doesNotMatch(source,/mission\.ekodi\.kr/);for(const source of files.slice(0,4))assert.match(source,/ekodi\.kr\/ekodimission/);const access=files[4];assert.match(access,/mission:\["https:\/\/ekodi\.kr"\]/);assert.match(access,/site==="mission"[\s\S]*?\/ekodimission/);
 });
+
+
+test('Mission application API never reports success without a persisted application id',async()=>{
+  const dataEnv={...env,DATA_ENABLED:'true',SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'publishable-test'};
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async()=>new Response(JSON.stringify({ok:true,message:'신청이 접수되었습니다.'}),{status:200,headers:{'content-type':'application/json'}});
+  try{
+    const response=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/api/activities/261003-autumn-community-trip/applications',{method:'POST',headers:{origin:'https://ekodi.kr','content-type':'application/json'},body:JSON.stringify({name:'저장검증',phone:'010-9999-8888',partySize:1,privacyConsent:true,website:'autofilled.example'})}),dataEnv);
+    assert.equal(response.status,503);
+    const body=await response.json();
+    assert.equal(body.ok,false);
+    assert.equal(body.error,'application_persistence_unverified');
+  }finally{globalThis.fetch=originalFetch}
+});
+
+test('Mission browser submit ignores accidental honeypot autofill and requires applicationId before success UI',async()=>{
+  const script=await readFile(new URL('../space/ekodimission.js',import.meta.url),'utf8');
+  assert.match(script,/website:''/);
+  assert.match(script,/!result\.applicationId/);
+});
