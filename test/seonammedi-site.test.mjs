@@ -444,3 +444,5 @@ test('current status exposes non-overlapping immediate subcategory tabs',async()
   assert.match(app,/item\.detailCategory=item\.category==='공식자료'\?officialDetailCategory\(item\):item\.category==='관련보도'\?newsDetailCategory\(item\)/);
   assert.match(app,/renderMaterialsForStatus=topCategory=>\{renderMaterialFilters\(topCategory\);renderMaterials\(topCategory,'전체'\)\}/);
 });
+
+// ops: retrigger guarded Control API deployment after Instagram profile-embed promotion
