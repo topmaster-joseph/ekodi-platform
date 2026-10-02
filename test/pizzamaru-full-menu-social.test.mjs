@@ -41,7 +41,8 @@ test('PizzaMaru customer page renders full menu navigation and official social l
     return new Response('{}',{status:404,headers:{'content-type':'application/json'}});
   };
   try{
-    const response=await renderRestaurantStorefrontPage(new Request('https://ekodi.kr/pizzamaru'),{},
+    const response=await renderRestaurantStorefrontPage(new Request('https://ekodi.kr/pizzamaru'),
+      {SUPABASE_URL:'https://project.example.test',SUPABASE_PUBLISHABLE_KEY:'public-test'},
       {profile:{name:'피자마루 목포대점',theme:'pizzamaru',lead:'목포대점'}},'pizzamaru');
     const html=await response.text();
     for(const marker of ['피자마루 전체메뉴','전체메뉴','공식채널','Instagram','Facebook','YouTube','@pizzamaru_official','본사 공식'])assert.match(html,new RegExp(marker));
