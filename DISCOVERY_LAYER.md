@@ -8,9 +8,29 @@ Its security model is **Discovery Secure Projection**:
 
 Discovery never widens authorization. Only information already intended for unrestricted public publication may enter the discovery projection.
 
+## Registry-driven projection
+
+Policy `EKODI-DISCOVERY-001` forbids per-route discovery maintenance for sites and resources.
+
+The canonical discovery sources are:
+
+- the EKODI service registry for verified public services;
+- the site-publication registry for public sites and sub-sites;
+- `public.public_discovery_registry` for public posts, articles, events, products, local businesses and other dynamic resources.
+
+Publishing systems project only unrestricted public fields into the Public Registry. Records leave discovery automatically when their publication state becomes private, draft, preparing, preview, archived or the owning site becomes private/maintenance. Admin, authentication, API, personal, private-share and edit surfaces are excluded before serialization.
+
+The runtime Worker serves the current projection at:
+
+- `/sitemap.xml`
+- `/llms.txt`
+- `/.well-known/public-discovery.json`
+
+Dynamic public HTML pages registered in the Public Registry receive canonical URL, description, Open Graph, Twitter and Schema.org JSON-LD centrally. New public routes therefore do not require discovery code changes.
+
 ## Runtime outputs
 
-The real `npm run build` path invokes `scripts/discovery-build.mjs` through `scripts/ccm-mr-postbuild.mjs` and emits or validates:
+The real `npm run build` path invokes `scripts/discovery-build.mjs` through `scripts/ccm-mr-postbuild.mjs` and emits or validates the static baseline:
 
 - `/robots.txt`
 - `/sitemap.xml`
@@ -24,7 +44,7 @@ The real `npm run build` path invokes `scripts/discovery-build.mjs` through `scr
 
 ## Public-first, private-by-default boundary
 
-Only explicitly declared canonical public routes belong in `DISCOVERY_PUBLIC_ROUTES`. Admin, auth, API, development-preview, tenant-private, and operational surfaces must never be added to the sitemap or LLM discovery source list.
+`DISCOVERY_PUBLIC_ROUTES` is compiled from canonical publication registries rather than a manually maintained site list. Static base/legal pages remain declared as build-owned assets. Admin, auth, API, development-preview, tenant-private, personal, private-share, edit and operational surfaces must never enter the sitemap or LLM discovery source list.
 
 Private prefixes are centralized in `DISCOVERY_PRIVATE_PREFIXES`. Admin, API and Mall operational routes use `X-Robots-Tag: noindex, nofollow, noarchive` where they cross the public edge. Authentication and other private hosts must remain non-discoverable independently of robots.txt.
 
@@ -82,6 +102,6 @@ Structured data must never be used as a hidden channel for facts that are not su
 
 ## Validation
 
-`test/discovery-layer.test.mjs` verifies the route allowlist, private-route exclusion, crawler-purpose separation, canonical source list, and Organization/WebSite/WebPage graph.
+`test/discovery-layer.test.mjs` verifies automatic registry projection, private-route exclusion, crawler-purpose separation, canonical source rules and structured-data graphs. `test/public-discovery-runtime.test.mjs` verifies live Public Registry merging, dynamic sitemap last-modified data, LLM projection and external-origin rejection.
 
 The production build itself fails when canonical, Open Graph, or JSON-LD markers are missing from EKODI-owned public pages. CI runs the same `npm run build`, so a Discovery Layer regression blocks the release path instead of silently shipping.
