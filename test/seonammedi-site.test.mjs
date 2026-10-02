@@ -283,7 +283,7 @@ test('seonammedi public and admin menus keep the agreed content-first order',asy
   assert.doesNotMatch(html,/<h2>현재상황<\/h2>|CURRENT STATUS|출처 검증형/);
   assert.match(html,/data-status-tab="news"[^>]*>관련보도<\/button>/);
   assert.match(html,/data-status-tab="official"[^>]*>공식기록<\/button>/);
-  assert.match(html,/data-view-link="status">활동이력<\/a>/);
+  assert.match(html,/href="#timeline" data-view-link="status">활동이력<\/a>/);
   assert.match(html,/id="timeline"[^>]*class="section activity-list-only"/);
   assert.doesNotMatch(html,/id="timeline"[\s\S]*?<div class="section-head">[\s\S]*?<h2>활동이력<\/h2>/);
   assert.doesNotMatch(html,/id="timeline"[\s\S]*?id="statusTabs"/);
@@ -320,6 +320,8 @@ test('seonammedi full public-menu administration covers status organization mate
   assert.match(app,/ORG_GROUP_META/);
   assert.match(app,/renderOrganizationGroup\('bidae'\)/);
   assert.match(app,/function showStatusTab\(tab\)/);
+  assert.match(app,/const canonicalViewHash=\{status:'timeline'/);
+  assert.match(app,/canonicalViewHash\[key\]\|\|key/);
   assert.match(app,/renderMaterialsForStatus\?\.\(isNews\?'관련보도':'공식자료'\)/);
   assert.match(adminHtml,/id="financeForm"/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/pages\/status/);
