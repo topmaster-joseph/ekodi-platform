@@ -327,3 +327,17 @@ test('Mission public application routing is generic, not hardcoded to individual
   assert.match(source,/missionApplicationMatch\[1\]/);
   assert.doesNotMatch(source,/normalizedMissionPath\(url\.pathname\)===MISSION_TRIP_APPLICATION_API\)return submitMissionEventApplication/);
 });
+
+
+test('EKODI Mission default fee account is Shinhan 100-033-234271 and is shown on fee-bearing trip page',async()=>{
+  const policy=JSON.parse(await readFile(new URL('../config/ekodimission-finance-policy.json',import.meta.url),'utf8'));
+  assert.equal(policy.policyId,'EKODIMISSION-DEFAULT-FEE-ACCOUNT-001');
+  assert.equal(policy.status,'enforced');
+  assert.equal(policy.bank,'신한은행');
+  assert.equal(policy.accountNumber,'100-033-234271');
+  assert.equal(policy.overridePolicy.defaultOverrideAllowed,false);
+  const page=await readFile(new URL('../space/ekodimission-autumn-trip-apply.page',import.meta.url),'utf8');
+  assert.match(page,/신한은행/);
+  assert.match(page,/100-033-234271/);
+  assert.match(page,/data-mission-default-account/);
+});
