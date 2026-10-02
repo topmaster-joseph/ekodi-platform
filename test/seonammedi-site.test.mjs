@@ -427,3 +427,18 @@ test('seonammedi notices are an authenticated public board with image and sharin
   assert.match(app,/recent=\[\.\.\.rows\]\.sort/);assert.match(css,/\.home-spotlight/);assert.match(css,/\.notice-detail/);
   assert.match(auth,/target\.pathname==='\/seonammedi'/);assert.match(migration,/image_key/);assert.match(apiConfig,/binding = "LIVE_RECORDINGS_BUCKET"/);
 });
+
+
+test('current status exposes non-overlapping immediate subcategory tabs',async()=>{
+  const [html,app]=await Promise.all([
+    readFile(new URL('index.html',root),'utf8'),
+    readFile(new URL('app.js',root),'utf8')
+  ]);
+  assert.match(html,/활동이력 세부 분류/);
+  assert.match(html,/id="statusMaterialFilterLabel">관련보도 세부 분류/);
+  assert.match(html,/id="materialFilters" aria-label="관련보도 세부 분류"/);
+  assert.doesNotMatch(html,/id="materialFilters"[^>]*hidden/);
+  for(const label of ['일반보도','경과·일지','현장·행사 보도','해설·분석','정부·지자체·국회','대학','비대위·당사자','기타 공식기록'])assert.match(app,new RegExp(label));
+  assert.match(app,/item\.detailCategory=item\.category==='공식자료'\?officialDetailCategory\(item\):item\.category==='관련보도'\?newsDetailCategory\(item\)/);
+  assert.match(app,/renderMaterialsForStatus=topCategory=>\{renderMaterialFilters\(topCategory\);renderMaterials\(topCategory,'전체'\)\}/);
+});
