@@ -90,3 +90,7 @@
   .public-admin-inline{min-height:32px;padding:6px 9px;font-size:11px}
   .public-admin-drawer{inset:0;width:100vw;height:100dvh;border:0;border-radius:0}
 }
+
+/* Activity History: keep breathing room below the sticky header. */
+.activity-list-only{padding-top:44px}
+@media(max-width:760px){.activity-list-only{padding-top:34px}}
