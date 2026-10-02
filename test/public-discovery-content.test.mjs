@@ -83,3 +83,14 @@ test('dynamic sitemap and llms are generated from central registry',async()=>{
   assert.match(text,/공개 공지/);
   assert.equal(llms.headers.get('x-ekodi-route'),'dynamic-public-llms');
 });
+
+
+test('runtime discovery uses verified public APIs and worker-first discovery routes',async()=>{
+  const source=await readFile(new URL('../public-discovery-content.js',import.meta.url),'utf8');
+  const wrangler=await readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
+  assert.match(source,/https:\/\/ekodi\.kr\/api\/seonammedi\/notices/);
+  assert.doesNotMatch(source,/FROM seonammedi_notices WHERE status='published'/);
+  assert.match(wrangler,/\/sitemap\.xml/);
+  assert.match(wrangler,/\/llms\.txt/);
+  assert.match(wrangler,/\/public-registry\.json/);
+});
