@@ -116,6 +116,60 @@
         "higher-order-rule-conflict"
       ],
       "completionRequiresVerifiedResolutionOrExplicitTerminalWait": true
+    },
+    "systemwideSelfRecovery": {
+      "policyId": "SYSTEMWIDE-SELF-RECOVERY-001",
+      "status": "enforced",
+      "appliesTo": [
+        "internal-system-failure",
+        "external-dependency-failure",
+        "provider-outage",
+        "network-error",
+        "quota-limit",
+        "service-degradation",
+        "ci-cd-failure",
+        "runtime-error",
+        "integration-error",
+        "data-path-error"
+      ],
+      "defaultDisposition": "self-resolve-and-continue",
+      "requiredLoop": [
+        "detect",
+        "isolate-impact",
+        "diagnose",
+        "attempt-primary-repair",
+        "discover-safe-alternatives",
+        "switch-or-retry",
+        "verify",
+        "reverify",
+        "resume-parent-work"
+      ],
+      "externalFailureIsNotTerminalByDefault": true,
+      "safeAlternativeRequiredBeforeEscalation": true,
+      "automaticProviderOrLaneFailover": true,
+      "automaticRetryWithBackoff": true,
+      "circuitBreakerRequired": true,
+      "degradedModeAllowedWhenSafe": true,
+      "rootCauseRemovalForRecurringIncidents": true,
+      "preserve": [
+        "security-boundaries",
+        "human-gates",
+        "data-integrity",
+        "audit-trail",
+        "orchestration-gate",
+        "guarded-release",
+        "production-verification"
+      ],
+      "escalateOnlyWhen": [
+        "human-authority-required",
+        "high-impact-or-irreversible",
+        "ambiguous-side-effect",
+        "security-or-data-integrity-risk",
+        "all-safe-alternatives-exhausted",
+        "higher-order-rule-conflict"
+      ],
+      "userInterruptionForbiddenForResolvableFailure": true,
+      "completionRequiresVerifiedRecoveryOrExplicitTerminalWait": true
     }
   },
   "consultationDecision": {
