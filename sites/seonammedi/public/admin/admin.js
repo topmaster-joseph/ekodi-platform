@@ -375,7 +375,11 @@ async function deleteChannel(item){
   if(!confirm('이 채널 연결을 삭제할까요?'))return;
   try{await api('/api/seonammedi/admin/channels/'+item.id,{method:'DELETE'});await loadChannels();text($('channelMessage'),'삭제했습니다.')}catch(error){text($('channelMessage'),error.message);$('channelMessage').classList.add('error')}
 }
-function platformLabel(value){return({youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',blog:'블로그',website:'웹사이트',other:'기타'})[value]||value}
+async function toggleChannelVisibility(item){
+  const next=!Boolean(item.visible),msg=$('channelMessage');msg.classList.remove('error');text(msg,next?'사이트 표시를 켜는 중…':'사이트 표시를 끄는 중…');
+  try{await api('/api/seonammedi/admin/channels/'+item.id,{method:'PUT',body:JSON.stringify({visible:next})});text(msg,next?'사이트 표시를 켰습니다.':'사이트 표시를 껐습니다.');await loadChannels()}catch(error){msg.classList.add('error');text(msg,error.message)}
+}
+function platformLabel(value){return({youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',tiktok:'TikTok',blog:'블로그',website:'웹사이트',other:'기타'})[value]||value}
 function categoryLabel(value){return({official:'공식채널','related-org':'관련기관',media:'언론·자료',civic:'시민·단체',other:'기타'})[value]||value}
 function renderChannels(){
   const host=$('channelList');host.replaceChildren();if(!state.channels.length){host.append(empty('등록된 채널이 없습니다.'));return}
@@ -385,7 +389,7 @@ function renderChannels(){
     const meta=document.createElement('div');meta.className='item-meta';meta.textContent=platformLabel(item.platform)+' · '+categoryLabel(item.category);left.append(a,meta);
     const flags=document.createElement('div');if(item.official)flags.append(tag('공식','official'));flags.append(tag(item.visible?'표시':'숨김',item.visible?'live':''));head.append(left,flags);article.append(head);
     if(item.note){const p=document.createElement('p');p.className='item-body';p.textContent=item.note;article.append(p)}
-    const actions=document.createElement('div');actions.className='item-actions';actions.append(button('수정',()=>editChannel(item)),button('삭제',()=>deleteChannel(item),'danger'));article.append(actions);host.append(article);
+    const actions=document.createElement('div');actions.className='item-actions';actions.append(button(item.visible?'사이트 숨기기':'사이트 표시',()=>toggleChannelVisibility(item)),button('수정',()=>editChannel(item)),button('삭제',()=>deleteChannel(item),'danger'));article.append(actions);host.append(article);
   }
 }
 async function loadChannels(){if(!state.me?.permissions?.channels)return;const data=await api('/api/seonammedi/admin/channels');state.channels=data.items||[];renderChannels();updateDashboard()}
