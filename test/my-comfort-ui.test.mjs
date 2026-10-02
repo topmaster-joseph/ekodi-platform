@@ -15,8 +15,8 @@ test('My EKODI root uses the calm custom landing without duplicate navigation',(
   assert.match(html,/data-my-tab-link="home"[\s\S]*href="#platforms"[\s\S]*href="#activity"[\s\S]*href="#account"/);
   assert.match(html,/id="myHub"/);
   assert.match(html,/MY EKODI · ACTION HUB/);
-  assert.match(html,/무엇을 하시겠어요\?/);
-  assert.match(html,/hub-shell\.css\?v=20261001-tab-shell-v1/);
+  assert.match(html,/무엇을 원하세요\?/);
+  assert.match(html,/hub-shell\.css\?v=20261002-wayfinder-v1/);
   assert.match(html,/class="my-bottom-tabs"/);
   assert.match(html,/id="workspaceCompact"/);
   assert.match(html,/data-my-tab-section="services"/);
@@ -49,6 +49,17 @@ test('My EKODI keeps current workspace in the header and compacts the signed-in 
   assert.match(hubCss,/\.top-actions \.workspace-compact\{position:static/);
   assert.match(hubCss,/body\[data-auth-state="member"\] \.personal-action-command\{display:grid/);
   assert.match(hubCss,/\.intent-examples\{display:none\}/);
+});
+
+test('My EKODI uses progressive wayfinding and a dedicated EKODIAN guide',()=>{
+  assert.match(html,/id="memberHero"/);
+  assert.match(html,/class="home-wayfinder"/);
+  assert.match(html,/class="ekodian-hero-art"/);
+  assert.match(html,/data-home-panel="intent"/);
+  assert.match(html,/data-home-panel="continue"/);
+  for(const step of ['goal','context','execute'])assert.match(html,new RegExp(`data-intent-step-marker="${step}"`));
+  assert.match(html,/data-intent-audience-choice="church"/);
+  assert.match(hubCss,/Progressive Wayfinder/);
 });
 
 test('My EKODI separates customized footer guidance from the shared legal footer',()=>{

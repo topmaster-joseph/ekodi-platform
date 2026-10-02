@@ -27,7 +27,7 @@ const storedWorkspace=()=>{try{return localStorage.getItem('ekodi_my_active_work
 const rememberWorkspace=value=>{try{if(value)localStorage.setItem('ekodi_my_active_workspace',value);else localStorage.removeItem('ekodi_my_active_workspace')}catch{}};
 const serviceDefinition=id=>SERVICES.find(([sid])=>sid===id)||null;
 const FOCUS_HASHES=new Map([['#recommendations','recommendations'],['#money','money'],['#creator','creator'],['#personal-brand','personal-brand'],['#journey-preview','journey-preview'],['#life-channels','life-channels']]);
-const TAB_HASHES=new Map([['#home','home'],['#intent','home'],['#intentPlanText','home'],['#platforms','services'],['#workspaces','services'],['#activity','activity'],['#memberHome','activity'],['#account','account']]);
+const TAB_HASHES=new Map([['#home','home'],['#intent','home'],['#intentPlanText','home'],['#platforms','services'],['#workspaces','services'],['#activity','activity'],['#memberHome','home'],['#account','account']]);
 const focusSurfaceKey=()=>FOCUS_HASHES.get(location.hash)||'';
 const activeTabKey=()=>TAB_HASHES.get(location.hash)||(focusSurfaceKey()?'focus':'home');
 function requestedReturnTarget(){
@@ -77,7 +77,8 @@ function syncSurfaceState({scroll=false}={}){
  document.body.dataset.homeMode=signedIn&&key?'focus':'home';
  document.body.dataset.activeTab=tab;
  document.querySelectorAll('[data-my-tab-section]').forEach(section=>{section.hidden=signedIn?section.dataset.myTabSection!==tab:section.dataset.myTabSection!=='home'});
- const memberHome=$('#memberHome');if(memberHome)memberHome.hidden=!signedIn||tab!=='home';
+ document.querySelectorAll('[data-member-only]').forEach(section=>{section.hidden=!signedIn||tab!=='home'});
+ syncHomePanels();
  document.querySelectorAll('[data-focus-surface]').forEach(section=>{section.hidden=!signedIn||section.dataset.focusSurface!==key});
  document.querySelectorAll('[data-focus-companion]').forEach(section=>{section.hidden=!signedIn||section.dataset.focusCompanion!==key});
  document.querySelectorAll('[data-my-tab-link]').forEach(link=>{
@@ -125,6 +126,35 @@ function initServiceTabs(){
  syncServiceTabs();
  document.querySelectorAll('[data-services-tab]').forEach(button=>button.addEventListener('click',()=>setServicesTab(button.dataset.servicesTab||'services')));
 }
+let activeHomePanel='intent';
+function syncHomePanels(){
+ const signedIn=Boolean(session?.access_token),tab=signedIn?activeTabKey():'home';
+ document.body.dataset.homePanel=activeHomePanel;
+ document.querySelectorAll('[data-home-panel]').forEach(panel=>{
+  if(!signedIn){panel.hidden=panel.id==='memberHome';return}
+  panel.hidden=tab!=='home'||panel.dataset.homePanel!==activeHomePanel;
+ });
+ document.querySelectorAll('[data-home-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.homeView===activeHomePanel)));
+}
+function setHomePanel(panel,{focus=false}={}){
+ if(!['intent','continue'].includes(panel))panel='intent';
+ activeHomePanel=panel;
+ try{sessionStorage.setItem('ekodi_my_home_panel',panel)}catch{}
+ syncHomePanels();
+ if(focus)requestAnimationFrame(()=>{
+  const target=panel==='intent'?$('#intentPlanText'):$('#memberHome');
+  target?.scrollIntoView({behavior:'smooth',block:'center'});
+  if(panel==='intent')target?.focus?.();
+ });
+}
+function initHomeWayfinder(){
+ try{activeHomePanel=sessionStorage.getItem('ekodi_my_home_panel')||'intent'}catch{activeHomePanel='intent'}
+ if(location.hash==='#memberHome')activeHomePanel='continue';
+ if(location.hash==='#intent'||location.hash==='#intentPlanText')activeHomePanel='intent';
+ document.querySelectorAll('[data-home-view]').forEach(button=>button.addEventListener('click',()=>setHomePanel(button.dataset.homeView||'intent',{focus:true})));
+ syncHomePanels();
+}
+
 function recentActivityUi(){
  const host=$('#activityTimeline');if(!host)return;
  if(!session){host.innerHTML='<div class="empty"><strong>로그인하면 최근 활동을 확인할 수 있습니다.</strong></div>';return}
@@ -235,6 +265,11 @@ function identityUi(){
  const compact=$('#workspaceCompact'),compactLabel=$('#workspaceCompactLabel');
  if(compact)compact.hidden=!session;
  if(compactLabel)compactLabel.textContent=current?.workspace_name||'개인';
+ const memberGreeting=$('#memberGreetingName');
+ if(memberGreeting){
+  const memberName=profile?.display_name||meta.full_name||meta.name||email.split('@')[0]||'';
+  memberGreeting.textContent=memberName?`안녕하세요, ${memberName}님!`:'안녕하세요!';
+ }
 
 }
 function memberHomeUi(){
@@ -404,10 +439,11 @@ window.addEventListener('ekodi:personalization-signal',event=>{
  ephemeralSignals=[signal,...ephemeralSignals.filter(item=>!(item.service_id===signal.service_id&&item.source===signal.source&&item.signal_type===signal.signal_type))].slice(0,30);
  platformUi();
 });
-window.addEventListener('hashchange',()=>{syncSurfaceState({scroll:true});progressiveSurfaceUi();if(location.hash==='#account')syncAccountTabs();if(location.hash==='#platforms'||location.hash==='#workspaces')syncServiceTabs();if(location.hash==='#activity')recentActivityUi()});
+window.addEventListener('hashchange',()=>{if(location.hash==='#memberHome')activeHomePanel='continue';if(location.hash==='#intent'||location.hash==='#intentPlanText')activeHomePanel='intent';syncSurfaceState({scroll:true});progressiveSurfaceUi();if(location.hash==='#account')syncAccountTabs();if(location.hash==='#platforms'||location.hash==='#workspaces')syncServiceTabs();if(location.hash==='#activity')recentActivityUi()});
 
 initAccountTabs();
 initServiceTabs();
+initHomeWayfinder();
 const compactWorkspace=$('#workspaceCompact');if(compactWorkspace)compactWorkspace.addEventListener('click',()=>setServicesTab('spaces'));
 
 if(MISROUTED_SERVICE_RETURN){
