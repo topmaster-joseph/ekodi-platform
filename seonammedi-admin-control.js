@@ -713,35 +713,38 @@ async function noticeAdminPayload(request,existing={}){
   const value={title:clean(input.title??existing.title,180),body:clean(input.body??existing.body,10000),status:input.status==='published'?'published':'draft',pinned:safeBool(input.pinned)?1:0,kind:(input.kind??existing.notice_kind)==='event'?'event':'notice',featured:input.featured===undefined?Number(existing.featured||0):(safeBool(input.featured)?1:0),eventStart:clean(input.eventStart??existing.event_start,40)||null,eventEnd:clean(input.eventEnd??existing.event_end,40)||null,image};
   return value;
 }
-async function storeNoticeImage(env,image){
+async function storeNoticeImage(env,image,principal){
   if(!image||typeof image!=='object'||Number(image.size||0)<=0)return null;
-  if(!env?.LIVE_RECORDINGS_BUCKET?.put)throw Object.assign(new Error('image_storage_unavailable'),{status:503});
-  if(Number(image.size)>8*1024*1024)throw Object.assign(new Error('image_too_large'),{status:413});
-  const imageType=String(image.type||'').toLowerCase();if(!['image/jpeg','image/png','image/webp','image/gif'].includes(imageType))throw Object.assign(new Error('unsupported_image_type'),{status:415});
-  const ext=imageType==='image/jpeg'?'jpg':imageType.split('/')[1],imageKey='seonammedi/notices/'+crypto.randomUUID()+'.'+ext;
-  await env.LIVE_RECORDINGS_BUCKET.put(imageKey,await image.arrayBuffer(),{httpMetadata:{contentType:imageType}});return{imageKey,imageType};
+  try{
+    const stored=await storeNoticeImageInDrive(env,image,{email:principal?.email||''});
+    return{imageKey:stored.key,imageType:stored.type};
+  }catch(error){
+    const code=String(error?.message||'image_storage_unavailable');
+    const status=code==='image_too_large'?413:code==='unsupported_image_type'?415:503;
+    throw Object.assign(new Error(code),{status});
+  }
 }
 async function createNotice(request,env,auth){
   if(!can(auth,NOTICE_CAP))return json({ok:false,error:'notice_forbidden'},403);
   const body=await noticeAdminPayload(request);if(!body)return json({ok:false,error:'invalid_request'},400);if(!body.title)return json({ok:false,error:'title_required'},400);
-  let stored=null;try{stored=await storeNoticeImage(env,body.image)}catch(error){return json({ok:false,error:error.message||'image_upload_failed'},error.status||500)}
+  let stored=null;try{stored=await storeNoticeImage(env,body.image,auth)}catch(error){return json({ok:false,error:error.message||'image_upload_failed'},error.status||500)}
   const now=new Date().toISOString(),publishedAt=body.status==='published'?now:null;
   try{const result=await env.DB.prepare('INSERT INTO seonammedi_notices(title,body,status,pinned,published_at,image_key,image_type,notice_kind,featured,event_start,event_end,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
     .bind(body.title,body.body,body.status,body.pinned,publishedAt,stored?.imageKey||'',stored?.imageType||'',body.kind,body.featured,body.eventStart,body.eventEnd,auth.email,now,now).run();
     const id=Number(result?.meta?.last_row_id||0);await audit(env,auth,'create','notice',id,{status:body.status,pinned:Boolean(body.pinned),featured:Boolean(body.featured),kind:body.kind});return json({ok:true,id},201)
-  }catch(error){if(stored?.imageKey)await env.LIVE_RECORDINGS_BUCKET?.delete?.(stored.imageKey).catch(()=>{});throw error}
+  }catch(error){if(stored?.imageKey)await deleteNoticeDriveKey(env,stored.imageKey);throw error}
 }
 async function updateNotice(request,env,auth,id){
   if(!can(auth,NOTICE_CAP))return json({ok:false,error:'notice_forbidden'},403);
   const existing=await env.DB.prepare('SELECT * FROM seonammedi_notices WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
   const body=await noticeAdminPayload(request,existing);if(!body)return json({ok:false,error:'invalid_request'},400);if(!body.title)return json({ok:false,error:'title_required'},400);
-  let stored=null;try{stored=await storeNoticeImage(env,body.image)}catch(error){return json({ok:false,error:error.message||'image_upload_failed'},error.status||500)}
+  let stored=null;try{stored=await storeNoticeImage(env,body.image,auth)}catch(error){return json({ok:false,error:error.message||'image_upload_failed'},error.status||500)}
   const now=new Date().toISOString(),publishedAt=body.status==='published'?(existing.published_at||now):null,imageKey=stored?.imageKey||existing.image_key||'',imageType=stored?.imageType||existing.image_type||'';
   try{await env.DB.prepare('UPDATE seonammedi_notices SET title=?,body=?,status=?,pinned=?,published_at=?,updated_at=?,image_key=?,image_type=?,notice_kind=?,featured=?,event_start=?,event_end=? WHERE id=?')
     .bind(body.title,body.body,body.status,body.pinned,publishedAt,now,imageKey,imageType,body.kind,body.featured,body.eventStart,body.eventEnd,id).run();
-    if(stored?.imageKey&&existing.image_key&&existing.image_key!==stored.imageKey)await env.LIVE_RECORDINGS_BUCKET?.delete?.(existing.image_key).catch(()=>{});
+    if(stored?.imageKey&&existing.image_key&&existing.image_key!==stored.imageKey)await deleteNoticeDriveKey(env,existing.image_key);
     await audit(env,auth,'update','notice',id,{status:body.status,pinned:Boolean(body.pinned),featured:Boolean(body.featured),kind:body.kind});return json({ok:true,id})
-  }catch(error){if(stored?.imageKey)await env.LIVE_RECORDINGS_BUCKET?.delete?.(stored.imageKey).catch(()=>{});throw error}
+  }catch(error){if(stored?.imageKey)await deleteNoticeDriveKey(env,stored.imageKey);throw error}
 }
 async function deleteNotice(env,auth,id){
   if(!can(auth,NOTICE_CAP))return json({ok:false,error:'notice_forbidden'},403);
