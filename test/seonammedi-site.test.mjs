@@ -614,3 +614,10 @@ test('seonammedi notice composer places attachments before body, compresses to 5
   assert.match(app,/첨부 사진을 본문에 함께 표시합니다/);
   assert.match(control,/image\.size\|\|0\)>5\*1024\*1024/);
 });
+
+
+test('seonammedi activity history keeps comfortable top spacing below sticky header',async()=>{
+  const css=await readFile(new URL('app.css',root),'utf8');
+  assert.match(css,/\.activity-list-only\{padding-top:44px\}/);
+  assert.match(css,/@media\(max-width:760px\)\{\.activity-list-only\{padding-top:34px\}\}/);
+});
