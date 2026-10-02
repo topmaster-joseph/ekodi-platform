@@ -283,6 +283,17 @@ export async function writeCanonicalDriveStream(env, options = {}) {
   };
 }
 
+export async function readCanonicalDriveFile(env, fileId = '') {
+  const id=String(fileId||'').trim();
+  if(!id||!/^[A-Za-z0-9_-]{8,200}$/.test(id))throw new Error('CANONICAL_STORAGE_FILE_ID_REQUIRED');
+  const connection=await primaryConnection(env);
+  const token=await accessToken(env,connection);
+  const meta=await driveJson(token,`/files/${encodeURIComponent(id)}?supportsAllDrives=true&fields=id,name,mimeType,size`);
+  const response=await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media&supportsAllDrives=true`,{headers:{authorization:`Bearer ${token}`}});
+  if(!response.ok)throw new Error(`CANONICAL_STORAGE_READ_${response.status}`);
+  return {id,name:meta.name||'',mimeType:meta.mimeType||response.headers.get('content-type')||'application/octet-stream',size:Number(meta.size||0),body:response.body};
+}
+
 export async function deleteCanonicalDriveFile(env, fileId = '') {
   const id = String(fileId || '').trim();
   if (!id || !/^[A-Za-z0-9_-]{8,200}$/.test(id)) throw new Error('CANONICAL_STORAGE_FILE_ID_REQUIRED');
