@@ -320,8 +320,8 @@ async function audit(env,auth,action,type,id,detail={}){
 }
 
 function noticeImageKeys(row){try{const keys=JSON.parse(String(row.image_keys_json||'[]'));if(Array.isArray(keys)&&keys.length)return keys.filter(Boolean).slice(0,5)}catch{}return row.image_key?[row.image_key]:[]}
-function publicNotice(row){const id=Number(row.id),keys=noticeImageKeys(row);return{id,title:row.title,body:row.body,pinned:Boolean(row.pinned),imageUrl:keys.length?PREFIX+'/notices/'+id+'/image/0':'',imageUrls:keys.map((_,index)=>PREFIX+'/notices/'+id+'/image/'+index),publishedAt:row.published_at||row.updated_at,updatedAt:row.updated_at,kind:row.notice_kind==='event'?'event':'notice',featured:Boolean(row.featured),eventStart:row.event_start||'',eventEnd:row.event_end||'',createdBy:row.created_by||''}}
-function adminNotice(row){return{...publicNotice(row),status:row.status,createdBy:row.created_by,createdAt:row.created_at}}
+function publicNotice(row,{canManage=false}={}){const id=Number(row.id),keys=noticeImageKeys(row);return{id,title:row.title,body:row.body,pinned:Boolean(row.pinned),imageUrl:keys.length?PREFIX+'/notices/'+id+'/image/0':'',imageUrls:keys.map((_,index)=>PREFIX+'/notices/'+id+'/image/'+index),publishedAt:row.published_at||row.updated_at,updatedAt:row.updated_at,kind:row.notice_kind==='event'?'event':'notice',featured:Boolean(row.featured),eventStart:row.event_start||'',eventEnd:row.event_end||'',canManage:Boolean(canManage)}}
+function adminNotice(row){return{...publicNotice(row,{canManage:true}),status:row.status,createdBy:row.created_by,createdAt:row.created_at}}
 function publicChannel(row){return{id:Number(row.id),platform:row.platform,name:row.name,url:row.url,previewUrl:row.preview_url||'',category:row.category,official:Boolean(row.official),note:row.note||'',sortOrder:Number(row.sort_order||0)}}
 function adminChannel(row){return{...publicChannel(row),visible:Boolean(row.visible),createdBy:row.created_by,createdAt:row.created_at,updatedAt:row.updated_at}}
 
@@ -336,11 +336,14 @@ async function noticePublicProjection(env){
     optional('event_start','NULL'),optional('event_end','NULL')
   ].join(',');
 }
-async function listPublicNotices(env){
+async function listPublicNotices(request,env){
   const projection=await noticePublicProjection(env);
   const rows=await env.DB.prepare(`SELECT ${projection} FROM seonammedi_notices
     WHERE status='published' ORDER BY pinned DESC,COALESCE(published_at,updated_at) DESC,id DESC LIMIT 40`).all();
-  return json({ok:true,items:(rows.results||[]).map(publicNotice)});
+  const principal=await principalFromSupabaseRequest(request).catch(()=>null);
+  const email=lower(principal?.email||'');
+  const admin=email?await env.DB.prepare("SELECT role FROM admins WHERE lower(trim(email))=? AND role='super_admin' LIMIT 1").bind(email).first().catch(()=>null):null;
+  return json({ok:true,items:(rows.results||[]).map(row=>publicNotice(row,{canManage:Boolean(admin)||Boolean(email&&lower(row.created_by)===email)}))});
 }
 async function storeNoticeImageInDrive(env,image,principal){
   if(!env?.STORAGE?.fetch)throw new Error('image_storage_unavailable');
@@ -951,7 +954,7 @@ export async function handleSeonamMediAdminApi(request,env){
   if(url.pathname===PREFIX+'/content'&&request.method==='GET'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
     return publicStorageRead('content',async()=>{
-      const [noticesResponse,channelsResponse]=await Promise.all([listPublicNotices(env),listPublicChannels(env)]);
+      const [noticesResponse,channelsResponse]=await Promise.all([listPublicNotices(request,env),listPublicChannels(env)]);
       const noticesBody=await noticesResponse.json().catch(()=>({items:[]}));
       const channelsBody=await channelsResponse.json().catch(()=>({items:[]}));
       return json({ok:true,notices:noticesBody.items||[],channels:channelsBody.items||[]});
@@ -962,7 +965,7 @@ export async function handleSeonamMediAdminApi(request,env){
   }
   if(url.pathname===PREFIX+'/notices'&&request.method==='GET'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
-    return publicStorageRead('notices',()=>listPublicNotices(env));
+    return publicStorageRead('notices',()=>listPublicNotices(request,env));
   }
   if(url.pathname===PREFIX+'/notices'&&request.method==='POST'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return createPublicNotice(request,env);
