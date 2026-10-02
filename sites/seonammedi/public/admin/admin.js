@@ -369,7 +369,7 @@ function resetChannel(){
   const form=$('channelForm');form.reset();form.elements.id.value='';form.elements.platform.value='youtube';form.elements.category.value='official';form.elements.sortOrder.value='0';form.elements.visible.checked=true;text($('channelFormTitle'),'채널 추가');text($('channelMessage'),'');
 }
 function editChannel(item){
-  const form=$('channelForm');form.elements.id.value=item.id;form.elements.platform.value=item.platform||'other';form.elements.name.value=item.name||'';form.elements.url.value=item.url||'';form.elements.category.value=item.category||'other';form.elements.sortOrder.value=String(item.sortOrder||0);form.elements.official.checked=Boolean(item.official);form.elements.visible.checked=Boolean(item.visible);form.elements.note.value=item.note||'';text($('channelFormTitle'),'채널 수정');showPanel('channels');form.elements.name.focus();
+  const form=$('channelForm');form.elements.id.value=item.id;form.elements.platform.value=item.platform||'other';form.elements.name.value=item.name||'';form.elements.url.value=item.url||'';form.elements.previewUrl.value=item.previewUrl||'';form.elements.category.value=item.category||'other';form.elements.sortOrder.value=String(item.sortOrder||0);form.elements.official.checked=Boolean(item.official);form.elements.visible.checked=Boolean(item.visible);form.elements.note.value=item.note||'';text($('channelFormTitle'),'채널 수정');showPanel('channels');form.elements.name.focus();
 }
 async function deleteChannel(item){
   if(!confirm('이 채널 연결을 삭제할까요?'))return;
@@ -405,7 +405,7 @@ $('noticeForm').addEventListener('submit',async event=>{
   try{await api(id?'/api/seonammedi/admin/notices/'+id:'/api/seonammedi/admin/notices',{method:id?'PUT':'POST',body:payload});text(msg,'저장했습니다.');resetNotice();await loadNotices()}catch(error){msg.classList.add('error');text(msg,error.message)}
 });
 $('channelForm').addEventListener('submit',async event=>{
-  event.preventDefault();const form=event.currentTarget,id=form.elements.id.value;const payload={platform:form.elements.platform.value,name:form.elements.name.value,url:form.elements.url.value,category:form.elements.category.value,sortOrder:Number(form.elements.sortOrder.value||0),official:form.elements.official.checked,visible:form.elements.visible.checked,note:form.elements.note.value};
+  event.preventDefault();const form=event.currentTarget,id=form.elements.id.value;const payload={platform:form.elements.platform.value,name:form.elements.name.value,url:form.elements.url.value,previewUrl:form.elements.previewUrl.value,category:form.elements.category.value,sortOrder:Number(form.elements.sortOrder.value||0),official:form.elements.official.checked,visible:form.elements.visible.checked,note:form.elements.note.value};
   const msg=$('channelMessage');msg.classList.remove('error');text(msg,'저장 중…');
   try{await api(id?'/api/seonammedi/admin/channels/'+id:'/api/seonammedi/admin/channels',{method:id?'PUT':'POST',body:JSON.stringify(payload)});text(msg,'저장했습니다.');resetChannel();await loadChannels()}catch(error){msg.classList.add('error');text(msg,error.message)}
 });
