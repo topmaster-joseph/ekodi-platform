@@ -21,6 +21,9 @@ test('workspace admin removes duplicate heading chrome and strongly marks active
   assert.match(css, /\.heading\{display:none!important\}/);
   assert.match(css, /\.sidebar nav a\.active\{[^}]*font-weight:850/);
   assert.match(css, /box-shadow:inset 3px 0 0 #111827/);
+  assert.match(css, /\.sidebar nav\{display:grid;gap:1px/);
+  assert.match(css, /\.sidebar nav a\{[^}]*padding:6px 9px/);
+  assert.match(css, /\.admin-nav-group-label\{[^}]*margin:5px 8px 1px/);
 });
 
 test('role capability engine keeps lower admin menus scoped', () => {
