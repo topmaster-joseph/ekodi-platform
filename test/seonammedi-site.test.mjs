@@ -401,6 +401,16 @@ test('seonammedi exposes seeded related channels on public and admin surfaces',a
   assert.match(adminHtml,/화면 내 미리보기 URL/);
 });
 
+
+
+test('seonammedi verified Instagram preview seed is additive and replaceable from admin',async()=>{
+  const migration=await readFile(new URL('../migrations/0125_seonammedi_instagram_preview_seed.sql',import.meta.url),'utf8');
+  assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_channel_previews/);
+  assert.match(migration,/instagram\.com\/wonokoh\/p\/Dd8q1vCSlhT\//);
+  assert.match(migration,/ON CONFLICT\(channel_id\) DO UPDATE SET/);
+  assert.doesNotMatch(migration,/DROP TABLE|DELETE FROM|ALTER TABLE .* RENAME/);
+});
+
 test('seonammedi channel previews use provider-safe embeds and same-origin metadata fallback',async()=>{
   const [control,app]=await Promise.all([
     readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
@@ -424,6 +434,8 @@ test('seonammedi channel previews use provider-safe embeds and same-origin metad
   assert.match(control,/feeds\/videos\.xml\?channel_id=/);
   assert.match(control,/provider\.kind!=='youtube'/);
   assert.match(control,/function explicitChannelEmbed\(item\)/);
+  assert.match(control,/item\.platform==='instagram'/);
+  assert.match(control,/\['p','reel'\]\.includes\(parts\[0\]\)/);
   assert.match(control,/preview\.contentType='explicit-preview'/);
   assert.match(control,/preview_url/);
   assert.match(control,/CHANNEL_BROWSER_UA/);
