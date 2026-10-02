@@ -327,6 +327,37 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   function accountStatusLabel(status){return({pending_authorization:'인증 필요',active:'연결됨',paused:'일시중지',reconnect_required:'재인증 필요',revoked:'연결 해제',error:'오류'})[status]||status||'확인 필요'}
   async function yt(){try{const h=await growth('/health');return{ok:h.ok,canUpload:Boolean(h.platform?.youtubeConfigured),oauthClientConfigured:Boolean(h.platform?.youtubeConfigured),refreshTokenStored:false,reason:h.platform?.youtubeConfigured?'OAuth broker ready':'Google OAuth 중앙 설정 필요',platform:h.platform||{}}}catch{return{ok:false,canUpload:false,reason:'NETWORK_ERROR',platform:{}}}}
 
+  const ACTIVITY_LIVE_CHANNEL='ekodi-mission-applications-v1';
+  let activityLiveTimer=0,activityLiveChannel=null,activityLiveSignature='',activityLiveBusy=false;
+  function activitySnapshotSignature(snap){
+    const summary=snap?.summary||{},participants=Array.isArray(snap?.participants)?snap.participants:[];
+    return JSON.stringify([summary.total||0,summary.applied||0,summary.waitlist||0,summary.confirmed||0,summary.attended||0,summary.no_show||0,summary.cancelled||0,participants.map(p=>[p.participation_id||'',p.status||'',p.party_size||1,p.checked_in_at||'',p.updated_at||'',p.name||'',p.phone||''])]);
+  }
+  function stopActivityLiveSync(){
+    if(activityLiveTimer){clearInterval(activityLiveTimer);activityLiveTimer=0}
+    if(activityLiveChannel){try{activityLiveChannel.close()}catch{}activityLiveChannel=null}
+  }
+  async function refreshActivityIfChanged(activityKey,force=false){
+    if(activityLiveBusy||document.hidden||section!=='activities')return;
+    const active=document.activeElement;
+    if(!force&&((active&&['INPUT','SELECT','TEXTAREA'].includes(active.tagName))||document.querySelector('dialog[open]')))return;
+    activityLiveBusy=true;
+    try{
+      const fresh=await activityRpc('activity_admin_snapshot',{p_workspace_slug:workspace,p_activity_key:activityKey});
+      const signature=activitySnapshotSignature(fresh);
+      if(force||signature!==activityLiveSignature){activityLiveSignature=signature;await activityAdmin(activityKey,true)}
+    }catch{}finally{activityLiveBusy=false}
+  }
+  function startActivityLiveSync(activityKey,snap){
+    stopActivityLiveSync();activityLiveSignature=activitySnapshotSignature(snap);
+    if(!activityKey||section!=='activities')return;
+    try{
+      activityLiveChannel=new BroadcastChannel(ACTIVITY_LIVE_CHANNEL);
+      activityLiveChannel.onmessage=event=>{if(String(event?.data?.activityKey||'')===activityKey)refreshActivityIfChanged(activityKey,true)};
+    }catch{}
+    activityLiveTimer=setInterval(()=>refreshActivityIfChanged(activityKey,false),3000);
+  }
+
   async function activityRpc(name,body={}){
     const token=await accessToken();if(!token)throw Object.assign(new Error('AUTH_REQUIRED'),{code:'AUTH_REQUIRED',status:401});
     const missionGateway=workspace==='ekodimission';
@@ -338,7 +369,9 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   function activityStatusOptions(current){return Object.entries(ACTIVITY_STATUS_LABEL).map(([value,label])=>'<option value="'+ae(value)+'" '+(value===current?'selected':'')+'>'+ae(label)+'</option>').join('')}
   function followUpOptions(current){return Object.entries(FOLLOW_UP_LABEL).map(([value,label])=>'<option value="'+ae(value)+'" '+(value===current?'selected':'')+'>'+ae(label)+'</option>').join('')}
   function companionsFromInput(value){return String(value||'').split(',').map(v=>v.trim()).filter(Boolean).slice(0,20)}
-  async function activityAdmin(activityKeyOverride=''){
+  async function activityAdmin(activityKeyOverride='',preserveUi=false){
+    const previousUi=preserveUi?{search:String($('activitySearch')?.value||''),status:String($('activityStatusFilter')?.value||''),checkin:String($('activityCheckinFilter')?.value||'')}:null;
+    stopActivityLiveSync();
     try{
       document.body.classList.add('activity-admin-view');
       $('mainPanel')?.classList.add('activity-admin-panel');
@@ -382,6 +415,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       const picker=$('activityPicker');if(picker)picker.onchange=()=>{const u=new URL(location.href);u.searchParams.set('activity',picker.value);history.replaceState(null,'',u.pathname+u.search);activityAdmin(picker.value)};
       const applyFilter=()=>{const q=String($('activitySearch')?.value||'').trim().toLowerCase(),st=String($('activityStatusFilter')?.value||''),ci=String($('activityCheckinFilter')?.value||'');let visibleSeq=0;document.querySelectorAll('[data-activity-row]').forEach(row=>{row.hidden=Boolean((q&&!String(row.dataset.search||'').includes(q))||(st&&row.dataset.status!==st)||(ci&&row.dataset.checkin!==ci));const seq=row.querySelector('.activity-seq');if(!row.hidden&&seq)seq.textContent=String(++visibleSeq)})};
       $('activitySearch')?.addEventListener('input',applyFilter);$('activityStatusFilter')?.addEventListener('change',applyFilter);$('activityCheckinFilter')?.addEventListener('change',applyFilter);
+      if(previousUi){if($('activitySearch'))$('activitySearch').value=previousUi.search;if($('activityStatusFilter'))$('activityStatusFilter').value=previousUi.status;if($('activityCheckinFilter'))$('activityCheckinFilter').value=previousUi.checkin;applyFilter()}
       const shareDialog=$('activityShareDialog'),shareButton=$('activityShareButton'),shareClose=$('activityShareClose'),shareExpirySelect=$('activityShareExpiry'),shareCustomWrap=$('activityShareCustomWrap'),shareCustomExpiry=$('activityShareCustomExpiry'),shareCreate=$('activityShareCreate'),shareRevoke=$('activityShareRevoke'),shareLinkRow=$('activityShareLinkRow'),shareLink=$('activityShareLink'),shareCopy=$('activityShareCopy'),shareStatus=$('activityShareStatus'),shareState=$('activityShareState');
       if(shareButton&&shareDialog)shareButton.onclick=()=>shareDialog.showModal();
       if(shareClose&&shareDialog)shareClose.onclick=()=>shareDialog.close();
@@ -409,7 +443,8 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       document.querySelectorAll('[data-activity-save]').forEach(btn=>btn.onclick=async()=>{const row=btn.closest('[data-activity-row]');if(!row)return;try{state('참가자 저장 중');const get=n=>row.querySelector('[data-field="'+n+'"]')?.value??'';await activityRpc('activity_admin_update_participation',{p_participation_id:row.dataset.participationId,p_status:get('status'),p_participant_role:get('role'),p_party_size:Number(get('partySize')||1),p_companions:companionsFromInput(get('companions')),p_support_notes:get('supportNotes'),p_follow_up_status:get('followUp'),p_follow_up_note:get('followUpNote'),p_media_consent:null});await activityAdmin(requested)}catch(e){state('저장 확인 필요');$('pageCopy').textContent=e.message}});
       document.querySelectorAll('[data-activity-checkin]').forEach(btn=>btn.onclick=async()=>{const row=btn.closest('[data-activity-row]');if(!row)return;try{state('체크인 중');await activityRpc('activity_admin_update_participation',{p_participation_id:row.dataset.participationId,p_status:'attended'});await activityAdmin(requested)}catch(e){state('체크인 확인 필요');$('pageCopy').textContent=e.message}});
       const add=$('activityAddForm');if(add)add.onsubmit=async e=>{e.preventDefault();const status=$('activityAddStatus');try{const fd=new FormData(add);if(fd.get('privacyConsent')!=='on')throw new Error('개인정보 수집·이용 동의 확인이 필요합니다.');state('참가자 추가 중');await activityRpc('activity_admin_add_participant',{p_workspace_slug:workspace,p_activity_key:requested,p_name:String(fd.get('name')||'').trim(),p_phone:String(fd.get('phone')||'').trim(),p_email:String(fd.get('email')||'').trim(),p_party_size:Number(fd.get('partySize')||1),p_status:String(fd.get('status')||'applied'),p_participant_role:String(fd.get('role')||'participant'),p_language:String(fd.get('language')||'ko'),p_companions:companionsFromInput(fd.get('companions')),p_support_notes:String(fd.get('supportNotes')||''),p_follow_up_status:String(fd.get('followUpStatus')||'none'),p_follow_up_note:String(fd.get('followUpNote')||''),p_source_channel:String(fd.get('sourceChannel')||'admin'),p_privacy_consent:true});if(status)status.textContent='참가자를 추가했습니다.';await activityAdmin(requested)}catch(err){if(status)status.textContent=err.message;state('추가 확인 필요')}};
-      state(workspace==='ekodimission'?'신청자 관리':'참가자 관리');
+      startActivityLiveSync(requested,snap);
+      state(workspace==='ekodimission'?'신청자 관리 · 자동 반영':'참가자 관리 · 자동 반영');
     }catch(e){if(e.status===401)return loginPanel('활동 참가자 관리에는 운영공간 로그인이 필요합니다.');$('summaryCards').innerHTML=[card('활동 · 참가자','확인 필요','실패를 성공으로 표시하지 않음')].join('');$('mainPanel').innerHTML='<h2>활동 · 참가자</h2><p class="empty">'+ae(e.message)+'</p>';state('확인 필요')}
   }
 
