@@ -161,6 +161,10 @@ test('seonammedi social channel hub groups channels by platform and supports Tik
   assert.match(adminJs,/tiktok:'TikTok'/);
   assert.match(control,/PLATFORMS=new Set\(\['youtube','instagram','facebook','tiktok'/);
   assert.match(control,/player\/v1/);
+  assert.match(control,/profileEmbedUrl/);
+  assert.match(control,/recentItems=instagramRecentItems\(embedHtml\)/);
+  assert.match(control,/videosUrl\.pathname=videosUrl\.pathname\.replace/);
+  assert.match(control,/youtube-nocookie\.com\/embed/);
 });
 
 test('seonammedi civic voices are manageable from the site admin without exposing contact publicly',async()=>{
@@ -345,7 +349,9 @@ test('seonammedi channel previews use provider-safe embeds and same-origin metad
   assert.ok(control.includes("instagram.com/'+encodeURIComponent(handle)+'/embed/"));
   assert.match(control,/instagramRecentItems/);
   assert.match(control,/profileEmbedUrl/);
-  assert.match(control,/preview\.recentItems=instagramRecentItems\(html\)/);
+  assert.match(control,/let recentItems=instagramRecentItems\(html\)/);
+  assert.match(control,/recentItems=instagramRecentItems\(embedHtml\)/);
+  assert.match(control,/preview\.recentItems=recentItems/);
   assert.match(control,/preview\.contentType='recent-posts'/);
   assert.match(control,/youtube-nocookie\.com\/embed\//);
   assert.match(control,/"videoId":"\(\[A-Za-z0-9_-\]\{11\}\)"/);
