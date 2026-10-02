@@ -1,5 +1,6 @@
 import { DISCOVERY_ORIGIN, DISCOVERY_PUBLIC_ROUTES, canonicalUrl } from './discovery-layer.js';
 import { listSitePublicationSettings } from './site-publication-runtime.js';
+import { fetchPublicDiscoveryRecords } from './public-discovery-runtime.js';
 
 export const EKODI_PUBLIC_REGISTRY_PATH='/public-registry.json';
 export const EKODI_PUBLIC_REGISTRY_POLICY='EKODI-PUBLIC-DISCOVERY-001';
@@ -48,6 +49,26 @@ function entryFromRoute(route){
   });
 }
 
+function entryFromRuntimeRecord(record){
+  const url=normalizeCanonical(record?.canonical_url);
+  if(!url)return null;
+  return Object.freeze({
+    id:`registry:${record.source_type||'resource'}:${record.source_key||url}`,
+    type:record.source_type||'resource',
+    name:record.title||url,
+    url,
+    path:normalizePath(new URL(url).pathname),
+    description:record.description||'',
+    schemaType:record.schema_type||'WebPage',
+    language:record.language||'ko',
+    imageUrl:record.image_url||'',
+    changefreq:['event','product'].includes(record.source_type)?'daily':'weekly',
+    priority:record.source_type==='site'?'0.8':'0.7',
+    source:'supabase-public-discovery-registry',
+    updatedAt:record.modified_at||'',
+  });
+}
+
 function entryFromSite(site){
   if(site?.publicStatus!=='public')return null;
   const url=normalizeCanonical(site.canonicalUrl,site.canonicalPath);
@@ -67,7 +88,7 @@ function entryFromSite(site){
 }
 
 export async function buildEkodiPublicRegistry(env){
-  const settings=await listSitePublicationSettings(env);
+  const [settings, runtimeRecords]=await Promise.all([listSitePublicationSettings(env),fetchPublicDiscoveryRecords(env)]);
   const publicationByPath=new Map(settings.map(site=>[normalizePath(site.canonicalPath),site]));
   const entries=new Map();
 
@@ -81,6 +102,10 @@ export async function buildEkodiPublicRegistry(env){
     const entry=entryFromSite(site);
     if(entry)entries.set(entry.url,entry);
   }
+  for(const record of runtimeRecords){
+    const entry=entryFromRuntimeRecord(record);
+    if(entry)entries.set(entry.url,entry);
+  }
 
   const resources=[...entries.values()].sort((a,b)=>a.path.localeCompare(b.path,'ko'));
   return Object.freeze({
@@ -90,7 +115,7 @@ export async function buildEkodiPublicRegistry(env){
     generatedAt:new Date().toISOString(),
     sitemapUrl:'https://ekodi.kr/sitemap.xml',
     rules:Object.freeze({
-      sourceOfTruth:'public_site_controls + registered discovery routes',
+      sourceOfTruth:'central Public Registry + public_site_controls + canonical service registries',
       include:'public only',
       exclude:Object.freeze(['private','maintenance','admin','auth','oauth','api','personal/private workspace','preview']),
     }),
