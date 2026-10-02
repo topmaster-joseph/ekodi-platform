@@ -388,8 +388,31 @@ function renderContent(){
 }
 async function loadContent(){if(!state.me?.permissions?.content)return;const data=await api('/api/seonammedi/admin/content');state.content=data.items||[];renderContent();updateDashboard()}
 
+const ADMIN_NOTICE_IMAGE_MAX_BYTES=5*1024*1024;
+const ADMIN_NOTICE_IMAGE_MAX_DIMENSION=2400;
+let adminNoticeSelectedFiles=[];
+async function compressAdminNoticeImage(file){
+  if(!file||Number(file.size||0)<=ADMIN_NOTICE_IMAGE_MAX_BYTES)return file;
+  let bitmap;try{bitmap=await createImageBitmap(file)}catch{throw new Error('이 사진은 자동 압축할 수 없습니다. 5MB 이하 파일로 다시 선택해 주세요.')}
+  const ratio=Math.min(1,ADMIN_NOTICE_IMAGE_MAX_DIMENSION/Math.max(bitmap.width,bitmap.height));
+  let width=Math.max(1,Math.round(bitmap.width*ratio)),height=Math.max(1,Math.round(bitmap.height*ratio)),blob=null;
+  const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d',{alpha:true});if(!ctx)throw new Error('사진 압축을 준비하지 못했습니다.');
+  for(let round=0;round<5;round++){
+    canvas.width=width;canvas.height=height;ctx.clearRect(0,0,width,height);ctx.drawImage(bitmap,0,0,width,height);
+    for(const quality of [0.86,0.74,0.62,0.5]){blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',quality));if(blob&&blob.size<=ADMIN_NOTICE_IMAGE_MAX_BYTES)break}
+    if(blob&&blob.size<=ADMIN_NOTICE_IMAGE_MAX_BYTES)break;
+    width=Math.max(1,Math.round(width*0.82));height=Math.max(1,Math.round(height*0.82));
+  }
+  bitmap.close?.();if(!blob||blob.size>ADMIN_NOTICE_IMAGE_MAX_BYTES)throw new Error('사진을 5MB 이하로 줄이지 못했습니다.');
+  const base=String(file.name||'notice-image').replace(/\.[^.]+$/,'');
+  return new File([blob],base+'.webp',{type:'image/webp',lastModified:Date.now()});
+}
+function renderAdminNoticeImagePreview(){
+  const host=$('adminNoticeImagePreview');if(!host)return;
+  host.replaceChildren(...adminNoticeSelectedFiles.map((file,index)=>{const box=document.createElement('div');box.className='item';const name=document.createElement('span');name.textContent=file.name+' · '+Math.max(1,Math.round(file.size/1024))+'KB';const remove=button('삭제',()=>{adminNoticeSelectedFiles.splice(index,1);renderAdminNoticeImagePreview()},'danger');box.append(name,remove);return box}));
+}
 function resetNotice(){
-  const form=$('noticeForm');form.reset();form.elements.id.value='';form.elements.status.value='published';text($('noticeFormTitle'),'공지 작성');text($('noticeMessage'),'');
+  const form=$('noticeForm');form.reset();adminNoticeSelectedFiles=[];renderAdminNoticeImagePreview();form.elements.id.value='';form.elements.status.value='published';text($('noticeFormTitle'),'공지 작성');text($('noticeMessage'),'');
 }
 function editNotice(item){
   const form=$('noticeForm');form.elements.id.value=item.id;form.elements.title.value=item.title||'';form.elements.body.value=item.body||'';form.elements.status.value=item.status||'draft';form.elements.pinned.checked=Boolean(item.pinned);form.elements.kind.value=item.kind||'notice';form.elements.featured.checked=Boolean(item.featured);form.elements.eventStart.value=item.eventStart?String(item.eventStart).slice(0,16):'';form.elements.eventEnd.value=item.eventEnd?String(item.eventEnd).slice(0,16):'';text($('noticeFormTitle'),'공지 수정');showPanel('notices');form.elements.title.focus();
@@ -447,8 +470,14 @@ $('timelineForm').addEventListener('submit',async event=>{
   const msg=$('timelineMessage');msg.classList.remove('error');text(msg,'저장 중…');
   try{await api(id?'/api/seonammedi/admin/timeline/'+id:'/api/seonammedi/admin/timeline',{method:id?'PUT':'POST',body:JSON.stringify(payload)});text(msg,'저장했습니다.');resetTimeline();await loadTimeline()}catch(error){msg.classList.add('error');text(msg,error.message)}
 });
+$('adminNoticeImages')?.addEventListener('change',async event=>{
+  const input=event.currentTarget,files=[...input.files].slice(0,5);if(input.files.length>5)alert('사진은 최대 5장까지 첨부할 수 있습니다.');
+  const msg=$('noticeMessage');text(msg,files.length?'사진을 5MB 이하로 최적화하는 중입니다…':'');
+  try{adminNoticeSelectedFiles=[];for(const file of files)adminNoticeSelectedFiles.push(await compressAdminNoticeImage(file));text(msg,adminNoticeSelectedFiles.length?'첨부 사진은 게시물 본문에 함께 표시됩니다.':'')}catch(error){adminNoticeSelectedFiles=[];input.value='';text(msg,error.message||'사진을 처리하지 못했습니다.')}
+  renderAdminNoticeImagePreview();
+});
 $('noticeForm').addEventListener('submit',async event=>{
-  event.preventDefault();const form=event.currentTarget,id=form.elements.id.value;const payload=new FormData();payload.set('title',form.elements.title.value);payload.set('body',form.elements.body.value);payload.set('status',form.elements.status.value);payload.set('pinned',String(form.elements.pinned.checked));payload.set('kind',form.elements.kind.value);payload.set('featured',String(form.elements.featured.checked));payload.set('eventStart',form.elements.eventStart.value);payload.set('eventEnd',form.elements.eventEnd.value);if(form.elements.image.files?.[0])payload.set('image',form.elements.image.files[0]);
+  event.preventDefault();const form=event.currentTarget,id=form.elements.id.value;const payload=new FormData();payload.set('title',form.elements.title.value);payload.set('body',form.elements.body.value);payload.set('status',form.elements.status.value);payload.set('pinned',String(form.elements.pinned.checked));payload.set('kind',form.elements.kind.value);payload.set('featured',String(form.elements.featured.checked));payload.set('eventStart',form.elements.eventStart.value);payload.set('eventEnd',form.elements.eventEnd.value);for(const file of adminNoticeSelectedFiles)payload.append('images',file,file.name);
   const msg=$('noticeMessage');msg.classList.remove('error');text(msg,'저장 중…');
   try{await api(id?'/api/seonammedi/admin/notices/'+id:'/api/seonammedi/admin/notices',{method:id?'PUT':'POST',body:payload});text(msg,'저장했습니다.');resetNotice();await loadNotices()}catch(error){msg.classList.add('error');text(msg,error.message)}
 });
