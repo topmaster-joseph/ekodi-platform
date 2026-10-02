@@ -13,6 +13,21 @@ test('seonammedi notice auth handoff returns to the notice composer instead of a
   assert.match(app,/if\(compose&&noticeToken\(\)\)\{noticeCompose\.hidden=false/);
 });
 
+
+test('seonammedi records the post-August-30 bidaewee activity chronology',async()=>{
+  const [dataText,control]=await Promise.all([
+    readFile(new URL('data.json',root),'utf8'),
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8')
+  ]);
+  const parsed=JSON.parse(dataText);
+  const rows=parsed.timeline.filter(row=>row.category==='비대위 활동'&&row.date>='2026.08.31');
+  const dates=rows.map(row=>row.date);
+  for(const date of ['2026.09.02','2026.09.03','2026.09.04','2026.09.05','2026.09.07','2026.09.08','2026.09.09','2026.09.14','2026.09.21','2026.09.22'])assert.ok(dates.includes(date),date);
+  assert.ok(rows.every(row=>Array.isArray(row.links)&&row.links.length>=1));
+  assert.match(control,/seed-bidaewee-20260904/);
+  assert.match(control,/seed-bidaewee-20260922/);
+});
+
 test('seonammedi civic channel keeps source attribution, media evidence and privacy boundaries',async()=>{const [html,data,app]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('data.json',root),'utf8'),readFile(new URL('app.js',root),'utf8')]);assert.match(html,/사실은 출처와 함께/);assert.match(html,/<h2>회계<\/h2>/);assert.match(html,/개인정보/);assert.match(html,/원출처 링크/);const parsed=JSON.parse(data);assert.ok(parsed.timeline.length>=10);assert.ok(parsed.sources.every(s=>s.publisher&&s.url));assert.equal(parsed.finance.raised,null);assert.equal(parsed.mediaPolicy.mode,'source-link-first');for(const row of parsed.timeline){assert.ok(Array.isArray(row.links));assert.ok(Array.isArray(row.media));for(const media of row.media){assert.ok(['photo','video'].includes(media.type));assert.match(media.url,/^https:\/\//);assert.ok(media.source)}}assert.ok(parsed.timeline.some(row=>row.media.some(media=>media.type==='photo')));assert.match(app,/mediaLabel/);assert.match(app,/safeUrl/);});
 
 test('canonical path, assets and feedback API use seonammedi',async()=>{const [html,app,build,router,wrangler]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('../scripts/build.mjs',import.meta.url),'utf8'),readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8'),readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8')]);assert.match(html,/https:\/\/ekodi\.kr\/seonammedi\//);assert.match(html,/\/seonammedi\/app\.css/);assert.match(app,/\/api\/seonammedi\/voices/);assert.match(build,/sites\/seonammedi\/public/);assert.match(router,/SEONAMMEDI_PREFIX='\/seonammedi'/);assert.match(router,/DELETED_SEONAM_PREFIXES/);const workerFirst=(wrangler.match(/run_worker_first = \[(.*?)\]/s)?.[1].match(/\"[^\"]+\"/g)||[]);assert.ok(workerFirst.length<=100);assert.doesNotMatch(wrangler,/\"\/seonammedi\\\*\"/);assert.doesNotMatch(wrangler,/\"\/seonam-med\\\*\"/);assert.doesNotMatch(wrangler,/crons\s*=/);assert.doesNotMatch(html,/사이트 일일점검|monitorBadge|id="monitor"/);assert.match(app,/\/api\/seonammedi\/monitor/);});
