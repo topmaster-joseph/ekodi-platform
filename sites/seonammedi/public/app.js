@@ -324,7 +324,22 @@ async function consumeNoticeHandoff(){
 function noticeLoginUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','portal');u.searchParams.set('direct','1');u.searchParams.set('return_to',location.origin+'/seonammedi/?compose=notice#notices');return u.href}
 function noticePermalink(id){return location.origin+'/seonammedi/notices/'+encodeURIComponent(id)}
 function noticeDate(item){const raw=item.publishedAt||item.updatedAt||'';return raw?new Date(raw).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):''}
-function noticeCard(item){const image=item.imageUrl?'<img src="'+escapeHtml(item.imageUrl)+'" alt="" loading="lazy">':'<span class="notice-thumb-empty">공지</span>';return '<article class="notice-item" data-notice-id="'+item.id+'"><a class="notice-open" href="'+noticePermalink(item.id)+'">'+image+'<div class="notice-row-copy"><h3>'+escapeHtml(item.title||'공지')+(item.pinned?'<span class="notice-pin">중요</span>':'')+'</h3><p>'+escapeHtml(item.body||'')+'</p></div><small class="notice-row-date">'+escapeHtml(noticeDate(item))+'</small></a></article>'}
+function noticeCard(item){
+  const image=item.imageUrl?'<img src="'+escapeHtml(item.imageUrl)+'" alt="" loading="lazy">':'<span class="notice-thumb-empty">공지</span>';
+  const mine=noticeOwnedByCurrentUser(item);
+  const actions=mine?'<div class="notice-row-actions"><button type="button" data-notice-edit="'+item.id+'">수정</button><button type="button" data-notice-delete="'+item.id+'">삭제</button></div>':'';
+  return '<article class="notice-item" data-notice-id="'+item.id+'"><a class="notice-open" href="'+noticePermalink(item.id)+'">'+image+'<div class="notice-row-copy"><h3>'+escapeHtml(item.title||'공지')+(item.pinned?'<span class="notice-pin">중요</span>':'')+'</h3><p>'+escapeHtml(item.body||'')+'</p></div><small class="notice-row-date">'+escapeHtml(noticeDate(item))+'</small></a>'+actions+'</article>'
+}
+async function deleteNotice(item){
+  if(!noticeOwnedByCurrentUser(item)||!confirm('이 게시물을 삭제하시겠습니까?'))return false;
+  const response=await fetch('/api/seonammedi/notices/'+item.id,{method:'DELETE',headers:{authorization:'Bearer '+noticeToken()},cache:'no-store'});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok){alert(data.error==='delete_forbidden'?'작성자만 삭제할 수 있습니다.':'삭제하지 못했습니다.');return false}
+  history.replaceState(null,'',location.pathname+'#notices');
+  const detail=el('noticeDetail');if(detail)detail.hidden=true;
+  const list=el('noticeList');if(list)list.hidden=false;
+  await loadNotices();return true;
+}
 function showNoticeDetail(item){
   const detail=el('noticeDetail');if(!detail)return;const images=(item.imageUrls?.length?item.imageUrls:(item.imageUrl?[item.imageUrl]:[])).map(url=>'<img src="'+escapeHtml(url)+'" alt="" class="notice-detail-image" loading="lazy">').join('');
   const mine=noticeOwnedByCurrentUser(item);
@@ -333,7 +348,7 @@ function showNoticeDetail(item){
   detail.querySelector('.notice-back')?.addEventListener('click',()=>{detail.hidden=true;el('noticeList').hidden=false;history.replaceState(null,'',location.pathname+'#notices')});
   detail.querySelector('.notice-share')?.addEventListener('click',async()=>{const url=noticePermalink(item.id);try{if(navigator.share)await navigator.share({title:item.title||'공지',text:item.body||'',url});else{await navigator.clipboard.writeText(url);alert('게시물 링크를 복사했습니다.')}}catch{}});
   detail.querySelector('.notice-edit')?.addEventListener('click',()=>beginNoticeEdit(item));
-  detail.querySelector('.notice-delete')?.addEventListener('click',async()=>{if(!confirm('이 게시물을 삭제하시겠습니까?'))return;const response=await fetch('/api/seonammedi/notices/'+item.id,{method:'DELETE',headers:{authorization:'Bearer '+noticeToken()},cache:'no-store'});const data=await response.json().catch(()=>({}));if(response.ok){history.replaceState(null,'',location.pathname+'#notices');detail.hidden=true;el('noticeList').hidden=false;await loadNotices()}else alert(data.error==='delete_forbidden'?'작성자만 삭제할 수 있습니다.':'삭제하지 못했습니다.')});
+  detail.querySelector('.notice-delete')?.addEventListener('click',()=>deleteNotice(item));
 }
 function renderFeaturedNotice(rows){
   const host=el('homeSpotlight');if(!host)return;const now=Date.now(),recent=[...rows].sort((a,b)=>String(b.publishedAt||b.updatedAt||'').localeCompare(String(a.publishedAt||a.updatedAt||'')));
@@ -349,6 +364,8 @@ async function loadNotices(){
     const response=await fetch('/api/seonammedi/notices',{cache:'no-store'});const data=await response.json().catch(()=>({}));
     if(!response.ok||!data.ok)throw new Error(data.message||'공지 목록을 불러오지 못했습니다.');
     publicNotices=Array.isArray(data.items)?data.items:[];host.innerHTML=publicNotices.length?publicNotices.map(noticeCard).join(''):'<p class="muted">등록된 공지가 없습니다.</p>';renderFeaturedNotice(publicNotices);
+    host.querySelectorAll('[data-notice-edit]').forEach(button=>button.addEventListener('click',()=>{const item=publicNotices.find(row=>Number(row.id)===Number(button.dataset.noticeEdit));if(item)beginNoticeEdit(item)}));
+    host.querySelectorAll('[data-notice-delete]').forEach(button=>button.addEventListener('click',()=>{const item=publicNotices.find(row=>Number(row.id)===Number(button.dataset.noticeDelete));if(item)deleteNotice(item)}));
     const pathMatch=location.pathname.match(/^\/seonammedi\/notices\/(\d+)\/?$/);const wanted=Number(pathMatch?.[1]||new URLSearchParams(location.search).get('notice')||0);const selected=publicNotices.find(item=>Number(item.id)===wanted);if(selected){showView('notices');showNoticeDetail(selected)}
   }catch(error){host.innerHTML='<p class="muted">'+escapeHtml(error.message||'공지 목록을 불러오지 못했습니다.')+'</p>'}
 }
