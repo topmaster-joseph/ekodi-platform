@@ -85,6 +85,10 @@ jobs:
           EKODI_CHANGED_FILES_PATH: ${{ runner.temp }}/ekodi-changed-files.txt
         run: node "$GITHUB_WORKSPACE/.ekodi-control/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
 
+      - name: Remove EKODI control checkout from application quality scope
+        shell: bash
+        run: rm -rf "$GITHUB_WORKSPACE/.ekodi-control"
+
       - name: Guard development quota before build and deploy
         shell: bash
         env:
