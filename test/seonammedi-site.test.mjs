@@ -298,7 +298,7 @@ test('SeonamMedi Control routes defer candidate verification until Shared Site b
 test('seonammedi public managed reads are migration-backed and never run request-time DDL',async()=>{
   const control=await readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8');
   const body=(start,end)=>control.slice(control.indexOf(start),control.indexOf(end));
-  const notices=body('async function listPublicNotices','async function listPublicChannels');
+  const notices=body('async function noticePublicProjection','async function listPublicChannels');
   const channels=body('async function listPublicChannels','async function adminMe');
   const pageData=body('async function listPublicPageData','function canManagePages');
   const timeline=body('async function listPublicTimeline','async function listAdminTimeline');
