@@ -53,14 +53,14 @@
 
 /seonammedi
   ! Content-Security-Policy
-  Content-Security-Policy: default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data: https:; frame-src https://www.instagram.com https://www.youtube-nocookie.com https://www.tiktok.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
   ! Cache-Control
   Cache-Control: no-store
   X-Robots-Tag: index, follow
 
 /seonammedi/*
   ! Content-Security-Policy
-  Content-Security-Policy: default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data: https:; frame-src https://www.instagram.com https://www.youtube-nocookie.com https://www.tiktok.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
   X-Robots-Tag: index, follow
 
 /seonammedi/admin/*
