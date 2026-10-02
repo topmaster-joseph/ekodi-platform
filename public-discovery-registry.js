@@ -1,6 +1,7 @@
 import { DISCOVERY_ORIGIN, DISCOVERY_PUBLIC_ROUTES, canonicalUrl } from './discovery-layer.js';
 import { listSitePublicationSettings } from './site-publication-runtime.js';
 import { collectPublicDiscoveryItems } from './public-discovery-content.js';
+import { fetchPublicDiscoveryRecords } from './public-discovery-runtime.js';
 
 export const EKODI_PUBLIC_REGISTRY_PATH='/public-registry.json';
 export const EKODI_PUBLIC_REGISTRY_POLICY='EKODI-PUBLIC-DISCOVERY-002';
@@ -51,6 +52,36 @@ function entryFromRoute(route){
   });
 }
 
+function entryFromSupabaseRecord(record){
+  const url=normalizeCanonical(record?.canonical_url);
+  if(!url)return null;
+  const path=normalizePath(new URL(url).pathname);
+  return Object.freeze({
+    id:`supabase:${record.source_type||'resource'}:${record.source_key||path}`,
+    type:record.source_type||'resource',
+    name:record.title||path,
+    url,path,
+    description:record.description||'',
+    schemaType:record.schema_type||'WebPage',
+    language:record.language||'ko',
+    imageUrl:record.image_url||'',
+    publishedAt:record.published_at||'',
+    updatedAt:record.modified_at||'',
+    changefreq:['event','product'].includes(record.source_type)?'daily':'weekly',
+    priority:record.source_type==='site'?'0.8':'0.7',
+    source:'supabase-public-discovery-registry',
+  });
+}
+
+function siteAllowsPath(settings,pathname){
+  const path=normalizePath(pathname);
+  const site=[...settings]
+    .filter(item=>normalizePath(item.canonicalPath||'/')!=='/')
+    .sort((a,b)=>normalizePath(b.canonicalPath||'/').length-normalizePath(a.canonicalPath||'/').length)
+    .find(item=>{const root=normalizePath(item.canonicalPath||'/');return path===root||path.startsWith(root+'/')});
+  return !site||site.publicStatus==='public';
+}
+
 function entryFromSite(site){
   if(site?.publicStatus!=='public')return null;
   const url=normalizeCanonical(site.canonicalUrl,site.canonicalPath);
@@ -70,7 +101,7 @@ function entryFromSite(site){
 }
 
 export async function buildEkodiPublicRegistry(env){
-  const settings=await listSitePublicationSettings(env);
+  const [settings,supabaseRecords]=await Promise.all([listSitePublicationSettings(env),fetchPublicDiscoveryRecords(env)]);
   const publicationByPath=new Map(settings.map(site=>[normalizePath(site.canonicalPath),site]));
   const entries=new Map();
 
@@ -102,6 +133,12 @@ export async function buildEkodiPublicRegistry(env){
     }));
   }
 
+  for(const record of supabaseRecords){
+    const entry=entryFromSupabaseRecord(record);
+    if(!entry||!siteAllowsPath(settings,entry.path))continue;
+    entries.set(entry.url,entry);
+  }
+
   const resources=[...entries.values()].sort((a,b)=>a.path.localeCompare(b.path,'ko'));
   return Object.freeze({
     schemaVersion:1,
@@ -110,8 +147,8 @@ export async function buildEkodiPublicRegistry(env){
     generatedAt:new Date().toISOString(),
     sitemapUrl:'https://ekodi.kr/sitemap.xml',
     rules:Object.freeze({
-      sourceOfTruth:'public_site_controls + registered discovery routes + public_discovery_items + verified public source adapters',
-      include:'public sites and public content only',
+      sourceOfTruth:'central Public Registry = site publication controls + canonical service registries + D1 public content ledger + Supabase public discovery registry',
+      include:'public sites, sub-sites, posts, events, products and services only',
       exclude:Object.freeze(['private','maintenance','admin','auth','oauth','api','personal/private workspace','preview']),
     }),
     count:resources.length,
