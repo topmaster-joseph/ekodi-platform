@@ -533,7 +533,10 @@ async function loadChannels(){
         const index=Number(buttons[next].dataset.channelIndex);showChannelPreview(index);buttons[next]?.focus();
       };
     }
-    activateChannelPlatform('all');
+    const route=channelRouteFromHash();
+    const routeItem=route?.id?publicChannels.find(item=>Number(item.id)===route.id):null;
+    const routePlatform=routeItem?String(routeItem.platform||'all').toLowerCase():(route?.platform&&channelsForPlatform(route.platform).length?route.platform:'all');
+    activateChannelPlatform(routePlatform,{preferredId:routeItem?.id||0,updateRoute:Boolean(routeItem)});
   }catch(error){
     publicChannels=[];
     host.innerHTML='<span class="muted">'+escapeHtml(error.message||'채널 목록을 불러오지 못했습니다.')+'</span>';
