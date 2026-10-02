@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "policyId": "SITE-EXECUTION-ENFORCEMENT-001",
   "status": "enforced",
   "sourceOfSites": "config/site-lifecycle-registry.json",
@@ -148,5 +148,15 @@
     "commonDefectMustBeFixedAtCommonOwner": true,
     "futureSitesAutoInheritPlatformCommon": true,
     "validatorMustRejectCommonRuleImplementedOnlyAsPerSitePatch": true
+  },
+  "authenticationEntry": {
+    "policyId": "SITE-CENTRAL-AUTH-ENTRY-001",
+    "status": "enforced",
+    "centralEntry": "https://ekodi.kr/auth/",
+    "siteLocalAuthPathForbidden": true,
+    "exactInitiatingReturnRequired": true,
+    "registeredCustomerDomainReturnAllowed": true,
+    "futureSitesAutoInherit": true,
+    "perSiteOptOutAllowed": false
   }
 }
