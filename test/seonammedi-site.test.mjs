@@ -412,6 +412,9 @@ test('seonammedi channel previews use provider-safe embeds and same-origin metad
   assert.match(control,/feeds\/videos\.xml\?channel_id=/);
   assert.match(control,/provider\.kind!=='youtube'/);
   assert.match(control,/function explicitChannelEmbed\(item\)/);
+  assert.match(control,/item\.platform==='instagram'/);
+  assert.match(control,/\['p','reel'\]\.includes\(parts\[0\]\)/);
+  assert.match(control,/instagram\.com\/\+'\+parts\[0\]/);
   assert.match(control,/preview\.contentType='explicit-preview'/);
   assert.match(control,/preview_url/);
   assert.match(control,/CHANNEL_BROWSER_UA/);
