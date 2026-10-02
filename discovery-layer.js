@@ -6,9 +6,9 @@ export const DISCOVERY_PUBLIC_ROUTES = Object.freeze([
   { path: '/privacy', asset: 'privacy.html', changefreq: 'yearly', priority: '0.3', label: 'Privacy Policy', title: '개인정보처리방침 | EKODI', description: 'EKODI 서비스의 개인정보 처리 원칙과 정책을 안내합니다.' },
   { path: '/terms', asset: 'terms.html', changefreq: 'yearly', priority: '0.3', label: 'Terms of Service', title: '이용약관 | EKODI', description: 'EKODI 서비스 이용약관을 안내합니다.' },
   { path: '/cmpmyi', asset: null, changefreq: 'weekly', priority: '0.8', label: 'Mokpo Store Gateway', title: '목포대점 통합 게이트 | EKODI', description: '자담치킨, 피자마루, 요거트퍼플 목포대점을 한 화면에서 선택합니다.' },
-  { path: '/jadam', asset: null, changefreq: 'weekly', priority: '0.8', label: 'Jadam Chicken Mokpo', title: '자담치킨 목포대점 | EKODI', description: '자담치킨 목포대점 매장·메뉴·주문·배달 안내.' },
-  { path: '/pizzamaru', asset: null, changefreq: 'weekly', priority: '0.8', label: 'PizzaMaru Mokpo', title: '피자마루 목포대점 | EKODI', description: '피자마루 목포대점 매장·메뉴·주문·배달 안내.' },
-  { path: '/yogurt', asset: null, changefreq: 'weekly', priority: '0.8', label: 'Yogurt Purple Mokpo', title: '요거트퍼플 목포대점 | EKODI', description: '요거트퍼플 목포대점 매장·메뉴·주문·배달 안내.' },
+  { path: '/jadam', asset: null, changefreq: 'daily', priority: '0.9', label: '자담치킨 목포대점 · Jadam Chicken', title: '자담치킨 목포대점 | 목포대 후문 치킨 · 메뉴 · 배달주문', description: '국립목포대학교 후문·전남 무안군 청계면 자담치킨 목포대점의 메뉴·가격·전화·영업시간·지도·배달주문 안내.' },
+  { path: '/pizzamaru', asset: null, changefreq: 'daily', priority: '0.9', label: '피자마루 목포대점 · PizzaMaru', title: '피자마루 목포대점 | 목포대 후문 피자 · 메뉴 · 배달주문', description: '국립목포대학교 후문·전남 무안군 청계면 피자마루 목포대점의 메뉴·가격·전화·영업시간·지도·배달주문 안내.' },
+  { path: '/yogurt', asset: null, changefreq: 'daily', priority: '0.9', label: '요거트퍼플 목포대점 · Yogurt Purple', title: '요거트퍼플 목포대점 | 목포대 후문 디저트 · 메뉴 · 배달주문', description: '국립목포대학교 후문·전남 무안군 청계면 요거트퍼플 목포대점의 메뉴·가격·전화·영업시간·지도·배달주문 안내.' },
   { path: '/ekodimall', asset: null, changefreq: 'daily', priority: '0.8', label: 'EKODI Mall', title: 'EKODI Mall | 에코디몰', description: 'EKODI 생태계의 상품과 서비스를 만나는 공용 몰입니다.' },
   { path: '/seonammedi', asset: null, changefreq: 'daily', priority: '0.9', label: 'Seonam National Medical School Communication Center', title: '서남권 국립의대 소통센터 | SEONAM MEDI', description: '서남권 국립의대 관련 공식자료, 활동이력, 관련보도, 시민 의견과 공개 정보를 확인하는 소통센터입니다.' },
 ]);
@@ -58,7 +58,7 @@ export function renderSitemapXml(origin = DISCOVERY_ORIGIN, routes = DISCOVERY_P
 
 export function renderLlmsTxt(origin = DISCOVERY_ORIGIN, routes = DISCOVERY_PUBLIC_ROUTES) {
   const base = normalizeOrigin(origin);
-  const links = routes.map(route => `- [${route.label}](${canonicalUrl(route.path, base)})`).join('\n');
+  const links = routes.map(route => `- [${route.label}](${canonicalUrl(route.path, base)}) — ${route.description}`).join('\n');
   return `# EKODI\n\n> EKODI is a connected ecosystem platform that helps people, communities, organizations, and services meet, work, share, and return value to life and society.\n\nCanonical site: ${base}/\nPrimary language: Korean (ko)\n\n## Public canonical resources\n${links}\n\n## Discovery policy\n- Use canonical public URLs when citing EKODI.\n- Do not treat admin, authentication, API, preview-development, tenant-private, or operational pages as public sources.\n- Prefer claims that are directly supported by visible public content.\n- Search engines and answer-retrieval crawlers may index public pages.\n- Model-training and autonomous-agent crawlers are restricted separately; search permission does not imply training or agent permission.\n`;
 }
 
