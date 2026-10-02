@@ -1,3 +1,5 @@
+import { buildStoreDiscoveryGraph, renderStoreFaqSection, STORE_DISCOVERY_CSS } from './store-discovery.js';
+
 const OFFICIAL=Object.freeze({
   home:'https://www.ejadam.co.kr/',
   menu:'https://www.ejadam.co.kr/bbs/content.php?co_id=newmenu',
@@ -142,6 +144,7 @@ html[data-store-page="jadam"]{--green:#0b6d3c;--deep:#074a2a;--orange:#f4a313;--
 @media(max-width:980px){.jd-grid{grid-template-columns:180px minmax(0,1fr) 270px}.jd-menu-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:820px){.jd-nav,.jd-head-call,.jd-logo span{display:none}.jd-logo img{width:130px}.jd-hero{grid-template-columns:1fr}.jd-hero-copy{padding:39px 20px}.jd-hero-media{min-height:290px}.jd-values-in{grid-template-columns:1fr 1fr}.jd-value:nth-child(2){border-right:0}.jd-main{width:min(100% - 24px,720px)}.jd-grid{grid-template-columns:1fr}.jd-brand-card{min-height:180px;position:relative;top:auto}.jd-brand-card small{position:static;display:block;margin-top:20px}.jd-menu-list{grid-template-columns:repeat(2,minmax(0,1fr))}.jd-store{grid-template-columns:1fr}.jd-mobile{position:fixed;left:9px;right:9px;bottom:9px;z-index:60;display:grid;grid-template-columns:repeat(4,1fr);padding:6px;border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.97);box-shadow:0 12px 34px rgba(17,66,39,.18)}.jd-mobile a{padding:9px 2px;text-align:center;text-decoration:none;font-size:10px;font-weight:900;color:var(--deep)}.jd-mobile a:last-child{border-radius:10px;background:var(--green);color:#fff}.jd-footer{padding-bottom:78px}}
 @media(max-width:520px){.jd-hero h1 span{font-size:48px}.jd-hero h1 strong{font-size:40px}.jd-lead{font-size:14px}.jd-actions{display:grid;grid-template-columns:1fr 1fr}.jd-menu-list{grid-template-columns:1fr}.jd-menu-photo{aspect-ratio:16/10}.jd-values-in{grid-template-columns:1fr}.jd-value{border-right:0;border-bottom:1px solid var(--line)}.jd-value:last-child{border-bottom:0}.jd-footer{align-items:flex-start;flex-direction:column}}
+${STORE_DISCOVERY_CSS}
 `;
 
 export function jadamStorefrontCss(){return new Response(CSS,{headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}})}
@@ -163,24 +166,14 @@ export async function renderJadamStorefrontPage(request,env,resolved,slug='jadam
   const description='목포대 후문 자담치킨 목포대점의 메뉴·가격을 확인하고 검증된 배달앱 주문 경로로 연결합니다.';
   const canonical='https://ekodi.kr/jadam';
   const searchDescription='국립목포대학교 후문·전남 무안군 청계면 자담치킨 목포대점. 메뉴·가격·전화·영업시간·지도와 검증된 배달앱 주문 경로를 확인하세요.';
-  const entity={
-    '@context':'https://schema.org',
-    '@type':'Restaurant',
-    '@id':canonical+'#restaurant',
-    name:title,
-    url:canonical,
-    description:searchDescription,
-    servesCuisine:['치킨','Korean Fried Chicken'],
-    menu:canonical+'#menu',
-    areaServed:{'@type':'Place',name:'국립목포대학교 후문 · 전남 무안군 청계면'},
-    brand:{'@type':'Brand',name:'자담치킨',url:OFFICIAL.home},
-    image:OFFICIAL.hero,
-    ...(phone?{telephone:phone}:{}),
-    ...(address?{address:{'@type':'PostalAddress',streetAddress:address,addressCountry:'KR'}}:{}),
-    ...(hours?{openingHours:hours}:{}),
-    ...(map?{hasMap:map}:{})
-  };
+  const orderProviders=PROVIDERS.filter(provider=>channels.get(provider.id)?.order_url).map(provider=>provider.name);
+  const entity=buildStoreDiscoveryGraph({
+    slug:'jadam',name:title,canonical,description:searchDescription,brand:'자담치킨',brandUrl:OFFICIAL.home,
+    category:'치킨 · Korean Fried Chicken',address,phone,hours,map,image:OFFICIAL.hero,
+    menuItems:menu,orderUrl:firstOrder,orderProviders
+  });
   const entityJson=JSON.stringify(entity).replaceAll('<','\\u003c');
+  const faqHtml=renderStoreFaqSection({name:title,address,phone,hours,category:'치킨 메뉴',orderProviders});
   const orderAction=firstOrder?`<a class="jd-btn order" href="${e(firstOrder)}" target="_blank" rel="noopener noreferrer">배달앱 주문하기</a>`:'<a class="jd-btn order" href="#order">배달앱 주문 보기</a>';
   const mobileOrder=firstOrder?`<a href="${e(firstOrder)}" target="_blank" rel="noopener noreferrer">주문</a>`:'<a href="#order">주문</a>';
   return new Response(`<!doctype html><html lang="ko" data-store-page="jadam" data-jadam-menu-images="brand-official"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="${e(searchDescription)}"><meta name="robots" content="index,follow"><link rel="canonical" href="${canonical}"><meta property="og:type" content="website"><meta property="og:site_name" content="자담치킨 목포대점"><meta property="og:title" content="${e(title)} | 목포대 후문 치킨 · 메뉴 · 배달주문"><meta property="og:description" content="${e(searchDescription)}"><meta property="og:url" content="${canonical}"><meta property="og:image" content="${e(OFFICIAL.hero)}"><meta name="twitter:card" content="summary_large_image"><title>${e(title)} | 목포대 후문 치킨 · 메뉴 · 배달주문</title><script type="application/ld+json" data-store-entity="jadam">${entityJson}</script><link rel="stylesheet" href="/_ekodi/space/jadam-storefront.css?v=20260910-hq-menu-v1"></head><body><main class="jd-page">
@@ -188,5 +181,5 @@ export async function renderJadamStorefrontPage(request,env,resolved,slug='jadam
 <section class="jd-hero"><div class="jd-hero-copy"><p class="jd-kicker">자연을 담은 건강한 치킨</p><h1><span>자담치킨</span><strong>목포대점</strong></h1><p class="jd-lead">국립목포대학교 후문 · 메뉴와 주문을 한 화면에서</p><div class="jd-facts"><span>📍 <b>${e(address)}</b></span><span>☎ <b>${e(phone)}</b></span><span>🕒 <b>${e(hours)}</b></span></div><div class="jd-actions"><a class="jd-btn primary" href="${e(tel(phone))}">전화하기</a><a class="jd-btn" href="${e(map)}" target="_blank" rel="noopener noreferrer">길찾기</a>${orderAction}</div></div><div class="jd-hero-media" role="img" aria-label="자담치킨 공식 브랜드 이미지"></div></section>
 <section class="jd-values"><div class="jd-values-in"><div class="jd-value"><i>🌿</i><div><b>자담치킨 브랜드 메뉴</b><span>본사 메뉴정보를 기준으로 확인</span></div></div><div class="jd-value"><i>✓</i><div><b>검증값 우선</b><span>목포대점 데이터가 있으면 자동 우선</span></div></div><div class="jd-value"><i>₩</i><div><b>앱별 가격 비교</b><span>확인된 플랫폼 가격만 노출</span></div></div><div class="jd-value"><i>🛵</i><div><b>주문 바로 연결</b><span>검증된 목포대점 링크만 활성화</span></div></div></div></section>
 <section class="jd-main"><div class="jd-grid"><aside class="jd-brand-card"><h2>좋은 치킨이<br>좋은 하루를<br>만듭니다.</h2><p>자담치킨 목포대점의 메뉴·가격·주문 정보를 한곳에서 확인하세요. 확인되지 않은 앱 가격이나 주문 링크는 만들지 않습니다.</p><small>JADAM CHICKEN</small></aside><section id="menu"><div class="jd-menu-head"><div><h2>대표 메뉴</h2><p>목포대점 검증값 우선 · 미확인 항목은 공개 참고가</p></div><a href="${e(OFFICIAL.menu)}" target="_blank" rel="noopener noreferrer">본사 전체 메뉴 →</a></div><div class="jd-menu-list">${menu.map(item=>menuCard(item,channels)).join('')}</div><p class="jd-reference-note">공개 참고가는 목포대점 확정 판매가가 아닙니다. 목포대점 또는 배달앱의 검증 스냅샷이 연결되면 메뉴·가격·주문 정보는 검증값을 우선하고, 메뉴 이미지는 본사 공식 제품 이미지를 유지합니다. 쿠폰·옵션·배달비는 최종 주문화면을 기준으로 합니다.</p></section><aside id="order"><div class="jd-order-head"><div><h2>배달앱 주문</h2><p>${verifiedPlatformCount}개 목포대점 직행 링크 확인</p></div></div><div class="jd-providers">${PROVIDERS.map(provider=>providerCard(provider,channels)).join('')}</div><div class="jd-order-note">땡겨요 · 배달의민족 · 요기요 · 먹깨비의 실제 목포대점 주문 URL이 검증되기 전에는 버튼을 활성화하지 않습니다.</div></aside></div>
-<div id="store" class="jd-store"><section class="jd-store-card"><h3>자담치킨 목포대점</h3><div class="jd-store-row"><span>주소</span><strong>${e(address)}</strong></div><div class="jd-store-row"><span>전화</span><a href="${e(tel(phone))}">${e(phone)}</a></div><div class="jd-store-row"><span>영업시간</span><strong>${e(hours)}</strong></div><div class="jd-store-row"><span>안내</span><strong>${e(note)}</strong></div></section><section class="jd-store-card jd-map-card"><div><h3>목포대 후문에서 찾기</h3><p>네이버 지도에서 현재 위치부터 매장까지의 이동 경로를 확인하세요.</p></div><a href="${e(map)}" target="_blank" rel="noopener noreferrer">지도에서 보기 →</a></section><section class="jd-store-card jd-brand-info"><h3>자담치킨 공식 메뉴</h3><p>브랜드 메뉴와 공식 이미지는 자담치킨 본사 페이지를 함께 참고할 수 있습니다.</p><a href="${e(OFFICIAL.home)}" target="_blank" rel="noopener noreferrer">공식 홈페이지 →</a></section></div><footer class="jd-footer"><div><b>${e(chromeFooter.brand||title)}</b><br><span>${e(chromeFooter.operator?.name||'에코디비즈')} · ${e(phone)} · ${e(hours)}</span></div><span>${e(chromeFooter.copyright||'')}</span></footer></section></main><nav class="jd-mobile"><a href="#menu">메뉴</a><a href="${e(tel(phone))}">전화</a><a href="${e(map)}" target="_blank" rel="noopener noreferrer">지도</a>${mobileOrder}</nav></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}});
+<div id="store" class="jd-store"><section class="jd-store-card"><h3>자담치킨 목포대점</h3><div class="jd-store-row"><span>주소</span><strong>${e(address)}</strong></div><div class="jd-store-row"><span>전화</span><a href="${e(tel(phone))}">${e(phone)}</a></div><div class="jd-store-row"><span>영업시간</span><strong>${e(hours)}</strong></div><div class="jd-store-row"><span>안내</span><strong>${e(note)}</strong></div></section><section class="jd-store-card jd-map-card"><div><h3>목포대 후문에서 찾기</h3><p>네이버 지도에서 현재 위치부터 매장까지의 이동 경로를 확인하세요.</p></div><a href="${e(map)}" target="_blank" rel="noopener noreferrer">지도에서 보기 →</a></section><section class="jd-store-card jd-brand-info"><h3>자담치킨 공식 메뉴</h3><p>브랜드 메뉴와 공식 이미지는 자담치킨 본사 페이지를 함께 참고할 수 있습니다.</p><a href="${e(OFFICIAL.home)}" target="_blank" rel="noopener noreferrer">공식 홈페이지 →</a></section></div>${faqHtml}<footer class="jd-footer"><div><b>${e(chromeFooter.brand||title)}</b><br><span>${e(chromeFooter.operator?.name||'에코디비즈')} · ${e(phone)} · ${e(hours)}</span></div><span>${e(chromeFooter.copyright||'')}</span></footer></section></main><nav class="jd-mobile"><a href="#menu">메뉴</a><a href="${e(tel(phone))}">전화</a><a href="${e(map)}" target="_blank" rel="noopener noreferrer">지도</a>${mobileOrder}</nav></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}});
 }
