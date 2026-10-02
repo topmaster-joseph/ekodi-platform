@@ -269,7 +269,13 @@ async function ensureTimelineSeed(db){
   const now=new Date().toISOString();
   for(const item of TIMELINE_SEED){
     const existing=await db.prepare('SELECT id FROM seonammedi_timeline WHERE legacy_key=? LIMIT 1').bind(item.legacyKey).first().catch(()=>null);
-    if(existing?.id)continue;
+    if(existing?.id){
+      await db.prepare(`UPDATE seonammedi_timeline SET
+        event_date=?,category=?,title=?,summary=?,evidence=?,links_json=?,media_json=?,monitor_keywords_json=?,status='published',sort_order=?,updated_at=?
+        WHERE id=?`)
+        .bind(item.date,item.category,item.title,item.summary,item.evidence,JSON.stringify(item.links||[]),JSON.stringify(item.media||[]),JSON.stringify(item.monitorKeywords||[]),item.sortOrder,now,existing.id).run();
+      continue;
+    }
     await db.prepare(`INSERT INTO seonammedi_timeline(
       legacy_key,event_date,category,title,summary,evidence,links_json,media_json,monitor_keywords_json,status,sort_order,created_by,created_at,updated_at
     ) VALUES(?,?,?,?,?,?,?,?,?,'published',?,'system-seed',?,?)`)
@@ -708,6 +714,7 @@ function timelineRow(row,admin=false){
   return item;
 }
 async function listPublicTimeline(env){
+  await ensureTimelineSeed(env.DB);
   const rows=await env.DB.prepare("SELECT * FROM seonammedi_timeline WHERE status='published' ORDER BY sort_order ASC,id ASC LIMIT 300").all();
   return json({ok:true,items:(rows.results||[]).map(row=>timelineRow(row,false))});
 }
