@@ -35,17 +35,18 @@ async function loadPublicUrls(){
 }
 
 async function submitNaver(urls){
-  const results=[];
-  for(const url of urls){
-    const endpoint=new URL('https://searchadvisor.naver.com/indexnow');
-    endpoint.searchParams.set('url',url);
-    endpoint.searchParams.set('key',EKODI_INDEXNOW_KEY);
-    endpoint.searchParams.set('keyLocation',EKODI_INDEXNOW_KEY_URL);
-    const response=await fetchWithTimeout(endpoint,{headers:{'user-agent':ua}});
-    results.push({url,status:response.status,ok:response.ok});
-    if(!response.ok)throw new Error(`Naver IndexNow failed for ${url}: HTTP ${response.status}`);
-  }
-  return results;
+  const response=await fetchWithTimeout('https://searchadvisor.naver.com/indexnow',{
+    method:'POST',
+    headers:{'content-type':'application/json; charset=utf-8','user-agent':ua},
+    body:JSON.stringify({
+      host:'ekodi.kr',
+      key:EKODI_INDEXNOW_KEY,
+      keyLocation:EKODI_INDEXNOW_KEY_URL,
+      urlList:urls,
+    }),
+  });
+  if(!response.ok)throw new Error(`Naver IndexNow batch failed: HTTP ${response.status}`);
+  return {status:response.status,ok:true,count:urls.length};
 }
 
 async function submitIndexNow(urls){
