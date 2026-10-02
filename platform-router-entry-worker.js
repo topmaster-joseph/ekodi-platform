@@ -516,7 +516,7 @@ async function routePlatform(request,env,ctx){
     return legacyResponse;
 }
 
-export default {
+const platformRouterEntry = {
   async fetch(request,env,ctx){
     const guard=await enforcePlatformRequestSecurity(request,env);
     if(guard)return applyPlatformSecurityHeaders(guard,request);
