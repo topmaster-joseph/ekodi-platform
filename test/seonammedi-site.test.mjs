@@ -73,6 +73,18 @@ test('seonammedi source changes are wired to both Shared Site and Control API re
 test('seonammedi branding is canonical and legacy public paths are deleted',async()=>{const html=await readFile(new URL('index.html',root),'utf8');assert.match(html,/서남권 국립의대 소통센터/);assert.doesNotMatch(html,/시민소통센터/);assert.match(html,/\/seonammedi\/app\.css/);});
 
 
+
+test('seonammedi admin restores unique panel and organization tab URL state',async()=>{
+  const adminJs=await readFile(new URL('admin/admin.js',root),'utf8');
+  assert.match(adminJs,/ADMIN_ROUTE_PANELS=new Set\(\['dashboard','status','channels','voices','finance','notices','organization','minutes','access'\]\)/);
+  assert.match(adminJs,/searchParams\.set\('panel',panel\)/);
+  assert.match(adminJs,/searchParams\.set\('org',org\)/);
+  assert.match(adminJs,/searchParams\.set\('records','review'\)/);
+  assert.match(adminJs,/restoreAdminRoute\(\{replace:true\}\)/);
+  assert.match(adminJs,/addEventListener\('popstate',\(\)=>restoreAdminRoute\(\)\)/);
+  assert.match(adminJs,/showOrgAdminTab\(params\.get\('org'\)\|\|'bidae',\{route:false\}\)/);
+});
+
 test('seonammedi admin stays site-local before and after Google authentication',async()=>{
   const [adminHtml,adminJs,auth,router,migration,manifestText]=await Promise.all([
     readFile(new URL('admin/index.html',root),'utf8'),
