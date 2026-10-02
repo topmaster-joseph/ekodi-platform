@@ -78,7 +78,8 @@ function hoursText(value) {
   if (typeof value === 'string') return value;
   if (Array.isArray(value)) return value.map(String).join(' · ');
   if (typeof value === 'object') {
-    return Object.entries(value).map(([key, item]) => `${key} ${Array.isArray(item) ? item.join(', ') : String(item)}`).join(' · ');
+    if (value.display) return String(value.display);
+    return Object.entries(value).filter(([key])=>key!=='note').map(([key, item]) => `${key} ${Array.isArray(item) ? item.join(', ') : String(item)}`).join(' · ');
   }
   return '';
 }
