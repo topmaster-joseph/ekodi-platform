@@ -399,6 +399,34 @@ async function createPublicNotice(request,env){
     return json({ok:true,id:Number(result?.meta?.last_row_id||0)},201);
   }catch(error){for(const item of stored)await deleteNoticeDriveKey(env,item.key);throw error}
 }
+async function updatePublicNotice(request,env,id){
+  const principal=await principalFromSupabaseRequest(request);if(!principal?.email)return json({ok:false,error:'authentication_required'},401);
+  const row=await env.DB.prepare('SELECT id,title,body,created_by,image_key,image_type,image_keys_json,image_types_json FROM seonammedi_notices WHERE id=?').bind(id).first();if(!row)return json({ok:false,error:'not_found'},404);
+  const email=lower(principal.email),admin=await env.DB.prepare("SELECT role FROM admins WHERE lower(trim(email))=? AND role='super_admin' LIMIT 1").bind(email).first().catch(()=>null);
+  if(lower(row.created_by)!==email&&!admin)return json({ok:false,error:'edit_forbidden'},403);
+  const form=await request.formData().catch(()=>null);if(!form)return json({ok:false,error:'invalid_form'},400);
+  const title=clean(form.get('title'),180),copy=clean(form.get('body'),10000);if(!title)return json({ok:false,error:'title_required'},400);
+  const existingKeys=noticeImageKeys(row);
+  let existingTypes=[];try{const parsed=JSON.parse(String(row.image_types_json||'[]'));if(Array.isArray(parsed))existingTypes=parsed}catch{}
+  if(!existingTypes.length&&row.image_type)existingTypes=[row.image_type];
+  const keepRaw=String(form.get('keepImageIndexes')??'');let keepIndexes;
+  if(keepRaw==='')keepIndexes=existingKeys.map((_,index)=>index);
+  else{try{const parsed=JSON.parse(keepRaw);keepIndexes=Array.isArray(parsed)?parsed.map(Number).filter(index=>Number.isInteger(index)&&index>=0&&index<existingKeys.length):[]}catch{return json({ok:false,error:'invalid_keep_images'},400)}}
+  keepIndexes=[...new Set(keepIndexes)].slice(0,5);
+  const keptKeys=keepIndexes.map(index=>existingKeys[index]).filter(Boolean),keptTypes=keepIndexes.map(index=>existingTypes[index]||'').slice(0,keptKeys.length);
+  const images=form.getAll('images').filter(image=>image&&typeof image==='object'&&Number(image.size||0)>0);
+  if(keptKeys.length+images.length>5)return json({ok:false,error:'too_many_images'},400);
+  const stored=[];try{for(const image of images)stored.push(await storeNoticeImageInDrive(env,image,principal))}
+  catch(error){for(const item of stored)await deleteNoticeDriveKey(env,item.key);const code=String(error?.message||'image_storage_unavailable');return json({ok:false,error:code},code==='image_too_large'?413:code==='unsupported_image_type'?415:503)}
+  const keys=[...keptKeys,...stored.map(item=>item.key)],types=[...keptTypes,...stored.map(item=>item.type)],now=new Date().toISOString();
+  try{
+    await env.DB.prepare('UPDATE seonammedi_notices SET title=?,body=?,image_key=?,image_type=?,image_keys_json=?,image_types_json=?,updated_at=? WHERE id=?')
+      .bind(title,copy,keys[0]||'',types[0]||'',JSON.stringify(keys),JSON.stringify(types),now,id).run();
+  }catch(error){for(const item of stored)await deleteNoticeDriveKey(env,item.key);throw error}
+  const kept=new Set(keptKeys);for(const key of existingKeys)if(!kept.has(key))await deleteNoticeDriveKey(env,key);
+  return json({ok:true,id});
+}
+
 async function deletePublicNotice(request,env,id){
   const principal=await principalFromSupabaseRequest(request);if(!principal?.email)return json({ok:false,error:'authentication_required'},401);
   const row=await env.DB.prepare('SELECT id,created_by,image_key,image_keys_json FROM seonammedi_notices WHERE id=?').bind(id).first();if(!row)return json({ok:false,error:'not_found'},404);
@@ -932,6 +960,9 @@ export async function handleSeonamMediAdminApi(request,env){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return createPublicNotice(request,env);
   }
   const noticeDeleteMatch=url.pathname.match(/^\/api\/seonammedi\/notices\/(\d+)$/);
+  if(noticeDeleteMatch&&request.method==='PUT'){
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return updatePublicNotice(request,env,Number(noticeDeleteMatch[1]));
+  }
   if(noticeDeleteMatch&&request.method==='DELETE'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return deletePublicNotice(request,env,Number(noticeDeleteMatch[1]));
   }

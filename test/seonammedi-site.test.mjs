@@ -529,3 +529,19 @@ test('seonammedi notice permalink is served by the site shell',async()=>{
   assert.match(app,/pathname\.match\(\/\^\\\/seonammedi\\\/notices/);
   assert.match(app,/find\(item=>Number\(item\.id\)===wanted\)/);
 });
+
+
+test('seonammedi notice detail lets the author edit and delete the clicked post',async()=>{
+  const [app,control]=await Promise.all([readFile(new URL('app.js',root),'utf8'),readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8')]);
+  assert.match(app,/noticeOwnedByCurrentUser/);
+  assert.match(app,/class="notice-edit">수정<\/button>/);
+  assert.match(app,/class="notice-delete">삭제<\/button>/);
+  assert.match(app,/beginNoticeEdit/);
+  assert.ok(app.includes("method=editingId?'PUT':'POST'"));
+  assert.match(app,/keepImageIndexes/);
+  assert.match(app,/data-remove-existing-image/);
+  assert.match(control,/async function updatePublicNotice\(request,env,id\)/);
+  assert.match(control,/edit_forbidden/);
+  assert.match(control,/request\.method==='PUT'/);
+  assert.match(control,/UPDATE seonammedi_notices SET title=\?,body=\?,image_key=\?,image_type=\?,image_keys_json=\?,image_types_json=\?,updated_at=\?/);
+});
