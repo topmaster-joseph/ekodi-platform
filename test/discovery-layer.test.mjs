@@ -63,7 +63,7 @@ test('page structured data links WebPage to stable WebSite and Organization enti
 
 test('discovery head is page-specific and exposes canonical social metadata', () => {
   const head = renderDiscoveryHead('/privacy');
-  assert.match(head, /data-ekodi-discovery="v3"/);
+  assert.match(head, /data-ekodi-discovery="v2"/);
   assert.match(head, /property="og:url" content="https:\/\/ekodi\.kr\/privacy"/);
   assert.match(head, /application\/ld\+json/);
   assert.match(head, /name="robots" content="index, follow"/);
