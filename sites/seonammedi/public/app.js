@@ -307,7 +307,7 @@ let publicNotices=[];
 function noticeToken(){try{const raw=localStorage.getItem(NOTICE_SESSION_KEY)||'';if(!raw)return'';const parsed=JSON.parse(raw);const session=parsed?.currentSession||parsed?.session||parsed;const access=String(session?.access_token||'');const expires=Number(session?.expires_at||0);return access&&(!expires||expires>Math.floor(Date.now()/1000)+30)?access:''}catch{return''}}
 function noticeSession(){try{const raw=localStorage.getItem(NOTICE_SESSION_KEY)||'';if(!raw)return null;const parsed=JSON.parse(raw);return parsed?.currentSession||parsed?.session||parsed||null}catch{return null}}
 function noticeCurrentEmail(){return String(noticeSession()?.user?.email||'').trim().toLowerCase()}
-function noticeOwnedByCurrentUser(item){const email=noticeCurrentEmail();return Boolean(noticeToken()&&email&&email===String(item?.createdBy||'').trim().toLowerCase())}
+function noticeOwnedByCurrentUser(item){return Boolean(noticeToken()&&item?.canManage)}
 async function consumeNoticeHandoff(){
   const params=new URLSearchParams(location.hash.replace(/^#/,''));
   const tokenHash=params.get('ekodi_token');if(!tokenHash)return false;
@@ -361,7 +361,7 @@ function renderFeaturedNotice(rows){
 async function loadNotices(){
   const host=el('noticeList');if(!host)return;
   try{
-    const response=await fetch('/api/seonammedi/notices',{cache:'no-store'});const data=await response.json().catch(()=>({}));
+    const token=noticeToken();const response=await fetch('/api/seonammedi/notices',{cache:'no-store',headers:token?{authorization:'Bearer '+token}:{}});const data=await response.json().catch(()=>({}));
     if(!response.ok||!data.ok)throw new Error(data.message||'공지 목록을 불러오지 못했습니다.');
     publicNotices=Array.isArray(data.items)?data.items:[];host.innerHTML=publicNotices.length?publicNotices.map(noticeCard).join(''):'<p class="muted">등록된 공지가 없습니다.</p>';renderFeaturedNotice(publicNotices);
     host.querySelectorAll('[data-notice-edit]').forEach(button=>button.addEventListener('click',()=>{const item=publicNotices.find(row=>Number(row.id)===Number(button.dataset.noticeEdit));if(item)beginNoticeEdit(item)}));
