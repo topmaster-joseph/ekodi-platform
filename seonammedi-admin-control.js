@@ -346,7 +346,7 @@ async function storeNoticeImageInDrive(env,image,principal){
   if(!env?.STORAGE?.fetch)throw new Error('image_storage_unavailable');
   const type=String(image.type||'').toLowerCase();
   if(!['image/jpeg','image/png','image/webp','image/gif'].includes(type))throw new Error('unsupported_image_type');
-  if(Number(image.size||0)>8*1024*1024)throw new Error('image_too_large');
+  if(Number(image.size||0)>5*1024*1024)throw new Error('image_too_large');
   const ext=type==='image/jpeg'?'jpg':type.split('/')[1];
   const bytes=new Uint8Array(await image.arrayBuffer());
   let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);
