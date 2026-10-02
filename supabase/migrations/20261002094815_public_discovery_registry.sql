@@ -264,3 +264,37 @@ after insert or update or delete on public.store_public_profiles
 for each row execute function public.sync_store_profile_discovery();
 
 update public.activities set updated_at = updated_at where status='published' and visibility='public';
+
+
+-- Explicit Data API execution policy. Registry mutation helpers are server-only.
+revoke execute on function public.discovery_private_path(text)
+from public, anon, authenticated;
+grant execute on function public.discovery_private_path(text)
+to service_role;
+
+revoke execute on function public.discovery_upsert_public_record(
+  text,text,text,text,text,text,text,text,text,timestamptz,timestamptz,jsonb,timestamptz
+) from public, anon, authenticated;
+grant execute on function public.discovery_upsert_public_record(
+  text,text,text,text,text,text,text,text,text,timestamptz,timestamptz,jsonb,timestamptz
+) to service_role;
+
+revoke execute on function public.discovery_remove_record(text,text)
+from public, anon, authenticated;
+grant execute on function public.discovery_remove_record(text,text)
+to service_role;
+
+revoke execute on function public.sync_activity_discovery()
+from public, anon, authenticated;
+grant execute on function public.sync_activity_discovery()
+to service_role;
+
+revoke execute on function public.sync_trade_product_discovery()
+from public, anon, authenticated;
+grant execute on function public.sync_trade_product_discovery()
+to service_role;
+
+revoke execute on function public.sync_store_profile_discovery()
+from public, anon, authenticated;
+grant execute on function public.sync_store_profile_discovery()
+to service_role;
