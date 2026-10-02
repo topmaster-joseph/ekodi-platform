@@ -52,6 +52,27 @@
         const lodging=Array.isArray(c.lodging)?c.lodging:[];for(let i=0;i<2;i++){const l=lodging[i]||{};set(`[data-trip-lodging-${i+1}-name]`,l.name);set(`[data-trip-lodging-${i+1}-detail]`,[l.room,l.capacity,l.note].filter(Boolean).join(' · '))}
       }).catch(()=>{});
   }
+  const activityItems=[...document.querySelectorAll('[data-activity-item]')];
+  const activityYear=document.querySelector('[data-activity-year]');
+  const activityMonth=document.querySelector('[data-activity-month]');
+  if(activityItems.length&&activityYear&&activityMonth){
+    const years=[...new Set(activityItems.map(item=>item.dataset.year).filter(Boolean))].sort((a,b)=>Number(b)-Number(a));
+    const months=[...new Set(activityItems.map(item=>item.dataset.month).filter(Boolean))].sort((a,b)=>Number(b)-Number(a));
+    for(const year of years){const option=document.createElement('option');option.value=year;option.textContent=year+'년';activityYear.append(option)}
+    for(const month of months){const option=document.createElement('option');option.value=month;option.textContent=Number(month)+'월';activityMonth.append(option)}
+    const applyActivityFilters=()=>{
+      const year=activityYear.value,month=activityMonth.value;
+      let visible=0;
+      for(const item of activityItems){
+        const show=(year==='all'||item.dataset.year===year)&&(month==='all'||item.dataset.month===month);
+        item.hidden=!show;if(show)visible++;
+      }
+      const empty=document.querySelector('[data-activity-empty]');
+      if(empty)empty.hidden=visible>0;
+    };
+    activityYear.addEventListener('change',applyActivityFilters);
+    activityMonth.addEventListener('change',applyActivityFilters);
+  }
   if(!form)return;
   const status=form.querySelector('[data-application-status]');const submit=form.querySelector('button[type="submit"]');
   const closeApplication=(data={})=>{
