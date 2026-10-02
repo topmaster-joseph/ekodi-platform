@@ -55,14 +55,15 @@ test('platform and site admin surfaces share one publication state source', asyn
 });
 
 
-test('site admin may place publication control beside its home menu using the universal slot', async () => {
+test('site publication runtime remains reusable while seonammedi omits the site-local selector', async () => {
   const [runtime,adminHtml,adminCss]=await Promise.all([
     read('site-publication-runtime.js'),
     read('sites/seonammedi/public/admin/index.html'),
     read('sites/seonammedi/public/admin/admin.css'),
   ]);
   assert.match(adminHtml,/sidebar-home-row/);
-  assert.match(adminHtml,/data-panel-target="dashboard"[^>]*>운영홈<\/button>[\s\S]*data-ekodi-site-publication-slot/);
+  assert.match(adminHtml,/data-panel-target="dashboard"[^>]*>운영홈<\/button>/);
+  assert.doesNotMatch(adminHtml,/data-ekodi-site-publication-slot|사이트 공개여부/);
   assert.match(runtime,/document\.querySelector\('\[data-ekodi-site-publication-slot\]'\)/);
   assert.match(runtime,/ekodi-site-publication-inline/);
   assert.match(runtime,/if\(slot\)select\.onchange=persist/);
