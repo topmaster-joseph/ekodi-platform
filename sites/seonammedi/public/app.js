@@ -473,7 +473,7 @@ async function showChannelPreview(index,{updateRoute=true}={}){
 function channelsForPlatform(platform){
   return platform==='all'?publicChannels:publicChannels.filter(item=>String(item.platform||'').toLowerCase()===platform);
 }
-function renderChannelAccounts(platform){
+function renderChannelAccounts(platform,{preferredId=0,updateRoute=true}={}){
   const host=el('publicChannelAccounts'),preview=el('channelPreview');if(!host)return;
   const rows=channelsForPlatform(platform);
   if(!rows.length){
@@ -481,11 +481,12 @@ function renderChannelAccounts(platform){
     if(preview)preview.hidden=true;
     return;
   }
+  const selectedRow=Math.max(0,preferredId?rows.findIndex(item=>Number(item.id)===Number(preferredId)):0);
   host.innerHTML=rows.map((item,rowIndex)=>{
-    const index=publicChannels.indexOf(item);
-    return '<button type="button" class="channel-account'+(rowIndex===0?' active':'')+'" role="tab" aria-selected="'+(rowIndex===0?'true':'false')+'" tabindex="'+(rowIndex===0?'0':'-1')+'" data-channel-index="'+index+'"><span>'+escapeHtml(channelPlatformLabel(item.platform))+'</span><strong>'+escapeHtml(item.name||'관련 채널')+'</strong><small>'+escapeHtml(item.official?'공식 확인':channelCategoryLabel(item.category))+'</small></button>';
+    const index=publicChannels.indexOf(item),active=rowIndex===selectedRow;
+    return '<button type="button" class="channel-account'+(active?' active':'')+'" role="tab" aria-selected="'+(active?'true':'false')+'" tabindex="'+(active?'0':'-1')+'" data-channel-index="'+index+'"><span>'+escapeHtml(channelPlatformLabel(item.platform))+'</span><strong>'+escapeHtml(item.name||'관련 채널')+'</strong><small>'+escapeHtml(item.official?'공식 확인':channelCategoryLabel(item.category))+'</small></button>';
   }).join('');
-  showChannelPreview(publicChannels.indexOf(rows[0]));
+  showChannelPreview(publicChannels.indexOf(rows[selectedRow]),{updateRoute});
 }
 function renderChannelPlatformTabs(){
   const host=el('publicChannelTabs');if(!host)return;
@@ -494,7 +495,7 @@ function renderChannelPlatformTabs(){
   const tabs=[...CHANNEL_PLATFORM_TABS,...extras.map(key=>[key,channelPlatformLabel(key)])];
   host.innerHTML=tabs.map(([key,label],index)=>'<button type="button" class="channel-tab'+(index===0?' active':'')+'" role="tab" aria-selected="'+(index===0?'true':'false')+'" tabindex="'+(index===0?'0':'-1')+'" data-channel-platform="'+escapeHtml(key)+'"><strong>'+escapeHtml(label)+'</strong><span>'+channelsForPlatform(key).length+'</span></button>').join('');
 }
-function activateChannelPlatform(platform){
+function activateChannelPlatform(platform,{preferredId=0,updateRoute=true}={}){
   activeChannelPlatform=platform||'all';
   const host=el('publicChannelTabs');
   host?.querySelectorAll('[data-channel-platform]').forEach(button=>{
@@ -503,7 +504,7 @@ function activateChannelPlatform(platform){
     button.setAttribute('aria-selected',active?'true':'false');
     button.tabIndex=active?0:-1;
   });
-  renderChannelAccounts(activeChannelPlatform);
+  renderChannelAccounts(activeChannelPlatform,{preferredId,updateRoute});
 }
 async function loadChannels(){
   const host=el('publicChannelTabs');if(!host)return;
