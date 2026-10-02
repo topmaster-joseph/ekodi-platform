@@ -71,6 +71,28 @@ export function channelAdminServices(){
   return ADMIN_SERVICE_CATALOG.filter(item=>Boolean(item.channelAdminSection));
 }
 
+function socialSubjectKey(item){
+  return String(item?.channelSubjectKey || item?.id || '').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,48);
+}
+
+export function canonicalCentralSocialAdminPath(service){
+  const item=typeof service==='string'?getAdminService(service):service;
+  const subject=socialSubjectKey(item);
+  if(!item||!subject)return '/admin/content/social';
+  const params=new URLSearchParams({social_scope:'tenant',social_subject:subject});
+  return `/admin/content/social?${params.toString()}`;
+}
+
+export function socialManagedServices(){
+  return ADMIN_SERVICE_CATALOG.map(item=>Object.freeze({
+    ...item,
+    socialManaged:true,
+    socialSubjectType:'tenant',
+    socialSubjectKey:socialSubjectKey(item),
+    socialAdminMode:item.channelAdminSection?'local-channel-center':'central-social-hub',
+  }));
+}
+
 export function canonicalServiceChannelAdminPath(service){
   const item=typeof service==='string'?getAdminService(service):service;
   if(!item?.channelAdminSection)return '';
@@ -80,6 +102,17 @@ export function canonicalServiceChannelAdminPath(service){
 
 export function canonicalServiceChannelAdminUrl(service){
   const path=canonicalServiceChannelAdminPath(service);
+  return path?`https://ekodi.kr${path}`:'';
+}
+
+export function canonicalServiceSocialAdminPath(service){
+  const item=typeof service==='string'?getAdminService(service):service;
+  if(!item)return '';
+  return item.channelAdminSection?canonicalServiceChannelAdminPath(item):canonicalCentralSocialAdminPath(item);
+}
+
+export function canonicalServiceSocialAdminUrl(service){
+  const path=canonicalServiceSocialAdminPath(service);
   return path?`https://ekodi.kr${path}`:'';
 }
 
