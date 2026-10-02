@@ -20,6 +20,6 @@ EKODI의 모든 사용자·독립·하위 사이트는 **사용자 화면을 운
 
 Desktop administrative surfaces keep primary navigation non-scrolling and use the central workspace as the page-level vertical scroll owner. Mobile may reposition the same navigation while preserving meaning and accessible targets.
 
-The machine-readable source of truth is `config/ui-surface-policy.js`; automated checks must verify runtime surface markers, authority separation, PUBLIC-SURFACE-ADMIN-001, and the staged rollout evidence.
+The machine-readable source of truth is `config/ui-surface-policy.js`; automated checks must verify runtime surface markers, authority separation, PUBLIC-SURFACE-ADMIN-001, and the staged rollout evidence. All implementation branches remain subject to the EKODI AI orchestration gate and protected-branch workflow.
 
 Canonical surface IDs: `platform-public`, `user-public`, `member-workspace`, `tenant-admin`, `platform-admin`, `service-admin`.
