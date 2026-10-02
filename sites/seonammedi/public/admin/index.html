@@ -171,16 +171,16 @@
     </section>
 
     <section class="panel-page" data-panel="channels" hidden>
-      <div class="heading"><div><p class="eyebrow">CHANNEL HUB</p><h1>채널 관리</h1><p>YouTube·Instagram·Facebook 등 관련 채널 원문 링크를 연결합니다.</p></div></div>
+      <div class="heading"><div><p class="eyebrow">CHANNEL HUB</p><h1>채널 관리</h1><p>YouTube·Instagram·Facebook·TikTok 등 관련 채널을 등록하고 사이트 노출을 켜고 끕니다.</p></div></div>
       <div class="two-col">
         <form id="channelForm" class="card form-card">
           <input type="hidden" name="id">
           <h2 id="channelFormTitle">채널 추가</h2>
-          <label>플랫폼<select name="platform"><option value="youtube">YouTube</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="blog">블로그</option><option value="website">웹사이트</option><option value="other">기타</option></select></label>
+          <label>플랫폼<select name="platform"><option value="youtube">YouTube</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="tiktok">TikTok</option><option value="blog">블로그</option><option value="website">웹사이트</option><option value="other">기타</option></select></label>
           <label>표시 이름<input name="name" maxlength="160" required></label>
           <label>링크<input name="url" type="url" inputmode="url" placeholder="https://..." required></label>
           <label>구분<select name="category"><option value="official">공식채널</option><option value="related-org">관련기관</option><option value="media">언론·자료</option><option value="civic">시민·단체</option><option value="other">기타</option></select></label>
-          <div class="form-row"><label>정렬<input name="sortOrder" type="number" min="0" max="9999" value="0"></label><label class="check"><input type="checkbox" name="official"> 공식 표시</label><label class="check"><input type="checkbox" name="visible" checked> 사이트 표시</label></div>
+          <div class="form-row"><label>정렬<input name="sortOrder" type="number" min="0" max="9999" value="0"></label><label class="check"><input type="checkbox" name="official"> 공식 표시</label><label class="check"><input type="checkbox" name="visible" checked> 사이트 표시 ON</label></div>
           <label>설명<input name="note" maxlength="500"></label>
           <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="channelReset" class="secondary">새 채널</button></div>
           <p id="channelMessage" class="message" role="status"></p>
