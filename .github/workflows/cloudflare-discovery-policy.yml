@@ -5,6 +5,7 @@ on:
     paths:
       - 'discovery-layer.js'\n      - 'config/public-discovery-registry.json'\n      - 'site-publication-runtime.js'\n      - 'config/ecosystem-services.json'
       - 'test/discovery-layer.test.mjs'
+      - 'test/public-discovery-runtime.test.mjs'
       - 'scripts/enforce-cloudflare-discovery-policy.mjs'
       - 'DISCOVERY_LAYER.md'
       - 'governance/security/discovery-secure-projection.md'
@@ -14,6 +15,7 @@ on:
     paths:
       - 'discovery-layer.js'\n      - 'config/public-discovery-registry.json'\n      - 'site-publication-runtime.js'\n      - 'config/ecosystem-services.json'
       - 'test/discovery-layer.test.mjs'
+      - 'test/public-discovery-runtime.test.mjs'
       - 'scripts/enforce-cloudflare-discovery-policy.mjs'
       - 'DISCOVERY_LAYER.md'
       - 'governance/security/discovery-secure-projection.md'
@@ -41,7 +43,7 @@ jobs:
           set -euo pipefail
           node --check scripts/enforce-cloudflare-discovery-policy.mjs
           node scripts/enforce-cloudflare-discovery-policy.mjs --validate-only
-          node --test test/discovery-layer.test.mjs
+          node --test test/discovery-layer.test.mjs test/public-discovery-runtime.test.mjs
           npm run build
 
   enforce-production:
