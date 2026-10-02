@@ -31,7 +31,8 @@ import { routeCanonicalSurface } from './canonical-surface-router.js';
 import { handlePreviewRequest } from './preview-page.js';
 import { storeGatewayPage } from './store-gateway-page.js';
 import { isEkodiIndexNowKeyPath, ekodiIndexNowKeyResponse } from './platform-indexnow.js';
-import { EKODI_PUBLIC_REGISTRY_PATH, ekodiPublicRegistryResponse } from './public-discovery-registry.js';
+import { EKODI_PUBLIC_REGISTRY_PATH, EKODI_DYNAMIC_SITEMAP_PATH, EKODI_DYNAMIC_LLMS_PATH, ekodiPublicRegistryResponse, ekodiDynamicSitemapResponse, ekodiDynamicLlmsResponse } from './public-discovery-registry.js';
+import { publicDiscoveryContentResponse } from './public-discovery-content.js';
 import { storePortfolioAdminPage, storePortfolioAdminPanelPage, storePortfolioAdminPanelScript, storePortfolioAdminShellScript } from './store-portfolio-admin-page.js';
 import { isStorePosAgentDownloadPath, storePosAgentDownload } from './store-pos-agent-download.js';
 import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
@@ -474,6 +475,9 @@ async function routePlatform(request,env,ctx){
       }
       if(['GET','HEAD'].includes(request.method)&&isEkodiIndexNowKeyPath(url.pathname))return ekodiIndexNowKeyResponse();
       if(['GET','HEAD'].includes(request.method)&&url.pathname===EKODI_PUBLIC_REGISTRY_PATH)return ekodiPublicRegistryResponse(env,{head:request.method==='HEAD'});
+      if(['GET','HEAD'].includes(request.method)&&url.pathname===EKODI_DYNAMIC_SITEMAP_PATH)return ekodiDynamicSitemapResponse(env,{head:request.method==='HEAD'});
+      if(['GET','HEAD'].includes(request.method)&&url.pathname===EKODI_DYNAMIC_LLMS_PATH)return ekodiDynamicLlmsResponse(env,{head:request.method==='HEAD'});
+      if(['GET','HEAD'].includes(request.method)){const projectedContent=await publicDiscoveryContentResponse(request,env);if(projectedContent)return projectedContent;}
       if(['GET','HEAD'].includes(request.method)&&STORE_GATEWAY_PATHS.has(url.pathname)){const response=injectEkodiShell(storeGatewayPage(),'ekodi','public');return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;}
       {const marketingProjection=marketingProjectionForPath(url.pathname);if(marketingProjection){const projected=await proxyCanonicalMarketing(request);if(projected)return isProjectionHome(url.pathname,marketingProjection)?injectEkodiProgressiveHome(projected):projected;}}
       if(['GET','HEAD'].includes(request.method)&&EKODIBIZ_PUBLIC_ROUTE.test(url.pathname))return routeEkodiBizPublic(request,env);

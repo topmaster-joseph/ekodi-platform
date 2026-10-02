@@ -284,6 +284,7 @@ function showView(view,{updateHash=false}={}){
 }
 function syncViewFromLocation(){
   const raw=location.hash.replace(/^#/,'');
+  if(raw.includes('ekodi_token=')){showView(new URLSearchParams(location.search).get('compose')==='notice'?'notices':'',{updateHash:false});return}
   showView(raw,{updateHash:false});
 }
 document.querySelector('.site-header nav')?.addEventListener('click',event=>{
@@ -298,8 +299,21 @@ syncViewFromLocation();
 const NOTICE_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token';
 let publicNotices=[];
 function noticeToken(){try{const raw=localStorage.getItem(NOTICE_SESSION_KEY)||'';if(!raw)return'';const parsed=JSON.parse(raw);const session=parsed?.currentSession||parsed?.session||parsed;const access=String(session?.access_token||'');const expires=Number(session?.expires_at||0);return access&&(!expires||expires>Math.floor(Date.now()/1000)+30)?access:''}catch{return''}}
+async function consumeNoticeHandoff(){
+  const params=new URLSearchParams(location.hash.replace(/^#/,''));
+  const tokenHash=params.get('ekodi_token');if(!tokenHash)return false;
+  try{
+    const response=await fetch('/api/seonammedi/admin/auth/exchange',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token_hash:tokenHash,type:params.get('ekodi_type')||'email'}),cache:'no-store'});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.access_token)throw new Error(data.error_description||data.msg||data.error||'login_handoff_failed');
+    localStorage.setItem(NOTICE_SESSION_KEY,JSON.stringify({access_token:data.access_token,refresh_token:data.refresh_token||'',expires_at:Number(data.expires_at||0)||Math.floor(Date.now()/1000)+Number(data.expires_in||3600),user:data.user||null}));
+    return true;
+  }finally{
+    history.replaceState(null,'',location.pathname+location.search+'#notices');
+  }
+}
 function noticeLoginUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','portal');u.searchParams.set('direct','1');u.searchParams.set('return_to',location.origin+'/seonammedi/?compose=notice#notices');return u.href}
-function noticePermalink(id){return location.origin+'/seonammedi/?notice='+encodeURIComponent(id)+'#notices'}
+function noticePermalink(id){return location.origin+'/seonammedi/notices/'+encodeURIComponent(id)}
 function noticeDate(item){const raw=item.publishedAt||item.updatedAt||'';return raw?new Date(raw).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):''}
 function noticeCard(item){const image=item.imageUrl?'<img src="'+escapeHtml(item.imageUrl)+'" alt="" loading="lazy">':'';return '<article class="notice-item" data-notice-id="'+item.id+'"><a class="notice-open" href="'+noticePermalink(item.id)+'">'+image+'<div><h3>'+escapeHtml(item.title||'공지')+(item.pinned?'<span class="notice-pin">중요</span>':'')+'</h3><p>'+escapeHtml(item.body||'')+'</p><small>'+escapeHtml(noticeDate(item))+'</small></div></a></article>'}
 function showNoticeDetail(item){
@@ -339,8 +353,16 @@ noticeCompose?.addEventListener('submit',async event=>{
   const form=new FormData(noticeCompose);form.delete('images');for(const file of noticeSelectedFiles)form.append('images',file,file.name);message.textContent='게시 중입니다…';
   try{const response=await fetch('/api/seonammedi/notices',{method:'POST',headers:{authorization:'Bearer '+token},body:form,cache:'no-store'});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'게시하지 못했습니다.');noticeCompose.reset();noticeSelectedFiles=[];renderNoticeImagePreview();noticeCompose.hidden=true;noticeWriteButton.hidden=false;message.textContent='게시했습니다.';await loadNotices();const item=publicNotices.find(row=>row.id===Number(data.id));if(item){history.replaceState(null,'',noticePermalink(item.id));showNoticeDetail(item)}}catch(error){message.textContent=error.message||'게시하지 못했습니다.'}
 });
-if(new URLSearchParams(location.search).get('compose')==='notice'&&noticeToken()){showView('notices');noticeCompose.hidden=false;noticeWriteButton.hidden=true}
-loadNotices();
+async function initNoticeFlow(){
+  const compose=new URLSearchParams(location.search).get('compose')==='notice';
+  let handoffError='';
+  try{await consumeNoticeHandoff()}catch(error){handoffError=error?.message||'로그인 연결에 실패했습니다.'}
+  if(compose)showView('notices');
+  if(compose&&noticeToken()){noticeCompose.hidden=false;noticeWriteButton.hidden=true;noticeCompose.querySelector('input[name="title"]')?.focus()}
+  else if(compose&&handoffError){const message=el('noticeComposeMessage');if(message)message.textContent='로그인 연결에 실패했습니다. 다시 로그인해 주세요.'}
+  await loadNotices();
+}
+initNoticeFlow();
 
 const channelPlatformLabel=value=>({all:'전체',youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',tiktok:'TikTok',blog:'블로그',website:'웹사이트',other:'기타'})[String(value||'').toLowerCase()]||'채널';
 const channelCategoryLabel=value=>({official:'공식','related-org':'관련기관',media:'미디어',civic:'시민·단체',other:'기타'})[String(value||'').toLowerCase()]||'관련';
