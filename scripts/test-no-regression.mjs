@@ -50,6 +50,7 @@ const baseTotal=[...old.values()].reduce((a,b)=>a+b,0);
 console.log(`PR test regression gate: current failing tests=${currentTotal}, base failing tests=${baseTotal}`);
 if(base.status===0||newFailures.length||currentTotal>baseTotal){
   console.error('New or worsened test failures detected.');
+  process.stderr.write(currentText);
   for(const item of newFailures.slice(0,50)) console.error(`- ${item}`);
   process.exit(1);
 }
