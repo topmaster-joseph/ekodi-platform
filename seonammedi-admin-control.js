@@ -472,8 +472,11 @@ function explicitChannelEmbed(item){
     }
     if(item.platform==='instagram'&&host==='instagram.com'){
       const parts=url.pathname.split('/').filter(Boolean);
-      if(['p','reel'].includes(parts[0])&&/^[A-Za-z0-9_-]{5,}$/.test(parts[1]||'')){
-        return 'https://www.instagram.com/'+parts[0]+'/'+encodeURIComponent(parts[1])+'/embed/';
+      const kindIndex=parts.findIndex(part=>['p','reel'].includes(part));
+      const kind=kindIndex>=0?parts[kindIndex]:'';
+      const shortcode=kindIndex>=0?parts[kindIndex+1]||'':'';
+      if(kind&&/^[A-Za-z0-9_-]{5,}$/.test(shortcode)){
+        return 'https://www.instagram.com/'+kind+'/'+encodeURIComponent(shortcode)+'/embed/';
       }
     }
   }catch{}
