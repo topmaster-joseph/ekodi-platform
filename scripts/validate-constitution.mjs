@@ -19,7 +19,7 @@ const executionFabric = json('config/autonomous-execution-fabric-policy.json');
 const remoteComputer = json('config/remote-computer-execution-policy.json');
 const sitePublicationConfig = json('config/site-publication-policy.json');
 
-if (constitution.version !== '1.26.1') fail('constitution version must be 1.26.1 with Universal FREE Identity enforcement plus all prior approved amendments');
+if (constitution.version !== '1.27.0') fail('constitution version must be 1.27.0 with platform-wide public access/action enforcement plus all prior approved amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
 for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','capability-before-service-enforced','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding','guest-open-public-user-surfaces','self-verifying-all-surface-system-evidence','ekodi-owned-virtualization-first','authentication-return-continuity','canonical-human-url-without-tracking-query','evidence-gated-ai-claims','evidence-gated-external-knowledge','automatic-execution-background-only-enforced','public-by-default-site-publication-control']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
@@ -330,6 +330,14 @@ if(publicUserSurface.id!=='PUBLIC-USER-SURFACE-001'||publicUserSurface.defaultAc
 if(publicUserSurface.authenticationEffect!=='enhance-not-replace-public-experience') fail('authentication must enhance, not replace, public user surfaces');
 if(publicUserSurface.safePublicProjectionRequired!==true||publicUserSurface.canonicalPublicLoginWallForbidden!==true) fail('safe guest public projection must be mandatory');
 if(publicUserSurface.permissionFailureReplacesPublicPage!==false) fail('permission failures must not replace canonical public pages');
+if(publicUserSurface.inheritanceScope!=='all-current-and-future-user-facing-services-workspaces-and-independent-sites'||publicUserSurface.serviceLocalOverrideAllowed!==false) fail('public user access inheritance must bind every current/future user and independent site without local override');
+const publicInteraction=publicUserSurface.publicInteractionPolicy||{};
+if(publicInteraction.id!=='PUBLIC-INTERACTION-001'||publicInteraction.status!=='enforced'||publicInteraction.defaultForExplicitlyPublicActions!=='guest-open') fail('constitutional public interaction policy missing');
+if(publicInteraction.authenticationRequiredForExplicitlyPublicActions!==false||publicInteraction.serviceLocalOverrideAllowed!==false) fail('explicitly public safe actions must stay guest-open without service-local override');
+for(const action of ['event-application','public-reservation-request','public-inquiry','public-feedback','public-opinion','public-interest-registration']) if(!publicInteraction.safePublicActionClasses?.includes(action)) fail(`missing safe public action class: ${action}`);
+if(publicInteraction.privilegeGrantForbidden!==true||publicInteraction.crossWorkspacePrivateWriteForbidden!==true||publicInteraction.protectedDataDisclosureForbidden!==true) fail('public actions must never grant privilege, cross workspace boundaries or disclose protected data');
+if(publicInteraction.serverPersistenceVerificationRequired!==true||publicInteraction.falseSuccessResponseForbidden!==true||publicInteraction.inputValidationRequired!==true||publicInteraction.abuseProtectionRequired!==true) fail('public action persistence/validation/abuse guards must remain mandatory');
+
 const visualContinuity=publicUserSurface.visualContinuity||{};
 if(visualContinuity.id!=='PUBLIC-VISUAL-CONTINUITY-001'||visualContinuity.status!=='enforced') fail('public visual continuity policy must remain enforced');
 if(visualContinuity.firstPaintStateResolutionRequired!==true||visualContinuity.transientCharacterOrIllustrationFlashForbidden!==true||visualContinuity.unresolvedDecorativeState!=='hidden-until-resolved') fail('conditional user visuals must resolve before visible paint');
@@ -340,6 +348,11 @@ if(publicUserSurface.explicitPrivateException?.requiresExplicitClassification!==
 const workspacePublicDefault=workspace.publicUserSurfaceDefault||{};
 if(workspacePublicDefault.policyId!=='PUBLIC-USER-SURFACE-001'||workspacePublicDefault.defaultAccess!=='guest-open') fail('service/workspace public user surface default must be guest-open');
 if(workspacePublicDefault.loginEffect!=='enhance-not-replace'||workspacePublicDefault.canonicalPublicRootLoginWallForbidden!==true) fail('service/workspace login policy must enhance rather than replace public pages');
+if(workspacePublicDefault.inheritanceScope!=='all-current-and-future-user-facing-services-workspaces-and-independent-sites'||workspacePublicDefault.serviceLocalOverrideAllowed!==false) fail('workspace public access inheritance scope drifted');
+const workspacePublicInteraction=workspacePublicDefault.publicInteractionDefault||{};
+if(workspacePublicInteraction.policyId!=='PUBLIC-INTERACTION-001'||workspacePublicInteraction.defaultForExplicitlyPublicActions!=='guest-open'||workspacePublicInteraction.authenticationRequired!==false) fail('workspace public interaction default missing');
+if(workspacePublicInteraction.serviceLocalOverrideAllowed!==false||workspacePublicInteraction.serverPersistenceVerificationRequired!==true||workspacePublicInteraction.falseSuccessResponseForbidden!==true) fail('workspace public action enforcement weakened');
+
 if(workspacePublicDefault.visualContinuity?.policyId!=='PUBLIC-VISUAL-CONTINUITY-001'||workspacePublicDefault.visualContinuity?.inheritedByAllUserSurfaces!==true) fail('service/workspace user surfaces must inherit public visual continuity');
 if(workspacePublicDefault.visualContinuity?.backgroundVariation?.stableForDocumentLifetime!==true||Number(workspacePublicDefault.visualContinuity?.backgroundVariation?.maxBackgroundMixPercent)>6) fail('service/workspace ambient variation must stay subtle and document-stable');
 for(const visibility of workspace.visibilityPolicies||[]) if(visibility.id!=='guest_visible'&&visibility.mayReplaceCanonicalPublicRoot!==false) fail(`${visibility.id} may not replace a canonical public root`);
