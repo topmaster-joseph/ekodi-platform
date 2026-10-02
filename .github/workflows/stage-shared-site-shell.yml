@@ -45,6 +45,13 @@ on:
       - 'wrangler.site.toml'
       - 'wrangler.site-staging.toml'
       - 'discovery-layer.js'
+      - 'public-discovery-registry.js'
+      - 'public-discovery-runtime.js'
+      - 'public-discovery-content.js'
+      - 'config/public-discovery-registry.json'
+      - 'supabase/migrations/*public_discovery_registry*.sql'
+      - 'test/public-discovery-runtime.test.mjs'
+      - 'test/public-discovery-content.test.mjs'
       - 'scripts/discovery-build.mjs'
       - 'scripts/ccm-mr-postbuild.mjs'
       - 'scripts/ops-health-build.mjs'
@@ -112,11 +119,14 @@ jobs:
           node --check marketing-canonical-projection.js
           node --check ekodi-shell-injector.js
           node --check discovery-layer.js
+          node --check public-discovery-registry.js
+          node --check public-discovery-runtime.js
+          node --check public-discovery-content.js
           node --check scripts/discovery-build.mjs
           node --check scripts/ops-health-build.mjs
           node --check scripts/attest-worker-release-artifact.mjs
           node --test test/worker-release-artifact-attestation.test.mjs
-          node --test test/marketing-canonical-projection.test.mjs test/insurance-public-route.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/discovery-layer.test.mjs test/learning-page.test.mjs test/learning-routing-contract.test.mjs
+          node --test test/marketing-canonical-projection.test.mjs test/insurance-public-route.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/discovery-layer.test.mjs test/public-discovery-runtime.test.mjs test/public-discovery-content.test.mjs test/learning-page.test.mjs test/learning-routing-contract.test.mjs
           npm run build
           cp auth-site/auth-workspace-target.js dist/auth-workspace-target.js
           test -f dist/insurance/index.html
@@ -131,7 +141,7 @@ jobs:
           grep -Fq 'User-agent: GPTBot' dist/robots.txt
           grep -Fq 'Disallow: /' dist/robots.txt
           grep -Fq '<loc>https://ekodi.kr/</loc>' dist/sitemap.xml
-          grep -Fq 'Canonical site: https://ekodi.kr/' dist/llms.txt
+          grep -Fq 'Canonical host: https://ekodi.kr' dist/llms.txt
           grep -Fq 'data-ekodi-discovery="v2"' dist/index.html
 
       - name: Materialize immutable production release artifact
@@ -240,7 +250,8 @@ jobs:
               && verify_public_path '/ekodibiz/invest/admin' 'WORKSPACE-LOCAL ADMIN' 'x-ekodi-route: public-ekodibiz-invest-admin' \
               && verify_discovery_path '/robots.txt' 'OAI-SearchBot' \
               && verify_discovery_path '/sitemap.xml' '<urlset' \
-              && verify_discovery_path '/llms.txt' 'Canonical site: https://ekodi.kr/'; then
+              && verify_discovery_path '/llms.txt' 'Canonical host: https://ekodi.kr' \
+              && verify_discovery_path '/public-registry.json' 'EKODI-PUBLIC-DISCOVERY-002'; then
               echo 'Shared-site core, canonical Shell, Messenger/Invest apex paths, Discovery Layer, Insurance, Space binding and EKODIBIZ staging verified through the production entry contract.'
               exit 0
             fi
