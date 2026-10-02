@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import registryConfig from '../config/public-discovery-registry.json' with { type: 'json' };
 import { canonicalUrl, DISCOVERY_CRAWLER_POLICY, DISCOVERY_PRIVATE_PREFIXES, DISCOVERY_PUBLIC_ROUTES, pageJsonLd, renderDiscoveryHead, renderLlmsTxt, renderRobotsTxt, renderSitemapXml } from '../discovery-layer.js';
 
 test('sitemap contains only declared public canonical routes', () => {
@@ -51,11 +52,11 @@ test('llms discovery file identifies canonical public sources and purpose separa
 });
 
 test('page structured data links WebPage to stable WebSite and Organization entities', () => {
-  const jsonLd = pageJsonLd('/history');
+  const jsonLd = pageJsonLd('/privacy');
   assert.equal(jsonLd['@context'], 'https://schema.org');
   assert.deepEqual(jsonLd['@graph'].map(entity => entity['@type']), ['Organization', 'WebSite', 'WebPage']);
   const page = jsonLd['@graph'][2];
-  assert.equal(page.url, 'https://ekodi.kr/history');
+  assert.equal(page.url, 'https://ekodi.kr/privacy');
   assert.deepEqual(page.isPartOf, { '@id': 'https://ekodi.kr/#website' });
   assert.deepEqual(page.about, { '@id': 'https://ekodi.kr/#organization' });
 });
@@ -66,4 +67,31 @@ test('discovery head is page-specific and exposes canonical social metadata', ()
   assert.match(head, /property="og:url" content="https:\/\/ekodi\.kr\/privacy"/);
   assert.match(head, /application\/ld\+json/);
   assert.match(head, /name="robots" content="index, follow"/);
+});
+
+
+test('central registry auto-projects verified live services and excludes preparing or private surfaces', () => {
+  const paths = new Set(DISCOVERY_PUBLIC_ROUTES.map(route => route.path));
+  for (const path of ['/ekodichurch', '/ekodibiz', '/business', '/books', '/publishing', '/journal', '/author', '/ekodilab', '/learn', '/life', '/work', '/invest']) {
+    assert.ok(paths.has(path), `expected auto-discovered live service: ${path}`);
+  }
+  assert.equal(paths.has('/ekodimission'), false);
+  assert.equal(paths.has('/my'), false);
+  assert.equal([...paths].some(path => path.includes('/admin') || path.startsWith('/api/')), false);
+});
+
+test('registered entity kinds generate type-specific Schema.org entities', () => {
+  const graph = pageJsonLd('/jadam')['@graph'];
+  assert.ok(graph.some(entity => entity['@type'] === 'Store'));
+  const page = graph.find(entity => entity['@type'] === 'WebPage');
+  const store = graph.find(entity => entity['@type'] === 'Store');
+  assert.deepEqual(page.about, { '@id': store['@id'] });
+});
+
+
+test('manual per-route discovery registration is disabled', () => {
+  assert.deepEqual(registryConfig.sites, []);
+  assert.deepEqual(registryConfig.resources, []);
+  assert.equal(registryConfig.policy.id, 'EKODI-DISCOVERY-001');
+  assert.match(registryConfig.policy.description, /No per-route discovery registration is required/);
 });
