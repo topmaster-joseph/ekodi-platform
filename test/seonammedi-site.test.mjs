@@ -628,3 +628,12 @@ test('seonammedi notice list actions use server-authorized canManage without exp
   assert.match(control,/canManage:Boolean\(admin\)\|\|Boolean\(email&&lower\(row\.created_by\)===email\)/);
   assert.doesNotMatch(control,/eventEnd:row\.event_end\|\|'',createdBy:row\.created_by\|\|''/);
 });
+
+
+test('seonammedi admin labels status menu as activity history and removes current-status editor content',async()=>{
+  const adminHtml=await readFile(new URL('admin/index.html',root),'utf8');
+  assert.match(adminHtml,/data-panel-target="status"[^>]*>활동이력<\/button>/);
+  assert.doesNotMatch(adminHtml,/data-panel-target="status"[^>]*>현재상황<\/button>/);
+  assert.doesNotMatch(adminHtml,/CURRENT STATUS|<h1>현재상황 관리<\/h1>|id="statusForm"/);
+  assert.match(adminHtml,/data-panel="status"[\s\S]*?data-records-admin-tab="timeline"[\s\S]*?<h1>활동이력 관리<\/h1>/);
+});
