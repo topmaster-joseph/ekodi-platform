@@ -531,6 +531,29 @@ test('seonammedi notice permalink is served by the site shell',async()=>{
 });
 
 
+
+test('seonammedi public site exposes authenticated section-level admin quick edit without exposing controls to visitors',async()=>{
+  const [app,css,adminHtml,adminJs,control]=await Promise.all([
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('app.css',root),'utf8'),
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('admin/admin.js',root),'utf8'),
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8')
+  ]);
+  assert.match(app,/initPublicAdminControls/);
+  assert.match(app,/\/api\/seonammedi\/admin\/me/);
+  for(const label of ['공지 바로 수정','조직 바로 수정','활동이력 공개여부','소통채널 바로 수정','시민의견 수정·삭제'])assert.match(app,new RegExp(label));
+  assert.match(app,/public-admin-drawer/);
+  assert.match(app,/panel',panel/);
+  assert.match(css,/\.public-admin-drawer/);
+  assert.match(adminHtml,/id="voiceEditForm"/);
+  assert.match(adminJs,/function editVoice\(item\)/);
+  assert.match(adminJs,/button\('수정',\(\)=>editVoice\(item\)\)/);
+  assert.match(control,/VOICE_CATEGORIES/);
+  assert.match(control,/UPDATE seonammedi_civic_voices SET category=\?,display_name=\?,contact=\?,message=\?,review_status=\?/);
+  assert.match(control,/public_consent_required/);
+});
+
 test('seonammedi notice detail lets the author edit and delete the clicked post',async()=>{
   const [app,control]=await Promise.all([readFile(new URL('app.js',root),'utf8'),readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8')]);
   assert.match(app,/noticeOwnedByCurrentUser/);
