@@ -3,7 +3,10 @@ name: Cloudflare Discovery Policy
 on:
   pull_request:
     paths:
-      - 'discovery-layer.js'\n      - 'config/public-discovery-registry.json'\n      - 'site-publication-runtime.js'\n      - 'config/ecosystem-services.json'
+      - 'discovery-layer.js'
+      - 'config/public-discovery-registry.json'
+      - 'site-publication-runtime.js'
+      - 'config/ecosystem-services.json'
       - 'test/discovery-layer.test.mjs'
       - 'scripts/enforce-cloudflare-discovery-policy.mjs'
       - 'DISCOVERY_LAYER.md'
@@ -12,7 +15,10 @@ on:
   push:
     branches: [main]
     paths:
-      - 'discovery-layer.js'\n      - 'config/public-discovery-registry.json'\n      - 'site-publication-runtime.js'\n      - 'config/ecosystem-services.json'
+      - 'discovery-layer.js'
+      - 'config/public-discovery-registry.json'
+      - 'site-publication-runtime.js'
+      - 'config/ecosystem-services.json'
       - 'test/discovery-layer.test.mjs'
       - 'scripts/enforce-cloudflare-discovery-policy.mjs'
       - 'DISCOVERY_LAYER.md'
