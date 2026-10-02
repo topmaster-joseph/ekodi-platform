@@ -305,7 +305,7 @@ let fatal=null;
 const checks={authSiteMission:true,authReturnToExact:true,preAuthNavigationVisible:true};
 try{
   await page.goto(targetUrl,{waitUntil:'domcontentloaded'});
-  await page.locator('#pageTitle').filter({hasText:'운영 홈'}).waitFor({state:'visible'});
+  await page.waitForFunction(()=>document.querySelector('#pageTitle')?.textContent?.includes('운영 홈'));
 
   checks.rootUrl=new URL(page.url()).pathname==='/ekodimission/admin';
   checks.rootTitle=(await page.locator('#pageTitle').textContent())?.includes('운영 홈')||false;
