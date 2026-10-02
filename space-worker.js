@@ -249,7 +249,8 @@ async function submitMissionEventApplication(request,env,eventKey=MISSION_EVENT_
     const upstream=await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/mission_submit_event_application`,{method:'POST',headers:{apikey:env.SUPABASE_PUBLISHABLE_KEY,'content-type':'application/json','cache-control':'no-store'},body:JSON.stringify(rpcBody)});
     const data=await upstream.json().catch(()=>null);
     if(!upstream.ok){const [error,message,status]=missionApplicationError(data?.message||data?.details||'');return json(env,{ok:false,error,message},status);}
-    return json(env,{ok:true,eventKey:eventSlug,applicationId:data?.application_id||null,message:'신청이 접수되었습니다.'},200);
+    if(!data?.ok||!data?.application_id)return json(env,{ok:false,error:'application_persistence_unverified',message:'신청 저장을 확인하지 못했습니다. 다시 신청해 주세요.'},503);
+    return json(env,{ok:true,eventKey:eventSlug,applicationId:data.application_id,message:'신청이 접수되었습니다.'},200);
   }catch{return json(env,{ok:false,error:'application_unavailable',message:'신청을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.'},503)}
 }
 async function publicSiteChrome(slug){
