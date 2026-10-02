@@ -551,6 +551,7 @@ function youtubeRecentItems(xml){
   return items;
 }
 async function resolveYouTubeChannelId(item,html=''){
+  const validId=value=>/^UC[A-Za-z0-9_-]{20,}$/.test(String(value||''))?String(value):'';
   const fromHtml=String(html||'').match(/<meta[^>]+itemprop=["']channelId["'][^>]+content=["'](UC[A-Za-z0-9_-]{20,})["']/i)
     ||String(html||'').match(/<meta[^>]+content=["'](UC[A-Za-z0-9_-]{20,})["'][^>]+itemprop=["']channelId["']/i)
     ||String(html||'').match(/"(?:channelId|externalId|browseId)":"(UC[A-Za-z0-9_-]{20,})"/)
@@ -558,13 +559,25 @@ async function resolveYouTubeChannelId(item,html=''){
     ||String(html||'').match(/youtube\.com\/channel\/(UC[A-Za-z0-9_-]{20,})/i);
   if(fromHtml?.[1])return fromHtml[1];
   try{
-    const aboutUrl=new URL(item.url);aboutUrl.search='';aboutUrl.hash='';aboutUrl.pathname=aboutUrl.pathname.replace(/\/$/,'')+'/about';
+    const url=new URL(item.url);
+    const direct=url.pathname.match(/\/channel\/(UC[A-Za-z0-9_-]{20,})/i)?.[1]||'';
+    if(validId(direct))return direct;
+    const aboutUrl=new URL(url.href);aboutUrl.search='';aboutUrl.hash='';aboutUrl.pathname=aboutUrl.pathname.replace(/\/$/,'')+'/about';
     const aboutPage=await fetchChannelPreviewPage(aboutUrl.href,CHANNEL_BROWSER_UA,6500);
     const aboutHtml=aboutPage?.ok?await aboutPage.text().catch(()=>''):'';
-    return (aboutHtml.match(/"(?:channelId|externalId|browseId)":"(UC[A-Za-z0-9_-]{20,})"/)
+    const aboutId=(aboutHtml.match(/"(?:channelId|externalId|browseId)":"(UC[A-Za-z0-9_-]{20,})"/)
       ||aboutHtml.match(/youtube\.com\/channel\/(UC[A-Za-z0-9_-]{20,})/i)
       ||aboutHtml.match(/feeds\/videos\.xml\?channel_id=(UC[A-Za-z0-9_-]{20,})/i))?.[1]||'';
-  }catch{return ''}
+    if(validId(aboutId))return aboutId;
+    const handle=url.pathname.split('/').filter(Boolean).find(part=>part.startsWith('@'))?.slice(1)||'';
+    if(handle){
+      const socialUrl='https://ekodi.kr/social/api/media/youtube/status?handle='+encodeURIComponent('@'+handle);
+      const social=await fetchChannelPreviewPage(socialUrl,'EKODI-SeonamMedi-ChannelResolver/1.0',5000);
+      const body=social?.ok?await social.json().catch(()=>({})):{};
+      if(validId(body.channelId))return body.channelId;
+    }
+  }catch{}
+  return '';
 }
 
 async function publicChannelPreview(env,id){
