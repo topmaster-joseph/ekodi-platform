@@ -568,3 +568,17 @@ test('seonammedi notice detail lets the author edit and delete the clicked post'
   assert.match(control,/request\.method==='PUT'/);
   assert.match(control,/UPDATE seonammedi_notices SET title=\?,body=\?,image_key=\?,image_type=\?,image_keys_json=\?,image_types_json=\?,updated_at=\?/);
 });
+
+
+test('seonammedi notice list exposes edit and delete actions for the signed-in author',async()=>{
+  const [app,css]=await Promise.all([
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('app.css',root),'utf8')
+  ]);
+  assert.match(app,/data-notice-edit/);
+  assert.match(app,/data-notice-delete/);
+  assert.match(app,/async function deleteNotice\(item\)/);
+  assert.match(app,/querySelectorAll\('\[data-notice-edit\]'\)/);
+  assert.match(app,/querySelectorAll\('\[data-notice-delete\]'\)/);
+  assert.match(css,/\.notice-row-actions/);
+});
