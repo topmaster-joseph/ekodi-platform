@@ -41,7 +41,7 @@ test('seonammedi post-selection timeline migration reconciles production D1',asy
   assert.match(control,/system-seed/);
 });
 
-test('seonammedi civic channel keeps source attribution, media evidence and privacy boundaries',async()=>{const [html,data,app]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('data.json',root),'utf8'),readFile(new URL('app.js',root),'utf8')]);assert.match(html,/사실은 출처와 함께/);assert.match(html,/<h2>회계<\/h2>/);assert.match(html,/개인정보/);assert.match(html,/원출처 링크/);const parsed=JSON.parse(data);assert.ok(parsed.timeline.length>=10);assert.ok(parsed.sources.every(s=>s.publisher&&s.url));assert.equal(parsed.finance.raised,null);assert.equal(parsed.mediaPolicy.mode,'source-link-first');for(const row of parsed.timeline){assert.ok(Array.isArray(row.links));assert.ok(Array.isArray(row.media));for(const media of row.media){assert.ok(['photo','video'].includes(media.type));assert.match(media.url,/^https:\/\//);assert.ok(media.source)}}assert.ok(parsed.timeline.some(row=>row.media.some(media=>media.type==='photo')));assert.match(app,/mediaLabel/);assert.match(app,/safeUrl/);});
+test('seonammedi civic channel keeps source attribution, media evidence and privacy boundaries',async()=>{const [html,data,app]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('data.json',root),'utf8'),readFile(new URL('app.js',root),'utf8')]);assert.match(html,/사실은 출처와 함께/);assert.match(html,/<h2>회계<\/h2>/);assert.match(html,/개인정보/);const parsed=JSON.parse(data);assert.ok(parsed.timeline.length>=10);assert.ok(parsed.sources.every(s=>s.publisher&&s.url));assert.equal(parsed.finance.raised,null);assert.equal(parsed.mediaPolicy.mode,'source-link-first');for(const row of parsed.timeline){assert.ok(Array.isArray(row.links));assert.ok(Array.isArray(row.media));for(const media of row.media){assert.ok(['photo','video'].includes(media.type));assert.match(media.url,/^https:\/\//);assert.ok(media.source)}}assert.ok(parsed.timeline.some(row=>row.media.some(media=>media.type==='photo')));assert.match(app,/mediaLabel/);assert.match(app,/safeUrl/);});
 
 test('canonical path, assets and feedback API use seonammedi',async()=>{const [html,app,build,router,wrangler]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('../scripts/build.mjs',import.meta.url),'utf8'),readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8'),readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8')]);assert.match(html,/https:\/\/ekodi\.kr\/seonammedi\//);assert.match(html,/\/seonammedi\/app\.css/);assert.match(app,/\/api\/seonammedi\/voices/);assert.match(build,/sites\/seonammedi\/public/);assert.match(router,/SEONAMMEDI_PREFIX='\/seonammedi'/);assert.match(router,/DELETED_SEONAM_PREFIXES/);const workerFirst=(wrangler.match(/run_worker_first = \[(.*?)\]/s)?.[1].match(/\"[^\"]+\"/g)||[]);assert.ok(workerFirst.length<=100);assert.doesNotMatch(wrangler,/\"\/seonammedi\\\*\"/);assert.doesNotMatch(wrangler,/\"\/seonam-med\\\*\"/);assert.doesNotMatch(wrangler,/crons\s*=/);assert.doesNotMatch(html,/사이트 일일점검|monitorBadge|id="monitor"/);assert.match(app,/\/api\/seonammedi\/monitor/);});
 
@@ -275,16 +275,19 @@ test('seonammedi admin utilities live above the left menu and content starts nea
 
 test('seonammedi public and admin menus keep the agreed content-first order',async()=>{
   const [html,adminHtml]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('admin/index.html',root),'utf8')]);
-  const publicOrder=['현재상황','소통채널','시민의견','회계','공지','조직'];
+  const publicOrder=['활동이력','소통채널','시민의견','회계','공지','조직'];
   let cursor=-1;for(const label of publicOrder){const next=html.indexOf('>'+label+'</a>',cursor+1);assert.ok(next>cursor,'public menu order: '+label);cursor=next}
   assert.doesNotMatch(html,/data-view-link="records"|data-view-link="timeline"|data-view-link="materials"/);
   assert.match(html,/id="timeline"[^>]*data-view-section="status"/);
   assert.match(html,/id="materials"[^>]*data-view-section="status"/);
   assert.doesNotMatch(html,/<h2>현재상황<\/h2>|CURRENT STATUS|출처 검증형/);
-  assert.match(html,/id="timeline"[^>]*data-view-section="status"[\s\S]*?<h2>활동이력<\/h2>[\s\S]*?id="statusTabs"/);
-  assert.match(html,/data-status-tab="timeline"[^>]*>활동이력<\/button>/);
   assert.match(html,/data-status-tab="news"[^>]*>관련보도<\/button>/);
   assert.match(html,/data-status-tab="official"[^>]*>공식기록<\/button>/);
+  assert.match(html,/data-view-link="status">활동이력<\/a>/);
+  assert.match(html,/id="timeline"[^>]*class="section activity-list-only"/);
+  assert.doesNotMatch(html,/id="timeline"[\s\S]*?<div class="section-head">[\s\S]*?<h2>활동이력<\/h2>/);
+  assert.doesNotMatch(html,/id="timeline"[\s\S]*?id="statusTabs"/);
+  assert.doesNotMatch(html,/<p class="filter-label">활동이력 세부 분류<\/p>/);
   assert.match(html,/data-status-pane="timeline"/);
   assert.match(html,/data-status-pane="materials"/);
   const adminOrder=['운영홈','현재상황','소통채널','시민의견','회계','공지','조직','내부 회의록','권한·관리자'];
@@ -568,3 +571,13 @@ test('seonammedi notice detail lets the author edit and delete the clicked post'
   assert.match(control,/request\.method==='PUT'/);
   assert.match(control,/UPDATE seonammedi_notices SET title=\?,body=\?,image_key=\?,image_type=\?,image_keys_json=\?,image_types_json=\?,updated_at=\?/);
 });
+
+
+test('seonammedi activity history always renders in descending date order across every filter',async()=>{
+  const app=await readFile(new URL('app.js',root),'utf8');
+  assert.match(app,/const timelineDateKey=value=>/);
+  assert.match(app,/const timelineDescending=\(a,b\)=>timelineDateKey\(b\.date\)-timelineDateKey\(a\.date\)/);
+  assert.match(app,/\(cat==='전체'\?d\.timeline:d\.timeline\.filter\([^;]+\)\)\.slice\(\)\.sort\(timelineDescending\)/);
+});
+
+// descending activity-history order is enforced for every public category filter
