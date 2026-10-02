@@ -258,10 +258,14 @@ begin
 end;
 $$;
 
-drop trigger if exists trg_sync_store_profile_discovery on public.store_public_profiles;
-create trigger trg_sync_store_profile_discovery
-after insert or update or delete on public.store_public_profiles
-for each row execute function public.sync_store_profile_discovery();
+do $
+begin
+  if to_regclass('public.store_public_profiles') is not null then
+    execute 'drop trigger if exists trg_sync_store_profile_discovery on public.store_public_profiles';
+    execute 'create trigger trg_sync_store_profile_discovery after insert or update or delete on public.store_public_profiles for each row execute function public.sync_store_profile_discovery()';
+  end if;
+end;
+$;
 
 update public.activities set updated_at = updated_at where status='published' and visibility='public';
 
