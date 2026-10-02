@@ -2,6 +2,7 @@ import { durableWriteQueueAvailable, enqueueDurableWrite } from './write-ingress
 
 const API_PATH='/api/seonammedi/voices';
 const HEALTH_PATH=API_PATH+'/health';
+const REPLY_PATH=/^\/api\/seonammedi\/voices\/(\d+)\/replies$/;
 const QUEUE_KIND='seonammedi.citizen_voice.v1';
 const CATEGORIES=new Set(['question','proposal','experience','factcheck','tip','other']);
 const clean=(value,max)=>String(value??'').trim().slice(0,max);
@@ -46,6 +47,16 @@ async function ensureSchema(db){
       FROM seonam_med_civic_voices;`);
   }
   await ensureSubmissionKey(db);
+  await db.exec(`CREATE TABLE IF NOT EXISTS seonammedi_civic_voice_replies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    voice_id INTEGER NOT NULL,
+    display_name TEXT NOT NULL DEFAULT '',
+    message TEXT NOT NULL,
+    request_fingerprint TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (voice_id) REFERENCES seonammedi_civic_voices(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_seonammedi_civic_voice_replies_voice ON seonammedi_civic_voice_replies(voice_id,id);`);
 }
 
 async function health(env){
@@ -78,13 +89,59 @@ async function persistVoice(env,payload){
   const now=payload.acceptedAt||new Date().toISOString();
   const result=await env.DB.prepare(`INSERT INTO seonammedi_civic_voices
     (category,display_name,contact,message,public_consent,privacy_consent,review_status,request_fingerprint,submission_key,created_at,updated_at)
-    VALUES (?,?,?,?,?,1,'received',?,?,?,?)`)
-    .bind(payload.category,payload.displayName,payload.contact,payload.message,payload.publicConsent?1:0,payload.requestFingerprint,payload.submissionId,now,now).run();
+    VALUES (?,?,?,?,1,1,'published',?,?,?,?)`)
+    .bind(payload.category,payload.displayName,payload.contact,payload.message,payload.requestFingerprint,payload.submissionId,now,now).run();
   const id=Number(result?.meta?.last_row_id||0);
   if(id)return id;
   const duplicate=await env.DB.prepare('SELECT id FROM seonammedi_civic_voices WHERE submission_key=? LIMIT 1').bind(payload.submissionId).first();
   if(duplicate?.id)return Number(duplicate.id);
   throw new Error('voice_insert_not_confirmed');
+}
+
+
+async function listPublicVoices(env){
+  if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
+  await ensureSchema(env.DB);
+  const voices=await env.DB.prepare(`SELECT id,category,display_name,message,created_at,updated_at
+    FROM seonammedi_civic_voices WHERE review_status='published' ORDER BY id DESC LIMIT 100`).all();
+  const replies=await env.DB.prepare(`SELECT r.id,r.voice_id,r.display_name,r.message,r.created_at
+    FROM seonammedi_civic_voice_replies r
+    JOIN seonammedi_civic_voices v ON v.id=r.voice_id
+    WHERE v.review_status='published'
+    ORDER BY r.id ASC LIMIT 1000`).all();
+  const byVoice=new Map();
+  for(const row of replies.results||[]){
+    const key=Number(row.voice_id);if(!byVoice.has(key))byVoice.set(key,[]);
+    byVoice.get(key).push({id:Number(row.id),displayName:row.display_name||'익명',message:row.message||'',createdAt:row.created_at});
+  }
+  return json({ok:true,items:(voices.results||[]).map(row=>({id:Number(row.id),category:row.category,displayName:row.display_name||'익명',message:row.message||'',createdAt:row.created_at,updatedAt:row.updated_at,replies:byVoice.get(Number(row.id))||[]}))});
+}
+
+async function createPublicReply(request,env,voiceId){
+  if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable',message:'저장소를 사용할 수 없습니다.'},503);
+  const contentLength=Number(request.headers.get('content-length')||0);
+  if(contentLength>8192)return json({ok:false,error:'payload_too_large'},413);
+  let body;try{body=await request.json()}catch{return json({ok:false,error:'invalid_json'},400)}
+  if(clean(body?.website,200))return json({ok:false,error:'spam_trap_triggered',message:'입력값을 다시 확인해 주세요.'},400);
+  const displayName=clean(body?.name,80);
+  const message=clean(body?.message,1500);
+  if(!message)return json({ok:false,error:'invalid_message',message:'답글 내용을 입력해 주세요.'},400);
+  await ensureSchema(env.DB);
+  const voice=await env.DB.prepare("SELECT id FROM seonammedi_civic_voices WHERE id=? AND review_status='published'").bind(voiceId).first();
+  if(!voice?.id)return json({ok:false,error:'voice_not_found'},404);
+  const requestFingerprint=await fingerprint(request);
+  const limited=await applyIngressRateLimit(env,'reply:'+requestFingerprint);
+  if(limited?.success===false)return json({ok:false,error:'rate_limited',message:'등록이 많습니다. 잠시 후 다시 시도해 주세요.'},429,{'retry-after':'30'});
+  const now=new Date().toISOString();
+  const result=await env.DB.prepare('INSERT INTO seonammedi_civic_voice_replies (voice_id,display_name,message,request_fingerprint,created_at) VALUES (?,?,?,?,?)')
+    .bind(voiceId,displayName,message,requestFingerprint,now).run();
+  return json({ok:true,id:Number(result?.meta?.last_row_id||0),message:'답글이 등록되었습니다.'},201);
+}
+
+function originAllowed(request,env){
+  if(env?.ENVIRONMENT!=='production')return true;
+  const origin=request.headers.get('origin')||'';
+  return new Set(['https://ekodi.kr','https://seonammedi.kr','https://www.seonammedi.kr','https://xn--3e0b8b58jw4co4mnpll3k.kr','https://www.xn--3e0b8b58jw4co4mnpll3k.kr']).has(origin);
 }
 
 export async function consumeSeonamMediVoiceMessage(envelope,env){
@@ -98,14 +155,18 @@ export async function consumeSeonamMediVoiceMessage(envelope,env){
 export async function handleSeonamMediCivicApi(request,env){
   const url=new URL(request.url);
   if(url.pathname===HEALTH_PATH&&request.method==='GET')return health(env);
-  if(url.pathname!==API_PATH)return null;
-  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{allow:'POST, OPTIONS','cache-control':'no-store'}});
-  if(request.method!=='POST')return json({ok:false,error:'method_not_allowed'},405);
-  if(env?.ENVIRONMENT==='production'){
-    const origin=request.headers.get('origin')||'';
-    const allowed=new Set(['https://ekodi.kr','https://seonammedi.kr','https://www.seonammedi.kr','https://xn--3e0b8b58jw4co4mnpll3k.kr','https://www.xn--3e0b8b58jw4co4mnpll3k.kr']);
-    if(!allowed.has(origin))return json({ok:false,error:'origin_not_allowed'},403);
+  const replyMatch=url.pathname.match(REPLY_PATH);
+  if(replyMatch){
+    if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{allow:'POST, OPTIONS','cache-control':'no-store'}});
+    if(request.method!=='POST')return json({ok:false,error:'method_not_allowed'},405);
+    if(!originAllowed(request,env))return json({ok:false,error:'origin_not_allowed'},403);
+    return createPublicReply(request,env,Number(replyMatch[1]));
   }
+  if(url.pathname!==API_PATH)return null;
+  if(request.method==='GET')return listPublicVoices(env);
+  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{allow:'GET, POST, OPTIONS','cache-control':'no-store'}});
+  if(request.method!=='POST')return json({ok:false,error:'method_not_allowed'},405);
+  if(!originAllowed(request,env))return json({ok:false,error:'origin_not_allowed'},403);
   const contentLength=Number(request.headers.get('content-length')||0);
   if(contentLength>16384)return json({ok:false,error:'payload_too_large'},413);
   let body;try{body=await request.json()}catch{return json({ok:false,error:'invalid_json'},400)}
@@ -115,35 +176,36 @@ export async function handleSeonamMediCivicApi(request,env){
   const displayName=clean(body?.name,80);
   const contact=clean(body?.contact,160);
   const message=clean(body?.message,3000);
-  const publicConsent=body?.publicConsent===true;
   if(!CATEGORIES.has(category))return json({ok:false,error:'invalid_category',message:'의견 유형을 확인해 주세요.'},400);
   if(!message)return json({ok:false,error:'invalid_message',message:'의견 내용을 입력해 주세요.'},400);
   if(body?.privacyConsent!==true)return json({ok:false,error:'privacy_consent_required',message:'개인정보 처리 동의가 필요합니다.'},400);
 
-  try{
-    const requestFingerprint=await fingerprint(request);
-    const limited=await applyIngressRateLimit(env,requestFingerprint);
-    if(limited?.success===false)return json({ok:false,error:'rate_limited',message:'접수가 많습니다. 잠시 후 다시 시도해 주세요.'},429,{'retry-after':'30'});
-    const submissionId=crypto.randomUUID();
-    const acceptedAt=new Date().toISOString();
-    const payload={submissionId,category,displayName,contact,message,publicConsent,requestFingerprint,acceptedAt};
+  const requestFingerprint=await fingerprint(request);
+  const limited=await applyIngressRateLimit(env,requestFingerprint);
+  if(limited?.success===false)return json({ok:false,error:'rate_limited',message:'등록이 많습니다. 잠시 후 다시 시도해 주세요.'},429,{'retry-after':'30'});
+  const submissionId=crypto.randomUUID();
+  const acceptedAt=new Date().toISOString();
+  const payload={submissionId,category,displayName,contact,message,publicConsent:true,requestFingerprint,acceptedAt};
 
+  try{
+    if(env?.DB?.prepare){
+      const id=await persistVoice(env,payload);
+      return json({ok:true,queued:false,id,submissionId,message:'시민의견이 등록되어 바로 게시되었습니다.'},201);
+    }
+  }catch(error){
+    console.error('seonammedi civic direct publish failed; trying durable queue',error);
+  }
+
+  try{
     if(durableWriteQueueAvailable(env)){
       const queued=await enqueueDurableWrite(env,{kind:QUEUE_KIND,workspaceId:'seonammedi',idempotencyKey:submissionId,payload,acceptedAt});
       if(!queued.ok)throw new Error(queued.error||'queue_rejected');
-      return json({ok:true,queued:true,submissionId,message:'의견이 접수되었습니다. 순차적으로 저장·검토됩니다.'},202);
+      return json({ok:true,queued:true,submissionId,message:'시민의견이 접수되었습니다. 저장 완료 즉시 게시됩니다.'},202);
     }
-
-    if(env?.ENVIRONMENT!=='production'&&env?.DB?.prepare){
-      await persistVoice(env,payload);
-      return json({ok:true,queued:false,submissionId,message:'의견이 접수되었습니다.'},201);
-    }
-
-    return json({ok:false,error:'durable_queue_unavailable',message:'접수량 보호 시스템을 준비 중입니다. 잠시 후 다시 시도해 주세요.'},503,{'retry-after':'5'});
+    return json({ok:false,error:'write_ingress_unavailable',message:'등록 저장소가 일시적으로 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.'},503,{'retry-after':'5'});
   }catch(error){
     console.error('seonammedi civic durable ingress failed',error);
-    return json({ok:false,error:'write_ingress_failed',message:'접수량이 많습니다. 잠시 후 다시 시도해 주세요.'},503,{'retry-after':'5'});
+    return json({ok:false,error:'write_ingress_failed',message:'등록이 많습니다. 잠시 후 다시 시도해 주세요.'},503,{'retry-after':'5'});
   }
 }
-
 export const SEONAMMEDI_VOICE_QUEUE_KIND=QUEUE_KIND;
