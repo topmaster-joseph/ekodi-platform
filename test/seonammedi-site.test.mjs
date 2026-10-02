@@ -453,6 +453,25 @@ test('seonammedi channel previews use provider-safe embeds and same-origin metad
   assert.match(app,/frame\.src='about:blank'/);
 });
 
+test('seonammedi channel preview exposes up to three recent items for YouTube and social channels',async()=>{
+  const [app,html,css,control]=await Promise.all([
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('index.html',root),'utf8'),
+    readFile(new URL('app.css',root),'utf8'),
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8')
+  ]);
+  assert.match(html,/id="channelPreviewRecent"/);
+  assert.match(app,/function renderChannelRecent\(item,data=\{\}\)/);
+  assert.match(app,/slice\(0,3\)/);
+  assert.match(app,/data-channel-recent-index/);
+  assert.match(css,/\.channel-recent-grid\{display:grid;grid-template-columns:repeat\(3/);
+  assert.match(control,/function youtubeRecentItems\(xml\)/);
+  assert.match(control,/items\.length<3/);
+  assert.match(control,/resolveYouTubeChannelId/);
+  assert.match(control,/contentType='recent-videos'/);
+});
+
+
 test('seonammedi admin auth handoff is same-origin and finance API is production-guarded',async()=>{
   const [control,adminJs,manifestText]=await Promise.all([
     readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
