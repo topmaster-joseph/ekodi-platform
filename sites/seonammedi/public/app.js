@@ -292,6 +292,7 @@ function showView(view,{updateHash=false}={}){
 function syncViewFromLocation(){
   const raw=location.hash.replace(/^#/,'');
   if(raw.includes('ekodi_token=')){showView(new URLSearchParams(location.search).get('compose')==='notice'?'notices':'',{updateHash:false});return}
+  if(raw==='channels'||raw.startsWith('channels/')){showView('channels',{updateHash:false});return}
   showView(raw,{updateHash:false});
 }
 document.querySelector('.site-header nav')?.addEventListener('click',event=>{
@@ -475,6 +476,22 @@ const channelPreviewEmbedUrl=(policy,data={})=>{
 let publicChannels=[];
 let channelPreviewSeq=0;
 let activeChannelPlatform='all';
+function channelRouteFromHash(){
+  const raw=location.hash.replace(/^#/,'');
+  if(raw==='channels')return {platform:'all',id:0};
+  if(!raw.startsWith('channels/'))return null;
+  const parts=raw.split('/');
+  const platform=decodeURIComponent(parts[1]||'all').toLowerCase();
+  const id=Number(parts[2]||0);
+  return {platform,id:Number.isFinite(id)&&id>0?id:0};
+}
+function writeChannelRoute(item){
+  if(!item)return;
+  const platform=encodeURIComponent(String(item.platform||'other').toLowerCase());
+  const id=Number(item.id||0);
+  const next='#channels/'+platform+(id>0?'/'+id:'');
+  if(location.hash!==next)history.replaceState({view:'channels',channelId:id},'',next);
+}
 const CHANNEL_PLATFORM_TABS=Object.freeze([
   ['all','전체'],
   ['facebook','Facebook'],
@@ -503,8 +520,9 @@ function renderChannelFallback(item,data={}){
   host.innerHTML='<div class="channel-preview-fallback-content"><div class="channel-preview-summary">'+(image!=='#'?'<img src="'+image+'" alt="" loading="lazy">':'')+'<div><span class="source-type">'+escapeHtml(platform)+'</span><h4>'+title+'</h4><p>'+description+'</p><small>'+escapeHtml(hint)+'</small></div></div>'+recentHtml+'</div>';
   host.hidden=false;
 }
-async function showChannelPreview(index){
+async function showChannelPreview(index,{updateRoute=true}={}){
   const item=publicChannels[index];if(!item)return;
+  if(updateRoute)writeChannelRoute(item);
   const seq=++channelPreviewSeq;
   const preview=el('channelPreview'),frame=el('channelPreviewFrame'),fallback=el('channelPreviewFallback'),title=el('channelPreviewTitle'),metaHost=el('channelPreviewMeta'),open=el('channelPreviewOpen');
   const url=safeUrl(item.url);
@@ -551,7 +569,7 @@ async function showChannelPreview(index){
 function channelsForPlatform(platform){
   return platform==='all'?publicChannels:publicChannels.filter(item=>String(item.platform||'').toLowerCase()===platform);
 }
-function renderChannelAccounts(platform){
+function renderChannelAccounts(platform,{preferredId=0,updateRoute=true}={}){
   const host=el('publicChannelAccounts'),preview=el('channelPreview');if(!host)return;
   const rows=channelsForPlatform(platform);
   if(!rows.length){
@@ -559,11 +577,12 @@ function renderChannelAccounts(platform){
     if(preview)preview.hidden=true;
     return;
   }
+  const selectedRow=Math.max(0,preferredId?rows.findIndex(item=>Number(item.id)===Number(preferredId)):0);
   host.innerHTML=rows.map((item,rowIndex)=>{
-    const index=publicChannels.indexOf(item);
-    return '<button type="button" class="channel-account'+(rowIndex===0?' active':'')+'" role="tab" aria-selected="'+(rowIndex===0?'true':'false')+'" tabindex="'+(rowIndex===0?'0':'-1')+'" data-channel-index="'+index+'"><span>'+escapeHtml(channelPlatformLabel(item.platform))+'</span><strong>'+escapeHtml(item.name||'관련 채널')+'</strong><small>'+escapeHtml(item.official?'공식 확인':channelCategoryLabel(item.category))+'</small></button>';
+    const index=publicChannels.indexOf(item),active=rowIndex===selectedRow;
+    return '<button type="button" class="channel-account'+(active?' active':'')+'" role="tab" aria-selected="'+(active?'true':'false')+'" tabindex="'+(active?'0':'-1')+'" data-channel-index="'+index+'"><span>'+escapeHtml(channelPlatformLabel(item.platform))+'</span><strong>'+escapeHtml(item.name||'관련 채널')+'</strong><small>'+escapeHtml(item.official?'공식 확인':channelCategoryLabel(item.category))+'</small></button>';
   }).join('');
-  showChannelPreview(publicChannels.indexOf(rows[0]));
+  showChannelPreview(publicChannels.indexOf(rows[selectedRow]),{updateRoute});
 }
 function renderChannelPlatformTabs(){
   const host=el('publicChannelTabs');if(!host)return;
@@ -572,7 +591,7 @@ function renderChannelPlatformTabs(){
   const tabs=[...CHANNEL_PLATFORM_TABS,...extras.map(key=>[key,channelPlatformLabel(key)])];
   host.innerHTML=tabs.map(([key,label],index)=>'<button type="button" class="channel-tab'+(index===0?' active':'')+'" role="tab" aria-selected="'+(index===0?'true':'false')+'" tabindex="'+(index===0?'0':'-1')+'" data-channel-platform="'+escapeHtml(key)+'"><strong>'+escapeHtml(label)+'</strong><span>'+channelsForPlatform(key).length+'</span></button>').join('');
 }
-function activateChannelPlatform(platform){
+function activateChannelPlatform(platform,{preferredId=0,updateRoute=true}={}){
   activeChannelPlatform=platform||'all';
   const host=el('publicChannelTabs');
   host?.querySelectorAll('[data-channel-platform]').forEach(button=>{
@@ -581,7 +600,7 @@ function activateChannelPlatform(platform){
     button.setAttribute('aria-selected',active?'true':'false');
     button.tabIndex=active?0:-1;
   });
-  renderChannelAccounts(activeChannelPlatform);
+  renderChannelAccounts(activeChannelPlatform,{preferredId,updateRoute});
 }
 async function loadChannels(){
   const host=el('publicChannelTabs');if(!host)return;
@@ -610,7 +629,10 @@ async function loadChannels(){
         const index=Number(buttons[next].dataset.channelIndex);showChannelPreview(index);buttons[next]?.focus();
       };
     }
-    activateChannelPlatform('all');
+    const route=channelRouteFromHash();
+    const routeItem=route?.id?publicChannels.find(item=>Number(item.id)===route.id):null;
+    const routePlatform=routeItem?String(routeItem.platform||'all').toLowerCase():(route?.platform&&channelsForPlatform(route.platform).length?route.platform:'all');
+    activateChannelPlatform(routePlatform,{preferredId:routeItem?.id||0,updateRoute:Boolean(routeItem)});
   }catch(error){
     publicChannels=[];
     host.innerHTML='<span class="muted">'+escapeHtml(error.message||'채널 목록을 불러오지 못했습니다.')+'</span>';
