@@ -5,6 +5,50 @@ const WORKSPACE_SLUG=/^[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?$/;
 const SITE_OWNED_ADMIN_ROOTS=new Set(['ekodimall','ekodimission']);
 export const RESERVED_WORKSPACE_SLUGS=new Set(platformRouteRegistrySnapshot().reserved);
 
+export const PUBLIC_USER_ACCESS_CONTRACT=Object.freeze({
+  policyId:'PUBLIC-USER-SURFACE-001',
+  interactionPolicyId:'PUBLIC-INTERACTION-001',
+  publicSurfaceDefault:'guest-open',
+  safePublicActionClasses:Object.freeze([
+    'event-application',
+    'public-reservation-request',
+    'public-inquiry',
+    'public-feedback',
+    'public-opinion',
+    'public-interest-registration',
+  ]),
+  protectedActionClasses:Object.freeze([
+    'private-write',
+    'restricted-application',
+    'payment',
+    'upload',
+    'operator',
+    'admin',
+    'privilege-changing-action',
+    'account-security',
+  ]),
+  serviceLocalOverrideAllowed:false,
+});
+
+const SAFE_PUBLIC_ACTIONS=new Set(PUBLIC_USER_ACCESS_CONTRACT.safePublicActionClasses);
+const PROTECTED_ACTIONS=new Set(PUBLIC_USER_ACCESS_CONTRACT.protectedActionClasses);
+
+export function publicUserAccessDecision({
+  surface='public',
+  actionClass='read',
+  explicitlyPublic=false,
+  explicitPrivate=false,
+}={}){
+  const normalizedSurface=String(surface||'public').trim().toLowerCase();
+  const normalizedAction=String(actionClass||'read').trim().toLowerCase();
+  if(explicitPrivate||normalizedSurface==='admin'||normalizedSurface==='operator'||normalizedSurface==='private')return 'auth-required';
+  if(normalizedAction==='read')return 'guest-open';
+  if(PROTECTED_ACTIONS.has(normalizedAction))return 'auth-required';
+  if(explicitlyPublic&&SAFE_PUBLIC_ACTIONS.has(normalizedAction))return 'guest-open';
+  return 'auth-required';
+}
+
+
 export function normalizeWorkspaceSlug(value){
   return String(value||'').trim().toLowerCase();
 }
