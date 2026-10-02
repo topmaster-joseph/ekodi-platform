@@ -350,7 +350,7 @@ test('Mission trip exposes pay-now buttons before and after application with def
   assert.match(page,/100-033-234271/);
   assert.match(page,/신한 SOL 열기/);
   assert.match(script,/참가비 바로 납부하기/);
-  assert.match(script,/data\.missionPayOpen/);
+  assert.match(script,/dataset\.missionPayOpen/);
   assert.match(script,/계좌번호를 복사했습니다/);
   assert.match(script,/신청이 완료되었습니다\. 아직 참가비를 납부하지 않았다면 바로 납부해 주세요/);
 });
