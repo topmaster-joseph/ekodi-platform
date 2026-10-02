@@ -20,7 +20,7 @@
 <header class="site-header">
   <a class="brand" href="/seonammedi/"><strong>서남권 국립의대 소통센터</strong><small>서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널</small></a>
   <nav aria-label="주요 메뉴">
-    <a href="#status" data-view-link="status">현재상황</a><a href="#channels" data-view-link="channels">소통채널</a><a href="#voices" data-view-link="voices">시민의견</a><a href="#finance" data-view-link="finance">회계</a><a href="#notices" data-view-link="notices">공지</a><a href="#organization" data-view-link="organization">조직</a>
+    <a href="#status" data-view-link="status">활동이력</a><a href="#channels" data-view-link="channels">소통채널</a><a href="#voices" data-view-link="voices">시민의견</a><a href="#finance" data-view-link="finance">회계</a><a href="#notices" data-view-link="notices">공지</a><a href="#organization" data-view-link="organization">조직</a>
   </nav>
 </header>
 <main>
@@ -41,14 +41,7 @@
   <div id="participantOrganizations" class="participant-organizations"></div>
 </section>
 
-<section id="timeline" class="section" data-view-section="status" data-status-pane="timeline" hidden>
-  <div class="section-head"><div><p class="eyebrow">ACTIVITY HISTORY</p><h2>활동이력</h2><p class="note">사건은 활동이력으로 한 번만 기록하고, 같은 사건의 공식자료·보도·사진·영상은 해당 이력의 근거자료로 묶습니다. 사진·영상은 원출처 링크를 우선하고, 독립 자료만 아래 자료목록에 표시합니다.</p></div></div>
-  <div id="statusTabs" class="filters status-tabs" role="tablist" aria-label="현재상황 분류">
-    <button type="button" class="active" data-status-tab="timeline" role="tab" aria-selected="true">활동이력</button>
-    <button type="button" data-status-tab="news" role="tab" aria-selected="false">관련보도</button>
-    <button type="button" data-status-tab="official" role="tab" aria-selected="false">공식기록</button>
-  </div>
-  <p class="filter-label">활동이력 세부 분류</p>
+<section id="timeline" class="section activity-list-only" data-view-section="status" data-status-pane="timeline" hidden>
   <div class="filters" id="timelineFilters" aria-label="활동이력 세부 분류"></div>
   <div id="timelineList" class="timeline"></div>
 </section>
@@ -68,7 +61,7 @@
 
 <section id="materials" class="section records-materials" data-view-section="status" data-status-pane="materials" hidden>
   <div class="section-head"><div><p class="eyebrow" id="statusMaterialEyebrow">RELATED NEWS</p><h2 id="statusMaterialTitle">관련보도</h2><p class="note" id="statusMaterialNote">활동이력과 중복되지 않는 관련보도를 원문 출처와 함께 표시합니다.</p></div><span class="badge">중복 제거</span></div>
-  <div class="filters status-tabs" role="tablist" aria-label="현재상황 분류">
+  <div class="filters status-tabs" role="tablist" aria-label="활동자료 분류">
     <button type="button" data-status-tab="timeline" role="tab" aria-selected="false">활동이력</button>
     <button type="button" data-status-tab="news" role="tab" aria-selected="false">관련보도</button>
     <button type="button" data-status-tab="official" role="tab" aria-selected="false">공식기록</button>
