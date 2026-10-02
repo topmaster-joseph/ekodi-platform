@@ -69,6 +69,7 @@ function normalizeCatalogSite(site,source='registry'){
     defaultMaintenanceTitle:clean(site.defaultMaintenanceTitle,80)||defaultMaintenanceTitle(site),
     defaultMaintenanceMessage:clean(site.defaultMaintenanceMessage,300)||defaultMaintenanceMessage,
     defaultRedirectMode:'button',
+    discoveryKind:clean(site.discoveryKind,80)||'organization',
   });
 }
 
