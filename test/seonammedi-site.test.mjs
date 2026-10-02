@@ -37,7 +37,7 @@ test('seonammedi post-selection timeline migration reconciles production D1',asy
   for(const date of ['2026.09.02','2026.09.03','2026.09.04','2026.09.05','2026.09.07','2026.09.08','2026.09.09','2026.09.14','2026.09.21','2026.09.22'])assert.ok(migration.includes(date),date);
   assert.match(migration,/ON CONFLICT\(legacy_key\) DO UPDATE SET/);
   assert.doesNotMatch(migration,/DROP TABLE|DELETE FROM|ALTER TABLE .* RENAME/);
-  assert.match(control,/SELECT id,created_by FROM seonammedi_timeline WHERE legacy_key=\\?/);
+  assert.match(control,/SELECT id,created_by FROM seonammedi_timeline WHERE legacy_key=\?/);
   assert.match(control,/system-seed/);
 });
 
