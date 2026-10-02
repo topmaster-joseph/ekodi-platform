@@ -514,4 +514,5 @@ test('seonammedi notice permalink is served by the site shell',async()=>{
   assert.equal(await response.text(),'/seonammedi/');
   const app=await readFile(new URL('app.js',root),'utf8');
   assert.match(app,/pathname\.match\(\/\^\\\/seonammedi\\\/notices/);
+  assert.match(app,/find\(item=>Number\(item\.id\)===wanted\)/);
 });
