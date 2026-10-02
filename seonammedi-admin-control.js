@@ -347,6 +347,7 @@ async function createPublicNotice(request,env){
   }catch(error){if(imageKey)await env.LIVE_RECORDINGS_BUCKET?.delete?.(imageKey).catch(()=>{});throw error}
 }
 async function listPublicChannels(env){
+  await ensurePublicContentSchema(env.DB);
   const rows=await env.DB.prepare(`SELECT id,platform,name,url,preview_url,category,official,note,sort_order FROM seonammedi_channels
     WHERE visible=1 ORDER BY official DESC,sort_order ASC,id ASC LIMIT 80`).all();
   return json({ok:true,items:(rows.results||[]).map(publicChannel)});
@@ -419,6 +420,7 @@ async function fetchChannelPreviewPage(url,userAgent,timeout=6000){
   try{return await fetch(url,{headers:{'user-agent':userAgent},redirect:'follow',signal:AbortSignal.timeout(timeout)})}catch{return null}
 }
 async function publicChannelPreview(env,id){
+  await ensurePublicContentSchema(env.DB);
   const row=await env.DB.prepare(`SELECT id,platform,name,url,preview_url,category,official,note,sort_order FROM seonammedi_channels
     WHERE id=? AND visible=1 LIMIT 1`).bind(id).first();
   if(!row)return json({ok:false,error:'not_found'},404);
