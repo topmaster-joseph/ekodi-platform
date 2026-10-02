@@ -69,6 +69,7 @@ function normalizeCatalogSite(site,source='registry'){
     defaultMaintenanceTitle:clean(site.defaultMaintenanceTitle,80)||defaultMaintenanceTitle(site),
     defaultMaintenanceMessage:clean(site.defaultMaintenanceMessage,300)||defaultMaintenanceMessage,
     defaultRedirectMode:'button',
+    discoveryKind:clean(site.discoveryKind,80)||'organization',
   });
 }
 
@@ -94,6 +95,7 @@ function realtimeParentSites(){
     canonicalPath:tenant.home,
     authoritySiteKey:tenant.authSite||tenant.apiTenant||tenant.id,
     tenantSlug:tenant.workspace||'',
+    discoveryKind:tenant.mode==='commerce'?'store':'organization',
   },'realtime-parent')).filter(Boolean);
 }
 
@@ -107,6 +109,7 @@ function realtimeLiveSites(){
     adminUrl:'https://ekodi.kr'+tenant.path.replace(/\/$/,'')+'/admin',
     authoritySiteKey:tenant.authSite||tenant.apiTenant||tenant.id,
     tenantSlug:tenant.workspace||'',
+    discoveryKind:'service',
     defaultMaintenanceTitle:'라이브 서비스 준비 중입니다',
     defaultMaintenanceMessage:'현재 이 Live 서비스는 관리자 검수 또는 준비 상태입니다.',
   },'realtime-live')).filter(Boolean);
