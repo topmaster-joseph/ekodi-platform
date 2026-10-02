@@ -493,3 +493,13 @@ test('current status exposes non-overlapping immediate subcategory tabs',async()
 });
 
 // ops: retrigger guarded Control API deployment after Instagram profile-embed promotion (r2)
+
+
+test('seonammedi notice permalink is served by the site shell',async()=>{
+  const env={ENVIRONMENT:'production',ASSETS:{fetch:async request=>new Response(new URL(request.url).pathname,{status:200,headers:{'content-type':'text/html; charset=utf-8'}})}};
+  const response=await platformRouter.fetch(new Request('https://ekodi.kr/seonammedi/notices/2'),env,{});
+  assert.equal(response.status,200);
+  assert.equal(await response.text(),'/seonammedi/');
+  const app=await readFile(new URL('app.js',root),'utf8');
+  assert.match(app,/pathname\.match\(\/\^\\\/seonammedi\\\/notices/);
+});
