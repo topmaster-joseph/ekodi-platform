@@ -71,7 +71,7 @@ async function emitStaticPageDiscovery(route) {
   let html = await readFile(pagePath, 'utf8');
   html = upsertCanonical(html, canonicalUrl(route.path));
   html = upsertDescription(html, route.description);
-  if (!html.includes('data-ekodi-discovery="v3"')) html = html.replace('</head>', `${renderDiscoveryHead(route.path)}\n</head>`);
+  if (!html.includes('data-ekodi-discovery="v2"')) html = html.replace('</head>', `${renderDiscoveryHead(route.path)}\n</head>`);
   await writeFile(pagePath, html);
 }
 
@@ -111,8 +111,8 @@ export async function emitDiscoveryAssets() {
     const html = await readFile(`${output}${route.asset}`, 'utf8'); const canonical = canonicalUrl(route.path);
     if (!html.includes(`<link rel="canonical" href="${canonical}">`)) throw new Error(`Canonical marker missing: ${route.path}`);
     if (!html.includes(`property="og:url" content="${canonical}"`)) throw new Error(`Open Graph canonical missing: ${route.path}`);
-    if (!html.includes(`data-ekodi-discovery="v3" data-ekodi-path="${route.path}"`)) throw new Error(`Structured discovery metadata missing: ${route.path}`);
+    if (!html.includes(`data-ekodi-discovery="v2" data-ekodi-path="${route.path}"`)) throw new Error(`Structured discovery metadata missing: ${route.path}`);
   }
-  console.log(`Built EKODI Discovery Layer v3 for ${DISCOVERY_PUBLIC_ROUTES.length} public routes plus ${EKODI_AI_DISCOVERY_PATH}, health-only crawler access at ${OPS_HEALTH_PATH}: robots.txt, sitemap.xml, llms.txt, canonical, Open Graph, Twitter and JSON-LD`);
+  console.log(`Built EKODI Discovery Layer v2 for ${DISCOVERY_PUBLIC_ROUTES.length} public routes plus ${EKODI_AI_DISCOVERY_PATH}, health-only crawler access at ${OPS_HEALTH_PATH}: robots.txt, sitemap.xml, llms.txt, canonical, Open Graph, Twitter and JSON-LD`);
 }
 if (process.argv[1] === fileURLToPath(import.meta.url)) await emitDiscoveryAssets();
