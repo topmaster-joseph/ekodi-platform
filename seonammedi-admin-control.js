@@ -868,7 +868,9 @@ function canManageVoices(auth){return can(auth,VOICE_CAP)||can(auth,CONTENT_CAP)
 async function listAdminVoices(env,auth){
   if(!canManageVoices(auth))return json({ok:false,error:'voice_forbidden'},403);
   const rows=await env.DB.prepare('SELECT id,category,display_name,contact,message,public_consent,privacy_consent,review_status,created_at,updated_at FROM seonammedi_civic_voices ORDER BY id DESC LIMIT 300').all();
-  return json({ok:true,items:(rows.results||[]).map(voiceRow)});
+  const replies=await env.DB.prepare('SELECT id,voice_id,display_name,message,created_at FROM seonammedi_civic_voice_replies ORDER BY id ASC LIMIT 3000').all().catch(()=>({results:[]}));
+  const grouped=new Map();for(const reply of replies.results||[]){const key=Number(reply.voice_id);if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push({id:Number(reply.id),displayName:reply.display_name||'익명',message:reply.message||'',createdAt:reply.created_at})}
+  return json({ok:true,items:(rows.results||[]).map(row=>({...voiceRow(row),replies:grouped.get(Number(row.id))||[]}))});
 }
 async function updateAdminVoice(request,env,auth,id){
   if(!canManageVoices(auth))return json({ok:false,error:'voice_forbidden'},403);
@@ -889,7 +891,14 @@ async function updateAdminVoice(request,env,auth,id){
 async function deleteAdminVoice(env,auth,id){
   if(!canManageVoices(auth))return json({ok:false,error:'voice_forbidden'},403);
   const existing=await env.DB.prepare('SELECT id,category,display_name FROM seonammedi_civic_voices WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
+  await env.DB.prepare('DELETE FROM seonammedi_civic_voice_replies WHERE voice_id=?').bind(id).run().catch(()=>null);
   await env.DB.prepare('DELETE FROM seonammedi_civic_voices WHERE id=?').bind(id).run();await audit(env,auth,'delete','civic_voice',id,{category:existing.category,displayName:existing.display_name||''});return json({ok:true,id});
+}
+async function deleteAdminVoiceReply(env,auth,voiceId,replyId){
+  if(!canManageVoices(auth))return json({ok:false,error:'voice_forbidden'},403);
+  const existing=await env.DB.prepare('SELECT id,voice_id,display_name FROM seonammedi_civic_voice_replies WHERE id=? AND voice_id=?').bind(replyId,voiceId).first();if(!existing)return json({ok:false,error:'not_found'},404);
+  await env.DB.prepare('DELETE FROM seonammedi_civic_voice_replies WHERE id=? AND voice_id=?').bind(replyId,voiceId).run();
+  await audit(env,auth,'delete','civic_voice_reply',replyId,{voiceId,displayName:existing.display_name||''});return json({ok:true,id:replyId,voiceId});
 }
 
 async function listAdminContent(env,auth){
@@ -1094,6 +1103,8 @@ export async function handleSeonamMediAdminApi(request,env){
   let voiceMatch=url.pathname.match(/^\/api\/seonammedi\/admin\/voices\/(\d+)$/);
   if(voiceMatch&&request.method==='PUT')return updateAdminVoice(request,env,auth,Number(voiceMatch[1]));
   if(voiceMatch&&request.method==='DELETE')return deleteAdminVoice(env,auth,Number(voiceMatch[1]));
+  const voiceReplyMatch=url.pathname.match(/^\/api\/seonammedi\/admin\/voices\/(\d+)\/replies\/(\d+)$/);
+  if(voiceReplyMatch&&request.method==='DELETE')return deleteAdminVoiceReply(env,auth,Number(voiceReplyMatch[1]),Number(voiceReplyMatch[2]));
   if(url.pathname===PREFIX+'/admin/content'&&request.method==='GET')return listAdminContent(env,auth);
   let contentMatch=url.pathname.match(/^\/api\/seonammedi\/admin\/content\/(\d+)$/);
   if(contentMatch&&request.method==='PUT')return updateAdminContent(request,env,auth,Number(contentMatch[1]));

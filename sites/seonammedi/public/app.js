@@ -223,6 +223,48 @@ async function loadMonitor(){
 // 사이트 자동점검 상태는 관리자 페이지에서만 표시합니다.
 
 
+const voiceCategoryLabels={question:'질문',proposal:'정책제안',experience:'의료경험',factcheck:'사실확인 요청',tip:'자료제보',other:'기타'};
+const publicVoiceList=el('publicVoiceList');
+const publicVoiceDate=value=>{try{return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'medium',timeStyle:'short'}).format(new Date(value))}catch{return''}};
+function renderPublicVoices(items){
+  if(!publicVoiceList)return;
+  if(!items.length){publicVoiceList.innerHTML='<p class="muted">아직 등록된 시민의견이 없습니다.</p>';return}
+  publicVoiceList.innerHTML=items.map(item=>`<article class="public-voice-card" data-voice-id="${Number(item.id)}">
+    <div class="public-voice-head"><div><strong>${escapeHtml(item.displayName||'익명')}</strong><span>${escapeHtml(voiceCategoryLabels[item.category]||'기타')}</span></div><time>${escapeHtml(publicVoiceDate(item.createdAt))}</time></div>
+    <p class="public-voice-message">${escapeHtml(item.message||'')}</p>
+    <div class="public-voice-replies">${(item.replies||[]).map(reply=>`<div class="public-voice-reply"><div><strong>${escapeHtml(reply.displayName||'익명')}</strong><time>${escapeHtml(publicVoiceDate(reply.createdAt))}</time></div><p>${escapeHtml(reply.message||'')}</p></div>`).join('')}</div>
+    <form class="voice-reply-form" data-voice-reply="${Number(item.id)}">
+      <input name="name" maxlength="80" placeholder="이름 또는 표시명 (익명 가능)">
+      <textarea name="message" maxlength="1500" rows="2" required placeholder="답글을 입력해 주세요"></textarea>
+      <div class="form-actions"><button type="submit">답글 등록</button><span role="status"></span></div>
+    </form>
+  </article>`).join('');
+}
+async function loadPublicVoices(){
+  if(!publicVoiceList)return;
+  try{
+    const response=await fetch('/api/seonammedi/voices',{cache:'no-store'});
+    const body=await response.json().catch(()=>({}));
+    if(!response.ok||body.ok!==true)throw new Error(body.message||body.error||'시민의견을 불러오지 못했습니다.');
+    renderPublicVoices(Array.isArray(body.items)?body.items:[]);
+  }catch(error){publicVoiceList.innerHTML='<p class="muted">'+escapeHtml(error.message||'시민의견을 불러오지 못했습니다.')+'</p>'}
+}
+publicVoiceList?.addEventListener('submit',async event=>{
+  const form=event.target.closest('[data-voice-reply]');if(!form)return;event.preventDefault();
+  const voiceId=Number(form.dataset.voiceReply||0),status=form.querySelector('[role="status"]'),button=form.querySelector('button[type="submit"]');
+  const data=new FormData(form),payload={name:data.get('name'),message:data.get('message')};
+  if(!String(payload.message||'').trim()){if(status)status.textContent='답글 내용을 입력해 주세요.';return}
+  if(button)button.disabled=true;if(status)status.textContent='등록 중…';
+  try{
+    const response=await fetch('/api/seonammedi/voices/'+voiceId+'/replies',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+    const body=await response.json().catch(()=>({}));
+    if(!response.ok||body.ok!==true)throw new Error(body.message||body.error||'답글을 등록하지 못했습니다.');
+    form.reset();if(status)status.textContent='답글이 등록되었습니다.';await loadPublicVoices();
+  }catch(error){if(status)status.textContent=error.message||'답글을 등록하지 못했습니다.'}
+  finally{if(button)button.disabled=false}
+});
+el('reloadVoices')?.addEventListener('click',loadPublicVoices);
+
 const voiceForm=el('voiceForm');
 if(voiceForm){
   const status=el('voiceStatus'),submitButton=voiceForm.querySelector('button[type="submit"]');
@@ -231,25 +273,27 @@ if(voiceForm){
     event.preventDefault();
     if(submitButton?.disabled)return;
     const form=new FormData(voiceForm);
-    const payload={category:form.get('category'),name:form.get('name'),contact:form.get('contact'),message:form.get('message'),publicConsent:form.get('publicConsent')==='on',privacyConsent:form.get('privacyConsent')==='on'};
+    const payload={category:form.get('category'),name:form.get('name'),contact:form.get('contact'),message:form.get('message'),privacyConsent:form.get('privacyConsent')==='on'};
     if(!String(payload.message||'').trim()){status.textContent='내용을 입력해 주세요.';return}
     if(!payload.privacyConsent){status.textContent='개인정보 처리 동의가 필요합니다.';return}
     if(submitButton)submitButton.disabled=true;
-    status.textContent='접수 중…';
+    status.textContent='등록 중…';
     try{
       const response=await fetch('/api/seonammedi/voices',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
       const body=await response.json().catch(()=>({}));
-      if(!response.ok||body.ok!==true||!body.submissionId){const detail=body.message||body.error||body.code||('HTTP '+response.status);throw new Error('접수하지 못했습니다. '+detail)}
+      if(!response.ok||body.ok!==true||!body.submissionId){const detail=body.message||body.error||body.code||('HTTP '+response.status);throw new Error('등록하지 못했습니다. '+detail)}
       voiceForm.reset();
-      status.textContent=body.message||'접수되었습니다.';
+      status.textContent=body.message||'등록되었습니다.';
+      await loadPublicVoices();
+      if(body.queued){setTimeout(loadPublicVoices,900);setTimeout(loadPublicVoices,2500)}
     }catch(error){
-      status.textContent=error.message||'접수하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+      status.textContent=error.message||'등록하지 못했습니다. 잠시 후 다시 시도해 주세요.';
     }finally{
       if(submitButton)submitButton.disabled=false;
     }
   });
 }
-
+loadPublicVoices();
 
 let activeStatusTab='timeline';
 function showStatusTab(tab){
