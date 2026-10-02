@@ -72,22 +72,26 @@
   <div id="materialList" class="material-list"></div>
 </section>
 
-<section id="voices" class="section split" data-view-section="voices" hidden>
-  <div>
-    <p class="eyebrow">CITIZEN VOICES</p><h2>시민의견</h2>
-    <p>시민 의견·질문·제보·정책제안·의료경험을 수렴하고 관련 쟁점에 연결하는 구조로 운영합니다.</p>
+<section id="voices" class="section" data-view-section="voices" hidden>
+  <div class="section-head">
+    <div><p class="eyebrow">CITIZEN VOICES</p><h2>시민의견</h2><p>등록된 시민의견은 별도 검토 대기 없이 바로 게시됩니다. 연락처·이메일은 공개하지 않습니다.</p></div>
   </div>
-  <form id="voiceForm" class="panel voice-form">
-    <strong>의견·제보 접수</strong>
-    <label>유형<select name="category"><option value="question">질문</option><option value="proposal">정책제안</option><option value="experience">의료경험</option><option value="factcheck">사실확인 요청</option><option value="tip">자료제보</option><option value="other">기타</option></select></label>
-    <label>이름 또는 표시명<input name="name" maxlength="80" placeholder="익명 가능"></label>
-    <label>연락처 또는 이메일<input name="contact" maxlength="160" placeholder="답변이 필요한 경우 입력"></label>
-    <label>내용<textarea name="message" maxlength="3000" required></textarea></label>
-    <label class="check"><input type="checkbox" name="publicConsent"> 검토 후 공개될 수 있음에 동의합니다.</label>
-    <label class="check"><input type="checkbox" name="privacyConsent" required> 접수·답변을 위한 개인정보 처리에 동의합니다.</label>
-    <div class="form-actions"><button type="submit">접수하기</button><span id="voiceStatus" role="status"></span></div>
-    <p class="muted">정상 접수된 의견은 공개 동의 여부와 관계없이 관리자 접수함에 등록됩니다. 공개 동의가 없는 개인정보와 제보자 정보는 공개하지 않습니다.</p>
-  </form>
+  <div class="voice-layout">
+    <form id="voiceForm" class="panel voice-form">
+      <strong>시민의견 등록</strong>
+      <label>유형<select name="category"><option value="question">질문</option><option value="proposal">정책제안</option><option value="experience">의료경험</option><option value="factcheck">사실확인 요청</option><option value="tip">자료제보</option><option value="other">기타</option></select></label>
+      <label>이름 또는 표시명<input name="name" maxlength="80" placeholder="익명 가능"></label>
+      <label>연락처 또는 이메일<input name="contact" maxlength="160" placeholder="답변이 필요한 경우에만 입력 · 공개되지 않음"></label>
+      <label>내용<textarea name="message" maxlength="3000" required></textarea></label>
+      <label class="check"><input type="checkbox" name="privacyConsent" required> 등록·답변을 위한 개인정보 처리에 동의합니다.</label>
+      <div class="form-actions"><button type="submit">등록하기</button><span id="voiceStatus" role="status"></span></div>
+      <p class="muted">등록 즉시 아래 시민의견 목록에 공개됩니다. 개인정보·연락처는 공개 목록에 표시하지 않습니다.</p>
+    </form>
+    <section class="voice-board" aria-labelledby="voiceBoardTitle">
+      <div class="card-head"><h3 id="voiceBoardTitle">등록된 시민의견</h3><button id="reloadVoices" type="button" class="secondary">새로고침</button></div>
+      <div id="publicVoiceList" class="public-voice-list" aria-live="polite"><p class="muted">시민의견을 불러오는 중입니다.</p></div>
+    </section>
+  </div>
 </section>
 
 <section id="channels" class="section" data-view-section="channels" hidden>
