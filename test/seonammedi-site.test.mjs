@@ -428,7 +428,7 @@ test('seonammedi channel previews use provider-safe embeds and same-origin metad
   assert.match(control,/profileEmbedUrl/);
   assert.match(control,/let recentItems=instagramRecentItems\(html\)/);
   assert.match(control,/recentItems=instagramRecentItems\(embedHtml\)/);
-  assert.match(control,/preview\.recentItems=recentItems/);
+  assert.match(control,/preview\.recentItems=\[\.\.\.\(preview\.recentItems\|\|\[\]\),\.\.\.recentItems\.filter/);
   assert.match(control,/preview\.contentType='recent-posts'/);
   assert.match(control,/preview\.embedUrl=provider\.profileEmbedUrl/);
   assert.match(control,/preview\.contentType='profile'/);
