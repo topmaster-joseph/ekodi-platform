@@ -1,12 +1,42 @@
 (()=>{
 const API='/api/seonammedi/admin/minutes';
+const PLATFORM_TOKEN_KEY='ekodi-auth-token';
+const SESSION_KEY='ekodi-seonam-admin-session';
+const CENTRAL_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token';
 const $=id=>document.getElementById(id);
 const form=$('minutesForm'), list=$('minutesList'), message=$('minutesMessage');
 if(!form||!list)return;
 let items=[];
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const authHeaders=()=>{const h={'content-type':'application/json'};try{const raw=sessionStorage.getItem('ekodi-seonam-admin-session');const s=raw&&JSON.parse(raw);if(s?.accessToken)h.authorization='Bearer '+s.accessToken}catch{}return h};
-async function api(url,options={}){const r=await fetch(url,{cache:'no-store',...options,headers:{...authHeaders(),...(options.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||('HTTP '+r.status));return d}
+
+function sessionToken(){
+  const platform=sessionStorage.getItem(PLATFORM_TOKEN_KEY)||'';
+  if(platform)return platform;
+  try{
+    const raw=sessionStorage.getItem(SESSION_KEY);
+    const s=raw&&JSON.parse(raw);
+    if(s?.accessToken)return String(s.accessToken);
+  }catch{}
+  try{
+    const raw=localStorage.getItem(CENTRAL_SESSION_KEY)||'';
+    if(!raw)return'';
+    const parsed=JSON.parse(raw);
+    const session=parsed?.currentSession||parsed?.session||parsed;
+    const access=String(session?.access_token||'');
+    const expires=Number(session?.expires_at||0);
+    if(!access)return'';
+    if(expires&&expires<=Math.floor(Date.now()/1000)+30)return'';
+    return access;
+  }catch{return''}
+}
+const authHeaders=()=>{const h={'content-type':'application/json'};const access=sessionToken();if(access)h.authorization='Bearer '+access;return h};
+async function api(url,options={}){
+  const r=await fetch(url,{cache:'no-store',credentials:'same-origin',...options,headers:{...authHeaders(),...(options.headers||{})}});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401)throw new Error('로그인 인증이 필요합니다. 관리자 페이지를 새로고침한 뒤 다시 시도해 주세요.');
+  if(!r.ok)throw new Error(d.error||('HTTP '+r.status));
+  return d
+}
 const dtLocal=v=>{if(!v)return'';const d=new Date(v);if(Number.isNaN(d.getTime()))return'';const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`};
 function reset(){form.reset();form.elements.id.value='';form.status.value='shared';form.showViewers.checked=true;$('minutesFormTitle').textContent='회의록 작성';message.textContent=''}
 function fill(x){form.elements.id.value=x.id;form.meetingAt.value=dtLocal(x.meetingAt);form.title.value=x.title||'';form.attendees.value=x.attendees||'';form.body.value=x.body||'';form.status.value=x.status||'closed';form.showViewers.checked=Boolean(x.showViewers);$('minutesFormTitle').textContent='회의록 수정';window.scrollTo({top:0,behavior:'smooth'})}
