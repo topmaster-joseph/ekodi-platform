@@ -152,6 +152,15 @@
         </section>
         <select id="intentPlanAudience" hidden aria-hidden="true"><option value="person">개인</option><option value="business">사업</option><option value="organization">기관·단체</option><option value="community">공동체</option><option value="church">교회</option><option value="team">팀</option></select>
       </form>
+      <div class="intent-actions intent-legacy-signals" aria-label="빠른 관심 영역" hidden>
+        <button type="button" data-intent-service="support">혜택·지원</button>
+        <button type="button" data-intent-service="work">일·진로</button>
+        <button type="button" data-intent-service="business">사업</button>
+        <button type="button" data-intent-service="author">글·콘텐츠</button>
+        <button type="button" data-intent-service="community">관계·생활</button>
+        <button type="button" data-finance-open>돈·재무</button>
+        <button type="button" data-intent-service="marketing">알리기</button>
+      </div>
       <div id="intentPlanResult" class="intent-plan-result" aria-live="polite" hidden></div>
       <div class="intent-result-actions" data-intent-result-actions hidden><button id="intentPlanReset" class="secondary" type="button">새 요청 시작</button></div>
     </section>
