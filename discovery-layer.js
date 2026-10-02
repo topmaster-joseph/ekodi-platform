@@ -76,35 +76,37 @@ function routeFromService(service) {
     source: 'ecosystem-services',
   });
 }
+const PUBLICATION_SITE_DISCOVERY_PROFILE=Object.freeze({
+  jadam:Object.freeze({kind:'store',priority:'0.9',changefreq:'daily',label:'자담치킨 목포대점',description:'국립목포대학교 후문 자담치킨 목포대점의 메뉴·가격·전화·영업시간·지도·배달주문 정보를 안내합니다.'}),
+  pizzamaru:Object.freeze({kind:'store',priority:'0.9',changefreq:'daily',label:'피자마루 목포대점',description:'국립목포대학교 후문 피자마루 목포대점의 메뉴·가격·전화·영업시간·지도·배달주문 정보를 안내합니다.'}),
+  yogurt:Object.freeze({kind:'store',priority:'0.9',changefreq:'daily',label:'요거트퍼플 목포대점',description:'국립목포대학교 후문 요거트퍼플 목포대점의 메뉴·가격·전화·영업시간·지도·배달주문 정보를 안내합니다.'}),
+  seonammedi:Object.freeze({kind:'organization',priority:'0.9',changefreq:'daily'}),
+  cgma:Object.freeze({kind:'organization'}),
+  cheonggye:Object.freeze({kind:'organization'}),
+  pyeonggongmok:Object.freeze({kind:'organization'}),
+  ekodimission:Object.freeze({kind:'organization'}),
+});
 function schemaKindForPublicationSite(site) {
-  const explicit = {
-    jadam: 'store',
-    pizzamaru: 'store',
-    yogurt: 'store',
-    cgma: 'organization',
-    cheonggye: 'organization',
-    seonammedi: 'organization',
-    pyeonggongmok: 'organization',
-    ekodimission: 'organization',
-  };
-  return explicit[String(site?.id || '').toLowerCase()] || site?.discoveryKind || 'organization';
+  const profile=PUBLICATION_SITE_DISCOVERY_PROFILE[String(site?.id || '').toLowerCase()];
+  return profile?.kind || site?.discoveryKind || 'organization';
 }
 function routeFromPublicationSite(site, services) {
   const path = normalizePath(site.canonicalPath);
   if (!path || pathBlocked(path)) return null;
   const service = services.get(path);
   if (service && !serviceIsDiscoverable(service)) return null;
+  const profile=PUBLICATION_SITE_DISCOVERY_PROFILE[String(site?.id || '').toLowerCase()]||{};
   return Object.freeze({
     id: site.id,
     path,
     asset: null,
     kind: service ? schemaKindForService(service) : schemaKindForPublicationSite(site),
     publicationState: 'public',
-    changefreq: 'weekly',
-    priority: path === '/' ? '1.0' : '0.7',
-    label: service?.nameEn || site.name,
-    title: service ? `${service.name} | EKODI` : `${site.name} | EKODI`,
-    description: service?.descriptionKo || service?.descriptionEn || `${site.name}의 EKODI 공식 공개 페이지입니다.`,
+    changefreq: profile.changefreq || 'weekly',
+    priority: path === '/' ? '1.0' : (profile.priority || '0.7'),
+    label: service?.nameEn || profile.label || site.name,
+    title: service ? `${service.name} | EKODI` : `${profile.label || site.name} | EKODI`,
+    description: service?.descriptionKo || service?.descriptionEn || profile.description || `${site.name}의 EKODI 공식 공개 페이지입니다.`,
     source: site.source || 'site-publication',
   });
 }
@@ -260,7 +262,7 @@ export function renderDiscoveryHead(path = '/', origin = DISCOVERY_ORIGIN) {
   return [
     '<meta name="robots" content="index, follow">', '<meta property="og:type" content="website">', '<meta property="og:site_name" content="EKODI">',
     `<meta property="og:title" content="${route.title}">`, `<meta property="og:description" content="${route.description}">`, `<meta property="og:url" content="${url}">`,
-    '<meta name="twitter:card" content="summary">', `<script type="application/ld+json" data-ekodi-discovery="v3" data-ekodi-path="${route.path}">${jsonLd}</script>`,
+    '<meta name="twitter:card" content="summary">', `<script type="application/ld+json" data-ekodi-discovery="v2" data-ekodi-path="${route.path}">${jsonLd}</script>`,
   ].join('\n');
 }
 
