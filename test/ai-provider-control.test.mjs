@@ -310,3 +310,14 @@ test('provider routing evidence records fallback and block reasons for operators
   assert.match(migration,/CREATE TABLE IF NOT EXISTS ai_provider_routing_events/);
   assert.match(migration,/previous_provider/);
 });
+
+
+test('provider admin summarizes readiness blockers and recent routing issue',()=>{
+  const admin=read('admin-provider-control.js');
+  assert.match(admin,/대기 사유/);
+  assert.match(admin,/Secret 필요/);
+  assert.match(admin,/무료보호 확인 필요/);
+  assert.match(admin,/런타임 동기화 필요/);
+  assert.match(admin,/실호출 검증 필요/);
+  assert.match(admin,/최근 우회\/차단/);
+});
