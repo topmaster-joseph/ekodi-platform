@@ -65,7 +65,7 @@ test('Mission admin root stays on overview and applicant roster opens from its m
   assert.match(script,/activity-toolbar/);
   assert.match(script,/상세 관리/);
   assert.match(script,/\+ 참가자 직접 추가/);
-  assert.match(script,/<th class="activity-seq-head" scope="col">연번<\/th><th scope="col">신청자<\/th><th scope="col">상태<\/th><th scope="col">인원<\/th><th scope="col">관리<\/th><th scope="col">조치<\/th>/);
+  assert.match(script,/<th class="activity-seq-head" scope="col">연번<\/th><th scope="col"><label><input id="activitySelectAll" type="checkbox"> 신청자<\/label><\/th><th scope="col">상태 · 참가비<\/th><th scope="col">인원<\/th><th scope="col">관리<\/th><th scope="col">조치<\/th>/);
   assert.doesNotMatch(script,/mountCommandHome|EKODITenantCommandHome/);
 });
 
