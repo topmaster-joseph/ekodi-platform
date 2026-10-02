@@ -21,6 +21,14 @@ test('Jadam customer page is public, brand-first, and exposes only the four requ
   assert.match(html,/본사 공식 제품 이미지/);
   assert.match(html,/메뉴 이미지는 본사 공식 제품 이미지를 유지합니다/);
   assert.match(html,/data-jadam-menu-images="brand-official"/);
+  assert.match(html,/rel="canonical" href="https:\/\/ekodi\.kr\/jadam"/);
+  assert.match(html,/data-store-entity="jadam"/);
+  assert.match(html,/"@type":"Restaurant"/);
+  assert.match(html,/"@id":"https:\/\/ekodi\.kr\/jadam#restaurant"/);
+  assert.match(html,/"telephone":"061-453-8295"/);
+  assert.match(html,/"streetAddress":"전남 무안군 청계면 승달산길 37-1"/);
+  assert.match(html,/"openingHours":"11:00–22:00"/);
+  assert.match(html,/국립목포대학교 후문 · 전남 무안군 청계면/);
   assert.match(html,/jadam-storefront\.css\?v=20260910-hq-menu-v1/);
   assert.doesNotMatch(html,/쿠팡이츠|당근 주문|네이버 주문|USER OPERATIONS|STORE MASTER|로그아웃/);
   assert.doesNotMatch(html,/example\.com/);
