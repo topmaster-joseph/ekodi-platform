@@ -83,9 +83,15 @@ if(statusCards){
 }
 // Canonical public activity-history filter labels/order.
 const timelineCategoryLabel=value=>String(value||'').trim()==='비대위 활동'?'비대위 활동이력':String(value||'').trim();
+const timelineDateKey=value=>{
+  const parts=String(value||'').trim().match(/\d+/g)||[];
+  const year=Number(parts[0]||0),month=Number(parts[1]||12),day=Number(parts[2]||31);
+  return year*10000+month*100+day;
+};
+const timelineDescending=(a,b)=>timelineDateKey(b.date)-timelineDateKey(a.date)||Number(b.id||0)-Number(a.id||0)||String(b.title||'').localeCompare(String(a.title||''),'ko-KR');
 const cats=['전체','비대위 활동이력','장기현안','정부·대학','후보대학 선정'];
 el('timelineFilters').innerHTML=cats.map((c,i)=>`<button data-cat="${escapeHtml(c)}" class="${i===0?'active':''}">${escapeHtml(c)}</button>`).join('');
-const render=cat=>{const rows=cat==='전체'?d.timeline:d.timeline.filter(x=>timelineCategoryLabel(x.category)===cat);el('timelineList').innerHTML=rows.map(x=>`<article class="timeline-item" data-event-date="${escapeHtml(x.date)}"><div class="timeline-date">${escapeHtml(x.date)}</div><div><h3>${escapeHtml(x.title)}</h3><p>${escapeHtml(x.summary)}</p><div class="chips"><span class="chip">${escapeHtml(timelineCategoryLabel(x.category))}</span><span class="chip">${escapeHtml(x.evidence)}</span></div>${evidenceBlock(x)}</div></article>`).join('')};
+const render=cat=>{const rows=(cat==='전체'?d.timeline:d.timeline.filter(x=>timelineCategoryLabel(x.category)===cat)).slice().sort(timelineDescending);el('timelineList').innerHTML=rows.map(x=>`<article class="timeline-item" data-event-date="${escapeHtml(x.date)}"><div class="timeline-date">${escapeHtml(x.date)}</div><div><h3>${escapeHtml(x.title)}</h3><p>${escapeHtml(x.summary)}</p><div class="chips"><span class="chip">${escapeHtml(timelineCategoryLabel(x.category))}</span><span class="chip">${escapeHtml(x.evidence)}</span></div>${evidenceBlock(x)}</div></article>`).join('')};
 render('전체');el('timelineFilters').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;[...el('timelineFilters').children].forEach(x=>x.classList.remove('active'));b.classList.add('active');render(b.dataset.cat);attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS||[])});
 const normalizeUrlKey=value=>{try{const u=new URL(String(value||''),location.origin);u.hash='';['utm_source','utm_medium','utm_campaign','utm_term','utm_content','fbclid','gclid'].forEach(k=>u.searchParams.delete(k));return u.href.replace(/\/$/,'')}catch{return String(value||'').trim().replace(/\/$/,'')}};
 const timelineEvidenceUrls=new Set((d.timeline||[]).flatMap(item=>[...(item.links||[]).map(link=>link.url),...(item.media||[]).map(media=>media.url)]).filter(Boolean).map(normalizeUrlKey));

@@ -568,3 +568,13 @@ test('seonammedi notice detail lets the author edit and delete the clicked post'
   assert.match(control,/request\.method==='PUT'/);
   assert.match(control,/UPDATE seonammedi_notices SET title=\?,body=\?,image_key=\?,image_type=\?,image_keys_json=\?,image_types_json=\?,updated_at=\?/);
 });
+
+
+test('seonammedi activity history always renders in descending date order across every filter',async()=>{
+  const app=await readFile(new URL('app.js',root),'utf8');
+  assert.match(app,/const timelineDateKey=value=>/);
+  assert.match(app,/const timelineDescending=\(a,b\)=>timelineDateKey\(b\.date\)-timelineDateKey\(a\.date\)/);
+  assert.match(app,/\(cat==='전체'\?d\.timeline:d\.timeline\.filter\([^;]+\)\)\.slice\(\)\.sort\(timelineDescending\)/);
+});
+
+// descending activity-history order is enforced for every public category filter
