@@ -68,7 +68,55 @@
     ],
     "nonTerminalFailuresRequireAutomaticRecovery": true,
     "validationFailureAction": "diagnose-repair-rerun-continue",
-    "parallelConflictAction": "cross-review-select-winner-retire-or-refresh-overlap-rerun-continue"
+    "parallelConflictAction": "cross-review-select-winner-retire-or-refresh-overlap-rerun-continue",
+    "minorIssueAutonomousRecovery": {
+      "policyId": "MINOR-ISSUE-AUTO-RESOLVE-001",
+      "status": "enforced",
+      "appliesPlatformWide": true,
+      "futureComponentsAutoInherit": true,
+      "classificationOwner": "ekodi-ai-orchestrator",
+      "defaultDisposition": "resolve-without-user-interruption",
+      "classifyAsMinorOnlyWhen": [
+        "reversible",
+        "bounded-blast-radius",
+        "no-new-privilege-or-credential-authority",
+        "no-destructive-data-operation",
+        "no-financial-or-legal-commitment",
+        "no-ambiguous-side-effect",
+        "no-orchestration-policy-weakening"
+      ],
+      "requiredLoop": [
+        "detect",
+        "diagnose",
+        "select-safe-primary-fix",
+        "discover-safe-alternative-if-primary-blocked",
+        "execute",
+        "verify",
+        "retry-or-switch-alternative",
+        "reverify",
+        "continue-parent-task"
+      ],
+      "automaticAlternativeRequired": true,
+      "automaticRetryRequired": true,
+      "rootCauseRemovalWhenRepeated": true,
+      "noUserInterruptionForResolvableMinorIssue": true,
+      "preserve": [
+        "orchestration-gate",
+        "human-gates",
+        "security-boundaries",
+        "audit-trail",
+        "guarded-release",
+        "production-verification"
+      ],
+      "escalateOnlyWhen": [
+        "human-authority-required",
+        "high-impact-or-irreversible",
+        "ambiguous-side-effect",
+        "all-registered-safe-alternatives-exhausted",
+        "higher-order-rule-conflict"
+      ],
+      "completionRequiresVerifiedResolutionOrExplicitTerminalWait": true
+    }
   },
   "consultationDecision": {
     "policyId": "AI-CONSULT-001",
