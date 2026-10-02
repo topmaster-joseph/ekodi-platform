@@ -448,6 +448,10 @@ async function publicChannelPreview(env,id){
     if(preview.recentItems.length){
       preview.mode='recent-embed';
       preview.contentType='recent-posts';
+    }else if(provider.profileEmbedUrl){
+      preview.embedUrl=provider.profileEmbedUrl;
+      preview.mode='embed';
+      preview.contentType='profile';
     }else preview.contentType='profile-summary';
     return json({ok:true,item,preview});
   }

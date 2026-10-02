@@ -355,6 +355,8 @@ test('seonammedi channel previews use provider-safe embeds and same-origin metad
   assert.match(control,/recentItems=instagramRecentItems\(embedHtml\)/);
   assert.match(control,/preview\.recentItems=recentItems/);
   assert.match(control,/preview\.contentType='recent-posts'/);
+  assert.match(control,/preview\.embedUrl=provider\.profileEmbedUrl/);
+  assert.match(control,/preview\.contentType='profile'/);
   assert.match(control,/youtube-nocookie\.com\/embed\//);
   assert.match(control,/"videoId":"\(\[A-Za-z0-9_-\]\{11\}\)"/);
   assert.match(control,/preview\.contentType='latest-video'/);
