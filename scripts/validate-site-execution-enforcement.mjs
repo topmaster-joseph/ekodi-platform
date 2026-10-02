@@ -52,7 +52,7 @@ const requiredContracts=new Set([
   'canonical-apex-path','shared-shell-and-ui-dna','brand-or-service-only-public-header',
   'site-owned-admin-addressability','auth-return-continuity','responsive-mobile-desktop-layout',
   'readability-and-no-clipping','keyboard-and-touch-accessibility','internal-external-link-integrity',
-  'loading-error-empty-state-usability','shared-header-footer-language-behavior',
+  'loading-error-empty-state-usability','shared-header-footer-language-behavior','central-social-hub-inheritance',
   'no-direct-production-mutation','isolated-branch-and-regression-validation','guarded-staging-before-production'
 ]);
 const contracts=new Set(policy.mandatoryContracts||[]);
