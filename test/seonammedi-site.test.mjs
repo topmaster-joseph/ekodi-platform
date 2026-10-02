@@ -280,7 +280,8 @@ test('seonammedi public and admin menus keep the agreed content-first order',asy
   assert.doesNotMatch(html,/data-view-link="records"|data-view-link="timeline"|data-view-link="materials"/);
   assert.match(html,/id="timeline"[^>]*data-view-section="status"/);
   assert.match(html,/id="materials"[^>]*data-view-section="status"/);
-  assert.match(html,/id="statusTabs"/);
+  assert.doesNotMatch(html,/<h2>현재상황<\/h2>|CURRENT STATUS|출처 검증형/);
+  assert.match(html,/id="timeline"[^>]*data-view-section="status"[\s\S]*?<h2>활동이력<\/h2>[\s\S]*?id="statusTabs"/);
   assert.match(html,/data-status-tab="timeline"[^>]*>활동이력<\/button>/);
   assert.match(html,/data-status-tab="news"[^>]*>관련보도<\/button>/);
   assert.match(html,/data-status-tab="official"[^>]*>공식기록<\/button>/);
