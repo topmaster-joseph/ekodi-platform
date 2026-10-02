@@ -217,12 +217,12 @@ test('seonammedi admin utilities live above the left menu and content starts nea
 
 test('seonammedi public and admin menus keep the agreed content-first order',async()=>{
   const [html,adminHtml]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('admin/index.html',root),'utf8')]);
-  const publicOrder=['현재상황','소통채널','시민의견','회계','공지사항','조직구성'];
+  const publicOrder=['현재상황','소통채널','시민의견','회계','공지','조직구성'];
   let cursor=-1;for(const label of publicOrder){const next=html.indexOf('>'+label+'</a>',cursor+1);assert.ok(next>cursor,'public menu order: '+label);cursor=next}
   assert.doesNotMatch(html,/data-view-link="records"|data-view-link="timeline"|data-view-link="materials"/);
   assert.match(html,/id="timeline"[^>]*data-view-section="status"/);
   assert.match(html,/id="materials"[^>]*data-view-section="status"/);
-  const adminOrder=['운영홈','현재상황','소통채널','시민의견','회계','공지사항','조직구성','내부 회의록','권한·관리자'];
+  const adminOrder=['운영홈','현재상황','소통채널','시민의견','회계','공지','조직구성','내부 회의록','권한·관리자'];
   cursor=-1;for(const label of adminOrder){const next=adminHtml.indexOf('>'+label+'</button>',cursor+1);assert.ok(next>cursor,'admin menu order: '+label);cursor=next}
   assert.doesNotMatch(adminHtml,/data-panel-target="timeline"|data-panel-target="content"/);
   assert.doesNotMatch(adminHtml,/data-ekodi-site-publication-slot|사이트 공개여부/);
@@ -238,7 +238,7 @@ test('seonammedi full public-menu administration covers status organization mate
     readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
     readFile(new URL('../migrations/0116_seonammedi_full_menu_admin.sql',import.meta.url),'utf8')
   ]);
-  for(const label of ['현재상황','조직구성','활동이력','공지사항','근거자료','시민의견','회계'])assert.match(adminHtml,new RegExp(label));
+  for(const label of ['현재상황','조직구성','활동이력','공지','근거자료','시민의견','회계'])assert.match(adminHtml,new RegExp(label));
   assert.match(adminHtml,/id="statusForm"/);
   assert.match(adminHtml,/id="organizationForm"/);
   assert.match(adminHtml,/data-org-admin-tab="bidae"/);
