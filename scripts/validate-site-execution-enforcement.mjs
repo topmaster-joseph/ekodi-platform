@@ -91,7 +91,7 @@ const siteScripts=await walkJs(new URL('../sites/',import.meta.url));
 const localAuthPattern=/new URL\(\s*['"]\/auth\/['"]\s*,\s*location\.origin\s*\)/;
 for(const scriptUrl of siteScripts){
   const source=await readFile(scriptUrl,'utf8');
-  if(localAuthPattern.test(source))fail(\`${scriptUrl.pathname.split('/').slice(-4).join('/')}: site-local /auth/ entry is forbidden; use https://ekodi.kr/auth/ and preserve return_to\`);
+  if(localAuthPattern.test(source))fail(`${scriptUrl.pathname.split('/').slice(-4).join('/')}: site-local /auth/ entry is forbidden; use https://ekodi.kr/auth/ and preserve return_to`);
 }
 
 if(registry.workspaceServicePolicy?.canonicalPattern!==policy.canonicalAddressing?.descendantPattern)fail('workspace service canonical pattern must match recursive enforcement policy');
