@@ -4,6 +4,7 @@ import { ownedCustomerSiteFor } from './ekodi-site-policy.js';
 import { injectEkodiShell, injectEkodiTenantReadability, shellServiceForHost, shellServiceForRootPath } from './ekodi-shell-injector.js';
 import { isWorkspaceAdminPathShape, isWorkspaceSlug } from './workspace-route-policy.js';
 import { resolveWorkspaceVisualDNA, workspaceVisualCssVariables } from './workspace-visual-dna.js';
+import { decorateRegistryDiscoveryResponse, handleRuntimeDiscoveryProjection } from './public-discovery-runtime.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const USER_SURFACES=new Set(['public','workspace']);
@@ -131,7 +132,12 @@ function effectiveRequest(request, env) {
 export default {
   async fetch(request, env, ctx) {
     const effective = effectiveRequest(request, env);
-    const response = await siteWorker.fetch(effective.request, env, ctx);
+    if (effective.host === PUBLIC_HOST) {
+      const discoveryProjection = await handleRuntimeDiscoveryProjection(effective.request, env);
+      if (discoveryProjection) return discoveryProjection;
+    }
+    let response = await siteWorker.fetch(effective.request, env, ctx);
+    if (effective.host === PUBLIC_HOST) response = await decorateRegistryDiscoveryResponse(response, effective.request, env);
     if (effective.host === PUBLIC_HOST) {
       const pathname=new URL(effective.request.url).pathname;
       if(rootInternalPath(pathname)||isWorkspaceAdminPathShape(pathname))return response;
