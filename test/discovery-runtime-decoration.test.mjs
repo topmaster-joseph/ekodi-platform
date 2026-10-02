@@ -9,7 +9,7 @@ test('dynamic discovery decoration adds canonical social and JSON-LD metadata', 
   const html = decorateDiscoveryHtml(shell, '/jadam/');
   assert.match(html, /rel="canonical" href="https:\/\/ekodi\.kr\/jadam"/);
   assert.match(html, /property="og:url" content="https:\/\/ekodi\.kr\/jadam"/);
-  assert.match(html, /data-ekodi-discovery="v2" data-ekodi-path="\/jadam"/);
+  assert.match(html, /data-ekodi-discovery="v3" data-ekodi-path="\/jadam"/);
   assert.match(html, /application\/ld\+json/);
   assert.equal((html.match(/name="robots"/g) || []).length, 1);
   assert.equal((html.match(/name="description"/g) || []).length, 1);
