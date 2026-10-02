@@ -20,7 +20,7 @@
 <header class="site-header">
   <a class="brand" href="/seonammedi/"><strong>서남권 국립의대 소통센터</strong><small>서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널</small></a>
   <nav aria-label="주요 메뉴">
-    <a href="#status" data-view-link="status">현재상황</a><a href="#channels" data-view-link="channels">소통채널</a><a href="#voices" data-view-link="voices">시민의견</a><a href="#finance" data-view-link="finance">회계</a><a href="#notices" data-view-link="notices">공지</a><a href="#organization" data-view-link="organization">조직</a>
+    <a href="#status" data-view-link="status">활동이력</a><a href="#channels" data-view-link="channels">소통채널</a><a href="#voices" data-view-link="voices">시민의견</a><a href="#finance" data-view-link="finance">회계</a><a href="#notices" data-view-link="notices">공지</a><a href="#organization" data-view-link="organization">조직</a>
   </nav>
 </header>
 <main>
@@ -32,15 +32,6 @@
   <aside id="homeSpotlight" class="home-spotlight" aria-label="최근 공지와 진행 중인 행사" hidden></aside>
 </section>
 
-<section id="status" class="section" data-view-section="status" hidden>
-  <div class="section-head"><div><p class="eyebrow">CURRENT STATUS</p><h2>현재상황</h2><p class="note">활동이력·관련보도·공식기록을 구분해 확인합니다.</p></div><span class="badge">출처 검증형</span></div>
-  <div id="statusTabs" class="filters status-tabs" role="tablist" aria-label="현재상황 분류">
-    <button type="button" class="active" data-status-tab="timeline" role="tab" aria-selected="true">활동이력</button>
-    <button type="button" data-status-tab="news" role="tab" aria-selected="false">관련보도</button>
-    <button type="button" data-status-tab="official" role="tab" aria-selected="false">공식기록</button>
-  </div>
-</section>
-
 <section id="organization" class="section" data-view-section="organization" hidden>
   <div class="section-head"><div><p class="eyebrow">ORGANIZATION</p><h2>조직</h2></div><span class="badge">공개 조직도</span></div>
   <p class="note">통합 대책위·시민단체연대·목포대 조직을 구분해 표시합니다. 공개가 확인된 구성만 노출하며 참여단체는 가나다순으로 정렬합니다.</p>
@@ -50,9 +41,7 @@
   <div id="participantOrganizations" class="participant-organizations"></div>
 </section>
 
-<section id="timeline" class="section" data-view-section="status" data-status-pane="timeline" hidden>
-  <div class="section-head"><div><p class="eyebrow">ACTIVITY HISTORY</p><h2>활동이력</h2><p class="note">사건은 활동이력으로 한 번만 기록하고, 같은 사건의 공식자료·보도·사진·영상은 해당 이력의 근거자료로 묶습니다. 사진·영상은 원출처 링크를 우선하고, 독립 자료만 아래 자료목록에 표시합니다.</p></div></div>
-  <p class="filter-label">활동이력 세부 분류</p>
+<section id="timeline" class="section activity-list-only" data-view-section="status" data-status-pane="timeline" hidden>
   <div class="filters" id="timelineFilters" aria-label="활동이력 세부 분류"></div>
   <div id="timelineList" class="timeline"></div>
 </section>
@@ -62,8 +51,9 @@
   <p class="note">Google 계정으로 로그인한 등록 사용자는 사진과 글을 게시할 수 있습니다. 게시물은 개별 링크로 열고 공유할 수 있습니다.</p>
   <form id="noticeComposeForm" class="notice-compose" hidden>
     <label>제목<input name="title" maxlength="180" required placeholder="제목을 입력하세요"></label>
+    <label>파일첨부 (사진 최대 5장)<input id="noticeImages" name="images" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple><small>첨부 시 장당 5MB 이하로 자동 최적화합니다. JPG·PNG·WEBP·GIF · 최대 5장 · 선택 후 개별 삭제 가능</small></label>
+    <div id="noticeImagePreview" class="notice-image-preview" aria-live="polite"></div>
     <label>내용<textarea name="body" maxlength="10000" rows="6" placeholder="내용을 입력하세요"></textarea></label>
-    <label>사진 (최대 5장)<input id="noticeImages" name="images" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple><small>JPG·PNG·WEBP·GIF, 장당 최대 8MB · 최대 5장 · 선택 후 개별 삭제 가능</small></label><div id="noticeImagePreview" class="notice-image-preview" aria-live="polite"></div>
     <div class="form-actions"><button type="submit">게시하기</button><button id="noticeComposeCancel" type="button" class="secondary">취소</button><span id="noticeComposeMessage" class="muted" role="status"></span></div>
   </form>
   <div id="noticeDetail" class="notice-detail" hidden></div>
@@ -72,6 +62,11 @@
 
 <section id="materials" class="section records-materials" data-view-section="status" data-status-pane="materials" hidden>
   <div class="section-head"><div><p class="eyebrow" id="statusMaterialEyebrow">RELATED NEWS</p><h2 id="statusMaterialTitle">관련보도</h2><p class="note" id="statusMaterialNote">활동이력과 중복되지 않는 관련보도를 원문 출처와 함께 표시합니다.</p></div><span class="badge">중복 제거</span></div>
+  <div class="filters status-tabs" role="tablist" aria-label="활동자료 분류">
+    <button type="button" data-status-tab="timeline" role="tab" aria-selected="false">활동이력</button>
+    <button type="button" data-status-tab="news" role="tab" aria-selected="false">관련보도</button>
+    <button type="button" data-status-tab="official" role="tab" aria-selected="false">공식기록</button>
+  </div>
   <p class="filter-label" id="statusMaterialFilterLabel">관련보도 세부 분류</p>
   <div class="filters" id="materialFilters" aria-label="관련보도 세부 분류"></div>
   <div id="materialList" class="material-list"></div>
@@ -91,7 +86,7 @@
     <label class="check"><input type="checkbox" name="publicConsent"> 검토 후 공개될 수 있음에 동의합니다.</label>
     <label class="check"><input type="checkbox" name="privacyConsent" required> 접수·답변을 위한 개인정보 처리에 동의합니다.</label>
     <div class="form-actions"><button type="submit">접수하기</button><span id="voiceStatus" role="status"></span></div>
-    <p class="muted">공개 동의가 없는 개인정보와 제보자 정보는 공개하지 않습니다.</p>
+    <p class="muted">정상 접수된 의견은 공개 동의 여부와 관계없이 관리자 접수함에 등록됩니다. 공개 동의가 없는 개인정보와 제보자 정보는 공개하지 않습니다.</p>
   </form>
 </section>
 

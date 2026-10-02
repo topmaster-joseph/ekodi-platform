@@ -35,7 +35,7 @@ test('banking API fixes tenant scope server-side and fails closed for real trans
   assert.match(worker,/organizationForWorkspace/);
   assert.match(worker,/current_site_activity_contexts/);
   assert.match(worker,/scope=finance-access|scope','finance-access/);
-  assert.match(worker,/lxcxwbdwwojjkgybbqii\.supabase\.co\/functions\/v1\/church-pastor-api/);
+  assert.match(worker,/renzehysxirjilvdxacv\.supabase\.co\/functions\/v1\/church-pastor-api/);
   assert.match(worker,/SELF_APPROVAL_NOT_ALLOWED/);
   assert.match(worker,/BANKING_EXECUTOR_NOT_CONNECTED/);
   assert.match(worker,/BANKING_TRANSFER_ENABLED/);

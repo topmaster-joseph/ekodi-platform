@@ -3,7 +3,7 @@ import { TENANT_ADMIN_CAPABILITIES, tenantAdminCan } from './tenant-admin-policy
 
 const CENTRAL_SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const CENTRAL_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-const CHURCH_PASTOR_API='https://lxcxwbdwwojjkgybbqii.supabase.co/functions/v1/church-pastor-api';
+const CHURCH_PASTOR_API='https://renzehysxirjilvdxacv.supabase.co/functions/v1/church-pastor-api';
 const ALLOWED_ORIGINS=new Set(['https://ekodi.kr']);
 const WORKSPACE_ALIASES=Object.freeze({
   'ekodi-church':'ekodichurch','ekodichurch':'ekodichurch',

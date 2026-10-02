@@ -68,7 +68,109 @@
     ],
     "nonTerminalFailuresRequireAutomaticRecovery": true,
     "validationFailureAction": "diagnose-repair-rerun-continue",
-    "parallelConflictAction": "cross-review-select-winner-retire-or-refresh-overlap-rerun-continue"
+    "parallelConflictAction": "cross-review-select-winner-retire-or-refresh-overlap-rerun-continue",
+    "minorIssueAutonomousRecovery": {
+      "policyId": "MINOR-ISSUE-AUTO-RESOLVE-001",
+      "status": "enforced",
+      "appliesPlatformWide": true,
+      "futureComponentsAutoInherit": true,
+      "classificationOwner": "ekodi-ai-orchestrator",
+      "defaultDisposition": "resolve-without-user-interruption",
+      "classifyAsMinorOnlyWhen": [
+        "reversible",
+        "bounded-blast-radius",
+        "no-new-privilege-or-credential-authority",
+        "no-destructive-data-operation",
+        "no-financial-or-legal-commitment",
+        "no-ambiguous-side-effect",
+        "no-orchestration-policy-weakening"
+      ],
+      "requiredLoop": [
+        "detect",
+        "diagnose",
+        "select-safe-primary-fix",
+        "discover-safe-alternative-if-primary-blocked",
+        "execute",
+        "verify",
+        "retry-or-switch-alternative",
+        "reverify",
+        "continue-parent-task"
+      ],
+      "automaticAlternativeRequired": true,
+      "automaticRetryRequired": true,
+      "rootCauseRemovalWhenRepeated": true,
+      "noUserInterruptionForResolvableMinorIssue": true,
+      "preserve": [
+        "orchestration-gate",
+        "human-gates",
+        "security-boundaries",
+        "audit-trail",
+        "guarded-release",
+        "production-verification"
+      ],
+      "escalateOnlyWhen": [
+        "human-authority-required",
+        "high-impact-or-irreversible",
+        "ambiguous-side-effect",
+        "all-registered-safe-alternatives-exhausted",
+        "higher-order-rule-conflict"
+      ],
+      "completionRequiresVerifiedResolutionOrExplicitTerminalWait": true
+    },
+    "systemwideSelfRecovery": {
+      "policyId": "SYSTEMWIDE-SELF-RECOVERY-001",
+      "status": "enforced",
+      "appliesTo": [
+        "internal-system-failure",
+        "external-dependency-failure",
+        "provider-outage",
+        "network-error",
+        "quota-limit",
+        "service-degradation",
+        "ci-cd-failure",
+        "runtime-error",
+        "integration-error",
+        "data-path-error"
+      ],
+      "defaultDisposition": "self-resolve-and-continue",
+      "requiredLoop": [
+        "detect",
+        "isolate-impact",
+        "diagnose",
+        "attempt-primary-repair",
+        "discover-safe-alternatives",
+        "switch-or-retry",
+        "verify",
+        "reverify",
+        "resume-parent-work"
+      ],
+      "externalFailureIsNotTerminalByDefault": true,
+      "safeAlternativeRequiredBeforeEscalation": true,
+      "automaticProviderOrLaneFailover": true,
+      "automaticRetryWithBackoff": true,
+      "circuitBreakerRequired": true,
+      "degradedModeAllowedWhenSafe": true,
+      "rootCauseRemovalForRecurringIncidents": true,
+      "preserve": [
+        "security-boundaries",
+        "human-gates",
+        "data-integrity",
+        "audit-trail",
+        "orchestration-gate",
+        "guarded-release",
+        "production-verification"
+      ],
+      "escalateOnlyWhen": [
+        "human-authority-required",
+        "high-impact-or-irreversible",
+        "ambiguous-side-effect",
+        "security-or-data-integrity-risk",
+        "all-safe-alternatives-exhausted",
+        "higher-order-rule-conflict"
+      ],
+      "userInterruptionForbiddenForResolvableFailure": true,
+      "completionRequiresVerifiedRecoveryOrExplicitTerminalWait": true
+    }
   },
   "consultationDecision": {
     "policyId": "AI-CONSULT-001",
