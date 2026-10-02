@@ -30,6 +30,7 @@ const SPECIAL_SITES=Object.freeze([
   Object.freeze({id:'pyeonggongmok',workspaceId:'pyeonggongmok',name:'평생공부하는 목회자 모임',canonicalUrl:'https://ekodi.kr/pyeonggongmok/',canonicalPath:'/pyeonggongmok',adminUrl:'https://ekodi.kr/pyeonggongmok/admin/',authoritySiteKey:'pyeonggongmok'}),
   Object.freeze({id:'cheonggye',workspaceId:'cheonggye',name:'청계잇다',canonicalUrl:'https://ekodi.kr/cheonggye/',canonicalPath:'/cheonggye',adminUrl:'https://ekodi.kr/cheonggye/admin/',authoritySiteKey:'cheonggye'}),
   Object.freeze({id:'cgma',workspaceId:'cgma',name:'청계면상인회',canonicalUrl:'https://ekodi.kr/cgma/',canonicalPath:'/cgma',adminUrl:'https://ekodi.kr/cgma/admin/',aliases:['cgma.or.kr','www.cgma.or.kr'],authoritySiteKey:'cgma',tenantSlug:'cheonggye'}),
+  Object.freeze({id:'cmpmyi',workspaceId:'cmpmyi',name:'목포대점 통합 게이트',canonicalUrl:'https://ekodi.kr/cmpmyi/',canonicalPath:'/cmpmyi',adminUrl:'https://ekodi.kr/cmpmyi/admin/',authoritySiteKey:'cmpmyi',discoveryKind:'store'}),
 ]);
 
 const clean=(value,max=2048)=>String(value??'').trim().slice(0,max);
