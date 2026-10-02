@@ -81,7 +81,7 @@
         "url": "https://ekodi.kr/ekodimission/activities",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["MISSION ACTIVITIES","/ekodimission/apply/261003-autumn-trip","/ekodimission/activities/260926-chuseok-open-table/archive","16:00–18:00","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
+        "expect": ["MISSION ACTIVITIES","활동 목록","data-activity-year","data-activity-month","/ekodimission/apply/261003-autumn-trip","/ekodimission/apply/260926-open-table","16:00–18:00","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
