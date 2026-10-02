@@ -1,4 +1,4 @@
-name: Submit Store IndexNow
+name: Submit EKODI Public Discovery
 
 on:
   workflow_run:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: store-indexnow-main
+  group: ekodi-public-discovery-main
   cancel-in-progress: false
 
 jobs:
@@ -19,7 +19,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
         with:
@@ -27,13 +27,14 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate store IndexNow contract
+      - name: Validate platform discovery contract
         run: |
           set -euo pipefail
-          node --check store-indexnow.js
+          node --check platform-indexnow.js
+          node --check public-discovery-registry.js
           node --check scripts/submit-store-indexnow.mjs
           node --test test/store-indexnow.test.mjs
-      - name: Notify Naver and IndexNow
+      - name: Notify Naver and IndexNow from Public Registry
         env:
           INDEXNOW_TIMEOUT_MS: '20000'
         run: node scripts/submit-store-indexnow.mjs
