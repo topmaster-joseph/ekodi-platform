@@ -32,6 +32,7 @@ import { handlePreviewRequest } from './preview-page.js';
 import { storeGatewayPage } from './store-gateway-page.js';
 import { isEkodiIndexNowKeyPath, ekodiIndexNowKeyResponse } from './platform-indexnow.js';
 import { EKODI_PUBLIC_REGISTRY_PATH, EKODI_DYNAMIC_SITEMAP_PATH, EKODI_DYNAMIC_LLMS_PATH, ekodiPublicRegistryResponse, ekodiDynamicSitemapResponse, ekodiDynamicLlmsResponse } from './public-discovery-registry.js';
+import { decorateRegistryDiscoveryResponse } from './public-discovery-runtime.js';
 import { publicDiscoveryContentResponse } from './public-discovery-content.js';
 import { storePortfolioAdminPage, storePortfolioAdminPanelPage, storePortfolioAdminPanelScript, storePortfolioAdminShellScript } from './store-portfolio-admin-page.js';
 import { isStorePosAgentDownloadPath, storePosAgentDownload } from './store-pos-agent-download.js';
@@ -532,7 +533,8 @@ export default {
     const adminPublicationSite=await resolvePublicationSiteForRequest(request,env,{admin:true});
     let response=await routePlatform(request,env,ctx);
     if(adminPublicationSite)response=injectSitePublicationAdmin(response,adminPublicationSite);
-    return applyPlatformSecurityHeaders(response,request);
+    response=applyPlatformSecurityHeaders(response,request);
+    return decorateRegistryDiscoveryResponse(response,request,env);
   },
   async queue(batch,env){
     for(const message of batch.messages){
