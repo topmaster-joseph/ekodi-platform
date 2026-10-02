@@ -630,15 +630,29 @@ test('seonammedi notice list actions use server-authorized canManage without exp
 });
 
 
-test('seonammedi admin notice images use canonical Google Drive storage',async()=>{
-  const [control,adminHtml]=await Promise.all([
-    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
-    readFile(new URL('admin/index.html',root),'utf8')
+test('seonammedi admin notice attachments are before body, max five, 5MB-compressed, and stored for inline public rendering',async()=>{
+  const [html,js,control]=await Promise.all([
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('admin/admin.js',root),'utf8'),
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8')
   ]);
+  assert.ok(html.indexOf('id="adminNoticeImages"')<html.indexOf('name="body"'));
+  assert.match(html,/파일첨부 \(사진 최대 5장\)/);
+  assert.match(html,/사진마다 5MB 이하로 자동 최적화/);
+  assert.match(js,/ADMIN_NOTICE_IMAGE_MAX_BYTES=5\*1024\*1024/);
+  assert.match(js,/compressAdminNoticeImage/);
+  assert.match(js,/payload\.append\('images'/);
+  assert.match(control,/form\.getAll\('images'\)/);
+  assert.match(control,/images\.length>5/);
+  assert.match(control,/Number\(image\.size\)>5\*1024\*1024/);
+  assert.match(control,/image_keys_json,image_types_json/);
+});
+
+
+test('seonammedi admin notice images use canonical Google Drive storage',async()=>{
+  const control=await readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8');
   assert.match(control,/async function storeNoticeImage\(env,image,principal\)/);
   assert.match(control,/storeNoticeImageInDrive\(env,image,\{email:principal\?\.email\|\|''\}\)/);
-  assert.match(control,/storeNoticeImage\(env,body\.image,auth\)/);
+  assert.match(control,/storeNoticeImage\(env,image,auth\)/);
   assert.doesNotMatch(control,/async function storeNoticeImage\(env,image\)[\s\S]{0,500}LIVE_RECORDINGS_BUCKET\.put/);
-  assert.match(adminHtml,/최대 5MB/);
-  assert.doesNotMatch(adminHtml,/최대 8MB/);
 });
