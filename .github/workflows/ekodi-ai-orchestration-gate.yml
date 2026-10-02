@@ -114,6 +114,11 @@ jobs:
           set -euo pipefail
           node --check scripts/validate-site-execution-enforcement.mjs
           npm run validate:site-execution
+      - name: Enforce Social Hub governance
+        run: |
+          set -euo pipefail
+          node --check scripts/validate-social-hub-enforcement.mjs
+          npm run validate:social-governance
       - name: Enforce Generation 10 Evolution Kernel
         run: |
           set -euo pipefail
