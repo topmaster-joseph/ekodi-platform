@@ -20,7 +20,7 @@
 <header class="site-header">
   <a class="brand" href="/seonammedi/"><strong>서남권 국립의대 소통센터</strong><small>서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널</small></a>
   <nav aria-label="주요 메뉴">
-    <a href="#status" data-view-link="status">현재상황</a><a href="#channels" data-view-link="channels">소통채널</a><a href="#voices" data-view-link="voices">시민의견</a><a href="#finance" data-view-link="finance">회계</a><a href="#notices" data-view-link="notices">공지</a><a href="#organization" data-view-link="organization">조직구성</a>
+    <a href="#status" data-view-link="status">현재상황</a><a href="#channels" data-view-link="channels">소통채널</a><a href="#voices" data-view-link="voices">시민의견</a><a href="#finance" data-view-link="finance">회계</a><a href="#notices" data-view-link="notices">공지</a><a href="#organization" data-view-link="organization">조직</a>
   </nav>
 </header>
 <main>
@@ -33,13 +33,16 @@
 </section>
 
 <section id="status" class="section" data-view-section="status" hidden>
-  <div class="section-head"><div><p class="eyebrow">CURRENT STATUS</p><h2>현재 진행상황</h2></div><span class="badge">출처 검증형</span></div>
-  <div id="statusCards" class="grid"></div>
-  <div id="statusDetail" class="status-detail" role="region" aria-live="polite" tabindex="-1" hidden></div>
+  <div class="section-head"><div><p class="eyebrow">CURRENT STATUS</p><h2>현재상황</h2><p class="note">활동이력·관련보도·공식기록을 구분해 확인합니다.</p></div><span class="badge">출처 검증형</span></div>
+  <div id="statusTabs" class="filters status-tabs" role="tablist" aria-label="현재상황 분류">
+    <button type="button" class="active" data-status-tab="timeline" role="tab" aria-selected="true">활동이력</button>
+    <button type="button" data-status-tab="news" role="tab" aria-selected="false">관련보도</button>
+    <button type="button" data-status-tab="official" role="tab" aria-selected="false">공식기록</button>
+  </div>
 </section>
 
 <section id="organization" class="section" data-view-section="organization" hidden>
-  <div class="section-head"><div><p class="eyebrow">ORGANIZATION</p><h2>조직구성</h2></div><span class="badge">공개 조직도</span></div>
+  <div class="section-head"><div><p class="eyebrow">ORGANIZATION</p><h2>조직</h2></div><span class="badge">공개 조직도</span></div>
   <p class="note">통합 대책위·시민단체연대·목포대 조직을 구분해 표시합니다. 공개가 확인된 구성만 노출하며 참여단체는 가나다순으로 정렬합니다.</p>
   <div id="organizationTabs" class="filters organization-tabs" role="tablist" aria-label="조직 구분"></div>
   <div id="organizationChart" class="organization-chart"></div>
@@ -47,7 +50,7 @@
   <div id="participantOrganizations" class="participant-organizations"></div>
 </section>
 
-<section id="timeline" class="section" data-view-section="status" hidden>
+<section id="timeline" class="section" data-view-section="status" data-status-pane="timeline" hidden>
   <div class="section-head"><div><p class="eyebrow">ACTIVITY HISTORY</p><h2>활동이력</h2><p class="note">사건은 활동이력으로 한 번만 기록하고, 같은 사건의 공식자료·보도·사진·영상은 해당 이력의 근거자료로 묶습니다. 사진·영상은 원출처 링크를 우선하고, 독립 자료만 아래 자료목록에 표시합니다.</p></div></div>
   <div class="filters" id="timelineFilters"></div>
   <div id="timelineList" class="timeline"></div>
@@ -66,9 +69,9 @@
   <div id="noticeList" class="notice-list"><p class="muted">공지를 불러오는 중입니다.</p></div>
 </section>
 
-<section id="materials" class="section records-materials" data-view-section="status" hidden>
-  <div class="section-head"><div><p class="eyebrow">SOURCES · PUBLIC POSTS</p><h2>근거자료</h2><p class="note">활동이력에 이미 연결된 동일 URL·동일 사건 자료는 중복 노출하지 않습니다. 별도로 확인할 가치가 있는 공식자료·관련보도·시민 온라인자료만 표시합니다.</p></div><span class="badge">중복 제거</span></div>
-  <div class="filters" id="materialFilters" aria-label="관련자료 분류"></div>
+<section id="materials" class="section records-materials" data-view-section="status" data-status-pane="materials" hidden>
+  <div class="section-head"><div><p class="eyebrow" id="statusMaterialEyebrow">RELATED NEWS</p><h2 id="statusMaterialTitle">관련보도</h2><p class="note" id="statusMaterialNote">활동이력과 중복되지 않는 관련보도를 원문 출처와 함께 표시합니다.</p></div><span class="badge">중복 제거</span></div>
+  <div class="filters" id="materialFilters" aria-label="현재상황 자료 분류" hidden></div>
   <div id="materialList" class="material-list"></div>
 </section>
 

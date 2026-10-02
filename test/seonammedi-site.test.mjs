@@ -217,12 +217,18 @@ test('seonammedi admin utilities live above the left menu and content starts nea
 
 test('seonammedi public and admin menus keep the agreed content-first order',async()=>{
   const [html,adminHtml]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('admin/index.html',root),'utf8')]);
-  const publicOrder=['현재상황','소통채널','시민의견','회계','공지','조직구성'];
+  const publicOrder=['현재상황','소통채널','시민의견','회계','공지','조직'];
   let cursor=-1;for(const label of publicOrder){const next=html.indexOf('>'+label+'</a>',cursor+1);assert.ok(next>cursor,'public menu order: '+label);cursor=next}
   assert.doesNotMatch(html,/data-view-link="records"|data-view-link="timeline"|data-view-link="materials"/);
   assert.match(html,/id="timeline"[^>]*data-view-section="status"/);
   assert.match(html,/id="materials"[^>]*data-view-section="status"/);
-  const adminOrder=['운영홈','현재상황','소통채널','시민의견','회계','공지','조직구성','내부 회의록','권한·관리자'];
+  assert.match(html,/id="statusTabs"/);
+  assert.match(html,/data-status-tab="timeline"[^>]*>활동이력<\/button>/);
+  assert.match(html,/data-status-tab="news"[^>]*>관련보도<\/button>/);
+  assert.match(html,/data-status-tab="official"[^>]*>공식기록<\/button>/);
+  assert.match(html,/data-status-pane="timeline"/);
+  assert.match(html,/data-status-pane="materials"/);
+  const adminOrder=['운영홈','현재상황','소통채널','시민의견','회계','공지','조직','내부 회의록','권한·관리자'];
   cursor=-1;for(const label of adminOrder){const next=adminHtml.indexOf('>'+label+'</button>',cursor+1);assert.ok(next>cursor,'admin menu order: '+label);cursor=next}
   assert.doesNotMatch(adminHtml,/data-panel-target="timeline"|data-panel-target="content"/);
   assert.doesNotMatch(adminHtml,/data-ekodi-site-publication-slot|사이트 공개여부/);
@@ -238,7 +244,7 @@ test('seonammedi full public-menu administration covers status organization mate
     readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
     readFile(new URL('../migrations/0116_seonammedi_full_menu_admin.sql',import.meta.url),'utf8')
   ]);
-  for(const label of ['현재상황','조직구성','활동이력','공지','근거자료','시민의견','회계'])assert.match(adminHtml,new RegExp(label));
+  for(const label of ['현재상황','조직','활동이력','관련보도','공식기록','공지','시민의견','회계'])assert.match(adminHtml,new RegExp(label));
   assert.match(adminHtml,/id="statusForm"/);
   assert.match(adminHtml,/id="organizationForm"/);
   assert.match(adminHtml,/data-org-admin-tab="bidae"/);
@@ -251,6 +257,8 @@ test('seonammedi full public-menu administration covers status organization mate
   assert.match(adminJs,/groups,levels:bidae\.levels/);
   assert.match(app,/ORG_GROUP_META/);
   assert.match(app,/renderOrganizationGroup\('bidae'\)/);
+  assert.match(app,/function showStatusTab\(tab\)/);
+  assert.match(app,/renderMaterialsForStatus\?\.\(isNews\?'관련보도':'공식자료'\)/);
   assert.match(adminHtml,/id="financeForm"/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/pages\/status/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/pages\/organization/);

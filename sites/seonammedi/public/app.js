@@ -77,8 +77,10 @@ if(pageResponse?.ok){const pageBody=await pageResponse.json().catch(()=>({}));if
 window.__SEONAM_MEDI_DATA=d;
 el('lastUpdated').textContent='최종 업데이트 '+d.updatedAt;
 const statusCards=el('statusCards');
-statusCards.innerHTML=d.status.filter(x=>x?.key!=='daily').map((x,i)=>{const key=x.key||['official','news'][i]||('status-'+i);return `<button type="button" class="card status-card" data-status="${escapeHtml(key)}" aria-expanded="false" aria-controls="statusDetail"><span class="status-card-copy"><strong class="status-card-title">${escapeHtml(x.title)}</strong><span class="status-card-text">${escapeHtml(x.text)}</span></span><span class="status-card-action">내용 보기 <span aria-hidden="true">→</span></span></button>`}).join('');
-statusCards.addEventListener('click',event=>{const button=event.target.closest('.status-card');if(!button)return;if(button.getAttribute('aria-expanded')==='true'){closeStatusDetail();return}renderStatusDetail(button.dataset.status,d)});
+if(statusCards){
+  statusCards.innerHTML=d.status.filter(x=>x?.key!=='daily').map((x,i)=>{const key=x.key||['official','news'][i]||('status-'+i);return `<button type="button" class="card status-card" data-status="${escapeHtml(key)}" aria-expanded="false" aria-controls="statusDetail"><span class="status-card-copy"><strong class="status-card-title">${escapeHtml(x.title)}</strong><span class="status-card-text">${escapeHtml(x.text)}</span></span><span class="status-card-action">내용 보기 <span aria-hidden="true">→</span></span></button>`}).join('');
+  statusCards.addEventListener('click',event=>{const button=event.target.closest('.status-card');if(!button)return;if(button.getAttribute('aria-expanded')==='true'){closeStatusDetail();return}renderStatusDetail(button.dataset.status,d)});
+}
 const cats=['전체',...new Set(d.timeline.map(x=>x.category))];
 el('timelineFilters').innerHTML=cats.map((c,i)=>`<button data-cat="${c}" class="${i===0?'active':''}">${c}</button>`).join('');
 const render=cat=>{const rows=cat==='전체'?d.timeline:d.timeline.filter(x=>x.category===cat);el('timelineList').innerHTML=rows.map(x=>`<article class="timeline-item" data-event-date="${x.date}"><div class="timeline-date">${x.date}</div><div><h3>${x.title}</h3><p>${x.summary}</p><div class="chips"><span class="chip">${x.category}</span><span class="chip">${x.evidence}</span></div>${evidenceBlock(x)}</div></article>`).join('')};
@@ -117,13 +119,15 @@ const materialItems=[
 });
 const materialCats=['전체','공식자료','관련보도','시민·온라인자료'];
 const materialFilters=el('materialFilters'),materialList=el('materialList');
+let renderMaterialsForStatus=null;
 if(materialFilters&&materialList){
   materialFilters.innerHTML=materialCats.map((cat,i)=>`<button data-material-cat="${escapeHtml(cat)}" class="${i===0?'active':''}">${escapeHtml(cat)}</button>`).join('');
   const renderMaterials=cat=>{
     const rows=(cat==='전체'?materialItems:materialItems.filter(item=>item.category===cat)).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)));
     materialList.innerHTML=rows.length?rows.map(item=>`<article class="material-item"><div class="material-date">${escapeHtml(item.date||'날짜 확인 중')}</div><div><h3><a href="${safeUrl(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a></h3>${item.summary?'<p>'+escapeHtml(item.summary)+'</p>':''}<div class="public-post-meta"><span class="source-type">${escapeHtml(item.category)}</span><span class="source-type">${escapeHtml(item.subtype)}</span>${item.publisher?'<span class="source-type">'+escapeHtml(item.publisher)+'</span>':''}${item.verification?'<span class="verify-state">'+escapeHtml(item.verification)+'</span>':''}</div></div></article>`).join(''):'<p class="muted">표시할 관련자료가 없습니다.</p>';
   };
-  renderMaterials('전체');
+  renderMaterialsForStatus=renderMaterials;
+  showStatusTab(activeStatusTab);
   materialFilters.addEventListener('click',event=>{const button=event.target.closest('button');if(!button)return;[...materialFilters.children].forEach(x=>x.classList.remove('active'));button.classList.add('active');renderMaterials(button.dataset.materialCat)});
 }
 const org=d.organization||{};
@@ -212,6 +216,23 @@ if(voiceForm){
 }
 
 
+let activeStatusTab='timeline';
+function showStatusTab(tab){
+  const key=['timeline','news','official'].includes(tab)?tab:'timeline';
+  activeStatusTab=key;
+  document.querySelectorAll('[data-status-tab]').forEach(button=>{const active=button.dataset.statusTab===key;button.classList.toggle('active',active);button.setAttribute('aria-selected',active?'true':'false')});
+  const timeline=el('timeline'),materials=el('materials');
+  if(timeline)timeline.hidden=key!=='timeline';
+  if(materials)materials.hidden=key==='timeline';
+  if(key!=='timeline'){
+    const isNews=key==='news';
+    if(el('statusMaterialEyebrow'))el('statusMaterialEyebrow').textContent=isNews?'RELATED NEWS':'OFFICIAL RECORD';
+    if(el('statusMaterialTitle'))el('statusMaterialTitle').textContent=isNews?'관련보도':'공식기록';
+    if(el('statusMaterialNote'))el('statusMaterialNote').textContent=isNews?'활동이력과 중복되지 않는 관련보도를 원문 출처와 함께 표시합니다.':'정부·국회·법원·지자체·대학·비대위 등 공식 주체의 기록을 원문 출처와 함께 표시합니다.';
+    renderMaterialsForStatus?.(isNews?'관련보도':'공식자료');
+  }
+}
+el('statusTabs')?.addEventListener('click',event=>{const button=event.target.closest('[data-status-tab]');if(button)showStatusTab(button.dataset.statusTab)});
 const viewAliases={status:'status',monitor:'status',organization:'organization',records:'status',timeline:'status',materials:'status',news:'status','public-posts':'status',notices:'notices',voices:'voices',channels:'channels',finance:'finance'};
 function showView(view,{updateHash=false}={}){
   const key=viewAliases[view]||'';
@@ -226,6 +247,7 @@ function showView(view,{updateHash=false}={}){
     const next=key?'#'+key:location.pathname;
     history.pushState({view:key},'',next);
   }
+  if(key==='status')showStatusTab(activeStatusTab);
   if(key){
     const first=document.querySelector('[data-view-section="'+CSS.escape(key)+'"]');
     first?.scrollIntoView({block:'start'});
