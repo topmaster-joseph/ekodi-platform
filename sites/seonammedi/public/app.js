@@ -380,6 +380,22 @@ const channelPreviewEmbedUrl=(policy,data={})=>{
 let publicChannels=[];
 let channelPreviewSeq=0;
 let activeChannelPlatform='all';
+function channelRouteFromHash(){
+  const raw=location.hash.replace(/^#/,'');
+  if(raw==='channels')return {platform:'all',id:0};
+  if(!raw.startsWith('channels/'))return null;
+  const parts=raw.split('/');
+  const platform=decodeURIComponent(parts[1]||'all').toLowerCase();
+  const id=Number(parts[2]||0);
+  return {platform,id:Number.isFinite(id)&&id>0?id:0};
+}
+function writeChannelRoute(item){
+  if(!item)return;
+  const platform=encodeURIComponent(String(item.platform||'other').toLowerCase());
+  const id=Number(item.id||0);
+  const next='#channels/'+platform+(id>0?'/'+id:'');
+  if(location.hash!==next)history.replaceState({view:'channels',channelId:id},'',next);
+}
 const CHANNEL_PLATFORM_TABS=Object.freeze([
   ['all','전체'],
   ['facebook','Facebook'],
