@@ -11,6 +11,7 @@ on:
 permissions:
   contents: read
   pull-requests: read
+  statuses: write
 
 concurrency:
   group: ekodi-ai-orchestration-${{ github.event.pull_request.number || github.ref }}
@@ -160,3 +161,16 @@ jobs:
             artifacts/guarded-release-rollback-proof.json
           if-no-files-found: error
           retention-days: 30
+      - name: Publish required legacy status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATUS_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          STATUS_STATE: ${{ job.status == 'success' && 'success' || 'failure' }}
+        run: |
+          curl --fail-with-body -sS -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${STATUS_SHA}" \
+            -d "{\"state\":\"${STATUS_STATE}\",\"context\":\"EKODI AI Orchestration Gate\",\"description\":\"EKODI AI orchestration gate\",\"target_url\":\"${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}"
