@@ -15,7 +15,17 @@ const [policy,registry,pkg,scheduler,workflow,liveVerifier]=await Promise.all([
 const failures=[];
 const fail=message=>failures.push(message);
 
-if(policy.schemaVersion!==1||policy.policyId!=='SITE-EXECUTION-ENFORCEMENT-001'||policy.status!=='enforced')fail('site execution policy must remain enforced schema v1');
+if(policy.schemaVersion!==2||policy.policyId!=='SITE-EXECUTION-ENFORCEMENT-001'||policy.status!=='enforced')fail('site execution policy must remain enforced schema v2');
+const scopePolicy=policy.changeScopeClassification||{};
+if(scopePolicy.policyId!=='SITE-CHANGE-SCOPE-001'||scopePolicy.status!=='enforced')fail('site change scope classification must remain enforced');
+for(const key of ['platform_common','shared_service_engine','site_specific'])if(!scopePolicy.classes?.[key])fail(`missing site change scope class: ${key}`);
+if(scopePolicy.classificationRequiredBeforeImplementation!==true)fail('every site change must be classified before implementation');
+if(scopePolicy.commonDefectMustBeFixedAtCommonOwner!==true)fail('common defects must be fixed at the shared owner, not copied per site');
+if(scopePolicy.futureSitesAutoInheritPlatformCommon!==true)fail('future sites must inherit platform-common changes automatically');
+if(scopePolicy.validatorMustRejectCommonRuleImplementedOnlyAsPerSitePatch!==true)fail('validator must reject common rules implemented only as per-site patches');
+if(scopePolicy.classes?.platform_common?.perSiteCopyForbidden!==true)fail('platform-common behavior may not be copied independently into each site');
+if(scopePolicy.classes?.shared_service_engine?.perSiteOverride!=='tighten-only')fail('shared engine sites may tighten but not relax the engine contract');
+if(scopePolicy.classes?.site_specific?.promotionToCommonRequiredWhenReusableAcrossSites!==true)fail('reusable site-specific behavior must be promoted to a common owner');
 if(policy.sourceOfSites!=='config/site-lifecycle-registry.json')fail('site execution policy must use the lifecycle registry as source of sites');
 if(policy.canonicalHost!=='ekodi.kr')fail('canonical host must remain ekodi.kr');
 if(policy.scope?.rootSite!==true||policy.scope?.allDescendantServicePaths!==true||policy.scope?.siteOwnedAdmin!==true)fail('root, descendant service paths, and site-owned admin must all be in scope');
