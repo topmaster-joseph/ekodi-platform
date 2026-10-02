@@ -285,6 +285,11 @@ test('seonammedi public and admin menus keep the agreed content-first order',asy
   assert.match(html,/data-status-tab="timeline"[^>]*>활동이력<\/button>/);
   assert.match(html,/data-status-tab="news"[^>]*>관련보도<\/button>/);
   assert.match(html,/data-status-tab="official"[^>]*>공식기록<\/button>/);
+  assert.match(html,/data-view-link="status">활동이력<\/a>/);
+  assert.match(html,/id="timeline"[^>]*class="section activity-list-only"/);
+  assert.doesNotMatch(html,/id="timeline"[\s\S]*?<div class="section-head">[\s\S]*?<h2>활동이력<\/h2>/);
+  assert.doesNotMatch(html,/id="timeline"[\s\S]*?id="statusTabs"/);
+  assert.doesNotMatch(html,/<p class="filter-label">활동이력 세부 분류<\/p>/);
   assert.match(html,/data-status-pane="timeline"/);
   assert.match(html,/data-status-pane="materials"/);
   const adminOrder=['운영홈','현재상황','소통채널','시민의견','회계','공지','조직','내부 회의록','권한·관리자'];
