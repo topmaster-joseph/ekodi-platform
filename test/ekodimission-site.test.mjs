@@ -354,3 +354,13 @@ test('Mission trip exposes pay-now buttons before and after application with def
   assert.match(script,/계좌번호를 복사했습니다/);
   assert.match(script,/신청이 완료되었습니다\. 아직 참가비를 납부하지 않았다면 바로 납부해 주세요/);
 });
+
+
+test('Mission trip keeps pay-now functional even when shared asset propagation lags',async()=>{
+  const page=await readFile(new URL('../space/ekodimission-autumn-trip-apply.page',import.meta.url),'utf8');
+  assert.match(page,/mission-pay-inline-v1/);
+  assert.match(page,/mission-pay-inline-script-v1/);
+  assert.match(page,/stopImmediatePropagation/);
+  assert.match(page,/MutationObserver/);
+  assert.match(page,/참가비 바로 납부하기/);
+});
