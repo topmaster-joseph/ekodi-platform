@@ -194,7 +194,7 @@ async function loadStatusPage(){
   const [managed,base]=await Promise.all([api('/api/seonammedi/admin/pages/status'),baseData()]);
   const rows=Array.isArray(managed.item?.data?.items)?managed.item.data.items:(base.status||[]);
   const byKey=Object.fromEntries(rows.map((x,i)=>[x.key||['official','news','daily'][i],x]));
-  const form=$('statusForm');
+  const form=$('statusForm');if(!form)return;
   for(const key of ['official','news']){const item=byKey[key]||{};form.elements[key+'Title'].value=item.title||'';form.elements[key+'Text'].value=item.text||''}
   text($('statusPageMessage'),'');
 }
