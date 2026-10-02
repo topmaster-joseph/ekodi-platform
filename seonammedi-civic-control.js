@@ -188,21 +188,16 @@ export async function handleSeonamMediCivicApi(request,env){
   const payload={submissionId,category,displayName,contact,message,publicConsent:true,requestFingerprint,acceptedAt};
 
   try{
-    if(env?.DB?.prepare){
-      const id=await persistVoice(env,payload);
-      return json({ok:true,queued:false,id,submissionId,message:'시민의견이 등록되어 바로 게시되었습니다.'},201);
-    }
-  }catch(error){
-    console.error('seonammedi civic direct publish failed; trying durable queue',error);
-  }
-
-  try{
     if(durableWriteQueueAvailable(env)){
       const queued=await enqueueDurableWrite(env,{kind:QUEUE_KIND,workspaceId:'seonammedi',idempotencyKey:submissionId,payload,acceptedAt});
       if(!queued.ok)throw new Error(queued.error||'queue_rejected');
-      return json({ok:true,queued:true,submissionId,message:'시민의견이 접수되었습니다. 저장 완료 즉시 게시됩니다.'},202);
+      return json({ok:true,queued:true,submissionId,message:'시민의견이 등록되었습니다. 저장 처리되는 즉시 공개됩니다.'},202);
     }
-    return json({ok:false,error:'write_ingress_unavailable',message:'등록 저장소가 일시적으로 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.'},503,{'retry-after':'5'});
+    if(env?.ENVIRONMENT!=='production'&&env?.DB?.prepare){
+      const id=await persistVoice(env,payload);
+      return json({ok:true,queued:false,id,submissionId,message:'시민의견이 등록되어 바로 게시되었습니다.'},201);
+    }
+    return json({ok:false,error:'durable_queue_unavailable',message:'등록 저장소를 준비 중입니다. 잠시 후 다시 시도해 주세요.'},503,{'retry-after':'5'});
   }catch(error){
     console.error('seonammedi civic durable ingress failed',error);
     return json({ok:false,error:'write_ingress_failed',message:'등록이 많습니다. 잠시 후 다시 시도해 주세요.'},503,{'retry-after':'5'});
