@@ -98,7 +98,10 @@ test('Space worker renders PizzaMaru and YogurtPurple as distinct styled user pa
     const expectedCssVersion=theme==='yogurt'?'20260912-yogurt-v4':'20260911-v2';
     assert.ok(body.includes(`/_ekodi/space/storefront.css?v=${expectedCssVersion}`));
     assert.doesNotMatch(body,/__SPACE_PAGE_/);
-    if(theme==='yogurt'){assert.match(body,/대표메뉴/);assert.match(body,/전체메뉴 자세히 보기/);assert.match(body,/본사 공식 메뉴 166종/);assert.match(body,/new_img58\.png/);assert.match(body,/배달앱에서 바로 주문/);assert.doesNotMatch(body,/USER OPERATIONS|STORE MASTER|로그아웃/);}
+    assert.match(body,new RegExp(`rel="canonical" href="https:\\\/\\\/ekodi\\.kr\\${path}"`));
+    assert.match(body,new RegExp(`data-store-entity="${path.slice(1)}"`));
+    assert.match(body,/"@type":"Restaurant"/);
+    if(theme==='yogurt'){assert.match(body,/대표메뉴/);assert.match(body,/전체메뉴 자세히 보기/);assert.match(body,/본사 공식 메뉴 166종/);assert.match(body,/new_img58\.png/);assert.match(body,/배달앱에서 바로 주문/);assert.match(body,/국립목포대학교 후문 · 전남 무안군 청계면/);assert.doesNotMatch(body,/USER OPERATIONS|STORE MASTER|로그아웃/);}
   }
   const styleResponse=await spaceWorker.fetch(new Request('https://space.ekodi.kr/storefront.css'),env);
   const styleBody=await styleResponse.text();
