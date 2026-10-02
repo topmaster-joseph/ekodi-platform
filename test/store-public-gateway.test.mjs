@@ -23,6 +23,7 @@ test('cmpmyi is reserved and guarded while stores remains a compatibility route'
   for(const workflow of [stage,prod]){assert.ok(workflow.includes('store-gateway-page.js'));assert.ok(workflow.includes('test/store-public-gateway.test.mjs'));}
   assert.ok(stage.includes("verify_public_path '/cmpmyi' 'THREE STORES · ONE GATE' 'x-ekodi-route: store-gateway'"));
   assert.ok(prod.includes("https://ekodi.kr/cmpmyi")); assert.ok(prod.includes('x-ekodi-route: store-gateway'));
-  for(const path of ['/cmpmyi','/jadam','/pizzamaru','/yogurt'])assert.ok(discovery.includes(`path: '${path}'`),path);
-  assert.ok(!discovery.includes("path: '/stores'"));
+  assert.ok(discovery.includes('compilePublicDiscoveryRegistry'));
+  for(const path of ['/cmpmyi','/jadam','/pizzamaru','/yogurt'])assert.ok(registeredPaths.has(path),path);
+  assert.ok(!registeredPaths.has('/stores'));
 });
