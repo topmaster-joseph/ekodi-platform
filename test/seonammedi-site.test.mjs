@@ -426,7 +426,7 @@ test('seonammedi channel previews use provider-safe embeds and same-origin metad
   assert.match(control,/function explicitChannelEmbed\(item\)/);
   assert.match(control,/item\.platform==='instagram'/);
   assert.match(control,/\['p','reel'\]\.includes\(parts\[0\]\)/);
-  assert.match(control,/encodeURIComponent\(parts\[1\]\)\+'\\/embed\\/'/);
+  assert.ok(control.includes("encodeURIComponent(parts[1])+'/embed/'"));
   assert.match(control,/preview\.contentType='explicit-preview'/);
   assert.match(control,/preview_url/);
   assert.match(control,/CHANNEL_BROWSER_UA/);
