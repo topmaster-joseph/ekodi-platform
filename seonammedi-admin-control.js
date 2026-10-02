@@ -314,8 +314,20 @@ function adminNotice(row){return{...publicNotice(row),status:row.status,createdB
 function publicChannel(row){return{id:Number(row.id),platform:row.platform,name:row.name,url:row.url,previewUrl:row.preview_url||'',category:row.category,official:Boolean(row.official),note:row.note||'',sortOrder:Number(row.sort_order||0)}}
 function adminChannel(row){return{...publicChannel(row),visible:Boolean(row.visible),createdBy:row.created_by,createdAt:row.created_at,updatedAt:row.updated_at}}
 
+async function noticePublicProjection(env){
+  const schema=await env.DB.prepare('PRAGMA table_info(seonammedi_notices)').all();
+  const columns=new Set((schema.results||[]).map(row=>String(row?.name||'')));
+  const optional=(name,fallback)=>columns.has(name)?name:fallback+' AS '+name;
+  return [
+    'id','title','body','pinned','published_at','updated_at',
+    optional('image_key',"''"),optional('image_type',"''"),
+    optional('notice_kind',"'notice'"),optional('featured','0'),
+    optional('event_start','NULL'),optional('event_end','NULL')
+  ].join(',');
+}
 async function listPublicNotices(env){
-  const rows=await env.DB.prepare(`SELECT id,title,body,pinned,published_at,updated_at,image_key,image_type,notice_kind,featured,event_start,event_end FROM seonammedi_notices
+  const projection=await noticePublicProjection(env);
+  const rows=await env.DB.prepare(`SELECT ${projection} FROM seonammedi_notices
     WHERE status='published' ORDER BY pinned DESC,COALESCE(published_at,updated_at) DESC,id DESC LIMIT 40`).all();
   return json({ok:true,items:(rows.results||[]).map(publicNotice)});
 }
@@ -854,7 +866,7 @@ export async function handleSeonamMediAdminApi(request,env){
   }
   if(url.pathname===PREFIX+'/notices'&&request.method==='GET'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
-    return publicStorageRead('notices',async()=>{await ensurePublicContentSchema(env.DB);return listPublicNotices(env)});
+    return publicStorageRead('notices',()=>listPublicNotices(env));
   }
   if(url.pathname===PREFIX+'/notices'&&request.method==='POST'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return createPublicNotice(request,env);

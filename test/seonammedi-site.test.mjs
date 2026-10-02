@@ -298,7 +298,7 @@ test('SeonamMedi Control routes defer candidate verification until Shared Site b
 test('seonammedi public managed reads are migration-backed and never run request-time DDL',async()=>{
   const control=await readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8');
   const body=(start,end)=>control.slice(control.indexOf(start),control.indexOf(end));
-  const notices=body('async function listPublicNotices','async function listPublicChannels');
+  const notices=body('async function noticePublicProjection','async function listPublicChannels');
   const channels=body('async function listPublicChannels','async function adminMe');
   const pageData=body('async function listPublicPageData','function canManagePages');
   const timeline=body('async function listPublicTimeline','async function listAdminTimeline');
@@ -310,6 +310,11 @@ test('seonammedi public managed reads are migration-backed and never run request
   assert.match(control,/resource\+'_storage_read_failed'/);
   const handler=control.slice(control.indexOf('export async function handleSeonamMediAdminApi'));
   for(const resource of ['page-data','content','timeline','notices','channels'])assert.match(handler,new RegExp("publicStorageRead\\('"+resource+"'"));
+  const noticeRoute=handler.slice(handler.indexOf("if(url.pathname===PREFIX+'/notices'&&request.method==='GET')"),handler.indexOf("if(url.pathname===PREFIX+'/notices'&&request.method==='POST')"));
+  assert.doesNotMatch(noticeRoute,/ensurePublicContentSchema\(|ensureSchema\(|ALTER TABLE|CREATE TABLE|CREATE INDEX/);
+  assert.match(notices,/PRAGMA table_info\(seonammedi_notices\)/);
+  assert.match(notices,/optional\('notice_kind',"'notice'"\)/);
+  assert.match(notices,/optional\('featured','0'\)/);
   const adminContent=body('async function listAdminContent','async function listAdminChannels');
   assert.match(adminContent,/ensureContentCategoryColumn\(env\.DB\)/);
 });
