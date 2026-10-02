@@ -595,3 +595,20 @@ test('seonammedi notice list exposes edit and delete actions for the signed-in a
   assert.match(app,/querySelectorAll\('\[data-notice-delete\]'\)/);
   assert.match(css,/\.notice-row-actions/);
 });
+
+
+test('seonammedi notice composer places attachments before body, compresses to 5MB, and renders images inline',async()=>{
+  const [html,app,control]=await Promise.all([
+    readFile(new URL('index.html',root),'utf8'),
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8')
+  ]);
+  assert.ok(html.indexOf('id="noticeImages"')<html.indexOf('name="body"'));
+  assert.match(html,/장당 5MB 이하로 자동 최적화/);
+  assert.match(app,/NOTICE_IMAGE_MAX_BYTES=5\*1024\*1024/);
+  assert.match(app,/async function compressNoticeImage\(file\)/);
+  assert.match(app,/canvas\.toBlob\(resolve,'image\/webp',quality\)/);
+  assert.match(app,/notice-detail-body/);
+  assert.match(app,/첨부 사진을 본문에 함께 표시합니다/);
+  assert.match(control,/image\.size\|\|0\)>5\*1024\*1024/);
+});

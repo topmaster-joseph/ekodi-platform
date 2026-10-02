@@ -343,7 +343,7 @@ async function deleteNotice(item){
 function showNoticeDetail(item){
   const detail=el('noticeDetail');if(!detail)return;const images=(item.imageUrls?.length?item.imageUrls:(item.imageUrl?[item.imageUrl]:[])).map(url=>'<img src="'+escapeHtml(url)+'" alt="" class="notice-detail-image" loading="lazy">').join('');
   const mine=noticeOwnedByCurrentUser(item);
-  detail.innerHTML='<button type="button" class="notice-back">목록</button><div class="notice-detail-images">'+images+'</div><h3>'+escapeHtml(item.title||'공지')+'</h3><p>'+escapeHtml(item.body||'')+'</p><small>'+escapeHtml(noticeDate(item))+'</small><div class="notice-detail-actions"><button type="button" class="notice-share">공유</button>'+(mine?'<button type="button" class="notice-edit">수정</button><button type="button" class="notice-delete">삭제</button>':'')+'</div>';
+  detail.innerHTML='<button type="button" class="notice-back">목록</button><h3>'+escapeHtml(item.title||'공지')+'</h3><div class="notice-detail-body"><p>'+escapeHtml(item.body||'')+'</p>'+(images?'<div class="notice-detail-images">'+images+'</div>':'')+'</div><small>'+escapeHtml(noticeDate(item))+'</small><div class="notice-detail-actions"><button type="button" class="notice-share">공유</button>'+(mine?'<button type="button" class="notice-edit">수정</button><button type="button" class="notice-delete">삭제</button>':'')+'</div>';
   detail.hidden=false;el('noticeList').hidden=true;
   detail.querySelector('.notice-back')?.addEventListener('click',()=>{detail.hidden=true;el('noticeList').hidden=false;history.replaceState(null,'',location.pathname+'#notices')});
   detail.querySelector('.notice-share')?.addEventListener('click',async()=>{const url=noticePermalink(item.id);try{if(navigator.share)await navigator.share({title:item.title||'공지',text:item.body||'',url});else{await navigator.clipboard.writeText(url);alert('게시물 링크를 복사했습니다.')}}catch{}});
@@ -369,10 +369,36 @@ async function loadNotices(){
     const pathMatch=location.pathname.match(/^\/seonammedi\/notices\/(\d+)\/?$/);const wanted=Number(pathMatch?.[1]||new URLSearchParams(location.search).get('notice')||0);const selected=publicNotices.find(item=>Number(item.id)===wanted);if(selected){showView('notices');showNoticeDetail(selected)}
   }catch(error){host.innerHTML='<p class="muted">'+escapeHtml(error.message||'공지 목록을 불러오지 못했습니다.')+'</p>'}
 }
+const NOTICE_IMAGE_MAX_BYTES=5*1024*1024;
+const NOTICE_IMAGE_MAX_DIMENSION=2400;
 let noticeSelectedFiles=[];
 let noticeEditingId=0;
 let noticeExistingImages=[];
 let noticeKeptImageIndexes=new Set();
+const noticeFileFromBlob=(blob,name)=>new File([blob],name,{type:blob.type||'image/webp',lastModified:Date.now()});
+async function compressNoticeImage(file){
+  if(!file||Number(file.size||0)<=NOTICE_IMAGE_MAX_BYTES)return file;
+  let bitmap;
+  try{bitmap=await createImageBitmap(file)}catch{throw new Error('이 사진은 자동 압축할 수 없습니다. 5MB 이하 파일로 다시 선택해 주세요.')}
+  const ratio=Math.min(1,NOTICE_IMAGE_MAX_DIMENSION/Math.max(bitmap.width,bitmap.height));
+  let width=Math.max(1,Math.round(bitmap.width*ratio)),height=Math.max(1,Math.round(bitmap.height*ratio));
+  const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d',{alpha:true});
+  if(!ctx){bitmap.close?.();throw new Error('사진 압축을 준비하지 못했습니다.')}
+  let blob=null;
+  for(let round=0;round<5;round++){
+    canvas.width=width;canvas.height=height;ctx.clearRect(0,0,width,height);ctx.drawImage(bitmap,0,0,width,height);
+    for(const quality of [0.86,0.74,0.62,0.5]){
+      blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',quality));
+      if(blob&&blob.size<=NOTICE_IMAGE_MAX_BYTES)break;
+    }
+    if(blob&&blob.size<=NOTICE_IMAGE_MAX_BYTES)break;
+    width=Math.max(1,Math.round(width*0.82));height=Math.max(1,Math.round(height*0.82));
+  }
+  bitmap.close?.();
+  if(!blob||blob.size>NOTICE_IMAGE_MAX_BYTES)throw new Error('사진을 5MB 이하로 줄이지 못했습니다. 더 작은 사진을 선택해 주세요.');
+  const base=String(file.name||'notice-image').replace(/\.[^.]+$/,'');
+  return noticeFileFromBlob(blob,base+'.webp');
+}
 function resetNoticeEditor(){
   noticeEditingId=0;noticeSelectedFiles=[];noticeExistingImages=[];noticeKeptImageIndexes=new Set();noticeCompose?.reset();renderNoticeImagePreview();
   const submit=noticeCompose?.querySelector('button[type="submit"]');if(submit)submit.textContent='게시하기';
@@ -394,9 +420,18 @@ function beginNoticeEdit(item){
   const message=el('noticeComposeMessage');if(message)message.textContent='게시글을 수정 중입니다.';
   renderNoticeImagePreview();noticeCompose.hidden=false;noticeWriteButton.hidden=true;el('noticeDetail').hidden=true;noticeCompose.scrollIntoView({block:'start'});noticeCompose.elements.title.focus();
 }
-el('noticeImages')?.addEventListener('change',event=>{
-  const remaining=Math.max(0,5-noticeKeptImageIndexes.size),files=[...event.target.files];noticeSelectedFiles=files.slice(0,remaining);
-  if(files.length>remaining)alert('사진은 기존 사진을 포함해 최대 5장까지 등록할 수 있습니다.');renderNoticeImagePreview();
+el('noticeImages')?.addEventListener('change',async event=>{
+  const input=event.currentTarget,remaining=Math.max(0,5-noticeKeptImageIndexes.size),files=[...input.files].slice(0,remaining);
+  if(input.files.length>remaining)alert('사진은 기존 사진을 포함해 최대 5장까지 등록할 수 있습니다.');
+  const message=el('noticeComposeMessage');if(message)message.textContent=files.length?'사진을 5MB 이하로 최적화하는 중입니다…':'';
+  try{
+    noticeSelectedFiles=[];
+    for(const file of files)noticeSelectedFiles.push(await compressNoticeImage(file));
+    if(message)message.textContent=noticeSelectedFiles.length?'첨부 사진을 본문에 함께 표시합니다.':'';
+  }catch(error){
+    noticeSelectedFiles=[];input.value='';if(message)message.textContent=error.message||'사진을 처리하지 못했습니다.';
+  }
+  renderNoticeImagePreview();
 });
 const noticeWriteButton=el('noticeWriteButton'),noticeCompose=el('noticeComposeForm');
 noticeWriteButton?.addEventListener('click',()=>{if(!noticeToken()){location.assign(noticeLoginUrl());return}resetNoticeEditor();noticeCompose.hidden=false;noticeWriteButton.hidden=true;noticeCompose.querySelector('input[name="title"]')?.focus()});
@@ -409,7 +444,7 @@ noticeCompose?.addEventListener('submit',async event=>{
   message.textContent=editingId?'수정 저장 중입니다…':'게시 중입니다…';
   try{
     const response=await fetch(url,{method,headers:{authorization:'Bearer '+token},body:form,cache:'no-store'});const data=await response.json().catch(()=>({}));
-    if(!response.ok){const messages={REQUEST_BODY_TOO_LARGE:'사진 용량이 너무 큽니다. 사진은 장당 8MB 이하, 최대 5장까지 등록할 수 있습니다.',too_many_images:'사진은 최대 5장까지 등록할 수 있습니다.',image_too_large:'사진 한 장의 크기는 최대 8MB입니다.',image_storage_unavailable:'사진 저장소에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.',edit_forbidden:'작성자만 수정할 수 있습니다.'};throw new Error(messages[data.error]||data.error||(editingId?'수정하지 못했습니다.':'게시하지 못했습니다.'))}
+    if(!response.ok){const messages={REQUEST_BODY_TOO_LARGE:'사진 용량이 너무 큽니다. 사진은 장당 5MB 이하, 최대 5장까지 등록할 수 있습니다.',too_many_images:'사진은 최대 5장까지 등록할 수 있습니다.',image_too_large:'사진 한 장의 크기는 최대 5MB입니다.',image_storage_unavailable:'사진 저장소에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.',edit_forbidden:'작성자만 수정할 수 있습니다.'};throw new Error(messages[data.error]||data.error||(editingId?'수정하지 못했습니다.':'게시하지 못했습니다.'))}
     resetNoticeEditor();noticeCompose.hidden=true;noticeWriteButton.hidden=false;message.textContent=editingId?'수정했습니다.':'게시했습니다.';await loadNotices();const item=publicNotices.find(row=>row.id===Number(data.id));if(item){history.replaceState(null,'',noticePermalink(item.id));showNoticeDetail(item)}
   }catch(error){message.textContent=error.message||(editingId?'수정하지 못했습니다.':'게시하지 못했습니다.')}
 });
