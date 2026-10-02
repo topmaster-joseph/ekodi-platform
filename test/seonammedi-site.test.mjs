@@ -338,6 +338,8 @@ test('seonammedi exposes seeded related channels on public and admin surfaces',a
   assert.match(migration,/instagram\.com\/wonokoh/);
   assert.match(migration,/youtube\.com\/@Mokpo-tv/);
   assert.match(migration,/WHERE NOT EXISTS/);
+  assert.match(adminHtml,/name="previewUrl"/);
+  assert.match(adminHtml,/화면 내 미리보기 URL/);
 });
 
 test('seonammedi channel previews use provider-safe embeds and same-origin metadata fallback',async()=>{
@@ -360,6 +362,10 @@ test('seonammedi channel previews use provider-safe embeds and same-origin metad
   assert.match(control,/browseId/);
   assert.match(control,/feeds\/videos\.xml\?channel_id=/);
   assert.match(control,/provider\.kind!=='youtube'/);
+  assert.match(control,/function explicitChannelEmbed\(item\)/);
+  assert.match(control,/preview\.contentType='explicit-preview'/);
+  assert.match(control,/preview_url/);
+  assert.match(control,/CHANNEL_BROWSER_UA/);
   assert.match(app,/channelPreviewSeq/);
   assert.match(app,/recentItems/);
   assert.match(app,/channelPreviewEmbedUrl/);
