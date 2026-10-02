@@ -209,6 +209,10 @@ test('seonammedi social channel hub groups channels by platform and supports Tik
   assert.match(app,/\['tiktok','TikTok'\]/);
   assert.match(app,/\['youtube','YouTube'\]/);
   assert.match(app,/data-channel-platform/);
+  assert.match(app,/channelRouteFromHash/);
+  assert.match(app,/writeChannelRoute/);
+  assert.match(app,/raw\.startsWith\('channels\/'\)/);
+  assert.match(app,/preferredId/);
   assert.match(adminHtml,/<option value="tiktok">TikTok<\/option>/);
   assert.match(adminHtml,/사이트 표시 ON/);
   assert.match(adminJs,/toggleChannelVisibility/);
