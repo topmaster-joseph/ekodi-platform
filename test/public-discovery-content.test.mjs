@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { collectPublicDiscoveryItems } from '../public-discovery-content.js';
 import { buildEkodiPublicRegistry, ekodiDynamicSitemapResponse, ekodiDynamicLlmsResponse } from '../public-discovery-registry.js';
 
@@ -13,7 +14,6 @@ function db(){
     canonical_path:'/jadam/services/special',description:'공개 서비스 안내',image_url:'',source:'test',
     published_at:'2026-10-02T01:00:00Z',updated_at:'2026-10-02T02:00:00Z',changefreq:'daily',priority:'0.8'
   }];
-  const notices=[{id:7,title:'공개 공지',body:'공지 본문',notice_kind:'notice',published_at:'2026-10-02T03:00:00Z',updated_at:'2026-10-02T03:00:00Z'}];
   return {
     prepare(sql){
       const q=String(sql);
@@ -29,7 +29,6 @@ function db(){
               if(q.includes('SELECT * FROM public_site_controls'))return {results:publicSites};
               if(q.includes('customer_tenants'))return {results:[]};
               if(q.includes('FROM public_discovery_items'))return {results:ledger};
-              if(q.includes('FROM seonammedi_notices'))return {results:notices};
               return {results:[]};
             }
           }
@@ -44,7 +43,6 @@ function db(){
           if(q.includes('SELECT * FROM public_site_controls'))return {results:publicSites};
           if(q.includes('customer_tenants'))return {results:[]};
           if(q.includes('FROM public_discovery_items'))return {results:ledger};
-          if(q.includes('FROM seonammedi_notices'))return {results:notices};
           return {results:[]};
         }
       };
@@ -54,34 +52,55 @@ function db(){
   };
 }
 
+async function withPublicNoticeApi(run){
+  const previous=globalThis.fetch;
+  globalThis.fetch=async input=>{
+    const url=String(input instanceof Request?input.url:input);
+    if(url==='https://ekodi.kr/api/seonammedi/notices'){
+      return new Response(JSON.stringify({ok:true,items:[{
+        id:7,title:'공개 공지',body:'공지 본문',kind:'notice',
+        imageUrl:'',imageUrls:[],publishedAt:'2026-10-02T03:00:00Z',updatedAt:'2026-10-02T03:00:00Z'
+      }]}),{status:200,headers:{'content-type':'application/json'}});
+    }
+    throw new Error('unexpected fetch '+url);
+  };
+  try{return await run()}finally{globalThis.fetch=previous}
+}
+
 test('collects registered public content and verified notice adapter content',async()=>{
-  const items=await collectPublicDiscoveryItems({DB:db()});
-  assert.ok(items.some(item=>item.url==='https://ekodi.kr/jadam/services/special'));
-  assert.ok(items.some(item=>item.url==='https://ekodi.kr/seonammedi/notices/7'));
+  await withPublicNoticeApi(async()=>{
+    const items=await collectPublicDiscoveryItems({DB:db()});
+    assert.ok(items.some(item=>item.url==='https://ekodi.kr/jadam/services/special'));
+    assert.ok(items.some(item=>item.url==='https://ekodi.kr/seonammedi/notices/7'));
+  });
 });
 
 test('central registry merges site and content projections',async()=>{
-  const registry=await buildEkodiPublicRegistry({DB:db()});
-  assert.equal(registry.policy,'EKODI-PUBLIC-DISCOVERY-002');
-  assert.ok(registry.urls.includes('https://ekodi.kr/jadam'));
-  assert.ok(registry.urls.includes('https://ekodi.kr/jadam/services/special'));
-  assert.ok(registry.urls.includes('https://ekodi.kr/seonammedi/notices/7'));
-  assert.equal(new Set(registry.urls).size,registry.urls.length);
+  await withPublicNoticeApi(async()=>{
+    const registry=await buildEkodiPublicRegistry({DB:db()});
+    assert.equal(registry.policy,'EKODI-PUBLIC-DISCOVERY-002');
+    assert.ok(registry.urls.includes('https://ekodi.kr/jadam'));
+    assert.ok(registry.urls.includes('https://ekodi.kr/jadam/services/special'));
+    assert.ok(registry.urls.includes('https://ekodi.kr/seonammedi/notices/7'));
+    assert.equal(new Set(registry.urls).size,registry.urls.length);
+  });
 });
 
 test('dynamic sitemap and llms are generated from central registry',async()=>{
-  const env={DB:db()};
-  const sitemap=await ekodiDynamicSitemapResponse(env);
-  const xml=await sitemap.text();
-  assert.match(xml,/https:\/\/ekodi\.kr\/jadam\/services\/special/);
-  assert.match(xml,/https:\/\/ekodi\.kr\/seonammedi\/notices\/7/);
-  assert.equal(sitemap.headers.get('x-ekodi-route'),'dynamic-public-sitemap');
+  await withPublicNoticeApi(async()=>{
+    const env={DB:db()};
+    const sitemap=await ekodiDynamicSitemapResponse(env);
+    const xml=await sitemap.text();
+    assert.match(xml,/https:\/\/ekodi\.kr\/jadam\/services\/special/);
+    assert.match(xml,/https:\/\/ekodi\.kr\/seonammedi\/notices\/7/);
+    assert.equal(sitemap.headers.get('x-ekodi-route'),'dynamic-public-sitemap');
 
-  const llms=await ekodiDynamicLlmsResponse(env);
-  const text=await llms.text();
-  assert.match(text,/자담치킨 공개 서비스/);
-  assert.match(text,/공개 공지/);
-  assert.equal(llms.headers.get('x-ekodi-route'),'dynamic-public-llms');
+    const llms=await ekodiDynamicLlmsResponse(env);
+    const text=await llms.text();
+    assert.match(text,/자담치킨 공개 서비스/);
+    assert.match(text,/공개 공지/);
+    assert.equal(llms.headers.get('x-ekodi-route'),'dynamic-public-llms');
+  });
 });
 
 
