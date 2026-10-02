@@ -14,7 +14,8 @@ test('store gateway is a public three-store chooser with canonical EKODI routes'
   assert.ok(!html.includes('pages.dev')); assert.ok(!html.includes('.ai.ekodi.kr'));
 });
 test('cmpmyi is reserved and guarded while stores remains a compatibility route',async()=>{
-  const [router,stage,prod,discovery]=await Promise.all([read('platform-router-entry-worker.js'),read('.github/workflows/stage-shared-site-shell.yml'),read('.github/workflows/deploy-site-core.yml'),read('discovery-layer.js')]);
+  const [router,stage,prod,discovery,registryText]=await Promise.all([read('platform-router-entry-worker.js'),read('.github/workflows/stage-shared-site-shell.yml'),read('.github/workflows/deploy-site-core.yml'),read('discovery-layer.js'),read('config/public-discovery-registry.json')]);
+  const registry=JSON.parse(registryText); const registeredPaths=new Set([...(registry.basePages||[]),...(registry.sites||[]),...(registry.resources||[])].map(item=>item.path));
   for(const slug of ['cmpmyi','stores']){assert.ok(RESERVED_WORKSPACE_SLUGS.has(slug));assert.equal(isWorkspaceSlug(slug),false)}
   assert.ok(router.includes("import { storeGatewayPage } from './store-gateway-page.js'"));
   assert.ok(router.includes('STORE_GATEWAY_PATHS.has(url.pathname)'));
