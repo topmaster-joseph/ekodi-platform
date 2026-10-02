@@ -581,3 +581,17 @@ test('seonammedi activity history always renders in descending date order across
 });
 
 // descending activity-history order is enforced for every public category filter
+
+
+test('seonammedi notice list exposes edit and delete actions for the signed-in author',async()=>{
+  const [app,css]=await Promise.all([
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('app.css',root),'utf8')
+  ]);
+  assert.match(app,/data-notice-edit/);
+  assert.match(app,/data-notice-delete/);
+  assert.match(app,/async function deleteNotice\(item\)/);
+  assert.match(app,/querySelectorAll\('\[data-notice-edit\]'\)/);
+  assert.match(app,/querySelectorAll\('\[data-notice-delete\]'\)/);
+  assert.match(css,/\.notice-row-actions/);
+});
