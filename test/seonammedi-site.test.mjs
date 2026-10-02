@@ -628,3 +628,22 @@ test('seonammedi notice list actions use server-authorized canManage without exp
   assert.match(control,/canManage:Boolean\(admin\)\|\|Boolean\(email&&lower\(row\.created_by\)===email\)/);
   assert.doesNotMatch(control,/eventEnd:row\.event_end\|\|'',createdBy:row\.created_by\|\|''/);
 });
+
+
+test('seonammedi admin notice attachments are before body, max five, 5MB-compressed, and stored for inline public rendering',async()=>{
+  const [html,js,control]=await Promise.all([
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('admin/admin.js',root),'utf8'),
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8')
+  ]);
+  assert.ok(html.indexOf('id="adminNoticeImages"')<html.indexOf('name="body"'));
+  assert.match(html,/파일첨부 \(사진 최대 5장\)/);
+  assert.match(html,/사진마다 5MB 이하로 자동 최적화/);
+  assert.match(js,/ADMIN_NOTICE_IMAGE_MAX_BYTES=5\*1024\*1024/);
+  assert.match(js,/compressAdminNoticeImage/);
+  assert.match(js,/payload\.append\('images'/);
+  assert.match(control,/form\.getAll\('images'\)/);
+  assert.match(control,/images\.length>5/);
+  assert.match(control,/Number\(image\.size\)>5\*1024\*1024/);
+  assert.match(control,/image_keys_json,image_types_json/);
+});
