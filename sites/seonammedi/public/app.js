@@ -127,7 +127,7 @@ if(materialFilters&&materialList){
     materialList.innerHTML=rows.length?rows.map(item=>`<article class="material-item"><div class="material-date">${escapeHtml(item.date||'날짜 확인 중')}</div><div><h3><a href="${safeUrl(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a></h3>${item.summary?'<p>'+escapeHtml(item.summary)+'</p>':''}<div class="public-post-meta"><span class="source-type">${escapeHtml(item.category)}</span><span class="source-type">${escapeHtml(item.subtype)}</span>${item.publisher?'<span class="source-type">'+escapeHtml(item.publisher)+'</span>':''}${item.verification?'<span class="verify-state">'+escapeHtml(item.verification)+'</span>':''}</div></div></article>`).join(''):'<p class="muted">표시할 관련자료가 없습니다.</p>';
   };
   renderMaterialsForStatus=renderMaterials;
-  renderMaterials('관련보도');
+  showStatusTab(activeStatusTab);
   materialFilters.addEventListener('click',event=>{const button=event.target.closest('button');if(!button)return;[...materialFilters.children].forEach(x=>x.classList.remove('active'));button.classList.add('active');renderMaterials(button.dataset.materialCat)});
 }
 const org=d.organization||{};
