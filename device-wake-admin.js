@@ -50,14 +50,18 @@
     const style = document.createElement('style');
     style.id = 'ekodiWakeControlStyles';
     style.textContent = `
-      .device-wake-control{margin:16px 0;padding:16px;border:1px solid rgba(100,151,198,.25);border-radius:14px;background:rgba(7,25,42,.62)}
-      .device-wake-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.device-wake-head h3{margin:2px 0 5px}.device-wake-head p{margin:0;color:#8fa6bb;font-size:11px;line-height:1.5}.device-wake-actions{display:flex;gap:7px;flex-wrap:wrap}
-      .device-wake-gateways,.device-wake-grid{display:grid;gap:10px;margin-top:13px}.device-wake-gateways{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}.device-wake-grid{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
-      .device-wake-gateway,.device-wake-card{border:1px solid rgba(103,149,190,.2);border-radius:12px;background:rgba(8,31,51,.58);padding:12px}.device-wake-gateway strong,.device-wake-card strong{display:block}.device-wake-gateway small,.device-wake-card small{display:block;color:#829bb2;margin-top:3px}
-      .device-wake-state{display:inline-flex;margin-top:7px;padding:3px 7px;border-radius:999px;background:rgba(100,116,139,.18);font-size:9px}.device-wake-state.online{background:rgba(34,197,94,.14);color:#86efac}.device-wake-state.offline{background:rgba(245,158,11,.14);color:#fcd34d}
-      .device-wake-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.device-wake-form label{display:grid;gap:4px;color:#8ea4b8;font-size:9px}.device-wake-form input,.device-wake-form select{min-width:0;height:34px;border:1px solid rgba(110,153,193,.28);border-radius:8px;background:#0b2943;color:#d7e6f5;padding:0 8px}.device-wake-form .wide{grid-column:1/-1}
-      .device-wake-checks{grid-column:1/-1;display:flex;gap:12px;flex-wrap:wrap}.device-wake-checks label{display:flex;align-items:center;gap:5px}.device-wake-card-actions{grid-column:1/-1;display:flex;gap:7px;flex-wrap:wrap}.device-wake-note{margin-top:12px;padding:10px;border-radius:9px;background:rgba(245,158,11,.08);color:#c9b47a;font-size:10px;line-height:1.5}.device-wake-enrollment{margin-top:10px;padding:10px;border:1px dashed rgba(110,153,193,.35);border-radius:9px}.device-wake-enrollment code{display:block;margin-top:7px;padding:8px;overflow-wrap:anywhere;background:#071a2b;border-radius:7px;color:#b8d5ef;font-size:9px}.device-wake-message{margin-top:9px;color:#9bb4ca;font-size:10px}
-      @media(max-width:560px){.device-wake-head{flex-direction:column}.device-wake-form{grid-template-columns:1fr}.device-wake-form .wide,.device-wake-checks,.device-wake-card-actions{grid-column:1}}
+      .device-wake-control{margin:8px 0;padding:10px;border:1px solid #d4d4d4;border-radius:10px;background:#fff;color:#111111;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+      .device-wake-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.device-wake-head h3{margin:0 0 2px;font-size:15px;line-height:1.25;color:#111111}.device-wake-head p{margin:0;color:#5b5b5b;font-size:10px;line-height:1.35}.device-wake-actions{display:flex;gap:5px;flex-wrap:wrap}.device-wake-actions button,.device-wake-card-actions button{min-height:30px;padding:0 10px;border-radius:7px;font-size:10px}.device-wake-control button.primary{background:#111;color:#fff;border:1px solid #111}.device-wake-control button.primary:hover{background:#000}.device-wake-control button.primary:disabled{background:#d8d8d8;color:#7a7a7a;border-color:#c8c8c8}.device-wake-control button.secondary{background:#fff;color:#111;border:1px solid #bdbdbd}.device-wake-control button.secondary:hover{background:#f1f1f1}
+      .device-wake-summary{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}.device-wake-summary span{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border:1px solid #d9d9d9;border-radius:999px;background:#f7f7f7;color:#2f2f2f;font-size:9px;font-weight:700}
+      .device-wake-gateways,.device-wake-grid{display:grid;gap:6px;margin-top:7px}.device-wake-gateways{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}.device-wake-grid{grid-template-columns:1fr}
+      .device-wake-gateway,.device-wake-card{border:1px solid #d9d9d9;border-radius:9px;background:#fbfbfb;padding:8px}.device-wake-gateway{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center}.device-wake-gateway strong,.device-wake-card strong{display:block;color:#111111;font-size:11px;line-height:1.2}.device-wake-gateway small,.device-wake-card small{display:block;color:#666666;margin:0;font-size:9px;line-height:1.25}.device-wake-gateway .device-wake-state{grid-column:2;grid-row:1/3;margin:0}
+      .device-wake-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}.device-wake-card-title{min-width:0;display:flex;align-items:center;gap:7px;flex-wrap:wrap}.device-wake-card-title>div{min-width:0}
+      .device-wake-state{display:inline-flex;align-items:center;margin:0;padding:2px 6px;border-radius:999px;background:#eeeeee;color:#4a4a4a;font-size:8px;font-weight:700;white-space:nowrap}.device-wake-state.online{background:#111;color:#fff;border:1px solid #111}.device-wake-state.offline{background:#fff;color:#444;border:1px solid #9d9d9d}
+      .device-wake-form{display:grid;grid-template-columns:1.4fr 1fr 1fr .55fr .65fr;gap:5px;align-items:end}.device-wake-form label{display:grid;gap:2px;color:#333333;font-size:8px;font-weight:700;line-height:1.1}.device-wake-form input,.device-wake-form select{min-width:0;height:30px;border:1px solid #c8c8c8;border-radius:7px;background:#fff;color:#111111;padding:0 7px;font-size:10px}.device-wake-form input:disabled,.device-wake-form select:disabled{background:#f0f0f0;color:#999999}.device-wake-form input:focus,.device-wake-form select:focus{outline:2px solid #111;outline-offset:1px;border-color:#111}.device-wake-form .wide{grid-column:auto}
+      .device-wake-checks{grid-column:1/4;display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-height:30px}.device-wake-checks label{display:flex;align-items:center;gap:4px;color:#4a4a4a;font-weight:600;white-space:nowrap}.device-wake-checks input{width:13px;height:13px;padding:0}.device-wake-card-actions{grid-column:4/6;display:flex;gap:5px;justify-content:flex-end;align-items:center}
+      .device-wake-note{margin-top:7px;padding:7px 8px;border:1px solid #cfcfcf;border-radius:7px;background:#f5f5f5;color:#444444;font-size:9px;line-height:1.35;border-left:3px solid #111}.device-wake-enrollment{margin-top:7px;padding:7px 8px;border:1px dashed #c8c8c8;border-radius:7px;background:#f8f8f8}.device-wake-enrollment strong,.device-wake-enrollment small{color:#2f2f2f;font-size:9px}.device-wake-enrollment code{display:block;margin-top:5px;padding:6px;overflow-wrap:anywhere;background:#111111;border-radius:6px;color:#f8f8f8;font-size:9px}.device-wake-message{margin:6px 0 0;color:#666666;font-size:9px;line-height:1.25}
+      @media(max-width:1100px){.device-wake-form{grid-template-columns:repeat(2,minmax(0,1fr))}.device-wake-form .wide,.device-wake-checks,.device-wake-card-actions{grid-column:1/-1}.device-wake-card-actions{justify-content:flex-start}}
+      @media(max-width:560px){.device-wake-control{padding:8px}.device-wake-head{flex-direction:column}.device-wake-form{grid-template-columns:1fr}.device-wake-card-head{align-items:flex-start}.device-wake-form .wide,.device-wake-checks,.device-wake-card-actions{grid-column:1}.device-wake-checks{gap:6px}.device-wake-note{font-size:8px}}
     `;
     document.head.append(style);
   }
@@ -65,12 +69,19 @@
   function render(section, devicesData, wake) {
     const gatewayHost = section.querySelector('[data-wake-gateways]');
     const grid = section.querySelector('[data-wake-grid]');
+    const summary = section.querySelector('[data-wake-summary]');
     const gateways = wake.gateways || [];
     gatewayHost.innerHTML = gateways.length
       ? gateways.map(gateway => `<article class="device-wake-gateway"><strong>${esc(gateway.label)}</strong><small>${esc(gateway.id)}</small><span class="device-wake-state ${gateway.status === 'online' ? 'online' : 'offline'}">${gateway.status === 'online' ? '온라인' : '오프라인'}</span><small>최근 ${esc(time(gateway.lastSeenAt))}</small></article>`).join('')
       : '<p class="device-wake-message">등록된 Wake Gateway가 없습니다.</p>';
 
     const devices = (devicesData.devices || []).filter(device => device.management?.type === 'pc' && device.platform !== 'inventory');
+    if (summary) {
+      const onlineGateways = gateways.filter(item => item.status === 'online').length;
+      const onlineDevices = devices.filter(item => item.status === 'online').length;
+      const eligibleDevices = devices.filter(isDesktopEligible).length;
+      summary.innerHTML = `<span>Gateway ${gateways.length} · 온라인 ${onlineGateways}</span><span>PC ${devices.length} · 온라인 ${onlineDevices}</span><span>Wake 가능 ${eligibleDevices}</span>`;
+    }
     grid.innerHTML = devices.length ? devices.map(device => {
       const profile = profileFor(wake, device.id);
       const eligible = isDesktopEligible(device);
@@ -78,16 +89,15 @@
       const online = device.status === 'online';
       const wakeReady = eligible && profile?.enabled && gateway?.status === 'online' && !online;
       return `<article class="device-wake-card" data-wake-device="${esc(device.id)}">
-        <strong>${esc(device.label || device.hostname || device.id)}</strong><small>${esc(device.hostname || device.id)} · ${online ? '온라인' : '오프라인'}</small>
-        <span class="device-wake-state ${eligible ? 'online' : 'offline'}">${eligible ? '데스크톱 Wake 허용 가능' : '노트북/휴대형 제외'}</span>
+        <div class="device-wake-card-head"><div class="device-wake-card-title"><div><strong>${esc(device.label || device.hostname || device.id)}</strong><small>${esc(device.hostname || device.id)}</small></div><span class="device-wake-state ${online ? 'online' : 'offline'}">${online ? '온라인' : '오프라인'}</span><span class="device-wake-state ${eligible ? 'online' : 'offline'}">${eligible ? 'Wake 허용 가능' : '노트북/휴대형 제외'}</span></div></div>
         <form class="device-wake-form" data-wake-profile-form>
-          <label class="wide">Wake Gateway<select name="gatewayId"${eligible ? '' : ' disabled'}>${gatewayOptions(wake, profile?.gatewayId || '')}</select></label>
+          <label class="wide">Gateway<select name="gatewayId"${eligible ? '' : ' disabled'}>${gatewayOptions(wake, profile?.gatewayId || '')}</select></label>
           <label>MAC 주소<input name="macAddress" placeholder="AA:BB:CC:DD:EE:FF" value="${esc(profile?.macAddress || '')}"${eligible ? '' : ' disabled'}></label>
           <label>브로드캐스트<input name="broadcastAddress" value="${esc(profile?.broadcastAddress || '255.255.255.255')}"${eligible ? '' : ' disabled'}></label>
           <label>WOL Port<input name="wolPort" type="number" min="1" max="65535" value="${Number(profile?.wolPort || 9)}"${eligible ? '' : ' disabled'}></label>
-          <label>부팅 확인 제한(초)<input name="bootTimeoutSeconds" type="number" min="60" max="900" value="${Number(profile?.bootTimeoutSeconds || 300)}"${eligible ? '' : ' disabled'}></label>
-          <div class="device-wake-checks"><label><input name="enabled" type="checkbox"${profile?.enabled ? ' checked' : ''}${eligible ? '' : ' disabled'}> 관리자 원격 전원 허용</label><label><input name="autoWakeForJobs" type="checkbox"${profile?.autoWakeForJobs ? ' checked' : ''}${eligible ? '' : ' disabled'}> 작업 대기 시 자동 깨우기</label><label><input name="resumeJobs" type="checkbox"${profile?.resumeJobs !== false ? ' checked' : ''}${eligible ? '' : ' disabled'}> 부팅 후 작업 계속</label></div>
-          <div class="device-wake-card-actions"><button type="submit" class="secondary"${eligible ? '' : ' disabled'}>전원 정책 저장</button><button type="button" class="primary" data-wake-now${wakeReady ? '' : ' disabled'}>${online ? '이미 온라인' : '지금 켜기'}</button></div>
+          <label>부팅 제한(초)<input name="bootTimeoutSeconds" type="number" min="60" max="900" value="${Number(profile?.bootTimeoutSeconds || 300)}"${eligible ? '' : ' disabled'}></label>
+          <div class="device-wake-checks"><label><input name="enabled" type="checkbox"${profile?.enabled ? ' checked' : ''}${eligible ? '' : ' disabled'}> 원격 전원 허용</label><label><input name="autoWakeForJobs" type="checkbox"${profile?.autoWakeForJobs ? ' checked' : ''}${eligible ? '' : ' disabled'}> 대기 작업 자동 깨우기</label><label><input name="resumeJobs" type="checkbox"${profile?.resumeJobs !== false ? ' checked' : ''}${eligible ? '' : ' disabled'}> 부팅 후 작업 계속</label></div>
+          <div class="device-wake-card-actions"><button type="submit" class="secondary"${eligible ? '' : ' disabled'}>정책 저장</button><button type="button" class="primary" data-wake-now${wakeReady ? '' : ' disabled'}>${online ? '온라인' : '지금 켜기'}</button></div>
         </form>
       </article>`;
     }).join('') : '<p class="device-wake-message">관리 가능한 데스크톱 PC가 없습니다.</p>';
@@ -112,7 +122,7 @@
     const section = document.createElement('section');
     section.id = PANEL_ID;
     section.className = 'device-wake-control';
-    section.innerHTML = `<div class="device-wake-head"><div><p class="kicker">POWER RECOVERY</p><h3>원격 전원 · 작업 자동복귀</h3><p>관리자가 허용한 데스크톱만 Wake Gateway를 통해 켜고, Windows 로그인 전 Device Agent가 복귀해 대기 작업을 이어갑니다.</p></div><div class="device-wake-actions"><button type="button" class="secondary" data-wake-refresh>↻ 새로고침</button><button type="button" class="primary" data-wake-enroll>Gateway 등록코드</button></div></div><div class="device-wake-note">노트북은 자동 작업 및 Wake 대상에서 제외됩니다. 완전 종료(S5) 깨우기는 대상 PC의 BIOS/NIC WOL과 같은 네트워크의 항상 켜진 Wake Gateway가 모두 준비되어야 합니다. 정전으로 AC 전원이 끊긴 상태는 WOL만으로 켤 수 없습니다.</div><div class="device-wake-enrollment" data-wake-enrollment hidden></div><div class="device-wake-gateways" data-wake-gateways></div><div class="device-wake-grid" data-wake-grid></div><p class="device-wake-message" data-wake-message>전원 복구 상태를 불러오는 중입니다.</p>`;
+    section.innerHTML = `<div class="device-wake-head"><div><p class="kicker">POWER RECOVERY</p><h3>원격 전원 · 작업 자동복귀</h3><p>Gateway와 PC 상태, 전원정책, 실행 가능 여부를 한 화면에서 확인합니다.</p></div><div class="device-wake-actions"><button type="button" class="secondary" data-wake-refresh>↻ 새로고침</button><button type="button" class="primary" data-wake-enroll>Gateway 등록</button></div></div><div class="device-wake-summary" data-wake-summary></div><div class="device-wake-note">Wake는 관리자가 허용한 비휴대형 데스크톱만 사용합니다. 완전 종료(S5)는 BIOS/NIC WOL과 같은 네트워크의 Wake Gateway가 필요하며, AC 전원이 끊긴 장치는 WOL로 켤 수 없습니다.</div><div class="device-wake-enrollment" data-wake-enrollment hidden></div><div class="device-wake-gateways" data-wake-gateways></div><div class="device-wake-grid" data-wake-grid></div><p class="device-wake-message" data-wake-message>전원 복구 상태를 불러오는 중입니다.</p>`;
     const browser = document.getElementById('adminDeviceBrowserDiagnostics');
     if (browser) browser.insertAdjacentElement('afterend', section); else panel.prepend(section);
 
