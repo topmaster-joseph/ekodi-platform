@@ -76,6 +76,19 @@ function routeFromService(service) {
     source: 'ecosystem-services',
   });
 }
+function schemaKindForPublicationSite(site) {
+  const explicit = {
+    jadam: 'store',
+    pizzamaru: 'store',
+    yogurt: 'store',
+    cgma: 'organization',
+    cheonggye: 'organization',
+    seonammedi: 'organization',
+    pyeonggongmok: 'organization',
+    ekodimission: 'organization',
+  };
+  return explicit[String(site?.id || '').toLowerCase()] || site?.discoveryKind || 'organization';
+}
 function routeFromPublicationSite(site, services) {
   const path = normalizePath(site.canonicalPath);
   if (!path || pathBlocked(path)) return null;
@@ -85,7 +98,7 @@ function routeFromPublicationSite(site, services) {
     id: site.id,
     path,
     asset: null,
-    kind: service ? schemaKindForService(service) : (site.discoveryKind || 'organization'),
+    kind: service ? schemaKindForService(service) : schemaKindForPublicationSite(site),
     publicationState: 'public',
     changefreq: 'weekly',
     priority: path === '/' ? '1.0' : '0.7',
