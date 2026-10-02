@@ -14,6 +14,7 @@ test('Mission tenant-admin production E2E exercises the deployed Activity partic
     "/ekodimission/admin",
     "/ekodimission/admin/activities",
     "운영 홈",
+    "document.querySelector('#pageTitle')?.textContent?.includes('운영 홈')",
     "rootTitle",
     "activityEntryVisible",
     "신청자 관리",
