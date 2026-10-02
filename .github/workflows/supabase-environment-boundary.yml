@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'config/supabase-environment-boundary.json'
+      - 'config/supabase-dev-legacy-drain.json'
       - 'docs/operations/supabase-development-production-boundary.md'
       - 'scripts/validate-supabase-environment-boundary.mjs'
       - '.github/workflows/supabase-environment-boundary.yml'
@@ -12,6 +13,7 @@ on:
     branches: [main, development]
     paths:
       - 'config/supabase-environment-boundary.json'
+      - 'config/supabase-dev-legacy-drain.json'
       - 'scripts/validate-supabase-environment-boundary.mjs'
       - 'supabase/**'
   workflow_dispatch:
