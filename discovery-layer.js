@@ -57,7 +57,7 @@ function serviceIsDiscoverable(service) {
   if (!service) return true;
   if (service.productionVerified !== true) return false;
   if (EXCLUDED_STATES.has(String(service.status || '').toLowerCase())) return false;
-  return String(service.status || '').toLowerCase() === 'live';
+  return ['live','beta'].includes(String(service.status || '').toLowerCase());
 }
 function routeFromService(service) {
   const path = safeInternalPath(service.url);
@@ -85,7 +85,7 @@ function routeFromPublicationSite(site, services) {
     id: site.id,
     path,
     asset: null,
-    kind: service ? schemaKindForService(service) : 'organization',
+    kind: service ? schemaKindForService(service) : (site.discoveryKind || 'organization'),
     publicationState: 'public',
     changefreq: 'weekly',
     priority: path === '/' ? '1.0' : '0.7',
