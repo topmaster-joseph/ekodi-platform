@@ -37,7 +37,7 @@ import { handleLocalCommerceControl } from './local-commerce-control.js';
 import { handleExternalAccountControl, runExternalAccountHealthAudit } from './external-account-control.js';
 import { handleRealtimeControl, runRealtimeRecordingRetention } from './realtime-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
-import { runSeonamMediDailyCheck } from './seonammedi-monitor.js';
+import { runSeonamMediHourlyCheck } from './seonammedi-monitor.js';
 
 function errorResponse(message, code) {
   return applyApiSecurityHeaders(new Response(JSON.stringify({ error:message, code }), {
@@ -375,8 +375,8 @@ export default {
     // A real Coupang report pass owns the whole Mission Control invocation budget.
     if (customerSchedule?.reporting?.ran) return customerSchedule;
     const scheduledAt = new Date(Number(controller?.scheduledTime || Date.now()));
-    const seonamMediDaily = scheduledAt.getUTCHours() === 23
-      ? runSeonamMediDailyCheck(env,{scheduledAt:scheduledAt.toISOString()}).catch(error => { console.error('Seonam Medi daily monitor error', error); return { ok:false, error:'seonammedi_daily_monitor_failed' }; })
+    const seonamMediHourly = scheduledAt.getUTCMinutes() === 0
+      ? runSeonamMediHourlyCheck(env,{scheduledAt:scheduledAt.toISOString()}).catch(error => { console.error('Seonam Medi hourly monitor error', error); return { ok:false, error:'seonammedi_hourly_monitor_failed' }; })
       : null;
     const externalAccountHealthDaily = scheduledAt.getUTCHours() === 23
       ? runExternalAccountHealthAudit(env,{scheduledAt:scheduledAt.toISOString()}).catch(error => { console.error('External account daily health error', error); return { ok:false, error:'external_account_daily_health_failed' }; })
@@ -399,11 +399,11 @@ export default {
       ctx.waitUntil(hybridWatchdog);
       ctx.waitUntil(recordingRetention);
       ctx.waitUntil(wakeOrchestration);
-      if (seonamMediDaily) ctx.waitUntil(seonamMediDaily);
+      if (seonamMediHourly) ctx.waitUntil(seonamMediHourly);
       if (externalAccountHealthDaily) ctx.waitUntil(externalAccountHealthDaily);
     }
     const background = [authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration];
-    if (seonamMediDaily) background.push(seonamMediDaily);
+    if (seonamMediHourly) background.push(seonamMediHourly);
     if (externalAccountHealthDaily) background.push(externalAccountHealthDaily);
     return customerSchedule || Promise.all(background);
   },
