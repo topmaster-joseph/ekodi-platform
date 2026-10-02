@@ -78,3 +78,13 @@ test('public-site design settings preview desktop tablet and mobile without chan
   assert.match(css,/\.design-live-preview/);
   assert.match(css,/width:min\(390px,100%\)/);
 });
+
+
+test('Mission applicant admin live refresh uses BroadcastChannel plus bounded polling fallback',async()=>{
+  const source=await workspaceAdminScript().text();
+  assert.match(source,/ekodi-mission-applications-v1/);
+  assert.match(source,/new BroadcastChannel\(ACTIVITY_LIVE_CHANNEL\)/);
+  assert.match(source,/setInterval\(\(\)=>refreshActivityIfChanged\(activityKey,false\),3000\)/);
+  assert.match(source,/activityAdmin\(activityKey,true\)/);
+  assert.match(source,/신청자 관리 · 자동 반영/);
+});
