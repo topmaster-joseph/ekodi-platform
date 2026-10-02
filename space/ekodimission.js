@@ -62,6 +62,7 @@
       const result=await response.json().catch(()=>({}));
       if(!response.ok||!result.ok||!result.applicationId)throw new Error(result.message||'신청 저장을 확인하지 못했습니다. 다시 신청해 주세요.');
       status.dataset.state='success';status.textContent='신청이 완료되었습니다. 같은 연락처로 다시 신청하면 내용이 업데이트됩니다.';
+      try{const bus=new BroadcastChannel('ekodi-mission-applications-v1');bus.postMessage({activityKey:applicationRecordKey,applicationId:result.applicationId,at:Date.now()});bus.close()}catch{}
       submit.textContent='신청 완료';
     }catch(error){status.dataset.state='error';status.textContent=error?.message||'신청을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.';submit.disabled=false;submit.textContent='다시 신청하기';}
   });
