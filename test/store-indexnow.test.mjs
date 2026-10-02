@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import {
   EKODI_INDEXNOW_KEY,
   EKODI_INDEXNOW_KEY_PATH,
@@ -49,4 +50,13 @@ test('central registry includes public routes and excludes maintenance/private s
   assert.ok(registry.urls.includes('https://ekodi.kr/jadam'));
   assert.ok(!registry.urls.includes('https://ekodi.kr/seonammedi'));
   assert.equal(new Set(registry.urls).size,registry.urls.length);
+});
+
+
+test('platform discovery uses Naver official batch POST contract',async()=>{
+  const source=await readFile(new URL('../scripts/submit-store-indexnow.mjs',import.meta.url),'utf8');
+  assert.match(source,/searchadvisor\.naver\.com\/indexnow/);
+  assert.match(source,/method:'POST'/);
+  assert.match(source,/urlList:urls/);
+  assert.doesNotMatch(source,/searchParams\.set\('url'/);
 });
