@@ -124,7 +124,11 @@
 
     <section class="panel-page" data-panel="voices" hidden>
       <div class="heading"><div><p class="eyebrow">CITIZEN VOICES</p><h1>시민의견 관리</h1><p>시민이 접수한 의견은 접수 즉시 목록에 보관됩니다. 관리자는 내용·표시명·연락처·분류를 수정하거나 삭제할 수 있습니다.</p></div><button id="reloadVoices" type="button" class="secondary">새로고침</button></div>
-      <form id="voiceEditForm" class="card form-card" hidden>
+      <section class="card list-card">
+        <div class="card-head"><h2>접수 목록</h2><div class="voice-tools"><select id="voiceStatusFilter" aria-label="상태 필터"><option value="all">전체 상태</option><option value="received">접수됨</option><option value="reviewing">검토중</option><option value="answered">답변완료</option><option value="published">공개</option><option value="archived">보관</option></select></div></div>
+        <div id="voiceList" class="item-list"></div><p id="voiceMessage" class="message" role="status"></p>
+      </section>
+      <form id="voiceEditForm" class="card form-card voice-edit-card" hidden>
         <input type="hidden" name="id">
         <h2>시민의견 수정</h2>
         <div class="form-row"><label>유형<select name="category"><option value="question">질문</option><option value="proposal">정책제안</option><option value="experience">의료경험</option><option value="factcheck">사실확인 요청</option><option value="tip">자료제보</option><option value="other">기타</option></select></label><label>표시명<input name="displayName" maxlength="80"></label></div>
@@ -134,10 +138,6 @@
         <p id="voiceConsentNote" class="muted"></p>
         <div class="actions"><button type="submit" class="primary">수정 저장</button><button type="button" id="voiceEditCancel" class="secondary">취소</button></div>
       </form>
-      <section class="card list-card">
-        <div class="card-head"><h2>접수 목록</h2><div class="voice-tools"><select id="voiceStatusFilter" aria-label="상태 필터"><option value="all">전체 상태</option><option value="received">접수됨</option><option value="reviewing">검토중</option><option value="answered">답변완료</option><option value="published">공개</option><option value="archived">보관</option></select></div></div>
-        <div id="voiceList" class="item-list"></div><p id="voiceMessage" class="message" role="status"></p>
-      </section>
     </section>
 
     <section class="panel-page" data-panel="notices" hidden>
