@@ -91,6 +91,7 @@ async function ensurePublicContentSchema(db){
     platform TEXT NOT NULL DEFAULT 'other',
     name TEXT NOT NULL DEFAULT '',
     url TEXT NOT NULL DEFAULT '',
+    preview_url TEXT NOT NULL DEFAULT '',
     category TEXT NOT NULL DEFAULT 'other',
     official INTEGER NOT NULL DEFAULT 0,
     visible INTEGER NOT NULL DEFAULT 1,
@@ -119,7 +120,7 @@ async function ensurePublicContentSchema(db){
   );`);
   const repair=[
     ['seonammedi_notices','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','body',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','status',"TEXT NOT NULL DEFAULT 'draft'"],['seonammedi_notices','pinned','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','published_at','TEXT'],['seonammedi_notices','image_key',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','image_type',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','notice_kind',"TEXT NOT NULL DEFAULT 'notice'"],['seonammedi_notices','featured','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','event_start','TEXT'],['seonammedi_notices','event_end','TEXT'],['seonammedi_notices','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','updated_at',"TEXT NOT NULL DEFAULT ''"],
-    ['seonammedi_channels','platform',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','name',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','url',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','category',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','official','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','visible','INTEGER NOT NULL DEFAULT 1'],['seonammedi_channels','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','note',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','updated_at',"TEXT NOT NULL DEFAULT ''"],
+    ['seonammedi_channels','platform',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','name',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','url',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','preview_url',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','category',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','official','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','visible','INTEGER NOT NULL DEFAULT 1'],['seonammedi_channels','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','note',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','updated_at',"TEXT NOT NULL DEFAULT ''"],
     ['seonammedi_timeline','legacy_key','TEXT'],['seonammedi_timeline','event_date',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','category',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','summary',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','evidence',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','links_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','media_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','monitor_keywords_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','status',"TEXT NOT NULL DEFAULT 'published'"],['seonammedi_timeline','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_timeline','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','updated_at',"TEXT NOT NULL DEFAULT ''"]
   ];
   for(const [table,column,definition] of repair)await addColumnIfMissing(db,table,column,definition);
@@ -311,7 +312,7 @@ async function audit(env,auth,action,type,id,detail={}){
 
 function publicNotice(row){const id=Number(row.id);return{id,title:row.title,body:row.body,pinned:Boolean(row.pinned),imageUrl:row.image_key?PREFIX+'/notices/'+id+'/image':'',publishedAt:row.published_at||row.updated_at,updatedAt:row.updated_at,kind:row.notice_kind==='event'?'event':'notice',featured:Boolean(row.featured),eventStart:row.event_start||'',eventEnd:row.event_end||''}}
 function adminNotice(row){return{...publicNotice(row),status:row.status,createdBy:row.created_by,createdAt:row.created_at}}
-function publicChannel(row){return{id:Number(row.id),platform:row.platform,name:row.name,url:row.url,category:row.category,official:Boolean(row.official),note:row.note||'',sortOrder:Number(row.sort_order||0)}}
+function publicChannel(row){return{id:Number(row.id),platform:row.platform,name:row.name,url:row.url,previewUrl:row.preview_url||'',category:row.category,official:Boolean(row.official),note:row.note||'',sortOrder:Number(row.sort_order||0)}}
 function adminChannel(row){return{...publicChannel(row),visible:Boolean(row.visible),createdBy:row.created_by,createdAt:row.created_at,updatedAt:row.updated_at}}
 
 async function listPublicNotices(env){
@@ -346,7 +347,7 @@ async function createPublicNotice(request,env){
   }catch(error){if(imageKey)await env.LIVE_RECORDINGS_BUCKET?.delete?.(imageKey).catch(()=>{});throw error}
 }
 async function listPublicChannels(env){
-  const rows=await env.DB.prepare(`SELECT id,platform,name,url,category,official,note,sort_order FROM seonammedi_channels
+  const rows=await env.DB.prepare(`SELECT id,platform,name,url,preview_url,category,official,note,sort_order FROM seonammedi_channels
     WHERE visible=1 ORDER BY official DESC,sort_order ASC,id ASC LIMIT 80`).all();
   return json({ok:true,items:(rows.results||[]).map(publicChannel)});
 }
@@ -361,6 +362,22 @@ const previewMeta=(html,key)=>{
   return '';
 };
 const previewTitle=html=>decodePreviewText(String(html||'').match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]||'');
+const CHANNEL_BROWSER_UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36';
+function explicitChannelEmbed(item){
+  const explicit=validHttps(item.previewUrl);
+  if(!explicit||item.platform!=='youtube')return '';
+  try{
+    const url=new URL(explicit),host=url.hostname.toLowerCase().replace(/^www\./,'');
+    let videoId='';
+    if(host==='youtu.be')videoId=url.pathname.split('/').filter(Boolean)[0]||'';
+    else if(['youtube.com','m.youtube.com','music.youtube.com','youtube-nocookie.com'].includes(host)){
+      videoId=url.searchParams.get('v')||'';
+      if(!videoId){const parts=url.pathname.split('/').filter(Boolean);if(['embed','shorts','live'].includes(parts[0]))videoId=parts[1]||'';}
+    }
+    if(/^[A-Za-z0-9_-]{11}$/.test(videoId))return 'https://www.youtube-nocookie.com/embed/'+videoId+'?rel=0';
+  }catch{}
+  return '';
+}
 function channelProviderUrl(item){
   try{
     const url=new URL(item.url);
@@ -402,13 +419,14 @@ async function fetchChannelPreviewPage(url,userAgent,timeout=6000){
   try{return await fetch(url,{headers:{'user-agent':userAgent},redirect:'follow',signal:AbortSignal.timeout(timeout)})}catch{return null}
 }
 async function publicChannelPreview(env,id){
-  const row=await env.DB.prepare(`SELECT id,platform,name,url,category,official,note,sort_order FROM seonammedi_channels
+  const row=await env.DB.prepare(`SELECT id,platform,name,url,preview_url,category,official,note,sort_order FROM seonammedi_channels
     WHERE id=? AND visible=1 LIMIT 1`).bind(id).first();
   if(!row)return json({ok:false,error:'not_found'},404);
-  const item=publicChannel(row),provider=channelProviderUrl(item);
-  const preview={title:item.name,description:item.note||'',image:'',embedUrl:'',mode:'summary',platform:item.platform,sourceUrl:item.url,recentItems:[]};
+  const item=publicChannel(row),provider=channelProviderUrl(item),explicitEmbed=explicitChannelEmbed(item);
+  const preview={title:item.name,description:item.note||'',image:'',embedUrl:explicitEmbed,mode:explicitEmbed?'embed':'summary',platform:item.platform,sourceUrl:item.url,recentItems:[]};
+  if(explicitEmbed){preview.contentType='explicit-preview';return json({ok:true,item,preview})}
   if(provider.kind==='instagram-profile'){
-    const userAgent='Mozilla/5.0 (compatible; EKODIChannelPreview/1.0; +https://ekodi.kr/seonammedi/)';
+    const userAgent=CHANNEL_BROWSER_UA;
     const page=await fetchChannelPreviewPage(item.url,userAgent,6000);
     let html=page?.ok?await page.text().catch(()=>''):'';
     let recentItems=instagramRecentItems(html);
@@ -433,7 +451,7 @@ async function publicChannelPreview(env,id){
     return json({ok:true,item,preview});
   }
   if(['facebook','tiktok'].includes(provider.kind)){
-    const page=await fetchChannelPreviewPage(item.url,'Mozilla/5.0 (compatible; EKODIChannelPreview/1.0; +https://ekodi.kr/seonammedi/)',6500);
+    const page=await fetchChannelPreviewPage(item.url,CHANNEL_BROWSER_UA,6500);
     const html=page?.ok?await page.text().catch(()=>''):'';
     if(html){
       preview.title=previewMeta(html,'og:title')||previewTitle(html)||preview.title;
@@ -451,7 +469,7 @@ async function publicChannelPreview(env,id){
     return json({ok:true,item,preview});
   }
   if(provider.kind!=='youtube')return json({ok:true,item,preview});
-  const page=await fetchChannelPreviewPage(item.url,'Mozilla/5.0 (compatible; EKODIChannelPreview/1.0; +https://ekodi.kr/seonammedi/)',7000);
+  const page=await fetchChannelPreviewPage(item.url,CHANNEL_BROWSER_UA,7000);
   if(!page?.ok)return json({ok:true,item,preview});
   const html=await page.text().catch(()=>'');
   preview.title=previewMeta(html,'og:title')||previewTitle(html)||preview.title;
@@ -466,7 +484,7 @@ async function publicChannelPreview(env,id){
       const videosUrl=new URL(item.url);
       videosUrl.search='';videosUrl.hash='';
       videosUrl.pathname=videosUrl.pathname.replace(/\/$/,'')+'/videos';
-      const videosPage=await fetchChannelPreviewPage(videosUrl.href,'Mozilla/5.0 (compatible; EKODIChannelPreview/1.0; +https://ekodi.kr/seonammedi/)',6500);
+      const videosPage=await fetchChannelPreviewPage(videosUrl.href,CHANNEL_BROWSER_UA,6500);
       const videosHtml=videosPage?.ok?await videosPage.text().catch(()=>''):'';
       pageVideoId=clean(
         (videosHtml.match(/"videoId":"([A-Za-z0-9_-]{11})"/)||videosHtml.match(/watch\?v=([A-Za-z0-9_-]{11})/))?.[1],
@@ -717,23 +735,24 @@ async function listAdminChannels(env,auth){
 }
 function channelInput(body,existing={}){
   const platform=clean(body?.platform??existing.platform,40).toLowerCase(),name=clean(body?.name??existing.name,160),url=validHttps(body?.url??existing.url);
+  const previewRaw=body?.previewUrl??existing.preview_url??'',previewUrl=previewRaw?validHttps(previewRaw):'';
   const category=clean(body?.category??existing.category,40).toLowerCase();
-  if(!PLATFORMS.has(platform)||!name||!url||!CHANNEL_CATEGORIES.has(category))return null;
-  return{platform,name,url,category,official:safeBool(body?.official)?1:0,visible:body?.visible===undefined?Number(existing.visible??1):(safeBool(body.visible)?1:0),sortOrder:safeOrder(body?.sortOrder??existing.sort_order),note:clean(body?.note??existing.note,500)};
+  if(!PLATFORMS.has(platform)||!name||!url||!CHANNEL_CATEGORIES.has(category)||(previewRaw&&!previewUrl))return null;
+  return{platform,name,url,previewUrl,category,official:safeBool(body?.official)?1:0,visible:body?.visible===undefined?Number(existing.visible??1):(safeBool(body.visible)?1:0),sortOrder:safeOrder(body?.sortOrder??existing.sort_order),note:clean(body?.note??existing.note,500)};
 }
 async function createChannel(request,env,auth){
   if(!can(auth,CHANNEL_CAP))return json({ok:false,error:'channel_forbidden'},403);
   const body=await request.json().catch(()=>null),value=channelInput(body);if(!value)return json({ok:false,error:'invalid_channel'},400);
-  const now=new Date().toISOString();const result=await env.DB.prepare(`INSERT INTO seonammedi_channels(platform,name,url,category,official,visible,sort_order,note,created_by,created_at,updated_at)
-    VALUES(?,?,?,?,?,?,?,?,?,?,?)`).bind(value.platform,value.name,value.url,value.category,value.official,value.visible,value.sortOrder,value.note,auth.email,now,now).run();
+  const now=new Date().toISOString();const result=await env.DB.prepare(`INSERT INTO seonammedi_channels(platform,name,url,preview_url,category,official,visible,sort_order,note,created_by,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).bind(value.platform,value.name,value.url,value.previewUrl,value.category,value.official,value.visible,value.sortOrder,value.note,auth.email,now,now).run();
   const id=Number(result?.meta?.last_row_id||0);await audit(env,auth,'create','channel',id,{platform:value.platform,name:value.name});return json({ok:true,id},201);
 }
 async function updateChannel(request,env,auth,id){
   if(!can(auth,CHANNEL_CAP))return json({ok:false,error:'channel_forbidden'},403);
   const existing=await env.DB.prepare('SELECT * FROM seonammedi_channels WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
   const body=await request.json().catch(()=>null),value=channelInput(body,existing);if(!value)return json({ok:false,error:'invalid_channel'},400);
-  const now=new Date().toISOString();await env.DB.prepare(`UPDATE seonammedi_channels SET platform=?,name=?,url=?,category=?,official=?,visible=?,sort_order=?,note=?,updated_at=? WHERE id=?`)
-    .bind(value.platform,value.name,value.url,value.category,value.official,value.visible,value.sortOrder,value.note,now,id).run();
+  const now=new Date().toISOString();await env.DB.prepare(`UPDATE seonammedi_channels SET platform=?,name=?,url=?,preview_url=?,category=?,official=?,visible=?,sort_order=?,note=?,updated_at=? WHERE id=?`)
+    .bind(value.platform,value.name,value.url,value.previewUrl,value.category,value.official,value.visible,value.sortOrder,value.note,now,id).run();
   await audit(env,auth,'update','channel',id,{platform:value.platform,name:value.name,visible:Boolean(value.visible)});return json({ok:true,id});
 }
 async function deleteChannel(env,auth,id){
