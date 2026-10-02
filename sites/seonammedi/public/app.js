@@ -677,3 +677,5 @@ async function initPublicAdminControls(){
   }catch{}
 }
 initPublicAdminControls();
+
+// EKODI release marker: notice-list authorized edit/delete actions verified on merged main.
