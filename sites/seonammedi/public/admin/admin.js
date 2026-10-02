@@ -72,22 +72,44 @@ async function api(path,options={}){
   if(response.status===401){sessionStorage.removeItem(PLATFORM_TOKEN_KEY);clearSession();try{localStorage.removeItem(CENTRAL_SESSION_KEY)}catch{}location.replace(authUrl());throw new Error('로그인이 만료되었습니다.')}
   if(!response.ok)throw Object.assign(new Error(data.error||'요청을 처리하지 못했습니다.'),{status:response.status,data});return data;
 }
-function selectRecordsAdminTab(name='timeline'){
+const ADMIN_ROUTE_PANELS=new Set(['dashboard','status','channels','voices','finance','notices','organization','minutes','access']);
+function writeAdminRoute(panel,{org=null,records=null,replace=false}={}){
+  const url=new URL(location.href);
+  if(panel&&panel!=='dashboard')url.searchParams.set('panel',panel);else url.searchParams.delete('panel');
+  if(panel==='organization'&&org&&ORG_GROUPS.some(item=>item.key===org))url.searchParams.set('org',org);else url.searchParams.delete('org');
+  if(panel==='status'&&records==='review')url.searchParams.set('records','review');else url.searchParams.delete('records');
+  const next=url.pathname+(url.searchParams.toString()?'?'+url.searchParams.toString():'');
+  history[replace?'replaceState':'pushState'](null,'',next);
+}
+function selectRecordsAdminTab(name='timeline',{route=true,replace=false}={}){
   const tabs=qsa('[data-records-admin-tab]'),panels=qsa('[data-records-admin-panel]');
   if(!tabs.length||!panels.length)return;
   const allowed=name==='review'?'review':'timeline';
   tabs.forEach(tab=>{const active=tab.dataset.recordsAdminTab===allowed;tab.classList.toggle('active',active);tab.setAttribute('aria-selected',active?'true':'false')});
   panels.forEach(panel=>{panel.hidden=panel.dataset.recordsAdminPanel!==allowed});
+  if(route)writeAdminRoute('status',{records:allowed,replace});
 }
-function showPanel(name){
-  const target=name==='timeline'?'content':name;
+function showPanel(name,{route=true,replace=false}={}){
+  const target=ADMIN_ROUTE_PANELS.has(name)?name:'dashboard';
   qsa('[data-panel]').forEach(node=>{const active=node.dataset.panel===target;node.hidden=!active;node.classList.toggle('active',active)});
   qsa('[data-panel-target]').forEach(node=>node.classList.toggle('active',node.dataset.panelTarget===target));
-  if(target==='content'&&name==='timeline')selectRecordsAdminTab('timeline');
+  if(route)writeAdminRoute(target,{replace});
+}
+function restoreAdminRoute({replace=false}={}){
+  const params=new URLSearchParams(location.search);
+  let panel=params.get('panel')||'dashboard';
+  if(!ADMIN_ROUTE_PANELS.has(panel))panel='dashboard';
+  const button=qs('[data-panel-target="'+panel+'"]');
+  if(button?.hidden)panel='dashboard';
+  showPanel(panel,{route:false});
+  if(panel==='organization')showOrgAdminTab(params.get('org')||'bidae',{route:false});
+  if(panel==='status')selectRecordsAdminTab(params.get('records')==='review'?'review':'timeline',{route:false});
+  if(replace)writeAdminRoute(panel,{org:panel==='organization'?(params.get('org')||'bidae'):null,records:panel==='status'?params.get('records'):null,replace:true});
 }
 qsa('[data-records-admin-tab]').forEach(button=>button.addEventListener('click',()=>selectRecordsAdminTab(button.dataset.recordsAdminTab)));
 qsa('[data-panel-target]').forEach(button=>button.addEventListener('click',()=>showPanel(button.dataset.panelTarget)));
 qsa('[data-go]').forEach(button=>button.addEventListener('click',()=>showPanel(button.dataset.go)));
+addEventListener('popstate',()=>restoreAdminRoute());
 
 function tag(label,cls=''){const span=document.createElement('span');span.className='tag '+cls;span.textContent=label;return span}
 function button(label,handler,cls=''){const b=document.createElement('button');b.type='button';b.textContent=label;if(cls)b.className=cls;b.addEventListener('click',handler);return b}
@@ -222,14 +244,16 @@ function fillOrgGroup(form,group){
   form.elements[key+'_committees'].value=(group.committees||[]).map(x=>[x.name,cleanOrgRoleText(x.lead)].filter(Boolean).join(' | ')).join('\n');
   form.elements[key+'_participants'].value=(group.participants||[]).map(x=>[x.name,x.representative,x.url].filter(Boolean).join(' | ')).join('\n');
 }
-function showOrgAdminTab(key){
-  qsa('[data-org-admin-panel]').forEach(panel=>panel.hidden=panel.dataset.orgAdminPanel!==key);
+function showOrgAdminTab(key,{route=true,replace=false}={}){
+  const allowed=ORG_GROUPS.some(item=>item.key===key)?key:'bidae';
+  qsa('[data-org-admin-panel]').forEach(panel=>panel.hidden=panel.dataset.orgAdminPanel!==allowed);
   qsa('[data-org-admin-tab]').forEach(button=>{
-    const active=button.dataset.orgAdminTab===key;
+    const active=button.dataset.orgAdminTab===allowed;
     button.classList.toggle('active',active);
     button.setAttribute('aria-selected',active?'true':'false');
   });
-  const form=$('organizationForm');if(form)form.elements.orgKey.value=key;
+  const form=$('organizationForm');if(form)form.elements.orgKey.value=allowed;
+  if(route)writeAdminRoute('organization',{org:allowed,replace});
 }
 qsa('[data-org-admin-tab]').forEach(button=>button.addEventListener('click',()=>showOrgAdminTab(button.dataset.orgAdminTab)));
 async function loadOrganization(){
@@ -429,6 +453,7 @@ async function init(refresh=false){
   try{
     state.me=await api('/api/seonammedi/admin/me');if(location.hash.includes('ekodi_token='))history.replaceState(null,'',location.pathname+location.search);updateDashboard();
     await Promise.all([loadSiteHealth(),state.me.permissions?.pages?loadStatusPage():Promise.resolve(),state.me.permissions?.pages?loadOrganization():Promise.resolve(),state.me.permissions?.timeline?loadTimeline():Promise.resolve(),state.me.permissions?.voices?loadVoices():Promise.resolve(),state.me.permissions?.content?loadContent():Promise.resolve(),state.me.permissions?.notices?loadNotices():Promise.resolve(),state.me.permissions?.channels?loadChannels():Promise.resolve(),state.me.permissions?.finance?loadFinance():Promise.resolve()]);
+    restoreAdminRoute({replace:true});
     if(refresh)text($('scopeSummary'),state.me.platform?'최고관리자 권한으로 최신 상태를 확인했습니다.':'게시판 관리자 권한으로 최신 상태를 확인했습니다.');
   }catch(error){
     if(error.status===403){const main=$('main');main.replaceChildren();const box=document.createElement('section');box.className='card placeholder';const h=document.createElement('strong');h.textContent='관리 권한이 없습니다';const p=document.createElement('p');p.textContent='이 Google 계정에는 서남권 국립의대 소통센터 관리 권한이 등록되어 있지 않습니다.';const a=document.createElement('a');a.href=authUrl();a.textContent='다른 Google 계정으로 로그인';box.append(h,p,a);main.append(box);return}
