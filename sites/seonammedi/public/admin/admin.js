@@ -263,7 +263,7 @@ async function loadOrganization(){
   state.organization=org;
   const form=$('organizationForm');
   normalizeOrgGroups(org).forEach(group=>fillOrgGroup(form,group));
-  showOrgAdminTab(form.elements.orgKey.value||'bidae');
+  showOrgAdminTab(form.elements.orgKey.value||'bidae',{route:false});
   text($('organizationMessage'),'');
 }
 $('organizationForm')?.addEventListener('submit',async event=>{
