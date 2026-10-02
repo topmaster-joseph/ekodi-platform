@@ -1,3 +1,4 @@
--- Optional administrator-selected safe preview URL for provider channels.
--- Automatic provider discovery remains the default; this value is used only as an explicit safe fallback.
-ALTER TABLE seonammedi_channels ADD COLUMN preview_url TEXT NOT NULL DEFAULT '';
+-- Schema marker for deterministic SeonamMedi channel previews.
+-- preview_url is added idempotently by ensurePublicContentSchema()/addColumnIfMissing
+-- before public channel reads, avoiding duplicate-column failures across reused staging D1.
+SELECT 1;
