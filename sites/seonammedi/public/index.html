@@ -52,7 +52,8 @@
 
 <section id="timeline" class="section" data-view-section="status" data-status-pane="timeline" hidden>
   <div class="section-head"><div><p class="eyebrow">ACTIVITY HISTORY</p><h2>활동이력</h2><p class="note">사건은 활동이력으로 한 번만 기록하고, 같은 사건의 공식자료·보도·사진·영상은 해당 이력의 근거자료로 묶습니다. 사진·영상은 원출처 링크를 우선하고, 독립 자료만 아래 자료목록에 표시합니다.</p></div></div>
-  <div class="filters" id="timelineFilters"></div>
+  <p class="filter-label">활동이력 세부 분류</p>
+  <div class="filters" id="timelineFilters" aria-label="활동이력 세부 분류"></div>
   <div id="timelineList" class="timeline"></div>
 </section>
 
@@ -71,7 +72,8 @@
 
 <section id="materials" class="section records-materials" data-view-section="status" data-status-pane="materials" hidden>
   <div class="section-head"><div><p class="eyebrow" id="statusMaterialEyebrow">RELATED NEWS</p><h2 id="statusMaterialTitle">관련보도</h2><p class="note" id="statusMaterialNote">활동이력과 중복되지 않는 관련보도를 원문 출처와 함께 표시합니다.</p></div><span class="badge">중복 제거</span></div>
-  <div class="filters" id="materialFilters" aria-label="현재상황 자료 분류" hidden></div>
+  <p class="filter-label" id="statusMaterialFilterLabel">관련보도 세부 분류</p>
+  <div class="filters" id="materialFilters" aria-label="관련보도 세부 분류"></div>
   <div id="materialList" class="material-list"></div>
 </section>
 
