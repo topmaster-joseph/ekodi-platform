@@ -27,7 +27,7 @@ create table if not exists public.activity_message_campaigns (
 create index if not exists activity_message_campaigns_activity_created_idx
   on public.activity_message_campaigns(activity_id,created_at desc);
 alter table public.activity_message_campaigns enable row level security;
-revoke all on table public.activity_message_campaigns from anon, authenticated;
+revoke all on table public.activity_message_campaigns from anon, authenticated, service_role;
 
 create or replace function public.activity_admin_payment_snapshot(
   p_workspace_slug text,
