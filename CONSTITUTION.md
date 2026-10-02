@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.27.0
+# EKODI Platform Constitution v1.27.1
 
 Effective: 2026-10-02
 
@@ -67,6 +67,15 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Service-local, agent-local, provider-local, workspace-local and learning-loop overrides are forbidden. A regression of this lifecycle is a CI failure.
 - The rule binds `config/remote-computer-execution-policy.json`, `config/autonomous-execution-fabric-policy.json`, `config/virtualization-routing-policy.json`, the background-browser policy, Hybrid Execution, Remote Computer Provider, Virtualization Router, Device Control and the EKODI Windows Agent.
 - Changes that weaken or waive this rule are constitutional changes and require the EKODI Platform Super Administrator's explicit approval, an amendment record, a version bump, rollback definition and governed promotion.
+
+## 1E. Mandatory EKODI-Native Browser Execution Order
+- **NATIVE-BROWSER-EXECUTION-ORDER-001** is mandatory for browser UI validation, synthetic surface verification, and isolated browser execution.
+- The execution order is fixed: **EKODI Background Browser Worker → EKODI Native Remote Computer → Autonomous Execution Fabric**.
+- External browser automation is forbidden by default. It may be used only after every eligible EKODI-native route is proven unusable with machine-readable failure evidence.
+- External fallback additionally requires an audit ID, native capability-gap record, security-equivalent-or-stronger isolation, no paid automatic upgrade, creation of a native recovery task, and retry of EKODI-native execution on the next eligible run.
+- Browser evidence must capture console errors, page errors, request failures, screenshots, and every HTTP 4xx/5xx response with URL, status, status text, and resource type.
+- Service-local, agent-local, provider-local, workspace-local and learning-loop waivers are forbidden. Regression of the native execution order or fallback guards blocks CI.
+- Machine-readable authority: `governance/constitution/constitution.json` → `browserVirtualizationExecutionPolicy`. Runtime routing: `config/virtualization-routing-policy.json`.
 
 ## 2. Domain Constitution
 - The apex `ekodi.kr` is the canonical public ecosystem entry point and canonical host for user-operated public spaces.
