@@ -32,6 +32,7 @@ import { handlePreviewRequest } from './preview-page.js';
 import { storeGatewayPage } from './store-gateway-page.js';
 import { isEkodiIndexNowKeyPath, ekodiIndexNowKeyResponse } from './platform-indexnow.js';
 import { EKODI_PUBLIC_REGISTRY_PATH, ekodiPublicRegistryResponse } from './public-discovery-registry.js';
+import { decorateRegistryDiscoveryResponse, handleRuntimeDiscoveryProjection } from './public-discovery-runtime.js';
 import { storePortfolioAdminPage, storePortfolioAdminPanelPage, storePortfolioAdminPanelScript, storePortfolioAdminShellScript } from './store-portfolio-admin-page.js';
 import { isStorePosAgentDownloadPath, storePosAgentDownload } from './store-pos-agent-download.js';
 import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
@@ -541,5 +542,15 @@ export default {
         message.retry();
       }
     }
+  },
+};
+
+
+export default {
+  async fetch(request, env, ctx) {
+    const discoveryProjection = await handleRuntimeDiscoveryProjection(request, env);
+    if (discoveryProjection) return discoveryProjection;
+    const response = await platformRouterEntry.fetch(request, env, ctx);
+    return decorateRegistryDiscoveryResponse(response, request, env);
   },
 };
