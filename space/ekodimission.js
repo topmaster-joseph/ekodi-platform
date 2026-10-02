@@ -14,7 +14,8 @@
   const title=String(meta?.dataset.eventTitle||defaultEvent.title);
   const shareText=String(meta?.dataset.eventText||defaultEvent.text);
   const invite=String(meta?.dataset.eventInvite||defaultEvent.invite)+' '+url;
-  const api=`/ekodimission/api/activities/${encodeURIComponent(applicationRecordKey)}/applications`;\n  const registrationApi=`/ekodimission/api/activities/${encodeURIComponent(applicationRecordKey)}/registration`;
+  const api=`/ekodimission/api/activities/${encodeURIComponent(applicationRecordKey)}/applications`;
+  const registrationApi=`/ekodimission/api/activities/${encodeURIComponent(applicationRecordKey)}/registration`;
   const shareStatus=m=>document.querySelectorAll('[data-share-status]').forEach(el=>el.textContent=m);
   async function copy(v,m){try{await navigator.clipboard.writeText(v)}catch{const t=document.createElement('textarea');t.value=v;document.body.append(t);t.select();document.execCommand('copy');t.remove()}shareStatus(m)}
   document.addEventListener('click',async e=>{
