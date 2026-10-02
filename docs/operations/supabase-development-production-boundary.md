@@ -4,10 +4,10 @@
 
 EKODI uses the existing two Supabase projects as environment boundaries, not as traffic-sharding peers.
 
-- **Production data plane**: project ref `renzehysxirjilvdxacv` (currently named `ekodi-platform`), logical role `ekodi-prod`.
-- **Development data plane**: project ref `lxcxwbdwwojjkgybbqii` (currently named `ekodi-church`), logical role `ekodi-dev`.
+- **Production data plane**: project ref `renzehysxirjilvdxacv` (named `ekodi-platform-prod`), logical role `ekodi-prod`.
+- **Development data plane**: project ref `lxcxwbdwwojjkgybbqii` (named `ekodi-platform-dev`), logical role `ekodi-dev`.
 
-The logical role is authoritative even if the provider-side display name has not yet been renamed.
+The provider-side display names now match the enforced production/development roles.
 
 ## Environment contract
 
