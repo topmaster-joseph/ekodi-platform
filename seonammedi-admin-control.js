@@ -1,7 +1,7 @@
 import authWorker from './auth-worker.js';
 import { principalFromSupabaseRequest } from './ekodi-principal.js';
 import { accessGrantIsActive, effectiveAccessCapabilities } from './access-governance.js';
-import { runSeonamMediDailyCheck } from './seonammedi-monitor.js';
+import { runSeonamMediHourlyCheck } from './seonammedi-monitor.js';
 
 const PREFIX='/api/seonammedi';
 const AUTH_EXCHANGE_PATH=PREFIX+'/admin/auth/exchange';
@@ -1050,7 +1050,7 @@ export async function handleSeonamMediAdminApi(request,env){
   if(url.pathname===PREFIX+'/admin/me'&&request.method==='GET')return adminMe(request,env,auth);
   if(url.pathname===PREFIX+'/admin/monitor/run'&&request.method==='POST'){
     if(!(can(auth,PAGE_CAP)||can(auth,CONTENT_CAP)))return json({ok:false,error:'health_forbidden'},403);
-    const result=await runSeonamMediDailyCheck(env,{scheduledAt:new Date().toISOString(),force:true});
+    const result=await runSeonamMediHourlyCheck(env,{scheduledAt:new Date().toISOString(),force:true});
     await audit(env,auth,'run','monitor',result?.runId||null,{status:result?.status||'',checked:Number(result?.checked||0),seen:Number(result?.seen||0),added:Number(result?.added||0)});
     return json({ok:Boolean(result?.ok),result},result?.ok===false?502:200);
   }

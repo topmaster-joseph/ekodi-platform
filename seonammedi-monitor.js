@@ -78,16 +78,16 @@ async function insertItem(env,item,seenAt){
     .bind(fingerprint,item.title,item.url,item.publisher,item.publishedAt,item.queryKey,item.queryLabel,seenAt,seenAt,item.resolvedUrl,item.mediaType,item.mediaUrl,item.mediaSource,item.mediaPublishedAt,item.mediaState,item.sourceType||'web',item.summaryText||'').run();
   return true;
 }
-export async function runSeonamMediDailyCheck(env,{scheduledAt=null,force=false}={}){
+export async function runSeonamMediHourlyCheck(env,{scheduledAt=null,force=false}={}){
   if(!env?.DB?.prepare)return {ok:false,error:'storage_unavailable'};
   const startedAt=new Date(scheduledAt||Date.now()).toISOString();let runId=null;let checked=0,seen=0,added=0,mediaCandidates=0,mediaBudget=MEDIA_ENRICH_LIMIT;const errors=[];
   if(!force){
     try{
-      const existing=await env.DB.prepare("SELECT id,status,completed_at FROM seonammedi_monitor_runs WHERE date(datetime(started_at,'+9 hours'))=date(datetime(?,'+9 hours')) AND status IN ('running','ok','partial') ORDER BY id DESC LIMIT 1").bind(startedAt).first();
+      const existing=await env.DB.prepare("SELECT id,status,completed_at FROM seonammedi_monitor_runs WHERE strftime('%Y-%m-%d %H',datetime(started_at,'+9 hours'))=strftime('%Y-%m-%d %H',datetime(?,'+9 hours')) AND status IN ('running','ok','partial') ORDER BY id DESC LIMIT 1").bind(startedAt).first();
       if(existing?.id)return {ok:true,status:'already_checked',skipped:true,runId:existing.id,completedAt:existing.completed_at||null};
     }catch(error){
       const message=clean(error?.message||error,300);
-      if(!/no such table|no such column/i.test(message))return {ok:false,error:'daily_guard_failed',message};
+      if(!/no such table|no such column/i.test(message))return {ok:false,error:'hourly_guard_failed',message};
     }
   }
   try{
@@ -126,6 +126,6 @@ export async function handleSeonamMediMonitorApi(request,env){
       env.DB.prepare("SELECT title,url,resolved_url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text FROM seonammedi_monitor_items WHERE datetime(last_seen_at)>=datetime('now','-7 days') ORDER BY COALESCE(published_at,first_seen_at) DESC LIMIT 48").all(),
       env.DB.prepare("SELECT count(*) AS count FROM seonammedi_monitor_items WHERE datetime(last_seen_at)>=datetime('now','-7 days') AND media_state='candidate' AND media_type IN ('photo','video')").first()
     ]);
-    return json({ok:true,siteOwned:true,aiProvider:false,schedule:'daily 08:00 Asia/Seoul',scheduler:'existing-control-cron',channels:{news:true,naverBlog:naverBlogConfigured(env)},lastRun:lastRun||null,mediaCandidateCount:Number(mediaCount?.count||0),items:rows?.results||[]});
+    return json({ok:true,siteOwned:true,aiProvider:false,schedule:'hourly Asia/Seoul',scheduler:'existing-control-cron',channels:{news:true,naverBlog:naverBlogConfigured(env)},lastRun:lastRun||null,mediaCandidateCount:Number(mediaCount?.count||0),items:rows?.results||[]});
   }catch(error){return json({ok:false,error:'monitor_schema_unavailable',message:'사이트 자동점검 저장소 준비 중입니다.',lastRun:null,items:[]},503,'no-store')}
 }
