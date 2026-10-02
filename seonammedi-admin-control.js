@@ -402,6 +402,18 @@ async function deletePublicNotice(request,env,id){
   return json({ok:true,id});
 }
 
+async function deletePublicNoticeImage(request,env,id,index){
+  const principal=await principalFromSupabaseRequest(request);if(!principal?.email)return json({ok:false,error:'authentication_required'},401);
+  const row=await env.DB.prepare('SELECT id,created_by,image_key,image_type,image_keys_json,image_types_json FROM seonammedi_notices WHERE id=?').bind(id).first();if(!row)return json({ok:false,error:'not_found'},404);
+  const email=lower(principal.email),admin=await env.DB.prepare("SELECT role FROM admins WHERE lower(trim(email))=? AND role='super_admin' LIMIT 1").bind(email).first().catch(()=>null);
+  if(lower(row.created_by)!==email&&!admin)return json({ok:false,error:'delete_forbidden'},403);
+  const keys=noticeImageKeys(row),types=(()=>{try{const value=JSON.parse(String(row.image_types_json||'[]'));return Array.isArray(value)?value.slice(0,5):[]}catch{return[]}})();
+  if(index<0||index>=keys.length)return json({ok:false,error:'image_not_found'},404);
+  const [removed]=keys.splice(index,1);types.splice(index,1);const now=new Date().toISOString();
+  await env.DB.prepare('UPDATE seonammedi_notices SET image_key=?,image_type=?,image_keys_json=?,image_types_json=?,updated_at=? WHERE id=?').bind(keys[0]||'',types[0]||'',JSON.stringify(keys),JSON.stringify(types),now,id).run();
+  await deleteNoticeDriveKey(env,removed);return json({ok:true,id,imageUrls:keys.map((_,i)=>PREFIX+'/notices/'+id+'/image/'+i)});
+}
+
 async function listPublicChannels(env){
   const rows=await env.DB.prepare(`SELECT c.id,c.platform,c.name,c.url,COALESCE(p.preview_url,'') preview_url,c.category,c.official,c.note,c.sort_order
     FROM seonammedi_channels c LEFT JOIN seonammedi_channel_previews p ON p.channel_id=c.id
@@ -915,6 +927,10 @@ export async function handleSeonamMediAdminApi(request,env){
   }
   if(url.pathname===PREFIX+'/notices'&&request.method==='POST'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return createPublicNotice(request,env);
+  }
+  const noticeImageDeleteMatch=url.pathname.match(/^\/api\/seonammedi\/notices\/(\d+)\/images\/(\d+)$/);
+  if(noticeImageDeleteMatch&&request.method==='DELETE'){
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return deletePublicNoticeImage(request,env,Number(noticeImageDeleteMatch[1]),Number(noticeImageDeleteMatch[2]));
   }
   const noticeDeleteMatch=url.pathname.match(/^\/api\/seonammedi\/notices\/(\d+)$/);
   if(noticeDeleteMatch&&request.method==='DELETE'){
