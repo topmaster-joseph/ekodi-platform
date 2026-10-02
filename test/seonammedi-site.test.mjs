@@ -161,6 +161,10 @@ test('seonammedi social channel hub groups channels by platform and supports Tik
   assert.match(adminJs,/tiktok:'TikTok'/);
   assert.match(control,/PLATFORMS=new Set\(\['youtube','instagram','facebook','tiktok'/);
   assert.match(control,/player\/v1/);
+  assert.match(control,/profileEmbedUrl/);
+  assert.match(control,/recentItems=instagramRecentItems\(embedHtml\)/);
+  assert.match(control,/videosUrl\.pathname=videosUrl\.pathname\.replace/);
+  assert.match(control,/youtube-nocookie\.com\/embed/);
 });
 
 test('seonammedi civic voices are manageable from the site admin without exposing contact publicly',async()=>{
