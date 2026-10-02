@@ -1,4 +1,4 @@
-import { canonicalDriveStatus, deleteCanonicalDriveFile, writeCanonicalDriveFile, writeCanonicalDriveStream } from './canonical-drive-writer.js';
+import { canonicalDriveStatus, deleteCanonicalDriveFile, readCanonicalDriveFile, writeCanonicalDriveFile, writeCanonicalDriveStream } from './canonical-drive-writer.js';
 
 const STORAGE_PREFIX = '/api/storage/v1';
 const STORAGE_CONTROL_ORIGIN = 'https://drive.ekodi.kr';
@@ -234,6 +234,17 @@ export async function handleStorageGateway(request, env = {}) {
       console.error('Storage R2 archive error',error);
       const message=String(error?.message || 'STORAGE_ARCHIVE_ERROR');
       return json({ error:'R2 녹화본을 공유드라이브로 보관하지 못했습니다.', code:message.split(':')[0] },errorStatus(message));
+    }
+  }
+
+  if (request.method === 'GET' && url.pathname.startsWith(`${STORAGE_PREFIX}/files/`)) {
+    const fileId=decodeURIComponent(url.pathname.slice(`${STORAGE_PREFIX}/files/`.length));
+    try {
+      const result=await readCanonicalDriveFile(env,fileId);
+      return new Response(result.body,{status:200,headers:{'content-type':result.mimeType||'application/octet-stream','cache-control':'private, max-age=300','x-content-type-options':'nosniff'}});
+    } catch (error) {
+      const message=String(error?.message||'STORAGE_FILE_READ_ERROR');
+      return json({error:'공유드라이브 파일을 읽지 못했습니다.',code:message.split(':')[0]},errorStatus(message));
     }
   }
 
