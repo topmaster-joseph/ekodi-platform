@@ -279,7 +279,7 @@ noticeCompose?.addEventListener('submit',async event=>{
 if(new URLSearchParams(location.search).get('compose')==='notice'&&noticeToken()){showView('notices');noticeCompose.hidden=false;noticeWriteButton.hidden=true}
 loadNotices();
 
-const channelPlatformLabel=value=>({youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',tiktok:'TikTok',blog:'블로그',website:'웹사이트',other:'기타'})[String(value||'').toLowerCase()]||'채널';
+const channelPlatformLabel=value=>({all:'전체',youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',tiktok:'TikTok',blog:'블로그',website:'웹사이트',other:'기타'})[String(value||'').toLowerCase()]||'채널';
 const channelCategoryLabel=value=>({official:'공식','related-org':'관련기관',media:'미디어',civic:'시민·단체',other:'기타'})[String(value||'').toLowerCase()]||'관련';
 const channelEmbedPolicy=platform=>({youtube:'embed',instagram:'recent-embed',facebook:'preview',tiktok:'provider-embed',blog:'preview',website:'preview',other:'preview'})[String(platform||'').toLowerCase()]||'preview';
 const channelPreviewEmbedUrl=(policy,data={})=>{
