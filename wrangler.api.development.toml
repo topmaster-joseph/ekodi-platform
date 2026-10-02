@@ -11,9 +11,10 @@ crons = ["*/10 * * * *"]
 [vars]
 ENVIRONMENT = "development"
 ADMIN_EMAIL = "topmaster.joseph@gmail.com"
-ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com"
+ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com,joseph@ekodi.kr"
 ADMIN_WORKSPACE_DOMAIN = "ekodi.kr"
-GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
+GOOGLE_CLIENT_ID = "483044030492-qvk96u0rvptsshat0pi8g522puq9ju16.apps.googleusercontent.com"
+GOOGLE_IDENTITY_ORIGIN = "https://ekodi-platform-development.ekodi-development.workers.dev"
 USER_AI_FREE_MONTHLY_REQUESTS = "20"
 USER_AI_FLEX_MONTHLY_REQUESTS = "20"
 ALLOWED_ORIGINS = "https://ekodi-platform-development.ekodi-development.workers.dev,https://ekodi-shared-site-staging.ekodi-development.workers.dev,https://ekodi-my-staging.ekodi-development.workers.dev"
