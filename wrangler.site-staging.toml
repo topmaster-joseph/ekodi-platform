@@ -5,6 +5,8 @@ workers_dev = true
 preview_urls = false
 
 [vars]
+MY_SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
+MY_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 ENVIRONMENT = "staging"
 
 [[services]]
