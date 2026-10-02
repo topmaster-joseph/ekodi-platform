@@ -62,3 +62,18 @@ main{padding:0 1.25rem 3rem}
 .mobile-apply-cta{display:none}
 @media(max-width:900px){.open-table-hero{grid-template-columns:1fr;gap:1.1rem;padding-top:2rem}.open-table-copy h1{font-size:clamp(2.8rem,10vw,4.7rem)}.open-table-info-card{max-width:none}}
 @media(max-width:620px){.open-table-hero{padding:1.4rem 0 1.7rem}.open-table-copy h1{font-size:clamp(2.55rem,13vw,4rem);margin-bottom:.8rem}.open-table-slogan{font-size:clamp(1.4rem,7vw,1.9rem)}.open-table-actions .button{flex:1 1 calc(50% - .35rem)}.open-table-summary{grid-template-columns:1fr;padding:.9rem 0 1.4rem}.open-table-info-card{padding:1.05rem}.open-table-info-card dl>div{grid-template-columns:62px 1fr;padding:.58rem 0}.mobile-apply-cta{position:fixed;left:1rem;right:1rem;bottom:max(1rem,env(safe-area-inset-bottom));z-index:50;display:flex;align-items:center;justify-content:center;min-height:50px;border-radius:999px;background:var(--ink);color:#fff;text-decoration:none;font-weight:900;box-shadow:0 14px 36px rgba(23,32,25,.24)}.event-page{padding-bottom:5.5rem}}
+
+.mission-pay-now{margin-top:.85rem}
+.mission-pay-secondary{margin-top:.65rem;background:#fff;color:var(--ink);border:1px solid var(--ink)}
+.mission-pay-after{margin-top:.65rem;background:var(--accent)}
+.mission-pay-sheet[hidden]{display:none!important}
+.mission-pay-sheet{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:1rem}
+.mission-pay-sheet-backdrop{position:absolute;inset:0;background:rgba(18,24,20,.52)}
+.mission-pay-card{position:relative;z-index:1;width:min(520px,100%);border:1px solid var(--line);border-radius:1.25rem;background:#fff;padding:1.25rem;box-shadow:0 24px 70px rgba(20,27,22,.24)}
+.mission-pay-card h2{margin:.2rem 0 .7rem;font-size:1.7rem}
+.mission-pay-close{position:absolute;right:.85rem;top:.7rem;width:2rem;height:2rem;border:0;background:transparent;font-size:1.6rem;cursor:pointer}
+.mission-pay-amount{font-size:1rem}.mission-pay-account{display:flex;justify-content:space-between;gap:1rem;align-items:center;margin:.85rem 0;padding:.9rem 1rem;border-radius:.85rem;background:#f5f3ee}.mission-pay-account strong{font-size:1.15rem}
+.mission-pay-actions{display:grid;grid-template-columns:1fr 1fr;gap:.55rem}.mission-pay-actions .button{width:100%;justify-content:center}.mission-pay-actions .button:last-child{grid-column:1/-1}
+.mission-pay-note{margin:.85rem 0 0;color:var(--muted);font-size:.8rem}.mission-pay-status{min-height:1.2rem;margin:.45rem 0 0;font-weight:800;color:var(--accent);font-size:.82rem}
+body.mission-pay-open{overflow:hidden}
+@media(max-width:560px){.mission-pay-sheet{align-items:end;padding:.65rem}.mission-pay-card{border-radius:1.1rem 1.1rem .8rem .8rem}.mission-pay-actions{grid-template-columns:1fr}.mission-pay-actions .button:last-child{grid-column:auto}}
