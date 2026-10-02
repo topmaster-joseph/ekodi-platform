@@ -4,6 +4,14 @@ on:
   pull_request:
     paths:
       - 'discovery-layer.js'
+      - 'public-discovery-registry.js'
+      - 'public-discovery-runtime.js'
+      - 'public-discovery-content.js'
+      - 'config/public-discovery-registry.json'
+      - 'site-publication-runtime.js'
+      - 'supabase/migrations/*public_discovery_registry*.sql'
+      - 'test/public-discovery-runtime.test.mjs'
+      - 'test/public-discovery-content.test.mjs'
       - 'DISCOVERY_LAYER.md'
       - 'governance/security/discovery-secure-projection.md'
       - 'scripts/discovery-build.mjs'
@@ -14,6 +22,14 @@ on:
     branches: [main]
     paths:
       - 'discovery-layer.js'
+      - 'public-discovery-registry.js'
+      - 'public-discovery-runtime.js'
+      - 'public-discovery-content.js'
+      - 'config/public-discovery-registry.json'
+      - 'site-publication-runtime.js'
+      - 'supabase/migrations/*public_discovery_registry*.sql'
+      - 'test/public-discovery-runtime.test.mjs'
+      - 'test/public-discovery-content.test.mjs'
       - 'DISCOVERY_LAYER.md'
       - 'governance/security/discovery-secure-projection.md'
       - 'scripts/discovery-build.mjs'
@@ -37,5 +53,8 @@ jobs:
         run: |
           set -euo pipefail
           node --check discovery-layer.js
-          node --test test/discovery-layer.test.mjs
+          node --check public-discovery-registry.js
+          node --check public-discovery-runtime.js
+          node --check public-discovery-content.js
+          node --test test/discovery-layer.test.mjs test/public-discovery-runtime.test.mjs test/public-discovery-content.test.mjs
           npm run build
