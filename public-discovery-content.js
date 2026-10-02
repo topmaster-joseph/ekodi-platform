@@ -100,23 +100,33 @@ async function ledgerItems(env){
   }catch{return []}
 }
 
-async function seonamNoticeItems(env){
-  if(!env?.DB)return [];
+async function fetchSeonamPublicNotices(){
   try{
-    const rows=await env.DB.prepare(`SELECT id,title,body,notice_kind,published_at,updated_at
-      FROM seonammedi_notices WHERE status='published' ORDER BY COALESCE(published_at,updated_at) DESC LIMIT 1000`).all();
-    return (rows.results||[]).map(row=>{
-      const id=Number(row.id);if(!Number.isInteger(id)||id<=0)return null;
-      const kind=row.notice_kind==='event'?'event':'notice';
-      const path=`/seonammedi/notices/${id}`;
-      return {
-        id:`seonammedi:${kind}:${id}`,type:kind,siteId:'seonammedi',name:row.title||'공지사항',
-        url:'https://ekodi.kr'+path,path,description:clean(row.body,500),imageUrl:'',source:'seonammedi_notices',
-        publishedAt:row.published_at||row.updated_at||'',updatedAt:row.updated_at||row.published_at||'',
-        changefreq:kind==='event'?'daily':'weekly',priority:kind==='event'?'0.8':'0.7'
-      };
-    }).filter(Boolean);
+    const response=await fetch('https://ekodi.kr/api/seonammedi/notices',{
+      method:'GET',
+      headers:{accept:'application/json','user-agent':'EKODI-Public-Discovery/2.0'},
+      signal:AbortSignal.timeout(10000),
+    });
+    if(!response.ok)return [];
+    const data=await response.json().catch(()=>({}));
+    return Array.isArray(data?.items)?data.items:[];
   }catch{return []}
+}
+
+async function seonamNoticeItems(){
+  const rows=await fetchSeonamPublicNotices();
+  return rows.slice(0,1000).map(row=>{
+    const id=Number(row.id);if(!Number.isInteger(id)||id<=0)return null;
+    const kind=row.kind==='event'?'event':'notice';
+    const path=`/seonammedi/notices/${id}`;
+    const imageUrl=Array.isArray(row.imageUrls)&&row.imageUrls[0]?row.imageUrls[0]:(row.imageUrl||'');
+    return {
+      id:`seonammedi:${kind}:${id}`,type:kind,siteId:'seonammedi',name:row.title||'공지사항',
+      url:'https://ekodi.kr'+path,path,description:clean(row.body,500),imageUrl,source:'seonammedi-public-api',
+      publishedAt:row.publishedAt||row.updatedAt||'',updatedAt:row.updatedAt||row.publishedAt||'',
+      changefreq:kind==='event'?'daily':'weekly',priority:kind==='event'?'0.8':'0.7'
+    };
+  }).filter(Boolean);
 }
 
 export async function collectPublicDiscoveryItems(env){
@@ -126,24 +136,25 @@ export async function collectPublicDiscoveryItems(env){
   return [...map.values()];
 }
 
-async function seonamNoticePage(env,id){
-  if(!env?.DB)return null;
-  const row=await env.DB.prepare(`SELECT id,title,body,notice_kind,published_at,updated_at,image_key,image_keys_json
-    FROM seonammedi_notices WHERE id=? AND status='published' LIMIT 1`).bind(id).first().catch(()=>null);
+async function seonamNoticePage(id){
+  const rows=await fetchSeonamPublicNotices();
+  const row=rows.find(item=>Number(item?.id)===Number(id));
   if(!row)return null;
   const title=clean(row.title,500)||'공지사항';
   const body=clean(row.body,12000);
-  const kind=row.notice_kind==='event'?'행사':'공지사항';
-  const published=clean(row.published_at||row.updated_at,80);
+  const kind=row.kind==='event'?'행사':'공지사항';
+  const published=clean(row.publishedAt||row.updatedAt,80);
+  const updated=clean(row.updatedAt||row.publishedAt,80);
   const canonical=`https://ekodi.kr/seonammedi/notices/${Number(row.id)}`;
-  let imageCount=0;
-  try{const keys=JSON.parse(row.image_keys_json||'[]');if(Array.isArray(keys))imageCount=Math.min(5,keys.filter(Boolean).length)}catch{}
-  if(!imageCount&&row.image_key)imageCount=1;
-  const images=Array.from({length:imageCount},(_,index)=>`<img src="/api/seonammedi/notices/${Number(row.id)}/image/${index}" alt="" loading="lazy">`).join('');
+  const rawImages=(Array.isArray(row.imageUrls)&&row.imageUrls.length?row.imageUrls:(row.imageUrl?[row.imageUrl]:[])).slice(0,5);
+  const images=rawImages.map(value=>{
+    const src=clean(value,1600);
+    return src?`<img src="${html(src)}" alt="" loading="lazy">`:'';
+  }).join('');
   const date=published?`<time datetime="${html(published)}">${html(published.slice(0,10))}</time>`:'';
   const jsonLd=JSON.stringify({
     '@context':'https://schema.org','@type':kind==='행사'?'Event':'Article',headline:title,url:canonical,
-    datePublished:published||undefined,dateModified:clean(row.updated_at,80)||published||undefined,
+    datePublished:published||undefined,dateModified:updated||published||undefined,
     publisher:{'@type':'Organization',name:'서남권 국립의대 소통센터',url:'https://ekodi.kr/seonammedi'}
   }).replace(/</g,'\\u003c');
   const page=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -159,7 +170,7 @@ export async function publicDiscoveryContentResponse(request,env){
   const url=new URL(request.url);
   const match=url.pathname.match(/^\/seonammedi\/notices\/(\d+)\/?$/);
   if(match){
-    const response=await seonamNoticePage(env,Number(match[1]));
+    const response=await seonamNoticePage(Number(match[1]));
     if(!response)return new Response('Not Found',{status:404,headers:{'content-type':'text/plain; charset=utf-8','x-robots-tag':'noindex'}});
     if(request.method==='HEAD')return new Response(null,{status:response.status,headers:response.headers});
     return response;
