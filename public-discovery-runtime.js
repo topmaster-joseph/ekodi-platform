@@ -1,4 +1,5 @@
-import { DISCOVERY_ORIGIN, DISCOVERY_PUBLIC_ROUTES, canonicalUrl, renderLlmsTxt, renderSitemapXml } from './discovery-layer.js';
+import { DISCOVERY_ORIGIN, DISCOVERY_PUBLIC_ROUTES, canonicalUrl, renderLlmsTxt } from './discovery-layer.js';
+import { listSitePublicationSettings } from './site-publication-runtime.js';
 
 const CACHE_TTL_MS = 60_000;
 let memoryCache = { expiresAt: 0, records: [] };
@@ -41,8 +42,8 @@ function routeFromRecord(record) {
     record,
   };
 }
-function mergeRoutes(records) {
-  const byPath = new Map(DISCOVERY_PUBLIC_ROUTES.map(route => [route.path, route]));
+function mergeRoutes(records, staticRoutes = DISCOVERY_PUBLIC_ROUTES) {
+  const byPath = new Map(staticRoutes.map(route => [route.path, route]));
   for (const record of records) {
     const route = routeFromRecord(record);
     if (route) byPath.set(route.path, route);
@@ -75,9 +76,9 @@ export async function fetchPublicDiscoveryRecords(env, { force = false } = {}) {
   }
 }
 
-function runtimeSitemap(records) {
-  const routes = mergeRoutes(records);
-  const staticPaths = new Set(DISCOVERY_PUBLIC_ROUTES.map(route => route.path));
+function runtimeSitemap(records, staticRoutes = DISCOVERY_PUBLIC_ROUTES) {
+  const routes = mergeRoutes(records, staticRoutes);
+  const staticPaths = new Set(staticRoutes.map(route => route.path));
   const urls = routes.map(route => {
     const lines = ['  <url>', `    <loc>${xml(canonicalUrl(route.path))}</loc>`];
     if (!staticPaths.has(route.path) && route.dateModified) lines.push(`    <lastmod>${xml(route.dateModified)}</lastmod>`);
@@ -87,8 +88,8 @@ function runtimeSitemap(records) {
   }).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
 }
-function runtimeLlms(records) {
-  const staticText = renderLlmsTxt();
+function runtimeLlms(records, staticRoutes = DISCOVERY_PUBLIC_ROUTES) {
+  const staticText = renderLlmsTxt(DISCOVERY_ORIGIN, staticRoutes);
   if (!records.length) return staticText;
   const links = records
     .filter(record => recordPath(record))
@@ -118,14 +119,40 @@ function projectionResponse(body, contentType, request) {
   });
 }
 
+async function effectivePublicationProjection(env, records) {
+  let settings = [];
+  try { settings = await listSitePublicationSettings(env); } catch {}
+  if (!settings.length) return { staticRoutes: DISCOVERY_PUBLIC_ROUTES, records };
+
+  const normalized = settings.map(site => ({
+    path: normalizedPath(site.canonicalPath || '/'),
+    status: String(site.publicStatus || 'public').toLowerCase(),
+  })).sort((a,b)=>b.path.length-a.path.length);
+
+  const isPublicPath = path => {
+    const target = normalizedPath(path);
+    const site = normalized.find(item => item.path === '/' ? target === '/' : (target === item.path || target.startsWith(item.path + '/')));
+    return !site || site.status === 'public';
+  };
+
+  return {
+    staticRoutes: DISCOVERY_PUBLIC_ROUTES.filter(route => isPublicPath(route.path)),
+    records: records.filter(record => {
+      const path = recordPath(record);
+      return path && isPublicPath(path);
+    }),
+  };
+}
+
 export async function handleRuntimeDiscoveryProjection(request, env) {
   if (!['GET','HEAD'].includes(request.method)) return null;
   const path = normalizedPath(new URL(request.url).pathname);
   if (!['/sitemap.xml','/llms.txt','/.well-known/public-discovery.json'].includes(path)) return null;
   const records = await fetchPublicDiscoveryRecords(env);
-  if (path === '/sitemap.xml') return projectionResponse(runtimeSitemap(records), 'application/xml; charset=utf-8', request);
-  if (path === '/llms.txt') return projectionResponse(runtimeLlms(records), 'text/plain; charset=utf-8', request);
-  return projectionResponse(registryJson(records), 'application/json; charset=utf-8', request);
+  const effective = await effectivePublicationProjection(env, records);
+  if (path === '/sitemap.xml') return projectionResponse(runtimeSitemap(effective.records, effective.staticRoutes), 'application/xml; charset=utf-8', request);
+  if (path === '/llms.txt') return projectionResponse(runtimeLlms(effective.records, effective.staticRoutes), 'text/plain; charset=utf-8', request);
+  return projectionResponse(registryJson(effective.records), 'application/json; charset=utf-8', request);
 }
 
 function jsonLdForRecord(record) {
@@ -182,7 +209,8 @@ export async function decorateRegistryDiscoveryResponse(response, request, env) 
   if (requestUrl.origin !== DISCOVERY_ORIGIN) return response;
   const canonical = DISCOVERY_ORIGIN + (normalizedPath(requestUrl.pathname) === '/' ? '/' : normalizedPath(requestUrl.pathname));
   const records = await fetchPublicDiscoveryRecords(env);
-  const record = records.find(item => clean(item.canonical_url,2048).replace(/\/+$/,'') === canonical.replace(/\/+$/,''));
+  const effective = await effectivePublicationProjection(env, records);
+  const record = effective.records.find(item => clean(item.canonical_url,2048).replace(/\/+$/,'') === canonical.replace(/\/+$/,''));
   if (!record) return response;
 
   let source = await response.text();
