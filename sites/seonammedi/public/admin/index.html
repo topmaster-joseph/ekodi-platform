@@ -21,7 +21,7 @@
     <div class="sidebar-home-row">
       <button class="active" data-panel-target="dashboard" type="button">운영홈</button>
     </div>
-    <button data-panel-target="status" type="button">현재상황</button>
+    <button data-panel-target="status" type="button">활동이력</button>
     <button data-panel-target="channels" type="button">소통채널</button>
     <button data-panel-target="voices" type="button">시민의견</button>
     <button data-panel-target="finance" type="button">회계</button>
@@ -42,19 +42,10 @@
         <article><span>공지</span><strong id="noticeCount">-</strong><small>초안 포함</small></article>
         <article><span>소통채널</span><strong id="channelCount">-</strong><small>숨김 포함</small></article>
       </div>
-      <section class="card"><h2>관리 범위</h2><p id="scopeSummary">권한을 확인하고 있습니다.</p><div class="quick"><button type="button" data-go="status">현재상황</button><button type="button" data-go="channels">소통채널</button><button type="button" data-go="voices">시민의견</button><button type="button" data-go="finance">회계</button><button type="button" data-go="notices">공지</button><button type="button" data-go="organization">조직</button><button type="button" data-go="minutes">내부 회의록</button><a href="/seonammedi/" target="_blank" rel="noopener">사이트 확인</a></div></section>
+      <section class="card"><h2>관리 범위</h2><p id="scopeSummary">권한을 확인하고 있습니다.</p><div class="quick"><button type="button" data-go="status">활동이력</button><button type="button" data-go="channels">소통채널</button><button type="button" data-go="voices">시민의견</button><button type="button" data-go="finance">회계</button><button type="button" data-go="notices">공지</button><button type="button" data-go="organization">조직</button><button type="button" data-go="minutes">내부 회의록</button><a href="/seonammedi/" target="_blank" rel="noopener">사이트 확인</a></div></section>
     </section>
 
     <section class="panel-page" data-panel="status" hidden>
-      <div class="heading"><div><p class="eyebrow">CURRENT STATUS</p><h1>현재상황 관리</h1><p>활동이력·관련보도·공식기록을 구분해 관리합니다.</p></div></div>
-      <form id="statusForm" class="card form-card">
-        <div class="form-row"><label>공식 기록 제목<input name="officialTitle" maxlength="120"></label><label>관련 보도 제목<input name="newsTitle" maxlength="120"></label></div>
-        <label>공식 기록 설명<textarea name="officialText" rows="4" maxlength="2000"></textarea></label>
-        <label>관련 보도 설명<textarea name="newsText" rows="4" maxlength="2000"></textarea></label>
-        <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="reloadStatusPage" class="secondary">다시 불러오기</button></div>
-        <p id="statusPageMessage" class="message" role="status"></p>
-      </form>
-      <div class="heading"><div><p class="eyebrow">ACTIVITY · SOURCES</p><h2>활동이력·관련보도·공식기록</h2><p>현재상황의 세 분류가 사용자 화면과 같은 기준으로 보이도록 관리합니다.</p></div></div>
       <div class="quick records-admin-tabs" role="tablist" aria-label="현재상황 근거자료 구분">
         <button type="button" class="active" data-records-admin-tab="timeline" role="tab" aria-selected="true">활동이력</button>
         <button type="button" data-records-admin-tab="review" role="tab" aria-selected="false">자료검토</button>
