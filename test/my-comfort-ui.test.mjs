@@ -62,6 +62,18 @@ test('My EKODI uses progressive wayfinding and a dedicated EKODIAN guide',()=>{
   assert.match(hubCss,/Progressive Wayfinder/);
 });
 
+test('My EKODI uses second-level wayfinders before service and account details',()=>{
+  assert.match(html,/id="servicesWayfinder"/);
+  assert.match(html,/data-services-open="services"/);
+  assert.match(html,/data-services-back/);
+  assert.match(html,/data-account-menu/);
+  assert.match(html,/data-account-open="basic"/);
+  assert.match(html,/data-account-open="character"/);
+  assert.match(html,/data-account-back/);
+  assert.match(hubCss,/Section Wayfinders/);
+  assert.match(hubCss,/\.section-wayfinder-grid/);
+});
+
 test('My EKODI separates customized footer guidance from the shared legal footer',()=>{
   assert.match(html,/class="my-custom-footer"/);
   assert.match(html,/class="my-footer-credo"/);
