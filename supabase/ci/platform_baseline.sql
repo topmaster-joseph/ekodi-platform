@@ -120,14 +120,14 @@ create table if not exists public.identity_challenges (
   created_at timestamptz not null default now()
 );
 
--- Production exposes these public helpers through private, security-definer
--- implementations. The ephemeral baseline reproduces the effective access rules
--- required by migration contracts without copying production internals.
+-- Production uses SECURITY INVOKER access helpers over RLS-protected tables.
+-- The ephemeral baseline mirrors that read path while granting only the SELECT
+-- capability required by these helper checks.
 create or replace function public.has_tenant_access(p_tenant uuid)
 returns boolean
 language sql
 stable
-security definer
+security invoker
 set search_path = public, auth
 as $$
   select exists(
@@ -146,7 +146,7 @@ create or replace function public.has_store_access(p_store uuid)
 returns boolean
 language sql
 stable
-security definer
+security invoker
 set search_path = public, auth
 as $$
   select exists(
@@ -170,7 +170,7 @@ create or replace function public.has_store_private_access(p_store uuid)
 returns boolean
 language sql
 stable
-security definer
+security invoker
 set search_path = public, auth
 as $$
   select exists(
@@ -200,3 +200,7 @@ alter table public.store_members enable row level security;
 alter table public.orders enable row level security;
 alter table public.site_access_registry enable row level security;
 alter table public.identity_challenges enable row level security;
+
+-- Production-compatible least privilege for SECURITY INVOKER access helpers.
+-- Write authority remains policy-controlled and is not widened by this CI fixture.
+grant select on table public.profiles, public.tenant_members, public.stores, public.store_members to authenticated;
