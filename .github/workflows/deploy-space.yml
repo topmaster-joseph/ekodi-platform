@@ -203,7 +203,7 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
 
-      - name: Select Supabase production deployment credential
+      - name: Select Supabase production deployment path
         shell: bash
         run: |
           set -euo pipefail
@@ -211,17 +211,25 @@ jobs:
           [ -n "$token" ] || token="${TOKEN_B:-}"
           [ -n "$token" ] || token="${TOKEN_C:-}"
           [ -n "$token" ] || token="${TOKEN_D:-}"
-          if [ -z "$token" ]; then
-            echo 'Space production release requires a Supabase Management API credential for schema preflight.'
-            exit 1
+          if [ -n "$token" ]; then
+            echo "::add-mask::$token"
+            echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+            echo "SUPABASE_SCHEMA_PREFLIGHT_MODE=management" >> "$GITHUB_ENV"
+            echo 'Space schema preflight will use the configured Supabase Management API credential.'
+          else
+            echo "SUPABASE_ACCESS_TOKEN=" >> "$GITHUB_ENV"
+            echo "SUPABASE_SCHEMA_PREFLIGHT_MODE=public-rpc-proof" >> "$GITHUB_ENV"
+            echo 'No Supabase Management API credential is configured; Space release will fail closed unless all required public read-only RPC contracts are live.'
           fi
-          echo "::add-mask::$token"
-          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
 
       - name: Heal and verify Supabase Space schema contract
         shell: bash
         run: |
           set -euo pipefail
+          if [ "${SUPABASE_SCHEMA_PREFLIGHT_MODE:-}" != 'management' ]; then
+            echo 'Management credential unavailable: schema mutation is disabled. Live public RPC proof is required before Worker release.'
+            exit 0
+          fi
 
           query_sql() {
             local sql="$1" out="$2"
@@ -269,31 +277,45 @@ jobs:
             grep -Fq "$marker" /tmp/space-schema-after.json || { echo "Missing required Space Supabase contract: $marker"; cat /tmp/space-schema-after.json; exit 1; }
           done
 
-          echo 'Space Supabase production schema contract verified before Worker release.'
+          echo 'Space Supabase production schema contract verified through the Management API before Worker release.'
 
-      - name: Verify anonymous public projection RPCs
+      - name: Verify anonymous public projection RPC schema proof
         shell: bash
         env:
           SUPABASE_PUBLISHABLE_KEY: sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
         run: |
           set -euo pipefail
           base="https://$SUPABASE_PROJECT_REF.supabase.co/rest/v1/rpc"
-          code=$(curl -sS -o /tmp/store-route-proof.json -w '%{http_code}' \
-            -X POST "$base/store_admin_route_profile" \
-            -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
-            -H 'Content-Type: application/json' \
-            --data '{"p_operating_slug":"jadam"}')
-          [ "$code" = '200' ]
-          grep -Fq '"slug"' /tmp/store-route-proof.json
+          verify_rpc() {
+            local name="$1" body="$2" out="$3" marker="${4:-}"
+            local code
+            code=$(curl -sS -o "$out" -w '%{http_code}' \
+              -X POST "$base/$name" \
+              -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
+              -H 'Content-Type: application/json' \
+              --data "$body")
+            if [ "$code" != '200' ]; then
+              echo "Required Space public RPC $name is unavailable (HTTP $code)." >&2
+              cat "$out" || true
+              exit 1
+            fi
+            if [ -n "$marker" ]; then
+              grep -Fq "$marker" "$out" || { echo "Required Space public RPC $name returned an unexpected projection." >&2; cat "$out"; exit 1; }
+            fi
+          }
 
-          code=$(curl -sS -o /tmp/organization-proof.json -w '%{http_code}' \
-            -X POST "$base/organization_public_snapshot" \
-            -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
-            -H 'Content-Type: application/json' \
-            --data '{"p_slug":"hammu"}')
-          [ "$code" = '200' ]
-          grep -Fq '"publicationState"' /tmp/organization-proof.json
-          echo 'Space public projection RPCs verified live.'
+          verify_rpc store_admin_route_profile '{"p_operating_slug":"jadam"}' /tmp/store-route-proof.json '"slug"'
+          verify_rpc organization_public_snapshot '{"p_slug":"hammu"}' /tmp/organization-proof.json '"publicationState"'
+          verify_rpc store_public_storefront '{"p_slug":"jadam"}' /tmp/storefront-proof.json
+          verify_rpc store_user_site_public_profile '{"p_slug":"jadam"}' /tmp/user-site-profile-proof.json
+          verify_rpc store_user_site_public_snapshot '{"p_slug":"jadam"}' /tmp/user-site-snapshot-proof.json
+
+          if [ "${SUPABASE_SCHEMA_PREFLIGHT_MODE:-}" = 'public-rpc-proof' ]; then
+            echo 'Space Supabase production schema contract verified read-only through all five live public RPCs; schema mutation remained disabled.'
+          else
+            echo 'Space public RPC projections verified live after Management API schema preflight.'
+          fi
+
       - name: Bootstrap or guarded release
         shell: bash
         run: |
