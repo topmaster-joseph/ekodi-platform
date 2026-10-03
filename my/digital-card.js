@@ -51,6 +51,7 @@ if(form){
       affiliation:String(fd.get('affiliation')||'').trim(),
       title:String(fd.get('title')||'').trim(),
       website:String(fd.get('website')||'').trim(),
+      contextKey:String(fd.get('contextKey')||new URLSearchParams(location.search).get('context')||'').trim(),
       bot_field:String(fd.get('bot_field')||''),
       privacyConsent:Boolean(fd.get('privacyConsent')),
       source:new URLSearchParams(location.search).get('utm_source')==='qr'?'qr':'card',
