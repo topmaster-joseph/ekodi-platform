@@ -648,3 +648,37 @@ html[data-ekodi-tenant-readability="v1"] :where(.table-wrap,[data-ekodi-table-sc
     font-size:clamp(30px,10vw,48px);
   }
 }
+
+
+/* PUBLIC-SURFACE-ADMIN-001 shared authenticated admin controls.
+ * Controls are rendered only after a service server authorizes capabilities.
+ */
+html[data-ekodi-user-ui] .ekodi-public-admin-inline{
+  margin-left:auto;display:inline-flex;align-items:center;justify-content:center;min-height:34px;
+  padding:7px 11px;border:1px solid #1f2937;border-radius:9px;background:#fff;color:#111827;
+  font:inherit;font-size:12px;font-weight:800;line-height:1;cursor:pointer
+}
+html[data-ekodi-user-ui] .ekodi-public-admin-inline:hover{background:#f3f4f6}
+.ekodi-public-admin-drawer{
+  position:fixed;z-index:10000;top:12px;right:12px;bottom:12px;width:min(720px,calc(100vw - 24px));
+  background:#fff;color:#111827;border:1px solid #cfd7df;border-radius:14px;
+  box-shadow:0 24px 70px rgba(15,23,42,.24);overflow:hidden
+}
+.ekodi-public-admin-drawer[hidden]{display:none!important}
+.ekodi-public-admin-drawer__head{
+  height:58px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;
+  border-bottom:1px solid #e5e7eb;background:#fff
+}
+.ekodi-public-admin-drawer__head>div{display:flex;flex-direction:column;min-width:0}
+.ekodi-public-admin-drawer__head small{font-size:10px;letter-spacing:.08em;color:#6b7280;font-weight:800}
+.ekodi-public-admin-drawer__head strong{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ekodi-public-admin-drawer__head button{
+  padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#111827;
+  font:inherit;font-weight:700;cursor:pointer
+}
+.ekodi-public-admin-drawer iframe{display:block;width:100%;height:calc(100% - 58px);border:0;background:#fff}
+body.ekodi-public-admin-drawer-open{overflow:hidden!important}
+@media(max-width:760px){
+  html[data-ekodi-user-ui] .ekodi-public-admin-inline{min-height:32px;padding:6px 9px;font-size:11px}
+  .ekodi-public-admin-drawer{inset:0;width:100vw;height:100dvh;border:0;border-radius:0}
+}
