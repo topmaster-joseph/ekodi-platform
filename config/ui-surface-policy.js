@@ -1,5 +1,5 @@
 export const EKODI_UI_SURFACE_POLICY=Object.freeze({
-  version:2,
+  version:3,
   name:'EKODI UI Surface System',
   constructionStandard:Object.freeze({
     source:'config/design-engine.json',
@@ -21,6 +21,44 @@ export const EKODI_UI_SURFACE_POLICY=Object.freeze({
     universalConstructionStandard:true,
     communicationFirst:true,
     personalizationWithinAuthority:true,
+    userSurfaceIsPrimaryOperationalSurface:true,
+    authenticatedAdminOperatesInPlace:true,
+    duplicateContentAdminUiForbidden:true,
+    dedicatedAdminRestrictedToSystemControl:true,
+  }),
+  operationalAdministration:Object.freeze({
+    policyId:'PUBLIC-SURFACE-ADMIN-001',
+    status:'enforced',
+    scope:'all-current-and-future-user-independent-and-child-sites',
+    defaultMode:'public-surface-first',
+    authorityModel:'same-surface-role-scoped-capabilities',
+    contentOperations:Object.freeze(['create','edit','delete','moderate','publish','reorder']),
+    capabilitySource:'server-authorized-role-and-membership',
+    visitorProjection:'admin-controls-not-rendered-without-authority',
+    duplicateUiRule:'same-content-must-not-have-separate-user-and-admin-management-implementations',
+    dedicatedAdminAllowedFor:Object.freeze([
+      'system-configuration',
+      'security',
+      'identity-and-access',
+      'authority-and-role-management',
+      'audit',
+      'integration-control',
+      'data-recovery',
+      'cross-site-platform-operations',
+    ]),
+    rollout:Object.freeze({
+      strategy:'progressive-proof-before-expansion',
+      pilot:'seonammedi',
+      pilotEvidence:Object.freeze([
+        'authenticated-section-level-quick-edit',
+        'server-authorized-canManage',
+        'visitor-control-non-rendering',
+        'same-origin-admin-auth',
+        'regression-tests',
+      ]),
+      migrationRule:'move-content-management-to-public-surface-before-removing-redundant-admin-ui',
+      rollbackRule:'retain-secure-admin-fallback-until-public-surface-operation-is-system-verified',
+    }),
   }),
   surfaces:Object.freeze({
     'platform-public':Object.freeze({
@@ -38,14 +76,17 @@ export const EKODI_UI_SURFACE_POLICY=Object.freeze({
     'tenant-admin':Object.freeze({
       audience:'administrator',authority:'tenant',identity:'tenant-primary',
       navigation:'fixed-primary-plus-context',shell:'admin',scrollOwner:'workspace',
+      purpose:'system-control-and-non-public-operational-exceptions',
     }),
     'platform-admin':Object.freeze({
       audience:'administrator',authority:'platform',identity:'ekodi-control-plane',
       navigation:'fixed-primary-plus-context',shell:'admin',scrollOwner:'workspace',
+      purpose:'platform-system-security-authority-audit-and-cross-site-operations',
     }),
     'service-admin':Object.freeze({
       audience:'administrator',authority:'service',identity:'service-context-primary',
       navigation:'fixed-primary-plus-context',shell:'admin',scrollOwner:'workspace',
+      purpose:'service-system-control-and-non-public-operational-exceptions',
     }),
   }),
   layers:Object.freeze({
