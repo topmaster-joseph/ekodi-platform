@@ -46,10 +46,36 @@ async function authorize(req: Request) {
   }
 }
 
+async function trafficIndexProof() {
+  const { data, error } = await admin.rpc("ekodi_supabase_traffic_index_ready");
+  if (error) {
+    console.error("traffic-index proof rpc", error);
+    return json({ error: "traffic_index_proof_failed" }, 500);
+  }
+  const indexReady =
+    data === true ||
+    (Array.isArray(data) && data.some((value) => value === true)) ||
+    (typeof data === "object" && data !== null && "index_ready" in data && (data as { index_ready?: unknown }).index_ready === true);
+
+  return json({
+    index_ready: indexReady,
+    measured_at: new Date().toISOString(),
+    source: "supabase-edge-github-oidc",
+    proof: "activity_message_campaigns_created_by_idx",
+  }, indexReady ? 200 : 503);
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "GET") return json({ error: "method_not_allowed" }, 405);
   const claims = await authorize(req);
   if (!claims) return json({ error: "github_actions_oidc_required" }, 401);
+
+  const url = new URL(req.url);
+  const proof = url.searchParams.get("proof") || "";
+  if (proof) {
+    if (proof !== "traffic-index") return json({ error: "proof_not_supported" }, 400);
+    return trafficIndexProof();
+  }
 
   const { data, error } = await admin.rpc("ekodi_free_tier_usage");
   if (error) {
