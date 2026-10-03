@@ -5,17 +5,26 @@ on:
   pull_request:
     paths:
       - 'supabase/migrations/20261003140500_activity_message_campaign_created_by_index.sql'
+      - 'supabase/migrations/20261003141307_supabase_traffic_index_oidc_proof.sql'
+      - 'supabase/functions/free-tier-usage/index.ts'
+      - 'config/free-tier-supabase-oidc.json'
       - 'test/supabase-activity-message-campaign-index.test.mjs'
+      - 'test/supabase-traffic-index-oidc-proof.test.mjs'
       - '.github/workflows/deploy-supabase-traffic-index.yml'
   push:
     branches: [main]
     paths:
       - 'supabase/migrations/20261003140500_activity_message_campaign_created_by_index.sql'
+      - 'supabase/migrations/20261003141307_supabase_traffic_index_oidc_proof.sql'
+      - 'supabase/functions/free-tier-usage/index.ts'
+      - 'config/free-tier-supabase-oidc.json'
       - 'test/supabase-activity-message-campaign-index.test.mjs'
+      - 'test/supabase-traffic-index-oidc-proof.test.mjs'
       - '.github/workflows/deploy-supabase-traffic-index.yml'
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: supabase-traffic-index-${{ github.event_name == 'pull_request' && format('validate-pr-{0}', github.event.pull_request.number) || 'production' }}
@@ -24,6 +33,7 @@ concurrency:
 env:
   PROJECT_REF: renzehysxirjilvdxacv
   MIGRATION: supabase/migrations/20261003140500_activity_message_campaign_created_by_index.sql
+  OIDC_CONFIG: config/free-tier-supabase-oidc.json
 
 jobs:
   validate:
@@ -34,13 +44,15 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate traffic index migration
+      - name: Validate traffic index migration and OIDC proof contract
         shell: bash
         run: |
           set -euo pipefail
-          node --test test/supabase-activity-message-campaign-index.test.mjs
+          node --test test/supabase-activity-message-campaign-index.test.mjs test/supabase-traffic-index-oidc-proof.test.mjs
           grep -Fq 'activity_message_campaigns_created_by_idx' "$MIGRATION"
           ! grep -Eiq 'drop[[:space:]]+(table|index)|truncate[[:space:]]+table' "$MIGRATION"
+          grep -Fq 'grant execute on function public.ekodi_supabase_traffic_index_ready() to service_role' supabase/migrations/20261003141307_supabase_traffic_index_oidc_proof.sql
+          grep -Fq 'revoke all on function public.ekodi_supabase_traffic_index_ready() from authenticated' supabase/migrations/20261003141307_supabase_traffic_index_oidc_proof.sql
 
   production:
     if: github.event_name != 'pull_request'
@@ -55,8 +67,11 @@ jobs:
       TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
 
-      - name: Select Supabase production credential
+      - name: Select Supabase production deployment path
         shell: bash
         run: |
           set -euo pipefail
@@ -64,40 +79,63 @@ jobs:
           [ -n "$token" ] || token="${TOKEN_B:-}"
           [ -n "$token" ] || token="${TOKEN_C:-}"
           [ -n "$token" ] || token="${TOKEN_D:-}"
-          if [ -z "$token" ]; then
-            echo 'No Supabase production deployment credential is configured.'
-            exit 1
+          if [ -n "$token" ]; then
+            echo "::add-mask::$token"
+            echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+            echo "SUPABASE_DEPLOY_MODE=management" >> "$GITHUB_ENV"
+            echo 'Supabase Management API credential available; additive migration path enabled.'
+          else
+            echo "SUPABASE_DEPLOY_MODE=oidc-proof" >> "$GITHUB_ENV"
+            echo 'No long-lived Supabase deployment credential; using GitHub OIDC live-state proof.'
           fi
-          echo "::add-mask::$token"
-          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
 
-      - name: Apply additive traffic index
+      - name: Request GitHub OIDC token for Supabase proof fallback
         shell: bash
         run: |
           set -euo pipefail
+          if [ "$SUPABASE_DEPLOY_MODE" = "management" ]; then
+            echo 'Management credential path selected; OIDC proof token is not needed.'
+            exit 0
+          fi
+          audience="$(node -e "const c=require('./$OIDC_CONFIG');process.stdout.write(c.audience)")"
+          endpoint="$(node -e "const c=require('./$OIDC_CONFIG');const p=c.projects.find(v=>v.ref===process.env.PROJECT_REF);if(!p)process.exit(2);process.stdout.write(p.usageEndpoint)")"
+          response="$(curl -sSf -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$audience")"
+          token="$(printf '%s' "$response" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);process.stdout.write(String(j.value||''))})")"
+          test -n "$token"
+          echo "::add-mask::$token"
+          echo "SUPABASE_OIDC_TOKEN=$token" >> "$GITHUB_ENV"
+          echo "SUPABASE_PROOF_ENDPOINT=$endpoint" >> "$GITHUB_ENV"
+
+      - name: Apply additive traffic index when management credential exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$SUPABASE_DEPLOY_MODE" != "management" ]; then
+            echo 'Migration apply skipped: production state will be verified through GitHub OIDC.'
+            exit 0
+          fi
           jq -Rs '{query:.,read_only:false}' "$MIGRATION" > /tmp/traffic-index.json
-          code=$(curl -sS -o /tmp/traffic-index-result.json -w '%{http_code}' \
-            -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
-            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            -H 'Content-Type: application/json' \
-            --data-binary @/tmp/traffic-index.json)
+          code=$(curl -sS -o /tmp/traffic-index-result.json -w '%{http_code}'             -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query"             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN"             -H 'Content-Type: application/json'             --data-binary @/tmp/traffic-index.json)
           if [ "$code" != '201' ]; then
             echo "Supabase traffic index migration failed with HTTP $code."
             cat /tmp/traffic-index-result.json
             exit 1
           fi
 
-      - name: Verify production index
+      - name: Verify production traffic index
         shell: bash
         run: |
           set -euo pipefail
-          printf '%s\n' "select exists (select 1 from pg_indexes where schemaname='public' and tablename='activity_message_campaigns' and indexname='activity_message_campaigns_created_by_idx') as index_ready;" > /tmp/traffic-index-proof.sql
-          jq -Rs '{query:.,read_only:true}' /tmp/traffic-index-proof.sql > /tmp/traffic-index-proof.json
-          code=$(curl -sS -o /tmp/traffic-index-proof-result.json -w '%{http_code}' \
-            -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
-            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            -H 'Content-Type: application/json' \
-            --data-binary @/tmp/traffic-index-proof.json)
-          [ "$code" = '201' ]
-          grep -Fq '"index_ready":true' /tmp/traffic-index-proof-result.json
-          echo 'Supabase production traffic index verified.'
+          if [ "$SUPABASE_DEPLOY_MODE" = "management" ]; then
+            printf '%s\\n' "select exists (select 1 from pg_indexes where schemaname='public' and tablename='activity_message_campaigns' and indexname='activity_message_campaigns_created_by_idx') as index_ready;" > /tmp/traffic-index-proof.sql
+            jq -Rs '{query:.,read_only:true}' /tmp/traffic-index-proof.sql > /tmp/traffic-index-proof.json
+            code=$(curl -sS -o /tmp/traffic-index-proof-result.json -w '%{http_code}'               -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query"               -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN"               -H 'Content-Type: application/json'               --data-binary @/tmp/traffic-index-proof.json)
+            [ "$code" = '201' ]
+            grep -Fq '"index_ready":true' /tmp/traffic-index-proof-result.json
+          else
+            code=$(curl -sS -o /tmp/traffic-index-proof-result.json -w '%{http_code}'               -H "Authorization: Bearer $SUPABASE_OIDC_TOKEN"               "$SUPABASE_PROOF_ENDPOINT?proof=traffic-index")
+            [ "$code" = '200' ] || { cat /tmp/traffic-index-proof-result.json; exit 1; }
+            grep -Fq '"index_ready":true' /tmp/traffic-index-proof-result.json
+            grep -Fq '"source":"supabase-edge-github-oidc"' /tmp/traffic-index-proof-result.json
+          fi
+          echo "Supabase production traffic index verified via $SUPABASE_DEPLOY_MODE."
