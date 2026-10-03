@@ -1,4 +1,4 @@
-const MUTATION_METHODS = new Set(['POST','PUT','PATCH','DELETE']);
+import { enforceTurnstilePublicWrite } from './turnstile-protection.js';\nconst MUTATION_METHODS = new Set(['POST','PUT','PATCH','DELETE']);
 const BLOCKED_METHODS = new Set(['TRACE','CONNECT']);
 const STANDARD_BODY_LIMIT = 8 * 1024 * 1024;
 const LARGE_MEDIA_BODY_LIMIT = 32 * 1024 * 1024;
@@ -106,7 +106,7 @@ export async function enforcePlatformRequestSecurity(request,env={}){
   if(!result.available){
     if(pathInfo.selfProtectedPublicWrite){
       console.warn('EKODI self-protected public write proceeding with application safeguards',{path:url.pathname,ray:request.headers.get('cf-ray')||''});
-      return null;
+      return enforceTurnstilePublicWrite(request,env);
     }
     if(String(env.ENVIRONMENT||'').toLowerCase()==='production'){
       console.error('EKODI public write edge protection unavailable',{path:url.pathname,ray:request.headers.get('cf-ray')||''});
@@ -118,7 +118,7 @@ export async function enforcePlatformRequestSecurity(request,env={}){
     console.warn('EKODI public write rate limit exceeded',{path:url.pathname,ray:request.headers.get('cf-ray')||''});
     return securityError('요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.','PLATFORM_PUBLIC_WRITE_RATE_LIMITED',429,'60');
   }
-  return null;
+  return enforceTurnstilePublicWrite(request,env);
 }
 
 export function applyPlatformSecurityHeaders(response,request){

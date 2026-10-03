@@ -102,3 +102,4 @@
 .public-voice-reply{background:#f7fafc;border-radius:12px;padding:10px 12px}.public-voice-reply p{margin:.4rem 0 0}
 .voice-reply-form{display:grid;gap:8px;margin-top:12px}.voice-reply-form input,.voice-reply-form textarea{width:100%}
 @media(max-width:860px){.voice-layout{grid-template-columns:1fr}.public-voice-replies{margin-left:8px}}
+\n.ekodi-turnstile-guard{max-width:100%;margin:6px 0}.ekodi-turnstile-guard iframe{max-width:100%}\n

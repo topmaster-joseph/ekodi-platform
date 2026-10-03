@@ -52,7 +52,7 @@ on:
       - 'invest-admin.css'
       - 'platform-router-entry-worker.js'
       - 'site-publication-runtime.js'
-      - 'platform-security-policy.js'
+      - 'platform-security-policy.js'\n      - 'turnstile-protection.js'\n      - 'test/turnstile-protection.test.mjs'\n      - 'scripts/provision-cloudflare-turnstile.mjs'
       - 'scripts/validate-platform-security-policy.mjs'
       - 'test/platform-security-policy.test.mjs'
       - 'local-region-registry.js'
