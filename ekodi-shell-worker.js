@@ -54,12 +54,13 @@ async function bundledShell(request,env,ctx){
   const ccmMrUrl=new URL(request.url);ccmMrUrl.pathname='/ccm-mr-player.js';
   const adminShellUrl=new URL(request.url);adminShellUrl.pathname='/admin-ui-shell.js';
   const uiGovernorUrl=new URL(request.url);uiGovernorUrl.pathname='/ui-surface-governor.js';
+  const publicSurfaceAdminUrl=new URL(request.url);publicSurfaceAdminUrl.pathname='/public-surface-admin.js';
   const headerUrl=new URL(request.url);headerUrl.pathname='/mobile-fixed-header.js';
   const messageUrl=new URL(request.url);messageUrl.pathname='/message-ui.js';
   const illustrationUrl=new URL(request.url);illustrationUrl.pathname='/illustration-system.js';
   const designInheritanceUrl=new URL(request.url);designInheritanceUrl.pathname='/service-design-inheritance.js';
   const linkCompatUrl=new URL(request.url);linkCompatUrl.pathname='/ecosystem-link-compat.js';
-  const [shellResponse,navResponse,contextResponse,userHeaderResponse,userFooterResponse,userAiEntryResponse,userLanguageResponse,mediaMeetingResponse,characterRegistryResponse,characterIdentityResponse,userCharacterResponse,ccmMrResponse,adminShellResponse,uiGovernorResponse,headerResponse,messageResponse,illustrationResponse,designInheritanceResponse,linkCompatResponse]=await Promise.all([
+  const [shellResponse,navResponse,contextResponse,userHeaderResponse,userFooterResponse,userAiEntryResponse,userLanguageResponse,mediaMeetingResponse,characterRegistryResponse,characterIdentityResponse,userCharacterResponse,ccmMrResponse,adminShellResponse,uiGovernorResponse,publicSurfaceAdminResponse,headerResponse,messageResponse,illustrationResponse,designInheritanceResponse,linkCompatResponse]=await Promise.all([
     safeAssetFetch(env,shellUrl,request),
     safeAssetFetch(env,navUrl,request),
     safeAssetFetch(env,contextUrl,request),
@@ -74,6 +75,7 @@ async function bundledShell(request,env,ctx){
     safeAssetFetch(env,ccmMrUrl,request),
     safeAssetFetch(env,adminShellUrl,request),
     safeAssetFetch(env,uiGovernorUrl,request),
+    safeAssetFetch(env,publicSurfaceAdminUrl,request),
     safeAssetFetch(env,headerUrl,request),
     safeAssetFetch(env,messageUrl,request),
     safeAssetFetch(env,illustrationUrl,request),
@@ -95,6 +97,7 @@ async function bundledShell(request,env,ctx){
   const ccmMrPlayer=ccmMrResponse.ok?await ccmMrResponse.text():'';
   const adminShell=adminShellResponse.ok?await adminShellResponse.text():'';
   const uiGovernor=uiGovernorResponse.ok?await uiGovernorResponse.text():'';
+  const publicSurfaceAdmin=publicSurfaceAdminResponse.ok?await publicSurfaceAdminResponse.text():'';
   const fixedHeader=headerResponse.ok?await headerResponse.text():'';
   const messageUI=messageResponse.ok?await messageResponse.text():'';
   const illustrationSystem=illustrationResponse.ok?await illustrationResponse.text():'';
@@ -115,13 +118,14 @@ async function bundledShell(request,env,ctx){
   headers.set('x-ekodi-ccm-mr',ccmMrPlayer?'v1':'missing');
   headers.set('x-ekodi-admin-ui-shell',adminShell?'v2':'missing');
   headers.set('x-ekodi-ui-surface-governor',uiGovernor?'v1':'missing');
+  headers.set('x-ekodi-public-surface-admin',publicSurfaceAdmin?'v1':'missing');
   headers.set('x-ekodi-message-ui',messageUI?'v1':'missing');
   headers.set('x-ekodi-illustration-system',illustrationSystem?'v1':'missing');
   headers.set('x-ekodi-service-design',designInheritance?'v1':'missing');
   headers.set('x-ekodi-link-compat',linkCompat?'v1':'missing');
   headers.set('x-ekodi-user-shortcuts','my-only');
   headers.set('x-ekodi-shell-bundle-cache',releaseRefresh?'refresh':'miss');
-  const bundle=canonicalizeBundledServiceUrls(`${USER_SHORTCUT_GUARD}\n${USER_FOOTER_BOOTSTRAP}\n${USER_EXPERIENCE_PROFILES_BOOTSTRAP}\n${LANGUAGE_REGISTRY_BOOTSTRAP}\n${characterRegistry}\n${characterIdentity}\n${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${userFooter}\n${userLanguage}\n${mediaMeeting}\n${userCharacter}\n${ccmMrPlayer}\n${adminShell}\n${fixedHeader}\n${userAiEntry}\n${uiGovernor}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`);
+  const bundle=canonicalizeBundledServiceUrls(`${USER_SHORTCUT_GUARD}\n${USER_FOOTER_BOOTSTRAP}\n${USER_EXPERIENCE_PROFILES_BOOTSTRAP}\n${LANGUAGE_REGISTRY_BOOTSTRAP}\n${characterRegistry}\n${characterIdentity}\n${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${userFooter}\n${userLanguage}\n${mediaMeeting}\n${userCharacter}\n${ccmMrPlayer}\n${adminShell}\n${fixedHeader}\n${userAiEntry}\n${uiGovernor}\n${publicSurfaceAdmin}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`);
   const response=withHeaders(new Response(bundle,{status:200,headers}));
   if(bundleCache&&bundleCacheKey&&ctx?.waitUntil){
     const stored=response.clone();
@@ -136,7 +140,7 @@ export default {
   async fetch(request,env,ctx){
     const url=new URL(request.url);
     if(request.method==='OPTIONS')return new Response(null,{status:204,headers:corsHeaders()});
-    if(url.pathname==='/health')return json({ok:true,service:'ekodi-shell',environment:env.ENVIRONMENT||'unknown',manifestVersion:EKODI_SERVICE_MANIFEST.version,shellVersion:EKODI_SERVICE_MANIFEST.shellVersion,userUIHeaderVersion:3,userUIFooterVersion:EKODI_USER_FOOTER.version,userAIEntryVersion:1,userLanguageVersion:8,mediaMeetingAdapterVersion:2,characterRegistryVersion:3,characterIdentityRegistryVersion:2,userCharacterVersion:7,ccmMrVersion:1,adminUIShellVersion:2,messageUIVersion:1,illustrationSystemVersion:1,serviceDesignVersion:4,userExperienceProfilesVersion:1,linkCompatVersion:1,userAccessPolicyVersion:1,identityModel:EKODI_SERVICE_MANIFEST.identityModel,services:EKODI_SERVICE_MANIFEST.services.length},200,'no-store');
+    if(url.pathname==='/health')return json({ok:true,service:'ekodi-shell',environment:env.ENVIRONMENT||'unknown',manifestVersion:EKODI_SERVICE_MANIFEST.version,shellVersion:EKODI_SERVICE_MANIFEST.shellVersion,userUIHeaderVersion:3,userUIFooterVersion:EKODI_USER_FOOTER.version,userAIEntryVersion:1,userLanguageVersion:8,mediaMeetingAdapterVersion:2,characterRegistryVersion:3,characterIdentityRegistryVersion:2,userCharacterVersion:7,ccmMrVersion:1,adminUIShellVersion:2,publicSurfaceAdminVersion:1,messageUIVersion:1,illustrationSystemVersion:1,serviceDesignVersion:4,userExperienceProfilesVersion:1,linkCompatVersion:1,userAccessPolicyVersion:1,identityModel:EKODI_SERVICE_MANIFEST.identityModel,services:EKODI_SERVICE_MANIFEST.services.length},200,'no-store');
     if(url.pathname==='/manifest.json')return json(EKODI_SERVICE_MANIFEST);
     if(url.pathname==='/language-registry.json')return json(EKODI_LANGUAGE_REGISTRY,200,'public, max-age=300, stale-while-revalidate=3600');
     if(url.pathname==='/user-footer.json')return json(EKODI_USER_FOOTER,200,'public, max-age=300, stale-while-revalidate=3600');
