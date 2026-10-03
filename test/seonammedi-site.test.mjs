@@ -703,3 +703,5 @@ test('seonammedi citizen voices publish immediately, render publicly, accept rep
   assert.match(security,/SELF_PROTECTED_PUBLIC_WRITE_PATTERNS/);
   assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_civic_voice_replies/);
 });
+
+test('seonammedi public latest updates follow hourly monitor and expose collected news',async()=>{const app=await readFile(new URL('app.js',root),'utf8');assert.match(app,/renderHomeMonitorUpdates\(data\)/);assert.match(app,/source_type==='news'\?'자동수집 · 공개보도'/);assert.match(app,/60\*60\*1000/);});
