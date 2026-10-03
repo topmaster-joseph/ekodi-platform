@@ -62,13 +62,19 @@ async function ensureSchema(db){
 async function health(env){
   if(!env?.DB?.prepare)return json({ok:false,storage:'unavailable',canonicalTable:false,legacyTable:false,queue:durableWriteQueueAvailable(env)?'ready':'unavailable'},503);
   try{
-    await ensureSchema(env.DB);
+    // Health probes must remain read-only. Production schema is provisioned by
+    // migrations before Worker promotion; request-time DDL can contend with D1
+    // during a versioned 0% candidate gate and produce a false deployment failure.
     const canonical=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='seonammedi_civic_voices'").first();
     const legacy=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='seonam_med_civic_voices'").first().catch(()=>null);
-    return json({ok:Boolean(canonical?.name),storage:'d1',canonicalTable:Boolean(canonical?.name),legacyTable:Boolean(legacy?.name),queue:durableWriteQueueAvailable(env)?'ready':'unavailable'});
+    const submissionKey=canonical?.name
+      ? await env.DB.prepare("SELECT submission_key FROM seonammedi_civic_voices LIMIT 0").all().then(()=>true).catch(()=>false)
+      : false;
+    const ok=Boolean(canonical?.name&&submissionKey);
+    return json({ok,storage:'d1',canonicalTable:Boolean(canonical?.name),legacyTable:Boolean(legacy?.name),submissionKey,queue:durableWriteQueueAvailable(env)?'ready':'unavailable'},ok?200:503);
   }catch(error){
     console.error('seonammedi civic health failed',error);
-    return json({ok:false,storage:'error',canonicalTable:false,legacyTable:false,queue:durableWriteQueueAvailable(env)?'ready':'unavailable'},503);
+    return json({ok:false,storage:'error',canonicalTable:false,legacyTable:false,submissionKey:false,queue:durableWriteQueueAvailable(env)?'ready':'unavailable'},503);
   }
 }
 
