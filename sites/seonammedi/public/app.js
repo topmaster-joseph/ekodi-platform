@@ -312,7 +312,14 @@ if(voiceForm){
       voiceForm.reset();
       status.textContent=body.message||'등록되었습니다.';
       await loadPublicVoices();
-      if(body.queued){setTimeout(loadPublicVoices,900);setTimeout(loadPublicVoices,2500)}
+      if(body.queued){
+        status.textContent='시민의견이 접수되었습니다. 공개 목록 반영을 확인하고 있습니다.';
+        const retryDelays=[800,1600,3200,5000,8000,12000];
+        retryDelays.forEach(delay=>setTimeout(async()=>{
+          await loadPublicVoices();
+          if(document.visibilityState==='visible')status.textContent='시민의견이 등록되었습니다. 목록은 저장 완료 즉시 자동 반영됩니다.';
+        },delay));
+      }
     }catch(error){
       status.textContent=error.message||'등록하지 못했습니다. 잠시 후 다시 시도해 주세요.';
     }finally{
