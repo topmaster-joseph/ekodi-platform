@@ -751,8 +751,9 @@ jobs:
               /^\[\[queues\.consumers\]\]$/ { skip=1; next }
               skip && /^\[/ { skip=0 }
               !skip { print }
-            ' wrangler.site.toml > /tmp/wrangler.site.pre-candidate.toml
-            npx --yes wrangler@4.119.0 triggers deploy --config /tmp/wrangler.site.pre-candidate.toml
+            ' wrangler.site.toml > .wrangler.site.pre-candidate.toml
+            npx --yes wrangler@4.119.0 triggers deploy --config .wrangler.site.pre-candidate.toml
+            rm -f .wrangler.site.pre-candidate.toml
             payload=$(read_domains)
           fi
           root_host='ekodi.kr'
