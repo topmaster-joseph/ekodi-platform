@@ -12,7 +12,7 @@ function binding(body='ok',type='text/plain'){
 }
 
 test('public person pages are a public projection of My EKODI, not a second admin surface',async()=>{
-  const [home,control,worker,migration,userHeader,digitalCardServer,digitalCardAdmin,digitalCardClient,digitalCardMigration]=await Promise.all([
+  const [home,control,worker,migration,userHeader,digitalCardServer,digitalCardAdmin,digitalCardClient,digitalCardQr,digitalCardMigration,identityShareMigration,qrVendor]=await Promise.all([
     read('my/index.html'),
     read('my/public-profile.js'),
     read('my-worker.js'),
@@ -21,7 +21,10 @@ test('public person pages are a public projection of My EKODI, not a second admi
     read('my/person-digital-card.js'),
     read('my/digital-card-admin.js'),
     read('my/digital-card.js'),
+    read('my/digital-card-qr.js'),
     read('supabase/migrations/20260930002300_person_digital_card_exchange.sql'),
+    read('supabase/migrations/20261001034500_person_identity_share_contexts.sql'),
+    read('my/vendor/qrcode.min.js'),
   ]);
   assert.match(home,/개인 관리공간 · 나만 보는 곳/);
   assert.match(home,/id="publicProfileForm"/);
@@ -50,11 +53,19 @@ test('public person pages are a public projection of My EKODI, not a second admi
   assert.match(home,/id="contactExchangeInbox"/);
   assert.match(worker,/routePersonDigitalCard/);
   assert.match(worker,/digitalCardPath:'\/\{handle\}\/card'/);
-  assert.match(digitalCardServer,/submit_person_contact_exchange/);
+  assert.match(digitalCardServer,/person_identity_share/);
+  assert.match(digitalCardServer,/submit_person_contact_exchange_v2/);
+  assert.match(digitalCardServer,/person-digital-card-qr-center/);
+  assert.match(digitalCardServer,/\/my\/vendor\/qrcode\.min\.js/);
   assert.match(digitalCardServer,/CARD_EXCHANGE_RATE_LIMITER/);
-  assert.match(digitalCardAdmin,/set_my_digital_card/);
+  assert.match(digitalCardAdmin,/set_my_identity_share_config/);
+  assert.match(digitalCardAdmin,/get_my_identity_share_config/);
   assert.match(digitalCardAdmin,/get_my_contact_exchanges/);
   assert.match(digitalCardClient,/navigator\.contacts/);
+  assert.match(digitalCardClient,/contextKey/);
+  assert.match(digitalCardQr,/new QRCode/);
+  assert.match(digitalCardQr,/downloadQr/);
+  assert.match(qrVendor,/QRCode/);
   assert.match(digitalCardMigration,/create table if not exists private\.person_digital_cards/);
   assert.match(digitalCardMigration,/create table if not exists private\.person_contact_exchanges/);
   assert.match(digitalCardMigration,/create table if not exists private\.person_contact_exchange_rate_limits/);
@@ -63,6 +74,16 @@ test('public person pages are a public projection of My EKODI, not a second admi
   assert.match(digitalCardMigration,/grant execute on function public\.submit_person_contact_exchange/);
   assert.match(digitalCardMigration,/p_privacy_consent boolean default false/);
   assert.doesNotMatch(digitalCardMigration,/grant select[^;]*private\.person_contact_exchanges/i);
+  assert.match(identityShareMigration,/create table if not exists private\.person_identity_roles/);
+  assert.match(identityShareMigration,/create table if not exists private\.person_share_contexts/);
+  assert.match(identityShareMigration,/person_share_contexts_one_default_idx/);
+  assert.match(identityShareMigration,/create or replace function public\.person_identity_share/);
+  assert.match(identityShareMigration,/create or replace function public\.set_my_identity_share_config/);
+  assert.match(identityShareMigration,/create or replace function public\.submit_person_contact_exchange_v2/);
+  assert.match(identityShareMigration,/context_label/);
+  assert.match(home,/id="digitalCardRoles"/);
+  assert.match(home,/id="digitalCardContexts"/);
+  assert.match(home,/id="digitalCardQrLink"/);
 });
 
 test('canonical apex preserves /@handle while handing the public page to My service ownership',async()=>{
@@ -107,8 +128,32 @@ test('canonical apex hands person digital-card paths to My EKODI',async()=>{
   }
 });
 
-test('person QR alias redirects to the digital card with QR attribution',async()=>{
-  const response=await myWorker.fetch(new Request('https://ekodi.kr/joseph/qr'),{});
-  assert.equal(response.status,307);
-  assert.equal(response.headers.get('location'),'https://ekodi.kr/joseph/card?utm_source=qr');
+test('person QR route renders a first-party QR share center for the selected context',async()=>{
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async url=>{
+    if(String(url).includes('/rest/v1/rpc/person_identity_share')){
+      return new Response(JSON.stringify({
+        ok:true,ready:true,handle:'joseph',display_name:'Joseph Jeong',headline:'',bio:'',links:[],phone:'',email:'',
+        exchange_enabled:true,
+        contexts:[{key:'ekodi',label:'EKODI',is_default:true,role_name:'EKODI',role_title:'대표'}],
+        selected_context:{key:'ekodi',label:'EKODI',is_default:true},
+        role:{key:'ekodi',name:'EKODI',title:'대표',description:'',url:''},
+      }),{status:200,headers:{'content-type':'application/json'}});
+    }
+    return originalFetch(url);
+  };
+  try{
+    const response=await myWorker.fetch(new Request('https://ekodi.kr/joseph/qr?context=ekodi'),{
+      DATA_ENABLED:'true',DATA_MODE:'isolated-staging',
+      SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'publishable-test',
+    });
+    assert.equal(response.status,200);
+    assert.equal(response.headers.get('x-ekodi-surface-context'),'person-digital-card-qr-center');
+    const body=await response.text();
+    assert.match(body,/QR 공유센터/);
+    assert.match(body,/id="qrCode"/);
+    assert.match(body,/context=ekodi&amp;utm_source=qr/);
+    assert.match(body,/\/my\/vendor\/qrcode\.min\.js/);
+    assert.doesNotMatch(body,/http-equiv="refresh"|location\.replace/);
+  }finally{globalThis.fetch=originalFetch}
 });
