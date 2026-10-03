@@ -78,14 +78,14 @@ test('MCP tool surface keeps reads safe and exposes bounded authenticated mutati
   assert.equal(command.annotations.destructiveHint,false);
   assert.equal(command.inputSchema.required[0],'goal');
 });
-test('MCP bearer validation rejects direct sessions and wrong audience',async()=>{
+test('MCP bearer validation rejects direct sessions and unconsented OAuth fallback',async()=>{
   const fetchImpl=async()=>new Response(JSON.stringify({id:'user-1',email:'u@example.com'}),{status:200});
   const direct=tokenFor({sub:'user-1',aud:EKODI_MCP_RESOURCE});
   const wrongAud=tokenFor({sub:'user-1',client_id:'client-1',aud:'authenticated'});
   let result=await validateMcpBearer(new Request('https://ekodi.kr/mcp',{headers:{authorization:`Bearer ${direct}`}}),{fetchImpl});
   assert.equal(result.reason,'oauth_client_required');
   result=await validateMcpBearer(new Request('https://ekodi.kr/mcp',{headers:{authorization:`Bearer ${wrongAud}`}}),{fetchImpl});
-  assert.equal(result.reason,'invalid_audience');
+  assert.equal(result.reason,'insufficient_mcp_authorization');
 });
 
 test('MCP bearer validation accepts an OAuth token minted for EKODI MCP',async()=>{
@@ -96,6 +96,21 @@ test('MCP bearer validation accepts an OAuth token minted for EKODI MCP',async()
   assert.equal(result.claims.client_id,'client-1');
   assert.equal(result.resourceAudience,EKODI_MCP_RESOURCE);
   assert.equal(result.legacyAudience,false);
+  assert.equal(result.fallbackAuthorization,false);
+});
+
+test('MCP bearer validation accepts hosted OAuth token only after durable MCP consent verification',async()=>{
+  const token=tokenFor({sub:'user-1',client_id:'client-1',aud:'authenticated'});
+  const fetchImpl=async url=>{
+    const value=String(url);
+    if(value.endsWith('/auth/v1/user')) return new Response(JSON.stringify({id:'user-1',email:'u@example.com'}),{status:200});
+    if(value.includes('/rest/v1/rpc/current_ekodi_mcp_identity')) return new Response(JSON.stringify({authenticated:true,authorized:true,canonical:true}),{status:200});
+    return new Response('{}',{status:404});
+  };
+  const result=await validateMcpBearer(new Request('https://ekodi.kr/mcp',{headers:{authorization:`Bearer ${token}`}}),{fetchImpl});
+  assert.equal(result.ok,true);
+  assert.equal(result.resourceAudience,EKODI_MCP_RESOURCE);
+  assert.equal(result.fallbackAuthorization,true);
 });
 
 test('canonical MCP responses advertise only the apex resource',async()=>{
