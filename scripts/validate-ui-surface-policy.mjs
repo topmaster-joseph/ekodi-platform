@@ -45,10 +45,11 @@ for(const [input,expected] of cases){
   const actualSurface=resolveEkodiUiSurface(input);
   if(actualSurface!==expected) fail(`${JSON.stringify(input)} resolved ${actualSurface}; expected ${expected}`);
 }
-const [injector,worker,governor,principles,seonamApp,seonamCss,seonamControl,seonamTests]=await Promise.all([
+const [injector,worker,governor,publicAdminRuntime,principles,seonamApp,seonamCss,seonamControl,seonamTests]=await Promise.all([
   readFile(new URL('../ekodi-shell-injector.js',import.meta.url),'utf8'),
   readFile(new URL('../ekodi-shell-worker.js',import.meta.url),'utf8'),
   readFile(new URL('../shell/ui-surface-governor.js',import.meta.url),'utf8'),
+  readFile(new URL('../shell/public-surface-admin.js',import.meta.url),'utf8'),
   readFile(new URL('../docs/ui-system-principles.md',import.meta.url),'utf8'),
   readFile(new URL('../sites/seonammedi/public/app.js',import.meta.url),'utf8'),
   readFile(new URL('../sites/seonammedi/public/app.css',import.meta.url),'utf8'),
@@ -62,6 +63,8 @@ if(!worker.includes('x-ekodi-ui-surface-governor')) fail('Shell bundle must adve
 for(const marker of ['tenant-admin','platform-admin','service-admin',"ekodiScrollOwner='workspace'","overflow-y','auto","overflow-y','hidden"]){
   if(!governor.includes(marker)) fail(`UI Surface Governor missing ${marker}`);
 }
+for(const marker of ['window.EKODIPublicSurfaceAdmin','cross_origin_admin_target_forbidden',"credentials:'same-origin'",'permissions[key]===true']) if(!publicAdminRuntime.includes(marker)) fail(`PUBLIC-SURFACE-ADMIN-001 runtime missing ${marker}`);
+if(!worker.includes("publicSurfaceAdminUrl.pathname='/public-surface-admin.js'")||!worker.includes('x-ekodi-public-surface-admin')) fail('Shell does not bundle PUBLIC-SURFACE-ADMIN-001 runtime');
 for(const label of required) if(!principles.includes(label)) fail(`UI system principles missing ${label}`);
 for(const marker of ['용이성','지역성·현장성','가독성','독창성','직관성','소통형','맞춤형']) if(!principles.includes(marker)) fail(`UI system principles missing construction principle: ${marker}`);
 for(const marker of ['PUBLIC-SURFACE-ADMIN-001','사용자 화면','중복 관리자 UI']) if(!principles.includes(marker)) fail(`UI principles missing public-surface administration contract: ${marker}`);
