@@ -703,3 +703,14 @@ test('seonammedi citizen voices publish immediately, render publicly, accept rep
   assert.match(security,/SELF_PROTECTED_PUBLIC_WRITE_PATTERNS/);
   assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_civic_voice_replies/);
 });
+
+
+test('seonammedi citizen voices are list-first with a progressive registration form',async()=>{
+  const [html,app,css]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('app.css',root),'utf8')]);
+  assert.match(html,/id="toggleVoiceForm"[^>]+aria-expanded="false"/);
+  assert.match(html,/id="publicVoiceList"[\s\S]*id="voiceForm"[^>]+hidden/);
+  assert.match(app,/function setVoiceFormOpen/);
+  assert.match(app,/publicVoiceList\?\.scrollIntoView/);
+  assert.match(css,/\.voice-layout\{display:flex;flex-direction:column/);
+  assert.match(css,/\.voice-form\[hidden\]\{display:none\}/);
+});
