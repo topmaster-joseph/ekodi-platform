@@ -106,8 +106,9 @@
 
 
 /* Citizen voice board: immediate public posts with threaded replies. */
-.voice-layout{display:grid;grid-template-columns:minmax(280px,.78fr) minmax(0,1.22fr);gap:18px;align-items:start}
-.voice-board{min-width:0}
+.voice-actions{display:flex;justify-content:flex-end;margin:0 0 14px}.voice-compose-toggle{min-height:44px;padding:10px 18px;border:0;border-radius:12px;background:#174a72;color:#fff;font:inherit;font-weight:800;cursor:pointer}
+.voice-layout{display:flex;flex-direction:column;gap:18px}
+.voice-board{min-width:0;order:1}.voice-form{order:2}.voice-form[hidden]{display:none}
 .public-voice-list{display:grid;gap:12px}
 .public-voice-card{background:#fff;border:1px solid var(--line,#dfe5ea);border-radius:16px;padding:16px;box-shadow:0 6px 18px rgba(15,35,55,.04)}
 .public-voice-head,.public-voice-reply>div{display:flex;justify-content:space-between;gap:10px;align-items:center}
@@ -116,4 +117,4 @@
 .public-voice-replies{display:grid;gap:8px;margin:12px 0 0 18px;border-left:2px solid #e4ebf0;padding-left:12px}
 .public-voice-reply{background:#f7fafc;border-radius:12px;padding:10px 12px}.public-voice-reply p{margin:.4rem 0 0}
 .voice-reply-form{display:grid;gap:8px;margin-top:12px}.voice-reply-form input,.voice-reply-form textarea{width:100%}
-@media(max-width:860px){.voice-layout{grid-template-columns:1fr}.public-voice-replies{margin-left:8px}}
+@media(max-width:860px){.voice-actions{justify-content:stretch}.voice-compose-toggle{width:100%}.public-voice-replies{margin-left:8px}}

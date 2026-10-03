@@ -293,6 +293,15 @@ publicVoiceList?.addEventListener('submit',async event=>{
 el('reloadVoices')?.addEventListener('click',loadPublicVoices);
 
 const voiceForm=el('voiceForm');
+const toggleVoiceForm=el('toggleVoiceForm');
+function setVoiceFormOpen(open,{focus=false}={}){
+  if(!voiceForm||!toggleVoiceForm)return;
+  voiceForm.hidden=!open;
+  toggleVoiceForm.setAttribute('aria-expanded',open?'true':'false');
+  toggleVoiceForm.textContent=open?'등록창 닫기':'의견 등록';
+  if(open&&focus)voiceForm.querySelector('select,input,textarea')?.focus();
+}
+toggleVoiceForm?.addEventListener('click',()=>setVoiceFormOpen(voiceForm?.hidden===true,{focus:true}));
 if(voiceForm){
   const status=el('voiceStatus'),submitButton=voiceForm.querySelector('button[type="submit"]');
   voiceForm.addEventListener('input',()=>{status.textContent=''});
@@ -313,6 +322,8 @@ if(voiceForm){
       status.textContent=body.message||'등록되었습니다.';
       await loadPublicVoices();
       if(body.queued){setTimeout(loadPublicVoices,900);setTimeout(loadPublicVoices,2500)}
+      setVoiceFormOpen(false);
+      publicVoiceList?.scrollIntoView({behavior:'smooth',block:'start'});
     }catch(error){
       status.textContent=error.message||'등록하지 못했습니다. 잠시 후 다시 시도해 주세요.';
     }finally{
