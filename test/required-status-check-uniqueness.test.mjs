@@ -22,7 +22,10 @@ test('required legacy statuses cover both PR head and strict merge commit', asyn
   for (const workflow of [ci, orchestration]) {
     assert.match(workflow, /STATUS_HEAD_SHA: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/);
     assert.match(workflow, /STATUS_MERGE_SHA: \$\{\{ github\.event\.pull_request\.merge_commit_sha \|\| '' \}\}/);
-    assert.match(workflow, /for sha in "\$STATUS_HEAD_SHA" "\$STATUS_MERGE_SHA"/);
+    assert.match(workflow, /STATUS_PR_NUMBER: \$\{\{ github\.event\.pull_request\.number \|\| '' \}\}/);
+    assert.match(workflow, /pulls\/\$\{STATUS_PR_NUMBER\}/);
+    assert.match(workflow, /get\('merge_commit_sha'\)/);
+    assert.match(workflow, /for sha in "\$STATUS_HEAD_SHA" "\$merge_sha"/);
     assert.match(workflow, /statuses\/\$\{sha\}/);
   }
 });
