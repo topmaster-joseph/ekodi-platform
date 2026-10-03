@@ -3,6 +3,7 @@ import { durableWriteQueueAvailable, enqueueDurableWrite } from './write-ingress
 const API_PATH='/api/seonammedi/voices';
 const HEALTH_PATH=API_PATH+'/health';
 const REPLY_PATH=/^\/api\/seonammedi\/voices\/(\d+)\/replies$/;
+const SUBMISSION_PATH=/^\/api\/seonammedi\/voices\/submissions\/([0-9a-f-]{36})$/i;
 const QUEUE_KIND='seonammedi.citizen_voice.v1';
 const CATEGORIES=new Set(['question','proposal','experience','factcheck','tip','other']);
 const clean=(value,max)=>String(value??'').trim().slice(0,max);
@@ -159,8 +160,17 @@ export async function consumeSeonamMediVoiceMessage(envelope,env){
   return true;
 }
 
+async function submissionStatus(env,submissionId){
+  if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
+  const row=await env.DB.prepare("SELECT id,review_status,created_at FROM seonammedi_civic_voices WHERE submission_key=? LIMIT 1").bind(submissionId).first().catch(()=>null);
+  if(!row)return json({ok:true,status:'pending',submissionId},202,{'retry-after':'1'});
+  return json({ok:true,status:row.review_status==='published'?'published':'stored',submissionId,id:Number(row.id),createdAt:row.created_at});
+}
+
 export async function handleSeonamMediCivicApi(request,env){
   const url=new URL(request.url);
+  const submissionMatch=url.pathname.match(SUBMISSION_PATH);
+  if(submissionMatch&&request.method==='GET')return submissionStatus(env,submissionMatch[1]);
   if(url.pathname===HEALTH_PATH&&request.method==='GET')return health(env);
   const replyMatch=url.pathname.match(REPLY_PATH);
   if(replyMatch){
