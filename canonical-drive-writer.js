@@ -83,8 +83,8 @@ function normalizeRouteKey(value) {
 async function primaryConnection(env) {
   if (!env.DB) throw new Error('CANONICAL_STORAGE_DB_MISSING');
   const row = await env.DB.prepare(`SELECT * FROM storage_connections
-    WHERE role='primary' AND status='ready'
-    ORDER BY updated_at DESC LIMIT 1`).first();
+    WHERE role='primary' AND status IN ('ready','connected')
+    ORDER BY CASE status WHEN 'ready' THEN 0 ELSE 1 END, updated_at DESC LIMIT 1`).first();
   if (!row) throw new Error('CANONICAL_STORAGE_PRIMARY_NOT_READY');
   const expectedId = String(env.STORAGE_PRIMARY_SHARED_DRIVE_ID || '').trim();
   const expectedName = String(env.STORAGE_PRIMARY_SHARED_DRIVE_NAME || 'EKODI').trim().toLowerCase();
@@ -94,11 +94,20 @@ async function primaryConnection(env) {
   return row;
 }
 
-async function routeFolder(env, routeKey) {
+async function routeFolder(env, routeKey, connection, token) {
   const row = await env.DB.prepare(`SELECT service_key,folder_name,folder_id
     FROM storage_routes WHERE service_key=? AND connection_role='primary'`).bind(routeKey).first();
-  if (!row || !String(row.folder_id || '').trim()) throw new Error('CANONICAL_STORAGE_ROUTE_NOT_READY');
-  return row;
+  if (!row) throw new Error('CANONICAL_STORAGE_ROUTE_NOT_READY');
+  if (String(row.folder_id || '').trim()) return row;
+  const parentId = String(connection?.drive_root_id || connection?.drive_id || '').trim();
+  if (!parentId) throw new Error('CANONICAL_STORAGE_ROUTE_NOT_READY');
+  const folderId = await ensureSubfolderPath(token, parentId, row.folder_name);
+  const now = new Date().toISOString();
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE storage_routes SET folder_id=?,updated_at=? WHERE service_key=? AND connection_role='primary'`).bind(folderId,now,routeKey),
+    env.DB.prepare(`UPDATE storage_connections SET status='ready',last_verified_at=?,updated_at=? WHERE id=?`).bind(now,now,connection.id),
+  ]);
+  return {...row, folder_id:folderId};
 }
 
 function safeName(value) {
@@ -179,11 +188,9 @@ export async function writeCanonicalDriveFile(env, options = {}) {
   const bytes = options.bytes instanceof Uint8Array ? options.bytes : new Uint8Array(options.bytes || []);
   if (!bytes.length) throw new Error('CANONICAL_STORAGE_CONTENT_REQUIRED');
 
-  const [connection, folder] = await Promise.all([
-    primaryConnection(env),
-    routeFolder(env, routeKey),
-  ]);
+  const connection = await primaryConnection(env);
   const token = await accessToken(env, connection);
+  const folder = await routeFolder(env, routeKey, connection, token);
   const mimeType = String(options.mimeType || 'application/octet-stream').slice(0, 120);
   const parentId = await ensureSubfolderPath(token, folder.folder_id, options.subfolderPath || '');
   const metadata = {
