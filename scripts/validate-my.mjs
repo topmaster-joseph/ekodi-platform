@@ -224,4 +224,8 @@ for(const required of ['memberHero','home-wayfinder','ekodian-hero-art','data-ho
   if(!content.html.includes(required))throw new Error(`My EKODI validation failed: progressive wayfinder marker missing: ${required}`);
 }
 
+for(const required of ['servicesWayfinder','data-services-menu','data-services-open="services"','data-services-back','data-account-menu','data-account-open="basic"','data-account-open="character"','data-account-back']){
+  if(!content.html.includes(required))throw new Error(`My EKODI validation failed: second-level wayfinder marker missing: ${required}`);
+}
+
 console.log('My EKODI validation passed: USER UI, common-service access context, universal membership, multi-device Free Device Care with browser-only safety boundaries, User AI, Shell-synced Workspace context, isolated staging, central auth and guarded production rollout are present.');
