@@ -4,6 +4,13 @@ on:
   pull_request:
     paths:
       - 'discovery-layer.js'
+      - 'public-discovery-registry.js'
+      - 'public-discovery-runtime.js'
+      - 'public-discovery-content.js'
+      - 'config/public-discovery-registry.json'
+      - 'supabase/migrations/*public_discovery_registry*.sql'
+      - 'test/public-discovery-runtime.test.mjs'
+      - 'test/public-discovery-content.test.mjs'
       - 'test/discovery-layer.test.mjs'
       - 'scripts/enforce-cloudflare-discovery-policy.mjs'
       - 'DISCOVERY_LAYER.md'
@@ -13,6 +20,13 @@ on:
     branches: [main]
     paths:
       - 'discovery-layer.js'
+      - 'public-discovery-registry.js'
+      - 'public-discovery-runtime.js'
+      - 'public-discovery-content.js'
+      - 'config/public-discovery-registry.json'
+      - 'supabase/migrations/*public_discovery_registry*.sql'
+      - 'test/public-discovery-runtime.test.mjs'
+      - 'test/public-discovery-content.test.mjs'
       - 'test/discovery-layer.test.mjs'
       - 'scripts/enforce-cloudflare-discovery-policy.mjs'
       - 'DISCOVERY_LAYER.md'
@@ -41,7 +55,10 @@ jobs:
           set -euo pipefail
           node --check scripts/enforce-cloudflare-discovery-policy.mjs
           node scripts/enforce-cloudflare-discovery-policy.mjs --validate-only
-          node --test test/discovery-layer.test.mjs
+          node --check public-discovery-registry.js
+          node --check public-discovery-runtime.js
+          node --check public-discovery-content.js
+          node --test test/discovery-layer.test.mjs test/public-discovery-runtime.test.mjs test/public-discovery-content.test.mjs
           npm run build
 
   enforce-production:
@@ -73,5 +90,6 @@ jobs:
           printf '%s' "$robots" | grep -Fq 'User-agent: GPTBot'
           printf '%s' "$robots" | grep -Fq 'User-agent: ClaudeBot'
           curl -fsS --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 20 https://ekodi.kr/sitemap.xml | grep -Fq '<loc>https://ekodi.kr/</loc>'
-          curl -fsS --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 20 https://ekodi.kr/llms.txt | grep -Fq 'Canonical site: https://ekodi.kr/'
+          curl -fsS --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 20 https://ekodi.kr/llms.txt | grep -Fq 'Canonical host: https://ekodi.kr'
+          curl -fsS --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 20 https://ekodi.kr/public-registry.json | grep -Fq 'EKODI-PUBLIC-DISCOVERY-002'
           echo 'Live EKODI public discovery endpoints remain reachable after Cloudflare enforcement.'
