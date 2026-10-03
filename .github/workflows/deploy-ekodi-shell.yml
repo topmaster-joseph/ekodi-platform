@@ -140,6 +140,8 @@ jobs:
           grep -Fq '__EKODI_USER_FOOTER_CONFIG__' shell/user-ui-footer.js
           grep -Fq 'window.EKODIAdminUIShell' shell/admin-ui-shell.js
           grep -Fq 'window.EKODIPublicSurfaceAdmin' shell/public-surface-admin.js
+          grep -Fq 'const VERSION=2' shell/public-surface-admin.js
+          grep -Fq "window.open(url.pathname+url.search+url.hash,'_blank','noopener,noreferrer')" shell/public-surface-admin.js
           grep -Fq 'cross_origin_admin_target_forbidden' shell/public-surface-admin.js
           grep -Fq '.side-brand' shell/admin-ui-shell.js
           grep -Fq 'node.remove()' shell/admin-ui-shell.js
