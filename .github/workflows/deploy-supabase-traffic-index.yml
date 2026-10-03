@@ -127,8 +127,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$SUPABASE_DEPLOY_MODE" = "management" ]; then
-            printf '%s
-' "select exists (select 1 from pg_indexes where schemaname='public' and tablename='activity_message_campaigns' and indexname='activity_message_campaigns_created_by_idx') as index_ready;" > /tmp/traffic-index-proof.sql
+            printf '%s\\n' "select exists (select 1 from pg_indexes where schemaname='public' and tablename='activity_message_campaigns' and indexname='activity_message_campaigns_created_by_idx') as index_ready;" > /tmp/traffic-index-proof.sql
             jq -Rs '{query:.,read_only:true}' /tmp/traffic-index-proof.sql > /tmp/traffic-index-proof.json
             code=$(curl -sS -o /tmp/traffic-index-proof-result.json -w '%{http_code}'               -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query"               -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN"               -H 'Content-Type: application/json'               --data-binary @/tmp/traffic-index-proof.json)
             [ "$code" = '201' ]
