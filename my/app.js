@@ -95,36 +95,46 @@ function syncSurfaceState({scroll=false}={}){
   });
  }
 }
-let activeAccountTab='basic';
+let activeAccountTab='menu';
 function syncAccountTabs(){
+ const isMenu=activeAccountTab==='menu';
+ document.querySelectorAll('[data-account-menu]').forEach(node=>{node.hidden=!isMenu});
+ document.querySelectorAll('[data-account-nav]').forEach(node=>{node.hidden=isMenu});
  document.querySelectorAll('[data-account-tab]').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.accountTab===activeAccountTab)));
- document.querySelectorAll('[data-account-panel]').forEach(panel=>{panel.hidden=panel.dataset.accountPanel!==activeAccountTab});
+ document.querySelectorAll('[data-account-panel]').forEach(panel=>{panel.hidden=isMenu||panel.dataset.accountPanel!==activeAccountTab});
 }
 function setAccountTab(tab){
- if(!['basic','public','character','security'].includes(tab))tab='basic';
+ if(!['menu','basic','public','character','security'].includes(tab))tab='menu';
  activeAccountTab=tab;syncAccountTabs();
  try{sessionStorage.setItem('ekodi_my_account_tab',tab)}catch{}
 }
 function initAccountTabs(){
- try{activeAccountTab=sessionStorage.getItem('ekodi_my_account_tab')||'basic'}catch{activeAccountTab='basic'}
- syncAccountTabs();
+ activeAccountTab='menu';
  document.querySelectorAll('[data-account-tab]').forEach(button=>button.addEventListener('click',()=>setAccountTab(button.dataset.accountTab||'basic')));
+ document.querySelectorAll('[data-account-open]').forEach(button=>button.addEventListener('click',()=>setAccountTab(button.dataset.accountOpen||'basic')));
+ document.querySelectorAll('[data-account-back]').forEach(button=>button.addEventListener('click',()=>setAccountTab('menu')));
+ syncAccountTabs();
 }
 
-let activeServicesTab='services';
+let activeServicesTab='menu';
 function syncServiceTabs(){
+ const isMenu=activeServicesTab==='menu';
+ document.querySelectorAll('[data-services-menu]').forEach(node=>{node.hidden=!isMenu});
+ document.querySelectorAll('[data-services-nav]').forEach(node=>{node.hidden=isMenu});
  document.querySelectorAll('[data-services-tab]').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.servicesTab===activeServicesTab)));
- document.querySelectorAll('[data-services-panel]').forEach(panel=>{panel.hidden=panel.dataset.servicesPanel!==activeServicesTab});
+ document.querySelectorAll('[data-services-panel]').forEach(panel=>{panel.hidden=isMenu||panel.dataset.servicesPanel!==activeServicesTab});
 }
 function setServicesTab(tab){
- if(!['services','spaces','status'].includes(tab))tab='services';
+ if(!['menu','services','spaces','status'].includes(tab))tab='menu';
  activeServicesTab=tab;syncServiceTabs();
  try{sessionStorage.setItem('ekodi_my_services_tab',tab)}catch{}
 }
 function initServiceTabs(){
- try{activeServicesTab=sessionStorage.getItem('ekodi_my_services_tab')||'services'}catch{activeServicesTab='services'}
- syncServiceTabs();
+ activeServicesTab=location.hash==='#workspaces'?'spaces':'menu';
  document.querySelectorAll('[data-services-tab]').forEach(button=>button.addEventListener('click',()=>setServicesTab(button.dataset.servicesTab||'services')));
+ document.querySelectorAll('[data-services-open]').forEach(button=>button.addEventListener('click',()=>setServicesTab(button.dataset.servicesOpen||'services')));
+ document.querySelectorAll('[data-services-back]').forEach(button=>button.addEventListener('click',()=>setServicesTab('menu')));
+ syncServiceTabs();
 }
 let activeHomePanel='intent';
 function syncHomePanels(){
@@ -439,7 +449,7 @@ window.addEventListener('ekodi:personalization-signal',event=>{
  ephemeralSignals=[signal,...ephemeralSignals.filter(item=>!(item.service_id===signal.service_id&&item.source===signal.source&&item.signal_type===signal.signal_type))].slice(0,30);
  platformUi();
 });
-window.addEventListener('hashchange',()=>{if(location.hash==='#memberHome')activeHomePanel='continue';if(location.hash==='#intent'||location.hash==='#intentPlanText')activeHomePanel='intent';syncSurfaceState({scroll:true});progressiveSurfaceUi();if(location.hash==='#account')syncAccountTabs();if(location.hash==='#platforms'||location.hash==='#workspaces')syncServiceTabs();if(location.hash==='#activity')recentActivityUi()});
+window.addEventListener('hashchange',()=>{if(location.hash==='#memberHome')activeHomePanel='continue';if(location.hash==='#intent'||location.hash==='#intentPlanText')activeHomePanel='intent';if(location.hash==='#account')setAccountTab('menu');if(location.hash==='#platforms')setServicesTab('menu');if(location.hash==='#workspaces')setServicesTab('spaces');syncSurfaceState({scroll:true});progressiveSurfaceUi();if(location.hash==='#activity')recentActivityUi()});
 
 initAccountTabs();
 initServiceTabs();

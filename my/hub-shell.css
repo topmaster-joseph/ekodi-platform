@@ -179,3 +179,27 @@ body[data-auth-state="member"] .my-desktop-tabs a[aria-selected="true"]{backgrou
   .intent-prompt-field textarea{font-size:14px}.intent-context-grid{grid-template-columns:1fr 1fr}
 }
 @media(max-width:480px){.intent-context-grid{grid-template-columns:1fr}.ekodian-guide{min-height:172px}.ekodian-hero-art{max-width:275px}}
+
+
+/* 2026-10-04 Section Wayfinders: choose a destination before opening details. */
+.section-wayfinder{width:min(1180px,calc(100% - 36px));margin:12px auto!important;padding:22px 24px!important;border:1px solid rgba(70,99,137,.12)!important;border-radius:24px!important;background:linear-gradient(145deg,#fbfdff,#f6faf8)!important}
+.section-wayfinder[hidden],[data-account-menu][hidden],[data-services-menu][hidden],[data-account-nav][hidden],[data-services-nav][hidden]{display:none!important}
+.section-wayfinder-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.account-wayfinder-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.section-wayfinder-grid button{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:10px;min-height:82px;padding:14px 15px;border:1px solid #dbe6f2;border-radius:18px;background:#fff;color:#31455f;text-align:left;box-shadow:0 7px 20px rgba(52,82,122,.045);cursor:pointer}
+.section-wayfinder-grid button:hover,.section-wayfinder-grid button:focus-visible{border-color:#9bb9f6;background:#f8fbff;box-shadow:0 10px 24px rgba(55,92,145,.08);outline:none}
+.section-wayfinder-grid button>span{grid-row:1 / 3;align-self:center;display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:#edf4ff;color:#386ed1;font-size:17px}
+.section-wayfinder-grid button>strong{align-self:end;font-size:13px;line-height:1.25}
+.section-wayfinder-grid button>small{align-self:start;margin-top:3px;color:#8491a2;font-size:10px;line-height:1.35}
+.section-menu-back{margin-right:auto!important;color:#47658b!important}
+.services-subtabs,.account-subtabs{align-items:center}
+@media(max-width:900px){.account-wayfinder-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){
+  .section-wayfinder{width:calc(100% - 24px);margin-left:12px!important;margin-right:12px!important;padding:16px!important;border-radius:20px!important}
+  .section-wayfinder-grid{grid-template-columns:1fr}
+  .account-wayfinder-grid{grid-template-columns:1fr 1fr}
+  .section-wayfinder-grid button{min-height:72px;padding:12px}
+  .services-subtabs,.account-subtabs{gap:4px}
+  .section-menu-back{flex:0 0 100%;text-align:left}
+}
+@media(max-width:460px){.account-wayfinder-grid{grid-template-columns:1fr}}
