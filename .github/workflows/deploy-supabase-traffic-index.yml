@@ -1,0 +1,103 @@
+name: Deploy Supabase Traffic Index
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20261003140500_activity_message_campaign_created_by_index.sql'
+      - 'test/supabase-activity-message-campaign-index.test.mjs'
+      - '.github/workflows/deploy-supabase-traffic-index.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/20261003140500_activity_message_campaign_created_by_index.sql'
+      - 'test/supabase-activity-message-campaign-index.test.mjs'
+      - '.github/workflows/deploy-supabase-traffic-index.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-traffic-index-${{ github.event_name == 'pull_request' && format('validate-pr-{0}', github.event.pull_request.number) || 'production' }}
+  cancel-in-progress: false
+
+env:
+  PROJECT_REF: renzehysxirjilvdxacv
+  MIGRATION: supabase/migrations/20261003140500_activity_message_campaign_created_by_index.sql
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate traffic index migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test test/supabase-activity-message-campaign-index.test.mjs
+          grep -Fq 'activity_message_campaigns_created_by_idx' "$MIGRATION"
+          ! grep -Eiq 'drop[[:space:]]+(table|index)|truncate[[:space:]]+table' "$MIGRATION"
+
+  production:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: production
+    env:
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Select Supabase production credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-}"
+          [ -n "$token" ] || token="${TOKEN_B:-}"
+          [ -n "$token" ] || token="${TOKEN_C:-}"
+          [ -n "$token" ] || token="${TOKEN_D:-}"
+          if [ -z "$token" ]; then
+            echo 'No Supabase production deployment credential is configured.'
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+
+      - name: Apply additive traffic index
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -Rs '{query:.,read_only:false}' "$MIGRATION" > /tmp/traffic-index.json
+          code=$(curl -sS -o /tmp/traffic-index-result.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/traffic-index.json)
+          if [ "$code" != '201' ]; then
+            echo "Supabase traffic index migration failed with HTTP $code."
+            cat /tmp/traffic-index-result.json
+            exit 1
+          fi
+
+      - name: Verify production index
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s\n' "select exists (select 1 from pg_indexes where schemaname='public' and tablename='activity_message_campaigns' and indexname='activity_message_campaigns_created_by_idx') as index_ready;" > /tmp/traffic-index-proof.sql
+          jq -Rs '{query:.,read_only:true}' /tmp/traffic-index-proof.sql > /tmp/traffic-index-proof.json
+          code=$(curl -sS -o /tmp/traffic-index-proof-result.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/traffic-index-proof.json)
+          [ "$code" = '201' ]
+          grep -Fq '"index_ready":true' /tmp/traffic-index-proof-result.json
+          echo 'Supabase production traffic index verified.'
