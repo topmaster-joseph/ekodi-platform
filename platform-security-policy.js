@@ -1,9 +1,12 @@
+import { turnstileEscalationHeaders, verifyTurnstileEscalation } from './turnstile-abuse-guard.js';
+
 const MUTATION_METHODS = new Set(['POST','PUT','PATCH','DELETE']);
 const BLOCKED_METHODS = new Set(['TRACE','CONNECT']);
 const STANDARD_BODY_LIMIT = 8 * 1024 * 1024;
 const LARGE_MEDIA_BODY_LIMIT = 32 * 1024 * 1024;
 const MAX_QUERY_LENGTH = 8192;
-const PUBLIC_CACHEABLE_API_PATHS = new Set(['/api/public/preview/map']);
+const PUBLIC_CACHEABLE_API_PATHS = new Set(['/api/public/preview/map','/api/seonammedi/page-data','/api/seonammedi/timeline','/api/seonammedi/channels','/api/seonammedi/content']);
+const PUBLIC_CACHEABLE_API_PATTERNS = [/^\/api\/seonammedi\/channels\/\d+\/preview$/,/^\/api\/seonammedi\/notices\/\d+\/image\/\d+$/];
 const SELF_PROTECTED_PUBLIC_WRITE_PATHS = new Set(['/api/seonammedi/voices']);
 const SELF_PROTECTED_PUBLIC_WRITE_PATTERNS = [/^\/api\/seonammedi\/voices\/\d+\/replies$/];
 const encoder = new TextEncoder();
@@ -15,7 +18,7 @@ function classifyPath(pathname=''){
   const api=path==='/api'||path.startsWith('/api/')||path.includes('/api/');
   const live=path==='/live'||path.startsWith('/live/')||path.includes('/live/');
   const media=/\/(?:upload|uploads|media|recording|recordings)(?:\/|$)/.test(path);
-  const publicCacheableApi=api&&PUBLIC_CACHEABLE_API_PATHS.has(path);
+  const publicCacheableApi=api&&(PUBLIC_CACHEABLE_API_PATHS.has(path)||PUBLIC_CACHEABLE_API_PATTERNS.some(pattern=>pattern.test(path)));
   const selfProtectedPublicWrite=SELF_PROTECTED_PUBLIC_WRITE_PATHS.has(path)||SELF_PROTECTED_PUBLIC_WRITE_PATTERNS.some(pattern=>pattern.test(path));
   const sensitive=(admin||auth||api)&&!selfProtectedPublicWrite;
   return {admin,auth,api,live,media,sensitive,publicCacheableApi,selfProtectedPublicWrite,surface:admin?'admin':auth?'auth':api?'api':live?'live':'public'};
@@ -49,8 +52,8 @@ async function limiterResult(binding,key){
   }
 }
 
-function securityError(message,code,status,retryAfter=''){
-  const headers=new Headers({'content-type':'application/json; charset=utf-8','cache-control':'no-store'});
+function securityError(message,code,status,retryAfter='',extraHeaders={}){
+  const headers=new Headers({'content-type':'application/json; charset=utf-8','cache-control':'no-store',...extraHeaders});
   if(retryAfter)headers.set('retry-after',retryAfter);
   return new Response(JSON.stringify({error:message,code}),{status,headers});
 }
@@ -115,8 +118,13 @@ export async function enforcePlatformRequestSecurity(request,env={}){
     return null;
   }
   if(!result.allowed){
-    console.warn('EKODI public write rate limit exceeded',{path:url.pathname,ray:request.headers.get('cf-ray')||''});
-    return securityError('요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.','PLATFORM_PUBLIC_WRITE_RATE_LIMITED',429,'60');
+    const challenge=await verifyTurnstileEscalation(request,env);
+    if(challenge.success){
+      console.info('EKODI public write rate limit escalated through verified Turnstile',{path:url.pathname,ray:request.headers.get('cf-ray')||''});
+      return null;
+    }
+    console.warn('EKODI public write rate limit exceeded',{path:url.pathname,ray:request.headers.get('cf-ray')||'',turnstile:challenge.reason});
+    return securityError('요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.','PLATFORM_PUBLIC_WRITE_RATE_LIMITED',429,'60',turnstileEscalationHeaders(env));
   }
   return null;
 }
@@ -147,7 +155,8 @@ export function applyPlatformSecurityHeaders(response,request){
   if((info.admin||info.auth)&&!headers.has('Cross-Origin-Opener-Policy'))headers.set('Cross-Origin-Opener-Policy','same-origin-allow-popups');
   if(info.sensitive){
     headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
-    const safePublicRead=info.publicCacheableApi&&['GET','HEAD'].includes(String(request.method||'GET').toUpperCase());
+    const personalized=Boolean(String(request.headers.get('authorization')||'').trim()||String(request.headers.get('cookie')||'').trim());
+    const safePublicRead=info.publicCacheableApi&&!personalized&&['GET','HEAD'].includes(String(request.method||'GET').toUpperCase());
     if(isDocumentResponse(secured)&&!safePublicRead)headers.set('Cache-Control','no-store');
   }
   headers.delete('X-Powered-By');
@@ -161,5 +170,6 @@ export const PLATFORM_SECURITY_CONSTANTS=Object.freeze({
   LARGE_MEDIA_BODY_LIMIT,
   MAX_QUERY_LENGTH,
   PUBLIC_CACHEABLE_API_PATHS:Object.freeze([...PUBLIC_CACHEABLE_API_PATHS]),
+  PUBLIC_CACHEABLE_API_PATTERNS:Object.freeze(PUBLIC_CACHEABLE_API_PATTERNS.map(pattern=>String(pattern))),
   SELF_PROTECTED_PUBLIC_WRITE_PATHS:Object.freeze([...SELF_PROTECTED_PUBLIC_WRITE_PATHS]),
 });

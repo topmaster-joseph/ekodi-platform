@@ -53,6 +53,10 @@ on:
       - 'platform-router-entry-worker.js'
       - 'site-publication-runtime.js'
       - 'platform-security-policy.js'
+      - 'public-edge-cache.js'
+      - 'turnstile-abuse-guard.js'
+      - 'test/public-edge-cache.test.mjs'
+      - 'test/turnstile-abuse-guard.test.mjs'
       - 'scripts/validate-platform-security-policy.mjs'
       - 'test/platform-security-policy.test.mjs'
       - 'local-region-registry.js'
@@ -784,6 +788,38 @@ jobs:
           npx --yes wrangler@4.119.0 queues list | grep -Fq 'ekodi-write-ingress-dlq'
           echo 'durableWriteQueueConsumer=attached'
 
+      - name: Verify public edge cache absorbs repeated SeonamMedi reads
+        if: steps.quota.outputs.skip_nonessential != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://ekodi.kr/api/seonammedi/timeline'
+          hit=false
+          for attempt in $(seq 1 6); do
+            curl -fsS -D /tmp/seonam-cache.headers -o /tmp/seonam-cache.json \
+              --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 20 "$url"
+            grep -Fq '"ok":true' /tmp/seonam-cache.json
+            grep -Fiq 'x-ekodi-cache-policy: public-edge-v1;seonammedi-timeline' /tmp/seonam-cache.headers
+            state=$(awk 'BEGIN{IGNORECASE=1} /^x-ekodi-edge-cache:/ {gsub("\\r",""); print $2; exit}' /tmp/seonam-cache.headers)
+            echo "SeonamMedi edge cache attempt $attempt: ${state:-missing}"
+            if [ "$state" = 'HIT' ]; then hit=true; break; fi
+            sleep 1
+          done
+          [ "$hit" = true ] || { echo 'Repeated safe public read never produced a Cloudflare Cache API HIT.' >&2; cat /tmp/seonam-cache.headers; exit 1; }
+          echo 'seonamMediPublicEdgeCache=HIT' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report adaptive Turnstile readiness without exposing secrets
+        if: steps.quota.outputs.skip_nonessential != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.119.0 secret list --config wrangler.site.toml > /tmp/shared-site-secrets.json
+          if grep -Fq '"TURNSTILE_SECRET_KEY"' /tmp/shared-site-secrets.json; then
+            echo 'adaptiveTurnstile=secret-configured' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'adaptiveTurnstile=staged-inert-no-secret' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          rm -f /tmp/shared-site-secrets.json
       - name: Verify EKODI Mission LIVE production shell contract
         if: steps.quota.outputs.skip_nonessential != 'true'
         env:
