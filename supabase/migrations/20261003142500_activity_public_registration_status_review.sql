@@ -25,8 +25,6 @@ comment on function public.mission_submit_event_application(text,text,text,text,
   'Intentional public mission application RPC. Honeypot and privacy-consent checks precede the canonical activity submission.';
 comment on function public.person_digital_card(text) is
   'Intentional anonymous projection. Returns only explicitly public digital-card fields for a published person handle.';
-comment on function public.person_identity_share(text,text) is
-  'Intentional anonymous projection. Returns only public person facts selected by an explicit public share context.';
 comment on function public.store_public_storefront(text) is
   'Intentional public storefront projection limited to public presentation and ordering metadata.';
 comment on function public.store_user_site_public_profile(text) is
@@ -35,5 +33,7 @@ comment on function public.store_user_site_public_snapshot(text) is
   'Intentional public user-site snapshot limited to public presentation and menu data.';
 comment on function public.submit_person_contact_exchange(text,text,text,text,text,text,text,boolean,text) is
   'Intentional anonymous contact-exchange endpoint. Requires privacy consent, validated contact input, throttling and an enabled public receiver.';
-comment on function public.submit_person_contact_exchange_v2(text,text,text,text,text,text,text,boolean,text,text) is
-  'Intentional anonymous context-aware contact-exchange endpoint. Requires an eligible public share context and delegates validation and throttling.';
+
+-- Note: production-only RPCs person_identity_share(...) and submit_person_contact_exchange_v2(...)
+-- are already reviewed and commented in production, but are intentionally excluded here until their
+-- canonical schema migrations are imported into the repository baseline.
