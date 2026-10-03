@@ -590,7 +590,7 @@ test('seonammedi public site uses shared authenticated inline admin without expo
   assert.match(app,/authEndpoint:'\/api\/seonammedi\/admin\/me'/);
   assert.match(app,/await admin\.authorize\(\)/);
   assert.match(app,/admin\.attach/);
-  for(const label of ['공지 바로 수정','조직 바로 수정','활동이력 공개여부','소통채널 바로 수정','시민의견 수정·삭제'])assert.match(app,new RegExp(label));
+  for(const label of ['공지 바로 수정','조직 바로 수정','활동이력 관리','소통채널 바로 수정','시민의견 수정·삭제'])assert.match(app,new RegExp(label));
   assert.doesNotMatch(app,/function publicAdminRequest|function ensurePublicAdminDrawer|function openPublicAdmin|function attachPublicAdminButton/);
   assert.doesNotMatch(app,/className='public-admin-drawer'|className='public-admin-inline'/);
   assert.doesNotMatch(css,/\.public-admin-drawer|\.public-admin-inline/);
