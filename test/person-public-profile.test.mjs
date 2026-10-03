@@ -108,6 +108,21 @@ test('shared-site guarded release verifies public person route ownership before 
   assert.ok(probe?.headerExpect?.includes('x-robots-tag: noindex, nofollow, noarchive'));
 });
 
+test('shared-site digital-card release probe stays aligned with the My service contract',async()=>{
+  const [sharedManifest,myManifest]=await Promise.all([
+    read('deploy/manifests/shared-site.worker.json').then(JSON.parse),
+    read('deploy/manifests/my.worker.json').then(JSON.parse),
+  ]);
+  const sharedProbe=sharedManifest.worker.requests.find(item=>item.url==='https://ekodi.kr/ekodi-card-probe/card');
+  const myProbe=myManifest.worker.requests.find(item=>item.url==='https://ekodi-my.topmaster-joseph.workers.dev/ekodi-card-probe/card');
+  assert.deepEqual(sharedProbe?.statuses,[404]);
+  assert.deepEqual(myProbe?.statuses,[404]);
+  assert.deepEqual(sharedProbe?.expect,myProbe?.expect);
+  assert.ok(sharedProbe?.expect?.includes('공개된 개인 프로필을 찾을 수 없습니다.'));
+  assert.ok(sharedProbe?.headerExpect?.includes('x-ekodi-canonical-surface: person-digital-card'));
+  assert.ok(sharedProbe?.headerExpect?.includes('x-ekodi-surface-context: person-digital-card'));
+});
+
 test('invalid @ paths are not claimed by the person profile router',async()=>{
   const my=binding();
   const response=await routeCanonicalSurface(new Request('https://ekodi.kr/@x'),{MY:my});
