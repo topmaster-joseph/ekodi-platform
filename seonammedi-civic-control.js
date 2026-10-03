@@ -107,7 +107,8 @@ async function persistVoice(env,payload){
 
 async function listPublicVoices(env){
   if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
-  await ensureSchema(env.DB);
+  // Public reads are deliberately read-only. Schema is provisioned by migrations;
+  // request-time DDL can contend with D1 and make the list fail while health is green.
   const voices=await env.DB.prepare(`SELECT id,category,display_name,message,created_at,updated_at
     FROM seonammedi_civic_voices WHERE review_status='published' ORDER BY id DESC LIMIT 100`).all();
   const replies=await env.DB.prepare(`SELECT r.id,r.voice_id,r.display_name,r.message,r.created_at
