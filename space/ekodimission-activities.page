@@ -15,12 +15,12 @@
     </div>
   </div>
   <div class="mission-activity-list" data-activity-list data-trip-content>
-    <article class="mission-activity-row featured" data-activity-item data-year="2026" data-month="10">
+    <article class="mission-activity-row featured" data-activity-item data-activity-key="261003-autumn-community-trip" data-year="2026" data-month="10">
       <time datetime="2026-10-03"><strong>10.03</strong><span>2026</span></time>
       <div class="mission-activity-row-copy"><div class="mission-activity-row-meta"><span class="mission-status upcoming">신청중</span><span>공동체 여행</span><span>10월 3–4일</span></div><h3 data-trip-title>2026 가을 공동체 여행</h3><p><span data-trip-departure>10월 3일 09:00 출발</span> · 고창 핑크뮬리 · 영광 가마미해수욕장 · 독채 1박 · <span data-trip-capacity>15</span>명</p></div>
-      <a class="mission-activity-detail-button" href="/ekodimission/apply/261003-autumn-trip">자세히 보기 <span aria-hidden="true">→</span></a>
+      <div class="mission-activity-row-actions"><a class="mission-activity-detail-button" href="/ekodimission/apply/261003-autumn-trip">자세히 보기 <span aria-hidden="true">→</span></a></div>
     </article>
-    <article class="mission-activity-row" data-activity-item data-year="2026" data-month="09">
+    <article class="mission-activity-row" data-activity-item data-activity-key="260926-chuseok-open-table" data-year="2026" data-month="09">
       <time datetime="2026-09-26"><strong>09.26</strong><span>2026</span></time>
       <div class="mission-activity-row-copy"><div class="mission-activity-row-meta"><span class="mission-status completed">완료</span><span>열린식탁</span><span>9월 26일</span></div><h3>2026 에코디 추석 열린식탁</h3><p>9월 26일 토요일 16:00–18:00 · 자담치킨 · 누구나 무료 · 행사 기록과 사진·영상 결과를 확인할 수 있습니다.</p></div>
       <div class="mission-activity-row-actions"><a class="mission-activity-detail-button" href="/ekodimission/apply/260926-open-table">행사 기록 <span aria-hidden="true">→</span></a><a class="mission-activity-detail-button" href="/ekodimission/activities/260926-chuseok-open-table/archive">사진·영상 결과 <span aria-hidden="true">→</span></a></div>
