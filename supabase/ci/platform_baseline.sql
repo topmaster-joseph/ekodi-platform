@@ -120,14 +120,14 @@ create table if not exists public.identity_challenges (
   created_at timestamptz not null default now()
 );
 
--- Production uses SECURITY INVOKER access helpers over RLS-protected tables.
--- The ephemeral baseline mirrors that read path while granting only the SELECT
--- capability required by these helper checks.
+-- Access helpers are deliberately narrow SECURITY DEFINER predicates.
+-- They bypass recursive membership-table RLS only to answer auth.uid()-scoped booleans;
+-- direct anonymous execution is forbidden by the hardening migration.
 create or replace function public.has_tenant_access(p_tenant uuid)
 returns boolean
 language sql
 stable
-security invoker
+security definer
 set search_path = public, auth
 as $$
   select exists(
@@ -146,7 +146,7 @@ create or replace function public.has_store_access(p_store uuid)
 returns boolean
 language sql
 stable
-security invoker
+security definer
 set search_path = public, auth
 as $$
   select exists(
@@ -170,7 +170,7 @@ create or replace function public.has_store_private_access(p_store uuid)
 returns boolean
 language sql
 stable
-security invoker
+security definer
 set search_path = public, auth
 as $$
   select exists(
@@ -200,7 +200,3 @@ alter table public.store_members enable row level security;
 alter table public.orders enable row level security;
 alter table public.site_access_registry enable row level security;
 alter table public.identity_challenges enable row level security;
-
--- Production-compatible least privilege for SECURITY INVOKER access helpers.
--- Write authority remains policy-controlled and is not widened by this CI fixture.
-grant select on table public.profiles, public.tenant_members, public.stores, public.store_members to authenticated;
