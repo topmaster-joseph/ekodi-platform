@@ -721,3 +721,5 @@ test('seonammedi citizen voices publish immediately, render publicly, accept rep
   assert.match(security,/SELF_PROTECTED_PUBLIC_WRITE_PATTERNS/);
   assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_civic_voice_replies/);
 });
+
+test('seonammedi mobile activity history uses compact filters, progressive detail, and inline admin control',async()=>{const [html,app,css]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('app.css',root),'utf8')]);assert.match(html,/id="timelineAdminEdit"/);assert.match(app,/timeline-toggle/);assert.match(app,/is-collapsed/);assert.match(app,/timelineAdminEdit/);assert.match(css,/activity-toolbar \.filters\{flex-wrap:nowrap;overflow-x:auto/);assert.match(css,/\.timeline-item\.is-collapsed \.timeline-detail\{display:none\}/);});
