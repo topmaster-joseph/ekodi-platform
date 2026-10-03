@@ -12,6 +12,8 @@ preview_urls = false
 
 [vars]
 ENVIRONMENT = "production"
+TURNSTILE_PUBLIC_WRITE_ESCALATION = "enabled"
+# TURNSTILE_SECRET_KEY remains a Worker secret. TURNSTILE_SITE_KEY is optional public metadata and is not set until a widget is provisioned.
 
 [[routes]]
 pattern = "ekodi.kr"
