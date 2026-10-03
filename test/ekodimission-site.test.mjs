@@ -364,3 +364,61 @@ test('Mission trip keeps pay-now functional even when shared asset propagation l
   assert.match(page,/MutationObserver/);
   assert.match(page,/참가비 바로 납부하기/);
 });
+
+
+test('Mission public admin bridge is tenant-scoped, privacy-preserving, and uses protected-window presentation',async()=>{
+  const [worker,script,activities,injector]=await Promise.all([
+    readFile(new URL('../space-worker.js',import.meta.url),'utf8'),
+    readFile(new URL('../space/ekodimission.js',import.meta.url),'utf8'),
+    readFile(new URL('../space/ekodimission-activities.page',import.meta.url),'utf8'),
+    readFile(new URL('../ekodi-shell-injector.js',import.meta.url),'utf8')
+  ]);
+  for(const marker of [
+    "MISSION_ADMIN_ME_API='/ekodimission/api/admin/me'",
+    'current_site_activity_contexts',
+    "['tenant_admin','store_owner'].includes(role)",
+    "permissions:{activities:true,payments:true,messages:true,media:true}",
+    "injectEkodiShell(branded,'mission','public',{existingHeader:true,memberGate:'service-owned'})"
+  ]) assert.ok(worker.includes(marker),marker);
+  assert.match(script,/window\.EKODIPublicSurfaceAdmin/);
+  assert.match(script,/Number\(shared\.version\|\|0\)<2/);
+  assert.match(script,/authEndpoint:'\/ekodimission\/api\/admin\/me'/);
+  assert.match(script,/adminPath:'\/ekodimission\/admin\/activities'/);
+  assert.match(script,/presentation:'window'/);
+  assert.match(script,/sessionStorage\.getItem\('ekodi-auth-token'\)/);
+  assert.doesNotMatch(script,/activity_admin_snapshot|person_contacts|follow_up_note|support_notes/);
+  assert.match(activities,/data-activity-key="261003-autumn-community-trip"/);
+  assert.match(activities,/data-activity-key="260926-chuseok-open-table"/);
+  assert.match(injector,/SERVICE_OWNED_FOOTER_SERVICES=new Set\(\['mission'\]\)/);
+
+  const dataEnv={...env,DATA_ENABLED:'true',SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'publishable-test'};
+  const originalFetch=globalThis.fetch;
+  try{
+    globalThis.fetch=async(input,init)=>{
+      assert.equal(String(input),'https://example.supabase.co/rest/v1/rpc/current_site_activity_contexts');
+      assert.equal(init.method,'POST');
+      assert.equal(init.headers.authorization,'Bearer mission-operator-token');
+      assert.equal(init.headers.apikey,'publishable-test');
+      return new Response(JSON.stringify([{tenant:'ekodimission',authorization_role:'tenant_admin',activity_role:'mission_operator'}]),{status:200,headers:{'content-type':'application/json'}});
+    };
+    const allowed=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/api/admin/me',{headers:{authorization:'Bearer mission-operator-token'}}),dataEnv);
+    assert.equal(allowed.status,200);
+    assert.equal(allowed.headers.get('x-ekodi-activity-admin-auth'),'mission-public-admin-v1');
+    const body=await allowed.json();
+    assert.equal(body.ok,true);
+    assert.equal(body.workspace,'ekodimission');
+    assert.equal(body.authorizationRole,'tenant_admin');
+    assert.deepEqual(body.permissions,{activities:true,payments:true,messages:true,media:true});
+
+    globalThis.fetch=async()=>new Response(JSON.stringify([{tenant:'ekodimission',authorization_role:'member',activity_role:'participant'}]),{status:200,headers:{'content-type':'application/json'}});
+    const denied=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/api/admin/me',{headers:{authorization:'Bearer ordinary-member-token'}}),dataEnv);
+    assert.equal(denied.status,403);
+    assert.equal((await denied.json()).error,'ACTIVITY_ADMIN_FORBIDDEN');
+
+    let called=false;
+    globalThis.fetch=async()=>{called=true;return new Response('[]',{status:200})};
+    const anonymous=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/api/admin/me'),dataEnv);
+    assert.equal(anonymous.status,401);
+    assert.equal(called,false);
+  }finally{globalThis.fetch=originalFetch}
+});
