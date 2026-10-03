@@ -60,6 +60,8 @@ assert(String(pkg.scripts?.check||'').includes('turnstile-abuse-guard.js'),'npm 
 assert(deploy.includes('platform-security-policy.js'),'shared-site production workflow must validate the platform security module');
 assert(deploy.includes('public-edge-cache.js'),'shared-site production workflow must track the public edge cache module');
 assert(deploy.includes('turnstile-abuse-guard.js'),'shared-site production workflow must track the Turnstile guard module');
+assert(deploy.includes('Verify public edge cache absorbs repeated SeonamMedi reads'),'shared-site production workflow must prove a live Cache API HIT');
+assert(deploy.includes('adaptiveTurnstile=staged-inert-no-secret'),'shared-site production workflow must report Turnstile readiness without exposing secrets');
 assert(deploy.includes('validate-platform-security-policy.mjs'),'shared-site production workflow must validate the security contract');
 
 console.log('Platform security policy valid: canonical edge enforcement, split mutation throttling, fail-closed sensitive paths, hardened response headers and production workflow enforcement are active.');
