@@ -22,11 +22,13 @@ const MISSION_TRIP_CONTENT_API=`/ekodimission/api/activities/${MISSION_TRIP_RECO
 const MISSION_TRIP_COLLAB_PATH='/ekodimission/edit/261003-autumn-trip';
 const MISSION_COLLAB_API='/ekodimission/api/collab';
 const MISSION_ADMIN_ACTIVITY_RPC_API='/ekodimission/api/admin/activity-rpc';
+const MISSION_ADMIN_ME_API='/ekodimission/api/admin/me';
 const MISSION_ADMIN_ACTIVITY_RPCS=new Set(['activity_admin_snapshot','activity_admin_update_participation','activity_admin_add_participant','activity_admin_share_status','activity_admin_create_share','activity_admin_revoke_share','activity_admin_upsert_media_link','activity_admin_payment_snapshot','activity_admin_update_payment','activity_admin_message_recipients','activity_admin_record_message','activity_admin_message_history']);
 const MISSION_SHARE_PATH_RE=/^\/ekodimission\/share\/([A-Za-z0-9_-]{32,200})$/;
 const MISSION_ACTIVITY_ARCHIVE_RE=/^\/ekodimission\/activities\/([a-z0-9-]+)\/archive$/;
 const MISSION_ACTIVITY_REGISTRATION_RE=/^\/ekodimission\/api\/activities\/([a-z0-9-]+)\/registration$/;
 const MISSION_ACTIVITY_APPLICATION_RE=/^\/ekodimission\/api\/activities\/([0-9]{6}-[a-z0-9][a-z0-9-]{2,79})\/applications$/;
+const MISSION_PUBLIC_ADMIN_PATHS=new Set(['/ekodimission/activities',MISSION_EVENT_PATH,MISSION_TRIP_PATH]);
 const EKODIMISSION_PAGES=new Map([['/ekodimission','/ekodimission.page'],['/ekodimission/vision','/ekodimission-vision.page'],['/ekodimission/activities','/ekodimission-activities.page'],[MISSION_EVENT_PATH,'/ekodimission-open-table-apply.page'],['/ekodimission/apply/261003-autumn-trip','/ekodimission-autumn-trip-apply.page'],['/ekodimission/prayer','/ekodimission-prayer.page'],['/ekodimission/participate','/ekodimission-participate.page'],['/ekodimission/partners','/ekodimission-partners.page'],['/ekodimission/stories','/ekodimission-stories.page'],['/ekodimission/give','/ekodimission-give.page'],['/ekodimission/transparency','/ekodimission-transparency.page'],['/ekodimission/contact','/ekodimission-contact.page']]);
 const EKODIMISSION_ASSETS=new Map([['/ekodimission/assets/site.css','/ekodimission.css'],['/ekodimission/assets/site.js','/ekodimission.js'],['/ekodimission/assets/shell.css','/ekodimission-shell.css'],['/ekodimission/assets/shell.js','/ekodimission-shell.js'],['/ekodimission/assets/mission-table-hero.svg','/mission-table-hero.svg'],['/ekodimission/assets/open-table-hero-260926.svg','/open-table-hero-260926.svg'],['/ekodimission/assets/open-table-meal-260925.jpg','/open-table-meal-260925.jpg'],['/ekodimission/assets/share.css','/ekodimission-share.css'],['/ekodimission/assets/collab.css','/ekodimission-collab.css'],['/ekodimission/assets/collab.js','/ekodimission-collab.js']]);
 function normalizedMissionPath(pathname){const clean=String(pathname||'').replace(/\/+$/,'');return clean||'/'}
@@ -134,6 +136,48 @@ async function routeMissionActivityArchive(request,env,activityKey){
   return brandSiteResponse(response);
 }
 
+async function routeMissionAdminMe(request,env){
+  if(request.method!=='GET')return json(env,{ok:false,error:'method_not_allowed',message:'GET 요청만 허용됩니다.'},405);
+  if(env.DATA_ENABLED!=='true'||!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return json(env,{ok:false,error:'activity_gateway_unavailable',message:'행사 관리 데이터 연결을 확인해 주세요.'},503);
+  const authorization=String(request.headers.get('authorization')||'');
+  if(!authorization.toLowerCase().startsWith('bearer '))return json(env,{ok:false,authenticated:false,error:'authentication_required'},401);
+  try{
+    const upstream=await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/current_site_activity_contexts`,{
+      method:'POST',
+      headers:{apikey:env.SUPABASE_PUBLISHABLE_KEY,authorization,'content-type':'application/json','cache-control':'no-store'},
+      body:'{}'
+    });
+    const raw=await upstream.json().catch(()=>[]);
+    if(!upstream.ok){
+      const response=json(env,{ok:false,authenticated:false,error:'authentication_required'},upstream.status===401?401:403);
+      response.headers.set('x-ekodi-activity-admin-auth','mission-public-admin-v1');
+      return response;
+    }
+    const contexts=Array.isArray(raw)?raw:[];
+    const context=contexts.find(item=>String(item?.tenant||'').trim().toLowerCase()==='ekodimission')||null;
+    const role=String(context?.authorization_role||'').trim().toLowerCase();
+    if(!context||!['tenant_admin','store_owner'].includes(role)){
+      const response=json(env,{ok:false,authenticated:true,error:'ACTIVITY_ADMIN_FORBIDDEN'},403);
+      response.headers.set('x-ekodi-activity-admin-auth','mission-public-admin-v1');
+      return response;
+    }
+    const response=json(env,{
+      ok:true,
+      authenticated:true,
+      workspace:'ekodimission',
+      authorizationRole:role,
+      activityRole:String(context?.activity_role||'').trim().toLowerCase(),
+      permissions:{activities:true,payments:true,messages:true,media:true}
+    });
+    response.headers.set('x-ekodi-activity-admin-auth','mission-public-admin-v1');
+    return response;
+  }catch{
+    const response=json(env,{ok:false,error:'activity_gateway_upstream_unavailable'},503);
+    response.headers.set('x-ekodi-activity-admin-auth','mission-public-admin-v1');
+    return response;
+  }
+}
+
 async function routeMissionAdminActivityRpc(request,env){
   if(request.method!=='POST')return json(env,{error:'method_not_allowed',message:'POST 요청만 허용됩니다.'},405);
   if(env.DATA_ENABLED!=='true'||!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return json(env,{error:'activity_gateway_unavailable',message:'행사 관리 데이터 연결을 확인해 주세요.'},503);
@@ -156,7 +200,7 @@ async function routeMissionAdminActivityRpc(request,env){
   }
 }
 async function routeEkodiMission(request,env){
-  const url=new URL(request.url);const pathname=normalizedMissionPath(url.pathname);if(pathname===MISSION_ADMIN_ACTIVITY_RPC_API)return routeMissionAdminActivityRpc(request,env);if(pathname===MISSION_TRIP_CONTENT_API)return routeMissionTripContent(request,env);if(pathname===MISSION_COLLAB_API)return routeMissionCollabApi(request,env);if(pathname===MISSION_TRIP_COLLAB_PATH)return routeMissionCollabPage(request,env);const registrationMatch=pathname.match(MISSION_ACTIVITY_REGISTRATION_RE);if(registrationMatch)return routeMissionActivityRegistration(request,env,registrationMatch[1]);const archiveMatch=pathname.match(MISSION_ACTIVITY_ARCHIVE_RE);if(archiveMatch)return routeMissionActivityArchive(request,env,archiveMatch[1]);const shareMatch=pathname.match(MISSION_SHARE_PATH_RE);
+  const url=new URL(request.url);const pathname=normalizedMissionPath(url.pathname);if(pathname===MISSION_ADMIN_ME_API)return routeMissionAdminMe(request,env);if(pathname===MISSION_ADMIN_ACTIVITY_RPC_API)return routeMissionAdminActivityRpc(request,env);if(pathname===MISSION_TRIP_CONTENT_API)return routeMissionTripContent(request,env);if(pathname===MISSION_COLLAB_API)return routeMissionCollabApi(request,env);if(pathname===MISSION_TRIP_COLLAB_PATH)return routeMissionCollabPage(request,env);const registrationMatch=pathname.match(MISSION_ACTIVITY_REGISTRATION_RE);if(registrationMatch)return routeMissionActivityRegistration(request,env,registrationMatch[1]);const archiveMatch=pathname.match(MISSION_ACTIVITY_ARCHIVE_RE);if(archiveMatch)return routeMissionActivityArchive(request,env,archiveMatch[1]);const shareMatch=pathname.match(MISSION_SHARE_PATH_RE);
   if(shareMatch)return routeMissionShare(request,env,shareMatch[1]);
   if(MISSION_EVENT_LEGACY_PATHS.has(pathname)){const target=new URL(MISSION_EVENT_PATH+url.search,'https://ekodi.kr');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-route':'ekodimission-event-canonical','x-ekodi-publication-status':'published'}});}
   if(pathname==='/ekodimission/live'){
@@ -168,7 +212,11 @@ async function routeEkodiMission(request,env){
   const target=new URL(request.url);target.pathname=assetPath;target.search='';const asset=await env.ASSETS.fetch(new Request(target.toString(),request));
   const isPage=EKODIMISSION_PAGES.has(pathname);let served=asset;
   if(isPage){const headers=new Headers(asset.headers);headers.set('content-type','text/html; charset=utf-8');headers.delete('content-length');const html=publishMissionHtml(await asset.text());served=new Response(request.method==='HEAD'?null:html,{status:asset.status,statusText:asset.statusText,headers});}
-  return brandSiteResponse(withHeaders(env,served,EKODIMISSION_ASSETS.has(pathname)?'ekodimission-asset':EKODIMISSION_PUBLIC_ROUTE));
+  const branded=brandSiteResponse(withHeaders(env,served,EKODIMISSION_ASSETS.has(pathname)?'ekodimission-asset':EKODIMISSION_PUBLIC_ROUTE));
+  if(isPage&&MISSION_PUBLIC_ADMIN_PATHS.has(pathname)&&typeof HTMLRewriter==='function'){
+    return injectEkodiShell(branded,'mission','public',{existingHeader:true,memberGate:'service-owned'});
+  }
+  return branded;
 }
 
 const DEFAULT_PAGE_PROFILE=Object.freeze({
