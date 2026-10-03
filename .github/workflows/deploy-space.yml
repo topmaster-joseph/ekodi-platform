@@ -22,6 +22,7 @@ on:
       - 'supabase/migrations/20260906005000_store_user_site_provisioning.sql'
       - 'supabase/migrations/20260909003000_storefront_public_snapshot.sql'
       - 'supabase/migrations/20260906006000_store_admin_routing.sql'
+      - 'supabase/migrations/20260914095000_organization_subsite_operations.sql'
       - 'supabase/migrations/20260909001000_public_storefront.sql'
       - 'supabase/migrations/20260913013000_ekodimall_canonical_path.sql'
       - 'supabase/tests/store_operating_spaces.test.sql'
@@ -56,6 +57,7 @@ on:
       - 'supabase/migrations/20260906005000_store_user_site_provisioning.sql'
       - 'supabase/migrations/20260909003000_storefront_public_snapshot.sql'
       - 'supabase/migrations/20260906006000_store_admin_routing.sql'
+      - 'supabase/migrations/20260914095000_organization_subsite_operations.sql'
       - 'supabase/migrations/20260909001000_public_storefront.sql'
       - 'supabase/migrations/20260913013000_ekodimall_canonical_path.sql'
       - 'supabase/tests/store_operating_spaces.test.sql'
@@ -80,6 +82,9 @@ concurrency:
 
 env:
   WRANGLER_VERSION: '4.119.0'
+  SUPABASE_PROJECT_REF: renzehysxirjilvdxacv
+  STORE_ROUTE_MIGRATION: supabase/migrations/20260906006000_store_admin_routing.sql
+  ORGANIZATION_MIGRATION: supabase/migrations/20260914095000_organization_subsite_operations.sql
 
 jobs:
   validate:
@@ -182,6 +187,10 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -193,6 +202,98 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
+
+      - name: Select Supabase production deployment credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-}"
+          [ -n "$token" ] || token="${TOKEN_B:-}"
+          [ -n "$token" ] || token="${TOKEN_C:-}"
+          [ -n "$token" ] || token="${TOKEN_D:-}"
+          if [ -z "$token" ]; then
+            echo 'Space production release requires a Supabase Management API credential for schema preflight.'
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+
+      - name: Heal and verify Supabase Space schema contract
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          query_sql() {
+            local sql="$1" out="$2"
+            jq -n --arg query "$sql" '{query:$query,read_only:true}' > /tmp/space-schema-query.json
+            local code
+            code=$(curl -sS -o "$out" -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H 'Content-Type: application/json' \
+              --data-binary @/tmp/space-schema-query.json)
+            [ "$code" = '201' ] || { echo "Space Supabase schema query failed with HTTP $code"; cat "$out"; exit 1; }
+          }
+
+          apply_migration() {
+            local migration="$1"
+            echo "Applying missing Space schema dependency: $migration"
+            jq -Rs '{query:.,read_only:false}' "$migration" > /tmp/space-schema-migration.json
+            local code
+            code=$(curl -sS -o /tmp/space-schema-migration-result.json -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H 'Content-Type: application/json' \
+              --data-binary @/tmp/space-schema-migration.json)
+            [ "$code" = '201' ] || { echo "Space Supabase migration failed for $migration with HTTP $code"; cat /tmp/space-schema-migration-result.json; exit 1; }
+          }
+
+          proof_sql="select
+            to_regprocedure('public.store_admin_route_profile(text)') is not null as store_route,
+            to_regprocedure('public.organization_public_snapshot(text)') is not null as organization_public,
+            to_regprocedure('public.store_public_storefront(text)') is not null as storefront_public,
+            to_regprocedure('public.store_user_site_public_profile(text)') is not null as user_site_profile,
+            to_regprocedure('public.store_user_site_public_snapshot(text)') is not null as user_site_snapshot;"
+
+          query_sql "$proof_sql" /tmp/space-schema-before.json
+
+          if ! grep -Fq '"store_route":true' /tmp/space-schema-before.json; then
+            apply_migration "$STORE_ROUTE_MIGRATION"
+          fi
+          if ! grep -Fq '"organization_public":true' /tmp/space-schema-before.json; then
+            apply_migration "$ORGANIZATION_MIGRATION"
+          fi
+
+          query_sql "$proof_sql" /tmp/space-schema-after.json
+          for marker in '"store_route":true' '"organization_public":true' '"storefront_public":true' '"user_site_profile":true' '"user_site_snapshot":true'; do
+            grep -Fq "$marker" /tmp/space-schema-after.json || { echo "Missing required Space Supabase contract: $marker"; cat /tmp/space-schema-after.json; exit 1; }
+          done
+
+          echo 'Space Supabase production schema contract verified before Worker release.'
+
+      - name: Verify anonymous public projection RPCs
+        shell: bash
+        env:
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
+        run: |
+          set -euo pipefail
+          base="https://$SUPABASE_PROJECT_REF.supabase.co/rest/v1/rpc"
+          code=$(curl -sS -o /tmp/store-route-proof.json -w '%{http_code}' \
+            -X POST "$base/store_admin_route_profile" \
+            -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
+            -H 'Content-Type: application/json' \
+            --data '{"p_operating_slug":"jadam"}')
+          [ "$code" = '200' ]
+          grep -Fq '"slug"' /tmp/store-route-proof.json
+
+          code=$(curl -sS -o /tmp/organization-proof.json -w '%{http_code}' \
+            -X POST "$base/organization_public_snapshot" \
+            -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
+            -H 'Content-Type: application/json' \
+            --data '{"p_slug":"hammu"}')
+          [ "$code" = '200' ]
+          grep -Fq '"publicationState"' /tmp/organization-proof.json
+          echo 'Space public projection RPCs verified live.'
       - name: Bootstrap or guarded release
         shell: bash
         run: |

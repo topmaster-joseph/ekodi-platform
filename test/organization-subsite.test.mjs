@@ -50,3 +50,18 @@ test('succession rules are configurable and do not fabricate officer identities'
   assert.match(sql,/officers remain empty until verified/);
   assert.doesNotMatch(sql,/윤재희|문대용/);
 });
+
+
+test('Space production release heals and verifies required Supabase RPC schema before Worker promotion', () => {
+  const workflow = fs.readFileSync(new URL('../.github/workflows/deploy-space.yml', import.meta.url), 'utf8');
+  assert.match(workflow,/SUPABASE_PROJECT_REF: renzehysxirjilvdxacv/);
+  assert.match(workflow,/20260906006000_store_admin_routing\.sql/);
+  assert.match(workflow,/20260914095000_organization_subsite_operations\.sql/);
+  assert.match(workflow,/Select Supabase production deployment credential/);
+  assert.match(workflow,/Heal and verify Supabase Space schema contract/);
+  assert.match(workflow,/store_admin_route_profile\(text\)/);
+  assert.match(workflow,/organization_public_snapshot\(text\)/);
+  assert.match(workflow,/store_user_site_public_snapshot\(text\)/);
+  assert.match(workflow,/api\.supabase\.com\/v1\/projects\/\$SUPABASE_PROJECT_REF\/database\/query/);
+  assert.match(workflow,/Verify anonymous public projection RPCs/);
+});
