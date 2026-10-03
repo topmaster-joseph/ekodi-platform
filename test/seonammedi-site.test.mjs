@@ -574,20 +574,29 @@ test('seonammedi notice permalink is served by the site shell',async()=>{
 
 
 
-test('seonammedi public site exposes authenticated section-level admin quick edit without exposing controls to visitors',async()=>{
-  const [app,css,adminHtml,adminJs,control]=await Promise.all([
+test('seonammedi public site uses shared authenticated inline admin without exposing local duplicate controls',async()=>{
+  const [app,css,adminHtml,adminJs,control,shared]=await Promise.all([
     readFile(new URL('app.js',root),'utf8'),
     readFile(new URL('app.css',root),'utf8'),
     readFile(new URL('admin/index.html',root),'utf8'),
     readFile(new URL('admin/admin.js',root),'utf8'),
-    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8')
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+    readFile(new URL('../shell/public-surface-admin.js',import.meta.url),'utf8')
   ]);
   assert.match(app,/initPublicAdminControls/);
-  assert.match(app,/\/api\/seonammedi\/admin\/me/);
+  assert.match(app,/window\.EKODIPublicSurfaceAdmin/);
+  assert.match(app,/serviceId:'seonammedi'/);
+  assert.match(app,/adminPath:'\/seonammedi\/admin\/'/);
+  assert.match(app,/authEndpoint:'\/api\/seonammedi\/admin\/me'/);
+  assert.match(app,/await admin\.authorize\(\)/);
+  assert.match(app,/admin\.attach/);
   for(const label of ['공지 바로 수정','조직 바로 수정','활동이력 공개여부','소통채널 바로 수정','시민의견 수정·삭제'])assert.match(app,new RegExp(label));
-  assert.match(app,/public-admin-drawer/);
-  assert.match(app,/panel',panel/);
-  assert.match(css,/\.public-admin-drawer/);
+  assert.doesNotMatch(app,/function publicAdminRequest|function ensurePublicAdminDrawer|function openPublicAdmin|function attachPublicAdminButton/);
+  assert.doesNotMatch(app,/className='public-admin-drawer'|className='public-admin-inline'/);
+  assert.doesNotMatch(css,/\.public-admin-drawer|\.public-admin-inline/);
+  assert.match(css,/\.ekodi-public-admin-inline/);
+  assert.match(shared,/window\.EKODIPublicSurfaceAdmin/);
+  assert.match(shared,/permissions\[key\]===true/);
   assert.match(adminHtml,/id="voiceEditForm"/);
   assert.match(adminJs,/function editVoice\(item\)/);
   assert.match(adminJs,/button\('수정',\(\)=>editVoice\(item\)\)/);
