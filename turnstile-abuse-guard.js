@@ -1,7 +1,6 @@
 const SITEVERIFY_URL='https://challenges.cloudflare.com/turnstile/v0/siteverify';
 const DEFAULT_ALLOWED_HOSTNAMES=Object.freeze([
   'ekodi.kr',
-  'www.ekodi.kr',
   'seonammedi.kr',
   'www.seonammedi.kr',
   'xn--3e0b8b58jw4co4mnpll3k.kr',
