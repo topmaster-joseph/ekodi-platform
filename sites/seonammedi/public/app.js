@@ -58,7 +58,7 @@ const renderStatusDetail=(key,d)=>{
     const run=latestMonitorData&&latestMonitorData.lastRun;
     const rows=((latestMonitorData&&latestMonitorData.items)||[]).slice(0,6);
     const summary=run?('최근 점검 '+(run.status==='ok'?'정상':run.status==='partial'?'일부 확인':'확인 필요')+' · 출처 '+Number(run.sources_checked||0)+'개 · 신규 '+Number(run.new_items||0)+'건 · 사진·영상 근거 후보 '+Number((latestMonitorData&&latestMonitorData.mediaCandidateCount)||0)+'건'):'자동점검 상태를 불러오는 중입니다.';
-    label='DAILY CHECK';title='일일 점검';description='EKODI가 공개 자료를 확인해 새 항목과 근거자료 후보를 수집하고, 원문 확인이 필요한 상태를 구분해 표시합니다.';
+    label='HOURLY CHECK';title='최근 업데이트';description='EKODI가 매시간 공개 자료를 확인해 새 항목과 근거자료 후보를 수집하고, 원문 확인이 필요한 상태를 구분해 표시합니다.';
     body='<div class="monitor-summary status-monitor-summary">'+escapeHtml(summary)+'</div><div class="status-detail-list">'+statusSourceRows(rows.map(item=>({title:item.title||'수집 자료',url:item.resolved_url||item.url,publisher:item.publisher||'출처 확인 중',date:kstDate(item.published_at||item.media_published_at||item.first_seen_at),kind:'자동수집 · 원문 확인 필요'})),'최근 수집된 새 자료가 없습니다.')+'</div>';target='#status';targetLabel='일일점검 전체 보기';
   }else{
     const item=(d.status||[]).find(x=>x.key===key);title=item?.title||'현재 진행상황';description=item?.text||'';
@@ -199,6 +199,27 @@ el('raised').textContent=money(d.finance.raised);el('spent').textContent=money(d
 const financeHost=el('financeList');if(financeHost){const rows=Array.isArray(d.finance.entries)?d.finance.entries:[];financeHost.innerHTML=rows.length?rows.map(item=>'<article class="material-item"><div class="material-date">'+escapeHtml(item.date||'')+'</div><div><h3>'+escapeHtml((item.type==='income'?'수입 ':'지출 ')+money(Number(item.amount||0)))+'</h3><p>'+escapeHtml(item.purpose||'')+'</p><div class="public-post-meta">'+(item.event?'<span class="source-type">'+escapeHtml(item.event)+'</span>':'')+'<span class="source-type">'+escapeHtml(item.evidenceStatus==='verified'?'증빙 확인완료':item.evidenceStatus==='held'?'증빙 보유':'증빙 미등록')+'</span></div>'+(item.note?'<p>'+escapeHtml(item.note)+'</p>':'')+'</div></article>').join(''):'<p class="muted">공개된 회계내역이 없습니다.</p>'}}
 
 const siteReady=load().catch(()=>{el('lastUpdated').textContent='데이터를 불러오지 못했습니다.'});
+function monitorHomeRows(items=[]){
+  const seen=new Set();
+  return items.filter(item=>item&&item.source_type!=='blog'&&safeUrl(item.resolved_url||item.url)!=='#').filter(item=>{
+    const key=String(item.resolved_url||item.url||item.title||'').trim().toLowerCase();
+    if(!key||seen.has(key))return false;seen.add(key);return true;
+  }).sort((a,b)=>String(b.published_at||b.first_seen_at||'').localeCompare(String(a.published_at||a.first_seen_at||''))).slice(0,4);
+}
+function renderHomeMonitorUpdates(data){
+  const section=el('homeLatestUpdates'),list=el('homeLatestList'),updated=el('homeLatestUpdatedAt');
+  if(!section||!list)return;
+  const rows=monitorHomeRows(data?.items||[]);
+  section.hidden=!rows.length;
+  if(!rows.length){list.innerHTML='';return}
+  const runAt=data?.lastRun?.completed_at||'';
+  if(updated)updated.textContent=runAt?'자동 갱신 '+new Date(runAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'1시간마다 자동 갱신';
+  list.innerHTML=rows.map(item=>{
+    const when=kstDate(item.published_at||item.first_seen_at||'');
+    const state=item.review_state==='verified'?'검증 완료':'자동수집 · 원문 확인';
+    return `<a class="home-latest-card" href="${safeUrl(item.resolved_url||item.url)}" target="_blank" rel="noopener noreferrer"><span class="home-latest-meta">${escapeHtml(when||'최근')} · ${escapeHtml(item.query_label||'관련자료')}</span><strong>${escapeHtml(item.title||'수집 자료')}</strong><small>${escapeHtml(item.publisher||'출처 확인 중')} · ${escapeHtml(state)}</small></a>`;
+  }).join('');
+}
 async function loadMonitor(){
   const badge=el('monitorBadge'),summary=el('monitorSummary'),list=el('monitorList');
   try{
@@ -207,20 +228,26 @@ async function loadMonitor(){
     latestMonitorData=data;
     if(!response.ok||!data.ok)throw new Error(data.message||'점검 상태를 불러오지 못했습니다.');
     const run=data.lastRun;
-    badge.textContent=run?.completed_at?'사이트 자동점검: '+new Date(run.completed_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'사이트 자동점검: 첫 실행 대기';
-    summary.textContent=run?('최근 점검 '+(run.status==='ok'?'정상':run.status==='partial'?'일부 확인':'확인 필요')+' · 출처 '+run.sources_checked+'개 · 신규 '+run.new_items+'건 · 사진·영상 근거 후보 '+Number(data.mediaCandidateCount||0)+'건'):'첫 자동점검은 매일 08:00에 실행됩니다.';
+    const runText=run?.completed_at?new Date(run.completed_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'첫 실행 대기';
+    if(badge)badge.textContent='사이트 자동점검: '+runText;
+    if(summary)summary.textContent=run?('최근 점검 '+(run.status==='ok'?'정상':run.status==='partial'?'일부 확인':'확인 필요')+' · 출처 '+run.sources_checked+'개 · 신규 '+run.new_items+'건 · 사진·영상 근거 후보 '+Number(data.mediaCandidateCount||0)+'건'):'자동점검은 매시간 실행됩니다.';
     const rows=(data.items||[]).slice(0,18);window.__SEONAM_MONITOR_ITEMS=data.items||[];attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS);
-    list.innerHTML=rows.length?rows.map(item=>`<article class="source"><a href="${safeUrl(item.resolved_url||item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title||'')}</a>${item.summary_text?'<p>'+escapeHtml(item.summary_text)+'</p>':''}<small>${escapeHtml(item.publisher||'출처 확인 중')} · 자동수집 ${item.source_type==='blog'?'블로그':'보도'}${item.media_type?' · '+(item.media_type==='video'?'영상 근거 후보':'사진 근거 후보'):''} · ${item.source_type==='blog'?'개인·온라인 게시물 / 공식자료 교차확인 필요':'원문 확인 필요'}</small></article>`).join(''):'<p class="muted">최근 7일 내 새로 수집된 공개 자료가 없습니다.</p>';
+    if(list)list.innerHTML=rows.length?rows.map(item=>`<article class="source"><a href="${safeUrl(item.resolved_url||item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title||'')}</a>${item.summary_text?'<p>'+escapeHtml(item.summary_text)+'</p>':''}<small>${escapeHtml(item.publisher||'출처 확인 중')} · 자동수집 ${item.source_type==='blog'?'블로그':'보도'}${item.media_type?' · '+(item.media_type==='video'?'영상 근거 후보':'사진 근거 후보'):''} · ${item.source_type==='blog'?'개인·온라인 게시물 / 공식자료 교차확인 필요':'원문 확인 필요'}</small></article>`).join(''):'<p class="muted">최근 7일 내 새로 수집된 공개 자료가 없습니다.</p>';
+    renderHomeMonitorUpdates(data);
+    if(run?.completed_at){const latest=el('lastUpdated');if(latest)latest.textContent='최근 업데이트 '+runText+' · EKODI 자동갱신'}
     refreshStatusDetail();
   }catch(error){
     latestMonitorData=null;
-    badge.textContent='사이트 자동점검: 준비 중';
-    summary.textContent=error.message||'점검 상태를 불러오지 못했습니다.';
-    list.innerHTML='';
+    if(badge)badge.textContent='사이트 자동점검: 준비 중';
+    if(summary)summary.textContent=error.message||'점검 상태를 불러오지 못했습니다.';
+    if(list)list.innerHTML='';
     refreshStatusDetail();
   }
 }
-// 사이트 자동점검 상태는 관리자 페이지에서만 표시합니다.
+siteReady.finally(()=>loadMonitor());
+setInterval(()=>{if(document.visibilityState==='visible')loadMonitor()},15*60*1000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')loadMonitor()});
+// 수집은 EKODI가 매시간 수행하고, 공개 홈페이지는 최신 결과를 자동 반영합니다.
 
 
 const voiceCategoryLabels={question:'질문',proposal:'정책제안',experience:'의료경험',factcheck:'사실확인 요청',tip:'자료제보',other:'기타'};
