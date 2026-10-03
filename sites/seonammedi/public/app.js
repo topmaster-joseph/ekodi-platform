@@ -250,6 +250,51 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 // 수집은 EKODI가 매시간 수행하고, 공개 홈페이지는 최신 결과를 자동 반영합니다.
 
 
+const TURNSTILE_CONFIG_PATH='/api/security/turnstile/config';
+let turnstileConfigPromise=null,turnstileScriptPromise=null;
+async function loadTurnstileConfig(){
+  if(!turnstileConfigPromise)turnstileConfigPromise=fetch(TURNSTILE_CONFIG_PATH,{cache:'no-store'}).then(async response=>response.ok?response.json():{enabled:false}).catch(()=>({enabled:false}));
+  return turnstileConfigPromise;
+}
+function loadTurnstileScript(){
+  if(window.turnstile)return Promise.resolve(window.turnstile);
+  if(turnstileScriptPromise)return turnstileScriptPromise;
+  turnstileScriptPromise=new Promise((resolve,reject)=>{
+    const script=document.createElement('script');
+    script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    script.defer=true;
+    script.onload=()=>window.turnstile?resolve(window.turnstile):reject(new Error('보안 확인 모듈을 불러오지 못했습니다.'));
+    script.onerror=()=>reject(new Error('보안 확인 모듈을 불러오지 못했습니다.'));
+    document.head.append(script);
+  });
+  return turnstileScriptPromise;
+}
+async function publicWriteSecurityHeaders(form){
+  const config=await loadTurnstileConfig();
+  if(!config?.enabled)return {};
+  const api=await loadTurnstileScript();
+  return new Promise((resolve,reject)=>{
+    const container=document.createElement('div');
+    container.className='ekodi-turnstile-guard';
+    const actions=form?.querySelector('.form-actions');
+    if(actions)actions.before(container);else form?.append(container);
+    let widgetId=null,settled=false;
+    const cleanup=()=>{try{if(widgetId!==null)api.remove(widgetId)}catch{}container.remove()};
+    const finish=(fn,value)=>{if(settled)return;settled=true;cleanup();fn(value)};
+    widgetId=api.render(container,{
+      sitekey:config.sitekey,
+      appearance:config.appearance||'interaction-only',
+      execution:config.execution||'execute',
+      action:config.action||'public_write',
+      callback:token=>finish(resolve,{'x-ekodi-turnstile-token':token}),
+      'error-callback':()=>finish(reject,new Error('보안 확인에 실패했습니다. 다시 시도해 주세요.')),
+      'expired-callback':()=>finish(reject,new Error('보안 확인 시간이 만료되었습니다. 다시 시도해 주세요.')),
+      'timeout-callback':()=>finish(reject,new Error('보안 확인 시간이 초과되었습니다. 다시 시도해 주세요.')),
+    });
+    api.execute(widgetId);
+  });
+}
+
 const voiceCategoryLabels={question:'질문',proposal:'정책제안',experience:'의료경험',factcheck:'사실확인 요청',tip:'자료제보',other:'기타'};
 const publicVoiceList=el('publicVoiceList');
 const publicVoiceDate=value=>{try{return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'medium',timeStyle:'short'}).format(new Date(value))}catch{return''}};
@@ -283,7 +328,10 @@ publicVoiceList?.addEventListener('submit',async event=>{
   if(!String(payload.message||'').trim()){if(status)status.textContent='답글 내용을 입력해 주세요.';return}
   if(button)button.disabled=true;if(status)status.textContent='등록 중…';
   try{
-    const response=await fetch('/api/seonammedi/voices/'+voiceId+'/replies',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+    if(status)status.textContent='보안 확인 중…';
+    const securityHeaders=await publicWriteSecurityHeaders(form);
+    if(status)status.textContent='등록 중…';
+    const response=await fetch('/api/seonammedi/voices/'+voiceId+'/replies',{method:'POST',headers:{'content-type':'application/json',...securityHeaders},body:JSON.stringify(payload)});
     const body=await response.json().catch(()=>({}));
     if(!response.ok||body.ok!==true)throw new Error(body.message||body.error||'답글을 등록하지 못했습니다.');
     form.reset();if(status)status.textContent='답글이 등록되었습니다.';await loadPublicVoices();
@@ -306,7 +354,10 @@ if(voiceForm){
     if(submitButton)submitButton.disabled=true;
     status.textContent='등록 중…';
     try{
-      const response=await fetch('/api/seonammedi/voices',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+      status.textContent='보안 확인 중…';
+      const securityHeaders=await publicWriteSecurityHeaders(voiceForm);
+      status.textContent='등록 중…';
+      const response=await fetch('/api/seonammedi/voices',{method:'POST',headers:{'content-type':'application/json',...securityHeaders},body:JSON.stringify(payload)});
       const body=await response.json().catch(()=>({}));
       if(!response.ok||body.ok!==true||!body.submissionId){const detail=body.message||body.error||body.code||('HTTP '+response.status);throw new Error('등록하지 못했습니다. '+detail)}
       voiceForm.reset();
