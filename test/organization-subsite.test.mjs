@@ -58,10 +58,15 @@ test('Space production release heals and verifies required Supabase RPC schema b
   assert.match(workflow,/20260906006000_store_admin_routing\.sql/);
   assert.match(workflow,/20260914095000_organization_subsite_operations\.sql/);
   assert.match(workflow,/Select Supabase production deployment credential/);
+  assert.match(workflow,/environment: production/);
+  assert.match(workflow,/SUPABASE_DEPLOY_MODE=live-proof/);
   assert.match(workflow,/Heal and verify Supabase Space schema contract/);
   assert.match(workflow,/store_admin_route_profile\(text\)/);
   assert.match(workflow,/organization_public_snapshot\(text\)/);
   assert.match(workflow,/store_user_site_public_snapshot\(text\)/);
   assert.match(workflow,/api\.supabase\.com\/v1\/projects\/\$SUPABASE_PROJECT_REF\/database\/query/);
   assert.match(workflow,/Verify anonymous public projection RPCs/);
+  assert.match(workflow,/store_public_storefront/);
+  assert.match(workflow,/store_user_site_public_profile/);
+  assert.match(workflow,/store_user_site_public_snapshot/);
 });

@@ -184,6 +184,7 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 18
+    environment: production
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -211,17 +212,24 @@ jobs:
           [ -n "$token" ] || token="${TOKEN_B:-}"
           [ -n "$token" ] || token="${TOKEN_C:-}"
           [ -n "$token" ] || token="${TOKEN_D:-}"
-          if [ -z "$token" ]; then
-            echo 'Space production release requires a Supabase Management API credential for schema preflight.'
-            exit 1
+          if [ -n "$token" ]; then
+            echo "::add-mask::$token"
+            echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+            echo "SUPABASE_DEPLOY_MODE=management" >> "$GITHUB_ENV"
+            echo 'Supabase Management API credential available; missing schema can be healed.'
+          else
+            echo "SUPABASE_DEPLOY_MODE=live-proof" >> "$GITHUB_ENV"
+            echo 'No Supabase Management API credential; enforcing fail-closed live RPC proof without schema mutation.'
           fi
-          echo "::add-mask::$token"
-          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
 
       - name: Heal and verify Supabase Space schema contract
         shell: bash
         run: |
           set -euo pipefail
+          if [ "$SUPABASE_DEPLOY_MODE" != "management" ]; then
+            echo 'Management credential unavailable; schema mutation skipped. Live public RPC proof will gate the release.'
+            exit 0
+          fi
 
           query_sql() {
             local sql="$1" out="$2"
@@ -278,21 +286,28 @@ jobs:
         run: |
           set -euo pipefail
           base="https://$SUPABASE_PROJECT_REF.supabase.co/rest/v1/rpc"
-          code=$(curl -sS -o /tmp/store-route-proof.json -w '%{http_code}' \
-            -X POST "$base/store_admin_route_profile" \
-            -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
-            -H 'Content-Type: application/json' \
-            --data '{"p_operating_slug":"jadam"}')
-          [ "$code" = '200' ]
-          grep -Fq '"slug"' /tmp/store-route-proof.json
 
-          code=$(curl -sS -o /tmp/organization-proof.json -w '%{http_code}' \
-            -X POST "$base/organization_public_snapshot" \
-            -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
-            -H 'Content-Type: application/json' \
-            --data '{"p_slug":"hammu"}')
-          [ "$code" = '200' ]
-          grep -Fq '"publicationState"' /tmp/organization-proof.json
+          rpc() {
+            local name="$1" body="$2" marker="$3"
+            local out="/tmp/space-rpc-${name}.json"
+            local code
+            code=$(curl -sS -o "$out" -w '%{http_code}' \
+              -X POST "$base/$name" \
+              -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
+              -H 'Content-Type: application/json' \
+              --data "$body")
+            if [ "$code" != '200' ] || ! grep -Fq "$marker" "$out"; then
+              echo "Required Space public RPC failed: $name (HTTP $code)"
+              cat "$out"
+              exit 1
+            fi
+          }
+
+          rpc store_admin_route_profile '{"p_operating_slug":"jadam"}' '"slug"'
+          rpc organization_public_snapshot '{"p_slug":"hammu"}' '"publicationState"'
+          rpc store_public_storefront '{"p_slug":"jadam"}' '"slug"'
+          rpc store_user_site_public_profile '{"p_slug":"jadam"}' '"canonical_slug"'
+          rpc store_user_site_public_snapshot '{"p_slug":"jadam"}' '"store"'
           echo 'Space public projection RPCs verified live.'
       - name: Bootstrap or guarded release
         shell: bash
