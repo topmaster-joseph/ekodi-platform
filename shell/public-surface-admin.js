@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION=1;
+const VERSION=2;
 const ROOT_MARKER='data-ekodi-public-admin';
 const ACTIVE_CLASS='ekodi-public-admin-active';
 const DRAWER_OPEN_CLASS='ekodi-public-admin-drawer-open';
@@ -65,20 +65,26 @@ function create(options={}){
     return drawer;
   }
 
-  function open(panel,label,params={}){
+  function open(panel,label,params={},presentation='drawer'){
     const panelId=clean(panel);
     if(!panelId)return null;
-    const host=ensureDrawer();
-    const frame=host.querySelector('[data-ekodi-public-admin-frame]');
-    const title=host.querySelector('[data-ekodi-public-admin-title]');
     const url=sameOriginUrl(adminBase.href);
     url.searchParams.set('panel',panelId);
     for(const [key,value] of Object.entries(safeParams(typeof params==='function'?params():params)))url.searchParams.set(key,value);
+    const mode=clean(presentation).toLowerCase()==='window'?'window':'drawer';
+    if(mode==='window'){
+      const popup=window.open(url.pathname+url.search+url.hash,'_blank','noopener,noreferrer');
+      emit('ekodi:public-admin-open',{serviceId,panel:panelId,presentation:mode});
+      return popup;
+    }
+    const host=ensureDrawer();
+    const frame=host.querySelector('[data-ekodi-public-admin-frame]');
+    const title=host.querySelector('[data-ekodi-public-admin-title]');
     if(title)title.textContent=clean(label)||'관리자 편집';
     if(frame)frame.src=url.pathname+url.search+url.hash;
     host.hidden=false;
     document.body?.classList.add(DRAWER_OPEN_CLASS);
-    emit('ekodi:public-admin-open',{serviceId,panel:panelId});
+    emit('ekodi:public-admin-open',{serviceId,panel:panelId,presentation:mode});
     return host;
   }
 
@@ -96,7 +102,8 @@ function create(options={}){
     button.dataset.ekodiPublicAdminPermission=permission;
     button.textContent=clean(descriptor.label)||'관리';
     button.setAttribute('aria-label',clean(descriptor.ariaLabel)||button.textContent);
-    button.addEventListener('click',()=>open(panel,descriptor.label,descriptor.params||{}));
+    button.dataset.ekodiPublicAdminPresentation=clean(descriptor.presentation)||'drawer';
+    button.addEventListener('click',()=>open(panel,descriptor.label,descriptor.params||{},descriptor.presentation||'drawer'));
     if(descriptor.prepend===true&&target.prepend)target.prepend(button);else target.append(button);
     return button;
   }
