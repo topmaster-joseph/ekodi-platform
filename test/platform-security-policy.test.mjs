@@ -31,6 +31,20 @@ test('public writes use a separate limiter',async()=>{
   assert.equal((await response.json()).code,'PLATFORM_PUBLIC_WRITE_RATE_LIMITED');
 });
 
+test('Turnstile enforcement is optional until provisioned and then fails closed without a token',async()=>{
+  const request=new Request('https://ekodi.kr/api/seonammedi/voices',{method:'POST',headers:{'cf-connecting-ip':'203.0.113.12'},body:'{}'});
+  const optional=await enforcePlatformRequestSecurity(request,{ENVIRONMENT:'production'});
+  assert.equal(optional,null);
+  const enforced=await enforcePlatformRequestSecurity(request,{
+    ENVIRONMENT:'production',
+    TURNSTILE_ENFORCEMENT:'enabled',
+    TURNSTILE_SITE_KEY:'site-key',
+    TURNSTILE_SECRET_KEY:'secret-key',
+  });
+  assert.equal(enforced.status,403);
+  assert.equal((await enforced.json()).code,'TURNSTILE_REQUIRED');
+});
+
 test('seonammedi civic intake falls back to its application safeguards when the paid edge limiter is unavailable',async()=>{
   const request=new Request('https://ekodi.kr/api/seonammedi/voices',{method:'POST',headers:{'cf-connecting-ip':'203.0.113.12'},body:'{}'});
   const response=await enforcePlatformRequestSecurity(request,{ENVIRONMENT:'production'});
