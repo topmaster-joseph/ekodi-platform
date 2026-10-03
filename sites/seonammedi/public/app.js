@@ -738,6 +738,7 @@ loadChannels();
 
 const PUBLIC_ADMIN_PLATFORM_TOKEN_KEY='ekodi-auth-token';
 let publicAdminMe=null;
+let publicAdminController=null;
 function publicAdminToken(){
   try{
     const platform=sessionStorage.getItem(PUBLIC_ADMIN_PLATFORM_TOKEN_KEY)||'';
@@ -745,49 +746,32 @@ function publicAdminToken(){
   }catch{}
   return typeof noticeToken==='function'?noticeToken():'';
 }
-async function publicAdminRequest(path,options={}){
-  const bearer=publicAdminToken();if(!bearer)throw Object.assign(new Error('admin_session_missing'),{status:401});
-  const headers=new Headers(options.headers||{});headers.set('authorization','Bearer '+bearer);
-  const response=await fetch(path,{...options,headers,cache:'no-store',credentials:'same-origin'});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw Object.assign(new Error(data.message||data.error||('HTTP '+response.status)),{status:response.status,data});
-  return data;
-}
-function ensurePublicAdminDrawer(){
-  let drawer=el('publicAdminDrawer');if(drawer)return drawer;
-  drawer=document.createElement('aside');drawer.id='publicAdminDrawer';drawer.className='public-admin-drawer';drawer.hidden=true;
-  drawer.innerHTML='<div class="public-admin-drawer-head"><div><small>ADMIN QUICK EDIT</small><strong id="publicAdminDrawerTitle">관리자 편집</strong></div><button type="button" id="publicAdminDrawerClose" aria-label="관리자 편집 닫기">닫기</button></div><iframe id="publicAdminDrawerFrame" title="관리자 빠른 편집" loading="eager"></iframe>';
-  document.body.append(drawer);
-  el('publicAdminDrawerClose')?.addEventListener('click',()=>{drawer.hidden=true;const frame=el('publicAdminDrawerFrame');if(frame)frame.src='about:blank';document.body.classList.remove('public-admin-drawer-open')});
-  return drawer;
-}
-function openPublicAdmin(panel,label,params={}){
-  const drawer=ensurePublicAdminDrawer(),frame=el('publicAdminDrawerFrame'),title=el('publicAdminDrawerTitle');
-  const url=new URL('/seonammedi/admin/',location.origin);url.searchParams.set('panel',panel);
-  for(const [key,value] of Object.entries(params))if(value)url.searchParams.set(key,value);
-  if(title)title.textContent=label||'관리자 편집';
-  if(frame)frame.src=url.pathname+url.search;
-  drawer.hidden=false;document.body.classList.add('public-admin-drawer-open');
-}
-function attachPublicAdminButton(target,{label,panel,permission,params}){
-  if(!target||!publicAdminMe?.permissions?.[permission]||target.querySelector('[data-public-admin-panel="'+panel+'"]'))return;
-  const button=document.createElement('button');button.type='button';button.className='public-admin-inline';button.dataset.publicAdminPanel=panel;button.textContent=label;
-  button.addEventListener('click',()=>openPublicAdmin(panel,label,typeof params==='function'?params():params||{}));
-  target.append(button);
+function sharedPublicAdmin(){
+  if(publicAdminController)return publicAdminController;
+  const shared=window.EKODIPublicSurfaceAdmin;
+  if(!shared?.create)return null;
+  publicAdminController=shared.create({
+    serviceId:'seonammedi',
+    adminPath:'/seonammedi/admin/',
+    authEndpoint:'/api/seonammedi/admin/me',
+    tokenProvider:publicAdminToken
+  });
+  return publicAdminController;
 }
 function renderPublicAdminControls(){
-  if(!publicAdminMe)return;
-  document.body.classList.add('public-admin-active');
-  attachPublicAdminButton(el('notices')?.querySelector('.section-head'),{label:'공지 바로 수정',panel:'notices',permission:'notices'});
-  attachPublicAdminButton(el('organization')?.querySelector('.section-head'),{label:'조직 바로 수정',panel:'organization',permission:'pages',params:()=>({org:document.querySelector('#organizationTabs [data-org-group].active')?.dataset.orgGroup||'bidae'})});
-  attachPublicAdminButton(el('timeline')?.querySelector('.section-head'),{label:'활동이력 공개여부',panel:'status',permission:'timeline'});
-  attachPublicAdminButton(el('channels')?.querySelector('.section-head'),{label:'소통채널 바로 수정',panel:'channels',permission:'channels'});
-  const voiceHead=el('voices')?.firstElementChild;attachPublicAdminButton(voiceHead,{label:'시민의견 수정·삭제',panel:'voices',permission:'voices'});
+  const admin=publicAdminController;
+  if(!admin||!publicAdminMe)return;
+  admin.attach(el('notices')?.querySelector('.section-head'),{label:'공지 바로 수정',panel:'notices',permission:'notices'});
+  admin.attach(el('organization')?.querySelector('.section-head'),{label:'조직 바로 수정',panel:'organization',permission:'pages',params:()=>({org:document.querySelector('#organizationTabs [data-org-group].active')?.dataset.orgGroup||'bidae'})});
+  admin.attach(el('timeline')?.querySelector('.section-head'),{label:'활동이력 공개여부',panel:'status',permission:'timeline'});
+  admin.attach(el('channels')?.querySelector('.section-head'),{label:'소통채널 바로 수정',panel:'channels',permission:'channels'});
+  const voiceHead=el('voices')?.firstElementChild;admin.attach(voiceHead,{label:'시민의견 수정·삭제',panel:'voices',permission:'voices'});
 }
 async function initPublicAdminControls(){
   if(!publicAdminToken())return;
+  const admin=sharedPublicAdmin();if(!admin)return;
   try{
-    const me=await publicAdminRequest('/api/seonammedi/admin/me');
+    const me=await admin.authorize();
     if(!me?.ok)return;
     publicAdminMe=me;renderPublicAdminControls();
   }catch{}
