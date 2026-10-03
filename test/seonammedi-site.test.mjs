@@ -590,7 +590,7 @@ test('seonammedi public site uses shared authenticated inline admin without expo
   assert.match(app,/authEndpoint:'\/api\/seonammedi\/admin\/me'/);
   assert.match(app,/await admin\.authorize\(\)/);
   assert.match(app,/admin\.attach/);
-  for(const label of ['공지 바로 수정','조직 바로 수정','활동이력 공개여부','소통채널 바로 수정','시민의견 수정·삭제'])assert.match(app,new RegExp(label));
+  for(const label of ['공지 바로 수정','조직 바로 수정','활동이력 관리','소통채널 바로 수정','시민의견 수정·삭제'])assert.match(app,new RegExp(label));
   assert.doesNotMatch(app,/function publicAdminRequest|function ensurePublicAdminDrawer|function openPublicAdmin|function attachPublicAdminButton/);
   assert.doesNotMatch(app,/className='public-admin-drawer'|className='public-admin-inline'/);
   assert.doesNotMatch(css,/\.public-admin-drawer|\.public-admin-inline/);
@@ -721,3 +721,5 @@ test('seonammedi citizen voices publish immediately, render publicly, accept rep
   assert.match(security,/SELF_PROTECTED_PUBLIC_WRITE_PATTERNS/);
   assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_civic_voice_replies/);
 });
+
+test('seonammedi mobile activity history uses compact filters, progressive detail, and inline admin control',async()=>{const [html,app,css]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('app.css',root),'utf8')]);assert.match(html,/id="timelineAdminEdit"/);assert.match(app,/timeline-toggle/);assert.match(app,/is-collapsed/);assert.match(app,/timelineAdminEdit/);assert.match(css,/activity-toolbar \.filters\{flex-wrap:nowrap;overflow-x:auto/);assert.match(css,/\.timeline-item\.is-collapsed \.timeline-detail\{display:none\}/);});
