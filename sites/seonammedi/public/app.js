@@ -216,7 +216,7 @@ function renderHomeMonitorUpdates(data){
   if(updated)updated.textContent=runAt?'자동 갱신 '+new Date(runAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'1시간마다 자동 갱신';
   list.innerHTML=rows.map(item=>{
     const when=kstDate(item.published_at||item.first_seen_at||'');
-    const state=item.review_state==='verified'?'검증 완료':'자동수집 · 원문 확인';
+    const state=item.review_state==='verified'?'검증 완료':item.source_type==='news'?'자동수집 · 공개보도':'자동수집 · 원문 확인';
     return `<a class="home-latest-card" href="${safeUrl(item.resolved_url||item.url)}" target="_blank" rel="noopener noreferrer"><span class="home-latest-meta">${escapeHtml(when||'최근')} · ${escapeHtml(item.query_label||'관련자료')}</span><strong>${escapeHtml(item.title||'수집 자료')}</strong><small>${escapeHtml(item.publisher||'출처 확인 중')} · ${escapeHtml(state)}</small></a>`;
   }).join('');
 }
@@ -245,7 +245,7 @@ async function loadMonitor(){
   }
 }
 siteReady.finally(()=>loadMonitor());
-setInterval(()=>{if(document.visibilityState==='visible')loadMonitor()},15*60*1000);
+setInterval(()=>{if(document.visibilityState==='visible')loadMonitor()},60*60*1000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')loadMonitor()});
 // 수집은 EKODI가 매시간 수행하고, 공개 홈페이지는 최신 결과를 자동 반영합니다.
 
