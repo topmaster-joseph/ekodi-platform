@@ -69,10 +69,12 @@ for(const label of required) if(!principles.includes(label)) fail(`UI system pri
 for(const marker of ['용이성','지역성·현장성','가독성','독창성','직관성','소통형','맞춤형']) if(!principles.includes(marker)) fail(`UI system principles missing construction principle: ${marker}`);
 for(const marker of ['PUBLIC-SURFACE-ADMIN-001','사용자 화면','중복 관리자 UI']) if(!principles.includes(marker)) fail(`UI principles missing public-surface administration contract: ${marker}`);
 
-for(const marker of ['initPublicAdminControls','/api/seonammedi/admin/me','public-admin-drawer']) if(!seonamApp.includes(marker)) fail(`seonammedi pilot missing public-surface admin evidence: ${marker}`);
-if(!seonamCss.includes('.public-admin-drawer')) fail('seonammedi pilot missing public admin drawer presentation');
+for(const marker of ['initPublicAdminControls','window.EKODIPublicSurfaceAdmin',"serviceId:'seonammedi'","adminPath:'/seonammedi/admin/'","authEndpoint:'/api/seonammedi/admin/me'",'await admin.authorize()','admin.attach']) if(!seonamApp.includes(marker)) fail(`seonammedi pilot missing shared public-surface admin evidence: ${marker}`);
+for(const duplicate of ['function publicAdminRequest','function ensurePublicAdminDrawer','function openPublicAdmin','function attachPublicAdminButton',"className='public-admin-drawer'","className='public-admin-inline'"]) if(seonamApp.includes(duplicate)) fail(`seonammedi must not duplicate shared public admin runtime: ${duplicate}`);
+for(const duplicate of ['.public-admin-drawer','.public-admin-inline']) if(seonamCss.includes(duplicate)) fail(`seonammedi must not duplicate shared public admin styling: ${duplicate}`);
+if(!seonamCss.includes('.ekodi-public-admin-inline')) fail('seonammedi site-specific shared-admin placement hook missing');
 for(const marker of ['canManage','authentication_required']) if(!seonamControl.includes(marker)) fail(`seonammedi pilot missing server authority evidence: ${marker}`);
-if(!seonamTests.includes('public site exposes authenticated section-level admin quick edit without exposing controls to visitors')) fail('seonammedi public-surface admin regression test missing');
+if(!seonamTests.includes('uses shared authenticated inline admin without exposing local duplicate controls')) fail('seonammedi shared public-surface admin regression test missing');
 
 if(failures.length){
   console.error(`EKODI UI Surface validation failed (${failures.length})`);
