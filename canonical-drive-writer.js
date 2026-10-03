@@ -237,11 +237,9 @@ export async function writeCanonicalDriveStream(env, options = {}) {
   const size = Number(options.size || 0);
   if (!Number.isFinite(size) || size <= 0) throw new Error('CANONICAL_STORAGE_SIZE_REQUIRED');
 
-  const [connection, folder] = await Promise.all([
-    primaryConnection(env),
-    routeFolder(env, routeKey),
-  ]);
+  const connection = await primaryConnection(env);
   const token = await accessToken(env, connection);
+  const folder = await routeFolder(env, routeKey, connection, token);
   const mimeType = String(options.mimeType || 'application/octet-stream').slice(0, 120);
   const parentId = await ensureSubfolderPath(token, folder.folder_id, options.subfolderPath || '');
   const metadata = {
