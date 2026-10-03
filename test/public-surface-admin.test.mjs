@@ -22,9 +22,13 @@ test('PUBLIC-SURFACE-ADMIN-001 has a shared Shell runtime',async()=>{
   assert.match(runtime,/cache:'no-store'/);
   assert.match(runtime,/permissions\[key\]===true/);
   assert.doesNotMatch(runtime,/localStorage\.setItem|sessionStorage\.setItem/);
+  assert.match(runtime,/const VERSION=2/);
+  assert.match(runtime,/window\.open\(url\.pathname\+url\.search\+url\.hash,'_blank','noopener,noreferrer'\)/);
+  assert.match(runtime,/presentation:mode/);
+  assert.match(runtime,/descriptor\.presentation\|\|'drawer'/);
   assert.match(worker,/publicSurfaceAdminUrl\.pathname='\/public-surface-admin\.js'/);
   assert.match(worker,/x-ekodi-public-surface-admin/);
-  assert.match(worker,/publicSurfaceAdminVersion:1/);
+  assert.match(worker,/publicSurfaceAdminVersion:2/);
   assert.match(css,/\.ekodi-public-admin-inline/);
   assert.match(css,/\.ekodi-public-admin-drawer/);
   const shellVersion=Number(manifestText.match(/shellVersion:\s*(\d+)/)?.[1]||0);
