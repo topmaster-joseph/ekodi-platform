@@ -4,6 +4,7 @@ import { createBoardAdapter, handleBoardAdapter, consumeBoardAdapter } from './c
 const API_PATH='/api/seonammedi/voices';
 const HEALTH_PATH=API_PATH+'/health';
 const REPLY_PATH=/^\/api\/seonammedi\/voices\/(\d+)\/replies$/;
+const SUBMISSION_PATH=/^\/api\/seonammedi\/voices\/submissions\/([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i;
 const QUEUE_KIND='seonammedi.citizen_voice.v1';
 const CATEGORIES=new Set(['question','proposal','experience','factcheck','tip','other']);
 const clean=(value,max)=>String(value??'').trim().slice(0,max);
@@ -105,6 +106,18 @@ async function persistVoice(env,payload){
   throw new Error('voice_insert_not_confirmed');
 }
 
+
+async function submissionStatus(env,submissionId){
+  if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
+  try{
+    const row=await env.DB.prepare("SELECT id,review_status FROM seonammedi_civic_voices WHERE submission_key=? LIMIT 1").bind(submissionId).first();
+    if(!row?.id)return json({ok:true,status:'pending',submissionId});
+    return json({ok:true,status:row.review_status==='published'?'published':'processing',submissionId,id:Number(row.id)});
+  }catch(error){
+    console.error('seonammedi submission status failed',error);
+    return json({ok:false,error:'status_lookup_failed'},503);
+  }
+}
 
 async function listPublicVoices(env){
   if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
@@ -215,6 +228,11 @@ export async function consumeSeonamMediVoiceMessage(envelope,env){
 export async function handleSeonamMediCivicApi(request,env){
   const url=new URL(request.url);
   if(url.pathname===HEALTH_PATH&&request.method==='GET')return handleBoardAdapter(citizenVoiceBoard,{action:'health',request,env});
+  const submissionMatch=url.pathname.match(SUBMISSION_PATH);
+  if(submissionMatch){
+    if(request.method!=='GET')return json({ok:false,error:'method_not_allowed'},405);
+    return submissionStatus(env,submissionMatch[1].toLowerCase());
+  }
   const replyMatch=url.pathname.match(REPLY_PATH);
   if(replyMatch){
     if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{allow:'POST, OPTIONS','cache-control':'no-store'}});
