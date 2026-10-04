@@ -773,7 +773,9 @@ jobs:
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
 
       - name: Finalize durable write queue consumer trigger
-        if: steps.quota.outputs.skip_nonessential != 'true'
+        # Queue consumption is part of the durable public-write contract, not a
+        # nonessential probe. POST acceptance without an attached consumer can
+        # strand accepted writes until a later release.
         shell: bash
         run: |
           set -euo pipefail
