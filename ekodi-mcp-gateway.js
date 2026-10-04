@@ -4,6 +4,7 @@ import { buildPersonalAiBridgeSnapshot, resolveCanonicalEkodiIdentity } from './
 import { authorizeCapabilityInvocation, SOVEREIGN_CAPABILITY_FABRIC } from './sovereign-capability-fabric.js';
 import { buildCoreAiGateway } from './core-ai-gateway.js';
 import { EKODI_MCP_EXTENSION_TOOLS, callAuthorizedEkodiMcpExtensionTool, callPublicEkodiMcpExtensionTool } from './ekodi-mcp-external-tools.js';
+import { publicEkodiMcpClientPolicy } from './mcp-client-policy.js';
 
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -127,7 +128,7 @@ export const EKODI_MCP_TOOLS=Object.freeze([
   Object.freeze({
     name:'ekodi_delegate_command',
     title:'EKODI AI Command Delegation',
-    description:'Use this when the signed-in user wants EKODI AI to coordinate configured AI providers, synthesize specialist evidence, and independently verify the result before ChatGPT continues. This delegates AI collaboration only and does not grant external system permissions or perform privileged side effects.',
+    description:'Use this when the signed-in user wants EKODI AI to coordinate configured AI providers, synthesize specialist evidence, and independently verify the result before the connected AI client continues. This delegates AI collaboration only and does not grant external system permissions or perform privileged side effects.',
     inputSchema:{
       type:'object',
       properties:{
@@ -206,12 +207,13 @@ export async function callEkodiMcpTool(name,args,request,env,dependencies={}){
     forward:'ekodi-ai-router',
     reverse:'ekodi-mcp-adapter',
     firstExternalConnectionRequiresConsent:true,
+    mcpClientPolicy:publicEkodiMcpClientPolicy(),
   });
   const publicExtended=callPublicEkodiMcpExtensionTool(name,args);
   if(publicExtended)return publicExtended;
   const resolved=await requireMcpIdentity(request,dependencies);
   if(resolved.error)return resolved.error;
-  const {identity}=resolved;
+  const {identity,auth}=resolved;
   const capabilityId=TOOL_CAPABILITIES[name];
   if(!capabilityId)return textResult('등록되지 않은 EKODI 도구입니다.',{error:'TOOL_NOT_FOUND'});
   const authorization=authorizeCapabilityInvocation({
@@ -238,7 +240,7 @@ export async function callEkodiMcpTool(name,args,request,env,dependencies={}){
       goal,
       risk,
       target,
-      context:Object.freeze({source:'chatgpt-mcp',channel:'mcp',canonicalIdentity:true,authorityTransfer:false}),
+      context:Object.freeze({source:'external-ai-mcp',channel:'mcp',canonicalIdentity:true,authorityTransfer:false,oauthClientId:String(auth?.claims?.client_id||'').slice(0,120)}),
     });
     const humanGateRequired=risk==='high'||risk==='critical';
     const data={
@@ -288,6 +290,7 @@ async function handleRpc(message,request,env,dependencies={}){
     resource:EKODI_MCP_RESOURCE,
     discovery:'https://ekodi.kr/.well-known/ekodi.json',
     fabric:SOVEREIGN_CAPABILITY_FABRIC,
+    clientPolicy:publicEkodiMcpClientPolicy(),
     _meta:{'io.modelcontextprotocol/serverInfo':{name:'ekodi-sovereign-capability-fabric',version:'2026-09-17.1'}},
   },{modern:true});
   if(method==='initialize')return rpcResult(id,{
