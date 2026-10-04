@@ -1,0 +1,12 @@
+﻿{
+  "version":"1.0.0",
+  "policyId":"EKODI-REPLACEABLE-BOARD-ENGINE-001",
+  "status":"enforced",
+  "appliesRecursivelyToAllServices":true,
+  "scope":["citizen_feedback","notice","qna","community"],
+  "rule":"Prefer a proven free/open-source external board engine behind the EKODI Board Adapter. Never couple public URLs, EKODI auth, user UI or canonical data ownership directly to one engine.",
+  "engineSelection":{"required":["open_source_license","self_hostable","documented_api","export_import","security_maintenance","upgrade_path","health_check"],"preferredLicense":["MIT","Apache-2.0","BSD"],"referenceCandidates":["flarum","nodebb"],"productionRule":"Only a stable, security-maintained engine may become the default production engine; release candidates remain evaluation-only unless explicitly approved by Human Gate."},
+  "architecture":{"registryRequired":true,"providerInterfaceRequired":true,"nativeFallbackRequired":true,"preserveEkodiUrl":true,"preserveEkodiAuth":true,"preserveUserSurface":true,"preserveCanonicalData":true,"durableWriteQueuePreserved":true,"falseSuccessForbidden":true},
+  "migration":{"dualRunBeforeCutover":true,"exportImportRequired":true,"rollbackRequired":true,"engineSwapWithoutPublicUrlChange":true},
+  "firstRollout":"seonammedi.citizen_voice"
+}
