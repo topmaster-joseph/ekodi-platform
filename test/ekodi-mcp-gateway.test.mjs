@@ -161,7 +161,8 @@ test('authenticated MCP command delegates collaboration to EKODI without transfe
 
   assert.equal(delegatedInput.goal,'Coordinate a safe EKODI deployment review.');
   assert.equal(delegatedInput.risk,'high');
-  assert.equal(delegatedInput.context.source,'chatgpt-mcp');
+  assert.equal(delegatedInput.context.source,'external-ai-mcp');
+  assert.equal(delegatedInput.context.oauthClientId,'chatgpt-client');
   assert.equal(delegatedInput.context.authorityTransfer,false);
   assert.equal('personId' in delegatedInput.context,false);
   assert.equal('ekodiId' in delegatedInput.context,false);
