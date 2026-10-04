@@ -266,7 +266,7 @@ async function verifiedBranchPrMerge(targetBranch) {
     for (const number of candidateNumbers) {
       try {
         const pr = await loadPullRequestByNumber(number);
-        if (isVerifiedMergedPr(pr, { targetBranch })) return true;
+        if (isVerifiedMergedPr(pr, { targetBranch })) return pr;
       } catch (error) {
         lastError = error?.message || String(error);
       }
@@ -274,7 +274,8 @@ async function verifiedBranchPrMerge(targetBranch) {
 
     try {
       const pulls = await loadAssociatedPullRequests();
-      if (pulls.some(pr => isVerifiedMergedPr(pr, { shaBound: true, targetBranch }))) return true;
+      const matched = pulls.find(pr => isVerifiedMergedPr(pr, { shaBound: true, targetBranch }));
+      if (matched) return matched;
     } catch (error) {
       lastError = error?.message || String(error);
     }
@@ -286,7 +287,88 @@ async function verifiedBranchPrMerge(targetBranch) {
   }
 
   if (lastError) console.warn(`[EKODI][AI-ORCHESTRATE-001] ${lastError}`);
-  return false;
+  return null;
+}
+
+function parseOrchestratorReleaseBranch(branchRef) {
+  const branchValue = text(branchRef);
+  const match = branchValue.match(/^ai\/([a-z0-9][a-z0-9._-]{0,31})\/(orch_[a-z0-9][a-z0-9_-]{15,120})$/i);
+  if (!match) return null;
+  return Object.freeze({ agent: match[1], taskId: match[2], branchRef: branchValue });
+}
+
+function releaseReceiptFixture() {
+  const fixturePath = text(process.env.EKODI_ORCHESTRATOR_RELEASE_RECEIPT_FIXTURE);
+  if (!fixturePath) return null;
+  if (!fs.existsSync(fixturePath)) throw new Error(`release receipt fixture is missing: ${fixturePath}`);
+  try {
+    return JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
+  } catch {
+    throw new Error(`release receipt fixture is malformed JSON: ${fixturePath}`);
+  }
+}
+
+async function fetchOrchestratorReleaseReceipt(taskId, branchRef) {
+  const fixture = releaseReceiptFixture();
+  if (fixture) {
+    if (fixture.timeout === true) throw new Error('release receipt verifier timeout');
+    if (fixture.networkError) throw new Error(`release receipt verifier network error: ${text(fixture.networkError)}`);
+    return Object.freeze({
+      status: Number(fixture.status || 200),
+      body: fixture.body && typeof fixture.body === 'object' ? fixture.body : {},
+    });
+  }
+
+  const endpoint = text(process.env.EKODI_ORCHESTRATOR_RELEASE_RECEIPT_URL || 'https://ekodi.kr/api/orchestrator/release-receipt');
+  let url;
+  try {
+    url = new URL(endpoint);
+  } catch {
+    throw new Error('canonical orchestrator release receipt URL is invalid');
+  }
+  url.searchParams.set('taskId', taskId);
+  url.searchParams.set('branchRef', branchRef);
+  const timeoutMs = boundedInteger(process.env.EKODI_ORCHESTRATOR_RELEASE_RECEIPT_TIMEOUT_MS, 5000, 500, 15000);
+  let response;
+  try {
+    response = await fetch(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json', 'User-Agent': 'ekodi-ai-orchestration-gate' },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (error) {
+    throw new Error(`release receipt verifier unavailable: ${error?.name === 'TimeoutError' ? 'timeout' : error?.message || 'network error'}`);
+  }
+  let body = {};
+  try {
+    body = JSON.parse(await response.text());
+  } catch {
+    throw new Error(`release receipt verifier returned malformed JSON (HTTP ${response.status})`);
+  }
+  return Object.freeze({ status: response.status, body });
+}
+
+async function verifyOrchestratorReleaseReceipt(branchRef) {
+  const parsed = parseOrchestratorReleaseBranch(branchRef);
+  if (!parsed) throw new Error(`production-bound release branch must be orchestrator-issued ai/<agent>/orch_<task-id>: ${branchRef || 'missing'}`);
+  const explicitTaskId = text(process.env.EKODI_RELEASE_TASK_ID);
+  if (explicitTaskId && explicitTaskId !== parsed.taskId) throw new Error('release taskId does not match orchestrator branchRef');
+
+  const receipt = await fetchOrchestratorReleaseReceipt(parsed.taskId, parsed.branchRef);
+  const body = receipt.body || {};
+  const reason = text(body.reason || `http_${receipt.status}`);
+  if (receipt.status !== 200 || body.authorized !== true) throw new Error(`orchestrator release receipt rejected: ${reason}`);
+  if (text(body.taskId) !== parsed.taskId) throw new Error('orchestrator release receipt taskId mismatch');
+  if (text(body.branchRef) !== parsed.branchRef) throw new Error('orchestrator release receipt branch mismatch');
+  if (text(body.authority) !== 'ekodi-orchestrator') throw new Error('orchestrator release receipt authority mismatch');
+  const state = text(body.state).toLowerCase();
+  if (['blocked', 'failed', 'cancelled'].includes(state)) throw new Error(`orchestrator release receipt is not releasable: ${state}`);
+  return Object.freeze({
+    taskId: parsed.taskId,
+    branchRef: parsed.branchRef,
+    authority: 'ekodi-orchestrator',
+    state: state || 'unknown',
+  });
 }
 
 let source = 'static-policy-validation';
@@ -300,16 +382,21 @@ if (staticPolicyMode) {
   if (!branchAllowed(intentBranch)) fail(`change branch must enter through EKODI AI namespace (${allowedPrefixes.join(', ')}): ${intentBranch || 'missing'}`);
   source = `pull-request:${event.pull_request?.number || 'unknown'}`;
 } else if (eventName === 'push' && text(process.env.GITHUB_REF_NAME) === defaultBranch) {
-  if (!await verifiedBranchPrMerge(defaultBranch)) fail(`direct push to ${defaultBranch} is forbidden; merge an EKODI AI orchestrated PR instead.`);
+  const mergedPr = await verifiedBranchPrMerge(defaultBranch);
+  if (!mergedPr) fail(`direct push to ${defaultBranch} is forbidden; merge an EKODI AI orchestrated PR instead.`);
+  intentBranch = text(mergedPr?.head?.ref);
   source = `protected-${defaultBranch}-pr-merge`;
 } else if (eventName === 'push' && integrationBranches.includes(text(process.env.GITHUB_REF_NAME))) {
   const integrationBranch = text(process.env.GITHUB_REF_NAME);
-  if (!await verifiedBranchPrMerge(integrationBranch)) fail(`direct push to ${integrationBranch} is forbidden for mutation workflows; merge an EKODI AI orchestrated PR instead.`);
+  const mergedPr = await verifiedBranchPrMerge(integrationBranch);
+  if (!mergedPr) fail(`direct push to ${integrationBranch} is forbidden for mutation workflows; merge an EKODI AI orchestrated PR instead.`);
+  intentBranch = text(mergedPr?.head?.ref);
   source = `protected-${integrationBranch}-pr-merge`;
 } else if (eventName === 'push') {
   if (!branchAllowed(text(process.env.GITHUB_REF_NAME))) fail('non-main change pushes must use an EKODI AI branch namespace.');
   source = 'ai-branch-push-routed-through-ekodi-ai';
 } else if (eventName === 'workflow_dispatch') {
+  intentBranch = text(process.env.EKODI_RELEASE_BRANCH_REF || intentBranch);
   source = 'human-intent-routed-through-ekodi-ai';
 } else if (eventName === 'schedule') {
   source = 'scheduled-intent-routed-through-ekodi-ai';
@@ -319,6 +406,17 @@ if (staticPolicyMode) {
   source = `${eventName}-routed-through-ekodi-ai`;
 } else if (releaseMode) {
   fail('direct local production mutation is forbidden; use an EKODI AI orchestrated GitHub change/release lane.');
+}
+
+const orchestratorBranch = parseOrchestratorReleaseBranch(intentBranch);
+const releaseReceiptRequired = !staticPolicyMode && (releaseMode || (ciMode && Boolean(orchestratorBranch)));
+let releaseReceipt = null;
+if (releaseReceiptRequired) {
+  try {
+    releaseReceipt = await verifyOrchestratorReleaseReceipt(intentBranch);
+  } catch (error) {
+    fail(error?.message || 'orchestrator release receipt verification failed');
+  }
 }
 
 const changedFiles = currentChangedFiles();
@@ -383,6 +481,14 @@ const attestation = {
   humanGateRecommended,
   directMutationAllowed: false,
   constitutionalControls: ciMode ? constitutionalControlValidators : [],
+  releaseReceipt: releaseReceipt ? Object.freeze({
+    required: true,
+    verified: true,
+    taskId: releaseReceipt.taskId,
+    branchRef: releaseReceipt.branchRef,
+    authority: releaseReceipt.authority,
+    state: releaseReceipt.state,
+  }) : Object.freeze({ required: releaseReceiptRequired, verified: false }),
   releaseMode,
   timestamp: new Date().toISOString(),
 };
@@ -393,6 +499,10 @@ fs.writeFileSync(path.join(root, 'artifacts', 'ekodi-ai-orchestration-attestatio
 if (process.env.GITHUB_OUTPUT) {
   fs.appendFileSync(process.env.GITHUB_OUTPUT, `orchestration_id=${orchestrationId}\n`);
   fs.appendFileSync(process.env.GITHUB_OUTPUT, `source=${source}\n`);
+  if (releaseReceipt) {
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, `task_id=${releaseReceipt.taskId}\n`);
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, `branch_ref=${releaseReceipt.branchRef}\n`);
+  }
 }
 if (process.env.GITHUB_STEP_SUMMARY) {
   fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
@@ -407,6 +517,7 @@ if (process.env.GITHUB_STEP_SUMMARY) {
     `- Fallback lanes: ${(executionFallback.preferredLaneOrder || []).join(' -> ')}`,
     `- Direct mutation: forbidden`,
     ciMode ? `- Constitutional controls: ${constitutionalControlValidators.length} passed` : '- Constitutional controls: static policy mode',
+    releaseReceipt ? `- Release receipt: verified (${releaseReceipt.taskId} / ${releaseReceipt.authority})` : `- Release receipt: ${releaseReceiptRequired ? 'required but unavailable' : 'not required for this static/non-release path'}`,
     humanGateRecommended ? '- Human Gate: recommended for topology-impacting intent' : '- Human Gate: not required by this classifier',
     '',
   ].join('\n'));
