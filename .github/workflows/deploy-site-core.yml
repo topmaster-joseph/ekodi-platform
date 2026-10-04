@@ -773,7 +773,9 @@ jobs:
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
 
       - name: Finalize durable write queue consumer trigger
-        if: steps.quota.outputs.skip_nonessential != 'true'
+        # Durable public writes are an essential production dependency. Never
+        # skip this trigger when the nonessential quota circuit is open: doing
+        # so leaves POST accepted into EKODI_WRITE_QUEUE with no consumer.
         shell: bash
         run: |
           set -euo pipefail
