@@ -14,6 +14,10 @@ test('production OAuth is bounded and dynamic client registration is not default
   assert.match(workflow,/Probe current OAuth server state/);
   assert.match(workflow,/OAUTH_STATE=bootstrap_required/);
   assert.match(workflow,/Automatic hourly recovery is armed/);
+  assert.match(workflow,/OAUTH_DISCOVERY_READY=true/);
+  assert.equal((workflow.match(/OAUTH_READY=true/g)||[]).length,1);
+  assert.match(workflow,/Verify bounded OAuth configuration[\s\S]*OAUTH_READY=true/);
+  assert.match(workflow,/Preserve bootstrap boundary[\s\S]*exit 1/);
 });
 
 test('MCP adapter targets the current stateless protocol while retaining legacy compatibility',()=>{
