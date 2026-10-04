@@ -297,34 +297,16 @@ function parseOrchestratorReleaseBranch(branchRef) {
   return Object.freeze({ agent: match[1], taskId: match[2], branchRef: branchValue });
 }
 
-function releaseReceiptFixture() {
-  const fixturePath = text(process.env.EKODI_ORCHESTRATOR_RELEASE_RECEIPT_FIXTURE);
-  if (!fixturePath) return null;
-  if (!fs.existsSync(fixturePath)) throw new Error(`release receipt fixture is missing: ${fixturePath}`);
-  try {
-    return JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
-  } catch {
-    throw new Error(`release receipt fixture is malformed JSON: ${fixturePath}`);
-  }
-}
-
 async function fetchOrchestratorReleaseReceipt(taskId, branchRef) {
-  const fixture = releaseReceiptFixture();
-  if (fixture) {
-    if (fixture.timeout === true) throw new Error('release receipt verifier timeout');
-    if (fixture.networkError) throw new Error(`release receipt verifier network error: ${text(fixture.networkError)}`);
-    return Object.freeze({
-      status: Number(fixture.status || 200),
-      body: fixture.body && typeof fixture.body === 'object' ? fixture.body : {},
-    });
-  }
-
   const endpoint = text(process.env.EKODI_ORCHESTRATOR_RELEASE_RECEIPT_URL || 'https://ekodi.kr/api/orchestrator/release-receipt');
   let url;
   try {
     url = new URL(endpoint);
   } catch {
     throw new Error('canonical orchestrator release receipt URL is invalid');
+  }
+  if (url.origin !== 'https://ekodi.kr' || url.pathname !== '/api/orchestrator/release-receipt') {
+    throw new Error('orchestrator release receipt verifier must use the canonical EKODI endpoint');
   }
   url.searchParams.set('taskId', taskId);
   url.searchParams.set('branchRef', branchRef);
