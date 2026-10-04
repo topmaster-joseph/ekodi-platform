@@ -8,6 +8,7 @@ import { spawnSync } from 'node:child_process';
 const read = file => fs.readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 const policy = JSON.parse(read('config/ai-change-orchestration-policy.json'));
 const validator = read('scripts/validate-ekodi-ai-change-orchestration.mjs');
+const releaseReceiptGate = read('scripts/orchestrator-release-receipt.mjs');
 const workflow = read('.github/workflows/ekodi-ai-orchestration-gate.yml');
 const siteWorker = read('site-worker.js');
 const workerRelease = read('scripts/guarded-worker-release.mjs');
@@ -54,8 +55,9 @@ test('main and production releases are fail-closed around orchestration and cons
   assert.match(validator, /direct push to \$\{defaultBranch\} is forbidden/);
   assert.match(validator, /direct local production mutation is forbidden/);
   assert.match(validator, /if \(ciMode\) runConstitutionalControls\(\)/);
-  assert.match(validator, /production-bound release branch must be orchestrator-issued/);
-  assert.match(validator, /orchestrator release receipt rejected/);
+  assert.match(validator, /verifyOrchestratorReleaseReceipt/);
+  assert.match(releaseReceiptGate, /production-bound release branch must be orchestrator-issued/);
+  assert.match(releaseReceiptGate, /orchestrator release receipt rejected/);
   for (const control of [
     'validate-constitution.mjs',
     'validate-platform-boundaries.mjs',
