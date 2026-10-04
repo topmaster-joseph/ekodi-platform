@@ -98,8 +98,8 @@ test('orchestrator task adapter is requester-isolated and queues through the exi
 });
 
 
-test('MCP delegated tasks carry standing delegation and are dispatched immediately',()=>{
-  const source=fs.readFileSync(new URL('../ekodi-orchestrator-task-adapter.js',import.meta.url),'utf8');
+test('MCP delegated tasks carry standing delegation and are dispatched immediately',async()=>{
+  const source=await readFile(new URL('../ekodi-orchestrator-task-adapter.js',import.meta.url),'utf8');
   assert.match(source,/delegation:\{allowed:true,reversible:true,audited:true,preflightVerified:true,verificationDefined:true\}/);
   assert.match(source,/runEkodiCommandQueue\(env,\{limit:1,taskId:id\}\)/);
   assert.match(source,/assigned_worker='ekodi-command-plane'/);
