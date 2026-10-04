@@ -11,17 +11,14 @@ const validator = path.join(root, 'scripts', 'validate-ekodi-ai-change-orchestra
 const sha = '1111111111111111111111111111111111111111';
 const receiptTaskId = 'orch_00000000-0000-4000-8000-000000000001';
 const receiptBranchRef = `ai/gpt-5-6-sol/${receiptTaskId}`;
-const authorizedReceipt = { status: 200, body: { authorized: true, taskId: receiptTaskId, branchRef: receiptBranchRef, state: 'assigned', authority: 'ekodi-orchestrator' } };
 
 function run(provenance, { message = 'squashed change', lookup = null, branch = 'main' } = {}) {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'ekodi-ai-provenance-'));
   const eventPath = path.join(temp, 'event.json');
   const provenancePath = path.join(temp, 'pulls.json');
   const lookupPath = path.join(temp, 'lookup.json');
-  const receiptPath = path.join(temp, 'receipt.json');
   fs.writeFileSync(eventPath, JSON.stringify({ head_commit: { message } }));
   fs.writeFileSync(provenancePath, typeof provenance === 'string' ? provenance : JSON.stringify(provenance));
-  fs.writeFileSync(receiptPath, JSON.stringify(authorizedReceipt));
   if (lookup) fs.writeFileSync(lookupPath, JSON.stringify(lookup));
   const result = spawnSync(process.execPath, [validator, '--release'], {
     cwd: root,
@@ -31,12 +28,11 @@ function run(provenance, { message = 'squashed change', lookup = null, branch = 
       GITHUB_EVENT_NAME: 'push',
       GITHUB_REF_NAME: branch,
       GITHUB_EVENT_PATH: eventPath,
-      GITHUB_REPOSITORY: 'topmaster-joseph/ekodi-platform',
+      GITHUB_REPOSITORY: 'fixture/ekodi-platform',
       GITHUB_RUN_ID: 'provenance-test',
       GITHUB_SHA: sha,
       GITHUB_ACTOR: 'topmaster-joseph',
       EKODI_GITHUB_PR_PROVENANCE: provenancePath,
-      EKODI_ORCHESTRATOR_RELEASE_RECEIPT_FIXTURE: receiptPath,
       ...(lookup ? { EKODI_GITHUB_PR_LOOKUP: lookupPath } : {}),
     },
   });
@@ -49,9 +45,7 @@ function runRestrictedTokenFallback(pr, { message = `Merge PR #${pr.number}: rel
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'ekodi-ai-public-fallback-'));
   const eventPath = path.join(temp, 'event.json');
   const preloadPath = path.join(temp, 'fetch-stub.mjs');
-  const receiptPath = path.join(temp, 'receipt.json');
   fs.writeFileSync(eventPath, JSON.stringify({ head_commit: { message } }));
-  fs.writeFileSync(receiptPath, JSON.stringify(authorizedReceipt));
   fs.writeFileSync(preloadPath, `
 const pr = JSON.parse(Buffer.from(process.env.EKODI_TEST_PR_B64, 'base64').toString('utf8'));
 globalThis.fetch = async (url, options = {}) => {
@@ -70,7 +64,7 @@ globalThis.fetch = async (url, options = {}) => {
       GITHUB_EVENT_NAME: 'push',
       GITHUB_REF_NAME: 'main',
       GITHUB_EVENT_PATH: eventPath,
-      GITHUB_REPOSITORY: 'topmaster-joseph/ekodi-platform',
+      GITHUB_REPOSITORY: 'fixture/ekodi-platform',
       GITHUB_API_URL: 'https://api.github.test',
       GITHUB_RUN_ID: 'restricted-token-fallback-test',
       GITHUB_SHA: sha,
@@ -78,7 +72,6 @@ globalThis.fetch = async (url, options = {}) => {
       GITHUB_TOKEN: 'contents-read-only-token',
       EKODI_GITHUB_PROVENANCE_ATTEMPTS: '1',
       EKODI_TEST_PR_B64: Buffer.from(JSON.stringify(pr)).toString('base64'),
-      EKODI_ORCHESTRATOR_RELEASE_RECEIPT_FIXTURE: receiptPath,
     },
   });
   fs.rmSync(temp, { recursive: true, force: true });
