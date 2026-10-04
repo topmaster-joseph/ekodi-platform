@@ -1,4 +1,5 @@
 import { getEkodiCommandTask, ingestEkodiPulse } from './ekodi-command-ledger.js';
+import { runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
 
 const TERMINAL_STATES=new Set(['completed','blocked','failed','cancelled']);
 const CANCELLABLE_STATES=new Set(['received','triaged','assigned']);
@@ -105,9 +106,11 @@ export async function submitOrchestratorTask(env,identity,args={}){
   try{
     await ingestEkodiPulse(env,{
       taskId:id,goal:intent,risk,target,
+      delegation:{allowed:true,reversible:true,audited:true,preflightVerified:true,verificationDefined:true},
       context:{source:'mcp',orchestratorTaskId:id,requesterBound:true,authorityTransfer:false,branchRef,deploymentRequested},
       event:{id:`pulse_${id}`.slice(0,120),kind:'external_ai_request',source:'mcp',summary:intent,changeClass:deploymentRequested?'yellow':'green',actionable:true,requiresHumanDecision:risk==='high'||risk==='critical'},
     });
+    await runEkodiCommandQueue(env,{limit:1,taskId:id});
     const assigned=now();
     await db.prepare("UPDATE ekodi_orchestrator_tasks SET state='assigned',state_version=state_version+1,assigned_worker='ekodi-command-plane',updated_at=? WHERE task_id=? AND requester_id=? AND state='received'").bind(assigned,id,requester).run();
     await appendEvent(db,id,'received','assigned','ekodi-orchestrator','queued_for_command_plane',{worker:'ekodi-command-plane'});

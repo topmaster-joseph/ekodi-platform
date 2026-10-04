@@ -18,3 +18,13 @@ test('Command Plane architecture requires bounded proactive delegation and symbo
   assert.equal(architecture.resourceAddressing.mode, 'symbolic');
   assert.equal(architecture.resourceAddressing.commandPlaneMayHardCodeLegacyUserOrAdminHostname, false);
 });
+
+
+test('Command Plane architecture requires an independent recovery dispatch path',()=>{
+  assert.equal(architecture.recoveryPlane.mandatory,true);
+  assert.equal(architecture.recoveryPlane.authority,'EKODI Orchestrator');
+  assert.ok(architecture.recoveryPlane.rules.some(rule=>rule.includes('targeted dispatch')));
+  assert.ok(architecture.recoveryPlane.rules.some(rule=>rule.includes('scheduler remains a recovery drain')));
+  assert.ok(architecture.recoveryPlane.rules.some(rule=>rule.includes('task id, branch ref, idempotency')));
+  assert.ok(architecture.recoveryPlane.rules.some(rule=>rule.includes('external AI')));
+});

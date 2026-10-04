@@ -76,5 +76,19 @@
   "relationshipToUrlMigration": {
     "canonicalIntent": "my and admin user surfaces may migrate to ekodi.kr path namespaces without changing Command Plane identity or authority semantics",
     "rule": "Command Plane targets resources symbolically and leaves canonical URL resolution to routing governance, so URL migration and AI orchestration may proceed in parallel."
+  },
+  "recoveryPlane": {
+    "mandatory": true,
+    "authority": "EKODI Orchestrator",
+    "rules": [
+      "accepted delegated low/normal-risk tasks must receive targeted dispatch without depending solely on scheduled queue drain",
+      "scheduler remains a recovery drain and must not be the only execution trigger",
+      "task id, branch ref, idempotency and audit history must survive worker recovery",
+      "provider failure must not transfer EKODI authority and must use eligible registry failover",
+      "worker recovery must prefer standby-before-replace and avoid queue deletion or task cancellation",
+      "high/critical/red changes remain behind Human Gate",
+      "external AI may plan, implement or review only under an EKODI-authorized task and branch"
+    ],
+    "completion": "production-bound recovery is complete only with EKODI Gate evidence and production verification"
   }
 }
