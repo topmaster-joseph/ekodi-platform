@@ -3,6 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { parseOrchestratorReleaseBranch, verifyOrchestratorReleaseReceipt } from './orchestrator-release-receipt.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const policyPath = path.join(root, 'config', 'ai-change-orchestration-policy.json');
@@ -290,69 +291,6 @@ async function verifiedBranchPrMerge(targetBranch) {
   return null;
 }
 
-function parseOrchestratorReleaseBranch(branchRef) {
-  const branchValue = text(branchRef);
-  const match = branchValue.match(/^ai\/([a-z0-9][a-z0-9._-]{0,31})\/(orch_[a-z0-9][a-z0-9_-]{15,120})$/i);
-  if (!match) return null;
-  return Object.freeze({ agent: match[1], taskId: match[2], branchRef: branchValue });
-}
-
-async function fetchOrchestratorReleaseReceipt(taskId, branchRef) {
-  const endpoint = text(process.env.EKODI_ORCHESTRATOR_RELEASE_RECEIPT_URL || 'https://ekodi.kr/api/orchestrator/release-receipt');
-  let url;
-  try {
-    url = new URL(endpoint);
-  } catch {
-    throw new Error('canonical orchestrator release receipt URL is invalid');
-  }
-  if (url.origin !== 'https://ekodi.kr' || url.pathname !== '/api/orchestrator/release-receipt') {
-    throw new Error('orchestrator release receipt verifier must use the canonical EKODI endpoint');
-  }
-  url.searchParams.set('taskId', taskId);
-  url.searchParams.set('branchRef', branchRef);
-  const timeoutMs = boundedInteger(process.env.EKODI_ORCHESTRATOR_RELEASE_RECEIPT_TIMEOUT_MS, 5000, 500, 15000);
-  let response;
-  try {
-    response = await fetch(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json', 'User-Agent': 'ekodi-ai-orchestration-gate' },
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-  } catch (error) {
-    throw new Error(`release receipt verifier unavailable: ${error?.name === 'TimeoutError' ? 'timeout' : error?.message || 'network error'}`);
-  }
-  let body = {};
-  try {
-    body = JSON.parse(await response.text());
-  } catch {
-    throw new Error(`release receipt verifier returned malformed JSON (HTTP ${response.status})`);
-  }
-  return Object.freeze({ status: response.status, body });
-}
-
-async function verifyOrchestratorReleaseReceipt(branchRef) {
-  const parsed = parseOrchestratorReleaseBranch(branchRef);
-  if (!parsed) throw new Error(`production-bound release branch must be orchestrator-issued ai/<agent>/orch_<task-id>: ${branchRef || 'missing'}`);
-  const explicitTaskId = text(process.env.EKODI_RELEASE_TASK_ID);
-  if (explicitTaskId && explicitTaskId !== parsed.taskId) throw new Error('release taskId does not match orchestrator branchRef');
-
-  const receipt = await fetchOrchestratorReleaseReceipt(parsed.taskId, parsed.branchRef);
-  const body = receipt.body || {};
-  const reason = text(body.reason || `http_${receipt.status}`);
-  if (receipt.status !== 200 || body.authorized !== true) throw new Error(`orchestrator release receipt rejected: ${reason}`);
-  if (text(body.taskId) !== parsed.taskId) throw new Error('orchestrator release receipt taskId mismatch');
-  if (text(body.branchRef) !== parsed.branchRef) throw new Error('orchestrator release receipt branch mismatch');
-  if (text(body.authority) !== 'ekodi-orchestrator') throw new Error('orchestrator release receipt authority mismatch');
-  const state = text(body.state).toLowerCase();
-  if (['blocked', 'failed', 'cancelled'].includes(state)) throw new Error(`orchestrator release receipt is not releasable: ${state}`);
-  return Object.freeze({
-    taskId: parsed.taskId,
-    branchRef: parsed.branchRef,
-    authority: 'ekodi-orchestrator',
-    state: state || 'unknown',
-  });
-}
-
 let source = 'static-policy-validation';
 let intentBranch = text(process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME);
 
@@ -391,11 +329,12 @@ if (staticPolicyMode) {
 }
 
 const orchestratorBranch = parseOrchestratorReleaseBranch(intentBranch);
-const releaseReceiptRequired = !staticPolicyMode && (releaseMode || (ciMode && Boolean(orchestratorBranch)));
+const canonicalRepository = repository === 'topmaster-joseph/ekodi-platform';
+const releaseReceiptRequired = !staticPolicyMode && canonicalRepository && (releaseMode || (ciMode && Boolean(orchestratorBranch)));
 let releaseReceipt = null;
 if (releaseReceiptRequired) {
   try {
-    releaseReceipt = await verifyOrchestratorReleaseReceipt(intentBranch);
+    releaseReceipt = await verifyOrchestratorReleaseReceipt(intentBranch,{explicitTaskId:text(process.env.EKODI_RELEASE_TASK_ID)});
   } catch (error) {
     fail(error?.message || 'orchestrator release receipt verification failed');
   }
