@@ -782,6 +782,11 @@ jobs:
           # The guarded release above has now promoted code containing the
           # queue(batch, env) handler, so attaching the consumer is safe.
           npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
+          # triggers deploy manages routes/domains/cron, not Queue consumers.
+          if ! npx --yes wrangler@4.119.0 queues consumer worker list ekodi-write-ingress --json | jq -e '.[] | select(.script_name == "shy-thunder-39a4")' >/dev/null; then
+            npx --yes wrangler@4.119.0 queues consumer worker add ekodi-write-ingress shy-thunder-39a4 --batch-size 50 --batch-timeout 1 --message-retries 5 --dead-letter-queue ekodi-write-ingress-dlq
+          fi
+          npx --yes wrangler@4.119.0 queues consumer worker list ekodi-write-ingress --json | jq -e '.[] | select(.script_name == "shy-thunder-39a4")' >/dev/null
           npx --yes wrangler@4.119.0 queues list | grep -Fq 'ekodi-write-ingress'
           npx --yes wrangler@4.119.0 queues list | grep -Fq 'ekodi-write-ingress-dlq'
           echo 'durableWriteQueueConsumer=attached'
