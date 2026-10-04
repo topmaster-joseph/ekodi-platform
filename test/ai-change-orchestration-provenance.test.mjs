@@ -9,14 +9,19 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const validator = path.join(root, 'scripts', 'validate-ekodi-ai-change-orchestration.mjs');
 const sha = '1111111111111111111111111111111111111111';
+const receiptTaskId = 'orch_00000000-0000-4000-8000-000000000001';
+const receiptBranchRef = `ai/gpt-5-6-sol/${receiptTaskId}`;
+const authorizedReceipt = { status: 200, body: { authorized: true, taskId: receiptTaskId, branchRef: receiptBranchRef, state: 'assigned', authority: 'ekodi-orchestrator' } };
 
 function run(provenance, { message = 'squashed change', lookup = null, branch = 'main' } = {}) {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'ekodi-ai-provenance-'));
   const eventPath = path.join(temp, 'event.json');
   const provenancePath = path.join(temp, 'pulls.json');
   const lookupPath = path.join(temp, 'lookup.json');
+  const receiptPath = path.join(temp, 'receipt.json');
   fs.writeFileSync(eventPath, JSON.stringify({ head_commit: { message } }));
   fs.writeFileSync(provenancePath, typeof provenance === 'string' ? provenance : JSON.stringify(provenance));
+  fs.writeFileSync(receiptPath, JSON.stringify(authorizedReceipt));
   if (lookup) fs.writeFileSync(lookupPath, JSON.stringify(lookup));
   const result = spawnSync(process.execPath, [validator, '--release'], {
     cwd: root,
@@ -31,6 +36,7 @@ function run(provenance, { message = 'squashed change', lookup = null, branch = 
       GITHUB_SHA: sha,
       GITHUB_ACTOR: 'topmaster-joseph',
       EKODI_GITHUB_PR_PROVENANCE: provenancePath,
+      EKODI_ORCHESTRATOR_RELEASE_RECEIPT_FIXTURE: receiptPath,
       ...(lookup ? { EKODI_GITHUB_PR_LOOKUP: lookupPath } : {}),
     },
   });
@@ -43,7 +49,9 @@ function runRestrictedTokenFallback(pr, { message = `Merge PR #${pr.number}: rel
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'ekodi-ai-public-fallback-'));
   const eventPath = path.join(temp, 'event.json');
   const preloadPath = path.join(temp, 'fetch-stub.mjs');
+  const receiptPath = path.join(temp, 'receipt.json');
   fs.writeFileSync(eventPath, JSON.stringify({ head_commit: { message } }));
+  fs.writeFileSync(receiptPath, JSON.stringify(authorizedReceipt));
   fs.writeFileSync(preloadPath, `
 const pr = JSON.parse(Buffer.from(process.env.EKODI_TEST_PR_B64, 'base64').toString('utf8'));
 globalThis.fetch = async (url, options = {}) => {
@@ -70,6 +78,7 @@ globalThis.fetch = async (url, options = {}) => {
       GITHUB_TOKEN: 'contents-read-only-token',
       EKODI_GITHUB_PROVENANCE_ATTEMPTS: '1',
       EKODI_TEST_PR_B64: Buffer.from(JSON.stringify(pr)).toString('base64'),
+      EKODI_ORCHESTRATOR_RELEASE_RECEIPT_FIXTURE: receiptPath,
     },
   });
   fs.rmSync(temp, { recursive: true, force: true });
@@ -83,7 +92,7 @@ function validPr(overrides = {}) {
     merged_at: '2026-09-09T00:00:00Z',
     merge_commit_sha: sha,
     base: { ref: 'main' },
-    head: { ref: 'ai/gpt-5-6-sol/provenance-test' },
+    head: { ref: receiptBranchRef },
     ...overrides,
   };
 }
