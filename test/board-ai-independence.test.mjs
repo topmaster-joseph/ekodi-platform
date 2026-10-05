@@ -44,3 +44,28 @@ test('board resilience policy forbids synchronous AI dependency',()=>{
   assert.equal(policy.aiIndependence.criticalPathAiDependency,'forbidden');
   assert.equal(policy.aiIndependence.synchronousAiProviderCalls,'forbidden');
 });
+
+
+test('all registered existing board surfaces remain AI-independent on their core path',()=>{
+  const policy=JSON.parse(fs.readFileSync(new URL('../config/replaceable-board-engine-policy.json',import.meta.url),'utf8').replace(/^\uFEFF/,''));
+  const surfaces=new Map((policy.verifiedIndependentSurfaces||[]).map(item=>[item.id,item]));
+  for(const id of ['seonammedi.citizen_voice','seonammedi.notice','journal.posts','organization.notices','community'])assert.ok(surfaces.has(id),id);
+
+  const admin=fs.readFileSync(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8');
+  assert.match(admin,/boardId:'seonammedi\.notice'/);
+  assert.match(admin,/createBoardRuntimeGuard\(\{adapter:seonamNoticeAdapter\}\)/);
+  for(const action of ['list','read','search','create','edit','delete','attachments','health'])assert.match(admin,new RegExp("handleBoardAdapter\\(seonamNoticeBoard,\\{action:'"+action+"'"));
+
+  const journal=fs.readFileSync(new URL('../journal-worker.js',import.meta.url),'utf8');
+  assert.doesNotMatch(journal,/api\.openai\.com|anthropic|generativelanguage\.googleapis\.com|workers[_-]?ai/i);
+
+  const organization=fs.readFileSync(new URL('../supabase/migrations/20260914095000_organization_subsite_operations.sql',import.meta.url),'utf8');
+  assert.match(organization,/organization_notices/);
+  assert.doesNotMatch(organization,/openai|anthropic|gemini|llm/i);
+
+  const community=fs.readFileSync(new URL('../supabase/functions/community-api/index.ts',import.meta.url),'utf8');
+  assert.match(community,/if \(!OPENAI_API_KEY \|\| !OPENAI_MODEL\) return fallback/);
+  assert.match(community,/if \(!response\.ok\) return fallback/);
+  assert.match(community,/community draft provider/);
+  assert.match(community,/return fallback/);
+});

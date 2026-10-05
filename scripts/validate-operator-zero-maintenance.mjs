@@ -13,6 +13,10 @@ const board=json('config/replaceable-board-engine-policy.json');
 const boardRuntime=text('board-runtime-guard.js');
 const boardProvider=text('replaceable-board-provider.js');
 const seonammediBoard=text('seonammedi-civic-control.js');
+const seonammediAdmin=text('seonammedi-admin-control.js');
+const journalBoard=text('journal-worker.js');
+const communityBoard=text('supabase/functions/community-api/index.ts');
+const organizationBoard=text('supabase/migrations/20260914095000_organization_subsite_operations.sql');
 const sharedSiteRelease=text('.github/workflows/deploy-site-core.yml');
 const controlApiRelease=text('.github/workflows/deploy-control-api.yml');
 const ui=text('config/ui-surface-policy.js');
@@ -35,6 +39,13 @@ if(!boardRuntime.includes('aiIndependent:true')||!boardRuntime.includes("coreSou
 if(/fetch\s*\(|openai|anthropic|gemini|llm|ekodi-ai/i.test(boardRuntime))fail('board runtime guard must not call AI or external providers');
 if(!boardProvider.includes('createBoardRuntimeGuard')||!boardProvider.includes("coreEngineId:'ekodi-native'"))fail('replaceable board provider must keep EKODI native core runtime');
 if(!seonammediBoard.includes('createBoardRuntimeGuard({adapter:citizenVoiceAdapter})'))fail('seonammedi citizen board must use the AI-independent runtime guard');
+if(!seonammediAdmin.includes("boardId:'seonammedi.notice'")||!seonammediAdmin.includes('createBoardRuntimeGuard({adapter:seonamNoticeAdapter})'))fail('seonammedi notice board must use the AI-independent runtime guard');
+for(const action of ['list','read','search','create','edit','delete','attachments','health'])if(!seonammediAdmin.includes(`handleBoardAdapter(seonamNoticeBoard,{action:'${action}'`))fail(`seonammedi notice board bypasses runtime guard for ${action}`);
+if(/api\\.openai\\.com|anthropic|generativelanguage\\.googleapis\\.com|workers[_-]?ai/i.test(journalBoard))fail('journal core posts path must remain AI-independent');
+if(!organizationBoard.includes('organization_notices')||/openai|anthropic|gemini|llm/i.test(organizationBoard))fail('organization notices must remain native and AI-independent');
+for(const marker of ['if (!OPENAI_API_KEY || !OPENAI_MODEL) return fallback','if (!response.ok) return fallback','community draft provider','return fallback'])if(!communityBoard.includes(marker))fail('community optional AI fallback drifted: '+marker);
+const registeredBoardSurfaces=new Set((board.verifiedIndependentSurfaces||[]).map(item=>item.id));
+for(const id of ['seonammedi.citizen_voice','seonammedi.notice','journal.posts','organization.notices','community'])if(!registeredBoardSurfaces.has(id))fail('existing board surface missing AI-independence registration: '+id);
 for(const file of ['common-board-adapter.js','board-runtime-guard.js','replaceable-board-provider.js','board-engine-registry.js']){
   if(!sharedSiteRelease.includes(`'${file}'`))fail(`shared-site release must trigger on common board runtime change: ${file}`);
   if(!controlApiRelease.includes(`'${file}'`))fail(`control-api release must trigger on common board runtime change: ${file}`);
