@@ -16,6 +16,10 @@ SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 AUTH_URL = "https://auth.ekodi.kr/?site=space"
 
+[[services]]
+binding = "STORAGE"
+service = "ekodi-storage-control"
+
 [assets]
 directory = "./space"
 binding = "ASSETS"
