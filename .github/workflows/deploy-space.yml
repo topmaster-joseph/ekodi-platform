@@ -33,6 +33,7 @@ on:
       - 'test/pizzamaru-full-menu-social.test.mjs'
       - 'test/jadam-storefront-brand.test.mjs'
       - 'test/ekodimission-shell-contract.test.mjs'
+      - 'test/ekodimission-photo-upload.test.mjs'
       - 'scripts/validate-ekodimission-shell-contract.mjs'
       - 'scripts/verify-ekodimission-production.mjs'
       - '.github/workflows/deploy-space.yml'
@@ -68,6 +69,7 @@ on:
       - 'test/pizzamaru-full-menu-social.test.mjs'
       - 'test/jadam-storefront-brand.test.mjs'
       - 'test/ekodimission-shell-contract.test.mjs'
+      - 'test/ekodimission-photo-upload.test.mjs'
       - 'scripts/validate-ekodimission-shell-contract.mjs'
       - 'scripts/verify-ekodimission-production.mjs'
       - '.github/workflows/deploy-space.yml'
@@ -108,8 +110,12 @@ jobs:
           node --check space/app.js
           node --test test/workspace-routing-10g.test.mjs test/store-operating-space.test.mjs test/store-user-site-admin.test.mjs test/storefront-public.test.mjs test/pizzamaru-full-menu-social.test.mjs test/jadam-storefront-brand.test.mjs test/ekodimission-site.test.mjs test/organization-subsite.test.mjs test/mnubiz-workspace.test.mjs
           node scripts/validate-ekodimission-shell-contract.mjs
-          node --test test/ekodimission-shell-contract.test.mjs
+          node --test test/ekodimission-shell-contract.test.mjs test/ekodimission-photo-upload.test.mjs
           grep -Fq "pattern = \"space.ekodi.kr\"" wrangler.space.toml
+          grep -Fq 'binding = "STORAGE"' wrangler.space.toml
+          grep -Fq 'service = "ekodi-storage-control"' wrangler.space.toml
+          grep -Fq 'MISSION_ACTIVITY_MEDIA_UPLOAD_RE' space-worker.js
+          grep -Fq "https://storage.internal/api/storage/v1/records" space-worker.js
           grep -Fq 'DATA_ENABLED = "false"' wrangler.space.staging.toml
           grep -Fq 'DATA_MODE = "isolated-staging"' wrangler.space.staging.toml
           grep -Fq 'path -> slug(locator) -> workspace_id -> relationship/policy -> role -> capability' space-worker.js
@@ -342,6 +348,18 @@ jobs:
         env:
           EKODI_MISSION_VERIFY_SCOPE: space
         run: node scripts/verify-ekodimission-production.mjs
+      - name: Verify EKODI Mission collaborative photo upload surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive='https://ekodi.kr/ekodimission/activities/261003-autumn-community-trip/archive'
+          code=$(curl -sS -o /tmp/mission-archive.html -w '%{http_code}' --connect-timeout 5 --max-time 20 "$archive" || true)
+          [ "$code" = '200' ]
+          grep -Fq 'data-photo-upload' /tmp/mission-archive.html
+          grep -Fq '사진 함께 올리기' /tmp/mission-archive.html
+          api_code=$(curl -sS -o /tmp/mission-photo-api.json -w '%{http_code}' --connect-timeout 5 --max-time 20             'https://ekodi.kr/ekodimission/api/activities/261003-autumn-community-trip/media-upload' || true)
+          [ "$api_code" = '405' ]
+          echo 'Mission collaborative photo upload UI and POST-only API route are live.'
       - name: Verify mnubiz user UI, shared header and shared footer
         shell: bash
         run: |
