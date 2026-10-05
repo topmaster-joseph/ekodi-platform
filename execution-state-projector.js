@@ -49,7 +49,7 @@ const DEPLOYMENT_STATE_GATE=Object.freeze({
   validating:'build',
   pr_gates:'build',
   staging:'release',
-  deploying:'release',
+  deploying:'production',
   production_verifying:'production',
   completed:'done',
 });
@@ -83,8 +83,15 @@ export function projectDeploymentGate({state='received',risk='normal',deployment
       independentVerificationRequired:['high','critical'].includes(normalized),
     });
   }
-  const current=DEPLOYMENT_STATE_GATE[lifecycle]||'build';
+  const mappedCurrent=DEPLOYMENT_STATE_GATE[lifecycle]||'build';
   const productionSatisfied=lifecycle==='completed'&&Boolean(productionEvidence);
+  const current=productionSatisfied
+    ? 'done'
+    : lifecycle==='completed'
+      ? 'production'
+      : normalized==='low'&&mappedCurrent==='release'
+        ? 'build'
+        : mappedCurrent;
   return Object.freeze({
     model:'3-gate',
     current,
