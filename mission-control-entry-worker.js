@@ -30,7 +30,7 @@ import { handleStorageGateway } from './storage-gateway.js';
 import { handleExternalAiModuleGateway } from './external-ai-module-gateway.js';
 import { runAiProviderHealthSchedule } from './ai-provider-control.js';
 import { handleEkodiMcpGateway, handleEkodiMcpMetadata } from './ekodi-mcp-gateway.js';
-import { handleOrchestratorReleaseReceipt } from './ekodi-orchestrator-task-adapter.js';
+import { handleOrchestratorReleaseReceipt, reconcileOrchestratorTasks } from './ekodi-orchestrator-task-adapter.js';
 import { handleDevotionalControl } from './devotional-control.js';
 import { handleLearningControl } from './learning-control.js';
 import { handleLocalCommerceControl } from './local-commerce-control.js';
@@ -384,6 +384,7 @@ export default {
     const authorBilling = runAuthorBillingSchedule(env).catch(error => { console.error('Author billing schedule error', error); return { processed:0, error:'author_billing_schedule_failed' }; });
     const messengerOutbox = drainMessengerOutbox(env, { limit:20 }).catch(error => { console.error('Messenger outbox schedule error', error); return { processed:0, failed:1, error:'messenger_outbox_schedule_failed' }; });
     const commandPulse = runEkodiPulseSchedule(env, { limit:1 }).catch(error => { console.error('EKODI v8 Pulse schedule error', error); return { ok:false, error:'ekodi_v8_pulse_failed' }; });
+    const orchestratorReconcile = reconcileOrchestratorTasks(env, { limit:20 }).catch(error => { console.error('EKODI orchestrator reconcile schedule error', error); return { checked:0, errors:1, error:'orchestrator_reconcile_failed' }; });
     const aiProviderHealth = runAiProviderHealthSchedule(env, { scheduledTime:controller?.scheduledTime }).catch(error => { console.error('AI provider health schedule error', error); return { ok:false, checked:0, error:'ai_provider_health_failed' }; });
     const hybridWatchdog = runHybridExecutionMonitor(env).catch(error => { console.error('Hybrid execution watchdog schedule error', error); return { status:'unavailable', error:'hybrid_execution_watchdog_failed' }; });
     const recordingRetention = runRealtimeRecordingRetention(env,{limit:10}).catch(error => { console.error('Realtime recording retention error', error); return { expired:0, stale:0, error:'realtime_recording_retention_failed' }; });
@@ -395,6 +396,7 @@ export default {
       ctx.waitUntil(authorBilling);
       ctx.waitUntil(messengerOutbox);
       ctx.waitUntil(commandPulse);
+      ctx.waitUntil(orchestratorReconcile);
       ctx.waitUntil(aiProviderHealth);
       ctx.waitUntil(hybridWatchdog);
       ctx.waitUntil(recordingRetention);
@@ -402,7 +404,7 @@ export default {
       if (seonamMediHourly) ctx.waitUntil(seonamMediHourly);
       if (externalAccountHealthDaily) ctx.waitUntil(externalAccountHealthDaily);
     }
-    const background = [authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration];
+    const background = [authorBilling, messengerOutbox, commandPulse, orchestratorReconcile, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration];
     if (seonamMediHourly) background.push(seonamMediHourly);
     if (externalAccountHealthDaily) background.push(externalAccountHealthDaily);
     return customerSchedule || Promise.all(background);
