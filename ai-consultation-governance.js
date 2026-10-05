@@ -109,7 +109,7 @@ function decisionShape(status, input, reasonCodes, categories) {
     displayLabel: display,
     risk,
     routerScore,
-    forced: categories.some(category => HIGH_IMPACT_CATEGORIES.includes(category)),
+    forced: mutationRequested(input) && categories.some(category => HIGH_IMPACT_CATEGORIES.includes(category)),
     categories,
     reasonCodes: unique(reasonCodes),
     requirements: Object.freeze(requirements),
@@ -119,7 +119,8 @@ function decisionShape(status, input, reasonCodes, categories) {
 export function decideEkodiConsultation(input = {}) {
   const risk = normalizeRisk(input.risk);
   const categories = detectedCategories(input);
-  const forced = categories.some(category => HIGH_IMPACT_CATEGORIES.includes(category));
+  const mutating = mutationRequested(input);
+  const forced = mutating && categories.some(category => HIGH_IMPACT_CATEGORIES.includes(category));
   const routerScore = normalizeRouterScore(input);
   const reasons = [];
 
