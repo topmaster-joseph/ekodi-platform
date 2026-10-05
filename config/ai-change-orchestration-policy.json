@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 10,
+  "schemaVersion": 9,
   "policyId": "AI-ORCHESTRATE-001",
   "status": "enforced",
   "controlPlane": "EKODI AI",
