@@ -1,12 +1,73 @@
-﻿{
-  "version":"1.0.0",
-  "policyId":"EKODI-REPLACEABLE-BOARD-ENGINE-001",
-  "status":"enforced",
-  "appliesRecursivelyToAllServices":true,
-  "scope":["citizen_feedback","notice","qna","community"],
-  "rule":"Prefer a proven free/open-source external board engine behind the EKODI Board Adapter. Never couple public URLs, EKODI auth, user UI or canonical data ownership directly to one engine.",
-  "engineSelection":{"required":["open_source_license","self_hostable","documented_api","export_import","security_maintenance","upgrade_path","health_check"],"preferredLicense":["MIT","Apache-2.0","BSD"],"referenceCandidates":["flarum","nodebb"],"productionRule":"Only a stable, security-maintained engine may become the default production engine; release candidates remain evaluation-only unless explicitly approved by Human Gate."},
-  "architecture":{"registryRequired":true,"providerInterfaceRequired":true,"nativeFallbackRequired":true,"preserveEkodiUrl":true,"preserveEkodiAuth":true,"preserveUserSurface":true,"preserveCanonicalData":true,"durableWriteQueuePreserved":true,"falseSuccessForbidden":true},
-  "migration":{"dualRunBeforeCutover":true,"exportImportRequired":true,"rollbackRequired":true,"engineSwapWithoutPublicUrlChange":true},
-  "firstRollout":"seonammedi.citizen_voice"
+{
+  "version": "1.1.0",
+  "policyId": "EKODI-REPLACEABLE-BOARD-ENGINE-001",
+  "status": "enforced",
+  "appliesRecursivelyToAllServices": true,
+  "scope": [
+    "all_interactive_boards",
+    "citizen_feedback",
+    "notice",
+    "qna",
+    "community"
+  ],
+  "rule": "All core board operations must remain available through the EKODI Board Adapter without any synchronous AI/LLM dependency. Replaceable external board engines are optional extension layers only and must never own canonical board CRUD, public URLs, EKODI auth, user UI or canonical data.",
+  "engineSelection": {
+    "required": [
+      "open_source_license",
+      "self_hostable",
+      "documented_api",
+      "export_import",
+      "security_maintenance",
+      "upgrade_path",
+      "health_check"
+    ],
+    "preferredLicense": [
+      "MIT",
+      "Apache-2.0",
+      "BSD"
+    ],
+    "referenceCandidates": [
+      "flarum",
+      "nodebb"
+    ],
+    "productionRule": "Only a stable, security-maintained engine may become the default production engine; release candidates remain evaluation-only unless explicitly approved by Human Gate."
+  },
+  "architecture": {
+    "registryRequired": true,
+    "providerInterfaceRequired": true,
+    "nativeFallbackRequired": true,
+    "preserveEkodiUrl": true,
+    "preserveEkodiAuth": true,
+    "preserveUserSurface": true,
+    "preserveCanonicalData": true,
+    "durableWriteQueuePreserved": true,
+    "falseSuccessForbidden": true,
+    "coreRuntimeGuardRequired": true,
+    "coreOperationsAlwaysUseEkodiAdapter": true,
+    "externalEngineMayNotOwnCanonicalCrud": true,
+    "aiSynchronousDependencyForbidden": true,
+    "aiFailureMustNotAffectCoreBoard": true,
+    "runtimeExtensionFailureIsolation": true
+  },
+  "migration": {
+    "dualRunBeforeCutover": true,
+    "exportImportRequired": true,
+    "rollbackRequired": true,
+    "engineSwapWithoutPublicUrlChange": true
+  },
+  "firstRollout": "seonammedi.citizen_voice",
+  "aiIndependence": {
+    "criticalPathAiDependency": "forbidden",
+    "synchronousAiProviderCalls": "forbidden",
+    "aiEnhancements": "optional_async_only",
+    "providerFailureBehavior": "ignore_or_retry_out_of_band_without_blocking_board",
+    "completionRule": "list_read_search_create_reply_edit_delete_moderate_attachments_health_consume_remain_operational_when_all_ai_providers_are_unavailable"
+  },
+  "runtime": {
+    "coreModule": "common-board-adapter.js",
+    "guardModule": "board-runtime-guard.js",
+    "replaceableProviderModule": "replaceable-board-provider.js",
+    "canonicalWritePlane": "EKODI-DURABLE-WRITE-INGRESS-001",
+    "searchRequiredInContract": true
+  }
 }
