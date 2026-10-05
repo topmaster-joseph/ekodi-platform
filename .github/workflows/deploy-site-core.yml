@@ -783,10 +783,25 @@ jobs:
           # queue(batch, env) handler, so attaching the consumer is safe.
           npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
           # triggers deploy manages routes/domains/cron, not Queue consumers.
-          if ! npx --yes wrangler@4.119.0 queues consumer worker list ekodi-write-ingress --json | jq -e '.[] | select(.script_name == "shy-thunder-39a4")' >/dev/null; then
-            npx --yes wrangler@4.119.0 queues consumer worker add ekodi-write-ingress shy-thunder-39a4 --batch-size 50 --batch-timeout 1 --message-retries 5 --dead-letter-queue ekodi-write-ingress-dlq
+          consumer_present() {
+            npx --yes wrangler@4.119.0 queues consumer worker list ekodi-write-ingress --json \
+              | jq -e '.. | strings | select(. == "shy-thunder-39a4")' >/dev/null
+          }
+          if ! consumer_present; then
+            set +e
+            consumer_add_output="$(npx --yes wrangler@4.119.0 queues consumer worker add ekodi-write-ingress shy-thunder-39a4 --batch-size 50 --batch-timeout 1 --message-retries 5 --dead-letter-queue ekodi-write-ingress-dlq 2>&1)"
+            consumer_add_status=$?
+            set -e
+            if [ "$consumer_add_status" -ne 0 ]; then
+              if printf '%s' "$consumer_add_output" | grep -Eq "already has a consumer|code: 11004|\[code: 11004\]"; then
+                echo "Queue consumer already exists; verifying desired worker binding."
+              else
+                printf '%s\n' "$consumer_add_output" >&2
+                exit "$consumer_add_status"
+              fi
+            fi
           fi
-          npx --yes wrangler@4.119.0 queues consumer worker list ekodi-write-ingress --json | jq -e '.[] | select(.script_name == "shy-thunder-39a4")' >/dev/null
+          consumer_present
           npx --yes wrangler@4.119.0 queues list | grep -Fq 'ekodi-write-ingress'
           npx --yes wrangler@4.119.0 queues list | grep -Fq 'ekodi-write-ingress-dlq'
           echo 'durableWriteQueueConsumer=attached'
