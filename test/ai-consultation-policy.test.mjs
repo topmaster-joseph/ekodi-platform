@@ -28,3 +28,29 @@ test('high-impact categories cannot silently skip consultation', () => {
     assert.equal(forced.has(category), true, category);
   }
 });
+
+
+test('deployment validation is exposed as three gates while retaining internal checks', () => {
+  const model = policy.deploymentGateModel;
+  assert.equal(model.policyId, 'EKODI-DEPLOY-3GATE-001');
+  assert.deepEqual(model.publicSequence, ['build', 'release', 'production']);
+  assert.equal(model.detailedLifecycleRemainsAuditable, true);
+  assert.equal(model.duplicateChecksMustBeDeduplicated, true);
+  assert.equal(model.samePurposeChecksRunInsideOneGate, true);
+  assert.equal(model.parallelizeIndependentChecks, true);
+  assert.deepEqual(model.riskRouting.low.publicGates, ['build', 'production']);
+  assert.deepEqual(model.riskRouting.low.collapsedGates, ['release']);
+  assert.deepEqual(model.riskRouting.normal.publicGates, ['build', 'release', 'production']);
+  assert.equal(model.riskRouting.high.independentVerificationRequired, true);
+  assert.equal(model.riskRouting.critical.humanGateWhenIndependentVerificationUnavailable, true);
+});
+
+test('three-gate simplification never weakens production completion or must-pass safety checks', () => {
+  const model = policy.deploymentGateModel;
+  assert.equal(model.completion.productionEvidenceRequiredWhenDeploymentRequested, true);
+  assert.equal(model.completion.liveFunctionalVerificationRequired, true);
+  assert.equal(model.completion.deployCommandAloneNeverMeansDone, true);
+  assert.equal(model.consultationBehavior.providerFailureMayNotBypassMustPassChecks, true);
+  assert.equal(policy.consultationDecision.executionBlockingRules.lowNormalProviderFailureIsAdvisory, true);
+  assert.equal(policy.consultationDecision.executionBlockingRules.mustPassSafetyChecksRemainBlocking, true);
+});
