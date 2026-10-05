@@ -52,7 +52,7 @@
       <div class="pos-agent-grid">
         <article class="pos-agent-card">
           <h3>설치 · 업그레이드</h3>
-          <p>처음 설치하거나 기존 Agent를 최신 버전으로 갱신합니다. 기존 로컬 설정은 업그레이드 시 보존됩니다.</p>
+          <p>처음 설치하거나 기존 Agent를 최신 버전으로 갱신합니다. 기존 로컬 설정은 업그레이드 시 보존됩니다. <strong>0x80041318 / 작업 XML 범위 오류는 최신 설치기가 자동 보정합니다.</strong></p>
           <div class="pos-agent-actions">
             <a class="primary" href="${BASE}setup-pos-agent.cmd" download>원클릭 설치 다운로드</a>
             <a href="${BASE}install-pos-agent.ps1" download>수동 설치 스크립트</a>
@@ -95,7 +95,7 @@
       </article>
 
       <div class="pos-agent-note">
-        브라우저 보안상 Windows 설치·삭제 파일을 자동 실행하지 않습니다. 다운로드한 <strong>.cmd</strong> 파일을 해당 POS PC에서 직접 실행하고, 관리자 권한 요청 내용을 확인한 뒤 허용합니다. Agent는 <strong>127.0.0.1</strong> 로컬 연결만 사용합니다.
+        브라우저 보안상 Windows 설치·삭제 파일을 자동 실행하지 않습니다. 다운로드한 <strong>.cmd</strong> 파일을 해당 POS PC에서 직접 실행하고, 관리자 권한 요청 내용을 확인한 뒤 허용합니다. 이전 설치에서 <strong>0x80041318</strong>이 발생했다면 기존 창을 닫고 <strong>원클릭 설치 다운로드</strong>를 새로 받아 다시 실행하세요. 최신 설치 파일은 구버전 20초 재시작 설정을 거부하고 Windows 작업 스케줄러 최소 1분 규칙에 맞춰 설치합니다. Agent는 <strong>127.0.0.1</strong> 로컬 연결만 사용합니다.
       </div>
     `;
     host.prepend(section);

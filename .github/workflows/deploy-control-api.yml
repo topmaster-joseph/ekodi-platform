@@ -2,6 +2,15 @@ name: Deploy Control API
 
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Verified orchestrator source branch'
+        required: false
+        type: string
+      release_task_id:
+        description: 'Verified orchestrator task id'
+        required: false
+        type: string
   pull_request:
     paths:
       - 'api-worker.js'
@@ -429,6 +438,8 @@ jobs:
       - name: EKODI AI Orchestration Gate
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+          EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Generate universal user-service registry
         run: npm run generate:user-services
@@ -491,6 +502,8 @@ jobs:
       - name: EKODI AI Orchestration Gate
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+          EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Generate universal user-service registry
         run: npm run generate:user-services
@@ -702,6 +715,8 @@ jobs:
       - name: EKODI AI Orchestration Gate
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+          EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Generate universal user-service registry
         run: npm run generate:user-services

@@ -51,6 +51,8 @@ test('Store Admin exposes the POS console without weakening store scope',async()
   assert.match(script,/start-pos-agent\.cmd/);
   assert.match(script,/stop-pos-agent\.cmd/);
   assert.match(script,/웹 POS 통합화면은 계속 사용할 수 있고/);
+  assert.match(script,/0x80041318/);
+  assert.match(script,/1분 재시작 간격/);
   assert.match(script,/webSection:'delivery'/);
   assert.match(script,/webSection:'orders'/);
   assert.match(script,/\/v1\/health/);

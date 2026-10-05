@@ -298,11 +298,15 @@ export async function settleEkodiCommandTask(input, task, result, options = {}) 
   let closedAt = null;
   if (resultState === 'verified' || resultState === 'ignored') closedAt = now;
   else if (resultState === 'human_gate') state = 'human_gate';
-  else if (['degraded', 'core_only', 'failed'].includes(resultState) && attempt < maxAttempts) {
+  // AI consultation is advisory for the deterministic core. Provider exhaustion
+  // must not turn a valid core-only result into an endless command retry loop.
+  // Only execution failures/degraded runs are retryable here; core_only is a
+  // stable hand-off state for the non-AI executor and remains open for evidence.
+  else if (resultState === 'core_only') state = 'core_only';
+  else if (['degraded', 'failed'].includes(resultState) && attempt < maxAttempts) {
     state = 'retry';
     nextAttemptAt = iso(nowMs + Math.min(30, 10 * attempt) * 60_000);
-  } else if (resultState === 'core_only') state = 'core_only';
-  else if (resultState === 'degraded') state = 'degraded';
+  } else if (resultState === 'degraded') state = 'degraded';
   else state = 'failed';
 
   const evidence = guardedResult?.evidence || {};

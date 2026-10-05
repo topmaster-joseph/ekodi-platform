@@ -270,6 +270,9 @@ async function appendEvent(db,id,fromState,toState,actor,reason,evidence=null){
 
 function publicTask(row){
   if(!row)return null;
+  const result=parseJson(row.result_json,null);
+  const evidence=parseJson(row.evidence_json,[]);
+  const commandMeta=evidence&&typeof evidence==='object'&&!Array.isArray(evidence)?evidence.commandLedger:null;
   return Object.freeze({
     taskId:row.task_id,
     state:row.state,
@@ -282,8 +285,14 @@ function publicTask(row){
     branchRef:row.branch_ref||null,
     prRef:row.pr_ref||null,
     deploymentRequested:Number(row.deployment_requested||0)===1,
-    result:parseJson(row.result_json,null),
-    evidence:parseJson(row.evidence_json,[]),
+    commandState:commandMeta?.state||null,
+    attemptCount:Number(commandMeta?.attemptCount||0),
+    maxAttempts:Number(commandMeta?.maxAttempts||0),
+    nextAttemptAt:commandMeta?.nextAttemptAt||null,
+    leaseUntil:commandMeta?.leaseUntil||null,
+    lastError:commandMeta?.lastError||'',
+    result,
+    evidence,
     productionEvidence:parseJson(row.production_evidence_json,null),
     createdAt:row.created_at,
     updatedAt:row.updated_at,
@@ -297,9 +306,13 @@ async function ownedTask(db,id,requester){
 
 function mapCommandState(state){
   const value=text(state,40).toLowerCase();
-  if(['queued','retry'].includes(value))return'assigned';
+  if(value==='queued')return'assigned';
+  if(value==='retry')return'assigned';
   if(value==='running')return'executing';
-  if(['verified','core_only'].includes(value))return'completed';
+  if(value==='verified')return'completed';
+  // core_only means AI consultation was unavailable; it is a deterministic
+  // execution hand-off, never proof that the requested change completed.
+  if(value==='core_only')return'assigned';
   if(['human_gate','degraded'].includes(value))return'blocked';
   if(value==='ignored')return'cancelled';
   if(value==='failed')return'failed';
@@ -312,14 +325,28 @@ async function syncFromCommandLedger(db,env,row){
   try{command=await getEkodiCommandTask(env,row.task_id)}catch{return row}
   if(!command)return row;
   let next=mapCommandState(command.state);
-  if(!next||next===row.state)return row;
+  if(!next)return row;
   if(next==='completed'&&Number(row.deployment_requested||0)===1&&!row.production_evidence_json)next='production_verifying';
   const terminal=TERMINAL_STATES.has(next);
   const updated=now();
-  const result=await db.prepare(`UPDATE ekodi_orchestrator_tasks SET state=?,state_version=state_version+1,
+  const stateChanged=next!==row.state;
+  const commandMeta={
+    state:command.state,
+    attemptCount:Number(command.attemptCount||0),
+    maxAttempts:Number(command.maxAttempts||0),
+    nextAttemptAt:command.nextAttemptAt||null,
+    leaseUntil:command.leaseUntil||null,
+    lastError:command.lastError||'',
+    updatedAt:command.updatedAt||null,
+  };
+  const rawEvidence=command.evidence;
+  const evidencePayload=rawEvidence&&typeof rawEvidence==='object'&&!Array.isArray(rawEvidence)
+    ? {...rawEvidence,commandLedger:commandMeta}
+    : {items:Array.isArray(rawEvidence)?rawEvidence:[],commandLedger:commandMeta};
+  const result=await db.prepare(`UPDATE ekodi_orchestrator_tasks SET state=?,state_version=state_version+?,
     result_json=?,evidence_json=?,updated_at=?,completed_at=? WHERE task_id=? AND requester_id=? AND state=?`)
-    .bind(next,safeJson(command.result||{}),safeJson(command.evidence||{}),updated,terminal?updated:null,row.task_id,row.requester_id,row.state).run();
-  if(changes(result)>0)await appendEvent(db,row.task_id,row.state,next,'ekodi-command-plane','command_ledger_sync',{commandState:command.state});
+    .bind(next,stateChanged?1:0,safeJson(command.result||{}),safeJson(evidencePayload),updated,terminal?updated:null,row.task_id,row.requester_id,row.state).run();
+  if(changes(result)>0&&stateChanged)await appendEvent(db,row.task_id,row.state,next,'ekodi-command-plane','command_ledger_sync',commandMeta);
   return ownedTask(db,row.task_id,row.requester_id);
 }
 
@@ -349,16 +376,16 @@ export async function submitOrchestratorTask(env,identity,args={}){
       context:{source:'mcp',orchestratorTaskId:id,requesterBound:true,authorityTransfer:false,branchRef,deploymentRequested},
       event:{id:`pulse_${id}`.slice(0,120),kind:'external_ai_request',source:'mcp',summary:intent,changeClass:deploymentRequested?'yellow':'green',actionable:true,requiresHumanDecision:risk==='high'||risk==='critical'},
     });
-    await runEkodiCommandQueue(env,{limit:1,taskId:id});
     const assigned=now();
     await db.prepare("UPDATE ekodi_orchestrator_tasks SET state='assigned',state_version=state_version+1,assigned_worker='ekodi-command-plane',updated_at=? WHERE task_id=? AND requester_id=? AND state='received'").bind(assigned,id,requester).run();
     await appendEvent(db,id,'received','assigned','ekodi-orchestrator','queued_for_command_plane',{worker:'ekodi-command-plane'});
+    await runEkodiCommandQueue(env,{limit:1,taskId:id});
   }catch(error){
     const failed=now();
     await db.prepare("UPDATE ekodi_orchestrator_tasks SET state='failed',state_version=state_version+1,dead_letter_reason=?,updated_at=?,completed_at=? WHERE task_id=? AND requester_id=?").bind(text(error?.message||error,500),failed,failed,id,requester).run();
     await appendEvent(db,id,'received','failed','ekodi-orchestrator','queue_submission_failed');
   }
-  return publicTask(await ownedTask(db,id,requester));
+  return publicTask(await syncFromCommandLedger(db,env,await ownedTask(db,id,requester)));
 }
 
 export async function getOrchestratorTaskStatus(env,identity,id){
