@@ -115,3 +115,12 @@ test('MCP delegated tasks carry standing delegation, expose retries, and synchro
   const dispatch=source.indexOf('await runEkodiCommandQueue(env,{limit:1,taskId:id})');
   assert.ok(assign>=0&&dispatch>assign,'assignment must be recorded before inline dispatch so execution state is not overwritten back to assigned');
 });
+
+
+test('MCP task status exposes compact three-gate deployment projection without hiding detailed state',async()=>{
+  const source=await readFile(new URL('../ekodi-orchestrator-task-adapter.js',import.meta.url),'utf8');
+  assert.match(source,/projectDeploymentGate/);
+  assert.match(source,/deploymentGate/);
+  assert.match(source,/productionEvidence/);
+  assert.match(source,/state:row\.state/);
+});
