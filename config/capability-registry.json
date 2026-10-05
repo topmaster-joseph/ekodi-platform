@@ -1,5 +1,5 @@
 {
-  "version": "3.2.0",
+  "version": "3.3.0",
   "name": "EKODI Universal Capability Registry",
   "principle": "Capabilities are stable reusable abilities. Intent selects capabilities; services and providers are replaceable implementations.",
   "surfacePolicy": {
@@ -561,6 +561,26 @@
         "finance",
         "accounting",
         "budget"
+      ]
+    },
+    {
+      "id": "community.site-board",
+      "name": "독립 사이트 게시판",
+      "domain": "community",
+      "ownerAgent": "community",
+      "actionTier": "execute_reversible",
+      "maturity": "service-backed",
+      "description": "각 사용자·독립 사이트의 /board를 사이트별 데이터·권한·설정·장애·백업·이전 단위가 분리된 독립 게시판 서비스로 운영한다.",
+      "surfaces": [
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "board",
+        "community",
+        "site",
+        "independent",
+        "게시판"
       ]
     },
     {
