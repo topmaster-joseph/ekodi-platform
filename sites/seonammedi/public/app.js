@@ -784,7 +784,7 @@ function renderPublicAdminControls(){
   admin.attach(el('organization')?.querySelector('.section-head'),{label:'조직 바로 수정',panel:'organization',permission:'pages',params:()=>({org:document.querySelector('#organizationTabs [data-org-group].active')?.dataset.orgGroup||'bidae'})});
   const timelineAdmin=el('timelineAdminEdit');if(timelineAdmin&&admin.has('timeline')){timelineAdmin.hidden=false;timelineAdmin.onclick=()=>admin.open('status','활동이력 관리')}
   admin.attach(el('channels')?.querySelector('.section-head'),{label:'소통채널 바로 수정',panel:'channels',permission:'channels'});
-  const voiceHead=el('voices')?.firstElementChild;admin.attach(voiceHead,{label:'시민의견 수정·삭제',panel:'voices',permission:'voices'});
+  if(admin.has('voices'))window.dispatchEvent(new CustomEvent('seonammedi:voice-inline-admin-authorized'));
 }
 async function initPublicAdminControls(){
   if(!publicAdminToken())return;
