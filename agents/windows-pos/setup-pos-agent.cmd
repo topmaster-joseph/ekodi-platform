@@ -22,11 +22,14 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
   "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;" ^
   "$base='https://ekodi.kr/cmpmyi/admin/agent/download';" ^
   "$dir=$env:EKODI_POS_SETUP_DIR;" ^
+  "$nonce=[DateTime]::UtcNow.Ticks;" ^
   "$files=@('install-pos-agent.ps1','EKODI-POS-Agent.ps1','pos-agent.config.example.json','diagnose-pos-targets.ps1','start-pos-agent.cmd','stop-pos-agent.cmd','uninstall-pos-agent.ps1');" ^
-  "foreach($name in $files){$uri=$base+'/'+$name;$out=Join-Path $dir $name;Invoke-WebRequest -UseBasicParsing -Uri $uri -OutFile $out -TimeoutSec 30};" ^
-  "$installer=Get-Content -LiteralPath (Join-Path $dir 'install-pos-agent.ps1') -Raw -Encoding UTF8;" ^
+  "foreach($name in $files){$uri=$base+'/'+$name+'?v='+$nonce;$out=Join-Path $dir $name;Invoke-WebRequest -UseBasicParsing -Uri $uri -OutFile $out -TimeoutSec 30};" ^
+  "$installerPath=Join-Path $dir 'install-pos-agent.ps1';" ^
+  "$installer=Get-Content -LiteralPath $installerPath -Raw -Encoding UTF8;" ^
+  "if($installer -notmatch 'EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v2' -or $installer -match 'RestartInterval \(New-TimeSpan -Seconds 20\)'){Write-Host '[EKODI] Refreshing Task Scheduler compatibility package...' -ForegroundColor Yellow;$uri=$base+'/install-pos-agent.ps1?v='+([DateTime]::UtcNow.Ticks);Invoke-WebRequest -UseBasicParsing -Uri $uri -OutFile $installerPath -TimeoutSec 30;$installer=Get-Content -LiteralPath $installerPath -Raw -Encoding UTF8};" ^
   "$agent=Get-Content -LiteralPath (Join-Path $dir 'EKODI-POS-Agent.ps1') -Raw -Encoding UTF8;" ^
-  "if($installer -notmatch 'listenerPrefix must remain loopback-only' -or $agent -notmatch 'explicit_user_action_only'){throw 'Downloaded package validation failed.'};" ^
+  "if($installer -notmatch 'listenerPrefix must remain loopback-only' -or $installer -notmatch 'EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v2' -or $installer -match 'RestartInterval \(New-TimeSpan -Seconds 20\)' -or $agent -notmatch 'explicit_user_action_only'){throw 'Downloaded package validation failed or an outdated Task Scheduler installer was received.'};" ^
   "& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $dir 'install-pos-agent.ps1');" ^
   "if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}"
 
