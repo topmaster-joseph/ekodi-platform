@@ -103,7 +103,7 @@ test('interactive board surfaces reuse EKODI native browser verification automat
   assert.match(boardHealth,/workflows: \['Deploy EKODI Shared Site Core'\]/);
   assert.match(boardHealth,/cron: '23 \*\/6 \* \* \*'/);
   assert.equal((boardHealth.match(/uses:\s*\.\/\.github\/workflows\/ekodi-background-browser-worker\.yml/g)||[]).length,2);
-  assert.match(boardHealth,/surface_paths:\s*\/seonammedi\/,\/cgma\//);
+  assert.match(boardHealth,/surface_paths:\s*\/seonammedi\/,\/cgma\/,\/cgma\/notices\/1/);
   assert.match(boardHealth,/device_profile:\s*desktop/);
   assert.match(boardHealth,/device_profile:\s*mobile-portrait/);
   assert.match(boardHealth,/\/api\/seonammedi\/voices/);
