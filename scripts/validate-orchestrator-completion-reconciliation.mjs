@@ -1,42 +1,133 @@
 import fs from 'node:fs';
 
-const policy=JSON.parse(fs.readFileSync('config/orchestrator-completion-reconciliation-policy.json','utf8').replace(/^\uFEFF/,''));
-const adapter=fs.readFileSync('ekodi-orchestrator-task-adapter.js','utf8').replace(/^\uFEFF/,'');
+const read=file=>fs.readFileSync(file,'utf8').replace(/^\uFEFF/,'');
+const policy=JSON.parse(read('config/orchestrator-completion-reconciliation-policy.json'));
+const adapter=read('ekodi-orchestrator-task-adapter.js');
+const oidc=read('github-actions-oidc.js');
+const evidence=read('scripts/github-actions-completion-evidence.mjs');
+const workflow=read('.github/workflows/reconcile-orchestrator-completions.yml');
+const controlWorkflow=read('.github/workflows/deploy-control-api.yml');
 const failures=[];
 const fail=message=>failures.push(message);
 
+if(policy.schemaVersion<2)fail('completion policy schema must include OIDC backstop');
 if(policy.policyId!=='EKODI-ORCHESTRATOR-COMPLETION-001'||policy.status!=='enforced')fail('completion policy must remain enforced');
 if(policy.owner!=='ekodi-orchestrator')fail('EKODI Orchestrator must own completion');
-if(policy.authority?.externalAiMayMarkCompleted!==false)fail('external AI must never mark tasks completed');
-if(policy.authority?.orchestratorOwnsTerminalTransition!==true)fail('orchestrator terminal authority missing');
-if(policy.authority?.requesterIsolationRequired!==true)fail('requester isolation missing');
-if(policy.authority?.issuedBranchMatchRequired!==true)fail('issued branch match missing');
+
+for(const [key,value] of Object.entries({
+  externalAiMayMarkCompleted:false,
+  requesterMayForgeEvidence:false,
+  orchestratorOwnsTerminalTransition:true,
+  requesterIsolationRequired:true,
+  issuedBranchMatchRequired:true,
+  githubActionsOidcRequiredForPushEvidence:true,
+  staticGitHubTokenRequired:false,
+})){
+  if(policy.authority?.[key]!==value)fail('authority rule mismatch: '+key);
+}
 
 for(const name of ['CI','EKODI AI Orchestration Gate']){
   if(!policy.requiredEvidence?.requiredCiWorkflowSuccess?.includes(name))fail('required workflow missing: '+name);
 }
-for(const key of ['mergedPullRequestToMain','allTriggeredDeployWorkflowsMustSucceed','stagingSuccessRequired','productionPromotionSuccessRequired','liveProductionHealthRequired','publicSourceReverificationRequired']){
+for(const key of [
+  'mergedPullRequestToMain',
+  'allTriggeredDeployWorkflowsMustSucceed',
+  'stagingSuccessRequired',
+  'productionPromotionSuccessRequired',
+  'liveProductionHealthRequired',
+  'authenticatedGitHubReverificationRequired',
+  'ekodiLiveHealthReverificationRequired',
+]){
   if(policy.requiredEvidence?.[key]!==true)fail('required evidence rule missing: '+key);
 }
-for(const key of ['getTaskStatusSelfHealsStaleDeploymentState','idempotent','safeToRetry','supersedingSuccessfulDeploymentMayRecoverCancelledOrTransientRelease','commandLedgerAlignedOnCompletion','externalReferencesRecorded','productionEvidencePersisted','completionEventRequired','falseCompletionForbidden']){
+for(const key of [
+  'getTaskStatusSelfHealsWhenRuntimeGitHubLookupAvailable',
+  'githubActionsOidcReceiptBackstopRequired',
+  'workflowRunTriggerRequired',
+  'scheduledRetryRequired',
+  'idempotent',
+  'safeToRetry',
+  'supersedingSuccessfulDeploymentMayRecoverCancelledOrTransientRelease',
+  'commandLedgerAlignedOnCompletion',
+  'externalReferencesRecorded',
+  'productionEvidencePersisted',
+  'completionEventRequired',
+  'falseCompletionForbidden',
+]){
   if(policy.reconciliation?.[key]!==true)fail('reconciliation rule missing: '+key);
+}
+
+if(policy.oidcBoundary?.issuer!=='https://token.actions.githubusercontent.com')fail('GitHub Actions OIDC issuer mismatch');
+if(policy.oidcBoundary?.audience!=='ekodi-orchestrator-completion')fail('OIDC audience mismatch');
+if(policy.oidcBoundary?.repository!=='topmaster-joseph/ekodi-platform')fail('OIDC repository mismatch');
+if(policy.oidcBoundary?.ref!=='refs/heads/main')fail('OIDC ref must be main');
+if(policy.oidcBoundary?.workflow!=='.github/workflows/reconcile-orchestrator-completions.yml')fail('OIDC workflow mismatch');
+for(const event of ['workflow_run','workflow_dispatch','schedule']){
+  if(!policy.oidcBoundary?.allowedEvents?.includes(event))fail('OIDC event missing: '+event);
 }
 
 for(const marker of [
   'collectOrchestratorCompletionEvidence',
-  'github-public-api-and-live-health',
+  'handleOrchestratorCompletionReconciliation',
+  'github-actions-oidc-and-live-health',
   "state='completed'",
   "state='verified'",
   'production_evidence_json',
-  'verified_production_evidence_reconciled',
+  'verified_oidc_production_evidence_reconciled',
   "INSERT OR IGNORE INTO ekodi_orchestrator_external_refs",
   'reconcileCompletionRow(db,env,row',
 ]){
   if(!adapter.includes(marker))fail('adapter marker missing: '+marker);
 }
 
+for(const marker of [
+  'https://token.actions.githubusercontent.com',
+  'ekodi-orchestrator-completion',
+  'refs/heads/main',
+  'reconcile-orchestrator-completions.yml@',
+  'crypto.subtle.verify',
+]){
+  if(!oidc.includes(marker))fail('OIDC verifier marker missing: '+marker);
+}
+
+for(const marker of [
+  'collectAuthenticatedCompletionEvidence',
+  'listWorkflowRunsForRepo',
+  'listJobsForWorkflowRun',
+  'compareCommits',
+  'production_promotion_evidence_missing',
+]){
+  if(!evidence.includes(marker))fail('authenticated evidence collector marker missing: '+marker);
+}
+
+for(const marker of [
+  'workflow_run:',
+  "cron: '*/15 * * * *'",
+  'id-token: write',
+  'actions: read',
+  'pull-requests: read',
+  'core.getIDToken',
+  'collectAuthenticatedCompletionEvidence',
+  '/api/orchestrator/completion-reconciliation',
+]){
+  if(!workflow.includes(marker))fail('completion workflow marker missing: '+marker);
+}
+if(/permissions:[\s\S]*contents:\s*write/.test(workflow))fail('completion workflow must not receive contents write');
+if(/secrets\.|GH_PAT|PERSONAL_ACCESS_TOKEN|EKODI_GITHUB_ADMIN_TOKEN/.test(workflow))fail('completion workflow must not depend on static privileged secrets');
+
+for(const path of [
+  "github-actions-oidc.js",
+  "scripts/github-actions-completion-evidence.mjs",
+  "test/github-actions-oidc.test.mjs",
+  "test/github-actions-completion-evidence.test.mjs",
+  "test/orchestrator-completion-reconciliation-endpoint.test.mjs",
+  ".github/workflows/reconcile-orchestrator-completions.yml",
+]){
+  if(!controlWorkflow.includes(`- '${path}'`))fail('Control API deploy trigger missing: '+path);
+}
+
 const statusFunction=adapter.slice(adapter.indexOf('export async function getOrchestratorTaskStatus'),adapter.indexOf('export async function cancelOrchestratorTask'));
-if(!statusFunction.includes('reconcileCompletionRow'))fail('get_task_status must self-heal stale deployment tasks');
+if(!statusFunction.includes('reconcileCompletionRow'))fail('get_task_status must retain runtime self-heal path');
 if(statusFunction.indexOf('reconcileCompletionRow')>statusFunction.indexOf('syncFromCommandLedger'))fail('production evidence reconciliation must run before command-ledger terminal mapping');
 
 if(failures.length){
@@ -45,7 +136,8 @@ if(failures.length){
   process.exit(1);
 }
 console.log('EKODI-ORCHESTRATOR-COMPLETION-001: OK');
-console.log('- completion authority remains inside EKODI Orchestrator');
-console.log('- merged PR, CI, staging, production and live health are reverified');
-console.log('- stale deployment tasks self-heal on status read');
+console.log('- EKODI Orchestrator remains the only completion authority');
+console.log('- runtime GitHub lookup remains a best-effort self-heal path');
+console.log('- GitHub Actions OIDC provides the durable authenticated backstop');
+console.log('- merged PR, CI, staging, production and live health remain mandatory');
 console.log('- false completion remains fail-closed');

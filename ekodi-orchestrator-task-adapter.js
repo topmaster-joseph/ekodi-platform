@@ -1,5 +1,6 @@
 import { getEkodiCommandTask, ingestEkodiPulse } from './ekodi-command-ledger.js';
 import { runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
+import { verifyGitHubActionsOidc } from './github-actions-oidc.js';
 
 const TERMINAL_STATES=new Set(['completed','blocked','failed','cancelled']);
 const CANCELLABLE_STATES=new Set(['received','triaged','assigned']);
@@ -133,10 +134,8 @@ export async function collectOrchestratorCompletionEvidence({taskId:id,branchRef
   });
 }
 
-async function reconcileCompletionRow(db,env,row,{fetchImpl=fetch}={}){
+async function persistCompletionEvidence(db,row,evidence,{actor='ekodi-orchestrator-reconciler',reason='verified_production_evidence_reconciled'}={}){
   if(!row||TERMINAL_STATES.has(row.state)||Number(row.deployment_requested||0)!==1)return row;
-  const evidence=await collectOrchestratorCompletionEvidence({taskId:row.task_id,branchRef:row.branch_ref,fetchImpl});
-  if(!evidence.verified)return row;
   const updated=now();
   const existingEvidence=parseJson(row.evidence_json,[]);
   const evidenceList=Array.isArray(existingEvidence)?existingEvidence:[existingEvidence].filter(Boolean);
@@ -155,8 +154,15 @@ async function reconcileCompletionRow(db,env,row,{fetchImpl=fetch}={}){
     db.prepare('INSERT OR IGNORE INTO ekodi_orchestrator_external_refs (task_id,provider,ref_type,ref_value,created_at) VALUES (?,?,?,?,?)').bind(row.task_id,'github','pull_request',String(evidence.pr.number),updated),
     db.prepare('INSERT OR IGNORE INTO ekodi_orchestrator_external_refs (task_id,provider,ref_type,ref_value,created_at) VALUES (?,?,?,?,?)').bind(row.task_id,'github','merge_commit',evidence.pr.mergeCommitSha,updated),
   ]).catch(()=>null);
-  await appendEvent(db,row.task_id,row.state,'completed','ekodi-orchestrator-reconciler','verified_production_evidence_reconciled',completionRecord);
+  await appendEvent(db,row.task_id,row.state,'completed',actor,reason,completionRecord);
   return ownedTask(db,row.task_id,row.requester_id);
+}
+
+async function reconcileCompletionRow(db,env,row,{fetchImpl=fetch}={}){
+  if(!row||TERMINAL_STATES.has(row.state)||Number(row.deployment_requested||0)!==1)return row;
+  const evidence=await collectOrchestratorCompletionEvidence({taskId:row.task_id,branchRef:row.branch_ref,fetchImpl});
+  if(!evidence.verified)return row;
+  return persistCompletionEvidence(db,row,evidence);
 }
 
 export async function reconcileOrchestratorTaskCompletion(env,identity,id,{fetchImpl=fetch}={}){
@@ -165,6 +171,77 @@ export async function reconcileOrchestratorTaskCompletion(env,identity,id,{fetch
   const row=await ownedTask(db,id,requester);
   if(!row)return null;
   return publicTask(await reconcileCompletionRow(db,env,row,{fetchImpl}));
+}
+
+function completionEvidenceShapeValid(evidence,row){
+  if(!evidence||evidence.verified!==true)return false;
+  if(text(evidence.taskId,160)!==text(row?.task_id,160))return false;
+  if(text(evidence.branchRef,220)!==text(row?.branch_ref,220))return false;
+  if(!/^https:\/\/github\.com\/topmaster-joseph\/ekodi-platform\/pull\/\d+$/.test(text(evidence.pr?.url,400)))return false;
+  if(!/^[a-f0-9]{40}$/i.test(text(evidence.pr?.mergeCommitSha,80)))return false;
+  const required=Array.isArray(evidence.requiredWorkflows)?evidence.requiredWorkflows:[];
+  for(const name of REQUIRED_COMPLETION_WORKFLOWS){
+    const item=required.find(entry=>entry?.name===name);
+    if(!item||item.conclusion!=='success')return false;
+  }
+  const deployments=Array.isArray(evidence.deployments)?evidence.deployments:[];
+  if(!deployments.length)return false;
+  if(!deployments.some(item=>Array.isArray(item?.stagingJobs)&&item.stagingJobs.length))return false;
+  if(!deployments.some(item=>Array.isArray(item?.productionJobs)&&item.productionJobs.length))return false;
+  return true;
+}
+
+async function currentLiveHealth({fetchImpl=fetch}={}){
+  let response=null;
+  try{response=await fetchImpl(LIVE_HEALTH_URL,{headers:{Accept:'application/json','User-Agent':'ekodi-orchestrator-completion-receipt'},cache:'no-store'})}catch{return null}
+  if(!response?.ok)return null;
+  let body={};
+  try{body=await response.json()}catch{return null}
+  if(body?.ok!==true)return null;
+  return Object.freeze({url:LIVE_HEALTH_URL,ok:true,service:text(body.service,120),version:body.version??null,verifiedAt:now()});
+}
+
+function bearer(request){
+  const value=text(request?.headers?.get?.('authorization'),12000);
+  return value.toLowerCase().startsWith('bearer ')?value.slice(7).trim():'';
+}
+
+export async function handleOrchestratorCompletionReconciliation(request,env,{fetchImpl=fetch}={}){
+  const url=new URL(request.url);
+  if(url.pathname!=='/api/orchestrator/completion-reconciliation')return null;
+  if(request.method!=='POST')return new Response(JSON.stringify({ok:false,reason:'method_not_allowed'}),{status:405,headers:{allow:'POST','content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+  const oidc=await verifyGitHubActionsOidc(bearer(request),{fetchImpl});
+  if(!oidc.ok)return new Response(JSON.stringify({ok:false,reason:'github_actions_oidc_required',detail:oidc.reason}),{status:401,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','www-authenticate':'Bearer realm="ekodi-orchestrator-completion"'}});
+  let body={};
+  try{body=await request.json()}catch{return new Response(JSON.stringify({ok:false,reason:'invalid_json'}),{status:400,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}})}
+  const db=dbFrom(env);
+  const action=text(body.action,40).toLowerCase();
+
+  if(action==='candidates'){
+    const result=await db.prepare(`SELECT task_id,branch_ref,state,updated_at FROM ekodi_orchestrator_tasks
+      WHERE deployment_requested=1 AND permission_class='delegated'
+      AND state NOT IN ('completed','blocked','failed','cancelled')
+      AND branch_ref IS NOT NULL ORDER BY updated_at ASC LIMIT 50`).all();
+    const rows=Array.isArray(result?.results)?result.results:[];
+    return new Response(JSON.stringify({ok:true,authority:'ekodi-orchestrator',candidates:rows.map(row=>({taskId:row.task_id,branchRef:row.branch_ref,state:row.state,updatedAt:row.updated_at}))}),{status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+  }
+
+  if(action==='complete'){
+    const id=text(body.taskId,160),branch=text(body.branchRef,220);
+    if(!validTaskId(id)||!validReleaseBranch(branch)||!branch.endsWith(`/${id}`))return new Response(JSON.stringify({ok:false,reason:'invalid_task_or_branch'}),{status:400,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+    const row=await db.prepare('SELECT * FROM ekodi_orchestrator_tasks WHERE task_id=? AND branch_ref=? AND deployment_requested=1 AND permission_class=\'delegated\'').bind(id,branch).first();
+    if(!row)return new Response(JSON.stringify({ok:false,reason:'task_not_found'}),{status:404,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+    if(row.state==='completed')return new Response(JSON.stringify({ok:true,taskId:id,state:'completed',idempotent:true}),{status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+    if(TERMINAL_STATES.has(row.state))return new Response(JSON.stringify({ok:false,reason:'terminal_state_not_completable',state:row.state}),{status:409,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+    if(!completionEvidenceShapeValid(body.evidence,row))return new Response(JSON.stringify({ok:false,reason:'completion_evidence_invalid'}),{status:400,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+    const live=await currentLiveHealth({fetchImpl});
+    if(!live)return new Response(JSON.stringify({ok:false,reason:'live_health_failed'}),{status:503,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+    const evidence=Object.freeze({...body.evidence,source:'github-actions-oidc-and-live-health',live,receipt:Object.freeze({repository:oidc.repository,ref:oidc.ref,eventName:oidc.eventName,workflowRef:oidc.workflowRef,runId:oidc.runId,runAttempt:oidc.runAttempt})});
+    const updated=await persistCompletionEvidence(db,row,evidence,{actor:'ekodi-github-actions-oidc-reconciler',reason:'verified_oidc_production_evidence_reconciled'});
+    return new Response(JSON.stringify({ok:true,taskId:id,state:updated?.state||'unknown',completedAt:updated?.completed_at||null,authority:'ekodi-orchestrator'}),{status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+  }
+
+  return new Response(JSON.stringify({ok:false,reason:'unsupported_action'}),{status:400,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
 }
 
 function text(value,max=1200){return String(value??'').trim().slice(0,max)}
