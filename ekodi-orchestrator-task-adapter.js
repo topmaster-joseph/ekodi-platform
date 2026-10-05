@@ -232,7 +232,10 @@ function mapCommandState(state){
   if(value==='queued')return'assigned';
   if(value==='retry')return'assigned';
   if(value==='running')return'executing';
-  if(['verified','core_only'].includes(value))return'completed';
+  if(value==='verified')return'completed';
+  // core_only means AI consultation was unavailable; it is a deterministic
+  // execution hand-off, never proof that the requested change completed.
+  if(value==='core_only')return'assigned';
   if(['human_gate','degraded'].includes(value))return'blocked';
   if(value==='ignored')return'cancelled';
   if(value==='failed')return'failed';
