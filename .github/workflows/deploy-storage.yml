@@ -19,6 +19,7 @@ on:
       - 'test/google-drive-storage.test.mjs'
       - 'test/google-oauth-apex-callback-migration.test.mjs'
       - 'test/r2-storage.test.mjs'
+      - 'test/ekodimission-photo-upload.test.mjs'
       - '.github/workflows/deploy-storage.yml'
   push:
     branches: [main]
@@ -38,6 +39,7 @@ on:
       - 'scripts/ensure-storage-access.mjs'
       - 'test/google-drive-storage.test.mjs'
       - 'test/r2-storage.test.mjs'
+      - 'test/ekodimission-photo-upload.test.mjs'
       - '.github/workflows/deploy-storage.yml'
 
 permissions:
@@ -67,7 +69,7 @@ jobs:
           node --check storage-admin.js
           node --check site-worker.js
           node --check scripts/ensure-storage-access.mjs
-          node --test test/google-drive-storage.test.mjs test/google-oauth-apex-callback-migration.test.mjs test/r2-storage.test.mjs
+          node --test test/google-drive-storage.test.mjs test/google-oauth-apex-callback-migration.test.mjs test/r2-storage.test.mjs test/ekodimission-photo-upload.test.mjs
           node scripts/validate-additive-migrations.mjs
           grep -Fq 'drive.ekodi.kr' wrangler.storage.toml
           grep -Fq 'STORAGE_PRIMARY_GOOGLE_DOMAINS = "ekodi.kr"' wrangler.storage.toml
@@ -75,6 +77,9 @@ jobs:
           grep -Fq 'bucket_name = "ekodi-storage"' wrangler.storage.toml
           grep -Fq 'binding = "STORAGE"' wrangler.site.toml
           grep -Fq 'service = "ekodi-storage-control"' wrangler.site.toml
+          grep -Fq "url.hostname==='storage.internal'" storage-worker.js
+          grep -Fq "url.pathname.startsWith('/api/storage/v1')" storage-worker.js
+          grep -Fq 'MAX_MUTATION_BODY_BYTES = 2 * 1024 * 1024' security-edge.js
           ! grep -Eq 'GOOGLE_DRIVE_CLIENT_SECRET\s*=\s*".+' wrangler.storage.toml
           ! grep -Eq 'STORAGE_CREDENTIAL_KEY\s*=\s*".+' wrangler.storage.toml
 
