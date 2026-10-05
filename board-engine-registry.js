@@ -8,12 +8,32 @@ export function registerBoardEngine(engine){
   return registry.get(id);
 }
 export function getBoardEngine(id){return registry.get(clean(id))||null;}
-export function listBoardEngines(){return [...registry.values()].map(({id,license,stability,selfHosted,clientRequired})=>({id,license,stability,selfHosted,clientRequired:Boolean(clientRequired)}));}
+export function listBoardEngines(){
+  return [...registry.values()].map(({id,license,stability,selfHosted,clientRequired})=>({
+    id,license,stability,selfHosted,clientRequired:Boolean(clientRequired)
+  }));
+}
 export function resolveBoardEngine({preferred,fallback='ekodi-native',allowPrerelease=false}={}){
   const candidate=getBoardEngine(preferred);
   if(candidate&&candidate.selfHosted!==false&&(allowPrerelease||candidate.stability==='stable'))return candidate;
   return getBoardEngine(fallback);
 }
-registerBoardEngine({id:'ekodi-native',license:'internal',stability:'stable',selfHosted:true,clientRequired:false,createBoard:({adapter})=>adapter});
-registerBoardEngine({id:'flarum',license:'MIT',stability:'prerelease',selfHosted:true,clientRequired:true,createBoard:({adapter,client})=>{if(!client?.createBoard)throw new Error('board_engine_client_required');return client.createBoard(adapter)}});
-registerBoardEngine({id:'nodebb',license:'GPL-3.0',stability:'stable',selfHosted:true,clientRequired:true,createBoard:({adapter,client})=>{if(!client?.createBoard)throw new Error('board_engine_client_required');return client.createBoard(adapter)}});
+
+registerBoardEngine({
+  id:'ekodi-native',license:'internal',stability:'stable',selfHosted:true,clientRequired:false,
+  createBoard:({adapter})=>adapter
+});
+registerBoardEngine({
+  id:'flarum',license:'MIT',stability:'prerelease',selfHosted:true,clientRequired:true,
+  createBoard:({adapter,client})=>{
+    if(!client?.createBoard)throw new Error('board_engine_client_required');
+    return client.createBoard(adapter);
+  }
+});
+registerBoardEngine({
+  id:'nodebb',license:'GPL-3.0',stability:'stable',selfHosted:true,clientRequired:true,
+  createBoard:({adapter,client})=>{
+    if(!client?.createBoard)throw new Error('board_engine_client_required');
+    return client.createBoard(adapter);
+  }
+});
