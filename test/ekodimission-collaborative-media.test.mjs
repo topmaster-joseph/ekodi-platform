@@ -21,7 +21,7 @@ test('EKODI Mission archive supports participant media-link collection with dedu
   assert.match(migration,/activity_public_archive_snapshot/);
   assert.match(migration,/hidden_at is null/);
 
-  assert.match(client,/same link/i);
+  assert.match(client,/같은 링크가 이미 있으면 하나로 정리됩니다/);
   assert.match(client,/activity_admin_hide_media_link/);
   assert.match(client,/location\.reload\(\)/);
 });
