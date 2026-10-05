@@ -122,6 +122,28 @@ export async function submitOrchestratorTask(env,identity,args={}){
   return publicTask(await ownedTask(db,id,requester));
 }
 
+export async function reconcileOrchestratorTasks(env, options = {}) {
+  const db=dbFrom(env);
+  const limit=Math.max(1,Math.min(50,Number(options.limit||20)));
+  const rows=await db.prepare(`SELECT * FROM ekodi_orchestrator_tasks
+    WHERE state NOT IN ('completed','blocked','failed','cancelled')
+    ORDER BY updated_at ASC LIMIT ?`).bind(limit).all();
+  const summary={checked:0,synced:0,productionVerifying:0,errors:0};
+  for(const row of rows?.results||[]){
+    summary.checked+=1;
+    try{
+      const before=row.state;
+      const after=await syncFromCommandLedger(db,env,row);
+      if(after?.state!==before)summary.synced+=1;
+      if(after?.state==='production_verifying')summary.productionVerifying+=1;
+    }catch(error){
+      summary.errors+=1;
+      console.error('EKODI orchestrator reconciliation error',row?.task_id,error);
+    }
+  }
+  return Object.freeze({...summary,observedAt:now()});
+}
+
 export async function getOrchestratorTaskStatus(env,identity,id){
   const db=dbFrom(env);const requester=requesterFrom(identity);if(!requester)throw new Error('EKODI_REQUESTER_REQUIRED');
   let row=await ownedTask(db,id,requester);if(!row)return null;
