@@ -4,7 +4,7 @@
   "status": "enforced",
   "owner": "ekodi-orchestrator",
   "canonicalOrigin": "https://ekodi.kr",
-  "maxPaths": 9,
+  "maxPaths": 12,
   "readOnly": true,
   "devices": [
     "desktop",
@@ -14,16 +14,14 @@
     {
       "id": "seonammedi.citizen_voice",
       "path": "/seonammedi/#voices",
-      "enabled": false,
-      "kind": "board",
-      "supersededBy": "seonammedi.board"
+      "enabled": true,
+      "kind": "board"
     },
     {
       "id": "seonammedi.notice",
       "path": "/seonammedi/#notices",
-      "enabled": false,
-      "kind": "board",
-      "supersededBy": "seonammedi.board"
+      "enabled": true,
+      "kind": "board"
     },
     {
       "id": "community",
@@ -40,8 +38,9 @@
     {
       "id": "ekodimission.activity_archive",
       "path": "/ekodimission/activities/261003-autumn-community-trip/archive",
-      "enabled": true,
-      "kind": "activity-results"
+      "enabled": false,
+      "kind": "activity-results",
+      "verificationNote": "bounded-browser-budget"
     },
     {
       "id": "ekodimission.board",
@@ -70,8 +69,9 @@
     {
       "id": "community.board",
       "path": "/community/board",
-      "enabled": true,
-      "kind": "board"
+      "enabled": false,
+      "kind": "board",
+      "verificationNote": "covered-by-community-legacy-and-route-tests"
     },
     {
       "id": "seonammedi.board",
