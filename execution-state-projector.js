@@ -37,3 +37,62 @@ export function completionGap(input={}){
   const kinds=new Set([...list(input.events),...list(input.evidence)].map(kind).filter(Boolean));
   return Object.freeze(required.filter(item=>!kinds.has(item)));
 }
+
+
+export const DEPLOYMENT_GATES=Object.freeze(['build','release','production']);
+
+const DEPLOYMENT_STATE_GATE=Object.freeze({
+  received:'build',
+  triaged:'build',
+  assigned:'build',
+  executing:'build',
+  validating:'build',
+  pr_gates:'build',
+  staging:'release',
+  deploying:'release',
+  production_verifying:'production',
+  completed:'done',
+});
+
+function normalizedRisk(value){
+  const risk=String(value||'normal').trim().toLowerCase();
+  return ['low','normal','high','critical'].includes(risk)?risk:'normal';
+}
+
+export function requiredDeploymentGatesForRisk(risk='normal'){
+  return Object.freeze(normalizedRisk(risk)==='low'
+    ? ['build','production']
+    : [...DEPLOYMENT_GATES]);
+}
+
+export function projectDeploymentGate({state='received',risk='normal',deploymentRequested=true,productionEvidence=null}={}){
+  if(!deploymentRequested)return null;
+  const lifecycle=String(state||'received').trim().toLowerCase();
+  const normalized=normalizedRisk(risk);
+  const requiredGates=requiredDeploymentGatesForRisk(normalized);
+  const collapsedGates=Object.freeze(normalized==='low'?['release']:[]);
+  if(['blocked','failed','cancelled'].includes(lifecycle)){
+    return Object.freeze({
+      model:'3-gate',
+      current:'blocked',
+      status:lifecycle,
+      detailedState:lifecycle,
+      requiredGates,
+      collapsedGates,
+      done:false,
+      independentVerificationRequired:['high','critical'].includes(normalized),
+    });
+  }
+  const current=DEPLOYMENT_STATE_GATE[lifecycle]||'build';
+  const productionSatisfied=lifecycle==='completed'&&Boolean(productionEvidence);
+  return Object.freeze({
+    model:'3-gate',
+    current,
+    status:productionSatisfied?'passed':'in_progress',
+    detailedState:lifecycle,
+    requiredGates,
+    collapsedGates,
+    done:productionSatisfied,
+    independentVerificationRequired:['high','critical'].includes(normalized),
+  });
+}
