@@ -1,4 +1,4 @@
-﻿name = "ekodi-independent-board"
+name = "ekodi-independent-board"
 main = "services/independent-board/worker.js"
 compatibility_date = "2026-08-12"
 workers_dev = false
@@ -8,11 +8,8 @@ preview_urls = false
 BOARD_ID = "seonammedi.citizen_voice"
 
 [[routes]]
-pattern = "board.seonammedi.kr"
-zone_name = "seonammedi.kr"
-custom_domain = true
-
-[[d1_databases]]
+pattern = "seonammedi.kr/board*"
+zone_name = "seonammedi.kr"`r`n`r`n[[d1_databases]]
 binding = "BOARD_DB"
 database_name = "ekodi-independent-board"
 database_id = "REPLACE_WITH_INDEPENDENT_BOARD_D1_ID"
