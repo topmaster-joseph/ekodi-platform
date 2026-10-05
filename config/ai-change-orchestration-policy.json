@@ -224,7 +224,13 @@
     "receiptDetailPath": "/api/control/ai/v8/tasks/{taskId}/consultation",
     "privateReasoningExcluded": true,
     "structuredEvidenceOnly": true,
-    "tamperEvidentHashChain": true
+    "tamperEvidentHashChain": true,
+    "executionBlockingRules": {
+      "lowNormalProviderFailureIsAdvisory": true,
+      "highCriticalRequireIndependentVerificationOrHumanGate": true,
+      "providerFailureMustNotCreateAdditionalDeploymentStage": true,
+      "mustPassSafetyChecksRemainBlocking": true
+    }
   },
   "sourceControl": {
     "defaultBranch": "main",
@@ -451,5 +457,120 @@
     "claimScopeMustMatchEvidenceScope": true,
     "materialKnowledgeCitationRequired": true,
     "finalResponseGuardRequired": true
+  },
+  "deploymentGateModel": {
+    "policyId": "EKODI-DEPLOY-3GATE-001",
+    "status": "enforced",
+    "principle": "keep-detailed-checks-internal-collapse-public-deployment-flow",
+    "publicSequence": [
+      "build",
+      "release",
+      "production"
+    ],
+    "doneState": "done",
+    "detailedLifecycleRemainsAuditable": true,
+    "duplicateChecksMustBeDeduplicated": true,
+    "samePurposeChecksRunInsideOneGate": true,
+    "parallelizeIndependentChecks": true,
+    "gates": {
+      "build": {
+        "purpose": "change_is_safe_to_package",
+        "mustPass": [
+          "source-policy",
+          "type-build",
+          "automated-tests",
+          "security-permission",
+          "database-compatibility",
+          "source-control"
+        ],
+        "advisory": [
+          "ai-review",
+          "additional-specialist-review"
+        ]
+      },
+      "release": {
+        "purpose": "immutable_candidate_is_safe_to_promote",
+        "mustPass": [
+          "staging-or-equivalent-preview",
+          "critical-smoke",
+          "auth-api-data-path",
+          "rollback-readiness",
+          "provenance"
+        ],
+        "advisory": [
+          "extra-ai-consultation",
+          "noncritical-observability-review"
+        ]
+      },
+      "production": {
+        "purpose": "real_service_is_verified_after_promotion",
+        "mustPass": [
+          "production-deployment",
+          "canonical-live-health",
+          "requested-functional-check",
+          "critical-observability",
+          "rollback-availability"
+        ],
+        "advisory": [
+          "extended-observation",
+          "additional-independent-review"
+        ]
+      }
+    },
+    "riskRouting": {
+      "low": {
+        "publicGates": [
+          "build",
+          "production"
+        ],
+        "collapsedGates": [
+          "release"
+        ],
+        "releaseBehavior": "internal-automatic-promotion-checks-on-same-immutable-artifact"
+      },
+      "normal": {
+        "publicGates": [
+          "build",
+          "release",
+          "production"
+        ],
+        "collapsedGates": []
+      },
+      "high": {
+        "publicGates": [
+          "build",
+          "release",
+          "production"
+        ],
+        "collapsedGates": [],
+        "independentVerificationRequired": true
+      },
+      "critical": {
+        "publicGates": [
+          "build",
+          "release",
+          "production"
+        ],
+        "collapsedGates": [],
+        "independentVerificationRequired": true,
+        "humanGateWhenIndependentVerificationUnavailable": true
+      }
+    },
+    "consultationBehavior": {
+      "classification": "advisory-unless-explicit-high-impact-policy-requires-independent-verification",
+      "lowNormalProviderFailureDoesNotCreateNewPublicStage": true,
+      "providerFailureMayNotBypassMustPassChecks": true,
+      "highCriticalFallbackOrder": [
+        "alternate-provider",
+        "ekodi-core-independent-verification",
+        "human-gate"
+      ],
+      "consultationEvidenceRemainsAuditable": true
+    },
+    "completion": {
+      "productionEvidenceRequiredWhenDeploymentRequested": true,
+      "liveFunctionalVerificationRequired": true,
+      "deployCommandAloneNeverMeansDone": true
+    }
   }
 }
