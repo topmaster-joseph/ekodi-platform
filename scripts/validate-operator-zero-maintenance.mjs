@@ -13,6 +13,8 @@ const board=json('config/replaceable-board-engine-policy.json');
 const boardRuntime=text('board-runtime-guard.js');
 const boardProvider=text('replaceable-board-provider.js');
 const seonammediBoard=text('seonammedi-civic-control.js');
+const sharedSiteRelease=text('.github/workflows/deploy-site-core.yml');
+const controlApiRelease=text('.github/workflows/deploy-control-api.yml');
 const ui=text('config/ui-surface-policy.js');
 
 if(policy.policyId!=='OPERATOR-ZERO-MAINTENANCE-001'||policy.status!=='enforced')fail('zero-maintenance policy must be enforced');
@@ -33,6 +35,14 @@ if(!boardRuntime.includes('aiIndependent:true')||!boardRuntime.includes("coreSou
 if(/fetch\s*\(|openai|anthropic|gemini|llm|ekodi-ai/i.test(boardRuntime))fail('board runtime guard must not call AI or external providers');
 if(!boardProvider.includes('createBoardRuntimeGuard')||!boardProvider.includes("coreEngineId:'ekodi-native'"))fail('replaceable board provider must keep EKODI native core runtime');
 if(!seonammediBoard.includes('createBoardRuntimeGuard({adapter:citizenVoiceAdapter})'))fail('seonammedi citizen board must use the AI-independent runtime guard');
+for(const file of ['common-board-adapter.js','board-runtime-guard.js','replaceable-board-provider.js','board-engine-registry.js']){
+  if(!sharedSiteRelease.includes(`'${file}'`))fail(`shared-site release must trigger on common board runtime change: ${file}`);
+  if(!controlApiRelease.includes(`'${file}'`))fail(`control-api release must trigger on common board runtime change: ${file}`);
+}
+for(const file of ['config/replaceable-board-engine-policy.json','config/module-first-policy.json']){
+  if(!sharedSiteRelease.includes(`'${file}'`))fail(`shared-site release must trigger on board policy change: ${file}`);
+  if(!controlApiRelease.includes(`'${file}'`))fail(`control-api release must trigger on board policy change: ${file}`);
+}
 for(const marker of ['userSurfaceIsPrimaryOperationalSurface:true','authenticatedAdminOperatesInPlace:true','duplicateContentAdminUiForbidden:true','dedicatedAdminRestrictedToSystemControl:true'])if(!ui.includes(marker))fail('user/admin integration drifted: '+marker);
 
 if(failures.length){
