@@ -21,6 +21,8 @@ test('one-click POS Agent setup is fixed to the official package and elevates ex
   assert.match(setup,/Refreshing Task Scheduler compatibility package/);
   assert.match(setup,/\?v=/);
   assert.match(setup,/outdated Task Scheduler installer/);
+  assert.match(setup,/Language\.Parser/);
+  assert.match(setup,/Downloaded installer syntax check failed/);
   assert.match(setup,/explicit_user_action_only/);
   assert.doesNotMatch(setup,/Invoke-Expression|\biex\b/i);
   assert.doesNotMatch(setup,/raw\.githubusercontent\.com|github\.com\/topmaster-joseph/i);
@@ -48,6 +50,9 @@ test('POS Agent scheduled task restart interval stays within Windows Task Schedu
   assert.match(install,/Get-ScheduledTask -TaskName \$TaskName -ErrorAction Stop/);
   assert.match(install,/Task Scheduler compatibility:/);
   assert.match(install,/compat-default-settings/);
+  assert.match(install,/Export-ScheduledTask -TaskName \$TaskName/);
+  assert.equal((install.match(/function Read-AgentConfig/g)||[]).length,1);
+  assert.equal((install.match(/function Register-AgentTask/g)||[]).length,1);
 });
 
 test('POS Agent upgrade preserves local target configuration and rolls back the agent file on failure',()=>{
