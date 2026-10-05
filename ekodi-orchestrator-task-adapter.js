@@ -2,6 +2,7 @@ import { getEkodiCommandTask, ingestEkodiPulse } from './ekodi-command-ledger.js
 import { runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
 import authCore from './auth-worker-core.js';
 import { verifyGitHubActionsOidc } from './github-actions-oidc.js';
+import { getCapabilityNode } from './ekodi-capability-ecosystem.js';
 
 const TERMINAL_STATES=new Set(['completed','blocked','failed','cancelled']);
 const CANCELLABLE_STATES=new Set(['received','triaged','assigned']);
@@ -264,6 +265,21 @@ function now(){return new Date().toISOString()}
 function taskId(){const id=typeof crypto?.randomUUID==='function'?crypto.randomUUID():`${Date.now()}_${Math.random().toString(16).slice(2)}`;return `orch_${id}`}
 function dbFrom(env){const db=env?.DB||env;if(!db?.prepare)throw new Error('EKODI_ORCHESTRATOR_DB_REQUIRED');return db}
 function requesterFrom(identity){return text(identity?.personId||identity?.ekodiId,160)}
+export function buildTaskScopedExecutionAuthority(identity={},target={},risk='normal'){
+  const personId=text(identity?.personId,160);
+  const capability=text(target?.capability,160);
+  const normalizedRisk=text(risk,20).toLowerCase();
+  if(!personId||!capability||normalizedRisk==='high'||normalizedRisk==='critical')return null;
+  const node=getCapabilityNode(capability);
+  if(!node||text(node.actionTier,40).toLowerCase()!=='execute_reversible')return null;
+  const workspaceId=text(target?.workspaceId||target?.workspaceSlug||'personal',120)||'personal';
+  return Object.freeze({
+    personId,
+    workspaceId,
+    role:'member',
+    capabilityGrants:Object.freeze([capability]),
+  });
+}
 function changes(result){return Number(result?.meta?.changes??result?.changes??0)}
 function agentId(value){
   const normalized=text(value,32).toLowerCase().replace(/[^a-z0-9._-]+/g,'-').replace(/^-+|-+$/g,'');
@@ -368,6 +384,7 @@ export async function submitOrchestratorTask(env,identity,args={}){
   const intent=text(args.intent||args.goal,1200);if(!intent)throw new Error('EKODI_TASK_INTENT_REQUIRED');
   const risk=['low','normal','high','critical'].includes(text(args.risk,20).toLowerCase())?text(args.risk,20).toLowerCase():'normal';
   const target=args.target&&typeof args.target==='object'?args.target:{};
+  const taskAuthority=buildTaskScopedExecutionAuthority(identity,target,risk);
   const deploymentRequested=args.deploymentRequested===true;
   const agent=agentId(args.agent||'external-ai');
   const rawKey=text(args.idempotencyKey,100);const idempotencyKey=rawKey?`${requester}:${rawKey}`.slice(0,220):null;
@@ -386,7 +403,7 @@ export async function submitOrchestratorTask(env,identity,args={}){
     await ingestEkodiPulse(env,{
       taskId:id,goal:intent,risk,target,
       delegation:{allowed:true,reversible:true,audited:true,preflightVerified:true,verificationDefined:true},
-      context:{source:'mcp',orchestratorTaskId:id,requesterBound:true,authorityTransfer:false,branchRef,deploymentRequested},
+      context:{source:'mcp',orchestratorTaskId:id,requesterBound:true,authorityTransfer:false,authoritySource:'ekodi-orchestrator-task-scope',authority:taskAuthority,branchRef,deploymentRequested},
       event:{id:`pulse_${id}`.slice(0,120),kind:'external_ai_request',source:'mcp',summary:intent,changeClass:deploymentRequested?'yellow':'green',actionable:true,requiresHumanDecision:risk==='high'||risk==='critical'},
     });
     const assigned=now();

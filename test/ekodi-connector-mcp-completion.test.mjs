@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { EKODI_AI_DISCOVERY, EKODI_AI_DISCOVERY_PATH } from '../scripts/discovery-build.mjs';
 import { EKODI_MCP_TOOLS, callEkodiMcpTool, handleEkodiMcpGateway } from '../ekodi-mcp-gateway.js';
+import { buildTaskScopedExecutionAuthority } from '../ekodi-orchestrator-task-adapter.js';
 
 const tool=name=>EKODI_MCP_TOOLS.find(item=>item.name===name);
 
@@ -98,9 +99,28 @@ test('orchestrator task adapter is requester-isolated and queues through the exi
 });
 
 
+test('orchestrator task authority is exact-scope and limited to reversible execution capabilities',()=>{
+  const allowed=buildTaskScopedExecutionAuthority(
+    {personId:'person-1'},
+    {workspaceId:'workspace-1',capability:'core.automation'},
+    'normal',
+  );
+  assert.deepEqual(allowed,{
+    personId:'person-1',
+    workspaceId:'workspace-1',
+    role:'member',
+    capabilityGrants:['core.automation'],
+  });
+  assert.equal(buildTaskScopedExecutionAuthority({personId:'person-1'},{capability:'core.interpreter'},'normal'),null);
+  assert.equal(buildTaskScopedExecutionAuthority({personId:'person-1'},{capability:'core.automation'},'high'),null);
+  assert.equal(buildTaskScopedExecutionAuthority({}, {capability:'core.automation'}, 'normal'),null);
+});
+
 test('MCP delegated tasks carry standing delegation, expose retries, and synchronize after immediate dispatch',async()=>{
   const source=await readFile(new URL('../ekodi-orchestrator-task-adapter.js',import.meta.url),'utf8');
   assert.match(source,/delegation:\{allowed:true,reversible:true,audited:true,preflightVerified:true,verificationDefined:true\}/);
+  assert.match(source,/authoritySource:'ekodi-orchestrator-task-scope'/);
+  assert.match(source,/authority:taskAuthority/);
   assert.match(source,/runEkodiCommandQueue\(env,\{limit:1,taskId:id\}\)/);
   assert.match(source,/assigned_worker='ekodi-command-plane'/);
   assert.match(source,/if\(value==='retry'\)return'assigned'/);
