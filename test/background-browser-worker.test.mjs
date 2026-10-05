@@ -6,6 +6,7 @@ import { normalizeTask } from '../scripts/ekodi-background-browser-worker.mjs';
 const source=fs.readFileSync(new URL('../scripts/ekodi-background-browser-worker.mjs',import.meta.url),'utf8');
 const policy=JSON.parse(fs.readFileSync(new URL('../config/background-browser-worker-policy.json',import.meta.url),'utf8'));
 const workerWorkflow=fs.readFileSync(new URL('../.github/workflows/ekodi-background-browser-worker.yml',import.meta.url),'utf8');
+const boardRegistry=JSON.parse(fs.readFileSync(new URL('../config/board-surface-verification.json',import.meta.url),'utf8'));
 const sharedRelease=fs.readFileSync(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
 
 test('EKODI background browser policy is native, canonical-origin and isolated',()=>{
@@ -62,7 +63,9 @@ test('shared-site guarded release invokes native browser verification after prod
   assert.match(workerWorkflow,/workflow_call:/);
   assert.match(workerWorkflow,/surface_path:/);
   assert.match(workerWorkflow,/surface_paths:/);
+  assert.match(workerWorkflow,/surface_registry:/);
   assert.match(workerWorkflow,/INPUT_PATHS/);
+  assert.match(workerWorkflow,/INPUT_REGISTRY/);
   assert.match(workerWorkflow,/horizontalOverflow/);
   assert.match(workerWorkflow,/userAiEntryCount/);
   assert.match(workerWorkflow,/test\("\/admin\(\?:\/\|\$\)"/);
@@ -78,6 +81,11 @@ test('shared-site guarded release invokes native browser verification after prod
   assert.match(sharedRelease,/device_profile:\s*desktop/);
   assert.match(sharedRelease,/device_profile:\s*mobile-portrait/);
   assert.match(sharedRelease,/surface_paths:\s*\/,\/my\/,\/admin\/,\/ekodimall\/admin/);
+  assert.equal((sharedRelease.match(/surface_registry:\s*config\/board-surface-verification\.json/g)||[]).length,2);
+  assert.equal(boardRegistry.policyId,'EKODI-BOARD-NATIVE-VERIFY-001');
+  assert.equal(boardRegistry.readOnly,true);
+  assert.deepEqual(boardRegistry.devices,['desktop','mobile-portrait']);
+  for(const path of ['/seonammedi/#voices','/seonammedi/#notices','/community/','/journal'])assert.ok(boardRegistry.surfaces.some(item=>item.enabled!==false&&item.path===path),path);
   assert.match(sharedRelease,/authenticated_admin_surface_verification:/);
   assert.match(sharedRelease,/verify-admin-production-ui-e2e\.yml/);
   for (const verifierPath of [
@@ -85,6 +93,7 @@ test('shared-site guarded release invokes native browser verification after prod
     'scripts/ekodi-background-browser-worker.mjs',
     'scripts/validate-background-browser-worker.mjs',
     'config/background-browser-worker-policy.json',
+    'config/board-surface-verification.json',
     'config/surface-system-verification-policy.json',
     '.github/workflows/ekodi-background-browser-worker.yml',
     '.github/workflows/verify-admin-production-ui-e2e.yml',

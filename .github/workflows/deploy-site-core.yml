@@ -262,6 +262,7 @@ on:
       - 'scripts/ekodi-background-browser-worker.mjs'
       - 'scripts/validate-background-browser-worker.mjs'
       - 'config/background-browser-worker-policy.json'
+      - 'config/board-surface-verification.json'
       - 'config/surface-system-verification-policy.json'
       - '.github/workflows/ekodi-background-browser-worker.yml'
       - '.github/workflows/verify-admin-production-ui-e2e.yml'
@@ -986,6 +987,7 @@ jobs:
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       surface_paths: /,/my/,/admin/,/ekodimall/admin
+      surface_registry: config/board-surface-verification.json
       device_profile: desktop
 
   native_surface_verification_mobile:
@@ -994,6 +996,7 @@ jobs:
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       surface_paths: /,/my/,/admin/,/ekodimall/admin
+      surface_registry: config/board-surface-verification.json
       device_profile: mobile-portrait
 
   authenticated_admin_surface_verification:
