@@ -50,8 +50,9 @@ test('shared runtime projects surface identity and keeps admin workspace as scro
 });
 
 test('seonammedi proves shared authenticated in-place administration before ecosystem rollout',async()=>{
-  const [app,css,control,siteTests,shared]=await Promise.all([
+  const [app,voiceAdmin,css,control,siteTests,shared]=await Promise.all([
     read('sites/seonammedi/public/app.js'),
+    read('sites/seonammedi/public/voice-public-admin.js'),
     read('sites/seonammedi/public/app.css'),
     read('seonammedi-admin-control.js'),
     read('test/seonammedi-site.test.mjs'),
@@ -67,5 +68,7 @@ test('seonammedi proves shared authenticated in-place administration before ecos
   assert.match(css,/\.ekodi-public-admin-inline/);
   assert.match(shared,/window\.EKODIPublicSurfaceAdmin/);
   assert.match(control,/canManage/);
-  assert.match(siteTests,/uses shared authenticated inline admin without exposing local duplicate controls/);
+  assert.match(voiceAdmin,/permissions\?\.voices===true/);
+  assert.match(voiceAdmin,/data-seonammedi-voice-admin/);
+  assert.match(siteTests,/uses shared authenticated inline admin without duplicate citizen-voice CRUD/);
 });
