@@ -2,12 +2,14 @@ import { readFile } from 'node:fs/promises';
 
 const root=new URL('../',import.meta.url);
 const read=path=>readFile(new URL(path,root),'utf8');
-const [policy,router,wrangler,pkgRaw,deploy]=await Promise.all([
+const [policy,router,wrangler,pkgRaw,deploy,edgeCache,turnstile]=await Promise.all([
   read('platform-security-policy.js'),
   read('platform-router-entry-worker.js'),
   read('wrangler.site.toml'),
   read('package.json'),
   read('.github/workflows/deploy-site-core.yml'),
+  read('public-edge-cache.js'),
+  read('turnstile-abuse-guard.js'),
 ]);
 
 for(const marker of [
@@ -23,7 +25,22 @@ for(const marker of [
   'Strict-Transport-Security',
 ]) assert(policy.includes(marker),`platform security policy missing: ${marker}`);
 
+for(const marker of [
+  'verifyTurnstileEscalation',
+  'turnstileEscalationHeaders',
+  'PUBLIC_CACHEABLE_API_PATTERNS',
+  '/api/seonammedi/page-data',
+  '/api/seonammedi/timeline',
+]) assert(policy.includes(marker),`platform security edge extension missing: ${marker}`);
+
+for(const marker of ['caches','cache.put','x-ekodi-edge-cache','seonammedi-page-data','seonammedi-timeline'])
+  assert(edgeCache.includes(marker),`public edge cache contract missing: ${marker}`);
+for(const marker of ['turnstile/v0/siteverify','TURNSTILE_SECRET_KEY','TURNSTILE_PUBLIC_WRITE_ESCALATION','x-ekodi-turnstile-required'])
+  assert(turnstile.includes(marker),`Turnstile escalation contract missing: ${marker}`);
+
 assert(router.includes("from './platform-security-policy.js'"),'canonical router must import platform security policy');
+assert(router.includes("from './public-edge-cache.js'"),'canonical router must import public edge cache helper');
+assert(router.includes('withPublicEdgeCache(request,ctx'),'SeonamMedi safe public reads must use edge cache wrapper');
 assert(router.includes('await enforcePlatformRequestSecurity(request,env)'),'canonical router must enforce request security before dispatch');
 assert(router.includes('applyPlatformSecurityHeaders(response,request)'),'canonical router must secure every returned response');
 
@@ -33,11 +50,18 @@ for(const marker of [
   'namespace_id = "3902"',
   'namespace_id = "3903"',
 ]) assert(wrangler.includes(marker),`shared site limiter binding missing: ${marker}`);
+assert(wrangler.includes('TURNSTILE_PUBLIC_WRITE_ESCALATION = "enabled"'),'Turnstile escalation mode must be explicitly declared');
 
 const pkg=JSON.parse(pkgRaw);
 assert(String(pkg.scripts?.['validate:security']||'').includes('validate-platform-security-policy.mjs'),'validate:security must include the platform-wide policy validator');
 assert(String(pkg.scripts?.check||'').includes('platform-security-policy.js'),'npm check must parse the platform security module');
+assert(String(pkg.scripts?.check||'').includes('public-edge-cache.js'),'npm check must parse public edge cache module');
+assert(String(pkg.scripts?.check||'').includes('turnstile-abuse-guard.js'),'npm check must parse Turnstile guard module');
 assert(deploy.includes('platform-security-policy.js'),'shared-site production workflow must validate the platform security module');
+assert(deploy.includes('public-edge-cache.js'),'shared-site production workflow must track the public edge cache module');
+assert(deploy.includes('turnstile-abuse-guard.js'),'shared-site production workflow must track the Turnstile guard module');
+assert(deploy.includes('Verify public edge cache absorbs repeated SeonamMedi reads'),'shared-site production workflow must prove a live Cache API HIT');
+assert(deploy.includes('adaptiveTurnstile=staged-inert-no-secret'),'shared-site production workflow must report Turnstile readiness without exposing secrets');
 assert(deploy.includes('validate-platform-security-policy.mjs'),'shared-site production workflow must validate the security contract');
 
 console.log('Platform security policy valid: canonical edge enforcement, split mutation throttling, fail-closed sensitive paths, hardened response headers and production workflow enforcement are active.');
