@@ -2,6 +2,7 @@ import { getEkodiCommandTask, ingestEkodiPulse } from './ekodi-command-ledger.js
 import { runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
 import authCore from './auth-worker-core.js';
 import { verifyGitHubActionsOidc } from './github-actions-oidc.js';
+import { projectExecutionState, completionGap } from './execution-state-projector.js';
 
 const TERMINAL_STATES=new Set(['completed','blocked','failed','cancelled']);
 const CANCELLABLE_STATES=new Set(['received','triaged','assigned']);
@@ -281,6 +282,25 @@ async function appendEvent(db,id,fromState,toState,actor,reason,evidence=null){
     .bind(id,seq,fromState||null,toState,actor,reason||null,evidence?safeJson(evidence):null,now()).run();
 }
 
+function projectionForTask(row){
+  if(!row)return null;
+  const evidence=parseJson(row.evidence_json,[]);
+  const items=Array.isArray(evidence)?evidence:(Array.isArray(evidence?.items)?evidence.items:[]);
+  const production=parseJson(row.production_evidence_json,null);
+  const projectedEvidence=[...items];
+  if(production?.verified===true){
+    projectedEvidence.push({kind:'production_verified'},{kind:'live_verified'});
+    if(production?.pr?.mergeCommitSha)projectedEvidence.push({kind:'merged_change'});
+    if(Array.isArray(production?.requiredWorkflows)&&production.requiredWorkflows.every(item=>item?.conclusion==='success'))projectedEvidence.push({kind:'required_gates'});
+    if(Array.isArray(production?.deployments)&&production.deployments.some(item=>Array.isArray(item?.stagingJobs)&&item.stagingJobs.length))projectedEvidence.push({kind:'staging_verified'});
+  }
+  if(row.task_id)projectedEvidence.push({kind:'authorized_task'});
+  const result=parseJson(row.result_json,{});
+  if(result?.artifactDigest||result?.artifact_digest)projectedEvidence.push({kind:'verified_artifact'});
+  const projection=projectExecutionState({events:[],evidence:projectedEvidence,completionContract:Number(row.deployment_requested||0)===1?'engineering_deployment':'non_mutating_analysis'});
+  return Object.freeze({...projection,gap:completionGap({events:[],evidence:projectedEvidence,completionContract:Number(row.deployment_requested||0)===1?'engineering_deployment':'non_mutating_analysis'})});
+}
+
 function publicTask(row){
   if(!row)return null;
   const result=parseJson(row.result_json,null);
@@ -307,6 +327,7 @@ function publicTask(row){
     result,
     evidence,
     productionEvidence:parseJson(row.production_evidence_json,null),
+    projection:projectionForTask(row),
     createdAt:row.created_at,
     updatedAt:row.updated_at,
     completedAt:row.completed_at||null,
