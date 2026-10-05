@@ -574,9 +574,11 @@ test('seonammedi notice permalink is served by the site shell',async()=>{
 
 
 
-test('seonammedi public site uses shared authenticated inline admin without exposing local duplicate controls',async()=>{
-  const [app,css,adminHtml,adminJs,control,shared]=await Promise.all([
+test('seonammedi public site uses shared authenticated inline admin without duplicate citizen-voice CRUD',async()=>{
+  const [html,app,voiceAdmin,css,adminHtml,adminJs,control,shared]=await Promise.all([
+    readFile(new URL('index.html',root),'utf8'),
     readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('voice-public-admin.js',root),'utf8'),
     readFile(new URL('app.css',root),'utf8'),
     readFile(new URL('admin/index.html',root),'utf8'),
     readFile(new URL('admin/admin.js',root),'utf8'),
@@ -590,16 +592,21 @@ test('seonammedi public site uses shared authenticated inline admin without expo
   assert.match(app,/authEndpoint:'\/api\/seonammedi\/admin\/me'/);
   assert.match(app,/await admin\.authorize\(\)/);
   assert.match(app,/admin\.attach/);
-  for(const label of ['공지 바로 수정','조직 바로 수정','활동이력 관리','소통채널 바로 수정','시민의견 수정·삭제'])assert.match(app,new RegExp(label));
-  assert.doesNotMatch(app,/function publicAdminRequest|function ensurePublicAdminDrawer|function openPublicAdmin|function attachPublicAdminButton/);
-  assert.doesNotMatch(app,/className='public-admin-drawer'|className='public-admin-inline'/);
-  assert.doesNotMatch(css,/\.public-admin-drawer|\.public-admin-inline/);
-  assert.match(css,/\.ekodi-public-admin-inline/);
+  for(const label of ['공지 바로 수정','조직 바로 수정','활동이력 관리','소통채널 바로 수정'])assert.match(app,new RegExp(label));
+  assert.match(app,/seonammedi:voice-inline-admin-authorized/);
+  assert.match(html,/voice-public-admin\.js/);
+  assert.match(voiceAdmin,/window\.EKODIPublicSurfaceAdmin/);
+  assert.match(voiceAdmin,/permissions\?\.voices===true/);
+  assert.match(voiceAdmin,/\/api\/seonammedi\/admin\/voices/);
+  assert.match(voiceAdmin,/data-seonammedi-voice-admin/);
+  assert.match(voiceAdmin,/voice-inline-admin-delete/);
+  assert.match(css,/\.voice-inline-admin/);
+  assert.doesNotMatch(adminHtml,/id="voiceEditForm"/);
+  assert.match(adminHtml,/사용자 화면에서 관리/);
+  assert.doesNotMatch(adminJs,/function editVoice\(item\)|function renderVoices\(\)/);
+  assert.match(adminJs,/async function loadVoices\(\)/);
   assert.match(shared,/window\.EKODIPublicSurfaceAdmin/);
   assert.match(shared,/permissions\[key\]===true/);
-  assert.match(adminHtml,/id="voiceEditForm"/);
-  assert.match(adminJs,/function editVoice\(item\)/);
-  assert.match(adminJs,/button\('수정',\(\)=>editVoice\(item\)\)/);
   assert.match(control,/VOICE_CATEGORIES/);
   assert.match(control,/UPDATE seonammedi_civic_voices SET category=\?,display_name=\?,contact=\?,message=\?,review_status=\?/);
   assert.match(control,/public_consent_required/);
