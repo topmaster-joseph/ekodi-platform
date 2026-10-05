@@ -2,6 +2,8 @@ import { getEkodiCommandTask, ingestEkodiPulse } from './ekodi-command-ledger.js
 import { runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
 import authCore from './auth-worker-core.js';
 import { verifyGitHubActionsOidc } from './github-actions-oidc.js';
+import { accessGrantIsActive, accessRolePreset, effectiveAccessCapabilities, parseCapabilityList } from './access-governance.js';
+import { tenantAdminCapabilitiesForRole } from './tenant-admin-policy.js';
 
 const TERMINAL_STATES=new Set(['completed','blocked','failed','cancelled']);
 const CANCELLABLE_STATES=new Set(['received','triaged','assigned']);
@@ -264,6 +266,46 @@ function now(){return new Date().toISOString()}
 function taskId(){const id=typeof crypto?.randomUUID==='function'?crypto.randomUUID():`${Date.now()}_${Math.random().toString(16).slice(2)}`;return `orch_${id}`}
 function dbFrom(env){const db=env?.DB||env;if(!db?.prepare)throw new Error('EKODI_ORCHESTRATOR_DB_REQUIRED');return db}
 function requesterFrom(identity){return text(identity?.personId||identity?.ekodiId,160)}
+async function resolveCommandAuthority(db,identity={},target={}){
+  const personId=text(identity?.personId,160),email=text(identity?.email,320).toLowerCase();
+  if(!personId||!email)return null;
+  const workspaceId=text(target?.workspaceId||target?.workspaceSlug,120)||null;
+  const requestedCapability=text(target?.capability,160);
+  const platformAdmin=await db.prepare('SELECT role FROM admins WHERE lower(trim(email))=? LIMIT 1').bind(email).first().catch(()=>null);
+  const platformRole=text(platformAdmin?.role,80).toLowerCase();
+  if(platformRole==='super_admin'){
+    return Object.freeze({personId,workspaceId,role:'super_admin',capabilityGrants:Object.freeze(['*'])});
+  }
+  const workspaceSlug=text(target?.workspaceSlug,120).toLowerCase();
+  if(!workspaceSlug){
+    return Object.freeze({personId,workspaceId:null,role:'member',capabilityGrants:Object.freeze([])});
+  }
+  const tenant=await db.prepare('SELECT id,slug,status FROM customer_tenants WHERE slug=? LIMIT 1').bind(workspaceSlug).first().catch(()=>null);
+  if(!tenant||text(tenant.status,40).toLowerCase()!=='active'){
+    return Object.freeze({personId,workspaceId:workspaceSlug,role:'member',capabilityGrants:Object.freeze([])});
+  }
+  const grant=await db.prepare(`SELECT role,enabled,principal_type,github_username,capabilities_json,denied_capabilities_json,expires_at
+    FROM customer_access_grants WHERE tenant_id=? AND lower(trim(email))=? LIMIT 1`)
+    .bind(tenant.id,email).first().catch(()=>null);
+  if(!accessGrantIsActive(grant)){
+    return Object.freeze({personId,workspaceId:workspaceSlug,role:'member',capabilityGrants:Object.freeze([])});
+  }
+  const roleCapabilities=tenantAdminCapabilitiesForRole(grant.role);
+  const explicitCapabilities=effectiveAccessCapabilities(grant);
+  const denied=new Set([
+    ...(accessRolePreset(grant.role)?.denied||[]),
+    ...parseCapabilityList(grant.denied_capabilities_json),
+  ]);
+  let grants=[...new Set([...roleCapabilities.filter(item=>item!=='*'),...explicitCapabilities])].filter(item=>!denied.has(item));
+  if(roleCapabilities.includes('*')&&requestedCapability&&!denied.has(requestedCapability))grants.push(requestedCapability);
+  grants=[...new Set(grants)];
+  return Object.freeze({
+    personId,
+    workspaceId:workspaceSlug,
+    role:text(grant.role,80).toLowerCase()||'member',
+    capabilityGrants:Object.freeze(grants),
+  });
+}
 function changes(result){return Number(result?.meta?.changes??result?.changes??0)}
 function agentId(value){
   const normalized=text(value,32).toLowerCase().replace(/[^a-z0-9._-]+/g,'-').replace(/^-+|-+$/g,'');
@@ -383,10 +425,11 @@ export async function submitOrchestratorTask(env,identity,args={}){
       (task_id,seq,from_state,to_state,actor,reason,evidence_json,created_at) VALUES (?,1,NULL,'received','mcp','authorized_external_submission',NULL,?)`).bind(id,created),
   ]);
   try{
+    const authority=await resolveCommandAuthority(db,identity,target);
     await ingestEkodiPulse(env,{
       taskId:id,goal:intent,risk,target,
       delegation:{allowed:true,reversible:true,audited:true,preflightVerified:true,verificationDefined:true},
-      context:{source:'mcp',orchestratorTaskId:id,requesterBound:true,authorityTransfer:false,branchRef,deploymentRequested},
+      context:{source:'mcp',orchestratorTaskId:id,requesterBound:true,authorityTransfer:false,branchRef,deploymentRequested,authority},
       event:{id:`pulse_${id}`.slice(0,120),kind:'external_ai_request',source:'mcp',summary:intent,changeClass:deploymentRequested?'yellow':'green',actionable:true,requiresHumanDecision:risk==='high'||risk==='critical'},
     });
     const assigned=now();
