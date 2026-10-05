@@ -31,13 +31,16 @@ function ensureSection() {
   if (section) return section;
   section = document.createElement('section');
   section.id = 'personal-ai';
-  section.className = 'section personal-ai-section';
+  section.className = 'section personal-ai-section my-tab-section';
+  section.dataset.myTabSection = 'account';
+  section.dataset.accountPanel = 'ai';
+  section.hidden = true;
   section.innerHTML = `
     <div class="section-head"><div><p class="eyebrow">MY AI · AUTOMATIC</p><h2>내 AI</h2></div><p>처음 한 번만 개인 AI를 연결하면 이후에는 EKODI Core와 AI Gateway가 상황과 비용 정책에 맞게 자동으로 선택합니다.</p></div>
     <div id="personalAiHub" class="personal-ai-hub" aria-live="polite"><div class="empty"><strong>AI 연결 상태를 확인 중입니다.</strong></div></div>`;
-  const recommendations = document.querySelector('#recommendations');
-  if (recommendations?.parentNode) recommendations.parentNode.insertBefore(section, recommendations.nextSibling);
-  else document.querySelector('main')?.prepend(section);
+  const account = document.querySelector('#account');
+  if (account?.parentNode) account.parentNode.insertBefore(section, account.nextSibling);
+  else document.querySelector('main')?.append(section);
   return section;
 }
 
@@ -128,9 +131,7 @@ function renderStatus(host, status) {
   host.innerHTML = `
     ${connectionGuide(status)}
     <article class="personal-ai-console">
-      <div class="personal-ai-console-copy"><small>EKODI User AI · ${esc(connectedText)}</small><h3>무엇을 도와드릴까요?</h3><p>${hasConnected ? '연결된 개인 AI를 기본으로 사용하고 EKODI가 적절한 경로를 자동 선택합니다.' : '개인 AI가 없어도 EKODI Core는 계속 작동하며, 필요하면 개인 AI 웹으로 이어드립니다.'}</p></div>
-      <form id="personalAiAskForm" class="personal-ai-ask"><textarea name="message" rows="3" maxlength="4000" placeholder="예: 오늘 내가 먼저 확인할 일을 정리해줘" required></textarea><button class="primary" type="submit">AI에게 묻기</button></form>
-      <div id="personalAiResult" class="personal-ai-result" hidden></div>
+      <div class="personal-ai-console-copy"><small>EKODI User AI · ${esc(connectedText)}</small><h3>AI 연결 상태</h3><p>${hasConnected ? '연결된 개인 AI를 기본으로 사용하고 EKODI가 적절한 경로를 자동 선택합니다.' : '개인 AI가 없어도 EKODI Core는 계속 작동합니다. 필요할 때 아래에서 연결할 수 있습니다.'}</p></div>
     </article>
     <article class="personal-ai-policy">
       <div><small>현재 AI 사용 상태</small><h3>${isFreeLike ? `${esc(String(plan.planId || 'FREE').toUpperCase())} · EKODI API 비용 0원` : `${esc(String(plan.planId || '').toUpperCase())} · EKODI 지원량 적용`}</h3><p>${isFreeLike ? `${esc(connectedText)} · AI가 없으면 Core-only` : `개인 AI 우선 · 이번 달 EKODI 지원 ${Number(plan.sponsoredUsed || 0)} / ${Number(plan.sponsoredRequests || 0)}회 사용`}</p></div>
@@ -140,7 +141,7 @@ function renderStatus(host, status) {
         <button class="secondary" type="submit">설정 저장</button>
       </form>
     </article>
-    ${hasConnected ? `<details class="personal-ai-policy"><summary>AI 연결 변경</summary>${setupContent}</details>` : setupContent}
+    <details class="personal-ai-policy"><summary>${hasConnected ? 'AI 연결 변경' : 'AI 연결하기'}</summary>${setupContent}</details>
     <div class="personal-ai-privacy"><strong>개인정보 보호</strong><span>API 키는 브라우저에 보관하지 않고 서버에서 암호화합니다. 민감정보는 개인 무료 AI로 자동 전송하지 않으며, AI가 없어도 EKODI Core는 계속 작동합니다.</span></div>`;
 
   const askForm = host.querySelector('#personalAiAskForm');
