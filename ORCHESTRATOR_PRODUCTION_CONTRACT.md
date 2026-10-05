@@ -12,6 +12,16 @@ EKODI Orchestrator owns every accepted execution task from receipt through produ
 
 `blocked`, `failed`, and `cancelled` are terminal/non-success states. A task with `deployment_requested=1` MUST NOT enter `completed` without production evidence.
 
+## Three-gate operating view
+
+The detailed lifecycle remains the append-only audit and recovery state machine. Operators, MCP clients and owner-facing status surfaces use one compact deployment view:
+
+`Build Gate -> Release Gate -> Production Gate -> DONE`
+
+Checks are not removed. Checks with the same purpose are deduplicated and executed inside the relevant gate, and independent checks should run in parallel when safe. Low-risk changes may collapse Release Gate from the public sequence, but the release/promotion checks still run internally against the same immutable candidate. Normal-risk changes expose all three gates. High and critical changes retain all three gates and independent verification where policy requires it.
+
+AI consultation and specialist review are supporting evidence inside a gate, not additional deployment stages. Provider failure cannot bypass must-pass security, permission, data-integrity, rollback, source-control or production-verification checks. A deployment task is never `DONE` until canonical production evidence and the requested functional verification are present.
+
 ## Delegated production authority
 
 A Super Administrator instruction to implement and complete a specific requested change is delegated production authority for that task, subject to existing guarded release controls. The Orchestrator may automatically select and retry authorized cloud execution paths and run the existing guarded production release after required gates pass.
