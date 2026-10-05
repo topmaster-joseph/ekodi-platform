@@ -218,7 +218,7 @@ async function routeMissionActivityMediaFile(request,env,mediaId){
   headers.set('content-type',String(ref.data.mime_type||headers.get('content-type')||'application/octet-stream'));
   headers.set('cache-control','public, max-age=3600, stale-while-revalidate=86400');
   headers.set('x-content-type-options','nosniff');
-  headers.set('content-disposition','inline; filename="'+missionSafeFilename(ref.data.filename||'photo').replace(/"/g,'_')+'"');
+  headers.set('content-disposition','inline');
   headers.delete('set-cookie');
   return new Response(request.method==='HEAD'?null:upstream.body,{status:200,headers});
 }
