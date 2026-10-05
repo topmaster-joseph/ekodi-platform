@@ -52,6 +52,7 @@ test('shared runtime projects surface identity and keeps admin workspace as scro
 test('seonammedi proves shared authenticated in-place administration before ecosystem rollout',async()=>{
   const [app,voiceAdmin,css,control,siteTests,shared]=await Promise.all([
     read('sites/seonammedi/public/app.js'),
+    read('sites/seonammedi/public/voice-public-admin.js'),
     read('sites/seonammedi/public/app.css'),
     read('seonammedi-admin-control.js'),
     read('test/seonammedi-site.test.mjs'),
