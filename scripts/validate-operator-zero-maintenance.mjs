@@ -10,6 +10,9 @@ const fail=message=>failures.push(message);
 const policy=json('config/operator-zero-maintenance-policy.json');
 const virtualization=json('config/virtualization-routing-policy.json');
 const board=json('config/replaceable-board-engine-policy.json');
+const boardRuntime=text('board-runtime-guard.js');
+const boardProvider=text('replaceable-board-provider.js');
+const seonammediBoard=text('seonammedi-civic-control.js');
 const ui=text('config/ui-surface-policy.js');
 
 if(policy.policyId!=='OPERATOR-ZERO-MAINTENANCE-001'||policy.status!=='enforced')fail('zero-maintenance policy must be enforced');
@@ -24,6 +27,12 @@ if(policy.contentFirst?.newBoardRequiresCodeCopy!==false)fail('new board code co
 for(const input of ['manifest','content','role-policy'])if(!policy.contentFirst?.newBoardInputs?.includes(input))fail('new board input missing: '+input);
 if(virtualization.owner!=='ekodi-orchestrator'||virtualization.selection?.nativeFirst!==true||virtualization.selection?.externalForbiddenWhenEligibleNativeHealthy!==true)fail('EKODI native virtualization-first contract drifted');
 if(board.status!=='enforced'||board.appliesRecursivelyToAllServices!==true||board.architecture?.providerInterfaceRequired!==true||board.architecture?.nativeFallbackRequired!==true)fail('replaceable board policy must remain recursive and provider-independent');
+for(const key of ['coreRuntimeGuardRequired','coreOperationsAlwaysUseEkodiAdapter','externalEngineMayNotOwnCanonicalCrud','aiSynchronousDependencyForbidden','aiFailureMustNotAffectCoreBoard','runtimeExtensionFailureIsolation'])if(board.architecture?.[key]!==true)fail('board resilience rule missing: '+key);
+if(board.aiIndependence?.criticalPathAiDependency!=='forbidden'||board.aiIndependence?.synchronousAiProviderCalls!=='forbidden')fail('board AI independence policy drifted');
+if(!boardRuntime.includes('aiIndependent:true')||!boardRuntime.includes("coreSource:'ekodi-board-adapter'"))fail('board runtime guard must declare AI-independent EKODI core ownership');
+if(/fetch\s*\(|openai|anthropic|gemini|llm|ekodi-ai/i.test(boardRuntime))fail('board runtime guard must not call AI or external providers');
+if(!boardProvider.includes('createBoardRuntimeGuard')||!boardProvider.includes("coreEngineId:'ekodi-native'"))fail('replaceable board provider must keep EKODI native core runtime');
+if(!seonammediBoard.includes('createBoardRuntimeGuard({adapter:citizenVoiceAdapter})'))fail('seonammedi citizen board must use the AI-independent runtime guard');
 for(const marker of ['userSurfaceIsPrimaryOperationalSurface:true','authenticatedAdminOperatesInPlace:true','duplicateContentAdminUiForbidden:true','dedicatedAdminRestrictedToSystemControl:true'])if(!ui.includes(marker))fail('user/admin integration drifted: '+marker);
 
 if(failures.length){
@@ -35,3 +44,4 @@ console.log('OPERATOR-ZERO-MAINTENANCE-001: OK');
 console.log('- operators manage content, not board software');
 console.log('- user/admin same-surface administration remains enforced');
 console.log('- EKODI native virtualization is first-line verification/recovery');
+console.log('- board CRUD/search remains AI-independent; replaceable engines are extension-only');
