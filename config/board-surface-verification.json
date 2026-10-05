@@ -40,6 +40,42 @@
       "path": "/ekodimission/activities/261003-autumn-community-trip/archive",
       "enabled": true,
       "kind": "activity-results"
+    },
+    {
+      "id": "ekodimission.board",
+      "path": "/ekodimission/board",
+      "enabled": true,
+      "kind": "board"
+    },
+    {
+      "id": "ekodichurch.board",
+      "path": "/ekodichurch/board",
+      "enabled": true,
+      "kind": "board"
+    },
+    {
+      "id": "cheonggye.board",
+      "path": "/cheonggye/board",
+      "enabled": true,
+      "kind": "board"
+    },
+    {
+      "id": "cgma.board",
+      "path": "/cgma/board",
+      "enabled": true,
+      "kind": "board"
+    },
+    {
+      "id": "community.board",
+      "path": "/community/board",
+      "enabled": true,
+      "kind": "board"
+    },
+    {
+      "id": "seonammedi.board",
+      "path": "/seonammedi/board",
+      "enabled": true,
+      "kind": "board"
     }
   ],
   "expansionRule": "register-active-board-surface-without-editing-browser-workflow"
