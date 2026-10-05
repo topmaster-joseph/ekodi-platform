@@ -39,7 +39,8 @@
       "id": "ekodimission.activity_archive",
       "path": "/ekodimission/activities/261003-autumn-community-trip/archive",
       "enabled": true,
-      "kind": "activity-results"
+      "kind": "activity-results",
+      "verificationPurpose": "collaborative-upload-perceptual-grouping"
     }
   ],
   "expansionRule": "register-active-board-surface-without-editing-browser-workflow"
