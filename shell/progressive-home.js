@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 const root=document.documentElement;
-if(!root||root.dataset.ekodiHomeFocusRequest!=='v1')return;
+if(!root||root.dataset.ekodiProgressiveHome==='off'||root.dataset.ekodiHomeFocusRequest!=='v1')return;
 const selector='section,article,aside,.section,.panel,.content-section,[data-section]';
 function homeCandidates(main){
   const direct=[...main.children].filter(node=>node.matches?.(selector));
