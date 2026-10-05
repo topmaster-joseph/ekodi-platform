@@ -5,6 +5,168 @@ const TERMINAL_STATES=new Set(['completed','blocked','failed','cancelled']);
 const CANCELLABLE_STATES=new Set(['received','triaged','assigned']);
 const NON_RELEASABLE_STATES=new Set(['blocked','failed','cancelled']);
 
+const GITHUB_REPOSITORY='topmaster-joseph/ekodi-platform';
+const GITHUB_API='https://api.github.com';
+const REQUIRED_COMPLETION_WORKFLOWS=Object.freeze(['CI','EKODI AI Orchestration Gate']);
+const LIVE_HEALTH_URL='https://ekodi.kr/api/health';
+
+function githubHeaders(){return {Accept:'application/vnd.github+json','User-Agent':'ekodi-orchestrator-completion-reconciler','X-GitHub-Api-Version':'2022-11-28'}}
+
+async function fetchJson(url,{fetchImpl=fetch}={}){
+  let response=null;
+  try{response=await fetchImpl(url,{headers:githubHeaders(),redirect:'follow'})}catch(error){return {ok:false,status:0,error:text(error?.message||error,160)}}
+  if(!response?.ok)return {ok:false,status:Number(response?.status||0),error:`http_${Number(response?.status||0)}`};
+  try{return {ok:true,status:response.status,data:await response.json()}}catch{return {ok:false,status:response.status,error:'invalid_json'}}
+}
+
+function completedSuccess(item){return item?.status==='completed'&&item?.conclusion==='success'}
+function productionJob(job){
+  const name=text(job?.name,160).toLowerCase();
+  return !name.includes('staging')&&(name==='deploy'||name==='production'||name.endsWith(' / deploy')||name.endsWith(' / production')||name.includes('deploy-production')||name.includes('production deploy'));
+}
+function stagingJob(job){return text(job?.name,160).toLowerCase().includes('staging')}
+
+async function commitContains(baseSha,headSha,{fetchImpl=fetch}={}){
+  if(baseSha===headSha)return true;
+  const comparison=await fetchJson(`${GITHUB_API}/repos/${GITHUB_REPOSITORY}/compare/${encodeURIComponent(baseSha)}...${encodeURIComponent(headSha)}`,{fetchImpl});
+  return comparison.ok&&['ahead','identical'].includes(text(comparison.data?.status,40).toLowerCase());
+}
+
+async function successfulSupersedingDeployRun(original,mergeSha,{fetchImpl=fetch}={}){
+  const workflowId=Number(original?.workflow_id||0);
+  if(!workflowId)return null;
+  const url=new URL(`${GITHUB_API}/repos/${GITHUB_REPOSITORY}/actions/workflows/${workflowId}/runs`);
+  url.searchParams.set('branch','main');
+  url.searchParams.set('event','push');
+  url.searchParams.set('status','success');
+  url.searchParams.set('per_page','20');
+  const response=await fetchJson(url,{fetchImpl});
+  if(!response.ok)return null;
+  const candidates=Array.isArray(response.data?.workflow_runs)?response.data.workflow_runs:[];
+  for(const candidate of candidates){
+    if(!completedSuccess(candidate)||Number(candidate.id)===Number(original.id))continue;
+    if(await commitContains(mergeSha,text(candidate.head_sha,80),{fetchImpl}))return candidate;
+  }
+  return null;
+}
+
+export async function collectOrchestratorCompletionEvidence({taskId:id,branchRef,fetchImpl=fetch}={}){
+  const task=text(id,160),branch=text(branchRef,220);
+  if(!validTaskId(task)||!validReleaseBranch(branch)||!branch.endsWith(`/${task}`))return Object.freeze({verified:false,reason:'invalid_task_or_branch'});
+
+  const pullsUrl=new URL(`${GITHUB_API}/repos/${GITHUB_REPOSITORY}/pulls`);
+  pullsUrl.searchParams.set('state','closed');
+  pullsUrl.searchParams.set('head',`topmaster-joseph:${branch}`);
+  pullsUrl.searchParams.set('per_page','20');
+  const pulls=await fetchJson(pullsUrl,{fetchImpl});
+  if(!pulls.ok)return Object.freeze({verified:false,reason:'github_pr_lookup_unavailable',status:pulls.status});
+  const pr=(Array.isArray(pulls.data)?pulls.data:[])
+    .filter(item=>item?.merged_at&&item?.head?.ref===branch&&item?.base?.ref==='main')
+    .sort((a,b)=>String(b.merged_at).localeCompare(String(a.merged_at)))[0];
+  if(!pr)return Object.freeze({verified:false,reason:'merged_pr_not_found'});
+  const mergeSha=text(pr.merge_commit_sha,80);
+  if(!/^[a-f0-9]{40}$/i.test(mergeSha))return Object.freeze({verified:false,reason:'merge_commit_missing'});
+
+  const runsUrl=new URL(`${GITHUB_API}/repos/${GITHUB_REPOSITORY}/actions/runs`);
+  runsUrl.searchParams.set('head_sha',mergeSha);
+  runsUrl.searchParams.set('event','push');
+  runsUrl.searchParams.set('per_page','100');
+  const runsResponse=await fetchJson(runsUrl,{fetchImpl});
+  if(!runsResponse.ok)return Object.freeze({verified:false,reason:'github_workflow_lookup_unavailable',status:runsResponse.status});
+  const runs=Array.isArray(runsResponse.data?.workflow_runs)?runsResponse.data.workflow_runs:[];
+  for(const required of REQUIRED_COMPLETION_WORKFLOWS){
+    const run=runs.find(item=>item?.name===required);
+    if(!completedSuccess(run))return Object.freeze({verified:false,reason:'required_workflow_not_successful',workflow:required,state:run?.status||'missing',conclusion:run?.conclusion||null});
+  }
+
+  const triggeredDeployRuns=runs.filter(item=>/^Deploy\b/i.test(text(item?.name,160)));
+  if(!triggeredDeployRuns.length)return Object.freeze({verified:false,reason:'production_deployment_run_missing'});
+  const deployRuns=[];
+  for(const original of triggeredDeployRuns){
+    let selected=original;
+    if(!completedSuccess(selected)){
+      const superseding=await successfulSupersedingDeployRun(original,mergeSha,{fetchImpl});
+      if(!superseding)return Object.freeze({verified:false,reason:'deployment_run_not_successful',workflow:text(original.name,160),state:original.status||'unknown',conclusion:original.conclusion||null});
+      selected={...superseding,_supersedesRunId:Number(original.id)};
+    }
+    deployRuns.push(selected);
+  }
+
+  const deploymentEvidence=[];
+  let stagingVerified=false,productionVerified=false;
+  for(const run of deployRuns){
+    const jobs=await fetchJson(`${GITHUB_API}/repos/${GITHUB_REPOSITORY}/actions/runs/${encodeURIComponent(run.id)}/jobs?per_page=100`,{fetchImpl});
+    if(!jobs.ok)return Object.freeze({verified:false,reason:'deployment_job_lookup_unavailable',workflow:text(run.name,160),status:jobs.status});
+    const list=Array.isArray(jobs.data?.jobs)?jobs.data.jobs:[];
+    const successfulStaging=list.filter(job=>stagingJob(job)&&completedSuccess(job));
+    const successfulProduction=list.filter(job=>productionJob(job)&&completedSuccess(job));
+    if(successfulStaging.length)stagingVerified=true;
+    if(successfulProduction.length)productionVerified=true;
+    deploymentEvidence.push(Object.freeze({
+      workflow:text(run.name,160),runId:Number(run.id),htmlUrl:text(run.html_url,400),
+      supersedesRunId:Number(run._supersedesRunId||0)||null,
+      stagingJobs:successfulStaging.map(job=>text(job.name,160)),
+      productionJobs:successfulProduction.map(job=>text(job.name,160)),
+    }));
+  }
+  if(!stagingVerified)return Object.freeze({verified:false,reason:'staging_evidence_missing'});
+  if(!productionVerified)return Object.freeze({verified:false,reason:'production_promotion_evidence_missing'});
+
+  let healthResponse=null;
+  try{healthResponse=await fetchImpl(LIVE_HEALTH_URL,{headers:{Accept:'application/json','User-Agent':'ekodi-orchestrator-completion-reconciler'},cache:'no-store'})}catch(error){return Object.freeze({verified:false,reason:'live_health_unavailable',detail:text(error?.message||error,120)})}
+  let health={};
+  try{health=await healthResponse.json()}catch{return Object.freeze({verified:false,reason:'live_health_invalid_json',status:Number(healthResponse?.status||0)})}
+  if(!healthResponse?.ok||health?.ok!==true)return Object.freeze({verified:false,reason:'live_health_failed',status:Number(healthResponse?.status||0)});
+
+  return Object.freeze({
+    verified:true,
+    source:'github-public-api-and-live-health',
+    taskId:task,
+    branchRef:branch,
+    pr:Object.freeze({number:Number(pr.number),url:text(pr.html_url,400),mergedAt:text(pr.merged_at,80),mergeCommitSha:mergeSha}),
+    requiredWorkflows:Object.freeze(REQUIRED_COMPLETION_WORKFLOWS.map(name=>{
+      const run=runs.find(item=>item?.name===name);
+      return Object.freeze({name,runId:Number(run.id),url:text(run.html_url,400),conclusion:run.conclusion});
+    })),
+    deployments:Object.freeze(deploymentEvidence),
+    live:Object.freeze({url:LIVE_HEALTH_URL,ok:true,service:text(health.service,120),version:health.version??null,verifiedAt:now()}),
+  });
+}
+
+async function reconcileCompletionRow(db,env,row,{fetchImpl=fetch}={}){
+  if(!row||TERMINAL_STATES.has(row.state)||Number(row.deployment_requested||0)!==1)return row;
+  const evidence=await collectOrchestratorCompletionEvidence({taskId:row.task_id,branchRef:row.branch_ref,fetchImpl});
+  if(!evidence.verified)return row;
+  const updated=now();
+  const existingEvidence=parseJson(row.evidence_json,[]);
+  const evidenceList=Array.isArray(existingEvidence)?existingEvidence:[existingEvidence].filter(Boolean);
+  const completionRecord={kind:'production-completion-reconciliation',source:evidence.source,pr:evidence.pr,requiredWorkflows:evidence.requiredWorkflows,deployments:evidence.deployments,live:evidence.live};
+  const previousResult=parseJson(row.result_json,{});
+  const resultJson={...(previousResult&&typeof previousResult==='object'&&!Array.isArray(previousResult)?previousResult:{}),ok:true,completion:'reconciled',mergeCommitSha:evidence.pr.mergeCommitSha,completedBy:'ekodi-orchestrator'};
+  const result=await db.prepare(`UPDATE ekodi_orchestrator_tasks SET state='completed',state_version=state_version+1,pr_ref=?,
+    result_json=?,evidence_json=?,production_evidence_json=?,updated_at=?,completed_at=?
+    WHERE task_id=? AND requester_id=? AND state NOT IN ('completed','blocked','failed','cancelled') AND branch_ref=?`)
+    .bind(evidence.pr.url,safeJson(resultJson),safeJson([...evidenceList,completionRecord]),safeJson(evidence),updated,updated,row.task_id,row.requester_id,row.branch_ref).run();
+  if(changes(result)<1)return ownedTask(db,row.task_id,row.requester_id);
+  await db.prepare(`UPDATE ai_command_tasks SET state='verified',result_json=?,evidence_json=?,updated_at=?,closed_at=?,lease_until=NULL
+    WHERE id=? AND state NOT IN ('verified','ignored','failed')`)
+    .bind(safeJson(resultJson),safeJson(completionRecord),updated,updated,row.task_id).run().catch(()=>null);
+  await db.batch([
+    db.prepare('INSERT OR IGNORE INTO ekodi_orchestrator_external_refs (task_id,provider,ref_type,ref_value,created_at) VALUES (?,?,?,?,?)').bind(row.task_id,'github','pull_request',String(evidence.pr.number),updated),
+    db.prepare('INSERT OR IGNORE INTO ekodi_orchestrator_external_refs (task_id,provider,ref_type,ref_value,created_at) VALUES (?,?,?,?,?)').bind(row.task_id,'github','merge_commit',evidence.pr.mergeCommitSha,updated),
+  ]).catch(()=>null);
+  await appendEvent(db,row.task_id,row.state,'completed','ekodi-orchestrator-reconciler','verified_production_evidence_reconciled',completionRecord);
+  return ownedTask(db,row.task_id,row.requester_id);
+}
+
+export async function reconcileOrchestratorTaskCompletion(env,identity,id,{fetchImpl=fetch}={}){
+  const db=dbFrom(env),requester=requesterFrom(identity);
+  if(!requester)throw new Error('EKODI_REQUESTER_REQUIRED');
+  const row=await ownedTask(db,id,requester);
+  if(!row)return null;
+  return publicTask(await reconcileCompletionRow(db,env,row,{fetchImpl}));
+}
+
 function text(value,max=1200){return String(value??'').trim().slice(0,max)}
 function safeJson(value,fallback={}){try{return JSON.stringify(value??fallback)}catch{return JSON.stringify(fallback)}}
 function parseJson(value,fallback={}){try{return JSON.parse(value||JSON.stringify(fallback))}catch{return fallback}}
@@ -125,7 +287,11 @@ export async function submitOrchestratorTask(env,identity,args={}){
 export async function getOrchestratorTaskStatus(env,identity,id){
   const db=dbFrom(env);const requester=requesterFrom(identity);if(!requester)throw new Error('EKODI_REQUESTER_REQUIRED');
   let row=await ownedTask(db,id,requester);if(!row)return null;
-  row=await syncFromCommandLedger(db,env,row);return publicTask(row);
+  if(Number(row.deployment_requested||0)===1&&!TERMINAL_STATES.has(row.state)){
+    try{row=await reconcileCompletionRow(db,env,row,{fetchImpl:fetch})}catch{}
+  }
+  if(!TERMINAL_STATES.has(row.state))row=await syncFromCommandLedger(db,env,row);
+  return publicTask(row);
 }
 
 export async function cancelOrchestratorTask(env,identity,id){

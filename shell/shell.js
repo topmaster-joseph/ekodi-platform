@@ -403,6 +403,7 @@ function buildUi(){
 function refreshThemeCycle(){if(!service)return;applyHostTokens();render();}
 
 function applyProgressiveHomeFocus(){
+  if(document.documentElement.dataset.ekodiProgressiveHome==='off')return;
   if(!service){document.documentElement.dataset.ekodiVisualState='ready';return;}
   const requested=document.documentElement.dataset.ekodiHomeFocusRequest==='v1';
   if(!requested&&(surface!=='public'||['church','ekodi'].includes(service.id)))return;

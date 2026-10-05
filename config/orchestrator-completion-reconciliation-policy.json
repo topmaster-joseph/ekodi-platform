@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-ORCHESTRATOR-COMPLETION-001",
+  "status": "enforced",
+  "owner": "ekodi-orchestrator",
+  "principle": "completion-follows-verified-production-evidence-not-agent-claims",
+  "scope": "all-orchestrator-deployment-tasks",
+  "authority": {
+    "externalAiMayMarkCompleted": false,
+    "requesterMayForgeEvidence": false,
+    "orchestratorOwnsTerminalTransition": true,
+    "requesterIsolationRequired": true,
+    "issuedBranchMatchRequired": true
+  },
+  "requiredEvidence": {
+    "mergedPullRequestToMain": true,
+    "requiredCiWorkflowSuccess": [
+      "CI",
+      "EKODI AI Orchestration Gate"
+    ],
+    "allTriggeredDeployWorkflowsMustSucceed": true,
+    "stagingSuccessRequired": true,
+    "productionPromotionSuccessRequired": true,
+    "liveProductionHealthRequired": true,
+    "publicSourceReverificationRequired": true
+  },
+  "reconciliation": {
+    "getTaskStatusSelfHealsStaleDeploymentState": true,
+    "idempotent": true,
+    "safeToRetry": true,
+    "supersedingSuccessfulDeploymentMayRecoverCancelledOrTransientRelease": true,
+    "commandLedgerAlignedOnCompletion": true,
+    "externalReferencesRecorded": true,
+    "productionEvidencePersisted": true,
+    "completionEventRequired": true,
+    "falseCompletionForbidden": true
+  },
+  "failureBehavior": {
+    "githubUnavailable": "leave-task-nonterminal",
+    "mergedPrMissing": "leave-task-nonterminal",
+    "requiredWorkflowMissingOrFailed": "leave-task-nonterminal",
+    "deploymentStillRunningOrFailed": "leave-task-nonterminal",
+    "stagingEvidenceMissing": "leave-task-nonterminal",
+    "productionEvidenceMissing": "leave-task-nonterminal",
+    "liveHealthFailed": "leave-task-nonterminal"
+  }
+}

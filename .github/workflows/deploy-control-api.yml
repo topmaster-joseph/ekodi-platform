@@ -43,6 +43,11 @@ on:
       - 'board-engine-registry.js'
       - 'config/replaceable-board-engine-policy.json'
       - 'config/module-first-policy.json'
+      - 'resilience-continuity.js'
+      - 'config/resilience-continuity-policy.json'
+      - 'config/operator-zero-maintenance-policy.json'
+      - 'scripts/validate-resilience-continuity.mjs'
+      - 'test/resilience-continuity.test.mjs'
       - 'seonammedi-admin-control.js'
       - 'migrations/0113_seonammedi_site_admin.sql'
       - 'migrations/0116_seonammedi_full_menu_admin.sql'
@@ -85,6 +90,9 @@ on:
       - 'mcp-client-policy.js'
       - 'ekodi-mcp-external-tools.js'
       - 'ekodi-orchestrator-task-adapter.js'
+      - 'config/orchestrator-completion-reconciliation-policy.json'
+      - 'scripts/validate-orchestrator-completion-reconciliation.mjs'
+      - 'test/orchestrator-completion-reconciler.test.mjs'
       - 'test/orchestrator-release-receipt.test.mjs'
       - 'test/sovereign-capability-fabric.test.mjs'
       - 'test/personal-ai-bridge.test.mjs'
@@ -229,6 +237,11 @@ on:
       - 'board-engine-registry.js'
       - 'config/replaceable-board-engine-policy.json'
       - 'config/module-first-policy.json'
+      - 'resilience-continuity.js'
+      - 'config/resilience-continuity-policy.json'
+      - 'config/operator-zero-maintenance-policy.json'
+      - 'scripts/validate-resilience-continuity.mjs'
+      - 'test/resilience-continuity.test.mjs'
       - 'seonammedi-admin-control.js'
       - 'migrations/0113_seonammedi_site_admin.sql'
       - 'migrations/0116_seonammedi_full_menu_admin.sql'
@@ -269,6 +282,12 @@ on:
       - 'ekodi-self-automation-engine.js'
       - 'ekodi-mcp-gateway.js'
       - 'mcp-client-policy.js'
+      - 'ekodi-mcp-external-tools.js'
+      - 'ekodi-orchestrator-task-adapter.js'
+      - 'config/orchestrator-completion-reconciliation-policy.json'
+      - 'scripts/validate-orchestrator-completion-reconciliation.mjs'
+      - 'test/orchestrator-completion-reconciler.test.mjs'
+      - 'test/orchestrator-release-receipt.test.mjs'
       - 'test/sovereign-capability-fabric.test.mjs'
       - 'test/personal-ai-bridge.test.mjs'
       - 'test/personal-ai-bridge-migration.test.mjs'
@@ -404,13 +423,16 @@ jobs:
       - name: Validate control plane, Core AI Gateway and governance
         run: |
           set -euo pipefail
-          for file in api-worker.js platform-maturity-control.js preview-public-projection.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js tenant-access-authority.js church-reports-control.js mission-control-entry-worker.js seonammedi-civic-control.js common-board-adapter.js board-runtime-guard.js replaceable-board-provider.js board-engine-registry.js realtime-control.js realtime-tenant-registry.js storage-gateway.js canonical-drive-writer.js external-ai-module-gateway.js secure-projection.js traffic-intelligence.js traffic-intelligence-control.js devotional-control.js user-ai-control.js learning-control.js personal-ai-bridge.js ekodi-mcp-gateway.js mcp-client-policy.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-command-control.js ekodi-command-ledger.js ekodi-pulse-runtime.js ekodi-command-plane.js ekodi-capability-executor.js ekodi-capability-ecosystem.js ekodi-capability-ecosystem-store.js ekodi-capability-sandbox.js ekodi-capability-accumulation.js ekodi-self-automation-engine.js ekodi-ai-provider-registry.js cloudflare-workers-ai-provider-adapter.js ai-orchestrator-runtime.js anthropic-provider-adapter.js gemini-orchestrator-provider-adapter.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js free-tier-resource-governor.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js affiliate-marketplace.js affiliate-provider-feed.js product-identity.js coupang-partners-automation.js offer-registry.js offer-registry-control.js offer-registry-sources.js social-registry-api.js mail-credential-vault.js mail-google-adapter.js mail-control.js external-account-control.js cloudflare-account-pool.js local-commerce-control.js language-automation.js ai-provider-control.js ai-free-quota.js config/language-registry.js config/managed-language-sites.js; do
+          for file in api-worker.js platform-maturity-control.js preview-public-projection.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js tenant-access-authority.js church-reports-control.js mission-control-entry-worker.js seonammedi-civic-control.js common-board-adapter.js board-runtime-guard.js replaceable-board-provider.js board-engine-registry.js realtime-control.js realtime-tenant-registry.js storage-gateway.js canonical-drive-writer.js external-ai-module-gateway.js secure-projection.js traffic-intelligence.js traffic-intelligence-control.js devotional-control.js user-ai-control.js learning-control.js personal-ai-bridge.js ekodi-mcp-gateway.js mcp-client-policy.js ekodi-mcp-external-tools.js ekodi-orchestrator-task-adapter.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-command-control.js ekodi-command-ledger.js ekodi-pulse-runtime.js ekodi-command-plane.js ekodi-capability-executor.js ekodi-capability-ecosystem.js ekodi-capability-ecosystem-store.js ekodi-capability-sandbox.js ekodi-capability-accumulation.js ekodi-self-automation-engine.js ekodi-ai-provider-registry.js cloudflare-workers-ai-provider-adapter.js ai-orchestrator-runtime.js anthropic-provider-adapter.js gemini-orchestrator-provider-adapter.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js free-tier-resource-governor.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js affiliate-marketplace.js affiliate-provider-feed.js product-identity.js coupang-partners-automation.js offer-registry.js offer-registry-control.js offer-registry-sources.js social-registry-api.js mail-credential-vault.js mail-google-adapter.js mail-control.js external-account-control.js cloudflare-account-pool.js local-commerce-control.js language-automation.js ai-provider-control.js ai-free-quota.js config/language-registry.js config/managed-language-sites.js; do
             node --check "$file"
           done
           node --check scripts/generate-user-service-registry.mjs
           node --check scripts/validate-universal-membership.mjs
           node --check scripts/guarded-worker-release.mjs
           node --check scripts/orchestrator-release-receipt.mjs
+          node --check scripts/validate-orchestrator-completion-reconciliation.mjs
+          node scripts/validate-orchestrator-completion-reconciliation.mjs
+          node --test test/orchestrator-completion-reconciler.test.mjs
           node --check scripts/validate-additive-migrations.mjs
           node --check scripts/validate-ai-mission-governance.mjs
           node --check scripts/validate-security-baseline.mjs

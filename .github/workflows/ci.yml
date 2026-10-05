@@ -88,7 +88,10 @@ jobs:
       - name: Run static policy and code checks
         env:
           EKODI_ORCHESTRATION_STATIC_POLICY: '1'
-        run: npm run check
+        run: |
+          npm run check
+          node scripts/validate-orchestrator-completion-reconciliation.mjs
+          node --test test/orchestrator-completion-reconciler.test.mjs
       - run: npm run build
       - name: Validate AI provider independence
         run: npm run validate:ai-resilience

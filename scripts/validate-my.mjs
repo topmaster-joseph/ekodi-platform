@@ -228,4 +228,8 @@ for(const required of ['servicesWayfinder','data-services-menu','data-services-o
   if(!content.html.includes(required))throw new Error(`My EKODI validation failed: second-level wayfinder marker missing: ${required}`);
 }
 
+for(const required of ['data-ekodi-user-ai-entry="off"','data-ekodi-progressive-home="off"','data-account-open="ai"','data-account-tab="ai"']){
+  if(!content.html.includes(required))throw new Error(`My EKODI validation failed: primary action surface opt-out marker missing: ${required}`);
+}
+
 console.log('My EKODI validation passed: USER UI, common-service access context, universal membership, multi-device Free Device Care with browser-only safety boundaries, User AI, Shell-synced Workspace context, isolated staging, central auth and guarded production rollout are present.');

@@ -39,7 +39,13 @@
     "canaryAndRollbackRequired": true,
     "selfHealingAndReconcileRequired": true,
     "externalProviderHotSwapRequired": true,
-    "operatorEscalationOnlyAfterAutomaticRecoveryExhausted": true
+    "operatorEscalationOnlyAfterAutomaticRecoveryExhausted": true,
+    "continuityFirstRecoveryRequired": true,
+    "safeImmediateReplacementRequired": true,
+    "postRecoveryRootCauseImprovementRequired": true,
+    "ambiguousWriteMustReconcileBeforeRetry": true,
+    "approvedFallbackMustBeSustainableAndReplaceable": true,
+    "productionVerificationBeforeCompletionRequired": true
   },
   "contentFirst": {
     "newBoardRequiresCodeCopy": false,
