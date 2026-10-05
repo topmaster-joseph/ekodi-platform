@@ -25,6 +25,8 @@ test('POS Agent install management remains a native super-admin status panel',as
   assert.match(js,/remove-pos-agent\.cmd/);
   assert.match(js,/diagnose-pos-targets\.ps1/);
   assert.match(js,/127\.0\.0\.1:17831/);
+  assert.match(js,/0x80041318/);
+  assert.match(js,/20초 재시작 설정/);
   assert.match(js,/\/jadam\/admin\/pos/);
   assert.match(js,/\/pizzamaru\/admin\/pos/);
   assert.match(js,/\/yogurt\/admin\/pos/);
