@@ -2,7 +2,7 @@ import { getEkodiCommandTask, ingestEkodiPulse } from './ekodi-command-ledger.js
 import { runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
 
 const TERMINAL_STATES=new Set(['completed','blocked','failed','cancelled']);
-const CANCELLABLE_STATES=new Set(['received','triaged','assigned','retrying']);
+const CANCELLABLE_STATES=new Set(['received','triaged','assigned']);
 const NON_RELEASABLE_STATES=new Set(['blocked','failed','cancelled']);
 
 const GITHUB_REPOSITORY='topmaster-joseph/ekodi-platform';
@@ -230,7 +230,7 @@ async function ownedTask(db,id,requester){
 function mapCommandState(state){
   const value=text(state,40).toLowerCase();
   if(value==='queued')return'assigned';
-  if(value==='retry')return'retrying';
+  if(value==='retry')return'assigned';
   if(value==='running')return'executing';
   if(['verified','core_only'].includes(value))return'completed';
   if(['human_gate','degraded'].includes(value))return'blocked';
@@ -324,7 +324,7 @@ export async function cancelOrchestratorTask(env,identity,id){
   if(TERMINAL_STATES.has(row.state))return Object.freeze({...publicTask(row),cancelled:false,reason:'already_terminal'});
   if(!CANCELLABLE_STATES.has(row.state))return Object.freeze({...publicTask(row),cancelled:false,reason:'task_in_flight'});
   const updated=now();
-  const result=await db.prepare("UPDATE ekodi_orchestrator_tasks SET state='cancelled',state_version=state_version+1,updated_at=?,completed_at=? WHERE task_id=? AND requester_id=? AND state IN ('received','triaged','assigned','retrying')").bind(updated,updated,row.task_id,requester).run();
+  const result=await db.prepare("UPDATE ekodi_orchestrator_tasks SET state='cancelled',state_version=state_version+1,updated_at=?,completed_at=? WHERE task_id=? AND requester_id=? AND state IN ('received','triaged','assigned')").bind(updated,updated,row.task_id,requester).run();
   if(changes(result)<1)return Object.freeze({...publicTask(await ownedTask(db,row.task_id,requester)),cancelled:false,reason:'state_changed'});
   await db.prepare("UPDATE ai_command_tasks SET state='ignored',updated_at=?,closed_at=?,lease_until=NULL WHERE id=? AND state IN ('queued','retry')").bind(updated,updated,row.task_id).run().catch(()=>null);
   await appendEvent(db,row.task_id,row.state,'cancelled','mcp','requester_cancelled');
