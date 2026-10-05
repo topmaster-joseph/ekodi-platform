@@ -45,13 +45,14 @@ for(const [input,expected] of cases){
   const actualSurface=resolveEkodiUiSurface(input);
   if(actualSurface!==expected) fail(`${JSON.stringify(input)} resolved ${actualSurface}; expected ${expected}`);
 }
-const [injector,worker,governor,publicAdminRuntime,principles,seonamApp,seonamCss,seonamControl,seonamTests]=await Promise.all([
+const [injector,worker,governor,publicAdminRuntime,principles,seonamApp,seonamVoiceAdmin,seonamCss,seonamControl,seonamTests]=await Promise.all([
   readFile(new URL('../ekodi-shell-injector.js',import.meta.url),'utf8'),
   readFile(new URL('../ekodi-shell-worker.js',import.meta.url),'utf8'),
   readFile(new URL('../shell/ui-surface-governor.js',import.meta.url),'utf8'),
   readFile(new URL('../shell/public-surface-admin.js',import.meta.url),'utf8'),
   readFile(new URL('../docs/ui-system-principles.md',import.meta.url),'utf8'),
   readFile(new URL('../sites/seonammedi/public/app.js',import.meta.url),'utf8'),
+  readFile(new URL('../sites/seonammedi/public/voice-public-admin.js',import.meta.url),'utf8'),
   readFile(new URL('../sites/seonammedi/public/app.css',import.meta.url),'utf8'),
   readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
   readFile(new URL('../test/seonammedi-site.test.mjs',import.meta.url),'utf8'),
@@ -74,7 +75,8 @@ for(const duplicate of ['function publicAdminRequest','function ensurePublicAdmi
 for(const duplicate of ['.public-admin-drawer','.public-admin-inline']) if(seonamCss.includes(duplicate)) fail(`seonammedi must not duplicate shared public admin styling: ${duplicate}`);
 if(!seonamCss.includes('.ekodi-public-admin-inline')) fail('seonammedi site-specific shared-admin placement hook missing');
 for(const marker of ['canManage','authentication_required']) if(!seonamControl.includes(marker)) fail(`seonammedi pilot missing server authority evidence: ${marker}`);
-if(!seonamTests.includes('uses shared authenticated inline admin without exposing local duplicate controls')) fail('seonammedi shared public-surface admin regression test missing');
+for(const marker of ['window.EKODIPublicSurfaceAdmin','permissions?.voices===true','/api/seonammedi/admin/voices','data-seonammedi-voice-admin']) if(!seonamVoiceAdmin.includes(marker)) fail(`seonammedi inline citizen-voice admin missing ${marker}`);
+if(!seonamTests.includes('uses shared authenticated inline admin without duplicate citizen-voice CRUD')) fail('seonammedi shared public-surface citizen-voice regression test missing');
 
 if(failures.length){
   console.error(`EKODI UI Surface validation failed (${failures.length})`);

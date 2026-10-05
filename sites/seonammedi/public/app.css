@@ -106,3 +106,15 @@
 /* 2026-10-03 SeonamMedi mobile activity-history UX */
 .activity-toolbar{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.activity-toolbar .filters{min-width:0;flex:1}.timeline-toggle{margin-top:12px;border:1px solid #cbd5df;border-radius:9px;background:#fff;color:#225d8f;padding:7px 10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.timeline-item.is-collapsed .timeline-summary{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}.timeline-item.is-collapsed .timeline-detail{display:none}
 @media(max-width:760px){body{overflow-x:hidden}.site-header{width:100%;padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}.brand{min-width:0;width:100%}.brand strong,.brand small{max-width:100%;overflow-wrap:anywhere}.activity-toolbar{display:block}.activity-toolbar .filters{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:-18px;padding:0 18px 8px;scroll-padding-inline:18px}.activity-toolbar .filters::-webkit-scrollbar{display:none}.activity-toolbar .filters button{flex:0 0 auto;white-space:nowrap}.activity-toolbar>.ekodi-public-admin-inline{margin:0 0 12px}.timeline-item{padding:16px;gap:8px}.timeline-date{font-size:15px}.timeline-item h3{font-size:18px;line-height:1.45}.timeline-summary{font-size:14px;line-height:1.65}.timeline-item.is-collapsed .chips{margin-top:8px}}
+
+.voice-inline-admin{margin-top:12px;padding-top:10px;border-top:1px solid var(--line,#dfe5ea)}
+.voice-inline-admin>summary{cursor:pointer;font-weight:700}
+.voice-inline-admin-form{display:grid;gap:10px;margin-top:10px}
+.voice-inline-admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.voice-inline-admin-form label{display:grid;gap:5px;font-size:.86rem}
+.voice-inline-admin-form input,.voice-inline-admin-form select,.voice-inline-admin-form textarea{width:100%;box-sizing:border-box}
+.voice-inline-admin-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.voice-inline-admin-delete{border:1px solid currentColor;background:transparent}
+.voice-inline-admin-status.error{font-weight:700}
+.public-voice-reply .voice-inline-admin-delete{margin-left:auto;font-size:.78rem;padding:4px 7px}
+@media(max-width:640px){.voice-inline-admin-grid{grid-template-columns:1fr}}
