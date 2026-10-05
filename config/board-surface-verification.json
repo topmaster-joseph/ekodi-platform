@@ -34,6 +34,12 @@
       "path": "/journal",
       "enabled": true,
       "kind": "board"
+    },
+    {
+      "id": "ekodimission.activity_archive",
+      "path": "/ekodimission/activities/261003-autumn-community-trip/archive",
+      "enabled": true,
+      "kind": "activity-results"
     }
   ],
   "expansionRule": "register-active-board-surface-without-editing-browser-workflow"
