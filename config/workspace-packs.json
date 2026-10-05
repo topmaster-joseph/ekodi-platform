@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "name": "EKODI Workspace Packs",
   "defaultPack": "personal-starter",
   "packs": [
@@ -90,7 +90,8 @@
         "finance.stewardship",
         "core.public-site",
         "device.observe",
-        "support.benefit-radar"
+        "support.benefit-radar",
+        "community.site-board"
       ],
       "signals": [
         "가게",
@@ -127,7 +128,8 @@
         "community.events",
         "finance.stewardship",
         "core.public-site",
-        "support.benefit-radar"
+        "support.benefit-radar",
+        "community.site-board"
       ],
       "signals": [
         "기관",
@@ -225,7 +227,8 @@
         "community.events",
         "ministry.service",
         "creator.writing",
-        "creator.media"
+        "creator.media",
+        "community.site-board"
       ],
       "signals": [
         "교회",
