@@ -27,6 +27,9 @@ const MISSION_ADMIN_ACTIVITY_RPCS=new Set(['activity_admin_snapshot','activity_a
 const MISSION_SHARE_PATH_RE=/^\/ekodimission\/share\/([A-Za-z0-9_-]{32,200})$/;
 const MISSION_ACTIVITY_ARCHIVE_RE=/^\/ekodimission\/activities\/([a-z0-9-]+)\/archive$/;
 const MISSION_ACTIVITY_MEDIA_RE=/^\/ekodimission\/api\/activities\/([a-z0-9-]+)\/media$/;
+const MISSION_ACTIVITY_MEDIA_UPLOAD_RE=/^\/ekodimission\/api\/activities\/([a-z0-9-]+)\/media-upload$/;
+const MISSION_ACTIVITY_MEDIA_FILE_RE=/^\/ekodimission\/media\/([0-9a-f-]{36})$/;
+const MISSION_MEDIA_MAX_FILE_BYTES=8*1024*1024;
 const MISSION_ACTIVITY_REGISTRATION_RE=/^\/ekodimission\/api\/activities\/([a-z0-9-]+)\/registration$/;
 const MISSION_ACTIVITY_APPLICATION_RE=/^\/ekodimission\/api\/activities\/([0-9]{6}-[a-z0-9][a-z0-9-]{2,79})\/applications$/;
 const MISSION_PUBLIC_ADMIN_PATHS=new Set(['/ekodimission/activities',MISSION_EVENT_PATH,MISSION_TRIP_PATH]);
@@ -124,6 +127,101 @@ async function routeMissionActivityRegistration(request,env,activityKey){
   if(!result.ok||!result.data?.ok)return json(env,{ok:false,error:'activity_not_found'},404);
   return json(env,result.data,200);
 }
+function missionHex(bytes){return [...bytes].map(v=>v.toString(16).padStart(2,'0')).join('')}
+function missionBytesToBase64(bytes){
+  let binary='';const chunk=0x8000;
+  for(let offset=0;offset<bytes.length;offset+=chunk)binary+=String.fromCharCode(...bytes.subarray(offset,Math.min(offset+chunk,bytes.length)));
+  return btoa(binary);
+}
+function missionDetectedImageMime(bytes){
+  if(bytes.length>=3&&bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff)return'image/jpeg';
+  if(bytes.length>=8&&bytes[0]===0x89&&bytes[1]===0x50&&bytes[2]===0x4e&&bytes[3]===0x47&&bytes[4]===0x0d&&bytes[5]===0x0a&&bytes[6]===0x1a&&bytes[7]===0x0a)return'image/png';
+  if(bytes.length>=12&&String.fromCharCode(...bytes.subarray(0,4))==='RIFF'&&String.fromCharCode(...bytes.subarray(8,12))==='WEBP')return'image/webp';
+  if(bytes.length>=6){const sig=String.fromCharCode(...bytes.subarray(0,6));if(sig==='GIF87a'||sig==='GIF89a')return'image/gif'}
+  if(bytes.length>=12&&String.fromCharCode(...bytes.subarray(4,8))==='ftyp'){
+    const brand=String.fromCharCode(...bytes.subarray(8,12)).toLowerCase();
+    if(['heic','heix','hevc','hevx'].includes(brand))return'image/heic';
+    if(['mif1','msf1','heif'].includes(brand))return'image/heif';
+  }
+  return'';
+}
+function missionSafeFilename(value){
+  const name=String(value||'photo').replace(/[\\/:*?"<>|\u0000-\u001f]/g,'_').trim();
+  return(name||'photo').slice(0,180);
+}
+async function routeMissionActivityMediaUpload(request,env,activityKey){
+  if(request.method!=='POST')return json(env,{ok:false,error:'method_not_allowed'},405);
+  const url=new URL(request.url),origin=String(request.headers.get('origin')||'');
+  if(url.hostname==='ekodi.kr'&&origin&&origin!=='https://ekodi.kr')return json(env,{ok:false,error:'origin_not_allowed'},403);
+  if(!env.STORAGE?.fetch)return json(env,{ok:false,error:'storage_unavailable',message:'사진 직접 업로드를 사용할 수 없습니다. 아래 링크 등록을 이용해 주세요.'},503);
+  const length=Number(request.headers.get('content-length')||0);
+  if(length&&length>MISSION_MEDIA_MAX_FILE_BYTES+524288)return json(env,{ok:false,error:'payload_too_large',message:'사진 한 장은 8MB 이하만 올릴 수 있습니다.'},413);
+  const form=await request.formData().catch(()=>null);
+  const file=form?.get('file'),submittedBy=String(form?.get('name')||'').trim().slice(0,80),title=String(form?.get('title')||'').trim().slice(0,160);
+  if(!(file instanceof File))return json(env,{ok:false,error:'file_required',message:'사진 파일을 선택해 주세요.'},400);
+  if(file.size<=0||file.size>MISSION_MEDIA_MAX_FILE_BYTES)return json(env,{ok:false,error:'invalid_file_size',message:'사진 한 장은 8MB 이하만 올릴 수 있습니다.'},413);
+  const bytes=new Uint8Array(await file.arrayBuffer());
+  const detected=missionDetectedImageMime(bytes);
+  if(!detected)return json(env,{ok:false,error:'unsupported_media_type',message:'JPG, PNG, WebP, GIF, HEIC 사진만 올릴 수 있습니다.'},415);
+  const declared=String(file.type||'').toLowerCase();
+  if(declared&&declared.startsWith('image/')&&declared!==detected&&!(declared==='image/heif'&&detected==='image/heic')&&!(declared==='image/heic'&&detected==='image/heif')){
+    return json(env,{ok:false,error:'media_signature_mismatch',message:'파일 형식과 실제 사진 데이터가 일치하지 않습니다.'},415);
+  }
+  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));
+  const sha256=missionHex(digest),filename=missionSafeFilename(file.name||'photo');
+  const reserve=await missionSupabaseRpc(env,'activity_public_reserve_media_upload',{
+    p_workspace_slug:'ekodimission',p_activity_key:activityKey,p_sha256:sha256,
+    p_title:title||filename,p_original_filename:filename,p_mime_type:detected,p_file_size:file.size,
+    p_submitted_by_name:submittedBy,p_perceptual_hash:''
+  });
+  if(!reserve.ok||!reserve.data?.ok)return json(env,{ok:false,error:reserve.data?.error||'upload_reservation_failed',message:'사진 등록 준비에 실패했습니다.'},reserve.status>=500?503:400);
+  if(!reserve.data.reserved){
+    return json(env,{ok:true,duplicate:true,pending:Boolean(reserve.data.pending),id:reserve.data.id,url:reserve.data.url||'',message:reserve.data.pending?'같은 사진이 이미 업로드 중입니다.':'같은 사진이 이미 등록되어 있어 한 장으로 정리했습니다.'},reserve.data.pending?202:200);
+  }
+  const mediaId=String(reserve.data.id||''),uploadToken=String(reserve.data.upload_token||'');
+  let storageFileId='';
+  try{
+    const storageResponse=await env.STORAGE.fetch(new Request('https://storage.internal/api/storage/v1/records',{
+      method:'POST',headers:{'content-type':'application/json','x-request-id':mediaId},
+      body:JSON.stringify({
+        spaceId:'ekodimission',serviceId:'media',storageRoute:'media',recordType:'mission_activity_photo',
+        createdBy:'public-activity-participant',retentionClass:'permanent',title:filename,mimeType:detected,
+        contentBase64:missionBytesToBase64(bytes),sourceModuleId:'ekodimission.activity-archive',
+        subfolderPath:'EKODI Mission/Activities/'+activityKey
+      })
+    }));
+    const stored=await storageResponse.json().catch(()=>({}));
+    storageFileId=String(stored?.file?.id||'');
+    if(!storageResponse.ok||!stored?.ok||!storageFileId)throw new Error(stored?.code||'storage_write_failed');
+    const finalize=await missionSupabaseRpc(env,'activity_public_finalize_media_upload',{
+      p_workspace_slug:'ekodimission',p_activity_key:activityKey,p_media_id:mediaId,p_upload_token:uploadToken,p_storage_file_id:storageFileId
+    });
+    if(!finalize.ok||!finalize.data?.ok)throw new Error(finalize.data?.error||'upload_finalize_failed');
+    return json(env,{ok:true,duplicate:false,id:mediaId,url:finalize.data.url||'',archive_url:finalize.data.archive_url||'',filename,size:file.size,mime_type:detected},201);
+  }catch(error){
+    if(storageFileId){
+      await env.STORAGE.fetch(new Request('https://storage.internal/api/storage/v1/delete-file',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({fileId:storageFileId})})).catch(()=>{});
+    }
+    await missionSupabaseRpc(env,'activity_public_fail_media_upload',{p_workspace_slug:'ekodimission',p_activity_key:activityKey,p_media_id:mediaId,p_upload_token:uploadToken}).catch(()=>{});
+    return json(env,{ok:false,error:'photo_upload_failed',message:'사진 저장에 실패했습니다. 링크 등록은 계속 사용할 수 있습니다.'},503);
+  }
+}
+async function routeMissionActivityMediaFile(request,env,mediaId){
+  if(!['GET','HEAD'].includes(request.method))return json(env,{ok:false,error:'method_not_allowed'},405);
+  if(!env.STORAGE?.fetch)return json(env,{ok:false,error:'storage_unavailable'},503);
+  const ref=await missionSupabaseRpc(env,'activity_public_media_file_ref',{p_media_id:mediaId});
+  if(!ref.ok||!ref.data?.ok)return new Response('Not Found',{status:404});
+  const fileId=String(ref.data.storage_file_id||'');
+  const upstream=await env.STORAGE.fetch(new Request('https://storage.internal/api/storage/v1/files/'+encodeURIComponent(fileId),{method:'GET'}));
+  if(!upstream.ok)return new Response('Not Found',{status:upstream.status===404?404:503});
+  const headers=new Headers(upstream.headers);
+  headers.set('content-type',String(ref.data.mime_type||headers.get('content-type')||'application/octet-stream'));
+  headers.set('cache-control','public, max-age=3600, stale-while-revalidate=86400');
+  headers.set('x-content-type-options','nosniff');
+  headers.set('content-disposition','inline; filename="'+missionSafeFilename(ref.data.filename||'photo').replace(/"/g,'_')+'"');
+  headers.delete('set-cookie');
+  return new Response(request.method==='HEAD'?null:upstream.body,{status:200,headers});
+}
 async function routeMissionActivityMedia(request,env,activityKey){
   if(request.method!=='POST')return json(env,{ok:false,error:'method_not_allowed'},405);
   const url=new URL(request.url);const origin=String(request.headers.get('origin')||'');
@@ -161,8 +259,8 @@ async function routeMissionActivityArchive(request,env,activityKey){
   if(!result.ok||!data?.ok)return withHeaders(env,new Response('Not Found',{status:404}),'ekodimission-archive');
   const esc=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const media=Array.isArray(data.media)?data.media:[];
-  const cards=media.length?media.map(item=>'<article class="service-card" data-media-card data-media-id="'+esc(item.id||'')+'"><a href="'+esc(item.url)+'" target="_blank" rel="noopener noreferrer"><p class="eyebrow">'+esc(String(item.source_channel||item.type||'media').toUpperCase())+'</p><h2>'+esc(item.title||'사진·영상 보기')+'</h2><p>원문·원본 보기 →</p></a></article>').join(''):'<article class="service-card"><h2>아직 등록된 결과가 없습니다.</h2><p>참여자 누구나 아래에서 사진·영상·채널 링크를 함께 모을 수 있습니다.</p></article>';
-  const html='<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="index,follow"><title>'+esc(data.activity?.title||'행사 결과')+' · 사진·영상</title><link rel="stylesheet" href="/ekodimission/assets/site.css"><link rel="stylesheet" href="/ekodimission/assets/shell.css"><script src="/ekodimission/assets/shell.js" defer></script><script src="/ekodimission/assets/archive.js" defer></script></head><body data-activity-archive data-activity-key="'+esc(activityKey)+'"><header class="mission-site-header"><a class="mission-brand" href="/ekodimission"><span class="mission-brand-mark">E</span><span><strong>에코디선교회</strong><small>EKODI MISSION</small></span></a><nav aria-label="주요 메뉴" data-mission-nav></nav></header><main class="subpage"><a class="back" href="/ekodimission/activities">← 활동</a><section class="sub-hero"><p class="eyebrow">ACTIVITY ARCHIVE</p><h1>'+esc(data.activity?.title||'행사 결과')+'</h1><p>'+esc(data.activity?.venue||'')+'</p></section><section aria-labelledby="activity-media-add-title"><div class="section-heading"><p class="eyebrow">TOGETHER · COLLECT</p><h2 id="activity-media-add-title">사진·영상·채널 링크 함께 모으기</h2><p>같은 링크는 자동으로 겹치지 않게 정리됩니다. Google Photos·Drive·YouTube·Facebook·Instagram 등 원본 링크를 등록해 주세요.</p></div><form class="apply-form" data-media-submit><div class="field-grid"><label><span>원본 링크 *</span><input name="url" type="url" inputmode="url" required placeholder="https://..."></label><label><span>제목</span><input name="title" maxlength="160" placeholder="예: 공동체 여행 사진"></label><label><span>이름 또는 닉네임</span><input name="name" maxlength="80" placeholder="선택"></label><label><span>종류</span><select name="type"><option value="other">자동/기타</option><option value="photo">사진</option><option value="album">사진 모음</option><option value="video">동영상</option><option value="document">문서</option></select></label></div><button class="apply-submit" type="submit">링크 등록</button><p class="share-status" data-media-status aria-live="polite"></p></form></section><section><div class="section-heading"><p class="eyebrow">CURATED RESULTS</p><h2>정리된 활동 결과</h2></div><div class="service-grid" data-media-list>'+cards+'</div></section></main></body></html>';
+  const cards=media.length?media.map(item=>{const direct=item.source_channel==='ekodi_storage'&&item.type==='photo';return '<article class="service-card activity-result-card" data-media-card data-media-id="'+esc(item.id||'')+'"><a href="'+esc(item.url)+'" target="_blank" rel="noopener noreferrer">'+(direct?'<img class="activity-result-photo" src="'+esc(item.url)+'" alt="" loading="lazy" decoding="async">':'')+'<p class="eyebrow">'+esc(String(item.source_channel||item.type||'media').toUpperCase())+'</p><h2>'+esc(item.title||'사진·영상 보기')+'</h2><p>'+(direct?'사진 크게 보기 →':'원문·원본 보기 →')+'</p></a></article>'}).join(''):'<article class="service-card"><h2>아직 등록된 결과가 없습니다.</h2><p>참여자 누구나 아래에서 사진을 직접 올리거나 영상·채널 링크를 함께 모을 수 있습니다.</p></article>';
+  const html='<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="index,follow"><title>'+esc(data.activity?.title||'행사 결과')+' · 사진·영상</title><link rel="stylesheet" href="/ekodimission/assets/site.css"><link rel="stylesheet" href="/ekodimission/assets/shell.css"><script src="/ekodimission/assets/shell.js" defer></script><script src="/ekodimission/assets/archive.js" defer></script></head><body data-activity-archive data-activity-key="'+esc(activityKey)+'"><header class="mission-site-header"><a class="mission-brand" href="/ekodimission"><span class="mission-brand-mark">E</span><span><strong>에코디선교회</strong><small>EKODI MISSION</small></span></a><nav aria-label="주요 메뉴" data-mission-nav></nav></header><main class="subpage"><a class="back" href="/ekodimission/activities">← 활동</a><section class="sub-hero"><p class="eyebrow">ACTIVITY ARCHIVE</p><h1>'+esc(data.activity?.title||'행사 결과')+'</h1><p>'+esc(data.activity?.venue||'')+'</p></section><section aria-labelledby="activity-photo-upload-title"><div class="section-heading"><p class="eyebrow">TOGETHER · UPLOAD</p><h2 id="activity-photo-upload-title">사진 함께 올리기</h2><p>여러 사람이 같은 사진을 올려도 SHA-256 기준으로 한 장만 보관합니다. JPG·PNG·WebP·GIF·HEIC, 사진 한 장당 8MB 이하입니다.</p></div><form class="apply-form mission-photo-upload" data-photo-upload><div class="field-grid"><label><span>사진 선택 *</span><input name="photos" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif" multiple required></label><label><span>이름 또는 닉네임</span><input name="name" maxlength="80" placeholder="선택"></label></div><button class="apply-submit" type="submit">선택한 사진 올리기</button><p class="share-status" data-photo-status aria-live="polite"></p></form></section><section aria-labelledby="activity-media-add-title"><div class="section-heading"><p class="eyebrow">CHANNEL LINKS</p><h2 id="activity-media-add-title">동영상·채널 링크 추가</h2><p>YouTube·Facebook·Instagram·Google Photos·Drive 등 활동 결과가 올라온 원본 링크도 함께 모을 수 있습니다.</p></div><form class="apply-form" data-media-submit><div class="field-grid"><label><span>원본 링크 *</span><input name="url" type="url" inputmode="url" required placeholder="https://..."></label><label><span>제목</span><input name="title" maxlength="160" placeholder="예: 공동체 여행 영상"></label><label><span>이름 또는 닉네임</span><input name="name" maxlength="80" placeholder="선택"></label><label><span>종류</span><select name="type"><option value="other">자동/기타</option><option value="photo">사진</option><option value="album">사진 모음</option><option value="video">동영상</option><option value="document">문서</option></select></label></div><button class="apply-submit" type="submit">링크 등록</button><p class="share-status" data-media-status aria-live="polite"></p></form></section><section><div class="section-heading"><p class="eyebrow">CURATED RESULTS</p><h2>정리된 활동 결과</h2></div><div class="service-grid" data-media-list>'+cards+'</div></section></main></body></html>';
   const response=withHeaders(env,new Response(request.method==='HEAD'?null:html,{status:200,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-robots-tag':'index, follow'}}),'ekodimission-archive');
   return brandSiteResponse(response);
 }
@@ -231,7 +329,7 @@ async function routeMissionAdminActivityRpc(request,env){
   }
 }
 async function routeEkodiMission(request,env){
-  const url=new URL(request.url);const pathname=normalizedMissionPath(url.pathname);if(pathname===MISSION_ADMIN_ME_API)return routeMissionAdminMe(request,env);if(pathname===MISSION_ADMIN_ACTIVITY_RPC_API)return routeMissionAdminActivityRpc(request,env);if(pathname===MISSION_TRIP_CONTENT_API)return routeMissionTripContent(request,env);if(pathname===MISSION_COLLAB_API)return routeMissionCollabApi(request,env);if(pathname===MISSION_TRIP_COLLAB_PATH)return routeMissionCollabPage(request,env);const registrationMatch=pathname.match(MISSION_ACTIVITY_REGISTRATION_RE);if(registrationMatch)return routeMissionActivityRegistration(request,env,registrationMatch[1]);const mediaMatch=pathname.match(MISSION_ACTIVITY_MEDIA_RE);if(mediaMatch)return routeMissionActivityMedia(request,env,mediaMatch[1]);const archiveMatch=pathname.match(MISSION_ACTIVITY_ARCHIVE_RE);if(archiveMatch)return routeMissionActivityArchive(request,env,archiveMatch[1]);const shareMatch=pathname.match(MISSION_SHARE_PATH_RE);
+  const url=new URL(request.url);const pathname=normalizedMissionPath(url.pathname);if(pathname===MISSION_ADMIN_ME_API)return routeMissionAdminMe(request,env);if(pathname===MISSION_ADMIN_ACTIVITY_RPC_API)return routeMissionAdminActivityRpc(request,env);if(pathname===MISSION_TRIP_CONTENT_API)return routeMissionTripContent(request,env);if(pathname===MISSION_COLLAB_API)return routeMissionCollabApi(request,env);if(pathname===MISSION_TRIP_COLLAB_PATH)return routeMissionCollabPage(request,env);const registrationMatch=pathname.match(MISSION_ACTIVITY_REGISTRATION_RE);if(registrationMatch)return routeMissionActivityRegistration(request,env,registrationMatch[1]);const uploadMatch=pathname.match(MISSION_ACTIVITY_MEDIA_UPLOAD_RE);if(uploadMatch)return routeMissionActivityMediaUpload(request,env,uploadMatch[1]);const mediaFileMatch=pathname.match(MISSION_ACTIVITY_MEDIA_FILE_RE);if(mediaFileMatch)return routeMissionActivityMediaFile(request,env,mediaFileMatch[1]);const mediaMatch=pathname.match(MISSION_ACTIVITY_MEDIA_RE);if(mediaMatch)return routeMissionActivityMedia(request,env,mediaMatch[1]);const archiveMatch=pathname.match(MISSION_ACTIVITY_ARCHIVE_RE);if(archiveMatch)return routeMissionActivityArchive(request,env,archiveMatch[1]);const shareMatch=pathname.match(MISSION_SHARE_PATH_RE);
   if(shareMatch)return routeMissionShare(request,env,shareMatch[1]);
   if(MISSION_EVENT_LEGACY_PATHS.has(pathname)){const target=new URL(MISSION_EVENT_PATH+url.search,'https://ekodi.kr');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-route':'ekodimission-event-canonical','x-ekodi-publication-status':'published'}});}
   if(pathname==='/ekodimission/live'){
