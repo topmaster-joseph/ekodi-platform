@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-EXECUTION-PROJECTION-001",
+  "status": "enforced",
+  "owner": "ekodi-orchestrator",
+  "principle": "events-and-evidence-are-authoritative-state-is-a-rebuildable-projection",
+  "compatibility": {"existingTaskStateRetainedAsProjectionCache":true,"existingCommandLedgerRetained":true,"generation10EvidenceLedgersRetained":true,"noFlagDayMigration":true},
+  "identity": {"taskIdIndependentOfExecutorSessionBranch":true,"executionIdRequiredPerAttempt":true,"artifactDigestRequiredForMutatingArtifacts":true},
+  "authority": {"executorMayAppendEvents":true,"executorMayAppendEvidence":true,"executorMaySelfDeclareTerminalSuccess":false,"projectorComputesCurrentState":true,"completionContractControlsTerminalSuccess":true},
+  "projection": {"deterministic":true,"replayable":true,"idempotent":true,"mutableStateIsSourceOfTruth":false,"contradictoryEvidence":"needs_reconciliation","expiredExecutionLease":"recoverable"},
+  "completionContracts": {
+    "engineering_deployment":["authorized_task","verified_artifact","required_gates","merged_change","staging_verified","production_verified","live_verified"],
+    "data_mutation":["authorized_task","write_receipt","read_back_verified"],
+    "external_provider_action":["authorized_task","provider_receipt","ekodi_read_back_verified"],
+    "non_mutating_analysis":["authorized_task","result_evidence"]
+  },
+  "recovery": {"executorReplaceable":true,"orphanEvidenceMayBeCorrelatedByTaskExecutionArtifact":true,"leaseExpiryRequiresReassignmentNotTaskRecreation":true,"deadLetterOnlyAfterCompletionContractCannotBeSatisfiedAutomatically":true}
+}
