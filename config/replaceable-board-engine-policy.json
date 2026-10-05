@@ -69,5 +69,32 @@
     "replaceableProviderModule": "replaceable-board-provider.js",
     "canonicalWritePlane": "EKODI-DURABLE-WRITE-INGRESS-001",
     "searchRequiredInContract": true
-  }
+  },
+  "verifiedIndependentSurfaces": [
+    {
+      "id": "seonammedi.citizen_voice",
+      "mode": "guarded_adapter",
+      "core": "d1_durable_write_ingress"
+    },
+    {
+      "id": "seonammedi.notice",
+      "mode": "guarded_adapter",
+      "core": "d1_plus_storage"
+    },
+    {
+      "id": "journal.posts",
+      "mode": "native_no_ai",
+      "core": "journal_worker"
+    },
+    {
+      "id": "organization.notices",
+      "mode": "native_no_ai",
+      "core": "supabase_postgres"
+    },
+    {
+      "id": "community",
+      "mode": "provider_optional_fallback",
+      "core": "supabase_edge_function"
+    }
+  ]
 }
