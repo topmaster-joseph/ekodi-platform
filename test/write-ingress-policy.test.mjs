@@ -40,6 +40,9 @@ test('durable write ingress policy is enforced and queue-first in production',as
   assert.match(workflow,/Finaliz[e] durable write queue consumer trigger/);
   assert.ok(workflow.indexOf('Candidate at 0%, verify routes, promote and auto-rollback on failure') < workflow.indexOf('Finalize durable write queue consumer trigger'));
   assert.match(workflow,/validate-write-ingress-policy\.mjs/);
+  assert.match(workflow,/consumer_present\(\)/);
+  assert.match(workflow,/already has a consumer\|code: 11004/);
+  assert.match(workflow,/jq -e '\.\. \| strings \| select\(\. == "shy-thunder-39a4"\)'/);
 });
 
 test('seonammedi public voice success requires durable acceptance id',async()=>{
