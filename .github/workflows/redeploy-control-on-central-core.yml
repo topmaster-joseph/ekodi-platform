@@ -2,6 +2,15 @@ name: Redeploy Control on Central Core Change
 
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Orchestrator-issued source branch'
+        required: false
+        type: string
+      release_task_id:
+        description: 'Orchestrator task id'
+        required: false
+        type: string
   push:
     branches: [main]
     paths:
@@ -61,8 +70,31 @@ jobs:
             sleep 2
           done
           echo 'native_control_run=false' >> "$GITHUB_OUTPUT"
+      - name: Resolve immutable orchestrator provenance
+        id: provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_BRANCH: ${{ inputs.release_branch_ref || '' }}
+          INPUT_TASK: ${{ inputs.release_task_id || '' }}
+        run: |
+          set -euo pipefail
+          branch="$INPUT_BRANCH"
+          task="$INPUT_TASK"
+          if [[ -z "$branch" && "$GITHUB_EVENT_NAME" == 'push' ]]; then
+            prs=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls")
+            branch=$(jq -r '[.[] | select(.merged_at != null and .base.ref == "main")][0].head.ref // empty' <<<"$prs")
+          fi
+          if [[ ! "$branch" =~ ^ai/[a-zA-Z0-9._-]+/(orch_[a-zA-Z0-9_-]+)$ ]]; then
+            echo "Missing orchestrator-issued merged provenance for $GITHUB_SHA" >&2
+            exit 1
+          fi
+          derived="${BASH_REMATCH[1]}"
+          [[ -z "$task" ]] && task="$derived"
+          [[ "$task" == "$derived" ]] || { echo 'task/branch provenance mismatch' >&2; exit 1; }
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "task=$task" >> "$GITHUB_OUTPUT"
       - name: Dispatch existing guarded Control API release
         if: github.event_name == 'workflow_dispatch' || steps.dedupe.outputs.native_control_run != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run deploy-control-api.yml --ref main
+        run: gh workflow run deploy-control-api.yml --ref main -f release_branch_ref='${{ steps.provenance.outputs.branch }}' -f release_task_id='${{ steps.provenance.outputs.task }}'
