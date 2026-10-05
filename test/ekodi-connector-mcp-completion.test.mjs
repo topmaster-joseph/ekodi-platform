@@ -103,8 +103,10 @@ test('MCP delegated tasks carry standing delegation, expose retries, and synchro
   assert.match(source,/delegation:\{allowed:true,reversible:true,audited:true,preflightVerified:true,verificationDefined:true\}/);
   assert.match(source,/runEkodiCommandQueue\(env,\{limit:1,taskId:id\}\)/);
   assert.match(source,/assigned_worker='ekodi-command-plane'/);
-  assert.match(source,/if\(value==='retry'\)return'retrying'/);
+  assert.match(source,/if\(value==='retry'\)return'assigned'/);
   assert.match(source,/commandLedger:commandMeta/);
+  assert.doesNotMatch(source,/return'retrying'/);
+  assert.match(source,/commandState:commandMeta\?\.state\|\|null/);
   assert.match(source,/attemptCount:Number\(commandMeta\?\.attemptCount\|\|0\)/);
   assert.match(source,/lastError:commandMeta\?\.lastError\|\|''/);
   assert.match(source,/state_version=state_version\+\?/);
