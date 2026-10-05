@@ -245,7 +245,7 @@ test('seonammedi civic voices are managed on the public surface without exposing
   assert.match(adminHtml,/시민의견 운영/);
   assert.doesNotMatch(adminHtml,/id="voiceList"/);
   assert.match(adminHtml,/사용자 화면에서 관리/);
-  assert.match(voiceAdmin,/관리자 전용 연락처|name,'contact'/);
+  assert.match(voiceAdmin,/field\('input','contact'/);
   assert.match(voiceAdmin,/publicConsent/);
   assert.match(voiceAdmin,/permissions\?\.voices===true/);
 });
