@@ -1,5 +1,6 @@
 import { durableWriteQueueAvailable, enqueueDurableWrite } from './write-ingress.js';
 import { createBoardAdapter, handleBoardAdapter, consumeBoardAdapter } from './common-board-adapter.js';
+import { createBoardRuntimeGuard } from './board-runtime-guard.js';
 
 const API_PATH='/api/seonammedi/voices';
 const HEALTH_PATH=API_PATH+'/health';
@@ -212,7 +213,7 @@ async function createPublicVoice(request,env){
   }
 }
 
-const citizenVoiceBoard=createBoardAdapter({
+const citizenVoiceAdapter=createBoardAdapter({
   boardId:'seonammedi.citizen_voice',
   list:(_request,env)=>listPublicVoices(env),
   create:createPublicVoice,
@@ -220,6 +221,7 @@ const citizenVoiceBoard=createBoardAdapter({
   health:(_request,env)=>health(env),
   consume:consumeVoice
 });
+const citizenVoiceBoard=createBoardRuntimeGuard({adapter:citizenVoiceAdapter});
 
 export async function consumeSeonamMediVoiceMessage(envelope,env){
   return consumeBoardAdapter(citizenVoiceBoard,envelope,env);
