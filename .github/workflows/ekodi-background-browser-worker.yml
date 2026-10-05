@@ -83,7 +83,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout current platform revision
+        if: github.repository == 'topmaster-joseph/ekodi-platform'
+        uses: actions/checkout@v7
+      - name: Checkout canonical EKODI browser worker for external EKODI repositories
+        if: github.repository != 'topmaster-joseph/ekodi-platform'
+        uses: actions/checkout@v7
+        with:
+          repository: topmaster-joseph/ekodi-platform
+          ref: main
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -98,7 +106,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout current platform revision
+        if: github.repository == 'topmaster-joseph/ekodi-platform'
+        uses: actions/checkout@v7
+      - name: Checkout canonical EKODI browser worker for external EKODI repositories
+        if: github.repository != 'topmaster-joseph/ekodi-platform'
+        uses: actions/checkout@v7
+        with:
+          repository: topmaster-joseph/ekodi-platform
+          ref: main
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
