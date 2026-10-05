@@ -1,5 +1,6 @@
 import { getEkodiCommandTask, ingestEkodiPulse } from './ekodi-command-ledger.js';
 import { runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
+import { projectDeploymentGate } from './execution-state-projector.js';
 import authCore from './auth-worker-core.js';
 import { verifyGitHubActionsOidc } from './github-actions-oidc.js';
 
@@ -286,6 +287,14 @@ function publicTask(row){
   const result=parseJson(row.result_json,null);
   const evidence=parseJson(row.evidence_json,[]);
   const commandMeta=evidence&&typeof evidence==='object'&&!Array.isArray(evidence)?evidence.commandLedger:null;
+  const deploymentRequested=Number(row.deployment_requested||0)===1;
+  const productionEvidence=parseJson(row.production_evidence_json,null);
+  const deploymentGate=deploymentRequested?projectDeploymentGate({
+    state:row.state,
+    risk:row.risk,
+    deploymentRequested,
+    productionEvidence,
+  }):null;
   return Object.freeze({
     taskId:row.task_id,
     state:row.state,
@@ -297,7 +306,8 @@ function publicTask(row){
     assignedWorker:row.assigned_worker||null,
     branchRef:row.branch_ref||null,
     prRef:row.pr_ref||null,
-    deploymentRequested:Number(row.deployment_requested||0)===1,
+    deploymentRequested,
+    deploymentGate,
     commandState:commandMeta?.state||null,
     attemptCount:Number(commandMeta?.attemptCount||0),
     maxAttempts:Number(commandMeta?.maxAttempts||0),
@@ -306,7 +316,7 @@ function publicTask(row){
     lastError:commandMeta?.lastError||'',
     result,
     evidence,
-    productionEvidence:parseJson(row.production_evidence_json,null),
+    productionEvidence,
     createdAt:row.created_at,
     updatedAt:row.updated_at,
     completedAt:row.completed_at||null,
