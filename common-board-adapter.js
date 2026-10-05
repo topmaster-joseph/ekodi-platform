@@ -1,27 +1,17 @@
 /**
  * EKODI Common Board Adapter
  *
- * Stable, provider-independent contract for every interactive EKODI board.
- * Canonical EKODI URLs, auth, UI, audit and data ownership remain outside the
- * replaceable board engine.
+ * Provider-independent contract for interactive EKODI boards.
+ * Canonical URL, auth, user surface and data ownership stay with EKODI.
  */
 const clean=(value,max=4000)=>String(value??'').trim().slice(0,max);
+
 export const BOARD_ADAPTER_OPERATIONS=Object.freeze([
   'list','read','create','reply','edit','delete','moderate','attachments','health','consume'
 ]);
 
 export function createBoardAdapter({
-  boardId,
-  list,
-  read,
-  create,
-  reply,
-  edit,
-  delete:remove,
-  moderate,
-  attachments,
-  health,
-  consume
+  boardId,list,read,create,reply,edit,delete:remove,moderate,attachments,health,consume
 }={}){
   if(!clean(boardId,120))throw new Error('board_adapter_id_required');
   if(typeof list!=='function'||typeof create!=='function')throw new Error('board_adapter_read_write_required');
@@ -38,7 +28,9 @@ export function createBoardAdapter({
     health:typeof health==='function'?health:null,
     consume:typeof consume==='function'?consume:null
   };
-  adapter.capabilities=Object.freeze(BOARD_ADAPTER_OPERATIONS.filter(key=>typeof adapter[key]==='function'));
+  adapter.capabilities=Object.freeze(
+    BOARD_ADAPTER_OPERATIONS.filter(operation=>typeof adapter[operation]==='function')
+  );
   return Object.freeze(adapter);
 }
 
