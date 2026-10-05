@@ -1,5 +1,6 @@
 import { getEkodiCommandTask, ingestEkodiPulse } from './ekodi-command-ledger.js';
 import { runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
+import authCore from './auth-worker-core.js';
 import { verifyGitHubActionsOidc } from './github-actions-oidc.js';
 
 const TERMINAL_STATES=new Set(['completed','blocked','failed','cancelled']);
@@ -191,14 +192,26 @@ function completionEvidenceShapeValid(evidence,row){
   return true;
 }
 
-async function currentLiveHealth({fetchImpl=fetch}={}){
+async function currentLiveHealth(env){
   let response=null;
-  try{response=await fetchImpl(LIVE_HEALTH_URL,{headers:{Accept:'application/json','User-Agent':'ekodi-orchestrator-completion-receipt'},cache:'no-store'})}catch{return null}
+  try{
+    response=await authCore.fetch(new Request(LIVE_HEALTH_URL,{
+      method:'GET',
+      headers:{Accept:'application/json','User-Agent':'ekodi-orchestrator-completion-receipt'},
+    }),env);
+  }catch{return null}
   if(!response?.ok)return null;
   let body={};
   try{body=await response.json()}catch{return null}
   if(body?.ok!==true)return null;
-  return Object.freeze({url:LIVE_HEALTH_URL,ok:true,service:text(body.service,120),version:body.version??null,verifiedAt:now()});
+  return Object.freeze({
+    url:LIVE_HEALTH_URL,
+    ok:true,
+    service:text(body.service,120),
+    version:body.version??null,
+    verification:'internal-canonical-health-handler',
+    verifiedAt:now(),
+  });
 }
 
 function bearer(request){
@@ -234,9 +247,9 @@ export async function handleOrchestratorCompletionReconciliation(request,env,{fe
     if(row.state==='completed')return new Response(JSON.stringify({ok:true,taskId:id,state:'completed',idempotent:true}),{status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
     if(TERMINAL_STATES.has(row.state))return new Response(JSON.stringify({ok:false,reason:'terminal_state_not_completable',state:row.state}),{status:409,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
     if(!completionEvidenceShapeValid(body.evidence,row))return new Response(JSON.stringify({ok:false,reason:'completion_evidence_invalid'}),{status:400,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
-    const live=await currentLiveHealth({fetchImpl});
+    const live=await currentLiveHealth(env);
     if(!live)return new Response(JSON.stringify({ok:false,reason:'live_health_failed'}),{status:503,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
-    const evidence=Object.freeze({...body.evidence,source:'github-actions-oidc-and-live-health',live,receipt:Object.freeze({repository:oidc.repository,ref:oidc.ref,eventName:oidc.eventName,workflowRef:oidc.workflowRef,runId:oidc.runId,runAttempt:oidc.runAttempt})});
+    const evidence=Object.freeze({...body.evidence,source:'github-actions-oidc-and-internal-canonical-health',live,receipt:Object.freeze({repository:oidc.repository,ref:oidc.ref,eventName:oidc.eventName,workflowRef:oidc.workflowRef,runId:oidc.runId,runAttempt:oidc.runAttempt})});
     const updated=await persistCompletionEvidence(db,row,evidence,{actor:'ekodi-github-actions-oidc-reconciler',reason:'verified_oidc_production_evidence_reconciled'});
     return new Response(JSON.stringify({ok:true,taskId:id,state:updated?.state||'unknown',completedAt:updated?.completed_at||null,authority:'ekodi-orchestrator'}),{status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
   }

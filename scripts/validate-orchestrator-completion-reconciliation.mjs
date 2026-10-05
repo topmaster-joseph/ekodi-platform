@@ -37,6 +37,8 @@ for(const key of [
   'liveProductionHealthRequired',
   'authenticatedGitHubReverificationRequired',
   'ekodiLiveHealthReverificationRequired',
+  'internalCanonicalHealthHandlerRequired',
+  'completionWorkerSelfFetchForbidden',
 ]){
   if(policy.requiredEvidence?.[key]!==true)fail('required evidence rule missing: '+key);
 }
@@ -69,7 +71,8 @@ for(const event of ['workflow_run','workflow_dispatch','schedule']){
 for(const marker of [
   'collectOrchestratorCompletionEvidence',
   'handleOrchestratorCompletionReconciliation',
-  'github-actions-oidc-and-live-health',
+  'github-actions-oidc-and-internal-canonical-health',
+  'internal-canonical-health-handler',
   "state='completed'",
   "state='verified'",
   'production_evidence_json',
@@ -129,6 +132,10 @@ for(const path of [
 const statusFunction=adapter.slice(adapter.indexOf('export async function getOrchestratorTaskStatus'),adapter.indexOf('export async function cancelOrchestratorTask'));
 if(!statusFunction.includes('reconcileCompletionRow'))fail('get_task_status must retain runtime self-heal path');
 if(statusFunction.indexOf('reconcileCompletionRow')>statusFunction.indexOf('syncFromCommandLedger'))fail('production evidence reconciliation must run before command-ledger terminal mapping');
+
+const healthFunction=adapter.slice(adapter.indexOf('async function currentLiveHealth'),adapter.indexOf('function bearer'));
+if(!healthFunction.includes('authCore.fetch'))fail('OIDC completion health must use the internal canonical health handler');
+if(healthFunction.includes('fetchImpl(')||healthFunction.includes('fetch(LIVE_HEALTH_URL'))fail('OIDC completion health must not self-fetch the public EKODI endpoint');
 
 if(failures.length){
   console.error('EKODI-ORCHESTRATOR-COMPLETION-001 validation failed');

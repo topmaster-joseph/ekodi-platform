@@ -25,7 +25,9 @@
     "productionPromotionSuccessRequired": true,
     "liveProductionHealthRequired": true,
     "authenticatedGitHubReverificationRequired": true,
-    "ekodiLiveHealthReverificationRequired": true
+    "ekodiLiveHealthReverificationRequired": true,
+    "internalCanonicalHealthHandlerRequired": true,
+    "completionWorkerSelfFetchForbidden": true
   },
   "reconciliation": {
     "getTaskStatusSelfHealsWhenRuntimeGitHubLookupAvailable": true,
