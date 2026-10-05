@@ -46,7 +46,7 @@ test('POS Agent scheduled task restart interval stays within Windows Task Schedu
   assert.match(install,/0x80041318/);
   assert.match(install,/FullyQualifiedErrorId/);
   assert.match(install,/Test-TaskSchemaRangeError/);
-  assert.match(install,/compatibility-safe settings/);
+  assert.match(install,/Windows-compatible default settings/);
   assert.match(install,/Get-ScheduledTask -TaskName \$TaskName -ErrorAction Stop/);
   assert.match(install,/Task Scheduler compatibility:/);
   assert.match(install,/compat-default-settings/);
