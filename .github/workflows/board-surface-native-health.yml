@@ -56,7 +56,7 @@ jobs:
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
-      surface_paths: /seonammedi/,/cgma/
+      surface_paths: /seonammedi/,/cgma/,/cgma/notices/1
       device_profile: desktop
 
   native_board_mobile:
@@ -64,5 +64,5 @@ jobs:
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
-      surface_paths: /seonammedi/,/cgma/
+      surface_paths: /seonammedi/,/cgma/,/cgma/notices/1
       device_profile: mobile-portrait
