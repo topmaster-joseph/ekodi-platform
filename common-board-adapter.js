@@ -1,39 +1,55 @@
 /**
  * EKODI Common Board Adapter
  *
- * Stable contract for commodity board features. Site-specific routes can keep
- * their canonical URL/UI while the storage engine is replaced behind this
- * adapter. The first rollout wraps SeonamMedi citizen voices without moving or
- * rewriting existing data.
+ * Provider-independent contract for interactive EKODI boards.
+ * Canonical URL, auth, user surface and data ownership stay with EKODI.
  */
 const clean=(value,max=4000)=>String(value??'').trim().slice(0,max);
 
+export const BOARD_ADAPTER_OPERATIONS=Object.freeze([
+  'list','read','create','reply','edit','delete','moderate','attachments','health','consume'
+]);
+
 export function createBoardAdapter({
-  boardId,
-  list,
-  create,
-  reply,
-  health,
-  consume
+  boardId,list,read,create,reply,edit,delete:remove,moderate,attachments,health,consume
 }={}){
   if(!clean(boardId,120))throw new Error('board_adapter_id_required');
   if(typeof list!=='function'||typeof create!=='function')throw new Error('board_adapter_read_write_required');
-  return Object.freeze({
+  const adapter={
     boardId:clean(boardId,120),
     list,
+    read:typeof read==='function'?read:null,
     create,
     reply:typeof reply==='function'?reply:null,
+    edit:typeof edit==='function'?edit:null,
+    delete:typeof remove==='function'?remove:null,
+    moderate:typeof moderate==='function'?moderate:null,
+    attachments:typeof attachments==='function'?attachments:null,
     health:typeof health==='function'?health:null,
     consume:typeof consume==='function'?consume:null
-  });
+  };
+  adapter.capabilities=Object.freeze(
+    BOARD_ADAPTER_OPERATIONS.filter(operation=>typeof adapter[operation]==='function')
+  );
+  return Object.freeze(adapter);
 }
 
-export async function handleBoardAdapter(adapter,{action,request,env,itemId}={}){
+export function boardAdapterCapabilities(adapter){
+  return Object.freeze([...(adapter?.capabilities||[])]);
+}
+
+export async function handleBoardAdapter(adapter,{action,request,env,itemId,attachmentId,payload}={}){
   if(!adapter)return null;
-  if(action==='list')return adapter.list(request,env);
-  if(action==='create')return adapter.create(request,env);
-  if(action==='reply'&&adapter.reply)return adapter.reply(request,env,Number(itemId));
-  if(action==='health'&&adapter.health)return adapter.health(request,env);
+  const id=Number(itemId);
+  if(action==='list')return adapter.list(request,env,payload);
+  if(action==='read'&&adapter.read)return adapter.read(request,env,id,payload);
+  if(action==='create')return adapter.create(request,env,payload);
+  if(action==='reply'&&adapter.reply)return adapter.reply(request,env,id,payload);
+  if(action==='edit'&&adapter.edit)return adapter.edit(request,env,id,payload);
+  if(action==='delete'&&adapter.delete)return adapter.delete(request,env,id,payload);
+  if(action==='moderate'&&adapter.moderate)return adapter.moderate(request,env,id,payload);
+  if(action==='attachments'&&adapter.attachments)return adapter.attachments(request,env,id,Number(attachmentId||0),payload);
+  if(action==='health'&&adapter.health)return adapter.health(request,env,payload);
   return null;
 }
 
