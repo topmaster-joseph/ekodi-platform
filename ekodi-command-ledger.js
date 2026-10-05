@@ -201,8 +201,33 @@ export async function getEkodiCommandLedgerStatus(input) {
   });
 }
 
+export async function recoverExpiredEkodiCommandTasks(input, options = {}) {
+  const db = await ensureEkodiCommandLedger(input);
+  const now = iso(options.now || Date.now());
+  const failed = await db.prepare(`UPDATE ai_command_tasks
+    SET state = 'failed', lease_until = NULL, next_attempt_at = NULL,
+        last_error = CASE WHEN last_error = '' THEN 'lease_expired_max_attempts' ELSE last_error END,
+        updated_at = ?, closed_at = ?
+    WHERE state = 'running' AND lease_until IS NOT NULL AND lease_until <= ?
+      AND attempt_count >= max_attempts`)
+    .bind(now, now, now).run();
+  const retried = await db.prepare(`UPDATE ai_command_tasks
+    SET state = 'retry', lease_until = NULL, next_attempt_at = ?,
+        last_error = CASE WHEN last_error = '' THEN 'lease_expired_requeued' ELSE last_error END,
+        updated_at = ?
+    WHERE state = 'running' AND lease_until IS NOT NULL AND lease_until <= ?
+      AND attempt_count < max_attempts`)
+    .bind(now, now, now).run();
+  return Object.freeze({
+    recovered: Number(retried?.meta?.changes ?? retried?.changes ?? 0),
+    exhausted: Number(failed?.meta?.changes ?? failed?.changes ?? 0),
+    observedAt: now,
+  });
+}
+
 export async function claimEkodiCommandTask(input, taskId, options = {}) {
   const db = await ensureEkodiCommandLedger(input);
+  await recoverExpiredEkodiCommandTasks(db, { now: options.now });
   const id = text(taskId, 120);
   if (!id) return null;
   const now = iso(options.now || Date.now());
@@ -220,6 +245,7 @@ export async function claimEkodiCommandTask(input, taskId, options = {}) {
 
 export async function claimNextEkodiCommandTask(input, options = {}) {
   const db = await ensureEkodiCommandLedger(input);
+  await recoverExpiredEkodiCommandTasks(db, { now: options.now });
   const now = iso(options.now || Date.now());
   const leaseMs = Math.min(Math.max(Number(options.leaseMs) || 120000, 30000), 300000);
   const leaseUntil = iso(new Date(now).getTime() + leaseMs);
@@ -370,6 +396,7 @@ export const EKODI_COMMAND_LEDGER = Object.freeze({
   durableStore: 'cloudflare-d1',
   evidenceStore: 'append-only-cloudflare-d1',
   maxAutomaticAttempts: 3,
+  expiredRunningLeaseRecovery: true,
   verifiedMutationRequiresExecutionEvidence: true,
   states: Object.freeze([...TASK_STATES]),
 });
