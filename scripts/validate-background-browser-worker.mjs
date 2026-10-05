@@ -4,6 +4,7 @@ import path from 'node:path';
 const root=process.cwd();
 const read=p=>JSON.parse(fs.readFileSync(path.join(root,p),'utf8').replace(/^\uFEFF/,''));
 const policy=read('config/background-browser-worker-policy.json');
+const boardRegistry=read('config/board-surface-verification.json');
 const surface=read('config/surface-system-verification-policy.json');
 const fabric=read('config/autonomous-execution-fabric-policy.json');
 const constitution=read('governance/constitution/constitution.json');
@@ -37,13 +38,20 @@ const browserMethod=(fabric.orchestration?.methodCatalog||[]).find(x=>x.id==='br
 if(browserMethod.ownership!=='ekodi'||browserMethod.defaultProvider!=='ekodi-background-browser-worker') fail('execution fabric browser-e2e method must use EKODI background browser worker');
 if(browserMethod.state!=='runtime-proven'||browserMethod.evidence!=='evidence/runtime/background-browser-worker/2026-09-22-initial-proof.json') fail('execution fabric browser-e2e lane must retain runtime proof');
 if(constitution.virtualizationSovereigntyPolicy?.ekodiOwnedVirtualizationFirst!==true) fail('constitutional virtualization sovereignty must remain native-first');
-if(!/workflow_call:\s*[\s\S]*?surface_path:/m.test(workerWorkflow)||!/workflow_call:\s*[\s\S]*?surface_paths:/m.test(workerWorkflow)||!/workflow_call:\s*[\s\S]*?device_profile:/m.test(workerWorkflow)) fail('background browser workflow must remain reusable through workflow_call with single and multi-surface inputs');
+if(!/workflow_call:\s*[\s\S]*?surface_path:/m.test(workerWorkflow)||!/workflow_call:\s*[\s\S]*?surface_paths:/m.test(workerWorkflow)||!/workflow_call:\s*[\s\S]*?surface_registry:/m.test(workerWorkflow)||!/workflow_call:\s*[\s\S]*?device_profile:/m.test(workerWorkflow)) fail('background browser workflow must remain reusable through workflow_call with single, multi-surface and registry inputs');
 if(!workerWorkflow.includes('INPUT_PATHS')||!workerWorkflow.includes('horizontalOverflow')||!workerWorkflow.includes('.pageErrors | length == 0')||!workerWorkflow.includes('.httpErrorResponses')) fail('background browser workflow must enforce multi-surface visual/runtime and HTTP error evidence');
+if(!workerWorkflow.includes("github.repository == 'topmaster-joseph/ekodi-platform'")||!workerWorkflow.includes('repository: topmaster-joseph/ekodi-platform')||!workerWorkflow.includes('ref: main')) fail('reusable browser worker must preserve current-revision platform checkout and canonical external-repository fallback');
 if(!sharedRelease.includes('native_surface_verification_desktop:')||!sharedRelease.includes('native_surface_verification_mobile:')) fail('shared-site production release must invoke the EKODI browser worker for desktop and mobile');
 if((sharedRelease.match(/uses:\s*\.\/\.github\/workflows\/ekodi-background-browser-worker\.yml/g)||[]).length<2) fail('shared-site production release must retain both native browser verification lanes');
 if(!sharedRelease.includes('needs: deploy')) fail('native browser verification must run after guarded production deploy');
 if(!sharedRelease.includes('device_profile: desktop')||!sharedRelease.includes('device_profile: mobile-portrait')) fail('release browser verification must cover desktop and mobile portrait');
 if(!sharedRelease.includes('surface_paths: /,/my/,/admin/')) fail('shared-site production release must verify root, My and Admin canonical surfaces');
+if(boardRegistry.policyId!=='EKODI-BOARD-NATIVE-VERIFY-001'||boardRegistry.status!=='enforced'||boardRegistry.owner!=='ekodi-orchestrator') fail('board native verification registry identity/status drifted');
+if(boardRegistry.canonicalOrigin!=='https://ekodi.kr'||boardRegistry.readOnly!==true||Number(boardRegistry.maxPaths)!==12) fail('board native verification registry safety contract drifted');
+const boardPaths=(boardRegistry.surfaces||[]).filter(item=>item?.enabled!==false).map(item=>item.path);
+for(const requiredPath of ['/seonammedi/#voices','/seonammedi/#notices','/community/','/journal']) if(!boardPaths.includes(requiredPath)) fail('board native verification path missing: '+requiredPath);
+if(!workerWorkflow.includes('INPUT_REGISTRY')||!workerWorkflow.includes('surface registry must stay inside the checked-out repository')) fail('background browser workflow must load board verification registry safely');
+if((sharedRelease.match(/surface_registry:\s*config\/board-surface-verification\.json/g)||[]).length<2) fail('desktop and mobile shared-site verification must consume the board surface registry');
 if(!sharedRelease.includes('authenticated_admin_surface_verification:')||!sharedRelease.includes('verify-admin-production-ui-e2e.yml')) fail('shared-site production release must run authenticated Admin UI verification after deploy');
 
 if(failures.length){
@@ -57,5 +65,5 @@ console.log('- ephemeral headless Playwright context, no active user profile reu
 console.log('- read-only network by default; mutation requires an explicit task grant');
 console.log('- external browser service dependency: none');
 console.log('- isolated browser runtime proof: registered');
-console.log('- shared-site guarded release: root + My + Admin on desktop/mobile native browser verification required');
+console.log('- shared-site guarded release: root + My + Admin + registered board surfaces on desktop/mobile native browser verification required');
 console.log('- authenticated Admin menu E2E is a required post-deploy verification lane');
