@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "policyId": "EKODI-ORCHESTRATOR-COMPLETION-001",
   "status": "enforced",
   "owner": "ekodi-orchestrator",
@@ -10,7 +10,9 @@
     "requesterMayForgeEvidence": false,
     "orchestratorOwnsTerminalTransition": true,
     "requesterIsolationRequired": true,
-    "issuedBranchMatchRequired": true
+    "issuedBranchMatchRequired": true,
+    "githubActionsOidcRequiredForPushEvidence": true,
+    "staticGitHubTokenRequired": false
   },
   "requiredEvidence": {
     "mergedPullRequestToMain": true,
@@ -22,10 +24,14 @@
     "stagingSuccessRequired": true,
     "productionPromotionSuccessRequired": true,
     "liveProductionHealthRequired": true,
-    "publicSourceReverificationRequired": true
+    "authenticatedGitHubReverificationRequired": true,
+    "ekodiLiveHealthReverificationRequired": true
   },
   "reconciliation": {
-    "getTaskStatusSelfHealsStaleDeploymentState": true,
+    "getTaskStatusSelfHealsWhenRuntimeGitHubLookupAvailable": true,
+    "githubActionsOidcReceiptBackstopRequired": true,
+    "workflowRunTriggerRequired": true,
+    "scheduledRetryRequired": true,
     "idempotent": true,
     "safeToRetry": true,
     "supersedingSuccessfulDeploymentMayRecoverCancelledOrTransientRelease": true,
@@ -35,8 +41,21 @@
     "completionEventRequired": true,
     "falseCompletionForbidden": true
   },
+  "oidcBoundary": {
+    "issuer": "https://token.actions.githubusercontent.com",
+    "audience": "ekodi-orchestrator-completion",
+    "repository": "topmaster-joseph/ekodi-platform",
+    "ref": "refs/heads/main",
+    "workflow": ".github/workflows/reconcile-orchestrator-completions.yml",
+    "allowedEvents": [
+      "workflow_run",
+      "workflow_dispatch",
+      "schedule"
+    ]
+  },
   "failureBehavior": {
-    "githubUnavailable": "leave-task-nonterminal",
+    "runtimeGithubLookupUnavailable": "leave-task-nonterminal-and-use-oidc-backstop",
+    "oidcVerificationUnavailable": "leave-task-nonterminal-and-retry",
     "mergedPrMissing": "leave-task-nonterminal",
     "requiredWorkflowMissingOrFailed": "leave-task-nonterminal",
     "deploymentStillRunningOrFailed": "leave-task-nonterminal",

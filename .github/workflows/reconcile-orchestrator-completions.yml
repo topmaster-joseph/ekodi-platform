@@ -1,0 +1,94 @@
+name: Reconcile EKODI Orchestrator Completions
+
+on:
+  workflow_run:
+    workflows:
+      - Deploy Control API
+      - Deploy EKODI Shared Site Core
+      - Deploy Business OS
+    types: [completed]
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+  id-token: write
+
+concurrency:
+  group: ekodi-orchestrator-completion-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout canonical main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+      - name: Reconcile verified production completions
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        with:
+          script: |
+            const path = require('path');
+            const { pathToFileURL } = require('url');
+            const moduleUrl = pathToFileURL(path.join(process.env.GITHUB_WORKSPACE, 'scripts/github-actions-completion-evidence.mjs')).href;
+            const { collectAuthenticatedCompletionEvidence } = await import(moduleUrl);
+            const audience = 'ekodi-orchestrator-completion';
+            const endpoint = 'https://ekodi.kr/api/orchestrator/completion-reconciliation';
+            const oidc = await core.getIDToken(audience);
+
+            async function post(payload) {
+              const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                  authorization: `Bearer ${oidc}`,
+                  'content-type': 'application/json',
+                  accept: 'application/json',
+                },
+                body: JSON.stringify(payload),
+              });
+              const body = await response.json().catch(() => ({}));
+              if (!response.ok) throw new Error(`EKODI completion endpoint HTTP ${response.status}: ${body.reason || body.detail || 'unknown'}`);
+              return body;
+            }
+
+            const candidateResult = await post({ action: 'candidates' });
+            const candidates = Array.isArray(candidateResult.candidates) ? candidateResult.candidates : [];
+            const report = [];
+
+            for (const candidate of candidates) {
+              let evidence;
+              try {
+                evidence = await collectAuthenticatedCompletionEvidence({
+                  github,
+                  taskId: candidate.taskId,
+                  branchRef: candidate.branchRef,
+                });
+              } catch (error) {
+                report.push({ taskId: candidate.taskId, state: 'deferred', reason: String(error?.message || error).slice(0, 180) });
+                continue;
+              }
+              if (evidence?.verified !== true) {
+                report.push({ taskId: candidate.taskId, state: 'deferred', reason: evidence?.reason || 'evidence_not_verified' });
+                continue;
+              }
+              try {
+                const result = await post({
+                  action: 'complete',
+                  taskId: candidate.taskId,
+                  branchRef: candidate.branchRef,
+                  evidence,
+                });
+                report.push({ taskId: candidate.taskId, state: result.state, completedAt: result.completedAt || null });
+              } catch (error) {
+                report.push({ taskId: candidate.taskId, state: 'deferred', reason: String(error?.message || error).slice(0, 180) });
+              }
+            }
+
+            core.info(JSON.stringify({ candidateCount: candidates.length, report }));

@@ -60,6 +60,7 @@ jobs:
           "$(go env GOPATH)/bin/actionlint" -color -shellcheck= -pyflakes= \
             .github/workflows/ci.yml \
             .github/workflows/deploy-control-api.yml \
+            .github/workflows/reconcile-orchestrator-completions.yml \
             .github/workflows/deploy-space.yml \
             .github/workflows/deploy-site-core.yml \
             .github/workflows/backup-ekodi-core.yml \
@@ -91,7 +92,7 @@ jobs:
         run: |
           npm run check
           node scripts/validate-orchestrator-completion-reconciliation.mjs
-          node --test test/orchestrator-completion-reconciler.test.mjs
+          node --test test/orchestrator-completion-reconciler.test.mjs test/github-actions-oidc.test.mjs test/github-actions-completion-evidence.test.mjs test/orchestrator-completion-reconciliation-endpoint.test.mjs
       - run: npm run build
       - name: Validate AI provider independence
         run: npm run validate:ai-resilience
