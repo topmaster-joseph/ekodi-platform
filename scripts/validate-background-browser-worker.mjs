@@ -10,6 +10,7 @@ const constitution=read('governance/constitution/constitution.json');
 const evidence=read('evidence/runtime/background-browser-worker/2026-09-22-initial-proof.json');
 const workerWorkflow=fs.readFileSync(path.join(root,'.github/workflows/ekodi-background-browser-worker.yml'),'utf8');
 const sharedRelease=fs.readFileSync(path.join(root,'.github/workflows/deploy-site-core.yml'),'utf8');
+const boardHealth=fs.readFileSync(path.join(root,'.github/workflows/board-surface-native-health.yml'),'utf8');
 const failures=[];
 const fail=m=>failures.push(m);
 
@@ -45,6 +46,10 @@ if(!sharedRelease.includes('needs: deploy')) fail('native browser verification m
 if(!sharedRelease.includes('device_profile: desktop')||!sharedRelease.includes('device_profile: mobile-portrait')) fail('release browser verification must cover desktop and mobile portrait');
 if(!sharedRelease.includes('surface_paths: /,/my/,/admin/')) fail('shared-site production release must verify root, My and Admin canonical surfaces');
 if(!sharedRelease.includes('authenticated_admin_surface_verification:')||!sharedRelease.includes('verify-admin-production-ui-e2e.yml')) fail('shared-site production release must run authenticated Admin UI verification after deploy');
+if(!boardHealth.includes("workflows: ['Deploy EKODI Shared Site Core']")||!boardHealth.includes("cron: '23 */6 * * *'")) fail('board native health must run after shared deploy and on a bounded schedule');
+if((boardHealth.match(/uses:\s*\.\/\.github\/workflows\/ekodi-background-browser-worker\.yml/g)||[]).length<2) fail('board health must reuse the EKODI native browser worker for desktop and mobile');
+if(!boardHealth.includes('surface_paths: /seonammedi/,/cgma/')||!boardHealth.includes('device_profile: desktop')||!boardHealth.includes('device_profile: mobile-portrait')) fail('board health must verify SeonamMedi and CGMA on desktop/mobile');
+for(const endpoint of ['/api/seonammedi/voices','/api/seonammedi/notices','/cgma/api/notices']) if(!boardHealth.includes(endpoint)) fail('board health public API probe missing: '+endpoint);
 
 if(failures.length){
   console.error(`EKODI Background Browser Worker validation failed (${failures.length})`);
