@@ -104,7 +104,7 @@ function syncAccountTabs(){
  document.querySelectorAll('[data-account-panel]').forEach(panel=>{panel.hidden=isMenu||panel.dataset.accountPanel!==activeAccountTab});
 }
 function setAccountTab(tab){
- if(!['menu','basic','public','character','security'].includes(tab))tab='menu';
+ if(!['menu','basic','public','character','security','ai'].includes(tab))tab='menu';
  activeAccountTab=tab;syncAccountTabs();
  try{sessionStorage.setItem('ekodi_my_account_tab',tab)}catch{}
 }

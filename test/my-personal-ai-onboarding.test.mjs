@@ -10,9 +10,9 @@ test('My EKODI renders first-connection guidance only when backend supplies it',
   assert.match(source, /connectionGuide\(status\)/);
 });
 
-test('connected users get compact state and connection management stays collapsed', () => {
-  assert.match(source, /hasConnected \? `<details/);
-  assert.match(source, /AI 연결 변경/);
+test('personal AI connection management stays collapsed for connected and unconnected users', () => {
+  assert.match(source, /<details class="personal-ai-policy"><summary>/);
+  assert.match(source, /hasConnected \? 'AI 연결 변경' : 'AI 연결하기'/);
   assert.match(source, /connectedText/);
 });
 
