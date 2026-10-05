@@ -37,7 +37,7 @@ function oidcFixture(){
     const url=String(inputUrl);
     if(url===`${issuer}/.well-known/openid-configuration`)return new Response(JSON.stringify({issuer,jwks_uri:`${issuer}/.well-known/jwks`}),{status:200});
     if(url===`${issuer}/.well-known/jwks`)return new Response(JSON.stringify({keys:[jwk]}),{status:200});
-    if(url==='https://ekodi.kr/api/health')return new Response(JSON.stringify({ok:true,service:'ekodi-auth-api',version:4}),{status:200});
+    if(url==='https://ekodi.kr/api/health')throw new Error('external self-fetch forbidden');
     throw new Error('unexpected fetch '+url);
   };
   return {token,fetchImpl};
@@ -157,8 +157,9 @@ test('verified OIDC evidence plus live health performs idempotent authoritative 
   assert.equal(row.state,'completed');
   assert.equal(row.pr_ref,'https://github.com/topmaster-joseph/ekodi-platform/pull/3574');
   const production=JSON.parse(row.production_evidence_json);
-  assert.equal(production.source,'github-actions-oidc-and-live-health');
+  assert.equal(production.source,'github-actions-oidc-and-internal-canonical-health');
   assert.equal(production.live.ok,true);
+  assert.equal(production.live.verification,'internal-canonical-health-handler');
   assert.equal(production.receipt.runId,'777');
   assert.equal(events.length,1);
   assert.equal(refs.length,2);
