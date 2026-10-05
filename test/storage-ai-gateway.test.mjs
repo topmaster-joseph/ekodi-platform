@@ -56,3 +56,15 @@ test('External AI durable output returns through EKODI Storage Gateway', () => {
   assert.match(aiGateway, /storeEkodiDurableRecord/);
   assert.doesNotMatch(aiGateway, /googleapis\.com\/drive/);
 });
+
+
+test('Canonical Drive writer self-heals connected primary routes before every write mode', () => {
+  assert.match(writer, /status IN \('ready','connected'\)/);
+  assert.match(writer, /CASE status WHEN 'ready' THEN 0 ELSE 1 END/);
+  assert.match(writer, /ensureSubfolderPath\(token, parentId, row\.folder_name\)/);
+  assert.match(writer, /UPDATE storage_routes SET folder_id=/);
+  assert.match(writer, /UPDATE storage_connections SET status='ready'/);
+  const calls = writer.match(/routeFolder\(env, routeKey, connection, token\)/g) || [];
+  assert.equal(calls.length, 2, 'multipart and resumable writes must both self-heal their route');
+  assert.doesNotMatch(writer, /routeFolder\(env, routeKey\),/);
+});
