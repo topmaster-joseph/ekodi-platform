@@ -13,6 +13,36 @@
   const mediaApi='/ekodimission/api/activities/'+encodeURIComponent(activityKey)+'/media';
   const photoApi='/ekodimission/api/activities/'+encodeURIComponent(activityKey)+'/media-upload';
   const setPhotoStatus=(message,state='')=>{if(!photoStatus)return;photoStatus.textContent=message;photoStatus.dataset.state=state};
+  async function photoDHash(file){
+    if(!file||/heic|heif/i.test(String(file.type||'')))return '';
+    let bitmap=null,url='';
+    try{
+      if(typeof createImageBitmap==='function')bitmap=await createImageBitmap(file);
+      else{
+        url=URL.createObjectURL(file);
+        bitmap=await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=url});
+      }
+      const canvas=document.createElement('canvas');canvas.width=9;canvas.height=8;
+      const ctx=canvas.getContext('2d',{willReadFrequently:true});if(!ctx)return '';
+      ctx.drawImage(bitmap,0,0,9,8);
+      const px=ctx.getImageData(0,0,9,8).data;
+      let bits='';
+      for(let y=0;y<8;y+=1){
+        for(let x=0;x<8;x+=1){
+          const a=(y*9+x)*4,b=(y*9+x+1)*4;
+          const la=px[a]*0.299+px[a+1]*0.587+px[a+2]*0.114;
+          const lb=px[b]*0.299+px[b+1]*0.587+px[b+2]*0.114;
+          bits+=la>lb?'1':'0';
+        }
+      }
+      let hex='';
+      for(let i=0;i<64;i+=4)hex+=parseInt(bits.slice(i,i+4),2).toString(16);
+      return /^[0-9a-f]{16}$/.test(hex)?hex:'';
+    }catch{return''}finally{
+      try{bitmap?.close?.()}catch{}
+      if(url)URL.revokeObjectURL(url);
+    }
+  }
 
 
   photoForm?.addEventListener('submit',async event=>{
@@ -31,7 +61,7 @@
       const file=files[index];
       setPhotoStatus((index+1)+'/'+files.length+' · '+file.name+' 업로드 중');
       try{
-        const body=new FormData();body.set('file',file,file.name);body.set('name',name);body.set('title',file.name);
+        const body=new FormData();body.set('file',file,file.name);body.set('name',name);body.set('title',file.name);const phash=await photoDHash(file);if(phash)body.set('phash',phash);
         const response=await fetch(photoApi,{method:'POST',body,credentials:'same-origin',headers:{accept:'application/json'}});
         const result=await response.json().catch(()=>({}));
         if(!(response.ok||response.status===202)||!result.ok)throw new Error(result.message||'업로드 실패');
