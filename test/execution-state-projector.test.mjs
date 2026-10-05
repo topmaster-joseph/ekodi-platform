@@ -29,6 +29,7 @@ test('three-gate deployment projection keeps detailed lifecycle internal',()=>{
  assert.deepEqual(requiredDeploymentGatesForRisk('normal'),['build','release','production']);
  assert.equal(projectDeploymentGate({state:'pr_gates',risk:'normal',deploymentRequested:true}).current,'build');
  assert.equal(projectDeploymentGate({state:'staging',risk:'normal',deploymentRequested:true}).current,'release');
+ assert.equal(projectDeploymentGate({state:'deploying',risk:'normal',deploymentRequested:true}).current,'production');
  assert.equal(projectDeploymentGate({state:'production_verifying',risk:'normal',deploymentRequested:true}).current,'production');
 });
 
@@ -37,13 +38,14 @@ test('low-risk release checks collapse from public stages without being removed'
  assert.deepEqual(view.requiredGates,['build','production']);
  assert.deepEqual(view.collapsedGates,['release']);
  assert.equal(view.detailedState,'staging');
+ assert.equal(view.current,'build');
  assert.equal(view.done,false);
 });
 
 test('production evidence remains mandatory for DONE',()=>{
  const withoutEvidence=projectDeploymentGate({state:'completed',risk:'normal',deploymentRequested:true});
  const withEvidence=projectDeploymentGate({state:'completed',risk:'normal',deploymentRequested:true,productionEvidence:{verified:true}});
- assert.equal(withoutEvidence.current,'done');
+ assert.equal(withoutEvidence.current,'production');
  assert.equal(withoutEvidence.done,false);
  assert.equal(withoutEvidence.status,'in_progress');
  assert.equal(withEvidence.current,'done');
