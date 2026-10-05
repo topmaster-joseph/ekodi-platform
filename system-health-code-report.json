@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-01T06:09:19.542Z",
-  "startedAt": "2026-10-01T06:08:53.776Z",
+  "generatedAt": "2026-10-05T05:25:13.699Z",
+  "startedAt": "2026-10-05T05:24:47.340Z",
   "repository": "topmaster-joseph/ekodi-platform",
   "branch": "main",
-  "head": "a0c71753bc7b8b4afcb7efb1fb34eb2bd17e16a1",
+  "head": "eb328ecd367d991b3150095504a52fa3550272ce",
   "overallScore": 86.1,
   "status": "watch",
   "thresholds": {
@@ -18,7 +18,7 @@
       "weight": 25,
       "score": 25,
       "status": "ok",
-      "detail": "655개 테스트 파일 · 전체 테스트 통과"
+      "detail": "676개 테스트 파일 · 전체 테스트 통과"
     },
     "duplication": {
       "weight": 15,
@@ -30,7 +30,7 @@
       "weight": 15,
       "score": 14.6,
       "status": "ok",
-      "detail": "대형 파일 1개 · 매우 큰 파일 0개 · TODO/FIXME 14건"
+      "detail": "대형 파일 1개 · 매우 큰 파일 0개 · TODO/FIXME 15건"
     },
     "security": {
       "weight": 15,
@@ -48,7 +48,7 @@
       "weight": 10,
       "score": 10,
       "status": "ok",
-      "detail": "211개 Workflow · 배포 가드 검증 통과"
+      "detail": "214개 Workflow · 배포 가드 검증 통과"
     },
     "documentation": {
       "weight": 5,
@@ -58,13 +58,13 @@
     }
   },
   "metrics": {
-    "runtimeFiles": 850,
-    "runtimeLines": 147099,
-    "testFiles": 655,
-    "workflows": 211,
+    "runtimeFiles": 876,
+    "runtimeLines": 151999,
+    "testFiles": 676,
+    "workflows": 214,
     "largeFiles": 1,
     "veryLargeFiles": 0,
-    "todoMarkers": 14,
+    "todoMarkers": 15,
     "duplicateGroups": 30,
     "duplicateWindows": 110
   },
@@ -175,7 +175,7 @@
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "✔ different ids within the same kind still vary atmosphere (1.117605ms)\n✔ css variables expose only visual tokens, not layout structure (0.408853ms)\n✔ durable write ingress policy is enforced and queue-first in production (7.294206ms)\n✔ seonammedi public voice success requires durable acceptance id (4.268552ms)\nℹ tests 3268\nℹ suites 0\nℹ pass 3268\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 24306.075387"
+      "summary": "✔ different ids within the same kind still vary atmosphere (1.576789ms)\n✔ css variables expose only visual tokens, not layout structure (0.482002ms)\n✔ durable write ingress policy is enforced and queue-first in production (7.252566ms)\n✔ seonammedi public voice success requires durable acceptance id (3.696014ms)\nℹ tests 3428\nℹ suites 0\nℹ pass 3428\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 24615.644858"
     },
     "security": {
       "ok": true,
