@@ -17,10 +17,12 @@ test('one-click POS Agent setup is fixed to the official package and elevates ex
   for(const name of ['install-pos-agent.ps1','EKODI-POS-Agent.ps1','pos-agent.config.example.json','diagnose-pos-targets.ps1','start-pos-agent.cmd','stop-pos-agent.cmd','uninstall-pos-agent.ps1']) assert.match(setup,new RegExp(name.replaceAll('.','\\.')));
   assert.match(setup,/Start-Process -FilePath '%ComSpec%'.*-Verb RunAs/);
   assert.match(setup,/listenerPrefix must remain loopback-only/);
-  assert.match(setup,/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v2/);
+  assert.match(setup,/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v3-clean/);
   assert.match(setup,/Refreshing Task Scheduler compatibility package/);
   assert.match(setup,/\?v=/);
   assert.match(setup,/outdated Task Scheduler installer/);
+  assert.match(setup,/Language\.Parser/);
+  assert.match(setup,/Downloaded installer syntax check failed/);
   assert.match(setup,/explicit_user_action_only/);
   assert.doesNotMatch(setup,/Invoke-Expression|\biex\b/i);
   assert.doesNotMatch(setup,/raw\.githubusercontent\.com|github\.com\/topmaster-joseph/i);
@@ -40,14 +42,17 @@ test('POS Agent installer keeps the local control boundary and interactive user 
 test('POS Agent scheduled task restart interval stays within Windows Task Scheduler XML limits',()=>{
   assert.match(install,/RestartInterval \(New-TimeSpan -Minutes 1\)/);
   assert.doesNotMatch(install,/RestartInterval \(New-TimeSpan -Seconds 20\)/);
-  assert.match(install,/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v2/);
+  assert.match(install,/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v3-clean/);
   assert.match(install,/0x80041318/);
   assert.match(install,/FullyQualifiedErrorId/);
   assert.match(install,/Test-TaskSchemaRangeError/);
-  assert.match(install,/compatibility-safe settings/);
+  assert.match(install,/Windows-compatible default settings/);
   assert.match(install,/Get-ScheduledTask -TaskName \$TaskName -ErrorAction Stop/);
   assert.match(install,/Task Scheduler compatibility:/);
-  assert.match(install,/New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit \(\[TimeSpan\]::Zero\)/);
+  assert.match(install,/compat-default-settings/);
+  assert.match(install,/Export-ScheduledTask -TaskName \$TaskName/);
+  assert.equal((install.match(/function Read-AgentConfig/g)||[]).length,1);
+  assert.equal((install.match(/function Register-AgentTask/g)||[]).length,1);
 });
 
 test('POS Agent upgrade preserves local target configuration and rolls back the agent file on failure',()=>{
