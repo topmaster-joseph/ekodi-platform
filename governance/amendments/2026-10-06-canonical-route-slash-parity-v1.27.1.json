@@ -1,0 +1,22 @@
+{
+  "version": "1.27.1",
+  "date": "2026-10-06",
+  "changeClass": "C2",
+  "taskId": "canonical-route-slash-parity-forced-rule-20261006",
+  "summary": "Make slashless and trailing-slash entry points for every current and future user-facing EKODI canonical service root resolve to one canonical behavior, preventing base-path and browser-asset regressions.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly instructed on 2026-10-06 that the /ai and /ai/ equivalence rule be established as a forced execution rule.",
+  "ruleId": "CANONICAL-ROUTE-SLASH-PARITY-001",
+  "implementation": [
+    "Add CANONICAL-ROUTE-SLASH-PARITY-001 to governance/constitution/constitution.json",
+    "Canonicalize slashless user-facing execution roots with HTTP 308 to their trailing-slash root in canonical-surface-router.js",
+    "Exclude API-only, nested API and exact routes",
+    "Require inherited regression coverage for current and future registered public execution surfaces"
+  ],
+  "verification": [
+    "test/canonical-surface-router.test.mjs",
+    "scripts/validate-constitution.mjs",
+    "guarded release gates",
+    "production verification of slashless and trailing-slash entry behavior"
+  ],
+  "rollback": "Revert only through a constitutional amendment if canonical slash normalization causes a verified service incompatibility; do not silently disable the inherited rule per service."
+}
