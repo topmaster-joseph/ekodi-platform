@@ -50,9 +50,10 @@
   <div id="timelineList" class="timeline"></div>
 </section>
 
-<section id="notices" class="section" data-view-section="notices" hidden>
-  <div class="section-head"><div><p class="eyebrow">NOTICE BOARD</p><h2>공지</h2></div><button id="noticeWriteButton" class="notice-write-button" type="button">게시글 작성</button></div>
-  <p class="note">Google 계정으로 로그인한 등록 사용자는 사진과 글을 게시할 수 있습니다. 게시물은 개별 링크로 열고 공유할 수 있습니다.</p>
+<section id="notices" class="section module-section" data-view-section="notices" hidden>
+  <div class="module-shell">
+    <aside class="module-intro"><p class="eyebrow">NOTICE BOARD</p><h2>공지</h2><p class="note">Google 계정으로 로그인한 등록 사용자는 사진과 글을 게시할 수 있습니다. 중요 소식과 공식 안내는 개별 링크로 열고 공유할 수 있습니다.</p><button id="noticeWriteButton" class="notice-write-button" type="button">게시글 작성</button></aside>
+    <div class="module-main">
   <form id="noticeComposeForm" class="notice-compose" hidden>
     <label>제목<input name="title" maxlength="180" required placeholder="제목을 입력하세요"></label>
     <label>파일첨부 (사진 최대 5장)<input id="noticeImages" name="images" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple><small>첨부 시 장당 5MB 이하로 자동 최적화합니다. JPG·PNG·WEBP·GIF · 최대 5장 · 선택 후 개별 삭제 가능</small></label>
@@ -62,6 +63,8 @@
   </form>
   <div id="noticeDetail" class="notice-detail" hidden></div>
   <div id="noticeList" class="notice-list"><p class="muted">공지를 불러오는 중입니다.</p></div>
+    </div>
+  </div>
 </section>
 
 <section id="materials" class="section records-materials" data-view-section="status" data-status-pane="materials" hidden>
@@ -76,25 +79,28 @@
   <div id="materialList" class="material-list"></div>
 </section>
 
-<section id="voices" class="section" data-view-section="voices" hidden>
-  <div class="section-head">
-    <div><p class="eyebrow">CITIZEN VOICES</p><h2>시민의견</h2><p>등록된 시민의견은 별도 검토 대기 없이 바로 게시됩니다. 연락처·이메일은 공개하지 않습니다.</p></div>
-  </div>
-  <div class="voice-layout">
-    <form id="voiceForm" class="panel voice-form">
-      <strong>시민의견 등록</strong>
-      <label>유형<select name="category"><option value="question">질문</option><option value="proposal">정책제안</option><option value="experience">의료경험</option><option value="factcheck">사실확인 요청</option><option value="tip">자료제보</option><option value="other">기타</option></select></label>
-      <label>이름 또는 표시명<input name="name" maxlength="80" placeholder="익명 가능"></label>
-      <label>연락처 또는 이메일<input name="contact" maxlength="160" placeholder="답변이 필요한 경우에만 입력 · 공개되지 않음"></label>
-      <label>내용<textarea name="message" maxlength="3000" required></textarea></label>
-      <label class="check"><input type="checkbox" name="privacyConsent" required> 등록·답변을 위한 개인정보 처리에 동의합니다.</label>
-      <div class="form-actions"><button type="submit">등록하기</button><span id="voiceStatus" role="status"></span></div>
-      <p class="muted">등록 즉시 아래 시민의견 목록에 공개됩니다. 개인정보·연락처는 공개 목록에 표시하지 않습니다.</p>
-    </form>
-    <section class="voice-board" aria-labelledby="voiceBoardTitle">
-      <div class="card-head"><h3 id="voiceBoardTitle">등록된 시민의견</h3><button id="reloadVoices" type="button" class="secondary">새로고침</button></div>
-      <div id="publicVoiceList" class="public-voice-list" aria-live="polite"><p class="muted">시민의견을 불러오는 중입니다.</p></div>
-    </section>
+<section id="voices" class="section module-section" data-view-section="voices" hidden>
+  <div class="module-shell">
+    <aside class="module-intro">
+      <p class="eyebrow">CITIZEN VOICES</p><h2>시민의견</h2>
+      <p>등록된 의견은 별도 검토 대기 없이 바로 게시됩니다. 연락처·이메일은 공개하지 않습니다.</p>
+      <button id="voiceComposeToggle" class="module-primary" type="button" aria-expanded="false" aria-controls="voiceForm">의견 등록</button>
+      <small class="muted">독립 게시판 기능은 이 화면 안에서 이용하며 직접 주소 <a href="/board">/board</a>도 유지됩니다.</small>
+    </aside>
+    <div class="module-main">
+      <div class="module-toolbar"><div><strong>등록된 시민의견</strong><span class="muted">최신 의견부터 표시합니다.</span></div><button id="reloadVoices" type="button" class="secondary">새로고침</button></div>
+      <form id="voiceForm" class="panel voice-form module-compose" hidden>
+        <strong>시민의견 등록</strong>
+        <label>유형<select name="category"><option value="question">질문</option><option value="proposal">정책제안</option><option value="experience">의료경험</option><option value="factcheck">사실확인 요청</option><option value="tip">자료제보</option><option value="other">기타</option></select></label>
+        <label>이름 또는 표시명<input name="name" maxlength="80" placeholder="익명 가능"></label>
+        <label>연락처 또는 이메일<input name="contact" maxlength="160" placeholder="답변이 필요한 경우에만 입력 · 공개되지 않음"></label>
+        <label>내용<textarea name="message" maxlength="3000" required></textarea></label>
+        <label class="check"><input type="checkbox" name="privacyConsent" required> 등록·답변을 위한 개인정보 처리에 동의합니다.</label>
+        <div class="form-actions"><button type="submit">등록하기</button><button id="voiceComposeCancel" type="button" class="secondary">취소</button><span id="voiceStatus" role="status"></span></div>
+        <p class="muted">등록 즉시 아래 시민의견 목록에 공개됩니다. 개인정보·연락처는 공개 목록에 표시하지 않습니다.</p>
+      </form>
+      <section class="voice-board" aria-labelledby="voiceBoardTitle"><h3 id="voiceBoardTitle" class="sr-only">등록된 시민의견</h3><div id="publicVoiceList" class="public-voice-list" aria-live="polite"><p class="muted">시민의견을 불러오는 중입니다.</p></div></section>
+    </div>
   </div>
 </section>
 
@@ -117,19 +123,19 @@
   </div>
 </section>
 
-<section id="finance" class="section" data-view-section="finance" hidden>
-  <div class="section-head"><div><p class="eyebrow">TRANSPARENCY</p><h2>회계</h2></div></div>
-  <div class="money-grid">
-    <article><span>누적 모금</span><strong id="raised">자료 입력 전</strong></article>
-    <article><span>누적 지출</span><strong id="spent">자료 입력 전</strong></article>
-    <article><span>현재 잔액</span><strong id="balance">자료 입력 전</strong></article>
+<section id="finance" class="section module-section" data-view-section="finance" hidden>
+  <div class="module-shell">
+    <aside class="module-intro"><p class="eyebrow">TRANSPARENCY</p><h2>회계</h2><p class="note">수입·지출 일자, 금액, 목적, 관련 행사와 증빙 여부를 공개합니다. 개인 후원자의 개인정보는 공개하지 않습니다.</p></aside>
+    <div class="module-main">
+      <div class="money-grid">
+        <article><span>누적 모금</span><strong id="raised">자료 입력 전</strong></article>
+        <article><span>누적 지출</span><strong id="spent">자료 입력 전</strong></article>
+        <article><span>현재 잔액</span><strong id="balance">자료 입력 전</strong></article>
+      </div>
+      <div class="module-toolbar"><div><strong>공개 회계내역</strong><span class="muted">최근 내역부터 확인할 수 있습니다.</span></div></div>
+      <div id="financeList" class="finance-list"><p class="muted">회계내역을 불러오는 중입니다.</p></div>
+    </div>
   </div>
-  <div class="panel">
-    <strong>공개 항목</strong>
-    <p>수입·지출 일자, 금액, 목적, 관련 행사, 증빙 여부를 공개합니다. 개인 후원자의 전화번호·주소·계좌번호 등 개인정보는 공개하지 않습니다.</p>
-  </div>
-  <div class="section-head finance-history-head"><div><p class="eyebrow">ACCOUNTING LEDGER</p><h3>공개 회계내역</h3></div></div>
-  <div id="financeList" class="finance-list"><p class="muted">회계내역을 불러오는 중입니다.</p></div>
 </section>
 </main>
 <footer>

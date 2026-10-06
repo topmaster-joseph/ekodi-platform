@@ -276,6 +276,16 @@ async function loadPublicVoices(){
     renderPublicVoices(Array.isArray(body.items)?body.items:[]);
   }catch(error){publicVoiceList.innerHTML='<p class="muted">'+escapeHtml(error.message||'시민의견을 불러오지 못했습니다.')+'</p>'}
 }
+const voiceComposeToggle=el('voiceComposeToggle'),voiceComposeCancel=el('voiceComposeCancel'),voiceComposeForm=el('voiceForm');
+function setVoiceCompose(open){
+  if(!voiceComposeForm)return;
+  voiceComposeForm.hidden=!open;
+  voiceComposeToggle?.setAttribute('aria-expanded',open?'true':'false');
+  if(open)voiceComposeForm.querySelector('select,input,textarea')?.focus();
+}
+if(voiceComposeToggle)voiceComposeToggle.onclick=()=>setVoiceCompose(voiceComposeForm?.hidden!==false);
+if(voiceComposeCancel)voiceComposeCancel.onclick=()=>setVoiceCompose(false);
+
 publicVoiceList?.addEventListener('submit',async event=>{
   const form=event.target.closest('[data-voice-reply]');if(!form)return;event.preventDefault();
   const voiceId=Number(form.dataset.voiceReply||0),status=form.querySelector('[role="status"]'),button=form.querySelector('button[type="submit"]');
