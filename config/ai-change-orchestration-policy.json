@@ -170,7 +170,21 @@
       ],
       "userInterruptionForbiddenForResolvableFailure": true,
       "completionRequiresVerifiedRecoveryOrExplicitTerminalWait": true
-    }
+    },
+    "defaultExecutionPath": [
+      "ekodi-core-plan-finalized",
+      "github-work-branch",
+      "code-mutation",
+      "automated-tests",
+      "pull-request",
+      "deployment-gate",
+      "guarded-deployment",
+      "production-verification"
+    ],
+    "aiConsultation": "advisory-not-serial-prerequisite",
+    "consultationMayBlockCodeExecution": false,
+    "corePlanOwnsExecution": true,
+    "githubBranchMutationIsDefault": true
   },
   "consultationDecision": {
     "policyId": "AI-CONSULT-001",
@@ -224,7 +238,10 @@
     "receiptDetailPath": "/api/control/ai/v8/tasks/{taskId}/consultation",
     "privateReasoningExcluded": true,
     "structuredEvidenceOnly": true,
-    "tamperEvidentHashChain": true
+    "tamperEvidentHashChain": true,
+    "executionRelationship": "parallel-or-advisory",
+    "codeExecutionMayProceedWithoutConsultationCompletion": true,
+    "failedConsultationDisposition": "record-isolate-continue-execution-unless-human-or-safety-gate-requires-stop"
   },
   "sourceControl": {
     "defaultBranch": "main",
