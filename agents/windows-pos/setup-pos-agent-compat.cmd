@@ -1,4 +1,5 @@
 @echo off
+rem setup-pos-agent-compat.cmd - EKODI legacy POS compatibility setup
 setlocal EnableExtensions
 title EKODI POS Agent - Compatibility Setup
 set "EKODI_POS_SETUP_COMPAT=task-scheduler-startup-fallback-v6"
