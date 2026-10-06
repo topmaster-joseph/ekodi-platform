@@ -28,6 +28,12 @@ test('SeonamMedi citizen voices use the standalone board API directly',async()=>
   assert.match(worker,/data-edit/);
   assert.match(worker,/data-delete/);
   assert.match(worker,/data-reply-delete/);
+  assert.match(worker,/서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널/);
+  assert.match(worker,/<footer>[\s\S]*서남권 국립의대 소통센터[\s\S]*href="\/admin\/">관리<\/a>[\s\S]*<\/footer>/);
+  assert.match(worker,/href="\/board" aria-current="page">시민의견/);
+  assert.match(worker,/https:\/\/ekodi\.kr\/auth\//);
+  assert.match(worker,/purpose","seonammedi-board-admin"/);
+  assert.match(worker,/EKODI 관리자 인증 완료 · 게시물 수정·삭제 기능이 활성화되었습니다/);
   assert.doesNotMatch(worker,/Response\.redirect\(new URL\(\'\/#voices\'/);
 });
 
