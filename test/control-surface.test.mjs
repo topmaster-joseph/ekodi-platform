@@ -5,8 +5,8 @@ import { readFile } from 'node:fs/promises';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 
 test('EKODI Control is an independent conversation-first command surface',async()=>{
-  const [html,css,js,worker,wrangler,build]=await Promise.all([
-    read('control.html'),read('control.css'),read('control.js'),read('site-worker.js'),read('wrangler.site.toml'),read('scripts/build.mjs')
+  const [html,css,js,worker,router,wrangler,build]=await Promise.all([
+    read('control.html'),read('control.css'),read('control.js'),read('site-worker.js'),read('platform-router-entry-worker.js'),read('wrangler.site.toml'),read('scripts/build.mjs')
   ]);
   assert.match(html,/EKODI Control/);
   assert.match(html,/무엇을 수행할까요/);
@@ -28,6 +28,9 @@ test('EKODI Control is an independent conversation-first command surface',async(
   assert.match(js,/providerHint:target/);
   assert.match(worker,/url\.pathname === '\/control'/);
   assert.match(worker,/CONTROL_ASSETS/);
+  assert.match(router,/\['\/control','\/control\/','\/control\.css','\/control\.js'\]\.includes\(url\.pathname\)/);
+  assert.match(router,/x-ekodi-canonical-surface','control/);
+  assert.match(router,/x-ekodi-route','control-surface/);
   assert.match(wrangler,/"\/control"/);
   assert.doesNotMatch(wrangler,/"\/control\/"|"\/control\/\*"/);
   assert.match(build,/'control\.html','control\.css','control\.js'/);
