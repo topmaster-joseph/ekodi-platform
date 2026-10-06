@@ -10,6 +10,16 @@ on:
         required: false
         default: false
         type: boolean
+      release_branch_ref:
+        description: 'Optional exact orchestrator source branch; recovered from merge SHA when omitted'
+        required: false
+        default: ''
+        type: string
+      release_task_id:
+        description: 'Optional orchestrator task id paired with release_branch_ref'
+        required: false
+        default: ''
+        type: string
   push:
     branches: [main]
     paths:
@@ -455,15 +465,23 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          REQUESTED_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref }}
+          REQUESTED_RELEASE_TASK_ID: ${{ inputs.release_task_id }}
         run: |
           set -euo pipefail
-          branch="${EKODI_RELEASE_BRANCH_REF:-}"
+          branch="${REQUESTED_RELEASE_BRANCH_REF:-${EKODI_RELEASE_BRANCH_REF:-}}"
+          requested_task="${REQUESTED_RELEASE_TASK_ID:-}"
           if [ -z "$branch" ] || [ "$branch" = "main" ]; then
             branch="$(gh api -H 'Accept: application/vnd.github+json' "/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '[.[] | select(.merged_at != null and .base.ref == "main" and (.head.ref | startswith("ai/")))] | sort_by(.merged_at) | last | .head.ref // empty')"
           fi
           if [[ "$branch" =~ ^ai/[^/]+/(orch_[A-Za-z0-9-]+)$ ]]; then
+            derived_task="${BASH_REMATCH[1]}"
+            if [ -n "$requested_task" ] && [ "$requested_task" != "$derived_task" ]; then
+              echo "Requested release task does not match orchestrator branch: task=$requested_task branch=$branch" >&2
+              exit 1
+            fi
             echo "EKODI_RELEASE_BRANCH_REF=$branch" >> "$GITHUB_ENV"
-            echo "EKODI_RELEASE_TASK_ID=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"
+            echo "EKODI_RELEASE_TASK_ID=${requested_task:-$derived_task}" >> "$GITHUB_ENV"
             echo "Recovered exact orchestrator release provenance from $GITHUB_SHA: $branch"
           else
             echo "Unable to recover orchestrator release provenance for manual dispatch at $GITHUB_SHA" >&2

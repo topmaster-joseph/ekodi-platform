@@ -8,14 +8,14 @@ test('retired SeonamMedi civic API points callers to standalone citizen board',a
   assert.equal(response.status,410);
   const body=await response.json();
   assert.equal(body.error,'legacy_citizen_voice_retired');
-  assert.equal(body.location,'/board/voices');
-  assert.match(response.headers.get('link')||'',/\/board\/voices/);
+  assert.equal(body.location,'https://seonammedi.kr/board/voices');
+  assert.match(response.headers.get('link')||'',/https:\/\/seonammedi\.kr\/board\/voices/);
 
   const health=await handleSeonamMediCivicApi(new Request('https://seonammedi.kr/api/seonammedi/voices/health'),{});
   assert.equal(health.status,200);
   const healthBody=await health.json();
   assert.equal(healthBody.retired,true);
-  assert.equal(healthBody.location,'/board/voices');
+  assert.equal(healthBody.location,'https://seonammedi.kr/board/voices');
   assert.equal(healthBody.queueDrain,'ack-drop');
 });
 

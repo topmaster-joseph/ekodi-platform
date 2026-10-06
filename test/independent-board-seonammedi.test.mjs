@@ -124,15 +124,23 @@ test('standalone boards reuse EKODI authentication and own their mutations',asyn
 });
 
 
-test('SeonamMedi board admin login receives a one-time site-local handoff token on the customer domain',async()=>{
-  const [worker,auth,access]=await Promise.all([
+test('SeonamMedi board admin login preserves the initiating external or internal mount',async()=>{
+  const [worker,auth,access,site,adminSite]=await Promise.all([
     read('services/independent-board/worker.js'),
     read('auth-site/auth.js'),
-    read('supabase/functions/access-api/index.ts')
+    read('supabase/functions/access-api/index.ts'),
+    read('sites/seonammedi/public/index.html'),
+    read('sites/seonammedi/public/admin/index.html')
   ]);
   assert.match(worker,/commonScript\('\/board\/voices'\)/);
   assert.match(worker,/location\.pathname\.startsWith\(\"\/seonammedi\/board\"\)/);
   assert.match(worker,/\/api\/seonammedi\/admin\/auth\/exchange/);
+  for(const route of ['voices','finance','notices']){
+    assert.match(site,new RegExp('href="board/'+route+'"'));
+    assert.match(adminSite,new RegExp('href="\\.\\./board/'+route+'"'));
+  }
+  assert.doesNotMatch(site,/href="https:\/\/seonammedi\.kr\/board\//);
+  assert.doesNotMatch(adminSite,/href="https:\/\/seonammedi\.kr\/board\//);
   assert.match(auth,/seonamMediHandoff/);
   assert.match(auth,/await handoffToService\(\)/);
   assert.match(worker,/set\(\"site\",\"seonammedi\"\)/);

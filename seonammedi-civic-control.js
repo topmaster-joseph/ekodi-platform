@@ -230,20 +230,20 @@ export async function consumeSeonamMediVoiceMessage(envelope,env){
 }
 
 function retiredCivicResponse(){
-  return json({ok:false,error:'legacy_citizen_voice_retired',location:'/board/voices'},410,{
-    link:'</board/voices>; rel="successor-version"'
+  return json({ok:false,error:'legacy_citizen_voice_retired',location:'https://seonammedi.kr/board/voices'},410,{
+    link:'<https://seonammedi.kr/board/voices>; rel="successor-version"'
   });
 }
 
 export async function handleSeonamMediCivicApi(request,env){
   const url=new URL(request.url);
   if(url.pathname===HEALTH_PATH&&request.method==='GET'){
-    return json({ok:true,retired:true,location:'/board/voices',queueDrain:'ack-drop'},200,{
-      link:'</board/voices>; rel="successor-version"'
+    return json({ok:true,retired:true,location:'https://seonammedi.kr/board/voices',queueDrain:'ack-drop'},200,{
+      link:'<https://seonammedi.kr/board/voices>; rel="successor-version"'
     });
   }
   if(url.pathname===API_PATH||REPLY_PATH.test(url.pathname)||SUBMISSION_PATH.test(url.pathname)){
-    if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{allow:'GET, POST, OPTIONS','cache-control':'no-store',link:'</board/voices>; rel="successor-version"'}});
+    if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{allow:'GET, POST, OPTIONS','cache-control':'no-store',link:'<https://seonammedi.kr/board/voices>; rel="successor-version"'}});
     return retiredCivicResponse();
   }
   return null;
