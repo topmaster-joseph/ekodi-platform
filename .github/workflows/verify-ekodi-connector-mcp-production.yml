@@ -42,7 +42,7 @@ jobs:
           const tools=JSON.parse(fs.readFileSync('/tmp/ekodi-tools.json','utf8'))?.result?.tools||[];
           const identify=JSON.parse(fs.readFileSync('/tmp/ekodi-identify.json','utf8'))?.result?.structuredContent||{};
           const unauth=JSON.parse(fs.readFileSync('/tmp/ekodi-unauth.json','utf8'))?.result||{};
-          const required=['identify_ekodi','discover_public_services','account_status','submit_task','get_task_status','cancel_task','ekodi_delegate_command'];
+          const required=['identify_ekodi','discover_public_services','account_status','submit_task','get_task_status','approve_task','cancel_task','ekodi_delegate_command'];
           const byName=new Map(tools.map(tool=>[tool.name,tool]));
           if(discovery?.canonical_origin!=='https://ekodi.kr')process.exit(1);
           if(!discovery?.aliases?.includes('EKODI')||!discovery?.aliases?.includes('에코디'))process.exit(1);
@@ -51,6 +51,9 @@ jobs:
           if(required.some(name=>!byName.has(name)))process.exit(1);
           if(byName.get('identify_ekodi')?.securitySchemes?.[0]?.type!=='noauth')process.exit(1);
           if(byName.get('submit_task')?.securitySchemes?.[0]?.type!=='oauth2')process.exit(1);
+          if(byName.get('approve_task')?.securitySchemes?.[0]?.type!=='oauth2'||byName.get('approve_task')?.annotations?.destructiveHint!==true)process.exit(1);
+          if(JSON.stringify(byName.get('approve_task')?.inputSchema?.required)!==JSON.stringify(['taskId','expectedStateVersion']))process.exit(1);
+          if(byName.get('approve_task')?.inputSchema?.properties?.expectedStateVersion?.type!=='integer')process.exit(1);
           if(byName.get('cancel_task')?.annotations?.destructiveHint!==true)process.exit(1);
           if(identify?.canonicalOrigin!=='https://ekodi.kr'||identify?.recognitionIsAuthorization!==false||identify?.orchestratorIsExecutionAuthority!==true)process.exit(1);
           if(unauth?.structuredContent?.authenticated!==false)process.exit(1);
@@ -87,5 +90,5 @@ jobs:
           - discovery: https://ekodi.kr/.well-known/ekodi.json
           - MCP: https://ekodi.kr/mcp
           - OAuth metadata: https://ekodi.kr/.well-known/oauth-protected-resource
-          - checks: aliases + canonical identity + tools/list + public identify + unauthenticated submit rejection
+          - checks: aliases + canonical identity + tools/list + bounded Human Gate approve_task + public identify + unauthenticated submit rejection
           - workflow: $RUN_URL"
