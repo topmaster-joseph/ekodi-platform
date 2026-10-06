@@ -17,6 +17,8 @@ const sharedDeploy = read('.github/workflows/deploy-site-core.yml');
 const sharedStage = read('.github/workflows/stage-shared-site-shell.yml');
 const adminControl = read('.github/workflows/deploy-admin-control-plane.yml');
 const ciWorkflow = read('.github/workflows/ci.yml');
+const releaseRecoveryWorkflow = read('.github/workflows/recover-release-provenance.yml');
+const releaseRecoveryScript = read('scripts/recover-release-provenance.mjs');
 
 test('EKODI AI is the mandatory change control plane', () => {
   assert.equal(policy.policyId, 'AI-ORCHESTRATE-001');
@@ -114,6 +116,13 @@ test('static policy validation cannot replace live PR provenance enforcement', (
   const forbidden = spawnSync(process.execPath, ['scripts/validate-ekodi-ai-change-orchestration.mjs', '--static-policy', '--release'], { cwd, env, encoding: 'utf8' });
   assert.notEqual(forbidden.status, 0);
   assert.match(forbidden.stderr, /static policy mode cannot replace CI\/release provenance enforcement/);
+});
+
+test('release provenance auto recovery accepts its trusted pull_request_target trigger', () => {
+  assert.match(releaseRecoveryWorkflow, /pull_request_target:/);
+  assert.match(releaseRecoveryScript, /\['pull_request','pull_request_target'\]\.includes\(eventName\)/);
+  assert.match(releaseRecoveryScript, /automatic provenance recovery is forbidden for fork pull requests/);
+  assert.match(releaseRecoveryScript, /automatic release provenance recovery requires policy-owner actor/);
 });
 
 test('production workflows that validate PR provenance can read pull requests', () => {
