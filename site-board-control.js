@@ -225,9 +225,9 @@ export async function handleSiteBoardRequest(request,env){
   if(method==='POST'&&sub==='/api/memberships/bootstrap'){
     const count=await env.DB.prepare('SELECT COUNT(*) AS n FROM ekodi_board_memberships WHERE board_id=?').bind(instance.board_id).first();
     if(Number(count?.n||0)>0)return boardJson(instance,{error:'board_membership_already_initialized'},409);
+    if(!who.authenticated)return boardJson(instance,{error:'ekodi_authentication_required'},401);
     const gate=await verifySuperAdminReauth(request,env,instance,'board.membership.bootstrap');
     if(!gate.ok)return boardJson(instance,{error:gate.error},gate.status);
-    if(!who.authenticated)return boardJson(instance,{error:'ekodi_authentication_required'},401);
     const stamp=now();
     await env.DB.prepare(`INSERT INTO ekodi_board_memberships(board_id,person_id,role,status,created_at,updated_at)
       VALUES (?,?,?,'active',?,?)`).bind(instance.board_id,who.personId,'owner',stamp,stamp).run();
@@ -238,9 +238,9 @@ export async function handleSiteBoardRequest(request,env){
   if(method==='POST'&&sub==='/api/lifecycle/cancel'){
     const gate=await verifySuperAdminReauth(request,env,instance,'board.lifecycle.cancel');
     if(!gate.ok)return boardJson(instance,{error:gate.error},gate.status);
-    const snapshotId=await snapshotBoard(env,instance,who,'lifecycle.cancel');
-    await env.DB.prepare(`UPDATE ekodi_board_instances SET status='cancelled',updated_at=? WHERE board_id=?`).bind(now(),instance.board_id).run();
     const lifecycleActor={...who,personId:gate.data?.actor||who.personId||'super_admin_reauth'};
+    const snapshotId=await snapshotBoard(env,instance,lifecycleActor,'lifecycle.cancel');
+    await env.DB.prepare(`UPDATE ekodi_board_instances SET status='cancelled',updated_at=? WHERE board_id=?`).bind(now(),instance.board_id).run();
     await audit(env,instance,lifecycleActor,'board.cancel','board',instance.board_id,{snapshotId,reauthenticated:true});
     return boardJson(instance,{ok:true,status:'cancelled',snapshotId});
   }
@@ -248,11 +248,22 @@ export async function handleSiteBoardRequest(request,env){
   if(method==='DELETE'&&sub==='/api/lifecycle'){
     const gate=await verifySuperAdminReauth(request,env,instance,'board.lifecycle.delete');
     if(!gate.ok)return boardJson(instance,{error:gate.error},gate.status);
-    const snapshotId=await snapshotBoard(env,instance,who,'lifecycle.delete');
-    await env.DB.prepare(`UPDATE ekodi_board_instances SET status='deleted',updated_at=? WHERE board_id=?`).bind(now(),instance.board_id).run();
     const lifecycleActor={...who,personId:gate.data?.actor||who.personId||'super_admin_reauth'};
+    const snapshotId=await snapshotBoard(env,instance,lifecycleActor,'lifecycle.delete');
+    await env.DB.prepare(`UPDATE ekodi_board_instances SET status='deleted',updated_at=? WHERE board_id=?`).bind(now(),instance.board_id).run();
     await audit(env,instance,lifecycleActor,'board.delete','board',instance.board_id,{snapshotId,physicalPurge:false,reauthenticated:true});
     return boardJson(instance,{ok:true,status:'deleted',snapshotId,physicalPurge:false});
+  }
+
+  if(method==='POST'&&sub==='/api/lifecycle/restore'){
+    const gate=await verifySuperAdminReauth(request,env,instance,'board.lifecycle.restore');
+    if(!gate.ok)return boardJson(instance,{error:gate.error},gate.status);
+    const latest=await env.DB.prepare('SELECT id FROM ekodi_board_snapshots WHERE board_id=? ORDER BY id DESC LIMIT 1').bind(instance.board_id).first();
+    if(!latest)return boardJson(instance,{error:'restore_snapshot_required'},409);
+    const lifecycleActor={...who,personId:gate.data?.actor||who.personId||'super_admin_reauth'};
+    await env.DB.prepare(`UPDATE ekodi_board_instances SET status='active',updated_at=? WHERE board_id=?`).bind(now(),instance.board_id).run();
+    await audit(env,instance,lifecycleActor,'board.restore','board',instance.board_id,{snapshotId:Number(latest.id),reauthenticated:true});
+    return boardJson(instance,{ok:true,status:'active',snapshotId:Number(latest.id)});
   }
 
   if(instance.status!=='active')return boardJson(instance,{error:'board_unavailable',status:instance.status},410);
@@ -386,5 +397,5 @@ export const EKODI_SITE_BOARD=Object.freeze({
   sharedPlatformDependency:'authentication_identity_only',
   boardLocalAuthorization:true,
   lifecycleDestructiveReauth:true,
-  coreOperations:Object.freeze(['list','read','create','edit','delete','comments','config','export','membership-bootstrap','membership-list','membership-upsert','membership-revoke','lifecycle-cancel','lifecycle-delete']),
+  coreOperations:Object.freeze(['list','read','create','edit','delete','comments','config','export','membership-bootstrap','membership-list','membership-upsert','membership-revoke','lifecycle-cancel','lifecycle-delete','lifecycle-restore']),
 });
