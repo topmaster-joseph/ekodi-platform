@@ -26,7 +26,10 @@
     "rollbackToLastKnownGoodRequired": true,
     "evidenceRequiredForEveryFailover": true,
     "falseSuccessForbidden": true,
-    "operatorEscalationOnlyAfterAutomaticRecoveryExhausted": true
+    "operatorEscalationOnlyAfterAutomaticRecoveryExhausted": true,
+    "boardAuthenticationSharedOnly": true,
+    "boardLocalOperationAndAuthorizationRequired": true,
+    "boardCrossSiteIsolationRequired": true
   },
   "sustainability": {
     "temporaryFallbackMustBeReplaceable": true,
@@ -46,7 +49,10 @@
     "idempotencyRequiredForRetriedWrites": true,
     "durableQueueRequiredWhenWriteCompletionCannotBeProven": true,
     "destructiveMigrationRequiresHumanGate": true,
-    "billingOrPaidPlanChangeRequiresHumanGate": true
+    "billingOrPaidPlanChangeRequiresHumanGate": true,
+    "boardLifecycleDestructiveActionRequiresSuperAdminReauthentication": true,
+    "boardLifecycleDestructiveActionRequiresTargetBoundSingleUseProof": true,
+    "boardLifecycleDestructiveActionRequiresRestoreEvidence": true
   },
   "capabilityRules": {
     "ai": {
