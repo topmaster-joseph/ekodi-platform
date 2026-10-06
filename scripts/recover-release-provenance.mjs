@@ -6,6 +6,8 @@ const eventPath=String(process.env.GITHUB_EVENT_PATH||'').trim();
 const ghToken=String(process.env.GH_TOKEN||'').trim();
 const cfToken=String(process.env.CLOUDFLARE_API_TOKEN||'').trim();
 const accountId=String(process.env.CLOUDFLARE_ACCOUNT_ID||'').trim();
+const APPROVAL_LABEL='orchestrator-human-gate-approved';
+const APPROVAL_MARKER_PREFIX='EKODI-HUMAN-GATE-APPROVE:';
 
 function fail(message){console.error('[EKODI][RELEASE-PROVENANCE-RECOVERY] '+message);process.exit(1)}
 function out(name,value){if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,`${name}=${String(value)}\n`)}
@@ -48,8 +50,40 @@ if(!sourceBranch.startsWith('ai/')){out('action','noop-non-ai-branch');process.e
 if(isOrchestratorBranch(sourceBranch)){out('action','noop-already-orchestrated');out('branch_ref',sourceBranch);process.exit(0)}
 if(sourceRepo!==repo)fail('automatic provenance recovery is forbidden for fork pull requests');
 const policy=jsonFile('config/ai-change-orchestration-policy.json');
-if(!(policy.governance?.policyOwners||[]).includes(actor))fail(`automatic release provenance recovery requires policy-owner actor; actor=${actor}`);
+const policyOwners=new Set(policy.governance?.policyOwners||[]);
+if(!policyOwners.has(actor))fail(`automatic release provenance recovery requires policy-owner actor; actor=${actor}`);
 if(!headSha.match(/^[a-f0-9]{40}$/i)||!prNumber)fail('pull request head SHA/number missing');
+const labels=(Array.isArray(pr.labels)?pr.labels:[]).map(item=>text(item?.name,120));
+if(!labels.includes(APPROVAL_LABEL)){
+  out('action','waiting-human-approval-label');
+  out('approval_label',APPROVAL_LABEL);
+  process.exit(0);
+}
+const approvalMarker=`${APPROVAL_MARKER_PREFIX}${headSha}`;
+const comments=await github(`/repos/${repo}/issues/${prNumber}/comments?per_page=100`);
+if(!comments.response.ok)fail(`failed to verify exact-SHA Human Gate approval: HTTP ${comments.response.status}`);
+const approvalComment=(Array.isArray(comments.data)?comments.data:[]).find(item=>{
+  const login=text(item?.user?.login,120);
+  const body=String(item?.body||'');
+  return policyOwners.has(login)&&body.includes(approvalMarker);
+});
+if(!approvalComment){
+  out('action','waiting-exact-sha-human-approval');
+  out('approval_marker',approvalMarker);
+  process.exit(0);
+}
+const approvalActor=text(approvalComment.user?.login,120);
+const humanApproval=Object.freeze({
+  kind:'release-provenance-human-gate-approval',
+  approvalId:`release-provenance:${headSha}`,
+  sourcePr:prNumber,
+  sourceSha:headSha,
+  approvedBy:approvalActor,
+  approvedAt:text(approvalComment.created_at,80),
+  marker:approvalMarker,
+  label:APPROVAL_LABEL,
+  scope:'exact-source-sha',
+});
 if(!cfToken||!accountId)fail('Cloudflare credentials are required for authoritative recovery task issuance');
 
 const wrangler=fs.readFileSync('wrangler.site.toml','utf8');
@@ -62,17 +96,25 @@ const branchRef=`ai/${agent}/${taskId}`;
 const createdAt=new Date().toISOString();
 const intent=`Automatically recover release provenance for PR #${prNumber} without weakening EKODI orchestration, guarded release, or production verification.`;
 const target=JSON.stringify({capability:'release.provenance.recovery',repository:repo,sourceBranch,sourceSha:headSha,sourcePr:prNumber});
-const evidence=JSON.stringify({kind:'automatic-release-provenance-recovery',sourceBranch,sourceSha:headSha,sourcePr:prNumber,policyId:policy.policyId,guardedReleasePreserved:true,productionVerificationRequired:true});
+const evidence=JSON.stringify({kind:'automatic-release-provenance-recovery',sourceBranch,sourceSha:headSha,sourcePr:prNumber,policyId:policy.policyId,humanApproval,guardedReleasePreserved:true,productionVerificationRequired:true});
 
 await d1(dbId,`INSERT OR IGNORE INTO ekodi_orchestrator_tasks
 (task_id,idempotency_key,requester_id,source,intent,target_json,risk,permission_class,assigned_worker,branch_ref,state,deployment_requested,evidence_json,created_at,updated_at)
 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,[
   taskId,`release-provenance-recovery:${headSha}`,`github-owner:${actor}`,'github-actions-release-recovery',
-  intent,target,'normal','delegated','ekodi-github-actions-release-recovery',branchRef,'assigned',1,evidence,createdAt,createdAt
+  intent,target,'high','delegated','ekodi-github-actions-release-recovery',branchRef,'assigned',1,evidence,createdAt,createdAt
 ]);
 await d1(dbId,`INSERT OR IGNORE INTO ekodi_orchestrator_task_events
-(task_id,seq,from_state,to_state,actor,reason,evidence_json,created_at) VALUES (?,1,NULL,'assigned',?,'automatic_release_provenance_recovery',?,?)`,[
+(task_id,seq,from_state,to_state,actor,reason,evidence_json,created_at) VALUES (?,1,NULL,'received',?,'automatic_release_provenance_recovery_requested',?,?)`,[
   taskId,`github-owner:${actor}`,evidence,createdAt
+]);
+await d1(dbId,`INSERT OR IGNORE INTO ekodi_orchestrator_task_events
+(task_id,seq,from_state,to_state,actor,reason,evidence_json,created_at) VALUES (?,2,'received','blocked','ekodi-orchestrator','human_gate_required',?,?)`,[
+  taskId,evidence,createdAt
+]);
+await d1(dbId,`INSERT OR IGNORE INTO ekodi_orchestrator_task_events
+(task_id,seq,from_state,to_state,actor,reason,evidence_json,created_at) VALUES (?,3,'blocked','assigned',?,'exact_sha_human_gate_approved',?,?)`,[
+  taskId,`github-owner:${approvalActor}`,JSON.stringify(humanApproval),createdAt
 ]);
 
 const receiptUrl=new URL('https://ekodi.kr/api/orchestrator/release-receipt');
@@ -82,7 +124,13 @@ if(!receipt.response.ok||receipt.data?.authorized!==true)fail(`recovery receipt 
 
 const refPath=`/repos/${repo}/git/refs`;
 const ref=await github(refPath,{method:'POST','headers':{'content-type':'application/json'},body:JSON.stringify({ref:`refs/heads/${branchRef}`,sha:headSha})});
-if(!ref.response.ok&&ref.response.status!==422)fail(`failed to create recovery branch: HTTP ${ref.response.status} ${JSON.stringify(ref.data)}`);
+if(!ref.response.ok){
+  if(ref.response.status!==422)fail(`failed to create recovery branch: HTTP ${ref.response.status} ${JSON.stringify(ref.data)}`);
+  const existing=await github(`/repos/${repo}/git/ref/heads/${encodeURIComponent(branchRef)}`);
+  if(!existing.response.ok||text(existing.data?.object?.sha,80)!==headSha){
+    fail('existing recovery branch does not match the exact approved source SHA');
+  }
+}
 
 const pulls=await github(`/repos/${repo}/pulls?state=open&head=${encodeURIComponent(repo.split('/')[0]+':'+branchRef)}&base=main`);
 let recoveryPr=Array.isArray(pulls.data)?pulls.data[0]:null;
