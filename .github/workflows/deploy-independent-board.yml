@@ -61,18 +61,18 @@ jobs:
             db_id="$(npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | jq -r '.[] | select(.name=="ekodi-independent-board") | (.uuid // .id)' | head -n1)"
           fi
           test -n "$db_id"
-          cp wrangler.independent-board.toml /tmp/wrangler.independent-board.toml
-          sed -i "s/REPLACE_WITH_INDEPENDENT_BOARD_D1_ID/$db_id/" /tmp/wrangler.independent-board.toml
+          cp wrangler.independent-board.toml $GITHUB_WORKSPACE/.wrangler.independent-board.runtime.toml
+          sed -i "s/REPLACE_WITH_INDEPENDENT_BOARD_D1_ID/$db_id/" $GITHUB_WORKSPACE/.wrangler.independent-board.runtime.toml
           npx --yes wrangler@${WRANGLER_VERSION} r2 bucket create ekodi-independent-board-files >/tmp/r2-create.log 2>&1 || true
           echo "db_id=$db_id" >> "$GITHUB_OUTPUT"
       - name: Apply board-owned migrations
         run: |
           set -euo pipefail
-          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply ekodi-independent-board --remote --config /tmp/wrangler.independent-board.toml
+          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply ekodi-independent-board --remote --config $GITHUB_WORKSPACE/.wrangler.independent-board.runtime.toml
       - name: Deploy standalone board worker
         run: |
           set -euo pipefail
-          npx --yes wrangler@${WRANGLER_VERSION} deploy --config /tmp/wrangler.independent-board.toml
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config $GITHUB_WORKSPACE/.wrangler.independent-board.runtime.toml
       - name: Verify production board health
         run: |
           set -euo pipefail
@@ -95,5 +95,5 @@ jobs:
           curl -fsS https://seonammedi.kr/board/api/posts | jq -e --arg marker "$marker" '.items[] | select(.message==$marker)' >/dev/null
           reply="$(curl -fsS -X POST "https://seonammedi.kr/board/api/posts/$post_id/replies" -H 'content-type: application/json' --data '{"name":"EKODI 검증","message":"reply-canary"}')"
           jq -e '.ok==true and (.id|tonumber)>0' <<<"$reply" >/dev/null
-          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-independent-board --remote --config /tmp/wrangler.independent-board.toml --command "DELETE FROM board_replies WHERE post_id=$post_id; DELETE FROM board_posts WHERE id=$post_id;"
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-independent-board --remote --config $GITHUB_WORKSPACE/.wrangler.independent-board.runtime.toml --command "DELETE FROM board_replies WHERE post_id=$post_id; DELETE FROM board_posts WHERE id=$post_id;"
           curl -fsS https://seonammedi.kr/board/api/posts | jq -e --arg marker "$marker" '[.items[] | select(.message==$marker)] | length==0' >/dev/null
