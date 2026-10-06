@@ -33,7 +33,9 @@ jobs:
         run: |
           set -euo pipefail
           deno check --node-modules-dir=auto supabase/functions/access-api/index.ts
-          grep -Fq 'portal:["https://ekodi.kr","https://seonammedi.kr"' supabase/functions/access-api/index.ts
+          grep -Fq 'portal:["https://ekodi.kr"]' supabase/functions/access-api/index.ts
+          grep -Fq 'seonammedi:["https://seonammedi.kr","https://www.seonammedi.kr"' supabase/functions/access-api/index.ts
+          grep -Fq 'if(site==="portal"||site==="seonammedi")' supabase/functions/access-api/index.ts
           grep -Fq 'admin.auth.admin.generateLink({type:"magiclink",email})' supabase/functions/access-api/index.ts
           grep -Fq 'expiresFor:"single_use"' supabase/functions/access-api/index.ts
 
