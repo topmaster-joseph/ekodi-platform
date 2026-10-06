@@ -141,6 +141,16 @@ test('one-click device protocol is bounded to EKODI enrollment and official API'
   assert.doesNotMatch(bootstrap, /EnrollmentCode/);
 });
 
+test('admin quick connect downloads one bounded enrollment connector without requiring protocol setup', () => {
+  assert.match(admin, /function buildEnrollmentInstaller/);
+  assert.match(admin, /\^EKD-\[A-F0-9\]\{20\}\$/);
+  assert.match(admin, /-EncodedCommand/);
+  assert.match(admin, /EKODI_PC_연결\.cmd/);
+  assert.match(admin, /downloadEnrollmentInstaller/);
+  assert.match(admin, /등록·Agent 실행·heartbeat 확인까지 자동으로 진행됩니다/);
+  assert.doesNotMatch(admin, /launchProtocol\(currentEnrollmentUrl\)/);
+});
+
 test('existing registered devices upgrade transactionally and preserve registration', () => {
   assert.match(agent, /\$AgentVersion = '2\.5\.1'/);
   assert.match(agent, /Invoke-AgentUpgradeTransaction/);
