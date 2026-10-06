@@ -52,6 +52,7 @@ on:
       - 'test/worker-release-artifact-attestation.test.mjs'
       - 'test/discovery-layer.test.mjs'
       - 'scripts/build.mjs'
+      - 'scripts/finalize-seonammedi-release.mjs'
       - '.github/workflows/stage-shared-site-shell.yml'
 
 permissions:
