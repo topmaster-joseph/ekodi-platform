@@ -378,7 +378,7 @@ export function buildEkodiCommandPlane(env = {}, providers = []) {
       if (!qualifiesStandingDelegation(input.delegation, event, risk)) {
         return Object.freeze({
           schemaVersion: 2,
-          state: 'human_gate',
+          state: 'auto_blocked',
           event,
           reason: event.requiresHumanDecision || RED_CHANGE_CLASSES.has(event.changeClass) || risk === 'high' || risk === 'critical'
             ? 'sovereign_or_high_impact_gate'
