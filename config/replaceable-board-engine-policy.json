@@ -1,0 +1,132 @@
+{
+  "version": "1.2.0",
+  "policyId": "EKODI-REPLACEABLE-BOARD-ENGINE-001",
+  "status": "enforced",
+  "appliesRecursivelyToAllServices": true,
+  "scope": [
+    "all_interactive_boards",
+    "citizen_feedback",
+    "notice",
+    "qna",
+    "community"
+  ],
+  "rule": "All core board operations must remain available through the EKODI Board Adapter without any synchronous AI/LLM dependency. Replaceable external board engines are optional extension layers only and must never own canonical board CRUD, public URLs, EKODI auth, user UI or canonical data.",
+  "engineSelection": {
+    "required": [
+      "open_source_license",
+      "self_hostable",
+      "documented_api",
+      "export_import",
+      "security_maintenance",
+      "upgrade_path",
+      "health_check"
+    ],
+    "preferredLicense": [
+      "MIT",
+      "Apache-2.0",
+      "BSD"
+    ],
+    "referenceCandidates": [
+      "flarum",
+      "nodebb"
+    ],
+    "productionRule": "Only a stable, security-maintained engine may become the default production engine; release candidates remain evaluation-only unless explicitly approved by Human Gate."
+  },
+  "architecture": {
+    "registryRequired": true,
+    "providerInterfaceRequired": true,
+    "nativeFallbackRequired": true,
+    "preserveEkodiUrl": true,
+    "preserveEkodiAuth": true,
+    "preserveUserSurface": true,
+    "preserveCanonicalData": true,
+    "durableWriteQueuePreserved": true,
+    "falseSuccessForbidden": true,
+    "coreRuntimeGuardRequired": true,
+    "coreOperationsAlwaysUseEkodiAdapter": true,
+    "externalEngineMayNotOwnCanonicalCrud": true,
+    "aiSynchronousDependencyForbidden": true,
+    "aiFailureMustNotAffectCoreBoard": true,
+    "runtimeExtensionFailureIsolation": true
+  },
+  "migration": {
+    "dualRunBeforeCutover": true,
+    "exportImportRequired": true,
+    "rollbackRequired": true,
+    "engineSwapWithoutPublicUrlChange": true
+  },
+  "firstRollout": "seonammedi.citizen_voice",
+  "aiIndependence": {
+    "criticalPathAiDependency": "forbidden",
+    "synchronousAiProviderCalls": "forbidden",
+    "aiEnhancements": "optional_async_only",
+    "providerFailureBehavior": "ignore_or_retry_out_of_band_without_blocking_board",
+    "completionRule": "list_read_search_create_reply_edit_delete_moderate_attachments_health_consume_remain_operational_when_all_ai_providers_are_unavailable"
+  },
+  "runtime": {
+    "coreModule": "common-board-adapter.js",
+    "guardModule": "board-runtime-guard.js",
+    "replaceableProviderModule": "replaceable-board-provider.js",
+    "canonicalWritePlane": "EKODI-DURABLE-WRITE-INGRESS-001",
+    "searchRequiredInContract": true
+  },
+  "verifiedIndependentSurfaces": [
+    {
+      "id": "seonammedi.citizen_voice",
+      "mode": "guarded_adapter",
+      "core": "d1_durable_write_ingress"
+    },
+    {
+      "id": "seonammedi.notice",
+      "mode": "guarded_adapter",
+      "core": "d1_plus_storage"
+    },
+    {
+      "id": "journal.posts",
+      "mode": "native_no_ai",
+      "core": "journal_worker"
+    },
+    {
+      "id": "organization.notices",
+      "mode": "native_no_ai",
+      "core": "supabase_postgres"
+    },
+    {
+      "id": "community",
+      "mode": "provider_optional_fallback",
+      "core": "supabase_edge_function"
+    }
+  ],
+  "independence": {
+    "ruleId": "EKODI-BOARD-INDEPENDENCE-001",
+    "status": "enforced",
+    "appliesTo": "all-current-and-future-user-independent-and-child-site-boards",
+    "sharedPlatformDependency": "authentication_identity_only",
+    "sharedCodeAllowed": true,
+    "sharedAuthorizationForbidden": true,
+    "centralTenantGrantAsBoardAuthorityForbidden": true,
+    "boardLocalMembershipRequired": true,
+    "boardLocalRoleAndPermissionRequired": true,
+    "boardLocalConfigurationRequired": true,
+    "boardLocalModerationRequired": true,
+    "boardLocalLifecycleRequired": true,
+    "boardLocalBackupRestoreExportRequired": true,
+    "boardLocalFailureIsolationRequired": true,
+    "boardLocalAuditRequired": true,
+    "crossBoardMutationForbidden": true,
+    "aiRequiredForCoreOperation": false,
+    "perBoardOptOutAllowed": false
+  },
+  "destructiveLifecycle": {
+    "cancelAndDeleteAllowed": true,
+    "ordinaryContentModerationUsesBoardLocalAuthority": true,
+    "boardLifecycleCancelRequiresSuperAdminReauthentication": true,
+    "boardLifecycleDeleteRequiresSuperAdminReauthentication": true,
+    "reauthenticationProofMaxAgeSeconds": 300,
+    "reauthenticationProofSingleUse": true,
+    "reauthenticationProofTargetBound": true,
+    "restorePointOrExportRequiredBeforeLifecycleMutation": true,
+    "auditEvidenceRequired": true,
+    "permanentPurgeRequiresSeparateExplicitApproval": true
+  }
+}

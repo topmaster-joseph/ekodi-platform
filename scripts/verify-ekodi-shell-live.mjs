@@ -87,6 +87,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
     if(Number(health.characterIdentityRegistryVersion)<2)failures.push(`health:characterIdentityRegistryVersion:${health.characterIdentityRegistryVersion||'missing'}`);
     if(Number(health.userCharacterVersion)<6)failures.push(`health:userCharacterVersion:${health.userCharacterVersion||'missing'}`);
     if(Number(health.adminUIShellVersion)<2)failures.push(`health:adminUIShellVersion:${health.adminUIShellVersion||'missing'}`);
+    if(Number(health.publicSurfaceAdminVersion)<2)failures.push(`health:publicSurfaceAdminVersion:${health.publicSurfaceAdminVersion||'missing'}`);
     if(Number(health.messageUIVersion)<1)failures.push(`health:messageUIVersion:${health.messageUIVersion||'missing'}`);
     if(Number(health.illustrationSystemVersion)<1)failures.push(`health:illustrationSystemVersion:${health.illustrationSystemVersion||'missing'}`);
     if(Number(health.serviceDesignVersion)<1)failures.push(`health:serviceDesignVersion:${health.serviceDesignVersion||'missing'}`);
@@ -125,6 +126,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
     'window.EKODIShell','내 공간 · My EKODI','EKODI 다음 행동','suggestedServices','모든 서비스 보기','ekodi:public-experience',
     'window.EKODIUserUIHeader','window.EKODIUserUIFooter','__EKODI_USER_AI_ENTRY__','AI로 하기','window.EKODIMediaMeetingAdapter','https://ekodi.kr/social/api/media/youtube/status','window.__EKODI_USER_FOOTER_CONFIG__','user-footer.json','window.EKODICharacterRegistry','window.EKODICharacterIdentityRegistry','ekodi.ekodian-identity.v1','window.EKODIUserCharacter',
     'window.EKODIAdminUIShell','ekodi-admin-ui-shell-style','.side-brand','ekodi:admin-shell-ready',
+    'window.EKODIPublicSurfaceAdmin','cross_origin_admin_target_forbidden','ekodi:public-admin-ready','window.open',"presentation:mode",
     'ekodi-mobile-fixed-header-style','data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important',
     'window.EKODIMessage','window.EKODIIllustration','ekodiIllustrationSystem','window.EKODIServiceDesign','ekodiDesignInheritance','--ekodi-service-accent',
     '__EKODI_ECOSYSTEM_LINK_COMPAT',"'ekodibiz.kr':'biz'",'window.__EKODI_LANGUAGE_REGISTRY__','https://ekodi.kr/api/i18n/v1','visibleLanguages','removeFooterLanguageControls','TRAFFIC_TELEMETRY','globalPrivacyControl','sendTrafficBeacon'
@@ -141,6 +143,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
   const expectedFooterHeader=footerConfig?.version?`v${Number(footerConfig.version)}`:'';
   if(expectedFooterHeader&&shellResult.headers?.get?.('x-ekodi-user-ui-footer')!==expectedFooterHeader)failures.push(`shell:user-ui-footer:${shellResult.headers?.get?.('x-ekodi-user-ui-footer')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-admin-ui-shell')!=='v2')failures.push(`shell:admin-ui-shell:${shellResult.headers?.get?.('x-ekodi-admin-ui-shell')||'missing'}`);
+  if(shellResult.headers?.get?.('x-ekodi-public-surface-admin')!=='v2')failures.push(`shell:public-surface-admin:${shellResult.headers?.get?.('x-ekodi-public-surface-admin')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-message-ui')!=='v1')failures.push(`shell:message-ui-header:${shellResult.headers?.get?.('x-ekodi-message-ui')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-illustration-system')!=='v1')failures.push(`shell:illustration-header:${shellResult.headers?.get?.('x-ekodi-illustration-system')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-service-design')!=='v1')failures.push(`shell:service-design-header:${shellResult.headers?.get?.('x-ekodi-service-design')||'missing'}`);
@@ -157,7 +160,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
 
   const statuses=results.map(item=>item.status).join('/');
   if(!failures.length){
-    console.log(`✅ EKODI Shell live verified at ${base}: statuses=${statuses}, services=${manifest.services.length}, userUI=header-v3/footer-${expectedFooterHeader||'current'}+ai-entry-v1+main-aligned-centered-v1+csp-safe-css, centralFooter=ok, language=header-only-v8, userCharacter=v6+identity-v2, adminUI=v2, messageUI=v1, illustrations=v1, serviceDesign=v1, linkCompat=v1, release=${release}.`);
+    console.log(`✅ EKODI Shell live verified at ${base}: statuses=${statuses}, services=${manifest.services.length}, userUI=header-v3/footer-${expectedFooterHeader||'current'}+ai-entry-v1+main-aligned-centered-v1+csp-safe-css, centralFooter=ok, language=header-only-v8, userCharacter=v6+identity-v2, adminUI=v2, publicAdmin=v2, messageUI=v1, illustrations=v1, serviceDesign=v1, linkCompat=v1, release=${release}.`);
     process.exit(0);
   }
   console.log(`Shell live verify ${attempt}/${attempts}: statuses=${statuses}; ${failures.join(' | ')}`);

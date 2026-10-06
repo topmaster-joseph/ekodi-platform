@@ -2,6 +2,8 @@ import authWorker from './auth-worker.js';
 import { principalFromSupabaseRequest } from './ekodi-principal.js';
 import { accessGrantIsActive, effectiveAccessCapabilities } from './access-governance.js';
 import { runSeonamMediHourlyCheck } from './seonammedi-monitor.js';
+import { createBoardAdapter, handleBoardAdapter } from './common-board-adapter.js';
+import { createBoardRuntimeGuard } from './board-runtime-guard.js';
 
 const PREFIX='/api/seonammedi';
 const AUTH_EXCHANGE_PATH=PREFIX+'/admin/auth/exchange';
@@ -345,6 +347,39 @@ async function listPublicNotices(request,env){
   const admin=email?await env.DB.prepare("SELECT role FROM admins WHERE lower(trim(email))=? AND role='super_admin' LIMIT 1").bind(email).first().catch(()=>null):null;
   return json({ok:true,items:(rows.results||[]).map(row=>publicNotice(row,{canManage:Boolean(admin)||Boolean(email&&lower(row.created_by)===email)}))});
 }
+
+async function noticeManageContext(request,env){
+  const principal=await principalFromSupabaseRequest(request).catch(()=>null);
+  const email=lower(principal?.email||'');
+  const admin=email?await env.DB.prepare("SELECT role FROM admins WHERE lower(trim(email))=? AND role='super_admin' LIMIT 1").bind(email).first().catch(()=>null):null;
+  return {email,admin:Boolean(admin)};
+}
+async function readPublicNotice(request,env,id){
+  const projection=await noticePublicProjection(env);
+  const row=await env.DB.prepare(`SELECT ${projection} FROM seonammedi_notices WHERE id=? AND status='published' LIMIT 1`).bind(id).first();
+  if(!row)return json({ok:false,error:'not_found'},404);
+  const access=await noticeManageContext(request,env);
+  return json({ok:true,item:publicNotice(row,{canManage:access.admin||Boolean(access.email&&lower(row.created_by)===access.email)})});
+}
+async function searchPublicNotices(request,env){
+  const q=clean(new URL(request.url).searchParams.get('q'),120);
+  if(!q)return listPublicNotices(request,env);
+  const projection=await noticePublicProjection(env),pattern='%'+q+'%';
+  const rows=await env.DB.prepare(`SELECT ${projection} FROM seonammedi_notices
+    WHERE status='published' AND (title LIKE ? OR body LIKE ?)
+    ORDER BY pinned DESC,COALESCE(published_at,updated_at) DESC,id DESC LIMIT 40`).bind(pattern,pattern).all();
+  const access=await noticeManageContext(request,env);
+  return json({ok:true,query:q,items:(rows.results||[]).map(row=>publicNotice(row,{canManage:access.admin||Boolean(access.email&&lower(row.created_by)===access.email)}))});
+}
+async function noticeBoardHealth(_request,env){
+  if(!env?.DB?.prepare)return json({ok:false,storage:'unavailable',board:'seonammedi.notice'},503);
+  try{
+    const table=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='seonammedi_notices'").first();
+    return json({ok:Boolean(table?.name),storage:'d1',board:'seonammedi.notice',aiIndependent:true},table?.name?200:503);
+  }catch{
+    return json({ok:false,storage:'error',board:'seonammedi.notice',aiIndependent:true},503);
+  }
+}
 async function storeNoticeImageInDrive(env,image,principal){
   if(!env?.STORAGE?.fetch)throw new Error('image_storage_unavailable');
   const type=String(image.type||'').toLowerCase();
@@ -440,6 +475,19 @@ async function deletePublicNotice(request,env,id){
   for(const key of noticeImageKeys(row))await deleteNoticeDriveKey(env,key);
   return json({ok:true,id});
 }
+
+const seonamNoticeAdapter=createBoardAdapter({
+  boardId:'seonammedi.notice',
+  list:listPublicNotices,
+  read:readPublicNotice,
+  search:searchPublicNotices,
+  create:createPublicNotice,
+  edit:updatePublicNotice,
+  delete:deletePublicNotice,
+  attachments:(_request,env,id,attachmentId)=>publicNoticeImage(env,id,Number(attachmentId||0)),
+  health:noticeBoardHealth
+});
+const seonamNoticeBoard=createBoardRuntimeGuard({adapter:seonamNoticeAdapter});
 
 async function listPublicChannels(env){
   const rows=await env.DB.prepare(`SELECT c.id,c.platform,c.name,c.url,COALESCE(p.preview_url,'') preview_url,c.category,c.official,c.note,c.sort_order
@@ -1029,7 +1077,7 @@ export async function handleSeonamMediAdminApi(request,env){
   if(url.pathname===PREFIX+'/content'&&request.method==='GET'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
     return publicStorageRead('content',async()=>{
-      const [noticesResponse,channelsResponse]=await Promise.all([listPublicNotices(request,env),listPublicChannels(env)]);
+      const [noticesResponse,channelsResponse]=await Promise.all([handleBoardAdapter(seonamNoticeBoard,{action:'list',request,env}),listPublicChannels(env)]);
       const noticesBody=await noticesResponse.json().catch(()=>({items:[]}));
       const channelsBody=await channelsResponse.json().catch(()=>({items:[]}));
       return json({ok:true,notices:noticesBody.items||[],channels:channelsBody.items||[]});
@@ -1038,23 +1086,38 @@ export async function handleSeonamMediAdminApi(request,env){
   if(url.pathname===PREFIX+'/timeline'&&request.method==='GET'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return publicStorageRead('timeline',()=>listPublicTimeline(env));
   }
+  if(url.pathname===PREFIX+'/notices/health'&&request.method==='GET'){
+    return handleBoardAdapter(seonamNoticeBoard,{action:'health',request,env});
+  }
+  if(url.pathname===PREFIX+'/notices/search'&&request.method==='GET'){
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
+    return publicStorageRead('notices-search',()=>handleBoardAdapter(seonamNoticeBoard,{action:'search',request,env}));
+  }
   if(url.pathname===PREFIX+'/notices'&&request.method==='GET'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
-    return publicStorageRead('notices',()=>listPublicNotices(request,env));
+    return publicStorageRead('notices',()=>handleBoardAdapter(seonamNoticeBoard,{action:'list',request,env}));
   }
   if(url.pathname===PREFIX+'/notices'&&request.method==='POST'){
-    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return createPublicNotice(request,env);
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
+    return handleBoardAdapter(seonamNoticeBoard,{action:'create',request,env});
   }
-  const noticeDeleteMatch=url.pathname.match(/^\/api\/seonammedi\/notices\/(\d+)$/);
-  if(noticeDeleteMatch&&request.method==='PUT'){
-    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return updatePublicNotice(request,env,Number(noticeDeleteMatch[1]));
+  const noticeItemMatch=url.pathname.match(/^\/api\/seonammedi\/notices\/(\d+)$/);
+  if(noticeItemMatch&&request.method==='GET'){
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
+    return publicStorageRead('notice-detail',()=>handleBoardAdapter(seonamNoticeBoard,{action:'read',request,env,itemId:noticeItemMatch[1]}));
   }
-  if(noticeDeleteMatch&&request.method==='DELETE'){
-    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return deletePublicNotice(request,env,Number(noticeDeleteMatch[1]));
+  if(noticeItemMatch&&request.method==='PUT'){
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
+    return handleBoardAdapter(seonamNoticeBoard,{action:'edit',request,env,itemId:noticeItemMatch[1]});
+  }
+  if(noticeItemMatch&&request.method==='DELETE'){
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
+    return handleBoardAdapter(seonamNoticeBoard,{action:'delete',request,env,itemId:noticeItemMatch[1]});
   }
   const noticeImageMatch=url.pathname.match(/^\/api\/seonammedi\/notices\/(\d+)\/image(?:\/(\d+))?$/);
   if(noticeImageMatch&&request.method==='GET'){
-    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return publicNoticeImage(env,Number(noticeImageMatch[1]),Number(noticeImageMatch[2]||0));
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
+    return handleBoardAdapter(seonamNoticeBoard,{action:'attachments',request,env,itemId:noticeImageMatch[1],attachmentId:noticeImageMatch[2]||0});
   }
   if(url.pathname===PREFIX+'/channels'&&request.method==='GET'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return publicStorageRead('channels',()=>listPublicChannels(env));

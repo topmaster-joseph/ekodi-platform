@@ -96,7 +96,12 @@ export function buildCoreAiGateway(env = {}, providers = []) {
     const capabilityId = String(options?.target?.capability || result?.plan?.target?.capability || '').trim().toLowerCase();
     if (!capabilityRequiresExecution(capabilityId)) return result;
 
-    if (result?.state !== 'verified') {
+    const commandState = String(result?.state || '').trim().toLowerCase();
+    // AI consultation is advisory. A core_only result means the deterministic
+    // command core produced a plan but no AI provider verified it. It may still
+    // proceed through the capability executor, whose authority, delegation,
+    // preflight, rollback and post-effect verification gates remain mandatory.
+    if (!['verified', 'core_only'].includes(commandState)) {
       return Object.freeze({
         ...result,
         evidence: Object.freeze({

@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "policyId": "OPERATOR-ZERO-MAINTENANCE-001",
+  "status": "enforced",
+  "scope": "all-current-and-future-user-independent-and-child-sites",
+  "principle": "operators-manage-content-not-software",
+  "operatorResponsibilities": [
+    "create-content",
+    "edit-content",
+    "classify-content",
+    "publish-content",
+    "reply-and-moderate-within-role",
+    "make-operational-judgments"
+  ],
+  "prohibitedOperatorMaintenance": [
+    "site-specific-board-code",
+    "schema-maintenance",
+    "manual-deployment",
+    "security-patching",
+    "browser-compatibility-fixes",
+    "board-engine-replacement",
+    "dependency-upgrades",
+    "site-specific-crud-forks",
+    "duplicate-admin-content-ui"
+  ],
+  "construction": {
+    "sharedKernelRequired": true,
+    "declarativeManifestRequired": true,
+    "siteSpecificCrudForkForbidden": true,
+    "duplicateContentAdminUiForbidden": true,
+    "authenticatedAdminOperatesOnUserSurface": true,
+    "stableBackwardCompatibleContract": true
+  },
+  "automation": {
+    "ekodiOrchestratorOwnsLifecycle": true,
+    "nativeVirtualizationFirst": true,
+    "automatedRegressionRequired": true,
+    "automatedSecurityAndDependencyRemediation": true,
+    "canaryAndRollbackRequired": true,
+    "selfHealingAndReconcileRequired": true,
+    "externalProviderHotSwapRequired": true,
+    "operatorEscalationOnlyAfterAutomaticRecoveryExhausted": true,
+    "continuityFirstRecoveryRequired": true,
+    "safeImmediateReplacementRequired": true,
+    "postRecoveryRootCauseImprovementRequired": true,
+    "ambiguousWriteMustReconcileBeforeRetry": true,
+    "approvedFallbackMustBeSustainableAndReplaceable": true,
+    "productionVerificationBeforeCompletionRequired": true
+  },
+  "contentFirst": {
+    "newBoardRequiresCodeCopy": false,
+    "newBoardInputs": [
+      "manifest",
+      "content",
+      "role-policy"
+    ],
+    "maintenanceUiMinimized": true
+  },
+  "exceptions": {
+    "allowedDedicatedAdmin": [
+      "system-configuration",
+      "security",
+      "identity-and-access",
+      "authority-and-role-management",
+      "audit",
+      "integration-control",
+      "data-recovery",
+      "cross-site-platform-operations"
+    ],
+    "humanGateRequiredFor": [
+      "destructive-data-migration",
+      "billing-or-paid-plan-change",
+      "security-boundary-reduction"
+    ]
+  }
+}

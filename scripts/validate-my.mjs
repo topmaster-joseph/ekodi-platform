@@ -22,7 +22,10 @@ const files={
   digitalCardServer:'my/person-digital-card.js',
   digitalCardAdmin:'my/digital-card-admin.js',
   digitalCardClient:'my/digital-card.js',
+  digitalCardQr:'my/digital-card-qr.js',
+  digitalCardVendor:'my/vendor/qrcode.min.js',
   digitalCardMigration:'supabase/migrations/20260930002300_person_digital_card_exchange.sql',
+  identityShareMigration:'supabase/migrations/20261001034500_person_identity_share_contexts.sql',
   prod:'wrangler.my.toml',
   staging:'wrangler.my.staging.toml',
   auth:'auth-site/client-auth.js',
@@ -37,7 +40,7 @@ const content=Object.fromEntries(await Promise.all(Object.entries(files).map(asy
 function must(key,marker){if(!content[key].includes(marker))throw new Error(`My EKODI validation failed: ${key} missing ${marker}`)}
 function mustNot(key,marker){if(content[key].includes(marker))throw new Error(`My EKODI validation failed: ${key} contains forbidden ${marker}`)}
 
-execFileSync(process.execPath,['--check',files.accessContext],{stdio:'inherit'});
+for(const key of ['accessContext','digitalCardServer','digitalCardAdmin','digitalCardClient','digitalCardQr'])execFileSync(process.execPath,['--check',files[key]],{stdio:'inherit'});
 
 must('html','My EKODI');
 must('html','data-ekodi-ui="USER"');
@@ -140,16 +143,34 @@ must('worker','accessContextGuidance:true');
 must('worker',"digitalCardPath:'/{handle}/card'");
 must('worker','contactExchange:true');
 must('digitalCardServer','routePersonDigitalCard');
-must('digitalCardServer','submit_person_contact_exchange');
+must('digitalCardServer','person_identity_share');
+must('digitalCardServer','submit_person_contact_exchange_v2');
+must('digitalCardServer','person-digital-card-qr-center');
+must('digitalCardServer','/my/vendor/qrcode.min.js');
 must('digitalCardServer','CARD_EXCHANGE_RATE_LIMITER');
-must('digitalCardAdmin','set_my_digital_card');
+must('digitalCardAdmin','get_my_identity_share_config');
+must('digitalCardAdmin','set_my_identity_share_config');
 must('digitalCardAdmin','get_my_contact_exchanges');
+must('digitalCardAdmin','digitalCardQrLink');
 must('digitalCardClient','navigator.contacts');
+must('digitalCardClient','contextKey');
+must('digitalCardQr','new QRCode');
+must('digitalCardQr','downloadQr');
+must('digitalCardVendor','QRCode');
 must('digitalCardMigration','private.person_digital_cards');
 must('digitalCardMigration','private.person_contact_exchanges');
 must('digitalCardMigration','private.person_contact_exchange_rate_limits');
 must('digitalCardMigration','contact_exchange_rate_limited');
 must('digitalCardMigration','privacy_consent_required');
+must('identityShareMigration','private.person_identity_roles');
+must('identityShareMigration','private.person_share_contexts');
+must('identityShareMigration','person_share_contexts_one_default_idx');
+must('identityShareMigration','public.person_identity_share');
+must('identityShareMigration','public.set_my_identity_share_config');
+must('identityShareMigration','public.submit_person_contact_exchange_v2');
+must('html','id="digitalCardRoles"');
+must('html','id="digitalCardContexts"');
+must('html','id="digitalCardQrLink"');
 must('worker','centralAiEntitlements:true');
 must('worker',"aiEntitlementManager:'/my/'");
 mustNot('prod','my.ekodi.kr');
@@ -201,6 +222,14 @@ for(const required of ['services-subtabs','data-services-tab="services"','data-s
 
 for(const required of ['memberHero','home-wayfinder','ekodian-hero-art','data-home-panel="intent"','data-home-panel="continue"','data-intent-step-marker="goal"','data-intent-step-marker="context"','data-intent-step-marker="execute"']){
   if(!content.html.includes(required))throw new Error(`My EKODI validation failed: progressive wayfinder marker missing: ${required}`);
+}
+
+for(const required of ['servicesWayfinder','data-services-menu','data-services-open="services"','data-services-back','data-account-menu','data-account-open="basic"','data-account-open="character"','data-account-back']){
+  if(!content.html.includes(required))throw new Error(`My EKODI validation failed: second-level wayfinder marker missing: ${required}`);
+}
+
+for(const required of ['data-ekodi-user-ai-entry="off"','data-ekodi-progressive-home="off"','data-account-open="ai"','data-account-tab="ai"']){
+  if(!content.html.includes(required))throw new Error(`My EKODI validation failed: primary action surface opt-out marker missing: ${required}`);
 }
 
 console.log('My EKODI validation passed: USER UI, common-service access context, universal membership, multi-device Free Device Care with browser-only safety boundaries, User AI, Shell-synced Workspace context, isolated staging, central auth and guarded production rollout are present.');

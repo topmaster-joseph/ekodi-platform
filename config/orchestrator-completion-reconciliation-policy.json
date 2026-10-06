@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 3,
+  "policyId": "EKODI-ORCHESTRATOR-COMPLETION-001",
+  "status": "enforced",
+  "owner": "ekodi-orchestrator",
+  "principle": "completion-follows-verified-production-evidence-not-agent-claims",
+  "scope": "all-orchestrator-deployment-tasks",
+  "authority": {
+    "externalAiMayMarkCompleted": false,
+    "requesterMayForgeEvidence": false,
+    "orchestratorOwnsTerminalTransition": true,
+    "requesterIsolationRequired": true,
+    "issuedBranchMatchRequired": true,
+    "githubActionsOidcRequiredForPushEvidence": true,
+    "staticGitHubTokenRequired": false
+  },
+  "requiredEvidence": {
+    "mergedPullRequestToMain": true,
+    "requiredCiWorkflowSuccess": [
+      "CI",
+      "EKODI AI Orchestration Gate"
+    ],
+    "allTriggeredDeployWorkflowsMustSucceed": true,
+    "stagingSuccessRequired": true,
+    "productionPromotionSuccessRequired": true,
+    "liveProductionHealthRequired": true,
+    "authenticatedGitHubReverificationRequired": true,
+    "ekodiLiveHealthReverificationRequired": true,
+    "internalCanonicalHealthHandlerRequired": true,
+    "completionWorkerSelfFetchForbidden": true,
+    "workflowSpecificStagingEquivalents": {
+      "Deploy CGMA Apex Edge": {
+        "job": "validate",
+        "requiredSteps": [
+          "Validate CGMA edge contract"
+        ],
+        "scope": "cgma-edge-only"
+      }
+    }
+  },
+  "reconciliation": {
+    "getTaskStatusSelfHealsWhenRuntimeGitHubLookupAvailable": true,
+    "githubActionsOidcReceiptBackstopRequired": true,
+    "workflowRunTriggerRequired": true,
+    "scheduledRetryRequired": true,
+    "idempotent": true,
+    "safeToRetry": true,
+    "supersedingSuccessfulDeploymentMayRecoverCancelledOrTransientRelease": true,
+    "commandLedgerAlignedOnCompletion": true,
+    "externalReferencesRecorded": true,
+    "productionEvidencePersisted": true,
+    "completionEventRequired": true,
+    "falseCompletionForbidden": true,
+    "candidateBatchLimit": 50,
+    "candidateFairRotationRequired": true,
+    "newUnattemptedCandidatesPrioritized": true,
+    "deferredCandidatesMustNotStarveNewerTasks": true,
+    "checkedAtMetadataRequired": true,
+    "workflowRunTriggerWorkflows": [
+      "Deploy Control API",
+      "Deploy EKODI Shared Site Core",
+      "Deploy CGMA Apex Edge",
+      "Deploy Business OS"
+    ]
+  },
+  "oidcBoundary": {
+    "issuer": "https://token.actions.githubusercontent.com",
+    "audience": "ekodi-orchestrator-completion",
+    "repository": "topmaster-joseph/ekodi-platform",
+    "ref": "refs/heads/main",
+    "workflow": ".github/workflows/reconcile-orchestrator-completions.yml",
+    "allowedEvents": [
+      "workflow_run",
+      "workflow_dispatch",
+      "schedule"
+    ]
+  },
+  "failureBehavior": {
+    "runtimeGithubLookupUnavailable": "leave-task-nonterminal-and-use-oidc-backstop",
+    "oidcVerificationUnavailable": "leave-task-nonterminal-and-retry",
+    "mergedPrMissing": "leave-task-nonterminal",
+    "requiredWorkflowMissingOrFailed": "leave-task-nonterminal",
+    "deploymentStillRunningOrFailed": "leave-task-nonterminal",
+    "stagingEvidenceMissing": "leave-task-nonterminal",
+    "productionEvidenceMissing": "leave-task-nonterminal",
+    "liveHealthFailed": "leave-task-nonterminal"
+  }
+}

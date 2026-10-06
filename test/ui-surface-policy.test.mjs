@@ -49,17 +49,26 @@ test('shared runtime projects surface identity and keeps admin workspace as scro
   assert.match(governor,/ekodiScrollOwner='workspace'/);assert.match(governor,/overflow-y','auto/);assert.match(governor,/overflow-y','hidden/);
 });
 
-test('seonammedi proves authenticated in-place administration before ecosystem rollout',async()=>{
-  const [app,css,control,siteTests]=await Promise.all([
+test('seonammedi proves shared authenticated in-place administration before ecosystem rollout',async()=>{
+  const [app,voiceAdmin,css,control,siteTests,shared]=await Promise.all([
     read('sites/seonammedi/public/app.js'),
+    read('sites/seonammedi/public/voice-public-admin.js'),
     read('sites/seonammedi/public/app.css'),
     read('seonammedi-admin-control.js'),
     read('test/seonammedi-site.test.mjs'),
+    read('shell/public-surface-admin.js'),
   ]);
   assert.match(app,/initPublicAdminControls/);
-  assert.match(app,/\/api\/seonammedi\/admin\/me/);
-  assert.match(app,/public-admin-drawer/);
-  assert.match(css,/\.public-admin-drawer/);
+  assert.match(app,/window\.EKODIPublicSurfaceAdmin/);
+  assert.match(app,/authEndpoint:'\/api\/seonammedi\/admin\/me'/);
+  assert.match(app,/await admin\.authorize\(\)/);
+  assert.match(app,/admin\.attach/);
+  assert.doesNotMatch(app,/function ensurePublicAdminDrawer|function openPublicAdmin|function attachPublicAdminButton/);
+  assert.doesNotMatch(css,/\.public-admin-drawer|\.public-admin-inline/);
+  assert.match(css,/\.ekodi-public-admin-inline/);
+  assert.match(shared,/window\.EKODIPublicSurfaceAdmin/);
   assert.match(control,/canManage/);
-  assert.match(siteTests,/authenticated section-level admin quick edit without exposing controls to visitors/);
+  assert.match(voiceAdmin,/permissions\?\.voices===true/);
+  assert.match(voiceAdmin,/data-seonammedi-voice-admin/);
+  assert.match(siteTests,/uses shared authenticated inline admin without duplicate citizen-voice CRUD/);
 });

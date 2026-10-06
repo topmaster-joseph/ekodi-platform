@@ -18,6 +18,8 @@ EKODI의 모든 사용자·독립·하위 사이트는 **사용자 화면을 운
 
 전환은 단계적으로 수행한다. 첫 실증 기준은 `seonammedi`이며, 사용자 화면 인라인 관리가 자동화 테스트와 운영 검증을 통과한 기능부터 기존 중복 관리자 UI를 제거한다. 안전한 전환 전까지는 기존 관리자 경로를 복구 가능한 fallback으로 유지한다.
 
+공통 브라우저 런타임은 `shell/public-surface-admin.js`이다. 이 런타임은 권한을 추론하지 않고 각 서비스의 서버가 반환한 permission/capability만 사용해 인라인 버튼과 같은 출처의 관리자 편집 패널을 표시한다. 인증 토큰은 저장하거나 DOM에 노출하지 않으며, 인증 확인과 관리자 대상 경로는 same-origin으로 제한한다.
+
 Desktop administrative surfaces keep primary navigation non-scrolling and use the central workspace as the page-level vertical scroll owner. Mobile may reposition the same navigation while preserving meaning and accessible targets.
 
 The machine-readable source of truth is `config/ui-surface-policy.js`; automated checks must verify runtime surface markers, authority separation, PUBLIC-SURFACE-ADMIN-001, and the staged rollout evidence. All implementation branches remain subject to the EKODI AI orchestration gate and protected-branch workflow.

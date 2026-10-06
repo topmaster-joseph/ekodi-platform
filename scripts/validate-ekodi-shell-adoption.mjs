@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { EKODI_SERVICE_MANIFEST } from '../ekodi-service-manifest.js';
 
-const [ecosystem,domainPolicy,docs,authRouter,clientAuth,siteConfig,platformRouter,platformRouterEntry,theme,shellSource,shellWorker,mobileHeaderSource,injectorSource,userUiStyle,workspaceStyle,responsiveStyle,rootIndex,adminStyle]=await Promise.all([
+const [ecosystem,domainPolicy,docs,authRouter,clientAuth,siteConfig,platformRouter,platformRouterEntry,theme,shellSource,shellWorker,publicSurfaceAdminSource,mobileHeaderSource,injectorSource,userUiStyle,workspaceStyle,responsiveStyle,rootIndex,adminStyle]=await Promise.all([
   readFile(new URL('../config/ecosystem-services.json',import.meta.url),'utf8').then(JSON.parse),
   readFile(new URL('../config/domain-canonical-policy.json',import.meta.url),'utf8').then(JSON.parse),
   readFile(new URL('../docs/ekodi-shell-contract.md',import.meta.url),'utf8'),
@@ -13,6 +13,7 @@ const [ecosystem,domainPolicy,docs,authRouter,clientAuth,siteConfig,platformRout
   readFile(new URL('../shell/theme.json',import.meta.url),'utf8').then(JSON.parse),
   readFile(new URL('../shell/shell.js',import.meta.url),'utf8'),
   readFile(new URL('../ekodi-shell-worker.js',import.meta.url),'utf8'),
+  readFile(new URL('../shell/public-surface-admin.js',import.meta.url),'utf8'),
   readFile(new URL('../shell/mobile-fixed-header.js',import.meta.url),'utf8'),
   readFile(new URL('../ekodi-shell-injector.js',import.meta.url),'utf8'),
   readFile(new URL('../shell/user-ui-shell.css',import.meta.url),'utf8'),
@@ -66,6 +67,9 @@ if(!injectorSource.includes("headers.set('x-ekodi-surface'"))fail('Worker inject
 if(!workspaceStyle.includes('data-ekodi-shell-surface="workspace"'))fail('shared workspace stylesheet must be scoped to internal surfaces');
 
 for(const required of ["headerUrl.pathname='/mobile-fixed-header.js'",'fixedHeader','bundledShell'])if(!shellWorker.includes(required))fail(`Shell Worker lost bundled mobile header runtime: ${required}`);
+for(const required of ["publicSurfaceAdminUrl.pathname='/public-surface-admin.js'","x-ekodi-public-surface-admin","publicSurfaceAdminVersion:2",'publicSurfaceAdmin'])if(!shellWorker.includes(required))fail(`Shell Worker lost public-surface admin runtime: ${required}`);
+for(const required of ['window.EKODIPublicSurfaceAdmin','const VERSION=2','cross_origin_admin_target_forbidden',"headers.set('authorization','Bearer '+bearer)","credentials:'same-origin'",'permissions[key]===true','data-ekodi-public-admin-drawer',"window.open(url.pathname+url.search+url.hash,'_blank','noopener,noreferrer')",'presentation:mode'])if(!publicSurfaceAdminSource.includes(required))fail(`public-surface admin runtime missing security/authority marker: ${required}`);
+for(const required of ['.ekodi-public-admin-inline','.ekodi-public-admin-drawer','ekodi-public-admin-drawer-open'])if(!userUiStyle.includes(required))fail(`shared public-surface admin style missing: ${required}`);
 for(const required of ['position:fixed!important','ResizeObserver','data-ekodi-mobile-header-spacer','safe-area-inset-top','.site-header','.topbar'])if(!mobileHeaderSource.includes(required))fail(`mobile header runtime missing: ${required}`);
 for(const required of ['position:fixed!important','left:0!important','right:0!important','safe-area-inset-top']){
   if(!compactUserUiStyle.includes(required))fail(`shared CSP-safe user chrome contract missing: ${required}`);

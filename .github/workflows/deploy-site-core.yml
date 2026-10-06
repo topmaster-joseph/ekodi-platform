@@ -79,6 +79,19 @@ on:
       - 'sites/seonammedi/public/**'
       - 'seonammedi-monitor.js'
       - 'seonammedi-civic-control.js'
+      - 'common-board-adapter.js'
+      - 'site-board-control.js'
+      - 'test/board-independence-forced-rule.test.mjs'
+      - 'board-runtime-guard.js'
+      - 'replaceable-board-provider.js'
+      - 'board-engine-registry.js'
+      - 'config/replaceable-board-engine-policy.json'
+      - 'config/module-first-policy.json'
+      - 'resilience-continuity.js'
+      - 'config/resilience-continuity-policy.json'
+      - 'config/operator-zero-maintenance-policy.json'
+      - 'scripts/validate-resilience-continuity.mjs'
+      - 'test/resilience-continuity.test.mjs'
       - 'write-ingress.js'
       - 'config/write-ingress-policy.json'
       - 'scripts/validate-write-ingress-policy.mjs'
@@ -256,6 +269,7 @@ on:
       - 'scripts/ekodi-background-browser-worker.mjs'
       - 'scripts/validate-background-browser-worker.mjs'
       - 'config/background-browser-worker-policy.json'
+      - 'config/board-surface-verification.json'
       - 'config/surface-system-verification-policy.json'
       - '.github/workflows/ekodi-background-browser-worker.yml'
       - '.github/workflows/verify-admin-production-ui-e2e.yml'
@@ -474,7 +488,7 @@ jobs:
       - name: Validate current shared site and admin sources
         run: |
           set -euo pipefail
-          for f in site-worker.js seonammedi-monitor.js seonammedi-civic-control.js write-ingress.js scripts/validate-write-ingress-policy.mjs sites/seonammedi/public/app.js tenant-live-page.js tenant-live.js tenant-live-admin-page.js learning-page.js invest-site-system.js invest-personal-control.js invest-admin.js platform-router-entry-worker.js platform-security-policy.js canonical-surface-router.js store-gateway-page.js store-portfolio-admin-page.js preview-page.js insurance-public-route.js sites/ekodi-insurance/public/advisor.js sites/ekodi-insurance/public/server-bridge.js marketing-canonical-projection.js workspace-admin-page.js tenant-finance-admin.js organization-admin-page.js tenant-admin-policy.js store-admin-engine.js church-pastor-admin-page.js church-member-home-page.js church-reports-admin.js workspace-trade-admin-page.js workspace-trade-portal.js mail-user-page.js mail-contact.js mail-admin-page.js tax-portal-worker.js tax-business-registry.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-provider-control.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-bootstrap.js auth-site/auth-entry.js auth-site/auth-workspace-target.js auth-site/client-auth.js marketing-ai-admin.js admin-authenticated-shell.js external-account-admin.js admin-assist-bootstrap.js admin-assist-dock.js admin-readable-command.js admin-central-handoff.js finance-monitor.js admin-demand-loader.js admin-public-site-controls.js client-access.js social-admin.js books-admin.js books-finance-admin.js books-distribution-admin.js books-pipeline-admin.js books-pipeline-bridge.js books-royalty-admin.js author-billing-admin.js ai-ops-admin.js devotional-admin.js ai-management-admin.js ai-module-spec-admin.js communication-admin.js openai-workspace-admin.js common-services-admin.js storage-admin.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js ekodibiz-admin-registry.js admin-design-engine.js campus-actions.js discovery-layer.js scripts/discovery-build.mjs scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/cloudflare-production-budget.mjs scripts/cloudflare-quota-guard-lib.mjs scripts/ensure-church-route-ownership.mjs scripts/admin-authenticated-e2e.mjs scripts/admin-assist-canonical-e2e.mjs scripts/admin-readable-command-postbuild.mjs scripts/admin-authenticated-e2e-retry.mjs scripts/admin-authenticated-e2e-menu-worker.mjs scripts/verify-ekodimission-admin-production-e2e.mjs scripts/verify-admin-provider-control-production.mjs scripts/validate-user-ui-dna.mjs scripts/validate-design-engine.mjs admin-language-status.js; do
+          for f in site-worker.js seonammedi-monitor.js seonammedi-civic-control.js common-board-adapter.js site-board-control.js board-runtime-guard.js replaceable-board-provider.js board-engine-registry.js write-ingress.js scripts/validate-write-ingress-policy.mjs sites/seonammedi/public/app.js tenant-live-page.js tenant-live.js tenant-live-admin-page.js learning-page.js invest-site-system.js invest-personal-control.js invest-admin.js platform-router-entry-worker.js platform-security-policy.js canonical-surface-router.js store-gateway-page.js store-portfolio-admin-page.js preview-page.js insurance-public-route.js sites/ekodi-insurance/public/advisor.js sites/ekodi-insurance/public/server-bridge.js marketing-canonical-projection.js workspace-admin-page.js tenant-finance-admin.js organization-admin-page.js tenant-admin-policy.js store-admin-engine.js church-pastor-admin-page.js church-member-home-page.js church-reports-admin.js workspace-trade-admin-page.js workspace-trade-portal.js mail-user-page.js mail-contact.js mail-admin-page.js tax-portal-worker.js tax-business-registry.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-provider-control.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-bootstrap.js auth-site/auth-entry.js auth-site/auth-workspace-target.js auth-site/client-auth.js marketing-ai-admin.js admin-authenticated-shell.js external-account-admin.js admin-assist-bootstrap.js admin-assist-dock.js admin-readable-command.js admin-central-handoff.js finance-monitor.js admin-demand-loader.js admin-public-site-controls.js client-access.js social-admin.js books-admin.js books-finance-admin.js books-distribution-admin.js books-pipeline-admin.js books-pipeline-bridge.js books-royalty-admin.js author-billing-admin.js ai-ops-admin.js devotional-admin.js ai-management-admin.js ai-module-spec-admin.js communication-admin.js openai-workspace-admin.js common-services-admin.js storage-admin.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js ekodibiz-admin-registry.js admin-design-engine.js campus-actions.js discovery-layer.js scripts/discovery-build.mjs scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/cloudflare-production-budget.mjs scripts/cloudflare-quota-guard-lib.mjs scripts/ensure-church-route-ownership.mjs scripts/admin-authenticated-e2e.mjs scripts/admin-assist-canonical-e2e.mjs scripts/admin-readable-command-postbuild.mjs scripts/admin-authenticated-e2e-retry.mjs scripts/admin-authenticated-e2e-menu-worker.mjs scripts/verify-ekodimission-admin-production-e2e.mjs scripts/verify-admin-provider-control-production.mjs scripts/validate-user-ui-dna.mjs scripts/validate-design-engine.mjs admin-language-status.js; do
             node --check "$f"
           done
           node --test test/local-region-platform.test.mjs test/local-region-operations.test.mjs test/local-region-enforcement.test.mjs test/local-region-content-ledger.test.mjs
@@ -751,8 +765,8 @@ jobs:
               /^\[\[queues\.consumers\]\]$/ { skip=1; next }
               skip && /^\[/ { skip=0 }
               !skip { print }
-            ' wrangler.site.toml > /tmp/wrangler.site.pre-candidate.toml
-            npx --yes wrangler@4.119.0 triggers deploy --config /tmp/wrangler.site.pre-candidate.toml
+            ' wrangler.site.toml > wrangler.site.pre-candidate.toml
+            npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.pre-candidate.toml
             payload=$(read_domains)
           fi
           root_host='ekodi.kr'
@@ -773,13 +787,35 @@ jobs:
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
 
       - name: Finalize durable write queue consumer trigger
-        if: steps.quota.outputs.skip_nonessential != 'true'
+        # Queue consumption is part of the durable public-write contract, not a
+        # nonessential probe. POST acceptance without an attached consumer can
+        # strand accepted writes until a later release.
         shell: bash
         run: |
           set -euo pipefail
           # The guarded release above has now promoted code containing the
           # queue(batch, env) handler, so attaching the consumer is safe.
           npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
+          # triggers deploy manages routes/domains/cron, not Queue consumers.
+          consumer_present() {
+            npx --yes wrangler@4.119.0 queues consumer worker list ekodi-write-ingress --json \
+              | jq -e '.. | strings | select(. == "shy-thunder-39a4")' >/dev/null
+          }
+          if ! consumer_present; then
+            set +e
+            consumer_add_output="$(npx --yes wrangler@4.119.0 queues consumer worker add ekodi-write-ingress shy-thunder-39a4 --batch-size 50 --batch-timeout 1 --message-retries 5 --dead-letter-queue ekodi-write-ingress-dlq 2>&1)"
+            consumer_add_status=$?
+            set -e
+            if [ "$consumer_add_status" -ne 0 ]; then
+              if printf '%s' "$consumer_add_output" | grep -Eq "already has a consumer|code: 11004|\[code: 11004\]"; then
+                echo "Queue consumer already exists; verifying desired worker binding."
+              else
+                printf '%s\n' "$consumer_add_output" >&2
+                exit "$consumer_add_status"
+              fi
+            fi
+          fi
+          consumer_present
           npx --yes wrangler@4.119.0 queues list | grep -Fq 'ekodi-write-ingress'
           npx --yes wrangler@4.119.0 queues list | grep -Fq 'ekodi-write-ingress-dlq'
           echo 'durableWriteQueueConsumer=attached'
@@ -958,6 +994,7 @@ jobs:
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       surface_paths: /,/my/,/admin/,/ekodimall/admin
+      surface_registry: config/board-surface-verification.json
       device_profile: desktop
 
   native_surface_verification_mobile:
@@ -966,6 +1003,7 @@ jobs:
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       surface_paths: /,/my/,/admin/,/ekodimall/admin
+      surface_registry: config/board-surface-verification.json
       device_profile: mobile-portrait
 
   authenticated_admin_surface_verification:

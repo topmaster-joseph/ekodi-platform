@@ -9,6 +9,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const validator = path.join(root, 'scripts', 'validate-ekodi-ai-change-orchestration.mjs');
 const sha = '1111111111111111111111111111111111111111';
+const receiptTaskId = 'orch_00000000-0000-4000-8000-000000000001';
+const receiptBranchRef = `ai/gpt-5-6-sol/${receiptTaskId}`;
 
 function run(provenance, { message = 'squashed change', lookup = null, branch = 'main' } = {}) {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'ekodi-ai-provenance-'));
@@ -26,7 +28,7 @@ function run(provenance, { message = 'squashed change', lookup = null, branch = 
       GITHUB_EVENT_NAME: 'push',
       GITHUB_REF_NAME: branch,
       GITHUB_EVENT_PATH: eventPath,
-      GITHUB_REPOSITORY: 'topmaster-joseph/ekodi-platform',
+      GITHUB_REPOSITORY: 'fixture/ekodi-platform',
       GITHUB_RUN_ID: 'provenance-test',
       GITHUB_SHA: sha,
       GITHUB_ACTOR: 'topmaster-joseph',
@@ -62,7 +64,7 @@ globalThis.fetch = async (url, options = {}) => {
       GITHUB_EVENT_NAME: 'push',
       GITHUB_REF_NAME: 'main',
       GITHUB_EVENT_PATH: eventPath,
-      GITHUB_REPOSITORY: 'topmaster-joseph/ekodi-platform',
+      GITHUB_REPOSITORY: 'fixture/ekodi-platform',
       GITHUB_API_URL: 'https://api.github.test',
       GITHUB_RUN_ID: 'restricted-token-fallback-test',
       GITHUB_SHA: sha,
@@ -83,7 +85,7 @@ function validPr(overrides = {}) {
     merged_at: '2026-09-09T00:00:00Z',
     merge_commit_sha: sha,
     base: { ref: 'main' },
-    head: { ref: 'ai/gpt-5-6-sol/provenance-test' },
+    head: { ref: receiptBranchRef },
     ...overrides,
   };
 }

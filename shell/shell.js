@@ -36,7 +36,7 @@ const handedTenant=fragment.get('ekodi_tenant')||'';
 const handedStore=fragment.get('ekodi_store')||'';
 
 const FALLBACK_THEME={
-  version:6,
+  version:7,
   workspace:{background:'#071522',surface:'#0B1D2E',surfaceRaised:'#10263A',border:'#24425E',text:'#F4F7FB',muted:'#9FB1C3',focus:'#8EC8FF',radius:'16px'},
   rules:{
     stableSurfaces:['workspace','admin','form','document','data'],
@@ -403,6 +403,7 @@ function buildUi(){
 function refreshThemeCycle(){if(!service)return;applyHostTokens();render();}
 
 function applyProgressiveHomeFocus(){
+  if(document.documentElement.dataset.ekodiProgressiveHome==='off')return;
   if(!service){document.documentElement.dataset.ekodiVisualState='ready';return;}
   const requested=document.documentElement.dataset.ekodiHomeFocusRequest==='v1';
   if(!requested&&(surface!=='public'||['church','ekodi'].includes(service.id)))return;

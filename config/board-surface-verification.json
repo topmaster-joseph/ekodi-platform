@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-BOARD-NATIVE-VERIFY-001",
+  "status": "enforced",
+  "owner": "ekodi-orchestrator",
+  "canonicalOrigin": "https://ekodi.kr",
+  "maxPaths": 12,
+  "readOnly": true,
+  "devices": [
+    "desktop",
+    "mobile-portrait"
+  ],
+  "surfaces": [
+    {
+      "id": "seonammedi.citizen_voice",
+      "path": "/seonammedi/#voices",
+      "enabled": true,
+      "kind": "board"
+    },
+    {
+      "id": "seonammedi.notice",
+      "path": "/seonammedi/#notices",
+      "enabled": true,
+      "kind": "board"
+    },
+    {
+      "id": "community",
+      "path": "/community/",
+      "enabled": true,
+      "kind": "board"
+    },
+    {
+      "id": "journal.posts",
+      "path": "/journal",
+      "enabled": true,
+      "kind": "board"
+    },
+    {
+      "id": "ekodimission.activity_archive",
+      "path": "/ekodimission/activities/261003-autumn-community-trip/archive",
+      "enabled": false,
+      "kind": "activity-results",
+      "verificationNote": "bounded-browser-budget"
+    },
+    {
+      "id": "ekodimission.board",
+      "path": "/ekodimission/board",
+      "enabled": true,
+      "kind": "board"
+    },
+    {
+      "id": "ekodichurch.board",
+      "path": "/ekodichurch/board",
+      "enabled": true,
+      "kind": "board"
+    },
+    {
+      "id": "cheonggye.board",
+      "path": "/cheonggye/board",
+      "enabled": true,
+      "kind": "board"
+    },
+    {
+      "id": "cgma.board",
+      "path": "/cgma/board",
+      "enabled": true,
+      "kind": "board"
+    },
+    {
+      "id": "community.board",
+      "path": "/community/board",
+      "enabled": false,
+      "kind": "board",
+      "verificationNote": "covered-by-community-legacy-and-route-tests"
+    },
+    {
+      "id": "seonammedi.board",
+      "path": "/seonammedi/board",
+      "enabled": true,
+      "kind": "board"
+    }
+  ],
+  "expansionRule": "register-active-board-surface-without-editing-browser-workflow"
+}

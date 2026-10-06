@@ -20,7 +20,7 @@
 <header class="site-header">
   <a class="brand" href="/seonammedi/"><strong>서남권 국립의대 소통센터</strong><small>서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널</small></a>
   <nav aria-label="주요 메뉴">
-    <a href="#timeline" data-view-link="status">활동이력</a><a href="#channels" data-view-link="channels">소통채널</a><a href="#voices" data-view-link="voices">시민의견</a><a href="#finance" data-view-link="finance">회계</a><a href="#notices" data-view-link="notices">공지</a><a href="#organization" data-view-link="organization">조직</a>
+    <a href="#timeline" data-view-link="status">활동이력</a><a href="#channels" data-view-link="channels">소통채널</a><a href="/board">시민의견</a><a href="#finance" data-view-link="finance">회계</a><a href="#notices" data-view-link="notices">공지</a><a href="#organization" data-view-link="organization">조직</a>
   </nav>
 </header>
 <main>
@@ -31,29 +31,44 @@
   <div class="meta"><span id="lastUpdated">업데이트 확인 중</span></div>
   <aside id="homeSpotlight" class="home-spotlight" aria-label="최근 공지와 진행 중인 행사" hidden></aside>
   <section id="homeLatestUpdates" class="home-latest-updates" aria-labelledby="homeLatestTitle" hidden>
-    <div class="home-latest-head"><div><p class="eyebrow">LATEST UPDATES</p><h2 id="homeLatestTitle">최근 업데이트</h2></div><span id="homeLatestUpdatedAt" class="badge">1시간마다 자동 갱신</span></div>
+    <div class="home-latest-head"><div><h2 id="homeLatestTitle">최근 업데이트</h2></div><span id="homeLatestUpdatedAt" class="badge">1시간마다 자동 갱신</span></div>
     <div id="homeLatestList" class="home-latest-list"></div>
   </section>
 </section>
 
 <section id="organization" class="section" data-view-section="organization" hidden>
-  <div class="section-head"><div><p class="eyebrow">ORGANIZATION</p><h2>조직</h2></div><span class="badge">공개 조직도</span></div>
+  <div class="section-head"><div><p class="eyebrow">ORGANIZATION</p><h2>조직</h2></div><div class="section-head-actions"><span class="badge">공개 조직도</span><button id="organizationManageToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="organizationManageForm">조직 바로 수정</button></div></div>
   <p class="note">통합 대책위·시민단체연대·목포대 조직을 구분해 표시합니다. 공개가 확인된 구성만 노출하며 참여단체는 가나다순으로 정렬합니다.</p>
   <div id="organizationTabs" class="filters organization-tabs" role="tablist" aria-label="조직 구분"></div>
+  <form id="organizationManageForm" class="panel organization-manage-form module-compose" hidden>
+    <input type="hidden" name="orgKey" value="bidae">
+    <strong id="organizationManageTitle">비대위 조직 수정</strong>
+    <label>상태 문구<input name="statusLabel" maxlength="180" placeholder="필요한 경우에만 표시"></label>
+    <div class="organization-form-grid">
+      <label>대표자회의<textarea name="representatives" rows="4" placeholder="한 줄에 한 명"></textarea></label>
+      <label>상임공동대표단<textarea name="standing" rows="4" placeholder="한 줄에 한 명"></textarea></label>
+      <label>집행위원회<textarea name="executive" rows="4" placeholder="한 줄에 한 명"></textarea></label>
+    </div>
+    <label>분과·위원회<textarea name="committees" rows="4" placeholder="위원회명 | 담당자"></textarea></label>
+    <label>참여단체<textarea name="participants" rows="5" placeholder="단체명 | 대표자 | https://주소"></textarea></label>
+    <div class="form-actions"><button type="submit">저장</button><button id="organizationManageCancel" type="button" class="secondary">취소</button><span id="organizationManageMessage" class="muted" role="status"></span></div>
+  </form>
   <div id="organizationChart" class="organization-chart"></div>
   <div class="section-head participant-head"><div><p class="eyebrow">PARTICIPATING ORGANIZATIONS</p><h3>참여단체</h3></div></div>
   <div id="participantOrganizations" class="participant-organizations"></div>
 </section>
 
 <section id="timeline" class="section activity-list-only" data-view-section="status" data-status-pane="timeline" hidden>
-  <div class="filters" id="timelineFilters" aria-label="활동이력 세부 분류"></div>
+  <div class="activity-toolbar"><div class="filters" id="timelineFilters" aria-label="활동이력 세부 분류"></div><button id="timelineAdminEdit" class="ekodi-public-admin-inline" type="button" hidden>활동이력 관리</button></div>
   <div id="timelineList" class="timeline"></div>
 </section>
 
-<section id="notices" class="section" data-view-section="notices" hidden>
-  <div class="section-head"><div><p class="eyebrow">NOTICE BOARD</p><h2>공지</h2></div><button id="noticeWriteButton" class="notice-write-button" type="button">게시글 작성</button></div>
-  <p class="note">Google 계정으로 로그인한 등록 사용자는 사진과 글을 게시할 수 있습니다. 게시물은 개별 링크로 열고 공유할 수 있습니다.</p>
-  <form id="noticeComposeForm" class="notice-compose" hidden>
+<section id="notices" class="section module-section" data-view-section="notices" hidden>
+  <div class="module-shell">
+    <aside class="module-intro"><p class="eyebrow">NOTICE BOARD</p><h2>공지</h2><p class="note">Google 계정으로 로그인한 등록 사용자는 사진과 글을 게시할 수 있습니다. 중요 소식과 공식 안내는 개별 링크로 열고 공유할 수 있습니다.</p></aside>
+    <div class="module-main">
+      <div class="module-toolbar"><span class="muted">최신 공지부터 표시합니다.</span><button id="noticeWriteButton" class="module-primary notice-write-button" type="button">게시글 작성</button></div>
+  <form id="noticeComposeForm" class="notice-compose module-compose" hidden>
     <label>제목<input name="title" maxlength="180" required placeholder="제목을 입력하세요"></label>
     <label>파일첨부 (사진 최대 5장)<input id="noticeImages" name="images" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple><small>첨부 시 장당 5MB 이하로 자동 최적화합니다. JPG·PNG·WEBP·GIF · 최대 5장 · 선택 후 개별 삭제 가능</small></label>
     <div id="noticeImagePreview" class="notice-image-preview" aria-live="polite"></div>
@@ -62,6 +77,8 @@
   </form>
   <div id="noticeDetail" class="notice-detail" hidden></div>
   <div id="noticeList" class="notice-list"><p class="muted">공지를 불러오는 중입니다.</p></div>
+    </div>
+  </div>
 </section>
 
 <section id="materials" class="section records-materials" data-view-section="status" data-status-pane="materials" hidden>
@@ -74,28 +91,6 @@
   <p class="filter-label" id="statusMaterialFilterLabel">관련보도 세부 분류</p>
   <div class="filters" id="materialFilters" aria-label="관련보도 세부 분류"></div>
   <div id="materialList" class="material-list"></div>
-</section>
-
-<section id="voices" class="section" data-view-section="voices" hidden>
-  <div class="section-head">
-    <div><p class="eyebrow">CITIZEN VOICES</p><h2>시민의견</h2><p>등록된 시민의견은 별도 검토 대기 없이 바로 게시됩니다. 연락처·이메일은 공개하지 않습니다.</p></div>
-  </div>
-  <div class="voice-layout">
-    <form id="voiceForm" class="panel voice-form">
-      <strong>시민의견 등록</strong>
-      <label>유형<select name="category"><option value="question">질문</option><option value="proposal">정책제안</option><option value="experience">의료경험</option><option value="factcheck">사실확인 요청</option><option value="tip">자료제보</option><option value="other">기타</option></select></label>
-      <label>이름 또는 표시명<input name="name" maxlength="80" placeholder="익명 가능"></label>
-      <label>연락처 또는 이메일<input name="contact" maxlength="160" placeholder="답변이 필요한 경우에만 입력 · 공개되지 않음"></label>
-      <label>내용<textarea name="message" maxlength="3000" required></textarea></label>
-      <label class="check"><input type="checkbox" name="privacyConsent" required> 등록·답변을 위한 개인정보 처리에 동의합니다.</label>
-      <div class="form-actions"><button type="submit">등록하기</button><span id="voiceStatus" role="status"></span></div>
-      <p class="muted">등록 즉시 아래 시민의견 목록에 공개됩니다. 개인정보·연락처는 공개 목록에 표시하지 않습니다.</p>
-    </form>
-    <section class="voice-board" aria-labelledby="voiceBoardTitle">
-      <div class="card-head"><h3 id="voiceBoardTitle">등록된 시민의견</h3><button id="reloadVoices" type="button" class="secondary">새로고침</button></div>
-      <div id="publicVoiceList" class="public-voice-list" aria-live="polite"><p class="muted">시민의견을 불러오는 중입니다.</p></div>
-    </section>
-  </div>
 </section>
 
 <section id="channels" class="section" data-view-section="channels" hidden>
@@ -117,19 +112,29 @@
   </div>
 </section>
 
-<section id="finance" class="section" data-view-section="finance" hidden>
-  <div class="section-head"><div><p class="eyebrow">TRANSPARENCY</p><h2>회계</h2></div></div>
-  <div class="money-grid">
-    <article><span>누적 모금</span><strong id="raised">자료 입력 전</strong></article>
-    <article><span>누적 지출</span><strong id="spent">자료 입력 전</strong></article>
-    <article><span>현재 잔액</span><strong id="balance">자료 입력 전</strong></article>
+<section id="finance" class="section module-section" data-view-section="finance" hidden>
+  <div class="module-shell">
+    <aside class="module-intro"><p class="eyebrow">TRANSPARENCY</p><h2>회계</h2><p class="note">수입·지출 일자, 금액, 목적, 관련 행사와 증빙 여부를 공개합니다. 개인 후원자의 개인정보는 공개하지 않습니다.</p></aside>
+    <div class="module-main">
+      <div class="money-grid">
+        <article><span>누적 모금</span><strong id="raised">자료 입력 전</strong></article>
+        <article><span>누적 지출</span><strong id="spent">자료 입력 전</strong></article>
+        <article><span>현재 잔액</span><strong id="balance">자료 입력 전</strong></article>
+      </div>
+      <div class="module-toolbar"><div><strong>공개 회계내역</strong><span class="muted">최근 내역부터 확인할 수 있습니다.</span></div><button id="financeManageToggle" class="module-primary" type="button" hidden aria-expanded="false" aria-controls="financeManageForm">내역 추가</button></div>
+      <form id="financeManageForm" class="panel finance-manage-form module-compose" hidden>
+        <input type="hidden" name="id">
+        <strong id="financeManageTitle">회계내역 추가</strong>
+        <div class="finance-form-row"><label>일자<input name="date" type="date" required></label><label>구분<select name="type"><option value="income">수입</option><option value="expense">지출</option></select></label><label>금액<input name="amount" type="number" min="0" step="1" required></label></div>
+        <label>목적·내용<input name="purpose" maxlength="500" required></label>
+        <label>관련 행사<input name="event" maxlength="300"></label>
+        <div class="finance-form-row"><label>증빙<select name="evidenceStatus"><option value="none">미등록</option><option value="held">증빙보유</option><option value="verified">확인완료</option></select></label><label class="check"><input type="checkbox" name="visible" checked> 사용자페이지 공개</label></div>
+        <label>공개 메모<textarea name="note" rows="4" maxlength="1000"></textarea></label>
+        <div class="form-actions"><button type="submit">저장</button><button id="financeManageCancel" type="button" class="secondary">취소</button><span id="financeManageMessage" class="muted" role="status"></span></div>
+      </form>
+      <div id="financeList" class="finance-list"><p class="muted">회계내역을 불러오는 중입니다.</p></div>
+    </div>
   </div>
-  <div class="panel">
-    <strong>공개 항목</strong>
-    <p>수입·지출 일자, 금액, 목적, 관련 행사, 증빙 여부를 공개합니다. 개인 후원자의 전화번호·주소·계좌번호 등 개인정보는 공개하지 않습니다.</p>
-  </div>
-  <div class="section-head finance-history-head"><div><p class="eyebrow">ACCOUNTING LEDGER</p><h3>공개 회계내역</h3></div></div>
-  <div id="financeList" class="finance-list"><p class="muted">회계내역을 불러오는 중입니다.</p></div>
 </section>
 </main>
 <footer>
@@ -137,4 +142,5 @@
   <a href="/seonammedi/admin/">관리</a>
 </footer>
 <script src="/seonammedi/app.js" defer></script>
+<script src="/seonammedi/voice-public-admin.js" defer></script>
 </body></html>

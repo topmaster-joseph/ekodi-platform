@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import platformRouter from '../platform-router-entry-worker.js';
 const root=new URL('../sites/seonammedi/public/',import.meta.url);
-test('seonammedi notice login uses central EKODI auth and preserves customer-domain return',async()=>{const [app,auth,policy]=await Promise.all([readFile(new URL('app.js',root),'utf8'),readFile(new URL('../auth-site/auth.js',import.meta.url),'utf8'),readFile(new URL('../config/site-execution-enforcement.json',import.meta.url),'utf8')]);assert.match(app,/new URL\('https:\/\/ekodi\.kr\/auth\/'\)/);assert.doesNotMatch(app,/new URL\('\/auth\/',location\.origin\)/);assert.match(app,/return_to',location\.origin\+'\/seonammedi\/\?compose=notice#notices'/);assert.match(auth,/https:\/\/seonammedi\.kr/);assert.match(auth,/서남권국립의대\.kr/);const parsed=JSON.parse(policy);assert.equal(parsed.authenticationEntry?.status,'enforced');assert.equal(parsed.authenticationEntry?.siteLocalAuthPathForbidden,true);assert.equal(parsed.authenticationEntry?.perSiteOptOutAllowed,false);});
+test('seonammedi notice login uses central EKODI auth and preserves customer-domain return',async()=>{const [app,auth,policy]=await Promise.all([readFile(new URL('app.js',root),'utf8'),readFile(new URL('../auth-site/auth.js',import.meta.url),'utf8'),readFile(new URL('../config/site-execution-enforcement.json',import.meta.url),'utf8')]);assert.match(app,/new URL\('https:\/\/ekodi\.kr\/auth\/'\)/);assert.doesNotMatch(app,/new URL\('\/auth\/',location\.origin\)/);assert.match(app,/return_to',location\.origin\+'\/\?compose=notice#notices'/);assert.match(auth,/https:\/\/seonammedi\.kr/);assert.match(auth,/서남권국립의대\.kr/);const parsed=JSON.parse(policy);assert.equal(parsed.authenticationEntry?.status,'enforced');assert.equal(parsed.authenticationEntry?.siteLocalAuthPathForbidden,true);assert.equal(parsed.authenticationEntry?.perSiteOptOutAllowed,false);});
 
 
 test('seonammedi notice auth handoff returns to the notice composer instead of activity history',async()=>{
@@ -43,7 +43,7 @@ test('seonammedi post-selection timeline migration reconciles production D1',asy
 
 test('seonammedi civic channel keeps source attribution, media evidence and privacy boundaries',async()=>{const [html,data,app]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('data.json',root),'utf8'),readFile(new URL('app.js',root),'utf8')]);assert.match(html,/사실은 출처와 함께/);assert.match(html,/<h2>회계<\/h2>/);assert.match(html,/개인정보/);const parsed=JSON.parse(data);assert.ok(parsed.timeline.length>=10);assert.ok(parsed.sources.every(s=>s.publisher&&s.url));assert.equal(parsed.finance.raised,null);assert.equal(parsed.mediaPolicy.mode,'source-link-first');for(const row of parsed.timeline){assert.ok(Array.isArray(row.links));assert.ok(Array.isArray(row.media));for(const media of row.media){assert.ok(['photo','video'].includes(media.type));assert.match(media.url,/^https:\/\//);assert.ok(media.source)}}assert.ok(parsed.timeline.some(row=>row.media.some(media=>media.type==='photo')));assert.match(app,/mediaLabel/);assert.match(app,/safeUrl/);});
 
-test('canonical path, assets and feedback API use seonammedi',async()=>{const [html,app,build,router,wrangler]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('../scripts/build.mjs',import.meta.url),'utf8'),readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8'),readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8')]);assert.match(html,/https:\/\/ekodi\.kr\/seonammedi\//);assert.match(html,/\/seonammedi\/app\.css/);assert.match(app,/\/api\/seonammedi\/voices/);assert.match(build,/sites\/seonammedi\/public/);assert.match(router,/SEONAMMEDI_PREFIX='\/seonammedi'/);assert.match(router,/DELETED_SEONAM_PREFIXES/);const workerFirst=(wrangler.match(/run_worker_first = \[(.*?)\]/s)?.[1].match(/\"[^\"]+\"/g)||[]);assert.ok(workerFirst.length<=100);assert.doesNotMatch(wrangler,/\"\/seonammedi\\\*\"/);assert.doesNotMatch(wrangler,/\"\/seonam-med\\\*\"/);assert.doesNotMatch(wrangler,/crons\s*=/);assert.doesNotMatch(html,/사이트 일일점검|monitorBadge|id="monitor"/);assert.match(app,/\/api\/seonammedi\/monitor/);});
+test('canonical path, assets and feedback API use seonammedi',async()=>{const [html,app,build,router,wrangler]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('../scripts/build.mjs',import.meta.url),'utf8'),readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8'),readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8')]);assert.match(html,/https:\/\/ekodi\.kr\/seonammedi\//);assert.match(html,/\/seonammedi\/app\.css/);assert.match(app,/\/board\/api\/posts/);assert.match(build,/sites\/seonammedi\/public/);assert.match(router,/SEONAMMEDI_PREFIX='\/seonammedi'/);assert.match(router,/DELETED_SEONAM_PREFIXES/);const workerFirst=(wrangler.match(/run_worker_first = \[(.*?)\]/s)?.[1].match(/\"[^\"]+\"/g)||[]);assert.ok(workerFirst.length<=100);assert.doesNotMatch(wrangler,/\"\/seonammedi\\\*\"/);assert.doesNotMatch(wrangler,/\"\/seonam-med\\\*\"/);assert.doesNotMatch(wrangler,/crons\s*=/);assert.doesNotMatch(html,/사이트 일일점검|monitorBadge|id="monitor"/);assert.match(app,/\/api\/seonammedi\/monitor/);});
 
 test('seonammedi civic canonical D1 table is provisioned by additive migration',async()=>{const [migration,durableMigration,civic]=await Promise.all([readFile(new URL('../migrations/0115_seonammedi_civic_canonical.sql',import.meta.url),'utf8'),readFile(new URL('../migrations/0118_seonammedi_voice_durable_ingress.sql',import.meta.url),'utf8'),readFile(new URL('../seonammedi-civic-control.js',import.meta.url),'utf8')]);assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_civic_voices/);assert.match(migration,/idx_seonammedi_civic_voices_created/);assert.doesNotMatch(migration,/DROP TABLE|ALTER TABLE .* RENAME/);assert.match(durableMigration,/ADD COLUMN submission_key/);assert.match(durableMigration,/idx_seonammedi_civic_voices_submission/);assert.doesNotMatch(durableMigration,/DROP TABLE|ALTER TABLE .* RENAME/);assert.match(civic,/await ensureSubmissionKey\(db\)/);});
 
@@ -109,7 +109,7 @@ test('seonammedi admin stays site-local before and after Google authentication',
   assert.match(adminHtml,/운영홈/);
   assert.doesNotMatch(adminHtml,/admin\/sites\/workspace|route=workspace&source=seonammedi|http-equiv="refresh"/);
   assert.match(adminJs,/site','portal'/);
-  assert.match(adminJs,/return_to',location\.origin\+'\/seonammedi\/admin\/'/);
+  assert.match(adminJs,/return_to',location\.origin\+'\/admin\/'/);
   assert.match(adminJs,/CENTRAL_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token'/);
   assert.match(adminJs,/localStorage\.getItem\(CENTRAL_SESSION_KEY\)/);
   assert.doesNotMatch(adminJs,/cdn\.jsdelivr\.net|createClient\(/);
@@ -169,7 +169,7 @@ test('timeline admin is seeded, permissioned and public materials use central ca
   assert.match(app,/\/api\/seonammedi\/timeline/);
   assert.doesNotMatch(adminHtml,/data-panel-target="timeline"/);
   assert.doesNotMatch(adminHtml,/data-panel-target="content"/);
-  assert.match(adminHtml,/data-panel-target="status"[^>]*>현재상황<\/button>/);
+  assert.doesNotMatch(adminHtml,/data-panel-target="status"[^>]*>현재상황<\/button>/);
   assert.match(adminHtml,/data-records-admin-tab="timeline"[^>]*>활동이력<\/button>/);
   assert.match(adminHtml,/id="timelineForm"/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/timeline/);
@@ -232,20 +232,22 @@ test('seonammedi social channel hub groups channels by platform and supports Tik
   assert.match(control,/youtube-nocookie\.com\/embed/);
 });
 
-test('seonammedi civic voices are manageable from the site admin without exposing contact publicly',async()=>{
-  const [control,adminHtml,adminJs]=await Promise.all([
+test('seonammedi civic voices are managed on the public surface without exposing contact to visitors',async()=>{
+  const [control,adminHtml,voiceAdmin]=await Promise.all([
     readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
     readFile(new URL('../sites/seonammedi/public/admin/index.html',import.meta.url),'utf8'),
-    readFile(new URL('../sites/seonammedi/public/admin/admin.js',import.meta.url),'utf8')
+    readFile(new URL('../sites/seonammedi/public/voice-public-admin.js',import.meta.url),'utf8')
   ]);
   assert.match(control,/VOICE_CAP='seonammedi\.voice\.manage'/);
   assert.match(control,/admin\/voices/);
   assert.match(control,/public_consent_required/);
   assert.match(control,/DELETE/);
-  assert.match(adminHtml,/시민의견 관리/);
-  assert.match(adminHtml,/id="voiceList"/);
-  assert.match(adminJs,/관리자 전용 연락처/);
-  assert.match(adminJs,/publicConsent/);
+  assert.match(adminHtml,/시민의견 운영/);
+  assert.doesNotMatch(adminHtml,/id="voiceList"/);
+  assert.match(adminHtml,/사용자 화면에서 관리/);
+  assert.match(voiceAdmin,/field\('input','contact'/);
+  assert.match(voiceAdmin,/publicConsent/);
+  assert.match(voiceAdmin,/permissions\?\.voices===true/);
 });
 
 test('seonammedi citizen voice admin keeps canonical super-admin access and visible load errors',async()=>{
@@ -301,8 +303,9 @@ test('seonammedi public and admin menus keep the agreed content-first order',asy
   assert.doesNotMatch(html,/<p class="filter-label">활동이력 세부 분류<\/p>/);
   assert.match(html,/data-status-pane="timeline"/);
   assert.match(html,/data-status-pane="materials"/);
-  const adminOrder=['운영홈','현재상황','소통채널','시민의견','회계','공지','조직','내부 회의록','권한·관리자'];
+  const adminOrder=['운영홈','내부 회의록','권한·관리자'];
   cursor=-1;for(const label of adminOrder){const next=adminHtml.indexOf('>'+label+'</button>',cursor+1);assert.ok(next>cursor,'admin menu order: '+label);cursor=next}
+  for(const label of ['현재상황','소통채널','시민의견','회계','공지','조직'])assert.doesNotMatch(adminHtml,new RegExp('data-panel-target="[^"]+"[^>]*>'+label+'<\\/button>'));
   assert.doesNotMatch(adminHtml,/data-panel-target="timeline"|data-panel-target="content"/);
   assert.doesNotMatch(adminHtml,/data-ekodi-site-publication-slot|사이트 공개여부/);
   assert.match(adminHtml,/data-records-admin-tab="timeline"[^>]*>활동이력<\/button>/);
@@ -334,10 +337,13 @@ test('seonammedi full public-menu administration covers status organization mate
   assert.match(app,/const canonicalViewHash=\{status:'timeline'/);
   assert.match(app,/canonicalViewHash\[key\]\|\|key/);
   assert.match(app,/renderMaterialsForStatus\?\.\(isNews\?'관련보도':'공식자료'\)/);
-  assert.match(adminHtml,/id="financeForm"/);
+  assert.doesNotMatch(adminHtml,/id="financeForm"/);
+  assert.match(adminHtml,/회계 관리 권한이 확인되면 공개 회계 화면/);
+  assert.match(html,/id="financeManageForm"/);
+  assert.match(app,/bindPublicFinanceAdmin/);
+  assert.match(app,/\/api\/seonammedi\/admin\/finance/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/pages\/status/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/pages\/organization/);
-  assert.match(adminJs,/\/api\/seonammedi\/admin\/finance/);
   assert.match(control,/PAGE_CAP='seonammedi\.page\.manage'/);
   assert.match(control,/FINANCE_CAP='seonammedi\.finance\.manage'/);
   assert.match(control,/PREFIX\+'\/page-data'/);
@@ -414,7 +420,7 @@ test('seonammedi exposes seeded related channels on public and admin surfaces',a
   assert.match(app,/ArrowLeft/);
   assert.match(app,/renderChannelPlatformTabs/);
   assert.match(app,/showChannelPreview\(publicChannels\.indexOf\(rows\[selectedRow\]\),\{updateRoute\}\)/);
-  assert.match(adminHtml,/data-panel-target="channels"/);
+  assert.doesNotMatch(adminHtml,/data-panel-target="channels"[^>]*>소통채널<\/button>/);
   assert.match(adminHtml,/소통채널 관리/);
   assert.match(migration,/instagram\.com\/wonokoh/);
   assert.match(migration,/youtube\.com\/@Mokpo-tv/);
@@ -574,23 +580,42 @@ test('seonammedi notice permalink is served by the site shell',async()=>{
 
 
 
-test('seonammedi public site exposes authenticated section-level admin quick edit without exposing controls to visitors',async()=>{
-  const [app,css,adminHtml,adminJs,control]=await Promise.all([
+test('seonammedi public site uses shared authenticated inline admin without duplicate citizen-voice CRUD',async()=>{
+  const [html,app,voiceAdmin,css,adminHtml,adminJs,control,shared]=await Promise.all([
+    readFile(new URL('index.html',root),'utf8'),
     readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('voice-public-admin.js',root),'utf8'),
     readFile(new URL('app.css',root),'utf8'),
     readFile(new URL('admin/index.html',root),'utf8'),
     readFile(new URL('admin/admin.js',root),'utf8'),
-    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8')
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+    readFile(new URL('../shell/public-surface-admin.js',import.meta.url),'utf8')
   ]);
   assert.match(app,/initPublicAdminControls/);
-  assert.match(app,/\/api\/seonammedi\/admin\/me/);
-  for(const label of ['공지 바로 수정','조직 바로 수정','활동이력 공개여부','소통채널 바로 수정','시민의견 수정·삭제'])assert.match(app,new RegExp(label));
-  assert.match(app,/public-admin-drawer/);
-  assert.match(app,/panel',panel/);
-  assert.match(css,/\.public-admin-drawer/);
-  assert.match(adminHtml,/id="voiceEditForm"/);
-  assert.match(adminJs,/function editVoice\(item\)/);
-  assert.match(adminJs,/button\('수정',\(\)=>editVoice\(item\)\)/);
+  assert.match(app,/window\.EKODIPublicSurfaceAdmin/);
+  assert.match(app,/serviceId:'seonammedi'/);
+  assert.match(app,/adminPath:'\/seonammedi\/admin\/'/);
+  assert.match(app,/authEndpoint:'\/api\/seonammedi\/admin\/me'/);
+  assert.match(app,/await admin\.authorize\(\)/);
+  assert.match(app,/admin\.attach/);
+  for(const label of ['조직 바로 수정','활동이력 관리','소통채널 바로 수정'])assert.match(app,new RegExp(label));
+  assert.match(app,/공지 바로 수정/);
+  assert.match(app,/bindPublicFinanceAdmin/);
+  assert.match(app,/if\(admin\.has\('notices'\)\).*loadNotices\(\)/);
+  assert.match(app,/seonammedi:voice-inline-admin-authorized/);
+  assert.match(html,/voice-public-admin\.js/);
+  assert.match(voiceAdmin,/window\.EKODIPublicSurfaceAdmin/);
+  assert.match(voiceAdmin,/permissions\?\.voices===true/);
+  assert.match(voiceAdmin,/\/board\/api\/admin\/posts/);
+  assert.match(voiceAdmin,/data-seonammedi-voice-admin/);
+  assert.match(voiceAdmin,/voice-inline-admin-delete/);
+  assert.match(css,/\.voice-inline-admin/);
+  assert.doesNotMatch(adminHtml,/id="voiceEditForm"/);
+  assert.match(adminHtml,/사용자 화면에서 관리/);
+  assert.doesNotMatch(adminJs,/function editVoice\(item\)|function renderVoices\(\)/);
+  assert.match(adminJs,/async function loadVoices\(\)/);assert.match(adminJs,/\/board\/api\/admin\/posts/);
+  assert.match(shared,/window\.EKODIPublicSurfaceAdmin/);
+  assert.match(shared,/permissions\[key\]===true/);
   assert.match(control,/VOICE_CATEGORIES/);
   assert.match(control,/UPDATE seonammedi_civic_voices SET category=\?,display_name=\?,contact=\?,message=\?,review_status=\?/);
   assert.match(control,/public_consent_required/);
@@ -666,10 +691,10 @@ test('seonammedi notice list actions use server-authorized canManage without exp
 });
 
 
-test('seonammedi admin notice Drive storage and five-image flow',async()=>{
-  const [control,adminJs,adminHtml]=await Promise.all([
+test('seonammedi notice image storage stays public-surface managed while admin duplicate editor is removed',async()=>{
+  const [control,app,adminHtml]=await Promise.all([
     readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
-    readFile(new URL('admin/admin.js',root),'utf8'),
+    readFile(new URL('app.js',root),'utf8'),
     readFile(new URL('admin/index.html',root),'utf8')
   ]);
   assert.match(control,/async function storeNoticeImage\(env,image,principal\)/);
@@ -678,37 +703,97 @@ test('seonammedi admin notice Drive storage and five-image flow',async()=>{
   assert.match(control,/if\(images\.length>5\)/);
   assert.match(control,/image_keys_json/);
   assert.match(control,/storeNoticeImage\(env,image,auth\)/);
-  assert.match(adminJs,/compressAdminNoticeImage/);
-  assert.match(adminJs,/ADMIN_NOTICE_IMAGE_MAX_BYTES=5\*1024\*1024/);
-  assert.match(adminJs,/payload\.append\('images',file,file\.name\)/);
-  assert.match(adminHtml,/id="adminNoticeImages"/);
-  assert.match(adminHtml,/사진 최대 5장/);
-  assert.doesNotMatch(adminHtml,/최대 8MB/);
+  assert.match(app,/NOTICE_IMAGE_MAX_BYTES=5\*1024\*1024/);
+  assert.match(app,/compressNoticeImage/);
+  assert.match(app,/form\.append\('images',file,file\.name\)/);
+  assert.doesNotMatch(adminHtml,/id="adminNoticeImages"|id="noticeForm"/);
+  assert.match(adminHtml,/공지 작성·수정·삭제는 실제 사용자 화면/);
 });
 
 
-test('seonammedi citizen voices publish immediately, render publicly, accept replies, and remain admin-moderatable',async()=>{
-  const [civic,control,html,app,security,migration,adminJs]=await Promise.all([
-    readFile(new URL('../seonammedi-civic-control.js',import.meta.url),'utf8'),
-    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+test('seonammedi public reply path never performs request-time schema DDL',async()=>{
+  const civic=await readFile(new URL('../seonammedi-civic-control.js',import.meta.url),'utf8');
+  const start=civic.indexOf('async function createPublicReply');
+  const end=civic.indexOf('function originAllowed',start);
+  assert.ok(start>=0&&end>start);
+  const block=civic.slice(start,end);
+  assert.doesNotMatch(block,/ensureSchema|CREATE TABLE|ALTER TABLE|CREATE INDEX/);
+});
+
+
+test('seonammedi citizen opinions hand off to the standalone board-owned UI',async()=>{
+  const [html,worker,config]=await Promise.all([
     readFile(new URL('index.html',root),'utf8'),
-    readFile(new URL('app.js',root),'utf8'),
-    readFile(new URL('../platform-security-policy.js',import.meta.url),'utf8'),
-    readFile(new URL('../migrations/0126_seonammedi_civic_voice_replies.sql',import.meta.url),'utf8'),
-    readFile(new URL('admin/admin.js',root),'utf8')
+    readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8'),
+    readFile(new URL('../wrangler.independent-board.toml',import.meta.url),'utf8')
   ]);
-  assert.match(civic,/review_status[^\n]+published/);
-  assert.match(civic,/async function listPublicVoices/);
-  assert.match(civic,/async function createPublicReply/);
-  assert.match(civic,/REPLY_PATH/);
-  assert.match(html,/id="publicVoiceList"/);
-  assert.match(html,/등록 즉시 아래 시민의견 목록에 공개/);
-  assert.doesNotMatch(html,/name="publicConsent"/);
-  assert.match(app,/loadPublicVoices/);
-  assert.match(app,/data-voice-reply/);
-  assert.match(app,/\/api\/seonammedi\/voices\/'\+voiceId\+'\/replies/);
-  assert.match(control,/deleteAdminVoiceReply/);
-  assert.match(adminJs,/답글 삭제/);
-  assert.match(security,/SELF_PROTECTED_PUBLIC_WRITE_PATTERNS/);
-  assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_civic_voice_replies/);
+  assert.match(html,/href="\/board"[^>]*>시민의견<\/a>/);
+  assert.doesNotMatch(html,/id="voices"|id="publicVoiceList"|id="voiceComposeToggle"/);
+  assert.match(worker,/function boardPage\(\)/);
+  assert.match(worker,/env\.BOARD_DB/);
+  assert.match(worker,/의견 등록/);
+  assert.match(worker,/답글 등록/);
+  assert.match(worker,/\/api\/admin\/posts/);
+  assert.match(config,/database_name = "ekodi-independent-board"/);
+});
+
+test('seonammedi mobile activity history uses compact filters, progressive detail, and inline admin control',async()=>{const [html,app,css]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('app.css',root),'utf8')]);assert.match(html,/id="timelineAdminEdit"/);assert.match(app,/timeline-toggle/);assert.match(app,/is-collapsed/);assert.match(app,/timelineAdminEdit/);assert.match(css,/activity-toolbar \.filters\{flex-wrap:nowrap;overflow-x:auto/);assert.match(css,/\.timeline-item\.is-collapsed \.timeline-detail\{display:none\}/);});
+
+
+test('seonammedi finance and notices stay embedded while citizen opinions use the standalone board surface',async()=>{
+  const [html,css,worker]=await Promise.all([
+    readFile(new URL('index.html',root),'utf8'),
+    readFile(new URL('app.css',root),'utf8'),
+    readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8')
+  ]);
+  for(const id of ['finance','notices'])assert.match(html,new RegExp('id="'+id+'" class="section module-section"'));
+  assert.doesNotMatch(html,/id="voices"/);
+  assert.match(html,/href="\/board"[^>]*>시민의견<\/a>/);
+  assert.match(worker,/href="\/#timeline">활동이력/);
+  assert.match(worker,/href="\/#channels">소통채널/);
+  assert.match(worker,/href="\/board" aria-current="page">시민의견/);
+  assert.match(worker,/href="\/#finance">회계/);
+  assert.match(worker,/href="\/#notices">공지/);
+  assert.match(worker,/href="\/#organization">조직/);
+  assert.match(css,/\.module-shell\{display:grid;grid-template-columns:minmax\(190px,250px\) minmax\(0,1fr\)/);
+});
+
+
+test('seonammedi registered Google admins manage public content from user surfaces while standalone admin stays essential-only',async()=>{
+  const [app,adminHtml,adminJs,worker]=await Promise.all([
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('admin/admin.js',root),'utf8'),
+    readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8')
+  ]);
+  assert.match(app,/공지 바로 수정/);
+  assert.match(app,/조직 바로 수정/);
+  assert.match(app,/활동이력 관리/);
+  assert.match(app,/소통채널 바로 수정/);
+  assert.match(app,/회계 바로 수정/);
+  assert.match(worker,/permissions\?\.voices===true/);
+  assert.match(worker,/data-edit/);
+  assert.match(worker,/data-delete/);
+  assert.match(worker,/data-reply-delete/);
+  assert.match(worker,/\/api\/admin\/posts/);
+  assert.match(adminHtml,/data-panel-target="minutes"[^>]*>내부 회의록<\/button>/);
+  assert.match(adminHtml,/data-panel-target="access"[^>]*>권한·관리자<\/button>/);
+  for(const label of ['현재상황','소통채널','시민의견','회계','공지','조직'])assert.doesNotMatch(adminHtml,new RegExp('data-panel-target="[^"]+"[^>]*>'+label+'<\\/button>'));
+  assert.match(adminJs,/navVisibility/);
+});
+
+
+
+test('seonammedi organization editing is inline on the public user surface',async()=>{
+  const html=await readFile(new URL('index.html',root),'utf8');
+  const app=await readFile(new URL('app.js',root),'utf8');
+  assert.match(html,/id="organizationManageToggle"/);
+  assert.match(html,/id="organizationManageForm"/);
+  assert.match(html,/name="representatives"/);
+  assert.match(html,/name="committees"/);
+  assert.match(html,/name="participants"/);
+  assert.match(app,/function bindPublicOrganizationAdmin\(\)/);
+  assert.match(app,/\/api\/seonammedi\/admin\/pages\/organization/);
+  assert.match(app,/if\(admin\.has\('pages'\)\)bindPublicOrganizationAdmin\(\)/);
+  assert.doesNotMatch(app,/admin\.attach\(el\('organization'\)/);
 });

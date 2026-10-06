@@ -3,6 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { parseOrchestratorReleaseBranch, verifyOrchestratorReleaseReceipt } from './orchestrator-release-receipt.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const policyPath = path.join(root, 'config', 'ai-change-orchestration-policy.json');
@@ -66,6 +67,14 @@ if (policy.controlPlane !== 'EKODI AI') fail('EKODI AI must remain the control p
 if (policy.mutationBoundary?.breakGlassBypassEnabled !== false) fail('break-glass bypass must remain disabled.');
 if (policy.sourceControl?.directPushToMain !== false) fail('direct main pushes must remain forbidden.');
 if (policy.execution?.externalAiMayOwnProductionMutation !== false) fail('external AI cannot own production mutation.');
+const expectedDefaultExecutionPath = ['ekodi-core-plan-finalized','github-work-branch','code-mutation','automated-tests','pull-request','deployment-gate','guarded-deployment','production-verification'];
+if (JSON.stringify(policy.execution?.defaultExecutionPath || []) !== JSON.stringify(expectedDefaultExecutionPath)) fail('EKODI Core to GitHub must remain the default execution path.');
+if (policy.execution?.aiConsultation !== 'advisory-not-serial-prerequisite') fail('AI consultation must remain advisory rather than a serial execution prerequisite.');
+if (policy.execution?.consultationMayBlockCodeExecution !== false) fail('AI consultation may not block ordinary code execution after EKODI Core finalizes the plan.');
+if (policy.execution?.corePlanOwnsExecution !== true || policy.execution?.githubBranchMutationIsDefault !== true) fail('EKODI Core must own execution and GitHub branch mutation must remain the default.');
+if (policy.consultationDecision?.executionRelationship !== 'parallel-or-advisory' || policy.consultationDecision?.codeExecutionMayProceedWithoutConsultationCompletion !== true) fail('consultation must remain parallel/advisory to code execution.');
+if (!Array.isArray(policy.consultationDecision?.forcedMultiConsultCategories) || policy.consultationDecision.forcedMultiConsultCategories.length === 0) fail('high-impact consultation categories must remain registered.');
+if (policy.consultationDecision?.failedConsultationDisposition !== 'record-isolate-continue-execution-unless-human-or-safety-gate-requires-stop') fail('failed consultation must be isolated from execution unless a human or safety gate requires a stop.');
 const dailyOperationalReport = policy.reporting?.dailyOperationalReport || {};
 if (dailyOperationalReport.policyId !== 'EKODI-DAILY-REPORT-ROLE-001') fail('daily operational report role policy must remain registered.');
 if (dailyOperationalReport.sourceOfTruth !== 'ekodi-generated-operational-report') fail('EKODI-generated operational report must remain the daily report source of truth.');
@@ -266,7 +275,7 @@ async function verifiedBranchPrMerge(targetBranch) {
     for (const number of candidateNumbers) {
       try {
         const pr = await loadPullRequestByNumber(number);
-        if (isVerifiedMergedPr(pr, { targetBranch })) return true;
+        if (isVerifiedMergedPr(pr, { targetBranch })) return pr;
       } catch (error) {
         lastError = error?.message || String(error);
       }
@@ -274,7 +283,8 @@ async function verifiedBranchPrMerge(targetBranch) {
 
     try {
       const pulls = await loadAssociatedPullRequests();
-      if (pulls.some(pr => isVerifiedMergedPr(pr, { shaBound: true, targetBranch }))) return true;
+      const matched = pulls.find(pr => isVerifiedMergedPr(pr, { shaBound: true, targetBranch }));
+      if (matched) return matched;
     } catch (error) {
       lastError = error?.message || String(error);
     }
@@ -286,7 +296,7 @@ async function verifiedBranchPrMerge(targetBranch) {
   }
 
   if (lastError) console.warn(`[EKODI][AI-ORCHESTRATE-001] ${lastError}`);
-  return false;
+  return null;
 }
 
 let source = 'static-policy-validation';
@@ -300,16 +310,21 @@ if (staticPolicyMode) {
   if (!branchAllowed(intentBranch)) fail(`change branch must enter through EKODI AI namespace (${allowedPrefixes.join(', ')}): ${intentBranch || 'missing'}`);
   source = `pull-request:${event.pull_request?.number || 'unknown'}`;
 } else if (eventName === 'push' && text(process.env.GITHUB_REF_NAME) === defaultBranch) {
-  if (!await verifiedBranchPrMerge(defaultBranch)) fail(`direct push to ${defaultBranch} is forbidden; merge an EKODI AI orchestrated PR instead.`);
+  const mergedPr = await verifiedBranchPrMerge(defaultBranch);
+  if (!mergedPr) fail(`direct push to ${defaultBranch} is forbidden; merge an EKODI AI orchestrated PR instead.`);
+  intentBranch = text(mergedPr?.head?.ref);
   source = `protected-${defaultBranch}-pr-merge`;
 } else if (eventName === 'push' && integrationBranches.includes(text(process.env.GITHUB_REF_NAME))) {
   const integrationBranch = text(process.env.GITHUB_REF_NAME);
-  if (!await verifiedBranchPrMerge(integrationBranch)) fail(`direct push to ${integrationBranch} is forbidden for mutation workflows; merge an EKODI AI orchestrated PR instead.`);
+  const mergedPr = await verifiedBranchPrMerge(integrationBranch);
+  if (!mergedPr) fail(`direct push to ${integrationBranch} is forbidden for mutation workflows; merge an EKODI AI orchestrated PR instead.`);
+  intentBranch = text(mergedPr?.head?.ref);
   source = `protected-${integrationBranch}-pr-merge`;
 } else if (eventName === 'push') {
   if (!branchAllowed(text(process.env.GITHUB_REF_NAME))) fail('non-main change pushes must use an EKODI AI branch namespace.');
   source = 'ai-branch-push-routed-through-ekodi-ai';
 } else if (eventName === 'workflow_dispatch') {
+  intentBranch = text(process.env.EKODI_RELEASE_BRANCH_REF || intentBranch);
   source = 'human-intent-routed-through-ekodi-ai';
 } else if (eventName === 'schedule') {
   source = 'scheduled-intent-routed-through-ekodi-ai';
@@ -319,6 +334,18 @@ if (staticPolicyMode) {
   source = `${eventName}-routed-through-ekodi-ai`;
 } else if (releaseMode) {
   fail('direct local production mutation is forbidden; use an EKODI AI orchestrated GitHub change/release lane.');
+}
+
+const orchestratorBranch = parseOrchestratorReleaseBranch(intentBranch);
+const canonicalRepository = repository === 'topmaster-joseph/ekodi-platform';
+const releaseReceiptRequired = !staticPolicyMode && canonicalRepository && (releaseMode || (ciMode && Boolean(orchestratorBranch)));
+let releaseReceipt = null;
+if (releaseReceiptRequired) {
+  try {
+    releaseReceipt = await verifyOrchestratorReleaseReceipt(intentBranch,{explicitTaskId:text(process.env.EKODI_RELEASE_TASK_ID)});
+  } catch (error) {
+    fail(error?.message || 'orchestrator release receipt verification failed');
+  }
 }
 
 const changedFiles = currentChangedFiles();
@@ -383,6 +410,14 @@ const attestation = {
   humanGateRecommended,
   directMutationAllowed: false,
   constitutionalControls: ciMode ? constitutionalControlValidators : [],
+  releaseReceipt: releaseReceipt ? Object.freeze({
+    required: true,
+    verified: true,
+    taskId: releaseReceipt.taskId,
+    branchRef: releaseReceipt.branchRef,
+    authority: releaseReceipt.authority,
+    state: releaseReceipt.state,
+  }) : Object.freeze({ required: releaseReceiptRequired, verified: false }),
   releaseMode,
   timestamp: new Date().toISOString(),
 };
@@ -393,6 +428,10 @@ fs.writeFileSync(path.join(root, 'artifacts', 'ekodi-ai-orchestration-attestatio
 if (process.env.GITHUB_OUTPUT) {
   fs.appendFileSync(process.env.GITHUB_OUTPUT, `orchestration_id=${orchestrationId}\n`);
   fs.appendFileSync(process.env.GITHUB_OUTPUT, `source=${source}\n`);
+  if (releaseReceipt) {
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, `task_id=${releaseReceipt.taskId}\n`);
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, `branch_ref=${releaseReceipt.branchRef}\n`);
+  }
 }
 if (process.env.GITHUB_STEP_SUMMARY) {
   fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
@@ -407,6 +446,7 @@ if (process.env.GITHUB_STEP_SUMMARY) {
     `- Fallback lanes: ${(executionFallback.preferredLaneOrder || []).join(' -> ')}`,
     `- Direct mutation: forbidden`,
     ciMode ? `- Constitutional controls: ${constitutionalControlValidators.length} passed` : '- Constitutional controls: static policy mode',
+    releaseReceipt ? `- Release receipt: verified (${releaseReceipt.taskId} / ${releaseReceipt.authority})` : `- Release receipt: ${releaseReceiptRequired ? 'required but unavailable' : 'not required for this static/non-release path'}`,
     humanGateRecommended ? '- Human Gate: recommended for topology-impacting intent' : '- Human Gate: not required by this classifier',
     '',
   ].join('\n'));

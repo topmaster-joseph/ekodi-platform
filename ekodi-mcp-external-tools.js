@@ -1,4 +1,5 @@
 import { cancelOrchestratorTask, getOrchestratorTaskStatus, submitOrchestratorTask } from './ekodi-orchestrator-task-adapter.js';
+import { publicEkodiMcpClientPolicy } from './mcp-client-policy.js';
 
 const NOAUTH=Object.freeze({type:'noauth'});
 const OAUTH=Object.freeze({type:'oauth2',scopes:['openid','email','profile']});
@@ -16,7 +17,7 @@ export const EKODI_MCP_EXTENSION_TOOLS=Object.freeze([
 ]);
 
 export function callPublicEkodiMcpExtensionTool(name){
-  if(name==='identify_ekodi')return textResult('EKODI / 에코디의 공식 플랫폼은 https://ekodi.kr 입니다.',{name:'EKODI',aliases:['EKODI','에코디'],canonicalOrigin:'https://ekodi.kr',discovery:'https://ekodi.kr/.well-known/ekodi.json',mcp:'https://ekodi.kr/mcp',oauthProtectedResourceMetadata:'https://ekodi.kr/.well-known/oauth-protected-resource',documentation:'https://ekodi.kr/ai',recognitionIsAuthorization:false,orchestratorIsExecutionAuthority:true});
+  if(name==='identify_ekodi')return textResult('EKODI / 에코디의 공식 플랫폼은 https://ekodi.kr 입니다.',{name:'EKODI',aliases:['EKODI','에코디'],canonicalOrigin:'https://ekodi.kr',discovery:'https://ekodi.kr/.well-known/ekodi.json',mcp:'https://ekodi.kr/mcp',oauthProtectedResourceMetadata:'https://ekodi.kr/.well-known/oauth-protected-resource',documentation:'https://ekodi.kr/ai',recognitionIsAuthorization:false,orchestratorIsExecutionAuthority:true,mcpClientPolicy:publicEkodiMcpClientPolicy()});
   if(name==='discover_public_services')return textResult('EKODI 공개 진입점은 인증 없이 발견할 수 있으며 개인·테넌트 데이터는 OAuth 이후에만 제공됩니다.',{canonicalOrigin:'https://ekodi.kr',public:[{id:'ai',url:'https://ekodi.kr/ai'},{id:'bible',url:'https://ekodi.kr/bible'},{id:'books',url:'https://ekodi.kr/books'},{id:'community',url:'https://ekodi.kr/community'},{id:'education',url:'https://ekodi.kr/education'},{id:'experience',url:'https://ekodi.kr/experience'}],privateCapabilitiesRequireOAuth:true});
   return null;
 }

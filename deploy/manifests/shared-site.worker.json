@@ -2136,6 +2136,24 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/ekodichurch/board/api/health",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"ok\":true",
+          "\"boardId\":\"site:ekodichurch:main\"",
+          "\"aiIndependent\":true",
+          "\"independent\":true"
+        ],
+        "headerExpect": [
+          "content-type: application/json; charset=utf-8",
+          "x-ekodi-board-independent: true",
+          "x-ekodi-board-id: site:ekodichurch:main"
+        ]
+      },
+      {
         "url": "https://ekodi.kr/jadam",
         "statuses": [
           200
@@ -2581,13 +2599,9 @@
         "expect": [
           "서남권 국립의대 소통센터",
           "운영홈",
-          "현재상황",
-          "소통채널",
-          "시민의견",
-          "회계",
-          "공지",
-          "조직",
-          "내부 회의록"
+          "내부 회의록",
+          "권한·관리자",
+          "사용자 화면에서 바로 관리 도구가 표시됩니다"
         ],
         "forbid": [
           "/admin/sites/workspace",
@@ -2719,7 +2733,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "디지털 명함이 아직 공개되지 않았습니다."
+          "공개된 개인 프로필을 찾을 수 없습니다."
         ],
         "headerExpect": [
           "x-ekodi-canonical-surface: person-digital-card",

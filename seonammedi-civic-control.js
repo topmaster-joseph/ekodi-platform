@@ -1,8 +1,11 @@
 import { durableWriteQueueAvailable, enqueueDurableWrite } from './write-ingress.js';
+import { createBoardAdapter, handleBoardAdapter, consumeBoardAdapter } from './common-board-adapter.js';
+import { createBoardRuntimeGuard } from './board-runtime-guard.js';
 
 const API_PATH='/api/seonammedi/voices';
 const HEALTH_PATH=API_PATH+'/health';
 const REPLY_PATH=/^\/api\/seonammedi\/voices\/(\d+)\/replies$/;
+const SUBMISSION_PATH=/^\/api\/seonammedi\/voices\/submissions\/([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i;
 const QUEUE_KIND='seonammedi.citizen_voice.v1';
 const CATEGORIES=new Set(['question','proposal','experience','factcheck','tip','other']);
 const clean=(value,max)=>String(value??'').trim().slice(0,max);
@@ -105,6 +108,18 @@ async function persistVoice(env,payload){
 }
 
 
+async function submissionStatus(env,submissionId){
+  if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
+  try{
+    const row=await env.DB.prepare("SELECT id,review_status FROM seonammedi_civic_voices WHERE submission_key=? LIMIT 1").bind(submissionId).first();
+    if(!row?.id)return json({ok:true,status:'pending',submissionId});
+    return json({ok:true,status:row.review_status==='published'?'published':'processing',submissionId,id:Number(row.id)});
+  }catch(error){
+    console.error('seonammedi submission status failed',error);
+    return json({ok:false,error:'status_lookup_failed'},503);
+  }
+}
+
 async function listPublicVoices(env){
   if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
   // Public reads are deliberately read-only. Schema is provisioned by migrations;
@@ -133,7 +148,6 @@ async function createPublicReply(request,env,voiceId){
   const displayName=clean(body?.name,80);
   const message=clean(body?.message,1500);
   if(!message)return json({ok:false,error:'invalid_message',message:'답글 내용을 입력해 주세요.'},400);
-  await ensureSchema(env.DB);
   const voice=await env.DB.prepare("SELECT id FROM seonammedi_civic_voices WHERE id=? AND review_status='published'").bind(voiceId).first();
   if(!voice?.id)return json({ok:false,error:'voice_not_found'},404);
   const requestFingerprint=await fingerprint(request);
@@ -151,7 +165,7 @@ function originAllowed(request,env){
   return new Set(['https://ekodi.kr','https://seonammedi.kr','https://www.seonammedi.kr','https://xn--3e0b8b58jw4co4mnpll3k.kr','https://www.xn--3e0b8b58jw4co4mnpll3k.kr']).has(origin);
 }
 
-export async function consumeSeonamMediVoiceMessage(envelope,env){
+async function consumeVoice(envelope,env){
   if(!envelope||envelope.kind!==QUEUE_KIND)return false;
   const payload=envelope.payload||{};
   if(!payload.submissionId||!payload.message||!CATEGORIES.has(payload.category))throw new Error('invalid_seonammedi_voice_queue_message');
@@ -159,20 +173,7 @@ export async function consumeSeonamMediVoiceMessage(envelope,env){
   return true;
 }
 
-export async function handleSeonamMediCivicApi(request,env){
-  const url=new URL(request.url);
-  if(url.pathname===HEALTH_PATH&&request.method==='GET')return health(env);
-  const replyMatch=url.pathname.match(REPLY_PATH);
-  if(replyMatch){
-    if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{allow:'POST, OPTIONS','cache-control':'no-store'}});
-    if(request.method!=='POST')return json({ok:false,error:'method_not_allowed'},405);
-    if(!originAllowed(request,env))return json({ok:false,error:'origin_not_allowed'},403);
-    return createPublicReply(request,env,Number(replyMatch[1]));
-  }
-  if(url.pathname!==API_PATH)return null;
-  if(request.method==='GET')return listPublicVoices(env);
-  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{allow:'GET, POST, OPTIONS','cache-control':'no-store'}});
-  if(request.method!=='POST')return json({ok:false,error:'method_not_allowed'},405);
+async function createPublicVoice(request,env){
   if(!originAllowed(request,env))return json({ok:false,error:'origin_not_allowed'},403);
   const contentLength=Number(request.headers.get('content-length')||0);
   if(contentLength>16384)return json({ok:false,error:'payload_too_large'},413);
@@ -209,5 +210,40 @@ export async function handleSeonamMediCivicApi(request,env){
     console.error('seonammedi civic durable ingress failed',error);
     return json({ok:false,error:'write_ingress_failed',message:'등록이 많습니다. 잠시 후 다시 시도해 주세요.'},503,{'retry-after':'5'});
   }
+}
+
+const citizenVoiceAdapter=createBoardAdapter({
+  boardId:'seonammedi.citizen_voice',
+  list:(_request,env)=>listPublicVoices(env),
+  create:createPublicVoice,
+  reply:createPublicReply,
+  health:(_request,env)=>health(env),
+  consume:consumeVoice
+});
+const citizenVoiceBoard=createBoardRuntimeGuard({adapter:citizenVoiceAdapter});
+
+export async function consumeSeonamMediVoiceMessage(envelope,env){
+  return consumeBoardAdapter(citizenVoiceBoard,envelope,env);
+}
+
+export async function handleSeonamMediCivicApi(request,env){
+  const url=new URL(request.url);
+  if(url.pathname===HEALTH_PATH&&request.method==='GET')return handleBoardAdapter(citizenVoiceBoard,{action:'health',request,env});
+  const submissionMatch=url.pathname.match(SUBMISSION_PATH);
+  if(submissionMatch){
+    if(request.method!=='GET')return json({ok:false,error:'method_not_allowed'},405);
+    return submissionStatus(env,submissionMatch[1].toLowerCase());
+  }
+  const replyMatch=url.pathname.match(REPLY_PATH);
+  if(replyMatch){
+    if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{allow:'POST, OPTIONS','cache-control':'no-store'}});
+    if(request.method!=='POST')return json({ok:false,error:'method_not_allowed'},405);
+    return handleBoardAdapter(citizenVoiceBoard,{action:'reply',request,env,itemId:replyMatch[1]});
+  }
+  if(url.pathname!==API_PATH)return null;
+  if(request.method==='GET')return handleBoardAdapter(citizenVoiceBoard,{action:'list',request,env});
+  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{allow:'GET, POST, OPTIONS','cache-control':'no-store'}});
+  if(request.method!=='POST')return json({ok:false,error:'method_not_allowed'},405);
+  return handleBoardAdapter(citizenVoiceBoard,{action:'create',request,env});
 }
 export const SEONAMMEDI_VOICE_QUEUE_KIND=QUEUE_KIND;

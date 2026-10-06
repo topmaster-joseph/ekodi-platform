@@ -40,18 +40,23 @@ test('durable write ingress policy is enforced and queue-first in production',as
   assert.match(workflow,/Finaliz[e] durable write queue consumer trigger/);
   assert.ok(workflow.indexOf('Candidate at 0%, verify routes, promote and auto-rollback on failure') < workflow.indexOf('Finalize durable write queue consumer trigger'));
   assert.match(workflow,/validate-write-ingress-policy\.mjs/);
+  assert.match(workflow,/consumer_present\(\)/);
+  assert.match(workflow,/already has a consumer\|code: 11004/);
+  assert.match(workflow,/jq -e '\.\. \| strings \| select\(\. == "shy-thunder-39a4"\)'/);
 });
 
-test('seonammedi public voice success requires durable acceptance id',async()=>{
-  const [html,app,civic]=await Promise.all([
+test('seonammedi citizen voice uses direct standalone-board persistence',async()=>{
+  const [html,app,worker,config]=await Promise.all([
     read('sites/seonammedi/public/index.html'),
     read('sites/seonammedi/public/app.js'),
-    read('seonammedi-civic-control.js')
+    read('services/independent-board/worker.js'),
+    read('wrangler.independent-board.toml')
   ]);
   assert.doesNotMatch(html,/name="website"/);
-  assert.match(app,/!body\.submissionId/);
-  assert.match(app,/submitButton\.disabled=true/);
-  assert.match(civic,/status=202|},202\)/);
-  assert.match(civic,/submission_key/);
-  assert.match(civic,/CREATE UNIQUE INDEX IF NOT EXISTS idx_seonammedi_civic_voices_submission/);
+  assert.match(app,/fetch\('\/board\/api\/posts'/);
+  assert.match(app,/!body\.id/);
+  assert.doesNotMatch(app,/!body\.submissionId|\/voices\/submissions\//);
+  assert.match(worker,/env\.BOARD_DB/);
+  assert.match(worker,/storage:'independent-board-d1'/);
+  assert.match(config,/database_name = "ekodi-independent-board"/);
 });

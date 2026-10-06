@@ -36,7 +36,7 @@ async function personForUser(userId:string){
 async function profileForPerson(personId:string){
   const [{data:person,error:personError},{data:identities,error:identityError}]=await Promise.all([
     admin.from("people").select("display_name,status,updated_at").eq("id",personId).single(),
-    admin.from("login_identities").select("auth_user_id,provider,email,is_primary,status,created_at").eq("person_id",personId).eq("status","active").order("is_primary",{ascending:false}).order("created_at",{ascending:true}),
+    admin.from("login_identities").select("auth_user_id,provider,email,is_primary,status,linked_at,last_seen_at").eq("person_id",personId).eq("status","active").order("is_primary",{ascending:false}).order("linked_at",{ascending:true}),
   ]);
   if(personError)throw personError;
   if(identityError)throw identityError;

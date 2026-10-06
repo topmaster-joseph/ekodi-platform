@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const setup=read('agents/windows-pos/setup-pos-agent.cmd');
+const compatSetup=read('agents/windows-pos/setup-pos-agent-compat.cmd');
 const install=read('agents/windows-pos/install-pos-agent.ps1');
 const uninstall=read('agents/windows-pos/uninstall-pos-agent.ps1');
 const diagnose=read('agents/windows-pos/diagnose-pos-targets.ps1');
@@ -17,9 +18,24 @@ test('one-click POS Agent setup is fixed to the official package and elevates ex
   for(const name of ['install-pos-agent.ps1','EKODI-POS-Agent.ps1','pos-agent.config.example.json','diagnose-pos-targets.ps1','start-pos-agent.cmd','stop-pos-agent.cmd','uninstall-pos-agent.ps1']) assert.match(setup,new RegExp(name.replaceAll('.','\\.')));
   assert.match(setup,/Start-Process -FilePath '%ComSpec%'.*-Verb RunAs/);
   assert.match(setup,/listenerPrefix must remain loopback-only/);
+  assert.match(setup,/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v5/);
+  assert.match(setup,/Refreshing Task Scheduler compatibility package/);
+  assert.match(setup,/\?v=/);
+  assert.match(setup,/outdated Task Scheduler installer/);
+  assert.match(setup,/Language\.Parser.*ParseFile/);
+  assert.match(setup,/Downloaded installer syntax check failed/);
   assert.match(setup,/explicit_user_action_only/);
   assert.doesNotMatch(setup,/Invoke-Expression|\biex\b/i);
   assert.doesNotMatch(setup,/raw\.githubusercontent\.com|github\.com\/topmaster-joseph/i);
+});
+
+test('compatibility setup bypasses Task Scheduler and requires the v6 installer contract',()=>{
+  assert.match(compatSetup,/Compatibility setup: Windows Task Scheduler will be bypassed/);
+  assert.match(compatSetup,/setup-pos-agent-compat/);
+  assert.match(compatSetup,/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v6/);
+  assert.match(compatSetup,/-ForceStartupFallback/);
+  assert.match(compatSetup,/cmpmyi\/admin\/agent\/download/);
+  assert.doesNotMatch(compatSetup,/Register-ScheduledTask|RestartInterval/);
 });
 
 test('POS Agent installer keeps the local control boundary and interactive user session',()=>{
@@ -33,12 +49,42 @@ test('POS Agent installer keeps the local control boundary and interactive user 
   assert.doesNotMatch(install,/https:\/\/(?!ekodi\.kr)/i);
 });
 
-test('POS Agent scheduled task restart interval stays within Windows Task Scheduler XML limits',()=>{
-  assert.match(install,/RestartInterval \(New-TimeSpan -Minutes 1\)/);
-  assert.doesNotMatch(install,/RestartInterval \(New-TimeSpan -Seconds 20\)/);
+test('POS Agent scheduled task registration degrades safely across Task Scheduler XML variants',()=>{
+  assert.doesNotMatch(install,/RestartInterval \(New-TimeSpan -(?:Seconds|Minutes)/);
+  assert.doesNotMatch(install,/ExecutionTimeLimit/);
+  assert.match(install,/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v6/);
+  assert.match(install,/\[switch\]\$ForceStartupFallback/);
+  assert.match(install,/Compatibility install requested: bypassing Task Scheduler/);
+  assert.match(install,/startup-folder-forced/);
   assert.match(install,/0x80041318/);
-  assert.match(install,/compatibility-safe settings/);
-  assert.match(install,/New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit \(\[TimeSpan\]::Zero\)/);
+  assert.match(install,/FullyQualifiedErrorId/);
+  assert.match(install,/Test-TaskSchemaRangeError/);
+  assert.match(install,/Register-EkodiScheduledTask/);
+  assert.match(install,/return 'default-settings'/);
+  assert.match(install,/return 'minimal-settings'/);
+  assert.match(install,/return 'interactive-default-runlevel'/);
+  assert.match(install,/Register-EkodiStartupFallback/);
+  assert.match(install,/return \$launcher/);
+  assert.match(install,/startup-folder/);
+  assert.match(install,/EKODI-POS-Agent-Startup\.cmd/);
+  assert.match(install,/netsh\.exe http add urlacl/);
+  assert.match(install,/Start-Process -FilePath 'powershell\.exe'/);
+  assert.match(install,/retrying with an explicit minimal settings profile/);
+  assert.match(install,/retrying without RunLevel Highest for compatibility/);
+  assert.match(install,/New-ScheduledTaskSettingsSet -StartWhenAvailable/);
+  assert.match(install,/Get-ScheduledTask -TaskName \$TaskName -ErrorAction Stop/);
+  assert.match(install,/Task Scheduler compatibility:/);
+  assert.match(install,/Register-ScheduledTask -TaskName \$Name -Action \$Action -Trigger \$Trigger -Principal \$Principal -Force/);
+  assert.match(install,/New-ScheduledTaskPrincipal -UserId \$identity\.Name -LogonType Interactive/);
+  assert.match(install,/Unregister-ScheduledTask -TaskName \$TaskName -Confirm:\$false/);
+});
+
+test('POS Agent installer source is structurally single-copy after compatibility repair',()=>{
+  assert.equal((install.match(/^param\(/gm)||[]).length,1);
+  assert.equal((install.match(/function Read-AgentConfig/g)||[]).length,1);
+  assert.equal((install.match(/function Register-EkodiScheduledTask/g)||[]).length,1);
+  assert.equal((install.match(/if \(-not \(Test-IsAdministrator\)\)/g)||[]).length,1);
+  assert.match(install,/\$prefix -notmatch '\^http:\/\/\(127\\\.0\\\.0\\\.1\|localhost\):\\d\+\/\$'/);
 });
 
 test('POS Agent upgrade preserves local target configuration and rolls back the agent file on failure',()=>{
@@ -58,7 +104,6 @@ test('POS target diagnostics are read-only and uninstall supports config preserv
   assert.match(uninstall,/\[switch\]\$KeepConfig/);
   assert.match(uninstall,/Configuration preserved/);
 });
-
 
 test('one-click POS Agent removal is fixed to the official uninstall script and asks before deleting',()=>{
   assert.match(remove,/choice \/C YN/);

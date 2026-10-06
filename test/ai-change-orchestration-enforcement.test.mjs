@@ -8,6 +8,7 @@ import { spawnSync } from 'node:child_process';
 const read = file => fs.readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 const policy = JSON.parse(read('config/ai-change-orchestration-policy.json'));
 const validator = read('scripts/validate-ekodi-ai-change-orchestration.mjs');
+const releaseReceiptGate = read('scripts/orchestrator-release-receipt.mjs');
 const workflow = read('.github/workflows/ekodi-ai-orchestration-gate.yml');
 const siteWorker = read('site-worker.js');
 const workerRelease = read('scripts/guarded-worker-release.mjs');
@@ -38,6 +39,24 @@ test('EKODI AI is the mandatory change control plane', () => {
   assert.equal(policy.executionFallback.preferredLaneOrder.at(-1), 'remote_desktop');
 });
 
+test('EKODI Core finalizes the plan before the default GitHub execution pipeline', () => {
+  assert.deepEqual(policy.execution.defaultExecutionPath, [
+    'ekodi-core-plan-finalized','github-work-branch','code-mutation','automated-tests',
+    'pull-request','deployment-gate','guarded-deployment','production-verification',
+  ]);
+  assert.equal(policy.execution.aiConsultation, 'advisory-not-serial-prerequisite');
+  assert.equal(policy.execution.consultationMayBlockCodeExecution, false);
+  assert.equal(policy.execution.corePlanOwnsExecution, true);
+  assert.equal(policy.execution.githubBranchMutationIsDefault, true);
+  assert.equal(policy.consultationDecision.executionRelationship, 'parallel-or-advisory');
+  assert.equal(policy.consultationDecision.codeExecutionMayProceedWithoutConsultationCompletion, true);
+  assert.ok(policy.consultationDecision.forcedMultiConsultCategories.includes('authentication'));
+  assert.ok(policy.consultationDecision.forcedMultiConsultCategories.includes('deployment'));
+  assert.equal(policy.consultationDecision.failedConsultationDisposition, 'record-isolate-continue-execution-unless-human-or-safety-gate-requires-stop');
+  assert.match(validator, /EKODI Core to GitHub must remain the default execution path/);
+  assert.match(validator, /AI consultation may not block ordinary code execution/);
+});
+
 test('execution fallback remains orchestrator-owned and fail-closed', () => {
   assert.match(validator, /automatic execution fallback must remain enabled/);
   assert.match(validator, /execution fallback decision owner must remain the EKODI orchestrator/);
@@ -54,6 +73,9 @@ test('main and production releases are fail-closed around orchestration and cons
   assert.match(validator, /direct push to \$\{defaultBranch\} is forbidden/);
   assert.match(validator, /direct local production mutation is forbidden/);
   assert.match(validator, /if \(ciMode\) runConstitutionalControls\(\)/);
+  assert.match(validator, /verifyOrchestratorReleaseReceipt/);
+  assert.match(releaseReceiptGate, /production-bound release branch must be orchestrator-issued/);
+  assert.match(releaseReceiptGate, /orchestrator release receipt rejected/);
   for (const control of [
     'validate-constitution.mjs',
     'validate-platform-boundaries.mjs',
@@ -110,10 +132,11 @@ test('shared-site production provenance gate receives the scoped GitHub token', 
 test('main accepts verified PR provenance and still rejects a direct push', () => {
   const cwd = new URL('..', import.meta.url); const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).stdout.trim();
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ekodi-orchestration-')); const eventPath = path.join(dir, 'event.json'); const provenancePath = path.join(dir, 'pulls.json');
-  const baseEnv = { ...process.env, GITHUB_EVENT_NAME: 'push', GITHUB_EVENT_PATH: eventPath, GITHUB_REF_NAME: 'main', GITHUB_RUN_ID: 'test-main-merge', GITHUB_ACTOR: 'topmaster-joseph', EKODI_GITHUB_PR_PROVENANCE: provenancePath };
+  const taskId='orch_00000000-0000-4000-8000-000000000001'; const branchRef=`ai/chatgpt/${taskId}`;
+  const baseEnv = { ...process.env, GITHUB_EVENT_NAME: 'push', GITHUB_EVENT_PATH: eventPath, GITHUB_REF_NAME: 'main', GITHUB_REPOSITORY: 'fixture/ekodi-platform', GITHUB_RUN_ID: 'test-main-merge', GITHUB_ACTOR: 'topmaster-joseph', EKODI_GITHUB_PR_PROVENANCE: provenancePath };
   try {
     fs.writeFileSync(eventPath, JSON.stringify({ head_commit: { message: 'squashed PR title (#1302)' } }));
-    fs.writeFileSync(provenancePath, JSON.stringify([{ number:1302,state:'closed',merged_at:'2026-09-09T00:00:00Z',merge_commit_sha:head,base:{ref:'main'},head:{ref:'ai/router-score'} }]));
+    fs.writeFileSync(provenancePath, JSON.stringify([{ number:1302,state:'closed',merged_at:'2026-09-09T00:00:00Z',merge_commit_sha:head,base:{ref:'main'},head:{ref:branchRef} }]));
     const merged=spawnSync(process.execPath,['scripts/validate-ekodi-ai-change-orchestration.mjs','--release'],{cwd,env:{...baseEnv,GITHUB_SHA:head},encoding:'utf8'}); assert.equal(merged.status,0,merged.stdout+'\n'+merged.stderr); assert.match(merged.stdout,/source=protected-main-pr-merge/);
     fs.writeFileSync(eventPath, JSON.stringify({ head_commit: { message: 'feat: direct push sentinel' } })); fs.writeFileSync(provenancePath,'[]');
     const direct=spawnSync(process.execPath,['scripts/validate-ekodi-ai-change-orchestration.mjs','--release'],{cwd,env:{...baseEnv,GITHUB_SHA:'0000000000000000000000000000000000000001'},encoding:'utf8'}); assert.notEqual(direct.status,0); assert.match(direct.stdout+'\n'+direct.stderr,/direct push to main is forbidden/);

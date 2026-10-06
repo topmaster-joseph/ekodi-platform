@@ -9,21 +9,28 @@ if(!form)return;
 const fields={
   phone:$('#digitalCardPhone'),
   email:$('#digitalCardEmail'),
-  phonePublic:$('#digitalCardPhonePublic'),
-  emailPublic:$('#digitalCardEmailPublic'),
   exchangeEnabled:$('#digitalCardExchangeEnabled'),
-  affiliations:$('#digitalCardAffiliations'),
-  addAffiliation:$('#digitalCardAddAffiliation'),
+  roles:$('#digitalCardRoles'),
+  contexts:$('#digitalCardContexts'),
+  addRole:$('#digitalCardAddRole'),
+  addContext:$('#digitalCardAddContext'),
   save:$('#digitalCardSave'),
   status:$('#digitalCardStatus'),
   link:$('#digitalCardLink'),
+  qrLink:$('#digitalCardQrLink'),
   inbox:$('#contactExchangeInbox'),
   inboxStatus:$('#contactExchangeInboxStatus'),
 };
+let rowSequence=0;
 
 function auth(){return window.EKODI_MY_AUTH||null}
 function token(){return String(auth()?.getAccessToken?.()||'')}
 function signedIn(){return Boolean(auth()?.isSignedIn?.()&&token())}
+function nextKey(prefix){rowSequence+=1;return `${prefix}-${rowSequence}`}
+function normalizeKey(value,fallback='item'){
+  const key=String(value||'').trim().toLowerCase().replace(/[^a-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40);
+  return /^[a-z0-9]/.test(key)?key:nextKey(fallback);
+}
 function setStatus(text,kind=''){
   fields.status.className=`profile-status${kind?` ${kind}`:''}`;
   fields.status.textContent=text;
@@ -37,52 +44,125 @@ async function rpc(name,args={}){
     body:JSON.stringify(args),
   });
   const data=await response.json().catch(()=>null);
-  if(!response.ok)throw new Error(String(data?.message||data?.error||'명함 정보를 처리하지 못했습니다.'));
+  if(!response.ok)throw new Error(String(data?.message||data?.error||'개인 공유 설정을 처리하지 못했습니다.'));
   return data||{};
 }
-function affiliationRow(item={}){
-  const row=document.createElement('div');row.className='digital-card-affiliation';
+function smallButton(label){
+  const button=document.createElement('button');
+  button.type='button';button.className='text-button';button.textContent=label;
+  return button;
+}
+function roleRow(item={}){
+  const row=document.createElement('div');row.className='digital-card-affiliation digital-card-role';
   const top=document.createElement('div');top.className='digital-card-affiliation-top';
-  const name=document.createElement('input');name.name='affiliationName';name.maxLength=120;name.placeholder='소속명';name.value=String(item.name||'');
-  const title=document.createElement('input');title.name='affiliationTitle';title.maxLength=120;title.placeholder='직함';title.value=String(item.title||'');
-  const remove=document.createElement('button');remove.type='button';remove.className='text-button';remove.textContent='삭제';remove.addEventListener('click',()=>row.remove());
+  const name=document.createElement('input');name.name='roleName';name.maxLength=120;name.placeholder='소속/역할명';name.value=String(item.name||'');
+  const title=document.createElement('input');title.name='roleTitle';title.maxLength=120;title.placeholder='직함';title.value=String(item.title||'');
+  const remove=smallButton('삭제');remove.addEventListener('click',()=>{row.remove();refreshRoleOptions()});
   top.append(name,title,remove);
-  const description=document.createElement('textarea');description.name='affiliationDescription';description.maxLength=800;description.rows=2;description.placeholder='이 소속에서 하는 일·역할 설명';description.value=String(item.description||'');
-  const url=document.createElement('input');url.name='affiliationUrl';url.type='url';url.inputMode='url';url.maxLength=1000;url.placeholder='https://관련 링크';url.value=String(item.url||'');
-  const visibleWrap=document.createElement('label');visibleWrap.className='digital-card-check';
-  const visible=document.createElement('input');visible.type='checkbox';visible.name='affiliationVisible';visible.checked=item.visible!==false;
-  visibleWrap.append(visible,document.createTextNode(' 이 소속을 명함에 표시'));
-  row.append(top,description,url,visibleWrap);
+  const key=document.createElement('input');key.name='roleKey';key.maxLength=40;key.autocapitalize='none';key.autocomplete='off';key.placeholder='공유용 ID (예: ekodi)';key.value=String(item.key||nextKey('role'));
+  const description=document.createElement('textarea');description.name='roleDescription';description.maxLength=800;description.rows=2;description.placeholder='이 역할에서 하는 일·소개';description.value=String(item.description||'');
+  const url=document.createElement('input');url.name='roleUrl';url.type='url';url.inputMode='url';url.maxLength=1000;url.placeholder='https://관련 링크';url.value=String(item.url||'');
+  const activeWrap=document.createElement('label');activeWrap.className='digital-card-check';
+  const active=document.createElement('input');active.type='checkbox';active.name='roleActive';active.checked=item.active!==false;
+  activeWrap.append(active,document.createTextNode(' 역할 사용'));
+  row.append(top,key,description,url,activeWrap);
+  key.addEventListener('change',()=>{key.value=normalizeKey(key.value,'role');refreshRoleOptions()});
+  name.addEventListener('input',refreshRoleOptions);
+  title.addEventListener('input',refreshRoleOptions);
   return row;
 }
-function renderAffiliations(items=[]){
-  fields.affiliations.replaceChildren();
-  const safe=Array.isArray(items)?items:[];
-  for(const item of safe)fields.affiliations.append(affiliationRow(item));
-  if(!safe.length)fields.affiliations.append(affiliationRow({visible:true}));
+function currentRoleOptions(){
+  return [...fields.roles.querySelectorAll('.digital-card-role')].map(row=>({
+    key:String(row.querySelector('[name="roleKey"]')?.value||'').trim().toLowerCase(),
+    label:[String(row.querySelector('[name="roleName"]')?.value||'').trim(),String(row.querySelector('[name="roleTitle"]')?.value||'').trim()].filter(Boolean).join(' · '),
+  })).filter(item=>item.key);
 }
-function collectAffiliations(){
-  return [...fields.affiliations.querySelectorAll('.digital-card-affiliation')].map(row=>({
-    name:String(row.querySelector('[name="affiliationName"]')?.value||'').trim(),
-    title:String(row.querySelector('[name="affiliationTitle"]')?.value||'').trim(),
-    description:String(row.querySelector('[name="affiliationDescription"]')?.value||'').trim(),
-    url:String(row.querySelector('[name="affiliationUrl"]')?.value||'').trim(),
-    visible:Boolean(row.querySelector('[name="affiliationVisible"]')?.checked),
+function refreshRoleOptions(){
+  const options=currentRoleOptions();
+  for(const select of fields.contexts.querySelectorAll('[name="contextRole"]')){
+    const selected=select.value;
+    select.replaceChildren(new Option('역할 연결 없음',''));
+    for(const item of options)select.append(new Option(item.label||item.key,item.key));
+    if([...select.options].some(option=>option.value===selected))select.value=selected;
+  }
+}
+function contextCheck(name,label,checked){
+  const wrap=document.createElement('label');wrap.className='digital-card-check digital-card-context-check';
+  const input=document.createElement('input');input.type='checkbox';input.name=name;input.checked=Boolean(checked);
+  wrap.append(input,document.createTextNode(` ${label}`));return wrap;
+}
+function contextRow(item={}){
+  const row=document.createElement('div');row.className='digital-card-context';
+  const top=document.createElement('div');top.className='digital-card-affiliation-top';
+  const label=document.createElement('input');label.name='contextLabel';label.maxLength=80;label.placeholder='공유모드 이름 (예: EKODI)';label.value=String(item.label||'');
+  const key=document.createElement('input');key.name='contextKey';key.maxLength=40;key.autocapitalize='none';key.autocomplete='off';key.placeholder='공유 ID (예: ekodi)';key.value=String(item.key||nextKey('context'));
+  const remove=smallButton('삭제');remove.addEventListener('click',()=>row.remove());
+  top.append(label,key,remove);
+  const role=document.createElement('select');role.name='contextRole';role.append(new Option('역할 연결 없음',''));
+  const options=currentRoleOptions();
+  for(const opt of options)role.append(new Option(opt.label||opt.key,opt.key));
+  role.value=String(item.role_key||'');
+  const checks=document.createElement('div');checks.className='digital-card-context-options';
+  const phone=contextCheck('contextPhone','휴대전화 공개',item.show_phone);
+  const email=contextCheck('contextEmail','이메일 공개',item.show_email);
+  const intro=contextCheck('contextIntro','공개 소개 표시',item.show_profile_intro!==false);
+  const links=contextCheck('contextLinks','대표 링크 표시',item.show_profile_links!==false);
+  const exchange=contextCheck('contextExchange','연락처 교환 허용',item.exchange_enabled!==false);
+  const visible=contextCheck('contextPublic','외부 공개',item.visibility==='public');
+  const isDefault=contextCheck('contextDefault','대표 공유모드',item.is_default);
+  isDefault.querySelector('input').addEventListener('change',event=>{
+    if(!event.currentTarget.checked)return;
+    for(const other of fields.contexts.querySelectorAll('[name="contextDefault"]'))if(other!==event.currentTarget)other.checked=false;
+  });
+  checks.append(phone,email,intro,links,exchange,visible,isDefault);
+  row.append(top,role,checks);
+  key.addEventListener('change',()=>{key.value=normalizeKey(key.value,'context')});
+  return row;
+}
+function renderRoles(items=[]){
+  fields.roles.replaceChildren();
+  for(const item of Array.isArray(items)?items:[])fields.roles.append(roleRow(item));
+}
+function renderContexts(items=[]){
+  fields.contexts.replaceChildren();
+  for(const item of Array.isArray(items)?items:[])fields.contexts.append(contextRow(item));
+}
+function collectRoles(){
+  return [...fields.roles.querySelectorAll('.digital-card-role')].map(row=>({
+    key:normalizeKey(row.querySelector('[name="roleKey"]')?.value,'role'),
+    name:String(row.querySelector('[name="roleName"]')?.value||'').trim(),
+    title:String(row.querySelector('[name="roleTitle"]')?.value||'').trim(),
+    description:String(row.querySelector('[name="roleDescription"]')?.value||'').trim(),
+    url:String(row.querySelector('[name="roleUrl"]')?.value||'').trim(),
+    active:Boolean(row.querySelector('[name="roleActive"]')?.checked),
   })).filter(item=>item.name||item.title||item.description||item.url);
 }
+function collectContexts(){
+  return [...fields.contexts.querySelectorAll('.digital-card-context')].map(row=>({
+    key:normalizeKey(row.querySelector('[name="contextKey"]')?.value,'context'),
+    label:String(row.querySelector('[name="contextLabel"]')?.value||'').trim(),
+    role_key:String(row.querySelector('[name="contextRole"]')?.value||'').trim(),
+    show_phone:Boolean(row.querySelector('[name="contextPhone"]')?.checked),
+    show_email:Boolean(row.querySelector('[name="contextEmail"]')?.checked),
+    show_profile_intro:Boolean(row.querySelector('[name="contextIntro"]')?.checked),
+    show_profile_links:Boolean(row.querySelector('[name="contextLinks"]')?.checked),
+    exchange_enabled:Boolean(row.querySelector('[name="contextExchange"]')?.checked),
+    visibility:row.querySelector('[name="contextPublic"]')?.checked?'public':'private',
+    is_default:Boolean(row.querySelector('[name="contextDefault"]')?.checked),
+  })).filter(item=>item.label);
+}
 function setDisabled(value){
-  for(const el of form.querySelectorAll('input,textarea,button'))el.disabled=value;
+  for(const el of form.querySelectorAll('input,textarea,select,button'))el.disabled=value;
 }
-async function loadPublicProfile(){
-  try{return await rpc('get_my_public_profile')}catch{return{}}
-}
-function showCardLink(profile={}){
-  const handle=String(profile.handle||'');
-  const visible=profile.visibility==='public'&&handle;
-  fields.link.hidden=!visible;
+async function loadPublicProfile(){try{return await rpc('get_my_public_profile')}catch{return{}}}
+function showCardLinks(profile={}){
+  const handle=String(profile.handle||''),visible=profile.visibility==='public'&&handle;
+  for(const el of [fields.link,fields.qrLink])if(el)el.hidden=!visible;
   if(visible){
     fields.link.href=`https://ekodi.kr/${handle}/card`;
-    fields.link.textContent=`디지털 명함 보기 · ekodi.kr/${handle}/card →`;
+    fields.link.textContent=`공유 페이지 · ekodi.kr/${handle}/card →`;
+    fields.qrLink.href=`https://ekodi.kr/${handle}/qr`;
+    fields.qrLink.textContent=`QR 공유센터 · ekodi.kr/${handle}/qr →`;
   }
 }
 function renderInbox(items=[]){
@@ -97,70 +177,55 @@ function renderInbox(items=[]){
     const name=document.createElement('strong');name.textContent=String(item.name||'이름 없음');
     const time=document.createElement('time');time.textContent=item.last_shared_at?new Date(item.last_shared_at).toLocaleString('ko-KR'):'';
     head.append(name,time);
+    if(item.context_label){const badge=document.createElement('span');badge.className='digital-card-context-badge';badge.textContent=String(item.context_label);article.append(badge)}
     const meta=document.createElement('p');meta.textContent=[item.affiliation,item.title].filter(Boolean).join(' · ')||'소속·직함 미입력';
     const contact=document.createElement('p');contact.textContent=[item.phone,item.email].filter(Boolean).join(' · ')||'연락처 없음';
     article.append(head,meta,contact);
-    if(item.website){
-      const link=document.createElement('a');link.href=item.website;link.target='_blank';link.rel='noreferrer';link.className='text-link';link.textContent='관련 링크 →';article.append(link);
-    }
+    if(item.website){const link=document.createElement('a');link.href=item.website;link.target='_blank';link.rel='noreferrer';link.className='text-link';link.textContent='관련 링크 →';article.append(link)}
     fields.inbox.append(article);
   }
 }
 async function refresh(){
   if(!signedIn()){
-    setDisabled(true);renderAffiliations([]);renderInbox([]);showCardLink({});
-    setStatus('로그인하면 디지털 명함과 연락처 교환 기능을 관리할 수 있습니다.');
-    fields.inboxStatus.textContent='로그인 후 받은 연락처를 확인할 수 있습니다.';
-    return;
+    setDisabled(true);renderRoles([]);renderContexts([]);renderInbox([]);showCardLinks({});
+    setStatus('로그인하면 개인 공유 설정을 관리할 수 있습니다.');
+    fields.inboxStatus.textContent='로그인 후 받은 연락처를 확인할 수 있습니다.';return;
   }
-  setDisabled(true);setStatus('디지털 명함 정보를 확인하고 있습니다.');
+  setDisabled(true);setStatus('개인 공유 설정을 확인하고 있습니다.');
   try{
     const [card,profile,inbox]=await Promise.all([
-      rpc('get_my_digital_card'),
-      loadPublicProfile(),
-      rpc('get_my_contact_exchanges',{p_limit:50}),
+      rpc('get_my_identity_share_config'),loadPublicProfile(),rpc('get_my_contact_exchanges',{p_limit:50}),
     ]);
-    fields.phone.value=String(card.phone||'');
-    fields.email.value=String(card.email||'');
-    fields.phonePublic.checked=Boolean(card.phone_public);
-    fields.emailPublic.checked=Boolean(card.email_public);
+    fields.phone.value=String(card.phone||'');fields.email.value=String(card.email||'');
     fields.exchangeEnabled.checked=Boolean(card.exchange_enabled);
-    renderAffiliations(card.affiliations);
-    showCardLink(profile);
-    renderInbox(Array.isArray(inbox.items)?inbox.items:[]);
-    fields.inboxStatus.textContent='상대방이 동의 후 보낸 연락처만 표시됩니다.';
-    setStatus(profile?.visibility==='public'&&profile?.handle?'명함 주소가 준비되어 있습니다. 공개할 연락처와 소속을 확인해 주세요.':'먼저 공개 개인페이지의 아이디와 공개 상태를 설정해 주세요.');
-  }catch(error){
-    renderAffiliations([]);renderInbox([]);setStatus(error.message||'디지털 명함 정보를 불러오지 못했습니다.','error');
-  }finally{setDisabled(false)}
+    renderRoles(card.roles);renderContexts(card.contexts);refreshRoleOptions();
+    showCardLinks(profile);renderInbox(Array.isArray(inbox.items)?inbox.items:[]);
+    fields.inboxStatus.textContent='공유모드가 자동 태그되어 어떤 관계로 연결됐는지 함께 표시됩니다.';
+    setStatus(profile?.visibility==='public'&&profile?.handle?'기본정보·역할·공유모드를 관리할 수 있습니다.':'먼저 공개 개인페이지의 아이디와 공개 상태를 설정해 주세요.');
+  }catch(error){renderRoles([]);renderContexts([]);renderInbox([]);setStatus(error.message||'개인 공유 설정을 불러오지 못했습니다.','error')}
+  finally{setDisabled(false)}
 }
 async function save(event){
-  event.preventDefault();
-  if(!signedIn())return;
-  const affiliations=collectAffiliations();
-  if(affiliations.length>20){setStatus('소속은 최대 20개까지 등록할 수 있습니다.','error');return}
+  event.preventDefault();if(!signedIn())return;
+  const roles=collectRoles(),contexts=collectContexts();
+  if(roles.length>20||contexts.length>20){setStatus('역할과 공유모드는 각각 최대 20개까지 등록할 수 있습니다.','error');return}
+  const roleKeys=roles.map(item=>item.key),contextKeys=contexts.map(item=>item.key);
+  if(new Set(roleKeys).size!==roleKeys.length||new Set(contextKeys).size!==contextKeys.length){setStatus('역할 ID와 공유 ID는 서로 중복될 수 없습니다.','error');return}
+  if(contexts.filter(item=>item.is_default).length>1){setStatus('대표 공유모드는 하나만 선택할 수 있습니다.','error');return}
   const label=fields.save.textContent;setDisabled(true);fields.save.textContent='저장 중…';
   try{
-    await rpc('set_my_digital_card',{
-      p_phone:String(fields.phone.value||'').trim(),
-      p_email:String(fields.email.value||'').trim(),
-      p_phone_public:Boolean(fields.phonePublic.checked),
-      p_email_public:Boolean(fields.emailPublic.checked),
-      p_exchange_enabled:Boolean(fields.exchangeEnabled.checked),
-      p_affiliations:affiliations,
+    await rpc('set_my_identity_share_config',{
+      p_phone:String(fields.phone.value||'').trim(),p_email:String(fields.email.value||'').trim(),
+      p_exchange_enabled:Boolean(fields.exchangeEnabled.checked),p_roles:roles,p_contexts:contexts,
     });
-    setStatus('디지털 명함 설정이 저장되었습니다.','success');
-    showCardLink(await loadPublicProfile());
-  }catch(error){setStatus(error.message||'명함 설정을 저장하지 못했습니다.','error')}
+    setStatus('개인정보 원장과 상황별 공유모드가 저장되었습니다.','success');showCardLinks(await loadPublicProfile());
+  }catch(error){setStatus(error.message||'공유 설정을 저장하지 못했습니다.','error')}
   finally{setDisabled(false);fields.save.textContent=label}
 }
-
-fields.addAffiliation.addEventListener('click',()=>{
-  if(fields.affiliations.children.length>=20){setStatus('소속은 최대 20개까지 등록할 수 있습니다.','error');return}
-  fields.affiliations.append(affiliationRow({visible:true}));
-});
+fields.addRole.addEventListener('click',()=>{if(fields.roles.children.length>=20)return setStatus('역할은 최대 20개까지 등록할 수 있습니다.','error');fields.roles.append(roleRow({active:true}));refreshRoleOptions()});
+fields.addContext.addEventListener('click',()=>{if(fields.contexts.children.length>=20)return setStatus('공유모드는 최대 20개까지 등록할 수 있습니다.','error');fields.contexts.append(contextRow({show_profile_intro:true,show_profile_links:true,exchange_enabled:true,visibility:'private'}))});
 form.addEventListener('submit',save);
 window.addEventListener('ekodi:my-session',()=>void refresh());
-window.addEventListener('ekodi:public-profile-updated',event=>showCardLink(event.detail||{}));
+window.addEventListener('ekodi:public-profile-updated',event=>showCardLinks(event.detail||{}));
 void refresh();
 })();

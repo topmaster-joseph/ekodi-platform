@@ -28,3 +28,10 @@ test('canonical public entry is apex-only while Admin and Auth are path-owned', 
   assert.match(wrangler, /"\/auth"/);
   assert.match(wrangler, /"\/auth\/\*"/);
 });
+
+
+test('pre-candidate trigger config stays in repository root so relative assets resolve to dist', () => {
+  assert.match(workflow, /> wrangler\.site\.pre-candidate\.toml/);
+  assert.match(workflow, /triggers deploy --config wrangler\.site\.pre-candidate\.toml/);
+  assert.doesNotMatch(workflow, /\/tmp\/wrangler\.site\.pre-candidate\.toml/);
+});

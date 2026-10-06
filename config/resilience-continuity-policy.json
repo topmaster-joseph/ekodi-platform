@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-RESILIENCE-CONTINUITY-001",
+  "status": "enforced",
+  "scope": "all-current-and-future-platform-services-sites-modules-and-execution-paths",
+  "owner": "ekodi-orchestrator",
+  "principle": "continuity-first-sustainable-replacement-then-root-cause-improvement",
+  "objective": "Keep EKODI user-facing and critical operational capabilities available without sacrificing security, authorization, auditability, canonical data integrity or truthful completion reporting.",
+  "priorityOrder": [
+    "protect-security-identity-and-canonical-data",
+    "detect-and-isolate-failure",
+    "switch-to-approved-sustainable-replacement-or-safe-degraded-mode",
+    "verify-real-service-continuity",
+    "record-evidence-and-gap",
+    "repair-root-cause",
+    "requalify-primary-or-promote-replacement",
+    "close-only-after-production-verification"
+  ],
+  "forcedExecution": {
+    "immediateContinuityActionRequired": true,
+    "doNotWaitForRootCauseBeforeSafeReplacement": true,
+    "approvedReplacementPreferredOverEmergencyCustomPatch": true,
+    "automaticRetryAndReconcileRequired": true,
+    "circuitBreakerRequiredForUnhealthyDependencies": true,
+    "healthGateRequiredBeforeTrafficPromotion": true,
+    "rollbackToLastKnownGoodRequired": true,
+    "evidenceRequiredForEveryFailover": true,
+    "falseSuccessForbidden": true,
+    "operatorEscalationOnlyAfterAutomaticRecoveryExhausted": true,
+    "boardAuthenticationSharedOnly": true,
+    "boardLocalOperationAndAuthorizationRequired": true,
+    "boardCrossSiteIsolationRequired": true
+  },
+  "sustainability": {
+    "temporaryFallbackMustBeReplaceable": true,
+    "providerLockInForbidden": true,
+    "exportOrMigrationPathRequired": true,
+    "fallbackMustNotBecomeDefaultByAccident": true,
+    "successfulFallbackCreatesRootCauseRecoveryWork": true,
+    "repeatedFallbackTriggersPermanentReplacementEvaluation": true,
+    "manualRecurringMaintenanceAsSteadyStateForbidden": true
+  },
+  "safetyBoundaries": {
+    "authorizationBypassForbidden": true,
+    "securityBoundaryReductionForbidden": true,
+    "auditBypassForbidden": true,
+    "canonicalDataOwnershipMustRemainExplicit": true,
+    "ambiguousWriteCrossProviderReplayForbidden": true,
+    "idempotencyRequiredForRetriedWrites": true,
+    "durableQueueRequiredWhenWriteCompletionCannotBeProven": true,
+    "destructiveMigrationRequiresHumanGate": true,
+    "billingOrPaidPlanChangeRequiresHumanGate": true,
+    "boardLifecycleDestructiveActionRequiresSuperAdminReauthentication": true,
+    "boardLifecycleDestructiveActionRequiresTargetBoundSingleUseProof": true,
+    "boardLifecycleDestructiveActionRequiresRestoreEvidence": true
+  },
+  "capabilityRules": {
+    "ai": {
+      "coreServiceMayDependSynchronouslyOnOptionalAi": false,
+      "failureAction": "bypass-or-route-to-approved-provider-without-blocking-core-service",
+      "postRecovery": "diagnose-provider-and-restore-or-replace"
+    },
+    "read": {
+      "failureAction": "approved-read-replica-cache-or-compatible-provider",
+      "staleDataMustBeMarked": true,
+      "fabricatedSuccessForbidden": true
+    },
+    "write": {
+      "failureAction": "canonical-durable-ingress-or-compatible-approved-write-plane",
+      "ambiguousCommitAction": "queue-and-reconcile-never-blind-replay",
+      "providerSwitchRequiresSharedIdempotencyAndCanonicalOwnership": true
+    },
+    "storage": {
+      "failureAction": "durable-queue-or-approved-replaceable-storage-adapter",
+      "metadataAndCanonicalReferencesMustRemainPortable": true
+    },
+    "worker": {
+      "failureAction": "healthy-approved-worker-or-isolated-execution-route",
+      "taskIdempotencyRequired": true
+    },
+    "network": {
+      "failureAction": "healthy-route-cache-or-last-known-good-read-only-surface",
+      "securityHeadersAndCanonicalDomainMustBePreserved": true
+    },
+    "deployment": {
+      "failureAction": "stop-promotion-and-rollback-last-known-good",
+      "canaryRequired": true,
+      "productionHealthVerificationRequired": true
+    },
+    "thirdPartyModule": {
+      "failureAction": "isolate-extension-and-continue-on-canonical-ekodi-core",
+      "externalModuleMayNotOwnUnrecoverableCanonicalData": true
+    },
+    "identityAndSecurity": {
+      "failureAction": "fail-closed-for-privileged-actions-while-preserving-safe-public-read-where-allowed",
+      "privilegeExpansionDuringRecoveryForbidden": true
+    }
+  },
+  "recoveryLifecycle": [
+    "observe",
+    "classify",
+    "isolate",
+    "select-safe-sustainable-alternative",
+    "switch-or-degrade-safely",
+    "verify",
+    "continue-service",
+    "record-evidence",
+    "root-cause-repair",
+    "retest",
+    "restore-or-permanently-replace",
+    "production-reverify"
+  ],
+  "verification": {
+    "representativeFailureScenariosRequired": [
+      "all-ai-providers-unavailable",
+      "read-provider-unavailable",
+      "ambiguous-write-outcome",
+      "worker-unavailable",
+      "third-party-module-unavailable",
+      "deployment-candidate-unhealthy",
+      "identity-provider-unavailable"
+    ],
+    "ciDriftGateRequired": true,
+    "stagingEvidenceRequired": true,
+    "guardedProductionReleaseRequired": true,
+    "liveProductionVerificationRequired": true
+  },
+  "linkedPolicies": [
+    "OPERATOR-ZERO-MAINTENANCE-001",
+    "EKODI-VIRTUALIZATION-ROUTING-001",
+    "EKODI-DURABLE-WRITE-INGRESS-001",
+    "EKODI-REPLACEABLE-BOARD-ENGINE-001"
+  ]
+}

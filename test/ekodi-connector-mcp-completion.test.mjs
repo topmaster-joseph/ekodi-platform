@@ -96,3 +96,35 @@ test('orchestrator task adapter is requester-isolated and queues through the exi
   assert.match(source,/state='cancelled'/);
   assert.match(source,/state IN \('queued','retry'\)/);
 });
+
+
+test('MCP delegated tasks carry standing delegation, expose retries, and synchronize after immediate dispatch',async()=>{
+  const source=await readFile(new URL('../ekodi-orchestrator-task-adapter.js',import.meta.url),'utf8');
+  assert.match(source,/delegation:\{allowed:true,reversible:true,audited:true,preflightVerified:true,verificationDefined:true\}/);
+  assert.match(source,/runEkodiCommandQueue\(env,\{limit:1,taskId:id\}\)/);
+  assert.match(source,/assigned_worker='ekodi-command-plane'/);
+  assert.match(source,/if\(value==='retry'\)return'assigned'/);
+  assert.match(source,/commandLedger:commandMeta/);
+  assert.doesNotMatch(source,/return'retrying'/);
+  assert.match(source,/commandState:commandMeta\?\.state\|\|null/);
+  assert.match(source,/attemptCount:Number\(commandMeta\?\.attemptCount\|\|0\)/);
+  assert.match(source,/lastError:commandMeta\?\.lastError\|\|''/);
+  assert.match(source,/state_version=state_version\+\?/);
+  assert.match(source,/syncFromCommandLedger\(db,env,await ownedTask\(db,id,requester\)\)/);
+  const assign=source.indexOf("SET state='assigned'");
+  const dispatch=source.indexOf('await runEkodiCommandQueue(env,{limit:1,taskId:id})');
+  assert.ok(assign>=0&&dispatch>assign,'assignment must be recorded before inline dispatch so execution state is not overwritten back to assigned');
+});
+
+
+test('orchestrator propagates canonical identity into least-privilege execution authority',async()=>{
+  const source=await readFile(new URL('../ekodi-orchestrator-task-adapter.js',import.meta.url),'utf8');
+  assert.match(source,/async function resolveCommandAuthority\(db,identity=\{\},target=\{\}\)/);
+  assert.match(source,/identity\?\.personId/);
+  assert.match(source,/customer_access_grants/);
+  assert.match(source,/accessGrantIsActive\(grant\)/);
+  assert.match(source,/tenantAdminCapabilitiesForRole\(grant\.role\)/);
+  assert.match(source,/denied_capabilities_json/);
+  assert.match(source,/context:\{source:'mcp'.*authority\}/s);
+  assert.match(source,/platformRole==='super_admin'/);
+});

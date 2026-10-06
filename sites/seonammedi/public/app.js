@@ -69,13 +69,31 @@ const renderStatusDetail=(key,d)=>{
 };
 const closeStatusDetail=()=>{const panel=el('statusDetail');if(panel)panel.hidden=true;el('statusCards')?.querySelectorAll('.status-card').forEach(button=>button.setAttribute('aria-expanded','false'))};
 const refreshStatusDetail=()=>{const active=el('statusCards')?.querySelector('.status-card[aria-expanded="true"]');if(active&&window.__SEONAM_MEDI_DATA)renderStatusDetail(active.dataset.status,window.__SEONAM_MEDI_DATA)};
+let publicFinanceEntries=[];
+const financeEvidenceLabel=value=>value==='verified'?'증빙 확인완료':value==='held'?'증빙 보유':'증빙 미등록';
+function updatePublicFinanceSummary(rows){
+  const visible=(rows||[]).filter(item=>item.visible!==false);
+  const raised=visible.filter(item=>item.type==='income').reduce((sum,item)=>sum+Number(item.amount||0),0);
+  const spent=visible.filter(item=>item.type!=='income').reduce((sum,item)=>sum+Number(item.amount||0),0);
+  if(el('raised'))el('raised').textContent=money(raised);if(el('spent'))el('spent').textContent=money(spent);if(el('balance'))el('balance').textContent=money(raised-spent);
+}
+function renderPublicFinance(rows,adminMode=false){
+  const host=el('financeList');if(!host)return;
+  const source=adminMode?(rows||[]):(rows||[]).filter(item=>item.visible!==false);
+  const sorted=source.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.id||0)-Number(a.id||0));
+  host.innerHTML=sorted.length?sorted.map(item=>{
+    const actions=adminMode?'<div class="finance-row-actions"><button type="button" data-finance-edit="'+Number(item.id)+'">수정</button><button type="button" data-finance-delete="'+Number(item.id)+'">삭제</button></div>':'';
+    const visibility=adminMode?'<span class="source-type '+(item.visible===false?'is-private':'')+'">'+(item.visible===false?'비공개':'공개')+'</span>':'';
+    return '<article class="material-item finance-item"><div class="material-date">'+escapeHtml(item.date||'')+'</div><div><h3>'+escapeHtml((item.type==='income'?'수입 ':'지출 ')+money(Number(item.amount||0)))+'</h3><p>'+escapeHtml(item.purpose||'')+'</p><div class="public-post-meta">'+(item.event?'<span class="source-type">'+escapeHtml(item.event)+'</span>':'')+'<span class="source-type">'+escapeHtml(financeEvidenceLabel(item.evidenceStatus))+'</span>'+visibility+'</div>'+(item.note?'<p>'+escapeHtml(item.note)+'</p>':'')+actions+'</div></article>';
+  }).join(''):'<p class="muted">'+(adminMode?'등록된 회계내역이 없습니다.':'공개된 회계내역이 없습니다.')+'</p>';
+}
 async function load(){
 const [r,timelineResponse,pageResponse]=await Promise.all([fetch('/seonammedi/data.json',{cache:'no-store'}),fetch('/api/seonammedi/timeline',{cache:'no-store'}).catch(()=>null),fetch('/api/seonammedi/page-data',{cache:'no-store'}).catch(()=>null)]);
 if(!r.ok)throw new Error('data');const d=await r.json();
 if(timelineResponse?.ok){const timelineBody=await timelineResponse.json().catch(()=>({}));if(Array.isArray(timelineBody.items))d.timeline=timelineBody.items}
 if(pageResponse?.ok){const pageBody=await pageResponse.json().catch(()=>({}));if(Array.isArray(pageBody.page?.status?.items))d.status=pageBody.page.status.items;if(pageBody.page?.organization&&typeof pageBody.page.organization==='object')d.organization=pageBody.page.organization;if(pageBody.finance&&typeof pageBody.finance==='object')d.finance=pageBody.finance}
 window.__SEONAM_MEDI_DATA=d;
-el('lastUpdated').textContent='최종 업데이트 '+d.updatedAt;
+el('lastUpdated').textContent='마지막 갱신 '+d.updatedAt;
 const statusCards=el('statusCards');
 if(statusCards){
   statusCards.innerHTML=d.status.filter(x=>x?.key!=='daily').map((x,i)=>{const key=x.key||['official','news'][i]||('status-'+i);return `<button type="button" class="card status-card" data-status="${escapeHtml(key)}" aria-expanded="false" aria-controls="statusDetail"><span class="status-card-copy"><strong class="status-card-title">${escapeHtml(x.title)}</strong><span class="status-card-text">${escapeHtml(x.text)}</span></span><span class="status-card-action">내용 보기 <span aria-hidden="true">→</span></span></button>`}).join('');
@@ -91,7 +109,7 @@ const timelineDateKey=value=>{
 const timelineDescending=(a,b)=>timelineDateKey(b.date)-timelineDateKey(a.date)||Number(b.id||0)-Number(a.id||0)||String(b.title||'').localeCompare(String(a.title||''),'ko-KR');
 const cats=['전체','비대위 활동이력','장기현안','정부·대학','후보대학 선정'];
 el('timelineFilters').innerHTML=cats.map((c,i)=>`<button data-cat="${escapeHtml(c)}" class="${i===0?'active':''}">${escapeHtml(c)}</button>`).join('');
-const render=cat=>{const rows=(cat==='전체'?d.timeline:d.timeline.filter(x=>timelineCategoryLabel(x.category)===cat)).slice().sort(timelineDescending);el('timelineList').innerHTML=rows.map(x=>`<article class="timeline-item" data-event-date="${escapeHtml(x.date)}"><div class="timeline-date">${escapeHtml(x.date)}</div><div><h3>${escapeHtml(x.title)}</h3><p>${escapeHtml(x.summary)}</p><div class="chips"><span class="chip">${escapeHtml(timelineCategoryLabel(x.category))}</span><span class="chip">${escapeHtml(x.evidence)}</span></div>${evidenceBlock(x)}</div></article>`).join('')};
+const render=cat=>{const rows=(cat==='전체'?d.timeline:d.timeline.filter(x=>timelineCategoryLabel(x.category)===cat)).slice().sort(timelineDescending);el('timelineList').innerHTML=rows.map((x,index)=>`<article class="timeline-item${index>2?' is-collapsed':''}" data-event-date="${escapeHtml(x.date)}"><div class="timeline-date">${escapeHtml(x.date)}</div><div class="timeline-content"><h3>${escapeHtml(x.title)}</h3><p class="timeline-summary">${escapeHtml(x.summary)}</p><div class="chips"><span class="chip">${escapeHtml(timelineCategoryLabel(x.category))}</span><span class="chip">${escapeHtml(x.evidence)}</span></div><div class="timeline-detail">${evidenceBlock(x)}</div><button class="timeline-toggle" type="button" aria-expanded="${index>2?'false':'true'}">${index>2?'자세히 보기':'접기'}</button></div></article>`).join('');el('timelineList').querySelectorAll('.timeline-toggle').forEach(button=>button.addEventListener('click',()=>{const card=button.closest('.timeline-item');const collapsed=card.classList.toggle('is-collapsed');button.setAttribute('aria-expanded',collapsed?'false':'true');button.textContent=collapsed?'자세히 보기':'접기'}))};
 render('전체');el('timelineFilters').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;[...el('timelineFilters').children].forEach(x=>x.classList.remove('active'));b.classList.add('active');render(b.dataset.cat);attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS||[])});
 const normalizeUrlKey=value=>{try{const u=new URL(String(value||''),location.origin);u.hash='';['utm_source','utm_medium','utm_campaign','utm_term','utm_content','fbclid','gclid'].forEach(k=>u.searchParams.delete(k));return u.href.replace(/\/$/,'')}catch{return String(value||'').trim().replace(/\/$/,'')}};
 const timelineEvidenceUrls=new Set((d.timeline||[]).flatMap(item=>[...(item.links||[]).map(link=>link.url),...(item.media||[]).map(media=>media.url)]).filter(Boolean).map(normalizeUrlKey));
@@ -170,14 +188,17 @@ const ORG_GROUP_META=[['bidae','비대위'],['mokpo','목포대'],['minhak','민
 const ORG_LEGACY_KEYS={bidae:'integrated',minhak:'civic'};
 const cleanOrgPublicText=value=>String(value||'').replace(/\s*\([^)]*위원회\s*겸임[^)]*\)/g,'').trim();
 const publicOrgStatusLabel=group=>group?.key!=='minhak'&&String(group?.statusLabel||'').trim()==='운영 중'?'':String(group?.statusLabel||'').trim();
-const orgGroups=Array.isArray(org.groups)&&org.groups.length
+let orgGroups=Array.isArray(org.groups)&&org.groups.length
   ?ORG_GROUP_META.map(([key,label])=>{const legacyKey=ORG_LEGACY_KEYS[key];const found=org.groups.find(group=>group.key===key)||(legacyKey?org.groups.find(group=>group.key===legacyKey):null);return{...(found||{}),key,label}})
   :ORG_GROUP_META.map(([key,label],index)=>index===0?{key,label,levels:org.levels||[],committees:org.committees||[],participants:org.participants||[]}:{key,label,status:key==='minhak'?'forming':'active',statusLabel:key==='minhak'?'구성 논의 중':'',levels:[],committees:[],participants:[]});
+let activePublicOrgKey='bidae';
 const chart=el('organizationChart');
 const participantHost=el('participantOrganizations');
 const orgTabs=el('organizationTabs');
 function renderOrganizationGroup(key){
   const group=orgGroups.find(item=>item.key===key)||orgGroups[0];
+  activePublicOrgKey=group?.key||'bidae';
+  if(el('organizationManageForm')&&!el('organizationManageForm').hidden)fillPublicOrganizationEditor(group);
   if(chart){
     const statusLabel=publicOrgStatusLabel(group);const status=statusLabel?'<p class="note org-status">'+escapeHtml(statusLabel)+'</p>':'';
     const levels=(group.levels||[]).map(level=>'<article class="org-level"><strong>'+escapeHtml(level.name)+'</strong>'+(Array.isArray(level.members)&&level.members.length?'<p>'+level.members.map(cleanOrgPublicText).filter(Boolean).map(escapeHtml).join(' · ')+'</p>':'')+'</article>').join('');
@@ -195,8 +216,10 @@ if(orgTabs){
   orgTabs.addEventListener('click',event=>{const button=event.target.closest('button[data-org-group]');if(button)renderOrganizationGroup(button.dataset.orgGroup)});
 }
 renderOrganizationGroup('bidae');
-el('raised').textContent=money(d.finance.raised);el('spent').textContent=money(d.finance.spent);el('balance').textContent=money(d.finance.balance);
-const financeHost=el('financeList');if(financeHost){const rows=Array.isArray(d.finance.entries)?d.finance.entries:[];financeHost.innerHTML=rows.length?rows.map(item=>'<article class="material-item"><div class="material-date">'+escapeHtml(item.date||'')+'</div><div><h3>'+escapeHtml((item.type==='income'?'수입 ':'지출 ')+money(Number(item.amount||0)))+'</h3><p>'+escapeHtml(item.purpose||'')+'</p><div class="public-post-meta">'+(item.event?'<span class="source-type">'+escapeHtml(item.event)+'</span>':'')+'<span class="source-type">'+escapeHtml(item.evidenceStatus==='verified'?'증빙 확인완료':item.evidenceStatus==='held'?'증빙 보유':'증빙 미등록')+'</span></div>'+(item.note?'<p>'+escapeHtml(item.note)+'</p>':'')+'</div></article>').join(''):'<p class="muted">공개된 회계내역이 없습니다.</p>'}}
+publicFinanceEntries=Array.isArray(d.finance.entries)?d.finance.entries:[];
+renderPublicFinance(publicFinanceEntries,false);
+updatePublicFinanceSummary(publicFinanceEntries);
+}
 
 const siteReady=load().catch(()=>{el('lastUpdated').textContent='데이터를 불러오지 못했습니다.'});
 function monitorHomeRows(items=[]){
@@ -234,7 +257,7 @@ async function loadMonitor(){
     const rows=(data.items||[]).slice(0,18);window.__SEONAM_MONITOR_ITEMS=data.items||[];attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS);
     if(list)list.innerHTML=rows.length?rows.map(item=>`<article class="source"><a href="${safeUrl(item.resolved_url||item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title||'')}</a>${item.summary_text?'<p>'+escapeHtml(item.summary_text)+'</p>':''}<small>${escapeHtml(item.publisher||'출처 확인 중')} · 자동수집 ${item.source_type==='blog'?'블로그':'보도'}${item.media_type?' · '+(item.media_type==='video'?'영상 근거 후보':'사진 근거 후보'):''} · ${item.source_type==='blog'?'개인·온라인 게시물 / 공식자료 교차확인 필요':'원문 확인 필요'}</small></article>`).join(''):'<p class="muted">최근 7일 내 새로 수집된 공개 자료가 없습니다.</p>';
     renderHomeMonitorUpdates(data);
-    if(run?.completed_at){const latest=el('lastUpdated');if(latest)latest.textContent='최근 업데이트 '+runText+' · EKODI 자동갱신'}
+    if(run?.completed_at){const latest=el('lastUpdated');if(latest)latest.textContent='마지막 갱신 '+runText+' · EKODI 자동갱신'}
     refreshStatusDetail();
   }catch(error){
     latestMonitorData=null;
@@ -270,12 +293,22 @@ function renderPublicVoices(items){
 async function loadPublicVoices(){
   if(!publicVoiceList)return;
   try{
-    const response=await fetch('/api/seonammedi/voices',{cache:'no-store'});
+    const response=await fetch('/board/api/posts',{cache:'no-store'});
     const body=await response.json().catch(()=>({}));
     if(!response.ok||body.ok!==true)throw new Error(body.message||body.error||'시민의견을 불러오지 못했습니다.');
     renderPublicVoices(Array.isArray(body.items)?body.items:[]);
   }catch(error){publicVoiceList.innerHTML='<p class="muted">'+escapeHtml(error.message||'시민의견을 불러오지 못했습니다.')+'</p>'}
 }
+const voiceComposeToggle=el('voiceComposeToggle'),voiceComposeCancel=el('voiceComposeCancel'),voiceComposeForm=el('voiceForm');
+function setVoiceCompose(open){
+  if(!voiceComposeForm)return;
+  voiceComposeForm.hidden=!open;
+  voiceComposeToggle?.setAttribute('aria-expanded',open?'true':'false');
+  if(open)voiceComposeForm.querySelector('select,input,textarea')?.focus();
+}
+if(voiceComposeToggle)voiceComposeToggle.onclick=()=>setVoiceCompose(voiceComposeForm?.hidden!==false);
+if(voiceComposeCancel)voiceComposeCancel.onclick=()=>setVoiceCompose(false);
+
 publicVoiceList?.addEventListener('submit',async event=>{
   const form=event.target.closest('[data-voice-reply]');if(!form)return;event.preventDefault();
   const voiceId=Number(form.dataset.voiceReply||0),status=form.querySelector('[role="status"]'),button=form.querySelector('button[type="submit"]');
@@ -283,7 +316,7 @@ publicVoiceList?.addEventListener('submit',async event=>{
   if(!String(payload.message||'').trim()){if(status)status.textContent='답글 내용을 입력해 주세요.';return}
   if(button)button.disabled=true;if(status)status.textContent='등록 중…';
   try{
-    const response=await fetch('/api/seonammedi/voices/'+voiceId+'/replies',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+    const response=await fetch('/board/api/posts/'+voiceId+'/replies',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
     const body=await response.json().catch(()=>({}));
     if(!response.ok||body.ok!==true)throw new Error(body.message||body.error||'답글을 등록하지 못했습니다.');
     form.reset();if(status)status.textContent='답글이 등록되었습니다.';await loadPublicVoices();
@@ -306,13 +339,13 @@ if(voiceForm){
     if(submitButton)submitButton.disabled=true;
     status.textContent='등록 중…';
     try{
-      const response=await fetch('/api/seonammedi/voices',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+      const response=await fetch('/board/api/posts',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
       const body=await response.json().catch(()=>({}));
-      if(!response.ok||body.ok!==true||!body.submissionId){const detail=body.message||body.error||body.code||('HTTP '+response.status);throw new Error('등록하지 못했습니다. '+detail)}
+      if(!response.ok||body.ok!==true||!body.id){const detail=body.message||body.error||body.code||('HTTP '+response.status);throw new Error('등록하지 못했습니다. '+detail)}
       voiceForm.reset();
       status.textContent=body.message||'등록되었습니다.';
       await loadPublicVoices();
-      if(body.queued){setTimeout(loadPublicVoices,900);setTimeout(loadPublicVoices,2500)}
+      setVoiceCompose(false);
     }catch(error){
       status.textContent=error.message||'등록하지 못했습니다. 잠시 후 다시 시도해 주세요.';
     }finally{
@@ -377,7 +410,7 @@ syncViewFromLocation();
 
 const NOTICE_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token';
 let publicNotices=[];
-function noticeToken(){try{const raw=localStorage.getItem(NOTICE_SESSION_KEY)||'';if(!raw)return'';const parsed=JSON.parse(raw);const session=parsed?.currentSession||parsed?.session||parsed;const access=String(session?.access_token||'');const expires=Number(session?.expires_at||0);return access&&(!expires||expires>Math.floor(Date.now()/1000)+30)?access:''}catch{return''}}
+function noticeToken(){try{const platform=sessionStorage.getItem('ekodi-auth-token')||'';if(platform)return platform;const raw=localStorage.getItem(NOTICE_SESSION_KEY)||'';if(!raw)return'';const parsed=JSON.parse(raw);const session=parsed?.currentSession||parsed?.session||parsed;const access=String(session?.access_token||'');const expires=Number(session?.expires_at||0);return access&&(!expires||expires>Math.floor(Date.now()/1000)+30)?access:''}catch{return''}}
 function noticeSession(){try{const raw=localStorage.getItem(NOTICE_SESSION_KEY)||'';if(!raw)return null;const parsed=JSON.parse(raw);return parsed?.currentSession||parsed?.session||parsed||null}catch{return null}}
 function noticeCurrentEmail(){return String(noticeSession()?.user?.email||'').trim().toLowerCase()}
 function noticeOwnedByCurrentUser(item){return Boolean(noticeToken()&&item?.canManage)}
@@ -394,8 +427,8 @@ async function consumeNoticeHandoff(){
     history.replaceState(null,'',location.pathname+location.search+'#notices');
   }
 }
-function noticeLoginUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','portal');u.searchParams.set('direct','1');u.searchParams.set('return_to',location.origin+'/seonammedi/?compose=notice#notices');return u.href}
-function noticePermalink(id){return location.origin+'/seonammedi/notices/'+encodeURIComponent(id)}
+function noticeLoginUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','portal');u.searchParams.set('direct','1');u.searchParams.set('return_to',location.origin+'/?compose=notice#notices');return u.href}
+function noticePermalink(id){return location.origin+'/notices/'+encodeURIComponent(id)}
 function noticeDate(item){const raw=item.publishedAt||item.updatedAt||'';return raw?new Date(raw).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):''}
 function noticeCard(item){
   const image=item.imageUrl?'<img src="'+escapeHtml(item.imageUrl)+'" alt="" loading="lazy">':'<span class="notice-thumb-empty">공지</span>';
@@ -738,6 +771,7 @@ loadChannels();
 
 const PUBLIC_ADMIN_PLATFORM_TOKEN_KEY='ekodi-auth-token';
 let publicAdminMe=null;
+let publicAdminController=null;
 function publicAdminToken(){
   try{
     const platform=sessionStorage.getItem(PUBLIC_ADMIN_PLATFORM_TOKEN_KEY)||'';
@@ -745,49 +779,125 @@ function publicAdminToken(){
   }catch{}
   return typeof noticeToken==='function'?noticeToken():'';
 }
-async function publicAdminRequest(path,options={}){
-  const bearer=publicAdminToken();if(!bearer)throw Object.assign(new Error('admin_session_missing'),{status:401});
-  const headers=new Headers(options.headers||{});headers.set('authorization','Bearer '+bearer);
-  const response=await fetch(path,{...options,headers,cache:'no-store',credentials:'same-origin'});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw Object.assign(new Error(data.message||data.error||('HTTP '+response.status)),{status:response.status,data});
-  return data;
+function sharedPublicAdmin(){
+  if(publicAdminController)return publicAdminController;
+  const shared=window.EKODIPublicSurfaceAdmin;
+  if(!shared?.create)return null;
+  publicAdminController=shared.create({
+    serviceId:'seonammedi',
+    adminPath:'/seonammedi/admin/',
+    authEndpoint:'/api/seonammedi/admin/me',
+    tokenProvider:publicAdminToken
+  });
+  return publicAdminController;
 }
-function ensurePublicAdminDrawer(){
-  let drawer=el('publicAdminDrawer');if(drawer)return drawer;
-  drawer=document.createElement('aside');drawer.id='publicAdminDrawer';drawer.className='public-admin-drawer';drawer.hidden=true;
-  drawer.innerHTML='<div class="public-admin-drawer-head"><div><small>ADMIN QUICK EDIT</small><strong id="publicAdminDrawerTitle">관리자 편집</strong></div><button type="button" id="publicAdminDrawerClose" aria-label="관리자 편집 닫기">닫기</button></div><iframe id="publicAdminDrawerFrame" title="관리자 빠른 편집" loading="eager"></iframe>';
-  document.body.append(drawer);
-  el('publicAdminDrawerClose')?.addEventListener('click',()=>{drawer.hidden=true;const frame=el('publicAdminDrawerFrame');if(frame)frame.src='about:blank';document.body.classList.remove('public-admin-drawer-open')});
-  return drawer;
+async function publicAdminJson(path,options={}){
+  const token=publicAdminToken();if(!token)throw new Error('관리자 로그인이 필요합니다.');
+  const headers=new Headers(options.headers||{});headers.set('authorization','Bearer '+token);if(options.body&&!headers.has('content-type'))headers.set('content-type','application/json');
+  const response=await fetch(path,{...options,headers,cache:'no-store'});const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error||'요청을 처리하지 못했습니다.');return data;
 }
-function openPublicAdmin(panel,label,params={}){
-  const drawer=ensurePublicAdminDrawer(),frame=el('publicAdminDrawerFrame'),title=el('publicAdminDrawerTitle');
-  const url=new URL('/seonammedi/admin/',location.origin);url.searchParams.set('panel',panel);
-  for(const [key,value] of Object.entries(params))if(value)url.searchParams.set(key,value);
-  if(title)title.textContent=label||'관리자 편집';
-  if(frame)frame.src=url.pathname+url.search;
-  drawer.hidden=false;document.body.classList.add('public-admin-drawer-open');
+const publicOrgLines=value=>String(value||'').split(/\r?\n/).map(row=>row.trim()).filter(Boolean);
+function normalizePublicOrgGroups(source={}){
+  const raw=Array.isArray(source.groups)?source.groups:[];
+  return ORG_GROUP_META.map(([key,label])=>{
+    const legacy=ORG_LEGACY_KEYS[key];
+    const found=raw.find(group=>group.key===key)||(legacy?raw.find(group=>group.key===legacy):null);
+    if(found)return{...found,key,label,levels:found.levels||[],committees:found.committees||[],participants:found.participants||[]};
+    if(key==='bidae')return{key,label,levels:source.levels||[],committees:source.committees||[],participants:source.participants||[]};
+    return{key,label,status:key==='minhak'?'forming':'active',statusLabel:key==='minhak'?'구성 논의 중':'',levels:[],committees:[],participants:[]};
+  });
 }
-function attachPublicAdminButton(target,{label,panel,permission,params}){
-  if(!target||!publicAdminMe?.permissions?.[permission]||target.querySelector('[data-public-admin-panel="'+panel+'"]'))return;
-  const button=document.createElement('button');button.type='button';button.className='public-admin-inline';button.dataset.publicAdminPanel=panel;button.textContent=label;
-  button.addEventListener('click',()=>openPublicAdmin(panel,label,typeof params==='function'?params():params||{}));
-  target.append(button);
+function fillPublicOrganizationEditor(group){
+  const form=el('organizationManageForm');if(!form||!group)return;
+  const members=name=>(group.levels||[]).find(level=>level.name===name)?.members||[];
+  form.elements.orgKey.value=group.key||activePublicOrgKey;
+  form.elements.statusLabel.value=publicOrgStatusLabel(group);
+  form.elements.representatives.value=members('대표자회의').map(cleanOrgPublicText).filter(Boolean).join('\n');
+  form.elements.standing.value=members('상임공동대표단').map(cleanOrgPublicText).filter(Boolean).join('\n');
+  form.elements.executive.value=members('집행위원회').map(cleanOrgPublicText).filter(Boolean).join('\n');
+  form.elements.committees.value=(group.committees||[]).map(item=>[item.name,cleanOrgPublicText(item.lead)].filter(Boolean).join(' | ')).join('\n');
+  form.elements.participants.value=(group.participants||[]).map(item=>[item.name,item.representative,item.url].filter(Boolean).join(' | ')).join('\n');
+  if(el('organizationManageTitle'))el('organizationManageTitle').textContent=(group.label||'조직')+' 조직 수정';
+}
+function publicOrganizationGroupFromForm(form,meta){
+  const level=(name,field)=>({name,members:publicOrgLines(form.elements[field].value).map(cleanOrgPublicText).filter(Boolean)});
+  const committees=publicOrgLines(form.elements.committees.value).map(row=>{const [name,...rest]=row.split('|');return{name:(name||'').trim(),lead:cleanOrgPublicText(rest.join('|'))}}).filter(item=>item.name);
+  const participants=publicOrgLines(form.elements.participants.value).map(row=>{const [name,representative,url]=row.split('|').map(value=>(value||'').trim());return{name,representative,url,visible:true}}).filter(item=>item.name);
+  return{key:meta.key,label:meta.label,status:meta.key==='minhak'?'forming':'active',statusLabel:String(form.elements.statusLabel.value||'').trim(),levels:[level('대표자회의','representatives'),level('상임공동대표단','standing'),level('집행위원회','executive')],committees,participants,participantSort:'ko-KR',publicOnly:true};
+}
+function publicOrganizationDataWithGroup(source,key,nextGroup){
+  const groups=normalizePublicOrgGroups(source).map(group=>group.key===key?nextGroup:group);
+  const bidae=groups.find(group=>group.key==='bidae')||groups[0];
+  return{...source,groups,levels:bidae.levels,committees:bidae.committees,participants:bidae.participants,participantSort:'ko-KR',publicOnly:true,schemaVersion:2};
+}
+function bindPublicOrganizationAdmin(){
+  const toggle=el('organizationManageToggle'),form=el('organizationManageForm'),cancel=el('organizationManageCancel');if(!toggle||!form)return;
+  toggle.hidden=false;
+  const setOpen=open=>{
+    form.hidden=!open;toggle.setAttribute('aria-expanded',open?'true':'false');toggle.textContent=open?'편집 닫기':'조직 바로 수정';
+    if(open){fillPublicOrganizationEditor(orgGroups.find(group=>group.key===activePublicOrgKey)||orgGroups[0]);form.querySelector('input:not([type="hidden"]),textarea')?.focus()}
+    else if(el('organizationManageMessage'))el('organizationManageMessage').textContent='';
+  };
+  toggle.onclick=()=>setOpen(form.hidden);cancel.onclick=()=>setOpen(false);
+  form.onsubmit=async event=>{
+    event.preventDefault();const key=form.elements.orgKey.value||activePublicOrgKey;const meta=ORG_GROUP_META.map(([orgKey,label])=>({key:orgKey,label})).find(item=>item.key===key)||{key:'bidae',label:'비대위'};const message=el('organizationManageMessage');
+    try{
+      if(message)message.textContent=meta.label+' 저장 중…';
+      const latest=await publicAdminJson('/api/seonammedi/admin/pages/organization');
+      const source=latest.item?.data&&Object.keys(latest.item.data).length?latest.item.data:{groups:orgGroups};
+      const nextGroup=publicOrganizationGroupFromForm(form,meta);
+      const data=publicOrganizationDataWithGroup(source,key,nextGroup);
+      await publicAdminJson('/api/seonammedi/admin/pages/organization',{method:'PUT',body:JSON.stringify({data,visible:true})});
+      orgGroups=normalizePublicOrgGroups(data);activePublicOrgKey=key;renderOrganizationGroup(key);fillPublicOrganizationEditor(nextGroup);
+      if(message)message.textContent=meta.label+' 조직 정보를 저장했습니다.';
+    }catch(error){if(message)message.textContent=error.message}
+  };
+}
+function resetPublicFinanceEditor(){
+  const form=el('financeManageForm');if(!form)return;form.reset();form.elements.id.value='';form.elements.type.value='income';form.elements.visible.checked=true;
+  if(el('financeManageTitle'))el('financeManageTitle').textContent='회계내역 추가';if(el('financeManageMessage'))el('financeManageMessage').textContent='';
+}
+function setPublicFinanceEditor(open,item=null){
+  const form=el('financeManageForm'),toggle=el('financeManageToggle');if(!form||!toggle)return;
+  if(!open){resetPublicFinanceEditor();form.hidden=true;toggle.setAttribute('aria-expanded','false');toggle.textContent='회계 바로 수정';return}
+  resetPublicFinanceEditor();
+  if(item){form.elements.id.value=item.id;form.elements.date.value=item.date||'';form.elements.type.value=item.type||'income';form.elements.amount.value=String(item.amount||0);form.elements.purpose.value=item.purpose||'';form.elements.event.value=item.event||'';form.elements.evidenceStatus.value=item.evidenceStatus||'none';form.elements.note.value=item.note||'';form.elements.visible.checked=item.visible!==false;if(el('financeManageTitle'))el('financeManageTitle').textContent='회계내역 수정'}
+  form.hidden=false;toggle.setAttribute('aria-expanded','true');toggle.textContent='작성 닫기';form.querySelector('input:not([type="hidden"]),select,textarea')?.focus();
+}
+async function loadPublicFinanceAdmin(){
+  const data=await publicAdminJson('/api/seonammedi/admin/finance');publicFinanceEntries=Array.isArray(data.items)?data.items:[];updatePublicFinanceSummary(publicFinanceEntries);renderPublicFinance(publicFinanceEntries,true);
+}
+function bindPublicFinanceAdmin(){
+  const toggle=el('financeManageToggle'),form=el('financeManageForm'),cancel=el('financeManageCancel'),host=el('financeList');if(!toggle||!form||!host)return;
+  toggle.hidden=false;toggle.textContent='회계 바로 수정';toggle.onclick=()=>setPublicFinanceEditor(form.hidden);cancel.onclick=()=>setPublicFinanceEditor(false);
+  form.onsubmit=async event=>{
+    event.preventDefault();const id=Number(form.elements.id.value||0),message=el('financeManageMessage');
+    const payload={date:form.elements.date.value,type:form.elements.type.value,amount:Number(form.elements.amount.value||0),purpose:form.elements.purpose.value,event:form.elements.event.value,evidenceStatus:form.elements.evidenceStatus.value,note:form.elements.note.value,visible:form.elements.visible.checked};
+    try{if(message)message.textContent='저장 중…';await publicAdminJson(id?'/api/seonammedi/admin/finance/'+id:'/api/seonammedi/admin/finance',{method:id?'PUT':'POST',body:JSON.stringify(payload)});setPublicFinanceEditor(false);await loadPublicFinanceAdmin()}catch(error){if(message)message.textContent=error.message}
+  };
+  host.onclick=async event=>{
+    const edit=event.target.closest('[data-finance-edit]'),del=event.target.closest('[data-finance-delete]');
+    if(edit){const item=publicFinanceEntries.find(row=>Number(row.id)===Number(edit.dataset.financeEdit));if(item)setPublicFinanceEditor(true,item);return}
+    if(del){const item=publicFinanceEntries.find(row=>Number(row.id)===Number(del.dataset.financeDelete));if(!item||!confirm('이 회계내역을 삭제할까요?'))return;try{await publicAdminJson('/api/seonammedi/admin/finance/'+item.id,{method:'DELETE'});await loadPublicFinanceAdmin()}catch(error){alert(error.message)}}
+  };
+  loadPublicFinanceAdmin().catch(()=>{});
 }
 function renderPublicAdminControls(){
-  if(!publicAdminMe)return;
-  document.body.classList.add('public-admin-active');
-  attachPublicAdminButton(el('notices')?.querySelector('.section-head'),{label:'공지 바로 수정',panel:'notices',permission:'notices'});
-  attachPublicAdminButton(el('organization')?.querySelector('.section-head'),{label:'조직 바로 수정',panel:'organization',permission:'pages',params:()=>({org:document.querySelector('#organizationTabs [data-org-group].active')?.dataset.orgGroup||'bidae'})});
-  attachPublicAdminButton(el('timeline')?.querySelector('.section-head'),{label:'활동이력 공개여부',panel:'status',permission:'timeline'});
-  attachPublicAdminButton(el('channels')?.querySelector('.section-head'),{label:'소통채널 바로 수정',panel:'channels',permission:'channels'});
-  const voiceHead=el('voices')?.firstElementChild;attachPublicAdminButton(voiceHead,{label:'시민의견 수정·삭제',panel:'voices',permission:'voices'});
+  const admin=publicAdminController;
+  if(!admin||!publicAdminMe)return;
+  if(admin.has('pages'))bindPublicOrganizationAdmin();
+  const timelineAdmin=el('timelineAdminEdit');if(timelineAdmin&&admin.has('timeline')){timelineAdmin.hidden=false;timelineAdmin.onclick=()=>admin.open('status','활동이력 관리')}
+  admin.attach(el('channels')?.querySelector('.section-head'),{label:'소통채널 바로 수정',panel:'channels',permission:'channels'});
+  if(admin.has('voices'))window.dispatchEvent(new CustomEvent('seonammedi:voice-inline-admin-authorized'));
+  if(admin.has('finance'))bindPublicFinanceAdmin();
+  if(admin.has('notices')){const noticeButton=el('noticeWriteButton');if(noticeButton)noticeButton.textContent='공지 바로 수정';loadNotices();}
 }
 async function initPublicAdminControls(){
   if(!publicAdminToken())return;
+  const admin=sharedPublicAdmin();if(!admin)return;
   try{
-    const me=await publicAdminRequest('/api/seonammedi/admin/me');
+    const me=await admin.authorize();
     if(!me?.ok)return;
     publicAdminMe=me;renderPublicAdminControls();
   }catch{}

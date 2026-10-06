@@ -13,6 +13,11 @@ on:
         required: false
         type: string
         default: ''
+      surface_registry:
+        description: Optional repository-relative JSON registry of canonical surfaces to add
+        required: false
+        type: string
+        default: ''
       device_profile:
         description: Device profile
         required: false
@@ -26,6 +31,10 @@ on:
         default: /
       surface_paths:
         description: Comma-separated canonical ekodi.kr paths to inspect in one isolated browser run
+        required: false
+        default: ''
+      surface_registry:
+        description: Optional repository-relative JSON registry of canonical surfaces to add
         required: false
         default: ''
       device_profile:
@@ -44,6 +53,7 @@ on:
       - 'scripts/ekodi-background-browser-worker.mjs'
       - 'scripts/validate-background-browser-worker.mjs'
       - 'config/background-browser-worker-policy.json'
+      - 'config/board-surface-verification.json'
       - 'config/surface-system-verification-policy.json'
       - 'config/autonomous-execution-fabric-policy.json'
       - 'test/background-browser-worker.test.mjs'
@@ -73,7 +83,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout current platform revision
+        if: github.repository == 'topmaster-joseph/ekodi-platform'
+        uses: actions/checkout@v7
+      - name: Checkout canonical EKODI browser worker for external EKODI repositories
+        if: github.repository != 'topmaster-joseph/ekodi-platform'
+        uses: actions/checkout@v7
+        with:
+          repository: topmaster-joseph/ekodi-platform
+          ref: main
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -88,7 +106,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout current platform revision
+        if: github.repository == 'topmaster-joseph/ekodi-platform'
+        uses: actions/checkout@v7
+      - name: Checkout canonical EKODI browser worker for external EKODI repositories
+        if: github.repository != 'topmaster-joseph/ekodi-platform'
+        uses: actions/checkout@v7
+        with:
+          repository: topmaster-joseph/ekodi-platform
+          ref: main
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -102,31 +128,55 @@ jobs:
           INPUT_PATH: ${{ inputs.surface_path || '/' }}
           # PR smoke exercises representative public, personal, and admin surfaces so shared runtime errors are attributable before merge.
           INPUT_PATHS: ${{ inputs.surface_paths || (github.event_name == 'pull_request' && '/,/my/,/admin/' || '') }}
+          INPUT_REGISTRY: ${{ inputs.surface_registry || (github.event_name == 'pull_request' && 'config/board-surface-verification.json' || '') }}
           INPUT_DEVICE: ${{ inputs.device_profile || 'desktop' }}
         run: |
           node - <<'NODE'
           const fs=require('fs');
+          const path=require('path');
           const fallback=String(process.env.INPUT_PATH||'/').trim();
           const requested=String(process.env.INPUT_PATHS||'').split(',').map(v=>v.trim()).filter(Boolean);
-          const paths=[...new Set(requested.length?requested:[fallback])];
-          if(paths.length>12) throw new Error('surface_paths supports at most 12 canonical paths per run');
-          for(const p of paths){
+          const registryInput=String(process.env.INPUT_REGISTRY||'').trim();
+          let registered=[];
+          let registryMaxPaths=12;
+          if(registryInput){
+            const root=path.resolve(process.cwd());
+            const resolved=path.resolve(root,registryInput);
+            if(resolved!==root&&!resolved.startsWith(root+path.sep)) throw new Error('surface registry must stay inside the checked-out repository');
+            const registry=JSON.parse(fs.readFileSync(resolved,'utf8').replace(/^\\uFEFF/,''));
+            if(registry?.canonicalOrigin!=='https://ekodi.kr') throw new Error('surface registry canonical origin must be https://ekodi.kr');
+            registryMaxPaths=Number(registry?.maxPaths||12);
+            if(!Number.isFinite(registryMaxPaths)||registryMaxPaths<1||registryMaxPaths>12) throw new Error('surface registry maxPaths must be between 1 and worker limit 12');
+            registered=(Array.isArray(registry?.surfaces)?registry.surfaces:[])
+              .filter(item=>item&&item.enabled!==false)
+              .map(item=>String(item.path||'').trim())
+              .filter(Boolean);
+          }
+          const base=requested.length?requested:[fallback];
+          const candidates=[...new Set([...base,...registered])];
+          for(const p of candidates){
             if(!p.startsWith('/')||p.startsWith('//')) throw new Error('surface path must be a canonical root-relative path');
             const u=new URL(p,'https://ekodi.kr');
             if(u.origin!=='https://ekodi.kr') throw new Error('surface path must stay on canonical ekodi.kr');
           }
+          const maxPaths=Math.min(12,registryMaxPaths);
+          const basePaths=[...new Set(base)];
+          if(basePaths.length>maxPaths) throw new Error('requested surface paths exceed bounded browser path limit');
+          const remaining=Math.max(0,maxPaths-basePaths.length);
+          const registeredPaths=[...new Set(registered)].filter(p=>!basePaths.includes(p)).slice(0,remaining);
+          const paths=[...basePaths,...registeredPaths];
           const device=String(process.env.INPUT_DEVICE||'desktop');
           const allowed=new Set(['compact-mobile','mobile-portrait','mobile-landscape','tablet','desktop']);
           if(!allowed.has(device)) throw new Error('invalid device profile');
           const shotName=(p,index)=>{
-            const clean=p.split(/[?#]/)[0].replace(/^\/+|\/+$/g,'').replace(/[^a-zA-Z0-9._-]+/g,'-');
-            return clean||('root-'+(index+1));
+            const clean=p.replace(/^\/+|\/+$/g,'').replace(/[?#]+/g,'-').replace(/[^a-zA-Z0-9._-]+/g,'-');
+            return String(index+1)+'-'+(clean||'root');
           };
           const actions=[];
           paths.forEach((p,index)=>{
             if(index>0) actions.push({type:'goto',path:p});
             actions.push({type:'snapshot'});
-            actions.push({type:'screenshot',name:'surface-'+shotName(p,index),fullPage:true});
+            if(index===0||p.split('/').includes('board')) actions.push({type:'screenshot',name:'surface-'+shotName(p,index),fullPage:true});
           });
           fs.mkdirSync('artifacts',{recursive:true});
           fs.writeFileSync('artifacts/browser-task.json',JSON.stringify({

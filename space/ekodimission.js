@@ -73,6 +73,36 @@
     activityYear.addEventListener('change',applyActivityFilters);
     activityMonth.addEventListener('change',applyActivityFilters);
   }
+  function missionAdminToken(){
+    try{return sessionStorage.getItem('ekodi-auth-token')||''}catch{return''}
+  }
+  async function initMissionPublicAdmin(){
+    const shared=window.EKODIPublicSurfaceAdmin;
+    if(!shared?.create||Number(shared.version||0)<2||!missionAdminToken())return;
+    const admin=shared.create({
+      serviceId:'mission',
+      adminPath:'/ekodimission/admin/activities',
+      authEndpoint:'/ekodimission/api/admin/me',
+      tokenProvider:missionAdminToken
+    });
+    try{
+      const me=await admin.authorize();
+      if(!me?.ok||!admin.has('activities'))return;
+      const listHead=document.querySelector('.mission-activity-index-head');
+      admin.attach(listHead,{label:'활동 · 참가자 관리',panel:'activities',permission:'activities',presentation:'window'});
+      for(const item of activityItems){
+        const activityKey=String(item.dataset.activityKey||'').trim();
+        if(!activityKey)continue;
+        const target=item.querySelector('.mission-activity-row-actions')||item;
+        admin.attach(target,{label:'참가자 관리',panel:'activities',permission:'activities',presentation:'window',params:{activity:activityKey}});
+      }
+      if(form){
+        const target=document.querySelector('.open-table-actions');
+        admin.attach(target,{label:'신청자 관리',panel:'activities',permission:'activities',presentation:'window',params:{activity:applicationRecordKey}});
+      }
+    }catch{}
+  }
+  initMissionPublicAdmin();
   if(!form)return;
   const status=form.querySelector('[data-application-status]');const submit=form.querySelector('button[type="submit"]');
   const closeApplication=(data={})=>{

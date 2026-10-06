@@ -1,6 +1,6 @@
 import { executionEvidenceSatisfied } from './ekodi-capability-executor.js';
 
-const TASK_STATES = new Set(['queued', 'running', 'retry', 'human_gate', 'verified', 'degraded', 'core_only', 'ignored', 'failed']);
+const TASK_STATES = new Set(['queued', 'running', 'retry', 'human_gate', 'auto_blocked', 'verified', 'degraded', 'core_only', 'ignored', 'failed']);
 
 function text(value, max = 1200) {
   return String(value ?? '').trim().slice(0, max);
@@ -201,8 +201,33 @@ export async function getEkodiCommandLedgerStatus(input) {
   });
 }
 
+export async function recoverExpiredEkodiCommandTasks(input, options = {}) {
+  const db = await ensureEkodiCommandLedger(input);
+  const now = iso(options.now || Date.now());
+  const failed = await db.prepare(`UPDATE ai_command_tasks
+    SET state = 'failed', lease_until = NULL, next_attempt_at = NULL,
+        last_error = CASE WHEN last_error = '' THEN 'lease_expired_max_attempts' ELSE last_error END,
+        updated_at = ?, closed_at = ?
+    WHERE state = 'running' AND lease_until IS NOT NULL AND lease_until <= ?
+      AND attempt_count >= max_attempts`)
+    .bind(now, now, now).run();
+  const retried = await db.prepare(`UPDATE ai_command_tasks
+    SET state = 'retry', lease_until = NULL, next_attempt_at = ?,
+        last_error = CASE WHEN last_error = '' THEN 'lease_expired_requeued' ELSE last_error END,
+        updated_at = ?
+    WHERE state = 'running' AND lease_until IS NOT NULL AND lease_until <= ?
+      AND attempt_count < max_attempts`)
+    .bind(now, now, now).run();
+  return Object.freeze({
+    recovered: Number(retried?.meta?.changes ?? retried?.changes ?? 0),
+    exhausted: Number(failed?.meta?.changes ?? failed?.changes ?? 0),
+    observedAt: now,
+  });
+}
+
 export async function claimEkodiCommandTask(input, taskId, options = {}) {
   const db = await ensureEkodiCommandLedger(input);
+  await recoverExpiredEkodiCommandTasks(db, { now: options.now });
   const id = text(taskId, 120);
   if (!id) return null;
   const now = iso(options.now || Date.now());
@@ -220,6 +245,7 @@ export async function claimEkodiCommandTask(input, taskId, options = {}) {
 
 export async function claimNextEkodiCommandTask(input, options = {}) {
   const db = await ensureEkodiCommandLedger(input);
+  await recoverExpiredEkodiCommandTasks(db, { now: options.now });
   const now = iso(options.now || Date.now());
   const leaseMs = Math.min(Math.max(Number(options.leaseMs) || 120000, 30000), 300000);
   const leaseUntil = iso(new Date(now).getTime() + leaseMs);
@@ -271,12 +297,19 @@ export async function settleEkodiCommandTask(input, task, result, options = {}) 
   let nextAttemptAt = null;
   let closedAt = null;
   if (resultState === 'verified' || resultState === 'ignored') closedAt = now;
-  else if (resultState === 'human_gate') state = 'human_gate';
-  else if (['degraded', 'core_only', 'failed'].includes(resultState) && attempt < maxAttempts) {
+  else if (resultState === 'auto_blocked') {
+    state = 'auto_blocked';
+    closedAt = now;
+  } else if (resultState === 'human_gate') state = 'human_gate';
+  // AI consultation is advisory for the deterministic core. Provider exhaustion
+  // must not turn a valid core-only result into an endless command retry loop.
+  // Only execution failures/degraded runs are retryable here; core_only is a
+  // stable hand-off state for the non-AI executor and remains open for evidence.
+  else if (resultState === 'core_only') state = 'core_only';
+  else if (['degraded', 'failed'].includes(resultState) && attempt < maxAttempts) {
     state = 'retry';
     nextAttemptAt = iso(nowMs + Math.min(30, 10 * attempt) * 60_000);
-  } else if (resultState === 'core_only') state = 'core_only';
-  else if (resultState === 'degraded') state = 'degraded';
+  } else if (resultState === 'degraded') state = 'degraded';
   else state = 'failed';
 
   const evidence = guardedResult?.evidence || {};
@@ -370,6 +403,7 @@ export const EKODI_COMMAND_LEDGER = Object.freeze({
   durableStore: 'cloudflare-d1',
   evidenceStore: 'append-only-cloudflare-d1',
   maxAutomaticAttempts: 3,
+  expiredRunningLeaseRecovery: true,
   verifiedMutationRequiresExecutionEvidence: true,
   states: Object.freeze([...TASK_STATES]),
 });
