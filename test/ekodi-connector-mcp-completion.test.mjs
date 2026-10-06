@@ -18,11 +18,14 @@ test('canonical EKODI discovery binds both aliases to the apex MCP resource',()=
 });
 
 test('MCP exposes discovery, account and authoritative task lifecycle tools',()=>{
-  for(const name of ['identify_ekodi','discover_public_services','account_status','submit_task','get_task_status','cancel_task','ekodi_delegate_command'])assert.ok(tool(name),`missing ${name}`);
+  for(const name of ['identify_ekodi','discover_public_services','account_status','submit_task','get_task_status','approve_task','cancel_task','ekodi_delegate_command'])assert.ok(tool(name),`missing ${name}`);
   assert.equal(tool('identify_ekodi').securitySchemes[0].type,'noauth');
   assert.equal(tool('discover_public_services').securitySchemes[0].type,'noauth');
   assert.equal(tool('submit_task').securitySchemes[0].type,'oauth2');
   assert.equal(tool('get_task_status').securitySchemes[0].type,'oauth2');
+  assert.equal(tool('approve_task').securitySchemes[0].type,'oauth2');
+  assert.equal(tool('approve_task').annotations.destructiveHint,true);
+  assert.deepEqual(tool('approve_task').inputSchema.required,['taskId','expectedStateVersion']);
   assert.equal(tool('cancel_task').annotations.destructiveHint,true);
 });
 
@@ -107,6 +110,9 @@ test('MCP delegated tasks carry standing delegation, expose retries, and synchro
   assert.match(source,/commandLedger:commandMeta/);
   assert.doesNotMatch(source,/return'retrying'/);
   assert.match(source,/commandState:commandMeta\?\.state\|\|null/);
+  assert.match(source,/humanGate/);
+  assert.match(source,/approvalTool:'approve_task'/);
+  assert.match(source,/expectedStateVersion:stateVersion/);
   assert.match(source,/attemptCount:Number\(commandMeta\?\.attemptCount\|\|0\)/);
   assert.match(source,/lastError:commandMeta\?\.lastError\|\|''/);
   assert.match(source,/state_version=state_version\+\?/);
@@ -127,4 +133,21 @@ test('orchestrator propagates canonical identity into least-privilege execution 
   assert.match(source,/denied_capabilities_json/);
   assert.match(source,/context:\{source:'mcp'.*authority\}/s);
   assert.match(source,/platformRole==='super_admin'/);
+});
+
+
+test('human-gate approval is super-admin-only, version-bound and auditable',async()=>{
+  const source=await readFile(new URL('../ekodi-orchestrator-task-adapter.js',import.meta.url),'utf8');
+  assert.match(source,/export async function approveOrchestratorTask/);
+  assert.match(source,/authority\?\.role!=='super_admin'/);
+  assert.match(source,/expected_state_version_required/);
+  assert.match(source,/state_version\|\|0\)!==expectedStateVersion/);
+  assert.match(source,/row\.state!=='blocked'/);
+  assert.match(source,/command\?\.state,40\).*human_gate/s);
+  assert.match(source,/human_gate_approval_recorded/);
+  assert.match(source,/human_gate_approval_applied/);
+  assert.match(source,/SET state='assigned',state_version=state_version\+1/);
+  assert.match(source,/SET state='queued',context_json=\?/);
+  assert.match(source,/humanApproval:receipt/);
+  assert.match(source,/runEkodiCommandQueue\(env,\{limit:1,taskId:task\}\)/);
 });

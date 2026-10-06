@@ -2,7 +2,7 @@ name: EKODI Release Provenance Auto Recovery
 
 on:
   pull_request_target:
-    types: [opened, reopened, synchronize, ready_for_review]
+    types: [opened, reopened, synchronize, ready_for_review, labeled]
 
 permissions:
   contents: write
@@ -18,7 +18,9 @@ jobs:
     if: >
       github.event.pull_request.draft == false &&
       startsWith(github.event.pull_request.head.ref, 'ai/') &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      !contains(github.event.pull_request.head.ref, '/orch_') &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.labels.*.name, 'orchestrator-human-gate-approved')
     runs-on: ubuntu-latest
     timeout-minutes: 8
     environment: production
@@ -35,7 +37,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Recover non-orchestrator release provenance
+      - name: Recover exact-SHA approved release provenance
         id: recover
         run: node scripts/recover-release-provenance.mjs
       - name: Report recovery result

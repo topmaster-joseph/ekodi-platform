@@ -151,6 +151,98 @@ test('Pulse auto-blocks high-impact or red changes without executing providers',
   assert.equal(calls, 0);
 });
 
+test('task-scoped super-admin approval resumes only the exact high-risk pulse', async () => {
+  let calls = 0;
+  const plane = buildEkodiCommandPlane({}, [
+    provider('openai', 10, ['text', 'reasoning', 'review'], async () => { calls += 1; return { text: 'openai' }; }),
+    provider('anthropic', 20, ['text', 'reasoning', 'review'], async () => { calls += 1; return { text: 'anthropic' }; }),
+    provider('gemini', 30, ['text', 'reasoning', 'review'], async () => { calls += 1; return { text: 'gemini' }; }),
+  ]);
+  const taskId = 'orch_approval_exact_task_123456789';
+  const result = await plane.handlePulse({
+    taskId,
+    risk: 'high',
+    event: {
+      id: taskId,
+      kind: 'repository',
+      summary: 'Apply an explicitly approved high-risk change.',
+      changeClass: 'red',
+      requiresHumanDecision: true,
+    },
+    delegation: { allowed:true, reversible:true, audited:true, preflightVerified:true, verificationDefined:true },
+    context: {
+      humanApproval: {
+        approved: true,
+        approvalId: `approval_${taskId}_v3`,
+        taskId,
+        scope: 'task',
+        approvedBy: 'person-super-admin',
+        approvedByRole: 'super_admin',
+        approvedAt: '2026-10-06T13:20:00.000Z',
+        expectedStateVersion: 3,
+      },
+    },
+  });
+  assert.notEqual(result.state, 'auto_blocked');
+  assert.ok(calls > 0);
+});
+
+test('human approval receipt cannot be replayed onto another task or by a non-super-admin role', async () => {
+  let calls = 0;
+  const plane = buildEkodiCommandPlane({}, [
+    provider('openai', 10, ['text', 'reasoning', 'review'], async () => { calls += 1; return { text: 'must-not-run' }; }),
+  ]);
+  const base = {
+    taskId: 'orch_target_task_123456789',
+    risk: 'high',
+    event: {
+      id: 'orch_target_task_123456789',
+      kind: 'repository',
+      summary: 'High-risk change must remain blocked.',
+      changeClass: 'red',
+      requiresHumanDecision: true,
+    },
+    delegation: { allowed:true, reversible:true, audited:true, preflightVerified:true, verificationDefined:true },
+  };
+  const wrongTask = await plane.handlePulse({
+    ...base,
+    context: { humanApproval: { approved:true, approvalId:'approval_orch_other_task_123456789_v2', taskId:'orch_other_task_123456789', scope:'task', approvedBy:'person-super-admin', approvedByRole:'super_admin', approvedAt:'2026-10-06T13:20:00.000Z', expectedStateVersion:2 } },
+  });
+  const wrongRole = await plane.handlePulse({
+    ...base,
+    context: { humanApproval: { approved:true, approvalId:`approval_${base.taskId}_v2`, taskId:base.taskId, scope:'task', approvedBy:'person-admin', approvedByRole:'admin', approvedAt:'2026-10-06T13:20:00.000Z', expectedStateVersion:2 } },
+  });
+  assert.equal(wrongTask.state, 'auto_blocked');
+  assert.equal(wrongRole.state, 'auto_blocked');
+  assert.equal(calls, 0);
+});
+
+test('malformed approval id remains blocked even when task and role fields look valid', async () => {
+  let calls = 0;
+  const taskId = 'orch_receipt_shape_123456789';
+  const plane = buildEkodiCommandPlane({}, [
+    provider('openai', 10, ['text', 'reasoning', 'review'], async () => { calls += 1; return { text: 'must-not-run' }; }),
+  ]);
+  const result = await plane.handlePulse({
+    taskId,
+    risk: 'high',
+    event: { id:taskId, kind:'repository', summary:'Do not run malformed approval.', changeClass:'red', requiresHumanDecision:true },
+    delegation: { allowed:true, reversible:true, audited:true, preflightVerified:true, verificationDefined:true },
+    context: { humanApproval: {
+      approved:true,
+      approvalId:'approval_wrong_v2',
+      taskId,
+      scope:'task',
+      approvedBy:'person-super-admin',
+      approvedByRole:'super_admin',
+      approvedAt:'2026-10-06T13:20:00.000Z',
+      expectedStateVersion:2,
+    } },
+  });
+  assert.equal(result.state,'auto_blocked');
+  assert.equal(calls,0);
+});
+
 test('resource targets are symbolic identities, not hard-coded user or admin hostnames', () => {
   const target = normalizeEkodiResourceTarget({
     workspaceId: 'workspace-123',

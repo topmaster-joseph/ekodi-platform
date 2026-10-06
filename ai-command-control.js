@@ -16,6 +16,11 @@ import {
 import { getEkodiConsultationHistory } from './ekodi-consultation-ledger.js';
 import { getEkodiProviderOperationalReadiness, runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
 import { getLatestAutonomousHealthSnapshot } from './ekodi-autonomous-health-telemetry.js';
+import {
+  approveOrchestratorTaskForPlatformAdmin,
+  getOrchestratorTaskStatusForPlatformAdmin,
+  listOrchestratorHumanGatesForPlatformAdmin,
+} from './ekodi-orchestrator-task-adapter.js';
 import { collectPlatformRuntimeObservations } from './ekodi-platform-observer.js';
 import { runRuntimeAutonomicControlPlane } from './ekodi-autonomic-control-plane.js';
 
@@ -144,6 +149,45 @@ export async function handleEkodiV8CommandControl(request, env) {
   const collaboration = await collaborationResponse(request, env, auth.session, url);
   if (collaboration) return collaboration;
 
+  const platformRole = text(auth.session.role || auth.session.authority?.role, 80).toLowerCase();
+  const requirePlatformSuperAdmin = requiredCapability => {
+    if (platformRole !== 'super_admin') return json(request, env, { error:'platform_super_admin_required', code:'ORCHESTRATOR_SUPER_ADMIN_REQUIRED' }, 403);
+    if (!sessionCapabilityGranted(auth.session, requiredCapability)) return json(request, env, { error:'capability_required', capability:requiredCapability }, 403);
+    return null;
+  };
+
+  if (request.method === 'GET' && url.pathname === `${PREFIX}/orchestrator/human-gates`) {
+    const denied = requirePlatformSuperAdmin('ai:read'); if (denied) return denied;
+    const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 20, 1), 50);
+    const tasks = await listOrchestratorHumanGatesForPlatformAdmin(env, auth.session, { limit });
+    return json(request, env, { ok:true, code:'ORCHESTRATOR_HUMAN_GATES', tasks });
+  }
+
+  const orchestratorTaskMatch = url.pathname.match(/^\/api\/control\/ai\/v8\/orchestrator\/tasks\/([^/]+)$/);
+  if (request.method === 'GET' && orchestratorTaskMatch) {
+    const denied = requirePlatformSuperAdmin('ai:read'); if (denied) return denied;
+    const task = await getOrchestratorTaskStatusForPlatformAdmin(env, auth.session, decodeURIComponent(orchestratorTaskMatch[1]));
+    if (!task) return json(request, env, { error:'Orchestrator task를 찾을 수 없습니다.', code:'ORCHESTRATOR_TASK_NOT_FOUND' }, 404);
+    return json(request, env, { ok:true, task });
+  }
+
+  const orchestratorApproveMatch = url.pathname.match(/^\/api\/control\/ai\/v8\/orchestrator\/tasks\/([^/]+)\/approve$/);
+  if (request.method === 'POST' && orchestratorApproveMatch) {
+    const denied = requirePlatformSuperAdmin('ai:operate'); if (denied) return denied;
+    const body = await readJson(request);
+    if (!body || !Number.isInteger(Number(body.expectedStateVersion)) || Number(body.expectedStateVersion) < 1) {
+      return json(request, env, { error:'현재 stateVersion이 필요합니다.', code:'ORCHESTRATOR_STATE_VERSION_REQUIRED' }, 400);
+    }
+    const task = await approveOrchestratorTaskForPlatformAdmin(
+      env,
+      auth.session,
+      decodeURIComponent(orchestratorApproveMatch[1]),
+      { expectedStateVersion:Number(body.expectedStateVersion), note:text(body.note,1000) },
+    );
+    if (!task) return json(request, env, { error:'Orchestrator task를 찾을 수 없습니다.', code:'ORCHESTRATOR_TASK_NOT_FOUND' }, 404);
+    return json(request, env, { ok:task.approved===true, task }, task.approved===true ? 200 : 409);
+  }
+
   const commandMutation = request.method === 'POST' && (url.pathname === `${PREFIX}/pulse` || url.pathname === `${PREFIX}/drain`);
   const commandRead = request.method === 'GET';
   const requiredCommandCapability = commandMutation ? 'ai:operate' : commandRead ? 'ai:read' : '';
@@ -260,5 +304,5 @@ export async function handleEkodiV8CommandControl(request, env) {
 export const EKODI_V8_COMMAND_CONTROL = Object.freeze({
   version: '1.3.0',
   prefix: PREFIX,
-  surfaces: Object.freeze(['status', 'tasks', 'tasks/:taskId/consultation', 'pulse', 'drain', 'collaboration-settings', 'collaboration-settings/audit']),
+  surfaces: Object.freeze(['status', 'tasks', 'tasks/:taskId/consultation', 'orchestrator/human-gates', 'orchestrator/tasks/:taskId', 'orchestrator/tasks/:taskId/approve', 'pulse', 'drain', 'collaboration-settings', 'collaboration-settings/audit']),
 });
