@@ -101,3 +101,51 @@ test('staging or production evidence absence forbids completion',async()=>{
   assert.equal(noProduction.verified,false);
   assert.equal(noProduction.reason,'production_promotion_evidence_missing');
 });
+
+
+test('CGMA validate contract is the only explicit staging-equivalent',async()=>{
+  const evidence=await collectAuthenticatedCompletionEvidence({
+    github:mockGithub({
+      runs:[
+        {id:1,name:'CI',status:'completed',conclusion:'success'},
+        {id:2,name:'EKODI AI Orchestration Gate',status:'completed',conclusion:'success'},
+        {id:3,workflow_id:43,name:'Deploy CGMA Apex Edge',status:'completed',conclusion:'success',head_sha:mergeSha,html_url:'https://example/cgma'},
+      ],
+      jobsByRun:{
+        3:[
+          {name:'validate',status:'completed',conclusion:'success',steps:[
+            {name:'Validate CGMA edge contract',status:'completed',conclusion:'success'},
+          ]},
+          {name:'production',status:'completed',conclusion:'success'},
+        ],
+      },
+    }),
+    taskId,branchRef,
+  });
+  assert.equal(evidence.verified,true);
+  assert.deepEqual(evidence.deployments[0].stagingJobs,['validate (preproduction-equivalent)']);
+  assert.deepEqual(evidence.deployments[0].productionJobs,['production']);
+});
+
+test('CGMA validate without the required contract step still fails closed',async()=>{
+  const evidence=await collectAuthenticatedCompletionEvidence({
+    github:mockGithub({
+      runs:[
+        {id:1,name:'CI',status:'completed',conclusion:'success'},
+        {id:2,name:'EKODI AI Orchestration Gate',status:'completed',conclusion:'success'},
+        {id:3,workflow_id:43,name:'Deploy CGMA Apex Edge',status:'completed',conclusion:'success',head_sha:mergeSha},
+      ],
+      jobsByRun:{
+        3:[
+          {name:'validate',status:'completed',conclusion:'success',steps:[
+            {name:'Some other validation',status:'completed',conclusion:'success'},
+          ]},
+          {name:'production',status:'completed',conclusion:'success'},
+        ],
+      },
+    }),
+    taskId,branchRef,
+  });
+  assert.equal(evidence.verified,false);
+  assert.equal(evidence.reason,'staging_evidence_missing');
+});
