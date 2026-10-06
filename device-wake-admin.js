@@ -57,6 +57,19 @@
       .device-wake-state{display:inline-flex;margin-top:7px;padding:3px 7px;border-radius:999px;background:rgba(100,116,139,.18);font-size:9px}.device-wake-state.online{background:rgba(34,197,94,.14);color:#86efac}.device-wake-state.offline{background:rgba(245,158,11,.14);color:#fcd34d}
       .device-wake-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.device-wake-form label{display:grid;gap:4px;color:#8ea4b8;font-size:9px}.device-wake-form input,.device-wake-form select{min-width:0;height:34px;border:1px solid rgba(110,153,193,.28);border-radius:8px;background:#0b2943;color:#d7e6f5;padding:0 8px}.device-wake-form .wide{grid-column:1/-1}
       .device-wake-checks{grid-column:1/-1;display:flex;gap:12px;flex-wrap:wrap}.device-wake-checks label{display:flex;align-items:center;gap:5px}.device-wake-card-actions{grid-column:1/-1;display:flex;gap:7px;flex-wrap:wrap}.device-wake-note{margin-top:12px;padding:10px;border-radius:9px;background:rgba(245,158,11,.08);color:#c9b47a;font-size:10px;line-height:1.5}.device-wake-enrollment{margin-top:10px;padding:10px;border:1px dashed rgba(110,153,193,.35);border-radius:9px}.device-wake-enrollment code{display:block;margin-top:7px;padding:8px;overflow-wrap:anywhere;background:#071a2b;border-radius:7px;color:#b8d5ef;font-size:9px}.device-wake-message{margin-top:9px;color:#9bb4ca;font-size:10px}
+      body.admin-compact .device-wake-control{border-color:#d9e2ec!important;background:#fff!important;color:#172033!important;box-shadow:none!important}
+      body.admin-compact .device-wake-head h3{color:#172033!important}
+      body.admin-compact .device-wake-head p,body.admin-compact .device-wake-gateway small,body.admin-compact .device-wake-card small,body.admin-compact .device-wake-message{color:#66768a!important;opacity:1!important}
+      body.admin-compact .device-wake-control .kicker{color:#66768a!important;opacity:1!important}
+      body.admin-compact .device-wake-gateway,body.admin-compact .device-wake-card{border-color:#e1e8ef!important;background:#f8fafc!important;color:#26384e!important}
+      body.admin-compact .device-wake-state{background:#eef2f7!important;color:#40566d!important}
+      body.admin-compact .device-wake-state.online{background:#eaf8f0!important;color:#16734a!important}
+      body.admin-compact .device-wake-state.offline{background:#fff4dc!important;color:#8a5a00!important}
+      body.admin-compact .device-wake-form label{color:#66768a!important}
+      body.admin-compact .device-wake-form input,body.admin-compact .device-wake-form select{border-color:#cfd9e4!important;background:#fff!important;color:#26384e!important}
+      body.admin-compact .device-wake-note{background:#fff9ec!important;color:#7a5b13!important;border:1px solid #efd49a!important}
+      body.admin-compact .device-wake-enrollment{border-color:#b9c9d9!important;background:#fbfcfe!important}
+      body.admin-compact .device-wake-enrollment code{background:#f1f5f9!important;color:#26384e!important}
       @media(max-width:560px){.device-wake-head{flex-direction:column}.device-wake-form{grid-template-columns:1fr}.device-wake-form .wide,.device-wake-checks,.device-wake-card-actions{grid-column:1}}
     `;
     document.head.append(style);
