@@ -58,7 +58,7 @@ test('all three board pages share the SeonamMedi header and footer contract',asy
   assert.match(worker,/link\('\/board\/voices'/);
   assert.match(worker,/link\('\/board\/finance'/);
   assert.match(worker,/link\('\/board\/notices'/);
-  assert.match(worker,/href="\/admin\/">관리/);
+  assert.match(worker,/id="adminLink" href="#admin">관리자/);
 });
 
 test('independent board deployment provisions its own storage and verifies real CRUD',async()=>{
@@ -112,7 +112,7 @@ test('SeonamMedi board admin login receives a one-time portal handoff token on t
     read('auth-site/auth.js'),
     read('supabase/functions/access-api/index.ts')
   ]);
-  assert.match(worker,/return_to",location\.origin\+"\/board"/);
+  assert.match(worker,/return_to",location\.origin\+"\/board\/voices"/);
   assert.match(worker,/\/api\/seonammedi\/admin\/auth\/exchange/);
   assert.match(auth,/seonamMediHandoff/);
   assert.match(auth,/await handoffToService\(\)/);
