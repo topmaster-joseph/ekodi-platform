@@ -42,22 +42,34 @@ for(let cycle=0;cycle<180;cycle++){
   const pending=required.filter(k=>headStatuses.get(k)?.state!=='success');
   if(pending.length){await sleep(3000);continue}
 
-  const mergeSha=String(p?.merge_commit_sha||'');
-  if(!/^[a-f0-9]{40}$/i.test(mergeSha)){await sleep(2000);continue}
+  // First converge the real PR head with the current protected base. This avoids
+  // chasing GitHub's ephemeral test-merge SHA while main is actively changing.
+  const update=await api('/pulls/'+pr.number+'/update-branch',{method:'PUT',body:JSON.stringify({expected_head_sha:headSha})});
+  if(update.r.status===202){
+    console.log(JSON.stringify({ok:true,action:'branch-updated',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+    // update-branch creates a new head commit; its push starts a fresh convergence
+    // run and fresh required checks. The old run must not act on a stale head.
+    process.exit(0);
+  }
+  if(![200,202,422].includes(update.r.status))fail('update-branch failed '+update.r.status+' '+JSON.stringify(update.data).slice(0,500));
+
+  const fresh=(await api('/pulls/'+pr.number)).data;
+  if(fresh?.head?.sha!==headSha){console.log('[EKODI][ORCH-AUTO-MERGE] head updated; next push run owns convergence');process.exit(0)}
+
+  const mergeSha=String(fresh?.merge_commit_sha||'');
+  if(!/^[a-f0-9]{40}$/i.test(mergeSha)){await sleep(1200);continue}
   for(const context of required){
     const source=headStatuses.get(context);
     const set=await api('/statuses/'+mergeSha,{method:'POST',body:JSON.stringify({state:'success',context,description:`Recovered from verified head ${headSha.slice(0,12)}`,target_url:source.target_url})});
     if(!set.r.ok)fail(`failed to publish ${context} to merge SHA: ${set.r.status}`);
   }
-  const verified=await statusMap(mergeSha);
-  if(required.some(k=>verified.get(k)?.state!=='success')){await sleep(1000);continue}
 
-  const merged=await api('/pulls/'+pr.number+'/merge',{method:'PUT',body:JSON.stringify({sha:headSha,merge_method:'squash',commit_title:p.title})});
+  const merged=await api('/pulls/'+pr.number+'/merge',{method:'PUT',body:JSON.stringify({sha:headSha,merge_method:'squash',commit_title:fresh.title})});
   if(merged.r.ok&&merged.data?.merged===true){
-    console.log(JSON.stringify({ok:true,pr:pr.number,mergeSha:merged.data.sha,taskId,branch,authority:'ekodi-orchestrator'}));
+    console.log(JSON.stringify({ok:true,action:'merged',pr:pr.number,mergeSha:merged.data.sha,taskId,branch,authority:'ekodi-orchestrator'}));
     process.exit(0);
   }
-  if([405,409,422].includes(merged.r.status)){await sleep(1500);continue}
+  if([405,409,422].includes(merged.r.status)){await sleep(1000);continue}
   fail('merge failed '+merged.r.status+' '+JSON.stringify(merged.data).slice(0,500));
 }
 fail('merge convergence timeout');
