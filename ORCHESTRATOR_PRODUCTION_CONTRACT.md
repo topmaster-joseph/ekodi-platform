@@ -20,6 +20,12 @@ Fresh approval remains mandatory for authority expansion, security-boundary chan
 
 Deployment-path selection follows `EKODI-DEPLOYMENT-FOUR-LAYER-001`: Runtime first when no code release is required; guarded GitHub Actions + Wrangler Deploy for code changes; Cloud Control only for allowlisted break-glass infrastructure repair and never as a second deployment lane; Owner for account, billing, paid plan/limit, identity ownership or root-security authority. Cloud Control repair returns to the guarded Deploy lane.
 
+## Human Gate approval receipt
+
+A blocked Human Gate task may resume only after an authenticated EKODI Platform Super Administrator creates a durable approval receipt for that exact task and current state version. Approval is compare-and-set: a stale state version, another task's receipt, or a non-super-admin identity must fail closed. The receipt is appended to the Orchestrator event ledger before the same task is resumed; it does not create new authority, change the requested scope, or count as execution, deployment, verification, or completion evidence.
+
+The command plane may honor that receipt only when the receipt task id exactly matches the running task, its scope is `task`, and its approving role is `super_admin`. Human/safety gates outside the approved task scope and all guarded release/production verification controls remain unchanged.
+
 ## Completion evidence
 
 For deployment tasks, completion requires durable evidence of the release artifact/ref, required gates, production endpoint/health verification, and post-deployment regression/security verification. Workers report evidence; only the Orchestrator settles the authoritative state.

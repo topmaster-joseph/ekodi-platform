@@ -88,12 +88,41 @@ jobs:
       - name: Verify production board UI
         run: |
           set -euo pipefail
-          html="$(curl -fsS --retry 2 --retry-delay 2 https://seonammedi.kr/board)"
-          grep -q 'id="writeToggle"' <<<"$html"
-          grep -q 'id="searchToggle"' <<<"$html"
-          grep -q 'id="voiceList"' <<<"$html"
-          grep -q 'href="/#channels">소통채널' <<<"$html"
-          grep -q 'aria-current="page">시민의견' <<<"$html"
+          fetch_board() {
+            local url="$1" body=""
+            for attempt in 1 2 3 4 5 6; do
+              body="$(curl -fsS --retry 2 --retry-delay 2 "$url" || true)"
+              if [[ -n "$body" ]]; then
+                printf '%s' "$body"
+                return 0
+              fi
+              sleep $((attempt * 2))
+            done
+            echo "board UI did not converge: $url" >&2
+            return 1
+          }
+          verify_contains() {
+            local label="$1" needle="$2" body="$3"
+            if ! grep -Fq "$needle" <<<"$body"; then
+              echo "production board UI check failed: $label (missing: $needle)" >&2
+              return 1
+            fi
+          }
+          voices="$(fetch_board https://seonammedi.kr/board/voices)"
+          finance="$(fetch_board https://seonammedi.kr/board/finance)"
+          notices="$(fetch_board https://seonammedi.kr/board/notices)"
+          verify_contains "voices write control" 'id="writeToggle"' "$voices"
+          verify_contains "voices search control" 'id="searchToggle"' "$voices"
+          verify_contains "voices list" 'id="voiceList"' "$voices"
+          verify_contains "voices active nav" 'aria-current="page" href="/board/voices">시민의견' "$voices"
+          verify_contains "finance active nav" 'aria-current="page" href="/board/finance">회계' "$finance"
+          verify_contains "finance summary" 'id="raised"' "$finance"
+          verify_contains "notices active nav" 'aria-current="page" href="/board/notices">공지' "$notices"
+          verify_contains "notices heading" 'NOTICE BOARD' "$notices"
+          for html in "$voices" "$finance" "$notices"; do
+            grep -q '서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널' <<<"$html"
+            grep -q '자료의 성격과 출처를 구분해 보존합니다' <<<"$html"
+          done
       - name: Production create-list-reply canary and cleanup
         run: |
           set -euo pipefail

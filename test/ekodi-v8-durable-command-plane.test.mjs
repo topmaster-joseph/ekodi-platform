@@ -160,3 +160,20 @@ test('live production proof is structurally read-only', () => {
   assert.match(goal, /Read-only service-health orchestration proof/);
   assert.doesNotMatch(goal.toLowerCase(), /\b(deploy|dns|permissions|secrets)\b/);
 });
+
+
+test('Orchestrator human-gate admin routes are super-admin and state-version gated', () => {
+  const source = fs.readFileSync(new URL('../ai-command-control.js', import.meta.url), 'utf8');
+  const adapter = fs.readFileSync(new URL('../ekodi-orchestrator-task-adapter.js', import.meta.url), 'utf8');
+  assert.match(source, /orchestrator\/human-gates/);
+  assert.match(source, /orchestrator\\\/tasks\\\/\(\[\^\/\]\+\)\\\/approve/);
+  assert.match(source, /platformRole !== 'super_admin'/);
+  assert.match(source, /ORCHESTRATOR_SUPER_ADMIN_REQUIRED/);
+  assert.match(source, /ORCHESTRATOR_STATE_VERSION_REQUIRED/);
+  assert.match(source, /approveOrchestratorTaskForPlatformAdmin/);
+  assert.match(adapter, /platformAdminIdentityFromSession/);
+  assert.match(adapter, /SELECT id,role FROM admins/);
+  assert.match(adapter, /role!=='super_admin'/);
+  assert.match(adapter, /listOrchestratorHumanGatesForPlatformAdmin/);
+  assert.match(adapter, /humanGate\?\.required===true/);
+});

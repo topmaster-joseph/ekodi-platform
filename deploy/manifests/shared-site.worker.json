@@ -1,9 +1,64 @@
 {
-  "version": 101,
+  "version": 102,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
     "requests": [
+      {
+        "url": "https://ekodi.kr/control",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKODI Control",
+          "무엇을 수행할까요?",
+          "/control.css",
+          "/control.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: control",
+          "x-ekodi-route: control-surface",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/control.css",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          ".control-rail",
+          ".composer-wrap"
+        ],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: control",
+          "x-ekodi-route: control-surface",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/control.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "/api/control/ai/v8/pulse",
+          "/api/control/ai/assist",
+          "control-surface"
+        ],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: control",
+          "x-ekodi-route: control-surface",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
       {
         "url": "https://ekodi.kr/preview/platform",
         "statuses": [
@@ -1219,7 +1274,9 @@
           "ekodi-chief-ai-chat-v1",
           "DECISION_RULES",
           "/api/control/ai/v8/pulse",
-          "executeNow:true"
+          "executeNow:true",
+          "/api/control/ai/v8/orchestrator/human-gates?limit=20",
+          "승인 후 계속"
         ],
         "headerExpect": [
           "x-content-type-options: nosniff",

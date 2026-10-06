@@ -100,7 +100,7 @@ test('seonammedi admin stays site-local before and after Google authentication',
   const [adminHtml,adminJs,auth,router,migration,manifestText]=await Promise.all([
     readFile(new URL('admin/index.html',root),'utf8'),
     readFile(new URL('admin/admin.js',root),'utf8'),
-    readFile(new URL('../auth-site/auth.js',import.meta.url),'utf8'),
+    readFile(new URL('../auth-site/client-auth.js',import.meta.url),'utf8'),
     readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8'),
     readFile(new URL('../migrations/0113_seonammedi_site_admin.sql',import.meta.url),'utf8'),
     readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8')
@@ -108,12 +108,12 @@ test('seonammedi admin stays site-local before and after Google authentication',
   assert.match(adminHtml,/data-seonam-admin/);
   assert.match(adminHtml,/운영홈/);
   assert.doesNotMatch(adminHtml,/admin\/sites\/workspace|route=workspace&source=seonammedi|http-equiv="refresh"/);
-  assert.match(adminJs,/site','portal'/);
+  assert.match(adminJs,/site','seonammedi'/);
   assert.match(adminJs,/return_to',location\.origin\+'\/admin\/'/);
   assert.match(adminJs,/CENTRAL_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token'/);
   assert.match(adminJs,/localStorage\.getItem\(CENTRAL_SESSION_KEY\)/);
   assert.doesNotMatch(adminJs,/cdn\.jsdelivr\.net|createClient\(/);
-  assert.match(auth,/site==='portal'.*\/seonammedi\/admin/s);
+  assert.match(auth,/seonammedi:\{name:'서남권 국립의대 소통센터'/);
   assert.match(router,/handleSeonamMediAdminApi/);
   assert.match(migration,/ohwon69@gmail\.com/);
   assert.match(migration,/board_admin/);
@@ -572,7 +572,7 @@ test('seonammedi notice permalink is served by the site shell',async()=>{
   const env={ENVIRONMENT:'production',ASSETS:{fetch:async request=>new Response(new URL(request.url).pathname,{status:200,headers:{'content-type':'text/html; charset=utf-8'}})}};
   const response=await platformRouter.fetch(new Request('https://ekodi.kr/seonammedi/notices/2'),env,{});
   assert.equal(response.status,200);
-  assert.equal(await response.text(),'/seonammedi/notices/');
+  assert.equal(await response.text(),'/seonammedi/');
   const app=await readFile(new URL('app.js',root),'utf8');
   assert.match(app,/pathname\.match\(\/\^\(\?:\\\/seonammedi\)\?\\\/notices/);
   assert.match(app,/find\(item=>Number\(item\.id\)===wanted\)/);
@@ -727,46 +727,36 @@ test('seonammedi citizen opinions hand off to the standalone board-owned UI',asy
     readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8'),
     readFile(new URL('../wrangler.independent-board.toml',import.meta.url),'utf8')
   ]);
-  assert.match(html,/href="\/board"[^>]*>시민의견<\/a>/);
+  assert.match(html,/href="\/board\/voices"[^>]*>시민의견<\/a>/);
   assert.doesNotMatch(html,/id="voices"|id="publicVoiceList"|id="voiceComposeToggle"/);
   assert.match(worker,/function boardPage\(\)/);
   assert.match(worker,/env\.BOARD_DB/);
   assert.match(worker,/의견 등록/);
   assert.match(worker,/답글 등록/);
   assert.match(worker,/\/api\/admin\/posts/);
+  assert.match(worker,/adminLogin\.hidden=false;await load\(\)/);
+  const authEntry=await readFile(new URL('../auth-site/auth-entry.js',import.meta.url),'utf8');
+  assert.match(authEntry,/purpose'\) === 'seonammedi-board-admin'/);
   assert.match(config,/database_name = "ekodi-independent-board"/);
 });
 
 test('seonammedi mobile activity history uses compact filters, progressive detail, and inline admin control',async()=>{const [html,app,css]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('app.css',root),'utf8')]);assert.match(html,/id="timelineAdminEdit"/);assert.match(app,/timeline-toggle/);assert.match(app,/is-collapsed/);assert.match(app,/timelineAdminEdit/);assert.match(css,/activity-toolbar \.filters\{flex-wrap:nowrap;overflow-x:auto/);assert.match(css,/\.timeline-item\.is-collapsed \.timeline-detail\{display:none\}/);});
 
 
-test('seonammedi finance and notices use standalone linked surfaces like citizen opinions',async()=>{
-  const [html,finance,notices,worker,adminHtml]=await Promise.all([
+test('seonammedi voices finance and notices use sibling standalone board routes',async()=>{
+  const [html,worker]=await Promise.all([
     readFile(new URL('index.html',root),'utf8'),
-    readFile(new URL('finance/index.html',root),'utf8'),
-    readFile(new URL('notices/index.html',root),'utf8'),
-    readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8'),
-    readFile(new URL('admin/index.html',root),'utf8')
+    readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8')
   ]);
-  assert.match(html,/href="\/board"[^>]*>시민의견<\/a>/);
-  assert.match(html,/href="\/finance\/">회계<\/a>/);
-  assert.match(html,/href="\/notices\/">공지<\/a>/);
-  assert.match(worker,/href="\/finance\/">회계/);
-  assert.match(worker,/href="\/notices\/">공지/);
-  assert.match(adminHtml,/href="\/finance\/">회계 관리/);
-  assert.match(adminHtml,/href="\/notices\/">공지 관리/);
-  assert.match(finance,/<h1>회계<\/h1>/);
-  assert.match(finance,/\/api\/seonammedi\/page-data/);
-  assert.match(finance,/\/api\/seonammedi\/admin\/finance/);
-  assert.match(finance,/누적 모금/);
-  assert.match(finance,/data-filter="income"/);
-  assert.match(notices,/<h1>공지<\/h1>/);
-  assert.match(notices,/\/api\/seonammedi\/notices/);
-  assert.match(notices,/게시글 작성/);
-  assert.match(notices,/\/notices\/'\+x\.id/);
-  assert.match(notices,/navigator\.share/);
-  assert.match(finance,/safe-area-inset-bottom/);
-  assert.match(notices,/safe-area-inset-bottom/);
+  assert.match(html,/href="\/board\/voices"[^>]*>시민의견<\/a>/);
+  assert.match(html,/href="\/board\/finance"[^>]*>회계<\/a>/);
+  assert.match(html,/href="\/board\/notices"[^>]*>공지<\/a>/);
+  assert.match(worker,/link\('\/board\/voices','시민의견','voices'\)/);
+  assert.match(worker,/link\('\/board\/finance','회계','finance'\)/);
+  assert.match(worker,/link\('\/board\/notices','공지','notices'\)/);
+  assert.match(worker,/function financePage\(\)/);
+  assert.match(worker,/function noticesPage\(\)/);
+  assert.match(worker,/href="\/#organization">조직/);
 });
 
 
@@ -782,7 +772,16 @@ test('seonammedi registered Google admins manage public content from user surfac
   assert.match(app,/활동이력 관리/);
   assert.match(app,/소통채널 바로 수정/);
   assert.match(app,/회계 바로 수정/);
-  assert.match(worker,/permissions\?\.voices===true/);
+  assert.match(worker,/auth\.permissions\?\.\[permission\]===true/);
+  const [control,accessApi]=await Promise.all([
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+    readFile(new URL('../supabase/functions/access-api/index.ts',import.meta.url),'utf8')
+  ]);
+  assert.match(accessApi,/path==="\/platform-authority"/);
+  assert.match(accessApi,/platformAdmin:await platformAdmin\(auth\.user\.id\)/);
+  assert.match(control,/async function centralPlatformAuthority\(request\)/);
+  assert.match(control,/PLATFORM_AUTHORITY_URL/);
+  assert.match(control,/if\(await centralPlatformAuthority\(request\)\)return \{ok:true,email:principalEmail,role:'super_admin',platform:true,capabilities:\['\*'\]\}/);
   assert.match(worker,/data-edit/);
   assert.match(worker,/data-delete/);
   assert.match(worker,/data-reply-delete/);
@@ -816,9 +815,9 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.match(html,/<a class="brand" href="\/">/);
   assert.match(html,/<a href="\/admin\/">관리<\/a>/);
   for(const hash of ['timeline','channels','organization'])assert.match(adminHtml,new RegExp('href="\/#'+hash+'"'));
-  assert.match(adminHtml,/href="\/board">시민의견 관리/);
-  assert.match(adminHtml,/href="\/finance\/">회계 관리/);
-  assert.match(adminHtml,/href="\/notices\/">공지 관리/);
+  assert.match(adminHtml,/href="\/board\/voices">시민의견 관리/);
+  assert.match(adminHtml,/href="\/board\/finance">회계 관리/);
+  assert.match(adminHtml,/href="\/board\/notices">공지 관리/);
   assert.match(app,/\^\(\?:\\\/seonammedi\)\?\\\/notices/);
   assert.ok(minutes.includes("location.origin+'/minutes/?token='"));
   assert.match(css,/min-height:100dvh;display:flex;flex-direction:column/);
