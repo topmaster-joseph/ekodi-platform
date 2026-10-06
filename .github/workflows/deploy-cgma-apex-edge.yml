@@ -21,7 +21,7 @@ concurrency:
 env:
   WRANGLER_VERSION: '4.119.0'
   CGMA_SOURCE_REPO: topmaster-joseph/cheonggye-market
-  CGMA_SOURCE_REF: 'bf864cb2cf02c8b8288617daa7fbba032eb335f6'
+  CGMA_SOURCE_REF: 'e5bfc47f2234ce9c92952cf29e00c34c2e27d12f'
 
 jobs:
   validate:
@@ -61,6 +61,7 @@ jobs:
           grep -Fq 'delegatedLiveResponse' cgma-root-gateway.js
           grep -Fq 'isBoardPath' cgma-root-gateway.js
           grep -Fq 'delegatedBoardResponse' cgma-root-gateway.js
+          grep -Fq 'board.internal.ekodi' cgma-root-gateway.js
           npx --yes wrangler@${WRANGLER_VERSION} deploy --dry-run --config wrangler.cgma-root-gateway.toml
           grep -Fq 'binding = "EKODI_SHARED"' wrangler.cgma-root-gateway.toml
           grep -Fq 'service = "shy-thunder-39a4"' wrangler.cgma-root-gateway.toml
