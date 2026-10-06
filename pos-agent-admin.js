@@ -96,7 +96,7 @@
       </article>
 
       <div class="pos-agent-note">
-        브라우저 보안상 Windows 설치·삭제 파일을 자동 실행하지 않습니다. 다운로드한 <strong>.cmd</strong> 파일을 해당 POS PC에서 직접 실행하고, 관리자 권한 요청 내용을 확인한 뒤 허용합니다. 이전 설치에서 <strong>0x80041318</strong> 또는 <strong>작업 XML 범위 오류</strong>가 반복되면 <strong>호환 설치 · 작업 XML 오류용</strong>을 사용하세요. 이 설치는 Windows 작업 스케줄러를 아예 우회하고 현재 사용자 시작프로그램 폴더로 Agent를 자동 시작하므로 같은 오류 경로를 다시 타지 않습니다. Agent는 <strong>127.0.0.1</strong> 로컬 연결만 사용합니다.
+        브라우저 보안상 Windows 설치·삭제 파일을 자동 실행하지 않습니다. 다운로드한 <strong>.cmd</strong> 파일을 해당 POS PC에서 직접 실행하고, 관리자 권한 요청 내용을 확인한 뒤 허용합니다. 이전 설치에서 <strong>0x80041318</strong> 또는 <strong>작업 XML 범위 오류</strong>가 반복되면 <strong>호환 설치 · 작업 XML 오류용</strong>을 사용하세요. 이 설치는 Windows 작업 스케줄러를 아예 우회하고 현재 사용자 시작프로그램 폴더로 Agent를 자동 시작하므로 같은 오류 경로를 다시 타지 않습니다. 기존 <strong>20초 재시작 설정</strong> 때문에 발생했던 오류도 이 경로에서는 사용하지 않습니다. Agent는 <strong>127.0.0.1</strong> 로컬 연결만 사용합니다.
       </div>
     `;
     host.prepend(section);
