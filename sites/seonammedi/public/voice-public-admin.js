@@ -57,7 +57,7 @@ async function reloadPublic(){
 }
 async function refreshAdminRows(){
   if(!authorized)return;
-  const data=await adminRequest('/api/seonammedi/admin/voices');
+  const data=await adminRequest('/board/api/admin/posts');
   rows=new Map((data.items||[]).map(item=>[Number(item.id),item]));
 }
 function statusNode(message,error=false){
@@ -70,7 +70,7 @@ function enhanceReply(replyNode,voiceId,reply){
     if(!confirm('이 답글을 삭제할까요?'))return;
     button.disabled=true;
     try{
-      await adminRequest('/api/seonammedi/admin/voices/'+voiceId+'/replies/'+reply.id,{method:'DELETE'});
+      await adminRequest('/board/api/admin/posts/'+voiceId+'/replies/'+reply.id,{method:'DELETE'});
       await refreshAdminRows();await reloadPublic();
     }catch(error){alert(error.message||'답글을 삭제하지 못했습니다.')}
     finally{button.disabled=false}
@@ -101,7 +101,7 @@ function createManager(item){
     event.preventDefault();save.disabled=true;state.textContent='저장 중…';state.classList.remove('error');
     try{
       const body={category:category.value,displayName:displayName.value,contact:contact.value,status:status.value,message:message.value};
-      await adminRequest('/api/seonammedi/admin/voices/'+item.id,{method:'PUT',body:JSON.stringify(body)});
+      await adminRequest('/board/api/admin/posts/'+item.id,{method:'PUT',body:JSON.stringify(body)});
       state.textContent='저장했습니다.';await refreshAdminRows();await reloadPublic();
     }catch(error){state.textContent=error.data?.message||error.message||'저장하지 못했습니다.';state.classList.add('error')}
     finally{save.disabled=false}
@@ -110,7 +110,7 @@ function createManager(item){
     if(!confirm('이 시민의견과 답글을 삭제할까요?'))return;
     remove.disabled=true;state.textContent='삭제 중…';
     try{
-      await adminRequest('/api/seonammedi/admin/voices/'+item.id,{method:'DELETE'});
+      await adminRequest('/board/api/admin/posts/'+item.id,{method:'DELETE'});
       await refreshAdminRows();await reloadPublic();
     }catch(error){state.textContent=error.message||'삭제하지 못했습니다.';state.classList.add('error');remove.disabled=false}
   });
