@@ -148,7 +148,6 @@ async function createPublicReply(request,env,voiceId){
   const displayName=clean(body?.name,80);
   const message=clean(body?.message,1500);
   if(!message)return json({ok:false,error:'invalid_message',message:'답글 내용을 입력해 주세요.'},400);
-  await ensureSchema(env.DB);
   const voice=await env.DB.prepare("SELECT id FROM seonammedi_civic_voices WHERE id=? AND review_status='published'").bind(voiceId).first();
   if(!voice?.id)return json({ok:false,error:'voice_not_found'},404);
   const requestFingerprint=await fingerprint(request);
