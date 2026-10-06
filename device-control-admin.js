@@ -560,7 +560,7 @@
       result.dataset.installCommand = command;
       launchProtocol(currentEnrollmentUrl);
     } catch (error) { alert(error.message); }
-    finally { button.disabled = false; button.textContent = 'Windows Agent 연결'; }
+    finally { button.disabled = false; button.textContent = '이 PC 연결'; }
   }
 
   async function createInventory(event) {
@@ -595,19 +595,46 @@
       <div class="device-attention-summary" id="deviceAttentionSummary" data-state="good"><div><strong>기기 상태를 확인하는 중입니다.</strong><span>문제가 있는 기기를 우선 표시합니다.</span></div></div>
       <div class="device-type-filters" id="deviceTypeFilters" aria-label="기기 유형 필터"></div>
       <div class="ekodi-device-list" id="ekodiDeviceList"><div class="device-empty"><p>기기 목록을 불러오는 중입니다.</p></div></div>
-      <details class="device-setup-tools">
-        <summary><strong>기기 연결 · 자동 작업 설정</strong><span>새 기기 등록, 자동 작업 배정, 권한 경계</span></summary>
+      <details class="device-setup-tools" open>
+        <summary><strong>PC 연결 · 설정</strong><span>처음에는 “이 PC 연결”만 누르면 됩니다.</span></summary>
         <div class="device-setup-tools-body">
-          <section class="device-job-console">
-            <div><p class="kicker">HYBRID EXECUTION QUEUE</p><h3>자동 작업 배정</h3><p>검증된 비휴대형 데스크톱 PC만 후보가 됩니다. POS·키오스크·태블릿·센서·로봇은 자동 실행 대상에서 제외합니다.</p></div>
-            <form id="deviceJobForm"><label>작업<select name="type"><option value="diagnostics.collect">전체 진단</option><option value="network.diagnose">네트워크 진단</option><option value="updates.scan">업데이트 확인</option><option value="maintenance.temp_cleanup">임시파일 정리</option></select></label><label>기기 그룹<input name="targetGroup" value="general" pattern="[a-z0-9][a-z0-9_-]{0,59}" required></label><label>우선순위<input name="priority" type="number" min="1" max="100" value="50"></label><button type="submit" class="primary">작업 등록</button></form>
-            <div id="deviceJobList" class="device-job-list"><p class="device-command-empty">작업 큐를 불러오는 중입니다.</p></div>
+          <section class="device-enrollment-box device-enrollment-agent device-quick-connect">
+            <div>
+              <p class="kicker">ONE CLICK CONNECT</p>
+              <h3>이 PC를 EKODI에 연결</h3>
+              <p>복잡한 코드는 입력하지 않습니다. 버튼을 누른 뒤 Windows 승인창이 뜨면 허용만 하세요.</p>
+              <details class="device-advanced-install">
+                <summary>다른 기기 유형 · 이름 · 위치 지정</summary>
+                <div class="device-onboarding-fields">
+                  <label>유형<select id="deviceEnrollmentType"><option value="pc">PC</option><option value="pos">POS</option><option value="kiosk">키오스크</option><option value="tablet">태블릿</option></select></label>
+                  <label>표시 이름<input id="deviceEnrollmentLabel" maxlength="80" placeholder="비우면 PC로 자동 등록"></label>
+                  <label>위치<input id="deviceEnrollmentLocation" maxlength="120" placeholder="선택사항"></label>
+                </div>
+              </details>
+            </div>
+            <button type="button" class="primary" id="createDeviceEnrollment">이 PC 연결</button>
           </section>
-          <div class="device-onboarding-grid">
-            <div class="device-enrollment-box device-enrollment-agent"><div><p class="kicker">AGENT PAIRING</p><h3>Windows Agent 기기 연결</h3><p>PC·Windows POS·Windows 키오스크·Windows 태블릿을 연결합니다. 기기유형 정책은 서버에서 강제됩니다.</p><div class="device-onboarding-fields"><label>유형<select id="deviceEnrollmentType"><option value="pc">PC</option><option value="pos">POS</option><option value="kiosk">키오스크</option><option value="tablet">태블릿</option></select></label><label>표시 이름<input id="deviceEnrollmentLabel" maxlength="80" placeholder="예: 자담 카운터 POS"></label><label>위치<input id="deviceEnrollmentLocation" maxlength="120" placeholder="예: 목포대점 카운터"></label></div></div><button type="button" class="primary" id="createDeviceEnrollment">Windows Agent 연결</button></div>
-            <form class="device-enrollment-box device-inventory-box" id="deviceInventoryForm"><div><p class="kicker">OBSERVE FIRST</p><h3>관찰 인벤토리 등록</h3><p>센서·로봇 등 아직 Agent가 없는 기기도 자산과 정책부터 등록합니다. 등록만으로 원격제어 권한이 생기지 않습니다.</p><div class="device-onboarding-fields"><label>유형<select name="deviceType"><option value="sensor">센서</option><option value="robot">서비스로봇</option><option value="pos">POS</option><option value="kiosk">키오스크</option><option value="tablet">태블릿</option><option value="other">기타</option></select></label><label>표시 이름<input name="label" maxlength="80" required placeholder="예: 전력계 1번"></label><label>위치<input name="locationLabel" maxlength="120" placeholder="예: 매장 주방"></label><label>메모<input name="notes" maxlength="500" placeholder="모델/용도 등"></label></div></div><button type="submit" class="secondary">관찰 등록</button></form>
+          <div class="device-enrollment-result" id="deviceEnrollmentResult" hidden>
+            <div><strong>연결 준비가 됐습니다.</strong><span data-enrollment-expiry></span></div>
+            <p><b>Windows 승인창이 뜨면 “예”만 누르세요.</b> 아무 반응이 없을 때만 아래 “연결 문제 해결”을 펼치면 됩니다.</p>
+            <div class="device-pair-actions"><button type="button" class="primary" id="continueDeviceEnrollment">연결 계속</button></div>
+            <details class="device-advanced-install">
+              <summary>연결 문제 해결</summary>
+              <p>자동 연결이 안 될 때만 연결 프로그램을 한 번 설치합니다.</p>
+              <div class="device-pair-actions"><a class="button secondary" href="${BOOTSTRAP_URL}" download="EKODI_Device_연결프로그램.cmd">연결 프로그램 설치</a></div>
+              <small>1회용 등록 코드</small><strong data-enrollment-code></strong>
+              <code data-install-command></code><button type="button" class="secondary" id="copyDeviceInstallCommand">설치 명령 복사</button>
+            </details>
           </div>
-          <div class="device-enrollment-result" id="deviceEnrollmentResult" hidden><div><small>1회용 등록 코드</small><strong data-enrollment-code></strong><span data-enrollment-expiry></span></div><p><b>연결 창이 떴다면 Windows 승인만 진행하세요.</b> 아무 반응이 없으면 연결 프로그램을 한 번 설치한 뒤 “이 PC 연결 계속”을 누르면 됩니다. 기존 Agent 업그레이드는 검증·자동 롤백 후 heartbeat까지 확인하며, 데스크톱 Boot/WOL은 Agent 연결과 별도로 설정합니다.</p><div class="device-pair-actions"><a class="button secondary" href="${BOOTSTRAP_URL}" download="EKODI_Device_연결프로그램.cmd">연결 프로그램 설치</a><button type="button" class="primary" id="continueDeviceEnrollment">이 PC 연결 계속</button></div><details class="device-advanced-install"><summary>고급 설치 · PowerShell 명령 보기</summary><code data-install-command></code><button type="button" class="secondary" id="copyDeviceInstallCommand">설치 명령 복사</button></details></div>
+          <details class="device-advanced-install">
+            <summary>고급 운영 설정</summary>
+            <section class="device-job-console">
+              <div><p class="kicker">HYBRID EXECUTION QUEUE</p><h3>자동 작업 배정</h3><p>검증된 비휴대형 데스크톱 PC만 자동 작업 후보가 됩니다.</p></div>
+              <form id="deviceJobForm"><label>작업<select name="type"><option value="diagnostics.collect">전체 진단</option><option value="network.diagnose">네트워크 진단</option><option value="updates.scan">업데이트 확인</option><option value="maintenance.temp_cleanup">임시파일 정리</option></select></label><label>기기 그룹<input name="targetGroup" value="general" pattern="[a-z0-9][a-z0-9_-]{0,59}" required></label><label>우선순위<input name="priority" type="number" min="1" max="100" value="50"></label><button type="submit" class="primary">작업 등록</button></form>
+              <div id="deviceJobList" class="device-job-list"><p class="device-command-empty">작업 큐를 불러오는 중입니다.</p></div>
+            </section>
+            <form class="device-enrollment-box device-inventory-box" id="deviceInventoryForm"><div><p class="kicker">OBSERVE FIRST</p><h3>관찰 인벤토리 등록</h3><p>Agent가 없는 센서·로봇 등을 관찰 자산으로만 등록합니다.</p><div class="device-onboarding-fields"><label>유형<select name="deviceType"><option value="sensor">센서</option><option value="robot">서비스로봇</option><option value="pos">POS</option><option value="kiosk">키오스크</option><option value="tablet">태블릿</option><option value="other">기타</option></select></label><label>표시 이름<input name="label" maxlength="80" required placeholder="예: 전력계 1번"></label><label>위치<input name="locationLabel" maxlength="120" placeholder="선택사항"></label><label>메모<input name="notes" maxlength="500" placeholder="모델/용도 등"></label></div></div><button type="submit" class="secondary">관찰 등록</button></form>
+          </details></div>
           <div class="device-security-note"><strong>권한 경계</strong><p>관찰 → 유형정책 → 진단 → 관리자 승인 → 허용 작업 실행 → 결과 검증 → 감사기록 순서로 동작합니다. 물리 동작이 가능한 기기는 전용 안전 어댑터 없이는 실행권한을 받지 않습니다.</p></div>
         </div>
       </details>
