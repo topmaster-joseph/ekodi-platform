@@ -6,8 +6,8 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-# EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v4
-$InstallerCompatibility = 'task-scheduler-0x80041318-v4'
+# EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v5
+$InstallerCompatibility = 'task-scheduler-0x80041318-v5'
 
 function Test-IsAdministrator {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -95,6 +95,41 @@ function Register-EkodiScheduledTask {
   }
 }
 
+function Register-EkodiStartupFallback {
+  param(
+    [string]$AgentPath,
+    [string]$ConfigPath,
+    [string]$ListenerPrefix
+  )
+
+  if ($ListenerPrefix -notmatch '^http://127\.0\.0\.1:\d+/$') {
+    throw 'Startup fallback requires the fixed 127.0.0.1 loopback listener.'
+  }
+
+  $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+  $startupDir = [Environment]::GetFolderPath([Environment+SpecialFolder]::Startup)
+  if ([string]::IsNullOrWhiteSpace($startupDir)) {
+    throw 'Windows Startup folder could not be resolved.'
+  }
+  New-Item -ItemType Directory -Path $startupDir -Force | Out-Null
+  $launcher = Join-Path $startupDir 'EKODI-POS-Agent-Startup.cmd'
+
+  # Future logons use the current interactive user, so reserve only the exact
+  # 127.0.0.1 listener for that user before creating the Startup launcher.
+  & netsh.exe http delete urlacl "url=$ListenerPrefix" *> $null
+  $reservation = & netsh.exe http add urlacl "url=$ListenerPrefix" "user=$($identity.Name)" 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    throw "Unable to reserve the loopback Agent URL for Startup fallback: $($reservation -join ' ')"
+  }
+
+  $launcherContent = @(
+    '@echo off',
+    ('powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "{0}" -ConfigPath "{1}"' -f $AgentPath,$ConfigPath)
+  ) -join [Environment]::NewLine
+  Set-Content -LiteralPath $launcher -Value $launcherContent -Encoding ASCII
+  return $launcher
+}
+
 if (-not (Test-IsAdministrator)) {
   throw 'Administrator privileges are required to install the EKODI POS Agent scheduled task.'
 }
@@ -138,15 +173,36 @@ try {
   $trigger = New-ScheduledTaskTrigger -AtLogOn -User $userName
   $principal = New-ScheduledTaskPrincipal -UserId $userName -LogonType Interactive -RunLevel Highest
 
-  $registrationMode = Register-EkodiScheduledTask -Name $TaskName -Action $action -Trigger $trigger -Principal $principal
-
-  $registeredTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
-  if (-not $registeredTask) {
-    throw 'Agent scheduled task registration could not be verified.'
+  try {
+    $registrationMode = Register-EkodiScheduledTask -Name $TaskName -Action $action -Trigger $trigger -Principal $principal
+  } catch {
+    if (-not (Test-TaskSchemaRangeError $_)) { throw }
+    Write-Host 'Task Scheduler is incompatible on this POS image; switching to the per-user Windows Startup fallback.' -ForegroundColor Yellow
+    try {
+      $partialTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+      if ($partialTask) { Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue }
+    } catch {}
+    [void](Register-EkodiStartupFallback -AgentPath $targetAgent -ConfigPath $targetConfig -ListenerPrefix ([string]$config.listenerPrefix))
+    $registrationMode = 'startup-folder'
   }
 
+  if ($registrationMode -ne 'startup-folder') {
+    $registeredTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+    if (-not $registeredTask) {
+      throw 'Agent scheduled task registration could not be verified.'
+    }
+    $staleStartupLauncher = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::Startup)) 'EKODI-POS-Agent-Startup.cmd'
+    if (Test-Path -LiteralPath $staleStartupLauncher) { Remove-Item -LiteralPath $staleStartupLauncher -Force }
+  }
+
+  Set-Content -LiteralPath (Join-Path $InstallDir 'install-mode.txt') -Value $registrationMode -Encoding ASCII
+
   if (-not $NoStart) {
-    Start-ScheduledTask -TaskName $TaskName
+    if ($registrationMode -eq 'startup-folder') {
+      Start-Process -FilePath 'powershell.exe' -ArgumentList $arguments -WindowStyle Hidden
+    } else {
+      Start-ScheduledTask -TaskName $TaskName
+    }
     $store = @($config.allowedStores | Where-Object { $_ } | Select-Object -First 1)
     $headers = @{}
     if ($store.Count) {
@@ -180,6 +236,8 @@ try {
   Write-Host "Task Scheduler compatibility: $InstallerCompatibility ($registrationMode)"
   if ($registrationMode -eq 'interactive-default-runlevel') {
     Write-Host 'Compatibility mode used: interactive current-user task with the Windows default run level.' -ForegroundColor Yellow
+  } elseif ($registrationMode -eq 'startup-folder') {
+    Write-Host 'Compatibility mode used: per-user Windows Startup folder because this POS image rejected Task Scheduler XML.' -ForegroundColor Yellow
   }
   Write-Host 'Foreground switching remains explicit-user-action only.'
 } catch {
@@ -188,6 +246,11 @@ try {
     Remove-Item -LiteralPath $backupAgent -Force
   } elseif (-not $hadAgent -and (Test-Path -LiteralPath $targetAgent)) {
     Remove-Item -LiteralPath $targetAgent -Force
+  }
+
+  $startupRollback = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::Startup)) 'EKODI-POS-Agent-Startup.cmd'
+  if (Test-Path -LiteralPath $startupRollback) {
+    try { Remove-Item -LiteralPath $startupRollback -Force } catch {}
   }
 
   if ($existingTask) {

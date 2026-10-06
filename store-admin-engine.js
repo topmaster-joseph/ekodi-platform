@@ -56,12 +56,15 @@ function clientMain(POLICY,CHANNEL_CATALOG){
   const CHANNEL_AUTH_PATHS=Object.freeze({youtube:'/v1/connect/youtube/start',meta:'/v1/connect/meta/start',threads:'/v1/connect/threads/start'});
   const SITE_CHROME_API='https://ekodi.kr/workspace-api/v1/site-chrome';
   const POS_AGENT_URL='http://127.0.0.1:17831';
+  const POS_AGENT_DOWNLOAD_BASE='/cmpmyi/admin/agent/download/';
+  const POS_AGENT_DOWNLOAD_VERSION='20261006-task-scheduler-startup-fallback-v5';
+  const posAgentFile=name=>POS_AGENT_DOWNLOAD_BASE+encodeURIComponent(name)+'?v='+encodeURIComponent(POS_AGENT_DOWNLOAD_VERSION);
   const POS_AGENT_FILES=Object.freeze({
-    setup:'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/agents/windows-pos/setup-pos-agent.cmd',
-    advancedInstall:'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/agents/windows-pos/install-pos-agent.ps1',
-    start:'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/agents/windows-pos/start-pos-agent.cmd',
-    stop:'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/agents/windows-pos/stop-pos-agent.cmd',
-    guide:'https://github.com/topmaster-joseph/ekodi-platform/tree/main/agents/windows-pos'
+    setup:posAgentFile('setup-pos-agent.cmd'),
+    advancedInstall:posAgentFile('install-pos-agent.ps1'),
+    start:posAgentFile('start-pos-agent.cmd'),
+    stop:posAgentFile('stop-pos-agent.cmd'),
+    guide:posAgentFile('README.md')
   });
   const SESSION_KEY=IS_PORTFOLIO?'ekodi-cmpmyi-admin-session':'ekodi-store-admin-session:'+SLUG;
   const CENTRAL_CMPMYI_SESSION_KEY='ekodi-cmpmyi-admin-session';
