@@ -297,7 +297,10 @@ export async function settleEkodiCommandTask(input, task, result, options = {}) 
   let nextAttemptAt = null;
   let closedAt = null;
   if (resultState === 'verified' || resultState === 'ignored') closedAt = now;
-  else if (resultState === 'human_gate') state = 'human_gate';
+  else if (resultState === 'auto_blocked') {
+    state = 'auto_blocked';
+    closedAt = now;
+  } else if (resultState === 'human_gate') state = 'human_gate';
   // AI consultation is advisory for the deterministic core. Provider exhaustion
   // must not turn a valid core-only result into an endless command retry loop.
   // Only execution failures/degraded runs are retryable here; core_only is a
