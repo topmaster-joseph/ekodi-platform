@@ -6,8 +6,8 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-# EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v3
-$InstallerCompatibility = 'task-scheduler-0x80041318-v3'
+# EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v4
+$InstallerCompatibility = 'task-scheduler-0x80041318-v4'
 
 function Test-IsAdministrator {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -56,38 +56,43 @@ function Register-EkodiScheduledTask {
     $Principal
   )
 
-  $attempts = @(
-    @{
-      mode = 'restart-1m'
-      settings = (New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartCount 5 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero))
-    },
-    @{
-      mode = 'compat-no-restart'
-      settings = (New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero))
-    },
-    @{
-      mode = 'legacy-default-settings'
-      settings = $null
-    }
-  )
-
-  $lastError = $null
-  foreach ($attempt in $attempts) {
-    try {
-      if ($null -eq $attempt.settings) {
-        Register-ScheduledTask -TaskName $Name -Action $Action -Trigger $Trigger -Principal $Principal -Force | Out-Null
-      } else {
-        Register-ScheduledTask -TaskName $Name -Action $Action -Trigger $Trigger -Principal $Principal -Settings $attempt.settings -Force | Out-Null
-      }
-      return [string]$attempt.mode
-    } catch {
-      $lastError = $_
-      if (-not (Test-TaskSchemaRangeError $_)) { throw }
-      Write-Host ("Task Scheduler rejected task XML in mode {0}; retrying with a simpler compatibility profile." -f $attempt.mode) -ForegroundColor Yellow
-    }
+  # Compatibility-first: the plain Windows default settings profile avoids
+  # serializing restart/time-limit values that older Task Scheduler versions
+  # reject with HRESULT 0x80041318.
+  try {
+    Register-ScheduledTask -TaskName $Name -Action $Action -Trigger $Trigger -Principal $Principal -Force | Out-Null
+    return 'default-settings'
+  } catch {
+    if (-not (Test-TaskSchemaRangeError $_)) { throw }
+    Write-Host 'Task Scheduler rejected the default task XML; retrying with an explicit minimal settings profile.' -ForegroundColor Yellow
+    $defaultError = $_
   }
 
-  throw $lastError
+  try {
+    $minimalSettings = New-ScheduledTaskSettingsSet -StartWhenAvailable
+    Register-ScheduledTask -TaskName $Name -Action $Action -Trigger $Trigger -Principal $Principal -Settings $minimalSettings -Force | Out-Null
+    return 'minimal-settings'
+  } catch {
+    if (-not (Test-TaskSchemaRangeError $_)) { throw }
+    Write-Host 'Task Scheduler rejected the minimal settings profile; retrying without RunLevel Highest for compatibility.' -ForegroundColor Yellow
+  }
+
+  # Some vendor POS images ship an older Task Scheduler schema that rejects
+  # the Highest run-level principal XML. Keep the task interactive and scoped
+  # to the current user, but allow the scheduler's default run level as a
+  # last-resort compatibility path. The Agent itself remains loopback-only.
+  $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+  $fallbackPrincipal = New-ScheduledTaskPrincipal -UserId $identity.Name -LogonType Interactive
+  try {
+    Register-ScheduledTask -TaskName $Name -Action $Action -Trigger $Trigger -Principal $fallbackPrincipal -Force | Out-Null
+    return 'interactive-default-runlevel'
+  } catch {
+    if (Test-TaskSchemaRangeError $_) {
+      Write-Host 'Task Scheduler still rejected the compatibility task XML.' -ForegroundColor Red
+      throw $defaultError
+    }
+    throw
+  }
 }
 
 if (-not (Test-IsAdministrator)) {
@@ -173,8 +178,8 @@ try {
   Write-Host "Scheduled task: $TaskName"
   Write-Host "Config preserved at: $targetConfig"
   Write-Host "Task Scheduler compatibility: $InstallerCompatibility ($registrationMode)"
-  if ($registrationMode -eq 'legacy-default-settings') {
-    Write-Host 'Legacy Task Scheduler profile used; Windows default task settings are active.' -ForegroundColor Yellow
+  if ($registrationMode -eq 'interactive-default-runlevel') {
+    Write-Host 'Compatibility mode used: interactive current-user task with the Windows default run level.' -ForegroundColor Yellow
   }
   Write-Host 'Foreground switching remains explicit-user-action only.'
 } catch {
@@ -187,6 +192,12 @@ try {
 
   if ($existingTask) {
     try { Start-ScheduledTask -TaskName $TaskName } catch {}
+  } else {
+    # A failed first-time registration must not leave a partial task behind.
+    try {
+      $partialTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+      if ($partialTask) { Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue }
+    } catch {}
   }
   throw
 } finally {
