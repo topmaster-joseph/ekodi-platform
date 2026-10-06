@@ -12,6 +12,9 @@ test('canonical EKODI discovery binds both aliases to the apex MCP resource',()=
   assert.deepEqual([...EKODI_AI_DISCOVERY.aliases],['EKODI','에코디']);
   assert.equal(EKODI_AI_DISCOVERY.ai.mcp,'https://ekodi.kr/mcp');
   assert.equal(EKODI_AI_DISCOVERY.ai.mcp_protocol_version,'2026-07-28');
+  assert.equal(EKODI_AI_DISCOVERY.ai.clients.genspark.integration,'custom-mcp');
+  assert.equal(EKODI_AI_DISCOVERY.ai.clients.genspark.endpoint,'https://ekodi.kr/mcp');
+  assert.equal(EKODI_AI_DISCOVERY.ai.clients.genspark.execution_authority,'ekodi-orchestrator');
   assert.equal(EKODI_AI_DISCOVERY.security.orchestrator_is_execution_authority,true);
   assert.equal(EKODI_AI_DISCOVERY.security.external_ai_is_execution_authority,false);
   assert.equal(EKODI_AI_DISCOVERY.discovery.name_recognition_is_authorization,false);
