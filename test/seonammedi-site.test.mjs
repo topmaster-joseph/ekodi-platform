@@ -782,3 +782,15 @@ test('seonammedi registered Google admins manage public content from user surfac
   assert.match(adminJs,/navVisibility/);
 });
 
+
+
+test('seonammedi public page loads shared admin runtime before admin-aware site scripts',async()=>{
+  const html=await readFile(new URL('index.html',root),'utf8');
+  const shared=html.indexOf('https://ekodi.kr/public-surface-admin.js');
+  const app=html.indexOf('/seonammedi/app.js');
+  const voices=html.indexOf('/seonammedi/voice-public-admin.js');
+  assert.ok(shared>=0,'shared public admin runtime is present');
+  assert.ok(shared<app,'shared runtime loads before app.js');
+  assert.ok(shared<voices,'shared runtime loads before voice admin');
+  assert.match(html,/data-ekodi-public-surface-admin="v2"/);
+});
