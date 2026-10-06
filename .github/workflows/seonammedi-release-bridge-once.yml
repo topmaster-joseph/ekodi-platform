@@ -1,4 +1,4 @@
-name: SeonamMedi One-Shot Control Release Retry
+name: SeonamMedi One-Shot Shared Site Release Retry
 
 on:
   push:
@@ -29,22 +29,15 @@ jobs:
             --data-urlencode "taskId=$RELEASE_TASK" \
             --data-urlencode "branchRef=$RELEASE_BRANCH")"
           node -e 'const x=JSON.parse(process.argv[1]); if(x.authorized!==true||x.authority!=="ekodi-orchestrator") process.exit(1)' "$receipt"
-      - name: Verify Control workflow definition matches main
+      - name: Dispatch guarded Shared Site release after Control asset contract repair
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin main --depth=1
-          file=.github/workflows/deploy-control-api.yml
-          test "$(git rev-parse HEAD:"$file")" = "$(git rev-parse origin/main:"$file")"
-      - name: Dispatch guarded Control release from authoritative branch
-        shell: bash
-        run: |
-          set -euo pipefail
-          api="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/deploy-control-api.yml/dispatches"
+          api="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/deploy-site-core.yml/dispatches"
           curl -fsS -X POST "$api" \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H 'Accept: application/vnd.github+json' \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
             -H 'Content-Type: application/json' \
-            -d "{\"ref\":\"$RELEASE_BRANCH\",\"inputs\":{\"release_branch_ref\":\"$RELEASE_BRANCH\",\"release_task_id\":\"$RELEASE_TASK\"}}"
-          echo 'Guarded Control production retry dispatched from authoritative branch.' >> "$GITHUB_STEP_SUMMARY"
+            -d "{\"ref\":\"$RELEASE_BRANCH\"}"
+          echo 'Guarded Shared Site release retry dispatched.' >> "$GITHUB_STEP_SUMMARY"
