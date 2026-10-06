@@ -34,7 +34,7 @@ async function d1(databaseId,sql,params){
   return data;
 }
 
-if(eventName!=='pull_request'){out('action','noop');process.exit(0)}
+if(!['pull_request','pull_request_target'].includes(eventName)){out('action','noop');process.exit(0)}
 if(!eventPath||!fs.existsSync(eventPath))fail('GitHub pull_request event payload is required');
 if(!ghToken)fail('GH_TOKEN is required');
 const event=jsonFile(eventPath);
