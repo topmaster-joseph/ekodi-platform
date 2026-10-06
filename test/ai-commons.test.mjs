@@ -94,8 +94,9 @@ test('Commons page loads browser assets only through the Worker-owned API bounda
   const canonical=fs.readFileSync(new URL('../canonical-surface-router.js',import.meta.url),'utf8');
   const verifier=fs.readFileSync(new URL('../.github/workflows/verify-ai-gateway-production.yml',import.meta.url),'utf8');
   const release=JSON.parse(fs.readFileSync(new URL('../deploy/manifests/ai-control.worker.json',import.meta.url),'utf8'));
-  assert.match(html,/\.\/api\/commons\/client\?v=/);
-  assert.match(html,/\.\/api\/commons\/style\?v=/);
+  assert.match(html,/\/ai\/api\/commons\/client\?v=/);
+  assert.match(html,/\/ai\/api\/commons\/style\?v=/);
+  assert.doesNotMatch(html,/\.\/api\/commons\/(?:client|style)\?v=/);
   assert.match(html,/실행 서비스/);
   assert.match(html,/serviceTabs/);
   assert.match(html,/기본 기능 전체/);
