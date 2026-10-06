@@ -13,8 +13,6 @@ comment on function public.activity_collab_update(text,text,jsonb,integer) is
   'Intentional token-gated public collaboration RPC with optimistic revision checks. No participant data access.';
 comment on function public.activity_public_archive_snapshot(text,text) is
   'Intentional public archive read RPC. Available only for public activities after the activity has ended.';
-comment on function public.activity_public_submit_media_link(text,text,text,text,text,text,text,text) is
-  'Intentional public post-activity media-link submission RPC. Accepts only bounded HTTPS links for ended public activities, de-duplicates canonical URLs, and exposes no participant/contact data.';
 comment on function public.activity_public_registration_status(text,text) is
   'Intentional public read RPC. Returns only public activity registration state and archive timing; no participant or contact data is projected.';
 comment on function public.activity_public_share_snapshot(text) is
