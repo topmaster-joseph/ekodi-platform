@@ -111,3 +111,54 @@ test('public preview cache exception does not weaken API write protection or oth
   }}),otherRequest);
   assert.equal(otherResponse.headers.get('cache-control'),'no-store');
 });
+
+
+test('safe SeonamMedi public reads keep explicit edge cache while authenticated reads remain no-store',()=>{
+  const publicRequest=new Request('https://ekodi.kr/api/seonammedi/timeline',{method:'GET'});
+  const publicResponse=applyPlatformSecurityHeaders(new Response('{"ok":true}',{headers:{
+    'content-type':'application/json; charset=utf-8',
+    'cache-control':'public, max-age=60, stale-while-revalidate=180',
+    'x-ekodi-cache-policy':'public-edge-v1;seonammedi-timeline',
+  }}),publicRequest);
+  assert.match(publicResponse.headers.get('cache-control')||'',/^public, max-age=60/);
+  assert.match(publicResponse.headers.get('x-ekodi-cache-policy')||'',/public-edge-v1/);
+
+  const authenticated=new Request('https://ekodi.kr/api/seonammedi/timeline',{method:'GET',headers:{authorization:'Bearer '+('z'.repeat(64))}});
+  const privateResponse=applyPlatformSecurityHeaders(new Response('{"ok":true}',{headers:{
+    'content-type':'application/json; charset=utf-8',
+    'cache-control':'public, max-age=60',
+  }}),authenticated);
+  assert.equal(privateResponse.headers.get('cache-control'),'no-store');
+});
+
+test('public write rate-limit can be escalated only by verified Turnstile without weakening the default 429',async()=>{
+  const request=new Request('https://ekodi.kr/mail/contact',{
+    method:'POST',
+    headers:{'cf-connecting-ip':'203.0.113.44','x-ekodi-turnstile-token':'verified-token'},
+    body:'{}',
+  });
+  const allowed=await enforcePlatformRequestSecurity(request,{
+    ENVIRONMENT:'production',
+    PLATFORM_PUBLIC_WRITE_RATE_LIMITER:limiter(false),
+    TURNSTILE_PUBLIC_WRITE_ESCALATION:'enabled',
+    TURNSTILE_SECRET_KEY:'server-secret',
+    TURNSTILE_SITE_KEY:'public-site-key',
+    TURNSTILE_VERIFY_FETCH:async()=>new Response(JSON.stringify({success:true,hostname:'ekodi.kr'}),{status:200}),
+  });
+  assert.equal(allowed,null);
+
+  const blocked=await enforcePlatformRequestSecurity(new Request('https://ekodi.kr/mail/contact',{
+    method:'POST',
+    headers:{'cf-connecting-ip':'203.0.113.45'},
+    body:'{}',
+  }),{
+    ENVIRONMENT:'production',
+    PLATFORM_PUBLIC_WRITE_RATE_LIMITER:limiter(false),
+    TURNSTILE_PUBLIC_WRITE_ESCALATION:'enabled',
+    TURNSTILE_SECRET_KEY:'server-secret',
+    TURNSTILE_SITE_KEY:'public-site-key',
+  });
+  assert.equal(blocked.status,429);
+  assert.equal(blocked.headers.get('x-ekodi-turnstile-required'),'1');
+  assert.equal(blocked.headers.get('x-ekodi-turnstile-sitekey'),'public-site-key');
+});
