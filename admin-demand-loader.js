@@ -254,6 +254,7 @@
         window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:key } }));
         mark(`ekodi-feature-${key}-ready`);
         scheduleSecondary(key, feature);
+        if (!auto && real?.isConnected) queueMicrotask(() => real.click());
       } catch (error) {
         console.warn('demand',key,error);
         if (placeholder?.isConnected) {
