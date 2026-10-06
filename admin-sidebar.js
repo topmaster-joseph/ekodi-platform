@@ -10,6 +10,7 @@ import {
 } from './admin-menu-registry.js';
 
 const LOCALE_KEY = 'ekodi-admin-locale';
+// ADMIN-WHITE-SURFACE-001: sidebar navigation stays on the shared white Admin surface.
 const LOCALE_COOKIE = 'ekodi_admin_locale';
 const mounted = new WeakMap();
 const RETIRED_MENU_SECTIONS = new Set(['overview']);
@@ -83,13 +84,13 @@ body.admin-compact{--admin-readable:#172033;--admin-secondary:#66768a;--admin-bo
 body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:2px!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-width:thin}
 body.admin-compact .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .nav{display:none!important}
 body.admin-compact .${GLOBAL_CLASS}{display:grid;gap:2px;margin:3px 0 6px}
-body.admin-compact .admin-global-nav{display:flex;align-items:center;gap:7px;width:100%;min-height:34px;padding:4px 8px;border:1px solid transparent;border-radius:9px;background:transparent;color:#dbe8f6!important;font:inherit;font-size:14px;font-weight:780;line-height:1.25;text-align:left;cursor:pointer;box-shadow:none!important;transition:background .12s ease,border-color .12s ease!important;opacity:1!important}
+body.admin-compact .admin-global-nav{display:flex;align-items:center;gap:7px;width:100%;min-height:34px;padding:4px 8px;border:1px solid transparent;border-radius:9px;background:transparent;color:#334155!important;font:inherit;font-size:14px;font-weight:780;line-height:1.25;text-align:left;cursor:pointer;box-shadow:none!important;transition:background .12s ease,border-color .12s ease!important;opacity:1!important}
 body.admin-compact .admin-global-nav span{color:inherit!important;opacity:1!important}
-body.admin-compact .admin-global-nav:hover{border-color:#274d73;background:#102c49;color:#fff!important}
-body.admin-compact .admin-global-nav.active{border-color:#2d6fac;background:#174b7b;color:#fff!important}
-body.admin-compact .admin-global-nav b{display:inline-grid;place-items:center;min-width:22px;color:#8fb5d6!important;font-size:13px;font-weight:850;letter-spacing:-.03em;opacity:1!important}
-body.admin-compact .admin-global-nav.active b{color:#d9ecff!important}
-body.admin-compact .${DETAILS_CLASS}{display:grid!important;gap:1px;margin:0 1px 3px 22px;padding:1px 0 2px 4px;border-left:1px solid #294b6b}
+body.admin-compact .admin-global-nav:hover{border-color:#cbd5e1;background:#f8fafc;color:#172033!important}
+body.admin-compact .admin-global-nav.active{border-color:#94a3b8;background:#fff;color:#111827!important;box-shadow:inset 3px 0 0 #111827!important}
+body.admin-compact .admin-global-nav b{display:inline-grid;place-items:center;min-width:22px;color:#64748b!important;font-size:13px;font-weight:850;letter-spacing:-.03em;opacity:1!important}
+body.admin-compact .admin-global-nav.active b{color:#111827!important}
+body.admin-compact .${DETAILS_CLASS}{display:grid!important;gap:1px;margin:0 1px 3px 22px;padding:1px 0 2px 4px;border-left:1px solid #d9e2ec}
 body.admin-compact .admin-detail-item{display:flex;align-items:center;gap:6px;width:100%;min-height:28px;margin:0;padding:3px 6px;border:1px solid transparent;border-radius:8px;background:transparent;color:#506174;font:inherit;font-size:12.5px;font-weight:700;line-height:1.12;text-align:left;cursor:pointer}
 body.admin-compact .admin-detail-item:hover{border-color:#dbe7ef;background:#f2f7fb;color:#173b57}
 body.admin-compact .admin-detail-item.active{border-color:#bfd5ee;background:#edf4ff;color:#0b5cab}
