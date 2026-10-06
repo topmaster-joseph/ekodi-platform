@@ -75,7 +75,7 @@ if(!r.ok)throw new Error('data');const d=await r.json();
 if(timelineResponse?.ok){const timelineBody=await timelineResponse.json().catch(()=>({}));if(Array.isArray(timelineBody.items))d.timeline=timelineBody.items}
 if(pageResponse?.ok){const pageBody=await pageResponse.json().catch(()=>({}));if(Array.isArray(pageBody.page?.status?.items))d.status=pageBody.page.status.items;if(pageBody.page?.organization&&typeof pageBody.page.organization==='object')d.organization=pageBody.page.organization;if(pageBody.finance&&typeof pageBody.finance==='object')d.finance=pageBody.finance}
 window.__SEONAM_MEDI_DATA=d;
-el('lastUpdated').textContent='최종 업데이트 '+d.updatedAt;
+el('lastUpdated').textContent='마지막 갱신 '+d.updatedAt;
 const statusCards=el('statusCards');
 if(statusCards){
   statusCards.innerHTML=d.status.filter(x=>x?.key!=='daily').map((x,i)=>{const key=x.key||['official','news'][i]||('status-'+i);return `<button type="button" class="card status-card" data-status="${escapeHtml(key)}" aria-expanded="false" aria-controls="statusDetail"><span class="status-card-copy"><strong class="status-card-title">${escapeHtml(x.title)}</strong><span class="status-card-text">${escapeHtml(x.text)}</span></span><span class="status-card-action">내용 보기 <span aria-hidden="true">→</span></span></button>`}).join('');
@@ -270,7 +270,7 @@ function renderPublicVoices(items){
 async function loadPublicVoices(){
   if(!publicVoiceList)return;
   try{
-    const response=await fetch('/api/seonammedi/voices',{cache:'no-store'});
+    const response=await fetch('/board/api/posts',{cache:'no-store'});
     const body=await response.json().catch(()=>({}));
     if(!response.ok||body.ok!==true)throw new Error(body.message||body.error||'시민의견을 불러오지 못했습니다.');
     renderPublicVoices(Array.isArray(body.items)?body.items:[]);
@@ -293,7 +293,7 @@ publicVoiceList?.addEventListener('submit',async event=>{
   if(!String(payload.message||'').trim()){if(status)status.textContent='답글 내용을 입력해 주세요.';return}
   if(button)button.disabled=true;if(status)status.textContent='등록 중…';
   try{
-    const response=await fetch('/api/seonammedi/voices/'+voiceId+'/replies',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+    const response=await fetch('/board/api/posts/'+voiceId+'/replies',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
     const body=await response.json().catch(()=>({}));
     if(!response.ok||body.ok!==true)throw new Error(body.message||body.error||'답글을 등록하지 못했습니다.');
     form.reset();if(status)status.textContent='답글이 등록되었습니다.';await loadPublicVoices();
@@ -316,32 +316,13 @@ if(voiceForm){
     if(submitButton)submitButton.disabled=true;
     status.textContent='등록 중…';
     try{
-      const response=await fetch('/api/seonammedi/voices',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+      const response=await fetch('/board/api/posts',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
       const body=await response.json().catch(()=>({}));
-      if(!response.ok||body.ok!==true||!body.submissionId){const detail=body.message||body.error||body.code||('HTTP '+response.status);throw new Error('등록하지 못했습니다. '+detail)}
+      if(!response.ok||body.ok!==true||!body.id){const detail=body.message||body.error||body.code||('HTTP '+response.status);throw new Error('등록하지 못했습니다. '+detail)}
       voiceForm.reset();
       status.textContent=body.message||'등록되었습니다.';
       await loadPublicVoices();
-      if(body.queued){
-        status.textContent='시민의견이 안전하게 접수되었습니다. 저장 완료를 확인하고 있습니다.';
-        const submissionId=body.submissionId;
-        const started=Date.now();
-        const confirm=async()=>{
-          try{
-            const check=await fetch('/api/seonammedi/voices/submissions/'+encodeURIComponent(submissionId),{cache:'no-store'});
-            const state=await check.json().catch(()=>({}));
-            if(check.ok&&state.ok===true&&state.status==='published'){
-              await loadPublicVoices();
-              status.textContent='시민의견이 등록되어 공개 목록에 반영되었습니다.';
-              return;
-            }
-          }catch{}
-          if(Date.now()-started<30000){setTimeout(confirm,1000);return}
-          await loadPublicVoices();
-          status.textContent='의견은 안전하게 접수되었습니다. 저장 처리가 지연되고 있어 목록을 계속 확인해 주세요.';
-        };
-        setTimeout(confirm,500);
-      }
+      setVoiceCompose(false);
     }catch(error){
       status.textContent=error.message||'등록하지 못했습니다. 잠시 후 다시 시도해 주세요.';
     }finally{
