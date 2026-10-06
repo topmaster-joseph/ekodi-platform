@@ -17,21 +17,13 @@ async function fingerprint(request){
 }
 
 async function health(env){
-  if(!env?.DB?.prepare)return json({ok:false,storage:'unavailable',canonicalTable:false,legacyTable:false,queue:durableWriteQueueAvailable(env)?'ready':'unavailable'},503);
+  if(!env?.DB?.prepare)return json({ok:false,storage:'unavailable',independent:true},503);
   try{
-    // Health probes must remain read-only. Production schema is provisioned by
-    // migrations before Worker promotion; request-time DDL can contend with D1
-    // during a versioned 0% candidate gate and produce a false deployment failure.
-    const canonical=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='seonammedi_civic_voices'").first();
-    const legacy=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='seonam_med_civic_voices'").first().catch(()=>null);
-    const submissionKey=canonical?.name
-      ? await env.DB.prepare("SELECT submission_key FROM seonammedi_civic_voices LIMIT 0").all().then(()=>true).catch(()=>false)
-      : false;
-    const ok=Boolean(canonical?.name&&submissionKey);
-    return json({ok,storage:'d1',canonicalTable:Boolean(canonical?.name),legacyTable:Boolean(legacy?.name),submissionKey,queue:durableWriteQueueAvailable(env)?'ready':'unavailable'},ok?200:503);
+    const posts=await listSiteBoardPostsWithComments(env,'seonammedi');
+    return json({ok:true,storage:'site-board',independent:true,queue:'retired',items:posts.length});
   }catch(error){
-    console.error('seonammedi civic health failed',error);
-    return json({ok:false,storage:'error',canonicalTable:false,legacyTable:false,submissionKey:false,queue:durableWriteQueueAvailable(env)?'ready':'unavailable'},503);
+    console.error('seonammedi board health failed',error);
+    return json({ok:false,storage:'site-board-error',independent:true,queue:'retired'},503);
   }
 }
 
