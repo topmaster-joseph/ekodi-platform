@@ -56,7 +56,9 @@ test('EKODI Core finalizes the plan before the default GitHub execution pipeline
   assert.equal(policy.execution.githubBranchMutationIsDefault, true);
   assert.equal(policy.consultationDecision.executionRelationship, 'parallel-or-advisory');
   assert.equal(policy.consultationDecision.codeExecutionMayProceedWithoutConsultationCompletion, true);
-  assert.deepEqual(policy.consultationDecision.forcedMultiConsultCategories, []);
+  assert.ok(policy.consultationDecision.forcedMultiConsultCategories.includes('authentication'));
+  assert.ok(policy.consultationDecision.forcedMultiConsultCategories.includes('deployment'));
+  assert.equal(policy.consultationDecision.failedConsultationDisposition, 'record-isolate-continue-execution-unless-human-or-safety-gate-requires-stop');
   assert.match(validator, /EKODI Core to GitHub must remain the default execution path/);
   assert.match(validator, /AI consultation may not block ordinary code execution/);
 });
