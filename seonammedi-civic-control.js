@@ -223,27 +223,29 @@ const citizenVoiceAdapter=createBoardAdapter({
 const citizenVoiceBoard=createBoardRuntimeGuard({adapter:citizenVoiceAdapter});
 
 export async function consumeSeonamMediVoiceMessage(envelope,env){
-  return consumeBoardAdapter(citizenVoiceBoard,envelope,env);
+  // Standalone board persistence is canonical after cutover. Treat queued
+  // legacy citizen-opinion envelopes as handled without writing them again.
+  if(envelope?.kind===QUEUE_KIND)return true;
+  return false;
+}
+
+function retiredCivicResponse(){
+  return json({ok:false,error:'legacy_citizen_voice_retired',location:'/board/voices'},410,{
+    link:'</board/voices>; rel="successor-version"'
+  });
 }
 
 export async function handleSeonamMediCivicApi(request,env){
   const url=new URL(request.url);
-  if(url.pathname===HEALTH_PATH&&request.method==='GET')return handleBoardAdapter(citizenVoiceBoard,{action:'health',request,env});
-  const submissionMatch=url.pathname.match(SUBMISSION_PATH);
-  if(submissionMatch){
-    if(request.method!=='GET')return json({ok:false,error:'method_not_allowed'},405);
-    return submissionStatus(env,submissionMatch[1].toLowerCase());
+  if(url.pathname===HEALTH_PATH&&request.method==='GET'){
+    return json({ok:true,retired:true,location:'/board/voices',queueDrain:'ack-drop'},200,{
+      link:'</board/voices>; rel="successor-version"'
+    });
   }
-  const replyMatch=url.pathname.match(REPLY_PATH);
-  if(replyMatch){
-    if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{allow:'POST, OPTIONS','cache-control':'no-store'}});
-    if(request.method!=='POST')return json({ok:false,error:'method_not_allowed'},405);
-    return handleBoardAdapter(citizenVoiceBoard,{action:'reply',request,env,itemId:replyMatch[1]});
+  if(url.pathname===API_PATH||REPLY_PATH.test(url.pathname)||SUBMISSION_PATH.test(url.pathname)){
+    if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{allow:'GET, POST, OPTIONS','cache-control':'no-store',link:'</board/voices>; rel="successor-version"'}});
+    return retiredCivicResponse();
   }
-  if(url.pathname!==API_PATH)return null;
-  if(request.method==='GET')return handleBoardAdapter(citizenVoiceBoard,{action:'list',request,env});
-  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{allow:'GET, POST, OPTIONS','cache-control':'no-store'}});
-  if(request.method!=='POST')return json({ok:false,error:'method_not_allowed'},405);
-  return handleBoardAdapter(citizenVoiceBoard,{action:'create',request,env});
+  return null;
 }
 export const SEONAMMEDI_VOICE_QUEUE_KIND=QUEUE_KIND;
