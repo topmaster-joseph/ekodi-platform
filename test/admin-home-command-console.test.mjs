@@ -54,11 +54,17 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.match(dock,/api\('\/api\/control\/ai\/v8\/pulse'/);
   assert.match(dock,/capability:'core\.automation'/);
   assert.match(dock,/executeNow:true/);
+  assert.match(dock,/\/api\/control\/ai\/v8\/orchestrator\/human-gates\?limit=20/);
+  assert.match(dock,/\/api\/control\/ai\/v8\/orchestrator\/tasks\/\$\{encodeURIComponent\(task\.taskId\)\}\/approve/);
+  assert.match(dock,/expectedStateVersion:task\.humanGate\.expectedStateVersion/);
+  assert.match(dock,/승인 후 계속/);
   assert.match(dock,/EKODI Command Plane/);
   const lazyAsset=releaseManifest.worker.requests.find(item=>item.url==='https://ekodi.kr/admin/admin-lazy-features.js?assist=v2');
   assert.ok(lazyAsset,'production release must verify the canonical Admin lazy command asset');
   assert.ok(lazyAsset.expect.includes('/api/control/ai/v8/pulse'));
   assert.ok(lazyAsset.expect.includes('executeNow:true'));
+  assert.ok(lazyAsset.expect.includes('/api/control/ai/v8/orchestrator/human-gates?limit=20'));
+  assert.ok(lazyAsset.expect.includes('승인 후 계속'));
   assert.doesNotMatch(dock,/actionType:'ui\.change_request'/);
   assert.match(dock,/addSessionMessage\('assistant',reply/);
   assert.match(bootstrap,/aria-label="에코디와 대화하기"/);
