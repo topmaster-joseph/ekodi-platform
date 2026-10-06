@@ -59,6 +59,7 @@ test('all three board pages share the SeonamMedi header and footer contract',asy
   assert.match(worker,/link\('\/board\/finance'/);
   assert.match(worker,/link\('\/board\/notices'/);
   assert.match(worker,/id="adminLink" href="#admin">관리자/);
+  assert.match(worker,/document\.getElementById\("adminLink"\)\?\.addEventListener\("click",[\s\S]*login\(\)/);
 });
 
 test('independent board deployment provisions its own storage and verifies real CRUD',async()=>{
