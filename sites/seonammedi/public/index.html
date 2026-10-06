@@ -20,7 +20,7 @@
 <header class="site-header">
   <a class="brand" href="/seonammedi/"><strong>서남권 국립의대 소통센터</strong><small>서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널</small></a>
   <nav aria-label="주요 메뉴">
-    <a href="#timeline" data-view-link="status">활동이력</a><a href="#channels" data-view-link="channels">소통채널</a><a href="#voices" data-view-link="voices">시민의견</a><a href="#finance" data-view-link="finance">회계</a><a href="#notices" data-view-link="notices">공지</a><a href="#organization" data-view-link="organization">조직</a>
+    <a href="#timeline" data-view-link="status">활동이력</a><a href="#channels" data-view-link="channels">소통채널</a><a href="/board">시민의견</a><a href="#finance" data-view-link="finance">회계</a><a href="#notices" data-view-link="notices">공지</a><a href="#organization" data-view-link="organization">조직</a>
   </nav>
 </header>
 <main>
@@ -78,30 +78,6 @@
   <p class="filter-label" id="statusMaterialFilterLabel">관련보도 세부 분류</p>
   <div class="filters" id="materialFilters" aria-label="관련보도 세부 분류"></div>
   <div id="materialList" class="material-list"></div>
-</section>
-
-<section id="voices" class="section module-section" data-view-section="voices" hidden>
-  <div class="module-shell">
-    <aside class="module-intro">
-      <p class="eyebrow">CITIZEN VOICES</p><h2>시민의견</h2>
-      <p class="note">누구나 의견을 등록할 수 있으며 연락처·이메일은 공개하지 않습니다.</p>
-    </aside>
-    <div class="module-main">
-      <div class="module-toolbar"><span class="muted">최신 의견부터 표시합니다.</span><button id="voiceComposeToggle" class="module-primary" type="button" aria-expanded="false" aria-controls="voiceForm">의견 등록</button></div>
-      <button id="reloadVoices" type="button" hidden aria-hidden="true" tabindex="-1">목록 새로고침</button>
-      <form id="voiceForm" class="panel voice-form module-compose" hidden>
-        <strong>의견 등록</strong>
-        <label>유형<select name="category"><option value="question">질문</option><option value="proposal">정책제안</option><option value="experience">의료경험</option><option value="factcheck">사실확인 요청</option><option value="tip">자료제보</option><option value="other">기타</option></select></label>
-        <label>이름 또는 표시명<input name="name" maxlength="80" placeholder="익명 가능"></label>
-        <label>연락처 또는 이메일<input name="contact" maxlength="160" placeholder="답변이 필요한 경우에만 입력 · 공개되지 않음"></label>
-        <label>내용<textarea name="message" maxlength="3000" required></textarea></label>
-        <label class="check"><input type="checkbox" name="privacyConsent" required> 등록·답변을 위한 개인정보 처리에 동의합니다.</label>
-        <div class="form-actions"><button type="submit">등록하기</button><button id="voiceComposeCancel" type="button" class="secondary">취소</button><span id="voiceStatus" role="status"></span></div>
-        <p class="muted">등록 즉시 공개되며 연락처·이메일은 목록에 표시하지 않습니다.</p>
-      </form>
-      <section class="voice-board" aria-labelledby="voiceBoardTitle"><h3 id="voiceBoardTitle" class="sr-only">시민의견 목록</h3><div id="publicVoiceList" class="public-voice-list" aria-live="polite"><p class="muted">시민의견을 불러오는 중입니다.</p></div></section>
-    </div>
-  </div>
 </section>
 
 <section id="channels" class="section" data-view-section="channels" hidden>
