@@ -1,11 +1,10 @@
 import { principalFromSupabaseRequest } from './ekodi-principal.js';
-import { accessGrantIsActive, effectiveAccessCapabilities } from './access-governance.js';
 
 const clean=(value,max=4000)=>String(value??'').trim().slice(0,max);
 const lower=value=>clean(value,320).toLowerCase();
 const json=(data,status=200,extraHeaders={})=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',...extraHeaders}});
 const now=()=>new Date().toISOString();
-const MANAGER_ROLES=new Set(['super_admin','platform_admin','owner','store_owner','tenant_admin','workspace_admin','client_admin','admin','manager','hq_manager']);
+const BOARD_MANAGE_ROLES=new Set(['owner','admin','moderator']);
 const PATH_TENANT_ALIASES=Object.freeze({
   ekodimission:'ekodimission',
   ekodichurch:'ekodichurch',
@@ -110,6 +109,23 @@ async function ensureSchema(env){
       detail_json TEXT NOT NULL DEFAULT '{}',
       created_at TEXT NOT NULL
     )`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS ekodi_board_memberships (
+      board_id TEXT NOT NULL,
+      person_id TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'member',
+      status TEXT NOT NULL DEFAULT 'active',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY(board_id,person_id)
+    )`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS ekodi_board_snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      board_id TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      snapshot_json TEXT NOT NULL,
+      created_by TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    )`),
   ]);
 }
 
@@ -128,17 +144,39 @@ async function actor(request,env,instance){
   if(!principal?.id)return Object.freeze({authenticated:false,personId:'',email:'',role:'anonymous',manage:false});
   const personId=clean(principal.subject?.key||principal.id,160);
   const email=lower(principal.email);
-  const platform=await env.DB.prepare('SELECT role FROM admins WHERE lower(trim(email))=? LIMIT 1').bind(email).first().catch(()=>null);
-  if(lower(platform?.role)==='super_admin')return Object.freeze({authenticated:true,personId,email,role:'super_admin',manage:true});
-  const tenant=await env.DB.prepare('SELECT id,status FROM customer_tenants WHERE slug=? LIMIT 1').bind(instance.tenant_slug).first().catch(()=>null);
-  if(!tenant||lower(tenant.status)!=='active')return Object.freeze({authenticated:true,personId,email,role:'member',manage:false});
-  const grant=await env.DB.prepare(`SELECT role,enabled,capabilities_json,denied_capabilities_json,expires_at
-    FROM customer_access_grants WHERE tenant_id=? AND lower(trim(email))=? LIMIT 1`).bind(tenant.id,email).first().catch(()=>null);
-  if(!accessGrantIsActive(grant))return Object.freeze({authenticated:true,personId,email,role:'member',manage:false});
-  const capabilities=effectiveAccessCapabilities(grant);
-  const role=lower(grant.role)||'member';
-  const manage=MANAGER_ROLES.has(role)||capabilities.includes('community.site-board')||capabilities.includes(`${instance.site_id}.board.manage`);
+  const membership=await env.DB.prepare(`SELECT role,status FROM ekodi_board_memberships
+    WHERE board_id=? AND person_id=? LIMIT 1`).bind(instance.board_id,personId).first().catch(()=>null);
+  const role=membership?.status==='active'?(lower(membership.role)||'member'):'member';
+  const manage=membership?.status==='active'&&BOARD_MANAGE_ROLES.has(role);
   return Object.freeze({authenticated:true,personId,email,role,manage});
+}
+
+async function verifySuperAdminReauth(request,env,instance,scope){
+  if(!env?.CONTROL_API?.fetch)return {ok:false,status:503,error:'reauth_service_unavailable'};
+  const proof=String(request.headers.get('x-ekodi-reauth-proof')||'').trim();
+  const authorization=String(request.headers.get('authorization')||'');
+  if(!proof||!authorization)return {ok:false,status:401,error:'super_admin_reauthentication_required'};
+  const url=new URL(request.url);url.pathname='/api/reauth/verify';url.search='';url.hash='';
+  const response=await env.CONTROL_API.fetch(new Request(url.toString(),{
+    method:'POST',
+    headers:{'content-type':'application/json','authorization':authorization,'x-ekodi-reauth-proof':proof},
+    body:JSON.stringify({scope,resource:instance.board_id}),
+  }));
+  const data=await response.json().catch(()=>null);
+  return response.ok&&data?.verified===true?{ok:true,data}:{ok:false,status:response.status||403,error:data?.error||'reauth_failed'};
+}
+
+async function snapshotBoard(env,instance,who,reason){
+  const [posts,comments,memberships]=await Promise.all([
+    env.DB.prepare('SELECT * FROM ekodi_board_posts WHERE board_id=? ORDER BY id').bind(instance.board_id).all(),
+    env.DB.prepare('SELECT * FROM ekodi_board_comments WHERE board_id=? ORDER BY id').bind(instance.board_id).all(),
+    env.DB.prepare('SELECT * FROM ekodi_board_memberships WHERE board_id=? ORDER BY person_id').bind(instance.board_id).all(),
+  ]);
+  const snapshot={schemaVersion:1,board:{...instance},posts:posts.results||[],comments:comments.results||[],memberships:memberships.results||[]};
+  const result=await env.DB.prepare(`INSERT INTO ekodi_board_snapshots
+    (board_id,reason,snapshot_json,created_by,created_at) VALUES (?,?,?,?,?)`)
+    .bind(instance.board_id,reason,JSON.stringify(snapshot),who?.personId||'',now()).run();
+  return Number(result?.meta?.last_row_id||0);
 }
 
 async function audit(env,instance,who,action,targetType='',targetId='',detail={}){
@@ -181,8 +219,42 @@ export async function handleSiteBoardRequest(request,env){
   if(!route)route=await dynamicDomainRoute(request,env);
   if(!route)return null;
   const instance=await ensureInstance(env,route);
-  if(!instance||instance.status!=='active')return new Response('Board unavailable',{status:503,headers:{'cache-control':'no-store'}});
+  if(!instance)return new Response('Board unavailable',{status:503,headers:{'cache-control':'no-store'}});
   const method=request.method.toUpperCase(),sub=route.subPath.replace(/\/+$/,'')||'/';
+  const who=await actor(request,env,instance);
+
+  if(method==='POST'&&sub==='/api/memberships/bootstrap'){
+    const count=await env.DB.prepare('SELECT COUNT(*) AS n FROM ekodi_board_memberships WHERE board_id=?').bind(instance.board_id).first();
+    if(Number(count?.n||0)>0)return boardJson(instance,{error:'board_membership_already_initialized'},409);
+    const gate=await verifySuperAdminReauth(request,env,instance,'board.membership.bootstrap');
+    if(!gate.ok)return boardJson(instance,{error:gate.error},gate.status);
+    if(!who.authenticated)return boardJson(instance,{error:'ekodi_authentication_required'},401);
+    const stamp=now();
+    await env.DB.prepare(`INSERT INTO ekodi_board_memberships(board_id,person_id,role,status,created_at,updated_at)
+      VALUES (?,?,?,'active',?,?)`).bind(instance.board_id,who.personId,'owner',stamp,stamp).run();
+    await audit(env,instance,who,'membership.bootstrap','board',instance.board_id,{role:'owner'});
+    return boardJson(instance,{ok:true,role:'owner'},201);
+  }
+
+  if(method==='POST'&&sub==='/api/lifecycle/cancel'){
+    const gate=await verifySuperAdminReauth(request,env,instance,'board.lifecycle.cancel');
+    if(!gate.ok)return boardJson(instance,{error:gate.error},gate.status);
+    const snapshotId=await snapshotBoard(env,instance,who,'lifecycle.cancel');
+    await env.DB.prepare(`UPDATE ekodi_board_instances SET status='cancelled',updated_at=? WHERE board_id=?`).bind(now(),instance.board_id).run();
+    await audit(env,instance,who,'board.cancel','board',instance.board_id,{snapshotId});
+    return boardJson(instance,{ok:true,status:'cancelled',snapshotId});
+  }
+
+  if(method==='DELETE'&&sub==='/api/lifecycle'){
+    const gate=await verifySuperAdminReauth(request,env,instance,'board.lifecycle.delete');
+    if(!gate.ok)return boardJson(instance,{error:gate.error},gate.status);
+    const snapshotId=await snapshotBoard(env,instance,who,'lifecycle.delete');
+    await env.DB.prepare(`UPDATE ekodi_board_instances SET status='deleted',updated_at=? WHERE board_id=?`).bind(now(),instance.board_id).run();
+    await audit(env,instance,who,'board.delete','board',instance.board_id,{snapshotId,physicalPurge:false});
+    return boardJson(instance,{ok:true,status:'deleted',snapshotId,physicalPurge:false});
+  }
+
+  if(instance.status!=='active')return boardJson(instance,{error:'board_unavailable',status:instance.status},410);
 
   if(method==='GET'&&sub==='/')return page(route,await listPosts(env,instance));
   const postPageMatch=sub.match(/^\/post\/(\d+)$/);
@@ -192,10 +264,9 @@ export async function handleSiteBoardRequest(request,env){
   const apiPost=sub.match(/^\/api\/posts\/(\d+)$/);
   if(method==='GET'&&apiPost){
     const post=await readPost(env,instance,Number(apiPost[1]));
-    return post?json(post):json({error:'not_found'},404);
+    return post?boardJson(instance,post):boardJson(instance,{error:'not_found'},404);
   }
 
-  const who=await actor(request,env,instance);
   if(method==='POST'&&sub==='/api/posts'){
     if(!who.authenticated&&Number(instance.allow_anonymous_write)!==1)return boardJson(instance,{error:'authentication_required'},401);
     const body=await parseBody(request),title=clean(body?.title,200),textBody=clean(body?.body,20000);
@@ -229,7 +300,7 @@ export async function handleSiteBoardRequest(request,env){
   const commentsMatch=sub.match(/^\/api\/posts\/(\d+)\/comments$/);
   if(method==='GET'&&commentsMatch){
     const id=Number(commentsMatch[1]),post=await readPost(env,instance,id);
-    return post?json({items:post.comments}):json({error:'not_found'},404);
+    return post?boardJson(instance,{items:post.comments}):boardJson(instance,{error:'not_found'},404);
   }
   if(method==='POST'&&commentsMatch){
     if(Number(instance.comments_enabled)!==1)return boardJson(instance,{error:'comments_disabled'},409);
@@ -263,16 +334,20 @@ export async function handleSiteBoardRequest(request,env){
     if(!who.manage)return boardJson(instance,{error:'forbidden'},403);
     const posts=await env.DB.prepare('SELECT * FROM ekodi_board_posts WHERE board_id=? ORDER BY id').bind(instance.board_id).all();
     const comments=await env.DB.prepare('SELECT * FROM ekodi_board_comments WHERE board_id=? ORDER BY id').bind(instance.board_id).all();
-    return boardJson(instance,{schemaVersion:1,board:{boardId:instance.board_id,siteId:instance.site_id,tenantSlug:instance.tenant_slug,config:instance.config_json},posts:posts.results||[],comments:comments.results||[]});
+    const memberships=await env.DB.prepare('SELECT person_id,role,status,created_at,updated_at FROM ekodi_board_memberships WHERE board_id=? ORDER BY person_id').bind(instance.board_id).all();
+    return boardJson(instance,{schemaVersion:2,board:{boardId:instance.board_id,siteId:instance.site_id,tenantSlug:instance.tenant_slug,status:instance.status,config:instance.config_json},posts:posts.results||[],comments:comments.results||[],memberships:memberships.results||[]});
   }
   return boardJson(instance,{error:'not_found'},404);
 }
 
 export const EKODI_SITE_BOARD=Object.freeze({
-  version:'1.0.0',
+  version:'1.1.0',
   canonicalSuffix:'/board',
   aiIndependent:true,
   siteScoped:true,
   exportable:true,
-  coreOperations:Object.freeze(['list','read','create','edit','delete','comments','config','export']),
+  sharedPlatformDependency:'authentication_identity_only',
+  boardLocalAuthorization:true,
+  lifecycleDestructiveReauth:true,
+  coreOperations:Object.freeze(['list','read','create','edit','delete','comments','config','export','membership-bootstrap','lifecycle-cancel','lifecycle-delete']),
 });
