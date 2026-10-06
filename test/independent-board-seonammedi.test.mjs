@@ -41,7 +41,24 @@ test('board schema keeps private contact out of the public read model',async()=>
   ]);
   assert.match(migration,/private_contact TEXT NOT NULL DEFAULT ''/);
   const listStart=worker.indexOf('async function list');
-  const listEnd=worker.indexOf('export default',listStart);
+  const listEnd=worker.indexOf('async function adminList',listStart);
   const listBlock=worker.slice(listStart,listEnd);
   assert.doesNotMatch(listBlock,/private_contact/);
+});
+
+test('standalone board reuses EKODI authentication for moderation and owns the mutations',async()=>{
+  const [worker,voiceAdmin,adminJs]=await Promise.all([
+    read('services/independent-board/worker.js'),
+    read('sites/seonammedi/public/voice-public-admin.js'),
+    read('sites/seonammedi/public/admin/admin.js')
+  ]);
+  assert.match(worker,/new URL\('\/api\/seonammedi\/admin\/me',url\.origin\)/);
+  assert.match(worker,/permissions\?\.voices===true/);
+  assert.match(worker,/path==='\/api\/admin\/posts'/);
+  assert.match(worker,/adminUpdate\(req,env/);
+  assert.match(worker,/adminDeleteReply\(req,env/);
+  assert.doesNotMatch(worker,/\/api\/admin\/bootstrap|\/api\/admin\/login|board_sessions|board_admins/);
+  assert.match(voiceAdmin,/\/board\/api\/admin\/posts/);
+  assert.doesNotMatch(voiceAdmin,/\/api\/seonammedi\/admin\/voices/);
+  assert.match(adminJs,/\/board\/api\/admin\/posts/);
 });
