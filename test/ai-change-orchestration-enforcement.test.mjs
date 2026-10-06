@@ -39,6 +39,28 @@ test('EKODI AI is the mandatory change control plane', () => {
   assert.equal(policy.executionFallback.preferredLaneOrder.at(-1), 'remote_desktop');
 });
 
+test('EKODI Core finalizes the plan before the default GitHub execution pipeline', () => {
+  assert.deepEqual(policy.execution.defaultExecutionPath, [
+    'ekodi-core-plan-finalized',
+    'github-work-branch',
+    'code-mutation',
+    'automated-tests',
+    'pull-request',
+    'deployment-gate',
+    'guarded-deployment',
+    'production-verification',
+  ]);
+  assert.equal(policy.execution.aiConsultation, 'advisory-not-serial-prerequisite');
+  assert.equal(policy.execution.consultationMayBlockCodeExecution, false);
+  assert.equal(policy.execution.corePlanOwnsExecution, true);
+  assert.equal(policy.execution.githubBranchMutationIsDefault, true);
+  assert.equal(policy.consultationDecision.executionRelationship, 'parallel-or-advisory');
+  assert.equal(policy.consultationDecision.codeExecutionMayProceedWithoutConsultationCompletion, true);
+  assert.deepEqual(policy.consultationDecision.forcedMultiConsultCategories, []);
+  assert.match(validator, /EKODI Core to GitHub must remain the default execution path/);
+  assert.match(validator, /AI consultation may not block ordinary code execution/);
+});
+
 test('execution fallback remains orchestrator-owned and fail-closed', () => {
   assert.match(validator, /automatic execution fallback must remain enabled/);
   assert.match(validator, /execution fallback decision owner must remain the EKODI orchestrator/);
