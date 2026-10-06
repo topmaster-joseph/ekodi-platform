@@ -729,7 +729,7 @@ test('seonammedi citizen voices publish immediately, render publicly, accept rep
   assert.match(civic,/async function createPublicReply/);
   assert.match(civic,/REPLY_PATH/);
   assert.match(html,/id="publicVoiceList"/);
-  assert.match(html,/등록 즉시 아래 시민의견 목록에 공개/);
+  assert.match(html,/등록 즉시 공개되며 연락처·이메일은 목록에 표시하지 않습니다/);
   assert.doesNotMatch(html,/name="publicConsent"/);
   assert.match(app,/loadPublicVoices/);
   assert.match(app,/data-voice-reply/);
