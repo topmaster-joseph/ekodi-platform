@@ -114,6 +114,11 @@ test('canonical Shell bindings are environment-specific and dependent releases w
   for(const workflow of workflows){assert.match(workflow,/canonical-surface-router\.js/);assert.match(workflow,/wrangler\.site\.toml/);assert.match(workflow,/wrangler\.site-staging\.toml/);assert.match(workflow,/seq 1 120[\s\S]*ekodi\.kr\/shell\/manifest\.json/);}
 });
 
+test('production Control assets stay Worker-first so guarded release headers are enforceable',async()=>{
+  const production=await fs.promises.readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
+  assert.match(production,/run_worker_first = \[[^\]]*"\/control"[^\]]*"\/control\.css"[^\]]*"\/control\.js"/s);
+});
+
 test('v8 control candidate probe does not make rollback depend on a newly introduced endpoint',async()=>{
   const manifest=JSON.parse(await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
   const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/api/control/ai/v8/status');
