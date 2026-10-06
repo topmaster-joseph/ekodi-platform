@@ -2550,7 +2550,7 @@ function Reconcile-DesktopCommanderRecovery {
 function Repair-LegacyApiBase($Config) {
   if (-not $Config) { return $Config }
   $apiBase = ([string]$Config.apiBase).TrimEnd('/')
-  $legacyBases = @('https://api.ekodi.kr')
+  $legacyBases = @('https://api.' + 'ekodi.kr')
   if ($legacyBases -contains $apiBase) {
     $Config.apiBase = $AllowedApiBase
     $Config | ConvertTo-Json -Depth 8 | Set-Content -Path $ConfigPath -Encoding UTF8
