@@ -66,3 +66,17 @@ test('CGMA board verification is release-critical while unrelated protected asse
   assert.match(cgmaWorkflow,/::warning::CGMA member admin JS asset verification is degraded/);
   assert.match(cgmaWorkflow,/::warning::CGMA member admin CSS asset verification is degraded/);
 });
+
+
+test('CGMA board gate waits for Shared Site readiness before blocking production', async () => {
+  const cgmaWorkflow=await readFile(new URL('../.github/workflows/deploy-cgma-apex-edge.yml',import.meta.url),'utf8');
+  const ensure=cgmaWorkflow.indexOf('Ensure current Shared Site board runtime before verification');
+  const verify=cgmaWorkflow.indexOf('Verify CGMA edge production');
+  assert.ok(ensure>0&&verify>ensure);
+  assert.match(cgmaWorkflow,/\/cgma\/board\/api\/health\?edge_release=/);
+  assert.match(cgmaWorkflow,/actions\/workflows\/deploy-site-core\.yml\/dispatches/);
+  assert.match(cgmaWorkflow,/for attempt in \$\(seq 1 72\)/);
+  assert.match(cgmaWorkflow,/sleep 5/);
+  assert.match(cgmaWorkflow,/bounded Shared Site wait/);
+  assert.doesNotMatch(cgmaWorkflow,/name: Dispatch current EKODI Shared Site guarded release/);
+});
