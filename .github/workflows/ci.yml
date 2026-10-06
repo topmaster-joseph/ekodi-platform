@@ -13,46 +13,6 @@ permissions:
   statuses: write
 
 jobs:
-  release-provenance-recovery:
-    name: EKODI Release Provenance Auto-Recovery
-    if: >-
-      github.event_name == 'pull_request' &&
-      startsWith(github.head_ref, 'ai/') &&
-      !contains(github.head_ref, '/orch_') &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor == 'topmaster-joseph'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-    env:
-      GH_TOKEN: ${{ github.token }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-      - name: Issue orchestrator recovery task and replace noncompliant PR
-        id: recovery
-        run: node scripts/recover-release-provenance.mjs
-      - name: Recovery summary
-        if: always()
-        run: |
-          {
-            echo '### EKODI Release Provenance Auto-Recovery'
-            echo "- action: \`${{ steps.recovery.outputs.action || 'failed' }}\`"
-            echo "- task: \`${{ steps.recovery.outputs.task_id || 'n/a' }}\`"
-            echo "- branch: \`${{ steps.recovery.outputs.branch_ref || 'n/a' }}\`"
-            echo "- recovery PR: \`#${{ steps.recovery.outputs.recovery_pr || 'n/a' }}\`"
-            echo "- merge: \`${{ steps.recovery.outputs.merge_disposition || 'n/a' }}\`"
-          } >> "$GITHUB_STEP_SUMMARY"
-
   orchestration-gate:
     name: CI Orchestration Contract
     runs-on: ubuntu-latest
