@@ -88,12 +88,21 @@ jobs:
       - name: Verify production board UI
         run: |
           set -euo pipefail
-          html="$(curl -fsS --retry 2 --retry-delay 2 https://seonammedi.kr/board)"
-          grep -q 'id="writeToggle"' <<<"$html"
-          grep -q 'id="searchToggle"' <<<"$html"
-          grep -q 'id="voiceList"' <<<"$html"
-          grep -q 'href="/#channels">소통채널' <<<"$html"
-          grep -q 'aria-current="page">시민의견' <<<"$html"
+          voices="$(curl -fsS --retry 2 --retry-delay 2 https://seonammedi.kr/board/voices)"
+          finance="$(curl -fsS --retry 2 --retry-delay 2 https://seonammedi.kr/board/finance)"
+          notices="$(curl -fsS --retry 2 --retry-delay 2 https://seonammedi.kr/board/notices)"
+          grep -q 'id="writeToggle"' <<<"$voices"
+          grep -q 'id="searchToggle"' <<<"$voices"
+          grep -q 'id="voiceList"' <<<"$voices"
+          grep -q 'aria-current="page">시민의견' <<<"$voices"
+          grep -q 'aria-current="page">회계' <<<"$finance"
+          grep -q 'id="raised"' <<<"$finance"
+          grep -q 'aria-current="page">공지' <<<"$notices"
+          grep -q 'NOTICE BOARD' <<<"$notices"
+          for html in "$voices" "$finance" "$notices"; do
+            grep -q '서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널' <<<"$html"
+            grep -q '자료의 성격과 출처를 구분해 보존합니다' <<<"$html"
+          done
       - name: Production create-list-reply canary and cleanup
         run: |
           set -euo pipefail
