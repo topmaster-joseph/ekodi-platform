@@ -88,9 +88,22 @@ jobs:
       - name: Verify production board UI
         run: |
           set -euo pipefail
-          voices="$(curl -fsS --retry 2 --retry-delay 2 https://seonammedi.kr/board/voices)"
-          finance="$(curl -fsS --retry 2 --retry-delay 2 https://seonammedi.kr/board/finance)"
-          notices="$(curl -fsS --retry 2 --retry-delay 2 https://seonammedi.kr/board/notices)"
+          fetch_board() {
+            local url="$1" body=""
+            for attempt in 1 2 3 4 5 6; do
+              body="$(curl -fsS --retry 2 --retry-delay 2 "$url" || true)"
+              if [[ -n "$body" ]]; then
+                printf '%s' "$body"
+                return 0
+              fi
+              sleep $((attempt * 2))
+            done
+            echo "board UI did not converge: $url" >&2
+            return 1
+          }
+          voices="$(fetch_board https://seonammedi.kr/board/voices)"
+          finance="$(fetch_board https://seonammedi.kr/board/finance)"
+          notices="$(fetch_board https://seonammedi.kr/board/notices)"
           grep -q 'id="writeToggle"' <<<"$voices"
           grep -q 'id="searchToggle"' <<<"$voices"
           grep -q 'id="voiceList"' <<<"$voices"
