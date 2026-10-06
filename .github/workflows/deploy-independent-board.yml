@@ -85,6 +85,7 @@ jobs:
           done
           echo "independent board health did not converge" >&2
           exit 1
+      # Verify all three public board surfaces only after Cloudflare route propagation settles.
       - name: Verify production board UI
         run: |
           set -euo pipefail
