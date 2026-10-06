@@ -154,3 +154,14 @@ test('paid provider order is OpenAI then Anthropic only after explicit delegated
   const plan=buildExecutionPlan(task,{openaiApi:true,anthropicApi:true});
   assert.equal(plan[0].providerId,'openai-api');
 });
+
+
+test('Genspark external agent is capability-visible only when explicitly configured',()=>{
+  const env={EKODI_PROVIDER_GENSPARK_ENABLED:'true',GENSPARK_AGENT_ENDPOINT:'https://relay.example.test/invoke',GENSPARK_AGENT_TOKEN:'token'};
+  const capabilities=providerCapabilities(env,[]);
+  assert.equal(capabilities.gensparkAgent,true);
+  assert.ok(availableProviderIds(capabilities).includes('genspark-agent'));
+  const status=providerStatus(env,[]).find(item=>item.id==='genspark-agent');
+  assert.equal(status?.kind,'external-agent');
+  assert.equal(status?.costClass,'provider-managed');
+});
