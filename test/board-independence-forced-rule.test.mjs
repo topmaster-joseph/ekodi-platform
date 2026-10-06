@@ -40,6 +40,10 @@ test('board lifecycle cancellation and deletion require target-bound super-admin
   assert.match(board,/board\.membership\.bootstrap/);
   assert.match(board,/board\.lifecycle\.cancel/);
   assert.match(board,/board\.lifecycle\.delete/);
+  assert.match(board,/board\.lifecycle\.restore/);
+  assert.match(board,/board\.membership\.bootstrap/);
+  assert.match(board,/api\/memberships/);
+  assert.match(board,/last_owner_cannot_be_removed/);
   assert.match(board,/x-ekodi-reauth-proof/);
   assert.match(board,/snapshotBoard/);
   assert.match(board,/physicalPurge:false/);
@@ -51,8 +55,12 @@ test('board lifecycle cancellation and deletion require target-bound super-admin
   assert.match(auth,/consumed_at IS NULL/);
   assert.match(auth,/board\.lifecycle\.cancel/);
   assert.match(auth,/board\.lifecycle\.delete/);
+  assert.match(auth,/board\.lifecycle\.restore/);
   assert.match(auth,/board\.membership\.bootstrap/);
   assert.match(auth,/session\.reauth\.consume/);
+  assert.match(auth,/JOIN admins a ON a\.id=p\.admin_id/);
+  assert.match(auth,/a\.role='super_admin'/);
+  assert.match(auth,/consumed_at=\?/);
 });
 
 test('continuity policy makes board independence a mandatory forced-execution rule',async()=>{
