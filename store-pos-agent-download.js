@@ -2,6 +2,7 @@ const RAW_BASE='https://raw.githubusercontent.com/topmaster-joseph/ekodi-platfor
 const DOWNLOAD_PREFIX='/cmpmyi/admin/agent/download/';
 const FILES=Object.freeze({
   'setup-pos-agent.cmd':{type:'application/octet-stream',source:'setup-pos-agent.cmd'},
+  'setup-pos-agent-compat.cmd':{type:'application/octet-stream',source:'setup-pos-agent-compat.cmd'},
   'remove-pos-agent.cmd':{type:'application/octet-stream',source:'remove-pos-agent.cmd'},
   'start-pos-agent.cmd':{type:'application/octet-stream',source:'start-pos-agent.cmd'},
   'stop-pos-agent.cmd':{type:'application/octet-stream',source:'stop-pos-agent.cmd'},
