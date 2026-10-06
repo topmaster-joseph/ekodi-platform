@@ -1,13 +1,14 @@
 param(
   [string]$InstallDir = "$env:ProgramData\EKODI\POSAgent",
   [string]$TaskName = 'EKODI POS Agent',
-  [switch]$NoStart
+  [switch]$NoStart,
+  [switch]$ForceStartupFallback
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-# EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v5
-$InstallerCompatibility = 'task-scheduler-0x80041318-v5'
+# EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v6
+$InstallerCompatibility = 'task-scheduler-0x80041318-v6'
 
 function Test-IsAdministrator {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -169,24 +170,35 @@ try {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
   $userName = $identity.Name
   $arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$targetAgent`" -ConfigPath `"$targetConfig`""
-  $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $arguments
-  $trigger = New-ScheduledTaskTrigger -AtLogOn -User $userName
-  $principal = New-ScheduledTaskPrincipal -UserId $userName -LogonType Interactive -RunLevel Highest
 
-  try {
-    $registrationMode = Register-EkodiScheduledTask -Name $TaskName -Action $action -Trigger $trigger -Principal $principal
-  } catch {
-    if (-not (Test-TaskSchemaRangeError $_)) { throw }
-    Write-Host 'Task Scheduler is incompatible on this POS image; switching to the per-user Windows Startup fallback.' -ForegroundColor Yellow
+  if ($ForceStartupFallback) {
+    Write-Host 'Compatibility install requested: bypassing Task Scheduler and using the per-user Windows Startup folder.' -ForegroundColor Yellow
     try {
       $partialTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
       if ($partialTask) { Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue }
     } catch {}
     [void](Register-EkodiStartupFallback -AgentPath $targetAgent -ConfigPath $targetConfig -ListenerPrefix ([string]$config.listenerPrefix))
-    $registrationMode = 'startup-folder'
+    $registrationMode = 'startup-folder-forced'
+  } else {
+    $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $arguments
+    $trigger = New-ScheduledTaskTrigger -AtLogOn -User $userName
+    $principal = New-ScheduledTaskPrincipal -UserId $userName -LogonType Interactive -RunLevel Highest
+
+    try {
+      $registrationMode = Register-EkodiScheduledTask -Name $TaskName -Action $action -Trigger $trigger -Principal $principal
+    } catch {
+      if (-not (Test-TaskSchemaRangeError $_)) { throw }
+      Write-Host 'Task Scheduler is incompatible on this POS image; switching to the per-user Windows Startup fallback.' -ForegroundColor Yellow
+      try {
+        $partialTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+        if ($partialTask) { Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue }
+      } catch {}
+      [void](Register-EkodiStartupFallback -AgentPath $targetAgent -ConfigPath $targetConfig -ListenerPrefix ([string]$config.listenerPrefix))
+      $registrationMode = 'startup-folder'
+    }
   }
 
-  if ($registrationMode -ne 'startup-folder') {
+  if ($registrationMode -notlike 'startup-folder*') {
     $registeredTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
     if (-not $registeredTask) {
       throw 'Agent scheduled task registration could not be verified.'
@@ -198,7 +210,7 @@ try {
   Set-Content -LiteralPath (Join-Path $InstallDir 'install-mode.txt') -Value $registrationMode -Encoding ASCII
 
   if (-not $NoStart) {
-    if ($registrationMode -eq 'startup-folder') {
+    if ($registrationMode -like 'startup-folder*') {
       Start-Process -FilePath 'powershell.exe' -ArgumentList $arguments -WindowStyle Hidden
     } else {
       Start-ScheduledTask -TaskName $TaskName
@@ -236,7 +248,7 @@ try {
   Write-Host "Task Scheduler compatibility: $InstallerCompatibility ($registrationMode)"
   if ($registrationMode -eq 'interactive-default-runlevel') {
     Write-Host 'Compatibility mode used: interactive current-user task with the Windows default run level.' -ForegroundColor Yellow
-  } elseif ($registrationMode -eq 'startup-folder') {
+  } elseif ($registrationMode -like 'startup-folder*') {
     Write-Host 'Compatibility mode used: per-user Windows Startup folder because this POS image rejected Task Scheduler XML.' -ForegroundColor Yellow
   }
   Write-Host 'Foreground switching remains explicit-user-action only.'
