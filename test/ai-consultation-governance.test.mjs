@@ -23,6 +23,18 @@ test('read-only deterministic work does not require consultation', () => {
   assert.equal(decision.requirements.consultationProviders, 0);
 });
 
+test('high-impact read-only inspection does not require consultation', () => {
+  for (const goal of [
+    'OAuth 인증과 permission 상태를 조회만 한다',
+    'Secret 및 운영배포 보호계층을 점검한다. 실제 변경은 하지 않는다.',
+    'production deployment 설정 분석만 수행한다',
+  ]) {
+    const decision = decideEkodiConsultation({ goal, risk: 'low' });
+    assert.equal(decision.status, 'not_required', goal);
+    assert.equal(decision.requirements.consultationProviders, 0, goal);
+  }
+});
+
 test('ordinary reversible mutation receives a single review', () => {
   const decision = decideEkodiConsultation({ goal: '일반 UI 문구 수정', risk: 'normal', mutation: true });
   assert.equal(decision.status, 'single_review');
