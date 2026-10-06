@@ -21,7 +21,7 @@ export function isAllowedOrigin(origin, env = {}) {
 
 function cors(origin, env = {}) {
   const headers = {
-    'Access-Control-Allow-Headers': 'content-type, authorization',
+    'Access-Control-Allow-Headers': 'content-type, authorization, x-ekodi-reauth-proof',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Max-Age': '86400',
     'Vary': 'Origin'
@@ -123,6 +123,16 @@ async function ensureSchema(db) {
       detail TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL,
       FOREIGN KEY(admin_id) REFERENCES admins(id)
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS reauth_proofs (
+      token_hash TEXT PRIMARY KEY,
+      admin_id INTEGER NOT NULL,
+      scope TEXT NOT NULL,
+      resource TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      consumed_at TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(admin_id) REFERENCES admins(id)
     )`)
   ]);
   await db.prepare(`CREATE TABLE IF NOT EXISTS domain_registry (
@@ -162,6 +172,17 @@ async function issueSession(db, adminId) {
   await db.prepare('INSERT INTO sessions (token_hash, admin_id, expires_at, created_at) VALUES (?, ?, ?, ?)')
     .bind(tokenHash, adminId, expires.toISOString(), now.toISOString()).run();
   return { token, expiresAt: expires.toISOString() };
+}
+
+async function issueReauthProof(db, adminId, scope, resource) {
+  const token = bytesToHex(crypto.getRandomValues(new Uint8Array(32)));
+  const tokenHash = await sha256(token);
+  const createdAt = new Date();
+  const expiresAt = new Date(createdAt.getTime() + 5 * 60 * 1000);
+  await db.prepare('DELETE FROM reauth_proofs WHERE expires_at <= ? OR consumed_at IS NOT NULL').bind(createdAt.toISOString()).run();
+  await db.prepare('INSERT INTO reauth_proofs (token_hash,admin_id,scope,resource,expires_at,consumed_at,created_at) VALUES (?,?,?,?,?,NULL,?)')
+    .bind(tokenHash, adminId, scope, resource, expiresAt.toISOString(), createdAt.toISOString()).run();
+  return { proof:token, expiresAt:expiresAt.toISOString(), scope, resource };
 }
 
 async function authenticate(request, db) {
@@ -308,6 +329,42 @@ export default {
     }
 
 
+
+    if (request.method === 'POST' && url.pathname === '/api/reauth') {
+      const adminSession = await authenticate(request, env.DB);
+      if (!adminSession || String(adminSession.role || '') !== 'super_admin') return reply({ error: '최고관리자 인증이 필요합니다.' }, 403);
+      const data = await readBody(request);
+      const scope = String(data?.scope || '').trim().slice(0,120);
+      const resource = String(data?.resource || '').trim().slice(0,240);
+      const password = typeof data?.password === 'string' ? data.password : '';
+      const allowedScopes = new Set(['board.lifecycle.cancel','board.lifecycle.delete','board.lifecycle.restore','board.membership.bootstrap']);
+      if (!allowedScopes.has(scope) || !resource.startsWith('site:') || !resource.endsWith(':main')) return reply({ error: '재인증 대상 범위를 확인해 주세요.' }, 400);
+      const admin = await env.DB.prepare('SELECT * FROM admins WHERE id = ?').bind(adminSession.id).first();
+      const digest = await passwordHash(password, admin?.password_salt, Number(admin?.password_iterations) || LEGACY_ITERATIONS);
+      if (!admin || !digest || !secureEqual(digest, admin.password_hash)) return reply({ error: '최고관리자 비밀번호를 다시 확인해 주세요.' }, 401);
+      const proof = await issueReauthProof(env.DB, admin.id, scope, resource);
+      await writeAudit(env.DB, admin.id, 'session.reauth', resource, scope);
+      return reply({ ok:true, ...proof });
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/reauth/verify') {
+      const adminSession = await authenticate(request, env.DB);
+      if (!adminSession || String(adminSession.role || '') !== 'super_admin') return reply({ error: '최고관리자 인증이 필요합니다.' }, 403);
+      const supplied = String(request.headers.get('x-ekodi-reauth-proof') || '').trim();
+      if (!supplied) return reply({ error: '재인증 proof가 필요합니다.' }, 401);
+      const data = await readBody(request);
+      const scope = String(data?.scope || '').trim().slice(0,120);
+      const resource = String(data?.resource || '').trim().slice(0,240);
+      const tokenHash = await sha256(supplied);
+      const row = await env.DB.prepare(`SELECT token_hash,admin_id,scope,resource,expires_at,consumed_at
+        FROM reauth_proofs WHERE token_hash=? AND admin_id=? AND scope=? AND resource=? AND expires_at>? AND consumed_at IS NULL LIMIT 1`)
+        .bind(tokenHash, adminSession.id, scope, resource, new Date().toISOString()).first();
+      if (!row) return reply({ error:'재인증 proof가 유효하지 않거나 만료되었습니다.' }, 403);
+      const consumedAt = new Date().toISOString();
+      await env.DB.prepare('UPDATE reauth_proofs SET consumed_at=? WHERE token_hash=? AND consumed_at IS NULL').bind(consumedAt,tokenHash).run();
+      await writeAudit(env.DB, adminSession.id, 'session.reauth.consume', resource, scope);
+      return reply({ ok:true, verified:true, scope, resource, consumedAt });
+    }
 
     if (request.method === 'POST' && url.pathname === '/api/password/reset') {
       const ipHash = await sha256(request.headers.get('cf-connecting-ip') || 'unknown');
