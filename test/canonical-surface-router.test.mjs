@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { ADMIN_MENU_REGISTRY } from '../admin-menu-registry.js';
+import { PLATFORM_EXECUTION_SURFACES } from '../platform-route-registry.js';
 import { routeCanonicalSurface } from '../canonical-surface-router.js';
 import platformEntry from '../platform-router-entry-worker.js';
 import siteWorker from '../site-worker.js';
@@ -19,6 +20,18 @@ function legacyRecorder(){
   };
   return {calls,fetch};
 }
+
+test('public execution surface roots canonicalize slashless URLs to the same trailing-slash route',async()=>{
+  const publicRoots=PLATFORM_EXECUTION_SURFACES.filter(spec=>!spec.exact&&!spec.id.endsWith('-api')&&!spec.prefix.includes('/api/'));
+  assert.ok(publicRoots.some(spec=>spec.id==='ai'));
+  for(const spec of publicRoots){
+    const response=await routeCanonicalSurface(new Request(`https://ekodi.kr${spec.prefix}`),{});
+    assert.equal(response.status,308,`${spec.id} slashless root must redirect`);
+    const location=new URL(response.headers.get('location'));
+    assert.equal(location.pathname,`${spec.prefix}/`,`${spec.id} must preserve the canonical service root`);
+    assert.equal(location.hostname,'ekodi.kr');
+  }
+});
 
 test('canonical surface roots normalize with trailing slashes',async()=>{
   for(const path of ['/my','/admin','/auth']){
@@ -265,4 +278,19 @@ test('connect cannot be claimed as a workspace slug',async()=>{
   const policy=await import('../workspace-route-policy.js');
   assert.equal(policy.isWorkspaceSlug('connect'),false);
   assert.equal(policy.workspaceRouteFromPublicPath('/connect'),null);
+});
+
+
+test('shared-site release probes honor canonical slash parity',async()=>{
+  const manifest=JSON.parse(await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  for(const root of ['/live','/pay','/cloud']){
+    const slashless=manifest.worker.requests.find(item=>item.url===`https://ekodi.kr${root}`);
+    const canonical=manifest.worker.requests.find(item=>item.url===`https://ekodi.kr${root}/`);
+    assert.ok(slashless,`missing slashless probe for ${root}`);
+    assert.deepEqual(slashless.statuses,[308]);
+    assert.equal(slashless.redirect,'manual');
+    assert.ok(slashless.headerExpect?.includes(`location: https://ekodi.kr${root}/`));
+    assert.ok(canonical,`missing canonical trailing-slash probe for ${root}`);
+    assert.deepEqual(canonical.statuses,[200]);
+  }
 });

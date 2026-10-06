@@ -1599,6 +1599,18 @@
       {
         "url": "https://ekodi.kr/live",
         "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "rollbackVerify": true,
+        "expect": [],
+        "headerExpect": [
+          "location: https://ekodi.kr/live/"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/live/",
+        "statuses": [
           200
         ],
         "redirect": "manual",
@@ -1906,6 +1918,17 @@
       {
         "url": "https://ekodi.kr/pay",
         "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "expect": [],
+        "headerExpect": [
+          "location: https://ekodi.kr/pay/"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/pay/",
+        "statuses": [
           200
         ],
         "redirect": "manual",
@@ -1923,6 +1946,17 @@
       },
       {
         "url": "https://ekodi.kr/cloud",
+        "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "expect": [],
+        "headerExpect": [
+          "location: https://ekodi.kr/cloud/"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/cloud/",
         "statuses": [
           200
         ],

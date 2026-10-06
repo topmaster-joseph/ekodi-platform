@@ -1,6 +1,7 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { loadHomepageServices, loadHomepageStatusCounts, renderServiceCards } from './ecosystem-registry.mjs';
+import { finalizeSeonamMediRelease } from './finalize-seonammedi-release.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = fileURLToPath(new URL('../dist/', import.meta.url));
@@ -34,6 +35,7 @@ await Promise.all([
 await cp(`${root}sites/ekodi-insurance/public`, `${output}insurance`, { recursive: true });
 await cp(`${root}sites/business-cooperative/public`, `${output}business-coop`, { recursive: true });
 await cp(`${root}sites/seonammedi/public`, `${output}seonammedi`, { recursive: true });
+await finalizeSeonamMediRelease(output);
 await cp(`${root}sites/pyeonggongmok/public`, `${output}pyeonggongmok`, { recursive: true });
 await cp(`${root}config/capability-registry.json`, `${output}capability-registry.json`);
 await cp(`${root}config/capability-foundry.json`, `${output}capability-foundry.json`);

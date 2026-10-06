@@ -289,6 +289,7 @@ on:
       - 'test/openai-workspace-release-contract.test.mjs'
       - 'test/shared-site-admin-probe.test.mjs'
       - 'scripts/build.mjs'
+      - 'scripts/finalize-seonammedi-release.mjs'
       - 'scripts/attest-worker-release-artifact.mjs'
       - 'scripts/guarded-worker-release.mjs'
       - 'scripts/cloudflare-production-budget.mjs'
