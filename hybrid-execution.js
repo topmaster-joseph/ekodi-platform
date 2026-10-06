@@ -1,5 +1,5 @@
 import authWorker from './auth-worker.js';
-import { compareLocalExecutionCandidates, localExecutionPolicySnapshot, localExecutionScore, normalizeLocalResource } from './local-execution-policy.js';
+import { compareLocalExecutionCandidates, localExecutionPolicySnapshot, localExecutionRolloutSnapshot, localExecutionScore, normalizeLocalResource } from './local-execution-policy.js';
 
 const ADMIN_PREFIX = '/api/control/hybrid-execution';
 const AGENT_NEXT_PATH = '/api/device-agent/commands/next';
@@ -490,7 +490,7 @@ async function listDashboard(env) {
   const fabric = await readFabricSettings(env);
   const [nodeRows, jobRows, eventRows] = await Promise.all([
     env.DB.prepare(`SELECT n.*, d.label, d.hostname, d.platform, d.agent_version, d.last_seen_at AS device_last_seen_at,
-      d.revoked_at,
+      d.revoked_at, d.settings_json,
       (SELECT COUNT(*) FROM hybrid_execution_jobs j
        WHERE j.assigned_device_id=n.device_id AND j.status IN ('assigned','leased')) AS active_jobs
       FROM hybrid_execution_nodes n
@@ -522,6 +522,7 @@ async function listDashboard(env) {
     lastHeartbeatAt:row.last_heartbeat_at,
     deviceLastSeenAt:row.device_last_seen_at,
     revoked:Boolean(row.revoked_at),
+    autoExecutionEligible:automaticLocalExecutionEligible(row),
   }));
   const jobs = (jobRows.results || []).map(row => ({
     id:row.id,
@@ -544,12 +545,16 @@ async function listDashboard(env) {
     id:row.id, jobId:row.job_id, deviceId:row.device_id, type:row.event_type,
     detail:parseJson(row.detail_json, {}), createdAt:row.created_at,
   }));
+  const onlineEligibleNodes = nodes.filter(node => node.online && node.enabled && node.autoExecutionEligible).length;
+  const autoNodes = nodes.filter(node => node.online && node.enabled && node.autoExecute && node.autoExecutionEligible).length;
+  const rollout = localExecutionRolloutSnapshot({ onlineEligibleNodes, autoNodes });
   return {
-    fabric,
+    fabric:{ ...fabric, rollout },
     nodes, jobs, events,
     summary:{
       onlineNodes:nodes.filter(node => node.online).length,
-      autoNodes:nodes.filter(node => node.online && node.enabled && node.autoExecute).length,
+      onlineEligibleNodes,
+      autoNodes,
       pendingJobs:jobs.filter(job => job.status === 'pending').length,
       activeJobs:jobs.filter(job => ['assigned','leased'].includes(job.status)).length,
       authRequiredJobs:jobs.filter(job => job.status === 'auth_required').length,
