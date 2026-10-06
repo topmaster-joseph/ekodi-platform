@@ -59,6 +59,37 @@ export function compareLocalExecutionCandidates(a, b) {
   return String(a.deviceId || a.id || '').localeCompare(String(b.deviceId || b.id || ''));
 }
 
+export const LOCAL_EXECUTION_ROLLOUT_STAGES = Object.freeze({
+  observe: Object.freeze({ minAutoNodes:0, label:'observe' }),
+  canary: Object.freeze({ minAutoNodes:1, label:'canary' }),
+  parallel: Object.freeze({ minAutoNodes:2, label:'parallel' }),
+});
+
+export function localExecutionRolloutSnapshot({ onlineEligibleNodes = 0, autoNodes = 0 } = {}) {
+  const eligible = Math.max(0, Math.floor(Number(onlineEligibleNodes) || 0));
+  const automatic = Math.max(0, Math.min(eligible, Math.floor(Number(autoNodes) || 0)));
+  const stage = automatic >= LOCAL_EXECUTION_ROLLOUT_STAGES.parallel.minAutoNodes
+    ? 'parallel'
+    : automatic >= LOCAL_EXECUTION_ROLLOUT_STAGES.canary.minAutoNodes
+      ? 'canary'
+      : 'observe';
+  const nextAction = stage === 'observe'
+    ? (eligible > 0 ? 'enable_one_canary_node' : 'enroll_eligible_node')
+    : stage === 'canary'
+      ? (eligible >= 2 ? 'validate_then_enable_second_node' : 'enroll_second_eligible_node')
+      : 'keep_parallel_and_monitor';
+
+  return Object.freeze({
+    stage,
+    onlineEligibleNodes: eligible,
+    autoNodes: automatic,
+    parallelReady: eligible >= 2,
+    nextAction,
+    automaticPromotion: false,
+    requiresExplicitNodeEnablement: true,
+  });
+}
+
 export function localExecutionPolicySnapshot() {
   return {
     version: LOCAL_EXECUTION_POLICY.version,
@@ -68,5 +99,7 @@ export function localExecutionPolicySnapshot() {
     parallelDistribution: true,
     portableAutoExecution: false,
     onlineWindowSeconds: LOCAL_EXECUTION_POLICY.onlineWindowMs / 1000,
+    rolloutStages:Object.keys(LOCAL_EXECUTION_ROLLOUT_STAGES),
+    automaticRolloutPromotion:false,
   };
 }
