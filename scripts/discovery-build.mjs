@@ -27,6 +27,14 @@ export const EKODI_AI_DISCOVERY = Object.freeze({
     orchestrator_api: 'https://ekodi.kr/api',
     human_connection_entry: 'https://ekodi.kr/ai',
     documentation: 'https://ekodi.kr/ai',
+    clients: Object.freeze({
+      genspark: Object.freeze({
+        integration: 'custom-mcp',
+        endpoint: 'https://ekodi.kr/mcp',
+        oauth_required_for_private_capabilities: true,
+        execution_authority: 'ekodi-orchestrator',
+      }),
+    }),
   }),
   security: Object.freeze({
     canonical_domain: 'ekodi.kr',
@@ -105,6 +113,7 @@ export async function emitDiscoveryAssets() {
   if (aiDiscovery.canonical_origin !== 'https://ekodi.kr') throw new Error('EKODI AI discovery canonical origin missing');
   if (!aiDiscovery.aliases?.includes('EKODI') || !aiDiscovery.aliases?.includes('에코디')) throw new Error('EKODI AI discovery aliases missing');
   if (aiDiscovery.ai?.mcp !== 'https://ekodi.kr/mcp') throw new Error('EKODI canonical MCP discovery endpoint missing');
+  if (aiDiscovery.ai?.clients?.genspark?.integration !== 'custom-mcp' || aiDiscovery.ai?.clients?.genspark?.endpoint !== 'https://ekodi.kr/mcp' || aiDiscovery.ai?.clients?.genspark?.execution_authority !== 'ekodi-orchestrator') throw new Error('Genspark MCP discovery contract invalid');
   if (aiDiscovery.security?.orchestrator_is_execution_authority !== true || aiDiscovery.discovery?.name_recognition_is_authorization !== false) throw new Error('EKODI AI discovery security boundary invalid');
   if (aiDiscovery.verification?.memory_is_not_verification !== true || aiDiscovery.verification?.current_state_requires_fresh_authoritative_evidence !== true || aiDiscovery.verification?.mcp_unavailable_behavior !== 'report_unverified') throw new Error('EKODI AI verification discovery contract invalid');
   for (const route of DISCOVERY_PUBLIC_ROUTES.filter(item => item.asset)) {
