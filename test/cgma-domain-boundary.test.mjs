@@ -54,3 +54,11 @@ test('CGMA production verifier accepts authenticated protection for admin assets
   assert.match(cgmaWorkflow, /check_protected_asset '\/cgma\/admin\/assets\/cgma-member-admin\.js'/);
   assert.match(cgmaWorkflow, /check_protected_asset '\/cgma\/admin\/assets\/cgma-member-admin\.css'/);
 });
+
+
+test('CGMA protected asset verifier accepts the Workspace Admin auth shell without exposing the asset', async () => {
+  const cgmaWorkflow=await readFile(new URL('../.github/workflows/deploy-cgma-apex-edge.yml',import.meta.url),'utf8');
+  assert.match(cgmaWorkflow, /grep -Fq '관리자 인증' \/tmp\/cgma\.protected\.body/);
+  assert.match(cgmaWorkflow, /x-ekodi-route: workspace-admin/);
+  assert.match(cgmaWorkflow, /correctly returned the authenticated Workspace Admin boundary/);
+});
