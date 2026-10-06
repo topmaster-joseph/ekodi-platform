@@ -188,14 +188,17 @@ const ORG_GROUP_META=[['bidae','비대위'],['mokpo','목포대'],['minhak','민
 const ORG_LEGACY_KEYS={bidae:'integrated',minhak:'civic'};
 const cleanOrgPublicText=value=>String(value||'').replace(/\s*\([^)]*위원회\s*겸임[^)]*\)/g,'').trim();
 const publicOrgStatusLabel=group=>group?.key!=='minhak'&&String(group?.statusLabel||'').trim()==='운영 중'?'':String(group?.statusLabel||'').trim();
-const orgGroups=Array.isArray(org.groups)&&org.groups.length
+let orgGroups=Array.isArray(org.groups)&&org.groups.length
   ?ORG_GROUP_META.map(([key,label])=>{const legacyKey=ORG_LEGACY_KEYS[key];const found=org.groups.find(group=>group.key===key)||(legacyKey?org.groups.find(group=>group.key===legacyKey):null);return{...(found||{}),key,label}})
   :ORG_GROUP_META.map(([key,label],index)=>index===0?{key,label,levels:org.levels||[],committees:org.committees||[],participants:org.participants||[]}:{key,label,status:key==='minhak'?'forming':'active',statusLabel:key==='minhak'?'구성 논의 중':'',levels:[],committees:[],participants:[]});
+let activePublicOrgKey='bidae';
 const chart=el('organizationChart');
 const participantHost=el('participantOrganizations');
 const orgTabs=el('organizationTabs');
 function renderOrganizationGroup(key){
   const group=orgGroups.find(item=>item.key===key)||orgGroups[0];
+  activePublicOrgKey=group?.key||'bidae';
+  if(el('organizationManageForm')&&!el('organizationManageForm').hidden)fillPublicOrganizationEditor(group);
   if(chart){
     const statusLabel=publicOrgStatusLabel(group);const status=statusLabel?'<p class="note org-status">'+escapeHtml(statusLabel)+'</p>':'';
     const levels=(group.levels||[]).map(level=>'<article class="org-level"><strong>'+escapeHtml(level.name)+'</strong>'+(Array.isArray(level.members)&&level.members.length?'<p>'+level.members.map(cleanOrgPublicText).filter(Boolean).map(escapeHtml).join(' · ')+'</p>':'')+'</article>').join('');
@@ -794,6 +797,63 @@ async function publicAdminJson(path,options={}){
   const response=await fetch(path,{...options,headers,cache:'no-store'});const data=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(data.error||'요청을 처리하지 못했습니다.');return data;
 }
+const publicOrgLines=value=>String(value||'').split(/\r?\n/).map(row=>row.trim()).filter(Boolean);
+function normalizePublicOrgGroups(source={}){
+  const raw=Array.isArray(source.groups)?source.groups:[];
+  return ORG_GROUP_META.map(([key,label])=>{
+    const legacy=ORG_LEGACY_KEYS[key];
+    const found=raw.find(group=>group.key===key)||(legacy?raw.find(group=>group.key===legacy):null);
+    if(found)return{...found,key,label,levels:found.levels||[],committees:found.committees||[],participants:found.participants||[]};
+    if(key==='bidae')return{key,label,levels:source.levels||[],committees:source.committees||[],participants:source.participants||[]};
+    return{key,label,status:key==='minhak'?'forming':'active',statusLabel:key==='minhak'?'구성 논의 중':'',levels:[],committees:[],participants:[]};
+  });
+}
+function fillPublicOrganizationEditor(group){
+  const form=el('organizationManageForm');if(!form||!group)return;
+  const members=name=>(group.levels||[]).find(level=>level.name===name)?.members||[];
+  form.elements.orgKey.value=group.key||activePublicOrgKey;
+  form.elements.statusLabel.value=publicOrgStatusLabel(group);
+  form.elements.representatives.value=members('대표자회의').map(cleanOrgPublicText).filter(Boolean).join('\n');
+  form.elements.standing.value=members('상임공동대표단').map(cleanOrgPublicText).filter(Boolean).join('\n');
+  form.elements.executive.value=members('집행위원회').map(cleanOrgPublicText).filter(Boolean).join('\n');
+  form.elements.committees.value=(group.committees||[]).map(item=>[item.name,cleanOrgPublicText(item.lead)].filter(Boolean).join(' | ')).join('\n');
+  form.elements.participants.value=(group.participants||[]).map(item=>[item.name,item.representative,item.url].filter(Boolean).join(' | ')).join('\n');
+  if(el('organizationManageTitle'))el('organizationManageTitle').textContent=(group.label||'조직')+' 조직 수정';
+}
+function publicOrganizationGroupFromForm(form,meta){
+  const level=(name,field)=>({name,members:publicOrgLines(form.elements[field].value).map(cleanOrgPublicText).filter(Boolean)});
+  const committees=publicOrgLines(form.elements.committees.value).map(row=>{const [name,...rest]=row.split('|');return{name:(name||'').trim(),lead:cleanOrgPublicText(rest.join('|'))}}).filter(item=>item.name);
+  const participants=publicOrgLines(form.elements.participants.value).map(row=>{const [name,representative,url]=row.split('|').map(value=>(value||'').trim());return{name,representative,url,visible:true}}).filter(item=>item.name);
+  return{key:meta.key,label:meta.label,status:meta.key==='minhak'?'forming':'active',statusLabel:String(form.elements.statusLabel.value||'').trim(),levels:[level('대표자회의','representatives'),level('상임공동대표단','standing'),level('집행위원회','executive')],committees,participants,participantSort:'ko-KR',publicOnly:true};
+}
+function publicOrganizationDataWithGroup(source,key,nextGroup){
+  const groups=normalizePublicOrgGroups(source).map(group=>group.key===key?nextGroup:group);
+  const bidae=groups.find(group=>group.key==='bidae')||groups[0];
+  return{...source,groups,levels:bidae.levels,committees:bidae.committees,participants:bidae.participants,participantSort:'ko-KR',publicOnly:true,schemaVersion:2};
+}
+function bindPublicOrganizationAdmin(){
+  const toggle=el('organizationManageToggle'),form=el('organizationManageForm'),cancel=el('organizationManageCancel');if(!toggle||!form)return;
+  toggle.hidden=false;
+  const setOpen=open=>{
+    form.hidden=!open;toggle.setAttribute('aria-expanded',open?'true':'false');toggle.textContent=open?'편집 닫기':'조직 바로 수정';
+    if(open){fillPublicOrganizationEditor(orgGroups.find(group=>group.key===activePublicOrgKey)||orgGroups[0]);form.querySelector('input:not([type="hidden"]),textarea')?.focus()}
+    else if(el('organizationManageMessage'))el('organizationManageMessage').textContent='';
+  };
+  toggle.onclick=()=>setOpen(form.hidden);cancel.onclick=()=>setOpen(false);
+  form.onsubmit=async event=>{
+    event.preventDefault();const key=form.elements.orgKey.value||activePublicOrgKey;const meta=ORG_GROUP_META.map(([orgKey,label])=>({key:orgKey,label})).find(item=>item.key===key)||{key:'bidae',label:'비대위'};const message=el('organizationManageMessage');
+    try{
+      if(message)message.textContent=meta.label+' 저장 중…';
+      const latest=await publicAdminJson('/api/seonammedi/admin/pages/organization');
+      const source=latest.item?.data&&Object.keys(latest.item.data).length?latest.item.data:{groups:orgGroups};
+      const nextGroup=publicOrganizationGroupFromForm(form,meta);
+      const data=publicOrganizationDataWithGroup(source,key,nextGroup);
+      await publicAdminJson('/api/seonammedi/admin/pages/organization',{method:'PUT',body:JSON.stringify({data,visible:true})});
+      orgGroups=normalizePublicOrgGroups(data);activePublicOrgKey=key;renderOrganizationGroup(key);fillPublicOrganizationEditor(nextGroup);
+      if(message)message.textContent=meta.label+' 조직 정보를 저장했습니다.';
+    }catch(error){if(message)message.textContent=error.message}
+  };
+}
 function resetPublicFinanceEditor(){
   const form=el('financeManageForm');if(!form)return;form.reset();form.elements.id.value='';form.elements.type.value='income';form.elements.visible.checked=true;
   if(el('financeManageTitle'))el('financeManageTitle').textContent='회계내역 추가';if(el('financeManageMessage'))el('financeManageMessage').textContent='';
@@ -826,7 +886,7 @@ function bindPublicFinanceAdmin(){
 function renderPublicAdminControls(){
   const admin=publicAdminController;
   if(!admin||!publicAdminMe)return;
-  admin.attach(el('organization')?.querySelector('.section-head'),{label:'조직 바로 수정',panel:'organization',permission:'pages',params:()=>({org:document.querySelector('#organizationTabs [data-org-group].active')?.dataset.orgGroup||'bidae'})});
+  if(admin.has('pages'))bindPublicOrganizationAdmin();
   const timelineAdmin=el('timelineAdminEdit');if(timelineAdmin&&admin.has('timeline')){timelineAdmin.hidden=false;timelineAdmin.onclick=()=>admin.open('status','활동이력 관리')}
   admin.attach(el('channels')?.querySelector('.section-head'),{label:'소통채널 바로 수정',panel:'channels',permission:'channels'});
   if(admin.has('voices'))window.dispatchEvent(new CustomEvent('seonammedi:voice-inline-admin-authorized'));

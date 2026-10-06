@@ -782,3 +782,18 @@ test('seonammedi registered Google admins manage public content from user surfac
   assert.match(adminJs,/navVisibility/);
 });
 
+
+
+test('seonammedi organization editing is inline on the public user surface',async()=>{
+  const html=await readFile(new URL('index.html',root),'utf8');
+  const app=await readFile(new URL('app.js',root),'utf8');
+  assert.match(html,/id="organizationManageToggle"/);
+  assert.match(html,/id="organizationManageForm"/);
+  assert.match(html,/name="representatives"/);
+  assert.match(html,/name="committees"/);
+  assert.match(html,/name="participants"/);
+  assert.match(app,/function bindPublicOrganizationAdmin\(\)/);
+  assert.match(app,/\/api\/seonammedi\/admin\/pages\/organization/);
+  assert.match(app,/if\(admin\.has\('pages'\)\)bindPublicOrganizationAdmin\(\)/);
+  assert.doesNotMatch(app,/admin\.attach\(el\('organization'\)/);
+});

@@ -37,9 +37,22 @@
 </section>
 
 <section id="organization" class="section" data-view-section="organization" hidden>
-  <div class="section-head"><div><p class="eyebrow">ORGANIZATION</p><h2>조직</h2></div><span class="badge">공개 조직도</span></div>
+  <div class="section-head"><div><p class="eyebrow">ORGANIZATION</p><h2>조직</h2></div><div class="section-head-actions"><span class="badge">공개 조직도</span><button id="organizationManageToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="organizationManageForm">조직 바로 수정</button></div></div>
   <p class="note">통합 대책위·시민단체연대·목포대 조직을 구분해 표시합니다. 공개가 확인된 구성만 노출하며 참여단체는 가나다순으로 정렬합니다.</p>
   <div id="organizationTabs" class="filters organization-tabs" role="tablist" aria-label="조직 구분"></div>
+  <form id="organizationManageForm" class="panel organization-manage-form module-compose" hidden>
+    <input type="hidden" name="orgKey" value="bidae">
+    <strong id="organizationManageTitle">비대위 조직 수정</strong>
+    <label>상태 문구<input name="statusLabel" maxlength="180" placeholder="필요한 경우에만 표시"></label>
+    <div class="organization-form-grid">
+      <label>대표자회의<textarea name="representatives" rows="4" placeholder="한 줄에 한 명"></textarea></label>
+      <label>상임공동대표단<textarea name="standing" rows="4" placeholder="한 줄에 한 명"></textarea></label>
+      <label>집행위원회<textarea name="executive" rows="4" placeholder="한 줄에 한 명"></textarea></label>
+    </div>
+    <label>분과·위원회<textarea name="committees" rows="4" placeholder="위원회명 | 담당자"></textarea></label>
+    <label>참여단체<textarea name="participants" rows="5" placeholder="단체명 | 대표자 | https://주소"></textarea></label>
+    <div class="form-actions"><button type="submit">저장</button><button id="organizationManageCancel" type="button" class="secondary">취소</button><span id="organizationManageMessage" class="muted" role="status"></span></div>
+  </form>
   <div id="organizationChart" class="organization-chart"></div>
   <div class="section-head participant-head"><div><p class="eyebrow">PARTICIPATING ORGANIZATIONS</p><h3>참여단체</h3></div></div>
   <div id="participantOrganizations" class="participant-organizations"></div>
