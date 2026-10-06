@@ -175,6 +175,10 @@ jobs:
                 echo "CGMA protected asset served directly: ${path} route=${route}"
                 return 0
               fi
+              if [[ "$code" == '200' ]] && grep -Fq '관리자 인증' /tmp/cgma.protected.body && grep -Fiq 'x-ekodi-route: workspace-admin' /tmp/cgma.protected.headers; then
+                echo "CGMA protected asset correctly returned the authenticated Workspace Admin boundary: ${path}"
+                return 0
+              fi
               location=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/^[^:]+:[[:space:]]*/,""); sub(/\r$/,""); print; exit}' /tmp/cgma.protected.headers)
               if [[ "$code" =~ ^30[12378]$ ]] && [[ "$location" == *'/auth/'* ]]; then
                 echo "CGMA protected asset correctly requires authentication: ${path}"
