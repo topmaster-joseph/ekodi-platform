@@ -54,11 +54,11 @@ test('Control Center lazy-loads Social Channels while security-wrapped Mission C
   ]);
   assert.match(features, /social:\s*\{[^}]*styles:\['social-admin\.css'\][^}]*scripts:\['social-admin\.js'\]/);
   assert.match(features, /hashes:\['#social'\]/);
-  assert.match(features, /if \(!auto && real\?\.isConnected\) queueMicrotask\(\(\) => real\.click\(\)\)/);
   assert.match(build, /social-admin\.css/);
   assert.match(build, /social-admin\.js/);
   assert.match(admin, /content\.querySelector\('\[data-panel~="social"\]'\)/);
   assert.match(admin, /nav\.querySelector\('\[data-section="social"\], \[data-lazy-section="social"\]'\)/);
+  assert.doesNotMatch(admin, /function install\(\) \{\s*if \(!token\(\)\) return;/);
   assert.doesNotMatch(admin, /document\.querySelector\('\[data-section="social"\]'\)\) return/);
   assert.ok(sharedDeploy.includes("- 'social-admin.js'"));
   assert.ok(sharedDeploy.includes("- 'social-admin.css'"));
