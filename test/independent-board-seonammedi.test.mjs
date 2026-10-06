@@ -104,3 +104,18 @@ test('standalone boards reuse EKODI authentication and own their mutations',asyn
   assert.doesNotMatch(voiceAdmin,/\/api\/seonammedi\/admin\/voices/);
   assert.match(adminJs,/\/board\/api\/admin\/posts/);
 });
+
+
+test('SeonamMedi board admin login receives a one-time portal handoff token on the customer domain',async()=>{
+  const [worker,auth,access]=await Promise.all([
+    read('services/independent-board/worker.js'),
+    read('auth-site/auth.js'),
+    read('supabase/functions/access-api/index.ts')
+  ]);
+  assert.match(worker,/return_to",location\.origin\+"\/board"/);
+  assert.match(worker,/\/api\/seonammedi\/admin\/auth\/exchange/);
+  assert.match(auth,/seonamMediHandoff/);
+  assert.match(auth,/await handoffToService\(\)/);
+  assert.match(access,/portal:\["https:\/\/ekodi\.kr","https:\/\/seonammedi\.kr"/);
+  assert.match(access,/if\(site==="portal"\)[\s\S]*generateLink\(\{type:"magiclink",email\}\)[\s\S]*workspace:null/);
+});
