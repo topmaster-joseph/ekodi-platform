@@ -81,6 +81,9 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.match(injector,/USER_SURFACES=new Set\(\['public','workspace'\]\)/);
   assert.match(injector,/if\(surface==='admin'\)return ADMIN_BOOT_STYLE/);
   assert.match(injector,/data-ekodi-admin-shell-boot/);
+  assert.match(injector,/ADMIN-WHITE-SURFACE-001/);
+  assert.match(injector,/html,body\{background:#fff!important/);
+  assert.match(injector,/body :is\(main,aside,header,nav,section,article/);
   assert.match(injector,/\.side-brand/);
 
   assert.match(worker,/adminShellUrl\.pathname='\/admin-ui-shell\.js'/);
