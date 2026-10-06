@@ -348,22 +348,22 @@ export default {
     }
 
     if (request.method === 'POST' && url.pathname === '/api/reauth/verify') {
-      const adminSession = await authenticate(request, env.DB);
-      if (!adminSession || String(adminSession.role || '') !== 'super_admin') return reply({ error: '최고관리자 인증이 필요합니다.' }, 403);
       const supplied = String(request.headers.get('x-ekodi-reauth-proof') || '').trim();
       if (!supplied) return reply({ error: '재인증 proof가 필요합니다.' }, 401);
       const data = await readBody(request);
       const scope = String(data?.scope || '').trim().slice(0,120);
       const resource = String(data?.resource || '').trim().slice(0,240);
       const tokenHash = await sha256(supplied);
-      const row = await env.DB.prepare(`SELECT token_hash,admin_id,scope,resource,expires_at,consumed_at
-        FROM reauth_proofs WHERE token_hash=? AND admin_id=? AND scope=? AND resource=? AND expires_at>? AND consumed_at IS NULL LIMIT 1`)
-        .bind(tokenHash, adminSession.id, scope, resource, new Date().toISOString()).first();
+      const row = await env.DB.prepare(`SELECT p.token_hash,p.admin_id,p.scope,p.resource,p.expires_at,p.consumed_at,a.role
+        FROM reauth_proofs p JOIN admins a ON a.id=p.admin_id
+        WHERE p.token_hash=? AND p.scope=? AND p.resource=? AND p.expires_at>? AND p.consumed_at IS NULL AND a.role='super_admin' LIMIT 1`)
+        .bind(tokenHash, scope, resource, new Date().toISOString()).first();
       if (!row) return reply({ error:'재인증 proof가 유효하지 않거나 만료되었습니다.' }, 403);
       const consumedAt = new Date().toISOString();
-      await env.DB.prepare('UPDATE reauth_proofs SET consumed_at=? WHERE token_hash=? AND consumed_at IS NULL').bind(consumedAt,tokenHash).run();
-      await writeAudit(env.DB, adminSession.id, 'session.reauth.consume', resource, scope);
-      return reply({ ok:true, verified:true, scope, resource, consumedAt });
+      const changed=await env.DB.prepare('UPDATE reauth_proofs SET consumed_at=? WHERE token_hash=? AND consumed_at IS NULL').bind(consumedAt,tokenHash).run();
+      if(Number(changed?.meta?.changes||0)!==1)return reply({error:'재인증 proof가 이미 사용되었습니다.'},409);
+      await writeAudit(env.DB, row.admin_id, 'session.reauth.consume', resource, scope);
+      return reply({ ok:true, verified:true, scope, resource, consumedAt, actor:`admin:${row.admin_id}` });
     }
 
     if (request.method === 'POST' && url.pathname === '/api/password/reset') {
