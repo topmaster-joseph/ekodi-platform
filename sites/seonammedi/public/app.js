@@ -75,7 +75,7 @@ if(!r.ok)throw new Error('data');const d=await r.json();
 if(timelineResponse?.ok){const timelineBody=await timelineResponse.json().catch(()=>({}));if(Array.isArray(timelineBody.items))d.timeline=timelineBody.items}
 if(pageResponse?.ok){const pageBody=await pageResponse.json().catch(()=>({}));if(Array.isArray(pageBody.page?.status?.items))d.status=pageBody.page.status.items;if(pageBody.page?.organization&&typeof pageBody.page.organization==='object')d.organization=pageBody.page.organization;if(pageBody.finance&&typeof pageBody.finance==='object')d.finance=pageBody.finance}
 window.__SEONAM_MEDI_DATA=d;
-el('lastUpdated').textContent='최종 업데이트 '+d.updatedAt;
+el('lastUpdated').textContent='마지막 갱신 '+d.updatedAt;
 const statusCards=el('statusCards');
 if(statusCards){
   statusCards.innerHTML=d.status.filter(x=>x?.key!=='daily').map((x,i)=>{const key=x.key||['official','news'][i]||('status-'+i);return `<button type="button" class="card status-card" data-status="${escapeHtml(key)}" aria-expanded="false" aria-controls="statusDetail"><span class="status-card-copy"><strong class="status-card-title">${escapeHtml(x.title)}</strong><span class="status-card-text">${escapeHtml(x.text)}</span></span><span class="status-card-action">내용 보기 <span aria-hidden="true">→</span></span></button>`}).join('');
