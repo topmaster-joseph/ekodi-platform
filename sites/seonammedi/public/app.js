@@ -472,7 +472,7 @@ async function loadNotices(){
     publicNotices=Array.isArray(data.items)?data.items:[];host.innerHTML=publicNotices.length?publicNotices.map(noticeCard).join(''):'<p class="muted">등록된 공지가 없습니다.</p>';renderFeaturedNotice(publicNotices);
     host.querySelectorAll('[data-notice-edit]').forEach(button=>button.addEventListener('click',()=>{const item=publicNotices.find(row=>Number(row.id)===Number(button.dataset.noticeEdit));if(item)beginNoticeEdit(item)}));
     host.querySelectorAll('[data-notice-delete]').forEach(button=>button.addEventListener('click',()=>{const item=publicNotices.find(row=>Number(row.id)===Number(button.dataset.noticeDelete));if(item)deleteNotice(item)}));
-    const pathMatch=location.pathname.match(/^\/seonammedi\/notices\/(\d+)\/?$/);const wanted=Number(pathMatch?.[1]||new URLSearchParams(location.search).get('notice')||0);const selected=publicNotices.find(item=>Number(item.id)===wanted);if(selected){showView('notices');showNoticeDetail(selected)}
+    const pathMatch=location.pathname.match(/^(?:\/seonammedi)?\/notices\/(\d+)\/?$/);const wanted=Number(pathMatch?.[1]||new URLSearchParams(location.search).get('notice')||0);const selected=publicNotices.find(item=>Number(item.id)===wanted);if(selected){showView('notices');showNoticeDetail(selected)}
   }catch(error){host.innerHTML='<p class="muted">'+escapeHtml(error.message||'공지 목록을 불러오지 못했습니다.')+'</p>'}
 }
 const NOTICE_IMAGE_MAX_BYTES=5*1024*1024;

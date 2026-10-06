@@ -43,7 +43,7 @@ test('seonammedi post-selection timeline migration reconciles production D1',asy
 
 test('seonammedi civic channel keeps source attribution, media evidence and privacy boundaries',async()=>{const [html,data,app]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('data.json',root),'utf8'),readFile(new URL('app.js',root),'utf8')]);assert.match(html,/사실은 출처와 함께/);assert.match(html,/<h2>회계<\/h2>/);assert.match(html,/개인정보/);const parsed=JSON.parse(data);assert.ok(parsed.timeline.length>=10);assert.ok(parsed.sources.every(s=>s.publisher&&s.url));assert.equal(parsed.finance.raised,null);assert.equal(parsed.mediaPolicy.mode,'source-link-first');for(const row of parsed.timeline){assert.ok(Array.isArray(row.links));assert.ok(Array.isArray(row.media));for(const media of row.media){assert.ok(['photo','video'].includes(media.type));assert.match(media.url,/^https:\/\//);assert.ok(media.source)}}assert.ok(parsed.timeline.some(row=>row.media.some(media=>media.type==='photo')));assert.match(app,/mediaLabel/);assert.match(app,/safeUrl/);});
 
-test('canonical path, assets and feedback API use seonammedi',async()=>{const [html,app,build,router,wrangler]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('../scripts/build.mjs',import.meta.url),'utf8'),readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8'),readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8')]);assert.match(html,/https:\/\/ekodi\.kr\/seonammedi\//);assert.match(html,/\/seonammedi\/app\.css/);assert.match(app,/\/board\/api\/posts/);assert.match(build,/sites\/seonammedi\/public/);assert.match(router,/SEONAMMEDI_PREFIX='\/seonammedi'/);assert.match(router,/DELETED_SEONAM_PREFIXES/);const workerFirst=(wrangler.match(/run_worker_first = \[(.*?)\]/s)?.[1].match(/\"[^\"]+\"/g)||[]);assert.ok(workerFirst.length<=100);assert.doesNotMatch(wrangler,/\"\/seonammedi\\\*\"/);assert.doesNotMatch(wrangler,/\"\/seonam-med\\\*\"/);assert.doesNotMatch(wrangler,/crons\s*=/);assert.doesNotMatch(html,/사이트 일일점검|monitorBadge|id="monitor"/);assert.match(app,/\/api\/seonammedi\/monitor/);});
+test('canonical path, assets and feedback API use seonammedi',async()=>{const [html,app,build,router,wrangler]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('../scripts/build.mjs',import.meta.url),'utf8'),readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8'),readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8')]);assert.match(html,/https:\/\/seonammedi\.kr\//);assert.match(html,/\/seonammedi\/app\.css/);assert.match(app,/\/board\/api\/posts/);assert.match(build,/sites\/seonammedi\/public/);assert.match(router,/SEONAMMEDI_PREFIX='\/seonammedi'/);assert.match(router,/DELETED_SEONAM_PREFIXES/);const workerFirst=(wrangler.match(/run_worker_first = \[(.*?)\]/s)?.[1].match(/\"[^\"]+\"/g)||[]);assert.ok(workerFirst.length<=100);assert.doesNotMatch(wrangler,/\"\/seonammedi\\\*\"/);assert.doesNotMatch(wrangler,/\"\/seonam-med\\\*\"/);assert.doesNotMatch(wrangler,/crons\s*=/);assert.doesNotMatch(html,/사이트 일일점검|monitorBadge|id="monitor"/);assert.match(app,/\/api\/seonammedi\/monitor/);});
 
 test('seonammedi civic canonical D1 table is provisioned by additive migration',async()=>{const [migration,durableMigration,civic]=await Promise.all([readFile(new URL('../migrations/0115_seonammedi_civic_canonical.sql',import.meta.url),'utf8'),readFile(new URL('../migrations/0118_seonammedi_voice_durable_ingress.sql',import.meta.url),'utf8'),readFile(new URL('../seonammedi-civic-control.js',import.meta.url),'utf8')]);assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_civic_voices/);assert.match(migration,/idx_seonammedi_civic_voices_created/);assert.doesNotMatch(migration,/DROP TABLE|ALTER TABLE .* RENAME/);assert.match(durableMigration,/ADD COLUMN submission_key/);assert.match(durableMigration,/idx_seonammedi_civic_voices_submission/);assert.doesNotMatch(durableMigration,/DROP TABLE|ALTER TABLE .* RENAME/);assert.match(civic,/await ensureSubmissionKey\(db\)/);});
 
@@ -574,7 +574,7 @@ test('seonammedi notice permalink is served by the site shell',async()=>{
   assert.equal(response.status,200);
   assert.equal(await response.text(),'/seonammedi/');
   const app=await readFile(new URL('app.js',root),'utf8');
-  assert.match(app,/pathname\.match\(\/\^\\\/seonammedi\\\/notices/);
+  assert.match(app,/pathname\.match\(\/\^\(\?:\\\/seonammedi\)\?\\\/notices/);
   assert.match(app,/find\(item=>Number\(item\.id\)===wanted\)/);
 });
 
@@ -796,4 +796,18 @@ test('seonammedi organization editing is inline on the public user surface',asyn
   assert.match(app,/\/api\/seonammedi\/admin\/pages\/organization/);
   assert.match(app,/if\(admin\.has\('pages'\)\)bindPublicOrganizationAdmin\(\)/);
   assert.doesNotMatch(app,/admin\.attach\(el\('organization'\)/);
+});
+
+
+test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My EKODI',async()=>{
+  const [html,app,adminHtml,minutes,css]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('admin/index.html',root),'utf8'),readFile(new URL('admin/admin-minutes.js',root),'utf8'),readFile(new URL('app.css',root),'utf8')]);
+  assert.match(html,/<link rel="canonical" href="https:\/\/seonammedi\.kr\/">/);
+  assert.match(html,/<a class="brand" href="\/">/);
+  assert.match(html,/<a href="\/admin\/">관리<\/a>/);
+  for(const hash of ['timeline','channels','finance','notices','organization'])assert.match(adminHtml,new RegExp('href="\/#'+hash+'"'));
+  assert.match(adminHtml,/href="\/board">시민의견 관리/);
+  assert.match(app,/\^\(\?:\\\/seonammedi\)\?\\\/notices/);
+  assert.ok(minutes.includes("location.origin+'/minutes/?token='"));
+  assert.match(css,/min-height:100dvh;display:flex;flex-direction:column/);
+  assert.match(css,/footer{margin-top:auto/);
 });
