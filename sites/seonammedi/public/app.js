@@ -318,30 +318,11 @@ if(voiceForm){
     try{
       const response=await fetch('/api/seonammedi/voices',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
       const body=await response.json().catch(()=>({}));
-      if(!response.ok||body.ok!==true||!body.submissionId){const detail=body.message||body.error||body.code||('HTTP '+response.status);throw new Error('등록하지 못했습니다. '+detail)}
+      if(!response.ok||body.ok!==true||!body.id){const detail=body.message||body.error||body.code||('HTTP '+response.status);throw new Error('등록하지 못했습니다. '+detail)}
       voiceForm.reset();
       status.textContent=body.message||'등록되었습니다.';
       await loadPublicVoices();
-      if(body.queued){
-        status.textContent='시민의견이 안전하게 접수되었습니다. 저장 완료를 확인하고 있습니다.';
-        const submissionId=body.submissionId;
-        const started=Date.now();
-        const confirm=async()=>{
-          try{
-            const check=await fetch('/api/seonammedi/voices/submissions/'+encodeURIComponent(submissionId),{cache:'no-store'});
-            const state=await check.json().catch(()=>({}));
-            if(check.ok&&state.ok===true&&state.status==='published'){
-              await loadPublicVoices();
-              status.textContent='시민의견이 등록되어 공개 목록에 반영되었습니다.';
-              return;
-            }
-          }catch{}
-          if(Date.now()-started<30000){setTimeout(confirm,1000);return}
-          await loadPublicVoices();
-          status.textContent='의견은 안전하게 접수되었습니다. 저장 처리가 지연되고 있어 목록을 계속 확인해 주세요.';
-        };
-        setTimeout(confirm,500);
-      }
+      setVoiceCompose(false);
     }catch(error){
       status.textContent=error.message||'등록하지 못했습니다. 잠시 후 다시 시도해 주세요.';
     }finally{
