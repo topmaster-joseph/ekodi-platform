@@ -169,7 +169,7 @@ test('timeline admin is seeded, permissioned and public materials use central ca
   assert.match(app,/\/api\/seonammedi\/timeline/);
   assert.doesNotMatch(adminHtml,/data-panel-target="timeline"/);
   assert.doesNotMatch(adminHtml,/data-panel-target="content"/);
-  assert.match(adminHtml,/data-panel-target="status"[^>]*>현재상황<\/button>/);
+  assert.doesNotMatch(adminHtml,/data-panel-target="status"[^>]*>현재상황<\/button>/);
   assert.match(adminHtml,/data-records-admin-tab="timeline"[^>]*>활동이력<\/button>/);
   assert.match(adminHtml,/id="timelineForm"/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/timeline/);
@@ -303,8 +303,9 @@ test('seonammedi public and admin menus keep the agreed content-first order',asy
   assert.doesNotMatch(html,/<p class="filter-label">활동이력 세부 분류<\/p>/);
   assert.match(html,/data-status-pane="timeline"/);
   assert.match(html,/data-status-pane="materials"/);
-  const adminOrder=['운영홈','현재상황','소통채널','시민의견','회계','공지','조직','내부 회의록','권한·관리자'];
+  const adminOrder=['운영홈','내부 회의록','권한·관리자'];
   cursor=-1;for(const label of adminOrder){const next=adminHtml.indexOf('>'+label+'</button>',cursor+1);assert.ok(next>cursor,'admin menu order: '+label);cursor=next}
+  for(const label of ['현재상황','소통채널','시민의견','회계','공지','조직'])assert.doesNotMatch(adminHtml,new RegExp('data-panel-target="[^"]+"[^>]*>'+label+'<\\/button>'));
   assert.doesNotMatch(adminHtml,/data-panel-target="timeline"|data-panel-target="content"/);
   assert.doesNotMatch(adminHtml,/data-ekodi-site-publication-slot|사이트 공개여부/);
   assert.match(adminHtml,/data-records-admin-tab="timeline"[^>]*>활동이력<\/button>/);
@@ -416,7 +417,7 @@ test('seonammedi exposes seeded related channels on public and admin surfaces',a
   assert.match(app,/ArrowLeft/);
   assert.match(app,/renderChannelPlatformTabs/);
   assert.match(app,/showChannelPreview\(publicChannels\.indexOf\(rows\[selectedRow\]\),\{updateRoute\}\)/);
-  assert.match(adminHtml,/data-panel-target="channels"/);
+  assert.doesNotMatch(adminHtml,/data-panel-target="channels"[^>]*>소통채널<\/button>/);
   assert.match(adminHtml,/소통채널 관리/);
   assert.match(migration,/instagram\.com\/wonokoh/);
   assert.match(migration,/youtube\.com\/@Mokpo-tv/);
@@ -757,4 +758,27 @@ test('seonammedi citizen voices finance and notices share the embedded module la
   assert.match(app,/function setVoiceCompose\(open\)/);
   assert.match(css,/\.module-shell\{display:grid;grid-template-columns:minmax\(190px,250px\) minmax\(0,1fr\)/);
   assert.match(css,/@media\(max-width:760px\)\{\.module-section/);
+});
+
+
+test('seonammedi registered Google admins manage public content from the user surface while standalone admin stays essential-only',async()=>{
+  const [html,app,adminHtml,adminJs,voiceAdmin]=await Promise.all([
+    readFile(new URL('index.html',root),'utf8'),
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('admin/admin.js',root),'utf8'),
+    readFile(new URL('voice-public-admin.js',root),'utf8')
+  ]);
+  assert.match(app,/공지 바로 수정/);
+  assert.match(app,/조직 바로 수정/);
+  assert.match(app,/활동이력 관리/);
+  assert.match(app,/소통채널 바로 수정/);
+  assert.match(app,/회계 바로 수정/);
+  assert.match(voiceAdmin,/voice-inline-admin-delete/);
+  assert.match(voiceAdmin,/\/board\/api\/admin\/posts/);
+  assert.match(adminHtml,/data-panel-target="minutes"[^>]*>내부 회의록<\/button>/);
+  assert.match(adminHtml,/data-panel-target="access"[^>]*>권한·관리자<\/button>/);
+  for(const label of ['현재상황','소통채널','시민의견','회계','공지','조직'])assert.doesNotMatch(adminHtml,new RegExp('data-panel-target="[^"]+"[^>]*>'+label+'<\\/button>'));
+  assert.match(adminHtml,/공지·시민의견·활동이력·회계·조직·소통채널은 로그인한 관리자에게 사용자 화면에서 바로 관리 도구가 표시됩니다/);
+  assert.match(adminJs,/navVisibility/);
 });
