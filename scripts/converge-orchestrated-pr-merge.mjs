@@ -3,6 +3,7 @@ const token=String(process.env.GH_TOKEN||'').trim();
 const branch=String(process.env.GITHUB_REF_NAME||'').trim();
 const headSha=String(process.env.GITHUB_SHA||'').trim();
 const required=['test','EKODI AI Orchestration Gate'];
+// User-authored reconciliation touch: retrigger protected PR checks after GitHub update-branch.
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function fail(m){throw new Error('[EKODI][ORCH-AUTO-MERGE] '+m)}
 async function api(path,init={}){
