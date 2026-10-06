@@ -58,7 +58,8 @@ test('all three board pages share the SeonamMedi header and footer contract',asy
   assert.match(worker,/link\('\/board\/voices'/);
   assert.match(worker,/link\('\/board\/finance'/);
   assert.match(worker,/link\('\/board\/notices'/);
-  assert.match(worker,/href="\/admin\/">관리/);
+  assert.match(worker,/id="adminLink" href="#admin">관리자/);
+  assert.match(worker,/document\.getElementById\("adminLink"\)\?\.addEventListener\("click",[\s\S]*login\(\)/);
 });
 
 test('independent board deployment provisions its own storage and verifies real CRUD',async()=>{
@@ -103,4 +104,20 @@ test('standalone boards reuse EKODI authentication and own their mutations',asyn
   assert.match(voiceAdmin,/\/board\/api\/admin\/posts/);
   assert.doesNotMatch(voiceAdmin,/\/api\/seonammedi\/admin\/voices/);
   assert.match(adminJs,/\/board\/api\/admin\/posts/);
+});
+
+
+test('SeonamMedi board admin login receives a one-time portal handoff token on the customer domain',async()=>{
+  const [worker,auth,access]=await Promise.all([
+    read('services/independent-board/worker.js'),
+    read('auth-site/auth.js'),
+    read('supabase/functions/access-api/index.ts')
+  ]);
+  assert.match(worker,/commonScript\('\/board\/voices'\)/);
+  assert.match(worker,/return_to",location\.origin\+"\'\+returnPath\+\'"/);
+  assert.match(worker,/\/api\/seonammedi\/admin\/auth\/exchange/);
+  assert.match(auth,/seonamMediHandoff/);
+  assert.match(auth,/await handoffToService\(\)/);
+  assert.match(access,/portal:\["https:\/\/ekodi\.kr","https:\/\/seonammedi\.kr"/);
+  assert.match(access,/if\(site==="portal"\)[\s\S]*generateLink\(\{type:"magiclink",email\}\)[\s\S]*workspace:null/);
 });
