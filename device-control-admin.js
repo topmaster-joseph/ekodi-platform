@@ -639,7 +639,10 @@
         </div>
       </details>
       `;
-    content.append(panel);
+    const quickSetup = panel.querySelector('.device-setup-tools');
+    const metrics = panel.querySelector('.device-metrics');
+    if (quickSetup && metrics) metrics.before(quickSetup);
+        content.append(panel);
     const demandLoader=globalThis.EKODIAdminDemand;
     const loadTapoScript=demandLoader?.loadScript||demandLoader?.loadJs;
     if(typeof loadTapoScript==='function') Promise.resolve(loadTapoScript.call(demandLoader,'tapo-device-admin.js')).catch(error=>console.warn('[EKODI Tapo Admin]',error.message));
