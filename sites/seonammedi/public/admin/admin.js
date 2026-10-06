@@ -11,7 +11,7 @@ const qsa=(sel,root=document)=>[...root.querySelectorAll(sel)];
 const text=(node,value)=>{if(node)node.textContent=String(value??'')};
 const dateText=value=>{if(!value)return'';try{return new Date(value).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}catch{return String(value)}};
 
-function authUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','portal');u.searchParams.set('direct','1');u.searchParams.set('return_to',location.origin+'/admin/');return u.href}
+function authUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','seonammedi');u.searchParams.set('direct','1');u.searchParams.set('return_to',location.origin+'/admin/');return u.href}
 function storedSession(){try{const value=JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null');return value?.accessToken?value:null}catch{return null}}
 function saveSession(value){sessionStorage.setItem(SESSION_KEY,JSON.stringify(value))}
 function clearSession(){sessionStorage.removeItem(SESSION_KEY)}
