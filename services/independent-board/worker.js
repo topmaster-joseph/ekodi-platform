@@ -68,7 +68,7 @@ async function adminDeleteReply(req,env,postId,replyId){
 }
 
 function boardPage(){
-  return new Response(\`<!doctype html>
+  return new Response(`<!doctype html>
 <html lang="ko">
 <head>
 <meta charset="utf-8">
@@ -130,7 +130,7 @@ function boardPage(){
   load().catch(err=>{status.textContent=err.message;list.innerHTML='<p class="empty">시민의견을 불러오지 못했습니다.</p>'});
 })();
 </script>
-</body></html>\`,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store","x-ekodi-board-independent":"true"}});
+</body></html>`,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store","x-ekodi-board-independent":"true"}});
 }
 
 export default {async fetch(req,env){
