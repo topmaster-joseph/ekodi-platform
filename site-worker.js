@@ -34,6 +34,7 @@ const PUBLIC_ASSETS = new Set([
   '/pizzamaru-mokpodae.js',
 ]);
 const PUBLIC_ADMIN_ALIASES = new Set(['/admin', '/admin/']);
+const CONTROL_ASSETS = new Set(['/control.css','/control.js']);
 const WORKSPACE_ADMIN_ASSET_ALIASES = new Map([
   ['/cgma/admin/assets/cgma-member-admin.js','/cgma-member-admin.js'],
   ['/cgma/admin/assets/cgma-member-admin.css','/cgma-member-admin.css'],
@@ -651,6 +652,18 @@ export default {
         response.headers.set('X-EKODI-Route','mcp-connect-auth');
         response.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
         return response;
+      }
+      if (url.pathname === '/control' || url.pathname === '/control/') {
+        const response = await env.ASSETS.fetch(assetRequest(request, '/control'));
+        const secured = withHostSecurity(response, ADMIN_CSP, 'no-store', 'control-surface');
+        secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+        return secured;
+      }
+      if (CONTROL_ASSETS.has(url.pathname)) {
+        const response = await env.ASSETS.fetch(request);
+        const secured = withHostSecurity(response, ADMIN_CSP, 'no-store', 'control-asset');
+        secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+        return secured;
       }
       if (url.pathname === '/ai') {
         const target = new URL(request.url);
