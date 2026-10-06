@@ -81,7 +81,12 @@ test('hub source uses canonical path-only routing and apex Admin/Auth links', ()
 
 
 test('Shared Site release verifies the canonical Live service owner contract', () => {
-  const live = releaseManifest.worker.requests.find(item => item.url === 'https://ekodi.kr/live');
+  const slashless = releaseManifest.worker.requests.find(item => item.url === 'https://ekodi.kr/live');
+  const live = releaseManifest.worker.requests.find(item => item.url === 'https://ekodi.kr/live/');
+  assert.ok(slashless);
+  assert.deepEqual(slashless.statuses,[308]);
+  assert.ok(slashless.headerExpect.includes('location: https://ekodi.kr/live/'));
+  assert.equal(slashless.rollbackVerify, true);
   assert.ok(live);
   for (const marker of ['EKODI Live','LIVE BROADCAST PROFESSIONAL SERVICE','라이브 서비스 사이트']) assert.ok(live.expect.includes(marker));
   assert.ok(live.headerExpect.includes('x-ekodi-route: live-service-hub'));

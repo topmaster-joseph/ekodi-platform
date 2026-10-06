@@ -279,3 +279,18 @@ test('connect cannot be claimed as a workspace slug',async()=>{
   assert.equal(policy.isWorkspaceSlug('connect'),false);
   assert.equal(policy.workspaceRouteFromPublicPath('/connect'),null);
 });
+
+
+test('shared-site release probes honor canonical slash parity',async()=>{
+  const manifest=JSON.parse(await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  for(const root of ['/live','/pay','/cloud']){
+    const slashless=manifest.worker.requests.find(item=>item.url===`https://ekodi.kr${root}`);
+    const canonical=manifest.worker.requests.find(item=>item.url===`https://ekodi.kr${root}/`);
+    assert.ok(slashless,`missing slashless probe for ${root}`);
+    assert.deepEqual(slashless.statuses,[308]);
+    assert.equal(slashless.redirect,'manual');
+    assert.ok(slashless.headerExpect?.includes(`location: https://ekodi.kr${root}/`));
+    assert.ok(canonical,`missing canonical trailing-slash probe for ${root}`);
+    assert.deepEqual(canonical.statuses,[200]);
+  }
+});
