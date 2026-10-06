@@ -1,4 +1,4 @@
-import { durableWriteQueueAvailable, enqueueDurableWrite } from './write-ingress.js';
+import { listSiteBoardPostsWithComments, createSiteBoardPost, createSiteBoardComment } from './site-board-control.js';
 import { createBoardAdapter, handleBoardAdapter, consumeBoardAdapter } from './common-board-adapter.js';
 import { createBoardRuntimeGuard } from './board-runtime-guard.js';
 
@@ -122,21 +122,16 @@ async function submissionStatus(env,submissionId){
 
 async function listPublicVoices(env){
   if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
-  // Public reads are deliberately read-only. Schema is provisioned by migrations;
-  // request-time DDL can contend with D1 and make the list fail while health is green.
-  const voices=await env.DB.prepare(`SELECT id,category,display_name,message,created_at,updated_at
-    FROM seonammedi_civic_voices WHERE review_status='published' ORDER BY id DESC LIMIT 100`).all();
-  const replies=await env.DB.prepare(`SELECT r.id,r.voice_id,r.display_name,r.message,r.created_at
-    FROM seonammedi_civic_voice_replies r
-    JOIN seonammedi_civic_voices v ON v.id=r.voice_id
-    WHERE v.review_status='published'
-    ORDER BY r.id ASC LIMIT 1000`).all();
-  const byVoice=new Map();
-  for(const row of replies.results||[]){
-    const key=Number(row.voice_id);if(!byVoice.has(key))byVoice.set(key,[]);
-    byVoice.get(key).push({id:Number(row.id),displayName:row.display_name||'익명',message:row.message||'',createdAt:row.created_at});
-  }
-  return json({ok:true,items:(voices.results||[]).map(row=>({id:Number(row.id),category:row.category,displayName:row.display_name||'익명',message:row.message||'',createdAt:row.created_at,updatedAt:row.updated_at,replies:byVoice.get(Number(row.id))||[]}))});
+  const posts=await listSiteBoardPostsWithComments(env,'seonammedi');
+  return json({ok:true,storage:'site-board',items:posts.map(post=>({
+    id:Number(post.id),
+    category:post.categoryId||'other',
+    displayName:post.title||'익명',
+    message:post.body||'',
+    createdAt:post.createdAt,
+    updatedAt:post.updatedAt,
+    replies:(post.comments||[]).map(reply=>({id:Number(reply.id),displayName:'익명',message:reply.body||'',createdAt:reply.createdAt}))
+  }))});
 }
 
 async function createPublicReply(request,env,voiceId){
@@ -148,15 +143,17 @@ async function createPublicReply(request,env,voiceId){
   const displayName=clean(body?.name,80);
   const message=clean(body?.message,1500);
   if(!message)return json({ok:false,error:'invalid_message',message:'답글 내용을 입력해 주세요.'},400);
-  const voice=await env.DB.prepare("SELECT id FROM seonammedi_civic_voices WHERE id=? AND review_status='published'").bind(voiceId).first();
-  if(!voice?.id)return json({ok:false,error:'voice_not_found'},404);
   const requestFingerprint=await fingerprint(request);
   const limited=await applyIngressRateLimit(env,'reply:'+requestFingerprint);
   if(limited?.success===false)return json({ok:false,error:'rate_limited',message:'등록이 많습니다. 잠시 후 다시 시도해 주세요.'},429,{'retry-after':'30'});
-  const now=new Date().toISOString();
-  const result=await env.DB.prepare('INSERT INTO seonammedi_civic_voice_replies (voice_id,display_name,message,request_fingerprint,created_at) VALUES (?,?,?,?,?)')
-    .bind(voiceId,displayName,message,requestFingerprint,now).run();
-  return json({ok:true,id:Number(result?.meta?.last_row_id||0),message:'답글이 등록되었습니다.'},201);
+  try{
+    const id=await createSiteBoardComment(env,'seonammedi',voiceId,{body:message});
+    return json({ok:true,id,message:'답글이 등록되었습니다.'},201);
+  }catch(error){
+    if(String(error?.message||error)==='post_not_found')return json({ok:false,error:'voice_not_found'},404);
+    console.error('seonammedi board reply failed',error);
+    return json({ok:false,error:'board_write_failed',message:'답글 저장에 실패했습니다.'},503);
+  }
 }
 
 function originAllowed(request,env){
@@ -191,24 +188,12 @@ async function createPublicVoice(request,env){
   const requestFingerprint=await fingerprint(request);
   const limited=await applyIngressRateLimit(env,requestFingerprint);
   if(limited?.success===false)return json({ok:false,error:'rate_limited',message:'등록이 많습니다. 잠시 후 다시 시도해 주세요.'},429,{'retry-after':'30'});
-  const submissionId=crypto.randomUUID();
-  const acceptedAt=new Date().toISOString();
-  const payload={submissionId,category,displayName,contact,message,publicConsent:true,requestFingerprint,acceptedAt};
-
   try{
-    if(durableWriteQueueAvailable(env)){
-      const queued=await enqueueDurableWrite(env,{kind:QUEUE_KIND,workspaceId:'seonammedi',idempotencyKey:submissionId,payload,acceptedAt});
-      if(!queued.ok)throw new Error(queued.error||'queue_rejected');
-      return json({ok:true,queued:true,submissionId,message:'시민의견이 등록되었습니다. 저장 처리되는 즉시 공개됩니다.'},202);
-    }
-    if(env?.ENVIRONMENT!=='production'&&env?.DB?.prepare){
-      const id=await persistVoice(env,payload);
-      return json({ok:true,queued:false,id,submissionId,message:'시민의견이 등록되어 바로 게시되었습니다.'},201);
-    }
-    return json({ok:false,error:'durable_queue_unavailable',message:'등록 저장소를 준비 중입니다. 잠시 후 다시 시도해 주세요.'},503,{'retry-after':'5'});
+    const id=await createSiteBoardPost(env,'seonammedi',{title:displayName||'익명',body:message,categoryId:category});
+    return json({ok:true,queued:false,id,storage:'site-board',message:'시민의견이 등록되어 바로 게시되었습니다.'},201);
   }catch(error){
-    console.error('seonammedi civic durable ingress failed',error);
-    return json({ok:false,error:'write_ingress_failed',message:'등록이 많습니다. 잠시 후 다시 시도해 주세요.'},503,{'retry-after':'5'});
+    console.error('seonammedi independent board write failed',error);
+    return json({ok:false,error:'board_write_failed',message:'게시판 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.'},503,{'retry-after':'5'});
   }
 }
 
