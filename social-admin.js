@@ -102,7 +102,6 @@
   }
 
   function install() {
-    if (!token()) return;
     const nav = document.querySelector('.sidebar nav');
     const content = document.querySelector('.content');
     if (!nav || !content || content.querySelector('[data-panel~="social"]')) return;
