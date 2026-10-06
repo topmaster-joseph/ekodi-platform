@@ -118,3 +118,8 @@
 .voice-inline-admin-status.error{font-weight:700}
 .public-voice-reply .voice-inline-admin-delete{margin-left:auto;font-size:.78rem;padding:4px 7px}
 @media(max-width:640px){.voice-inline-admin-grid{grid-template-columns:1fr}}
+
+/* Independent board stays visually inside the citizen-voice view while retaining its own runtime. */
+.board-embed{width:100%;min-height:70vh;border:1px solid #ddd;background:#fff;overflow:hidden}
+.board-embed iframe{display:block;width:100%;min-height:70vh;border:0;background:#fff}
+@media(max-width:720px){.board-embed,.board-embed iframe{min-height:78vh}}

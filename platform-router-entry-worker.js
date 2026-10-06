@@ -55,7 +55,7 @@ import { localRegionOperationsAdminScript } from './local-region-operations-admi
 import { regionalCommerceProgramFromLocalRoute, regionalCommerceProgramFromPath } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
-import { handleSeonamMediCivicApi, consumeSeonamMediVoiceMessage } from './seonammedi-civic-control.js';
+
 import { handleSeonamMediAdminApi } from './seonammedi-admin-control.js';
 import { handleSeonamMediMonitorApi } from './seonammedi-monitor.js';
 import { handleSiteBoardRequest } from './site-board-control.js';
@@ -352,7 +352,7 @@ async function routePlatform(request,env,ctx){
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
     const siteBoard=await handleSiteBoardRequest(request,env);if(siteBoard)return siteBoard;
     if(host===PUBLIC_HOST&&url.pathname.startsWith(MALL_API_APEX_PREFIX)){const mallApi=await routeMallApiApex(request,env);if(mallApi)return mallApi;}
-    if((host===PUBLIC_HOST||SEONAMMEDI_HOSTS.has(host))&&url.pathname.startsWith('/api/seonammedi/')){const admin=await handleSeonamMediAdminApi(request,env);if(admin)return admin;const monitor=await handleSeonamMediMonitorApi(request,env);if(monitor)return monitor;const civic=await handleSeonamMediCivicApi(request,env);if(civic)return civic;}
+    if((host===PUBLIC_HOST||SEONAMMEDI_HOSTS.has(host))&&url.pathname.startsWith('/api/seonammedi/')){const admin=await handleSeonamMediAdminApi(request,env);if(admin)return admin;const monitor=await handleSeonamMediMonitorApi(request,env);if(monitor)return monitor;}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isDeletedSeonamPath(url.pathname))return deletedSeonamResponse();
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isSeonamMediPath(url.pathname))return routeSeonamMediStatic(request,env);
     if(SEONAMMEDI_HOSTS.has(host)&&['GET','HEAD'].includes(request.method))return routeSeonamMediDomain(request,env);
@@ -535,17 +535,5 @@ export default {
     let response=await routePlatform(request,env,ctx);
     if(adminPublicationSite)response=injectSitePublicationAdmin(response,adminPublicationSite);
     return applyPlatformSecurityHeaders(response,request);
-  },
-  async queue(batch,env){
-    for(const message of batch.messages){
-      try{
-        const handled=await consumeSeonamMediVoiceMessage(message.body,env);
-        if(!handled)throw new Error('unknown_write_ingress_kind');
-        message.ack();
-      }catch(error){
-        console.error('EKODI durable write consumer failed',error);
-        message.retry();
-      }
-    }
   },
 };
