@@ -67,8 +67,8 @@ test('board owns categories, attachments, search, backups and comment moderation
   for(const table of ['ekodi_board_categories','ekodi_board_post_categories','ekodi_board_attachments','ekodi_board_snapshots']){
     assert.ok(source.includes('CREATE TABLE IF NOT EXISTS '+table),table);
   }
-  for(const route of ['/api/search','/api/categories','/attachments','/api/snapshots','/api/comments']){
-    assert.ok(source.includes(route),route);
+  for(const marker of ["sub==='/api/search'","sub==='/api/categories'","attachmentPostMatch","sub==='/api/snapshots'","commentItemMatch"]){
+    assert.ok(source.includes(marker),marker);
   }
   assert.match(source,/sharedPlatformDependency:'authentication_identity_only'/);
   assert.match(source,/boardLocalAuthorization:true/);
