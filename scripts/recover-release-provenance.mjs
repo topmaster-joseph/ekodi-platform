@@ -101,10 +101,20 @@ if(!recoveryNumber)fail('recovery PR number missing');
 await github(`/repos/${repo}/issues/${prNumber}/comments`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({body:`EKODI automatic release-provenance recovery created #${recoveryNumber} on \`${branchRef}\` (task \`${taskId}\`). This PR is superseded by the orchestrator-issued branch.`})});
 await github(`/repos/${repo}/pulls/${prNumber}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({state:'closed'})});
 
-const merge=await github(`/repos/${repo}/pulls/${recoveryNumber}/merge`,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({merge_method:'squash'})});
-const mergeDisposition=merge.response.ok?'merged-immediately':`guarded-pending-http-${merge.response.status}`;
-if(!merge.response.ok){
-  await github(`/repos/${repo}/issues/${recoveryNumber}/comments`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({body:'EKODI recovery branch issued successfully. Merge remains guarded by required checks; production deployment will continue after the repository gate allows merge.'})});
+let mergeDisposition='guarded-auto-merge-requested';
+const pullRequestId=text(recoveryPr?.node_id,160);
+if(!pullRequestId)fail('recovery PR GraphQL node id missing');
+const autoMerge=await request('https://api.github.com/graphql',{
+  method:'POST',
+  headers:{accept:'application/vnd.github+json','content-type':'application/json','x-github-api-version':'2022-11-28',authorization:`Bearer ${ghToken}`},
+  body:JSON.stringify({query:'mutation($id:ID!){enablePullRequestAutoMerge(input:{pullRequestId:$id,mergeMethod:SQUASH}){pullRequest{number autoMergeRequest{enabledAt}}}}',variables:{id:pullRequestId}})
+});
+if(!autoMerge.response.ok||autoMerge.data?.errors?.length){
+  const merge=await github(`/repos/${repo}/pulls/${recoveryNumber}/merge`,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({merge_method:'squash'})});
+  mergeDisposition=merge.response.ok?'merged-immediately':`guarded-pending-http-${merge.response.status}`;
+  if(!merge.response.ok){
+    await github(`/repos/${repo}/issues/${recoveryNumber}/comments`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({body:'EKODI recovery branch issued successfully. Required checks still protect merge. If repository auto-merge is unavailable, the guarded merge queue remains the only unresolved transport step.'})});
+  }
 }
 
 out('action','recovered');out('task_id',taskId);out('branch_ref',branchRef);out('recovery_pr',recoveryNumber);out('merge_disposition',mergeDisposition);
