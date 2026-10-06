@@ -101,17 +101,24 @@ jobs:
             echo "board UI did not converge: $url" >&2
             return 1
           }
+          verify_contains() {
+            local label="$1" needle="$2" body="$3"
+            if ! grep -Fq "$needle" <<<"$body"; then
+              echo "production board UI check failed: $label (missing: $needle)" >&2
+              return 1
+            fi
+          }
           voices="$(fetch_board https://seonammedi.kr/board/voices)"
           finance="$(fetch_board https://seonammedi.kr/board/finance)"
           notices="$(fetch_board https://seonammedi.kr/board/notices)"
-          grep -q 'id="writeToggle"' <<<"$voices"
-          grep -q 'id="searchToggle"' <<<"$voices"
-          grep -q 'id="voiceList"' <<<"$voices"
-          grep -q 'aria-current="page" href="/board/voices">시민의견' <<<"$voices"
-          grep -q 'aria-current="page" href="/board/finance">회계' <<<"$finance"
-          grep -q 'id="raised"' <<<"$finance"
-          grep -q 'aria-current="page" href="/board/notices">공지' <<<"$notices"
-          grep -q 'NOTICE BOARD' <<<"$notices"
+          verify_contains "voices write control" 'id="writeToggle"' "$voices"
+          verify_contains "voices search control" 'id="searchToggle"' "$voices"
+          verify_contains "voices list" 'id="voiceList"' "$voices"
+          verify_contains "voices active nav" 'aria-current="page" href="/board/voices">시민의견' "$voices"
+          verify_contains "finance active nav" 'aria-current="page" href="/board/finance">회계' "$finance"
+          verify_contains "finance summary" 'id="raised"' "$finance"
+          verify_contains "notices active nav" 'aria-current="page" href="/board/notices">공지' "$notices"
+          verify_contains "notices heading" 'NOTICE BOARD' "$notices"
           for html in "$voices" "$finance" "$notices"; do
             grep -q '서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널' <<<"$html"
             grep -q '자료의 성격과 출처를 구분해 보존합니다' <<<"$html"
