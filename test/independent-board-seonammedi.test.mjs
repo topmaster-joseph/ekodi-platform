@@ -46,18 +46,18 @@ test('finance and notice boards are first-class standalone board routes',async()
   assert.match(worker,/requirePermission\(req,'notices'\)/);
   assert.match(migration,/CREATE TABLE IF NOT EXISTS finance_posts/);
   assert.match(migration,/CREATE TABLE IF NOT EXISTS notice_posts/);
-  assert.match(site,/href="\/board\/voices">시민의견/);
-  assert.match(site,/href="\/board\/finance">회계/);
-  assert.match(site,/href="\/board\/notices">공지/);
+  assert.match(site,/href="https:\/\/seonammedi\.kr\/board\/voices">시민의견/);
+  assert.match(site,/href="https:\/\/seonammedi\.kr\/board\/finance">회계/);
+  assert.match(site,/href="https:\/\/seonammedi\.kr\/board\/notices">공지/);
 });
 
 test('all three board pages share the SeonamMedi header and footer contract',async()=>{
   const worker=await read('services/independent-board/worker.js');
   assert.match(worker,/서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널/);
   assert.match(worker,/자료의 성격과 출처를 구분해 보존합니다/);
-  assert.match(worker,/link\('\/board\/voices'/);
-  assert.match(worker,/link\('\/board\/finance'/);
-  assert.match(worker,/link\('\/board\/notices'/);
+  assert.match(worker,/link\('https:\/\/seonammedi\.kr\/board\/voices'/);
+  assert.match(worker,/link\('https:\/\/seonammedi\.kr\/board\/finance'/);
+  assert.match(worker,/link\('https:\/\/seonammedi\.kr\/board\/notices'/);
   assert.match(worker,/id="adminLink" href="#admin">관리자/);
   assert.match(worker,/document\.getElementById\("adminLink"\)\?\.addEventListener\("click",[\s\S]*login\(\)/);
 });
@@ -107,15 +107,23 @@ test('standalone boards reuse EKODI authentication and own their mutations',asyn
 });
 
 
-test('SeonamMedi board admin login receives a one-time portal handoff token on the customer domain',async()=>{
-  const [worker,auth,access]=await Promise.all([
+test('SeonamMedi board routes and admin handoff stay pinned to the customer domain',async()=>{
+  const [worker,auth,access,site,adminSite]=await Promise.all([
     read('services/independent-board/worker.js'),
     read('auth-site/auth.js'),
-    read('supabase/functions/access-api/index.ts')
+    read('supabase/functions/access-api/index.ts'),
+    read('sites/seonammedi/public/index.html'),
+    read('sites/seonammedi/public/admin/index.html')
   ]);
   assert.match(worker,/commonScript\('\/board\/voices'\)/);
-  assert.match(worker,/return_to",location\.origin\+"\'\+returnPath\+\'"/);
+  assert.match(worker,/return_to","https:\/\/seonammedi\.kr\'\+returnPath\+\'"/);
   assert.match(worker,/\/api\/seonammedi\/admin\/auth\/exchange/);
+  assert.doesNotMatch(site,/href="\/board\/(?:voices|finance|notices)"/);
+  assert.doesNotMatch(adminSite,/href="\/board\/(?:voices|finance|notices)"/);
+  for(const route of ['voices','finance','notices']){
+    assert.match(site,new RegExp('href="https://seonammedi\\.kr/board/'+route+'"'));
+    assert.match(adminSite,new RegExp('href="https://seonammedi\\.kr/board/'+route+'"'));
+  }
   assert.match(auth,/seonamMediHandoff/);
   assert.match(auth,/await handoffToService\(\)/);
   assert.match(access,/portal:\["https:\/\/ekodi\.kr","https:\/\/seonammedi\.kr"/);
