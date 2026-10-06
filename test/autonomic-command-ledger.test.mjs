@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { claimEkodiCommandTask, ingestEkodiPulse, EKODI_COMMAND_LEDGER } from '../ekodi-command-ledger.js';
+import { claimEkodiCommandTask, ingestEkodiPulse, settleEkodiCommandTask, EKODI_COMMAND_LEDGER } from '../ekodi-command-ledger.js';
 
 function fakeDb() {
   const tasks = new Map();
@@ -51,6 +51,19 @@ function fakeDb() {
             row.updated_at=this.args[1];
             return { success:true, meta:{ changes:1 } };
           }
+          if (/UPDATE ai_command_tasks SET\s+state = \?/.test(sql)) {
+            const [state,next_attempt_at,plan_json,result_json,evidence_json,last_error,updated_at,closed_at,id] = this.args;
+            const row = tasks.get(id);
+            if (row) Object.assign(row,{ state,next_attempt_at,lease_until:null,plan_json,result_json,evidence_json,last_error,updated_at,closed_at });
+            return { success:true, meta:{ changes:row ? 1 : 0 } };
+          }
+          if (/INSERT INTO ai_command_runs/.test(sql)) return { success:true, meta:{ changes:1 } };
+          if (/UPDATE ai_pulse_events SET state = \?, processed_at = \? WHERE id = \?/.test(sql)) {
+            const [state,processed_at,id] = this.args;
+            const row = events.get(id);
+            if (row) Object.assign(row,{ state, processed_at });
+            return { success:true, meta:{ changes:row ? 1 : 0 } };
+          }
           return { success:true, meta:{ changes:0 } };
         },
         async first() {
@@ -100,4 +113,27 @@ test('human-gated autonomic event is persisted but never enters the executable q
 test('command ledger recognizes auto_blocked without changing human_gate behavior', () => {
   assert.ok(EKODI_COMMAND_LEDGER.states.includes('auto_blocked'));
   assert.ok(EKODI_COMMAND_LEDGER.states.includes('human_gate'));
+});
+
+
+test('auto_blocked settlement closes the task and mirrors the pulse without retry', async () => {
+  const DB=fakeDb();
+  const task=await ingestEkodiPulse(DB,{
+    taskId:'task_auto_blocked',
+    goal:'Preserve an automatically blocked result.',
+    event:{
+      id:'auto_blocked_event',
+      kind:'system_event',
+      source:'test',
+      summary:'Blocked by policy.',
+      changeClass:'green',
+      actionable:true,
+    },
+  });
+  const settled=await settleEkodiCommandTask(DB,task,{ state:'auto_blocked', reason:'policy_blocked' },{ now:Date.UTC(2026,9,6,7,45,0) });
+  assert.equal(settled.state,'auto_blocked');
+  assert.equal(settled.event.state,'auto_blocked');
+  assert.equal(settled.nextAttemptAt,null);
+  assert.ok(settled.closedAt);
+  assert.equal(DB.tasks.get(task.id).state,'auto_blocked');
 });
