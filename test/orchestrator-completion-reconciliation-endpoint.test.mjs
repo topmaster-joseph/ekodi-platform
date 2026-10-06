@@ -58,6 +58,7 @@ function dbFixture(){
     pr_ref:null,
     created_at:'2026-10-05T00:00:00.000Z',
     updated_at:'2026-10-05T00:00:01.000Z',
+    reconciliation_checked_at:null,
     completed_at:null,
     target_json:'{}',
     intent:'test',
@@ -78,12 +79,16 @@ function dbFixture(){
           return null;
         },
         async all(){
-          if(sql.includes('FROM ekodi_orchestrator_tasks')&&sql.includes('ORDER BY updated_at ASC LIMIT 50')){
-            return {results:[{task_id:row.task_id,branch_ref:row.branch_ref,state:row.state,updated_at:row.updated_at}]};
+          if(sql.includes('FROM ekodi_orchestrator_tasks')&&sql.includes('reconciliation_checked_at ASC')&&sql.includes('updated_at DESC')&&sql.includes('LIMIT 50')){
+            return {results:[{task_id:row.task_id,branch_ref:row.branch_ref,state:row.state,updated_at:row.updated_at,reconciliation_checked_at:row.reconciliation_checked_at}]};
           }
           return {results:[]};
         },
         async run(){
+          if(sql.startsWith('UPDATE ekodi_orchestrator_tasks SET reconciliation_checked_at=')){
+            row.reconciliation_checked_at=this.args[0];
+            return {meta:{changes:1}};
+          }
           if(sql.startsWith('UPDATE ekodi_orchestrator_tasks SET state=\'completed\'')){
             row.state='completed';
             row.state_version+=1;
@@ -132,6 +137,8 @@ test('OIDC workflow can list only nonterminal delegated deployment candidates',a
   const body=await response.json();
   assert.equal(body.ok,true);
   assert.equal(body.authority,'ekodi-orchestrator');
+  assert.equal(body.selection,'fair-round-robin');
+  assert.match(body.checkedAt,/^\d{4}-\d{2}-\d{2}T/);
   assert.deepEqual(body.candidates,[{taskId,branchRef,state:'assigned',updatedAt:'2026-10-05T00:00:01.000Z'}]);
 });
 
@@ -182,4 +189,18 @@ test('completion endpoint rejects unauthenticated callers before reading ledger'
   const body=await response.json();
   assert.equal(body.ok,false);
   assert.equal(body.reason,'github_actions_oidc_required');
+});
+
+
+test('candidate selection rotates reconciliation attempts instead of pinning the same oldest 50',async()=>{
+  const {token,fetchImpl}=oidcFixture();
+  const {env,row}=dbFixture();
+  assert.equal(row.reconciliation_checked_at,null);
+  const response=await handleOrchestratorCompletionReconciliation(request(token,{action:'candidates'}),env,{fetchImpl});
+  assert.equal(response.status,200);
+  assert.match(String(row.reconciliation_checked_at),/^\d{4}-\d{2}-\d{2}T/);
+  const source=await import('node:fs/promises').then(fs=>fs.readFile(new URL('../ekodi-orchestrator-task-adapter.js',import.meta.url),'utf8'));
+  assert.match(source,/CASE WHEN reconciliation_checked_at IS NULL THEN 0 ELSE 1 END ASC/);
+  assert.match(source,/reconciliation_checked_at ASC, updated_at DESC/);
+  assert.doesNotMatch(source,/ORDER BY updated_at ASC LIMIT 50/);
 });
