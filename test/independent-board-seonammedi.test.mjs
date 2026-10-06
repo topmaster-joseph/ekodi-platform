@@ -41,7 +41,7 @@ test('board schema keeps private contact out of the public read model',async()=>
   ]);
   assert.match(migration,/private_contact TEXT NOT NULL DEFAULT ''/);
   const listStart=worker.indexOf('async function list');
-  const listEnd=worker.indexOf('export default',listStart);
+  const listEnd=worker.indexOf('async function adminList',listStart);
   const listBlock=worker.slice(listStart,listEnd);
   assert.doesNotMatch(listBlock,/private_contact/);
 });
