@@ -219,30 +219,76 @@ function degradedValue(role, reason) {
   });
 }
 
-async function runAssigned({ env, provider, taskName, context, role, objective, timeoutMs, governance = {} }) {
-  if (!provider) {
-    return Object.freeze({ role, provider: null, mode: 'core_only', ok: false, value: degradedValue(role, 'no_eligible_provider') });
+function failoverCandidates(providers, preferredProviderId, requiredCapabilities = [], excludeProviderIds = []) {
+  const excluded = new Set((Array.isArray(excludeProviderIds) ? excludeProviderIds : []).filter(Boolean));
+  const eligible = providers.filter(provider => supports(provider, requiredCapabilities) && !excluded.has(provider.id));
+  const preferred = eligible.find(provider => provider.id === preferredProviderId);
+  return preferred ? [preferred, ...eligible.filter(provider => provider.id !== preferred.id)] : eligible;
+}
+
+async function runAssigned({
+  env,
+  providers,
+  preferredProviderId,
+  requiredCapabilities = [],
+  excludeProviderIds = [],
+  taskName,
+  context,
+  role,
+  objective,
+  timeoutMs,
+  governance = {},
+}) {
+  const candidates = failoverCandidates(providers, preferredProviderId, requiredCapabilities, excludeProviderIds);
+  if (!candidates.length) {
+    return Object.freeze({
+      role,
+      provider: null,
+      mode: 'core_only',
+      ok: false,
+      attemptedProviders: Object.freeze([]),
+      value: degradedValue(role, 'no_eligible_provider'),
+    });
   }
-  const orchestrator = buildEkodiAiOrchestrator(env, [provider]);
-  const result = await orchestrator.run({
-    taskName,
-    context: Object.freeze({
-      ...context,
-      commandPlane: Object.freeze({ role, objective }),
-    }),
-    collaboration: 'primary',
-    risk: 'normal',
-    requiredCapabilities: [],
-    governance,
-    timeoutMs,
-    fallback: reason => degradedValue(role, reason),
-  });
+
+  const attemptedProviders = [];
+  let lastValue = degradedValue(role, 'provider_unavailable');
+  for (const provider of candidates) {
+    attemptedProviders.push(provider.id);
+    const orchestrator = buildEkodiAiOrchestrator(env, [provider]);
+    const result = await orchestrator.run({
+      taskName,
+      context: Object.freeze({
+        ...context,
+        commandPlane: Object.freeze({ role, objective }),
+      }),
+      collaboration: 'primary',
+      risk: 'normal',
+      requiredCapabilities: [],
+      governance,
+      timeoutMs,
+      fallback: reason => degradedValue(role, reason),
+    });
+    lastValue = result.value;
+    if (result.mode === 'ai' && result.ok !== false) {
+      return Object.freeze({
+        role,
+        provider: result.provider || provider.id,
+        mode: result.mode,
+        ok: true,
+        attemptedProviders: Object.freeze([...attemptedProviders]),
+        value: result.value,
+      });
+    }
+  }
+
   return Object.freeze({
     role,
-    provider: result.mode === 'ai' ? result.provider : null,
-    mode: result.mode,
-    ok: result.mode === 'ai' && result.ok !== false,
-    value: result.value,
+    provider: null,
+    mode: 'core_only',
+    ok: false,
+    attemptedProviders: Object.freeze([...attemptedProviders]),
+    value: lastValue,
   });
 }
 
@@ -260,7 +306,9 @@ export function buildEkodiCommandPlane(env = {}, providers = []) {
 
     const specialistResults = await Promise.all(plan.assignments.map(assignment => runAssigned({
       env,
-      provider: providerById(normalizedProviders, assignment.provider),
+      providers: normalizedProviders,
+      preferredProviderId: assignment.provider,
+      requiredCapabilities: assignment.requiredCapabilities,
       taskName: `${plan.taskId}.${assignment.role}`,
       context,
       role: assignment.role,
@@ -276,10 +324,14 @@ export function buildEkodiCommandPlane(env = {}, providers = []) {
       value: result.value,
     })));
 
+    const specialistProviderIds = specialistResults.filter(result => result.ok && result.provider).map(result => result.provider);
     const sentinelProvider = providerById(normalizedProviders, plan.sentinelProvider);
     const sentinel = plan.consultationDecision.requirements.sentinel && sentinelProvider ? await runAssigned({
       env,
-      provider: sentinelProvider,
+      providers: normalizedProviders,
+      preferredProviderId: sentinelProvider.id,
+      requiredCapabilities: ['review'],
+      excludeProviderIds: normalizedProviders.some(provider => supports(provider, ['review']) && !specialistProviderIds.includes(provider.id)) ? specialistProviderIds : [],
       taskName: `${plan.taskId}.sentinel`,
       context: Object.freeze({
         ...context,
@@ -293,9 +345,13 @@ export function buildEkodiCommandPlane(env = {}, providers = []) {
     }) : null;
 
     const reverifierProvider = providerById(normalizedProviders, plan.reverifierProvider);
+    const usedVerificationProviders = [...specialistProviderIds, sentinel?.provider].filter(Boolean);
     const reverifier = plan.consultationDecision.requirements.reverifier && reverifierProvider ? await runAssigned({
       env,
-      provider: reverifierProvider,
+      providers: normalizedProviders,
+      preferredProviderId: reverifierProvider.id,
+      requiredCapabilities: ['review'],
+      excludeProviderIds: normalizedProviders.some(provider => supports(provider, ['review']) && !usedVerificationProviders.includes(provider.id)) ? usedVerificationProviders : [],
       taskName: `${plan.taskId}.reverifier`,
       context: Object.freeze({
         ...context,
@@ -316,11 +372,14 @@ export function buildEkodiCommandPlane(env = {}, providers = []) {
     const sentinelOk = !plan.consultationDecision.requirements.sentinel || Boolean(sentinel?.ok);
     const reverifierOk = !plan.consultationDecision.requirements.reverifier || Boolean(reverifier?.ok);
     const diversityOk = successfulProviders.size >= Number(plan.consultationDecision.requirements.minProviderDiversity || 0);
+    const hasExecutorHandoff = Boolean(input?.context?.branchRef && input?.context?.deploymentRequested === true);
     const state = specialistOk && sentinelOk && reverifierOk && diversityOk
       ? 'verified'
       : successfulProviders.size > 0
         ? 'degraded'
-        : 'core_only';
+        : hasExecutorHandoff
+          ? 'executor_ready'
+          : 'core_only';
 
     const provisional = {
       schemaVersion: 2,
@@ -342,6 +401,11 @@ export function buildEkodiCommandPlane(env = {}, providers = []) {
         providerDiversity: successfulProviders.size,
         sentinelIndependent: Boolean(sentinel?.ok && plan.sentinelIndependent),
         verified: state === 'verified',
+        executorHandoff: state === 'executor_ready' ? Object.freeze({
+          ready: true,
+          branchRef: text(input?.context?.branchRef, 220) || null,
+          reason: 'ai_consultation_unavailable_external_executor_authorized',
+        }) : null,
         consultation: Object.freeze({
           status: consultation.status,
           actualCallCount: consultation.actualCallCount,
@@ -399,7 +463,7 @@ export function buildEkodiCommandPlane(env = {}, providers = []) {
 }
 
 export const EKODI_COMMAND_PLANE = Object.freeze({
-  version: '1.1.0',
+  version: '1.2.0',
   authority: 'bounded-by-ekodi-sovereign-governance',
   proactiveRequiresStandingDelegation: true,
   independentSentinelPreferred: true,
