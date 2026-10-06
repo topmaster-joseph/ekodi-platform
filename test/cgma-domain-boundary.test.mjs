@@ -54,3 +54,14 @@ test('CGMA production verifier accepts authenticated protection for admin assets
   assert.match(cgmaWorkflow, /check_protected_asset '\/cgma\/admin\/assets\/cgma-member-admin\.js'/);
   assert.match(cgmaWorkflow, /check_protected_asset '\/cgma\/admin\/assets\/cgma-member-admin\.css'/);
 });
+
+
+test('CGMA board verification is release-critical while unrelated protected assets are advisory', async () => {
+  const cgmaWorkflow=await readFile(new URL('../.github/workflows/deploy-cgma-apex-edge.yml',import.meta.url),'utf8');
+  const board=cgmaWorkflow.indexOf("check_board '/cgma/board'");
+  const jsAsset=cgmaWorkflow.indexOf("if ! check_protected_asset '/cgma/admin/assets/cgma-member-admin.js'");
+  const cssAsset=cgmaWorkflow.indexOf("if ! check_protected_asset '/cgma/admin/assets/cgma-member-admin.css'");
+  assert.ok(board>0&&jsAsset>board&&cssAsset>jsAsset);
+  assert.match(cgmaWorkflow,/::warning::CGMA member admin JS asset verification is degraded/);
+  assert.match(cgmaWorkflow,/::warning::CGMA member admin CSS asset verification is degraded/);
+});
