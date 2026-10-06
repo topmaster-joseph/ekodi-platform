@@ -102,7 +102,35 @@ function Register-EkodiStartupFallback {
     [string]$ListenerPrefix
   )
 
-  if ($ListenerPrefix -notmatch '^http://127\.0\.0\.1:\d+/
+  if ($ListenerPrefix -notmatch '^http://127\.0\.0\.1:\d+/$') {
+    throw 'Startup fallback requires the fixed 127.0.0.1 loopback listener.'
+  }
+
+  $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+  $startupDir = [Environment]::GetFolderPath([Environment+SpecialFolder]::Startup)
+  if ([string]::IsNullOrWhiteSpace($startupDir)) {
+    throw 'Windows Startup folder could not be resolved.'
+  }
+  New-Item -ItemType Directory -Path $startupDir -Force | Out-Null
+  $launcher = Join-Path $startupDir 'EKODI-POS-Agent-Startup.cmd'
+
+  # Future logons use the current interactive user, so reserve only the exact
+  # 127.0.0.1 listener for that user before creating the Startup launcher.
+  & netsh.exe http delete urlacl "url=$ListenerPrefix" *> $null
+  $reservation = & netsh.exe http add urlacl "url=$ListenerPrefix" "user=$($identity.Name)" 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    throw "Unable to reserve the loopback Agent URL for Startup fallback: $($reservation -join ' ')"
+  }
+
+  $launcherContent = @(
+    '@echo off',
+    ('powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "{0}" -ConfigPath "{1}"' -f $AgentPath,$ConfigPath)
+  ) -join [Environment]::NewLine
+  Set-Content -LiteralPath $launcher -Value $launcherContent -Encoding ASCII
+  return $launcher
+}
+
+if (-not (Test-IsAdministrator)) {
   throw 'Administrator privileges are required to install the EKODI POS Agent scheduled task.'
 }
 
@@ -145,7 +173,6 @@ try {
   $trigger = New-ScheduledTaskTrigger -AtLogOn -User $userName
   $principal = New-ScheduledTaskPrincipal -UserId $userName -LogonType Interactive -RunLevel Highest
 
-  $startupLauncher = $null
   try {
     $registrationMode = Register-EkodiScheduledTask -Name $TaskName -Action $action -Trigger $trigger -Principal $principal
   } catch {
@@ -155,7 +182,7 @@ try {
       $partialTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
       if ($partialTask) { Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue }
     } catch {}
-    $startupLauncher = Register-EkodiStartupFallback -AgentPath $targetAgent -ConfigPath $targetConfig -ListenerPrefix ([string]$config.listenerPrefix)
+    [void](Register-EkodiStartupFallback -AgentPath $targetAgent -ConfigPath $targetConfig -ListenerPrefix ([string]$config.listenerPrefix))
     $registrationMode = 'startup-folder'
   }
 
@@ -224,144 +251,6 @@ try {
   $startupRollback = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::Startup)) 'EKODI-POS-Agent-Startup.cmd'
   if (Test-Path -LiteralPath $startupRollback) {
     try { Remove-Item -LiteralPath $startupRollback -Force } catch {}
-  }
-
-  if ($existingTask) {
-    try { Start-ScheduledTask -TaskName $TaskName } catch {}
-  } else {
-    # A failed first-time registration must not leave a partial task behind.
-    try {
-      $partialTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-      if ($partialTask) { Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue }
-    } catch {}
-  }
-  throw
-} finally {
-  if (Test-Path -LiteralPath $candidateAgent) {
-    Remove-Item -LiteralPath $candidateAgent -Force
-  }
-}
-) {
-    throw 'Startup fallback requires the fixed 127.0.0.1 loopback listener.'
-  }
-
-  $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-  $startupDir = [Environment]::GetFolderPath([Environment+SpecialFolder]::Startup)
-  if ([string]::IsNullOrWhiteSpace($startupDir)) {
-    throw 'Windows Startup folder could not be resolved.'
-  }
-  New-Item -ItemType Directory -Path $startupDir -Force | Out-Null
-  $launcher = Join-Path $startupDir 'EKODI-POS-Agent-Startup.cmd'
-
-  # The Startup fallback runs without elevation at future logons, so reserve
-  # only the Agent's exact loopback URL for the current interactive user.
-  & netsh.exe http delete urlacl "url=$ListenerPrefix" *> $null
-  $reservation = & netsh.exe http add urlacl "url=$ListenerPrefix" "user=$($identity.Name)" 2>&1
-  if ($LASTEXITCODE -ne 0) {
-    throw "Unable to reserve the loopback Agent URL for Startup fallback: $($reservation -join ' ')"
-  }
-
-  $launcherContent = @(
-    '@echo off',
-    ('powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "{0}" -ConfigPath "{1}"' -f $AgentPath,$ConfigPath)
-  ) -join [Environment]::NewLine
-  Set-Content -LiteralPath $launcher -Value $launcherContent -Encoding ASCII
-  return $launcher
-}
-
-if (-not (Test-IsAdministrator)) {
-  throw 'Administrator privileges are required to install the EKODI POS Agent scheduled task.'
-}
-
-$sourceAgent = Join-Path $PSScriptRoot 'EKODI-POS-Agent.ps1'
-$sourceConfig = Join-Path $PSScriptRoot 'pos-agent.config.example.json'
-if (-not (Test-Path -LiteralPath $sourceAgent)) { throw "Agent source missing: $sourceAgent" }
-if (-not (Test-Path -LiteralPath $sourceConfig)) { throw "Config example missing: $sourceConfig" }
-
-New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
-$candidateAgent = Join-Path $InstallDir 'EKODI-POS-Agent.candidate.ps1'
-$targetAgent = Join-Path $InstallDir 'EKODI-POS-Agent.ps1'
-$targetConfig = Join-Path $InstallDir 'pos-agent.config.json'
-$backupAgent = Join-Path $InstallDir 'EKODI-POS-Agent.rollback.ps1'
-
-Copy-Item -LiteralPath $sourceAgent -Destination $candidateAgent -Force
-Validate-PowerShellFile $candidateAgent
-if (-not (Test-Path -LiteralPath $targetConfig)) {
-  Copy-Item -LiteralPath $sourceConfig -Destination $targetConfig
-}
-$config = Read-AgentConfig $targetConfig
-
-$existingTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-$hadAgent = Test-Path -LiteralPath $targetAgent
-if ($hadAgent) {
-  Copy-Item -LiteralPath $targetAgent -Destination $backupAgent -Force
-}
-
-try {
-  if ($existingTask) {
-    Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-    Start-Sleep -Milliseconds 250
-  }
-
-  Move-Item -LiteralPath $candidateAgent -Destination $targetAgent -Force
-
-  $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-  $userName = $identity.Name
-  $arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$targetAgent`" -ConfigPath `"$targetConfig`""
-  $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $arguments
-  $trigger = New-ScheduledTaskTrigger -AtLogOn -User $userName
-  $principal = New-ScheduledTaskPrincipal -UserId $userName -LogonType Interactive -RunLevel Highest
-
-  $registrationMode = Register-EkodiScheduledTask -Name $TaskName -Action $action -Trigger $trigger -Principal $principal
-
-  $registeredTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
-  if (-not $registeredTask) {
-    throw 'Agent scheduled task registration could not be verified.'
-  }
-
-  if (-not $NoStart) {
-    Start-ScheduledTask -TaskName $TaskName
-    $store = @($config.allowedStores | Where-Object { $_ } | Select-Object -First 1)
-    $headers = @{}
-    if ($store.Count) {
-      $headers['X-EKODI-Store'] = [string]$store[0]
-    }
-    $healthUrl = ([string]$config.listenerPrefix).TrimEnd('/') + '/v1/health'
-    $healthy = $false
-    for ($attempt = 1; $attempt -le 20; $attempt++) {
-      Start-Sleep -Milliseconds 500
-      try {
-        $health = Invoke-RestMethod -Uri $healthUrl -Method Get -Headers $headers -TimeoutSec 2
-        if ($health.ok) {
-          $healthy = $true
-          break
-        }
-      } catch {}
-    }
-    if (-not $healthy) {
-      throw 'Agent task was registered but the loopback health endpoint did not become ready.'
-    }
-  }
-
-  if (Test-Path -LiteralPath $backupAgent) {
-    Remove-Item -LiteralPath $backupAgent -Force
-  }
-
-  Write-Host 'EKODI POS Agent install/upgrade complete.' -ForegroundColor Green
-  Write-Host "Install directory: $InstallDir"
-  Write-Host "Scheduled task: $TaskName"
-  Write-Host "Config preserved at: $targetConfig"
-  Write-Host "Task Scheduler compatibility: $InstallerCompatibility ($registrationMode)"
-  if ($registrationMode -eq 'interactive-default-runlevel') {
-    Write-Host 'Compatibility mode used: interactive current-user task with the Windows default run level.' -ForegroundColor Yellow
-  }
-  Write-Host 'Foreground switching remains explicit-user-action only.'
-} catch {
-  if (Test-Path -LiteralPath $backupAgent) {
-    Copy-Item -LiteralPath $backupAgent -Destination $targetAgent -Force
-    Remove-Item -LiteralPath $backupAgent -Force
-  } elseif (-not $hadAgent -and (Test-Path -LiteralPath $targetAgent)) {
-    Remove-Item -LiteralPath $targetAgent -Force
   }
 
   if ($existingTask) {
