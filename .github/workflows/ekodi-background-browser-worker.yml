@@ -138,26 +138,33 @@ jobs:
           const requested=String(process.env.INPUT_PATHS||'').split(',').map(v=>v.trim()).filter(Boolean);
           const registryInput=String(process.env.INPUT_REGISTRY||'').trim();
           let registered=[];
+          let registryMaxPaths=12;
           if(registryInput){
             const root=path.resolve(process.cwd());
             const resolved=path.resolve(root,registryInput);
             if(resolved!==root&&!resolved.startsWith(root+path.sep)) throw new Error('surface registry must stay inside the checked-out repository');
             const registry=JSON.parse(fs.readFileSync(resolved,'utf8').replace(/^\\uFEFF/,''));
             if(registry?.canonicalOrigin!=='https://ekodi.kr') throw new Error('surface registry canonical origin must be https://ekodi.kr');
-            if(Number(registry?.maxPaths||12)>12) throw new Error('surface registry maxPaths cannot exceed worker limit 12');
+            registryMaxPaths=Number(registry?.maxPaths||12);
+            if(!Number.isFinite(registryMaxPaths)||registryMaxPaths<1||registryMaxPaths>12) throw new Error('surface registry maxPaths must be between 1 and worker limit 12');
             registered=(Array.isArray(registry?.surfaces)?registry.surfaces:[])
               .filter(item=>item&&item.enabled!==false)
               .map(item=>String(item.path||'').trim())
               .filter(Boolean);
           }
           const base=requested.length?requested:[fallback];
-          const paths=[...new Set([...base,...registered])];
-          if(paths.length>12) throw new Error('combined surface paths support at most 12 canonical paths per run');
-          for(const p of paths){
+          const candidates=[...new Set([...base,...registered])];
+          for(const p of candidates){
             if(!p.startsWith('/')||p.startsWith('//')) throw new Error('surface path must be a canonical root-relative path');
             const u=new URL(p,'https://ekodi.kr');
             if(u.origin!=='https://ekodi.kr') throw new Error('surface path must stay on canonical ekodi.kr');
           }
+          const maxPaths=Math.min(12,registryMaxPaths);
+          const basePaths=[...new Set(base)];
+          if(basePaths.length>maxPaths) throw new Error('requested surface paths exceed bounded browser path limit');
+          const remaining=Math.max(0,maxPaths-basePaths.length);
+          const registeredPaths=[...new Set(registered)].filter(p=>!basePaths.includes(p)).slice(0,remaining);
+          const paths=[...basePaths,...registeredPaths];
           const device=String(process.env.INPUT_DEVICE||'desktop');
           const allowed=new Set(['compact-mobile','mobile-portrait','mobile-landscape','tablet','desktop']);
           if(!allowed.has(device)) throw new Error('invalid device profile');

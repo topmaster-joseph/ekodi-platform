@@ -51,6 +51,7 @@ if(boardRegistry.canonicalOrigin!=='https://ekodi.kr'||boardRegistry.readOnly!==
 const boardPaths=(boardRegistry.surfaces||[]).filter(item=>item?.enabled!==false).map(item=>item.path);
 for(const requiredPath of ['/seonammedi/#voices','/seonammedi/#notices','/community/','/journal']) if(!boardPaths.includes(requiredPath)) fail('board native verification path missing: '+requiredPath);
 if(!workerWorkflow.includes('INPUT_REGISTRY')||!workerWorkflow.includes('surface registry must stay inside the checked-out repository')) fail('background browser workflow must load board verification registry safely');
+if(!workerWorkflow.includes('const remaining=Math.max(0,maxPaths-basePaths.length)')||!workerWorkflow.includes('.slice(0,remaining)')) fail('background browser workflow must preserve requested surfaces and bound registry growth to the remaining path budget');
 if((sharedRelease.match(/surface_registry:\s*config\/board-surface-verification\.json/g)||[]).length<2) fail('desktop and mobile shared-site verification must consume the board surface registry');
 if(!sharedRelease.includes('authenticated_admin_surface_verification:')||!sharedRelease.includes('verify-admin-production-ui-e2e.yml')) fail('shared-site production release must run authenticated Admin UI verification after deploy');
 
