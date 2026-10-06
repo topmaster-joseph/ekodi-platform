@@ -67,6 +67,14 @@ if (policy.controlPlane !== 'EKODI AI') fail('EKODI AI must remain the control p
 if (policy.mutationBoundary?.breakGlassBypassEnabled !== false) fail('break-glass bypass must remain disabled.');
 if (policy.sourceControl?.directPushToMain !== false) fail('direct main pushes must remain forbidden.');
 if (policy.execution?.externalAiMayOwnProductionMutation !== false) fail('external AI cannot own production mutation.');
+const expectedDefaultExecutionPath = ['ekodi-core-plan-finalized','github-work-branch','code-mutation','automated-tests','pull-request','deployment-gate','guarded-deployment','production-verification'];
+if (JSON.stringify(policy.execution?.defaultExecutionPath || []) !== JSON.stringify(expectedDefaultExecutionPath)) fail('EKODI Core to GitHub must remain the default execution path.');
+if (policy.execution?.aiConsultation !== 'advisory-not-serial-prerequisite') fail('AI consultation must remain advisory rather than a serial execution prerequisite.');
+if (policy.execution?.consultationMayBlockCodeExecution !== false) fail('AI consultation may not block ordinary code execution after EKODI Core finalizes the plan.');
+if (policy.execution?.corePlanOwnsExecution !== true || policy.execution?.githubBranchMutationIsDefault !== true) fail('EKODI Core must own execution and GitHub branch mutation must remain the default.');
+if (policy.consultationDecision?.executionRelationship !== 'parallel-or-advisory' || policy.consultationDecision?.codeExecutionMayProceedWithoutConsultationCompletion !== true) fail('consultation must remain parallel/advisory to code execution.');
+if (!Array.isArray(policy.consultationDecision?.forcedMultiConsultCategories) || policy.consultationDecision.forcedMultiConsultCategories.length === 0) fail('high-impact consultation categories must remain registered.');
+if (policy.consultationDecision?.failedConsultationDisposition !== 'record-isolate-continue-execution-unless-human-or-safety-gate-requires-stop') fail('failed consultation must be isolated from execution unless a human or safety gate requires a stop.');
 const dailyOperationalReport = policy.reporting?.dailyOperationalReport || {};
 if (dailyOperationalReport.policyId !== 'EKODI-DAILY-REPORT-ROLE-001') fail('daily operational report role policy must remain registered.');
 if (dailyOperationalReport.sourceOfTruth !== 'ekodi-generated-operational-report') fail('EKODI-generated operational report must remain the daily report source of truth.');
