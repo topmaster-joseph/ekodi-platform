@@ -315,7 +315,16 @@ async function renderAccess(s){
     const authorized=authorizedWorkspaces(workspaces);fallbackWorkspaceKey=authorized[0]?.workspace_key||null;
     const requested=authorized.find(item=>item.workspace_key===requestedWorkspace);
 
-    if(site==='portal'){location.assign(returnTo);return;}
+    if(site==='portal'){
+      const target=new URL(returnTo);
+      const seonamMediHandoff=target.origin==='https://seonammedi.kr'||target.origin===new URL('https://서남권국립의대.kr').origin;
+      if(seonamMediHandoff){
+        routing=true;showProcessing('Google 인증이 완료되었습니다. 서남권 국립의대 소통센터로 안전하게 돌아가는 중입니다.');
+        try{await handoffToService();return;}
+        catch(e){console.error('seonammedi portal handoff',e);showAccessFallback(s,'소통센터 인증 복귀에 실패했습니다. 다시 인증해 주세요.','error');return;}
+      }
+      location.assign(returnTo);return;
+    }
     if(requested){
       routing=true;showProcessing(`${requested.workspace_name||'선택한 Workspace'}로 연결하고 있습니다.`);
       try{await handoffToService(requested.workspace_key);return;}
