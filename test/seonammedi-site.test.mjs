@@ -720,70 +720,65 @@ test('seonammedi public reply path never performs request-time schema DDL',async
   assert.doesNotMatch(block,/ensureSchema|CREATE TABLE|ALTER TABLE|CREATE INDEX/);
 });
 
-test('seonammedi citizen voices publish immediately, render publicly, accept replies, and remain admin-moderatable',async()=>{
-  const [civic,control,html,app,security,migration,voiceAdmin]=await Promise.all([
-    readFile(new URL('../seonammedi-civic-control.js',import.meta.url),'utf8'),
-    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+
+test('seonammedi citizen opinions hand off to the standalone board-owned UI',async()=>{
+  const [html,worker,config]=await Promise.all([
     readFile(new URL('index.html',root),'utf8'),
-    readFile(new URL('app.js',root),'utf8'),
-    readFile(new URL('../platform-security-policy.js',import.meta.url),'utf8'),
-    readFile(new URL('../migrations/0126_seonammedi_civic_voice_replies.sql',import.meta.url),'utf8'),
-    readFile(new URL('voice-public-admin.js',root),'utf8')
+    readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8'),
+    readFile(new URL('../wrangler.independent-board.toml',import.meta.url),'utf8')
   ]);
-  assert.match(civic,/review_status[^\n]+published/);
-  assert.match(civic,/async function listPublicVoices/);
-  assert.match(civic,/async function createPublicReply/);
-  assert.match(civic,/REPLY_PATH/);
-  assert.match(html,/id="publicVoiceList"/);
-  assert.match(html,/등록 즉시 공개되며 연락처·이메일은 목록에 표시하지 않습니다/);
-  assert.doesNotMatch(html,/name="publicConsent"/);
-  assert.match(app,/loadPublicVoices/);
-  assert.match(app,/data-voice-reply/);
-  assert.match(app,/\/board\/api\/posts\/'\+voiceId\+'\/replies/);
-  assert.match(control,/deleteAdminVoiceReply/);
-  assert.match(voiceAdmin,/답글 삭제/);
-  assert.match(security,/SELF_PROTECTED_PUBLIC_WRITE_PATTERNS/);
-  assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_civic_voice_replies/);
+  assert.match(html,/href="\/board"[^>]*>시민의견<\/a>/);
+  assert.doesNotMatch(html,/id="voices"|id="publicVoiceList"|id="voiceComposeToggle"/);
+  assert.match(worker,/function boardPage\(\)/);
+  assert.match(worker,/env\.BOARD_DB/);
+  assert.match(worker,/의견 등록/);
+  assert.match(worker,/답글 등록/);
+  assert.match(worker,/\/api\/admin\/posts/);
+  assert.match(config,/database_name = "ekodi-independent-board"/);
 });
 
 test('seonammedi mobile activity history uses compact filters, progressive detail, and inline admin control',async()=>{const [html,app,css]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('app.css',root),'utf8')]);assert.match(html,/id="timelineAdminEdit"/);assert.match(app,/timeline-toggle/);assert.match(app,/is-collapsed/);assert.match(app,/timelineAdminEdit/);assert.match(css,/activity-toolbar \.filters\{flex-wrap:nowrap;overflow-x:auto/);assert.match(css,/\.timeline-item\.is-collapsed \.timeline-detail\{display:none\}/);});
 
-test('seonammedi citizen voices finance and notices share the embedded module layout',async()=>{
-  const [html,app,css]=await Promise.all([
+
+test('seonammedi finance and notices stay embedded while citizen opinions use the standalone board surface',async()=>{
+  const [html,css,worker]=await Promise.all([
     readFile(new URL('index.html',root),'utf8'),
-    readFile(new URL('app.js',root),'utf8'),
-    readFile(new URL('app.css',root),'utf8')
+    readFile(new URL('app.css',root),'utf8'),
+    readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8')
   ]);
-  for(const id of ['voices','finance','notices'])assert.match(html,new RegExp('id="'+id+'" class="section module-section"'));
-  assert.match(html,/class="module-shell"/);
-  assert.match(html,/id="voiceComposeToggle"/);
-  assert.doesNotMatch(html,/독립 게시판 기능은|직접 주소|>새로고침<|href="\/board"/);
-  assert.match(html,/id="reloadVoices" type="button" hidden/);
-  assert.match(html,/최신 의견부터 표시합니다.<\/span><button id="voiceComposeToggle"/);
-  assert.match(app,/function setVoiceCompose\(open\)/);
+  for(const id of ['finance','notices'])assert.match(html,new RegExp('id="'+id+'" class="section module-section"'));
+  assert.doesNotMatch(html,/id="voices"/);
+  assert.match(html,/href="\/board"[^>]*>시민의견<\/a>/);
+  assert.match(worker,/href="\/#timeline">활동이력/);
+  assert.match(worker,/href="\/#channels">소통채널/);
+  assert.match(worker,/href="\/board" aria-current="page">시민의견/);
+  assert.match(worker,/href="\/#finance">회계/);
+  assert.match(worker,/href="\/#notices">공지/);
+  assert.match(worker,/href="\/#organization">조직/);
   assert.match(css,/\.module-shell\{display:grid;grid-template-columns:minmax\(190px,250px\) minmax\(0,1fr\)/);
-  assert.match(css,/@media\(max-width:760px\)\{\.module-section/);
 });
 
 
-test('seonammedi registered Google admins manage public content from the user surface while standalone admin stays essential-only',async()=>{
-  const [html,app,adminHtml,adminJs,voiceAdmin]=await Promise.all([
-    readFile(new URL('index.html',root),'utf8'),
+test('seonammedi registered Google admins manage public content from user surfaces while standalone admin stays essential-only',async()=>{
+  const [app,adminHtml,adminJs,worker]=await Promise.all([
     readFile(new URL('app.js',root),'utf8'),
     readFile(new URL('admin/index.html',root),'utf8'),
     readFile(new URL('admin/admin.js',root),'utf8'),
-    readFile(new URL('voice-public-admin.js',root),'utf8')
+    readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8')
   ]);
   assert.match(app,/공지 바로 수정/);
   assert.match(app,/조직 바로 수정/);
   assert.match(app,/활동이력 관리/);
   assert.match(app,/소통채널 바로 수정/);
   assert.match(app,/회계 바로 수정/);
-  assert.match(voiceAdmin,/voice-inline-admin-delete/);
-  assert.match(voiceAdmin,/\/board\/api\/admin\/posts/);
+  assert.match(worker,/permissions\?\.voices===true/);
+  assert.match(worker,/data-edit/);
+  assert.match(worker,/data-delete/);
+  assert.match(worker,/data-reply-delete/);
+  assert.match(worker,/\/api\/admin\/posts/);
   assert.match(adminHtml,/data-panel-target="minutes"[^>]*>내부 회의록<\/button>/);
   assert.match(adminHtml,/data-panel-target="access"[^>]*>권한·관리자<\/button>/);
   for(const label of ['현재상황','소통채널','시민의견','회계','공지','조직'])assert.doesNotMatch(adminHtml,new RegExp('data-panel-target="[^"]+"[^>]*>'+label+'<\\/button>'));
-  assert.match(adminHtml,/공지·시민의견·활동이력·회계·조직·소통채널은 로그인한 관리자에게 사용자 화면에서 바로 관리 도구가 표시됩니다/);
   assert.match(adminJs,/navVisibility/);
 });
+
