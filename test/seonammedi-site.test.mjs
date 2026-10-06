@@ -705,6 +705,15 @@ test('seonammedi admin notice Drive storage and five-image flow',async()=>{
 });
 
 
+test('seonammedi public reply path never performs request-time schema DDL',async()=>{
+  const civic=await readFile(new URL('../seonammedi-civic-control.js',import.meta.url),'utf8');
+  const start=civic.indexOf('async function createPublicReply');
+  const end=civic.indexOf('function originAllowed',start);
+  assert.ok(start>=0&&end>start);
+  const block=civic.slice(start,end);
+  assert.doesNotMatch(block,/ensureSchema|CREATE TABLE|ALTER TABLE|CREATE INDEX/);
+});
+
 test('seonammedi citizen voices publish immediately, render publicly, accept replies, and remain admin-moderatable',async()=>{
   const [civic,control,html,app,security,migration,voiceAdmin]=await Promise.all([
     readFile(new URL('../seonammedi-civic-control.js',import.meta.url),'utf8'),
