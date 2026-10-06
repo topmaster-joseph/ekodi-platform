@@ -1,5 +1,5 @@
 {
-  "version": 101,
+  "version": 102,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -1219,7 +1219,9 @@
           "ekodi-chief-ai-chat-v1",
           "DECISION_RULES",
           "/api/control/ai/v8/pulse",
-          "executeNow:true"
+          "executeNow:true",
+          "/api/control/ai/v8/orchestrator/human-gates?limit=20",
+          "승인 후 계속"
         ],
         "headerExpect": [
           "x-content-type-options: nosniff",
