@@ -75,7 +75,7 @@ for(const duplicate of ['function publicAdminRequest','function ensurePublicAdmi
 for(const duplicate of ['.public-admin-drawer','.public-admin-inline']) if(seonamCss.includes(duplicate)) fail(`seonammedi must not duplicate shared public admin styling: ${duplicate}`);
 if(!seonamCss.includes('.ekodi-public-admin-inline')) fail('seonammedi site-specific shared-admin placement hook missing');
 for(const marker of ['canManage','authentication_required']) if(!seonamControl.includes(marker)) fail(`seonammedi pilot missing server authority evidence: ${marker}`);
-for(const marker of ['window.EKODIPublicSurfaceAdmin','permissions?.voices===true','/api/seonammedi/admin/voices','data-seonammedi-voice-admin']) if(!seonamVoiceAdmin.includes(marker)) fail(`seonammedi inline citizen-voice admin missing ${marker}`);
+for(const marker of ['window.EKODIPublicSurfaceAdmin','permissions?.voices===true','/board/api/admin/posts','data-seonammedi-voice-admin']) if(!seonamVoiceAdmin.includes(marker)) fail(`seonammedi inline citizen-voice admin missing ${marker}`);
 if(!seonamTests.includes('uses shared authenticated inline admin without duplicate citizen-voice CRUD')) fail('seonammedi shared public-surface citizen-voice regression test missing');
 
 if(failures.length){
