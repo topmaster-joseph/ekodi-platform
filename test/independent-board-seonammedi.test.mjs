@@ -107,7 +107,7 @@ test('standalone boards reuse EKODI authentication and own their mutations',asyn
 });
 
 
-test('SeonamMedi board admin login receives a one-time portal handoff token on the customer domain',async()=>{
+test('SeonamMedi board admin login receives a one-time site-local handoff token on the customer domain',async()=>{
   const [worker,auth,access]=await Promise.all([
     read('services/independent-board/worker.js'),
     read('auth-site/auth.js'),
@@ -118,6 +118,7 @@ test('SeonamMedi board admin login receives a one-time portal handoff token on t
   assert.match(worker,/\/api\/seonammedi\/admin\/auth\/exchange/);
   assert.match(auth,/seonamMediHandoff/);
   assert.match(auth,/await handoffToService\(\)/);
-  assert.match(access,/portal:\["https:\/\/ekodi\.kr","https:\/\/seonammedi\.kr"/);
-  assert.match(access,/if\(site==="portal"\)[\s\S]*generateLink\(\{type:"magiclink",email\}\)[\s\S]*workspace:null/);
+  assert.match(worker,/set\(\"site\",\"seonammedi\"\)/);
+  assert.match(access,/seonammedi:\["https:\/\/seonammedi\.kr"/);
+  assert.match(access,/if\(site==="portal"\|\|site==="seonammedi"\)[\s\S]*generateLink\(\{type:"magiclink",email\}\)[\s\S]*workspace:null/);
 });
