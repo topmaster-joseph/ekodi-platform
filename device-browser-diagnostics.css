@@ -18,3 +18,20 @@
 @media(max-width:980px){.admin-browser-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:720px){.admin-browser-diagnostic{padding:16px}.admin-browser-diagnostic-head{display:block}.admin-browser-diagnostic-head>span{display:block;margin-top:8px}.admin-browser-diagnostic-result{grid-template-columns:1fr}.admin-browser-stats{grid-template-columns:1fr 1fr}.admin-browser-score{min-height:auto}.admin-browser-recommendations{grid-column:auto}}
 @media(max-width:460px){.admin-browser-stats{grid-template-columns:1fr}.admin-browser-diagnostic-actions button{width:100%}}
+
+
+/* ADMIN-DEVICES-READABILITY-20261006 */
+body.admin-compact .admin-browser-diagnostic{border-color:#d9e2ec!important;background:#fff!important;color:#172033!important;box-shadow:none!important}
+body.admin-compact .admin-browser-diagnostic-head h3{color:#172033!important}
+body.admin-compact .admin-browser-diagnostic-head p,
+body.admin-compact .admin-browser-diagnostic-head>span,
+body.admin-compact .admin-browser-diagnostic-actions small{color:#66768a!important;opacity:1!important}
+body.admin-compact .admin-browser-diagnostic .kicker{color:#66768a!important;opacity:1!important}
+body.admin-compact .admin-browser-diagnostic-result{border-top-color:#e1e8ef!important}
+body.admin-compact .admin-browser-score,
+body.admin-compact .admin-browser-stats span,
+body.admin-compact .admin-browser-recommendations p{background:#f8fafc!important;color:#26384e!important}
+body.admin-compact .admin-browser-score strong{color:#172033!important}
+body.admin-compact .admin-browser-score span,
+body.admin-compact .admin-browser-stats small{color:#718196!important}
+body.admin-compact .admin-browser-stats b{color:#26384e!important}

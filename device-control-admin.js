@@ -519,7 +519,7 @@
     const list = document.querySelector('#ekodiDeviceList');
     const total = document.querySelector('#deviceMetricTotal'), online = document.querySelector('#deviceMetricOnline'), issues = document.querySelector('#deviceMetricIssues'), avgHealth = document.querySelector('#deviceMetricHealth');
     if (!list) return;
-    const scored = devices.filter(device => Number.isFinite(Number(device.health?.score)));
+    const scored = devices.filter(device => device.status === 'online' && Number.isFinite(Number(device.health?.score)));
     total.textContent = String(devices.length);
     online.textContent = String(devices.filter(device => device.status === 'online').length);
     issues.textContent = String(devices.filter(device => ['stale','offline'].includes(device.status) || (Number.isFinite(Number(device.health?.score)) && Number(device.health.score) < 75)).length);
@@ -589,7 +589,7 @@
         <article><small>등록 기기</small><strong id="deviceMetricTotal">—</strong><span>전체 자산</span></article>
         <article><small>현재 온라인</small><strong id="deviceMetricOnline">—</strong><span>Agent 응답 기준</span></article>
         <article><small>확인 필요</small><strong id="deviceMetricIssues">—</strong><span>오프라인·지연·건강 저하</span></article>
-        <article><small>평균 건강점수</small><strong id="deviceMetricHealth">—</strong><span>진단 가능한 기기 기준</span></article>
+        <article><small>평균 건강점수</small><strong id="deviceMetricHealth">—</strong><span>현재 온라인·진단 가능 기기 기준</span></article>
         <article><small>배정 대기</small><strong id="deviceMetricQueued">—</strong><span>자동 작업 큐</span></article>
       </div>
       <div class="device-attention-summary" id="deviceAttentionSummary" data-state="good"><div><strong>기기 상태를 확인하는 중입니다.</strong><span>문제가 있는 기기를 우선 표시합니다.</span></div></div>
