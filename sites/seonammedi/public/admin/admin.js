@@ -439,7 +439,7 @@ $('adminNoticeImages')?.addEventListener('change',async event=>{
   try{adminNoticeSelectedFiles=[];for(const file of files)adminNoticeSelectedFiles.push(await compressAdminNoticeImage(file));text(msg,adminNoticeSelectedFiles.length?'첨부 사진은 게시물 본문에 함께 표시됩니다.':'')}catch(error){adminNoticeSelectedFiles=[];input.value='';text(msg,error.message||'사진을 처리하지 못했습니다.')}
   renderAdminNoticeImagePreview();
 });
-$('noticeForm').addEventListener('submit',async event=>{
+$('noticeForm')?.addEventListener('submit',async event=>{
   event.preventDefault();const form=event.currentTarget,id=form.elements.id.value;const payload=new FormData();payload.set('title',form.elements.title.value);payload.set('body',form.elements.body.value);payload.set('status',form.elements.status.value);payload.set('pinned',String(form.elements.pinned.checked));payload.set('kind',form.elements.kind.value);payload.set('featured',String(form.elements.featured.checked));payload.set('eventStart',form.elements.eventStart.value);payload.set('eventEnd',form.elements.eventEnd.value);for(const file of adminNoticeSelectedFiles)payload.append('images',file,file.name);
   const msg=$('noticeMessage');msg.classList.remove('error');text(msg,'저장 중…');
   try{await api(id?'/api/seonammedi/admin/notices/'+id:'/api/seonammedi/admin/notices',{method:id?'PUT':'POST',body:payload});text(msg,'저장했습니다.');resetNotice();await loadNotices()}catch(error){msg.classList.add('error');text(msg,error.message)}
@@ -449,7 +449,7 @@ $('channelForm').addEventListener('submit',async event=>{
   const msg=$('channelMessage');msg.classList.remove('error');text(msg,'저장 중…');
   try{await api(id?'/api/seonammedi/admin/channels/'+id:'/api/seonammedi/admin/channels',{method:id?'PUT':'POST',body:JSON.stringify(payload)});text(msg,'저장했습니다.');resetChannel();await loadChannels()}catch(error){msg.classList.add('error');text(msg,error.message)}
 });
-$('reloadTimeline').addEventListener('click',()=>loadTimeline().catch(()=>{}));$('reloadStatusPage')?.addEventListener('click',()=>loadStatusPage().catch(()=>{}));$('reloadOrganization')?.addEventListener('click',()=>loadOrganization().catch(()=>{}));$('reloadFinance')?.addEventListener('click',()=>loadFinance().catch(()=>{}));$('financeReset')?.addEventListener('click',resetFinance);$('timelineReset').addEventListener('click',resetTimeline);$('reloadContent').addEventListener('click',()=>loadContent().catch(()=>{}));$('noticeReset').addEventListener('click',resetNotice);$('channelReset').addEventListener('click',resetChannel);$('reloadNotices').addEventListener('click',()=>loadNotices().catch(()=>{}));$('reloadChannels').addEventListener('click',()=>loadChannels().catch(()=>{}));
+$('reloadTimeline').addEventListener('click',()=>loadTimeline().catch(()=>{}));$('reloadStatusPage')?.addEventListener('click',()=>loadStatusPage().catch(()=>{}));$('reloadOrganization')?.addEventListener('click',()=>loadOrganization().catch(()=>{}));$('reloadFinance')?.addEventListener('click',()=>loadFinance().catch(()=>{}));$('financeReset')?.addEventListener('click',resetFinance);$('timelineReset').addEventListener('click',resetTimeline);$('reloadContent').addEventListener('click',()=>loadContent().catch(()=>{}));$('noticeReset')?.addEventListener('click',resetNotice);$('channelReset').addEventListener('click',resetChannel);$('reloadNotices')?.addEventListener('click',()=>loadNotices().catch(()=>{}));$('reloadChannels').addEventListener('click',()=>loadChannels().catch(()=>{}));
 $('reloadSiteHealth')?.addEventListener('click',()=>loadSiteHealth().catch(()=>{}));
 $('runSiteHealth')?.addEventListener('click',async()=>{
   const button=$('runSiteHealth');if(!button)return;
@@ -468,7 +468,7 @@ $('refreshAll').addEventListener('click',()=>init(true));$('changeAccount').addE
 async function init(refresh=false){
   try{
     state.me=await api('/api/seonammedi/admin/me');if(location.hash.includes('ekodi_token='))history.replaceState(null,'',location.pathname+location.search);updateDashboard();
-    await Promise.all([loadSiteHealth(),state.me.permissions?.pages?loadStatusPage():Promise.resolve(),state.me.permissions?.pages?loadOrganization():Promise.resolve(),state.me.permissions?.timeline?loadTimeline():Promise.resolve(),state.me.permissions?.voices?loadVoices():Promise.resolve(),state.me.permissions?.content?loadContent():Promise.resolve(),state.me.permissions?.notices?loadNotices():Promise.resolve(),state.me.permissions?.channels?loadChannels():Promise.resolve(),state.me.permissions?.finance?loadFinance():Promise.resolve()]);
+    await Promise.all([loadSiteHealth(),state.me.permissions?.pages?loadStatusPage():Promise.resolve(),state.me.permissions?.pages?loadOrganization():Promise.resolve(),state.me.permissions?.timeline?loadTimeline():Promise.resolve(),state.me.permissions?.voices?loadVoices():Promise.resolve(),state.me.permissions?.content?loadContent():Promise.resolve(),state.me.permissions?.channels?loadChannels():Promise.resolve()]);
     restoreAdminRoute({replace:true});
     if(refresh)text($('scopeSummary'),state.me.platform?'최고관리자 권한으로 최신 상태를 확인했습니다.':'게시판 관리자 권한으로 최신 상태를 확인했습니다.');
   }catch(error){

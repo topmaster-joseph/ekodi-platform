@@ -336,10 +336,13 @@ test('seonammedi full public-menu administration covers status organization mate
   assert.match(app,/const canonicalViewHash=\{status:'timeline'/);
   assert.match(app,/canonicalViewHash\[key\]\|\|key/);
   assert.match(app,/renderMaterialsForStatus\?\.\(isNews\?'관련보도':'공식자료'\)/);
-  assert.match(adminHtml,/id="financeForm"/);
+  assert.doesNotMatch(adminHtml,/id="financeForm"/);
+  assert.match(adminHtml,/회계 관리 권한이 확인되면 공개 회계 화면/);
+  assert.match(html,/id="financeManageForm"/);
+  assert.match(app,/bindPublicFinanceAdmin/);
+  assert.match(app,/\/api\/seonammedi\/admin\/finance/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/pages\/status/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/pages\/organization/);
-  assert.match(adminJs,/\/api\/seonammedi\/admin\/finance/);
   assert.match(control,/PAGE_CAP='seonammedi\.page\.manage'/);
   assert.match(control,/FINANCE_CAP='seonammedi\.finance\.manage'/);
   assert.match(control,/PREFIX\+'\/page-data'/);
@@ -594,7 +597,10 @@ test('seonammedi public site uses shared authenticated inline admin without dupl
   assert.match(app,/authEndpoint:'\/api\/seonammedi\/admin\/me'/);
   assert.match(app,/await admin\.authorize\(\)/);
   assert.match(app,/admin\.attach/);
-  for(const label of ['공지 바로 수정','조직 바로 수정','활동이력 관리','소통채널 바로 수정'])assert.match(app,new RegExp(label));
+  for(const label of ['조직 바로 수정','활동이력 관리','소통채널 바로 수정'])assert.match(app,new RegExp(label));
+  assert.doesNotMatch(app,/공지 바로 수정/);
+  assert.match(app,/bindPublicFinanceAdmin/);
+  assert.match(app,/if\(admin\.has\('notices'\)\)loadNotices\(\)/);
   assert.match(app,/seonammedi:voice-inline-admin-authorized/);
   assert.match(html,/voice-public-admin\.js/);
   assert.match(voiceAdmin,/window\.EKODIPublicSurfaceAdmin/);
@@ -684,10 +690,10 @@ test('seonammedi notice list actions use server-authorized canManage without exp
 });
 
 
-test('seonammedi admin notice Drive storage and five-image flow',async()=>{
-  const [control,adminJs,adminHtml]=await Promise.all([
+test('seonammedi notice image storage stays public-surface managed while admin duplicate editor is removed',async()=>{
+  const [control,app,adminHtml]=await Promise.all([
     readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
-    readFile(new URL('admin/admin.js',root),'utf8'),
+    readFile(new URL('app.js',root),'utf8'),
     readFile(new URL('admin/index.html',root),'utf8')
   ]);
   assert.match(control,/async function storeNoticeImage\(env,image,principal\)/);
@@ -696,12 +702,11 @@ test('seonammedi admin notice Drive storage and five-image flow',async()=>{
   assert.match(control,/if\(images\.length>5\)/);
   assert.match(control,/image_keys_json/);
   assert.match(control,/storeNoticeImage\(env,image,auth\)/);
-  assert.match(adminJs,/compressAdminNoticeImage/);
-  assert.match(adminJs,/ADMIN_NOTICE_IMAGE_MAX_BYTES=5\*1024\*1024/);
-  assert.match(adminJs,/payload\.append\('images',file,file\.name\)/);
-  assert.match(adminHtml,/id="adminNoticeImages"/);
-  assert.match(adminHtml,/사진 최대 5장/);
-  assert.doesNotMatch(adminHtml,/최대 8MB/);
+  assert.match(app,/NOTICE_IMAGE_MAX_BYTES=5\*1024\*1024/);
+  assert.match(app,/compressNoticeImage/);
+  assert.match(app,/form\.append\('images',file,file\.name\)/);
+  assert.doesNotMatch(adminHtml,/id="adminNoticeImages"|id="noticeForm"/);
+  assert.match(adminHtml,/공지 작성·수정·삭제는 실제 사용자 화면/);
 });
 
 

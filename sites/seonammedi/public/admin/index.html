@@ -132,22 +132,8 @@
     </section>
 
     <section class="panel-page" data-panel="notices" hidden>
-      <div class="heading"><div><p class="eyebrow">NOTICE BOARD</p><h1>공지 관리</h1><p>공개 페이지의 공지 게시판을 작성·수정·삭제합니다.</p></div></div>
-      <div class="two-col">
-        <form id="noticeForm" class="card form-card">
-          <input type="hidden" name="id">
-          <h2 id="noticeFormTitle">공지 작성</h2>
-          <label>제목<input name="title" maxlength="180" required></label>
-          <label>파일첨부 (사진 최대 5장)<input id="adminNoticeImages" name="images" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple><small class="muted">첨부 시 사진마다 5MB 이하로 자동 최적화하며 게시물 본문에 함께 표시합니다.</small></label>
-          <div id="adminNoticeImagePreview" class="notice-image-preview" aria-live="polite"></div>
-          <label>내용<textarea name="body" maxlength="10000" rows="10"></textarea></label>
-          <div class="form-row"><label>구분<select name="kind"><option value="notice">공지</option><option value="event">행사·일정</option></select></label><label>행사 시작<input name="eventStart" type="datetime-local"></label><label>행사 종료<input name="eventEnd" type="datetime-local"></label></div>
-          <div class="form-row"><label>상태<select name="status"><option value="published">공개</option><option value="draft">초안</option></select></label><label class="check"><input type="checkbox" name="pinned"> 상단 고정</label><label class="check"><input type="checkbox" name="featured"> 첫 화면 우선 노출</label></div>
-          <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="noticeReset" class="secondary">새 글</button></div>
-          <p id="noticeMessage" class="message" role="status"></p>
-        </form>
-        <section class="card list-card"><div class="card-head"><h2>공지 목록</h2><button type="button" id="reloadNotices" class="secondary">새로고침</button></div><div id="noticeList" class="item-list"></div></section>
-      </div>
+      <div class="heading"><div><p class="eyebrow">NOTICE BOARD</p><h1>공지 운영</h1><p>공지 작성·수정·삭제는 실제 사용자 화면에서 권한에 따라 수행합니다.</p></div></div>
+      <section class="card"><h2>사용자 화면에서 관리</h2><p>관리 권한이 확인되면 공지 목록과 상세 화면에 수정·삭제 도구가 표시됩니다. 일반 방문자에게는 관리 도구가 보이지 않습니다.</p><div class="actions"><a class="primary" href="/seonammedi/#notices">공지 화면 열기 →</a></div></section>
     </section>
 
     <section class="panel-page" data-panel="minutes" hidden>
@@ -188,18 +174,8 @@
     </section>
 
     <section class="panel-page" data-panel="finance" hidden>
-      <div class="heading"><div><p class="eyebrow">TRANSPARENCY</p><h1>회계 관리</h1><p>수입·지출 내역을 등록하면 사용자 페이지의 누적 모금·지출·잔액이 자동 계산됩니다.</p></div><button id="reloadFinance" type="button" class="secondary">새로고침</button></div>
-      <div class="two-col">
-        <form id="financeForm" class="card form-card">
-          <input type="hidden" name="id"><h2 id="financeFormTitle">회계내역 추가</h2>
-          <div class="form-row"><label>일자<input name="date" type="date" required></label><label>구분<select name="type"><option value="income">수입</option><option value="expense">지출</option></select></label><label>금액<input name="amount" type="number" min="0" step="1" required></label></div>
-          <label>목적·내용<input name="purpose" maxlength="500" required></label><label>관련 행사<input name="event" maxlength="300"></label>
-          <div class="form-row"><label>증빙<select name="evidenceStatus"><option value="none">미등록</option><option value="held">증빙보유</option><option value="verified">확인완료</option></select></label><label class="check"><input type="checkbox" name="visible" checked> 사용자페이지 공개</label></div>
-          <label>공개 메모<textarea name="note" rows="4" maxlength="1000"></textarea></label>
-          <div class="actions"><button type="submit" class="primary">저장</button><button type="button" id="financeReset" class="secondary">새 내역</button></div><p id="financeMessage" class="message" role="status"></p>
-        </form>
-        <section class="card list-card"><div class="card-head"><h2>회계내역</h2><span id="financeSummary" class="muted">합계 계산 중</span></div><div id="financeList" class="item-list"></div></section>
-      </div>
+      <div class="heading"><div><p class="eyebrow">TRANSPARENCY</p><h1>회계 운영</h1><p>회계내역 등록·수정·삭제와 공개 여부 관리는 실제 사용자 화면에서 수행합니다.</p></div></div>
+      <section class="card"><h2>사용자 화면에서 관리</h2><p>회계 관리 권한이 확인되면 공개 회계 화면에 내역 추가·수정·삭제 도구와 공개·비공개 상태가 표시됩니다. 방문자는 공개 내역만 봅니다.</p><div class="actions"><a class="primary" href="/seonammedi/#finance">회계 화면 열기 →</a></div></section>
     </section>
 
     <section class="panel-page" data-panel="access" hidden>
