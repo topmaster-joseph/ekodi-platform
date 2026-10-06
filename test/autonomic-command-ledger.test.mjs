@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { claimEkodiCommandTask, ingestEkodiPulse } from '../ekodi-command-ledger.js';
+import { claimEkodiCommandTask, ingestEkodiPulse, EKODI_COMMAND_LEDGER } from '../ekodi-command-ledger.js';
 
 function fakeDb() {
   const tasks = new Map();
@@ -94,4 +94,10 @@ test('human-gated autonomic event is persisted but never enters the executable q
   const claimed=await claimEkodiCommandTask(DB,task.id);
   assert.equal(claimed,null);
   assert.equal(DB.tasks.get(task.id).attempt_count,0);
+});
+
+
+test('command ledger recognizes auto_blocked without changing human_gate behavior', () => {
+  assert.ok(EKODI_COMMAND_LEDGER.states.includes('auto_blocked'));
+  assert.ok(EKODI_COMMAND_LEDGER.states.includes('human_gate'));
 });
