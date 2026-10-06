@@ -233,12 +233,19 @@ export async function handleOrchestratorCompletionReconciliation(request,env,{fe
   const action=text(body.action,40).toLowerCase();
 
   if(action==='candidates'){
-    const result=await db.prepare(`SELECT task_id,branch_ref,state,updated_at FROM ekodi_orchestrator_tasks
+    const result=await db.prepare(`SELECT task_id,branch_ref,state,updated_at,reconciliation_checked_at FROM ekodi_orchestrator_tasks
       WHERE deployment_requested=1 AND permission_class='delegated'
       AND state NOT IN ('completed','blocked','failed','cancelled')
-      AND branch_ref IS NOT NULL ORDER BY updated_at ASC LIMIT 50`).all();
+      AND branch_ref IS NOT NULL
+      ORDER BY CASE WHEN reconciliation_checked_at IS NULL THEN 0 ELSE 1 END ASC,
+        reconciliation_checked_at ASC, updated_at DESC
+      LIMIT 50`).all();
     const rows=Array.isArray(result?.results)?result.results:[];
-    return new Response(JSON.stringify({ok:true,authority:'ekodi-orchestrator',candidates:rows.map(row=>({taskId:row.task_id,branchRef:row.branch_ref,state:row.state,updatedAt:row.updated_at}))}),{status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+    const checkedAt=now();
+    if(rows.length)await db.batch(rows.map(row=>db.prepare(
+      'UPDATE ekodi_orchestrator_tasks SET reconciliation_checked_at=? WHERE task_id=? AND state NOT IN (\'completed\',\'blocked\',\'failed\',\'cancelled\')'
+    ).bind(checkedAt,row.task_id)));
+    return new Response(JSON.stringify({ok:true,authority:'ekodi-orchestrator',selection:'fair-round-robin',checkedAt,candidates:rows.map(row=>({taskId:row.task_id,branchRef:row.branch_ref,state:row.state,updatedAt:row.updated_at}))}),{status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
   }
 
   if(action==='complete'){

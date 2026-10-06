@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "policyId": "EKODI-ORCHESTRATOR-COMPLETION-001",
   "status": "enforced",
   "owner": "ekodi-orchestrator",
@@ -41,7 +41,12 @@
     "externalReferencesRecorded": true,
     "productionEvidencePersisted": true,
     "completionEventRequired": true,
-    "falseCompletionForbidden": true
+    "falseCompletionForbidden": true,
+    "candidateBatchLimit": 50,
+    "candidateFairRotationRequired": true,
+    "newUnattemptedCandidatesPrioritized": true,
+    "deferredCandidatesMustNotStarveNewerTasks": true,
+    "checkedAtMetadataRequired": true
   },
   "oidcBoundary": {
     "issuer": "https://token.actions.githubusercontent.com",
