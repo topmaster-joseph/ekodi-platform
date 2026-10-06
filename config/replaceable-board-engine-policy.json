@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "policyId": "EKODI-REPLACEABLE-BOARD-ENGINE-001",
   "status": "enforced",
   "appliesRecursivelyToAllServices": true,
@@ -96,5 +96,37 @@
       "mode": "provider_optional_fallback",
       "core": "supabase_edge_function"
     }
-  ]
+  ],
+  "independence": {
+    "ruleId": "EKODI-BOARD-INDEPENDENCE-001",
+    "status": "enforced",
+    "appliesTo": "all-current-and-future-user-independent-and-child-site-boards",
+    "sharedPlatformDependency": "authentication_identity_only",
+    "sharedCodeAllowed": true,
+    "sharedAuthorizationForbidden": true,
+    "centralTenantGrantAsBoardAuthorityForbidden": true,
+    "boardLocalMembershipRequired": true,
+    "boardLocalRoleAndPermissionRequired": true,
+    "boardLocalConfigurationRequired": true,
+    "boardLocalModerationRequired": true,
+    "boardLocalLifecycleRequired": true,
+    "boardLocalBackupRestoreExportRequired": true,
+    "boardLocalFailureIsolationRequired": true,
+    "boardLocalAuditRequired": true,
+    "crossBoardMutationForbidden": true,
+    "aiRequiredForCoreOperation": false,
+    "perBoardOptOutAllowed": false
+  },
+  "destructiveLifecycle": {
+    "cancelAndDeleteAllowed": true,
+    "ordinaryContentModerationUsesBoardLocalAuthority": true,
+    "boardLifecycleCancelRequiresSuperAdminReauthentication": true,
+    "boardLifecycleDeleteRequiresSuperAdminReauthentication": true,
+    "reauthenticationProofMaxAgeSeconds": 300,
+    "reauthenticationProofSingleUse": true,
+    "reauthenticationProofTargetBound": true,
+    "restorePointOrExportRequiredBeforeLifecycleMutation": true,
+    "auditEvidenceRequired": true,
+    "permanentPurgeRequiresSeparateExplicitApproval": true
+  }
 }
