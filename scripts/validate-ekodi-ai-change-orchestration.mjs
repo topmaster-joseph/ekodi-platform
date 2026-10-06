@@ -61,12 +61,19 @@ function runConstitutionalControls() {
 
 if (!fs.existsSync(policyPath)) fail('orchestration policy is missing.');
 const policy = readJson(policyPath);
-if (policy.schemaVersion !== 9) fail('orchestration policy schemaVersion must be 9 with operational and knowledge claim integrity.');
+if (policy.schemaVersion !== 10) fail('orchestration policy schemaVersion must be 10 with core-to-GitHub execution ordering.');
 if (policy.policyId !== 'AI-ORCHESTRATE-001' || policy.status !== 'enforced') fail('policy must remain enforced.');
 if (policy.controlPlane !== 'EKODI AI') fail('EKODI AI must remain the control plane.');
 if (policy.mutationBoundary?.breakGlassBypassEnabled !== false) fail('break-glass bypass must remain disabled.');
 if (policy.sourceControl?.directPushToMain !== false) fail('direct main pushes must remain forbidden.');
 if (policy.execution?.externalAiMayOwnProductionMutation !== false) fail('external AI cannot own production mutation.');
+const expectedDefaultExecutionPath = ['ekodi-core-plan-finalized','github-work-branch','code-mutation','automated-tests','pull-request','deployment-gate','guarded-deployment','production-verification'];
+if (JSON.stringify(policy.execution?.defaultExecutionPath || []) !== JSON.stringify(expectedDefaultExecutionPath)) fail('EKODI Core to GitHub must remain the default execution path.');
+if (policy.execution?.aiConsultation !== 'advisory-not-serial-prerequisite') fail('AI consultation must remain advisory rather than a serial execution prerequisite.');
+if (policy.execution?.consultationMayBlockCodeExecution !== false) fail('AI consultation may not block ordinary code execution after EKODI Core finalizes the plan.');
+if (policy.execution?.corePlanOwnsExecution !== true || policy.execution?.githubBranchMutationIsDefault !== true) fail('EKODI Core must own execution and GitHub branch mutation must remain the default.');
+if (policy.consultationDecision?.executionRelationship !== 'parallel-or-advisory' || policy.consultationDecision?.codeExecutionMayProceedWithoutConsultationCompletion !== true) fail('consultation must remain parallel/advisory to code execution.');
+if ((policy.consultationDecision?.forcedMultiConsultCategories || []).length !== 0) fail('no change category may restore mandatory serial multi-consultation before code execution.');
 const dailyOperationalReport = policy.reporting?.dailyOperationalReport || {};
 if (dailyOperationalReport.policyId !== 'EKODI-DAILY-REPORT-ROLE-001') fail('daily operational report role policy must remain registered.');
 if (dailyOperationalReport.sourceOfTruth !== 'ekodi-generated-operational-report') fail('EKODI-generated operational report must remain the daily report source of truth.');
