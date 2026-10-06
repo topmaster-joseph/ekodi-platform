@@ -1279,5 +1279,42 @@
     "localOverrideForbidden": true,
     "serviceOrAgentWaiverForbidden": true,
     "policyRegressionBlocksCi": true
+  },
+  "canonicalRouteSlashParityPolicy": {
+    "id": "CANONICAL-ROUTE-SLASH-PARITY-001",
+    "status": "enforced",
+    "mode": "mandatory-inherited-rule",
+    "scope": "all-current-and-future-user-facing-canonical-service-roots",
+    "canonicalBehavior": {
+      "slashlessRoot": "308-redirect-to-trailing-slash-root",
+      "trailingSlashRoot": "serve-canonical-root",
+      "queryStringPreserved": true,
+      "methodPreservedBy308": true,
+      "canonicalHost": "ekodi.kr"
+    },
+    "purpose": [
+      "slashless-and-trailing-slash-entry-points-must-resolve-to-one-canonical-behavior",
+      "relative-browser-assets-must-not-escape-the-service-base-path",
+      "new-user-facing-services-inherit-the-rule-without-per-service-opt-in"
+    ],
+    "exclusions": [
+      "api-only-roots",
+      "nested-api-endpoints",
+      "explicit-exact-routes"
+    ],
+    "browserAssetRule": {
+      "basePathSafeAssetsRequired": true,
+      "absoluteCanonicalServiceAssetPathsPreferred": true,
+      "regressionTestRequired": true
+    },
+    "enforcement": [
+      "canonical-surface-router.js",
+      "platform-route-registry.js",
+      "test/canonical-surface-router.test.mjs",
+      "scripts/validate-constitution.mjs",
+      "guarded-release",
+      "production-verification"
+    ],
+    "exceptionPolicy": "constitutional-amendment-required"
   }
 }
