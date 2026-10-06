@@ -1,6 +1,7 @@
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',...extra}});
 const text=v=>String(v??'').trim();
 const now=()=>new Date().toISOString();
+// Release marker: SeonamMedi voices/finance/notices board promotion 2026-10-07.
 const CATEGORIES=new Set(['question','proposal','experience','factcheck','tip','other']);
 const STATES=new Set(['received','reviewing','answered','published','archived']);
 const FINANCE_TYPES=new Set(['income','expense']);
