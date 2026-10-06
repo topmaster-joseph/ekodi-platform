@@ -1,9 +1,10 @@
+/* ADMIN-WHITE-SURFACE-001: platform Admin navigation and work canvas use white as the base surface. */
 /* EKODI Design Engine · Admin Surface v1
  * Seven-area primary navigation, light operational canvas, contained EKODIAN layer.
  */
 body.admin-compact.ekodi-admin-design-engine{
   padding-top:0!important;
-  background:#f6f8fb!important;
+  background:#fff!important;
   color:#172033!important;
   --admin-readable:#172033;
   --admin-secondary:#66768a;
@@ -23,9 +24,9 @@ body.admin-compact.ekodi-admin-design-engine .app>main{
   overscroll-behavior:contain!important;
 }
 body.admin-compact.ekodi-admin-design-engine .sidebar{
-  background:#0b1f36!important;
-  color:#e9f2fb!important;
-  border-right:1px solid #173653!important;
+  background:#fff!important;
+  color:#172033!important;
+  border-right:1px solid #d9e2ec!important;
   box-shadow:none!important;
   overflow:hidden!important;
 }
@@ -39,20 +40,21 @@ body.admin-compact.ekodi-admin-design-engine .sidebar nav::-webkit-scrollbar{wid
 body.admin-compact.ekodi-admin-design-engine .admin-global-nav{
   min-height:40px!important;
   border-radius:11px!important;
-  color:#dbe8f6!important;
+  color:#334155!important;
 }
 body.admin-compact.ekodi-admin-design-engine .admin-global-nav:hover{
-  border-color:#274d73!important;
-  background:#102c49!important;
-  color:#fff!important;
+  border-color:#cbd5e1!important;
+  background:#f8fafc!important;
+  color:#172033!important;
 }
 body.admin-compact.ekodi-admin-design-engine .admin-global-nav.active{
-  border-color:#2d6fac!important;
-  background:#174b7b!important;
-  color:#fff!important;
+  border-color:#94a3b8!important;
+  background:#fff!important;
+  color:#111827!important;
+  box-shadow:inset 3px 0 0 #111827!important;
 }
-body.admin-compact.ekodi-admin-design-engine .admin-global-nav b{color:#8fb5d6!important}
-body.admin-compact.ekodi-admin-design-engine .admin-global-nav.active b{color:#d9ecff!important}
+body.admin-compact.ekodi-admin-design-engine .admin-global-nav b{color:#64748b!important}
+body.admin-compact.ekodi-admin-design-engine .admin-global-nav.active b{color:#111827!important}
 body.admin-compact.ekodi-admin-design-engine .admin-global-details[data-admin-flat-details="true"]{
   margin-left:0!important;
   padding-left:0!important;
@@ -89,7 +91,7 @@ body.admin-compact.ekodi-admin-design-engine .admin-capability-shortcut{
   color:#0b5cab!important;
 }
 body.admin-compact.ekodi-admin-design-engine main,
-body.admin-compact.ekodi-admin-design-engine .content{background:#f6f8fb!important;color:#172033!important}
+body.admin-compact.ekodi-admin-design-engine .content{background:#fff!important;color:#172033!important}
 body.admin-compact.ekodi-admin-design-engine .content :is(h1,h2,h3,strong){color:#172033!important}
 body.admin-compact.ekodi-admin-design-engine .content :is(p,small,.muted){color:#66768a!important}
 
@@ -223,7 +225,7 @@ body.admin-compact.ekodi-admin-design-engine .content [data-panel] :where(small,
  * Enforce readable type, high contrast, and minimum interaction targets across every Admin surface.
  */
 body.admin-compact.ekodi-admin-design-engine [data-admin-context-rail="true"]{
-  background:#f7faf9!important;
+  background:#fff!important;
   color:#172033!important;
   border-color:#d7e4df!important;
   color-scheme:light!important;
