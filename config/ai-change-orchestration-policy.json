@@ -210,7 +210,20 @@
       "partial",
       "failed"
     ],
-    "forcedMultiConsultCategories": [],
+    "forcedMultiConsultCategories": [
+      "authentication",
+      "authorization",
+      "security",
+      "secrets",
+      "payment",
+      "finance",
+      "permission",
+      "data_migration",
+      "destructive_data",
+      "production",
+      "deployment",
+      "dns"
+    ],
     "reverificationTriggers": [
       "critical-risk",
       "material-dissent",
@@ -227,7 +240,8 @@
     "structuredEvidenceOnly": true,
     "tamperEvidentHashChain": true,
     "executionRelationship": "parallel-or-advisory",
-    "codeExecutionMayProceedWithoutConsultationCompletion": true
+    "codeExecutionMayProceedWithoutConsultationCompletion": true,
+    "failedConsultationDisposition": "record-isolate-continue-execution-unless-human-or-safety-gate-requires-stop"
   },
   "sourceControl": {
     "defaultBranch": "main",
