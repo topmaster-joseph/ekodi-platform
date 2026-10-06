@@ -47,6 +47,12 @@ function canonicalSlashRedirect(request,prefix){
   const target=new URL(request.url);target.pathname=`${prefix}/`;
   return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});
 }
+function canonicalExecutionRootRedirect(request,spec){
+  const path=new URL(request.url).pathname;
+  const apiLike=spec.id.endsWith('-api')||spec.prefix.includes('/api/');
+  if(apiLike||spec.exact||path!==spec.prefix)return null;
+  return canonicalSlashRedirect(request,spec.prefix);
+}
 function directDocumentNavigation(request){
   return String(request.headers.get('sec-fetch-dest')||'').toLowerCase()==='document';
 }
@@ -268,7 +274,10 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
       'x-robots-tag':'noindex, nofollow, noarchive',
     }});
   }
-  const executionSurface=executionSurfaceForPath(path);if(executionSurface){const response=await proxyExecutionSurface(request,env,executionSurface,legacyFetch,externalFetch);return executionSurface.id==='lab'?injectEkodiTenantReadability(response):response;}
+  const executionSurface=executionSurfaceForPath(path);if(executionSurface){
+    const rootRedirect=canonicalExecutionRootRedirect(request,executionSurface);if(rootRedirect)return rootRedirect;
+    const response=await proxyExecutionSurface(request,env,executionSurface,legacyFetch,externalFetch);return executionSurface.id==='lab'?injectEkodiTenantReadability(response):response;
+  }
   if(PUBLIC_PERSON_PATH_RE.test(path))return proxyBinding(request,env?.MY,'','person-public-profile');
   if(PERSON_DIGITAL_CARD_PATH_RE.test(path))return proxyBinding(request,env?.MY,'','person-digital-card');
   if(path===SURFACE_PREFIXES.my)return canonicalSlashRedirect(request,SURFACE_PREFIXES.my);
