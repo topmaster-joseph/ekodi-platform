@@ -362,7 +362,8 @@ async function routePlatform(request,env,ctx){
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){const adminTarget=legacyAdminAliasTarget(url.pathname);if(adminTarget){const target=new URL(request.url);target.pathname=adminTarget;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'admin-canonical-handoff'}})}}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
       const cameraPair=url.pathname.match(/^\/live\/c\/([A-Za-z0-9_-]{8,80})\/?$/);if(cameraPair)return managementCameraPage(cameraPair[1]);
-      if(url.pathname==='/live'||url.pathname==='/live/')return liveShell(liveServicePage());
+      if(url.pathname==='/live'){const target=new URL(request.url);target.pathname='/live/';return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'live-canonical-slash'}})}
+      if(url.pathname==='/live/')return liveShell(liveServicePage());
       if(url.pathname==='/live/admin'||url.pathname==='/live/admin/')return liveShell(liveServiceAdminPage(),'admin');
       if(url.pathname==='/tenant-live-admin.css')return tenantLiveAdminCss();
       if(url.pathname==='/tenant-live-admin.js')return tenantLiveAdminScript();
