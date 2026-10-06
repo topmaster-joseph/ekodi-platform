@@ -40,7 +40,7 @@
           <small>${esc(device.id)}</small>
           <button type="button" data-rp-wake="${esc(device.id)}" ${state.loading||!state.relayConfigured?'disabled':''}>깨우기</button>
         </article>`).join(''):'<div class="remote-power-empty">등록된 원격 PC 정보를 불러오는 중입니다.</div>'}</div>
-      <div class="remote-power-subhead"><strong>EKODI Device Agent · Remote Desktop 복구</strong><small>아래 상태는 PC 전원/RDP 접속 상태가 아니라 Device Agent heartbeat 기준입니다.</small></div>
+      <div class="remote-power-subhead"><strong>Remote Desktop 자가복구 · EKODI Device Agent</strong><small>아래 상태는 PC 전원/RDP 접속 상태가 아니라 Device Agent heartbeat 기준입니다.</small></div>
       <div class="remote-power-grid">${state.agents.length?state.agents.map(device=>`
         <article class="remote-power-device">
           <div><strong>${esc(device.label||device.hostname||'미식별 PC')}</strong><span class="remote-power-status" data-status="${esc(device.status||'unknown')}">${esc(statusLabel(device.status,'agent'))}</span></div>
