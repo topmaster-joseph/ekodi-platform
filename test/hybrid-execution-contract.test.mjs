@@ -156,3 +156,13 @@ test('execution admin visibly communicates the enforced background-only automati
   assert.match(admin, /OAuth · CAPTCHA · OS 권한/);
   assert.match(admin, /'computer\.browser\.execute':'백그라운드 브라우저 자동실행'/);
 });
+
+
+test('admin surface exposes staged local edge rollout without automatic promotion', () => {
+  assert.match(admin, /id="hybridRolloutStage"/);
+  assert.match(admin, /OBSERVE/);
+  assert.match(admin, /CANARY/);
+  assert.match(admin, /PARALLEL/);
+  assert.match(admin, /renderRollout/);
+  assert.match(admin, /두 번째 적격 노드/);
+});
