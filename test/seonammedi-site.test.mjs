@@ -727,7 +727,7 @@ test('seonammedi citizen opinions hand off to the standalone board-owned UI',asy
     readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8'),
     readFile(new URL('../wrangler.independent-board.toml',import.meta.url),'utf8')
   ]);
-  assert.match(html,/href="\/board\/voices"[^>]*>시민의견<\/a>/);
+  assert.match(html,/href="https:\/\/seonammedi\.kr\/board\/voices"[^>]*>시민의견<\/a>/);
   assert.doesNotMatch(html,/id="voices"|id="publicVoiceList"|id="voiceComposeToggle"/);
   assert.match(worker,/function boardPage\(\)/);
   assert.match(worker,/env\.BOARD_DB/);
@@ -748,12 +748,12 @@ test('seonammedi voices finance and notices use sibling standalone board routes'
     readFile(new URL('index.html',root),'utf8'),
     readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8')
   ]);
-  assert.match(html,/href="\/board\/voices"[^>]*>시민의견<\/a>/);
-  assert.match(html,/href="\/board\/finance"[^>]*>회계<\/a>/);
-  assert.match(html,/href="\/board\/notices"[^>]*>공지<\/a>/);
-  assert.match(worker,/link\('\/board\/voices','시민의견','voices'\)/);
-  assert.match(worker,/link\('\/board\/finance','회계','finance'\)/);
-  assert.match(worker,/link\('\/board\/notices','공지','notices'\)/);
+  assert.match(html,/href="https:\/\/seonammedi\.kr\/board\/voices"[^>]*>시민의견<\/a>/);
+  assert.match(html,/href="https:\/\/seonammedi\.kr\/board\/finance"[^>]*>회계<\/a>/);
+  assert.match(html,/href="https:\/\/seonammedi\.kr\/board\/notices"[^>]*>공지<\/a>/);
+  assert.match(worker,/link\('https:\/\/seonammedi\.kr\/board\/voices','시민의견','voices'\)/);
+  assert.match(worker,/link\('https:\/\/seonammedi\.kr\/board\/finance','회계','finance'\)/);
+  assert.match(worker,/link\('https:\/\/seonammedi\.kr\/board\/notices','공지','notices'\)/);
   assert.match(worker,/function financePage\(\)/);
   assert.match(worker,/function noticesPage\(\)/);
   assert.match(worker,/href="\/#organization">조직/);
@@ -815,9 +815,9 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.match(html,/<a class="brand" href="\/">/);
   assert.match(html,/<a href="\/admin\/">관리<\/a>/);
   for(const hash of ['timeline','channels','organization'])assert.match(adminHtml,new RegExp('href="\/#'+hash+'"'));
-  assert.match(adminHtml,/href="\/board\/voices">시민의견 관리/);
-  assert.match(adminHtml,/href="\/board\/finance">회계 관리/);
-  assert.match(adminHtml,/href="\/board\/notices">공지 관리/);
+  assert.match(adminHtml,/href="https:\/\/seonammedi\.kr\/board\/voices">시민의견 관리/);
+  assert.match(adminHtml,/href="https:\/\/seonammedi\.kr\/board\/finance">회계 관리/);
+  assert.match(adminHtml,/href="https:\/\/seonammedi\.kr\/board\/notices">공지 관리/);
   assert.match(app,/\^\(\?:\\\/seonammedi\)\?\\\/notices/);
   assert.ok(minutes.includes("location.origin+'/minutes/?token='"));
   assert.match(css,/min-height:100dvh;display:flex;flex-direction:column/);
