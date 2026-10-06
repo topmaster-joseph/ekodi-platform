@@ -40,6 +40,11 @@ zone_name = "ekodi.kr"
 pattern = "ekodi.kr/ekodichurch/admin*"
 zone_name = "ekodi.kr"
 
+# Canonical Church board must outrank the public /ekodichurch/* path gateway.
+[[routes]]
+pattern = "ekodi.kr/ekodichurch/board*"
+zone_name = "ekodi.kr"
+
 
 
 

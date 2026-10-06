@@ -111,3 +111,25 @@ test('pre-candidate Church route repair defers exact member response verificatio
   assert.deepEqual(member?.statuses,[308]);
   assert.ok(member?.headerExpect?.includes('location: '+CHURCH_ROUTE_CONTRACT.memberCanonicalUrl));
 });
+
+
+test('Church board carve-out stays on Shared Site and guarded candidate verifies board identity',async()=>{
+  assert.deepEqual(CHURCH_ROUTE_CONTRACT.boardSharedRoutes,['ekodi.kr/ekodichurch/board*']);
+  assert.equal(CHURCH_ROUTE_CONTRACT.boardUrl,'https://ekodi.kr/ekodichurch/board');
+  assert.equal(CHURCH_ROUTE_CONTRACT.boardHealthUrl,'https://ekodi.kr/ekodichurch/board/api/health');
+  assert.equal(CHURCH_ROUTE_CONTRACT.boardId,'site:ekodichurch:main');
+  const wrangler=await readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
+  assert.match(wrangler,/pattern = "ekodi\.kr\/ekodichurch\/board\*"/);
+  const source=await readFile(new URL('../scripts/ensure-church-route-ownership.mjs',import.meta.url),'utf8');
+  assert.match(source,/boardSharedRoutes/);
+  assert.match(source,/verifyBoardSurface/);
+  assert.match(source,/Church board Shared Site route missing after repair/);
+  const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const board=manifest.worker.requests.find(item=>item.url===CHURCH_ROUTE_CONTRACT.boardHealthUrl);
+  assert.ok(board,'Church board health probe missing');
+  assert.deepEqual(board.statuses,[200]);
+  assert.ok(board.headerExpect?.includes('x-ekodi-board-independent: true'));
+  assert.ok(board.headerExpect?.includes('x-ekodi-board-id: '+CHURCH_ROUTE_CONTRACT.boardId));
+  assert.ok(board.expect?.includes('"independent":true'));
+  assert.ok(board.expect?.includes('"boardId":"'+CHURCH_ROUTE_CONTRACT.boardId+'"'));
+});

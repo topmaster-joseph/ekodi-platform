@@ -43,3 +43,13 @@ test('board runtime contract is site-scoped, AI-independent and exportable',asyn
   assert.match(router,/handleSiteBoardRequest/);
   assert.match(router,/const siteBoard=await handleSiteBoardRequest\(request,env\);if\(siteBoard\)return siteBoard/);
 });
+
+
+test('all JSON board APIs retain independent board identity headers',async()=>{
+  const source=await readFile(new URL('../site-board-control.js',import.meta.url),'utf8');
+  assert.match(source,/const boardJson=\(instance,data,status=200\)=>json/);
+  assert.match(source,/x-ekodi-board-id/);
+  assert.match(source,/x-ekodi-board-independent/);
+  assert.doesNotMatch(source,/return json\(/);
+  assert.match(source,/return boardJson\(instance,\{ok:true,boardId:instance\.board_id,siteId:instance\.site_id,aiIndependent:true,independent:true\}\)/);
+});

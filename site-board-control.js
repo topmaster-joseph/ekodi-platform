@@ -3,7 +3,7 @@ import { accessGrantIsActive, effectiveAccessCapabilities } from './access-gover
 
 const clean=(value,max=4000)=>String(value??'').trim().slice(0,max);
 const lower=value=>clean(value,320).toLowerCase();
-const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+const json=(data,status=200,extraHeaders={})=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',...extraHeaders}});
 const now=()=>new Date().toISOString();
 const MANAGER_ROLES=new Set(['super_admin','platform_admin','owner','store_owner','tenant_admin','workspace_admin','client_admin','admin','manager','hq_manager']);
 const PATH_TENANT_ALIASES=Object.freeze({
@@ -149,6 +149,7 @@ async function audit(env,instance,who,action,targetType='',targetId='',detail={}
 
 function publicPost(row){return {id:Number(row.id),title:row.title,body:row.body,createdAt:row.created_at,updatedAt:row.updated_at};}
 function publicComment(row){return {id:Number(row.id),postId:Number(row.post_id),body:row.body,createdAt:row.created_at,updatedAt:row.updated_at};}
+const boardJson=(instance,data,status=200)=>json(data,status,{'x-ekodi-board-id':instance.board_id,'x-ekodi-board-independent':'true'});
 async function parseBody(request){try{return await request.json()}catch{return null}}
 
 async function listPosts(env,instance){
@@ -186,8 +187,8 @@ export async function handleSiteBoardRequest(request,env){
   if(method==='GET'&&sub==='/')return page(route,await listPosts(env,instance));
   const postPageMatch=sub.match(/^\/post\/(\d+)$/);
   if(method==='GET'&&postPageMatch)return postPage(route,await readPost(env,instance,Number(postPageMatch[1])));
-  if(method==='GET'&&sub==='/api/health')return json({ok:true,boardId:instance.board_id,siteId:instance.site_id,aiIndependent:true,independent:true});
-  if(method==='GET'&&sub==='/api/posts')return json({boardId:instance.board_id,items:await listPosts(env,instance)});
+  if(method==='GET'&&sub==='/api/health')return boardJson(instance,{ok:true,boardId:instance.board_id,siteId:instance.site_id,aiIndependent:true,independent:true});
+  if(method==='GET'&&sub==='/api/posts')return boardJson(instance,{boardId:instance.board_id,items:await listPosts(env,instance)});
   const apiPost=sub.match(/^\/api\/posts\/(\d+)$/);
   if(method==='GET'&&apiPost){
     const post=await readPost(env,instance,Number(apiPost[1]));
@@ -196,34 +197,34 @@ export async function handleSiteBoardRequest(request,env){
 
   const who=await actor(request,env,instance);
   if(method==='POST'&&sub==='/api/posts'){
-    if(!who.authenticated&&Number(instance.allow_anonymous_write)!==1)return json({error:'authentication_required'},401);
+    if(!who.authenticated&&Number(instance.allow_anonymous_write)!==1)return boardJson(instance,{error:'authentication_required'},401);
     const body=await parseBody(request),title=clean(body?.title,200),textBody=clean(body?.body,20000);
-    if(!title||!textBody)return json({error:'title_and_body_required'},400);
+    if(!title||!textBody)return boardJson(instance,{error:'title_and_body_required'},400);
     const stamp=now();
     const result=await env.DB.prepare(`INSERT INTO ekodi_board_posts
       (board_id,author_person_id,author_email,title,body,status,created_at,updated_at) VALUES (?,?,?,?,?,'published',?,?)`)
       .bind(instance.board_id,who.personId,who.email,title,textBody,stamp,stamp).run();
     const id=Number(result?.meta?.last_row_id||0);
     await audit(env,instance,who,'post.create','post',id);
-    return json({ok:true,id},201);
+    return boardJson(instance,{ok:true,id},201);
   }
   if(apiPost&&['PATCH','DELETE'].includes(method)){
-    if(!who.authenticated)return json({error:'authentication_required'},401);
+    if(!who.authenticated)return boardJson(instance,{error:'authentication_required'},401);
     const id=Number(apiPost[1]);
     const existing=await env.DB.prepare('SELECT * FROM ekodi_board_posts WHERE board_id=? AND id=? LIMIT 1').bind(instance.board_id,id).first();
-    if(!existing)return json({error:'not_found'},404);
+    if(!existing)return boardJson(instance,{error:'not_found'},404);
     const owns=clean(existing.author_person_id,160)===who.personId;
-    if(!owns&&!who.manage)return json({error:'forbidden'},403);
+    if(!owns&&!who.manage)return boardJson(instance,{error:'forbidden'},403);
     if(method==='DELETE'){
       await env.DB.prepare(`UPDATE ekodi_board_posts SET status='deleted',updated_at=? WHERE board_id=? AND id=?`).bind(now(),instance.board_id,id).run();
       await audit(env,instance,who,'post.delete','post',id);
-      return json({ok:true});
+      return boardJson(instance,{ok:true});
     }
     const body=await parseBody(request),title=clean(body?.title??existing.title,200),textBody=clean(body?.body??existing.body,20000);
-    if(!title||!textBody)return json({error:'title_and_body_required'},400);
+    if(!title||!textBody)return boardJson(instance,{error:'title_and_body_required'},400);
     await env.DB.prepare('UPDATE ekodi_board_posts SET title=?,body=?,updated_at=? WHERE board_id=? AND id=?').bind(title,textBody,now(),instance.board_id,id).run();
     await audit(env,instance,who,'post.edit','post',id);
-    return json({ok:true});
+    return boardJson(instance,{ok:true});
   }
   const commentsMatch=sub.match(/^\/api\/posts\/(\d+)\/comments$/);
   if(method==='GET'&&commentsMatch){
@@ -231,24 +232,24 @@ export async function handleSiteBoardRequest(request,env){
     return post?json({items:post.comments}):json({error:'not_found'},404);
   }
   if(method==='POST'&&commentsMatch){
-    if(Number(instance.comments_enabled)!==1)return json({error:'comments_disabled'},409);
-    if(!who.authenticated&&Number(instance.allow_anonymous_write)!==1)return json({error:'authentication_required'},401);
+    if(Number(instance.comments_enabled)!==1)return boardJson(instance,{error:'comments_disabled'},409);
+    if(!who.authenticated&&Number(instance.allow_anonymous_write)!==1)return boardJson(instance,{error:'authentication_required'},401);
     const id=Number(commentsMatch[1]);
     const exists=await env.DB.prepare(`SELECT id FROM ekodi_board_posts WHERE board_id=? AND id=? AND status='published' LIMIT 1`).bind(instance.board_id,id).first();
-    if(!exists)return json({error:'not_found'},404);
+    if(!exists)return boardJson(instance,{error:'not_found'},404);
     const body=await parseBody(request),comment=clean(body?.body,5000);
-    if(!comment)return json({error:'body_required'},400);
+    if(!comment)return boardJson(instance,{error:'body_required'},400);
     const stamp=now();
     const result=await env.DB.prepare(`INSERT INTO ekodi_board_comments
       (board_id,post_id,author_person_id,author_email,body,status,created_at,updated_at) VALUES (?,?,?,?,?,'published',?,?)`)
       .bind(instance.board_id,id,who.personId,who.email,comment,stamp,stamp).run();
     const commentId=Number(result?.meta?.last_row_id||0);
     await audit(env,instance,who,'comment.create','comment',commentId,{postId:id});
-    return json({ok:true,id:commentId},201);
+    return boardJson(instance,{ok:true,id:commentId},201);
   }
-  if(method==='GET'&&sub==='/api/config')return json({siteId:instance.site_id,visibility:instance.visibility,allowAnonymousWrite:Number(instance.allow_anonymous_write)===1,commentsEnabled:Number(instance.comments_enabled)===1});
+  if(method==='GET'&&sub==='/api/config')return boardJson(instance,{siteId:instance.site_id,visibility:instance.visibility,allowAnonymousWrite:Number(instance.allow_anonymous_write)===1,commentsEnabled:Number(instance.comments_enabled)===1});
   if(method==='PATCH'&&sub==='/api/config'){
-    if(!who.manage)return json({error:'forbidden'},403);
+    if(!who.manage)return boardJson(instance,{error:'forbidden'},403);
     const body=await parseBody(request)||{};
     const visibility=['public','members'].includes(lower(body.visibility))?lower(body.visibility):instance.visibility;
     const anonymous=body.allowAnonymousWrite===undefined?Number(instance.allow_anonymous_write):(body.allowAnonymousWrite?1:0);
@@ -256,15 +257,15 @@ export async function handleSiteBoardRequest(request,env){
     await env.DB.prepare('UPDATE ekodi_board_instances SET visibility=?,allow_anonymous_write=?,comments_enabled=?,updated_at=? WHERE board_id=?')
       .bind(visibility,anonymous,comments,now(),instance.board_id).run();
     await audit(env,instance,who,'config.update','board',instance.board_id,{visibility,anonymous,comments});
-    return json({ok:true});
+    return boardJson(instance,{ok:true});
   }
   if(method==='GET'&&sub==='/api/export'){
-    if(!who.manage)return json({error:'forbidden'},403);
+    if(!who.manage)return boardJson(instance,{error:'forbidden'},403);
     const posts=await env.DB.prepare('SELECT * FROM ekodi_board_posts WHERE board_id=? ORDER BY id').bind(instance.board_id).all();
     const comments=await env.DB.prepare('SELECT * FROM ekodi_board_comments WHERE board_id=? ORDER BY id').bind(instance.board_id).all();
-    return json({schemaVersion:1,board:{boardId:instance.board_id,siteId:instance.site_id,tenantSlug:instance.tenant_slug,config:instance.config_json},posts:posts.results||[],comments:comments.results||[]});
+    return boardJson(instance,{schemaVersion:1,board:{boardId:instance.board_id,siteId:instance.site_id,tenantSlug:instance.tenant_slug,config:instance.config_json},posts:posts.results||[],comments:comments.results||[]});
   }
-  return json({error:'not_found'},404);
+  return boardJson(instance,{error:'not_found'},404);
 }
 
 export const EKODI_SITE_BOARD=Object.freeze({

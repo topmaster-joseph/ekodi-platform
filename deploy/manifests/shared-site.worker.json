@@ -2136,6 +2136,24 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/ekodichurch/board/api/health",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"ok\":true",
+          "\"boardId\":\"site:ekodichurch:main\"",
+          "\"aiIndependent\":true",
+          "\"independent\":true"
+        ],
+        "headerExpect": [
+          "content-type: application/json; charset=utf-8",
+          "x-ekodi-board-independent: true",
+          "x-ekodi-board-id: site:ekodichurch:main"
+        ]
+      },
+      {
         "url": "https://ekodi.kr/jadam",
         "statuses": [
           200
