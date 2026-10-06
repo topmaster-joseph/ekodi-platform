@@ -11,7 +11,20 @@
   function esc(v){ return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
   function host(){ return document.querySelector('#deviceControlPanel') || document.querySelector('[data-panel~="devices"]'); }
-  function statusLabel(status){ return status==='online'?'온라인':status==='offline'?'오프라인':status==='wake_requested'?'기동 요청':'상태 확인 전'; }
+  function statusLabel(status, source='remote'){ 
+    if(status==='online') return source==='agent'?'Agent 연결됨':'온라인';
+    if(status==='offline') return source==='agent'?'Agent 응답없음':'오프라인';
+    if(status==='stale') return source==='agent'?'Agent 응답지연':'응답 지연';
+    if(status==='enrolled') return source==='agent'?'Agent 등록됨 · 첫 heartbeat 대기':'등록됨';
+    if(status==='revoked') return '권한 해제';
+    if(status==='wake_requested') return '기동 요청';
+    return '상태 확인 전';
+  }
+  function timeLabel(value){
+    if(!value)return 'heartbeat 없음';
+    const date=new Date(value); if(Number.isNaN(date.getTime()))return 'heartbeat 확인 불가';
+    return date.toLocaleString('ko-KR');
+  }
 
   function render(){
     const root=host(); if(!root)return;
@@ -23,16 +36,16 @@
       ${state.message?`<div class="remote-power-message">${esc(state.message)}</div>`:''}
       <div class="remote-power-grid">${state.devices.length?state.devices.map(device=>`
         <article class="remote-power-device">
-          <div><strong>${esc(device.label)}</strong><span class="remote-power-status" data-status="${esc(device.status||'unknown')}">${esc(statusLabel(device.status))}</span></div>
+          <div><strong>${esc(device.label)}</strong><span class="remote-power-status" data-status="${esc(device.status||'unknown')}">${esc(statusLabel(device.status,'remote'))}</span></div>
           <small>${esc(device.id)}</small>
           <button type="button" data-rp-wake="${esc(device.id)}" ${state.loading||!state.relayConfigured?'disabled':''}>깨우기</button>
         </article>`).join(''):'<div class="remote-power-empty">등록된 원격 PC 정보를 불러오는 중입니다.</div>'}</div>
-      <div class="remote-power-subhead"><strong>Remote Desktop 자가복구</strong><small>EKODI Device Agent가 허용된 복구 명령만 실행합니다.</small></div>
+      <div class="remote-power-subhead"><strong>EKODI Device Agent · Remote Desktop 복구</strong><small>아래 상태는 PC 전원/RDP 접속 상태가 아니라 Device Agent heartbeat 기준입니다.</small></div>
       <div class="remote-power-grid">${state.agents.length?state.agents.map(device=>`
         <article class="remote-power-device">
-          <div><strong>${esc(device.label||device.hostname||device.id)}</strong><span class="remote-power-status" data-status="${esc(device.status||'unknown')}">${esc(statusLabel(device.status))}</span></div>
-          <small>${esc(device.id)}</small>
-          <div class="remote-power-actions"><button type="button" data-rp-recovery="enable" data-rp-device="${esc(device.id)}" ${state.loading?'disabled':''}>자가복구 켜기</button><button type="button" data-rp-recovery="run" data-rp-device="${esc(device.id)}" ${state.loading?'disabled':''}>지금 복구</button><button type="button" data-rp-recovery="disable" data-rp-device="${esc(device.id)}" ${state.loading?'disabled':''}>끄기</button></div>
+          <div><strong>${esc(device.label||device.hostname||'미식별 PC')}</strong><span class="remote-power-status" data-status="${esc(device.status||'unknown')}">${esc(statusLabel(device.status,'agent'))}</span></div>
+          <small>${esc(device.id)} · 최근 heartbeat ${esc(timeLabel(device.lastSeenAt||device.last_seen_at))}</small>
+          <div class="remote-power-actions"><button type="button" data-rp-recovery="enable" data-rp-device="${esc(device.id)}" ${state.loading||device.status==='revoked'?'disabled':''}>자가복구 켜기</button><button type="button" data-rp-recovery="run" data-rp-device="${esc(device.id)}" ${state.loading||device.status!=='online'?'disabled':''} title="${device.status==='online'?'즉시 Remote Desktop 복구 실행':'Device Agent가 연결되어야 즉시 복구할 수 있습니다.'}">지금 복구</button><button type="button" data-rp-recovery="disable" data-rp-device="${esc(device.id)}" ${state.loading||device.status==='revoked'?'disabled':''}>끄기</button></div>
         </article>`).join(''):'<div class="remote-power-empty">EKODI Device Agent에 등록된 PC가 없습니다.</div>'}</div>`;
     card.querySelector('[data-rp-refresh]')?.addEventListener('click',load);
     card.querySelectorAll('[data-rp-wake]').forEach(button=>button.addEventListener('click',()=>wake(button.dataset.rpWake)));
