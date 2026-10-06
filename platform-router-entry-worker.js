@@ -389,6 +389,15 @@ async function routePlatform(request,env,ctx){
     }
     const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
     if(canonical)return canonical;
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&(['/control','/control/','/control.css','/control.js'].includes(url.pathname))){
+      const response=await legacyPlatformRouter.fetch(request,env,ctx);
+      const out=new Response(response.body,response);
+      out.headers.set('x-ekodi-canonical-surface','control');
+      out.headers.set('x-ekodi-route','control-surface');
+      out.headers.set('cache-control','no-store');
+      out.headers.set('x-robots-tag','noindex, nofollow, noarchive');
+      return out;
+    }
 
     if(CGMA_HOSTS.has(host)&&['GET','HEAD'].includes(request.method))return routeCgmaPublic(request,env);
 
