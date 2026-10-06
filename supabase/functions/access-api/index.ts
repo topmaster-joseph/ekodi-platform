@@ -252,6 +252,10 @@ Deno.serve(async(req)=>{
       return json(req,{...data,user:{id:auth.user.id,email:auth.user.email??null,name:auth.user.user_metadata?.full_name??auth.user.user_metadata?.name??null}});
     }
 
+    if(req.method==="GET"&&path==="/platform-authority"){
+      return json(req,{ok:true,platformAdmin:await platformAdmin(auth.user.id)});
+    }
+
     if(req.method==="GET"&&path==="/workspaces"){
       const site=clip(requestUrl.searchParams.get("site"),60);
       if(!site)return json(req,{error:"site_required"},400);

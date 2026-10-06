@@ -18,6 +18,9 @@ const PAGE_CAP='seonammedi.page.manage';
 const FINANCE_CAP='seonammedi.finance.manage';
 const MINUTES_CAP='seonammedi.page.manage';
 const MINUTES_STATES=new Set(['shared','closed']);
+const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
+const PLATFORM_AUTHORITY_URL=SUPABASE_URL+'/functions/v1/access-api/platform-authority';
 const VOICE_STATES=new Set(['received','reviewing','answered','published','archived']);
 const VOICE_CATEGORIES=new Set(['question','proposal','experience','factcheck','tip','other']);
 const TIMELINE_STATES=new Set(['draft','published']);
@@ -296,6 +299,19 @@ async function platformSession(request,env){
   return session?.authenticated&&session?.email?session:null;
 }
 
+async function centralPlatformAuthority(request){
+  const authorization=String(request.headers.get('authorization')||'').trim();
+  if(!authorization.toLowerCase().startsWith('bearer ')||authorization.length>8200)return false;
+  const response=await fetch(PLATFORM_AUTHORITY_URL,{
+    method:'GET',
+    headers:{apikey:SUPABASE_PUBLISHABLE_KEY,authorization},
+    signal:AbortSignal.timeout(8000),
+  }).catch(()=>null);
+  if(!response?.ok)return false;
+  const data=await response.json().catch(()=>null);
+  return data?.ok===true&&data?.platformAdmin===true;
+}
+
 async function authority(request,env){
   if(!env?.DB?.prepare)return {ok:false,status:503,error:'storage_unavailable'};
   const session=await platformSession(request,env);
@@ -303,6 +319,7 @@ async function authority(request,env){
   const principal=await principalFromSupabaseRequest(request);
   if(!principal?.email)return {ok:false,status:401,error:'authentication_required'};
   const principalEmail=lower(principal.email);
+  if(await centralPlatformAuthority(request))return {ok:true,email:principalEmail,role:'super_admin',platform:true,capabilities:['*']};
   const platformAdmin=await env.DB.prepare('SELECT role FROM admins WHERE lower(trim(email))=? LIMIT 1').bind(principalEmail).first().catch(()=>null);
   if(lower(platformAdmin?.role)==='super_admin')return {ok:true,email:principalEmail,role:'super_admin',platform:true,capabilities:['*']};
   const tenant=await env.DB.prepare('SELECT id,status FROM customer_tenants WHERE slug=? LIMIT 1').bind(TENANT_SLUG).first();

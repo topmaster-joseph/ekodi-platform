@@ -734,6 +734,9 @@ test('seonammedi citizen opinions hand off to the standalone board-owned UI',asy
   assert.match(worker,/의견 등록/);
   assert.match(worker,/답글 등록/);
   assert.match(worker,/\/api\/admin\/posts/);
+  assert.match(worker,/adminLogin\.hidden=false;await load\(\)/);
+  const authEntry=await readFile(new URL('../auth-site/auth-entry.js',import.meta.url),'utf8');
+  assert.match(authEntry,/purpose'\) === 'seonammedi-board-admin'/);
   assert.match(config,/database_name = "ekodi-independent-board"/);
 });
 
@@ -770,6 +773,15 @@ test('seonammedi registered Google admins manage public content from user surfac
   assert.match(app,/소통채널 바로 수정/);
   assert.match(app,/회계 바로 수정/);
   assert.match(worker,/auth\.permissions\?\.\[permission\]===true/);
+  const [control,accessApi]=await Promise.all([
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+    readFile(new URL('../supabase/functions/access-api/index.ts',import.meta.url),'utf8')
+  ]);
+  assert.match(accessApi,/path==="\/platform-authority"/);
+  assert.match(accessApi,/platformAdmin:await platformAdmin\(auth\.user\.id\)/);
+  assert.match(control,/async function centralPlatformAuthority\(request\)/);
+  assert.match(control,/PLATFORM_AUTHORITY_URL/);
+  assert.match(control,/if\(await centralPlatformAuthority\(request\)\)return \{ok:true,email:principalEmail,role:'super_admin',platform:true,capabilities:\['\*'\]\}/);
   assert.match(worker,/data-edit/);
   assert.match(worker,/data-delete/);
   assert.match(worker,/data-reply-delete/);
