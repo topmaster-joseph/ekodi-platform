@@ -46,6 +46,7 @@
   };
   let timer = null;
   let currentEnrollmentUrl = '';
+  let currentEnrollmentInstaller = '';
   let deviceCatalog = Object.values(TYPE_FALLBACK);
   let currentDevices = [];
   let activeType = 'all';
@@ -134,6 +135,62 @@
     const deviceType = device.management?.type || 'pc';
     if (deviceType === 'pc') return true;
     return OBSERVE_COMMANDS[deviceType]?.has(type) === true;
+  }
+
+  function utf16leBase64(value) {
+    const text = String(value || '');
+    let binary = '';
+    for (let i = 0; i < text.length; i += 1) {
+      const code = text.charCodeAt(i);
+      binary += String.fromCharCode(code & 255, code >>> 8);
+    }
+    return btoa(binary);
+  }
+
+  function buildEnrollmentInstaller(enrollmentCode) {
+    const code = String(enrollmentCode || '').trim();
+    if (!/^EKD-[A-F0-9]{20}$/.test(code)) throw new Error('기기 연결 코드 형식이 올바르지 않습니다.');
+    const ps = [
+      "$ErrorActionPreference='Stop'",
+      "$p=Join-Path $env:TEMP 'ekodi-device-agent.ps1'",
+      "Invoke-WebRequest -UseBasicParsing '" + WINDOWS_AGENT_URL + "' -OutFile $p",
+      "& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p -Install -EnrollmentCode '" + code + "' -ApiBase '" + API_BASE + "'",
+      "if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}",
+    ].join(';');
+    const encoded = utf16leBase64(ps);
+    return [
+      '@echo off',
+      'setlocal',
+      'chcp 65001 >nul',
+      'title EKODI PC 연결',
+      'echo EKODI에 이 PC를 연결합니다.',
+      'echo Windows 관리자 승인창이 나타나면 [예]를 누르세요.',
+      'echo.',
+      `powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand ${encoded}`,
+      'if errorlevel 1 (',
+      '  echo.',
+      '  echo PC 연결에 실패했습니다. 관리자 화면의 [연결 문제 해결]을 확인하세요.',
+      '  pause',
+      '  exit /b 1',
+      ')',
+      'echo.',
+      'echo EKODI PC 연결이 완료되었습니다. 이 창을 닫아도 됩니다.',
+      'pause',
+      'endlocal',
+    ].join('\r\n');
+  }
+
+  function downloadEnrollmentInstaller() {
+    if (!currentEnrollmentInstaller) return;
+    const blob = new Blob([currentEnrollmentInstaller], { type:'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'EKODI_PC_연결.cmd';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   function launchProtocol(url) {
@@ -557,12 +614,13 @@
       const data = await request('/api/control/devices/enrollment', { method:'POST', body:JSON.stringify({ deviceType, label:labelInput?.value.trim() || typeInfo(deviceType).label, locationLabel:locationInput?.value.trim() || '' }) });
       const command = `$p="$env:TEMP\\ekodi-device-agent.ps1"; Invoke-WebRequest -UseBasicParsing "${WINDOWS_AGENT_URL}" -OutFile $p; powershell -NoProfile -ExecutionPolicy Bypass -File $p -Install -EnrollmentCode "${data.enrollmentCode}" -ApiBase "${API_BASE}"`;
       currentEnrollmentUrl = data.protocolUrl || `ekodi-device://enroll?code=${encodeURIComponent(data.enrollmentCode)}`;
+      currentEnrollmentInstaller = buildEnrollmentInstaller(data.enrollmentCode);
       result.hidden = false;
       result.querySelector('[data-enrollment-code]').textContent = data.enrollmentCode;
-      result.querySelector('[data-enrollment-expiry]').textContent = `${typeInfo(deviceType).label} · 유효시간: ${timeLabel(data.expiresAt)}까지 · 1회 사용`;
+      result.querySelector('[data-enrollment-expiry]').textContent = `${typeInfo(deviceType).label} · ${timeLabel(data.expiresAt)}까지 사용할 수 있습니다.`;
       result.querySelector('[data-install-command]').textContent = command;
       result.dataset.installCommand = command;
-      launchProtocol(currentEnrollmentUrl);
+      downloadEnrollmentInstaller();
     } catch (error) { alert(error.message); }
     finally { button.disabled = false; button.textContent = '이 PC 연결'; }
   }
@@ -623,8 +681,8 @@
           </section>
           <div class="device-enrollment-result" id="deviceEnrollmentResult" hidden>
             <div><strong>연결 준비가 됐습니다.</strong><span data-enrollment-expiry></span></div>
-            <p><b>Windows 승인창이 뜨면 “예”만 누르세요.</b> 아무 반응이 없을 때만 아래 “연결 문제 해결”을 펼치면 됩니다.</p>
-            <div class="device-pair-actions"><button type="button" class="primary" id="continueDeviceEnrollment">연결 계속</button></div>
+            <p><b>다운로드된 “EKODI_PC_연결.cmd” 파일을 열고 Windows 승인창에서 “예”만 누르세요.</b> 등록·Agent 실행·heartbeat 확인까지 자동으로 진행됩니다.</p>
+            <div class="device-pair-actions"><button type="button" class="primary" id="downloadDeviceEnrollment">연결파일 다시 받기</button></div>
             <details class="device-advanced-install">
               <summary>연결 문제 해결</summary>
               <p>자동 연결이 안 될 때만 연결 프로그램을 한 번 설치합니다.</p>
@@ -659,7 +717,7 @@
     panel.querySelector('#deviceJobForm').addEventListener('submit', createAutoJob);
     panel.querySelector('#createDeviceEnrollment').addEventListener('click', createEnrollment);
     panel.querySelector('#deviceInventoryForm').addEventListener('submit', createInventory);
-    panel.querySelector('#continueDeviceEnrollment').addEventListener('click', () => launchProtocol(currentEnrollmentUrl));
+    panel.querySelector('#downloadDeviceEnrollment').addEventListener('click', downloadEnrollmentInstaller);
     panel.querySelector('#copyDeviceInstallCommand').addEventListener('click', async event => {
       const command = panel.querySelector('#deviceEnrollmentResult').dataset.installCommand || '';
       if (!command) return;
