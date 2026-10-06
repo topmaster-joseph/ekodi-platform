@@ -27,7 +27,16 @@
     "authenticatedGitHubReverificationRequired": true,
     "ekodiLiveHealthReverificationRequired": true,
     "internalCanonicalHealthHandlerRequired": true,
-    "completionWorkerSelfFetchForbidden": true
+    "completionWorkerSelfFetchForbidden": true,
+    "workflowSpecificStagingEquivalents": {
+      "Deploy CGMA Apex Edge": {
+        "job": "validate",
+        "requiredSteps": [
+          "Validate CGMA edge contract"
+        ],
+        "scope": "cgma-edge-only"
+      }
+    }
   },
   "reconciliation": {
     "getTaskStatusSelfHealsWhenRuntimeGitHubLookupAvailable": true,
