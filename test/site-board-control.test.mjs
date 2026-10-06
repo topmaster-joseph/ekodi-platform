@@ -61,3 +61,34 @@ test('internal service-binding host resolves canonical site board path without w
   assert.equal(resolveSiteBoardRoute('https://example.com/cgma/board'),null);
   assert.equal(resolveSiteBoardRoute('https://cgma.or.kr/cgma/board'),null);
 });
+
+test('board owns categories, attachments, search, backups and comment moderation without EKODI AI',async()=>{
+  const source=await readFile(new URL('../site-board-control.js',import.meta.url),'utf8');
+  for(const table of ['ekodi_board_categories','ekodi_board_post_categories','ekodi_board_attachments','ekodi_board_snapshots']){
+    assert.ok(source.includes('CREATE TABLE IF NOT EXISTS '+table),table);
+  }
+  for(const marker of ["sub==='/api/search'","sub==='/api/categories'","attachmentPostMatch","sub==='/api/snapshots'","commentItemMatch"]){
+    assert.ok(source.includes(marker),marker);
+  }
+  assert.match(source,/sharedPlatformDependency:'authentication_identity_only'/);
+  assert.match(source,/boardLocalAuthorization:true/);
+  assert.match(source,/aiIndependent:true/);
+  assert.match(source,/WHERE board_id=\\?/);
+  assert.match(source,/schemaVersion:3/);
+  for(const operation of ['categories','attachments','search','snapshot','comment-edit','comment-delete']){
+    assert.ok(EKODI_SITE_BOARD.coreOperations.includes(operation),operation);
+  }
+});
+
+test('independent domain routing stays local to each board identity',()=>{
+  const seonam=resolveSiteBoardRoute('https://seonammedi.kr/board/api/search?q=medical');
+  const cgma=resolveSiteBoardRoute('https://cgma.or.kr/board/api/categories');
+  const mission=resolveSiteBoardRoute('https://ekodi.kr/ekodimission/board/api/snapshots');
+  assert.equal(seonam.siteId,'seonammedi');
+  assert.equal(seonam.basePath,'/board');
+  assert.equal(cgma.siteId,'cgma');
+  assert.equal(cgma.basePath,'/board');
+  assert.equal(mission.siteId,'ekodimission');
+  assert.equal(mission.basePath,'/ekodimission/board');
+  assert.notEqual(seonam.siteId,cgma.siteId);
+});
