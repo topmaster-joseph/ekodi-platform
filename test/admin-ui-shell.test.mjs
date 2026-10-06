@@ -40,6 +40,9 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.equal(adminShell.includes('#ekodiAdminLocaleWrap'),true);
   assert.equal(adminShell.includes('#ekodiAdminLocale'),true);
   assert.equal(adminShell.includes('const VERSION=2'),true);
+  assert.match(adminShell,/ADMIN-WHITE-SURFACE-001/);
+  assert.match(adminShell,/--ekodi-admin-bg:#fff/);
+  assert.match(adminShell,/--ekodi-admin-sidebar:#fff/);
   assert.match(adminShell,/position:sticky!important/);
   assert.match(adminShell,/ADMIN-MOBILE-SHELL-003/);
   assert.match(adminShell,/\.ekodi-admin-shell-main\{padding-top:0!important/);
@@ -69,9 +72,10 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.equal(adminSidebar.includes("display:flex;align-items:center;gap:7px"),true);
   assert.equal(adminSidebar.includes("renderSidebarDetails(nav, globals, group, displayedSection || section, locale)"),true);
   assert.equal(adminDesign.includes('ADMIN-MONOCHROME-001'),true);
-  assert.match(adminDesign,/\.sidebar\{[\s\S]*background:#050505!important/);
-  assert.match(adminDesign,/\.admin-global-nav\.active\{[\s\S]*background:#fff!important[\s\S]*color:#050505!important/);
-  assert.match(adminDesign,/main,[\s\S]*\.content\{[\s\S]*background:#fafafa!important/);
+  assert.match(adminDesign,/ADMIN-WHITE-SURFACE-001/);
+  assert.match(adminDesign,/\.sidebar\{[\s\S]*background:#fff!important[\s\S]*color:#172033!important/);
+  assert.match(adminDesign,/\.admin-global-nav\.active\{[\s\S]*background:#fff!important[\s\S]*color:#111827!important/);
+  assert.match(adminDesign,/main,[\s\S]*\.content\{background:#fff!important;color:#172033!important/);
   assert.equal(adminCompact.includes('social-connections'),true);
 
   assert.match(userHeader,/USER_SURFACES=new Set\(\['public','workspace'\]\)/);
