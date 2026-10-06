@@ -40,6 +40,7 @@
   const ACTION_RE=/(수정|바꿔|변경|고쳐|조치|적용|구축|연동|배포|재구성|정리|없애|옮겨|추가|만들어|fix|change|deploy|build|connect|apply|update)/i;
   let inbox=[];
   let actions=[];
+  let orchestratorGates=[];
   let activeThread=null;
   let aiHistory=[];
   let lastAiReply=null;
@@ -180,8 +181,8 @@
   function setOpen(open,persist=true){state.open=Boolean(open);const panel=root?.querySelector('#ekodiAssistPanel');const launcher=root?.querySelector('#ekodiAssistLauncher');root?.classList.toggle('history-only',!state.open);if(panel)panel.hidden=false;if(launcher){launcher.hidden=true;launcher.setAttribute('aria-expanded',String(state.open))}if(persist)saveState();positionWorkbench();renderRail();if(state.open){renderMain();refreshSummary();setTimeout(()=>root?.querySelector('#ekodiAssistCommand')?.focus(),0)}}
   function setTab(tab,persist=true){state.tab=tab==='inbox'?'inbox':'ai';root?.querySelectorAll('[data-assist-tab]').forEach(button=>button.classList.toggle('active',button.dataset.assistTab===state.tab));if(persist)saveState();activeThread=null;renderRail();renderMain()}
   function newCommand(){state.tab='ai';state.activeSessionId=null;state.query='';aiHistory=[];lastAiReply=null;saveState();const search=root?.querySelector('#ekodiAssistSearch');if(search)search.value='';setTab('ai',false);renderRail();renderAi();root?.querySelector('#ekodiAssistCommand')?.focus()}
-  function updateBadge(){const inquiry=inbox.filter(item=>item.status==='waiting_human'||['requested','accepted'].includes(item.handoffStatus)).length;const approvals=actions.filter(item=>item.status==='awaiting_human').length;const total=inquiry+approvals;const badge=root?.querySelector('#ekodiAssistBadge');if(!badge)return;badge.hidden=total===0;badge.textContent=total>99?'99+':String(total);badge.setAttribute('aria-label',`관리자 확인 필요 ${total}건`)}
-  async function refreshSummary(){if(!token())return;try{const [inboxData,actionData]=await Promise.all([api('/api/control/messenger/inbox'),api('/api/control/ai/actions?limit=20')]);inbox=Array.isArray(inboxData.inbox)?inboxData.inbox:[];actions=Array.isArray(actionData.actions)?actionData.actions:[];updateBadge();if(state.open){renderRail();renderMain()}}catch(error){if(state.open)showStatus(error.message,true)}}
+  function updateBadge(){const inquiry=inbox.filter(item=>item.status==='waiting_human'||['requested','accepted'].includes(item.handoffStatus)).length;const approvals=actions.filter(item=>item.status==='awaiting_human').length;const total=inquiry+approvals+orchestratorGates.length;const badge=root?.querySelector('#ekodiAssistBadge');if(!badge)return;badge.hidden=total===0;badge.textContent=total>99?'99+':String(total);badge.setAttribute('aria-label',`관리자 확인 필요 ${total}건`)}
+  async function refreshSummary(){if(!token())return;try{const [inboxData,actionData,gateData]=await Promise.all([api('/api/control/messenger/inbox'),api('/api/control/ai/actions?limit=20'),api('/api/control/ai/v8/orchestrator/human-gates?limit=20').catch(()=>({tasks:[]}))]);inbox=Array.isArray(inboxData.inbox)?inboxData.inbox:[];actions=Array.isArray(actionData.actions)?actionData.actions:[];orchestratorGates=Array.isArray(gateData.tasks)?gateData.tasks:[];updateBadge();if(state.open){renderRail();renderMain()}}catch(error){if(state.open)showStatus(error.message,true)}}
   function showStatus(message,error=false){const chat=root?.querySelector('#ekodiAssistChat');if(!chat)return;let node=chat.querySelector('.ekodi-assist-live-status');if(!node){node=el('div','ekodi-assist-live-status');chat.append(node)}node.textContent=message;node.classList.toggle('error',error);scrollChat()}
 
   function renderRail(){
@@ -207,6 +208,7 @@
   function renderAi(){
     const chat=root?.querySelector('#ekodiAssistChat');if(!chat)return;const composer=root.querySelector('#ekodiAssistComposer');if(composer)composer.hidden=false;chat.replaceChildren();const session=activeSession();const title=root.querySelector('#ekodiAssistTitle');if(title)title.textContent=session?.title||'새 대화';
     renderProactiveSuggestion(!session?.messages?.length);
+    renderOrchestratorGates(chat);
     if(!session?.messages?.length){
       const welcome=el('div','ekodi-assist-welcome');welcome.append(el('div','ekodi-assist-mark','E'),el('h2','','무엇을 관리하거나 실행할까요?'),el('p','','질문, 상태 점검, 수정·구축·운영 요청을 이곳에서 이어갑니다.'));
       const quick=el('div','ekodi-assist-quick');[['현재 화면 상태 점검','현재 화면과 관련 서비스 상태를 점검해줘'],['승인 대기 보기','현재 사람 승인을 기다리는 작업을 알려줘'],['이 화면 개선점','현재 관리자 화면의 개선점을 분석해줘']].forEach(([label,text])=>{const button=el('button','',label);button.type='button';button.addEventListener('click',()=>submitAi(text));quick.append(button)});welcome.append(quick);chat.append(welcome);
@@ -224,6 +226,34 @@
     }
     renderAiActions(chat,false);scrollChat();
   }
+  async function approveOrchestratorGate(task,button){
+    if(!task?.taskId||!task?.humanGate?.expectedStateVersion)return;
+    const original=button.textContent;button.disabled=true;button.textContent='승인 처리 중';
+    try{
+      const result=await api(`/api/control/ai/v8/orchestrator/tasks/${encodeURIComponent(task.taskId)}/approve`,{method:'POST',body:JSON.stringify({expectedStateVersion:task.humanGate.expectedStateVersion,note:'Approved from EKODI Platform Admin assist'})});
+      if(result?.task?.approved!==true)throw new Error(result?.task?.reason||'승인을 적용하지 못했습니다.');
+      showStatus('승인을 기록하고 같은 작업을 다시 실행했습니다.');
+      await refreshSummary();
+    }catch(error){
+      showStatus(error.message||'승인 처리에 실패했습니다.',true);
+      await refreshSummary();
+    }finally{button.disabled=false;button.textContent=original}
+  }
+  function renderOrchestratorGates(host){
+    if(!orchestratorGates.length)return;
+    const section=el('section','ekodi-assist-proactive');section.setAttribute('aria-label','Orchestrator 승인 대기');
+    const head=el('div','ekodi-proactive-copy');head.append(el('small','ekodi-proactive-priority','승인 필요'),el('strong','','Orchestrator 승인 대기'),el('p','',`${orchestratorGates.length}개 작업이 최고관리자 승인을 기다리고 있습니다.`));section.append(head);
+    for(const task of orchestratorGates){
+      const card=el('article','ekodi-proactive-card');
+      const copy=el('div','ekodi-proactive-copy');
+      copy.append(el('small','ekodi-proactive-priority',String(task.risk||'high').toUpperCase()),el('strong','',task.intent||task.taskId),el('p','',`${task.taskId} · stateVersion ${task.stateVersion}`));
+      const controls=el('div','ekodi-proactive-actions');
+      const approve=el('button','ekodi-proactive-use','승인 후 계속');approve.type='button';approve.addEventListener('click',()=>approveOrchestratorGate(task,approve));controls.append(approve);
+      card.append(copy,controls);section.append(card);
+    }
+    host.append(section);
+  }
+
   function renderProactiveSuggestion(visible){
     const host=root?.querySelector('#ekodiAssistProactive');if(!host)return;host.replaceChildren();host.hidden=!visible;if(!visible)return;
     for(const suggestion of PROACTIVE_SUGGESTIONS){
