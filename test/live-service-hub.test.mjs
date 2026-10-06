@@ -61,3 +61,12 @@ test('service manifest advertises canonical apex Live as an active public surfac
   assert.match(manifest,/id:'live'.*url:'https:\/\/ekodi\.kr\/live'.*defaultSurface:'public'.*state:'live'/);
   assert.doesNotMatch(manifest,/id:'live'.*url:'https:\/\/live\.ekodi\.kr\//);
 });
+
+
+test('Live special handler preserves the platform slash-parity contract',async()=>{
+  const source=await read('platform-router-entry-worker.js');
+  assert.ok(source.includes("if(url.pathname==='/live'){const target=new URL(request.url);target.pathname='/live/'"));
+  assert.ok(source.includes("status:308"));
+  assert.ok(source.includes("x-ekodi-route':'live-canonical-slash'"));
+  assert.ok(source.includes("if(url.pathname==='/live/')return liveShell(liveServicePage());"));
+});
