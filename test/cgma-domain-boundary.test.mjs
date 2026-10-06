@@ -36,7 +36,7 @@ test('Shared Site candidate smoke excludes the independently routed CGMA public 
 
 test('CGMA edge workflow pins board delegation source and verifies independent board', async () => {
   const cgmaWorkflow=await readFile(new URL('../.github/workflows/deploy-cgma-apex-edge.yml',import.meta.url),'utf8');
-  assert.match(cgmaWorkflow, /CGMA_SOURCE_REF: 'f97d03f1e290763a2e0cfe7f64b2b92f74d231ef'/);
+  assert.match(cgmaWorkflow, /CGMA_SOURCE_REF: 'bf864cb2cf02c8b8288617daa7fbba032eb335f6'/);
   assert.match(cgmaWorkflow, /grep -Fq 'isBoardPath' cgma-root-gateway\.js/);
   assert.match(cgmaWorkflow, /grep -Fq 'delegatedBoardResponse' cgma-root-gateway\.js/);
   assert.match(cgmaWorkflow, /check_board '\/cgma\/board'/);
