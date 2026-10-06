@@ -1,0 +1,42 @@
+name: Recover EKODI Release Provenance
+
+on:
+  pull_request:
+    types: [labeled, reopened, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: recover-release-provenance-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  recover:
+    if: >
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'ai/') &&
+      !contains(github.event.pull_request.head.ref, '/orch_') &&
+      contains(github.event.pull_request.labels.*.name, 'orchestrator-human-gate-approved')
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate recovery implementation
+        run: |
+          node --check scripts/recover-release-provenance.mjs
+          node --test test/release-provenance-recovery.test.mjs
+      - name: Recover exact-SHA Orchestrator release provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/recover-release-provenance.mjs
