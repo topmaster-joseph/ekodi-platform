@@ -84,7 +84,7 @@ function boardPage(){
   <nav class="site-nav" aria-label="주요 메뉴"><a href="/#timeline">활동이력</a><a href="/#channels">소통채널</a><a class="active" href="/board" aria-current="page">시민의견</a><a href="/#finance">회계</a><a href="/#notices">공지</a><a href="/#organization">조직</a></nav>
 </div></header>
 <main>
-  <section class="page-head"><div><p class="eyebrow">CITIZEN VOICES</p><h1>시민의견</h1><p class="note">누구나 로그인 없이 등록하고 답글을 남길 수 있습니다. 등록 즉시 공개됩니다.</p></div><div class="actions"><button id="writeToggle" type="button">의견 등록</button><button id="searchToggle" class="secondary" type="button">검색</button></div></section>
+  <section class="page-head"><div><p class="eyebrow">CITIZEN VOICES</p><h1>시민의견</h1><p class="note">누구나 로그인 없이 등록하고 답글을 남길 수 있습니다. 등록 즉시 공개됩니다.</p></div><div class="actions"><button id="writeToggle" type="button">의견 등록</button><button id="searchToggle" class="secondary" type="button">검색</button><button id="adminLogin" class="secondary" type="button">관리자 로그인</button></div></section>
   <form id="writeForm" class="panel" hidden><div class="form-grid"><select name="category" aria-label="유형"><option value="question">질문</option><option value="proposal">정책제안</option><option value="experience">의료경험</option><option value="factcheck">사실확인 요청</option><option value="tip">자료제보</option><option value="other">기타</option></select><input name="name" maxlength="80" placeholder="이름 또는 표시명 (익명 가능)"><textarea name="message" maxlength="12000" required placeholder="시민의견을 입력해 주세요"></textarea></div><div class="form-actions"><button type="submit">등록</button><button id="writeCancel" class="secondary" type="button">취소</button></div></form>
   <form id="searchForm" class="panel" hidden><div class="search-row"><input name="q" maxlength="120" required placeholder="제목 또는 내용 검색"><button type="submit">검색</button><button id="searchReset" class="secondary" type="button">전체</button></div></form>
   <div id="status" class="status" role="status"></div>
@@ -92,11 +92,21 @@ function boardPage(){
 </main>
 <script>
 (function(){
-  const byId=id=>document.getElementById(id),list=byId("voiceList"),status=byId("status"),write=byId("writeForm"),search=byId("searchForm");
+  const byId=id=>document.getElementById(id),list=byId("voiceList"),status=byId("status"),write=byId("writeForm"),search=byId("searchForm"),adminLogin=byId("adminLogin");
   const labels={question:"질문",proposal:"정책제안",experience:"의료경험",factcheck:"사실확인 요청",tip:"자료제보",other:"기타"};
   const esc=v=>String(v==null?"":v).replace(/[<>&"]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]));
   const dt=v=>{try{return new Intl.DateTimeFormat("ko-KR",{dateStyle:"medium",timeStyle:"short",timeZone:"Asia/Seoul"}).format(new Date(v))}catch{return""}};
   function token(){try{const p=sessionStorage.getItem("ekodi-auth-token")||"";if(p)return p}catch{}try{const raw=localStorage.getItem("sb-renzehysxirjilvdxacv-auth-token")||"";if(!raw)return"";const parsed=JSON.parse(raw),session=parsed&&((parsed.currentSession)||(parsed.session)||parsed),access=String(session&&session.access_token||""),expires=Number(session&&session.expires_at||0);return access&&(!expires||expires>Math.floor(Date.now()/1000)+30)?access:""}catch{return""}}
+  function adminAuthUrl(){const u=new URL("https://ekodi.kr/auth/");u.searchParams.set("site","portal");u.searchParams.set("direct","1");u.searchParams.set("return_to",location.origin+"/board");return u.href}
+  async function consumeAdminHandoff(){
+    const params=new URLSearchParams(location.hash.replace(/^#/,"")),tokenHash=params.get("ekodi_token");if(!tokenHash)return false;
+    try{
+      const d=await call("/api/seonammedi/admin/auth/exchange",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({token_hash:tokenHash,type:params.get("ekodi_type")||"email"})});
+      if(!d.access_token)throw new Error("login_handoff_failed");
+      localStorage.setItem("sb-renzehysxirjilvdxacv-auth-token",JSON.stringify({access_token:d.access_token,refresh_token:d.refresh_token||"",expires_at:Number(d.expires_at||0)||Math.floor(Date.now()/1000)+Number(d.expires_in||3600),user:d.user||null}));
+      return true;
+    }finally{history.replaceState(null,"",location.pathname+location.search)}
+  }
   async function call(url,options){const r=await fetch(url,options||{}),d=await r.json().catch(()=>({}));if(!r.ok||d.ok===false)throw new Error(d.message||d.error||"요청을 처리하지 못했습니다.");return d}
   let adminItems=null;
   function render(items,admin){
@@ -113,7 +123,7 @@ function boardPage(){
     render(data.items||[],false);status.textContent=q?"검색 결과":"";
     if(q)return;
     const t=token();if(!t)return;
-    try{const admin=await call("/board/api/admin/posts",{headers:{authorization:"Bearer "+t}});adminItems=admin.items||[];render(adminItems,true);status.textContent="관리자 관리 기능이 활성화되었습니다."}catch{}
+    try{const admin=await call("/board/api/admin/posts",{headers:{authorization:"Bearer "+t}});adminItems=admin.items||[];render(adminItems,true);if(adminLogin)adminLogin.hidden=true;status.textContent="관리자 관리 기능이 활성화되었습니다."}catch{if(adminLogin)adminLogin.hidden=false}
   }
   byId("writeToggle").onclick=()=>{write.hidden=!write.hidden;search.hidden=true;if(!write.hidden)write.querySelector("select,input,textarea").focus()};
   byId("writeCancel").onclick=()=>{write.reset();write.hidden=true};
@@ -127,7 +137,8 @@ function boardPage(){
     if(del){const id=Number(del.dataset.delete);if(!confirm("이 시민의견을 삭제할까요?"))return;await call("/board/api/admin/posts/"+id,{method:"DELETE",headers:{authorization:"Bearer "+t}});await load();status.textContent="삭제되었습니다.";return}
     if(rd){const post=Number(rd.dataset.post),reply=Number(rd.dataset.replyDelete);if(!confirm("이 답글을 삭제할까요?"))return;await call("/board/api/admin/posts/"+post+"/replies/"+reply,{method:"DELETE",headers:{authorization:"Bearer "+t}});await load();status.textContent="답글이 삭제되었습니다."}
   }catch(err){status.textContent=err.message}});
-  load().catch(err=>{status.textContent=err.message;list.innerHTML='<p class="empty">시민의견을 불러오지 못했습니다.</p>'});
+  if(adminLogin)adminLogin.onclick=()=>location.assign(adminAuthUrl());
+  (async()=>{try{await consumeAdminHandoff()}catch(err){status.textContent=err.message||"관리자 로그인 연결에 실패했습니다."}if(adminLogin)adminLogin.hidden=Boolean(token());await load()})().catch(err=>{status.textContent=err.message;list.innerHTML='<p class="empty">시민의견을 불러오지 못했습니다.</p>'});
 })();
 </script>
 </body></html>`,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store","x-ekodi-board-independent":"true"}});
