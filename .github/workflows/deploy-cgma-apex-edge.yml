@@ -120,6 +120,25 @@ jobs:
           set -euo pipefail
           cd cgma-source
           npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.cgma-root-gateway.toml
+      - name: Ensure current Shared Site board runtime before verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          ready='false'
+          for attempt in $(seq 1 3); do
+            code=$(curl -sS -D /tmp/cgma.board.health.headers -o /tmp/cgma.board.health.body -w '%{http_code}' --max-time 20 "https://ekodi.kr/cgma/board/api/health?edge_release=${GITHUB_SHA}" || true)
+            if [[ "$code" == '200' ]] && grep -Fq '"boardId":"site:cgma:main"' /tmp/cgma.board.health.body && grep -Fq '"independent":true' /tmp/cgma.board.health.body; then
+              ready='true'
+              break
+            fi
+            sleep 2
+          done
+          if [[ "$ready" != 'true' ]]; then
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-site-core.yml/dispatches" -f ref=main
+            echo 'CGMA board target is not healthy yet. Dispatched current-main Shared Site guarded release before blocking board verification.'
+          else
+            echo 'CGMA independent board runtime is already healthy; no Shared Site redispatch required.'
+          fi
       - name: Verify CGMA edge production
         shell: bash
         run: |
@@ -157,15 +176,15 @@ jobs:
           }
           check_board() {
             local path="$1" code
-            for attempt in $(seq 1 18); do
+            for attempt in $(seq 1 72); do
               code=$(curl -sS -L --max-redirs 6 -D /tmp/cgma.board.headers -o /tmp/cgma.board.body -w '%{http_code}' --max-time 20 "https://ekodi.kr${path}?edge_release=${GITHUB_SHA}" || true)
               if [[ "$code" == '200' ]] && grep -Fq '<title>게시판</title>' /tmp/cgma.board.body && grep -Fiq 'x-ekodi-board-independent: true' /tmp/cgma.board.headers && grep -Fiq 'x-ekodi-board-id: site:cgma:main' /tmp/cgma.board.headers && ! grep -Fiq 'x-ekodi-route: cgma-root-gateway' /tmp/cgma.board.headers; then
                 echo "CGMA independent board verified: ${path}"
                 return 0
               fi
-              sleep 4
+              sleep 5
             done
-            echo "CGMA independent board verification failed: ${path} code=${code}"
+            echo "CGMA independent board verification failed after bounded Shared Site wait: ${path} code=${code}"
             return 1
           }
           check_protected_asset() {
@@ -213,9 +232,3 @@ jobs:
           fi
           check_redirect '/cgma/member-admin' 'https://ekodi.kr/cgma/admin/member?edge_release='
           check_live '/cgma/live/'
-      - name: Dispatch current EKODI Shared Site guarded release
-        shell: bash
-        run: |
-          set -euo pipefail
-          gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-site-core.yml/dispatches" -f ref=main
-          echo 'CGMA apex edge is live. Dispatched current-main Shared Site guarded release.'
