@@ -51,7 +51,6 @@ if(isOrchestratorBranch(sourceBranch)){out('action','noop-already-orchestrated')
 if(sourceRepo!==repo)fail('automatic provenance recovery is forbidden for fork pull requests');
 const policy=jsonFile('config/ai-change-orchestration-policy.json');
 const policyOwners=new Set(policy.governance?.policyOwners||[]);
-if(!policyOwners.has(actor))fail(`automatic release provenance recovery requires policy-owner actor; actor=${actor}`);
 if(!headSha.match(/^[a-f0-9]{40}$/i)||!prNumber)fail('pull request head SHA/number missing');
 const labels=(Array.isArray(pr.labels)?pr.labels:[]).map(item=>text(item?.name,120));
 if(!labels.includes(APPROVAL_LABEL)){
@@ -101,12 +100,12 @@ const evidence=JSON.stringify({kind:'automatic-release-provenance-recovery',sour
 await d1(dbId,`INSERT OR IGNORE INTO ekodi_orchestrator_tasks
 (task_id,idempotency_key,requester_id,source,intent,target_json,risk,permission_class,assigned_worker,branch_ref,state,deployment_requested,evidence_json,created_at,updated_at)
 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,[
-  taskId,`release-provenance-recovery:${headSha}`,`github-owner:${actor}`,'github-actions-release-recovery',
+  taskId,`release-provenance-recovery:${headSha}`,`github-owner:${approvalActor}`,'github-actions-release-recovery',
   intent,target,'high','delegated','ekodi-github-actions-release-recovery',branchRef,'assigned',1,evidence,createdAt,createdAt
 ]);
 await d1(dbId,`INSERT OR IGNORE INTO ekodi_orchestrator_task_events
 (task_id,seq,from_state,to_state,actor,reason,evidence_json,created_at) VALUES (?,1,NULL,'received',?,'automatic_release_provenance_recovery_requested',?,?)`,[
-  taskId,`github-owner:${actor}`,evidence,createdAt
+  taskId,`github-owner:${approvalActor}`,evidence,createdAt
 ]);
 await d1(dbId,`INSERT OR IGNORE INTO ekodi_orchestrator_task_events
 (task_id,seq,from_state,to_state,actor,reason,evidence_json,created_at) VALUES (?,2,'received','blocked','ekodi-orchestrator','human_gate_required',?,?)`,[
