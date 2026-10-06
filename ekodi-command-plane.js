@@ -196,10 +196,25 @@ function normalizePulseEvent(input = {}) {
   });
 }
 
-function qualifiesStandingDelegation(delegation = {}, event, risk) {
+function validHumanApproval(input = {}, taskId = '') {
+  const approval = input?.context?.humanApproval;
+  if (!approval || approval.approved !== true) return false;
+  const exactTaskId = text(taskId, 160);
+  const expectedStateVersion = Number(approval.expectedStateVersion);
+  return text(approval.taskId, 160) === exactTaskId
+    && text(approval.scope, 40) === 'task'
+    && text(approval.approvedByRole, 80) === 'super_admin'
+    && text(approval.approvedBy, 160).length > 0
+    && text(approval.approvedAt, 80).length > 0
+    && Number.isInteger(expectedStateVersion)
+    && expectedStateVersion > 0
+    && text(approval.approvalId, 260) === `approval_${exactTaskId}_v${expectedStateVersion}`;
+}
+
+function qualifiesStandingDelegation(delegation = {}, event, risk, humanApproval = false) {
   if (!delegation || delegation.allowed !== true) return false;
-  if (risk === 'high' || risk === 'critical') return false;
-  if (event.requiresHumanDecision || RED_CHANGE_CLASSES.has(event.changeClass)) return false;
+  if ((risk === 'high' || risk === 'critical') && !humanApproval) return false;
+  if ((event.requiresHumanDecision || RED_CHANGE_CLASSES.has(event.changeClass)) && !humanApproval) return false;
   return delegation.reversible === true
     && delegation.audited === true
     && delegation.preflightVerified === true
@@ -375,7 +390,8 @@ export function buildEkodiCommandPlane(env = {}, providers = []) {
       if (!event.actionable) {
         return Object.freeze({ schemaVersion: 2, state: 'ignored', event, reason: 'event_not_actionable' });
       }
-      if (!qualifiesStandingDelegation(input.delegation, event, risk)) {
+      const humanApproval = validHumanApproval(input, input.taskId || event.id);
+      if (!qualifiesStandingDelegation(input.delegation, event, risk, humanApproval)) {
         return Object.freeze({
           schemaVersion: 2,
           state: 'auto_blocked',
