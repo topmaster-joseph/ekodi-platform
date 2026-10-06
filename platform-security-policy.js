@@ -4,8 +4,8 @@ const STANDARD_BODY_LIMIT = 8 * 1024 * 1024;
 const LARGE_MEDIA_BODY_LIMIT = 32 * 1024 * 1024;
 const MAX_QUERY_LENGTH = 8192;
 const PUBLIC_CACHEABLE_API_PATHS = new Set(['/api/public/preview/map']);
-const SELF_PROTECTED_PUBLIC_WRITE_PATHS = new Set(['/api/seonammedi/voices']);
-const SELF_PROTECTED_PUBLIC_WRITE_PATTERNS = [/^\/api\/seonammedi\/voices\/\d+\/replies$/];
+const SELF_PROTECTED_PUBLIC_WRITE_PATHS = new Set();
+const SELF_PROTECTED_PUBLIC_WRITE_PATTERNS = [];
 const encoder = new TextEncoder();
 
 function classifyPath(pathname=''){
