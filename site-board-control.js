@@ -154,12 +154,11 @@ async function actor(request,env,instance){
 async function verifySuperAdminReauth(request,env,instance,scope){
   if(!env?.CONTROL_API?.fetch)return {ok:false,status:503,error:'reauth_service_unavailable'};
   const proof=String(request.headers.get('x-ekodi-reauth-proof')||'').trim();
-  const authorization=String(request.headers.get('authorization')||'');
-  if(!proof||!authorization)return {ok:false,status:401,error:'super_admin_reauthentication_required'};
+  if(!proof)return {ok:false,status:401,error:'super_admin_reauthentication_required'};
   const url=new URL(request.url);url.pathname='/api/reauth/verify';url.search='';url.hash='';
   const response=await env.CONTROL_API.fetch(new Request(url.toString(),{
     method:'POST',
-    headers:{'content-type':'application/json','authorization':authorization,'x-ekodi-reauth-proof':proof},
+    headers:{'content-type':'application/json','x-ekodi-reauth-proof':proof},
     body:JSON.stringify({scope,resource:instance.board_id}),
   }));
   const data=await response.json().catch(()=>null);
@@ -241,7 +240,8 @@ export async function handleSiteBoardRequest(request,env){
     if(!gate.ok)return boardJson(instance,{error:gate.error},gate.status);
     const snapshotId=await snapshotBoard(env,instance,who,'lifecycle.cancel');
     await env.DB.prepare(`UPDATE ekodi_board_instances SET status='cancelled',updated_at=? WHERE board_id=?`).bind(now(),instance.board_id).run();
-    await audit(env,instance,who,'board.cancel','board',instance.board_id,{snapshotId});
+    const lifecycleActor={...who,personId:gate.data?.actor||who.personId||'super_admin_reauth'};
+    await audit(env,instance,lifecycleActor,'board.cancel','board',instance.board_id,{snapshotId,reauthenticated:true});
     return boardJson(instance,{ok:true,status:'cancelled',snapshotId});
   }
 
@@ -250,11 +250,48 @@ export async function handleSiteBoardRequest(request,env){
     if(!gate.ok)return boardJson(instance,{error:gate.error},gate.status);
     const snapshotId=await snapshotBoard(env,instance,who,'lifecycle.delete');
     await env.DB.prepare(`UPDATE ekodi_board_instances SET status='deleted',updated_at=? WHERE board_id=?`).bind(now(),instance.board_id).run();
-    await audit(env,instance,who,'board.delete','board',instance.board_id,{snapshotId,physicalPurge:false});
+    const lifecycleActor={...who,personId:gate.data?.actor||who.personId||'super_admin_reauth'};
+    await audit(env,instance,lifecycleActor,'board.delete','board',instance.board_id,{snapshotId,physicalPurge:false,reauthenticated:true});
     return boardJson(instance,{ok:true,status:'deleted',snapshotId,physicalPurge:false});
   }
 
   if(instance.status!=='active')return boardJson(instance,{error:'board_unavailable',status:instance.status},410);
+
+  if(method==='GET'&&sub==='/api/memberships'){
+    if(!who.manage)return boardJson(instance,{error:'forbidden'},403);
+    const rows=await env.DB.prepare('SELECT person_id,role,status,created_at,updated_at FROM ekodi_board_memberships WHERE board_id=? ORDER BY role,person_id').bind(instance.board_id).all();
+    return boardJson(instance,{items:rows.results||[]});
+  }
+  if(method==='PUT'&&sub==='/api/memberships'){
+    if(!who.manage)return boardJson(instance,{error:'forbidden'},403);
+    const body=await parseBody(request)||{};
+    const personId=clean(body.personId,160),role=lower(body.role);
+    if(!personId||!['owner','admin','moderator','member'].includes(role))return boardJson(instance,{error:'invalid_membership'},400);
+    if(who.role!=='owner'&&role==='owner')return boardJson(instance,{error:'owner_role_requires_owner'},403);
+    const stamp=now();
+    await env.DB.prepare(`INSERT INTO ekodi_board_memberships(board_id,person_id,role,status,created_at,updated_at)
+      VALUES (?,?,?,'active',?,?)
+      ON CONFLICT(board_id,person_id) DO UPDATE SET role=excluded.role,status='active',updated_at=excluded.updated_at`)
+      .bind(instance.board_id,personId,role,stamp,stamp).run();
+    await audit(env,instance,who,'membership.upsert','person',personId,{role});
+    return boardJson(instance,{ok:true,personId,role});
+  }
+  if(method==='DELETE'&&sub==='/api/memberships'){
+    if(!who.manage)return boardJson(instance,{error:'forbidden'},403);
+    const body=await parseBody(request)||{};
+    const personId=clean(body.personId,160);
+    if(!personId)return boardJson(instance,{error:'person_id_required'},400);
+    const target=await env.DB.prepare('SELECT role FROM ekodi_board_memberships WHERE board_id=? AND person_id=? AND status=? LIMIT 1').bind(instance.board_id,personId,'active').first();
+    if(!target)return boardJson(instance,{error:'not_found'},404);
+    if(lower(target.role)==='owner'){
+      const owners=await env.DB.prepare("SELECT COUNT(*) AS n FROM ekodi_board_memberships WHERE board_id=? AND status='active' AND role='owner'").bind(instance.board_id).first();
+      if(Number(owners?.n||0)<=1)return boardJson(instance,{error:'last_owner_cannot_be_removed'},409);
+      if(who.role!=='owner')return boardJson(instance,{error:'owner_role_requires_owner'},403);
+    }
+    await env.DB.prepare("UPDATE ekodi_board_memberships SET status='revoked',updated_at=? WHERE board_id=? AND person_id=?").bind(now(),instance.board_id,personId).run();
+    await audit(env,instance,who,'membership.revoke','person',personId,{role:target.role});
+    return boardJson(instance,{ok:true});
+  }
 
   if(method==='GET'&&sub==='/')return page(route,await listPosts(env,instance));
   const postPageMatch=sub.match(/^\/post\/(\d+)$/);
@@ -349,5 +386,5 @@ export const EKODI_SITE_BOARD=Object.freeze({
   sharedPlatformDependency:'authentication_identity_only',
   boardLocalAuthorization:true,
   lifecycleDestructiveReauth:true,
-  coreOperations:Object.freeze(['list','read','create','edit','delete','comments','config','export','membership-bootstrap','lifecycle-cancel','lifecycle-delete']),
+  coreOperations:Object.freeze(['list','read','create','edit','delete','comments','config','export','membership-bootstrap','membership-list','membership-upsert','membership-revoke','lifecycle-cancel','lifecycle-delete']),
 });
