@@ -54,16 +54,23 @@ function detectedCategories(input = {}) {
   return unique(tests.filter(([, regex]) => regex.test(source)).map(([name]) => name));
 }
 
+function explicitReadOnlyRequested(input = {}) {
+  if (bool(input.readOnly) || bool(input.context?.readOnly)) return true;
+  if (input.readOnly === false || input.context?.readOnly === false) return false;
+  const source = haystack(input);
+  return /(read[ -]?only|no side effects?|do not (?:change|modify|write|deploy|delete)|inspection only|analysis only|조회만|읽기 전용|읽기전용|변경(?:은|을)? 하지 않는다|수정(?:은|을)? 하지 않는다|실제 변경은 하지 않는다|분석만|평가만|진단만)/i.test(source);
+}
+
 function mutationRequested(input = {}) {
   if (bool(input.mutation) || bool(input.context?.mutation)) return true;
   if (input.mutation === false || input.context?.mutation === false) return false;
+  if (explicitReadOnlyRequested(input)) return false;
   const source = haystack(input);
   return /(create|write|update|modify|change|fix|patch|merge|deploy|release|delete|migrate|rotate|revoke|구축|생성|작성|수정|변경|업데이트|적용|병합|배포|삭제|이전|교체|폐기)/i.test(source);
 }
 
 function readOnlyRequested(input = {}) {
-  if (bool(input.readOnly) || bool(input.context?.readOnly)) return true;
-  if (input.readOnly === false || input.context?.readOnly === false) return false;
+  if (explicitReadOnlyRequested(input)) return true;
   if (mutationRequested(input)) return false;
   const source = haystack(input);
   return /(get|list|read|view|show|status|inspect|check|summari[sz]e|조회|읽|보기|상태|확인|점검|요약|설명)/i.test(source);
@@ -128,6 +135,10 @@ export function decideEkodiConsultation(input = {}) {
     if (forced) reasons.push('high_impact_category');
     return decisionShape('reverified', input, reasons, categories);
   }
+  if (readOnlyRequested(input) && !mutationRequested(input)) {
+    reasons.push('read_only_or_deterministic');
+    return decisionShape('not_required', input, reasons, categories);
+  }
   if (routerScore !== null && routerScore < 55) {
     reasons.push('router_confidence_low');
     if (forced || risk === 'high') reasons.push('high_impact_category');
@@ -136,10 +147,6 @@ export function decideEkodiConsultation(input = {}) {
   if (forced || risk === 'high') {
     reasons.push(forced ? 'high_impact_category' : 'high_risk');
     return decisionShape('multi_consult', input, reasons, categories);
-  }
-  if (readOnlyRequested(input) && !mutationRequested(input)) {
-    reasons.push('read_only_or_deterministic');
-    return decisionShape('not_required', input, reasons, categories);
   }
   if ((bool(input.routine) || bool(input.context?.routine)) && !mutationRequested(input)) {
     reasons.push('routine_non_mutating');
