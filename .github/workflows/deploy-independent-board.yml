@@ -85,6 +85,15 @@ jobs:
           done
           echo "independent board health did not converge" >&2
           exit 1
+      - name: Verify production board UI
+        run: |
+          set -euo pipefail
+          html="$(curl -fsS --retry 2 --retry-delay 2 https://seonammedi.kr/board)"
+          grep -q 'id="writeToggle"' <<<"$html"
+          grep -q 'id="searchToggle"' <<<"$html"
+          grep -q 'id="voiceList"' <<<"$html"
+          grep -q 'href="/#channels">소통채널' <<<"$html"
+          grep -q 'aria-current="page">시민의견' <<<"$html"
       - name: Production create-list-reply canary and cleanup
         run: |
           set -euo pipefail
