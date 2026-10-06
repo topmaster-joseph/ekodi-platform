@@ -270,7 +270,7 @@ function renderPublicVoices(items){
 async function loadPublicVoices(){
   if(!publicVoiceList)return;
   try{
-    const response=await fetch('/api/seonammedi/voices',{cache:'no-store'});
+    const response=await fetch('/board/api/posts',{cache:'no-store'});
     const body=await response.json().catch(()=>({}));
     if(!response.ok||body.ok!==true)throw new Error(body.message||body.error||'시민의견을 불러오지 못했습니다.');
     renderPublicVoices(Array.isArray(body.items)?body.items:[]);
@@ -293,7 +293,7 @@ publicVoiceList?.addEventListener('submit',async event=>{
   if(!String(payload.message||'').trim()){if(status)status.textContent='답글 내용을 입력해 주세요.';return}
   if(button)button.disabled=true;if(status)status.textContent='등록 중…';
   try{
-    const response=await fetch('/api/seonammedi/voices/'+voiceId+'/replies',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+    const response=await fetch('/board/api/posts/'+voiceId+'/replies',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
     const body=await response.json().catch(()=>({}));
     if(!response.ok||body.ok!==true)throw new Error(body.message||body.error||'답글을 등록하지 못했습니다.');
     form.reset();if(status)status.textContent='답글이 등록되었습니다.';await loadPublicVoices();
@@ -316,7 +316,7 @@ if(voiceForm){
     if(submitButton)submitButton.disabled=true;
     status.textContent='등록 중…';
     try{
-      const response=await fetch('/api/seonammedi/voices',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+      const response=await fetch('/board/api/posts',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
       const body=await response.json().catch(()=>({}));
       if(!response.ok||body.ok!==true||!body.id){const detail=body.message||body.error||body.code||('HTTP '+response.status);throw new Error('등록하지 못했습니다. '+detail)}
       voiceForm.reset();
