@@ -371,6 +371,7 @@ function mapCommandState(state){
   if(value==='queued')return'assigned';
   if(value==='retry')return'assigned';
   if(value==='running')return'executing';
+  if(value==='executor_ready')return'assigned';
   if(value==='verified')return'completed';
   // core_only means AI consultation was unavailable; it is a deterministic
   // execution hand-off, never proof that the requested change completed.
