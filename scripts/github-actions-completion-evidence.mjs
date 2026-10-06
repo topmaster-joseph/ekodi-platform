@@ -1,8 +1,23 @@
 const REQUIRED_WORKFLOWS=Object.freeze(['CI','EKODI AI Orchestration Gate']);
+const STAGING_EQUIVALENTS=Object.freeze({
+  'Deploy CGMA Apex Edge':Object.freeze({
+    job:'validate',
+    requiredSteps:Object.freeze(['Validate CGMA edge contract']),
+  }),
+});
 
 function text(value,max=500){return String(value??'').trim().slice(0,max)}
 function success(item){return item?.status==='completed'&&item?.conclusion==='success'}
 function stagingJob(job){return text(job?.name,160).toLowerCase().includes('staging')}
+function stagingEquivalentJobs(run,jobs){
+  const rule=STAGING_EQUIVALENTS[text(run?.name,160)];
+  if(!rule)return [];
+  const job=(jobs||[]).find(item=>text(item?.name,160)===rule.job&&success(item));
+  if(!job)return [];
+  const steps=Array.isArray(job.steps)?job.steps:[];
+  const verified=rule.requiredSteps.every(required=>steps.some(step=>text(step?.name,160)===required&&success(step)));
+  return verified?[`${rule.job} (preproduction-equivalent)`]:[];
+}
 function productionJob(job){
   const name=text(job?.name,160).toLowerCase();
   return !name.includes('staging')&&(name==='deploy'||name==='production'||name.endsWith(' / deploy')||name.endsWith(' / production')||name.includes('deploy-production')||name.includes('production deploy'));
@@ -57,6 +72,7 @@ export async function collectAuthenticatedCompletionEvidence({github,owner='topm
     const jobsResponse=await github.rest.actions.listJobsForWorkflowRun({owner,repo,run_id:Number(run.id),per_page:100});
     const jobs=jobsResponse.data?.jobs||[];
     const stagingJobs=jobs.filter(job=>stagingJob(job)&&success(job)).map(job=>text(job.name,160));
+    if(!stagingJobs.length)stagingJobs.push(...stagingEquivalentJobs(run,jobs));
     const productionJobs=jobs.filter(job=>productionJob(job)&&success(job)).map(job=>text(job.name,160));
     if(stagingJobs.length)hasStaging=true;
     if(productionJobs.length)hasProduction=true;

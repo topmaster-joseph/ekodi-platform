@@ -29,6 +29,11 @@ for(const [key,value] of Object.entries({
 for(const name of ['CI','EKODI AI Orchestration Gate']){
   if(!policy.requiredEvidence?.requiredCiWorkflowSuccess?.includes(name))fail('required workflow missing: '+name);
 }
+const cgmaStagingEquivalent=policy.requiredEvidence?.workflowSpecificStagingEquivalents?.['Deploy CGMA Apex Edge'];
+if(cgmaStagingEquivalent?.job!=='validate')fail('CGMA staging-equivalent must use validate job');
+if(!cgmaStagingEquivalent?.requiredSteps?.includes('Validate CGMA edge contract'))fail('CGMA staging-equivalent must require the edge contract step');
+if(cgmaStagingEquivalent?.scope!=='cgma-edge-only')fail('CGMA staging-equivalent scope must remain CGMA-only');
+
 for(const key of [
   'mergedPullRequestToMain',
   'allTriggeredDeployWorkflowsMustSucceed',
@@ -105,6 +110,10 @@ for(const marker of [
 }
 
 for(const marker of [
+  'STAGING_EQUIVALENTS',
+  'Deploy CGMA Apex Edge',
+  'Validate CGMA edge contract',
+  'preproduction-equivalent',
   'collectAuthenticatedCompletionEvidence',
   'listWorkflowRunsForRepo',
   'listJobsForWorkflowRun',
