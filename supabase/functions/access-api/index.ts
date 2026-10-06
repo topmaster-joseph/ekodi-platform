@@ -187,7 +187,7 @@ function validHandoff(site:string,raw:string){
     edu:["https://edu.ekodi.kr"],
     media:["https://media.ekodi.kr"],
     admin:["https://admin.ekodi.kr"],
-    portal:["https://ekodi.kr"]
+    portal:["https://ekodi.kr","https://seonammedi.kr",new URL("https://서남권국립의대.kr").origin]
   };
   try{
     const target=new URL(raw);
@@ -305,6 +305,16 @@ Deno.serve(async(req)=>{
       if(!site||!returnTo)return json(req,{error:"invalid_handoff_target"},400);
       const email=String(auth.user.email??"").trim().toLowerCase();
       if(!email)return json(req,{error:"email_required"},400);
+
+      if(site==="portal"){
+        const {data,error}=await admin.auth.admin.generateLink({type:"magiclink",email});
+        const tokenHash=data?.properties?.hashed_token;
+        if(error||!tokenHash){
+          console.error("portal handoff generateLink",error?.message||"missing_hashed_token");
+          return json(req,{error:"handoff_token_issue_failed"},503);
+        }
+        return json(req,{ok:true,tokenHash,type:"email",returnTo,expiresFor:"single_use",workspace:null});
+      }
 
       const {data:workspaceData,error:workspaceError}=await auth.db.rpc("current_site_workspaces",{p_site_key:site});
       if(workspaceError)throw workspaceError;
