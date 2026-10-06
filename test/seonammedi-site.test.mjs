@@ -303,7 +303,7 @@ test('seonammedi public and admin menus keep the agreed content-first order',asy
   assert.doesNotMatch(html,/<p class="filter-label">활동이력 세부 분류<\/p>/);
   assert.match(html,/data-status-pane="timeline"/);
   assert.match(html,/data-status-pane="materials"/);
-  const adminOrder=['운영홈','현재상황','소통채널','시민의견','회계','공지','조직','내부 회의록','권한·관리자'];
+  const adminOrder=['운영홈','현재상황','소통채널','회계','공지','조직','내부 회의록','권한·관리자'];
   cursor=-1;for(const label of adminOrder){const next=adminHtml.indexOf('>'+label+'</button>',cursor+1);assert.ok(next>cursor,'admin menu order: '+label);cursor=next}
   assert.doesNotMatch(adminHtml,/data-panel-target="timeline"|data-panel-target="content"/);
   assert.doesNotMatch(adminHtml,/data-ekodi-site-publication-slot|사이트 공개여부/);
