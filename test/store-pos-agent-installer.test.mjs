@@ -17,7 +17,7 @@ test('one-click POS Agent setup is fixed to the official package and elevates ex
   for(const name of ['install-pos-agent.ps1','EKODI-POS-Agent.ps1','pos-agent.config.example.json','diagnose-pos-targets.ps1','start-pos-agent.cmd','stop-pos-agent.cmd','uninstall-pos-agent.ps1']) assert.match(setup,new RegExp(name.replaceAll('.','\\.')));
   assert.match(setup,/Start-Process -FilePath '%ComSpec%'.*-Verb RunAs/);
   assert.match(setup,/listenerPrefix must remain loopback-only/);
-  assert.match(setup,/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v3/);
+  assert.match(setup,/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v4/);
   assert.match(setup,/Refreshing Task Scheduler compatibility package/);
   assert.match(setup,/\?v=/);
   assert.match(setup,/outdated Task Scheduler installer/);
@@ -40,21 +40,24 @@ test('POS Agent installer keeps the local control boundary and interactive user 
 });
 
 test('POS Agent scheduled task registration degrades safely across Task Scheduler XML variants',()=>{
-  assert.match(install,/RestartInterval \(New-TimeSpan -Minutes 1\)/);
-  assert.doesNotMatch(install,/RestartInterval \(New-TimeSpan -Seconds 20\)/);
-  assert.match(install,/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v3/);
+  assert.doesNotMatch(install,/RestartInterval \(New-TimeSpan -(?:Seconds|Minutes)/);
+  assert.doesNotMatch(install,/ExecutionTimeLimit/);
+  assert.match(install,/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v4/);
   assert.match(install,/0x80041318/);
   assert.match(install,/FullyQualifiedErrorId/);
   assert.match(install,/Test-TaskSchemaRangeError/);
   assert.match(install,/Register-EkodiScheduledTask/);
-  assert.match(install,/mode = 'restart-1m'/);
-  assert.match(install,/mode = 'compat-no-restart'/);
-  assert.match(install,/mode = 'legacy-default-settings'/);
-  assert.match(install,/retrying with a simpler compatibility profile/);
+  assert.match(install,/return 'default-settings'/);
+  assert.match(install,/return 'minimal-settings'/);
+  assert.match(install,/return 'interactive-default-runlevel'/);
+  assert.match(install,/retrying with an explicit minimal settings profile/);
+  assert.match(install,/retrying without RunLevel Highest for compatibility/);
+  assert.match(install,/New-ScheduledTaskSettingsSet -StartWhenAvailable/);
   assert.match(install,/Get-ScheduledTask -TaskName \$TaskName -ErrorAction Stop/);
   assert.match(install,/Task Scheduler compatibility:/);
-  assert.match(install,/New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit \(\[TimeSpan\]::Zero\)/);
   assert.match(install,/Register-ScheduledTask -TaskName \$Name -Action \$Action -Trigger \$Trigger -Principal \$Principal -Force/);
+  assert.match(install,/New-ScheduledTaskPrincipal -UserId \$identity\.Name -LogonType Interactive/);
+  assert.match(install,/Unregister-ScheduledTask -TaskName \$TaskName -Confirm:\$false/);
 });
 
 test('POS Agent installer source is structurally single-copy after compatibility repair',()=>{
