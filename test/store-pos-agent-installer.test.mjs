@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const setup=read('agents/windows-pos/setup-pos-agent.cmd');
+const compatSetup=read('agents/windows-pos/setup-pos-agent-compat.cmd');
 const install=read('agents/windows-pos/install-pos-agent.ps1');
 const uninstall=read('agents/windows-pos/uninstall-pos-agent.ps1');
 const diagnose=read('agents/windows-pos/diagnose-pos-targets.ps1');
@@ -28,6 +29,15 @@ test('one-click POS Agent setup is fixed to the official package and elevates ex
   assert.doesNotMatch(setup,/raw\.githubusercontent\.com|github\.com\/topmaster-joseph/i);
 });
 
+test('compatibility setup bypasses Task Scheduler and requires the v6 installer contract',()=>{
+  assert.match(compatSetup,/Compatibility setup: Windows Task Scheduler will be bypassed/);
+  assert.match(compatSetup,/setup-pos-agent-compat/);
+  assert.match(compatSetup,/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v6/);
+  assert.match(compatSetup,/-ForceStartupFallback/);
+  assert.match(compatSetup,/cmpmyi\/admin\/agent\/download/);
+  assert.doesNotMatch(compatSetup,/Register-ScheduledTask|RestartInterval/);
+});
+
 test('POS Agent installer keeps the local control boundary and interactive user session',()=>{
   assert.match(install,/ProgramData\\EKODI\\POSAgent/);
   assert.match(install,/listenerPrefix must remain loopback-only/);
@@ -42,7 +52,10 @@ test('POS Agent installer keeps the local control boundary and interactive user 
 test('POS Agent scheduled task registration degrades safely across Task Scheduler XML variants',()=>{
   assert.doesNotMatch(install,/RestartInterval \(New-TimeSpan -(?:Seconds|Minutes)/);
   assert.doesNotMatch(install,/ExecutionTimeLimit/);
-  assert.match(install,/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v5/);
+  assert.match(install,/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v6/);
+  assert.match(install,/\[switch\]\$ForceStartupFallback/);
+  assert.match(install,/Compatibility install requested: bypassing Task Scheduler/);
+  assert.match(install,/startup-folder-forced/);
   assert.match(install,/0x80041318/);
   assert.match(install,/FullyQualifiedErrorId/);
   assert.match(install,/Test-TaskSchemaRangeError/);
