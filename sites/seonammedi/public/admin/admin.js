@@ -116,14 +116,14 @@ function button(label,handler,cls=''){const b=document.createElement('button');b
 function empty(label){const p=document.createElement('p');p.className='empty';p.textContent=label;return p}
 
 function updateDashboard(){
-    text($('contentCount'),state.content.length);text($('timelineCount'),state.timeline.length);text($('voiceCount'),state.voices.length);text($('noticeCount'),state.notices.length);text($('channelCount'),state.channels.length);
+    text($('contentCount'),state.content.length);text($('timelineCount'),state.timeline.length);text($('noticeCount'),state.notices.length);text($('channelCount'),state.channels.length);
   const me=state.me;if(!me)return;
   const statusLabel=me.publicStatus==='public'?'공개':me.publicStatus==='private'?'비공개':'점검중';text($('publicStatus'),statusLabel);
-  const perms=[];if(me.permissions?.timeline)perms.push('활동이력');if(me.permissions?.voices)perms.push('시민의견');if(me.permissions?.content)perms.push('웹검색 게시검토');if(me.permissions?.notices)perms.push('공지');if(me.permissions?.channels)perms.push('소통채널');
+  const perms=[];if(me.permissions?.timeline)perms.push('활동이력');if(me.permissions?.content)perms.push('웹검색 게시검토');if(me.permissions?.notices)perms.push('공지');if(me.permissions?.channels)perms.push('소통채널');
   text($('scopeSummary'),me.platform?'최고관리자 권한으로 이 사이트를 관리하고 있습니다.':(perms.length?perms.join('·')+' 관리 권한만 부여된 사이트 범위 관리자입니다.':'조회 권한만 있습니다.'));
   text($('adminIdentity'),me.email||'');text($('accessEmail'),me.email||'-');text($('accessRole'),me.platform?'최고관리자':'게시판 관리자');
-  text($('accessPages'),me.permissions?.pages?'현재상황·조직구성 수정 가능':'권한 없음');const runHealth=$('runSiteHealth');if(runHealth)runHealth.hidden=!me.permissions?.health;text($('accessTimeline'),me.permissions?.timeline?'등록·수정·게시여부 선택 가능':'권한 없음');text($('accessVoices'),me.permissions?.voices?'접수내용 조회·상태변경·삭제 가능':'권한 없음');text($('accessFinance'),me.permissions?.finance?'회계내역 등록·수정·삭제 가능':'권한 없음');text($('accessContent'),me.permissions?.content?'분류·게시여부 선택 가능':'권한 없음');text($('accessNotice'),me.permissions?.notices?'작성·수정·삭제 가능':'권한 없음');text($('accessChannel'),me.permissions?.channels?'추가·수정·숨김·삭제 가능':'권한 없음');
-  qs('[data-panel-target="status"]').hidden=!(me.permissions?.pages||me.permissions?.timeline||me.permissions?.content);qs('[data-panel-target="organization"]').hidden=!me.permissions?.pages;qs('[data-panel-target="voices"]').hidden=!me.permissions?.voices;qs('[data-panel-target="notices"]').hidden=!me.permissions?.notices;qs('[data-panel-target="channels"]').hidden=!me.permissions?.channels;qs('[data-panel-target="finance"]').hidden=!me.permissions?.finance;
+  text($('accessPages'),me.permissions?.pages?'현재상황·조직구성 수정 가능':'권한 없음');const runHealth=$('runSiteHealth');if(runHealth)runHealth.hidden=!me.permissions?.health;text($('accessTimeline'),me.permissions?.timeline?'등록·수정·게시여부 선택 가능':'권한 없음');text($('accessFinance'),me.permissions?.finance?'회계내역 등록·수정·삭제 가능':'권한 없음');text($('accessContent'),me.permissions?.content?'분류·게시여부 선택 가능':'권한 없음');text($('accessNotice'),me.permissions?.notices?'작성·수정·삭제 가능':'권한 없음');text($('accessChannel'),me.permissions?.channels?'추가·수정·숨김·삭제 가능':'권한 없음');
+  qs('[data-panel-target="status"]').hidden=!(me.permissions?.pages||me.permissions?.timeline||me.permissions?.content);qs('[data-panel-target="organization"]').hidden=!me.permissions?.pages;qs('[data-panel-target="notices"]').hidden=!me.permissions?.notices;qs('[data-panel-target="channels"]').hidden=!me.permissions?.channels;qs('[data-panel-target="finance"]').hidden=!me.permissions?.finance;
 }
 
 
@@ -302,12 +302,6 @@ $('financeForm')?.addEventListener('submit',async event=>{
 });
 
 
-async function loadVoices(){
-  if(!state.me?.permissions?.voices)return;
-  const data=await api('/api/seonammedi/admin/voices');
-  state.voices=data.items||[];
-  updateDashboard();
-}
 
 
 
@@ -468,7 +462,7 @@ $('refreshAll').addEventListener('click',()=>init(true));$('changeAccount').addE
 async function init(refresh=false){
   try{
     state.me=await api('/api/seonammedi/admin/me');if(location.hash.includes('ekodi_token='))history.replaceState(null,'',location.pathname+location.search);updateDashboard();
-    await Promise.all([loadSiteHealth(),state.me.permissions?.pages?loadStatusPage():Promise.resolve(),state.me.permissions?.pages?loadOrganization():Promise.resolve(),state.me.permissions?.timeline?loadTimeline():Promise.resolve(),state.me.permissions?.voices?loadVoices():Promise.resolve(),state.me.permissions?.content?loadContent():Promise.resolve(),state.me.permissions?.notices?loadNotices():Promise.resolve(),state.me.permissions?.channels?loadChannels():Promise.resolve(),state.me.permissions?.finance?loadFinance():Promise.resolve()]);
+    await Promise.all([loadSiteHealth(),state.me.permissions?.pages?loadStatusPage():Promise.resolve(),state.me.permissions?.pages?loadOrganization():Promise.resolve(),state.me.permissions?.timeline?loadTimeline():Promise.resolve(),state.me.permissions?.content?loadContent():Promise.resolve(),state.me.permissions?.notices?loadNotices():Promise.resolve(),state.me.permissions?.channels?loadChannels():Promise.resolve(),state.me.permissions?.finance?loadFinance():Promise.resolve()]);
     restoreAdminRoute({replace:true});
     if(refresh)text($('scopeSummary'),state.me.platform?'최고관리자 권한으로 최신 상태를 확인했습니다.':'게시판 관리자 권한으로 최신 상태를 확인했습니다.');
   }catch(error){
