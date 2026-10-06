@@ -575,8 +575,8 @@ export async function createSiteBoardPost(env,siteId,{title,body,categoryId}={})
   const category=safeCategoryId(categoryId);
   if(category){
     await env.DB.prepare(`INSERT OR IGNORE INTO ekodi_board_categories
-      (board_id,category_id,name,description,sort_order,status,created_at,updated_at) VALUES (?,?,?,?,0,'active',?,?)`)
-      .bind(instance.board_id,category,category,'',stamp,stamp).run();
+      (board_id,category_id,name,sort_order,status,created_at,updated_at) VALUES (?,?,?,0,'active',?,?)`)
+      .bind(instance.board_id,category,category,stamp,stamp).run();
     await env.DB.prepare('INSERT OR IGNORE INTO ekodi_board_post_categories(board_id,post_id,category_id) VALUES (?,?,?)').bind(instance.board_id,id,category).run();
   }
   await audit(env,instance,{personId:''},'post.create.public','post',id,{categoryId:category||null});
