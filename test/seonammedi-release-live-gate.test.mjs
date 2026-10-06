@@ -9,8 +9,10 @@ test('shared-site production gate verifies SeonamMedi live release convergence',
   ]);
   assert.match(script,/\.well-known\/ekodi-release\.json/);
   assert.match(script,/release_mismatch/);
-  assert.match(script,/root_html_release_mismatch/);
-  assert.match(script,/admin_html_release_mismatch/);
+  assert.match(script,/\['root',root\],\['admin',admin\],\['finance',finance\],\['notices',notices\]/);
+  assert.match(script,/name\+'_html_release_mismatch'/);
+  assert.match(script,/finance_surface_contract_missing/);
+  assert.match(script,/notices_surface_contract_missing/);
   assert.match(script,/max-age=31536000/);
   assert.match(script,/immutable/);
   assert.match(script,/manifest_cache_policy/);

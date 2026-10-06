@@ -29,13 +29,22 @@ for(let attempt=1;attempt<=attempts;attempt++){
     if(live.release!==expected.release)throw new Error('release_mismatch expected='+expected.release+' live='+String(live.release||''));
     if(JSON.stringify(live.routes)!==JSON.stringify(expected.routes))throw new Error('route_manifest_mismatch');
 
-    const [root,admin]=await Promise.all([fetchText(origin+'/?release_verify='+expected.release),fetchText(origin+'/admin/?release_verify='+expected.release)]);
+    const [root,admin,finance,notices]=await Promise.all([
+      fetchText(origin+'/?release_verify='+expected.release),
+      fetchText(origin+'/admin/?release_verify='+expected.release),
+      fetchText(origin+'/finance/?release_verify='+expected.release),
+      fetchText(origin+'/notices/?release_verify='+expected.release)
+    ]);
     if(!root.response.ok)throw new Error('root_http_'+root.response.status);
     if(!admin.response.ok)throw new Error('admin_http_'+admin.response.status);
-    if(releaseFromHtml(root.text)!==expected.release)throw new Error('root_html_release_mismatch');
-    if(releaseFromHtml(admin.text)!==expected.release)throw new Error('admin_html_release_mismatch');
-    if(!root.text.includes('data-ekodi-release-convergence'))throw new Error('root_runtime_convergence_missing');
-    if(!admin.text.includes('data-ekodi-release-convergence'))throw new Error('admin_runtime_convergence_missing');
+    if(!finance.response.ok)throw new Error('finance_http_'+finance.response.status);
+    if(!notices.response.ok)throw new Error('notices_http_'+notices.response.status);
+    for(const [name,page] of [['root',root],['admin',admin],['finance',finance],['notices',notices]]){
+      if(releaseFromHtml(page.text)!==expected.release)throw new Error(name+'_html_release_mismatch');
+      if(!page.text.includes('data-ekodi-release-convergence'))throw new Error(name+'_runtime_convergence_missing');
+    }
+    if(!finance.text.includes('/api/seonammedi/admin/finance'))throw new Error('finance_surface_contract_missing');
+    if(!notices.text.includes('/api/seonammedi/notices'))throw new Error('notices_surface_contract_missing');
 
     for(const key of ['app.js','app.css','admin/admin.js','admin/admin.css']){
       const asset=live.assets?.[key];

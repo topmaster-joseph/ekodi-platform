@@ -572,7 +572,7 @@ test('seonammedi notice permalink is served by the site shell',async()=>{
   const env={ENVIRONMENT:'production',ASSETS:{fetch:async request=>new Response(new URL(request.url).pathname,{status:200,headers:{'content-type':'text/html; charset=utf-8'}})}};
   const response=await platformRouter.fetch(new Request('https://ekodi.kr/seonammedi/notices/2'),env,{});
   assert.equal(response.status,200);
-  assert.equal(await response.text(),'/seonammedi/');
+  assert.equal(await response.text(),'/seonammedi/notices/');
   const app=await readFile(new URL('app.js',root),'utf8');
   assert.match(app,/pathname\.match\(\/\^\(\?:\\\/seonammedi\)\?\\\/notices/);
   assert.match(app,/find\(item=>Number\(item\.id\)===wanted\)/);
@@ -740,22 +740,33 @@ test('seonammedi citizen opinions hand off to the standalone board-owned UI',asy
 test('seonammedi mobile activity history uses compact filters, progressive detail, and inline admin control',async()=>{const [html,app,css]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('app.css',root),'utf8')]);assert.match(html,/id="timelineAdminEdit"/);assert.match(app,/timeline-toggle/);assert.match(app,/is-collapsed/);assert.match(app,/timelineAdminEdit/);assert.match(css,/activity-toolbar \.filters\{flex-wrap:nowrap;overflow-x:auto/);assert.match(css,/\.timeline-item\.is-collapsed \.timeline-detail\{display:none\}/);});
 
 
-test('seonammedi finance and notices stay embedded while citizen opinions use the standalone board surface',async()=>{
-  const [html,css,worker]=await Promise.all([
+test('seonammedi finance and notices use standalone linked surfaces like citizen opinions',async()=>{
+  const [html,finance,notices,worker,adminHtml]=await Promise.all([
     readFile(new URL('index.html',root),'utf8'),
-    readFile(new URL('app.css',root),'utf8'),
-    readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8')
+    readFile(new URL('finance/index.html',root),'utf8'),
+    readFile(new URL('notices/index.html',root),'utf8'),
+    readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8'),
+    readFile(new URL('admin/index.html',root),'utf8')
   ]);
-  for(const id of ['finance','notices'])assert.match(html,new RegExp('id="'+id+'" class="section module-section"'));
-  assert.doesNotMatch(html,/id="voices"/);
   assert.match(html,/href="\/board"[^>]*>시민의견<\/a>/);
-  assert.match(worker,/href="\/#timeline">활동이력/);
-  assert.match(worker,/href="\/#channels">소통채널/);
-  assert.match(worker,/href="\/board" aria-current="page">시민의견/);
-  assert.match(worker,/href="\/#finance">회계/);
-  assert.match(worker,/href="\/#notices">공지/);
-  assert.match(worker,/href="\/#organization">조직/);
-  assert.match(css,/\.module-shell\{display:grid;grid-template-columns:minmax\(190px,250px\) minmax\(0,1fr\)/);
+  assert.match(html,/href="\/finance\/">회계<\/a>/);
+  assert.match(html,/href="\/notices\/">공지<\/a>/);
+  assert.match(worker,/href="\/finance\/">회계/);
+  assert.match(worker,/href="\/notices\/">공지/);
+  assert.match(adminHtml,/href="\/finance\/">회계 관리/);
+  assert.match(adminHtml,/href="\/notices\/">공지 관리/);
+  assert.match(finance,/<h1>회계<\/h1>/);
+  assert.match(finance,/\/api\/seonammedi\/page-data/);
+  assert.match(finance,/\/api\/seonammedi\/admin\/finance/);
+  assert.match(finance,/누적 모금/);
+  assert.match(finance,/data-filter="income"/);
+  assert.match(notices,/<h1>공지<\/h1>/);
+  assert.match(notices,/\/api\/seonammedi\/notices/);
+  assert.match(notices,/게시글 작성/);
+  assert.match(notices,/\/notices\/'\+x\.id/);
+  assert.match(notices,/navigator\.share/);
+  assert.match(finance,/safe-area-inset-bottom/);
+  assert.match(notices,/safe-area-inset-bottom/);
 });
 
 
@@ -804,8 +815,10 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.match(html,/<link rel="canonical" href="https:\/\/seonammedi\.kr\/">/);
   assert.match(html,/<a class="brand" href="\/">/);
   assert.match(html,/<a href="\/admin\/">관리<\/a>/);
-  for(const hash of ['timeline','channels','finance','notices','organization'])assert.match(adminHtml,new RegExp('href="\/#'+hash+'"'));
+  for(const hash of ['timeline','channels','organization'])assert.match(adminHtml,new RegExp('href="\/#'+hash+'"'));
   assert.match(adminHtml,/href="\/board">시민의견 관리/);
+  assert.match(adminHtml,/href="\/finance\/">회계 관리/);
+  assert.match(adminHtml,/href="\/notices\/">공지 관리/);
   assert.match(app,/\^\(\?:\\\/seonammedi\)\?\\\/notices/);
   assert.ok(minutes.includes("location.origin+'/minutes/?token='"));
   assert.match(css,/min-height:100dvh;display:flex;flex-direction:column/);

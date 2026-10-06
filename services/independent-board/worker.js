@@ -83,7 +83,7 @@ function boardPage(){
 <header class="site-header">
   <a class="brand" href="/"><strong>서남권 국립의대 소통센터</strong><small>서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널</small></a>
   <nav aria-label="주요 메뉴">
-    <a href="/#timeline">활동이력</a><a href="/#channels">소통채널</a><a href="/board" aria-current="page">시민의견</a><a href="/#finance">회계</a><a href="/#notices">공지</a><a href="/#organization">조직</a>
+    <a href="/#timeline">활동이력</a><a href="/#channels">소통채널</a><a href="/board" aria-current="page">시민의견</a><a href="/finance/">회계</a><a href="/notices/">공지</a><a href="/#organization">조직</a>
   </nav>
 </header>
 <main class="board-main">
