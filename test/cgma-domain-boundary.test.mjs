@@ -33,3 +33,12 @@ test('Shared Site candidate smoke excludes the independently routed CGMA public 
     'https://ekodi.kr/cgma/marketing',
   ]) assert.ok(!urls.includes(url), `independently routed CGMA URL leaked into Shared Site candidate smoke: ${url}`);
 });
+
+test('CGMA edge workflow pins board delegation source and verifies independent board', () => {
+  assert.match(workflow, /CGMA_SOURCE_REF: 'f97d03f1e290763a2e0cfe7f64b2b92f74d231ef'/);
+  assert.match(workflow, /grep -Fq 'isBoardPath' cgma-root-gateway\.js/);
+  assert.match(workflow, /grep -Fq 'delegatedBoardResponse' cgma-root-gateway\.js/);
+  assert.match(workflow, /check_board '\/cgma\/board'/);
+  assert.match(workflow, /x-ekodi-board-independent: true/);
+  assert.match(workflow, /x-ekodi-board-id: site:cgma:main/);
+});
