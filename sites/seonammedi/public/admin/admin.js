@@ -304,7 +304,7 @@ $('financeForm')?.addEventListener('submit',async event=>{
 
 async function loadVoices(){
   if(!state.me?.permissions?.voices)return;
-  const data=await api('/api/seonammedi/admin/voices');
+  const data=await api('/board/api/admin/posts');
   state.voices=data.items||[];
   updateDashboard();
 }
