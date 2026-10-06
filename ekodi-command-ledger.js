@@ -1,6 +1,6 @@
 import { executionEvidenceSatisfied } from './ekodi-capability-executor.js';
 
-const TASK_STATES = new Set(['queued', 'running', 'retry', 'human_gate', 'verified', 'degraded', 'core_only', 'ignored', 'failed']);
+const TASK_STATES = new Set(['queued', 'running', 'retry', 'human_gate', 'auto_blocked', 'verified', 'degraded', 'core_only', 'ignored', 'failed']);
 
 function text(value, max = 1200) {
   return String(value ?? '').trim().slice(0, max);
