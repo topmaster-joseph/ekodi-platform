@@ -101,6 +101,7 @@ on:
       - 'mcp-client-policy.js'
       - 'ekodi-mcp-external-tools.js'
       - 'ekodi-orchestrator-task-adapter.js'
+      - 'migrations/0127_orchestrator_reconciliation_rotation.sql'
       - 'github-actions-oidc.js'
       - 'config/orchestrator-completion-reconciliation-policy.json'
       - 'scripts/validate-orchestrator-completion-reconciliation.mjs'
