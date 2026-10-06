@@ -123,7 +123,8 @@ function updateDashboard(){
   text($('scopeSummary'),me.platform?'최고관리자 권한으로 이 사이트를 관리하고 있습니다.':(perms.length?perms.join('·')+' 관리 권한만 부여된 사이트 범위 관리자입니다.':'조회 권한만 있습니다.'));
   text($('adminIdentity'),me.email||'');text($('accessEmail'),me.email||'-');text($('accessRole'),me.platform?'최고관리자':'게시판 관리자');
   text($('accessPages'),me.permissions?.pages?'현재상황·조직구성 수정 가능':'권한 없음');const runHealth=$('runSiteHealth');if(runHealth)runHealth.hidden=!me.permissions?.health;text($('accessTimeline'),me.permissions?.timeline?'등록·수정·게시여부 선택 가능':'권한 없음');text($('accessVoices'),me.permissions?.voices?'접수내용 조회·상태변경·삭제 가능':'권한 없음');text($('accessFinance'),me.permissions?.finance?'회계내역 등록·수정·삭제 가능':'권한 없음');text($('accessContent'),me.permissions?.content?'분류·게시여부 선택 가능':'권한 없음');text($('accessNotice'),me.permissions?.notices?'작성·수정·삭제 가능':'권한 없음');text($('accessChannel'),me.permissions?.channels?'추가·수정·숨김·삭제 가능':'권한 없음');
-  qs('[data-panel-target="status"]').hidden=!(me.permissions?.pages||me.permissions?.timeline||me.permissions?.content);qs('[data-panel-target="organization"]').hidden=!me.permissions?.pages;qs('[data-panel-target="voices"]').hidden=!me.permissions?.voices;qs('[data-panel-target="notices"]').hidden=!me.permissions?.notices;qs('[data-panel-target="channels"]').hidden=!me.permissions?.channels;qs('[data-panel-target="finance"]').hidden=!me.permissions?.finance;
+  const navVisibility={status:Boolean(me.permissions?.pages||me.permissions?.timeline||me.permissions?.content),organization:Boolean(me.permissions?.pages),voices:Boolean(me.permissions?.voices),notices:Boolean(me.permissions?.notices),channels:Boolean(me.permissions?.channels),finance:Boolean(me.permissions?.finance)};
+  for(const [panel,visible] of Object.entries(navVisibility)){const node=qs('[data-panel-target="'+panel+'"]');if(node)node.hidden=!visible}
 }
 
 
