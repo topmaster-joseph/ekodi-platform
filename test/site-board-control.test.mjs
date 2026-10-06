@@ -53,3 +53,11 @@ test('all JSON board APIs retain independent board identity headers',async()=>{
   assert.doesNotMatch(source,/return json\(/);
   assert.match(source,/return boardJson\(instance,\{ok:true,boardId:instance\.board_id,siteId:instance\.site_id,aiIndependent:true,independent:true\}\)/);
 });
+
+
+test('internal service-binding host resolves canonical site board path without widening public hosts',()=>{
+  const internal=resolveSiteBoardRoute('https://board.internal.ekodi/cgma/board/api/health');
+  assert.deepEqual(internal,{siteId:'cgma',tenantSlug:'cgma',basePath:'/cgma/board',subPath:'/api/health'});
+  assert.equal(resolveSiteBoardRoute('https://example.com/cgma/board'),null);
+  assert.equal(resolveSiteBoardRoute('https://cgma.or.kr/cgma/board'),null);
+});
