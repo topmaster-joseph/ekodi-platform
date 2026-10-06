@@ -45,7 +45,7 @@ test('durable write ingress policy is enforced and queue-first in production',as
   assert.match(workflow,/jq -e '\.\. \| strings \| select\(\. == "shy-thunder-39a4"\)'/);
 });
 
-test('seonammedi citizen voice is an explicit independent-board exception to queue-first ingress',async()=>{
+test('seonammedi public voice success requires durable acceptance id',async()=>{
   const [html,app,civic]=await Promise.all([
     read('sites/seonammedi/public/index.html'),
     read('sites/seonammedi/public/app.js'),
