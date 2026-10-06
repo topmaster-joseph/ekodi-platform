@@ -751,7 +751,9 @@ test('seonammedi citizen voices finance and notices share the embedded module la
   for(const id of ['voices','finance','notices'])assert.match(html,new RegExp('id="'+id+'" class="section module-section"'));
   assert.match(html,/class="module-shell"/);
   assert.match(html,/id="voiceComposeToggle"/);
-  assert.match(html,/href="\/board"/);
+  assert.doesNotMatch(html,/독립 게시판 기능은|직접 주소|>새로고침<|href="\/board"/);
+  assert.match(html,/id="reloadVoices" type="button" hidden/);
+  assert.match(html,/최신 의견부터 표시합니다.<\/span><button id="voiceComposeToggle"/);
   assert.match(app,/function setVoiceCompose\(open\)/);
   assert.match(css,/\.module-shell\{display:grid;grid-template-columns:minmax\(190px,250px\) minmax\(0,1fr\)/);
   assert.match(css,/@media\(max-width:760px\)\{\.module-section/);
