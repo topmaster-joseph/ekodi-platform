@@ -142,9 +142,10 @@ test('central auth directly honors a requested verified Social or Energy workspa
   assert.match(authTarget,/window\.__EKODI_WORKSPACE_ROUTING/);
 });
 
-test('AI login is a canonical first-party client realm',()=>{
+test('AI and registered independent-domain sites are canonical first-party client realms',()=>{
   assert.match(clientAuth,/ai:\{name:'EKODI AI',returnTo:'https:\/\/ekodi\.kr\/ai\/'/);
-  assert.match(authRouter,/firstPartyClientSites=new Set\(\['ai'\]\)/);
+  assert.match(clientAuth,/seonammedi:\{name:'서남권 국립의대 소통센터'/);
+  assert.match(authRouter,/firstPartyClientSites=new Set\(\['ai','seonammedi'\]\)/);
   assert.match(authRouter,/firstPartyClientSites\.has\(site\)/);
 });
 
