@@ -21,7 +21,7 @@ concurrency:
 env:
   WRANGLER_VERSION: '4.119.0'
   CGMA_SOURCE_REPO: topmaster-joseph/cheonggye-market
-  CGMA_SOURCE_REF: 'a1a00cfef892aac3b41d3a1d31138f2dab8eb118'
+  CGMA_SOURCE_REF: 'f97d03f1e290763a2e0cfe7f64b2b92f74d231ef'
 
 jobs:
   validate:
@@ -59,6 +59,8 @@ jobs:
           grep -Fq 'delegatedOwnerAdminResponse' cgma-root-gateway.js
           grep -Fq 'isLivePath' cgma-root-gateway.js
           grep -Fq 'delegatedLiveResponse' cgma-root-gateway.js
+          grep -Fq 'isBoardPath' cgma-root-gateway.js
+          grep -Fq 'delegatedBoardResponse' cgma-root-gateway.js
           npx --yes wrangler@${WRANGLER_VERSION} deploy --dry-run --config wrangler.cgma-root-gateway.toml
           grep -Fq 'binding = "EKODI_SHARED"' wrangler.cgma-root-gateway.toml
           grep -Fq 'service = "shy-thunder-39a4"' wrangler.cgma-root-gateway.toml
@@ -152,6 +154,19 @@ jobs:
             echo "CGMA Live verification failed: ${path} code=${code}"
             return 1
           }
+          check_board() {
+            local path="$1" code
+            for attempt in $(seq 1 18); do
+              code=$(curl -sS -L --max-redirs 6 -D /tmp/cgma.board.headers -o /tmp/cgma.board.body -w '%{http_code}' --max-time 20 "https://ekodi.kr${path}?edge_release=${GITHUB_SHA}" || true)
+              if [[ "$code" == '200' ]] && grep -Fq '<title>게시판</title>' /tmp/cgma.board.body && grep -Fiq 'x-ekodi-board-independent: true' /tmp/cgma.board.headers && grep -Fiq 'x-ekodi-board-id: site:cgma:main' /tmp/cgma.board.headers && ! grep -Fiq 'x-ekodi-route: cgma-root-gateway' /tmp/cgma.board.headers; then
+                echo "CGMA independent board verified: ${path}"
+                return 0
+              fi
+              sleep 4
+            done
+            echo "CGMA independent board verification failed: ${path} code=${code}"
+            return 1
+          }
           check_redirect() {
             local path="$1" location_prefix="$2" code
             for attempt in $(seq 1 18); do
@@ -174,6 +189,7 @@ jobs:
           check_cgma '/cgma/admin/assets/cgma-member-admin.css' '.cgma-member-head' 'admin-workspace-asset'
           check_redirect '/cgma/member-admin' 'https://ekodi.kr/cgma/admin/member?edge_release='
           check_live '/cgma/live/'
+          check_board '/cgma/board'
       - name: Dispatch current EKODI Shared Site guarded release
         shell: bash
         run: |
