@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "policyId": "SITE-EXECUTION-ENFORCEMENT-001",
   "status": "enforced",
   "sourceOfSites": "config/site-lifecycle-registry.json",
@@ -36,7 +36,9 @@
     "central-social-hub-inheritance",
     "no-direct-production-mutation",
     "isolated-branch-and-regression-validation",
-    "guarded-staging-before-production"
+    "guarded-staging-before-production",
+    "canonical-mount-parity",
+    "descendant-slash-parity"
   ],
   "publicHeader": {
     "internalWorkspaceWordingForbidden": true,
@@ -157,6 +159,55 @@
     "siteLocalAuthPathForbidden": true,
     "exactInitiatingReturnRequired": true,
     "registeredCustomerDomainReturnAllowed": true,
+    "futureSitesAutoInherit": true,
+    "perSiteOptOutAllowed": false
+  },
+  "canonicalMountParity": {
+    "policyId": "CANONICAL-PATH-MOUNT-PARITY-001",
+    "status": "enforced",
+    "mode": "mandatory-recursive",
+    "scope": "all-current-and-future-public-user-independent-sites-and-descendant-routes",
+    "externalCanonicalAndInternalMountMustServeSameSurface": true,
+    "descendantRouteSuffixMustBePreserved": true,
+    "absoluteRootLinksForbiddenWhenTheyCanEscapeSiteMount": true,
+    "mountAwareOrRelativeNavigationRequired": true,
+    "authReturnMustPreserveInitiatingHostAndMount": true,
+    "internalMountMustNotLeakIntoCustomerDomainUrl": true,
+    "customerDomainMustNotCollapseToEkodiRootOrMy": true,
+    "futureSitesAutoInherit": true,
+    "perSiteOptOutAllowed": false,
+    "productionVerificationRequired": true,
+    "registeredMountPairs": [
+      {
+        "id": "seonammedi",
+        "externalBase": "https://seonammedi.kr",
+        "internalBase": "https://ekodi.kr/seonammedi",
+        "descendantPaths": [
+          "/board/voices",
+          "/board/finance",
+          "/board/notices",
+          "/admin"
+        ],
+        "sourceRoot": "sites/seonammedi/public",
+        "routeConfig": "wrangler.independent-board.toml"
+      }
+    ]
+  },
+  "descendantSlashParity": {
+    "policyId": "CANONICAL-ROUTE-SLASH-PARITY-001",
+    "status": "enforced",
+    "mode": "mandatory-recursive",
+    "scope": "all-current-and-future-site-root-admin-board-and-descendant-routes",
+    "slashlessAndTrailingSlashMustResolveSameSurface": true,
+    "sameAuthenticationRealmRequired": true,
+    "sameAuthorizationContextRequired": true,
+    "sameMountRequired": true,
+    "sameCanonicalHostRequired": true,
+    "queryStringPreserved": true,
+    "allowedNormalization": "308-or-equivalent-direct-resolution",
+    "contentDivergenceForbidden": true,
+    "bothVariantsRegressionTestRequired": true,
+    "productionVerificationRequired": true,
     "futureSitesAutoInherit": true,
     "perSiteOptOutAllowed": false
   }

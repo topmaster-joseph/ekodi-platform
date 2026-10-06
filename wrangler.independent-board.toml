@@ -11,6 +11,10 @@ BOARD_ID = "seonammedi.citizen_voice"
 pattern = "seonammedi.kr/board*"
 zone_name = "seonammedi.kr"
 
+[[routes]]
+pattern = "ekodi.kr/seonammedi/board*"
+zone_name = "ekodi.kr"
+
 [[d1_databases]]
 binding = "BOARD_DB"
 database_name = "ekodi-independent-board"

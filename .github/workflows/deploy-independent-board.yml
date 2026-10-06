@@ -109,8 +109,17 @@ jobs:
             fi
           }
           voices="$(fetch_board https://seonammedi.kr/board/voices)"
+          voices_slash="$(fetch_board https://seonammedi.kr/board/voices/)"
           finance="$(fetch_board https://seonammedi.kr/board/finance)"
+          finance_slash="$(fetch_board https://seonammedi.kr/board/finance/)"
           notices="$(fetch_board https://seonammedi.kr/board/notices)"
+          notices_slash="$(fetch_board https://seonammedi.kr/board/notices/)"
+          internal_voices="$(fetch_board https://ekodi.kr/seonammedi/board/voices)"
+          internal_voices_slash="$(fetch_board https://ekodi.kr/seonammedi/board/voices/)"
+          internal_finance="$(fetch_board https://ekodi.kr/seonammedi/board/finance)"
+          internal_finance_slash="$(fetch_board https://ekodi.kr/seonammedi/board/finance/)"
+          internal_notices="$(fetch_board https://ekodi.kr/seonammedi/board/notices)"
+          internal_notices_slash="$(fetch_board https://ekodi.kr/seonammedi/board/notices/)"
           verify_contains "voices write control" 'id="writeToggle"' "$voices"
           verify_contains "voices search control" 'id="searchToggle"' "$voices"
           verify_contains "voices list" 'id="voiceList"' "$voices"
@@ -119,7 +128,16 @@ jobs:
           verify_contains "finance summary" 'id="raised"' "$finance"
           verify_contains "notices active nav" 'aria-current="page" href="/board/notices">공지' "$notices"
           verify_contains "notices heading" 'NOTICE BOARD' "$notices"
-          for html in "$voices" "$finance" "$notices"; do
+          verify_contains "internal voices route" 'aria-current="page" href="/seonammedi/board/voices">시민의견' "$internal_voices"
+          verify_contains "internal finance route" 'aria-current="page" href="/seonammedi/board/finance">회계' "$internal_finance"
+          verify_contains "internal notices route" 'aria-current="page" href="/seonammedi/board/notices">공지' "$internal_notices"
+          verify_contains "external voices slash parity" 'aria-current="page" href="/board/voices">시민의견' "$voices_slash"
+          verify_contains "external finance slash parity" 'aria-current="page" href="/board/finance">회계' "$finance_slash"
+          verify_contains "external notices slash parity" 'aria-current="page" href="/board/notices">공지' "$notices_slash"
+          verify_contains "internal voices slash parity" 'aria-current="page" href="/seonammedi/board/voices">시민의견' "$internal_voices_slash"
+          verify_contains "internal finance slash parity" 'aria-current="page" href="/seonammedi/board/finance">회계' "$internal_finance_slash"
+          verify_contains "internal notices slash parity" 'aria-current="page" href="/seonammedi/board/notices">공지' "$internal_notices_slash"
+          for html in "$voices" "$voices_slash" "$finance" "$finance_slash" "$notices" "$notices_slash" "$internal_voices" "$internal_voices_slash" "$internal_finance" "$internal_finance_slash" "$internal_notices" "$internal_notices_slash"; do
             grep -q '서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널' <<<"$html"
             grep -q '자료의 성격과 출처를 구분해 보존합니다' <<<"$html"
           done
