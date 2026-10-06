@@ -101,6 +101,7 @@ jobs:
             .github/workflows/ci.yml \
             .github/workflows/deploy-control-api.yml \
             .github/workflows/reconcile-orchestrator-completions.yml \
+            .github/workflows/recover-release-provenance.yml \
             .github/workflows/deploy-space.yml \
             .github/workflows/deploy-site-core.yml \
             .github/workflows/backup-ekodi-core.yml \
