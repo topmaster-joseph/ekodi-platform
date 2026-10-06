@@ -13,6 +13,7 @@ const PATH_TENANT_ALIASES=Object.freeze({
   community:'community',
   seonammedi:'seonammedi',
 });
+const INTERNAL_BOARD_SERVICE_HOST='board.internal.ekodi';
 const CUSTOM_HOST_SITE=Object.freeze({
   'seonammedi.kr':'seonammedi',
   'www.seonammedi.kr':'seonammedi',
@@ -36,7 +37,7 @@ export function resolveSiteBoardRoute(input){
   if(custom&&(url.pathname==='/board'||url.pathname.startsWith('/board/'))){
     return Object.freeze({siteId:custom,tenantSlug:tenantSlugFor(custom),basePath:'/board',subPath:url.pathname.slice('/board'.length)||'/'});
   }
-  if(host==='ekodi.kr'){
+  if(host==='ekodi.kr'||host===INTERNAL_BOARD_SERVICE_HOST){
     const match=url.pathname.match(/^\/([a-z0-9-]+)\/board(?:\/(.*))?\/?$/i);
     if(match){
       const siteId=safeSiteId(match[1]);
