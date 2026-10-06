@@ -61,3 +61,40 @@ test('continuous site improvement is bound to the same recursive policy',()=>{
   assert.match(scheduler,/every discoverable same-site subservice and site-owned admin surface/);
   assert.match(scheduler,/child surfaces may tighten but must not relax/);
 });
+
+
+test('canonical mount and descendant slash parity are forced inherited rules',()=>{
+  const policy=json('config/site-execution-enforcement.json');
+  assert.equal(policy.schemaVersion,4);
+  assert.ok(policy.mandatoryContracts.includes('canonical-mount-parity'));
+  assert.ok(policy.mandatoryContracts.includes('descendant-slash-parity'));
+  const mount=policy.canonicalMountParity;
+  assert.equal(mount.policyId,'CANONICAL-PATH-MOUNT-PARITY-001');
+  assert.equal(mount.status,'enforced');
+  assert.equal(mount.mode,'mandatory-recursive');
+  assert.equal(mount.externalCanonicalAndInternalMountMustServeSameSurface,true);
+  assert.equal(mount.descendantRouteSuffixMustBePreserved,true);
+  assert.equal(mount.absoluteRootLinksForbiddenWhenTheyCanEscapeSiteMount,true);
+  assert.equal(mount.authReturnMustPreserveInitiatingHostAndMount,true);
+  assert.equal(mount.customerDomainMustNotCollapseToEkodiRootOrMy,true);
+  assert.equal(mount.futureSitesAutoInherit,true);
+  assert.equal(mount.perSiteOptOutAllowed,false);
+  const seonam=mount.registeredMountPairs.find(item=>item.id==='seonammedi');
+  assert.equal(seonam.externalBase,'https://seonammedi.kr');
+  assert.equal(seonam.internalBase,'https://ekodi.kr/seonammedi');
+  assert.deepEqual(seonam.descendantPaths,['/board/voices','/board/finance','/board/notices','/admin']);
+
+  const slash=policy.descendantSlashParity;
+  assert.equal(slash.policyId,'CANONICAL-ROUTE-SLASH-PARITY-001');
+  assert.equal(slash.status,'enforced');
+  assert.equal(slash.mode,'mandatory-recursive');
+  assert.equal(slash.slashlessAndTrailingSlashMustResolveSameSurface,true);
+  assert.equal(slash.sameAuthenticationRealmRequired,true);
+  assert.equal(slash.sameAuthorizationContextRequired,true);
+  assert.equal(slash.sameMountRequired,true);
+  assert.equal(slash.sameCanonicalHostRequired,true);
+  assert.equal(slash.contentDivergenceForbidden,true);
+  assert.equal(slash.bothVariantsRegressionTestRequired,true);
+  assert.equal(slash.futureSitesAutoInherit,true);
+  assert.equal(slash.perSiteOptOutAllowed,false);
+});

@@ -24,7 +24,7 @@ export async function finalizeSeonamMediRelease(output){
     await writeFile(siteDir+fingerprinted,body);
     assets[key]={path:fingerprinted,sha256:sha256(body)};
   }
-  const routes={home:'/',timeline:'/#timeline',channels:'/#channels',voices:'/board',finance:'/#finance',notices:'/#notices',organization:'/#organization',admin:'/admin/'};
+  const routes={home:'/',timeline:'/#timeline',channels:'/#channels',voices:'/board',finance:'/finance/',notices:'/notices/',organization:'/#organization',admin:'/admin/'};
   const release=shortHash(JSON.stringify({assets,routes}));
   const manifest={schemaVersion:1,site:'seonammedi',release,assets,routes};
   await mkdir(siteDir+'.well-known/',{recursive:true});
@@ -52,5 +52,11 @@ export async function finalizeSeonamMediRelease(output){
     .replace(/\/seonammedi\/admin\/admin-minutes\.js(?:\?[^"']*)?/g,'/seonammedi/'+assets['admin/admin-minutes.js'].path);
   if(!admin.includes('data-ekodi-release-convergence'))admin=admin.replace('</head>',runtime+'\n</head>');
   await writeFile(siteDir+'admin/index.html',admin);
+
+  for(const relative of ['finance/index.html','notices/index.html']){
+    let page=await readFile(siteDir+relative,'utf8');
+    if(!page.includes('data-ekodi-release-convergence'))page=page.replace('</head>',runtime+'\n</head>');
+    await writeFile(siteDir+relative,page);
+  }
   return manifest;
 }

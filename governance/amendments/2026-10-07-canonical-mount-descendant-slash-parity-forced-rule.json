@@ -1,0 +1,48 @@
+{
+  "version": "1.27.1-operational-2026-10-07",
+  "date": "2026-10-07",
+  "changeClass": "C2",
+  "taskId": "canonical-mount-descendant-slash-parity-forced-rule-20261007",
+  "summary": "Enforce path-mount parity between customer domains and EKODI internal mounts, and require slashless/trailing-slash parity for all descendant routes.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly instructed that route-matching errors and trailing-slash/non-trailing-slash divergence be enforced as repeat-prevention forced execution rules.",
+  "rules": [
+    {
+      "ruleId": "CANONICAL-PATH-MOUNT-PARITY-001",
+      "requirements": [
+        "External customer-domain paths and internal EKODI mount paths must serve the same logical surface.",
+        "Descendant route suffixes must be preserved across mounts.",
+        "Root-absolute links that can escape an internal mount are forbidden.",
+        "Navigation and authentication returns must preserve the initiating host and mount.",
+        "Customer-domain routes must never collapse to the EKODI root or My EKODI unless explicitly requested."
+      ]
+    },
+    {
+      "ruleId": "CANONICAL-ROUTE-SLASH-PARITY-001",
+      "requirements": [
+        "Slashless and trailing-slash variants of every site root, admin, board and descendant route must resolve to the same logical surface.",
+        "Authentication realm, authorization context, canonical host and mount must remain identical across slash variants.",
+        "Either an HTTP 308 canonical redirect or equivalent direct resolution is permitted.",
+        "Content divergence between slash variants blocks validation and deployment."
+      ]
+    }
+  ],
+  "enforcement": [
+    "config/site-execution-enforcement.json",
+    "scripts/validate-site-execution-enforcement.mjs",
+    "test/site-execution-enforcement.test.mjs",
+    "test/independent-board-seonammedi.test.mjs",
+    ".github/workflows/ekodi-ai-orchestration-gate.yml",
+    ".github/workflows/deploy-independent-board.yml"
+  ],
+  "inheritance": {
+    "futureSitesAutoInherit": true,
+    "perSiteOptOutAllowed": false,
+    "allDescendantRoutesIncluded": true
+  },
+  "verification": [
+    "static mount-aware navigation validation",
+    "slashless/trailing-slash regression tests",
+    "external and internal production route verification",
+    "guarded deployment"
+  ]
+}

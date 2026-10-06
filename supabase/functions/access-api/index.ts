@@ -187,7 +187,8 @@ function validHandoff(site:string,raw:string){
     edu:["https://edu.ekodi.kr"],
     media:["https://media.ekodi.kr"],
     admin:["https://admin.ekodi.kr"],
-    portal:["https://ekodi.kr","https://seonammedi.kr",new URL("https://서남권국립의대.kr").origin]
+    portal:["https://ekodi.kr"],
+    seonammedi:["https://seonammedi.kr","https://www.seonammedi.kr",new URL("https://서남권국립의대.kr").origin,new URL("https://www.서남권국립의대.kr").origin]
   };
   try{
     const target=new URL(raw);
@@ -310,11 +311,11 @@ Deno.serve(async(req)=>{
       const email=String(auth.user.email??"").trim().toLowerCase();
       if(!email)return json(req,{error:"email_required"},400);
 
-      if(site==="portal"){
+      if(site==="portal"||site==="seonammedi"){
         const {data,error}=await admin.auth.admin.generateLink({type:"magiclink",email});
         const tokenHash=data?.properties?.hashed_token;
         if(error||!tokenHash){
-          console.error("portal handoff generateLink",error?.message||"missing_hashed_token");
+          console.error(site+" handoff generateLink",error?.message||"missing_hashed_token");
           return json(req,{error:"handoff_token_issue_failed"},503);
         }
         return json(req,{ok:true,tokenHash,type:"email",returnTo,expiresFor:"single_use",workspace:null});

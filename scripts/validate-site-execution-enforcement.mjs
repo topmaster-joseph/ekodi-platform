@@ -16,7 +16,7 @@ const [policy,registry,pkg,scheduler,workflow,liveVerifier]=await Promise.all([
 const failures=[];
 const fail=message=>failures.push(message);
 
-if(policy.schemaVersion!==3||policy.policyId!=='SITE-EXECUTION-ENFORCEMENT-001'||policy.status!=='enforced')fail('site execution policy must remain enforced schema v3');
+if(policy.schemaVersion!==4||policy.policyId!=='SITE-EXECUTION-ENFORCEMENT-001'||policy.status!=='enforced')fail('site execution policy must remain enforced schema v4');
 const authEntry=policy.authenticationEntry||{};
 if(authEntry.policyId!=='SITE-CENTRAL-AUTH-ENTRY-001'||authEntry.status!=='enforced')fail('central site auth-entry policy must remain enforced');
 if(authEntry.centralEntry!=='https://ekodi.kr/auth/')fail('site auth entry must remain the canonical EKODI auth path');
@@ -53,10 +53,56 @@ const requiredContracts=new Set([
   'site-owned-admin-addressability','auth-return-continuity','responsive-mobile-desktop-layout',
   'readability-and-no-clipping','keyboard-and-touch-accessibility','internal-external-link-integrity',
   'loading-error-empty-state-usability','shared-header-footer-language-behavior','central-social-hub-inheritance',
-  'no-direct-production-mutation','isolated-branch-and-regression-validation','guarded-staging-before-production'
+  'no-direct-production-mutation','isolated-branch-and-regression-validation','guarded-staging-before-production',
+  'canonical-mount-parity','descendant-slash-parity'
 ]);
 const contracts=new Set(policy.mandatoryContracts||[]);
 for(const contract of requiredContracts)if(!contracts.has(contract))fail(`missing mandatory site contract: ${contract}`);
+
+const mountParity=policy.canonicalMountParity||{};
+if(mountParity.policyId!=='CANONICAL-PATH-MOUNT-PARITY-001'||mountParity.status!=='enforced'||mountParity.mode!=='mandatory-recursive')fail('canonical path/mount parity must remain mandatory-recursive');
+for(const flag of ['externalCanonicalAndInternalMountMustServeSameSurface','descendantRouteSuffixMustBePreserved','absoluteRootLinksForbiddenWhenTheyCanEscapeSiteMount','mountAwareOrRelativeNavigationRequired','authReturnMustPreserveInitiatingHostAndMount','internalMountMustNotLeakIntoCustomerDomainUrl','customerDomainMustNotCollapseToEkodiRootOrMy','futureSitesAutoInherit','productionVerificationRequired'])if(mountParity[flag]!==true)fail(`canonical mount parity flag must remain true: ${flag}`);
+if(mountParity.perSiteOptOutAllowed!==false)fail('canonical mount parity per-site opt-out must remain forbidden');
+
+const slashParity=policy.descendantSlashParity||{};
+if(slashParity.policyId!=='CANONICAL-ROUTE-SLASH-PARITY-001'||slashParity.status!=='enforced'||slashParity.mode!=='mandatory-recursive')fail('descendant slash parity must remain mandatory-recursive');
+for(const flag of ['slashlessAndTrailingSlashMustResolveSameSurface','sameAuthenticationRealmRequired','sameAuthorizationContextRequired','sameMountRequired','sameCanonicalHostRequired','queryStringPreserved','contentDivergenceForbidden','bothVariantsRegressionTestRequired','productionVerificationRequired','futureSitesAutoInherit'])if(slashParity[flag]!==true)fail(`descendant slash parity flag must remain true: ${flag}`);
+if(slashParity.perSiteOptOutAllowed!==false)fail('descendant slash parity per-site opt-out must remain forbidden');
+if(slashParity.allowedNormalization!=='308-or-equivalent-direct-resolution')fail('slash parity normalization contract drifted');
+
+for(const pair of mountParity.registeredMountPairs||[]){
+  const external=new URL(pair.externalBase);
+  const internal=new URL(pair.internalBase);
+  if(internal.hostname!=='ekodi.kr')fail(`${pair.id}: internal mount must stay on ekodi.kr`);
+  if(external.origin===internal.origin)fail(`${pair.id}: custom-domain mount pair must have distinct origins`);
+  const descendants=Array.isArray(pair.descendantPaths)?pair.descendantPaths:[];
+  if(!descendants.length)fail(`${pair.id}: registered mount pair must declare descendant paths`);
+  for(const route of descendants){
+    if(!String(route).startsWith('/'))fail(`${pair.id}: descendant path must start with /: ${route}`);
+    if(String(route).length>1&&String(route).endsWith('/'))fail(`${pair.id}: registry path must be slashless canonical form: ${route}`);
+  }
+  if(pair.sourceRoot){
+    const html=await read(`${pair.sourceRoot}/index.html`).catch(()=>null);
+    if(!html)fail(`${pair.id}: source root index missing: ${pair.sourceRoot}/index.html`);
+    else {
+      const roots=[...new Set(descendants.map(route=>'/'+route.replace(/^\/+|\/+$/g,'').split('/')[0]))];
+      for(const rootPath of roots){
+        const quotedDouble='href="'+rootPath;
+        const quotedSingle="href='"+rootPath;
+        if(html.includes(quotedDouble)||html.includes(quotedSingle))fail(`${pair.id}: root-absolute navigation can escape internal mount: ${rootPath}; use relative or mount-aware navigation`);
+      }
+    }
+  }
+  if(pair.routeConfig&&descendants.some(route=>route.startsWith('/board/'))){
+    const routes=await read(pair.routeConfig).catch(()=>null);
+    const internalPath=internal.pathname.replace(/\/$/,'');
+    if(!routes)fail(`${pair.id}: route config missing: ${pair.routeConfig}`);
+    else {
+      if(!routes.includes(`${external.hostname}/board*`))fail(`${pair.id}: external board mount route missing from ${pair.routeConfig}`);
+      if(!routes.includes(`${internal.hostname}${internalPath}/board*`))fail(`${pair.id}: internal board mount route missing from ${pair.routeConfig}`);
+    }
+  }
+}
 
 const lifecycleEnforcement=registry.enforcement||{};
 if(lifecycleEnforcement.policy!=='config/site-execution-enforcement.json')fail('site lifecycle registry must point to the site execution policy');

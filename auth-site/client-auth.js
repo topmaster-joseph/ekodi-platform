@@ -7,6 +7,7 @@ function fetchTimed(url,options={},ms=10000){const controller=new AbortControlle
 
 const realms={
   portal:{name:'EKODI',returnTo:'https://ekodi.kr/',open:true,kind:'portal'},
+  seonammedi:{name:'서남권 국립의대 소통센터',returnTo:'https://seonammedi.kr/',origins:['https://seonammedi.kr','https://www.seonammedi.kr','https://xn--3e0b8b58jw4co4mnpll3k.kr','https://www.xn--3e0b8b58jw4co4mnpll3k.kr'],open:true,kind:'seonammedi'},
   space:{name:'EKODI 운영공간',returnTo:'https://ekodi.kr/',origins:['https://ekodi.kr'],open:true,kind:'space'},
   'my':{name:'My EKODI',returnTo:'https://ekodi.kr/my/',open:true,kind:'my'},
   ai:{name:'EKODI AI',returnTo:'https://ekodi.kr/ai/',origins:['https://ekodi.kr'],open:true,kind:'ai'},
