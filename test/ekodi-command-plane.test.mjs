@@ -120,7 +120,7 @@ test('Pulse may start delegated reversible work without another chat prompt and 
   assert.equal(calls, 2);
 });
 
-test('Pulse stops at a human gate for high-impact or red changes', async () => {
+test('Pulse auto-blocks high-impact or red changes without executing providers', async () => {
   let calls = 0;
   const plane = buildEkodiCommandPlane({}, [
     provider('openai', 10, ['text', 'reasoning', 'review'], async () => {
@@ -146,7 +146,7 @@ test('Pulse stops at a human gate for high-impact or red changes', async () => {
     },
   });
 
-  assert.equal(result.state, 'human_gate');
+  assert.equal(result.state, 'auto_blocked');
   assert.equal(result.reason, 'sovereign_or_high_impact_gate');
   assert.equal(calls, 0);
 });
