@@ -43,3 +43,14 @@ test('CGMA edge workflow pins board delegation source and verifies independent b
   assert.match(cgmaWorkflow, /x-ekodi-board-independent: true/);
   assert.match(cgmaWorkflow, /x-ekodi-board-id: site:cgma:main/);
 });
+
+
+test('CGMA production verifier accepts authenticated protection for admin assets without weakening the route', async () => {
+  const cgmaWorkflow=await readFile(new URL('../.github/workflows/deploy-cgma-apex-edge.yml',import.meta.url),'utf8');
+  assert.match(cgmaWorkflow, /check_protected_asset\(\)/);
+  assert.match(cgmaWorkflow, /--max-redirs 0/);
+  assert.match(cgmaWorkflow, /\^30\[12378\]\$/);
+  assert.match(cgmaWorkflow, /location.*\/auth\//s);
+  assert.match(cgmaWorkflow, /check_protected_asset '\/cgma\/admin\/assets\/cgma-member-admin\.js'/);
+  assert.match(cgmaWorkflow, /check_protected_asset '\/cgma\/admin\/assets\/cgma-member-admin\.css'/);
+});
