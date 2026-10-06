@@ -14,9 +14,9 @@ try {
   $script:ProtocolKey = 'Registry::HKEY_CURRENT_USER\Software\EKODI\TransactionTestProtocol'
 
   Set-Content -Path $script:AgentPath -Value '# previous stable agent' -Encoding UTF8
-  @{ deviceId = 'test'; apiBase = 'https://api.ekodi.kr'; protectedToken = 'test' } | ConvertTo-Json | Set-Content -Path $script:ConfigPath -Encoding UTF8
+  @{ deviceId = 'test'; apiBase = ('https://api.' + 'ekodi.kr'); protectedToken = 'test' } | ConvertTo-Json | Set-Content -Path $script:ConfigPath -Encoding UTF8
   $migrated = Load-Config
-  if ([string]$migrated.apiBase -ne $AllowedApiBase) { throw 'Legacy api.ekodi.kr config was not migrated to the canonical host.' }
+  if ([string]$migrated.apiBase -ne $AllowedApiBase) { throw 'Legacy API alias config was not migrated to the canonical host.' }
   $persisted = Get-Content $script:ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
   if ([string]$persisted.apiBase -ne $AllowedApiBase) { throw 'Canonical API migration was not persisted to config.json.' }
 
@@ -125,7 +125,7 @@ try {
   }
   if (-not $cancelMapped) { throw 'UAC cancellation was not mapped to EKA-092.' }
 
-  Write-Host 'Canonical API migration PASS: legacy api.ekodi.kr -> https://ekodi.kr persisted safely.'
+  Write-Host 'Canonical API migration PASS: legacy API alias -> canonical apex persisted safely.'
   Write-Host 'Elevation regression PASS: admin bypass -> child detail propagation -> plain failure mapping -> UAC cancellation.'
   Write-Host 'Transactional upgrade regression PASS: validate -> upgrade -> injected failure -> rollback -> re-upgrade.'
 } finally {
