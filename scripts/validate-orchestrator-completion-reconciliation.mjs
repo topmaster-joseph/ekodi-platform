@@ -10,7 +10,7 @@ const controlWorkflow=read('.github/workflows/deploy-control-api.yml');
 const failures=[];
 const fail=message=>failures.push(message);
 
-if(policy.schemaVersion<2)fail('completion policy schema must include OIDC backstop');
+if(policy.schemaVersion<3)fail('completion policy schema must include OIDC backstop and fair candidate rotation');
 if(policy.policyId!=='EKODI-ORCHESTRATOR-COMPLETION-001'||policy.status!=='enforced')fail('completion policy must remain enforced');
 if(policy.owner!=='ekodi-orchestrator')fail('EKODI Orchestrator must own completion');
 
@@ -55,9 +55,14 @@ for(const key of [
   'productionEvidencePersisted',
   'completionEventRequired',
   'falseCompletionForbidden',
+  'candidateFairRotationRequired',
+  'newUnattemptedCandidatesPrioritized',
+  'deferredCandidatesMustNotStarveNewerTasks',
+  'checkedAtMetadataRequired',
 ]){
   if(policy.reconciliation?.[key]!==true)fail('reconciliation rule missing: '+key);
 }
+if(policy.reconciliation?.candidateBatchLimit!==50)fail('completion reconciliation candidate batch limit must remain bounded at 50');
 
 if(policy.oidcBoundary?.issuer!=='https://token.actions.githubusercontent.com')fail('GitHub Actions OIDC issuer mismatch');
 if(policy.oidcBoundary?.audience!=='ekodi-orchestrator-completion')fail('OIDC audience mismatch');
@@ -79,6 +84,8 @@ for(const marker of [
   'verified_oidc_production_evidence_reconciled',
   "INSERT OR IGNORE INTO ekodi_orchestrator_external_refs",
   'reconcileCompletionRow(db,env,row',
+  'reconciliation_checked_at ASC, updated_at DESC',
+  "selection:'fair-round-robin'",
 ]){
   if(!adapter.includes(marker))fail('adapter marker missing: '+marker);
 }
