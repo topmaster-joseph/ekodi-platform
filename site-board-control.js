@@ -544,6 +544,59 @@ export async function handleSiteBoardRequest(request,env){
   return boardJson(instance,{error:'not_found'},404);
 }
 
+export async function ensurePublicSiteBoard(env,siteId){
+  const normalized=safeSiteId(siteId);
+  if(!normalized||!env?.DB?.prepare)throw new Error('board_storage_unavailable');
+  const route={siteId:normalized,tenantSlug:normalized,basePath:'/board',subPath:'/'};
+  const instance=await ensureInstance(env,route);
+  if(!instance)throw new Error('board_instance_unavailable');
+  if(Number(instance.allow_anonymous_write)!==1){
+    await env.DB.prepare('UPDATE ekodi_board_instances SET allow_anonymous_write=1,comments_enabled=1,updated_at=? WHERE board_id=?')
+      .bind(now(),instance.board_id).run();
+    instance.allow_anonymous_write=1;instance.comments_enabled=1;
+  }
+  return instance;
+}
+
+export async function listSiteBoardPostsWithComments(env,siteId){
+  const instance=await ensurePublicSiteBoard(env,siteId);
+  const posts=await listPosts(env,instance);
+  return Promise.all(posts.map(post=>readPost(env,instance,post.id)));
+}
+
+export async function createSiteBoardPost(env,siteId,{title,body,categoryId}={}){
+  const instance=await ensurePublicSiteBoard(env,siteId);
+  const stamp=now(),safeTitle=clean(title,200),safeBody=clean(body,20000);
+  if(!safeTitle||!safeBody)throw new Error('title_and_body_required');
+  const result=await env.DB.prepare(`INSERT INTO ekodi_board_posts
+    (board_id,author_person_id,author_email,title,body,status,created_at,updated_at) VALUES (?,?,?,?,?,'published',?,?)`)
+    .bind(instance.board_id,'','',safeTitle,safeBody,stamp,stamp).run();
+  const id=Number(result?.meta?.last_row_id||0);
+  const category=safeCategoryId(categoryId);
+  if(category){
+    await env.DB.prepare(`INSERT OR IGNORE INTO ekodi_board_categories
+      (board_id,category_id,name,description,sort_order,status,created_at,updated_at) VALUES (?,?,?,?,0,'active',?,?)`)
+      .bind(instance.board_id,category,category,'',stamp,stamp).run();
+    await env.DB.prepare('INSERT OR IGNORE INTO ekodi_board_post_categories(board_id,post_id,category_id) VALUES (?,?,?)').bind(instance.board_id,id,category).run();
+  }
+  await audit(env,instance,{personId:''},'post.create.public','post',id,{categoryId:category||null});
+  return id;
+}
+
+export async function createSiteBoardComment(env,siteId,postId,{body}={}){
+  const instance=await ensurePublicSiteBoard(env,siteId);
+  const exists=await env.DB.prepare("SELECT id FROM ekodi_board_posts WHERE board_id=? AND id=? AND status='published' LIMIT 1").bind(instance.board_id,Number(postId)).first();
+  if(!exists)throw new Error('post_not_found');
+  const text=clean(body,5000);if(!text)throw new Error('body_required');
+  const stamp=now();
+  const result=await env.DB.prepare(`INSERT INTO ekodi_board_comments
+    (board_id,post_id,author_person_id,author_email,body,status,created_at,updated_at) VALUES (?,?,?,?,?,'published',?,?)`)
+    .bind(instance.board_id,Number(postId),'','',text,stamp,stamp).run();
+  const id=Number(result?.meta?.last_row_id||0);
+  await audit(env,instance,{personId:''},'comment.create.public','comment',id,{postId:Number(postId)});
+  return id;
+}
+
 export const EKODI_SITE_BOARD=Object.freeze({
   version:'1.2.0',
   canonicalSuffix:'/board',
