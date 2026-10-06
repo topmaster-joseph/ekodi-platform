@@ -1,0 +1,97 @@
+name: Deploy Independent Board
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/independent-board/**'
+      - 'wrangler.independent-board.toml'
+      - 'sites/seonammedi/public/app.js'
+      - '.github/workflows/deploy-independent-board.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-independent-board-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Validate standalone board contract
+        run: |
+          node --check services/independent-board/worker.js
+          node --test test/independent-board-seonammedi.test.mjs
+
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Verify Cloudflare credentials
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Provision standalone D1 and R2
+        id: storage
+        run: |
+          set -euo pipefail
+          db_id="$(npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | jq -r '.[] | select(.name=="ekodi-independent-board") | (.uuid // .id)' | head -n1)"
+          if [[ -z "$db_id" || "$db_id" == "null" ]]; then
+            npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-independent-board
+            db_id="$(npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | jq -r '.[] | select(.name=="ekodi-independent-board") | (.uuid // .id)' | head -n1)"
+          fi
+          test -n "$db_id"
+          cp wrangler.independent-board.toml /tmp/wrangler.independent-board.toml
+          sed -i "s/REPLACE_WITH_INDEPENDENT_BOARD_D1_ID/$db_id/" /tmp/wrangler.independent-board.toml
+          npx --yes wrangler@${WRANGLER_VERSION} r2 bucket create ekodi-independent-board-files >/tmp/r2-create.log 2>&1 || true
+          echo "db_id=$db_id" >> "$GITHUB_OUTPUT"
+      - name: Apply board-owned migrations
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply ekodi-independent-board --remote --config /tmp/wrangler.independent-board.toml
+      - name: Deploy standalone board worker
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config /tmp/wrangler.independent-board.toml
+      - name: Verify production board health
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            body="$(curl -fsS --retry 2 --retry-delay 2 https://seonammedi.kr/board/health || true)"
+            if jq -e '.ok==true and .service=="independent-board" and .storage=="independent-board-d1" and .db==true' <<<"$body" >/dev/null; then
+              exit 0
+            fi
+            sleep $((attempt * 3))
+          done
+          echo "independent board health did not converge" >&2
+          exit 1
+      - name: Production create-list-reply canary and cleanup
+        run: |
+          set -euo pipefail
+          marker="EKODI-BOARD-CANARY-${GITHUB_RUN_ID}"
+          created="$(curl -fsS -X POST https://seonammedi.kr/board/api/posts -H 'content-type: application/json' --data "{"name":"EKODI 검증","category":"other","message":"$marker","privacyConsent":true}")"
+          post_id="$(jq -r '.id // 0' <<<"$created")"
+          test "$post_id" -gt 0
+          curl -fsS https://seonammedi.kr/board/api/posts | jq -e --arg marker "$marker" '.items[] | select(.message==$marker)' >/dev/null
+          reply="$(curl -fsS -X POST "https://seonammedi.kr/board/api/posts/$post_id/replies" -H 'content-type: application/json' --data '{"name":"EKODI 검증","message":"reply-canary"}')"
+          jq -e '.ok==true and (.id|tonumber)>0' <<<"$reply" >/dev/null
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-independent-board --remote --config /tmp/wrangler.independent-board.toml --command "DELETE FROM board_replies WHERE post_id=$post_id; DELETE FROM board_posts WHERE id=$post_id;"
+          curl -fsS https://seonammedi.kr/board/api/posts | jq -e --arg marker "$marker" '[.items[] | select(.message==$marker)] | length==0' >/dev/null
