@@ -36,7 +36,7 @@ test('protected resource metadata points MCP at EKODI Supabase OAuth',()=>{
 });
 
 test('MCP tool surface keeps reads safe and exposes bounded authenticated mutations',()=>{
-  assert.ok(EKODI_MCP_TOOLS.length>=11);
+  assert.ok(EKODI_MCP_TOOLS.length>=12);
   for(const name of ['identify_ekodi','discover_public_services','ekodi_bridge_status','account_status','get_task_status','ekodi_my_identity','ekodi_my_ai_status','ekodi_my_services']){
     assert.equal(tool(name)?.annotations?.readOnlyHint,true,`${name} must remain read-only`);
     assert.equal(tool(name)?.annotations?.destructiveHint,false,`${name} must remain non-destructive`);
@@ -63,6 +63,15 @@ test('MCP tool surface keeps reads safe and exposes bounded authenticated mutati
   assert.equal(status.securitySchemes[0].type,'oauth2');
   assert.equal(status.ekodiCapability,'ai.command.delegate');
   assert.deepEqual(status.inputSchema.required,['taskId']);
+
+  const approve=tool('approve_task');
+  assert.equal(approve.securitySchemes[0].type,'oauth2');
+  assert.equal(approve.ekodiCapability,'ai.command.delegate');
+  assert.equal(approve.annotations.readOnlyHint,false);
+  assert.equal(approve.annotations.destructiveHint,true);
+  assert.deepEqual(approve.inputSchema.required,['taskId','expectedStateVersion']);
+  assert.equal(approve.inputSchema.properties.expectedStateVersion.type,'integer');
+  assert.equal(approve.inputSchema.properties.expectedStateVersion.minimum,1);
 
   const cancel=tool('cancel_task');
   assert.equal(cancel.securitySchemes[0].type,'oauth2');
@@ -202,6 +211,8 @@ test('MCP server instructions force every EKODI operation through the Orchestrat
   assert.match(MCP_SERVER_INSTRUCTIONS,/deploymentRequested=true/);
   assert.match(MCP_SERVER_INSTRUCTIONS,/returned branchRef exactly/);
   assert.match(MCP_SERVER_INSTRUCTIONS,/use get_task_status/);
+  assert.match(MCP_SERVER_INSTRUCTIONS,/approve_task/);
+  assert.match(MCP_SERVER_INSTRUCTIONS,/stateVersion/);
   assert.match(MCP_SERVER_INSTRUCTIONS,/Never perform, simulate, or claim direct EKODI production changes/);
 
   const request=new Request('https://ekodi.kr/mcp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:91,method:'server/discover',params:{}})});
