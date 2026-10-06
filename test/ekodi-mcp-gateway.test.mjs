@@ -210,4 +210,7 @@ test('MCP server instructions force every EKODI operation through the Orchestrat
   assert.equal(body.result.instructions,MCP_SERVER_INSTRUCTIONS);
   assert.equal(body.result.alwaysRouteEkodiOperations,true);
   assert.equal(body.result.executionAuthority,'ekodi-orchestrator');
+  assert.equal(body.result.clientProfiles.genspark.customMcp,true);
+  assert.equal(body.result.clientProfiles.genspark.endpoint,EKODI_MCP_RESOURCE);
+  assert.equal(body.result.clientProfiles.genspark.executionAuthority,'ekodi-orchestrator');
 });
