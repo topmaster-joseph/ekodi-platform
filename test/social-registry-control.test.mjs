@@ -54,6 +54,7 @@ test('Control Center lazy-loads Social Channels while security-wrapped Mission C
   ]);
   assert.match(features, /social:\s*\{[^}]*styles:\['social-admin\.css'\][^}]*scripts:\['social-admin\.js'\]/);
   assert.match(features, /hashes:\['#social'\]/);
+  assert.match(features, /if \(!auto && real\?\.isConnected\) queueMicrotask\(\(\) => real\.click\(\)\)/);
   assert.match(build, /social-admin\.css/);
   assert.match(build, /social-admin\.js/);
   assert.match(admin, /content\.querySelector\('\[data-panel~="social"\]'\)/);
