@@ -1,4 +1,4 @@
-import { cancelOrchestratorTask, getOrchestratorTaskStatus, submitOrchestratorTask } from './ekodi-orchestrator-task-adapter.js';
+import { approveOrchestratorTask, cancelOrchestratorTask, getOrchestratorTaskStatus, submitOrchestratorTask } from './ekodi-orchestrator-task-adapter.js';
 import { publicEkodiMcpClientPolicy } from './mcp-client-policy.js';
 
 const NOAUTH=Object.freeze({type:'noauth'});
@@ -13,6 +13,7 @@ export const EKODI_MCP_EXTENSION_TOOLS=Object.freeze([
   Object.freeze({name:'account_status',title:'EKODI 연결 계정 상태',description:'Confirm that the current OAuth login is linked to a canonical EKODI identity.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false,idempotentHint:true},securitySchemes:[OAUTH],ekodiCapability:'identity.self.read'}),
   Object.freeze({name:'submit_task',title:'EKODI Orchestrator 작업 제출',description:'Submit an authorized goal to the authoritative EKODI Orchestrator queue and receive a durable task_id. For production-bound code/config/deployment work, set deploymentRequested=true; EKODI returns the only authorized branchRef. This tool does not transfer execution authority to the external AI.',inputSchema:{type:'object',properties:{intent:{type:'string',minLength:1,maxLength:1200},risk:{type:'string',enum:['low','normal','high','critical'],default:'normal'},target:TARGET_SCHEMA,agent:{type:'string',minLength:1,maxLength:32,pattern:'^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$'},deploymentRequested:{type:'boolean',default:false},idempotencyKey:{type:'string',maxLength:100}},required:['intent'],additionalProperties:false},annotations:{readOnlyHint:false,destructiveHint:false,openWorldHint:true,idempotentHint:false},securitySchemes:[OAUTH],ekodiCapability:'ai.command.delegate'}),
   Object.freeze({name:'get_task_status',title:'EKODI Orchestrator 작업 상태',description:'Read the authoritative state and result of a task submitted by the current EKODI identity.',inputSchema:{type:'object',properties:{taskId:{type:'string',minLength:1,maxLength:160}},required:['taskId'],additionalProperties:false},annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false,idempotentHint:true},securitySchemes:[OAUTH],ekodiCapability:'ai.command.delegate'}),
+  Object.freeze({name:'approve_task',title:'EKODI Orchestrator Human Gate 승인',description:'Approve exactly one blocked Human Gate task as the EKODI Platform Super Administrator. Requires the current task stateVersion to prevent stale approval and records a durable approval receipt before resuming the same task.',inputSchema:{type:'object',properties:{taskId:{type:'string',minLength:1,maxLength:160},expectedStateVersion:{type:'integer',minimum:1},note:{type:'string',maxLength:1000}},required:['taskId','expectedStateVersion'],additionalProperties:false},annotations:{readOnlyHint:false,destructiveHint:true,openWorldHint:true,idempotentHint:true},securitySchemes:[OAUTH],ekodiCapability:'ai.command.delegate'}),
   Object.freeze({name:'cancel_task',title:'EKODI Orchestrator 대기 작업 취소',description:'Cancel a task owned by the current EKODI identity only while it is still pending and has not entered execution.',inputSchema:{type:'object',properties:{taskId:{type:'string',minLength:1,maxLength:160}},required:['taskId'],additionalProperties:false},annotations:{readOnlyHint:false,destructiveHint:true,openWorldHint:false,idempotentHint:true},securitySchemes:[OAUTH],ekodiCapability:'ai.command.delegate'}),
 ]);
 
@@ -29,6 +30,13 @@ export async function callAuthorizedEkodiMcpExtensionTool(name,args,identity,env
   }
   if(name==='get_task_status'){
     try{const task=await getOrchestratorTaskStatus(env,identity,args?.taskId);return task?textResult('EKODI Orchestrator의 권위 있는 작업 상태입니다.',{found:true,...task,authority:'ekodi-orchestrator'}):textResult('현재 EKODI 신원에 속한 작업을 찾을 수 없습니다.',{found:false,taskId:String(args?.taskId||'').slice(0,160)});}catch(error){return textResult('EKODI Orchestrator 작업 상태를 읽지 못했습니다.',{found:false,error:String(error?.message||error).slice(0,240)});}
+  }
+  if(name==='approve_task'){
+    try{
+      const task=await approveOrchestratorTask(env,identity,args?.taskId,{expectedStateVersion:args?.expectedStateVersion,note:args?.note});
+      if(!task)return textResult('승인할 EKODI Orchestrator 작업을 찾을 수 없습니다.',{found:false,approved:false,taskId:String(args?.taskId||'').slice(0,160)});
+      return textResult(task.approved?'EKODI 최고관리자 승인을 기록하고 동일 작업을 재개했습니다.':'현재 상태에서는 작업 승인을 적용하지 않았습니다.',{found:true,...task,authority:'ekodi-orchestrator'});
+    }catch(error){return textResult('EKODI Orchestrator Human Gate 승인을 처리하지 못했습니다.',{approved:false,error:String(error?.message||error).slice(0,240)});}
   }
   if(name==='cancel_task'){
     try{const task=await cancelOrchestratorTask(env,identity,args?.taskId);return task?textResult(task.cancelled?'대기 중인 EKODI Orchestrator 작업을 취소했습니다.':'현재 상태에서는 작업을 취소하지 않았습니다.',{found:true,...task,authority:'ekodi-orchestrator'}):textResult('현재 EKODI 신원에 속한 작업을 찾을 수 없습니다.',{found:false,taskId:String(args?.taskId||'').slice(0,160)});}catch(error){return textResult('EKODI Orchestrator 작업 취소를 처리하지 못했습니다.',{cancelled:false,error:String(error?.message||error).slice(0,240)});}
