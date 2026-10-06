@@ -112,7 +112,8 @@ test('SeonamMedi board admin login receives a one-time portal handoff token on t
     read('auth-site/auth.js'),
     read('supabase/functions/access-api/index.ts')
   ]);
-  assert.match(worker,/return_to",location\.origin\+"\/board\/voices"/);
+  assert.match(worker,/commonScript\('\/board\/voices'\)/);
+  assert.match(worker,/return_to",location\.origin\+"\'\+returnPath\+\'"/);
   assert.match(worker,/\/api\/seonammedi\/admin\/auth\/exchange/);
   assert.match(auth,/seonamMediHandoff/);
   assert.match(auth,/await handoffToService\(\)/);
