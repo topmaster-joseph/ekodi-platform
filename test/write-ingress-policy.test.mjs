@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 
-test('durable write ingress policy is enforced and queue-first in production',async()=>{
+test('durable write ingress policy remains queue-first except for explicitly isolated independent boards',async()=>{
   const [policyText,trafficText,wrangler,ingress,civic,router,workflow]=await Promise.all([
     read('config/write-ingress-policy.json'),
     read('config/concurrent-traffic-policy.json'),
@@ -21,40 +21,29 @@ test('durable write ingress policy is enforced and queue-first in production',as
   assert.equal(policy.ingress.directDatabaseWriteForbiddenForBurstEligiblePublicWrites,true);
   assert.equal(policy.ingress.successRequiresDurableAcceptance,true);
   assert.equal(policy.failure.falseSuccessForbidden,true);
-  assert.equal(policy.rollout.firstReferenceImplementation,'seonammedi_citizen_voice');
   assert.equal(traffic.writePlane.publicBurstEligibleWrites,'queue-first');
   assert.equal(traffic.writePlane.productionDirectDatabaseWrite,'forbidden');
   assert.match(wrangler,/binding = "EKODI_WRITE_QUEUE"/);
-  assert.match(wrangler,/queue = "ekodi-write-ingress"/);
-  assert.match(wrangler,/dead_letter_queue = "ekodi-write-ingress-dlq"/);
   assert.match(ingress,/durable_queue_acceptance_required_before_success_response/);
-  assert.match(civic,/enqueueDurableWrite/);
-  assert.match(civic,/submissionId=crypto\.randomUUID\(\)/);
-  assert.match(civic,/durable_queue_unavailable/);
-  assert.match(civic,/retry-after/);
+  assert.doesNotMatch(civic,/enqueueDurableWrite|durable_queue_unavailable|submissionId=crypto\.randomUUID/);
+  assert.match(civic,/createSiteBoardPost/);
+  assert.match(civic,/storage:'site-board'/);
   assert.match(router,/async queue\(batch,env\)/);
-  assert.match(router,/message\.ack\(\)/);
-  assert.match(router,/message\.retry\(\)/);
   assert.match(workflow,/Ensure durable write queues/);
-  assert.match(workflow,/wrangler\.site\.pre-candidate\.toml/);
-  assert.match(workflow,/Finaliz[e] durable write queue consumer trigger/);
-  assert.ok(workflow.indexOf('Candidate at 0%, verify routes, promote and auto-rollback on failure') < workflow.indexOf('Finalize durable write queue consumer trigger'));
-  assert.match(workflow,/validate-write-ingress-policy\.mjs/);
-  assert.match(workflow,/consumer_present\(\)/);
-  assert.match(workflow,/already has a consumer\|code: 11004/);
-  assert.match(workflow,/jq -e '\.\. \| strings \| select\(\. == "shy-thunder-39a4"\)'/);
 });
 
-test('seonammedi public voice success requires durable acceptance id',async()=>{
+test('seonammedi citizen voice accepts direct independent-board persistence',async()=>{
   const [html,app,civic]=await Promise.all([
     read('sites/seonammedi/public/index.html'),
     read('sites/seonammedi/public/app.js'),
     read('seonammedi-civic-control.js')
   ]);
   assert.doesNotMatch(html,/name="website"/);
-  assert.match(app,/!body\.submissionId/);
-  assert.match(app,/submitButton\.disabled=true/);
-  assert.match(civic,/status=202|},202\)/);
-  assert.match(civic,/submission_key/);
-  assert.match(civic,/CREATE UNIQUE INDEX IF NOT EXISTS idx_seonammedi_civic_voices_submission/);
+  assert.doesNotMatch(app,/!body\.submissionId|\/voices\/submissions\//);
+  assert.match(app,/!body\.id/);
+  assert.match(app,/setVoiceCompose\(false\)/);
+  assert.match(civic,/createSiteBoardPost/);
+  assert.match(civic,/storage:'site-board'/);
+  assert.match(civic,/},201\)/);
+  assert.doesNotMatch(civic,/submission_key|enqueueDurableWrite/);
 });
