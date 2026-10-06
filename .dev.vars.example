@@ -6,3 +6,9 @@ OPENAI_MODEL=gpt-5.6-terra
 REMOTE_POWER_RELAY_URL=https://remote-power-relay.example.invalid
 REMOTE_POWER_SHARED_SECRET=replace-with-long-random-secret
 REMOTE_POWER_DEVICES_JSON=[{"id":"joseph-notebook","label":"JosephNotebook"},{"id":"user3","label":"user3"},{"id":"user2","label":"user2"}]
+
+# Optional Genspark Agent Fabric relay. Disabled by default until an approved endpoint exists.
+EKODI_PROVIDER_GENSPARK_ENABLED=false
+GENSPARK_AGENT_ENDPOINT=https://genspark-relay.example.invalid/invoke
+GENSPARK_AGENT_TOKEN=replace-with-server-only-relay-token
+EKODI_GENSPARK_AGENT_PROFILE=genspark-super-agent
