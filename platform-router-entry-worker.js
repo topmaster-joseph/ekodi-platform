@@ -360,9 +360,13 @@ async function routePlatform(request,env,ctx){
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isPyeonggongmokPath(url.pathname))return routePyeonggongmokStatic(request,env);
     if(host===PUBLIC_HOST&&(url.pathname==='/api/finance'||url.pathname.startsWith('/api/finance/')))return routeTaxFinance(request,env,ctx);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){const adminTarget=legacyAdminAliasTarget(url.pathname);if(adminTarget){const target=new URL(request.url);target.pathname=adminTarget;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'admin-canonical-handoff'}})}}
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&url.pathname==='/live'){
+      const canonicalLive=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
+      if(canonicalLive)return canonicalLive;
+    }
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
       const cameraPair=url.pathname.match(/^\/live\/c\/([A-Za-z0-9_-]{8,80})\/?$/);if(cameraPair)return managementCameraPage(cameraPair[1]);
-      if(url.pathname==='/live'||url.pathname==='/live/')return liveShell(liveServicePage());
+      if(url.pathname==='/live/')return liveShell(liveServicePage());
       if(url.pathname==='/live/admin'||url.pathname==='/live/admin/')return liveShell(liveServiceAdminPage(),'admin');
       if(url.pathname==='/tenant-live-admin.css')return tenantLiveAdminCss();
       if(url.pathname==='/tenant-live-admin.js')return tenantLiveAdminScript();
