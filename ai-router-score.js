@@ -51,6 +51,7 @@ export function providerCostClass(providerId=''){
   if(id==='node:claude-code')return'claude-subscription';
   if(id.startsWith('node:'))return'account-managed';
   if(id==='openai-api'||id==='anthropic-api')return'paid-opt-in';
+  if(id==='genspark-agent')return'provider-managed';
   if(id.startsWith('worker:'))return'provider-managed';
   return'account-managed';
 }
@@ -66,7 +67,7 @@ export function inferTaskTraits(task={}){
 
 function baseProfile(providerId){
   const id=clean(providerId);
-  const direct=['cloudflare-workers-ai','gemini-free','openrouter-free','groq-free','huggingface-free-credit','openai-api','anthropic-api'].includes(id);
+  const direct=['cloudflare-workers-ai','gemini-free','openrouter-free','groq-free','huggingface-free-credit','genspark-agent','openai-api','anthropic-api'].includes(id);
   const node=id.startsWith('node:');
   const worker=id.startsWith('worker:');
   const skills=node
