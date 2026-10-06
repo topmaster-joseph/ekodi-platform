@@ -335,10 +335,14 @@ function publicTask(row){
   const result=parseJson(row.result_json,null);
   const evidence=parseJson(row.evidence_json,[]);
   const commandMeta=evidence&&typeof evidence==='object'&&!Array.isArray(evidence)?evidence.commandLedger:null;
+  const stateVersion=Number(row.state_version||1);
+  const humanGate=row.state==='blocked'&&text(commandMeta?.state,40).toLowerCase()==='human_gate'
+    ?Object.freeze({required:true,approvalTool:'approve_task',expectedStateVersion:stateVersion})
+    :null;
   return Object.freeze({
     taskId:row.task_id,
     state:row.state,
-    stateVersion:Number(row.state_version||1),
+    stateVersion,
     intent:row.intent,
     target:parseJson(row.target_json,{}),
     risk:row.risk,
@@ -348,6 +352,7 @@ function publicTask(row){
     prRef:row.pr_ref||null,
     deploymentRequested:Number(row.deployment_requested||0)===1,
     commandState:commandMeta?.state||null,
+    humanGate,
     attemptCount:Number(commandMeta?.attemptCount||0),
     maxAttempts:Number(commandMeta?.maxAttempts||0),
     nextAttemptAt:commandMeta?.nextAttemptAt||null,
@@ -449,6 +454,123 @@ export async function submitOrchestratorTask(env,identity,args={}){
     await appendEvent(db,id,'received','failed','ekodi-orchestrator','queue_submission_failed');
   }
   return publicTask(await syncFromCommandLedger(db,env,await ownedTask(db,id,requester)));
+}
+
+export async function approveOrchestratorTask(env,identity,id,args={}){
+  const db=dbFrom(env);const requester=requesterFrom(identity);if(!requester)throw new Error('EKODI_REQUESTER_REQUIRED');
+  const task=text(id,160);if(!validTaskId(task))return Object.freeze({approved:false,reason:'invalid_task_id',taskId:task});
+  const expectedStateVersion=Number.parseInt(args?.expectedStateVersion,10);
+  if(!Number.isInteger(expectedStateVersion)||expectedStateVersion<1)return Object.freeze({approved:false,reason:'expected_state_version_required',taskId:task});
+  const authority=await resolveCommandAuthority(db,identity,{});
+  if(authority?.role!=='super_admin')return Object.freeze({approved:false,reason:'super_admin_required',taskId:task});
+  let row=await db.prepare('SELECT * FROM ekodi_orchestrator_tasks WHERE task_id=?').bind(task).first();
+  if(!row)return null;
+  if(Number(row.state_version||0)!==expectedStateVersion)return Object.freeze({...publicTask(row),approved:false,reason:'state_version_conflict'});
+  let command=null;try{command=await getEkodiCommandTask(env,task)}catch{}
+  if(row.state!=='blocked'||text(command?.state,40).toLowerCase()!=='human_gate'){
+    return Object.freeze({...publicTask(row),approved:false,reason:'task_not_waiting_human_gate'});
+  }
+  const approvedAt=now();
+  const receipt=Object.freeze({
+    kind:'human-gate-approval',
+    approvalId:`approval_${task}_v${expectedStateVersion}`,
+    taskId:task,
+    scope:'task',
+    approved:true,
+    approvedBy:authority.personId,
+    approvedByRole:'super_admin',
+    approvedAt,
+    expectedStateVersion,
+    risk:text(row.risk,20),
+    branchRef:text(row.branch_ref,220)||null,
+    note:text(args?.note,1000)||'',
+  });
+  const taskUpdate=await db.prepare(`UPDATE ekodi_orchestrator_tasks
+    SET state='assigned',state_version=state_version+1,updated_at=?,completed_at=NULL
+    WHERE task_id=? AND state='blocked' AND state_version=?`)
+    .bind(approvedAt,task,expectedStateVersion).run();
+  if(changes(taskUpdate)<1){
+    row=await db.prepare('SELECT * FROM ekodi_orchestrator_tasks WHERE task_id=?').bind(task).first();
+    return Object.freeze({...publicTask(row),approved:false,reason:'state_changed_before_approval'});
+  }
+  try{
+    await appendEvent(db,task,'blocked','assigned',`super-admin:${authority.personId}`,'human_gate_approval_recorded',receipt);
+  }catch{
+    const failedAt=now();
+    await db.prepare(`UPDATE ekodi_orchestrator_tasks
+      SET state='blocked',state_version=state_version+1,updated_at=?,completed_at=?
+      WHERE task_id=? AND state='assigned'`).bind(failedAt,failedAt,task).run().catch(()=>null);
+    row=await db.prepare('SELECT * FROM ekodi_orchestrator_tasks WHERE task_id=?').bind(task).first();
+    return Object.freeze({...publicTask(row),approved:false,reason:'approval_receipt_persist_failed'});
+  }
+  const commandContext={...(command?.context||{}),humanApproval:receipt};
+  const commandUpdate=await db.prepare(`UPDATE ai_command_tasks
+    SET state='queued',context_json=?,next_attempt_at=?,lease_until=NULL,last_error='',updated_at=?,closed_at=NULL
+    WHERE id=? AND state='human_gate'`)
+    .bind(safeJson(commandContext),approvedAt,approvedAt,task).run();
+  if(changes(commandUpdate)<1){
+    const failedAt=now();
+    await db.prepare(`UPDATE ekodi_orchestrator_tasks
+      SET state='blocked',state_version=state_version+1,updated_at=?,completed_at=?
+      WHERE task_id=? AND state='assigned'`).bind(failedAt,failedAt,task).run();
+    await appendEvent(db,task,'assigned','blocked','ekodi-orchestrator','human_gate_approval_resume_failed',{approvalId:receipt.approvalId});
+    row=await db.prepare('SELECT * FROM ekodi_orchestrator_tasks WHERE task_id=?').bind(task).first();
+    return Object.freeze({...publicTask(row),approved:false,reason:'command_gate_resume_failed',approvalReceipt:receipt});
+  }
+  try{
+    await appendEvent(db,task,'assigned','assigned',`super-admin:${authority.personId}`,'human_gate_approval_applied',receipt);
+  }catch{
+    const failedAt=now();
+    await db.prepare(`UPDATE ai_command_tasks
+      SET state='human_gate',context_json=?,next_attempt_at=NULL,lease_until=NULL,updated_at=?
+      WHERE id=? AND state='queued'`).bind(safeJson(command?.context||{}),failedAt,task).run().catch(()=>null);
+    await db.prepare(`UPDATE ekodi_orchestrator_tasks
+      SET state='blocked',state_version=state_version+1,updated_at=?,completed_at=?
+      WHERE task_id=? AND state='assigned'`).bind(failedAt,failedAt,task).run().catch(()=>null);
+    row=await db.prepare('SELECT * FROM ekodi_orchestrator_tasks WHERE task_id=?').bind(task).first();
+    return Object.freeze({...publicTask(row),approved:false,reason:'approval_audit_finalize_failed'});
+  }
+  try{await runEkodiCommandQueue(env,{limit:1,taskId:task})}catch{}
+  row=await db.prepare('SELECT * FROM ekodi_orchestrator_tasks WHERE task_id=?').bind(task).first();
+  if(row&&!TERMINAL_STATES.has(row.state))row=await syncFromCommandLedger(db,env,row);
+  return Object.freeze({...publicTask(row),approved:true,approvalReceipt:receipt});
+}
+
+async function platformAdminIdentityFromSession(db,session={}){
+  const email=text(session?.email,320).toLowerCase();
+  const role=text(session?.role||session?.authority?.role,80).toLowerCase();
+  if(!email||role!=='super_admin')return null;
+  const row=await db.prepare('SELECT id,role FROM admins WHERE lower(trim(email))=? LIMIT 1').bind(email).first().catch(()=>null);
+  if(text(row?.role,80).toLowerCase()!=='super_admin'||!row?.id)return null;
+  return Object.freeze({personId:`platform-admin:${row.id}`,email,ekodiId:null});
+}
+
+export async function getOrchestratorTaskStatusForPlatformAdmin(env,session,id){
+  const db=dbFrom(env),identity=await platformAdminIdentityFromSession(db,session);
+  if(!identity)throw new Error('EKODI_PLATFORM_SUPER_ADMIN_REQUIRED');
+  let row=await db.prepare('SELECT * FROM ekodi_orchestrator_tasks WHERE task_id=?').bind(text(id,160)).first();
+  if(!row)return null;
+  if(Number(row.deployment_requested||0)===1&&!TERMINAL_STATES.has(row.state)){
+    try{row=await reconcileCompletionRow(db,env,row,{fetchImpl:fetch})}catch{}
+  }
+  if(!TERMINAL_STATES.has(row.state))row=await syncFromCommandLedger(db,env,row);
+  return publicTask(row);
+}
+
+export async function listOrchestratorHumanGatesForPlatformAdmin(env,session,{limit=20}={}){
+  const db=dbFrom(env),identity=await platformAdminIdentityFromSession(db,session);
+  if(!identity)throw new Error('EKODI_PLATFORM_SUPER_ADMIN_REQUIRED');
+  const capped=Math.min(Math.max(Number(limit)||20,1),50);
+  const result=await db.prepare(`SELECT * FROM ekodi_orchestrator_tasks
+    WHERE state='blocked' ORDER BY updated_at DESC LIMIT ?`).bind(capped).all();
+  const rows=Array.isArray(result?.results)?result.results:[];
+  return rows.map(publicTask).filter(task=>task?.humanGate?.required===true);
+}
+
+export async function approveOrchestratorTaskForPlatformAdmin(env,session,id,args={}){
+  const db=dbFrom(env),identity=await platformAdminIdentityFromSession(db,session);
+  if(!identity)throw new Error('EKODI_PLATFORM_SUPER_ADMIN_REQUIRED');
+  return approveOrchestratorTask(env,identity,id,args);
 }
 
 export async function getOrchestratorTaskStatus(env,identity,id){
