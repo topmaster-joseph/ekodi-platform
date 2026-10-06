@@ -1,0 +1,87 @@
+name: Deploy Access API
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/access-api/**"
+      - "supabase/functions/_shared/**"
+      - "auth-site/auth.js"
+      - "test/independent-board-seonammedi.test.mjs"
+      - ".github/workflows/deploy-access-api.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/functions/access-api/**"
+      - "supabase/functions/_shared/**"
+      - ".github/workflows/deploy-access-api.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Validate access API
+        shell: bash
+        run: |
+          set -euo pipefail
+          deno check --node-modules-dir=auto supabase/functions/access-api/index.ts
+          grep -Fq 'portal:["https://ekodi.kr","https://seonammedi.kr"' supabase/functions/access-api/index.ts
+          grep -Fq 'admin.auth.admin.generateLink({type:"magiclink",email})' supabase/functions/access-api/index.ts
+          grep -Fq 'expiresFor:"single_use"' supabase/functions/access-api/index.ts
+
+  production:
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: production
+    env:
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+      PROJECT_REF: renzehysxirjilvdxacv
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: EKODI AI Orchestration Gate
+        run: node scripts/validate-ekodi-ai-change-orchestration.mjs --release
+      - name: Validate deployment guardrails
+        run: node scripts/validate-deployment-guardrails.mjs
+      - name: Select Supabase deployment credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-}"
+          [ -n "$token" ] || token="${TOKEN_B:-}"
+          [ -n "$token" ] || token="${TOKEN_C:-}"
+          [ -n "$token" ] || token="${TOKEN_D:-}"
+          if [ -z "$token" ]; then
+            echo 'No Supabase deployment credential is configured.'
+            exit 2
+          fi
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Deploy access API
+        run: npx --yes supabase@2.116.0 functions deploy access-api --project-ref "$PROJECT_REF" --no-verify-jwt
+      - name: Verify access API is reachable
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://$PROJECT_REF.supabase.co/functions/v1/access-api/me?site=portal"
+          key='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_'
+          code=$(curl -sS -o /tmp/access-api.json -w '%{http_code}' "$endpoint" -H "apikey: $key")
+          test "$code" = '401'
+          grep -Fq 'unauthorized' /tmp/access-api.json
