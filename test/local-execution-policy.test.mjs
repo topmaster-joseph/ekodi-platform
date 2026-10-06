@@ -47,3 +47,16 @@ test('parallel jobs spread once the first node gains active work', () => {
   nodes.sort(compareLocalExecutionCandidates);
   assert.equal(nodes[0].id,'b');
 });
+
+
+test('staged local edge rollout never promotes nodes automatically', async () => {
+  const { localExecutionRolloutSnapshot } = await import('../local-execution-policy.js');
+  assert.deepEqual(localExecutionRolloutSnapshot({ onlineEligibleNodes:0, autoNodes:0 }), {
+    stage:'observe', onlineEligibleNodes:0, autoNodes:0, parallelReady:false,
+    nextAction:'enroll_eligible_node', automaticPromotion:false, requiresExplicitNodeEnablement:true,
+  });
+  assert.equal(localExecutionRolloutSnapshot({ onlineEligibleNodes:2, autoNodes:1 }).stage, 'canary');
+  assert.equal(localExecutionRolloutSnapshot({ onlineEligibleNodes:2, autoNodes:1 }).nextAction, 'validate_then_enable_second_node');
+  assert.equal(localExecutionRolloutSnapshot({ onlineEligibleNodes:2, autoNodes:2 }).stage, 'parallel');
+  assert.equal(localExecutionRolloutSnapshot({ onlineEligibleNodes:2, autoNodes:2 }).parallelReady, true);
+});
