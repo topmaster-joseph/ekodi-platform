@@ -594,7 +594,7 @@ test('seonammedi public site uses shared authenticated inline admin without dupl
   assert.match(app,/initPublicAdminControls/);
   assert.match(app,/window\.EKODIPublicSurfaceAdmin/);
   assert.match(app,/serviceId:'seonammedi'/);
-  assert.match(app,/adminPath:'\/seonammedi\/admin\/'/);
+  assert.match(app,/adminPath:window\.__SEONAMMEDI_ROUTES__\?\.admin\|\|'\/seonammedi\/admin\/'/);
   assert.match(app,/authEndpoint:'\/api\/seonammedi\/admin\/me'/);
   assert.match(app,/await admin\.authorize\(\)/);
   assert.match(app,/admin\.attach/);
@@ -821,4 +821,23 @@ test('seonammedi customer domain cache-busts public and admin static assets',asy
   assert.ok(adminHtml.includes('<a href="/" target="_blank" rel="noopener">공개페이지</a>'));
   assert.ok(adminHtml.includes('/seonammedi/admin/admin.js?v=20261006-domain-routing-2'));
   assert.ok(adminHtml.includes('/seonammedi/admin/admin-minutes.js?v=20261006-domain-routing-2'));
+});
+
+
+test('seonammedi release convergence is build-owned and cache-safe',async()=>{
+  const [build,release,router,app]=await Promise.all([
+    readFile(new URL('../scripts/build.mjs',import.meta.url),'utf8'),
+    readFile(new URL('../scripts/finalize-seonammedi-release.mjs',import.meta.url),'utf8'),
+    readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8'),
+    readFile(new URL('app.js',root),'utf8')
+  ]);
+  assert.match(build,/finalizeSeonamMediRelease/);
+  assert.match(release,/\.well-known\/ekodi-release\.json/);
+  assert.match(release,/createHash\('sha256'\)/);
+  assert.match(release,/data-ekodi-release-convergence/);
+  assert.match(release,/window\.__SEONAMMEDI_ROUTES__/);
+  assert.match(router,/function applySeonamMediCachePolicy\(/);
+  assert.match(router,/max-age=31536000, immutable/);
+  assert.match(router,/no-cache, must-revalidate/);
+  assert.match(app,/window\.__SEONAMMEDI_ROUTES__\?\.admin/);
 });

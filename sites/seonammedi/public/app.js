@@ -785,7 +785,7 @@ function sharedPublicAdmin(){
   if(!shared?.create)return null;
   publicAdminController=shared.create({
     serviceId:'seonammedi',
-    adminPath:'/seonammedi/admin/',
+    adminPath:window.__SEONAMMEDI_ROUTES__?.admin||'/seonammedi/admin/',
     authEndpoint:'/api/seonammedi/admin/me',
     tokenProvider:publicAdminToken
   });
