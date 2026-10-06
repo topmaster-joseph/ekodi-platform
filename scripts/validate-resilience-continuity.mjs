@@ -73,6 +73,15 @@ if (writeIngress.status !== 'enforced' || writeIngress.ingress?.idempotencyKeyRe
 if (writeIngress.failure?.falseSuccessForbidden !== true) fail('write ingress false success must remain forbidden');
 if (board.architecture?.runtimeExtensionFailureIsolation !== true) fail('board extension failure isolation must remain enforced');
 if (board.architecture?.externalEngineMayNotOwnCanonicalCrud !== true) fail('external board engine must not own canonical CRUD');
+if (board.independence?.ruleId !== 'EKODI-BOARD-INDEPENDENCE-001' || board.independence?.status !== 'enforced') fail('board independence policy must remain enforced');
+if (board.independence?.sharedPlatformDependency !== 'authentication_identity_only') fail('boards may share only EKODI authentication identity');
+for (const key of ['sharedAuthorizationForbidden','centralTenantGrantAsBoardAuthorityForbidden','boardLocalMembershipRequired','boardLocalRoleAndPermissionRequired','boardLocalConfigurationRequired','boardLocalModerationRequired','boardLocalLifecycleRequired','boardLocalBackupRestoreExportRequired','boardLocalFailureIsolationRequired','boardLocalAuditRequired','crossBoardMutationForbidden']) {
+  if (board.independence?.[key] !== true) fail('board independence rule missing: ' + key);
+}
+if (board.destructiveLifecycle?.boardLifecycleCancelRequiresSuperAdminReauthentication !== true || board.destructiveLifecycle?.boardLifecycleDeleteRequiresSuperAdminReauthentication !== true) fail('board lifecycle destructive actions must require super-admin reauthentication');
+if (board.destructiveLifecycle?.reauthenticationProofMaxAgeSeconds !== 300 || board.destructiveLifecycle?.reauthenticationProofSingleUse !== true || board.destructiveLifecycle?.reauthenticationProofTargetBound !== true) fail('board destructive reauthentication proof contract drifted');
+if (continuity.forcedExecution?.boardAuthenticationSharedOnly !== true || continuity.forcedExecution?.boardLocalOperationAndAuthorizationRequired !== true || continuity.forcedExecution?.boardCrossSiteIsolationRequired !== true) fail('board forced execution independence contract drifted');
+if (continuity.safetyBoundaries?.boardLifecycleDestructiveActionRequiresSuperAdminReauthentication !== true || continuity.safetyBoundaries?.boardLifecycleDestructiveActionRequiresTargetBoundSingleUseProof !== true || continuity.safetyBoundaries?.boardLifecycleDestructiveActionRequiresRestoreEvidence !== true) fail('board destructive lifecycle safety boundary drifted');
 
 for (const marker of [
   'continue-without-optional-ai',
