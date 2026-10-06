@@ -741,3 +741,18 @@ test('seonammedi citizen voices publish immediately, render publicly, accept rep
 });
 
 test('seonammedi mobile activity history uses compact filters, progressive detail, and inline admin control',async()=>{const [html,app,css]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('app.css',root),'utf8')]);assert.match(html,/id="timelineAdminEdit"/);assert.match(app,/timeline-toggle/);assert.match(app,/is-collapsed/);assert.match(app,/timelineAdminEdit/);assert.match(css,/activity-toolbar \.filters\{flex-wrap:nowrap;overflow-x:auto/);assert.match(css,/\.timeline-item\.is-collapsed \.timeline-detail\{display:none\}/);});
+
+test('seonammedi citizen voices finance and notices share the embedded module layout',async()=>{
+  const [html,app,css]=await Promise.all([
+    readFile(new URL('index.html',root),'utf8'),
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('app.css',root),'utf8')
+  ]);
+  for(const id of ['voices','finance','notices'])assert.match(html,new RegExp('id="'+id+'" class="section module-section"'));
+  assert.match(html,/class="module-shell"/);
+  assert.match(html,/id="voiceComposeToggle"/);
+  assert.match(html,/href="\/board"/);
+  assert.match(app,/function setVoiceCompose\(open\)/);
+  assert.match(css,/\.module-shell\{display:grid;grid-template-columns:minmax\(190px,250px\) minmax\(0,1fr\)/);
+  assert.match(css,/@media\(max-width:760px\)\{\.module-section/);
+});
