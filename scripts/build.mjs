@@ -123,7 +123,7 @@ for (const asset of htmlAssets) {
     if (!html.includes('homepage-ambient.css')) html = html.replace('</head>', '<link rel="stylesheet" href="/homepage-ambient.css">\n</head>');
     if (!html.includes('homepage-ambient.js')) html = html.replace('</body>', '<script src="/homepage-ambient.js" defer></script>\n</body>');
   }
-  if (!html.includes('data-ekodi-responsive')) html = html.replace('</head>', `<style data-ekodi-responsive>\n${responsiveCss}\n</style>\n</head>`);
+  if (asset !== 'control.html' && !html.includes('data-ekodi-responsive')) html = html.replace('</head>', `<style data-ekodi-responsive>\n${responsiveCss}\n</style>\n</head>`);
   if (asset === 'admin-shell.html') {
     html = html.replace(/\s*<script src="finance-monitor\.js"><\/script>\s*/g, '\n');
     html = html.replace(/\s*<link rel="stylesheet" href="(?:admin-compact|campus-actions)\.css">\s*/g, '\n');
@@ -143,7 +143,7 @@ await writeFile(`${output}release-control-admin.js`, `${releaseJs}\n${timelineJs
 const adminStaticMirrorDir = `${output}admin/`;
 await mkdir(adminStaticMirrorDir, { recursive: true });
 const adminStaticMirrorAssets = assets.filter(asset =>
-  !asset.endsWith('.html') && /\.(?:css|js|cmd|json|map|svg|png|webp|ico)$/i.test(asset)
+  !['control.css','control.js'].includes(asset) && !asset.endsWith('.html') && /\.(?:css|js|cmd|json|map|svg|png|webp|ico)$/i.test(asset)
 );
 await cp(`${output}admin-shell.html`, `${adminStaticMirrorDir}index.html`);
 await Promise.all(adminStaticMirrorAssets.map(asset => cp(`${output}${asset}`, `${adminStaticMirrorDir}${asset}`)));
