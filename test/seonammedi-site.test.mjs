@@ -599,14 +599,14 @@ test('seonammedi public site uses shared authenticated inline admin without dupl
   assert.match(html,/voice-public-admin\.js/);
   assert.match(voiceAdmin,/window\.EKODIPublicSurfaceAdmin/);
   assert.match(voiceAdmin,/permissions\?\.voices===true/);
-  assert.match(voiceAdmin,/\/api\/seonammedi\/admin\/voices/);
+  assert.match(voiceAdmin,/\/board\/api\/admin\/posts/);
   assert.match(voiceAdmin,/data-seonammedi-voice-admin/);
   assert.match(voiceAdmin,/voice-inline-admin-delete/);
   assert.match(css,/\.voice-inline-admin/);
   assert.doesNotMatch(adminHtml,/id="voiceEditForm"/);
   assert.match(adminHtml,/사용자 화면에서 관리/);
   assert.doesNotMatch(adminJs,/function editVoice\(item\)|function renderVoices\(\)/);
-  assert.match(adminJs,/async function loadVoices\(\)/);
+  assert.match(adminJs,/async function loadVoices\(\)/);assert.match(adminJs,/\/board\/api\/admin\/posts/);
   assert.match(shared,/window\.EKODIPublicSurfaceAdmin/);
   assert.match(shared,/permissions\[key\]===true/);
   assert.match(control,/VOICE_CATEGORIES/);
