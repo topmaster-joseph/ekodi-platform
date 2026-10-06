@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 9,
+  "schemaVersion": 10,
   "policyId": "AI-ORCHESTRATE-001",
   "status": "enforced",
   "controlPlane": "EKODI AI",
@@ -170,7 +170,21 @@
       ],
       "userInterruptionForbiddenForResolvableFailure": true,
       "completionRequiresVerifiedRecoveryOrExplicitTerminalWait": true
-    }
+    },
+    "defaultExecutionPath": [
+      "ekodi-core-plan-finalized",
+      "github-work-branch",
+      "code-mutation",
+      "automated-tests",
+      "pull-request",
+      "deployment-gate",
+      "guarded-deployment",
+      "production-verification"
+    ],
+    "aiConsultation": "advisory-not-serial-prerequisite",
+    "consultationMayBlockCodeExecution": false,
+    "corePlanOwnsExecution": true,
+    "githubBranchMutationIsDefault": true
   },
   "consultationDecision": {
     "policyId": "AI-CONSULT-001",
@@ -196,20 +210,7 @@
       "partial",
       "failed"
     ],
-    "forcedMultiConsultCategories": [
-      "authentication",
-      "authorization",
-      "security",
-      "secrets",
-      "payment",
-      "finance",
-      "permission",
-      "data_migration",
-      "destructive_data",
-      "production",
-      "deployment",
-      "dns"
-    ],
+    "forcedMultiConsultCategories": [],
     "reverificationTriggers": [
       "critical-risk",
       "material-dissent",
@@ -224,7 +225,9 @@
     "receiptDetailPath": "/api/control/ai/v8/tasks/{taskId}/consultation",
     "privateReasoningExcluded": true,
     "structuredEvidenceOnly": true,
-    "tamperEvidentHashChain": true
+    "tamperEvidentHashChain": true,
+    "executionRelationship": "parallel-or-advisory",
+    "codeExecutionMayProceedWithoutConsultationCompletion": true
   },
   "sourceControl": {
     "defaultBranch": "main",
