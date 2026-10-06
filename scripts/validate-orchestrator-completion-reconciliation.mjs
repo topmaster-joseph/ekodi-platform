@@ -63,6 +63,10 @@ for(const key of [
   if(policy.reconciliation?.[key]!==true)fail('reconciliation rule missing: '+key);
 }
 if(policy.reconciliation?.candidateBatchLimit!==50)fail('completion reconciliation candidate batch limit must remain bounded at 50');
+for(const name of ['Deploy Control API','Deploy EKODI Shared Site Core','Deploy CGMA Apex Edge','Deploy Business OS']){
+  if(!policy.reconciliation?.workflowRunTriggerWorkflows?.includes(name))fail('completion workflow trigger missing from policy: '+name);
+  if(!workflow.includes('- '+name))fail('completion workflow trigger missing: '+name);
+}
 
 if(policy.oidcBoundary?.issuer!=='https://token.actions.githubusercontent.com')fail('GitHub Actions OIDC issuer mismatch');
 if(policy.oidcBoundary?.audience!=='ekodi-orchestrator-completion')fail('OIDC audience mismatch');

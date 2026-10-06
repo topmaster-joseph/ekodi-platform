@@ -46,7 +46,13 @@
     "candidateFairRotationRequired": true,
     "newUnattemptedCandidatesPrioritized": true,
     "deferredCandidatesMustNotStarveNewerTasks": true,
-    "checkedAtMetadataRequired": true
+    "checkedAtMetadataRequired": true,
+    "workflowRunTriggerWorkflows": [
+      "Deploy Control API",
+      "Deploy EKODI Shared Site Core",
+      "Deploy CGMA Apex Edge",
+      "Deploy Business OS"
+    ]
   },
   "oidcBoundary": {
     "issuer": "https://token.actions.githubusercontent.com",

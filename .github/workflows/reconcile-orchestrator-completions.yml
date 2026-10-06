@@ -5,6 +5,7 @@ on:
     workflows:
       - Deploy Control API
       - Deploy EKODI Shared Site Core
+      - Deploy CGMA Apex Edge
       - Deploy Business OS
     types: [completed]
   schedule:
