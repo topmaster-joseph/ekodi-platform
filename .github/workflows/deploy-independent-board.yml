@@ -89,7 +89,8 @@ jobs:
         run: |
           set -euo pipefail
           marker="EKODI-BOARD-CANARY-${GITHUB_RUN_ID}"
-          created="$(curl -fsS -X POST https://seonammedi.kr/board/api/posts -H 'content-type: application/json' --data "{"name":"EKODI 검증","category":"other","message":"$marker","privacyConsent":true}")"
+          payload="$(jq -nc --arg marker "$marker" '{name:"EKODI 검증",category:"other",message:$marker,privacyConsent:true}')"
+          created="$(curl -fsS -X POST https://seonammedi.kr/board/api/posts -H 'content-type: application/json' --data "$payload")"
           post_id="$(jq -r '.id // 0' <<<"$created")"
           test "$post_id" -gt 0
           curl -fsS https://seonammedi.kr/board/api/posts | jq -e --arg marker "$marker" '.items[] | select(.message==$marker)' >/dev/null
