@@ -55,6 +55,7 @@ import { localRegionOperationsAdminScript } from './local-region-operations-admi
 import { regionalCommerceProgramFromLocalRoute, regionalCommerceProgramFromPath } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
+import { withPublicEdgeCache } from './public-edge-cache.js';
 import { handleSeonamMediCivicApi, consumeSeonamMediVoiceMessage } from './seonammedi-civic-control.js';
 import { handleSeonamMediAdminApi } from './seonammedi-admin-control.js';
 import { handleSeonamMediMonitorApi } from './seonammedi-monitor.js';
@@ -355,6 +356,15 @@ async function routeMallApiApex(request,env){
   return response;
 }
 
+async function routeSeonamMediApi(request,env,ctx){
+  return withPublicEdgeCache(request,ctx,async()=>{
+    const admin=await handleSeonamMediAdminApi(request,env);if(admin)return admin;
+    const monitor=await handleSeonamMediMonitorApi(request,env);if(monitor)return monitor;
+    const civic=await handleSeonamMediCivicApi(request,env);if(civic)return civic;
+    return null;
+  });
+}
+
 async function routePlatform(request,env,ctx){
     const url=new URL(request.url);
     const host=resolvedHost(request,env);
@@ -363,7 +373,7 @@ async function routePlatform(request,env,ctx){
     const seonamBoard=legacySeonamBoardRedirect(request);if(seonamBoard)return seonamBoard;
     const siteBoard=await handleSiteBoardRequest(request,env);if(siteBoard)return siteBoard;
     if(host===PUBLIC_HOST&&url.pathname.startsWith(MALL_API_APEX_PREFIX)){const mallApi=await routeMallApiApex(request,env);if(mallApi)return mallApi;}
-    if((host===PUBLIC_HOST||SEONAMMEDI_HOSTS.has(host))&&url.pathname.startsWith('/api/seonammedi/')){const admin=await handleSeonamMediAdminApi(request,env);if(admin)return admin;const monitor=await handleSeonamMediMonitorApi(request,env);if(monitor)return monitor;const civic=await handleSeonamMediCivicApi(request,env);if(civic)return civic;}
+    if((host===PUBLIC_HOST||SEONAMMEDI_HOSTS.has(host))&&url.pathname.startsWith('/api/seonammedi/')){const seonamApi=await routeSeonamMediApi(request,env,ctx);if(seonamApi)return seonamApi;}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isDeletedSeonamPath(url.pathname))return deletedSeonamResponse();
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isSeonamMediPath(url.pathname))return routeSeonamMediStatic(request,env);
     if(SEONAMMEDI_HOSTS.has(host)&&['GET','HEAD'].includes(request.method))return routeSeonamMediDomain(request,env);
