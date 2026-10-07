@@ -53,3 +53,15 @@ test('shared-site staging and governance checks stay apex-path-only', () => {
   assert.match(zeroSubdomainGuard, /shared-site release request must use canonical apex/);
   assert.match(zeroSubdomainGuard, /deploy\/manifests\/shared-site\.worker\.json/);
 });
+
+
+test('shared-site manual release propagates exact orchestrator provenance into staging', () => {
+  assert.match(workflow,/staging_gate:[\s\S]*with:[\s\S]*release_branch_ref: \$\{\{ inputs\.release_branch_ref \}\}/);
+  assert.match(workflow,/release_task_id: \$\{\{ inputs\.release_task_id \}\}/);
+  assert.match(stagingWorkflow,/workflow_call:[\s\S]*inputs:[\s\S]*release_branch_ref:/);
+  assert.match(stagingWorkflow,/release_task_id:/);
+  assert.match(stagingWorkflow,/Apply exact orchestrator provenance from release caller/);
+  assert.match(stagingWorkflow,/EKODI_RELEASE_BRANCH_REF=\$branch/);
+  assert.match(stagingWorkflow,/EKODI_RELEASE_TASK_ID=\$\{requested_task:-\$derived_task\}/);
+  assert.match(stagingWorkflow,/GITHUB_TOKEN: \$\{\{ github\.token \}\}/);
+});
