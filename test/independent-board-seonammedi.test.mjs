@@ -177,3 +177,19 @@ test('standalone board preserves slash parity on external and internal mounts',a
     assert.equal(hb.includes('MY OPERATING SPACES'),false);
   }
 });
+
+
+test('orchestrated merge dispatches independent board deploy with exact provenance',async()=>{
+  const [script,mergeWorkflow,deployWorkflow]=await Promise.all([
+    read('scripts/converge-orchestrated-pr-merge.mjs'),
+    read('.github/workflows/converge-orchestrated-pr-merge.yml'),
+    read('.github/workflows/deploy-independent-board.yml')
+  ]);
+  assert.match(mergeWorkflow,/actions: write/);
+  assert.match(deployWorkflow,/pull-requests: read/);
+  assert.match(script,/independentBoardTouched/);
+  assert.match(script,/deploy-independent-board\.yml\/dispatches/);
+  assert.match(script,/release_branch_ref:branch/);
+  assert.match(script,/release_task_id:taskId/);
+  assert.match(script,/action:'deploy-dispatched'/);
+});
