@@ -1,0 +1,42 @@
+{
+  "version": "1.27.1-operational-2026-10-07-auth-return-url-hygiene",
+  "date": "2026-10-07",
+  "changeClass": "C2",
+  "taskId": "orch_20261007-1407-4000-8000-000000000001",
+  "summary": "Forbid one-time login return credentials from appearing in browser address-bar query strings or fragments and require URL-clean return transport.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly instructed that one-time authentication values used for login return must never be displayed in the browser address bar and that this must become a forced execution rule.",
+  "rules": [
+    {
+      "ruleId": "AUTH-RETURN-URL-HYGIENE-001",
+      "requirements": [
+        "One-time login return credentials must never be transported in URL query parameters or fragments.",
+        "Login return credentials must use POST body transport or an equivalent server-side session handoff that does not expose the credential in the address bar.",
+        "The destination must consume the one-time credential before rendering the normal target surface.",
+        "history.replaceState is defense in depth only and may not be used as the primary justification for credential-bearing URL transport.",
+        "Referrer leakage of login return credentials is forbidden.",
+        "The rule applies to current and future sites, admin surfaces, boards and descendant routes with no per-site opt-out."
+      ]
+    }
+  ],
+  "enforcement": [
+    "config/site-execution-enforcement.json",
+    "scripts/validate-site-execution-enforcement.mjs",
+    "auth-site/client-auth.js",
+    "auth-return-post.js",
+    "platform-router-entry-worker.js",
+    "services/independent-board/worker.js",
+    "test/site-execution-enforcement.test.mjs",
+    "test/auth-return-url-hygiene.test.mjs"
+  ],
+  "inheritance": {
+    "futureSitesAutoInherit": true,
+    "perSiteOptOutAllowed": false,
+    "allDescendantRoutesIncluded": true
+  },
+  "verification": [
+    "static rejection of query/fragment one-time credential generation",
+    "form-post transport contract test",
+    "shared destination bridge test",
+    "guarded deployment and production login-return verification"
+  ]
+}
