@@ -230,7 +230,7 @@ await writeFile(shellPath, compactShell);
 // with a five-minute-old menu registry after a deployment.
 const moduleImportVersions = new Map([
   ['admin-menu-layout.js', ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js', 'admin-site-chrome.js']],
-  ['admin-menu-registry.js', ['admin-service-handoffs.js', 'admin-design-engine.js', 'platform-maturity-admin.js']],
+  ['admin-menu-registry.js', ['admin-service-handoffs.js', 'admin-design-engine.js']],
   ['admin-service-handoffs.js', ['admin-service-catalog.js']],
   ['admin-sidebar.js', ['admin-menu-registry.js']],
   ['admin-menu-runtime.js', ['admin-menu-registry.js', 'ekodibiz-admin-registry.js']],
