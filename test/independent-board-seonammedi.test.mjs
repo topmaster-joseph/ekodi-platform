@@ -179,11 +179,13 @@ test('standalone board preserves slash parity on external and internal mounts',a
 });
 
 
-test('orchestrated merge dispatches independent board deploy with exact provenance',async()=>{
-  const [script,mergeWorkflow,deployWorkflow]=await Promise.all([
+test('orchestrated merge dispatches board/shared-site deploys and live legacy handoff verification',async()=>{
+  const [script,mergeWorkflow,deployWorkflow,sharedDeploy,router]=await Promise.all([
     read('scripts/converge-orchestrated-pr-merge.mjs'),
     read('.github/workflows/converge-orchestrated-pr-merge.yml'),
-    read('.github/workflows/deploy-independent-board.yml')
+    read('.github/workflows/deploy-independent-board.yml'),
+    read('.github/workflows/deploy-site-core.yml'),
+    read('platform-router-entry-worker.js')
   ]);
   assert.match(mergeWorkflow,/actions: write/);
   assert.match(deployWorkflow,/pull-requests: read/);
@@ -199,4 +201,10 @@ test('orchestrated merge dispatches independent board deploy with exact provenan
   assert.match(script,/merged===true\)\{await dispatchPostMergeDeploys\(\)/);
   assert.match(script,/already merged; post-merge deploys reconciled/);
   assert.match(script,/action:'deploy-dispatched'/);
+  assert.match(sharedDeploy,/Verify stray SeonamMedi board URLs canonicalize/);
+  assert.match(sharedDeploy,/https:\/\/ekodi\.kr\/board\/\$\{route\}/);
+  assert.match(sharedDeploy,/https:\/\/seonammedi\.kr\/board\/\$\{route\}/);
+  assert.match(router,/legacySeonamBoardRedirect/);
+  assert.match(router,/https:\/\/seonammedi\.kr\/board\//);
+  assert.ok(router.indexOf('legacySeonamBoardRedirect(request)')<router.indexOf('handleSiteBoardRequest(request,env)'));
 });

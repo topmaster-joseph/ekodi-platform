@@ -833,6 +833,28 @@ jobs:
         if: steps.quota.outputs.skip_nonessential != 'true'
         run: node scripts/verify-seonammedi-release-live.mjs --expected=dist/seonammedi/.well-known/ekodi-release.json --origin=https://seonammedi.kr --attempts=18 --delayMs=5000
 
+      - name: Verify stray SeonamMedi board URLs canonicalize
+        shell: bash
+        run: |
+          set -euo pipefail
+          for route in voices finance notices; do
+            ok=false
+            for attempt in $(seq 1 12); do
+              headers="/tmp/seonammedi-board-${route}.headers"
+              code="$(curl -sS -D "$headers" -o /dev/null -w '%{http_code}' "https://ekodi.kr/board/${route}" || true)"
+              location="$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' "$headers" 2>/dev/null || true)"
+              if [[ "$code" == "308" && "$location" == "https://seonammedi.kr/board/${route}" ]]; then
+                ok=true
+                break
+              fi
+              sleep $((attempt * 2))
+            done
+            if [[ "$ok" != "true" ]]; then
+              echo "Legacy EKODI board URL did not canonicalize: route=${route} code=${code} location=${location}" >&2
+              exit 1
+            fi
+          done
+
       - name: Finalize durable write queue consumer trigger
         # Queue consumption is part of the durable public-write contract, not a
         # nonessential probe. POST acceptance without an attached consumer can
