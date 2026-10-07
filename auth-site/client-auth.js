@@ -222,6 +222,18 @@ function postLoginTarget(){
 function routeTarget(proof){
   if(!proof?.tokenHash)throw new Error('identity_handoff_missing');
   const target=postLoginTarget();
+  if(site==='seonammedi'&&target.origin!=='https://ekodi.kr'){
+    target.hash='';
+    const form=document.createElement('form');
+    form.method='POST';
+    form.action=target.href;
+    form.hidden=true;
+    const fields={ekodi_auth_return:'1',ekodi_token:proof.tokenHash,ekodi_type:proof.type||'email'};
+    for(const [name,value] of Object.entries(fields)){const input=document.createElement('input');input.type='hidden';input.name=name;input.value=String(value||'');form.append(input)}
+    document.body.append(form);
+    form.submit();
+    return;
+  }
   target.hash=new URLSearchParams({ekodi_token:proof.tokenHash,ekodi_type:proof.type||'email'}).toString();
   location.assign(target.href);
 }
