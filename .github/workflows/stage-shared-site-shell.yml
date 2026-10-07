@@ -155,6 +155,12 @@ jobs:
           node --test test/marketing-canonical-projection.test.mjs test/insurance-public-route.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/discovery-layer.test.mjs test/learning-page.test.mjs test/learning-routing-contract.test.mjs
           npm run build
           cp auth-site/auth-workspace-target.js dist/auth-workspace-target.js
+          if find dist -type f \( -path 'dist/board*' -o -path 'dist/*/board*' \) -print -quit | grep -q .; then
+            echo 'Static asset would shadow the independent Board Runtime route.' >&2
+            find dist -type f \( -path 'dist/board*' -o -path 'dist/*/board*' \) -print >&2
+            exit 1
+          fi
+          echo 'boardAssetShadow=none'
           test -f dist/insurance/index.html
           test -f dist/insurance/advisor.html
           test -f dist/trade.html
