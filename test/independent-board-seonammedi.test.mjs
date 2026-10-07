@@ -81,9 +81,9 @@ test('independent board deployment provisions its own storage and verifies real 
   assert.match(workflow,/d1 create ekodi-independent-board/);
   assert.match(workflow,/d1 migrations apply ekodi-independent-board --remote/);
   assert.match(workflow,/r2 bucket create ekodi-independent-board-files/);
-  assert.match(workflow,/Recover exact orchestrator provenance for manual dispatch/);
+  assert.match(workflow,/Recover exact orchestrator provenance/);
   assert.match(workflow,/EKODI_RELEASE_BRANCH_REF=\$branch/);
-  assert.match(workflow,/EKODI_RELEASE_TASK_ID=\$\{BASH_REMATCH\[1\]\}/);
+  assert.match(workflow,/EKODI_RELEASE_TASK_ID=\$\{requested_task:-\$derived_task\}/);
   assert.match(workflow,/https:\/\/seonammedi\.kr\/board\/health/);
   assert.match(workflow,/Verify production board UI/);
   assert.match(workflow,/https:\/\/seonammedi\.kr\/board\/voices/);
@@ -92,6 +92,11 @@ test('independent board deployment provisions its own storage and verifies real 
   assert.match(workflow,/https:\/\/ekodi\.kr\/seonammedi\/board\/voices/);
   assert.match(workflow,/https:\/\/ekodi\.kr\/seonammedi\/board\/finance/);
   assert.match(workflow,/https:\/\/ekodi\.kr\/seonammedi\/board\/notices/);
+  assert.match(workflow,/release_branch_ref:/);
+  assert.match(workflow,/release_task_id:/);
+  assert.match(workflow,/REQUESTED_RELEASE_BRANCH_REF/);
+  assert.match(workflow,/commits\/\$GITHUB_SHA\/pulls/);
+  assert.match(workflow,/Requested release task does not match orchestrator branch/);
   assert.match(workflow,/Production create-list-reply canary and cleanup/);
   assert.match(workflow,/DELETE FROM board_replies WHERE post_id=\$post_id/);
   assert.match(workflow,/DELETE FROM board_posts WHERE id=\$post_id/);
