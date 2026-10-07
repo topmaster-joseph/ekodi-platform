@@ -56,7 +56,8 @@ test('maturity dashboard registry entry stays in the status area', () => {
   const demand = read('admin-demand-loader.js');
   assert.match(registry, /id: 'maturity'[^\n]*group: 'status'/);
   assert.match(registry, /maturity:'status'/);
-  assert.match(registry, /platform-maturity-admin\.js/);
+  assert.doesNotMatch(registry, /platform-maturity-admin\.js/);
+  assert.match(demand, /maturity:\{[^\n]*scripts:\['platform-maturity-admin\.js'\]/);
 });
 
 
