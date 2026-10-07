@@ -4,7 +4,7 @@ const readJson=async path=>JSON.parse((await readFile(new URL(`../${path}`,impor
 const read=async path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 const walkJs=async dir=>{const out=[];for(const entry of await readdir(dir,{withFileTypes:true})){const child=new URL(entry.name+(entry.isDirectory()?'/':''),dir);if(entry.isDirectory())out.push(...await walkJs(child));else if(entry.isFile()&&entry.name.endsWith('.js'))out.push(child)}return out};
 
-const [policy,registry,pkg,scheduler,workflow,liveVerifier,authClient,platformRouterEntry,independentBoard,authReturnBridge]=await Promise.all([
+const [policy,registry,pkg,scheduler,workflow,liveVerifier,authClient,authGeneral,authBusiness,authWorkspace,authAdmin,adminMenuRuntime,supplyNetworkAdmin,platformRouterEntry,independentBoard,authReturnBridge]=await Promise.all([
   readJson('config/site-execution-enforcement.json'),
   readJson('config/site-lifecycle-registry.json'),
   readJson('package.json'),
@@ -12,6 +12,12 @@ const [policy,registry,pkg,scheduler,workflow,liveVerifier,authClient,platformRo
   read('.github/workflows/ekodi-ai-orchestration-gate.yml'),
   read('scripts/verify-mobile-fixed-headers-live.mjs'),
   read('auth-site/client-auth.js'),
+  read('auth-site/auth.js'),
+  read('auth-site/business-auth.js'),
+  read('auth-site/auth-workspace-target.js'),
+  read('auth-site/admin-auth.js'),
+  read('admin-menu-runtime.js'),
+  read('supply-network-admin.js'),
   read('platform-router-entry-worker.js'),
   read('services/independent-board/worker.js'),
   read('auth-return-post.js'),
@@ -32,6 +38,23 @@ for(const flag of ['oneTimeCredentialInAddressBarForbidden','queryCredentialTran
 if(authReturnUrlHygiene.perSiteOptOutAllowed!==false)fail('auth return URL hygiene per-site opt-out must remain forbidden');
 if(/target\.hash\s*=\s*new URLSearchParams\(\{ekodi_token:/.test(authClient))fail('central auth must not place one-time handoff credentials in URL fragments');
 if(/searchParams\.set\(['"](?:ekodi_token|token_hash|code|state|nonce|ticket|handoff_token)['"]/.test(authClient))fail('central auth must not place one-time handoff credentials in URL query parameters');
+const credentialUrlProducers=[
+  ['auth-site/client-auth.js',authClient],
+  ['auth-site/auth.js',authGeneral],
+  ['auth-site/business-auth.js',authBusiness],
+  ['auth-site/auth-workspace-target.js',authWorkspace],
+  ['auth-site/admin-auth.js',authAdmin],
+  ['admin-menu-runtime.js',adminMenuRuntime],
+  ['supply-network-admin.js',supplyNetworkAdmin],
+];
+const forbiddenCredentialUrlPatterns=[
+  /(?:target|destination)\.hash\s*=\s*new URLSearchParams\([^;]*(?:ekodi_token|ekodi_admin_token)/s,
+  /(?:target|destination)\.searchParams\.set\(['"](?:ekodi_token|ekodi_admin_token|token_hash|access_token|refresh_token|handoff_token)['"]/s,
+  /fragment\s*=\s*\{[^}]*ekodi_token/s,
+];
+for(const [file,source] of credentialUrlProducers)for(const pattern of forbiddenCredentialUrlPatterns)if(pattern.test(source))fail(`credential-bearing URL transport forbidden in ${file}`);
+if(!authAdmin.includes("sessionStorage.setItem('ekodi-auth-token',result.token)"))fail('admin login return must preserve the token in same-origin sessionStorage instead of the URL');
+if(!authBusiness.includes("sessionStorage.setItem('ekodi-business-session'"))fail('Business OS login return must use same-origin session storage instead of URL credentials');
 for(const marker of ["form.method='POST'","ekodi_auth_return:'1'","form.submit()"]){if(!authClient.includes(marker))fail(`central auth missing form-post return marker: ${marker}`)}
 if(!platformRouterEntry.includes("handleAuthReturnPost(request)"))fail('platform router must consume URL-clean form-post auth returns before normal routing');
 if(!independentBoard.includes("handleAuthReturnPost(req)"))fail('independent board must consume URL-clean form-post auth returns before board routing');
