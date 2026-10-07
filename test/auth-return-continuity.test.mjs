@@ -39,8 +39,10 @@ test('central client auth returns directly to the initiating trusted URL',()=>{
   assert.match(client,/function postLoginTarget\(\)/);
   assert.match(client,/const target=new URL\(RETURN_TO\)/);
   assert.match(client,/const target=postLoginTarget\(\)/);
-  assert.match(client,/target\.hash=new URLSearchParams/);
-  assert.match(client,/location\.assign\(target\.href\)/);
+  assert.doesNotMatch(client,/target\.hash=new URLSearchParams\(\{ekodi_token:/);
+  assert.match(client,/form\.method='POST'/);
+  assert.match(client,/ekodi_auth_return:'1'/);
+  assert.match(client,/form\.submit\(\)/);
   assert.match(client,/isPlatformMy&&!\['my','portal'\]\.includes\(site\)/);
   assert.doesNotMatch(client,/function myEntryTarget\(\)/);
   assert.doesNotMatch(client,/commonServiceEntry&&proof\.platformAdmin!==true/);
