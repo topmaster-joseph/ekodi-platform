@@ -1,5 +1,6 @@
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 import { realtimeTenantList } from './realtime-tenant-registry.js';
+import { STORE_DISCOVERY_PROFILES } from './store-discovery.js';
 
 export const SITE_PUBLICATION_POLICY_ID='EKODI-SITE-PUBLICATION-001';
 export const SITE_PUBLICATION_STATUSES=Object.freeze(['public','private','maintenance']);
@@ -26,10 +27,11 @@ const TENANT_PATH_ALIASES=Object.freeze({
 });
 const SPECIAL_SITES=Object.freeze([
   Object.freeze({id:'ekodi',workspaceId:'platform',name:'EKODI',canonicalUrl:'https://ekodi.kr/',canonicalPath:'/',adminUrl:'https://ekodi.kr/admin/',exactRoot:true,authoritySiteKey:'ekodi'}),
-  Object.freeze({id:'seonammedi',workspaceId:'seonammedi',name:'서남권 국립의대 소통센터',canonicalUrl:'https://ekodi.kr/seonammedi/',canonicalPath:'/seonammedi',adminUrl:'https://ekodi.kr/seonammedi/admin/',aliases:['seonammedi.kr','www.seonammedi.kr','xn--3e0b8b58jw4co4mnpll3k.kr','www.xn--3e0b8b58jw4co4mnpll3k.kr'],authoritySiteKey:'seonammedi'}),
+  Object.freeze({id:'seonammedi',workspaceId:'seonammedi',name:'서남권 국립의대 소통센터',canonicalUrl:'https://ekodi.kr/seonammedi/',canonicalPath:'/seonammedi',adminUrl:'https://ekodi.kr/seonammedi/admin/',aliases:['seonammedi.kr','www.seonammedi.kr','xn--3e0b8b58jw4co4mnpll3k.kr','www.xn--3e0b8b58jw4co4mnpll3k.kr'],authoritySiteKey:'seonammedi',discoveryPriority:'0.9',discoveryChangefreq:'daily',discoveryDescription:'서남권 국립의대 관련 공식자료, 활동이력, 관련보도, 시민 의견과 공개 정보를 확인하는 소통센터입니다.'}),
   Object.freeze({id:'pyeonggongmok',workspaceId:'pyeonggongmok',name:'평생공부하는 목회자 모임',canonicalUrl:'https://ekodi.kr/pyeonggongmok/',canonicalPath:'/pyeonggongmok',adminUrl:'https://ekodi.kr/pyeonggongmok/admin/',authoritySiteKey:'pyeonggongmok'}),
   Object.freeze({id:'cheonggye',workspaceId:'cheonggye',name:'청계잇다',canonicalUrl:'https://ekodi.kr/cheonggye/',canonicalPath:'/cheonggye',adminUrl:'https://ekodi.kr/cheonggye/admin/',authoritySiteKey:'cheonggye'}),
   Object.freeze({id:'cgma',workspaceId:'cgma',name:'청계면상인회',canonicalUrl:'https://ekodi.kr/cgma/',canonicalPath:'/cgma',adminUrl:'https://ekodi.kr/cgma/admin/',aliases:['cgma.or.kr','www.cgma.or.kr'],authoritySiteKey:'cgma',tenantSlug:'cheonggye'}),
+  Object.freeze({id:'cmpmyi',workspaceId:'cmpmyi',name:'목포대점 통합 게이트',canonicalUrl:'https://ekodi.kr/cmpmyi/',canonicalPath:'/cmpmyi',adminUrl:'https://ekodi.kr/cmpmyi/admin/',authoritySiteKey:'cmpmyi',discoveryKind:'store'}),
 ]);
 
 const clean=(value,max=2048)=>String(value??'').trim().slice(0,max);
@@ -69,6 +71,12 @@ function normalizeCatalogSite(site,source='registry'){
     defaultMaintenanceTitle:clean(site.defaultMaintenanceTitle,80)||defaultMaintenanceTitle(site),
     defaultMaintenanceMessage:clean(site.defaultMaintenanceMessage,300)||defaultMaintenanceMessage,
     defaultRedirectMode:'button',
+    discoveryKind:clean(site.discoveryKind,80)||'organization',
+    discoveryPriority:clean(site.discoveryPriority,8)||'',
+    discoveryChangefreq:clean(site.discoveryChangefreq,16)||'',
+    discoveryDescription:clean(site.discoveryDescription,1000)||'',
+    discoveryTitle:clean(site.discoveryTitle,240)||'',
+    discoveryLabel:clean(site.discoveryLabel,160)||'',
   });
 }
 
@@ -86,15 +94,22 @@ function manifestSites(){
 }
 
 function realtimeParentSites(){
-  return realtimeTenantList().map(tenant=>normalizeCatalogSite({
-    id:tenant.authSite||tenant.apiTenant||tenant.id,
-    workspaceId:tenant.workspace||tenant.apiTenant||tenant.id,
-    name:tenant.name,
-    canonicalUrl:'https://ekodi.kr'+tenant.home,
-    canonicalPath:tenant.home,
-    authoritySiteKey:tenant.authSite||tenant.apiTenant||tenant.id,
-    tenantSlug:tenant.workspace||'',
-  },'realtime-parent')).filter(Boolean);
+  return realtimeTenantList().map(tenant=>{
+    const storeProfile=STORE_DISCOVERY_PROFILES[tenant.apiTenant]||STORE_DISCOVERY_PROFILES[tenant.id]||null;
+    return normalizeCatalogSite({
+      id:tenant.authSite||tenant.apiTenant||tenant.id,
+      workspaceId:tenant.workspace||tenant.apiTenant||tenant.id,
+      name:tenant.name,
+      canonicalUrl:'https://ekodi.kr'+tenant.home,
+      canonicalPath:tenant.home,
+      authoritySiteKey:tenant.authSite||tenant.apiTenant||tenant.id,
+      tenantSlug:tenant.workspace||'',
+      discoveryKind:storeProfile?'store':(tenant.mode==='commerce'?'store':'organization'),
+      discoveryPriority:storeProfile?'0.9':'',
+      discoveryChangefreq:storeProfile?'daily':'',
+      discoveryDescription:storeProfile?`${tenant.name} · ${storeProfile.localTerms.join(' · ')}. 메뉴·가격·전화·영업시간·지도·배달주문 안내.`:'',
+    },'realtime-parent');
+  }).filter(Boolean);
 }
 
 function realtimeLiveSites(){
@@ -107,6 +122,7 @@ function realtimeLiveSites(){
     adminUrl:'https://ekodi.kr'+tenant.path.replace(/\/$/,'')+'/admin',
     authoritySiteKey:tenant.authSite||tenant.apiTenant||tenant.id,
     tenantSlug:tenant.workspace||'',
+    discoveryKind:'service',
     defaultMaintenanceTitle:'라이브 서비스 준비 중입니다',
     defaultMaintenanceMessage:'현재 이 Live 서비스는 관리자 검수 또는 준비 상태입니다.',
   },'realtime-live')).filter(Boolean);

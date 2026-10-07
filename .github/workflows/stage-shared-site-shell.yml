@@ -56,12 +56,16 @@ on:
       - 'wrangler.site.toml'
       - 'wrangler.site-staging.toml'
       - 'discovery-layer.js'
+      - 'public-discovery-runtime.js'
+      - 'config/public-discovery-registry.json'
+      - 'site-publication-runtime.js'
       - 'scripts/discovery-build.mjs'
       - 'scripts/ccm-mr-postbuild.mjs'
       - 'scripts/ops-health-build.mjs'
       - 'scripts/attest-worker-release-artifact.mjs'
       - 'test/worker-release-artifact-attestation.test.mjs'
       - 'test/discovery-layer.test.mjs'
+      - 'test/public-discovery-runtime.test.mjs'
       - 'scripts/build.mjs'
       - 'scripts/finalize-seonammedi-release.mjs'
       - '.github/workflows/stage-shared-site-shell.yml'
@@ -148,11 +152,12 @@ jobs:
           node --check marketing-canonical-projection.js
           node --check ekodi-shell-injector.js
           node --check discovery-layer.js
+          node --check public-discovery-runtime.js
           node --check scripts/discovery-build.mjs
           node --check scripts/ops-health-build.mjs
           node --check scripts/attest-worker-release-artifact.mjs
           node --test test/worker-release-artifact-attestation.test.mjs
-          node --test test/marketing-canonical-projection.test.mjs test/insurance-public-route.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/discovery-layer.test.mjs test/learning-page.test.mjs test/learning-routing-contract.test.mjs
+          node --test test/marketing-canonical-projection.test.mjs test/insurance-public-route.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/discovery-layer.test.mjs test/public-discovery-runtime.test.mjs test/learning-page.test.mjs test/learning-routing-contract.test.mjs
           npm run build
           cp auth-site/auth-workspace-target.js dist/auth-workspace-target.js
           test -f dist/insurance/index.html
@@ -168,7 +173,7 @@ jobs:
           grep -Fq 'Disallow: /' dist/robots.txt
           grep -Fq '<loc>https://ekodi.kr/</loc>' dist/sitemap.xml
           grep -Fq 'Canonical site: https://ekodi.kr/' dist/llms.txt
-          grep -Fq 'data-ekodi-discovery="v2"' dist/index.html
+          grep -Fq 'data-ekodi-discovery="v3"' dist/index.html
 
       - name: Materialize immutable production release artifact
         id: release_artifact
