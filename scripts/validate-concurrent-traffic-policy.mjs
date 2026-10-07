@@ -3,6 +3,8 @@ const p=JSON.parse(fs.readFileSync(new URL('../config/concurrent-traffic-policy.
 const storage=JSON.parse(fs.readFileSync(new URL('../config/storage-policy.json',import.meta.url),'utf8'));
 const platformSecurity=fs.readFileSync(new URL('../platform-security-policy.js',import.meta.url),'utf8');
 const siteConfig=fs.readFileSync(new URL('../wrangler.site.toml',import.meta.url),'utf8');
+const edgePolicy=JSON.parse(fs.readFileSync(new URL('../config/edge-routing-cache-policy.json',import.meta.url),'utf8'));
+const edgeRuntime=fs.readFileSync(new URL('../edge-traffic-cache.js',import.meta.url),'utf8');
 const apiConfig=fs.readFileSync(new URL('../wrangler.api.toml',import.meta.url),'utf8');
 const fail=(m)=>{console.error('[EKODI-CONCURRENT-TRAFFIC-10K-001] '+m);process.exitCode=1};
 if(p.status!=='enforced')fail('policy must be enforced');
@@ -32,4 +34,13 @@ if(!apiConfig.includes('name = "AUTH_RATE_LIMITER"'))fail('control API auth limi
 if(p.quotaProtection?.warningPercent!==70||p.quotaProtection?.protectPercent!==90||p.quotaProtection?.circuitBreakerPercent!==100)fail('70/90/100 quota protection thresholds required');
 if(!Array.isArray(p.quotaProtection?.stopRetryStatuses)||!p.quotaProtection.stopRetryStatuses.includes(429)||!p.quotaProtection.stopRetryStatuses.includes(1027))fail('429/1027 circuit-breaker signals required');
 if(p.failurePolicy?.circuitBreaker!==true)fail('circuit breaker required');
+if(p.edgeCache?.policy!=='EKODI-EDGE-ROUTING-CACHE-001')fail('edge cache policy linkage required');
+if(p.edgeCache?.publicEdgeHitTargetPercent<95)fail('public edge hit target must be >=95%');
+if(p.edgeCache?.privateCacheLeakTolerance!==0)fail('private cache leak tolerance must be zero');
+if(edgePolicy.status!=='enforced'||edgePolicy.policyId!=='EKODI-EDGE-ROUTING-CACHE-001')fail('edge routing/cache policy must be enforced');
+if(edgePolicy.cacheSafety?.neverCacheAdminAuthMyApiMcpWebhook!==true)fail('private edge cache exclusion contract missing');
+if(edgePolicy.stampedeProtection?.sameIsolateRequestCoalescing!==true)fail('request coalescing required for surge protection');
+if(!edgeRuntime.includes("serveWithSafeEdgeCache"))fail('edge cache runtime missing');
+if(!edgeRuntime.includes("X-EKODI-Edge-Cache"))fail('edge cache observability header missing');
+if(!platformSecurity.includes("privateUser")||!platformSecurity.includes("mcp")||!platformSecurity.includes("webhook"))fail('private surface classification must include my/mcp/webhook');
 if(!process.exitCode)console.log('EKODI-CONCURRENT-TRAFFIC-10K-001 validated.');
