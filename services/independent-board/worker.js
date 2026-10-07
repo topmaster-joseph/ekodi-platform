@@ -164,7 +164,7 @@ function nav(active,req){
   const link=(href,label,key)=>'<a'+(active===key?' class="active" aria-current="page"':'')+' href="'+href+'">'+label+'</a>';
   return '<header class="site-header"><a class="brand" href="'+sitePath(req)+'"><strong>서남권 국립의대 소통센터</strong><small>서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널</small></a><nav aria-label="주요 메뉴"><a href="'+sitePath(req,'/#timeline')+'">활동이력</a><a href="'+sitePath(req,'/#channels')+'">소통채널</a>'+link(boardPath(req,'voices'),'시민의견','voices')+link(boardPath(req,'finance'),'회계','finance')+link(boardPath(req,'notices'),'공지','notices')+'<a href="'+sitePath(req,'/#organization')+'">조직</a></nav></header>';
 }
-const footer='<footer><p><strong>서남권 국립의대 소통센터</strong> · 자료의 성격과 출처를 구분해 보존합니다.</p><a id="adminLink" href="#admin">관리자</a></footer>';
+const footer='<footer><p><strong>서남권 국립의대 소통센터</strong> · 자료의 성격과 출처를 구분해 보존합니다.</p><a id="adminLink" href="/admin/">관리</a></footer>';
 function shell(req,active,title,eyebrow,note,controls,content,script){
   return new Response('<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+title+' · 서남권 국립의대 소통센터</title><link rel="stylesheet" href="'+sitePath(req,'/app.css?v=20261006-domain-routing-2')+'"><style>'+boardCss+'</style></head><body>'+nav(active,req)+'<main><section class="board-head"><div><p class="eyebrow">'+eyebrow+'</p><h1>'+title+'</h1><p class="note">'+note+'</p></div><div class="board-actions">'+controls+'</div></section>'+content+'</main>'+footer+'<script>'+script+'<\/script></body></html>',{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-ekodi-board-independent':'true'}});
 }
