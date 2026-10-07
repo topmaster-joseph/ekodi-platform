@@ -38,6 +38,7 @@ if (!worker.name || !worker.config || !Array.isArray(worker.requests) || !worker
   throw new Error('Worker manifest requires worker.name, worker.config and worker.requests.');
 }
 const allowFirstDeploy = worker.allowFirstDeploy === true;
+const attestationPath = String(worker.attestationPath || '').trim();
 
 const configPath = path.resolve(root, worker.config);
 if (!configPath.startsWith(root + path.sep) || !fs.existsSync(configPath)) {
@@ -308,6 +309,49 @@ async function verifyAll(overrideVersion = '', phase = 'standard') {
   for (const request of worker.requests) await fetchCheck(request, overrideVersion, phase);
 }
 
+async function verifyReleaseAttestation(expectedVersion, phase) {
+  if (!attestationPath) return;
+  const firstUrl = worker.requests.find(request => request?.url)?.url;
+  if (!firstUrl) throw new Error('Release attestation requires at least one manifest request URL.');
+  const target = new URL(attestationPath, firstUrl).toString();
+  const headers = {
+    'user-agent': 'EKODI-Release-Attestation/1.0',
+    'accept': 'application/json',
+  };
+  if (phase === 'candidate') {
+    headers['Cloudflare-Workers-Version-Overrides'] = `${worker.name}="${expectedVersion}"`;
+  }
+  let last = '';
+  const attempts = phase === 'production' ? PROMOTION_VERIFY_ATTEMPTS : STANDARD_VERIFY_ATTEMPTS;
+  for (let index = 1; index <= attempts; index += 1) {
+    try {
+      const url = new URL(target);
+      url.searchParams.set('ekodi_release_attestation', `${runId}-${attempt}-${index}`);
+      const response = await fetch(url, {
+        method: 'GET',
+        redirect: 'manual',
+        headers,
+        signal: AbortSignal.timeout(12000),
+      });
+      const body = await response.text();
+      const versionHeader = String(response.headers.get('x-ekodi-release-version') || '');
+      let payload = null;
+      try { payload = JSON.parse(body); } catch {}
+      const versionId = String(payload?.versionId || versionHeader || '');
+      if (response.status !== 200) throw new Error(`HTTP ${response.status}`);
+      if (response.headers.get('x-ekodi-route') !== 'release-attestation') throw new Error('release attestation route header missing');
+      if (versionId !== expectedVersion) throw new Error(`expected version ${expectedVersion}, received ${versionId || 'none'}`);
+      if (String(response.headers.get('cache-control') || '').toLowerCase().includes('no-store') === false) throw new Error('release attestation must be no-store');
+      console.log(`✅ ${phase} release attestation verified: ${target} -> ${versionId}`);
+      return;
+    } catch (error) {
+      last = error?.message || String(error);
+      if (index < attempts) await new Promise(resolve => setTimeout(resolve, VERIFY_RETRY_DELAY_MS));
+    }
+  }
+  throw new Error(`${phase} release attestation failed for ${target}: ${last}`);
+}
+
 function appendSummary(lines) {
   if (!process.env.GITHUB_STEP_SUMMARY) return;
   fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
@@ -362,10 +406,12 @@ try {
 
   console.log('Phase 2/3: smoke-test the 0% candidate through Cloudflare version overrides.');
   await verifyAll(candidateVersion);
+  await verifyReleaseAttestation(candidateVersion, 'candidate');
 
   console.log('Phase 3/3: candidate passed, promote it to 100% and verify production without overrides.');
   deployVersions([`${candidateVersion}@100%`], `EKODI guarded promote ${tag}`);
   await verifyAll('', 'production');
+  await verifyReleaseAttestation(candidateVersion, 'production');
 
   appendSummary([
     `## EKODI guarded Worker release: ${worker.name}`,
@@ -376,6 +422,7 @@ try {
     '- AI_PROVIDER=NONE resilience gate passed before any production candidate was attached.',
     '- Candidate was attached at 0% traffic, verified with version overrides, then promoted to 100%.',
     '- Production smoke verification passed after promotion.',
+    `- Release attestation matched promoted Worker version: \`${candidateVersion}\`.`,
   ]);
   console.log('✅ Guarded Worker release complete.');
 } catch (error) {
