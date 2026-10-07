@@ -82,7 +82,8 @@ test('synthetic production Admin UI verifier requires visible left navigation an
   assert.match(text, /data-admin-detail-more=/);
   assert.match(text, /no visible left-navigation trigger/);
   assert.match(text, /const alreadyActive = await page\.evaluate\(section => window\.EKODIAdminPanels\?\.current\?\.\(\) === section, id\)/);
-  assert.match(text, /if \(!alreadyActive\) \{\s*const trigger = await resolveMenuTrigger\(id, group\);\s*await dispatchClick\(trigger\);\s*\}/);
+  assert.match(text, /if \(!alreadyActive\) \{[\s\S]*const trigger = await resolveMenuTrigger\(id, group\);[\s\S]*await dispatchClick\(trigger\);[\s\S]*activation retry after slow\/lazy module response[\s\S]*const retryTrigger = await resolveMenuTrigger\(id, group\);[\s\S]*await dispatchClick\(retryTrigger\);/);
+  assert.match(text, /timeout: 20000/);
   assert.doesNotMatch(text, /contextTab\.waitFor/);
   assert.doesNotMatch(text, /const alreadyActive = await contextTab\.evaluate/);
 });
