@@ -266,3 +266,10 @@ test('notice board supports compressed photo attachments and native sharing',()=
   assert.match(worker,/data-share/);
   assert.match(worker,/api\\\/notices\\\/files/);
 });
+
+
+test('board footer keeps two-line identity left and management action top-right',()=>{
+  assert.match(worker,/footer p strong,footer p span\{display:block\}/);
+  assert.match(worker,/footer a\{position:absolute;top:12px/);
+  assert.match(worker,/<strong>서남권 국립의대 소통센터<\/strong><span>자료의 성격과 출처를 구분해 보존합니다.<\/span>/);
+});
