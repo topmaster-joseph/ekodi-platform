@@ -50,11 +50,21 @@ async function exchangeOneTimeToken(tokenHash,type,fetchImpl){
     user:data.user||null
   };
 }
-function completionPage(session){
+function returnContext(form){
+  const clean=(name,max=180)=>String(form.get(name)||'').trim().slice(0,max);
+  return {
+    workspace:clean('ekodi_workspace'),
+    tenant:clean('ekodi_tenant'),
+    store:clean('ekodi_store'),
+    createdAt:Date.now()
+  };
+}
+function completionPage(session,context={}){
   const sessionJson=scriptJson(session);
+  const contextJson=scriptJson(context);
   const storageKey=scriptJson(SUPABASE_SESSION_KEY);
   const sensitiveKeys=scriptJson(SENSITIVE_URL_KEYS);
-  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>로그인 복귀</title></head><body><main><p>로그인 정보를 확인하고 원래 화면으로 돌아갑니다.</p></main><script>(()=>{const session=${sessionJson},storageKey=${storageKey},sensitiveKeys=${sensitiveKeys};const clean=new URL(location.href);for(const key of sensitiveKeys)clean.searchParams.delete(key);if(clean.hash){const raw=clean.hash.slice(1),hashParams=new URLSearchParams(raw);let changed=false;for(const key of sensitiveKeys){if(hashParams.has(key)){hashParams.delete(key);changed=true}}if(changed)clean.hash=hashParams.toString()?'#'+hashParams.toString():''}history.replaceState(null,'',clean.pathname+clean.search+clean.hash);try{localStorage.setItem(storageKey,JSON.stringify(session));sessionStorage.setItem('ekodi-auth-token',session.access_token||'')}catch{}location.replace(clean.href)})()</script></body></html>`;
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>로그인 복귀</title></head><body><main><p>로그인 정보를 확인하고 원래 화면으로 돌아갑니다.</p></main><script>(()=>{const session=${sessionJson},context=${contextJson},storageKey=${storageKey},sensitiveKeys=${sensitiveKeys};const clean=new URL(location.href);for(const key of sensitiveKeys)clean.searchParams.delete(key);if(clean.hash){const raw=clean.hash.slice(1),hashParams=new URLSearchParams(raw);let changed=false;for(const key of sensitiveKeys){if(hashParams.has(key)){hashParams.delete(key);changed=true}}if(changed)clean.hash=hashParams.toString()?'#'+hashParams.toString():''}history.replaceState(null,'',clean.pathname+clean.search+clean.hash);try{localStorage.setItem(storageKey,JSON.stringify(session));sessionStorage.setItem('ekodi-auth-token',session.access_token||'');if(context.workspace||context.tenant||context.store)sessionStorage.setItem('ekodi-auth-return-context',JSON.stringify(context))}catch{}location.replace(clean.href)})()</script></body></html>`;
 }
 
 export async function handleAuthReturnPost(request,{fetchImpl=fetch}={}){
@@ -67,7 +77,7 @@ export async function handleAuthReturnPost(request,{fetchImpl=fetch}={}){
   if(type!=='email')return errorPage('지원하지 않는 로그인 복귀 유형입니다.',400);
   try{
     const session=await exchangeOneTimeToken(tokenHash,type,fetchImpl);
-    return htmlResponse(completionPage(session),200);
+    return htmlResponse(completionPage(session,returnContext(form)),200);
   }catch(error){
     console.error('EKODI auth return form-post exchange failed',{status:Number(error?.status||0),path:new URL(request.url).pathname});
     return errorPage('로그인 복귀를 완료하지 못했습니다. 다시 로그인해 주세요.',Number(error?.status)>=400&&Number(error?.status)<600?Number(error.status):502);
