@@ -1,11 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourcePath = path.join(root, 'config', 'ecosystem-services.json');
 const serverPath = path.join(root, 'generated', 'user-services.js');
 const browserPath = path.join(root, 'my', 'user-services.js');
+const myAppPath = path.join(root, 'my', 'app.js');
+const myIndexPath = path.join(root, 'my', 'index.html');
+const serviceManifestPath = path.join(root, 'ekodi-service-manifest.js');
 
 const RESERVED_INTERNAL = new Set([
   'admin', 'api', 'auth', 'control', 'core', 'finance', 'security', 'shell', 'workspace-api',
@@ -76,4 +80,22 @@ const browser = `${banner}export const USER_SERVICES = Object.freeze(${payload})
 fs.mkdirSync(path.dirname(serverPath), { recursive: true });
 fs.writeFileSync(serverPath, server);
 fs.writeFileSync(browserPath, browser);
+
+const appSource = fs.readFileSync(myAppPath, 'utf8');
+const manifestSource = fs.readFileSync(serviceManifestPath, 'utf8');
+const appFingerprint = createHash('sha256')
+  .update(appSource)
+  .update('\0')
+  .update(manifestSource)
+  .digest('hex')
+  .slice(0, 16);
+const appVersion = `fp-${appFingerprint}`;
+const indexSource = fs.readFileSync(myIndexPath, 'utf8');
+const appAssetPattern = /\/my\/app\.js\?v=[^\"'&<>\s]+/g;
+const appAssetMatches = indexSource.match(appAssetPattern) || [];
+if (!appAssetMatches.length) throw new Error('My EKODI index must reference a versioned /my/app.js asset.');
+const nextIndex = indexSource.replace(appAssetPattern, `/my/app.js?v=${appVersion}`);
+fs.writeFileSync(myIndexPath, nextIndex);
+
 console.log(`Generated ${normalized.length} EKODI user services with homepage presentation metadata.`);
+console.log(`Fingerprint My EKODI app asset: ${appVersion} (${appAssetMatches.length} reference(s)).`);
