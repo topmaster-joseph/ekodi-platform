@@ -46,6 +46,11 @@ function installStyle(){
     html[data-ekodi-shell-surface="admin"] body :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea){background:#fff!important;color:#203247!important;border-color:#cbd5e1!important}
     html[data-ekodi-shell-surface="admin"] body :is(code,pre,[data-code-surface]){color-scheme:dark}
     html[data-ekodi-shell-surface="admin"] body :is(.badge,[class$="-badge"],[class$="-status"],[role="status"],button,.button,.btn){background-image:none}
+    /* ADMIN-WHITE-SURFACE-003: all structural descendants stay white, even when a subservice ships legacy dark CSS after boot. */
+    html[data-ekodi-shell-surface="admin"] body :where(div,main,aside,header,footer,nav,section,article,form,fieldset,table,thead,tbody,tfoot,tr,th,td,dialog){background-color:#fff!important;background-image:none!important}
+    html[data-ekodi-shell-surface="admin"] body :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea){background-color:#fff!important;background-image:none!important;color:#203247!important;border-color:#cbd5e1!important}
+    html[data-ekodi-shell-surface="admin"] body :where(pre,code,kbd,samp,[data-code-surface]){background-color:initial}
+    html[data-ekodi-shell-surface="admin"] body :where(button,.button,.btn,[role="button"],.badge,[class$="-badge"],[class$="-status"],[role="status"],progress,meter){background-image:none}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar{display:flex!important;flex-direction:column!important;height:100dvh!important;min-height:0!important;overflow:hidden!important;box-sizing:border-box!important;padding-top:max(8px,env(safe-area-inset-top,0px))!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-gutter:stable}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav[data-ekodi-admin-nav-mode="primary"]{flex:0 0 auto!important;overflow:hidden!important;overscroll-behavior:auto!important;scrollbar-gutter:auto!important}
