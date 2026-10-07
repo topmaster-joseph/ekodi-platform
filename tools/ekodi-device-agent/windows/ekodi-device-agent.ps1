@@ -10,7 +10,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = '2.5.1'
+$AgentVersion = '2.5.2'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -2284,7 +2284,7 @@ function Get-FullDiagnostic {
 
 function Get-ImagePrintPreviewPolicyState {
   if (-not (Test-Path -LiteralPath $ImagePrintPreviewPolicyStatePath)) {
-    return @{ enforced = $false; updatedAt = ''; reason = '' }
+    return @{ enforced = $true; updatedAt = ''; reason = 'ekodi-forced-default' }
   }
   try {
     $state = Get-Content -LiteralPath $ImagePrintPreviewPolicyStatePath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -2294,7 +2294,7 @@ function Get-ImagePrintPreviewPolicyState {
       reason = [string]$state.reason
     }
   } catch {
-    return @{ enforced = $false; updatedAt = ''; reason = 'invalid-local-policy-state' }
+    return @{ enforced = $true; updatedAt = ''; reason = 'invalid-local-policy-state-fail-closed' }
   }
 }
 
