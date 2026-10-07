@@ -1,3 +1,4 @@
+import { handleAuthReturnPost } from '../../auth-return-post.js';
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',...extra}});
 const text=v=>String(v??'').trim();
 const now=()=>new Date().toISOString();
@@ -17,30 +18,6 @@ function financeType(v){const value=text(v).toLowerCase();return FINANCE_TYPES.h
 function evidenceState(v){const value=text(v).toLowerCase();return EVIDENCE_STATES.has(value)?value:'none'}
 function safeAmount(v){const n=Math.round(Number(v)||0);return Math.max(0,Math.min(n,999999999999))}
 function dateOnly(v){const value=text(v);return /^\d{4}-\d{2}-\d{2}$/.test(value)?value:new Date().toISOString().slice(0,10)}
-const SUPABASE_VERIFY_URL='https://renzehysxirjilvdxacv.supabase.co/auth/v1/verify';
-const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-const SUPABASE_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token';
-function authReturnHtml(session,path){
-  const payload=JSON.stringify(session).replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026');
-  const target=JSON.stringify(path||'/board/voices');
-  return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>로그인 복귀</title></head><body><p>관리자 로그인을 확인하고 있습니다.</p><script>(()=>{const session='+payload+',target='+target+';try{localStorage.setItem("'+SUPABASE_SESSION_KEY+'",JSON.stringify(session));sessionStorage.removeItem("ekodi-auth-token")}catch{}history.replaceState(null,"",target);location.replace(target)})()<\\/script></body></html>';
-}
-async function boardAuthReturn(req){
-  if(req.method!=='POST')return null;
-  const type=String(req.headers.get('content-type')||'').toLowerCase();
-  if(!type.includes('application/x-www-form-urlencoded')&&!type.includes('multipart/form-data'))return null;
-  let form;try{form=await req.clone().formData()}catch{return null}
-  if(String(form.get('ekodi_auth_return')||'')!=='1')return null;
-  const tokenHash=text(form.get('ekodi_token')||form.get('token_hash'));
-  const tokenType=text(form.get('ekodi_type')||'email').toLowerCase();
-  if(!tokenHash||tokenType!=='email')return new Response('로그인 복귀 인증값이 올바르지 않습니다.',{status:400,headers:{'content-type':'text/plain; charset=utf-8','cache-control':'no-store','referrer-policy':'no-referrer'}});
-  const response=await fetch(SUPABASE_VERIFY_URL,{method:'POST',headers:{apikey:SUPABASE_PUBLISHABLE_KEY,'content-type':'application/json','cache-control':'no-store'},body:JSON.stringify({token_hash:tokenHash,type:tokenType})});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok||!data?.access_token)return new Response('로그인 복귀를 완료하지 못했습니다. 관리자 로그인을 다시 진행해 주세요.',{status:response.status>=400&&response.status<600?response.status:502,headers:{'content-type':'text/plain; charset=utf-8','cache-control':'no-store','referrer-policy':'no-referrer'}});
-  const session={access_token:String(data.access_token),refresh_token:String(data.refresh_token||''),expires_at:Number(data.expires_at||0)||Math.floor(Date.now()/1000)+Number(data.expires_in||3600),user:data.user||null};
-  return new Response(authReturnHtml(session,new URL(req.url).pathname),{status:200,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store, max-age=0','pragma':'no-cache','referrer-policy':'no-referrer','x-content-type-options':'nosniff','x-ekodi-auth-return':'form-post-v1'}});
-}
-
 async function adminMe(req){
   const authorization=bearer(req);if(!/^Bearer\s+\S+/i.test(authorization))return null;
   const verify=new URL('/api/seonammedi/admin/me',new URL(req.url).origin);
@@ -189,7 +166,7 @@ function noticesPage(req){
 }
 
 export default {async fetch(req,env){
-  const authReturn=await boardAuthReturn(req);if(authReturn)return authReturn;
+  const authReturn=await handleAuthReturnPost(req);if(authReturn)return authReturn;
   const url=new URL(req.url),path=pathOf(req);
   if((path==='/'||path==='/voices'||path==='/voices/')&&req.method==='GET')return boardPage(req);
   if((path==='/finance'||path==='/finance/')&&req.method==='GET')return financePage(req);
