@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'auth-site/**'
+      - 'auth-return-post.js'
       - 'supabase/functions/identity-api/**'
       - 'supabase/functions/business-handoff-api/**'
       - 'site-worker.js'
@@ -36,6 +37,7 @@ jobs:
           node --check auth-site/client-auth.js
           node --check auth-site/author-auth.js
           node --check auth-site/business-auth.js
+          node --check auth-return-post.js
           node --check site-worker.js
           node --test test/admin-auth-cache-boundary.test.mjs
       - name: Verify One Login and invisible auth contract
@@ -70,7 +72,13 @@ jobs:
           grep -Fq 'button_auto_select:false' auth-site/client-auth.js
           grep -Fq "DIRECT_LOGIN=params.get('direct')==='1'" auth-site/client-auth.js
           grep -Fq 'window.google.accounts.id.prompt' auth-site/client-auth.js
+          grep -Fq "form.method='POST'" auth-site/client-auth.js
+          grep -Fq "ekodi_auth_return:'1'" auth-site/client-auth.js
           grep -Fq 'ekodi_token:proof.tokenHash' auth-site/client-auth.js
+          if grep -Eq 'target\.hash[[:space:]]*=[[:space:]]*new URLSearchParams\([^;]*ekodi_token' auth-site/client-auth.js; then
+            echo 'Universal identity auth must not put one-time credentials in URL fragments.'
+            exit 1
+          fi
           grep -Fq "function postLoginTarget()" auth-site/client-auth.js
           grep -Fq "const target=new URL(RETURN_TO)" auth-site/client-auth.js
           grep -Fq "isPlatformMy&&!['my','portal'].includes(site)" auth-site/client-auth.js
@@ -88,8 +96,15 @@ jobs:
 
           grep -Fq 'functions/v1/business-handoff-api' auth-site/business-auth.js
           grep -Fq 'functions/v1/identity-api' auth-site/business-auth.js
-          grep -Fq '/session/handoff' auth-site/business-auth.js
+          grep -Fq "sessionStorage.setItem('ekodi-business-session'" auth-site/business-auth.js
           grep -Fq 'response.status===403' auth-site/business-auth.js
+          if grep -Eq '(target|destination)\.hash[[:space:]]*=[[:space:]]*new URLSearchParams\([^;]*(ekodi_token|ekodi_admin_token)' auth-site/business-auth.js; then
+            echo 'Business auth must not put credentials in the address bar.'
+            exit 1
+          fi
+          grep -Fq "policyId:'AUTH-RETURN-URL-HYGIENE-001'" auth-return-post.js
+          grep -Fq "request.clone().formData()" auth-return-post.js
+          grep -Fq "referrer-policy':'no-referrer'" auth-return-post.js
           grep -Fq 'session_timeout' auth-site/business-auth.js
           grep -Fq 'google_library_timeout' auth-site/business-auth.js
           if grep -Fq 'onAuthStateChange(async' auth-site/business-auth.js; then
