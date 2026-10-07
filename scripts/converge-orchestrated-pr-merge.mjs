@@ -43,6 +43,13 @@ const independentBoardTouched=changedFiles.some(file=>
   file==='sites/seonammedi/public/app.js'||
   file==='.github/workflows/deploy-independent-board.yml'
 );
+const myTouched=changedFiles.some(file=>
+  file.startsWith('my/')||
+  file==='my-worker.js'||
+  file==='wrangler.my.toml'||
+  file==='deploy/manifests/my.worker.json'||
+  file==='.github/workflows/deploy-my.yml'
+);
 const sharedSiteTouched=changedFiles.some(file=>
   file.startsWith('sites/')||
   file.startsWith('auth-site/')||
@@ -58,6 +65,14 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='.github/workflows/converge-orchestrated-pr-merge.yml'
 );
 async function dispatchPostMergeDeploys(){
+  if(myTouched){
+    const dispatch=await api('/actions/workflows/deploy-my.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('My EKODI deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-my.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
   if(independentBoardTouched){
     const dispatch=await api('/actions/workflows/deploy-independent-board.yml/dispatches',{
       method:'POST',
