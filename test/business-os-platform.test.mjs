@@ -105,12 +105,14 @@ test('live gateway forwards authenticated aggregate RPCs and never contains a se
   assert.doesNotMatch(liveWorker,/SERVICE_ROLE|service_role|SUPABASE_SERVICE_ROLE_KEY/);
 });
 
-test('Business OS central auth has a dedicated one-time handoff path',()=>{
+test('Business OS central auth returns on the canonical origin without URL credentials',()=>{
   assert.match(authRouter,/site==='business'/);
   assert.match(authRouter,/business-auth\.js/);
   assert.match(businessAuth,/business-handoff-api/);
   assert.match(businessAuth,/Google 계정/);
-  assert.match(businessAuth,/ekodi_token/);
+  assert.match(businessAuth,/BUSINESS_HOME='https:\/\/ekodi\.kr\/business'/);
+  assert.match(businessAuth,/sessionStorage\.setItem\('ekodi-business-session'/);
+  assert.doesNotMatch(businessAuth,/fragment\s*=\s*\{[^}]*ekodi_token/s);
 });
 
 test('Business OS preserves the requested workspace across sign-in without trusting legacy UI query state',()=>{
