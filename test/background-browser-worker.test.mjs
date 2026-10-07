@@ -8,6 +8,7 @@ const policy=JSON.parse(fs.readFileSync(new URL('../config/background-browser-wo
 const workerWorkflow=fs.readFileSync(new URL('../.github/workflows/ekodi-background-browser-worker.yml',import.meta.url),'utf8');
 const boardRegistry=JSON.parse(fs.readFileSync(new URL('../config/board-surface-verification.json',import.meta.url),'utf8'));
 const sharedRelease=fs.readFileSync(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
+const boardHealth=fs.readFileSync(new URL('../.github/workflows/board-surface-native-health.yml',import.meta.url),'utf8');
 
 test('EKODI background browser policy is native, canonical-origin and isolated',()=>{
   assert.equal(policy.policyId,'EKODI-BROWSER-WORKER-001');
@@ -108,4 +109,17 @@ test('shared-site guarded release invokes native browser verification after prod
   const mobile=sharedRelease.match(/native_surface_verification_mobile:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
   assert.match(desktop,/needs:\s*deploy/);
   assert.match(mobile,/needs:\s*deploy/);
+});
+
+
+test('interactive board surfaces reuse EKODI native browser verification automatically',()=>{
+  assert.match(boardHealth,/workflows: \['Deploy EKODI Shared Site Core'\]/);
+  assert.match(boardHealth,/cron: '23 \*\/6 \* \* \*'/);
+  assert.equal((boardHealth.match(/uses:\s*\.\/\.github\/workflows\/ekodi-background-browser-worker\.yml/g)||[]).length,2);
+  assert.match(boardHealth,/surface_paths:\s*\/seonammedi\/,\/cgma\/,\/cgma\/notices\/1/);
+  assert.match(boardHealth,/device_profile:\s*desktop/);
+  assert.match(boardHealth,/device_profile:\s*mobile-portrait/);
+  assert.match(boardHealth,/\/api\/seonammedi\/voices/);
+  assert.match(boardHealth,/\/api\/seonammedi\/notices/);
+  assert.match(boardHealth,/\/cgma\/api\/notices/);
 });

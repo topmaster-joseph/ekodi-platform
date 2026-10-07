@@ -1,0 +1,68 @@
+name: EKODI Board Surface Native Health
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 */6 * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/board-surface-native-health.yml'
+      - '.github/workflows/ekodi-background-browser-worker.yml'
+      - 'config/background-browser-worker-policy.json'
+  workflow_run:
+    workflows: ['Deploy EKODI Shared Site Core']
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-board-surface-native-health
+  cancel-in-progress: true
+
+jobs:
+  public_api_contract:
+    name: Public board API contract
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify public read contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          check_json() {
+            local url="$1"
+            local expression="$2"
+            local body=''
+            for attempt in $(seq 1 5); do
+              body="$(curl -fsSL --max-time 20 "$url" 2>/dev/null || true)"
+              if printf '%s' "$body" | jq -e "$expression" >/dev/null 2>&1; then
+                echo "OK $url"
+                return 0
+              fi
+              sleep 3
+            done
+            echo "FAILED $url"
+            return 1
+          }
+          check_json 'https://ekodi.kr/api/seonammedi/voices' '.ok == true and (.items | type == "array")'
+          check_json 'https://ekodi.kr/api/seonammedi/notices' '.ok == true and (.items | type == "array")'
+          check_json 'https://ekodi.kr/cgma/api/notices' '(.items | type == "array")'
+
+  native_board_desktop:
+    name: EKODI Native Board Verification · Desktop
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      surface_paths: /seonammedi/,/cgma/,/cgma/notices/1
+      device_profile: desktop
+
+  native_board_mobile:
+    name: EKODI Native Board Verification · Mobile
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      surface_paths: /seonammedi/,/cgma/,/cgma/notices/1
+      device_profile: mobile-portrait
