@@ -113,7 +113,7 @@ jobs:
           set -euo pipefail
           branch="${REQUESTED_RELEASE_BRANCH_REF:-}"
           requested_task="${REQUESTED_RELEASE_TASK_ID:-}"
-          if [[ ! "$branch" =~ ^ai/[^/]+/(orch_[A-Za-z0-9-]+)$ ]]; then
+          if [[ ! "$branch" =~ ^ai/[^/]+/(orch_[A-Za-z0-9_-]+)$ ]]; then
             echo "Invalid orchestrator release branch supplied to staging: $branch" >&2
             exit 1
           fi
