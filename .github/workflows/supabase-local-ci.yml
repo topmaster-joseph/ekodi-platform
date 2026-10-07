@@ -30,20 +30,43 @@ jobs:
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect Supabase-impacting changes
+        id: scope
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+          printf '%s\n' "$files"
+          if printf '%s\n' "$files" | grep -Eq '^(supabase/|auth-site/|scripts/validate-supabase-public-grants\.mjs$|test/[^/]*supabase[^/]*\.test\.mjs$|\.github/workflows/supabase-local-ci\.yml$)'; then
+            echo 'needs_db=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'needs_db=false' >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: actions/setup-node@v7
+        if: github.event_name != 'pull_request' || steps.scope.outputs.needs_db == 'true'
         with:
           node-version: '24'
 
       - name: Validate explicit Supabase public-object access policy
+        if: github.event_name != 'pull_request' || steps.scope.outputs.needs_db == 'true'
         run: |
           node scripts/validate-supabase-public-grants.mjs
           node --test test/supabase-public-grants-policy.test.mjs
 
       - name: Initialize ephemeral Supabase config
+        if: github.event_name != 'pull_request' || steps.scope.outputs.needs_db == 'true'
         run: npx --yes supabase@$SUPABASE_CLI_VERSION init --force
 
       - name: Start database-only Supabase
+        if: github.event_name != 'pull_request' || steps.scope.outputs.needs_db == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -54,6 +77,7 @@ jobs:
           mv "$RUNNER_TEMP/ekodi-migrations" supabase/migrations
 
       - name: Apply production-compatible test baseline
+        if: github.event_name != 'pull_request' || steps.scope.outputs.needs_db == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -63,6 +87,7 @@ jobs:
             < supabase/ci/platform_baseline.sql
 
       - name: Apply proposed migrations on baseline
+        if: github.event_name != 'pull_request' || steps.scope.outputs.needs_db == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -74,6 +99,7 @@ jobs:
           done
 
       - name: Prove secure defaults for new public objects
+        if: github.event_name != 'pull_request' || steps.scope.outputs.needs_db == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -114,6 +140,7 @@ jobs:
           SQL
 
       - name: Lint Postgres functions
+        if: github.event_name != 'pull_request' || steps.scope.outputs.needs_db == 'true'
         run: >-
           npx --yes supabase@$SUPABASE_CLI_VERSION db lint
           --db-url "$TEST_DB_URL"
@@ -121,9 +148,11 @@ jobs:
           --fail-on error
 
       - name: Run pgTAP database contracts
+        if: github.event_name != 'pull_request' || steps.scope.outputs.needs_db == 'true'
         run: npx --yes supabase@$SUPABASE_CLI_VERSION test db --db-url "$TEST_DB_URL"
 
       - name: Run application contract tests
+        if: github.event_name != 'pull_request' || steps.scope.outputs.needs_db == 'true'
         run: npm test
 
       - name: Stop ephemeral Supabase database

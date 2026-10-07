@@ -54,7 +54,32 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version: "1.25.x"
+      - name: Detect lightweight My EKODI-only PR
+        id: scope
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+          printf '%s\n' "$files"
+          if [[ -n "$files" ]] && ! printf '%s\n' "$files" | grep -Eqv '^my/'; then
+            echo 'my_only=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'my_only=false' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Fast My EKODI checks
+        if: github.event_name == 'pull_request' && steps.scope.outputs.my_only == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          find my -maxdepth 1 -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
+          test -s my/index.html
+          test -s my/app.js
       - name: Validate GitHub Actions workflows
+        if: github.event_name != 'pull_request' || steps.scope.outputs.my_only != 'true'
         run: |
           go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
           "$(go env GOPATH)/bin/actionlint" -color -shellcheck= -pyflakes= \
@@ -74,19 +99,23 @@ jobs:
             .github/workflows/verify-ekodi-orchestrator-live-e2e.yml \
             .github/workflows/supabase-environment-boundary.yml
       - name: Enforce traffic-ready data plane
+        if: github.event_name != 'pull_request' || steps.scope.outputs.my_only != 'true'
         run: |
           node --check data-plane.js
           node --check data-plane-adapters.js
           node --test test/data-plane.test.mjs
       - name: Validate traffic-aware reliability gate
+        if: github.event_name != 'pull_request' || steps.scope.outputs.my_only != 'true'
         run: |
           node --check scripts/reliability-validation-lib.mjs
           node --check scripts/run-reliability-validation.mjs
           node scripts/run-reliability-validation.mjs --validate-only
           node --test test/reliability-validation.test.mjs
       - name: Validate Supabase DEV PROD boundary
+        if: github.event_name != 'pull_request' || steps.scope.outputs.my_only != 'true'
         run: node scripts/validate-supabase-environment-boundary.mjs
       - name: Run static policy and code checks
+        if: github.event_name != 'pull_request' || steps.scope.outputs.my_only != 'true'
         env:
           EKODI_ORCHESTRATION_STATIC_POLICY: '1'
         run: |
@@ -94,14 +123,17 @@ jobs:
           node scripts/validate-orchestrator-completion-reconciliation.mjs
           node --test test/orchestrator-completion-reconciler.test.mjs test/github-actions-oidc.test.mjs test/github-actions-completion-evidence.test.mjs test/orchestrator-completion-reconciliation-endpoint.test.mjs
       - run: npm run build
+        if: github.event_name != 'pull_request' || steps.scope.outputs.my_only != 'true'
       - name: Validate AI provider independence
+        if: github.event_name != 'pull_request' || steps.scope.outputs.my_only != 'true'
         run: npm run validate:ai-resilience
       - name: Verify no-provider survival
+        if: github.event_name != 'pull_request' || steps.scope.outputs.my_only != 'true'
         env:
           AI_PROVIDER: NONE
         run: npm run test:ai-none
       - name: Run full tests with PR regression gate
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.scope.outputs.my_only != 'true'
         run: node scripts/test-no-regression.mjs
       - name: Run full tests on main
         if: github.event_name != 'pull_request'
