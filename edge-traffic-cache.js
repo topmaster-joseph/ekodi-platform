@@ -91,7 +91,7 @@ export async function serveWithSafeEdgeCache(request,ctx,producer){
     return produced;
   })();
   if(inflight.size<MAX_INFLIGHT_KEYS)inflight.set(id,run);
-  try{return withCacheState(await run,'MISS')}
+  try{const fresh=await run;return withCacheState(fresh.clone(),'MISS')}
   finally{if(inflight.get(id)===run)inflight.delete(id)}
 }
 
