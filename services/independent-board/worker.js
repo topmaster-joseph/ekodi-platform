@@ -23,7 +23,7 @@ const SUPABASE_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token';
 function authReturnHtml(session,path){
   const payload=JSON.stringify(session).replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026');
   const target=JSON.stringify(path||'/board/voices');
-  return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>로그인 복귀</title></head><body><p>관리자 로그인을 확인하고 있습니다.</p><script>(()=>{const session='+payload+',target='+target+';try{localStorage.setItem("'+SUPABASE_SESSION_KEY+'",JSON.stringify(session));sessionStorage.removeItem("ekodi-auth-token")}catch{}history.replaceState(null,"",target);location.replace(target)})()<\\/script></body></html>';
+  return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>로그인 복귀</title></head><body><p>관리자 로그인을 확인하고 있습니다.</p><script>(()=>{const session='+payload+',target='+target+';try{localStorage.setItem("'+SUPABASE_SESSION_KEY+'",JSON.stringify(session));sessionStorage.removeItem("ekodi-auth-token")}catch{}history.replaceState(null,"",target);location.replace(target)})()</script></body></html>';
 }
 async function boardAuthReturn(req){
   if(req.method!=='POST')return null;

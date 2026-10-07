@@ -242,6 +242,8 @@ test('SeonamMedi board consumes Google return by POST so one-time token is not p
     assert.equal(html.includes(tokenHash),false);
     assert.match(html,/localStorage\.setItem/);
     assert.match(html,/location\.replace\(target\)/);
+    assert.match(html,/<\/script><\/body><\/html>$/);
+    assert.equal(html.includes('<\\/script>'),false);
   }finally{globalThis.fetch=original}
 });
 
