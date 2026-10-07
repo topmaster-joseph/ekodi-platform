@@ -8,7 +8,7 @@
   const INTEGRATION = { not_ready:'미연동', manual:'수동', deeplink:'딥링크', api:'API', feed:'Feed', live:'실연동' };
   const OUTREACH = { none:'미연락', planned:'연락 예정', sent:'문의 발송', replied:'회신 수신', action_required:'추가조치', closed:'연락 종료' };
   const token = () => { try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } };
-  const mallAdminUrl = () => { const target=new URL(MALL_ADMIN); const value=token(); if(value) target.hash=new URLSearchParams({ekodi_admin_token:value}).toString(); return target.href; };
+  const mallAdminUrl = () => { const target=new URL(MALL_ADMIN); target.hash=''; return target.href; };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   async function api(path, options = {}) {
     const headers = new Headers(options.headers || {});
