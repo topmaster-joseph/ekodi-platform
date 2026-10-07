@@ -45,6 +45,9 @@ const independentBoardTouched=changedFiles.some(file=>
 );
 const sharedSiteTouched=changedFiles.some(file=>
   file.startsWith('sites/')||
+  file==='deploy/manifests/shared-site.worker.json'||
+  file==='seonammedi-admin-control.js'||
+  file==='wrangler.site.toml'||
   file==='platform-router-entry-worker.js'||
   file==='site-worker.js'||
   file==='scripts/build.mjs'||
