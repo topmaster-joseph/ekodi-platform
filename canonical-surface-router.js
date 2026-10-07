@@ -23,7 +23,7 @@ const AUTH_CSP=[
   "img-src 'self' data: https://lh3.googleusercontent.com https://*.tosspayments.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
-  "form-action 'self' https://renzehysxirjilvdxacv.supabase.co https://*.tosspayments.com",
+  "form-action 'self' https://renzehysxirjilvdxacv.supabase.co https://*.tosspayments.com https://seonammedi.kr https://www.seonammedi.kr https://xn--3e0b8b58jw4co4mnpll3k.kr https://www.xn--3e0b8b58jw4co4mnpll3k.kr",
   "object-src 'none'",
 ].join('; ');
 const AUTH_ASSETS=new Set(['/auth.js','/auth-bootstrap.js','/auth-entry.js','/auth.css','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/google-origin-bridge.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);

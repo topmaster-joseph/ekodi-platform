@@ -31,6 +31,9 @@ test('central auth entry stays executable under restrictive CSP without inline J
   const authCsp = authRouterWorker.match(/const AUTH_CSP=\[[\s\S]*?\]\.join\('; '\);/)?.[0] || '';
   assert.ok(authCsp, 'AUTH_CSP block must remain present');
   assert.doesNotMatch(authCsp, /script-src[^\n]*'unsafe-inline'/);
+  assert.match(authCsp, /form-action[^\n]*https:\/\/seonammedi\.kr/);
+  assert.match(authCsp, /form-action[^\n]*https:\/\/www\.seonammedi\.kr/);
+  assert.match(authCsp, /form-action[^\n]*https:\/\/xn--3e0b8b58jw4co4mnpll3k\.kr/);
 });
 
 test('guarded production release verifies current auth entry, bridge and workspace handoff assets', () => {
