@@ -219,6 +219,7 @@ on:
       - 'test/mcp-client-policy.test.mjs'
       - '.github/workflows/deploy-control-api.yml'
       - 'test/control-trigger-deploy-guard.test.mjs'
+  # Main push releases must originate from an orchestrated PR merge; the release gate resolves that PR provenance.
   push:
     branches: [main]
     paths:
