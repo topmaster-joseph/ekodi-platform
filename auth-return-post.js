@@ -33,6 +33,7 @@ async function readAuthReturnForm(request){
     return form;
   }catch{return null}
 }
+function safeContextValue(value,max=180){const text=String(value||'').trim();return text.length<=max&&/^[A-Za-z0-9:_-]*$/.test(text)?text:''}
 async function exchangeOneTimeToken(tokenHash,type,fetchImpl){
   const response=await fetchImpl(SUPABASE_VERIFY_URL,{
     method:'POST',
@@ -73,6 +74,7 @@ export async function handleAuthReturnPost(request,{fetchImpl=fetch}={}){
   if(!form)return null;
   const tokenHash=String(form.get('ekodi_token')||form.get('token_hash')||'').trim();
   const type=String(form.get('ekodi_type')||'email').trim().toLowerCase();
+  const context={workspace:safeContextValue(form.get('ekodi_workspace')),tenant:safeContextValue(form.get('ekodi_tenant')),store:safeContextValue(form.get('ekodi_store'))};
   if(!ONE_TIME_TOKEN_RE.test(tokenHash))return errorPage('로그인 복귀 인증값이 올바르지 않습니다.',400);
   if(type!=='email')return errorPage('지원하지 않는 로그인 복귀 유형입니다.',400);
   try{
