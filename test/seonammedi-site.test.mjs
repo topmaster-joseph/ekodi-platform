@@ -889,3 +889,12 @@ test('seonammedi auth bridge falls back to the registered Supabase public endpoi
     assert.match(called,/^https:\/\/renzehysxirjilvdxacv\.supabase\.co\/auth\/v1\/verify$/);
   }finally{globalThis.fetch=original}
 });
+
+
+test('seonammedi auth bridge changes automatically route through guarded Control production release',async()=>{
+  const workflow=await readFile(new URL('../.github/workflows/redeploy-control-on-central-core.yml',import.meta.url),'utf8');
+  assert.match(workflow,/seonammedi-admin-control\.js/);
+  assert.match(workflow,/gh workflow run deploy-control-api\.yml --ref main/);
+  assert.match(workflow,/release_branch_ref/);
+  assert.match(workflow,/release_task_id/);
+});
