@@ -1,3 +1,4 @@
+import { handleAuthReturnPost } from '../../auth-return-post.js';
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',...extra}});
 const text=v=>String(v??'').trim();
 const now=()=>new Date().toISOString();
@@ -166,6 +167,7 @@ function noticesPage(req){
 }
 
 export default {async fetch(req,env){
+  const authReturn=await handleAuthReturnPost(req);if(authReturn)return authReturn;
   const url=new URL(req.url),path=pathOf(req);
   if((path==='/'||path==='/voices'||path==='/voices/')&&req.method==='GET')return boardPage(req);
   if((path==='/finance'||path==='/finance/')&&req.method==='GET')return financePage(req);
