@@ -254,3 +254,13 @@ test('SeonamMedi central auth uses form POST only for the customer-domain return
   assert.match(client,/ekodi_auth_return:'1'/);
   assert.match(client,/form\.submit\(\)/);
 });
+
+
+test('standalone board keeps a unified wide layout and stable footer',async()=>{
+  const mod=await import(new URL('../services/independent-board/worker.js?layout='+Date.now(),import.meta.url));
+  const response=await mod.default.fetch(new Request('https://seonammedi.kr/board/voices'),{});
+  const html=await response.text();
+  assert.match(html,/width:min\(1120px,calc\(100% - 32px\)\)/);
+  assert.match(html,/calc\(\(100% - 1120px\)\/2\)/);
+  assert.match(html,/white-space:nowrap/);
+});
