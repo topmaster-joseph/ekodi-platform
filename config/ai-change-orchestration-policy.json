@@ -397,7 +397,29 @@
         "ekodi-proposals",
         "human-decision-required"
       ],
-      "duplicateReportSuppression": true
+      "duplicateReportSuppression": true,
+      "siteDailyAccessReport": {
+        "required": true,
+        "source": "ekodi-traffic-intelligence",
+        "reportSection": "site-daily-access-status",
+        "timeBasisMustBeExplicit": true,
+        "includeSiteRanking": true,
+        "includeTotal": true,
+        "includePreviousDayComparison": true,
+        "metrics": [
+          "humanSessions",
+          "requestTotal",
+          "searchBotRequests",
+          "ekodiInternalRequests",
+          "otherBotRequests",
+          "unclassifiedRequests"
+        ],
+        "humanSessionsMeaning": "privacy-preserving-daily-browser-session-signal-not-identified-unique-person",
+        "requestAndHumanSessionMetricsMustRemainDistinct": true,
+        "unavailableDataDisposition": "state-ekodi-confirmation-unavailable",
+        "partialOrErrorStateMustBeReported": true,
+        "noEstimation": true
+      }
     }
   },
   "executionFallback": {
