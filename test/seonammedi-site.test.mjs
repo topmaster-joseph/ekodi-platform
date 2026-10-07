@@ -898,3 +898,5 @@ test('seonammedi auth bridge changes automatically route through guarded Control
   assert.match(workflow,/release_branch_ref/);
   assert.match(workflow,/release_task_id/);
 });
+
+test('seonammedi public latest updates follow hourly monitor and expose collected news',async()=>{const app=await readFile(new URL('app.js',root),'utf8');assert.match(app,/renderHomeMonitorUpdates\(data\)/);assert.match(app,/source_type==='news'\?'자동수집 · 공개보도'/);assert.match(app,/60\*60\*1000/);});
