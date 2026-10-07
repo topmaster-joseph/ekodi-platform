@@ -27,6 +27,7 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 env:
   WRANGLER_VERSION: '4.119.0'
