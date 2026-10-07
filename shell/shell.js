@@ -31,9 +31,10 @@ const hidden=script?.dataset?.ekodiShell==='off';
 const requestedSurface=normalizeSurface(script?.dataset?.ekodiSurface||'workspace');
 const memberGateMode=String(script?.dataset?.ekodiMemberGate||'shared').trim().toLowerCase();
 const fragment=new URLSearchParams(location.hash.startsWith('#')?location.hash.slice(1):'');
-const handedWorkspace=fragment.get('ekodi_workspace')||'';
-const handedTenant=fragment.get('ekodi_tenant')||'';
-const handedStore=fragment.get('ekodi_store')||'';
+let authReturnContext={};try{const raw=JSON.parse(sessionStorage.getItem('ekodi-auth-return-context')||'{}');if(Date.now()-Number(raw?.createdAt||0)<120000)authReturnContext=raw;sessionStorage.removeItem('ekodi-auth-return-context')}catch{}
+const handedWorkspace=fragment.get('ekodi_workspace')||String(authReturnContext.workspace||'');
+const handedTenant=fragment.get('ekodi_tenant')||String(authReturnContext.tenant||'');
+const handedStore=fragment.get('ekodi_store')||String(authReturnContext.store||'');
 
 const FALLBACK_THEME={
   version:7,
