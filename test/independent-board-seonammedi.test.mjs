@@ -191,9 +191,12 @@ test('orchestrated merge dispatches board/shared-site deploys and live legacy ha
   assert.match(deployWorkflow,/pull-requests: read/);
   assert.match(script,/independentBoardTouched/);
   assert.match(script,/sharedSiteTouched/);
+  assert.match(script,/centralControlTouched/);
   assert.match(script,/file\.startsWith\('sites\/'\)/);
   assert.match(script,/deploy-independent-board\.yml\/dispatches/);
   assert.match(script,/deploy-site-core\.yml\/dispatches/);
+  assert.match(script,/deploy-control-api\.yml\/dispatches/);
+  assert.match(script,/ekodi-command-plane\.js/);
   assert.match(script,/release_branch_ref:branch/);
   assert.match(script,/release_task_id:taskId/);
   assert.match(script,/sync_domains:'false'/);
