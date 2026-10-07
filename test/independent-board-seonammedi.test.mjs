@@ -92,6 +92,11 @@ test('independent board deployment provisions its own storage and verifies real 
   assert.match(workflow,/https:\/\/ekodi\.kr\/seonammedi\/board\/voices/);
   assert.match(workflow,/https:\/\/ekodi\.kr\/seonammedi\/board\/finance/);
   assert.match(workflow,/https:\/\/ekodi\.kr\/seonammedi\/board\/notices/);
+  assert.match(workflow,/release_branch_ref:/);
+  assert.match(workflow,/release_task_id:/);
+  assert.match(workflow,/REQUESTED_RELEASE_BRANCH_REF/);
+  assert.match(workflow,/commits\/\$GITHUB_SHA\/pulls/);
+  assert.match(workflow,/Requested release task does not match orchestrator branch/);
   assert.match(workflow,/Production create-list-reply canary and cleanup/);
   assert.match(workflow,/DELETE FROM board_replies WHERE post_id=\$post_id/);
   assert.match(workflow,/DELETE FROM board_posts WHERE id=\$post_id/);
