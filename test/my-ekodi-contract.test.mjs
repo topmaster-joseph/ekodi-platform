@@ -117,6 +117,8 @@ test('My EKODI security middleware runs before static assets in staging and prod
   assert.match(worker,/'x-ekodi-service':'my-ekodi'/);
   assert.match(worker,/x-robots-tag','noindex, nofollow, noarchive/);
   assert.match(worker,/contentType\.includes\('text\/html'\)/);
+  assert.match(worker,/max-age=31536000, immutable/);
+  assert.match(worker,/withVersionedAssetCache/);
   assert.match(manifest,/x-ekodi-service: my-ekodi/);
 });
 
@@ -276,4 +278,27 @@ test('My EKODI provides explicit privacy-first personal character selection',asy
   assert.match(profileApi,/character_biometric_payload_forbidden/);
   assert.match(profileApi,/\['canonical','personal'\]/);
   assert.match(profileApi,/admin\.auth\.admin\.updateUserById/);
+});
+
+
+test('My versioned assets use immutable browser caching while runtime data remains uncached',async()=>{
+  const [html,worker]=await Promise.all([read('my/index.html'),read('my-worker.js')]);
+  assert.match(html,/app\.js\?v=20261007-access-batch-cache-v1/);
+  assert.match(worker,/searchParams\.has\('v'\)/);
+  assert.match(worker,/public, max-age=31536000, immutable/);
+  assert.match(worker,/\/config\.js'[\s\S]{0,240}cache-control':'no-store'/);
+});
+
+test('Convergent merge dispatches My EKODI production release with the orchestrator receipt',async()=>{
+  const [converge,workflow]=await Promise.all([
+    read('scripts/converge-orchestrated-pr-merge.mjs'),
+    read('.github/workflows/deploy-my.yml')
+  ]);
+  assert.match(converge,/const myTouched=/);
+  assert.match(converge,/deploy-my\.yml\/dispatches/);
+  assert.match(converge,/release_branch_ref:branch,release_task_id:taskId/);
+  assert.match(workflow,/release_branch_ref:/);
+  assert.match(workflow,/release_task_id:/);
+  assert.match(workflow,/EKODI_RELEASE_BRANCH_REF:/);
+  assert.match(workflow,/EKODI_RELEASE_TASK_ID:/);
 });
