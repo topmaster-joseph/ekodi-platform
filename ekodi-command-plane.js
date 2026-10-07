@@ -4,7 +4,7 @@ import { decideEkodiConsultation, summarizeConsultationExecution } from './ai-co
 
 const RISK_LEVELS = new Set(['low', 'normal', 'high', 'critical']);
 const PULSE_KINDS = new Set(['manual_goal', 'schedule', 'webhook', 'repository', 'monitor', 'service_health', 'system_event']);
-const RED_CHANGE_CLASSES = new Set(['red', 'constitutional_change', 'production_dns', 'permission_expansion', 'destructive_data', 'secrets']);
+const ABSOLUTE_BLOCK_CHANGE_CLASSES = new Set(['constitutional_change', 'permission_expansion', 'destructive_data', 'secrets']);
 
 function text(value, max = 240) {
   return String(value ?? '').trim().slice(0, max);
@@ -213,8 +213,8 @@ function validHumanApproval(input = {}, taskId = '') {
 
 function qualifiesStandingDelegation(delegation = {}, event, risk, humanApproval = false) {
   if (!delegation || delegation.allowed !== true) return false;
-  if ((risk === 'high' || risk === 'critical') && !humanApproval) return false;
-  if ((event.requiresHumanDecision || RED_CHANGE_CLASSES.has(event.changeClass)) && !humanApproval) return false;
+  if (risk === 'critical' && !humanApproval) return false;
+  if ((event.requiresHumanDecision || ABSOLUTE_BLOCK_CHANGE_CLASSES.has(event.changeClass)) && !humanApproval) return false;
   return delegation.reversible === true
     && delegation.audited === true
     && delegation.preflightVerified === true
@@ -396,7 +396,7 @@ export function buildEkodiCommandPlane(env = {}, providers = []) {
           schemaVersion: 2,
           state: 'auto_blocked',
           event,
-          reason: event.requiresHumanDecision || RED_CHANGE_CLASSES.has(event.changeClass) || risk === 'high' || risk === 'critical'
+          reason: event.requiresHumanDecision || ABSOLUTE_BLOCK_CHANGE_CLASSES.has(event.changeClass) || risk === 'critical'
             ? 'sovereign_or_high_impact_gate'
             : 'standing_delegation_not_satisfied',
         });
