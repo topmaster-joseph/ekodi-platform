@@ -90,7 +90,8 @@
       "class": "workspace_user_site",
       "canonicalUrl": "https://ekodi.kr/cgma",
       "customDomains": [
-        "https://cgma.or.kr"
+        "https://cgma.or.kr",
+        "https://www.cgma.or.kr"
       ],
       "migrationState": "retain_existing",
       "runtime": "site_access_registry+public_site_controls",
@@ -216,5 +217,53 @@
     "siteAdminIncluded": true,
     "futureSitesAutoInherit": true,
     "perSiteOptOutAllowed": false
+  },
+  "boardProvisioning": {
+    "policyId": "EKODI-SITE-BOARD-PROVISIONING-001",
+    "status": "enforced",
+    "sourceOfTruth": "site-lifecycle-registry",
+    "eligibleClasses": [
+      "workspace_user_site"
+    ],
+    "dynamicTenantSource": "active_customer_tenants",
+    "boardPathSuffix": "/board",
+    "sharedPlatformDependency": "authentication_identity_only",
+    "authorizationOwner": "board_local_membership",
+    "provisioningMode": "idempotent_reconcile",
+    "futureSitesAutoInherit": true,
+    "perSiteOptOutAllowed": false,
+    "genericPlatformServicesExcludedByDefault": true,
+    "destructiveReconciliationForbidden": true,
+    "reconcileIntervalMinutes": 60,
+    "independentSites": [
+      {
+        "id": "ekodimission",
+        "name": "에코디선교회",
+        "class": "workspace_user_site",
+        "canonicalUrl": "https://ekodi.kr/ekodimission",
+        "boardSiteId": "ekodimission"
+      },
+      {
+        "id": "seonammedi",
+        "name": "서남권 국립의대 소통센터",
+        "class": "workspace_user_site",
+        "canonicalUrl": "https://seonammedi.kr/",
+        "pathAlias": "/seonammedi",
+        "boardSiteId": "seonammedi",
+        "customDomains": [
+          "seonammedi.kr",
+          "www.seonammedi.kr",
+          "xn--3e0b8b58jw4co4mnpll3k.kr",
+          "www.xn--3e0b8b58jw4co4mnpll3k.kr"
+        ]
+      },
+      {
+        "id": "pyeonggongmok",
+        "name": "평생공부하는 목회자 모임",
+        "class": "workspace_user_site",
+        "canonicalUrl": "https://ekodi.kr/pyeonggongmok",
+        "boardSiteId": "pyeonggongmok"
+      }
+    ]
   }
 }
