@@ -4,9 +4,11 @@ import {
   adaptiveModeFromUsagePercent,
   adaptiveModeFromBurnRate,
   buildAdaptiveInfrastructureDecision,
+  classifyTrafficCapacity,
   classifyServiceCriticality,
   metricBurnRate,
-  serviceActionForMode
+  serviceActionForMode,
+  trafficCapacityTierFromConcurrentSessions
 } from '../adaptive-resource-orchestrator.js';
 
 test('usage thresholds map to NORMAL SAVE PROTECT SURVIVE',()=>{
@@ -86,4 +88,53 @@ test('current low paid usage remains normal instead of overreacting',()=>{
   assert.equal(decision.mode,'normal');
   assert.ok(decision.highestBurnRate<0.7);
   assert.equal(decision.blockNonessential,false);
+});
+
+
+test('100/1000/10000 concurrent sessions map to explicit traffic capacity tiers',()=>{
+  assert.equal(trafficCapacityTierFromConcurrentSessions(100),'L1');
+  assert.equal(trafficCapacityTierFromConcurrentSessions(101),'L2');
+  assert.equal(trafficCapacityTierFromConcurrentSessions(1000),'L2');
+  assert.equal(trafficCapacityTierFromConcurrentSessions(1001),'L3');
+  assert.equal(trafficCapacityTierFromConcurrentSessions(10000),'L3');
+  assert.equal(trafficCapacityTierFromConcurrentSessions(10001),'PROTECT');
+  assert.equal(trafficCapacityTierFromConcurrentSessions(null),null);
+});
+
+test('healthy high concurrency is observed without degrading service from concurrency alone',()=>{
+  const decision=buildAdaptiveInfrastructureDecision({
+    metrics:[],
+    runtimeSignals:{concurrentSessions:5000,sustainedWindow:'daily'}
+  });
+  assert.equal(decision.trafficCapacity.tier,'L3');
+  assert.equal(decision.trafficCapacity.sustained,true);
+  assert.equal(decision.trafficCapacity.dedicatedCapacityCandidate,true);
+  assert.equal(decision.trafficCapacity.promotionEligible,false);
+  assert.equal(decision.trafficCapacity.concurrencyAloneChangesProtectionMode,false);
+  assert.equal(decision.mode,'normal');
+});
+
+test('high concurrency plus independent queue pressure raises the matching protection floor',()=>{
+  const decision=buildAdaptiveInfrastructureDecision({
+    metrics:[],
+    runtimeSignals:{concurrentSessions:5000,sustainedWindow:'weekly',queuePressure:true}
+  });
+  assert.equal(decision.trafficCapacity.tier,'L3');
+  assert.deepEqual(decision.trafficCapacity.pressureSignals,['queue_pressure']);
+  assert.equal(decision.trafficCapacity.promotionEligible,true);
+  assert.equal(decision.reasons.trafficCapacityMode,'protect');
+  assert.equal(decision.mode,'protect');
+});
+
+test('persistent demand can become a dedicated-capacity candidate without automatic paid upgrade',()=>{
+  const capacity=classifyTrafficCapacity({
+    concurrentSessions:12000,
+    sustainedWindow:'monthly',
+    rpsPressure:true
+  });
+  assert.equal(capacity.tier,'PROTECT');
+  assert.equal(capacity.sustainedWindow,'monthly');
+  assert.equal(capacity.dedicatedCapacityCandidate,true);
+  assert.equal(capacity.capacityModeFloor,'survive');
+  assert.equal(capacity.automaticPaidUpgrade,false);
 });

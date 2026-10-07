@@ -32,4 +32,9 @@ if(!apiConfig.includes('name = "AUTH_RATE_LIMITER"'))fail('control API auth limi
 if(p.quotaProtection?.warningPercent!==70||p.quotaProtection?.protectPercent!==90||p.quotaProtection?.circuitBreakerPercent!==100)fail('70/90/100 quota protection thresholds required');
 if(!Array.isArray(p.quotaProtection?.stopRetryStatuses)||!p.quotaProtection.stopRetryStatuses.includes(429)||!p.quotaProtection.stopRetryStatuses.includes(1027))fail('429/1027 circuit-breaker signals required');
 if(p.failurePolicy?.circuitBreaker!==true)fail('circuit breaker required');
+if(p.sustainedDemand?.windows?.join(',')!=='daily,weekly,monthly')fail('daily/weekly/monthly sustained windows required');
+if(p.sustainedDemand?.classificationSeparateFromProtection!==true)fail('capacity classification must remain separate from protection');
+if(p.sustainedDemand?.concurrencyAloneChangesProtectionMode!==false)fail('concurrency alone must not change protection mode');
+if(p.sustainedDemand?.corroboratingPressureRequiredForProtection!==true)fail('independent pressure must corroborate protection');
+if(p.sustainedDemand?.automaticPaidUpgrade!==false)fail('sustained demand must not buy capacity automatically');
 if(!process.exitCode)console.log('EKODI-CONCURRENT-TRAFFIC-10K-001 validated.');
