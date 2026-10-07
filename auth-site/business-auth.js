@@ -2,7 +2,7 @@ const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
 const HANDOFF=`${SUPABASE_URL}/functions/v1/business-handoff-api`;
-const BUSINESS_HOME='https://business.ekodi.kr/';
+const BUSINESS_HOME='https://ekodi.kr/business';
 const BUSINESS_WORKSPACES=new Set(['ekodibiz','jadam']);
 const params=new URLSearchParams(location.search);
 const $=id=>document.getElementById(id);
@@ -14,13 +14,14 @@ function safeReturn(raw){
   if(!raw)return BUSINESS_HOME;
   try{
     const target=new URL(raw);
-    if(target.protocol!=='https:'||target.username||target.password||target.origin!=='https://business.ekodi.kr')return BUSINESS_HOME;
+    const canonical=target.origin==='https://ekodi.kr'&&(target.pathname==='/business'||target.pathname.startsWith('/business/'));
+    if(target.protocol!=='https:'||target.username||target.password||!canonical)return BUSINESS_HOME;
     target.hash='';target.searchParams.delete('problem');
     return target.href;
   }catch{return BUSINESS_HOME}
 }
 function workspaceFromReturn(raw){
-  try{const path=new URL(raw).pathname.replace(/^\/+|\/+$/g,'').toLowerCase();return BUSINESS_WORKSPACES.has(path)?path:null}catch{return null}
+  try{let path=new URL(raw).pathname.replace(/^\/+|\/+$/g,'').toLowerCase();if(path.startsWith('business/'))path=path.slice('business/'.length);return BUSINESS_WORKSPACES.has(path)?path:null}catch{return null}
 }
 const RETURN_TO=safeReturn(params.get('return_to')||params.get('returnTo'));
 const REQUESTED_WORKSPACE=workspaceFromReturn(RETURN_TO);
@@ -74,12 +75,12 @@ function showRetry(message){
   show('signedIn',false);show('signedOut',true);show('googleButtonHost',false);show('googleRetry',true);show('cancelSignedOut',true);
   notice('authStatus',message,'error');
 }
-function redirectWithToken(tokenHash,type='email',workspace=null){
-  if(!tokenHash)throw new Error('handoff_token_missing');
-  const target=new URL(RETURN_TO);
-  const fragment={ekodi_token:tokenHash,ekodi_type:type};
-  if(workspace)fragment.ekodi_workspace=workspace;
-  target.hash=new URLSearchParams(fragment).toString();
+function redirectWithSession(s,workspace=null){
+  if(!s?.access_token)throw new Error('business_session_missing');
+  const target=new URL(RETURN_TO);target.hash='';
+  const stored={accessToken:s.access_token,refreshToken:s.refresh_token||'',expiresAt:Number(s.expires_at||0)||Math.floor(Date.now()/1000)+Number(s.expires_in||3600),user:{id:s.user?.id||'',email:s.user?.email||''}};
+  if(workspace)stored.handoffWorkspace=workspace;
+  try{sessionStorage.setItem('ekodi-business-session',JSON.stringify(stored))}catch{}
   location.assign(target.href);
 }
 async function tryBusinessHandoff(s){
@@ -88,12 +89,11 @@ async function tryBusinessHandoff(s){
   const text=await response.text();let data={};try{data=text?JSON.parse(text):{}}catch{}
   if(response.status===403)return false;
   if(!response.ok||!data.tokenHash)throw new Error(data.error||`business_handoff_${response.status}`);
-  redirectWithToken(data.tokenHash,data.type||'email',data.workspace||REQUESTED_WORKSPACE||'ekodibiz');
+  redirectWithSession(s,data.workspace||REQUESTED_WORKSPACE||'ekodibiz');
   return true;
 }
 async function freeIdentityHandoff(s){
-  const proof=await identity('/session/handoff',{method:'POST',authenticated:true,session:s});
-  redirectWithToken(proof.tokenHash,proof.type||'email');
+  redirectWithSession(s,REQUESTED_WORKSPACE||null);
 }
 async function routeSession(s){
   if(routing)return;
