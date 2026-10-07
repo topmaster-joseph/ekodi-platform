@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
+const worker=await read('services/independent-board/worker.js');
 
 test('SeonamMedi citizen voices use the standalone board API directly',async()=>{
   const [app,worker,config]=await Promise.all([
