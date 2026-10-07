@@ -329,6 +329,14 @@ for (const [id, group] of menus) {
     if (!alreadyActive) {
       const trigger = await resolveMenuTrigger(id, group);
       await dispatchClick(trigger);
+      try {
+        await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 12000 });
+      } catch {
+        console.log(`[PROD-E2E] ${id}: activation retry after slow/lazy module response`);
+        const retryTrigger = await resolveMenuTrigger(id, group);
+        await dispatchClick(retryTrigger);
+        await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 20000 });
+      }
     }
   }
   await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 12000 });
