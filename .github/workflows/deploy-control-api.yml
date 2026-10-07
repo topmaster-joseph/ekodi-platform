@@ -714,6 +714,8 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       MAIL_GOOGLE_CLIENT_SECRET: ${{ secrets.MAIL_GOOGLE_CLIENT_SECRET }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+      EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
