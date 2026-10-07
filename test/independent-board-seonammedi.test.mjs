@@ -254,3 +254,15 @@ test('SeonamMedi central auth uses form POST only for the customer-domain return
   assert.match(client,/ekodi_auth_return:'1'/);
   assert.match(client,/form\.submit\(\)/);
 });
+
+
+test('notice board supports compressed photo attachments and native sharing',()=>{
+  assert.match(worker,/NOTICE_IMAGE_MAX=5/);
+  assert.match(worker,/saveNoticeImages/);
+  assert.match(worker,/BOARD_FILES\.put/);
+  assert.match(worker,/createImageBitmap/);
+  assert.match(worker,/1600\/Math\.max/);
+  assert.match(worker,/navigator\.share/);
+  assert.match(worker,/data-share/);
+  assert.match(worker,/api\\\/notices\\\/files/);
+});
