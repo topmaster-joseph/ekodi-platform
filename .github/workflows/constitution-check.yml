@@ -43,6 +43,10 @@ jobs:
         run: node scripts/validate-surface-system-verification-policy.mjs
       - name: Test universal surface system verification contract
         run: node --test test/surface-system-verification-policy.test.mjs
+      - name: Validate broadcast and interpretation enforcement
+        run: node scripts/validate-broadcast-interpretation-enforcement.mjs
+      - name: Test broadcast and interpretation enforcement contract
+        run: node --test test/broadcast-interpretation-enforcement.test.mjs
       - name: Constitutional change approval gate
         if: github.event_name == 'pull_request'
         env:
