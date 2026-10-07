@@ -121,7 +121,9 @@ function showNavigationFallback(targetHref){
   notice('Google 인증은 완료됐지만 자동 화면 이동이 지연되고 있습니다. 아래 버튼을 한 번 누르면 관리자 화면으로 이어집니다.','error');
 }
 function navigateToAdmin(result){
-  const target=new URL(safeReturn);target.hash=new URLSearchParams({ekodi_admin_token:result.token}).toString();const targetHref=target.href;
+  if(!result?.token)throw new Error('admin_token_missing');
+  const target=new URL(safeReturn);target.hash='';const targetHref=target.href;
+  try{sessionStorage.setItem('ekodi-auth-token',result.token)}catch{}
   notice('관리자 인증이 완료되었습니다. 관리자 화면으로 이동합니다.');
   const authHref=location.href;window.setTimeout(()=>{if(location.href===authHref)showNavigationFallback(targetHref)},1200);
   try{location.replace(targetHref)}catch{try{location.assign(targetHref)}catch{showNavigationFallback(targetHref)}}
