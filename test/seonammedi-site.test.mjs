@@ -853,3 +853,20 @@ test('seonammedi release convergence is build-owned and cache-safe',async()=>{
   assert.match(router,/no-cache, must-revalidate/);
   assert.match(app,/window\.__SEONAMMEDI_ROUTES__\?\.admin/);
 });
+
+
+test('seonammedi static surfaces declare route parity contract and preserve mount-aware links',async()=>{
+  const [html,adminHtml,adminJs]=await Promise.all([
+    readFile(new URL('index.html',root),'utf8'),
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('admin/admin.js',root),'utf8')
+  ]);
+  for(const source of [html,adminHtml]){
+    assert.match(source,/name="ekodi-route-contract" content="CANONICAL-PATH-MOUNT-PARITY-001 CANONICAL-ROUTE-SLASH-PARITY-001"/);
+  }
+  for(const route of ['voices','finance','notices'])assert.match(html,new RegExp('href="board/'+route+'"'));
+  assert.match(html,/href="admin\/">관리<\/a>/);
+  for(const route of ['voices','finance','notices'])assert.match(adminHtml,new RegExp('href="\.\.\/board/'+route+'"'));
+  assert.match(adminJs,/searchParams\.set\('site','seonammedi'\)/);
+  assert.doesNotMatch(adminJs,/searchParams\.set\('site','portal'\)/);
+});
