@@ -1,4 +1,5 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { handleAuthReturnPost } from './auth-return-post.js';
 
 const SECURITY_HEADERS={
   'x-content-type-options':'nosniff',
@@ -12,6 +13,7 @@ function withHeaders(response){const headers=new Headers(response.headers);for(c
 async function assetFor(request,env,path){const url=new URL(request.url);url.pathname=path;return env.ASSETS.fetch(new Request(url,request))}
 export default{
   async fetch(request,env){
+    const authReturn=await handleAuthReturnPost(request);if(authReturn)return authReturn;
     const url=new URL(request.url);
     if(url.pathname==='/health')return json({ok:true,service:'ekodi-education',surface:'education-platform',areas:['admission','study'],contextModel:'person-space-role',officialSourceRequired:true,submissionExecution:false,sensitiveDocumentStorage:false,dataMode:runtimeConfig(env).dataMode,ekodiShell:true});
     if(url.pathname==='/config.js')return new Response(`window.EKODI_EDU_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
