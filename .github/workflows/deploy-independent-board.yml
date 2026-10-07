@@ -44,7 +44,28 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
+      - name: Recover exact orchestrator provenance for manual dispatch
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch="${EKODI_RELEASE_BRANCH_REF:-}"
+          if [ -z "$branch" ] || [ "$branch" = "main" ]; then
+            branch="$(gh api -H 'Accept: application/vnd.github+json' "/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '[.[] | select(.merged_at != null and .base.ref == "main" and (.head.ref | startswith("ai/")))] | sort_by(.merged_at) | last | .head.ref // empty')"
+          fi
+          if [[ "$branch" =~ ^ai/[^/]+/(orch_[A-Za-z0-9-]+)$ ]]; then
+            echo "EKODI_RELEASE_BRANCH_REF=$branch" >> "$GITHUB_ENV"
+            echo "EKODI_RELEASE_TASK_ID=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"
+            echo "Recovered exact orchestrator release provenance from $GITHUB_SHA: $branch"
+          else
+            echo "Unable to recover orchestrator release provenance for manual dispatch at $GITHUB_SHA" >&2
+            exit 1
+          fi
       - name: EKODI AI Orchestration Gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Verify Cloudflare credentials
         run: |
