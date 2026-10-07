@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
 test('My EKODI is a unified private-first USER UI hub, not a second source of truth',async()=>{
@@ -302,4 +303,27 @@ test('Convergent merge dispatches My EKODI production release with the orchestra
   assert.match(workflow,/release_task_id:/);
   assert.match(workflow,/EKODI_RELEASE_BRANCH_REF:/);
   assert.match(workflow,/EKODI_RELEASE_TASK_ID:/);
+});
+
+test('My app asset fingerprint matches the current app and service manifest content',async()=>{
+  const [html,app,manifest,generator]=await Promise.all([
+    read('my/index.html'),
+    read('my/app.js'),
+    read('ekodi-service-manifest.js'),
+    read('scripts/generate-user-service-registry.mjs')
+  ]);
+  const expected='fp-'+createHash('sha256').update(app).update('\\0').update(manifest).digest('hex').slice(0,16);
+  const matches=[...html.matchAll(/\/my\/app\.js\?v=(fp-[a-f0-9]{16})/g)].map(match=>match[1]);
+  assert.ok(matches.length>=2,'script and modulepreload must both carry the app fingerprint');
+  assert.ok(matches.every(value=>value===expected),`expected ${expected}, got ${matches.join(', ')}`);
+  assert.match(generator,/createHash\('sha256'\)/);
+  assert.match(generator,/appAssetPattern/);
+});
+
+test('My prioritizes the core app while lowering secondary script fetch priority',async()=>{
+  const html=await read('my/index.html');
+  assert.match(html,/rel="modulepreload" href="\/my\/app\.js\?v=fp-[a-f0-9]{16}" fetchpriority="high"/);
+  for(const name of ['public-profile','digital-card-admin','character-identity','membership-summary','approval-brief','personal-finance','life-communication','church-marketing-ai','channel-automation']){
+    assert.match(html,new RegExp('<script[^>]*src="/my/'+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\.js[^\"]*"[^>]*fetchpriority="low"'));
+  }
 });
