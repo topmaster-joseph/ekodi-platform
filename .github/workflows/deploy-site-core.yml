@@ -1,4 +1,5 @@
 name: Deploy EKODI Shared Site Core
+# 2026-10-07: force canonical SeonamMedi board route production reconciliation
 
 on:
   schedule:
