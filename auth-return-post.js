@@ -51,15 +51,6 @@ async function exchangeOneTimeToken(tokenHash,type,fetchImpl){
     user:data.user||null
   };
 }
-function returnContext(form){
-  const clean=(name,max=180)=>String(form.get(name)||'').trim().slice(0,max);
-  return {
-    workspace:clean('ekodi_workspace'),
-    tenant:clean('ekodi_tenant'),
-    store:clean('ekodi_store'),
-    createdAt:Date.now()
-  };
-}
 function completionPage(session,context={}){
   const sessionJson=scriptJson(session);
   const contextJson=scriptJson(context);
@@ -79,7 +70,7 @@ export async function handleAuthReturnPost(request,{fetchImpl=fetch}={}){
   if(type!=='email')return errorPage('지원하지 않는 로그인 복귀 유형입니다.',400);
   try{
     const session=await exchangeOneTimeToken(tokenHash,type,fetchImpl);
-    return htmlResponse(completionPage(session,returnContext(form)),200);
+    return htmlResponse(completionPage(session,context),200);
   }catch(error){
     console.error('EKODI auth return form-post exchange failed',{status:Number(error?.status||0),path:new URL(request.url).pathname});
     return errorPage('로그인 복귀를 완료하지 못했습니다. 다시 로그인해 주세요.',Number(error?.status)>=400&&Number(error?.status)<600?Number(error.status):502);
