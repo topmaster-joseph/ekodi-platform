@@ -1,0 +1,70 @@
+{
+  "version": "1.0.0",
+  "policyId": "EKODI-EDGE-ROUTING-CACHE-001",
+  "status": "enforced",
+  "objectives": {
+    "normalConcurrentUsers": 100,
+    "busyConcurrentUsers": 1000,
+    "surgeConcurrentUsers": 10000,
+    "stressTestConcurrentUsers": 50000,
+    "publicEdgeHitTargetPercent": 95,
+    "privateCacheLeakTolerance": 0
+  },
+  "classes": {
+    "immutable_static": {
+      "methods": ["GET", "HEAD"],
+      "requiresVersionQuery": true,
+      "cacheControl": "public, max-age=31536000, immutable"
+    },
+    "revalidated_static": {
+      "methods": ["GET", "HEAD"],
+      "cacheControl": "public, max-age=300, stale-while-revalidate=3600"
+    },
+    "safe_public_read": {
+      "methods": ["GET", "HEAD"],
+      "routes": {
+        "/": 60,
+        "/sitemap.xml": 300,
+        "/llms.txt": 300,
+        "/public-registry.json": 300,
+        "/seonammedi": 30,
+        "/seonammedi/": 30
+      },
+      "staleWhileRevalidateSeconds": 300,
+      "edgeCache": true,
+      "requestCoalescing": true
+    },
+    "private_or_sensitive": {
+      "prefixes": ["/admin", "/auth", "/my", "/api", "/mcp", "/webhooks"],
+      "cacheControl": "no-store",
+      "failClosed": true
+    },
+    "write": {
+      "methods": ["POST", "PUT", "PATCH", "DELETE"],
+      "cacheControl": "no-store",
+      "queueBurstEligibleWrites": true
+    }
+  },
+  "cacheSafety": {
+    "bypassWhenAuthorizationPresent": true,
+    "bypassWhenCookiePresent": true,
+    "bypassWhenRangePresent": true,
+    "neverStoreSetCookie": true,
+    "neverStoreNon2xx": true,
+    "neverCacheAdminAuthMyApiMcpWebhook": true,
+    "canonicalQueryBeforeCache": true
+  },
+  "stampedeProtection": {
+    "sameIsolateRequestCoalescing": true,
+    "maxInflightKeys": 128,
+    "cacheMissFailOpen": true
+  },
+  "trafficProtection": {
+    "warningPercent": 70,
+    "protectPercent": 90,
+    "circuitBreakerPercent": 100,
+    "stopRetryStatuses": [429, 1027],
+    "preserve": ["public_read", "auth", "forms", "orders", "payments", "admin_control"],
+    "shedFirst": ["crawler", "analytics_detail", "background_ai", "noncritical_probes"]
+  }
+}
