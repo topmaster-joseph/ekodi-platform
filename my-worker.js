@@ -261,7 +261,7 @@ async function manifestDrivenApp(request,env){
   const block=/const SERVICES=\[[\s\S]*?const WORKSPACE_ENTRY_PRIORITY=\[[^\]]*\];/;
   if(!block.test(source)){
     const headers=new Headers(asset.headers);headers.set('x-ekodi-my-services','manifest-fallback');
-    return withHeaders(env,new Response(source,{status:asset.status,statusText:asset.statusText,headers}));
+    return withVersionedAssetCache(request,withHeaders(env,new Response(source,{status:asset.status,statusText:asset.statusText,headers})));
   }
   const rewritten=source.replace(block,myServicePreamble());
   const headers=new Headers(asset.headers);
