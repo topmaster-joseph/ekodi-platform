@@ -69,7 +69,7 @@ jobs:
           if [ -z "$branch" ] || [ "$branch" = "main" ]; then
             branch="$(gh api -H 'Accept: application/vnd.github+json' "/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '[.[] | select(.merged_at != null and .base.ref == "main" and (.head.ref | startswith("ai/")))] | sort_by(.merged_at) | last | .head.ref // empty')"
           fi
-          if [[ "$branch" =~ ^ai/[^/]+/(orch_[A-Za-z0-9-]+)$ ]]; then
+          if [[ "$branch" =~ ^ai/[^/]+/(orch_[A-Za-z0-9_-]+)$ ]]; then
             derived_task="${BASH_REMATCH[1]}"
             if [ -n "$requested_task" ] && [ "$requested_task" != "$derived_task" ]; then
               echo "Requested release task does not match orchestrator branch: task=$requested_task branch=$branch" >&2
