@@ -21,11 +21,12 @@
     },
     'public-site-controls':{scripts:['admin-public-site-controls.js'],real:'[data-section="public-site-controls"]'},
     'language-status':{scripts:['admin-language-status.js'],real:'[data-section="language-status"]'},
+    maturity:{label:'성숙도',icon:'M5',scripts:['platform-maturity-admin.js'],real:'[data-section="maturity"]',hashes:['#maturity']},
     aiops: {
       label: 'AI Ops', icon: '✦',
       styles: ['ai-ops-admin.css'],
       scripts: ['ai-ops-admin.js'],
-      secondaryScripts: ['admin-lazy-features.js'],
+      secondaryScripts: ['admin-lazy-features.js','ai-operations-center-admin.js'],
       real: '[data-section="aiops"]',
       hashes: ['#ai-ops', '#aiops'],
       insert: 'after-campus',
