@@ -81,7 +81,7 @@ export async function serveWithSafeEdgeCache(request,ctx,producer){
   }catch(error){console.warn('[EKODI edge cache] read failed',error)}
 
   const id=key.url;
-  if(inflight.has(id))return withCacheState(await inflight.get(id),'COALESCED');
+  if(inflight.has(id)){const shared=await inflight.get(id);return withCacheState(shared.clone(),'COALESCED');}
   const run=(async()=>{
     const produced=applyEdgeTrafficPolicy(await producer(),request,decision);
     if(cacheableResponse(produced)){
