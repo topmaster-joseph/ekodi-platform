@@ -870,3 +870,22 @@ test('seonammedi static surfaces declare route parity contract and preserve moun
   assert.match(adminJs,/searchParams\.set\('site','seonammedi'\)/);
   assert.doesNotMatch(adminJs,/searchParams\.set\('site','portal'\)/);
 });
+
+
+test('seonammedi auth bridge falls back to the registered Supabase public endpoint when route env vars are absent',async()=>{
+  const mod=await import(new URL('../seonammedi-admin-control.js?auth-fallback='+Date.now(),import.meta.url));
+  const original=globalThis.fetch;
+  let called='';
+  globalThis.fetch=async (url,options={})=>{
+    called=String(url);
+    assert.equal(options.method,'POST');
+    return new Response(JSON.stringify({access_token:'session-token',refresh_token:'refresh-token',expires_at:9999999999,user:{id:'u1',email:'admin@example.com'}}),{status:200,headers:{'content-type':'application/json'}});
+  };
+  try{
+    const response=await mod.handleSeonamMediAdminApi(new Request('https://seonammedi.kr/api/seonammedi/admin/auth/exchange',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token_hash:'handoff-token',type:'email'})}),{});
+    assert.equal(response.status,200);
+    const data=await response.json();
+    assert.equal(data.access_token,'session-token');
+    assert.match(called,/^https:\/\/renzehysxirjilvdxacv\.supabase\.co\/auth\/v1\/verify$/);
+  }finally{globalThis.fetch=original}
+});
