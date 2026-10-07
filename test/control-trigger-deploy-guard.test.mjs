@@ -25,3 +25,14 @@ test('Control production propagates orchestrator release receipt to nested guard
   const envIndex = production.indexOf('EKODI_RELEASE_BRANCH_REF:');
   assert.ok(envIndex >= 0 && envIndex < guardedIndex, 'release receipt env must reach guarded promotion');
 });
+
+test('Control production auto-runs after orchestrated main merges that touch its release surface', () => {
+  const pushStart = workflow.indexOf('  push:');
+  const pullStart = workflow.indexOf('  pull_request:');
+  const pushBlock = workflow.slice(pushStart, pullStart > pushStart ? pullStart : workflow.indexOf('\nconcurrency:', pushStart));
+  assert.ok(pushStart >= 0, 'push trigger must exist');
+  assert.match(pushBlock, /branches:\s*\[main\]/);
+  assert.match(pushBlock, /'\.github\/workflows\/deploy-control-api\.yml'/);
+  assert.match(pushBlock, /'seonammedi-admin-control\.js'/);
+  assert.match(pushBlock, /'test\/control-trigger-deploy-guard\.test\.mjs'/);
+});

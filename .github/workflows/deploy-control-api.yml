@@ -218,6 +218,7 @@ on:
       - 'test/orchestrator-release-gate.test.mjs'
       - 'test/mcp-client-policy.test.mjs'
       - '.github/workflows/deploy-control-api.yml'
+      - 'test/control-trigger-deploy-guard.test.mjs'
   push:
     branches: [main]
     paths:
@@ -418,6 +419,7 @@ on:
       - 'test/orchestrator-release-gate.test.mjs'
       - 'test/mcp-client-policy.test.mjs'
       - '.github/workflows/deploy-control-api.yml'
+      - 'test/control-trigger-deploy-guard.test.mjs'
 
 permissions:
   contents: read
