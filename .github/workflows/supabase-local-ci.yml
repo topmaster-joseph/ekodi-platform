@@ -73,6 +73,32 @@ jobs:
             docker exec -i "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$migration"
           done
 
+      - name: Prove anonymous SECURITY DEFINER RPCs are explicitly reviewed
+        shell: bash
+        run: |
+          set -euo pipefail
+          db_container="$(docker ps --filter 'name=supabase_db_' --format '{{.ID}}' | head -n1)"
+          test -n "$db_container"
+          docker exec -i "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          do $block$
+          declare
+            fn record;
+          begin
+            for fn in
+              select p.oid::regprocedure::text as signature
+              from pg_proc p
+              join pg_namespace n on n.oid=p.pronamespace
+              where n.nspname='public'
+                and p.prosecdef
+                and has_function_privilege('anon',p.oid,'EXECUTE')
+                and nullif(trim(coalesce(obj_description(p.oid,'pg_proc'),'')),'') is null
+            loop
+              raise exception 'anonymous SECURITY DEFINER RPC missing explicit review comment: %', fn.signature;
+            end loop;
+          end
+          $block$;
+          SQL
+
       - name: Prove secure defaults for new public objects
         shell: bash
         run: |
