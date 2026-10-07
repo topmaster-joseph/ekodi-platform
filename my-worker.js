@@ -38,6 +38,15 @@ function withHeaders(env,response){
   }else if(!headers.has('cache-control'))headers.set('cache-control','public, max-age=300');
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
+function withVersionedAssetCache(request,response){
+  const url=new URL(request.url);
+  if(!url.searchParams.has('v'))return response;
+  const headers=new Headers(response.headers);
+  const contentType=headers.get('content-type')||'';
+  if(contentType.includes('text/html')||contentType.includes('application/json'))return response;
+  headers.set('cache-control','public, max-age=31536000, immutable');
+  return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+}
 function runtimeConfig(env){const dataEnabled=env.DATA_ENABLED==='true'&&Boolean(env.SUPABASE_URL&&env.SUPABASE_PUBLISHABLE_KEY);return{dataEnabled,dataMode:env.DATA_MODE||'isolated-staging',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:'',authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=my',personalFinanceApi:'https://personal-finance-api.ekodi.kr'}}
 function personalBrandUrl(){const target='https://ekodi.kr/ekodibiz/marketing-ai?mode=personal-brand&source=my';return `https://ekodi.kr/auth/?site=marketing&return_to=${encodeURIComponent(target)}`}
 function visibleServices(){return EKODI_SERVICE_MANIFEST.services.filter(service=>service.id!=='my'&&service.state!=='planned').sort((a,b)=>(a.order||999)-(b.order||999));}
@@ -296,7 +305,7 @@ export default{
     const canonicalAsset=CANONICAL_MY_ASSET_ALIASES.get(url.pathname);
     if(canonicalAsset){
       const target=new URL(request.url);target.pathname=canonicalAsset;
-      return withHeaders(env,await env.ASSETS.fetch(new Request(target.toString(),request)));
+      return withVersionedAssetCache(request,withHeaders(env,await env.ASSETS.fetch(new Request(target.toString(),request))));
     }
     if(url.pathname==='/config.js'){
       const cfg=runtimeConfig(env);
@@ -323,7 +332,7 @@ export default{
     const privateRoute=parsePrivateWorkspacePath(url.pathname);
     if(privateRoute===false)return json(env,{ok:false,error:'private_workspace_route_not_found'},404);
     if(privateRoute)return routedMyHome(request,env,privateRoute);
-    const response=withHeaders(env,await env.ASSETS.fetch(request));
+    const response=withVersionedAssetCache(request,withHeaders(env,await env.ASSETS.fetch(request)));
     return injectEkodiShell(response,'my');
   }
 };
