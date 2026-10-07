@@ -120,12 +120,16 @@ test('Pulse may start delegated reversible work without another chat prompt and 
   assert.equal(calls, 2);
 });
 
-test('Pulse auto-blocks high-impact or red changes without executing providers', async () => {
+test('Pulse allows reversible high-risk red changes under complete standing delegation', async () => {
   let calls = 0;
   const plane = buildEkodiCommandPlane({}, [
     provider('openai', 10, ['text', 'reasoning', 'review'], async () => {
       calls += 1;
-      return { text: 'must-not-run' };
+      return { text: 'reviewed' };
+    }),
+    provider('anthropic', 20, ['text', 'reasoning', 'review'], async () => {
+      calls += 1;
+      return { text: 'reviewed' };
     }),
   ]);
 
@@ -133,7 +137,7 @@ test('Pulse auto-blocks high-impact or red changes without executing providers',
     event: {
       id: 'evt-red',
       kind: 'repository',
-      summary: 'Change production identity authority.',
+      summary: 'Apply a reversible high-risk production change.',
       changeClass: 'red',
     },
     risk: 'high',
@@ -146,9 +150,49 @@ test('Pulse auto-blocks high-impact or red changes without executing providers',
     },
   });
 
-  assert.equal(result.state, 'auto_blocked');
-  assert.equal(result.reason, 'sovereign_or_high_impact_gate');
-  assert.equal(calls, 0);
+  assert.notEqual(result.state, 'auto_blocked');
+  assert.ok(calls > 0);
+});
+
+test('Pulse allows reversible production DNS changes under complete standing delegation', async () => {
+  let calls = 0;
+  const plane = buildEkodiCommandPlane({}, [
+    provider('openai', 10, ['text', 'reasoning', 'review'], async () => { calls += 1; return { text: 'reviewed' }; }),
+    provider('anthropic', 20, ['text', 'reasoning', 'review'], async () => { calls += 1; return { text: 'reviewed' }; }),
+  ]);
+
+  const result = await plane.handlePulse({
+    event: { id:'evt-dns', kind:'system_event', summary:'Adjust a reversible production DNS record.', changeClass:'production_dns' },
+    risk:'high',
+    delegation:{ allowed:true, reversible:true, audited:true, preflightVerified:true, verificationDefined:true },
+  });
+
+  assert.notEqual(result.state, 'auto_blocked');
+  assert.ok(calls > 0);
+});
+
+test('Pulse still auto-blocks critical or irreversible sovereign classes', async () => {
+  let calls = 0;
+  const plane = buildEkodiCommandPlane({}, [
+    provider('openai', 10, ['text', 'reasoning', 'review'], async () => { calls += 1; return { text: 'must-not-run' }; }),
+  ]);
+  const delegation={ allowed:true, reversible:true, audited:true, preflightVerified:true, verificationDefined:true };
+
+  for (const input of [
+    { risk:'critical', changeClass:'red' },
+    { risk:'high', changeClass:'constitutional_change' },
+    { risk:'high', changeClass:'permission_expansion' },
+    { risk:'high', changeClass:'destructive_data' },
+    { risk:'high', changeClass:'secrets' },
+  ]) {
+    const result = await plane.handlePulse({
+      event:{ id:`evt-${input.changeClass}-${input.risk}`, kind:'system_event', summary:'Guarded change.', changeClass:input.changeClass },
+      risk:input.risk,
+      delegation,
+    });
+    assert.equal(result.state,'auto_blocked');
+  }
+  assert.equal(calls,0);
 });
 
 test('task-scoped super-admin approval resumes only the exact high-risk pulse', async () => {
