@@ -81,6 +81,9 @@ test('independent board deployment provisions its own storage and verifies real 
   assert.match(workflow,/d1 create ekodi-independent-board/);
   assert.match(workflow,/d1 migrations apply ekodi-independent-board --remote/);
   assert.match(workflow,/r2 bucket create ekodi-independent-board-files/);
+  assert.match(workflow,/Recover exact orchestrator provenance for manual dispatch/);
+  assert.match(workflow,/EKODI_RELEASE_BRANCH_REF=\$branch/);
+  assert.match(workflow,/EKODI_RELEASE_TASK_ID=\$\{BASH_REMATCH\[1\]\}/);
   assert.match(workflow,/https:\/\/seonammedi\.kr\/board\/health/);
   assert.match(workflow,/Verify production board UI/);
   assert.match(workflow,/https:\/\/seonammedi\.kr\/board\/voices/);
