@@ -192,6 +192,7 @@ test('orchestrated merge dispatches board/shared-site deploys and live legacy ha
   assert.match(deployWorkflow,/pull-requests: read/);
   assert.match(script,/independentBoardTouched/);
   assert.match(script,/sharedSiteTouched/);
+  assert.match(script,/file\.startsWith\('auth-site\/'\)/);
   assert.match(script,/file\.startsWith\('sites\/'\)/);
   assert.match(script,/deploy\/manifests\/shared-site\.worker\.json/);
   assert.match(script,/seonammedi-admin-control\.js/);
