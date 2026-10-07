@@ -142,7 +142,7 @@ test('SeonamMedi board admin login preserves the initiating external or internal
   ]);
   assert.match(worker,/commonScript\('\/board\/voices'\)/);
   assert.match(worker,/location\.pathname\.startsWith\(\"\/seonammedi\/board\"\)/);
-  assert.match(worker,/\/api\/seonammedi\/admin\/auth\/exchange/);
+  assert.match(worker,/ekodi_auth_return/);\n  assert.match(worker,/auth\/v1\/verify/);
   for(const route of ['voices','finance','notices']){
     assert.match(site,new RegExp('href="board/'+route+'"'));
     assert.match(adminSite,new RegExp('href="\\.\\./board/'+route+'"'));
@@ -210,4 +210,43 @@ test('orchestrated merge dispatches board/shared-site deploys and live legacy ha
   assert.match(router,/legacySeonamBoardRedirect/);
   assert.match(router,/https:\/\/seonammedi\.kr\/board\//);
   assert.ok(router.indexOf('legacySeonamBoardRedirect(request)')<router.indexOf('handleSiteBoardRequest(request,env)'));
+});
+
+
+test('SeonamMedi board consumes Google return by POST so one-time token is not placed in the address bar',async()=>{
+  const mod=await import(new URL('../services/independent-board/worker.js?auth-post='+Date.now(),import.meta.url));
+  const tokenHash='a'.repeat(64);
+  const original=globalThis.fetch;
+  let exchanged=null;
+  globalThis.fetch=async (url,options={})=>{
+    if(String(url)==='https://renzehysxirjilvdxacv.supabase.co/auth/v1/verify'){
+      exchanged=JSON.parse(options.body);
+      return new Response(JSON.stringify({access_token:'board-session',refresh_token:'refresh',expires_in:3600,user:{email:'admin@example.com'}}),{status:200,headers:{'content-type':'application/json'}});
+    }
+    throw new Error('unexpected fetch '+url);
+  };
+  try{
+    const request=new Request('https://seonammedi.kr/board/voices',{
+      method:'POST',
+      headers:{'content-type':'application/x-www-form-urlencoded'},
+      body:new URLSearchParams({ekodi_auth_return:'1',ekodi_token:tokenHash,ekodi_type:'email'})
+    });
+    const response=await mod.default.fetch(request,{});
+    assert.equal(response.status,200);
+    assert.equal(response.headers.get('x-ekodi-auth-return'),'form-post-v1');
+    assert.equal(response.headers.get('referrer-policy'),'no-referrer');
+    assert.deepEqual(exchanged,{token_hash:tokenHash,type:'email'});
+    const html=await response.text();
+    assert.equal(html.includes(tokenHash),false);
+    assert.match(html,/localStorage\.setItem/);
+    assert.match(html,/location\.replace\(target\)/);
+  }finally{globalThis.fetch=original}
+});
+
+test('SeonamMedi central auth uses form POST only for the customer-domain return',async()=>{
+  const client=await read('auth-site/client-auth.js');
+  assert.match(client,/if\(site==='seonammedi'&&target\.origin!=='https:\/\/ekodi\.kr'\)/);
+  assert.match(client,/form\.method='POST'/);
+  assert.match(client,/ekodi_auth_return:'1'/);
+  assert.match(client,/form\.submit\(\)/);
 });
