@@ -70,7 +70,7 @@ function implicitEkodiRealm(id){
   return {name:value.replace(/-/g,' ').toUpperCase(),returnTo:`${origin}/`,origins:[origin],open:true,kind:value};
 }
 const manifestConfig=await manifestRealm(site);
-const baseConfig=realms[site]||manifestConfig||implicitEkodiRealm(site)||realms.portal;
+const baseConfig=manifestConfig||realms[site]||implicitEkodiRealm(site)||realms.portal;
 const config={...baseConfig,operatingModel:manifestConfig?.operatingModel||baseConfig.operatingModel||'',userAccessPolicy:manifestConfig?.userAccessPolicy||baseConfig.userAccessPolicy||null};
 const commonServiceEntry=config.operatingModel==='shared-service';
 function safeReturn(raw){
@@ -220,8 +220,9 @@ function postLoginTarget(){
   return target;
 }
 function routeTarget(proof){
-  if(!proof?.tokenHash)throw new Error('identity_handoff_missing');
   const target=postLoginTarget();
+  if(target.origin===location.origin){location.assign(target.href);return}
+  if(!proof?.tokenHash)throw new Error('identity_handoff_missing');
   const form=document.createElement('form');
   form.method='POST';
   form.action=target.href;
