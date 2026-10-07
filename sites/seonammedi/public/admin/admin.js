@@ -12,7 +12,8 @@ const text=(node,value)=>{if(node)node.textContent=String(value??'')};
 const dateText=value=>{if(!value)return'';try{return new Date(value).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}catch{return String(value)}};
 
 // legacy site','portal is intentionally rejected here; independent-domain admin auth uses the seonammedi realm.
-function authUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','seonammedi');u.searchParams.set('direct','1');u.searchParams.set('return_to',location.origin+'/admin/');return u.href}
+function adminReturnUrl(){const internal=location.hostname==='ekodi.kr'&&(location.pathname==='/seonammedi/admin'||location.pathname.startsWith('/seonammedi/admin/'));return location.origin+(internal?'/seonammedi/admin/':'/admin/')}
+function authUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','seonammedi');u.searchParams.set('direct','1');u.searchParams.set('return_to',adminReturnUrl());return u.href}
 function storedSession(){try{const value=JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null');return value?.accessToken?value:null}catch{return null}}
 function saveSession(value){sessionStorage.setItem(SESSION_KEY,JSON.stringify(value))}
 function clearSession(){sessionStorage.removeItem(SESSION_KEY)}
