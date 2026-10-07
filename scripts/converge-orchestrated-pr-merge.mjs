@@ -53,6 +53,14 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='scripts/converge-orchestrated-pr-merge.mjs'||
   file==='.github/workflows/converge-orchestrated-pr-merge.yml'
 );
+const centralControlTouched=changedFiles.some(file=>
+  [
+    'core-permission.js','core-workflow.js','core-evidence.js','core-ai-gateway.js',
+    'ekodi-command-plane.js','ekodi-command-ledger.js','ekodi-pulse-runtime.js',
+    'ekodi-capability-executor.js','ekodi-capability-ecosystem.js',
+    'config/capability-registry.json','ekodi-service-manifest.js'
+  ].includes(file)
+);
 async function dispatchPostMergeDeploys(){
   if(independentBoardTouched){
     const dispatch=await api('/actions/workflows/deploy-independent-board.yml/dispatches',{
@@ -69,6 +77,14 @@ async function dispatchPostMergeDeploys(){
     });
     if(!dispatch.r.ok)fail('shared site deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-site-core.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(centralControlTouched){
+    const dispatch=await api('/actions/workflows/deploy-control-api.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('control api deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-control-api.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
 }
 
