@@ -18,7 +18,6 @@ const GLOBAL_CLASS = 'admin-global-navs';
 const SOURCE_CLASS = 'admin-context-source';
 // LEFT-NAV-AUTHORITY-006: visible Admin navigation is left-side direct work only.
 const DETAILS_CLASS = 'admin-global-details';
-const MORE_CLASS = 'admin-detail-more';
 const MOBILE_NAV_CLASS = 'admin-mobile-primary-nav';
 const DRAWER_SCRIM_CLASS = 'admin-mobile-drawer-scrim';
 const MOBILE_PRIMARY_GROUPS = Object.freeze([
@@ -28,13 +27,14 @@ const MOBILE_PRIMARY_GROUPS = Object.freeze([
   { id:'status', icon:'↑', ko:'운영', en:'Ops' },
 ]);
 const FLAT_DETAIL_GROUPS = new Set(['services']);
+const REDUNDANT_DETAIL_SECTIONS = new Set(['sites-all','users-access','engine-all','health']);
 const PRIMARY_SECTIONS = Object.freeze({
   summary: ['platform-overview'],
-  sites: ['sites-all', 'sites-business', 'sites-clients', 'sites-community', 'sites-core', 'sites-preparing'],
-  people: ['users-access', 'admins', 'ai-membership', 'security'],
-  services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'],
+  sites: ['sites-business', 'sites-clients', 'sites-community', 'sites-core', 'sites-preparing'],
+  people: ['admins', 'ai-membership', 'security'],
+  services: ['engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'],
   content: ['work', 'communication', 'community', 'books', 'social'],
-  status: ['health', 'site-health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity'],
+  status: ['site-health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity'],
   'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'ai-module-spec', 'audit-records'],
 });
 
@@ -305,14 +305,13 @@ function renderSidebarDetails(nav, globals, group, section, locale) {
     details.className = DETAILS_CLASS;
     details.setAttribute('aria-label', locale === 'en' ? 'Admin submenu' : '관리자 하위 메뉴');
   }
-  const ids = availableIds(nav, group);
+  const ids = availableIds(nav, group).filter(id => !REDUNDANT_DETAIL_SECTIONS.has(id));
   const flatDetails = FLAT_DETAIL_GROUPS.has(group);
   const primaryOrder = PRIMARY_SECTIONS[group] || [];
   const primarySet = new Set(primaryOrder);
   const primary = primaryOrder.filter(id => ids.includes(id));
   const extras = ids.filter(id => !primarySet.has(id));
-  const expanded = nav.dataset.adminMoreGroup === group || extras.includes(section);
-  const shown = expanded ? ids : primary;
+  const shown = [...primary, ...extras];
   const nodes = shown.map(id => {
     const definition = getAdminMenuItem(id);
     const button = document.createElement('button');
@@ -328,21 +327,6 @@ function renderSidebarDetails(nav, globals, group, section, locale) {
     button.classList.toggle('active', id === section);
     return button;
   });
-  if (extras.length) {
-    const more = document.createElement('button');
-    more.type = 'button';
-    more.className = MORE_CLASS;
-    more.dataset.adminDetailMore = group;
-    const label = document.createElement('span');
-    label.textContent = expanded
-      ? (locale === 'en' ? 'Show less' : '간단히 보기')
-      : (locale === 'en' ? `More (${extras.length})` : `더보기 ${extras.length}`);
-    const mark = document.createElement('b');
-    mark.setAttribute('aria-hidden', 'true');
-    mark.textContent = expanded ? '⌃' : '⌄';
-    more.append(label, mark);
-    nodes.push(more);
-  }
   details.dataset.adminDetailGroup = group;
   details.dataset.adminFlatDetails = flatDetails ? 'true' : 'false';
   details.replaceChildren(...nodes);
@@ -596,15 +580,6 @@ export function mountAdminSidebar(root = document, options = {}) {
   observer.observe(nav, { childList: true, subtree: false });
 
   nav.addEventListener('click', event => {
-    const more = event.target.closest('[data-admin-detail-more]');
-    if (more) {
-      event.preventDefault();
-      const group = more.dataset.adminDetailMore || '';
-      if (nav.dataset.adminMoreGroup === group) delete nav.dataset.adminMoreGroup;
-      else nav.dataset.adminMoreGroup = group;
-      schedule();
-      return;
-    }
     const detail = event.target.closest('[data-admin-detail-section]');
     if (detail) {
       event.preventDefault();
@@ -621,7 +596,8 @@ export function mountAdminSidebar(root = document, options = {}) {
     nav.dataset.adminFocusedGroup = group;
     const currentSection = activeSection(nav);
     if (currentSection === 'command-home' || getAdminMenuGroupForSection(currentSection) !== group) {
-      const defaultSection = getAdminMenuGroupDefault(group);
+      const candidateIds = availableIds(nav, group).filter(id => !REDUNDANT_DETAIL_SECTIONS.has(id));
+      const defaultSection = candidateIds[0] || getAdminMenuGroupDefault(group);
       const defaultDefinition = getAdminMenuItem(defaultSection);
       if (defaultDefinition?.adminHandoff !== true) {
         activateSection(nav, defaultSection);
