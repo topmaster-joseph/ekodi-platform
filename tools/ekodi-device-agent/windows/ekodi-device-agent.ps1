@@ -2547,9 +2547,21 @@ function Reconcile-DesktopCommanderRecovery {
   if ($config.enabled) { Ensure-DesktopCommanderRunning | Out-Null }
 }
 
+function Repair-LegacyApiBase($Config) {
+  if (-not $Config) { return $Config }
+  $apiBase = ([string]$Config.apiBase).TrimEnd('/')
+  $legacyBases = @('https://api.' + 'ekodi.kr')
+  if ($legacyBases -contains $apiBase) {
+    $Config.apiBase = $AllowedApiBase
+    $Config | ConvertTo-Json -Depth 8 | Set-Content -Path $ConfigPath -Encoding UTF8
+  }
+  return $Config
+}
+
 function Load-Config {
   if (-not (Test-Path $ConfigPath)) { throw 'EKODI Device Agent 설정 파일이 없습니다. 다시 등록해 주세요.' }
-  return Get-Content $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
+  $config = Get-Content $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
+  return Repair-LegacyApiBase $config
 }
 
 function Get-AgentHeaders($Config) {
