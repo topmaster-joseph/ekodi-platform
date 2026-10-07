@@ -286,6 +286,7 @@ test('My versioned assets use immutable browser caching while runtime data remai
   assert.match(html,/app\.js\?v=20261007-access-batch-cache-v1/);
   assert.match(worker,/searchParams\.has\('v'\)/);
   assert.match(worker,/public, max-age=31536000, immutable/);
+  assert.match(worker,/manifest-fallback'[\s\S]{0,220}withVersionedAssetCache\(request/);
   assert.match(worker,/\/config\.js'[\s\S]{0,240}cache-control':'no-store'/);
 });
 
