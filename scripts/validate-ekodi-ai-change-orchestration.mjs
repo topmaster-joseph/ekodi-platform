@@ -336,8 +336,20 @@ if (staticPolicyMode) {
   fail('direct local production mutation is forbidden; use an EKODI AI orchestrated GitHub change/release lane.');
 }
 
-const orchestratorBranch = parseOrchestratorReleaseBranch(intentBranch);
 const canonicalRepository = repository === 'topmaster-joseph/ekodi-platform';
+
+// Release workflows can run after an orchestrated PR has already merged to main.
+// In that case GITHUB_REF_NAME is "main", but the authority that must be verified
+// is the orchestrator-issued source branch of the PR that produced this exact SHA.
+// Recover that provenance instead of treating main itself as an authority-bearing branch.
+if (!staticPolicyMode && canonicalRepository && releaseMode && !parseOrchestratorReleaseBranch(intentBranch) && text(process.env.GITHUB_REF_NAME) === defaultBranch) {
+  const mergedPr = await verifiedBranchPrMerge(defaultBranch);
+  if (!mergedPr) fail(`production release on ${defaultBranch} requires verified orchestrated PR provenance for SHA ${sha}.`);
+  intentBranch = text(mergedPr?.head?.ref);
+  source = `${source}:verified-orchestrated-pr-provenance`;
+}
+
+const orchestratorBranch = parseOrchestratorReleaseBranch(intentBranch);
 const releaseReceiptRequired = !staticPolicyMode && canonicalRepository && (releaseMode || (ciMode && Boolean(orchestratorBranch)));
 let releaseReceipt = null;
 if (releaseReceiptRequired) {
