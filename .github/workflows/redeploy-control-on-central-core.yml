@@ -26,6 +26,7 @@ on:
       - 'config/capability-registry.json'
       - 'ekodi-service-manifest.js'
       - 'scripts/validate-central-modules.mjs'
+      - 'seonammedi-admin-control.js'
       - '.github/workflows/redeploy-control-on-central-core.yml'
 
 permissions:
