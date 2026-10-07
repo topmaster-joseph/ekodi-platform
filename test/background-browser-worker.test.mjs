@@ -54,6 +54,9 @@ test('worker uses Playwright isolated context without arbitrary JS task executio
   assert.match(source,/page\.on\('response'/);
   assert.match(source,/httpErrorResponses/);
   assert.match(source,/status>=400/);
+  assert.match(source,/waitForLoadState\('domcontentloaded'/);
+  assert.match(source,/Execution context was destroyed\|Cannot find context/);
+  assert.match(source,/for\(let attempt=0;attempt<3;attempt\+\+\)/);
   assert.doesNotMatch(source,/child_process|exec\(|spawn\(|powershell|cmd\.exe|SendKeys|SetCursorPos/);
   assert.doesNotMatch(source,/item\.code|action\.code|rawJavascript/);
 });
