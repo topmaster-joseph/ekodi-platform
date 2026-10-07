@@ -34,6 +34,15 @@ for(let i=0;i<20&&!pr;i++){
   if(!pr)await sleep(3000);
 }
 if(!pr)fail('open PR not found');
+const filesLookup=await api('/pulls/'+pr.number+'/files?per_page=100');
+if(!filesLookup.r.ok)fail('PR file lookup failed '+filesLookup.r.status);
+const changedFiles=(Array.isArray(filesLookup.data)?filesLookup.data:[]).map(file=>String(file.filename||''));
+const independentBoardTouched=changedFiles.some(file=>
+  file.startsWith('services/independent-board/')||
+  file==='wrangler.independent-board.toml'||
+  file==='sites/seonammedi/public/app.js'||
+  file==='.github/workflows/deploy-independent-board.yml'
+);
 
 for(let cycle=0;cycle<180;cycle++){
   const p=(await api('/pulls/'+pr.number)).data;
@@ -67,6 +76,14 @@ for(let cycle=0;cycle<180;cycle++){
 
   const merged=await api('/pulls/'+pr.number+'/merge',{method:'PUT',body:JSON.stringify({sha:headSha,merge_method:'squash',commit_title:fresh.title})});
   if(merged.r.ok&&merged.data?.merged===true){
+    if(independentBoardTouched){
+      const dispatch=await api('/actions/workflows/deploy-independent-board.yml/dispatches',{
+        method:'POST',
+        body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+      });
+      if(!dispatch.r.ok)fail('independent board deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+      console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-independent-board.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+    }
     console.log(JSON.stringify({ok:true,action:'merged',pr:pr.number,mergeSha:merged.data.sha,taskId,branch,authority:'ekodi-orchestrator'}));
     process.exit(0);
   }
