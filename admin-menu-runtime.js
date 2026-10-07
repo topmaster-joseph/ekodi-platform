@@ -58,7 +58,7 @@ function adminSubserviceDestination(definition) {
   if (!target) return '';
   const currentToken = token();
   if (currentToken) {
-    target.hash = new URLSearchParams({ ekodi_admin_token: currentToken }).toString();
+    target.hash = '';
     return target.href;
   }
   const auth = new URL(CENTRAL_ADMIN_AUTH);
