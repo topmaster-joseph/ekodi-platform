@@ -104,6 +104,15 @@ function isProjectionHome(pathname,projection){const path=String(pathname||'').r
 function isCgmaRoot(pathname){return /^\/cgma\/?$/i.test(String(pathname||''));}
 function isSeonamMediPath(pathname){const path=String(pathname||'');return path===SEONAMMEDI_PREFIX||path.startsWith(SEONAMMEDI_PREFIX+'/');}
 function isDeletedSeonamPath(pathname){const path=String(pathname||'');return DELETED_SEONAM_PREFIXES.some(prefix=>path===prefix||path.startsWith(prefix+'/'));}
+function legacySeonamBoardRedirect(request){
+  const url=new URL(request.url);
+  if(resolvedHost(request)!==PUBLIC_HOST||!['GET','HEAD'].includes(request.method))return null;
+  const match=url.pathname.match(/^\/board\/(voices|finance|notices)\/?$/i);
+  if(!match)return null;
+  const target=new URL('https://seonammedi.kr/board/'+match[1].toLowerCase());
+  target.search=url.search;
+  return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'seonammedi-board-canonical-handoff'}});
+}
 function deletedSeonamResponse(){return new Response('Not Found',{status:404,headers:{'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'seonammedi-deleted'}});}
 function applySeonamMediCachePolicy(out,pathname){const path=String(pathname||'');const type=String(out.headers.get('content-type')||'').toLowerCase();if(type.includes('text/html')||path.includes('/.well-known/ekodi-release.json'))out.headers.set('cache-control','no-store');else if(/\.[a-f0-9]{12}\.(?:js|css)$/.test(path))out.headers.set('cache-control','public, max-age=31536000, immutable');else if(/\.(?:js|css)$/.test(path))out.headers.set('cache-control','no-cache, must-revalidate');return out;}
 async function routeSeonamMediStatic(request,env){if(!env?.ASSETS?.fetch)return new Response('Site assets unavailable',{status:503,headers:{'cache-control':'no-store'}});const source=new URL(request.url);const target=new URL(request.url);if(source.pathname===SEONAMMEDI_PREFIX)target.pathname=SEONAMMEDI_PREFIX+'/';else if(/^\/seonammedi\/notices\/\d+\/?$/.test(source.pathname)&&['GET','HEAD'].includes(request.method))target.pathname=SEONAMMEDI_PREFIX+'/';const upstream=await env.ASSETS.fetch(new Request(target.toString(),request));const out=new Response(upstream.body,upstream);out.headers.set('x-ekodi-route','seonammedi-static');out.headers.set('x-content-type-options','nosniff');if((out.headers.get('content-type')||'').includes('text/html')&&(source.pathname===SEONAMMEDI_PREFIX+'/admin'||source.pathname.startsWith(SEONAMMEDI_PREFIX+'/admin/')||source.pathname===SEONAMMEDI_PREFIX+'/minutes'||source.pathname.startsWith(SEONAMMEDI_PREFIX+'/minutes/')))out.headers.set('x-robots-tag','noindex, nofollow, noarchive');return applySeonamMediCachePolicy(out,source.pathname);}
@@ -351,6 +360,7 @@ async function routePlatform(request,env,ctx){
     const host=resolvedHost(request,env);
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
+    const seonamBoard=legacySeonamBoardRedirect(request);if(seonamBoard)return seonamBoard;
     const siteBoard=await handleSiteBoardRequest(request,env);if(siteBoard)return siteBoard;
     if(host===PUBLIC_HOST&&url.pathname.startsWith(MALL_API_APEX_PREFIX)){const mallApi=await routeMallApiApex(request,env);if(mallApi)return mallApi;}
     if((host===PUBLIC_HOST||SEONAMMEDI_HOSTS.has(host))&&url.pathname.startsWith('/api/seonammedi/')){const admin=await handleSeonamMediAdminApi(request,env);if(admin)return admin;const monitor=await handleSeonamMediMonitorApi(request,env);if(monitor)return monitor;const civic=await handleSeonamMediCivicApi(request,env);if(civic)return civic;}
