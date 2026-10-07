@@ -12,7 +12,9 @@
     "allDescendantServicePaths": true,
     "siteOwnedAdmin": true,
     "futureSitesAutoInherit": true,
-    "perSiteOptOutAllowed": false
+    "perSiteOptOutAllowed": false,
+    "independentBoardAutoProvisioning": true,
+    "genericPlatformUtilitiesExcludedFromBoardAutoProvisioning": true
   },
   "canonicalAddressing": {
     "publicPattern": "https://ekodi.kr/{slug}",
@@ -210,5 +212,8 @@
     "productionVerificationRequired": true,
     "futureSitesAutoInherit": true,
     "perSiteOptOutAllowed": false
-  }
+  },
+  "forcedRules": [
+    "independent-board-auto-provisioning"
+  ]
 }
