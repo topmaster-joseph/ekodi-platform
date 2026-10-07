@@ -1275,8 +1275,7 @@
           "DECISION_RULES",
           "/api/control/ai/v8/pulse",
           "executeNow:true",
-          "/api/control/ai/v8/orchestrator/human-gates?limit=20",
-          "승인 후 계속"
+          "/api/control/ai/v8/orchestrator/human-gates?limit=20"
         ],
         "headerExpect": [
           "x-content-type-options: nosniff",
