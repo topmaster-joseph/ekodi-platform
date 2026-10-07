@@ -38,6 +38,7 @@ import { handleExternalAccountControl, runExternalAccountHealthAudit } from './e
 import { handleRealtimeControl, runRealtimeRecordingRetention } from './realtime-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 import { runSeonamMediHourlyCheck } from './seonammedi-monitor.js';
+import { reconcileSiteBoardInstances } from './site-board-control.js';
 
 function errorResponse(message, code) {
   return applyApiSecurityHeaders(new Response(JSON.stringify({ error:message, code }), {
@@ -383,6 +384,9 @@ export default {
     const seonamMediHourly = scheduledAt.getUTCMinutes() === 0
       ? runSeonamMediHourlyCheck(env,{scheduledAt:scheduledAt.toISOString()}).catch(error => { console.error('Seonam Medi hourly monitor error', error); return { ok:false, error:'seonammedi_hourly_monitor_failed' }; })
       : null;
+    const boardCoverageHourly = scheduledAt.getUTCMinutes() === 0
+      ? reconcileSiteBoardInstances(env).catch(error => { console.error('Site board coverage reconcile error', error); return { ok:false, error:'site_board_coverage_reconcile_failed' }; })
+      : null;
     const externalAccountHealthDaily = scheduledAt.getUTCHours() === 23
       ? runExternalAccountHealthAudit(env,{scheduledAt:scheduledAt.toISOString()}).catch(error => { console.error('External account daily health error', error); return { ok:false, error:'external_account_daily_health_failed' }; })
       : null;
@@ -405,10 +409,12 @@ export default {
       ctx.waitUntil(recordingRetention);
       ctx.waitUntil(wakeOrchestration);
       if (seonamMediHourly) ctx.waitUntil(seonamMediHourly);
+      if (boardCoverageHourly) ctx.waitUntil(boardCoverageHourly);
       if (externalAccountHealthDaily) ctx.waitUntil(externalAccountHealthDaily);
     }
     const background = [authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration];
     if (seonamMediHourly) background.push(seonamMediHourly);
+    if (boardCoverageHourly) background.push(boardCoverageHourly);
     if (externalAccountHealthDaily) background.push(externalAccountHealthDaily);
     return customerSchedule || Promise.all(background);
   },
