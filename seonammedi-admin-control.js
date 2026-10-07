@@ -40,6 +40,7 @@ async function authBridge(request,env,mode){
   const refreshToken=clean(body?.refresh_token,8192);
   if(mode==='exchange'&&!tokenHash)return json({ok:false,error:'token_hash_required'},400);
   if(mode==='refresh'&&!refreshToken)return json({ok:false,error:'refresh_token_required'},400);
+  // Customer-domain routes may omit these Worker vars; retain the registered public Supabase auth fallback.
   const base=(clean(env?.MY_SUPABASE_URL,500)||SUPABASE_URL).replace(/\/+$/,'');
   const key=clean(env?.MY_SUPABASE_PUBLISHABLE_KEY,1200)||SUPABASE_PUBLISHABLE_KEY;
   if(!base||!key)return json({ok:false,error:'auth_bridge_unconfigured'},503);
