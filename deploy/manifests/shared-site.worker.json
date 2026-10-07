@@ -2771,12 +2771,14 @@
         "redirect": "manual",
         "expect": [
           "\"ok\":true",
-          "\"storage\":\"d1\"",
-          "\"canonicalTable\":true"
+          "\"retired\":true",
+          "\"location\":\"https://seonammedi.kr/board/voices\"",
+          "\"queueDrain\":\"ack-drop\""
         ],
         "rollbackVerify": false,
         "bodyIncludes": [
-          "\"canonicalTable\":true"
+          "\"retired\":true",
+          "\"queueDrain\":\"ack-drop\""
         ]
       },
       {
