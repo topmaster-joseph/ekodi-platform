@@ -31,7 +31,7 @@ test('EKODI Control is an independent conversation-first command surface',async(
   assert.match(router,/\['\/control','\/control\/','\/control\.css','\/control\.js'\]\.includes\(url\.pathname\)/);
   assert.match(router,/x-ekodi-canonical-surface','control/);
   assert.match(router,/x-ekodi-route','control-surface/);
-  assert.match(wrangler,/"\/control"/);
-  assert.doesNotMatch(wrangler,/"\/control\/"|"\/control\/\*"/);
+  assert.match(wrangler,/"\/control\*"/);
+  assert.doesNotMatch(wrangler,/"\/control-center"|"\/control-center\/"|"\/control-center\.html"/);
   assert.match(build,/'control\.html','control\.css','control\.js'/);
 });
