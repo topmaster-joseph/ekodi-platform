@@ -62,7 +62,11 @@ test('seonammedi proves shared authenticated in-place administration before ecos
   assert.match(app,/window\.EKODIPublicSurfaceAdmin/);
   assert.match(app,/authEndpoint:'\/api\/seonammedi\/admin\/me'/);
   assert.match(app,/await admin\.authorize\(\)/);
-  assert.match(app,/admin\.attach/);
+  assert.match(app,/renderPublicAdminControls/);
+  assert.match(app,/admin\.has\('timeline'\)/);
+  assert.match(app,/bindPublicTimelineAdmin/);
+  assert.match(app,/admin\.has\('channels'\)/);
+  assert.match(app,/bindPublicChannelAdmin/);
   assert.doesNotMatch(app,/function ensurePublicAdminDrawer|function openPublicAdmin|function attachPublicAdminButton/);
   assert.doesNotMatch(css,/\.public-admin-drawer|\.public-admin-inline/);
   assert.match(css,/\.ekodi-public-admin-inline/);
