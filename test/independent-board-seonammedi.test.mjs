@@ -192,6 +192,9 @@ test('orchestrated merge dispatches board/shared-site deploys and live legacy ha
   assert.match(script,/independentBoardTouched/);
   assert.match(script,/sharedSiteTouched/);
   assert.match(script,/file\.startsWith\('sites\/'\)/);
+  assert.match(script,/deploy\/manifests\/shared-site\.worker\.json/);
+  assert.match(script,/seonammedi-admin-control\.js/);
+  assert.match(script,/wrangler\.site\.toml/);
   assert.match(script,/deploy-independent-board\.yml\/dispatches/);
   assert.match(script,/deploy-site-core\.yml\/dispatches/);
   assert.match(script,/release_branch_ref:branch/);
