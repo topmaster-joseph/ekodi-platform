@@ -1,5 +1,5 @@
 name: Deploy EKODI Church Homepage
-# Release reconciliation marker: church-operating-space-20260924
+# Release reconciliation marker: church-source-baec5a95-20260927
 
 on:
   workflow_dispatch:
