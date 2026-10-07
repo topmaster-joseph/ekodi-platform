@@ -111,7 +111,7 @@ test('redundant aggregate submenu rows are hidden and More is retired', () => {
 });
 
 test('Operations, Releases & Incidents shows every visible submenu without a collapsed more bucket', () => {
-  assert.match(sidebar, /status: \['health', 'site-health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity'\]/);
+  assert.match(sidebar, /status: \['site-health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity'\]/);
   assert.match(registry, /id: 'deployments'.*배포·변경 이력/s);
   for (const id of ['site-health','deployments','aiops','devices','pos-agent','api-cost','architecture','maturity']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
@@ -120,7 +120,7 @@ test('Operations, Releases & Incidents shows every visible submenu without a col
 
 test('Services & AI uses flat direct engine links with no duplicate top navigation', () => {
   assert.match(sidebar, /FLAT_DETAIL_GROUPS = new Set\(\['services'\]\)/);
-  assert.match(sidebar, /services: \['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'\]/);
+  assert.match(sidebar, /services: \['engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'\]/);
   assert.match(sidebar, /details\.dataset\.adminFlatDetails = flatDetails \? 'true' : 'false'/);
   assert.match(sidebar, /data-admin-flat-details="true"/);
   assert.doesNotMatch(sidebar, /function renderContextTabs/);
@@ -178,7 +178,7 @@ test('shared menu ES modules are published and cache-busted with the admin relea
   assert.match(postbuild, /copyFile\(`\$\{root\}\$\{asset\}`, `\$\{dist\}\$\{asset\}`\)/);
   assert.match(postbuild, /\.\.\.sharedAdminMenuModules/);
   assert.match(postbuild, /moduleImportVersions = new Map/);
-  assert.match(postbuild, /\['admin-menu-registry\.js', \['admin-service-handoffs\.js', 'admin-design-engine\.js', 'platform-maturity-admin\.js'\]\]/);
+  assert.match(postbuild, /\['admin-menu-registry\.js', \['admin-service-handoffs\.js', 'admin-design-engine\.js'\]\]/);
   assert.match(postbuild, /\['admin-service-handoffs\.js', \['admin-service-catalog\.js'\]\]/);
   assert.match(postbuild, /`\.\/\$\{imported\}\?v=\$\{assetVersion\}`/);
 });
