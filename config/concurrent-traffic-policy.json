@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "policyId": "EKODI-CONCURRENT-TRAFFIC-10K-001",
   "status": "enforced",
   "appliesRecursivelyToAllServices": true,
@@ -185,5 +185,29 @@
       "payments",
       "admin_control"
     ]
+  },
+  "edgeCache": {
+    "policy": "EKODI-EDGE-ROUTING-CACHE-001",
+    "safePublicReadEdgeCache": true,
+    "sameIsolateRequestCoalescing": true,
+    "publicEdgeHitTargetPercent": 95,
+    "privateCacheLeakTolerance": 0,
+    "privatePrefixes": [
+      "/admin",
+      "/auth",
+      "/my",
+      "/api",
+      "/mcp",
+      "/webhooks"
+    ],
+    "versionedStaticImmutable": true,
+    "unversionedStaticRevalidateSeconds": 300
+  },
+  "securityEnvelope": {
+    "privateSurfacesFailClosed": true,
+    "authorizationBypassesPublicCache": true,
+    "cookiesBypassPublicCache": true,
+    "setCookieNeverCached": true,
+    "writeRequestsNeverCached": true
   }
 }
