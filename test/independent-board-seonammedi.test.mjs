@@ -280,6 +280,6 @@ test('standalone board media and layout contract is shared by citizen voices and
 
 test('standalone board media endpoint is restricted to board-owned R2 prefixes',async()=>{
   const worker=await read('services/independent-board/worker.js');
-  assert.match(worker,/\^seonammedi\\\/(voices\|notices)\\\//);
+  assert.match(worker,/\^seonammedi\\\/\(voices\|notices\)\\\//);
   assert.match(worker,/x-content-type-options','nosniff'/);
 });
