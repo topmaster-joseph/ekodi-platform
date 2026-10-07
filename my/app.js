@@ -407,6 +407,22 @@ async function loadProfile(){
 }
 async function loadAccess(){
  access=new Map();workspaces=new Map();if(!sb||!session)return;
+ const siteKeys=SERVICES.map(([id])=>id);
+ try{
+  const payload=await rpc('my_dashboard_access_context',{p_site_keys:siteKeys});
+  const accessBySite=payload?.access&&typeof payload.access==='object'?payload.access:null;
+  const workspacesBySite=payload?.workspaces&&typeof payload.workspaces==='object'?payload.workspaces:null;
+  if(accessBySite&&workspacesBySite){
+   for(const id of siteKeys){
+    access.set(id,accessBySite[id]||{status:'unregistered',plan:'free'});
+    const rows=workspacesBySite[id];
+    workspaces.set(id,Array.isArray(rows)?rows:[]);
+   }
+   return;
+  }
+ }catch(error){
+  console.warn('dashboard-access-context fallback',error);
+ }
  await Promise.all(SERVICES.map(async([id])=>{
   const [a,w]=await Promise.all([rpc('current_site_access',{p_site_key:id}),rpc('current_site_workspaces',{p_site_key:id})]);
   access.set(id,a||{status:'unregistered',plan:'free'});workspaces.set(id,Array.isArray(w)?w:[]);
