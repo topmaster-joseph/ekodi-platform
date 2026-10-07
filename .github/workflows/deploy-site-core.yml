@@ -410,6 +410,9 @@ jobs:
     needs: scheduled_release_gate
     if: needs.scheduled_release_gate.outputs.proceed == 'true'
     uses: ./.github/workflows/stage-shared-site-shell.yml
+    with:
+      release_branch_ref: ${{ inputs.release_branch_ref }}
+      release_task_id: ${{ inputs.release_task_id }}
     secrets: inherit
 
   reliability_gate:

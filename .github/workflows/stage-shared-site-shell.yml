@@ -2,6 +2,17 @@ name: Stage Shared Site Shell
 
 on:
   workflow_call:
+    inputs:
+      release_branch_ref:
+        description: 'Exact orchestrator source branch supplied by the release caller'
+        required: false
+        default: ''
+        type: string
+      release_task_id:
+        description: 'Exact orchestrator task id paired with release_branch_ref'
+        required: false
+        default: ''
+        type: string
     outputs:
       release_digest:
         description: 'Immutable digest of the production Worker bundle, static assets, config and release contract verified by staging'
@@ -92,7 +103,31 @@ jobs:
           echo "SOURCE_DATE_EPOCH=$source_date_epoch" >> "$GITHUB_ENV"
           echo "Release build timestamp pinned to source commit epoch: $source_date_epoch"
 
+      - name: Apply exact orchestrator provenance from release caller
+        if: inputs.release_branch_ref != ''
+        shell: bash
+        env:
+          REQUESTED_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref }}
+          REQUESTED_RELEASE_TASK_ID: ${{ inputs.release_task_id }}
+        run: |
+          set -euo pipefail
+          branch="${REQUESTED_RELEASE_BRANCH_REF:-}"
+          requested_task="${REQUESTED_RELEASE_TASK_ID:-}"
+          if [[ ! "$branch" =~ ^ai/[^/]+/(orch_[A-Za-z0-9-]+)$ ]]; then
+            echo "Invalid orchestrator release branch supplied to staging: $branch" >&2
+            exit 1
+          fi
+          derived_task="${BASH_REMATCH[1]}"
+          if [ -n "$requested_task" ] && [ "$requested_task" != "$derived_task" ]; then
+            echo "Requested release task does not match orchestrator branch: task=$requested_task branch=$branch" >&2
+            exit 1
+          fi
+          echo "EKODI_RELEASE_BRANCH_REF=$branch" >> "$GITHUB_ENV"
+          echo "EKODI_RELEASE_TASK_ID=${requested_task:-$derived_task}" >> "$GITHUB_ENV"
+          echo "Applied exact staging release provenance: $branch"
       - name: EKODI AI Orchestration Gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Validate shared router and build
         run: |
