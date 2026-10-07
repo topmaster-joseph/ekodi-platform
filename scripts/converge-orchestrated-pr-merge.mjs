@@ -45,6 +45,7 @@ const independentBoardTouched=changedFiles.some(file=>
 );
 const sharedSiteTouched=changedFiles.some(file=>
   file.startsWith('sites/')||
+  file.startsWith('auth-site/')||
   file==='deploy/manifests/shared-site.worker.json'||
   file==='seonammedi-admin-control.js'||
   file==='wrangler.site.toml'||
