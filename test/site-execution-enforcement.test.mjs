@@ -116,11 +116,21 @@ test('login return one-time credentials never use the browser address bar',()=>{
   assert.equal(hygiene.perSiteOptOutAllowed,false);
 
   const client=read('auth-site/client-auth.js');
+  const general=read('auth-site/auth.js');
+  const business=read('auth-site/business-auth.js');
+  const workspace=read('auth-site/auth-workspace-target.js');
+  const admin=read('auth-site/admin-auth.js');
+  const adminMenu=read('admin-menu-runtime.js');
+  const supply=read('supply-network-admin.js');
   const bridge=read('auth-return-post.js');
   const platform=read('platform-router-entry-worker.js');
   const board=read('services/independent-board/worker.js');
-  assert.doesNotMatch(client,/target\.hash\s*=\s*new URLSearchParams\(\{ekodi_token:/);
-  assert.doesNotMatch(client,/searchParams\.set\(['"](?:ekodi_token|token_hash|code|state|nonce|ticket|handoff_token)['"]/);
+  const producers=[client,general,business,workspace,admin,adminMenu,supply];
+  for(const source of producers){
+    assert.doesNotMatch(source,/(?:target|destination)\.hash\s*=\s*new URLSearchParams\([^;]*(?:ekodi_token|ekodi_admin_token)/s);
+    assert.doesNotMatch(source,/(?:target|destination)\.searchParams\.set\(['"](?:ekodi_token|ekodi_admin_token|token_hash|access_token|refresh_token|handoff_token)['"]/s);
+    assert.doesNotMatch(source,/fragment\s*=\s*\{[^}]*ekodi_token/s);
+  }
   assert.match(client,/form\.method='POST'/);
   assert.match(client,/ekodi_auth_return:'1'/);
   assert.match(client,/form\.submit\(\)/);
@@ -130,4 +140,6 @@ test('login return one-time credentials never use the browser address bar',()=>{
   assert.match(bridge,/location\.replace\(clean\.href\)/);
   assert.match(platform,/handleAuthReturnPost\(request\)/);
   assert.match(board,/handleAuthReturnPost\(req\)/);
+  assert.match(admin,/sessionStorage\.setItem\('ekodi-auth-token',result\.token\)/);
+  assert.match(business,/sessionStorage\.setItem\('ekodi-business-session'/);
 });
