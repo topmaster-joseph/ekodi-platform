@@ -109,7 +109,12 @@ test('seonammedi admin stays site-local before and after Google authentication',
   assert.match(adminHtml,/운영홈/);
   assert.doesNotMatch(adminHtml,/admin\/sites\/workspace|route=workspace&source=seonammedi|http-equiv="refresh"/);
   assert.match(adminJs,/site','seonammedi'/);
-  assert.match(adminJs,/return_to',location\.origin\+'\/admin\/'/);
+  assert.match(adminJs,/function adminReturnUrl\(\)/);
+  assert.match(adminJs,/location\.hostname==='ekodi\.kr'/);
+  assert.match(adminJs,/location\.pathname==='\/seonammedi\/admin'/);
+  assert.match(adminJs,/location\.pathname\.startsWith\('\/seonammedi\/admin\/'\)/);
+  assert.match(adminJs,/internal\?'\/seonammedi\/admin\/':'\/admin\/'/);
+  assert.match(adminJs,/return_to',adminReturnUrl\(\)/);
   assert.match(adminJs,/CENTRAL_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token'/);
   assert.match(adminJs,/localStorage\.getItem\(CENTRAL_SESSION_KEY\)/);
   assert.doesNotMatch(adminJs,/cdn\.jsdelivr\.net|createClient\(/);
