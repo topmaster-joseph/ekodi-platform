@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {
   ORCHESTRATOR_RELEASE_RECEIPT_ENDPOINT,
   parseOrchestratorReleaseBranch,
@@ -107,4 +108,16 @@ test('receipt verifier returns only bounded non-sensitive authority evidence',()
   const serialized=JSON.stringify(result);
   assert.doesNotMatch(serialized,/private-requester|private-intent|private-token|private-refresh/);
   assert.match(serialized,/ekodi-orchestrator/);
+});
+
+
+test('deployment workflows accept the canonical orchestrator task-id grammar',async()=>{
+  const files=['deploy-site-core.yml','deploy-independent-board.yml','stage-shared-site-shell.yml'];
+  for(const name of files){
+    const source=await readFile(new URL('../.github/workflows/'+name,import.meta.url),'utf8');
+    assert.ok(source.includes('(orch_[A-Za-z0-9_-]+)'),name);
+    assert.equal(source.includes('(orch_[A-Za-z0-9-]+)'),false,name);
+  }
+  const underscored='ai/openai/orch_shared_site_dispatch_contract_20261007';
+  assert.ok(parseOrchestratorReleaseBranch(underscored));
 });
