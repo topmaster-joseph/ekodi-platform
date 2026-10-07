@@ -4,7 +4,7 @@ import { adminAuthorityForRole, authorizeEkodiAction, hasEkodiCapability } from 
 const root = new URL('../', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
 
-const [edge, entry, site, wrangler, adminAuth, adminSession, authorization, customerEntry, projection, coreApi, externalAi, openAi, claude, gemini, aiContractRaw] = await Promise.all([
+const [edge, entry, site, wrangler, adminAuth, adminSession, authorization, customerEntry, projection, coreApi, externalAi, openAi, claude, gemini, aiContractRaw, constitutionRaw] = await Promise.all([
   read('security-edge.js'),
   read('mission-control-entry-worker.js'),
   read('site-worker.js'),
@@ -20,6 +20,7 @@ const [edge, entry, site, wrangler, adminAuth, adminSession, authorization, cust
   read('claude-provider-adapter.js'),
   read('gemini-provider-adapter.js'),
   read('config/external-ai-module-contract.json'),
+  read('governance/constitution/constitution.json'),
 ]);
 
 for (const marker of [
@@ -54,10 +55,16 @@ for (const marker of [
 ]) assert(wrangler.includes(marker), `wrangler security binding missing: ${marker}`);
 assert(wrangler.includes('workers_dev = false'), 'production Control API must not expose workers.dev');
 const allowedOrigins = (wrangler.match(/ALLOWED_ORIGINS\s*=\s*"([^"]*)"/)?.[1] || '').split(',').map(value => value.trim()).filter(Boolean);
-for (const forbiddenOrigin of [
-  'https://shy-thunder-39a4.topmaster-joseph.workers.dev',
-  'https://ekodi-platform.pages.dev',
-]) assert(!allowedOrigins.includes(forbiddenOrigin), `production Control API CORS must not allow non-production origin: ${forbiddenOrigin}`);
+const constitution = JSON.parse(constitutionRaw);
+const customerOwnedHosts = new Set(Object.keys(constitution.customerOwnedDomainMappings || {}).map(value => String(value).toLowerCase()));
+assert(allowedOrigins.includes('https://ekodi.kr'), 'production Control API CORS must include the canonical apex origin');
+for (const origin of allowedOrigins) {
+  const parsed = new URL(origin);
+  assert(parsed.protocol === 'https:', `production Control API CORS origin must use HTTPS: ${origin}`);
+  const host = parsed.hostname.toLowerCase();
+  assert(host === 'ekodi.kr' || customerOwnedHosts.has(host),
+    `production Control API CORS must use only the apex or constitution-registered customer domains: ${origin}`);
+}
 
 for (const marker of [
   'GOOGLE_ISSUERS',
