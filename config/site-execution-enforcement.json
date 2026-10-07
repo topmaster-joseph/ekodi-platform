@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "policyId": "SITE-EXECUTION-ENFORCEMENT-001",
   "status": "enforced",
   "sourceOfSites": "config/site-lifecycle-registry.json",
@@ -38,7 +38,8 @@
     "isolated-branch-and-regression-validation",
     "guarded-staging-before-production",
     "canonical-mount-parity",
-    "descendant-slash-parity"
+    "descendant-slash-parity",
+    "auth-return-url-hygiene"
   ],
   "publicHeader": {
     "internalWorkspaceWordingForbidden": true,
@@ -208,6 +209,20 @@
     "contentDivergenceForbidden": true,
     "bothVariantsRegressionTestRequired": true,
     "productionVerificationRequired": true,
+    "futureSitesAutoInherit": true,
+    "perSiteOptOutAllowed": false
+  },
+  "authenticationReturnUrlHygiene": {
+    "policyId": "AUTH-RETURN-URL-HYGIENE-001",
+    "status": "enforced",
+    "scope": "all-current-and-future-login-return-handoffs",
+    "oneTimeCredentialInAddressBarForbidden": true,
+    "queryCredentialTransportForbidden": true,
+    "fragmentCredentialTransportForbidden": true,
+    "postBodyOrServerSessionTransportRequired": true,
+    "destinationMustConsumeBeforeNormalSurface": true,
+    "historyReplacementDefenseInDepthOnly": true,
+    "referrerLeakageForbidden": true,
     "futureSitesAutoInherit": true,
     "perSiteOptOutAllowed": false
   }
