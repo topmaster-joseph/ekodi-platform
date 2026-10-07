@@ -4,24 +4,39 @@ const readJson=async path=>JSON.parse((await readFile(new URL(`../${path}`,impor
 const read=async path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 const walkJs=async dir=>{const out=[];for(const entry of await readdir(dir,{withFileTypes:true})){const child=new URL(entry.name+(entry.isDirectory()?'/':''),dir);if(entry.isDirectory())out.push(...await walkJs(child));else if(entry.isFile()&&entry.name.endsWith('.js'))out.push(child)}return out};
 
-const [policy,registry,pkg,scheduler,workflow,liveVerifier]=await Promise.all([
+const [policy,registry,pkg,scheduler,workflow,liveVerifier,authClient,platformRouterEntry,independentBoard,authReturnBridge]=await Promise.all([
   readJson('config/site-execution-enforcement.json'),
   readJson('config/site-lifecycle-registry.json'),
   readJson('package.json'),
   read('ekodi-site-improvement-scheduler.js'),
   read('.github/workflows/ekodi-ai-orchestration-gate.yml'),
   read('scripts/verify-mobile-fixed-headers-live.mjs'),
+  read('auth-site/client-auth.js'),
+  read('platform-router-entry-worker.js'),
+  read('services/independent-board/worker.js'),
+  read('auth-return-post.js'),
 ]);
 
 const failures=[];
 const fail=message=>failures.push(message);
 
-if(policy.schemaVersion!==4||policy.policyId!=='SITE-EXECUTION-ENFORCEMENT-001'||policy.status!=='enforced')fail('site execution policy must remain enforced schema v4');
+if(policy.schemaVersion!==5||policy.policyId!=='SITE-EXECUTION-ENFORCEMENT-001'||policy.status!=='enforced')fail('site execution policy must remain enforced schema v5');
 const authEntry=policy.authenticationEntry||{};
 if(authEntry.policyId!=='SITE-CENTRAL-AUTH-ENTRY-001'||authEntry.status!=='enforced')fail('central site auth-entry policy must remain enforced');
 if(authEntry.centralEntry!=='https://ekodi.kr/auth/')fail('site auth entry must remain the canonical EKODI auth path');
 if(authEntry.siteLocalAuthPathForbidden!==true||authEntry.exactInitiatingReturnRequired!==true)fail('site-local auth routes must be forbidden and exact initiating return required');
 if(authEntry.futureSitesAutoInherit!==true||authEntry.perSiteOptOutAllowed!==false)fail('central auth entry must auto-inherit to future sites with no per-site opt-out');
+const authReturnUrlHygiene=policy.authenticationReturnUrlHygiene||{};
+if(authReturnUrlHygiene.policyId!=='AUTH-RETURN-URL-HYGIENE-001'||authReturnUrlHygiene.status!=='enforced')fail('login return URL hygiene policy must remain enforced');
+for(const flag of ['oneTimeCredentialInAddressBarForbidden','queryCredentialTransportForbidden','fragmentCredentialTransportForbidden','postBodyOrServerSessionTransportRequired','destinationMustConsumeBeforeNormalSurface','historyReplacementDefenseInDepthOnly','referrerLeakageForbidden','futureSitesAutoInherit'])if(authReturnUrlHygiene[flag]!==true)fail(`auth return URL hygiene flag must remain true: ${flag}`);
+if(authReturnUrlHygiene.perSiteOptOutAllowed!==false)fail('auth return URL hygiene per-site opt-out must remain forbidden');
+if(/target\.hash\s*=\s*new URLSearchParams\(\{ekodi_token:/.test(authClient))fail('central auth must not place one-time handoff credentials in URL fragments');
+if(/searchParams\.set\(['"](?:ekodi_token|token_hash|code|state|nonce|ticket|handoff_token)['"]/.test(authClient))fail('central auth must not place one-time handoff credentials in URL query parameters');
+for(const marker of ["form.method='POST'","ekodi_auth_return:'1'","form.submit()"]){if(!authClient.includes(marker))fail(`central auth missing form-post return marker: ${marker}`)}
+if(!platformRouterEntry.includes("handleAuthReturnPost(request)"))fail('platform router must consume URL-clean form-post auth returns before normal routing');
+if(!independentBoard.includes("handleAuthReturnPost(req)"))fail('independent board must consume URL-clean form-post auth returns before board routing');
+for(const marker of ['AUTH-RETURN-URL-HYGIENE-001','request.clone().formData()','token_hash:tokenHash','referrer-policy','history.replaceState','location.replace(clean.href)'])if(!authReturnBridge.includes(marker))fail(`shared auth return bridge missing URL-hygiene behavior: ${marker}`);
+if(authReturnBridge.includes('location.assign(target.href)')||authReturnBridge.includes('target.hash=new URLSearchParams'))fail('shared auth return bridge must not recreate credential-bearing URL navigation');
 const scopePolicy=policy.changeScopeClassification||{};
 if(scopePolicy.policyId!=='SITE-CHANGE-SCOPE-001'||scopePolicy.status!=='enforced')fail('site change scope classification must remain enforced');
 for(const key of ['platform_common','shared_service_engine','site_specific'])if(!scopePolicy.classes?.[key])fail(`missing site change scope class: ${key}`);
@@ -54,7 +69,7 @@ const requiredContracts=new Set([
   'readability-and-no-clipping','keyboard-and-touch-accessibility','internal-external-link-integrity',
   'loading-error-empty-state-usability','shared-header-footer-language-behavior','central-social-hub-inheritance',
   'no-direct-production-mutation','isolated-branch-and-regression-validation','guarded-staging-before-production',
-  'canonical-mount-parity','descendant-slash-parity'
+  'canonical-mount-parity','descendant-slash-parity','auth-return-url-hygiene'
 ]);
 const contracts=new Set(policy.mandatoryContracts||[]);
 for(const contract of requiredContracts)if(!contracts.has(contract))fail(`missing mandatory site contract: ${contract}`);
