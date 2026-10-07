@@ -142,8 +142,10 @@ test('SeonamMedi board admin login preserves the initiating external or internal
   ]);
   assert.match(worker,/commonScript\('\/board\/voices'\)/);
   assert.match(worker,/location\.pathname\.startsWith\(\"\/seonammedi\/board\"\)/);
-  assert.match(worker,/ekodi_auth_return/);
-  assert.match(worker,/auth\/v1\/verify/);
+  assert.match(worker,/handleAuthReturnPost/);
+  const bridge=await read('auth-return-post.js');
+  assert.match(bridge,/ekodi_auth_return/);
+  assert.match(bridge,/auth\/v1\/verify/);
   for(const route of ['voices','finance','notices']){
     assert.match(site,new RegExp('href="board/'+route+'"'));
     assert.match(adminSite,new RegExp('href="\\.\\./board/'+route+'"'));
@@ -241,13 +243,14 @@ test('SeonamMedi board consumes Google return by POST so one-time token is not p
     const html=await response.text();
     assert.equal(html.includes(tokenHash),false);
     assert.match(html,/localStorage\.setItem/);
-    assert.match(html,/location\.replace\(target\)/);
+    assert.match(html,/location\.replace\(clean\.href\)/);
   }finally{globalThis.fetch=original}
 });
 
-test('SeonamMedi central auth uses form POST only for the customer-domain return',async()=>{
+test('SeonamMedi central auth inherits the universal form-POST return rule',async()=>{
   const client=await read('auth-site/client-auth.js');
-  assert.match(client,/if\(site==='seonammedi'&&target\.origin!=='https:\/\/ekodi\.kr'\)/);
+  assert.doesNotMatch(client,/target\.hash=new URLSearchParams\(\{ekodi_token:/);
+  assert.doesNotMatch(client,/if\(site==='seonammedi'&&target\.origin!=='https:\/\/ekodi\.kr'\)/);
   assert.match(client,/form\.method='POST'/);
   assert.match(client,/ekodi_auth_return:'1'/);
   assert.match(client,/form\.submit\(\)/);
