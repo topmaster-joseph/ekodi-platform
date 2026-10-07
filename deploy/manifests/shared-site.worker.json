@@ -1,5 +1,5 @@
 {
-  "version": 102,
+  "version": 103,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -2834,6 +2834,7 @@
           "x-robots-tag: noindex, nofollow, noarchive"
         ]
       }
-    ]
+    ],
+    "attestationPath": "/__ekodi/version"
   }
 }
