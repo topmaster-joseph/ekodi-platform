@@ -254,3 +254,32 @@ test('SeonamMedi central auth uses form POST only for the customer-domain return
   assert.match(client,/ekodi_auth_return:'1'/);
   assert.match(client,/form\.submit\(\)/);
 });
+
+
+test('standalone board media and layout contract is shared by citizen voices and notices',async()=>{
+  const [worker,migration]=await Promise.all([
+    read('services/independent-board/worker.js'),
+    read('services/independent-board/migrations/0004_board_media.sql')
+  ]);
+  assert.match(migration,/ALTER TABLE board_posts ADD COLUMN image_keys/);
+  assert.match(migration,/ALTER TABLE notice_posts ADD COLUMN image_keys/);
+  assert.match(worker,/const MEDIA_MAX=5,MEDIA_BYTES=1600000/);
+  assert.match(worker,/saveImages\(env,'voices'/);
+  assert.match(worker,/saveImages\(env,'notices'/);
+  assert.match(worker,/\/api\/files\//);
+  assert.match(worker,/data-share/);
+  assert.match(worker,/navigator\.share/);
+  assert.match(worker,/name="images" type="file"/);
+  assert.match(worker,/width:min\(1180px,calc\(100% - 28px\)\)/);
+  assert.match(worker,/class="footer-copy"><strong>서남권 국립의대 소통센터<\/strong><span>자료의 성격과 출처를 구분해 보존합니다\.<\/span>/);
+  const financeStart=worker.indexOf('function financePage(req){');
+  const financeEnd=worker.indexOf('function noticesPage(req){',financeStart);
+  const financeBlock=worker.slice(financeStart,financeEnd);
+  assert.doesNotMatch(financeBlock,/elements\.images|data-share/);
+});
+
+test('standalone board media endpoint is restricted to board-owned R2 prefixes',async()=>{
+  const worker=await read('services/independent-board/worker.js');
+  assert.match(worker,/\^seonammedi\\\/(voices\|notices)\\\//);
+  assert.match(worker,/x-content-type-options','nosniff'/);
+});
