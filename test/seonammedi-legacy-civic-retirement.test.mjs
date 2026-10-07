@@ -35,7 +35,7 @@ test('legacy shared-D1 citizen voice rows are cleared after standalone cutover',
 
 test('shared-site release manifest verifies the retired civic health contract',async()=>{
   const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
-  const requests=manifest?.verification?.requests||manifest?.verify?.requests||manifest?.requests||[];
+  const requests=manifest?.worker?.requests||manifest?.verification?.requests||manifest?.verify?.requests||manifest?.requests||[];
   const check=requests.find(item=>item?.url==='https://ekodi.kr/api/seonammedi/voices/health');
   assert.ok(check,'voices health verification entry missing');
   const markers=[...(check.expect||[]),...(check.bodyIncludes||[])].join(' ');
