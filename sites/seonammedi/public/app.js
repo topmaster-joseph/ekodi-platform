@@ -87,6 +87,48 @@ function renderPublicFinance(rows,adminMode=false){
     return '<article class="material-item finance-item"><div class="material-date">'+escapeHtml(item.date||'')+'</div><div><h3>'+escapeHtml((item.type==='income'?'수입 ':'지출 ')+money(Number(item.amount||0)))+'</h3><p>'+escapeHtml(item.purpose||'')+'</p><div class="public-post-meta">'+(item.event?'<span class="source-type">'+escapeHtml(item.event)+'</span>':'')+'<span class="source-type">'+escapeHtml(financeEvidenceLabel(item.evidenceStatus))+'</span>'+visibility+'</div>'+(item.note?'<p>'+escapeHtml(item.note)+'</p>':'')+actions+'</div></article>';
   }).join(''):'<p class="muted">'+(adminMode?'등록된 회계내역이 없습니다.':'공개된 회계내역이 없습니다.')+'</p>';
 }
+
+const TIMELINE_FILTERS=['전체','비대위 활동이력','장기현안','정부·대학','후보대학 선정'];
+let publicTimelineEntries=[];
+let publicTimelineAdminMode=false;
+let activeTimelineCategory='전체';
+const timelineCategoryLabel=value=>{
+  const raw=String(value||'').trim();
+  if(raw==='비대위 활동')return'비대위 활동이력';
+  if(raw==='장기연혁')return'장기현안';
+  return raw;
+};
+const timelineDateKey=value=>{
+  const parts=String(value||'').trim().match(/\d+/g)||[];
+  const year=Number(parts[0]||0),month=Number(parts[1]||12),day=Number(parts[2]||31);
+  return year*10000+month*100+day;
+};
+const timelineDescending=(a,b)=>timelineDateKey(b.date)-timelineDateKey(a.date)||Number(b.id||0)-Number(a.id||0)||String(b.title||'').localeCompare(String(a.title||''),'ko-KR');
+function renderTimelineFilters(){
+  const host=el('timelineFilters');if(!host)return;
+  host.innerHTML=TIMELINE_FILTERS.map(cat=>'<button data-cat="'+escapeHtml(cat)+'" class="'+(cat===activeTimelineCategory?'active':'')+'">'+escapeHtml(cat)+'</button>').join('');
+  if(host.dataset.bound!=='1'){
+    host.dataset.bound='1';
+    host.addEventListener('click',event=>{const button=event.target.closest('button[data-cat]');if(!button)return;activeTimelineCategory=button.dataset.cat;renderTimelineFilters();renderPublicTimeline();});
+  }
+}
+function renderPublicTimeline(){
+  const host=el('timelineList');if(!host)return;
+  const rows=(activeTimelineCategory==='전체'?publicTimelineEntries:publicTimelineEntries.filter(item=>timelineCategoryLabel(item.category)===activeTimelineCategory)).slice().sort(timelineDescending);
+  host.innerHTML=rows.length?rows.map((item,index)=>{
+    const adminActions=publicTimelineAdminMode?'<div class="timeline-admin-actions"><span class="source-type '+(item.status==='published'?'':'is-private')+'">'+(item.status==='published'?'공개':'비공개')+'</span><button type="button" data-timeline-edit="'+Number(item.id)+'">수정</button><button type="button" data-timeline-status="'+Number(item.id)+'">'+(item.status==='published'?'비공개로':'공개로')+'</button><button type="button" data-timeline-delete="'+Number(item.id)+'">삭제</button></div>':'';
+    return '<article class="timeline-item'+(index>2?' is-collapsed':'')+'" data-event-date="'+escapeHtml(item.date)+'"><div class="timeline-date">'+escapeHtml(item.date)+'</div><div class="timeline-content"><h3>'+escapeHtml(item.title)+'</h3><p class="timeline-summary">'+escapeHtml(item.summary)+'</p><div class="chips"><span class="chip">'+escapeHtml(timelineCategoryLabel(item.category))+'</span><span class="chip">'+escapeHtml(item.evidence)+'</span></div><div class="timeline-detail">'+evidenceBlock(item)+'</div>'+adminActions+'<button class="timeline-toggle" type="button" aria-expanded="'+(index>2?'false':'true')+'">'+(index>2?'자세히 보기':'접기')+'</button></div></article>';
+  }).join(''):'<p class="muted">표시할 활동이력이 없습니다.</p>';
+  host.querySelectorAll('.timeline-toggle').forEach(button=>button.addEventListener('click',()=>{const card=button.closest('.timeline-item');const collapsed=card.classList.toggle('is-collapsed');button.setAttribute('aria-expanded',collapsed?'false':'true');button.textContent=collapsed?'자세히 보기':'접기'}));
+  attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS||[]);
+}
+function initializePublicTimeline(rows){
+  publicTimelineEntries=Array.isArray(rows)?rows:[];
+  activeTimelineCategory='전체';
+  renderTimelineFilters();
+  renderPublicTimeline();
+}
+
 async function load(){
 const [r,timelineResponse,pageResponse]=await Promise.all([fetch('/seonammedi/data.json',{cache:'no-store'}),fetch('/api/seonammedi/timeline',{cache:'no-store'}).catch(()=>null),fetch('/api/seonammedi/page-data',{cache:'no-store'}).catch(()=>null)]);
 if(!r.ok)throw new Error('data');const d=await r.json();
@@ -100,17 +142,7 @@ if(statusCards){
   statusCards.addEventListener('click',event=>{const button=event.target.closest('.status-card');if(!button)return;if(button.getAttribute('aria-expanded')==='true'){closeStatusDetail();return}renderStatusDetail(button.dataset.status,d)});
 }
 // Canonical public activity-history filter labels/order.
-const timelineCategoryLabel=value=>String(value||'').trim()==='비대위 활동'?'비대위 활동이력':String(value||'').trim();
-const timelineDateKey=value=>{
-  const parts=String(value||'').trim().match(/\d+/g)||[];
-  const year=Number(parts[0]||0),month=Number(parts[1]||12),day=Number(parts[2]||31);
-  return year*10000+month*100+day;
-};
-const timelineDescending=(a,b)=>timelineDateKey(b.date)-timelineDateKey(a.date)||Number(b.id||0)-Number(a.id||0)||String(b.title||'').localeCompare(String(a.title||''),'ko-KR');
-const cats=['전체','비대위 활동이력','장기현안','정부·대학','후보대학 선정'];
-el('timelineFilters').innerHTML=cats.map((c,i)=>`<button data-cat="${escapeHtml(c)}" class="${i===0?'active':''}">${escapeHtml(c)}</button>`).join('');
-const render=cat=>{const rows=(cat==='전체'?d.timeline:d.timeline.filter(x=>timelineCategoryLabel(x.category)===cat)).slice().sort(timelineDescending);el('timelineList').innerHTML=rows.map((x,index)=>`<article class="timeline-item${index>2?' is-collapsed':''}" data-event-date="${escapeHtml(x.date)}"><div class="timeline-date">${escapeHtml(x.date)}</div><div class="timeline-content"><h3>${escapeHtml(x.title)}</h3><p class="timeline-summary">${escapeHtml(x.summary)}</p><div class="chips"><span class="chip">${escapeHtml(timelineCategoryLabel(x.category))}</span><span class="chip">${escapeHtml(x.evidence)}</span></div><div class="timeline-detail">${evidenceBlock(x)}</div><button class="timeline-toggle" type="button" aria-expanded="${index>2?'false':'true'}">${index>2?'자세히 보기':'접기'}</button></div></article>`).join('');el('timelineList').querySelectorAll('.timeline-toggle').forEach(button=>button.addEventListener('click',()=>{const card=button.closest('.timeline-item');const collapsed=card.classList.toggle('is-collapsed');button.setAttribute('aria-expanded',collapsed?'false':'true');button.textContent=collapsed?'자세히 보기':'접기'}))};
-render('전체');el('timelineFilters').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;[...el('timelineFilters').children].forEach(x=>x.classList.remove('active'));b.classList.add('active');render(b.dataset.cat);attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS||[])});
+initializePublicTimeline(d.timeline);
 const normalizeUrlKey=value=>{try{const u=new URL(String(value||''),location.origin);u.hash='';['utm_source','utm_medium','utm_campaign','utm_term','utm_content','fbclid','gclid'].forEach(k=>u.searchParams.delete(k));return u.href.replace(/\/$/,'')}catch{return String(value||'').trim().replace(/\/$/,'')}};
 const timelineEvidenceUrls=new Set((d.timeline||[]).flatMap(item=>[...(item.links||[]).map(link=>link.url),...(item.media||[]).map(media=>media.url)]).filter(Boolean).map(normalizeUrlKey));
 const seenMaterialKeys=new Set();
@@ -856,6 +888,87 @@ function bindPublicOrganizationAdmin(){
     }catch(error){if(message)message.textContent=error.message}
   };
 }
+
+function resetPublicTimelineEditor(){
+  const form=el('timelineManageForm');if(!form)return;
+  form.reset();form.elements.id.value='';form.elements.status.value='published';form.elements.sortOrder.value=String(publicTimelineEntries.length);
+  if(el('timelineManageTitle'))el('timelineManageTitle').textContent='활동이력 추가';
+  if(el('timelineManageMessage'))el('timelineManageMessage').textContent='';
+}
+function setPublicTimelineEditor(open,item=null){
+  const form=el('timelineManageForm'),toggle=el('timelineManageToggle');if(!form||!toggle)return;
+  if(!open){resetPublicTimelineEditor();form.hidden=true;toggle.setAttribute('aria-expanded','false');toggle.textContent='활동이력 바로 수정';return}
+  resetPublicTimelineEditor();
+  if(item){
+    form.elements.id.value=item.id;form.elements.date.value=item.date||'';form.elements.category.value=item.category||'';form.elements.title.value=item.title||'';form.elements.summary.value=item.summary||'';form.elements.evidence.value=item.evidence||'';form.elements.sortOrder.value=String(item.sortOrder??0);form.elements.status.value=item.status||'draft';
+    if(el('timelineManageTitle'))el('timelineManageTitle').textContent='활동이력 수정';
+  }
+  form.hidden=false;toggle.setAttribute('aria-expanded','true');toggle.textContent='편집 닫기';form.querySelector('input:not([type="hidden"]),textarea')?.focus();
+}
+async function loadPublicTimelineAdmin(){
+  const data=await publicAdminJson('/api/seonammedi/admin/timeline');
+  publicTimelineEntries=Array.isArray(data.items)?data.items:[];publicTimelineAdminMode=true;
+  if(window.__SEONAM_MEDI_DATA)window.__SEONAM_MEDI_DATA.timeline=publicTimelineEntries.filter(item=>item.status==='published');
+  renderTimelineFilters();renderPublicTimeline();
+}
+function bindPublicTimelineAdmin(){
+  const toggle=el('timelineManageToggle'),form=el('timelineManageForm'),cancel=el('timelineManageCancel'),host=el('timelineList');if(!toggle||!form||!host)return;
+  toggle.hidden=false;toggle.onclick=()=>setPublicTimelineEditor(form.hidden);cancel.onclick=()=>setPublicTimelineEditor(false);
+  form.onsubmit=async event=>{
+    event.preventDefault();const id=Number(form.elements.id.value||0),message=el('timelineManageMessage');
+    const payload={date:form.elements.date.value,category:form.elements.category.value,title:form.elements.title.value,summary:form.elements.summary.value,evidence:form.elements.evidence.value,sortOrder:Number(form.elements.sortOrder.value||0),status:form.elements.status.value};
+    try{if(message)message.textContent='저장 중…';await publicAdminJson(id?'/api/seonammedi/admin/timeline/'+id:'/api/seonammedi/admin/timeline',{method:id?'PUT':'POST',body:JSON.stringify(payload)});setPublicTimelineEditor(false);await loadPublicTimelineAdmin()}catch(error){if(message)message.textContent=error.message}
+  };
+  host.addEventListener('click',async event=>{
+    const edit=event.target.closest('[data-timeline-edit]'),status=event.target.closest('[data-timeline-status]'),del=event.target.closest('[data-timeline-delete]');
+    if(edit){const item=publicTimelineEntries.find(row=>Number(row.id)===Number(edit.dataset.timelineEdit));if(item)setPublicTimelineEditor(true,item);return}
+    if(status){const item=publicTimelineEntries.find(row=>Number(row.id)===Number(status.dataset.timelineStatus));if(!item)return;try{await publicAdminJson('/api/seonammedi/admin/timeline/'+item.id,{method:'PUT',body:JSON.stringify({status:item.status==='published'?'draft':'published'})});await loadPublicTimelineAdmin()}catch(error){alert(error.message)}return}
+    if(del){const item=publicTimelineEntries.find(row=>Number(row.id)===Number(del.dataset.timelineDelete));if(!item||!confirm('이 활동이력을 삭제할까요?'))return;try{await publicAdminJson('/api/seonammedi/admin/timeline/'+item.id,{method:'DELETE'});await loadPublicTimelineAdmin()}catch(error){alert(error.message)}}
+  });
+  loadPublicTimelineAdmin().catch(()=>{});
+}
+let publicChannelAdminItems=[];
+function resetPublicChannelEditor(){
+  const form=el('channelManageForm');if(!form)return;
+  form.reset();form.elements.id.value='';form.elements.platform.value='youtube';form.elements.category.value='official';form.elements.sortOrder.value='0';form.elements.visible.checked=true;
+  if(el('channelManageTitle'))el('channelManageTitle').textContent='채널 추가';
+  if(el('channelManageMessage'))el('channelManageMessage').textContent='';
+}
+function setPublicChannelEditor(open,item=null){
+  const form=el('channelManageForm'),toggle=el('channelManageToggle');if(!form||!toggle)return;
+  if(!open){resetPublicChannelEditor();form.hidden=true;toggle.setAttribute('aria-expanded','false');toggle.textContent='소통채널 바로 수정';return}
+  resetPublicChannelEditor();
+  if(item){
+    form.elements.id.value=item.id;form.elements.platform.value=item.platform||'other';form.elements.category.value=item.category||'other';form.elements.sortOrder.value=String(item.sortOrder||0);form.elements.name.value=item.name||'';form.elements.url.value=item.url||'';form.elements.previewUrl.value=item.previewUrl||'';form.elements.official.checked=Boolean(item.official);form.elements.visible.checked=item.visible!==false;form.elements.note.value=item.note||'';
+    if(el('channelManageTitle'))el('channelManageTitle').textContent='채널 수정';
+  }
+  form.hidden=false;toggle.setAttribute('aria-expanded','true');toggle.textContent='편집 닫기';form.querySelector('input:not([type="hidden"]),select,textarea')?.focus();
+}
+function renderPublicChannelAdminList(){
+  const host=el('channelManageList');if(!host)return;
+  host.hidden=false;
+  host.innerHTML=publicChannelAdminItems.length?publicChannelAdminItems.map(item=>'<article class="inline-manage-item"><div><strong>'+escapeHtml(item.name||'채널')+'</strong><small>'+escapeHtml([channelPlatformLabel(item.platform),channelCategoryLabel(item.category),item.visible===false?'비공개':'공개'].join(' · '))+'</small></div><div class="inline-manage-actions"><button type="button" data-channel-edit="'+Number(item.id)+'">수정</button><button type="button" data-channel-visible="'+Number(item.id)+'">'+(item.visible===false?'공개로':'비공개로')+'</button><button type="button" data-channel-delete="'+Number(item.id)+'">삭제</button></div></article>').join(''):'<p class="muted">등록된 채널이 없습니다.</p>';
+}
+async function loadPublicChannelAdmin(){
+  const data=await publicAdminJson('/api/seonammedi/admin/channels');publicChannelAdminItems=Array.isArray(data.items)?data.items:[];renderPublicChannelAdminList();
+}
+function bindPublicChannelAdmin(){
+  const toggle=el('channelManageToggle'),form=el('channelManageForm'),cancel=el('channelManageCancel'),list=el('channelManageList');if(!toggle||!form||!list)return;
+  toggle.hidden=false;toggle.onclick=()=>setPublicChannelEditor(form.hidden);cancel.onclick=()=>setPublicChannelEditor(false);
+  form.onsubmit=async event=>{
+    event.preventDefault();const id=Number(form.elements.id.value||0),message=el('channelManageMessage');
+    const payload={platform:form.elements.platform.value,category:form.elements.category.value,sortOrder:Number(form.elements.sortOrder.value||0),name:form.elements.name.value,url:form.elements.url.value,previewUrl:form.elements.previewUrl.value,official:form.elements.official.checked,visible:form.elements.visible.checked,note:form.elements.note.value};
+    try{if(message)message.textContent='저장 중…';await publicAdminJson(id?'/api/seonammedi/admin/channels/'+id:'/api/seonammedi/admin/channels',{method:id?'PUT':'POST',body:JSON.stringify(payload)});setPublicChannelEditor(false);await Promise.all([loadPublicChannelAdmin(),loadChannels()])}catch(error){if(message)message.textContent=error.message}
+  };
+  list.onclick=async event=>{
+    const edit=event.target.closest('[data-channel-edit]'),visibility=event.target.closest('[data-channel-visible]'),del=event.target.closest('[data-channel-delete]');
+    if(edit){const item=publicChannelAdminItems.find(row=>Number(row.id)===Number(edit.dataset.channelEdit));if(item)setPublicChannelEditor(true,item);return}
+    if(visibility){const item=publicChannelAdminItems.find(row=>Number(row.id)===Number(visibility.dataset.channelVisible));if(!item)return;try{await publicAdminJson('/api/seonammedi/admin/channels/'+item.id,{method:'PUT',body:JSON.stringify({visible:item.visible===false})});await Promise.all([loadPublicChannelAdmin(),loadChannels()])}catch(error){alert(error.message)}return}
+    if(del){const item=publicChannelAdminItems.find(row=>Number(row.id)===Number(del.dataset.channelDelete));if(!item||!confirm('이 채널을 삭제할까요?'))return;try{await publicAdminJson('/api/seonammedi/admin/channels/'+item.id,{method:'DELETE'});await Promise.all([loadPublicChannelAdmin(),loadChannels()])}catch(error){alert(error.message)}}
+  };
+  loadPublicChannelAdmin().catch(()=>{});
+}
+
 function resetPublicFinanceEditor(){
   const form=el('financeManageForm');if(!form)return;form.reset();form.elements.id.value='';form.elements.type.value='income';form.elements.visible.checked=true;
   if(el('financeManageTitle'))el('financeManageTitle').textContent='회계내역 추가';if(el('financeManageMessage'))el('financeManageMessage').textContent='';
@@ -889,8 +1002,8 @@ function renderPublicAdminControls(){
   const admin=publicAdminController;
   if(!admin||!publicAdminMe)return;
   if(admin.has('pages'))bindPublicOrganizationAdmin();
-  const timelineAdmin=el('timelineAdminEdit');if(timelineAdmin&&admin.has('timeline')){timelineAdmin.hidden=false;timelineAdmin.onclick=()=>admin.open('status','활동이력 관리')}
-  admin.attach(el('channels')?.querySelector('.section-head'),{label:'소통채널 바로 수정',panel:'channels',permission:'channels'});
+  if(admin.has('timeline'))bindPublicTimelineAdmin();
+  if(admin.has('channels'))bindPublicChannelAdmin();
   if(admin.has('voices'))window.dispatchEvent(new CustomEvent('seonammedi:voice-inline-admin-authorized'));
   if(admin.has('finance'))bindPublicFinanceAdmin();
   if(admin.has('notices')){const noticeButton=el('noticeWriteButton');if(noticeButton)noticeButton.textContent='공지 바로 수정';loadNotices();}

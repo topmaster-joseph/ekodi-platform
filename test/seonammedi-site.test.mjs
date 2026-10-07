@@ -602,8 +602,8 @@ test('seonammedi public site uses shared authenticated inline admin without dupl
   assert.match(app,/adminPath:window\.__SEONAMMEDI_ROUTES__\?\.admin\|\|'\/seonammedi\/admin\/'/);
   assert.match(app,/authEndpoint:'\/api\/seonammedi\/admin\/me'/);
   assert.match(app,/await admin\.authorize\(\)/);
-  assert.match(app,/admin\.attach/);
-  for(const label of ['조직 바로 수정','활동이력 관리','소통채널 바로 수정'])assert.match(app,new RegExp(label));
+  assert.doesNotMatch(app,/admin\.attach/);
+  for(const label of ['조직 바로 수정','활동이력 바로 수정','소통채널 바로 수정'])assert.match(html,new RegExp(label));
   assert.match(app,/공지 바로 수정/);
   assert.match(app,/bindPublicFinanceAdmin/);
   assert.match(app,/if\(admin\.has\('notices'\)\).*loadNotices\(\)/);
@@ -646,7 +646,7 @@ test('seonammedi activity history always renders in descending date order across
   const app=await readFile(new URL('app.js',root),'utf8');
   assert.match(app,/const timelineDateKey=value=>/);
   assert.match(app,/const timelineDescending=\(a,b\)=>timelineDateKey\(b\.date\)-timelineDateKey\(a\.date\)/);
-  assert.match(app,/\(cat==='전체'\?d\.timeline:d\.timeline\.filter\([^;]+\)\)\.slice\(\)\.sort\(timelineDescending\)/);
+  assert.match(app,/\(activeTimelineCategory==='전체'\?publicTimelineEntries:publicTimelineEntries\.filter\([^;]+\)\)\.slice\(\)\.sort\(timelineDescending\)/);
 });
 
 // descending activity-history order is enforced for every public category filter
@@ -745,7 +745,7 @@ test('seonammedi citizen opinions hand off to the standalone board-owned UI',asy
   assert.match(config,/database_name = "ekodi-independent-board"/);
 });
 
-test('seonammedi mobile activity history uses compact filters, progressive detail, and inline admin control',async()=>{const [html,app,css]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('app.css',root),'utf8')]);assert.match(html,/id="timelineAdminEdit"/);assert.match(app,/timeline-toggle/);assert.match(app,/is-collapsed/);assert.match(app,/timelineAdminEdit/);assert.match(css,/activity-toolbar \.filters\{flex-wrap:nowrap;overflow-x:auto/);assert.match(css,/\.timeline-item\.is-collapsed \.timeline-detail\{display:none\}/);});
+test('seonammedi mobile activity history uses compact filters, progressive detail, and inline admin control',async()=>{const [html,app,css]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('app.css',root),'utf8')]);assert.match(html,/id="timelineManageToggle"/);assert.match(html,/id="timelineManageForm"/);assert.match(app,/timeline-toggle/);assert.match(app,/is-collapsed/);assert.match(app,/bindPublicTimelineAdmin/);assert.match(css,/activity-toolbar \.filters\{flex-wrap:nowrap;overflow-x:auto/);assert.match(css,/\.timeline-item\.is-collapsed \.timeline-detail\{display:none\}/);assert.match(css,/\.inline-manage-grid\{grid-template-columns:1fr\}/);});
 
 
 test('seonammedi voices finance and notices use sibling standalone board routes',async()=>{
@@ -774,9 +774,11 @@ test('seonammedi registered Google admins manage public content from user surfac
   ]);
   assert.match(app,/공지 바로 수정/);
   assert.match(app,/조직 바로 수정/);
-  assert.match(app,/활동이력 관리/);
-  assert.match(app,/소통채널 바로 수정/);
+  assert.match(app,/bindPublicTimelineAdmin/);
+  assert.match(app,/bindPublicChannelAdmin/);
   assert.match(app,/회계 바로 수정/);
+  assert.doesNotMatch(app,/admin\.open\('status','활동이력 관리'\)/);
+  assert.doesNotMatch(app,/admin\.attach\(el\('channels'\)/);
   assert.match(worker,/auth\.permissions\?\.\[permission\]===true/);
   const [control,accessApi]=await Promise.all([
     readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
@@ -902,4 +904,31 @@ test('seonammedi auth bridge changes automatically route through guarded Control
   assert.match(workflow,/gh workflow run deploy-control-api\.yml --ref main/);
   assert.match(workflow,/release_branch_ref/);
   assert.match(workflow,/release_task_id/);
+});
+
+
+test('seonammedi timeline and channels are managed inline on the public user surface',async()=>{
+  const [html,app,css]=await Promise.all([
+    readFile(new URL('index.html',root),'utf8'),
+    readFile(new URL('app.js',root),'utf8'),
+    readFile(new URL('app.css',root),'utf8')
+  ]);
+  for(const id of ['timelineManageToggle','timelineManageForm','channelManageToggle','channelManageForm','channelManageList'])assert.match(html,new RegExp('id="'+id+'"'));
+  assert.match(app,/function bindPublicTimelineAdmin\(\)/);
+  assert.match(app,/\/api\/seonammedi\/admin\/timeline/);
+  assert.match(app,/data-timeline-edit/);
+  assert.match(app,/data-timeline-status/);
+  assert.match(app,/data-timeline-delete/);
+  assert.match(app,/function bindPublicChannelAdmin\(\)/);
+  assert.match(app,/\/api\/seonammedi\/admin\/channels/);
+  assert.match(app,/data-channel-edit/);
+  assert.match(app,/data-channel-visible/);
+  assert.match(app,/data-channel-delete/);
+  assert.match(app,/if\(admin\.has\('timeline'\)\)bindPublicTimelineAdmin\(\)/);
+  assert.match(app,/if\(admin\.has\('channels'\)\)bindPublicChannelAdmin\(\)/);
+  assert.doesNotMatch(app,/timelineAdminEdit/);
+  assert.doesNotMatch(app,/admin\.open\('status','활동이력 관리'\)/);
+  assert.doesNotMatch(app,/admin\.attach\(el\('channels'\)/);
+  assert.match(css,/\.inline-manage-form/);
+  assert.match(css,/\.inline-manage-list/);
 });
