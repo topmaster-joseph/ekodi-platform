@@ -194,7 +194,9 @@ function validHandoff(site:string,raw:string){
     const target=new URL(raw);
     if(target.protocol!=="https:"||target.username||target.password)return null;
     if(site==="marketing"&&validMarketingOrigin(target.origin))return target.href;
-    const platformPath=target.origin==="https://ekodi.kr"&&((site==="cgma"&&(target.pathname==="/cgma"||target.pathname.startsWith("/cgma/")))||(site==="mission"&&(target.pathname==="/ekodimission"||target.pathname.startsWith("/ekodimission/"))));
+    const canonicalPrefixes:Record<string,string>={cgma:"/cgma",biz:"/ekodibiz",trade:"/ekodibiz/trade",mall:"/ekodimall",books:"/books",church:"/ekodichurch",lab:"/ekodilab",mission:"/ekodimission",community:"/community",social:"/social",energy:"/energy"};
+    const prefix=canonicalPrefixes[site]||"";
+    const platformPath=target.origin==="https://ekodi.kr"&&Boolean(prefix)&&(target.pathname===prefix||target.pathname.startsWith(prefix+"/"));
     return (((origins[site]||[]).includes(target.origin)&&target.origin!=="https://ekodi.kr")||platformPath)?target.href:null;
   }catch{return null}
 }
