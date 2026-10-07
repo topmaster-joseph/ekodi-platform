@@ -163,17 +163,28 @@ export async function runTask(rawTask, options={}){
         results.push({type:'assertText',text:action.text,matched:true}); continue;
       }
       if(action.type==='snapshot'){
-        const snap=await page.evaluate(()=>({
-          title:document.title,
-          url:location.href,
-          readyState:document.readyState,
-          bodyText:(document.body?.innerText||'').slice(0,4000),
-          userAiEntryCount:document.querySelectorAll('[data-ekodi-user-ai-entry]').length,
-          scrollWidth:document.documentElement.scrollWidth,
-          clientWidth:document.documentElement.clientWidth,
-          scrollHeight:document.documentElement.scrollHeight,
-          clientHeight:document.documentElement.clientHeight,
-        }));
+        let snap=null;
+        for(let attempt=0;attempt<3;attempt++){
+          try{
+            await page.waitForLoadState('domcontentloaded',{timeout:Math.min(3000,remaining())}).catch(()=>{});
+            snap=await page.evaluate(()=>({
+              title:document.title,
+              url:location.href,
+              readyState:document.readyState,
+              bodyText:(document.body?.innerText||'').slice(0,4000),
+              userAiEntryCount:document.querySelectorAll('[data-ekodi-user-ai-entry]').length,
+              scrollWidth:document.documentElement.scrollWidth,
+              clientWidth:document.documentElement.clientWidth,
+              scrollHeight:document.documentElement.scrollHeight,
+              clientHeight:document.documentElement.clientHeight,
+            }));
+            break;
+          }catch(error){
+            const transient=/Execution context was destroyed|Cannot find context/i.test(String(error?.message||error));
+            if(!transient||attempt===2)throw error;
+            await page.waitForTimeout(250);
+          }
+        }
         results.push({type:'snapshot',...snap,horizontalOverflow:snap.scrollWidth>snap.clientWidth+1}); continue;
       }
       if(action.type==='screenshot'){
