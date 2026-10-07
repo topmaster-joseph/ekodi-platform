@@ -43,10 +43,38 @@ const independentBoardTouched=changedFiles.some(file=>
   file==='sites/seonammedi/public/app.js'||
   file==='.github/workflows/deploy-independent-board.yml'
 );
+const sharedSiteTouched=changedFiles.some(file=>
+  file.startsWith('sites/')||
+  file==='platform-router-entry-worker.js'||
+  file==='site-worker.js'||
+  file==='scripts/build.mjs'||
+  file==='scripts/finalize-seonammedi-release.mjs'||
+  file==='.github/workflows/deploy-site-core.yml'||
+  file==='scripts/converge-orchestrated-pr-merge.mjs'||
+  file==='.github/workflows/converge-orchestrated-pr-merge.yml'
+);
+async function dispatchPostMergeDeploys(){
+  if(independentBoardTouched){
+    const dispatch=await api('/actions/workflows/deploy-independent-board.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('independent board deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-independent-board.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(sharedSiteTouched){
+    const dispatch=await api('/actions/workflows/deploy-site-core.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{sync_domains:'false',release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('shared site deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-site-core.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+}
 
 for(let cycle=0;cycle<180;cycle++){
   const p=(await api('/pulls/'+pr.number)).data;
-  if(p?.merged===true){console.log('[EKODI][ORCH-AUTO-MERGE] already merged');process.exit(0)}
+  if(p?.merged===true){await dispatchPostMergeDeploys();console.log('[EKODI][ORCH-AUTO-MERGE] already merged; post-merge deploys reconciled');process.exit(0)}
   if(p?.head?.sha!==headSha)fail('PR head moved away from workflow SHA');
   const headStatuses=await statusMap(headSha);
   const pending=required.filter(k=>headStatuses.get(k)?.state!=='success');
@@ -76,14 +104,7 @@ for(let cycle=0;cycle<180;cycle++){
 
   const merged=await api('/pulls/'+pr.number+'/merge',{method:'PUT',body:JSON.stringify({sha:headSha,merge_method:'squash',commit_title:fresh.title})});
   if(merged.r.ok&&merged.data?.merged===true){
-    if(independentBoardTouched){
-      const dispatch=await api('/actions/workflows/deploy-independent-board.yml/dispatches',{
-        method:'POST',
-        body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
-      });
-      if(!dispatch.r.ok)fail('independent board deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
-      console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-independent-board.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
-    }
+    await dispatchPostMergeDeploys();
     console.log(JSON.stringify({ok:true,action:'merged',pr:pr.number,mergeSha:merged.data.sha,taskId,branch,authority:'ekodi-orchestrator'}));
     process.exit(0);
   }
