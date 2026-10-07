@@ -175,6 +175,10 @@
           <div class="hybrid-policy-item"><small>전경 표시 예외</small><strong>OAuth · CAPTCHA · OS 권한</strong></div>
         </div>
       </section>
+      <section class="hybrid-watchdog" id="hybridRollout" data-status="observe">
+        <div class="hybrid-watchdog-head"><div><strong>로컬 실행 단계</strong><span class="hybrid-pill" id="hybridRolloutStage">OBSERVE</span></div><small id="hybridRolloutReadiness">적격 노드 확인 중</small></div>
+        <div class="hybrid-monitor-note" id="hybridRolloutNote">자동 승격 없이 적격 노드 상태부터 확인합니다.</div>
+      </section>
       <section class="hybrid-watchdog" id="hybridWatchdog" data-status="unknown">
         <div class="hybrid-watchdog-head"><div><strong>운영 자동감시</strong><span class="hybrid-pill" id="hybridMonitorStatus">확인 전</span></div><small id="hybridMonitorTime">10분 주기 감시</small></div>
         <div class="hybrid-incidents" id="hybridIncidentList"><div class="hybrid-empty">감시 상태를 불러오는 중입니다.</div></div>
@@ -285,6 +289,26 @@
     }
   }
 
+  function renderRollout() {
+    const panel = document.querySelector('#hybridExecutionPanel');
+    if (!panel) return;
+    const rollout = lastDashboard.fabric?.rollout || {};
+    const stage = rollout.stage || 'observe';
+    const stageLabel = ({ observe:'OBSERVE', canary:'CANARY', parallel:'PARALLEL' })[stage] || String(stage).toUpperCase();
+    const stageNode = panel.querySelector('#hybridRolloutStage');
+    const readiness = panel.querySelector('#hybridRolloutReadiness');
+    const note = panel.querySelector('#hybridRolloutNote');
+    const host = panel.querySelector('#hybridRollout');
+    if (host) host.dataset.status = stage === 'parallel' ? 'healthy' : stage === 'canary' ? 'degraded' : 'unknown';
+    if (stageNode) stageNode.textContent = stageLabel;
+    if (readiness) readiness.textContent = `적격 온라인 ${Number(rollout.onlineEligibleNodes) || 0}대 · 자동실행 ${Number(rollout.autoNodes) || 0}대`;
+    if (note) note.textContent = stage === 'observe'
+      ? '관찰 단계입니다. 적격 노드를 확인하고 첫 카나리 노드만 명시적으로 활성화합니다.'
+      : stage === 'canary'
+        ? (rollout.parallelReady ? '카나리 단계가 동작 중입니다. 검증 후 두 번째 적격 노드를 활성화하면 병렬 단계로 전환됩니다.' : '카나리 단계가 동작 중입니다. 두 번째 적격 노드 등록·온라인 상태가 필요합니다.')
+        : '두 대 이상의 적격 노드가 least-loaded 방식으로 병렬 실행 가능한 상태입니다.';
+  }
+
   function renderMonitoring() {
     const panel = document.querySelector('#hybridExecutionPanel');
     if (!panel) return;
@@ -393,6 +417,7 @@
       nodes.innerHTML = lastDashboard.nodes.length ? lastDashboard.nodes.map(nodeMarkup).join('') : '<div class="hybrid-empty">Agent가 다음 작업을 확인하면 실행 노드로 나타납니다.</div>';
       nodes.querySelectorAll('[data-save-node]').forEach(button => button.addEventListener('click', saveNode));
       renderFabric();
+      renderRollout();
       renderMonitoring();
       renderJobs();
       renderEvents();
