@@ -1,3 +1,4 @@
+/* ADMIN-WHITE-SURFACE-001: conversation workbench and navigation rail use a white base canvas. */
 /* EKODI Admin conversation-first workbench v1
    A single light navigation rail + spacious work canvas + persistent command composer.
    This is an EKODI-native interaction contract, not a provider-specific clone. */
@@ -9,7 +10,7 @@ body.admin-compact{
   --ekodi-admin-sidebar-width:228px;
   --ekodi-assist-left:228px;
   --ekodi-admin-canvas:#ffffff;
-  --ekodi-admin-sidebar:#f7f8fc;
+  --ekodi-admin-sidebar:#fff;
   --ekodi-admin-hover:#eceff5;
   --ekodi-admin-active:#e8f0fe;
   --ekodi-admin-text:#1f1f1f;

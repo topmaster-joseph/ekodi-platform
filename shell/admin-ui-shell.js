@@ -3,6 +3,7 @@
 
 const VERSION=2;
 const STYLE_ID='ekodi-admin-ui-shell-style';
+// ADMIN-WHITE-SURFACE-001: the shared Admin UI shell owns a white navigation and workspace baseline.
 const SURFACE='admin';
 const SIDEBAR_SELECTORS=['[data-ekodi-admin-sidebar]','[data-ekodi-sidebar]','#sidebar','.admin-sidebar','.sidebar'];
 const BRAND_SELECTORS=['[data-ekodi-admin-sidebar-header]','[data-ekodi-admin-brand]','.side-brand','.sidebar-brand','.admin-sidebar-brand'];
@@ -28,25 +29,35 @@ function installStyle(){
   style.textContent=`
     html[data-ekodi-shell-surface="admin"] :is([data-ekodi-admin-sidebar-header],[data-ekodi-admin-brand],.side-brand,.sidebar-brand,.admin-sidebar-brand){display:none!important}
     html[data-ekodi-shell-surface="admin"] :is([data-ekodi-language-control],[data-language-selector],[data-language-switcher],[data-admin-locale-caption],.language-selector,.language-switcher,.lang-selector,.lang-switcher,#ekodiAdminLocaleWrap,#ekodiAdminLocale,#google_translate_element,.goog-te-gadget){display:none!important}
-    html[data-ekodi-shell-surface="admin"]{color-scheme:light;--ekodi-admin-bg:#f4f7fb;--ekodi-admin-panel:#fff;--ekodi-admin-text:#172033;--ekodi-admin-muted:#65788d;--ekodi-admin-line:#d9e3ec;--ekodi-admin-sidebar:#0b1f36;--ekodi-admin-sidebar-line:#173653;--ekodi-admin-active:#174b7b}
+    html[data-ekodi-shell-surface="admin"]{color-scheme:light;--ekodi-admin-bg:#fff;--ekodi-admin-panel:#fff;--ekodi-admin-text:#172033;--ekodi-admin-muted:#65788d;--ekodi-admin-line:#d9e3ec;--ekodi-admin-sidebar:#fff;--ekodi-admin-sidebar-line:#d9e3ec;--ekodi-admin-active:#fff}
     html[data-ekodi-shell-surface="admin"] body{background:var(--ekodi-admin-bg)!important;color:var(--ekodi-admin-text)!important}
-    html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar{display:flex!important;flex-direction:column!important;height:100dvh!important;min-height:0!important;overflow:hidden!important;box-sizing:border-box!important;padding-top:max(8px,env(safe-area-inset-top,0px))!important;background:var(--ekodi-admin-sidebar)!important;color:#e9f2fb!important;border-color:var(--ekodi-admin-sidebar-line)!important}
-    html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar :is(.nav,[data-ekodi-admin-nav] a,[data-ekodi-admin-nav] button){color:#dbe8f6!important}
-    html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar :is(.nav,[data-ekodi-admin-nav] a,[data-ekodi-admin-nav] button):hover{background:#102c49!important;color:#fff!important}
-    html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar :is(.nav.active,[aria-current="page"]){background:var(--ekodi-admin-active)!important;color:#fff!important}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar{display:flex!important;flex-direction:column!important;height:100dvh!important;min-height:0!important;overflow:hidden!important;box-sizing:border-box!important;padding-top:max(8px,env(safe-area-inset-top,0px))!important;background:var(--ekodi-admin-sidebar)!important;color:var(--ekodi-admin-text)!important;border-color:var(--ekodi-admin-sidebar-line)!important}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar :is(.nav,[data-ekodi-admin-nav] a,[data-ekodi-admin-nav] button){color:#405269!important}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar :is(.nav,[data-ekodi-admin-nav] a,[data-ekodi-admin-nav] button):hover{background:#f8fafc!important;color:#172033!important}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar :is(.nav.active,[aria-current="page"]){background:var(--ekodi-admin-active)!important;color:#111827!important;box-shadow:inset 3px 0 0 #111827!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main{background:var(--ekodi-admin-bg)!important;color:var(--ekodi-admin-text)!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea){min-height:42px;border:1px solid #bccbd9;border-radius:10px;background:#fff;color:#203247;padding:9px 11px;font:inherit}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main :is(input,select,textarea):focus{outline:none;border-color:#4d8fc7;box-shadow:0 0 0 3px #dceeff}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main table{color:#2d4157;background:#fff}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main th{background:#f4f7fa;color:#43566a}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main :is(.section,.module,.card,[data-ekodi-admin-card]){border-color:var(--ekodi-admin-line)}
+    /* ADMIN-WHITE-SURFACE-002: local feature CSS may style states, but structural Admin surfaces remain white. */
+    html[data-ekodi-shell-surface="admin"] body :is(main,aside,header,nav,section,article,.app,.layout,.content,.workspace,.admin-main,.admin-content,.panel,.card,.module,[class$="-panel"],[class$="-card"],[class$="-row"],[class$="-wrap"]){background-color:#fff!important;background-image:none!important}
+    html[data-ekodi-shell-surface="admin"] body :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea){background:#fff!important;color:#203247!important;border-color:#cbd5e1!important}
+    html[data-ekodi-shell-surface="admin"] body :is(code,pre,[data-code-surface]){color-scheme:dark}
+    html[data-ekodi-shell-surface="admin"] body :is(.badge,[class$="-badge"],[class$="-status"],[role="status"],button,.button,.btn){background-image:none}
+    /* ADMIN-WHITE-SURFACE-003: all structural descendants stay white, even when a subservice ships legacy dark CSS after boot. */
+    html[data-ekodi-shell-surface="admin"] body :where(div,main,aside,header,footer,nav,section,article,form,fieldset,table,thead,tbody,tfoot,tr,th,td,dialog){background-color:#fff!important;background-image:none!important}
+    html[data-ekodi-shell-surface="admin"] body :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea){background-color:#fff!important;background-image:none!important;color:#203247!important;border-color:#cbd5e1!important}
+    html[data-ekodi-shell-surface="admin"] body :where(pre,code,kbd,samp,[data-code-surface]){background-color:initial}
+    html[data-ekodi-shell-surface="admin"] body :where(button,.button,.btn,[role="button"],.badge,[class$="-badge"],[class$="-status"],[role="status"],progress,meter){background-image:none}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar{display:flex!important;flex-direction:column!important;height:100dvh!important;min-height:0!important;overflow:hidden!important;box-sizing:border-box!important;padding-top:max(8px,env(safe-area-inset-top,0px))!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-gutter:stable}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav[data-ekodi-admin-nav-mode="primary"]{flex:0 0 auto!important;overflow:hidden!important;overscroll-behavior:auto!important;scrollbar-gutter:auto!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main{height:100dvh!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-sidebar-footer{margin-top:auto!important;flex:0 0 auto!important;position:static!important}
-    html[data-ekodi-shell-surface="admin"] .ekodi-admin-module-health-link{display:flex!important;align-items:center!important;gap:8px!important;min-height:40px!important;margin:4px 8px 8px!important;padding:8px 10px!important;border:1px solid #294b6b!important;border-radius:9px!important;background:#102c49!important;color:#e6f2ff!important;text-decoration:none!important;font-size:13px!important;font-weight:800!important;line-height:1.3!important}
-    html[data-ekodi-shell-surface="admin"] .ekodi-admin-module-health-link:hover{background:#174b7b!important;color:#fff!important}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-module-health-link{display:flex!important;align-items:center!important;gap:8px!important;min-height:40px!important;margin:4px 8px 8px!important;padding:8px 10px!important;border:1px solid #d9e3ec!important;border-radius:9px!important;background:#fff!important;color:#172033!important;text-decoration:none!important;font-size:13px!important;font-weight:800!important;line-height:1.3!important}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-module-health-link:hover{background:#f8fafc!important;color:#111827!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-header-account-hidden{display:none!important}
     @media(min-width:761px){html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-topbar{display:none!important}}
     @media(max-width:760px){

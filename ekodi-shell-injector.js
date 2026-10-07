@@ -26,7 +26,7 @@ const OPERATING_SPACE_LABEL_VERSION='v1';
 const OPERATING_SPACE_LABEL_HEADER='x-ekodi-operating-space-label';
 const SHELL_TENANT_READABILITY_STYLE=`${SHELL_ORIGIN}/user-ui-shell.css?tenant-readability=${TENANT_READABILITY_VERSION}`;
 const SHELL_MOBILE_HEADER_SCRIPT=`${SHELL_ORIGIN}/mobile-fixed-header.js?tenant-readability=${TENANT_READABILITY_VERSION}`;
-const ADMIN_BOOT_STYLE=`<style data-ekodi-admin-shell-boot>:where(.side-brand,.sidebar-brand,.admin-sidebar-brand,[data-ekodi-admin-sidebar-header],[data-ekodi-admin-brand]){display:none!important}</style>`;
+const ADMIN_BOOT_STYLE=`<style data-ekodi-admin-shell-boot>/* ADMIN-WHITE-SURFACE-001: every Admin shell and subservice starts from a white structural canvas. */html,body{background:#fff!important;color-scheme:light}body :is(main,aside,header,nav,section,article,.app,.layout,.content,.workspace,.admin-main,.admin-content,.sidebar,.topbar,.top,.admin-header,.page,.shell,.panel,.card,.module,.ekodi-admin-context,.ekodi-workspace-connection-summary article,.ekodi-workspace-connection-row,.ekodi-privilege-card){background-color:#fff!important;background-image:none!important}:where(.side-brand,.sidebar-brand,.admin-sidebar-brand,[data-ekodi-admin-sidebar-header],[data-ekodi-admin-brand]){display:none!important}.ekodi-privilege-card{color:#172033!important}</style>`;
 const ADMIN_DIRECT_GOOGLE_SCRIPT=`${SHELL_CSP_ORIGIN}/admin-direct-google.js?v=20260924-v1`;
 const SPECIAL_HOST_ALIASES=Object.freeze({
   'mall.ekodi.kr':'mall','mall.biz.ekodi.kr':'mall','trade.biz.ekodi.kr':'trade','pay.biz.ekodi.kr':'pay'

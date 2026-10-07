@@ -98,24 +98,29 @@ test('global menu labels use readable contrast on the dark primary sidebar', () 
   assert.match(sidebar, /\.sidebar nav\[data-ekodi-admin-nav-mode="primary"\] > \.nav\{display:none!important\}/);
   assert.match(sidebar, /\.sidebar nav\[data-ekodi-admin-nav-mode="primary"\] > \.admin-context-source\{display:none!important\}/);
   assert.match(sidebar, /\.sidebar nav\[data-ekodi-admin-nav-mode="primary"\] > \.admin-global-navs\{display:grid!important\}/);
-  assert.match(sidebar, /\.admin-global-nav\{[^}]*color:#dbe8f6!important/);
-  assert.match(sidebar, /\.admin-global-nav\.active\{[^}]*background:#174b7b[^}]*color:#fff!important/);
+  assert.match(sidebar, /\.admin-global-nav\{[^}]*color:#334155!important/);
+  assert.match(sidebar, /\.admin-global-nav\.active\{[^}]*background:#fff[^}]*color:#111827!important/);
   assert.match(sidebar, /\.admin-global-nav span\{color:inherit!important;opacity:1!important\}/);
   assert.match(sidebar, /font-size:14px;font-weight:780/);
 });
 
 
+test('redundant aggregate submenu rows are hidden and More is retired', () => {
+  assert.match(sidebar, /REDUNDANT_DETAIL_SECTIONS = new Set\(\['sites-all','users-access','engine-all','health'\]\)/);
+  assert.doesNotMatch(sidebar, /data-admin-detail-more/);
+});
+
 test('Operations, Releases & Incidents shows every visible submenu without a collapsed more bucket', () => {
-  assert.match(sidebar, /status: \['health', 'site-health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity'\]/);
+  assert.match(sidebar, /status: \['site-health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity'\]/);
   assert.match(registry, /id: 'deployments'.*배포·변경 이력/s);
-  for (const id of ['health','site-health','deployments','aiops','devices','pos-agent','api-cost','architecture','maturity']) {
+  for (const id of ['site-health','deployments','aiops','devices','pos-agent','api-cost','architecture','maturity']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
   }
 });
 
 test('Services & AI uses flat direct engine links with no duplicate top navigation', () => {
   assert.match(sidebar, /FLAT_DETAIL_GROUPS = new Set\(\['services'\]\)/);
-  assert.match(sidebar, /services: \['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'\]/);
+  assert.match(sidebar, /services: \['engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'\]/);
   assert.match(sidebar, /details\.dataset\.adminFlatDetails = flatDetails \? 'true' : 'false'/);
   assert.match(sidebar, /data-admin-flat-details="true"/);
   assert.doesNotMatch(sidebar, /function renderContextTabs/);
@@ -173,7 +178,7 @@ test('shared menu ES modules are published and cache-busted with the admin relea
   assert.match(postbuild, /copyFile\(`\$\{root\}\$\{asset\}`, `\$\{dist\}\$\{asset\}`\)/);
   assert.match(postbuild, /\.\.\.sharedAdminMenuModules/);
   assert.match(postbuild, /moduleImportVersions = new Map/);
-  assert.match(postbuild, /\['admin-menu-registry\.js', \['admin-service-handoffs\.js', 'admin-design-engine\.js', 'platform-maturity-admin\.js'\]\]/);
+  assert.match(postbuild, /\['admin-menu-registry\.js', \['admin-service-handoffs\.js', 'admin-design-engine\.js'\]\]/);
   assert.match(postbuild, /\['admin-service-handoffs\.js', \['admin-service-catalog\.js'\]\]/);
   assert.match(postbuild, /`\.\/\$\{imported\}\?v=\$\{assetVersion\}`/);
 });

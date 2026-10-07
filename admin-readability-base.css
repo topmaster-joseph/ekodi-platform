@@ -1,6 +1,7 @@
 /* EKODI Admin readability base: admin shell and every admin subservice only */
-body.admin-compact{--ekodi-admin-text:#182438;--ekodi-admin-subtext:#46596f;--ekodi-admin-muted:#5f7084;--ekodi-admin-border:#d7e1eb;--ekodi-admin-surface:#fff;--ekodi-admin-soft:#f4f7fb;color-scheme:light;background:var(--ekodi-admin-soft)!important;color:var(--ekodi-admin-text)!important;font-size:16px!important;line-height:1.6!important;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
-body.admin-compact .app,body.admin-compact .app>main,body.admin-compact .content{background:var(--ekodi-admin-soft)!important;color:var(--ekodi-admin-text)!important}
+/* ADMIN-WHITE-SURFACE-001: white is the canonical Admin page/shell background. */
+body.admin-compact{--ekodi-admin-text:#182438;--ekodi-admin-subtext:#46596f;--ekodi-admin-muted:#5f7084;--ekodi-admin-border:#d7e1eb;--ekodi-admin-surface:#fff;--ekodi-admin-soft:#fff;color-scheme:light;background:var(--ekodi-admin-soft)!important;color:var(--ekodi-admin-text)!important;font-size:16px!important;line-height:1.6!important;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+body.admin-compact .app,body.admin-compact .app>main,body.admin-compact .content{background:#fff!important;color:var(--ekodi-admin-text)!important}
 body.admin-compact .sidebar,body.admin-compact .topbar{background:#fff!important;color:var(--ekodi-admin-text)!important;border-color:var(--ekodi-admin-border)!important}
 body.admin-compact .topbar h1{font-size:23px!important;line-height:1.25!important;font-weight:850!important;color:var(--ekodi-admin-text)!important;letter-spacing:-.025em!important}
 body.admin-compact .topbar .kicker,body.admin-compact .kicker{font-size:11px!important;line-height:1.35!important;font-weight:800!important;color:#356da7!important;letter-spacing:.1em!important}

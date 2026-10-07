@@ -10,6 +10,7 @@ import {
 } from './admin-menu-registry.js';
 
 const LOCALE_KEY = 'ekodi-admin-locale';
+// ADMIN-WHITE-SURFACE-001: sidebar navigation stays on the shared white Admin surface.
 const LOCALE_COOKIE = 'ekodi_admin_locale';
 const mounted = new WeakMap();
 const RETIRED_MENU_SECTIONS = new Set(['overview']);
@@ -17,7 +18,6 @@ const GLOBAL_CLASS = 'admin-global-navs';
 const SOURCE_CLASS = 'admin-context-source';
 // LEFT-NAV-AUTHORITY-006: visible Admin navigation is left-side direct work only.
 const DETAILS_CLASS = 'admin-global-details';
-const MORE_CLASS = 'admin-detail-more';
 const MOBILE_NAV_CLASS = 'admin-mobile-primary-nav';
 const DRAWER_SCRIM_CLASS = 'admin-mobile-drawer-scrim';
 const MOBILE_PRIMARY_GROUPS = Object.freeze([
@@ -27,13 +27,14 @@ const MOBILE_PRIMARY_GROUPS = Object.freeze([
   { id:'status', icon:'↑', ko:'운영', en:'Ops' },
 ]);
 const FLAT_DETAIL_GROUPS = new Set(['services']);
+const REDUNDANT_DETAIL_SECTIONS = new Set(['sites-all','users-access','engine-all','health']);
 const PRIMARY_SECTIONS = Object.freeze({
   summary: ['platform-overview'],
-  sites: ['sites-all', 'sites-business', 'sites-clients', 'sites-community', 'sites-core', 'sites-preparing'],
-  people: ['users-access', 'admins', 'ai-membership', 'security'],
-  services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'],
+  sites: ['sites-business', 'sites-clients', 'sites-community', 'sites-core', 'sites-preparing'],
+  people: ['admins', 'ai-membership', 'security'],
+  services: ['engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'],
   content: ['work', 'communication', 'community', 'books', 'social'],
-  status: ['health', 'site-health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity'],
+  status: ['site-health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity'],
   'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'ai-module-spec', 'audit-records'],
 });
 
@@ -83,13 +84,13 @@ body.admin-compact{--admin-readable:#172033;--admin-secondary:#66768a;--admin-bo
 body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:2px!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-width:thin}
 body.admin-compact .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .nav{display:none!important}
 body.admin-compact .${GLOBAL_CLASS}{display:grid;gap:2px;margin:3px 0 6px}
-body.admin-compact .admin-global-nav{display:flex;align-items:center;gap:7px;width:100%;min-height:34px;padding:4px 8px;border:1px solid transparent;border-radius:9px;background:transparent;color:#dbe8f6!important;font:inherit;font-size:14px;font-weight:780;line-height:1.25;text-align:left;cursor:pointer;box-shadow:none!important;transition:background .12s ease,border-color .12s ease!important;opacity:1!important}
+body.admin-compact .admin-global-nav{display:flex;align-items:center;gap:7px;width:100%;min-height:34px;padding:4px 8px;border:1px solid transparent;border-radius:9px;background:transparent;color:#334155!important;font:inherit;font-size:14px;font-weight:780;line-height:1.25;text-align:left;cursor:pointer;box-shadow:none!important;transition:background .12s ease,border-color .12s ease!important;opacity:1!important}
 body.admin-compact .admin-global-nav span{color:inherit!important;opacity:1!important}
-body.admin-compact .admin-global-nav:hover{border-color:#274d73;background:#102c49;color:#fff!important}
-body.admin-compact .admin-global-nav.active{border-color:#2d6fac;background:#174b7b;color:#fff!important}
-body.admin-compact .admin-global-nav b{display:inline-grid;place-items:center;min-width:22px;color:#8fb5d6!important;font-size:13px;font-weight:850;letter-spacing:-.03em;opacity:1!important}
-body.admin-compact .admin-global-nav.active b{color:#d9ecff!important}
-body.admin-compact .${DETAILS_CLASS}{display:grid!important;gap:1px;margin:0 1px 3px 22px;padding:1px 0 2px 4px;border-left:1px solid #294b6b}
+body.admin-compact .admin-global-nav:hover{border-color:#cbd5e1;background:#f8fafc;color:#172033!important}
+body.admin-compact .admin-global-nav.active{border-color:#94a3b8;background:#fff;color:#111827!important;box-shadow:inset 3px 0 0 #111827!important}
+body.admin-compact .admin-global-nav b{display:inline-grid;place-items:center;min-width:22px;color:#64748b!important;font-size:13px;font-weight:850;letter-spacing:-.03em;opacity:1!important}
+body.admin-compact .admin-global-nav.active b{color:#111827!important}
+body.admin-compact .${DETAILS_CLASS}{display:grid!important;gap:1px;margin:0 1px 3px 22px;padding:1px 0 2px 4px;border-left:1px solid #d9e2ec}
 body.admin-compact .admin-detail-item{display:flex;align-items:center;gap:6px;width:100%;min-height:28px;margin:0;padding:3px 6px;border:1px solid transparent;border-radius:8px;background:transparent;color:#506174;font:inherit;font-size:12.5px;font-weight:700;line-height:1.12;text-align:left;cursor:pointer}
 body.admin-compact .admin-detail-item:hover{border-color:#dbe7ef;background:#f2f7fb;color:#173b57}
 body.admin-compact .admin-detail-item.active{border-color:#bfd5ee;background:#edf4ff;color:#0b5cab}
@@ -98,9 +99,6 @@ body.admin-compact .admin-detail-item.active b{color:#155eef}
 body.admin-compact .${DETAILS_CLASS}[data-admin-flat-details="true"]{margin:0 0 6px!important;padding:0!important;border-left:0!important;gap:2px!important}
 body.admin-compact .${DETAILS_CLASS}[data-admin-flat-details="true"] .admin-detail-item{min-height:38px!important;padding:6px 10px!important;border-radius:9px!important;font-weight:720!important}
 body.admin-compact .${DETAILS_CLASS}[data-admin-flat-details="true"] .admin-detail-item b{min-width:22px!important}
-body.admin-compact .${MORE_CLASS}{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:28px;margin:1px 0 0;padding:3px 6px;border:0;border-radius:8px;background:transparent;color:#748294;font:inherit;font-size:12px;font-weight:760;cursor:pointer}
-body.admin-compact .${MORE_CLASS}:hover{background:#f2f7fb;color:#173b57}
-body.admin-compact .${MORE_CLASS} b{font-size:11px;font-weight:800}
 body.admin-compact .${SOURCE_CLASS}{display:none!important}
 body.admin-compact .content{padding:12px 16px 28px!important;max-width:1680px!important;margin:0 auto!important}
 body.admin-compact .content .hero{margin-bottom:12px!important;padding:14px 16px!important;box-shadow:none!important;backdrop-filter:none!important}
@@ -304,14 +302,13 @@ function renderSidebarDetails(nav, globals, group, section, locale) {
     details.className = DETAILS_CLASS;
     details.setAttribute('aria-label', locale === 'en' ? 'Admin submenu' : '관리자 하위 메뉴');
   }
-  const ids = availableIds(nav, group);
+  const ids = availableIds(nav, group).filter(id => !REDUNDANT_DETAIL_SECTIONS.has(id));
   const flatDetails = FLAT_DETAIL_GROUPS.has(group);
   const primaryOrder = PRIMARY_SECTIONS[group] || [];
   const primarySet = new Set(primaryOrder);
   const primary = primaryOrder.filter(id => ids.includes(id));
   const extras = ids.filter(id => !primarySet.has(id));
-  const expanded = nav.dataset.adminMoreGroup === group || extras.includes(section);
-  const shown = expanded ? ids : primary;
+  const shown = [...primary, ...extras];
   const nodes = shown.map(id => {
     const definition = getAdminMenuItem(id);
     const button = document.createElement('button');
@@ -327,21 +324,6 @@ function renderSidebarDetails(nav, globals, group, section, locale) {
     button.classList.toggle('active', id === section);
     return button;
   });
-  if (extras.length) {
-    const more = document.createElement('button');
-    more.type = 'button';
-    more.className = MORE_CLASS;
-    more.dataset.adminDetailMore = group;
-    const label = document.createElement('span');
-    label.textContent = expanded
-      ? (locale === 'en' ? 'Show less' : '간단히 보기')
-      : (locale === 'en' ? `More (${extras.length})` : `더보기 ${extras.length}`);
-    const mark = document.createElement('b');
-    mark.setAttribute('aria-hidden', 'true');
-    mark.textContent = expanded ? '⌃' : '⌄';
-    more.append(label, mark);
-    nodes.push(more);
-  }
   details.dataset.adminDetailGroup = group;
   details.dataset.adminFlatDetails = flatDetails ? 'true' : 'false';
   details.replaceChildren(...nodes);
@@ -595,15 +577,6 @@ export function mountAdminSidebar(root = document, options = {}) {
   observer.observe(nav, { childList: true, subtree: false });
 
   nav.addEventListener('click', event => {
-    const more = event.target.closest('[data-admin-detail-more]');
-    if (more) {
-      event.preventDefault();
-      const group = more.dataset.adminDetailMore || '';
-      if (nav.dataset.adminMoreGroup === group) delete nav.dataset.adminMoreGroup;
-      else nav.dataset.adminMoreGroup = group;
-      schedule();
-      return;
-    }
     const detail = event.target.closest('[data-admin-detail-section]');
     if (detail) {
       event.preventDefault();
@@ -620,7 +593,8 @@ export function mountAdminSidebar(root = document, options = {}) {
     nav.dataset.adminFocusedGroup = group;
     const currentSection = activeSection(nav);
     if (currentSection === 'command-home' || getAdminMenuGroupForSection(currentSection) !== group) {
-      const defaultSection = getAdminMenuGroupDefault(group);
+      const candidateIds = availableIds(nav, group).filter(id => !REDUNDANT_DETAIL_SECTIONS.has(id));
+      const defaultSection = candidateIds[0] || getAdminMenuGroupDefault(group);
       const defaultDefinition = getAdminMenuItem(defaultSection);
       if (defaultDefinition?.adminHandoff !== true) {
         activateSection(nav, defaultSection);
