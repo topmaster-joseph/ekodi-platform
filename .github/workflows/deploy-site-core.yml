@@ -1,4 +1,5 @@
 name: Deploy EKODI Shared Site Core
+# Shared-site/Auth guarded release owner; workflow-file changes intentionally retrigger production convergence.
 
 on:
   schedule:
