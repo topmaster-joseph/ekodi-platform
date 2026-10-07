@@ -17,7 +17,8 @@ test('AI operations center source parses as JavaScript', () => {
 test('AI operations center remains loaded while the visible status menu uses incident language', () => {
   assert.match(menu, /id: 'aiops'[^\n]*group: 'status'[^\n]*ko: '장애·오류·경고'[^\n]*en: 'Incidents, Errors & Warnings'/);
   assert.match(menu, /id: 'openai'[^\n]*group: 'services'[^\n]*en: 'OpenAI'[^\n]*internal: true/);
-  assert.match(menu, /import\('\.\/ai-operations-center-admin\.js'\)/);
+  assert.doesNotMatch(menu, /import\('\.\/ai-operations-center-admin\.js'\)/);
+  assert.match(demand, /secondaryScripts: \['admin-lazy-features\.js','ai-operations-center-admin\.js'\]/);
   assert.match(menu, /globalPolicyMutation: 'super_admin'/);
 });
 
