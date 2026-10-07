@@ -81,12 +81,28 @@ const EKODIBIZ_NAMESPACE_PREFIX='/ekodibiz/';
 const WORKSPACE_ASSET_PREFIX='/_ekodi/space/';
 const EKODIMISSION_APEX_PREFIX='/ekodimission';
 const DEPLOYMENT_PROBE_PATH='/deployment-probe';
+const RELEASE_ATTESTATION_PATH='/__ekodi/version';
 const STORE_GATEWAY_PATHS=new Set(['/cmpmyi','/cmpmyi/']);
 const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js','storefront.json','storefront.css','jadam-storefront.css']);
 const SEONAMMEDI_PREFIX='/seonammedi';
 const SEONAMMEDI_HOSTS=new Set(['seonammedi.kr','www.seonammedi.kr','xn--3e0b8b58jw4co4mnpll3k.kr','www.xn--3e0b8b58jw4co4mnpll3k.kr']);
 const DELETED_SEONAM_PREFIXES=['/seonam-medi','/seonam-med'];
 const PYEONGGONGMOK_PREFIX='/pyeonggongmok';
+
+function releaseAttestationResponse(env){
+  const metadata=env?.CF_VERSION_METADATA||{};
+  const versionId=String(metadata.id||'unknown');
+  const tag=String(metadata.tag||'');
+  const payload={ok:versionId!=='unknown',service:'shared-site',environment:String(env?.ENVIRONMENT||'unknown'),versionId,tag};
+  return new Response(JSON.stringify(payload),{status:200,headers:{
+    'content-type':'application/json; charset=utf-8',
+    'cache-control':'no-store, max-age=0',
+    'x-content-type-options':'nosniff',
+    'x-ekodi-route':'release-attestation',
+    'x-ekodi-release-version':versionId,
+    'x-ekodi-release-tag':tag
+  }});
+}
 
 function resolvedHost(request,env){
   const url=new URL(request.url);
@@ -546,6 +562,10 @@ export default {
   async fetch(request,env,ctx){
     const guard=await enforcePlatformRequestSecurity(request,env);
     if(guard)return applyPlatformSecurityHeaders(guard,request);
+    const incomingUrl=new URL(request.url);
+    if(incomingUrl.pathname===RELEASE_ATTESTATION_PATH&&['GET','HEAD'].includes(request.method)){
+      return applyPlatformSecurityHeaders(releaseAttestationResponse(env),request);
+    }
     const canonicalQueryRedirect=canonicalTrackingQueryRedirect(request);
     if(canonicalQueryRedirect)return applyPlatformSecurityHeaders(canonicalQueryRedirect,request);
     const publicationAsset=sitePublicationAdminAsset(request);
