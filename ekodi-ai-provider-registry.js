@@ -5,6 +5,7 @@ import { createCloudflareWorkersAiProvider } from './cloudflare-workers-ai-provi
 import { createOpenRouterFreeProvider } from './openrouter-free-provider-adapter.js';
 import { createGroqFreeProvider } from './groq-free-provider-adapter.js';
 import { createHuggingFaceProvider } from './huggingface-provider-adapter.js';
+import { createGensparkProvider } from './genspark-provider-adapter.js';
 
 const ENABLED_VALUES=new Set(['1','true','yes','on','enabled']);
 const PROVIDER_ID=/^[a-z0-9][a-z0-9._-]{1,79}$/;
@@ -16,7 +17,7 @@ function costClass(id){if(id==='gemini')return'free-preferred';if(id==='openai'|
 function decorate(provider,metadata={}){return Object.freeze({...provider,available:provider.available!==false&&metadata.enabled!==false,priority:priority(metadata.priority??provider.priority,100),capabilities:Object.freeze([...(metadata.capabilities||provider.capabilities||['text'])]),trustClass:String(metadata.trustClass||provider.trustClass||'external').trim().toLowerCase()||'external',resourceClass:metadata.resourceClass||provider.resourceClass||'personal-api',fundingSource:metadata.fundingSource||provider.fundingSource||'personal',officialPath:metadata.officialPath??provider.officialPath??false,automationAllowed:metadata.automationAllowed??provider.automationAllowed??true,costClass:metadata.costClass||provider.costClass||'unknown',freeQuotaRemaining:metadata.freeQuotaRemaining??provider.freeQuotaRemaining??null})}
 function extensionProviders(options={}){
   const raw=Array.isArray(options.additionalProviders)?options.additionalProviders:Array.isArray(options.providers)?options.providers:[];
-  const seen=new Set(['cloudflare-workers-ai','gemini','openrouter-free','groq-free','huggingface-free-credit','openai','anthropic']);
+  const seen=new Set(['cloudflare-workers-ai','gemini','openrouter-free','groq-free','genspark','huggingface-free-credit','openai','anthropic']);
   return raw.map(provider=>{
     if(!provider||typeof provider!=='object'||typeof provider.invoke!=='function')throw new Error('invalid_provider_adapter');
     const id=String(provider.id||'').trim().toLowerCase();
@@ -35,6 +36,7 @@ export function createEkodiAiProviderRegistry(env={},options={}){
     decorate(createGeminiOrchestratorProvider(geminiEnv,{fetchImpl:options.fetchImpl}),{enabled:enabled(env.EKODI_PROVIDER_GEMINI_ENABLED??env.GEMINI_ENABLED),priority:priority(env.EKODI_PROVIDER_GEMINI_PRIORITY??env.GEMINI_PRIORITY,10),fundingSource:source('gemini'),resourceClass:resource('gemini'),costClass:costClass('gemini'),officialPath:true}),
     decorate(createOpenRouterFreeProvider(env,{fetchImpl:options.fetchImpl}),{enabled:enabled(env.EKODI_PROVIDER_OPENROUTER_FREE_ENABLED,false),priority:priority(env.EKODI_PROVIDER_OPENROUTER_FREE_PRIORITY,20),capabilities:['text','reasoning','code'],fundingSource:'ekodi',resourceClass:'shared-free-api',costClass:'free-preferred',officialPath:true}),
     decorate(createGroqFreeProvider(env,{fetchImpl:options.fetchImpl}),{enabled:enabled(env.EKODI_PROVIDER_GROQ_FREE_ENABLED,false),priority:priority(env.EKODI_PROVIDER_GROQ_FREE_PRIORITY,30),capabilities:['text','reasoning','code'],fundingSource:'ekodi',resourceClass:'shared-free-api',costClass:'free-preferred',officialPath:true}),
+    decorate(createGensparkProvider(env,{fetchImpl:options.fetchImpl}),{enabled:enabled(env.EKODI_PROVIDER_GENSPARK_ENABLED,false),priority:priority(env.EKODI_PROVIDER_GENSPARK_PRIORITY,45),capabilities:['text','reasoning','research','browser','document','code'],fundingSource:'provider-managed',resourceClass:'external-agent',costClass:'provider-managed',trustClass:'external-agent',officialPath:false,automationAllowed:false}),
     decorate(createHuggingFaceProvider(env,{fetchImpl:options.fetchImpl}),{enabled:enabled(env.EKODI_PROVIDER_HF_FREE_ENABLED,false),priority:priority(env.EKODI_PROVIDER_HF_FREE_PRIORITY,55),capabilities:['text','reasoning','code'],fundingSource:'ekodi',resourceClass:'shared-free-api',costClass:'free-preferred',officialPath:true}),
     decorate(createOpenAiProvider(openaiEnv,{fetchImpl:options.fetchImpl}),{enabled:enabled(env.EKODI_PROVIDER_OPENAI_ENABLED??env.OPENAI_ENABLED),priority:priority(env.EKODI_PROVIDER_OPENAI_PRIORITY??env.OPENAI_PRIORITY,60),capabilities:['text','reasoning','code','vision'],fundingSource:source('openai'),resourceClass:resource('openai'),costClass:costClass('openai'),officialPath:true}),
     decorate(createAnthropicProvider(anthropicEnv,{fetchImpl:options.fetchImpl}),{enabled:enabled(env.EKODI_PROVIDER_ANTHROPIC_ENABLED??env.ANTHROPIC_ENABLED),priority:priority(env.EKODI_PROVIDER_ANTHROPIC_PRIORITY??env.ANTHROPIC_PRIORITY,70),fundingSource:source('anthropic'),resourceClass:resource('anthropic'),costClass:costClass('anthropic'),officialPath:true}),

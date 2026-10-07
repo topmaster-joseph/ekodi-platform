@@ -28,7 +28,7 @@ test('opt-in registry exposes the governed provider chain without exposing crede
   }, []);
   const status = gateway.status();
   assert.equal(status.multiProviderEnabled, true);
-  assert.deepEqual(status.orchestration.configuredProviders.map(provider => provider.id), ['cloudflare-workers-ai', 'gemini', 'openrouter-free', 'groq-free', 'huggingface-free-credit', 'openai', 'anthropic']);
+  assert.deepEqual(status.orchestration.configuredProviders.map(provider => provider.id), ['cloudflare-workers-ai', 'gemini', 'openrouter-free', 'groq-free', 'genspark', 'huggingface-free-credit', 'openai', 'anthropic']);
   const serialized = JSON.stringify(status);
   assert.equal(serialized.includes('openai-test-secret'), false);
   assert.equal(serialized.includes('anthropic-test-secret'), false);

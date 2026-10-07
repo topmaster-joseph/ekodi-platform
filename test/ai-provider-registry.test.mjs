@@ -7,8 +7,8 @@ import {
 
 test('provider registry is provider-neutral and safe when no credentials are configured', () => {
   const providers = createEkodiAiProviderRegistry({}, { fetchImpl: async () => { throw new Error('must not run'); } });
-  assert.deepEqual(providers.map(provider => provider.id), ['cloudflare-workers-ai', 'gemini', 'openrouter-free', 'groq-free', 'huggingface-free-credit', 'openai', 'anthropic']);
-  assert.deepEqual(providers.map(provider => provider.priority), [5, 10, 20, 30, 55, 60, 70]);
+  assert.deepEqual(providers.map(provider => provider.id), ['cloudflare-workers-ai', 'gemini', 'openrouter-free', 'groq-free', 'genspark', 'huggingface-free-credit', 'openai', 'anthropic']);
+  assert.deepEqual(providers.map(provider => provider.priority), [5, 10, 20, 30, 45, 55, 60, 70]);
   assert.equal(providers.every(provider => provider.available === false), true);
 });
 
@@ -25,5 +25,5 @@ test('provider status never exposes credentials', () => {
   assert.equal(serialized.includes('test-anthropic-secret'), false);
   assert.equal(serialized.includes('test-gemini-secret'), false);
   assert.equal(serialized.includes('test-huggingface-secret'), false);
-  assert.deepEqual(status.map(item => item.id), ['cloudflare-workers-ai', 'gemini', 'openrouter-free', 'groq-free', 'huggingface-free-credit', 'openai', 'anthropic']);
+  assert.deepEqual(status.map(item => item.id), ['cloudflare-workers-ai', 'gemini', 'openrouter-free', 'groq-free', 'genspark', 'huggingface-free-credit', 'openai', 'anthropic']);
 });

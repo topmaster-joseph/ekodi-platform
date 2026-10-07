@@ -292,6 +292,7 @@ async function handleRpc(message,request,env,dependencies={}){
     discovery:'https://ekodi.kr/.well-known/ekodi.json',
     fabric:SOVEREIGN_CAPABILITY_FABRIC,
     clientPolicy:publicEkodiMcpClientPolicy(),
+    clientProfiles:{genspark:{customMcp:true,endpoint:EKODI_MCP_RESOURCE,authorization:'oauth2',executionAuthority:'ekodi-orchestrator'}},
     _meta:{'io.modelcontextprotocol/serverInfo':{name:'ekodi-sovereign-capability-fabric',version:'2026-09-17.1'}},
   },{modern:true});
   if(method==='initialize')return rpcResult(id,{
