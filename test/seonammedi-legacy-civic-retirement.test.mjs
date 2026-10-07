@@ -31,3 +31,15 @@ test('legacy shared-D1 citizen voice rows are cleared after standalone cutover',
   assert.ok(replies>=0&&voices>replies);
   assert.doesNotMatch(migration,/DROP TABLE|DROP COLUMN|ALTER TABLE .* RENAME/i);
 });
+
+
+test('shared-site release manifest verifies the retired civic health contract',async()=>{
+  const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const requests=manifest?.verification?.requests||manifest?.verify?.requests||manifest?.requests||[];
+  const check=requests.find(item=>item?.url==='https://ekodi.kr/api/seonammedi/voices/health');
+  assert.ok(check,'voices health verification entry missing');
+  const markers=[...(check.expect||[]),...(check.bodyIncludes||[])].join(' ');
+  assert.match(markers,/\"retired\":true/);
+  assert.match(markers,/\"queueDrain\":\"ack-drop\"/);
+  assert.doesNotMatch(markers,/\"storage\":\"d1\"|\"canonicalTable\":true/);
+});
