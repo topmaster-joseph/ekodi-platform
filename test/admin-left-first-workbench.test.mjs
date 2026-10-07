@@ -15,11 +15,11 @@ test('Platform Admin uses seven explicit control areas with active direct-task n
   ]) assert.ok(registry.includes(marker), marker);
   for (const marker of [
     "summary: ['platform-overview']",
-    "sites: ['sites-all', 'sites-business', 'sites-clients', 'sites-community', 'sites-core', 'sites-preparing']",
-    "people: ['users-access', 'admins', 'ai-membership', 'security']",
-    "services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview']",
+    "sites: ['sites-business', 'sites-clients', 'sites-community', 'sites-core', 'sites-preparing']",
+    "people: ['admins', 'ai-membership', 'security']",
+    "services: ['engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview']",
     "content: ['work', 'communication', 'community', 'books', 'social']",
-    "status: ['health', 'site-health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity']",
+    "status: ['site-health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity']",
     "'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'ai-module-spec', 'audit-records']",
   ]) assert.ok(sidebar.includes(marker), marker);
   assert.match(sidebar, /nav\.querySelector\(':scope>\.admin-command-entry'\)\?\.remove\(\)/);
@@ -29,6 +29,8 @@ test('Platform Admin uses seven explicit control areas with active direct-task n
   assert.doesNotMatch(sidebar, /shell = document\.createElement/);
     assert.match(sidebar, /role-projected-sidebar-v4/);
   assert.match(sidebar, /renderSidebarDetails\(nav, globals, group, displayedSection \|\| section, locale\)/);
+  assert.match(sidebar, /REDUNDANT_DETAIL_SECTIONS = new Set\(\['sites-all','users-access','engine-all','health'\]\)/);
+  assert.doesNotMatch(sidebar, /data-admin-detail-more/);
 });
 test('Functional Admin pages keep only the bottom EKODI composer until conversation is opened', async () => {
   const [bootstrapCss, dockCss, principles] = await Promise.all([
