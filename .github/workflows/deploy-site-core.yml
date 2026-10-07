@@ -315,6 +315,8 @@ on:
       - 'config/cloudflare-production-quota-guard.json'
       - 'config/edge-routing-cache-policy.json'
       - 'edge-traffic-cache.js'
+      - 'test/edge-traffic-cache.test.mjs'
+      - 'test/edge-traffic-surge.test.mjs'
       - 'test/cloudflare-quota-guard.test.mjs'
       - 'scripts/ensure-church-route-ownership.mjs'
       - 'test/church-route-ownership.test.mjs'
