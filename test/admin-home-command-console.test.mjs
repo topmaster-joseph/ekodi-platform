@@ -64,7 +64,7 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.ok(lazyAsset.expect.includes('/api/control/ai/v8/pulse'));
   assert.ok(lazyAsset.expect.includes('executeNow:true'));
   assert.ok(lazyAsset.expect.includes('/api/control/ai/v8/orchestrator/human-gates?limit=20'));
-  assert.doesNotMatch(adminLazy,/승인 후 계속/);
+  assert.ok(!lazyAsset.expect.includes('승인 후 계속'));
   assert.doesNotMatch(dock,/actionType:'ui\.change_request'/);
   assert.match(dock,/addSessionMessage\('assistant',reply/);
   assert.match(bootstrap,/aria-label="에코디와 대화하기"/);
