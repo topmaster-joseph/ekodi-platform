@@ -13,12 +13,16 @@ function classifyPath(pathname=''){
   const admin=/(^|\/)admin(?:\/|$)/.test(path);
   const auth=path==='/auth'||path.startsWith('/auth/')||path.includes('/auth/');
   const api=path==='/api'||path.startsWith('/api/')||path.includes('/api/');
+  const privateUser=path==='/my'||path.startsWith('/my/');
+  const mcp=path==='/mcp'||path.startsWith('/mcp/');
+  const webhook=path==='/webhooks'||path.startsWith('/webhooks/');
   const live=path==='/live'||path.startsWith('/live/')||path.includes('/live/');
   const media=/\/(?:upload|uploads|media|recording|recordings)(?:\/|$)/.test(path);
   const publicCacheableApi=api&&PUBLIC_CACHEABLE_API_PATHS.has(path);
   const selfProtectedPublicWrite=SELF_PROTECTED_PUBLIC_WRITE_PATHS.has(path)||SELF_PROTECTED_PUBLIC_WRITE_PATTERNS.some(pattern=>pattern.test(path));
-  const sensitive=(admin||auth||api)&&!selfProtectedPublicWrite;
-  return {admin,auth,api,live,media,sensitive,publicCacheableApi,selfProtectedPublicWrite,surface:admin?'admin':auth?'auth':api?'api':live?'live':'public'};
+  const sensitive=(admin||auth||api||privateUser||mcp||webhook)&&!selfProtectedPublicWrite;
+  const surface=admin?'admin':auth?'auth':privateUser?'my':api?'api':mcp?'mcp':webhook?'webhook':live?'live':'public';
+  return {admin,auth,api,privateUser,mcp,webhook,live,media,sensitive,publicCacheableApi,selfProtectedPublicWrite,surface};
 }
 
 async function digest(value){
@@ -151,7 +155,7 @@ export function applyPlatformSecurityHeaders(response,request){
     if(isDocumentResponse(secured)&&!safePublicRead)headers.set('Cache-Control','no-store');
   }
   headers.delete('X-Powered-By');
-  headers.set('X-EKODI-Security-Policy','platform-edge-v2');
+  headers.set('X-EKODI-Security-Policy','platform-edge-v3');
   headers.set('X-EKODI-Security-Surface',info.surface);
   return secured;
 }
