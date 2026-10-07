@@ -3,6 +3,13 @@ const root=new URL('../sites/seonammedi/public/',import.meta.url);
 test('seonammedi notice login uses central EKODI auth and preserves customer-domain return',async()=>{const [app,auth,policy]=await Promise.all([readFile(new URL('app.js',root),'utf8'),readFile(new URL('../auth-site/auth.js',import.meta.url),'utf8'),readFile(new URL('../config/site-execution-enforcement.json',import.meta.url),'utf8')]);assert.match(app,/new URL\('https:\/\/ekodi\.kr\/auth\/'\)/);assert.doesNotMatch(app,/new URL\('\/auth\/',location\.origin\)/);assert.match(app,/return_to',location\.origin\+'\/\?compose=notice#notices'/);assert.match(auth,/https:\/\/seonammedi\.kr/);assert.match(auth,/서남권국립의대\.kr/);const parsed=JSON.parse(policy);assert.equal(parsed.authenticationEntry?.status,'enforced');assert.equal(parsed.authenticationEntry?.siteLocalAuthPathForbidden,true);assert.equal(parsed.authenticationEntry?.perSiteOptOutAllowed,false);});
 
 
+test('seonammedi auth bridge keeps a production fallback when Worker vars are omitted',async()=>{
+  const control=await readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8');
+  assert.match(control,/env\?\.MY_SUPABASE_URL\|\|SUPABASE_URL/);
+  assert.match(control,/env\?\.MY_SUPABASE_PUBLISHABLE_KEY\|\|SUPABASE_PUBLISHABLE_KEY/);
+});
+
+
 test('seonammedi notice auth handoff returns to the notice composer instead of activity history',async()=>{
   const app=await readFile(new URL('app.js',root),'utf8');
   assert.match(app,/consumeNoticeHandoff/);
