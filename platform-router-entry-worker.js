@@ -1,5 +1,6 @@
 import legacyPlatformRouter from './platform-router-worker.js';
 import { canonicalTrackingQueryRedirect } from './canonical-query-policy.js';
+import { handleAuthReturnPost } from './auth-return-post.js';
 import financeEntryWorker from './finance-entry-worker.js';
 import taxPortalWorker from './tax-portal-worker.js';
 import { injectTaxLocalFallback } from './tax-local-fallback.js';
@@ -544,6 +545,8 @@ async function routePlatform(request,env,ctx){
 
 export default {
   async fetch(request,env,ctx){
+    const authReturn=await handleAuthReturnPost(request);
+    if(authReturn)return applyPlatformSecurityHeaders(authReturn,request);
     const guard=await enforcePlatformRequestSecurity(request,env);
     if(guard)return applyPlatformSecurityHeaders(guard,request);
     const canonicalQueryRedirect=canonicalTrackingQueryRedirect(request);
