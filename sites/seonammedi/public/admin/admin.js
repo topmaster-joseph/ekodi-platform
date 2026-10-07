@@ -190,6 +190,7 @@ async function loadSiteHealth(){
 }
 
 const lines=value=>String(value||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+const friendlyStorageError=error=>{const raw=String(error?.message||'');if(raw.includes('CANONICAL_STORAGE')||raw.includes('image_storage_unavailable'))return '파일 저장소 연결을 복구하고 있습니다. 잠시 후 다시 시도해 주세요.';return raw||'요청을 처리하지 못했습니다.'};
 async function baseData(){if(state.baseData)return state.baseData;const response=await fetch('/seonammedi/data.json',{cache:'no-store'});state.baseData=response.ok?await response.json():{};return state.baseData}
 async function loadStatusPage(){
   if(!state.me?.permissions?.pages)return;
@@ -413,7 +414,7 @@ async function deleteChannel(item){
 }
 async function toggleChannelVisibility(item){
   const next=!Boolean(item.visible),msg=$('channelMessage');msg.classList.remove('error');text(msg,next?'사이트 표시를 켜는 중…':'사이트 표시를 끄는 중…');
-  try{await api('/api/seonammedi/admin/channels/'+item.id,{method:'PUT',body:JSON.stringify({visible:next})});text(msg,next?'사이트 표시를 켰습니다.':'사이트 표시를 껐습니다.');await loadChannels()}catch(error){msg.classList.add('error');text(msg,error.message)}
+  try{await api('/api/seonammedi/admin/channels/'+item.id,{method:'PUT',body:JSON.stringify({visible:next})});text(msg,next?'사이트 표시를 켰습니다.':'사이트 표시를 껐습니다.');await loadChannels()}catch(error){msg.classList.add('error');text(msg,friendlyStorageError(error))}
 }
 function platformLabel(value){return({youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',tiktok:'TikTok',blog:'블로그',website:'웹사이트',other:'기타'})[value]||value}
 function categoryLabel(value){return({official:'공식채널','related-org':'관련기관',media:'언론·자료',civic:'시민·단체',other:'기타'})[value]||value}

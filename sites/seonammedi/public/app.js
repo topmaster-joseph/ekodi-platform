@@ -552,7 +552,7 @@ noticeCompose?.addEventListener('submit',async event=>{
   message.textContent=editingId?'수정 저장 중입니다…':'게시 중입니다…';
   try{
     const response=await fetch(url,{method,headers:{authorization:'Bearer '+token},body:form,cache:'no-store'});const data=await response.json().catch(()=>({}));
-    if(!response.ok){const messages={REQUEST_BODY_TOO_LARGE:'사진 용량이 너무 큽니다. 사진은 장당 5MB 이하, 최대 5장까지 등록할 수 있습니다.',too_many_images:'사진은 최대 5장까지 등록할 수 있습니다.',image_too_large:'사진 한 장의 크기는 최대 5MB입니다.',image_storage_unavailable:'사진 저장소에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.',edit_forbidden:'작성자만 수정할 수 있습니다.'};throw new Error(messages[data.error]||data.error||(editingId?'수정하지 못했습니다.':'게시하지 못했습니다.'))}
+    if(!response.ok){const messages={REQUEST_BODY_TOO_LARGE:'사진 용량이 너무 큽니다. 사진은 장당 5MB 이하, 최대 5장까지 등록할 수 있습니다.',too_many_images:'사진은 최대 5장까지 등록할 수 있습니다.',image_too_large:'사진 한 장의 크기는 최대 5MB입니다.',image_storage_unavailable:'사진 저장소에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.',CANONICAL_STORAGE_PRIMARY_NOT_READY:'파일 저장소 연결을 복구하고 있습니다. 잠시 후 다시 시도해 주세요.',CANONICAL_STORAGE_TOKEN_400:'파일 저장소 인증을 복구하고 있습니다. 잠시 후 다시 시도해 주세요.',edit_forbidden:'작성자만 수정할 수 있습니다.'};throw new Error(messages[data.error]||data.error||(editingId?'수정하지 못했습니다.':'게시하지 못했습니다.'))}
     resetNoticeEditor();noticeCompose.hidden=true;noticeWriteButton.hidden=false;message.textContent=editingId?'수정했습니다.':'게시했습니다.';await loadNotices();const item=publicNotices.find(row=>row.id===Number(data.id));if(item){history.replaceState(null,'',noticePermalink(item.id));showNoticeDetail(item)}
   }catch(error){message.textContent=error.message||(editingId?'수정하지 못했습니다.':'게시하지 못했습니다.')}
 });
