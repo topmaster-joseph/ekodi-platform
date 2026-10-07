@@ -284,7 +284,7 @@ test('My EKODI provides explicit privacy-first personal character selection',asy
 
 test('My versioned assets use immutable browser caching while runtime data remains uncached',async()=>{
   const [html,worker]=await Promise.all([read('my/index.html'),read('my-worker.js')]);
-  assert.match(html,/app\.js\?v=20261007-access-batch-cache-v1/);
+  assert.match(html,/app\.js\?v=fp-[a-f0-9]{16}/);
   assert.match(worker,/searchParams\.has\('v'\)/);
   assert.match(worker,/public, max-age=31536000, immutable/);
   assert.match(worker,/manifest-fallback'[\s\S]{0,220}withVersionedAssetCache\(request/);
@@ -312,7 +312,7 @@ test('My app asset fingerprint matches the current app and service manifest cont
     read('ekodi-service-manifest.js'),
     read('scripts/generate-user-service-registry.mjs')
   ]);
-  const expected='fp-'+createHash('sha256').update(app).update('\\0').update(manifest).digest('hex').slice(0,16);
+  const expected='fp-'+createHash('sha256').update(app).update('\0').update(manifest).digest('hex').slice(0,16);
   const matches=[...html.matchAll(/\/my\/app\.js\?v=(fp-[a-f0-9]{16})/g)].map(match=>match[1]);
   assert.ok(matches.length>=2,'script and modulepreload must both carry the app fingerprint');
   assert.ok(matches.every(value=>value===expected),`expected ${expected}, got ${matches.join(', ')}`);
