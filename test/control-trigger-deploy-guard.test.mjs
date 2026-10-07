@@ -16,3 +16,12 @@ test('deployment guard distinguishes trigger synchronization from an unsafe dire
   assert.ok(validator.includes("/wrangler(?:@[^\\s]+)?\\s+deploy\\s+--config\\s+wrangler\\.api\\.toml/"));
   assert.doesNotMatch(validator, /forbidText\('\.github\/workflows\/deploy-control-api\.yml',[^\n]*deploy --config wrangler\.api\.toml/);
 });
+
+test('Control production propagates orchestrator release receipt to nested guarded promotion', () => {
+  const production = workflow.slice(workflow.indexOf('  production:'));
+  assert.match(production, /EKODI_RELEASE_BRANCH_REF:\s*\$\{\{ inputs\.release_branch_ref \|\| '' \}\}/);
+  assert.match(production, /EKODI_RELEASE_TASK_ID:\s*\$\{\{ inputs\.release_task_id \|\| '' \}\}/);
+  const guardedIndex = production.indexOf('guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json');
+  const envIndex = production.indexOf('EKODI_RELEASE_BRANCH_REF:');
+  assert.ok(envIndex >= 0 && envIndex < guardedIndex, 'release receipt env must reach guarded promotion');
+});
