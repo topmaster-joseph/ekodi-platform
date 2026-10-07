@@ -65,9 +65,10 @@ test('continuous site improvement is bound to the same recursive policy',()=>{
 
 test('canonical mount and descendant slash parity are forced inherited rules',()=>{
   const policy=json('config/site-execution-enforcement.json');
-  assert.equal(policy.schemaVersion,4);
+  assert.equal(policy.schemaVersion,5);
   assert.ok(policy.mandatoryContracts.includes('canonical-mount-parity'));
   assert.ok(policy.mandatoryContracts.includes('descendant-slash-parity'));
+  assert.ok(policy.mandatoryContracts.includes('auth-return-url-hygiene'));
   const mount=policy.canonicalMountParity;
   assert.equal(mount.policyId,'CANONICAL-PATH-MOUNT-PARITY-001');
   assert.equal(mount.status,'enforced');
@@ -97,4 +98,48 @@ test('canonical mount and descendant slash parity are forced inherited rules',()
   assert.equal(slash.bothVariantsRegressionTestRequired,true);
   assert.equal(slash.futureSitesAutoInherit,true);
   assert.equal(slash.perSiteOptOutAllowed,false);
+});
+
+
+test('login return one-time credentials never use the browser address bar',()=>{
+  const policy=json('config/site-execution-enforcement.json');
+  const hygiene=policy.authenticationReturnUrlHygiene;
+  assert.equal(hygiene.policyId,'AUTH-RETURN-URL-HYGIENE-001');
+  assert.equal(hygiene.status,'enforced');
+  assert.equal(hygiene.oneTimeCredentialInAddressBarForbidden,true);
+  assert.equal(hygiene.queryCredentialTransportForbidden,true);
+  assert.equal(hygiene.fragmentCredentialTransportForbidden,true);
+  assert.equal(hygiene.postBodyOrServerSessionTransportRequired,true);
+  assert.equal(hygiene.historyReplacementDefenseInDepthOnly,true);
+  assert.equal(hygiene.referrerLeakageForbidden,true);
+  assert.equal(hygiene.futureSitesAutoInherit,true);
+  assert.equal(hygiene.perSiteOptOutAllowed,false);
+
+  const client=read('auth-site/client-auth.js');
+  const general=read('auth-site/auth.js');
+  const business=read('auth-site/business-auth.js');
+  const workspace=read('auth-site/auth-workspace-target.js');
+  const admin=read('auth-site/admin-auth.js');
+  const adminMenu=read('admin-menu-runtime.js');
+  const supply=read('supply-network-admin.js');
+  const bridge=read('auth-return-post.js');
+  const platform=read('platform-router-entry-worker.js');
+  const board=read('services/independent-board/worker.js');
+  const producers=[client,general,business,workspace,admin,adminMenu,supply];
+  for(const source of producers){
+    assert.doesNotMatch(source,/(?:target|destination)\.hash\s*=\s*new URLSearchParams\([^;]*(?:ekodi_token|ekodi_admin_token)/s);
+    assert.doesNotMatch(source,/(?:target|destination)\.searchParams\.set\(['"](?:ekodi_token|ekodi_admin_token|token_hash|access_token|refresh_token|handoff_token)['"]/s);
+    assert.doesNotMatch(source,/fragment\s*=\s*\{[^}]*ekodi_token/s);
+  }
+  assert.match(client,/form\.method='POST'/);
+  assert.match(client,/ekodi_auth_return:'1'/);
+  assert.match(client,/form\.submit\(\)/);
+  assert.match(bridge,/AUTH-RETURN-URL-HYGIENE-001/);
+  assert.match(bridge,/request\.clone\(\)\.formData\(\)/);
+  assert.match(bridge,/history\.replaceState/);
+  assert.match(bridge,/location\.replace\(clean\.href\)/);
+  assert.match(platform,/handleAuthReturnPost\(request\)/);
+  assert.match(board,/handleAuthReturnPost\(req\)/);
+  assert.match(admin,/sessionStorage\.setItem\('ekodi-auth-token',result\.token\)/);
+  assert.match(business,/sessionStorage\.setItem\('ekodi-business-session'/);
 });
