@@ -40,8 +40,8 @@ async function authBridge(request,env,mode){
   const refreshToken=clean(body?.refresh_token,8192);
   if(mode==='exchange'&&!tokenHash)return json({ok:false,error:'token_hash_required'},400);
   if(mode==='refresh'&&!refreshToken)return json({ok:false,error:'refresh_token_required'},400);
-  const base=clean(env?.MY_SUPABASE_URL,500).replace(/\/+$/,'');
-  const key=clean(env?.MY_SUPABASE_PUBLISHABLE_KEY,1200);
+  const base=clean(env?.MY_SUPABASE_URL||SUPABASE_URL,500).replace(/\/+$/,'');
+  const key=clean(env?.MY_SUPABASE_PUBLISHABLE_KEY||SUPABASE_PUBLISHABLE_KEY,1200);
   if(!base||!key)return json({ok:false,error:'auth_bridge_unconfigured'},503);
   const endpoint=mode==='refresh'?'/auth/v1/token?grant_type=refresh_token':'/auth/v1/verify';
   const payload=mode==='refresh'?{refresh_token:refreshToken}:{token_hash:tokenHash,type:clean(body?.type,40)||'email'};
