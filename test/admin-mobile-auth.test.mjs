@@ -24,9 +24,11 @@ test('admin auth delegates Google popup mode to the approved origin bridge', () 
   assert.doesNotMatch(adminAuth, /supportsFedCmButton/);
 });
 
-test('successful admin login navigates with replace and provides a delayed manual fallback', () => {
+test('successful admin login keeps the session token out of the address bar and provides a delayed manual fallback', () => {
   assert.match(adminAuth, /navigateToAdmin\(result\)/);
-  assert.match(adminAuth, /ekodi_admin_token:result\.token/);
+  assert.match(adminAuth, /sessionStorage\.setItem\('ekodi-auth-token',result\.token\)/);
+  assert.doesNotMatch(adminAuth, /ekodi_admin_token:result\.token/);
+  assert.match(adminAuth, /target\.hash=''/);
   assert.match(adminAuth, /location\.replace\(targetHref\)/);
   assert.match(adminAuth, /showNavigationFallback\(targetHref\)/);
   assert.match(adminAuth, /인증 완료 · 관리자 화면 열기/);
@@ -37,7 +39,8 @@ test('admin destination still accepts the same handoff token and router cache is
   assert.match(router, /admin-auth\.js\?v=20260918-canonical-origin-2/);
 });
 
-test('admin auth can return a verified platform session to nested Mall admin controls', () => {
+test('admin auth can return a verified platform session to nested Mall admin controls without a URL token', () => {
   assert.equal(adminAuth.includes("u.pathname.startsWith('/ekodimall/admin/')"), true);
-  assert.match(adminAuth, /ekodi_admin_token:result\.token/);
+  assert.match(adminAuth, /sessionStorage\.setItem\('ekodi-auth-token',result\.token\)/);
+  assert.doesNotMatch(adminAuth, /ekodi_admin_token:result\.token/);
 });
