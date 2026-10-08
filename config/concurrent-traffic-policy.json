@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "policyId": "EKODI-CONCURRENT-TRAFFIC-10K-001",
   "status": "enforced",
   "appliesRecursivelyToAllServices": true,
@@ -21,6 +21,37 @@
     "provider_429_1027",
     "ai_inflight"
   ],
+  "runtimeGovernor": {
+    "enabled": true,
+    "windowSeconds": 10,
+    "requestsPerSecond": {
+      "L2": 30,
+      "L3": 100,
+      "PROTECT": 300
+    },
+    "rateLimiters": {
+      "L2": "TRAFFIC_L2_RATE_LIMITER",
+      "L3": "TRAFFIC_L3_RATE_LIMITER",
+      "PROTECT": "TRAFFIC_PROTECT_RATE_LIMITER"
+    },
+    "adaptiveSignals": {
+      "sampleWindowSeconds": 60,
+      "minimumSamples": 10,
+      "p95LatencyMs": {"L2":1200,"L3":2200,"PROTECT":4000},
+      "errorRatePercent": {"L2":2,"L3":5,"PROTECT":12},
+      "recoveryStableMinutes": 10,
+      "stepDownOneTierAtATime": true,
+      "scope": "worker_isolate_secondary_signal"
+    },
+    "workersCache": {
+      "productionEnabled": true,
+      "anonymousPublicGetOnly": true,
+      "privateSurfacesExcluded": true,
+      "edgeTtlSeconds": {"L1":60,"L2":120,"L3":300,"PROTECT":600},
+      "staleWhileRevalidateSeconds": {"L1":300,"L2":600,"L3":1800,"PROTECT":3600},
+      "staleIfErrorSeconds": 86400
+    }
+  },
   "tiers": [
     {
       "id": "L1",

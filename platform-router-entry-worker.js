@@ -55,6 +55,7 @@ import { localRegionOperationsAdminScript } from './local-region-operations-admi
 import { regionalCommerceProgramFromLocalRoute, regionalCommerceProgramFromPath } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
+import { applyTrafficResponsePolicy, assessTrafficTier, recordTrafficOutcome, trafficRequestGuard } from './traffic-governor.js';
 import { handleSeonamMediCivicApi, consumeSeonamMediVoiceMessage } from './seonammedi-civic-control.js';
 import { handleSeonamMediAdminApi } from './seonammedi-admin-control.js';
 import { handleSeonamMediMonitorApi } from './seonammedi-monitor.js';
@@ -562,20 +563,32 @@ export default {
   async fetch(request,env,ctx){
     const guard=await enforcePlatformRequestSecurity(request,env);
     if(guard)return applyPlatformSecurityHeaders(guard,request);
+    const trafficStartedAt=Date.now();
+    const traffic=await assessTrafficTier(request,env);
+    const trafficGuard=trafficRequestGuard(request,traffic);
+    if(trafficGuard)return applyPlatformSecurityHeaders(trafficGuard,request);
+    let trafficRecorded=false;
+    const record=status=>{if(trafficRecorded)return;trafficRecorded=true;recordTrafficOutcome({durationMs:Date.now()-trafficStartedAt,status})};
+    const finalize=response=>{
+      record(response.status);
+      response=applyTrafficResponsePolicy(response,request,traffic);
+      return applyPlatformSecurityHeaders(response,request);
+    };
     const incomingUrl=new URL(request.url);
     if(incomingUrl.pathname===RELEASE_ATTESTATION_PATH&&['GET','HEAD'].includes(request.method)){
-      return applyPlatformSecurityHeaders(releaseAttestationResponse(env),request);
+      return finalize(releaseAttestationResponse(env));
     }
     const canonicalQueryRedirect=canonicalTrackingQueryRedirect(request);
-    if(canonicalQueryRedirect)return applyPlatformSecurityHeaders(canonicalQueryRedirect,request);
+    if(canonicalQueryRedirect)return finalize(canonicalQueryRedirect);
     const publicationAsset=sitePublicationAdminAsset(request);
-    if(publicationAsset)return applyPlatformSecurityHeaders(publicationAsset,request);
+    if(publicationAsset)return finalize(publicationAsset);
     const publicationGuard=await sitePublicationGuard(request,env);
-    if(publicationGuard)return applyPlatformSecurityHeaders(publicationGuard,request);
+    if(publicationGuard)return finalize(publicationGuard);
     const adminPublicationSite=await resolvePublicationSiteForRequest(request,env,{admin:true});
-    let response=await routePlatform(request,env,ctx);
+    let response;
+    try{response=await routePlatform(request,env,ctx)}catch(error){record(500);throw error}
     if(adminPublicationSite)response=injectSitePublicationAdmin(response,adminPublicationSite);
-    return applyPlatformSecurityHeaders(response,request);
+    return finalize(response);
   },
   async queue(batch,env){
     for(const message of batch.messages){

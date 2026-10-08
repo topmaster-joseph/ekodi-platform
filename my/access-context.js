@@ -71,11 +71,10 @@ async function resolve(){
   const {data,error}=await sb.auth.getSession();
   const session=data?.session||null;
   if(error||!session){render(section,{state:'로그인 필요',headline:'Google 무료회원 확인 후 이어집니다.',detail:'공개 콘텐츠는 로그인 없이 계속 볼 수 있고, 개인·공간 데이터와 저장·작성 기능은 로그인 후 열립니다.',copy:`${service.name}의 내 이용범위는 로그인 후 확인합니다.`,primaryLabel:'Google로 무료 시작',primaryHref:authUrl(),secondaryHref:serviceReturn});return}
-  const [{data:access,error:accessError},{data:rows,error:workspaceError}]=await Promise.all([
-    sb.rpc('current_site_access',{p_site_key:source}),
-    sb.rpc('current_site_workspaces',{p_site_key:source})
-  ]);
-  if(accessError||workspaceError){render(section,{state:'권한 확인 지연',headline:'내 이용상태를 지금 확인하지 못했습니다.',detail:'권한을 추측해 열지 않고 기존 상태를 유지합니다. 잠시 후 다시 확인해 주세요.',copy:`${service.name} 접근정보 조회가 지연되고 있습니다.`,primaryLabel:'내 공간 보기',primaryHref:'#workspaces',secondaryHref:serviceReturn});return}
+  const {data:context,error:contextError}=await sb.rpc('my_dashboard_access_context',{p_site_keys:[source]});
+  const access=context?.access?.[source]||null;
+  const rows=context?.workspaces?.[source]||[];
+  if(contextError||!context?.access||!context?.workspaces){render(section,{state:'권한 확인 지연',headline:'내 이용상태를 지금 확인하지 못했습니다.',detail:'권한을 추측해 열지 않고 기존 상태를 유지합니다. 잠시 후 다시 확인해 주세요.',copy:`${service.name} 접근정보 조회가 지연되고 있습니다.`,primaryLabel:'내 공간 보기',primaryHref:'#workspaces',secondaryHref:serviceReturn});return}
   const workspaces=(Array.isArray(rows)?rows:[]).filter(row=>ACTIVE_STATUSES.has(String(row?.status||'')));
   const exact=requestedWorkspace?workspaces.find(row=>row?.workspace_key===requestedWorkspace):null;
   const minimumTier=service?.userAccessPolicy?.minimumTier||'free';

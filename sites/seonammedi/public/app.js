@@ -404,6 +404,19 @@ function setVoiceCompose(open){
 }
 if(voiceComposeToggle)voiceComposeToggle.onclick=()=>setVoiceCompose(voiceComposeForm?.hidden!==false);
 if(voiceComposeCancel)voiceComposeCancel.onclick=()=>setVoiceCompose(false);
+async function waitForBoardSubmission(result){
+  if(result?.id)return Number(result.id);
+  const statusUrl=String(result?.statusUrl||'');
+  if(!result?.submissionId||!statusUrl)return 0;
+  for(let attempt=0;attempt<8;attempt++){
+    await new Promise(resolve=>setTimeout(resolve,500));
+    const response=await fetch(statusUrl,{cache:'no-store'}).catch(()=>null);
+    if(!response?.ok)continue;
+    const body=await response.json().catch(()=>({}));
+    if(body.status==='published'&&body.id)return Number(body.id);
+  }
+  return 0;
+}
 
 publicVoiceList?.addEventListener('submit',async event=>{
   const form=event.target.closest('[data-voice-reply]');if(!form)return;event.preventDefault();
@@ -415,7 +428,8 @@ publicVoiceList?.addEventListener('submit',async event=>{
     const response=await fetch('/board/api/posts/'+voiceId+'/replies',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
     const body=await response.json().catch(()=>({}));
     if(!response.ok||body.ok!==true)throw new Error(body.message||body.error||'답글을 등록하지 못했습니다.');
-    form.reset();if(status)status.textContent='답글이 등록되었습니다.';await loadPublicVoices();
+    const storedId=await waitForBoardSubmission(body);
+    form.reset();if(status)status.textContent=storedId?'답글이 등록되었습니다.':'답글이 접수되었습니다. 잠시 후 목록에 표시됩니다.';await loadPublicVoices();
   }catch(error){if(status)status.textContent=error.message||'답글을 등록하지 못했습니다.'}
   finally{if(button)button.disabled=false}
 });
@@ -437,9 +451,10 @@ if(voiceForm){
     try{
       const response=await fetch('/board/api/posts',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
       const body=await response.json().catch(()=>({}));
-      if(!response.ok||body.ok!==true||!body.id){const detail=body.message||body.error||body.code||('HTTP '+response.status);throw new Error('등록하지 못했습니다. '+detail)}
+      if(!response.ok||body.ok!==true||(!body.id&&!body.submissionId)){const detail=body.message||body.error||body.code||('HTTP '+response.status);throw new Error('등록하지 못했습니다. '+detail)}
+      const storedId=await waitForBoardSubmission(body);
       voiceForm.reset();
-      status.textContent=body.message||'등록되었습니다.';
+      status.textContent=storedId?(body.message||'등록되었습니다.'):'시민의견이 접수되었습니다. 잠시 후 목록에 표시됩니다.';
       await loadPublicVoices();
       setVoiceCompose(false);
     }catch(error){

@@ -4,6 +4,7 @@ const storage=JSON.parse(fs.readFileSync(new URL('../config/storage-policy.json'
 const platformSecurity=fs.readFileSync(new URL('../platform-security-policy.js',import.meta.url),'utf8');
 const siteConfig=fs.readFileSync(new URL('../wrangler.site.toml',import.meta.url),'utf8');
 const apiConfig=fs.readFileSync(new URL('../wrangler.api.toml',import.meta.url),'utf8');
+const governor=fs.readFileSync(new URL('../traffic-governor.js',import.meta.url),'utf8');
 const fail=(m)=>{console.error('[EKODI-CONCURRENT-TRAFFIC-10K-001] '+m);process.exitCode=1};
 if(p.status!=='enforced')fail('policy must be enforced');
 if(p.appliesRecursivelyToAllServices!==true)fail('all services must inherit policy');
@@ -29,6 +30,22 @@ if(!siteConfig.includes('name = "PLATFORM_PUBLIC_WRITE_RATE_LIMITER"'))fail('sha
 if(!siteConfig.includes('name = "PLATFORM_SENSITIVE_RATE_LIMITER"'))fail('shared site sensitive limiter binding missing');
 if(!siteConfig.includes('run_worker_first'))fail('shared site asset-first/worker-first routing contract missing');
 if(!apiConfig.includes('name = "AUTH_RATE_LIMITER"'))fail('control API auth limiter binding missing');
+if(p.runtimeGovernor?.enabled!==true||p.runtimeGovernor?.windowSeconds!==10)fail('runtime traffic governor must be enabled with a 10-second window');
+if(p.runtimeGovernor?.requestsPerSecond?.L2!==30||p.runtimeGovernor?.requestsPerSecond?.L3!==100||p.runtimeGovernor?.requestsPerSecond?.PROTECT!==300)fail('runtime traffic thresholds must remain 30/100/300 rps');
+for(const binding of ['TRAFFIC_L2_RATE_LIMITER','TRAFFIC_L3_RATE_LIMITER','TRAFFIC_PROTECT_RATE_LIMITER']){
+  if(!siteConfig.includes(`name = "${binding}"`))fail(binding+' binding missing');
+  if(!governor.includes(binding))fail(binding+' runtime use missing');
+}
+if(!siteConfig.includes('[cache]')||!siteConfig.includes('enabled = true'))fail('production Workers cache must be enabled');
+if(!governor.includes('cloudflare-cdn-cache-control'))fail('traffic governor must publish edge-only cache policy');
+if(!governor.includes("'/auth','/my','/admin','/control','/api','/mcp','/webhooks','/mail','/live'"))fail('private traffic cache exclusions missing');
+if(p.runtimeGovernor?.workersCache?.anonymousPublicGetOnly!==true||p.runtimeGovernor?.workersCache?.privateSurfacesExcluded!==true)fail('public cache safety contract missing');
+const adaptive=p.runtimeGovernor?.adaptiveSignals||{};
+if(adaptive.sampleWindowSeconds!==60||adaptive.minimumSamples!==10)fail('adaptive traffic sample window must remain 60s / 10 samples');
+if(adaptive.p95LatencyMs?.L2!==1200||adaptive.p95LatencyMs?.L3!==2200||adaptive.p95LatencyMs?.PROTECT!==4000)fail('adaptive p95 thresholds must remain 1200/2200/4000ms');
+if(adaptive.errorRatePercent?.L2!==2||adaptive.errorRatePercent?.L3!==5||adaptive.errorRatePercent?.PROTECT!==12)fail('adaptive error thresholds must remain 2/5/12 percent');
+if(adaptive.recoveryStableMinutes!==10||adaptive.stepDownOneTierAtATime!==true)fail('adaptive recovery hysteresis must remain 10 minutes and stepwise');
+for(const marker of ['recordTrafficOutcome','trafficRuntimeSnapshot','recovery_hysteresis',"out.headers.set('cache-control','no-store')"]){if(!governor.includes(marker))fail('traffic runtime marker missing: '+marker)}
 if(p.quotaProtection?.warningPercent!==70||p.quotaProtection?.protectPercent!==90||p.quotaProtection?.circuitBreakerPercent!==100)fail('70/90/100 quota protection thresholds required');
 if(!Array.isArray(p.quotaProtection?.stopRetryStatuses)||!p.quotaProtection.stopRetryStatuses.includes(429)||!p.quotaProtection.stopRetryStatuses.includes(1027))fail('429/1027 circuit-breaker signals required');
 if(p.failurePolicy?.circuitBreaker!==true)fail('circuit breaker required');

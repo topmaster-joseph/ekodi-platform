@@ -9,7 +9,7 @@ const WORKSPACE_KEY_RE=/^[a-z]+:[a-zA-Z0-9:_-]+$/;
 const SERVICE_ID_RE=/^[a-z][a-z0-9-]*$/;
 const PUBLIC_PERSON_PATH_RE=/^\/@([a-z0-9][a-z0-9._-]{2,39})\/?$/;
 const PRIVATE_ROUTER_TAG='<script src="/my/private-workspace-router.js?v=20260827-private-workspace-1"></script>';
-const ACCESS_CONTEXT_TAG='<script type="module" src="/my/access-context.js?v=20260829-common-service-access-1"></script>';
+const ACCESS_CONTEXT_TAG='<script type="module" src="/my/access-context.js?v=20261008-traffic-resilience-v2"></script>';
 const CANONICAL_MY_ASSET_ALIASES=new Map([
   ['/my/private-workspace-router.js','/private-workspace-router.js'],
   ['/my/access-context.js','/access-context.js'],

@@ -19,6 +19,27 @@ let session=null,items=[],access=new Map(),workspaces=new Map(),filter='all',act
 let personalizationPreferences=new Map(),personalizationSignals=[],ephemeralSignals=[],discoveryOpen=false;
 window.EKODI_MY_AUTH=Object.freeze({getAccessToken:()=>String(session?.access_token||''),getUserId:()=>String(session?.user?.id||''),isSignedIn:()=>Boolean(session?.access_token)});
 
+const ACCESS_SNAPSHOT_TTL_MS=5*60*1000;
+const accessSnapshotKey=()=>session?.user?.id?`ekodi_my_access_snapshot_v2:${session.user.id}`:'';
+function applyAccessPayload(siteKeys,payload){
+ const accessBySite=payload?.access&&typeof payload.access==='object'?payload.access:null;
+ const workspacesBySite=payload?.workspaces&&typeof payload.workspaces==='object'?payload.workspaces:null;
+ if(!accessBySite||!workspacesBySite)return false;
+ for(const id of siteKeys){
+  access.set(id,accessBySite[id]||{status:'unregistered',plan:'free'});
+  const rows=workspacesBySite[id];workspaces.set(id,Array.isArray(rows)?rows:[]);
+ }
+ return true;
+}
+function rememberAccessSnapshot(payload){
+ const key=accessSnapshotKey();if(!key)return;
+ try{sessionStorage.setItem(key,JSON.stringify({savedAt:Date.now(),access:payload.access,workspaces:payload.workspaces}))}catch{}
+}
+function cachedAccessSnapshot(){
+ const key=accessSnapshotKey();if(!key)return null;
+ try{const snapshot=JSON.parse(sessionStorage.getItem(key)||'null');if(!snapshot||Date.now()-Number(snapshot.savedAt||0)>ACCESS_SNAPSHOT_TTL_MS)return null;return snapshot}catch{return null}
+}
+
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 const mode=v=>MODES[v]?v:'writer';
 const plan=v=>({free:'Free',basic:'Basic',pro:'Pro',enterprise:'Business',standard:'Standard'})[String(v||'free').toLowerCase()]||String(v||'Free');
@@ -408,25 +429,12 @@ async function loadProfile(){
 async function loadAccess(){
  access=new Map();workspaces=new Map();if(!sb||!session)return;
  const siteKeys=SERVICES.map(([id])=>id);
- try{
-  const payload=await rpc('my_dashboard_access_context',{p_site_keys:siteKeys});
-  const accessBySite=payload?.access&&typeof payload.access==='object'?payload.access:null;
-  const workspacesBySite=payload?.workspaces&&typeof payload.workspaces==='object'?payload.workspaces:null;
-  if(accessBySite&&workspacesBySite){
-   for(const id of siteKeys){
-    access.set(id,accessBySite[id]||{status:'unregistered',plan:'free'});
-    const rows=workspacesBySite[id];
-    workspaces.set(id,Array.isArray(rows)?rows:[]);
-   }
-   return;
-  }
- }catch(error){
-  console.warn('dashboard-access-context fallback',error);
- }
- await Promise.all(SERVICES.map(async([id])=>{
-  const [a,w]=await Promise.all([rpc('current_site_access',{p_site_key:id}),rpc('current_site_workspaces',{p_site_key:id})]);
-  access.set(id,a||{status:'unregistered',plan:'free'});workspaces.set(id,Array.isArray(w)?w:[]);
- }));
+ const payload=await rpc('my_dashboard_access_context',{p_site_keys:siteKeys});
+ if(applyAccessPayload(siteKeys,payload)){rememberAccessSnapshot(payload);return}
+ const snapshot=cachedAccessSnapshot();
+ if(snapshot&&applyAccessPayload(siteKeys,snapshot)){console.warn('dashboard-access-context using recent snapshot');return}
+ console.warn('dashboard-access-context unavailable; using safe defaults without per-service fan-out');
+ for(const id of siteKeys){access.set(id,{status:'unregistered',plan:'free'});workspaces.set(id,[])}
 }
 async function loadPortfolio(){
  items=[];if(!sb||!session)return;

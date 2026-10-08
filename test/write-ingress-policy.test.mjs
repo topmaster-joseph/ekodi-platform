@@ -45,7 +45,7 @@ test('durable write ingress policy is enforced and queue-first in production',as
   assert.match(workflow,/jq -e '\.\. \| strings \| select\(\. == "shy-thunder-39a4"\)'/);
 });
 
-test('seonammedi citizen voice uses direct standalone-board persistence',async()=>{
+test('seonammedi citizen voice keeps standalone ownership behind durable queue ingress',async()=>{
   const [html,app,worker,config]=await Promise.all([
     read('sites/seonammedi/public/index.html'),
     read('sites/seonammedi/public/app.js'),
@@ -54,9 +54,11 @@ test('seonammedi citizen voice uses direct standalone-board persistence',async()
   ]);
   assert.doesNotMatch(html,/name="website"/);
   assert.match(app,/fetch\('\/board\/api\/posts'/);
-  assert.match(app,/!body\.id/);
-  assert.doesNotMatch(app,/!body\.submissionId|\/voices\/submissions\//);
+  assert.match(app,/body\.submissionId/);
+  assert.match(app,/waitForBoardSubmission/);
   assert.match(worker,/env\.BOARD_DB/);
+  assert.match(worker,/BOARD_WRITE_QUEUE/);
   assert.match(worker,/storage:'independent-board-d1'/);
   assert.match(config,/database_name = "ekodi-independent-board"/);
+  assert.match(config,/queue = "ekodi-independent-board-write-ingress"/);
 });

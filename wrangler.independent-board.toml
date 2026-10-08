@@ -5,6 +5,7 @@ workers_dev = false
 preview_urls = false
 
 [vars]
+ENVIRONMENT = "production"
 BOARD_ID = "seonammedi.citizen_voice"
 
 [[routes]]
@@ -24,3 +25,22 @@ migrations_dir = "services/independent-board/migrations"
 [[r2_buckets]]
 binding = "BOARD_FILES"
 bucket_name = "ekodi-independent-board-files"
+
+[[ratelimits]]
+name = "BOARD_PUBLIC_WRITE_RATE_LIMITER"
+namespace_id = "4913"
+[ratelimits.simple]
+limit = 30
+period = 60
+
+[[queues.producers]]
+binding = "BOARD_WRITE_QUEUE"
+queue = "ekodi-independent-board-write-ingress"
+
+[[queues.consumers]]
+queue = "ekodi-independent-board-write-ingress"
+max_batch_size = 50
+max_batch_timeout = 1
+max_retries = 5
+max_concurrency = 5
+dead_letter_queue = "ekodi-independent-board-write-ingress-dlq"

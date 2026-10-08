@@ -22,8 +22,9 @@ test('central common-service auth preserves the initiating return target without
 test('My common-service access guidance resolves only RLS-protected user access and never guesses another workspace',async()=>{
   const access=await read('my/access-context.js');
   execFileSync(process.execPath,['--check',fileURLToPath(new URL('../my/access-context.js',import.meta.url))],{stdio:'pipe'});
-  assert.match(access,/current_site_access/);
-  assert.match(access,/current_site_workspaces/);
+  assert.match(access,/my_dashboard_access_context/);
+  assert.doesNotMatch(access,/rpc\('current_site_access'/);
+  assert.doesNotMatch(access,/rpc\('current_site_workspaces'/);
   assert.match(access,/ACTIVE_STATUSES/);
   assert.match(access,/requestedWorkspace&&!exact/);
   assert.match(access,/다른 공간으로 임의 전환하지 않습니다/);
@@ -36,7 +37,7 @@ test('My common-service access guidance resolves only RLS-protected user access 
 test('My Worker injects access guidance into root and canonical private workspace shells',async()=>{
   const worker=await read('my-worker.js');
   assert.match(worker,/ACCESS_CONTEXT_TAG/);
-  assert.match(worker,/\/my\/access-context\.js\?v=20260829-common-service-access-1/);
+  assert.match(worker,/\/my\/access-context\.js\?v=20261008-traffic-resilience-v2/);
   assert.doesNotMatch(worker,/ACCESS_CONTEXT_TAG='<script type="module" src="\/access-context\.js/);
   assert.match(worker,/if\(!source\.includes\('\/access-context\.js'\)\)/);
   assert.match(worker,/accessContextGuidance:true/);

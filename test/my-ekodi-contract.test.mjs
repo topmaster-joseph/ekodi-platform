@@ -11,8 +11,11 @@ test('My EKODI is a unified private-first USER UI hub, not a second source of tr
   assert.match(html,/MY SPACES/);
   assert.match(html,/내 선택이 우선/);
   assert.match(html,/공간별 데이터/);
-  assert.match(app,/current_site_access/);
-  assert.match(app,/current_site_workspaces/);
+  assert.match(app,/my_dashboard_access_context/);
+  assert.match(app,/ACCESS_SNAPSHOT_TTL_MS=5\*60\*1000/);
+  assert.match(app,/safe defaults without per-service fan-out/);
+  assert.doesNotMatch(app,/rpc\('current_site_access'/);
+  assert.doesNotMatch(app,/rpc\('current_site_workspaces'/);
   assert.match(app,/creator_portfolio_items/);
   assert.doesNotMatch(app,/\.update\(\{visibility:/);
   assert.match(userAi,/boundary:'suggest-and-handoff'/);
@@ -283,7 +286,7 @@ test('My EKODI provides explicit privacy-first personal character selection',asy
 
 test('My versioned assets use immutable browser caching while runtime data remains uncached',async()=>{
   const [html,worker]=await Promise.all([read('my/index.html'),read('my-worker.js')]);
-  assert.match(html,/app\.js\?v=20261007-access-batch-cache-v1/);
+  assert.match(html,/app\.js\?v=20261008-traffic-resilience-v2/);
   assert.match(worker,/searchParams\.has\('v'\)/);
   assert.match(worker,/public, max-age=31536000, immutable/);
   assert.match(worker,/manifest-fallback'[\s\S]{0,220}withVersionedAssetCache\(request/);
