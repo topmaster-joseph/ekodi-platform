@@ -145,18 +145,16 @@
   </div>
 </section>
 
-<section id="finance" class="section module-section finance-preparing-section" data-view-section="finance" hidden>
-  <div class="section-head section-view-title"><div><p class="eyebrow">TRANSPARENCY</p><h2>회계</h2></div></div>
-  <div class="finance-preparing-note" role="status"><strong>세부 메뉴 준비중</strong><p>회계 공개 화면을 정리하고 있습니다. 준비가 완료되면 이 메뉴에서 바로 확인할 수 있습니다.</p></div>
+<section id="finance" class="section module-section" data-view-section="finance" hidden>
+  <div class="section-head section-view-title"><div><p class="eyebrow">TRANSPARENCY</p><h2>회계</h2><p class="note">수입·지출 일자, 금액, 목적, 관련 행사와 증빙 여부를 공개합니다. 개인 후원자의 개인정보는 공개하지 않습니다.</p></div></div>
   <div class="module-shell finance-detail-content">
-    <aside class="module-intro"><p class="eyebrow">TRANSPARENCY</p><h2>회계</h2><p class="note">수입·지출 일자, 금액, 목적, 관련 행사와 증빙 여부를 공개합니다. 개인 후원자의 개인정보는 공개하지 않습니다.</p></aside>
-    <div class="module-main">
+    <div class="module-main finance-public-main">
       <div class="money-grid">
         <article><span>누적 모금</span><strong id="raised">자료 입력 전</strong></article>
         <article><span>누적 지출</span><strong id="spent">자료 입력 전</strong></article>
         <article><span>현재 잔액</span><strong id="balance">자료 입력 전</strong></article>
       </div>
-      <div class="module-toolbar"><div><strong>공개 회계내역</strong><span class="muted">최근 내역부터 확인할 수 있습니다.</span></div><button id="financeManageToggle" class="module-primary" type="button" hidden aria-expanded="false" aria-controls="financeManageForm">내역 추가</button></div>
+      <div class="module-toolbar"><div><strong>전체 회계내역</strong><span class="muted">일반 사용자는 전체 공개 내역을 조회할 수 있으며 입력·수정은 관리자에게만 표시됩니다.</span></div><button id="financeManageToggle" class="module-primary" type="button" hidden aria-expanded="false" aria-controls="financeManageForm">내역 추가</button></div>
       <form id="financeManageForm" class="panel finance-manage-form module-compose" hidden>
         <input type="hidden" name="id">
         <strong id="financeManageTitle">회계내역 추가</strong>
