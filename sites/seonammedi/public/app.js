@@ -492,7 +492,6 @@ function showView(view,{updateHash=false}={}){
 }
 function syncViewFromLocation(){
   const raw=location.hash.replace(/^#/,'');
-  if(raw==='finance'){location.replace('/finance/');return}
   if(raw==='notices'){location.replace('/notices/');return}
   if(raw.includes('ekodi_token=')){showView(new URLSearchParams(location.search).get('compose')==='notice'?'notices':'',{updateHash:false});return}
   if(raw==='channels'||raw.startsWith('channels/')){showView('channels',{updateHash:false});return}
