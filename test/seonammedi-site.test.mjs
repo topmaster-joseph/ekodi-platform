@@ -846,6 +846,14 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.ok(minutes.includes("location.origin+'/minutes/?token='"));
   assert.match(css,/min-height:100dvh;display:flex;flex-direction:column/);
   assert.match(css,/footer{margin-top:auto/);
+  assert.match(html,/href="board\/finance">회계<\/a>/);
+  assert.match(app,/financeLink=event\.target\.closest\('a\[href="board\/finance"\]\'\)/);
+  assert.match(html,/ACTIVITY HISTORY<\/p><h2>활동이력<\/h2>/);
+  assert.match(html,/세부 메뉴 준비중/);
+  assert.doesNotMatch(app,/raw==='finance'.*location\.replace\('\/finance\/'\)/);
+  assert.match(css,/scroll-margin-top:84px/);
+  assert.match(css,/@media\(max-width:760px\)\{\.section\{scroll-margin-top:118px\}/);
+  assert.match(css,/\.finance-preparing-section \.finance-detail-content\{display:none!important\}/);
   assert.match(css,/\.hero\{padding:48px 20px 26px\}/);
   assert.match(css,/\.section\{padding:44px 20px 28px;border-top:1px solid #dce3ea\}/);
   assert.match(css,/@media\(max-width:760px\).*\.section\{padding-top:36px\}/);

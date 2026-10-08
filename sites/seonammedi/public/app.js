@@ -478,6 +478,8 @@ function showView(view,{updateHash=false}={}){
     const active=link.dataset.viewLink===key;
     if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
   });
+  const financeNav=document.querySelector('.site-header nav a[href="board/finance"]');
+  if(financeNav){if(key==='finance')financeNav.setAttribute('aria-current','page');else financeNav.removeAttribute('aria-current')}
   const hero=document.querySelector('.hero');
   if(hero)hero.hidden=Boolean(key);
   if(updateHash){
@@ -492,13 +494,14 @@ function showView(view,{updateHash=false}={}){
 }
 function syncViewFromLocation(){
   const raw=location.hash.replace(/^#/,'');
-  if(raw==='finance'){location.replace('/finance/');return}
   if(raw==='notices'){location.replace('/notices/');return}
   if(raw.includes('ekodi_token=')){showView(new URLSearchParams(location.search).get('compose')==='notice'?'notices':'',{updateHash:false});return}
   if(raw==='channels'||raw.startsWith('channels/')){showView('channels',{updateHash:false});return}
   showView(raw,{updateHash:false});
 }
 document.querySelector('.site-header nav')?.addEventListener('click',event=>{
+  const financeLink=event.target.closest('a[href="board/finance"]');
+  if(financeLink){event.preventDefault();showView('finance',{updateHash:true});return}
   const link=event.target.closest('[data-view-link]');
   if(!link)return;
   event.preventDefault();
