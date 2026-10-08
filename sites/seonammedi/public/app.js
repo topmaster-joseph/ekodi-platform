@@ -314,11 +314,17 @@ updatePublicFinanceSummary(publicFinanceEntries);
 
 const siteReady=load().catch(()=>{el('lastUpdated').textContent='데이터를 불러오지 못했습니다.'});
 function monitorHomeRows(items=[]){
-  const seen=new Set();
-  return items.filter(item=>item&&item.source_type!=='blog'&&safeUrl(item.resolved_url||item.url)!=='#').filter(item=>{
-    const key=String(item.resolved_url||item.url||item.title||'').trim().toLowerCase();
-    if(!key||seen.has(key))return false;seen.add(key);return true;
-  }).sort((a,b)=>String(b.published_at||b.first_seen_at||'').localeCompare(String(a.published_at||a.first_seen_at||''))).slice(0,4);
+  const candidates=items.filter(item=>item&&item.source_type!=='blog'&&safeUrl(item.resolved_url||item.url)!=='#')
+    .sort((a,b)=>String(b.published_at||b.first_seen_at||'').localeCompare(String(a.published_at||a.first_seen_at||'')));
+  const selected=[];
+  for(const item of candidates){
+    const url=timelineNormalizeUrl(item.resolved_url||item.url),date=monitorTimelineDate(item),title=String(item.title||'').trim();
+    if(!title)continue;
+    if(selected.some(prev=>(url&&prev.url===url)||(date&&prev.date===date&&timelineTitleSimilarity(prev.title,title)>=0.72)))continue;
+    selected.push({item,url,date,title});
+    if(selected.length===4)break;
+  }
+  return selected.map(row=>row.item);
 }
 function renderHomeMonitorUpdates(data){
   const section=el('homeLatestUpdates'),list=el('homeLatestList'),updated=el('homeLatestUpdatedAt');
@@ -452,8 +458,9 @@ function showStatusTab(tab){
   activeStatusTab=key;
   document.querySelectorAll('[data-status-tab]').forEach(button=>{const active=button.dataset.statusTab===key;button.classList.toggle('active',active);button.setAttribute('aria-selected',active?'true':'false')});
   const timeline=el('timeline'),materials=el('materials');
-  if(timeline)timeline.hidden=key!=='timeline';
-  if(materials)materials.hidden=key==='timeline';
+  const statusVisible=document.querySelector('[data-view-link="status"][aria-current="page"]')!==null;
+  if(timeline)timeline.hidden=!statusVisible||key!=='timeline';
+  if(materials)materials.hidden=!statusVisible||key==='timeline';
   if(key!=='timeline'){
     const isNews=key==='news';
     if(el('statusMaterialEyebrow'))el('statusMaterialEyebrow').textContent=isNews?'RELATED NEWS':'OFFICIAL RECORD';
@@ -499,6 +506,7 @@ document.querySelector('.site-header nav')?.addEventListener('click',event=>{
   showView(link.dataset.viewLink,{updateHash:true});
 });
 window.addEventListener('popstate',syncViewFromLocation);
+window.addEventListener('hashchange',syncViewFromLocation);
 syncViewFromLocation();
 
 const NOTICE_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token';
