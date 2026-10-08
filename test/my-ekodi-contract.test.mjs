@@ -342,3 +342,5 @@ test('My EKODI defers secondary feature bundles until after the critical startup
   assert.ok(rootProbe?.expect?.includes('secondary-feature-loader.js?v=20261008-startup-defer-v1'));
   assert.ok(!rootProbe?.expect?.some(marker=>marker.includes('church-marketing-ai.js')||marker.includes('channel-automation.js')));
 });
+
+// Release contract refresh: deferred My startup probe.
