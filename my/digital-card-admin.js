@@ -11,8 +11,10 @@ const fields={
   email:$('#digitalCardEmail'),
   exchangeEnabled:$('#digitalCardExchangeEnabled'),
   roles:$('#digitalCardRoles'),
+  messengers:$('#digitalCardMessengers'),
   contexts:$('#digitalCardContexts'),
   addRole:$('#digitalCardAddRole'),
+  addMessenger:$('#digitalCardAddMessenger'),
   addContext:$('#digitalCardAddContext'),
   save:$('#digitalCardSave'),
   status:$('#digitalCardStatus'),
@@ -22,6 +24,15 @@ const fields={
   inboxStatus:$('#contactExchangeInboxStatus'),
 };
 let rowSequence=0;
+const MESSENGER_SERVICES=Object.freeze([
+  ['wechat','WeChat'],
+  ['whatsapp','WhatsApp'],
+  ['telegram','Telegram'],
+  ['line','LINE'],
+  ['kakaotalk','KakaoTalk'],
+  ['custom','기타 메신저'],
+]);
+const messengerServiceLabel=value=>MESSENGER_SERVICES.find(([key])=>key===value)?.[1]||'기타 메신저';
 
 function auth(){return window.EKODI_MY_AUTH||null}
 function token(){return String(auth()?.getAccessToken?.()||'')}
@@ -86,6 +97,66 @@ function refreshRoleOptions(){
     if([...select.options].some(option=>option.value===selected))select.value=selected;
   }
 }
+
+function moveMessengerRow(row,direction){
+  const sibling=direction<0?row.previousElementSibling:row.nextElementSibling;
+  if(!sibling)return;
+  if(direction<0)fields.messengers.insertBefore(row,sibling);
+  else sibling.after(row);
+  refreshMessengerOptions();
+}
+function messengerRow(item={}){
+  const row=document.createElement('div');row.className='digital-card-messenger';
+  const key=document.createElement('input');key.type='hidden';key.name='messengerKey';key.value=String(item.key||nextKey('messenger'));
+  const top=document.createElement('div');top.className='digital-card-messenger-top';
+  const service=document.createElement('select');service.name='messengerService';
+  for(const [value,label] of MESSENGER_SERVICES)service.append(new Option(label,value));
+  service.value=String(item.service||'wechat');
+  const label=document.createElement('input');label.name='messengerLabel';label.maxLength=80;label.placeholder='표시명 (선택)';label.value=String(item.label||'');
+  const controls=document.createElement('div');controls.className='digital-card-row-controls';
+  const up=smallButton('↑');up.title='위로';up.addEventListener('click',()=>moveMessengerRow(row,-1));
+  const down=smallButton('↓');down.title='아래로';down.addEventListener('click',()=>moveMessengerRow(row,1));
+  const remove=smallButton('삭제');remove.addEventListener('click',()=>{row.remove();refreshMessengerOptions()});
+  controls.append(up,down,remove);top.append(service,label,controls);
+  const value=document.createElement('input');value.name='messengerValue';value.maxLength=200;value.placeholder='아이디 · 사용자명 · 전화번호';value.value=String(item.value||'');
+  const url=document.createElement('input');url.name='messengerUrl';url.type='url';url.inputMode='url';url.maxLength=1000;url.placeholder='https://공유 링크 (선택)';url.value=String(item.url||'');
+  const enabledWrap=document.createElement('label');enabledWrap.className='digital-card-check';
+  const enabled=document.createElement('input');enabled.type='checkbox';enabled.name='messengerEnabled';enabled.checked=item.enabled!==false;
+  enabledWrap.append(enabled,document.createTextNode(' 이 연락수단 사용'));
+  row.append(key,top,value,url,enabledWrap);
+  for(const el of [service,label,value,enabled])el.addEventListener('change',refreshMessengerOptions);
+  label.addEventListener('input',refreshMessengerOptions);value.addEventListener('input',refreshMessengerOptions);
+  return row;
+}
+function currentMessengerOptions(){
+  return [...fields.messengers.querySelectorAll('.digital-card-messenger')].map(row=>{
+    const key=String(row.querySelector('[name="messengerKey"]')?.value||'').trim().toLowerCase();
+    const service=String(row.querySelector('[name="messengerService"]')?.value||'custom');
+    const label=String(row.querySelector('[name="messengerLabel"]')?.value||'').trim();
+    const value=String(row.querySelector('[name="messengerValue"]')?.value||'').trim();
+    return {key,label:label||messengerServiceLabel(service),detail:value};
+  }).filter(item=>item.key);
+}
+function renderMessengerChoices(host,selectedKeys=[]){
+  const selected=new Set(Array.isArray(selectedKeys)?selectedKeys.map(String):[]);
+  host.replaceChildren();
+  const title=document.createElement('strong');title.textContent='공개할 메신저';host.append(title);
+  const options=currentMessengerOptions();
+  if(!options.length){
+    const empty=document.createElement('span');empty.className='digital-card-context-messenger-empty';empty.textContent='등록된 메신저 없음';host.append(empty);return;
+  }
+  for(const item of options){
+    const wrap=document.createElement('label');wrap.className='digital-card-check digital-card-context-check';
+    const input=document.createElement('input');input.type='checkbox';input.value=item.key;input.checked=selected.has(item.key);
+    wrap.append(input,document.createTextNode(` ${item.label}${item.detail?` · ${item.detail}`:''}`));host.append(wrap);
+  }
+}
+function refreshMessengerOptions(){
+  for(const host of fields.contexts.querySelectorAll('.digital-card-context-messengers')){
+    const selected=[...host.querySelectorAll('input:checked')].map(input=>input.value);
+    renderMessengerChoices(host,selected);
+  }
+}
 function contextCheck(name,label,checked){
   const wrap=document.createElement('label');wrap.className='digital-card-check digital-card-context-check';
   const input=document.createElement('input');input.type='checkbox';input.name=name;input.checked=Boolean(checked);
@@ -115,13 +186,19 @@ function contextRow(item={}){
     for(const other of fields.contexts.querySelectorAll('[name="contextDefault"]'))if(other!==event.currentTarget)other.checked=false;
   });
   checks.append(phone,email,intro,links,exchange,visible,isDefault);
-  row.append(top,role,checks);
+  const messengerChoices=document.createElement('div');messengerChoices.className='digital-card-context-messengers';
+  renderMessengerChoices(messengerChoices,item.messenger_keys);
+  row.append(top,role,checks,messengerChoices);
   key.addEventListener('change',()=>{key.value=normalizeKey(key.value,'context')});
   return row;
 }
 function renderRoles(items=[]){
   fields.roles.replaceChildren();
   for(const item of Array.isArray(items)?items:[])fields.roles.append(roleRow(item));
+}
+function renderMessengers(items=[]){
+  fields.messengers.replaceChildren();
+  for(const item of Array.isArray(items)?items:[])fields.messengers.append(messengerRow(item));
 }
 function renderContexts(items=[]){
   fields.contexts.replaceChildren();
@@ -137,6 +214,17 @@ function collectRoles(){
     active:Boolean(row.querySelector('[name="roleActive"]')?.checked),
   })).filter(item=>item.name||item.title||item.description||item.url);
 }
+function collectMessengers(){
+  return [...fields.messengers.querySelectorAll('.digital-card-messenger')].map((row,index)=>({
+    key:normalizeKey(row.querySelector('[name="messengerKey"]')?.value,'messenger'),
+    service:String(row.querySelector('[name="messengerService"]')?.value||'custom'),
+    label:String(row.querySelector('[name="messengerLabel"]')?.value||'').trim(),
+    value:String(row.querySelector('[name="messengerValue"]')?.value||'').trim(),
+    url:String(row.querySelector('[name="messengerUrl"]')?.value||'').trim(),
+    enabled:Boolean(row.querySelector('[name="messengerEnabled"]')?.checked),
+    sort_order:index,
+  })).filter(item=>item.value||item.url);
+}
 function collectContexts(){
   return [...fields.contexts.querySelectorAll('.digital-card-context')].map(row=>({
     key:normalizeKey(row.querySelector('[name="contextKey"]')?.value,'context'),
@@ -149,6 +237,7 @@ function collectContexts(){
     exchange_enabled:Boolean(row.querySelector('[name="contextExchange"]')?.checked),
     visibility:row.querySelector('[name="contextPublic"]')?.checked?'public':'private',
     is_default:Boolean(row.querySelector('[name="contextDefault"]')?.checked),
+    messenger_keys:[...row.querySelectorAll('.digital-card-context-messengers input:checked')].map(input=>input.value),
   })).filter(item=>item.label);
 }
 function setDisabled(value){
@@ -187,7 +276,7 @@ function renderInbox(items=[]){
 }
 async function refresh(){
   if(!signedIn()){
-    setDisabled(true);renderRoles([]);renderContexts([]);renderInbox([]);showCardLinks({});
+    setDisabled(true);renderRoles([]);renderMessengers([]);renderContexts([]);renderInbox([]);showCardLinks({});
     setStatus('로그인하면 개인 공유 설정을 관리할 수 있습니다.');
     fields.inboxStatus.textContent='로그인 후 받은 연락처를 확인할 수 있습니다.';return;
   }
@@ -198,31 +287,33 @@ async function refresh(){
     ]);
     fields.phone.value=String(card.phone||'');fields.email.value=String(card.email||'');
     fields.exchangeEnabled.checked=Boolean(card.exchange_enabled);
-    renderRoles(card.roles);renderContexts(card.contexts);refreshRoleOptions();
+    renderRoles(card.roles);renderMessengers(card.messengers);renderContexts(card.contexts);refreshRoleOptions();refreshMessengerOptions();
     showCardLinks(profile);renderInbox(Array.isArray(inbox.items)?inbox.items:[]);
     fields.inboxStatus.textContent='공유모드가 자동 태그되어 어떤 관계로 연결됐는지 함께 표시됩니다.';
     setStatus(profile?.visibility==='public'&&profile?.handle?'기본정보·역할·공유모드를 관리할 수 있습니다.':'먼저 공개 개인페이지의 아이디와 공개 상태를 설정해 주세요.');
-  }catch(error){renderRoles([]);renderContexts([]);renderInbox([]);setStatus(error.message||'개인 공유 설정을 불러오지 못했습니다.','error')}
+  }catch(error){renderRoles([]);renderMessengers([]);renderContexts([]);renderInbox([]);setStatus(error.message||'개인 공유 설정을 불러오지 못했습니다.','error')}
   finally{setDisabled(false)}
 }
 async function save(event){
   event.preventDefault();if(!signedIn())return;
-  const roles=collectRoles(),contexts=collectContexts();
-  if(roles.length>20||contexts.length>20){setStatus('역할과 공유모드는 각각 최대 20개까지 등록할 수 있습니다.','error');return}
+  const roles=collectRoles(),messengers=collectMessengers(),contexts=collectContexts();
+  if(roles.length>20||messengers.length>20||contexts.length>20){setStatus('역할·메신저·공유모드는 각각 최대 20개까지 등록할 수 있습니다.','error');return}
+  if(new Set(messengers.map(item=>item.key)).size!==messengers.length){setStatus('메신저 내부 ID가 중복되었습니다. 항목을 삭제 후 다시 추가해 주세요.','error');return}
   const roleKeys=roles.map(item=>item.key),contextKeys=contexts.map(item=>item.key);
   if(new Set(roleKeys).size!==roleKeys.length||new Set(contextKeys).size!==contextKeys.length){setStatus('역할 ID와 공유 ID는 서로 중복될 수 없습니다.','error');return}
   if(contexts.filter(item=>item.is_default).length>1){setStatus('대표 공유모드는 하나만 선택할 수 있습니다.','error');return}
   const label=fields.save.textContent;setDisabled(true);fields.save.textContent='저장 중…';
   try{
-    await rpc('set_my_identity_share_config',{
+    await rpc('set_my_identity_share_config_v2',{
       p_phone:String(fields.phone.value||'').trim(),p_email:String(fields.email.value||'').trim(),
-      p_exchange_enabled:Boolean(fields.exchangeEnabled.checked),p_roles:roles,p_contexts:contexts,
+      p_exchange_enabled:Boolean(fields.exchangeEnabled.checked),p_roles:roles,p_messengers:messengers,p_contexts:contexts,
     });
     setStatus('개인정보 원장과 상황별 공유모드가 저장되었습니다.','success');showCardLinks(await loadPublicProfile());
   }catch(error){setStatus(error.message||'공유 설정을 저장하지 못했습니다.','error')}
   finally{setDisabled(false);fields.save.textContent=label}
 }
 fields.addRole.addEventListener('click',()=>{if(fields.roles.children.length>=20)return setStatus('역할은 최대 20개까지 등록할 수 있습니다.','error');fields.roles.append(roleRow({active:true}));refreshRoleOptions()});
+fields.addMessenger.addEventListener('click',()=>{if(fields.messengers.children.length>=20)return setStatus('메신저는 최대 20개까지 등록할 수 있습니다.','error');fields.messengers.append(messengerRow({service:'wechat',enabled:true}));refreshMessengerOptions()});
 fields.addContext.addEventListener('click',()=>{if(fields.contexts.children.length>=20)return setStatus('공유모드는 최대 20개까지 등록할 수 있습니다.','error');fields.contexts.append(contextRow({show_profile_intro:true,show_profile_links:true,exchange_enabled:true,visibility:'private'}))});
 form.addEventListener('submit',save);
 window.addEventListener('ekodi:my-session',()=>void refresh());

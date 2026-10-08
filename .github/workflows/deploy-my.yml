@@ -48,7 +48,7 @@ on:
       - 'supabase/migrations/*person_public_profiles*.sql'
       - 'supabase/migrations/*person_digital_card*.sql'
       - 'supabase/migrations/*person_identity_share*.sql'
-      - 'test/person-public-profile.test.mjs'
+      - 'test/person-public-profile.test.mjs test/person-messenger-sharing.test.mjs'
       - '.github/workflows/deploy-my.yml'
   push:
     branches: [main]
@@ -102,6 +102,7 @@ env:
   WRANGLER_VERSION: '4.119.0'
   DIGITAL_CARD_MIGRATION: supabase/migrations/20260930002300_person_digital_card_exchange.sql
   IDENTITY_SHARE_MIGRATION: supabase/migrations/20261001034500_person_identity_share_contexts.sql
+  MESSENGER_MIGRATION: supabase/migrations/20261008113036_person_messenger_contacts.sql
 
 jobs:
   validate:
@@ -151,6 +152,10 @@ jobs:
           grep -Fq 'private.person_identity_roles' "$IDENTITY_SHARE_MIGRATION"
           grep -Fq 'person_identity_share' "$IDENTITY_SHARE_MIGRATION"
           grep -Fq 'submit_person_contact_exchange_v2' "$IDENTITY_SHARE_MIGRATION"
+          test -f "$MESSENGER_MIGRATION"
+          grep -Fq 'private.person_messenger_contacts' "$MESSENGER_MIGRATION"
+          grep -Fq 'person_identity_share_capabilities' "$MESSENGER_MIGRATION"
+          grep -Fq 'set_my_identity_share_config_v2' "$MESSENGER_MIGRATION"
           node --test test/universal-membership-contract.test.mjs test/my-ekodi-contract.test.mjs test/my-private-workspace-routing.test.mjs test/my-manifest-services.test.mjs test/my-life-journey.test.mjs test/my-life-communication.test.mjs test/my-progressive-personalization.test.mjs test/my-docs-ai.test.mjs test/my-intent-os.test.mjs test/my-intent-execution-bridge.test.mjs test/person-public-profile.test.mjs
           test -f deploy/manifests/my.worker.json
 
@@ -377,6 +382,54 @@ jobs:
           [ "$code" = '200' ]
           grep -Eq '"ok"[[:space:]]*:[[:space:]]*false' /tmp/identity-share-probe.json
           echo 'Personal identity share-context projection is ready.'
+      - name: Ensure messenger contact sharing schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="$MY_SUPABASE_URL/rest/v1/rpc/person_identity_share_capabilities"
+          probe_code=$(curl -sS -o /tmp/messenger-share-preflight.json -w '%{http_code}' \
+            -X POST "$endpoint" \
+            -H "apikey: $MY_SUPABASE_PUBLISHABLE_KEY" \
+            -H 'Content-Type: application/json' \
+            --data '{}' || true)
+          if [[ "$probe_code" == '200' ]] && grep -Eq '"messenger_contacts"[[:space:]]*:[[:space:]]*true' /tmp/messenger-share-preflight.json; then
+            echo 'Messenger contact sharing schema already exists.'
+            exit 0
+          fi
+          token="${TOKEN_A:-}"
+          [ -n "$token" ] || token="${TOKEN_B:-}"
+          [ -n "$token" ] || token="${TOKEN_C:-}"
+          [ -n "$token" ] || token="${TOKEN_D:-}"
+          if [ -z "$token" ]; then
+            echo 'Messenger contact sharing schema is missing and no Supabase production deployment credential is configured.'
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          jq -Rs '{query:.,read_only:false}' "$MESSENGER_MIGRATION" > /tmp/messenger-share-migration.json
+          code=$(curl -sS -o /tmp/messenger-share-migration-result.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/renzehysxirjilvdxacv/database/query" \
+            -H "Authorization: Bearer $token" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/messenger-share-migration.json)
+          if [ "$code" != '201' ]; then
+            echo "Messenger contact sharing migration failed with HTTP $code."
+            cat /tmp/messenger-share-migration-result.json
+            exit 1
+          fi
+      - name: Verify messenger contact sharing database contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="$MY_SUPABASE_URL/rest/v1/rpc/person_identity_share_capabilities"
+          code=$(curl -sS -o /tmp/messenger-share-probe.json -w '%{http_code}' \
+            -X POST "$endpoint" \
+            -H "apikey: $MY_SUPABASE_PUBLISHABLE_KEY" \
+            -H 'Content-Type: application/json' \
+            --data '{}')
+          [ "$code" = '200' ]
+          grep -Eq '"messenger_contacts"[[:space:]]*:[[:space:]]*true' /tmp/messenger-share-probe.json
+          grep -Eq '"context_filtered"[[:space:]]*:[[:space:]]*true' /tmp/messenger-share-probe.json
+          echo 'Messenger contact sharing schema and bounded projection are ready.'
       - name: Generate universal user-service registry
         run: npm run generate:user-services
       - name: Verify Cloudflare credentials
