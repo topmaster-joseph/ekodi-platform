@@ -6,7 +6,7 @@ const bearer='a'.repeat(50);
 const authenticated=(url=URL)=>new Request(url,{headers:{authorization:'Bearer '+bearer}});
 const withFetch=async(mock,run)=>{const original=globalThis.fetch;globalThis.fetch=mock;try{return await run()}finally{globalThis.fetch=original}};
 const member={id:'member-1',email:'member@example.com',email_confirmed_at:'2026-10-01T00:00:00Z'};
-const identity=()=>new Response(JSON.stringify(member),{status:200,headers:{'content-type':'application/json'}});
+const identity=async()=>new Response(JSON.stringify(member),{status:200,headers:{'content-type':'application/json'}});
 test('member common-analysis data is never accessible without a validated token',async()=>{
  const response=await handleInvestCommonAnalysisApi(new Request(URL));
  assert.equal(response.status,401);
