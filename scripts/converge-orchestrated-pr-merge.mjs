@@ -71,6 +71,7 @@ const marketingGrowthTouched=changedFiles.some(file=>[
   'wrangler.marketing-growth.toml',
   '.github/workflows/deploy-marketing-growth.yml',
 ].includes(file));
+const mallSiteTouched=changedFiles.some(file=>file.startsWith('sites/ekodi-mall/')||file==='.github/workflows/deploy-ekodi-mall.yml');
 const sharedSiteTouched=changedFiles.some(file=>
   file.startsWith('sites/')||
   file.startsWith('auth-site/')||
@@ -85,6 +86,14 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='.github/workflows/converge-orchestrated-pr-merge.yml'
 );
 async function dispatchPostMergeDeploys(){
+  if(mallSiteTouched){
+    const dispatch=await api('/actions/workflows/deploy-ekodi-mall.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Mall Pages deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-ekodi-mall.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
   // GITHUB_TOKEN merges do not invoke ordinary main push workflows.
   // Explicit dispatch forwards the already verified EKODI release receipt.
   if(controlApiTouched){
