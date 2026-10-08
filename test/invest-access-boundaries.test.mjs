@@ -24,10 +24,10 @@ test('member common-analysis page is hidden until verified auth and contains no 
  assert.match(html,/모든 로그인 회원/);
  assert.doesNotMatch(html,/access_token|보유 종목|내 개인 투자 프로필/);
  const js=await investAnalysisScript().text();
- assert.match(js,/\/workspace-api\/v1\/invest\/subjects/);
+ assert.match(js,/\/workspace-api\/v1\/invest\/common-analysis/);
  assert.match(js,/Bearer /);
  assert.match(js,/if\(!response.ok\)throw/);
- assert.doesNotMatch(js,/\/automation\/policy|\/invest\/context/);
+ assert.doesNotMatch(js,/\/automation\/policy|\/invest\/context|삼성전자|NVIDIA/);
 });
 test('private My Invest has a disabled subscription by default',async()=>{
  const response=await investMyRoute(get('/invest'),{});
