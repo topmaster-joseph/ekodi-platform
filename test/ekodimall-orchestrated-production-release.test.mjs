@@ -54,7 +54,7 @@ test('approved merge explicitly schedules latest-main checks when GITHUB_TOKEN s
     assert.match(source, /^on:\n  workflow_dispatch:/m, filename + ' must support exact-main explicit checks');
     assert.ok(coordinator.includes("'" + filename + "'"), filename + ' must be dispatched after guarded merge');
   }
-  assert.ok(coordinator.includes("'device-agent-production-verification.yml/dispatches'"));
+  assert.ok(coordinator.includes('device-agent-production-verification.yml/dispatches'));
   assert.ok(coordinator.includes("'/git/ref/heads/main'"));
   assert.ok(coordinator.includes('liveMainSha!==expectedMainSha'));
   assert.ok(coordinator.includes("await dispatchPostMergeDeploys(String(merged.data.sha||''))"));
