@@ -53,7 +53,7 @@ function safeLocation(url){
 }
 async function openPlaywright(){
   try{return (await import('playwright')).chromium;}
-  catch{throw Error('playwright_not_installed: npm install --no-save --package-lock=false playwright@1.55.0');}
+  catch{throw Error('playwright_not_installed: npm install --no-save --package-lock=false playwright@1.64.0');}
 }
 async function guardedNavigation(page){
   await page.route('**/*',async route=>{
