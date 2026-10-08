@@ -104,6 +104,8 @@ jobs:
           cp wrangler.independent-board.toml $GITHUB_WORKSPACE/.wrangler.independent-board.runtime.toml
           sed -i "s/REPLACE_WITH_INDEPENDENT_BOARD_D1_ID/$db_id/" $GITHUB_WORKSPACE/.wrangler.independent-board.runtime.toml
           npx --yes wrangler@${WRANGLER_VERSION} r2 bucket create ekodi-independent-board-files >/tmp/r2-create.log 2>&1 || true
+          npx --yes wrangler@${WRANGLER_VERSION} queues create ekodi-independent-board-write-ingress >/tmp/queue-create.log 2>&1 || true
+          npx --yes wrangler@${WRANGLER_VERSION} queues create ekodi-independent-board-write-ingress-dlq >/tmp/dlq-create.log 2>&1 || true
           echo "db_id=$db_id" >> "$GITHUB_OUTPUT"
       - name: Apply board-owned migrations
         run: |
@@ -118,7 +120,7 @@ jobs:
           set -euo pipefail
           for attempt in 1 2 3 4 5; do
             body="$(curl -fsS --retry 2 --retry-delay 2 https://seonammedi.kr/board/health || true)"
-            if jq -e '.ok==true and .service=="independent-board" and .storage=="independent-board-d1" and .db==true' <<<"$body" >/dev/null; then
+            if jq -e '.ok==true and .service=="independent-board" and .storage=="independent-board-d1" and .db==true and .queue=="ready" and .rateLimiter==true' <<<"$body" >/dev/null; then
               exit 0
             fi
             sleep $((attempt * 3))
@@ -181,16 +183,30 @@ jobs:
             grep -q '서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널' <<<"$html"
             grep -q '자료의 성격과 출처를 구분해 보존합니다' <<<"$html"
           done
-      - name: Production create-list-reply canary and cleanup
+      - name: Production queue-create-list-reply canary and cleanup
         run: |
           set -euo pipefail
           marker="EKODI-BOARD-CANARY-${GITHUB_RUN_ID}"
           payload="$(jq -nc --arg marker "$marker" '{name:"EKODI 검증",category:"other",message:$marker,privacyConsent:true}')"
           created="$(curl -fsS -X POST https://seonammedi.kr/board/api/posts -H 'content-type: application/json' --data "$payload")"
-          post_id="$(jq -r '.id // 0' <<<"$created")"
+          jq -e '.ok==true and .queued==true and (.submissionId|length)==36' <<<"$created" >/dev/null
+          post_id=0
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            listed="$(curl -fsS https://seonammedi.kr/board/api/posts)"
+            post_id="$(jq -r --arg marker "$marker" '[.items[] | select(.message==$marker)][0].id // 0' <<<"$listed")"
+            [[ "$post_id" -gt 0 ]] && break
+            sleep 2
+          done
           test "$post_id" -gt 0
-          curl -fsS https://seonammedi.kr/board/api/posts | jq -e --arg marker "$marker" '.items[] | select(.message==$marker)' >/dev/null
-          reply="$(curl -fsS -X POST "https://seonammedi.kr/board/api/posts/$post_id/replies" -H 'content-type: application/json' --data '{"name":"EKODI 검증","message":"reply-canary"}')"
-          jq -e '.ok==true and (.id|tonumber)>0' <<<"$reply" >/dev/null
+          reply_marker="reply-canary-${GITHUB_RUN_ID}"
+          reply_payload="$(jq -nc --arg message "$reply_marker" '{name:"EKODI 검증",message:$message}')"
+          reply="$(curl -fsS -X POST "https://seonammedi.kr/board/api/posts/$post_id/replies" -H 'content-type: application/json' --data "$reply_payload")"
+          jq -e '.ok==true and .queued==true and (.submissionId|length)==36' <<<"$reply" >/dev/null
+          reply_seen=false
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS https://seonammedi.kr/board/api/posts | jq -e --argjson post "$post_id" --arg message "$reply_marker" '.items[] | select(.id==$post) | .replies[] | select(.message==$message)' >/dev/null; then reply_seen=true; break; fi
+            sleep 2
+          done
+          test "$reply_seen" = true
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-independent-board --remote --config $GITHUB_WORKSPACE/.wrangler.independent-board.runtime.toml --command "DELETE FROM board_replies WHERE post_id=$post_id; DELETE FROM board_posts WHERE id=$post_id;"
           curl -fsS https://seonammedi.kr/board/api/posts | jq -e --arg marker "$marker" '[.items[] | select(.message==$marker)] | length==0' >/dev/null

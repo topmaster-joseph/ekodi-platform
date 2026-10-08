@@ -31,6 +31,34 @@ test('SeonamMedi citizen voices use the standalone board API directly',async()=>
   assert.match(worker,/data-reply-delete/);
 });
 
+test('standalone public writes are rate-limited, queue-first and idempotent',async()=>{
+  const [worker,config,migration,workflow]=await Promise.all([
+    read('services/independent-board/worker.js'),
+    read('wrangler.independent-board.toml'),
+    read('services/independent-board/migrations/0005_durable_write_ingress.sql'),
+    read('.github/workflows/deploy-independent-board.yml')
+  ]);
+  assert.match(config,/name = "BOARD_PUBLIC_WRITE_RATE_LIMITER"/);
+  assert.match(config,/binding = "BOARD_WRITE_QUEUE"/);
+  assert.match(config,/queue = "ekodi-independent-board-write-ingress"/);
+  assert.match(config,/dead_letter_queue = "ekodi-independent-board-write-ingress-dlq"/);
+  assert.match(config,/max_concurrency = 5/);
+  assert.match(migration,/board_posts ADD COLUMN submission_key/);
+  assert.match(migration,/board_replies ADD COLUMN submission_key/);
+  assert.match(migration,/UNIQUE INDEX IF NOT EXISTS idx_board_posts_submission_key/);
+  assert.match(worker,/POST_QUEUE_KIND='independent-board\.post\.v1'/);
+  assert.match(worker,/REPLY_QUEUE_KIND='independent-board\.reply\.v1'/);
+  assert.match(worker,/BOARD_PUBLIC_WRITE_RATE_LIMITER/);
+  assert.match(worker,/env\[QUEUE_BINDING\]\.send/);
+  assert.match(worker,/async queue\(batch,env\)/);
+  assert.match(worker,/message\.ack\(\)/);
+  assert.match(worker,/message\.retry\(\)/);
+  assert.match(worker,/submissionStatus/);
+  assert.match(workflow,/queues create ekodi-independent-board-write-ingress/);
+  assert.match(workflow,/Production queue-create-list-reply canary and cleanup/);
+  assert.match(workflow,/\.queued==true/);
+});
+
 test('finance and notice boards are first-class standalone board routes',async()=>{
   const [worker,migration,site]=await Promise.all([
     read('services/independent-board/worker.js'),
@@ -97,7 +125,7 @@ test('independent board deployment provisions its own storage and verifies real 
   assert.match(workflow,/REQUESTED_RELEASE_BRANCH_REF/);
   assert.match(workflow,/commits\/\$GITHUB_SHA\/pulls/);
   assert.match(workflow,/Requested release task does not match orchestrator branch/);
-  assert.match(workflow,/Production create-list-reply canary and cleanup/);
+  assert.match(workflow,/Production queue-create-list-reply canary and cleanup/);
   assert.match(workflow,/DELETE FROM board_replies WHERE post_id=\$post_id/);
   assert.match(workflow,/DELETE FROM board_posts WHERE id=\$post_id/);
 });
@@ -109,7 +137,7 @@ test('board schema keeps private contact out of the public read model',async()=>
   ]);
   assert.match(migration,/private_contact TEXT NOT NULL DEFAULT ''/);
   const listStart=worker.indexOf('async function list');
-  const listEnd=worker.indexOf('async function adminList',listStart);
+  const listEnd=worker.indexOf('async function persistQueuedPost',listStart);
   const listBlock=worker.slice(listStart,listEnd);
   assert.doesNotMatch(listBlock,/private_contact/);
 });

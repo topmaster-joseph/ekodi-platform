@@ -6,6 +6,24 @@ const STATES=new Set(['received','reviewing','answered','published','archived'])
 const FINANCE_TYPES=new Set(['income','expense']);
 const EVIDENCE_STATES=new Set(['none','held','verified']);
 const MEDIA_MAX=5,MEDIA_BYTES=1600000;
+const POST_QUEUE_KIND='independent-board.post.v1';
+const REPLY_QUEUE_KIND='independent-board.reply.v1';
+const QUEUE_BINDING='BOARD_WRITE_QUEUE';
+function queueAvailable(env){return Boolean(env?.[QUEUE_BINDING]&&typeof env[QUEUE_BINDING].send==='function')}
+async function requestIdentity(req){
+  const raw=[req.headers.get('cf-connecting-ip')||req.headers.get('x-forwarded-for')?.split(',')[0]||'unknown',String(req.headers.get('user-agent')||'').slice(0,160)].join('|');
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(raw));
+  return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+async function publicWriteAllowed(req,env,scope){
+  const limiter=env?.BOARD_PUBLIC_WRITE_RATE_LIMITER;
+  if(!limiter?.limit)return env?.ENVIRONMENT==='production'?{available:false,allowed:false}:{available:true,allowed:true};
+  try{const result=await limiter.limit({key:`${scope}:${await requestIdentity(req)}`});return{available:true,allowed:result?.success!==false}}catch(error){console.error('board public write limiter unavailable',error);return{available:false,allowed:false}}
+}
+async function enqueueBoardWrite(env,envelope){
+  if(!queueAvailable(env))return false;
+  await env[QUEUE_BINDING].send(envelope,{contentType:'json'});return true;
+}
 function imageKeys(v){try{const a=Array.isArray(v)?v:JSON.parse(v||'[]');return a.filter(x=>typeof x==='string'&&x).slice(0,MEDIA_MAX)}catch{return[]}}
 function mediaUrls(v){return imageKeys(v).map(k=>'/board/api/files/'+encodeURIComponent(k))}
 function b64bytes(v){const raw=String(v||'').replace(/^data:[^,]+,/,'');if(raw.length>Math.ceil(MEDIA_BYTES*4/3)+16)return new Uint8Array(0);const bin=atob(raw);const out=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);return out}
@@ -87,6 +105,47 @@ async function list(env,url){
     id:Number(p.id),category:p.category||'other',displayName:p.author_name||'익명',message:p.body||'',imageUrls:mediaUrls(p.image_keys),createdAt:p.created_at,updatedAt:p.updated_at,
     replies:replies.filter(r=>Number(r.post_id)===Number(p.id)).map(r=>({id:Number(r.id),displayName:r.author_name||'익명',message:r.body||'',createdAt:r.created_at}))
   }))});
+}
+async function persistQueuedPost(env,payload){
+  const existing=await env.BOARD_DB.prepare("SELECT id FROM board_posts WHERE submission_key=? LIMIT 1").bind(payload.submissionId).first();
+  if(existing?.id)return Number(existing.id);
+  const imageJson=JSON.stringify(imageKeys(payload.imageKeys));
+  try{
+    const r=await env.BOARD_DB.prepare('INSERT INTO board_posts(author_name,category,private_contact,title,body,image_keys,submission_key,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)')
+      .bind(payload.name||'익명',payload.category||'other',payload.contact||'',payload.title||payload.name||'시민의견',payload.content,imageJson,payload.submissionId,payload.createdAt,payload.createdAt).run();
+    if(Number(r?.meta?.last_row_id||0))return Number(r.meta.last_row_id);
+  }catch(error){
+    const duplicate=await env.BOARD_DB.prepare("SELECT id FROM board_posts WHERE submission_key=? LIMIT 1").bind(payload.submissionId).first().catch(()=>null);
+    if(duplicate?.id)return Number(duplicate.id);throw error;
+  }
+  throw new Error('board_post_insert_not_confirmed');
+}
+async function persistQueuedReply(env,payload){
+  const existing=await env.BOARD_DB.prepare("SELECT id FROM board_replies WHERE submission_key=? LIMIT 1").bind(payload.submissionId).first();
+  if(existing?.id)return Number(existing.id);
+  const post=await env.BOARD_DB.prepare("SELECT id FROM board_posts WHERE id=? AND status='published'").bind(payload.postId).first();
+  if(!post?.id)throw new Error('reply_parent_unavailable');
+  try{
+    const r=await env.BOARD_DB.prepare('INSERT INTO board_replies(post_id,author_name,body,submission_key,created_at) VALUES(?,?,?,?,?)')
+      .bind(post.id,payload.name||'익명',payload.content,payload.submissionId,payload.createdAt).run();
+    if(Number(r?.meta?.last_row_id||0))return Number(r.meta.last_row_id);
+  }catch(error){
+    const duplicate=await env.BOARD_DB.prepare("SELECT id FROM board_replies WHERE submission_key=? LIMIT 1").bind(payload.submissionId).first().catch(()=>null);
+    if(duplicate?.id)return Number(duplicate.id);throw error;
+  }
+  throw new Error('board_reply_insert_not_confirmed');
+}
+async function consumeBoardWrite(envelope,env){
+  if(envelope?.kind===POST_QUEUE_KIND){await persistQueuedPost(env,envelope.payload||{});return true}
+  if(envelope?.kind===REPLY_QUEUE_KIND){await persistQueuedReply(env,envelope.payload||{});return true}
+  return false;
+}
+async function submissionStatus(env,submissionId){
+  const post=await env.BOARD_DB.prepare("SELECT id,status FROM board_posts WHERE submission_key=? LIMIT 1").bind(submissionId).first().catch(()=>null);
+  if(post?.id)return json({ok:true,status:post.status==='published'?'published':'processing',kind:'post',id:Number(post.id),submissionId});
+  const reply=await env.BOARD_DB.prepare("SELECT id,status FROM board_replies WHERE submission_key=? LIMIT 1").bind(submissionId).first().catch(()=>null);
+  if(reply?.id)return json({ok:true,status:reply.status==='published'?'published':'processing',kind:'reply',id:Number(reply.id),submissionId});
+  return json({ok:true,status:'pending',submissionId});
 }
 async function adminList(req,env){
   const gate=await requireVoiceAdmin(req);if(!gate.ok)return gate.response;
@@ -218,23 +277,39 @@ export default {async fetch(req,env){
   if((path==='/'||path==='/voices'||path==='/voices/')&&req.method==='GET')return boardPage(req);
   if((path==='/finance'||path==='/finance/')&&req.method==='GET')return financePage(req);
   if((path==='/notices'||path==='/notices/')&&req.method==='GET')return noticesPage(req);
-  if(path==='/health'&&req.method==='GET')return json({ok:true,service:'independent-board',boardId:env.BOARD_ID,storage:'independent-board-d1',db:Boolean(env.BOARD_DB),files:Boolean(env.BOARD_FILES),auth:'ekodi',boards:['voices','finance','notices']});
+  if(path==='/health'&&req.method==='GET')return json({ok:true,service:'independent-board',boardId:env.BOARD_ID,storage:'independent-board-d1',db:Boolean(env.BOARD_DB),files:Boolean(env.BOARD_FILES),queue:queueAvailable(env)?'ready':'unavailable',rateLimiter:Boolean(env.BOARD_PUBLIC_WRITE_RATE_LIMITER?.limit),auth:'ekodi',boards:['voices','finance','notices']});
   if(path==='/api/posts'&&req.method==='GET')return list(env,url);
+  const submission=path.match(/^\/api\/submissions\/([0-9a-f-]{36})$/i);
+  if(submission&&req.method==='GET')return submissionStatus(env,submission[1]);
   if(path==='/api/posts'&&req.method==='POST'){
+    const limited=await publicWriteAllowed(req,env,'post');
+    if(!limited.available)return json({ok:false,error:'write_protection_unavailable',message:'등록 보호장치를 준비 중입니다. 잠시 후 다시 시도해 주세요.'},503,{'retry-after':'30'});
+    if(!limited.allowed)return json({ok:false,error:'rate_limited',message:'등록 요청이 많습니다. 잠시 후 다시 시도해 주세요.'},429,{'retry-after':'60'});
     const b=await body(req),name=text(b.name||b.authorName).slice(0,80),content=text(b.message||b.body).slice(0,12000),title=text(b.title||name||'시민의견').slice(0,160),kind=category(b.category),contact=text(b.contact).slice(0,160);
     if(!content)return json({ok:false,error:'message_required',message:'의견 내용을 입력해 주세요.'},400);
-    const t=now(),r=await env.BOARD_DB.prepare('INSERT INTO board_posts(author_name,category,private_contact,title,body,image_keys,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)').bind(name||'익명',kind,contact,title,content,'[]',t,t).run();
-    const id=Number(r.meta.last_row_id||0),keys=await saveImages(env,'voices',id,Array.isArray(b.images)?b.images:[]);
-    if(keys.length)await env.BOARD_DB.prepare('UPDATE board_posts SET image_keys=? WHERE id=?').bind(JSON.stringify(keys),id).run();
-    return json({ok:true,id,storage:'independent-board-d1',message:'시민의견이 등록되어 바로 게시되었습니다.'},201);
+    const submissionId=crypto.randomUUID(),createdAt=now();
+    const keys=await saveImages(env,'voices',submissionId,Array.isArray(b.images)?b.images:[]);
+    const payload={submissionId,name:name||'익명',category:kind,contact,title,content,imageKeys:keys,createdAt};
+    try{
+      if(await enqueueBoardWrite(env,{kind:POST_QUEUE_KIND,payload}))return json({ok:true,queued:true,submissionId,statusUrl:'/board/api/submissions/'+submissionId,storage:'independent-board-queue',message:'시민의견이 접수되었습니다. 저장되는 즉시 공개됩니다.'},202);
+      if(env?.ENVIRONMENT!=='production'&&env?.BOARD_DB?.prepare){const id=await persistQueuedPost(env,payload);return json({ok:true,queued:false,id,submissionId,storage:'independent-board-d1'},201)}
+      await deleteImages(env,keys);return json({ok:false,error:'durable_queue_unavailable',message:'등록 저장소를 준비 중입니다. 잠시 후 다시 시도해 주세요.'},503,{'retry-after':'5'});
+    }catch(error){await deleteImages(env,keys);console.error('board durable post ingress failed',error);return json({ok:false,error:'write_ingress_failed',message:'등록 요청이 많습니다. 잠시 후 다시 시도해 주세요.'},503,{'retry-after':'5'})}
   }
   const reply=path.match(/^\/api\/posts\/(\d+)\/replies$/);
   if(reply&&req.method==='POST'){
+    const limited=await publicWriteAllowed(req,env,'reply');
+    if(!limited.available)return json({ok:false,error:'write_protection_unavailable'},503,{'retry-after':'30'});
+    if(!limited.allowed)return json({ok:false,error:'rate_limited',message:'답글 등록이 많습니다. 잠시 후 다시 시도해 주세요.'},429,{'retry-after':'60'});
     const b=await body(req),name=text(b.name||b.authorName).slice(0,80),content=text(b.message||b.body).slice(0,6000);
     if(!content)return json({ok:false,error:'message_required',message:'답글 내용을 입력해 주세요.'},400);
     const post=await env.BOARD_DB.prepare("SELECT id FROM board_posts WHERE id=? AND status='published'").bind(+reply[1]).first();if(!post)return json({ok:false,error:'not_found'},404);
-    const r=await env.BOARD_DB.prepare('INSERT INTO board_replies(post_id,author_name,body,created_at) VALUES(?,?,?,?)').bind(post.id,name||'익명',content,now()).run();
-    return json({ok:true,id:Number(r.meta.last_row_id||0),message:'답글이 등록되었습니다.'},201);
+    const submissionId=crypto.randomUUID(),payload={submissionId,postId:Number(post.id),name:name||'익명',content,createdAt:now()};
+    try{
+      if(await enqueueBoardWrite(env,{kind:REPLY_QUEUE_KIND,payload}))return json({ok:true,queued:true,submissionId,statusUrl:'/board/api/submissions/'+submissionId,message:'답글이 접수되었습니다. 저장되는 즉시 표시됩니다.'},202);
+      if(env?.ENVIRONMENT!=='production'&&env?.BOARD_DB?.prepare){const id=await persistQueuedReply(env,payload);return json({ok:true,queued:false,id,submissionId},201)}
+      return json({ok:false,error:'durable_queue_unavailable'},503,{'retry-after':'5'});
+    }catch(error){console.error('board durable reply ingress failed',error);return json({ok:false,error:'write_ingress_failed'},503,{'retry-after':'5'})}
   }
   if(path==='/api/finance'&&req.method==='GET')return listFinance(env,url,false);
   if(path==='/api/notices'&&req.method==='GET')return listNotices(env,url,false);
@@ -249,4 +324,16 @@ export default {async fetch(req,env){
   const item=path.match(/^\/api\/admin\/posts\/(\d+)$/);if(item&&req.method==='PUT')return adminUpdate(req,env,+item[1]);if(item&&req.method==='DELETE')return adminDelete(req,env,+item[1]);
   const adminReply=path.match(/^\/api\/admin\/posts\/(\d+)\/replies\/(\d+)$/);if(adminReply&&req.method==='DELETE')return adminDeleteReply(req,env,+adminReply[1],+adminReply[2]);
   return json({ok:false,error:'not_found'},404);
+},
+async queue(batch,env){
+  for(const message of batch.messages){
+    try{
+      const handled=await consumeBoardWrite(message.body,env);
+      if(!handled)throw new Error('unknown_board_write_kind');
+      message.ack();
+    }catch(error){
+      console.error('independent board queue consumer failed',error);
+      message.retry();
+    }
+  }
 }};
