@@ -11,6 +11,15 @@ on:
       - "sites/ekodi-mall/**"
       - ".github/workflows/deploy-ekodi-mall.yml"
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Verified EKODI Orchestrator branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Verified EKODI Orchestrator task ID'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -147,6 +156,10 @@ jobs:
           node-version: "24"
 
       - name: EKODI AI Orchestration Gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+          EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Verify Development boundary
         shell: bash
@@ -442,6 +455,10 @@ jobs:
           node-version: "24"
 
       - name: EKODI AI Orchestration Gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+          EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
 
       - name: Enforce single EKODI Mall Pages production owner
