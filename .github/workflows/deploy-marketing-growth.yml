@@ -2,6 +2,15 @@ name: Deploy Marketing Growth Connector
 
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Verified EKODI Orchestrator branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Verified EKODI Orchestrator task ID'
+        required: true
+        type: string
   push:
     branches: [main]
     paths:
@@ -41,8 +50,9 @@ on:
 permissions:
   contents: read
 
+# Serialize shared D1 migrations with production Control API releases.
 concurrency:
-  group: ekodi-marketing-growth-production
+  group: ekodi-control-api-release-production
   cancel-in-progress: false
 
 env:
@@ -70,6 +80,10 @@ jobs:
           node-version: '24'
 
       - name: EKODI AI Orchestration Gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+          EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Validate central OAuth, promotion and active sales engines
         run: |
