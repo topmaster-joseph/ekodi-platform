@@ -1,5 +1,5 @@
 {
-  "version": 9,
+  "version": 10,
   "evidence": {
     "generation": 10,
     "ledger": "ai_production_evidence",
@@ -617,30 +617,52 @@
       {
         "url": "https://ekodi.kr/api/seonammedi/admin/auth/exchange",
         "method": "POST",
-        "statuses": [400],
+        "statuses": [
+          400
+        ],
         "redirect": "manual",
-        "expect": ["token_hash_required"],
-        "headerExpect": ["cache-control: no-store","x-content-type-options: nosniff"],
+        "expect": [
+          "token_hash_required"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
         "candidateVerify": false,
         "candidateVerifyReason": "Canonical SeonamMedi admin auth bridge reaches Control API through the Shared Site service binding; verify after guarded promotion.",
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/api/seonammedi/admin/finance",
-        "statuses": [401],
+        "statuses": [
+          401
+        ],
         "redirect": "manual",
-        "expect": ["authentication_required"],
-        "headerExpect": ["cache-control: no-store","x-content-type-options: nosniff"],
+        "expect": [
+          "authentication_required"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
         "candidateVerify": false,
         "candidateVerifyReason": "Canonical SeonamMedi admin finance API reaches Control API through the Shared Site service binding; verify after guarded promotion.",
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/api/seonammedi/page-data",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["\"ok\":true", "\"finance\":"],
-        "headerExpect": ["cache-control: no-store","x-content-type-options: nosniff"],
+        "expect": [
+          "\"ok\":true",
+          "\"finance\":"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
         "candidateVerify": false,
         "candidateVerifyReason": "Canonical SeonamMedi API reaches Control API through the Shared Site service binding; verify after guarded promotion.",
         "rollbackVerify": false
