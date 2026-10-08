@@ -872,9 +872,10 @@ test('seonammedi customer domain cache-busts public and admin static assets',asy
 
 
 test('seonammedi release convergence is build-owned and cache-safe',async()=>{
-  const [build,release,router,app]=await Promise.all([
+  const [build,release,verify,router,app]=await Promise.all([
     readFile(new URL('../scripts/build.mjs',import.meta.url),'utf8'),
     readFile(new URL('../scripts/finalize-seonammedi-release.mjs',import.meta.url),'utf8'),
+    readFile(new URL('../scripts/verify-seonammedi-release-live.mjs',import.meta.url),'utf8'),
     readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8'),
     readFile(new URL('app.js',root),'utf8')
   ]);
@@ -883,9 +884,15 @@ test('seonammedi release convergence is build-owned and cache-safe',async()=>{
   assert.match(release,/createHash\('sha256'\)/);
   assert.match(release,/data-ekodi-release-convergence/);
   assert.match(release,/window\.__SEONAMMEDI_ROUTES__/);
+  assert.match(verify,/root_cache_policy_/);
+  assert.match(verify,/admin_cache_policy_/);
+  assert.match(verify,/public.*max-age=0/);
+  assert.match(verify,/admin_robots_policy_/);
   assert.match(router,/function applySeonamMediCachePolicy\(/);
-  assert.match(router,/privateHtml=.*admin\|minutes\|auth\|board/);
-  assert.match(router,/privateHtml\?'no-store':'public, max-age=0'/);
+  assert.match(router,/privatePath=.*admin\|minutes\|auth\|board/);
+  assert.match(router,/if\(privatePath\)\{out\.headers\.set\('cache-control','no-store'\)/);
+  assert.match(router,/x-robots-tag','noindex, nofollow, noarchive'/);
+  assert.match(router,/type\.includes\('text\/html'\).*public, max-age=0/);
   assert.match(router,/max-age=31536000, immutable/);
   assert.match(router,/no-cache, must-revalidate/);
   assert.match(app,/window\.__SEONAMMEDI_ROUTES__\?\.admin/);

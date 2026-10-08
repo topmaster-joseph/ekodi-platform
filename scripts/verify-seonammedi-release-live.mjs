@@ -55,9 +55,13 @@ for(let attempt=1;attempt<=attempts;attempt++){
       if(!/max-age=31536000/.test(cache)||!/immutable/.test(cache))throw new Error('asset_cache_policy_'+key+'_'+cache);
     }
 
-    const rootCache=String(root.response.headers.get('cache-control')||'');
-    const manifestCache=String(manifestResult.response.headers.get('cache-control')||'');
-    if(!/no-store/.test(rootCache))throw new Error('root_cache_policy_'+rootCache);
+    const rootCache=String(root.response.headers.get('cache-control')||'').toLowerCase();
+    const adminCache=String(admin.response.headers.get('cache-control')||'').toLowerCase();
+    const adminRobots=String(admin.response.headers.get('x-robots-tag')||'').toLowerCase();
+    const manifestCache=String(manifestResult.response.headers.get('cache-control')||'').toLowerCase();
+    if(!/public/.test(rootCache)||!/max-age=0/.test(rootCache)||/no-store|private/.test(rootCache))throw new Error('root_cache_policy_'+rootCache);
+    if(!/no-store/.test(adminCache))throw new Error('admin_cache_policy_'+adminCache);
+    if(!/noindex/.test(adminRobots))throw new Error('admin_robots_policy_'+adminRobots);
     if(!/no-store/.test(manifestCache))throw new Error('manifest_cache_policy_'+manifestCache);
 
     console.log(JSON.stringify({ok:true,origin,release:expected.release,attempt,assets:Object.keys(live.assets||{}).length}));
