@@ -230,8 +230,9 @@ test('orchestrated merge dispatches board/shared-site deploys and live legacy ha
   assert.match(script,/release_branch_ref:branch/);
   assert.match(script,/release_task_id:taskId/);
   assert.match(script,/sync_domains:'false'/);
-  assert.match(script,/async function dispatchPostMergeDeploys\(\)/);
-  assert.match(script,/merged===true\)\{await dispatchPostMergeDeploys\(\)/);
+  assert.match(script,/async function dispatchPostMergeDeploys\(expectedMainSha\)/);
+  assert.match(script,/merged===true\)\{await dispatchPostMergeDeploys\(String\(p\?\.merge_commit_sha\|\|''\)\)/);
+  assert.match(script,/liveMainSha!==expectedMainSha/);
   assert.match(script,/already merged; post-merge deploys reconciled/);
   assert.match(script,/action:'deploy-dispatched'/);
   assert.match(sharedDeploy,/Verify stray SeonamMedi board URLs canonicalize/);
