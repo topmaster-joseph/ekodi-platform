@@ -312,7 +312,7 @@ renderPublicFinance(publicFinanceEntries,false);
 updatePublicFinanceSummary(publicFinanceEntries);
 }
 
-const siteReady=load().catch(()=>{el('lastUpdated').textContent='데이터를 불러오지 못했습니다.'});
+const siteReady=load().catch(error=>{console.error('[seonammedi] data load failed',error)});
 function monitorHomeRows(items=[]){
   const candidates=items.filter(item=>item&&item.source_type!=='blog'&&safeUrl(item.resolved_url||item.url)!=='#')
     .sort((a,b)=>String(b.published_at||b.first_seen_at||'').localeCompare(String(a.published_at||a.first_seen_at||'')));
@@ -333,7 +333,7 @@ function renderHomeMonitorUpdates(data){
   section.hidden=!rows.length;
   if(!rows.length){list.innerHTML='';return}
   const runAt=data?.lastRun?.completed_at||'';
-  if(updated)updated.textContent=runAt?'자동 갱신 '+new Date(runAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'1시간마다 자동 갱신';
+  if(updated)updated.textContent=runAt?'마지막 갱신 '+new Date(runAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})+' · EKODI 자동갱신':'1시간마다 자동 갱신';
   list.innerHTML=rows.map(item=>{
     const when=kstDate(item.published_at||item.first_seen_at||'');
     const state=item.review_state==='verified'?'검증 완료':'자동수집 · 원문 확인';
@@ -354,7 +354,6 @@ async function loadMonitor(){
     const rows=(data.items||[]).slice(0,18);window.__SEONAM_MONITOR_ITEMS=data.items||[];applyMonitorTimelineUpdates(window.__SEONAM_MONITOR_ITEMS);attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS);
     if(list)list.innerHTML=rows.length?rows.map(item=>`<article class="source"><a href="${safeUrl(item.resolved_url||item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title||'')}</a>${item.summary_text?'<p>'+escapeHtml(item.summary_text)+'</p>':''}<small>${escapeHtml(item.publisher||'출처 확인 중')} · 자동수집 ${item.source_type==='blog'?'블로그':'보도'}${item.media_type?' · '+(item.media_type==='video'?'영상 근거 후보':'사진 근거 후보'):''} · ${item.source_type==='blog'?'개인·온라인 게시물 / 공식자료 교차확인 필요':'원문 확인 필요'}</small></article>`).join(''):'<p class="muted">최근 7일 내 새로 수집된 공개 자료가 없습니다.</p>';
     renderHomeMonitorUpdates(data);
-    if(run?.completed_at){const latest=el('lastUpdated');if(latest)latest.textContent='마지막 갱신 '+runText+' · EKODI 자동갱신'}
     refreshStatusDetail();
   }catch(error){
     latestMonitorData=null;
