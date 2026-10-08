@@ -195,14 +195,16 @@ test('Production rollout preserves guarded My EKODI promotions and verifies the 
 
 
 test('My EKODI approval hub keeps unified visibility and person-scoped decision authority',async()=>{
-  const [home,approvalHtml,approvalApp,worker,migration]=await Promise.all([
+  const [home,loader,approvalHtml,approvalApp,worker,migration]=await Promise.all([
     read('my/index.html'),
+    read('my/secondary-feature-loader.js'),
     read('my/approvals/index.html'),
     read('my/approvals/app.js'),
     read('my-worker.js'),
     read('supabase/migrations/20260904150000_approval_core.sql')
   ]);
-  assert.match(home,/approval-brief\.js/);
+  assert.match(home,/secondary-feature-loader\.js/);
+  assert.match(loader,/approval-brief\.js/);
   assert.match(approvalHtml,/MY APPROVAL · DECISION INBOX/);
   assert.match(approvalHtml,/data-ekodi-ui="USER"/);
   assert.match(approvalApp,/my_approval_person_id/);
@@ -269,14 +271,14 @@ test('My EKODI keeps the guest entry sparse and turns the signed-in root into a 
 
 
 test('My EKODI provides explicit privacy-first personal character selection',async()=>{
-  const [html,app,character,worker,profileApi]=await Promise.all([
-    read('my/index.html'),read('my/app.js'),read('my/character-identity.js'),read('my-worker.js'),read('supabase/functions/profile-api/index.ts')
+  const [html,loader,app,character,worker,profileApi]=await Promise.all([
+    read('my/index.html'),read('my/secondary-feature-loader.js'),read('my/app.js'),read('my/character-identity.js'),read('my-worker.js'),read('supabase/functions/profile-api/index.ts')
   ]);
   assert.match(html,/id="characterPreview"/);
   assert.match(html,/id="characterCanonical"/);
   assert.match(html,/id="characterPersonal"/);
   assert.match(html,/id="characterPortraitInput"/);
-  assert.match(html,/character-identity\.js/);
+  assert.match(loader,/character-identity\.js/);
   assert.match(app,/getUserId:\(\)=>String\(session\?\.user\?\.id\|\|''\)/);
   assert.match(character,/DB_NAME='ekodi-my-character-v1'/);
   assert.match(character,/indexedDB\.open/);
