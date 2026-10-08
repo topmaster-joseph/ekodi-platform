@@ -7,6 +7,14 @@ export async function runAutonomousDevelopmentOnce(db, options = {}) {
   const task = await claimNextEkodiCommandTask(db,{leaseMs:options.leaseMs});
   if (!task) return {status:'idle'};
   const startedAt = new Date().toISOString();
+  // The shared command queue also contains non-development tasks.
+  // Never dispatch those to the development executor.
+  if (task.target?.autonomousDevelopment !== true || task.risk === 'critical') {
+    const settlement = await settleEkodiCommandTask(db,task,{
+      state:'human_gate',reason:'development_runner_scope_or_risk_gate'
+    },{startedAt});
+    return {status:settlement.state,taskId:task.id};
+  }
   let result;
   try {
     result = await options.execute(Object.freeze({
