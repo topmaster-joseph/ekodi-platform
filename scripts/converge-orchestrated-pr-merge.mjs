@@ -82,6 +82,9 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='site-worker.js'||
   file==='scripts/build.mjs'||
   file==='scripts/finalize-seonammedi-release.mjs'||
+  file==='scripts/verify-seonammedi-release-live.mjs'||
+  file==='scripts/seonammedi-cache-contract.mjs'||
+  file==='test/seonammedi-cache-contract.test.mjs'||
   file==='.github/workflows/deploy-site-core.yml'||
   file==='.github/workflows/converge-orchestrated-pr-merge.yml'
 );
