@@ -1,4 +1,5 @@
 import { access, readFile } from 'node:fs/promises';
+import { auditDataStoreTopology } from './data-store-topology.mjs';
 const readJson=async path=>JSON.parse((await readFile(new URL(`../${path}`,import.meta.url),'utf8')).replace(/^\uFEFF/,''));
 const policy=await readJson('config/data-ownership-policy.json');
 const failures=[];
@@ -29,3 +30,15 @@ if(failures.length){
   process.exit(1);
 }
 console.log(`Data ownership OK: ${core.protectedTables.length} protected core tables, ${Object.keys(boundaries.platforms||{}).length} service boundary declarations`);
+const topology = await readJson('config/data-store-topology.json');
+const declarations = {};
+for (const source of new Set((topology.stores || []).map(item => item.source))) {
+  declarations[source] = await readFile(new URL(`../${source}`, import.meta.url), 'utf8');
+}
+const report = auditDataStoreTopology(topology, declarations);
+if (!report.ok) {
+  for (const error of report.errors) console.error('[DATA-TOPOLOGY] ' + error);
+  process.exit(1);
+}
+for (const warning of report.warnings) console.warn('[DATA-TOPOLOGY] ' + warning);
+console.log(`Data-store declarations OK: ${report.inventory.length} registered, 0 live resources verified by this offline audit`);
