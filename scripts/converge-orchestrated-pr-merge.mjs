@@ -95,16 +95,28 @@ async function dispatchPostMergeDeploys(expectedMainSha){
     console.log(JSON.stringify({ok:true,action:'stale-main-dispatch-deferred',expectedMainSha,liveMainSha,pr:pr.number}));
     return;
   }
+  const assertLatestMainBeforeDispatch=async(workflow)=>{
+    const ref=await api('/git/ref/heads/main');
+    if(!ref.r.ok)fail('latest main recheck failed '+ref.r.status);
+    const actual=String(ref.data?.object?.sha||'');
+    if(actual!==expectedMainSha){
+      console.log(JSON.stringify({ok:true,action:'newer-main-deferred',workflow,expectedMainSha,actual,pr:pr.number}));
+      return false;
+    }
+    return true;
+  };
   // These four required workflows run against main even when path filters
   // would otherwise skip them. A production Device Agent check additionally
   // receives the same Orchestrator branch/task receipt verified above.
   for(const workflow of ['constitution-check.yml','ci.yml','device-control-windows.yml']){
+    if(!(await assertLatestMainBeforeDispatch(workflow)))return;
     const dispatch=await api('/actions/workflows/'+workflow+'/dispatches',{
       method:'POST',body:JSON.stringify({ref:'main'})
     });
     if(!dispatch.r.ok)fail('latest-main required check dispatch failed '+workflow+' '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     console.log(JSON.stringify({ok:true,action:'latest-main-check-dispatched',workflow,pr:pr.number,expectedMainSha,authority:'ekodi-orchestrator'}));
   }
+  if(!(await assertLatestMainBeforeDispatch('device-agent-production-verification.yml')))return;
   const deviceCheck=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{
     method:'POST',body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
   });
@@ -112,6 +124,7 @@ async function dispatchPostMergeDeploys(expectedMainSha){
   console.log(JSON.stringify({ok:true,action:'latest-main-check-dispatched',workflow:'device-agent-production-verification.yml',pr:pr.number,expectedMainSha,taskId,branch,authority:'ekodi-orchestrator'}));
   // Explicit dispatch forwards the already verified EKODI release receipt.
   if(controlApiTouched){
+    if(!(await assertLatestMainBeforeDispatch('deploy-control-api.yml')))return;
     const dispatch=await api('/actions/workflows/deploy-control-api.yml/dispatches',{
       method:'POST',
       body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
@@ -120,6 +133,7 @@ async function dispatchPostMergeDeploys(expectedMainSha){
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-control-api.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(marketingGrowthTouched){
+    if(!(await assertLatestMainBeforeDispatch('deploy-marketing-growth.yml')))return;
     const dispatch=await api('/actions/workflows/deploy-marketing-growth.yml/dispatches',{
       method:'POST',
       body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
@@ -128,6 +142,7 @@ async function dispatchPostMergeDeploys(expectedMainSha){
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-marketing-growth.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(myTouched){
+    if(!(await assertLatestMainBeforeDispatch('deploy-my.yml')))return;
     const dispatch=await api('/actions/workflows/deploy-my.yml/dispatches',{
       method:'POST',
       body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
@@ -136,6 +151,7 @@ async function dispatchPostMergeDeploys(expectedMainSha){
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-my.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(independentBoardTouched){
+    if(!(await assertLatestMainBeforeDispatch('deploy-independent-board.yml')))return;
     const dispatch=await api('/actions/workflows/deploy-independent-board.yml/dispatches',{
       method:'POST',
       body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
@@ -144,6 +160,7 @@ async function dispatchPostMergeDeploys(expectedMainSha){
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-independent-board.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(sharedSiteTouched){
+    if(!(await assertLatestMainBeforeDispatch('deploy-site-core.yml')))return;
     const dispatch=await api('/actions/workflows/deploy-site-core.yml/dispatches',{
       method:'POST',
       body:JSON.stringify({ref:'main',inputs:{sync_domains:'false',release_branch_ref:branch,release_task_id:taskId}})
