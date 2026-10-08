@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-DATA-STORE-TOPOLOGY-001",
+  "status": "audit-only",
+  "owner": "EKODI Core",
+  "rule": "Canonical person/workspace and authorization remain central. Operational records belong to the responsible service. Direct cross-service private table access is forbidden; use authorized API/event projections.",
+  "releaseSafeguards": {
+    "noAutomaticProvisioning": true,
+    "noAutomaticCutover": true,
+    "neverCopyPrivateDataWithoutApprovedPlan": true,
+    "backupAndRestoreDrillBeforeMigration": true,
+    "dualReadComparisonBeforeCutover": true,
+    "serviceRollbackRequired": true,
+    "individualServiceFailureIsolation": true
+  },
+  "stores": [
+    {
+      "id": "core-supabase",
+      "engine": "postgresql",
+      "ownerBoundary": "control-api",
+      "source": "wrangler.api.toml",
+      "section": "vars",
+      "binding": "MY_SUPABASE_URL",
+      "expectedContains": ".supabase.co",
+      "state": "configured",
+      "isolation": "logical",
+      "data": "canonical people/workspaces, tenant-scoped service tables; church_private is a schema, not a separate project"
+    },
+    {
+      "id": "auth-d1",
+      "engine": "cloudflare-d1",
+      "ownerBoundary": "control-api",
+      "source": "wrangler.api.toml",
+      "section": "d1_databases",
+      "binding": "DB",
+      "expectedName": "ekodi-auth",
+      "state": "configured",
+      "isolation": "shared",
+      "data": "control API operational and service-namespace tables; server-side access control required"
+    },
+    {
+      "id": "independent-board-d1",
+      "engine": "cloudflare-d1",
+      "ownerBoundary": "independent-board",
+      "source": "wrangler.independent-board.toml",
+      "section": "d1_databases",
+      "binding": "BOARD_DB",
+      "expectedName": "ekodi-independent-board",
+      "state": "provisioning-required",
+      "isolation": "dedicated",
+      "data": "seonammedi independent board content; must not be mistaken for central D1"
+    },
+    {
+      "id": "independent-board-files",
+      "engine": "cloudflare-r2",
+      "ownerBoundary": "independent-board",
+      "source": "wrangler.independent-board.toml",
+      "section": "r2_buckets",
+      "binding": "BOARD_FILES",
+      "expectedName": "ekodi-independent-board-files",
+      "state": "declared-unverified",
+      "isolation": "dedicated",
+      "data": "board files, not a replacement for relational data"
+    }
+  ],
+  "migrationOrder": [
+    "inventory-and-backup",
+    "service-auth-contract",
+    "shadow-read-and-row-count-check",
+    "staging-write-read-delete-and-restore-test",
+    "human-gated-cutover-if-required",
+    "production-canary-and-rollback-ready"
+  ],
+  "completionCriterion": "Live binding and restore evidence, tenant isolation tests, guarded deployment and production endpoint verification for each moved service."
+}

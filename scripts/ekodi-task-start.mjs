@@ -10,7 +10,7 @@ function run(command, args, options = {}) {
     encoding: 'utf8',
     stdio: options.stdio ?? ['ignore', 'pipe', 'pipe'],
     cwd: options.cwd,
-  }).trim();
+  })?.trim() ?? '';
 }
 
 function git(args, options = {}) {
