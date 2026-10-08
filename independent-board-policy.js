@@ -30,8 +30,8 @@ export function boardActionOwner(action) {
 export function boardRouteKey(pathname) {
   if (typeof pathname !== 'string' || !pathname.startsWith('/') || pathname.includes('//')) return null;
   const path = pathname.split(/[?#]/, 1)[0];
-  if (!/^\\/board\\/[a-z0-9_-]+\\/?$/i.test(path)) return null;
-  return path.replace(/\\/$/, '').toLowerCase();
+  if (!/^\/board\/[a-z0-9_-]+\/?$/i.test(path)) return null;
+  return path.replace(/\/$/, '').toLowerCase();
 }
 
 export function validateBoardCategories(categories, previousCategories = []) {
