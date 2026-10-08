@@ -9,7 +9,6 @@ const PREFIX = '/api/affiliate';
 const DEFAULT_ACCOUNT_ID = 'coupang-ekodibiz';
 const PUBLIC_STOREFRONT_SLUG = 'ekodi-mall';
 const DEFAULT_DISCLOSURE = '쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.';
-const AUTO_RETRY_MS = 15 * 60 * 1000;
 
 function json(data, status = 200, sourceHeaders = new Headers()) {
   const headers = new Headers({
@@ -211,12 +210,6 @@ async function recommendationRouteForMerchant(db, merchantKey) {
   return row && routeRecommendationReady(row) ? row : null;
 }
 
-function recentFailedRun(automation) {
-  if (automation?.status !== 'failed' || !automation?.lastRunAt) return false;
-  const timestamp = Date.parse(automation.lastRunAt);
-  return Number.isFinite(timestamp) && (Date.now() - timestamp) < AUTO_RETRY_MS;
-}
-
 async function readPublicRows(env, limit) {
   try {
     const rows = await env.DB.prepare(`SELECT id, product_id, product_name, price_krw, image_url, category, is_rocket, is_free_shipping, selected_at
@@ -257,15 +250,10 @@ async function publicProducts(request, env, url) {
     disclosureText = cleanText(account?.disclosure_text, 1000) || DEFAULT_DISCLOSURE;
   } catch {}
 
-  let automation = await getAffiliateAutomationStatus(env);
-  if (automation.configured && automation.needsRefresh && !recentFailedRun(automation)) {
-    try {
-      await runAffiliateAutomation(env, { reason: automation.activeProducts > 0 ? 'public-stale' : 'public-empty' });
-      automation = await getAffiliateAutomationStatus(env);
-    } catch (error) {
-      automation = { ...automation, status: 'degraded', refreshError: cleanText(error?.message || 'AUTOMATION_REFRESH_FAILED', 160) };
-    }
-  }
+  // Read-only storefront: network-based refresh runs in the scheduled or admin worker,
+  // never in a customer request. This keeps shoppers fast during provider outages.
+  const automation = await getAffiliateAutomationStatus(env);
+  const catalogRefreshDue = Boolean(automation.configured && automation.needsRefresh);
   const rows = await readPublicRows(env, limit);
   const recommendedMerchants = await recommendedMerchantKeys(env.DB, 'ekodimall');
   const coupangProducts = automation.configured && recommendedMerchants.has('coupang_partners') ? rows.map(row => ({ ...publicProductView(request, row), recommendationEligible: true, affiliateMode: 'direct', marketCountry: 'KR', settlementCurrency: 'KRW' })) : [];
@@ -276,7 +264,7 @@ async function publicProducts(request, env, url) {
     .map(([providerKey, providerName]) => ({ providerKey, providerName }));
   const combinedDisclosure = marketplaceProducts.length ? `${disclosureText} ${MULTI_AFFILIATE_DISCLOSURE}` : disclosureText;
   const productIdentities = groupProductOffers(products);
-  return json({ storefront: PUBLIC_STOREFRONT_SLUG, providerKey: marketplaceProducts.length ? 'multi_affiliate' : 'coupang_partners', providers, automationStatus, disclosureText: combinedDisclosure, catalogMode: 'product_identity_v1', productIdentities, products }, 200, publicHeaders(request));
+  return json({ storefront: PUBLIC_STOREFRONT_SLUG, providerKey: marketplaceProducts.length ? 'multi_affiliate' : 'coupang_partners', providers, automationStatus, catalogRefreshDue, catalogLastRunAt: automation.lastRunAt, disclosureText: combinedDisclosure, catalogMode: 'product_identity_v1', productIdentities, products }, 200, publicHeaders(request));
 }
 
 function coupangImageUrl(value) {
@@ -391,7 +379,8 @@ async function overview(env) {
       manualMarketplaceProductRegistration: true,
       automaticDeepLink: true,
       automaticClickTracking: true,
-      automaticPerformanceSync: false,
+      automaticPerformanceSync: false, // Provider-wide sync is not implemented.
+      coupangReportSyncStatus: automation.reporting?.status || 'not_run',
       apiStatus: automation.configured ? 'configured' : 'credentials_required',
     },
   };

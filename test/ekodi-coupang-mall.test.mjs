@@ -135,8 +135,8 @@ test('automatic product search and partner link issuance are connected', () => {
   assert.match(automation, /\uD64D\uC0BC \uC120\uBB3C\uC138\uD2B8/);
   assert.match(automation, /expectedKeywords/);
   assert.match(api, /runAffiliateAutomation/);
-  assert.match(api, /public-empty/);
-  assert.match(api, /public-stale/);
+  assert.match(entryWorker, /syncScheduledAffiliateAutomation/);
+  assert.match(api, /catalogRefreshDue/);
 });
 
 test('on-demand ingest adds requested products without replacing the batch catalog', () => {
@@ -250,13 +250,14 @@ test('root router publishes Mall at /ekodimall and redirects nested legacy paths
   assert.match(router, /'\/mall\.js'/);
 });
 
-test('public affiliate catalog degrades safely when background refresh throws', () => {
+test('public affiliate catalog never blocks shoppers on a remote Coupang refresh', () => {
   const start = api.indexOf('async function publicProducts');
   const end = api.indexOf('function coupangImageUrl', start);
   const publicCatalog = api.slice(start, end);
-  assert.match(publicCatalog, /try \{/);
-  assert.match(publicCatalog, /runAffiliateAutomation/);
-  assert.match(publicCatalog, /status: 'degraded'/);
-  assert.match(publicCatalog, /AUTOMATION_REFRESH_FAILED/);
+  assert.doesNotMatch(publicCatalog, /runAffiliateAutomation\(/);
+  assert.match(publicCatalog, /catalogRefreshDue/);
+  assert.match(publicCatalog, /catalogLastRunAt/);
+  assert.match(publicCatalog, /readPublicRows\(env, limit\)/);
+  assert.match(entryWorker, /syncScheduledAffiliateAutomation/);
   assert.match(publicCatalog, /return json\(\{ storefront:/);
 });
