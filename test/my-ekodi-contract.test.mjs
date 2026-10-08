@@ -337,4 +337,8 @@ test('My EKODI defers secondary feature bundles until after the critical startup
   assert.match(loader,/data-finance-open/);
   assert.match(loader,/a\[href="#account"\]/);
   assert.match(loader,/Promise\.allSettled/);
+  const manifest=JSON.parse(await read('deploy/manifests/my.worker.json'));
+  const rootProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/my/');
+  assert.ok(rootProbe?.expect?.includes('secondary-feature-loader.js?v=20261008-startup-defer-v1'));
+  assert.ok(!rootProbe?.expect?.some(marker=>marker.includes('church-marketing-ai.js')||marker.includes('channel-automation.js')));
 });
