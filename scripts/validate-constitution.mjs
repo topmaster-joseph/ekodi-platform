@@ -16,6 +16,15 @@ const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 // BOARD-INDEPENDENT-001: inherited contract guard (existing and future boards).
 const boardPolicy = workspace.boardPolicy;
+
+const boardConstitution = constitution.independentBoardPolicy || {};
+if (boardConstitution.id !== 'BOARD-INDEPENDENT-001' || boardConstitution.status !== 'enforced') fail('constitutional independent board rule missing');
+if (boardConstitution.scope !== 'all-current-and-future-site-boards' || boardConstitution.inheritedWithoutServiceOptIn !== true || boardConstitution.localOverrideForbidden !== true) fail('independent board rule must apply without local opt-in or override');
+if (boardConstitution.singleCanonicalWriteStore !== true || boardConstitution.legacyWriteForbidden !== true || boardConstitution.preserveExistingRecords !== true) fail('constitutional board storage boundaries must preserve single writer and existing posts');
+if (boardConstitution.globalCategoryListForced !== false || boardConstitution.perBoardCategoryContract !== true) fail('board category contracts are per-board, not global');
+if (boardConstitution.canonicalTrailingSlashEquivalent !== true || boardConstitution.returnToOriginalBoardAfterLogin !== true || boardConstitution.serverSideAuthorizationRequired !== true) fail('constitutional board path, auth return and server authorization are mandatory');
+if (boardConstitution.requireRealProductionEvidenceBeforeCompletion !== true) fail('board completion cannot precede production evidence');
+
 if (!boardPolicy || boardPolicy.policyId !== 'BOARD-INDEPENDENT-001' || boardPolicy.inherited !== true) fail('BOARD-INDEPENDENT-001 must be inherited');
 if (boardPolicy?.singleCanonicalWriteStore !== true || boardPolicy?.legacyWriteForbidden !== true) fail('board writes must have one canonical store and forbid legacy writes');
 if (boardPolicy?.perBoardCategoryContract !== true || boardPolicy?.globalCategoryListForced !== false) fail('board categories must remain board-specific');
