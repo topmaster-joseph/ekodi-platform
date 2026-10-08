@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { investIntroPage, investAnalysisPage, investAnalysisScript } from '../invest-access-ui.js';
 import { investMyRoute } from '../invest-my-workspace.js';
+import myWorker from '../my-worker.js';
+import { routeCanonicalSurface } from '../canonical-surface-router.js';
 
 const origin='https://ekodi.kr';
 const get=path=>new Request(origin+path);
@@ -97,4 +99,22 @@ test('private access does not expose member financial data and routes fail close
  const source=await js.text();
  assert.match(source,/\/my\/invest\/access/);
  assert.doesNotMatch(source,/localStorage\.setItem|\/automation\/resume|\/broker\/orders/);
+});
+
+test('canonical /my/invest routes through the MY worker with private non-cacheable HTML',async()=>{
+ const env={MY:{fetch:request=>myWorker.fetch(request,{})}};
+ const response=await routeCanonicalSurface(get('/my/invest'),env);
+ assert.equal(response.status,200);
+ assert.equal(response.headers.get('x-ekodi-canonical-surface'),'my');
+ assert.match(response.headers.get('cache-control'),/no-store/);
+ assert.match(response.headers.get('x-robots-tag'),/noindex/);
+ const html=await response.text();
+ assert.match(html,/마이투자/);
+ assert.match(html,/id="owner" hidden/);
+});
+test('canonical /my/invest/access rejects anonymous requests at the real MY entry',async()=>{
+ const env={MY:{fetch:request=>myWorker.fetch(request,{})}};
+ const response=await routeCanonicalSurface(get('/my/invest/access'),env);
+ assert.equal(response.status,401);
+ assert.equal((await response.json()).error,'authentication_required');
 });
