@@ -50,6 +50,26 @@ const myTouched=changedFiles.some(file=>
   file==='deploy/manifests/my.worker.json'||
   file==='.github/workflows/deploy-my.yml'
 );
+// Release targets are selected only from the verified, merged PR file list.
+const controlApiTouched=changedFiles.some(file=>[
+  'affiliate-control.js',
+  'affiliate-marketplace.js',
+  'coupang-partners-automation.js',
+  'customer-entry-worker.js',
+  'mission-control-entry-worker.js',
+  'wrangler.api.toml',
+  '.github/workflows/deploy-control-api.yml',
+].includes(file));
+const marketingGrowthTouched=changedFiles.some(file=>[
+  'mall-autonomous-profit-loop.js',
+  'mall-growth-dashboard.js',
+  'mall-sales-intelligence.js',
+  'mall-promotion-automation.js',
+  'marketing-growth-worker.js',
+  'marketing-growth-entry.js',
+  'wrangler.marketing-growth.toml',
+  '.github/workflows/deploy-marketing-growth.yml',
+].includes(file));
 const sharedSiteTouched=changedFiles.some(file=>
   file.startsWith('sites/')||
   file.startsWith('auth-site/')||
@@ -61,10 +81,27 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='scripts/build.mjs'||
   file==='scripts/finalize-seonammedi-release.mjs'||
   file==='.github/workflows/deploy-site-core.yml'||
-  file==='scripts/converge-orchestrated-pr-merge.mjs'||
   file==='.github/workflows/converge-orchestrated-pr-merge.yml'
 );
 async function dispatchPostMergeDeploys(){
+  // GITHUB_TOKEN merges do not invoke ordinary main push workflows.
+  // Explicit dispatch forwards the already verified EKODI release receipt.
+  if(controlApiTouched){
+    const dispatch=await api('/actions/workflows/deploy-control-api.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Control API deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-control-api.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(marketingGrowthTouched){
+    const dispatch=await api('/actions/workflows/deploy-marketing-growth.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Marketing Growth deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-marketing-growth.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
   if(myTouched){
     const dispatch=await api('/actions/workflows/deploy-my.yml/dispatches',{
       method:'POST',
