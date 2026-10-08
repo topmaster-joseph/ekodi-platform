@@ -125,6 +125,27 @@ namespace_id = "3903"
 limit = 120
 period = 60
 
+[[ratelimits]]
+name = "TRAFFIC_L2_RATE_LIMITER"
+namespace_id = "3910"
+[ratelimits.simple]
+limit = 300
+period = 10
+
+[[ratelimits]]
+name = "TRAFFIC_L3_RATE_LIMITER"
+namespace_id = "3911"
+[ratelimits.simple]
+limit = 1000
+period = 10
+
+[[ratelimits]]
+name = "TRAFFIC_PROTECT_RATE_LIMITER"
+namespace_id = "3912"
+[ratelimits.simple]
+limit = 3000
+period = 10
+
 
 [[queues.producers]]
 binding = "EKODI_WRITE_QUEUE"
@@ -136,6 +157,9 @@ max_batch_size = 50
 max_batch_timeout = 1
 max_retries = 5
 dead_letter_queue = "ekodi-write-ingress-dlq"
+
+[cache]
+enabled = true
 
 [assets]
 directory = "./dist"

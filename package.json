@@ -73,10 +73,11 @@
     "validate:canonical-boundaries": "node scripts/validate-canonical-boundary-sync.mjs",
     "validate:repository-sot": "node scripts/validate-repository-source-of-truth.mjs",
     "validate:data-ownership": "node scripts/validate-data-ownership.mjs",
-    "validate:fast": "node --check platform-route-registry.js && node --check canonical-surface-router.js && node --check scripts/build.mjs && node --test test/platform-route-registry.test.mjs && npm run validate:canonical-boundaries && npm run validate:repository-sot && npm run validate:data-ownership && npm run validate:site-execution && npm run validate:social-governance && npm run validate:autonomic-control-plane && npm run validate:boundaries && npm run validate:deployments && npm run validate:admin-routes && npm run validate:security && npm run validate:write-ingress",
+    "validate:fast": "node --check platform-route-registry.js && node --check canonical-surface-router.js && node --check scripts/build.mjs && node --test test/platform-route-registry.test.mjs && npm run validate:canonical-boundaries && npm run validate:repository-sot && npm run validate:data-ownership && npm run validate:site-execution && npm run validate:social-governance && npm run validate:autonomic-control-plane && npm run validate:boundaries && npm run validate:deployments && npm run validate:admin-routes && npm run validate:security && npm run validate:write-ingress && npm run validate:traffic",
     "validate:full": "npm run check && npm test",
     "validate:site-execution": "node scripts/validate-site-execution-enforcement.mjs && node --test test/site-execution-enforcement.test.mjs",
     "validate:write-ingress": "node --check write-ingress.js && node scripts/validate-write-ingress-policy.mjs && node --test test/write-ingress-policy.test.mjs",
+    "validate:traffic": "node --check traffic-governor.js && node scripts/validate-concurrent-traffic-policy.mjs && node --test test/concurrent-traffic-runtime.test.mjs",
     "validate:social-governance": "node scripts/validate-social-hub-enforcement.mjs && node --test test/social-hub-enforcement.test.mjs"
   },
   "engines": {
