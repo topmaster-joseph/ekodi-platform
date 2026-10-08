@@ -566,10 +566,11 @@ async function routePlatform(request,env,ctx){
       if(url.pathname==='/messenger-ui.js')return messengerUiScript();
     }
 
-    if(host===INVEST_HOST&&request.method==='GET'){
-      if(url.pathname==='/'||url.pathname==='')return injectEkodiShell(await withInvestSubjectScript(investUserPage()),'invest');
-      if(url.pathname==='/invest-ui.js')return investUiScript();
-      if(url.pathname==='/invest-subject-ui.js')return investSubjectUiScript();
+    if(host===INVEST_HOST&&['GET','HEAD'].includes(request.method)){
+      // The legacy subdomain must never bypass the canonical /invest authentication boundary.
+      // All authenticated market analysis is served on ekodi.kr, never on a parallel host.
+      const target=new URL(url.pathname==='/'||!url.pathname?'https://ekodi.kr/invest':'https://ekodi.kr/invest/analysis');
+      return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'private, no-store','x-ekodi-invest-route':'canonical-apex'}});
     }
     const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&legacyOperatingSpacePath(url.pathname))return ensureLegacyOperatingSpaceMarker(injectEkodiTenantReadability(legacyResponse),request.method==='GET');
