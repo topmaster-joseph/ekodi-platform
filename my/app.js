@@ -19,6 +19,7 @@ let session=null,items=[],access=new Map(),workspaces=new Map(),filter='all',act
 let personalizationPreferences=new Map(),personalizationSignals=[],ephemeralSignals=[],discoveryOpen=false;
 window.EKODI_MY_AUTH=Object.freeze({getAccessToken:()=>String(session?.access_token||''),getUserId:()=>String(session?.user?.id||''),isSignedIn:()=>Boolean(session?.access_token)});
 
+const ACCESS_CONTEXT_RUNTIME='batched-snapshot-no-fanout-v3';
 const ACCESS_SNAPSHOT_TTL_MS=5*60*1000;
 const accessSnapshotKey=()=>session?.user?.id?`ekodi_my_access_snapshot_v2:${session.user.id}`:'';
 function applyAccessPayload(siteKeys,payload){

@@ -3,6 +3,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const cfg=window.EKODI_MY_CONFIG||{};
 const WORKSPACE_KEY_RE=/^[a-z]+:[a-zA-Z0-9:_-]+$/;
 const SERVICE_ID_RE=/^[a-z][a-z0-9-]*$/;
+const ACCESS_CONTEXT_RUNTIME='batched-single-site-no-fanout-v3';
 const ACTIVE_STATUSES=new Set(['active','pre_registered']);
 const params=new URLSearchParams(location.search);
 const source=String(params.get('from')||'').trim().toLowerCase();

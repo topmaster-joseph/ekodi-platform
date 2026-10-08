@@ -15,7 +15,7 @@ test('EKODI public homepage is an explicit secured apex Worker route', () => {
   assert.match(worker, /'public-home'/);
   assert.match(worker, /'public-asset'/);
   assert.match(worker, /PUBLIC_CSP/);
-  assert.match(worker, /'no-store', 'public-home'/);
+  assert.match(worker, /'public, max-age=0', 'public-home'/);
 });
 
 test('Chief AI lazy admin bootstrap is served through the secured version-aware admin asset route', () => {

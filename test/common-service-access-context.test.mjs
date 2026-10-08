@@ -37,7 +37,7 @@ test('My common-service access guidance resolves only RLS-protected user access 
 test('My Worker injects access guidance into root and canonical private workspace shells',async()=>{
   const worker=await read('my-worker.js');
   assert.match(worker,/ACCESS_CONTEXT_TAG/);
-  assert.match(worker,/\/my\/access-context\.js\?v=20261008-traffic-resilience-v2/);
+  assert.match(worker,/\/my\/access-context\.js\?v=20261008-traffic-resilience-v3/);
   assert.doesNotMatch(worker,/ACCESS_CONTEXT_TAG='<script type="module" src="\/access-context\.js/);
   assert.match(worker,/if\(!source\.includes\('\/access-context\.js'\)\)/);
   assert.match(worker,/accessContextGuidance:true/);
