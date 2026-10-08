@@ -1,20 +1,35 @@
-import {claimNextEkodiCommandTask,settleEkodiCommandTask} from './ekodi-command-ledger.js';
+import {ensureEkodiCommandLedger,getEkodiCommandTask,settleEkodiCommandTask,recoverExpiredEkodiCommandTasks} from './ekodi-command-ledger.js';
 
-// This adapter never executes shell commands or deploys code directly.
-// The executor is injected by an isolated worker process.
+// Scoped claim: unrelated command tasks remain untouched in the shared queue.
+export async function claimAutonomousDevelopmentTask(input, options = {}) {
+  const db = await ensureEkodiCommandLedger(input);
+  await recoverExpiredEkodiCommandTasks(db,options);
+  const now = new Date(options.now || Date.now()).toISOString();
+  const leaseMs = Math.min(300000,Math.max(30000,Number(options.leaseMs)||120000));
+  const until = new Date(Date.parse(now)+leaseMs).toISOString();
+  const row = await db.prepare(`SELECT id FROM ai_command_tasks
+    WHERE state IN ('queued','retry') AND risk != 'critical'
+    AND json_valid(target_json) AND json_extract(target_json,'$.autonomousDevelopment') = 1
+    AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
+    AND (lease_until IS NULL OR lease_until <= ?)
+    ORDER BY created_at ASC LIMIT 1`).bind(now,now).first();
+  if (!row?.id) return null;
+  const updated = await db.prepare(`UPDATE ai_command_tasks
+    SET state='running', attempt_count=attempt_count+1, lease_until=?, updated_at=?
+    WHERE id=? AND state IN ('queued','retry') AND risk != 'critical'
+    AND json_valid(target_json) AND json_extract(target_json,'$.autonomousDevelopment') = 1
+    AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
+    AND (lease_until IS NULL OR lease_until <= ?)`).bind(until,now,row.id,now,now).run();
+  if (Number(updated?.meta?.changes ?? updated?.changes ?? 0)!==1) return null;
+  return getEkodiCommandTask(db,row.id);
+}
+
+// Execution happens only in an injected isolated worker, never inside this module.
 export async function runAutonomousDevelopmentOnce(db, options = {}) {
   if (typeof options.execute !== 'function') throw new Error('isolated_executor_required');
-  const task = await claimNextEkodiCommandTask(db,{leaseMs:options.leaseMs});
+  const task = await claimAutonomousDevelopmentTask(db,{leaseMs:options.leaseMs});
   if (!task) return {status:'idle'};
   const startedAt = new Date().toISOString();
-  // The shared command queue also contains non-development tasks.
-  // Never dispatch those to the development executor.
-  if (task.target?.autonomousDevelopment !== true || task.risk === 'critical') {
-    const settlement = await settleEkodiCommandTask(db,task,{
-      state:'human_gate',reason:'development_runner_scope_or_risk_gate'
-    },{startedAt});
-    return {status:settlement.state,taskId:task.id};
-  }
   let result;
   try {
     result = await options.execute(Object.freeze({
@@ -28,9 +43,6 @@ export async function runAutonomousDevelopmentOnce(db, options = {}) {
     },{startedAt});
     return {status:settlement.state,taskId:task.id};
   }
-  // Do not treat an executor return as independent release verification.
-  // Settlement failures propagate to the caller rather than being mistaken for
-  // executor failures and causing a second settlement attempt.
   const settlement = await settleEkodiCommandTask(db,task,{
     state:'core_only',reason:'awaiting_independent_release_verification',
     evidence:{executionReceipt:result?.executionReceipt || null},
