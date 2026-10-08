@@ -1,0 +1,42 @@
+{
+  "amendmentId": "BOARD-INDEPENDENT-FORCED-RULE-20261008",
+  "version": "1.27.1",
+  "date": "2026-10-08",
+  "changeClass": "C2",
+  "ruleId": "BOARD-INDEPENDENT-001",
+  "status": "approved-by-explicit-owner-instruction",
+  "taskId": "orch_board-governance-20261008",
+  "summary": "Require an inherited, independent, single-writer board contract for every current and future EKODI board while retaining board-specific categories and existing records.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly instructed on 2026-10-08 that the independent board policy become a forced execution rule for all EKODI boards and instructed continued implementation and verification.",
+  "approvedBy": "topmaster-joseph",
+  "approvalEvidence": {
+    "explicitOwnerInstruction": true,
+    "ownerInstructionDate": "2026-10-08",
+    "ownerInstruction": "좋아 에코디의 모든 게시판에 대한 강제실행규칙으로 설정해줘"
+  },
+  "implementation": [
+    "governance/constitution/constitution.json",
+    "config/service-workspace-policy.json",
+    "workspace-route-policy.js",
+    "scripts/validate-constitution.mjs",
+    "scripts/validate-independent-board-policy.mjs",
+    "test/independent-board-policy.test.mjs",
+    ".github/workflows/constitution-check.yml"
+  ],
+  "mandatoryRules": [
+    "independent board engine owns board content and CRUD; platform owns identity handoff and routing",
+    "one canonical write-store per board; legacy services cannot double-write",
+    "per-board versioned category contracts, preserving all existing category keys and posts",
+    "equivalent slash/no-slash navigation, refresh and trusted post-login return",
+    "server-side authorization and protections for restricted operations",
+    "CI regression gate and real production evidence required before completion"
+  ],
+  "validation": [
+    "EKODI Constitution Check",
+    "node scripts/validate-independent-board-policy.mjs",
+    "node --test test/independent-board-policy.test.mjs",
+    "real canonical production verification after gated deployment"
+  ],
+  "rollback": "Any modification or rollback requires a subsequent recorded constitutional amendment; never delete existing posts or weaken access enforcement as a workaround.",
+  "releaseStatus": "proposed-pr-awaiting-ci-and-orchestrator-receipt"
+}
