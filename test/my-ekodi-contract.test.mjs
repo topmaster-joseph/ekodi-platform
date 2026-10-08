@@ -170,7 +170,7 @@ test('Personal users can enter personal-brand Marketing without a tenant or stor
 });
 
 test('Production rollout preserves guarded My EKODI promotions and verifies the current return-routing contract',async()=>{
-  const [workflow,app]=await Promise.all([read('.github/workflows/deploy-my.yml'),read('my/app.js')]);
+  const [workflow,app,accessContext,manifest]=await Promise.all([read('.github/workflows/deploy-my.yml'),read('my/app.js'),read('my/access-context.js'),read('deploy/manifests/my.worker.json')]);
   assert.match(workflow,/has no deployments/);
   assert.match(workflow,/ekodi\.kr\/my\/health/);
   assert.match(workflow,/MY PLATFORMS/);
@@ -178,6 +178,17 @@ test('Production rollout preserves guarded My EKODI promotions and verifies the 
   assert.match(workflow,/Existing production .*satisfies.*My EKODI hub contract/);
   assert.match(workflow,/guarded-worker-release\.mjs/);
   assert.match(app,/function misroutedServiceReturn\(\)/);
+  assert.match(app,/ACCESS_CONTEXT_RUNTIME='batched-snapshot-no-fanout-v3'/);
+  assert.doesNotMatch(app,/rpc\('current_site_access'/);
+  assert.doesNotMatch(app,/rpc\('current_site_workspaces'/);
+  assert.match(accessContext,/my_dashboard_access_context/);
+  assert.match(accessContext,/ACCESS_CONTEXT_RUNTIME='batched-single-site-no-fanout-v3'/);
+  assert.doesNotMatch(accessContext,/rpc\('current_site_access'/);
+  assert.doesNotMatch(accessContext,/rpc\('current_site_workspaces'/);
+  assert.match(manifest,/batched-snapshot-no-fanout-v3/);
+  assert.match(workflow,/my_dashboard_access_context/);
+  assert.match(workflow,/! grep -Fq "rpc\('current_site_access'"/);
+  assert.match(workflow,/! grep -Fq "rpc\('current_site_workspaces'"/);
   assert.equal((workflow.match(/misroutedServiceReturn/g)||[]).length,2);
   assert.doesNotMatch(workflow,/misroutedWorkspaceAdminReturn/);
 });
@@ -286,7 +297,7 @@ test('My EKODI provides explicit privacy-first personal character selection',asy
 
 test('My versioned assets use immutable browser caching while runtime data remains uncached',async()=>{
   const [html,worker]=await Promise.all([read('my/index.html'),read('my-worker.js')]);
-  assert.match(html,/app\.js\?v=20261008-traffic-resilience-v2/);
+  assert.match(html,/app\.js\?v=20261008-traffic-resilience-v3/);
   assert.match(worker,/searchParams\.has\('v'\)/);
   assert.match(worker,/public, max-age=31536000, immutable/);
   assert.match(worker,/manifest-fallback'[\s\S]{0,220}withVersionedAssetCache\(request/);

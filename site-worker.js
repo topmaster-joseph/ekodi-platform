@@ -676,7 +676,7 @@ export default {
       if (url.pathname.startsWith('/ai/')) return proxyPublicAi(request, env);
       if (url.pathname === '/' || url.pathname === '/index.html') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/'));
-        return withHostSecurity(response, PUBLIC_CSP, 'no-store', 'public-home');
+        return withHostSecurity(response, PUBLIC_CSP, 'public, max-age=0', 'public-home');
       }
       if (['GET','HEAD'].includes(request.method) && (url.pathname === '/pizzamaru/mokpodae' || url.pathname === '/pizzamaru/mokpodae/')) {
         const target=new URL('/pizzamaru',request.url);target.search=url.search;

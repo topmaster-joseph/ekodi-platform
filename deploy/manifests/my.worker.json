@@ -19,6 +19,29 @@
         ]
       },
       {
+        "url": "https://ekodi-my.topmaster-joseph.workers.dev/app.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "ACCESS_CONTEXT_RUNTIME='batched-snapshot-no-fanout-v3'",
+          "my_dashboard_access_context",
+          "safe defaults without per-service fan-out"
+        ]
+      },
+      {
+        "url": "https://ekodi-my.topmaster-joseph.workers.dev/access-context.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "ACCESS_CONTEXT_RUNTIME='batched-single-site-no-fanout-v3'",
+          "my_dashboard_access_context"
+        ]
+      },
+      {
         "url": "https://ekodi.kr/my/",
         "statuses": [
           200
@@ -88,8 +111,7 @@
         "candidateVerify": false,
         "candidateVerifyReason": "Canonical /my asset routing is verified after promotion through the Shared Site MY service binding.",
         "expect": [
-          "current_site_access",
-          "current_site_workspaces",
+          "my_dashboard_access_context",
           "ACTIVE_STATUSES"
         ]
       },
