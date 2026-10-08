@@ -846,6 +846,9 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.ok(minutes.includes("location.origin+'/minutes/?token='"));
   assert.match(css,/min-height:100dvh;display:flex;flex-direction:column/);
   assert.match(css,/footer{margin-top:auto/);
+  assert.match(css,/\.hero\{padding:48px 20px 26px\}/);
+  assert.match(css,/\.section\{padding:44px 20px 28px;border-top:1px solid #dce3ea\}/);
+  assert.match(css,/@media\(max-width:760px\).*\.section\{padding-top:36px\}/);
 });
 
 
