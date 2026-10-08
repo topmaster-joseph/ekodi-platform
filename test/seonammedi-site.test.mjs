@@ -830,6 +830,9 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.match(html,/<link rel="canonical" href="https:\/\/seonammedi\.kr\/">/);
   assert.match(html,/<a class="brand" href="\.\/">/);
   assert.match(html,/<a href="admin\/">관리<\/a>/);
+  assert.match(html,/<div class="site-footer-copy">\s*<strong>서남권 국립의대 소통센터<\/strong>\s*<span>자료의 성격과 출처를 구분해 보존합니다.<\/span>\s*<\/div>/);
+  assert.match(css,/\.site-footer-copy\{display:grid;gap:2px/);
+  assert.match(css,/footer>a\{flex:0 0 auto;margin-left:auto/);
   for(const hash of ['timeline','channels','organization'])assert.match(adminHtml,new RegExp('href="\.\.\/#'+hash+'"'));
   assert.match(adminHtml,/href="\.\.\/board\/voices">시민의견 관리/);
   assert.match(adminHtml,/href="\.\.\/board\/finance">회계 관리/);
