@@ -355,12 +355,14 @@ async function loadMonitor(){
     if(list)list.innerHTML=rows.length?rows.map(item=>`<article class="source"><a href="${safeUrl(item.resolved_url||item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title||'')}</a>${item.summary_text?'<p>'+escapeHtml(item.summary_text)+'</p>':''}<small>${escapeHtml(item.publisher||'출처 확인 중')} · 자동수집 ${item.source_type==='blog'?'블로그':'보도'}${item.media_type?' · '+(item.media_type==='video'?'영상 근거 후보':'사진 근거 후보'):''} · ${item.source_type==='blog'?'개인·온라인 게시물 / 공식자료 교차확인 필요':'원문 확인 필요'}</small></article>`).join(''):'<p class="muted">최근 7일 내 새로 수집된 공개 자료가 없습니다.</p>';
     renderHomeMonitorUpdates(data);
     refreshStatusDetail();
+    renderMediaHub();
   }catch(error){
     latestMonitorData=null;
     if(badge)badge.textContent='사이트 자동점검: 준비 중';
     if(summary)summary.textContent=error.message||'점검 상태를 불러오지 못했습니다.';
     if(list)list.innerHTML='';
     refreshStatusDetail();
+    renderMediaHub();
   }
 }
 siteReady.finally(()=>loadMonitor());
@@ -868,6 +870,28 @@ async function loadChannels(){
   }
 }
 loadChannels();
+
+const MEDIA_HUB_FILTERS=Object.freeze([['all','전체'],['video','영상'],['broadcast','방송'],['social','SNS'],['news','언론'],['official','공식자료']]);
+let activeMediaHubFilter='all';
+const mediaHubKind=item=>{
+  const corpus=[item.media_type,item.source_type,item.query_label,item.publisher,item.title].filter(Boolean).join(' ').toLowerCase();
+  if(/youtube|영상|video|릴스|reel|shorts|tiktok/.test(corpus))return'video';
+  if(/방송|mbc|kbs|sbs|ytn|jtbc|tv|radio|라디오/.test(corpus))return'broadcast';
+  if(/instagram|facebook|tiktok|sns|블로그|blog/.test(corpus))return'social';
+  if(/정부|교육부|복지부|보건복지부|전라남도|전남도|목포대|순천대|공식|보도자료/.test(corpus)&&item.source_type!=='news')return'official';
+  return'news';
+};
+const mediaHubLabel=kind=>({video:'영상',broadcast:'방송',social:'SNS',news:'언론',official:'공식자료'})[kind]||'자료';
+const mediaHubRows=()=>{const seen=new Set();return ((latestMonitorData&&latestMonitorData.items)||[]).filter(item=>{const url=timelineNormalizeUrl(item.resolved_url||item.url);const title=String(item.title||'').trim();if(!title||!url||url==='#')return false;const key=url+'|'+title.toLowerCase();if(seen.has(key))return false;seen.add(key);return true}).slice().sort((a,b)=>String(b.published_at||b.media_published_at||b.first_seen_at||'').localeCompare(String(a.published_at||a.media_published_at||a.first_seen_at||'')));};
+function renderMediaHub(){
+  const filters=el('mediaHubFilters'),host=el('mediaHubList'),updated=el('mediaHubUpdated');if(!filters||!host)return;
+  const rows=mediaHubRows(),counts=Object.fromEntries(MEDIA_HUB_FILTERS.map(([key])=>[key,key==='all'?rows.length:rows.filter(item=>mediaHubKind(item)===key).length]));
+  filters.innerHTML=MEDIA_HUB_FILTERS.map(([key,label])=>'<button type="button" role="tab" aria-selected="'+(activeMediaHubFilter===key?'true':'false')+'" class="'+(activeMediaHubFilter===key?'active':'')+'" data-media-filter="'+key+'">'+label+' <span>'+counts[key]+'</span></button>').join('');
+  const visible=activeMediaHubFilter==='all'?rows:rows.filter(item=>mediaHubKind(item)===activeMediaHubFilter);
+  host.innerHTML=visible.length?visible.slice(0,30).map(item=>{const kind=mediaHubKind(item),url=safeUrl(item.resolved_url||item.url),date=kstDate(item.published_at||item.media_published_at||item.first_seen_at),summary=String(item.summary_text||'').trim();return '<a class="media-hub-item" href="'+url+'" target="_blank" rel="noopener noreferrer"><span class="media-hub-kind">'+escapeHtml(mediaHubLabel(kind))+'</span><span class="media-hub-copy"><strong>'+escapeHtml(item.title||'관련 공개자료')+'</strong>'+(summary?'<span>'+escapeHtml(summary)+'</span>':'')+'<small>'+escapeHtml([item.publisher,date,item.review_state==='verified'?'검증 완료':'원문 확인'].filter(Boolean).join(' · '))+'</small></span><span class="media-hub-open" aria-hidden="true">↗</span></a>'}).join(''):'<p class="muted media-hub-empty">현재 분류에 표시할 공개자료가 없습니다.</p>';
+  if(updated){const at=latestMonitorData?.lastRun?.completed_at;updated.textContent=at?'최근 갱신 '+new Date(at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'1시간마다 자동 갱신'}
+  if(filters.dataset.bound!=='1'){filters.dataset.bound='1';filters.onclick=event=>{const button=event.target.closest('[data-media-filter]');if(!button)return;activeMediaHubFilter=button.dataset.mediaFilter;renderMediaHub()}}
+}
 
 const PUBLIC_ADMIN_PLATFORM_TOKEN_KEY='ekodi-auth-token';
 let publicAdminMe=null;
