@@ -17,7 +17,7 @@ Windows에 Node 24와 Chrome이 설치된 경우 해당 PC의 로컬 터미널�
 ```powershell
 git clone https://github.com/topmaster-joseph/ekodi-platform.git
 cd ekodi-platform
-npm install --no-save --package-lock=false playwright@1.55.0
+npm install --no-save --package-lock=false playwright@1.64.0
 node scripts/ekodi-owned-youtube-browser.mjs public-check
 node scripts/ekodi-owned-youtube-browser.mjs login-setup --approve-interactive-setup
 node scripts/ekodi-owned-youtube-browser.mjs session-verify
