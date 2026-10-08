@@ -5,6 +5,8 @@
   const API = 'https://ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const state = { loading:false, relayConfigured:false, devices:[], agents:[], message:'' };
+  const refreshMs = 30000;
+  let refreshTimer = null;
 
   function token(){ try{return sessionStorage.getItem(TOKEN_KEY)||''}catch{return''} }
   function headers(json=false){ const h=token()?{authorization:`Bearer ${token()}`}:{ }; if(json)h['content-type']='application/json'; return h; }
@@ -31,6 +33,7 @@
     let card=root.querySelector('[data-ekodi-remote-power]');
     if(!card){ card=document.createElement('section'); card.dataset.ekodiRemotePower='true'; card.className='remote-power-card'; root.appendChild(card); }
     const relay = state.relayConfigured ? '전원 릴레이 연결 설정됨' : '전원 릴레이 설정 필요';
+    card.setAttribute('aria-busy', String(state.loading));
     card.innerHTML=`
       <div class="remote-power-head"><div><small>REMOTE WORK NODES</small><h3>원격 PC 전원관리</h3><p>${esc(relay)} · MAC/IP/비밀키는 관리자 브라우저에 노출하지 않습니다.</p></div><button type="button" data-rp-refresh ${state.loading?'disabled':''}>새로고침</button></div>
       ${state.message?`<div class="remote-power-message">${esc(state.message)}</div>`:''}
@@ -38,7 +41,7 @@
         <article class="remote-power-device">
           <div><strong>${esc(device.label)}</strong><span class="remote-power-status" data-status="${esc(device.status||'unknown')}">${esc(statusLabel(device.status,'remote'))}</span></div>
           <small>${esc(device.id)}</small>
-          <button type="button" data-rp-wake="${esc(device.id)}" ${state.loading||!state.relayConfigured?'disabled':''}>깨우기</button>
+          <button type="button" data-rp-wake="${esc(device.id)}" ${state.loading||!state.relayConfigured||device.status==='online'?'disabled':''}>${device.status==='online'?'온라인':'깨우기'}</button>
         </article>`).join(''):'<div class="remote-power-empty">등록된 원격 PC 정보를 불러오는 중입니다.</div>'}</div>
       <div class="remote-power-subhead"><strong>Remote Desktop 자가복구 · EKODI Device Agent</strong><small>아래 상태는 PC 전원/RDP 접속 상태가 아니라 Device Agent heartbeat 기준입니다.</small></div>
       <div class="remote-power-grid">${state.agents.length?state.agents.map(device=>`
@@ -64,7 +67,7 @@
       const agentPayload=await agentResponse.json().catch(()=>({}));
       state.agents=agentResponse.ok&&Array.isArray(agentPayload.devices)?agentPayload.devices.filter(device=>device.deviceType==='pc'||device.platform==='windows'):[];
       if(!state.relayConfigured)state.message='LAN 전원 릴레이를 연결하면 오프라인 PC를 관리자에서 기동할 수 있습니다.';
-    }catch(error){ state.message=`원격 전원 상태를 불러오지 못했습니다: ${error.message}`; }
+    }catch(error){ state.devices=[]; state.agents=[]; state.relayConfigured=false; state.message=`원격 전원 상태를 불러오지 못했습니다: ${error.message}`; }
     finally{ state.loading=false; render(); }
   }
 
@@ -95,6 +98,11 @@
     finally{ state.loading=false; render(); }
   }
 
+  function startAutoRefresh(){
+    if(refreshTimer) return;
+    refreshTimer=setInterval(()=>{ if(!document.hidden && host() && !state.loading) load(); },refreshMs);
+  }
   window.EKODIRemotePowerAdmin={load,wake,recovery};
+  startAutoRefresh();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{if(host())load()},{once:true}); else if(host())load();
 })();
