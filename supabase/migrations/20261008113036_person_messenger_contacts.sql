@@ -24,7 +24,7 @@ create table if not exists private.person_messenger_contacts (
   constraint person_messenger_contacts_url_length
     check (length(url) <= 1000),
   constraint person_messenger_contacts_url_scheme
-    check (url = '' or url ~ '^https?://'),
+    check (url = '' or url ~ '^https://'),
   constraint person_messenger_contacts_person_key_unique
     unique(person_id, contact_key),
   constraint person_messenger_contacts_person_id_id_unique
@@ -186,7 +186,7 @@ begin
        or length(coalesce(item->>'label',''))>80
        or length(coalesce(item->>'value',''))>200
        or length(coalesce(item->>'url',''))>1000
-       or (coalesce(item->>'url','')<>'' and coalesce(item->>'url','') !~ '^https?://')
+       or (coalesce(item->>'url','')<>'' and coalesce(item->>'url','') !~ '^https://')
        or (trim(coalesce(item->>'value',''))='' and trim(coalesce(item->>'url',''))='')
   ) then
     raise exception 'invalid_messenger_item';
