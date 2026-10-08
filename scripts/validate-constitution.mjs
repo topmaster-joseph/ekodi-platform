@@ -14,6 +14,15 @@ const boundaries = json('platform-boundaries.json');
 const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
+// BOARD-INDEPENDENT-001: inherited contract guard (existing and future boards).
+const boardPolicy = workspace.boardPolicy;
+if (!boardPolicy || boardPolicy.policyId !== 'BOARD-INDEPENDENT-001' || boardPolicy.inherited !== true) fail('BOARD-INDEPENDENT-001 must be inherited');
+if (boardPolicy?.singleCanonicalWriteStore !== true || boardPolicy?.legacyWriteForbidden !== true) fail('board writes must have one canonical store and forbid legacy writes');
+if (boardPolicy?.perBoardCategoryContract !== true || boardPolicy?.globalCategoryListForced !== false) fail('board categories must remain board-specific');
+if (boardPolicy?.preserveExistingRecords !== true || boardPolicy?.serverSideAuthorizationRequired !== true) fail('board record preservation and server-side authorization are mandatory');
+if (boardPolicy?.canonicalTrailingSlashEquivalent !== true || boardPolicy?.returnToOriginalBoardAfterLogin !== true) fail('board path and auth-return continuity required');
+if (boardPolicy?.noCompletionWithoutEvidence !== true || !Array.isArray(boardPolicy?.regressionChecks) || boardPolicy.regressionChecks.length < 8) fail('board regression evidence required');
+
 const surfaceVerification = json('config/surface-system-verification-policy.json');
 const executionFabric = json('config/autonomous-execution-fabric-policy.json');
 const remoteComputer = json('config/remote-computer-execution-policy.json');
