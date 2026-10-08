@@ -266,7 +266,7 @@ async function manifestDrivenApp(request,env){
   const rewritten=source.replace(block,myServicePreamble());
   const headers=new Headers(asset.headers);
   headers.set('content-type','application/javascript; charset=utf-8');
-  headers.set('cache-control','no-store');
+  headers.set('cache-control',new URL(request.url).searchParams.has('v')?'public, max-age=31536000, immutable':'no-store');
   headers.set('x-ekodi-my-services','manifest-v1');
   return withHeaders(env,new Response(rewritten,{status:asset.status,statusText:asset.statusText,headers}));
 }
