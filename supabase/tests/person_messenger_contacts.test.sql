@@ -37,8 +37,8 @@ select ok(
   'anonymous callers can access the bounded public projection'
 );
 
-insert into public.people(id,display_name,status)
-values('11111111-1111-4111-8111-111111111111'::uuid,'Messenger Proof','active');
+insert into public.people(id,ekodi_id,display_name,status)
+values('11111111-1111-4111-8111-111111111111'::uuid,'EKD-11111111111141118111111111111111','Messenger Proof','active');
 
 insert into public.person_public_profiles(
   person_id,handle,display_name,headline,bio,links,visibility
