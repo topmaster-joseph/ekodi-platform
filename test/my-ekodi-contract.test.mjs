@@ -318,3 +318,21 @@ test('Convergent merge dispatches My EKODI production release with the orchestra
   assert.match(workflow,/EKODI_RELEASE_BRANCH_REF:/);
   assert.match(workflow,/EKODI_RELEASE_TASK_ID:/);
 });
+
+
+test('My EKODI defers secondary feature bundles until after the critical startup path',async()=>{
+  const [html,loader]=await Promise.all([read('my/index.html'),read('my/secondary-feature-loader.js')]);
+  assert.match(html,/secondary-feature-loader\.js\?v=20261008-startup-defer-v1/);
+  for(const asset of [
+    'public-profile.js','digital-card-admin.js','character-identity.js','approval-brief.js',
+    'personal-finance.js','life-communication.js','church-marketing-ai.js','channel-automation.js'
+  ]){
+    assert.doesNotMatch(html,new RegExp('<script[^>]+src="\\/my\\/'+asset.replaceAll('.','\\.')+''));
+    assert.match(loader,new RegExp('\\/my\\/'+asset.replaceAll('.','\\.')));
+  }
+  assert.match(loader,/requestIdleCallback/);
+  assert.match(loader,/window\.addEventListener\('load'/);
+  assert.match(loader,/data-finance-open/);
+  assert.match(loader,/a\[href="#account"\]/);
+  assert.match(loader,/Promise\.allSettled/);
+});
