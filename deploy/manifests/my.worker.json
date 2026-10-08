@@ -82,6 +82,7 @@
           "digitalCardPath",
           "digitalCardQrCenter",
           "identityShareContexts",
+          "messengerContactSharing",
           "contactExchange"
         ]
       },
