@@ -34,3 +34,16 @@ test('manual release inputs require both task fields and Growth gate receives th
   assert.ok(control.includes('ekodi-control-api-release-'));
   assert.ok(growth.includes('paidActivation:false'));
 });
+
+test('Control public preview smoke enforces the effective no-store edge policy on candidate and stable traffic', () => {
+  const manifest = JSON.parse(readFileSync(new URL('../deploy/manifests/control-api.worker.json', import.meta.url), 'utf8'));
+  const preview = manifest.worker.requests.find(item => item.url.includes('/api/public/preview/map?scope=ekodi&mode=platform'));
+  assert.ok(preview, 'the canonical public preview must remain in the guarded smoke set');
+  assert.ok(preview.headerExpect.includes('cache-control: no-store'));
+  assert.ok(preview.candidateHeaderExpect.includes('cache-control: no-store'));
+  assert.ok(preview.headerExpect.includes('x-content-type-options: nosniff'));
+  assert.ok(preview.candidateHeaderExpect.includes('x-content-type-options: nosniff'));
+  assert.ok(preview.expect.includes('"secrets":false'));
+  assert.ok(preview.candidateExpect.includes('"personalData":false'));
+  assert.ok(coordinator.includes("'deploy/manifests/control-api.worker.json'"));
+});

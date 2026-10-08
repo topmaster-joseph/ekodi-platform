@@ -11,6 +11,7 @@ const checks = [
   ['travel/stay/index.html', ['EKODI 숙소', '숙소 추천', '지역·일정·인원·예산 등 숙소 조건', 'data-affiliate-mode="stay"', 'affiliate-hub.js']],
   ['coupang/index.html', ['쿠팡 파트너스', '상품 추천', '사람·상황·예산·용도 등 상품 조건', 'data-affiliate-mode="shopping"', '쿠팡 파트너스 활동의 일환', 'affiliate-hub.js']],
   ['assets/affiliate-hub.js', ['affiliate/public/products', 'noopener sponsored', '예약 가능 여부 확인']],
+  ['assets/affiliate-share.js', ['shareUrlForProduct', 'prioritizeSharedProduct', 'https://ekodi.kr', 'product']],
   ['assets/context-curator.css', ['context-hero', 'context-result-grid', 'discover-grid', 'buyer-mobile', 'context-offer-dialog', 'context-detail-offer']],
   ['assets/styles.css', ['EKODI typography invariant', 'word-break:keep-all', 'overflow-wrap:break-word', 'hyphens:none', '.ekodi-break-anywhere']],
   ['seller/index.html', ['OPEN SELLER STUDIO', 'PERSONAL PRODUCT STUDIO', 'sellerDraftForm', 'Google로 무료 시작', '7%', '8%', '9%', 'STOREFRONT', 'ANALYTICS', '/assets/seller-readiness.js', '/assets/seller-analytics.js', '/assets/seller-storefronts.js', '/assets/analytics.css']],
