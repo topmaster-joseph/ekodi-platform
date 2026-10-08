@@ -4,6 +4,7 @@ import { routeIntent } from './capability-intent-runtime.js';
 import capabilityRegistry from './config/capability-registry.json' with { type: 'json' };
 import workspacePacks from './config/workspace-packs.json' with { type: 'json' };
 import { routePersonDigitalCard } from './my/person-digital-card.js';
+import { investMyRoute } from './invest-my-workspace.js';
 
 const WORKSPACE_KEY_RE=/^[a-z]+:[a-zA-Z0-9:_-]+$/;
 const SERVICE_ID_RE=/^[a-z][a-z0-9-]*$/;
@@ -298,6 +299,8 @@ async function routedMyHome(request,env,route=null){
 export default{
   async fetch(request,env){
     const url=new URL(request.url);
+    const investMyResponse=await investMyRoute(request,env);
+    if(investMyResponse)return withHeaders(env,investMyResponse);
     const digitalCardResponse=await routePersonDigitalCard(request,env);
     if(digitalCardResponse)return digitalCardResponse;
     const publicHandle=parsePublicPersonPath(url.pathname);
