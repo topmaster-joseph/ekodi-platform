@@ -1316,5 +1316,39 @@
       "production-verification"
     ],
     "exceptionPolicy": "constitutional-amendment-required"
+  },
+  "independentBoardPolicy": {
+    "id": "BOARD-INDEPENDENT-001",
+    "status": "enforced",
+    "mode": "mandatory-inherited-rule",
+    "scope": "all-current-and-future-site-boards",
+    "engineOwner": "independent-board-engine",
+    "platformRole": [
+      "identity-provider",
+      "authorization-handoff",
+      "route-integration"
+    ],
+    "singleCanonicalWriteStore": true,
+    "legacyWriteForbidden": true,
+    "legacyReadCompatibilityAllowed": true,
+    "preserveExistingRecords": true,
+    "perBoardCategoryContract": true,
+    "globalCategoryListForced": false,
+    "canonicalTrailingSlashEquivalent": true,
+    "returnToOriginalBoardAfterLogin": true,
+    "serverSideAuthorizationRequired": true,
+    "requireRealProductionEvidenceBeforeCompletion": true,
+    "inheritedWithoutServiceOptIn": true,
+    "localOverrideForbidden": true,
+    "independentSiteVisualContinuityRequired": true,
+    "enforcement": [
+      "config/service-workspace-policy.json",
+      "workspace-route-policy.js",
+      "scripts/validate-constitution.mjs",
+      "scripts/validate-independent-board-policy.mjs",
+      "test/independent-board-policy.test.mjs",
+      ".github/workflows/constitution-check.yml"
+    ],
+    "exceptionPolicy": "constitutional-amendment-required"
   }
 }
