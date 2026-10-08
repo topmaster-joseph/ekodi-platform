@@ -10,6 +10,15 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# Windows PowerShell 5.1 may not load the DPAPI assembly automatically.
+try {
+  Add-Type -AssemblyName System.Security -ErrorAction Stop
+  $null = [System.Security.Cryptography.ProtectedData]
+  $null = [System.Security.Cryptography.DataProtectionScope]
+} catch {
+  throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
+}
+
 $AgentVersion = '2.5.1'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
