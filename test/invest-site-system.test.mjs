@@ -7,7 +7,7 @@ import { INVEST_AUTOMATION_LOOP } from '../invest-automation-runtime.js';
 test('Invest exposes one canonical hub with specialized asset subpaths',()=>{
   const paths=INVEST_ASSET_SITES.map(site=>site.path);
   assert.deepEqual(paths,[
-    '/invest','/invest/personal','/invest/opportunities','/invest/projects','/invest/diligence',
+    '/invest','/my/invest','/invest/opportunities','/invest/projects','/invest/diligence',
     '/invest/matching','/invest/aftercare','/invest/stock','/invest/bond','/invest/real-estate',
     '/invest/fund','/invest/alternative','/invest/portfolio','/invest/automation'
   ]);
@@ -15,19 +15,13 @@ test('Invest exposes one canonical hub with specialized asset subpaths',()=>{
   assert.equal(investSiteForPath('/invest/real-estate/')?.id,'real-estate');
 });
 
-test('personal investment control is private-by-default and uses shared Invest APIs',async()=>{
-  const page=routeInvestSite(new Request('https://ekodi.kr/invest/personal'));
-  assert.equal(page.status,200);
-  assert.match(page.headers.get('cache-control')||'',/no-store/);
-  assert.match(page.headers.get('x-robots-tag')||'',/noindex/);
-  const html=await page.text();
-  assert.match(html,/PERSONAL INVESTMENT OS/);
-  assert.match(html,/자동운용 즉시 정지/);
-  const script=routeInvestSite(new Request('https://ekodi.kr/invest/assets/personal.js'));
-  const js=await script.text();
-  assert.match(js,/\/workspace-api\/v1\/invest/);
-  assert.match(js,/\/automation\/halt/);
-  assert.match(js,/\/automation\/resume/);
+test('legacy personal investment path redirects to the canonical private My Invest',async()=>{
+  const response=routeInvestSite(new Request('https://ekodi.kr/invest/personal'));
+  assert.equal(response.status,308);
+  assert.equal(new URL(response.headers.get('location')).pathname,'/my/invest');
+  assert.equal(response.headers.get('cache-control'),'no-store');
+  const legacyScript=routeInvestSite(new Request('https://ekodi.kr/invest/assets/personal.js'));
+  assert.equal(legacyScript.status,410);
 });
 
 test('project investment lifecycle is evidence-first and connection-only',async()=>{
