@@ -831,6 +831,11 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.match(html,/<a class="brand" href="\.\/">/);
   assert.match(html,/<a href="admin\/">관리<\/a>/);
   assert.match(html,/<div class="site-footer-copy">\s*<strong>서남권 국립의대 소통센터<\/strong>\s*<span>자료의 성격과 출처를 구분해 보존합니다.<\/span>\s*<\/div>/);
+  assert.ok(!html.includes('id="lastUpdated"'));
+  assert.match(html,/id="homeLatestUpdatedAt"/);
+  assert.ok(app.includes("'마지막 갱신 '+new Date(runAt).toLocaleString"));
+  assert.ok(app.includes("+' · EKODI 자동갱신'"));
+  assert.ok(!app.includes("latest.textContent='마지막 갱신 '"));
   assert.match(css,/\.site-footer-copy\{display:grid;gap:2px/);
   assert.match(css,/footer>a\{flex:0 0 auto;margin-left:auto/);
   for(const hash of ['timeline','channels','organization'])assert.match(adminHtml,new RegExp('href="\.\.\/#'+hash+'"'));
