@@ -884,6 +884,8 @@ test('seonammedi release convergence is build-owned and cache-safe',async()=>{
   assert.match(release,/data-ekodi-release-convergence/);
   assert.match(release,/window\.__SEONAMMEDI_ROUTES__/);
   assert.match(router,/function applySeonamMediCachePolicy\(/);
+  assert.match(router,/privateHtml=.*admin\|minutes\|auth\|board/);
+  assert.match(router,/privateHtml\?'no-store':'public, max-age=0'/);
   assert.match(router,/max-age=31536000, immutable/);
   assert.match(router,/no-cache, must-revalidate/);
   assert.match(app,/window\.__SEONAMMEDI_ROUTES__\?\.admin/);
