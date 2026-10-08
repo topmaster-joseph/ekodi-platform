@@ -58,6 +58,7 @@ const controlApiTouched=changedFiles.some(file=>[
   'customer-entry-worker.js',
   'mission-control-entry-worker.js',
   'wrangler.api.toml',
+  'deploy/manifests/control-api.worker.json',
   '.github/workflows/deploy-control-api.yml',
 ].includes(file));
 const marketingGrowthTouched=changedFiles.some(file=>[

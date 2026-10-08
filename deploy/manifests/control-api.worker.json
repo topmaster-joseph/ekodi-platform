@@ -24,7 +24,7 @@
         ],
         "headerExpect": [
           "x-content-type-options: nosniff",
-          "cache-control: public"
+          "cache-control: no-store"
         ],
         "candidateStatuses": [
           200
@@ -37,7 +37,7 @@
         ],
         "candidateHeaderExpect": [
           "x-content-type-options: nosniff",
-          "cache-control: public"
+          "cache-control: no-store"
         ],
         "candidateForbid": [],
         "rollbackVerify": false
