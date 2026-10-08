@@ -55,6 +55,7 @@ import { localRegionOperationsAdminScript } from './local-region-operations-admi
 import { regionalCommerceProgramFromLocalRoute, regionalCommerceProgramFromPath } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
+import { serveWithSafeEdgeCache } from './edge-traffic-cache.js';
 import { handleSeonamMediCivicApi, consumeSeonamMediVoiceMessage } from './seonammedi-civic-control.js';
 import { handleSeonamMediAdminApi } from './seonammedi-admin-control.js';
 import { handleSeonamMediMonitorApi } from './seonammedi-monitor.js';
@@ -573,7 +574,7 @@ export default {
     const publicationGuard=await sitePublicationGuard(request,env);
     if(publicationGuard)return applyPlatformSecurityHeaders(publicationGuard,request);
     const adminPublicationSite=await resolvePublicationSiteForRequest(request,env,{admin:true});
-    let response=await routePlatform(request,env,ctx);
+    let response=await serveWithSafeEdgeCache(request,ctx,()=>routePlatform(request,env,ctx));
     if(adminPublicationSite)response=injectSitePublicationAdmin(response,adminPublicationSite);
     return applyPlatformSecurityHeaders(response,request);
   },

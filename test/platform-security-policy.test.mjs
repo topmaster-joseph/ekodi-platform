@@ -52,7 +52,7 @@ test('shared edge adds security headers without disabling live capture',()=>{
   assert.match(response.headers.get('strict-transport-security')||'',/includeSubDomains/);
   assert.equal(response.headers.get('x-frame-options'),'DENY');
   assert.match(response.headers.get('permissions-policy')||'',/camera=\(self\)/);
-  assert.equal(response.headers.get('x-ekodi-security-policy'),'platform-edge-v2');
+  assert.equal(response.headers.get('x-ekodi-security-policy'),'platform-edge-v3');
 });
 
 test('Mall Free Ops admin embed keeps the narrow first-party framing exception',()=>{
@@ -93,7 +93,7 @@ test('safe public preview API keeps explicit public cache while retaining API se
   assert.match(response.headers.get('cache-control')||'',/^public, max-age=15/);
   assert.equal(response.headers.get('x-ekodi-cache-policy'),'control-public-preview-v1');
   assert.equal(response.headers.get('x-content-type-options'),'nosniff');
-  assert.equal(response.headers.get('x-ekodi-security-policy'),'platform-edge-v2');
+  assert.equal(response.headers.get('x-ekodi-security-policy'),'platform-edge-v3');
   assert.equal(response.headers.get('x-ekodi-security-surface'),'api');
   assert.match(response.headers.get('x-robots-tag')||'',/noindex/);
 });
