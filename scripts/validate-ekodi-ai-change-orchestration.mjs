@@ -84,6 +84,16 @@ for (const key of ['externalChatAssistantMayIndependentlyReverify','externalChat
 }
 if (dailyOperationalReport.missingEkodiReportDisposition !== 'state-ekodi-confirmation-unavailable') fail('missing EKODI report evidence must remain explicitly unavailable, never inferred.');
 if (dailyOperationalReport.duplicateReportSuppression !== true) fail('duplicate daily operational reports must remain suppressed.');
+const siteDailyAccessReport = dailyOperationalReport.siteDailyAccessReport || {};
+if (siteDailyAccessReport.required !== true) fail('site daily access status must remain required in the official daily operational report.');
+if (siteDailyAccessReport.source !== 'ekodi-traffic-intelligence') fail('site daily access status must use EKODI Traffic Intelligence as its source.');
+for (const key of ['timeBasisMustBeExplicit','includeSiteRanking','includeTotal','includePreviousDayComparison','requestAndHumanSessionMetricsMustRemainDistinct','partialOrErrorStateMustBeReported','noEstimation']) {
+  if (siteDailyAccessReport[key] !== true) fail(`site daily access report rule must remain true: ${key}`);
+}
+for (const metric of ['humanSessions','requestTotal','searchBotRequests','ekodiInternalRequests','otherBotRequests','unclassifiedRequests']) {
+  if (!(siteDailyAccessReport.metrics || []).includes(metric)) fail(`site daily access report metric is required: ${metric}`);
+}
+if (siteDailyAccessReport.unavailableDataDisposition !== 'state-ekodi-confirmation-unavailable') fail('unavailable site traffic data must remain explicitly unavailable, never inferred.');
 const claimIntegrity = policy.claimIntegrity || {};
 if (claimIntegrity.policyId !== 'AI-CLAIM-INTEGRITY-001' || claimIntegrity.status !== 'enforced') fail('claim integrity policy binding must remain enforced.');
 for (const key of ['aiStatementNeverCreatesSystemState','agentOutputIsAssertionNotEvidence','memoryCannotProveCurrentOperationalState','currentStateRequiresFreshEvidence','claimScopeMustMatchEvidenceScope','finalResponseGuardRequired','materialOperationalClaimReceiptRequired','broadScopeRequiresIndependentVerifier','unknownMustNotBecomeSuccess']) {
