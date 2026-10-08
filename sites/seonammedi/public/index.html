@@ -21,7 +21,7 @@
 <header class="site-header">
   <a class="brand" href="./"><strong>서남권 국립의대 소통센터</strong><small>서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널</small></a>
   <nav aria-label="주요 메뉴">
-    <a href="#timeline" data-view-link="status">활동이력</a><a href="#channels" data-view-link="channels">소통채널</a><a href="board/voices">시민의견</a><a href="board/finance">회계</a><a href="board/notices">공지</a><a href="#organization" data-view-link="organization">조직</a>
+    <a href="#timeline" data-view-link="status">활동이력</a><a href="#channels" data-view-link="channels">소통채널</a><a href="board/voices">시민의견</a><a href="#finance" data-view-link="finance">회계</a><a href="board/notices">공지</a><a href="#organization" data-view-link="organization">조직</a>
   </nav>
 </header>
 <main>
@@ -59,6 +59,7 @@
 </section>
 
 <section id="timeline" class="section activity-list-only" data-view-section="status" data-status-pane="timeline" hidden>
+  <div class="section-head section-view-title"><div><p class="eyebrow">ACTIVITY HISTORY</p><h2>활동이력</h2></div></div>
   <div class="activity-toolbar"><div class="filters" id="timelineFilters" aria-label="활동이력 세부 분류"></div><button id="timelineManageToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="timelineManageForm">활동이력 바로 수정</button></div>
   <form id="timelineManageForm" class="panel module-compose inline-manage-form" hidden>
     <input type="hidden" name="id">
@@ -133,8 +134,10 @@
   </div>
 </section>
 
-<section id="finance" class="section module-section" data-view-section="finance" hidden>
-  <div class="module-shell">
+<section id="finance" class="section module-section finance-preparing-section" data-view-section="finance" hidden>
+  <div class="section-head section-view-title"><div><p class="eyebrow">TRANSPARENCY</p><h2>회계</h2></div></div>
+  <div class="finance-preparing-note" role="status"><strong>세부 메뉴 준비중</strong><p>회계 공개 화면을 정리하고 있습니다. 준비가 완료되면 이 메뉴에서 바로 확인할 수 있습니다.</p></div>
+  <div class="module-shell finance-detail-content">
     <aside class="module-intro"><p class="eyebrow">TRANSPARENCY</p><h2>회계</h2><p class="note">수입·지출 일자, 금액, 목적, 관련 행사와 증빙 여부를 공개합니다. 개인 후원자의 개인정보는 공개하지 않습니다.</p></aside>
     <div class="module-main">
       <div class="money-grid">
