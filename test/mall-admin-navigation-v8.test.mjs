@@ -23,7 +23,7 @@ test('Mall admin resolves URL aliases to the authorized tenant subject before se
   assert.match(source, /workspace==='ekodibiz'\?'ekodi-biz'/);
   assert.match(source, /subject_key',canonicalSubjectKey\(\)/);
   assert.match(source, /subject_key=\$\{encodeURIComponent\(canonicalSubjectKey\(\)\)\}/);
-  assert.match(source, /subject_type=workspace&subject_key='\+encodeURIComponent\(canonicalSubjectKey\(\)\)/);
+  assert.match(source, /subject_type=tenant&subject_key='\+encodeURIComponent\(canonicalSubjectKey\(\)\)/);
   assert.match(source, /if\(section==='sales'\)return location\.replace\(`\$\{adminBase\}\/analytics`\)/);
   assert.match(source, /if\(\['marketing','automation'\]\.includes\(section\)\)return location\.replace\(`\$\{adminBase\}\/channel-settings`\)/);
 });
