@@ -278,7 +278,43 @@
     "branchDeletion": false,
     "integrationBranches": [
       "development"
-    ]
+    ],
+    "preMergeReadinessRecovery": {
+      "policyId": "PREMERGE-READINESS-RECOVERY-001",
+      "status": "enforced",
+      "appliesPlatformWide": true,
+      "requiredChecksSource": "config/github-governance.json",
+      "requiredLoop": [
+        "discover-protected-branch-required-contexts",
+        "compare-head-and-merge-base-check-results",
+        "diagnose-missing-pending-failed-or-stale-checks",
+        "repair-trigger-or-branch-identity-without-bypass",
+        "refresh-branch-against-current-base-when-strict-up-to-date-required",
+        "rerun-or-retrigger-required-workflows",
+        "recheck-exact-head-sha-and-mergeability",
+        "continue-until-all-required-checks-green-and-merge-ready"
+      ],
+      "automaticRetryWithBackoff": true,
+      "automaticSafeAlternatives": true,
+      "neverWeakenBranchProtection": true,
+      "neverForgeStatuses": true,
+      "neverBypassHumanOrSecurityGate": true,
+      "mergeOnlyAfterRequiredChecks": true,
+      "postMergeRequired": [
+        "guarded-deployment",
+        "production-host-verification",
+        "mobile-viewport-verification",
+        "route-and-admin-regression"
+      ],
+      "completionRequiresProductionEvidence": true,
+      "terminalWaitOnlyFor": [
+        "external-required-check-running",
+        "human-authority-required",
+        "irreversible-or-security-risk",
+        "all-safe-alternatives-exhausted"
+      ],
+      "auditEachAttempt": true
+    }
   },
   "mutationBoundary": {
     "orchestrationGateRequiredBeforeMutation": true,
