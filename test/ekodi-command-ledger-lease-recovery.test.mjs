@@ -15,3 +15,13 @@ test('command ledger reclaims expired running leases before targeted and queue c
 test('expired lease recovery is advertised by the durable ledger contract', () => {
   assert.match(source, /expiredRunningLeaseRecovery: true/);
 });
+
+
+test('legacy core_only deployment handoffs are upgraded without weakening lease recovery', () => {
+  assert.match(source, /state = 'executor_ready'/);
+  assert.match(source, /WHERE state = 'core_only'[\s\S]*deploymentRequested[\s\S]*branchRef/);
+  assert.match(source, /legacy_core_only_handoff_recovered/);
+  assert.match(source, /legacyExecutorHandoffsRecovered/);
+  assert.match(source, /'executor_ready'/);
+  assert.match(source, /version: '2\.1\.0'/);
+});
