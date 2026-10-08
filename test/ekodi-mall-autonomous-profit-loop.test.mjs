@@ -30,6 +30,16 @@ test('stale feedback degrades before publishing is treated as healthy', () => {
   assert.equal(result.nextAction,'refresh:feedback');
 });
 
+test('stale conversion evidence is not presented as fresh learning', () => {
+  const result = classifyMallAutonomousProfitLoop({
+    stages: stages({ learn: { status: 'stale', fresh: false } }),
+    economics: { orders30d: 2, commission30dKrw: 9000 },
+    topAction: 'scale',
+  });
+  assert.equal(result.state, 'degraded');
+  assert.equal(result.nextAction, 'refresh:learning');
+});
+
 test('publisher gate or total publication failure blocks the loop', () => {
   const approval=classifyMallAutonomousProfitLoop({stages:stages({publish:{status:'approval_required',fresh:true,published:0,failed:0}})});
   assert.equal(approval.state,'blocked');
