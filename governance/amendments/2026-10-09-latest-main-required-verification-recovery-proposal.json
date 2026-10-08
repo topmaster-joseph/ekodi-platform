@@ -1,0 +1,45 @@
+{
+  "amendmentId": "LATEST-MAIN-REQUIRED-VERIFICATION-RECOVERY-20261009",
+  "constitutionVersion": "1.27.1",
+  "changeClass": "C2",
+  "proposedAt": "2026-10-09",
+  "taskId": "pending-ekodi-orchestrator-issuance",
+  "summary": "Recover missing latest-main required verification runs after Orchestrator-controlled GITHUB_TOKEN merges while retaining all authorization, release receipts, staging, rollback and production gates.",
+  "approvalBasis": "Platform owner requested automatic real-incident recovery and continuation. Protected workflow change still requires the standard constitution-approved PR label and authoritative EKODI Orchestrator-issued task and release receipt; these have not been issued for this source draft.",
+  "implementation": [
+    ".github/workflows/ci.yml workflow_dispatch of existing tests",
+    ".github/workflows/constitution-check.yml workflow_dispatch with unchanged constitutional checks and amendment gate",
+    ".github/workflows/device-control-windows.yml workflow_dispatch with unchanged contracts",
+    ".github/workflows/device-agent-production-verification.yml exact merged SHA Orchestrator release provenance recovery",
+    "scripts/converge-orchestrated-pr-merge.mjs guarded latest-main explicit dispatch",
+    "test/ekodimall-orchestrated-production-release.test.mjs regression guards"
+  ],
+  "mandatoryRules": [
+    "The six-workflow owner completion condition requires verified successes from the same latest main SHA.",
+    "A GITHUB_TOKEN-generated merge is never treated as evidence that GitHub push workflows ran.",
+    "Read-only required checks can be explicitly dispatched after a receipt-authorized merge.",
+    "Real device verification must bind to the exact merged PR source branch and authorized Orchestrator task; schedule runs fail closed without valid provenance.",
+    "The existing production deploy workflows remain governed by change scope, quotas, release receipts, guarded staging and verified rollback.",
+    "An earlier-SHA or skipped workflow is not counted as verified success.",
+    "Formal C2 confirmation and Orchestrator task issuance remain required before any live merge."
+  ],
+  "validation": [
+    "scripts/validate-constitution-change.mjs",
+    "scripts/validate-ekodi-ai-change-orchestration.mjs",
+    "test/ekodimall-orchestrated-production-release.test.mjs",
+    "EKODI Constitution Check",
+    "CI",
+    "Device Control Windows CI",
+    "Device Agent Production Verification"
+  ],
+  "rollback": "Revert the orchestrated post-merge verification dispatch and manual validation inputs through an authorized PR; retain previous valid release receipts and production rollback boundaries.",
+  "status": "proposed",
+  "approvedBy": null,
+  "approvalEvidence": {
+    "explicitOwnerAutomationRequest": true,
+    "ownerRequestDate": "2026-10-09",
+    "requiredPullRequestLabel": "constitution-approved",
+    "approvalLabel": null,
+    "orchestratorTaskIssued": false
+  }
+}
