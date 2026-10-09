@@ -148,6 +148,10 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
      .eq('interest_id',interestId).order('created_at',{ascending:true}).limit(100));
    return reply(req,{messages});
   }
+  // The sender of every new message (including replies) must have a valid
+  // bank-confirmed community subscription; receiving/reading remains free.
+  // Do not use profile flags or client claims as billing evidence.
+  if(!await subscribed(admin,userId))return reply(req,{error:'community_subscription_required'},402);
   const v=await body(req);
   if(typeof v?.text!=='string'||!v.text.trim()||v.text.length>1000)return reply(req,{error:'invalid_message'},400);
   const {error}=await admin.from('singles_messages').insert({interest_id:interestId,sender_id:userId,body:v.text.trim()});
