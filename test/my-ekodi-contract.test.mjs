@@ -1,4 +1,4 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
@@ -9,8 +9,8 @@ test('My EKODI is a unified private-first USER UI hub, not a second source of tr
   assert.match(html,/EKODI USER AI/);
   assert.match(html,/MY PLATFORMS/);
   assert.match(html,/MY SPACES/);
-  assert.match(html,/내 선택이 우선/);
-  assert.match(html,/공간별 데이터/);
+  assert.match(html,/???좏깮???곗꽑/);
+  assert.match(html,/怨듦컙蹂??곗씠??);
   assert.match(app,/my_dashboard_access_context/);
   assert.match(app,/ACCESS_SNAPSHOT_TTL_MS=5\*60\*1000/);
   assert.match(app,/safe defaults without per-service fan-out/);
@@ -68,7 +68,7 @@ test('My keeps the active workspace when opening Social or Energy and when retur
   assert.match(app,/\(!connected\(id\)&&!open\)/);
   assert.match(app,/current\.services\?\.includes\(id\)\|\|open/);
   assert.match(app,/workspace\.services\?\.includes\(contextual\.id\)\|\|OPEN_SSO_SITES\.has\(contextual\.id\)/);
-  assert.match(app,/open\?'현재 Workspace를 유지한 채 바로 열 수 있는 공용 서비스입니다.'/);
+  assert.match(app,/open\?'?꾩옱 Workspace瑜??좎???梨?諛붾줈 ?????덈뒗 怨듭슜 ?쒕퉬?ㅼ엯?덈떎.'/);
 });
 
 test('Logged-out My EKODI reports zero connected platforms and does not count open SSO services as connected',async()=>{
@@ -169,7 +169,7 @@ test('Creator portfolio stays person-scoped and private by default',async()=>{
 test('Personal users can enter personal-brand Marketing without a tenant or store workspace',async()=>{
   const [html,worker]=await Promise.all([read('my/index.html'),read('my-worker.js')]);
   assert.match(html,/PERSONAL BRAND MARKETING/);
-  assert.match(html,/나도 하나의 브랜드/);
+  assert.match(html,/?섎룄 ?섎굹??釉뚮옖??);
   assert.match(html,/mode%3Dpersonal-brand/);
   assert.match(worker,/personalBrandMarketing:true/);
   assert.match(worker,/pathname==='\/personal-brand'/);
@@ -213,12 +213,12 @@ test('My EKODI approval hub keeps unified visibility and person-scoped decision 
   ]);
   assert.match(home,/secondary-feature-loader\.js/);
   assert.match(loader,/approval-brief\.js/);
-  assert.match(approvalHtml,/MY APPROVAL · DECISION INBOX/);
+  assert.match(approvalHtml,/MY APPROVAL 쨌 DECISION INBOX/);
   assert.match(approvalHtml,/data-ekodi-ui="USER"/);
   assert.match(approvalApp,/my_approval_person_id/);
   assert.match(approvalApp,/decide_approval/);
   assert.match(approvalApp,/cancel_approval/);
-  assert.match(approvalApp,/AI 참고 요약 · 결재 판단 아님/);
+  assert.match(approvalApp,/AI 李멸퀬 ?붿빟 쨌 寃곗옱 ?먮떒 ?꾨떂/);
   assert.match(worker,/approvalHub:true/);
   assert.match(worker,/pathname==='\/approvals'/);
   assert.match(migration,/requester_person_id = \(select private\.current_person_id\(\)\)/);
@@ -274,7 +274,7 @@ test('My EKODI keeps the guest entry sparse and turns the signed-in root into a 
   assert.match(css,/body\[data-auth-state="guest"\] main>:not\(\.comfort-hero\)/);
   assert.match(css,/\.member-focus-grid/);
   assert.match(css,/body\[data-auth-state="member"\]\[data-home-mode="focus"\]/);
-  assert.match(userAi,/내 에코디,<br>필요한 것만\./);
+  assert.match(userAi,/???먯퐫??<br>?꾩슂??寃껊쭔\./);
 });
 
 
