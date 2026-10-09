@@ -59,7 +59,7 @@ function Test-IsAdministrator {
 
 function Enter-AgentInstallLock {
   # Serialize overlapping protocol bootstrap and enrollment without changing system security policy.
-  $mutex = [Threading.Mutex]::new($false, 'Global\\EKODI_Device_Agent_Install_V1')
+  $mutex = [Threading.Mutex]::new($false, 'Global\EKODI_Device_Agent_Install_V1')
   $acquired = $false
   try {
     try { $acquired = $mutex.WaitOne(0, $false) }
