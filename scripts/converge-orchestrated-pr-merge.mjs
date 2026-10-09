@@ -92,6 +92,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='canonical-surface-router.js'||
   file==='device-control-admin.js'||
   file==='device-control-admin.css'||
+  // Keep all Device Control/Remote Power/Wake static assets in a single orchestrated deploy boundary.
+  ['remote-power-admin.js','remote-power-admin.css','device-wake-admin.js'].includes(file)||
   file==='ekodi-device-bootstrap.cmd'||
   file==='site-worker.js'||
   file==='scripts/build.mjs'||
