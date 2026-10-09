@@ -5,7 +5,8 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {workspaceAdminCanAccess} from '../workspace-admin-page.js';
-import {churchPastorCanAccess} from '../church-pastor-admin-page.js';
+import {churchPastorCanAccess,churchPastorAdminScript} from '../church-pastor-admin-page.js';
+import {workspaceAdminCss} from '../workspace-admin-page.js';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const mission=fs.readFileSync(path.join(root,'workspace-admin-page.js'),'utf8');
@@ -56,4 +57,16 @@ test('both administration scripts pass syntax check',()=>{
     const result=spawnSync(process.execPath,['--check',path.join(root,file)],{encoding:'utf8'});
     assert.equal(result.status,0,file+': '+result.stderr);
   }
+});
+
+test('church client provides esbuild helper before serializing the pastor runtime',async()=>{
+  const script=await (await churchPastorAdminScript()).text();
+  assert.match(script,/const __name=\(target,value\)=>Object\.defineProperty/);
+  assert.ok(script.indexOf('const __name=')<script.indexOf('const section='),'helper must be declared before runtime initializes');
+});
+test('tenant admin sidebar uses readable contrast and compact rows when common shell is active',async()=>{
+  const css=await (await workspaceAdminCss()).text();
+  assert.match(css,/\.ekodi-admin-shell-sidebar\.sidebar \[data-ekodi-admin-nav\] :is\(a,button\)\{color:#273244!important/);
+  assert.match(css,/\.ekodi-admin-shell-sidebar\.sidebar #adminNav\{align-content:start!important/);
+  assert.match(css,/\.admin-nav-accordion\{align-content:start!important/);
 });

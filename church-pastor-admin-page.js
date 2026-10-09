@@ -284,7 +284,7 @@ function pastorClient(POLICY){
 
 export function churchPastorAdminScript(){
   const payload=tenantAdminPolicySnapshot();
-  return new Response(`(${pastorClient.toString()})(${JSON.stringify(payload)});`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+  return new Response(`const __name=(target,value)=>Object.defineProperty(target,'name',{value,configurable:true});\n(${pastorClient.toString()})(${JSON.stringify(payload)});`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 }
 
 export function churchPastorAdminPage(){
