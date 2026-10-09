@@ -23,11 +23,7 @@ test('release evidence is independently checked without repeating staging load',
   assert.ok(section.length > 50);
   assert.match(section, /actions\/download-artifact@v7/);
   assert.match(section, /name: reliability-release-\$\{\{ github\.run_id \}\}/);
-  assert.match(section, /for profile in baseline spike; do/);
-  assert.match(section, /report\.ok === true && report\.passed === true/);
-  assert.match(section, /report\.targetClass === "staging"/);
-  assert.match(section, /Number\.isFinite\(report\.metrics\?\.total\) && report\.metrics\.total > 0/);
-  assert.match(section, /Array\.isArray\(report\.violations\) && report\.violations\.length === 0/);
+  assert.match(section, /run: node scripts\/verify-reliability-release-evidence\.mjs --directory=reliability-proof/);
   assert.match(section, /- name: Run explicitly selected staging profile\r?\n\s+if: inputs\.suite != 'release'/);
   assert.doesNotMatch(section, /--profile=baseline|--profile=spike/);
 });
@@ -35,7 +31,7 @@ test('release evidence is independently checked without repeating staging load',
 test('evidence failure remains fail-closed; release artifacts remain same-run and bounded', () => {
   assert.match(reliability, /name: reliability-release-\$\{\{ github\.run_id \}\}/);
   assert.match(reliability, /if-no-files-found: ignore/);
-  assert.match(reliability, /test -s "\$file"/);
-  assert.match(reliability, /process\.exit\(1\)/);
+  assert.match(reliability, /scripts\/verify-reliability-release-evidence\.mjs --directory=reliability-proof/);
+  assert.match(reliability, /if: inputs\.suite == 'release'/);
   assert.match(reliability, /retention-days: 14/);
 });

@@ -57,7 +57,8 @@ jobs:
           node --check scripts/reliability-validation-lib.mjs
           node --check scripts/run-reliability-validation.mjs
           node scripts/run-reliability-validation.mjs --validate-only
-          node --test test/reliability-validation.test.mjs
+          node --check scripts/verify-reliability-release-evidence.mjs
+          node --test test/reliability-validation.test.mjs test/reliability-release-proof-contract.test.mjs test/verify-reliability-release-evidence.test.mjs
 
   staging-release:
     if: inputs.suite == 'release'
@@ -109,27 +110,7 @@ jobs:
           path: reliability-proof
       - name: Independently verify guarded release reliability evidence
         if: inputs.suite == 'release'
-        shell: bash
-        run: |
-          set -euo pipefail
-          for profile in baseline spike; do
-            file="reliability-proof/reliability-${profile}.json"
-            test -s "$file"
-            node -e '
-              const fs = require("node:fs");
-              const report = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-              const profile = process.argv[2];
-              const valid = report.ok === true && report.passed === true &&
-                report.profile === profile && report.targetClass === "staging" &&
-                report.targetHost === "ekodi-shared-site-staging.ekodi-development.workers.dev" &&
-                Number.isFinite(report.metrics?.total) && report.metrics.total > 0 &&
-                Number.isFinite(report.metrics?.p95Ms) &&
-                Number.isFinite(report.metrics?.errorRate) &&
-                Array.isArray(report.violations) && report.violations.length === 0;
-              if (!valid) { console.error("Staging release evidence invalid: " + profile); process.exit(1); }
-              console.log("Independently verified staging release evidence: " + profile);
-            ' "$file" "$profile"
-          done
+        run: node scripts/verify-reliability-release-evidence.mjs --directory=reliability-proof
       - name: Run explicitly selected staging profile
         if: inputs.suite != 'release'
         env:
