@@ -39,6 +39,35 @@ test('canonical surface roots normalize with trailing slashes',async()=>{
     assert.equal(response.status,308);assert.equal(new URL(response.headers.get('location')).pathname,`${path}/`);
   }
 });
+test('Desktop Bootstrap admin aliases bypass generic canonical shell rewriting at the true apex entry',async()=>{
+  const legacy=legacyRecorder();
+  for(const path of ['/admin/desktop/bootstrap','/admin/desktop/bootstrap/','/admin/desktop/bootstrap/index.html']){
+    for(const entry of [
+      () => routeCanonicalSurface(new Request(`https://ekodi.kr${path}?sensitive=discard`),{}, {legacyFetch:legacy.fetch}),
+      () => platformEntry.fetch(new Request(`https://ekodi.kr${path}?sensitive=discard`),{},{}),
+    ]){
+      const response=await entry();
+      assert.equal(response.status,307,path);
+      assert.equal(response.headers.get('location'),'/admin/status/devices',path);
+      assert.equal(response.headers.get('cache-control'),'no-store',path);
+      assert.equal(response.headers.get('x-ekodi-route'),'desktop-bootstrap-canonical',path);
+      assert.equal(response.headers.get('x-robots-tag'),'noindex, nofollow, noarchive',path);
+    }
+  }
+  assert.equal(legacy.calls.length,0,'the admin shell must not swallow the bootstrap alias');
+  const rejected=await platformEntry.fetch(new Request('https://ekodi.kr/admin/desktop/bootstrap/',{method:'POST'}),{},{});
+  assert.equal(rejected.status,405);
+  assert.equal(rejected.headers.get('allow'),'GET, HEAD');
+});
+
+test('a canonical apex admin routing change dispatches the guarded shared-site deployment',()=>{
+  const orchestrator=fs.readFileSync(new URL('../scripts/converge-orchestrated-pr-merge.mjs',import.meta.url),'utf8');
+  assert.match(orchestrator,/file==='canonical-surface-router\.js'/);
+  assert.match(orchestrator,/if\(sharedSiteTouched\)/);
+  assert.match(orchestrator,/\/actions\/workflows\/deploy-site-core\.yml\/dispatches/);
+  assert.match(orchestrator,/release_branch_ref:branch,release_task_id:taskId/);
+});
+
 test('My and system paths preserve the internal execution boundary',async()=>{
   const my=binding(),control=binding();
   let response=await routeCanonicalSurface(new Request('https://ekodi.kr/my/docs/app.js'),{MY:my,CONTROL_API:control});
