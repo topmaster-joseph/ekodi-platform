@@ -124,6 +124,12 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
       {code:'consulting',display_name:'선택형 일반 교제·소통 컨설팅',amount_krw:v.consulting_amount_krw,duration_days:30,active:false},
     ],{onConflict:'code'});
   if(priceError)throw priceError;
+  const last4=account.replace(/[^0-9]/g,'').slice(-4);
+  const {error:auditError}=await admin.from('singles_bank_settings_audit').insert({
+    actor_id:userId,account_last4:last4,
+    community_amount_krw:v.community_amount_krw,consulting_amount_krw:v.consulting_amount_krw,
+  });
+  if(auditError)throw auditError;
   return reply(req,{saved:true,bank_collection_enabled:false,reason:'requires_independent_release_approval'});
  }
  if(path==='/bank/admin/orders'&&method==='GET'){
