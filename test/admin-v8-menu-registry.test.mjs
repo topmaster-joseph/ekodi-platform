@@ -6,11 +6,9 @@ import {
   getAdminMenuGroupDefault,
 } from '../admin-menu-registry.js';
 
-test('v8 admin exposes the final seven EKODI management areas', () => {
-  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.id), [
-    'summary', 'sites', 'people', 'services', 'content', 'status', 'settings-records',
-  ]);
-  assert.equal(ADMIN_MENU_GROUPS.length, 7);
+test('v8 admin exposes eleven distinct EKODI management areas', () => {
+  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.id), ['summary', 'sites', 'people', 'services', 'content', 'finance', 'status', 'releases', 'devices-agent', 'settings-records', 'security-audit']);
+  assert.equal(ADMIN_MENU_GROUPS.length, 11);
   assert.equal(getAdminMenuGroupDefault('summary'), 'platform-overview');
   assert.equal(getAdminMenuGroupDefault('services'), 'engine-all');
   assert.equal(getAdminMenuGroupDefault('sites'), 'sites-all');
@@ -41,11 +39,12 @@ test('User access delegates to the unified site member directory', () => {
   assert.equal(byId.get('clients')?.internal, true);
 });
 
-test('Status owns AI operations, execution infrastructure and observability surfaces', () => {
+test('Operations, devices, finance and releases have one distinct primary owner', () => {
   const byId = new Map(ADMIN_MENU_REGISTRY.map(item => [item.id, item]));
-  for (const id of ['aiops', 'devices', 'health', 'site-health', 'api-cost', 'deployments']) {
-    assert.equal(byId.get(id)?.group, 'status', `${id} must live in Status & Releases`);
-    assert.notEqual(byId.get(id)?.internal, true, `${id} must remain directly accessible`);
+  const ownership = { health:'status','site-health':'status',deployments:'releases',aiops:'releases',devices:'devices-agent','pos-agent':'devices-agent','api-cost':'finance',finance:'finance',security:'security-audit','audit-records':'security-audit' };
+  for (const [id,group] of Object.entries(ownership)) {
+    assert.equal(byId.get(id)?.group, group, id);
+    assert.notEqual(byId.get(id)?.internal, true, id);
   }
 });
 

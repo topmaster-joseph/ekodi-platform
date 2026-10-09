@@ -198,7 +198,7 @@ test('legacy Admin entry host still converges while Auth has no legacy host cont
   assert.equal(response.status,308);const target=new URL(response.headers.get('location'));assert.equal(target.pathname,'/admin/');assert.equal(target.searchParams.get('route'),'books');
 });
 
-test('Admin canonical route registry mirrors the seven management areas and migrates legacy groups',()=>{
+test('Admin canonical route registry mirrors the eleven management areas and migrates legacy groups',()=>{
   const source=fs.readFileSync(new URL('../admin-canonical-routes.js',import.meta.url),'utf8');
   const location={href:'https://ekodi.kr/admin/',hostname:'ekodi.kr',pathname:'/admin/',search:'',hash:''};
   const window={location};vm.runInNewContext(source,{window,URL,URLSearchParams,Object,Set,String});
@@ -212,7 +212,7 @@ test('Admin canonical route registry mirrors the seven management areas and migr
   assert.equal(routes.pathFor('devotional'),'/admin/content/devotional');
   assert.equal(routes.pathFor('workspace'),'/admin/sites/workspace');
   assert.equal(routes.pathFor('clients'),'/admin/sites/clients');
-  assert.equal(routes.pathFor('aiops'),'/admin/status/aiops');
+  assert.equal(routes.pathFor('aiops'),'/admin/releases/aiops');
   assert.equal(routes.sectionFromPath('/admin/system/security'),'security');
   assert.equal(routes.sectionFromPath('/admin/home/campus'),'campus');
   assert.equal(routes.sectionFromPath('/admin/system/campus'),'campus');

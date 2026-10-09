@@ -84,13 +84,13 @@ test('device browser diagnostics are mirrored under canonical /admin and verifie
   assert.ok(diagnosticRequests.every(item => String(item.url).startsWith('https://ekodi.kr/admin/')));
 });
 
-test('shared admin navigation exposes seven canonical areas with top contextual tabs', async () => {
+test('shared admin navigation exposes eleven distinct areas with direct task routes', async () => {
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   const postbuild = await read('scripts/admin-performance-postbuild.mjs');
   assert.doesNotMatch(registry, /id: 'overview'/);
-  for (const area of ['summary', 'sites', 'people', 'services', 'content', 'status', 'settings-records']) assert.match(registry, new RegExp(`id: '${area}'`));
-  for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'ai', 'business', 'data', 'site-management', 'security-audit', 'settings', 'access']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
+  for (const area of ['summary', 'sites', 'people', 'services', 'content', 'finance', 'status', 'releases', 'devices-agent', 'settings-records', 'security-audit']) assert.match(registry, new RegExp(`id: '${area}'`));
+  for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'ai', 'business', 'data', 'site-management', 'settings', 'access']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
   assert.match(registry, /id: 'campus', group: 'sites'/);
   assert.match(registry, /id: 'work', group: 'content'/);
   assert.match(registry, /id: 'clients', group: 'sites'/);
@@ -100,7 +100,7 @@ test('shared admin navigation exposes seven canonical areas with top contextual 
   assert.match(registry, /id: 'books', group: 'content'/);
   assert.match(registry, /id: 'devotional', group: 'content'/);
   assert.match(registry, /id: 'capabilities', group: 'services'/);
-  assert.match(registry, /id: 'devices', group: 'status'/);
+  assert.match(registry, /id: 'devices', group: 'devices-agent'/);
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
   assert.match(sidebar, /admin-global-navs/);
   assert.doesNotMatch(sidebar, /data-admin-context-section/);
