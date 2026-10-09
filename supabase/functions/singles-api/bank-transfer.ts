@@ -54,6 +54,11 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   const list=await many(admin.from('singles_bank_orders').select(columns).eq('user_id',userId).order('created_at',{ascending:false}).limit(30));
   return reply(req,{orders:list.map(publicOrder)});
  }
+ const ownRef=path.match(/^\/bank\/orders\/(EDH-[A-F0-9]{32})$/)?.[1];
+ if(ownRef&&method==='GET'){
+  const row=await one(admin.from('singles_bank_orders').select(columns).eq('reference',ownRef).eq('user_id',userId));
+  return row?reply(req,{order:publicOrder(row)}):reply(req,{error:'not_found'},404);
+ }
  if(path==='/bank/orders'&&method==='POST'){
   if(!bankOn())return reply(req,{error:'bank_collection_not_launched'},503);
   const member=await one(admin.from('singles_memberships')
@@ -131,6 +136,14 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   });
   if(auditError)throw auditError;
   return reply(req,{saved:true,bank_collection_enabled:false,reason:'requires_independent_release_approval'});
+ }
+ const adminLookup=path.match(/^\/bank\/admin\/orders\/(EDH-[A-F0-9]{32})$/)?.[1];
+ if(adminLookup&&method==='GET'){
+  if(!await operator(admin,userId))return reply(req,{error:'operator_capability_required'},403);
+  const row=await one(admin.from('singles_bank_orders')
+    .select('reference,user_id,plan_code,amount_krw,status,created_at,reported_paid_at,verified_at,member_acknowledged_at')
+    .eq('reference',adminLookup));
+  return row?reply(req,{order:row}):reply(req,{error:'not_found'},404);
  }
  if(path==='/bank/admin/orders'&&method==='GET'){
   if(!await operator(admin,userId))return reply(req,{error:'operator_capability_required'},403);
