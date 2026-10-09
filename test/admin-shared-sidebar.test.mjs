@@ -9,6 +9,16 @@ const sidebar = await readFile(new URL('../admin-sidebar.js', import.meta.url), 
 const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
 const postbuild = await readFile(new URL('../scripts/admin-performance-postbuild.mjs', import.meta.url), 'utf8');
 
+test('Admin sidebar or production verifier changes trigger guarded shared-site release', async () => {
+  const release = await readFile(new URL('../scripts/converge-orchestrated-pr-merge.mjs', import.meta.url), 'utf8');
+  for(const path of ['admin-sidebar.js','scripts/verify-admin-production-ui-e2e.mjs']) {
+    assert.ok(release.includes("file==='" + path + "'"), 'missing guarded deploy trigger: ' + path);
+  }
+  assert.ok(release.includes('if(sharedSiteTouched)'));
+  assert.ok(release.includes('/actions/workflows/deploy-site-core.yml/dispatches'));
+  assert.ok(release.includes('release_branch_ref:branch,release_task_id:taskId'));
+});
+
 test('eleven unique areas replace the former overlapping admin taxonomy', () => {
   for (const id of ['summary', 'sites', 'people', 'services', 'content', 'finance', 'status', 'releases', 'devices-agent', 'settings-records', 'security-audit']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
