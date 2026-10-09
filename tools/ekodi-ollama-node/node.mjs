@@ -20,10 +20,10 @@ function authHeaders({nodeId, token}) {
   if (!NODE_ID_PATTERN.test(nodeId || '') || !token || token.length < 20) throw new Error('node_not_enrolled');
   return { authorization: 'Bearer ' + token, 'x-ekodi-node-id': nodeId, 'content-type': 'application/json' };
 }
-async function postJson(url, payload, headers = {}, fetchImpl = fetch) {
+async function postJson(url, payload, headers = {}, fetchImpl = fetch, timeoutMs = 30000) {
   const response = await fetchImpl(url, {
     method: 'POST', headers: {'content-type':'application/json', ...headers},
-    body: JSON.stringify(payload), signal: AbortSignal.timeout(30000),
+    body: JSON.stringify(payload), signal: AbortSignal.timeout(timeoutMs),
     redirect: 'error',
   });
   const data = await response.json().catch(() => ({}));
@@ -73,7 +73,7 @@ export async function answerLocal(prompt, {fetchImpl = fetch} = {}) {
   const result=await postJson(OLLAMA_BASE + '/api/generate', {
     model: MODEL, prompt, stream:false, keep_alive:'1m',
     options:{num_ctx:2048, num_predict:400, temperature:0},
-  }, {}, fetchImpl);
+  }, {}, fetchImpl, 110000);
   if (!result.done || typeof result.response !== 'string' || !result.response.trim())
     throw new Error('empty_model_response');
   return result.response.slice(0,12000);
