@@ -31,12 +31,12 @@ test('EKODI Mission archive restores documented activity years and does not publ
 });
 test('Mission activity archive remains newest-first and filterable by calendar year',async()=>{
  const html=await read('ekodimission-activities.page');
- const dates=[...html.matchAll(/<time datetime="(\\d{4}-\\d{2}-\\d{2})"/g)].map(m=>m[1]);
+ const dates=[...html.matchAll(/<time datetime="(\d{4}-\d{2}-\d{2})"/g)].map(m=>m[1]);
  assert.ok(dates.length>=12);
  assert.deepEqual(dates,[...dates].sort().reverse());
  for(const section of html.split('<article class="mission-activity-row').slice(1)){
   assert.ok(section.includes('data-activity-item'));
-  assert.match(section,/data-year="\\d{4}"/);
-  assert.match(section,/data-month="\\d{2}"/);
+  assert.match(section,/data-year="\d{4}"/);
+  assert.match(section,/data-month="\d{2}"/);
  }
 });
