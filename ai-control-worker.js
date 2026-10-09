@@ -78,8 +78,15 @@ async function centralAdminSession(request,env,requiredCapability='ai:read'){
     const response=await fetch(`${base}/api/session`,{headers:{accept:'application/json',authorization:`Bearer ${token}`},cache:'no-store'});
     if(!response.ok)return null;
     const data=await response.json().catch(()=>({}));
-    if(data?.authenticated!==true||data?.authority?.kind!=='admin')return null;
+    if(data?.authenticated!==true)return null;
     const role=clean(data.role||data.authority?.role).toLowerCase();
+    // Central /api/session has two valid response contracts: capability-bearing
+    // Admin authority and the original EKODI D1 super-admin session. In both
+    // cases the session must be authenticated by the trusted Control API.
+    // Never infer capabilities for any non-super-admin or a non-admin authority.
+    const hasAdminAuthority=data.authority?.kind==='admin';
+    const isLegacyCentralSuperAdmin=!data.authority&&role==='super_admin';
+    if(!hasAdminAuthority&&!isLegacyCentralSuperAdmin)return null;
     if(!capabilityGranted(data.authority,requiredCapability)&&role!=='super_admin')return{error:json({error:'capability_required',capability:requiredCapability},403)};
     const email=clean(data.email).toLowerCase();if(!email)return{error:json({error:'admin_identity_missing'},403)};
     return{user:{id:email,email,role,authority:data.authority},source:'central-admin'};
