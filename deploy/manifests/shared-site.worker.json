@@ -1549,8 +1549,8 @@
         "redirect": "manual",
         "expect": [
           "EKODI Invest",
-          "data-ekodi-platform=\"invest\"",
-          "/invest/invest-ui.js"
+          "data-ekodi-service=\"invest\"",
+          "근거를 먼저 보는 투자분석"
         ],
         "headerExpect": [
           "x-ekodi-shell: v2",

@@ -15,7 +15,9 @@ test('verified Mall merge dispatches both production services with the same orch
   }
   assert.ok(coordinator.split('inputs:{release_branch_ref:branch,release_task_id:taskId}').length - 1 >= 4);
   assert.ok(coordinator.includes('merged.data?.merged===true'));
-  assert.ok(!coordinator.includes("file==='scripts/converge-orchestrated-pr-merge.mjs'||"));
+  // Changes to the dispatch controller must themselves run through the guarded
+  // shared-site release. Mall and Control dispatches remain separate and receipt-bound.
+  assert.ok(coordinator.includes("file===\'scripts/converge-orchestrated-pr-merge.mjs\'||"));
 });
 
 test('manual release inputs require both task fields and Growth gate receives them', () => {
@@ -51,10 +53,13 @@ test('Control public preview smoke enforces the effective no-store edge policy o
 test('approved merge explicitly schedules latest-main checks when GITHUB_TOKEN suppresses push triggers', () => {
   for (const filename of ['ci.yml', 'constitution-check.yml', 'device-control-windows.yml']) {
     const source = readFileSync(new URL('../.github/workflows/' + filename, import.meta.url), 'utf8');
-    assert.match(source, /^on:\n  workflow_dispatch:/m, filename + ' must support exact-main explicit checks');
+    assert.match(source, /^on:\r?\n  workflow_dispatch:/m, filename + ' must support exact-main explicit checks');
     assert.ok(coordinator.includes("'" + filename + "'"), filename + ' must be dispatched after guarded merge');
   }
   assert.ok(coordinator.includes('device-agent-production-verification.yml/dispatches'));
+  for (const name of ['deploy-space.yml', 'deploy-ekodi-mall.yml']) {
+    assert.ok(coordinator.includes("assertLatestMainBeforeDispatch('" + name + "')"), name + ' must use same latest-main SHA as required checks');
+  }
   assert.ok(coordinator.includes("'/git/ref/heads/main'"));
   assert.ok(coordinator.includes('liveMainSha!==expectedMainSha'));
   assert.ok(coordinator.includes("await dispatchPostMergeDeploys(String(merged.data.sha||''))"));

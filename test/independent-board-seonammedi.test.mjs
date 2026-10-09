@@ -80,6 +80,25 @@ test('finance and notice boards are first-class standalone board routes',async()
   assert.match(site,/href="board\/notices">공지/);
 });
 
+test('finance access tiers expose summary to signed-in Google users and details only to admins',async()=>{
+  const worker=await read('services/independent-board/worker.js');
+  assert.match(worker,/async function signedInGoogle\(req\)/);
+  assert.match(worker,/providers\.includes\('google'\)/);
+  assert.match(worker,/async function requireSignedInGoogle\(req\)/);
+  assert.match(worker,/Google 로그인 후 총괄내역을 확인할 수 있습니다/);
+  assert.match(worker,/\/api\/finance\/summary/);
+  assert.match(worker,/finance_detail_admin_only/);
+  assert.match(worker,/세부 회계내역은 관리자만 볼 수 있습니다/);
+  assert.match(worker,/관리자만 볼 수 있습니다/);
+  assert.match(worker,/관리자 권한 · 총괄내역과 세부내역 확인 가능/);
+  assert.match(worker,/writeToggle\.hidden=true/);
+  assert.match(worker,/writeToggle\.hidden=false/);
+  assert.match(worker,/\/board\/api\/admin\/finance/);
+  assert.match(worker,/method:id\?"PUT":"POST"/);
+  assert.match(worker,/method:"DELETE"/);
+});
+
+
 test('standalone board supports both customer-domain and internal seonammedi mounts',async()=>{
   const mod=await import(new URL('../services/independent-board/worker.js?dual-mount='+Date.now(),import.meta.url));
   const external=await mod.default.fetch(new Request('https://seonammedi.kr/board/voices'),{});

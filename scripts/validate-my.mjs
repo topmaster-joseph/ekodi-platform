@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 
 const files={
   html:'my/index.html',
+  hubCss:'my/hub-shell.css',
   app:'my/app.js',
   personalization:'my/progressive-personalization.js',
   accessContext:'my/access-context.js',
@@ -43,6 +44,9 @@ function mustNot(key,marker){if(content[key].includes(marker))throw new Error(`M
 
 for(const key of ['accessContext','digitalCardServer','digitalCardAdmin','digitalCardClient','digitalCardQr'])execFileSync(process.execPath,['--check',files[key]],{stdio:'inherit'});
 
+must('hubCss','body[data-auth-state="member"] .my-tab-section[hidden]');
+must('hubCss','html[data-ekodi-character="off"] body .ekodi-main-ekodian');
+// Hash routing hidden authority: selected tab must be the only visible primary surface.
 must('html','My EKODI');
 must('html','data-ekodi-ui="USER"');
 must('html','EKODI USER AI');

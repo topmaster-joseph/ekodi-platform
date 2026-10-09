@@ -16,6 +16,17 @@
   <meta name="twitter:card" content="summary">
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://seonammedi.kr/#website","url":"https://seonammedi.kr/","name":"서남권 국립의대 소통센터","alternateName":["SEONAM MEDI","seonammedi.kr","서남권국립의대.kr"],"inLanguage":"ko"},{"@type":"WebPage","@id":"https://seonammedi.kr/#webpage","url":"https://seonammedi.kr/","name":"서남권 국립의대 소통센터 | SEONAM MEDI","description":"서남권 국립의대 관련 공식자료, 활동이력, 관련보도, 시민 의견과 공개 정보를 확인하는 소통센터입니다.","inLanguage":"ko","isPartOf":{"@id":"https://seonammedi.kr/#website"}}]}</script>
   <link rel="stylesheet" href="/seonammedi/app.css?v=20261006-domain-routing-2">
+<style id="seonammedi-organization-mobile-fix">
+#organization{min-height:0!important;padding-bottom:24px!important;background:#fff!important}
+#organization .section-head{margin-bottom:12px!important;gap:8px;align-items:center}
+#organization .section-head h2{margin:0;font-size:clamp(24px,5vw,30px)}
+#organization .note{font-size:14px;line-height:1.55;margin:0 0 16px;color:#555;word-break:keep-all}
+#organization .organization-tabs{margin:0 0 12px;display:flex;flex-wrap:wrap;gap:6px}
+#organization .organization-chart,#organization .participant-organizations{min-height:0!important}
+#organization .participant-head{margin:18px 0 8px!important}
+#organization .participant-head h3{margin:0;font-size:19px}
+@media(max-width:640px){#organization{padding-top:20px!important;padding-left:16px!important;padding-right:16px!important}#organization .section-head-actions{margin:0}#organization .organization-chart:empty,#organization .participant-organizations:empty{display:none}}
+</style>
 </head>
 <body>
 <header class="site-header">
@@ -37,8 +48,8 @@
 </section>
 
 <section id="organization" class="section" data-view-section="organization" hidden>
-  <div class="section-head"><div><p class="eyebrow">ORGANIZATION</p><h2>조직</h2></div><div class="section-head-actions"><span class="badge">공개 조직도</span><button id="organizationManageToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="organizationManageForm">조직 바로 수정</button></div></div>
-  <p class="note">통합 대책위·시민단체연대·목포대 조직을 구분해 표시합니다. 공개가 확인된 구성만 노출하며 참여단체는 가나다순으로 정렬합니다.</p>
+  <div class="section-head"><div><h2>조직</h2></div><div class="section-head-actions"><button id="organizationManageToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="organizationManageForm">조직 바로 수정</button></div></div>
+  <p class="note">공개 확인된 조직 구성과 참여단체를 안내합니다.</p>
   <div id="organizationTabs" class="filters organization-tabs" role="tablist" aria-label="조직 구분"></div>
   <form id="organizationManageForm" class="panel organization-manage-form module-compose" hidden>
     <input type="hidden" name="orgKey" value="bidae">
@@ -54,7 +65,7 @@
     <div class="form-actions"><button type="submit">저장</button><button id="organizationManageCancel" type="button" class="secondary">취소</button><span id="organizationManageMessage" class="muted" role="status"></span></div>
   </form>
   <div id="organizationChart" class="organization-chart"></div>
-  <div class="section-head participant-head"><div><p class="eyebrow">PARTICIPATING ORGANIZATIONS</p><h3>참여단체</h3></div></div>
+  <div class="section-head participant-head"><div><h3>참여단체</h3></div></div>
   <div id="participantOrganizations" class="participant-organizations"></div>
 </section>
 
@@ -134,18 +145,16 @@
   </div>
 </section>
 
-<section id="finance" class="section module-section finance-preparing-section" data-view-section="finance" hidden>
-  <div class="section-head section-view-title"><div><p class="eyebrow">TRANSPARENCY</p><h2>회계</h2></div></div>
-  <div class="finance-preparing-note" role="status"><strong>세부 메뉴 준비중</strong><p>회계 공개 화면을 정리하고 있습니다. 준비가 완료되면 이 메뉴에서 바로 확인할 수 있습니다.</p></div>
+<section id="finance" class="section module-section" data-view-section="finance" hidden>
+  <div class="section-head section-view-title"><div><p class="eyebrow">TRANSPARENCY</p><h2>회계</h2><p class="note">수입·지출 일자, 금액, 목적, 관련 행사와 증빙 여부를 공개합니다. 개인 후원자의 개인정보는 공개하지 않습니다.</p></div></div>
   <div class="module-shell finance-detail-content">
-    <aside class="module-intro"><p class="eyebrow">TRANSPARENCY</p><h2>회계</h2><p class="note">수입·지출 일자, 금액, 목적, 관련 행사와 증빙 여부를 공개합니다. 개인 후원자의 개인정보는 공개하지 않습니다.</p></aside>
-    <div class="module-main">
+    <div class="module-main finance-public-main">
       <div class="money-grid">
         <article><span>누적 모금</span><strong id="raised">자료 입력 전</strong></article>
         <article><span>누적 지출</span><strong id="spent">자료 입력 전</strong></article>
         <article><span>현재 잔액</span><strong id="balance">자료 입력 전</strong></article>
       </div>
-      <div class="module-toolbar"><div><strong>공개 회계내역</strong><span class="muted">최근 내역부터 확인할 수 있습니다.</span></div><button id="financeManageToggle" class="module-primary" type="button" hidden aria-expanded="false" aria-controls="financeManageForm">내역 추가</button></div>
+      <div class="module-toolbar"><div><strong>전체 회계내역</strong><span class="muted">일반 사용자는 전체 공개 내역을 조회할 수 있으며 입력·수정은 관리자에게만 표시됩니다.</span></div><button id="financeManageToggle" class="module-primary" type="button" hidden aria-expanded="false" aria-controls="financeManageForm">내역 추가</button></div>
       <form id="financeManageForm" class="panel finance-manage-form module-compose" hidden>
         <input type="hidden" name="id">
         <strong id="financeManageTitle">회계내역 추가</strong>

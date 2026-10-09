@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { assertSeonamMediAssetCachePolicy } from './seonammedi-cache-contract.mjs';
 
 const args=Object.fromEntries(process.argv.slice(2).map(arg=>{
   const m=arg.match(/^--([^=]+)=(.*)$/);
@@ -51,8 +52,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
       if(!asset?.path)throw new Error('asset_manifest_missing_'+key);
       const assetResult=await fetchText(origin+'/'+asset.path.replace(/^\//,'')+'?release_verify='+expected.release);
       if(!assetResult.response.ok)throw new Error('asset_http_'+key+'_'+assetResult.response.status);
-      const cache=String(assetResult.response.headers.get('cache-control')||'');
-      if(!/max-age=31536000/.test(cache)||!/immutable/.test(cache))throw new Error('asset_cache_policy_'+key+'_'+cache);
+      assertSeonamMediAssetCachePolicy(key,assetResult.response.headers);
     }
 
     const rootCache=String(root.response.headers.get('cache-control')||'').toLowerCase();

@@ -203,3 +203,18 @@ body[data-auth-state="member"] .my-desktop-tabs a[aria-selected="true"]{backgrou
   .section-menu-back{flex:0 0 100%;text-align:left}
 }
 @media(max-width:460px){.account-wayfinder-grid{grid-template-columns:1fr}}
+
+
+/* 2026-10-09 Hash routing authority: hidden state always beats member display rules. */
+body[data-auth-state="member"] .my-tab-section[hidden],
+body[data-auth-state="member"] [data-member-only][hidden],
+body[data-auth-state="member"] [data-home-panel][hidden],
+body[data-auth-state="member"] [data-account-panel][hidden],
+body[data-auth-state="member"] [data-services-panel][hidden]{
+  display:none!important;
+}
+/* My EKODI owns its hero EKODIAN; never layer the global Shell character on top. */
+html[data-ekodi-character="off"] body .ekodi-main-ekodian{
+  display:none!important;
+  visibility:hidden!important;
+}

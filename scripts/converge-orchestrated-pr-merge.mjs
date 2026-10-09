@@ -71,17 +71,36 @@ const marketingGrowthTouched=changedFiles.some(file=>[
   'wrangler.marketing-growth.toml',
   '.github/workflows/deploy-marketing-growth.yml',
 ].includes(file));
+const spaceTouched=changedFiles.some(file=>
+  file.startsWith('space/')||
+  file==='space-worker.js'||
+  file==='deploy/manifests/space.worker.json'||
+  file==='wrangler.space.toml'||
+  file==='wrangler.space.staging.toml'||
+  file==='.github/workflows/deploy-space.yml'
+);
+const mallSiteTouched=changedFiles.some(file=>file.startsWith('sites/ekodi-mall/')||file==='.github/workflows/deploy-ekodi-mall.yml');
 const sharedSiteTouched=changedFiles.some(file=>
+  file==='workspace-admin-page.js'||
+  file==='mall-social-setup.js'||
   file.startsWith('sites/')||
   file.startsWith('auth-site/')||
   file==='deploy/manifests/shared-site.worker.json'||
   file==='seonammedi-admin-control.js'||
   file==='wrangler.site.toml'||
   file==='platform-router-entry-worker.js'||
+  file==='canonical-surface-router.js'||
+  file==='device-control-admin.js'||
+  file==='device-control-admin.css'||
+  file==='ekodi-device-bootstrap.cmd'||
   file==='site-worker.js'||
   file==='scripts/build.mjs'||
   file==='scripts/finalize-seonammedi-release.mjs'||
+  file==='scripts/verify-seonammedi-release-live.mjs'||
+  file==='scripts/seonammedi-cache-contract.mjs'||
+  file==='test/seonammedi-cache-contract.test.mjs'||
   file==='.github/workflows/deploy-site-core.yml'||
+  file==='scripts/converge-orchestrated-pr-merge.mjs'||
   file==='.github/workflows/converge-orchestrated-pr-merge.yml'
 );
 async function dispatchPostMergeDeploys(expectedMainSha){
@@ -105,6 +124,28 @@ async function dispatchPostMergeDeploys(expectedMainSha){
     }
     return true;
   };
+
+  // Only the guarded operating-space workflow can mutate production.
+  // The originating orchestrator release receipt is mandatory.
+  if(spaceTouched){
+    if(!(await assertLatestMainBeforeDispatch('deploy-space.yml')))return;
+    const dispatch=await api('/actions/workflows/deploy-space.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Operating Space deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-space.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+
+  if(mallSiteTouched){
+    if(!(await assertLatestMainBeforeDispatch('deploy-ekodi-mall.yml')))return;
+    const dispatch=await api('/actions/workflows/deploy-ekodi-mall.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Mall Pages deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-ekodi-mall.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
   // These four required workflows run against main even when path filters
   // would otherwise skip them. A production Device Agent check additionally
   // receives the same Orchestrator branch/task receipt verified above.
