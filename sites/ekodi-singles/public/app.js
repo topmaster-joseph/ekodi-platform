@@ -4,7 +4,7 @@ const $=id=>document.getElementById(id);
 const page=document.body.dataset.page||'';
 const labels={'':'처음','/my':'내 프로필','/events':'공개 행사','/groups':'우리 모임','/discover':'동행 찾기','/messages':'메시지','/subscribe':'구독'};
 const state={client:null,session:null,status:null,member:null,subscription:{active:false}};
-const loginUrl=()=>{const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','community');u.searchParams.set('return_to','https://ekodi.kr/singles'+(page||'/my'));return u.toString()};
+const loginUrl=()=>{const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','singles');u.searchParams.set('return_to','https://ekodi.kr/singles'+(page||'/my'));return u.toString()};
 const text=(tag,body,css='')=>{const n=document.createElement(tag);n.textContent=String(body??'');if(css)n.className=css;return n};
 const button=(label,handler,css='outline')=>{const n=document.createElement('button');n.type='button';n.textContent=label;n.className=css;n.addEventListener('click',handler);return n};
 const holder=()=>{const h=$('memberContent');h.replaceChildren();h.hidden=false;$('publicPanel').hidden=true;return h};
