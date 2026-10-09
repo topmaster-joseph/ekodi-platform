@@ -98,6 +98,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='wrangler.site.toml'||
   file==='platform-router-entry-worker.js'||
   file==='canonical-surface-router.js'||
+  file==='admin-sidebar.js'||
+  file==='scripts/verify-admin-production-ui-e2e.mjs'||
   file==='device-control-admin.js'||
   file==='device-control-admin.css'||
   // Keep all Device Control/Remote Power/Wake static assets in a single orchestrated deploy boundary.
