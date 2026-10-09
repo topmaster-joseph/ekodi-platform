@@ -33,14 +33,17 @@ test('missing private configuration means no personal data operations',async()=>
   assert.equal((await denied.json()).error,'singles_enrollment_not_launched');
   assert.equal((await routeSinglesSurface(req('/singles/api/withdraw','DELETE'),env)).status,503);
 });
-test('private routes are noindex, admin denies access, trailing slashes equivalent',async()=>{
+test('private routes are noindex, admin shell never exposes payment data, trailing slashes equivalent',async()=>{
   for(const path of ['/singles/my','/singles/my/','/singles/messages','/singles/discover']){
     const r=await routeSinglesSurface(req(path),env);
     assert.equal(r.status,200);
     assert.match(r.headers.get('x-robots-tag'),/noindex/);
     assert.match(r.headers.get('cache-control'),/no-store/);
   }
-  assert.equal((await routeSinglesSurface(req('/singles/admin'),env)).status,404);
+  const admin=await routeSinglesSurface(req('/singles/admin'),env);
+ assert.equal(admin.status,200);
+ assert.match(admin.headers.get('x-robots-tag'),/noindex/);
+ assert.doesNotMatch(await admin.text(),/EDH-[A-F0-9]{32}/);
   assert.equal((await routeSinglesSurface(req('/singles/missing'),env)).status,404);
   const h=await routeSinglesSurface(req('/singles','HEAD'),env);
   assert.equal(h.status,200);
