@@ -7,7 +7,7 @@ const worker=await readFile(new URL('../singles-surface.js',import.meta.url),'ut
 test('two independent feature gates block unapproved enrollment and matching',()=>{
   assert.match(worker,/SINGLES_M1_ENABLED.*'true'/);
   assert.match(api,/SINGLES_ONBOARDING_ENABLED.*"true"/);
-  assert.match(worker,/matching_enabled:false,messaging_enabled:false,paid_brokerage_enabled:false/);
+  assert.match(worker,/matching_enabled:false,messaging_enabled:socialEnabled\(env\),messages_are_free:true,paid_brokerage_enabled:false/);
   assert.match(worker,/if\(!enabled\(env\)\)return json\(\{error:'singles_enrollment_not_launched'\},503\)/);
   assert.match(api,/if \(!enabled\(\)\) return reply\(req, \{ error: "singles_enrollment_not_launched" \}, 503\)/);
 });
