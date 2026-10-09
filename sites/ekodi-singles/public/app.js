@@ -36,18 +36,18 @@ async function api(path,options={}){
  return data;
 }
 function paywall(h,action){
- const box=text('section','','paywall');box.append(text('h3','공동체 행사 참가 구독'));
- paragraph(box,action+'은 행사 참여 구독 혜택입니다. 상호 동의한 메시지·답장, 차단·신고는 무료입니다.');
+ const box=text('section','','paywall');box.append(text('h3','동행 기본 구독'));
+ paragraph(box,action+'에는 유효한 기본 구독이 필요합니다. 호감 수락·거절, 메시지 열람, 차단·신고는 무료입니다.');
  box.append(button('계좌이체 구독 안내',()=>location.assign('/singles/subscribe'),'primary'));h.append(box);
 }
 function errorText(error){
- if(error?.status===402)return '해당 행사·선택형 컨설팅의 구독 확인이 필요합니다. 메시지는 무료입니다.';
+ if(error?.status===402)return '행사 참가·메시지 발송·답장 또는 별도 컨설팅 이용에 필요한 구독을 확인해 주세요.';
  if(error?.status===403)return '권한이나 성인확인·상호동의 조건을 확인해 주세요.';
  if(error?.status===503)return '현재 안전한 서비스 개통을 준비 중입니다.';
  return '요청을 완료하지 못했습니다. 다시 확인해 주세요.';
 }
 async function readSubscription(){
- try{const d=await api('/subscription');state.subscription={active:d.active===true,expires_at:d.expires_at||null};}
+ try{const d=await api('/subscription');state.subscription={active:d.active===true,community_active:d.community_active===true,consulting_active:d.consulting_active===true,expires_at:d.expires_at||null};}
  catch{state.subscription={active:false}}
 }
 function profileForm(h){
@@ -138,7 +138,7 @@ async function showDiscover(h){
  })}catch(e){notice(h,errorText(e))}
 }
 async function showMessages(h){
- notice(h,'상대의 관심 수락·거절과 상호 동의 후 메시지·답장은 무료입니다. 거절·차단·신고도 무료로 이용할 수 있습니다.');
+ notice(h,'관심 수락·거절과 상호 동의 후 메시지 열람은 무료입니다. 새 메시지와 답장을 보내려면 보내는 사람에게 유효한 기본 구독이 필요합니다. 차단·신고는 언제나 무료입니다.');
  try{const d=await api('/requests');appendList(h,d.requests||[],(card,r)=>{
   card.append(text('h3',r.display_name||'새로운 관심'));paragraph(card,r.status==='pending'?'상대의 관심이 도착했습니다.':'연결 상태: '+r.status);
   if(r.status==='pending'&&r.incoming===true){
@@ -163,6 +163,7 @@ async function showMessages(h){
     }catch(e){notice(card,errorText(e))}
    }));
    card.append(button('메시지',async()=>{
+    if(!state.subscription.active){paywall(card,'메시지 발송·답장');return}
     const body=prompt('상대에게 보낼 메시지 (최대 1000자)');
     if(!body?.trim())return;
     try{await api('/messages/'+r.id,{method:'POST',body:{text:body.slice(0,1000)}});notice(card,'메시지가 전송되었습니다.')}
@@ -215,10 +216,10 @@ async function reloadBankOrders(h){
 async function showSubscription(h){
  const box=text('section','','paywall');
  box.append(text('h3','EKODI 동행 · 계좌이체 구독'));
- paragraph(box,'무료: 소개, 프로필 등록, 동행 찾기, 호감 표현·수락, 상호 동의 후 메시지와 답장.');
- paragraph(box,'행사 참가 신청은 공동체 구독 혜택입니다. 소통·공동체 참여를 위한 일반 컨설팅은 필요한 경우에만 별도로 선택합니다. 특정 상대의 결혼 알선은 제공하지 않습니다.');
+ paragraph(box,'무료: 소개, 프로필 등록, 동행 찾기, 호감 표현·수락, 상호 동의 후 받은 메시지 열람, 차단·신고.');
+ paragraph(box,'기본 구독(community)은 행사 참가 신청 및 상호 동의한 사람에게 메시지·답장 보내기에 적용됩니다. 소통·공동체 참여 일반 컨설팅은 별도 선택 구독입니다. 특정 상대의 결혼 알선은 제공하지 않습니다.');
  paragraph(box,'결제수단: 온라인 계좌이체만 허용합니다. 카드·자동결제·가상 구독 활성화는 제공하지 않습니다.');
- box.append(text('p',state.subscription.community_active?'행사 참여 구독: 활성':'행사 참여 구독: 미활성','status-text'));
+ box.append(text('p',state.subscription.community_active?'기본 구독(행사·메시지 발송): 활성':'기본 구독(행사·메시지 발송): 미활성','status-text'));
  box.append(text('p',state.subscription.consulting_active?'선택형 컨설팅: 활성':'선택형 컨설팅: 미활성','status-text'));
  h.append(box);
  try{
