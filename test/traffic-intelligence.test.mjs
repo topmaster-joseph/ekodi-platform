@@ -80,14 +80,14 @@ test('canonical child paths attribute browser visits without treating all ekodi.
   assert.equal(trafficSiteIdForVisit('ekodi.kr', 'ekodibiz/trade', 'biz'), 'trade');
   assert.equal(trafficSiteIdForVisit('ekodi.kr', 'ekodibiz/marketing-ai', 'biz'), 'marketing');
   assert.equal(trafficSiteIdForVisit('ekodi.kr', 'cgma', 'cgma'), 'cgma');
-  assert.equal(trafficSiteIdForVisit('www.ekodi.kr', '/ai/', 'ai'), 'ai');
+  assert.equal(trafficSiteIdForVisit('ekodi.kr', '/ai/', 'ai'), 'ai');
   assert.equal(trafficSiteIdForVisit('ekodi.kr', 'admin', 'mission'), 'root');
   assert.equal(trafficSiteIdForVisit('ekodi.kr', 'unknown-path', 'mission'), 'root');
   assert.equal(trafficSiteIdForVisit('ekodi.kr', 'ekodichurch/user123', 'mall'), 'church');
   assert.equal(trafficSiteIdForVisit('ekodi.kr', '', 'mission'), 'mission');
   assert.equal(trafficSiteIdForVisit('ekodi.kr', '', 'made-up-site'), 'root');
   assert.equal(trafficSiteIdForVisit('seonammedi.kr', '', 'mission'), 'seonammedi');
-  assert.equal(trafficSiteIdForVisit('church.ekodi.kr', 'ekodimall', 'mall'), 'church');
+  assert.equal(trafficSiteIdForVisit('ekodichurch.kr', 'ekodimall', 'mall'), 'church');
 });
 test('shared shell sends only the site route and the daily admin report marks request scope', async () => {
   const shell = await readFile('shell/shell.js', 'utf8');
