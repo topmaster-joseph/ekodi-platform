@@ -72,6 +72,8 @@ test('status and health attention apply to representative Agent rather than stal
   ]);
   assert.equal(model.rosterNeedsAttention(actual.find(group=>group.primary.id==='dev-new').primary),false);
   assert.equal(model.rosterNeedsAttention(actual.find(group=>group.primary.id==='dev-unhealthy').primary),true);
+  const unknown = record('dev-new-health','PCZ','online');
+  assert.equal(model.rosterNeedsAttention(unknown),false,'missing score must not be treated as zero');
 });
 
 test('compact roster is searchable, keyboard-accessible, lazy and non-destructive', () => {
