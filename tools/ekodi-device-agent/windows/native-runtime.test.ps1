@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $agent = Join-Path $PSScriptRoot 'ekodi-device-agent.ps1'
 $oldProgramData = [Environment]::GetEnvironmentVariable('ProgramData','Process')
 $root = Join-Path ([IO.Path]::GetTempPath()) ('ekodi-native-agent-smoke-' + [guid]::NewGuid().ToString('N'))
@@ -10,7 +10,7 @@ try {
   $match = [regex]::Match($source, '\ntry \{\n  if \(\$ProtocolUrl\)')
   if (-not $match.Success) { throw 'agent_entrypoint_marker_missing' }
   $definitions = Join-Path $root 'agent-definitions.ps1'
-  [IO.File]::WriteAllText($definitions,$source.Substring(0,$match.Index),[Text.UTF8Encoding]::new($false))
+  [IO.File]::WriteAllText($definitions,$source.Substring(0,$match.Index),[Text.UTF8Encoding]::new($true))
   . $definitions
   if (-not (Test-Path -LiteralPath $CommonDataRoot)) { throw 'common_appdata_fallback_failed' }
   $httpHandler = [Net.Http.HttpClientHandler]::new()
