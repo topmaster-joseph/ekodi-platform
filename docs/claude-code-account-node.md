@@ -18,7 +18,7 @@ Claude Code is a local CLI that runs the agent but sends model requests to Anthr
 ## EKODI control and scope
 
 - For personal, interactive read-only work outside the EKODI queue, use `claude -p ... --permission-mode plan` with very few turns. The EKODI subscription queue intentionally refuses public/general text tasks.
-- For internal development code tasks, the central EKODI node creates an isolated Git worktree, uses `acceptEdits` permission mode, and disallows Claude's shell and web tools. The EKODI node—not Claude—performs the deterministic Git commit/push, with CI, constitutional gates, review, deployment and production verification still required.
+- For internal development code tasks, the central EKODI node creates an isolated Git worktree, uses `acceptEdits` permission mode, and explicitly permits only Claude's built-in `Read,Glob,Grep,Edit,Write` tools; shell, network, MCP and other tools remain unavailable. The EKODI node—not Claude—performs the deterministic Git commit/push, with CI, constitutional gates, review, deployment and production verification still required.
 - Keep secrets, personal data and cross-tenant content out of model prompts unless a separate authorized data-processing contract exists. Shell, GitHub and runtime secrets are never delegated to the CLI as a bypass.
 - On a small desktop such as user3 (8 GiB RAM), run one local AI job at a time, and avoid overlapping large Ollama inference with Claude Code. Ollama's 1.5 GiB free-memory gate still applies separately.
 

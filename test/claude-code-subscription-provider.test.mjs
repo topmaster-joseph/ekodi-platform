@@ -53,6 +53,8 @@ test('read-only simple work and bounded edit work respect tool boundaries',()=>{
   const code=claudeArguments({...job,needsCodeBranch:true},'edit code');
   assert.equal(code[code.indexOf('--permission-mode')+1],'acceptEdits');
   assert.equal(code[code.indexOf('--max-turns')+1],'8');
+  assert.equal(code[code.indexOf('--tools')+1],'Read,Glob,Grep,Edit,Write');
+  assert.equal(simple[simple.indexOf('--tools')+1],'');
   assert.throws(()=>claudeArguments(job,''),/bounds/);
   assert.throws(()=>claudeArguments(job,'x'.repeat(24001)),/bounds/);
 });

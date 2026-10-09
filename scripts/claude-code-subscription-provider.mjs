@@ -38,6 +38,8 @@ export function claudeArguments(job,prompt){
     '-p',input,'--output-format','json','--no-session-persistence',
     '--max-turns',change?'8':'2',
     '--permission-mode',change?'acceptEdits':'plan',
+    // Allow only built-in local file tools. Reject shell/network/MCP tools at the CLI surface.
+    '--tools',change?'Read,Glob,Grep,Edit,Write':'',
     // The EKODI node owns deterministic commits, tests and release gates.
     '--disallowedTools','Bash','WebFetch','WebSearch',
   ];
