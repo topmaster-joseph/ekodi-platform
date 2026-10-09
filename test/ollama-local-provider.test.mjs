@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {ollamaLocalEnabled,ollamaLocalModel,ollamaLocalReady,runOllamaLocal} from '../scripts/ollama-local-provider.mjs';
+import {ollamaLocalEnabled,ollamaLocalModel,ollamaLocalReady,runOllamaLocal as runOllamaRaw} from '../scripts/ollama-local-provider.mjs';
+const runOllamaLocal=(prompt,options={})=>runOllamaRaw(prompt,{freeMemoryBytes:2*1024**3,...options});
 import {availableProviderIds,buildExecutionPlan} from '../ai-control-core.js';
 import {providerStatus} from '../ai-control-provider-router.js';
 
@@ -48,6 +49,7 @@ test('empty, overlong, disabled and failed invocations fail closed',async()=>{
   await assert.rejects(()=>runOllamaLocal('x'.repeat(6001),{env}),/bounds/);
   await assert.rejects(()=>runOllamaLocal('hi',{env:{...env,OLLAMA_NO_CLOUD:'0'}}),/disabled/);
   await assert.rejects(()=>runOllamaLocal('hi',{env,fetchImpl:async()=>({ok:false,status:503})}),/503/);
+  await assert.rejects(()=>runOllamaLocal('hi',{env,freeMemoryBytes:128}),/insufficient_free_memory/);
 });
 
 test('central routing only opts in safe non-code jobs',()=>{
