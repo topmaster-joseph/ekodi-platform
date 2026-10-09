@@ -24,7 +24,7 @@ function configuredOrigin(raw){try{const u=new URL(String(raw||''));return u.pro
 function status(env){const active=enabled(env);return{
  service:'ekodi-singles',name:'EKODI 동행',phase:active?'enrollment-preview':'preparing',
  onboarding_enabled:active,social_enabled:socialEnabled(env),paid_actions_enabled:paymentEnabled(env),
- matching_enabled:false,messaging_enabled:socialEnabled(env),messages_are_free:true,paid_brokerage_enabled:false,
+ matching_enabled:false,messaging_enabled:socialEnabled(env),messages_require_subscription:true,paid_brokerage_enabled:false,
  bank_transfer_enabled:bankEnabled(env),bank_verification_enabled:bankVerifyEnabled(env),consulting_optional:true,
  events:[],identity_provider:'ekodi',
  ...(active?{auth:{supabase_url:env.SUPABASE_URL,publishable_key:env.SUPABASE_PUBLISHABLE_KEY}}:{})
@@ -68,7 +68,11 @@ async function api(req,env,sub){
  if(!enabled(env))return json({error:'singles_enrollment_not_launched'},503);
  const [targetPath,social]=route;
  if(social&&!socialEnabled(env))return json({error:'singles_social_not_launched'},503);
- const paidWrite=Boolean(sub.match(/^\/api\/events\/[0-9a-f-]{36}\/rsvp$/i)&&req.method==='POST');
+ // Writes for both event participation and *every* message (including replies)
+ // require the central paid-actions release gate; reads and consent remain free.
+ const paidWrite=req.method==='POST'&&Boolean(
+  sub.match(/^\/api\/events\/[0-9a-f-]{36}\/rsvp$/i)||
+  sub.match(/^\/api\/messages\/[0-9a-f-]{36}$/i));
  if(paidWrite&&!paymentEnabled(env))return json({error:'paid_actions_not_launched'},503);
  if(sub==='/api/bank/orders'&&req.method==='POST'&&!bankEnabled(env))return json({error:'bank_collection_not_launched'},503);
  if(sub.match(/^\/api\/bank\/admin\/orders\/EDH-[A-F0-9]{32}\/review$/)&&!bankVerifyEnabled(env))return json({error:'bank_verification_not_launched'},503);
