@@ -80,7 +80,9 @@ function syncCategory(section=window.EKODIAdminPanels?.current?.()){state.catego
 function kindLabel(kind,category=''){if(kind==='provider')return'외부 공급자 연동';if(kind==='service')return'독립 서비스';if(category==='professional')return'전문 엔진';if(category==='common')return'공통 엔진';return'엔진'}
 async function jsonFetch(url,options={}){const headers={accept:'application/json',...authHeaders(),...(options.headers||{})};if(options.body&&!headers['content-type'])headers['content-type']='application/json';const response=await fetch(url,{...options,headers,cache:'no-store'});let data={};try{data=await response.json()}catch{}if(response.status===401||response.status===403){window.EKODIAdminCore?.showLogin?.('관리자 세션 만료 · 다시 로그인');throw new Error('admin_session_required')}if(!response.ok)throw new Error(data.error||`HTTP ${response.status}`);return data}
 const control=(path,options)=>jsonFetch(`${CONTROL}${path}`,options);
-const common=(path,options)=>jsonFetch(`/api/control/common-services/${path}`,options);
+// AI runtime has its own canonical /ai/api routes; the generic Control API
+// does not implement the legacy common-services/ai forwarding endpoint.
+const common=(path,options)=>jsonFetch(`/ai/api/${String(path).replace(/^ai\//,'')}`,options);
 function serviceMap(){const map=new Map();for(const item of state.overview?.services||[]){if(item?.id)map.set(`id:${String(item.id).toLowerCase()}`,item);if(item?.domain)map.set(`domain:${String(item.domain).toLowerCase()}`,item)}return map}
 function serviceRow(service){const map=serviceMap();return(service.controlId?map.get(`id:${String(service.controlId).toLowerCase()}`):null)||map.get(`domain:${String(service.domain||'').toLowerCase()}`)||null}
 function formatCheckTime(value){if(!value)return'미점검';const date=new Date(value);return Number.isNaN(date.getTime())?'미점검':date.toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}
