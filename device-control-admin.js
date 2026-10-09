@@ -174,7 +174,7 @@
       "if($LASTEXITCODE -ne 0){throw ('[EKB-215][install] 설치 프로세스 종료 코드 '+$LASTEXITCODE)}",
       "} catch { Write-Host ('[EKB-219]['+$stage+'] '+$_.Exception.Message) -ForegroundColor Red;exit 1 }",
       "finally { Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue }",
-    ].join(';');
+    ].join('\n'); // Preserve the try/catch/finally grammar: ';finally' executes as a command on Windows PowerShell 5.1.
     const encoded = utf16leBase64(ps);
     return [
       '@echo off',
