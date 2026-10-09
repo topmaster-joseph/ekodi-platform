@@ -2,7 +2,7 @@
 'use strict';
 const $=id=>document.getElementById(id);
 const page=document.body.dataset.page||'';
-const labels={'':'처음','/my':'내 프로필','/events':'공개 행사','/groups':'우리 모임','/discover':'동행 찾기','/messages':'메시지','/subscribe':'구독'};
+const labels={'':'처음','/my':'내 프로필','/events':'공개 행사','/groups':'우리 모임','/discover':'동행 찾기','/messages':'메시지','/subscribe':'구독·입금','/admin':'결제관리'};
 const state={client:null,session:null,status:null,member:null,subscription:{active:false}};
 const loginUrl=()=>{const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','singles');u.searchParams.set('return_to','https://ekodi.kr/singles'+(page||'/my'));return u.toString()};
 const text=(tag,body,css='')=>{const n=document.createElement(tag);n.textContent=String(body??'');if(css)n.className=css;return n};
@@ -36,12 +36,12 @@ async function api(path,options={}){
  return data;
 }
 function paywall(h,action){
- const box=text('section','','paywall');box.append(text('h3','함께하는 더 깊은 연결'));
- paragraph(box,action+'은 구독 회원 기능입니다. 상대방의 수락·거절, 차단·신고는 무료로 이용할 수 있습니다.');
- box.append(button('구독 안내 보기',()=>location.assign('/singles/subscribe'),'primary'));h.append(box);
+ const box=text('section','','paywall');box.append(text('h3','공동체 행사 참가 구독'));
+ paragraph(box,action+'은 행사 참여 구독 혜택입니다. 상호 동의한 메시지·답장, 차단·신고는 무료입니다.');
+ box.append(button('계좌이체 구독 안내',()=>location.assign('/singles/subscribe'),'primary'));h.append(box);
 }
 function errorText(error){
- if(error?.status===402)return '이 기능은 유료 구독 확인 후 이용할 수 있습니다.';
+ if(error?.status===402)return '해당 행사·선택형 컨설팅의 구독 확인이 필요합니다. 메시지는 무료입니다.';
  if(error?.status===403)return '권한이나 성인확인·상호동의 조건을 확인해 주세요.';
  if(error?.status===503)return '현재 안전한 서비스 개통을 준비 중입니다.';
  return '요청을 완료하지 못했습니다. 다시 확인해 주세요.';
@@ -138,7 +138,7 @@ async function showDiscover(h){
  })}catch(e){notice(h,errorText(e))}
 }
 async function showMessages(h){
- notice(h,'상대의 관심을 수락하거나 거절하는 것은 무료입니다. 서로 수락한 이후 양측 모두 구독 중일 때 메시지를 보낼 수 있습니다.');
+ notice(h,'상대의 관심 수락·거절과 상호 동의 후 메시지·답장은 무료입니다. 거절·차단·신고도 무료로 이용할 수 있습니다.');
  try{const d=await api('/requests');appendList(h,d.requests||[],(card,r)=>{
   card.append(text('h3',r.display_name||'새로운 관심'));paragraph(card,r.status==='pending'?'상대의 관심이 도착했습니다.':'연결 상태: '+r.status);
   if(r.status==='pending'&&r.incoming===true){
@@ -163,7 +163,6 @@ async function showMessages(h){
     }catch(e){notice(card,errorText(e))}
    }));
    card.append(button('메시지',async()=>{
-    if(!state.subscription.active){paywall(card,'메시지 발송');return}
     const body=prompt('상대에게 보낼 메시지 (최대 1000자)');
     if(!body?.trim())return;
     try{await api('/messages/'+r.id,{method:'POST',body:{text:body.slice(0,1000)}});notice(card,'메시지가 전송되었습니다.')}
@@ -172,11 +171,115 @@ async function showMessages(h){
   }
  })}catch(e){notice(h,errorText(e))}
 }
-function showSubscription(h){
- const box=text('div','','paywall');box.append(text('h3','EKODI 동행 Plus'));
- paragraph(box,'무료회원은 소개·프로필·공개행사·동행 탐색·호감 표시·수락을 이용합니다. 행사 참가 신청과 상호 동의 후 메시지 보내기·답장에는 각각 유료 구독 자격이 필요합니다.');
- box.append(text('p',state.subscription.active?'서버에서 활성 구독을 확인했습니다.':'유료 결제는 운영·법적 검증 후 개통합니다. 아직 실제 결제나 자동 갱신을 받지 않습니다.','status-text'));
+const money=value=>Number(value||0).toLocaleString('ko-KR')+'원';
+const stateLabel={awaiting_transfer:'이체 대기',reported_paid:'회원 입금 신고',verified:'관리자 입금 확인',rejected:'확인 불가',cancelled:'취소'};
+async function reloadBankOrders(h){
+ let panel=$('bankOrders');
+ if(!panel){panel=text('section','','member-card');panel.id='bankOrders';h.append(panel)}
+ panel.replaceChildren();panel.append(text('h3','나의 입금·확인 내역'));
+ try{
+  const rows=(await api('/bank/orders')).orders||[];
+  if(!rows.length){paragraph(panel,'아직 결제 내역이 없습니다.');return}
+  for(const row of rows){
+   const card=text('article','','mini-card');
+   card.append(text('h4',(row.plan_code==='consulting'?'선택형 컨설팅':'행사 참가 구독')+' · '+money(row.amount_krw)));
+   paragraph(card,'결제고유번호: '+row.reference);
+   paragraph(card,'상태: '+(stateLabel[row.status]||row.status));
+   if(row.status==='awaiting_transfer'){
+    paragraph(card,'계좌이체: '+[row.bank_name,row.account_number,row.account_holder].filter(Boolean).join(' · '));
+    paragraph(card,'입금 시 결제고유번호를 받는 분 통장 표시란에 기재하세요. 불가능하면 운영자에게 고유번호를 알려주세요.');
+    card.append(button('계좌이체 완료 신고',async()=>{
+     if(!confirm('실제로 계좌이체를 완료했습니까? 입금 신고만으로 구독은 시작되지 않습니다.'))return;
+     try{await api('/bank/orders/'+row.reference+'/report',{method:'POST',body:{}});await reloadBankOrders(h);}
+     catch(e){notice(card,errorText(e))}
+    },'primary'));
+   }
+   if(row.status==='reported_paid')paragraph(card,'관리자가 실제 은행 입금 내역과 대조하는 중입니다.');
+   if(row.status==='verified'){
+    paragraph(card,'관리자 확인: '+(row.verified_at?.slice(0,16).replace('T',' ')||'완료'));
+    if(!row.member_acknowledged_at)card.append(button('관리자 확인 결과를 확인했습니다',async()=>{
+     try{await api('/bank/orders/'+row.reference+'/acknowledge',{method:'POST',body:{}});await reloadBankOrders(h)}
+     catch(e){notice(card,errorText(e))}
+    },'outline'));
+    else paragraph(card,'회원도 확인했습니다.');
+   }
+   if(row.status==='rejected')paragraph(card,'운영자 확인: '+(row.rejection_reason||'입금 내역 재확인 필요'));
+   panel.append(card);
+  }
+ }catch(e){notice(panel,errorText(e))}
+}
+async function showSubscription(h){
+ const box=text('section','','paywall');
+ box.append(text('h3','EKODI 동행 · 계좌이체 구독'));
+ paragraph(box,'무료: 소개, 프로필 등록, 동행 찾기, 호감 표현·수락, 상호 동의 후 메시지와 답장.');
+ paragraph(box,'행사 참가 신청은 공동체 구독 혜택입니다. 소통·공동체 참여를 위한 일반 컨설팅은 필요한 경우에만 별도로 선택합니다. 특정 상대의 결혼 알선은 제공하지 않습니다.');
+ paragraph(box,'결제수단: 온라인 계좌이체만 허용합니다. 카드·자동결제·가상 구독 활성화는 제공하지 않습니다.');
+ box.append(text('p',state.subscription.community_active?'행사 참여 구독: 활성':'행사 참여 구독: 미활성','status-text'));
+ box.append(text('p',state.subscription.consulting_active?'선택형 컨설팅: 활성':'선택형 컨설팅: 미활성','status-text'));
  h.append(box);
+ try{
+  const d=await api('/bank/plans');
+  if(!d.available){notice(box,'입금 계좌·금액 및 운영 검증이 완료되면 신청할 수 있습니다. 현재는 결제를 받지 않습니다.')}
+  else for(const plan of d.plans||[]){
+   const part=text('article','','member-card');
+   part.append(text('h4',plan.display_name+' · '+money(plan.amount_krw)+' / '+plan.duration_days+'일'));
+   part.append(button('계좌이체 주문번호 발급',async()=>{
+    try{const r=await api('/bank/orders',{method:'POST',body:{plan_code:plan.code}});
+     notice(part,'결제고유번호 '+r.order.reference+'가 발급되었습니다.');
+     await reloadBankOrders(h);
+    }catch(e){notice(part,errorText(e))}
+   },'primary'));
+   box.append(part);
+  }
+ }catch(e){notice(box,errorText(e))}
+ await reloadBankOrders(h);
+ if(state.subscription.consulting_active){
+  const box2=text('section','','member-card');box2.append(text('h3','선택형 컨설팅 신청'));
+  paragraph(box2,'특정 상대 연결·결혼 알선이 아닌 일반 대화, 공동체 적응, 개인 성장 안내만 제공합니다.');
+  const topics=[['communication','대화·소통'],['community_participation','공동체 참여'],['personal_growth','개인 성장']];
+  const select=document.createElement('select');
+  for(const [key,label] of topics){const option=document.createElement('option');option.value=key;option.textContent=label;select.append(option)}
+  box2.append(select,button('컨설팅 상담 신청',async()=>{
+   try{await api('/bank/consulting/requests',{method:'POST',body:{topic:select.value}});notice(box2,'상담 신청이 접수되었습니다.')}
+   catch(e){notice(box2,errorText(e))}
+  },'primary'));
+  h.append(box2);
+ }
+ const adminLink=text('a','운영자 입금내역 관리 →','outline');adminLink.href='/singles/admin';h.append(adminLink);
+}
+async function showBankAdmin(h){
+ const p=text('section','','member-card');p.append(text('h3','입금 확인 · 운영자 전용'));
+ paragraph(p,'EKODI가 부여한 결제 운영 권한이 있어야 실제 내역을 볼 수 있습니다. 회원 입금 신고와 은행 명세를 직접 대조하세요.');
+ h.append(p);
+ try{
+  const data=await api('/bank/admin/orders');
+  if(!(data.orders||[]).length){paragraph(p,'확인할 주문이 없습니다.');return}
+  for(const row of data.orders){
+   const card=text('article','','mini-card');
+   card.append(text('h4','결제고유번호 '+row.reference));
+   paragraph(card,'상품: '+(row.plan_code==='consulting'?'컨설팅':'행사 참여')+' / '+money(row.amount_krw));
+   paragraph(card,'상태: '+(stateLabel[row.status]||row.status));
+   paragraph(card,'회원 입금 신고: '+(row.reported_paid_at||'없음'));
+   paragraph(card,'관리자 확인: '+(row.verified_at||'미확인')+' / 회원 재확인: '+(row.member_acknowledged_at||'미확인'));
+   if(row.status==='reported_paid'){
+    const trace=document.createElement('input');trace.type='text';trace.maxLength=100;trace.placeholder='실제 은행 명세 거래번호';trace.setAttribute('aria-label','은행 명세 거래번호');
+    const reason=document.createElement('input');reason.type='text';reason.maxLength=200;reason.placeholder='반려 사유';reason.setAttribute('aria-label','반려 사유');
+    card.append(trace,button('실제 입금 확인·구독 승인',async()=>{
+     if(trace.value.trim().length<4){notice(card,'은행 명세 거래번호를 입력하세요.');return}
+     if(!confirm('실제 은행 거래내역과 금액을 확인했습니까? 승인 후 구독 권한이 부여됩니다.'))return;
+     try{await api('/bank/admin/orders/'+row.reference+'/review',{method:'POST',body:{decision:'verified',bank_trace:trace.value.trim()}});
+      p.replaceChildren();await showBankAdmin(h)}
+     catch(e){notice(card,errorText(e))}
+    },'primary'),reason,button('입금 내역 반려',async()=>{
+     if(!confirm('입금 신고를 반려하시겠습니까?'))return;
+     try{await api('/bank/admin/orders/'+row.reference+'/review',{method:'POST',body:{decision:'rejected',reason:reason.value.trim()}});
+      p.replaceChildren();await showBankAdmin(h)}
+     catch(e){notice(card,errorText(e))}
+    }));
+   }
+   p.append(card);
+  }
+ }catch(e){notice(p,e?.status===403?'운영 권한이 없습니다.':errorText(e))}
 }
 async function signedIn(status){
  $('serviceStage').textContent='로그인 완료';
@@ -187,7 +290,8 @@ async function signedIn(status){
  else if(page==='/events')await showEvents(h);
  else if(page==='/discover')await showDiscover(h);
  else if(page==='/messages')await showMessages(h);
- else if(page==='/subscribe')showSubscription(h);
+ else if(page==='/subscribe')await showSubscription(h);
+ else if(page==='/admin')await showBankAdmin(h);
  else if(page==='/groups')paragraph(h,'지역 공동체·소그룹 기능을 준비하고 있습니다. 행사 목록을 먼저 확인해 주세요.');
  else {paragraph(h,'반갑습니다. 나의 프로필, 공개 행사, 동행 찾기를 살펴보세요.');const row=text('div','','actions');for(const [name,href] of [['프로필 등록','/singles/my'],['공개 행사','/singles/events'],['동행 찾기','/singles/discover']]){const a=text('a',name,'outline');a.href=href;row.append(a)}h.append(row)}
 }
