@@ -9,9 +9,10 @@ test('only interest recipient gets accept/decline buttons; initiator waits',()=>
  assert.match(api,/\.eq\('to_user_id',userId\)/);
  assert.match(app,/상대방의 답변을 기다리고 있습니다/);
 });
-test('free interest response but premium message send and rsvp enforced server-side',()=>{
+test('interest replies and messages are free; event subscription is server checked',()=>{
  assert.match(api,/if\(decisionId&&method==='POST'\)/);
- assert.match(api,/if\(!await subscribed\(admin,userId\)\)/g);
- assert.match(api,/source==='verified_central_billing'/);
- assert.match(api,/if\(!billingEnabled\(\)\)return false/);
+ assert.match(api,/hasBankPlan\(admin,userId,'community'\)/);
+ const afterMessage=api.slice(api.indexOf('const interestId=match(p'));
+ assert.doesNotMatch(afterMessage,/if\(!await subscribed\(/);
+ assert.match(api,/mutual_consent_required/);
 });
