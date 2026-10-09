@@ -2,7 +2,7 @@ import { evaluateAutonomousOperation } from './sovereign-autonomy-runtime.js';
 import { getControlPlaneSummary } from './cognitive-control-plane.js';
 import { getSovereignAutonomySummary } from './sovereign-autonomy-runtime.js';
 import {AI_MISSION_RUNTIME,evaluateMissionAction} from './ai-governance-runtime.js';
-import {AI_ROUTER_SCORE_POLICY,providerCostClass,rankProviders,scoreProvider} from './ai-router-score.js';
+import {AI_ROUTER_SCORE_POLICY,inferTaskTraits,providerCostClass,rankProviders,scoreProvider} from './ai-router-score.js';
 import {AI_COST_POLICY,evaluateAiCostEligibility} from './ai-cost-policy.js';
 import {buildKnowledgeEvidenceContext,normalizeKnowledgeEvidence,normalizeKnowledgeTaskInput} from './ai-knowledge-claim.js';
 
@@ -162,7 +162,15 @@ export function availableProviderIds(capabilities = {}, task = null) {
   if (capabilities.anthropicApi) ids.push('anthropic-api');
   for (const raw of capabilities.workerProviders || []) {const id=providerToken(raw);if(id)ids.push(`worker:${id}`);}
   const inventory = unique(ids);
-  return task ? inventory.filter(id => providerAllowedForTask(id, task, capabilities)) : inventory;
+  return task ? inventory.filter(id => {
+    if (id==='node:ollama-local') {
+      const category=inferTaskTraits(task).category;
+      if (task.needsCodeBranch || !['general','writing'].includes(category)) return false;
+      // Opt-in only: never silently send arbitrary collaboration tasks to a tiny model.
+      if (!task.requestedProviders?.includes('node:ollama-local')) return false;
+    }
+    return providerAllowedForTask(id, task, capabilities);
+  }) : inventory;
 }
 
 export function resolveOriginResponseProvider(task, capabilities = {}) {

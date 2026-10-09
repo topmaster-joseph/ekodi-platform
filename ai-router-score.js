@@ -58,7 +58,7 @@ export function providerCostClass(providerId=''){
 export function inferTaskTraits(task={}){
   const text=`${task.title||''} ${task.prompt||''}`.toLowerCase();
   const code=task.needsCodeBranch===true||/\b(code|coding|git|github|branch|deploy|repository|repo|debug|refactor|test|migration)\b/.test(text)||/코드|코딩|깃|브랜치|배포|저장소|디버그|리팩터|테스트|마이그레이션/.test(text);
-  const research=!code&&(/\b(research|analyse|analyze|compare|evidence|literature|study)\b/.test(text)||/연구|분석|비교|근거|문헌|조사/.test(text));
+  const research=!code&&(/\b(research|analysis|analyse|analyze|compare|evidence|literature|study)\b/.test(text)||/연구|분석|비교|근거|문헌|조사/.test(text));
   const writing=!code&&!research&&(/\b(write|draft|rewrite|translate|email|document|copy)\b/.test(text)||/작성|초안|번역|이메일|문서|문구|글쓰기/.test(text));
   const category=code?'code':research?'analysis':writing?'writing':'general';
   return Object.freeze({category,code,research,writing,latencyTargetMs:code?120000:30000});
@@ -69,7 +69,9 @@ function baseProfile(providerId){
   const direct=['cloudflare-workers-ai','gemini-free','openrouter-free','groq-free','huggingface-free-credit','openai-api','anthropic-api'].includes(id);
   const node=id.startsWith('node:');
   const worker=id.startsWith('worker:');
-  const skills=node
+  const skills=id==='node:ollama-local'
+    ?{general:0.62,analysis:0.22,writing:0.55,code:0.02,review:0.1}
+    :node
     ?{general:0.75,analysis:0.8,writing:0.68,code:0.96,review:0.9}
     :direct
       ?{general:0.8,analysis:0.82,writing:0.82,code:0.62,review:0.78}
