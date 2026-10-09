@@ -11,7 +11,7 @@ function position(needle) {
 }
 
 test('production release depends directly on staging and reliability gates', () => {
-  assert.match(workflow, /deploy:\n    needs: \[staging_gate, reliability_gate\]/);
+  assert.match(workflow, /deploy:\r?\n    needs: \[staging_gate, reliability_gate\]/);
   assert.match(workflow, /STAGING_RELEASE_DIGEST: \$\{\{ needs\.staging_gate\.outputs\.release_digest \}\}/);
 });
 
