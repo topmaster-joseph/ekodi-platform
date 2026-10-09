@@ -36,6 +36,20 @@ test('paid GPT/Claude do not activate just because a key exists',async()=>{
       assert.equal(response.status,503);
       assert.equal((await response.json()).error,'paid_provider_not_enabled');
     }
+    env.AI_COMMONS_PAID_CHAT_ENABLED='true';
+    // Operator enablement alone cannot turn every free member into a paid API consumer.
+    const blocked=await worker.fetch(request('/api/commons/chat','POST',{
+      mode:'gpt',messages:[{role:'user',content:'한글'}],
+    },'test-token'),env,null);
+    assert.equal(blocked.status,503);
+    assert.equal((await blocked.json()).error,'paid_provider_not_enabled');
+    const anonymousStatus=await worker.fetch(request('/api/commons/chat/status'),env,null);
+    assert.equal((await anonymousStatus.json()).providers.gpt,false);
+    env.AI_COMMONS_PAID_CHAT_USER_IDS='member-1';
+    const eligibleStatus=await worker.fetch(request('/api/commons/chat/status','GET',null,'test-token'),env,null);
+    const flags=(await eligibleStatus.json()).providers;
+    assert.equal(flags.gpt,true);
+    assert.equal(flags.claude,true);
   }finally{globalThis.fetch=oldFetch}
 });
 
