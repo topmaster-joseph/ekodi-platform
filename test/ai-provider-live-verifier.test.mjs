@@ -10,6 +10,9 @@ test('live provider control verifier checks the current tabbed UI rather than a 
   assert.ok(verifier.includes('EKODIProviderControl'));
   assert.ok(verifier.includes('/admin/status/aiops'));
   assert.ok(!verifier.includes('COMMON AI PROVIDER CONTROL'));
+  const admin=read('admin-provider-control.js');
+  assert.ok(admin.includes('EKODI AI CONTROL CENTER'));
+  assert.ok(admin.includes('ekodi-ai-center-tabs'));
 });
 
 test('admin UI verifier changes retrigger guarded site deployment',()=>{
