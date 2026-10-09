@@ -27,7 +27,7 @@ function mockGithub(overrides={}){
             {id:2,name:'EKODI AI Orchestration Gate',status:'completed',conclusion:'success',html_url:'https://example/gate'},
             {id:3,workflow_id:30,name:'Deploy Control API',status:'completed',conclusion:'success',head_sha:mergeSha,html_url:'https://example/deploy'},
           ];
-          const allowed=all.map(run=>({...run,event:run.event||(/^Deploy\\b/.test(run.name)?'push':'pull_request')}));
+          const allowed=all.map(run=>({...run,event:run.event||(run.name.startsWith('Deploy ')?'push':'pull_request')}));
           return {data:{workflow_runs:head_sha===prHeadSha&&event==='pull_request'
             ?allowed.filter(run=>run.event==='pull_request')
             :head_sha===mergeSha&&!event
