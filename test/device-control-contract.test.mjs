@@ -370,3 +370,17 @@ test('bounded isolated desktop session is payload-sanitized and capability-gated
   assert.match(agent, /isolatedDesktop = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
   assert.doesNotMatch(agent, /isolatedDesktop = \$true/);
 });
+
+test('native Windows Agent loads built-in HTTP transport, bounds local health state and backs off free cloud polls', () => {
+  assert.match(agent, /Add-Type -AssemblyName System\.Net\.Http/);
+  assert.match(agent, /GetFolderPath\('CommonApplicationData'\)/);
+  assert.match(agent, /function Write-AgentRuntimeStatus/);
+  assert.match(agent, /runtime-status\.json/);
+  assert.match(agent, /function Get-AgentRetryCode/);
+  assert.match(agent, /'AUTH_REQUIRED'/);
+  assert.match(agent, /'RATE_LIMITED'/);
+  assert.match(agent, /Get-Random -Minimum 0 -Maximum 5/);
+  assert.match(agent, /if \(\$hasCommand\) \{ \$sleepSeconds = 3 \}/);
+  assert.match(agent, /Math\]::Min\(300,/);
+  assert.doesNotMatch(agent, /Write-AgentRuntimeStatus[\s\S]{0,120}protectedToken/);
+});
