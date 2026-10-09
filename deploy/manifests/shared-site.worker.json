@@ -1550,7 +1550,7 @@
         "expect": [
           "EKODI Invest",
           "data-ekodi-service=\"invest\"",
-          "/invest/invest-ui.js"
+          "근거를 먼저 보는 투자분석"
         ],
         "headerExpect": [
           "x-ekodi-shell: v2",
