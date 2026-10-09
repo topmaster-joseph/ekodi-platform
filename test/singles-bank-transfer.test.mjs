@@ -8,10 +8,10 @@ const reference='EDH-'+'B'.repeat(32);
 const reply=(_req,body,status=200)=>new Response(JSON.stringify(body),{status});
 const flags={SINGLES_BANK_TRANSFER_ENABLED:'false',SINGLES_BANK_VERIFICATION_ENABLED:'false'};
 globalThis.Deno={env:{get:key=>flags[key]||undefined}};
-function db({operator=false,grant=false,configured=false}={}){
+function db({operator=false,grant=false,configured=false,canVerify=operator,canConfigure=operator}={}){
  const writes=[],reads=[],calls=[];
  const rows={
-  singles_bank_operators:{enabled:operator},
+  singles_bank_operators:{enabled:operator,can_verify:canVerify,can_configure:canConfigure},
   singles_memberships:{status:'active',base_consent:true,adult_verified_at:'2026-10-09T01:00:00Z'},
   singles_bank_plans:{code:'community',display_name:'행사 참가',amount_krw:25000,duration_days:30,active:configured},
   singles_bank_settings:{bank_name:'테스트은행',account_number:'0000000000',account_holder:'테스트',active:configured},
@@ -27,6 +27,7 @@ function db({operator=false,grant=false,configured=false}={}){
     select(){return this},eq(k,v){this.filters.push([k,v]);reads.push([name,k,v]);return this},
     order(){return this},limit(){return this},
     insert(row){writes.push({name,row});this.mode='write';return this},
+    upsert(row){writes.push({name,row});this.mode='write';return this},
     single:async()=>({data:{id:'55555555-5555-4555-8555-555555555555',status:'requested'},error:null}),
     maybeSingle:async()=>({data:rows[name]||null,error:null}),
     then(on,fail){return Promise.resolve({data:resultFor(name),error:null}).then(on,fail)},
@@ -98,6 +99,32 @@ test('admin must have capability, verification flag, and bank statement referenc
  assert.equal(r.status,200);
  assert.equal(x.calls[0].name,'singles_bank_confirm_order');
  assert.equal(x.calls[0].params.p_operator,uid);
+});
+test('ledger viewer may not verify without separate verification capability',async()=>{
+ flags.SINGLES_BANK_TRANSFER_ENABLED='true';
+ flags.SINGLES_BANK_VERIFICATION_ENABLED='true';
+ const x=db({operator:true,canVerify:false});
+ const path='/bank/admin/orders/'+reference+'/review';
+ const r=await handleSinglesBank(request(path,'POST',{decision:'verified',bank_trace:'TX-123456'}),path,x,uid,reply);
+ assert.equal(r.status,403);
+ assert.equal(x.calls.length,0);
+});
+test('bank account setting is allowed only to config authority and cannot activate collection',async()=>{
+ flags.SINGLES_BANK_TRANSFER_ENABLED='true';
+ const path='/bank/admin/config';
+ const input={bank_name:'테스트은행',account_number:'000 000 000',account_holder:'홍길동',
+   community_amount_krw:25000,consulting_amount_krw:45000};
+ let x=db({operator:true,canConfigure:false});
+ let r=await handleSinglesBank(request(path,'PUT',input),path,x,uid,reply);
+ assert.equal(r.status,403);
+ assert.equal(x.writes.length,0);
+ x=db({operator:true,canConfigure:true});
+ r=await handleSinglesBank(request(path,'PUT',input),path,x,uid,reply);
+ assert.equal(r.status,200);
+ assert.equal((await r.json()).bank_collection_enabled,false);
+ assert.equal(x.writes.length,2);
+ assert.equal(x.writes[0].row.active,false);
+ assert.ok(x.writes[1].row.every(z=>z.active===false));
 });
 test('optional general consulting requires its own confirmed plan, not community plan',async()=>{
  flags.SINGLES_BANK_TRANSFER_ENABLED='true';
