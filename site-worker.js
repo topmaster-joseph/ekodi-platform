@@ -625,7 +625,7 @@ export default {
 
     // Desktop Bootstrap is a canonical entry alias, not a separate admin screen.
     // It must precede the catch-all /admin/* shell fallback; static redirect HTML is not served there.
-    if (host === PUBLIC_HOST && /^\\/admin\\/desktop\\/bootstrap(?:\\/|\\/index\\.html)?$/.test(url.pathname)) {
+    if (host === PUBLIC_HOST && /^\/admin\/desktop\/bootstrap(?:\/|\/index\.html)?$/.test(url.pathname)) {
       if (!['GET', 'HEAD'].includes(request.method)) {
         const response = new Response(null, {status:405, headers:{allow:'GET, HEAD', 'cache-control':'no-store'}});
         applyBaseSecurityHeaders(response.headers);
