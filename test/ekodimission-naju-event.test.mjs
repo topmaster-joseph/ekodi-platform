@@ -34,3 +34,10 @@ test('10 October Naju festival page and homepage links',async()=>{
   assert.ok(list.includes('href="'+route+'"'));
   assert.ok(list.indexOf('2026-10-10')<list.indexOf('2026-10-03'));
 });
+
+test('Naju mobile itinerary time labels stay horizontal and visually scoped',async()=>{
+  const css=await readFile(new URL('ekodimission.css',base),'utf8');
+  assert.match(css,/\.naju-activity-page \.timeline li\{grid-template-columns:104px minmax\(0,1fr\)/);
+  assert.match(css,/\.naju-activity-page \.timeline time\{[^}]*white-space:nowrap/);
+  assert.match(css,/@media\(max-width:760px\)/);
+});
