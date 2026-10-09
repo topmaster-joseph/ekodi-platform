@@ -27,8 +27,12 @@ export function createGroqFreeProvider(env={},options={}){
   const available=Boolean(enabled&&key&&typeof fetchImpl==='function');
   return Object.freeze({
     id:'groq-free',model,available,priority:25,costClass:'free-preferred',
-    async invoke({prompt='' }={}){
+    async invoke(input={}){
       if(!available)throw new Error('groq_free_not_configured');
+      // The shared EKODI gateway invokes providers with {taskName, context},
+      // while direct provider calls pass {prompt}. Support both contracts.
+      const prompt=clean(input.prompt||input.context?.prompt||input.context?.message||input.context?.request,24000);
+      if(!prompt)throw new Error('groq_free_prompt_required');
       const reservation=await reserveFreeDailyRequest(env,'groq-free',dailyLimit(env));
       const projected=await projectForExternalAi({prompt:clean(prompt,24000)},{profile:'ai_minimum',purpose:'ekodi-free-provider',salt:crypto.randomUUID()});
       const safePrompt=clean(projected?.prompt||JSON.stringify(projected),24000);

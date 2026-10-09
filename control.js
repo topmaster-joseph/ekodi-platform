@@ -13,7 +13,7 @@
     ['qwen','Qwen','AI'],
   ];
   const WORKERS=[['cloud','Cloud Worker'],['browser','Browser Worker'],['local','Local Worker Pool']];
-  const state={sessions:loadHistory(),activeId:null,view:'chat',busy:false,tasks:loadState().tasks||[],results:loadState().results||[]};
+  const state={sessions:loadHistory(),activeId:null,view:'chat',busy:false,authenticated:false,authPromise:null,tasks:loadState().tasks||[],results:loadState().results||[]};
   const $=s=>document.querySelector(s);
   const $$=s=>[...document.querySelectorAll(s)];
   const now=()=>new Date().toISOString();
@@ -24,7 +24,7 @@
   function saveState(){try{sessionStorage.setItem(CONTROL_STATE,JSON.stringify({tasks:state.tasks.slice(0,40),results:state.results.slice(0,40)}))}catch{}}
   function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
   function title(text){const v=String(text||'').replace(/\s+/g,' ').trim();return v.length>46?v.slice(0,46)+'…':v||'새 작업'}
-  function statusLabel(v){return ({queued:'대기',running:'실행 중',verified:'완료',resolved:'완료',failed:'실패',blocked:'차단',core_only:'Core 처리',human_gate:'확인 필요',assist_only:'검토',ready_for_executor:'실행 대기',approved_pending_executor:'승인됨'})[v]||v||'진행'}
+  function statusLabel(v){return ({queued:'대기',running:'실행 중',verified:'완료',resolved:'완료',failed:'실패',blocked:'차단',auto_blocked:'승인·사전점검 필요',preflight_failed:'사전점검 실패',core_only:'Core 처리',human_gate:'확인 필요',assist_only:'검토',ready_for_executor:'실행 대기',approved_pending_executor:'승인됨'})[v]||v||'진행'}
   function headers(json=false){const h={accept:'application/json'};if(token())h.authorization='Bearer '+token();if(json)h['content-type']='application/json';return h}
   async function api(path,options={}){
     const response=await fetch(API+path,{cache:'no-store',...options,headers:{...headers(Boolean(options.body)),...(options.headers||{})}});
@@ -52,33 +52,95 @@
     return '<article class="turn '+esc(m.role)+'"><div class="meta">'+esc(m.role==='user'?'사용자':'EKODI')+(meta?' · '+esc(meta):'')+'</div><div class="bubble">'+esc(m.text)+'</div>'+task+'</article>';
   }).join('');requestAnimationFrame(()=>{const c=$('#conversation');window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})})}
   function historyForAssist(){const s=state.sessions.find(x=>x.id===state.activeId);return (s?.messages||[]).filter(m=>m.role==='user'||m.role==='assistant').slice(-8).map(m=>({role:m.role,text:m.text}))}
+  function authDisplay(label,ok=false,detail=''){
+    state.authenticated=ok;
+    $('#authState').textContent=label;
+    $('#runtimeStatus').textContent=label;
+    $('#runtimeStatus').classList.toggle('ok',ok);
+    const banner=$('#authBanner');
+    banner.hidden=ok;
+    $('#authBannerText').textContent=detail||'EKODI 최고관리자 로그인이 필요합니다. 로그인 후 Control로 돌아오세요.';
+  }
+  async function verifySession(){
+    if(state.authPromise)return state.authPromise;
+    state.authPromise=(async()=>{
+      if(!token()){authDisplay('로그인 필요');return false}
+      authDisplay('서버 인증 확인 중',false,'저장된 토큰의 권한과 유효기간을 확인하고 있습니다.');
+      try{
+        const session=await api('/api/session');
+        if(session?.authenticated===true && session?.role==='super_admin'){
+          authDisplay('최고관리자 인증됨',true);
+          return true;
+        }
+        authDisplay(session?.authenticated?'최고관리자 권한 없음':'로그인 필요');
+        return false;
+      }catch(error){
+        authDisplay(error?.auth?'로그인 만료':'인증 확인 실패',false,error?.auth?'로그인 세션이 만료되었거나 권한이 없습니다.':'인증 서버 연결을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+        return false;
+      }
+    })();
+    try{return await state.authPromise}finally{state.authPromise=null}
+  }
+  async function preflightCommand(message){
+    // A successful observation, not a client-side assertion, is the only evidence
+    // that may satisfy EKODI Command Plane standing-delegation preflight.
+    const checked=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({
+      agentId:'chief',actionType:'service.health_check',area:'health_checks',target:'control',
+      rationale:'Control 명령 실행 전 사전점검: '+message.slice(0,500),
+      payload:{source:'control-surface',pathname:'/control',request:message.slice(0,1000)},
+      reversible:true,delegated:true,preflightVerified:false
+    })});
+    return checked?.ok===true && checked?.status==='verified' && checked?.execution?.ok===true;
+  }
   async function submitCommand(value){
-    if(state.busy)return;const message=String(value||'').trim();if(!message)return;
-    state.busy=true;$('#sendButton').disabled=true;const target=$('#executionTarget').value;const executeNow=$('#executeNow').checked;
-    const prior=historyForAssist();pushMessage('user',message,{target});$('#commandInput').value='';resizeInput();
-    let queued=null;
+    if(state.busy)return;
+    const message=String(value||'').trim();
+    if(!message){toast('실행할 명령이나 질문을 입력해 주세요.');return}
+    state.busy=true;$('#sendButton').disabled=true;
     try{
+      if(!(await verifySession())){toast('최고관리자 인증을 확인한 뒤 다시 실행해 주세요.');return}
+      const target=$('#executionTarget').value,executeNow=$('#executeNow').checked;
+      const prior=historyForAssist();
+      pushMessage('user',message,{target});$('#commandInput').value='';resizeInput();
+      let queued=null,preflightProblem='';
       if(executeNow){
-        queued=await api('/api/control/ai/v8/pulse',{method:'POST',body:JSON.stringify({
-          goal:message,risk:'normal',
-          target:{capability:'core.automation',service:'control',section:'command',surface:'control',providerHint:target},
-          delegation:{allowed:true,reversible:true,audited:true,preflightVerified:false,verificationDefined:true},
-          context:{source:'control-surface',pathname:'/control',executionTarget:target,request:message},
-          event:{kind:'control_command',source:'control-surface',summary:message,changeClass:'yellow',actionable:true,requiresHumanDecision:false},
-          executeNow:true
-        })});
+        try{
+          const preflight=await preflightCommand(message);
+          if(!preflight){
+            preflightProblem='서버 사전점검이 통과하지 않아 자동실행을 접수하지 않았습니다.';
+          }else{
+            queued=await api('/api/control/ai/v8/pulse',{method:'POST',body:JSON.stringify({
+              goal:message,risk:'normal',
+              target:{capability:'core.automation',service:'control',section:'command',surface:'control',providerHint:target},
+              delegation:{allowed:true,reversible:true,audited:true,preflightVerified:preflight,verificationDefined:true},
+              context:{source:'control-surface',pathname:'/control',executionTarget:target,request:message},
+              event:{kind:'control_command',source:'control-surface',summary:message,changeClass:'yellow',actionable:true,requiresHumanDecision:false},
+              executeNow:true
+            })});
+          }
+        }catch(error){
+          preflightProblem='자동실행은 접수되지 않았습니다. '+(error.auth?'로그인 권한을 다시 확인해 주세요.':error.message);
+        }
       }
       const taskId=queued?.task?.id||queued?.execution?.results?.[0]?.taskId||'';
-      const taskStatus=queued?.task?.state||queued?.execution?.results?.[0]?.state||(executeNow?'queued':'assist_only');
+      const taskStatus=queued?.task?.state||queued?.execution?.results?.[0]?.state||(preflightProblem?'preflight_failed':executeNow?'queued':'assist_only');
       if(taskId){state.tasks.unshift({id:taskId,title:title(message),status:taskStatus,target,at:now()});state.tasks=state.tasks.slice(0,40);saveState()}
-      const result=await api('/api/control/ai/assist',{method:'POST',body:JSON.stringify({message,history:prior,context:{source:'control-surface',pathname:'/control',executionTarget:target,taskId}})});
-      const reply=String(result.reply||'응답을 받지 못했습니다.');
-      pushMessage('assistant',reply,{provider:result.provider||'EKODI',target,status:taskStatus,taskId});
-      state.results.unshift({title:title(message),summary:reply.slice(0,280),provider:result.provider||'EKODI',taskId,status:taskStatus,at:now()});state.results=state.results.slice(0,40);saveState();renderPanels();
-    }catch(error){
-      pushMessage('assistant',error.message,{status:'failed',target});
-      if(error.auth)toast('최고관리자 로그인 후 /control로 돌아오세요.');
-    }finally{state.busy=false;$('#sendButton').disabled=false;$('#commandInput').focus()}
+      let reply='',provider='EKODI';
+      try{
+        const result=await api('/api/control/ai/assist',{method:'POST',body:JSON.stringify({message,history:prior,context:{source:'control-surface',section:'command',title:'EKODI Control',pathname:'/control',executionTarget:target,taskId}})});
+        provider=result.provider||'EKODI';
+        reply=String(result.reply||'').trim()||'AI가 유효한 답변을 반환하지 않았습니다. 명령 전달 기록을 확인해 주세요.';
+      }catch(error){
+        reply='AI 설명을 받지 못했습니다. '+error.message;
+      }
+      if(queued?.task?.state==='auto_blocked')reply='EKODI 정책에 따라 자동실행이 차단되었습니다. 승인·검증 상태를 확인해 주세요.\n\n'+reply;
+      if(preflightProblem)reply=preflightProblem+'\n\n'+reply;
+      pushMessage('assistant',reply,{provider,target,status:taskStatus,taskId});
+      state.results.unshift({title:title(message),summary:reply.slice(0,280),provider,taskId,status:taskStatus,at:now()});
+      state.results=state.results.slice(0,40);saveState();renderPanels();
+    }finally{
+      state.busy=false;$('#sendButton').disabled=false;$('#commandInput').focus();
+    }
   }
   function card(titleText,status,description){return '<article class="card"><div class="card-head"><strong>'+esc(titleText)+'</strong><span class="badge">'+esc(status)+'</span></div><p>'+esc(description||'')+'</p></article>'}
   function renderPanels(){
@@ -101,8 +163,7 @@
   }
   async function boot(){
     bind();renderRecent();renderMessages();renderPanels();
-    const logged=Boolean(token());$('#authState').textContent=logged?'최고관리자 세션':'로그인 필요';$('#runtimeStatus').textContent=logged?'EKODI 연결 준비':'로그인 필요';$('#runtimeStatus').classList.toggle('ok',logged);
-    if(!logged)toast('최고관리자 로그인 세션이 필요합니다.');
+    await verifySession();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
