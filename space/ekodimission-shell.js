@@ -1,6 +1,11 @@
 (()=>{
   // Deployment sync: keep the published language-visibility contract aligned with ekodi-space assets.
   const sourceLocale='ko-KR';
+  // Redirect legacy year anchors formerly embedded in the news page.
+  if(location.pathname.replace(/\/+$/,'')==='/ekodimission/stories'&&/^#history-20\d{2}$/.test(location.hash)){
+    location.replace('/ekodimission/history'+location.hash);
+    return;
+  }
   const localeStorageKey='ekodi_user_locale';
   const localeCookieKey='ekodi_locale';
   const languageRegistryUrl='/shell/language-registry.json';
@@ -11,6 +16,7 @@
     release:'language-visibility-v1',
     links:Object.freeze([
       Object.freeze({href:'/ekodimission/activities',label:'활동'}),
+      Object.freeze({href:'/ekodimission/history',label:'연혁'}),
       Object.freeze({href:'/ekodimission/live',label:'라이브'}),
       Object.freeze({href:'/ekodimission/participate',label:'함께하기'}),
       Object.freeze({href:'/ekodimission/partners',label:'협력'}),

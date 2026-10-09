@@ -15,7 +15,7 @@ const legacyCurrentEventPath='/ekodimission/activities/260926-chuseok-open-table
 const applicationApi='/ekodimission/api/activities/260926-chuseok-open-table/applications';
 const standaloneApplyPath=eventPath;
 const pageCases=[
-  ['/ekodimission','에코디선교회'],['/ekodimission/activities','MISSION ACTIVITIES'],
+  ['/ekodimission','에코디선교회'],['/ekodimission/activities','MISSION ACTIVITIES'],['/ekodimission/history','OUR JOURNEY'],
   [eventPath,'한가위 열린식탁 & 나눔마켓'],['/ekodimission/participate','PARTICIPATE'],
   ['/ekodimission/partners','PARTNERSHIP'],['/ekodimission/stories','STORIES & NEWS'],['/ekodimission/give','GIVE & SHARE'],
 ];
