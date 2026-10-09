@@ -1,0 +1,80 @@
+{
+  "task_id": "singles-mvp-blueprint-20261009",
+  "service": "ekodi-singles",
+  "name": "EKODI 동행",
+  "phase": "blueprint-only",
+  "source_of_truth": "docs/EKODI-SINGLES-MVP.md",
+  "canonical_host": "ekodi.kr",
+  "canonical_path": "/singles",
+  "launch_mode": "not-launched",
+  "journeys": [
+    "community",
+    "relationship",
+    "marriage"
+  ],
+  "route_plan": [
+    "/singles",
+    "/singles/discover",
+    "/singles/groups",
+    "/singles/events",
+    "/singles/messages",
+    "/singles/my",
+    "/singles/admin"
+  ],
+  "existing_reuse": [
+    "people",
+    "login_identities",
+    "community_connect reference patterns",
+    "EKODI Core capability authorization",
+    "EKODI Messenger adapter subject to isolation verification"
+  ],
+  "independent_consent": [
+    "base_service",
+    "sensitive_religion",
+    "discoverability",
+    "marriage_purpose"
+  ],
+  "defaults": {
+    "adult_only_19_plus": true,
+    "private_by_default": true,
+    "public_profile_search_indexing": false,
+    "external_ai_sensitive_data": false,
+    "paid_brokerage": false,
+    "mutual_consent_before_chat": true,
+    "admins_read_private_messages": false,
+    "dedicated_sensitive_profile_storage": true,
+    "feature_active": false
+  },
+  "roles": [
+    "visitor",
+    "authenticated",
+    "singles_member",
+    "group_host",
+    "trust_safety",
+    "singles_admin",
+    "platform_admin"
+  ],
+  "proposed_tables": [
+    "singles_memberships",
+    "singles_sensitive_profiles",
+    "singles_public_cards",
+    "singles_groups",
+    "singles_group_members",
+    "singles_events",
+    "singles_event_rsvps",
+    "singles_interests",
+    "singles_matches",
+    "singles_blocks",
+    "singles_reports",
+    "singles_audit"
+  ],
+  "gates": [
+    "design-review",
+    "legal-consent-review",
+    "dev-migrations-rls",
+    "synthetic-role-e2e",
+    "staging",
+    "guarded-release",
+    "production-canary"
+  ]
+}
