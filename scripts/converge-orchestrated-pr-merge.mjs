@@ -71,12 +71,18 @@ const marketingGrowthTouched=changedFiles.some(file=>[
   'wrangler.marketing-growth.toml',
   '.github/workflows/deploy-marketing-growth.yml',
 ].includes(file));
+const spaceTouched=changedFiles.some(file=>
+  file.startsWith('space/')||
+  file==='space-worker.js'||
+  file==='deploy/manifests/space.worker.json'||
+  file==='wrangler.space.toml'||
+  file==='wrangler.space.staging.toml'||
+  file==='.github/workflows/deploy-space.yml'
+);
 const mallSiteTouched=changedFiles.some(file=>file.startsWith('sites/ekodi-mall/')||file==='.github/workflows/deploy-ekodi-mall.yml');
 const sharedSiteTouched=changedFiles.some(file=>
   file==='workspace-admin-page.js'||
   file==='mall-social-setup.js'||
-  // Canonical admin assets are served by the shared-site Worker even when the Worker source is unchanged.
-  ['device-control-admin.js','device-control-admin.css','remote-power-admin.js','remote-power-admin.css','device-wake-admin.js'].includes(file)||
   file.startsWith('sites/')||
   file.startsWith('auth-site/')||
   file==='deploy/manifests/shared-site.worker.json'||
@@ -84,6 +90,11 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='wrangler.site.toml'||
   file==='platform-router-entry-worker.js'||
   file==='canonical-surface-router.js'||
+  file==='device-control-admin.js'||
+  file==='device-control-admin.css'||
+  // Keep all Device Control/Remote Power/Wake static assets in a single orchestrated deploy boundary.
+  ['remote-power-admin.js','remote-power-admin.css','device-wake-admin.js'].includes(file)||
+  file==='ekodi-device-bootstrap.cmd'||
   file==='site-worker.js'||
   file==='scripts/build.mjs'||
   file==='scripts/finalize-seonammedi-release.mjs'||
@@ -91,9 +102,21 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='scripts/seonammedi-cache-contract.mjs'||
   file==='test/seonammedi-cache-contract.test.mjs'||
   file==='.github/workflows/deploy-site-core.yml'||
+  file==='scripts/converge-orchestrated-pr-merge.mjs'||
   file==='.github/workflows/converge-orchestrated-pr-merge.yml'
 );
 async function dispatchPostMergeDeploys(){
+  // Only the guarded operating-space workflow can mutate production.
+  // The originating orchestrator release receipt is mandatory.
+  if(spaceTouched){
+    const dispatch=await api('/actions/workflows/deploy-space.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Operating Space deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-space.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+
   if(mallSiteTouched){
     const dispatch=await api('/actions/workflows/deploy-ekodi-mall.yml/dispatches',{
       method:'POST',

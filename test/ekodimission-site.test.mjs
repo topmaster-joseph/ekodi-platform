@@ -15,7 +15,7 @@ const legacyCurrentEventPath='/ekodimission/activities/260926-chuseok-open-table
 const applicationApi='/ekodimission/api/activities/260926-chuseok-open-table/applications';
 const standaloneApplyPath=eventPath;
 const pageCases=[
-  ['/ekodimission','에코디선교회'],['/ekodimission/activities','MISSION ACTIVITIES'],
+  ['/ekodimission','에코디선교회'],['/ekodimission/activities','MISSION ACTIVITIES'],['/ekodimission/history','OUR JOURNEY'],
   [eventPath,'한가위 열린식탁 & 나눔마켓'],['/ekodimission/participate','PARTICIPATE'],
   ['/ekodimission/partners','PARTNERSHIP'],['/ekodimission/stories','STORIES & NEWS'],['/ekodimission/give','GIVE & SHARE'],
 ];
@@ -421,4 +421,16 @@ test('Mission public admin bridge is tenant-scoped, privacy-preserving, and uses
     assert.equal(anonymous.status,401);
     assert.equal(called,false);
   }finally{globalThis.fetch=originalFetch}
+});
+
+
+test('mission remains the owner of its public UI while retaining shared admin shell',async()=>{
+  for(const route of ['/ekodimission','/ekodimission/activities','/ekodimission/apply/260926-open-table','/ekodimission/apply/261003-autumn-trip']){
+    const response=await spaceWorker.fetch(new Request('https://ekodi.kr'+route),env);
+    assert.equal(response.status,200,route);
+    assert.match(await response.text(),/<html data-ekodi-user-ai-entry="off" lang="ko">/,route);
+  }
+  // A route requiring mission public admin capabilities must preserve that delegation.
+  const response=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/activities'),env);
+  assert.equal(response.headers.get('x-ekodi-independent-site'),'true');
 });

@@ -80,6 +80,25 @@ test('finance and notice boards are first-class standalone board routes',async()
   assert.match(site,/href="board\/notices">공지/);
 });
 
+test('finance access tiers expose summary to signed-in Google users and details only to admins',async()=>{
+  const worker=await read('services/independent-board/worker.js');
+  assert.match(worker,/async function signedInGoogle\(req\)/);
+  assert.match(worker,/providers\.includes\('google'\)/);
+  assert.match(worker,/async function requireSignedInGoogle\(req\)/);
+  assert.match(worker,/Google 로그인 후 총괄내역을 확인할 수 있습니다/);
+  assert.match(worker,/\/api\/finance\/summary/);
+  assert.match(worker,/finance_detail_admin_only/);
+  assert.match(worker,/세부 회계내역은 관리자만 볼 수 있습니다/);
+  assert.match(worker,/관리자만 볼 수 있습니다/);
+  assert.match(worker,/관리자 권한 · 총괄내역과 세부내역 확인 가능/);
+  assert.match(worker,/writeToggle\.hidden=true/);
+  assert.match(worker,/writeToggle\.hidden=false/);
+  assert.match(worker,/\/board\/api\/admin\/finance/);
+  assert.match(worker,/method:id\?"PUT":"POST"/);
+  assert.match(worker,/method:"DELETE"/);
+});
+
+
 test('standalone board supports both customer-domain and internal seonammedi mounts',async()=>{
   const mod=await import(new URL('../services/independent-board/worker.js?dual-mount='+Date.now(),import.meta.url));
   const external=await mod.default.fetch(new Request('https://seonammedi.kr/board/voices'),{});
@@ -310,4 +329,24 @@ test('standalone board media endpoint is restricted to board-owned R2 prefixes',
   const worker=await read('services/independent-board/worker.js');
   assert.match(worker,/\^seonammedi\\\/\(voices\|notices\)\\\//);
   assert.match(worker,/x-content-type-options','nosniff'/);
+});
+
+
+test('independent board header uses one aligned desktop row and a stacked mobile layout on every route',async()=>{
+  const mod=await import(new URL('../services/independent-board/worker.js?header-layout='+Date.now(),import.meta.url));
+  for(const mount of ['https://seonammedi.kr/board','https://ekodi.kr/seonammedi/board']){
+    for(const route of ['voices','finance','notices']){
+      const response=await mod.default.fetch(new Request(mount+'/'+route),{});
+      assert.equal(response.status,200,mount+'/'+route);
+      const html=await response.text();
+      assert.match(html,/<header class="site-header independent-board-header">/);
+      assert.match(html,/\.site-header\.independent-board-header\{display:flex;flex-direction:row;align-items:center;justify-content:space-between;/);
+      assert.match(html,/\.site-header\.independent-board-header>\.brand\{display:flex;flex:0 1 auto;flex-direction:column;/);
+      assert.match(html,/\.site-header\.independent-board-header>nav\{display:flex;flex:0 1 auto;align-items:center;justify-content:flex-end;[^}]*width:auto;/);
+      assert.match(html,/@media\(max-width:760px\)\{\.site-header\.independent-board-header\{flex-direction:column;align-items:stretch;/);
+      assert.match(html,/\.site-header\.independent-board-header>nav\{flex:none;justify-content:flex-start;[^}]*width:100%/);
+      assert.match(html,/\.site-header\.independent-board-header>nav a\[aria-current="page"\]\{color:#111;/);
+      assert.match(html,new RegExp('aria-current="page" href="'+mount.replace('https://seonammedi.kr','').replace('https://ekodi.kr','')+'/'+route+'">'));
+    }
+  }
 });
