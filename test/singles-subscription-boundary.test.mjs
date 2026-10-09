@@ -23,14 +23,16 @@ test('guest cannot list events or see profiles; only descriptions are public',as
  }
  assert.match(ui,/if\(!state\.session\)\{showGuest\(\);return\}/);
 });
-test('server authorizes premium actions only with independent launch gates and trusted central billing',()=>{
+test('event entry requires bank grant; free messages remain independent of billing',()=>{
  assert.match(worker,/SINGLES_PAID_ACTIONS_ENABLED/);
  assert.match(worker,/paid_actions_not_launched/);
- assert.match(social,/SINGLES_PAYMENTS_ENABLED/);
- assert.match(social,/source==='verified_central_billing'/);
- assert.match(social,/Date\.parse\(record\.expires_at\)>Date\.now\(\)/);
+ assert.match(social,/hasBankPlan\(admin,userId,'community'\)/);
+ assert.match(worker,/SINGLES_BANK_TRANSFER_ENABLED/);
+ assert.doesNotMatch(social,/source==='verified_central_billing'/);
  assert.match(social,/if\(!await subscribed\(admin,userId\)\)/);
- assert.match(social,/subscription_required/);
+ assert.match(social,/community_subscription_required/);
+ const messageSection=social.slice(social.indexOf('const interestId=match(p'));
+ assert.doesNotMatch(messageSection,/subscribed\(/);
  assert.doesNotMatch(social.replace(/\/\/[^\n]*/g,''),/user_metadata|raw_user_meta_data/);
 });
 test('interests, mutual acceptance and refusal remain separate from payment',()=>{
@@ -51,9 +53,10 @@ test('DEV schema is default-private and includes no client-accessible entitlemen
  assert.match(schema,/adult_verified_at is not null/);
  assert.doesNotMatch(schema,/grant .* to authenticated/i);
 });
-test('UI has named subscriber gates for events, first messages, replies',()=>{
+test('UI paywall is limited to events and optional consulting; messages remain free',()=>{
  assert.match(ui,/paywall\(card,'행사 참가 신청'\)/);
- assert.match(ui,/paywall\(card,'메시지 발송'\)/);
+ assert.doesNotMatch(ui,/paywall\(card,'메시지 발송'\)/);
+ assert.match(ui,/메시지·답장은 무료/);
  assert.match(ui,/호감 수락/);
  assert.match(ui,/정중히 거절/);
  assert.match(ui,/로그인 후 무료로 볼 수 있습니다/);
