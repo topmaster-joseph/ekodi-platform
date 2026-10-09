@@ -252,6 +252,42 @@ async function showBankAdmin(h){
  paragraph(p,'EKODI가 부여한 결제 운영 권한이 있어야 실제 내역을 볼 수 있습니다. 회원 입금 신고와 은행 명세를 직접 대조하세요.');
  h.append(p);
  try{
+  const config=await api('/bank/admin/config');
+  const detail=document.createElement('details');detail.className='member-card';
+  const summary=document.createElement('summary');summary.textContent='입금 계좌·상품 금액 설정';
+  detail.append(summary);
+  paragraph(detail,'은행 계좌와 금액을 저장하면 결제 접수는 다시 비활성으로 돌아갑니다. 별도 운영 승인이 있어야 공개됩니다.');
+  const bank=config.bank||{};
+  const prices=new Map((config.plans||[]).map(x=>[x.code,x.amount_krw]));
+  if(config.can_configure){
+   const form=document.createElement('form');
+   const field=(label,value='',type='text')=>{
+    const wrapper=text('label',label,'field'),input=document.createElement('input');
+    input.type=type;input.value=value===null||value===undefined?'':String(value);
+    input.required=true;wrapper.append(input);form.append(wrapper);return input;
+   };
+   const bankName=field('은행명',bank.bank_name),number=field('계좌번호',bank.account_number),
+    holder=field('예금주',bank.account_holder),
+    community=field('행사 참여 구독 금액(원)',prices.get('community'),'number'),
+    consulting=field('선택형 컨설팅 구독 금액(원)',prices.get('consulting'),'number');
+   const msg=text('p','','status-text');
+   form.append(button('설정 저장(결제접수 비활성)',async()=>{
+    const amount=input=>input.value.trim()===''?null:Number(input.value);
+    const request={
+      bank_name:bankName.value.trim(),account_number:number.value.trim(),account_holder:holder.value.trim(),
+      community_amount_krw:amount(community),consulting_amount_krw:amount(consulting)
+    };
+    if(!confirm('은행 계좌·요금 설정을 저장합니까? 결제 접수는 별도 승인이 있을 때까지 비활성 상태로 유지됩니다.'))return;
+    try{await api('/bank/admin/config',{method:'PUT',body:request});
+     msg.textContent='저장됐습니다. 실제 결제 접수는 별도 승인 전까지 비활성입니다.';
+    }catch(e){msg.textContent=errorText(e)}
+   },'primary'),msg);detail.append(form);
+  }else{
+   paragraph(detail,'은행 계좌와 요금의 수정 권한은 최고관리자가 별도로 부여합니다.');
+   paragraph(detail,[bank.bank_name,bank.account_number,bank.account_holder].filter(Boolean).join(' · ')||'은행 계좌 미설정');
+  }
+  p.append(detail);
+  if(config.can_verify!==true)paragraph(p,'조회 권한은 있으나 입금 승인 권한은 없습니다.');
   const data=await api('/bank/admin/orders');
   if(!(data.orders||[]).length){paragraph(p,'확인할 주문이 없습니다.');return}
   for(const row of data.orders){
@@ -268,12 +304,12 @@ async function showBankAdmin(h){
      if(trace.value.trim().length<4){notice(card,'은행 명세 거래번호를 입력하세요.');return}
      if(!confirm('실제 은행 거래내역과 금액을 확인했습니까? 승인 후 구독 권한이 부여됩니다.'))return;
      try{await api('/bank/admin/orders/'+row.reference+'/review',{method:'POST',body:{decision:'verified',bank_trace:trace.value.trim()}});
-      p.replaceChildren();await showBankAdmin(h)}
+      location.reload()}
      catch(e){notice(card,errorText(e))}
     },'primary'),reason,button('입금 내역 반려',async()=>{
      if(!confirm('입금 신고를 반려하시겠습니까?'))return;
      try{await api('/bank/admin/orders/'+row.reference+'/review',{method:'POST',body:{decision:'rejected',reason:reason.value.trim()}});
-      p.replaceChildren();await showBankAdmin(h)}
+      location.reload()}
      catch(e){notice(card,errorText(e))}
     }));
    }
