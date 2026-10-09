@@ -76,6 +76,21 @@ test('only caller own receipts are selected; no other customer data returned',as
  assert.equal(r.status,200);
  assert.ok(x.reads.some(([table,key,value])=>table==='singles_bank_orders'&&key==='user_id'&&value===uid));
 });
+test('exact member payment lookup always scopes receipt reference to identity',async()=>{
+ flags.SINGLES_BANK_TRANSFER_ENABLED='true';
+ const x=db({configured:true});
+ const p='/bank/orders/'+reference;
+ await handleSinglesBank(request(p),p,x,uid,reply);
+ assert.ok(x.reads.some(([table,key,val])=>table==='singles_bank_orders'&&key==='reference'&&val===reference));
+ assert.ok(x.reads.some(([table,key,val])=>table==='singles_bank_orders'&&key==='user_id'&&val===uid));
+});
+test('exact operator payment reference cannot be looked up by ordinary member',async()=>{
+ flags.SINGLES_BANK_TRANSFER_ENABLED='true';
+ const x=db({operator:false}),p='/bank/admin/orders/'+reference;
+ const r=await handleSinglesBank(request(p),p,x,uid,reply);
+ assert.equal(r.status,403);
+ assert.ok(!x.reads.some(([table])=>table==='singles_bank_orders'));
+});
 test('admin receipt view is denied unless an operator has been provisioned',async()=>{
  flags.SINGLES_BANK_TRANSFER_ENABLED='true';
  const x=db({operator:false});
