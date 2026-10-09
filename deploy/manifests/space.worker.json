@@ -189,7 +189,7 @@
         "url": "https://ekodi.kr/ekodimission/history",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["OUR JOURNEY · 2018–2026","선교회 연혁","한국외국인선교회 무안지부 설립","제주 여름캠프","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
+        "expect": ["OUR JOURNEY · 2018–2026","class=\"mission-site-header\"","선교회 연혁","한국외국인선교회 무안지부 설립","제주 여름캠프","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
