@@ -23,6 +23,14 @@ test('My EKODI is a unified private-first USER UI hub, not a second source of tr
   assert.match(userAi,/specialistDirectControl:false/);
 });
 
+test('My initial member render waits only for core access and defers enrichment',async()=>{
+  const app=await read('my/app.js');
+  assert.match(app,/await loadAccess\(\);[\s\S]{0,120}renderCoreMemberContext\(\)/);
+  assert.match(app,/Promise\.allSettled\(\[loadPortfolio\(\),loadProfile\(\),loadPersonalization\(\)\]\)/);
+  assert.match(app,/requestIdleCallback/);
+  assert.doesNotMatch(app,/Promise\.all\(\[loadAccess\(\),loadPortfolio\(\),loadProfile\(\),loadPersonalization\(\)\]\)/);
+});
+
 test('My EKODI has one visible workspace selector path and no dead hidden controls',async()=>{
   const [html,app]=await Promise.all([read('my/index.html'),read('my/app.js')]);
   assert.match(html,/id="workspaceList"/);
