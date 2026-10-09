@@ -75,6 +75,15 @@ The Windows CI regression runs the sequence `candidate validation → existing i
 
 After initial enrollment, normal power and lock operations are initiated from the admin console.
 
+### Registered PC roster (display-only grouping)
+
+- The canonical list in `/admin/status/devices` is expanded by default and displays one compact, searchable row per **Windows hostname + managed device type**, with online/offline state, latest heartbeat and registration count. Blank/generic hostnames and observer/inventory assets always remain separate by `deviceId`.
+- **Matching hostnames do not establish hardware identity.** They may belong to different physical PCs. Grouping is strictly a UI view; each unique enrollment ID, credential, command history, health and revoke ability remains independent and accessible under the group. Duplicate identical IDs appear only once in the list. Never automatically revoke, delete, re-enroll, combine tokens or overwrite task records based on a name match.
+- Active online records appear first. Revoked-only groups are hidden until the administrator selects **해제된 기기 기록 포함**. Revoked records within a live hostname group remain inspectable with their original identity.
+- Use **기기 검색**, **연결 상태**, device-type filters and the short one-row status list to find computers; expand a row only when a specific Agent needs diagnostics or management. Refresh keeps the expanded group and advanced panel state so a live status update does not repeatedly hide the current computer.
+- The separate Remote Power panel uses a **single Agent selector**, not a duplicate multi-card list. Wake policy cards are folded under per-hostname groups, and their individual `deviceId` configuration remains independently editable.
+- Counts reflect *display groups*, not audited distinct physical hardware. Verify a hardware-specific identifier before suggesting a permanent database record merger.
+
 ## Data model
 
 Migrations: `migrations/0021_device_control.sql`, `migrations/0022_device_hybrid_execution.sql`
