@@ -7,7 +7,7 @@ try {
   New-Item -ItemType Directory -Force -Path $SandboxRoot | Out-Null
   # Import definitions only: do not invoke install/run/protocol dispatch in a CI smoke test.
   $source = [IO.File]::ReadAllText($agent).Replace(([string][char]13+[char]10),[string][char]10)
-  $match = [regex]::Match($source, '\ntry \{\n  if \(\$ProtocolUrl\)')
+  $match = [regex]::Match($source, '\n\$script:InstallMutex = \$null\ntry \{')
   if (-not $match.Success) { throw 'agent_entrypoint_marker_missing' }
   $definitions = Join-Path $SandboxRoot 'agent-definitions.ps1'
   [IO.File]::WriteAllText($definitions,$source.Substring(0,$match.Index),[Text.UTF8Encoding]::new($true))

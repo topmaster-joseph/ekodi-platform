@@ -152,7 +152,7 @@ test('admin quick connect downloads one bounded enrollment connector without req
 });
 
 test('existing registered devices upgrade transactionally and preserve registration', () => {
-  assert.match(agent, /\$AgentVersion = '2\.5\.1'/);
+  assert.match(agent, /\$AgentVersion = '2\.5\.2'/);
   assert.match(agent, /Invoke-AgentUpgradeTransaction/);
   assert.match(agent, /Assert-AgentCandidate/);
   assert.match(agent, /New-AgentUpgradeSnapshot/);
@@ -173,6 +173,21 @@ test('agent self-update validates actual PowerShell command AST instead of raw g
   assert.match(agent, /CommandAst/);
   assert.match(agent, /ParseInput/);
   assert.match(agent, /\('Invoke-' \+ 'Expression'\)/);
+});
+
+test('one-click connection diagnoses Windows launch blocks and never runs two elevated installs concurrently', () => {
+  assert.match(bootstrap, /EKB-010/);
+  assert.match(bootstrap, /EKB-011/);
+  assert.match(bootstrap, /powershell_blocked/);
+  assert.match(admin, /EKB-210/);
+  assert.match(admin, /EKB-211/);
+  assert.match(admin, /EKB-212/);
+  assert.match(agent, /Enter-AgentInstallLock/);
+  assert.match(agent, /EKA-080/);
+  assert.match(agent, /concurrent_install/);
+  assert.match(agent, /Global\\EKODI_Device_Agent_Install_V1/);
+  assert.match(agent, /InstallMutex\.ReleaseMutex\(\)/);
+  assert.match(admin, /설치 창이 열려 있으면/);
 });
 
 test('bootstrap elevates only when needed and keeps Boot/WOL separate', () => {
