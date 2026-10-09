@@ -144,6 +144,8 @@ await writeFile(`${output}release-control-admin.js`, `${releaseJs}\n${timelineJs
 
 const adminStaticMirrorDir = `${output}admin/`;
 await mkdir(adminStaticMirrorDir, { recursive: true });
+await mkdir(`${adminStaticMirrorDir}desktop/bootstrap`, { recursive: true });
+await cp(`${root}admin/desktop/bootstrap/index.html`, `${adminStaticMirrorDir}desktop/bootstrap/index.html`);
 const adminStaticMirrorAssets = assets.filter(asset =>
   !['control.css','control.js'].includes(asset) && !asset.endsWith('.html') && /\.(?:css|js|cmd|json|map|svg|png|webp|ico)$/i.test(asset)
 );
