@@ -55,6 +55,9 @@ The Windows Agent install/upgrade path is fail-safe and does not couple Agent av
 - Any failure after the snapshot restores the prior Agent file, Scheduled Task and protocol state and attempts to resume heartbeat.
 - Failure output includes a stable `EKA-xxx` stage code; bootstrap failures use `EKB-xxx`.
 - The bootstrap elevates with UAC only when the current process is not already elevated.
+- Windows Agent 2.5.2 uses a named, elevated install mutex for both one-click enrollment and protocol bootstrap. If another EKODI installer is already running, `EKA-080` reports a non-destructive busy state; it must finish before the next attempt.
+- One-click CMD preflight codes `EKB-010/011` (protocol bootstrap) and `EKB-210/211/212` (enrollment) distinguish PowerShell not found/blocked from later installation errors. A Windows Defender, AppLocker, WDAC or corporate security policy block must be reviewed by the device administrator; EKODI must **not** disable or bypass protection.
+- Use **only** the generated `EKODI_PC_연결.cmd` for initial enrollment. The separate legacy `EKODI_Device_연결프로그램.cmd` exists for protocol repair only, and must not be launched concurrently. An enrollment code displayed in logs or screenshots is short-lived; issue a fresh code before retrying.
 - Desktop boot-at-startup and Wake-on-LAN are a **separate** operation in `ekodi-device-startup.ps1`. Agent installation never automatically enables Boot/WOL.
 - Boot/WOL failures use `EKBW-xxx` stage codes and do not redefine Agent installation success.
 
