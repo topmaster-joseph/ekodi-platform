@@ -73,6 +73,8 @@ const marketingGrowthTouched=changedFiles.some(file=>[
 ].includes(file));
 const mallSiteTouched=changedFiles.some(file=>file.startsWith('sites/ekodi-mall/')||file==='.github/workflows/deploy-ekodi-mall.yml');
 const sharedSiteTouched=changedFiles.some(file=>
+  file==='workspace-admin-page.js'||
+  file==='mall-social-setup.js'||
   file.startsWith('sites/')||
   file.startsWith('auth-site/')||
   file==='deploy/manifests/shared-site.worker.json'||
