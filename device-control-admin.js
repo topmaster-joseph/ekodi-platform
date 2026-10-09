@@ -152,10 +152,21 @@
     if (!/^EKD-[A-F0-9]{20}$/.test(code)) throw new Error('기기 연결 코드 형식이 올바르지 않습니다.');
     const ps = [
       "$ErrorActionPreference='Stop'",
-      "$p=Join-Path $env:TEMP 'ekodi-device-agent.ps1'",
-      "Invoke-WebRequest -UseBasicParsing '" + WINDOWS_AGENT_URL + "' -OutFile $p",
+      "$stage='download'",
+      "$p=Join-Path $env:TEMP ('ekodi-device-agent-'+[guid]::NewGuid().ToString('N')+'.ps1')",
+      "try {",
+      "Invoke-WebRequest -UseBasicParsing '" + WINDOWS_AGENT_URL + "' -OutFile $p -ErrorAction Stop",
+      "$stage='validate'",
+      "$source=Get-Content -LiteralPath $p -Raw -Encoding UTF8 -ErrorAction Stop",
+      "if($source -notmatch '\\$AgentVersion\\s*='){throw '[EKB-213][validate] Agent 파일 식별 검증 실패'}",
+      "$tokens=$null;$errors=$null",
+      "$null=[System.Management.Automation.Language.Parser]::ParseInput($source,[ref]$tokens,[ref]$errors)",
+      "if($errors.Count -gt 0){throw '[EKB-214][validate] Agent PowerShell 구문 검증 실패'}",
+      "$stage='install'",
       "& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p -Install -EnrollmentCode '" + code + "' -ApiBase '" + API_BASE + "'",
-      "if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}",
+      "if($LASTEXITCODE -ne 0){throw ('[EKB-215][install] 설치 프로세스 종료 코드 '+$LASTEXITCODE)}",
+      "} catch { Write-Host ('[EKB-219]['+$stage+'] '+$_.Exception.Message) -ForegroundColor Red;exit 1 }",
+      "finally { Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue }",
     ].join(';');
     const encoded = utf16leBase64(ps);
     return [
