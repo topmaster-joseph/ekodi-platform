@@ -9,6 +9,16 @@ const sidebar = await readFile(new URL('../admin-sidebar.js', import.meta.url), 
 const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
 const postbuild = await readFile(new URL('../scripts/admin-performance-postbuild.mjs', import.meta.url), 'utf8');
 
+test('Admin sidebar or production verifier changes trigger guarded shared-site release', async () => {
+  const release = await readFile(new URL('../scripts/converge-orchestrated-pr-merge.mjs', import.meta.url), 'utf8');
+  for(const path of ['admin-sidebar.js','scripts/verify-admin-production-ui-e2e.mjs']) {
+    assert.ok(release.includes("file==='" + path + "'"), 'missing guarded deploy trigger: ' + path);
+  }
+  assert.ok(release.includes('if(sharedSiteTouched)'));
+  assert.ok(release.includes('/actions/workflows/deploy-site-core.yml/dispatches'));
+  assert.ok(release.includes('release_branch_ref:branch,release_task_id:taskId'));
+});
+
 test('eleven unique areas replace the former overlapping admin taxonomy', () => {
   for (const id of ['summary', 'sites', 'people', 'services', 'content', 'finance', 'status', 'releases', 'devices-agent', 'settings-records', 'security-audit']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
@@ -88,10 +98,22 @@ test('handoff-backed default groups stay open without immediate navigation', () 
   const globalClick = sidebar.slice(sidebar.indexOf("const group = global.dataset.adminGlobalGroup || ''"), sidebar.indexOf("closeDrawer();", sidebar.indexOf("const group = global.dataset.adminGlobalGroup || ''")) + 14);
   assert.match(globalClick, /nav\.dataset\.adminFocusedGroup = group/);
   assert.match(globalClick, /defaultDefinition\?\.adminHandoff !== true/);
-  assert.match(globalClick, /activateSection\(nav, defaultSection\)/);
-  assert.match(globalClick, /delete nav\.dataset\.adminFocusedGroup/);
+  assert.match(globalClick, /const activationAccepted = activateSection\(nav, defaultSection\)/);
+  assert.match(globalClick, /if \(!activationAccepted\) delete nav\.dataset\.adminFocusedGroup/);
+  assert.doesNotMatch(globalClick, /activateSection\(nav, defaultSection\);\s*delete nav\.dataset\.adminFocusedGroup/);
+  assert.match(sidebar, /const sectionChanged = \(\) => \{ delete nav\.dataset\.adminFocusedGroup; schedule\(\); \}/);
   assert.doesNotMatch(sidebar, /dataset\.adminCommandHome/);
   assert.match(sidebar, /section !== 'command-home' \|\| Boolean\(focusedGroup\)/);
+});
+
+test('slow/lazy releases, devices and other work areas keep the clicked axis selected until activation', () => {
+  const handler = sidebar.slice(sidebar.indexOf("const group = global.dataset.adminGlobalGroup || ''"), sidebar.indexOf('closeDrawer();', sidebar.indexOf("const group = global.dataset.adminGlobalGroup || ''")));
+  assert.match(handler, /nav\.dataset\.adminFocusedGroup = group/);
+  assert.match(handler, /const activationAccepted = activateSection\(nav, defaultSection\)/);
+  assert.doesNotMatch(handler, /activateSection\(nav, defaultSection\);\s*delete nav\.dataset\.adminFocusedGroup/);
+  assert.match(sidebar, /const focusedGroup = String\(nav\.dataset\.adminFocusedGroup \|\| ''\)\.trim\(\)/);
+  assert.match(sidebar, /const group = ADMIN_MENU_GROUPS\.some\(item => item\.id === focusedGroup\) \? focusedGroup : activeGroup/);
+  assert.match(sidebar, /window\.addEventListener\('ekodi-admin-section-changed', sectionChanged\)/);
 });
 
 test('global menu labels use readable contrast on the dark primary sidebar', () => {
