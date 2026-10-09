@@ -100,6 +100,7 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='scripts/seonammedi-cache-contract.mjs'||
   file==='test/seonammedi-cache-contract.test.mjs'||
   file==='.github/workflows/deploy-site-core.yml'||
+  file==='scripts/converge-orchestrated-pr-merge.mjs'||
   file==='.github/workflows/converge-orchestrated-pr-merge.yml'
 );
 async function dispatchPostMergeDeploys(){
