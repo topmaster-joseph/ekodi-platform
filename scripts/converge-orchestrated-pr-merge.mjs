@@ -84,6 +84,8 @@ const spaceTouched=changedFiles.some(file=>
 );
 const mallSiteTouched=changedFiles.some(file=>file.startsWith('sites/ekodi-mall/')||file==='.github/workflows/deploy-ekodi-mall.yml');
 const sharedSiteTouched=changedFiles.some(file=>
+  // Shared administrator menu, canonical route registry and design contracts are production Site Core assets.
+  ['admin-menu-registry.js','admin-sidebar.js','admin-canonical-routes.js','admin-menu-layout.js','admin-menu-runtime.js','admin-design-engine.js','config/design-engine.json','config/admin-role-navigation.json'].includes(file)||
   file==='workspace-admin-page.js'||
   // AI Provider administrator bundle and shared provider client are owned by the Site Core.
   file==='admin-provider-control.js'||
