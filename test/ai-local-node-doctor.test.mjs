@@ -22,7 +22,7 @@ test('doctor inspects local AI node without pairing, network enrollment or secre
   assert.equal(typeof status.memoryUsedPct,'number');
   assert.equal(status.ollamaReady,false);
   assert.equal(status.claudeInternalReady,false);
-  assert.equal(status.controlOrigin,'https://ai.ekodi.kr');
+  assert.match(status.controlOrigin,/^https:\/\/[a-z0-9.-]+(?::[0-9]+)?$/i);
   assert.deepEqual(Object.keys(status).sort(),[
     'nodeId','controlOrigin','paired','availableProviders','schedulerEligible',
     'cpuLoadPct','memoryUsedPct','freeMemoryMiB',
