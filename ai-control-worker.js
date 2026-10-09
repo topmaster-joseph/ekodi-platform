@@ -36,7 +36,7 @@ async function freeCostDecisionGate(env,capabilities){
 function supabaseReady(env){return Boolean(clean(env.SUPABASE_URL)&&clean(env.SUPABASE_PUBLISHABLE_KEY))}
 function bearer(request){const value=clean(request.headers.get('authorization'));return value.toLowerCase().startsWith('bearer ')?value.slice(7).trim():''}
 function safeId(value){const id=clean(value).toLowerCase();return /^[a-z0-9][a-z0-9._-]{2,79}$/.test(id)?id:''}
-function safeProviders(values){return [...new Set((Array.isArray(values)?values:[]).map(v=>clean(v).toLowerCase()).filter(v=>['codex','gemini-cli','claude-code'].includes(v)))]}
+function safeProviders(values){return [...new Set((Array.isArray(values)?values:[]).map(v=>clean(v).toLowerCase()).filter(v=>['codex','gemini-cli','claude-code','ollama-local'].includes(v)))]}
 function storedProviders(value){try{return safeProviders(JSON.parse(value||'[]'))}catch{return[]}}
 function safeNodeTelemetry(input={}){
   const resource=normalizeLocalResource(input.system||{});
@@ -218,14 +218,16 @@ async function execute(env,id){
 async function leaseNodeJob(request,env,node){
   const input=await body(request)||{};
   const detected=safeProviders(input.providers);
+  // An explicitly empty heartbeat means the model/CLI is offline: do not lease stale capabilities.
+  const advertised=Array.isArray(input.providers)?detected:safeProviders(node.providers);
   const telemetry=safeNodeTelemetry(input);
   const stamp=now();
   await env.DB.prepare(`UPDATE ai_control_nodes SET providers=?,current_load=?,cpu_load_pct=?,memory_used_pct=?,max_concurrency=?,is_portable=?,auto_execution_eligible=?,system_json=?,state='online',updated_at=?,last_seen_at=? WHERE id=?`).bind(
-    JSON.stringify(detected.length?detected:node.providers),telemetry.currentLoad,telemetry.cpuLoadPct,telemetry.memoryUsedPct,telemetry.maxConcurrency,
+    JSON.stringify(advertised),telemetry.currentLoad,telemetry.cpuLoadPct,telemetry.memoryUsedPct,telemetry.maxConcurrency,
     telemetry.isPortable?1:0,telemetry.autoExecutionEligible?1:0,telemetry.systemJson,stamp,stamp,node.id,
   ).run();
   if(!telemetry.autoExecutionEligible)return json({job:null,scheduler:{eligible:false,reason:telemetry.isPortable?'portable_device':'hardware_eligibility_unknown'}});
-  const providers=(detected.length?detected:node.providers).map(v=>`node:${v}`);
+  const providers=(advertised).map(v=>`node:${v}`);
   if(!providers.length)return json({job:null,scheduler:{eligible:true,reason:'no_provider'}});
   const placeholders=providers.map(()=>'?').join(',');
   const leaseUntil=new Date(Date.now()+3*60*1000).toISOString();
