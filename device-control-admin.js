@@ -591,9 +591,14 @@
     }).sort((a, b) => compareRosterRecords(a.primary, b.primary) || a.key.localeCompare(b.key, 'ko'));
   }
 
+  function hasRosterHealthScore(device) {
+    const score = device.health?.score;
+    return score !== null && score !== undefined && score !== '' && Number.isFinite(Number(score));
+  }
+
   function rosterNeedsAttention(device) {
     return ['stale', 'offline'].includes(device.status)
-      || (device.status === 'online' && Number.isFinite(Number(device.health?.score)) && Number(device.health.score) < 75);
+      || (device.status === 'online' && hasRosterHealthScore(device) && Number(device.health.score) < 75);
   }
 
   function createRosterGroup(group) {
@@ -696,7 +701,7 @@
     }
     const visible = issues.slice(0, 4).map(group => {
       const device = group.primary;
-      const score = device.status === 'online' && Number.isFinite(Number(device.health?.score)) ? ' · 건강 ' + Math.round(Number(device.health.score)) + '점' : '';
+      const score = device.status === 'online' && hasRosterHealthScore(device) ? ' · 건강 ' + Math.round(Number(device.health.score)) + '점' : '';
       return `<button type="button" data-roster-focus="${escapeHtml(group.key)}"><strong>${escapeHtml(device.label || device.hostname || typeInfo(device).label)}</strong><span>${escapeHtml(statusLabel(device.status))}${escapeHtml(score)}</span></button>`;
     }).join('');
     host.innerHTML = `<div><strong>확인 필요 ${issues.length}개 그룹</strong><span>응답 지연·오프라인·건강점수 75점 미만 기기를 우선 표시합니다.</span></div><div class="device-attention-items">${visible}</div>`;
@@ -723,7 +728,7 @@
     const counted = showRetiredGroups ? grouped : current;
     const onlineGroups = current.filter(group => group.primary.status === 'online');
     const attentionGroups = current.filter(group => rosterNeedsAttention(group.primary));
-    const scored = onlineGroups.filter(group => Number.isFinite(Number(group.primary.health?.score)));
+    const scored = onlineGroups.filter(group => hasRosterHealthScore(group.primary));
     const total = document.querySelector('#deviceMetricTotal');
     const online = document.querySelector('#deviceMetricOnline');
     const issues = document.querySelector('#deviceMetricIssues');
