@@ -92,7 +92,7 @@ export function providerVerifiedForTraffic(row,nowMs=Date.now()){
   const last=Date.parse(clean(row.last_checked_at,80));
   return Number.isFinite(last)&&last<=nowMs&&nowMs-last<=PROVIDER_VERIFICATION_TTL_MS;
 }
-function providerHealthBlocksTraffic(row){return !providerVerifiedForTraffic(row)}
+function providerHealthBlocksTraffic(row,registryConfigured=false){return (registryConfigured&&!row)||!providerVerifiedForTraffic(row)}
 function freeQuotaProviderId(id){if(id==='gemini')return'gemini-free';if(['cloudflare-workers-ai','openrouter-free','groq-free','cerebras-free','qwen-free','deepseek-free-credit','huggingface-free-credit'].includes(id))return id;return''}
 async function freeQuotaBlocked(env,id){const quotaId=freeQuotaProviderId(id);if(!quotaId)return false;const map=await quotaCapabilities(env,[quotaId]);return map[quotaId]?.remaining===0}
 async function recordGatewayFreeQuota(env,id,outcome){const quotaId=freeQuotaProviderId(id);if(!quotaId)return;await recordFreeProviderOutcome(env,quotaId,outcome).catch(()=>{})}
@@ -186,7 +186,7 @@ export async function invokeAiProviderCapability(env,{capability='default',syste
     const cost=providerCostEligibility(id,governance);
     if(!cost.eligible){blocked.push(id);await recordRoutingEvent(env,{capability:cap,provider:id,eventType:'blocked',reason:clean(cost.blockedBy||'cost-policy',160),position,previousProvider});continue}
     if(await freeQuotaBlocked(env,id)){blocked.push(id);await recordRoutingEvent(env,{capability:cap,provider:id,eventType:'blocked',reason:'free-quota-exhausted',position,previousProvider});continue}
-    if(providerHealthBlocksTraffic(row)){blocked.push(id);await recordRoutingEvent(env,{capability:cap,provider:id,eventType:'blocked',reason:'health-circuit-open',position,previousProvider});continue}
+    if(providerHealthBlocksTraffic(row,Boolean(env.DB))){blocked.push(id);await recordRoutingEvent(env,{capability:cap,provider:id,eventType:'blocked',reason:'health-circuit-open',position,previousProvider});continue}
     const binding=row?.secret_binding||DEFAULTS[id]?.binding;
     if(!providerConfigured(env,id,binding)){blocked.push(id);await recordRoutingEvent(env,{capability:cap,provider:id,eventType:'blocked',reason:'credential-not-configured',position,previousProvider});continue}
     const model=selected.modelOverride||row?.default_model||DEFAULTS[id]?.model||'';
