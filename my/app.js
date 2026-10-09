@@ -447,8 +447,22 @@ async function loadPortfolio(){
  const {data,error}=await sb.from('creator_portfolio_items').select('id,project_id,workspace_key,title,summary,creator_mode,status,visibility,updated_at').order('updated_at',{ascending:false});
  if(error)throw error;items=data||[];
 }
+function renderCoreMemberContext(){
+ ensureActiveWorkspace();identityUi();profileUi();summaryUi();workspaceUi();platformUi();portfolioUi();memberHomeUi();recentActivityUi();syncSurfaceState();progressiveSurfaceUi();
+}
+async function loadDeferredMemberContext(expectedUserId){
+ const results=await Promise.allSettled([loadPortfolio(),loadProfile(),loadPersonalization()]);
+ if(expectedUserId!==String(session?.user?.id||''))return;
+ for(const result of results)if(result.status==='rejected')console.warn('My EKODI deferred context',result.reason);
+ renderCoreMemberContext();
+}
 async function loadAll(){
- await Promise.all([loadAccess(),loadPortfolio(),loadProfile(),loadPersonalization()]);ensureActiveWorkspace();identityUi();profileUi();summaryUi();workspaceUi();platformUi();portfolioUi();memberHomeUi();recentActivityUi();syncSurfaceState();progressiveSurfaceUi();
+ const expectedUserId=String(session?.user?.id||'');
+ await loadAccess();
+ renderCoreMemberContext();
+ if(!session)return;
+ const schedule=globalThis.requestIdleCallback||((callback)=>setTimeout(callback,0));
+ schedule(()=>{void loadDeferredMemberContext(expectedUserId)},{timeout:1200});
 }
 async function saveProfile(event){
  event.preventDefault();
