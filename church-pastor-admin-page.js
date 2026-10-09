@@ -58,13 +58,13 @@ function pastorClient(POLICY){
   const LOCAL_GROUPS=[{id:'today',label:'오늘 일정',items:[['overview','오늘의 교회'],['calendar','일정']]},{id:'people',label:'출석 · 교인',items:[['attendance','개인별 출결'],['people','교인 · 가정'],['care','돌봄 · 후속']]},{id:'ministry',label:'예배 · 사역',items:[['worship','예배 · 말씀'],['ministry','사역 · 팀']]},{id:'records',label:'신청 · 기록',items:[['reports','사역보고']]},{id:'finance',label:'재정 업무',items:[['offerings','헌금관리'],['banking','통장 · 이체'],['accounting','회계관리'],['receipts','기부금영수증']]}];
   const VIEWER_GROUPS=[{id:'today',label:'조회',items:[['overview','오늘의 교회'],['worship','예배 · 말씀'],['calendar','일정']]}];
   const SECTION_CAPABILITY={overview:POLICY.capabilities.dashboard,people:POLICY.capabilities.people,attendance:POLICY.capabilities.attendance,worship:POLICY.capabilities.worship,care:POLICY.capabilities.care,calendar:POLICY.capabilities.calendar,ministry:POLICY.capabilities.ministry,offerings:POLICY.capabilities.offerings,banking:POLICY.capabilities.financeManage,accounting:POLICY.capabilities.financeManage,receipts:POLICY.capabilities.receipts,reports:POLICY.capabilities.reports,ai:POLICY.capabilities.ai,chrome:POLICY.capabilities.site,access:POLICY.capabilities.access};
-  const roleLabel={senior_pastor:'담임목회자',pastor:'목회자',church_treasurer:'재정책임자',church_finance:'재정담당',care_staff:'돌봄 담당',staff:'운영 담당',viewer:'조회 담당'};
-  const canWrite=()=>['senior_pastor','pastor','care_staff','staff'].includes(staff?.role);
+  const roleLabel={worship_admin:'주일모임 관리자',senior_pastor:'담임목회자',pastor:'목회자',church_treasurer:'재정책임자',church_finance:'재정담당',care_staff:'돌봄 담당',staff:'운영 담당',viewer:'조회 담당'};
+  const canWrite=()=>['senior_pastor','pastor','care_staff','staff','worship_admin'].includes(staff?.role);
   const canCare=()=>['senior_pastor','pastor','care_staff'].includes(staff?.role);
   const roleCapabilities=role=>POLICY.roleCapabilities[String(role||'').trim().toLowerCase()]||[];
-  const canSection=(key,role=staff?.role)=>{const capability=SECTION_CAPABILITY[key];const allowed=roleCapabilities(role);return Boolean(capability&&(allowed.includes('*')||allowed.includes(capability)));};
+  const canSection=(key,role=staff?.role)=>{if(role==='worship_admin')return key==='worship';const capability=SECTION_CAPABILITY[key];const allowed=roleCapabilities(role);return Boolean(capability&&(allowed.includes('*')||allowed.includes(capability)));};
   const navigationProfile=role=>POLICY.roleNavigationProfiles?.[String(role||'').trim().toLowerCase()]||'local-operator';
-  const groupsForRole=role=>{const profile=navigationProfile(role);if(profile==='delegated-manager')return DELEGATED_GROUPS;if(profile==='viewer'||profile==='external-specialist')return VIEWER_GROUPS;return LOCAL_GROUPS;};
+  const groupsForRole=role=>{if(role==='worship_admin')return[{id:'worship',label:'에코디교회',items:[['worship','주일모임 · 말씀']]}];const profile=navigationProfile(role);if(profile==='delegated-manager')return DELEGATED_GROUPS;if(profile==='viewer'||profile==='external-specialist')return VIEWER_GROUPS;return LOCAL_GROUPS;};
   function publishTenantContext(){if(!staff)return;document.documentElement.dataset.tenantRole=staff.role;document.documentElement.dataset.ekodiAdminNavigationProfile=navigationProfile(staff.role);window.dispatchEvent(new CustomEvent('ekodi:tenant-context',{detail:{scope:'tenant',tenant:CHURCH,role:staff.role,section,capabilities:roleCapabilities(staff.role)}}));}
   function renderNav(role=''){const root=$('adminNav');root.replaceChildren();const groups=groupsForRole(role);document.documentElement.dataset.ekodiAdminNavigationProfile=navigationProfile(role);for(const group of groups){const items=group.items.filter(([key])=>role?canSection(key,role):key==='overview');if(!items.length)continue;const label=document.createElement('span');label.className='admin-nav-group-label';label.textContent=group.label;root.append(label);for(const [key,itemLabel] of items){const a=document.createElement('a');a.href=key==='overview'?base+'/overview':base+'/'+key;a.textContent=itemLabel;a.dataset.adminSection=key;if(key===section){a.classList.add('active');a.setAttribute('aria-current','page')}root.append(a)}}}
 
@@ -91,11 +91,94 @@ function pastorClient(POLICY){
   function loginPanel(message='목회자 운영공간은 인증된 교회 담당자만 들어올 수 있습니다.'){$('summaryCards').innerHTML=[card('운영공간','에코디교회','교회 로컬 관리자'),card('현재 상태','로그인 전','교인·돌봄 데이터 비공개'),card('관리 원칙','최소권한','역할별 허용 메뉴만 표시'),card('공개 화면','사용 가능','교회 사용자 화면은 별도')].join('');$('mainPanel').innerHTML=`<h2>목회자 운영공간</h2><p class="empty">${esc(message)} 로그인 전에는 교인·돌봄·사역 데이터와 목회자 권한 정보를 표시하지 않습니다.</p><div class="actions"><a class="button primary" href="${esc(authHref())}">Google 계정으로 관리자 확인</a><a class="button" href="/ekodichurch">교회 화면 보기</a></div><p class="empty" style="margin-top:14px">인증 후에도 현재 교회 역할의 Capability 범위 안에서만 관리 메뉴와 데이터가 표시됩니다.</p>`;state('로그인 필요');}
   function permissionPanel(){$('summaryCards').innerHTML=staffCards().join('');$('mainPanel').innerHTML='<h2>\uAD8C\uD55C \uBC94\uC704</h2><p class="empty">\uD604\uC7AC \uC5ED\uD560\uC5D0 \uD5C8\uC6A9\uB41C \uAD00\uB9AC \uBA54\uB274\uB9CC \uD45C\uC2DC\uD569\uB2C8\uB2E4. \uAC19\uC740 \uAD00\uB9AC\uC790 \uD398\uC774\uC9C0\uC5D0\uC11C Capability\uB85C \uAD8C\uD55C\uC744 \uC801\uC6A9\uD569\uB2C8\uB2E4.</p>';state('\uAD8C\uD55C \uC81C\uD55C');}
   function deniedPanel(){const email=session?.user?.email||'';$('summaryCards').innerHTML=[card('운영공간','에코디교회','tenant isolated'),card('접근','차단','목회자 권한 필요')].join('');$('mainPanel').innerHTML=`<h2>권한이 없습니다</h2><p class="empty">${esc(email)} 계정은 아직 에코디교회 목회자 운영권한에 등록되지 않았습니다. 권한 등록 전에는 교인·돌봄 데이터가 노출되지 않습니다.</p>`;state('접근 차단');}
-  async function loadStaff(){const q=`church_slug=eq.${encodeURIComponent(CHURCH)}&user_id=eq.${encodeURIComponent(session.user.id)}&active=eq.true&select=id,role,display_name&limit=1`;const rows=await rest('church_staff',q);staff=rows?.[0]||null;if(staff){renderNav(staff.role);publishTenantContext();}return staff;}
+  async function loadStaff(){
+    if(section==='worship'){
+      const url=SUPABASE_URL+'/rest/v1/site_access_registry?site_key=eq.church&role=eq.tenant_admin&status=eq.active&select=site_key,role&limit=1';
+      const response=await fetch(url,{headers:{apikey:SUPABASE_KEY,authorization:'Bearer '+session.accessToken,accept:'application/json'},cache:'no-store'});
+      const rows=await response.json().catch(()=>[]);
+      if(!response.ok)throw Object.assign(new Error(rows?.message||'교회 주일모임 관리자 권한 확인 실패'),{status:response.status,code:rows?.code});
+      staff=Array.isArray(rows)&&rows.some(row=>row.site_key==='church'&&row.role==='tenant_admin')?{role:'worship_admin',display_name:'주일모임 관리자'}:null;
+      if(staff){renderNav(staff.role);publishTenantContext();}
+      return staff;
+    }
+    const q=`church_slug=eq.${encodeURIComponent(CHURCH)}&user_id=eq.${encodeURIComponent(session.user.id)}&active=eq.true&select=id,role,display_name&limit=1`;const rows=await rest('church_staff',q);staff=rows?.[0]||null;if(staff){renderNav(staff.role);publishTenantContext();}return staff;}
   function staffCards(){return [card('운영공간','에코디교회','church tenant'),card('내 권한',roleLabel[staff?.role]||staff?.role||'-','least privilege')];}
   async function overview(){state('확인 중');const [members,newcomers,care,services]=await Promise.all([count('church_members','church_slug=eq.ekodi-church&status=eq.active'),count('church_members','church_slug=eq.ekodi-church&status=eq.newcomer'),count('church_care_tasks','church_slug=eq.ekodi-church&status=in.(open,in_progress)'),rest('church_services','church_slug=eq.ekodi-church&select=id,service_date,title,scripture,sermon_title,status&order=service_date.asc&limit=5')]);$('summaryCards').innerHTML=[card('활동 교인',fmt(members),'실제 등록 기준'),card('새가족',fmt(newcomers),'후속 연결 확인'),card('돌봄 후속',fmt(care),'열린 과제'),card('예배 준비',fmt(services.length),'최근/예정 기록'),card('내 권한',roleLabel[staff.role]||staff.role,'교회 로컬 권한')].join('');$('mainPanel').innerHTML=`<h2>오늘의 교회</h2><div class="service-list"><div class="service-row"><div><strong>사람이 숫자보다 앞섭니다</strong><p>새가족·돌봄·예배 준비에서 다음 행동이 필요한 사람을 먼저 확인합니다.</p></div><div class="actions"><a href="${base}/people">새가족 보기</a><a href="${base}/care">돌봄 보기</a></div></div>${services.length?services.map(s=>`<div class="service-row"><div><strong>${esc(s.title||'예배')}</strong><p>${esc(s.service_date||'')} · ${esc(s.scripture||'본문 미정')} · ${esc(s.sermon_title||'설교제목 미정')}</p></div><span class="tag ${s.status==='ready'?'live':''}">${esc(s.status||'draft')}</span></div>`).join(''):'<p class="empty">등록된 예배 기록이 없습니다.</p>'}</div>`;state('운영');}
   async function people(){state('불러오는 중');const rows=await rest('church_members','church_slug=eq.ekodi-church&select=id,full_name,preferred_name,phone,email,status,household_name,joined_on&order=full_name.asc&limit=100');$('summaryCards').innerHTML=[...staffCards(),card('등록 교인',fmt(rows.length),'현재 목록'),card('수정',canWrite()?'가능':'조회만','역할 기반')].join('');const form=canWrite()?`<form id="peopleForm" class="trade-form"><div class="trade-grid"><label>이름<input name="full_name" required maxlength="80"></label><label>부르는 이름<input name="preferred_name" maxlength="80"></label><label>연락처<input name="phone" maxlength="40"></label><label>이메일<input name="email" type="email" maxlength="254"></label><label>가정/가구<input name="household_name" maxlength="120"></label><label>상태<select name="status"><option value="active">등록</option><option value="newcomer">새가족</option><option value="inactive">비활동</option></select></label></div><div class="actions"><button class="button primary" type="submit">교인 등록</button></div><p id="formFlash" class="trade-flash"></p></form>`:'';$('mainPanel').innerHTML=`<h2>교인 · 가정</h2>${rows.length?`<div class="table-wrap"><table><thead><tr><th>이름</th><th>가정</th><th>연락처</th><th>상태</th></tr></thead><tbody>${rows.map(r=>`<tr><td><strong>${esc(r.preferred_name||r.full_name)}</strong><br><small>${esc(r.full_name)}</small></td><td>${esc(r.household_name||'-')}</td><td>${esc(r.phone||r.email||'-')}</td><td><span class="tag ${r.status==='active'?'live':''}">${esc(r.status)}</span></td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">등록된 교인이 없습니다.</p>'}${form}`;const f=$('peopleForm');if(f)f.onsubmit=async e=>{e.preventDefault();try{state('저장 중');const body=Object.fromEntries(new FormData(f));body.church_slug=CHURCH;await rest('church_members','',{method:'POST',body});await people();}catch(err){$('formFlash').textContent=`저장 실패: ${err.message}`;state('확인 필요');}};state('운영');}
-  async function worship(){state('불러오는 중');const rows=await rest('church_services','church_slug=eq.ekodi-church&select=id,service_date,title,scripture,sermon_title,preacher,status&order=service_date.desc&limit=80');$('summaryCards').innerHTML=[...staffCards(),card('예배 기록',fmt(rows.length),'최근 목록'),card('준비중',fmt(rows.filter(x=>x.status!=='complete').length),'실제 상태')].join('');const form=canWrite()?`<form id="worshipForm" class="trade-form"><div class="trade-grid"><label>예배일<input name="service_date" type="date" required></label><label>예배명<input name="title" required maxlength="120" value="토요모임"></label><label>본문<input name="scripture" maxlength="120"></label><label>설교제목<input name="sermon_title" maxlength="180"></label><label>설교자<input name="preacher" maxlength="120"></label><label>상태<select name="status"><option value="draft">준비중</option><option value="ready">준비완료</option><option value="complete">완료</option></select></label></div><div class="actions"><button class="button primary" type="submit">예배 기록</button></div><p id="formFlash" class="trade-flash"></p></form>`:'';$('mainPanel').innerHTML=`<h2>예배 · 말씀</h2>${rows.length?`<div class="table-wrap"><table><thead><tr><th>일자</th><th>예배</th><th>본문</th><th>설교</th><th>상태</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.service_date)}</td><td>${esc(r.title)}</td><td>${esc(r.scripture||'-')}</td><td>${esc(r.sermon_title||'-')}<br><small>${esc(r.preacher||'')}</small></td><td><span class="tag ${r.status==='ready'?'live':''}">${esc(r.status)}</span></td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">예배 기록이 없습니다.</p>'}${form}`;const f=$('worshipForm');if(f)f.onsubmit=async e=>{e.preventDefault();try{state('저장 중');const body=Object.fromEntries(new FormData(f));body.church_slug=CHURCH;await rest('church_services','',{method:'POST',body});await worship();}catch(err){$('formFlash').textContent=`저장 실패: ${err.message}`;state('확인 필요');}};state('운영');}
+  async function worship(){
+    state('주일모임 확인 중');
+    const source=SUPABASE_URL+'/rest/v1/church_worship_materials';
+    const bearer=session?.accessToken||'';
+    const headers={apikey:SUPABASE_KEY,authorization:'Bearer '+bearer,accept:'application/json'};
+    const response=await fetch(source+'?service_type=eq.sunday&order=service_date.desc&limit=52',{headers,cache:'no-store'});
+    const rows=await response.json().catch(()=>[]);
+    if(!response.ok)throw Object.assign(new Error(rows?.message||'주일모임 데이터를 불러오지 못했습니다.'),{status:response.status,code:rows?.code});
+    const services=Array.isArray(rows)?rows.filter(item=>item.service_type==='sunday'):[];
+    $('summaryCards').innerHTML=[...staffCards(),card('주일모임',fmt(services.length),'에코디교회만 관리'),card('미게시',fmt(services.filter(s=>!s.is_published).length),'공통본문 검증 전 초안')].join('');
+    const form=canWrite()?`<form id="worshipForm" class="trade-form">
+      <div class="trade-grid">
+        <label>주일 날짜<input type="date" name="service_date" required></label>
+        <label>모임 시각<input name="service_time" value="11:00" maxlength="40"></label>
+        <label>공통 매일묵상 본문<input name="scripture" placeholder="날짜별 원본 확인 후 입력" maxlength="150"></label>
+        <label>말씀 제목<input name="title" maxlength="180"></label>
+        <label>말씀나눔<input name="preacher" maxlength="120" value="정찬균 목사"></label>
+        <label>찬양<input name="songs" maxlength="1000"></label>
+        <label>대표기도<textarea name="prayer" rows="3" maxlength="2000"></textarea></label>
+        <label>공지<textarea name="notice" rows="3" maxlength="2000"></textarea></label>
+      </div><div class="actions"><button type="submit" name="meeting_action" value="draft" class="button">초안 저장</button><button type="submit" name="meeting_action" value="publish" class="button primary">검증 후 공개</button></div><p id="formFlash" class="trade-flash" role="status"></p>
+    </form>`:'';
+    $('mainPanel').innerHTML=`<div class="service-row"><div><strong>에코디교회 · 주일모임 전용 관리</strong><p>에코디선교회 토요모임은 별도 소속·관리권한으로 운영합니다. 공통본문 확정 전에는 초안으로 저장하세요.</p></div><a href="/ekodimission/admin/saturday">선교회 토요모임 →</a></div>
+      <div class="table-wrap"><table><thead><tr><th>일자</th><th>공통본문</th><th>말씀 제목</th><th>상태</th><th>관리</th></tr></thead><tbody>${services.map((item,index)=>`<tr><td>${esc(item.service_date)}</td><td>${esc(item.scripture||'원본 미확인')}</td><td>${esc(item.title||'제목 미정')}</td><td>${item.is_published?'게시':'초안'}</td><td>${canWrite()?`<button type="button" class="button" data-worship-edit="${index}">편집</button>`:''}</td></tr>`).join('')}</tbody></table></div>${form}`;
+    const f=$('worshipForm');
+    if(f){
+      const dateField=f.elements.namedItem('service_date');
+      const scriptureField=f.elements.namedItem('scripture');
+      async function refreshApprovedReading(){
+        const date=String(dateField?.value||'');
+        scriptureField.readOnly=date.startsWith('2026-10-');
+        if(!scriptureField.readOnly)return;
+        try{
+          const response=await fetch('/api/public/scripture/common?date='+encodeURIComponent(date),{cache:'no-store'});
+          if(!response.ok)throw new Error('공통본문 원본 조회 실패');
+          const common=await response.json();
+          if(!common.found||common.status!=='approved'||!common.passage)throw new Error('이 날짜에 승인된 공통본문이 없습니다.');
+          scriptureField.value=common.passage;
+          $('formFlash').textContent='EKODI 공통본문 레지스트리: '+common.passage;
+        }catch(error){scriptureField.value='';$('formFlash').textContent=error.message;}
+      }
+      dateField?.addEventListener('change',refreshApprovedReading);
+      $('mainPanel').querySelectorAll('[data-worship-edit]').forEach(button=>button.onclick=()=>{
+        const item=services[Number(button.dataset.worshipEdit)];if(!item)return;
+        for(const name of ['service_date','service_time','scripture','title','preacher','songs','prayer','notice']){
+          const input=f.elements.namedItem(name);if(input)input.value=String(item[name]||'');
+        }
+        f.scrollIntoView({behavior:'smooth',block:'nearest'});
+        refreshApprovedReading();
+      });
+      f.onsubmit=async event=>{
+        event.preventDefault();
+        const data=Object.fromEntries(new FormData(f));
+        const published=event.submitter?.value==='publish';
+        const date=String(data.service_date||'');
+        if(!date||new Date(date+'T12:00:00+09:00').getUTCDay()!==0){$('formFlash').textContent='일요일 날짜를 선택해 주세요.';return;}
+        if(published&&(!String(data.scripture||'').trim()||!String(data.title||'').trim())){$('formFlash').textContent='공통본문과 말씀 제목 확인 후 공개할 수 있습니다.';return;}
+        const payload={service_type:'sunday',service_date:date,service_name:'에코디 주일모임',service_time:data.service_time||'11:00',scripture:data.scripture||'',title:data.title||'',preacher:data.preacher||'',songs:data.songs||'',prayer:data.prayer||'',notice:data.notice||'',is_published:published,updated_at:new Date().toISOString()};
+        try{
+          state('저장 중');
+          if(date.startsWith('2026-10-')){
+            const verify=await fetch('/api/public/scripture/common?date='+encodeURIComponent(date),{cache:'no-store'});
+            if(!verify.ok)throw new Error('공통본문 레지스트리를 확인할 수 없어 저장하지 않았습니다.');
+            const canonical=await verify.json();
+            if(canonical.status!=='approved'||canonical.passage!==String(data.scripture||''))throw new Error('날짜별 승인 공통본문과 일치해야 저장할 수 있습니다.');
+          }
+          const saved=await fetch(source+'?on_conflict=service_type,service_date',{method:'POST',headers:{...headers,'content-type':'application/json',Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(payload)});
+          if(!saved.ok){const error=await saved.json().catch(()=>({}));throw new Error(error.message||('저장 실패 '+saved.status));}
+          await worship();
+        }catch(error){$('formFlash').textContent=error.message;state('저장 확인 필요');}
+      };
+    }
+    state('주일모임 관리');
+  }
   async function care(){if(!canCare()){$('summaryCards').innerHTML=staffCards().join('');$('mainPanel').innerHTML='<h2>돌봄 기록 보호</h2><p class="empty">돌봄·심방·기도 후속은 담임목회자, 목회자, 지정 돌봄 담당자에게만 표시합니다.</p>';return state('권한 제한');}state('불러오는 중');const rows=await rest('church_care_tasks','church_slug=eq.ekodi-church&select=id,subject_name,care_type,next_action,due_on,status,created_at&order=due_on.asc.nullslast&limit=100');$('summaryCards').innerHTML=[...staffCards(),card('열린 돌봄',fmt(rows.filter(x=>x.status!=='done').length),'후속 필요'),card('완료',fmt(rows.filter(x=>x.status==='done').length),'기록 기준')].join('');const form=`<form id="careForm" class="trade-form"><div class="trade-grid"><label>대상 이름<input name="subject_name" required maxlength="120"></label><label>돌봄 유형<select name="care_type"><option value="visit">심방</option><option value="call">연락</option><option value="prayer">기도</option><option value="newcomer">새가족 후속</option><option value="other">기타</option></select></label><label>다음 행동<input name="next_action" maxlength="300"></label><label>예정일<input name="due_on" type="date"></label><label>상태<select name="status"><option value="open">대기</option><option value="in_progress">진행</option><option value="done">완료</option></select></label></div><div class="actions"><button class="button primary" type="submit">돌봄 후속 등록</button></div><p id="formFlash" class="trade-flash"></p></form>`;$('mainPanel').innerHTML=`<h2>돌봄 · 후속</h2><p class="empty">상담 전문과 민감한 기도제목을 일반 교인 메모에 섞지 않습니다. 여기에는 필요한 다음 행동만 최소한으로 기록합니다.</p>${rows.length?`<div class="table-wrap"><table><thead><tr><th>대상</th><th>유형</th><th>다음 행동</th><th>예정일</th><th>상태</th></tr></thead><tbody>${rows.map(r=>`<tr><td><strong>${esc(r.subject_name)}</strong></td><td>${esc(r.care_type)}</td><td>${esc(r.next_action||'-')}</td><td>${esc(r.due_on||'-')}</td><td><span class="tag ${r.status==='done'?'live':'warn'}">${esc(r.status)}</span></td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">돌봄 후속이 없습니다.</p>'}${form}`;const f=$('careForm');if(f)f.onsubmit=async e=>{e.preventDefault();try{state('저장 중');const body=Object.fromEntries(new FormData(f));body.church_slug=CHURCH;body.created_by=session.user.id;await rest('church_care_tasks','',{method:'POST',body});await care();}catch(err){$('formFlash').textContent=`저장 실패: ${err.message}`;state('확인 필요');}};state('보호된 운영');}
   async function attendance(){
     state('출결현황 확인 중');
@@ -234,7 +317,7 @@ function pastorClient(POLICY){
 
 export function churchPastorAdminScript(){
   const payload=tenantAdminPolicySnapshot();
-  return new Response(`(${pastorClient.toString()})(${JSON.stringify(payload)});`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+  return new Response(`const __name=(target,value)=>Object.defineProperty(target,'name',{value,configurable:true});\n(${pastorClient.toString()})(${JSON.stringify(payload)});`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 }
 
 export function churchPastorAdminPage(){

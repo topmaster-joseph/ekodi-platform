@@ -106,3 +106,20 @@ body.mission-pay-open{overflow:hidden}
 .activity-result-photo{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:.8rem;margin:0 0 .7rem;background:#f3f3f1}
 .share-status[data-state=success]{color:#176b3a}.share-status[data-state=error]{color:#a12b2b}
 @media(max-width:700px){.activity-result-photo{aspect-ratio:1/1}.mission-photo-upload .field-grid{grid-template-columns:1fr}}
+
+/* Naju Oct 10 timeline: preserve readable time/phase labels on narrow screens without horizontal scrolling. */
+@media(max-width:760px){
+  .naju-activity-page .timeline li{grid-template-columns:104px minmax(0,1fr);gap:.75rem}
+  .naju-activity-page .timeline time{font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif;font-size:1rem;line-height:1.45;font-weight:800;white-space:nowrap;color:#315c46}
+}
+
+/* Dedicated EKODI Mission history timeline; respect mobile text widths and document direction. */
+.mission-history-section{padding:2.5rem 0 3.5rem;border-top:1px solid var(--line)}
+.mission-history-timeline{list-style:none;padding:0;margin:1.6rem 0 0;border-top:1px solid var(--line)}
+.mission-history-entry{display:grid;grid-template-columns:minmax(110px,180px) minmax(0,1fr);gap:1.2rem;padding:1.3rem 0;border-bottom:1px solid var(--line);scroll-margin-top:6rem}
+.mission-history-date{display:flex;flex-direction:column;gap:.35rem}
+.mission-history-date time{font-size:clamp(1.15rem,2.8vw,1.7rem);font-weight:850;line-height:1.2;color:var(--accent)}
+.mission-history-date span{font-size:.78rem;color:var(--muted);font-weight:650}
+.mission-history-content h3{font-size:clamp(1.05rem,2.2vw,1.42rem);margin:0 0 .45rem}
+.mission-history-content p{margin:0 0 .5rem;color:var(--muted);line-height:1.65;overflow-wrap:anywhere}
+@media(max-width:620px){.mission-history-section{padding:1.5rem 0 2rem}.mission-history-entry{grid-template-columns:86px minmax(0,1fr);gap:.75rem;padding:1.1rem 0}.mission-history-date time{font-size:1.1rem}.mission-history-date span{font-size:.71rem}.mission-history-content p{font-size:.89rem;line-height:1.5}}

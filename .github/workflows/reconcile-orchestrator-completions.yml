@@ -7,6 +7,7 @@ on:
       - Deploy EKODI Shared Site Core
       - Deploy CGMA Apex Edge
       - Deploy Business OS
+      - Deploy Independent Board
     types: [completed]
   schedule:
     - cron: '*/15 * * * *'

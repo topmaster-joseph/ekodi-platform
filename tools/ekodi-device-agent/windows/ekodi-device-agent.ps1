@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.5.1'
+$AgentVersion = '2.5.2'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -55,6 +55,23 @@ function Test-IsAdministrator {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
   $principal = [Security.Principal.WindowsPrincipal]::new($identity)
   return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Enter-AgentInstallLock {
+  # Serialize overlapping protocol bootstrap and enrollment without changing system security policy.
+  $mutex = [Threading.Mutex]::new($false, 'Global\EKODI_Device_Agent_Install_V1')
+  $acquired = $false
+  try {
+    try { $acquired = $mutex.WaitOne(0, $false) }
+    catch [Threading.AbandonedMutexException] { $acquired = $true }
+    if (-not $acquired) {
+      Throw-AgentStageError 'EKA-080' 'concurrent_install' '다른 EKODI 연결 프로그램이 실행 중입니다. 먼저 실행된 설치가 완료된 뒤 다시 시도하세요.'
+    }
+    return $mutex
+  } catch {
+    $mutex.Dispose()
+    throw
+  }
 }
 
 function Throw-AgentStageError([string]$Code, [string]$Stage, [string]$Message, $Inner = $null) {
@@ -2774,17 +2791,28 @@ function Run-Agent {
   }
 }
 
+$script:InstallMutex = $null
 try {
-  if ($ProtocolUrl) { Handle-ProtocolUrl $ProtocolUrl; exit }
-  if ($RegisterProtocol) { Register-ProtocolOnly; exit }
-  if ($Install) { Install-Agent; exit }
-  if ($Run) { Run-Agent; exit }
-
-  Write-Host "EKODI Device Agent $AgentVersion" -ForegroundColor Cyan
-  Write-Host '등록: -Install -EnrollmentCode <코드>'
-  Write-Host '원클릭 연결 등록: -RegisterProtocol'
-  Write-Host '실행: -Run'
+  # Lock only the elevated mutation process. A non-elevated parent must not block its UAC child.
+  if (($ProtocolUrl -or $RegisterProtocol -or $Install) -and (Test-IsAdministrator)) {
+    $script:InstallMutex = Enter-AgentInstallLock
+  }
+  if ($ProtocolUrl) { Handle-ProtocolUrl $ProtocolUrl }
+  elseif ($RegisterProtocol) { Register-ProtocolOnly }
+  elseif ($Install) { Install-Agent }
+  elseif ($Run) { Run-Agent }
+  else {
+    Write-Host "EKODI Device Agent $AgentVersion" -ForegroundColor Cyan
+    Write-Host '등록: -Install -EnrollmentCode <코드>'
+    Write-Host '원클릭 연결 등록: -RegisterProtocol'
+    Write-Host '실행: -Run'
+  }
 } catch {
   Write-ElevationFailureRecord $ElevationResultPath $_.Exception.Message
   throw
+} finally {
+  if ($script:InstallMutex) {
+    try { $script:InstallMutex.ReleaseMutex() } catch { }
+    $script:InstallMutex.Dispose()
+  }
 }

@@ -10,10 +10,11 @@
   const form=document.querySelector('[data-event-application]');
   const meta=document.querySelector('[data-event-meta]');
   const applicationRecordKey=String(form?.querySelector('[name="eventKey"]')?.value||defaultEvent.applicationRecordKey);
-  const url=String(meta?.dataset.eventUrl||defaultEvent.url);
-  const title=String(meta?.dataset.eventTitle||defaultEvent.title);
-  const shareText=String(meta?.dataset.eventText||defaultEvent.text);
-  const invite=String(meta?.dataset.eventInvite||defaultEvent.invite)+' '+url;
+  const missionHome=Boolean(document.querySelector('.hero-split'))&&!form;
+  const url=missionHome?'https://ekodi.kr/ekodimission':String(meta?.dataset.eventUrl||defaultEvent.url);
+  const title=missionHome?'에코디선교회 · EKODI MISSION':String(meta?.dataset.eventTitle||defaultEvent.title);
+  const shareText=missionHome?'생명을 살리는 공동체, 말씀대로 살아내고 살려내는 공동체. 대학가의 청년·유학생·이웃과 말씀과 식탁으로 만납니다.':String(meta?.dataset.eventText||defaultEvent.text);
+  const invite=(missionHome?'에코디선교회의 말씀·식탁·장학·지역 봉사 사역을 함께 살펴보세요.':String(meta?.dataset.eventInvite||defaultEvent.invite))+' '+url;
   const api=`/ekodimission/api/activities/${encodeURIComponent(applicationRecordKey)}/applications`;
   const registrationApi=`/ekodimission/api/activities/${encodeURIComponent(applicationRecordKey)}/registration`;
   const shareStatus=m=>document.querySelectorAll('[data-share-status]').forEach(el=>el.textContent=m);

@@ -73,7 +73,7 @@
         "url": "https://ekodi.kr/ekodimission",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["EKODI MISSION","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
+        "expect": ["EKODI MISSION","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js", "OUR JOURNEY · SINCE 2018", "말씀대로 살아내고 살려낸 발자취","/ekodimission/activities/261010-naju-yeongsan"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
@@ -81,8 +81,16 @@
         "url": "https://ekodi.kr/ekodimission/activities",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["MISSION ACTIVITIES","활동 목록","data-activity-year","data-activity-month","/ekodimission/apply/261003-autumn-trip","/ekodimission/apply/260926-open-table","16:00–18:00","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
+        "expect": ["MISSION ACTIVITIES","활동 목록","data-activity-year","data-activity-month","/ekodimission/apply/261003-autumn-trip","/ekodimission/apply/260926-open-table","16:00–18:00","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js", "2025 사랑의 연탄봉사", "한국외국인선교회 무안지부 설립","2026 제주 여름캠프","/ekodimission/activities/261010-naju-yeongsan"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/activities/261010-naju-yeongsan",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["10월 10일 토요일","11:00","나주 영산강정원","운영진 안내","data-share-event","data-event-meta","data-mission-nav","class=\"mission-site-header\"","href=\"https://www.naju.go.kr/tour/festival/river\"","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
+        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-site-class: brand-site","x-ekodi-publication-status: published","x-robots-tag: index, follow"],
         "rollbackVerify": false
       },
       {
@@ -173,7 +181,15 @@
         "url": "https://ekodi.kr/ekodimission/partners",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["PARTNERSHIP","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
+        "expect": ["PARTNERSHIP","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js", "함께할 수 있는 네 가지 길"],
+        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/history",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["OUR JOURNEY · 2018–2026","class=\"mission-site-header\"","선교회 연혁","한국외국인선교회 무안지부 설립","제주 여름캠프","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
@@ -181,7 +197,7 @@
         "url": "https://ekodi.kr/ekodimission/stories",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["STORIES & NEWS","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
+        "expect": ["STORIES & NEWS","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js", "OUR JOURNEY", "연혁 전체 보기", "2026년 9–10월 선교편지"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
@@ -197,7 +213,7 @@
         "url": "https://ekodi.kr/ekodimission/vision",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["VISION & VALUES","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
+        "expect": ["VISION & VALUES","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js", "생명을 살리는 공동체"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },

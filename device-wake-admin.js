@@ -57,6 +57,24 @@
       .device-wake-state{display:inline-flex;margin-top:7px;padding:3px 7px;border-radius:999px;background:rgba(100,116,139,.18);font-size:9px}.device-wake-state.online{background:rgba(34,197,94,.14);color:#86efac}.device-wake-state.offline{background:rgba(245,158,11,.14);color:#fcd34d}
       .device-wake-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.device-wake-form label{display:grid;gap:4px;color:#8ea4b8;font-size:9px}.device-wake-form input,.device-wake-form select{min-width:0;height:34px;border:1px solid rgba(110,153,193,.28);border-radius:8px;background:#0b2943;color:#d7e6f5;padding:0 8px}.device-wake-form .wide{grid-column:1/-1}
       .device-wake-checks{grid-column:1/-1;display:flex;gap:12px;flex-wrap:wrap}.device-wake-checks label{display:flex;align-items:center;gap:5px}.device-wake-card-actions{grid-column:1/-1;display:flex;gap:7px;flex-wrap:wrap}.device-wake-note{margin-top:12px;padding:10px;border-radius:9px;background:rgba(245,158,11,.08);color:#c9b47a;font-size:10px;line-height:1.5}.device-wake-enrollment{margin-top:10px;padding:10px;border:1px dashed rgba(110,153,193,.35);border-radius:9px}.device-wake-enrollment code{display:block;margin-top:7px;padding:8px;overflow-wrap:anywhere;background:#071a2b;border-radius:7px;color:#b8d5ef;font-size:9px}.device-wake-message{margin-top:9px;color:#9bb4ca;font-size:10px}
+
+      body.admin-compact .device-wake-control{background:#fff;color:#172033;border:1px solid #d9e2ec;border-radius:12px}
+      body.admin-compact .device-wake-head p,body.admin-compact .device-wake-message{color:#66768a}
+      body.admin-compact .device-wake-note{color:#56667a;background:#f8fafc;border:1px solid #e1e8ef}
+      body.admin-compact .device-wake-gateway,body.admin-compact .device-wake-card{background:#fff;color:#172033;border:1px solid #d9e2ec}
+      body.admin-compact .device-wake-gateway small,body.admin-compact .device-wake-card small{color:#66768a}
+      body.admin-compact .device-wake-form label{color:#26384e}
+      body.admin-compact .device-wake-form input,body.admin-compact .device-wake-form select{background:#fff;color:#172033;border:1px solid #cbd5e1}
+      .device-wake-profiles,.device-wake-group{margin-top:8px;background:#fff;border:1px solid #d9e2ec;border-radius:10px;overflow:hidden;color:#172033}
+      .device-wake-profiles>summary,.device-wake-group>summary{list-style:none;cursor:pointer;padding:11px 12px;font-size:12px;font-weight:700}
+      .device-wake-profiles>summary::-webkit-details-marker,.device-wake-group>summary::-webkit-details-marker{display:none}
+      .device-wake-profiles>summary::after,.device-wake-group>summary::after{content:'  ▾';color:#64748b}
+      .device-wake-profiles[open]>summary::after,.device-wake-group[open]>summary::after{content:'  ▴'}
+      .device-wake-grid{grid-template-columns:minmax(0,1fr)}
+      .device-wake-profiles .device-wake-grid{padding:8px;margin:0}
+      .device-wake-group-inner{display:grid;gap:8px;padding:10px;border-top:1px solid #e7ecf2}
+      .device-wake-group .device-wake-card{padding:10px}
+      .device-wake-group>summary:focus-visible,.device-wake-profiles>summary:focus-visible{outline:2px solid #33688e;outline-offset:-2px}
       @media(max-width:560px){.device-wake-head{flex-direction:column}.device-wake-form{grid-template-columns:1fr}.device-wake-form .wide,.device-wake-checks,.device-wake-card-actions{grid-column:1}}
     `;
     document.head.append(style);
@@ -70,8 +88,27 @@
       ? gateways.map(gateway => `<article class="device-wake-gateway"><strong>${esc(gateway.label)}</strong><small>${esc(gateway.id)}</small><span class="device-wake-state ${gateway.status === 'online' ? 'online' : 'offline'}">${gateway.status === 'online' ? '온라인' : '오프라인'}</span><small>최근 ${esc(time(gateway.lastSeenAt))}</small></article>`).join('')
       : '<p class="device-wake-message">등록된 Wake Gateway가 없습니다.</p>';
 
-    const devices = (devicesData.devices || []).filter(device => device.management?.type === 'pc' && device.platform !== 'inventory');
-    grid.innerHTML = devices.length ? devices.map(device => {
+    const devices = [...new Map((devicesData.devices || [])
+      .filter(device => device?.id && device.management?.type === 'pc' && device.platform !== 'inventory' && device.status !== 'revoked')
+      .map(device => [device.id, device])).values()];
+    const byHostname = new Map();
+    for (const device of devices) {
+      const hostname = String(device.hostname || '').trim().toLowerCase();
+      // No hardware fingerprint: grouping by hostname is only an indexed display, not permission merging.
+      const key = hostname && !['unknown','localhost','pc','windows','-'].includes(hostname)
+        ? 'windows:' + hostname : 'id:' + device.id;
+      if (!byHostname.has(key)) byHostname.set(key, []);
+      byHostname.get(key).push(device);
+    }
+    const groups = [...byHostname.entries()];
+    const openKeys = new Set([...grid.querySelectorAll('.device-wake-group[open]')].map(el => el.dataset.wakeGroup));
+    const disclosure = section.querySelector('[data-wake-profiles]');
+    if (disclosure) disclosure.querySelector('summary').textContent = '기기별 전원 정책 · ' + groups.length + '개 목록 (' + devices.length + '건의 등록기록)';
+    grid.innerHTML = groups.length ? groups.map(([key, records]) => {
+      records.sort((a,b) => (a.status === 'online' ? -1 : 0) - (b.status === 'online' ? -1 : 0));
+      const primary = records[0];
+      const note = records.length > 1 ? '<p class="device-wake-message">컴퓨터명이 같은 기록입니다. 실제 동일한 PC인지는 확인되지 않았으므로 기기 ID별 전원 설정을 별도로 관리합니다.</p>' : '';
+      const controls = records.map(device => {
       const profile = profileFor(wake, device.id);
       const eligible = isDesktopEligible(device);
       const gateway = gateways.find(item => item.id === profile?.gatewayId);
@@ -90,6 +127,11 @@
           <div class="device-wake-card-actions"><button type="submit" class="secondary"${eligible ? '' : ' disabled'}>전원 정책 저장</button><button type="button" class="primary" data-wake-now${wakeReady ? '' : ' disabled'}>${online ? '이미 온라인' : '지금 켜기'}</button></div>
         </form>
       </article>`;
+      }).join('');
+      return `<details class="device-wake-group" data-wake-group="${esc(key)}"${openKeys.has(key) ? ' open' : ''}>
+        <summary>${esc(primary.label || primary.hostname || primary.id)} · ${esc(primary.status === 'online' ? '온라인' : '오프라인')}${records.length > 1 ? ' · 같은 이름 ' + records.length + '건' : ''}</summary>
+        <div class="device-wake-group-inner">${note}${controls}</div>
+      </details>`;
     }).join('') : '<p class="device-wake-message">관리 가능한 데스크톱 PC가 없습니다.</p>';
   }
 
@@ -112,7 +154,7 @@
     const section = document.createElement('section');
     section.id = PANEL_ID;
     section.className = 'device-wake-control';
-    section.innerHTML = `<div class="device-wake-head"><div><p class="kicker">POWER RECOVERY</p><h3>원격 전원 · 작업 자동복귀</h3><p>관리자가 허용한 데스크톱만 Wake Gateway를 통해 켜고, Windows 로그인 전 Device Agent가 복귀해 대기 작업을 이어갑니다.</p></div><div class="device-wake-actions"><button type="button" class="secondary" data-wake-refresh>↻ 새로고침</button><button type="button" class="primary" data-wake-enroll>Gateway 등록코드</button></div></div><div class="device-wake-note">노트북은 자동 작업 및 Wake 대상에서 제외됩니다. 완전 종료(S5) 깨우기는 대상 PC의 BIOS/NIC WOL과 같은 네트워크의 항상 켜진 Wake Gateway가 모두 준비되어야 합니다. 정전으로 AC 전원이 끊긴 상태는 WOL만으로 켤 수 없습니다.</div><div class="device-wake-enrollment" data-wake-enrollment hidden></div><div class="device-wake-gateways" data-wake-gateways></div><div class="device-wake-grid" data-wake-grid></div><p class="device-wake-message" data-wake-message>전원 복구 상태를 불러오는 중입니다.</p>`;
+    section.innerHTML = `<div class="device-wake-head"><div><p class="kicker">POWER RECOVERY</p><h3>원격 전원 · 작업 자동복귀</h3><p>관리자가 허용한 데스크톱만 Wake Gateway를 통해 켜고, Windows 로그인 전 Device Agent가 복귀해 대기 작업을 이어갑니다.</p></div><div class="device-wake-actions"><button type="button" class="secondary" data-wake-refresh>↻ 새로고침</button><button type="button" class="primary" data-wake-enroll>Gateway 등록코드</button></div></div><div class="device-wake-note">노트북은 자동 작업 및 Wake 대상에서 제외됩니다. 완전 종료(S5) 깨우기는 대상 PC의 BIOS/NIC WOL과 같은 네트워크의 항상 켜진 Wake Gateway가 모두 준비되어야 합니다. 정전으로 AC 전원이 끊긴 상태는 WOL만으로 켤 수 없습니다.</div><div class="device-wake-enrollment" data-wake-enrollment hidden></div><div class="device-wake-gateways" data-wake-gateways></div><details class="device-wake-profiles" data-wake-profiles><summary>기기별 전원 정책 설정</summary><div class="device-wake-grid" data-wake-grid></div></details><p class="device-wake-message" data-wake-message>전원 복구 상태를 불러오는 중입니다.</p>`;
     const browser = document.getElementById('adminDeviceBrowserDiagnostics');
     if (browser) browser.insertAdjacentElement('afterend', section); else panel.prepend(section);
 
