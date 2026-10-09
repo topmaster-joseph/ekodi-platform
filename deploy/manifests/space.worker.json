@@ -81,7 +81,7 @@
         "url": "https://ekodi.kr/ekodimission/activities",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["MISSION ACTIVITIES","활동 목록","data-activity-year","data-activity-month","/ekodimission/apply/261003-autumn-trip","/ekodimission/apply/260926-open-table","16:00–18:00","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js", "2025 사랑의 연탄봉사", "한국외국인선교회 무안지부 설립"],
+        "expect": ["MISSION ACTIVITIES","활동 목록","data-activity-year","data-activity-month","/ekodimission/apply/261003-autumn-trip","/ekodimission/apply/260926-open-table","16:00–18:00","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js", "2025 사랑의 연탄봉사", "한국외국인선교회 무안지부 설립","2026 제주 여름캠프"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
