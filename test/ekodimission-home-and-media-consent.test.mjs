@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import spaceWorker from '../space-worker.js';
 
 const read=name=>readFile(new URL('../'+name,import.meta.url),'utf8');
 
@@ -60,4 +61,21 @@ test('Published mission photo and media-link submissions require explicit server
  assert.ok(uploadHandler.indexOf("form?.get('publicConsent')!=='true'")<uploadHandler.indexOf('crypto.subtle.digest'));
  assert.ok(linkHandler.indexOf('body?.publicConsent!==true')>0);
  assert.ok(linkHandler.indexOf('body?.publicConsent!==true')<linkHandler.indexOf('activity_public_submit_media_link'));
+ // Public-facing POSTs are forwarded by the central router into Space; fail
+ // immediately at the server without calling Storage or Supabase if consent is missing.
+ const env={
+  ASSETS:{fetch:async()=>{throw new Error('Media request fell through to the static asset router')}},
+  STORAGE:{fetch:async()=>{throw new Error('No storage write should happen without consent')}}
+ };
+ const link=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/api/activities/260926-chuseok-open-table/media',{
+  method:'POST',headers:{'content-type':'application/json'},
+  body:JSON.stringify({url:'https://example.org/public-gallery',type:'album'})
+ }),env);
+ assert.equal(link.status,400);
+ assert.equal((await link.json()).error,'media_public_consent_required');
+ const form=new FormData();
+ form.set('file',new File([new Uint8Array([0x89,0x50,0x4e,0x47])],'photo.png',{type:'image/png'}));
+ const photo=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/api/activities/260926-chuseok-open-table/media-upload',{method:'POST',body:form}),env);
+ assert.equal(photo.status,400);
+ assert.equal((await photo.json()).error,'media_public_consent_required');
 });
