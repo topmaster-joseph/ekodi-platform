@@ -21,7 +21,7 @@ function database(){
   db.prepare("INSERT INTO notice_posts(title,body,pinned,image_keys,status,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)")
     .run('비공개 공지','작성중',0,'[]','draft','private@example.com',seededAt,seededAt);
   return {raw:db,api:{
-    prepare(sql){return{all:async()=>({results:db.prepare(sql).all()}),bind(...params){const statement=db.prepare(sql);return{
+    prepare(sql){return{first:async()=>db.prepare(sql).get()||null,all:async()=>({results:db.prepare(sql).all()}),bind(...params){const statement=db.prepare(sql);return{
       first:async()=>statement.get(...params)||null,
       all:async()=>({results:statement.all(...params)}),
       run:async()=>{const r=statement.run(...params);return {meta:{changes:Number(r.changes),last_row_id:Number(r.lastInsertRowid)}}}
@@ -91,6 +91,21 @@ test('finance grand total includes all published rows even when public list is l
   const summary=await (await board.fetch(request('/api/finance'),env)).json();
   assert.equal(summary.items.length,150);
   assert.deepEqual(summary.summary,{raised:50160,spent:0,balance:50160});
+  db.raw.close();
+});
+
+
+test('visible comments are not hidden by thousands of comments on other posts',async()=>{
+  const db=database(),env=envWith(db),now='2026-10-09T10:00:00Z';
+  const sql='INSERT INTO board_discussion_comments(board_kind,post_id,author_id,author_name,body,submission_key,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)';
+  const insert=db.raw.prepare(sql);
+  db.raw.exec('BEGIN');
+  for(let i=0;i<3005;i++)insert.run('finance',9000,'archived','옛 글','기존 댓글','old-'+i,now,now);
+  insert.run('finance',1,'member','회원','최신 공개 댓글','current-visible',now,now);
+  db.raw.exec('COMMIT');
+  const finance=await (await board.fetch(request('/api/finance'),env)).json();
+  assert.equal(finance.items[0].comments.length,1);
+  assert.equal(finance.items[0].comments[0].message,'최신 공개 댓글');
   db.raw.close();
 });
 

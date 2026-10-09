@@ -6,7 +6,17 @@ export const BOARD_DISCUSSION_QUEUE_KIND='independent-board.discussion-comment.v
 
 export async function listBoardDiscussionComments(env,kind,items){
   if(!PARENTS[kind]||!items.length)return items;
-  const rows=(await env.BOARD_DB.prepare("SELECT id,post_id,author_name,body,created_at,updated_at FROM board_discussion_comments WHERE board_kind=? AND status='published' ORDER BY id ASC LIMIT 3000").bind(kind).all()).results||[];
+  // Scope reads to the page's published posts. A global LIMIT silently lost new
+  // comments when older unrelated posts had already accumulated thousands.
+  const ids=[...new Set(items.map(x=>Number(x.id)).filter(x=>Number.isSafeInteger(x)&&x>0))];
+  const rows=[];
+  for(let offset=0;offset<ids.length;offset+=50){
+    const chunk=ids.slice(offset,offset+50);
+    const placeholders=chunk.map(()=>'?').join(',');
+    const sql="SELECT id,post_id,author_name,body,created_at,updated_at FROM board_discussion_comments WHERE board_kind=? AND status='published' AND post_id IN ("+placeholders+") ORDER BY post_id,id ASC";
+    const result=(await env.BOARD_DB.prepare(sql).bind(kind,...chunk).all()).results||[];
+    rows.push(...result);
+  }
   const byPost=new Map();
   for(const r of rows){
     const id=Number(r.post_id);

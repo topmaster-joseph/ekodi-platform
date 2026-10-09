@@ -18,6 +18,7 @@ test('guest reads and shares, but cannot publish a voice or a reply',async()=>{
   const html=await (await board.fetch(request('/voices'),{})).text();
   assert.match(html,/로그인 후 의견 등록/);
   assert.match(html,/data-share/);
+  assert.match(html,/data-reply-edit/);
   assert.match(html,/로그인 없이 열람·공유/);
   assert.match(html,/답글은 로그인 후 작성/);
   const script=Array.from(html.matchAll(/<script>([\s\S]*?)<\/script>/g)).at(-1)?.[1];
@@ -62,6 +63,8 @@ test('confirmed EKODI member can queue new citizen opinion and reply, without ad
     assert.equal(reply.status,202);
     const edit=await board.fetch(request('/api/admin/posts/42','PUT','member-token',{message:'not mine'}),env);
     assert.equal(edit.status,403);
+    const replyEdit=await board.fetch(request('/api/admin/posts/42/replies/3','PUT','member-token',{message:'member cannot edit'}),env);
+    assert.equal(replyEdit.status,403);
   });
   assert.deepEqual(queued.map(x=>x.kind),['independent-board.post.v1','independent-board.reply.v1']);
 });
@@ -75,9 +78,14 @@ test('only registered voice admin can update and delete existing opinions',async
   },async()=>{
     const updated=await board.fetch(request('/api/admin/posts/42','PUT','admin-token',{displayName:'관리자',category:'proposal',message:'수정 내용'}),env);
     assert.equal(updated.status,200);
+    const replyEdited=await board.fetch(request('/api/admin/posts/42/replies/3','PUT','admin-token',{message:'관리자가 수정한 답글'}),env);
+    assert.equal(replyEdited.status,200);
+    const replyDeleted=await board.fetch(request('/api/admin/posts/42/replies/3','DELETE','admin-token'),env);
+    assert.equal(replyDeleted.status,200);
     const deleted=await board.fetch(request('/api/admin/posts/42','DELETE','admin-token'),env);
     assert.equal(deleted.status,200);
   });
   assert.ok(statements.some(s=>s.sql.startsWith('UPDATE board_posts SET author_name=')));
+  assert.ok(statements.some(s=>s.sql.startsWith('UPDATE board_replies SET body=')));
   assert.ok(statements.some(s=>s.sql.includes("status='deleted'")));
 });
