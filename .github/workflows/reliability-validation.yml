@@ -81,7 +81,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: reliability-release-${{ github.run_id }}
+          name: reliability-release-${{ github.run_id }}-${{ github.run_attempt }}
           path: reliability-*.json
           if-no-files-found: ignore
           retention-days: 14
@@ -106,7 +106,7 @@ jobs:
         if: inputs.suite == 'release'
         uses: actions/download-artifact@v7
         with:
-          name: reliability-release-${{ github.run_id }}
+          name: reliability-release-${{ github.run_id }}-${{ github.run_attempt }}
           path: reliability-proof
       - name: Independently verify guarded release reliability evidence
         if: inputs.suite == 'release'
@@ -119,7 +119,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: inputs.suite != 'release' && always()
         with:
-          name: reliability-manual-${{ github.run_id }}
+          name: reliability-manual-${{ github.run_id }}-${{ github.run_attempt }}
           path: reliability-manual.json
           if-no-files-found: ignore
           retention-days: 14

@@ -22,16 +22,25 @@ test('release evidence is independently checked without repeating staging load',
   const section = reliability.slice(reliability.indexOf('  staging-manual:\n'.replaceAll('\n', reliability.includes('\r\n') ? '\r\n' : '\n')));
   assert.ok(section.length > 50);
   assert.match(section, /actions\/download-artifact@v7/);
-  assert.match(section, /name: reliability-release-\$\{\{ github\.run_id \}\}/);
+  assert.match(section, /name: reliability-release-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}/);
   assert.match(section, /run: node scripts\/verify-reliability-release-evidence\.mjs --directory=reliability-proof/);
   assert.match(section, /- name: Run explicitly selected staging profile\r?\n\s+if: inputs\.suite != 'release'/);
   assert.doesNotMatch(section, /--profile=baseline|--profile=spike/);
 });
 
 test('evidence failure remains fail-closed; release artifacts remain same-run and bounded', () => {
-  assert.match(reliability, /name: reliability-release-\$\{\{ github\.run_id \}\}/);
+  assert.match(reliability, /name: reliability-release-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}/);
   assert.match(reliability, /if-no-files-found: ignore/);
   assert.match(reliability, /scripts\/verify-reliability-release-evidence\.mjs --directory=reliability-proof/);
   assert.match(reliability, /if: inputs\.suite == 'release'/);
   assert.match(reliability, /retention-days: 14/);
+});
+
+test('staging reliability artifacts are isolated by run and rerun attempt', () => {
+  // GITHUB_RUN_ID alone collides on a rerun. Both producer and consumer
+  // must bind the same artifact to the same GitHub run *and attempt*.
+  const releaseArtifact = /name: reliability-release-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}/g;
+  assert.equal([...reliability.matchAll(releaseArtifact)].length, 2);
+  assert.match(reliability, /name: reliability-manual-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}/);
+  assert.doesNotMatch(reliability, /name: reliability-(?:release|manual)-\$\{\{ github\.run_id \}\}\r?\n/);
 });
