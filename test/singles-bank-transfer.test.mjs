@@ -122,9 +122,12 @@ test('bank account setting is allowed only to config authority and cannot activa
  r=await handleSinglesBank(request(path,'PUT',input),path,x,uid,reply);
  assert.equal(r.status,200);
  assert.equal((await r.json()).bank_collection_enabled,false);
- assert.equal(x.writes.length,2);
+ assert.equal(x.writes.length,3);
  assert.equal(x.writes[0].row.active,false);
  assert.ok(x.writes[1].row.every(z=>z.active===false));
+ assert.equal(x.writes[2].name,'singles_bank_settings_audit');
+ assert.equal(x.writes[2].row.account_last4,'0000');
+ assert.equal(x.writes[2].row.account_number,undefined);
 });
 test('optional general consulting requires its own confirmed plan, not community plan',async()=>{
  flags.SINGLES_BANK_TRANSFER_ENABLED='true';
@@ -151,4 +154,13 @@ test('DB migration limits raw function execution to server and forces manually c
  assert.match(sql,/p_action='verified'/);
  assert.match(sql,/not exists\(select 1 from public\.singles_bank_operators/);
  assert.doesNotMatch(sql,/grant (?:select|insert|update) on table public\.singles_bank_orders to authenticated/i);
+});
+
+test('SQL receipt hardening checks independent operator role and active verified member',async()=>{
+ const sql=await readFile(new URL('../supabase/migrations/20261009225500_singles_bank_verification_hardening.sql',import.meta.url),'utf8');
+ assert.match(sql,/enabled=true and can_verify=true/);
+ assert.match(sql,/member_no_longer_eligible/);
+ assert.match(sql,/revoke all on function public\.singles_bank_confirm_order/);
+ assert.match(sql,/grant execute on function public\.singles_bank_confirm_order[\s\S]*to service_role/);
+ assert.match(sql,/singles_bank_settings_audit/);
 });
