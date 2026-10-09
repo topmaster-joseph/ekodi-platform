@@ -192,7 +192,7 @@ async function adminDeleteReply(req,env,postId,replyId){
   return json({ok:true,id:replyId});
 }
 
-async async function financeSummary(env){
+async function financeSummary(env){
   const rows=(await env.BOARD_DB.prepare("SELECT entry_type,amount FROM finance_posts WHERE status='published'").all()).results||[];
   const raised=rows.filter(x=>x.entry_type==='income').reduce((a,x)=>a+Number(x.amount||0),0),spent=rows.filter(x=>x.entry_type==='expense').reduce((a,x)=>a+Number(x.amount||0),0);
   return {raised,spent,balance:raised-spent};
