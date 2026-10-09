@@ -84,6 +84,16 @@ test('finance and notices public APIs show published entries and private audit f
   db.raw.close();
 });
 
+
+test('finance grand total includes all published rows even when public list is limited',async()=>{
+  const db=database(),env=envWith(db),stmt=db.raw.prepare("INSERT INTO finance_posts(entry_date,entry_type,amount,purpose,related_event,evidence_status,public_note,status,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
+  for(let i=0;i<160;i++)stmt.run('2026-10-09','income',1,'추가 항목','','none','','published','', '2026-10-09T10:00:00Z','2026-10-09T10:00:00Z');
+  const summary=await (await board.fetch(request('/api/finance'),env)).json();
+  assert.equal(summary.items.length,150);
+  assert.deepEqual(summary.summary,{raised:50160,spent:0,balance:50160});
+  db.raw.close();
+});
+
 test('public pages share links and contain valid guest/login scripts on both domains',async()=>{
   for(const p of ['finance','notices']){
     for(const domain of ['https://seonammedi.kr/board','https://ekodi.kr/seonammedi/board']){

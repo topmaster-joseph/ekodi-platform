@@ -232,8 +232,10 @@ async function listFinance(env,url,admin=false){
   sql+=' ORDER BY entry_date DESC,id DESC LIMIT '+(admin?'300':'150');
   const rows=(await env.BOARD_DB.prepare(sql).bind(...args).all()).results||[];
   const items=rows.map(r=>({id:Number(r.id),date:r.entry_date,type:r.entry_type,amount:Number(r.amount||0),purpose:r.purpose||'',event:r.related_event||'',note:r.public_note||'',status:r.status||'published',createdAt:r.created_at,updatedAt:r.updated_at,...(admin?{evidenceStatus:r.evidence_status||'none',createdBy:r.created_by||''}:{})}));
-  const visible=items.filter(x=>admin||x.status==='published'),raised=visible.filter(x=>x.type==='income').reduce((a,x)=>a+x.amount,0),spent=visible.filter(x=>x.type==='expense').reduce((a,x)=>a+x.amount,0);
-  return json({ok:true,boardId:'seonammedi.finance',storage:'independent-board-d1',summary:{raised,spent,balance:raised-spent},items:await listBoardDiscussionComments(env,'finance',visible)});
+  const visible=items.filter(x=>admin||x.status==='published');
+  // The list is paginated/limited; grand totals must include every published ledger row.
+  const summary=await financeSummary(env);
+  return json({ok:true,boardId:'seonammedi.finance',storage:'independent-board-d1',summary,items:await listBoardDiscussionComments(env,'finance',visible)});
 }
 async function createFinance(req,env){
   const gate=await requirePermission(req,'finance');if(!gate.ok)return gate.response;
