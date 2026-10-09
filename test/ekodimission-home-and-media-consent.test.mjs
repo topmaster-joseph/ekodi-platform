@@ -10,19 +10,19 @@ test('Mission home keeps only introduction + active/upcoming event while retaini
     read('space/ekodimission.page'),read('space/ekodimission-activities.page'),
     read('space/ekodimission.js'),read('space/ekodimission.css')
   ]);
-  const sections=[...home.matchAll(/<section\\b/g)];
+  const sections=[...home.matchAll(/<section\b/g)];
   assert.equal(sections.length,2,'No completed events, long index or history duplicated on home');
   assert.match(home,/class="hero hero-split"/);
   assert.match(home,/data-mission-home-event data-event-last-day="2026-10-10"/);
   assert.match(home,/data-mission-home-empty hidden/);
-  assert.match(home,/\\/ekodimission\\/history/);
-  assert.match(home,/\\/ekodimission\\/activities/);
+  assert.match(home,/\/ekodimission\/history/);
+  assert.match(home,/\/ekodimission\/activities/);
   for(const obsolete of ['RECENT ACTIVITY','PAST ACTIVITY','OUR JOURNEY · SINCE 2018','MISSION SERVICES','2026 가을 공동체 여행'])
     assert.ok(!home.includes(obsolete),'Home retains old section '+obsolete);
   assert.match(archive,/2026 가을 공동체 여행/);
   assert.match(archive,/2026 에코디 추석 열린식탁/);
-  assert.match(js,/timeZone:'Asia\\/Seoul'/);
-  assert.match(css,/\\.mission-home-event\\[hidden\\]\\s*,\\s*\\.mission-home-empty\\[hidden\\]\\{display:none!important\\}/);
+  assert.match(js,/timeZone:'Asia\/Seoul'/);
+  assert.match(css,/\.mission-home-event\[hidden\]\s*,\s*\.mission-home-empty\[hidden\]\{display:none!important\}/);
 });
 
 test('Current-event visibility correctly changes at Korea midnight',async()=>{
@@ -48,13 +48,13 @@ test('Current-event visibility correctly changes at Korea midnight',async()=>{
 
 test('Published mission photo and media-link submissions require explicit server-validated consent',async()=>{
  const [worker,ui]=await Promise.all([read('space-worker.js'),read('space/ekodimission-archive.js')]);
- assert.match(worker,/form\\?\\.get\\('publicConsent'\\)!=='true'/);
- assert.match(worker,/body\\?\\.publicConsent!==true/);
+ assert.match(worker,/form\?\.get\('publicConsent'\)!=='true'/);
+ assert.match(worker,/body\?\.publicConsent!==true/);
  assert.match(worker,/media_public_consent_required/);
- assert.match(worker,/name=\\"publicConsent\\" value=\\"true\\" required/g);
- assert.match(ui,/body\\.set\\('publicConsent','true'\\)/);
- assert.match(ui,/publicConsent:data\\.get\\('publicConsent'\\)==='true'/);
- assert.match(ui,/publicConsent.*\\?\\.checked/);
+ assert.match(worker,/name=\"publicConsent\" value=\"true\" required/g);
+ assert.match(ui,/body\.set\('publicConsent','true'\)/);
+ assert.match(ui,/publicConsent:data\.get\('publicConsent'\)==='true'/);
+ assert.match(ui,/publicConsent.*\?\.checked/);
  const env={STORAGE:{fetch:async()=>{throw Error('No storage should be touched without consent')}}};
  const link=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/api/activities/260926-chuseok-open-table/media',{
   method:'POST',headers:{'content-type':'application/json'},
