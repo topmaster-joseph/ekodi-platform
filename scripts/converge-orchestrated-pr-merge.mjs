@@ -102,6 +102,7 @@ const sharedSiteTouched=changedFiles.some(file=>
   ['remote-power-admin.js','remote-power-admin.css','device-wake-admin.js'].includes(file)||
   file==='ekodi-device-bootstrap.cmd'||
   file==='site-worker.js'||
+  file==='scripts/verify-admin-provider-control-production.mjs'||
   file==='scripts/build.mjs'||
   file==='scripts/finalize-seonammedi-release.mjs'||
   file==='scripts/verify-seonammedi-release-live.mjs'||
