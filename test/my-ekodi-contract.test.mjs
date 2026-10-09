@@ -229,6 +229,19 @@ test('My EKODI approval hub keeps unified visibility and person-scoped decision 
   assert.doesNotMatch(approvalApp,/service_role|SUPABASE_SERVICE_ROLE_KEY/);
 });
 
+test('My guarded release verifies deferred secondary features through the loader contract',async()=>{
+  const [home,loader,manifest,workflow]=await Promise.all([
+    read('my/index.html'),read('my/secondary-feature-loader.js'),read('deploy/manifests/my.worker.json'),read('.github/workflows/release-church-marketing-ai.yml')
+  ]);
+  assert.match(home,/secondary-feature-loader\.js\?v=20261008-startup-defer-v1/);
+  assert.match(loader,/church-marketing-ai\.js\?v=20260827-church-marketing-1/);
+  assert.match(loader,/channel-automation\.js\?v=20260903-channel-automation-1/);
+  assert.match(manifest,/secondary-feature-loader\.js\?v=20261008-startup-defer-v1/);
+  assert.match(manifest,/ekodi-my\.topmaster-joseph\.workers\.dev\/secondary-feature-loader\.js/);
+  assert.doesNotMatch(manifest,/"CREATOR PORTFOLIO",\s*"church-marketing-ai\.js/);
+  assert.match(workflow,/my\/secondary-feature-loader\.js/);
+});
+
 test('My production verification uses only the canonical apex path',async()=>{
   const workflow=await read('.github/workflows/deploy-my.yml');
   assert.doesNotMatch(workflow,/https:\/\/my\.ekodi\.kr/);
