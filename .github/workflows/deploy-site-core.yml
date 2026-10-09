@@ -1064,6 +1064,33 @@ jobs:
             check "$asset" || failed=1
           done
 
+          # A successful Worker deploy is not complete until the user-visible Device Control bundle is fresh.
+          # These are public static admin scripts only; no authenticated device metadata is fetched here.
+          device_assets_verified=0
+          for attempt in $(seq 1 12); do
+            if curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 20 \
+                'https://ekodi.kr/device-control-admin.js' -o /tmp/ekodi-device-roster.js \
+              && grep -Fq 'function rosterGroupKey(device)' /tmp/ekodi-device-roster.js \
+              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 20 \
+                'https://ekodi.kr/device-control-admin.css' -o /tmp/ekodi-device-roster.css \
+              && grep -Fq '.device-roster-group' /tmp/ekodi-device-roster.css \
+              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 20 \
+                'https://ekodi.kr/remote-power-admin.js' -o /tmp/ekodi-remote-power.js \
+              && grep -Fq 'selectedAgentId' /tmp/ekodi-remote-power.js \
+              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 20 \
+                'https://ekodi.kr/device-browser-diagnostics.js' -o /tmp/ekodi-device-browser.js \
+              && grep -Fq 'device-wake-group' /tmp/ekodi-device-browser.js; then
+              device_assets_verified=1
+              echo 'EKODI Device Control roster, power and Wake production static assets verified.'
+              break
+            fi
+            if [ "$attempt" -lt 12 ]; then sleep 5; fi
+          done
+          if [ "$device_assets_verified" -ne 1 ]; then
+            echo '[EKODI][DEVICE-UI-RELEASE] production assets are stale after site-core deployment' >&2
+            failed=1
+          fi
+
           exit "$failed"
 
 
