@@ -197,7 +197,14 @@ async function main(){
  catch{return}
  state.status=status;
  if(!status?.onboarding_enabled||!status?.auth?.supabase_url||!status?.auth?.publishable_key)return;
- if(typeof window.supabase?.createClient!=='function')return;
+ if(typeof window.supabase?.createClient!=='function'){
+  const ready=await new Promise(resolve=>{
+   const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+   script.async=true;script.addEventListener('load',()=>resolve(typeof window.supabase?.createClient==='function'),{once:true});
+   script.addEventListener('error',()=>resolve(false),{once:true});document.head.append(script);
+  });
+  if(!ready){$('serviceStage').textContent='로그인 모듈 점검 중';return}
+ }
  state.client=window.supabase.createClient(status.auth.supabase_url,status.auth.publishable_key,
  {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
  // Existing EKODI community bridge uses a short-lived OTP hash in the fragment.

@@ -13,6 +13,10 @@ const request=(p,method='GET')=>new Request('https://ekodi.kr'+p,{method});
 test('guest cannot list events or see profiles; only descriptions are public',async()=>{
  const x=await routeSinglesSurface(request('/singles/api/public'),env);
  assert.equal(x.status,200);const d=await x.json();assert.deepEqual(d.events,[]);
+ const landing=await routeSinglesSurface(request('/singles'),env);
+ const publicHtml=await landing.text();
+ assert.doesNotMatch(publicHtml,/cdn\\.jsdelivr\\.net\/npm\/@supabase/);
+ assert.match(publicHtml,/\/singles\/app\.js/);
  for(const p of ['/singles/api/events','/singles/api/discover','/singles/api/subscription','/singles/api/profile']){
   const x=await routeSinglesSurface(request(p),env);
   assert.equal(x.status,503,p);
