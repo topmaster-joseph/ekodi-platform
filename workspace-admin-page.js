@@ -113,7 +113,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   const standardRootGroups=[
     {id:'home',label:'운영',sections:[['overview','운영 홈']]},
     {id:'work',label:'고객 · 업무',sections:[['work','업무'],['confirmations','지급 · 수령 확인']]},
-    {id:'marketing',label:workspace==='ekodimission'?'모임 · 활동':'마케팅',sections:[...(workspace==='ekodimission'?[['saturday','토요모임'],['activities','행사 · 신청자']]:[]),['marketing','마케팅 AI'],['publishing','채널 · 자동게시']]},
+    {id:'marketing',label:'마케팅',sections:[...(workspace==='ekodimission'?[['saturday','토요모임'],['activities','행사 · 신청자']]:[]),['marketing','마케팅 AI'],['publishing','채널 · 자동게시']]},
     {id:'management',label:'경영',sections:[['finance','재무'],...(isBizWorkspace?[['tax','세금 · 증빙']]:[])]},
     {id:'tools',label:'운영도구',sections:[['mail','메일'],['languages','다국어 번역 · 게시']]},
     {id:'site-access',label:'사이트 관리',sections:[['chrome','헤더 · 푸터'],['design','사이트 디자인'],...peopleSections,['status','운영 상태'],['records','변경 · 감사 기록']]}
