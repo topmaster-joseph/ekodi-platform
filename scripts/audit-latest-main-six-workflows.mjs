@@ -48,11 +48,27 @@ export async function githubRequestJson(path, { repository = DEFAULT_REPOSITORY,
 function requiredJobEvidence(jobs, required) {
   if (!Array.isArray(jobs) || jobs.length === 0) return { ok: false, reason: 'no-jobs' };
   for (const name of required) {
-    const job = jobs.find(x => x.name === name);
-    if (!job) return { ok: false, reason: 'required-job-missing:' + name };
-    if (job.status !== 'completed' || job.conclusion !== 'success') {
-      return { ok: false, reason: 'required-job-not-success:' + name + ':' + (job.conclusion || job.status || 'unknown') };
+    // Matrix jobs are exposed as "job_id / matrix_value" by GitHub Actions.
+    // Every instance must succeed: one passing subjob cannot mask a skipped peer.
+    const matches = jobs.filter(x => x.name === name || x.name?.startsWith(name + ' / '));
+    if (!matches.length) return { ok: false, reason: 'required-job-missing:' + name };
+    const blocked = matches.find(job => job.status !== 'completed' || job.conclusion !== 'success');
+    if (blocked) {
+      return {
+        ok: false,
+        reason: 'required-job-not-success:' + blocked.name + ':' +
+          (blocked.conclusion || blocked.status || 'unknown'),
+      };
     }
+  }
+  // The strict user contract rejects skipped jobs, even if a workflow reports success.
+  const otherBlocked = jobs.find(job => job.status !== 'completed' || job.conclusion !== 'success');
+  if (otherBlocked) {
+    return {
+      ok: false,
+      reason: 'workflow-job-not-success:' + otherBlocked.name + ':' +
+        (otherBlocked.conclusion || otherBlocked.status || 'unknown'),
+    };
   }
   return { ok: true };
 }

@@ -136,3 +136,53 @@ test('a malformed GitHub job response fails closed rather than claiming success'
   const fixture = fixtures(f => f.jobs.set(1000, { total_count: 101, jobs: [] }));
   await assert.rejects(() => auditLatestMain({ requestJson: fixture.requestJson }), /Incomplete job evidence/);
 });
+
+test('strict auditor accepts matrix job names only when every matrix subjob succeeds', async () => {
+  const fixture = fixtures(f => {
+    f.jobs.set(1005, { total_count: 9, jobs: [
+      { name: 'scheduled_release_gate', status: 'completed', conclusion: 'success' },
+      { name: 'staging_gate / staging', status: 'completed', conclusion: 'success' },
+      { name: 'reliability_gate / contract', status: 'completed', conclusion: 'success' },
+      { name: 'reliability_gate / staging-release', status: 'completed', conclusion: 'success' },
+      { name: 'deploy', status: 'completed', conclusion: 'success' },
+      { name: 'EKODI Authenticated Admin Surface Verification / chromium', status: 'completed', conclusion: 'success' },
+      { name: 'EKODI Native Surface Verification · Desktop / contract', status: 'completed', conclusion: 'success' },
+      { name: 'EKODI Native Surface Verification · Desktop / runtime-smoke', status: 'completed', conclusion: 'success' },
+      { name: 'EKODI Native Surface Verification · Mobile / runtime-smoke', status: 'completed', conclusion: 'success' },
+    ] });
+  });
+  const proof = await auditLatestMain({ requestJson: fixture.requestJson });
+  assert.equal(proof.ok, true);
+  assert.equal(proof.checks[5].ok, true);
+});
+
+test('staging-manual skipped matrix subjob rejects actual successful shared-site run', async () => {
+  const fixture = fixtures(f => {
+    f.jobs.set(1005, { total_count: 11, jobs: [
+      { name: 'scheduled_release_gate', status: 'completed', conclusion: 'success' },
+      { name: 'staging_gate / staging', status: 'completed', conclusion: 'success' },
+      { name: 'reliability_gate / contract', status: 'completed', conclusion: 'success' },
+      { name: 'reliability_gate / staging-release', status: 'completed', conclusion: 'success' },
+      { name: 'reliability_gate / staging-manual', status: 'completed', conclusion: 'skipped' },
+      { name: 'deploy', status: 'completed', conclusion: 'success' },
+      { name: 'EKODI Authenticated Admin Surface Verification / chromium', status: 'completed', conclusion: 'success' },
+      { name: 'EKODI Native Surface Verification · Desktop / contract', status: 'completed', conclusion: 'success' },
+      { name: 'EKODI Native Surface Verification · Desktop / runtime-smoke', status: 'completed', conclusion: 'success' },
+      { name: 'EKODI Native Surface Verification · Mobile / contract', status: 'completed', conclusion: 'success' },
+      { name: 'EKODI Native Surface Verification · Mobile / runtime-smoke', status: 'completed', conclusion: 'success' },
+    ] });
+  });
+  const proof = await auditLatestMain({ requestJson: fixture.requestJson });
+  assert.equal(proof.ok, false);
+  assert.match(proof.checks[5].reason, /reliability_gate \/ staging-manual:skipped/);
+});
+
+test('success-labelled workflow with an extra skipped job never counts as complete', async () => {
+  const fixture = fixtures(f => {
+    f.jobs.get(1001).jobs.push({ name: 'optional-sidecar', status: 'completed', conclusion: 'skipped' });
+    f.jobs.get(1001).total_count += 1;
+  });
+  const proof = await auditLatestMain({ requestJson: fixture.requestJson });
+  assert.equal(proof.ok, false);
+  assert.match(proof.checks[1].reason, /workflow-job-not-success:optional-sidecar:skipped/);
+});
