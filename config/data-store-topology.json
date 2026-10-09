@@ -46,7 +46,9 @@
       "section": "d1_databases",
       "binding": "BOARD_DB",
       "expectedName": "ekodi-independent-board",
-      "state": "provisioning-required",
+      "state": "runtime-resolved",
+      "resolverWorkflow": ".github/workflows/deploy-independent-board.yml",
+      "resolverPlaceholder": "REPLACE_WITH_INDEPENDENT_BOARD_D1_ID",
       "isolation": "dedicated",
       "data": "seonammedi independent board content; must not be mistaken for central D1"
     },
