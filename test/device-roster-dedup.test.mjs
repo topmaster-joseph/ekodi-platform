@@ -5,6 +5,8 @@ import { runInNewContext } from 'node:vm';
 
 const admin = await readFile(new URL('../device-control-admin.js', import.meta.url), 'utf8');
 const css = await readFile(new URL('../device-control-admin.css', import.meta.url), 'utf8');
+const remotePower = await readFile(new URL('../remote-power-admin.js', import.meta.url), 'utf8');
+const wake = await readFile(new URL('../device-wake-admin.js', import.meta.url), 'utf8');
 
 // Evaluate only the pure projection helpers: no live DOM, network or mutation.
 const start = admin.indexOf('  function rosterGroupKey(device) {');
@@ -87,4 +89,18 @@ test('compact roster is searchable, keyboard-accessible, lazy and non-destructiv
   assert.doesNotMatch(admin.slice(start,end), /\b(fetch|localStorage|sessionStorage|DELETE|revoke)\b/);
   assert.match(css, /\.device-roster-summary:focus-visible/);
   assert.match(css, /@media\(max-width:620px\)/);
+});
+
+
+test('secondary remote-power and Wake panels no longer repeat the primary Agent card roster', () => {
+  assert.match(remotePower, /data-rp-agent/);
+  assert.match(remotePower, /selectedAgentId/);
+  assert.match(remotePower, /data-rp-nodes/);
+  assert.match(remotePower, /new Map\(agentPayload\.devices/);
+  assert.match(wake, /data-wake-profiles/);
+  assert.match(wake, /device-wake-group/);
+  assert.match(wake, /byHostname\.get\(key\)\.push\(device\)/);
+  assert.match(wake, /data-wake-device/);
+  assert.match(wake, /data-wake-profile-form/);
+  assert.match(wake, /No hardware fingerprint/); // never conflate group key with verified physical identity
 });
