@@ -31,7 +31,7 @@ test('every platform admin menu has a unique canonical address',()=>{
 test('platform admin detail routes round-trip without collapsing to the menu root',()=>{
   const routes=routesFor();
   const path=routes.pathFor('finance',['transactions','txn-123','edit']);
-  assert.equal(path,'/admin/content/finance/transactions/txn-123/edit');
+  assert.equal(path,'/admin/finance/finance/transactions/txn-123/edit');
   const route=routes.routeFromPath(path);
   assert.equal(route.section,'finance');
   assert.deepEqual(Array.from(route.detailSegments),['transactions','txn-123','edit']);
@@ -46,7 +46,7 @@ test('canonical URL preserves page state query while removing only legacy route 
   };
   assert.equal(
     routes.canonicalUrl('finance',loc,['transactions']),
-    '/admin/content/finance/transactions?filter=pending&page=3'
+    '/admin/finance/finance/transactions?filter=pending&page=3'
   );
 });
 

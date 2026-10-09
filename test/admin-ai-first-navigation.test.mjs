@@ -40,23 +40,17 @@ test('Campus shortcuts cannot reopen hidden technical panels', () => {
   assert.ok(layout.includes('routeInternal()'));
 });
 
-test('human-facing Admin menu has one canonical order inside seven EKODI areas', () => {
-  assert.deepEqual(adminMenuGroups(), ['summary','sites','people','services','content','status','settings-records']);
+test('human-facing Admin menu has one canonical order inside eleven unique EKODI areas', () => {
+  assert.deepEqual(adminMenuGroups(), ['summary','sites','people','services','content','finance','status','releases','devices-agent','settings-records','security-audit']);
   assert.deepEqual(adminMenuOrder(), [
-    'platform-overview',
-    'sites-all','sites-core','sites-business','sites-community','sites-clients','sites-knowledge','sites-communication','sites-worklife','sites-other','sites-preparing',
-    'users-access','security','admins','ai-membership',
-    'engine-all','engine-core','engine-common','engine-operations','engine-professional','engine-ai','engine-integration','engine-preview',
-    'work','communication','community','books','devotional','social','finance',
-    'health','site-health','deployments','aiops','devices','pos-agent','api-cost','architecture','maturity',
-    'public-site-controls','language-status','ai-module-spec','storage','ai-settings','audit-records',
+    'platform-overview', 'sites-all', 'sites-core', 'sites-business', 'sites-community', 'sites-clients', 'sites-knowledge', 'sites-communication', 'sites-worklife', 'sites-other', 'sites-preparing', 'users-access', 'admins', 'ai-membership', 'engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview', 'work', 'communication', 'community', 'books', 'devotional', 'social', 'finance', 'api-cost', 'health', 'site-health', 'architecture', 'maturity', 'deployments', 'aiops', 'devices', 'pos-agent', 'public-site-controls', 'language-status', 'ai-module-spec', 'storage', 'ai-settings', 'security', 'audit-records'
   ]);
   assert.ok(layout.includes('const ORDER=Object.freeze(adminMenuOrder());'));
   assert.ok(layout.includes('const RANK=new Map(ORDER.map((section,index)=>[section,index+1]));'));
   assert.ok(layout.includes('function applyOrder()'));
 });
 
-test('Platform Admin sidebar uses readable seven-area spacing with role-projected task details', () => {
+test('Platform Admin sidebar uses readable eleven-area spacing with role-projected task details', () => {
   for (const marker of ['ekodi-admin-workbench-tabs-style','gap:2px!important','min-height:40px','padding:6px 10px','font-size:14px']) assert.ok(sidebar.includes(marker));
   assert.ok(sidebar.includes("role-projected-sidebar-v4"));
 });
