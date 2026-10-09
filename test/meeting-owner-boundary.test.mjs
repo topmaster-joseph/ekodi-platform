@@ -70,3 +70,11 @@ test('tenant admin sidebar uses readable contrast and compact rows when common s
   assert.match(css,/\.ekodi-admin-shell-sidebar\.sidebar #adminNav\{align-content:start!important/);
   assert.match(css,/\.admin-nav-accordion\{align-content:start!important/);
 });
+
+test('Sunday manager reads the existing site registry instead of missing church_staff table',()=>{
+  assert.match(church,/if\(section==='worship'\)\{/);
+  assert.match(church,/site_access_registry\?site_key=eq\.church&role=eq\.tenant_admin/);
+  assert.match(church,/role:'worship_admin'/);
+  assert.match(church,/if\(role==='worship_admin'\)return key==='worship'/);
+  assert.match(church,/service_type=eq\.sunday/);
+});
