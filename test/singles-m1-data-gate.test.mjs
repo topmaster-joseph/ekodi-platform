@@ -13,8 +13,8 @@ test('two independent feature gates block unapproved enrollment and matching',()
 });
 test('development schema is server-only, RLS enabled, and public discovery forced false',()=>{
   for(const name of ['singles_memberships','singles_sensitive_profiles','singles_public_cards','singles_consent_receipts']){
-    assert.match(sql,new RegExp('create table if not exists public\\\\.'+name));
-    assert.match(sql,new RegExp('alter table public\\\\.'+name+' enable row level security'));
+    assert.match(sql,new RegExp('create table if not exists public\\.'+name));
+    assert.match(sql,new RegExp('alter table public\\.'+name+' enable row level security'));
   }
   assert.match(sql,/revoke all on table[\s\S]*from PUBLIC,anon,authenticated/);
   assert.match(sql,/discoverable boolean not null default false check\(discoverable = false\)/);
