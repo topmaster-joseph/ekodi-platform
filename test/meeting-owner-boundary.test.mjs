@@ -69,6 +69,7 @@ test('tenant admin sidebar uses readable contrast and compact rows when common s
   assert.match(css,/\.ekodi-admin-shell-sidebar\.sidebar \[data-ekodi-admin-nav\] :is\(a,button\)\{color:#273244!important/);
   assert.match(css,/\.ekodi-admin-shell-sidebar\.sidebar #adminNav\{align-content:start!important/);
   assert.match(css,/\.admin-nav-accordion\{align-content:start!important/);
+  assert.match(css,/\.sidebar #adminNav\{align-content:start!important/);
 });
 
 test('Sunday manager reads the existing site registry instead of missing church_staff table',()=>{
@@ -77,4 +78,9 @@ test('Sunday manager reads the existing site registry instead of missing church_
   assert.match(church,/role:'worship_admin'/);
   assert.match(church,/if\(role==='worship_admin'\)return key==='worship'/);
   assert.match(church,/service_type=eq\.sunday/);
+});
+
+test('authenticated tenant navigation excludes unauthorized items, never permitted ones',()=>{
+  assert.match(mission,/if\(role\?!canSection\(key,role\):!\(workspace==='ekodimission'\|\|key==='overview'\)\)continue/);
+  assert.doesNotMatch(mission,/if\(role\?canSection\(key,role\):/);
 });
