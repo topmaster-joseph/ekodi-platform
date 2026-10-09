@@ -3,9 +3,11 @@ import {homedir} from 'node:os';
 import path from 'node:path';
 
 const text=value=>String(value??'').trim();
+const INTERNAL_REPOSITORY=/^topmaster-joseph\/ekodi-(?:platform|site|church|mall)$/;
 const BILLABLE_ENV=['ANTHROPIC_API_KEY','ANTHROPIC_AUTH_TOKEN','ANTHROPIC_BASE_URL','CLAUDE_CODE_USE_BEDROCK','CLAUDE_CODE_USE_VERTEX','CLAUDE_CODE_USE_FOUNDRY'];
 export function claudeSubscriptionOptIn(env=process.env){
   return text(env.EKODI_ENABLE_CLAUDE_CODE).toLowerCase()==='true'
+    && text(env.EKODI_CLAUDE_INTERNAL_ONLY).toLowerCase()==='true'
     && !BILLABLE_ENV.some(name=>text(env[name])&&text(env[name])!=='0');
 }
 export function claudeExecutable({platform=process.platform,home=homedir(),exists=existsSync}={}){
@@ -14,6 +16,12 @@ export function claudeExecutable({platform=process.platform,home=homedir(),exist
     return exists(native)?native:'';
   }
   return 'claude';
+}
+export function claudeInternalTaskAllowed(job={}){
+  return job.providerId==='node:claude-code'
+    && job.needsCodeBranch===true
+    && INTERNAL_REPOSITORY.test(text(job.repository))
+    && /^ai\/[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*$/i.test(text(job.branch));
 }
 export function claudeAuthValid(stdout){
   let status;try{status=JSON.parse(text(stdout))}catch{return false}
@@ -52,6 +60,7 @@ export async function claudeCodeReady({env=process.env,run,platform=process.plat
 }
 export async function runClaudeCode(job,{cwd,run,prompt,env=process.env,platform=process.platform,home=homedir(),exists=existsSync}={}){
   if(!claudeSubscriptionOptIn(env))throw new Error('claude_subscription_mode_required');
+  if(!claudeInternalTaskAllowed(job))throw new Error('claude_internal_code_job_only');
   const binary=claudeExecutable({platform,home,exists});
   if(!binary)throw new Error('claude_native_binary_not_found');
   if(typeof run!=='function')throw new Error('claude_executor_unavailable');

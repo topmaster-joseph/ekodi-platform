@@ -1,15 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  claudeSubscriptionOptIn,claudeExecutable,claudeAuthValid,claudeArguments,
+  claudeSubscriptionOptIn,claudeInternalTaskAllowed,claudeExecutable,claudeAuthValid,claudeArguments,
   claudeOutput,claudeCodeReady,runClaudeCode,
 } from '../scripts/claude-code-subscription-provider.mjs';
 
-const env={EKODI_ENABLE_CLAUDE_CODE:'true'};
+const env={EKODI_ENABLE_CLAUDE_CODE:'true',EKODI_CLAUDE_INTERNAL_ONLY:'true'};
 const status=JSON.stringify({loggedIn:true,authMethod:'claude.ai',apiProvider:'firstParty',subscriptionType:'pro'});
 const result=JSON.stringify({type:'result',subtype:'success',is_error:false,result:'CLAUDE_OK',total_cost_usd:0.01});
 const exeOpts={platform:'win32',home:'C:\\Users\\test',exists:()=>true};
-const job={providerId:'node:claude-code',needsCodeBranch:false};
+const job={providerId:'node:claude-code',needsCodeBranch:true,repository:'topmaster-joseph/ekodi-platform',branch:'ai/gpt6/task-claude-test'};
 
 test('must be opted in and have no API billing environment',()=>{
   assert.equal(claudeSubscriptionOptIn(env),true);
@@ -19,12 +19,21 @@ test('must be opted in and have no API billing environment',()=>{
   assert.equal(claudeSubscriptionOptIn({...env,CLAUDE_CODE_USE_BEDROCK:'1'}),false);
   assert.equal(claudeSubscriptionOptIn({...env,CLAUDE_CODE_USE_VERTEX:'true'}),false);
   assert.equal(claudeSubscriptionOptIn({EKODI_ENABLE_CLAUDE_CODE:'false'}),false);
+  assert.equal(claudeSubscriptionOptIn({EKODI_ENABLE_CLAUDE_CODE:'true'}),false);
 });
 
 test('native binary only on Windows',()=>{
   assert.match(claudeExecutable(exeOpts),/claude.exe$/);
   assert.equal(claudeExecutable({...exeOpts,exists:()=>false}),'');
   assert.equal(claudeExecutable({platform:'linux'}),'claude');
+});
+
+test('automated subscription jobs restricted to EKODI internal isolated code branches',()=>{
+  assert.equal(claudeInternalTaskAllowed(job),true);
+  assert.equal(claudeInternalTaskAllowed({...job,needsCodeBranch:false}),false);
+  assert.equal(claudeInternalTaskAllowed({...job,branch:'main'}),false);
+  assert.equal(claudeInternalTaskAllowed({...job,repository:'external/customer'}),false);
+  assert.equal(claudeInternalTaskAllowed({...job,providerId:'node:other'}),false);
 });
 
 test('only first-party authenticated subscription accepted',()=>{
@@ -35,7 +44,7 @@ test('only first-party authenticated subscription accepted',()=>{
 });
 
 test('read-only simple work and bounded edit work respect tool boundaries',()=>{
-  const simple=claudeArguments(job,'hello');
+  const simple=claudeArguments({...job,needsCodeBranch:false},'hello');
   assert.deepEqual(simple.slice(0,3),['-p','hello','--output-format']);
   assert.equal(simple[simple.indexOf('--permission-mode')+1],'plan');
   assert.equal(simple[simple.indexOf('--max-turns')+1],'2');
@@ -73,6 +82,7 @@ test('execution checks subscriber status first and parses only verified response
   assert.equal(calls[1].args[0],'-p');
   assert.equal(calls[1].options.cwd,'C:\\repo');
   await assert.rejects(()=>runClaudeCode(job,{run,prompt:'hi',env:{...env,ANTHROPIC_API_KEY:'key'},...exeOpts}),/subscription_mode_required/);
+  await assert.rejects(()=>runClaudeCode({...job,needsCodeBranch:false},{run,prompt:'hi',env,...exeOpts}),/claude_internal_code_job_only/);
   await assert.rejects(()=>runClaudeCode(job,{run:async()=>({stdout:'{}'}),prompt:'hi',env,...exeOpts}),/subscription_auth_required/);
   await assert.rejects(()=>runClaudeCode(job,{run:async(command,args)=>{if(args[0]==='auth')return {stdout:status};throw Error('secret prompt in stderr')},prompt:'hi',env,...exeOpts}),/claude_node_execution_failed/);
   await assert.rejects(()=>runClaudeCode(job,{run:async(command,args)=>{if(args[0]==='auth')return {stdout:status};throw Error('rate limit 429')},prompt:'hi',env,...exeOpts}),/claude_subscription_limit_reached/);
