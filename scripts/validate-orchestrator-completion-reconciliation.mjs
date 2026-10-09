@@ -33,6 +33,9 @@ const cgmaStagingEquivalent=policy.requiredEvidence?.workflowSpecificStagingEqui
 if(cgmaStagingEquivalent?.job!=='validate')fail('CGMA staging-equivalent must use validate job');
 if(!cgmaStagingEquivalent?.requiredSteps?.includes('Validate CGMA edge contract'))fail('CGMA staging-equivalent must require the edge contract step');
 if(cgmaStagingEquivalent?.scope!=='cgma-edge-only')fail('CGMA staging-equivalent scope must remain CGMA-only');
+const boardStagingEquivalent=policy.requiredEvidence?.workflowSpecificStagingEquivalents?.['Deploy Independent Board'];
+if(boardStagingEquivalent?.job!=='validate'||!boardStagingEquivalent?.requiredSteps?.includes('Validate standalone board contract')||boardStagingEquivalent?.scope!=='independent-board-only')fail('independent board staging-equivalent must require its exact validate contract');
+if(!evidence.includes("'Deploy Independent Board'"))fail('authenticated collector must verify independent board staging-equivalent');
 
 for(const key of [
   'mergedPullRequestToMain',
@@ -68,7 +71,7 @@ for(const key of [
   if(policy.reconciliation?.[key]!==true)fail('reconciliation rule missing: '+key);
 }
 if(policy.reconciliation?.candidateBatchLimit!==50)fail('completion reconciliation candidate batch limit must remain bounded at 50');
-for(const name of ['Deploy Control API','Deploy EKODI Shared Site Core','Deploy CGMA Apex Edge','Deploy Business OS']){
+for(const name of ['Deploy Control API','Deploy EKODI Shared Site Core','Deploy CGMA Apex Edge','Deploy Business OS','Deploy Independent Board']){
   if(!policy.reconciliation?.workflowRunTriggerWorkflows?.includes(name))fail('completion workflow trigger missing from policy: '+name);
   if(!workflow.includes('- '+name))fail('completion workflow trigger missing: '+name);
 }

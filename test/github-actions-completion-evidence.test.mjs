@@ -5,6 +5,7 @@ import { collectAuthenticatedCompletionEvidence } from '../scripts/github-action
 const taskId='orch_00000000-0000-4000-8000-000000000123';
 const branchRef=`ai/chatgpt/${taskId}`;
 const mergeSha='0123456789abcdef0123456789abcdef01234567';
+const prHeadSha='fedcba9876543210fedcba9876543210fedcba98';
 
 function mockGithub(overrides={}){
   return {
@@ -15,16 +16,24 @@ function mockGithub(overrides={}){
           html_url:'https://github.com/topmaster-joseph/ekodi-platform/pull/3574',
           merged_at:'2026-10-05T05:45:00Z',
           merge_commit_sha:mergeSha,
-          head:{ref:branchRef},
+          head:{ref:branchRef,sha:prHeadSha},
           base:{ref:'main'},
         }]}),
       },
       actions:{
-        listWorkflowRunsForRepo:async()=>({data:{workflow_runs:overrides.runs||[
-          {id:1,name:'CI',status:'completed',conclusion:'success',html_url:'https://example/ci'},
-          {id:2,name:'EKODI AI Orchestration Gate',status:'completed',conclusion:'success',html_url:'https://example/gate'},
-          {id:3,workflow_id:30,name:'Deploy Control API',status:'completed',conclusion:'success',head_sha:mergeSha,html_url:'https://example/deploy'},
-        ]}}),
+        listWorkflowRunsForRepo:async({head_sha,event})=>{
+          const all=overrides.runs||[
+            {id:1,name:'CI',status:'completed',conclusion:'success',html_url:'https://example/ci'},
+            {id:2,name:'EKODI AI Orchestration Gate',status:'completed',conclusion:'success',html_url:'https://example/gate'},
+            {id:3,workflow_id:30,name:'Deploy Control API',status:'completed',conclusion:'success',head_sha:mergeSha,html_url:'https://example/deploy'},
+          ];
+          const allowed=all.map(run=>({...run,event:run.event||(run.name.startsWith('Deploy ')?'push':'pull_request')}));
+          return {data:{workflow_runs:head_sha===prHeadSha&&event==='pull_request'
+            ?allowed.filter(run=>run.event==='pull_request')
+            :head_sha===mergeSha&&!event
+              ?allowed.filter(run=>['push','workflow_dispatch'].includes(run.event))
+              :[]}};
+        },
         listJobsForWorkflowRun:async({run_id})=>({data:{jobs:(overrides.jobsByRun?.[run_id])||[
           {name:'staging',status:'completed',conclusion:'success'},
           {name:'production',status:'completed',conclusion:'success'},
@@ -148,4 +157,39 @@ test('CGMA validate without the required contract step still fails closed',async
   });
   assert.equal(evidence.verified,false);
   assert.equal(evidence.reason,'staging_evidence_missing');
+});
+
+
+test('independent-board workflow_dispatch requires exact preproduction contract before completion',async()=>{
+  const runs=[
+    {id:1,name:'CI',status:'completed',conclusion:'success'},
+    {id:2,name:'EKODI AI Orchestration Gate',status:'completed',conclusion:'success'},
+    {id:33,workflow_id:333,name:'Deploy Independent Board',event:'workflow_dispatch',status:'completed',conclusion:'success',head_sha:mergeSha},
+  ];
+  const jobsByRun={33:[
+    {name:'validate',status:'completed',conclusion:'success',steps:[{name:'Validate standalone board contract',status:'completed',conclusion:'success'}]},
+    {name:'deploy',status:'completed',conclusion:'success'},
+  ]};
+  const verified=await collectAuthenticatedCompletionEvidence({github:mockGithub({runs,jobsByRun}),taskId,branchRef});
+  assert.equal(verified.verified,true);
+  assert.deepEqual(verified.deployments[0].stagingJobs,['validate (preproduction-equivalent)']);
+  assert.deepEqual(verified.deployments[0].productionJobs,['deploy']);
+  assert.equal(verified.deployments[0].runId,33);
+
+  const invalid=await collectAuthenticatedCompletionEvidence({github:mockGithub({runs,jobsByRun:{33:[
+    {name:'validate',status:'completed',conclusion:'success',steps:[{name:'unrelated check',status:'completed',conclusion:'success'}]},
+    {name:'deploy',status:'completed',conclusion:'success'},
+  ]}}),taskId,branchRef});
+  assert.equal(invalid.verified,false);
+  assert.equal(invalid.reason,'staging_evidence_missing');
+});
+
+test('production completion refuses PR-only workflow runs when no real deployment was dispatched',async()=>{
+  const evidence=await collectAuthenticatedCompletionEvidence({github:mockGithub({runs:[
+    {id:1,name:'CI',status:'completed',conclusion:'success'},
+    {id:2,name:'EKODI AI Orchestration Gate',status:'completed',conclusion:'success'},
+    {id:3,name:'Deploy Independent Board',event:'pull_request',status:'completed',conclusion:'success'},
+  ]}),taskId,branchRef});
+  assert.equal(evidence.verified,false);
+  assert.equal(evidence.reason,'production_deployment_run_missing');
 });

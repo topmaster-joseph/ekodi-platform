@@ -331,3 +331,23 @@ test('standalone board media endpoint is restricted to board-owned R2 prefixes',
   assert.match(worker,/\^seonammedi\\\/\(voices\|notices\)\\\//);
   assert.match(worker,/x-content-type-options','nosniff'/);
 });
+
+
+test('independent board header uses one aligned desktop row and a stacked mobile layout on every route',async()=>{
+  const mod=await import(new URL('../services/independent-board/worker.js?header-layout='+Date.now(),import.meta.url));
+  for(const mount of ['https://seonammedi.kr/board','https://ekodi.kr/seonammedi/board']){
+    for(const route of ['voices','finance','notices']){
+      const response=await mod.default.fetch(new Request(mount+'/'+route),{});
+      assert.equal(response.status,200,mount+'/'+route);
+      const html=await response.text();
+      assert.match(html,/<header class="site-header independent-board-header">/);
+      assert.match(html,/\.site-header\.independent-board-header\{display:flex;flex-direction:row;align-items:center;justify-content:space-between;/);
+      assert.match(html,/\.site-header\.independent-board-header>\.brand\{display:flex;flex:0 1 auto;flex-direction:column;/);
+      assert.match(html,/\.site-header\.independent-board-header>nav\{display:flex;flex:0 1 auto;align-items:center;justify-content:flex-end;[^}]*width:auto;/);
+      assert.match(html,/@media\(max-width:760px\)\{\.site-header\.independent-board-header\{flex-direction:column;align-items:stretch;/);
+      assert.match(html,/\.site-header\.independent-board-header>nav\{flex:none;justify-content:flex-start;[^}]*width:100%/);
+      assert.match(html,/\.site-header\.independent-board-header>nav a\[aria-current="page"\]\{color:#111;/);
+      assert.match(html,new RegExp('aria-current="page" href="'+mount.replace('https://seonammedi.kr','').replace('https://ekodi.kr','')+'/'+route+'">'));
+    }
+  }
+});

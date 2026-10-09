@@ -4,6 +4,10 @@ const STAGING_EQUIVALENTS=Object.freeze({
     job:'validate',
     requiredSteps:Object.freeze(['Validate CGMA edge contract']),
   }),
+  'Deploy Independent Board':Object.freeze({
+    job:'validate',
+    requiredSteps:Object.freeze(['Validate standalone board contract']),
+  }),
 });
 
 function text(value,max=500){return String(value??'').trim().slice(0,max)}
@@ -48,16 +52,23 @@ export async function collectAuthenticatedCompletionEvidence({github,owner='topm
   const mergeSha=text(pr.merge_commit_sha,80);
   if(!/^[a-f0-9]{40}$/i.test(mergeSha))return {verified:false,reason:'merge_commit_missing'};
 
-  const runResponse=await github.rest.actions.listWorkflowRunsForRepo({owner,repo,head_sha:mergeSha,event:'push',per_page:100});
-  const runs=runResponse.data?.workflow_runs||[];
+  // A guarded GITHUB_TOKEN squash merge does not emit a new main push run.
+  // Bind mandatory checks to the exact head SHA of the merged PR instead.
+  const validatedHeadSha=text(pr.head?.sha,80);
+  if(!/^[a-f0-9]{40}$/i.test(validatedHeadSha))return {verified:false,reason:'merged_pr_head_missing'};
+  const checkResponse=await github.rest.actions.listWorkflowRunsForRepo({owner,repo,head_sha:validatedHeadSha,event:'pull_request',per_page:100});
+  const checkRuns=checkResponse.data?.workflow_runs||[];
   const requiredWorkflows=[];
   for(const name of REQUIRED_WORKFLOWS){
-    const run=runs.find(item=>item?.name===name);
+    const run=checkRuns.find(item=>item?.name===name);
     if(!success(run))return {verified:false,reason:'required_workflow_not_successful',workflow:name};
     requiredWorkflows.push({name,runId:Number(run.id),url:text(run.html_url,400),conclusion:'success'});
   }
 
-  const triggered=runs.filter(item=>/^Deploy\b/i.test(text(item?.name,160)));
+  // The production deployment is explicitly dispatched with the merge commit.
+  // Never treat PR preview workflows as promoted production deployments.
+  const deploymentResponse=await github.rest.actions.listWorkflowRunsForRepo({owner,repo,head_sha:mergeSha,per_page:100});
+  const triggered=(deploymentResponse.data?.workflow_runs||[]).filter(item=>/^(?:Deploy)\b/i.test(text(item?.name,160))&&['push','workflow_dispatch'].includes(text(item?.event,40)));
   if(!triggered.length)return {verified:false,reason:'production_deployment_run_missing'};
   const deployments=[];
   let hasStaging=false,hasProduction=false;
