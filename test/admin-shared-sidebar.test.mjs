@@ -9,11 +9,11 @@ const sidebar = await readFile(new URL('../admin-sidebar.js', import.meta.url), 
 const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
 const postbuild = await readFile(new URL('../scripts/admin-performance-postbuild.mjs', import.meta.url), 'utf8');
 
-test('seven canonical areas replace the former many-group admin taxonomy', () => {
-  for (const id of ['summary', 'sites', 'people', 'services', 'content', 'status', 'settings-records']) {
+test('eleven unique areas replace the former overlapping admin taxonomy', () => {
+  for (const id of ['summary', 'sites', 'people', 'services', 'content', 'finance', 'status', 'releases', 'devices-agent', 'settings-records', 'security-audit']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
   }
-  for (const retired of ['site-management', 'security-audit', 'settings', 'access']) {
+  for (const retired of ['site-management', 'settings', 'access']) {
     assert.doesNotMatch(registry, new RegExp(`id: '${retired}'`));
   }
   assert.match(sidebar, /admin-global-navs/);
@@ -105,9 +105,13 @@ test('global menu labels use readable contrast on the dark primary sidebar', () 
 });
 
 
-test('Operations, Releases & Incidents shows every visible submenu without a collapsed more bucket', () => {
-  assert.match(sidebar, /status: \['health', 'site-health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity'\]/);
-  assert.match(registry, /id: 'deployments'.*배포·변경 이력/s);
+test('Operations, releases, devices and finance have distinct visible submenus', () => {
+  for (const marker of [
+    "status: ['health', 'site-health', 'architecture', 'maturity']",
+    "releases: ['deployments', 'aiops']",
+    "'devices-agent': ['devices', 'pos-agent']",
+    "finance: ['finance', 'api-cost']",
+  ]) assert.ok(sidebar.includes(marker), marker);
   for (const id of ['health','site-health','deployments','aiops','devices','pos-agent','api-cost','architecture','maturity']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
   }
