@@ -2,6 +2,7 @@
 // Sensitive faith answers, matching, discovery and messaging are intentionally not implemented.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { handleSinglesSocial } from "./social.ts";
 const ORIGIN = "https://ekodi.kr";
 const VERSION = "singles-m1-2026-10-09-draft";
 const enabled = () => Deno.env.get("SINGLES_ONBOARDING_ENABLED") === "true";
@@ -54,8 +55,9 @@ Deno.serve(async req => {
   if (req.method === "GET" && p === "/health")
     return reply(req, { ok: true, enrollment_enabled: enabled(), version: VERSION });
   if (!enabled()) return reply(req, { error: "singles_enrollment_not_launched" }, 503);
-  if (!["/me", "/withdraw"].includes(p)) return reply(req, { error: "not_found" }, 404);
-  if (!((p === "/me" && ["GET", "PUT"].includes(req.method)) || (p === "/withdraw" && req.method === "DELETE")))
+  const socialRoute = !["/me", "/withdraw"].includes(p);
+  if (!socialRoute && !["/me", "/withdraw"].includes(p)) return reply(req, { error: "not_found" }, 404);
+  if (!socialRoute && !((p === "/me" && ["GET", "PUT"].includes(req.method)) || (p === "/withdraw" && req.method === "DELETE")))
     return reply(req, { error: "method_not_allowed" }, 405);
   try {
     const bearer = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
@@ -64,6 +66,7 @@ Deno.serve(async req => {
     if (error || !data.user || data.user.is_anonymous) return reply(req, { error: "unauthorized" }, 401);
     const userId = data.user.id;
     const admin = db(true);
+    if (socialRoute) return await handleSinglesSocial(req, p, admin, userId, reply);
     if (p === "/withdraw") {
       const { error: updateError } = await admin.from("singles_memberships").update({
         status: "withdrawn", discoverable: false, marriage_opt_in: false,
