@@ -159,10 +159,12 @@
     if (!/^EKD-[A-F0-9]{20}$/.test(code)) throw new Error('기기 연결 코드 형식이 올바르지 않습니다.');
     const ps = [
       "$ErrorActionPreference='Stop'",
-      "$stage='download'",
+      "$stage='tls'",
       "$p=Join-Path $env:TEMP ('ekodi-device-agent-'+[guid]::NewGuid().ToString('N')+'.ps1')",
       "try {",
-      "Invoke-WebRequest -UseBasicParsing '" + WINDOWS_AGENT_URL + "' -OutFile $p -ErrorAction Stop",
+      "try {[Net.ServicePointManager]::SecurityProtocol=[Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12} catch {throw '[EKB-216][tls] TLS 1.2를 사용할 수 없습니다. Windows 업데이트와 .NET/TLS 설정을 확인하세요.'}",
+      "$stage='download'",
+      "Invoke-WebRequest -UseBasicParsing '" + WINDOWS_AGENT_URL + "' -OutFile $p -ErrorAction Stop -TimeoutSec 45",
       "$stage='validate'",
       "$source=Get-Content -LiteralPath $p -Raw -Encoding UTF8 -ErrorAction Stop",
       "if($source -notmatch '\\$AgentVersion\\s*='){throw '[EKB-213][validate] Agent 파일 식별 검증 실패'}",
@@ -172,7 +174,7 @@
       "$stage='install'",
       "& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p -Install -EnrollmentCode '" + code + "' -ApiBase '" + API_BASE + "'",
       "if($LASTEXITCODE -ne 0){throw ('[EKB-215][install] 설치 프로세스 종료 코드 '+$LASTEXITCODE)}",
-      "} catch { Write-Host ('[EKB-219]['+$stage+'] '+$_.Exception.Message) -ForegroundColor Red;exit 1 }",
+      "} catch { if($stage -eq 'download' -and $_.Exception.Message -match 'SSL|TLS|보안 채널|secure channel'){Write-Host '[EKB-217][tls] HTTPS 연결 실패: PC 시간, Windows 루트 인증서, TLS 1.2 및 프록시 설정을 확인하세요.' -ForegroundColor Yellow};Write-Host ('[EKB-219]['+$stage+'] '+$_.Exception.Message) -ForegroundColor Red;exit 1 }",
       "finally { Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue }",
     ].join(';');
     const encoded = utf16leBase64(ps);

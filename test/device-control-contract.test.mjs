@@ -138,6 +138,9 @@ test('one-click device protocol is bounded to EKODI enrollment and official API'
   assert.match(admin, /launchProtocol/);
   assert.match(admin, /ekodi-device-bootstrap\.cmd/);
   assert.match(bootstrap, /-RegisterProtocol/);
+  assert.match(bootstrap, /SecurityProtocolType\]::Tls12/);
+  assert.match(bootstrap, /EKB-117/);
+  assert.match(agent, /function Update-AgentFromOfficialSource[\s\S]*SecurityProtocolType\]::Tls12/);
   assert.match(bootstrap, /CommandAst/);
   assert.doesNotMatch(bootstrap, /EnrollmentCode/);
 });
@@ -230,6 +233,11 @@ test('downloaded one-click CMD embeds a parsed, race-free, stage-aware PowerShel
   assert.match(ps, /EKB-214/);
   assert.match(ps, /EKB-215/);
   assert.match(ps, /EKB-219/);
+  assert.match(ps, /EKB-216/);
+  assert.match(ps, /EKB-217/);
+  assert.match(ps, /\[Net\.ServicePointManager\]::SecurityProtocol=\[Net\.ServicePointManager\]::SecurityProtocol -bor \[Net\.SecurityProtocolType\]::Tls12/);
+  assert.ok(ps.indexOf('::Tls12') < ps.indexOf('Invoke-WebRequest'), 'TLS 1.2 must be enabled before enrollment download');
+  assert.match(ps, /-TimeoutSec 45/);
   assert.match(ps, /-Install -EnrollmentCode 'EKD-0123456789ABCDEF0123'/);
   assert.match(ps, /finally\s*\{\s*Remove-Item -LiteralPath \$p/);
   assert.doesNotMatch(ps, /Join-Path \$env:TEMP 'ekodi-device-agent\.ps1'/);

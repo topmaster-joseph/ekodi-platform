@@ -821,7 +821,9 @@ function Invoke-AgentUpgradeTransaction([string]$CandidatePath, [switch]$DeferRe
 
 function Update-AgentFromOfficialSource {
   $temp = Join-Path $env:TEMP 'ekodi-device-agent-update.ps1'
-  Invoke-WebRequest -UseBasicParsing $AgentSourceUrl -OutFile $temp
+  # Windows PowerShell on older POS/desktop images may otherwise default to pre-TLS-1.2 protocols.
+  [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+  Invoke-WebRequest -UseBasicParsing $AgentSourceUrl -OutFile $temp -TimeoutSec 45
   [void](Assert-AgentCandidate $temp)
   $result = Invoke-AgentUpgradeTransaction -CandidatePath $temp -DeferRestart
   return @{ message = "EKODI Device Agent를 트랜잭션 방식으로 $($result.version) 버전으로 업데이트했습니다. 명령 결과 전송 후 Agent를 안전 재시작합니다."; restartRequired = $true; version = $result.version; settings = Get-AgentSettings }
