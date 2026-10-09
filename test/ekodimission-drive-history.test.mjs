@@ -14,7 +14,10 @@ test('EKODI Mission archive restores documented activity years and does not publ
   ]);
   for(const year of ['2018','2021','2022','2023','2024','2025','2026'])assert.match(activities,new RegExp('data-year="'+year+'"'));
   for(const anchor of ['2018','2023','2025','2026'])assert.ok(stories.includes('id="history-'+anchor+'"'));
-  assert.ok((activities.match(/data-activity-item/g)||[]).length>=12);
+  assert.ok((activities.match(/data-activity-item/g)||[]).length>=14);
+  assert.ok(activities.includes("2026 제주 여름캠프"));
+  assert.ok(activities.includes("2022 서울 공동체 여행"));
+  assert.ok(!activities.includes('datetime="2018-08-13"'),"Conflicting founding day must not be asserted");
   assert.ok(home.includes('RECENT ACTIVITY · 2026'));
   assert.ok(!activities.includes('mission-status upcoming'));
   assert.ok(!stories.includes('첫 활동은 2026년 9월 26일 진행 예정'));
@@ -31,10 +34,11 @@ test('EKODI Mission archive restores documented activity years and does not publ
 });
 test('Mission activity archive remains newest-first and filterable by calendar year',async()=>{
  const html=await read('ekodimission-activities.page');
- const dates=[...html.matchAll(/<time datetime="(\d{4}-\d{2}(?:-\d{2})?)"/g)].map(m=>m[1]);
- assert.ok(dates.length>=12);
+ const dates=[...html.matchAll(/<time datetime="(\d{4}(?:-\d{2}(?:-\d{2})?)?)"/g)].map(m=>m[1]);
+ assert.ok(dates.length>=14);
  assert.deepEqual(dates,[...dates].sort().reverse());
  assert.ok(html.includes('<time datetime="2023-10"><strong>10월</strong>'),'Unknown exact day must not be invented');
+ assert.ok(html.includes('<time datetime="2018"><strong>2018</strong>'),'Contradictory founding month/day must not be invented');
  assert.ok(html.includes('<time datetime="2023-11"><strong>11월</strong>'),'Unknown exact day must not be invented');
  for(const section of html.split('<article class="mission-activity-row').slice(1)){
   assert.ok(section.includes('data-activity-item'));
