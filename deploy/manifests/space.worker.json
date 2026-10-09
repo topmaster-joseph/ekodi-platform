@@ -93,6 +93,14 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/ekodimission/activities/261010-naju-yeongsan",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["10월 10일 토요일", "11:00", "나주 영산강정원", "운영진 안내", "data-share-event", "data-event-meta", "data-mission-nav", "class=\"mission-site-header\"", "href=\"https://www.naju.go.kr/tour/festival/river\""],
+        "headerExpect": ["x-ekodi-route: ekodimission-public", "x-ekodi-independent-site: true", "x-ekodi-site-class: brand-site", "x-ekodi-publication-status: published", "x-robots-tag: index, follow"],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/ekodimission/apply/260926-open-table",
         "statuses": [200],
         "redirect": "manual",
