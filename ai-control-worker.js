@@ -36,7 +36,7 @@ async function freeCostDecisionGate(env,capabilities){
 function supabaseReady(env){return Boolean(clean(env.SUPABASE_URL)&&clean(env.SUPABASE_PUBLISHABLE_KEY))}
 function bearer(request){const value=clean(request.headers.get('authorization'));return value.toLowerCase().startsWith('bearer ')?value.slice(7).trim():''}
 function safeId(value){const id=clean(value).toLowerCase();return /^[a-z0-9][a-z0-9._-]{2,79}$/.test(id)?id:''}
-function safeProviders(values){return [...new Set((Array.isArray(values)?values:[]).map(v=>clean(v).toLowerCase()).filter(v=>['codex','gemini-cli','claude-code'].includes(v)))]}
+function safeProviders(values){return [...new Set((Array.isArray(values)?values:[]).map(v=>clean(v).toLowerCase()).filter(v=>['codex','gemini-cli','claude-code','ollama-local'].includes(v)))]}
 function storedProviders(value){try{return safeProviders(JSON.parse(value||'[]'))}catch{return[]}}
 function safeNodeTelemetry(input={}){
   const resource=normalizeLocalResource(input.system||{});
@@ -231,7 +231,7 @@ async function leaseNodeJob(request,env,node){
   const leaseUntil=new Date(Date.now()+3*60*1000).toISOString();
   const cutoff=new Date(Date.now()-ONLINE_WINDOW_MS).toISOString();
   const [jobRows,nodeRows,activeRows]=await Promise.all([
-    env.DB.prepare(`SELECT * FROM ai_control_jobs WHERE (state='queued' OR (state='leased' AND lease_until<?)) AND provider_id IN (${placeholders}) ORDER BY created_at ASC LIMIT 20`).bind(stamp,...providers).all(),
+    env.DB.prepare(`SELECT * FROM ai_control_jobs WHERE (state='queued' OR (state='leased' AND lease_until<?)) AND provider_id IN (${placeholders}) AND (provider_id <> 'node:ollama-local' OR needs_code_branch=0) ORDER BY created_at ASC LIMIT 20`).bind(stamp,...providers).all(),
     env.DB.prepare(`SELECT id,name,providers,current_load,max_concurrency,last_seen_at FROM ai_control_nodes WHERE state='online' AND auto_execution_eligible=1 AND is_portable=0 AND last_seen_at>=? ORDER BY current_load ASC,last_seen_at DESC`).bind(cutoff).all(),
     env.DB.prepare("SELECT lease_owner AS node_id,COUNT(*) AS active_count FROM ai_control_jobs WHERE state='leased' AND lease_until>=? AND lease_owner!='' GROUP BY lease_owner").bind(stamp).all(),
   ]);

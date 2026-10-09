@@ -49,6 +49,7 @@ export function providerCostClass(providerId=''){
   if(id==='node:codex')return'chatgpt-plan-included';
   if(id==='node:gemini-cli')return'google-free-quota';
   if(id==='node:claude-code')return'claude-subscription';
+  if(id==='node:ollama-local')return'free-preferred';
   if(id.startsWith('node:'))return'account-managed';
   if(id==='openai-api'||id==='anthropic-api')return'paid-opt-in';
   if(id.startsWith('worker:'))return'provider-managed';
