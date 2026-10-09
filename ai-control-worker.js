@@ -371,16 +371,25 @@ async function reserveCommonsChatUsage(env,userId,tier){
     return result.meta?.changes?{ok:true}:{error:'daily_chat_limit_reached',status:429};
   }catch(error){console.error('AI Commons usage store unavailable',clean(error?.message||error).slice(0,100));return{error:'chat_usage_store_unavailable',status:503};}
 }
+function commonsPaidAuthorized(env,userId){
+  if(env.AI_COMMONS_PAID_CHAT_ENABLED!=='true')return false;
+  // A global paid switch never entitles all free accounts to charge the platform.
+  // This bounded allowlist is an operator-only interim gate; replace with verified subscription entitlements.
+  const userIds=clean(env.AI_COMMONS_PAID_CHAT_USER_IDS).split(',').map(clean).filter(Boolean);
+  return Boolean(userId&&userIds.includes(userId));
+}
 async function handleCommonsChat(request,env,url){
   if(request.method==='GET'&&url.pathname==='/api/commons/chat/status'){
-    try{const capabilities=await commonsChatCapabilities(env);return json({providers:commonsChatStatus(capabilities,env.AI_COMMONS_PAID_CHAT_ENABLED==='true')})}
+    let memberId='';
+    if(bearer(request)){const auth=await requireCommonsMember(request,env);memberId=clean(auth.user?.id);}
+    try{const capabilities=await commonsChatCapabilities(env);return json({providers:commonsChatStatus(capabilities,commonsPaidAuthorized(env,memberId))})}
     catch{return json({providers:commonsChatStatus()})}
   }
   if(request.method==='POST'&&url.pathname==='/api/commons/chat'){
     const auth=await requireCommonsMember(request,env);if(auth.error)return auth.error;
     let input;try{input=normalizeCommonsChatInput(await body(request))}catch(error){return json({error:clean(error.message)},400)}
     let capabilities;try{capabilities=await commonsChatCapabilities(env)}catch{return json({error:'provider_status_unavailable'},503)}
-    const providers=selectCommonsChatProviders(input.mode,capabilities,env.AI_COMMONS_PAID_CHAT_ENABLED==='true');
+    const providers=selectCommonsChatProviders(input.mode,capabilities,commonsPaidAuthorized(env,auth.user.id));
     if(!providers.length)return json({error:input.mode==='gpt'||input.mode==='claude'?'paid_provider_not_enabled':'provider_unavailable'},503);
     const tier=input.mode==='ollama'?'local':(input.mode==='gpt'||input.mode==='claude'?'paid':'free');
     const usage=await reserveCommonsChatUsage(env,auth.user.id,tier);if(!usage.ok)return json({error:usage.error},usage.status);
