@@ -71,7 +71,7 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   const {error}=await admin.from('singles_event_rsvps').upsert({event_id:rsvpId,user_id:userId,status:'requested'}, {onConflict:'event_id,user_id'});
   if(error)throw error;return reply(req,{ok:true,status:'requested'});
  }
- const earlyBlock=match(p,/^\\/blocks\\/([0-9a-f-]{36})$/i);
+ const earlyBlock=match(p,/^\/blocks\/([0-9a-f-]{36})$/i);
  if(earlyBlock&&method==='POST'){
   if(!active(m))return reply(req,{error:'membership_required'},403);
   if(earlyBlock===userId)return reply(req,{error:'cannot_block_self'},400);
@@ -79,7 +79,7 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   if(error)throw error;
   return reply(req,{ok:true,blocked:true});
  }
- const reportTarget=match(p,/^\\/reports\\/([0-9a-f-]{36})$/i);
+ const reportTarget=match(p,/^\/reports\/([0-9a-f-]{36})$/i);
  if(reportTarget&&method==='POST'){
   if(!active(m))return reply(req,{error:'membership_required'},403);
   if(reportTarget===userId)return reply(req,{error:'cannot_report_self'},400);
