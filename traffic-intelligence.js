@@ -22,7 +22,9 @@ const LEGACY_SITE_ALIASES = Object.freeze({
   'ekodibiz.kr': 'biz',
   'www.ekodibiz.kr': 'biz',
   'cgma.or.kr': 'cgma',
-  'www.cgma.or.kr': 'cgma'
+  'www.cgma.or.kr': 'cgma',
+  'seonammedi.kr': 'seonammedi',
+  'www.seonammedi.kr': 'seonammedi'
 });
 export function normalizeTrafficHost(value) {
   return String(value || '').trim().toLowerCase().replace(/\.$/, '').slice(0, 253);
@@ -38,6 +40,45 @@ export function trafficSiteIdForHost(value) {
     return /^[a-z0-9-]{1,64}$/.test(label) ? label : 'ekodi';
   }
   return host.replace(/[^a-z0-9.-]/g, '').slice(0, 80);
+}
+
+// These are *site* identifiers, not arbitrary URL paths. Keep the public
+// URL's first segment separate from the browser's self-reported service id.
+// Cloudflare zone request aggregates remain host-scoped and are not split here.
+const ROOT_PATH_SITE_IDS = Object.freeze({
+  ai:'ai', bible:'bible', books:'books', community:'community',
+  ekodichurch:'church', ekodimission:'mission', ekodibiz:'biz',
+  ekodimall:'mall', ekodilab:'lab', cgma:'cgma', cheonggye:'cheonggye',
+  seonammedi:'seonammedi', pgm:'pgm', jadam:'jadam',
+  pizzamaru:'pizzamaru', yogurt:'yogurt', cmpmyi:'cmpmyi',
+  joseph:'joseph', live:'live', trade:'trade', journal:'journal',
+  publishing:'publishing', invest:'invest', money:'money', social:'social',
+  author:'author', business:'business', delivery:'delivery',
+  education:'edu', energy:'energy', support:'support', life:'life',
+  management:'management', cafe:'cafe', messenger:'messenger',
+  insurance:'insurance', work:'work', space:'space', experience:'experience',
+  lab:'lab', pay:'pay', stores:'stores',
+  'ekodibiz/trade':'trade', 'ekodibiz/marketing-ai':'marketing',
+  'ekodibiz/mall':'mall'
+});
+const KNOWN_SITE_IDS = new Set(Object.values(ROOT_PATH_SITE_IDS));
+
+// sitePath is a *short*, whitelisted route prefix supplied by the shared
+// shell, never a raw URL, query, fragment or persistable visit path.
+export function trafficSiteIdForVisit(host, sitePath = '', legacyServiceId = '') {
+  const normalizedHost = normalizeTrafficHost(host);
+  const hostSite = trafficSiteIdForHost(normalizedHost);
+  if (normalizedHost !== 'ekodi.kr' && normalizedHost !== 'www.ekodi.kr') return hostSite;
+  const prefix = String(sitePath || '').trim().toLowerCase().replace(/^\\/+|\\/+$/g, '');
+  if (prefix) {
+    if (!/^[a-z0-9-]+(?:\\/[a-z0-9-]+)?$/.test(prefix)) return 'root';
+    const parts = prefix.split('/');
+    return ROOT_PATH_SITE_IDS[prefix] || ROOT_PATH_SITE_IDS[parts[0]] || 'root';
+  }
+  // Old cached shells did not send sitePath. Keep their site counts intact
+  // without accepting arbitrary site names from a public telemetry payload.
+  const legacy = String(legacyServiceId || '').trim().toLowerCase();
+  return KNOWN_SITE_IDS.has(legacy) ? legacy : 'root';
 }
 
 export function classifyTrafficUserAgent(value) {
