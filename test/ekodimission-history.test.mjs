@@ -43,9 +43,9 @@ test('shared header and homepage now present history as distinct from activities
  ]);
  assert.match(shell,/href:'\/ekodimission\/activities',label:'활동'[\s\S]*href:'\/ekodimission\/history',label:'연혁'[\s\S]*href:'\/ekodimission\/live',label:'라이브'/);
  assert.match(shell,/location.replace\('\/ekodimission\/history'\+location.hash\)/);
- assert.ok(home.includes('href="/ekodimission/history#history-2018"'));
- assert.ok(home.includes('href="/ekodimission/history#history-2026"'));
- assert.ok(home.includes('<h3>연혁</h3>'));
+ assert.ok(home.includes('href="/ekodimission/history"'),'Landing directs to the independent history page');
+ assert.ok(home.includes('진행·예정 행사'));
+ assert.ok(!home.includes('href="/ekodimission/history#history-2018"'),'No history timeline on home');
  assert.ok(activities.includes('href="/ekodimission/history#history-2025"'));
  assert.ok(activities.includes('href="/ekodimission/history"'));
  assert.ok(stories.includes('href="/ekodimission/history"'));
