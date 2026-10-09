@@ -75,6 +75,8 @@ const mallSiteTouched=changedFiles.some(file=>file.startsWith('sites/ekodi-mall/
 const sharedSiteTouched=changedFiles.some(file=>
   file==='workspace-admin-page.js'||
   file==='mall-social-setup.js'||
+  // Canonical admin assets are served by the shared-site Worker even when the Worker source is unchanged.
+  ['device-control-admin.js','device-control-admin.css','remote-power-admin.js','remote-power-admin.css','device-wake-admin.js'].includes(file)||
   file.startsWith('sites/')||
   file.startsWith('auth-site/')||
   file==='deploy/manifests/shared-site.worker.json'||
