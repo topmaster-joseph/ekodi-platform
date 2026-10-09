@@ -53,7 +53,8 @@ async function systemSnapshot(){
   return{
     cpuLoadPct:cpu,memoryUsedPct:memory,isPortable,
     deviceClass:isPortable===true?'portable':isPortable===false?'desktop':'unknown',
-    autoExecutionEligible:isPortable===false,
+    // Protect crowded 8 GiB desktops from receiving additional queued jobs.
+    autoExecutionEligible:isPortable===false&&memory<=90,
     measuredAt:new Date().toISOString(),schedulerPolicy:LOCAL_EXECUTION_POLICY.version,
   };
 }
@@ -117,4 +118,21 @@ async function loop(config){
   console.log(`EKODI AI account node ${config.nodeId} connected to ${CONTROL}`);for(;;){try{const providers=await detectProviders();const leased=await api('/api/node/lease',{token:config.nodeToken,node:config.nodeId,body:{providers,system:await systemSnapshot(),maxConcurrency:boundedConcurrency()}});if(!leased.job){await sleep(5000);continue}console.log(`leased ${leased.job.id} ${leased.job.providerId}`);const result=await executeJob(leased.job);await api(`/api/node/jobs/${encodeURIComponent(leased.job.id)}/complete`,{token:config.nodeToken,node:config.nodeId,body:result});console.log(`${leased.job.id} ${result.ok?'completed':'failed'}`)}catch(error){console.error(new Date().toISOString(),clean(error?.message||error));await sleep(10000)}}
 }
 
+// Read-only diagnostic mode: never print node tokens, subscription identity, pairing secrets or auth status JSON.
+if(hasArg('--doctor')){
+  const config=await loadConfig();
+  const [providers,snapshot]=await Promise.all([detectProviders(),systemSnapshot()]);
+  console.log(JSON.stringify({
+    nodeId:nodeId(),controlOrigin:new URL(CONTROL).origin,
+    paired:Boolean(config?.nodeToken),availableProviders:providers,
+    schedulerEligible:snapshot.autoExecutionEligible,
+    cpuLoadPct:snapshot.cpuLoadPct,memoryUsedPct:snapshot.memoryUsedPct,
+    freeMemoryMiB:Math.round(os.freemem()/(1024*1024)),
+    ollamaEnabled:process.env.EKODI_ENABLE_OLLAMA_LOCAL==='true',
+    ollamaReady:providers.includes('ollama-local'),
+    claudeInternalReady:providers.includes('claude-code'),
+    isPortable:snapshot.isPortable,
+  },null,2));
+  process.exit(0);
+}
 await mkdir(ROOT,{recursive:true});const pairCode=arg('--pair');let config=pairCode?await enroll(pairCode):await loadConfig();if(!config?.nodeToken){console.error('Node is not paired. Generate a pairing code in ai.ekodi.kr and run: node scripts/ai-account-node.mjs --pair CODE');process.exit(2)}if(pairCode&&hasArg('--pair-only')){console.log(`EKODI AI account node ${config.nodeId} paired with ${config.providers.join(', ')}`);process.exit(0)}await loop(config);

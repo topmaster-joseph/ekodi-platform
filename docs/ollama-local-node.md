@@ -16,6 +16,7 @@ The EKODI Orchestrator remains cloud-first and all delegated execution stays beh
 - Accepts small `general` and `writing` tasks only; refuses analysis and code tasks, any code-branch job, input over 6000 characters, or calls to a remote/cloud Ollama model.
 - Calls a fixed loopback endpoint. It never opens port 11434 to the internet or enables a tunnel.
 - Memory-conscious defaults: 1024-token context, 160 predicted tokens, one request per local scheduler concurrency slot, `keep_alive:0` to release the model after a request. Real throughput must be benchmarked per device.
+- Read-only `node scripts/ai-account-node.mjs --doctor` displays detected provider readiness and resource pressure, but never pairing tokens, subscription identities or secrets. The scheduler also pauses outbound job leasing if RAM usage is above 90 percent on an eligible desktop.
 - Node pairing, rate limits, governance, task approval, cost policy, branch isolation and audit are unchanged. The GPT/OpenAI fallback is **not** used automatically without delegated budget.
 - Local CPU execution has power/hardware cost; “no model API fee” does not mean zero operating cost.
 

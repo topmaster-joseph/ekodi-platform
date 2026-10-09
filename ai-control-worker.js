@@ -226,7 +226,7 @@ async function leaseNodeJob(request,env,node){
     JSON.stringify(advertised),telemetry.currentLoad,telemetry.cpuLoadPct,telemetry.memoryUsedPct,telemetry.maxConcurrency,
     telemetry.isPortable?1:0,telemetry.autoExecutionEligible?1:0,telemetry.systemJson,stamp,stamp,node.id,
   ).run();
-  if(!telemetry.autoExecutionEligible)return json({job:null,scheduler:{eligible:false,reason:telemetry.isPortable?'portable_device':'hardware_eligibility_unknown'}});
+  if(!telemetry.autoExecutionEligible)return json({job:null,scheduler:{eligible:false,reason:telemetry.isPortable?'portable_device':telemetry.memoryUsedPct>90?'memory_pressure':'hardware_eligibility_unknown'}});
   const providers=(advertised).map(v=>`node:${v}`);
   if(!providers.length)return json({job:null,scheduler:{eligible:true,reason:'no_provider'}});
   const placeholders=providers.map(()=>'?').join(',');
