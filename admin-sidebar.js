@@ -30,11 +30,15 @@ const FLAT_DETAIL_GROUPS = new Set(['services']);
 const PRIMARY_SECTIONS = Object.freeze({
   summary: ['platform-overview'],
   sites: ['sites-all', 'sites-business', 'sites-clients', 'sites-community', 'sites-core', 'sites-preparing'],
-  people: ['users-access', 'admins', 'ai-membership', 'security'],
+  people: ['users-access', 'admins', 'ai-membership'],
   services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'],
   content: ['work', 'communication', 'community', 'books', 'social'],
-  status: ['health', 'site-health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity'],
-  'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'ai-module-spec', 'audit-records'],
+  finance: ['finance', 'api-cost'],
+  status: ['health', 'site-health', 'architecture', 'maturity'],
+  releases: ['deployments', 'aiops'],
+  'devices-agent': ['devices', 'pos-agent'],
+  'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'ai-module-spec'],
+  'security-audit': ['security', 'audit-records'],
 });
 
 export function adminSidebarSectionOf(item) {
@@ -623,8 +627,11 @@ export function mountAdminSidebar(root = document, options = {}) {
       const defaultSection = getAdminMenuGroupDefault(group);
       const defaultDefinition = getAdminMenuItem(defaultSection);
       if (defaultDefinition?.adminHandoff !== true) {
-        activateSection(nav, defaultSection);
-        delete nav.dataset.adminFocusedGroup;
+        // Demand-loaded panels may take several seconds to mount. Keep the
+        // selected work area visible immediately; sectionChanged clears this
+        // temporary focus only after the target panel actually activates.
+        const activationAccepted = activateSection(nav, defaultSection);
+        if (!activationAccepted) delete nav.dataset.adminFocusedGroup;
       }
     }
     closeDrawer();

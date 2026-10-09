@@ -31,7 +31,7 @@ const bundle=await get('/ai-ops-admin.js');
 if(bundle){
   if(bundle.status!==200) failures.push(`/ai-ops-admin.js: expected 200, got ${bundle.status}`);
   const source=await bundle.text();
-  for(const marker of ['EKODIProviderControl','renderMissingTargets','COMMON AI PROVIDER CONTROL']){
+  for(const marker of ['EKODIProviderControl','renderMissingTargets','EKODI AI CONTROL CENTER','ekodi-ai-center-tabs']){
     if(!source.includes(marker)) failures.push(`/ai-ops-admin.js: missing bundled provider marker ${marker}`);
   }
 }

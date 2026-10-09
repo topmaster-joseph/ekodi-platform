@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.5.2'
+$AgentVersion = '2.5.3'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -816,6 +816,48 @@ function Invoke-AgentUpgradeTransaction([string]$CandidatePath, [switch]$DeferRe
     }
     $code = if ($codes.ContainsKey($stage)) { $codes[$stage] } else { 'EKA-199' }
     Throw-AgentStageError $code $stage 'Agent 설치·업그레이드를 중단하고 이전 상태로 롤백했습니다.' $failure
+  }
+}
+
+function Install-EkodiLocalAI {
+  # Fixed, versioned source. Never execute a command supplied by a cloud payload.
+  $uri = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/tools/ekodi-device-agent/windows/ekodi-localai-installer.ps1'
+  $expectedSha256 = 'B1BEEA46AFED286EF73947A7A8B52331C1E95FCA13D7A9107B4A3B190AE9500D'
+  $download = Join-Path $env:TEMP ('ekodi-localai-installer-' + [guid]::NewGuid().ToString('N') + '.ps1')
+  try {
+    Invoke-WebRequest -UseBasicParsing -Uri $uri -OutFile $download -TimeoutSec 90
+    $actual = (Get-FileHash -LiteralPath $download -Algorithm SHA256).Hash
+    if ($actual -ne $expectedSha256) { throw 'LOCALAI_INSTALLER_HASH_MISMATCH' }
+    $tokens = $null
+    $errors = $null
+    [void][System.Management.Automation.Language.Parser]::ParseFile($download,[ref]$tokens,[ref]$errors)
+    if ($errors.Count -gt 0) { throw 'LOCALAI_INSTALLER_SYNTAX_INVALID' }
+    $process = Start-Process -FilePath 'powershell.exe' -ArgumentList @(
+      '-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',('"'+$download+'"')
+    ) -WindowStyle Hidden -PassThru
+    if (!$process.WaitForExit(1800000)) {
+      try { $process.Kill() } catch {}
+      throw 'LOCALAI_INSTALL_TIMEOUT'
+    }
+    $receiptPath = Join-Path $env:LOCALAPPDATA 'EKODI\LocalAI\last-install-result.json'
+    $receipt = $null
+    if (Test-Path -LiteralPath $receiptPath) {
+      try { $receipt = Get-Content -LiteralPath $receiptPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch {}
+    }
+    $outcome = @{
+      exitCode = [int]$process.ExitCode
+      result = [string]$receipt.result
+      ollama = [string]$receipt.ollama
+      claude = [string]$receipt.claude
+      model = [string]$receipt.model
+      inference = [string]$receipt.inference
+      claudeAuthenticated = [string]$receipt.claudeAuthenticated
+      logAvailable = (Test-Path -LiteralPath $receiptPath)
+    }
+    if ($process.ExitCode -ne 0) { throw ('LOCALAI_INSTALL_PARTIAL_OR_FAILED: '+$outcome.result) }
+    return $outcome
+  } finally {
+    Remove-Item -LiteralPath $download -Force -ErrorAction SilentlyContinue
   }
 }
 
@@ -2505,6 +2547,7 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'profile.workstation.apply' { return Apply-WorkstationProfile }
     'profile.workstation.restore' { return Restore-WorkstationProfile }
     'agent.self_update' { return Update-AgentFromOfficialSource }
+    'software.localai.install' { return Install-EkodiLocalAI }
     'computer.browser.canary' { return Invoke-BackgroundBrowserCanary }
     'computer.browser.execute' { return Invoke-BackgroundBrowserWorker $payload }
     'remote_desktop.recovery.enable' { return Set-DesktopCommanderRecovery $true }
@@ -2592,7 +2635,7 @@ function Send-Heartbeat($Config) {
     capabilities = @{
       powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
-      networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true
+      networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true
       computerRead = $true; processRead = $true; agentStatus = $true
       isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified; isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified; isolatedDesktopSessionCanary = [bool](Get-IsolatedDesktopSessionCanaryState).verified; isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified
       desktopCapture = $false; desktopInput = $false
@@ -2695,7 +2738,7 @@ function Install-Agent {
       capabilities = @{
         powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
         diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
-        networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true
+        networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true
         arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
       }
     } | ConvertTo-Json -Depth 8

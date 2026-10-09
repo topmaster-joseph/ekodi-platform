@@ -126,17 +126,25 @@
       "people",
       "services",
       "content",
+      "finance",
       "status",
-      "settings-records"
+      "releases",
+      "devices-agent",
+      "settings-records",
+      "security-audit"
     ],
     "primaryAxisLabelsKo": [
-      "플랫폼 전체현황",
+      "전체 대시보드",
       "사이트·브랜드",
-      "사용자·관리자·권한",
+      "회원·관리자·권한",
       "서비스·AI",
       "콘텐츠·행사·소통",
-      "운영·배포·장애",
-      "설정·보안·감사"
+      "결제·회계·비용",
+      "상태·성능·점검",
+      "배포·장애",
+      "기기·에이전트",
+      "설정·연동·저장소",
+      "보안·감사"
     ],
     "layout": "fixed-role-projected-sidebar + scrolling-workspace + bottom-command-composer",
     "desktopPrimarySidebarScroll": true,
@@ -219,7 +227,7 @@
         "level": 1,
         "owner": "global",
         "surface": "fixed-left-sidebar",
-        "rule": "seven-platform-control-areas-for-platform-super-admin"
+        "rule": "eleven-distinct-platform-control-areas-for-platform-super-admin"
       },
       {
         "level": 2,
@@ -243,7 +251,7 @@
       "nestedScroll": "tables-and-explicit-data-views-only"
     },
     "pageAnatomy": [
-      "platform super admin left navigation: seven explicit control areas with active-area direct task links",
+      "platform super admin left navigation: eleven distinct control areas with active-area direct task links",
       "delegated/local admin navigation: role- and domain-specific direct task links only",
       "workspace header: title + purpose + status/actions only; no duplicate navigation",
       "workspace header: title + purpose + status + primary actions",

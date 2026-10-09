@@ -15,7 +15,7 @@ const legacyCurrentEventPath='/ekodimission/activities/260926-chuseok-open-table
 const applicationApi='/ekodimission/api/activities/260926-chuseok-open-table/applications';
 const standaloneApplyPath=eventPath;
 const pageCases=[
-  ['/ekodimission','에코디선교회'],['/ekodimission/activities','MISSION ACTIVITIES'],
+  ['/ekodimission','에코디선교회'],['/ekodimission/activities','MISSION ACTIVITIES'],['/ekodimission/history','OUR JOURNEY'],
   [eventPath,'한가위 열린식탁 & 나눔마켓'],['/ekodimission/participate','PARTICIPATE'],
   ['/ekodimission/partners','PARTNERSHIP'],['/ekodimission/stories','STORIES & NEWS'],['/ekodimission/give','GIVE & SHARE'],
 ];
@@ -67,7 +67,7 @@ test('EKODI Mission shared assets and unknown child routes are guarded',async()=
 test('Open Table is first-party EKODI application UI with corrected Sep 26 schedule',async()=>{
   const [event,activities,script,css,admin]=await Promise.all([readFile(new URL('../space/ekodimission-open-table-apply.page',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission-activities.page',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission.js',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission.css',import.meta.url),'utf8'),readFile(new URL('../workspace-admin-page.js',import.meta.url),'utf8')]);
   assert.match(event,/260926-chuseok-open-table/);assert.match(event,/9월 26일 토요일/);assert.match(event,/16:00–18:00/);assert.match(event,/자담치킨 목포대점/);assert.match(event,/id="apply"/);assert.match(event,/data-event-application/);assert.doesNotMatch(event,/docs\.google\.com|forms\/d\//i);
-  assert.match(activities,/\/ekodimission\/apply\/260926-open-table/);assert.match(activities,/9월 26일 토요일 16:00–18:00/);const home=await readFile(new URL('../space/ekodimission.page',import.meta.url),'utf8');assert.match(home,/09\.26/);assert.match(home,/SAT · 2026/);assert.match(home,/2026년 9월 26일\(토\) 16:00–18:00/);assert.doesNotMatch(home,/09\.25|15:00–17:00/);assert.match(home,/\/ekodimission\/apply\/260926-open-table/);assert.doesNotMatch(script,/docs\.google\.com|forms\/d\//i);assert.match(script,/ekodimission\/apply\/260926-open-table/);assert.match(script,/2026년 9월 26일 토요일 오후 4시/);
+  assert.match(activities,/\/ekodimission\/apply\/260926-open-table/);assert.match(activities,/9월 26일 토요일 16:00–18:00/);const home=await readFile(new URL('../space/ekodimission.page',import.meta.url),'utf8');assert.match(home,/진행·예정 행사/);assert.match(home,/10\.10/);assert.match(home,/SAT · 2026/);assert.doesNotMatch(home,/09\.26|09\.25|15:00–17:00/);assert.doesNotMatch(home,/\/ekodimission\/apply\/260926-open-table/);assert.doesNotMatch(script,/docs\.google\.com|forms\/d\//i);assert.match(script,/ekodimission\/apply\/260926-open-table/);assert.match(script,/2026년 9월 26일 토요일 오후 4시/);
   assert.match(script,/applications/);assert.match(css,/word-break:keep-all/);assert.match(css,/overflow-wrap:break-word/);assert.match(css,/hyphens:none/);assert.match(css,/\.open-table-hero\{/);assert.match(css,/\.mobile-apply-cta\{/);
   assert.match(admin,/'ekodimission':'에코디선교회'/);assert.match(admin,/'ekodimission':'mission'/);
 });
