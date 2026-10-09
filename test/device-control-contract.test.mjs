@@ -153,7 +153,7 @@ test('admin quick connect downloads one bounded enrollment connector without req
 });
 
 test('existing registered devices upgrade transactionally and preserve registration', () => {
-  assert.match(agent, /\$AgentVersion = '2\.5\.2'/);
+  assert.match(agent, /\$AgentVersion = '2\.5\.3'/);
   assert.match(agent, /Invoke-AgentUpgradeTransaction/);
   assert.match(agent, /Assert-AgentCandidate/);
   assert.match(agent, /New-AgentUpgradeSnapshot/);
