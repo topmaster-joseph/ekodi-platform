@@ -21,7 +21,9 @@ test('device admin shows status and attention before setup controls', async () =
   const list = source.indexOf('id="ekodiDeviceList"');
   const setup = source.indexOf('class="device-setup-tools"');
   assert.ok(metrics >= 0 && attention > metrics && list > attention && setup > list);
-  assert.match(source, /확인 필요 \$\{issues\.length\}대/);
+  assert.match(source, /확인 필요 \$\{issues\.length\}개 그룹/);
+  assert.match(source, /<details class="device-status-tools" open>/);
+  assert.match(source, /device-roster-overview/);
   assert.match(source, /세부 관리 · 고급 작업/);
   assert.match(source, /LOCAL COMPUTERS · DEVICES/);
 });

@@ -623,6 +623,22 @@ export default {
 
     if (PUBLIC_ALIAS_HOSTS.has(host)) return redirectToPublicCanonical(url);
 
+    // Desktop Bootstrap is a canonical entry alias, not a separate admin screen.
+    // It must precede the catch-all /admin/* shell fallback; static redirect HTML is not served there.
+    if (host === PUBLIC_HOST && /^\/admin\/desktop\/bootstrap(?:\/|\/index\.html)?$/.test(url.pathname)) {
+      if (!['GET', 'HEAD'].includes(request.method)) {
+        const response = new Response(null, {status:405, headers:{allow:'GET, HEAD', 'cache-control':'no-store'}});
+        applyBaseSecurityHeaders(response.headers);
+        response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+        return response;
+      }
+      const response = new Response(null, {status:307, headers:{location:'/admin/status/devices','cache-control':'no-store'}});
+      applyBaseSecurityHeaders(response.headers);
+      response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+      response.headers.set('X-EKODI-Route', 'desktop-bootstrap-canonical');
+      return response;
+    }
+
     if ((url.pathname === '/admin' || url.pathname === '/admin/') && host !== PUBLIC_HOST && !ADMIN_HOSTS.has(host)) {
       const target = new URL('https://ekodi.kr/admin/');
       target.searchParams.set('source', host);

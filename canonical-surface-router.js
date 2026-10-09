@@ -287,6 +287,20 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     const documentRedirect=authAssetDocumentRedirect(request,path);if(documentRedirect)return documentRedirect;
     return serveCanonicalAuth(request,env);
   }
+  // This exact admin entry is a route alias, not a new admin screen.
+  // Intercept before proxyAdminShell rewrites every nested /admin/* path to legacy '/'.
+  if(/^\/admin\/desktop\/bootstrap(?:\/|\/index\.html)?$/.test(path)){
+    const headers={
+      'cache-control':'no-store',
+      'x-content-type-options':'nosniff',
+      'x-robots-tag':'noindex, nofollow, noarchive',
+      'x-ekodi-route':'desktop-bootstrap-canonical',
+      'x-ekodi-canonical-surface':'admin',
+      'x-ekodi-canonical-path':'/admin/status/devices',
+    };
+    if(!['GET','HEAD'].includes(request.method))return new Response(null,{status:405,headers:{...headers,allow:'GET, HEAD'}});
+    return new Response(null,{status:307,headers:{...headers,location:'/admin/status/devices'}});
+  }
   if(path===SURFACE_PREFIXES.admin)return canonicalSlashRedirect(request,SURFACE_PREFIXES.admin);
   if(path.startsWith(`${SURFACE_PREFIXES.admin}/`)){
     if(typeof legacyFetch!=='function')return serviceUnavailable('admin');

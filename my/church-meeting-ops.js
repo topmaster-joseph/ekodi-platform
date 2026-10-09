@@ -114,14 +114,14 @@ function renderEditor(pack){
     <label>말씀나눔<input data-pack-field="preacher" value="${editorValue(pack,'preacher')}"></label><label>대표기도<input data-pack-field="prayer" value="${editorValue(pack,'prayer')}"></label>
     <label class="wide">찬양<textarea rows="3" data-pack-field="songs">${editorValue(pack,'songs')}</textarea></label><label class="wide">모임 순서<textarea rows="4" data-pack-field="order">${editorValue(pack,'order')}</textarea></label>
     <label class="wide">공지<textarea rows="3" data-pack-field="announcements">${editorValue(pack,'announcements')}</textarea></label><label>식사준비<input data-pack-field="meal" value="${editorValue(pack,'meal')}"></label>
-  </div><div class="cmo-actions"><button class="primary" type="button" data-cmo-action="all">전체 자동 준비</button><button type="button" data-cmo-action="save">초안 저장</button><button type="button" data-cmo-action="bulletin">주보</button><button type="button" data-cmo-action="ppt">PPTX</button><button class="publish" type="button" data-cmo-action="homepage">홈페이지 게시</button><button type="button" data-cmo-action="live">라이브 설정</button><a href="${CONSOLE_URL}" target="_blank" rel="noopener">상세 운영 콘솔</a></div>
+  </div><div class="cmo-actions"><button class="primary" type="button" data-cmo-action="all">전체 자동 준비</button><button type="button" data-cmo-action="save">초안 저장</button><button type="button" data-cmo-action="bulletin">주보</button><button type="button" data-cmo-action="ppt">PPTX</button><button class="publish" type="button" data-cmo-action="homepage">홈페이지 게시</button><button type="button" data-cmo-action="live">라이브 설정</button><a href="${CONSOLE_URL}" target="_blank" rel="noopener">교회 운영 콘솔</a></div>
   <div class="cmo-preview"><strong>홈페이지</strong>\n${esc(homepage)}\n\n<strong>라이브</strong>\n${esc(live.title)}\n${esc(live.description)}</div>`;
 }
 function render(){
   const host=ensureHost(),workspaceKey=selectedChurchWorkspace();if(!signedIn()||!workspaceKey){host.hidden=true;return}host.hidden=false;
-  const sunday=state.services.find(item=>item.kind==='sunday'),saturday=state.services.find(item=>item.kind==='saturday'),sourceText=state.source?` · ${state.source}`:'';
-  host.innerHTML=`<div class="cmo-head"><div><p class="eyebrow">EKODI CHURCH · MEETING OPS</p><h2>주일·토요모임 운영</h2><p>원자료 하나로 주보·PPTX·홈페이지 게시·라이브방송 설정을 이어서 준비합니다.</p></div><span class="cmo-status">${state.loading?'자료 확인 중…':state.error?esc(state.error):`목회자 ${esc(state.role||'staff')}${sourceText}`}</span></div>
-  ${state.loading?'<div class="cmo-empty">에코디교회 자료를 불러오고 있습니다.</div>':`<div class="cmo-grid">${[sunday,saturday].filter(Boolean).map(pack=>`<button type="button" class="cmo-card${state.selected?.id===pack.id?' active':''}" data-cmo-select="${esc(pack.id)}"><small>${label(pack.kind)} · <span class="cmo-state">${pack.published?'홈페이지 게시됨':'초안'}</span></small><strong>${esc(pack.sermonTitle||pack.title||'말씀 제목 입력')}</strong><span>${esc(formatDate(pack.date))}${pack.scripture?` · ${esc(pack.scripture)}`:''}</span></button>`).join('')}</div><div data-cmo-editor></div>`}`;
+  const sunday=state.services.find(item=>item.kind==='sunday'),sourceText=state.source?` · ${state.source}`:'';
+  host.innerHTML=`<div class="cmo-head"><div><p class="eyebrow">EKODI CHURCH · MEETING OPS</p><h2>에코디교회 · 주일모임 운영</h2><p>원자료 하나로 주보·PPTX·홈페이지 게시·라이브방송 설정을 이어서 준비합니다.</p></div><span class="cmo-status">${state.loading?'자료 확인 중…':state.error?esc(state.error):`목회자 ${esc(state.role||'staff')}${sourceText}`}</span></div>
+  ${state.loading?'<div class="cmo-empty">에코디교회 자료를 불러오고 있습니다.</div>':`<div class="cmo-grid">${[sunday].filter(Boolean).map(pack=>`<button type="button" class="cmo-card${state.selected?.id===pack.id?' active':''}" data-cmo-select="${esc(pack.id)}"><small>${label(pack.kind)} · <span class="cmo-state">${pack.published?'홈페이지 게시됨':'초안'}</span></small><strong>${esc(pack.sermonTitle||pack.title||'말씀 제목 입력')}</strong><span>${esc(formatDate(pack.date))}${pack.scripture?` · ${esc(pack.scripture)}`:''}</span></button>`).join('')}</div><div data-cmo-editor></div>`}`;
   if(state.selected)renderEditor(activePack());
 }
 async function fetchPublishedStore(access){
@@ -144,14 +144,13 @@ async function verifyAndLoad(){
         const response=await fetch(url,{headers:{authorization:`Bearer ${access}`,accept:'application/json'},cache:'no-store'}),data=await response.json().catch(()=>[]);if(!response.ok)throw new Error(data?.error||`HTTP ${response.status}`);rows=Array.isArray(data)?data:[];
       }catch(error){console.warn('[EKODI Church Meeting Ops] source fallback',storeError,error);rows=[]}
     }
-    const normalized=rows.map((row,index)=>normalizeService(row,index)).filter(item=>['sunday','saturday'].includes(item.kind)).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+    const normalized=rows.map((row,index)=>normalizeService(row,index)).filter(item=>item.kind==='sunday').sort((a,b)=>String(b.date).localeCompare(String(a.date)));
     const sunday=normalized.find(item=>item.kind==='sunday')||emptyService('sunday');
-    const saturday=normalized.find(item=>item.kind==='saturday')||emptyService('saturday');
-    state.services=[sunday,saturday];state.source=source;state.selected=sunday;state.error='';
-  }catch(error){state.error=error?.message||'모임 자료를 불러오지 못했습니다.';state.services=[emptyService('sunday'),emptyService('saturday')];state.selected=state.services[0]}finally{state.loading=false;render()}
+    state.services=[sunday];state.source=source;state.selected=sunday;state.error='';
+  }catch(error){state.error=error?.message||'모임 자료를 불러오지 못했습니다.';state.services=[emptyService('sunday')];state.selected=state.services[0]}finally{state.loading=false;render()}
 }
 async function persist(pack,published){
-  const access=token();if(!access)throw new Error('로그인이 필요합니다.');if(!pack.date)throw new Error('모임 날짜를 입력해 주세요.');
+  const access=token();if(!access)throw new Error('로그인이 필요합니다.');if(!pack.date)throw new Error('모임 날짜를 입력해 주세요.');if(pack.kind!=='sunday')throw new Error('토요모임은 에코디선교회 관리자 화면에서만 관리합니다.');if(new Date(pack.date+'T12:00:00+09:00').getUTCDay()!==0)throw new Error('주일모임은 일요일 날짜만 등록할 수 있습니다.');if(published&&(!String(pack.scripture||'').trim()||!String(pack.sermonTitle||'').trim()))throw new Error('공통본문과 말씀 제목을 확인한 뒤 게시하세요.');
   saveDraft(pack);
   const row={service_type:pack.kind,service_date:pack.date,service_name:label(pack.kind),service_time:serviceTime(pack.kind),scripture:pack.scripture||'',title:pack.sermonTitle||'',preacher:pack.preacher||'',songs:(pack.songs||[]).join('\n'),prayer:pack.prayer||'',notice:pack.announcements||'',meal:pack.meal||'',is_published:Boolean(published),updated_at:new Date().toISOString()};
   const response=await fetch(`${SUPABASE_URL}/rest/v1/church_worship_materials?on_conflict=service_type,service_date`,{method:'POST',headers:{apikey:PUBLISHABLE_KEY,authorization:`Bearer ${access}`,'content-type':'application/json',prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(row)});

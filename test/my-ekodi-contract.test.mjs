@@ -229,6 +229,14 @@ test('My EKODI approval hub keeps unified visibility and person-scoped decision 
   assert.doesNotMatch(approvalApp,/service_role|SUPABASE_SERVICE_ROLE_KEY/);
 });
 
+test('My guarded release manifest follows the lazy startup contract',async()=>{
+  const manifest=await read('deploy/manifests/my.worker.json');
+  assert.match(manifest,/app\.js\?v=20261009-hash-routing-v2/);
+  assert.match(manifest,/secondary-feature-loader\.js\?v=20261008-startup-defer-v1/);
+  assert.doesNotMatch(manifest,/church-marketing-ai\.js\?v=20260827-church-marketing-1/);
+  assert.doesNotMatch(manifest,/channel-automation\.js\?v=20260903-channel-automation-1/);
+});
+
 test('My production verification uses only the canonical apex path',async()=>{
   const workflow=await read('.github/workflows/deploy-my.yml');
   assert.doesNotMatch(workflow,/https:\/\/my\.ekodi\.kr/);
@@ -307,7 +315,7 @@ test('My EKODI provides explicit privacy-first personal character selection',asy
 
 test('My versioned assets use immutable browser caching while runtime data remains uncached',async()=>{
   const [html,worker]=await Promise.all([read('my/index.html'),read('my-worker.js')]);
-  assert.match(html,/app\.js\?v=20261008-traffic-resilience-v3/);
+  assert.match(html,/app\.js\?v=20261009-hash-routing-v2/);
   assert.match(worker,/searchParams\.has\('v'\)/);
   assert.match(worker,/public, max-age=31536000, immutable/);
   assert.match(worker,/manifest-fallback'[\s\S]{0,220}withVersionedAssetCache\(request/);

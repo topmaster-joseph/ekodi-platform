@@ -15,7 +15,9 @@ test('verified Mall merge dispatches both production services with the same orch
   }
   assert.ok(coordinator.split('inputs:{release_branch_ref:branch,release_task_id:taskId}').length - 1 >= 4);
   assert.ok(coordinator.includes('merged.data?.merged===true'));
-  assert.ok(!coordinator.includes("file==='scripts/converge-orchestrated-pr-merge.mjs'||"));
+  // Changes to the dispatch controller must themselves run through the guarded
+  // shared-site release. Mall and Control dispatches remain separate and receipt-bound.
+  assert.ok(coordinator.includes("file===\'scripts/converge-orchestrated-pr-merge.mjs\'||"));
 });
 
 test('manual release inputs require both task fields and Growth gate receives them', () => {
