@@ -9,10 +9,10 @@ test('only interest recipient gets accept/decline buttons; initiator waits',()=>
  assert.match(api,/\.eq\('to_user_id',userId\)/);
  assert.match(app,/상대방의 답변을 기다리고 있습니다/);
 });
-test('interest replies and messages are free; event subscription is server checked',()=>{
+test('interest acceptance stays free but each message send and reply is subscription-gated',()=>{
  assert.match(api,/if\(decisionId&&method==='POST'\)/);
  assert.match(api,/hasBankPlan\(admin,userId,'community'\)/);
  const afterMessage=api.slice(api.indexOf('const interestId=match(p'));
- assert.doesNotMatch(afterMessage,/if\(!await subscribed\(/);
+ assert.match(afterMessage,/if\(!await subscribed\(admin,userId\)\)/);
  assert.match(api,/mutual_consent_required/);
 });
