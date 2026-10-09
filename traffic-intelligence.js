@@ -69,9 +69,9 @@ export function trafficSiteIdForVisit(host, sitePath = '', legacyServiceId = '')
   const normalizedHost = normalizeTrafficHost(host);
   const hostSite = trafficSiteIdForHost(normalizedHost);
   if (normalizedHost !== 'ekodi.kr' && normalizedHost !== 'www.ekodi.kr') return hostSite;
-  const prefix = String(sitePath || '').trim().toLowerCase().replace(/^\\/+|\\/+$/g, '');
+  const prefix = String(sitePath || '').trim().toLowerCase().replace(/^\/+|\/+$/g, '');
   if (prefix) {
-    if (!/^[a-z0-9-]+(?:\\/[a-z0-9-]+)?$/.test(prefix)) return 'root';
+    if (!/^[a-z0-9-]+(?:\/[a-z0-9-]+)?$/.test(prefix)) return 'root';
     const parts = prefix.split('/');
     return ROOT_PATH_SITE_IDS[prefix] || ROOT_PATH_SITE_IDS[parts[0]] || 'root';
   }
