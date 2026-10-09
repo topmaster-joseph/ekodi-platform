@@ -8,6 +8,7 @@ on:
       - '.github/workflows/release-church-marketing-ai.yml'
       - 'my/index.html'
       - 'my/church-marketing-ai.js'
+      - 'my/secondary-feature-loader.js'
       - 'deploy/manifests/marketing-ai.pages.json'
       - 'deploy/manifests/my.worker.json'
 
@@ -49,7 +50,8 @@ jobs:
         run: |
           set -euo pipefail
           node --check my/church-marketing-ai.js
-          grep -Fq '/church-marketing-ai.js?v=20260827-church-marketing-1' my/index.html
+          grep -Fq '/secondary-feature-loader.js?v=20261008-startup-defer-v1' my/index.html
+          grep -Fq '/church-marketing-ai.js?v=20260827-church-marketing-1' my/secondary-feature-loader.js
           grep -Fq 'MARKETING_URL' my/church-marketing-ai.js
           grep -Fq "url.searchParams.set('workspace', workspaceKey)" my/church-marketing-ai.js
           grep -Fq 'https://ekodi.kr/ekodichurch/marketing/' my/church-marketing-ai.js
@@ -98,7 +100,8 @@ jobs:
           for attempt in $(seq 1 24); do
             if verify 'https://marketing.ekodi.kr/church/' 'data-ekodi-church-marketing-ai' /tmp/church.html \
               && verify 'https://marketing.ekodi.kr/church/app.js' 'ekodi-church-marketing-drafts-v1' /tmp/church-app.js \
-              && verify 'https://ekodi.kr/my/' 'church-marketing-ai.js?v=20260827-church-marketing-1' /tmp/my.html \
+              && verify 'https://ekodi.kr/my/' 'secondary-feature-loader.js?v=20261008-startup-defer-v1' /tmp/my.html \
+              && verify 'https://ekodi.kr/my/secondary-feature-loader.js?v=20261008-startup-defer-v1' 'church-marketing-ai.js?v=20260827-church-marketing-1' /tmp/my-secondary-loader.js \
               && verify 'https://marketing.ekodi.kr/' 'id="freeTrialForm"' /tmp/marketing.html \
               && verify 'https://jadam.ekodi.kr/' 'id="googleCustomerAuth"' /tmp/jadam.html \
               && verify 'https://pizzamaru.ekodi.kr/' 'id="googleCustomerAuth"' /tmp/pizza.html \
