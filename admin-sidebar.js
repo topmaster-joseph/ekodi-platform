@@ -627,8 +627,11 @@ export function mountAdminSidebar(root = document, options = {}) {
       const defaultSection = getAdminMenuGroupDefault(group);
       const defaultDefinition = getAdminMenuItem(defaultSection);
       if (defaultDefinition?.adminHandoff !== true) {
-        activateSection(nav, defaultSection);
-        delete nav.dataset.adminFocusedGroup;
+        // Demand-loaded panels may take several seconds to mount. Keep the
+        // selected work area visible immediately; sectionChanged clears this
+        // temporary focus only after the target panel actually activates.
+        const activationAccepted = activateSection(nav, defaultSection);
+        if (!activationAccepted) delete nav.dataset.adminFocusedGroup;
       }
     }
     closeDrawer();

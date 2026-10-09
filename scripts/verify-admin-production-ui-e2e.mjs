@@ -268,7 +268,18 @@ for (const [id, group] of menus) {
         ), group, { timeout: 12000 });
         break;
       } catch (error) {
-        if (attempt === 1) throw new Error(`${id}: ${group} never activated after bounded retries: ${error.message}`);
+        if (attempt === 1) {
+          const state = await page.evaluate(() => ({
+            requestedSection:window.EKODIAdminPanels?.current?.() || '',
+            routedSection:window.EKODIAdminRoutes?.sectionFromLocation?.(location) || '',
+            focusedGroup:document.querySelector('.sidebar nav')?.dataset.adminFocusedGroup || '',
+            activeGroups:[...document.querySelectorAll('button[data-admin-global-group]')]
+              .filter(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))
+              .map(node => node.dataset.adminGlobalGroup),
+            selectedUrl:location.pathname + location.hash,
+          }));
+          throw new Error(`${id}: ${group} never activated after bounded retries: ${JSON.stringify(state)}`, { cause:error });
+        }
       }
     }
     selectedWorkArea = group;
