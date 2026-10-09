@@ -5,6 +5,7 @@ import {AI_ROUTER_SCORE_POLICY} from './ai-router-score.js';
 import {loadAiCollaborationPolicy} from './ai-collaboration-settings.js';
 import { LOCAL_EXECUTION_POLICY, compareLocalExecutionCandidates, localExecutionPolicySnapshot, normalizeLocalResource } from './local-execution-policy.js';
 import capabilityRegistry from './config/capability-registry.json' with { type: 'json' };
+import {normalizeCommonsChatInput,buildCommonsChatPrompt,selectCommonsChatProviders,commonsChatStatus} from './ai-commons-conversation.js';
 import {AI_COMMONS_POLICY,adminIdeaView,canFinalPublish,executionCatalogSnapshot,memberIdeaView,normalizeAiIdeaInput,publicRequestView,rankCommonCapabilities,rankPublicExecutionServices,requestSimilarity,resolveExecutionServiceEntry,suggestedIdeaState} from './ai-commons.js';
 import {attachSiteImprovementTask,buildSiteImprovementPrompt,claimLowTrafficSiteImprovement,completeSiteImprovementNodeJob,dispatchCloudSiteImprovement,failSiteImprovementClaim,failSiteImprovementTask,markSiteImprovementRunning,reconcileSiteImprovementRelease} from './ekodi-site-improvement-scheduler.js';
 import {handleSiteImprovementResponsesBroker} from './ekodi-site-improvement-oidc-broker.js';
@@ -163,7 +164,7 @@ async function insertTask(env,task){
 }
 function taskRow(row){if(!row)return null;const tier=row.mission_tier||'';const governance=JSON.parse(row.governance_json||'{}');return{id:row.id,title:row.title,prompt:row.prompt,mode:'parallel',requestedMode:row.mode||'parallel',state:row.state,requestedProviders:JSON.parse(row.requested_providers||'[]'),needsCodeBranch:Boolean(row.needs_code_branch),branch:row.branch||'',origin:governance.origin||null,executionEnvironment:'development',governance,missionDecision:{policyVersion:row.mission_policy_version||'',tier,reason:row.mission_reason||'',explanation:row.mission_explanation||'',analysisOnly:Boolean(row.analysis_only),forbidden:tier==='forbidden',humanGate:tier==='human_gate',allowModelConsultation:tier!=='forbidden',autonomousActionAllowed:['observe','execute_reversible'].includes(tier),humanApprovalRequired:tier!=='forbidden'},createdBy:row.created_by,createdAt:row.created_at,updatedAt:row.updated_at,approvalState:row.approval_state||'pending',resultSummary:row.result_summary?JSON.parse(row.result_summary):null,error:row.error||''}}
 async function getTask(env,id){return dbReady(env)?taskRow(await env.DB.prepare('SELECT * FROM ai_control_tasks WHERE id=?').bind(id).first()):null}
-async function listTasks(env){if(!dbReady(env))throw new Error('state_store_unavailable');const data=await env.DB.prepare('SELECT * FROM ai_control_tasks ORDER BY created_at DESC LIMIT 100').all();return(data.results||[]).map(taskRow)}
+async function listTasks(env){if(!dbReady(env))throw new Error('state_store_unavailable');const data=await env.DB.prepare("SELECT * FROM ai_control_tasks WHERE created_by NOT LIKE 'commons:%' ORDER BY created_at DESC LIMIT 100").all();return(data.results||[]).map(taskRow)}
 async function patchTask(env,id,fields){const entries=Object.entries(fields);if(!entries.length)return;await env.DB.prepare(`UPDATE ai_control_tasks SET ${entries.map(([key])=>`${key}=?`).join(',')} WHERE id=?`).bind(...entries.map(([,value])=>typeof value==='object'?JSON.stringify(value):value),id).run()}
 async function createRun(env,run){await env.DB.prepare('INSERT INTO ai_control_runs (id,task_id,provider_id,role,state,output,error,started_at,finished_at,router_score,router_score_breakdown,router_score_policy_version) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').bind(run.id,run.taskId,run.providerId,run.role,run.state,'','',run.startedAt,'',Number(run.routerScore)||0,JSON.stringify(run.routerScoreBreakdown||{}),clean(run.routerScorePolicyVersion)).run()}
 async function finishRun(env,run){await env.DB.prepare('UPDATE ai_control_runs SET state=?,output=?,error=?,finished_at=? WHERE id=?').bind(run.state,run.output||'',run.error||'',run.finishedAt||now(),run.id).run()}
@@ -264,6 +265,10 @@ async function completeNodeJob(request,env,node,jobId){
   await env.DB.prepare('UPDATE ai_control_jobs SET state=?,output=?,error=?,updated_at=?,finished_at=? WHERE id=?').bind(ok?'completed':'failed',output,error,stamp,stamp,jobId).run();
   await finishRun(env,{id:job.run_id,state:ok?'completed':'failed',output,error,finishedAt:stamp});
   const task=await getTask(env,job.task_id);
+  if(task?.createdBy?.startsWith('commons:')){
+    await patchTask(env,job.task_id,{state:ok?'completed':'failed',updated_at:stamp,error:ok?'':'local_model_failed',result_summary:ok?{finalResponse:output.slice(0,12000)}:{}});
+    return json({ok:true,commonsChat:{state:ok?'completed':'failed'}});
+  }
   if(task?.createdBy==='ekodi-site-improvement-scheduler'){
     if(!ok){
       await failSiteImprovementTask(env,job.task_id,error||'site_improvement_node_failed');
@@ -343,6 +348,69 @@ async function runScheduledSiteImprovement(env){
 }
 
 function commonsConfig(env={}){return{policy:AI_COMMONS_POLICY,authUrl:'https://ekodi.kr/auth/?site=ai&return_to=https%3A%2F%2Fekodi.kr%2Fai%2F',supabaseUrl:clean(env.SUPABASE_URL),supabasePublishableKey:clean(env.SUPABASE_PUBLISHABLE_KEY)}}
+async function commonsChatCapabilities(env){
+  const nodes=await onlineNodeProviders(env);
+  return runtimeCapabilities(env,nodes);
+}
+async function reserveCommonsChatUsage(env,userId,tier){
+  if(!dbReady(env))return{error:'state_store_unavailable',status:503};
+  const today=new Date().toISOString().slice(0,10);
+  const maximum=tier==='paid'?3:20;
+  try{
+    const result=await env.DB.prepare("INSERT INTO ai_commons_chat_usage(user_id,day_utc,tier,request_count) VALUES(?,?,?,1) ON CONFLICT(user_id,day_utc,tier) DO UPDATE SET request_count=request_count+1 WHERE request_count < ?").bind(userId,today,tier,maximum).run();
+    return result.meta?.changes?{ok:true}:{error:'daily_chat_limit_reached',status:429};
+  }catch(error){console.error('AI Commons usage store unavailable',clean(error?.message||error).slice(0,100));return{error:'chat_usage_store_unavailable',status:503};}
+}
+async function handleCommonsChat(request,env,url){
+  if(request.method==='GET'&&url.pathname==='/api/commons/chat/status'){
+    try{const capabilities=await commonsChatCapabilities(env);return json({providers:commonsChatStatus(capabilities,env.AI_COMMONS_PAID_CHAT_ENABLED==='true')})}
+    catch{return json({providers:commonsChatStatus()})}
+  }
+  if(request.method==='POST'&&url.pathname==='/api/commons/chat'){
+    const auth=await requireCommonsMember(request,env);if(auth.error)return auth.error;
+    let input;try{input=normalizeCommonsChatInput(await body(request))}catch(error){return json({error:clean(error.message)},400)}
+    let capabilities;try{capabilities=await commonsChatCapabilities(env)}catch{return json({error:'provider_status_unavailable'},503)}
+    const providers=selectCommonsChatProviders(input.mode,capabilities,env.AI_COMMONS_PAID_CHAT_ENABLED==='true');
+    if(!providers.length)return json({error:input.mode==='gpt'||input.mode==='claude'?'paid_provider_not_enabled':'provider_unavailable'},503);
+    const tier=input.mode==='ollama'?'local':(input.mode==='gpt'||input.mode==='claude'?'paid':'free');
+    const usage=await reserveCommonsChatUsage(env,auth.user.id,tier);if(!usage.ok)return json({error:usage.error},usage.status);
+    const prompt=buildCommonsChatPrompt(input.messages);
+    if(input.mode==='ollama'){
+      const stamp=now(),id=crypto.randomUUID();
+      const task={id,title:'EKODI Commons Chat',prompt,requestedProviders:['node:ollama-local'],needsCodeBranch:false,branch:'',
+        missionDecision:{policyVersion:AI_CONTROL_POLICY.missionPolicyVersion,tier:'observe',reason:'commons_conversation',analysisOnly:true},
+        governance:{origin:{provider:'ekodi',channel:'commons-chat',requestId:id}},createdBy:'commons:'+auth.user.id,state:'running',createdAt:stamp,updatedAt:stamp};
+      try{
+        await insertTask(env,task);
+        await enqueueNodeRun(env,task,{providerId:'node:ollama-local',role:'commons-chat'},prompt);
+        return json({ok:true,jobId:id,state:'queued',provider:'ollama'},202);
+      }catch(error){console.error('AI Commons local queue unavailable',clean(error?.message||error).slice(0,100));return json({error:'local_queue_unavailable'},503)}
+    }
+    const task={id:crypto.randomUUID(),title:'EKODI Commons Chat',origin:{provider:'ekodi',channel:'commons-chat'}};
+    for(const providerId of providers){
+      try{
+        const result=await invokeProviderWithMeta(env,providerId,prompt,task,'commons-chat');
+        const answer=clean(result.text).slice(0,12000);if(!answer)throw new Error('empty_model_answer');
+        await recordFreeProviderOutcome(env,providerId,{ok:true,quota:result.quota||null}).catch(()=>{});
+        return json({ok:true,reply:answer,provider:providerId});
+      }catch(error){
+        await recordFreeProviderOutcome(env,providerId,{ok:false,error}).catch(()=>{});
+        console.warn('AI Commons provider failed',providerId,clean(error?.message||error).slice(0,100));
+      }
+    }
+    return json({error:'all_providers_unavailable'},503);
+  }
+  const match=url.pathname.match(/^\/api\/commons\/chat\/jobs\/([a-f0-9-]{36})$/);
+  if(request.method==='GET'&&match){
+    const auth=await requireCommonsMember(request,env);if(auth.error)return auth.error;
+    const task=await getTask(env,match[1]);if(!task||task.createdBy!=='commons:'+auth.user.id)return json({error:'job_not_found'},404);
+    const pending=!['completed','failed'].includes(task.state);
+    if(pending&&Date.now()-Date.parse(task.createdAt)>10*60*1000)return json({state:'expired',error:'local_queue_timeout'});
+    return json({state:task.state,...(task.state==='completed'?{reply:clean(task.resultSummary?.finalResponse).slice(0,12000),provider:'ollama'}:{}),
+      ...(task.state==='failed'?{error:'local_model_failed'}:{})});
+  }
+  return null;
+}
 async function requireCommonsMember(request,env){
   const token=bearer(request);if(!token)return{error:json({error:'authentication_required'},401)};
   if(!supabaseReady(env))return{error:json({error:'identity_unavailable'},503)};
@@ -459,6 +527,7 @@ async function handleCommonsAdmin(request,env,url){
 async function handleCommonsApi(request,env,ctx){
   const url=new URL(request.url);if(!url.pathname.startsWith('/api/commons/'))return null;
   if(url.pathname.startsWith('/api/commons/admin/'))return handleCommonsAdmin(request,env,url);
+  if(url.pathname.startsWith('/api/commons/chat')){const response=await handleCommonsChat(request,env,url);if(response)return response;}
   if(['GET','HEAD'].includes(request.method)&&url.pathname==='/api/commons/client')return commonsBrowserAsset(request,env,'commons.js','text/javascript; charset=utf-8');
   if(['GET','HEAD'].includes(request.method)&&url.pathname==='/api/commons/style')return commonsBrowserAsset(request,env,'commons.css','text/css; charset=utf-8');
   if(request.method==='GET'&&url.pathname==='/api/commons/config')return json(commonsConfig(env));
@@ -561,6 +630,13 @@ export default{async fetch(request,env,ctx){
   return env.ASSETS.fetch(request);
 },
 async scheduled(controller,env,ctx){
+  const cleanup=(async()=>{if(!dbReady(env))return;
+    const before=new Date(Date.now()-7*24*60*60*1000).toISOString();
+    await env.DB.prepare("DELETE FROM ai_control_jobs WHERE task_id IN (SELECT id FROM ai_control_tasks WHERE created_by LIKE 'commons:%' AND created_at < ?)").bind(before).run();
+    await env.DB.prepare("DELETE FROM ai_control_runs WHERE task_id IN (SELECT id FROM ai_control_tasks WHERE created_by LIKE 'commons:%' AND created_at < ?)").bind(before).run();
+    await env.DB.prepare("DELETE FROM ai_control_tasks WHERE created_by LIKE 'commons:%' AND created_at < ?").bind(before).run();
+  })().catch(error=>console.warn('AI Commons chat cleanup deferred',clean(error?.message||error).slice(0,100)));
+  if(ctx?.waitUntil)ctx.waitUntil(cleanup);else await cleanup;
   const work=runScheduledSiteImprovement(env).catch(error=>console.error('EKODI scheduled site improvement failed',clean(error?.message||error)));
   if(ctx?.waitUntil)ctx.waitUntil(work);else await work;
 }};
