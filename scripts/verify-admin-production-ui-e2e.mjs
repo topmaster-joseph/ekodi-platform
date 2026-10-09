@@ -251,7 +251,18 @@ for (const [id, group] of menus) {
     await global.waitFor({ state: 'visible', timeout: 10000 });
     const active = await global.evaluate(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active'));
     if (!active) await dispatchClick(global);
-    await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(node => node.dataset.adminGlobalGroup === target && (node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))), group, { timeout: 5000 });
+    try {
+      await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(node => node.dataset.adminGlobalGroup === target && (node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))), group, { timeout: 7000 });
+    } catch (error) {
+      const state = await page.evaluate(() => ({
+        requestedSection:window.EKODIAdminPanels?.current?.() || '',
+        routedSection:window.EKODIAdminRoutes?.sectionFromLocation?.(location) || '',
+        focusedGroup:document.querySelector('.sidebar nav')?.dataset.adminFocusedGroup || '',
+        activeGroups:[...document.querySelectorAll('button[data-admin-global-group]')].filter(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active')).map(node => node.dataset.adminGlobalGroup),
+        selectedUrl:location.pathname + location.hash,
+      }));
+      throw new Error(`Work area ${group} did not select after click: ${JSON.stringify(state)}`, { cause:error });
+    }
     selectedWorkArea = group;
   }
 
