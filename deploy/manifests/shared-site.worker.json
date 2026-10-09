@@ -6,6 +6,40 @@
     "requests": [
       {
         "url": "https://ekodi.kr/control",
+        "statuses": [308],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/admin/control",
+          "x-ekodi-route: control-canonical-redirect",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/control/",
+        "statuses": [308],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/admin/control",
+          "x-ekodi-route: control-canonical-redirect",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/admin/control/",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI Control", "id=\"commandForm\""],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: control",
+          "x-ekodi-route: control-surface",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/admin/control",
         "statuses": [
           200
         ],

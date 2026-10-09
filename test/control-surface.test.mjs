@@ -28,7 +28,10 @@ test('EKODI Control is an independent conversation-first command surface',async(
   assert.match(js,/providerHint:target/);
   assert.match(worker,/url\.pathname === '\/control'/);
   assert.match(worker,/CONTROL_ASSETS/);
-  assert.match(router,/\['\/control','\/control\/','\/control\.css','\/control\.js'\]\.includes\(url\.pathname\)/);
+  assert.match(worker,/url\.pathname === '\/admin\/control'/);
+  assert.match(router,/\['\/admin\/control','\/admin\/control\/'\]/);
+  assert.match(router,/\['\/control\.css','\/control\.js'\]/);
+  assert.match(router,/control-canonical-redirect/);
   assert.match(router,/x-ekodi-canonical-surface','control/);
   assert.match(router,/x-ekodi-route','control-surface/);
   assert.match(wrangler,/"\/control\*"/);

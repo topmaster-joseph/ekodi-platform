@@ -669,7 +669,18 @@ export default {
         response.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
         return response;
       }
+      // EKODI Control belongs to the platform administrator namespace.
       if (url.pathname === '/control' || url.pathname === '/control/') {
+        const target = new URL(request.url);
+        target.pathname = '/admin/control';
+        const response = new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store'}});
+        applyBaseSecurityHeaders(response.headers);
+        response.headers.set('X-EKODI-Route','control-canonical-redirect');
+        response.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+        return response;
+      }
+      if (url.pathname === '/admin/control' || url.pathname === '/admin/control/') {
+        if (!['GET','HEAD'].includes(request.method)) return new Response(null,{status:405,headers:{allow:'GET, HEAD','cache-control':'no-store'}});
         const response = await env.ASSETS.fetch(assetRequest(request, '/control'));
         const secured = withHostSecurity(response, ADMIN_CSP, 'no-store', 'control-surface');
         secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');

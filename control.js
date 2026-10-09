@@ -87,7 +87,7 @@
     const checked=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({
       agentId:'chief',actionType:'service.health_check',area:'health_checks',target:'control',
       rationale:'Control 명령 실행 전 사전점검: '+message.slice(0,500),
-      payload:{source:'control-surface',pathname:'/control',request:message.slice(0,1000)},
+      payload:{source:'control-surface',pathname:'/admin/control',request:message.slice(0,1000)},
       reversible:true,delegated:true,preflightVerified:false
     })});
     return checked?.ok===true && checked?.status==='verified' && checked?.execution?.ok===true;
@@ -113,7 +113,7 @@
               goal:message,risk:'normal',
               target:{capability:'core.automation',service:'control',section:'command',surface:'control',providerHint:target},
               delegation:{allowed:true,reversible:true,audited:true,preflightVerified:preflight,verificationDefined:true},
-              context:{source:'control-surface',pathname:'/control',executionTarget:target,request:message},
+              context:{source:'control-surface',pathname:'/admin/control',executionTarget:target,request:message},
               event:{kind:'control_command',source:'control-surface',summary:message,changeClass:'yellow',actionable:true,requiresHumanDecision:false},
               executeNow:true
             })});
@@ -127,7 +127,7 @@
       if(taskId){state.tasks.unshift({id:taskId,title:title(message),status:taskStatus,target,at:now()});state.tasks=state.tasks.slice(0,40);saveState()}
       let reply='',provider='EKODI';
       try{
-        const result=await api('/api/control/ai/assist',{method:'POST',body:JSON.stringify({message,history:prior,context:{source:'control-surface',section:'command',title:'EKODI Control',pathname:'/control',executionTarget:target,taskId}})});
+        const result=await api('/api/control/ai/assist',{method:'POST',body:JSON.stringify({message,history:prior,context:{source:'control-surface',section:'command',title:'EKODI Control',pathname:'/admin/control',executionTarget:target,taskId}})});
         provider=result.provider||'EKODI';
         reply=String(result.reply||'').trim()||'AI가 유효한 답변을 반환하지 않았습니다. 명령 전달 기록을 확인해 주세요.';
       }catch(error){
