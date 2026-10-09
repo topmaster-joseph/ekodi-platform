@@ -3,6 +3,7 @@ import {freemem} from 'node:os';
 // Never use a network host supplied by a job or the cloud model catalog.
 const ENDPOINT='http://127.0.0.1:11434';
 const DEFAULT_MODEL='qwen3:0.6b';
+const MIN_FREE_MEMORY_BYTES=1536*1024*1024;
 const MODEL_ID=/^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,79}(?::[a-zA-Z0-9][a-zA-Z0-9._-]{0,63})?$/;
 const enabled=value=>['true','1','yes','on'].includes(String(value??'').trim().toLowerCase());
 
@@ -17,7 +18,7 @@ export function ollamaLocalEnabled(env=process.env){
 }
 
 export async function ollamaLocalReady({env=process.env,fetchImpl=globalThis.fetch,freeMemoryBytes=freemem()}={}){
-  if(!ollamaLocalEnabled(env)||freeMemoryBytes<1536*1024*1024)return false;
+  if(!ollamaLocalEnabled(env)||freeMemoryBytes<MIN_FREE_MEMORY_BYTES)return false;
   const model=ollamaLocalModel(env);
   try{
     const response=await fetchImpl(ENDPOINT+'/api/tags',{method:'GET',signal:AbortSignal.timeout(4000)});
@@ -27,8 +28,10 @@ export async function ollamaLocalReady({env=process.env,fetchImpl=globalThis.fet
   }catch{return false}
 }
 
-export async function runOllamaLocal(prompt,{env=process.env,fetchImpl=globalThis.fetch,timeoutMs=120000}={}){
+export async function runOllamaLocal(prompt,{env=process.env,fetchImpl=globalThis.fetch,timeoutMs=120000,freeMemoryBytes=freemem()}={}){
   if(!ollamaLocalEnabled(env))throw new Error('ollama_local_disabled');
+  // Model readiness can change between queue lease and execution.
+  if(freeMemoryBytes<MIN_FREE_MEMORY_BYTES)throw new Error('ollama_local_insufficient_free_memory');
   const model=ollamaLocalModel(env);
   const content=String(prompt??'').trim();
   if(!content||content.length>6000)throw new Error('ollama_local_prompt_out_of_bounds');
