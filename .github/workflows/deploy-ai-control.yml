@@ -45,6 +45,8 @@ on:
       - 'platform-route-registry.js'
       - 'wrangler.site.toml'
       - 'test/ai-commons*.test.mjs'
+      - 'ai-commons-conversation.js'
+      - 'migrations/0129_ai_commons_chat_usage.sql'
       - 'test/ai-interpreter.test.mjs'
       - 'test/ekodi-site-improvement-scheduler.test.mjs'
       - 'test/site-improvement-oidc-broker.test.mjs'
@@ -129,6 +131,8 @@ on:
       - 'platform-route-registry.js'
       - 'wrangler.site.toml'
       - 'test/ai-commons*.test.mjs'
+      - 'ai-commons-conversation.js'
+      - 'migrations/0129_ai_commons_chat_usage.sql'
       - 'test/ai-interpreter.test.mjs'
       - 'test/ekodi-site-improvement-scheduler.test.mjs'
       - 'test/site-improvement-oidc-broker.test.mjs'
@@ -255,7 +259,7 @@ jobs:
           node scripts/validate-constitution.mjs
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-additive-migrations.mjs migrations
-          node --test test/ai-knowledge-claim.test.mjs test/ai-control-platform.test.mjs test/ai-control-provider-router.test.mjs test/ai-free-quota.test.mjs test/free-provider-adapters.test.mjs test/ai-router-score.test.mjs test/ai-collaboration-settings.test.mjs test/local-execution-policy.test.mjs test/ai-account-node-scheduler.test.mjs test/cognitive-control-plane.test.mjs test/ekodi-site-improvement-scheduler.test.mjs test/site-improvement-oidc-broker.test.mjs test/common-service-operator-control.test.mjs test/ai-commons.test.mjs test/ai-commons-subservice.test.mjs test/ai-interpreter.test.mjs
+          node --test test/ai-knowledge-claim.test.mjs test/ai-control-platform.test.mjs test/ai-control-provider-router.test.mjs test/ai-free-quota.test.mjs test/free-provider-adapters.test.mjs test/ai-router-score.test.mjs test/ai-collaboration-settings.test.mjs test/local-execution-policy.test.mjs test/ai-account-node-scheduler.test.mjs test/cognitive-control-plane.test.mjs test/ekodi-site-improvement-scheduler.test.mjs test/site-improvement-oidc-broker.test.mjs test/common-service-operator-control.test.mjs test/ai-commons.test.mjs test/ai-commons-subservice.test.mjs test/ai-commons-conversation.test.mjs test/ai-interpreter.test.mjs
           node --check ai-commons.js
           node --check ai-commons-admin.js
           node --check ai-control/commons.js
@@ -302,6 +306,7 @@ jobs:
           test -f migrations/0096_activate_ai_provider_pool.sql
           test -f migrations/0121_extended_free_ai_provider_chain.sql
           test -f migrations/0122_ai_provider_routing_evidence.sql
+          test -f migrations/0129_ai_commons_chat_usage.sql
           grep -Fq 'CREATE TABLE IF NOT EXISTS ai_provider_routing_events' migrations/0122_ai_provider_routing_evidence.sql
           grep -Fq "'cerebras-free', 'Cerebras · 무료 체험'" migrations/0121_extended_free_ai_provider_chain.sql
           grep -Fq "'qwen-free', 'Qwen · 무료 할당량'" migrations/0121_extended_free_ai_provider_chain.sql
