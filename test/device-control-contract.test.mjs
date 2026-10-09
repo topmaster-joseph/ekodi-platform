@@ -241,6 +241,7 @@ test('device Admin and bootstrap changes automatically dispatch guarded shared-s
   for (const file of ['device-control-admin.js','device-control-admin.css','ekodi-device-bootstrap.cmd']) {
     assert.ok(release.includes("file==='" + file + "'"), "missing release target " + file);
   }
+  assert.ok(release.includes("file==='scripts/converge-orchestrated-pr-merge.mjs'"), 'deployment controller changes must not silently skip production release');
   assert.ok(release.includes('if(sharedSiteTouched)'));
   assert.ok(release.includes('/actions/workflows/deploy-site-core.yml/dispatches'));
   assert.ok(release.includes('release_branch_ref:branch,release_task_id:taskId'));
