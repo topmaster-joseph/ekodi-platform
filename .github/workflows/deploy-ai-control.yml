@@ -3,6 +3,17 @@ name: Deploy EKODI AI Control Plane
 
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Required for production: orchestrator-issued release branch'
+        required: false
+        default: ''
+        type: string
+      release_task_id:
+        description: 'Required for production: exact orchestrator task ID'
+        required: false
+        default: ''
+        type: string
   pull_request:
     paths:
       - 'ai-control/**'
@@ -182,6 +193,8 @@ concurrency:
 
 env:
   WRANGLER_VERSION: '4.127.1'
+  EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+  EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
 
 jobs:
   validate:
@@ -438,7 +451,7 @@ jobs:
           exit 1
 
   deploy-production:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.release_branch_ref != '' && inputs.release_task_id != ''))
     needs: [validate, deploy-staging]
     runs-on: ubuntu-latest
     timeout-minutes: 22
