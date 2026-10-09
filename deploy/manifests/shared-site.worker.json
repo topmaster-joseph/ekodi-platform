@@ -1549,7 +1549,7 @@
         "redirect": "manual",
         "expect": [
           "EKODI Invest",
-          "data-ekodi-platform=\"invest\"",
+          "data-ekodi-service=\"invest\"",
           "/invest/invest-ui.js"
         ],
         "headerExpect": [
