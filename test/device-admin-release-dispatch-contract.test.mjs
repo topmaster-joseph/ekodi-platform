@@ -36,4 +36,8 @@ test('only guarded shared-site core owns device admin asset production', async (
   assert.match(script, /releaseBranchRef|release_branch_ref:branch/);
   assert.match(workflow, /EKODI AI Orchestration Gate/);
   assert.match(workflow, /guarded-worker-release\.mjs/);
+  for (const marker of ['function rosterGroupKey(device)', '.device-roster-group', 'selectedAgentId', 'device-wake-group']) {
+    assert.ok(workflow.includes(marker), 'production asset verification missing: ' + marker);
+  }
+  assert.match(workflow, /DEVICE-UI-RELEASE/);
 });
