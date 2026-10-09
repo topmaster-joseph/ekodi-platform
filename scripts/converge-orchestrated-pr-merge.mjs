@@ -82,6 +82,9 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='wrangler.site.toml'||
   file==='platform-router-entry-worker.js'||
   file==='canonical-surface-router.js'||
+  file==='device-control-admin.js'||
+  file==='device-control-admin.css'||
+  file==='ekodi-device-bootstrap.cmd'||
   file==='site-worker.js'||
   file==='scripts/build.mjs'||
   file==='scripts/finalize-seonammedi-release.mjs'||
