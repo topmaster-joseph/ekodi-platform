@@ -111,7 +111,7 @@ async function requireNode(request,env){
 
 async function onlineNodeProviders(env){
   if(!dbReady(env))return[];const cutoff=new Date(Date.now()-ONLINE_WINDOW_MS).toISOString();
-  const data=await env.DB.prepare("SELECT providers FROM ai_control_nodes WHERE state='online' AND last_seen_at>=?").bind(cutoff).all();
+  const data=await env.DB.prepare("SELECT providers FROM ai_control_nodes WHERE state='online' AND auto_execution_eligible=1 AND is_portable=0 AND last_seen_at>=?").bind(cutoff).all();
   return [...new Set((data.results||[]).flatMap(row=>storedProviders(row.providers)).map(v=>clean(v).toLowerCase()).filter(Boolean))];
 }
 async function providerPerformanceMetrics(env){
@@ -286,7 +286,7 @@ async function runScheduledSiteImprovement(env){
   let task=null;
   try{
     const nodeProviders=await onlineNodeProviders(env);
-    const localProvider=['codex','gemini-cli'].find(provider=>nodeProviders.includes(provider))||'';
+    const localProvider=['codex','gemini-cli','claude-code'].find(provider=>nodeProviders.includes(provider))||'';
     const input=normalizeTaskInput({
       title:'EKODI daily site improvement: '+claim.site.name,
       prompt:buildSiteImprovementPrompt(claim),
