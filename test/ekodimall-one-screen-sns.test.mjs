@@ -67,3 +67,13 @@ test('one-screen CSS is responsive and the controls stay on the existing adminis
   assert.match(src, /channel-settings/);
   assert.doesNotMatch(src, /const GROWTH_API='https:\/\/marketing-connect-api\.ekodi\.kr'/);
 });
+
+test('a merged Mall admin UI change dispatches the protected site-core production workflow', () => {
+  const orchestrator = readFileSync(new URL('../scripts/converge-orchestrated-pr-merge.mjs', import.meta.url), 'utf8');
+  assert.ok(orchestrator.includes("file==='workspace-admin-page.js'"));
+  assert.ok(orchestrator.includes("file==='mall-social-setup.js'"));
+  assert.ok(orchestrator.includes('if(sharedSiteTouched)'));
+  assert.ok(orchestrator.includes('/actions/workflows/deploy-site-core.yml/dispatches'));
+  assert.ok(orchestrator.includes('release_branch_ref:branch,release_task_id:taskId'));
+  assert.ok(src.includes("textContent=service==='mall'?'SNS 통합 설정'"));
+});
