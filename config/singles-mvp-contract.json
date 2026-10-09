@@ -86,7 +86,7 @@
       "discover_verified",
       "interest",
       "mutual_acceptance",
-      "mutual_messaging",
+      "mutual_message_read",
       "report",
       "block",
       "withdraw"
@@ -103,13 +103,20 @@
       "member_reports_payment": true,
       "operator_reconciles_bank_statement": true,
       "member_acknowledges_result": true,
-      "automatic_grant_from_member_claim": false
+      "automatic_grant_from_member_claim": false,
+      "verified_community_grant_required_for_message_post": true,
+      "consulting_does_not_unlock_messages": true,
+      "per_message_charge": false
     },
     "safety": {
       "operator_view_scoped": true,
       "bank_account_change_disables_collection": true,
       "independent_operator_capabilities": true,
-      "production_collection_enabled": false
-    }
+      "production_collection_enabled": false,
+      "messages_require_mutual_acceptance": true,
+      "free_block_and_report": true
+    },
+    "message_send": "bank_verified_community_subscription_required_for_every_sender_and_reply",
+    "message_read": "free_after_mutual_consent_and_safety_checks"
   }
 }
