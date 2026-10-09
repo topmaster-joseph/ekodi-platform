@@ -139,3 +139,52 @@ body.admin-compact .device-setup-tools>summary span{font-size:11px!important}
   body.admin-compact .device-status-tools>.device-type-filters,
   body.admin-compact .device-status-tools>.ekodi-device-list{margin:10px}
 }
+
+/* DEVICE-BOOTSTRAP-WIDE-CANONICAL-20261009
+   The fixed sidebar owns only its 220px rail. In device view, never reserve
+   a phantom secondary column or constrain the enrollment area to a half page.
+   Scoped to the visible device panel so other admin screens are unaffected. */
+body.admin-compact .app:has(#deviceControlPanel:not(.hidden-panel)){
+  width:100%!important;
+  max-width:none!important;
+  grid-template-columns:220px minmax(0,1fr)!important;
+}
+body.admin-compact .app:has(#deviceControlPanel:not(.hidden-panel))>main{
+  width:calc(100vw - 220px)!important;
+  min-width:0!important;
+  max-width:none!important;
+}
+body.admin-compact .app:has(#deviceControlPanel:not(.hidden-panel)) .content{
+  width:100%!important;
+  max-width:none!important;
+  margin-inline:0!important;
+  min-width:0!important;
+}
+body.admin-compact #deviceControlPanel:not(.hidden-panel){
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  grid-column:1/-1!important;
+}
+body.admin-compact #deviceControlPanel .device-setup-tools,
+body.admin-compact #deviceControlPanel .device-status-tools,
+body.admin-compact #deviceControlPanel .device-setup-tools-body,
+body.admin-compact #deviceControlPanel .device-enrollment-result{
+  min-width:0;
+  width:100%;
+  max-width:100%;
+  overflow-wrap:anywhere;
+}
+body.admin-compact #deviceControlPanel .device-quick-connect>div{min-width:0}
+body.admin-compact #deviceControlPanel .device-quick-connect>.primary{min-width:150px}
+body.admin-compact #deviceControlPanel .device-enrollment-result code{
+  max-width:100%;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+@media(max-width:760px){
+  body.admin-compact .app:has(#deviceControlPanel:not(.hidden-panel)){display:block!important}
+  body.admin-compact .app:has(#deviceControlPanel:not(.hidden-panel))>main{width:100%!important;max-width:100%!important}
+  body.admin-compact .app:has(#deviceControlPanel:not(.hidden-panel)) .content{width:100%!important;padding-inline:12px!important}
+  body.admin-compact #deviceControlPanel .device-quick-connect{grid-template-columns:1fr!important}
+}
