@@ -68,7 +68,7 @@ const KNOWN_SITE_IDS = new Set(Object.values(ROOT_PATH_SITE_IDS));
 export function trafficSiteIdForVisit(host, sitePath = '', legacyServiceId = '') {
   const normalizedHost = normalizeTrafficHost(host);
   const hostSite = trafficSiteIdForHost(normalizedHost);
-  if (normalizedHost !== 'ekodi.kr' && normalizedHost !== 'www.ekodi.kr') return hostSite;
+  if (normalizedHost.replace(/^www[.]/, '') !== 'ekodi.kr') return hostSite;
   const prefix = String(sitePath || '').trim().toLowerCase().replace(/^\/+|\/+$/g, '');
   if (prefix) {
     if (!/^[a-z0-9-]+(?:\/[a-z0-9-]+)?$/.test(prefix)) return 'root';
