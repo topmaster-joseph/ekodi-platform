@@ -500,6 +500,10 @@ export default{
     if(normalizedMissionPath(url.pathname)===MISSION_TRIP_CONTENT_API)return routeMissionTripContent(request,env);
     if(normalizedMissionPath(url.pathname)===MISSION_COLLAB_API)return routeMissionCollabApi(request,env);
     if(normalizedMissionPath(url.pathname)===MISSION_ADMIN_ACTIVITY_RPC_API)return routeEkodiMission(request,env);
+    // Public post-event photo/link submissions must reach the Mission media handlers.
+    // All body, consent, origin and file signature checks remain inside routeEkodiMission.
+    const missionWritePath=normalizedMissionPath(url.pathname);
+    if(request.method==='POST'&&(MISSION_ACTIVITY_MEDIA_UPLOAD_RE.test(missionWritePath)||MISSION_ACTIVITY_MEDIA_RE.test(missionWritePath)))return routeEkodiMission(request,env);
     if(['GET','HEAD'].includes(request.method)&&(normalizedMissionPath(url.pathname)===EKODIMISSION_PREFIX||normalizedMissionPath(url.pathname).startsWith(EKODIMISSION_PREFIX+'/')))return routeEkodiMission(request,env);
     if(url.pathname==='/health')return json(env,{ok:true,service:'ekodi-space',product:'operating-space',identity:'ekodi-id',workspaceIdentity:'workspace-id',routeModel:['root-slug','workspace-service'],memberNamespaceRequired:false,dataEnabled:runtimeConfig(env).dataEnabled,dataMode:runtimeConfig(env).dataMode});
     if(url.pathname==='/config.js')return withHeaders(env,new Response(`window.EKODI_SPACE_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store'}}),'config');
