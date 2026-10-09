@@ -81,6 +81,7 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='seonammedi-admin-control.js'||
   file==='wrangler.site.toml'||
   file==='platform-router-entry-worker.js'||
+  file==='canonical-surface-router.js'||
   file==='site-worker.js'||
   file==='scripts/build.mjs'||
   file==='scripts/finalize-seonammedi-release.mjs'||
