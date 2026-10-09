@@ -2,6 +2,15 @@ name: Deploy EKODI Operating Space
 
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: Orchestrator-issued ai/<agent>/orch_<task-id> branch
+        required: true
+        type: string
+      release_task_id:
+        description: Verified EKODI orchestrator task ID
+        required: true
+        type: string
   pull_request:
     paths:
       - 'space/**'
@@ -83,6 +92,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+  EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
   WRANGLER_VERSION: '4.119.0'
   SUPABASE_PROJECT_REF: renzehysxirjilvdxacv
   STORE_ROUTE_MIGRATION: supabase/migrations/20260906006000_store_admin_routing.sql
@@ -202,6 +213,15 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Verify orchestrator release intent
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$EKODI_RELEASE_BRANCH_REF"
+          test -n "$EKODI_RELEASE_TASK_ID"
+          [[ "$EKODI_RELEASE_BRANCH_REF" =~ ^ai/[a-zA-Z0-9._-]+/orch_[a-zA-Z0-9_-]+$ ]]
+          [[ "$EKODI_RELEASE_BRANCH_REF" == *"/$EKODI_RELEASE_TASK_ID" ]]
       - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Verify production credentials
