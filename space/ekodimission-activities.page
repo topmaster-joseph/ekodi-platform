@@ -15,7 +15,12 @@
     </div>
   </div>
   <div class="mission-activity-list" data-activity-list data-trip-content>
-    <article class="mission-activity-row featured" data-activity-item data-activity-key="261003-autumn-community-trip" data-year="2026" data-month="10">
+    <article class="mission-activity-row featured" data-activity-item data-year="2026" data-month="10">
+      <time datetime="2026-10-10"><strong>10.10</strong><span>2026</span></time>
+      <div class="mission-activity-row-copy"><div class="mission-activity-row-meta"><span class="mission-status scheduled">행사 안내</span><span>토요모임 · 문화교제</span><span>10월 10일(토) 오전 11시</span></div><h3>토요모임 후 나주 영산강축제</h3><p>오전 11시 에코디선교회 토요모임 후, 나주 영산강정원에서 함께 걷고 문화교제를 나눕니다. 이동·귀가 시각은 운영진 안내 예정입니다.</p></div>
+      <div class="mission-activity-row-actions"><a class="mission-activity-detail-button" href="/ekodimission/activities/261010-naju-yeongsan">일정·장소 안내 <span aria-hidden="true">→</span></a></div>
+    </article>
+    <article class="mission-activity-row" data-activity-item data-activity-key="261003-autumn-community-trip" data-year="2026" data-month="10">
       <time datetime="2026-10-03"><strong>10.03</strong><span>2026</span></time>
       <div class="mission-activity-row-copy"><div class="mission-activity-row-meta"><span class="mission-status completed">일정 종료</span><span>공동체 여행</span><span>10월 3–4일</span></div><h3 data-trip-title>2026 가을 공동체 여행</h3><p><span data-trip-departure>10월 3일 09:00 출발</span> · 고창 핑크뮬리 · 영광 가마미해수욕장 · 독채 1박 · <span data-trip-capacity>15</span>명</p></div>
       <div class="mission-activity-row-actions"><a class="mission-activity-detail-button" href="/ekodimission/apply/261003-autumn-trip">여행 안내·기록 <span aria-hidden="true">→</span></a></div>

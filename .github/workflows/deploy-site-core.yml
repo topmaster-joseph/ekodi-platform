@@ -935,6 +935,10 @@ jobs:
 
           echo 'canonicalAdminRouteOwnership=verified'
 
+      - name: Verify Device Admin production release artifact parity
+        if: steps.quota.outputs.skip_nonessential != 'true'
+        run: node scripts/verify-device-admin-live.mjs --origin=https://ekodi.kr --expectedDir=dist --attempts=12 --delayMs=5000
+
       - name: Verify canonical AI Provider Control production surface
         if: steps.quota.outputs.skip_nonessential != 'true'
         run: node scripts/verify-admin-provider-control-production.mjs
