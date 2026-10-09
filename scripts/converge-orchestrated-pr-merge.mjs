@@ -57,6 +57,9 @@ const controlApiTouched=changedFiles.some(file=>[
   'coupang-partners-automation.js',
   'customer-entry-worker.js',
   'mission-control-entry-worker.js',
+  // AI Provider API runtime ownership; release-automation changes also repair missed deployments.
+  'ai-provider-control.js',
+  'scripts/converge-orchestrated-pr-merge.mjs',
   'wrangler.api.toml',
   'deploy/manifests/control-api.worker.json',
   '.github/workflows/deploy-control-api.yml',
@@ -82,6 +85,9 @@ const spaceTouched=changedFiles.some(file=>
 const mallSiteTouched=changedFiles.some(file=>file.startsWith('sites/ekodi-mall/')||file==='.github/workflows/deploy-ekodi-mall.yml');
 const sharedSiteTouched=changedFiles.some(file=>
   file==='workspace-admin-page.js'||
+  // AI Provider administrator bundle and shared provider client are owned by the Site Core.
+  file==='admin-provider-control.js'||
+  file==='ai-provider-control.js'||
   file==='mall-social-setup.js'||
   file.startsWith('sites/')||
   file.startsWith('auth-site/')||
