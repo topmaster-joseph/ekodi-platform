@@ -1550,7 +1550,7 @@
         "expect": [
           "EKODI Invest",
           "data-ekodi-service=\"invest\"",
-          "/invest/invest-ui.js"
+          "data-ekodi-user-surface=\"workspace\""
         ],
         "headerExpect": [
           "x-ekodi-shell: v2",

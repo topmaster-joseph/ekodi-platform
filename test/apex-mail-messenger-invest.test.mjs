@@ -45,7 +45,16 @@ test('Invest page and assets are path-native',async()=>{
   const rootInvest=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/invest');
   assert.ok(rootInvest);
   assert.ok(rootInvest.expect.includes('data-ekodi-service="invest"'));
-    const subjectProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/invest/invest-subject-ui.js');
+  assert.ok(rootInvest.expect.includes('data-ekodi-user-surface="workspace"'));
+  assert.ok(rootInvest.expect.includes('EKODI Invest'));
+  // A served shell may lazy-load the investment UI. The JS bundle must
+  // still be verified as a separate HTTP 200 public asset contract.
+  const assetProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/invest/invest-ui.js');
+  assert.ok(assetProbe);
+  assert.deepEqual(assetProbe.statuses,[200]);
+  assert.ok(assetProbe.expect.includes('/v1/invest/context'));
+  assert.ok(assetProbe.headerExpect.includes('x-content-type-options: nosniff'));
+  const subjectProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/invest/invest-subject-ui.js');
   assert.deepEqual(subjectProbe.expect,['https://ekodi.kr/workspace-api','subject_type','subject_key']);
   assert.equal(subjectProbe.expect.includes('profile_key'),false);
 });
