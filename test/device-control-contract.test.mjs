@@ -236,6 +236,16 @@ test('downloaded one-click CMD embeds a parsed, race-free, stage-aware PowerShel
   assert.doesNotMatch(ps, /Invoke-Expression|\biex\b/i);
 });
 
+test('device Admin and bootstrap changes automatically dispatch guarded shared-site release', async () => {
+  const release = await readFile(new URL('../scripts/converge-orchestrated-pr-merge.mjs', import.meta.url), 'utf8');
+  for (const file of ['device-control-admin.js','device-control-admin.css','ekodi-device-bootstrap.cmd']) {
+    assert.ok(release.includes("file==='" + file + "'"), "missing release target " + file);
+  }
+  assert.ok(release.includes('if(sharedSiteTouched)'));
+  assert.ok(release.includes('/actions/workflows/deploy-site-core.yml/dispatches'));
+  assert.ok(release.includes('release_branch_ref:branch,release_task_id:taskId'));
+});
+
 test('bootstrap elevates only when needed and keeps Boot/WOL separate', () => {
   assert.match(bootstrap, /\$isAdmin=/);
   assert.match(bootstrap, /if\(\$isAdmin\)/);
