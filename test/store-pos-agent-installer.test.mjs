@@ -18,7 +18,9 @@ test('one-click POS Agent setup is fixed to the official package and elevates ex
   for(const name of ['install-pos-agent.ps1','EKODI-POS-Agent.ps1','pos-agent.config.example.json','diagnose-pos-targets.ps1','start-pos-agent.cmd','stop-pos-agent.cmd','uninstall-pos-agent.ps1']) assert.match(setup,new RegExp(name.replaceAll('.','\\.')));
   assert.match(setup,/Start-Process -FilePath '%ComSpec%'.*-Verb RunAs/);
   assert.match(setup,/listenerPrefix must remain loopback-only/);
-  assert.match(setup,/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v5/);
+  const installerMarker=install.match(/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v\d+/)?.[0];
+  assert.ok(installerMarker,'Installer compatibility marker must be present');
+  assert.ok(setup.includes(installerMarker),'One-click setup must accept the current installer version');
   assert.match(setup,/Refreshing Task Scheduler compatibility package/);
   assert.match(setup,/\?v=/);
   assert.match(setup,/outdated Task Scheduler installer/);
