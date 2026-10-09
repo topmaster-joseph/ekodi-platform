@@ -141,7 +141,7 @@ async function showMessages(h){
  notice(h,'상대의 관심을 수락하거나 거절하는 것은 무료입니다. 서로 수락한 이후 양측 모두 구독 중일 때 메시지를 보낼 수 있습니다.');
  try{const d=await api('/requests');appendList(h,d.requests||[],(card,r)=>{
   card.append(text('h3',r.display_name||'새로운 관심'));paragraph(card,r.status==='pending'?'상대의 관심이 도착했습니다.':'연결 상태: '+r.status);
-  if(r.status==='pending'){
+  if(r.status==='pending'&&r.incoming===true){
    card.append(button('호감 수락',async()=>{
     try{await api('/requests/'+r.id+'/respond',{method:'POST',body:{decision:'accepted'}});notice(card,'연결에 동의했습니다. 메시지 전송은 구독 후 가능합니다.')}
     catch(e){notice(card,errorText(e))}
@@ -150,6 +150,7 @@ async function showMessages(h){
     catch(e){notice(card,errorText(e))}
    }))
   }
+  if(r.status==='pending'&&r.incoming!==true){paragraph(card,'상대방의 답변을 기다리고 있습니다. 수락·거절은 요청을 받은 사람만 할 수 있습니다.');}
   if(r.status==='accepted'){
    card.append(button('대화 내용 보기',async()=>{
     try{const d=await api('/messages/'+r.id);const list=text('div','','member-card');
