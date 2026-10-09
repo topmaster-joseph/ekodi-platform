@@ -71,6 +71,25 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   const {error}=await admin.from('singles_event_rsvps').upsert({event_id:rsvpId,user_id:userId,status:'requested'}, {onConflict:'event_id,user_id'});
   if(error)throw error;return reply(req,{ok:true,status:'requested'});
  }
+ const earlyBlock=match(p,/^\\/blocks\\/([0-9a-f-]{36})$/i);
+ if(earlyBlock&&method==='POST'){
+  if(!active(m))return reply(req,{error:'membership_required'},403);
+  if(earlyBlock===userId)return reply(req,{error:'cannot_block_self'},400);
+  const {error}=await admin.from('singles_blocks').upsert({blocker_id:userId,blocked_id:earlyBlock},{onConflict:'blocker_id,blocked_id'});
+  if(error)throw error;
+  return reply(req,{ok:true,blocked:true});
+ }
+ const reportTarget=match(p,/^\\/reports\\/([0-9a-f-]{36})$/i);
+ if(reportTarget&&method==='POST'){
+  if(!active(m))return reply(req,{error:'membership_required'},403);
+  if(reportTarget===userId)return reply(req,{error:'cannot_report_self'},400);
+  const v=await body(req);
+  if(!['harassment','fake_profile','spam','safety','other'].includes(v?.category)||typeof v?.details!=='string'||v.details.length>500)
+   return reply(req,{error:'invalid_report'},400);
+  const {error}=await admin.from('singles_reports').insert({reporter_id:userId,target_id:reportTarget,category:v.category,details:v.details});
+  if(error)throw error;
+  return reply(req,{ok:true,status:'open'});
+ }
  if(!verified(m))return reply(req,{error:'adult_verification_required'},403);
  if(p==='/discover'&&method==='GET'){
   const eligible=await many(admin.from('singles_memberships').select('user_id').eq('status','active').eq('discoverable',true)
@@ -137,12 +156,6 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   if(typeof v?.text!=='string'||!v.text.trim()||v.text.length>1000)return reply(req,{error:'invalid_message'},400);
   const {error}=await admin.from('singles_messages').insert({interest_id:interestId,sender_id:userId,body:v.text.trim()});
   if(error)throw error;return reply(req,{ok:true});
- }
- const blockId=match(p,/^\/blocks\/([0-9a-f-]{36})$/i);
- if(blockId&&method==='POST'){
-  if(blockId===userId)return reply(req,{error:'cannot_block_self'},400);
-  const {error}=await admin.from('singles_blocks').upsert({blocker_id:userId,blocked_id:blockId},{onConflict:'blocker_id,blocked_id'});
-  if(error)throw error;return reply(req,{ok:true,blocked:true});
  }
  return reply(req,{error:'not_found'},404);
 }
