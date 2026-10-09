@@ -76,5 +76,47 @@
     "staging",
     "guarded-release",
     "production-canary"
-  ]
+  ],
+  "operating_policy": {
+    "service_role": "adult trust-based community connection, not marriage brokerage",
+    "free": [
+      "public_introduction",
+      "profile_after_login",
+      "event_read_after_login",
+      "discover_verified",
+      "interest",
+      "mutual_acceptance",
+      "mutual_message_read",
+      "report",
+      "block",
+      "withdraw"
+    ],
+    "event_rsvp": "bank_verified_community_subscription",
+    "optional_consulting": "bank_verified_consulting_subscription; general communication/community support only; no named-person marriage advice",
+    "marriage_brokerage": false,
+    "payment": {
+      "method": "manual_online_bank_transfer_only",
+      "cards": false,
+      "pg": false,
+      "automatic_renewal": false,
+      "receipt_reference": "EDH-128bit-unique",
+      "member_reports_payment": true,
+      "operator_reconciles_bank_statement": true,
+      "member_acknowledges_result": true,
+      "automatic_grant_from_member_claim": false,
+      "verified_community_grant_required_for_message_post": true,
+      "consulting_does_not_unlock_messages": true,
+      "per_message_charge": false
+    },
+    "safety": {
+      "operator_view_scoped": true,
+      "bank_account_change_disables_collection": true,
+      "independent_operator_capabilities": true,
+      "production_collection_enabled": false,
+      "messages_require_mutual_acceptance": true,
+      "free_block_and_report": true
+    },
+    "message_send": "bank_verified_community_subscription_required_for_every_sender_and_reply",
+    "message_read": "free_after_mutual_consent_and_safety_checks"
+  }
 }
