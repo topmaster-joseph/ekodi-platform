@@ -184,6 +184,10 @@ async function reloadBankOrders(h){
    const card=text('article','','mini-card');
    card.append(text('h4',(row.plan_code==='consulting'?'선택형 컨설팅':'행사 참가 구독')+' · '+money(row.amount_krw)));
    paragraph(card,'결제고유번호: '+row.reference);
+   card.append(button('고유번호 복사',async()=>{
+    try{await navigator.clipboard.writeText(row.reference);notice(card,'고유번호를 복사했습니다.');}
+    catch{notice(card,'복사할 수 없습니다. 표시된 고유번호를 직접 사용해 주세요.')}
+   }));
    paragraph(card,'상태: '+(stateLabel[row.status]||row.status));
    if(row.status==='awaiting_transfer'){
     paragraph(card,'계좌이체: '+[row.bank_name,row.account_number,row.account_holder].filter(Boolean).join(' · '));
@@ -288,6 +292,39 @@ async function showBankAdmin(h){
   }
   p.append(detail);
   if(config.can_verify!==true)paragraph(p,'조회 권한은 있으나 입금 승인 권한은 없습니다.');
+  const findBox=text('section','','member-card');
+  findBox.append(text('h4','결제고유번호로 입금 내역 조회'));
+  const lookup=document.createElement('input');lookup.type='text';
+  lookup.maxLength=36;lookup.placeholder='EDH-...';lookup.setAttribute('aria-label','결제고유번호');
+  const lookupResult=text('div','','');
+  findBox.append(lookup,button('고유번호 조회',async()=>{
+   lookupResult.replaceChildren();
+   const reference=lookup.value.trim().toUpperCase();
+   if(!/^EDH-[A-F0-9]{32}$/.test(reference)){notice(lookupResult,'정확한 결제고유번호를 입력하세요.');return}
+   try{
+    const r=await api('/bank/admin/orders/'+reference);
+    const row=r.order;
+    lookupResult.append(text('h4',row.reference),text('p',
+      '상품: '+(row.plan_code==='consulting'?'컨설팅':'행사 참여')+
+      ' · '+money(row.amount_krw)+' · '+(stateLabel[row.status]||row.status)));
+    paragraph(lookupResult,'회원 신고: '+(row.reported_paid_at||'없음')+
+      ' / 관리자 확인: '+(row.verified_at||'미확인')+
+      ' / 회원 확인: '+(row.member_acknowledged_at||'미확인'));
+    if(row.status==='reported_paid'&&config.can_verify===true){
+     const trace=document.createElement('input');trace.maxLength=100;trace.placeholder='은행 명세 거래번호';
+     trace.setAttribute('aria-label','은행 명세 거래번호');
+     lookupResult.append(trace,button('조회한 고유번호의 입금 승인',async()=>{
+      if(trace.value.trim().length<4){notice(lookupResult,'은행 명세 거래번호를 입력하세요.');return}
+      if(!confirm('이 고유번호의 입금과 금액을 은행 거래내역으로 확인했습니까?'))return;
+      try{await api('/bank/admin/orders/'+reference+'/review',{
+        method:'POST',body:{decision:'verified',bank_trace:trace.value.trim()}});
+       location.reload();
+      }catch(e){notice(lookupResult,errorText(e))}
+     },'primary'));
+    }
+   }catch(e){notice(lookupResult,errorText(e))}
+  }),lookupResult);
+  p.append(findBox);
   const data=await api('/bank/admin/orders');
   if(!(data.orders||[]).length){paragraph(p,'확인할 주문이 없습니다.');return}
   for(const row of data.orders){
