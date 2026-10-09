@@ -91,10 +91,10 @@ test('canonical child paths attribute browser visits without treating all ekodi.
 });
 test('shared shell sends only the site route and the daily admin report marks request scope', async () => {
   const shell = await readFile('shell/shell.js', 'utf8');
-  assert.match(shell, /site_path:first\\+child/);
-  assert.doesNotMatch(shell, /site_path:location\\.pathname/);
+  assert.match(shell, /site_path:first\+child/);
+  assert.doesNotMatch(shell, /site_path:location\.pathname/);
   const controller = await readFile('traffic-intelligence-control.js', 'utf8');
-  assert.match(controller, /trafficSiteIdForVisit\\(host, body\\?\\.site_path, body\\?\\.site_id\\)/);
+  assert.match(controller, /trafficSiteIdForVisit\(host, body\?\.site_path, body\?\.site_id\)/);
   assert.match(controller, /cloudflareRequests:'host-scoped/);
   assert.match(controller, /activeConcurrency:'not measured/);
 });
