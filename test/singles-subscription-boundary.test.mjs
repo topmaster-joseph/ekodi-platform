@@ -23,7 +23,7 @@ test('guest cannot list events or see profiles; only descriptions are public',as
  }
  assert.match(ui,/if\(!state\.session\)\{showGuest\(\);return\}/);
 });
-test('event entry requires bank grant; free messages remain independent of billing',()=>{
+test('event registration and message POST both require bank-confirmed subscription',()=>{
  assert.match(worker,/SINGLES_PAID_ACTIONS_ENABLED/);
  assert.match(worker,/paid_actions_not_launched/);
  assert.match(social,/hasBankPlan\(admin,userId,'community'\)/);
@@ -32,7 +32,9 @@ test('event entry requires bank grant; free messages remain independent of billi
  assert.match(social,/if\(!await subscribed\(admin,userId\)\)/);
  assert.match(social,/community_subscription_required/);
  const messageSection=social.slice(social.indexOf('const interestId=match(p'));
- assert.doesNotMatch(messageSection,/subscribed\(/);
+ assert.match(messageSection,/if\(!await subscribed\(admin,userId\)\)/);
+ assert.match(worker,/sub\.match\(\/\^\\\/api\\\/messages/);
+ assert.match(worker,/paidWrite=.*req.method==='POST'/);
  assert.doesNotMatch(social.replace(/\/\/[^\n]*/g,''),/user_metadata|raw_user_meta_data/);
 });
 test('interests, mutual acceptance and refusal remain separate from payment',()=>{
@@ -53,10 +55,11 @@ test('DEV schema is default-private and includes no client-accessible entitlemen
  assert.match(schema,/adult_verified_at is not null/);
  assert.doesNotMatch(schema,/grant .* to authenticated/i);
 });
-test('UI paywall is limited to events and optional consulting; messages remain free',()=>{
+test('UI paywall applies to event registration and message send/reply while reading is free',()=>{
  assert.match(ui,/paywall\(card,'행사 참가 신청'\)/);
- assert.doesNotMatch(ui,/paywall\(card,'메시지 발송'\)/);
- assert.match(ui,/메시지·답장은 무료/);
+ assert.match(ui,/paywall\(card,'메시지 발송·답장'\)/);
+ assert.match(ui,/메시지 열람은 무료/);
+ assert.match(ui,/if\(!state\.subscription\.active\)/);
  assert.match(ui,/호감 수락/);
  assert.match(ui,/정중히 거절/);
  assert.match(ui,/로그인 후 무료로 볼 수 있습니다/);
