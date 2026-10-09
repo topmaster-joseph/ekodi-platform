@@ -112,3 +112,11 @@ body.mission-pay-open{overflow:hidden}
   .naju-activity-page .timeline li{grid-template-columns:104px minmax(0,1fr);gap:.75rem}
   .naju-activity-page .timeline time{font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif;font-size:1rem;line-height:1.45;font-weight:800;white-space:nowrap;color:#315c46}
 }
+
+/* Mission home: introduction and active/upcoming events only */
+.mission-home-current{padding:2rem 0 1rem}
+.mission-home-current .activity-date strong{white-space:nowrap;font-size:clamp(1.95rem,3.5vw,2.6rem)}
+.mission-home-current .activity-date{min-width:0}
+.mission-home-empty{margin:1.2rem 0;padding:1.25rem;border:1px solid var(--line);border-radius:1rem;background:var(--card);color:var(--muted)}
+.mission-home-archive-link{margin:1rem 0 0;text-align:right}
+@media(max-width:760px){.mission-home-current .activity-date{min-height:auto}.mission-home-archive-link{text-align:left}}
