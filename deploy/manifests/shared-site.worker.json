@@ -5,6 +5,57 @@
     "config": "wrangler.site.toml",
     "requests": [
       {
+        "url": "https://ekodi.kr/admin/desktop/bootstrap/",
+        "statuses": [
+          307
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: /admin/status/devices",
+          "cache-control: no-store",
+          "x-ekodi-route: desktop-bootstrap-canonical"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/device-control-admin.css",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "DEVICE-BOOTSTRAP-WIDE-CANONICAL-20261009",
+          ".app:has(#deviceControlPanel:not(.hidden-panel))"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/device-control-admin.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKB-219",
+          "ekodi-device-agent-",
+          "function groupRosterDevices"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodi-device-bootstrap.cmd",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKB-011",
+          "ekodi-device-agent-bootstrap-",
+          "Remove-Item -LiteralPath $agent"
+        ],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/control",
         "statuses": [
           200
