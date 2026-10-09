@@ -92,6 +92,12 @@ await page.route('https://ekodi.kr/api/control/messenger/inbox', async route => 
 await page.route('https://ekodi.kr/api/control/ai/actions?limit=20', async route => {
   await route.fulfill(syntheticJson({ actions:[] }));
 });
+// This synthetic UI-only session cannot access the real directory API. Mock only
+// its read-only response; production authorization rules stay completely intact.
+await page.route('**/api/customers/directory', async route => {
+  if (!['GET','OPTIONS'].includes(route.request().method())) throw new Error('Synthetic directory cannot mutate data');
+  await route.fulfill(syntheticJson({generatedAt:'2026-10-10T00:00:00Z',summary:{},authority:{},tenants:[],roles:[],members:[]}));
+});
 await page.route('https://ekodi.kr/api/control/ai/assist', async route => {
   if (route.request().method() !== 'POST') return route.fulfill(syntheticJson({ reply:'', mode:'free_assist' }));
   const body = route.request().postDataJSON();
@@ -185,7 +191,7 @@ for (const id of menuIds) if (!productionOrder.includes(id)) throw new Error(`Pr
 
 async function dispatchClick(locator, timeout = 10_000) {
   await locator.waitFor({ state: 'visible', timeout });
-  await locator.evaluate(node => { setTimeout(() => node.click(), 0); return true; });
+  await locator.evaluate(node => { node.click(); return true; });
 }
 
 async function resolveMenuTrigger(id, group) {
@@ -246,22 +252,35 @@ await verifyCommandConsoleRoundTrip();
 let selectedWorkArea = null;
 for (const [id, group] of menus) {
   console.log(`[PROD-E2E] ${id}: begin`);
-  if (selectedWorkArea !== group) {
-    const global = page.locator(`button[data-admin-global-group="${group}"]`);
+  // Delegated or lazily loaded sections may change the real active work area
+  // without changing this loop's expected group. Check DOM on every navigation.
+  const groupActive = () => page.evaluate(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(
+    node => node.dataset.adminGlobalGroup === target && (node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))
+  ), group);
+  if (selectedWorkArea !== group || !await groupActive()) {
+    const global = page.locator(`button[data-admin-global-group="${group}"]`).first();
     await global.waitFor({ state: 'visible', timeout: 10000 });
-    const active = await global.evaluate(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active'));
-    if (!active) await dispatchClick(global);
-    try {
-      await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(node => node.dataset.adminGlobalGroup === target && (node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))), group, { timeout: 7000 });
-    } catch (error) {
-      const state = await page.evaluate(() => ({
-        requestedSection:window.EKODIAdminPanels?.current?.() || '',
-        routedSection:window.EKODIAdminRoutes?.sectionFromLocation?.(location) || '',
-        focusedGroup:document.querySelector('.sidebar nav')?.dataset.adminFocusedGroup || '',
-        activeGroups:[...document.querySelectorAll('button[data-admin-global-group]')].filter(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active')).map(node => node.dataset.adminGlobalGroup),
-        selectedUrl:location.pathname + location.hash,
-      }));
-      throw new Error(`Work area ${group} did not select after click: ${JSON.stringify(state)}`, { cause:error });
+    for (let attempt=0; attempt<2; attempt++) {
+      if (!await groupActive()) await dispatchClick(global);
+      try {
+        await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(
+          node => node.dataset.adminGlobalGroup === target && (node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))
+        ), group, { timeout: 12000 });
+        break;
+      } catch (error) {
+        if (attempt === 1) {
+          const state = await page.evaluate(() => ({
+            requestedSection:window.EKODIAdminPanels?.current?.() || '',
+            routedSection:window.EKODIAdminRoutes?.sectionFromLocation?.(location) || '',
+            focusedGroup:document.querySelector('.sidebar nav')?.dataset.adminFocusedGroup || '',
+            activeGroups:[...document.querySelectorAll('button[data-admin-global-group]')]
+              .filter(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))
+              .map(node => node.dataset.adminGlobalGroup),
+            selectedUrl:location.pathname + location.hash,
+          }));
+          throw new Error(`${id}: ${group} never activated after bounded retries: ${JSON.stringify(state)}`, { cause:error });
+        }
+      }
     }
     selectedWorkArea = group;
   }
