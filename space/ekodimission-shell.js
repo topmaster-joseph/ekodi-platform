@@ -7,10 +7,11 @@
   const languageStatusUrl='/api/i18n/v1/status?service=mission';
   const languageCatalogUrl=locale=>`/api/i18n/v1/catalog?service=mission&locale=${encodeURIComponent(locale)}`;
   const contract=Object.freeze({
-    version:3,
+    version:4,
     release:'language-visibility-v1',
     links:Object.freeze([
       Object.freeze({href:'/ekodimission/activities',label:'활동'}),
+      Object.freeze({href:'/ekodimission/history',label:'연혁'}),
       Object.freeze({href:'/ekodimission/live',label:'라이브'}),
       Object.freeze({href:'/ekodimission/participate',label:'함께하기'}),
       Object.freeze({href:'/ekodimission/partners',label:'협력'}),
