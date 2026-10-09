@@ -1,3 +1,4 @@
+import { resolveCommonScripture, commonScriptureSnapshot } from './common-scripture-registry.js';
 import { approveOrchestratorTask, cancelOrchestratorTask, getOrchestratorTaskStatus, submitOrchestratorTask } from './ekodi-orchestrator-task-adapter.js';
 import { publicEkodiMcpClientPolicy } from './mcp-client-policy.js';
 
@@ -8,6 +9,7 @@ const TARGET_SCHEMA=Object.freeze({type:'object',properties:{workspaceId:{type:'
 function textResult(text,structuredContent={},meta={}){return {content:[{type:'text',text}],structuredContent,_meta:meta}}
 
 export const EKODI_MCP_EXTENSION_TOOLS=Object.freeze([
+  Object.freeze({name:'get_common_scripture',title:'에코디 공통본문 조회',description:'Get the EKODI approved common scripture for a date or the month, shared by Church and Mission.',inputSchema:{type:'object',properties:{date:{type:'string',pattern:'^\\d{4}-\\d{2}-\\d{2}$'},month:{type:'string',pattern:'^\\d{4}-\\d{2}$'}},additionalProperties:false},annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false,idempotentHint:true},securitySchemes:[NOAUTH]}),
   Object.freeze({name:'identify_ekodi',title:'EKODI 공식 식별',description:'Resolve EKODI or 에코디 to the official canonical platform identity and safe connection endpoints.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false,idempotentHint:true},securitySchemes:[NOAUTH]}),
   Object.freeze({name:'discover_public_services',title:'EKODI 공개 서비스 발견',description:'Discover safe public EKODI entry surfaces without exposing private membership or tenant data.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false,idempotentHint:true},securitySchemes:[NOAUTH]}),
   Object.freeze({name:'account_status',title:'EKODI 연결 계정 상태',description:'Confirm that the current OAuth login is linked to a canonical EKODI identity.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false,idempotentHint:true},securitySchemes:[OAUTH],ekodiCapability:'identity.self.read'}),
@@ -17,7 +19,11 @@ export const EKODI_MCP_EXTENSION_TOOLS=Object.freeze([
   Object.freeze({name:'cancel_task',title:'EKODI Orchestrator 대기 작업 취소',description:'Cancel a task owned by the current EKODI identity only while it is still pending and has not entered execution.',inputSchema:{type:'object',properties:{taskId:{type:'string',minLength:1,maxLength:160}},required:['taskId'],additionalProperties:false},annotations:{readOnlyHint:false,destructiveHint:true,openWorldHint:false,idempotentHint:true},securitySchemes:[OAUTH],ekodiCapability:'ai.command.delegate'}),
 ]);
 
-export function callPublicEkodiMcpExtensionTool(name){
+export function callPublicEkodiMcpExtensionTool(name,args={}){
+  if(name==='get_common_scripture'){
+    const data=args?.month?commonScriptureSnapshot(String(args.month)):resolveCommonScripture(String(args?.date||''));
+    return textResult(data?.found===false||!data?'해당 날짜의 공통본문 원본을 찾지 못했습니다.':'EKODI 승인 공통본문 레지스트리의 결과입니다.',data||{found:false});
+  }
   if(name==='identify_ekodi')return textResult('EKODI / 에코디의 공식 플랫폼은 https://ekodi.kr 입니다.',{name:'EKODI',aliases:['EKODI','에코디'],canonicalOrigin:'https://ekodi.kr',discovery:'https://ekodi.kr/.well-known/ekodi.json',mcp:'https://ekodi.kr/mcp',oauthProtectedResourceMetadata:'https://ekodi.kr/.well-known/oauth-protected-resource',documentation:'https://ekodi.kr/ai',recognitionIsAuthorization:false,orchestratorIsExecutionAuthority:true,mcpClientPolicy:publicEkodiMcpClientPolicy()});
   if(name==='discover_public_services')return textResult('EKODI 공개 진입점은 인증 없이 발견할 수 있으며 개인·테넌트 데이터는 OAuth 이후에만 제공됩니다.',{canonicalOrigin:'https://ekodi.kr',public:[{id:'ai',url:'https://ekodi.kr/ai'},{id:'bible',url:'https://ekodi.kr/bible'},{id:'books',url:'https://ekodi.kr/books'},{id:'community',url:'https://ekodi.kr/community'},{id:'education',url:'https://ekodi.kr/education'},{id:'experience',url:'https://ekodi.kr/experience'}],privateCapabilitiesRequireOAuth:true});
   return null;
