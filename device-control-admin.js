@@ -166,10 +166,26 @@
       'echo EKODI에 이 PC를 연결합니다.',
       'echo Windows 관리자 승인창이 나타나면 [예]를 누르세요.',
       'echo.',
+      'where powershell.exe >nul 2>&1',
+      'if errorlevel 1 (',
+      '  echo [EKB-210][powershell_missing] Windows PowerShell을 찾을 수 없습니다.',
+      '  echo Windows 관리자에게 PowerShell 설치 및 실행 정책을 확인하세요.',
+      '  pause',
+      '  exit /b 1',
+      ')',
+      'powershell.exe -NoProfile -NonInteractive -Command "exit 0" >nul 2>&1',
+      'if errorlevel 1 (',
+      '  echo [EKB-211][powershell_blocked] Windows 보안 또는 조직 정책이 PowerShell 시작을 거부했습니다.',
+      '  echo 앱 제어 및 Windows 보안 차단 기록을 확인하세요. 보안 설정을 해제하지 않습니다.',
+      '  pause',
+      '  exit /b 1',
+      ')',
       `powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand ${encoded}`,
       'if errorlevel 1 (',
       '  echo.',
-      '  echo PC 연결에 실패했습니다. 관리자 화면의 [연결 문제 해결]을 확인하세요.',
+      '  echo [EKB-212][enrollment] EKODI PC 연결 작업이 완료되지 않았습니다.',
+      '  echo 위쪽 EKA 단계 오류를 확인하고 다른 EKODI 설치 창을 닫은 뒤 다시 시도하세요.',
+      '  echo Windows 앱 제어 차단 기록을 확인하되 보안 기능을 해제하지 마세요.',
       '  pause',
       '  exit /b 1',
       ')',
@@ -667,7 +683,7 @@
             <div>
               <p class="kicker">ONE CLICK CONNECT</p>
               <h3>이 PC를 EKODI에 연결</h3>
-              <p>복잡한 코드는 입력하지 않습니다. 버튼을 누른 뒤 Windows 승인창이 뜨면 허용만 하세요.</p>
+              <p>처음 연결은 이 버튼만 사용합니다. 다운로드한 연결파일 하나만 실행하고, Windows 관리자 승인창이 뜨면 허용하세요.</p>
               <details class="device-advanced-install">
                 <summary>다른 기기 유형 · 이름 · 위치 지정</summary>
                 <div class="device-onboarding-fields">
@@ -681,11 +697,11 @@
           </section>
           <div class="device-enrollment-result" id="deviceEnrollmentResult" hidden>
             <div><strong>연결 준비가 됐습니다.</strong><span data-enrollment-expiry></span></div>
-            <p><b>다운로드된 “EKODI_PC_연결.cmd” 파일을 열고 Windows 승인창에서 “예”만 누르세요.</b> 등록·Agent 실행·heartbeat 확인까지 자동으로 진행됩니다.</p>
+            <p><b>다운로드된 “EKODI_PC_연결.cmd” 파일 하나만 실행하세요. 다른 EKODI 설치 창이 열려 있으면 먼저 완료하거나 닫고 Windows 승인창에서 “예”를 누르세요.</b> 등록·Agent 실행·heartbeat 확인까지 자동으로 진행됩니다.</p>
             <div class="device-pair-actions"><button type="button" class="primary" id="downloadDeviceEnrollment">연결파일 다시 받기</button></div>
             <details class="device-advanced-install">
               <summary>연결 문제 해결</summary>
-              <p>자동 연결이 안 될 때만 연결 프로그램을 한 번 설치합니다.</p>
+              <p>연결 프로그램을 동시에 여러 개 실행하지 마세요. 기존 설치를 모두 종료한 후, 원클릭 프로토콜이 필요한 경우에만 아래 보조 설치를 별도로 수행합니다. 접근 거부가 나타나면 Windows 보안/앱 제어 차단 기록과 EKB/EKA 단계를 확인하세요.</p>
               <div class="device-pair-actions"><a class="button secondary" href="${BOOTSTRAP_URL}" download="EKODI_Device_연결프로그램.cmd">연결 프로그램 설치</a></div>
               <small>1회용 등록 코드</small><strong data-enrollment-code></strong>
               <code data-install-command></code><button type="button" class="secondary" id="copyDeviceInstallCommand">설치 명령 복사</button>
