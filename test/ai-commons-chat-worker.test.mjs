@@ -38,3 +38,44 @@ test('paid GPT/Claude do not activate just because a key exists',async()=>{
     }
   }finally{globalThis.fetch=oldFetch}
 });
+
+test('authenticated member gets an actual response from a configured free Workers AI adapter',async()=>{
+  const calls=[];
+  const db={
+    prepare(statement){
+      return{bind(...args){
+        calls.push({statement,args});
+        return{
+          async all(){return{results:[]}},
+          async run(){return{meta:{changes:1}}},
+          async first(){return{call_count:1}},
+        };
+      }};
+    }
+  };
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async()=>new Response(JSON.stringify({id:'member-2',email:'member@example.test'}),{
+    status:200,headers:{'content-type':'application/json'},
+  });
+  const env={
+    DB:db,ENVIRONMENT:'development',
+    SUPABASE_URL:'https://auth.example.test',SUPABASE_PUBLISHABLE_KEY:'test-publishable',
+    EKODI_PROVIDER_WORKERS_AI_ENABLED:'true',
+    AI:{async run(_model,options){
+      assert.ok(Array.isArray(options.messages));
+      return{response:'무료 AI의 실제 어댑터 응답',usage:{prompt_tokens:12,completion_tokens:6}};
+    }},
+  };
+  try{
+    const response=await worker.fetch(request('/api/commons/chat','POST',{
+      mode:'auto',messages:[{role:'user',content:'안녕하세요'}],
+    },'member-test-token'),env,null);
+    assert.equal(response.status,200);
+    const data=await response.json();
+    assert.equal(data.ok,true);
+    assert.equal(data.provider,'cloudflare-workers-ai');
+    assert.equal(data.reply,'무료 AI의 실제 어댑터 응답');
+    assert.ok(calls.some(v=>v.statement.includes('ai_commons_chat_usage')));
+    assert.ok(calls.some(v=>v.statement.includes('ai_provider_daily_budget')));
+  }finally{globalThis.fetch=originalFetch}
+});
