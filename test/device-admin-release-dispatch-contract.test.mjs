@@ -41,3 +41,16 @@ test('only guarded shared-site core owns device admin asset production', async (
   }
   assert.match(workflow, /DEVICE-UI-RELEASE/);
 });
+
+test('admin menu ownership changes always dispatch guarded shared-site release', async () => {
+  const script = await read('scripts/converge-orchestrated-pr-merge.mjs');
+  const workflow = await read('.github/workflows/deploy-site-core.yml');
+  const segment = script.slice(script.indexOf('const sharedSiteTouched='), script.indexOf('async function dispatchPostMergeDeploys()'));
+  const assets = ['admin-menu-registry.js','admin-sidebar.js','admin-canonical-routes.js','admin-menu-layout.js','admin-menu-runtime.js','admin-design-engine.js','config/design-engine.json','config/admin-role-navigation.json'];
+  for (const asset of assets) {
+    assert.ok(segment.includes("'" + asset + "'"), 'missing orchestrator site-core ownership for ' + asset);
+    if (['admin-menu-registry.js','admin-sidebar.js','admin-menu-layout.js','admin-menu-runtime.js','admin-design-engine.js','config/design-engine.json'].includes(asset))
+      assert.ok(workflow.includes("'" + asset + "'"), 'missing GitHub push fallback ownership for ' + asset);
+  }
+  assert.match(script, /release_branch_ref:branch,release_task_id:taskId/);
+});
