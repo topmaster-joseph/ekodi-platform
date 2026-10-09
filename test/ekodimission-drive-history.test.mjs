@@ -19,7 +19,10 @@ test('EKODI Mission archive restores documented activity years and does not publ
   assert.ok(activities.includes("2022 서울 공동체 여행"));
   assert.ok(!activities.includes('datetime="2018-08-13"'),"Conflicting founding day must not be asserted");
   assert.match(activities,/data-year="2018" data-month=""[\s\S]*?<time datetime="2018">/,"Unknown founding month must not be indexed as August");
-  assert.ok(home.includes('RECENT ACTIVITY · 2026'));
+  assert.ok(!home.includes('RECENT ACTIVITY · 2026'));
+  assert.ok(home.includes('진행·예정 행사'));
+  assert.ok(home.includes('data-mission-home-event'));
+  assert.equal([...home.matchAll(/<section\b/g)].length,2,'The home should show only introduction and current events');
   assert.ok(!activities.includes('mission-status upcoming'));
   assert.ok(!stories.includes('첫 활동은 2026년 9월 26일 진행 예정'));
   assert.ok(home.includes('/ekodimission/activities'));

@@ -73,7 +73,7 @@
         "url": "https://ekodi.kr/ekodimission",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["EKODI MISSION","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js", "OUR JOURNEY · SINCE 2018", "말씀대로 살아내고 살려낸 발자취","/ekodimission/activities/261010-naju-yeongsan"],
+        "expect": ["EKODI MISSION","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js", "CURRENT ACTIVITIES", "진행·예정 행사", "data-mission-home-event","/ekodimission/activities/261010-naju-yeongsan"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
