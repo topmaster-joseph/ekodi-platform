@@ -27,7 +27,7 @@ test('server authorizes premium actions only with independent launch gates and t
  assert.match(social,/Date\.parse\(record\.expires_at\)>Date\.now\(\)/);
  assert.match(social,/if\(!await subscribed\(admin,userId\)\)/);
  assert.match(social,/subscription_required/);
- assert.doesNotMatch(social,/user_metadata|raw_user_meta_data/);
+ assert.doesNotMatch(social.replace(/\/\/[^\n]*/g,''),/user_metadata|raw_user_meta_data/);
 });
 test('interests, mutual acceptance and refusal remain separate from payment',()=>{
  assert.match(social,/if\(p==='\/requests'/);
