@@ -10,6 +10,18 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# Windows PowerShell 5.1 does not consistently auto-load System.Net.Http.
+# The native browser worker uses HttpClient, and must work without pwsh or a paid remote runtime.
+try {
+  Add-Type -AssemblyName System.Net.Http -ErrorAction Stop
+  $null = [Net.Http.HttpClientHandler]
+} catch {
+  throw '[EKODI:EKA-297][http] Native HTTP runtime is unavailable: ' + $_.Exception.GetType().Name
+}
+# Some restricted remote/service shells omit ProgramData from their environment.
+$CommonDataRoot = [Environment]::GetFolderPath('CommonApplicationData')
+if (-not $CommonDataRoot) { $CommonDataRoot = [Environment]::GetEnvironmentVariable('ProgramData', 'Machine') }
+if (-not $CommonDataRoot) { throw '[EKODI:EKA-298][path] Windows common application data directory is unavailable.' }
 # Windows PowerShell 5.1 may not load the DPAPI assembly automatically.
 try {
   Add-Type -AssemblyName System.Security -ErrorAction Stop
@@ -20,7 +32,7 @@ try {
 }
 
 $AgentVersion = '2.5.2'
-$Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
+$Root = Join-Path $CommonDataRoot 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
 $PowerBackupPath = Join-Path $Root 'power-before-ekodi.pow'
@@ -35,14 +47,14 @@ $AllowedApiBase = 'https://ekodi.kr'
 $UpgradeRoot = Join-Path $Root 'transactions'
 $script:RestartAfterCommand = $false
 $BrowserCanaryStatePath = Join-Path $Root 'background-browser-canary.json'
-$BrowserCanaryProfileRoot = Join-Path $env:ProgramData 'EKODI\BrowserWorker\CanaryProfile'
-$BrowserWorkerProfileRoot = Join-Path $env:ProgramData 'EKODI\BrowserWorker\Tasks'
+$BrowserCanaryProfileRoot = Join-Path $CommonDataRoot 'EKODI\BrowserWorker\CanaryProfile'
+$BrowserWorkerProfileRoot = Join-Path $CommonDataRoot 'EKODI\BrowserWorker\Tasks'
 $BrowserCanaryUrl = 'https://ekodi.kr/'
 $IsolatedDesktopCanaryStatePath = Join-Path $Root 'isolated-desktop-canary.json'
 $IsolatedDesktopGuestCanaryStatePath = Join-Path $Root 'isolated-desktop-guest-canary.json'
 $IsolatedDesktopUiCanaryStatePath = Join-Path $Root 'isolated-desktop-ui-canary.json'
 $IsolatedDesktopSessionCanaryStatePath = Join-Path $Root 'isolated-desktop-session-canary.json'
-$IsolatedDesktopSessionRoot = Join-Path $env:ProgramData 'EKODI\IsolatedDesktop\Sessions'
+$IsolatedDesktopSessionRoot = Join-Path $CommonDataRoot 'EKODI\IsolatedDesktop\Sessions'
 $ImagePrintPreviewClsid = '{60fd46de-f830-4894-a628-6fa81bc0190d}'
 $ImagePrintPreviewUserKey = 'HKCU:\Software\Classes\SystemFileAssociations\image\shell\print'
 $ImagePrintPreviewEffectiveKey = 'Registry::HKEY_CLASSES_ROOT\SystemFileAssociations\image\shell\print'
@@ -2610,7 +2622,7 @@ function Complete-Command($Config, [string]$CommandId, [bool]$Success, $Result) 
 
 function Poll-Command($Config) {
   $response = Invoke-RestMethod -Method Get -Uri "$($Config.apiBase)/api/device-agent/commands/next" -Headers (Get-AgentHeaders $Config)
-  if (-not $response.command) { return }
+  if (-not $response.command) { return $false }
   try {
     $result = Invoke-DeviceCommand $response.command
     Complete-Command $Config ([string]$response.command.id) $true $result
@@ -2620,6 +2632,7 @@ function Poll-Command($Config) {
   } catch {
     Complete-Command $Config ([string]$response.command.id) $false @{ message = $_.Exception.Message }
   }
+  return $true
 }
 
 function Stop-ExistingAgentProcesses {
@@ -2762,23 +2775,65 @@ function Handle-ProtocolUrl([string]$Url) {
   Install-Agent
 }
 
+function Write-AgentRuntimeStatus([string]$State, [string]$Reason, [int]$Failures, [int]$RetrySeconds) {
+  # Only bounded state codes are stored: never persist tokens, request bodies or error strings.
+  try {
+    $record = @{
+      schemaVersion = 1
+      agentVersion = $AgentVersion
+      state = $State
+      reason = $Reason
+      consecutiveFailures = $Failures
+      retrySeconds = $RetrySeconds
+      updatedAt = (Get-Date).ToUniversalTime().ToString('o')
+    }
+    $record | ConvertTo-Json -Compress | Set-Content -LiteralPath (Join-Path $Root 'runtime-status.json') -Encoding UTF8 -ErrorAction Stop
+  } catch {
+    # Local status writes must never interrupt cloud polling.
+  }
+}
+function Get-AgentRetryCode($Failure) {
+  try {
+    $response = $Failure.Exception.Response
+    if ($response) {
+      $code = [int]$response.StatusCode
+      if ($code -eq 401 -or $code -eq 403) { return 'AUTH_REQUIRED' }
+      if ($code -eq 429) { return 'RATE_LIMITED' }
+      if ($code -ge 500) { return 'CLOUD_RETRY' }
+    }
+  } catch {}
+  return 'TRANSPORT_RETRY'
+}
+
 function Run-Agent {
   $mutex = [Threading.Mutex]::new($false, 'Global\EKODI_Device_Agent_V2')
   if (-not $mutex.WaitOne(0, $false)) { return }
   try {
     $config = Load-Config
     $lastHeartbeat = [datetime]::MinValue
+    $failures = 0
     while ($true) {
+      $sleepSeconds = 20 + (Get-Random -Minimum 0 -Maximum 5)
       try {
-        if (((Get-Date) - $lastHeartbeat).TotalSeconds -ge 60) { Send-Heartbeat $config; $lastHeartbeat = Get-Date }
+        if (((Get-Date) - $lastHeartbeat).TotalSeconds -ge 60) {
+          Send-Heartbeat $config
+          $lastHeartbeat = Get-Date
+          Write-AgentRuntimeStatus 'connected' 'OK' 0 $sleepSeconds
+        }
+        $hasCommand = $false
         Reconcile-DesktopCommanderRecovery
         Reconcile-ImagePrintPreviewPolicy
-        Poll-Command $config
+        Poll-Command $config | ForEach-Object { $hasCommand = [bool]$_ }
+        if ($hasCommand) { $sleepSeconds = 3 }
+        $failures = 0
         if ($script:RestartAfterCommand) { break }
       } catch {
-        # 네트워크 중단은 다음 주기에 자동 복구합니다. 임의 명령 실행으로 우회하지 않습니다.
+        # Backoff preserves the free cloud request budget and prevents 401 / 429 retry storms.
+        $failures = [Math]::Min(8, $failures + 1)
+        $sleepSeconds = [int][Math]::Min(300, 15 * [Math]::Pow(2, [Math]::Min(5, $failures - 1)))
+        Write-AgentRuntimeStatus 'retrying' (Get-AgentRetryCode $_) $failures $sleepSeconds
       }
-      Start-Sleep -Seconds 10
+      Start-Sleep -Seconds $sleepSeconds
     }
   } finally {
     $restart = [bool]$script:RestartAfterCommand

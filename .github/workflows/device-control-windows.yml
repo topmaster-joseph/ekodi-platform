@@ -111,6 +111,11 @@ jobs:
             }
             Write-Host "PowerShell parse OK: $path"
           }
+      - name: Verify self-hosted Windows PowerShell 5.1 runtime and bounded polling
+        shell: pwsh
+        run: |
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/ekodi-device-agent/windows/native-runtime.test.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Native device runtime compatibility test failed.' }
       - name: Verify remote execution and privacy boundary
         shell: pwsh
         run: |
