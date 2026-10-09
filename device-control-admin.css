@@ -139,3 +139,61 @@ body.admin-compact .device-setup-tools>summary span{font-size:11px!important}
   body.admin-compact .device-status-tools>.device-type-filters,
   body.admin-compact .device-status-tools>.ekodi-device-list{margin:10px}
 }
+
+
+/* EKODI roster v4: one legible row per hostname group; every enrollment stays addressable. */
+.ekodi-device-panel{width:100%;min-width:0;max-width:100%}
+.device-roster-toolbar{display:grid;grid-template-columns:minmax(220px,1fr) minmax(170px,220px) auto;gap:12px;align-items:end}
+.device-roster-toolbar label{display:grid;gap:5px;min-width:0;font-size:12px;font-weight:650}
+.device-roster-toolbar input[type=search],.device-roster-toolbar select{min-height:40px;width:100%;min-width:0;border:1px solid #ced8e2;border-radius:9px;padding:0 11px;background:#fff;color:#172033;font:inherit}
+.device-roster-retired-label{display:flex!important;align-items:center;gap:8px;padding:0 0 10px;white-space:nowrap}
+.device-roster-retired-label input{width:17px;height:17px;accent-color:#235d86}
+.device-roster-overview{font-size:12px;line-height:1.5;color:#56667a;margin:0}
+.ekodi-device-list{display:grid;grid-template-columns:minmax(0,1fr);gap:7px}
+.device-roster-group{min-width:0;background:#fff;border:1px solid #d7dfe8;border-radius:10px;overflow:hidden}
+.device-roster-group[data-status=online]{border-left:3px solid #207b57}
+.device-roster-group[data-status=stale],.device-roster-group[data-status=offline]{border-left:3px solid #a46a25}
+.device-roster-group.is-focused{outline:2px solid #6a97bb;outline-offset:2px}
+.device-roster-summary{list-style:none;display:grid;grid-template-columns:minmax(185px,2fr) minmax(70px,.55fr) minmax(165px,1fr) minmax(105px,.9fr);gap:12px;align-items:center;padding:11px 14px;cursor:pointer}
+.device-roster-summary::-webkit-details-marker{display:none}
+.device-roster-summary:focus-visible,.device-roster-record>summary:focus-visible{outline:2px solid #2563a4;outline-offset:-3px}
+.device-roster-name{display:grid;gap:3px;min-width:0}
+.device-roster-name strong{font-size:14px;color:#172033;line-height:1.3;overflow-wrap:anywhere}
+.device-roster-name small{font-size:11px;color:#64748b;line-height:1.4;overflow-wrap:anywhere}
+.device-roster-state{font-size:12px;font-weight:700;color:#26384e}
+.device-roster-seen,.device-roster-count{font-size:11px;line-height:1.45;color:#5c6e7e;overflow-wrap:anywhere}
+.device-roster-count{justify-self:end;text-align:right}
+.device-roster-count::after{content:'  ▾';font-size:12px}
+.device-roster-group[open]>.device-roster-summary .device-roster-count::after{content:'  ▴'}
+.device-roster-body{display:grid;gap:8px;border-top:1px solid #e5eaf0;padding:10px 12px 12px;background:#fbfcfe}
+.device-roster-hint{font-size:12px;line-height:1.5;color:#4c6173;margin:0;padding:9px 11px;border:1px solid #dfe5ee;background:#fff;border-radius:8px}
+.device-roster-record{min-width:0;border:1px solid #dce3eb;background:#fff;border-radius:8px;overflow:hidden}
+.device-roster-record>summary{font-size:12px;line-height:1.5;color:#34485c;font-weight:650;cursor:pointer;padding:10px 12px;overflow-wrap:anywhere}
+.device-roster-record[open]>summary{border-bottom:1px solid #e5eaf0}
+.device-roster-record-body{padding:8px}
+.device-roster-record-body>.ekodi-device-card{border:0!important;box-shadow:none!important;padding:10px!important;border-radius:6px!important}
+body.admin-compact .device-status-tools>.device-roster-toolbar{margin:12px 14px 0}
+body.admin-compact .device-status-tools>.device-roster-overview{margin:8px 14px}
+body.admin-compact .ekodi-device-list{grid-template-columns:minmax(0,1fr)!important;gap:7px!important}
+body.admin-compact .device-roster-group{background:#fff!important;color:#172033!important;border-color:#d7dfe8!important}
+body.admin-compact .device-roster-record{background:#fff!important}
+body.admin-compact .device-status-tools>summary{border-bottom:1px solid #e5eaf0}
+@media(max-width:980px){
+  .device-roster-toolbar{grid-template-columns:minmax(0,1fr) minmax(150px,200px)}
+  .device-roster-retired-label{grid-column:1/-1;padding:0}
+  .device-roster-summary{grid-template-columns:minmax(0,1fr) 105px;gap:5px 10px}
+  .device-roster-name{grid-row:span 2}
+  .device-roster-state{justify-self:end}
+  .device-roster-seen{grid-column:2;justify-self:end;text-align:right}
+  .device-roster-count{grid-column:1/-1;justify-self:start;text-align:left}
+}
+@media(max-width:620px){
+  .device-roster-toolbar{grid-template-columns:1fr}
+  .device-roster-retired-label{grid-column:auto}
+  .device-roster-summary{padding:10px;grid-template-columns:minmax(0,1fr) auto}
+  .device-roster-name strong{font-size:14px}
+  .device-roster-seen{font-size:10px}
+  .device-roster-body{padding:8px}
+  body.admin-compact .device-status-tools>.device-roster-toolbar{margin:10px 10px 0}
+  body.admin-compact .device-status-tools>.device-roster-overview{margin:8px 10px}
+}

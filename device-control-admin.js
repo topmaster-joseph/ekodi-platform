@@ -50,6 +50,13 @@
   let deviceCatalog = Object.values(TYPE_FALLBACK);
   let currentDevices = [];
   let activeType = 'all';
+  let rosterStatus = 'all';
+  let rosterSearch = '';
+  let showRetiredGroups = false;
+  const openRosterGroups = new Set();
+  const openRosterRecords = new Set();
+  const closedRosterRecords = new Set();
+  const openRosterAdvanced = new Set();
 
   function authHeaders(json = false) {
     const token = sessionStorage.getItem(TOKEN_KEY) || '';
@@ -476,6 +483,11 @@
     );
 
     const advanced = document.createElement('details'); advanced.className = 'device-details device-advanced-control';
+    advanced.open = openRosterAdvanced.has(device.id);
+    advanced.addEventListener('toggle', () => {
+      if (!advanced.isConnected) return;
+      if (advanced.open) openRosterAdvanced.add(device.id); else openRosterAdvanced.delete(device.id);
+    });
     advanced.innerHTML = '<summary>세부 관리 · 고급 작업</summary>';
     const advancedBody = document.createElement('div'); advancedBody.className = 'device-advanced-control-body';
 
@@ -549,38 +561,174 @@
     catch (error) { alert(error.message); } finally { submit.disabled = false; }
   }
 
+  // Presentation-only grouping: identical hostnames are NOT proof of shared hardware identity.
+  // Every original record and its deviceId remain reachable; no server mutation or token merger.
+  function rosterGroupKey(device) {
+    const id = String(device?.id || '').trim();
+    const type = String(device?.management?.type || 'pc').trim().toLowerCase();
+    const host = String(device?.hostname || '').trim().toLowerCase();
+    const platform = String(device?.platform || '').trim().toLowerCase();
+    if (platform !== 'windows' || !host || ['unknown', 'localhost', 'windows', 'pc', 'n/a', '-'].includes(host)) {
+      return 'id:' + id;
+    }
+    return 'host:windows:' + type + ':' + host;
+  }
+
+  function rosterRecordRank(device) {
+    return ({ online:0, stale:1, enrolled:2, offline:3, inventory:4, revoked:5 })[device.status] ?? 4;
+  }
+
+  function compareRosterRecords(a, b) {
+    const rank = rosterRecordRank(a) - rosterRecordRank(b);
+    if (rank) return rank;
+    const seen = (Date.parse(b.lastSeenAt || b.enrolledAt || '') || 0) - (Date.parse(a.lastSeenAt || a.enrolledAt || '') || 0);
+    if (seen) return seen;
+    return String(a.id || '').localeCompare(String(b.id || ''));
+  }
+
+  function groupRosterDevices(devices) {
+    const groups = new Map();
+    const seenIds = new Set();
+    for (const device of (Array.isArray(devices) ? devices : [])) {
+      const id = String(device?.id || '').trim();
+      if (!id || seenIds.has(id)) continue;
+      seenIds.add(id);
+      const key = rosterGroupKey(device);
+      if (!groups.has(key)) groups.set(key, { key, records:[] });
+      groups.get(key).records.push(device);
+    }
+    return Array.from(groups.values()).map(group => {
+      group.records.sort(compareRosterRecords);
+      const active = group.records.filter(device => device.status !== 'revoked');
+      group.retired = active.length === 0;
+      group.primary = active[0] || group.records[0];
+      group.activeCount = active.length;
+      return group;
+    }).sort((a, b) => compareRosterRecords(a.primary, b.primary) || a.key.localeCompare(b.key, 'ko'));
+  }
+
+  function hasRosterHealthScore(device) {
+    const score = device.health?.score;
+    return score !== null && score !== undefined && score !== '' && Number.isFinite(Number(score));
+  }
+
+  function rosterNeedsAttention(device) {
+    return ['stale', 'offline'].includes(device.status)
+      || (device.status === 'online' && hasRosterHealthScore(device) && Number(device.health.score) < 75);
+  }
+
+  function createRosterGroup(group) {
+    const primary = group.primary;
+    const type = typeInfo(primary);
+    const wrapper = document.createElement('details');
+    wrapper.className = 'device-roster-group';
+    wrapper.dataset.rosterKey = group.key;
+    wrapper.dataset.status = primary.status;
+    wrapper.open = openRosterGroups.has(group.key);
+    const heading = document.createElement('summary');
+    heading.className = 'device-roster-summary';
+    const name = document.createElement('span'); name.className = 'device-roster-name';
+    const title = document.createElement('strong'); title.textContent = primary.label || primary.hostname || type.label;
+    const host = document.createElement('small');
+    host.textContent = [type.label, primary.hostname && primary.hostname !== primary.label ? primary.hostname : '', primary.management?.locationLabel || ''].filter(Boolean).join(' · ');
+    name.append(title, host);
+    const status = document.createElement('span'); status.className = 'device-roster-state'; status.textContent = statusLabel(primary.status);
+    const seen = document.createElement('time'); seen.className = 'device-roster-seen';
+    seen.textContent = primary.status === 'inventory' ? '관찰 등록' : '최근 연결 ' + timeLabel(primary.lastSeenAt);
+    if (primary.lastSeenAt) seen.dateTime = primary.lastSeenAt;
+    const registrations = document.createElement('span'); registrations.className = 'device-roster-count';
+    registrations.textContent = group.records.length > 1 ? '동일 이름 기록 ' + group.records.length + '건' : '등록 1건';
+    heading.append(name, status, seen, registrations);
+    const body = document.createElement('div'); body.className = 'device-roster-body';
+
+    function populateBody() {
+      if (body.childNodes.length) return;
+      if (group.records.length > 1) {
+        const hint = document.createElement('p'); hint.className = 'device-roster-hint';
+        hint.textContent = '컴퓨터명이 같은 등록 기록을 한곳에 모았습니다. 실제 같은 PC인지 확인 전까지 기기 ID·권한은 각각 유지하며 자동 삭제하지 않습니다.';
+        body.append(hint);
+      }
+      for (const [index, device] of group.records.entries()) {
+        const row = document.createElement('details'); row.className = 'device-roster-record';
+        row.dataset.deviceId = device.id;
+        row.open = openRosterRecords.has(device.id) || (index === 0 && !closedRosterRecords.has(device.id));
+        const recordSummary = document.createElement('summary');
+        const date = device.lastSeenAt || device.enrolledAt;
+        const statusText = statusLabel(device.status);
+        recordSummary.textContent = [device.label || device.hostname || typeInfo(device).label, statusText, 'ID …' + String(device.id).slice(-8), date ? timeLabel(date) : '연결 정보 없음'].join(' · ');
+        const recordBody = document.createElement('div'); recordBody.className = 'device-roster-record-body';
+        function populateRecord() { if (!recordBody.childNodes.length) recordBody.append(deviceCard(device)); }
+        if (row.open) populateRecord();
+        row.addEventListener('toggle', () => {
+          if (!row.isConnected) return;
+          if (row.open) {
+            openRosterRecords.add(device.id); closedRosterRecords.delete(device.id);
+            populateRecord();
+          } else {
+            openRosterRecords.delete(device.id); closedRosterRecords.add(device.id);
+            recordBody.replaceChildren();
+          }
+        });
+        row.append(recordSummary, recordBody);
+        body.append(row);
+      }
+    }
+    if (wrapper.open) populateBody();
+    wrapper.addEventListener('toggle', () => {
+      if (!wrapper.isConnected) return;
+      if (wrapper.open) { openRosterGroups.add(group.key); populateBody(); }
+      else { openRosterGroups.delete(group.key); body.replaceChildren(); }
+    });
+    wrapper.append(heading, body);
+    return wrapper;
+  }
+
   function renderTypeFilters(devices) {
     const host = document.querySelector('#deviceTypeFilters');
     if (!host) return;
-    const counts = devices.reduce((map, device) => { const type = device.management?.type || 'pc'; map[type] = (map[type] || 0) + 1; return map; }, {});
-    const buttons = [{id:'all',label:'전체',icon:'◉'}, ...deviceCatalog].map(item => {
-      const count = item.id === 'all' ? devices.length : (counts[item.id] || 0);
-      return `<button type="button" class="device-type-filter${activeType === item.id ? ' active' : ''}" data-type-filter="${escapeHtml(item.id)}"><span>${escapeHtml(item.icon || '○')}</span><strong>${escapeHtml(item.label)}</strong><small>${count}</small></button>`;
+    const groups = groupRosterDevices(devices).filter(group => showRetiredGroups || !group.retired);
+    const counts = groups.reduce((map, group) => {
+      const type = group.primary.management?.type || 'pc';
+      map[type] = (map[type] || 0) + 1;
+      return map;
+    }, {});
+    host.innerHTML = [{id:'all',label:'전체',icon:'◉'}, ...deviceCatalog].map(item => {
+      const count = item.id === 'all' ? groups.length : (counts[item.id] || 0);
+      return `<button type="button" class="device-type-filter${activeType === item.id ? ' active' : ''}" data-type-filter="${escapeHtml(item.id)}" aria-pressed="${activeType === item.id}"><span>${escapeHtml(item.icon || '○')}</span><strong>${escapeHtml(item.label)}</strong><small>${count}</small></button>`;
     }).join('');
-    host.innerHTML = buttons;
-    host.querySelectorAll('[data-type-filter]').forEach(button => button.addEventListener('click', () => { activeType = button.dataset.typeFilter || 'all'; renderTypeFilters(currentDevices); renderDevices(currentDevices); }));
+    host.querySelectorAll('[data-type-filter]').forEach(button => button.addEventListener('click', () => {
+      activeType = button.dataset.typeFilter || 'all';
+      renderDevices(currentDevices);
+    }));
   }
 
-  function renderAttentionSummary(devices) {
+  function renderAttentionSummary(groups) {
     const host = document.querySelector('#deviceAttentionSummary');
     if (!host) return;
-    const issues = devices.filter(device => ['stale','offline'].includes(device.status) || (Number.isFinite(Number(device.health?.score)) && Number(device.health.score) < 75));
+    const issues = groups.filter(group => rosterNeedsAttention(group.primary));
     host.dataset.state = issues.length ? 'attention' : 'good';
-    if (!devices.length) {
-      host.innerHTML = '<div><strong>연결된 기기가 없습니다.</strong><span>아래 “기기 연결 · 자동 작업 설정”에서 첫 기기를 연결할 수 있습니다.</span></div>';
+    if (!groups.length) {
+      host.innerHTML = '<div><strong>관리 중인 기기가 없습니다.</strong><span>“이 PC 연결”로 기기를 등록하세요. 해제된 기록은 별도로 확인할 수 있습니다.</span></div>';
       return;
     }
     if (!issues.length) {
-      host.innerHTML = '<div><strong>현재 확인이 필요한 기기가 없습니다.</strong><span>온라인 상태와 건강점수가 정상 범위입니다.</span></div>';
+      host.innerHTML = '<div><strong>현재 확인이 필요한 기기가 없습니다.</strong><span>기기별 최근 연결과 상태는 아래 목록에서 확인하세요.</span></div>';
       return;
     }
-    const visible = issues.slice(0, 4).map(device => {
-      const score = Number.isFinite(Number(device.health?.score)) ? ` · 건강 ${Math.round(Number(device.health.score))}점` : '';
-      return `<button type="button" data-device-focus="${escapeHtml(device.id)}"><strong>${escapeHtml(device.label || device.hostname || typeInfo(device).label)}</strong><span>${escapeHtml(statusLabel(device.status))}${escapeHtml(score)}</span></button>`;
+    const visible = issues.slice(0, 4).map(group => {
+      const device = group.primary;
+      const score = device.status === 'online' && hasRosterHealthScore(device) ? ' · 건강 ' + Math.round(Number(device.health.score)) + '점' : '';
+      return `<button type="button" data-roster-focus="${escapeHtml(group.key)}"><strong>${escapeHtml(device.label || device.hostname || typeInfo(device).label)}</strong><span>${escapeHtml(statusLabel(device.status))}${escapeHtml(score)}</span></button>`;
     }).join('');
-    host.innerHTML = `<div><strong>확인 필요 ${issues.length}대</strong><span>오프라인·응답 지연·건강점수 75점 미만 기기를 우선 표시합니다.</span></div><div class="device-attention-items">${visible}</div>`;
-    host.querySelectorAll('[data-device-focus]').forEach(button => button.addEventListener('click', () => {
-      const target = document.querySelector(`[data-device-id="${CSS.escape(button.dataset.deviceFocus || '')}"]`);
+    host.innerHTML = `<div><strong>확인 필요 ${issues.length}개 그룹</strong><span>응답 지연·오프라인·건강점수 75점 미만 기기를 우선 표시합니다.</span></div><div class="device-attention-items">${visible}</div>`;
+    host.querySelectorAll('[data-roster-focus]').forEach(button => button.addEventListener('click', () => {
+      const key = button.dataset.rosterFocus || '';
+      activeType = 'all'; rosterStatus = 'all'; rosterSearch = '';
+      const search = document.querySelector('#deviceRosterSearch'); if (search) search.value = '';
+      const select = document.querySelector('#deviceRosterStatus'); if (select) select.value = 'all';
+      openRosterGroups.add(key);
+      renderDevices(currentDevices);
+      const target = Array.from(document.querySelectorAll('[data-roster-key]')).find(element => element.dataset.rosterKey === key);
       target?.scrollIntoView({ behavior:'smooth', block:'center' });
       target?.classList.add('is-focused');
       window.setTimeout(() => target?.classList.remove('is-focused'), 1600);
@@ -588,25 +736,52 @@
   }
 
   function renderDevices(devices) {
-    currentDevices = devices;
+    currentDevices = Array.isArray(devices) ? devices : [];
     const list = document.querySelector('#ekodiDeviceList');
-    const total = document.querySelector('#deviceMetricTotal'), online = document.querySelector('#deviceMetricOnline'), issues = document.querySelector('#deviceMetricIssues'), avgHealth = document.querySelector('#deviceMetricHealth');
     if (!list) return;
-    const scored = devices.filter(device => device.status === 'online' && Number.isFinite(Number(device.health?.score)));
-    total.textContent = String(devices.length);
-    online.textContent = String(devices.filter(device => device.status === 'online').length);
-    const issueCount = devices.filter(device => ['stale','offline'].includes(device.status) || (Number.isFinite(Number(device.health?.score)) && Number(device.health.score) < 75)).length;
-    const onlineCount = devices.filter(device => device.status === 'online').length;
-    issues.textContent = String(issueCount);
-    avgHealth.textContent = scored.length ? String(Math.round(scored.reduce((sum, device) => sum + Number(device.health.score), 0) / scored.length)) : '—';
+    const grouped = groupRosterDevices(currentDevices);
+    const current = grouped.filter(group => !group.retired);
+    const counted = showRetiredGroups ? grouped : current;
+    const onlineGroups = current.filter(group => group.primary.status === 'online');
+    const attentionGroups = current.filter(group => rosterNeedsAttention(group.primary));
+    const scored = onlineGroups.filter(group => hasRosterHealthScore(group.primary));
+    const total = document.querySelector('#deviceMetricTotal');
+    const online = document.querySelector('#deviceMetricOnline');
+    const issues = document.querySelector('#deviceMetricIssues');
+    const avgHealth = document.querySelector('#deviceMetricHealth');
+    if (total) total.textContent = String(current.length);
+    if (online) online.textContent = String(onlineGroups.length);
+    if (issues) issues.textContent = String(attentionGroups.length);
+    if (avgHealth) avgHealth.textContent = scored.length
+      ? String(Math.round(scored.reduce((sum, group) => sum + Number(group.primary.health.score), 0) / scored.length)) : '—';
+    const duplicates = grouped.filter(group => group.records.length > 1).length;
+    const registrations = grouped.reduce((sum, group) => sum + group.records.length, 0);
     const statusSummary = document.querySelector('#deviceStatusSummary');
-    if (statusSummary) statusSummary.textContent = !devices.length ? '연결된 기기 없음' : issueCount ? `등록 ${devices.length} · 확인 필요 ${issueCount}` : `등록 ${devices.length} · 온라인 ${onlineCount} · 정상`;
-    renderAttentionSummary(devices);
-    renderTypeFilters(devices);
-    const visible = activeType === 'all' ? devices : devices.filter(device => (device.management?.type || 'pc') === activeType);
-    list.textContent = '';
-    if (!visible.length) { list.innerHTML = `<div class="device-empty"><strong>${devices.length ? '이 유형에 등록된 기기가 없습니다.' : '아직 등록된 기기가 없습니다.'}</strong><p>Windows Agent 기기는 연결하고, 센서·로봇 등은 관찰 인벤토리로 먼저 등록할 수 있습니다.</p></div>`; return; }
-    visible.forEach(device => list.append(deviceCard(device)));
+    if (statusSummary) statusSummary.textContent = `관리 목록 ${current.length}개 · 등록기록 ${registrations}건${duplicates ? ' · 같은 이름 그룹 ' + duplicates : ''}`;
+    renderAttentionSummary(current);
+    renderTypeFilters(currentDevices);
+    const query = rosterSearch.trim().toLocaleLowerCase();
+    const visible = counted.filter(group => {
+      const device = group.primary;
+      if (activeType !== 'all' && (device.management?.type || 'pc') !== activeType) return false;
+      if (rosterStatus === 'online' && device.status !== 'online') return false;
+      if (rosterStatus === 'attention' && !rosterNeedsAttention(device)) return false;
+      if (rosterStatus === 'offline' && !['stale', 'offline', 'enrolled'].includes(device.status)) return false;
+      if (!query) return true;
+      return group.records.some(item => [item.label, item.hostname, item.management?.locationLabel, item.osVersion, item.id]
+        .some(value => String(value || '').toLocaleLowerCase().includes(query)));
+    });
+    const overview = document.querySelector('#deviceRosterOverview');
+    if (overview) overview.textContent = `표시 ${visible.length}개 / ${counted.length}개 · 원본 등록기록 ${registrations}건${duplicates ? ' · 같은 이름 ' + duplicates + '개 그룹' : ''}`;
+    // Avoid discarding inputs while an operator is changing a per-device management field.
+    if (list.contains(document.activeElement) && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+    list.replaceChildren();
+    if (!visible.length) {
+      const empty = document.createElement('div'); empty.className = 'device-empty';
+      empty.innerHTML = '<strong>조건에 맞는 등록 기기가 없습니다.</strong><p>검색·상태·유형 필터를 바꾸거나 해제된 기록 표시를 확인하세요.</p>';
+      list.append(empty); return;
+    }
+    visible.forEach(group => list.append(createRosterGroup(group)));
   }
 
   async function loadDevices() {
@@ -663,16 +838,22 @@
         <div><p class="kicker">REMOTE WORK & DEVICE MANAGEMENT · LOCAL COMPUTERS · DEVICES</p><h2>로컬컴퓨터·기기</h2><p>현재 연결 상태와 이용현황을 먼저 보고, 문제가 있는 기기만 빠르게 찾아 조치합니다. 원격 작업·연결·자동작업·고급 설정은 필요할 때 펼쳐 사용합니다.</p></div>
         <div class="device-head-actions"><span id="deviceGeneratedAt">연결 상태 확인 전</span><button type="button" class="secondary" id="refreshDevices">↻ 새로고침</button></div>
       </div>
-      <details class="device-status-tools">
+      <details class="device-status-tools" open>
         <summary><strong>연결된 기기 · 상태 보기</strong><span id="deviceStatusSummary">상태 확인 중</span></summary>
         <div class="device-metrics" aria-label="기기 핵심 현황">
-          <article><small>등록 기기</small><strong id="deviceMetricTotal">—</strong><span>전체 자산</span></article>
-          <article><small>현재 온라인</small><strong id="deviceMetricOnline">—</strong><span>Agent 응답 기준</span></article>
-          <article><small>확인 필요</small><strong id="deviceMetricIssues">—</strong><span>오프라인·지연·건강 저하</span></article>
+          <article><small>관리 목록</small><strong id="deviceMetricTotal">—</strong><span>같은 컴퓨터명 묶음</span></article>
+          <article><small>현재 온라인</small><strong id="deviceMetricOnline">—</strong><span>목록별 최신 Agent</span></article>
+          <article><small>확인 필요</small><strong id="deviceMetricIssues">—</strong><span>응답 지연·건강 저하</span></article>
           <article><small>평균 건강점수</small><strong id="deviceMetricHealth">—</strong><span>현재 온라인·진단 가능 기기 기준</span></article>
           <article><small>배정 대기</small><strong id="deviceMetricQueued">—</strong><span>자동 작업 큐</span></article>
         </div>
         <div class="device-attention-summary" id="deviceAttentionSummary" data-state="good"><div><strong>기기 상태를 확인하는 중입니다.</strong><span>문제가 있는 기기를 우선 표시합니다.</span></div></div>
+        <div class="device-roster-toolbar" role="group" aria-label="등록 기기 목록 검색 및 필터">
+          <label class="device-roster-search-label"><span>기기 검색</span><input id="deviceRosterSearch" type="search" placeholder="컴퓨터명 · 위치 · 기기 ID" autocomplete="off"></label>
+          <label class="device-roster-status-label"><span>연결 상태</span><select id="deviceRosterStatus"><option value="all">전체 상태</option><option value="online">온라인</option><option value="attention">확인 필요</option><option value="offline">오프라인·지연</option></select></label>
+          <label class="device-roster-retired-label"><input id="deviceRosterShowRetired" type="checkbox"><span>해제된 기기 기록 포함</span></label>
+        </div>
+        <p class="device-roster-overview" id="deviceRosterOverview" aria-live="polite">등록 기록을 불러오는 중입니다.</p>
         <div class="device-type-filters" id="deviceTypeFilters" aria-label="기기 유형 필터"></div>
         <div class="ekodi-device-list" id="ekodiDeviceList"><div class="device-empty"><p>기기 목록을 불러오는 중입니다.</p></div></div>
       </details>
@@ -730,6 +911,9 @@
 
     button.addEventListener('click', showDevices);
     panel.querySelector('#refreshDevices').addEventListener('click', loadDevices);
+    panel.querySelector('#deviceRosterSearch').addEventListener('input', event => { rosterSearch = event.currentTarget.value; renderDevices(currentDevices); });
+    panel.querySelector('#deviceRosterStatus').addEventListener('change', event => { rosterStatus = event.currentTarget.value; renderDevices(currentDevices); });
+    panel.querySelector('#deviceRosterShowRetired').addEventListener('change', event => { showRetiredGroups = event.currentTarget.checked; renderDevices(currentDevices); });
     panel.querySelector('#deviceJobForm').addEventListener('submit', createAutoJob);
     panel.querySelector('#createDeviceEnrollment').addEventListener('click', createEnrollment);
     panel.querySelector('#deviceInventoryForm').addEventListener('submit', createInventory);
