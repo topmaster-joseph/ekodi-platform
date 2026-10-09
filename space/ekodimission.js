@@ -17,6 +17,23 @@
   const invite=(missionHome?'에코디선교회의 말씀·식탁·장학·지역 봉사 사역을 함께 살펴보세요.':String(meta?.dataset.eventInvite||defaultEvent.invite))+' '+url;
   const api=`/ekodimission/api/activities/${encodeURIComponent(applicationRecordKey)}/applications`;
   const registrationApi=`/ekodimission/api/activities/${encodeURIComponent(applicationRecordKey)}/registration`;
+  // Keep the landing page focused on not-yet-ended events in Korea time.
+  // Event records remain accessible in the activity archive after the end date.
+  const homeEventCards=[...document.querySelectorAll('[data-mission-home-event]')];
+  if(homeEventCards.length){
+    const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+    const kstPart=key=>parts.find(part=>part.type===key)?.value||'';
+    const todayKst=[kstPart('year'),kstPart('month'),kstPart('day')].join('-');
+    let current=0;
+    for(const card of homeEventCards){
+      const lastDay=String(card.dataset.eventLastDay||'');
+      const visible=/^\\d{4}-\\d{2}-\\d{2}$/.test(lastDay)&&lastDay>=todayKst;
+      card.hidden=!visible;
+      if(visible)current++;
+    }
+    const empty=document.querySelector('[data-mission-home-empty]');
+    if(empty)empty.hidden=current!==0;
+  }
   const shareStatus=m=>document.querySelectorAll('[data-share-status]').forEach(el=>el.textContent=m);
   async function copy(v,m){try{await navigator.clipboard.writeText(v)}catch{const t=document.createElement('textarea');t.value=v;document.body.append(t);t.select();document.execCommand('copy');t.remove()}shareStatus(m)}
   const paymentSheet=document.querySelector('[data-mission-pay-sheet]');
