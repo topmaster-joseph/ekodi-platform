@@ -6,11 +6,12 @@ const id='33333333-3333-4333-8333-333333333333';
 const reply=(_req,body,status=200)=>new Response(JSON.stringify(body),{status});
 const settings={SINGLES_SOCIAL_ENABLED:'true',SINGLES_BANK_TRANSFER_ENABLED:'false'};
 globalThis.Deno={env:{get:key=>settings[key]||undefined}};
-function db({verified=true,accepted=false}={}){
+function db({verified=true,accepted=false,grant=false}={}){
  const writes=[];
  const rows={singles_memberships:{status:'active',base_consent:true,age_19_confirmed:true,adult_verified_at:verified?'2026-10-09T00:00:00Z':null,religion_consent:true,discoverable:verified},
   singles_interests:accepted?{from_user_id:other,to_user_id:uid,status:'accepted'}:null,
-  singles_events:{id,starts_at:'2027-05-01T09:00:00Z'},singles_bank_grants:null};
+  singles_events:{id,starts_at:'2027-05-01T09:00:00Z'},
+  singles_bank_grants:grant?{expires_at:'2030-01-01T00:00:00Z'}:null};
  const make=(name)=>{
   const query={
    filters:[],
@@ -45,13 +46,43 @@ test('event participation still requires a confirmed bank community grant',async
  assert.equal(res.status,402);assert.equal((await res.json()).error,'community_subscription_required');
  assert.equal(admin.writes.length,0);
 });
-test('verified mutual interest permits free messaging without subscription',async()=>{
+test('mutual consent never bypasses active subscription for sending a message',async()=>{
+ settings.SINGLES_BANK_TRANSFER_ENABLED='false';
  const admin=db({verified:true,accepted:true});
+ const req=new Request('https://ekodi.kr/messages/'+id,{method:'POST',body:JSON.stringify({text:'안녕하세요'})});
+ const res=await handleSinglesSocial(req,'/messages/'+id,admin,uid,reply);
+ assert.equal(res.status,402);
+ assert.equal((await res.json()).error,'community_subscription_required');
+ assert.equal(admin.writes.length,0);
+});
+test('an expired or absent payment entitlement prevents send and reply',async()=>{
+ settings.SINGLES_BANK_TRANSFER_ENABLED='true';
+ const admin=db({verified:true,accepted:true,grant:false});
+ const req=new Request('https://ekodi.kr/messages/'+id,{method:'POST',body:JSON.stringify({text:'답장입니다'})});
+ const res=await handleSinglesSocial(req,'/messages/'+id,admin,uid,reply);
+ assert.equal(res.status,402);
+ assert.equal((await res.json()).error,'community_subscription_required');
+ assert.equal(admin.writes.length,0);
+ settings.SINGLES_BANK_TRANSFER_ENABLED='false';
+});
+test('verified subscriber can send a message after mutual consent',async()=>{
+ settings.SINGLES_BANK_TRANSFER_ENABLED='true';
+ const admin=db({verified:true,accepted:true,grant:true});
  const req=new Request('https://ekodi.kr/messages/'+id,{method:'POST',body:JSON.stringify({text:'안녕하세요'})});
  const res=await handleSinglesSocial(req,'/messages/'+id,admin,uid,reply);
  assert.equal(res.status,200);assert.equal((await res.json()).ok,true);
  assert.equal(admin.writes.length,1);
  assert.equal(admin.writes[0].name,'singles_messages');
+ settings.SINGLES_BANK_TRANSFER_ENABLED='false';
+});
+test('mutually accepted message history remains readable without subscription',async()=>{
+ settings.SINGLES_BANK_TRANSFER_ENABLED='false';
+ const admin=db({verified:true,accepted:true});
+ const req=new Request('https://ekodi.kr/messages/'+id);
+ const res=await handleSinglesSocial(req,'/messages/'+id,admin,uid,reply);
+ assert.equal(res.status,200);
+ assert.deepEqual((await res.json()).messages,[]);
+ assert.equal(admin.writes.length,0);
 });
 test('free block remains available to an enrolled non-verified adult',async()=>{
  const admin=db({verified:false});
