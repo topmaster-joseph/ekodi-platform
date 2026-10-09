@@ -40,6 +40,8 @@ function allowApi(path,method){
   ['/api/bank/admin/orders',['GET']],['/api/bank/admin/config',['GET','PUT']],['/api/bank/consulting/requests',['GET','POST']]]){
    if(path===endpoint&&methods.includes(method))return [path.slice(4),true];
  }
+ const exactReceipt=path.match(/^\/api\/bank\/(?:admin\/)?orders\/(EDH-[A-F0-9]{32})$/);
+ if(exactReceipt&&method==='GET')return [path.slice(4),true];
  const memberCheck=path.match(/^\/api\/bank\/orders\/(EDH-[A-F0-9]{32})\/(report|acknowledge)$/);
  if(memberCheck&&method==='POST')return [path.slice(4),true];
  const adminCheck=path.match(/^\/api\/bank\/admin\/orders\/(EDH-[A-F0-9]{32})\/review$/);
