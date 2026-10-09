@@ -42,7 +42,10 @@ test('Invest page and assets are path-native',async()=>{
   const urls=new Set(manifest.worker.requests.map(item=>item.url));
   for(const url of ['https://ekodi.kr/invest','https://ekodi.kr/invest/invest-ui.js','https://ekodi.kr/invest/invest-subject-ui.js','https://ekodi.kr/invest/app.js'])assert.ok(urls.has(url),url);
   assert.equal([...urls].some(url=>url.startsWith('https://invest.ekodi.kr')),false);
-  const subjectProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/invest/invest-subject-ui.js');
+  const rootInvest=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/invest');
+  assert.ok(rootInvest);
+  assert.ok(rootInvest.expect.includes('data-ekodi-service="invest"'));
+    const subjectProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/invest/invest-subject-ui.js');
   assert.deepEqual(subjectProbe.expect,['https://ekodi.kr/workspace-api','subject_type','subject_key']);
   assert.equal(subjectProbe.expect.includes('profile_key'),false);
 });
