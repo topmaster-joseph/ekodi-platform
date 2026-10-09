@@ -3,6 +3,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { handleSinglesSocial } from "./social.ts";
+import { handleSinglesBank } from "./bank-transfer.ts";
 const ORIGIN = "https://ekodi.kr";
 const VERSION = "singles-m1-2026-10-09-draft";
 const enabled = () => Deno.env.get("SINGLES_ONBOARDING_ENABLED") === "true";
@@ -66,6 +67,7 @@ Deno.serve(async req => {
     if (error || !data.user || data.user.is_anonymous) return reply(req, { error: "unauthorized" }, 401);
     const userId = data.user.id;
     const admin = db(true);
+    if (socialRoute && p.startsWith("/bank/")) return await handleSinglesBank(req, p, admin, userId, reply);
     if (socialRoute) return await handleSinglesSocial(req, p, admin, userId, reply);
     if (p === "/withdraw") {
       const { error: updateError } = await admin.from("singles_memberships").update({
