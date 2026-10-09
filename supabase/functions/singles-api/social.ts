@@ -1,20 +1,16 @@
 // EKODI Singles social actions. Server-side identity, adult, reciprocal consent and paid entitlement.
 // Active only when BOTH central worker and Supabase function feature gates are explicitly enabled.
 // Never infer subscription from client properties, user_metadata, or a user-editable profile.
+import { bankPlanSnapshot, hasBankPlan } from './bank-transfer.ts';
 type Reply=(req:Request,body:unknown,status?:number)=>Response;
 type Admin=any;
 const socialEnabled=()=>Deno.env.get('SINGLES_SOCIAL_ENABLED')==='true';
-const billingEnabled=()=>Deno.env.get('SINGLES_PAYMENTS_ENABLED')==='true';
 async function one(query:any){const {data,error}=await query.maybeSingle();if(error)throw error;return data}
 async function many(query:any){const {data,error}=await query;if(error)throw error;return data||[]}
 async function membership(admin:Admin,id:string){return one(admin.from('singles_memberships').select('status,base_consent,religion_consent,age_19_confirmed,adult_verified_at,discoverable').eq('user_id',id))}
 const active=(m:any)=>m?.status==='active'&&m.base_consent===true&&m.age_19_confirmed===true;
 const verified=(m:any)=>active(m)&&Boolean(m.adult_verified_at);
-async function subscribed(admin:Admin,userId:string){
- if(!billingEnabled())return false;
- const record=await one(admin.from('singles_entitlements').select('tier,status,source,expires_at').eq('user_id',userId));
- return record?.tier==='plus'&&record.status==='active'&&record.source==='verified_central_billing'&&Date.parse(record.expires_at)>Date.now();
-}
+async function subscribed(admin:Admin,userId:string){return hasBankPlan(admin,userId,'community')}
 async function blocked(admin:Admin,a:string,b:string){
  const items=await many(admin.from('singles_blocks').select('blocker_id,blocked_id')
   .or('and(blocker_id.eq.'+a+',blocked_id.eq.'+b+'),and(blocker_id.eq.'+b+',blocked_id.eq.'+a+')').limit(1));
@@ -26,7 +22,7 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
  if(!socialEnabled())return reply(req,{error:'singles_social_not_launched'},503);
  const m=await membership(admin,userId);
  const method=req.method;
- if(p==='/subscription'&&method==='GET')return reply(req,{active:await subscribed(admin,userId)});
+ if(p==='/subscription'&&method==='GET')return reply(req,await bankPlanSnapshot(admin,userId));
  if(p==='/profile'&&method==='GET'){
   const record=await one(admin.from('singles_profiles').select('display_name,broad_region,intro').eq('user_id',userId));
   return reply(req,{profile:record?{...record,discoverable:m?.discoverable===true}:null});
@@ -65,7 +61,7 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
  const rsvpId=match(p,/^\/events\/([0-9a-f-]{36})\/rsvp$/i);
  if(rsvpId&&method==='POST'){
   if(!verified(m))return reply(req,{error:'adult_verification_required'},403);
-  if(!await subscribed(admin,userId))return reply(req,{error:billingEnabled()?'subscription_required':'paid_actions_not_launched'},billingEnabled()?402:503);
+  if(!await subscribed(admin,userId))return reply(req,{error:'community_subscription_required'},402);
   const event=await one(admin.from('singles_events').select('id,starts_at').eq('id',rsvpId).eq('state','published'));
   if(!event||Date.parse(event.starts_at)<=Date.now())return reply(req,{error:'event_not_available'},409);
   const {error}=await admin.from('singles_event_rsvps').upsert({event_id:rsvpId,user_id:userId,status:'requested'}, {onConflict:'event_id,user_id'});
@@ -146,12 +142,12 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
     return reply(req,{error:'mutual_consent_required'},403);
   const other=interest.from_user_id===userId?interest.to_user_id:interest.from_user_id;
   if(await blocked(admin,userId,other))return reply(req,{error:'blocked'},403);
+  if(!verified(await membership(admin,other)))return reply(req,{error:'other_member_unavailable'},403);
   if(method==='GET'){
    const messages=await many(admin.from('singles_messages').select('id,sender_id,body,created_at')
      .eq('interest_id',interestId).order('created_at',{ascending:true}).limit(100));
    return reply(req,{messages});
   }
-  if(!await subscribed(admin,userId))return reply(req,{error:billingEnabled()?'subscription_required':'paid_actions_not_launched'},billingEnabled()?402:503);
   const v=await body(req);
   if(typeof v?.text!=='string'||!v.text.trim()||v.text.length>1000)return reply(req,{error:'invalid_message'},400);
   const {error}=await admin.from('singles_messages').insert({interest_id:interestId,sender_id:userId,body:v.text.trim()});
