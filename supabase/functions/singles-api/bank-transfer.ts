@@ -16,8 +16,9 @@ async function payload(req:Request){
  try{return JSON.parse(raw)}catch{throw new Error('invalid_json')}
 }
 async function operator(admin:Admin,userId:string){
- const row=await one(admin.from('singles_bank_operators').select('enabled').eq('user_id',userId));
- return row?.enabled===true;
+ const row=await one(admin.from('singles_bank_operators')
+   .select('enabled,can_verify,can_configure').eq('user_id',userId));
+ return row?.enabled===true?row:null;
 }
 export async function hasBankPlan(admin:Admin,userId:string,planCode:string){
  if(!bankOn())return false;
@@ -89,6 +90,42 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   if(error)return reply(req,{error:action==='report'?'report_not_allowed':'acknowledgment_not_allowed'},409);
   return reply(req,{reference,status:data});
  }
+ if(path==='/bank/admin/config'&&method==='GET'){
+  const role=await operator(admin,userId);
+  if(!role)return reply(req,{error:'operator_capability_required'},403);
+  const settings=await one(admin.from('singles_bank_settings')
+    .select('bank_name,account_number,account_holder,active').eq('id',1));
+  const plans=await many(admin.from('singles_bank_plans')
+    .select('code,display_name,amount_krw,duration_days,active').order('code'));
+  return reply(req,{bank:settings,plans,can_configure:role.can_configure===true,
+    can_verify:role.can_verify===true,collection_open:bankOn()});
+ }
+ if(path==='/bank/admin/config'&&method==='PUT'){
+  const role=await operator(admin,userId);
+  if(!role||role.can_configure!==true)return reply(req,{error:'bank_configuration_capability_required'},403);
+  const v=await payload(req);
+  if(!v||typeof v!=='object'||Array.isArray(v)||
+    Object.keys(v).some(k=>!['bank_name','account_number','account_holder','community_amount_krw','consulting_amount_krw'].includes(k)))
+    return reply(req,{error:'invalid_bank_configuration'},400);
+  const name=typeof v.bank_name==='string'?v.bank_name.trim():'';
+  const account=typeof v.account_number==='string'?v.account_number.trim():'';
+  const holder=typeof v.account_holder==='string'?v.account_holder.trim():'';
+  const validAmount=a=>a===null||(Number.isInteger(a)&&a>=100&&a<=10000000);
+  if(name.length<2||name.length>70||! /^[0-9 -]{6,40}$/.test(account)||holder.length<2||holder.length>70
+     ||!validAmount(v.community_amount_krw)||!validAmount(v.consulting_amount_krw))
+    return reply(req,{error:'invalid_bank_configuration_values'},400);
+  // Changing destination/prices always closes collection until a separate release approval.
+  const {error:bankError}=await admin.from('singles_bank_settings')
+    .upsert({id:1,bank_name:name,account_number:account,account_holder:holder,active:false},{onConflict:'id'});
+  if(bankError)throw bankError;
+  const {error:priceError}=await admin.from('singles_bank_plans')
+    .upsert([
+      {code:'community',display_name:'행사 참여 구독',amount_krw:v.community_amount_krw,duration_days:30,active:false},
+      {code:'consulting',display_name:'선택형 일반 교제·소통 컨설팅',amount_krw:v.consulting_amount_krw,duration_days:30,active:false},
+    ],{onConflict:'code'});
+  if(priceError)throw priceError;
+  return reply(req,{saved:true,bank_collection_enabled:false,reason:'requires_independent_release_approval'});
+ }
  if(path==='/bank/admin/orders'&&method==='GET'){
   if(!await operator(admin,userId))return reply(req,{error:'operator_capability_required'},403);
   const list=await many(admin.from('singles_bank_orders')
@@ -98,7 +135,8 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
  }
  const adminRef=decisionRef(path);
  if(adminRef&&method==='POST'){
-  if(!await operator(admin,userId))return reply(req,{error:'operator_capability_required'},403);
+  const role=await operator(admin,userId);
+  if(!role||role.can_verify!==true)return reply(req,{error:'verification_capability_required'},403);
   if(!verifyOn())return reply(req,{error:'bank_verification_not_launched'},503);
   const v=await payload(req);
   if(!v||!['verified','rejected'].includes(v.decision)||
