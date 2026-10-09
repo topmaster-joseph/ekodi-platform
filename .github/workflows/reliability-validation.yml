@@ -86,8 +86,14 @@ jobs:
           retention-days: 14
 
   staging-manual:
-    if: github.event_name == 'workflow_dispatch' && inputs.suite != 'release'
-    needs: contract
+    # In the release suite, this is an independent proof of the actual
+    # baseline/spike artifacts, not a skipped manual-only matrix job.
+    # No additional requests hit the staging service or Cloudflare.
+    needs: [contract, staging-release]
+    if: >-
+      always() && needs.contract.result == 'success' &&
+      ((inputs.suite == 'release' && needs['staging-release'].result == 'success') ||
+       (github.event_name == 'workflow_dispatch' && inputs.suite != 'release'))
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -95,12 +101,42 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Retrieve same-run baseline and spike results
+        if: inputs.suite == 'release'
+        uses: actions/download-artifact@v7
+        with:
+          name: reliability-release-${{ github.run_id }}
+          path: reliability-proof
+      - name: Independently verify guarded release reliability evidence
+        if: inputs.suite == 'release'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for profile in baseline spike; do
+            file="reliability-proof/reliability-${profile}.json"
+            test -s "$file"
+            node -e '
+              const fs = require("node:fs");
+              const report = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+              const profile = process.argv[2];
+              const valid = report.ok === true && report.passed === true &&
+                report.profile === profile && report.targetClass === "staging" &&
+                report.targetHost === "ekodi-shared-site-staging.ekodi-development.workers.dev" &&
+                Number.isFinite(report.metrics?.total) && report.metrics.total > 0 &&
+                Number.isFinite(report.metrics?.p95Ms) &&
+                Number.isFinite(report.metrics?.errorRate) &&
+                Array.isArray(report.violations) && report.violations.length === 0;
+              if (!valid) { console.error("Staging release evidence invalid: " + profile); process.exit(1); }
+              console.log("Independently verified staging release evidence: " + profile);
+            ' "$file" "$profile"
+          done
       - name: Run explicitly selected staging profile
+        if: inputs.suite != 'release'
         env:
           OBSERVED_RPS: ${{ inputs.observed_peak_rps || vars.EKODI_OBSERVED_PEAK_RPS || '0' }}
         run: node scripts/run-reliability-validation.mjs --target="$STAGING_URL" --profile="${{ inputs.suite }}" --observed-rps="$OBSERVED_RPS" --manual=true --output=reliability-manual.json
       - uses: actions/upload-artifact@v7
-        if: always()
+        if: inputs.suite != 'release' && always()
         with:
           name: reliability-manual-${{ github.run_id }}
           path: reliability-manual.json
