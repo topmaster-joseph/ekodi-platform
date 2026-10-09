@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
 
 const [api, agent, admin, build, entry, security, bootstrap, startup] = await Promise.all([
   readFile(new URL('../device-control.js', import.meta.url), 'utf8'),
@@ -188,6 +189,51 @@ test('one-click connection diagnoses Windows launch blocks and never runs two el
   assert.match(agent, /Global\\EKODI_Device_Agent_Install_V1/);
   assert.match(agent, /InstallMutex\.ReleaseMutex\(\)/);
   assert.match(admin, /설치 창이 열려 있으면/);
+});
+
+test('one-click Windows installers isolate download paths and delete temporary scripts', async () => {
+  const css = await readFile(new URL('../device-control-admin.css', import.meta.url), 'utf8');
+  assert.match(admin, /ekodi-device-agent-.*NewGuid\(\)\.ToString/);
+  assert.match(bootstrap, /ekodi-device-agent-bootstrap-.*NewGuid\(\)\.ToString/);
+  assert.match(admin, /EKB-213/);
+  assert.match(admin, /EKB-214/);
+  assert.match(admin, /EKB-215/);
+  assert.match(admin, /EKB-219/);
+  assert.match(admin, /Parser\]::ParseInput/);
+  assert.match(admin, /Remove-Item -LiteralPath \$p -Force -ErrorAction SilentlyContinue/);
+  assert.match(bootstrap, /Remove-Item -LiteralPath \$agent -Force -ErrorAction SilentlyContinue/);
+  assert.doesNotMatch(admin, /Join-Path \$env:TEMP 'ekodi-device-agent\.ps1'/);
+  assert.doesNotMatch(bootstrap, /Join-Path \$env:TEMP 'ekodi-device-agent-bootstrap\.ps1'/);
+  assert.match(css, /DEVICE-BOOTSTRAP-WIDE-CANONICAL-20261009/);
+  assert.match(css, /\.app:has\(#deviceControlPanel:not\(\.hidden-panel\)\)/);
+  assert.match(css, /width:calc\(100vw - 220px\)!important/);
+  assert.match(css, /@media\(max-width:760px\)/);
+});
+
+test('downloaded one-click CMD embeds a parsed, race-free, stage-aware PowerShell launcher', () => {
+  const begin = admin.indexOf('  function utf16leBase64(value) {');
+  const end = admin.indexOf('  function downloadEnrollmentInstaller()', begin);
+  assert.ok(begin >= 0 && end > begin, 'installer function extraction must be anchored');
+  const ctx = {
+    WINDOWS_AGENT_URL: 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/tools/ekodi-device-agent/windows/ekodi-device-agent.ps1',
+    API_BASE: 'https://ekodi.kr',
+    btoa: text => Buffer.from(text, 'binary').toString('base64'),
+  };
+  vm.runInNewContext(admin.slice(begin, end) + "\nthis.installer = buildEnrollmentInstaller('EKD-0123456789ABCDEF0123');", ctx, {timeout:1000});
+  assert.match(ctx.installer, /@echo off/);
+  assert.match(ctx.installer, /EKB-210/);
+  const encoded = ctx.installer.match(/-EncodedCommand ([A-Za-z0-9+/=]+)/)?.[1];
+  assert.ok(encoded, 'one-click command must contain UTF-16LE PowerShell');
+  const ps = Buffer.from(encoded, 'base64').toString('utf16le');
+  assert.match(ps, /ekodi-device-agent-.*NewGuid\(\)\.ToString/);
+  assert.match(ps, /EKB-213/);
+  assert.match(ps, /EKB-214/);
+  assert.match(ps, /EKB-215/);
+  assert.match(ps, /EKB-219/);
+  assert.match(ps, /-Install -EnrollmentCode 'EKD-0123456789ABCDEF0123'/);
+  assert.match(ps, /finally\s*\{\s*Remove-Item -LiteralPath \$p/);
+  assert.doesNotMatch(ps, /Join-Path \$env:TEMP 'ekodi-device-agent\.ps1'/);
+  assert.doesNotMatch(ps, /Invoke-Expression|\biex\b/i);
 });
 
 test('bootstrap elevates only when needed and keeps Boot/WOL separate', () => {
