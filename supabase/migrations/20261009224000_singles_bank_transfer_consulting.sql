@@ -68,14 +68,12 @@ create table if not exists public.singles_bank_audit (
   created_at timestamptz not null default now()
 );
 create index if not exists singles_bank_audit_order on public.singles_bank_audit(reference,created_at);
-create schema if not exists ekodi_singles_private;
-revoke all on schema ekodi_singles_private from public, anon, authenticated;
-grant usage on schema ekodi_singles_private to service_role;
+-- Only service_role may execute these transaction-safe functions; revoke default PUBLIC EXECUTE.
 -- Atomic verification: lock order, verify operator, assign benefit only once.
-create or replace function ekodi_singles_private.confirm_bank_order(
+create or replace function public.singles_bank_confirm_order(
  p_reference text, p_operator uuid, p_action text, p_trace text default null, p_reason text default null
 ) returns text language plpgsql security definer
- set search_path = pg_catalog, public, ekodi_singles_private
+ set search_path = pg_catalog, public
 as $$
 declare r public.singles_bank_orders%rowtype;
 begin
@@ -105,8 +103,8 @@ begin
  end if;
  return p_action;
 end $$;
-revoke all on function ekodi_singles_private.confirm_bank_order(text,uuid,text,text,text) from public,anon,authenticated;
-grant execute on function ekodi_singles_private.confirm_bank_order(text,uuid,text,text,text) to service_role;
+revoke all on function public.singles_bank_confirm_order(text,uuid,text,text,text) from public,anon,authenticated;
+grant execute on function public.singles_bank_confirm_order(text,uuid,text,text,text) to service_role;
 -- New tables remain service-owned; no direct browser table exposure.
 alter table public.singles_bank_settings enable row level security;
 alter table public.singles_bank_plans enable row level security;
@@ -120,3 +118,42 @@ revoke all on table public.singles_bank_settings,public.singles_bank_plans,
 grant select on table public.singles_bank_settings,public.singles_bank_plans,public.singles_bank_operators to service_role;
 grant select,insert,update on table public.singles_bank_orders,public.singles_bank_grants to service_role;
 grant select,insert on table public.singles_bank_audit to service_role;
+
+
+-- Self-assertion records the member's action, never activates an entitlement.
+create or replace function public.singles_bank_report_order(p_reference text,p_actor uuid)
+ returns text language plpgsql security definer set search_path=pg_catalog,public as $$
+begin
+ update public.singles_bank_orders set status='reported_paid',reported_paid_at=now()
+ where reference=p_reference and user_id=p_actor and status='awaiting_transfer';
+ if not found then raise exception 'order_cannot_be_reported' using errcode='23514'; end if;
+ insert into public.singles_bank_audit(reference,actor_id,action)
+ values(p_reference,p_actor,'member_reported');
+ return 'reported_paid';
+end $$;
+revoke all on function public.singles_bank_report_order(text,uuid) from public,anon,authenticated;
+grant execute on function public.singles_bank_report_order(text,uuid) to service_role;
+create or replace function public.singles_bank_acknowledge_order(p_reference text,p_actor uuid)
+ returns text language plpgsql security definer set search_path=pg_catalog,public as $$
+begin
+ update public.singles_bank_orders set member_acknowledged_at=now()
+ where reference=p_reference and user_id=p_actor and status='verified' and member_acknowledged_at is null;
+ if not found then raise exception 'order_cannot_be_acknowledged' using errcode='23514'; end if;
+ insert into public.singles_bank_audit(reference,actor_id,action)
+ values(p_reference,p_actor,'member_acknowledged');
+ return 'member_acknowledged';
+end $$;
+revoke all on function public.singles_bank_acknowledge_order(text,uuid) from public,anon,authenticated;
+grant execute on function public.singles_bank_acknowledge_order(text,uuid) to service_role;
+-- Optional *general* communication / community consulting, never matchmaking with a named person.
+create table if not exists public.singles_consulting_requests(
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.singles_memberships(user_id),
+  topic text not null check(topic in ('communication','community_participation','personal_growth')),
+  status text not null default 'requested' check(status in ('requested','scheduled','completed','cancelled')),
+  created_at timestamptz not null default now()
+);
+create index if not exists singles_consulting_owner on public.singles_consulting_requests(user_id,created_at desc);
+alter table public.singles_consulting_requests enable row level security;
+revoke all on table public.singles_consulting_requests from public,anon,authenticated;
+grant select,insert,update on table public.singles_consulting_requests to service_role;
