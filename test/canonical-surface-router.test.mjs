@@ -22,14 +22,32 @@ function legacyRecorder(){
 }
 
 test('public execution surface roots canonicalize slashless URLs to the same trailing-slash route',async()=>{
-  const publicRoots=PLATFORM_EXECUTION_SURFACES.filter(spec=>!spec.exact&&!spec.id.endsWith('-api')&&!spec.prefix.includes('/api/'));
-  assert.ok(publicRoots.some(spec=>spec.id==='ai'));
+  const publicRoots=PLATFORM_EXECUTION_SURFACES.filter(spec=>spec.id!=='ai'&&!spec.exact&&!spec.id.endsWith('-api')&&!spec.prefix.includes('/api/'));
+  assert.ok(PLATFORM_EXECUTION_SURFACES.some(spec=>spec.id==='ai'));
   for(const spec of publicRoots){
     const response=await routeCanonicalSurface(new Request(`https://ekodi.kr${spec.prefix}`),{});
     assert.equal(response.status,308,`${spec.id} slashless root must redirect`);
     const location=new URL(response.headers.get('location'));
     assert.equal(location.pathname,`${spec.prefix}/`,`${spec.id} must preserve the canonical service root`);
     assert.equal(location.hostname,'ekodi.kr');
+  }
+});
+
+test('AI slashless and trailing slash paths both serve directly without a redirect',async()=>{
+  for(const entry of ['canonical','site']){
+    const service=binding('EKODI AI direct root','text/html');
+    for(const path of ['/ai','/ai/']){
+      const request=new Request('https://ekodi.kr'+path+'?source=test');
+      const response=entry==='canonical'
+        ? await routeCanonicalSurface(request,{AI:service})
+        : await siteWorker.fetch(request,{AI:service});
+      assert.equal(response.status,200,entry+' '+path);
+      assert.equal(response.headers.get('location'),null,entry+' '+path);
+      assert.equal(response.headers.get('x-ekodi-canonical-surface'),'ai',entry+' '+path);
+      assert.equal(response.headers.get('x-ekodi-canonical-path'),'/ai',entry+' '+path);
+      assert.equal(await response.text(),'EKODI AI direct root',entry+' '+path);
+    }
+    assert.deepEqual(service.calls.map(item=>item.pathname),['/','/']);
   }
 });
 
