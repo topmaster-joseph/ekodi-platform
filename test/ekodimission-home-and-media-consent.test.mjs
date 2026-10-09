@@ -55,7 +55,7 @@ test('Published mission photo and media-link submissions require explicit server
  // First-party public POSTs must not silently fall through to ASSETS.fetch.
  assert.match(worker,/request\.method==='POST'&&\(MISSION_ACTIVITY_MEDIA_UPLOAD_RE\.test\(missionWritePath\)\|\|MISSION_ACTIVITY_MEDIA_RE\.test\(missionWritePath\)\)/);
  assert.match(worker,/return routeEkodiMission\(request,env\);/);
- assert.match(worker,/name=\"publicConsent\" value=\"true\" required/g);
+ assert.equal((worker.match(/name=\"publicConsent\" value=\"true\" required/g)||[]).length,2,'Both public photo and media-link forms must require consent');
  assert.match(ui,/body\.set\('publicConsent','true'\)/);
  assert.match(ui,/publicConsent:data\.get\('publicConsent'\)==='true'/);
  assert.match(ui,/publicConsent.*\?\.checked/);
