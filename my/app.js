@@ -3,6 +3,11 @@ import { applyPreferenceAction, buildPersonalizedServiceView, normalizePreferenc
 
 const cfg=window.EKODI_MY_CONFIG||{};
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+function enforceMyVisualIsolation(){
+ document.querySelectorAll('.ekodi-main-ekodian').forEach(node=>node.remove());
+}
+window.addEventListener('ekodi:user-character-ready',enforceMyVisualIsolation);
+
 const MODES={writer:'Writer',video:'Video',podcast:'Podcast',lecture:'Educator',research:'Research',visual:'Visual',mission:'Mission',ai:'AI Creator'};
 const SERVICES=[
  ['church','에코디교회','https://ekodi.kr/ekodichurch'],['biz','에코디비즈','https://ekodi.kr/ekodibiz'],['books','출판','https://books.ekodi.kr'],['author','Creator AI','https://author.ekodi.kr'],['lab','에코디연구소','https://ekodi.kr/ekodilab'],['community','커뮤니티','https://ekodi.kr/community'],['work','에코디워크 · 구인구직','https://ekodi.kr/work'],['social','EKODI Social','https://social.ekodi.kr'],['energy','Energy AI','https://energy.ekodi.kr'],['business','Business OS','https://ekodi.kr/business'],['mall','에코디몰','https://ekodi.kr/ekodimall'],['marketing','Marketing AI','https://ekodi.kr/ekodibiz/marketing-ai']
@@ -442,8 +447,22 @@ async function loadPortfolio(){
  const {data,error}=await sb.from('creator_portfolio_items').select('id,project_id,workspace_key,title,summary,creator_mode,status,visibility,updated_at').order('updated_at',{ascending:false});
  if(error)throw error;items=data||[];
 }
+function renderCoreMemberContext(){
+ ensureActiveWorkspace();identityUi();profileUi();summaryUi();workspaceUi();platformUi();portfolioUi();memberHomeUi();recentActivityUi();syncSurfaceState();progressiveSurfaceUi();
+}
+async function loadDeferredMemberContext(expectedUserId){
+ const results=await Promise.allSettled([loadPortfolio(),loadProfile(),loadPersonalization()]);
+ if(expectedUserId!==String(session?.user?.id||''))return;
+ for(const result of results)if(result.status==='rejected')console.warn('My EKODI deferred context',result.reason);
+ renderCoreMemberContext();
+}
 async function loadAll(){
- await Promise.all([loadAccess(),loadPortfolio(),loadProfile(),loadPersonalization()]);ensureActiveWorkspace();identityUi();profileUi();summaryUi();workspaceUi();platformUi();portfolioUi();memberHomeUi();recentActivityUi();syncSurfaceState();progressiveSurfaceUi();
+ const expectedUserId=String(session?.user?.id||'');
+ await loadAccess();
+ renderCoreMemberContext();
+ if(!session)return;
+ const schedule=globalThis.requestIdleCallback||((callback)=>setTimeout(callback,0));
+ schedule(()=>{void loadDeferredMemberContext(expectedUserId)},{timeout:1200});
 }
 async function saveProfile(event){
  event.preventDefault();
@@ -476,6 +495,7 @@ window.addEventListener('ekodi:personalization-signal',event=>{
 });
 window.addEventListener('hashchange',()=>{if(location.hash==='#memberHome')activeHomePanel='continue';if(location.hash==='#intent'||location.hash==='#intentPlanText')activeHomePanel='intent';if(location.hash==='#account')setAccountTab('menu');if(location.hash==='#platforms')setServicesTab('menu');if(location.hash==='#workspaces')setServicesTab('spaces');syncSurfaceState({scroll:true});progressiveSurfaceUi();if(location.hash==='#activity')recentActivityUi()});
 
+enforceMyVisualIsolation();
 initAccountTabs();
 initServiceTabs();
 initHomeWayfinder();
