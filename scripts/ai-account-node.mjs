@@ -4,6 +4,7 @@ import {homedir,tmpdir} from 'node:os';
 import os from 'node:os';
 import path from 'node:path';
 import { LOCAL_EXECUTION_POLICY } from '../local-execution-policy.js';
+import {claudeCodeReady,runClaudeCode} from './claude-code-subscription-provider.mjs';
 
 const CONTROL=(process.env.EKODI_AI_CONTROL_URL||'https://ai.ekodi.kr').replace(/\/+$/,'');
 const ROOT=path.join(homedir(),'.ekodi-ai');
@@ -63,7 +64,7 @@ async function detectProviders(){
   const providers=[];
   if(await codexReady())providers.push('codex');
   if(process.env.EKODI_ENABLE_GEMINI_CLI==='true'&&await commandReady('gemini'))providers.push('gemini-cli');
-  if(process.env.EKODI_ENABLE_CLAUDE_CODE==='true'&&await commandReady('claude'))providers.push('claude-code');
+  if(await claudeCodeReady({run}))providers.push('claude-code');
   return providers;
 }
 async function api(endpoint,{method='POST',token='',node='',body=null}={}){
@@ -103,6 +104,7 @@ async function executeJob(job){
     let output='';
     if(job.providerId==='node:codex')output=await runCodex(job,cwd);
     else if(job.providerId==='node:gemini-cli')output=await runGemini(job,cwd);
+    else if(job.providerId==='node:claude-code')output=await runClaudeCode(job,{cwd,run,prompt:job.needsCodeBranch?codingPrompt(job):job.prompt});
     else throw new Error(`provider_not_enabled:${job.providerId}`);
     await pushChanges(job,cwd);return{ok:true,output};
   }catch(error){return{ok:false,error:clean(error?.message||error)}}
