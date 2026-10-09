@@ -27,7 +27,7 @@
     let current=0;
     for(const card of homeEventCards){
       const lastDay=String(card.dataset.eventLastDay||'');
-      const visible=/^\\d{4}-\\d{2}-\\d{2}$/.test(lastDay)&&lastDay>=todayKst;
+      const visible=/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(lastDay)&&lastDay>=todayKst;
       card.hidden=!visible;
       if(visible)current++;
     }
