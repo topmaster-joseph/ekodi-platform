@@ -85,7 +85,14 @@ async function runtimeSecretInventory(env={}){if(!runtimeSyncReady(env))return n
 async function fingerprint(value){const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));return [...new Uint8Array(digest)].slice(0,8).map(v=>v.toString(16).padStart(2,'0')).join('')}
 function runtimeEnabled(env,id,fallback){const value=clean(env?.[RUNTIME_BINDINGS[id]?.enabled],30).toLowerCase();if(!value)return fallback;return ['1','true','yes','on','enabled'].includes(value)}
 function providerCostEligibility(id,context={}){return evaluateAiCostEligibility({costClass:DEFAULTS[id]?.costClass||'unknown'},context)}
-function providerHealthBlocksTraffic(row){const status=clean(row?.health_status,40).toLowerCase(),code=clean(row?.last_error,160).toLowerCase();if(status==='unconfigured')return true;if(status!=='error')return false;return /(credit_balance_exhausted|insufficient_quota|spend_limit|quota_exceeded|billing_hard_limit|billing_not_active|invalid_api_key|authentication_error|not_configured)/.test(code)}
+const PROVIDER_VERIFICATION_TTL_MS=3*60*60*1000;
+export function providerVerifiedForTraffic(row,nowMs=Date.now()){
+  if(!row)return true; // Compatibility for internal calls without a registry; registered providers must pass live verification.
+  if(clean(row.health_status,40).toLowerCase()!=='healthy')return false;
+  const last=Date.parse(clean(row.last_checked_at,80));
+  return Number.isFinite(last)&&last<=nowMs&&nowMs-last<=PROVIDER_VERIFICATION_TTL_MS;
+}
+function providerHealthBlocksTraffic(row){return !providerVerifiedForTraffic(row)}
 function freeQuotaProviderId(id){if(id==='gemini')return'gemini-free';if(['cloudflare-workers-ai','openrouter-free','groq-free','cerebras-free','qwen-free','deepseek-free-credit','huggingface-free-credit'].includes(id))return id;return''}
 async function freeQuotaBlocked(env,id){const quotaId=freeQuotaProviderId(id);if(!quotaId)return false;const map=await quotaCapabilities(env,[quotaId]);return map[quotaId]?.remaining===0}
 async function recordGatewayFreeQuota(env,id,outcome){const quotaId=freeQuotaProviderId(id);if(!quotaId)return;await recordFreeProviderOutcome(env,quotaId,outcome).catch(()=>{})}
@@ -102,9 +109,10 @@ async function providerSnapshot(env){
     const runtimeConfigured=secretless?providerConfigured(env,row.provider_id,row.secret_binding):(runtimeInventoryKnown?runtimeTargets.every(target=>target.configured===true):providerConfigured(env,row.provider_id,row.secret_binding));
     const freeGuardConfigured=providerFreeGuardConfigured(env,row.provider_id);
     const inSync=runtime.enabled===Boolean(row.enabled)&&runtime.priority===Number(row.priority||100)&&runtime.model===row.default_model;
-    const verificationPassed=clean(row.health_status,40).toLowerCase()==='healthy';
-    const trafficEligible=Boolean(row.enabled)&&runtime.enabled&&runtimeConfigured&&freeGuardConfigured&&inSync&&!providerHealthBlocksTraffic(row);
-    const activationState=!Boolean(row.enabled)?'disabled':!runtimeConfigured?'secret-required':!freeGuardConfigured?'guard-required':!inSync||!runtime.enabled?'runtime-sync-required':verificationPassed?'verified':'verification-required';
+    const verificationPassed=providerVerifiedForTraffic(row);
+    const trafficEligible=Boolean(row.enabled)&&runtime.enabled&&runtimeConfigured&&freeGuardConfigured&&inSync&&verificationPassed;
+    const staleVerification=clean(row.health_status,40).toLowerCase()==='healthy'&&!verificationPassed;
+    const activationState=!Boolean(row.enabled)?'disabled':!runtimeConfigured?'secret-required':!freeGuardConfigured?'guard-required':!inSync||!runtime.enabled?'runtime-sync-required':verificationPassed?'verified':staleVerification?'stale-verification':'verification-required';
     return{id:row.provider_id,name:row.display_name,type:row.provider_type,enabled:Boolean(row.enabled),priority:Number(row.priority||100),model:row.default_model,secretBinding:row.secret_binding,costClass:row.cost_class,configured:runtimeConfigured,requiresSecret:!secretless,freeGuardRequired:Boolean(DEFAULTS[row.provider_id]?.freeGuardBinding),freeGuardLabel:DEFAULTS[row.provider_id]?.freeGuardLabel||'',freeGuardConfigured,health:row.health_status||'unknown',lastCheckedAt:row.last_checked_at||'',lastError:row.last_error||'',runtime,runtimeTargets,inSync,verificationPassed,trafficEligible,fallbackEligible:trafficEligible,activationState,valueReturned:false};
   });
   const [alerts,freeQuotaStates,routingEventsResult]=await Promise.all([
@@ -201,39 +209,27 @@ export async function invokeAiProviderCapability(env,{capability='default',syste
   const error=new Error('provider_unavailable');error.attempted=attempted;error.blocked=blocked;throw error;
 }
 async function runGateway(request,env){
-  if(request.method==='OPTIONS'){const headers=corsHeaders(request,env);if(!headers.get('access-control-allow-origin'))return json(request,env,{error:'origin_forbidden'},403);return new Response(null,{status:204,headers})}
-  if(request.method!=='POST')return json(request,env,{error:'method_not_allowed'},405);
-  const user=await verifySupabaseUser(request,env);if(!user)return json(request,env,{error:'authentication_required'},401);
-  if(!await budgetAllowed(env))return json(request,env,{error:'budget_limit_reached'},429);
-  const body=await request.json().catch(()=>({})),capability=CAPABILITIES.has(clean(body?.capability,40))?clean(body.capability,40):'default',system=clean(body?.system,12000),input=clean(body?.input,120000),maxOutputTokens=Math.max(64,Math.min(8192,Number(body?.maxOutputTokens)||4096));
-  if(!input)return json(request,env,{error:'input_required'},400);
-  const selected=await route(env,capability),order=[selected.primaryProvider,...selected.fallbacks].filter((id,index,array)=>PROVIDERS.has(id)&&array.indexOf(id)===index),attempted=[],blocked=[];
-  for(let position=0;position<order.length;position++){
-    const id=order[position],row=await providerRow(env,id),previousProvider=attempted.at(-1)||'';
-    if(row&&Number(row.enabled)!==1){blocked.push(id);await recordRoutingEvent(env,{capability,provider:id,eventType:'blocked',reason:'disabled',position,previousProvider});continue}
-    const cost=providerCostEligibility(id,{});
-    if(!cost.eligible){blocked.push(id);await recordRoutingEvent(env,{capability,provider:id,eventType:'blocked',reason:clean(cost.blockedBy||'cost-policy',160),position,previousProvider});continue}
-    if(await freeQuotaBlocked(env,id)){blocked.push(id);await recordRoutingEvent(env,{capability,provider:id,eventType:'blocked',reason:'free-quota-exhausted',position,previousProvider});continue}
-    if(providerHealthBlocksTraffic(row)){blocked.push(id);await recordRoutingEvent(env,{capability,provider:id,eventType:'blocked',reason:'health-circuit-open',position,previousProvider});continue}
-    const binding=row?.secret_binding||DEFAULTS[id]?.binding;
-    if(!providerConfigured(env,id,binding)){blocked.push(id);await recordRoutingEvent(env,{capability,provider:id,eventType:'blocked',reason:'credential-not-configured',position,previousProvider});continue}
-    const model=selected.modelOverride||row?.default_model||DEFAULTS[id]?.model||'',started=Date.now();attempted.push(id);
-    await recordRoutingEvent(env,{capability,provider:id,eventType:previousProvider?'fallback-attempt':'attempt',reason:previousProvider?'previous-provider-failed':'primary-route',position,previousProvider});
-    try{
-      const result=await invokeProvider(env,id,model,system,input,maxOutputTokens);
-      await recordGatewayFreeQuota(env,id,{ok:true,quota:result.quota||null});
-      await recordCall(env,{capability,provider:id,model:result.model,status:'completed',responseMs:Date.now()-started,inputUnits:result.inputUnits,outputUnits:result.outputUnits});
-      await recordRoutingEvent(env,{capability,provider:id,eventType:'selected',reason:'completed',position,previousProvider});
-      await recordMeter(env,result,capability);
-      return json(request,env,{ok:true,contract:'ekodi.ai-provider.v1',text:result.text,provider:{id:result.provider,model:result.model},usage:{inputUnits:result.inputUnits,outputUnits:result.outputUnits}},200)
-    }catch(error){
-      const code=clean(error?.message||error,160);
-      await recordGatewayFreeQuota(env,id,{ok:false,error});
-      await recordCall(env,{capability,provider:id,model,status:'failed',responseMs:Date.now()-started,errorCode:code});
-      await recordRoutingEvent(env,{capability,provider:id,eventType:'attempt-failed',reason:code,position,previousProvider});
-    }
+  if(request.method==='OPTIONS'){
+    const headers=corsHeaders(request,env);
+    if(!headers.get('access-control-allow-origin'))return json(request,env,{error:'origin_forbidden'},403);
+    return new Response(null,{status:204,headers});
   }
-  return json(request,env,{error:'provider_unavailable',attempted,blocked},503)
+  if(request.method!=='POST')return json(request,env,{error:'method_not_allowed'},405);
+  const user=await verifySupabaseUser(request,env);
+  if(!user)return json(request,env,{error:'authentication_required'},401);
+  const body=await request.json().catch(()=>({}));
+  const capability=CAPABILITIES.has(clean(body?.capability,40))?clean(body.capability,40):'default';
+  const system=clean(body?.system,12000),input=clean(body?.input,120000);
+  const maxOutputTokens=Math.max(64,Math.min(8192,Number(body?.maxOutputTokens)||4096));
+  if(!input)return json(request,env,{error:'input_required'},400);
+  try{
+    // Internal and authenticated requests must share exactly one cost/health/fallback path.
+    const result=await invokeAiProviderCapability(env,{capability,system,input,maxOutputTokens});
+    return json(request,env,{ok:true,contract:'ekodi.ai-provider.v1',text:result.text,provider:{id:result.provider,model:result.model},usage:result.usage},200);
+  }catch(error){
+    if(error?.message==='budget_limit_reached')return json(request,env,{error:'budget_limit_reached'},429);
+    return json(request,env,{error:'provider_unavailable',attempted:error?.attempted||[],blocked:error?.blocked||[]},503);
+  }
 }
 async function syncProviderRuntime(env,id,{enabled,priority,model,freeGuardConfirmed=false}){const bindings=RUNTIME_BINDINGS[id];if(!bindings)throw new Error('unknown_provider');const freeGuardBinding=DEFAULTS[id]?.freeGuardBinding||'',existingFreeGuard=providerFreeGuardConfigured(env,id);if(enabled&&freeGuardBinding&&!freeGuardConfirmed&&!existingFreeGuard)throw new Error('free_provider_guard_confirmation_required');const pairs=[['AI_MULTI_PROVIDER_ENABLED','true'],[bindings.enabled,enabled?'true':'false'],[bindings.priority,String(priority)],[bindings.model,model]];if(freeGuardBinding)pairs.push([freeGuardBinding,enabled&&(freeGuardConfirmed||existingFreeGuard)?'true':'false']);for(const[name,value]of pairs)await putRuntimeSecret(env,name,value)}
 async function updateProvider(request,env,session,id){
@@ -244,7 +240,8 @@ async function updateProvider(request,env,session,id){
   const priority=Math.max(1,Math.min(999,Number(body.priority)||100)),current=await providerRow(env,id),model=clean(body.defaultModel,120)||current?.default_model||DEFAULTS[id].model;
   const freeGuardConfirmed=body.freeGuardConfirmed===true;
   try{await syncProviderRuntime(env,id,{enabled:Boolean(enabled),priority,model,freeGuardConfirmed})}catch(error){if(error?.message==='free_provider_guard_confirmation_required')return json(request,env,{error:'free_provider_guard_confirmation_required',provider:id},409);const failure=runtimeSyncFailure(error);await audit(env,session,'provider.update.failed',id,JSON.stringify(failure));return json(request,env,{error:'provider_runtime_sync_failed',...failure},503)}
-  await env.DB.prepare('UPDATE ai_provider_registry SET enabled=?,priority=?,default_model=?,updated_at=?,updated_by=? WHERE provider_id=?').bind(enabled,priority,model,new Date().toISOString(),clean(session.email,240),id).run();
+  const settingsChanged=!current||Number(current.enabled)!==enabled||clean(current.default_model,120)!==model;
+  await env.DB.prepare("UPDATE ai_provider_registry SET enabled=?,priority=?,default_model=?,health_status=CASE WHEN ? THEN 'unknown' ELSE health_status END,last_checked_at=CASE WHEN ? THEN NULL ELSE last_checked_at END,last_error=CASE WHEN ? THEN '' ELSE last_error END,updated_at=?,updated_by=? WHERE provider_id=?").bind(enabled,priority,model,settingsChanged,settingsChanged,settingsChanged,new Date().toISOString(),clean(session.email,240),id).run();
   if(enabled===1&&DEFAULTS[id]?.costClass==='paid-opt-in')await resolveCostAlertsForPaidConfiguration(env,session.email).catch(()=>{});
   await audit(env,session,'provider.update',id,JSON.stringify({enabled:Boolean(enabled),priority,model,runtimeSynced:true}));
   return json(request,env,await providerSnapshot(env));
