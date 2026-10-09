@@ -83,7 +83,7 @@ test('canonical child paths attribute browser visits without treating all ekodi.
   assert.equal(trafficSiteIdForVisit('www.ekodi.kr', '/ai/', 'ai'), 'ai');
   assert.equal(trafficSiteIdForVisit('ekodi.kr', 'admin', 'mission'), 'root');
   assert.equal(trafficSiteIdForVisit('ekodi.kr', 'unknown-path', 'mission'), 'root');
-  assert.equal(trafficSiteIdForVisit('ekodi.kr', 'ekodichurch/user123', 'mall'), 'root');
+  assert.equal(trafficSiteIdForVisit('ekodi.kr', 'ekodichurch/user123', 'mall'), 'church');
   assert.equal(trafficSiteIdForVisit('ekodi.kr', '', 'mission'), 'mission');
   assert.equal(trafficSiteIdForVisit('ekodi.kr', '', 'made-up-site'), 'root');
   assert.equal(trafficSiteIdForVisit('seonammedi.kr', '', 'mission'), 'seonammedi');
