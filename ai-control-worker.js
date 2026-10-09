@@ -350,7 +350,17 @@ async function runScheduledSiteImprovement(env){
 function commonsConfig(env={}){return{policy:AI_COMMONS_POLICY,authUrl:'https://ekodi.kr/auth/?site=ai&return_to=https%3A%2F%2Fekodi.kr%2Fai%2F',supabaseUrl:clean(env.SUPABASE_URL),supabasePublishableKey:clean(env.SUPABASE_PUBLISHABLE_KEY)}}
 async function commonsChatCapabilities(env){
   const nodes=await onlineNodeProviders(env);
-  return runtimeCapabilities(env,nodes);
+  // Heartbeat alone does not mean a local model can accept real work.
+  // Match the scheduler's eligibility and resource gate before showing Ollama as ready.
+  let localReady=false;
+  if(dbReady(env)){
+    const cutoff=new Date(Date.now()-ONLINE_WINDOW_MS).toISOString();
+    const data=await env.DB.prepare("SELECT providers FROM ai_control_nodes WHERE state='online' AND auto_execution_eligible=1 AND is_portable=0 AND last_seen_at>=?").bind(cutoff).all();
+    localReady=(data.results||[]).some(row=>storedProviders(row.providers).includes('ollama-local'));
+  }
+  const eligible=nodes.filter(id=>id!=='ollama-local');
+  if(localReady)eligible.push('ollama-local');
+  return runtimeCapabilities(env,eligible);
 }
 async function reserveCommonsChatUsage(env,userId,tier){
   if(!dbReady(env))return{error:'state_store_unavailable',status:503};
