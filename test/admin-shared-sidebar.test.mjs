@@ -88,10 +88,22 @@ test('handoff-backed default groups stay open without immediate navigation', () 
   const globalClick = sidebar.slice(sidebar.indexOf("const group = global.dataset.adminGlobalGroup || ''"), sidebar.indexOf("closeDrawer();", sidebar.indexOf("const group = global.dataset.adminGlobalGroup || ''")) + 14);
   assert.match(globalClick, /nav\.dataset\.adminFocusedGroup = group/);
   assert.match(globalClick, /defaultDefinition\?\.adminHandoff !== true/);
-  assert.match(globalClick, /activateSection\(nav, defaultSection\)/);
-  assert.match(globalClick, /delete nav\.dataset\.adminFocusedGroup/);
+  assert.match(globalClick, /const activationAccepted = activateSection\(nav, defaultSection\)/);
+  assert.match(globalClick, /if \(!activationAccepted\) delete nav\.dataset\.adminFocusedGroup/);
+  assert.doesNotMatch(globalClick, /activateSection\(nav, defaultSection\);\s*delete nav\.dataset\.adminFocusedGroup/);
+  assert.match(sidebar, /const sectionChanged = \(\) => \{ delete nav\.dataset\.adminFocusedGroup; schedule\(\); \}/);
   assert.doesNotMatch(sidebar, /dataset\.adminCommandHome/);
   assert.match(sidebar, /section !== 'command-home' \|\| Boolean\(focusedGroup\)/);
+});
+
+test('slow/lazy releases, devices and other work areas keep the clicked axis selected until activation', () => {
+  const handler = sidebar.slice(sidebar.indexOf("const group = global.dataset.adminGlobalGroup || ''"), sidebar.indexOf('closeDrawer();', sidebar.indexOf("const group = global.dataset.adminGlobalGroup || ''")));
+  assert.match(handler, /nav\.dataset\.adminFocusedGroup = group/);
+  assert.match(handler, /const activationAccepted = activateSection\(nav, defaultSection\)/);
+  assert.doesNotMatch(handler, /activateSection\(nav, defaultSection\);\s*delete nav\.dataset\.adminFocusedGroup/);
+  assert.match(sidebar, /const focusedGroup = String\(nav\.dataset\.adminFocusedGroup \|\| ''\)\.trim\(\)/);
+  assert.match(sidebar, /const group = ADMIN_MENU_GROUPS\.some\(item => item\.id === focusedGroup\) \? focusedGroup : activeGroup/);
+  assert.match(sidebar, /window\.addEventListener\('ekodi-admin-section-changed', sectionChanged\)/);
 });
 
 test('global menu labels use readable contrast on the dark primary sidebar', () => {
