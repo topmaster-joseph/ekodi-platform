@@ -190,6 +190,25 @@ test('one-click connection diagnoses Windows launch blocks and never runs two el
   assert.match(admin, /설치 창이 열려 있으면/);
 });
 
+test('one-click Windows installers isolate download paths and delete temporary scripts', async () => {
+  const css = await readFile(new URL('../device-control-admin.css', import.meta.url), 'utf8');
+  assert.match(admin, /ekodi-device-agent-.*NewGuid\(\)\.ToString/);
+  assert.match(bootstrap, /ekodi-device-agent-bootstrap-.*NewGuid\(\)\.ToString/);
+  assert.match(admin, /EKB-213/);
+  assert.match(admin, /EKB-214/);
+  assert.match(admin, /EKB-215/);
+  assert.match(admin, /EKB-219/);
+  assert.match(admin, /Parser\]::ParseInput/);
+  assert.match(admin, /Remove-Item -LiteralPath \$p -Force -ErrorAction SilentlyContinue/);
+  assert.match(bootstrap, /Remove-Item -LiteralPath \$agent -Force -ErrorAction SilentlyContinue/);
+  assert.doesNotMatch(admin, /Join-Path \$env:TEMP 'ekodi-device-agent\.ps1'/);
+  assert.doesNotMatch(bootstrap, /Join-Path \$env:TEMP 'ekodi-device-agent-bootstrap\.ps1'/);
+  assert.match(css, /DEVICE-BOOTSTRAP-WIDE-CANONICAL-20261009/);
+  assert.match(css, /\.app:has\(#deviceControlPanel:not\(\.hidden-panel\)\)/);
+  assert.match(css, /width:calc\(100vw - 220px\)!important/);
+  assert.match(css, /@media\(max-width:760px\)/);
+});
+
 test('bootstrap elevates only when needed and keeps Boot/WOL separate', () => {
   assert.match(bootstrap, /\$isAdmin=/);
   assert.match(bootstrap, /if\(\$isAdmin\)/);
