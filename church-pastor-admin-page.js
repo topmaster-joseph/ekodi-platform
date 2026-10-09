@@ -131,12 +131,29 @@ function pastorClient(POLICY){
       <div class="table-wrap"><table><thead><tr><th>일자</th><th>공통본문</th><th>말씀 제목</th><th>상태</th><th>관리</th></tr></thead><tbody>${services.map((item,index)=>`<tr><td>${esc(item.service_date)}</td><td>${esc(item.scripture||'원본 미확인')}</td><td>${esc(item.title||'제목 미정')}</td><td>${item.is_published?'게시':'초안'}</td><td>${canWrite()?`<button type="button" class="button" data-worship-edit="${index}">편집</button>`:''}</td></tr>`).join('')}</tbody></table></div>${form}`;
     const f=$('worshipForm');
     if(f){
+      const dateField=f.elements.namedItem('service_date');
+      const scriptureField=f.elements.namedItem('scripture');
+      async function refreshApprovedReading(){
+        const date=String(dateField?.value||'');
+        scriptureField.readOnly=date.startsWith('2026-10-');
+        if(!scriptureField.readOnly)return;
+        try{
+          const response=await fetch('/api/public/scripture/common?date='+encodeURIComponent(date),{cache:'no-store'});
+          if(!response.ok)throw new Error('공통본문 원본 조회 실패');
+          const common=await response.json();
+          if(!common.found||common.status!=='approved'||!common.passage)throw new Error('이 날짜에 승인된 공통본문이 없습니다.');
+          scriptureField.value=common.passage;
+          $('formFlash').textContent='EKODI 공통본문 레지스트리: '+common.passage;
+        }catch(error){scriptureField.value='';$('formFlash').textContent=error.message;}
+      }
+      dateField?.addEventListener('change',refreshApprovedReading);
       $('mainPanel').querySelectorAll('[data-worship-edit]').forEach(button=>button.onclick=()=>{
         const item=services[Number(button.dataset.worshipEdit)];if(!item)return;
         for(const name of ['service_date','service_time','scripture','title','preacher','songs','prayer','notice']){
           const input=f.elements.namedItem(name);if(input)input.value=String(item[name]||'');
         }
         f.scrollIntoView({behavior:'smooth',block:'nearest'});
+        refreshApprovedReading();
       });
       f.onsubmit=async event=>{
         event.preventDefault();
@@ -148,6 +165,12 @@ function pastorClient(POLICY){
         const payload={service_type:'sunday',service_date:date,service_name:'에코디 주일모임',service_time:data.service_time||'11:00',scripture:data.scripture||'',title:data.title||'',preacher:data.preacher||'',songs:data.songs||'',prayer:data.prayer||'',notice:data.notice||'',is_published:published,updated_at:new Date().toISOString()};
         try{
           state('저장 중');
+          if(date.startsWith('2026-10-')){
+            const verify=await fetch('/api/public/scripture/common?date='+encodeURIComponent(date),{cache:'no-store'});
+            if(!verify.ok)throw new Error('공통본문 레지스트리를 확인할 수 없어 저장하지 않았습니다.');
+            const canonical=await verify.json();
+            if(canonical.status!=='approved'||canonical.passage!==String(data.scripture||''))throw new Error('날짜별 승인 공통본문과 일치해야 저장할 수 있습니다.');
+          }
           const saved=await fetch(source+'?on_conflict=service_type,service_date',{method:'POST',headers:{...headers,'content-type':'application/json',Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(payload)});
           if(!saved.ok){const error=await saved.json().catch(()=>({}));throw new Error(error.message||('저장 실패 '+saved.status));}
           await worship();

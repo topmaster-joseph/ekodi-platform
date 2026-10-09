@@ -528,12 +528,29 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
         <div class="table-wrap"><table><thead><tr><th>날짜</th><th>공통본문</th><th>말씀 제목</th><th>상태</th><th>관리</th></tr></thead><tbody>${rows.map((row,index)=>`<tr><td>${ae(row.service_date)}</td><td>${ae(row.scripture||'원본 미확인')}</td><td>${ae(row.title||'제목 미정')}</td><td>${row.is_published?'게시':'초안'}</td><td>${writable?`<button type="button" class="button" data-saturday-edit="${index}">편집</button>`:''}</td></tr>`).join('')}</tbody></table></div>${form}`;
       const editor=$('missionSaturdayForm');
       if(editor){
+        const dateField=editor.elements.namedItem('service_date');
+        const scriptureField=editor.elements.namedItem('scripture');
+        async function refreshApprovedReading(){
+          const date=String(dateField?.value||'');
+          scriptureField.readOnly=date.startsWith('2026-10-');
+          if(!scriptureField.readOnly)return;
+          try{
+            const response=await fetch('/api/public/scripture/common?date='+encodeURIComponent(date),{cache:'no-store'});
+            if(!response.ok)throw new Error('공통본문 원본 조회 실패');
+            const common=await response.json();
+            if(!common.found||common.status!=='approved'||!common.passage)throw new Error('이 날짜에 승인된 공통본문이 없습니다.');
+            scriptureField.value=common.passage;
+            $('missionMeetingFlash').textContent='EKODI 공통본문 레지스트리: '+common.passage;
+          }catch(error){scriptureField.value='';$('missionMeetingFlash').textContent=error.message;}
+        }
+        dateField?.addEventListener('change',refreshApprovedReading);
         $('mainPanel').querySelectorAll('[data-saturday-edit]').forEach(button=>button.onclick=()=>{
           const item=rows[Number(button.dataset.saturdayEdit)];if(!item)return;
           for(const name of ['service_date','service_time','scripture','title','preacher','songs','prayer','notice']){
             const control=editor.elements.namedItem(name);if(control)control.value=String(item[name]||'');
           }
           editor.scrollIntoView({block:'nearest',behavior:'smooth'});
+          refreshApprovedReading();
         });
         editor.onsubmit=async event=>{
           event.preventDefault();
@@ -545,6 +562,12 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
           const payload={service_type:'saturday',service_date:date,service_name:'에코디 토요모임',service_time:values.service_time||'11:00',scripture:values.scripture||'',title:values.title||'',preacher:values.preacher||'',songs:values.songs||'',prayer:values.prayer||'',notice:values.notice||'',is_published:publishing,updated_at:new Date().toISOString()};
           try{
             state('저장 중');
+          if(date.startsWith('2026-10-')){
+            const verify=await fetch('/api/public/scripture/common?date='+encodeURIComponent(date),{cache:'no-store'});
+            if(!verify.ok)throw new Error('공통본문 레지스트리를 확인할 수 없어 저장하지 않았습니다.');
+            const canonical=await verify.json();
+            if(canonical.status!=='approved'||canonical.passage!==String(values.scripture||''))throw new Error('날짜별 승인 공통본문과 일치해야 저장할 수 있습니다.');
+          }
             const saved=await fetch(endpoint+'?on_conflict=service_type,service_date',{method:'POST',headers:{...headers,'content-type':'application/json',Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(payload)});
             if(!saved.ok){const issue=await saved.json().catch(()=>({}));throw new Error(issue.message||('저장 실패 '+saved.status));}
             await saturdayMeeting();
