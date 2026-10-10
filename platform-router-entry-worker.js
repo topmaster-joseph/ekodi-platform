@@ -393,6 +393,15 @@ async function routeMallApiApex(request,env){
 async function routePlatform(request,env,ctx){
     const url=new URL(request.url);
     const host=resolvedHost(request,env);
+    // Retired short aliases must never fall through to a different workspace storefront.
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
+      const legacySite=url.pathname.match(/^\/(ekodibooks|pgm)(\/.*)?$/i);
+      if(legacySite){
+        const target=new URL(request.url);
+        target.pathname=(legacySite[1].toLowerCase()==='ekodibooks'?'/books':'/pyeonggongmok')+(legacySite[2]||'/');
+        return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'legacy-service-canonical'}});
+      }
+    }
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
     const seonamBoard=legacySeonamBoardRedirect(request);if(seonamBoard)return seonamBoard;
