@@ -1434,7 +1434,12 @@ async function nextCommand(request, env, device) {
 
 function mergeDiagnosticResult(device, commandType, result) {
   if (commandType === 'diagnostics.collect' && result.diagnostics && typeof result.diagnostics === 'object') {
-    return result.diagnostics;
+    const previous = parseJson(device.diagnostics_json);
+    const latest = { ...result.diagnostics };
+    // Full diagnostics refresh must not erase an independently verified
+    // local AI receipt that was already projected through the safe allowlist.
+    if (previous.localAiProof) latest.localAiProof = previous.localAiProof;
+    return latest;
   }
   const current = parseJson(device.diagnostics_json);
   // Keep the latest successful native AI verification receipt visible even
