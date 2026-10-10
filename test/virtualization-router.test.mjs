@@ -208,3 +208,13 @@ test('external fallback is rejected without native repair evidence',()=>{
   assert.equal(result.code,'EXTERNAL_FALLBACK_NATIVE_REPAIR_REQUIRED');
   assert.deepEqual(result.details.missingRecoveryEvidence,['ekodi-native-remote-computer']);
 });
+
+test('native repair evidence must cover every eligible provider before fallback',()=>{
+  const result=selectVirtualizationProvider({taskClass:'browser-ui-validation',nativeProviders:[],
+    externalFallback:{reason:'native-capability-unavailable',auditId:'audit',nativeCapabilityGapRecord:'gap',securityEquivalentOrStronger:true,
+      nativeRecoveryEvidence:[{id:'ekodi-background-browser-worker',attempted:true,outcome:'exhausted',auditId:'repair'}],
+      nativeFailures:[{id:'ekodi-background-browser-worker',reason:'native-capability-unavailable'}]},
+    externalProviders:[{id:'external',enabled:true,approved:true,securityEquivalentOrStronger:true}]});
+  assert.equal(result.code,'EXTERNAL_FALLBACK_NATIVE_REPAIR_REQUIRED');
+  assert.deepEqual(result.details.missingRecoveryEvidence,['ekodi-native-remote-computer','autonomous-execution-fabric']);
+});
