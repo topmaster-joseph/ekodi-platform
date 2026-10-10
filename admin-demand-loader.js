@@ -272,7 +272,7 @@
     return task;
   }
 
-  function placeholder(key,feature) {
+  function placeholder(key, feature) {
     if (!nav || nav.querySelector(`[data-demand-feature="${key}"]`)) return false;
     const button = nav.querySelector(feature.real);
     if (!button) return false;
