@@ -15,6 +15,7 @@ function responseHeaders(origin = '') {
   const headers = new Headers({
     'cache-control':'no-store',
     'x-content-type-options':'nosniff',
+    'x-ekodi-traffic-telemetry':'site-scoped-v2',
     'vary':'Origin',
   });
   if (origin) headers.set('access-control-allow-origin', origin);
