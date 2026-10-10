@@ -9,3 +9,7 @@ The Orchestrator's convergent post-merge dispatcher starts `deploy-ekodi-church-
 Validation should verify that `church-release.json.sourceSha` equals the exact Church revision deployed, not simply that the home page returns HTTP 200.
 
 This Pages release is not proof that the separate Supabase `church-pastor-api` Edge Function is deployed. Track the independently guarded API release and real authenticated-role browser checks under issue #4092.
+
+## Synchronized release check
+
+After the Orchestrator updated this branch with the current protected `main`, the repository owner re-runs required statuses on the new head. This synchronization does not itself mean the static Church source was deployed; check Cloudflare release evidence and the exact `church-release.json` SHA before completion.
