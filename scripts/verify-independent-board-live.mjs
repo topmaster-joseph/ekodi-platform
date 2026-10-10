@@ -67,7 +67,7 @@ export async function verifyIndependentBoardLive({
     assert.equal(health.body.independent, true);
     assert.equal(health.body.aiIndependent, true);
     assert.equal(health.response.headers.get('x-ekodi-board-independent'), 'true');
-    assert.equal(health.response.headers.get('x-ekodi-board-id'), id);
+    assert.equal(health.response.headers.get('x-ekodi-board-id'), id, board.site + ' board ID response header');
     const posts = await json(board.prefix + '/api/posts');
     assert.equal(posts.body.boardId, id);
     assert.ok(Array.isArray(posts.body.items), board.site + ' items');
