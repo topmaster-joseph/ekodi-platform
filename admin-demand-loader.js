@@ -56,7 +56,7 @@
     'api-cost':{label:'API Cost',icon:'₩',styles:['api-cost-admin.css'],scripts:['api-cost-admin.js'],real:'[data-section="api-cost"]',hashes:['#api-cost'],insert:'after-health'},
     storage:{label:'Storage',icon:'▣',styles:['storage-admin.css'],scripts:['storage-admin.js'],real:'[data-section="storage"]',hashes:['#storage'],paths:['/admin/settings-records/storage','/admin/system/storage'],insert:'after-health'},
     security:{label:'Security',icon:'◆',styles:['admin-secret-generator.css'],scripts:['admin-secret-generator.js'],real:'[data-section="security"]',hashes:['#security'],insert:'after-health'},
-    deployments:{label:'Deployments',icon:'↑',styles:['release-control-admin.css'],scripts:['release-control-admin.js'],real:'[data-section="deployments"]',hashes:['#deployments','#release'],insert:'after-security'},
+    deployments:{label:'Deployments',icon:'↑',styles:['release-control-admin.css'],scripts:['release-control-admin.js'],real:'[data-section="deployments"]',ready:'#releaseControl',hashes:['#deployments','#release'],insert:'after-security'},
     work: {
       label: '구인구직', icon: 'W',
       styles: ['work-admin.css'],
@@ -111,52 +111,52 @@
     if (loadedStyles.has(href)) return loadedStyles.get(href);
     const existing = document.querySelector(`link[data-ekodi-demand-style="${href}"]`);
     if (existing) return Promise.resolve(existing);
-    const promise = new Promise(resolve => {
+    const promise=new Promise(resolve=>{
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = assetUrl(href);
-      link.dataset.ekodiDemandStyle = href;
+      link.href=assetUrl(href);
+      link.dataset.ekodiDemandStyle=href;
       link.addEventListener('load', () => resolve(link), { once:true });
       link.addEventListener('error', () => resolve(link), { once:true });
       document.head.appendChild(link);
     });
-    loadedStyles.set(href, promise);
+    loadedStyles.set(href,promise);
     return promise;
   }
 
   function loadScript(src) {
     if (loadedScripts.has(src)) return loadedScripts.get(src);
-    const promise = new Promise((resolve, reject) => {
+    const promise=new Promise((resolve,reject)=>{
       const script = document.createElement('script');
-      script.src = assetUrl(src);
-      script.dataset.ekodiDemandScript = src;
+      script.src=assetUrl(src);
+      script.dataset.ekodiDemandScript=src;
       script.addEventListener('load', () => resolve(script), { once:true });
       script.addEventListener('error', () => reject(new Error(`${src} load failed`)), { once:true });
       document.body.appendChild(script);
-    }).catch(error => { loadedScripts.delete(src); throw error; });
-    loadedScripts.set(src, promise);
+    }).catch(error=>{ loadedScripts.delete(src); throw error; });
+    loadedScripts.set(src,promise);
     return promise;
   }
 
-  function waitFor(selector, timeout = 4500) {
-    const existing = document.querySelector(selector);
+  function waitFor(selector,timeout=4500) {
+    const existing=document.querySelector(selector);
     if (existing) return Promise.resolve(existing);
-    return new Promise((resolve, reject) => {
-      let settled = false;
-      const finish = (node, error) => {
+    return new Promise((resolve,reject)=>{
+      let settled=false;
+      const finish=(node,error)=>{
         if (settled) return;
-        settled = true;
+        settled=true;
         observer.disconnect();
         clearTimeout(timer);
         if (error) reject(error); else resolve(node);
       };
-      const observer = new MutationObserver(() => {
-        const node = document.querySelector(selector);
+      const observer = new MutationObserver(()=>{
+        const node=document.querySelector(selector);
         if (node) finish(node);
       });
-      if (nav) observer.observe(nav, { childList:true, subtree:true });
+      if (nav) observer.observe(nav,{ childList:true,subtree:true });
       const content = document.querySelector('.content');
-      if (content) observer.observe(content, { childList:true, subtree:true });
+      if (content) observer.observe(content,{ childList:true,subtree:true });
       const timer = window.setTimeout(() => finish(null, new Error('menu timeout')), timeout);
     });
   }
@@ -184,33 +184,33 @@
       return globalThis.scheduler.postTask(() => callback({ didTimeout:false, timeRemaining:() => 50 }), { priority:'background' });
     }
     if ('requestIdleCallback' in window) return window.requestIdleCallback(callback);
-    return window.setTimeout(() => callback({ didTimeout:false, timeRemaining:() => 20 }), 1200);
+    return window.setTimeout(()=>callback({ didTimeout:false,timeRemaining:()=>20 }),1200);
   }
 
   function scheduleSecondary(key, feature) {
     if (secondaryScheduled.has(key)) return;
-    const styles = feature.secondaryStyles || [];
-    const scripts = feature.secondaryScripts || [];
-    if (!(styles.length || scripts.length)) return;
+    const styles=feature.secondaryStyles||[];
+    const scripts=feature.secondaryScripts||[];
+    if (!(styles.length||scripts.length)) return;
     secondaryScheduled.add(key);
 
-    let index = 0;
-    let stylesLoaded = false;
-    const step = () => {
-      if (!authenticated() || index >= scripts.length) return;
+    let index=0;
+    let stylesLoaded=false;
+    const step=()=>{
+      if (!authenticated()||index >= scripts.length) return;
       if (document.visibilityState === 'hidden') {
         document.addEventListener('visibilitychange', step, { once:true });
         return;
       }
-      onBackground(async deadline => {
+      onBackground(async deadline=>{
         if (!authenticated()) return;
-        if (inputPending() || (deadline?.timeRemaining && deadline.timeRemaining() < 6)) {
-          window.setTimeout(step, 500);
+        if (inputPending()||(deadline?.timeRemaining&&deadline.timeRemaining() < 6)) {
+          window.setTimeout(step,500);
           return;
         }
         try {
           if (!stylesLoaded) {
-            stylesLoaded = true;
+            stylesLoaded=true;
             await Promise.all(styles.map(loadStyle));
           }
           if (scripts[index]) await loadScript(scripts[index]);
@@ -224,12 +224,12 @@
     step();
   }
 
-  async function activateFeature(key, placeholder, auto = false) {
-    const feature = FEATURES[key];
-    if (!feature || !authenticated()) return;
+  async function activateFeature(key,placeholder,auto=false) {
+    const feature=FEATURES[key];
+    if (!feature||!authenticated()) return;
     if (pending.has(key)) return pending.get(key);
 
-    const task = (async () => {
+    const task=(async ()=>{
       mark(`ekodi-feature-${key}-start`);
       if (placeholder) {
         placeholder.disabled = true;
@@ -237,11 +237,12 @@
         placeholder.classList.add('is-loading');
       }
       try {
-        await Promise.all((feature.styles || []).map(loadStyle));
+        await Promise.all((feature.styles||[]).map(loadStyle));
         for (const src of feature.scripts || []) await loadScript(src);
         const real = await waitFor(feature.real);
+        if(feature.ready)await waitFor(feature.ready,1e4);
         if (placeholder) {
-          const handler = placeholder.__ekodiDemandHandler;
+          const handler=placeholder.__ekodiDemandHandler;
           if (handler) placeholder.removeEventListener('click', handler, true);
           delete placeholder.__ekodiDemandHandler;
           placeholder.disabled = false;
@@ -267,7 +268,7 @@
       }
     })();
 
-    pending.set(key, task);
+    pending.set(key,task);
     return task;
   }
 
@@ -275,17 +276,17 @@
     if (!nav || nav.querySelector(`[data-demand-feature="${key}"]`)) return false;
     const button = nav.querySelector(feature.real);
     if (!button) return false;
-    let changed = false;
+    let changed=false;
     if (button.dataset.demandFeature !== key) {
-      button.dataset.demandFeature = key;
-      changed = true;
+      button.dataset.demandFeature=key;
+      changed=true;
     }
-    const handler = event => {
+    const handler=event=>{
       event.preventDefault();
       event.stopImmediatePropagation();
-      activateFeature(key, button, false);
+      activateFeature(key,button,false);
     };
-    button.__ekodiDemandHandler = handler;
+    button.__ekodiDemandHandler=handler;
     button.addEventListener('click', handler, true);
     return changed;
   }
@@ -301,7 +302,7 @@
         finance.dataset.financeAssetsRequested = 'false';
         console.warn('[EKODI Admin] Finance lazy load failed', error);
       });
-    }, true);
+    },true);
     return true;
   }
 
@@ -309,16 +310,16 @@
 
   function install(){
     if(!authenticated()||!nav)return;
-    let changed = false;
-    Object.entries(FEATURES).forEach(([key, feature]) => { if (placeholder(key, feature)) changed = true; });
-    if (bindBaseEnhancements()) changed = true;
+    let changed=false;
+    Object.entries(FEATURES).forEach(([key,feature])=>{ if (placeholder(key,feature)) changed=true; });
+    if (bindBaseEnhancements()) changed=true;
     if(!nav.dataset.cb){nav.dataset.cb='1';nav.addEventListener('click',e=>{if(!e.target.closest('[data-section="books"], [data-lazy-section="books"]')||nav.dataset.cbl)return;nav.dataset.cbl='1';loadStyle('author-billing-admin.css').then(()=>loadScript('author-billing-admin.js')).catch(()=>delete nav.dataset.cbl)},true);changed=true;}
     window.EKODIAdminSidebar?.sync?.(document);
     if (changed) window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:'placeholders' } }));
-    const requestedKey = requestedFeature();
+    const requestedKey=requestedFeature();
     if (requestedKey) {
       const button = nav.querySelector(`[data-demand-feature="${requestedKey}"]`);
-      activateFeature(requestedKey, button, true);
+      activateFeature(requestedKey,button,true);
     }
   }
 
@@ -327,13 +328,13 @@
   window.addEventListener('ekodi-admin-ready', install);
   window.addEventListener('ekodi-authenticated', onAuthState);
   window.addEventListener('hashchange', () => {
-    const requestedKey = requestedFeature();
-    if (!requestedKey || !authenticated()) return;
+    const requestedKey=requestedFeature();
+    if (!requestedKey||!authenticated()) return;
     const button = nav?.querySelector(`[data-demand-feature="${requestedKey}"]`);
-    if (button) activateFeature(requestedKey, button, true);
+    if (button) activateFeature(requestedKey,button,true);
   });
 
-  window.EKODIAdminDemand = Object.freeze({
+  window.EKODIAdminDemand=Object.freeze({
     activate: key => activateFeature(key, nav?.querySelector(`[data-demand-feature="${key}"]`), false),
     loadScript,
     loadStyle,
