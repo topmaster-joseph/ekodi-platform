@@ -24,7 +24,7 @@ test('site-health has a registered demand path with a real installed panel readi
 
 test('site health loads without introducing synthetic administrative permissions or bypasses', () => {
   const loader = read('admin-demand-loader.js');
-  assert.match(loader, /if\(!feature\|\|!authenticated\(\)\)return/);
+  assert.match(loader, /if\s*\(!feature\|\|!authenticated\(\)\)\s*return/);
   assert.match(loader, /if\(feature\.ready\)await waitFor\(feature\.ready,1e4\)/);
   assert.doesNotMatch(loader, /ALLOW_UNAUTHENTICATED_SITE_HEALTH/);
 });
