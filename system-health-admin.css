@@ -295,3 +295,9 @@ body.admin-compact #ekodiSystemHealth .system-health-footnote{
 .system-health-local-nav button.is-active{border-color:rgba(59,130,246,.24);background:rgba(59,130,246,.1);color:inherit}
 body.admin-compact #ekodiSystemHealth [data-health-anchor]{scroll-margin-top:76px}
 @media(max-width:760px){.system-health-local-nav{position:sticky;top:56px;z-index:8;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;background:var(--admin-surface,#fff)}.system-health-local-nav::-webkit-scrollbar{display:none}.system-health-local-nav button{flex:0 0 auto;min-height:34px;font-size:12px}}
+
+/* Date-by-date Traffic Intelligence stays compact across 7/30-day views. */
+.traffic-intelligence-daily-card{margin:10px 0 18px}
+.traffic-intelligence-days{display:grid;gap:6px;max-height:270px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.traffic-intelligence-days .traffic-intelligence-site-row{min-height:34px}
+@media(max-width:540px){.traffic-intelligence-days{max-height:320px}.traffic-intelligence-days .traffic-intelligence-site-row{gap:3px}}
