@@ -73,6 +73,7 @@
       'startup.scan':'시작프로그램 확인',
       'maintenance.temp_cleanup':'임시파일 정리',
       'computer.browser.execute':'백그라운드 브라우저 자동실행',
+      'computer.workspace.slides.audio.insert':'Google Slides 원본 오디오 내장',
       'power.always_on':'항상 켜짐',
       'power.presentation':'프레젠테이션',
       'power.normal':'일반 모드',
@@ -192,6 +193,16 @@
         </form>
         <small class="hybrid-native-feedback" id="hybridNativeFeedback" role="status">온라인 자체 노드와 BG Browser Canary가 필요합니다. 외부 GitHub 사이트와 로그인 화면은 이 작업으로 실행할 수 없습니다.</small>
       </section>
+      <section class="hybrid-native-browser" id="hybridGoogleWorkspaceAudio" aria-label="Google Workspace 전용 오디오 실행">
+        <div class="hybrid-row"><div><h4>Google Workspace · 주일예배 오디오 삽입</h4>
+        <p>기존 261011 주일예배 Google Slides 42장 중 주기도문 5장, 다국어 설교 제목 3장에 등록된 MP3만 삽입합니다. EKODI 격리 전용 프로필의 실제 Google 로그인과 사전 Canary가 필요합니다.</p>
+        </div><span class="hybrid-pill" id="hybridWorkspaceAudioReadiness">실행기 준비 확인 중</span></div>
+        <div class="hybrid-controls">
+          <button type="button" class="primary" id="enqueueWorkspaceAudio" disabled>기존 원본에 MP3 8개 삽입 요청</button>
+          <a href="https://docs.google.com/presentation/d/1wJhndsrFK7GrwnJsmWMvarivlNCfgTE97RGQTRJ3CfI/edit" target="_blank" rel="noopener noreferrer">Google Slides 원본 열기</a>
+        </div>
+        <small class="hybrid-native-feedback" id="hybridWorkspaceAudioFeedback" role="status">로그인/권한이 없으면 작업하지 않습니다. 작업 접수는 실제 삽입 완료가 아닙니다.</small>
+      </section>
       <section class="hybrid-watchdog" id="hybridWatchdog" data-status="unknown">
         <div class="hybrid-watchdog-head"><div><strong>운영 자동감시</strong><span class="hybrid-pill" id="hybridMonitorStatus">확인 전</span></div><small id="hybridMonitorTime">10분 주기 감시</small></div>
         <div class="hybrid-incidents" id="hybridIncidentList"><div class="hybrid-empty">감시 상태를 불러오는 중입니다.</div></div>
@@ -240,6 +251,7 @@
     panel.querySelector('#toggleHybridFabric')?.addEventListener('click', toggleFabric);
     panel.querySelector('#enqueueHybridDiagnostic')?.addEventListener('click', enqueueDiagnostic);
     panel.querySelector('#hybridNativeBrowserForm')?.addEventListener('submit', enqueueNativeBrowser);
+    panel.querySelector('#enqueueWorkspaceAudio')?.addEventListener('click', enqueueWorkspaceAudio);
     panel.querySelector('#hybridStatusFilter')?.addEventListener('change', renderJobs);
     panel.querySelector('#hybridJobSearch')?.addEventListener('input', renderJobs);
     load();
@@ -309,6 +321,29 @@
       node.online && node.enabled && node.autoExecute
       && node.capabilities?.backgroundBrowser === true
       && Number(node.activeJobs || 0) < Number(node.maxConcurrency || 1));
+  }
+
+  function eligibleWorkspaceAudioNodes() {
+    if (lastDashboard.fabric?.enabled === false) return [];
+    return (lastDashboard.nodes || []).filter(node =>
+      node.online && node.enabled && node.autoExecute
+      && node.capabilities?.workspaceSlidesAudio === true
+      && Number(node.activeJobs || 0) < Number(node.maxConcurrency || 1));
+  }
+
+  function renderWorkspaceAudioStatus() {
+    const panel = document.querySelector('#hybridGoogleWorkspaceAudio');
+    if (!panel) return;
+    const eligible = eligibleWorkspaceAudioNodes();
+    const busy = (lastDashboard.jobs || []).some(job =>
+      job.taskType === 'computer.workspace.slides.audio.insert'
+      && ['pending','assigned','leased'].includes(job.status));
+    const button = panel.querySelector('#enqueueWorkspaceAudio');
+    button.disabled = !eligible.length || busy || lastDashboard.fabric?.canManage !== true;
+    panel.querySelector('#hybridWorkspaceAudioReadiness').textContent =
+      busy ? '동일 작업 진행 중' :
+      !eligible.length ? '전용 Google 인증·Canary 또는 노드 준비 필요' :
+      lastDashboard.fabric?.canManage !== true ? '최고관리자 전용' : `전용 실행 가능 노드 ${eligible.length}대`;
   }
 
   function renderNativeBrowserStatus() {
@@ -447,6 +482,7 @@
       nodes.querySelectorAll('[data-save-node]').forEach(button => button.addEventListener('click', saveNode));
       renderFabric();
       renderNativeBrowserStatus();
+      renderWorkspaceAudioStatus();
       renderMonitoring();
       renderJobs();
       renderEvents();
@@ -508,6 +544,36 @@
       await load();
     } catch (error) { alert(error.message); }
     finally { button.disabled = false; }
+  }
+
+  async function enqueueWorkspaceAudio() {
+    const button = document.querySelector('#enqueueWorkspaceAudio');
+    const feedback = document.querySelector('#hybridWorkspaceAudioFeedback');
+    if (!button || button.disabled) return;
+    if (!confirm('기존 261011 Google Slides 원본에 지정된 MP3 8개만 실제 오디오로 삽입할까요? 전용 Google 로그인/권한과 실행기 Canary가 사전 검증돼야 합니다.')) return;
+    button.disabled=true;
+    feedback.textContent='EKODI 자체 실행기 작업을 등록하고 있습니다.';
+    try {
+      if (!eligibleWorkspaceAudioNodes().length) throw new Error('전용 Google Workspace 노드 또는 Canary가 준비되지 않았습니다.');
+      const result=await request('/api/control/hybrid-execution/jobs',{
+        method:'POST',
+        body:JSON.stringify({
+          taskType:'computer.workspace.slides.audio.insert',
+          confirmed:true,maxAttempts:1,priority:60,
+          payload:{
+            pilotId:'261011-ekodi-sunday-service-8-mp3',
+            presentationId:'1wJhndsrFK7GrwnJsmWMvarivlNCfgTE97RGQTRJ3CfI',
+            operation:'insert-native-audio',
+          }
+        }),
+      });
+      feedback.textContent=`작업 접수 ${result.job?.id||'확인 필요'} · 8개 오디오 실제 삽입/재생 영수증이 있어야 완료됩니다.`;
+      await load();
+    } catch(error) {
+      feedback.textContent=`작업 등록 실패: ${error.message}`;
+    } finally {
+      renderWorkspaceAudioStatus();
+    }
   }
 
   async function enqueueNativeBrowser(event) {
