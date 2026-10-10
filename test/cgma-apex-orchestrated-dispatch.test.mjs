@@ -24,9 +24,10 @@ test('CGMA production dispatch carries orchestrator receipt and never disables v
   assert.equal((workflow.match(/validate-ekodi-ai-change-orchestration\.mjs\" --release/g)||[]).length,2);
   assert.match(workflow,/Verify EKODI Production account boundary/);
   assert.match(workflow,/deploy-site-core\.yml\/dispatches/);
-  assert.match(workflow,/-f release_branch_ref="\$EKODI_RELEASE_BRANCH_REF"/);
-  assert.match(workflow,/-f release_task_id="\$EKODI_RELEASE_TASK_ID"/);
-  assert.match(workflow,/-f sync_domains=false/);
+  assert.match(workflow,/\{ref:"main",inputs:\{sync_domains:"false",release_branch_ref:\$branch,release_task_id:\$task\}\}/);
+  assert.match(workflow,/gh api --method POST.*deploy-site-core\.yml\/dispatches.*--input -/);
+  assert.doesNotMatch(workflow,/-f release_branch_ref=/);
+  assert.doesNotMatch(workflow,/-f release_task_id=/);
   assert.match(workflow,/Verify CGMA edge production/);
   assert.match(workflow,/check_board '\/cgma\/board'/);
 });
