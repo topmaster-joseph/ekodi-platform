@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-const DEVICES_URL='https://ekodi.kr/api/control/devices';
+const DEVICES_URL='https://ekodi.kr/api/control/devices/readiness';
 const HEARTBEAT_MAX_AGE_MS=90_000;
 const norm=value=>String(value||'').trim().toLowerCase();
 
@@ -41,7 +41,10 @@ export function summarizeNativeDeviceReadiness(devices,{hostname='user3',now=Dat
 
 export async function observeNativeDeviceReadiness({token,hostname='user3',now=Date.now(),fetchImpl=fetch}={}){
   if(!token||typeof token!=='string'||token.trim().length<20)throw new Error('trusted_admin_session_required');
-  const response=await fetchImpl(DEVICES_URL,{
+  const target=norm(hostname);
+  if(!/^[a-z0-9-]{2,48}$/.test(target))throw new Error('invalid_target_hostname');
+  const url=DEVICES_URL+'?hostname='+encodeURIComponent(target);
+  const response=await fetchImpl(url,{
     method:'GET',redirect:'error',cache:'no-store',
     headers:{authorization:'Bearer '+token,accept:'application/json'},
     signal:AbortSignal.timeout(12000)
