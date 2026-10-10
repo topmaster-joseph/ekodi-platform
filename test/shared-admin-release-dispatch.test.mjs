@@ -15,3 +15,15 @@ test('deploy request retains authenticated orchestrator receipt and main release
  assert.match(script,/body:JSON\.stringify\(\{ref:'main',inputs:\{sync_domains:'false',release_branch_ref:branch,release_task_id:taskId\}\}\)/);
  assert.match(script,/release receipt is not authorized/);
 });
+
+test('Shared Site workflow watches changes to its own orchestrator post-merge dispatcher',async()=>{
+ const workflow=await readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
+ const begin=workflow.indexOf('  push:');
+ const end=workflow.indexOf('  pull_request:',begin);
+ const pushBlock=workflow.slice(begin,end>begin?end:undefined).split('  jobs:')[0];
+ assert.ok(pushBlock.includes("      - 'scripts/converge-orchestrated-pr-merge.mjs'"),'dispatcher changes must trigger guarded site deploy');
+ assert.ok(pushBlock.includes("      - '.github/workflows/deploy-site-core.yml'"));
+ assert.ok(workflow.includes('release_branch_ref:'));
+ assert.ok(workflow.includes('release_task_id:'));
+ assert.ok(ownership.includes("file==='scripts/converge-orchestrated-pr-merge.mjs'"),'orchestrator modifications must dispatch Shared Site after protected merge');
+});
