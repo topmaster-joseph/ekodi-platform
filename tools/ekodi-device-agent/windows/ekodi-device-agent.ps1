@@ -1,4 +1,4 @@
-param(
+﻿param(
   [switch]$Install,
   [switch]$Run,
   [switch]$RegisterProtocol,
@@ -20,6 +20,13 @@ try {
 }
 
 $AgentVersion = '2.5.3'
+# Restore the canonical Windows program data directory when a managed session omits it.
+if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
+  $env:ProgramData = [Environment]::GetFolderPath([Environment+SpecialFolder]::CommonApplicationData)
+}
+if ([string]::IsNullOrWhiteSpace($env:ProgramData) -or -not [System.IO.Path]::IsPathRooted($env:ProgramData)) {
+  throw '[EKODI:EKA-298][environment] Windows ProgramData path is unavailable.'
+}
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -2317,6 +2324,53 @@ function Invoke-IsolatedDesktopSessionExecute($Payload) {
   }
 }
 
+function Get-EkodiLocalAiVerification {
+  # Bounded native diagnostic: no arbitrary command arguments, no credentials.
+  # VM UI canaries do not establish local host AI readiness.
+  $proof = [ordered]@{
+    checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+    ollamaApi = 'unavailable'
+    ollamaVersion = ''
+    selectedModel = ''
+    inference = 'not_checked'
+    claudeCli = 'not_visible_to_agent'
+    claudeAuth = 'requires_interactive_user_verification'
+    executionMode = 'fixed_loopback_api'
+    credentialCollection = $false
+  }
+  try {
+    $version = Invoke-RestMethod -Method Get -Uri 'http://127.0.0.1:11434/api/version' -TimeoutSec 5 -ErrorAction Stop
+    if ($version.version) {
+      $proof.ollamaApi = 'ready'
+      $proof.ollamaVersion = [string]$version.version
+    }
+  } catch { }
+  if ($proof.ollamaApi -eq 'ready') {
+    try {
+      $tags = Invoke-RestMethod -Method Get -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 8 -ErrorAction Stop
+      $available = @($tags.models | ForEach-Object { [string]$_.name })
+      $model = @('qwen2.5-coder:1.5b', 'qwen3:0.6b') | Where-Object { $available -contains $_ } | Select-Object -First 1
+      if ($model) {
+        $proof.selectedModel = [string]$model
+        $body = @{
+          model = [string]$model
+          prompt = 'Reply exactly OK'
+          stream = $false
+          think = $false
+          options = @{ num_predict = 64; num_ctx = 512; temperature = 0 }
+        } | ConvertTo-Json -Depth 5 -Compress
+        $reply = Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:11434/api/generate' -Body $body -ContentType 'application/json' -TimeoutSec 45 -ErrorAction Stop
+        if ([string]$reply.response -match '^\s*OK[.!]?\s*$') { $proof.inference = 'passed' }
+        else { $proof.inference = 'nonmatching_response' }
+      } else { $proof.inference = 'approved_model_missing' }
+    } catch { $proof.inference = 'api_error_or_timeout' }
+  }
+  try {
+    if (Get-Command -Name 'claude' -ErrorAction Stop) { $proof.claudeCli = 'visible_in_agent_context' }
+  } catch { }
+  return @{ message = 'EKODI native local AI verification completed'; localAiProof = $proof }
+}
+
 function Get-RemoteAgentStatus {
   $taskState = 'unknown'
   try {
@@ -2555,6 +2609,7 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'profile.workstation.restore' { return Restore-WorkstationProfile }
     'agent.self_update' { return Update-AgentFromOfficialSource }
     'software.localai.install' { return Install-EkodiLocalAI }
+    'software.localai.verify' { return Get-EkodiLocalAiVerification }
     'computer.browser.canary' { return Invoke-BackgroundBrowserCanary }
     'computer.browser.execute' { return Invoke-BackgroundBrowserWorker $payload }
     'remote_desktop.recovery.enable' { return Set-DesktopCommanderRecovery $true }
@@ -2642,7 +2697,7 @@ function Send-Heartbeat($Config) {
     capabilities = @{
       powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
-      networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true
+      networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true
       computerRead = $true; processRead = $true; agentStatus = $true
       isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified; isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified; isolatedDesktopSessionCanary = [bool](Get-IsolatedDesktopSessionCanaryState).verified; isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified
       desktopCapture = $false; desktopInput = $false
@@ -2745,7 +2800,7 @@ function Install-Agent {
       capabilities = @{
         powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
         diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
-        networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true
+        networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true
         arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
       }
     } | ConvertTo-Json -Depth 8
