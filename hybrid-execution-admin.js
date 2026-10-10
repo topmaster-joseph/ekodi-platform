@@ -315,7 +315,8 @@
     const panel = document.querySelector('#hybridNativeBrowser');
     if (!panel) return;
     const ready = eligibleNativeBrowserNodes();
-    panel.querySelector('#enqueueHybridNativeBrowser').disabled = ready.length === 0;
+    const button = panel.querySelector('#enqueueHybridNativeBrowser');
+    button.disabled = ready.length === 0;
     panel.querySelector('#hybridNativeReadiness').textContent = ready.length
       ? `실행 가능 후보 ${ready.length}대`
       : lastDashboard.fabric?.enabled === false ? '실행망 일시중지' : '실행 가능 노드 없음';
