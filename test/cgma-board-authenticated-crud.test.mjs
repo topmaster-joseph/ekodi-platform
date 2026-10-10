@@ -139,3 +139,35 @@ test('board internal Worker rejects untrusted host and unrelated path',async()=>
     assert.equal((await worker.fetch(new Request('https://board.internal.ekodi/ekodimission/board'),env)).status,404);
   }finally{db.close();}
 });
+
+
+test('CGMA public page progressively offers authenticated inline editor, and only the author can see edit flags',async()=>{
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async()=>Response.json({message:'unauthorized'},{status:401});
+  const {env,db}=fixture();
+  try{
+    const html=await worker.fetch(request(''),env);
+    assert.equal(html.status,200);
+    const page=await html.text();
+    assert.match(page,/id="cgma-board-editor" hidden/);
+    assert.match(page,/id="cgma-board-tools" hidden/);
+    assert.match(page,/src="\/cgma\/board\/assets\/board-client\.js"/);
+    const asset=await worker.fetch(request('/assets/board-client.js'),env);
+    assert.equal(asset.status,200);
+    assert.match(asset.headers.get('content-type')||'',/javascript/);
+    assert.equal(asset.headers.get('x-ekodi-board-id'),'site:cgma:main');
+    assert.match(await asset.text(),/sessionStorage\.getItem\('ekodi-auth-token'\)/);
+    assert.equal((await worker.fetch(request('/api/me'),env)).status,401);
+    assert.equal((await worker.fetch(request('/api/me','GET','admin1'),env)).status,200);
+    assert.equal((await (await worker.fetch(request('/api/me','GET','admin1'),env)).json()).canManage,false);
+    const created=await (await worker.fetch(request('/api/posts','POST','admin1',{title:'authorized',body:'private-test-data'}),env)).json();
+    const owner=(await (await worker.fetch(request('/api/posts','GET','admin1'),env)).json()).items;
+    const another=(await (await worker.fetch(request('/api/posts','GET','admin2'),env)).json()).items;
+    const anonymous=(await (await worker.fetch(request('/api/posts'),env)).json()).items;
+    assert.equal(owner.length,1);
+    assert.equal(owner[0].id,created.id);
+    assert.equal(owner[0].canEdit,true);
+    assert.equal(another[0].canEdit,false);
+    assert.equal(Object.hasOwn(anonymous[0],'canEdit'),false);
+  }finally{globalThis.fetch=originalFetch;db.close();}
+});
