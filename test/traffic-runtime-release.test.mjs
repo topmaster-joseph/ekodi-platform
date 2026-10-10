@@ -31,3 +31,11 @@ test('Shell release accepts only verified orchestrator dispatch into main',async
   assert.match(workflow,/grep -Fq 'site_path:first\+child'/);
   assert.match(workflow,/Verify Shell staging with release cache busting/);
 });
+
+test('daily anonymous browser session hash is separated by canonical site',async()=>{
+  const controller=await read('traffic-intelligence-control.js');
+  assert.ok(controller.includes('async function sessionHash(day, host, siteId, sid)'));
+  assert.ok(controller.includes('${day}|${host}|${siteId}|${sid}'));
+  assert.ok(controller.includes('sessionHash(day, host, siteId, sid)'));
+  assert.ok(controller.includes('ON CONFLICT(day, host, session_hash)'));
+});
