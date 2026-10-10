@@ -35,6 +35,9 @@ test('connected channel takes priority over an older revoked record, and registr
   assert.equal(connectionFor('facebook').external_id,'page1');
   assert.match(source,/const live=connection\?\.status==='active';/);
   assert.match(source,/계정 등록됨 · OAuth 확인 필요/);
+  const guard=readFileSync(new URL('../scripts/validate-admin-source.mjs',import.meta.url),'utf8');
+  assert.ok(guard.includes("connection?.status==='active'?"+String.fromCharCode(96)+"<span class='tag live'>연결 유지</span>"+String.fromCharCode(96)));
+  assert.ok(!guard.includes("account.status==='active'?"+String.fromCharCode(96)+"<span class='tag live'>연결 유지</span>"+String.fromCharCode(96)));
   assert.match(source,/connection\?\.status==='active'\?\`<span class='tag live'>연결 유지/);
 });
 
