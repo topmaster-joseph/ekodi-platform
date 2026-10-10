@@ -951,7 +951,8 @@ function Invoke-BackgroundBrowserCanary {
   Remove-Item -LiteralPath $BrowserCanaryStatePath -Force -ErrorAction SilentlyContinue
   $browser = Resolve-EkodiBrowser
   if (-not $browser) { throw 'supported_browser_not_found' }
-  New-Item -ItemType Directory -Path $BrowserCanaryProfileRoot -Force | Out-Null
+  $canaryProfile = Join-Path $BrowserCanaryProfileRoot ([Guid]::NewGuid().ToString('N'))
+  New-Item -ItemType Directory -Path $canaryProfile -Force | Out-Null
 
   $arguments = @(
     '--headless=new',
@@ -960,7 +961,7 @@ function Invoke-BackgroundBrowserCanary {
     '--disable-sync',
     '--no-first-run',
     '--no-default-browser-check',
-    "--user-data-dir=`"$BrowserCanaryProfileRoot`"",
+    "--user-data-dir=`"$canaryProfile`"",
     '--dump-dom',
     "`"$BrowserCanaryUrl`""
   ) -join ' '
@@ -974,6 +975,7 @@ function Invoke-BackgroundBrowserCanary {
     RedirectStandardOutput = $true
     RedirectStandardError = $true
   }
+  try {
   [void]$process.Start()
   $stdoutTask = $process.StandardOutput.ReadToEndAsync()
   $stderrTask = $process.StandardError.ReadToEndAsync()
@@ -1009,6 +1011,9 @@ function Invoke-BackgroundBrowserCanary {
   New-Item -ItemType Directory -Path $Root -Force | Out-Null
   $proof | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $BrowserCanaryStatePath -Encoding UTF8
   return @{ message = 'Background Browser canary를 사용자 화면 개입 없이 검증했습니다. 검증된 버전에서만 EKODI 자체 Browser Worker를 사용할 수 있습니다.'; browserCanary = $proof }
+  } finally {
+    Remove-Item -LiteralPath $canaryProfile -Recurse -Force -ErrorAction SilentlyContinue
+  }
 }
 
 function Resolve-EkodiBrowserTaskUrl([string]$Path) {

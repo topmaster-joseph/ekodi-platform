@@ -33,3 +33,10 @@ test('device agent canary covers Windows x86 browser locations and emits actiona
   assert.match(deviceAgent, /--headless=new/);
   assert.match(deviceAgent, /CreateNoWindow = \$true/);
 });
+
+test('device canary uses a fresh unique profile and cleans it even when the browser fails', () => {
+  assert.match(deviceAgent, /\$canaryProfile = Join-Path \$BrowserCanaryProfileRoot \(\[Guid\]::NewGuid\(\)\.ToString\('N'\)\)/);
+  assert.match(deviceAgent, /--user-data-dir=.*\$canaryProfile/);
+  assert.match(deviceAgent, /Remove-Item -LiteralPath \$canaryProfile -Recurse -Force -ErrorAction SilentlyContinue/);
+  assert.match(deviceAgent, /\$process\.ExitCode -eq 0 -and \$stdout\.Length -gt 0/);
+});
