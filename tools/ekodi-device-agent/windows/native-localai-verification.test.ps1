@@ -62,6 +62,27 @@ Assert-Equals 'secret-free result' $pass.localAiProof.credentialCollection $fals
 Assert-Equals 'Claude auth not inferred' $pass.localAiProof.claudeAuth 'requires_interactive_user_verification'
 Assert-Equals 'execution fixed to loopback' $pass.localAiProof.executionMode 'fixed_loopback_api'
 
+# Verify the exact cloud command type is dispatched through the real allowlist.
+$script:TestScenario = 'success'
+$script:TestRequests = @()
+$dispatched = Invoke-DeviceCommand ([pscustomobject]@{
+  type = 'software.localai.verify'
+  payload = [pscustomobject]@{ command = 'whoami'; accessToken = 'FORBIDDEN_SENTINEL' }
+})
+Assert-Equals 'allowlisted dispatch inference' $dispatched.localAiProof.inference 'passed'
+Assert-Equals 'allowlisted dispatch uses only fixed API URLs' $script:TestRequests.Count 3
+if ($dispatched | ConvertTo-Json -Depth 8 | Select-String 'FORBIDDEN_SENTINEL' -Quiet) {
+  throw 'Cloud payload unexpectedly surfaced in local AI proof'
+}
+$rejected = $false
+try {
+  [void](Invoke-DeviceCommand ([pscustomobject]@{
+    type = 'computer.terminal.exec'
+    payload = [pscustomobject]@{ command = 'whoami' }
+  }))
+} catch { $rejected = $true }
+Assert-Equals 'arbitrary remote shell stays blocked' $rejected $true
+
 $script:TestScenario = 'missing_model'
 $script:TestRequests = @()
 $missing = Get-EkodiLocalAiVerification
