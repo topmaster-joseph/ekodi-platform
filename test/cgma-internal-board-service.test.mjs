@@ -15,7 +15,7 @@ test('CGMA board service has no publicly reachable Worker routes or static asset
  assert.match(config,/binding = "CONTROL_API"[\s\S]*service = "ekodi-auth-api"/);
 });
 test('CGMA board ingress rejects unrelated hosts, sites and public paths',async()=>{
- for(const url of ['https://ekodi.kr/cgma/board','https://board.internal.ekodi/cheonggye/board','https://board.internal.ekodi/','https://board.internal.ekodi/cgma/admin']){
+ for(const url of ['https://ekodi.kr/cgma/board','https://board.internal.ekodi/cheonggye/board','https://board.internal.ekodi/','https://board.internal.ekodi/cgma/admin','https://board.internal.ekodi/cgma/board-other']){
    const r=await service.fetch(new Request(url),{});
    assert.equal(r.status,404,url);
    assert.equal(r.headers.get('cache-control'),'no-store');
@@ -43,4 +43,10 @@ test('authorized service binding does not return static HTML for CGMA board heal
 test('the internal service uses the existing board authorization, never synthetic ownership',()=>{
  assert.match(source,/handleSiteBoardRequest\(request,env\)/);
  assert.doesNotMatch(source,/new Response\('CGMA board',\{status:200/);
+});
+
+test('unrelated mutation never reaches shared board storage',async()=>{
+ const response=await service.fetch(new Request('https://board.internal.ekodi/cheonggye/board/api/posts',{method:'POST',body:'{}'}),{});
+ assert.equal(response.status,404);
+ assert.equal(response.headers.get('x-content-type-options'),'nosniff');
 });
