@@ -37,6 +37,9 @@ if(!pr)fail('open PR not found');
 const filesLookup=await api('/pulls/'+pr.number+'/files?per_page=100');
 if(!filesLookup.r.ok)fail('PR file lookup failed '+filesLookup.r.status);
 const changedFiles=(Array.isArray(filesLookup.data)?filesLookup.data:[]).map(file=>String(file.filename||''));
+// GitHub token-mediated merges do not emit regular main push events.
+// Dispatch CGMA's guarded edge workflow through the verified orchestrator.
+const cgmaApexTouched=changedFiles.includes('.github/workflows/deploy-cgma-apex-edge.yml');
 const independentBoardTouched=changedFiles.some(file=>
   file.startsWith('services/independent-board/')||
   file==='wrangler.independent-board.toml'||
@@ -128,6 +131,14 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='.github/workflows/converge-orchestrated-pr-merge.yml'
 );
 async function dispatchPostMergeDeploys(){
+  if(cgmaApexTouched){
+    const dispatch=await api('/actions/workflows/deploy-cgma-apex-edge.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('CGMA Apex Edge deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-cgma-apex-edge.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
   // Only the guarded operating-space workflow can mutate production.
   // The originating orchestrator release receipt is mandatory.
   if(spaceTouched){

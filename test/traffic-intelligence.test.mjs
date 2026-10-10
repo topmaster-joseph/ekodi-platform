@@ -5,6 +5,7 @@ import {
   classifyTrafficUserAgent,
   isAllowedTelemetryOrigin,
   trafficSiteIdForHost,
+  trafficSiteIdForVisit,
 } from '../traffic-intelligence.js';
 
 test('EKODI automation is separated from public crawlers and unknown browsers', () => {
@@ -70,4 +71,30 @@ test('collector isolates unavailable zones and preserves partial analytics', asy
   assert.match(collector, /const stateStatus = skippedZones\.length \? 'partial' : 'ok'/);
   assert.match(collector, /if \(collectedZoneCount === 0\)/);
   assert.match(collector, /last_success_at=excluded\.last_success_at/);
+});
+
+test('canonical child paths attribute browser visits without treating all ekodi.kr traffic as root', () => {
+  assert.equal(trafficSiteIdForVisit('ekodi.kr', 'ekodichurch', 'church'), 'church');
+  assert.equal(trafficSiteIdForVisit('ekodi.kr', 'ekodimission', 'mission'), 'mission');
+  assert.equal(trafficSiteIdForVisit('ekodi.kr', 'ekodimall', 'mall'), 'mall');
+  assert.equal(trafficSiteIdForVisit('ekodi.kr', 'ekodibiz/trade', 'biz'), 'trade');
+  assert.equal(trafficSiteIdForVisit('ekodi.kr', 'ekodibiz/marketing-ai', 'biz'), 'marketing');
+  assert.equal(trafficSiteIdForVisit('ekodi.kr', 'cgma', 'cgma'), 'cgma');
+  assert.equal(trafficSiteIdForVisit('ekodi.kr', '/ai/', 'ai'), 'ai');
+  assert.equal(trafficSiteIdForVisit('ekodi.kr', 'admin', 'mission'), 'root');
+  assert.equal(trafficSiteIdForVisit('ekodi.kr', 'unknown-path', 'mission'), 'root');
+  assert.equal(trafficSiteIdForVisit('ekodi.kr', 'ekodichurch/user123', 'mall'), 'church');
+  assert.equal(trafficSiteIdForVisit('ekodi.kr', '', 'mission'), 'mission');
+  assert.equal(trafficSiteIdForVisit('ekodi.kr', '', 'made-up-site'), 'root');
+  assert.equal(trafficSiteIdForVisit('seonammedi.kr', '', 'mission'), 'seonammedi');
+  assert.equal(trafficSiteIdForVisit('ekodichurch.kr', 'ekodimall', 'mall'), 'church');
+});
+test('shared shell sends only the site route and the daily admin report marks request scope', async () => {
+  const shell = await readFile('shell/shell.js', 'utf8');
+  assert.match(shell, /site_path:first\+child/);
+  assert.doesNotMatch(shell, /site_path:location\.pathname/);
+  const controller = await readFile('traffic-intelligence-control.js', 'utf8');
+  assert.match(controller, /trafficSiteIdForVisit\(host, body\?\.site_path, body\?\.site_id\)/);
+  assert.match(controller, /cloudflareRequests:'host-scoped/);
+  assert.match(controller, /activeConcurrency:'not measured/);
 });

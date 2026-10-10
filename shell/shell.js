@@ -131,7 +131,13 @@ function trafficDailySessionId(){
 function sendTrafficBeacon(){
   if(!service||navigator.globalPrivacyControl===true||navigator.doNotTrack==='1')return;
   if(surface==='admin'||surface==='data'||surface==='document'||surface==='form')return;
-  const sid=trafficDailySessionId();if(!sid)return;const body=JSON.stringify({sid,site_id:service.id,surface});
+  const sid=trafficDailySessionId();if(!sid)return;
+  const route=location.pathname.split('/').filter(Boolean);
+  const first=/^[a-z0-9-]+$/i.test(route[0]||'')?route[0].toLowerCase():'';
+  const child=first==='ekodibiz'&&['trade','marketing-ai','mall'].includes(String(route[1]||'').toLowerCase())
+    ?`/${route[1].toLowerCase()}`:'';
+  // Send only a known route prefix; do not transmit user IDs, queries or full paths.
+  const body=JSON.stringify({sid,site_id:service.id,site_path:first+child,surface});
   try{if(navigator.sendBeacon?.(TRAFFIC_TELEMETRY,body))return;}catch{}
   try{fetch(TRAFFIC_TELEMETRY,{method:'POST',mode:'cors',keepalive:true,headers:{'content-type':'text/plain;charset=UTF-8'},body}).catch(()=>{});}catch{}
 }
