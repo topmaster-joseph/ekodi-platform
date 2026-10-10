@@ -27,7 +27,7 @@ test('health panel also resolves architecture, retaining independent navigation 
 });
 test('compact Admin menu contains the same alias and exact source integrity hash',async()=>{
  const compact=await readFile(new URL('../admin-menu-layout.compact.js',import.meta.url),'utf8');
- assert.match(compact,/\["health","health"\],\["architecture","health"\]/);
+ assert.match(compact,/\["health","health"\],\["site-health","site-health"\],\["architecture","health"\]/);
  const expected=createHash('sha256').update(layout.replace(/\r\n/g,'\n')).digest('hex');
  assert.match(compact,new RegExp('^// source-sha256:'+expected));
 });
