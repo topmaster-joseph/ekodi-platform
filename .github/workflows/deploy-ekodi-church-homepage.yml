@@ -4,6 +4,15 @@ name: Deploy EKODI Church Homepage
 
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Official EKODI Orchestrator release branch (receipt checked)'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Matching EKODI Orchestrator task ID'
+        required: true
+        type: string
   push:
     branches: [main]
     paths:
@@ -48,6 +57,9 @@ jobs:
           path: .ekodi-control
 
       - name: EKODI AI Orchestration Gate
+        env:
+          EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+          EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
         run: node "$GITHUB_WORKSPACE/.ekodi-control/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
 
       - name: Validate Church source, privacy boundary and multilingual life hub
@@ -56,13 +68,15 @@ jobs:
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-          for file in index.html script.js live/index.html live/live.js live/host-intent.js live/live.css church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css church-online-status.js church-live-entry.css giving.js church-footer.css community-visual.css church-life-hub.js church-life-hub.css church-life-hub-i18n.js my/index.html my/app.js my/styles.css my/giving/index.html my/giving/app.js my/giving/styles.css my/attendance/index.html my/attendance/app.js my/attendance/styles.css; do
+          for file in index.html script.js live/index.html live/live.js live/host-intent.js live/live.css church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css church-online-status.js church-worship-admin.js church-live-entry.css giving.js church-footer.css community-visual.css church-life-hub.js church-life-hub.css church-life-hub-i18n.js my/index.html my/app.js my/styles.css my/giving/index.html my/giving/app.js my/giving/styles.css my/attendance/index.html my/attendance/app.js my/attendance/styles.css; do
             test -s "church/$file"
           done
-          for file in script.js live/live.js live/host-intent.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-online-status.js giving.js church-life-hub.js church-life-hub-i18n.js my/app.js my/giving/app.js my/attendance/app.js; do
+          for file in script.js live/live.js live/host-intent.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-online-status.js church-worship-admin.js giving.js church-life-hub.js church-life-hub-i18n.js my/app.js my/giving/app.js my/attendance/app.js; do
             node --check "church/$file"
           done
           grep -Fq 'data-ekodi-life-hub' church/index.html
+          grep -Fq 'data-church-worship-admin' church/index.html
+          grep -Fq 'scope=worship-access' church/church-worship-admin.js
           grep -Fq 'church-life-hub.js' church/index.html
           grep -Fq 'church-life-hub.css' church/index.html
           grep -Fq 'church-life-hub-i18n.js' church/index.html
@@ -178,12 +192,15 @@ jobs:
             life_i18n=$(curl -L -sS -o /tmp/life-i18n.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-life-hub-i18n.js?release=${release}" || true)
             life_css=$(curl -L -sS -o /tmp/life.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-life-hub.css?release=${release}" || true)
             online_status=$(curl -L -sS -o /tmp/church-online-status.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-online-status.js?release=${release}" || true)
+            worship_admin=$(curl -L -sS -o /tmp/church-worship-admin.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-worship-admin.js?release=${release}" || true)
             live_css=$(curl -L -sS -o /tmp/church-live-entry.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-live-entry.css?release=${release}" || true)
             live_js=$(curl -L -sS -o /tmp/church-live.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/live/live.js?release=${release}" || true)
             live_intent=$(curl -L -sS -o /tmp/church-live-host-intent.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/live/host-intent.js?release=${release}" || true)
             marker=$(curl -L -sS -o /tmp/church-release.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-release.json?release=${release}" || true)
-            if [[ "$root" == 200 && "$member" == 200 && "$giving_member" == 200 && "$giving_member_js" == 200 && "$attendance_member" == 200 && "$attendance_member_js" == 200 && "$life" == 200 && "$life_i18n" == 200 && "$life_css" == 200 && "$online_status" == 200 && "$live_css" == 200 && "$live_js" == 200 && "$live_intent" == 200 && "$marker" == 200 ]] \
+            if [[ "$root" == 200 && "$member" == 200 && "$giving_member" == 200 && "$giving_member_js" == 200 && "$attendance_member" == 200 && "$attendance_member_js" == 200 && "$life" == 200 && "$life_i18n" == 200 && "$life_css" == 200 && "$online_status" == 200 && "$worship_admin" == 200 && "$live_css" == 200 && "$live_js" == 200 && "$live_intent" == 200 && "$marker" == 200 ]] \
               && grep -Fq 'data-ekodi-life-hub' /tmp/church.html \
+              && grep -Fq 'data-church-worship-admin' /tmp/church.html \
+              && grep -Fq 'scope=worship-access' /tmp/church-worship-admin.js \
               && ! grep -Fq 'data-ekodi-operating-space-label' /tmp/church.html \
               && ! grep -Fq '운영공간' /tmp/church.html \
               && ! grep -Fq '<em class="operating-space-label"' /tmp/church.html \

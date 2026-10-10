@@ -23,7 +23,7 @@
     "validate:mission": "node scripts/validate-ai-mission-governance.mjs",
     "validate:ai-resilience": "node scripts/validate-ai-provider-independence.mjs",
     "validate:ui-dna": "node scripts/validate-user-ui-dna.mjs",
-    "validate:ui-surfaces": "node scripts/validate-ui-surface-policy.mjs && node --test test/ui-surface-policy.test.mjs test/seonammedi-inline-auth-recovery.test.mjs test/ekodimission-inline-auth-recovery.test.mjs",
+    "validate:ui-surfaces": "node scripts/validate-ui-surface-policy.mjs && node --test test/ui-surface-policy.test.mjs test/seonammedi-inline-auth-recovery.test.mjs test/ekodimission-inline-auth-recovery.test.mjs test/church-public-worship-admin-capability.test.mjs",
     "validate:design-engine": "node scripts/validate-design-engine.mjs",
     "validate:seasonal-design": "node scripts/validate-seasonal-design-governance.mjs",
     "season:plan": "node scripts/seasonal-design-advisor.mjs",

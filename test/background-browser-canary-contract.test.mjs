@@ -23,3 +23,13 @@ test('background browser canary rejects local and non-http targets', () => {
   assert.match(worker, /loopback_target_forbidden/);
   assert.match(worker, /url_userinfo_forbidden/);
 });
+
+const deviceAgent = await readFile(new URL('../tools/ekodi-device-agent/windows/ekodi-device-agent.ps1', import.meta.url), 'utf8');
+test('device agent canary covers Windows x86 browser locations and emits actionable failure evidence', () => {
+  assert.match(deviceAgent, /ProgramFiles\(x86\)/);
+  assert.match(deviceAgent, /background_browser_canary_failed: browser=/);
+  assert.match(deviceAgent, /stdoutBytes=/);
+  assert.match(deviceAgent, /stderr=/);
+  assert.match(deviceAgent, /--headless=new/);
+  assert.match(deviceAgent, /CreateNoWindow = \$true/);
+});
