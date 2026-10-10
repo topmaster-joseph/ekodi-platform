@@ -20,6 +20,9 @@ const READ_ROLES={
   church_receipt_requests:['senior_pastor','church_treasurer','church_finance'],
 };
 const FINANCE_ACCESS_ROLES=new Set(['senior_pastor','church_treasurer','church_finance']);
+// A narrow read-only capability check for same-page worship administration.
+// Do not infer this capability from login, finance access, or membership alone.
+const WORSHIP_ACCESS_ROLES=new Set(['senior_pastor','pastor','staff','worship_admin']);
 const WRITE_ROLES={
   church_members:['senior_pastor','pastor','staff'],
   church_services:['senior_pastor','pastor','staff'],
@@ -126,6 +129,11 @@ Deno.serve(async req=>{
   let staff=null;try{staff=await staffFor(identity.id);}catch(error){return json({error:String(error?.message||error)},503,origin);}
   if(!staff)return json({error:'CHURCH_STAFF_REQUIRED'},403,origin);
   const url=new URL(req.url);
+  if(url.searchParams.get('scope')==='worship-access'){
+    if(req.method!=='GET')return json({error:'METHOD_NOT_ALLOWED'},405,origin);
+    if(!WORSHIP_ACCESS_ROLES.has(staff.role))return json({error:'ROLE_NOT_ALLOWED'},403,origin);
+    return json({ok:true,permissions:{worship:true},churchSlug:CHURCH_SLUG},200,origin);
+  }
   if(url.searchParams.get('scope')==='finance-access'){
     if(!FINANCE_ACCESS_ROLES.has(staff.role))return json({error:'ROLE_NOT_ALLOWED'},403,origin);
     return json({ok:true,role:staff.role,email:identity.email,userId:identity.id,churchSlug:CHURCH_SLUG},200,origin);
