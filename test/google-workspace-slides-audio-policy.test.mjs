@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import {
   normalizeSlidesAudioPilot, validateSlidesAudioPilotReceipt,
   SLIDES_AUDIO_ITEMS, SLIDES_AUDIO_PILOT_ID, SLIDES_AUDIO_PRESENTATION_ID,
@@ -75,4 +77,19 @@ test('native audio receipt requires all eight playback probes and isolation',()=
  assert.equal(validateSlidesAudioPilotReceipt(r).ok,false);
  r=receipt();r.activeUserProfileReused=true;
  assert.equal(validateSlidesAudioPilotReceipt(r).ok,false);
+});
+
+test('queue, admin UI and Windows Agent are wired but default closed',()=>{
+ const base=new URL('../', import.meta.url);
+ const files=['hybrid-execution.js','hybrid-execution-admin.js','tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'];
+ const [queue,ui,agent]=files.map(f=>readFileSync(new URL(f,base),'utf8'));
+ assert.match(queue, /'computer\.workspace\.slides\.audio\.insert': \{ capability:'workspaceSlidesAudio'/);
+ assert.match(queue, /GOOGLE_WORKSPACE_NATIVE_NODE_NOT_READY/);
+ assert.match(queue, /validateSlidesAudioPilotReceipt\(result\.workspaceSlidesAudio\)/);
+ assert.match(ui, /id="enqueueWorkspaceAudio" disabled/);
+ assert.match(ui, /'computer\.workspace\.slides\.audio\.insert'/);
+ assert.match(agent, /workspaceSlidesAudio = \[bool\]\(Get-WorkspaceSlidesAudioState\)\.verified/);
+ assert.match(agent, /workspace_audio_canary_required/);
+ assert.match(agent, /Invoke-WorkspaceSlidesAudioTask \$payload/);
+ assert.match(agent, /\$AgentVersion = '2\.5\.3'/);
 });
