@@ -27,5 +27,7 @@ test('Shell release accepts only verified orchestrator dispatch into main',async
   assert.match(workflow,/github\.ref == 'refs\/heads\/main'/);
   assert.match(workflow,/validate-ekodi-ai-change-orchestration\.mjs" --release/);
   assert.match(workflow,/Verify real Shell hostname with release cache busting/);
+  assert.match(workflow,/Verify canonical EKODI Shell serves site-specific telemetry/);
+  assert.match(workflow,/grep -Fq 'site_path:first\+child'/);
   assert.match(workflow,/Verify Shell staging with release cache busting/);
 });
