@@ -23,6 +23,11 @@ on:
         required: false
         type: string
         default: desktop
+      church_locale_diagnostic:
+        description: Run independent Church nine-language Chromium diagnostics
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       surface_path:
@@ -37,6 +42,11 @@ on:
         description: Optional repository-relative JSON registry of canonical surfaces to add
         required: false
         default: ''
+      church_locale_diagnostic:
+        description: Run EKODI Church nine-language diagnostic
+        required: false
+        default: false
+        type: boolean
       device_profile:
         description: Device profile
         required: false
@@ -189,6 +199,7 @@ jobs:
           },null,2));
           NODE
       - name: EKODI native Church nine-language diagnostic
+        if: github.event_name == 'pull_request' || inputs.church_locale_diagnostic == true
         shell: bash
         run: |
           set -euo pipefail
