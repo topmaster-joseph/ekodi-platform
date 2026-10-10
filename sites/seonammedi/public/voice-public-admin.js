@@ -136,13 +136,31 @@ async function authorize(){
   if(!authorized)return false;
   await refreshAdminRows();decorate();return true;
 }
+let starting=null;
 async function start(){
-  const root=document.getElementById(ROOT_ID);if(!root)return;
-  if(!await authorize())return;
-  observer=new MutationObserver(()=>requestAnimationFrame(decorate));
-  observer.observe(root,{childList:true,subtree:true});
-  decorate();
-  window.addEventListener('ekodi:public-admin-ready',()=>{refreshAdminRows().then(decorate).catch(()=>{})});
+  const root=document.getElementById(ROOT_ID);if(!root)return false;
+  if(starting)return starting;
+  starting=(async()=>{
+    if(!await authorize())return false;
+    if(!observer){
+      observer=new MutationObserver(()=>requestAnimationFrame(decorate));
+      observer.observe(root,{childList:true,subtree:true});
+    }
+    decorate();
+    return true;
+  })();
+  try{return await starting}finally{starting=null}
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+// The first page load can precede both auth handoff and the shared Shell runtime.
+// Always subscribe, even when the first authorization attempt is denied.
+function retryAuthorization(event){
+  const serviceId=event?.detail?.serviceId;
+  if(serviceId&&serviceId!=='seonammedi'&&serviceId!=='seonammedi-voices-inline')return;
+  if(!authorized){start().catch(()=>{});return}
+  refreshAdminRows().then(decorate).catch(()=>{});
+}
+window.addEventListener('ekodi:public-admin-ready',retryAuthorization);
+window.addEventListener('ekodi:public-admin-runtime-ready',retryAuthorization);
+window.addEventListener('seonammedi:voice-inline-admin-authorized',retryAuthorization);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{start().catch(()=>{})},{once:true});else start().catch(()=>{});
 })();
