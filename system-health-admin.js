@@ -57,7 +57,7 @@
   const section = document.createElement('section');
   section.id = MODULE_ID;
   section.className = 'section system-health-section hidden-panel';
-  section.dataset.panel = `${SECTION} platform-overview`;
+  section.dataset.panel = `${SECTION} platform-overview architecture`;
   section.hidden = true;
   section.innerHTML = `
     <div class="section-head system-health-head">
