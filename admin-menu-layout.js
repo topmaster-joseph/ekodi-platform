@@ -14,7 +14,7 @@ const ORDER=Object.freeze(adminMenuOrder());
 const RANK=new Map(ORDER.map((section,index)=>[section,index+1]));
 const DEMAND_KEYS=new Map([
   ['campus','campus'],['public-site-controls','public-site-controls'],['language-status','language-status'],['aiops','aiops'],['ai-settings','ai-settings'],['openai','openai'],['devotional','devotional'],['ai-module-spec','ai-module-spec'],['ai-membership','aimembers'],
-  ['health','health'],['api-cost','api-cost'],['storage','storage'],['security','security'],['work','work'],
+  ['health','health'],['architecture','health'],['api-cost','api-cost'],['storage','storage'],['security','security'],['work','work'],
   ['clients','clients'],['community','community'],['books','books'],['social','social'],['supply-network','supply-network'],
   ['marketing-ai','marketing'],['devices','devices'],['life-ai','life-ai'],['personal-finance','personal-finance'],['deployments','deployments']
 ]);
