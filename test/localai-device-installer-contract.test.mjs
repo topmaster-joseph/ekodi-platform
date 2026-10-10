@@ -21,7 +21,7 @@ test('native local AI verification is observe-only and cloud-payload-free',()=>{
  assert.ok(agent.includes("'software.localai.verify' { return Get-EkodiLocalAiVerification }"));
  assert.ok(agent.includes('localAiVerify = $true'));
  assert.ok(agent.includes("Uri 'http://127.0.0.1:11434/api/generate'"));
- assert.ok(agent.includes('num_predict = 8; num_ctx = 512'));
+ assert.ok(agent.includes('num_predict = 64; num_ctx = 512'));
  assert.ok(agent.includes('TimeoutSec 45'));
  assert.ok(agent.includes("claudeAuth = 'requires_interactive_user_verification'"));
  assert.ok(!agent.includes('function Get-EkodiLocalAiVerification($Payload)'));
