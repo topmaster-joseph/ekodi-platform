@@ -15,6 +15,7 @@ test('unrelated trade and generic operating-space pages never include hidden Yog
     const html=await response.text();
     assert.equal(response.status,200,path);
     assert.equal(response.headers.get('x-ekodi-route'),path==='/'?'space-home':'space-workspace',path);
+    assert.match(response.headers.get('x-robots-tag')||'',/noindex/,path);
     assert.match(html,/id="internalShell"/,path);
     assert.doesNotMatch(html,/id="publicStorefront"|YOGURT PURPLE|yogurtpurple\.com|요거트퍼플 목포대점/,path);
     assert.doesNotMatch(html,/__SPACE_(?:PUBLIC|INTERNAL)_CLASS__/,path);
