@@ -57,7 +57,7 @@ jobs:
           node --check device-control-admin.js
           node --check remote-power-admin.js
           node --check admin-demand-loader.js
-          node --test test/device-control-contract.test.mjs test/windows-device-enrollment-launcher.test.mjs test/non-disruptive-device-agent-contract.test.mjs test/background-browser-canary-contract.test.mjs
+          node --test test/device-control-contract.test.mjs test/windows-device-enrollment-launcher.test.mjs test/non-disruptive-device-agent-contract.test.mjs test/background-browser-canary-contract.test.mjs test/localai-device-installer-contract.test.mjs
       - name: Build authenticated true-lazy Admin with Device AI
         run: |
           set -euo pipefail
