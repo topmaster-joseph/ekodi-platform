@@ -56,3 +56,11 @@ test('admin code keeps manual refresh separate from OAuth and distinguishes regi
   assert.match(css,/mall-simple-grid/);
   assert.match(css,/youtube-pending/);
 });
+
+
+test('Google broker exchange failures are explained without demanding blind re-authorization', () => {
+  const html=renderMallSocialSetup({oauthNotice:{status:'error',reason:'GOOGLE_OAUTH_EXCHANGE_FAILED'}});
+  assert.match(html,/Google 인증 응답을 처리하지 못했습니다/);
+  assert.match(html,/연결 상태를 먼저 확인/);
+  assert.doesNotMatch(html,/>GOOGLE_OAUTH_EXCHANGE_FAILED</);
+});
