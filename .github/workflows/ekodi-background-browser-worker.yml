@@ -188,6 +188,11 @@ jobs:
             actions
           },null,2));
           NODE
+      - name: EKODI native Church nine-language diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ekodi-church-native-locale-diagnosis.mjs
       - name: Run EKODI-owned isolated browser
         env:
           EKODI_BROWSER_TASK_FILE: artifacts/browser-task.json
