@@ -11,6 +11,8 @@ test('production Admin E2E retries asynchronous route drift through real left na
   assert.match(source,/await dispatchClick\(retryTrigger\)/);
   assert.match(source,/real menu activation did not stabilize after bounded retry/);
   assert.match(source,/before,after/);
+  assert.match(source,/if \(id === 'command-home'\) throw initialError/);
+  assert.match(source,/console\.warn\(`\[PROD-E2E\]/);
 });
 
 test('navigation retry cannot falsely pass invisible panels or expand fake permissions',()=>{
