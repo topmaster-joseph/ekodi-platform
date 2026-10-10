@@ -1,4 +1,5 @@
 import authWorker from './auth-worker.js';
+import { normalizeSlidesAudioPilot, validateSlidesAudioPilotReceipt, SLIDES_AUDIO_ITEMS, SLIDES_AUDIO_PRESENTATION_ID } from './google-workspace-slides-audio-policy.js';
 import { compareLocalExecutionCandidates, localExecutionPolicySnapshot, localExecutionScore, normalizeLocalResource } from './local-execution-policy.js';
 
 const ADMIN_PREFIX = '/api/control/hybrid-execution';
@@ -22,6 +23,7 @@ const TASK_POLICIES = Object.freeze({
   'computer.process.list': { capability:'processRead', risk:'observe' },
   'computer.agent.status': { capability:'agentStatus', risk:'observe' },
   'computer.browser.execute': { capability:'backgroundBrowser', risk:'maintain', confirm:true, payload:'background-browser-task', executionMode:'background-only' },
+  'computer.workspace.slides.audio.insert': { capability:'workspaceSlidesAudio', risk:'privileged', confirm:true, payload:'google-workspace-slides-audio', executionMode:'dedicated-headless-browser' },
   'network.diagnose': { capability:'networkDiagnostics', risk:'observe' },
   'printers.diagnose': { capability:'printerDiagnostics', risk:'observe' },
   'startup.scan': { capability:'startupManagement', risk:'observe' },
@@ -84,6 +86,7 @@ function sanitizePayload(type, rawPayload) {
     if (!/^[a-f0-9]{64}$/.test(itemId)) throw new Error('PAYLOAD_INVALID');
     return { itemId };
   }
+  if (policy.payload === 'google-workspace-slides-audio') return normalizeSlidesAudioPilot(rawPayload);
   if (policy.payload === 'background-browser-task') {
     const pathValue=safeText(rawPayload?.path || '/',600);
     const deviceProfile=safeText(rawPayload?.deviceProfile || 'desktop',40);
@@ -429,13 +432,21 @@ export async function handleHybridAgentResult(request, env, commandId) {
   if (!job) return json({ error:'처리 중인 하이브리드 작업을 찾을 수 없습니다.' }, 404);
 
   const body = await readJson(request) || {};
-  const success = body.success === true;
+  let success = body.success === true;
   const result = body.result && typeof body.result === 'object' && !Array.isArray(body.result)
     ? parseJson(safeJson(body.result, 24000), {})
     : { message:safeText(body.message, 300) };
   const now = new Date().toISOString();
+  if (job.task_type === 'computer.workspace.slides.audio.insert') {
+    const proof = validateSlidesAudioPilotReceipt(result.workspaceSlidesAudio);
+    if (!proof.ok) {
+      success = false;
+      result.message = 'workspace_audio_receipt_unverified:' + proof.reason;
+    }
+  }
 
-  if (job.task_type === 'computer.browser.execute' && result.browserWorker?.authRequired === true) {
+  if ((job.task_type === 'computer.browser.execute' && result.browserWorker?.authRequired === true) ||
+      (job.task_type === 'computer.workspace.slides.audio.insert' && result.workspaceSlidesAudio?.status === 'auth_required')) {
     const update = await env.DB.prepare(`UPDATE hybrid_execution_jobs
       SET status='completed', result_json=?, last_error='AUTH_REQUIRED', lease_expires_at=NULL,
           updated_at=?, completed_at=?
@@ -648,11 +659,19 @@ async function handleAdmin(request, env) {
     let payload;
     try { payload = sanitizePayload(taskType, body.payload || {}); }
     catch { return json({ error:'하이브리드 작업 인자가 유효하지 않습니다.', code:'HYBRID_TASK_PAYLOAD_INVALID' }, 400); }
+    if (taskType === 'computer.workspace.slides.audio.insert' && auth.session.role !== 'super_admin') {
+      return json({ error:'Google Workspace 원본 슬라이드 편집은 최고관리자만 실행할 수 있습니다.', code:'GOOGLE_WORKSPACE_SUPER_ADMIN_REQUIRED' }, 403);
+    }
+    if (taskType === 'computer.workspace.slides.audio.insert') {
+      const existing = await env.DB.prepare(`SELECT id FROM hybrid_execution_jobs
+        WHERE task_type='computer.workspace.slides.audio.insert' AND status IN ('pending','assigned','leased') LIMIT 1`).first();
+      if (existing) return json({ error:'동일한 원본 슬라이드 편집 작업이 이미 진행 중입니다.', code:'GOOGLE_WORKSPACE_JOB_ALREADY_ACTIVE', jobId:existing.id }, 409);
+    }
     const priority = clampInt(body.priority, 0, 100, 50);
     const deviceGroup = body.deviceGroup ? safeGroup(body.deviceGroup) : null;
     const requiredCapabilities = sanitizeCapabilities(body.requiredCapabilities);
     if (!requiredCapabilities.includes(policy.capability)) requiredCapabilities.push(policy.capability);
-    const maxAttempts = clampInt(body.maxAttempts, 1, MAX_ATTEMPTS, MAX_ATTEMPTS);
+    const maxAttempts = taskType === 'computer.workspace.slides.audio.insert' ? 1 : clampInt(body.maxAttempts, 1, MAX_ATTEMPTS, MAX_ATTEMPTS);
     const notBeforeAt = body.notBeforeAt && Number.isFinite(Date.parse(body.notBeforeAt))
       ? new Date(body.notBeforeAt).toISOString()
       : null;
