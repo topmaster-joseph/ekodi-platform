@@ -6,7 +6,10 @@ const orchestrator=await readFile(new URL('../scripts/converge-orchestrated-pr-m
 const workflow=await readFile(new URL('../.github/workflows/deploy-cgma-apex-edge.yml',import.meta.url),'utf8');
 
 test('orchestrator dispatches CGMA Apex after verified merge rather than relying on token-generated main pushes',()=>{
-  assert.match(orchestrator,/const cgmaApexTouched=changedFiles\.includes\('\.github\/workflows\/deploy-cgma-apex-edge\.yml'\)/);
+  const cgmaOwner=orchestrator.match(/const cgmaApexTouched=changedFiles\.some\(file=>\[([\s\S]*?)\]\.includes\(file\)\)/)?.[1]||'';
+  for(const owned of ['.github/workflows/deploy-cgma-apex-edge.yml','site-board-control.js','cgma-board-service-worker.js','wrangler.cgma-board-internal.toml']){
+    assert.ok(cgmaOwner.includes("'"+owned+"'"),'CGMA Edge release owner missing '+owned);
+  }
   assert.match(orchestrator,/if\(cgmaApexTouched\)\{/);
   assert.match(orchestrator,/\/actions\/workflows\/deploy-cgma-apex-edge\.yml\/dispatches/);
   assert.match(orchestrator,/ref:'main',inputs:\{release_branch_ref:branch,release_task_id:taskId\}/);
