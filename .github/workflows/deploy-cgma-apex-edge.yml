@@ -145,7 +145,13 @@ jobs:
             sleep 2
           done
           if [[ "$ready" != 'true' ]]; then
-            gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-site-core.yml/dispatches" -f ref=main
+            # Pass the same EKODI-orchestrator-approved receipt to Site Core.
+            test -n "$EKODI_RELEASE_BRANCH_REF"
+            test -n "$EKODI_RELEASE_TASK_ID"
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-site-core.yml/dispatches" \
+              -f ref=main -f sync_domains=false \
+              -f release_branch_ref="$EKODI_RELEASE_BRANCH_REF" \
+              -f release_task_id="$EKODI_RELEASE_TASK_ID"
             echo 'CGMA board target is not healthy yet. Dispatched current-main Shared Site guarded release before blocking board verification.'
           else
             echo 'CGMA independent board runtime is already healthy; no Shared Site redispatch required.'
