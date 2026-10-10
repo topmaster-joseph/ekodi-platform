@@ -39,6 +39,7 @@ test('CGMA edge workflow pins board delegation source and verifies independent b
   assert.match(cgmaWorkflow, /CGMA_SOURCE_REF: '628c6a5776d3101b86556dcfb888944d9f479fe9'/);
   assert.match(cgmaWorkflow, /grep -Fq 'isBoardPath' cgma-root-gateway\.js/);
   assert.match(cgmaWorkflow, /grep -Fq 'delegatedBoardResponse' cgma-root-gateway\.js/);
+  assert.match(cgmaWorkflow, /grep -Fq 'x-ekodi-cgma-board-diagnostic' cgma-root-gateway\.js/);
   assert.match(cgmaWorkflow, /grep -Fq 'board\.internal\.ekodi' cgma-root-gateway\.js/);
   assert.match(cgmaWorkflow, /check_board '\/cgma\/board'/);
   assert.match(cgmaWorkflow, /x-ekodi-board-independent: true/);
