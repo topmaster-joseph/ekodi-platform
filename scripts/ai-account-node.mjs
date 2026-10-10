@@ -4,6 +4,8 @@ import {homedir,tmpdir} from 'node:os';
 import os from 'node:os';
 import path from 'node:path';
 import { LOCAL_EXECUTION_POLICY } from '../local-execution-policy.js';
+import {claudeCodeReady,runClaudeCode} from './claude-code-subscription-provider.mjs';
+import {ollamaLocalReady,runOllamaLocal} from './ollama-local-provider.mjs';
 
 const CONTROL=(process.env.EKODI_AI_CONTROL_URL||'https://ai.ekodi.kr').replace(/\/+$/,'');
 const ROOT=path.join(homedir(),'.ekodi-ai');
@@ -51,7 +53,8 @@ async function systemSnapshot(){
   return{
     cpuLoadPct:cpu,memoryUsedPct:memory,isPortable,
     deviceClass:isPortable===true?'portable':isPortable===false?'desktop':'unknown',
-    autoExecutionEligible:isPortable===false,
+    // Protect crowded 8 GiB desktops from receiving additional queued jobs.
+    autoExecutionEligible:isPortable===false&&memory<=90,
     measuredAt:new Date().toISOString(),schedulerPolicy:LOCAL_EXECUTION_POLICY.version,
   };
 }
@@ -63,14 +66,15 @@ async function detectProviders(){
   const providers=[];
   if(await codexReady())providers.push('codex');
   if(process.env.EKODI_ENABLE_GEMINI_CLI==='true'&&await commandReady('gemini'))providers.push('gemini-cli');
-  if(process.env.EKODI_ENABLE_CLAUDE_CODE==='true'&&await commandReady('claude'))providers.push('claude-code');
+  if(await claudeCodeReady({run}))providers.push('claude-code');
+  if(await ollamaLocalReady())providers.push('ollama-local');
   return providers;
 }
 async function api(endpoint,{method='POST',token='',node='',body=null}={}){
   const headers={'content-type':'application/json'};if(token)headers.authorization=`Bearer ${token}`;if(node)headers['x-ekodi-node-id']=node;
   const response=await fetch(`${CONTROL}${endpoint}`,{method,headers,body:body==null?undefined:JSON.stringify(body)});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||`http_${response.status}`);return data;
 }
-async function enroll(code){const providers=await detectProviders();if(!providers.length)throw new Error('no_authenticated_account_cli');const id=nodeId();const data=await api('/api/node/enroll',{body:{code,nodeId:id,name:os.hostname(),providers}});const config={nodeId:id,nodeToken:data.nodeToken,providers:data.providers,controlUrl:CONTROL,pairedAt:new Date().toISOString()};await saveConfig(config);return config}
+async function enroll(code){const providers=await detectProviders();if(!providers.length)throw new Error('no_authenticated_local_provider');const id=nodeId();const data=await api('/api/node/enroll',{body:{code,nodeId:id,name:os.hostname(),providers}});const config={nodeId:id,nodeToken:data.nodeToken,providers:data.providers,controlUrl:CONTROL,pairedAt:new Date().toISOString()};await saveConfig(config);return config}
 async function git(command,args,cwd){return run(bin('git'),[command,...args],{cwd,timeoutMs:120000})}
 async function prepareWorkspace(job){
   if(!job.needsCodeBranch)return await mkdir(path.join(tmpdir(),'ekodi-ai-node',job.taskId),{recursive:true}).then(()=>path.join(tmpdir(),'ekodi-ai-node',job.taskId));
@@ -98,11 +102,14 @@ async function runGemini(job,cwd){
   const result=await run(bin('gemini'),args,{cwd,timeoutMs:20*60*1000});const output=geminiText(result.stdout);if(!output)throw new Error('gemini_cli_empty_response');return output;
 }
 async function executeJob(job){
-  const cwd=await prepareWorkspace(job);
   try{
+    if(job.providerId==='node:ollama-local'&&job.needsCodeBranch)throw new Error('ollama_local_code_branch_forbidden');
+    const cwd=await prepareWorkspace(job);
     let output='';
     if(job.providerId==='node:codex')output=await runCodex(job,cwd);
     else if(job.providerId==='node:gemini-cli')output=await runGemini(job,cwd);
+    else if(job.providerId==='node:claude-code')output=await runClaudeCode(job,{cwd,run,prompt:job.needsCodeBranch?codingPrompt(job):job.prompt});
+    else if(job.providerId==='node:ollama-local')output=await runOllamaLocal(job.prompt);
     else throw new Error(`provider_not_enabled:${job.providerId}`);
     await pushChanges(job,cwd);return{ok:true,output};
   }catch(error){return{ok:false,error:clean(error?.message||error)}}
@@ -111,4 +118,21 @@ async function loop(config){
   console.log(`EKODI AI account node ${config.nodeId} connected to ${CONTROL}`);for(;;){try{const providers=await detectProviders();const leased=await api('/api/node/lease',{token:config.nodeToken,node:config.nodeId,body:{providers,system:await systemSnapshot(),maxConcurrency:boundedConcurrency()}});if(!leased.job){await sleep(5000);continue}console.log(`leased ${leased.job.id} ${leased.job.providerId}`);const result=await executeJob(leased.job);await api(`/api/node/jobs/${encodeURIComponent(leased.job.id)}/complete`,{token:config.nodeToken,node:config.nodeId,body:result});console.log(`${leased.job.id} ${result.ok?'completed':'failed'}`)}catch(error){console.error(new Date().toISOString(),clean(error?.message||error));await sleep(10000)}}
 }
 
+// Read-only diagnostic mode: never print node tokens, subscription identity, pairing secrets or auth status JSON.
+if(hasArg('--doctor')){
+  const config=await loadConfig();
+  const [providers,snapshot]=await Promise.all([detectProviders(),systemSnapshot()]);
+  console.log(JSON.stringify({
+    nodeId:nodeId(),controlOrigin:new URL(CONTROL).origin,
+    paired:Boolean(config?.nodeToken),availableProviders:providers,
+    schedulerEligible:snapshot.autoExecutionEligible,
+    cpuLoadPct:snapshot.cpuLoadPct,memoryUsedPct:snapshot.memoryUsedPct,
+    freeMemoryMiB:Math.round(os.freemem()/(1024*1024)),
+    ollamaEnabled:process.env.EKODI_ENABLE_OLLAMA_LOCAL==='true',
+    ollamaReady:providers.includes('ollama-local'),
+    claudeInternalReady:providers.includes('claude-code'),
+    isPortable:snapshot.isPortable,
+  },null,2));
+  process.exit(0);
+}
 await mkdir(ROOT,{recursive:true});const pairCode=arg('--pair');let config=pairCode?await enroll(pairCode):await loadConfig();if(!config?.nodeToken){console.error('Node is not paired. Generate a pairing code in ai.ekodi.kr and run: node scripts/ai-account-node.mjs --pair CODE');process.exit(2)}if(pairCode&&hasArg('--pair-only')){console.log(`EKODI AI account node ${config.nodeId} paired with ${config.providers.join(', ')}`);process.exit(0)}await loop(config);

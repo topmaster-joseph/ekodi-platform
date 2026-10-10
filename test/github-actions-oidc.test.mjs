@@ -72,7 +72,9 @@ for(const [name,claim,value,reason] of [
 test('rejects modified signature',async()=>{
   const {token,fetchImpl}=fixture();
   const [a,b,c]=token.split('.');
-  const modified=`${a}.${b}.${c.slice(0,-2)}aa`;
+  // Flip a high-order signature character: the final base64url sextet can contain unused bits,
+  // so replacing trailing characters may occasionally decode to the *same* signature bytes.
+  const modified=`${a}.${b}.${c[0]==='A'?'B':'A'}${c.slice(1)}`;
   const result=await verifyGitHubActionsOidc(modified,{fetchImpl});
   assert.equal(result.ok,false);
   assert.equal(result.reason,'signature_invalid');

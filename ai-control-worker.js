@@ -119,7 +119,7 @@ async function requireNode(request,env){
 
 async function onlineNodeProviders(env){
   if(!dbReady(env))return[];const cutoff=new Date(Date.now()-ONLINE_WINDOW_MS).toISOString();
-  const data=await env.DB.prepare("SELECT providers FROM ai_control_nodes WHERE state='online' AND last_seen_at>=?").bind(cutoff).all();
+  const data=await env.DB.prepare("SELECT providers FROM ai_control_nodes WHERE state='online' AND auto_execution_eligible=1 AND is_portable=0 AND last_seen_at>=?").bind(cutoff).all();
   return [...new Set((data.results||[]).flatMap(row=>storedProviders(row.providers)).map(v=>clean(v).toLowerCase()).filter(Boolean))];
 }
 async function providerPerformanceMetrics(env){
@@ -226,14 +226,16 @@ async function execute(env,id){
 async function leaseNodeJob(request,env,node){
   const input=await body(request)||{};
   const detected=safeProviders(input.providers);
+  // An explicitly empty heartbeat means the model/CLI is offline: do not lease stale capabilities.
+  const advertised=Array.isArray(input.providers)?detected:safeProviders(node.providers);
   const telemetry=safeNodeTelemetry(input);
   const stamp=now();
   await env.DB.prepare(`UPDATE ai_control_nodes SET providers=?,current_load=?,cpu_load_pct=?,memory_used_pct=?,max_concurrency=?,is_portable=?,auto_execution_eligible=?,system_json=?,state='online',updated_at=?,last_seen_at=? WHERE id=?`).bind(
-    JSON.stringify(detected.length?detected:node.providers),telemetry.currentLoad,telemetry.cpuLoadPct,telemetry.memoryUsedPct,telemetry.maxConcurrency,
+    JSON.stringify(advertised),telemetry.currentLoad,telemetry.cpuLoadPct,telemetry.memoryUsedPct,telemetry.maxConcurrency,
     telemetry.isPortable?1:0,telemetry.autoExecutionEligible?1:0,telemetry.systemJson,stamp,stamp,node.id,
   ).run();
-  if(!telemetry.autoExecutionEligible)return json({job:null,scheduler:{eligible:false,reason:telemetry.isPortable?'portable_device':'hardware_eligibility_unknown'}});
-  const providers=(detected.length?detected:node.providers).map(v=>`node:${v}`);
+  if(!telemetry.autoExecutionEligible)return json({job:null,scheduler:{eligible:false,reason:telemetry.isPortable?'portable_device':telemetry.memoryUsedPct>90?'memory_pressure':'hardware_eligibility_unknown'}});
+  const providers=(advertised).map(v=>`node:${v}`);
   if(!providers.length)return json({job:null,scheduler:{eligible:true,reason:'no_provider'}});
   const placeholders=providers.map(()=>'?').join(',');
   const leaseUntil=new Date(Date.now()+3*60*1000).toISOString();
@@ -296,7 +298,7 @@ async function runScheduledSiteImprovement(env){
   let task=null;
   try{
     const nodeProviders=await onlineNodeProviders(env);
-    const localProvider=['codex','gemini-cli'].find(provider=>nodeProviders.includes(provider))||'';
+    const localProvider=['codex','gemini-cli','claude-code'].find(provider=>nodeProviders.includes(provider))||'';
     const input=normalizeTaskInput({
       title:'EKODI daily site improvement: '+claim.site.name,
       prompt:buildSiteImprovementPrompt(claim),

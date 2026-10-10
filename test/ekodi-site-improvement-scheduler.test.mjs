@@ -68,7 +68,8 @@ test('production AI worker owns the hourly scheduler while staging stays passive
   assert.match(entry,/async scheduled\(controller, env, ctx\)/);
   assert.match(entry,/aiControlWorker\.scheduled\(controller, env, ctx\)/);
   assert.match(worker,/createdBy:'ekodi-site-improvement-scheduler'/);
-  assert.match(worker,/\['codex','gemini-cli'\]\.find/);
+  assert.match(worker,/\['codex','gemini-cli','claude-code'\]\.find/);
+  assert.match(worker,/auto_execution_eligible=1 AND is_portable=0/);
 });
 
 test('low traffic decision enforces both recent sessions and cumulative visit pressure',async()=>{
