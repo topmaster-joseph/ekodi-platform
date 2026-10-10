@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { handleTrafficIntelligence } from '../traffic-intelligence-control.js';
 import { readFile } from 'node:fs/promises';
 import {
   classifyTrafficUserAgent,
@@ -110,4 +111,35 @@ test('browser telemetry may transmit only declared service routes, never arbitra
   assert.match(shell,/const first=trafficKnownRoots\.has\(routeRoot\)\?routeRoot:''/);
   assert.match(shell,/site_path:first\+child/);
   assert.doesNotMatch(shell,/site_path:location\.pathname/);
+});
+
+test('real visit handler preserves independent anonymous sessions across sibling sites',async()=>{
+  const rows=[];
+  const db={prepare(sql){
+    assert.match(sql,/INSERT INTO traffic_human_sessions/);
+    return {bind(...values){return {async run(){rows.push(values);return {success:true}}}}};
+  }};
+  const session='visitor_session_1234567890123456789012345';
+  async function visit(sitePath){
+    const req=new Request('https://ekodi.kr/api/telemetry/visit',{
+      method:'POST',
+      headers:{origin:'https://ekodi.kr','content-type':'text/plain'},
+      body:JSON.stringify({sid:session,site_id:'root',site_path:sitePath,surface:'home'})
+    });
+    return handleTrafficIntelligence(req,{DB:db});
+  }
+  const church=await visit('ekodichurch');
+  const mall=await visit('ekodimall');
+  assert.equal(church.status,204);
+  assert.equal(mall.status,204);
+  assert.equal(rows.length,2);
+  assert.equal(rows[0][2],'church');
+  assert.equal(rows[1][2],'mall');
+  assert.notEqual(rows[0][3],rows[1][3],'site-specific hashes must not collide or overwrite another site');
+  assert.equal(rows[0][0],rows[1][0]);
+  for(const row of rows){
+    assert.equal(row[1],'ekodi.kr');
+    assert.match(row[3],/^[a-f0-9]{32}$/);
+    assert.ok(!row.includes(session),'no raw browser sid should be persisted');
+  }
 });
