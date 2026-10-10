@@ -1,6 +1,6 @@
 name: Deploy EKODI Church Homepage
 # Release reconciliation marker: church-operating-space-20260924
-# Reconcile Church public Pages to source commit 2e71e09789dda60aaf48fe259b8c32c43776250f (2026-10-09).
+# Reconcile Church public Pages to source commit 38981575c18f23f82e8754d7114a890f24a4768c (2026-10-10): 5-language Lord's Prayer pronunciation.
 
 on:
   workflow_dispatch:
