@@ -1,0 +1,21 @@
+# Internal Service Binding only; do not attach a public route or workers.dev.
+name = "ekodi-cgma-board-internal"
+main = "cgma-board-service-worker.js"
+compatibility_date = "2026-08-12"
+workers_dev = false
+preview_urls = false
+
+[vars]
+ENVIRONMENT = "production"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-auth"
+database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
+
+[[services]]
+binding = "CONTROL_API"
+service = "ekodi-auth-api"
+
+[observability.logs]
+enabled = true
