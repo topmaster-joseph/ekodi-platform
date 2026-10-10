@@ -19,7 +19,7 @@ object IDs. The general `computer.browser.execute` remains EKODI-origin only.
 Cloud:
 1. Only authenticated `super_admin` + `confirmed:true` may enqueue.
 2. Payload must equal `{pilotId:"261011-ekodi-sunday-service-8-mp3",presentationId:"1wJhndsrFK7GrwnJsmWMvarivlNCfgTE97RGQTRJ3CfI",operation:"insert-native-audio"}`. No URL, path, user ID, third-party URL, or user-selected file ID is accepted. Server expands the full fixed eight-file plan.
-3. Idempotent one-at-a-time (no active parallel task) and `maxAttempts=1`.
+3. Strict one-shot: any prior submission (even failed/partial) blocks an automatic second attempt until all eight slides are reviewed. No active parallel task and `maxAttempts=1`.
 4. The queue requires Agent capability `workspaceSlidesAudio:true`. An ordinary online/browser-canary node does NOT qualify.
 5. A job cannot be marked completed by a link-only result, an incomplete set or an unverifiable native audio playback receipt.
 
