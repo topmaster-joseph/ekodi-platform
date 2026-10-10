@@ -1,6 +1,6 @@
 name: Deploy EKODI Church Homepage
 # Release reconciliation marker: church-operating-space-20260924
-# Reconcile Church public Pages to source commit 2e71e09789dda60aaf48fe259b8c32c43776250f (2026-10-09).
+# Reconcile Church public Pages to merged Sunday worship Live source 24430fc0a501b756157fb480461f3033fafbd20f (2026-10-10).
 
 on:
   workflow_dispatch:
@@ -56,10 +56,10 @@ jobs:
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-          for file in index.html script.js live/index.html live/live.js live/host-intent.js live/live.css church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css church-online-status.js church-live-entry.css giving.js church-footer.css community-visual.css church-life-hub.js church-life-hub.css church-life-hub-i18n.js my/index.html my/app.js my/styles.css my/giving/index.html my/giving/app.js my/giving/styles.css my/attendance/index.html my/attendance/app.js my/attendance/styles.css; do
+          for file in index.html script.js worship/2026-10-11/index.html worship/2026-10-11/worship.js worship/2026-10-11/worship.css worship/2026-10-11/materials.json live/worship-materials.js live/worship-materials.css live/index.html live/live.js live/host-intent.js live/live.css church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css church-online-status.js church-live-entry.css giving.js church-footer.css community-visual.css church-life-hub.js church-life-hub.css church-life-hub-i18n.js my/index.html my/app.js my/styles.css my/giving/index.html my/giving/app.js my/giving/styles.css my/attendance/index.html my/attendance/app.js my/attendance/styles.css; do
             test -s "church/$file"
           done
-          for file in script.js live/live.js live/host-intent.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-online-status.js giving.js church-life-hub.js church-life-hub-i18n.js my/app.js my/giving/app.js my/attendance/app.js; do
+          for file in script.js live/live.js live/worship-materials.js worship/2026-10-11/worship.js live/host-intent.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-online-status.js giving.js church-life-hub.js church-life-hub-i18n.js my/app.js my/giving/app.js my/attendance/app.js; do
             node --check "church/$file"
           done
           grep -Fq 'data-ekodi-life-hub' church/index.html
@@ -161,6 +161,32 @@ jobs:
           set -euo pipefail
           cd /tmp/ekodi-church-pages
           npx --yes wrangler@${WRANGLER_VERSION} pages deploy . --project-name ekodi-church --branch main --commit-dirty=true
+
+      - name: Verify real worship bulletin and EKODI-owned viewer materials
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -e '.schema == "ekodi.worship.materials.v1" and .site == "ekodichurch" and .date == "2026-10-11" and (.slides | length) == 16' church/worship/2026-10-11/materials.json >/dev/null
+          for attempt in $(seq 1 18); do
+            bulletin_code=$(curl -L -sS -o /tmp/church-1011-bulletin.html -w '%{http_code}' --connect-timeout 5 --max-time 18 "https://ekodi.kr/ekodichurch/worship/2026-10-11/?release=${CHURCH_SOURCE_SHA}" || true)
+            packet_code=$(curl -L -sS -o /tmp/church-1011-materials.json -w '%{http_code}' --connect-timeout 5 --max-time 18 "https://ekodi.kr/ekodichurch/worship/2026-10-11/materials.json?release=${CHURCH_SOURCE_SHA}" || true)
+            studio_code=$(curl -L -sS -o /tmp/church-1011-live.html -w '%{http_code}' --connect-timeout 5 --max-time 18 "https://ekodi.kr/ekodichurch/live/?release=${CHURCH_SOURCE_SHA}" || true)
+            script_code=$(curl -L -sS -o /tmp/church-1011-viewer.js -w '%{http_code}' --connect-timeout 5 --max-time 18 "https://ekodi.kr/ekodichurch/live/worship-materials.js?release=${CHURCH_SOURCE_SHA}" || true)
+            for response in "$bulletin_code" "$packet_code" "$studio_code" "$script_code"; do
+              if [[ "$response" == 429 || "$response" == 1027 ]]; then echo 'Quota circuit tripped; stop canary'; exit 75; fi
+            done
+            if [[ "$bulletin_code" == 200 && "$packet_code" == 200 && "$studio_code" == 200 && "$script_code" == 200 ]] \
+              && grep -Fq '모두가 듣도록' /tmp/church-1011-bulletin.html \
+              && grep -Fq 'id="viewerContentLayout"' /tmp/church-1011-live.html \
+              && grep -Fq 'data-viewer-material-mode' /tmp/church-1011-live.html \
+              && grep -Fq 'async function loadPacket()' /tmp/church-1011-viewer.js \
+              && jq -e '.schema == "ekodi.worship.materials.v1" and .site == "ekodichurch" and (.slides | length) == 16' /tmp/church-1011-materials.json >/dev/null 2>&1; then
+              echo 'Real-host worship bulletin, 16-slide material manifest, and self-hosted Live viewer verified.'
+              break
+            fi
+            if [[ "$attempt" == 18 ]]; then echo 'Worship production canary failed to converge'; exit 1; fi
+            sleep 3
+          done
 
       - name: Verify production life hub assets and exact release
         shell: bash
