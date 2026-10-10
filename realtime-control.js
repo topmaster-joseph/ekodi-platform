@@ -470,6 +470,46 @@ async function roomMutation(request,env,url,input){
   return json(request,env,{ok:true,room:safeRoom(await roomById(env,room.id))});
 }
 
+// Room-scoped presenter cursor: original media is independent from presentation state.
+async function presentationRoute(request,env,url,input){
+  const match=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/presentation$/);
+  if(!match)return null;
+  if(!['GET','PUT'].includes(request.method))return json(request,env,{ok:false,error:'method_not_allowed'},405);
+  const room=await roomById(env,decodeURIComponent(match[1]));
+  if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+  if(request.method==='GET'){
+    if(!room.anonymous_viewers_enabled){
+      const access=await entitlementFor(request,env,slug(room.tenant_id));
+      if(!access.identity)return json(request,env,{ok:false,error:'authentication_required'},401);
+    }
+    try{
+      const row=await env.DB.prepare('SELECT deck_id,slide_index,revision,updated_at FROM realtime_presentation_state WHERE room_id=? AND tenant_id=?')
+        .bind(room.id,room.tenant_id).first();
+      return json(request,env,{ok:true,roomId:room.id,tenant:room.tenant_id,
+        presentation:row?{deckId:row.deck_id,index:Number(row.slide_index),revision:Number(row.revision),updatedAt:row.updated_at}:null});
+    }catch(error){console.warn('presentation state read unavailable',error?.message||error);return json(request,env,{ok:false,error:'presentation_state_unavailable'},503)}
+  }
+  const auth=await ownerAllowed(request,env,room);
+  if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
+  if(!['created','starting','live'].includes(room.status))return json(request,env,{ok:false,error:'room_not_active'},409);
+  const deckId=clean(input?.deckId,80);
+  const index=input?.index;
+  if(!/^worship-20\d{2}-\d{2}-\d{2}$/.test(deckId)||!Number.isInteger(index)||index<0||index>119)
+    return json(request,env,{ok:false,error:'invalid_presentation_state'},400);
+  const stamp=new Date().toISOString();
+  try{
+    await env.DB.prepare(`INSERT INTO realtime_presentation_state(room_id,tenant_id,deck_id,slide_index,revision,updated_at)
+      VALUES (?,?,?,?,1,?) ON CONFLICT(room_id) DO UPDATE SET deck_id=excluded.deck_id,
+      slide_index=excluded.slide_index,revision=realtime_presentation_state.revision+1,updated_at=excluded.updated_at
+      WHERE realtime_presentation_state.tenant_id=excluded.tenant_id`)
+      .bind(room.id,room.tenant_id,deckId,index,stamp).run();
+    const row=await env.DB.prepare('SELECT deck_id,slide_index,revision,updated_at FROM realtime_presentation_state WHERE room_id=? AND tenant_id=?')
+      .bind(room.id,room.tenant_id).first();
+    return json(request,env,{ok:true,roomId:room.id,tenant:room.tenant_id,
+      presentation:row?{deckId:row.deck_id,index:Number(row.slide_index),revision:Number(row.revision),updatedAt:row.updated_at}:null});
+  }catch(error){console.warn('presentation state update unavailable',error?.message||error);return json(request,env,{ok:false,error:'presentation_state_unavailable'},503)}
+}
+
 async function destinationRoute(request,env,url){
   if(request.method==='GET'&&url.pathname===`${PREFIX}/destinations/catalog`){
     const config=realtimeTenant(url.searchParams.get('tenant')||'');if(!config)return json(request,env,{ok:false,error:'invalid_tenant'},400);
@@ -782,6 +822,7 @@ export async function handleRealtimeControl(request,env){
     return createRoom(request,env,config.apiTenant,input||{});
   }
   const recordings=await recordingRoutes(request,env,url,input);if(recordings)return recordings;
+  const presentation=await presentationRoute(request,env,url,input);if(presentation)return presentation;
   const destinations=await destinationRoute(request,env,url);if(destinations)return destinations;
   const collaboration=await collaborationRoute(request,env,url,input);if(collaboration)return collaboration;
   const managementCamera=await managementCameraPairRoute(request,env,url,input);if(managementCamera)return managementCamera;
