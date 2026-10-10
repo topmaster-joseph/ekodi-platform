@@ -4,6 +4,15 @@ name: Deploy EKODI Church Homepage
 
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Official EKODI Orchestrator release branch (receipt checked)'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Matching EKODI Orchestrator task ID'
+        required: true
+        type: string
   push:
     branches: [main]
     paths:
@@ -48,6 +57,9 @@ jobs:
           path: .ekodi-control
 
       - name: EKODI AI Orchestration Gate
+        env:
+          EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+          EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
         run: node "$GITHUB_WORKSPACE/.ekodi-control/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
 
       - name: Validate Church source, privacy boundary and multilingual life hub
