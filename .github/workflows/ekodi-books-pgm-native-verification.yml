@@ -5,6 +5,8 @@ on:
   pull_request:
     paths:
       - 'config/books-pgm-native-verification.json'
+      - 'config/ekodibooks-native-verification.json'
+      - 'config/pgm-cgma-native-verification.json'
       - 'test/books-pgm-native-verification.test.mjs'
       - '.github/workflows/ekodi-books-pgm-native-verification.yml'
       - '.github/workflows/ekodi-background-browser-worker.yml'
@@ -43,18 +45,34 @@ jobs:
         run: |
           node --test test/books-pgm-native-verification.test.mjs test/legacy-books-pgm-canonical.test.mjs test/pyeonggongmok-site.test.mjs test/platform-route-registry.test.mjs
 
-  desktop-native-browser:
+  desktop-books:
     needs: route-and-registry-contract
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
-      surface_paths: /ekodibooks,/pgm
-      surface_registry: config/books-pgm-native-verification.json
+      surface_paths: /ekodibooks
+      surface_registry: config/ekodibooks-native-verification.json
       device_profile: desktop
 
-  mobile-native-browser:
+  mobile-books:
     needs: route-and-registry-contract
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
-      surface_paths: /ekodibooks,/pgm
-      surface_registry: config/books-pgm-native-verification.json
+      surface_paths: /ekodibooks
+      surface_registry: config/ekodibooks-native-verification.json
+      device_profile: mobile-portrait
+
+  desktop-pgm-cgma:
+    needs: route-and-registry-contract
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      surface_paths: /pgm
+      surface_registry: config/pgm-cgma-native-verification.json
+      device_profile: desktop
+
+  mobile-pgm-cgma:
+    needs: route-and-registry-contract
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      surface_paths: /pgm
+      surface_registry: config/pgm-cgma-native-verification.json
       device_profile: mobile-portrait
