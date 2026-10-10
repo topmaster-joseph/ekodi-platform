@@ -134,6 +134,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='scripts/verify-admin-production-ui-e2e.mjs'||
   file==='device-control-admin.js'||
   file==='device-control-admin.css'||
+  // MCP-free EKODI native background browser controls also ship in Site Core.
+  file==='hybrid-execution-admin.js'||
   // Keep all Device Control/Remote Power/Wake static assets in a single orchestrated deploy boundary.
   ['remote-power-admin.js','remote-power-admin.css','device-wake-admin.js'].includes(file)||
   file==='ekodi-device-bootstrap.cmd'||
