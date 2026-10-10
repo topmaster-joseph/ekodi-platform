@@ -17,7 +17,8 @@ test('architecture menu uses existing health demand loader, not an undefined fea
 });
 test('health panel also resolves architecture, retaining independent navigation URL',()=>{
  assert.match(health,/const SECTION\s*=\s*'health'/);
- assert.match(health,/section\.dataset\.panel\s*=\s*`\$\{SECTION\} platform-overview architecture`/);
+ assert.match(health,/section\.dataset\.panel\s*=\s*`\$\{SECTION\} platform-overview`/);
+ assert.match(health,/section\.dataset\.panel \+= ' architecture'/);
  assert.match(layout,/if\(!activatePanel\(section\)\)requestDemand\(section\)/);
  assert.match(layout,/requestedSection=section;return activatePanel\(section\)\|\|requestDemand\(section\)/);
  assert.match(layout,/current:\(\)=>requestedSection/);
