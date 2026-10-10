@@ -196,16 +196,41 @@ async function dispatchClick(locator, timeout = 10_000) {
 
 async function resolveMenuTrigger(id, group) {
   const detail = page.locator(`button.admin-detail-item[data-admin-detail-section="${id}"]`).first();
-  if (await detail.count() && await detail.isVisible().catch(() => false)) return detail;
-
   const more = page.locator(`button[data-admin-detail-more="${group}"]`).first();
-  if (await more.count() && await more.isVisible().catch(() => false)) {
-    await dispatchClick(more);
-    await detail.waitFor({ state: 'visible', timeout: 10_000 });
-    return detail;
-  }
+  const groupButton = page.locator(`button[data-admin-global-group="${group}"]`).first();
 
-  throw new Error(`${id}: no visible left-navigation trigger after selecting work area ${group}`);
+  // Shared Admin groups can render a fallback section while a lazy module is
+  // mounting. Re-select only the requested group; never click another menu,
+  // fabricate a passing panel, or silently ignore an unavailable target.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (await detail.isVisible().catch(() => false)) return detail;
+    if (await more.isVisible().catch(() => false)) {
+      const expanded = await page.locator('.sidebar nav').first()
+        .getAttribute('data-admin-more-group').then(value => value === group).catch(() => false);
+      if (!expanded) await dispatchClick(more, 8_000);
+    }
+    try {
+      await detail.waitFor({ state: 'visible', timeout: 5_000 });
+      return detail;
+    } catch {
+      // A menu that remains invisible is retried with the same group focus.
+    }
+    if (attempt < 2 && await groupButton.isVisible().catch(() => false)) {
+      await dispatchClick(groupButton, 8_000);
+      await page.waitForTimeout(350);
+    }
+  }
+  const diagnostic = await page.evaluate(() => {
+    const nav = document.querySelector('.sidebar nav');
+    return {
+      focusedGroup:nav?.dataset.adminFocusedGroup || '',
+      expandedGroup:nav?.dataset.adminMoreGroup || '',
+      activeGroups:[...document.querySelectorAll('button[data-admin-global-group]')]
+        .filter(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))
+        .map(node => node.dataset.adminGlobalGroup),
+    };
+  });
+  throw new Error(`${id}: no visible left-navigation trigger after selecting work area ${group}; ${JSON.stringify(diagnostic)}`);
 }
 
 const results = [];
