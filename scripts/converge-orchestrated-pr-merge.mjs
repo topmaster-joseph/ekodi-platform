@@ -39,7 +39,13 @@ if(!filesLookup.r.ok)fail('PR file lookup failed '+filesLookup.r.status);
 const changedFiles=(Array.isArray(filesLookup.data)?filesLookup.data:[]).map(file=>String(file.filename||''));
 // GitHub token-mediated merges do not emit regular main push events.
 // Dispatch CGMA's guarded edge workflow through the verified orchestrator.
-const cgmaApexTouched=changedFiles.includes('.github/workflows/deploy-cgma-apex-edge.yml');
+const cgmaApexTouched=changedFiles.some(file=>[
+  '.github/workflows/deploy-cgma-apex-edge.yml',
+  'cgma-board-service-worker.js',
+  'wrangler.cgma-board-internal.toml',
+  'site-board-control.js',
+  'scripts/converge-orchestrated-pr-merge.mjs',
+].includes(file));
 const independentBoardTouched=changedFiles.some(file=>
   file.startsWith('services/independent-board/')||
   file==='wrangler.independent-board.toml'||
@@ -132,6 +138,10 @@ const sharedSiteTouched=changedFiles.some(file=>
   ['remote-power-admin.js','remote-power-admin.css','device-wake-admin.js'].includes(file)||
   file==='ekodi-device-bootstrap.cmd'||
   file==='site-worker.js'||
+  // Site Core also owns the shared independent-board runtime and its public edge contract.
+  file==='site-board-control.js'||
+  file==='common-board-adapter.js'||
+  file==='cgma-board-service-worker.js'||
   file==='scripts/verify-admin-provider-control-production.mjs'||
   file==='scripts/build.mjs'||
   file==='scripts/finalize-seonammedi-release.mjs'||
