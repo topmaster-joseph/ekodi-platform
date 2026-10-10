@@ -6,14 +6,15 @@ const SECTION_GROUP=Object.freeze({
   'sites-all':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',
   campus:'sites',clients:'sites','site-chrome':'sites',organization:'sites',workspace:'sites','cheonggye-members':'sites',
   'common-services':'services','service-modules':'services',confirmations:'services','life-ai':'services','personal-finance':'services',invest:'services','marketing-ai':'services',affiliates:'services','supply-network':'services',insurance:'services',capabilities:'services',openai:'services',
-  'users-access':'people',security:'people',admins:'people','ai-membership':'people',
-  work:'content',communication:'content',community:'content',books:'content',devotional:'content',social:'content',finance:'content',tax:'content',
-  health:'status','site-health':'status',deployments:'status',aiops:'status',devices:'status','pos-agent':'status','api-cost':'status',architecture:'status',maturity:'status',services:'status',
-  'public-site-controls':'settings-records','language-status':'settings-records','ai-module-spec':'settings-records',storage:'settings-records','ai-settings':'settings-records','audit-records':'settings-records',policies:'settings-records',
+  'users-access':'people',security:'security-audit',admins:'people','ai-membership':'people',
+  work:'content',communication:'content',community:'content',books:'content',devotional:'content',social:'content',finance:'finance',tax:'content',
+  health:'status','site-health':'status',deployments:'releases',aiops:'releases',devices:'devices-agent','pos-agent':'devices-agent','api-cost':'finance',architecture:'status',maturity:'status',services:'status',
+  'public-site-controls':'settings-records','language-status':'settings-records','ai-module-spec':'settings-records',storage:'settings-records','ai-settings':'settings-records','audit-records':'security-audit',policies:'settings-records',
 });
 const GROUP_DEFAULT=Object.freeze({
-  summary:'platform-overview',services:'engine-all',sites:'sites-all',people:'users-access',content:'work',status:'health','settings-records':'public-site-controls',
+  summary:'platform-overview',services:'engine-all',sites:'sites-all',people:'users-access',content:'work',finance:'finance',status:'health',releases:'deployments','devices-agent':'devices','settings-records':'public-site-controls','security-audit':'security',
 });
+const PREVIOUS_NAV_GROUP=Object.freeze({security:'people',finance:'content','api-cost':'status',deployments:'status',aiops:'status',devices:'status','pos-agent':'status','audit-records':'settings-records'});
 const LEGACY_GROUP_DEFAULT=Object.freeze({
   home:'command-home',operations:'work',workspaces:'clients',community:'community',publishing:'books',system:'health',
   common:'common-services',professional:'life-ai',space:'clients',spaces:'clients',
@@ -77,6 +78,7 @@ function routeFromPath(pathname){
   const section=normalizeSection(parts[2]);
   if(!section)return null;
   const valid=SECTION_GROUP[section]===group
+    ||PREVIOUS_NAV_GROUP[section]===group
     ||LEGACY_SECTION_GROUP[section]===group
     ||(section==='campus'&&['home','system'].includes(group))
     ||(group==='services'&&['community','ai-membership','books','devotional'].includes(section))

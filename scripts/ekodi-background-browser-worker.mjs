@@ -122,13 +122,55 @@ export async function runTask(rawTask, options={}){
   const deadline=Date.now()+task.timeoutMs;
   const results=[];
   const screenshots=[];
+  const recoveredNavigations=[];
   const remaining=()=>Math.max(100,deadline-Date.now());
+  // Pace mobile read-only verification across canonical services. Never bypass
+  // Cloudflare rate limiting or conceal a failure after bounded retries.
+  let lastNavigationAt=0;
   const goto=async p=>{
     if(Date.now()>=deadline) fail('BROWSER_TASK_TIMEOUT','Browser task timed out');
-    const target=ORIGIN+safePath(p);
-    const response=await page.goto(target,{waitUntil:'domcontentloaded',timeout:Math.min(30000,remaining())});
-    if(new URL(page.url()).origin!==ORIGIN) fail('BROWSER_REDIRECT_ORIGIN_FORBIDDEN','Navigation escaped canonical origin');
-    return {url:page.url(),status:response?.status()??null};
+    const canonicalPath=safePath(p);
+    const target=ORIGIN+canonicalPath;
+    for(let attempt=0;attempt<3;attempt++){
+      const minimumGap=task.deviceProfile.includes('mobile')?2200:500;
+      const pause=Math.max(0,minimumGap-(Date.now()-lastNavigationAt));
+      if(pause>0) await page.waitForTimeout(Math.min(pause,remaining()));
+      if(Date.now()>=deadline) fail('BROWSER_TASK_TIMEOUT','Browser task timed out');
+      const startingResponses=httpErrorResponses.length;
+      const startingPageErrors=pageErrors.length;
+      const startingConsoleErrors=consoleErrors.length;
+      const response=await page.goto(target,{waitUntil:'domcontentloaded',timeout:Math.min(30000,remaining())});
+      lastNavigationAt=Date.now();
+      if(new URL(page.url()).origin!==ORIGIN) fail('BROWSER_REDIRECT_ORIGIN_FORBIDDEN','Navigation escaped canonical origin');
+      // Allow critical dynamic imports to settle before evaluating transient status.
+      await page.waitForTimeout(Math.min(task.deviceProfile.includes('mobile')?650:250,remaining()));
+      const status=response?.status()??null;
+      const transient=[429,502,503,504];
+      const subresourceErrors=httpErrorResponses.slice(startingResponses).filter(item=>
+        item.url.startsWith(ORIGIN+'/') && transient.includes(item.status));
+      const transientStatus=transient.includes(status)?status:subresourceErrors[0]?.status;
+      if(transientStatus){
+        const record={path:canonicalPath,attempt:attempt+1,status:transientStatus,recovered:false,
+          pageErrors:pageErrors.slice(startingPageErrors),
+          httpErrors:httpErrorResponses.slice(startingResponses)};
+        recoveredNavigations.push(record);
+        if(attempt===2 || remaining()<4000) fail('BROWSER_NAVIGATION_THROTTLED',
+          'Navigation '+canonicalPath+' returned transient HTTP '+transientStatus+' after bounded retry');
+        // Keep an explicit recovery trail instead of contaminating the final page's
+        // validation with a discarded navigation's errors.
+        pageErrors.splice(startingPageErrors);
+        consoleErrors.splice(startingConsoleErrors);
+        httpErrorResponses.splice(startingResponses);
+        const headerRetry=Number(response?.headers()?.['retry-after']||0);
+        const backoff=Math.min(12000,Math.max(2500*(attempt+1),Number.isFinite(headerRetry)?headerRetry*1000:0));
+        await page.waitForTimeout(Math.min(backoff,remaining()));
+        continue;
+      }
+      if(status!==null && status>=400) fail('BROWSER_NAVIGATION_HTTP_ERROR','Navigation '+canonicalPath+' returned HTTP '+status);
+      for(const record of recoveredNavigations) if(record.path===canonicalPath) record.recovered=true;
+      return {url:page.url(),status};
+    }
+    fail('BROWSER_NAVIGATION_THROTTLED','Navigation '+canonicalPath+' exhausted attempts');
   };
 
   try{
@@ -220,6 +262,7 @@ export async function runTask(rawTask, options={}){
       hostInputInjection:false,
       allowMutation:task.allowMutation,
       blockedMutations,
+      recoveredNavigations,
       results,
       screenshots,
       consoleErrors:consoleErrors.slice(0,20),

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="필요한 AI는 바로 쓰고, 없으면 함께 만드는 EKODI 모두의 AI">
   <title>EKODI 모두의 AI</title>
-  <link rel="stylesheet" href="/ai/api/commons/style?v=20261006-ai-absolute-assets-1">
+  <link rel="stylesheet" href="/ai/api/commons/style?v=20261010-commons-chat-1">
 </head>
 <body>
   <main class="page">
@@ -20,6 +20,23 @@
         <a id="loginLink" class="login" href="../auth/?site=ai">로그인</a>
       </div>
     </header>
+
+    <section class="chat section" id="chat" aria-labelledby="chatTitle">
+      <div class="chat-heading">
+        <div><p class="kicker">AI 통합 대화</p><h2 id="chatTitle">무엇을 하고 싶으세요?</h2><p class="chat-subtitle">질문 하나로 시작하세요. EKODI가 연결된 AI 엔진으로 답합니다.</p></div>
+        <div class="chat-model"><label for="chatProvider">AI 엔진</label><select id="chatProvider" aria-label="AI 엔진 선택"><option value="auto">자동 · 무료 우선</option><option value="ollama">Ollama · 로컬</option><option value="gpt">GPT · API</option><option value="claude">Claude · API</option></select></div>
+      </div>
+      <div id="chatAvailability" class="chat-availability" aria-live="polite">모델 연결 상태를 확인하고 있습니다.</div>
+      <div id="chatMessages" class="chat-messages" role="log" aria-label="AI 대화" aria-live="polite">
+        <p class="chat-intro">문서 작성, 글 다듬기, 아이디어 정리, 코딩 질문 등 원하는 작업을 입력해 보세요.</p>
+      </div>
+      <form id="chatForm" class="chat-form">
+        <label class="visually-hidden" for="chatInput">AI에게 질문하기</label>
+        <textarea id="chatInput" rows="2" maxlength="1200" required placeholder="EKODI AI에게 무엇이든 물어보세요."></textarea>
+        <button type="submit" id="chatSubmit">보내기 ↗</button>
+      </form>
+      <p id="chatStatus" class="chat-status" role="status">로그인 후 대화할 수 있습니다. 사용량과 API 비용은 EKODI 운영 정책에 따라 제한됩니다.</p>
+    </section>
 
     <section class="services section" aria-labelledby="serviceTitle">
       <div class="section-title-row">
@@ -78,6 +95,6 @@
 
     <footer><span>EKODI 모두의 AI</span><a href="../">ekodi.kr</a></footer>
   </main>
-  <script type="module" src="/ai/api/commons/client?v=20261006-ai-absolute-assets-1"></script>
+  <script type="module" src="/ai/api/commons/client?v=20261010-commons-chat-1"></script>
 </body>
 </html>

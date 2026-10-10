@@ -50,6 +50,7 @@
     const input=photoForm.querySelector('input[type="file"][name="photos"]');
     const files=[...(input?.files||[])];
     if(!files.length){setPhotoStatus('사진을 선택해 주세요.','error');return}
+    if(!photoForm.querySelector('input[name="publicConsent"]')?.checked){setPhotoStatus('사진 속 인물과 저작권자의 공개 동의를 확인해 주세요.','error');return}
     if(files.length>20){setPhotoStatus('한 번에 최대 20장까지 올릴 수 있습니다.','error');return}
     const tooLarge=files.find(file=>file.size>8*1024*1024);
     if(tooLarge){setPhotoStatus(tooLarge.name+' 파일이 8MB를 넘습니다.','error');return}
@@ -61,7 +62,7 @@
       const file=files[index];
       setPhotoStatus((index+1)+'/'+files.length+' · '+file.name+' 업로드 중');
       try{
-        const body=new FormData();body.set('file',file,file.name);body.set('name',name);body.set('title',file.name);const phash=await photoDHash(file);if(phash)body.set('phash',phash);
+        const body=new FormData();body.set('file',file,file.name);body.set('name',name);body.set('title',file.name);body.set('publicConsent','true');const phash=await photoDHash(file);if(phash)body.set('phash',phash);
         const response=await fetch(photoApi,{method:'POST',body,credentials:'same-origin',headers:{accept:'application/json'}});
         const result=await response.json().catch(()=>({}));
         if(!(response.ok||response.status===202)||!result.ok)throw new Error(result.message||'업로드 실패');
@@ -80,13 +81,15 @@
   form?.addEventListener('submit',async event=>{
     event.preventDefault();
     if(!form.reportValidity())return;
+    if(!form.querySelector('input[name="publicConsent"]')?.checked){setStatus('공개 가능한 링크인지 확인해 주세요.','error');return}
     const submit=form.querySelector('button[type="submit"]');
     const data=new FormData(form);
     const payload={
       url:String(data.get('url')||'').trim(),
       title:String(data.get('title')||'').trim(),
       name:String(data.get('name')||'').trim(),
-      type:String(data.get('type')||'other')
+      type:String(data.get('type')||'other'),
+      publicConsent:data.get('publicConsent')==='true'
     };
     submit.disabled=true;setStatus('등록하고 있습니다.');
     try{

@@ -3,13 +3,17 @@ import './admin-service-handoffs.js';
 import './admin-context-shell-recovery.js';
 
 export const ADMIN_MENU_GROUPS = Object.freeze([
-  { id: 'summary', icon: '◉', defaultSection: 'platform-overview', labels: { ko: '플랫폼 전체현황', en: 'Platform Overview' } },
+  { id: 'summary', icon: '◉', defaultSection: 'platform-overview', labels: { ko: '전체 대시보드', en: 'Platform Dashboard' } },
   { id: 'sites', icon: '▦', defaultSection: 'sites-all', labels: { ko: '사이트·브랜드', en: 'Sites & Brands' } },
-  { id: 'people', icon: '♙', defaultSection: 'users-access', labels: { ko: '사용자·관리자·권한', en: 'Users, Admins & Access' } },
+  { id: 'people', icon: '♙', defaultSection: 'users-access', labels: { ko: '회원·관리자·권한', en: 'Members, Admins & Access' } },
   { id: 'services', icon: '◇', defaultSection: 'engine-all', labels: { ko: '서비스·AI', en: 'Services & AI' } },
   { id: 'content', icon: '▤', defaultSection: 'work', labels: { ko: '콘텐츠·행사·소통', en: 'Content, Events & Communication' } },
-  { id: 'status', icon: '↑', defaultSection: 'health', labels: { ko: '운영·배포·장애', en: 'Operations, Releases & Incidents' } },
-  { id: 'settings-records', icon: '⚙', defaultSection: 'public-site-controls', labels: { ko: '설정·보안·감사', en: 'Settings, Security & Audit' } },
+  { id: 'finance', icon: '₩', defaultSection: 'finance', labels: { ko: '결제·회계·비용', en: 'Payments, Accounting & Costs' } },
+  { id: 'status', icon: '◉', defaultSection: 'health', labels: { ko: '상태·성능·점검', en: 'Health, Performance & Checks' } },
+  { id: 'releases', icon: '↑', defaultSection: 'deployments', labels: { ko: '배포·장애', en: 'Releases & Incidents' } },
+  { id: 'devices-agent', icon: 'D', defaultSection: 'devices', labels: { ko: '기기·에이전트', en: 'Devices & Agents' } },
+  { id: 'settings-records', icon: '⚙', defaultSection: 'public-site-controls', labels: { ko: '설정·연동·저장소', en: 'Settings, Integrations & Storage' } },
+  { id: 'security-audit', icon: '§', defaultSection: 'security', labels: { ko: '보안·감사', en: 'Security & Audit' } },
 ]);
 
 export const ADMIN_MENU_REGISTRY = Object.freeze([
@@ -43,7 +47,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'sites-independent', group: 'sites', icon: 'D', delegateSection: 'campus', siteRelation: 'independent', labels: { ko: '독립 사이트', en: 'Independent Sites' }, internal: true },
 
   { id: 'users-access', group: 'people', icon: 'U', delegateSection: 'clients', labels: { ko: '전체 사용자·접근', en: 'All Users & Access' } },
-  { id: 'security', group: 'people', icon: 'S', labels: { ko: '보안·인증 기록', en: 'Security & Identity Records' } },
+  { id: 'security', group: 'security-audit', icon: 'S', labels: { ko: '보안·인증 기록', en: 'Security & Identity Records' } },
   { id: 'admins', group: 'people', icon: '♙', labels: { ko: '관리자 계정·권한', en: 'Administrator Accounts & Access' }, superAdminOnly: true },
   { id: 'ai-membership', group: 'people', icon: '◈', labels: { ko: '역할·등급·가입 승인', en: 'Roles, Grades & Approvals' } },
 
@@ -53,16 +57,16 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'books', group: 'content', icon: 'B', labels: { ko: '전체 게시물·미디어', en: 'Posts & Media' } },
   { id: 'devotional', group: 'content', icon: 'V', labels: { ko: '다국어 게시·묵상', en: 'Multilingual Publishing & Devotional' } },
   { id: 'social', group: 'content', icon: '↗', labels: { ko: '방송·채널·자동게시', en: 'Broadcast, Channels & Autopost' } },
-  { id: 'finance', group: 'content', icon: '₩', labels: { ko: '결제·회계 운영', en: 'Finance Operations' } },
+  { id: 'finance', group: 'finance', icon: '₩', labels: { ko: '결제·회계 운영', en: 'Finance Operations' } },
   { id: 'tax', group: 'content', icon: 'T', labels: { ko: '세금·증빙', en: 'Tax & Evidence' }, href: 'https://ekodi.kr/tax', adminHandoff: true, internal: true },
 
   { id: 'health', group: 'status', icon: '◉', labels: { ko: '전체 운영상태', en: 'Overall Operational Health' } },
   { id: 'site-health', group: 'status', icon: '✓', labels: { ko: '사이트 자동점검', en: 'Site Health Checks' }, superAdminOnly: true },
-  { id: 'deployments', group: 'status', icon: '↑', labels: { ko: '배포·변경 이력', en: 'Deployments & Change History' } },
-  { id: 'aiops', group: 'status', icon: 'AI', labels: { ko: '장애·오류·경고', en: 'Incidents, Errors & Warnings' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
-  { id: 'devices', group: 'status', icon: 'D', labels: { ko: '실행 인프라', en: 'Execution Infrastructure' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
-  { id: 'pos-agent', group: 'status', icon: 'POS', labels: { ko: 'POS Agent 설치·관리', en: 'POS Agent Install & Management' }, superAdminOnly: true, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
-  { id: 'api-cost', group: 'status', icon: '₩', labels: { ko: '사용량·비용', en: 'Usage & Cost' } },
+  { id: 'deployments', group: 'releases', icon: '↑', labels: { ko: '배포·변경 이력', en: 'Deployments & Change History' } },
+  { id: 'aiops', group: 'releases', icon: 'AI', labels: { ko: '장애·오류·경고', en: 'Incidents, Errors & Warnings' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
+  { id: 'devices', group: 'devices-agent', icon: 'D', labels: { ko: '실행 인프라', en: 'Execution Infrastructure' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
+  { id: 'pos-agent', group: 'devices-agent', icon: 'POS', labels: { ko: 'POS Agent 설치·관리', en: 'POS Agent Install & Management' }, superAdminOnly: true, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
+  { id: 'api-cost', group: 'finance', icon: '₩', labels: { ko: '사용량·비용', en: 'Usage & Cost' } },
   { id: 'architecture', group: 'status', icon: '◇', labels: { ko: '시스템 구조', en: 'System Structure' } },
   { id: 'maturity', group: 'status', icon: 'M5', labels: { ko: '플랫폼 성숙도', en: 'Platform Maturity' }, superAdminOnly: true },
   { id: 'services', group: 'status', icon: '▦', labels: { ko: '서비스·지표', en: 'Services & Metrics' }, internal: true },
@@ -73,7 +77,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'ai-module-spec', group: 'settings-records', icon: 'API', labels: { ko: '외부 연동·API', en: 'External Integrations & API' } },
   { id: 'storage', group: 'settings-records', icon: '▣', labels: { ko: '보관함·저장소', en: 'Archive & Storage' } },
   { id: 'ai-settings', group: 'settings-records', icon: '⚙', labels: { ko: 'AI·자동화 정책', en: 'AI & Automation Policies' }, governance: { track:'agent', changeClass:'yellow', controlPlane:true, globalPolicyMutation:'super_admin' } },
-  { id: 'audit-records', group: 'settings-records', icon: '§', delegateSection: 'aiops', labels: { ko: '운영규칙·변경·감사기록', en: 'Operating Rules, Changes & Audit' } },
+  { id: 'audit-records', group: 'security-audit', icon: '§', delegateSection: 'aiops', labels: { ko: '운영규칙·변경·감사기록', en: 'Operating Rules, Changes & Audit' } },
 
   { id: 'campus', group: 'sites', icon: '⌂', labels: { ko: '사이트 관리 원장', en: 'Site Management Registry' }, internal: true },
   { id: 'clients', group: 'sites', icon: 'C', labels: { ko: '사용자·사이트 권한', en: 'Users & Site Access' }, internal: true },
@@ -100,7 +104,11 @@ export const ADMIN_MENU_CATEGORY_LABELS = Object.freeze({
   sites: { ko: '사이트', en: 'Sites' },
   access: { ko: '사용자·권한', en: 'Users & Access' },
   content: { ko: '콘텐츠·운영', en: 'Content & Operations' },
-  status: { ko: '상태·배포', en: 'Status & Releases' },
+  status: { ko: '상태·점검', en: 'Status & Checks' },
+  releases: { ko: '배포·장애', en: 'Releases & Incidents' },
+  devices: { ko: '기기·실행', en: 'Devices & Execution' },
+  finance: { ko: '결제·비용', en: 'Payments & Costs' },
+  security: { ko: '보안·감사', en: 'Security & Audit' },
   settings: { ko: '설정·기록', en: 'Settings & Records' },
   other: { ko: '기타', en: 'Other' },
 });
@@ -110,17 +118,21 @@ const ADMIN_MENU_CATEGORY_ORDER = Object.freeze({
   sites: ['sites','other'],
   people: ['access','other'],
   content: ['content','other'],
+  finance: ['finance','other'],
   status: ['status','other'],
+  releases: ['releases','other'],
+  'devices-agent': ['devices','other'],
+  'security-audit': ['security','other'],
   'settings-records': ['settings','other'],
 });
 const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   'platform-overview':'overview','command-home':'overview',
   'engine-all':'catalog','engine-core':'catalog','engine-common':'catalog','engine-operations':'catalog','engine-professional':'catalog','engine-ai':'catalog','engine-integration':'catalog','engine-preview':'catalog','service-modules':'catalog',
   'sites-all':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',campus:'sites',clients:'sites','site-chrome':'sites',cmpmyi:'sites',organization:'sites',workspace:'sites',
-  'users-access':'access',security:'access',admins:'access','ai-membership':'access',
-  work:'content',communication:'content',community:'content',books:'content',devotional:'content',social:'content',finance:'content',tax:'content',
-  health:'status','site-health':'status',deployments:'status',aiops:'status',devices:'status','pos-agent':'status','api-cost':'status',architecture:'status',maturity:'status',services:'status',
-  'public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'settings','audit-records':'settings',policies:'settings',
+  'users-access':'access',security:'security',admins:'access','ai-membership':'access',
+  work:'content',communication:'content',community:'content',books:'content',devotional:'content',social:'content',finance:'finance',tax:'content',
+  health:'status','site-health':'status',deployments:'releases',aiops:'releases',devices:'devices','pos-agent':'devices','api-cost':'finance',architecture:'status',maturity:'status',services:'status',
+  'public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'settings','audit-records':'security',policies:'settings',
   'common-services':'catalog',confirmations:'catalog','life-ai':'catalog','personal-finance':'catalog',invest:'catalog','marketing-ai':'catalog','supply-network':'catalog',insurance:'catalog',capabilities:'catalog',openai:'catalog',
 });
 

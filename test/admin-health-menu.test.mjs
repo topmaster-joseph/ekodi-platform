@@ -10,11 +10,11 @@ test('Health remains a visible Status route with security and capability ownersh
   const menu = await read('admin-menu-layout.js');
   const registry = await read('admin-menu-registry.js');
   const loader = await read('admin-demand-loader.js');
-  assert.match(registry, /id: 'security', group: 'people'/);
+  assert.match(registry, /id: 'security', group: 'security-audit'/);
   assert.match(registry, /id: 'capabilities', group: 'services'/);
   assert.match(registry, /id: 'health', group: 'status'/);
-  assert.match(registry, /id: 'aiops', group: 'status'/);
-  assert.match(registry, /id: 'devices', group: 'status'/);
+  assert.match(registry, /id: 'aiops', group: 'releases'/);
+  assert.match(registry, /id: 'devices', group: 'devices-agent'/);
   assert.ok(routePair(menu, '#health', 'health'));
   assert.ok(canonicalPair(menu, 'health', '#health'));
   assert.match(loader, /health:\s*\{/);
