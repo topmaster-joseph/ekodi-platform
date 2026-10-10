@@ -528,6 +528,23 @@ function summarizeCommandResult(result = {}) {
   for (const key of ['message', 'freedMB', 'pendingCount', 'installedCount', 'failedCount', 'rebootRequired', 'profile']) {
     if (result[key] !== undefined) summary[key] = result[key];
   }
+  // Explicitly project only bounded proof fields. Never expose the full
+  // Device Agent result, host environment, provider credentials, or model output.
+  if (result.localAiProof && typeof result.localAiProof === 'object') {
+    const proof = result.localAiProof;
+    const oneOf = (value, values, fallback) => values.includes(value) ? value : fallback;
+    summary.localAiProof = {
+      checkedAt: safeText(proof.checkedAt, 45),
+      ollamaApi: oneOf(proof.ollamaApi, ['ready', 'unavailable'], 'unknown'),
+      ollamaVersion: safeText(proof.ollamaVersion, 70),
+      selectedModel: oneOf(proof.selectedModel, ['qwen2.5-coder:1.5b', 'qwen3:0.6b', ''], ''),
+      inference: oneOf(proof.inference, ['passed', 'not_checked', 'nonmatching_response', 'approved_model_missing', 'api_error_or_timeout'], 'unknown'),
+      claudeCli: oneOf(proof.claudeCli, ['visible_in_agent_context', 'not_visible_to_agent'], 'unknown'),
+      claudeAuth: 'requires_interactive_user_verification',
+      credentialCollection: proof.credentialCollection === true,
+      executionMode: 'fixed_loopback_api',
+    };
+  }
   if (result.desktopSessionCanary && typeof result.desktopSessionCanary === 'object') {
     summary.desktopSessionCanary = {
       ok: result.desktopSessionCanary.ok === true,
