@@ -1060,6 +1060,38 @@ async function handleAdmin(request, env) {
   if (!auth.session) return auth.response;
   const path = new URL(request.url).pathname;
 
+  // Observe an enrolled Windows agent without reconciling jobs, claiming work, or exposing device credentials.
+  // Unlike GET /api/control/devices, this endpoint is strictly read-only.
+  if (request.method === 'GET' && path === `${ADMIN_PREFIX}/readiness`) {
+    const hostname = safeText(new URL(request.url).searchParams.get('hostname'), 48).toLowerCase();
+    if (!/^[a-z0-9-]{2,48}$/.test(hostname)) {
+      return json({ error:'Invalid device hostname', code:'DEVICE_HOSTNAME_INVALID' }, 400, request, env);
+    }
+    const rows = await env.DB.prepare(`SELECT r.hostname, r.platform, r.last_seen_at,
+      r.capabilities_json, m.device_type
+      FROM device_registry r
+      LEFT JOIN device_management_profiles m ON m.device_id = r.id
+      WHERE LOWER(r.hostname) = ? AND r.revoked_at IS NULL
+      ORDER BY r.last_seen_at DESC LIMIT 10`).bind(hostname).all();
+    const devices = (rows.results || []).map(row => {
+      const capabilities = parseJson(row.capabilities_json);
+      return {
+        hostname: row.hostname,
+        platform: row.platform,
+        lastSeenAt: row.last_seen_at,
+        status: statusFor(row.last_seen_at, null),
+        revokedAt: null,
+        management: { source:'agent', type:normalizeDeviceType(row.device_type || 'pc') },
+        capabilities: {
+          backgroundBrowser: capabilities.backgroundBrowser === true,
+          isolatedDesktop: capabilities.isolatedDesktop === true,
+          localAI: capabilities.localAI === true
+        }
+      };
+    });
+    return json({ devices, generatedAt:new Date().toISOString(), mode:'observe-only' }, 200, request, env);
+  }
+
   if (request.method === 'GET' && path === ADMIN_PREFIX) {
     await reconcileJobs(env);
     return json({ devices: await listDevices(env), jobs: await listJobs(env), catalog: deviceCatalog(), generatedAt: new Date().toISOString() }, 200, request, env);
@@ -1497,6 +1529,8 @@ export async function handleDeviceControl(request, env) {
   if (!path.startsWith(ADMIN_PREFIX) && !path.startsWith(AGENT_PREFIX)) return null;
   if (!env.DB) return json({ error: 'Device Control 데이터베이스가 연결되지 않았습니다.' }, 503, request, env);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(request, env) });
+  // The heartbeat observer must never trigger schema DDL or job reconciliation.
+  if (request.method === 'GET' && path === `${ADMIN_PREFIX}/readiness`) return handleAdmin(request, env);
   await ensureSchema(env.DB);
   if (path.startsWith(ADMIN_PREFIX)) return handleAdmin(request, env);
   return handleAgent(request, env);

@@ -59,6 +59,16 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   const CHANNEL_OAUTH_RESULT_KEY='ekodi-channel-oauth-result-v1';
   const CHANNEL_OAUTH_POPUP_NAME='ekodi_channel_oauth_popup';
   let channelOAuthNotice=null;
+  // An OAuth redirect can only confirm that the callback ran. A completed
+  // channel connection must also exist in the current tenant's live vault.
+  const channelOAuthConfirmed=(result,connections)=>result?.status==='success'&&
+    (connections||[]).some(x=>x.status==='active'&&
+      (result.provider==='meta'?['facebook','instagram'].includes(x.provider):x.provider===result.provider));
+  const channelOAuthCopy=(result,verified,label)=>verified
+    ?label+' 계정 연결이 서버에서 확인됐습니다. 다시 인증할 필요가 없습니다.'
+    :result.status==='success'
+      ?label+' 인증 화면에서 돌아왔지만 서버의 활성 연결을 확인하지 못했습니다. 인증 결과 확인 버튼으로 상태를 조회하세요. 연결이 확인되기 전에는 재인증을 반복하지 마세요.'
+      :label+' 인증을 완료하지 못했습니다.'+(result.reason?' '+result.reason:'');
   const channelOAuthResultFromLocation=()=>{
     const params=new URLSearchParams(location.search),status=params.get('ekodi_connect');
     if(!['success','error'].includes(String(status||'')))return null;
@@ -90,8 +100,13 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     if(!['channels','publishing','marketing'].includes(section))return;
     channelOAuthNotice=result;
     try{await channel()}catch{}
-    const ok=result.status==='success',label=CHANNEL_PROVIDERS[result.provider]?.label||result.provider||'채널';
-    if($('pageCopy'))$('pageCopy').textContent=ok?label+' 인증이 완료되었습니다. 연결 상태를 새로 반영했습니다.':label+' 인증을 완료하지 못했습니다.'+(result.reason?' '+result.reason:'');
+    // The redirect may arrive before local UI state refresh. Read the
+    // authenticated tenant-scoped connection ledger, not the URL alone.
+    let liveConnections=[];
+    try{const ledger=await growth('/v1/connections');liveConnections=ledger.connections||[]}catch{}
+    const ok=channelOAuthConfirmed(result,liveConnections);
+    const label=CHANNEL_PROVIDERS[result.provider]?.label||result.provider||'채널';
+    if($('pageCopy'))$('pageCopy').textContent=channelOAuthCopy(result,ok,label);
     state(ok?'채널 연결 완료':'채널 연결 확인 필요');
   }
   try{
@@ -866,8 +881,9 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       document.querySelectorAll('[data-channel-panel]').forEach(btn=>btn.onclick=()=>{const panel=document.getElementById(btn.dataset.channelPanel);if(!panel)return;if(panel.tagName==='DETAILS')panel.open=true;panel.scrollIntoView({behavior:'smooth',block:'start'})});
       if(channelOAuthNotice){
         const notice=channelOAuthNotice;channelOAuthNotice=null;
-        const ok=notice.status==='success',label=CHANNEL_PROVIDERS[notice.provider]?.label||notice.provider||'채널';
-        if($('pageCopy'))$('pageCopy').textContent=ok?label+' 인증이 완료되었습니다. 연결 상태를 새로 반영했습니다.':label+' 인증을 완료하지 못했습니다.'+(notice.reason?' '+notice.reason:'');
+        const ok=channelOAuthConfirmed(notice,connections);
+        const label=CHANNEL_PROVIDERS[notice.provider]?.label||notice.provider||'채널';
+        if($('pageCopy'))$('pageCopy').textContent=channelOAuthCopy(notice,ok,label);
         state(ok?'채널 연결 완료':'채널 연결 확인 필요');
       }else state('채널 설정');
     }catch(e){if(e.status===401)return loginPanel('채널 연결에는 운영공간 로그인이 필요합니다.');$('mainPanel').innerHTML=`<h2>채널 통합관리</h2><p class="empty">${ae(e.message)}</p>`;state('확인 필요')}

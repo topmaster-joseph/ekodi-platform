@@ -20,6 +20,9 @@ const READ_ROLES={
   church_receipt_requests:['senior_pastor','church_treasurer','church_finance'],
 };
 const FINANCE_ACCESS_ROLES=new Set(['senior_pastor','church_treasurer','church_finance']);
+// A narrow read-only capability check for same-page worship administration.
+// Do not infer this capability from login, finance access, or membership alone.
+const WORSHIP_ACCESS_ROLES=new Set(['senior_pastor','pastor','staff','worship_admin']);
 const WRITE_ROLES={
   church_members:['senior_pastor','pastor','staff'],
   church_services:['senior_pastor','pastor','staff'],
@@ -124,8 +127,23 @@ Deno.serve(async req=>{
   if(!['GET','POST','PATCH'].includes(req.method))return json({error:'METHOD_NOT_ALLOWED'},405,origin);
   const identity=await centralIdentity(req);if(!identity)return json({error:'AUTH_REQUIRED'},401,origin);
   let staff=null;try{staff=await staffFor(identity.id);}catch(error){return json({error:String(error?.message||error)},503,origin);}
-  if(!staff)return json({error:'CHURCH_STAFF_REQUIRED'},403,origin);
   const url=new URL(req.url);
+  if(url.searchParams.get('scope')==='worship-access'){
+    if(req.method!=='GET')return json({error:'METHOD_NOT_ALLOWED'},405,origin);
+    let permitted=Boolean(staff&&WORSHIP_ACCESS_ROLES.has(staff.role));
+    // Dedicated worship administrators are assigned to the church tenant registry,
+    // not necessarily church_staff. Reuse the existing user-scoped RLS projection.
+    if(!permitted&&!staff){
+      const lookup=new URL(CENTRAL_SUPABASE_URL+'/rest/v1/site_access_registry');
+      lookup.search=new URLSearchParams({site_key:'eq.church',role:'eq.tenant_admin',status:'eq.active',select:'site_key,role',limit:'1'}).toString();
+      const proof=await fetch(lookup,{headers:{apikey:CENTRAL_PUBLISHABLE_KEY,authorization:'Bearer '+bearer(req),accept:'application/json'},cache:'no-store'}).catch(()=>null);
+      const rows=proof?.ok?await proof.json().catch(()=>[]):[];
+      permitted=Array.isArray(rows)&&rows.some(row=>row.site_key==='church'&&row.role==='tenant_admin');
+    }
+    if(!permitted)return json({error:'ROLE_NOT_ALLOWED'},403,origin);
+    return json({ok:true,permissions:{worship:true},churchSlug:CHURCH_SLUG},200,origin);
+  }
+  if(!staff)return json({error:'CHURCH_STAFF_REQUIRED'},403,origin);
   if(url.searchParams.get('scope')==='finance-access'){
     if(!FINANCE_ACCESS_ROLES.has(staff.role))return json({error:'ROLE_NOT_ALLOWED'},403,origin);
     return json({ok:true,role:staff.role,email:identity.email,userId:identity.id,churchSlug:CHURCH_SLUG},200,origin);
