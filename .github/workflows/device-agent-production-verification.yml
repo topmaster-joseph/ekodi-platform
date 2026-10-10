@@ -2,6 +2,23 @@ name: Device Agent Production Verification
 
 on:
   workflow_dispatch:
+    inputs:
+      execution_mode:
+        description: 'Observe enrolled devices or run Orchestrator-approved canaries'
+        required: true
+        default: observe
+        type: choice
+        options:
+          - observe
+          - verify
+      release_branch_ref:
+        description: 'Orchestrator release branch, required in verify mode'
+        required: false
+        type: string
+      release_task_id:
+        description: 'Orchestrator release task ID, required in verify mode'
+        required: false
+        type: string
   schedule:
     - cron: '17 * * * *'
   pull_request:
@@ -10,6 +27,8 @@ on:
       - 'device-control.js'
       - 'device-control-admin.js'
       - 'scripts/verify-device-agent-production.mjs'
+      - 'scripts/observe-native-device-readiness.mjs'
+      - 'test/native-device-readiness-observe.test.mjs'
       - 'test/device-agent-production-verification.test.mjs'
       - 'test/device-control-contract.test.mjs'
       - 'test/non-disruptive-device-agent-contract.test.mjs'
@@ -22,6 +41,8 @@ on:
       - 'device-control.js'
       - 'device-control-admin.js'
       - 'scripts/verify-device-agent-production.mjs'
+      - 'scripts/observe-native-device-readiness.mjs'
+      - 'test/native-device-readiness-observe.test.mjs'
       - 'test/device-agent-production-verification.test.mjs'
       - 'test/device-control-contract.test.mjs'
       - 'test/non-disruptive-device-agent-contract.test.mjs'
@@ -48,6 +69,8 @@ jobs:
         run: |
           set -euo pipefail
           node --check scripts/verify-device-agent-production.mjs
+          node --check scripts/observe-native-device-readiness.mjs
+          node --test test/native-device-readiness-observe.test.mjs
           node --test test/device-agent-production-verification.test.mjs test/non-disruptive-device-agent-contract.test.mjs test/background-browser-canary-contract.test.mjs test/isolated-desktop-backend.test.mjs test/isolated-guest-agent.test.mjs
           grep -Fq "agent.self_update" scripts/verify-device-agent-production.mjs
           grep -Fq "computer.browser.canary" scripts/verify-device-agent-production.mjs
@@ -85,8 +108,15 @@ jobs:
         with:
           node-version: '24'
 
-      - name: EKODI AI Orchestration Gate
-        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: EKODI AI Orchestration Gate for mutating verification
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'verify'
+        env:
+          EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+          EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
+        run: |
+          test -n "$EKODI_RELEASE_BRANCH_REF"
+          test -n "$EKODI_RELEASE_TASK_ID"
+          node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
 
       - name: Issue short-lived genuine super-admin session
         shell: bash
@@ -150,7 +180,14 @@ jobs:
           echo "E2E_AUTH_DB_ID=$auth_db" >> "$GITHUB_ENV"
           echo 'Short-lived production-authenticated Device Agent verification session issued.'
 
+      - name: Observe production native PC Agent heartbeat without issuing commands
+        if: github.event_name != 'workflow_dispatch' || inputs.execution_mode != 'verify'
+        env:
+          DEVICE_TARGET_HOSTNAME: 'user3'
+        run: node scripts/observe-native-device-readiness.mjs
+
       - name: Verify native browser through bounded isolated session stages
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'verify'
         env:
           DEVICE_TARGET_WAIT_MS: '60000'
           DEVICE_COMMAND_WAIT_MS: '300000'
@@ -162,7 +199,10 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [ -f artifacts/device-agent-production-verification.json ]; then
+          if [ -f artifacts/native-device-readiness.json ]; then
+            echo '## EKODI PC3 Native Agent Observation (no device commands)' >> "$GITHUB_STEP_SUMMARY"
+            jq -r '"- Mode: \(.mode)\\n- Registered: \(.registered)\\n- Heartbeat healthy: \(.heartbeatHealthy)\\n- State: \(.verificationState)\\n- Browser capability projected: \(.capabilities.backgroundBrowser)\\n- Native cutover verified: \(.nativeCutoverVerified)\\n- Observed at: \(.observedAt)"' artifacts/native-device-readiness.json >> "$GITHUB_STEP_SUMMARY"
+          elif [ -f artifacts/device-agent-production-verification.json ]; then
             echo '## EKODI real-device Native Virtualization Verification' >> "$GITHUB_STEP_SUMMARY"
             echo '' >> "$GITHUB_STEP_SUMMARY"
             jq -r '"- Passed: \(.ok)\n- Deferred: \(.deferred // false)\n- Verification state: \(.verificationState // "VERIFIED")\n- Expected Agent version: \(.expectedAgentVersion // .update.verification.expectedVersion // "-")\n- Reported Agent version: \(.update.verification.reportedAgentVersion // "-")\n- Transactional update: \(.update.verification.transactionalResult // false)\n- Browser worker ready: \(.cutover.nativeBrowserOperationServiceReady // false)\n- Hyper-V canary verified: \(.cutover.isolatedDesktopCanaryVerified // false)\n- Guest runtime canary verified: \(.cutover.isolatedDesktopGuestCanaryVerified // false)\n- Guest UI canary verified: \(.cutover.isolatedDesktopUiCanaryVerified // false)\n- Session canary verified: \(.cutover.isolatedDesktopSessionCanaryVerified // false)\n- Bounded session executor ready: \(.cutover.boundedSessionExecutorReady // false)\n- Isolated desktop execution ready: \(.cutover.isolatedDesktopReady // false)\n- Native capability gap: \(.nativeCapabilityGap // "-")\n- Cutover state: \(.cutover.reason)\n- Observed/verified at: \(.verifiedAt // .observedAt // "-")"' artifacts/device-agent-production-verification.json >> "$GITHUB_STEP_SUMMARY"
