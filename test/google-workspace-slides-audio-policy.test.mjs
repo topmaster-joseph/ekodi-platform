@@ -85,6 +85,7 @@ test('queue, admin UI and Windows Agent are wired but default closed',()=>{
  const [queue,ui,agent]=files.map(f=>readFileSync(new URL(f,base),'utf8'));
  assert.match(queue, /'computer\.workspace\.slides\.audio\.insert': \{ capability:'workspaceSlidesAudio'/);
  assert.match(queue, /GOOGLE_WORKSPACE_NATIVE_NODE_NOT_READY/);
+ assert.match(queue, /GOOGLE_WORKSPACE_PREVIOUS_ATTEMPT_REQUIRES_REVIEW/);
  assert.match(queue, /validateSlidesAudioPilotReceipt\(result\.workspaceSlidesAudio\)/);
  assert.match(ui, /id="enqueueWorkspaceAudio" disabled/);
  assert.match(ui, /'computer\.workspace\.slides\.audio\.insert'/);
