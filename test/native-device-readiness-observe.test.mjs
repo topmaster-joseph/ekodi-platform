@@ -6,7 +6,7 @@ import {observeNativeDeviceReadiness,summarizeNativeDeviceReadiness} from '../sc
 const now=Date.parse('2026-10-10T14:00:00.000Z');
 const online={hostname:'USER3',platform:'Windows 11',management:{source:'agent',type:'pc'},
   revokedAt:null,status:'online',lastSeenAt:new Date(now-12000).toISOString(),
-  capabilities:{backgroundBrowser:true,isolatedDesktop:false,localAI:false},
+  capabilities:{backgroundBrowser:true,backgroundBrowserCanary:true,isolatedDesktop:false,isolatedDesktopProbe:true,agentStatus:true,localAiInstall:true},
   id:'do-not-expose-device-id',deviceToken:'do-not-expose-token'};
 test('native observer verifies only a recent enrolled agent heartbeat and publishes no identifiers',()=>{
   const a=summarizeNativeDeviceReadiness([online],{now,hostname:'user3'});
@@ -14,6 +14,11 @@ test('native observer verifies only a recent enrolled agent heartbeat and publis
   assert.equal(a.heartbeatHealthy,true);
   assert.equal(a.capabilities.backgroundBrowser,true);
   assert.equal(a.capabilities.isolatedDesktop,false);
+  assert.equal(a.capabilities.agentStatus,true);
+  assert.equal(a.capabilities.localAiInstall,true);
+  assert.equal(a.capabilities.isolatedDesktopProbe,true);
+  assert.equal(a.capabilities.backgroundBrowserCanary,true);
+  assert.equal('localAI' in a.capabilities,false,'unsupported legacy alias must not be projected');
   assert.equal(a.nativeCutoverVerified,false);
   assert.equal(a.remoteCommandIssued,false);
   assert.doesNotMatch(JSON.stringify(a),/do-not-expose/);
@@ -94,4 +99,15 @@ test('read-only heartbeat route skips schema DDL and command-queue reconciliatio
   const schema=route.indexOf('await ensureSchema(env.DB)');
   assert.ok(bypass>0 && schema>bypass,'read-only query must return before schema initialization');
   assert.match(route,/return handleAdmin\(request, env\)/);
+});
+
+test('native capability projection uses actual Windows Agent heartbeat field names',()=>{
+  const api=readFileSync(new URL('../device-control.js',import.meta.url),'utf8');
+  const agent=readFileSync(new URL('../tools/ekodi-device-agent/windows/ekodi-device-agent.ps1',import.meta.url),'utf8');
+  for(const key of ['localAiInstall','agentStatus','backgroundBrowserCanary','isolatedDesktopProbe']){
+    assert.ok(agent.includes(key+' = '),'Windows heartbeat declares '+key);
+    assert.ok(api.includes(key+': capabilities.'+key+' === true'),'sanitized API projects '+key);
+  }
+  const readiness=api.slice(api.indexOf("path === `\${ADMIN_PREFIX}/readiness`)"),api.indexOf("if (request.method === 'GET' && path === ADMIN_PREFIX)"));
+  assert.ok(!readiness.includes('localAI: capabilities.localAI'),'legacy localAI field must not appear');
 });
