@@ -22,7 +22,7 @@ function endpoint({role='pastor',bearer=true,method='GET',from=origin}={}){
     throw Error('Unexpected service call: '+path);
   };
   const Deno={env:{get:key=>key==='SUPABASE_URL'?'https://renzehysxirjilvdxacv.supabase.co':key==='SUPABASE_SERVICE_ROLE_KEY'?'test-server-key':''},serve:callback=>{handler=callback}};
-  runInNewContext(source,{Deno,fetch:upstream,Request,Response,Headers,URL});
+  runInNewContext(source,{Deno,fetch:upstream,Request,Response,Headers,URL,URLSearchParams});
   const request=new Request('https://renzehysxirjilvdxacv.supabase.co/functions/v1/church-pastor-api?scope=worship-access',{method,headers:{origin:from,...(bearer?{authorization:'Bearer user-test-session'}:{})}});
   return {run:()=>handler(request),calls};
 }
