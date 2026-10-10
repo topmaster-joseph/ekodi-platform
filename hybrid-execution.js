@@ -663,9 +663,14 @@ async function handleAdmin(request, env) {
       return json({ error:'Google Workspace 원본 슬라이드 편집은 최고관리자만 실행할 수 있습니다.', code:'GOOGLE_WORKSPACE_SUPER_ADMIN_REQUIRED' }, 403);
     }
     if (taskType === 'computer.workspace.slides.audio.insert') {
-      const existing = await env.DB.prepare(`SELECT id FROM hybrid_execution_jobs
-        WHERE task_type='computer.workspace.slides.audio.insert' AND status IN ('pending','assigned','leased') LIMIT 1`).first();
-      if (existing) return json({ error:'동일한 원본 슬라이드 편집 작업이 이미 진행 중입니다.', code:'GOOGLE_WORKSPACE_JOB_ALREADY_ACTIVE', jobId:existing.id }, 409);
+      // A partial run might already have inserted one or more native audio
+      // objects. No second run is safe until its eight-slide state is reviewed.
+      const existing = await env.DB.prepare(`SELECT id,status FROM hybrid_execution_jobs
+        WHERE task_type='computer.workspace.slides.audio.insert'
+        ORDER BY created_at DESC LIMIT 1`).first();
+      if (existing) return json({ error:'기존 오디오 삽입 실행 기록이 있습니다. 슬라이드 중복 삽입 방지를 위해 재실행 전 수동 검증이 필요합니다.',
+        code:'GOOGLE_WORKSPACE_PREVIOUS_ATTEMPT_REQUIRES_REVIEW',
+        jobId:existing.id, previousStatus:existing.status }, 409);
       const candidates = await readyNodes(env);
       if (!candidates.some(node => capabilitiesObject(node).workspaceSlidesAudio === true)) {
         return json({ error:'검증된 Google Workspace 전용 실행 노드가 없어 작업을 접수하지 않았습니다.',
