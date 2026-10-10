@@ -471,6 +471,13 @@ async function appShell(request,env,route='space-home',profile=DEFAULT_PAGE_PROF
   const contentType=asset.headers.get('content-type')||'';
   if(!contentType.includes('text/html'))return withHeaders(env,asset,route);
   let html=await asset.text();
+  // Non-store operating spaces must not ship another tenant's hidden
+  // storefront DOM. Hiding unrelated markup with CSS is not isolation.
+  if(profile.theme!=='yogurt'){
+    const storeStart=html.indexOf('<div id="publicStorefront"');
+    const shellStart=html.indexOf('<main id="internalShell"',storeStart+1);
+    if(storeStart>=0&&shellStart>storeStart)html=html.slice(0,storeStart)+html.slice(shellStart);
+  }
   const tokens={
     '__SPACE_PAGE_DOCUMENT_TITLE__':profile.documentTitle,
     '__SPACE_PAGE_NAME__':profile.name,
