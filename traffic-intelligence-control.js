@@ -132,7 +132,7 @@ function baseAggregate(key = '') {
 // Cloudflare Analytics is host-level; browser sessions can be service-level.
 export function trafficRequestScopeForHosts(requestHosts = []) {
   if (!requestHosts.length) return 'not-measured';
-  if (requestHosts.some(host => ['ekodi.kr', 'www.ekodi.kr'].includes(normalizeTrafficHost(host)))) return 'shared-host';
+  if (requestHosts.some(host => normalizeTrafficHost(host) === 'ekodi.kr')) return 'shared-host';
   return 'host-only';
 }
 
