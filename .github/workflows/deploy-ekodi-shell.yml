@@ -229,3 +229,20 @@ jobs:
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.shell.toml
       - name: Verify real Shell hostname with release cache busting
         run: node scripts/verify-ekodi-shell-live.mjs
+      - name: Verify canonical EKODI Shell serves site-specific telemetry
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4; do
+            if curl --fail --silent --show-error --max-time 20 \
+              "https://ekodi.kr/shell/shell.js?telemetry-release=${GITHUB_SHA}-${attempt}" \
+              -o /tmp/ekodi-traffic-shell-live.js; then
+              if grep -Fq 'site_path:first+child' /tmp/ekodi-traffic-shell-live.js; then
+                echo "Verified site-specific telemetry on canonical EKODI Shell"
+                exit 0
+              fi
+            fi
+            sleep 5
+          done
+          echo "Canonical EKODI Shell is stale: site attribution marker missing" >&2
+          exit 1
