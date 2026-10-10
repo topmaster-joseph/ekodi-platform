@@ -37,6 +37,9 @@ if(!pr)fail('open PR not found');
 const filesLookup=await api('/pulls/'+pr.number+'/files?per_page=100');
 if(!filesLookup.r.ok)fail('PR file lookup failed '+filesLookup.r.status);
 const changedFiles=(Array.isArray(filesLookup.data)?filesLookup.data:[]).map(file=>String(file.filename||''));
+// GitHub token-mediated merges do not emit regular main push events.
+// Dispatch CGMA's guarded edge workflow through the verified orchestrator.
+const cgmaApexTouched=changedFiles.includes('.github/workflows/deploy-cgma-apex-edge.yml');
 const independentBoardTouched=changedFiles.some(file=>
   file.startsWith('services/independent-board/')||
   file==='wrangler.independent-board.toml'||
@@ -57,6 +60,9 @@ const controlApiTouched=changedFiles.some(file=>[
   'coupang-partners-automation.js',
   'customer-entry-worker.js',
   'mission-control-entry-worker.js',
+  // AI Provider API runtime ownership; release-automation changes also repair missed deployments.
+  'ai-provider-control.js',
+  'scripts/converge-orchestrated-pr-merge.mjs',
   'wrangler.api.toml',
   'deploy/manifests/control-api.worker.json',
   '.github/workflows/deploy-control-api.yml',
@@ -80,8 +86,24 @@ const spaceTouched=changedFiles.some(file=>
   file==='.github/workflows/deploy-space.yml'
 );
 const mallSiteTouched=changedFiles.some(file=>file.startsWith('sites/ekodi-mall/')||file==='.github/workflows/deploy-ekodi-mall.yml');
+const aiControlTouched=changedFiles.some(file=>
+  file==='ai-control-worker.js'||
+  file==='common-services-admin.js'||
+  file.startsWith('ai-control/')||
+  file.startsWith('ai-control-')||
+  file==='deploy/manifests/ai-control.worker.json'||
+  file==='wrangler.ai.toml'||
+  file==='.github/workflows/deploy-ai-control.yml'||
+  file==='scripts/converge-orchestrated-pr-merge.mjs'
+);
 const sharedSiteTouched=changedFiles.some(file=>
+  // Shared administrator menu, canonical route registry and design contracts are production Site Core assets.
+  ['admin-menu-registry.js','admin-sidebar.js','admin-canonical-routes.js','admin-menu-layout.js','admin-menu-layout.compact.js','admin-menu-runtime.js','admin-demand-loader.js','release-control-admin.js','system-health-admin.js','admin-design-engine.js','config/design-engine.json','config/admin-role-navigation.json'].includes(file)||
   file==='workspace-admin-page.js'||
+  // AI Provider administrator bundle and shared provider client are owned by the Site Core.
+  file==='admin-provider-control.js'||
+  file==='common-services-admin.js'||
+  file==='ai-provider-control.js'||
   file==='mall-social-setup.js'||
   file.startsWith('sites/')||
   file.startsWith('auth-site/')||
@@ -90,10 +112,15 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='wrangler.site.toml'||
   file==='platform-router-entry-worker.js'||
   file==='canonical-surface-router.js'||
+  file==='admin-sidebar.js'||
+  file==='scripts/verify-admin-production-ui-e2e.mjs'||
   file==='device-control-admin.js'||
   file==='device-control-admin.css'||
+  // Keep all Device Control/Remote Power/Wake static assets in a single orchestrated deploy boundary.
+  ['remote-power-admin.js','remote-power-admin.css','device-wake-admin.js'].includes(file)||
   file==='ekodi-device-bootstrap.cmd'||
   file==='site-worker.js'||
+  file==='scripts/verify-admin-provider-control-production.mjs'||
   file==='scripts/build.mjs'||
   file==='scripts/finalize-seonammedi-release.mjs'||
   file==='scripts/verify-seonammedi-release-live.mjs'||
@@ -125,6 +152,15 @@ async function dispatchPostMergeDeploys(expectedMainSha){
     return true;
   };
 
+  if(cgmaApexTouched){
+    if(!(await assertLatestMainBeforeDispatch('deploy-cgma-apex-edge.yml')))return;
+    const dispatch=await api('/actions/workflows/deploy-cgma-apex-edge.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('CGMA Apex Edge deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-cgma-apex-edge.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
   // Only the guarded operating-space workflow can mutate production.
   // The originating orchestrator release receipt is mandatory.
   if(spaceTouched){
@@ -199,6 +235,14 @@ async function dispatchPostMergeDeploys(expectedMainSha){
     });
     if(!dispatch.r.ok)fail('independent board deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-independent-board.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(aiControlTouched){
+    const dispatch=await api('/actions/workflows/deploy-ai-control.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('AI Control Plane deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-ai-control.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(sharedSiteTouched){
     if(!(await assertLatestMainBeforeDispatch('deploy-site-core.yml')))return;

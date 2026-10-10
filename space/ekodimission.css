@@ -112,3 +112,22 @@ body.mission-pay-open{overflow:hidden}
   .naju-activity-page .timeline li{grid-template-columns:104px minmax(0,1fr);gap:.75rem}
   .naju-activity-page .timeline time{font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif;font-size:1rem;line-height:1.45;font-weight:800;white-space:nowrap;color:#315c46}
 }
+
+/* Dedicated EKODI Mission history timeline; respect mobile text widths and document direction. */
+.mission-history-section{padding:2.5rem 0 3.5rem;border-top:1px solid var(--line)}
+.mission-history-timeline{list-style:none;padding:0;margin:1.6rem 0 0;border-top:1px solid var(--line)}
+.mission-history-entry{display:grid;grid-template-columns:minmax(110px,180px) minmax(0,1fr);gap:1.2rem;padding:1.3rem 0;border-bottom:1px solid var(--line);scroll-margin-top:6rem}
+.mission-history-date{display:flex;flex-direction:column;gap:.35rem}
+.mission-history-date time{font-size:clamp(1.15rem,2.8vw,1.7rem);font-weight:850;line-height:1.2;color:var(--accent)}
+.mission-history-date span{font-size:.78rem;color:var(--muted);font-weight:650}
+.mission-history-content h3{font-size:clamp(1.05rem,2.2vw,1.42rem);margin:0 0 .45rem}
+.mission-history-content p{margin:0 0 .5rem;color:var(--muted);line-height:1.65;overflow-wrap:anywhere}
+@media(max-width:620px){.mission-history-section{padding:1.5rem 0 2rem}.mission-history-entry{grid-template-columns:86px minmax(0,1fr);gap:.75rem;padding:1.1rem 0}.mission-history-date time{font-size:1.1rem}.mission-history-date span{font-size:.71rem}.mission-history-content p{font-size:.89rem;line-height:1.5}}
+
+/* Mission landing: short introduction plus not-yet-ended events only. */
+.mission-home-current{padding:2rem 0 2.6rem}
+.mission-home-current .activity-date strong{font-size:clamp(1.95rem,3.5vw,2.6rem);white-space:nowrap}
+.mission-home-event[hidden],.mission-home-empty[hidden]{display:none!important}
+.mission-home-empty{padding:1.2rem 1.4rem;border:1px solid var(--line);border-radius:1rem;background:var(--card);color:var(--muted)}
+.mission-home-archive-link{display:flex;flex-wrap:wrap;gap:.6rem;justify-content:flex-end;margin:1rem 0 0}
+@media(max-width:760px){.mission-home-current .activity-date{min-height:auto}.mission-home-archive-link{justify-content:flex-start}.mission-home-current .activity-card{min-width:0}}

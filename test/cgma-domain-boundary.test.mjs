@@ -36,9 +36,18 @@ test('Shared Site candidate smoke excludes the independently routed CGMA public 
 
 test('CGMA edge workflow pins board delegation source and verifies independent board', async () => {
   const cgmaWorkflow=await readFile(new URL('../.github/workflows/deploy-cgma-apex-edge.yml',import.meta.url),'utf8');
-  assert.match(cgmaWorkflow, /CGMA_SOURCE_REF: 'e5bfc47f2234ce9c92952cf29e00c34c2e27d12f'/);
+  assert.match(cgmaWorkflow, /CGMA_SOURCE_REF: 'a0171e0d4a77d702ca7c3ad3904d760a791a51db'/);
   assert.match(cgmaWorkflow, /grep -Fq 'isBoardPath' cgma-root-gateway\.js/);
   assert.match(cgmaWorkflow, /grep -Fq 'delegatedBoardResponse' cgma-root-gateway\.js/);
+  assert.match(cgmaWorkflow, /grep -Fq 'x-ekodi-cgma-board-diagnostic' cgma-root-gateway\.js/);
+  assert.match(cgmaWorkflow,/binding = "EKODI_BOARD"/);
+  assert.match(cgmaWorkflow,/service = "ekodi-cgma-board-internal"/);
+  assert.ok(cgmaWorkflow.indexOf('Deploy route-less CGMA board service before edge delegation') < cgmaWorkflow.indexOf('Deploy CGMA apex edge with central Production authority'));
+  assert.match(cgmaWorkflow,/deploy --config \.ekodi-control\/wrangler\.cgma-board-internal\.toml/);
+  // Verify that diagnostics stay on the authenticated Service Binding release path.
+  assert.match(cgmaWorkflow, /node verify-root-gateway\.mjs/);
+  assert.match(cgmaWorkflow, /persist-credentials: false/);
+  assert.match(cgmaWorkflow, /grep -Fq 'service = "shy-thunder-39a4"'/);
   assert.match(cgmaWorkflow, /grep -Fq 'board\.internal\.ekodi' cgma-root-gateway\.js/);
   assert.match(cgmaWorkflow, /check_board '\/cgma\/board'/);
   assert.match(cgmaWorkflow, /x-ekodi-board-independent: true/);

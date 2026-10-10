@@ -10,6 +10,7 @@ import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
 import { investUserPage, investUiScript } from './invest-user-page.js';
 import { investSubjectUiScript } from './invest-subject-ui.js';
 import { routeInvestSite } from './invest-site-system.js';
+import { isSinglesRoute, routeSinglesSurface } from './singles-surface.js';
 import { investIntroPage, investAnalysisPage, investAnalysisScript } from './invest-access-ui.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
@@ -395,6 +396,7 @@ async function routePlatform(request,env,ctx){
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
     const seonamBoard=legacySeonamBoardRedirect(request);if(seonamBoard)return seonamBoard;
+    if(host===PUBLIC_HOST&&isSinglesRoute(url.pathname))return routeSinglesSurface(request,env);
     const siteBoard=await handleSiteBoardRequest(request,env);if(siteBoard)return siteBoard;
     if(host===PUBLIC_HOST&&url.pathname.startsWith(MALL_API_APEX_PREFIX)){const mallApi=await routeMallApiApex(request,env);if(mallApi)return mallApi;}
     if((host===PUBLIC_HOST||SEONAMMEDI_HOSTS.has(host))&&url.pathname.startsWith('/api/seonammedi/')){const admin=await handleSeonamMediAdminApi(request,env);if(admin)return admin;const monitor=await handleSeonamMediMonitorApi(request,env);if(monitor)return monitor;const civic=await handleSeonamMediCivicApi(request,env);if(civic)return civic;}

@@ -12,6 +12,7 @@ const realms={
   'my':{name:'My EKODI',returnTo:'https://ekodi.kr/my/',open:true,kind:'my'},
   ai:{name:'EKODI AI',returnTo:'https://ekodi.kr/ai/',origins:['https://ekodi.kr'],open:true,kind:'ai'},
   community:{name:'Community',returnTo:'https://ekodi.kr/community/',open:true,kind:'community'},
+  singles:{name:'EKODI 동행',returnTo:'https://ekodi.kr/singles/',origins:['https://ekodi.kr'],open:true,kind:'singles'},
   church:{name:'EKODI Church',returnTo:'https://church.ekodi.kr/',open:true,kind:'church'},
   biz:{name:'EKODI Biz',returnTo:'https://biz.ekodi.kr/',open:true,kind:'biz'},
   trade:{name:'EKODI Trading',returnTo:'https://trade.ekodi.kr/',open:true,kind:'trade'},
