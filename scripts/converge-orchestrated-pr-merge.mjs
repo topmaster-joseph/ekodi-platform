@@ -122,6 +122,7 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='admin-provider-control.js'||
   file==='common-services-admin.js'||
   file==='ai-provider-control.js'||
+  file==='ai-ops-admin.js'||
   file==='mall-social-setup.js'||
   file.startsWith('sites/')||
   file.startsWith('auth-site/')||
