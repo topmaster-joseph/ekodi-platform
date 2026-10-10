@@ -64,3 +64,13 @@ test('Shared Site Core production deploy executes the read-only subpage sentinel
   assert.match(workflow, /run: node scripts\/verify-independent-board-live\.mjs/);
   assert.ok(workflow.indexOf('Verify independent board subpages') > workflow.indexOf('\n  deploy:'));
 });
+
+test('Cloudflare HTTP 429 immediately stops the live sentinel without retries', async () => {
+  let attempts = 0;
+  const fetcher = async () => { attempts++; return new Response('', {status: 429}); };
+  await assert.rejects(
+    () => verifyIndependentBoardLive({fetcher, sleep: async () => {}}),
+    /Cloudflare traffic guard 429/,
+  );
+  assert.equal(attempts, 1);
+});
