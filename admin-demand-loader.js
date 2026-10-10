@@ -187,7 +187,7 @@
     return window.setTimeout(()=>callback({ didTimeout:false,timeRemaining:()=>20 }),1200);
   }
 
-  function scheduleSecondary(key,feature) {
+  function scheduleSecondary(key, feature) {
     if (secondaryScheduled.has(key)) return;
     const styles=feature.secondaryStyles||[];
     const scripts=feature.secondaryScripts||[];
@@ -232,7 +232,7 @@
     const task=(async ()=>{
       mark(`ekodi-feature-${key}-start`);
       if (placeholder) {
-        placeholder.disabled=true;
+        placeholder.disabled = true;
         placeholder.setAttribute('aria-busy', 'true');
         placeholder.classList.add('is-loading');
       }
@@ -245,7 +245,7 @@
           const handler=placeholder.__ekodiDemandHandler;
           if (handler) placeholder.removeEventListener('click', handler, true);
           delete placeholder.__ekodiDemandHandler;
-          placeholder.disabled=false;
+          placeholder.disabled = false;
           placeholder.removeAttribute('aria-busy');
           placeholder.classList.remove('is-loading');
           placeholder.removeAttribute('data-demand-feature');
@@ -254,11 +254,11 @@
         window.EKODIAdminSidebar?.sync?.(document);
         window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:key } }));
         mark(`ekodi-feature-${key}-ready`);
-        scheduleSecondary(key,feature);
+        scheduleSecondary(key, feature);
       } catch (error) {
         console.warn('demand',key,error);
         if (placeholder?.isConnected) {
-          placeholder.disabled=false;
+          placeholder.disabled = false;
           placeholder.removeAttribute('aria-busy');
           placeholder.classList.remove('is-loading');
           placeholder.title = '다시 시도';
