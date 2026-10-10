@@ -170,8 +170,32 @@ async function ensureInstance(env,route){
   return env.DB.prepare('SELECT * FROM ekodi_board_instances WHERE board_id=? LIMIT 1').bind(id).first();
 }
 
+// The independent board accepts an EKODI administrator only after the internal
+// CONTROL_API validates the real bearer session. A claimed email, header or
+// platform role never grants board-local owner/admin/moderator permissions.
+async function verifiedAdminPrincipal(request,env){
+  if(!env?.CONTROL_API?.fetch)return null;
+  const authorization=String(request.headers.get('authorization')||'');
+  if(!/^Bearer [^\s]+$/.test(authorization)||authorization.length>8192)return null;
+  const url=new URL(request.url);
+  url.pathname='/api/session';
+  url.search='';
+  url.hash='';
+  const response=await env.CONTROL_API.fetch(new Request(url.toString(),{
+    method:'GET',headers:{authorization},redirect:'manual',
+  })).catch(()=>null);
+  if(!response?.ok)return null;
+  const session=await response.json().catch(()=>null);
+  if(session?.authenticated!==true||!['super_admin','admin'].includes(lower(session.role)))return null;
+  const email=lower(session.email);
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return null;
+  const personId='admin:'+email;
+  return Object.freeze({id:personId,email,subject:{key:personId}});
+}
+
 async function actor(request,env,instance){
-  const principal=await principalFromSupabaseRequest(request).catch(()=>null);
+  const principal=await verifiedAdminPrincipal(request,env)
+    || await principalFromSupabaseRequest(request).catch(()=>null);
   if(!principal?.id)return Object.freeze({authenticated:false,personId:'',email:'',role:'anonymous',boardMember:false,manage:false});
   const personId=clean(principal.subject?.key||principal.id,160);
   const email=lower(principal.email);

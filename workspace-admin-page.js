@@ -58,7 +58,20 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   const $=id=>document.getElementById(id);
   const CHANNEL_OAUTH_RESULT_KEY='ekodi-channel-oauth-result-v1';
   const CHANNEL_OAUTH_POPUP_NAME='ekodi_channel_oauth_popup';
+  // sessionStorage survives the round-trip through Google's site in the same popup.
+  // Some browsers clear window.name during cross-site navigation.
+  const CHANNEL_OAUTH_POPUP_MARKER='ekodi-channel-oauth-popup-pending-v1';
   let channelOAuthNotice=null;
+  // An OAuth redirect can only confirm that the callback ran. A completed
+  // channel connection must also exist in the current tenant's live vault.
+  const channelOAuthConfirmed=(result,connections)=>result?.status==='success'&&
+    (connections||[]).some(x=>x.status==='active'&&
+      (result.provider==='meta'?['facebook','instagram'].includes(x.provider):x.provider===result.provider));
+  const channelOAuthCopy=(result,verified,label)=>verified
+    ?label+' 계정 연결이 서버에서 확인됐습니다. 다시 인증할 필요가 없습니다.'
+    :result.status==='success'
+      ?label+' 인증 화면에서 돌아왔지만 서버의 활성 연결을 확인하지 못했습니다. 인증 결과 확인 버튼으로 상태를 조회하세요. 연결이 확인되기 전에는 재인증을 반복하지 마세요.'
+      :label+' 인증을 완료하지 못했습니다.'+(result.reason?' '+result.reason:'');
   const channelOAuthResultFromLocation=()=>{
     const params=new URLSearchParams(location.search),status=params.get('ekodi_connect');
     if(!['success','error'].includes(String(status||'')))return null;
@@ -78,7 +91,12 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   if(initialChannelOAuthResult){
     publishChannelOAuthResult(initialChannelOAuthResult);
     clearChannelOAuthResultUrl();
-    if(window.name===CHANNEL_OAUTH_POPUP_NAME){
+    let returnedInPopup=window.name===CHANNEL_OAUTH_POPUP_NAME;
+    try{
+      if(sessionStorage.getItem(CHANNEL_OAUTH_POPUP_MARKER)==='pending')returnedInPopup=true;
+      sessionStorage.removeItem(CHANNEL_OAUTH_POPUP_MARKER);
+    }catch{}
+    if(returnedInPopup){
       document.body.innerHTML='<main style="font-family:system-ui,sans-serif;max-width:440px;margin:48px auto;padding:24px;text-align:center"><h1 style="font-size:20px">채널 인증 처리 완료</h1><p style="color:#667085">관리자 화면에 결과를 반영하고 이 창을 닫습니다.</p><button type="button" onclick="window.close()" style="padding:10px 16px">창 닫기</button></main>';
       setTimeout(()=>window.close(),120);
       return;
@@ -90,8 +108,13 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     if(!['channels','publishing','marketing'].includes(section))return;
     channelOAuthNotice=result;
     try{await channel()}catch{}
-    const ok=result.status==='success',label=CHANNEL_PROVIDERS[result.provider]?.label||result.provider||'채널';
-    if($('pageCopy'))$('pageCopy').textContent=ok?label+' 인증이 완료되었습니다. 연결 상태를 새로 반영했습니다.':label+' 인증을 완료하지 못했습니다.'+(result.reason?' '+result.reason:'');
+    // The redirect may arrive before local UI state refresh. Read the
+    // authenticated tenant-scoped connection ledger, not the URL alone.
+    let liveConnections=[];
+    try{const ledger=await growth('/v1/connections');liveConnections=ledger.connections||[]}catch{}
+    const ok=channelOAuthConfirmed(result,liveConnections);
+    const label=CHANNEL_PROVIDERS[result.provider]?.label||result.provider||'채널';
+    if($('pageCopy'))$('pageCopy').textContent=channelOAuthCopy(result,ok,label);
     state(ok?'채널 연결 완료':'채널 연결 확인 필요');
   }
   try{
@@ -754,6 +777,9 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     try{
       if(!popup)popup=window.open('about:blank',CHANNEL_OAUTH_POPUP_NAME,'popup,width=560,height=760,resizable=yes,scrollbars=yes');
       if(popup){try{popup.document.title='EKODI 채널 인증';popup.document.body.innerHTML='<p style="font-family:system-ui,sans-serif;padding:24px">인증을 준비하고 있습니다.</p>';popup.opener=null}catch{}}
+      // Mark the pre-opened same-origin popup before leaving for Google OAuth.
+      // A same-tab fallback deliberately has no marker and must stay open on return.
+      if(popup&&!popup.closed){try{popup.sessionStorage.setItem(CHANNEL_OAUTH_POPUP_MARKER,'pending')}catch{}}
       const d=await growth(path,{method:'POST',body:JSON.stringify({mode:'publish',returnUrl:location.origin+location.pathname,accountHint,registryConnectionId})});
       if(!d.authorizationUrl)throw new Error('인증 주소를 받지 못했습니다.');
       state(`${target.label} 인증 진행 중`);
@@ -788,13 +814,13 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
 
       const platformMark=id=>({youtube:'YT',instagram:'IG',facebook:'f',threads:'@',naver_blog:'N',tiktok:'TT',kakao_channel:'K'}[id]||String(id||'?').slice(0,2).toUpperCase());
       const accountFor=provider=>registeredAccounts.find(a=>channelProviderFromRegistry(a)===provider);
-      const connectionFor=provider=>connections.find(x=>String(x.provider)===String(provider));
+      const connectionFor=provider=>connections.find(x=>String(x.provider)===String(provider)&&x.status==='active')||connections.find(x=>String(x.provider)===String(provider));
       const channelByProvider=provider=>publishChannels.find(c=>String(c.provider)===String(provider));
       const catalogRows=(CHANNEL_CATALOG||[]).map(target=>{
         const configured=Boolean(platform[target.healthKey]),formats=(target.formats||[]).map(format=>format.label).join(' · '),account=accountFor(target.id),connection=connectionFor(target.id),pc=connection?channelFor(connection):channelByProvider(target.id),autoOn=Boolean(pc&&pc.status==='active'&&pc.config?.autoPublishEnabled!==false),last=jobs.find(j=>String(j.provider)===String(target.id));
-        const stateLabel=connection?.status==='active'?'연결됨':account?.status==='active'?'인증됨':target.automationAdapter?(configured?'연결 가능':'플랫폼 설정 필요'):target.id==='naver_blog'?'공식 공유 방식':target.automaticPublishing?'어댑터 준비 필요':'연결관리';
-        const live=connection?.status==='active'||account?.status==='active'||(configured&&target.automationAdapter);
-        const action=target.automationAdapter&&account?(account.status==='active'?`<span class='tag live'>연결 유지</span>`:`<button class='button ${configured?'primary':''}' type='button' data-account-auth='${ae(account.id)}' data-provider='${ae(target.id)}' ${configured?'':'disabled'}>${['reconnect_required','revoked','error'].includes(account.status)?'재연결':'연결'}${configured?'':' · 설정 대기'}</button>`):`<button class='button ${target.id==='youtube'&&configured?'primary':''}' type='button' data-channel-quick='${ae(target.id)}' ${target.automationAdapter&&!configured?'disabled':''}>${target.automationAdapter?(configured?'계정 추가':'설정 필요'):'관리'}</button>`;
+        const stateLabel=connection?.status==='active'?'연결됨':account?.status==='active'?'계정 등록됨 · OAuth 확인 필요':target.automationAdapter?(configured?'연결 가능':'플랫폼 설정 필요'):target.id==='naver_blog'?'공식 공유 방식':target.automaticPublishing?'어댑터 준비 필요':'연결관리';
+        const live=connection?.status==='active';
+        const action=target.automationAdapter&&account?(connection?.status==='active'?`<span class='tag live'>연결 유지</span>`:`<button class='button ${configured?'primary':''}' type='button' data-account-auth='${ae(account.id)}' data-provider='${ae(target.id)}' ${configured?'':'disabled'}>${['reconnect_required','revoked','error'].includes(account.status)?'재연결':'연결'}${configured?'':' · 설정 대기'}</button>`):`<button class='button ${target.id==='youtube'&&configured?'primary':''}' type='button' data-channel-quick='${ae(target.id)}' ${target.automationAdapter&&!configured?'disabled':''}>${target.automationAdapter?(configured?'계정 추가':'설정 필요'):'관리'}</button>`;
         return `<tr><td><div class='channel-platform'><span class='channel-platform-mark'>${ae(platformMark(target.id))}</span><div><strong>${ae(target.label)}</strong><small>${ae(formats||'연결')}</small></div></div></td><td><span class='tag ${live?'live':'warn'}'>${ae(stateLabel)}</span></td><td><span class='channel-auto-state ${autoOn?'on':''}'><span class='channel-auto-dot'></span>${autoOn?'켜짐':'꺼짐'}</span></td><td>${last?ae(last.status):'-'}${last?.published_at?`<br><small>${ae(new Date(last.published_at).toLocaleString('ko-KR'))}</small>`:''}</td><td><div class='channel-action'>${action}</div></td></tr>`;
       }).join('');
       const catalogPanel=`<section id='channel-overview' class='channel-primary-card'><h2>채널 관리</h2><p>지원 채널 · 게시형식, 연결 상태, 자동게시 여부, 최근 게시와 필요한 조치를 한 표에서 확인합니다.</p><div class='channel-table-wrap'><table class='channel-table'><thead><tr><th>채널</th><th>연결 상태</th><th>자동게시</th><th>최근 게시</th><th>작업</th></tr></thead><tbody>${catalogRows}</tbody></table></div></section>`;
@@ -866,8 +892,9 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       document.querySelectorAll('[data-channel-panel]').forEach(btn=>btn.onclick=()=>{const panel=document.getElementById(btn.dataset.channelPanel);if(!panel)return;if(panel.tagName==='DETAILS')panel.open=true;panel.scrollIntoView({behavior:'smooth',block:'start'})});
       if(channelOAuthNotice){
         const notice=channelOAuthNotice;channelOAuthNotice=null;
-        const ok=notice.status==='success',label=CHANNEL_PROVIDERS[notice.provider]?.label||notice.provider||'채널';
-        if($('pageCopy'))$('pageCopy').textContent=ok?label+' 인증이 완료되었습니다. 연결 상태를 새로 반영했습니다.':label+' 인증을 완료하지 못했습니다.'+(notice.reason?' '+notice.reason:'');
+        const ok=channelOAuthConfirmed(notice,connections);
+        const label=CHANNEL_PROVIDERS[notice.provider]?.label||notice.provider||'채널';
+        if($('pageCopy'))$('pageCopy').textContent=channelOAuthCopy(notice,ok,label);
         state(ok?'채널 연결 완료':'채널 연결 확인 필요');
       }else state('채널 설정');
     }catch(e){if(e.status===401)return loginPanel('채널 연결에는 운영공간 로그인이 필요합니다.');$('mainPanel').innerHTML=`<h2>채널 통합관리</h2><p class="empty">${ae(e.message)}</p>`;state('확인 필요')}
