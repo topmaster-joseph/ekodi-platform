@@ -62,5 +62,5 @@ test('anonymous membership, snapshot or export data access fails the production 
 test('Shared Site Core production deploy executes the read-only subpage sentinel after promotion', async () => {
   const workflow = await readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8');
   assert.match(workflow, /run: node scripts\/verify-independent-board-live\.mjs/);
-  assert.ok(workflow.indexOf('Verify independent board subpages') > workflow.indexOf('name: deploy'));
+  assert.ok(workflow.indexOf('Verify independent board subpages') > workflow.indexOf('\n  deploy:'));
 });
