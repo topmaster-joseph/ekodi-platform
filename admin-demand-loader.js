@@ -150,7 +150,7 @@
         clearTimeout(timer);
         if (error) reject(error); else resolve(node);
       };
-      const observer=new MutationObserver(()=>{
+      const observer = new MutationObserver(()=>{
         const node=document.querySelector(selector);
         if (node) finish(node);
       });
