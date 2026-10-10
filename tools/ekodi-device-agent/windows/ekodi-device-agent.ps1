@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.5.3'
+$AgentVersion = '2.5.4'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -37,6 +37,12 @@ $script:RestartAfterCommand = $false
 $BrowserCanaryStatePath = Join-Path $Root 'background-browser-canary.json'
 $BrowserCanaryProfileRoot = Join-Path $env:ProgramData 'EKODI\BrowserWorker\CanaryProfile'
 $BrowserWorkerProfileRoot = Join-Path $env:ProgramData 'EKODI\BrowserWorker\Tasks'
+$WorkspaceAudioRoot = Join-Path $env:ProgramData 'EKODI\GoogleWorkspace'
+$WorkspaceAudioScript = Join-Path $WorkspaceAudioRoot 'tools\ekodi-device-agent\windows\google-workspace-slides-audio.mjs'
+$WorkspaceAudioPolicy = Join-Path $WorkspaceAudioRoot 'google-workspace-slides-audio-policy.js'
+$WorkspaceAudioConsent = Join-Path $WorkspaceAudioRoot 'consent.json'
+$WorkspaceAudioCanary = Join-Path $WorkspaceAudioRoot 'canary.json'
+$WorkspaceAudioProfile = Join-Path $WorkspaceAudioRoot 'automation-profile'
 $BrowserCanaryUrl = 'https://ekodi.kr/'
 $IsolatedDesktopCanaryStatePath = Join-Path $Root 'isolated-desktop-canary.json'
 $IsolatedDesktopGuestCanaryStatePath = Join-Path $Root 'isolated-desktop-guest-canary.json'
@@ -1002,6 +1008,70 @@ function Invoke-BackgroundBrowserCanary {
   New-Item -ItemType Directory -Path $Root -Force | Out-Null
   $proof | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $BrowserCanaryStatePath -Encoding UTF8
   return @{ message = 'Background Browser canary를 사용자 화면 개입 없이 검증했습니다. 검증된 버전에서만 EKODI 자체 Browser Worker를 사용할 수 있습니다.'; browserCanary = $proof }
+}
+
+function Get-WorkspaceSlidesAudioState {
+  $state = @{ verified = $false; reason = 'runtime_not_ready'; pilotId = '261011-ekodi-sunday-service-8-mp3' }
+  if (-not (Test-Path -LiteralPath $WorkspaceAudioScript) -or -not (Test-Path -LiteralPath $WorkspaceAudioPolicy)) {
+    $state.reason = 'workspace_audio_runtime_missing'; return $state
+  }
+  if (-not (Test-Path -LiteralPath $WorkspaceAudioProfile)) {
+    $state.reason = 'dedicated_workspace_profile_missing'; return $state
+  }
+  if (-not (Get-Command 'node.exe' -ErrorAction SilentlyContinue)) {
+    $state.reason = 'node_runtime_unavailable'; return $state
+  }
+  try {
+    $consent = Get-Content -LiteralPath $WorkspaceAudioConsent -Raw -Encoding UTF8 | ConvertFrom-Json
+    $canary = Get-Content -LiteralPath $WorkspaceAudioCanary -Raw -Encoding UTF8 | ConvertFrom-Json
+    $now = [DateTime]::UtcNow
+    $expiry = [DateTime]::Parse([string]$consent.expiresAt).ToUniversalTime()
+    $verifiedAt = [DateTime]::Parse([string]$canary.verifiedAt).ToUniversalTime()
+    if ($consent.operatorConsented -ne $true -or $consent.dedicatedProfileVerified -ne $true -or
+        [string]$consent.pilotId -ne '261011-ekodi-sunday-service-8-mp3' -or
+        [string]$consent.presentationId -ne '1wJhndsrFK7GrwnJsmWMvarivlNCfgTE97RGQTRJ3CfI' -or
+        $expiry -le $now -or $expiry -gt $now.AddDays(7)) {
+      $state.reason = 'workspace_google_consent_required'; return $state
+    }
+    if ($canary.verified -ne $true -or [string]$canary.pilotId -ne '261011-ekodi-sunday-service-8-mp3' -or
+        [string]$canary.presentationId -ne '1wJhndsrFK7GrwnJsmWMvarivlNCfgTE97RGQTRJ3CfI' -or
+        [string]$canary.agentVersion -ne $AgentVersion -or $verifiedAt -lt $now.AddHours(-24) -or $verifiedAt -gt $now.AddMinutes(2)) {
+      $state.reason = 'workspace_audio_canary_required'; return $state
+    }
+    return @{ verified = $true; reason = ''; pilotId = '261011-ekodi-sunday-service-8-mp3' }
+  } catch {
+    $state.reason = 'workspace_audio_consent_or_canary_unreadable'; return $state
+  }
+}
+
+function Invoke-WorkspaceSlidesAudioTask($Payload) {
+  $readiness = Get-WorkspaceSlidesAudioState
+  if (-not $readiness.verified) { throw ('workspace_audio_not_ready:' + $readiness.reason) }
+  if ([string]$Payload.pilotId -ne '261011-ekodi-sunday-service-8-mp3' -or
+      [string]$Payload.presentationId -ne '1wJhndsrFK7GrwnJsmWMvarivlNCfgTE97RGQTRJ3CfI' -or
+      [string]$Payload.operation -ne 'insert-native-audio' -or
+      @($Payload.items).Count -ne 8 -or
+      $Payload.interactiveLoginAllowed -ne $false -or
+      $Payload.reuseActiveUserBrowserProfile -ne $false) {
+    throw 'workspace_audio_scope_invalid'
+  }
+  $node = (Get-Command 'node.exe' -ErrorAction Stop).Source
+  $previousProfile = $env:EKODI_WORKSPACE_AUTOMATION_PROFILE
+  $previousConsent = $env:EKODI_WORKSPACE_CONSENT_FILE
+  $previousResult = $env:EKODI_WORKSPACE_RESULT_FILE
+  try {
+    $env:EKODI_WORKSPACE_AUTOMATION_PROFILE = $WorkspaceAudioProfile
+    $env:EKODI_WORKSPACE_CONSENT_FILE = $WorkspaceAudioConsent
+    $env:EKODI_WORKSPACE_RESULT_FILE = ''
+    $raw = & $node $WorkspaceAudioScript 2>$null
+    if (-not $raw) { throw 'workspace_audio_worker_no_result' }
+    $report = ($raw | Select-Object -Last 1) | ConvertFrom-Json
+    return @{ message = 'Google Workspace 전용 음성 삽입 작업 결과를 제출합니다.'; workspaceSlidesAudio = $report }
+  } finally {
+    $env:EKODI_WORKSPACE_AUTOMATION_PROFILE = $previousProfile
+    $env:EKODI_WORKSPACE_CONSENT_FILE = $previousConsent
+    $env:EKODI_WORKSPACE_RESULT_FILE = $previousResult
+  }
 }
 
 function Resolve-EkodiBrowserTaskUrl([string]$Path) {
@@ -2550,6 +2620,7 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'software.localai.install' { return Install-EkodiLocalAI }
     'computer.browser.canary' { return Invoke-BackgroundBrowserCanary }
     'computer.browser.execute' { return Invoke-BackgroundBrowserWorker $payload }
+    'computer.workspace.slides.audio.insert' { return Invoke-WorkspaceSlidesAudioTask $payload }
     'remote_desktop.recovery.enable' { return Set-DesktopCommanderRecovery $true }
     'remote_desktop.recovery.disable' { return Set-DesktopCommanderRecovery $false }
     'remote_desktop.recovery.run' { return Ensure-DesktopCommanderRunning $true }
@@ -2638,6 +2709,7 @@ function Send-Heartbeat($Config) {
       networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true
       computerRead = $true; processRead = $true; agentStatus = $true
       isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified; isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified; isolatedDesktopSessionCanary = [bool](Get-IsolatedDesktopSessionCanaryState).verified; isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified
+      workspaceSlidesAudio = [bool](Get-WorkspaceSlidesAudioState).verified
       desktopCapture = $false; desktopInput = $false
       arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
     }
