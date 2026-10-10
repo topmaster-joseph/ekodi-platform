@@ -552,11 +552,11 @@
 
     card.append(head, meta, health.firstElementChild, recommendationPanel(device), mainActions, advanced, foot);
     const proofCommand = latestCommandByType(device, 'software.localai.verify');
-    const proof = proofCommand?.result?.localAiProof;
+    const proof = proofCommand?.result?.localAiProof || device.diagnostics?.localAiProof;
     if (proof) {
       const summary = document.createElement('div');
       summary.className = 'device-remote-summary-card';
-      summary.innerHTML = `<small>로컬 AI 실증 · ${timeLabel(proofCommand.completedAt || proofCommand.issuedAt)}</small><strong>Ollama ${escapeHtml(proof.ollamaApi || '미확인')} · 추론 ${escapeHtml(proof.inference || '미확인')}</strong><span>모델 ${escapeHtml(proof.selectedModel || '없음')} · Claude CLI ${escapeHtml(proof.claudeCli || '미확인')} · Claude 계정 인증은 사용자 세션에서 별도 확인</span>`;
+      summary.innerHTML = `<small>로컬 AI 실증 · ${timeLabel(proof.checkedAt || proofCommand?.completedAt || proofCommand?.issuedAt)}</small><strong>Ollama ${escapeHtml(proof.ollamaApi || '미확인')} · 추론 ${escapeHtml(proof.inference || '미확인')}</strong><span>모델 ${escapeHtml(proof.selectedModel || '없음')} · Claude CLI ${escapeHtml(proof.claudeCli || '미확인')} · Claude 계정 인증은 사용자 세션에서 별도 확인</span>`;
       mainActions.after(summary);
     }
     return card;
