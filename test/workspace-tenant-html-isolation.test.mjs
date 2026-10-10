@@ -10,7 +10,7 @@ const env={
 };
 
 test('unrelated trade and generic operating-space pages never include hidden Yogurt tenant DOM',async()=>{
-  for(const path of ['/ekoditrade','/ekoditrade/','/']){
+  for(const path of ['/ekoditrade','/ekoditrade/','/ekodicafe','/ekodicafe/','/']){
     const response=await spaceWorker.fetch(new Request('https://ekodi.kr'+path),env);
     const html=await response.text();
     assert.equal(response.status,200,path);
