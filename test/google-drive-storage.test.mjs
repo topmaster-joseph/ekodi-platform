@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { marketingYouTubeOAuthErrorCode } from '../marketing-youtube-oauth-error.js';
 
 const control = await readFile(new URL('../google-drive-storage-control.js', import.meta.url), 'utf8');
 const worker = await readFile(new URL('../storage-worker.js', import.meta.url), 'utf8');
@@ -231,4 +232,26 @@ test('Google storage automatically reconnects only when Google credentials requi
   assert.doesNotMatch(cheonggyeAdmin, /startAutoReconnect|\/oauth\/start/);
   assert.match(cheonggyeAdmin, /GOOGLE_REAUTH_REQUIRED/);
   assert.match(cheonggyeAdmin, /Google Sheet 시스템 연결을 복구해야 합니다/);
+});
+
+
+test('verified Marketing YouTube OAuth errors return safe callback result without a stale-state loop', async () => {
+  const begin = control.indexOf('export async function finishMarketingYouTubeOAuth(');
+  const end = control.indexOf('export async function consumeMarketingYouTubeTicket(', begin);
+  assert.ok(begin >= 0 && end > begin);
+  const callback = control.slice(begin,end);
+  assert.ok(callback.indexOf('readState(env,') >= 0);
+  assert.ok(callback.indexOf('readState(env,') < callback.indexOf('  try {'));
+  assert.match(callback,/return \{marketingState,error:marketingYouTubeOAuthErrorCode\(error\)\}/);
+  assert.match(callback,/GOOGLE_OAUTH_STATE_INVALID/);
+  const growth = await readFile(new URL('../marketing-growth-worker.js', import.meta.url), 'utf8');
+  assert.match(growth,/if \(brokerError\) \{[\s\S]*?markRegistryFailure\(env,state,error\)[\s\S]*?redirectResult\(state.return_url/);
+});
+
+test('Marketing YouTube broker reports only allowlisted errors and never provider secrets', () => {
+  assert.equal(marketingYouTubeOAuthErrorCode({code:'YOUTUBE_TARGET_ACCOUNT_MISMATCH'}),'YOUTUBE_TARGET_ACCOUNT_MISMATCH');
+  assert.equal(marketingYouTubeOAuthErrorCode({message:'YOUTUBE_REFRESH_TOKEN_MISSING'}),'YOUTUBE_REFRESH_TOKEN_MISSING');
+  assert.equal(marketingYouTubeOAuthErrorCode({code:'invalid_grant',message:'secret details'}),'GOOGLE_OAUTH_EXCHANGE_FAILED');
+  assert.equal(marketingYouTubeOAuthErrorCode({message:'Client secret leaked: abc123'}),'GOOGLE_OAUTH_EXCHANGE_FAILED');
+  assert.equal(marketingYouTubeOAuthErrorCode(null),'GOOGLE_OAUTH_EXCHANGE_FAILED');
 });
