@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-BOOKS-PGM-NATIVE-VERIFY-001",
+  "status": "enforced",
+  "owner": "ekodi-orchestrator",
+  "canonicalOrigin": "https://ekodi.kr",
+  "readOnly": true,
+  "maxPaths": 12,
+  "devices": [
+    "desktop",
+    "mobile-portrait"
+  ],
+  "intent": "Verify requested ekodi.kr/ekodibooks and ekodi.kr/pgm entrypoints, their independent child pages and admin entry, plus CGMA board recovery without weakening the existing canonical redirects.",
+  "surfaces": [
+    {
+      "id": "books.home",
+      "path": "/ekodibooks",
+      "expectedText": "에코디서점",
+      "kind": "site-home"
+    },
+    {
+      "id": "books.series",
+      "path": "/ekodibooks/series/",
+      "expectedText": "EKODI ORIGINAL",
+      "kind": "child-page"
+    },
+    {
+      "id": "books.research",
+      "path": "/ekodibooks/research/",
+      "expectedText": "연구 분야",
+      "kind": "child-page"
+    },
+    {
+      "id": "books.notes",
+      "path": "/ekodibooks/notes/",
+      "expectedText": "출판을 만들면서",
+      "kind": "child-page"
+    },
+    {
+      "id": "books.ekodian",
+      "path": "/ekodibooks/ekodian/",
+      "expectedText": "에코디언을 찾아서",
+      "kind": "book-detail"
+    },
+    {
+      "id": "books.admin",
+      "path": "/ekodibooks/admin/",
+      "kind": "admin-entry",
+      "note": "Read-only, no login or rights escalation; redirects remain preserved"
+    },
+    {
+      "id": "pgm.home",
+      "path": "/pgm",
+      "expectedText": "평생공부하는 목회자",
+      "kind": "site-home"
+    },
+    {
+      "id": "pgm.study",
+      "path": "/pgm/#study",
+      "expectedText": "성경 읽기와 해석",
+      "kind": "site-section"
+    },
+    {
+      "id": "pgm.archive",
+      "path": "/pgm/#archive",
+      "expectedText": "공부가 쌓여온 흔적",
+      "kind": "site-section"
+    },
+    {
+      "id": "pgm.admin",
+      "path": "/pgm/admin/",
+      "kind": "admin-entry",
+      "note": "Read-only, no login or rights escalation"
+    },
+    {
+      "id": "cgma.board",
+      "path": "/cgma/board",
+      "expectedText": "게시판",
+      "kind": "independent-board"
+    },
+    {
+      "id": "cgma.board.health",
+      "path": "/cgma/board/api/health",
+      "expectedText": "site:cgma:main",
+      "kind": "board-health"
+    }
+  ]
+}

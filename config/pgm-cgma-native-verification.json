@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-BOOKS-PGM-NATIVE-VERIFY-001",
+  "canonicalOrigin": "https://ekodi.kr",
+  "readOnly": true,
+  "maxPaths": 6,
+  "surfaces": [
+    {
+      "id": "pgm.home",
+      "path": "/pgm",
+      "expectedText": "평생공부하는 목회자",
+      "kind": "site-home"
+    },
+    {
+      "id": "pgm.study",
+      "path": "/pgm/#study",
+      "expectedText": "성경 읽기와 해석",
+      "kind": "site-section"
+    },
+    {
+      "id": "pgm.archive",
+      "path": "/pgm/#archive",
+      "expectedText": "공부가 쌓여온 흔적",
+      "kind": "site-section"
+    },
+    {
+      "id": "pgm.admin",
+      "path": "/pgm/admin/",
+      "kind": "admin-entry",
+      "note": "Read-only, no login or rights escalation"
+    },
+    {
+      "id": "cgma.board",
+      "path": "/cgma/board",
+      "expectedText": "게시판",
+      "kind": "independent-board"
+    },
+    {
+      "id": "cgma.board.health",
+      "path": "/cgma/board/api/health",
+      "expectedText": "site:cgma:main",
+      "kind": "board-health"
+    }
+  ]
+}

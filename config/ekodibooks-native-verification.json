@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-BOOKS-PGM-NATIVE-VERIFY-001",
+  "canonicalOrigin": "https://ekodi.kr",
+  "readOnly": true,
+  "maxPaths": 6,
+  "surfaces": [
+    {
+      "id": "books.home",
+      "path": "/ekodibooks",
+      "expectedText": "에코디서점",
+      "kind": "site-home"
+    },
+    {
+      "id": "books.series",
+      "path": "/ekodibooks/series/",
+      "expectedText": "EKODI ORIGINAL",
+      "kind": "child-page"
+    },
+    {
+      "id": "books.research",
+      "path": "/ekodibooks/research/",
+      "expectedText": "연구 분야",
+      "kind": "child-page"
+    },
+    {
+      "id": "books.notes",
+      "path": "/ekodibooks/notes/",
+      "expectedText": "출판을 만들면서",
+      "kind": "child-page"
+    },
+    {
+      "id": "books.ekodian",
+      "path": "/ekodibooks/ekodian/",
+      "expectedText": "에코디언을 찾아서",
+      "kind": "book-detail"
+    },
+    {
+      "id": "books.admin",
+      "path": "/ekodibooks/admin/",
+      "kind": "admin-entry",
+      "note": "Read-only, no login or rights escalation; redirects remain preserved"
+    }
+  ]
+}
