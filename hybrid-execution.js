@@ -666,6 +666,11 @@ async function handleAdmin(request, env) {
       const existing = await env.DB.prepare(`SELECT id FROM hybrid_execution_jobs
         WHERE task_type='computer.workspace.slides.audio.insert' AND status IN ('pending','assigned','leased') LIMIT 1`).first();
       if (existing) return json({ error:'동일한 원본 슬라이드 편집 작업이 이미 진행 중입니다.', code:'GOOGLE_WORKSPACE_JOB_ALREADY_ACTIVE', jobId:existing.id }, 409);
+      const candidates = await readyNodes(env);
+      if (!candidates.some(node => capabilitiesObject(node).workspaceSlidesAudio === true)) {
+        return json({ error:'검증된 Google Workspace 전용 실행 노드가 없어 작업을 접수하지 않았습니다.',
+          code:'GOOGLE_WORKSPACE_NATIVE_NODE_NOT_READY' }, 409);
+      }
     }
     const priority = clampInt(body.priority, 0, 100, 50);
     const deviceGroup = body.deviceGroup ? safeGroup(body.deviceGroup) : null;
