@@ -307,6 +307,53 @@ test('resource targets are symbolic identities, not hard-coded user or admin hos
   assert.equal(JSON.stringify(target).includes('my.ekodi.kr'), false);
 });
 
+test('command plane fails over from an unhealthy assigned provider to the next eligible provider', async () => {
+  const calls = [];
+  const plane = buildEkodiCommandPlane({}, [
+    provider('primary', 10, ['text', 'reasoning', 'review'], async () => {
+      calls.push('primary');
+      throw new Error('PRIMARY_UNAVAILABLE');
+    }),
+    provider('secondary', 20, ['text', 'reasoning', 'review'], async () => {
+      calls.push('secondary');
+      return { text: 'secondary-ok' };
+    }),
+    provider('reviewer', 30, ['text', 'reasoning', 'review'], async () => {
+      calls.push('reviewer');
+      return { text: 'reviewer-ok' };
+    }),
+  ]);
+
+  const result = await plane.execute({
+    taskId: 'provider-failover',
+    goal: 'Use the next healthy provider when the assigned provider is unavailable.',
+    mutation: true,
+  });
+
+  assert.notEqual(result.state, 'core_only');
+  assert.ok(calls.includes('secondary'));
+  assert.ok(result.specialists.some(item => item.ok && item.provider === 'secondary'));
+});
+
+test('deployment tasks become executor_ready when AI consultation is unavailable but an authorized branch handoff exists', async () => {
+  const plane = buildEkodiCommandPlane({ AI_PROVIDER: 'NONE' }, [
+    provider('openai', 10, ['text', 'reasoning', 'review'], async () => ({ text: 'must-not-run' })),
+  ]);
+
+  const result = await plane.execute({
+    taskId: 'executor-handoff',
+    goal: 'Continue deterministic branch execution without AI consultation.',
+    context: {
+      deploymentRequested: true,
+      branchRef: 'ai/chatgpt/orch_executor_handoff_123456789',
+    },
+  });
+
+  assert.equal(result.state, 'executor_ready');
+  assert.equal(result.evidence.executorHandoff.ready, true);
+  assert.equal(result.evidence.executorHandoff.branchRef, 'ai/chatgpt/orch_executor_handoff_123456789');
+});
+
 test('AI_PROVIDER=NONE leaves the Command Plane in Core-only degraded mode without invoking providers', async () => {
   let calls = 0;
   const plane = buildEkodiCommandPlane({ AI_PROVIDER: 'NONE' }, [
