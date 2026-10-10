@@ -11,6 +11,7 @@ test('orchestrator dispatches CGMA Apex after verified merge rather than relying
   assert.match(orchestrator,/\/actions\/workflows\/deploy-cgma-apex-edge\.yml\/dispatches/);
   assert.match(orchestrator,/ref:'main',inputs:\{release_branch_ref:branch,release_task_id:taskId\}/);
   assert.match(orchestrator,/CGMA Apex Edge deploy dispatch failed/);
+  assert.doesNotMatch(orchestrator,/const cgmaApexTouched=changedFiles\.some\(file=>file\.startsWith\('sites\/'\)/);
   assert.match(orchestrator,/if\(p\?\.merged===true\)\{await dispatchPostMergeDeploys\(\)/);
 });
 
