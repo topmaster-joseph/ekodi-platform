@@ -28,7 +28,7 @@ Windows Agent:
    - `google-workspace-slides-audio-policy.js`
    - `package.json` with `{"type":"module"}`
    - `tools/ekodi-device-agent/windows/google-workspace-slides-audio.mjs`
-2. Node.js + local `playwright` must be provisioned and Microsoft Edge installed. **No automatic npm installs or external subscriptions from unattended jobs.**
+2. Node.js + local `playwright` must be provisioned and Microsoft Edge installed. **No automatic npm installs or external subscriptions from unattended jobs.** For a locally verified, officially released repo checkout, the controlled bootstrap is `tools/ekodi-device-agent/windows/install-google-workspace-audio-runtime.ps1 -RepositoryRoot <approved checkout> -Apply`; without `-Apply` it is a read-only preflight. Installation never logs in or creates consent.
 3. Provision a completely **dedicated** automation browser profile at `%ProgramData%\EKODI\GoogleWorkspace\automation-profile`. It must not be the active Chrome/Edge/Opera user profile or have an active process sharing it.
 4. An authorized human must explicitly consent to an *isolated automation profile* and authenticate in it. No passwords, cookie exports, token URLs, clipboard scraping or unattended login. Use separately reviewed local-consent session bootstrap tooling; if absent, leave the job blocked.
 5. Human consent is recorded locally in `consent.json` with the exact `pilotId`, `presentationId`, `operatorConsented:true`, `dedicatedProfileVerified:true`, and a future `expiresAt` no more than 7 days ahead. This file is a prerequisite, **not** authentication itself.
