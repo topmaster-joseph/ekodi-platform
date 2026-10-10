@@ -161,6 +161,11 @@ const churchPagesTouched=changedFiles.some(file=>
   file==='scripts/verify-church-homepage-production.mjs'||
   file==='test/church-homepage-release-dispatch.test.mjs'
 );
+// Supabase Church API is an independent guarded release boundary, not a Site Core asset.
+const churchApiTouched=changedFiles.some(file=>
+  file.startsWith('supabase/functions/church-pastor-api/')||
+  file==='.github/workflows/deploy-church-pastor-api.yml'
+);
 async function dispatchPostMergeDeploys(){
   if(cgmaApexTouched){
     const dispatch=await api('/actions/workflows/deploy-cgma-apex-edge.yml/dispatches',{
@@ -238,6 +243,14 @@ async function dispatchPostMergeDeploys(){
     });
     if(!dispatch.r.ok)fail('Shell deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-ekodi-shell.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(churchApiTouched){
+    const dispatch=await api('/actions/workflows/deploy-church-pastor-api.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Church Pastor API deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-church-pastor-api.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(churchPagesTouched){
     const dispatch=await api('/actions/workflows/deploy-ekodi-church-homepage.yml/dispatches',{
