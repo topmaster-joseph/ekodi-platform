@@ -1,4 +1,5 @@
 import { superviseConnection } from './integration-connection-supervisor.js';
+import { marketingYouTubeOAuthErrorCode } from './marketing-youtube-oauth-error.js';
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 
 const BASE = '/api/control/storage/google';
@@ -298,14 +299,20 @@ export async function finishMarketingYouTubeOAuth(env,{state,code,error}={}) {
   if(!authCode) throw Object.assign(new Error('AUTHORIZATION_CODE_MISSING'),{code:'AUTHORIZATION_CODE_MISSING'});
   const redirectUri=String(payload.redirectUri||'').trim();
   if(!ALLOWED_MARKETING_GOOGLE_REDIRECT_URIS.has(redirectUri)) throw Object.assign(new Error('MARKETING_YOUTUBE_REDIRECT_URI_INVALID'),{code:'MARKETING_YOUTUBE_REDIRECT_URI_INVALID'});
-  const token=await tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),code:authCode,grant_type:'authorization_code',redirect_uri:redirectUri});
+  try {
+    const token=await tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),code:authCode,grant_type:'authorization_code',redirect_uri:redirectUri});
   const targetAccount=String(payload.targetAccount||'').trim().toLowerCase();
   const profileResponse=await fetch(GOOGLE_USERINFO,{headers:{authorization:`Bearer ${token.access_token}`}});
   const profile=await profileResponse.json().catch(()=>({}));
   const authorizedEmail=profileResponse.ok?String(profile.email||'').trim().toLowerCase():'';
   if(targetAccount&&authorizedEmail!==targetAccount) throw Object.assign(new Error('YOUTUBE_TARGET_ACCOUNT_MISMATCH'),{code:'YOUTUBE_TARGET_ACCOUNT_MISMATCH',targetAccount,authorizedEmail});
   const ticket=await createMarketingYouTubeTicket(env,{token,targetAccount,authorizedEmail});
-  return {marketingState,ticket,targetAccount,authorizedEmail};
+    return {marketingState,ticket,targetAccount,authorizedEmail};
+  } catch (error) {
+    // The signed OAuth state is already verified. Report only safe errors back
+    // to the original Mall page; invalid/tampered state still fails closed above.
+    return {marketingState,error:marketingYouTubeOAuthErrorCode(error)};
+  }
 }
 export async function consumeMarketingYouTubeTicket(env,{ticket}={}) {
   await ensureSchema(env.DB); const raw=String(ticket||'').trim(); if(!raw) throw new Error('GOOGLE_OAUTH_TICKET_REQUIRED');
