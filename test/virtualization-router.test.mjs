@@ -37,6 +37,8 @@ test('external fallback is rejected when native failure evidence is incomplete',
     ],
     externalProviders:[{id:'external-browser',enabled:true,approved:true,securityEquivalentOrStronger:true}],
     externalFallback:{
+      nativeRecoveryEvidence:[{id:'ekodi-background-browser-worker',attempted:true,outcome:'exhausted',auditId:'repair-ekodi-background-browser-worker'},{id:'ekodi-native-remote-computer',attempted:true,outcome:'exhausted',auditId:'repair-ekodi-native-remote-computer'},{id:'autonomous-execution-fabric',attempted:true,outcome:'exhausted',auditId:'repair-autonomous-execution-fabric'}],
+      
       reason:'native-capability-unavailable',
       auditId:'audit-1',
       nativeCapabilityGapRecord:'gap-1',
@@ -62,6 +64,8 @@ test('audited external fallback is allowed only after every eligible native rout
       paidUpgradeRequired:false
     }],
     externalFallback:{
+      nativeRecoveryEvidence:[{id:'ekodi-native-remote-computer',attempted:true,outcome:'exhausted',auditId:'repair-ekodi-native-remote-computer'}],
+      
       reason:'native-capability-not-production-ready',
       auditId:'audit-desktop-1',
       nativeCapabilityGapRecord:'native-gap-desktop-1',
@@ -87,6 +91,8 @@ test('paid or security-weaker fallback is fail-closed',()=>{
   const paid=selectVirtualizationProvider({
     ...common,
     externalFallback:{
+      nativeRecoveryEvidence:[{id:'ekodi-native-remote-computer',attempted:true,outcome:'exhausted',auditId:'repair-ekodi-native-remote-computer'}],
+      
       reason:'native-capability-unavailable',
       auditId:'a',
       nativeCapabilityGapRecord:'g',
@@ -100,6 +106,8 @@ test('paid or security-weaker fallback is fail-closed',()=>{
   const weak=selectVirtualizationProvider({
     ...common,
     externalFallback:{
+      nativeRecoveryEvidence:[{id:'ekodi-native-remote-computer',attempted:true,outcome:'exhausted',auditId:'repair-ekodi-native-remote-computer'}],
+      
       reason:'native-capability-unavailable',
       auditId:'a',
       nativeCapabilityGapRecord:'g',
@@ -127,6 +135,8 @@ test('browser external fallback is rejected unless it proves background-only sur
       {id:'autonomous-execution-fabric',state:'unavailable',healthy:false,ownership:'ekodi'},
     ],
     externalFallback:{
+      nativeRecoveryEvidence:[{id:'ekodi-background-browser-worker',attempted:true,outcome:'exhausted',auditId:'repair-ekodi-background-browser-worker'},{id:'ekodi-native-remote-computer',attempted:true,outcome:'exhausted',auditId:'repair-ekodi-native-remote-computer'},{id:'autonomous-execution-fabric',attempted:true,outcome:'exhausted',auditId:'repair-autonomous-execution-fabric'}],
+      
       reason:'native-capability-unavailable',
       auditId:'audit-bg',
       nativeCapabilityGapRecord:'gap-bg',
@@ -176,4 +186,25 @@ test('browser tasks recover through EKODI native providers before any external f
     {id:'ekodi-native-remote-computer',state:'unavailable',healthy:false,ownership:'ekodi'},
     {id:'autonomous-execution-fabric',state:'runtime-proven',healthy:true,ownership:'ekodi'}]});
   assert.equal(secondRecovery.providerId,'autonomous-execution-fabric');
+});
+
+test('native executor failure returns mandatory repair and update plan',()=>{
+  const result=selectVirtualizationProvider({taskClass:'browser-ui-validation',nativeProviders:[]});
+  assert.equal(result.code,'NATIVE_VIRTUALIZATION_REQUIRED');
+  assert.equal(result.details.recoveryPlan.required,true);
+  assert.equal(result.details.recoveryPlan.maxAttemptsPerProvider,2);
+  assert.ok(result.details.recoveryPlan.stages.includes('signed-update-if-needed'));
+});
+
+test('external fallback is rejected without native repair evidence',()=>{
+  const result=selectVirtualizationProvider({
+    taskClass:'computer-use-automation',
+    nativeProviders:[],
+    externalFallback:{reason:'native-capability-unavailable',auditId:'a',nativeCapabilityGapRecord:'g',
+      securityEquivalentOrStronger:true,
+      nativeFailures:[{id:'ekodi-native-remote-computer',reason:'native-capability-unavailable'}]},
+    externalProviders:[{id:'external',enabled:true,approved:true,securityEquivalentOrStronger:true}]
+  });
+  assert.equal(result.code,'EXTERNAL_FALLBACK_NATIVE_REPAIR_REQUIRED');
+  assert.deepEqual(result.details.missingRecoveryEvidence,['ekodi-native-remote-computer']);
 });
