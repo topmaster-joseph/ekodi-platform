@@ -278,7 +278,30 @@ jobs:
             for(const locale of locales){
               await page.goto(`https://ekodi.kr/ekodichurch/?lang=${encodeURIComponent(locale)}&release=${release}`,{waitUntil:'domcontentloaded',timeout:30000});
               await page.waitForFunction(expected=>document.documentElement.lang===expected&&window.__EKODI_CHURCH_LIFE_HUB_I18N__===true&&document.querySelector('[data-ekodi-life-hub]')&&document.querySelector('#life-reflection-form'),{timeout:25000},locale);
-              if(extended.has(locale)) await page.waitForFunction(expected=>window.EKODIChurchExtendedI18n?.getLocale?.()===expected,{timeout:20000},locale);
+              if(extended.has(locale)){
+                try{
+                  await page.waitForFunction(expected=>window.EKODIChurchExtendedI18n?.getLocale?.()===expected,{timeout:20000},locale);
+                }catch(error){
+                  // Preserve the browser gate. Emit precise state so EKODI can repair the root cause.
+                  const diagnostics=await page.evaluate(()=>{
+                    const root=document.documentElement;
+                    const control=document.querySelector('[data-ekodi-language-control] select');
+                    return {
+                      href:location.href,lang:root.lang,dataLocale:root.dataset.ekodiLocale||'',
+                      expected: new URLSearchParams(location.search).get('lang'),
+                      extendedAvailable:typeof window.EKODIChurchExtendedI18n?.getLocale==='function',
+                      extendedLocale:window.EKODIChurchExtendedI18n?.getLocale?.()||null,
+                      sharedLocale:window.EKODIUserLanguage?.getLocale?.()||null,
+                      coreLocale:window.EKODIChurchI18n?.getLocale?.()||null,
+                      selectedLocale:control?.value||null,
+                      lifeHubReady:window.__EKODI_CHURCH_LIFE_HUB_I18N__===true,
+                      scripts:[...document.scripts].filter(s=>/church-i18n|church-life-hub/i.test(s.src)).map(s=>s.src),
+                    };
+                  }).catch(e=>({inspectionError:String(e)}));
+                  console.error('EKODI_CHURCH_EXTENDED_I18N_DIAGNOSTIC='+JSON.stringify({locale,diagnostics}));
+                  throw error;
+                }
+              }
               if(locale!=='ko-KR'){
                 await page.waitForFunction(expected=>{
                   if(document.documentElement.lang!==expected)return false;
