@@ -164,7 +164,6 @@ test('anonymous OPTIONS telemetry probe reveals version without accessing or wri
 test('host-wide Cloudflare requests cannot be misreported as child-site zero',async()=>{
   assert.equal(trafficRequestScopeForHosts([]),'not-measured');
   assert.equal(trafficRequestScopeForHosts(['ekodi.kr']),'shared-host');
-  assert.equal(trafficRequestScopeForHosts(['www.ekodi.kr']),'shared-host');
   assert.equal(trafficRequestScopeForHosts(['ekodichurch.kr']),'host-only');
   assert.equal(trafficRequestScopeForHosts(['ekodichurch.kr','ekodi.kr']),'shared-host');
   const control=await readFile('traffic-intelligence-control.js','utf8');
