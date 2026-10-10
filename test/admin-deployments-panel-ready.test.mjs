@@ -11,6 +11,7 @@ const [demand,deployments,layout]=await Promise.all([
 test('Deployments loader does not confuse existing navigation button with authorized panel readiness',()=>{
  assert.match(demand,/deployments:\{[^\n]*real:'\[data-section="deployments"\]',ready:'#releaseControl'/);
  const loadScripts=demand.search(/for \(const src of feature\.scripts\s*\|\|\s*\[\]\) await loadScript\(src\)/);
+ assert.equal((demand.match(/ready:'#releaseControl'/g)||[]).length,1);
  const navReady=demand.search(/const real\s*=\s*await waitFor\(feature\.real\)/);
  const actualReady=demand.indexOf('if(feature.ready)await waitFor(feature.ready,1e4)');
  const placeholderRestore=demand.indexOf('placeholder.removeAttribute(\'data-demand-feature\')');
