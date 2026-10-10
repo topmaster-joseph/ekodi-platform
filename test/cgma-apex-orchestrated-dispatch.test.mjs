@@ -12,7 +12,11 @@ test('orchestrator dispatches CGMA Apex after verified merge rather than relying
   assert.match(orchestrator,/ref:'main',inputs:\{release_branch_ref:branch,release_task_id:taskId\}/);
   assert.match(orchestrator,/CGMA Apex Edge deploy dispatch failed/);
   assert.doesNotMatch(orchestrator,/const cgmaApexTouched=changedFiles\.some\(file=>file\.startsWith\('sites\/'\)/);
-  assert.match(orchestrator,/if\(p\?\.merged===true\)\{await dispatchPostMergeDeploys\(\)/);
+  // A verified squash SHA is required; never assume GITHUB_TOKEN push triggers required checks.
+  assert.match(orchestrator,/if\(merged\.r\.ok&&merged\.data\?\.merged===true\)\{/);
+  assert.match(orchestrator,/await dispatchPostMergeDeploys\(String\(merged\.data\.sha\|\|''\)\)/);
+  assert.match(orchestrator,/if\(!\(await assertLatestMainBeforeDispatch\('deploy-cgma-apex-edge\.yml'\)\)\)return/);
+  assert.match(orchestrator,/liveMainSha!==expectedMainSha/);
 });
 
 test('CGMA production dispatch carries orchestrator receipt and never disables verification',()=>{
