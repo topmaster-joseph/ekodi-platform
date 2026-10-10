@@ -1,4 +1,5 @@
 import { principalFromSupabaseRequest } from './ekodi-principal.js';
+import { CGMA_BOARD_CLIENT_JS } from './cgma-board-client.js';
 
 const clean=(value,max=4000)=>String(value??'').trim().slice(0,max);
 const lower=value=>clean(value,320).toLowerCase();
@@ -251,11 +252,15 @@ function safeAttachmentUrl(value){try{const url=new URL(clean(value,2000));retur
 const boardJson=(instance,data,status=200)=>json(data,status,{'x-ekodi-board-id':instance.board_id,'x-ekodi-board-independent':'true'});
 async function parseBody(request){try{return await request.json()}catch{return null}}
 
-async function listPosts(env,instance){
-  const rows=await env.DB.prepare(`SELECT p.id,p.title,p.body,p.created_at,p.updated_at,
+async function listPosts(env,instance,who=null){
+  const rows=await env.DB.prepare(`SELECT p.id,p.title,p.body,p.author_person_id,p.created_at,p.updated_at,
       (SELECT pc.category_id FROM ekodi_board_post_categories pc WHERE pc.board_id=p.board_id AND pc.post_id=p.id ORDER BY pc.category_id LIMIT 1) AS category_id
     FROM ekodi_board_posts p WHERE p.board_id=? AND p.status='published' ORDER BY p.created_at DESC,p.id DESC LIMIT 100`).bind(instance.board_id).all();
-  return (rows.results||[]).map(publicPost);
+  return (rows.results||[]).map(row=>{
+    const post=publicPost(row);
+    if(who?.authenticated)post.canEdit=Boolean(who.manage||clean(row.author_person_id,160)===who.personId);
+    return post;
+  });
 }
 async function readPost(env,instance,id){
   const post=await env.DB.prepare(`SELECT p.*,
@@ -270,8 +275,13 @@ async function readPost(env,instance,id){
 function htmlEscape(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function page(route,posts){
   const items=posts.length?posts.map(post=>`<article><a href="${route.basePath}/post/${post.id}"><h2>${htmlEscape(post.title)}</h2></a><p>${htmlEscape(post.body).slice(0,220)}</p><time>${htmlEscape(post.createdAt)}</time></article>`).join(''):'<p class="empty">등록된 글이 없습니다.</p>';
-  return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>게시판</title><style>body{margin:0;background:#fff;color:#111;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}main{width:min(920px,calc(100% - 28px));margin:0 auto;padding:18px 0}header{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:12px 0}h1{font-size:22px;margin:0}article{padding:15px 0;border-bottom:1px solid #e6e6e6}h2{font-size:18px;margin:0 0 7px}a{color:#111;text-decoration:none}p{white-space:pre-wrap;line-height:1.5;margin:0 0 7px}time{font-size:12px;color:#666}.empty{padding:30px 0}</style></head><body><main><header><h1>게시판</h1></header>${items}</main></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-ekodi-board-id':boardId(route.siteId),'x-ekodi-board-independent':'true'}});
+  const isCgma=route.siteId==='cgma';
+  const controls=isCgma?`<div id="cgma-board-tools" hidden><button type="button" id="cgma-board-new">글쓰기</button></div><section id="cgma-board-editor" hidden><form id="cgma-board-form"><label for="cgma-board-title">제목</label><input id="cgma-board-title" maxlength="200" required><label for="cgma-board-body">내용</label><textarea id="cgma-board-body" rows="6" maxlength="20000" required></textarea><div class="cgma-board-actions"><button type="submit" id="cgma-board-submit">글 등록</button><button type="button" id="cgma-board-cancel" hidden>취소</button></div></form></section><p id="cgma-board-feedback" role="status" aria-live="polite"></p>`:'';
+  const script=isCgma?`<script defer src="${route.basePath}/assets/board-client.js"></script>`:'';
+  const attr=isCgma?` data-cgma-board="${route.basePath}"`:'';
+  return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>게시판</title><style>body{margin:0;background:#fff;color:#111;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}main{width:min(920px,calc(100% - 28px));margin:0 auto;padding:18px 0}header{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:12px 0;display:flex;justify-content:space-between;align-items:center}h1{font-size:22px;margin:0}article{padding:15px 0;border-bottom:1px solid #e6e6e6}h2{font-size:18px;margin:0 0 7px}a{color:#111;text-decoration:none}p{white-space:pre-wrap;line-height:1.5;margin:0 0 7px}time{font-size:12px;color:#666}.empty{padding:30px 0}button{border:1px solid #222;background:#fff;color:#111;cursor:pointer;padding:8px 12px;border-radius:6px;font:inherit}button:disabled{opacity:.5;cursor:wait}button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid #111;outline-offset:2px}#cgma-board-editor{padding:14px 0;border-bottom:1px solid #ddd}#cgma-board-form{display:grid;gap:8px}input,textarea{padding:10px;border:1px solid #999;border-radius:6px;background:#fff;color:#111;font:inherit;width:100%;box-sizing:border-box}.cgma-board-actions{display:flex;gap:8px;margin-top:8px}#cgma-board-feedback{font-size:13px;color:#444;padding:6px 0}@media(max-width:600px){main{width:calc(100% - 20px);padding-top:10px}h1{font-size:20px}button{padding:9px 10px}}</style></head><body><main${attr}><header><h1>게시판</h1>${isCgma?'<div id="cgma-board-tools" hidden><button type="button" id="cgma-board-new">글쓰기</button></div>':''}</header>${controls.replace('<div id="cgma-board-tools" hidden><button type="button" id="cgma-board-new">글쓰기</button></div>','')}<div id="cgma-board-posts">${items}</div></main>${script}</body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-ekodi-board-id':boardId(route.siteId),'x-ekodi-board-independent':'true'}});
 }
+
 function postPage(route,post){
   if(!post)return new Response('Not Found',{status:404});
   const comments=post.comments.map(c=>`<li>${htmlEscape(c.body)} <small>${htmlEscape(c.createdAt)}</small></li>`).join('');
@@ -340,6 +350,12 @@ export async function handleSiteBoardRequest(request,env){
     return boardJson(instance,{error:who.authenticated?'board_membership_required':'authentication_required'},who.authenticated?403:401);
   }
 
+  if(method==='GET'&&sub==='/api/me'){
+    return who.authenticated?boardJson(instance,{authenticated:true,canManage:who.manage,boardId:instance.board_id}):boardJson(instance,{error:'authentication_required'},401);
+  }
+  if(method==='GET'&&route.siteId==='cgma'&&sub==='/assets/board-client.js'){
+    return new Response(CGMA_BOARD_CLIENT_JS,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-board-id':instance.board_id,'x-ekodi-board-independent':'true'}});
+  }
   if(method==='GET'&&sub==='/api/memberships'){
     if(!who.manage)return boardJson(instance,{error:'forbidden'},403);
     const rows=await env.DB.prepare('SELECT person_id,role,status,created_at,updated_at FROM ekodi_board_memberships WHERE board_id=? ORDER BY role,person_id').bind(instance.board_id).all();
@@ -380,7 +396,7 @@ export async function handleSiteBoardRequest(request,env){
   const postPageMatch=sub.match(/^\/post\/(\d+)$/);
   if(method==='GET'&&postPageMatch)return postPage(route,await readPost(env,instance,Number(postPageMatch[1])));
   if(method==='GET'&&sub==='/api/health')return boardJson(instance,{ok:true,boardId:instance.board_id,siteId:instance.site_id,aiIndependent:true,independent:true});
-  if(method==='GET'&&sub==='/api/posts')return boardJson(instance,{boardId:instance.board_id,items:await listPosts(env,instance)});
+  if(method==='GET'&&sub==='/api/posts')return boardJson(instance,{boardId:instance.board_id,items:await listPosts(env,instance,who)});
   const apiPost=sub.match(/^\/api\/posts\/(\d+)$/);
   if(method==='GET'&&apiPost){
     const post=await readPost(env,instance,Number(apiPost[1]));
