@@ -37,12 +37,15 @@ try {
           const visibleText=(body?.innerText||'').slice(0,35000);
           const clone=body?.cloneNode(true);
           clone?.querySelectorAll('[data-ekodi-language-control]').forEach(x=>x.remove());
+          const detachedText=(clone?.innerText||'').slice(0,35000);
           return {stage,lang:src.lang,extendedLocale:window.EKODIChurchExtendedI18n?.getLocale?.()??null,
             coreLocale:window.EKODIChurchI18n?.getLocale?.()??null,
             publicHub:Boolean(window.__EKODI_CHURCH_LIFE_HUB_I18N__),
             extendedBoot:Boolean(window.__EKODI_CHURCH_EXTENDED_I18N__),
             title:document.title.slice(0,120),
             koreanVisible:/[가-힣]/.test(visibleText),
+            koreanInDetachedClone:/[가-힣]/.test(detachedText),
+            detachedKoreanExcerpt:(detachedText.match(/.{0,25}[가-힣].{0,30}/)||[])[0]??'',
             koreanExcerpt:(visibleText.match(/.{0,25}[가-힣].{0,30}/)||[])[0]??'',
             languageOptions:[...(document.querySelector('[data-ekodi-language-control] select')?.options||[])].map(x=>x.value),
             hiddenWorshipControl:document.querySelector('[data-church-worship-admin]')?.hidden??null,
