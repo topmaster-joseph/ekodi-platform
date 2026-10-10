@@ -22,7 +22,7 @@ test('CGMA board ingress rejects unrelated hosts, sites and public paths',async(
  }
 });
 test('authorized service binding does not return static HTML for CGMA board health',async()=>{
- const instance={board_id:'site:cgma:main',site_id:'cgma',tenant_slug:'cheonggye'};
+ const instance={board_id:'site:cgma:main',site_id:'cgma',tenant_slug:'cheonggye',status:'active'};
  const calls=[];
  const env={DB:{batch:async()=>[],prepare:(sql)=>{calls.push(sql);return{
    bind(){return this},
