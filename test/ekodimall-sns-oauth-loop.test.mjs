@@ -56,3 +56,22 @@ test('admin code keeps manual refresh separate from OAuth and distinguishes regi
   assert.match(css,/mall-simple-grid/);
   assert.match(css,/youtube-pending/);
 });
+
+test('provider cards use a single class attribute so the pending YouTube connect action is hidden',()=>{
+  const html=renderMallSocialSetup({platform:{youtubeConfigured:true}});
+  const card=html.match(/<article[^>]*data-mall-provider="youtube"[^>]*>/)?.[0] || '';
+  assert.match(card,/class="mall-social-provider youtube-pending"/);
+  assert.equal((card.match(/\\bclass=/g)||[]).length,1);
+});
+
+test('a provider cannot claim active publishing with another OAuth account\'s channel',()=>{
+  const html=renderMallSocialSetup({
+    platform:{metaConfigured:true},
+    connections:[{provider:'facebook',status:'active',external_id:'page-A'}],
+    channels:[{provider:'facebook',status:'active',external_account_id:'page-B',config:{autoPublishEnabled:true}}],
+  });
+  assert.match(html,/실제 발행 가능 0개/);
+  const block=html.match(/<article[^>]*data-mall-provider="facebook"[\\s\\S]*?<\\/article>/)?.[0] || '';
+  assert.match(block,/실제 발행 중지/);
+  assert.doesNotMatch(block,/실제 발행 사용 중/);
+});
