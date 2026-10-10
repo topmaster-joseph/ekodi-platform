@@ -907,7 +907,9 @@ function Resolve-EkodiBrowser {
     "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
     "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe",
     "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
-    "$env:LOCALAPPDATA\Microsoft\Edge\Application\msedge.exe"
+    "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
+    "$env:LOCALAPPDATA\Microsoft\Edge\Application\msedge.exe",
+    "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe"
   )
   return ($candidates | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1)
 }
@@ -998,7 +1000,12 @@ function Invoke-BackgroundBrowserCanary {
     checkedAt = (Get-Date).ToUniversalTime().ToString('o')
     stderrSummary = $(if ($stderr) { $stderr.Substring(0, [Math]::Min(300, $stderr.Length)) } else { '' })
   }
-  if (-not $ok) { throw 'background_browser_canary_failed' }
+  if (-not $ok) {
+    $exitDescription = [string]$process.ExitCode
+    $stderrDescription = ([string]$proof.stderrSummary -replace '[\r\n]+', ' ').Trim()
+    if (-not $stderrDescription) { $stderrDescription = 'no-stderr' }
+    throw ('background_browser_canary_failed: browser=' + $proof.browser + '; exit=' + $exitDescription + '; stdoutBytes=' + $proof.contentBytes + '; stderr=' + $stderrDescription)
+  }
   New-Item -ItemType Directory -Path $Root -Force | Out-Null
   $proof | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $BrowserCanaryStatePath -Encoding UTF8
   return @{ message = 'Background Browser canary를 사용자 화면 개입 없이 검증했습니다. 검증된 버전에서만 EKODI 자체 Browser Worker를 사용할 수 있습니다.'; browserCanary = $proof }
