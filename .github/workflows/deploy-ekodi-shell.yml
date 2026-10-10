@@ -2,6 +2,15 @@ name: Deploy EKODI Shell
 
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Verified EKODI Orchestrator source branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Verified EKODI Orchestrator task'
+        required: true
+        type: string
   pull_request:
     paths: &shell_paths
       - 'ekodi-service-manifest.js'
@@ -47,6 +56,8 @@ concurrency:
 
 env:
   WRANGLER_VERSION: '4.127.1'
+  EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+  EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
 
 jobs:
   validate:
@@ -193,7 +204,7 @@ jobs:
         run: node scripts/verify-ekodi-shell-live.mjs
 
   production:
-    if: github.event_name != 'pull_request' && needs.validate.result == 'success' && needs.staging.result == 'success'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.validate.result == 'success' && needs.staging.result == 'success'
     needs: [validate, staging]
     runs-on: ubuntu-latest
     timeout-minutes: 15
