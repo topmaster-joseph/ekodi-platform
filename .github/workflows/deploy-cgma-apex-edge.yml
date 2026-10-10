@@ -72,6 +72,8 @@ jobs:
           grep -Fq 'delegatedLiveResponse' cgma-root-gateway.js
           grep -Fq 'isBoardPath' cgma-root-gateway.js
           grep -Fq 'delegatedBoardResponse' cgma-root-gateway.js
+          # Keep the safely bounded upstream identity/status diagnostic in release builds.
+          grep -Fq 'x-ekodi-cgma-board-diagnostic' cgma-root-gateway.js
           grep -Fq 'board.internal.ekodi' cgma-root-gateway.js
           npx --yes wrangler@${WRANGLER_VERSION} deploy --dry-run --config wrangler.cgma-root-gateway.toml
           grep -Fq 'binding = "EKODI_SHARED"' wrangler.cgma-root-gateway.toml
