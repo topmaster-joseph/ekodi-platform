@@ -40,6 +40,10 @@ test('CGMA edge workflow pins board delegation source and verifies independent b
   assert.match(cgmaWorkflow, /grep -Fq 'isBoardPath' cgma-root-gateway\.js/);
   assert.match(cgmaWorkflow, /grep -Fq 'delegatedBoardResponse' cgma-root-gateway\.js/);
   assert.match(cgmaWorkflow, /grep -Fq 'x-ekodi-cgma-board-diagnostic' cgma-root-gateway\.js/);
+  // Verify that diagnostics stay on the authenticated Service Binding release path.
+  assert.match(cgmaWorkflow, /node verify-root-gateway\.mjs/);
+  assert.match(cgmaWorkflow, /persist-credentials: false/);
+  assert.match(cgmaWorkflow, /grep -Fq 'service = "shy-thunder-39a4"'/);
   assert.match(cgmaWorkflow, /grep -Fq 'board\.internal\.ekodi' cgma-root-gateway\.js/);
   assert.match(cgmaWorkflow, /check_board '\/cgma\/board'/);
   assert.match(cgmaWorkflow, /x-ekodi-board-independent: true/);
