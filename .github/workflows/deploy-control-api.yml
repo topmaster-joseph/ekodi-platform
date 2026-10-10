@@ -846,6 +846,25 @@ jobs:
           grep -Fq '"code":"PF_ADMIN_AUTH_REQUIRED"' /tmp/personal-finance.json
           grep -Fq '"publishedLocales":["ko-KR"]' /tmp/i18n.json
           grep -Fq '"inheritedDefault":true' /tmp/catalog.json
+      - name: Verify canonical traffic telemetry version without writing visitor data
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4; do
+            status=$(curl --silent --show-error --connect-timeout 5 --max-time 15 \
+              -X OPTIONS -H 'Origin: https://ekodi.kr' \
+              -H 'Access-Control-Request-Method: POST' \
+              -D /tmp/ekodi-traffic-telemetry.headers \
+              -o /dev/null -w '%{http_code}' \
+              "https://ekodi.kr/api/telemetry/visit?deploy-verification=${GITHUB_SHA}-${attempt}" || true)
+            if [ "$status" = '204' ] && grep -Eiq '^x-ekodi-traffic-telemetry:[[:space:]]*site-scoped-v2' /tmp/ekodi-traffic-telemetry.headers; then
+              echo 'Verified canonical telemetry version via read-only preflight'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Canonical telemetry API version missing or stale" >&2
+          exit 1
       - name: Verify Realtime SFU production health
         run: node scripts/provision-realtime-sfu.mjs --verify
       - name: Record recovery point
