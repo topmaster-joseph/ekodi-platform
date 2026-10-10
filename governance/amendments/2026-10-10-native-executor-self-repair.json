@@ -31,6 +31,7 @@
     "explicitOwnerInstruction": true,
     "ownerInstructionDate": "2026-10-10",
     "requiredPullRequestLabel": "constitution-approved",
-    "approvalLabel": "constitution-approved"
+    "approvalLabel": "constitution-approved",
+    "validationNote": "Owner-approved constitution-approved label is recorded on PR #4038; protected CI must verify this approval before merge."
   }
 }
