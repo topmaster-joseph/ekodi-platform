@@ -7,6 +7,7 @@ on:
   pull_request:
     paths:
       - 'traffic-intelligence.js'
+      - 'traffic-collector-quality.js'
       - 'traffic-intelligence-control.js'
       - 'scripts/collect-traffic-intelligence.mjs'
       - 'shell/shell.js'
@@ -20,6 +21,7 @@ on:
     branches: [main]
     paths:
       - 'traffic-intelligence.js'
+      - 'traffic-collector-quality.js'
       - 'traffic-intelligence-control.js'
       - 'scripts/collect-traffic-intelligence.mjs'
       - 'migrations/0059_traffic_intelligence.sql'
@@ -44,6 +46,7 @@ jobs:
           node-version: '24'
       - name: Validate Traffic Intelligence contract
         run: |
+          node --check traffic-collector-quality.js
           node --check traffic-intelligence.js
           node --check traffic-intelligence-control.js
           node --check scripts/collect-traffic-intelligence.mjs
