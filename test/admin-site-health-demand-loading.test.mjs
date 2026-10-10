@@ -22,6 +22,7 @@ test('site-health has a registered demand path with a real installed panel readi
   assert.match(layout, /queueMicrotask\(\(\)=>\{if\(requestedSection===section\)activatePanel\(section\);\}\)/);
 });
 
+// Preserve the authenticated lazy-loader guard independently of postbuild whitespace compaction.
 test('site health loads without introducing synthetic administrative permissions or bypasses', () => {
   const loader = read('admin-demand-loader.js');
   assert.match(loader, /if\s*\(!feature\|\|!authenticated\(\)\)\s*return/);
