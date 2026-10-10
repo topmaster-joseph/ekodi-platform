@@ -24,3 +24,7 @@ The Church Pages workflow and EKODI-owned native browser 9-language probes have 
 ## Latest protected-base synchronization
 
 The official Orchestrator reconciled this PR with the current protected main branch. Required checks must be regenerated on the synchronized, owner-signed head and must all succeed before guarded merge or Supabase mutation. Source sha labels from the former head are not completion evidence.
+
+## Additional guarded head recovery
+
+The latest protected-base sync created a new workflow head as unrelated EKODI releases were landing concurrently. Revalidate all required checks on that new head; preserve the original approved Orchestrator task identity, and do not reuse statuses from stale source heads.
