@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import vm from 'node:vm';
 
 const root=path.resolve(import.meta.dirname,'..');
 const api=fs.readFileSync(path.join(root,'device-control.js'),'utf8');
@@ -24,6 +25,43 @@ test('native local AI verification is observe-only and cloud-payload-free',()=>{
  assert.ok(agent.includes('TimeoutSec 45'));
  assert.ok(agent.includes("claudeAuth = 'requires_interactive_user_verification'"));
  assert.ok(!agent.includes('function Get-EkodiLocalAiVerification($Payload)'));
+});
+
+test('local AI proof survives sanitized admin device projection without secrets', () => {
+ const start = api.indexOf('function summarizeCommandResult(');
+ const end = api.indexOf('\n}\n', start) + 3;
+ assert.ok(start >= 0 && end > start);
+ const source = api.slice(start, end);
+ const summarize = vm.runInNewContext(source + '\nsummarizeCommandResult', {
+   safeText: (value, max = 120) => String(value ?? '').trim().slice(0, max),
+ });
+ const receipt = summarize({
+   message: 'local test receipt',
+   localAiProof: {
+     checkedAt: '2026-10-10T00:00:00Z',
+     ollamaApi: 'ready',
+     ollamaVersion: '0.40.1',
+     selectedModel: 'qwen2.5-coder:1.5b',
+     inference: 'passed',
+     claudeCli: 'visible_in_agent_context',
+     claudeAuth: 'fake_authenticated',
+     credentialCollection: false,
+     accessToken: 'SHOULD_NOT_BE_EXPOSED',
+     rawOutput: 'SHOULD_NOT_BE_EXPOSED',
+     environment: { SECRET: 'SHOULD_NOT_BE_EXPOSED' },
+   },
+ });
+ assert.equal(receipt.localAiProof.inference, 'passed');
+ assert.equal(receipt.localAiProof.selectedModel, 'qwen2.5-coder:1.5b');
+ assert.equal(receipt.localAiProof.claudeAuth, 'requires_interactive_user_verification');
+ assert.equal(receipt.localAiProof.accessToken, undefined);
+ assert.equal(receipt.localAiProof.rawOutput, undefined);
+ assert.equal(receipt.localAiProof.environment, undefined);
+ assert.ok(!JSON.stringify(receipt).includes('SHOULD_NOT_BE_EXPOSED'));
+ const invalid = summarize({localAiProof: {inference:'passed!!!',selectedModel:'unknown-model',ollamaApi:'hacked'}});
+ assert.equal(invalid.localAiProof.inference, 'unknown');
+ assert.equal(invalid.localAiProof.selectedModel, '');
+ assert.equal(invalid.localAiProof.ollamaApi, 'unknown');
 });
 
 test('installer file checksum is pinned in device agent',()=>{
