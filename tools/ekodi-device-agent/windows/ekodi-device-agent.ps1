@@ -1,4 +1,4 @@
-param(
+﻿param(
   [switch]$Install,
   [switch]$Run,
   [switch]$RegisterProtocol,
