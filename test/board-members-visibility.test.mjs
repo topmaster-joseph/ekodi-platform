@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { handleSiteBoardRequest } from '../site-board-control.js';
 
-function fakeDb(visibility='public',membership=null){
+function fakeDb(visibility='public',membership=null,anonymousWrite=0){
   const instance={board_id:'site:cgma:main',site_id:'cgma',tenant_slug:'cheonggye',
-    status:'active',visibility,allow_anonymous_write:0,comments_enabled:1,config_json:'{}'};
+    status:'active',visibility,allow_anonymous_write:anonymousWrite,comments_enabled:1,config_json:'{}'};
   return {
     batch:async()=>[],
     prepare(sql){
@@ -92,4 +92,15 @@ test('public board retains anonymous read and denies anonymous posting',async()=
   assert.equal(list.status,200);
   const create=await call(db,'/api/posts','POST');
   assert.equal(create.status,401);
+});
+
+test('members-only visibility wins over anonymous-write configuration',async()=>{
+  const db=fakeDb('members',null,1);
+  const read=await call(db,'/api/posts');
+  assert.equal(read.status,401);
+  const create=await call(db,'/api/posts','POST');
+  assert.equal(create.status,401);
+  const publicDb=fakeDb('public',null,1);
+  const health=await call(publicDb,'/api/health');
+  assert.equal(health.status,200);
 });
