@@ -192,7 +192,12 @@
     if (domain) selectedDomain = domain;
     document.querySelectorAll('[data-panel]').forEach(node => {
       const targets = String(node.dataset.panel || '').split(' ');
-      node.classList.toggle('hidden-panel', !targets.includes(SECTION));
+      const visible = targets.includes(SECTION);
+      node.classList.toggle('hidden-panel', !visible);
+      // Shared Admin may have set the native hidden attribute when another
+      // section was active. CSS-only updates left the AI Ops/audit panel blank.
+      node.hidden = !visible;
+      if (visible) node.dataset.adminListLayout = 'single';
     });
     document.querySelectorAll('.sidebar .nav[data-section]').forEach(item => item.classList.toggle('active', item.dataset.section === SECTION));
     const title = $('#pageTitle');
