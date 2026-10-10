@@ -1529,6 +1529,8 @@ export async function handleDeviceControl(request, env) {
   if (!path.startsWith(ADMIN_PREFIX) && !path.startsWith(AGENT_PREFIX)) return null;
   if (!env.DB) return json({ error: 'Device Control 데이터베이스가 연결되지 않았습니다.' }, 503, request, env);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(request, env) });
+  // The heartbeat observer must never trigger schema DDL or job reconciliation.
+  if (request.method === 'GET' && path === `${ADMIN_PREFIX}/readiness`) return handleAdmin(request, env);
   await ensureSchema(env.DB);
   if (path.startsWith(ADMIN_PREFIX)) return handleAdmin(request, env);
   return handleAgent(request, env);
