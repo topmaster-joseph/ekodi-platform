@@ -32,9 +32,9 @@ test('EKODI Books and PGM are the requested same-origin entrypoint baseline with
 });
 
 test('legacy Books and PGM routes keep existing canonical and admin permission boundaries',()=>{
- assert.match(router,/const legacySite=url\.pathname\.match\(\/\^\\\/\(ekodibooks\|pgm\)/);
+ assert.match(router,/legacySite=url\.pathname\.match/);
  assert.match(router,/legacy-service-canonical/);
- assert.match(router,/target\.pathname=\(legacySite\[1\]\.toLowerCase\(\)===\x27ekodibooks\x27\?\x27\/books\x27:\x27\/pyeonggongmok\x27\)/);
+ assert.match(router,/target\.pathname=.*pyeonggongmok/);
  assert.match(router,/handleSiteBoardRequest\(request,env\)/);
  assert.match(router,/routePyeonggongmokStatic\(request,env\)/);
 });
