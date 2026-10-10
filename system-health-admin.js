@@ -176,7 +176,7 @@
         <div class="traffic-intelligence-countries" data-traffic-countries><p class="operations-loading">Beacon 집계 대기</p></div>
       </article>
     </div>
-    <article class="health-diagram-card" style="margin-top:10px">
+    <article class="health-diagram-card traffic-intelligence-daily-card">
       <div class="health-diagram-head"><div><small>UTC DAYS</small><strong>일자별 브라우저 세션 · 호스트 요청</strong></div><span>오늘은 부분 집계</span></div>
       <div class="traffic-intelligence-days traffic-intelligence-sites" data-traffic-days><p class="operations-loading">일자별 집계 대기</p></div>
       <p class="system-health-footnote">호스트 요청과 브라우저 세션은 서로 다른 지표입니다. 공유 도메인 ekodi.kr의 요청은 하위 서비스별로 분리되지 않습니다.</p>
