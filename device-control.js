@@ -94,6 +94,7 @@ const COMMAND_POLICIES = Object.freeze({
   'profile.workstation.restore': { risk: 'maintain', confirm: true },
   'agent.self_update': { risk: 'maintain', confirm: true },
   'software.localai.install': { risk: 'maintain', confirm: true },
+  'software.localai.verify': { risk: 'observe' },
   'computer.browser.canary': { risk: 'maintain', confirm: true },
   'computer.browser.execute': { risk: 'maintain', confirm: true, payload: 'background-browser-task' },
   'remote_desktop.recovery.enable': { risk: 'maintain', confirm: true },
@@ -115,6 +116,7 @@ const COMMAND_CAPABILITIES = Object.freeze({
   'computer.process.list': 'processRead',
   'computer.agent.status': 'agentStatus',
   'software.localai.install': 'localAiInstall',
+  'software.localai.verify': 'localAiVerify',
   'computer.desktop.probe': 'isolatedDesktopProbe',
   'computer.desktop.canary': 'isolatedDesktopProbe',
   'computer.desktop.guest.canary': 'isolatedDesktopCanary',
@@ -525,6 +527,23 @@ function summarizeCommandResult(result = {}) {
     : (Number.isFinite(Number(value)) ? Number(value) : null);
   for (const key of ['message', 'freedMB', 'pendingCount', 'installedCount', 'failedCount', 'rebootRequired', 'profile']) {
     if (result[key] !== undefined) summary[key] = result[key];
+  }
+  // Explicitly project only bounded proof fields. Never expose the full
+  // Device Agent result, host environment, provider credentials, or model output.
+  if (result.localAiProof && typeof result.localAiProof === 'object') {
+    const proof = result.localAiProof;
+    const oneOf = (value, values, fallback) => values.includes(value) ? value : fallback;
+    summary.localAiProof = {
+      checkedAt: safeText(proof.checkedAt, 45),
+      ollamaApi: oneOf(proof.ollamaApi, ['ready', 'unavailable'], 'unknown'),
+      ollamaVersion: safeText(proof.ollamaVersion, 70),
+      selectedModel: oneOf(proof.selectedModel, ['qwen2.5-coder:1.5b', 'qwen3:0.6b', ''], ''),
+      inference: oneOf(proof.inference, ['passed', 'not_checked', 'nonmatching_response', 'approved_model_missing', 'api_error_or_timeout'], 'unknown'),
+      claudeCli: oneOf(proof.claudeCli, ['visible_in_agent_context', 'not_visible_to_agent'], 'unknown'),
+      claudeAuth: 'requires_interactive_user_verification',
+      credentialCollection: proof.credentialCollection === true,
+      executionMode: 'fixed_loopback_api',
+    };
   }
   if (result.desktopSessionCanary && typeof result.desktopSessionCanary === 'object') {
     summary.desktopSessionCanary = {
@@ -1415,9 +1434,19 @@ async function nextCommand(request, env, device) {
 
 function mergeDiagnosticResult(device, commandType, result) {
   if (commandType === 'diagnostics.collect' && result.diagnostics && typeof result.diagnostics === 'object') {
-    return result.diagnostics;
+    const previous = parseJson(device.diagnostics_json);
+    const latest = { ...result.diagnostics };
+    // Full diagnostics refresh must not erase an independently verified
+    // local AI receipt that was already projected through the safe allowlist.
+    if (previous.localAiProof) latest.localAiProof = previous.localAiProof;
+    return latest;
   }
   const current = parseJson(device.diagnostics_json);
+  // Keep the latest successful native AI verification receipt visible even
+  // after this device's recentCommands window has rotated out.
+  if (commandType === 'software.localai.verify' && result.localAiProof && typeof result.localAiProof === 'object') {
+    current.localAiProof = summarizeCommandResult(result).localAiProof;
+  }
   const section = DIAGNOSTIC_SECTIONS[commandType];
   if (section && result[section] && typeof result[section] === 'object') current[section] = result[section];
   if (result.storage && typeof result.storage === 'object') current.storage = result.storage;
