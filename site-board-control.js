@@ -172,14 +172,15 @@ async function ensureInstance(env,route){
 
 async function actor(request,env,instance){
   const principal=await principalFromSupabaseRequest(request).catch(()=>null);
-  if(!principal?.id)return Object.freeze({authenticated:false,personId:'',email:'',role:'anonymous',manage:false});
+  if(!principal?.id)return Object.freeze({authenticated:false,personId:'',email:'',role:'anonymous',boardMember:false,manage:false});
   const personId=clean(principal.subject?.key||principal.id,160);
   const email=lower(principal.email);
   const membership=await env.DB.prepare(`SELECT role,status FROM ekodi_board_memberships
     WHERE board_id=? AND person_id=? LIMIT 1`).bind(instance.board_id,personId).first().catch(()=>null);
-  const role=membership?.status==='active'?(lower(membership.role)||'member'):'member';
-  const manage=membership?.status==='active'&&BOARD_MANAGE_ROLES.has(role);
-  return Object.freeze({authenticated:true,personId,email,role,manage});
+  const boardMember=membership?.status==='active';
+  const role=boardMember?(lower(membership.role)||'member'):'member';
+  const manage=boardMember&&BOARD_MANAGE_ROLES.has(role);
+  return Object.freeze({authenticated:true,personId,email,role,boardMember,manage});
 }
 
 async function verifySuperAdminReauth(request,env,instance,scope){
@@ -307,6 +308,13 @@ export async function handleSiteBoardRequest(request,env){
   }
 
   if(instance.status!=='active')return boardJson(instance,{error:'board_unavailable',status:instance.status},410);
+
+  // A members-only board must never expose posts, comments, attachments, search,
+  // or mutable operations to a logged-in person without an active board membership.
+  // Keep the health identity and non-sensitive visibility config publicly readable.
+  if(instance.visibility==='members'&&!who.boardMember&&sub!=='/api/health'&&sub!=='/api/config'){
+    return boardJson(instance,{error:who.authenticated?'board_membership_required':'authentication_required'},who.authenticated?403:401);
+  }
 
   if(method==='GET'&&sub==='/api/memberships'){
     if(!who.manage)return boardJson(instance,{error:'forbidden'},403);
