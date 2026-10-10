@@ -1,6 +1,6 @@
 import { executionEvidenceSatisfied } from './ekodi-capability-executor.js';
 
-const TASK_STATES = new Set(['queued', 'running', 'retry', 'human_gate', 'auto_blocked', 'verified', 'degraded', 'core_only', 'ignored', 'failed']);
+const TASK_STATES = new Set(['queued', 'running', 'retry', 'human_gate', 'auto_blocked', 'verified', 'degraded', 'core_only', 'executor_ready', 'ignored', 'failed']);
 
 function text(value, max = 1200) {
   return String(value ?? '').trim().slice(0, max);
@@ -204,6 +204,14 @@ export async function getEkodiCommandLedgerStatus(input) {
 export async function recoverExpiredEkodiCommandTasks(input, options = {}) {
   const db = await ensureEkodiCommandLedger(input);
   const now = iso(options.now || Date.now());
+  const legacyHandoffs = await db.prepare(`UPDATE ai_command_tasks
+    SET state = 'executor_ready',
+        last_error = CASE WHEN last_error = '' THEN 'legacy_core_only_handoff_recovered' ELSE last_error END,
+        updated_at = ?
+    WHERE state = 'core_only'
+      AND COALESCE(json_extract(context_json, '$.deploymentRequested'), 0) = 1
+      AND COALESCE(json_extract(context_json, '$.branchRef'), '') <> ''`)
+    .bind(now).run();
   const failed = await db.prepare(`UPDATE ai_command_tasks
     SET state = 'failed', lease_until = NULL, next_attempt_at = NULL,
         last_error = CASE WHEN last_error = '' THEN 'lease_expired_max_attempts' ELSE last_error END,
@@ -221,6 +229,7 @@ export async function recoverExpiredEkodiCommandTasks(input, options = {}) {
   return Object.freeze({
     recovered: Number(retried?.meta?.changes ?? retried?.changes ?? 0),
     exhausted: Number(failed?.meta?.changes ?? failed?.changes ?? 0),
+    legacyExecutorHandoffsRecovered: Number(legacyHandoffs?.meta?.changes ?? legacyHandoffs?.changes ?? 0),
     observedAt: now,
   });
 }
@@ -305,6 +314,7 @@ export async function settleEkodiCommandTask(input, task, result, options = {}) 
   // must not turn a valid core-only result into an endless command retry loop.
   // Only execution failures/degraded runs are retryable here; core_only is a
   // stable hand-off state for the non-AI executor and remains open for evidence.
+  else if (resultState === 'executor_ready') state = 'executor_ready';
   else if (resultState === 'core_only') state = 'core_only';
   else if (['degraded', 'failed'].includes(resultState) && attempt < maxAttempts) {
     state = 'retry';
@@ -399,7 +409,7 @@ function hydrateEvent(row) {
 }
 
 export const EKODI_COMMAND_LEDGER = Object.freeze({
-  version: '2.0.0',
+  version: '2.1.0',
   durableStore: 'cloudflare-d1',
   evidenceStore: 'append-only-cloudflare-d1',
   maxAutomaticAttempts: 3,

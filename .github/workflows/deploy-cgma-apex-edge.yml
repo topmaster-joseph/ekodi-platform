@@ -30,7 +30,7 @@ concurrency:
 env:
   WRANGLER_VERSION: '4.119.0'
   CGMA_SOURCE_REPO: topmaster-joseph/cheonggye-market
-  CGMA_SOURCE_REF: '9ebec7b33361eafad995673ed4688fb9d4c61de1'
+  CGMA_SOURCE_REF: 'a0171e0d4a77d702ca7c3ad3904d760a791a51db'
   EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
   EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
 
@@ -72,10 +72,14 @@ jobs:
           grep -Fq 'delegatedLiveResponse' cgma-root-gateway.js
           grep -Fq 'isBoardPath' cgma-root-gateway.js
           grep -Fq 'delegatedBoardResponse' cgma-root-gateway.js
+          # Keep the safely bounded upstream identity/status diagnostic in release builds.
+          grep -Fq 'x-ekodi-cgma-board-diagnostic' cgma-root-gateway.js
           grep -Fq 'board.internal.ekodi' cgma-root-gateway.js
           npx --yes wrangler@${WRANGLER_VERSION} deploy --dry-run --config wrangler.cgma-root-gateway.toml
           grep -Fq 'binding = "EKODI_SHARED"' wrangler.cgma-root-gateway.toml
           grep -Fq 'service = "shy-thunder-39a4"' wrangler.cgma-root-gateway.toml
+          grep -Fq 'binding = "EKODI_BOARD"' wrangler.cgma-root-gateway.toml
+          grep -Fq 'service = "ekodi-cgma-board-internal"' wrangler.cgma-root-gateway.toml
 
   production:
     needs: validate
@@ -126,6 +130,19 @@ jobs:
           check_upstream 'https://cheonggye-market.pages.dev/admin' 'data-admin-tab="today"'
           check_upstream 'https://cheonggye-market.pages.dev/member-admin' 'MOVED TO ADMIN CONSOLE'
           check_upstream 'https://cheonggye-market.pages.dev/api/resources' '"items"'
+      - name: Deploy route-less CGMA board service before edge delegation
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check .ekodi-control/cgma-board-service-worker.js
+          test -f .ekodi-control/wrangler.cgma-board-internal.toml
+          grep -Fq 'workers_dev = false' .ekodi-control/wrangler.cgma-board-internal.toml
+          grep -Fq 'preview_urls = false' .ekodi-control/wrangler.cgma-board-internal.toml
+          if grep -Eq '^\s*(\[\[routes\]\]|\[assets\])' .ekodi-control/wrangler.cgma-board-internal.toml; then
+            echo 'CGMA board internal service must not expose public routes or static assets' >&2
+            exit 1
+          fi
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config .ekodi-control/wrangler.cgma-board-internal.toml
       - name: Deploy CGMA apex edge with central Production authority
         shell: bash
         run: |
