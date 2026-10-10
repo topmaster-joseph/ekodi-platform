@@ -143,3 +143,20 @@ test('real visit handler preserves independent anonymous sessions across sibling
     assert.ok(!row.includes(session),'no raw browser sid should be persisted');
   }
 });
+
+test('anonymous OPTIONS telemetry probe reveals version without accessing or writing D1',async()=>{
+  const request=new Request('https://ekodi.kr/api/telemetry/visit',{
+    method:'OPTIONS',headers:{
+      origin:'https://ekodi.kr',
+      'access-control-request-method':'POST'
+    }
+  });
+  let touched=false;
+  const env={DB:{prepare(){touched=true;throw new Error('D1 must not be touched')}}};
+  const response=await handleTrafficIntelligence(request,env);
+  assert.equal(response.status,204);
+  assert.equal(response.headers.get('x-ekodi-traffic-telemetry'),'site-scoped-v2');
+  assert.equal(response.headers.get('access-control-allow-origin'),'https://ekodi.kr');
+  assert.equal(response.headers.get('access-control-allow-methods'),'POST, OPTIONS');
+  assert.equal(touched,false);
+});
