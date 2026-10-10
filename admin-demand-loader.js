@@ -56,7 +56,7 @@
     'api-cost':{label:'API Cost',icon:'₩',styles:['api-cost-admin.css'],scripts:['api-cost-admin.js'],real:'[data-section="api-cost"]',hashes:['#api-cost'],insert:'after-health'},
     storage:{label:'Storage',icon:'▣',styles:['storage-admin.css'],scripts:['storage-admin.js'],real:'[data-section="storage"]',hashes:['#storage'],paths:['/admin/settings-records/storage','/admin/system/storage'],insert:'after-health'},
     security:{label:'Security',icon:'◆',styles:['admin-secret-generator.css'],scripts:['admin-secret-generator.js'],real:'[data-section="security"]',hashes:['#security'],insert:'after-health'},
-    deployments:{label:'Deployments',icon:'↑',styles:['release-control-admin.css'],scripts:['release-control-admin.js'],real:'[data-section="deployments"]',hashes:['#deployments','#release'],insert:'after-security'},
+    deployments:{label:'Deployments',icon:'↑',styles:['release-control-admin.css'],scripts:['release-control-admin.js'],real:'[data-section="deployments"]',ready:'#releaseControl',hashes:['#deployments','#release'],insert:'after-security'},
     work: {
       label: '구인구직', icon: 'W',
       styles: ['work-admin.css'],
@@ -240,6 +240,10 @@
         await Promise.all((feature.styles || []).map(loadStyle));
         for (const src of feature.scripts || []) await loadScript(src);
         const real = await waitFor(feature.real);
+        // A lazy menu button may predate its asynchronously authorized panel.
+        // Keep the demand handler until the actual capability-gated panel exists.
+        // An unauthorized session must never be treated as a ready workspace.
+        if (feature.ready) await waitFor(feature.ready, 10000);
         if (placeholder) {
           const handler = placeholder.__ekodiDemandHandler;
           if (handler) placeholder.removeEventListener('click', handler, true);
