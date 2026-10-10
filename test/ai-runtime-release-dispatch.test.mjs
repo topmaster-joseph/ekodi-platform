@@ -32,9 +32,9 @@ test('orchestrator-dispatched Control API deployment owns PC Agent heartbeat han
   const end=source.indexOf('const marketingGrowthTouched=',start);
   assert.ok(start>=0 && end>start,'Control API deployment ownership block exists');
   const owned=source.slice(start,end);
-  assert.match(owned,/'device-control\\.js'/);
-  assert.match(owned,/'mission-control-entry-worker\\.js'/);
-  assert.match(source,/if\\(controlApiTouched\\)\\{/);
-  assert.match(source,/\\/actions\\/workflows\\/deploy-control-api\\.yml\\/dispatches/);
-  assert.match(source,/inputs:\\{release_branch_ref:branch,release_task_id:taskId\\}/);
+  assert.ok(owned.includes("'device-control.js'"));
+  assert.ok(owned.includes("'mission-control-entry-worker.js'"));
+  assert.ok(source.includes('if(controlApiTouched){'));
+  assert.ok(source.includes('/actions/workflows/deploy-control-api.yml/dispatches'));
+  assert.ok(source.includes('inputs:{release_branch_ref:branch,release_task_id:taskId}'));
 });
