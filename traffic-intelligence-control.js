@@ -42,8 +42,10 @@ async function sessionCheck(request, env) {
   return { response, session:await response.clone().json() };
 }
 
-async function sessionHash(day, host, sid) {
-  const digest = await crypto.subtle.digest('SHA-256', encoder.encode(`${day}|${host}|${sid}`));
+async function sessionHash(day, host, siteId, sid) {
+  // Keep a single browser session isolated between sibling paths of ekodi.kr.
+  // This changes the anonymous hash only; raw URL, IP and UA are never persisted.
+  const digest = await crypto.subtle.digest('SHA-256', encoder.encode(`${day}|${host}|${siteId}|${sid}`));
   return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('').slice(0, 32);
 }
 
@@ -77,7 +79,7 @@ async function handleVisit(request, env) {
     const day = new Date().toISOString().slice(0, 10);
     const countryRaw = String(request.cf?.country || request.headers.get('cf-ipcountry') || 'XX').toUpperCase();
     const country = /^[A-Z]{2}$/.test(countryRaw) ? countryRaw : 'XX';
-    const hash = await sessionHash(day, host, sid);
+    const hash = await sessionHash(day, host, siteId, sid);
     const now = new Date().toISOString();
 
     try {
