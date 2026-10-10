@@ -216,8 +216,6 @@ on:
       - 'author-billing-admin.js'
       - 'author-billing-admin.css'
       - 'ai-ops-admin.js'
-      - 'platform-maturity-admin.js'
-      - 'test/admin-panel-navigation-race.test.mjs'
       - 'ai-management-admin.js'
       - 'ai-management-admin.css'
       - 'user-ai-tier-panel.js'
@@ -952,6 +950,10 @@ jobs:
       - name: Verify canonical AI Provider Control production surface
         if: steps.quota.outputs.skip_nonessential != 'true'
         run: node scripts/verify-admin-provider-control-production.mjs
+
+      - name: Verify independent board subpages and Singles gated access live
+        if: steps.quota.outputs.skip_nonessential != 'true'
+        run: node scripts/verify-independent-board-live.mjs
 
       - name: Verify admin assets and every registered production service
         if: steps.quota.outputs.skip_nonessential != 'true'
