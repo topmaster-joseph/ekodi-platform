@@ -192,7 +192,9 @@
     if (domain) selectedDomain = domain;
     document.querySelectorAll('[data-panel]').forEach(node => {
       const targets = String(node.dataset.panel || '').split(' ');
-      node.classList.toggle('hidden-panel', !targets.includes(SECTION));
+      const visible=targets.includes(SECTION);
+      node.classList.toggle('hidden-panel', !visible);
+      node.hidden=!visible;
     });
     document.querySelectorAll('.sidebar .nav[data-section]').forEach(item => item.classList.toggle('active', item.dataset.section === SECTION));
     const title = $('#pageTitle');
