@@ -448,7 +448,7 @@ async function routePlatform(request,env,ctx){
     }
     const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
     if(canonical)return canonical;
-    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&(['/control.css','/control.js'].includes(url.pathname))){
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&(['/control.css','/control.js','/control-admin-nav.js'].includes(url.pathname))){
       const response=await legacyPlatformRouter.fetch(request,env,ctx);
       const out=new Response(response.body,response);
       out.headers.set('x-ekodi-canonical-surface','control');

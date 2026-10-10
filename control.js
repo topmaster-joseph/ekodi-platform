@@ -153,7 +153,7 @@
   function newTask(){state.activeId=null;setView('chat');renderMessages();$('#commandInput').focus()}
   function closeRail(){$('#controlRail').classList.remove('open')}
   function bind(){
-    $$('.nav-item').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+    $$('[data-view]').forEach(b=>b.onclick=()=>{setView(b.dataset.view);history.replaceState(null,'',b.dataset.view==='chat'?'/admin/control':'/admin/control?view='+encodeURIComponent(b.dataset.view));});
     $('#newTask').onclick=newTask;$('#railOpen').onclick=()=>$('#controlRail').classList.add('open');$('#railClose').onclick=closeRail;
     $('#commandForm').addEventListener('submit',e=>{e.preventDefault();submitCommand($('#commandInput').value)});
     $('#commandInput').addEventListener('input',resizeInput);

@@ -76,6 +76,14 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/control-admin-nav.js",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["admin-nav-heading", "admin-nav-link", "data-view"],
+        "headerExpect": ["x-ekodi-canonical-surface: control", "x-ekodi-route: control-surface", "cache-control: no-store"],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/control.js",
         "statuses": [
           200
