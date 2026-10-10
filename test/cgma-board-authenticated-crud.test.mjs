@@ -7,13 +7,14 @@ import worker from '../cgma-board-service-worker.js';
 // real EKODI API, Cloudflare, Supabase, or the production board endpoint.
 function mockD1() {
   const sqlite=new DatabaseSync(':memory:');
+  // D1 prepares statements lazily; compile each SQLite statement only after
+  // schema batch execution begins, so CREATE INDEX sees its preceding table.
   const prepare=sql=>{
-    const stmt=sqlite.prepare(sql);
     const bound=(args=[])=>({
       bind:(...next)=>bound(next),
-      first:async()=>stmt.get(...args)??null,
-      all:async()=>({results:stmt.all(...args)}),
-      run:async()=>{const result=stmt.run(...args);return {meta:{last_row_id:Number(result.lastInsertRowid),changes:Number(result.changes)}};},
+      first:async()=>sqlite.prepare(sql).get(...args)??null,
+      all:async()=>({results:sqlite.prepare(sql).all(...args)}),
+      run:async()=>{const result=sqlite.prepare(sql).run(...args);return {meta:{last_row_id:Number(result.lastInsertRowid),changes:Number(result.changes)}};},
     });
     return bound();
   };
