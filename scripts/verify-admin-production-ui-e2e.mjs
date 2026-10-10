@@ -421,31 +421,10 @@ for (const [id, group] of menus) {
     continue;
   }
 
-  try {
-    await page.waitForFunction(section => {
-      const panels = [...document.querySelectorAll('.content [data-panel]')].filter(panel => String(panel.dataset.panel || '').split(/\s+/).includes(section));
-      return panels.some(panel => !panel.hidden && !panel.classList.contains('hidden-panel'));
-    }, id, { timeout: 12000 });
-  } catch (error) {
-    // Do not skip or force-show a protected panel: record its actual state and
-    // identify auth/nav/lazy-load races without logging credentials or tokens.
-    const diagnostic = await page.evaluate(section => ({
-      section,
-      selected:window.EKODIAdminPanels?.current?.() || '',
-      maturityAuthorization:section === 'maturity' ? document.documentElement.dataset.ekodiMaturityAuthorized || 'unknown' : undefined,
-      focusedGroup:document.querySelector('.sidebar nav')?.dataset.adminFocusedGroup || '',
-      matchingPanels:[...document.querySelectorAll('.content [data-panel]')]
-        .filter(panel => String(panel.dataset.panel || '').split(/\s+/).includes(section))
-        .map(panel => ({
-          id:panel.id || '', hidden:panel.hidden,
-          hiddenClass:panel.classList.contains('hidden-panel'),
-          display:getComputedStyle(panel).display,
-          width:Math.round(panel.getBoundingClientRect().width),
-        })),
-    }), id);
-    await page.screenshot({ path:path.join(artifactsDir,`menu-failed-${id}.png`), fullPage:false }).catch(() => {});
-    throw new Error(`${id}: Admin panel visibility contract failed: ${JSON.stringify(diagnostic)}`, { cause:error });
-  }
+  await page.waitForFunction(section => {
+    const panels = [...document.querySelectorAll('.content [data-panel]')].filter(panel => String(panel.dataset.panel || '').split(/\s+/).includes(section));
+    return panels.some(panel => !panel.hidden && !panel.classList.contains('hidden-panel'));
+  }, id, { timeout: 12000 });
 
   await page.waitForFunction(section => {
     const panel = [...document.querySelectorAll('.content [data-panel]')].find(node => String(node.dataset.panel || '').split(/\s+/).includes(section) && !node.hidden && !node.classList.contains('hidden-panel'));
