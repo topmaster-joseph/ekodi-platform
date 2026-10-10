@@ -20,6 +20,14 @@ try {
 }
 
 $AgentVersion = '2.5.3'
+# Some remote/managed Windows sessions omit ProgramData from the process environment.
+# Resolve the canonical system data directory without changing machine-wide settings.
+if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
+  $env:ProgramData = [Environment]::GetFolderPath([Environment+SpecialFolder]::CommonApplicationData)
+}
+if ([string]::IsNullOrWhiteSpace($env:ProgramData) -or -not [System.IO.Path]::IsPathRooted($env:ProgramData)) {
+  throw '[EKODI:EKA-298][environment] Windows ProgramData path is unavailable.'
+}
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
