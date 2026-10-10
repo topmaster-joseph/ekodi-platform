@@ -318,3 +318,24 @@ jobs:
             code=$(curl -L -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 20 "$target" || true)
             case "$code" in 2*|3*) echo "link ok: $code $target" ;; *) echo "link failed: $code $target"; exit 1 ;; esac
           done
+- name: Verify October 11 prayer pronunciation page and five-language assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          root='https://ekodi.kr/ekodichurch/worship/2026-10-11/prayer/'
+          for attempt in $(seq 1 12); do
+            html=$(curl -L -sS -o /tmp/church-prayer.html -w '%{http_code}' --connect-timeout 5 --max-time 20 "$root?lang=ko&release=$CHURCH_SOURCE_SHA" || true)
+            js=$(curl -L -sS -o /tmp/church-prayer.js -w '%{http_code}' --connect-timeout 5 --max-time 20 "$root/prayer.js?release=$CHURCH_SOURCE_SHA" || true)
+            css=$(curl -L -sS -o /tmp/church-prayer.css -w '%{http_code}' --connect-timeout 5 --max-time 20 "$root/prayer.css?release=$CHURCH_SOURCE_SHA" || true)
+            if [[ "$html" == 200 && "$js" == 200 && "$css" == 200 ]] &&
+                grep -Fq '듣고, 따라 읽는 주기도문' /tmp/church-prayer.html &&
+                grep -Fq 'SpeechSynthesisUtterance' /tmp/church-prayer.js &&
+                grep -Fq "locale: 'vi-VN'" /tmp/church-prayer.js &&
+                grep -Fq '[data-active=true]' /tmp/church-prayer.css; then
+              echo 'October 11 five-language prayer pronunciation is live.'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Prayer route verification failed: html=$html js=$js css=$css"
+          exit 1
