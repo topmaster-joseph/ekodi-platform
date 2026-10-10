@@ -2,6 +2,15 @@ name: Deploy CGMA Apex Edge
 
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Authorized EKODI orchestrator release branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Exact authorized EKODI task ID'
+        required: true
+        type: string
   pull_request:
     paths:
       - '.github/workflows/deploy-cgma-apex-edge.yml'
@@ -22,6 +31,8 @@ env:
   WRANGLER_VERSION: '4.119.0'
   CGMA_SOURCE_REPO: topmaster-joseph/cheonggye-market
   CGMA_SOURCE_REF: '9ebec7b33361eafad995673ed4688fb9d4c61de1'
+  EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+  EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
 
 jobs:
   validate:
@@ -68,7 +79,7 @@ jobs:
 
   production:
     needs: validate
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || (inputs.release_branch_ref != '' && inputs.release_task_id != ''))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -134,7 +145,13 @@ jobs:
             sleep 2
           done
           if [[ "$ready" != 'true' ]]; then
-            gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-site-core.yml/dispatches" -f ref=main
+            # Pass the same EKODI-orchestrator-approved receipt to Site Core.
+            test -n "$EKODI_RELEASE_BRANCH_REF"
+            test -n "$EKODI_RELEASE_TASK_ID"
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-site-core.yml/dispatches" \
+              -f ref=main -f sync_domains=false \
+              -f release_branch_ref="$EKODI_RELEASE_BRANCH_REF" \
+              -f release_task_id="$EKODI_RELEASE_TASK_ID"
             echo 'CGMA board target is not healthy yet. Dispatched current-main Shared Site guarded release before blocking board verification.'
           else
             echo 'CGMA independent board runtime is already healthy; no Shared Site redispatch required.'
