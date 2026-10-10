@@ -39,3 +39,13 @@ test('daily anonymous browser session hash is separated by canonical site',async
   assert.ok(controller.includes('sessionHash(day, host, siteId, sid)'));
   assert.ok(controller.includes('ON CONFLICT(day, host, session_hash)'));
 });
+
+test('Control API production validates anonymous telemetry version via no-write preflight',async()=>{
+  const workflow=await read('.github/workflows/deploy-control-api.yml');
+  assert.match(workflow,/Verify canonical traffic telemetry version without writing visitor data/);
+  assert.match(workflow,/-X OPTIONS -H 'Origin: https:\/\/ekodi\.kr'/);
+  assert.match(workflow,/site-scoped-v2/);
+  assert.match(workflow,/\[ "\$status" = '204' \]/);
+  const handler=await read('traffic-intelligence-control.js');
+  assert.match(handler,/'x-ekodi-traffic-telemetry':'site-scoped-v2'/);
+});
