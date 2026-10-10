@@ -66,6 +66,8 @@ const controlApiTouched=changedFiles.some(file=>[
   'coupang-partners-automation.js',
   'customer-entry-worker.js',
   'mission-control-entry-worker.js',
+  // PC Agent registry and heartbeat handlers are deployed by the Control API.
+  'device-control.js',
   // AI Provider API runtime ownership; release-automation changes also repair missed deployments.
   'ai-provider-control.js',
   // Telemetry reader and site classifier run inside the Control API.
