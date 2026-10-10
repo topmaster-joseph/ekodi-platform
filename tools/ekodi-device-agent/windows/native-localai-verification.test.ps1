@@ -39,7 +39,7 @@ function Invoke-RestMethod {
       if ($request.model -ne 'qwen2.5-coder:1.5b' -or $request.stream -ne $false) {
         throw 'unexpected model or streaming'
       }
-      if ($request.options.num_predict -gt 8 -or $request.options.num_ctx -gt 512) {
+      if ($request.options.num_predict -gt 64 -or $request.options.num_ctx -gt 512 -or $request.think -ne $false) {
         throw 'unbounded local inference'
       }
       if ($script:TestScenario -eq 'wrong_reply') {
