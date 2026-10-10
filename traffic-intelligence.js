@@ -45,7 +45,7 @@ export function trafficSiteIdForHost(value) {
 // These are *site* identifiers, not arbitrary URL paths. Keep the public
 // URL's first segment separate from the browser's self-reported service id.
 // Cloudflare zone request aggregates remain host-scoped and are not split here.
-const ROOT_PATH_SITE_IDS = Object.freeze({
+export const ROOT_PATH_SITE_IDS = Object.freeze({
   ai:'ai', bible:'bible', books:'books', community:'community',
   ekodichurch:'church', ekodimission:'mission', ekodibiz:'biz',
   ekodimall:'mall', ekodilab:'lab', cgma:'cgma', cheonggye:'cheonggye',
