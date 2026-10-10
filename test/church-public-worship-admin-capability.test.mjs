@@ -12,7 +12,13 @@ function endpoint({role='pastor',bearer=true,method='GET',from=origin}={}){
     const path=String(url);
     calls.push({path,method:init.method||'GET'});
     if(path.includes('/auth/v1/user'))return new Response(JSON.stringify({id:'verified-user-id',email:'church-operator@example.invalid',email_confirmed_at:'2026-10-01T00:00:00Z'}),{status:200});
-    if(path.includes('/rest/v1/rpc/church_pastor_staff_for_user'))return new Response(JSON.stringify({role}),{status:200});
+    if(path.includes('/rest/v1/rpc/church_pastor_staff_for_user'))return new Response(JSON.stringify(role.startsWith('registry_')?null:{role}),{status:200});
+    if(path.includes('/rest/v1/site_access_registry')){
+      assert.match(path,/site_key=eq.church/);
+      assert.match(path,/role=eq.tenant_admin/);
+      assert.equal(init.headers.authorization,'Bearer user-test-session');
+      return new Response(JSON.stringify(role==='registry_worship_admin'?[{site_key:'church',role:'tenant_admin'}]:[]),{status:200});
+    }
     throw Error('Unexpected service call: '+path);
   };
   const Deno={env:{get:key=>key==='SUPABASE_URL'?'https://renzehysxirjilvdxacv.supabase.co':key==='SUPABASE_SERVICE_ROLE_KEY'?'test-server-key':''},serve:callback=>{handler=callback}};
@@ -29,11 +35,18 @@ test('worship capability checks server-resolved tenant staff role, never a UI cl
     assert.deepEqual(JSON.parse(await response.text()),{ok:true,permissions:{worship:true},churchSlug:'ekodi-church'});
     assert.equal(api.calls.length,2,'only central user + staff RPC');
   }
-  for(const role of ['viewer','care_staff','church_treasurer','church_finance']){
+  for(const role of ['viewer','care_staff','church_treasurer','church_finance','registry_viewer']){
     const response=await endpoint({role}).run();
     assert.equal(response.status,403,role);
     assert.equal((await response.json()).error,'ROLE_NOT_ALLOWED');
   }
+});
+test('RLS-scoped tenant administrator has worship access without a church_staff row',async()=>{
+  const api=endpoint({role:'registry_worship_admin'});
+  const response=await api.run();
+  assert.equal(response.status,200);
+  assert.deepEqual(JSON.parse(await response.text()),{ok:true,permissions:{worship:true},churchSlug:'ekodi-church'});
+  assert.equal(api.calls.length,3);
 });
 test('worship capability endpoint rejects guests, mutation requests and foreign origin',async()=>{
   const guest=endpoint({bearer:false});
