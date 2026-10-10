@@ -59,6 +59,7 @@ jobs:
       TOKEN_C: ${{ secrets.SUPABASE_PAT }}
       TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
       PUBLISHABLE_KEY: sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
+      STAGING_PUBLISHABLE_KEY: sb_publishable_SyaM4rBxa1JdE9arZrhULg_z1BIQRXL
     steps:
       - uses: actions/checkout@v7
         with:
@@ -92,7 +93,7 @@ jobs:
         run: |
           set -euo pipefail
           endpoint="https://$STAGING_PROJECT_REF.supabase.co/functions/v1/church-pastor-api?scope=worship-access"
-          code=$(curl -sS -o /tmp/church-stage-guest.json -w '%{http_code}' --max-time 20 -H "apikey: $PUBLISHABLE_KEY" "$endpoint")
+          code=$(curl -sS -o /tmp/church-stage-guest.json -w '%{http_code}' --max-time 20 -H "apikey: $STAGING_PUBLISHABLE_KEY" "$endpoint")
           test "$code" = '401'
           jq -e '.error == "AUTH_REQUIRED"' /tmp/church-stage-guest.json >/dev/null
       - name: Deploy canonical Church API
