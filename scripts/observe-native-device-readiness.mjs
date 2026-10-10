@@ -30,8 +30,11 @@ export function summarizeNativeDeviceReadiness(devices,{hostname='user3',now=Dat
       matching.length?'NATIVE_AGENT_REGISTERED_NOT_ONLINE':'NATIVE_AGENT_NOT_REGISTERED',
     capabilities:{
       backgroundBrowser:ready?.capabilities?.backgroundBrowser===true,
+      backgroundBrowserCanary:ready?.capabilities?.backgroundBrowserCanary===true,
       isolatedDesktop:ready?.capabilities?.isolatedDesktop===true,
-      localAI:ready?.capabilities?.localAI===true
+      isolatedDesktopProbe:ready?.capabilities?.isolatedDesktopProbe===true,
+      agentStatus:ready?.capabilities?.agentStatus===true,
+      localAiInstall:ready?.capabilities?.localAiInstall===true
     },
     nativeCutoverVerified:false,
     remoteCommandIssued:false,
