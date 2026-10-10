@@ -30,3 +30,7 @@ Restore activity and applicant management affordances within the published Missi
 ## Rollout discipline
 
 Use the authenticated EKODI Orchestrator, protected PR review, CI, staging, guarded Operating Space deployment, actual canonical-host checks and regression tests. Keep current UI and admin fallback during rollout; do not remove routes or change local/global role scopes.
+
+## Post-rebase CI trigger
+
+The canonical release branch was synchronized with the protected `main` branch by EKODI's official Convergent Merge workflow. The repository-owner follow-up commit preserves the same functional scope and requests fresh protected PR checks for the synchronized revision. A successful protected merge, rollout and real-host verification are still required.
