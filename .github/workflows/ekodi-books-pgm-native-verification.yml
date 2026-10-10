@@ -1,0 +1,60 @@
+name: EKODI Books and PGM Native Browser Verification
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'config/books-pgm-native-verification.json'
+      - 'test/books-pgm-native-verification.test.mjs'
+      - '.github/workflows/ekodi-books-pgm-native-verification.yml'
+      - '.github/workflows/ekodi-background-browser-worker.yml'
+      - 'platform-router-entry-worker.js'
+      - 'sites/pyeonggongmok/public/**'
+      - 'books/**'
+      - 'test/legacy-books-pgm-canonical.test.mjs'
+      - 'test/pyeonggongmok-site.test.mjs'
+  push:
+    branches: [main]
+    paths:
+      - 'config/books-pgm-native-verification.json'
+      - 'test/books-pgm-native-verification.test.mjs'
+      - '.github/workflows/ekodi-books-pgm-native-verification.yml'
+      - 'platform-router-entry-worker.js'
+      - 'sites/pyeonggongmok/public/**'
+      - 'books/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-books-pgm-native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  route-and-registry-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify EKODI Books, PGM and CGMA child-route contracts
+        run: |
+          node --test test/books-pgm-native-verification.test.mjs test/legacy-books-pgm-canonical.test.mjs test/pyeonggongmok-site.test.mjs test/platform-route-registry.test.mjs
+
+  desktop-native-browser:
+    needs: route-and-registry-contract
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      surface_paths: /ekodibooks,/pgm
+      surface_registry: config/books-pgm-native-verification.json
+      device_profile: desktop
+
+  mobile-native-browser:
+    needs: route-and-registry-contract
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      surface_paths: /ekodibooks,/pgm
+      surface_registry: config/books-pgm-native-verification.json
+      device_profile: mobile-portrait
