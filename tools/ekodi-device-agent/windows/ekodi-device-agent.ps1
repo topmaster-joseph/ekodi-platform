@@ -2342,7 +2342,8 @@ function Get-EkodiLocalAiVerification {
           model = [string]$model
           prompt = 'Reply exactly OK'
           stream = $false
-          options = @{ num_predict = 8; num_ctx = 512; temperature = 0 }
+          think = $false
+          options = @{ num_predict = 64; num_ctx = 512; temperature = 0 }
         } | ConvertTo-Json -Depth 5 -Compress
         $reply = Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:11434/api/generate' -Body $body -ContentType 'application/json' -TimeoutSec 45 -ErrorAction Stop
         if ([string]$reply.response -match '^\s*OK[.!]?\s*$') { $proof.inference = 'passed' }
