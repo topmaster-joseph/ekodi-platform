@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {availableProviderIds} from '../ai-control-core.js';
 import {providerCostClass} from '../ai-router-score.js';
-import {createNode, resourceDecision, validateJob} from '../tools/ekodi-ollama-node/node.mjs';
+import {answerLocal, createNode, resourceDecision, validateJob} from '../tools/ekodi-ollama-node/node.mjs';
 
 const validJob={id:'00000000-0000-4000-8000-000000000123', providerId:'node:ollama-local',needsCodeBranch:false,branch:'',prompt:'Briefly summarize a public changelog.'};
 const creds={nodeId:'ollama-user3-a1b2c3d4',token:'x'.repeat(35)};
@@ -69,4 +69,23 @@ test('Ineligible node still reports heartbeat but receives no work',async()=>{
   assert.equal(result.state,'idle');
   assert.equal(result.eligible,false);
   assert.equal(JSON.parse(records[0].opts.body).system.autoExecutionEligible,false);
+});
+
+test('Local Ollama jobs release model RAM immediately on small Windows workstations',async()=>{
+  const requests=[];
+  const fakeFetch=async(url,options)=>{
+    requests.push({url,options});
+    return new Response(JSON.stringify({done:true,response:'EKODI_MEMORY_RELEASE_OK'}),{
+      status:200,headers:{'content-type':'application/json'}
+    });
+  };
+  const output=await answerLocal('Return a small result',{fetchImpl:fakeFetch});
+  assert.equal(output,'EKODI_MEMORY_RELEASE_OK');
+  assert.equal(requests.length,1);
+  assert.equal(requests[0].url,'http://127.0.0.1:11434/api/generate');
+  const payload=JSON.parse(requests[0].options.body);
+  assert.equal(payload.model,'qwen2.5-coder:1.5b');
+  assert.equal(payload.keep_alive,'0s');
+  assert.equal(payload.stream,false);
+  assert.equal(payload.options.num_predict,400);
 });
