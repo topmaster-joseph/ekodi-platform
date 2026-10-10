@@ -39,7 +39,20 @@ function fixtures(change = () => {}) {
         return { workflow_runs: index < 0 ? [] : [runs[index]] };
       }
       const id = path.match(/^\/actions\/runs\/([0-9]+)\/jobs\?per_page=100$/);
-      if (id) return jobs.get(Number(id[1]));
+      if (id) {
+        const evidence = jobs.get(Number(id[1]));
+        if (!evidence) return evidence;
+        return {
+          ...evidence,
+          jobs: evidence.jobs.map(job => ({
+            ...job,
+            steps: job.steps ?? [{
+              name: 'Mandatory execution evidence',
+              status: 'completed', conclusion: 'success',
+            }],
+          })),
+        };
+      }
       throw new Error('Unexpected API read: ' + path);
     },
     setMain: fn => {
@@ -185,4 +198,26 @@ test('success-labelled workflow with an extra skipped job never counts as comple
   const proof = await auditLatestMain({ requestJson: fixture.requestJson });
   assert.equal(proof.ok, false);
   assert.match(proof.checks[1].reason, /workflow-job-not-success:optional-sidecar:skipped/);
+});
+
+
+test('successful real-device job with skipped native verification step is rejected', async () => {
+  const fixture = fixtures(f => {
+    f.jobs.get(1003).jobs.find(x => x.name === 'real-device').steps = [
+      { name: 'Contract', status: 'completed', conclusion: 'success' },
+      { name: 'Verify native browser through bounded isolated session stages', status: 'completed', conclusion: 'skipped' },
+    ];
+  });
+  const proof = await auditLatestMain({ requestJson: fixture.requestJson });
+  assert.equal(proof.ok, false);
+  assert.match(proof.checks[3].reason, /job-step-not-success:real-device:Verify native browser.*:skipped/);
+});
+
+test('successful real-device job with missing step evidence is rejected', async () => {
+  const fixture = fixtures(f => {
+    f.jobs.get(1003).jobs.find(x => x.name === 'real-device').steps = [];
+  });
+  const proof = await auditLatestMain({ requestJson: fixture.requestJson });
+  assert.equal(proof.ok, false);
+  assert.match(proof.checks[3].reason, /job-steps-missing:real-device/);
 });

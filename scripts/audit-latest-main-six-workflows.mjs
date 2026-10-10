@@ -70,6 +70,23 @@ function requiredJobEvidence(jobs, required) {
         (otherBlocked.conclusion || otherBlocked.status || 'unknown'),
     };
   }
+  // GitHub may mark a job successful even when a required nested step never ran.
+  // Fail closed on absent or skipped step evidence; do not equate green jobs with
+  // executed native-device, staging, or production verification.
+  for (const job of jobs) {
+    if (!Array.isArray(job.steps) || job.steps.length === 0) {
+      return { ok: false, reason: 'job-steps-missing:' + job.name };
+    }
+    const blockedStep = job.steps.find(step =>
+      step.status !== 'completed' || step.conclusion !== 'success');
+    if (blockedStep) {
+      return {
+        ok: false,
+        reason: 'job-step-not-success:' + job.name + ':' + blockedStep.name + ':' +
+          (blockedStep.conclusion || blockedStep.status || 'unknown'),
+      };
+    }
+  }
   return { ok: true };
 }
 
