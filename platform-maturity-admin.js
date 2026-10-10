@@ -47,6 +47,7 @@ html:not([data-ekodi-maturity-authorized="true"]) .sidebar [data-section="maturi
   let authorized = false;
   let loaded = false;
   let loading = null;
+  let authorizationInFlight = null;
 
   const token = () => {
     try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; }
@@ -335,21 +336,31 @@ html:not([data-ekodi-maturity-authorized="true"]) .sidebar [data-section="maturi
     }
   }
 
-  async function authorize() {
-    try {
-      const session = await readSession();
-      if (session?.role !== 'super_admin') return deny();
-      authorized = true; root.dataset.ekodiMaturityAuthorized = 'true'; ensureNav();
-      if (location.hash.toLowerCase() === '#maturity' || window.EKODIAdminPanels?.current?.() === SECTION) await loadData();
-    } catch (error) {
-      console.warn('[EKODI Maturity] authorization check failed', error);
-      deny();
-    }
+  function authorize() {
+    // Coalesce simultaneous session checks: a stale unauthorized response must
+    // not race with the current authorization or a section navigation.
+    if (authorizationInFlight) return authorizationInFlight;
+    authorizationInFlight = (async () => {
+      try {
+        const session = await readSession();
+        if (session?.role !== 'super_admin') return deny();
+        authorized = true; root.dataset.ekodiMaturityAuthorized = 'true'; ensureNav();
+        if (location.hash.toLowerCase() === '#maturity' || window.EKODIAdminPanels?.current?.() === SECTION) await loadData();
+      } catch (error) {
+        console.warn('[EKODI Maturity] authorization check failed', error);
+        deny();
+      }
+    })().finally(() => { authorizationInFlight = null; });
+    return authorizationInFlight;
   }
 
   refreshButton?.addEventListener('click', () => loadData(true));
   window.addEventListener('ekodi-admin-section-changed', event => {
     if (event.detail?.section !== SECTION) return;
+    // Only an authenticated super_admin can reveal this panel. A transient
+    // earlier session check can recover on explicit re-navigation; never
+    // auto-open after a denied check or expose content while unauthorized.
+    if (!authorized) { void authorize(); return; }
     if (authorized) {
       if (location.hash.toLowerCase() !== '#maturity') history.replaceState(history.state, '', `${location.pathname}${location.search}#maturity`);
       void loadData();
