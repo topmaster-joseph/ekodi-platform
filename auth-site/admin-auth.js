@@ -89,6 +89,9 @@ async function completeGoogleLogin(credential,challenge){
   // This prevents a silent login loop when session persistence or routing has failed.
   const verified=await request('/api/session',{headers:{authorization:`Bearer ${result.token}`}});
   if(verified.authenticated!==true)throw new Error('admin_session_not_ready');
+  // Same-origin same-tab navigation must not depend solely on the URL fragment handoff.
+  // Store only after the server validated the session; retain the hash handoff for popups.
+  try{sessionStorage.setItem('ekodi-auth-token',result.token)}catch{}
   navigateToAdmin(result);
 }
 function renderOriginBridgeButton(host,config,challenge){
