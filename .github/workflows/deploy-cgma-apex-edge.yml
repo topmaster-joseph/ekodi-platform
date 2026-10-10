@@ -2,6 +2,15 @@ name: Deploy CGMA Apex Edge
 
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Authorized EKODI orchestrator release branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Exact authorized EKODI task ID'
+        required: true
+        type: string
   pull_request:
     paths:
       - '.github/workflows/deploy-cgma-apex-edge.yml'
@@ -22,6 +31,8 @@ env:
   WRANGLER_VERSION: '4.119.0'
   CGMA_SOURCE_REPO: topmaster-joseph/cheonggye-market
   CGMA_SOURCE_REF: '9ebec7b33361eafad995673ed4688fb9d4c61de1'
+  EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+  EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
 
 jobs:
   validate:
@@ -68,7 +79,7 @@ jobs:
 
   production:
     needs: validate
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || (inputs.release_branch_ref != '' && inputs.release_task_id != ''))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -91,6 +102,7 @@ jobs:
           path: .ekodi-control
 
       - name: EKODI AI Orchestration Gate
+        id: orchestrator_receipt
         run: node "$GITHUB_WORKSPACE/.ekodi-control/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Verify EKODI Production account boundary
         shell: bash
@@ -121,6 +133,11 @@ jobs:
           cd cgma-source
           npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.cgma-root-gateway.toml
       - name: Ensure current Shared Site board runtime before verification
+        env:
+          # workflow_dispatch passes explicit inputs; main push derives the same
+          # owner-verified values from the preceding EKODI orchestration gate.
+          EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || steps.orchestrator_receipt.outputs.branch_ref }}
+          EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || steps.orchestrator_receipt.outputs.task_id }}
         shell: bash
         run: |
           set -euo pipefail
@@ -134,7 +151,14 @@ jobs:
             sleep 2
           done
           if [[ "$ready" != 'true' ]]; then
-            gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-site-core.yml/dispatches" -f ref=main
+            # Pass the same EKODI-orchestrator-approved receipt to Site Core.
+            test -n "$EKODI_RELEASE_BRANCH_REF"
+            test -n "$EKODI_RELEASE_TASK_ID"
+            # workflow_dispatch accepts only top-level ref and a nested inputs object.
+            # Passing -f release_* as top-level fields incorrectly yields HTTP 422.
+            jq -nc --arg branch "$EKODI_RELEASE_BRANCH_REF" --arg task "$EKODI_RELEASE_TASK_ID" \
+              '{ref:"main",inputs:{sync_domains:"false",release_branch_ref:$branch,release_task_id:$task}}' \
+              | gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-site-core.yml/dispatches" --input -
             echo 'CGMA board target is not healthy yet. Dispatched current-main Shared Site guarded release before blocking board verification.'
           else
             echo 'CGMA independent board runtime is already healthy; no Shared Site redispatch required.'

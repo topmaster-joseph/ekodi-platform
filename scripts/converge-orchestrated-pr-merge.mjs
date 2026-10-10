@@ -37,6 +37,9 @@ if(!pr)fail('open PR not found');
 const filesLookup=await api('/pulls/'+pr.number+'/files?per_page=100');
 if(!filesLookup.r.ok)fail('PR file lookup failed '+filesLookup.r.status);
 const changedFiles=(Array.isArray(filesLookup.data)?filesLookup.data:[]).map(file=>String(file.filename||''));
+// GitHub token-mediated merges do not emit regular main push events.
+// Dispatch CGMA's guarded edge workflow through the verified orchestrator.
+const cgmaApexTouched=changedFiles.includes('.github/workflows/deploy-cgma-apex-edge.yml');
 const independentBoardTouched=changedFiles.some(file=>
   file.startsWith('services/independent-board/')||
   file==='wrangler.independent-board.toml'||
@@ -59,7 +62,7 @@ const controlApiTouched=changedFiles.some(file=>[
   'mission-control-entry-worker.js',
   // AI Provider API runtime ownership; release-automation changes also repair missed deployments.
   'ai-provider-control.js',
-  // Traffic telemetry handler and host classifier run inside Control API.
+  // Telemetry reader and site classifier run inside the Control API.
   'traffic-intelligence-control.js',
   'traffic-intelligence.js',
   'scripts/converge-orchestrated-pr-merge.mjs',
@@ -107,7 +110,7 @@ const shellRuntimeTouched=changedFiles.some(file=>
 );
 const sharedSiteTouched=changedFiles.some(file=>
   // Shared administrator menu, canonical route registry and design contracts are production Site Core assets.
-  ['admin-menu-registry.js','admin-sidebar.js','admin-canonical-routes.js','admin-menu-layout.js','admin-menu-runtime.js','admin-design-engine.js','config/design-engine.json','config/admin-role-navigation.json'].includes(file)||
+  ['admin-menu-registry.js','admin-sidebar.js','admin-canonical-routes.js','admin-menu-layout.js','admin-menu-layout.compact.js','admin-menu-runtime.js','admin-demand-loader.js','release-control-admin.js','system-health-admin.js','admin-design-engine.js','config/design-engine.json','config/admin-role-navigation.json'].includes(file)||
   file==='workspace-admin-page.js'||
   // AI Provider administrator bundle and shared provider client are owned by the Site Core.
   file==='admin-provider-control.js'||
@@ -140,6 +143,14 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='.github/workflows/converge-orchestrated-pr-merge.yml'
 );
 async function dispatchPostMergeDeploys(){
+  if(cgmaApexTouched){
+    const dispatch=await api('/actions/workflows/deploy-cgma-apex-edge.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('CGMA Apex Edge deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-cgma-apex-edge.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
   // Only the guarded operating-space workflow can mutate production.
   // The originating orchestrator release receipt is mandatory.
   if(spaceTouched){

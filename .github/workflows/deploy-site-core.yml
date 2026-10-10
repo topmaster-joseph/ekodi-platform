@@ -25,6 +25,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/deploy-site-core.yml'
+      - 'scripts/converge-orchestrated-pr-merge.mjs'
       - 'site-worker.js'
       - 'test/admin-subdomain-redirect-runtime.test.mjs'
       - 'cgmurrc.html'
