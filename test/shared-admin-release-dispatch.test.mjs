@@ -25,4 +25,5 @@ test('Shared Site workflow watches changes to its own orchestrator post-merge di
  assert.ok(pushBlock.includes("      - '.github/workflows/deploy-site-core.yml'"));
  assert.ok(workflow.includes('release_branch_ref:'));
  assert.ok(workflow.includes('release_task_id:'));
+ assert.ok(ownership.includes("file==='scripts/converge-orchestrated-pr-merge.mjs'"),'orchestrator modifications must dispatch Shared Site after protected merge');
 });
