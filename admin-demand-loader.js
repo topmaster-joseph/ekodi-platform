@@ -162,20 +162,6 @@
     });
   }
 
-  function insertPlaceholder(button,feature){
-    if(!nav)return;
-    if(feature.insert==='first')return nav.prepend(button);
-    if(feature.insert==='after-campus'){const a=nav.querySelector('[data-demand-feature="campus"], [data-section="campus"]');if(a)return a.insertAdjacentElement('afterend',button);}
-    if(feature.insert==='after-aiops'){const a=nav.querySelector('[data-demand-feature="aiops"], [data-section="aiops"]');if(a)return a.insertAdjacentElement('afterend',button);}
-    if(feature.insert==='after-health'){const a=nav.querySelector('[data-demand-feature="health"], [data-section="health"]');if(a)return a.insertAdjacentElement('afterend',button);}
-    if(feature.insert==='after-security'){const a=nav.querySelector('[data-demand-feature="security"], [data-section="security"]');if(a)return a.insertAdjacentElement('afterend',button);}
-    if(feature.insert==='after-deployments'){const a=nav.querySelector('[data-demand-feature="deployments"], [data-section="deployments"]');if(a)return a.insertAdjacentElement('afterend',button);}
-    if(feature.insert==='after-services'){const a=nav.querySelector('[data-section="services"]');if(a)return a.insertAdjacentElement('afterend',button);}
-    if(feature.insert==='after-work'){const a=nav.querySelector('[data-demand-feature="work"], [data-section="work"]');if(a)return a.insertAdjacentElement('afterend',button);}
-    if(feature.insert==='after-workspace'){const a=nav.querySelector('[data-section="workspace"], [data-lazy-section="workspace"], [data-demand-feature="workspace"]');if(a)return a.insertAdjacentElement('afterend',button);}
-    nav.append(button);
-  }
-
   function inputPending() {
     try { return Boolean(navigator.scheduling?.isInputPending?.()); } catch { return false; }
   }
