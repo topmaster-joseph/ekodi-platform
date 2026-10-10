@@ -90,6 +90,13 @@ test('sanitized local AI proof persists after last-five command history rollover
  assert.equal(response.localAiProof.accessToken, undefined);
  assert.equal(response.system.cpuLoadPct, 3);
  assert.ok(!JSON.stringify(response).includes('SENSITIVE_VALUE'));
+ const refreshed = merge({diagnostics_json: JSON.stringify(response)}, 'diagnostics.collect', {
+   diagnostics: { system: { cpuLoadPct: 9 } },
+ });
+ assert.equal(refreshed.system.cpuLoadPct, 9);
+ assert.equal(refreshed.localAiProof.inference, 'passed');
+ assert.equal(refreshed.localAiProof.selectedModel, 'qwen2.5-coder:1.5b');
+ assert.equal(refreshed.localAiProof.accessToken, undefined);
  assert.ok(api.includes("current.localAiProof = summarizeCommandResult(result).localAiProof"));
  const admin = fs.readFileSync(path.join(root,'device-control-admin.js'),'utf8');
  assert.ok(admin.includes("proofCommand?.result?.localAiProof || device.diagnostics?.localAiProof"));
