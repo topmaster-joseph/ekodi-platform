@@ -25,3 +25,16 @@ test('AI Control workflow allows production only with orchestrator release input
   assert.match(source, /validate-ekodi-ai-change-orchestration\.mjs" --release/);
   assert.match(source, /needs: \[validate, deploy-staging\]/);
 });
+
+test('orchestrator-dispatched Control API deployment owns PC Agent heartbeat handler',()=>{
+  const source=text('scripts/converge-orchestrated-pr-merge.mjs');
+  const start=source.indexOf('const controlApiTouched=changedFiles.some');
+  const end=source.indexOf('const marketingGrowthTouched=',start);
+  assert.ok(start>=0 && end>start,'Control API deployment ownership block exists');
+  const owned=source.slice(start,end);
+  assert.match(owned,/'device-control\\.js'/);
+  assert.match(owned,/'mission-control-entry-worker\\.js'/);
+  assert.match(source,/if\\(controlApiTouched\\)\\{/);
+  assert.match(source,/\\/actions\\/workflows\\/deploy-control-api\\.yml\\/dispatches/);
+  assert.match(source,/inputs:\\{release_branch_ref:branch,release_task_id:taskId\\}/);
+});
