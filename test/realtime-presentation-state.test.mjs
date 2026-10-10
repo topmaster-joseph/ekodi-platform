@@ -12,26 +12,37 @@ function fixtures(){
     ['room_ended',{id:'room_ended',tenant_id:'ekodichurch',owner_user_id:'person:church',status:'ended',anonymous_viewers_enabled:1}],
   ]);
   const presentation=new Map();
-  const db={prepare(sql){return{bind(...params){return{
-    async first(){
-      if(sql.includes('FROM sessions JOIN admins'))return{email:'admin@example.test',role:'super_admin',expires_at:'2099-01-01T00:00:00.000Z'};
-      if(sql.includes("FROM service_subscriptions WHERE subject_type='person'"))return null;
-      if(sql.includes('SELECT * FROM realtime_rooms WHERE id=?'))return rooms.get(params[0])||null;
-      if(sql.includes('FROM realtime_presentation_state WHERE room_id=?')){const item=presentation.get(params[0]);return item?.tenant_id===params[1]?item:null}
-      return null;
-    },
-    async run(){
-      if(sql.includes('INSERT INTO realtime_presentation_state')){
-        const [room_id,tenant_id,deck_id,slide_index,updated_at]=params;
-        const previous=presentation.get(room_id);
-        if(previous&&previous.tenant_id!==tenant_id)return{success:false};
-        presentation.set(room_id,{room_id,tenant_id,deck_id,slide_index,revision:(previous?.revision||0)+1,updated_at});
-      }
-      return{success:true};
-    },
-    async all(){return{results:[]};}
-  }} }};
-  return{db,rooms,presentation};
+  const db={
+    prepare(sql){
+      return {
+        bind(...params){
+          return {
+            async first(){
+              if(sql.includes('FROM sessions JOIN admins'))return {email:'admin@example.test',role:'super_admin',expires_at:'2099-01-01T00:00:00.000Z'};
+              if(sql.includes("FROM service_subscriptions WHERE subject_type='person'"))return null;
+              if(sql.includes('SELECT * FROM realtime_rooms WHERE id=?'))return rooms.get(params[0])||null;
+              if(sql.includes('FROM realtime_presentation_state WHERE room_id=?')){
+                const item=presentation.get(params[0]);
+                return item?.tenant_id===params[1]?item:null;
+              }
+              return null;
+            },
+            async run(){
+              if(sql.includes('INSERT INTO realtime_presentation_state')){
+                const [room_id,tenant_id,deck_id,slide_index,updated_at]=params;
+                const previous=presentation.get(room_id);
+                if(previous&&previous.tenant_id!==tenant_id)return {success:false};
+                presentation.set(room_id,{room_id,tenant_id,deck_id,slide_index,revision:(previous?.revision||0)+1,updated_at});
+              }
+              return {success:true};
+            },
+            async all(){return {results:[]};}
+          };
+        }
+      };
+    }
+  };
+  return {db,rooms,presentation};
 }
 function req(room,method='GET',data,authorized=false){
   return new Request('https://ekodi.kr/api/realtime/rooms/'+room+'/presentation',{
