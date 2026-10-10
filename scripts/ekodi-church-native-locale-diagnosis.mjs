@@ -56,7 +56,7 @@ try {
     const final=item.checkpoints.at(-1);
     const success=item.httpStatus===200 && final?.lang===locale &&
       ( !['my','kac','vi','mn','id'].includes(locale) || final.extendedLocale===locale ) &&
-      !final.koreanVisible && item.errors.length===0;
+      (locale==='ko-KR'||!final.koreanVisible) && item.errors.length===0;
     item.success=Boolean(success);
     if(!success)unsuccessful++;
     console.log(JSON.stringify({locale,success:item.success,checks:item.checkpoints,
