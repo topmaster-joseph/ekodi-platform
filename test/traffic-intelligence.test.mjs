@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { trafficAnalyticsFailureCategory, canKeepTrafficHostTotalsWithMissingUserAgent, trafficZoneCollectionStatus } from '../traffic-collector-quality.js';
 import { handleTrafficIntelligence, trafficRequestScopeForHosts, trafficUtcDayStatus } from '../traffic-intelligence-control.js';
 import { readFile } from 'node:fs/promises';
 import {
@@ -70,7 +71,7 @@ test('collector isolates unavailable zones and preserves partial analytics', asy
   assert.match(collector, /let collectedZoneCount = 0/);
   assert.match(collector, /const skippedZones = \[\]/);
   assert.match(collector, /try \{[\s\S]*collectZone\(zone, window\)[\s\S]*catch \(error\)/);
-  assert.match(collector, /const stateStatus = skippedZones\.length \? 'partial' : 'ok'/);
+  assert.match(collector, /const stateStatus = trafficZoneCollectionStatus\(collectedZoneCount, zones\.length, degradedZoneCount\)/);
   assert.match(collector, /if \(collectedZoneCount === 0\)/);
   assert.match(collector, /last_success_at=excluded\.last_success_at/);
 });
@@ -187,4 +188,24 @@ test('UTC partial-day status is explicit without changing historical daily value
   assert.match(ui,/data-traffic-days/);
   assert.match(ui,/item\.utcDayStatus === 'partial'/);
   assert.match(ui,/브라우저 세션 .*호스트 요청/);
+});
+
+test('Cloudflare host totals survive unavailable per-zone classifier without disguising coverage',async()=>{
+  assert.equal(trafficAnalyticsFailureCategory({status:403,message:'zone.analytics.read denied'}),'permission_denied');
+  assert.equal(trafficAnalyticsFailureCategory({message:'Cannot query field userAgent'}),'unsupported_metric');
+  assert.equal(trafficAnalyticsFailureCategory({message:'viewer.zones.empty'}),'analytics_unavailable');
+  assert.equal(trafficAnalyticsFailureCategory({status:429,message:'too many requests'}),'rate_limited');
+  assert.equal(trafficAnalyticsFailureCategory({status:503,message:'upstream unavailable'}),'upstream_error');
+  assert.equal(canKeepTrafficHostTotalsWithMissingUserAgent({message:'Cannot query field userAgent'}),true);
+  assert.equal(canKeepTrafficHostTotalsWithMissingUserAgent({status:429}),false);
+  assert.equal(trafficZoneCollectionStatus(6,6,0),'ok');
+  assert.equal(trafficZoneCollectionStatus(6,6,1),'partial');
+  assert.equal(trafficZoneCollectionStatus(1,6,0),'partial');
+  const collector=await readFile('scripts/collect-traffic-intelligence.mjs','utf8');
+  assert.match(collector,/const hostRows = await queryHostTotals\(zone.id, window.start, window.end\)/);
+  assert.match(collector,/if \(!canKeepTrafficHostTotalsWithMissingUserAgent\(error\)\) throw error/);
+  assert.match(collector,/const buckets = result.buckets/);
+  assert.match(collector,/category === 'rate_limited'/);
+  assert.doesNotMatch(collector,/console\.warn\([^\n]*error\.message/);
+  assert.doesNotMatch(collector,/skippedZones\.push\(\{ zone:zone.name, message:/);
 });
