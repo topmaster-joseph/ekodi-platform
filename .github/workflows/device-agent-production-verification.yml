@@ -201,7 +201,7 @@ jobs:
         run: |
           if [ -f artifacts/native-device-readiness.json ]; then
             echo '## EKODI PC3 Native Agent Observation (no device commands)' >> "$GITHUB_STEP_SUMMARY"
-            jq -r '"- Mode: \(.mode)\\n- Registered: \(.registered)\\n- Heartbeat healthy: \(.heartbeatHealthy)\\n- State: \(.verificationState)\\n- Browser capability projected: \(.capabilities.backgroundBrowser)\\n- Native cutover verified: \(.nativeCutoverVerified)\\n- Observed at: \(.observedAt)"' artifacts/native-device-readiness.json >> "$GITHUB_STEP_SUMMARY"
+            jq -r '"- Mode: \(.mode)\n- Registered: \(.registered)\n- Heartbeat healthy: \(.heartbeatHealthy)\n- State: \(.verificationState)\n- Browser capability projected: \(.capabilities.backgroundBrowser)\n- Native cutover verified: \(.nativeCutoverVerified)\n- Observed at: \(.observedAt)"' artifacts/native-device-readiness.json >> "$GITHUB_STEP_SUMMARY"
           elif [ -f artifacts/device-agent-production-verification.json ]; then
             echo '## EKODI real-device Native Virtualization Verification' >> "$GITHUB_STEP_SUMMARY"
             echo '' >> "$GITHUB_STEP_SUMMARY"
