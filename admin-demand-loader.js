@@ -240,10 +240,7 @@
         await Promise.all((feature.styles || []).map(loadStyle));
         for (const src of feature.scripts || []) await loadScript(src);
         const real = await waitFor(feature.real);
-        // A lazy menu button may predate its asynchronously authorized panel.
-        // Keep the demand handler until the actual capability-gated panel exists.
-        // An unauthorized session must never be treated as a ready workspace.
-        if (feature.ready) await waitFor(feature.ready, 10000);
+        if(feature.ready)await waitFor(feature.ready,1e4);
         if (placeholder) {
           const handler = placeholder.__ekodiDemandHandler;
           if (handler) placeholder.removeEventListener('click', handler, true);
