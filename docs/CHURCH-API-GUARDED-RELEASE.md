@@ -20,3 +20,7 @@ This function already authenticates and authorizes through the central user iden
 5. No tenant personal data in the public Church homepage.
 
 The Church Pages workflow and EKODI-owned native browser 9-language probes have already passed independently. Pending operator-positive proofs must be reported as outstanding, not silently marked complete.
+
+## Latest protected-base synchronization
+
+The official Orchestrator reconciled this PR with the current protected main branch. Required checks must be regenerated on the synchronized, owner-signed head and must all succeed before guarded merge or Supabase mutation. Source sha labels from the former head are not completion evidence.
