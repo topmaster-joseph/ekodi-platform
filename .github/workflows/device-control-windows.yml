@@ -1,6 +1,7 @@
 name: Device Control Windows CI
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'device-control.js'

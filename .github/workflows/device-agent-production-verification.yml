@@ -2,6 +2,15 @@ name: Device Agent Production Verification
 
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Orchestrator-issued source branch for this exact merged main commit'
+        required: false
+        type: string
+      release_task_id:
+        description: 'Orchestrator task id corresponding to the source branch'
+        required: false
+        type: string
   schedule:
     - cron: '17 * * * *'
   pull_request:
@@ -30,6 +39,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: device-agent-production-verification-${{ github.ref }}
@@ -85,7 +95,37 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Recover exact merged-PR Orchestrator provenance
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref }}
+          REQUESTED_RELEASE_TASK_ID: ${{ inputs.release_task_id }}
+        run: |
+          set -euo pipefail
+          merged_branch="$(gh api -H 'Accept: application/vnd.github+json' "/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '[.[] | select(.merged_at != null and .base.ref == "main" and (.head.ref | startswith("ai/")))] | sort_by(.merged_at) | last | .head.ref // empty')"
+          branch="${REQUESTED_RELEASE_BRANCH_REF:-$merged_branch}"
+          if [ -z "$merged_branch" ] || [ "$branch" != "$merged_branch" ]; then
+            echo "Release provenance must match this exact merged main commit: $GITHUB_SHA" >&2
+            exit 1
+          fi
+          if [[ "$branch" =~ ^ai/[^/]+/(orch_[A-Za-z0-9_-]+)$ ]]; then
+            derived_task="${BASH_REMATCH[1]}"
+            if [ -n "${REQUESTED_RELEASE_TASK_ID:-}" ] && [ "$REQUESTED_RELEASE_TASK_ID" != "$derived_task" ]; then
+              echo 'Release task id and Orchestrator branch disagree.' >&2
+              exit 1
+            fi
+            echo "EKODI_RELEASE_BRANCH_REF=$branch" >> "$GITHUB_ENV"
+            echo "EKODI_RELEASE_TASK_ID=$derived_task" >> "$GITHUB_ENV"
+          else
+            echo 'No valid Orchestrator-issued branch for this merged commit.' >&2
+            exit 1
+          fi
+
       - name: EKODI AI Orchestration Gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
 
       - name: Issue short-lived genuine super-admin session

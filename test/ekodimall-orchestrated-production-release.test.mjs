@@ -49,3 +49,29 @@ test('Control public preview smoke enforces the effective no-store edge policy o
   assert.ok(preview.candidateExpect.includes('"personalData":false'));
   assert.ok(coordinator.includes("'deploy/manifests/control-api.worker.json'"));
 });
+
+test('approved merge explicitly schedules latest-main checks when GITHUB_TOKEN suppresses push triggers', () => {
+  for (const filename of ['ci.yml', 'constitution-check.yml', 'device-control-windows.yml']) {
+    const source = readFileSync(new URL('../.github/workflows/' + filename, import.meta.url), 'utf8');
+    assert.match(source, /^on:\r?\n  workflow_dispatch:/m, filename + ' must support exact-main explicit checks');
+    assert.ok(coordinator.includes("'" + filename + "'"), filename + ' must be dispatched after guarded merge');
+  }
+  assert.ok(coordinator.includes('device-agent-production-verification.yml/dispatches'));
+  for (const name of ['deploy-space.yml', 'deploy-ekodi-mall.yml']) {
+    assert.ok(coordinator.includes("assertLatestMainBeforeDispatch('" + name + "')"), name + ' must use same latest-main SHA as required checks');
+  }
+  assert.ok(coordinator.includes("'/git/ref/heads/main'"));
+  assert.ok(coordinator.includes('liveMainSha!==expectedMainSha'));
+  assert.ok(coordinator.includes("await dispatchPostMergeDeploys(String(merged.data.sha||''))"));
+  assert.ok(coordinator.includes('receipt.data?.authorized!==true'), 'Orchestrator receipt remains required');
+});
+
+test('real-device verification derives merged main provenance and preserves the release receipt gate', () => {
+  const source = readFileSync(new URL('../.github/workflows/device-agent-production-verification.yml', import.meta.url), 'utf8');
+  assert.match(source, /workflow_dispatch:[\s\S]*?release_branch_ref:[\s\S]*?release_task_id:/);
+  assert.ok(source.includes('commits/$GITHUB_SHA/pulls'));
+  assert.ok(source.includes('branch" != "$merged_branch"'));
+  assert.ok(source.includes('EKODI_RELEASE_TASK_ID=$derived_task'));
+  assert.ok(source.includes('validate-ekodi-ai-change-orchestration.mjs" --release'));
+  assert.ok(source.includes('pull-requests: read'));
+});
