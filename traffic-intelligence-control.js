@@ -3,6 +3,7 @@ import {
   TRAFFIC_CLASSIFIER_VERSION,
   isAllowedTelemetryOrigin,
   trafficSiteIdForHost,
+  trafficSiteIdForVisit,
   normalizeTrafficHost,
 } from './traffic-intelligence.js';
 
@@ -72,8 +73,7 @@ async function handleVisit(request, env) {
     if (!/^[A-Za-z0-9_-]{16,96}$/.test(sid)) return json({ error:'유효한 세션 식별자가 필요합니다.' }, 400, origin);
 
     const host = normalizeTrafficHost(new URL(origin).hostname);
-    const mappedSite = safeSiteId(trafficSiteIdForHost(host));
-    const siteId = mappedSite || safeSiteId(body?.site_id) || 'unknown';
+    const siteId = safeSiteId(trafficSiteIdForVisit(host, body?.site_path, body?.site_id)) || 'root';
     const day = new Date().toISOString().slice(0, 10);
     const countryRaw = String(request.cf?.country || request.headers.get('cf-ipcountry') || 'XX').toUpperCase();
     const country = /^[A-Z]{2}$/.test(countryRaw) ? countryRaw : 'XX';
@@ -210,6 +210,11 @@ async function handleAdmin(request, env) {
       days,
       selectedSite:selectedSite || null,
       timeBasis:'UTC daily aggregates',
+      attribution:{
+        browserSessions:'site-scoped where shared-shell route telemetry is available',
+        cloudflareRequests:'host-scoped; ekodi.kr requests include all its child sites',
+        activeConcurrency:'not measured by this daily aggregate endpoint',
+      },
       privacy:{
         rawIpStored:false,
         rawUserAgentStored:false,
@@ -231,7 +236,8 @@ async function handleAdmin(request, env) {
       notes:[
         '실사용자는 개인 식별이 아닌 일일 브라우저 세션 신호입니다.',
         '검색·AI 크롤러와 EKODI 내부 자동화는 User-Agent 신호로 분류합니다.',
-        '확실하지 않은 요청은 사람으로 추정하지 않고 미분류로 남깁니다.'
+        '확실하지 않은 요청은 사람으로 추정하지 않고 미분류로 남깁니다.',
+        'Cloudflare 요청 수는 호스트 단위이며 ekodi.kr 하위 사이트별 요청 수가 아닙니다.'
       ]
     });
   } catch (error) {
