@@ -1,0 +1,115 @@
+name: Deploy Church Pastor API
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/functions/church-pastor-api/**'
+      - 'test/church-public-worship-admin-capability.test.mjs'
+      - '.github/workflows/deploy-church-pastor-api.yml'
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Official EKODI Orchestrator release branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Matching EKODI Orchestrator task ID'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-church-pastor-api-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Validate Church API and tenant permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          deno check supabase/functions/church-pastor-api/index.ts
+          node --test test/church-public-worship-admin-capability.test.mjs
+          grep -Fq "scope')==='worship-access'" supabase/functions/church-pastor-api/index.ts
+          grep -Fq "scope')==='finance-access'" supabase/functions/church-pastor-api/index.ts
+          grep -Fq "CHURCH_STAFF_REQUIRED" supabase/functions/church-pastor-api/index.ts
+  production:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    environment: production
+    env:
+      PROJECT_REF: renzehysxirjilvdxacv
+      STAGING_PROJECT_REF: lxcxwbdwwojjkgybbqii
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+      PUBLISHABLE_KEY: sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate official Orchestrator release receipt
+        env:
+          EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref }}
+          EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id }}
+        run: node scripts/validate-ekodi-ai-change-orchestration.mjs --release
+      - name: Verify production deployment guardrails
+        run: node scripts/validate-deployment-guardrails.mjs
+      - name: Select Supabase deployment credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-}"
+          [ -n "$token" ] || token="${TOKEN_B:-}"
+          [ -n "$token" ] || token="${TOKEN_C:-}"
+          [ -n "$token" ] || token="${TOKEN_D:-}"
+          if [ -z "$token" ]; then echo 'No Supabase credential configured'; exit 2; fi
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Stage Church API in development project
+        run: npx --yes supabase@2.116.0 functions deploy church-pastor-api --project-ref "$STAGING_PROJECT_REF" --no-verify-jwt
+      - name: Stage negative-auth checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://$STAGING_PROJECT_REF.supabase.co/functions/v1/church-pastor-api?scope=worship-access"
+          code=$(curl -sS -o /tmp/church-stage-guest.json -w '%{http_code}' --max-time 20 -H "apikey: $PUBLISHABLE_KEY" "$endpoint")
+          test "$code" = '401'
+          jq -e '.error == "AUTH_REQUIRED"' /tmp/church-stage-guest.json >/dev/null
+      - name: Deploy canonical Church API
+        run: npx --yes supabase@2.116.0 functions deploy church-pastor-api --project-ref "$PROJECT_REF" --no-verify-jwt
+      - name: Verify production CORS, denial and source boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://$PROJECT_REF.supabase.co/functions/v1/church-pastor-api?scope=worship-access"
+          code=$(curl -sS -o /tmp/church-prod-guest.json -w '%{http_code}' --max-time 20 -H "apikey: $PUBLISHABLE_KEY" "$endpoint")
+          test "$code" = '401'
+          jq -e '.error == "AUTH_REQUIRED"' /tmp/church-prod-guest.json >/dev/null
+          code=$(curl -sS -o /tmp/church-prod-cross-origin.json -w '%{http_code}' --max-time 20 -H "apikey: $PUBLISHABLE_KEY" -H 'Origin: https://untrusted.example' "$endpoint")
+          test "$code" = '403'
+          jq -e '.error == "ORIGIN_NOT_ALLOWED"' /tmp/church-prod-cross-origin.json >/dev/null
+          code=$(curl -sS -D /tmp/church-prod-options.headers -o /dev/null -w '%{http_code}' -X OPTIONS --max-time 20 -H "apikey: $PUBLISHABLE_KEY" -H 'Origin: https://ekodi.kr' "$endpoint")
+          test "$code" = '204'
+          grep -Eiq '^access-control-allow-origin:[[:space:]]*https://ekodi\.kr' /tmp/church-prod-options.headers
+          echo "Church Pastor API guest and cross-origin negative checks passed."
+          echo "SOURCE_SHA=$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
