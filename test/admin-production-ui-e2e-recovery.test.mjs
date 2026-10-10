@@ -21,6 +21,7 @@ test('navigation retry cannot falsely pass invisible panels or expand fake permi
   assert.ok(start>0&&end>start);
   const retry=source.slice(start,end);
   assert.doesNotMatch(retry,/route\.fulfill|status:\s*200|authenticated:\s*true|\.catch\(\(\)=>true\)/);
+  assert.doesNotMatch(retry,/admin-context-source|contextTab\.click|bypassCSP|ignoreHTTPSErrors/);
   assert.match(retry,/page\.waitForFunction\(section => window\.EKODIAdminPanels\?\.current\?\.\(\) === section, id, \{ timeout: 20000 \}\)/);
   assert.match(source,/if \(activeCount !== expectedCount\) throw new Error/);
 });
