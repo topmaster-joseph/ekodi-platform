@@ -144,6 +144,14 @@
       .hybrid-job-detail{display:grid;gap:5px;padding:8px 2px 2px;word-break:break-word}
       .hybrid-event[data-type="failed"]{border-color:rgba(180,35,35,.35)}
       .hybrid-event[data-type="completed"]{border-color:rgba(24,130,76,.28)}
+      .hybrid-native-browser{margin:14px 0;padding:14px;border:1px solid var(--line,#e0e4eb);border-radius:14px}
+      .hybrid-native-browser h4{margin:0 0 5px}
+      .hybrid-native-browser p{margin:0 0 10px;font-size:.87rem}
+      .hybrid-native-form{display:flex;align-items:end;gap:10px;flex-wrap:wrap}
+      .hybrid-native-form label{display:grid;gap:5px;flex:1;min-width:160px}
+      .hybrid-native-form label:first-child{flex:3;min-width:240px}
+      .hybrid-native-form input,.hybrid-native-form select{width:100%;box-sizing:border-box}
+      .hybrid-native-feedback{display:block;margin-top:8px;font-size:.86rem}
       .hybrid-privacy{margin:12px 0 0;font-size:.84rem;opacity:.76}
       @media(max-width:900px){.hybrid-automation-policy{grid-template-columns:1fr}.hybrid-metrics{grid-template-columns:repeat(3,1fr)}}
       @media(max-width:760px){.hybrid-grid{grid-template-columns:1fr}.hybrid-ledger{grid-column:auto}.hybrid-policy-grid{grid-template-columns:1fr}.hybrid-metrics{grid-template-columns:repeat(2,1fr)}}
@@ -174,6 +182,15 @@
           <div class="hybrid-policy-item" data-state="protected"><small>사용자 창·탭</small><strong>보존 · 자동종료 금지</strong></div>
           <div class="hybrid-policy-item"><small>전경 표시 예외</small><strong>OAuth · CAPTCHA · OS 권한</strong></div>
         </div>
+      </section>
+      <section class="hybrid-native-browser" id="hybridNativeBrowser" aria-label="EKODI 자체 브라우저 실행">
+        <div class="hybrid-row"><div><h4>자체 브라우저 실행 · MCP 불필요</h4><p>기존 EKODI Agent와 작업 큐를 사용합니다. 전용 백그라운드 프로필에서만 실행하며 사용자의 열린 탭과 입력을 건드리지 않습니다.</p></div><span class="hybrid-pill" id="hybridNativeReadiness" role="status">노드 확인 중</span></div>
+        <form class="hybrid-native-form" id="hybridNativeBrowserForm">
+          <label>EKODI 내부 경로<input name="path" value="/ai/" maxlength="600" required autocomplete="off" spellcheck="false"></label>
+          <label>화면<select name="deviceProfile"><option value="desktop">데스크톱</option><option value="compact-mobile">모바일</option><option value="tablet">태블릿</option></select></label>
+          <button type="submit" class="primary" id="enqueueHybridNativeBrowser" disabled>자체 실행 요청</button>
+        </form>
+        <small class="hybrid-native-feedback" id="hybridNativeFeedback" role="status">온라인 자체 노드와 BG Browser Canary가 필요합니다. 외부 GitHub 사이트와 로그인 화면은 이 작업으로 실행할 수 없습니다.</small>
       </section>
       <section class="hybrid-watchdog" id="hybridWatchdog" data-status="unknown">
         <div class="hybrid-watchdog-head"><div><strong>운영 자동감시</strong><span class="hybrid-pill" id="hybridMonitorStatus">확인 전</span></div><small id="hybridMonitorTime">10분 주기 감시</small></div>
@@ -222,6 +239,7 @@
     panel.querySelector('#refreshHybrid')?.addEventListener('click', load);
     panel.querySelector('#toggleHybridFabric')?.addEventListener('click', toggleFabric);
     panel.querySelector('#enqueueHybridDiagnostic')?.addEventListener('click', enqueueDiagnostic);
+    panel.querySelector('#hybridNativeBrowserForm')?.addEventListener('submit', enqueueNativeBrowser);
     panel.querySelector('#hybridStatusFilter')?.addEventListener('change', renderJobs);
     panel.querySelector('#hybridJobSearch')?.addEventListener('input', renderJobs);
     load();
@@ -283,6 +301,40 @@
       button.textContent = enabled ? '실행망 일시중지' : '실행망 가동';
       button.className = enabled ? 'secondary' : 'primary';
     }
+  }
+
+  function eligibleNativeBrowserNodes() {
+    if (lastDashboard.fabric?.enabled === false) return [];
+    return (lastDashboard.nodes || []).filter(node =>
+      node.online && node.enabled && node.autoExecute
+      && node.capabilities?.backgroundBrowser === true
+      && Number(node.activeJobs || 0) < Number(node.maxConcurrency || 1));
+  }
+
+  function renderNativeBrowserStatus() {
+    const panel = document.querySelector('#hybridNativeBrowser');
+    if (!panel) return;
+    const ready = eligibleNativeBrowserNodes();
+    panel.querySelector('#enqueueHybridNativeBrowser').disabled = ready.length === 0;
+    panel.querySelector('#hybridNativeReadiness').textContent = ready.length
+      ? `실행 가능 후보 ${ready.length}대`
+      : lastDashboard.fabric?.enabled === false ? '실행망 일시중지' : '실행 가능 노드 없음';
+  }
+
+  function normalizeNativeBrowserPath(input) {
+    const path = String(input || '').trim();
+    if (!path.startsWith('/') || path.startsWith('//') || /[\u0000-\u001f]/.test(path)) {
+      throw new Error('EKODI 내부 경로만 입력할 수 있습니다. 예: /ai/');
+    }
+    const target = new URL(path, API_BASE);
+    if (target.origin !== API_BASE || target.username || target.password || target.port) {
+      throw new Error('외부 사이트 주소는 허용하지 않습니다.');
+    }
+    if ([...target.searchParams.keys()].some(key => /(?:token|secret|password|credential|code|session|authorization|api.key)/i.test(key))) {
+      throw new Error('인증정보가 포함된 주소는 실행할 수 없습니다.');
+    }
+    if (target.hash) throw new Error('해시(#)를 제거한 내부 경로를 입력하세요.');
+    return target.pathname + target.search;
   }
 
   function renderMonitoring() {
@@ -393,6 +445,7 @@
       nodes.innerHTML = lastDashboard.nodes.length ? lastDashboard.nodes.map(nodeMarkup).join('') : '<div class="hybrid-empty">Agent가 다음 작업을 확인하면 실행 노드로 나타납니다.</div>';
       nodes.querySelectorAll('[data-save-node]').forEach(button => button.addEventListener('click', saveNode));
       renderFabric();
+      renderNativeBrowserStatus();
       renderMonitoring();
       renderJobs();
       renderEvents();
@@ -454,6 +507,34 @@
       await load();
     } catch (error) { alert(error.message); }
     finally { button.disabled = false; }
+  }
+
+  async function enqueueNativeBrowser(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const button = form.querySelector('#enqueueHybridNativeBrowser');
+    const feedback = document.querySelector('#hybridNativeFeedback');
+    if (!button || button.disabled) return;
+    try {
+      if (!eligibleNativeBrowserNodes().length) throw new Error('온라인 노드 및 BG Browser Canary를 확인하세요.');
+      const path = normalizeNativeBrowserPath(form.elements.path.value);
+      const deviceProfile = form.elements.deviceProfile.value;
+      if (!['desktop','compact-mobile','tablet'].includes(deviceProfile)) throw new Error('허용되지 않은 화면 크기입니다.');
+      if (!confirm(`EKODI 자체 실행기로 ${path}를 백그라운드 점검할까요? 사용자 브라우저 탭은 조작하지 않습니다.`)) return;
+      button.disabled = true;
+      feedback.textContent = '실행 요청을 등록하는 중입니다.';
+      const result = await request('/api/control/hybrid-execution/jobs', {
+        method:'POST',
+        body:JSON.stringify({ taskType:'computer.browser.execute',
+          payload:{ path, deviceProfile }, priority:50, maxAttempts:1, confirmed:true }),
+      });
+      feedback.textContent = `작업 등록 ${result.job?.id || '확인 필요'} · 결과는 아래 실행 기록에서 확인하세요.`;
+      await load();
+    } catch (error) {
+      if (feedback) feedback.textContent = `실행 요청 실패: ${error.message}`;
+    } finally {
+      renderNativeBrowserStatus();
+    }
   }
 
   async function cancelJob(event) {
