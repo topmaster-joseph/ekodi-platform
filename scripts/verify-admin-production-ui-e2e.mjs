@@ -394,7 +394,39 @@ for (const [id, group] of menus) {
       }
     }
   }
-  await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 12000 });
+  try {
+    await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 12000 });
+  } catch (initialError) {
+    // A lazy module may asynchronously select a fallback after the first
+    // section click. Re-select the same real left-navigation item once,
+    // without treating a hidden panel or a missing click as a success.
+    if (id === 'command-home') throw initialError;
+    const before = await page.evaluate(() => ({
+      current:window.EKODIAdminPanels?.current?.()||'',
+      route:location.pathname+location.hash,
+      focused:document.querySelector('.sidebar nav')?.dataset.adminFocusedGroup||'',
+    }));
+    console.warn(`[PROD-E2E] ${id}: selected panel changed during mount; bounded real-navigation recovery ${JSON.stringify(before)}`);
+    if (!await groupActive()) {
+      const global = page.locator(`button[data-admin-global-group="${group}"]`).first();
+      await dispatchClick(global);
+      await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(
+        node => node.dataset.adminGlobalGroup===target && (node.getAttribute('aria-current')==='page'||node.classList.contains('active'))
+      ), group, { timeout:12000 });
+    }
+    const retryTrigger = await resolveMenuTrigger(id,group);
+    await dispatchClick(retryTrigger);
+    try {
+      await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 20000 });
+    } catch {
+      const after = await page.evaluate(() => ({
+        current:window.EKODIAdminPanels?.current?.()||'',
+        route:location.pathname+location.hash,
+        focused:document.querySelector('.sidebar nav')?.dataset.adminFocusedGroup||'',
+      }));
+      throw new Error(`${id}: real menu activation did not stabilize after bounded retry: ${JSON.stringify({before,after})}`, {cause:initialError});
+    }
+  }
 
   if (id === 'command-home') {
     await page.waitForFunction(() => {
