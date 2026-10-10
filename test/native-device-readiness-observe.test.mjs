@@ -85,3 +85,13 @@ test('untrusted hostnames are blocked before querying production API',async()=>{
   }),/invalid_target_hostname/);
   assert.equal(count,0);
 });
+
+test('read-only heartbeat route skips schema DDL and command-queue reconciliation',()=>{
+  const source=readFileSync(new URL('../device-control.js',import.meta.url),'utf8');
+  const start=source.indexOf('export async function handleDeviceControl(');
+  const route=source.slice(start,start+850);
+  const bypass=route.indexOf("path === `\${ADMIN_PREFIX}/readiness`");
+  const schema=route.indexOf('await ensureSchema(env.DB)');
+  assert.ok(bypass>0 && schema>bypass,'read-only query must return before schema initialization');
+  assert.match(route,/return handleAdmin\(request, env\)/);
+});
