@@ -96,7 +96,7 @@
   }
 
   function authenticated() {
-    return Boolean(token()&&app&&!app.hidden);
+    return Boolean(token() && app && !app.hidden);
   }
 
   function assetUrl(path) {
