@@ -40,7 +40,7 @@ test('live observation uses only authenticated GET and never submits commands',a
   const a=await observeNativeDeviceReadiness({token:'temporary-session-token-long-enough',hostname:'user3',now,fetchImpl:fakeFetch});
   assert.equal(a.heartbeatHealthy,true);
   assert.equal(calls.length,1);
-  assert.equal(calls[0].url,'https://ekodi.kr/api/control/devices');
+  assert.equal(calls[0].url,'https://ekodi.kr/api/control/devices/readiness?hostname=user3');
   assert.equal(calls[0].init.method,'GET');
   assert.equal(calls[0].init.headers.authorization,'Bearer temporary-session-token-long-enough');
 });
@@ -60,4 +60,28 @@ test('scheduled native heartbeat checks cannot run mutating canaries without rel
   assert.match(workflow,/test -n "\$EKODI_RELEASE_TASK_ID"/);
   assert.match(workflow,/validate-ekodi-ai-change-orchestration.mjs" --release/);
   assert.match(workflow,/Revoke short-lived verification session/);
+});
+
+test('production native heartbeat endpoint is an authenticated SELECT-only snapshot',()=>{
+  const source=readFileSync(new URL('../device-control.js',import.meta.url),'utf8');
+  const begin=source.indexOf("if (request.method === 'GET' && path === `\${ADMIN_PREFIX}/readiness`)");
+  const end=source.indexOf("if (request.method === 'GET' && path === ADMIN_PREFIX)",begin);
+  assert.ok(begin>0 && end>begin,'readiness route must precede the job-reconciling admin list route');
+  const route=source.slice(begin,end);
+  assert.match(route,/SELECT r.hostname, r.platform, r.last_seen_at/);
+  assert.match(route,/r.revoked_at IS NULL/);
+  assert.match(route,/WHERE LOWER\(r.hostname\) = \?/);
+  assert.match(route,/mode:'observe-only'/);
+  assert.doesNotMatch(route,/reconcileJobs|UPDATE\s+|INSERT\s+|DELETE\s+|\.run\(|\.batch\(|\.first\(/i);
+  assert.doesNotMatch(route,/token_hash|command_type|issued_by|device_id:/i);
+  assert.match(source.slice(end,end+145),/reconcileJobs\(env\)/);
+});
+test('untrusted hostnames are blocked before querying production API',async()=>{
+  let count=0;
+  await assert.rejects(observeNativeDeviceReadiness({
+    token:'trusted-admin-session-long-enough',
+    hostname:'user3/../../../',
+    fetchImpl:async()=>{count++;throw new Error('should not be called');}
+  }),/invalid_target_hostname/);
+  assert.equal(count,0);
 });
