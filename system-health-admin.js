@@ -57,7 +57,9 @@
   const section = document.createElement('section');
   section.id = MODULE_ID;
   section.className = 'section system-health-section hidden-panel';
-  section.dataset.panel = `${SECTION} platform-overview architecture`;
+  section.dataset.panel = `${SECTION} platform-overview`;
+  // Reuse this single panel for architecture without changing the legacy health contract.
+  section.dataset.panel += ' architecture';
   section.hidden = true;
   section.innerHTML = `
     <div class="section-head system-health-head">
