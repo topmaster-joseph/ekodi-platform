@@ -28,6 +28,11 @@ test('CGMA production dispatch carries orchestrator receipt and never disables v
   assert.match(workflow,/gh api --method POST.*deploy-site-core\.yml\/dispatches.*--input -/);
   assert.doesNotMatch(workflow,/-f release_branch_ref=/);
   assert.doesNotMatch(workflow,/-f release_task_id=/);
+  assert.match(workflow,/id: orchestrator_receipt/);
+  assert.match(workflow,/EKODI_RELEASE_BRANCH_REF: \$\{\{ inputs\.release_branch_ref \|\| steps\.orchestrator_receipt\.outputs\.branch_ref \}\}/);
+  assert.match(workflow,/EKODI_RELEASE_TASK_ID: \$\{\{ inputs\.release_task_id \|\| steps\.orchestrator_receipt\.outputs\.task_id \}\}/);
+  assert.match(workflow,/test -n "\$EKODI_RELEASE_BRANCH_REF"/);
+  assert.match(workflow,/test -n "\$EKODI_RELEASE_TASK_ID"/);
   assert.match(workflow,/Verify CGMA edge production/);
   assert.match(workflow,/check_board '\/cgma\/board'/);
 });
