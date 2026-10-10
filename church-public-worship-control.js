@@ -11,8 +11,8 @@ export async function handlePublicChurchWorship(request,env={},dependencies={}){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(requested)||Number.isNaN(Date.parse(requested+'T00:00:00+09:00')))return json({ok:false,code:'INVALID_DATE'},400);
   const from=requested>=kstDate()?requested:kstDate();
   const params=new URLSearchParams({select:'service_type,service_date,service_name,service_time,scripture,title,preacher',is_published:'eq.true',service_date:'gte.'+from,order:'service_date.asc',limit:'3'});
-  const origin=String(env.SUPABASE_URL||SUPABASE).replace(/\/+$/,'');
-  const key=String(env.SUPABASE_PUBLISHABLE_KEY||env.SUPABASE_ANON_KEY||PUBLIC_KEY);
+  const origin=String(env.PUBLIC_WORSHIP_SUPABASE_URL||SUPABASE).replace(/\/+$/,'');
+  const key=String(env.PUBLIC_WORSHIP_SUPABASE_PUBLISHABLE_KEY||PUBLIC_KEY);
   try{
     const res=await (dependencies.fetch||fetch)(origin+'/rest/v1/church_worship_materials?'+params,{headers:{apikey:key,accept:'application/json'},redirect:'error'});
     if(!res.ok)return json({ok:false,code:'WORSHIP_SOURCE_UNAVAILABLE'},502);
