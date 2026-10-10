@@ -1,0 +1,67 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {normalizeTask} from '../scripts/ekodi-background-browser-worker.mjs';
+
+const root=new URL('../',import.meta.url);
+const read=relative=>readFile(new URL(relative,root),'utf8');
+const registry=JSON.parse(await read('config/books-pgm-native-verification.json'));
+const workflow=await read('.github/workflows/ekodi-books-pgm-native-verification.yml');
+const sharedWorkflow=await read('.github/workflows/ekodi-background-browser-worker.yml');
+const router=await read('platform-router-entry-worker.js');
+
+test('EKODI Books and PGM are the requested same-origin entrypoint baseline with bounded child paths',()=>{
+ assert.equal(registry.policyId,'EKODI-BOOKS-PGM-NATIVE-VERIFY-001');
+ assert.equal(registry.canonicalOrigin,'https://ekodi.kr');
+ assert.equal(registry.readOnly,true);
+ assert.equal(registry.maxPaths,12);
+ assert.deepEqual(registry.devices,['desktop','mobile-portrait']);
+ const entries=registry.surfaces.filter(e=>e.enabled!==false);
+ assert.ok(entries.length<=registry.maxPaths);
+ assert.equal(new Set(entries.map(e=>e.path)).size,entries.length);
+ assert.equal(new Set(entries.map(e=>e.id)).size,entries.length);
+ for(const e of entries){
+   assert.equal(new URL(e.path,'https://ekodi.kr').origin,'https://ekodi.kr');
+   assert.ok(e.path.startsWith('/')&&!e.path.startsWith('//'));
+   if(e.expectedText)assert.ok(typeof e.expectedText==='string'&&e.expectedText.length<=500);
+   assert.equal(normalizeTask({path:e.path,deviceProfile:'mobile-portrait',actions:[{type:'snapshot'}]}).allowMutation,false);
+ }
+ for(const path of ['/ekodibooks','/ekodibooks/series/','/ekodibooks/research/','/ekodibooks/notes/','/ekodibooks/ekodian/','/ekodibooks/admin/','/pgm','/pgm/#study','/pgm/#archive','/pgm/admin/','/cgma/board','/cgma/board/api/health']){
+   assert.ok(entries.some(e=>e.path===path),path);
+ }
+});
+
+test('legacy Books and PGM routes keep existing canonical and admin permission boundaries',()=>{
+ assert.match(router,/const legacySite=url\.pathname\.match\(\/\^\\\/\(ekodibooks\|pgm\)/);
+ assert.match(router,/legacy-service-canonical/);
+ assert.match(router,/target\.pathname=\(legacySite\[1\]\.toLowerCase\(\)===\x27ekodibooks\x27\?\x27\/books\x27:\x27\/pyeonggongmok\x27\)/);
+ assert.match(router,/handleSiteBoardRequest\(request,env\)/);
+ assert.match(router,/routePyeonggongmokStatic\(request,env\)/);
+});
+
+test('all referenced child pages and PGM admin handoff exist in repository assets',async()=>{
+ for(const path of ['index.html','series/index.html','research/index.html','notes/index.html','ekodian/index.html']){
+   const source=await read('books/'+path);
+   assert.match(source,/<title>/);
+   assert.match(source,/<main id="main">/);
+ }
+ const home=await read('sites/pyeonggongmok/public/index.html');
+ for(const id of ['study','archive','join'])assert.ok(home.includes('id="'+id+'"'),id);
+ const admin=await read('sites/pyeonggongmok/public/admin/index.html');
+ assert.match(admin,/https:\/\/ekodi\.kr\/admin\/\?route=workspace&source=pyeonggongmok/);
+});
+
+test('EKODI-owned native Chromium executor verifies actual child page content on two isolated device profiles',()=>{
+ assert.match(workflow,/desktop-native-browser:/);
+ assert.match(workflow,/mobile-native-browser:/);
+ assert.match(workflow,/device_profile: desktop/);
+ assert.match(workflow,/device_profile: mobile-portrait/);
+ assert.equal((workflow.match(/uses: \.\/\.github\/workflows\/ekodi-background-browser-worker\.yml/g)||[]).length,2);
+ assert.equal((workflow.match(/surface_registry: config\/books-pgm-native-verification\.json/g)||[]).length,2);
+ assert.equal((workflow.match(/surface_paths: \/ekodibooks,\/pgm/g)||[]).length,2);
+ assert.match(sharedWorkflow,/expectedTextByPath/);
+ assert.match(sharedWorkflow,/actions\.push\(\{type:'assertText',text:expectedTextByPath\.get\(p\)\}\)/);
+ assert.match(sharedWorkflow,/allowMutation:false/);
+ assert.match(sharedWorkflow,/headless == true/);
+ assert.match(sharedWorkflow,/ephemeralContext == true/);
+});
