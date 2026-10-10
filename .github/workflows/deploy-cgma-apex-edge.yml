@@ -30,7 +30,7 @@ concurrency:
 env:
   WRANGLER_VERSION: '4.119.0'
   CGMA_SOURCE_REPO: topmaster-joseph/cheonggye-market
-  CGMA_SOURCE_REF: '9ebec7b33361eafad995673ed4688fb9d4c61de1'
+  CGMA_SOURCE_REF: '628c6a5776d3101b86556dcfb888944d9f479fe9'
   EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
   EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
 
