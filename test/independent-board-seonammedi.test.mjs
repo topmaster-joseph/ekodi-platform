@@ -80,19 +80,18 @@ test('finance and notice boards are first-class standalone board routes',async()
   assert.match(site,/href="board\/notices">공지/);
 });
 
-test('finance access tiers expose summary to signed-in Google users and details only to admins',async()=>{
+test('finance published records and summary are public while private audit fields and editing require administrator',async()=>{
   const worker=await read('services/independent-board/worker.js');
-  assert.match(worker,/async function signedInGoogle\(req\)/);
-  assert.match(worker,/providers\.includes\('google'\)/);
-  assert.match(worker,/async function requireSignedInGoogle\(req\)/);
-  assert.match(worker,/Google 로그인 후 총괄내역을 확인할 수 있습니다/);
   assert.match(worker,/\/api\/finance\/summary/);
-  assert.match(worker,/finance_detail_admin_only/);
-  assert.match(worker,/세부 회계내역은 관리자만 볼 수 있습니다/);
+  assert.match(worker,/path==='\/api\/finance'&&req.method==='GET'\)return listFinance\(env,url,false\)/);
+  assert.match(worker,/viewer:'public'/);
+  assert.match(worker,/\?\{evidenceStatus:r\.evidence_status/);
+  assert.match(worker,/createdBy:r\.created_by/);
   assert.match(worker,/관리자만 볼 수 있습니다/);
   assert.match(worker,/관리자 권한 · 총괄내역과 세부내역 확인 가능/);
   assert.match(worker,/writeToggle\.hidden=true/);
-  assert.match(worker,/writeToggle\.hidden=false/);
+  assert.match(worker,/writeToggle\.hidden=!admin/);
+  assert.match(worker,/requirePermission\(req,'finance'\)/);
   assert.match(worker,/\/board\/api\/admin\/finance/);
   assert.match(worker,/method:id\?"PUT":"POST"/);
   assert.match(worker,/method:"DELETE"/);
@@ -322,7 +321,9 @@ test('standalone board media and layout contract is shared by citizen voices and
   const financeStart=worker.indexOf('function financePage(req){');
   const financeEnd=worker.indexOf('function noticesPage(req){',financeStart);
   const financeBlock=worker.slice(financeStart,financeEnd);
-  assert.doesNotMatch(financeBlock,/elements\.images|data-share/);
+  assert.doesNotMatch(financeBlock,/elements\.images/);
+  assert.match(financeBlock,/data-share/);
+  assert.match(financeBlock,/data-comment/);
 });
 
 test('standalone board media endpoint is restricted to board-owned R2 prefixes',async()=>{
