@@ -1,11 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { handleTrafficIntelligence } from '../traffic-intelligence-control.js';
 import { readFile } from 'node:fs/promises';
 import {
   classifyTrafficUserAgent,
   isAllowedTelemetryOrigin,
   trafficSiteIdForHost,
   trafficSiteIdForVisit,
+  ROOT_PATH_SITE_IDS,
 } from '../traffic-intelligence.js';
 
 test('EKODI automation is separated from public crawlers and unknown browsers', () => {
@@ -97,4 +99,64 @@ test('shared shell sends only the site route and the daily admin report marks re
   assert.match(controller, /trafficSiteIdForVisit\(host, body\?\.site_path, body\?\.site_id\)/);
   assert.match(controller, /cloudflareRequests:'host-scoped/);
   assert.match(controller, /activeConcurrency:'not measured/);
+});
+
+test('browser telemetry may transmit only declared service routes, never arbitrary slugs',async()=>{
+  const shell=await readFile('shell/shell.js','utf8');
+  const rootsMatch=shell.match(/const trafficKnownRoots=new Set\('([^']+)'\.split\(' '\)\)/);
+  assert.ok(rootsMatch,'canonical route whitelist must be present in the browser shell');
+  const browserRoots=rootsMatch[1].split(' ');
+  const canonicalRoots=Object.keys(ROOT_PATH_SITE_IDS).filter(key=>!key.includes('/'));
+  assert.deepEqual([...new Set(browserRoots)].sort(),canonicalRoots.sort(),'browser and backend site roots must stay in sync');
+  assert.match(shell,/const first=trafficKnownRoots\.has\(routeRoot\)\?routeRoot:''/);
+  assert.match(shell,/site_path:first\+child/);
+  assert.doesNotMatch(shell,/site_path:location\.pathname/);
+});
+
+test('real visit handler preserves independent anonymous sessions across sibling sites',async()=>{
+  const rows=[];
+  const db={prepare(sql){
+    assert.match(sql,/INSERT INTO traffic_human_sessions/);
+    return {bind(...values){return {async run(){rows.push(values);return {success:true}}}}};
+  }};
+  const session='visitor_session_1234567890123456789012345';
+  async function visit(sitePath){
+    const req=new Request('https://ekodi.kr/api/telemetry/visit',{
+      method:'POST',
+      headers:{origin:'https://ekodi.kr','content-type':'text/plain'},
+      body:JSON.stringify({sid:session,site_id:'root',site_path:sitePath,surface:'home'})
+    });
+    return handleTrafficIntelligence(req,{DB:db});
+  }
+  const church=await visit('ekodichurch');
+  const mall=await visit('ekodimall');
+  assert.equal(church.status,204);
+  assert.equal(mall.status,204);
+  assert.equal(rows.length,2);
+  assert.equal(rows[0][2],'church');
+  assert.equal(rows[1][2],'mall');
+  assert.notEqual(rows[0][3],rows[1][3],'site-specific hashes must not collide or overwrite another site');
+  assert.equal(rows[0][0],rows[1][0]);
+  for(const row of rows){
+    assert.equal(row[1],'ekodi.kr');
+    assert.match(row[3],/^[a-f0-9]{32}$/);
+    assert.ok(!row.includes(session),'no raw browser sid should be persisted');
+  }
+});
+
+test('anonymous OPTIONS telemetry probe reveals version without accessing or writing D1',async()=>{
+  const request=new Request('https://ekodi.kr/api/telemetry/visit',{
+    method:'OPTIONS',headers:{
+      origin:'https://ekodi.kr',
+      'access-control-request-method':'POST'
+    }
+  });
+  let touched=false;
+  const env={DB:{prepare(){touched=true;throw new Error('D1 must not be touched')}}};
+  const response=await handleTrafficIntelligence(request,env);
+  assert.equal(response.status,204);
+  assert.equal(response.headers.get('x-ekodi-traffic-telemetry'),'site-scoped-v2');
+  assert.equal(response.headers.get('access-control-allow-origin'),'https://ekodi.kr');
+  assert.equal(response.headers.get('access-control-allow-methods'),'POST, OPTIONS');
+  assert.equal(touched,false);
 });

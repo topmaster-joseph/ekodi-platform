@@ -62,6 +62,9 @@ const controlApiTouched=changedFiles.some(file=>[
   'mission-control-entry-worker.js',
   // AI Provider API runtime ownership; release-automation changes also repair missed deployments.
   'ai-provider-control.js',
+  // Telemetry reader and site classifier run inside the Control API.
+  'traffic-intelligence-control.js',
+  'traffic-intelligence.js',
   'scripts/converge-orchestrated-pr-merge.mjs',
   'wrangler.api.toml',
   'deploy/manifests/control-api.worker.json',
@@ -95,6 +98,15 @@ const aiControlTouched=changedFiles.some(file=>
   file==='wrangler.ai.toml'||
   file==='.github/workflows/deploy-ai-control.yml'||
   file==='scripts/converge-orchestrated-pr-merge.mjs'
+);
+// GITHUB_TOKEN merges do not trigger main push workflows. Browser telemetry
+// changes require the dedicated Shell Worker, not only the shared Site Core.
+const shellRuntimeTouched=changedFiles.some(file=>
+  file.startsWith('shell/')||
+  ['ekodi-shell-worker.js','ekodi-shell-injector.js','ekodi-service-manifest.js',
+   'wrangler.shell.toml','deploy/manifests/shell.worker.json',
+   '.github/workflows/deploy-ekodi-shell.yml',
+   'scripts/converge-orchestrated-pr-merge.mjs'].includes(file)
 );
 const sharedSiteTouched=changedFiles.some(file=>
   // Shared administrator menu, canonical route registry and design contracts are production Site Core assets.
@@ -199,6 +211,14 @@ async function dispatchPostMergeDeploys(){
     });
     if(!dispatch.r.ok)fail('AI Control Plane deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-ai-control.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(shellRuntimeTouched){
+    const dispatch=await api('/actions/workflows/deploy-ekodi-shell.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Shell deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-ekodi-shell.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(sharedSiteTouched){
     const dispatch=await api('/actions/workflows/deploy-site-core.yml/dispatches',{
