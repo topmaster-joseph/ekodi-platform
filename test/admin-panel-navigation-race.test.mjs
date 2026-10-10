@@ -21,3 +21,13 @@ test('maturity requires a fresh super_admin session and serializes explicit auth
   assert.match(source,/authorized = true; root\.dataset\.ekodiMaturityAuthorized = 'true'/);
   assert.match(source,/root\.dataset\.ekodiMaturityAuthorized = 'false'/);
 });
+
+test('production Chromium reports the exact panel and protected auth state instead of silently skipping',async()=>{
+  const source=await readFile(new URL('../scripts/verify-admin-production-ui-e2e.mjs',import.meta.url),'utf8');
+  assert.match(source,/maturityAuthorization:section === 'maturity'/);
+  assert.match(source,/matchingPanels:/);
+  assert.match(source,/hiddenClass:panel\.classList\.contains\('hidden-panel'\)/);
+  assert.match(source,/Admin panel visibility contract failed/);
+  assert.match(source,/menu-failed-\$\{id\}\.png/);
+  assert.match(source,/throw new Error\(\x60\$\{id\}: Admin panel visibility contract failed/);
+});
