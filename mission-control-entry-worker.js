@@ -32,6 +32,7 @@ import { runAiProviderHealthSchedule } from './ai-provider-control.js';
 import { handleEkodiMcpGateway, handleEkodiMcpMetadata } from './ekodi-mcp-gateway.js';
 import { handleOrchestratorReleaseReceipt, handleOrchestratorCompletionReconciliation } from './ekodi-orchestrator-task-adapter.js';
 import { handleDevotionalControl } from './devotional-control.js';
+import { handlePublicChurchWorship } from './church-public-worship-control.js';
 import { handlePublicCommonScripture } from './common-scripture-registry.js';
 import { handleLearningControl } from './learning-control.js';
 import { handleLocalCommerceControl } from './local-commerce-control.js';
@@ -152,6 +153,8 @@ export default {
     const path = incoming.pathname;
     const scriptureResponse=handlePublicCommonScripture(request);
     if(scriptureResponse)return applyApiSecurityHeaders(scriptureResponse);
+    const publicWorship=await handlePublicChurchWorship(request,env);
+    if(publicWorship)return applyApiSecurityHeaders(publicWorship);
 
     if ((path === '/api' || path === '/api/') && request.method === 'GET') {
       return applyApiSecurityHeaders(new Response(JSON.stringify({
