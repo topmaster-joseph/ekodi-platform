@@ -37,7 +37,7 @@ Windows Agent:
    $env:EKODI_WORKSPACE_AUTOMATION_PROFILE = "$env:ProgramData\EKODI\GoogleWorkspace\automation-profile"
    $env:EKODI_WORKSPACE_CONSENT_FILE = "$env:ProgramData\EKODI\GoogleWorkspace\consent.json"
    $env:EKODI_WORKSPACE_CANARY_FILE = "$env:ProgramData\EKODI\GoogleWorkspace\canary.json"
-   $env:EKODI_AGENT_VERSION = "2.5.4"
+   $env:EKODI_AGENT_VERSION = "2.5.3"
    node "$env:ProgramData\EKODI\GoogleWorkspace\tools\ekodi-device-agent\windows\google-workspace-slides-audio.mjs" --canary
    ```
 7. Agent advertises `workspaceSlidesAudio:true` only with a fresh (24 hours) matching local canary, intact runtime files, dedicated profile, consent and Node runtime. Session/Google permissions are never distributed via EKODI cloud logs.
