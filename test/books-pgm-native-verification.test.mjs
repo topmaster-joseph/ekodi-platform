@@ -73,4 +73,5 @@ test('EKODI-owned native Chromium executor verifies child page text in isolated 
  assert.match(sharedWorkflow,/allowMutation:false/);
  assert.match(sharedWorkflow,/headless == true/);
  assert.match(sharedWorkflow,/ephemeralContext == true/);
+ assert.match(sharedWorkflow,/inputs\.surface_registry \|\| inputs\.surface_paths \|\| inputs\.surface_path/);
 });
