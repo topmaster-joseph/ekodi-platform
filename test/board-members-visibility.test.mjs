@@ -104,3 +104,13 @@ test('members-only visibility wins over anonymous-write configuration',async()=>
   const health=await call(publicDb,'/api/health');
   assert.equal(health.status,200);
 });
+
+test('customer-domain and internal service-binding aliases never bypass members-only read gate',async()=>{
+  for(const url of ['https://cgma.or.kr/board/api/posts',
+    'https://board.internal.ekodi/cgma/board/api/posts']){
+    const res=await handleSiteBoardRequest(new Request(url),{DB:fakeDb('members')});
+    assert.equal(res.status,401,url);
+    assert.equal(res.headers.get('x-ekodi-board-id'),'site:cgma:main');
+    assert.equal((await res.json()).error,'authentication_required',url);
+  }
+});
