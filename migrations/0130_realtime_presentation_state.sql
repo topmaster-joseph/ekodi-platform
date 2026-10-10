@@ -1,6 +1,6 @@
 -- EKODI Live: tenant-scoped, room-owned presenter slide cursor.
 -- Shared D1 migration; state is public only when its room permits anonymous viewers.
--- No stream keys, passwords, text transcripts or viewer identities are recorded.
+-- Stores only bounded slide position, deck reference, room/tenant identity and update time.
 CREATE TABLE IF NOT EXISTS realtime_presentation_state (
   room_id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL,
