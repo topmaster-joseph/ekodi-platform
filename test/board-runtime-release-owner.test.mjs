@@ -46,3 +46,11 @@ test('CGMA internal board remains route-less and released only with official tas
  assert.match(cgmaWorkflow,/release_task_id:/);
  assert.match(cgmaWorkflow,/wrangler\.cgma-board-internal\.toml/);
 });
+
+test('CGMA recovery deploys route-less internal board before the public edge gateway',()=>{
+ const internal=cgmaWorkflow.indexOf('deploy --config .ekodi-control/wrangler.cgma-board-internal.toml');
+ const gateway=cgmaWorkflow.indexOf('deploy --config wrangler.cgma-root-gateway.toml');
+ assert.ok(internal>0,'CGMA internal board deploy step missing');
+ assert.ok(gateway>internal,'public gateway cannot deploy before its verified board service');
+ assert.match(cgmaWorkflow,/Verify CGMA edge production/);
+});
