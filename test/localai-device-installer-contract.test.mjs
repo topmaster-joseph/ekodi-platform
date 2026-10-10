@@ -64,6 +64,37 @@ test('local AI proof survives sanitized admin device projection without secrets'
  assert.equal(invalid.localAiProof.ollamaApi, 'unknown');
 });
 
+test('sanitized local AI proof persists after last-five command history rollover', () => {
+ const findFunction = name => {
+   const start = api.indexOf('function ' + name + '(');
+   const end = api.indexOf('\n}\n', start) + 3;
+   assert.ok(start >= 0 && end > start, name + ' not found');
+   return api.slice(start, end);
+ };
+ const sandbox = {
+   safeText: (value, max = 120) => String(value ?? '').trim().slice(0, max),
+   parseJson: value => JSON.parse(value || '{}'),
+   DIAGNOSTIC_SECTIONS: {},
+ };
+ const source = findFunction('summarizeCommandResult') + '\n' +
+   findFunction('mergeDiagnosticResult') + '\nmergeDiagnosticResult';
+ const merge = vm.runInNewContext(source, sandbox);
+ const device = { diagnostics_json: JSON.stringify({ system: { cpuLoadPct: 3 } }) };
+ const response = merge(device, 'software.localai.verify', { localAiProof: {
+   checkedAt: '2026-10-10T21:00:00Z', ollamaApi: 'ready', inference: 'passed',
+   selectedModel: 'qwen2.5-coder:1.5b', claudeAuth: 'faked_auth',
+   accessToken: 'SENSITIVE_VALUE',
+ } });
+ assert.equal(response.localAiProof.inference, 'passed');
+ assert.equal(response.localAiProof.claudeAuth, 'requires_interactive_user_verification');
+ assert.equal(response.localAiProof.accessToken, undefined);
+ assert.equal(response.system.cpuLoadPct, 3);
+ assert.ok(!JSON.stringify(response).includes('SENSITIVE_VALUE'));
+ assert.ok(api.includes("current.localAiProof = summarizeCommandResult(result).localAiProof"));
+ const admin = fs.readFileSync(path.join(root,'device-control-admin.js'),'utf8');
+ assert.ok(admin.includes("proofCommand?.result?.localAiProof || device.diagnostics?.localAiProof"));
+});
+
 test('installer file checksum is pinned in device agent',()=>{
  const hash=crypto.createHash('sha256').update(payload).digest('hex').toUpperCase();
  assert.ok(agent.includes(hash));
