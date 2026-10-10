@@ -213,6 +213,8 @@ on:
       - 'author-billing-admin.js'
       - 'author-billing-admin.css'
       - 'ai-ops-admin.js'
+      - 'platform-maturity-admin.js'
+      - 'test/admin-panel-navigation-race.test.mjs'
       - 'ai-management-admin.js'
       - 'ai-management-admin.css'
       - 'user-ai-tier-panel.js'
