@@ -4,6 +4,7 @@
 // login automation, active desktop/browser profile reuse or generic browsing.
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   normalizeSlidesAudioPilot, SLIDES_AUDIO_PILOT_ID,
   SLIDES_AUDIO_PRESENTATION_ID, SLIDES_AUDIO_OPERATION,
@@ -14,6 +15,7 @@ const hostBase = 'https://docs.google.com/presentation/d/';
 const profile = path.resolve(process.env.EKODI_WORKSPACE_AUTOMATION_PROFILE || '');
 const consentFile = process.env.EKODI_WORKSPACE_CONSENT_FILE || '';
 const evidenceFile = process.env.EKODI_WORKSPACE_RESULT_FILE || '';
+const canaryFile = process.env.EKODI_WORKSPACE_CANARY_FILE || '';
 const outcome = (status, extra={}) => ({
   status, presentationId:SLIDES_AUDIO_PRESENTATION_ID,
   dedicatedProfileVerified:false, foregroundFocusStolen:false,
@@ -121,7 +123,7 @@ async function insertOne(page,item){
   }
   return {slideId:item.slideId,fileId:item.fileId,nativeAudioControlObserved,playbackVerified,hyperlinkOnly:false};
 }
-export async function runGoogleWorkspaceAudioPilot(){
+export async function runGoogleWorkspaceAudioPilot({canaryOnly=false}={}){
   safeProfile();
   normalizeSlidesAudioPilot({pilotId:SLIDES_AUDIO_PILOT_ID,presentationId:SLIDES_AUDIO_PRESENTATION_ID,operation:SLIDES_AUDIO_OPERATION});
   await validateOperatorConsent();
@@ -138,6 +140,24 @@ export async function runGoogleWorkspaceAudioPilot(){
       acceptDownloads:false,permissions:[],serviceWorkers:'block',
     });
     const page=context.pages()[0]||await context.newPage();
+    if(canaryOnly){
+      await page.goto(hostBase+SLIDES_AUDIO_PRESENTATION_ID+'/edit#slide=id.'+SLIDES_AUDIO_ITEMS[0].slideId,{
+        waitUntil:'domcontentloaded',timeout:45000,
+      });
+      if(authRequired(page.url()) || /\/accounts\/ServiceLogin/.test(page.url())) refuse('AUTH_REQUIRED');
+      const menu=page.getByRole('menuitem',{name:/^(Insert|삽입)$/i});
+      if(!(await menu.first().isVisible({timeout:8000}))) refuse('SLIDES_EDITOR_AUTH_REQUIRED');
+      const canary={
+        verified:true,pilotId:SLIDES_AUDIO_PILOT_ID,presentationId:SLIDES_AUDIO_PRESENTATION_ID,
+        agentVersion:process.env.EKODI_AGENT_VERSION||'',
+        verifiedAt:new Date().toISOString(),
+        dedicatedProfileVerified:true, interactiveLoginOpened:false,
+      };
+      if(!canaryFile || !canary.agentVersion) refuse('CANARY_OUTPUT_CONFIGURATION_REQUIRED');
+      await fs.writeFile(canaryFile,JSON.stringify(canary,null,2),{mode:0o600});
+      report.status='canary-ready';
+      return report;
+    }
     for(const item of SLIDES_AUDIO_ITEMS){
       const observation=await insertOne(page,item);
       report.items.push(observation);
@@ -157,10 +177,11 @@ export async function runGoogleWorkspaceAudioPilot(){
     if(evidenceFile)await fs.writeFile(evidenceFile,JSON.stringify(report,null,2),{mode:0o600}).catch(()=>{});
   }
 }
-if(process.argv[1] && path.resolve(process.argv[1])===path.resolve(new URL(import.meta.url).pathname)){
-  runGoogleWorkspaceAudioPilot().then(r=>{
+if(process.argv[1] && path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
+  const canaryOnly=process.argv.includes('--canary');
+  runGoogleWorkspaceAudioPilot({canaryOnly}).then(r=>{
     process.stdout.write(JSON.stringify(r)+'\n');
-    if(r.status!=='completed')process.exitCode=2;
+    if(r.status!=='completed' && r.status!=='canary-ready')process.exitCode=2;
   }).catch(e=>{
     process.stdout.write(JSON.stringify(outcome('blocked',{code:e.code||'PREFLIGHT_FAILED'}))+'\n');
     process.exitCode=2;
