@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {verifyIndependentBoardLive, LIVE_BOARDS} from '../scripts/verify-independent-board-live.mjs';
+import {readFile} from 'node:fs/promises';
 
 function fixture({mismatch = false, subscription = true, leak = false} = {}) {
   const calls = [];
@@ -56,4 +57,10 @@ test('messages require a verified community subscription even while social featu
 test('anonymous membership, snapshot or export data access fails the production gate', async () => {
   const {fetcher} = fixture({leak: true});
   await assert.rejects(() => verifyIndependentBoardLive({fetcher, sleep: async () => {}}), /expected 401\/403, got HTTP 200/);
+});
+
+test('Shared Site Core production deploy executes the read-only subpage sentinel after promotion', async () => {
+  const workflow = await readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /run: node scripts\/verify-independent-board-live\.mjs/);
+  assert.ok(workflow.indexOf('Verify independent board subpages') > workflow.indexOf('name: deploy'));
 });
