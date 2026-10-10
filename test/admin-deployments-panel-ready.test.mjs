@@ -12,7 +12,7 @@ test('Deployments loader does not confuse existing navigation button with author
  assert.match(demand,/deployments:\{[^\n]*real:'\[data-section="deployments"\]',ready:'#releaseControl'/);
  const loadScripts=demand.indexOf('for (const src of feature.scripts || []) await loadScript(src)');
  const navReady=demand.indexOf('const real = await waitFor(feature.real)');
- const actualReady=demand.indexOf('if (feature.ready) await waitFor(feature.ready, 10000)');
+ const actualReady=demand.indexOf('if(feature.ready)await waitFor(feature.ready,1e4)');
  const placeholderRestore=demand.indexOf('placeholder.removeAttribute(\'data-demand-feature\')');
  assert.ok(loadScripts>=0&&loadScripts<navReady&&navReady<actualReady&&actualReady<placeholderRestore);
 });
