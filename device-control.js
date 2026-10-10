@@ -1437,6 +1437,11 @@ function mergeDiagnosticResult(device, commandType, result) {
     return result.diagnostics;
   }
   const current = parseJson(device.diagnostics_json);
+  // Keep the latest successful native AI verification receipt visible even
+  // after this device's recentCommands window has rotated out.
+  if (commandType === 'software.localai.verify' && result.localAiProof && typeof result.localAiProof === 'object') {
+    current.localAiProof = summarizeCommandResult(result).localAiProof;
+  }
   const section = DIAGNOSTIC_SECTIONS[commandType];
   if (section && result[section] && typeof result[section] === 'object') current[section] = result[section];
   if (result.storage && typeof result.storage === 'object') current.storage = result.storage;
