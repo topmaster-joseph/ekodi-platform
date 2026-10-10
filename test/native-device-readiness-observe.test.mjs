@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {observeNativeDeviceReadiness,summarizeNativeDeviceReadiness} from '../scripts/observe-native-device-readiness.mjs';
 
 const now=Date.parse('2026-10-10T14:00:00.000Z');
@@ -47,4 +48,16 @@ test('missing administrator session is rejected before any API request',async()=
   let n=0;
   await assert.rejects(observeNativeDeviceReadiness({token:'',fetchImpl:async()=>{n++;}}),/trusted_admin_session_required/);
   assert.equal(n,0);
+});
+
+test('scheduled native heartbeat checks cannot run mutating canaries without release receipt',()=>{
+  const workflow=readFileSync(new URL('../.github/workflows/device-agent-production-verification.yml',import.meta.url),'utf8');
+  assert.match(workflow,/Observe production native PC Agent heartbeat without issuing commands/);
+  assert.match(workflow,/github.event_name != 'workflow_dispatch' \|\| inputs.execution_mode != 'verify'/);
+  assert.match(workflow,/Verify native browser through bounded isolated session stages/);
+  assert.match(workflow,/github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'verify'/);
+  assert.match(workflow,/test -n "\$EKODI_RELEASE_BRANCH_REF"/);
+  assert.match(workflow,/test -n "\$EKODI_RELEASE_TASK_ID"/);
+  assert.match(workflow,/validate-ekodi-ai-change-orchestration.mjs" --release/);
+  assert.match(workflow,/Revoke short-lived verification session/);
 });
