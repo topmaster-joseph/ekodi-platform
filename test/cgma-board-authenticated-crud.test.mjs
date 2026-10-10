@@ -72,6 +72,11 @@ test('independent board: verified admin session permits own create/edit/soft-del
     assert.equal((await health.json()).independent,true);
     const anonymous=await worker.fetch(request('/api/posts','POST','',{title:'untrusted',body:'blocked'}),env);
     assert.equal(anonymous.status,401);
+    const forged=request('/api/posts','POST','',{title:'forged identity',body:'blocked'});
+    forged.headers.set('x-ekodi-admin-email','admin1@example.invalid');
+    forged.headers.set('x-ekodi-admin-role','super_admin');
+    assert.equal((await worker.fetch(forged,env)).status,401,
+      'unverified email or role headers never become an authenticated board principal');
     const invalid=await worker.fetch(request('/api/posts','POST','viewer',{title:'not admin',body:'blocked'}),env);
     assert.equal(invalid.status,401);
     const create=await worker.fetch(request('/api/posts','POST','admin1',{title:'CGMA test post',body:'test-only'}),env);
