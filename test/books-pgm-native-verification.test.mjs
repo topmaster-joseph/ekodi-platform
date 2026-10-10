@@ -7,6 +7,8 @@ const root=new URL('../',import.meta.url);
 const read=relative=>readFile(new URL(relative,root),'utf8');
 const registry=JSON.parse(await read('config/books-pgm-native-verification.json'));
 const workflow=await read('.github/workflows/ekodi-books-pgm-native-verification.yml');
+const booksBatch=JSON.parse(await read('config/ekodibooks-native-verification.json'));
+const pgmBatch=JSON.parse(await read('config/pgm-cgma-native-verification.json'));
 const sharedWorkflow=await read('.github/workflows/ekodi-background-browser-worker.yml');
 const router=await read('platform-router-entry-worker.js');
 
@@ -51,14 +53,21 @@ test('all referenced child pages and PGM admin handoff exist in repository asset
  assert.match(admin,/https:\/\/ekodi\.kr\/admin\/\?route=workspace&source=pyeonggongmok/);
 });
 
-test('EKODI-owned native Chromium executor verifies actual child page content on two isolated device profiles',()=>{
- assert.match(workflow,/desktop-native-browser:/);
- assert.match(workflow,/mobile-native-browser:/);
+test('EKODI-owned native Chromium executor verifies child page text in isolated bounded device batches',()=>{
+ assert.deepEqual([...booksBatch.surfaces,...pgmBatch.surfaces].map(e=>e.path),registry.surfaces.map(e=>e.path));
+ for(const batch of [booksBatch,pgmBatch]){
+   assert.equal(batch.maxPaths,6);
+   assert.ok(batch.surfaces.length<=6);
+   assert.equal(batch.readOnly,true);
+ }
+ for(const job of ['desktop-books','mobile-books','desktop-pgm-cgma','mobile-pgm-cgma'])assert.ok(workflow.includes('  '+job+':'),job);
  assert.match(workflow,/device_profile: desktop/);
  assert.match(workflow,/device_profile: mobile-portrait/);
- assert.equal((workflow.match(/uses: \.\/\.github\/workflows\/ekodi-background-browser-worker\.yml/g)||[]).length,2);
- assert.equal((workflow.match(/surface_registry: config\/books-pgm-native-verification\.json/g)||[]).length,2);
- assert.equal((workflow.match(/surface_paths: \/ekodibooks,\/pgm/g)||[]).length,2);
+ assert.equal((workflow.match(/uses: \.\/\.github\/workflows\/ekodi-background-browser-worker\.yml/g)||[]).length,4);
+ assert.equal((workflow.match(/surface_registry: config\/ekodibooks-native-verification\.json/g)||[]).length,2);
+ assert.equal((workflow.match(/surface_registry: config\/pgm-cgma-native-verification\.json/g)||[]).length,2);
+ assert.equal((workflow.match(/surface_paths: \/ekodibooks/g)||[]).length,2);
+ assert.equal((workflow.match(/surface_paths: \/pgm/g)||[]).length,2);
  assert.match(sharedWorkflow,/expectedTextByPath/);
  assert.match(sharedWorkflow,/actions\.push\(\{type:'assertText',text:expectedTextByPath\.get\(p\)\}\)/);
  assert.match(sharedWorkflow,/allowMutation:false/);
