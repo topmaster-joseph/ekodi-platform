@@ -238,8 +238,8 @@
       }
       try {
         await Promise.all((feature.styles||[]).map(loadStyle));
-        for (const src of feature.scripts||[]) await loadScript(src);
-        const real=await waitFor(feature.real);
+        for (const src of feature.scripts || []) await loadScript(src);
+        const real = await waitFor(feature.real);
         if(feature.ready)await waitFor(feature.ready,1e4);
         if (placeholder) {
           const handler=placeholder.__ekodiDemandHandler;
@@ -249,7 +249,7 @@
           placeholder.removeAttribute('aria-busy');
           placeholder.classList.remove('is-loading');
           placeholder.removeAttribute('data-demand-feature');
-          if (placeholder !== real&&placeholder.isConnected) placeholder.remove();
+          if (placeholder !== real && placeholder.isConnected) placeholder.remove();
         }
         window.EKODIAdminSidebar?.sync?.(document);
         window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:key } }));
@@ -274,7 +274,7 @@
 
   function placeholder(key,feature) {
     if (!nav || nav.querySelector(`[data-demand-feature="${key}"]`)) return false;
-    const button=nav.querySelector(feature.real);
+    const button = nav.querySelector(feature.real);
     if (!button) return false;
     let changed=false;
     if (button.dataset.demandFeature !== key) {
