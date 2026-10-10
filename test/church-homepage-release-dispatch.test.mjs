@@ -31,4 +31,8 @@ test('Church Pages production proof checks newly authorized inline asset on real
   assert.match(w,/https:\/\/ekodi\.kr\/ekodichurch\/church-worship-admin\.js\?release=\$\{release\}/);
   assert.match(w,/grep -Fq 'scope=worship-access' \/tmp\/church-worship-admin\.js/);
   assert.match(w,/CHURCH_SOURCE_SHA/);
+  assert.match(w,/EKODI_CHURCH_EXTENDED_I18N_DIAGNOSTIC=/);
+  assert.match(w,/throw error;/);
+  assert.match(w,/window\.EKODIChurchExtendedI18n\?\.getLocale/);
+  assert.match(w,/\['ko-KR','en','zh-CN','ja','my','kac','vi','mn','id'\]/);
 });
