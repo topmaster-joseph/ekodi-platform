@@ -19,3 +19,7 @@ The Church public website is owned by `topmaster-joseph/ekodi-church`. The EKODI
 5. Verify desktop/mobile public worship pages, older admin fallback, and no routing regressions.
 
 If credentials, guarded deployment or authenticated browser access are unavailable, leave this release unverified. Never report production completion from static tests or merge status alone.
+
+## Protected base synchronization evidence
+
+The official orchestrator reconciled this recovery branch with the latest protected main. Repository-owner follow-up validation now requests fresh PR checks for the synchronized head without altering the API implementation or bypassing any required status check.
