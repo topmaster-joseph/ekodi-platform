@@ -139,6 +139,21 @@ export async function runGoogleWorkspaceAudioPilot({canaryOnly=false}={}){
       headless:true,channel:'msedge',viewport:{width:1440,height:900},
       acceptDownloads:false,permissions:[],serviceWorkers:'block',
     });
+    // The dedicated Google editor may fetch its own Google-hosted assets;
+    // it may NOT silently contact arbitrary third-party origins.
+    await context.route('**/*',route=>{
+      try{
+        const uri=new URL(route.request().url());
+        const host=uri.hostname.toLowerCase();
+        const permitted=uri.protocol==='https:' &&
+          (host==='google.com' || host.endsWith('.google.com') ||
+           host==='googleapis.com' || host.endsWith('.googleapis.com') ||
+           host==='gstatic.com' || host.endsWith('.gstatic.com') ||
+           host==='googleusercontent.com' || host.endsWith('.googleusercontent.com') ||
+           host==='gvt1.com' || host.endsWith('.gvt1.com'));
+        return permitted?route.continue():route.abort('blockedbyclient');
+      }catch{return route.abort('blockedbyclient');}
+    });
     const page=context.pages()[0]||await context.newPage();
     if(canaryOnly){
       await page.goto(hostBase+SLIDES_AUDIO_PRESENTATION_ID+'/edit#slide=id.'+SLIDES_AUDIO_ITEMS[0].slideId,{
