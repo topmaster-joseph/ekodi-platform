@@ -57,10 +57,27 @@ export function auditDataStoreTopology(topology, contents) {
     if (store.expectedName && store.expectedName !== match.name) errors.push(store.id + ': resource name mismatch');
     if (store.expectedContains && !String(match.value ?? '').includes(store.expectedContains)) errors.push(store.id + ': endpoint mismatch');
     if (store.state === 'configured' && missing) errors.push(store.id + ': configured but unresolved binding');
-    if (store.state === 'provisioning-required' && !missing) warnings.push(store.id + ': verify live resource before promotion');
-    if (missing) warnings.push(store.id + ': not provisioned in manifest');
+    let declarationState = missing ? 'unresolved-binding' : 'declared';
+    if (store.state === 'runtime-resolved') {
+      const workflow = contents[store.resolverWorkflow];
+      const placeholder = String(store.resolverPlaceholder || '');
+      if (!missing || !placeholder || match.value !== placeholder) {
+        errors.push(store.id + ': expected only the explicit deployment-time placeholder');
+      }
+      if (!workflow || !workflow.includes('d1 list --json') ||
+          !workflow.includes('d1 create ' + store.expectedName) ||
+          !workflow.includes('sed -i "s/' + placeholder + '/$db_id/"')) {
+        errors.push(store.id + ': trusted deployment-time database resolution is missing');
+      }
+      declarationState = 'deployment-time-binding';
+      warnings.push(store.id + ': deployment resolves D1 ID; production health must be verified separately');
+    } else if (store.state === 'provisioning-required' && !missing) {
+      warnings.push(store.id + ': verify live resource before promotion');
+    } else if (missing) {
+      warnings.push(store.id + ': unresolved declaration; provider inventory may differ');
+    }
     inventory.push({ id: store.id, engine: store.engine, ownerBoundary: store.ownerBoundary,
-      isolation: store.isolation, state: missing ? 'unresolved-binding' : 'declared', liveVerified: false });
+      isolation: store.isolation, state: declarationState, liveVerified: false });
   }
   if (!ids.size) errors.push('No registered stores');
   return { ok: !errors.length, errors, warnings, inventory };
