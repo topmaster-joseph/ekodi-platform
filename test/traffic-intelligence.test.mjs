@@ -6,6 +6,7 @@ import {
   isAllowedTelemetryOrigin,
   trafficSiteIdForHost,
   trafficSiteIdForVisit,
+  ROOT_PATH_SITE_IDS,
 } from '../traffic-intelligence.js';
 
 test('EKODI automation is separated from public crawlers and unknown browsers', () => {
@@ -97,4 +98,16 @@ test('shared shell sends only the site route and the daily admin report marks re
   assert.match(controller, /trafficSiteIdForVisit\(host, body\?\.site_path, body\?\.site_id\)/);
   assert.match(controller, /cloudflareRequests:'host-scoped/);
   assert.match(controller, /activeConcurrency:'not measured/);
+});
+
+test('browser telemetry may transmit only declared service routes, never arbitrary slugs',async()=>{
+  const shell=await readFile('shell/shell.js','utf8');
+  const rootsMatch=shell.match(/const trafficKnownRoots=new Set\('([^']+)'\.split\(' '\)\)/);
+  assert.ok(rootsMatch,'canonical route whitelist must be present in the browser shell');
+  const browserRoots=rootsMatch[1].split(' ');
+  const canonicalRoots=Object.keys(ROOT_PATH_SITE_IDS).filter(key=>!key.includes('/'));
+  assert.deepEqual([...new Set(browserRoots)].sort(),canonicalRoots.sort(),'browser and backend site roots must stay in sync');
+  assert.match(shell,/const first=trafficKnownRoots\.has\(routeRoot\)\?routeRoot:''/);
+  assert.match(shell,/site_path:first\+child/);
+  assert.doesNotMatch(shell,/site_path:location\.pathname/);
 });
