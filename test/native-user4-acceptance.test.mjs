@@ -195,3 +195,13 @@ test('USER4 official update refuses offline, other host, and concurrent commands
   }
   assert.equal(writes,0);
 });
+
+test('USER4 browser error classifier accepts only bounded diagnostic categories',()=>{
+  assert.equal(classifyUser4BrowserFailure('CDP_WORKER_FAILED: {"code":"CDP_BROWSER_EARLY_EXIT_ACCESS"}'), 'CDP_BROWSER_EARLY_EXIT_ACCESS');
+  assert.equal(classifyUser4BrowserFailure('CDP_BROWSER_EARLY_EXIT_DEPENDENCY C:\\Users\\Sensitive\\chrome.exe'), 'CDP_BROWSER_EARLY_EXIT_DEPENDENCY');
+  assert.equal(classifyUser4BrowserFailure('CDP_BROWSER_EARLY_EXIT_POLICY'), 'CDP_BROWSER_EARLY_EXIT_POLICY');
+  assert.equal(classifyUser4BrowserFailure('CDP_BROWSER_EARLY_EXIT_SANDBOX'), 'CDP_BROWSER_EARLY_EXIT_SANDBOX');
+  assert.equal(classifyUser4BrowserFailure('CDP_BROWSER_EARLY_EXIT_ZERO'), 'CDP_BROWSER_EARLY_EXIT_ZERO');
+  assert.equal(classifyUser4BrowserFailure('CDP_BROWSER_EARLY_EXIT_UNKNOWN'), 'CDP_BROWSER_EARLY_EXIT_UNKNOWN');
+  assert.equal(classifyUser4BrowserFailure('C:\\Users\\Sensitive\\private.log'), 'BROWSER_FAILURE_UNCLASSIFIED');
+});

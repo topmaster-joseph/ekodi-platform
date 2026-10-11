@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { allowedTarget, browserCandidates, probeCdp, attemptNativeCanaryBrowsers, installedCanaryBrowsers } from '../tools/ekodi-device-agent/windows/ekodi-native-browser-cdp.mjs';
+import { allowedTarget, browserCandidates, probeCdp, attemptNativeCanaryBrowsers, installedCanaryBrowsers, classifyNativeBrowserEarlyExit } from '../tools/ekodi-device-agent/windows/ekodi-native-browser-cdp.mjs';
 
 test('native CDP canary only accepts canonical HTTPS EKODI', () => {
   assert.equal(allowedTarget('https://ekodi.kr/'), true);
@@ -62,4 +62,30 @@ test('one-shot CLI uses a bounded watchdog and exits explicitly after serializin
   assert.match(source,/stream\.write\(JSON\.stringify\(output\)/);
   assert.match(source,/process\.exit\(failed\?1:0\)/);
   assert.match(source,/timeoutMs:12000/);
+});
+
+test('Windows browser early exit reports only safe fixed categories, never stderr paths',()=>{
+  const sensitive='C:\\Users\\private-user\\confidential\\chrome.exe';
+  const cases=[
+    {code:5,stderr:'Access is denied '+sensitive,expected:'CDP_BROWSER_EARLY_EXIT_ACCESS'},
+    {code:1,stderr:'A DLL was not found '+sensitive,expected:'CDP_BROWSER_EARLY_EXIT_DEPENDENCY'},
+    {code:1,stderr:'Group policy has blocked execution '+sensitive,expected:'CDP_BROWSER_EARLY_EXIT_POLICY'},
+    {code:1,stderr:'sandbox failed to initialize '+sensitive,expected:'CDP_BROWSER_EARLY_EXIT_SANDBOX'},
+    {code:0,stderr:'',expected:'CDP_BROWSER_EARLY_EXIT_ZERO'},
+    {code:1,stderr:sensitive,expected:'CDP_BROWSER_EARLY_EXIT_UNKNOWN'}
+  ];
+  for(const {code,stderr,expected} of cases){
+    const actual=classifyNativeBrowserEarlyExit(code,stderr);
+    assert.equal(actual,expected);
+    assert.doesNotMatch(actual,/private-user|confidential|Users/);
+  }
+});
+test('Chrome then Edge failures remain categorically visible without raw stderr',async()=>{
+  await assert.rejects(()=>attemptNativeCanaryBrowsers({
+    browsers:['chrome.exe','msedge.exe'],
+    probe:async({browser})=>{
+      if(browser==='chrome.exe')throw Error('CDP_BROWSER_EARLY_EXIT_ACCESS');
+      throw Error('CDP_BROWSER_EARLY_EXIT_POLICY');
+    }
+  }),/CDP_BROWSER_EARLY_EXIT_POLICY/);
 });
