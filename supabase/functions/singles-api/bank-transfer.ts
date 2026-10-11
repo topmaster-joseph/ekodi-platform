@@ -122,7 +122,7 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   const products=await many(admin.from('singles_product_catalog').select('code,title,category,scope,amount_krw,message_credits,contact_credits,period_days,session_minutes,active,legal_reviewed').order('code'));
   return reply(req,{products,collection_open:false});
  }
- const catalogCode=path.match(new RegExp('^/bank/admin/catalog/([a-z][a-z0-9_]{2,49})
+ const catalogCode=path.match(/^\/bank\/admin\/catalog\/([a-z][a-z0-9_]{2,49})$/)?.[1];
  if(catalogCode&&method==='PUT'){
   const role=await operator(admin,userId);
   if(!role||role.can_configure!==true)return reply(req,{error:'price_admin_required'},403);
