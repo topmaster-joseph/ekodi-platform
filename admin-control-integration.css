@@ -42,3 +42,8 @@ html body:has(#adminControlHome:not([hidden])) .admin-command-workbench {
   }
   #adminControlHome .admin-control-home-foot span { max-width:64%; }
 }
+
+/* The existing administrator navigation reveals the integrated command view. */
+html body:has(#adminControlHome:not([hidden])) [data-ekodi-control-entry]{
+  background:#eaf1ff!important;color:#174ea6!important;font-weight:750!important;
+}
