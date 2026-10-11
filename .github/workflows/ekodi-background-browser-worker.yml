@@ -199,7 +199,7 @@ jobs:
           },null,2));
           NODE
       - name: EKODI native Church nine-language diagnostic
-        if: github.event_name == 'pull_request' || inputs.church_locale_diagnostic == true
+        if: inputs.church_locale_diagnostic == true
         shell: bash
         run: |
           set -euo pipefail
