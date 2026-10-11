@@ -202,8 +202,8 @@ test('readiness response includes USER4 local AI capability and only SELECT-back
   const start=api.indexOf("if (request.method === 'GET' && path === \`\${ADMIN_PREFIX}/readiness\`)");
   const end=api.indexOf("if (request.method === 'GET' && path === ADMIN_PREFIX)",start);
   const route=api.slice(start,end);
-  assert.match(route,/localAiVerify: capabilities\\.localAiVerify === true/);
+  assert.match(route,/localAiVerify: capabilities\.localAiVerify === true/);
   assert.match(route,/proofs:projectNativeDeviceProofs/);
-  assert.match(route,/c\\.command_type IN \\('computer\\.browser\\.canary', 'software\\.localai\\.verify'\\)/);
-  assert.doesNotMatch(route,/INSERT\\s+INTO|UPDATE\\s+device_commands|DELETE\\s+FROM|token_hash/i);
+  assert.match(route,/c\.command_type IN \('computer\.browser\.canary', 'software\.localai\.verify'\)/);
+  assert.doesNotMatch(route,/INSERT\s+INTO|UPDATE\s+device_commands|DELETE\s+FROM|token_hash/i);
 });
