@@ -48,7 +48,11 @@ on:
       - 'test/native-user3-localai-recovery.test.mjs'
       - 'scripts/verify-native-user4-acceptance.mjs'
       - 'scripts/verify-native-user4-virtual-probe.mjs'
+      - 'scripts/select-native-user4-execution-route.mjs'
+      - 'scripts/select-native-user4-execution-route.mjs'
       - 'test/native-user4-acceptance.test.mjs'
+      - 'test/native-user4-execution-route.test.mjs'
+      - 'test/native-user4-execution-route.test.mjs'
       - 'test/native-localai-proof.test.mjs'
       - 'test/native-device-readiness-observe.test.mjs'
       - 'test/device-agent-production-verification.test.mjs'
@@ -103,7 +107,8 @@ jobs:
           node --check scripts/recover-native-user3-localai.mjs
           node --test test/native-user3-localai-recovery.test.mjs
           node --check scripts/verify-native-user4-acceptance.mjs
-          node --test test/native-device-readiness-observe.test.mjs test/native-agent-status-canary.test.mjs test/native-localai-proof.test.mjs test/native-user4-acceptance.test.mjs
+          node --check scripts/select-native-user4-execution-route.mjs
+          node --test test/native-device-readiness-observe.test.mjs test/native-agent-status-canary.test.mjs test/native-localai-proof.test.mjs test/native-user4-acceptance.test.mjs test/native-user4-execution-route.test.mjs
           node --test test/device-agent-production-verification.test.mjs test/non-disruptive-device-agent-contract.test.mjs test/background-browser-canary-contract.test.mjs test/isolated-desktop-backend.test.mjs test/isolated-guest-agent.test.mjs
           grep -Fq "agent.self_update" scripts/verify-device-agent-production.mjs
           grep -Fq "computer.browser.canary" scripts/verify-device-agent-production.mjs
@@ -253,10 +258,16 @@ jobs:
         run: node scripts/recover-native-user2-localai.mjs
 
       - name: Verify USER4 native isolated Hyper-V backend readiness
+        id: user4_virtual_probe
+        continue-on-error: true
         if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user4-virtual-probe'
         env:
           DEVICE_TARGET_HOSTNAME: 'user4'
         run: node scripts/verify-native-user4-virtual-probe.mjs
+
+      - name: Select USER4 safe native execution route
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user4-virtual-probe'
+        run: node scripts/select-native-user4-execution-route.mjs
 
       - name: Verify USER2 native isolated Hyper-V backend readiness
         if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-virtual-probe'
@@ -287,6 +298,11 @@ jobs:
         if: always()
         shell: bash
         run: |
+          if [ -f artifacts/native-user4-execution-route.json ]; then
+            echo '## USER4 Safe Native Execution Route' >> "$GITHUB_STEP_SUMMARY"
+            jq -r '"- Route: \(.route)\n- Kind: \(.routeKind)\n- Hyper-V ready: \(.desktopBackendReady)\n- Browser alternative ready: \(.browserAlternativeReady)\n- Gap: \(.gapReason // "-")\n- External provider used: \(.externalProviderUsed // false)"' artifacts/native-user4-execution-route.json >> "$GITHUB_STEP_SUMMARY"
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+          fi
           if [ -f artifacts/native-device-readiness.json ]; then
             echo '## EKODI PC3 Native Agent Observation (no device commands)' >> "$GITHUB_STEP_SUMMARY"
             jq -r '"- Mode: \(.mode)\n- Registered: \(.registered)\n- Heartbeat healthy: \(.heartbeatHealthy)\n- State: \(.verificationState)\n- Browser capability projected: \(.capabilities.backgroundBrowser)\n- Native cutover verified: \(.nativeCutoverVerified)\n- Observed at: \(.observedAt)"' artifacts/native-device-readiness.json >> "$GITHUB_STEP_SUMMARY"
