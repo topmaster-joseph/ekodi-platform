@@ -44,6 +44,16 @@ try{
   });
   await page.route(url=>url.origin===API_ORIGIN&&url.pathname===API_PATH&&url.searchParams.get('scope')==='worship-access',async route=>{
     const req=route.request();
+    // A cross-origin request can require a CORS OPTIONS preflight.
+    // Both requests are isolated to this allowlisted capability endpoint.
+    if(req.method()==='OPTIONS'){
+      return route.fulfill({status:204,headers:{
+        'access-control-allow-origin':ORIGIN,
+        'access-control-allow-methods':'GET, OPTIONS',
+        'access-control-allow-headers':'authorization, apikey, accept, content-type',
+        'access-control-max-age':'0'
+      }});
+    }
     intercepted++;
     assert.equal(req.method(),'GET');
     assert.equal(req.headers().authorization,'Bearer '+FAKE_TOKEN);
@@ -51,7 +61,7 @@ try{
     await route.fulfill({
       status:ok?200:403,
       contentType:'application/json',
-      headers:{'access-control-allow-origin':ORIGIN,'cache-control':'no-store'},
+      headers:{'access-control-allow-origin':ORIGIN,'access-control-allow-headers':'authorization,apikey,accept,content-type','cache-control':'no-store'},
       body:JSON.stringify(ok?{ok:true,permissions:{worship:true},churchSlug:'ekodi-church'}:{error:'ROLE_NOT_ALLOWED'})
     });
   });
@@ -72,7 +82,17 @@ try{
     }));
     window.dispatchEvent(new Event('focus'));
   },FAKE_TOKEN);
-  await page.waitForFunction(()=>document.querySelector('[data-church-worship-admin]')?.hidden===false,null,{timeout:12000});
+  try{
+    await page.waitForFunction(()=>document.querySelector('[data-church-worship-admin]')?.hidden===false,null,{timeout:12000});
+  }catch(error){
+    const state=await page.evaluate(()=>({
+      hasSyntheticSession:!!sessionStorage.getItem('ekodi-church-pastor-session'),
+      adminHidden:document.querySelector('[data-church-worship-admin]')?.hidden??null,
+      adminScriptLoaded:!![...document.scripts].find(x=>x.src.endsWith('/church-worship-admin.js'))
+    }));
+    console.error('EKODI_NATIVE_CHURCH_ROLE_DIAGNOSTIC='+JSON.stringify({intercepted,state,pageErrorCount:errors.length,requestHttpStatus:httpErrors.map(x=>x.status).slice(0,12)}));
+    throw error;
+  }
   assert.equal(await admin.evaluate(el=>el.hidden),false);
   assert.equal(intercepted,1);
   checks.push({step:'in-browser synthetic server-authorized response',result:'visible',intercepted});
