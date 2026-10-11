@@ -108,6 +108,30 @@
     $('#workerCards').innerHTML=WORKERS.map(([id,name])=>card(name,'상태는 실행 시 확인',id+' 실행계층')).join('');
     $('#resultCards').innerHTML=state.results.length?state.results.map(r=>card(r.title,statusLabel(r.status),(r.provider||'EKODI')+(r.taskId?' · '+r.taskId:'')+'\n'+r.summary)).join(''):card('아직 결과가 없습니다','대기','명령 처리 후 검증된 결과가 이곳에 누적됩니다.');
   }
+  async function refreshOrchestratorTasks(){
+    const recent=state.tasks.filter(item=>item.target==='EKODI Orchestrator' && /^orch_[a-z0-9_-]{16,}$/i.test(item.id||'')).slice(0,10);
+    let updated=0,unavailable=0;
+    for(const row of recent){
+      try{
+        const response=await api('/api/control/ai/v8/orchestrator/tasks/'+encodeURIComponent(row.id));
+        const task=response?.task;
+        if(!task||task.taskId!==row.id)continue;
+        row.status=String(task.state||row.status);
+        row.at=now();
+        // A task state is NOT equivalent to independently verified production delivery.
+        row.productionEvidencePresent=Boolean(task.productionEvidence);
+        const result=state.results.find(item=>item.taskId===row.id);
+        if(result){
+          result.status=row.status;
+          result.summary='오케스트레이터 상태: '+statusLabel(row.status)+
+            ' · 운영 증빙: '+(row.productionEvidencePresent?'수신됨 (검증 별도)':'미확인');
+        }
+        updated++;
+      }catch{unavailable++}
+    }
+    saveState();renderPanels();
+    toast('오케스트레이터 상태 '+updated+'건 갱신'+(unavailable?' · '+unavailable+'건 조회 실패':''));
+  }
   function resizeInput(){const input=$('#commandInput');input.style.height='auto';input.style.height=Math.min(input.scrollHeight,190)+'px'}
   function newTask(){state.activeId=null;setView('chat');renderMessages();$('#commandInput').focus()}
   function closeRail(){$('#controlRail').classList.remove('open')}
@@ -118,7 +142,7 @@
     $('#commandInput').addEventListener('input',resizeInput);
     $('#commandInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#commandForm').requestSubmit()}});
     $$('[data-prompt]').forEach(b=>b.onclick=()=>{$('#commandInput').value=b.dataset.prompt;resizeInput();$('#commandInput').focus()});
-    $$('[data-refresh]').forEach(b=>b.onclick=()=>{renderPanels();toast('현재 Control 기록을 새로 표시했습니다.')});
+    $('[data-refresh]').forEach(b=>b.onclick=()=>{refreshOrchestratorTasks().catch(()=>toast('오케스트레이터 상태 갱신 실패'))});
   }
   async function boot(){
     bind();renderRecent();renderMessages();renderPanels();
