@@ -975,7 +975,7 @@ function Invoke-EkodiNativeCdpCanary {
   if (-not $nodeCommand) { throw 'CDP_NODE_RUNTIME_REQUIRED' }
   $nodeExe = [string]$nodeCommand.Source
   $nodeVersionText = & $nodeExe --version
-  if ($LASTEXITCODE -ne 0 -or $nodeVersionText -notmatch '^v(\\d+)\\.') { throw 'CDP_NODE_VERSION_UNAVAILABLE' }
+  if ($LASTEXITCODE -ne 0 -or $nodeVersionText -notmatch '^v(\d+)\.') { throw 'CDP_NODE_VERSION_UNAVAILABLE' }
   if ([int]$Matches[1] -lt 22) { throw 'CDP_NODE_22_REQUIRED' }
   $workerRoot = Join-Path $Root 'browser-worker'
   New-Item -ItemType Directory -Path $workerRoot -Force | Out-Null
