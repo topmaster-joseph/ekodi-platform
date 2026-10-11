@@ -41,7 +41,8 @@ test('profile share URL requires explicit visibility, verified adult, and https'
 test('multi-period price plans require verified bank grants and paid event fee does not silently enroll',()=>{
  assert.match(migration,/community_90/);
  assert.match(migration,/community_365/);
- assert.match(bank,/\.in\('plan_code',codes\)/);
+ assert.match(bank,/const codes=planCode==='community'/);
+ assert.match(bank,/\.eq\('plan_code',code\)/);
  assert.match(bank,/can_configure/);
  assert.match(social,/event_fee_verification_not_configured/);
  assert.match(social,/event_pricing_capability_required/);
