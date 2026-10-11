@@ -20,3 +20,17 @@ test('no direct client grants, and purchase terms and prices are snapshotted',()
  assert.match(sql,/terms_version text not null/);
  assert.match(sql,/amount_krw integer not null/);
 });
+
+test('only receiver consent can authorize a charged contact request',()=>{
+ assert.match(sql,/sender_id uuid not null/);
+ assert.match(sql,/receiver_id uuid not null/);
+ assert.match(sql,/request_id uuid not null unique/);
+ assert.match(sql,/status='accepted'/);
+ assert.match(sql,/charged_at is not null and accepted_at is not null/);
+ assert.match(sql,/status not in \('declined','cancelled','expired'\) or charged_units=0/);
+});
+test('domestic and international license paperwork are admin-only and do not turn on brokerage',()=>{
+ assert.match(sql,/singles_brokerage_application_checklist/);
+ assert.match(sql,/regime in \('domestic','international'\)/);
+ assert.match(sql,/revoke all on public.singles_brokerage_application_checklist/);
+});
