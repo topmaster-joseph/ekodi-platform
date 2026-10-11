@@ -597,14 +597,30 @@ export function mountAdminSidebar(root = document, options = {}) {
 
   let queued = false;
   let syncing = false;
+  let resyncRequested = false;
   const sync = () => {
-    if (syncing) return;
+    if (syncing) {
+      // A lazy Admin panel may change the selected work area while the
+      // sidebar is rendering. Preserve that update instead of dropping it.
+      resyncRequested = true;
+      return;
+    }
     syncing = true;
     try { syncAdminSidebar(root, options); }
-    finally { syncing = false; }
+    finally {
+      syncing = false;
+      if (resyncRequested) {
+        resyncRequested = false;
+        schedule();
+      }
+    }
   };
   const schedule = () => {
-    if (queued || syncing) return;
+    if (syncing) {
+      resyncRequested = true;
+      return;
+    }
+    if (queued) return;
     queued = true;
     queueMicrotask(() => {
       queued = false;
