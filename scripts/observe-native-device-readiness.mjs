@@ -34,7 +34,8 @@ export function summarizeNativeDeviceReadiness(devices,{hostname='user3',now=Dat
       isolatedDesktop:ready?.capabilities?.isolatedDesktop===true,
       isolatedDesktopProbe:ready?.capabilities?.isolatedDesktopProbe===true,
       agentStatus:ready?.capabilities?.agentStatus===true,
-      localAiInstall:ready?.capabilities?.localAiInstall===true
+      localAiInstall:ready?.capabilities?.localAiInstall===true,
+      localAiVerify:ready?.capabilities?.localAiVerify===true
     },
     nativeCutoverVerified:false,
     remoteCommandIssued:false,
