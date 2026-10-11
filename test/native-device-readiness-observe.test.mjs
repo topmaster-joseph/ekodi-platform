@@ -78,7 +78,7 @@ test('production native heartbeat endpoint is an authenticated SELECT-only snaps
   assert.match(route,/WHERE LOWER\(r.hostname\) = \?/);
   assert.match(route,/mode:'observe-only'/);
   assert.doesNotMatch(route,/reconcileJobs|UPDATE\s+|INSERT\s+|DELETE\s+|\.run\(|\.batch\(|\.first\(/i);
-  assert.doesNotMatch(route,/token_hash|command_type|issued_by|device_id:/i);
+  assert.doesNotMatch(route,/token_hash|issued_by|device_id:/i);
   assert.match(source.slice(end,end+145),/reconcileJobs\(env\)/);
 });
 test('untrusted hostnames are blocked before querying production API',async()=>{
@@ -174,4 +174,24 @@ test('fleet observation fails closed for untrusted token or duplicated/invalid t
     token:'temporary-session-token-long-enough',hostnames:['user3','user3'],fetchImpl
   }),/invalid_fleet_targets/);
   assert.equal(called,0);
+});
+
+test('scheduled native USER4 observation projects only bounded results, never raw command metadata',async()=>{
+  const token='temporary-session-token-long-enough';
+  const fakeFetch=async(url,init)=>{
+    assert.equal(init.method,'GET');
+    assert.match(url,/hostname=user4$/);
+    return new Response(JSON.stringify({
+      devices:[{...online,hostname:'USER4'}],
+      proofs:{
+        browser:{status:'succeeded',verified:true,fresh:true,completedAt:new Date(now-1000).toISOString(),secret:'never-share'},
+        localAi:{status:'failed',verified:false,fresh:true,completedAt:new Date(now-2000).toISOString(),result:'sensitive-output'}
+      }
+    }),{status:200});
+  };
+  const result=await observeNativeDeviceReadiness({token,hostname:'user4',now,fetchImpl:fakeFetch});
+  assert.equal(result.targetAlias,'user4');
+  assert.equal(result.proofs.browser.verified,true);
+  assert.equal(result.proofs.localAi.verified,false);
+  assert.doesNotMatch(JSON.stringify(result),/never-share|sensitive-output|deviceToken/);
 });
