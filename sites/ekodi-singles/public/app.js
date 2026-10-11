@@ -425,7 +425,7 @@ async function signedIn(status){
  else if(page==='/discover')await showDiscover(h);
  else if(page==='/messages')await showMessages(h);
  else if(page==='/subscribe')await showSubscription(h);
- else if(page==='/admin'){await showBankAdmin(h);await showEventPricing(h);}
+ else if(page==='/admin'){await showBankAdmin(h);await showEventPricing(h);const a=text('a','결혼중개업 신고·등록 공식 신청 ↗','outline');a.href='https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13510000012';a.target='_blank';a.rel='noopener noreferrer';h.append(a);}
  else if(page==='/groups')paragraph(h,'지역 공동체·소그룹 기능을 준비하고 있습니다. 행사 목록을 먼저 확인해 주세요.');
  else {paragraph(h,'반갑습니다. 나의 프로필, 공개 행사, 동행 찾기를 살펴보세요.');const row=text('div','','actions');for(const [name,href] of [['프로필 등록','/singles/my'],['공개 행사','/singles/events'],['동행 찾기','/singles/discover']]){const a=text('a',name,'outline');a.href=href;row.append(a)}h.append(row)}
 }
