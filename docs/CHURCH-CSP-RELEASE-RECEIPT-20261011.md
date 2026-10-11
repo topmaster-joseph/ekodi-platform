@@ -15,3 +15,7 @@ The Church Pages workflow validates the source `_headers` policy before deployme
 After official Pages deployment, rerun the first-party EKODI Chromium UI lifecycle PR #4224 (with its synthetic role response fixture clearly identified) and verify anonymous API denial separately. A real authorized Google administrator session still requires independent operator-positive evidence.
 
 This documentation commit causes the existing EKODI Convergent Merge controller to verify the active PR against protected main. No branch protection or CI bypass is authorized.
+
+## Protected-main synchronization evidence
+
+The official EKODI Convergent Merge run #38136214850 reconciled this branch with the current main and reported `branch-updated`. The exact approved source and required CSP checks are unchanged. This owner-authored follow-up requires fresh CI and native release guards on the synchronized head and allows only the official protected merge workflow to promote the release.
