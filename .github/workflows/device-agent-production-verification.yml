@@ -17,6 +17,7 @@ on:
           - user2-localai
           - user2-upgrade-localai
           - user4-acceptance
+          - user4-browser-recovery
       release_branch_ref:
         description: 'Orchestrator release branch, required in verify mode'
         required: false
@@ -45,6 +46,8 @@ on:
       - 'scripts/recover-native-user3-localai.mjs'
       - 'test/native-user3-localai-recovery.test.mjs'
       - 'scripts/verify-native-user4-acceptance.mjs'
+      - 'scripts/recover-native-user4-browser.mjs'
+      - 'test/native-user4-browser-recovery.test.mjs'
       - 'test/native-user4-acceptance.test.mjs'
       - 'test/native-localai-proof.test.mjs'
       - 'test/native-device-readiness-observe.test.mjs'
@@ -100,6 +103,8 @@ jobs:
           node --check scripts/recover-native-user3-localai.mjs
           node --test test/native-user3-localai-recovery.test.mjs
           node --check scripts/verify-native-user4-acceptance.mjs
+          node --check scripts/recover-native-user4-browser.mjs
+          node --test test/native-user4-browser-recovery.test.mjs
           node --test test/native-device-readiness-observe.test.mjs test/native-agent-status-canary.test.mjs test/native-localai-proof.test.mjs test/native-user4-acceptance.test.mjs
           node --test test/device-agent-production-verification.test.mjs test/non-disruptive-device-agent-contract.test.mjs test/background-browser-canary-contract.test.mjs test/isolated-desktop-backend.test.mjs test/isolated-guest-agent.test.mjs
           grep -Fq "agent.self_update" scripts/verify-device-agent-production.mjs
@@ -148,7 +153,7 @@ jobs:
           node-version: '24'
 
       - name: EKODI AI Orchestration Gate for mutating verification
-        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user3-upgrade-localai' || inputs.execution_mode == 'user2-localai' || inputs.execution_mode == 'user2-upgrade-localai' || inputs.execution_mode == 'user4-acceptance')
+        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user3-upgrade-localai' || inputs.execution_mode == 'user2-localai' || inputs.execution_mode == 'user2-upgrade-localai' || inputs.execution_mode == 'user4-acceptance' || inputs.execution_mode == 'user4-browser-recovery')
         env:
           EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
           EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
@@ -258,6 +263,10 @@ jobs:
       - name: Verify USER4 native CDP and Ollama receipts through EKODI Device Agent
         if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user4-acceptance'
         run: node scripts/verify-native-user4-acceptance.mjs
+
+      - name: Transactional USER4 Agent refresh then independent CDP and Ollama acceptance
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user4-browser-recovery'
+        run: node scripts/recover-native-user4-browser.mjs
 
       - name: Verify native browser through bounded isolated session stages
         if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'verify'
