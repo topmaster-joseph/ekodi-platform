@@ -40,3 +40,11 @@ test('device canary uses a fresh unique profile and cleans it even when the brow
   assert.match(deviceAgent, /Remove-Item -LiteralPath \$canaryProfile -Recurse -Force -ErrorAction SilentlyContinue/);
   assert.match(deviceAgent, /\$process\.ExitCode -eq 0 -and \$stdout\.Length -gt 0/);
 });
+
+test('device canary retries empty Chrome DOM on Edge with an isolated profile and remains fail closed', () => {
+  assert.match(deviceAgent, /function Resolve-EkodiEdgeBrowser/);
+  assert.match(deviceAgent, /function Invoke-BackgroundBrowserCanary\(\[bool\]\$PreferEdge = \$false\)/);
+  assert.match(deviceAgent, /-not \$PreferEdge -and \[IO.Path\]::GetFileName\(\$browser\) -eq 'chrome.exe'/);
+  assert.match(deviceAgent, /Invoke-BackgroundBrowserCanary -PreferEdge \$true/);
+  assert.match(deviceAgent, /\$process\.ExitCode -eq 0 -and \$stdout\.Length -gt 0/);
+});
