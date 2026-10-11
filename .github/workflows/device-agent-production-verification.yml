@@ -279,3 +279,5 @@ jobs:
           echo 'Short-lived Device Agent verification session revoked.'
 
 # Trigger existing guarded Orchestrator convergence for USER2 acceptance.
+
+# Owner-authored CI recheck after guarded base synchronization.
