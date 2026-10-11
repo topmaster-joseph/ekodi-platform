@@ -1,0 +1,204 @@
+name: EKODI Presence Guarded Release
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/functions/presence-attendance-api/**'
+      - 'supabase/migrations/20261011150000_presence_offline_core.sql'
+      - 'supabase/migrations/20261011150100_presence_api_functions.sql'
+      - '.github/workflows/deploy-presence.yml'
+      - 'test/presence-release-workflow.test.mjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-presence.yml'
+      - 'supabase/functions/presence-attendance-api/**'
+      - 'supabase/migrations/20261011150000_presence_offline_core.sql'
+      - 'supabase/migrations/20261011150100_presence_api_functions.sql'
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Real EKODI Orchestrator task branch (ai/<agent>/orch_<task>)'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Matching, officially issued Orchestrator task ID'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: write
+
+concurrency:
+  group: ekodi-presence-guarded-production
+  cancel-in-progress: false
+
+env:
+  PRODUCTION_PROJECT_REF: renzehysxirjilvdxacv
+  STAGING_PROJECT_REF: lxcxwbdwwojjkgybbqii
+  TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+  TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+  TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+  TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify non-biometric tenant-private release
+        run: |
+          set -euo pipefail
+          node --test test/presence-contract.test.mjs test/mission-presence-contract.test.mjs test/presence-release-workflow.test.mjs
+          test -s supabase/functions/presence-attendance-api/index.ts
+          test -s supabase/migrations/20261011150000_presence_offline_core.sql
+          test -s supabase/migrations/20261011150100_presence_api_functions.sql
+          ! grep -q -- '--no-verify-jwt' .github/workflows/deploy-presence.yml
+          grep -Fq 'revoke all on function public.presence_apply' supabase/migrations/20261011150100_presence_api_functions.sql
+          grep -Fq 'noindex,nofollow,noarchive' space/ekodimission-presence.page
+
+  release:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Recover the exact official EKODI release provenance
+        env:
+          INPUT_BRANCH: ${{ inputs.release_branch_ref || '' }}
+          INPUT_TASK: ${{ inputs.release_task_id || '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            metadata=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls")
+            release_branch=$(jq -r --arg sha "$GITHUB_SHA" '[.[] | select(.merged_at != null and .merge_commit_sha == $sha) | .head.ref] | first // empty' <<<"$metadata")
+            if [[ -z "$release_branch" ]]; then
+              echo "No merged PR found for the exact current commit"; exit 1
+            fi
+            release_task="${release_branch##*/}"
+          else
+            if [[ "$GITHUB_REF" != 'refs/heads/main' ]]; then
+              echo "Manual production dispatch must run on main"; exit 1
+            fi
+            release_branch="$INPUT_BRANCH"
+            release_task="$INPUT_TASK"
+          fi
+          if [[ ! "$release_branch" =~ ^ai/[A-Za-z0-9._-]+/orch_[A-Za-z0-9._-]+$ ]]; then
+            echo "Not an official EKODI Orchestrator release branch"; exit 1
+          fi
+          if [[ "$release_task" != "${release_branch##*/}" ]]; then
+            echo "Release branch and task do not match"; exit 1
+          fi
+          echo "EKODI_RELEASE_BRANCH_REF=$release_branch" >> "$GITHUB_ENV"
+          echo "EKODI_RELEASE_TASK_ID=$release_task" >> "$GITHUB_ENV"
+      - name: Verify real Orchestrator issuance and production guardrails
+        run: |
+          set -euo pipefail
+          node scripts/validate-ekodi-ai-change-orchestration.mjs --release
+          node scripts/validate-deployment-guardrails.mjs
+      - name: Select scoped Supabase deployment credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="$TOKEN_A"
+          [[ -n "$token" ]] || token="$TOKEN_B"
+          [[ -n "$token" ]] || token="$TOKEN_C"
+          [[ -n "$token" ]] || token="$TOKEN_D"
+          [[ -n "$token" ]] || { echo 'Missing production Supabase deployment credential'; exit 1; }
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Apply and verify staged Presence schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref="$STAGING_PROJECT_REF"
+          for migration in supabase/migrations/20261011150000_presence_offline_core.sql supabase/migrations/20261011150100_presence_api_functions.sql; do
+            jq -Rs '{query:.,read_only:false}' "$migration" > /tmp/presence-query.json
+            code=$(curl -sS -o /tmp/presence-db-result.json -w '%{http_code}' --max-time 80 -X POST "https://api.supabase.com/v1/projects/$ref/database/query" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H 'Content-Type: application/json' --data-binary @/tmp/presence-query.json)
+            [[ "$code" == 201 ]] || { echo "Staging migration failed ($code): $migration"; cat /tmp/presence-db-result.json; exit 1; }
+          done
+          cat > /tmp/presence-proof.sql <<'SQL'
+          do $proof$
+          begin
+            if (select count(*) from information_schema.tables where table_schema='presence_private') != 7 then
+              raise exception 'presence table inventory incomplete';
+            end if;
+            if exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='presence_private' and c.relkind='r' and not c.relrowsecurity) then
+              raise exception 'presence table RLS missing';
+            end if;
+            if not exists(select 1 from public.tenants where slug='ekodi-church') then
+              raise exception 'church staging tenant missing';
+            end if;
+          end $proof$;
+          SQL
+          jq -Rs '{query:.,read_only:false}' /tmp/presence-proof.sql > /tmp/presence-query.json
+          code=$(curl -sS -o /tmp/presence-db-result.json -w '%{http_code}' --max-time 40 -X POST "https://api.supabase.com/v1/projects/$ref/database/query" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H 'Content-Type: application/json' --data-binary @/tmp/presence-query.json)
+          [[ "$code" == 201 ]] || { echo "Staging privacy proof failed"; cat /tmp/presence-db-result.json; exit 1; }
+      - name: Deploy staging authenticated Edge Function
+        run: npx --yes supabase@2.116.0 functions deploy presence-attendance-api --project-ref "$STAGING_PROJECT_REF"
+      - name: Stage negative-auth canary
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=$(curl -sS -o /tmp/stage-presence-guest.json -w '%{http_code}' --max-time 25 "https://$STAGING_PROJECT_REF.supabase.co/functions/v1/presence-attendance-api?tenant=ekodi-church")
+          [[ "$status" == 401 ]] || { echo "Staging attendance API incorrectly accepted anonymous request (HTTP $status)"; exit 1; }
+      - name: Verify both production tenant slugs before any production mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/presence-production-preflight.sql <<'SQL'
+          do $preflight$
+          begin
+            if (select count(*) from public.tenants where slug in ('ekodi-church','ekodimission')) != 2 then
+              raise exception 'required production tenant slugs missing';
+            end if;
+          end $preflight$;
+          SQL
+          jq -Rs '{query:.,read_only:false}' /tmp/presence-production-preflight.sql > /tmp/presence-query.json
+          code=$(curl -sS -o /tmp/presence-db-result.json -w '%{http_code}' --max-time 40 -X POST "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/database/query" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H 'Content-Type: application/json' --data-binary @/tmp/presence-query.json)
+          [[ "$code" == 201 ]] || { echo "Production tenant preflight failed; no production migration attempted"; exit 1; }
+      - name: Apply approved additive schema to production
+        shell: bash
+        run: |
+          set -euo pipefail
+          for migration in supabase/migrations/20261011150000_presence_offline_core.sql supabase/migrations/20261011150100_presence_api_functions.sql; do
+            jq -Rs '{query:.,read_only:false}' "$migration" > /tmp/presence-query.json
+            code=$(curl -sS -o /tmp/presence-db-result.json -w '%{http_code}' --max-time 80 -X POST "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/database/query" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H 'Content-Type: application/json' --data-binary @/tmp/presence-query.json)
+            [[ "$code" == 201 ]] || { echo "Production Presence schema migration failed ($code): $migration"; exit 1; }
+          done
+          jq -Rs '{query:.,read_only:false}' /tmp/presence-proof.sql > /tmp/presence-query.json
+          code=$(curl -sS -o /tmp/presence-db-result.json -w '%{http_code}' --max-time 40 -X POST "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/database/query" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H 'Content-Type: application/json' --data-binary @/tmp/presence-query.json)
+          [[ "$code" == 201 ]] || { echo "Production Presence RLS/table proof failed"; exit 1; }
+      - name: Deploy production authenticated Presence API
+        run: npx --yes supabase@2.116.0 functions deploy presence-attendance-api --project-ref "$PRODUCTION_PROJECT_REF"
+      - name: Verify production anonymous and cross-origin denial
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://$PRODUCTION_PROJECT_REF.supabase.co/functions/v1/presence-attendance-api?tenant=ekodi-church"
+          guest=$(curl -sS -o /tmp/prod-presence-guest.json -w '%{http_code}' --max-time 25 "$endpoint")
+          [[ "$guest" == 401 ]] || { echo "Production Presence guest read denied incorrectly (HTTP $guest)"; exit 1; }
+          echo "Protected Presence production SQL and API canaries verified." >> "$GITHUB_STEP_SUMMARY"
+      - name: Ask official EKODI Church release pipeline to publish latest Church main
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run deploy-ekodi-church-homepage.yml --ref main -f "release_branch_ref=$EKODI_RELEASE_BRANCH_REF" -f "release_task_id=$EKODI_RELEASE_TASK_ID"
+          echo "Church central release dispatched; verify its separate production job and live attendance route before marking complete." >> "$GITHUB_STEP_SUMMARY"
