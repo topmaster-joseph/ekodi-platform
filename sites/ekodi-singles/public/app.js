@@ -385,6 +385,28 @@ async function showBankAdmin(h){
   }
  }catch(e){notice(p,e?.status===403?'운영 권한이 없습니다.':errorText(e))}
 }
+async function showEventPricing(h){
+ try{
+  const result=await api('/admin/events');
+  const panel=text('section','','member-card');panel.append(text('h3','행사별 참가비 정책'));
+  paragraph(panel,'행사 참가비는 무료 또는 개별 금액으로 설정할 수 있습니다. 유료 참가비 입금 검증 기능을 개통하기 전까지 유료 신청은 차단됩니다.');
+  if(!(result.events||[]).length)paragraph(panel,'가격을 설정할 등록 행사가 없습니다.');
+  for(const event of result.events||[]){
+   const row=text('article','','mini-card');row.append(text('h4',event.title));
+   const label=text('label','참가비(원)','field'),input=document.createElement('input');
+   input.type='number';input.min='0';input.max='1000000';input.step='100';input.value=String(event.fee_krw||0);label.append(input);
+   const noticeText=text('p','','status-text');
+   row.append(label,button('참가비 저장',async()=>{
+    const price=Number(input.value);
+    if(!Number.isInteger(price)||price<0||price>1000000){noticeText.textContent='0원부터 100만원까지 입력하세요.';return}
+    if(!confirm('해당 행사의 참가비를 변경합니까? 기존 참가 신청자가 있으면 변경되지 않습니다.'))return;
+    try{await api('/admin/events/'+event.id+'/fee',{method:'PUT',body:{fee_krw:price}});noticeText.textContent='행사 참가비를 저장했습니다.'}
+    catch(e){noticeText.textContent=errorText(e)}
+   },'outline'),noticeText);panel.append(row);
+  }
+  h.append(panel);
+ }catch(e){if(e?.status!==403)notice(h,'행사 참가비 관리 연결을 확인해 주세요.')}
+}
 async function signedIn(status){
  document.querySelectorAll('[data-member-nav]').forEach(link=>{link.hidden=false});
  $('serviceStage').textContent='로그인 완료';
@@ -396,7 +418,7 @@ async function signedIn(status){
  else if(page==='/discover')await showDiscover(h);
  else if(page==='/messages')await showMessages(h);
  else if(page==='/subscribe')await showSubscription(h);
- else if(page==='/admin')await showBankAdmin(h);
+ else if(page==='/admin'){await showBankAdmin(h);await showEventPricing(h);}
  else if(page==='/groups')paragraph(h,'지역 공동체·소그룹 기능을 준비하고 있습니다. 행사 목록을 먼저 확인해 주세요.');
  else {paragraph(h,'반갑습니다. 나의 프로필, 공개 행사, 동행 찾기를 살펴보세요.');const row=text('div','','actions');for(const [name,href] of [['프로필 등록','/singles/my'],['공개 행사','/singles/events'],['동행 찾기','/singles/discover']]){const a=text('a',name,'outline');a.href=href;row.append(a)}h.append(row)}
 }
