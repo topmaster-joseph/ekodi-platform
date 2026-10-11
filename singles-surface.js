@@ -21,13 +21,16 @@ function paymentEnabled(env){return socialEnabled(env)&&env?.SINGLES_PAID_ACTION
 function bankEnabled(env){return socialEnabled(env)&&env?.SINGLES_BANK_TRANSFER_ENABLED==='true'}
 function bankVerifyEnabled(env){return bankEnabled(env)&&env?.SINGLES_BANK_VERIFICATION_ENABLED==='true'}
 function configuredOrigin(raw){try{const u=new URL(String(raw||''));return u.protocol==='https:'?u:null}catch{return null}}
-function status(env){const active=enabled(env);return{
+function status(env){const active=enabled(env);
+ // The Supabase publishable key is public; admin preparation still needs login and a separately provisioned operator capability.
+ const prepReady=Boolean(configuredOrigin(env?.SINGLES_API_URL)&&configuredOrigin(env?.SUPABASE_URL)&&env?.SUPABASE_PUBLISHABLE_KEY);
+ return{
  service:'ekodi-singles',name:'EKODI 동행',phase:active?'enrollment-preview':'preparing',
- onboarding_enabled:active,social_enabled:socialEnabled(env),paid_actions_enabled:paymentEnabled(env),
+ onboarding_enabled:active,admin_preparation_enabled:prepReady,social_enabled:socialEnabled(env),paid_actions_enabled:paymentEnabled(env),
  matching_enabled:false,messaging_enabled:socialEnabled(env),messages_require_subscription:true,paid_brokerage_enabled:false,
  bank_transfer_enabled:bankEnabled(env),bank_verification_enabled:bankVerifyEnabled(env),consulting_optional:true,
  events:[],identity_provider:'ekodi',
- ...(active?{auth:{supabase_url:env.SUPABASE_URL,publishable_key:env.SUPABASE_PUBLISHABLE_KEY}}:{})
+ ...(active||prepReady?{auth:{supabase_url:env.SUPABASE_URL,publishable_key:env.SUPABASE_PUBLISHABLE_KEY}}:{})
 }}
 function allowApi(path,method){
  if(path==='/api/me'&&['GET','PUT'].includes(method))return ['/me',false];
@@ -70,7 +73,9 @@ async function api(req,env,sub){
  const route=allowApi(sub,req.method);if(!route)return json({error:'not_found'},404);
  // Permit ONLY operator-authorized licensing preparation before member enrollment launch.
  // Every request still requires a verified bearer and the Supabase operator capability.
- const adminPreparation=sub==='/api/bank/admin/brokerage-readiness';
+ const adminPreparation=sub==='/api/bank/admin/brokerage-readiness'||
+  (req.method==='GET'&&sub==='/api/bank/admin/catalog')||
+  (req.method==='PUT'&&/^\/api\/bank\/admin\/catalog\/[a-z][a-z0-9_]{2,49}$/.test(sub));
  if(!enabled(env)&&!adminPreparation)return json({error:'singles_enrollment_not_launched'},503);
  const [targetPath,social]=route;
  if(social&&!socialEnabled(env)&&!adminPreparation)return json({error:'singles_social_not_launched'},503);
