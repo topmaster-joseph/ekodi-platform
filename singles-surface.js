@@ -37,7 +37,7 @@ function allowApi(path,method){
  if(path==='/api/subscription'&&method==='GET')return ['/subscription',true];
  for(const [endpoint,methods] of [
   ['/api/bank/plans',['GET']],['/api/bank/orders',['GET','POST']],
-  ['/api/bank/admin/orders',['GET']],['/api/bank/admin/config',['GET','PUT']],['/api/bank/admin/catalog',['GET']],['/api/bank/admin/brokerage-checklist',['GET','PUT']],['/api/bank/consulting/requests',['GET','POST']]]){
+  ['/api/bank/admin/orders',['GET']],['/api/bank/admin/config',['GET','PUT']],['/api/bank/admin/catalog',['GET']],['/api/bank/consulting/requests',['GET','POST']]]){
    if(path===endpoint&&methods.includes(method))return [path.slice(4),true];
  }
  if(/^\/api\/bank\/admin\/catalog\/[a-z][a-z0-9_]{2,49}$/.test(path)&&method==='PUT')return [path.slice(4),true];
