@@ -57,3 +57,17 @@ test('moderation deployment is orchestrator-authorized and never replays vulnera
   assert.match(workflow,/credential unavailable: failing closed/);
   assert.match(workflow,/Verify that security guards are installed in production/);
 });
+
+test('protected merge reconciler only dispatches reviewed guards after official release receipt and matching main blobs',()=>{
+  const runner=readFileSync(new URL('../.github/workflows/reconcile-mission-media-moderation-release.yml',import.meta.url),'utf8');
+  assert.match(runner,/release-receipt/);
+  assert.match(runner,/\.authorized == true/);
+  assert.match(runner,/merged_at/);
+  assert.match(runner,/if \[ -n "\$merged_at" \]/);
+  assert.match(runner,/source_sha/);
+  assert.match(runner,/main_sha/);
+  assert.match(runner,/\[ "\$source_sha" = "\$main_sha" \]/);
+  assert.match(runner,/deploy-activity-public-share-schema.yml\/dispatches/);
+  assert.match(runner,/ref:"main"/);
+  assert.doesNotMatch(runner,/supabase\.com\/v1\/projects\/.*\/database\/query/);
+});
