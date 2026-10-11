@@ -121,14 +121,27 @@ receiptUrl.searchParams.set('taskId',taskId);receiptUrl.searchParams.set('branch
 const receipt=await request(receiptUrl,{headers:{accept:'application/json','user-agent':'ekodi-release-provenance-recovery'}});
 if(!receipt.response.ok||receipt.data?.authorized!==true)fail(`recovery receipt not authorized: HTTP ${receipt.response.status} ${JSON.stringify(receipt.data)}`);
 
-const refPath=`/repos/${repo}/git/refs`;
-const ref=await github(refPath,{method:'POST','headers':{'content-type':'application/json'},body:JSON.stringify({ref:`refs/heads/${branchRef}`,sha:headSha})});
-if(!ref.response.ok){
-  if(ref.response.status!==422)fail(`failed to create recovery branch: HTTP ${ref.response.status} ${JSON.stringify(ref.data)}`);
-  const existing=await github(`/repos/${repo}/git/ref/heads/${encodeURIComponent(branchRef)}`);
-  if(!existing.response.ok||text(existing.data?.object?.sha,80)!==headSha){
+// Check an existing exactly approved orchestrator branch before attempting any GitHub write.
+// This also supports delegated owner creation when GITHUB_TOKEN cannot create protected refs.
+const existingRefPath=`/repos/${repo}/git/ref/heads/${branchRef.split('/').map(encodeURIComponent).join('/')}`;
+const existing=await github(existingRefPath);
+if(existing.response.ok){
+  if(text(existing.data?.object?.sha,80)!==headSha){
     fail('existing recovery branch does not match the exact approved source SHA');
   }
+}else if(existing.response.status===404){
+  const refPath=`/repos/${repo}/git/refs`;
+  const ref=await github(refPath,{method:'POST','headers':{'content-type':'application/json'},body:JSON.stringify({ref:`refs/heads/${branchRef}`,sha:headSha})});
+  if(!ref.response.ok){
+    // Accept only a verified exact-SHA concurrent creation, not a generic 403 bypass.
+    if(ref.response.status!==422)fail(`failed to create recovery branch: HTTP ${ref.response.status} ${JSON.stringify(ref.data)}`);
+    const raced=await github(existingRefPath);
+    if(!raced.response.ok||text(raced.data?.object?.sha,80)!==headSha){
+      fail('existing recovery branch does not match the exact approved source SHA');
+    }
+  }
+}else{
+  fail(`failed to inspect existing recovery branch: HTTP ${existing.response.status}`);
 }
 
 const pulls=await github(`/repos/${repo}/pulls?state=open&head=${encodeURIComponent(repo.split('/')[0]+':'+branchRef)}&base=main`);

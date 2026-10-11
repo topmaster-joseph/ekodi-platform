@@ -32,7 +32,7 @@ if(failures.length){
 console.log(`Data ownership OK: ${core.protectedTables.length} protected core tables, ${Object.keys(boundaries.platforms||{}).length} service boundary declarations`);
 const topology = await readJson('config/data-store-topology.json');
 const declarations = {};
-for (const source of new Set((topology.stores || []).map(item => item.source))) {
+for (const source of new Set((topology.stores || []).flatMap(item => [item.source, item.resolverWorkflow].filter(Boolean)))) {
   declarations[source] = await readFile(new URL(`../${source}`, import.meta.url), 'utf8');
 }
 const report = auditDataStoreTopology(topology, declarations);
