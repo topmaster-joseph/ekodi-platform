@@ -1,3 +1,5 @@
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 // Receipt-gated, bounded EKODI-native Windows Agent command proof.
 // Invoked exclusively by Device Agent Production Verification status mode.
 const BASE='https://ekodi.kr';
@@ -71,7 +73,7 @@ export async function verifyNativeAgentStatus({
   throw new Error('native_agent_status_command_timeout');
 }
 
-if(process.argv[1] && import.meta.url===new URL('file://'+process.argv[1]).href){
+if(process.argv[1] && path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   verifyNativeAgentStatus({token:process.env.E2E_ADMIN_TOKEN,hostname:process.env.DEVICE_TARGET_HOSTNAME||'user3'})
   .then(result=>console.log('[EKODI][NATIVE-STATUS-CANARY] '+JSON.stringify(result)))
   .catch(error=>{console.error('[EKODI][NATIVE-STATUS-CANARY] '+String(error?.message||'status_verify_failed').slice(0,100));process.exitCode=1;});
