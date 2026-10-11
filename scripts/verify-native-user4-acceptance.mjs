@@ -85,9 +85,18 @@ export async function verifyUser4Acceptance(options={}){
   catch(error){failures.push('browser:'+String(error?.message||'failed').slice(0,100));}
   try{localAi=await verifyNativeLocalAi({...options,hostname:'user4'});}
   catch(error){failures.push('localAi:'+String(error?.message||'failed').slice(0,100));}
-  // Do not return a passed acceptance without two independent real USER4 receipts.
-  return {ok:failures.length===0,verifiedAt:new Date().toISOString(),
-    targetAlias:'user4',browser,localAi,failures};
+  // Two independent, host-matched execution receipts are mandatory. An empty
+  // error list is not enough if one of the command verifiers returns no proof.
+  const browserVerified=browser?.targetAlias==='user4' &&
+    browser.receiptStatus==='succeeded' && browser.mode==='native-cdp' &&
+    Number.isFinite(browser.domBytes) && browser.domBytes>0;
+  const localAiVerified=localAi?.targetAlias==='user4' &&
+    localAi.receiptStatus==='succeeded' && localAi.ollamaApi==='ready' &&
+    localAi.inference==='passed' && localAi.credentialCollection===false;
+  return {schemaVersion:1,mode:'ekodi-native-receipt-gated',
+    ok:failures.length===0&&browserVerified&&localAiVerified,
+    browserVerified:Boolean(browserVerified),localAiVerified:Boolean(localAiVerified),
+    verifiedAt:new Date().toISOString(),targetAlias:'user4',browser,localAi,failures};
 }
 
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
