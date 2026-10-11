@@ -1,4 +1,4 @@
-param(
+﻿param(
   [switch]$Install,
   [switch]$Run,
   [switch]$RegisterProtocol,
@@ -970,8 +970,71 @@ function Get-BackgroundBrowserCanaryState {
   }
 }
 
+function Invoke-EkodiNativeCdpCanary {
+  $nodeCommand = Get-Command node.exe -ErrorAction SilentlyContinue
+  if (-not $nodeCommand) { throw 'CDP_NODE_RUNTIME_REQUIRED' }
+  $nodeExe = [string]$nodeCommand.Source
+  $nodeVersionText = & $nodeExe --version
+  if ($LASTEXITCODE -ne 0 -or $nodeVersionText -notmatch '^v(\d+)\.') { throw 'CDP_NODE_VERSION_UNAVAILABLE' }
+  if ([int]$Matches[1] -lt 22) { throw 'CDP_NODE_22_REQUIRED' }
+  $workerRoot = Join-Path $Root 'browser-worker'
+  New-Item -ItemType Directory -Path $workerRoot -Force | Out-Null
+  $workerPath = Join-Path $workerRoot 'ekodi-native-browser-cdp.mjs'
+  # Immutable, reviewed source commit: never execute a URL supplied by a job payload.
+  $workerUrl = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/c58143ffdd956011023708eb11f8940beca8cfe5/tools/ekodi-device-agent/windows/ekodi-native-browser-cdp.mjs'
+  $download = Join-Path $workerRoot ('candidate-' + [Guid]::NewGuid().ToString('N') + '.mjs')
+  try {
+    Invoke-WebRequest -UseBasicParsing -Uri $workerUrl -OutFile $download -TimeoutSec 20 -ErrorAction Stop
+    $candidate = Get-Content -LiteralPath $download -Raw -Encoding UTF8
+    if ($candidate -notmatch 'CDP_DOM_EVIDENCE_MISSING' -or $candidate -notmatch 'CDP_TARGET_FORBIDDEN') { throw 'CDP_WORKER_SOURCE_INVALID' }
+    Move-Item -LiteralPath $download -Destination $workerPath -Force
+  } finally {
+    Remove-Item -LiteralPath $download -Force -ErrorAction SilentlyContinue
+  }
+  $process = [Diagnostics.Process]::new()
+  $process.StartInfo = [Diagnostics.ProcessStartInfo]@{
+    FileName = $nodeExe
+    Arguments = ('"' + $workerPath + '"')
+    UseShellExecute = $false
+    CreateNoWindow = $true
+    RedirectStandardOutput = $true
+    RedirectStandardError = $true
+  }
+  [void]$process.Start()
+  $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+  $stderrTask = $process.StandardError.ReadToEndAsync()
+  if (-not $process.WaitForExit(35000)) {
+    try { $process.Kill() } catch {}
+    throw 'CDP_WORKER_TIMEOUT'
+  }
+  $stdout = $stdoutTask.GetAwaiter().GetResult()
+  $stderr = $stderrTask.GetAwaiter().GetResult()
+  if ($process.ExitCode -ne 0) { throw ('CDP_WORKER_FAILED: ' + $stderr.Substring(0,[Math]::Min(260,$stderr.Length))) }
+  try { $receipt = $stdout.Trim() | ConvertFrom-Json -ErrorAction Stop } catch { throw 'CDP_WORKER_INVALID_RECEIPT' }
+  if ($receipt.ok -ne $true -or [int]$receipt.domBytes -le 0 -or [string]$receipt.url -ne $BrowserCanaryUrl -or [string]$receipt.mode -ne 'native-cdp') {
+    throw 'CDP_WORKER_EVIDENCE_INVALID'
+  }
+  $proof = @{
+    ok = $true
+    mode = 'native-cdp'
+    agentVersion = $AgentVersion
+    browser = [string]$receipt.browser
+    url = $BrowserCanaryUrl
+    contentBytes = [int]$receipt.domBytes
+    dedicatedAutomationProfile = $true
+    offscreenOrHeadless = $true
+    focusIsolated = $true
+    clipboardShared = $false
+    userInputInjection = $false
+    checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+  }
+  $proof | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $BrowserCanaryStatePath -Encoding UTF8
+  return @{ message = 'EKODI Native CDP Browser Worker DOM verification completed.'; browserCanary = $proof }
+}
+
 function Invoke-BackgroundBrowserCanary([bool]$PreferEdge = $false) {
   Remove-Item -LiteralPath $BrowserCanaryStatePath -Force -ErrorAction SilentlyContinue
+  if (-not $PreferEdge) { return Invoke-EkodiNativeCdpCanary }
   $browser = if ($PreferEdge) { Resolve-EkodiEdgeBrowser } else { Resolve-EkodiBrowser }
   if (-not $browser) { throw 'supported_browser_not_found' }
   $canaryProfile = Join-Path $BrowserCanaryProfileRoot ([Guid]::NewGuid().ToString('N'))
@@ -2412,6 +2475,53 @@ function Invoke-IsolatedDesktopSessionExecute($Payload) {
   }
 }
 
+function Get-EkodiLocalAiVerification {
+  # Bounded native diagnostic: no arbitrary command arguments, no credentials.
+  # VM UI canaries do not establish local host AI readiness.
+  $proof = [ordered]@{
+    checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+    ollamaApi = 'unavailable'
+    ollamaVersion = ''
+    selectedModel = ''
+    inference = 'not_checked'
+    claudeCli = 'not_visible_to_agent'
+    claudeAuth = 'requires_interactive_user_verification'
+    executionMode = 'fixed_loopback_api'
+    credentialCollection = $false
+  }
+  try {
+    $version = Invoke-RestMethod -Method Get -Uri 'http://127.0.0.1:11434/api/version' -TimeoutSec 5 -ErrorAction Stop
+    if ($version.version) {
+      $proof.ollamaApi = 'ready'
+      $proof.ollamaVersion = [string]$version.version
+    }
+  } catch { }
+  if ($proof.ollamaApi -eq 'ready') {
+    try {
+      $tags = Invoke-RestMethod -Method Get -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 8 -ErrorAction Stop
+      $available = @($tags.models | ForEach-Object { [string]$_.name })
+      $model = @('qwen2.5-coder:1.5b', 'qwen3:0.6b') | Where-Object { $available -contains $_ } | Select-Object -First 1
+      if ($model) {
+        $proof.selectedModel = [string]$model
+        $body = @{
+          model = [string]$model
+          prompt = 'Reply exactly OK'
+          stream = $false
+          think = $false
+          options = @{ num_predict = 64; num_ctx = 512; temperature = 0 }
+        } | ConvertTo-Json -Depth 5 -Compress
+        $reply = Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:11434/api/generate' -Body $body -ContentType 'application/json' -TimeoutSec 45 -ErrorAction Stop
+        if ([string]$reply.response -match '^\s*OK[.!]?\s*$') { $proof.inference = 'passed' }
+        else { $proof.inference = 'nonmatching_response' }
+      } else { $proof.inference = 'approved_model_missing' }
+    } catch { $proof.inference = 'api_error_or_timeout' }
+  }
+  try {
+    if (Get-Command -Name 'claude' -ErrorAction Stop) { $proof.claudeCli = 'visible_in_agent_context' }
+  } catch { }
+  return @{ message = 'EKODI native local AI verification completed'; localAiProof = $proof }
+}
+
 function Get-RemoteAgentStatus {
   $taskState = 'unknown'
   try {
@@ -2650,6 +2760,7 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'profile.workstation.restore' { return Restore-WorkstationProfile }
     'agent.self_update' { return Update-AgentFromOfficialSource }
     'software.localai.install' { return Install-EkodiLocalAI }
+    'software.localai.verify' { return Get-EkodiLocalAiVerification }
     'computer.browser.canary' { return Invoke-BackgroundBrowserCanary }
     'computer.browser.execute' { return Invoke-BackgroundBrowserWorker $payload }
     'computer.workspace.slides.audio.insert' { return Invoke-WorkspaceSlidesAudioTask $payload }
@@ -2738,7 +2849,7 @@ function Send-Heartbeat($Config) {
     capabilities = @{
       powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
-      networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true
+      networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true
       computerRead = $true; processRead = $true; agentStatus = $true
       isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified; isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified; isolatedDesktopSessionCanary = [bool](Get-IsolatedDesktopSessionCanaryState).verified; isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified
       workspaceSlidesAudio = [bool](Get-WorkspaceSlidesAudioState).verified
@@ -2842,7 +2953,7 @@ function Install-Agent {
       capabilities = @{
         powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
         diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
-        networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true
+        networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true
         arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
       }
     } | ConvertTo-Json -Depth 8
