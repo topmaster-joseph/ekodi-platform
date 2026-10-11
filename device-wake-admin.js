@@ -86,7 +86,7 @@
     const gateways = wake.gateways || [];
     gatewayHost.innerHTML = gateways.length
       ? gateways.map(gateway => `<article class="device-wake-gateway"><strong>${esc(gateway.label)}</strong><small>${esc(gateway.id)}</small><span class="device-wake-state ${gateway.status === 'online' ? 'online' : 'offline'}">${gateway.status === 'online' ? '온라인' : '오프라인'}</span><small>최근 ${esc(time(gateway.lastSeenAt))}</small></article>`).join('')
-      : '<p class="device-wake-message">등록된 Wake Gateway가 없습니다.</p>';
+      : '<p class="device-wake-message">원격으로 PC를 켜는 연결장치가 아직 등록되지 않았습니다. 필요한 경우에만 설정하세요.</p>';
 
     const devices = [...new Map((devicesData.devices || [])
       .filter(device => device?.id && device.management?.type === 'pc' && device.platform !== 'inventory' && device.status !== 'revoked')
@@ -154,7 +154,7 @@
     const section = document.createElement('section');
     section.id = PANEL_ID;
     section.className = 'device-wake-control';
-    section.innerHTML = `<div class="device-wake-head"><div><p class="kicker">POWER RECOVERY</p><h3>원격 전원 · 작업 자동복귀</h3><p>관리자가 허용한 데스크톱만 Wake Gateway를 통해 켜고, Windows 로그인 전 Device Agent가 복귀해 대기 작업을 이어갑니다.</p></div><div class="device-wake-actions"><button type="button" class="secondary" data-wake-refresh>↻ 새로고침</button><button type="button" class="primary" data-wake-enroll>Gateway 등록코드</button></div></div><div class="device-wake-note">노트북은 자동 작업 및 Wake 대상에서 제외됩니다. 완전 종료(S5) 깨우기는 대상 PC의 BIOS/NIC WOL과 같은 네트워크의 항상 켜진 Wake Gateway가 모두 준비되어야 합니다. 정전으로 AC 전원이 끊긴 상태는 WOL만으로 켤 수 없습니다.</div><div class="device-wake-enrollment" data-wake-enrollment hidden></div><div class="device-wake-gateways" data-wake-gateways></div><details class="device-wake-profiles" data-wake-profiles><summary>기기별 전원 정책 설정</summary><div class="device-wake-grid" data-wake-grid></div></details><p class="device-wake-message" data-wake-message>전원 복구 상태를 불러오는 중입니다.</p>`;
+    section.innerHTML = `<div class="device-wake-head"><div><p class="kicker">원격 전원 · 고급 설정</p><h3>PC 켜기와 작업 이어하기</h3><p>관리자가 허용한 데스크톱만 Wake Gateway를 통해 켜고, Windows 로그인 전 Device Agent가 복귀해 대기 작업을 이어갑니다.</p></div><div class="device-wake-actions"><button type="button" class="secondary" data-wake-refresh>↻ 새로고침</button><button type="button" class="primary" data-wake-enroll>전원 연결장치 등록</button></div></div><div class="device-wake-note">노트북은 자동 작업 및 Wake 대상에서 제외됩니다. 완전 종료(S5) 깨우기는 대상 PC의 BIOS/NIC WOL과 같은 네트워크의 항상 켜진 Wake Gateway가 모두 준비되어야 합니다. 정전으로 AC 전원이 끊긴 상태는 WOL만으로 켤 수 없습니다.</div><div class="device-wake-enrollment" data-wake-enrollment hidden></div><div class="device-wake-gateways" data-wake-gateways></div><details class="device-wake-profiles" data-wake-profiles><summary>고급 전원 설정</summary><div class="device-wake-grid" data-wake-grid></div></details><p class="device-wake-message" data-wake-message>전원 복구 상태를 불러오는 중입니다.</p>`;
     const browser = document.getElementById('adminDeviceBrowserDiagnostics');
     if (browser) browser.insertAdjacentElement('afterend', section); else panel.prepend(section);
 
