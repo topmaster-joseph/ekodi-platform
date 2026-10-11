@@ -71,7 +71,12 @@ function syncTitle(section){
 }
 function activateCommandHome(){
   dc=false;requestedSection=COMMAND_HOME;
-  for(const panel of content.querySelectorAll('[data-panel]')){panel.classList.add('hidden-panel');panel.hidden=true}
+  // The same Control workspace is visible on /admin/, without a second sidebar.
+  for(const panel of content.querySelectorAll('[data-panel]')){
+    const visible=panelTargets(panel).includes(COMMAND_HOME);
+    panel.classList.toggle('hidden-panel',!visible);
+    panel.hidden=!visible;
+  }
   for(const item of allNav())item.classList.toggle('active',!isInternalNav(item)&&sectionOf(item)===COMMAND_HOME);
   syncTitle(COMMAND_HOME);
   replaceSectionUrl(COMMAND_HOME);
