@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {observeNativeDeviceReadiness,summarizeNativeDeviceReadiness} from '../scripts/observe-native-device-readiness.mjs';
+import {observeNativeDeviceReadiness,observeNativeDeviceReadinessFleet,summarizeNativeDeviceReadiness} from '../scripts/observe-native-device-readiness.mjs';
 
 const now=Date.parse('2026-10-10T14:00:00.000Z');
 const online={hostname:'USER3',platform:'Windows 11',management:{source:'agent',type:'pc'},
@@ -128,4 +128,50 @@ test('post-production Control API completion triggers only safe native heartbeat
   assert.ok(w.includes('node scripts/observe-native-device-readiness.mjs'));
   assert.ok(w.includes('test -n "$EKODI_RELEASE_BRANCH_REF"'));
   assert.ok(w.includes('test -n "$EKODI_RELEASE_TASK_ID"'));
+});
+
+test('scheduled read-only fleet observation independently classifies USER4 rather than replacing it with USER3',async()=>{
+  const requests=[];
+  const fetchImpl=async(url,init)=>{
+    requests.push({url,method:init.method});
+    const target=new URL(url).searchParams.get('hostname');
+    const devices=target==='user3'?[online]:[
+      {...online,hostname:'USER4',status:'offline',lastSeenAt:new Date(now-600000).toISOString()}
+    ];
+    return new Response(JSON.stringify({devices}),{status:200});
+  };
+  const fleet=await observeNativeDeviceReadinessFleet({
+    token:'temporary-session-token-long-enough',
+    hostnames:['user3','user4'],now,fetchImpl
+  });
+  assert.equal(fleet.targets[0].heartbeatHealthy,true);
+  assert.equal(fleet.targets[1].targetAlias,'user4');
+  assert.equal(fleet.targets[1].heartbeatHealthy,false);
+  assert.equal(fleet.targets[1].verificationState,'NATIVE_AGENT_REGISTERED_NOT_ONLINE');
+  assert.equal(fleet.remoteCommandIssued,false);
+  assert.deepEqual(requests.map(x=>x.method),['GET','GET']);
+  assert.equal(requests[1].url,'https://ekodi.kr/api/control/devices/readiness?hostname=user4');
+  assert.doesNotMatch(JSON.stringify(fleet),/do-not-expose/);
+});
+test('USER4 readiness failure is explicit; healthy USER3 never substitutes its proof',async()=>{
+  const fetchImpl=async(url)=>{
+    if(new URL(url).searchParams.get('hostname')==='user4')return new Response('{}',{status:503});
+    return new Response(JSON.stringify({devices:[online]}),{status:200});
+  };
+  const fleet=await observeNativeDeviceReadinessFleet({
+    token:'temporary-session-token-long-enough',now,fetchImpl
+  });
+  assert.equal(fleet.targets[0].heartbeatHealthy,true);
+  assert.equal(fleet.targets[1].heartbeatHealthy,false);
+  assert.equal(fleet.targets[1].verificationState,'NATIVE_AGENT_OBSERVATION_UNAVAILABLE');
+  assert.equal(fleet.targets[1].remoteCommandIssued,false);
+});
+test('fleet observation fails closed for untrusted token or duplicated/invalid target',async()=>{
+  let called=0;
+  const fetchImpl=async()=>{called++;throw Error('unexpected');};
+  await assert.rejects(()=>observeNativeDeviceReadinessFleet({token:'',fetchImpl}),/trusted_admin_session_required/);
+  await assert.rejects(()=>observeNativeDeviceReadinessFleet({
+    token:'temporary-session-token-long-enough',hostnames:['user3','user3'],fetchImpl
+  }),/invalid_fleet_targets/);
+  assert.equal(called,0);
 });
