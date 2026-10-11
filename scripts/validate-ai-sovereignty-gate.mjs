@@ -63,7 +63,7 @@ assert.notEqual(identity.personId,'attacker-id');
 const controlUi=readFileSync(new URL('../control.js',import.meta.url),'utf8');
 const controlHtml=readFileSync(new URL('../control.html',import.meta.url),'utf8');
 assert.match(controlHtml,/id="orchestratorRelease"/);
-assert.match(controlUi,/\#\('orchestratorRelease'\)/);
+assert.ok(controlUi.includes("$('#orchestratorRelease')"));
 assert.match(controlUi,/\/api\/control\/ai\/v8\/orchestrator\/submit/);
 assert.match(controlUi,/deploymentRequested:true/);
 assert.match(controlUi,/idempotencyKey/);
