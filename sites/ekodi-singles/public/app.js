@@ -370,6 +370,12 @@ async function signedIn(status){
  else {paragraph(h,'반갑습니다. 나의 프로필, 공개 행사, 동행 찾기를 살펴보세요.');const row=text('div','','actions');for(const [name,href] of [['프로필 등록','/singles/my'],['공개 행사','/singles/events'],['동행 찾기','/singles/discover']]){const a=text('a',name,'outline');a.href=href;row.append(a)}h.append(row)}
 }
 async function main(){
+ // Clear one-time credentials before any async work or feature flag checks.
+ // The token remains only in memory for the current authentication attempt.
+ const fragment=new URLSearchParams(location.hash.slice(1));
+ const tokenHash=fragment.get('ekodi_token');
+ const tokenType=fragment.get('ekodi_type')||'email';
+ if(tokenHash)history.replaceState(null,'',location.pathname+location.search);
  showGuest();
  let status;
  try{status=await fetch('/singles/api/status',{cache:'no-store'}).then(r=>r.json())}
@@ -387,11 +393,8 @@ async function main(){
  state.client=window.supabase.createClient(status.auth.supabase_url,status.auth.publishable_key,
  {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
  // Existing EKODI community bridge uses a short-lived OTP hash in the fragment.
- const fragment=new URLSearchParams(location.hash.slice(1));
- const tokenHash=fragment.get('ekodi_token');
  if(tokenHash){
-  try{await state.client.auth.verifyOtp({token_hash:tokenHash,type:fragment.get('ekodi_type')||'email'});}catch{}
-  history.replaceState(null,'',location.pathname+location.search);
+  try{await state.client.auth.verifyOtp({token_hash:tokenHash,type:tokenType});}catch{}
  }
  const {data}=await state.client.auth.getSession();
  state.session=data?.session;
