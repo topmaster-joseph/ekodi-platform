@@ -58,6 +58,8 @@ function profileForm(h){
   if(!multi)el.type='text';el.name=key;el.maxLength=max;el.autocomplete='off';el.placeholder=caption;label.append(el);form.append(label);return el;
  };
  const nickname=input('표시 이름','display_name',32),region=input('지역(광역 단위)','broad_region',40),intro=input('나를 소개하는 한마디','intro',400,true);
+ const suggestedName=state.session?.user?.user_metadata?.full_name||state.session?.user?.user_metadata?.name;
+ if(typeof suggestedName==='string'&&suggestedName.trim())nickname.value=suggestedName.trim().slice(0,32);
  const profileLink=input('공개할 명함·프로필 HTTPS 링크 (선택)','public_link',300);
  const importLabel=text('label','디지털 명함(.vcf)에서 초안 가져오기 · 브라우저 내 처리','field');
  const importFile=document.createElement('input');importFile.type='file';importFile.accept='.vcf,text/vcard,text/x-vcard';
