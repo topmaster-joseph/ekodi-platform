@@ -69,4 +69,8 @@ assert.match(controlUi,/deploymentRequested:true/);
 assert.match(controlUi,/idempotencyKey/);
 assert.match(controlUi,/보호된 승인.*배포 완료가 아닙니다/);
 assert.match(controlUi,/\/api\/control\/ai\/v8\/pulse/); // ordinary mode unchanged
+assert.ok(controlUi.includes("'/api/control/ai/v8/orchestrator/tasks/'"));
+assert.ok(controlUi.includes('productionEvidencePresent'));
+assert.ok(controlUi.includes('수신됨 (검증 별도)'));
+assert.ok(controlUi.includes('refreshOrchestratorTasks().catch'));
 console.log('EKODI reuse-first gate: policy, official submission, UI boundaries passed');
