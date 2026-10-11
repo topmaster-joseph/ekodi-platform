@@ -71,15 +71,27 @@ requireText('.github/workflows/deploy-control-api.yml', [
   'Guarded 0-percent Control candidate then promote',
   'Verify production Control and universal membership boundaries',
 ]);
-requireText('.github/workflows/backup-ekodi-core.yml', [
+const backupWorkflow = requireText('.github/workflows/backup-ekodi-core.yml', [
   "'ekodi-auth'",
-  'ekodi-core-backup-pr-',
+  'BACKUP_LOCAL=true',
   'd1 migrations apply DB',
-  'd1 delete "$BACKUP_DATABASE"',
+  'rm -rf .wrangler/state',
+  '--local',
+  'd1 export "$BACKUP_DATABASE"',
+  '--remote --skip-confirmation',
   'sqlite3 backup/restored.sqlite',
   'PRAGMA integrity_check',
+  'r2 object put',
   'actions/upload-artifact@v4',
 ]);
+for (const forbidden of [
+  'INSERT INTO core_backup_runs',
+  'd1 execute "$BACKUP_DATABASE"',
+  'd1 create "$DB_NAME"',
+  'd1 delete "$BACKUP_DATABASE"',
+]) {
+  if (backupWorkflow.includes(forbidden)) fail('.github/workflows/backup-ekodi-core.yml', `backup source must remain read-only; forbidden marker: ${forbidden}`);
+}
 requireText('.github/workflows/ci.yml', [
   'AI_PROVIDER: NONE',
   'npm run test:ai-none',

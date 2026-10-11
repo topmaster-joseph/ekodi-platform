@@ -29,3 +29,15 @@ test('official orchestrator release gates USER4 virtual probe dispatch',()=>{
   assert.match(orchestrator,/execution_mode:'user4-virtual-probe',release_branch_ref:branch,release_task_id:taskId/);
   assert.match(orchestrator,/authority:'ekodi-orchestrator'/);
 });
+
+
+test('USER4 Hyper-V gap remains visible while workflow selects a safe native alternative',()=>{
+  assert.match(src,/persistProbeEvidence\(evidence\)/);
+  assert.match(src,/native-user4-virtual-probe\.json/);
+  assert.match(src,/if\(proof\.headlessBackendReady!==true\)throw Error\('user4_hyperv_backend_not_ready'\)/);
+  assert.match(workflow,/id: user4_virtual_probe/);
+  assert.match(workflow,/continue-on-error: true/);
+  assert.match(workflow,/Select USER4 safe native execution route/);
+  assert.match(workflow,/node scripts\/select-native-user4-execution-route\.mjs/);
+  assert.match(workflow,/native-user4-execution-route\.json/);
+});
