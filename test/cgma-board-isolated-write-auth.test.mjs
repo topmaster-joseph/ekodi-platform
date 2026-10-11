@@ -16,6 +16,7 @@ function fixture(){
   ]);
   const mutations=[];
   let authCalls=0;
+  let lastAuthRequest=null;
   const db={
     async batch(){return [];},
     prepare(sql){
@@ -77,7 +78,7 @@ function fixture(){
         if(path!=='/api/session')return new Response('not found',{status:404});
         const token=request.headers.get('authorization')?.replace(/^Bearer /,'')||'';
         // Test-only diagnostic: never print bearer values or real account details.
-        console.log('fixture session request', {sessionPath:path, bearerPresent:!!token, recognized:['owner','member','other','outsider'].includes(token)});
+        lastAuthRequest={sessionPath:path,bearerPresent:!!token,recognized:['owner','member','other','outsider'].includes(token),method:request.method};
         if(!['owner','member','other','outsider'].includes(token))return Response.json({authenticated:false},{status:401});
         return Response.json({authenticated:true,role:'admin',email:token+'@local.invalid'});
       },
@@ -90,7 +91,7 @@ function fixture(){
       ...(['GET','HEAD'].includes(method)?{}:{body:JSON.stringify(body??{})})});
     const response=await handleSiteBoardRequest(request,env);
     const data=await response.json();
-    return {status:response.status,body:data,headers:response.headers,debug:{bearerPresent:request.headers.has('authorization'),authCalls}};
+    return {status:response.status,body:data,headers:response.headers,debug:{bearerPresent:request.headers.has('authorization'),authCalls,lastAuthRequest}};
   }
   return {call,posts,members,mutations,env};
 }
