@@ -15,4 +15,6 @@ assert.equal(chooseEkodiExecution({providers:providers.slice(0,1),paidApproved:t
 assert.equal(chooseEkodiExecution({providers:providers.slice(0,1),paidApproved:true}).executionAuthorized,false);
 assert.equal(JSON.stringify(publicAiJobReceipt({taskId:'t1',status:'verified',apiKey:key,prompt:key,productionVerified:false})).includes(key),false);
 assert.equal(publicAiJobReceipt({status:'verified',productionVerified:false}).productionVerified,false);
-console.log('EKODI reuse-first gate: 11 assertions passed');
+assert.equal(chooseEkodiExecution({providers:[{id:'mystery',available:true,automationAllowed:true,costClass:'unknown',trustClass:'external'}]}).path,'blocked');
+assert.equal(chooseEkodiExecution({providers:[{id:'free',available:true,automationAllowed:true,costClass:'free-preferred',trustClass:'external'}]}).providerId,'free');
+console.log('EKODI reuse-first gate: 13 assertions passed');
