@@ -1323,14 +1323,28 @@ function Invoke-EkodiHeadlessScreenshot(
     }
     if (-not (Test-Path -LiteralPath $portFile)) { throw 'cdp_port_file_missing' }
 
-    # Chromium can still hold DevToolsActivePort exclusively immediately after it
-    # appears. A file-exists check alone does not mean it is readable yet.
+    # A newly created DevToolsActivePort may still be exclusively locked by Chromium.
+    # Retry for a bounded window rather than treating the first sharing lock as a failure.
     $port = 0
     $portReadDeadline = [DateTime]::UtcNow.AddSeconds(5)
     while ([DateTime]::UtcNow -lt $portReadDeadline) {
       try {
         $portLines = @(Get-Content -LiteralPath $portFile -Encoding UTF8 -ErrorAction Stop)
-        if ($portLines.Count -gt 0 -and [string]$portLines[0] -match '^[0-9]{2,5}
+        if ($portLines.Count -gt 0) {
+          $candidatePort = 0
+          if ([int]::TryParse([string]$portLines[0], [ref]$candidatePort) -and $candidatePort -gt 0 -and $candidatePort -le 65535) {
+            $port = $candidatePort
+            break
+          }
+        }
+      } catch [System.IO.IOException] {
+        # Sharing violation while browser metadata is being written.
+      } catch [System.UnauthorizedAccessException] {
+        # Retry only while the bounded deadline remains.
+      }
+      Start-Sleep -Milliseconds 100
+    }
+    if ($port -le 0) { throw 'cdp_port_invalid_or_locked' }
 
     $targets = Invoke-RestMethod -Uri "http://127.0.0.1:$port/json/list" -Method Get -TimeoutSec 10
     $page = @($targets | Where-Object { $_.type -eq 'page' } | Select-Object -First 1)[0]
