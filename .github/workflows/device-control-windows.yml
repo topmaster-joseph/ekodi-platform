@@ -57,7 +57,7 @@ jobs:
           node --check device-control-admin.js
           node --check remote-power-admin.js
           node --check admin-demand-loader.js
-          node --test test/device-control-contract.test.mjs test/windows-device-enrollment-launcher.test.mjs test/non-disruptive-device-agent-contract.test.mjs test/background-browser-canary-contract.test.mjs
+          node --test test/device-control-contract.test.mjs test/windows-device-enrollment-launcher.test.mjs test/non-disruptive-device-agent-contract.test.mjs test/background-browser-canary-contract.test.mjs test/localai-device-installer-contract.test.mjs
       - name: Build authenticated true-lazy Admin with Device AI
         run: |
           set -euo pipefail
@@ -113,6 +113,9 @@ jobs:
             }
             Write-Host "PowerShell parse OK: $path"
           }
+      - name: Test native LocalAI diagnosis paths on Windows PowerShell 5.1 (mock loopback)
+        shell: powershell
+        run: .\tools\ekodi-device-agent\windows\native-localai-verification.test.ps1
       - name: Verify actual generated Windows CMD attaches finally and cleans temporary installer
         shell: pwsh
         run: node --test test/windows-device-enrollment-launcher.test.mjs
