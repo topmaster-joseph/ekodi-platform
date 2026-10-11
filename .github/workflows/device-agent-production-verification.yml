@@ -277,3 +277,5 @@ jobs:
             --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')" \
             | jq -e '.success == true' >/dev/null
           echo 'Short-lived Device Agent verification session revoked.'
+
+# Trigger existing guarded Orchestrator convergence for USER2 acceptance.
