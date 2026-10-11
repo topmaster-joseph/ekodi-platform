@@ -60,6 +60,9 @@ jobs:
     timeout-minutes: 10
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      # Optional separate read-only GraphQL token, restricted to EKODI zones.
+      # The existing credential remains responsible for D1 writes and zone discovery.
+      CLOUDFLARE_TRAFFIC_ANALYTICS_TOKEN: ${{ secrets.CLOUDFLARE_TRAFFIC_ANALYTICS_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v7
