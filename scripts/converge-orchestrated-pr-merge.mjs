@@ -168,12 +168,26 @@ const churchPagesTouched=changedFiles.some(file=>
 const nativeAgentStatusTouched=changedFiles.some(file=>file==='scripts/verify-native-agent-status.mjs');
 // Single allowlisted local AI loopback diagnostic; independent from the status acceptance canary.
 const nativeLocalAiVerifyTouched=changedFiles.some(file=>file==='scripts/verify-native-localai.mjs');
+const nativeUser4AcceptanceTouched=changedFiles.some(file=>file==='scripts/verify-native-user4-acceptance.mjs');
 // Supabase Church API is an independent guarded release boundary, not a Site Core asset.
 const churchApiTouched=changedFiles.some(file=>
   file.startsWith('supabase/functions/church-pastor-api/')||
   file==='.github/workflows/deploy-church-pastor-api.yml'
 );
 async function dispatchPostMergeDeploys(){
+  if(nativeUser4AcceptanceTouched){
+    const dispatch=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{
+        execution_mode:'user4-acceptance',
+        release_branch_ref:branch,release_task_id:taskId
+      }})
+    });
+    if(!dispatch.r.ok)fail('Native USER4 acceptance dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,300));
+    console.log(JSON.stringify({ok:true,action:'native-user4-acceptance-dispatched',
+      workflow:'device-agent-production-verification.yml',pr:pr.number,taskId,branch,
+      authority:'ekodi-orchestrator'}));
+  }
   if(nativeLocalAiVerifyTouched){
     const dispatch=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{
       method:'POST',
