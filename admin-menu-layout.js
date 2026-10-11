@@ -71,16 +71,7 @@ function syncTitle(section){
 }
 function activateCommandHome(){
   dc=false;requestedSection=COMMAND_HOME;
-  // Reuse the existing administrator shell: show its integrated Control panel,
-  // not a second navigation rail or a duplicate floating composer.
-  for(const panel of content.querySelectorAll('[data-panel]')){
-    const visible=panelTargets(panel).includes(COMMAND_HOME);
-    panel.classList.toggle('hidden-panel',!visible);
-    panel.hidden=!visible;
-  }
-  // The authenticated admin runtime alone activates this panel.
-  const frame=content.querySelector('#adminControlFrame');
-  if(frame&&!frame.hasAttribute('src')&&frame.dataset.src)frame.setAttribute('src',frame.dataset.src);
+  for(const panel of content.querySelectorAll('[data-panel]')){panel.classList.add('hidden-panel');panel.hidden=true}
   for(const item of allNav())item.classList.toggle('active',!isInternalNav(item)&&sectionOf(item)===COMMAND_HOME);
   syncTitle(COMMAND_HOME);
   replaceSectionUrl(COMMAND_HOME);
