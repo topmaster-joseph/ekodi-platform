@@ -7,7 +7,9 @@ const source=readFileSync(new URL('../admin-control-frame.js',import.meta.url),'
 
 function fixture(){
   const listeners=new Map();
+  const navListeners=new Map();
   const classes=new Set();
+  const panelClasses=new Set(['hidden-panel']);
   const attributes=new Map();
   const frame={
     classList:{
@@ -15,6 +17,8 @@ function fixture(){
       remove:value=>classes.delete(value),
       contains:value=>classes.has(value),
     },
+    dataset:{src:'/admin/control?embed=admin'},
+    hasAttribute:key=>attributes.has(key),
     getAttribute:key=>attributes.get(key)||null,
     setAttribute:(key,value)=>attributes.set(key,String(value)),
     removeAttribute:key=>attributes.delete(key),
@@ -22,17 +26,33 @@ function fixture(){
     contentDocument:null,
   };
   const notice={hidden:true};
+  const panel={
+    hidden:true,
+    classList:{
+      add:value=>panelClasses.add(value),
+      remove:value=>panelClasses.delete(value),
+      toggle:(value,force)=>{
+        if(force)panelClasses.add(value);else panelClasses.delete(value);
+      },
+      contains:value=>panelClasses.has(value),
+    },
+  };
   const root={dataset:{}};
   const document={
     documentElement:root,
     getElementById(id){
       if(id==='adminControlFrame')return frame;
       if(id==='adminControlFrameNotice')return notice;
+      if(id==='adminControlHome')return panel;
       return null;
     },
   };
-  runInNewContext(source,{document});
-  return {frame,notice,root,listeners};
+  const window={
+    addEventListener:(event,callback)=>navListeners.set(event,callback),
+    EKODIAdminPanels:{current:()=> 'command-home'},
+  };
+  runInNewContext(source,{document,window});
+  return {frame,notice,panel,root,listeners,navListeners};
 }
 
 test('control frame verifier waits for login and does not report an unloaded iframe as broken',()=>{
@@ -95,4 +115,31 @@ test('a subsequent valid reload clears a previous fallback',()=>{
   assert.equal(notice.hidden,true);
   assert.equal(root.dataset.ekodiControlEmbedded,'ready');
   assert.equal(frame.classList.contains('admin-control-frame-unavailable'),false);
+});
+
+test('admin navigation reveals central Control and hides it outside the command home',()=>{
+  const {frame,panel,navListeners}=fixture();
+  const activate=navListeners.get('ekodi-admin-section-changed');
+  assert.equal(typeof activate,'function');
+  assert.equal(panel.hidden,true);
+  assert.equal(frame.hasAttribute('src'),false);
+  activate({detail:{section:'command-home'}});
+  assert.equal(panel.hidden,false);
+  assert.equal(panel.classList.contains('hidden-panel'),false);
+  assert.equal(frame.getAttribute('src'),'/admin/control?embed=admin');
+  activate({detail:{section:'finance'}});
+  assert.equal(panel.hidden,true);
+  assert.equal(panel.classList.contains('hidden-panel'),true);
+  assert.equal(frame.getAttribute('src'),'/admin/control?embed=admin');
+});
+
+test('authenticated admin ready event restores home panel without reloading the iframe',()=>{
+  const {frame,panel,navListeners}=fixture();
+  const ready=navListeners.get('ekodi-admin-ready');
+  assert.equal(typeof ready,'function');
+  ready();
+  assert.equal(panel.hidden,false);
+  assert.equal(frame.getAttribute('src'),'/admin/control?embed=admin');
+  ready();
+  assert.equal(frame.getAttribute('src'),'/admin/control?embed=admin');
 });
