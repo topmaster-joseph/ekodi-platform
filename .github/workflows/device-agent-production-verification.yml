@@ -13,6 +13,7 @@ on:
           - verify
           - status
           - localai
+          - user2-localai
           - user4-acceptance
       release_branch_ref:
         description: 'Orchestrator release branch, required in verify mode'
@@ -139,7 +140,7 @@ jobs:
           node-version: '24'
 
       - name: EKODI AI Orchestration Gate for mutating verification
-        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user4-acceptance')
+        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user2-localai' || inputs.execution_mode == 'user4-acceptance')
         env:
           EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
           EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
@@ -226,6 +227,12 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'localai'
         env:
           DEVICE_TARGET_HOSTNAME: 'user3'
+        run: node scripts/verify-native-localai.mjs
+
+      - name: Verify USER2 native Ollama loopback inference with real Windows receipt
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-localai'
+        env:
+          DEVICE_TARGET_HOSTNAME: 'user2'
         run: node scripts/verify-native-localai.mjs
 
       - name: Verify USER4 native CDP and Ollama receipts through EKODI Device Agent
