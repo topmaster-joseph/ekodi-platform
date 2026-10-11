@@ -85,6 +85,30 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/admin/admin-control-integration.css",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "#adminControlHome",
+          "#adminControlFrameNotice"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/admin/admin-control-frame.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "adminControlFrameNotice",
+          "getElementById('commandForm')"
+        ],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/control.css",
         "statuses": [
           200
@@ -1121,7 +1145,10 @@
           "admin-authenticated-shell.js?v=",
           "admin-direct-google.js?v=20260924-v1",
           "admin-compact.js admin-menu-layout.js admin-demand-loader.js",
-          "https://ekodi.kr/auth/?site=admin"
+          "https://ekodi.kr/auth/?site=admin",
+          "id=\"adminControlFrame\"",
+          "data-src=\"/admin/control?embed=admin\"",
+          "admin-control-frame.js"
         ],
         "headerExpect": [
           "x-ekodi-route: admin-shell",
