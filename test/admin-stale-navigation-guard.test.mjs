@@ -46,3 +46,9 @@ test('latest queued navigation remains active when no newer menu was selected', 
   for (const callback of callbacks) callback();
   assert.deepEqual(activations, ['audit-records']);
 });
+
+test('compact Admin entrypoint applies the same newest-selection and native-handoff invariants', () => {
+  const compact = readFileSync(new URL('../admin-menu-layout.compact.js', import.meta.url), 'utf8');
+  assert.match(compact, /v=i,!\(t\.matches\("a\.nav\[href\]"\)&&!L\(i\)\)&&window\.setTimeout\(\(\)=>\{v===i&&\(q\(i\)\|\|x\(i\)\)\},0\)/);
+  assert.doesNotMatch(compact, /v=i,window\.setTimeout\(\(\)=>\{q\(i\)\|\|x\(i\)\},0\)/);
+});
