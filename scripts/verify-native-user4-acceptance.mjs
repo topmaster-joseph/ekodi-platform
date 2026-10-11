@@ -10,6 +10,26 @@ const CANARY='computer.browser.canary';
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const when=value=>Date.parse(String(value||''));
 
+const SAFE_BROWSER_FAILURE_CODES=new Set([
+  'CDP_NODE_RUNTIME_REQUIRED','CDP_NODE_VERSION_UNAVAILABLE','CDP_NODE_22_REQUIRED',
+  'CDP_WORKER_SOURCE_INVALID','CDP_WORKER_TIMEOUT','CDP_WORKER_INVALID_RECEIPT',
+  'CDP_WORKER_EVIDENCE_INVALID','CDP_TARGET_FORBIDDEN','CDP_BROWSER_NOT_FOUND',
+  'CDP_BROWSER_REQUIRED','CDP_BROWSER_EARLY_EXIT','CDP_BROWSER_SPAWN',
+  'CDP_PORT_TIMEOUT','CDP_PORT_INVALID','CDP_SOCKET_ERROR','CDP_SOCKET_TIMEOUT',
+  'CDP_COMMAND_TIMEOUT','CDP_DOM_EVIDENCE_MISSING'
+]);
+// Only fixed categorical codes leave the authenticated runtime. No raw stderr,
+// paths, process arguments, command results, tokens or page DOM are logged.
+export function classifyUser4BrowserFailure(message) {
+  const raw=typeof message==='string' ? message.slice(0,800) : '';
+  const candidates=raw.match(/CDP_[A-Z0-9_]+/g)||[];
+  const match=candidates.find(value=>SAFE_BROWSER_FAILURE_CODES.has(value));
+  if(match)return match;
+  if(raw.includes('CDP_WORKER_FAILED'))return 'CDP_WORKER_FAILED';
+  if(raw.includes('background_browser_canary_failed'))return 'LEGACY_BROWSER_CANARY_FAILED';
+  return 'BROWSER_FAILURE_UNCLASSIFIED';
+}
+
 export function eligibleUser4Agent(device,{now=Date.now()}={}){
   const seen=when(device?.lastSeenAt);
   return device?.hostname?.trim().toLowerCase()==='user4' &&
@@ -61,7 +81,11 @@ export async function verifyUser4Browser({token,fetchImpl=fetch,clock=()=>Date.n
     const device=(await getDevices()).find(d=>d.id===eligible.id);
     const receipt=(device?.recentCommands||[]).find(c=>c.id===command.id);
     if(!receipt)continue;
-    if(['failed','cancelled'].includes(receipt.status))throw new Error('user4_browser_'+receipt.status);
+    if(receipt.status==='failed') {
+      const reason=classifyUser4BrowserFailure(receipt.result?.message);
+      throw new Error('user4_browser_failed:'+reason);
+    }
+    if(receipt.status==='cancelled')throw new Error('user4_browser_cancelled');
     if(receipt.status!=='succeeded')continue;
     const proof=receipt.result?.browserCanary;
     if(!proof||proof.ok!==true||proof.mode!=='native-cdp'||
