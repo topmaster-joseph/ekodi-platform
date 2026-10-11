@@ -19,6 +19,9 @@ test('anonymous navigation hides member-only profile, messages, discovery and fi
   assert.ok(anchor?.includes('data-member-nav hidden'),title);
  }
  assert.match(ui,/querySelectorAll\('\[data-member-nav\]'\)/);
+ assert.match(html,/data-guest-nav>로그인<\/a>/);
+ assert.match(html,/data-member-nav hidden>내 프로필<\/a>/);
+ assert.match(ui,/querySelectorAll\('\[data-guest-nav\]'\)/);
 });
 test('vCard import runs in browser and cannot itself publish or verify identity',()=>{
  assert.match(ui,/importFile\.addEventListener\('change'/);
