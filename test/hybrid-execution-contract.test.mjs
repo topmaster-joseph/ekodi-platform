@@ -103,7 +103,8 @@ test('automatic browser jobs are hard-routed to background-only execution and ne
   assert.match(hybrid, /closeOwnedSurfaceOnComplete:true/);
   assert.match(hybrid, /closeOwnedSurfaceOnAuthRequired:true/);
   assert.match(hybrid, /preserveUserOwnedSurfaces:true/);
-  assert.match(hybrid, /claimedPayload=sanitizePayload\(job\.task_type/);
+  assert.match(hybrid, /: sanitizePayload\(job\.task_type,storedPayload\)/);
+  assert.match(hybrid, /restoreStoredSlidesAudioPilot\(storedPayload\)/);
   assert.match(hybrid, /stored_payload_invalid/);
 });
 
