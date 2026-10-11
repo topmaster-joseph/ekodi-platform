@@ -48,6 +48,6 @@ test('production AI membership lazy module keeps native visibility and guarded S
   assert.match(loader, /ready: '#userAiMembershipPanel'/);
   assert.match(panel, /node\.hidden = !visible/);
   assert.match(panel, /section\.hidden = true/);
-  assert.match(convergence, /file==='user-ai-tier-panel\.js'/);
+  assert.match(convergence, /'admin-demand-loader\.js'/);
   assert.match(deploy, /- 'user-ai-tier-panel\.js'/);
 });
