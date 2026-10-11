@@ -951,6 +951,10 @@ jobs:
         if: steps.quota.outputs.skip_nonessential != 'true'
         run: node scripts/verify-admin-provider-control-production.mjs
 
+      - name: Verify independent board subpages and Singles gated access live
+        if: steps.quota.outputs.skip_nonessential != 'true'
+        run: node scripts/verify-independent-board-live.mjs
+
       - name: Verify admin assets and every registered production service
         if: steps.quota.outputs.skip_nonessential != 'true'
         shell: bash

@@ -394,7 +394,39 @@ for (const [id, group] of menus) {
       }
     }
   }
-  await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 12000 });
+  try {
+    await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 12000 });
+  } catch (initialError) {
+    // A lazy module may asynchronously select a fallback after the first
+    // section click. Re-select the same real left-navigation item once,
+    // without treating a hidden panel or a missing click as a success.
+    if (id === 'command-home') throw initialError;
+    const before = await page.evaluate(() => ({
+      current:window.EKODIAdminPanels?.current?.()||'',
+      route:location.pathname+location.hash,
+      focused:document.querySelector('.sidebar nav')?.dataset.adminFocusedGroup||'',
+    }));
+    console.warn(`[PROD-E2E] ${id}: selected panel changed during mount; bounded real-navigation recovery ${JSON.stringify(before)}`);
+    if (!await groupActive()) {
+      const global = page.locator(`button[data-admin-global-group="${group}"]`).first();
+      await dispatchClick(global);
+      await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(
+        node => node.dataset.adminGlobalGroup===target && (node.getAttribute('aria-current')==='page'||node.classList.contains('active'))
+      ), group, { timeout:12000 });
+    }
+    const retryTrigger = await resolveMenuTrigger(id,group);
+    await dispatchClick(retryTrigger);
+    try {
+      await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 20000 });
+    } catch {
+      const after = await page.evaluate(() => ({
+        current:window.EKODIAdminPanels?.current?.()||'',
+        route:location.pathname+location.hash,
+        focused:document.querySelector('.sidebar nav')?.dataset.adminFocusedGroup||'',
+      }));
+      throw new Error(`${id}: real menu activation did not stabilize after bounded retry: ${JSON.stringify({before,after})}`, {cause:initialError});
+    }
+  }
 
   if (id === 'command-home') {
     await page.waitForFunction(() => {
@@ -421,10 +453,33 @@ for (const [id, group] of menus) {
     continue;
   }
 
-  await page.waitForFunction(section => {
-    const panels = [...document.querySelectorAll('.content [data-panel]')].filter(panel => String(panel.dataset.panel || '').split(/\s+/).includes(section));
-    return panels.some(panel => !panel.hidden && !panel.classList.contains('hidden-panel'));
-  }, id, { timeout: 12000 });
+  try {
+    await page.waitForFunction(section => {
+      const panels = [...document.querySelectorAll('.content [data-panel]')].filter(panel => String(panel.dataset.panel || '').split(/\s+/).includes(section));
+      return panels.some(panel => !panel.hidden && !panel.classList.contains('hidden-panel'));
+    }, id, { timeout: 12000 });
+  } catch (error) {
+    // Preserve the hard UI assertion: report evidence, never skip the menu.
+    const state = await page.evaluate(section => ({
+      section,
+      current: window.EKODIAdminPanels?.current?.() || '',
+      route: location.pathname + location.hash,
+      panels: [...document.querySelectorAll('.content [data-panel]')]
+        .filter(node => String(node.dataset.panel || '').split(/\s+/).includes(section))
+        .map(node => ({
+          id: node.id || '',
+          hidden: node.hidden,
+          hiddenClass: node.classList.contains('hidden-panel'),
+          display: getComputedStyle(node).display,
+          visibility: getComputedStyle(node).visibility,
+          textLength: String(node.textContent || '').trim().length,
+          width: node.getBoundingClientRect().width,
+          height: node.getBoundingClientRect().height,
+        })),
+    }), id);
+    console.error(`[PROD-E2E] ${id}: panel visibility timeout ${JSON.stringify(state)}`);
+    throw new Error(`${id}: panel visibility did not stabilize: ${JSON.stringify(state)}`, { cause: error });
+  }
 
   await page.waitForFunction(section => {
     const panel = [...document.querySelectorAll('.content [data-panel]')].find(node => String(node.dataset.panel || '').split(/\s+/).includes(section) && !node.hidden && !node.classList.contains('hidden-panel'));

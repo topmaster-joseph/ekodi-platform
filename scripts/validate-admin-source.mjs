@@ -67,7 +67,7 @@ const workspaceAdmin = readFileSync(join(root, 'workspace-admin-page.js'), 'utf8
 for (const marker of [
   'ADMIN_SSO_RECOVERY_KEY',
   'beginWorkspaceSsoRecovery()',
-  "account.status==='active'?`<span class='tag live'>연결 유지</span>`",
+  "connection?.status==='active'?`<span class='tag live'>연결 유지</span>`",
   '추가 OAuth 승인 없이 관리자 로그인으로 계속 사용합니다',
   "['reconnect_required','revoked','error'].includes"
 ]) {
