@@ -22,3 +22,7 @@ Captured artifacts describe `realUserAuthenticated=false` and `serverRoleRespons
 - Existing native Chromium workflow #38135300886 was re-run successfully after CSP correction, according to #4236 review.
 - Actual Google administrator E2E and native Windows Device Agent real heartbeat/receipt still require separate verified, authorized sessions. Never use a user's ordinary browser profile or impersonate an identity.
 - PR branch protection, full CI, and EKODI official release receipt remain mandatory. A GitHub Action check reported `action_required` on an Orchestrator bot-authored synchronization commit; the repository owner's documentation-only commit refreshes checks on the exact latest source. No status checks are falsified.
+
+## Owner revalidation after official branch synchronization
+
+The official EKODI Convergent Merge rebased this candidate onto protected current main. GitHub classified the bot-authored synchronization SHA as `action_required`, requiring new owner-authored checks on the current head. This documentation-only follow-up does not change executable logic, authentication, permission grants, or release gates. The first-party Chromium result #38184758537 was a passing *synthetic* server-permission UI proof and is not evidence of real Google sign-in.
