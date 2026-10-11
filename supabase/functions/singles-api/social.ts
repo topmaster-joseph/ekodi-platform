@@ -24,21 +24,23 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
  const method=req.method;
  if(p==='/subscription'&&method==='GET')return reply(req,await bankPlanSnapshot(admin,userId));
  if(p==='/profile'&&method==='GET'){
-  const record=await one(admin.from('singles_profiles').select('display_name,broad_region,intro').eq('user_id',userId));
+  const record=await one(admin.from('singles_profiles').select('display_name,broad_region,intro,public_link').eq('user_id',userId));
   return reply(req,{profile:record?{...record,discoverable:m?.discoverable===true}:null});
  }
  if(p==='/profile'&&method==='PUT'){
   if(!active(m))return reply(req,{error:'membership_required'},403);
   const v=await body(req);
-  if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>!['display_name','broad_region','intro','discoverable'].includes(k)))
+  if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>!['display_name','broad_region','intro','public_link','discoverable'].includes(k)))
    return reply(req,{error:'invalid_profile_fields'},400);
   if(typeof v.display_name!=='string'||v.display_name.trim().length<2||v.display_name.trim().length>32
     ||typeof v.broad_region!=='string'||v.broad_region.length>40||typeof v.intro!=='string'||v.intro.length>400
-    ||typeof v.discoverable!=='boolean')return reply(req,{error:'invalid_profile'},400);
+    ||typeof v.discoverable!=='boolean'||typeof v.public_link!=='string'||v.public_link.length>300)return reply(req,{error:'invalid_profile'},400);
+  const profileUrl=v.public_link.trim();
+  if(profileUrl){try{const link=new URL(profileUrl);if(link.protocol!=='https:'||link.username||link.password||!link.hostname.includes('.')||link.hostname==='localhost')return reply(req,{error:'invalid_public_profile_link'},400)}catch{return reply(req,{error:'invalid_public_profile_link'},400)}}
   const visibilityRequested=v.discoverable===true;
   const allowDiscover=visibilityRequested&&verified(m)&&m.religion_consent===true;
   const {error:profileError}=await admin.from('singles_profiles').upsert({
-   user_id:userId,display_name:v.display_name.trim(),broad_region:v.broad_region.trim(),intro:v.intro.trim(),updated_at:new Date().toISOString()
+   user_id:userId,display_name:v.display_name.trim(),broad_region:v.broad_region.trim(),intro:v.intro.trim(),public_link:profileUrl||null,updated_at:new Date().toISOString()
   },{onConflict:'user_id'});
   if(profileError)throw profileError;
   const {error:memberError}=await admin.from('singles_memberships').update({discoverable:allowDiscover})
@@ -48,13 +50,13 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
  }
  // Logged-in users can browse published events even before signing up for singles.
  if(p==='/events'&&method==='GET'){
-  const events=await many(admin.from('singles_events').select('id,title,summary,region,starts_at')
+  const events=await many(admin.from('singles_events').select('id,title,summary,region,starts_at,fee_krw')
    .eq('state','published').gte('starts_at',new Date().toISOString()).order('starts_at').limit(40));
   return reply(req,{events});
  }
  const eventId=match(p,/^\/events\/([0-9a-f-]{36})$/i);
  if(eventId&&method==='GET'){
-  const event=await one(admin.from('singles_events').select('id,title,summary,description,region,starts_at,capacity')
+  const event=await one(admin.from('singles_events').select('id,title,summary,description,region,starts_at,capacity,fee_krw')
     .eq('id',eventId).eq('state','published'));
   return event?reply(req,{event}):reply(req,{error:'not_found'},404);
  }
@@ -62,8 +64,10 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
  if(rsvpId&&method==='POST'){
   if(!verified(m))return reply(req,{error:'adult_verification_required'},403);
   if(!await subscribed(admin,userId))return reply(req,{error:'community_subscription_required'},402);
-  const event=await one(admin.from('singles_events').select('id,starts_at').eq('id',rsvpId).eq('state','published'));
+  const event=await one(admin.from('singles_events').select('id,starts_at,fee_krw').eq('id',rsvpId).eq('state','published'));
   if(!event||Date.parse(event.starts_at)<=Date.now())return reply(req,{error:'event_not_available'},409);
+  // Event-specific paid fees require a distinct verified receipt; subscriptions cannot silently waive them.
+  if(event.fee_krw>0)return reply(req,{error:'event_fee_verification_not_configured'},503);
   const {error}=await admin.from('singles_event_rsvps').upsert({event_id:rsvpId,user_id:userId,status:'requested'}, {onConflict:'event_id,user_id'});
   if(error)throw error;return reply(req,{ok:true,status:'requested'});
  }
@@ -96,8 +100,8 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   const blockedIds=new Set(ownBlocks.map((b:any)=>b.blocker_id===userId?b.blocked_id:b.blocker_id));
   const ids=eligible.map((x:any)=>x.user_id).filter((id:string)=>!blockedIds.has(id));
   if(!ids.length)return reply(req,{profiles:[]});
-  const profiles=await many(admin.from('singles_profiles').select('user_id,display_name,broad_region,intro').in('user_id',ids).limit(20));
-  return reply(req,{profiles:profiles.map((p:any)=>({id:p.user_id,display_name:p.display_name,broad_region:p.broad_region,intro:p.intro}))});
+  const profiles=await many(admin.from('singles_profiles').select('user_id,display_name,broad_region,intro,public_link').in('user_id',ids).limit(20));
+  return reply(req,{profiles:profiles.map((p:any)=>({id:p.user_id,display_name:p.display_name,broad_region:p.broad_region,intro:p.intro,public_link:p.public_link||null}))});
  }
  const interestUser=match(p,/^\/interests\/([0-9a-f-]{36})$/i);
  if(interestUser&&method==='POST'){
