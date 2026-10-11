@@ -54,3 +54,16 @@ test('admin menu ownership changes always dispatch guarded shared-site release',
   }
   assert.match(script, /release_branch_ref:branch,release_task_id:taskId/);
 });
+
+test('EKODI native hybrid admin browser is always released via guarded Site Core after owner-approved merge', async () => {
+  const script = await read('scripts/converge-orchestrated-pr-merge.mjs');
+  const workflow = await read('.github/workflows/deploy-site-core.yml');
+  const segment = script.slice(script.indexOf('const sharedSiteTouched='), script.indexOf('async function dispatchPostMergeDeploys()'));
+  assert.ok(segment.includes("file==='hybrid-execution-admin.js'"), 'hybrid native browser admin must trigger protected Site Core deploy');
+  assert.ok(workflow.includes("- 'hybrid-execution-admin.js'"), 'native hybrid admin asset must be covered by push fallback');
+  assert.match(script, /if\(sharedSiteTouched\)/);
+  assert.match(script, /release_branch_ref:branch,release_task_id:taskId/);
+  const admin = await read('hybrid-execution-admin.js');
+  assert.ok(admin.includes("id=\"enqueueHybridCgmaBoard\""), 'native CGMA button must exist in released asset');
+  assert.ok(admin.includes("taskType:'computer.browser.execute'"), 'CGMA action must use EKODI native agent queue');
+});
