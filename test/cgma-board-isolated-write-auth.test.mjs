@@ -74,6 +74,8 @@ function fixture(){
         if(path==='/api/reauth/verify')return Response.json({verified:false},{status:403});
         if(path!=='/api/session')return new Response('not found',{status:404});
         const token=request.headers.get('authorization')?.replace(/^Bearer /,'')||'';
+        // Test-only diagnostic: never print bearer values or real account details.
+        console.log('fixture session request', {sessionPath:path, bearerPresent:!!token, recognized:['owner','member','other','outsider'].includes(token)});
         if(!['owner','member','other','outsider'].includes(token))return Response.json({authenticated:false},{status:401});
         return Response.json({authenticated:true,role:'admin',email:token+'@local.invalid'});
       },
@@ -105,7 +107,7 @@ test('anonymous cannot create posts and cannot gain board manager role by forged
 test('member creates and edits own isolated post; non-owner cannot edit another user post',async()=>{
   const f=fixture();
   const create=await f.call('POST','/api/posts',{token:'member',body:{title:'fixture-only',body:'original'}});
-  assert.equal(create.status,201);
+  assert.equal(create.status,201,JSON.stringify(create.body));
   assert.equal(create.body.id,1);
   assert.equal(create.headers.get('x-ekodi-board-id'),BOARD);
   const blocked=await f.call('PATCH','/api/posts/1',{token:'other',body:{title:'tamper'}});
