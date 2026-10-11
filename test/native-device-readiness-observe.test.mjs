@@ -111,3 +111,21 @@ test('native capability projection uses actual Windows Agent heartbeat field nam
   const readiness=api.slice(api.indexOf("path === `\${ADMIN_PREFIX}/readiness`)"),api.indexOf("if (request.method === 'GET' && path === ADMIN_PREFIX)"));
   assert.ok(!readiness.includes('localAI: capabilities.localAI'),'legacy localAI field must not appear');
 });
+
+test('post-production Control API completion triggers only safe native heartbeat observation',()=>{
+  const w=readFileSync(new URL('../.github/workflows/device-agent-production-verification.yml',import.meta.url),'utf8');
+  assert.ok(w.includes('workflow_run:\n    workflows: [Deploy Control API]\n    types: [completed]'));
+  const head=w.slice(w.indexOf('  real-device:'),w.indexOf('  real-device:')+900);
+  for(const marker of [
+    "github.ref == 'refs/heads/main'",
+    "github.event_name == 'workflow_run'",
+    "github.event.workflow_run.event == 'workflow_dispatch'",
+    "github.event.workflow_run.head_branch == 'main'",
+    "github.event.workflow_run.conclusion == 'success'"
+  ]) assert.ok(head.includes(marker),'Missing provenance restriction: '+marker);
+  assert.ok(w.includes("if: github.event_name != 'workflow_dispatch' || inputs.execution_mode != 'verify'"));
+  assert.ok(w.includes("if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'verify'"));
+  assert.ok(w.includes('node scripts/observe-native-device-readiness.mjs'));
+  assert.ok(w.includes('test -n "$EKODI_RELEASE_BRANCH_REF"'));
+  assert.ok(w.includes('test -n "$EKODI_RELEASE_TASK_ID"'));
+});
