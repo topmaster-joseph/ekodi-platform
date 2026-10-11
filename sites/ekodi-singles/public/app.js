@@ -429,6 +429,39 @@ async function showAllPricing(h){
   h.append(box);
  }catch(e){if(e?.status!==403)notice(h,'가격관리 권한이 필요합니다.')}
 }
+async function showBrokerageReadiness(h){
+ try{
+  const data=await api('/bank/admin/brokerage-readiness');
+  const panel=text('section','','member-card');
+  panel.append(text('h3','국내·국제결혼중개업 신고·등록 준비'));
+  paragraph(panel,'현재 결혼중개 영업은 비활성입니다. 진행 상태 저장은 행정기관 신고 수리 또는 등록을 의미하지 않습니다.');
+  const official=text('a','정부24 공식 민원 안내 · 국내 신고 / 국제 등록 ↗','outline');
+  official.href='https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13510000012';
+  official.target='_blank';official.rel='noopener noreferrer';panel.append(official);
+  for(const regime of ['domestic','international']){
+   const group=text('section','','member-card');
+   group.append(text('h4',regime==='domestic'?'국내결혼중개업 신고':'국제결혼중개업 등록'));
+   for(const item of data.items||[]){
+    if(item.regime!==regime)continue;
+    const field=text('div','','field');field.append(text('label',item.requirement));
+    const progress=document.createElement('select');
+    for(const [value,label] of [['not_started','준비 전'],['collecting','자료 수집'],['ready_for_review','검토 준비'],['submitted','관할기관 제출']]){
+     const opt=document.createElement('option');opt.value=value;opt.textContent=label;progress.append(opt);
+    }
+    progress.value=item.progress;
+    const evidence=document.createElement('input');evidence.type='text';evidence.maxLength=240;
+    evidence.placeholder='내부 증빙 문서번호(주민등록번호 입력 금지)';evidence.value=item.evidence_ref||'';
+    const feedback=text('p','','status-text');
+    field.append(progress,evidence,button('진행상태 저장',async()=>{
+     try{await api('/bank/admin/brokerage-readiness',{method:'PUT',body:{regime,code:item.code,progress:progress.value,evidence_ref:evidence.value.trim()}});feedback.textContent='저장됨 · 인허가 완료를 의미하지 않음'}
+     catch(e){feedback.textContent=errorText(e)}
+    }),feedback);group.append(field);
+   }
+   panel.append(group);
+  }
+  h.append(panel);
+ }catch(e){if(e?.status!==403)notice(h,'인허가 준비자료를 조회하지 못했습니다.')}
+}
 async function signedIn(status){
  document.querySelectorAll('[data-member-nav]').forEach(link=>{link.hidden=false});
  document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.hidden=true});
@@ -441,7 +474,7 @@ async function signedIn(status){
  else if(page==='/discover')await showDiscover(h);
  else if(page==='/messages')await showMessages(h);
  else if(page==='/subscribe')await showSubscription(h);
- else if(page==='/admin'){await showBankAdmin(h);await showEventPricing(h);await showAllPricing(h);}
+ else if(page==='/admin'){await showBankAdmin(h);await showEventPricing(h);await showAllPricing(h);await showBrokerageReadiness(h);}
  else if(page==='/groups')paragraph(h,'지역 공동체·소그룹 기능을 준비하고 있습니다. 행사 목록을 먼저 확인해 주세요.');
  else {paragraph(h,'반갑습니다. 나의 프로필, 공개 행사, 동행 찾기를 살펴보세요.');const row=text('div','','actions');for(const [name,href] of [['프로필 등록','/singles/my'],['공개 행사','/singles/events'],['동행 찾기','/singles/discover']]){const a=text('a',name,'outline');a.href=href;row.append(a)}h.append(row)}
 }
