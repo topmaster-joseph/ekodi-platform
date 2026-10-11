@@ -211,7 +211,14 @@ nav.addEventListener('click',event=>{
   if(isInternalNav(item)){event.preventDefault();event.stopImmediatePropagation();return routeInternal();}
   const section=sectionOf(item);if(!section)return;dc=false;
   if(section==='sites'){event.preventDefault();event.stopImmediatePropagation();return openSites();}
-  requestedSection=section;window.setTimeout(()=>{if(!activatePanel(section))requestDemand(section);},0);
+  requestedSection=section;
+  // A prior menu click may still have a queued activation when a delegated
+  // audit-records/AI Ops section is selected synchronously. Never let the
+  // previous section's timeout override the newer requested route.
+  window.setTimeout(()=>{
+    if(requestedSection!==section)return;
+    if(!activatePanel(section))requestDemand(section);
+  },0);
 },true);
 content.addEventListener('click',event=>{
   const control=event.target.closest('[data-campus-section]');
