@@ -316,6 +316,19 @@ jobs:
             echo '- Verification artifact was not produced because a non-deferrable verification error occurred.' >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      - name: Preserve USER4 route evidence
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user4-virtual-probe'
+        uses: actions/upload-artifact@v7
+        with:
+          name: user4-native-route-${{ github.run_id }}
+          path: |
+            artifacts/native-user4-readiness.json
+            artifacts/native-user4-virtual-probe.json
+            artifacts/native-user4-execution-route.json
+          if-no-files-found: warn
+          include-hidden-files: true
+          retention-days: 14
+
       - name: Revoke short-lived verification session
         if: always() && env.E2E_AUTH_DB_ID != '' && env.E2E_TOKEN_HASH != ''
         shell: bash
