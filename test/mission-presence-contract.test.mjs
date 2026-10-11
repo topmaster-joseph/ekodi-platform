@@ -17,3 +17,5 @@ test('mission public worker routes onsite presence while preserving private robo
  assert.match(worker,/pathname==='\/ekodimission\/presence'/);
  assert.match(worker,/ekodimission\/assets\/presence-operator\.js/);
 });
+
+test('mission hidden resolution form cannot leak through CSS',()=>{assert.match(read('../space/ekodimission-presence.css'),/\.ekodi-presence \[hidden\]\{display:none!important\}/);});
