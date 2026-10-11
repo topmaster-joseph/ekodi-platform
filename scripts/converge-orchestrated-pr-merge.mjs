@@ -34,6 +34,8 @@ for(let i=0;i<20&&!pr;i++){
   if(!pr)await sleep(3000);
 }
 if(!pr)fail('open PR not found');
+// Draft PRs remain unpublished and must not be merged or deployed.
+if(pr.draft===true){console.log('[EKODI][ORCH-AUTO-MERGE] draft PR; unpublished hold, no merge');process.exit(0)}
 const filesLookup=await api('/pulls/'+pr.number+'/files?per_page=100');
 if(!filesLookup.r.ok)fail('PR file lookup failed '+filesLookup.r.status);
 const changedFiles=(Array.isArray(filesLookup.data)?filesLookup.data:[]).map(file=>String(file.filename||''));
@@ -309,6 +311,7 @@ async function dispatchPostMergeDeploys(){
 
 for(let cycle=0;cycle<180;cycle++){
   const p=(await api('/pulls/'+pr.number)).data;
+  if(p?.draft===true){console.log('[EKODI][ORCH-AUTO-MERGE] PR changed to draft; stop before merge');process.exit(0)}
   if(p?.merged===true){await dispatchPostMergeDeploys();console.log('[EKODI][ORCH-AUTO-MERGE] already merged; post-merge deploys reconciled');process.exit(0)}
   if(p?.head?.sha!==headSha)fail('PR head moved away from workflow SHA');
   const headStatuses=await statusMap(headSha);
