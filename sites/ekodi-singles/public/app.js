@@ -66,13 +66,16 @@ function profileForm(h){
   const file=importFile.files?.[0];if(!file)return;
   if(file.size>65536){imported.textContent='64KB 이하의 명함 파일만 허용합니다.';return}
   try{
-   const card=(await file.text()).replace(/\\r?\\n[ \\t]/g,'').split(/\\r?\\n/);
+   const card=(await file.text()).replace(/\r?\n[ \t]/g,'').split(/\r?\n/);
    if(!card.some(line=>/^BEGIN:VCARD$/i.test(line.trim()))){imported.textContent='올바른 vCard 명함 파일이 아닙니다.';return}
-   const field=key=>card.find(line=>line.split(':',1)[0].split(';',1)[0].toUpperCase()===key)?.slice(card.find(line=>line.split(':',1)[0].split(';',1)[0].toUpperCase()===key).indexOf(':')+1).replace(/\\\\n/gi,' ').trim()||'';
+   const field=key=>{
+    const row=card.find(line=>line.split(':',1)[0].split(';',1)[0].toUpperCase()===key);
+    return row?row.slice(row.indexOf(':')+1).replace(/\\n/gi,' ').trim():'';
+   };
    const name=field('FN'),organization=field('ORG'),title=field('TITLE'),link=field('URL');
    if(name)nickname.value=name.slice(0,32);
    if(organization||title)intro.value=[organization,title].filter(Boolean).join(' · ').slice(0,400);
-   if(link&&/^https:\\/\\//i.test(link))profileLink.value=link.slice(0,300);
+   if(link&&link.startsWith('https://'))profileLink.value=link.slice(0,300);
    discover.checked=false;
    imported.textContent='표시 이름·소속·직함·링크만 초안으로 입력했습니다. 공개 여부는 직접 선택하세요.';
   }catch{imported.textContent='명함 파일을 읽을 수 없습니다.'}
