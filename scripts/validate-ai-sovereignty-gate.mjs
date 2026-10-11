@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {sanitizeAiConnectionStatus, chooseEkodiExecution, publicAiJobReceipt} from '../ekodi-ai-sovereignty-gate.js';
 const key='sk-not-for-output';
 assert.deepEqual(Object.keys(sanitizeAiConnectionStatus({id:'openai',available:true,apiKey:key,authMethod:'api-key'})).sort(), ['authMethod','connected','expiresAt','id','reauthenticationRequired'].sort());
@@ -21,4 +22,16 @@ assert.equal(chooseEkodiExecution({providers:[{id:'no-automation',available:true
 assert.equal(chooseEkodiExecution({providers:[{id:'disabled',available:false,automationAllowed:true,costClass:'free-preferred',trustClass:'external'}]}).path,'blocked');
 assert.equal(chooseEkodiExecution({capabilityId:'reports',capabilities:[{...cap,state:'staged'}]}).path,'blocked');
 assert.equal(sanitizeAiConnectionStatus({id:'local',available:true,authMethod:'local'}).authMethod,'local');
-console.log('EKODI reuse-first gate: 17 assertions passed');
+// Contract test: protect the admin preview boundary from accidental mutation or authorization bypass.
+const control=readFileSync(new URL('../ai-command-control.js',import.meta.url),'utf8');
+const begin=control.indexOf("if (request.method === 'POST' && url.pathname === \`${PREFIX}/sovereignty/preview\`)");
+const end=control.indexOf("if (request.method === 'GET' && url.pathname === \`${PREFIX}/orchestrator/human-gates\`)",begin);
+assert.ok(begin>=0 && end>begin,'read-only sovereignty preview route missing');
+const preview=control.slice(begin,end);
+assert.match(preview,/requirePlatformSuperAdmin\('ai:read'\)/);
+assert.match(preview,/capabilities:\[\]/);
+assert.match(preview,/paidApproved:false/);
+assert.match(preview,/executionAuthorized:false/);
+assert.doesNotMatch(preview,/runEkodiCommandQueue\s*\(|ingestEkodiPulse\s*\(|submitOrchestratorTask\s*\(/);
+assert.match(preview,/reusableSuggestions/);
+console.log('EKODI reuse-first gate: 24 assertions passed');
