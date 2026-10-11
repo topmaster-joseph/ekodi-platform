@@ -276,6 +276,10 @@ jobs:
           DEVICE_TARGET_HOSTNAME: 'user2'
         run: node scripts/verify-native-user2-virtual-probe.mjs
 
+      - name: Select USER2 native safe alternative without authorizing guest desktop
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-virtual-probe'
+        run: node scripts/select-native-user2-safe-route.mjs
+
       - name: Verify USER2 native Ollama loopback inference with real Windows receipt
         if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-localai'
         env:
@@ -315,6 +319,18 @@ jobs:
             echo '## EKODI real-device Native Virtualization Verification' >> "$GITHUB_STEP_SUMMARY"
             echo '- Verification artifact was not produced because a non-deferrable verification error occurred.' >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Preserve USER2 native probe and safe route evidence
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-virtual-probe'
+        uses: actions/upload-artifact@v7
+        with:
+          name: user2-native-route-${{ github.run_id }}
+          path: |
+            artifacts/native-device-readiness.json
+            artifacts/native-user2-virtual-probe.json
+            artifacts/native-user2-safe-route.json
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Preserve USER4 route evidence
         if: always() && github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user4-virtual-probe'
