@@ -6,7 +6,7 @@ type Reply=(req:Request,body:unknown,status?:number)=>Response;
 const bankOn=()=>Deno.env.get('SINGLES_BANK_TRANSFER_ENABLED')==='true';
 const verifyOn=()=>Deno.env.get('SINGLES_BANK_VERIFICATION_ENABLED')==='true';
 const REF=/^EDH-[A-F0-9]{32}$/;
-const CODES=['community','consulting'];
+const CODES=['community','community_90','community_365','consulting'];
 async function one(q:any){const {data,error}=await q.maybeSingle();if(error)throw error;return data}
 async function many(q:any){const {data,error}=await q;if(error)throw error;return data||[]}
 async function payload(req:Request){
@@ -22,8 +22,9 @@ async function operator(admin:Admin,userId:string){
 }
 export async function hasBankPlan(admin:Admin,userId:string,planCode:string){
  if(!bankOn())return false;
- const row=await one(admin.from('singles_bank_grants').select('expires_at').eq('user_id',userId).eq('plan_code',planCode));
- return Boolean(row?.expires_at&&Date.parse(row.expires_at)>Date.now());
+ const codes=planCode==='community'?['community','community_90','community_365']:[planCode];
+ const rows=await many(admin.from('singles_bank_grants').select('expires_at').eq('user_id',userId).in('plan_code',codes));
+ return rows.some((row:any)=>Boolean(row.expires_at&&Date.parse(row.expires_at)>Date.now()));
 }
 export async function bankPlanSnapshot(admin:Admin,userId:string){
  const community=await hasBankPlan(admin,userId,'community'),consulting=await hasBankPlan(admin,userId,'consulting');
@@ -110,7 +111,7 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   if(!role||role.can_configure!==true)return reply(req,{error:'bank_configuration_capability_required'},403);
   const v=await payload(req);
   if(!v||typeof v!=='object'||Array.isArray(v)||
-    Object.keys(v).some(k=>!['bank_name','account_number','account_holder','community_amount_krw','consulting_amount_krw'].includes(k)))
+    Object.keys(v).some(k=>!['bank_name','account_number','account_holder','community_amount_krw','consulting_amount_krw','tier_prices'].includes(k)))
     return reply(req,{error:'invalid_bank_configuration'},400);
   const name=typeof v.bank_name==='string'?v.bank_name.trim():'';
   const account=typeof v.account_number==='string'?v.account_number.trim():'';
@@ -119,6 +120,9 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   if(name.length<2||name.length>70||! /^[0-9 -]{6,40}$/.test(account)||holder.length<2||holder.length>70
      ||!validAmount(v.community_amount_krw)||!validAmount(v.consulting_amount_krw))
     return reply(req,{error:'invalid_bank_configuration_values'},400);
+  const tierPrices=v.tier_prices||{};
+  if(!tierPrices||typeof tierPrices!=='object'||Array.isArray(tierPrices)||Object.keys(tierPrices).some(k=>!['community_90','community_365'].includes(k)||!validAmount(tierPrices[k])))
+    return reply(req,{error:'invalid_tier_prices'},400);
   // Changing destination/prices always closes collection until a separate release approval.
   const {error:bankError}=await admin.from('singles_bank_settings')
     .upsert({id:1,bank_name:name,account_number:account,account_holder:holder,active:false},{onConflict:'id'});
@@ -129,6 +133,13 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
       {code:'consulting',display_name:'선택형 일반 교제·소통 컨설팅',amount_krw:v.consulting_amount_krw,duration_days:30,active:false},
     ],{onConflict:'code'});
   if(priceError)throw priceError;
+  for(const code of ['community_90','community_365']){
+   if(Object.prototype.hasOwnProperty.call(tierPrices,code)){
+    const amount_krw=tierPrices[code];
+    const {error:tierError}=await admin.from('singles_bank_plans').update({amount_krw,active:false}).eq('code',code);
+    if(tierError)throw tierError;
+   }
+  }
   const last4=account.replace(/[^0-9]/g,'').slice(-4);
   const {error:auditError}=await admin.from('singles_bank_settings_audit').insert({
     actor_id:userId,account_last4:last4,
