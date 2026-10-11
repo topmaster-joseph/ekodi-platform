@@ -55,7 +55,23 @@ export async function observeNativeDeviceReadiness({token,hostname='user3',now=D
   if(!response.ok)throw new Error('native_agent_observation_http_'+response.status);
   const data=await response.json();
   if(!Array.isArray(data?.devices))throw new Error('native_agent_observation_invalid_response');
-  return summarizeNativeDeviceReadiness(data.devices,{hostname,now});
+  const summary=summarizeNativeDeviceReadiness(data.devices,{hostname,now});
+  const redacted=data?.proofs && typeof data.proofs==='object' ? data.proofs : {};
+  const evidence=kind=>{
+    const item=redacted[kind];
+    if(!item||typeof item!=='object')return {status:'not_observed',verified:false,fresh:false};
+    const status=['queued','claimed','succeeded','failed','cancelled'].includes(item.status)
+      ? item.status : 'unknown';
+    return {
+      status,
+      verified:item.verified===true && item.fresh===true && status==='succeeded',
+      fresh:item.fresh===true,
+      completedAt:typeof item.completedAt==='string' && Number.isFinite(Date.parse(item.completedAt))
+        ? new Date(item.completedAt).toISOString() : null,
+    };
+  };
+  return {...summary,proofs:{browser:evidence('browser'),localAi:evidence('localAi')}};
+
 }
 
 // Read-only multi-device observation; no command POST, no alternate-device success substitution.
