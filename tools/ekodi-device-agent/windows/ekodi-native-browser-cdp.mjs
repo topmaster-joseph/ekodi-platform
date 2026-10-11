@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // EKODI-owned background browser canary. Node 22+; no external automation service.
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { access, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -24,7 +24,7 @@ export function browserCandidates(env = process.env) {
 }
 export async function selectBrowser(candidates = browserCandidates()) {
   for (const candidate of candidates) {
-    try { await import('node:fs/promises').then(fs=>fs.access(candidate)); return candidate; } catch {}
+    try { await access(candidate); return candidate; } catch {}
   }
   throw new Error('CDP_BROWSER_NOT_FOUND');
 }
@@ -92,7 +92,7 @@ export async function probeCdp({browser, url=TARGET, timeoutMs=20000} = {}) {
     await rm(profile,{recursive:true,force:true,maxRetries:4,retryDelay:200}).catch(()=>{});
   }
 }
-if(process.argv[1] && import.meta.url === new URL('file://'+path.resolve(process.argv[1]).replaceAll('\\','/')).href){
+if(process.argv[1] && decodeURIComponent(new URL(import.meta.url).pathname).replace(/^\/(?!\/)([A-Za-z]:)/,'$1').toLowerCase() === path.resolve(process.argv[1]).replaceAll('\\','/').toLowerCase()){
   try {const result=await probeCdp({browser:await selectBrowser()});process.stdout.write(JSON.stringify(result)+'\n');}
   catch(e){process.stderr.write(JSON.stringify({ok:false,code:String(e.message||e).slice(0,160)})+'\n');process.exitCode=1;}
 }
