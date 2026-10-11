@@ -427,7 +427,7 @@ async function showAllPricing(h){
    }),msg);box.append(field);
   }
   h.append(box);
- }catch(e){if(e?.status!==403)notice(h,'가격관리 권한이 필요합니다.')}
+ }catch(e){if(e?.status===403)notice(h,'가격관리 역할이 발급되지 않았습니다.');else notice(h,'가격관리 설정을 불러오지 못했습니다.')}
 }
 async function showBrokerageReadiness(h){
  try{
@@ -460,7 +460,7 @@ async function showBrokerageReadiness(h){
    panel.append(group);
   }
   h.append(panel);
- }catch(e){if(e?.status!==403)notice(h,'인허가 준비자료를 조회하지 못했습니다.')}
+ }catch(e){if(e?.status===403)notice(h,'인허가 관리 권한이 없습니다. 검증된 EKODI 계정에 운영자 역할이 필요합니다.');else notice(h,'인허가 준비자료를 조회하지 못했습니다.')}
 }
 async function signedIn(status){
  document.querySelectorAll('[data-member-nav]').forEach(link=>{link.hidden=false});
