@@ -1074,6 +1074,49 @@ async function reconcileJobs(env) {
   }
 }
 
+// Read-only, redacted projection. A successful command is NOT proof until the
+// matching native receipt, strict target, isolation and freshness are verified.
+export function projectNativeDeviceProofs(rows = [], now = Date.now()) {
+  const output = { browser: null, localAi: null };
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const browser = row.command_type === 'computer.browser.canary';
+    const localAi = row.command_type === 'software.localai.verify';
+    const key = browser ? 'browser' : localAi ? 'localAi' : '';
+    if (!key || output[key]) continue; // The most recent command is authoritative.
+    const completedMs = Date.parse(String(row.completed_at || ''));
+    const fresh = Number.isFinite(completedMs) && completedMs <= now + 5000 &&
+      now - completedMs >= 0 && now - completedMs <= 24 * 3600 * 1000;
+    const receipt = parseJson(row.result_json);
+    const status = ['queued','claimed','succeeded','failed','cancelled'].includes(row.status) ? row.status : 'unknown';
+    const completedAt = Number.isFinite(completedMs) ? new Date(completedMs).toISOString() : null;
+    if (browser) {
+      const proof = receipt?.browserCanary || {};
+      const bytes = Number(proof.contentBytes);
+      output[key] = {
+        status, completedAt, fresh,
+        mode: proof.mode === 'native-cdp' ? 'native-cdp' : 'unverified',
+        contentBytes: Number.isSafeInteger(bytes) && bytes > 0 ? Math.min(bytes, 10_000_000) : 0,
+        verified: status === 'succeeded' && fresh && proof.ok === true &&
+          proof.mode === 'native-cdp' && proof.url === 'https://ekodi.kr/' &&
+          Number.isSafeInteger(bytes) && bytes > 0 && proof.dedicatedAutomationProfile === true &&
+          proof.focusIsolated === true && proof.clipboardShared === false &&
+          proof.userInputInjection === false,
+      };
+    } else {
+      const proof = receipt?.localAiProof || {};
+      output[key] = {
+        status, completedAt, fresh,
+        ollamaApi: proof.ollamaApi === 'ready' ? 'ready' : 'unverified',
+        inference: proof.inference === 'passed' ? 'passed' : 'unverified',
+        verified: status === 'succeeded' && fresh && proof.ollamaApi === 'ready' &&
+          proof.inference === 'passed' && proof.credentialCollection === false &&
+          proof.executionMode === 'fixed_loopback_api',
+      };
+    }
+  }
+  return output;
+}
+
 async function handleAdmin(request, env) {
   const auth = await adminSession(request, env);
   if (!auth.session) return auth.response;
@@ -1092,6 +1135,14 @@ async function handleAdmin(request, env) {
       LEFT JOIN device_management_profiles m ON m.device_id = r.id
       WHERE LOWER(r.hostname) = ? AND r.revoked_at IS NULL
       ORDER BY r.last_seen_at DESC LIMIT 10`).bind(hostname).all();
+    // SELECT-only: bind exact hostname, inspect the newest active enrollment only,
+    // never return device IDs, command IDs, raw results or provider credentials.
+    const proofRows = await env.DB.prepare(`SELECT c.command_type, c.status, c.completed_at, c.result_json
+      FROM device_commands c WHERE c.device_id = (
+        SELECT id FROM device_registry WHERE LOWER(hostname) = ? AND revoked_at IS NULL
+        ORDER BY last_seen_at DESC LIMIT 1
+      ) AND c.command_type IN ('computer.browser.canary', 'software.localai.verify')
+      ORDER BY c.issued_at DESC LIMIT 12`).bind(hostname).all();
     const devices = (rows.results || []).map(row => {
       const capabilities = parseJson(row.capabilities_json);
       return {
@@ -1111,7 +1162,7 @@ async function handleAdmin(request, env) {
         }
       };
     });
-    return json({ devices, generatedAt:new Date().toISOString(), mode:'observe-only' }, 200, request, env);
+    return json({ devices, proofs:projectNativeDeviceProofs(proofRows.results || []), generatedAt:new Date().toISOString(), mode:'observe-only' }, 200, request, env);
   }
 
   if (request.method === 'GET' && path === ADMIN_PREFIX) {
