@@ -63,4 +63,40 @@ values
 ('event_basic','행사 기본 참가권','community_event','per_event',9900,null,null,null,null),
 ('event_plus','행사 특별 참가권','community_event','per_event',29900,null,null,null,null)
 on conflict(code) do nothing;
+-- Consent-based charging must happen once and only after verified receiver acceptance.
+-- Credits are pre-funded, but an outgoing request merely reserves a right;
+-- a receiver's verified acceptance atomically consumes it.
+create table if not exists public.singles_message_credit_wallets (
+ user_id uuid not null references auth.users(id),
+ scope text not null check(scope in ('per_message','per_contact')),
+ available integer not null default 0 check(available>=0),
+ reserved integer not null default 0 check(reserved>=0),
+ updated_at timestamptz not null default now(),
+ primary key(user_id,scope)
+);
+create table if not exists public.singles_message_consent_charges (
+ id uuid primary key default gen_random_uuid(),
+ sender_id uuid not null references auth.users(id),
+ receiver_id uuid not null references auth.users(id),
+ request_id uuid not null unique,
+ product_code text not null references public.singles_product_catalog(code),
+ status text not null default 'pending' check(status in ('pending','accepted','declined','cancelled','expired')),
+ reservation_units integer not null default 1 check(reservation_units>0),
+ charged_units integer not null default 0 check(charged_units>=0),
+ accepted_at timestamptz,
+ charged_at timestamptz,
+ created_at timestamptz not null default now(),
+ check(sender_id<>receiver_id),
+ check(status<>'accepted' or (charged_at is not null and accepted_at is not null and charged_units=reservation_units)),
+ check(status not in ('declined','cancelled','expired') or charged_units=0)
+);
+create unique index if not exists singles_message_consent_once
+ on public.singles_message_consent_charges(sender_id,receiver_id,product_code)
+ where status='accepted' and product_code like 'contact_%';
+-- SQL rights must be served by a trusted RPC with a transaction lock and separate
+-- verified payment receipt, not client-side state or a self-reported deposit.
+alter table public.singles_message_credit_wallets enable row level security;
+alter table public.singles_message_consent_charges enable row level security;
+revoke all on public.singles_message_credit_wallets,public.singles_message_consent_charges from public,anon,authenticated;
+grant select,insert,update on public.singles_message_credit_wallets,public.singles_message_consent_charges to service_role;
 -- All products disabled by default. No matchmaking services or bypass of confirmed payment.
