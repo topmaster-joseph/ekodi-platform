@@ -37,7 +37,7 @@ function allowApi(path,method){
  if(path==='/api/subscription'&&method==='GET')return ['/subscription',true];
  for(const [endpoint,methods] of [
   ['/api/bank/plans',['GET']],['/api/bank/orders',['GET','POST']],
-  ['/api/bank/admin/orders',['GET']],['/api/bank/admin/config',['GET','PUT']],['/api/bank/admin/catalog',['GET']],['/api/bank/consulting/requests',['GET','POST']]]){
+  ['/api/bank/admin/orders',['GET']],['/api/bank/admin/config',['GET','PUT']],['/api/bank/admin/catalog',['GET']],['/api/bank/admin/brokerage-readiness',['GET','PUT']],['/api/bank/consulting/requests',['GET','POST']]]){
    if(path===endpoint&&methods.includes(method))return [path.slice(4),true];
  }
  if(/^\/api\/bank\/admin\/catalog\/[a-z][a-z0-9_]{2,49}$/.test(path)&&method==='PUT')return [path.slice(4),true];
@@ -68,9 +68,12 @@ async function api(req,env,sub){
  if(sub==='/api/public'&&SAFE_METHODS.has(req.method))return json({description_only:true,events:[],groups:[]},200,false);
  if(!sub.startsWith('/api/'))return null;
  const route=allowApi(sub,req.method);if(!route)return json({error:'not_found'},404);
- if(!enabled(env))return json({error:'singles_enrollment_not_launched'},503);
+ // Permit ONLY operator-authorized licensing preparation before member enrollment launch.
+ // Every request still requires a verified bearer and the Supabase operator capability.
+ const adminPreparation=sub==='/api/bank/admin/brokerage-readiness';
+ if(!enabled(env)&&!adminPreparation)return json({error:'singles_enrollment_not_launched'},503);
  const [targetPath,social]=route;
- if(social&&!socialEnabled(env))return json({error:'singles_social_not_launched'},503);
+ if(social&&!socialEnabled(env)&&!adminPreparation)return json({error:'singles_social_not_launched'},503);
  // Writes for both event participation and *every* message (including replies)
  // require the central paid-actions release gate; reads and consent remain free.
  const paidWrite=req.method==='POST'&&Boolean(
