@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const panel = readFileSync(new URL('../user-ai-tier-panel.js', import.meta.url), 'utf8');
 const shell = readFileSync(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
+const loader = readFileSync(new URL('../admin-demand-loader.js', import.meta.url), 'utf8');
 
 test('AI membership visible activation synchronizes canonical Admin current section',()=>{
   const show = panel.slice(panel.indexOf('  function showSection() {'), panel.indexOf('  function installNav() {'));
@@ -27,4 +28,11 @@ test('membership nav still offers a direct visible click and an actual panel',()
   assert.match(panel,/button\.addEventListener\('click', event => \{ event\.preventDefault\(\); event\.stopPropagation\(\); showSection\(\); \}\)/);
   assert.match(panel,/section\.dataset\.panel = SECTION/);
   assert.match(panel,/section\.hidden = true/);
+});
+
+test('AI membership lazy loader waits for the actual panel before signaling readiness',()=>{
+  assert.match(loader,/aimembers:\\s*\\{/);
+  assert.match(loader,/ready: '#userAiMembershipPanel'/);
+  assert.match(loader,/real: '\\[data-section="ai-membership"\\]'/);
+  assert.match(panel,/section\\.id = PANEL_ID/);
 });
