@@ -63,7 +63,6 @@ jobs:
             echo "BACKUP_DATABASE=DB" >> "$GITHUB_ENV"
             echo "BACKUP_CONFIG=wrangler.api.toml" >> "$GITHUB_ENV"
             echo "BACKUP_LOCAL=true" >> "$GITHUB_ENV"
-            echo "BACKUP_PERSIST_DIR=$RUNNER_TEMP/ekodi-core-backup-local" >> "$GITHUB_ENV"
             echo "source=isolated-local-d1" >> "$GITHUB_OUTPUT"
           else
             echo "BACKUP_DATABASE=$PRODUCTION_BACKUP_DATABASE" >> "$GITHUB_ENV"
@@ -76,10 +75,9 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           set -euo pipefail
-          rm -rf "$BACKUP_PERSIST_DIR"
-          mkdir -p "$BACKUP_PERSIST_DIR"
+          rm -rf .wrangler/state
           npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB \
-            --local --persist-to "$BACKUP_PERSIST_DIR" --config "$BACKUP_CONFIG"
+            --local --config "$BACKUP_CONFIG"
 
       - name: Export EKODI Core D1
         run: |
@@ -87,7 +85,7 @@ jobs:
           mkdir -p backup
           if [ "$BACKUP_LOCAL" = "true" ]; then
             npx --yes wrangler@${WRANGLER_VERSION} d1 export "$BACKUP_DATABASE" \
-              --local --persist-to "$BACKUP_PERSIST_DIR" \
+              --local \
               --output=backup/ekodi-auth.sql \
               --config "$BACKUP_CONFIG"
           else
