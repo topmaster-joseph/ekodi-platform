@@ -299,6 +299,26 @@ function globalButtons(globals, locale) {
     existing.delete(group.id);
   }
   for (const button of existing.values()) button.remove();
+  // Single EKODI Control entry: open the central command panel inside
+  // this existing admin shell, never another sidebar or duplicate composer.
+  let control = globals.querySelector('[data-ekodi-control-entry]');
+  if (!control) {
+    control = document.createElement('a');
+    control.className = 'admin-global-nav admin-control-entry';
+    control.dataset.ekodiControlEntry = 'true';
+    control.href = '/admin/';
+    globals.append(control);
+  }
+  // Update the reused element's handler rather than registering duplicate
+  // listeners every time the menu re-renders.
+  control.href='/admin/';
+  control.onclick=event=>{
+    if(!window.EKODIAdminPanels?.activate)return;
+    event.preventDefault();
+    window.EKODIAdminPanels.activate('command-home');
+  };
+  control.textContent = locale === 'en' ? '⌘  EKODI Control' : '⌘  에코디 운영관제';
+  control.setAttribute('aria-label',locale === 'en' ? 'Open EKODI Control' : '에코디 운영관제 열기');
 }
 
 function renderSidebarDetails(nav, globals, group, section, locale) {
