@@ -150,3 +150,31 @@ html[data-control-embed="admin"] .auth-banner a{color:#fff!important}
  html[data-control-embed="admin"] .target-label select{max-width:165px}
  html[data-control-embed="admin"] .toggle{display:flex!important}
 }
+
+
+/* Embedded conversation is a contained app, not a scrolling second page. */
+html[data-control-embed="admin"],
+html[data-control-embed="admin"] body,
+html[data-control-embed="admin"] .control-shell {
+  height:100dvh!important;max-height:100dvh!important;overflow:hidden!important;
+}
+html[data-control-embed="admin"] .control-main {
+  height:100dvh!important;min-height:0!important;overflow:hidden!important;
+}
+html[data-control-embed="admin"] #viewChat.active{
+  overflow:hidden!important;
+}
+html[data-control-embed="admin"] .conversation{
+  overflow-y:auto!important;min-height:0!important;
+  padding-bottom:30px!important;scrollbar-color:#617795 transparent;
+}
+html[data-control-embed="admin"] .composer-wrap{
+  position:relative!important;flex:0 0 auto!important;
+  margin-top:auto!important;bottom:auto!important;
+}
+html[data-control-embed="admin"] .view.active:not(#viewChat){
+  overflow:auto!important;
+}
+@media(max-width:760px){
+ html[data-control-embed="admin"] .conversation{padding-bottom:18px!important}
+}
