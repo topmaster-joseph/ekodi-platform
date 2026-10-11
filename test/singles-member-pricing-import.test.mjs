@@ -28,6 +28,7 @@ test('vCard import runs in browser and cannot itself publish or verify identity'
  assert.match(ui,/file\.size>65536/);
  assert.match(ui,/discover\.checked=false/);
  assert.match(ui,/file\.text\(\)/);
+ assert.match(ui,/state\.session\?\.user\?\.user_metadata\?\.full_name/);
  assert.match(ui,/정부 공공 마이데이터/);
  assert.doesNotMatch(ui,/adult_verified_at\s*:\s*true/);
 });
