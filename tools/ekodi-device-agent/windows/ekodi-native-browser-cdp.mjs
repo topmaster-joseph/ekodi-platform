@@ -30,6 +30,7 @@ export async function selectBrowser(candidates = browserCandidates()) {
 }
 async function waitForPort(profile, child, deadline) {
   while (Date.now() < deadline) {
+    if (child.spawnError) throw new Error('CDP_BROWSER_SPAWN_' + child.spawnError);
     if (child.exitCode !== null) throw new Error('CDP_BROWSER_EARLY_EXIT_' + child.exitCode);
     try {
       const raw = await readFile(path.join(profile,'DevToolsActivePort'),'utf8');
@@ -50,6 +51,7 @@ export async function probeCdp({browser, url=TARGET, timeoutMs=20000} = {}) {
   let ws;
   try {
     child=spawn(browser,['--headless=new','--disable-gpu','--no-first-run','--no-default-browser-check','--disable-extensions','--disable-sync','--remote-debugging-port=0','--user-data-dir='+profile,'about:blank'],{windowsHide:true,stdio:'ignore'});
+    child.once('error', err => { child.spawnError = err.code || 'UNKNOWN'; });
     const deadline=Date.now()+timeoutMs;
     const endpoint=await waitForPort(profile,child,deadline);
     ws=new WebSocket(endpoint);
