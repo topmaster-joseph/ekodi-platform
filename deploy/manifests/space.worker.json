@@ -206,6 +206,7 @@
         "headerExpect": [
           "x-ekodi-route: ekodimission-public",
           "x-ekodi-independent-site: true",
+          "x-ekodi-publication-status: published",
           "x-robots-tag: noindex, nofollow, noarchive",
           "cache-control: no-store"
         ],
