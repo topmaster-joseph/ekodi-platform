@@ -81,9 +81,6 @@ test('shared-site guarded release invokes native browser verification after prod
   assert.match(workerWorkflow,/group:\s*ekodi-background-browser-worker-\$\{\{ github\.ref \}\}-\$\{\{ inputs\.device_profile \|\| 'desktop' \}\}/);
   assert.match(sharedRelease,/native_surface_verification_desktop:/);
   assert.match(sharedRelease,/native_surface_verification_mobile:/);
-  assert.match(sharedRelease,/native_surface_verification_mobile:[\s\S]*?needs:\s*\[deploy, native_surface_verification_desktop, authenticated_admin_surface_verification\]/);
-  assert.match(sharedRelease,/native_surface_verification_mobile:[\s\S]*?if:\s*\$\{\{ always\(\) && needs\.deploy\.result == 'success' \}\}/);
-  assert.match(sharedRelease,/native_surface_verification_mobile:[\s\S]*?uses:\s*\.\/\.github\/workflows\/ekodi-background-browser-worker\.yml/);
   assert.match(sharedRelease,/uses:\s*\.\/\.github\/workflows\/ekodi-background-browser-worker\.yml/);
   assert.match(sharedRelease,/device_profile:\s*desktop/);
   assert.match(sharedRelease,/device_profile:\s*mobile-portrait/);
@@ -109,7 +106,14 @@ test('shared-site guarded release invokes native browser verification after prod
   }
   const desktop=sharedRelease.match(/native_surface_verification_desktop:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
   const mobile=sharedRelease.match(/native_surface_verification_mobile:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
-  assert.match(desktop,/needs:\s*deploy/);
+  // Read-only native canaries must not concurrently flood shared Cloudflare origin.
+  assert.match(desktop,/needs:\s*\[deploy, authenticated_admin_surface_verification\]/);
+  assert.match(desktop,/if:\s*\$\{\{ always\(\) && needs\.deploy\.result == 'success' \}\}/);
   assert.match(mobile,/needs:\s*\[deploy, native_surface_verification_desktop, authenticated_admin_surface_verification\]/);
   assert.match(mobile,/if:\s*\$\{\{ always\(\) && needs\.deploy\.result == 'success' \}\}/);
+  // The authenticated Admin, Desktop and Mobile are each mandatory even if
+  // another post-deploy canary fails (never reinterpret HTTP 429 as success).
+  assert.match(sharedRelease,/authenticated_admin_surface_verification:[\s\S]*?needs:\s*deploy/);
+  assert.doesNotMatch(desktop,/continue-on-error:/);
+  assert.doesNotMatch(mobile,/continue-on-error:/);
 });
