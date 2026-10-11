@@ -31,6 +31,11 @@ test('private route never permits anonymous checklist disclosure',async()=>{
  const r=await routeSinglesSurface(new Request('https://ekodi.kr/singles/api/bank/admin/brokerage-readiness'),{ASSETS:{fetch:async()=>new Response('asset')}});
  assert.equal(r.status,503);
  const j=await r.json();assert.ok(j.error);
+ const config={ASSETS:{fetch:async()=>new Response('asset')},SINGLES_API_URL:'https://example.supabase.co/functions/v1/singles-api'};
+ const ready=await routeSinglesSurface(new Request('https://ekodi.kr/singles/api/bank/admin/brokerage-readiness'),config);
+ assert.equal(ready.status,401,'prelaunch admin may prepare only after authentication');
+ const social=await routeSinglesSurface(new Request('https://ekodi.kr/singles/api/discover'),config);
+ assert.equal(social.status,503,'public member discovery must remain closed');
 });
 test('official filing remains a user-confirmed government flow rather than a platform submission',()=>{
  assert.match(ui,/CappBizCD=13510000012/);
