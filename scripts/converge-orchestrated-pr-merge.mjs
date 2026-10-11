@@ -138,6 +138,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='canonical-surface-router.js'||
   file==='admin-sidebar.js'||
   file==='scripts/verify-admin-production-ui-e2e.mjs'||
+  // Hybrid native browser admin page shares the guarded Site Core release boundary.
+  file==='hybrid-execution-admin.js'||
   file==='device-control-admin.js'||
   file==='device-control-admin.css'||
   // Keep all Device Control/Remote Power/Wake static assets in a single orchestrated deploy boundary.
