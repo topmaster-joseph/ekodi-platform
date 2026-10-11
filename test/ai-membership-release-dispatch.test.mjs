@@ -12,6 +12,7 @@ test('AI membership panel edits dispatch guarded Shared Site Core deployment',()
   const selector=dispatcher.slice(start,end);
   assert.ok(selector.includes("file==='user-ai-tier-panel.js'||"));
   assert.ok(selector.includes("file==='admin-provider-control.js'||"));
+  assert.ok(!selector.includes("file==='test/ai-membership-release-dispatch.test.mjs'"));
   assert.ok(dispatcher.includes('if(sharedSiteTouched)'));
   assert.ok(dispatcher.includes("'deploy-site-core.yml'"));
 });
