@@ -175,6 +175,7 @@ const nativeUser2LocalAiTouched=changedFiles.some(file=>file==='scripts/verify-n
 // USER3 only: one-time transactional official Agent update, then fixed loopback Ollama proof.
 const nativeUser3RecoveryTouched=changedFiles.some(file=>file==='scripts/recover-native-user3-localai.mjs');
 const nativeUser2RecoveryTouched=changedFiles.some(file=>file==='scripts/recover-native-user2-localai.mjs');
+const nativeUser2VirtualProbeTouched=changedFiles.some(file=>file==='scripts/verify-native-user2-virtual-probe.mjs');
 const nativeUser4AcceptanceTouched=changedFiles.some(file=>file==='scripts/verify-native-user4-acceptance.mjs');
 // Supabase Church API is an independent guarded release boundary, not a Site Core asset.
 const churchApiTouched=changedFiles.some(file=>
@@ -194,6 +195,15 @@ async function dispatchPostMergeDeploys(){
     console.log(JSON.stringify({ok:true,action:'native-user4-acceptance-dispatched',
       workflow:'device-agent-production-verification.yml',pr:pr.number,taskId,branch,
       authority:'ekodi-orchestrator'}));
+  }
+  if(nativeUser2VirtualProbeTouched){
+    const dispatched=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{
+      method:'POST',body:JSON.stringify({ref:'main',inputs:{
+        execution_mode:'user2-virtual-probe',release_branch_ref:branch,release_task_id:taskId
+      }})
+    });
+    if(!dispatched.r.ok)fail('USER2 native virtual probe dispatch failed '+dispatched.r.status+' '+JSON.stringify(dispatched.data).slice(0,350));
+    console.log(JSON.stringify({ok:true,action:'native-user2-virtual-probe-dispatched',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(nativeUser2RecoveryTouched){
     const dispatch=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{
