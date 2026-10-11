@@ -70,3 +70,10 @@ This implementation is a **candidate** until CI, Orchestrator task provenance, p
 - Protected recovery PR: #4122; official server release receipt returned `authorized:true`, `authority:ekodi-orchestrator`.
 - All required CI and Control API staging checks passed on original recovered commit. The recovery lane must still run strict base sync and all checks on the new head before merging.
 - Do not mark native audio complete without a local authenticated Windows canary and 8/8 real embedded audio playback evidence. Desktop Commander remote quota is currently exhausted, and no authorized local browser session has been verified.
+
+## 2026-10-11 protected head-refresh evidence
+
+- The official convergent-merge job verified the Orchestrator receipt and synchronized this PR branch with the protected `main` head without force-updating `main`.
+- The GitHub Actions authored update generated an `action_required` CI state, which is **not** a successful check and must not be counted as one.
+- This owner-authorized documentation change must trigger a fresh set of ordinary protected PR checks. No check will be skipped, spoofed, disabled or treated as optional.
+- Native Google Slides audio acceptance is separate from deployment. Its 8 slide-specific media objects and direct playback have not yet been verified; do not publish a completion claim based on CI alone.
