@@ -1,6 +1,6 @@
 // EKODI Presence: private administrator API for church and mission onsite attendance.
 // Auth is verified against the current Supabase project; service key is never sent to clients.
-const ALLOWED_ORIGINS = new Set(['https://ekodi.kr','https://www.ekodi.kr']);
+const ALLOWED_ORIGINS = new Set(['https://ekodi.kr']);
 const TENANTS = new Set(['ekodi-church','ekodimission']);
 const ACTIONS = new Set(['open_session','register_person','observe','record_headcount','check_in','resolve','unlink','close_session']);
 function headers(origin: string) {
