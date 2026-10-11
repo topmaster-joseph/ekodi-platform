@@ -57,7 +57,7 @@ test('M1 public assets keep static serving path and reject non-safe methods',asy
 });
 
 test('unpublished site fails closed across HTML, assets and public listings',async()=>{
- const locked={ASSETS:env.ASSETS};
+ const locked={SINGLES_PUBLIC_PREVIEW_ENABLED:'false',ASSETS:env.ASSETS};
  for(const path of ['/singles','/singles/','/singles/my','/singles/events','/singles/admin','/singles/app.js','/singles/styles.css','/singles/api/public']){
   const response=await routeSinglesSurface(req(path),locked);
   assert.equal(response.status,404,path);
@@ -66,4 +66,15 @@ test('unpublished site fails closed across HTML, assets and public listings',asy
  const status=await (await routeSinglesSurface(req('/singles/api/status'),locked)).json();
  assert.equal(status.onboarding_enabled,false);
  assert.equal((await routeSinglesSurface(req('/singles/api/me','PUT'),locked)).status,503);
+});
+
+test('public launch exposes informational introduction only while member services stay disabled',async()=>{
+ const publicEnv={ASSETS:env.ASSETS};
+ const landing=await routeSinglesSurface(req('/singles'),publicEnv);
+ assert.equal(landing.status,200);
+ const info=await (await routeSinglesSurface(req('/singles/api/public'),publicEnv)).json();
+ assert.equal(info.description_only,true);
+ assert.deepEqual(info.events,[]);
+ assert.equal((await routeSinglesSurface(req('/singles/api/me','GET'),publicEnv)).status,503);
+ assert.equal((await routeSinglesSurface(req('/singles/api/bank/plans','GET'),publicEnv)).status,503);
 });
