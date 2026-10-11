@@ -81,7 +81,7 @@ export async function probeCdp({browser, url=TARGET, timeoutMs=20000} = {}) {
     await send('Page.navigate',{url},session);
     let html='';
     while(Date.now()<deadline){
-      const reply=await send('Runtime.evaluate',{expression:'document.readyState==="complete" ? document.documentElement.outerHTML : ""',returnByValue:true},session);
+      const reply=await send('Runtime.evaluate',{expression:'location.href === '+JSON.stringify(url)+' && document.readyState==="complete" ? document.documentElement.outerHTML : ""',returnByValue:true},session);
       html=reply?.result?.value||'';
       if(html.length>0)break;
       await sleep(200);
