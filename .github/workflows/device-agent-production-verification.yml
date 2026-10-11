@@ -12,6 +12,7 @@ on:
           - observe
           - verify
           - status
+          - localai
       release_branch_ref:
         description: 'Orchestrator release branch, required in verify mode'
         required: false
@@ -36,6 +37,8 @@ on:
       - 'scripts/observe-native-device-readiness.mjs'
       - 'scripts/verify-native-agent-status.mjs'
       - 'test/native-agent-status-canary.test.mjs'
+      - 'scripts/verify-native-localai.mjs'
+      - 'test/native-localai-proof.test.mjs'
       - 'test/native-device-readiness-observe.test.mjs'
       - 'test/device-agent-production-verification.test.mjs'
       - 'test/device-control-contract.test.mjs'
@@ -52,6 +55,8 @@ on:
       - 'scripts/observe-native-device-readiness.mjs'
       - 'scripts/verify-native-agent-status.mjs'
       - 'test/native-agent-status-canary.test.mjs'
+      - 'scripts/verify-native-localai.mjs'
+      - 'test/native-localai-proof.test.mjs'
       - 'test/native-device-readiness-observe.test.mjs'
       - 'test/device-agent-production-verification.test.mjs'
       - 'test/device-control-contract.test.mjs'
@@ -81,7 +86,8 @@ jobs:
           node --check scripts/verify-device-agent-production.mjs
           node --check scripts/observe-native-device-readiness.mjs
           node --check scripts/verify-native-agent-status.mjs
-          node --test test/native-device-readiness-observe.test.mjs test/native-agent-status-canary.test.mjs
+          node --check scripts/verify-native-localai.mjs
+          node --test test/native-device-readiness-observe.test.mjs test/native-agent-status-canary.test.mjs test/native-localai-proof.test.mjs
           node --test test/device-agent-production-verification.test.mjs test/non-disruptive-device-agent-contract.test.mjs test/background-browser-canary-contract.test.mjs test/isolated-desktop-backend.test.mjs test/isolated-guest-agent.test.mjs
           grep -Fq "agent.self_update" scripts/verify-device-agent-production.mjs
           grep -Fq "computer.browser.canary" scripts/verify-device-agent-production.mjs
@@ -129,7 +135,7 @@ jobs:
           node-version: '24'
 
       - name: EKODI AI Orchestration Gate for mutating verification
-        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status')
+        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai')
         env:
           EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
           EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
@@ -211,6 +217,12 @@ jobs:
         env:
           DEVICE_TARGET_HOSTNAME: 'user3'
         run: node scripts/verify-native-agent-status.mjs
+
+      - name: Verify USER3 native Ollama loopback inference with real Windows receipt
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'localai'
+        env:
+          DEVICE_TARGET_HOSTNAME: 'user3'
+        run: node scripts/verify-native-localai.mjs
 
       - name: Verify native browser through bounded isolated session stages
         if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'verify'
