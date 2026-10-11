@@ -27,6 +27,10 @@
       scripts: ['ai-ops-admin.js'],
       secondaryScripts: ['admin-lazy-features.js'],
       real: '[data-section="aiops"]',
+      // The sidebar may exist before the shared AI Ops/audit panel is mounted.
+      // Wait for the real alias-capable DOM panel before reporting demand ready;
+      // otherwise audit-records can select correctly but remain hidden.
+      ready: '#aiOpsPanel[data-panel~="audit-records"]',
       hashes: ['#ai-ops', '#aiops'],
       insert: 'after-campus',
     },
