@@ -95,6 +95,7 @@ const COMMAND_POLICIES = Object.freeze({
   'agent.self_update': { risk: 'maintain', confirm: true },
   'software.localai.install': { risk: 'maintain', confirm: true },
   'software.localai.verify': { risk: 'observe' },
+  'software.localai.pair': { risk: 'maintain', confirm: true, payload: 'localai-pairing' },
   'computer.browser.canary': { risk: 'maintain', confirm: true },
   'computer.browser.execute': { risk: 'maintain', confirm: true, payload: 'background-browser-task' },
   'remote_desktop.recovery.enable': { risk: 'maintain', confirm: true },
@@ -117,6 +118,7 @@ const COMMAND_CAPABILITIES = Object.freeze({
   'computer.agent.status': 'agentStatus',
   'software.localai.install': 'localAiInstall',
   'software.localai.verify': 'localAiVerify',
+  'software.localai.pair': 'localAiPair',
   'computer.desktop.probe': 'isolatedDesktopProbe',
   'computer.desktop.canary': 'isolatedDesktopProbe',
   'computer.desktop.guest.canary': 'isolatedDesktopCanary',
@@ -364,6 +366,11 @@ function commandAllowedForDeviceType(deviceType, commandType) {
 function sanitizeCommandPayload(type, rawPayload) {
   const policy = COMMAND_POLICIES[type];
   if (!policy?.payload) return {};
+  if (policy.payload === 'localai-pairing') {
+    const code=safeText(rawPayload?.pairingCode,10).toUpperCase();
+    if(!/^[A-HJ-NP-Z2-9]{10}$/.test(code))throw new Error('LOCALAI_PAIRING_CODE_INVALID');
+    return {pairingCode:code};
+  }
   if (policy.payload === 'startup-item') {
     const itemId = safeText(rawPayload?.itemId, 80).toLowerCase();
     if (!/^[a-f0-9]{64}$/.test(itemId)) throw new Error('STARTUP_ITEM_INVALID');
@@ -1159,7 +1166,8 @@ async function handleAdmin(request, env) {
           isolatedDesktopProbe: capabilities.isolatedDesktopProbe === true,
           agentStatus: capabilities.agentStatus === true,
           localAiInstall: capabilities.localAiInstall === true,
-          localAiVerify: capabilities.localAiVerify === true
+          localAiVerify: capabilities.localAiVerify === true,
+          localAiPair: capabilities.localAiPair === true
         }
       };
     });
@@ -1560,6 +1568,11 @@ async function commandResult(request, env, device, commandId) {
     .bind(status, completedAt, safeJsonObject(result, 24000), commandId, device.id).run();
   if (!update.meta?.changes) return json({ error: '처리 중인 명령을 찾을 수 없습니다.' }, 404, request, env);
 
+  // Never retain used pairing codes in command history, including failed attempts.
+  if(command.command_type==='software.localai.pair'){
+    await env.DB.prepare("UPDATE device_commands SET payload_json='{}' WHERE id=? AND device_id=?")
+      .bind(commandId,device.id).run();
+  }
   if(command.command_type==='camera.live.start'){
     await env.DB.batch([
       env.DB.prepare(`UPDATE device_stream_sessions SET status=?, completed_at=? WHERE command_id=? AND device_id=?`).bind(status,completedAt,commandId,device.id),
