@@ -10,3 +10,5 @@ verifyNativeLocalAi({
   console.error('[EKODI][USER2-NATIVE-LOCALAI-CANARY] ' + String(error?.message || 'verification_failed').slice(0,100));
   process.exitCode = 1;
 });
+
+// Owner-initiated revalidation after related-change integration approval.
