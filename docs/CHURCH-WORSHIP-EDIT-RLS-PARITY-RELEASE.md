@@ -29,3 +29,7 @@ write route or client-side bearer exposure has been changed.
 
 The Orchestrator must synchronize this release with current protected main
 and regenerate required checks rather than reusing a stale GitHub merge SHA.
+
+## Protected main synchronization
+
+EKODI Orchestrator synchronized this PR with a newer protected main revision. GitHub classified the bot-authored intermediate head as action_required. This owner-authored documentation commit requests fresh CI, local Supabase and first-party Chromium checks on the updated branch head; it does not alter the server capability source or bypass branch protection.
