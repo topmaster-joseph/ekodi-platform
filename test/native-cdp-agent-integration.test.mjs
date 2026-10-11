@@ -22,5 +22,5 @@ test('CDP worker supplies DOM proof and never returns success from process exit 
   assert.match(worker,/CDP_DOM_EVIDENCE_MISSING/);
   assert.match(worker,/mkdtemp/);
   assert.match(worker,/rm\(profile,\{recursive:true,force:true/);
-  assert.match(worker,/windowsHide:true,stdio:'ignore'/);
+  assert.match(worker,/windowsHide:true,stdio:\\['ignore','ignore','pipe'\\]/);
 });
