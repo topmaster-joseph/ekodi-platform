@@ -981,7 +981,7 @@ function Invoke-EkodiNativeCdpCanary {
   New-Item -ItemType Directory -Path $workerRoot -Force | Out-Null
   $workerPath = Join-Path $workerRoot 'ekodi-native-browser-cdp.mjs'
   # Immutable, reviewed source commit: never execute a URL supplied by a job payload.
-  $workerUrl = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/f78a7dc63cb760ea53be5f44968e4f5c48f2ab74/tools/ekodi-device-agent/windows/ekodi-native-browser-cdp.mjs'
+  $workerUrl = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/c58143ffdd956011023708eb11f8940beca8cfe5/tools/ekodi-device-agent/windows/ekodi-native-browser-cdp.mjs'
   $download = Join-Path $workerRoot ('candidate-' + [Guid]::NewGuid().ToString('N') + '.mjs')
   try {
     Invoke-WebRequest -UseBasicParsing -Uri $workerUrl -OutFile $download -TimeoutSec 20 -ErrorAction Stop
