@@ -1118,7 +1118,11 @@ jobs:
 
   native_surface_verification_mobile:
     name: EKODI Native Surface Verification · Mobile
-    needs: deploy
+    # Do not burst desktop, authenticated admin and mobile canaries against
+    # the shared Cloudflare origin simultaneously. Keep mobile mandatory even
+    # when another verification fails; never turn HTTP 429 into a pass.
+    needs: [deploy, native_surface_verification_desktop, authenticated_admin_surface_verification]
+    if: ${{ always() && needs.deploy.result == 'success' }}
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       surface_paths: /,/my/,/admin/,/ekodimall/admin
