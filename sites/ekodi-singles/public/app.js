@@ -490,7 +490,8 @@ async function main(){
  try{status=await fetch('/singles/api/status',{cache:'no-store'}).then(r=>r.json())}
  catch{return}
  state.status=status;
- if(!status?.onboarding_enabled||!status?.auth?.supabase_url||!status?.auth?.publishable_key)return;
+ const prelaunchAdmin=page==='/admin'&&status?.admin_preparation_enabled===true&&status?.onboarding_enabled===false;
+ if((!status?.onboarding_enabled&&!prelaunchAdmin)||!status?.auth?.supabase_url||!status?.auth?.publishable_key)return;
  if(typeof window.supabase?.createClient!=='function'){
   const ready=await new Promise(resolve=>{
    const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
@@ -508,6 +509,15 @@ async function main(){
  const {data}=await state.client.auth.getSession();
  state.session=data?.session;
  if(!state.session){showGuest();return}
+ if(prelaunchAdmin){
+  document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.hidden=true});
+  $('serviceStage').textContent='운영 준비 · 회원서비스 미개통';
+  const h=holder();
+  notice(h,'회원가입·메시지·결제는 아직 중단돼 있습니다. 별도 권한이 확인된 관리자만 가격 및 인허가 준비 상태를 수정할 수 있습니다.');
+  await showBrokerageReadiness(h);
+  await showAllPricing(h);
+  return;
+ }
  await signedIn(status);
 }
 main().catch(()=>{$('serviceStage').textContent='연결 점검 중'});
