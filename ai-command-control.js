@@ -1,6 +1,7 @@
 ﻿import authWorker from './auth-worker.js';
 import { chooseEkodiExecution, sanitizeAiConnectionStatus } from './ekodi-ai-sovereignty-gate.js';
 import { providerStatus } from './ai-control-provider-router.js';
+import { findReusableComposition } from './ekodi-capability-ecosystem.js';
 import { getCoreAiGatewayStatus } from './core-ai-gateway.js';
 import { adminAuthorityForRole, hasEkodiCapability } from './ekodi-authorization.js';
 import {
@@ -170,6 +171,8 @@ export async function handleEkodiV8CommandControl(request, env) {
       id:item.id, available:item.available === true, automationAllowed:true,
       trustClass:'external', costClass:item.costClass, priority:100,
     }));
+    const suggestions = findReusableComposition(text(body.goal || body.capabilityId, 500), 5)
+      .map(item => ({ id:item.capability.id, name:item.capability.name, score:item.score }));
     const decision = chooseEkodiExecution({
       capabilityId:text(body.capabilityId,120),
       // Never trust client-supplied "verified" capability claims.
@@ -184,7 +187,8 @@ export async function handleEkodiV8CommandControl(request, env) {
       authMethod:item.configured ? 'api-key' : 'unconfigured',
     }));
     return json(request, env, { ok:true, previewOnly:true, executionAuthorized:false,
-      decision, connections, notice:'Existing capability and local provider verification are not yet wired.' });
+      decision, connections, reusableSuggestions:suggestions,
+      notice:'Suggestions are unverified matches, not authority to execute. Local provider verification is not yet wired.' });
   }
 
   if (request.method === 'GET' && url.pathname === `${PREFIX}/orchestrator/human-gates`) {
