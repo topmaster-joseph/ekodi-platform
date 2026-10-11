@@ -94,7 +94,54 @@ export async function probeCdp({browser, url=TARGET, timeoutMs=20000} = {}) {
     await rm(profile,{recursive:true,force:true,maxRetries:4,retryDelay:200}).catch(()=>{});
   }
 }
+// Keep the Chrome and Edge trials independent. Only validated DOM evidence can
+// succeed; a zero-output/early-exit browser never counts as a passed canary.
+export async function attemptNativeCanaryBrowsers({browsers,probe=probeCdp,timeoutMs=12000}={}) {
+  if(!Array.isArray(browsers) || browsers.length===0)throw new Error('CDP_BROWSER_NOT_FOUND');
+  const failures=[];
+  for(const browser of browsers.slice(0,2)){
+    try { return await probe({browser,timeoutMs}); }
+    catch(e) {
+      const value=String(e?.message||'');
+      const match=value.match(/CDP_[A-Z0-9_]+/);
+      let code=match?.[0]||'CDP_BROWSER_UNEXPECTED_ERROR';
+      if(code.startsWith('CDP_BROWSER_EARLY_EXIT_'))code='CDP_BROWSER_EARLY_EXIT';
+      if(code.startsWith('CDP_BROWSER_SPAWN_'))code='CDP_BROWSER_SPAWN';
+      if(code.startsWith('CDP_COMMAND_TIMEOUT_'))code='CDP_COMMAND_TIMEOUT';
+      failures.push(code.slice(0,80));
+    }
+  }
+  throw new Error(failures.at(-1)||'CDP_BROWSER_UNEXPECTED_ERROR');
+}
+export async function installedCanaryBrowsers(candidates=browserCandidates()) {
+  const names=new Set(), available=[];
+  for(const candidate of candidates){
+    const name=path.win32.basename(candidate).toLowerCase();
+    if(!['chrome.exe','msedge.exe'].includes(name) || names.has(name))continue;
+    try { await access(candidate); names.add(name); available.push(candidate); }
+    catch {}
+  }
+  return available;
+}
 if(process.argv[1] && decodeURIComponent(new URL(import.meta.url).pathname).replace(/^\/(?!\/)([A-Za-z]:)/,'$1').toLowerCase() === path.resolve(process.argv[1]).replaceAll('\\','/').toLowerCase()){
-  try {const result=await probeCdp({browser:await selectBrowser()});process.stdout.write(JSON.stringify(result)+'\n');}
-  catch(e){process.stderr.write(JSON.stringify({ok:false,code:String(e.message||e).slice(0,160)})+'\n');process.exitCode=1;}
+  // A one-shot worker must terminate after writing its receipt even when
+  // Chromium/CDP leaves a socket handle alive. Keep below Agent's 35s limit.
+  let finalized=false;
+  function complete(output,failed) {
+    if(finalized)return;
+    finalized=true;
+    clearTimeout(hardLimit);
+    const stream=failed?process.stderr:process.stdout;
+    stream.write(JSON.stringify(output)+'\n',()=>process.exit(failed?1:0));
+  }
+  const hardLimit=setTimeout(()=>complete({ok:false,code:'CDP_WORKER_WATCHDOG_TIMEOUT'},true),31000);
+  try {
+    const browsers=await installedCanaryBrowsers();
+    const result=await attemptNativeCanaryBrowsers({browsers,timeoutMs:12000});
+    complete(result,false);
+  }catch(e){
+    const raw=String(e?.message||'');
+    const match=raw.match(/CDP_[A-Z0-9_]+/);
+    complete({ok:false,code:(match?.[0]||'CDP_BROWSER_UNEXPECTED_ERROR').slice(0,80)},true);
+  }
 }
