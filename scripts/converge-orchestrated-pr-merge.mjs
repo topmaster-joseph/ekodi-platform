@@ -122,6 +122,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='workspace-admin-page.js'||
   // AI Provider administrator bundle and shared provider client are owned by the Site Core.
   file==='admin-provider-control.js'||
+  // AI membership is compiled into the shared ai-ops-admin.js bundle.
+  file==='user-ai-tier-panel.js'||
   file==='common-services-admin.js'||
   file==='ai-provider-control.js'||
   file==='mall-social-setup.js'||

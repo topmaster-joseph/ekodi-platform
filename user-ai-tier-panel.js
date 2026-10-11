@@ -167,6 +167,11 @@
   function panel() { return document.querySelector(`#${PANEL_ID}`); }
 
   function showSection() {
+    // The membership panel's own click handler stops event propagation. Sync the
+    // canonical Admin router first so visible content and current() agree.
+    if (window.EKODIAdminPanels?.current?.() !== SECTION) {
+      window.EKODIAdminPanels?.activate?.(SECTION);
+    }
     document.querySelectorAll('[data-panel]').forEach(node => {
       const targets = String(node.dataset.panel || '').split(' ');
       const visible = targets.includes(SECTION);
