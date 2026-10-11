@@ -110,5 +110,6 @@ test('shared-site guarded release invokes native browser verification after prod
   const desktop=sharedRelease.match(/native_surface_verification_desktop:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
   const mobile=sharedRelease.match(/native_surface_verification_mobile:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
   assert.match(desktop,/needs:\s*deploy/);
-  assert.match(mobile,/needs:\s*deploy/);
+  assert.match(mobile,/needs:\s*\[deploy, native_surface_verification_desktop, authenticated_admin_surface_verification\]/);
+  assert.match(mobile,/if:\s*\$\{\{ always\(\) && needs\.deploy\.result == 'success' \}\}/);
 });
