@@ -55,3 +55,5 @@ run().catch(e=>{console.error('[EKODI][USER2-NATIVE-VIRTUAL-PROBE] '+String(e.me
 // Canonical Orchestrator owner-authored protected validation trigger.
 
 // Owner-authorized canonical CI and protected merge convergence trigger.
+
+// Revalidate after official protected base synchronization.
