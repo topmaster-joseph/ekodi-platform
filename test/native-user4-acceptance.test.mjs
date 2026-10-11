@@ -74,4 +74,7 @@ test('aggregate outcome is not successful if both live receipts are absent',asyn
   assert.equal(result.targetAlias,'user4');
   assert.equal(result.browser,null);
   assert.equal(result.localAi,null);
+  assert.equal(result.browserVerified,false);
+  assert.equal(result.localAiVerified,false);
+  assert.equal(result.mode,'ekodi-native-receipt-gated');
 });
