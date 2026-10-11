@@ -6,7 +6,7 @@ import {observeNativeDeviceReadiness,observeNativeDeviceReadinessFleet,summarize
 const now=Date.parse('2026-10-10T14:00:00.000Z');
 const online={hostname:'USER3',platform:'Windows 11',management:{source:'agent',type:'pc'},
   revokedAt:null,status:'online',lastSeenAt:new Date(now-12000).toISOString(),
-  capabilities:{backgroundBrowser:true,backgroundBrowserCanary:true,isolatedDesktop:false,isolatedDesktopProbe:true,agentStatus:true,localAiInstall:true},
+  capabilities:{backgroundBrowser:true,backgroundBrowserCanary:true,isolatedDesktop:false,isolatedDesktopProbe:true,agentStatus:true,localAiInstall:true,localAiVerify:true},
   id:'do-not-expose-device-id',deviceToken:'do-not-expose-token'};
 test('native observer verifies only a recent enrolled agent heartbeat and publishes no identifiers',()=>{
   const a=summarizeNativeDeviceReadiness([online],{now,hostname:'user3'});
@@ -16,6 +16,7 @@ test('native observer verifies only a recent enrolled agent heartbeat and publis
   assert.equal(a.capabilities.isolatedDesktop,false);
   assert.equal(a.capabilities.agentStatus,true);
   assert.equal(a.capabilities.localAiInstall,true);
+  assert.equal(a.capabilities.localAiVerify,true);
   assert.equal(a.capabilities.isolatedDesktopProbe,true);
   assert.equal(a.capabilities.backgroundBrowserCanary,true);
   assert.equal('localAI' in a.capabilities,false,'unsupported legacy alias must not be projected');
@@ -194,4 +195,15 @@ test('scheduled native USER4 observation projects only bounded results, never ra
   assert.equal(result.proofs.browser.verified,true);
   assert.equal(result.proofs.localAi.verified,false);
   assert.doesNotMatch(JSON.stringify(result),/never-share|sensitive-output|deviceToken/);
+});
+
+test('readiness response includes USER4 local AI capability and only SELECT-backed redacted proof',()=>{
+  const api=readFileSync(new URL('../device-control.js',import.meta.url),'utf8');
+  const start=api.indexOf("if (request.method === 'GET' && path === \`\${ADMIN_PREFIX}/readiness\`)");
+  const end=api.indexOf("if (request.method === 'GET' && path === ADMIN_PREFIX)",start);
+  const route=api.slice(start,end);
+  assert.match(route,/localAiVerify: capabilities\\.localAiVerify === true/);
+  assert.match(route,/proofs:projectNativeDeviceProofs/);
+  assert.match(route,/c\\.command_type IN \\('computer\\.browser\\.canary', 'software\\.localai\\.verify'\\)/);
+  assert.doesNotMatch(route,/INSERT\\s+INTO|UPDATE\\s+device_commands|DELETE\\s+FROM|token_hash/i);
 });
