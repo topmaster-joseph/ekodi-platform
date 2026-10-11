@@ -1084,8 +1084,11 @@ async function handleAdmin(request, env) {
         management: { source:'agent', type:normalizeDeviceType(row.device_type || 'pc') },
         capabilities: {
           backgroundBrowser: capabilities.backgroundBrowser === true,
+          backgroundBrowserCanary: capabilities.backgroundBrowserCanary === true,
           isolatedDesktop: capabilities.isolatedDesktop === true,
-          localAI: capabilities.localAI === true
+          isolatedDesktopProbe: capabilities.isolatedDesktopProbe === true,
+          agentStatus: capabilities.agentStatus === true,
+          localAiInstall: capabilities.localAiInstall === true
         }
       };
     });
