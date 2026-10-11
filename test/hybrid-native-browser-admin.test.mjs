@@ -49,3 +49,23 @@ test('execution UI fails closed until online enabled canary-capable native worke
   assert.match(admin, /button\.disabled = ready\.length === 0/);
   assert.match(admin, /renderNativeBrowserStatus\(\)/);
 });
+
+
+test('CGMA one-click smoke stays on EKODI native isolated browser with no admin mutation', () => {
+  assert.match(admin, /id="enqueueHybridCgmaBoard" disabled/);
+  assert.match(admin, /addEventListener\('click', enqueueNativeCgmaBoard\)/);
+  assert.match(admin, /async function enqueueNativeCgmaBoard\(\)/);
+  assert.match(admin, /if \(!form \|\| !button \|\| button\.disabled \|\| !eligibleNativeBrowserNodes\(\)\.length\) return/);
+  assert.match(admin, /form\.elements\.path\.value = '\/cgma\/board'/);
+  assert.match(admin, /form\.elements\.deviceProfile\.value = 'desktop'/);
+  assert.match(admin, /await enqueueNativeBrowser\(\{preventDefault\(\)\{\},currentTarget:form\}\)/);
+  assert.match(admin, /lastDashboard\.fabric\?\.canManage !== true/);
+  assert.match(admin, /CGMA 버튼은 \/cgma\/board 공개 화면만 읽기 전용으로 점검합니다/);
+  assert.match(admin, /로그인·글쓰기·수정·삭제 성공을 뜻하지 않습니다/);
+  assert.equal(normalize('/cgma/board'), '/cgma/board');
+  assert.equal(normalize('/cgma/board/api/health'), '/cgma/board/api/health');
+  assert.match(admin, /taskType:'computer\.browser\.execute'/);
+  assert.match(admin, /payload:\{ path, deviceProfile \}/);
+  assert.match(admin, /maxAttempts:1, confirmed:true/);
+  assert.doesNotMatch(admin, /remote[_-]desktop[_-]commander.*enqueueNativeCgmaBoard/);
+});
