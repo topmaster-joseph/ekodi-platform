@@ -16,3 +16,7 @@ Any future failure must be captured rather than bypassed, and no external browse
 ## Post-convergence protected checks
 
 After EKODI Convergent Merge synchronized this candidate with protected main, the resulting bot-authored commit required owner-triggered checks. The current owner-authored record requests full required CI and first-party browser worker verification on the synchronized source, without changing its runtime scope.
+
+## GitHub protected-base refresh (second attempt)
+
+An additional concurrent main integration produced a new bot-authored synchronization commit. This owner-authored follow-up requires the complete first-party CI and Chromium run again on the latest branch head; stale approvals and merge statuses are not reused.
