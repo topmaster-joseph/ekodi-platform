@@ -18,6 +18,8 @@ function fixture(){
 test('admin root reuses one sidebar and loads Control only after auth navigation',()=>{
   const html=read('admin-shell.html');
   const layout=read('admin-menu-layout.js');
+  const compact=read('admin-menu-layout.compact.js');
+  const sidebar=read('admin-sidebar.js');
   const css=read('admin-control-integration.css');
   const build=read('scripts/build.mjs');
   assert.match(html,/<section class="admin-control-home" id="adminControlHome" data-panel="command-home"/);
@@ -26,6 +28,9 @@ test('admin root reuses one sidebar and loads Control only after auth navigation
   assert.doesNotMatch(html,/<iframe[^>]*\ssrc="\/admin\/control\?embed=admin"/);
   assert.match(layout,/panelTargets\(panel\)\.includes\(COMMAND_HOME\)/);
   assert.match(layout,/!frame\.hasAttribute\('src'\)/);
+  assert.match(compact,/function Q\(\)\{v=X;for\(const e of s\.querySelectorAll\("\[data-panel\]"\)\)/);
+  assert.match(compact,/e\.hasAttribute\("src"\)/);
+  assert.match(sidebar,/window\.EKODIAdminPanels\.activate\('command-home'\)/);
   assert.match(css,/#adminControlFrame/);
   assert.match(css,/body:has\(#adminControlHome:not\(\[hidden\]\)\) \.ekodi-assist-bootstrap/);
   assert.match(build,/'admin-control-integration\.css'/);
