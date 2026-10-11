@@ -14,11 +14,20 @@ export function mountPresenceOperator(host,{tenant,getToken,apiUrl}){
   <form data-headcount><strong>현장 인원 추정</strong><input type="number" name="count" min="0" max="100000" required placeholder="현장 전체 인원"><button>추정 기록</button></form>
   <form data-person><strong>확인된 참석자 등록</strong><input name="display_name" maxlength="120" required placeholder="본인 확인된 이름"><label><input type="checkbox" name="verified" required> 당사자 확인 후 등록</label><button>인물 등록</button></form>
   <form data-checkin><strong>인물 출석 체크</strong><select name="person_id" required data-people></select><button>현장 출석</button></form></div>
-  <h3>신원 확인 대기</h3><div data-pending></div><h3>출석 현황</h3><div data-attendees></div>
+  <h3>신원 확인 대기</h3><div data-pending></div>
+  <form data-resolve-form hidden class="presence-action-box">
+    <strong>확인된 참석자 지정</strong>
+    <p data-observation-label></p>
+    <select data-resolution-person required aria-label="확인한 참석자 선택"></select>
+    <input name="reason" required minlength="5" maxlength="240" placeholder="확인 근거 (예: 예배 후 본인 확인)">
+    <div class="presence-actions"><button type="submit">신원 지정 확정</button><button type="button" data-cancel-resolve>취소</button></div>
+  </form>
+  <h3>확인된 참석자 연결 기록</h3><div data-linked></div>
+  <h3>출석 현황</h3><div data-attendees></div>
   </section>`;
   const q=s=>host.querySelector(s);
   const status=q('.presence-status'),sessionSelect=q('[data-sessions]');
-  let selected='',snapshot=null,locked=false;
+  let selected='',snapshot=null,locked=false,resolvingId='';
   function setStatus(s){status.textContent=s;}
   async function call(method,body,query=''){
     const token=await getToken();if(!token)throw new Error('로그인이 필요합니다.');
@@ -50,6 +59,11 @@ export function mountPresenceOperator(host,{tenant,getToken,apiUrl}){
     q('[data-summary]').textContent=`출석 ${new Set(attendees.map(a=>a.person_id)).size}명 · 미확인 기록 ${pending.length}건 · 현장 추정 ${snapshot.headcount?.estimate??'미집계'}명 (합산하지 않음)`;
     q('[data-attendees]').innerHTML=attendees.length?`<ul>${attendees.map(a=>`<li>${encode(a.name)} · ${a.channel==='onsite'?'현장':'온라인'} · ${encode(a.status)}</li>`).join('')}</ul>`:'<p>출석 기록 없음</p>';
     q('[data-pending]').innerHTML=pending.length?pending.map(p=>`<div class="presence-pending"><span>${encode(p.label||'미확인 참석자')} (${encode(p.id.slice(0,8))})</span><button type="button" data-resolve="${encode(p.id)}">신원 지정</button></div>`).join(''):'<p>확인 대기 기록 없음</p>';
+    const linked=Array.isArray(snapshot.linked)?snapshot.linked:[];
+    q('[data-linked]').innerHTML=linked.length?linked.map(p=>`<div class="presence-pending"><span>${encode(p.label||'현장 기록')} → ${encode(p.name||'확인된 참석자')}</span><button type="button" data-unlink="${encode(p.id)}">연결 취소</button></div>`).join(''):'<p>연결된 미확인 기록 없음</p>';
+    const selector=q('[data-resolution-person]');
+    selector.innerHTML='<option value="">확인된 인물 선택</option>'+people.map(p=>`<option value="${encode(p.id)}">${encode(p.name)}</option>`).join('');
+    if(resolvingId&&!pending.some(p=>p.id===resolvingId)){resolvingId='';q('[data-resolve-form]').hidden=true;}
     for(const el of [q('[data-observe]'),q('[data-headcount]'),q('[data-checkin]')])el.querySelector('button').disabled=!selected;
     setStatus('최신 현황');
   }
@@ -65,11 +79,29 @@ export function mountPresenceOperator(host,{tenant,getToken,apiUrl}){
   bind('[data-checkin]','check_in',f=>({session_id:selected,person_id:String(f.get('person_id')),channel:'onsite',verification_method:'staff_verified'}));
   q('[data-pending]').addEventListener('click',e=>{
     const id=e.target.closest('[data-resolve]')?.dataset.resolve;if(!id)return;
-    const personId=prompt('확인된 인물의 고유 ID를 입력하세요. 기존 등록명단에서 ID를 확인하세요.');
+    resolvingId=id;
+    q('[data-observation-label]').textContent=`선택한 미확인 기록: ${snapshot.pending.find(p=>p.id===id)?.label||id.slice(0,8)}`;
+    q('[data-resolve-form]').hidden=false;
+    q('[data-resolution-person]').focus();
+  });
+  q('[data-resolve-form]').addEventListener('submit',e=>{
+    e.preventDefault();if(!resolvingId||!selected)return;
+    const f=new FormData(e.currentTarget);
+    const personId=q('[data-resolution-person]').value;
     if(!personId)return;
-    const reason=prompt('신원을 확인한 근거를 입력하세요 (최소 5자)');
-    if(!reason)return;
-    mutate('resolve',{session_id:selected,observation_id:id,person_id:personId,verification_reason:reason});
+    const reason=String(f.get('reason')||'').trim();
+    if(reason.length<5){setStatus('확인 근거를 5자 이상 입력하세요.');return;}
+    const observationId=resolvingId;
+    resolvingId='';q('[data-resolve-form]').hidden=true;
+    mutate('resolve',{session_id:selected,observation_id:observationId,person_id:personId,verification_reason:reason});
+    e.currentTarget.reset();
+  });
+  q('[data-cancel-resolve]').addEventListener('click',()=>{resolvingId='';q('[data-resolve-form]').hidden=true;});
+  q('[data-linked]').addEventListener('click',e=>{
+    const id=e.target.closest('[data-unlink]')?.dataset.unlink;if(!id)return;
+    const reason=prompt('연결 취소 사유를 5자 이상 입력하세요. 기존 기록은 감사 내역에 보존됩니다.');
+    if(!reason||reason.trim().length<5)return;
+    mutate('unlink',{session_id:selected,observation_id:id,reason:reason.trim()});
   });
   refresh().catch(e=>setStatus(`조회 실패: ${e.message}`));
   return {refresh,destroy:()=>{host.replaceChildren();}};
