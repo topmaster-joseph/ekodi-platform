@@ -17,10 +17,10 @@ export function renderMallSocialSetup({ platform = {}, connections = [], registe
     const connected = Boolean(verified(target.id));
     const configured = platform[target.key] === true;
     const registered = registeredAccounts.some(row => row.provider === target.id);
-    const channel = channels.find(row => row.provider === target.id && row.status === 'active');
-    const channelOn = connected && Boolean(channel && channel.config?.autoPublishEnabled !== false);
+    const channelOn = channels.some(row => row.provider === target.id && row.status === 'active' && row.config?.autoPublishEnabled !== false &&
+      active.some(connection => connection.provider === target.id && String(connection.external_id || '') === String(row.external_account_id || '')));
     const label = connected ? 'OAuth 인증 완료' : !configured ? '플랫폼 설정 필요' : registered ? 'OAuth 인증 필요' : '계정 연결 필요';
-    return `<article class="mall-social-provider" data-mall-provider="${esc(target.id)}" class="${target.id==='youtube'&&!connected&&configured?'youtube-pending':''}">
+    return `<article class="mall-social-provider ${target.id==='youtube'&&!connected&&configured?'youtube-pending':''}" data-mall-provider="${esc(target.id)}">
       <div class="mall-social-provider-head"><strong>${esc(target.label)}</strong><span class="mall-social-pill ${connected ? 'ready' : ''}">${esc(label)}</span></div>
       <p>${esc(target.info)}</p>
       <div class="mall-social-provider-meta">앱 ${configured ? '준비됨' : '미설정'} · 실제 발행 ${channelOn ? '사용 중' : '중지'}</div>

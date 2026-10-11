@@ -680,6 +680,8 @@ async function initNoticeFlow(){
   if(compose&&noticeToken()){noticeCompose.hidden=false;noticeWriteButton.hidden=true;noticeCompose.querySelector('input[name="title"]')?.focus()}
   else if(compose&&handoffError){const message=el('noticeComposeMessage');if(message)message.textContent='로그인 연결에 실패했습니다. 다시 로그인해 주세요.'}
   await loadNotices();
+  // Auth handoff is asynchronous: authorize the in-place tools only after it completes.
+  await initPublicAdminControls();
 }
 initNoticeFlow();
 
@@ -1090,17 +1092,24 @@ function renderPublicAdminControls(){
   if(admin.has('channels'))bindPublicChannelAdmin();
   if(admin.has('voices'))window.dispatchEvent(new CustomEvent('seonammedi:voice-inline-admin-authorized'));
   if(admin.has('finance'))bindPublicFinanceAdmin();
-  if(admin.has('notices')){const noticeButton=el('noticeWriteButton');if(noticeButton)noticeButton.textContent='공지 바로 수정';loadNotices();}
+  if(admin.has('notices')){const noticeButton=el('noticeWriteButton');if(noticeButton)noticeButton.textContent='공지 작성';loadNotices();}
 }
+let publicAdminInitPromise=null;
 async function initPublicAdminControls(){
-  if(!publicAdminToken())return;
-  const admin=sharedPublicAdmin();if(!admin)return;
-  try{
-    const me=await admin.authorize();
-    if(!me?.ok)return;
-    publicAdminMe=me;renderPublicAdminControls();
-  }catch{}
+  if(!publicAdminToken())return false;
+  const admin=sharedPublicAdmin();if(!admin)return false;
+  // Handoff completion and Shell readiness may occur together; use one authorization flight.
+  if(publicAdminInitPromise)return publicAdminInitPromise;
+  publicAdminInitPromise=(async()=>{
+    try{
+      const me=await admin.authorize();
+      if(!me?.ok)return false;
+      publicAdminMe=me;renderPublicAdminControls();
+      return true;
+    }catch{return false}
+  })();
+  try{return await publicAdminInitPromise}finally{publicAdminInitPromise=null}
 }
-initPublicAdminControls();
+window.addEventListener('ekodi:public-admin-runtime-ready',()=>{initPublicAdminControls().catch(()=>{})});
 
 // EKODI release marker: notice-list authorized edit/delete actions verified on merged main.

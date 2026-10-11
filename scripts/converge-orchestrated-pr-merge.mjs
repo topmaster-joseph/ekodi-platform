@@ -39,7 +39,13 @@ if(!filesLookup.r.ok)fail('PR file lookup failed '+filesLookup.r.status);
 const changedFiles=(Array.isArray(filesLookup.data)?filesLookup.data:[]).map(file=>String(file.filename||''));
 // GitHub token-mediated merges do not emit regular main push events.
 // Dispatch CGMA's guarded edge workflow through the verified orchestrator.
-const cgmaApexTouched=changedFiles.includes('.github/workflows/deploy-cgma-apex-edge.yml');
+const cgmaApexTouched=changedFiles.some(file=>[
+  '.github/workflows/deploy-cgma-apex-edge.yml',
+  'cgma-board-service-worker.js',
+  'wrangler.cgma-board-internal.toml',
+  'site-board-control.js',
+  'scripts/converge-orchestrated-pr-merge.mjs',
+].includes(file));
 const independentBoardTouched=changedFiles.some(file=>
   file.startsWith('services/independent-board/')||
   file==='wrangler.independent-board.toml'||
@@ -60,6 +66,8 @@ const controlApiTouched=changedFiles.some(file=>[
   'coupang-partners-automation.js',
   'customer-entry-worker.js',
   'mission-control-entry-worker.js',
+  // PC Agent registry and heartbeat handlers are deployed by the Control API.
+  'device-control.js',
   // AI Provider API runtime ownership; release-automation changes also repair missed deployments.
   'ai-provider-control.js',
   // Telemetry reader and site classifier run inside the Control API.
@@ -132,6 +140,10 @@ const sharedSiteTouched=changedFiles.some(file=>
   ['remote-power-admin.js','remote-power-admin.css','device-wake-admin.js'].includes(file)||
   file==='ekodi-device-bootstrap.cmd'||
   file==='site-worker.js'||
+  // Site Core also owns the shared independent-board runtime and its public edge contract.
+  file==='site-board-control.js'||
+  file==='common-board-adapter.js'||
+  file==='cgma-board-service-worker.js'||
   file==='scripts/verify-admin-provider-control-production.mjs'||
   file==='scripts/build.mjs'||
   file==='scripts/finalize-seonammedi-release.mjs'||
@@ -141,6 +153,18 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='.github/workflows/deploy-site-core.yml'||
   file==='scripts/converge-orchestrated-pr-merge.mjs'||
   file==='.github/workflows/converge-orchestrated-pr-merge.yml'
+);
+// Church public Pages is independent of Site Core and must use the guarded
+// source-pinned release, with the already verified Orchestrator receipt.
+const churchPagesTouched=changedFiles.some(file=>
+  file==='.github/workflows/deploy-ekodi-church-homepage.yml'||
+  file==='scripts/verify-church-homepage-production.mjs'||
+  file==='test/church-homepage-release-dispatch.test.mjs'
+);
+// Supabase Church API is an independent guarded release boundary, not a Site Core asset.
+const churchApiTouched=changedFiles.some(file=>
+  file.startsWith('supabase/functions/church-pastor-api/')||
+  file==='.github/workflows/deploy-church-pastor-api.yml'
 );
 async function dispatchPostMergeDeploys(){
   if(cgmaApexTouched){
@@ -219,6 +243,22 @@ async function dispatchPostMergeDeploys(){
     });
     if(!dispatch.r.ok)fail('Shell deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-ekodi-shell.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(churchApiTouched){
+    const dispatch=await api('/actions/workflows/deploy-church-pastor-api.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Church Pastor API deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-church-pastor-api.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(churchPagesTouched){
+    const dispatch=await api('/actions/workflows/deploy-ekodi-church-homepage.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Church Pages deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-ekodi-church-homepage.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(sharedSiteTouched){
     const dispatch=await api('/actions/workflows/deploy-site-core.yml/dispatches',{

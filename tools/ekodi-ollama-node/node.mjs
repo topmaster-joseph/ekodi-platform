@@ -71,7 +71,8 @@ export function validateJob(job) {
 }
 export async function answerLocal(prompt, {fetchImpl = fetch} = {}) {
   const result=await postJson(OLLAMA_BASE + '/api/generate', {
-    model: MODEL, prompt, stream:false, keep_alive:'1m',
+    // This PC-local worker evicts model RAM after every job to keep 8 GB Windows agents responsive.
+    model: MODEL, prompt, stream:false, keep_alive:'0s',
     options:{num_ctx:2048, num_predict:400, temperature:0},
   }, {}, fetchImpl, 110000);
   if (!result.done || typeof result.response !== 'string' || !result.response.trim())

@@ -161,4 +161,6 @@ function create(options={}){
 }
 
 window.EKODIPublicSurfaceAdmin=Object.freeze({version:VERSION,create});
+// Late-loading service scripts can safely initialize once the shared runtime exists.
+window.dispatchEvent(new CustomEvent('ekodi:public-admin-runtime-ready',{detail:{version:VERSION}}));
 })();

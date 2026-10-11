@@ -94,33 +94,71 @@
   function missionAdminToken(){
     try{return sessionStorage.getItem('ekodi-auth-token')||''}catch{return''}
   }
+  let missionAdminController=null;
+  let missionAdminPending=null;
+  let missionAdminPendingToken='';
+  let missionAdminAuthorizedToken='';
+  const missionAdminButtons=new Set();
+  function clearMissionPublicAdmin(){
+    for(const button of missionAdminButtons)button.remove();
+    missionAdminButtons.clear();
+    missionAdminController?.reset();
+    missionAdminAuthorizedToken='';
+  }
   async function initMissionPublicAdmin(){
+    const token=missionAdminToken();
+    if(!token){clearMissionPublicAdmin();return false}
     const shared=window.EKODIPublicSurfaceAdmin;
-    if(!shared?.create||Number(shared.version||0)<2||!missionAdminToken())return;
-    const admin=shared.create({
+    if(!shared?.create||Number(shared.version||0)<2)return false;
+    if(missionAdminPending){
+      const pendingToken=missionAdminPendingToken;
+      const result=await missionAdminPending;
+      return pendingToken===token?result:initMissionPublicAdmin();
+    }
+    if(missionAdminAuthorizedToken&&missionAdminAuthorizedToken!==token)clearMissionPublicAdmin();
+    const admin=missionAdminController||(missionAdminController=shared.create({
       serviceId:'mission',
       adminPath:'/ekodimission/admin/activities',
       authEndpoint:'/ekodimission/api/admin/me',
       tokenProvider:missionAdminToken
-    });
-    try{
-      const me=await admin.authorize();
-      if(!me?.ok||!admin.has('activities'))return;
-      const listHead=document.querySelector('.mission-activity-index-head');
-      admin.attach(listHead,{label:'활동 · 참가자 관리',panel:'activities',permission:'activities',presentation:'window'});
-      for(const item of activityItems){
-        const activityKey=String(item.dataset.activityKey||'').trim();
-        if(!activityKey)continue;
-        const target=item.querySelector('.mission-activity-row-actions')||item;
-        admin.attach(target,{label:'참가자 관리',panel:'activities',permission:'activities',presentation:'window',params:{activity:activityKey}});
-      }
-      if(form){
-        const target=document.querySelector('.open-table-actions');
-        admin.attach(target,{label:'신청자 관리',panel:'activities',permission:'activities',presentation:'window',params:{activity:applicationRecordKey}});
-      }
-    }catch{}
+    }));
+    missionAdminPendingToken=token;
+    missionAdminPending=(async()=>{
+      try{
+        const me=await admin.authorize();
+        if(token!==missionAdminToken()||!me?.ok||!admin.has('activities')){
+          clearMissionPublicAdmin();return false;
+        }
+        const listHead=document.querySelector('.mission-activity-index-head');
+        const add=(target,options)=>{
+          const button=admin.attach(target,{panel:'activities',permission:'activities',presentation:'window',...options});
+          if(button)missionAdminButtons.add(button);
+        };
+        add(listHead,{label:'활동 · 참가자 관리'});
+        for(const item of activityItems){
+          const activityKey=String(item.dataset.activityKey||'').trim();
+          if(!activityKey)continue;
+          add(item.querySelector('.mission-activity-row-actions')||item,{label:'참가자 관리',params:{activity:activityKey}});
+        }
+        if(form)add(document.querySelector('.open-table-actions'),{label:'신청자 관리',params:{activity:applicationRecordKey}});
+        missionAdminAuthorizedToken=token;
+        return true;
+      }catch{clearMissionPublicAdmin();return false}
+    })();
+    try{return await missionAdminPending}
+    finally{
+      missionAdminPending=null;
+      missionAdminPendingToken='';
+      // An account can change while the previous authorization request is in flight.
+      if(missionAdminToken()&&missionAdminToken()!==token)queueMicrotask(()=>{initMissionPublicAdmin().catch(()=>{})});
+    }
   }
-  initMissionPublicAdmin();
+  const refreshMissionAdmin=()=>{initMissionPublicAdmin().catch(()=>{})};
+  window.addEventListener('ekodi:public-admin-runtime-ready',refreshMissionAdmin);
+  window.addEventListener('pageshow',refreshMissionAdmin);
+  window.addEventListener('focus',refreshMissionAdmin);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshMissionAdmin()});
+  refreshMissionAdmin();
   if(!form)return;
   const status=form.querySelector('[data-application-status]');const submit=form.querySelector('button[type="submit"]');
   const closeApplication=(data={})=>{

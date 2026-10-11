@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { handleTrafficIntelligence } from '../traffic-intelligence-control.js';
+import { trafficAnalyticsFailureCategory, canKeepTrafficHostTotalsWithMissingUserAgent, trafficZoneCollectionStatus } from '../traffic-collector-quality.js';
+import { handleTrafficIntelligence, trafficRequestScopeForHosts, trafficUtcDayStatus } from '../traffic-intelligence-control.js';
 import { readFile } from 'node:fs/promises';
 import {
   classifyTrafficUserAgent,
@@ -70,7 +71,7 @@ test('collector isolates unavailable zones and preserves partial analytics', asy
   assert.match(collector, /let collectedZoneCount = 0/);
   assert.match(collector, /const skippedZones = \[\]/);
   assert.match(collector, /try \{[\s\S]*collectZone\(zone, window\)[\s\S]*catch \(error\)/);
-  assert.match(collector, /const stateStatus = skippedZones\.length \? 'partial' : 'ok'/);
+  assert.match(collector, /const stateStatus = trafficZoneCollectionStatus\(collectedZoneCount, zones\.length, degradedZoneCount\)/);
   assert.match(collector, /if \(collectedZoneCount === 0\)/);
   assert.match(collector, /last_success_at=excluded\.last_success_at/);
 });
@@ -159,4 +160,52 @@ test('anonymous OPTIONS telemetry probe reveals version without accessing or wri
   assert.equal(response.headers.get('access-control-allow-origin'),'https://ekodi.kr');
   assert.equal(response.headers.get('access-control-allow-methods'),'POST, OPTIONS');
   assert.equal(touched,false);
+});
+
+test('host-wide Cloudflare requests cannot be misreported as child-site zero',async()=>{
+  assert.equal(trafficRequestScopeForHosts([]),'not-measured');
+  assert.equal(trafficRequestScopeForHosts(['ekodi.kr']),'shared-host');
+  assert.equal(trafficRequestScopeForHosts(['ekodichurch.kr']),'host-only');
+  assert.equal(trafficRequestScopeForHosts(['ekodichurch.kr','ekodi.kr']),'shared-host');
+  const control=await readFile('traffic-intelligence-control.js','utf8');
+  assert.match(control,/requestTotal:requestScope === 'not-measured' \? null : item.requestTotal/);
+  assert.match(control,/site\.requestHosts\.add\(row\.host\)/);
+  assert.match(control,/requestHosts:new Set\(\)/);
+  const ui=await readFile('system-health-admin.js','utf8');
+  assert.match(ui,/하위서비스 요청 미측정/);
+  assert.match(ui,/공유호스트 전체 요청/);
+  assert.match(ui,/해당 호스트 요청/);
+  assert.doesNotMatch(ui,/요청 \$\{compact\(site\.requestTotal\)\} · 사람추정/);
+});
+
+test('UTC partial-day status is explicit without changing historical daily values',async()=>{
+  assert.equal(trafficUtcDayStatus('2026-10-10','2026-10-11T00:00:00.000Z'),'complete');
+  assert.equal(trafficUtcDayStatus('2026-10-11','2026-10-11T00:00:00.000Z'),'partial');
+  assert.equal(trafficUtcDayStatus('2026-10-11','2026-10-11T23:59:59.000Z'),'partial');
+  const control=await readFile('traffic-intelligence-control.js','utf8');
+  const ui=await readFile('system-health-admin.js','utf8');
+  assert.match(control,/utcDayStatus:trafficUtcDayStatus\(item\.key\)/);
+  assert.match(ui,/data-traffic-days/);
+  assert.match(ui,/item\.utcDayStatus === 'partial'/);
+  assert.match(ui,/브라우저 세션 .*호스트 요청/);
+});
+
+test('Cloudflare host totals survive unavailable per-zone classifier without disguising coverage',async()=>{
+  assert.equal(trafficAnalyticsFailureCategory({status:403,message:'zone.analytics.read denied'}),'permission_denied');
+  assert.equal(trafficAnalyticsFailureCategory({message:'Cannot query field userAgent'}),'unsupported_metric');
+  assert.equal(trafficAnalyticsFailureCategory({message:'viewer.zones.empty'}),'analytics_unavailable');
+  assert.equal(trafficAnalyticsFailureCategory({status:429,message:'too many requests'}),'rate_limited');
+  assert.equal(trafficAnalyticsFailureCategory({status:503,message:'upstream unavailable'}),'upstream_error');
+  assert.equal(canKeepTrafficHostTotalsWithMissingUserAgent({message:'Cannot query field userAgent'}),true);
+  assert.equal(canKeepTrafficHostTotalsWithMissingUserAgent({status:429}),false);
+  assert.equal(trafficZoneCollectionStatus(6,6,0),'ok');
+  assert.equal(trafficZoneCollectionStatus(6,6,1),'partial');
+  assert.equal(trafficZoneCollectionStatus(1,6,0),'partial');
+  const collector=await readFile('scripts/collect-traffic-intelligence.mjs','utf8');
+  assert.match(collector,/const hostRows = await queryHostTotals\(zone.id, window.start, window.end\)/);
+  assert.match(collector,/if \(!canKeepTrafficHostTotalsWithMissingUserAgent\(error\)\) throw error/);
+  assert.match(collector,/const buckets = result.buckets/);
+  assert.match(collector,/category === 'rate_limited'/);
+  assert.doesNotMatch(collector,/console\.warn\([^\n]*error\.message/);
+  assert.doesNotMatch(collector,/skippedZones\.push\(\{ zone:zone.name, message:/);
 });

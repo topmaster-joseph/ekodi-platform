@@ -632,7 +632,7 @@ test('seonammedi public site uses shared authenticated inline admin without dupl
   assert.match(app,/await admin\.authorize\(\)/);
   assert.doesNotMatch(app,/admin\.attach/);
   for(const label of ['조직 바로 수정','활동이력 바로 수정','소통채널 바로 수정'])assert.match(html,new RegExp(label));
-  assert.match(app,/공지 바로 수정/);
+  assert.match(app,/공지 작성/);
   assert.match(app,/bindPublicFinanceAdmin/);
   assert.match(app,/if\(admin\.has\('notices'\)\).*loadNotices\(\)/);
   assert.match(app,/seonammedi:voice-inline-admin-authorized/);
@@ -800,7 +800,7 @@ test('seonammedi registered Google admins manage public content from user surfac
     readFile(new URL('admin/admin.js',root),'utf8'),
     readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8')
   ]);
-  assert.match(app,/공지 바로 수정/);
+  assert.match(app,/공지 작성/);
   assert.match(app,/조직 바로 수정/);
   assert.match(app,/bindPublicTimelineAdmin/);
   assert.match(app,/bindPublicChannelAdmin/);

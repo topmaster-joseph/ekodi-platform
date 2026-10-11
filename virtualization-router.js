@@ -50,6 +50,19 @@ function fail(code,message,details={}){
   return {ok:false,code,message,details};
 }
 
+export function nativeExecutorRecoveryPlan(taskClass, eligibleIds=[]) {
+  return {
+    required:true,
+    policy:'EKODI-NATIVE-SELF-REPAIR-001',
+    taskClass,
+    providerIds:[...eligibleIds],
+    stages:['diagnose','allowlisted-repair','signed-update-if-needed','isolated-canary','bounded-native-retry','audit'],
+    maxAttemptsPerProvider:2,
+    rollbackOnCanaryFailure:true,
+    privilegedConsentBypass:false
+  };
+}
+
 export function selectVirtualizationProvider(input={}){
   const taskClass=text(input.taskClass,120);
   const eligibleIds=TASK_NATIVE_ORDER[taskClass];
@@ -78,8 +91,24 @@ export function selectVirtualizationProvider(input={}){
     return fail('NATIVE_VIRTUALIZATION_REQUIRED','No eligible EKODI-native virtualization provider is currently usable and no audited fallback was supplied',{
       taskClass,
       eligibleNative:eligibleNative.map(x=>({id:x.id,state:x.state||'unknown',healthy:x.healthy===true})),
-      requiredAction:'build-or-recover-ekodi-native-capability'
+      requiredAction:'diagnose-repair-update-reverify-retry-native',
+      recoveryPlan:nativeExecutorRecoveryPlan(taskClass,eligibleIds)
     });
+  }
+
+  const recoveryEvidence=asArray(fallback.nativeRecoveryEvidence);
+  const unrecovered=eligibleIds.filter(id=>{
+    const item=recoveryEvidence.find(row=>text(row?.id,120)===id);
+    return !item || item.attempted!==true ||
+      !['exhausted','unsafe','requires-local-consent'].includes(text(item.outcome,80)) ||
+      !text(item.auditId,160);
+  });
+  if(unrecovered.length){
+    return fail('EXTERNAL_FALLBACK_NATIVE_REPAIR_REQUIRED',
+      'Native executor self-repair and bounded retry evidence are required before external fallback',{
+        missingRecoveryEvidence:unrecovered,
+        recoveryPlan:nativeExecutorRecoveryPlan(taskClass,eligibleIds)
+      });
   }
 
   const reason=text(fallback.reason,120);

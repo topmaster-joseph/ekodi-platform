@@ -87,7 +87,29 @@
     "correctableNativeGapMustNotInterruptUserWorkflow": true,
     "nativeCapabilityMustBeRetriedOnNextEligibleExecution": true,
     "fallbackMustNotBecomeDefaultByHistory": true,
-    "externalBrowserFallbackMustCreateNativeRecoveryTask": true
+    "externalBrowserFallbackMustCreateNativeRecoveryTask": true,
+    "nativeFailureAutoRemediation": {
+      "status": "enforced",
+      "owner": "ekodi-orchestrator",
+      "default": "diagnose-repair-update-reverify-retry-native",
+      "steps": [
+        "capture-failure-and-device-health",
+        "classify-root-cause",
+        "apply-allowlisted-idempotent-repair",
+        "perform-signed-version-pinned-update-if-needed",
+        "run-isolated-canary-and-security-gates",
+        "retry-native-with-bounded-attempts",
+        "record-receipt-and-audit"
+      ],
+      "maxAutomaticAttemptsPerProvider": 2,
+      "productionMutationRequiresProtectedRelease": true,
+      "hostPrivilegeEscalationForbidden": true,
+      "credentialOrConsentBypassForbidden": true,
+      "rollbackOnCanaryFailure": true,
+      "fallbackOnlyAfterExhaustedOrUnsafeRecovery": true,
+      "externalFallbackRequiresExistingAuditEvidence": true,
+      "recoveryFailuresMustNotBeReportedAsSuccess": true
+    }
   },
   "constitutionalPolicies": [
     "VIRTUALIZATION-SOVEREIGNTY-001",

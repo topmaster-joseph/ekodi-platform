@@ -1,0 +1,37 @@
+{
+  "amendmentId": "NATIVE-EXECUTOR-SELF-REPAIR-20261010",
+  "constitutionVersion": "1.27.1",
+  "approvedAt": "2026-10-10",
+  "changeClass": "C2",
+  "taskId": "native-executor-auto-recovery-20261010",
+  "summary": "Require bounded self-diagnosis, allowlisted repair, signed version-pinned updates, isolated canary, rollback and audited retry before fallback away from EKODI-owned executors.",
+  "approvalBasis": "The EKODI platform owner explicitly requested that EKODI native executors be automatically repaired and updated upon failure and used preferentially while practical tests continue.",
+  "implementation": [
+    "config/virtualization-routing-policy.json",
+    "virtualization-router.js",
+    "test/virtualization-router.test.mjs"
+  ],
+  "mandatoryRules": [
+    "native-first remains enforced",
+    "run bounded safe auto-remediation before external fallback",
+    "record each eligible native provider repair outcome and audit id",
+    "never bypass privileged OS consent or protected release gates",
+    "rollback failed canary and report failure honestly"
+  ],
+  "validation": [
+    "EKODI Virtualization Routing Guard",
+    "EKODI Constitution Check",
+    "EKODI AI Orchestration Gate",
+    "CI"
+  ],
+  "rollback": "Revert this amendment and its routing changes through protected C2 release if runtime regressions appear.",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalEvidence": {
+    "explicitOwnerInstruction": true,
+    "ownerInstructionDate": "2026-10-10",
+    "requiredPullRequestLabel": "constitution-approved",
+    "approvalLabel": "constitution-approved",
+    "validationNote": "Owner-approved constitution-approved label is recorded on PR #4038; protected CI must verify this approval before merge."
+  }
+}

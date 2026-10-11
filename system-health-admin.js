@@ -168,7 +168,7 @@
     </div>
     <div class="traffic-intelligence-columns">
       <article class="health-diagram-card">
-        <div class="health-diagram-head"><div><small>SITES</small><strong>사이트별 요청 구성</strong></div><span data-traffic-site-count>—</span></div>
+        <div class="health-diagram-head"><div><small>SITES</small><strong>서비스별 브라우저 세션 · 호스트 요청</strong></div><span data-traffic-site-count>—</span></div>
         <div class="traffic-intelligence-sites" data-traffic-sites><p class="operations-loading">집계 대기</p></div>
       </article>
       <article class="health-diagram-card">
@@ -176,6 +176,11 @@
         <div class="traffic-intelligence-countries" data-traffic-countries><p class="operations-loading">Beacon 집계 대기</p></div>
       </article>
     </div>
+    <article class="health-diagram-card traffic-intelligence-daily-card">
+      <div class="health-diagram-head"><div><small>UTC DAYS</small><strong>일자별 브라우저 세션 · 호스트 요청</strong></div><span>오늘은 부분 집계</span></div>
+      <div class="traffic-intelligence-days traffic-intelligence-sites" data-traffic-days><p class="operations-loading">일자별 집계 대기</p></div>
+      <p class="system-health-footnote">호스트 요청과 브라우저 세션은 서로 다른 지표입니다. 공유 도메인 ekodi.kr의 요청은 하위 서비스별로 분리되지 않습니다.</p>
+    </article>
 
     <div class="system-health-divider"><span>트래픽 상태</span></div>
     <div class="system-health-overall" data-health-overall data-state="pending">
@@ -327,11 +332,13 @@
   function renderTrafficIntelligence(result) {
     const sitesHost = get('[data-traffic-sites]');
     const countriesHost = get('[data-traffic-countries]');
+    const daysHost = get('[data-traffic-days]');
     if (!result?.ok) {
       trafficStatus.textContent = `분류 조회 실패 · ${result?.error?.message || '연결 확인 필요'}`;
       for (const selector of ['[data-traffic-human]','[data-traffic-search]','[data-traffic-internal]','[data-traffic-bot]','[data-traffic-unknown]','[data-traffic-coverage]','[data-traffic-version]']) get(selector).textContent = '—';
       sitesHost.innerHTML = '<p class="operations-error">Traffic Intelligence 집계를 확인하지 못했습니다.</p>';
       countriesHost.innerHTML = '<p class="operations-error">실사용 세션 국가 집계를 확인하지 못했습니다.</p>';
+      daysHost.innerHTML = '<p class="operations-error">일자별 세션 집계를 확인하지 못했습니다.</p>';
       return;
     }
     const data = result.data || {};
@@ -357,8 +364,26 @@
       const row = document.createElement('div'); row.className = 'traffic-intelligence-site-row';
       const name = document.createElement('div'); const strong = document.createElement('strong'); strong.textContent = site.siteId || 'unknown';
       const small = document.createElement('small'); small.textContent = (site.hosts || []).join(' · '); name.append(strong, small);
-      const meta = document.createElement('span'); meta.textContent = `요청 ${compact(site.requestTotal)} · 사람추정 ${compact(site.humanSessions)}`;
+      const scope = site.requestScope || (site.requestTotal == null ? 'not-measured' : 'host-only');
+      const requestText = scope === 'not-measured'
+        ? '하위서비스 요청 미측정'
+        : scope === 'shared-host'
+          ? `공유호스트 전체 요청 ${compact(site.requestTotal)}`
+          : `해당 호스트 요청 ${compact(site.requestTotal)}`;
+      const meta = document.createElement('span'); meta.textContent = `${requestText} · 브라우저 세션 ${compact(site.humanSessions)}`;
       row.append(name, meta); sitesHost.append(row);
+    }
+
+    daysHost.textContent = '';
+    const daily = data.series || [];
+    if (!daily.length) daysHost.innerHTML = '<p class="operations-loading">선택 기간의 일자별 집계를 기다리는 중입니다.</p>';
+    for (const item of daily.slice().reverse()) {
+      const row = document.createElement('div'); row.className = 'traffic-intelligence-site-row';
+      const date = document.createElement('strong');
+      date.textContent = `${item.key} (UTC)${item.utcDayStatus === 'partial' ? ' · 진행 중' : ''}`;
+      const meta = document.createElement('span');
+      meta.textContent = `브라우저 세션 ${compact(item.humanSessions)} · 호스트 요청 ${compact(item.requestTotal)}`;
+      row.append(date, meta); daysHost.append(row);
     }
 
     countriesHost.textContent = '';
