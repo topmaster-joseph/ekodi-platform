@@ -1158,7 +1158,8 @@ async function handleAdmin(request, env) {
           isolatedDesktop: capabilities.isolatedDesktop === true,
           isolatedDesktopProbe: capabilities.isolatedDesktopProbe === true,
           agentStatus: capabilities.agentStatus === true,
-          localAiInstall: capabilities.localAiInstall === true
+          localAiInstall: capabilities.localAiInstall === true,
+          localAiVerify: capabilities.localAiVerify === true
         }
       };
     });
