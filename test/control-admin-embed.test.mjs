@@ -27,10 +27,13 @@ test('admin root reuses one sidebar and loads Control only after auth navigation
   assert.match(html,/<iframe id="adminControlFrame"/);
   assert.match(html,/data-src="\/admin\/control\?embed=admin"/);
   assert.doesNotMatch(html,/<iframe[^>]*\ssrc="\/admin\/control\?embed=admin"/);
-  assert.match(layout,/panelTargets\(panel\)\.includes\(COMMAND_HOME\)/);
-  assert.match(layout,/!frame\.hasAttribute\('src'\)/);
-  assert.match(compact,/function Q\(\)\{v=X;for\(const e of s\.querySelectorAll\("\[data-panel\]"\)\)/);
-  assert.match(compact,/e\.hasAttribute\("src"\)/);
+  assert.match(layout,/function activateCommandHome\(\)\{/);
+  assert.match(compact,/function Q\(\)\{v=X,z\(X\),f\(X\)\}/);
+  // Control panel activation is deliberately external to the compact menu's
+  // strict 10 KB first-paint budget.
+  assert.match(frameJs,/ekodi-admin-section-changed/);
+  assert.match(frameJs,/ekodi-admin-ready/);
+  assert.match(frameJs,/frame\.setAttribute\('src',frame\.dataset\.src\)/);
   assert.match(sidebar,/window\.EKODIAdminPanels\.activate\('command-home'\)/);
   assert.match(css,/#adminControlFrame/);
   assert.match(html,/id="adminControlFrameNotice" role="status" hidden/);
