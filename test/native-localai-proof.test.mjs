@@ -42,6 +42,55 @@ test('native USER3 loopback Ollama inference and Windows result are verified wit
   assert.deepEqual(JSON.parse(calls.find(x=>x.opts.method==='POST').opts.body),
     {type:'software.localai.verify',confirmed:true});
 });
+test('duplicate online USER2 hostnames are rejected without queuing any commands',async()=>{
+  const user2={...device,id:'verified-user2-id',hostname:'USER2'};
+  const another={...user2,id:'ambiguous-user2-id'};
+  let posts=0;
+  const fetchImpl=async(_url,options)=>{
+    if(options.method==='POST')posts++;
+    return response({devices:[device,user2,another]});
+  };
+  await assert.rejects(verifyNativeLocalAi({
+    token:'short-lived-admin-token-long-enough',hostname:'user2',
+    clock:()=>now,fetchImpl,maxPoll:1
+  }),/ambiguous_localai_target_hostname/);
+  assert.equal(posts,0);
+});
+
+test('unique USER2 Windows Agent receives the exact hostname-scoped Ollama canary',async()=>{
+  const user2={...device,id:'verified-user2-id',hostname:'USER2'};
+  const completed={id:'cmd-user2',type:'software.localai.verify',status:'succeeded',
+    result:{localAiProof:{ollamaApi:'ready',ollamaVersion:'0.40.1',
+      selectedModel:'qwen2.5-coder:1.5b',inference:'passed',credentialCollection:false,
+      executionMode:'fixed_loopback_api'}},completedAt:new Date(now).toISOString()};
+  const posts=[];
+  const fetchImpl=async(url,options)=>{
+    if(options.method==='POST'){
+      posts.push(url);
+      return response({command:{id:'cmd-user2',type:'software.localai.verify',status:'queued'}});
+    }
+    return response({devices:[device,{...user2,recentCommands:posts.length?[completed]:[]}]});
+  };
+  const proof=await verifyNativeLocalAi({
+    token:'short-lived-admin-token-long-enough',hostname:'user2',
+    clock:()=>now,fetchImpl,maxPoll:1
+  });
+  assert.equal(proof.targetAlias,'user2');
+  assert.equal(proof.inference,'passed');
+  assert.deepEqual(posts,['https://ekodi.kr/api/control/devices/verified-user2-id/commands']);
+  assert.doesNotMatch(JSON.stringify(proof),/verified-user2-id|admin-token/);
+});
+
+test('USER2 mode remains protected by the orchestration release receipt',()=>{
+  const workflow=readFileSync(new URL('../.github/workflows/device-agent-production-verification.yml',import.meta.url),'utf8');
+  assert.ok(workflow.includes('- user2-localai'));
+  assert.ok(workflow.includes("inputs.execution_mode == 'user2-localai'"));
+  const user2Step=workflow.slice(workflow.indexOf('Verify USER2 native Ollama'),workflow.indexOf('Verify USER4 native CDP'));
+  assert.ok(user2Step.includes("DEVICE_TARGET_HOSTNAME: 'user2'"));
+  assert.ok(user2Step.includes('run: node scripts/verify-native-localai.mjs'));
+  assert.ok(workflow.includes('node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release'));
+});
+
 test('missing Windows loopback proof cannot pass',async()=>{
   const fakeFetch=async(url,opts)=>{
     if(opts.method==='POST')return response({command:{id:'cmd-bad',type:'software.localai.verify',status:'queued'}});
