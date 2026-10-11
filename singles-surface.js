@@ -101,6 +101,12 @@ function page(active='처음'){
 }
 export async function routeSinglesSurface(request,env){
  const url=new URL(request.url),sub=pathAfterSingles(url.pathname);if(sub===null)return null;
+ // Before formal launch, the whole member-facing site is private by default.
+ // A deliberate preview opt-in can expose only informational HTML/assets, never APIs or paid actions.
+ if(!enabled(env)&&env?.SINGLES_PUBLIC_PREVIEW_ENABLED!=='true'&&
+    (sub==='/api/public'||!sub.startsWith('/api/'))){
+  return json({error:'singles_unpublished'},404);
+ }
  if(sub==='/styles.css'||sub==='/app.js'){if(!SAFE_METHODS.has(request.method))return json({error:'method_not_allowed'},405);return env.ASSETS.fetch(request)}
  const fromApi=await api(request,env,sub);if(fromApi)return fromApi;
  if(!SAFE_METHODS.has(request.method))return json({error:'method_not_allowed'},405);
