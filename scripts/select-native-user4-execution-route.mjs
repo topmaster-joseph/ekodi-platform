@@ -5,12 +5,33 @@ import {selectVirtualizationProvider} from '../virtualization-router.js';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 
-export function selectUser4ExecutionRoute({readiness={},probe={}}={}) {
-  const hyperVReady=probe?.backendReady===true;
-  const browserReady=readiness?.heartbeatHealthy===true
+export function selectUser4ExecutionRoute({readiness={},probe={},now=Date.now()}={}) {
+  // Source-bound and age-bounded: another PC or an old receipt cannot activate
+  // the USER4 native browser fallback or the headless Hyper-V route.
+  const fresh=(value,maxAge)=>{
+    const time=Date.parse(String(value||''));
+    return Number.isFinite(time) && time<=now && now-time<=maxAge;
+  };
+  const user4Observed=readiness?.targetAlias==='user4'
+    && readiness?.heartbeatHealthy===true
+    && fresh(readiness?.observedAt,5*60*1000);
+  const proof=readiness?.proofs?.browser;
+  const browserReady=user4Observed
     && readiness?.capabilities?.backgroundBrowser===true
     && readiness?.capabilities?.backgroundBrowserCanary===true
-    && readiness?.proofs?.browser?.verified===true;
+    && proof?.status==='succeeded'
+    && proof?.verified===true && proof?.fresh===true
+    && fresh(proof?.completedAt,24*60*60*1000);
+  const hyperVReady=user4Observed
+    && probe?.targetAlias==='user4'
+    && probe?.receiptStatus==='succeeded'
+    && probe?.backendReady===true
+    && probe?.userDesktopAttached===false
+    && probe?.virtualizationFirmwareEnabled===true
+    && probe?.hyperVState==='Enabled'
+    && probe?.hyperVPowerShellAvailable===true
+    && probe?.baseVmPresent===true
+    && fresh(probe?.completedAt,10*60*1000);
 
   if(hyperVReady){
     return {
