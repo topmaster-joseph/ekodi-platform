@@ -105,9 +105,9 @@ export async function verifyUser4Browser({token,fetchImpl=fetch,clock=()=>Date.n
   throw new Error('user4_native_browser_timeout');
 }
 
-// Latest pinned, bounded Chrome/Edge CDP worker was merged on October 11 at 09:00 UTC.
+// Latest diagnostics-capable Chrome/Edge CDP worker requires a new official USER4 Agent update after 11:29 UTC.
 // Never infer that an older USER4 Agent has loaded it from an earlier heartbeat.
-export const USER4_CDP_FIX_FLOOR = Date.parse('2026-10-11T09:00:12.000Z');
+export const USER4_CDP_FIX_FLOOR = Date.parse('2026-10-11T11:29:00.000Z');
 const UPDATE='agent.self_update';
 export async function ensureUser4AgentUpdated({
   token,fetchImpl=fetch,clock=()=>Date.now(),sleepFn=wait,pollMs=4000,maxPoll=65
