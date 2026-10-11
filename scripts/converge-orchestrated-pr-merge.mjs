@@ -78,6 +78,14 @@ const controlApiTouched=changedFiles.some(file=>[
   'deploy/manifests/control-api.worker.json',
   '.github/workflows/deploy-control-api.yml',
 ].includes(file));
+// GitHub-token merges do not emit ordinary main push events. A successful
+// collector change must replay its guarded read-only Cloudflare query and
+// idempotent D1 aggregate UPSERT after the orchestrator verifies the merge.
+const trafficCollectorTouched=changedFiles.some(file=>[
+  'scripts/collect-traffic-intelligence.mjs',
+  'traffic-collector-quality.js',
+  '.github/workflows/traffic-intelligence-analytics.yml',
+].includes(file));
 const marketingGrowthTouched=changedFiles.some(file=>[
   'mall-autonomous-profit-loop.js',
   'mall-growth-dashboard.js',
@@ -203,6 +211,16 @@ async function dispatchPostMergeDeploys(){
     });
     if(!dispatch.r.ok)fail('Control API deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-control-api.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  // This dispatch is restricted to the exact, already-merged release's
+  // modified collector files. The target workflow queues same-ref runs
+  // (cancel-in-progress:false), and only its collect job writes aggregates.
+  if(trafficCollectorTouched){
+    const dispatch=await api('/actions/workflows/traffic-intelligence-analytics.yml/dispatches',{
+      method:'POST', body:JSON.stringify({ref:'main'})
+    });
+    if(!dispatch.r.ok)fail('Traffic Intelligence analytics dispatch failed '+dispatch.r.status);
+    console.log(JSON.stringify({ok:true,action:'collector-dispatched',workflow:'traffic-intelligence-analytics.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(marketingGrowthTouched){
     const dispatch=await api('/actions/workflows/deploy-marketing-growth.yml/dispatches',{
