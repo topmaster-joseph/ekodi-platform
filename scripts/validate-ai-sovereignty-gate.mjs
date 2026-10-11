@@ -60,4 +60,13 @@ assert.equal(identity.email,'admin@ekodi.kr');
 assert.match(identity.personId,/^admin_[0-9a-f]{40}$/);
 assert.equal(identity.personId,(await trustedAdminOrchestratorIdentity({email:'admin@ekodi.kr'})).personId);
 assert.notEqual(identity.personId,'attacker-id');
-console.log('EKODI reuse-first gate: policy + secure official submission assertions passed');
+const controlUi=readFileSync(new URL('../control.js',import.meta.url),'utf8');
+const controlHtml=readFileSync(new URL('../control.html',import.meta.url),'utf8');
+assert.match(controlHtml,/id="orchestratorRelease"/);
+assert.match(controlUi,/\#\('orchestratorRelease'\)/);
+assert.match(controlUi,/\/api\/control\/ai\/v8\/orchestrator\/submit/);
+assert.match(controlUi,/deploymentRequested:true/);
+assert.match(controlUi,/idempotencyKey/);
+assert.match(controlUi,/보호된 승인.*배포 완료가 아닙니다/);
+assert.match(controlUi,/\/api\/control\/ai\/v8\/pulse/); // ordinary mode unchanged
+console.log('EKODI reuse-first gate: policy, official submission, UI boundaries passed');
