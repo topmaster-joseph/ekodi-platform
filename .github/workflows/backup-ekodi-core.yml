@@ -20,8 +20,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: ekodi-core-backup-${{ github.event_name }}
-  cancel-in-progress: false
+  group: ekodi-core-backup-${{ github.event.pull_request.number || github.ref_name || github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   WRANGLER_VERSION: '4.119.0'
