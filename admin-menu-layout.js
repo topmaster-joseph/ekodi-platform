@@ -77,6 +77,10 @@ function activateCommandHome(){
     panel.classList.toggle('hidden-panel',!visible);
     panel.hidden=!visible;
   }
+  // Load the privileged command frame only when the authenticated admin
+  // explicitly opens the home panel. Never preload it on the login screen.
+  const frame=content.querySelector('#adminControlFrame');
+  if(frame&&!frame.hasAttribute('src')&&frame.dataset.src)frame.setAttribute('src',frame.dataset.src);
   for(const item of allNav())item.classList.toggle('active',!isInternalNav(item)&&sectionOf(item)===COMMAND_HOME);
   syncTitle(COMMAND_HOME);
   replaceSectionUrl(COMMAND_HOME);
