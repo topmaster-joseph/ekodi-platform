@@ -1,4 +1,6 @@
 ﻿import authWorker from './auth-worker.js';
+import { chooseEkodiExecution, sanitizeAiConnectionStatus } from './ekodi-ai-sovereignty-gate.js';
+import { providerStatus } from './ai-control-provider-router.js';
 import { getCoreAiGatewayStatus } from './core-ai-gateway.js';
 import { adminAuthorityForRole, hasEkodiCapability } from './ekodi-authorization.js';
 import {
@@ -156,6 +158,35 @@ export async function handleEkodiV8CommandControl(request, env) {
     return null;
   };
 
+  // Read-only decision preview; never runs AI, issues tokens, or grants execution rights.
+  if (request.method === 'POST' && url.pathname === `${PREFIX}/sovereignty/preview`) {
+    const denied = requirePlatformSuperAdmin('ai:read'); if (denied) return denied;
+    const body = await readJson(request);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return json(request, env, { ok:false, code:'INVALID_SOVEREIGNTY_PREVIEW' }, 400);
+    }
+    const statuses = providerStatus(env).filter(item => item?.id && item?.kind === 'official-api');
+    const providers = statuses.map(item => ({
+      id:item.id, available:item.available === true, automationAllowed:true,
+      trustClass:'external', costClass:item.costClass, priority:100,
+    }));
+    const decision = chooseEkodiExecution({
+      capabilityId:text(body.capabilityId,120),
+      // Never trust client-supplied "verified" capability claims.
+      capabilities:[],
+      risk:text(body.risk || 'normal',20),
+      sensitive:body.sensitive === true,
+      paidApproved:false,
+      providers,
+    });
+    const connections = statuses.map(item => sanitizeAiConnectionStatus({
+      id:item.id, available:item.available === true,
+      authMethod:item.configured ? 'api-key' : 'unconfigured',
+    }));
+    return json(request, env, { ok:true, previewOnly:true, executionAuthorized:false,
+      decision, connections, notice:'Existing capability and local provider verification are not yet wired.' });
+  }
+
   if (request.method === 'GET' && url.pathname === `${PREFIX}/orchestrator/human-gates`) {
     const denied = requirePlatformSuperAdmin('ai:read'); if (denied) return denied;
     const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 20, 1), 50);
@@ -304,5 +335,5 @@ export async function handleEkodiV8CommandControl(request, env) {
 export const EKODI_V8_COMMAND_CONTROL = Object.freeze({
   version: '1.3.0',
   prefix: PREFIX,
-  surfaces: Object.freeze(['status', 'tasks', 'tasks/:taskId/consultation', 'orchestrator/human-gates', 'orchestrator/tasks/:taskId', 'orchestrator/tasks/:taskId/approve', 'pulse', 'drain', 'collaboration-settings', 'collaboration-settings/audit']),
+  surfaces: Object.freeze(['status', 'tasks', 'tasks/:taskId/consultation', 'orchestrator/human-gates', 'orchestrator/tasks/:taskId', 'orchestrator/tasks/:taskId/approve', 'pulse', 'drain', 'collaboration-settings', 'collaboration-settings/audit', 'sovereignty/preview']),
 });
