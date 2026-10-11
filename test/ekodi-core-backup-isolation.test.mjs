@@ -6,8 +6,9 @@ const workflow=await readFile(new URL('../.github/workflows/backup-ekodi-core.ym
 
 test('PR backup recovery drill is local-only and never creates a remote D1',()=>{
   assert.match(workflow,/BACKUP_LOCAL=true/);
-  assert.match(workflow,/d1 migrations apply DB[\s\S]*--local --persist-to/);
-  assert.match(workflow,/d1 export "\$BACKUP_DATABASE"[\s\S]*--local --persist-to/);
+  assert.match(workflow,/d1 migrations apply DB[\s\S]*--local --config/);
+  assert.match(workflow,/rm -rf \.wrangler\/state/);
+  assert.match(workflow,/d1 export "\$BACKUP_DATABASE"[\s\S]*--local/);
   assert.doesNotMatch(workflow,/d1 create "\$DB_NAME"/);
   assert.doesNotMatch(workflow,/d1 delete "\$BACKUP_DATABASE"/);
   assert.doesNotMatch(workflow,/d1 migrations apply DB --remote/);
