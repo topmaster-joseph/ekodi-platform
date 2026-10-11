@@ -1332,9 +1332,14 @@ function Invoke-EkodiHeadlessScreenshot(
         $portLines = @(Get-Content -LiteralPath $portFile -Encoding UTF8 -ErrorAction Stop)
         if ($portLines.Count -gt 0) {
           $candidatePort = 0
-          if ([int]::TryParse([string]$portLines[0], [ref]$candidatePort) -and $candidatePort -gt 0 -and $candidatePort -le 65535) {
-            $port = $candidatePort
-            break
+          $isParsed = [int]::TryParse([string]$portLines[0], [ref]$candidatePort)
+          if ($isParsed) {
+            if ($candidatePort -gt 0) {
+              if ($candidatePort -le 65535) {
+                $port = $candidatePort
+                break
+              }
+            }
           }
         }
       } catch [System.IO.IOException] {
