@@ -99,4 +99,38 @@ alter table public.singles_message_credit_wallets enable row level security;
 alter table public.singles_message_consent_charges enable row level security;
 revoke all on public.singles_message_credit_wallets,public.singles_message_consent_charges from public,anon,authenticated;
 grant select,insert,update on public.singles_message_credit_wallets,public.singles_message_consent_charges to service_role;
+-- Application-readiness checklist is administrative-only, never a brokerage launch permit.
+create table if not exists public.singles_brokerage_application_checklist (
+ regime text not null check(regime in ('domestic','international')),
+ requirement text not null check(char_length(requirement) between 3 and 75),
+ completed boolean not null default false,
+ evidence_reference text check(evidence_reference is null or char_length(evidence_reference)<=500),
+ checked_by uuid references auth.users(id),
+ checked_at timestamptz,
+ primary key(regime,requirement)
+);
+alter table public.singles_brokerage_application_checklist enable row level security;
+revoke all on public.singles_brokerage_application_checklist from public,anon,authenticated;
+grant select,insert,update on public.singles_brokerage_application_checklist to service_role;
+insert into public.singles_brokerage_application_checklist(regime,requirement)
+values
+('domestic','관할 시군구·사업자 형태 확인'),
+('domestic','중개사무소 적합 시설 및 사용권원'),
+('domestic','대표·종사자 결격사유와 종사자 명단'),
+('domestic','보증보험 가입·증빙'),
+('domestic','계약서·수수료·환불 약관 법률 검토'),
+('domestic','개인정보·기록 보존·접근통제 검토'),
+('domestic','정부24 신청서와 제출서류 준비'),
+('domestic','관할 시군구 신고 수리 확인'),
+('international','관할 시군구·사업자 형태 확인'),
+('international','중개사무소 적합 시설 및 사용권원'),
+('international','국제결혼중개업 종사자 교육 수료'),
+('international','자본금 또는 자산평가액 1억원 이상 증빙'),
+('international','보증보험 가입·증빙'),
+('international','대표·종사자 결격사유 및 종사자 명단'),
+('international','국제결혼 서면계약·번역·정보 제공 의무 검토'),
+('international','국가별 외국법·비자·인권·통역 의무 검토'),
+('international','정부24 등록신청과 관련 서류 준비'),
+('international','관할 시군구 등록 완료 및 등록증 확인')
+on conflict do nothing;
 -- All products disabled by default. No matchmaking services or bypass of confirmed payment.
