@@ -117,7 +117,7 @@
       'diagnostics.collect': '전체 진단', 'network.diagnose': '네트워크 진단', 'printers.diagnose': '프린터 진단', 'printing.image_preview.status': '인쇄 미리보기 점검', 'printing.image_preview.repair': '인쇄 미리보기 복구', 'printing.image_preview.restore': '인쇄 미리보기 원상복구', 'startup.scan': '시작프로그램 확인',
       'startup.disable': '시작프로그램 해제', 'startup.restore': '시작프로그램 복원', 'maintenance.temp_cleanup': '임시파일 정리',
       'updates.scan': '업데이트 확인', 'updates.install': '업데이트 설치', 'profile.workstation.apply': 'EKODI 업무환경',
-      'profile.workstation.restore': '업무환경 복원', 'agent.self_update': 'Agent 업데이트', 'software.localai.install': 'Ollama·Claude 설치', 'computer.browser.canary': 'BG Browser Canary',
+      'profile.workstation.restore': '업무환경 복원', 'agent.self_update': 'Agent 업데이트', 'software.localai.install': 'Ollama·Claude 설치', 'software.localai.verify': '로컬 AI 실증', 'computer.browser.canary': 'BG Browser Canary',
       'computer.agent.status': 'Agent 상태', 'computer.system.read': '시스템 상태', 'computer.process.list': '프로세스 보기', 'computer.desktop.probe': '격리 데스크톱 점검', 'computer.desktop.canary': '격리 VM Canary', 'computer.desktop.guest.canary': 'Guest 실행 Canary', 'computer.desktop.ui.canary': 'Guest UI Canary', 'computer.desktop.session.canary': 'Session Canary', 'computer.desktop.session.execute': '격리 Session 실행',
     };
     return labels[type] || type;
@@ -493,6 +493,7 @@
       makeActionButton(device, 'updates.scan', '업데이트 확인', 'ghost', {}, !capability(device, 'windowsUpdate')),
       makeActionButton(device, 'agent.self_update', 'Agent 업데이트', 'secondary'),
       makeActionButton(device, 'software.localai.install', 'Ollama·Claude 설치', 'secondary', {}, !capability(device, 'localAiInstall')),
+      makeActionButton(device, 'software.localai.verify', '로컬 AI 실증', 'primary', {}, !capability(device, 'localAiVerify')),
     );
 
     const advanced = document.createElement('details'); advanced.className = 'device-details device-advanced-control';
@@ -550,6 +551,14 @@
     foot.append(note, revoke);
 
     card.append(head, meta, health.firstElementChild, recommendationPanel(device), mainActions, advanced, foot);
+    const proofCommand = latestCommandByType(device, 'software.localai.verify');
+    const proof = proofCommand?.result?.localAiProof || device.diagnostics?.localAiProof;
+    if (proof) {
+      const summary = document.createElement('div');
+      summary.className = 'device-remote-summary-card';
+      summary.innerHTML = `<small>로컬 AI 실증 · ${timeLabel(proof.checkedAt || proofCommand?.completedAt || proofCommand?.issuedAt)}</small><strong>Ollama ${escapeHtml(proof.ollamaApi || '미확인')} · 추론 ${escapeHtml(proof.inference || '미확인')}</strong><span>모델 ${escapeHtml(proof.selectedModel || '없음')} · Claude CLI ${escapeHtml(proof.claudeCli || '미확인')} · Claude 계정 인증은 사용자 세션에서 별도 확인</span>`;
+      mainActions.after(summary);
+    }
     return card;
   }
 
