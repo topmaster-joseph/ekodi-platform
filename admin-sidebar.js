@@ -12,6 +12,17 @@ import {
 const LOCALE_KEY = 'ekodi-admin-locale';
 const LOCALE_COOKIE = 'ekodi_admin_locale';
 const mounted = new WeakMap();
+const activationEpoch = new WeakMap();
+
+function beginActivation(nav) {
+  const next = (activationEpoch.get(nav) || 0) + 1;
+  activationEpoch.set(nav, next);
+  return next;
+}
+
+function isLatestActivation(nav, epoch) {
+  return activationEpoch.get(nav) === epoch;
+}
 const RETIRED_MENU_SECTIONS = new Set(['overview']);
 const GLOBAL_CLASS = 'admin-global-navs';
 const SOURCE_CLASS = 'admin-context-source';
@@ -401,6 +412,7 @@ function syncWorkbenchState(nav, locale, preferredSection = '') {
 
 function activateSection(nav, section) {
   if (!section) return false;
+  const epoch = beginActivation(nav);
   const definition = getAdminMenuItem(section);
   const fallback = [...navItems(nav)].find(item => adminSidebarSectionOf(item) === section);
   if (definition?.delegateSection) {
@@ -420,11 +432,16 @@ function activateSection(nav, section) {
   const demandTarget = [...navItems(nav)].find(item => item.dataset.demandFeature === section);
   if (demandTarget && window.EKODIAdminDemand?.activate) {
     Promise.resolve(window.EKODIAdminDemand.activate(section)).then(() => {
+      // A newer submenu/work-area selection always wins. Never allow an
+      // earlier lazy demand load (for example security) to overwrite a later
+      // delegated selection (for example audit-records) after it finishes.
+      if (!isLatestActivation(nav, epoch)) return;
       if (window.EKODIAdminPanels?.activate) {
         window.EKODIAdminPanels.activate(section);
         return;
       }
       const installed = [...navItems(nav)].find(item => adminSidebarSectionOf(item) === section && !item.hasAttribute('data-demand-feature'));
+      if (!isLatestActivation(nav, epoch)) return;
       installed?.click?.();
     }).catch(error => console.warn(`[EKODI Admin] visible navigation demand activation failed: ${section}`, error));
     return true;
