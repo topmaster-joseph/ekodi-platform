@@ -413,6 +413,22 @@ async function showEventPricing(h){
   h.append(panel);
  }catch(e){if(e?.status!==403)notice(h,'행사 참가비 관리 연결을 확인해 주세요.')}
 }
+async function showAllPricing(h){
+ try{
+  const data=await api('/bank/admin/catalog');const box=text('section','','member-card');
+  box.append(text('h3','가격정책 · 메시지권·기간권·컨설팅'));
+  paragraph(box,'가격 변경 즉시 판매는 중단되며 법률 검토와 정식 개통 전에는 결제할 수 없습니다.');
+  for(const plan of data.products||[]){
+   const field=text('label',plan.title,'field'),value=document.createElement('input');
+   value.type='number';value.min='4900';value.max='200000';value.step='100';value.value=String(plan.amount_krw);
+   const msg=text('p','','status-text');field.append(value);
+   field.append(button('가격 저장',async()=>{
+    try{await api('/bank/admin/catalog/'+plan.code,{method:'PUT',body:{amount_krw:Number(value.value)}});msg.textContent='저장 완료 · 판매 중지'}catch(e){msg.textContent=errorText(e)}
+   }),msg);box.append(field);
+  }
+  h.append(box);
+ }catch(e){if(e?.status!==403)notice(h,'가격관리 권한이 필요합니다.')}
+}
 async function signedIn(status){
  document.querySelectorAll('[data-member-nav]').forEach(link=>{link.hidden=false});
  document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.hidden=true});
@@ -425,7 +441,7 @@ async function signedIn(status){
  else if(page==='/discover')await showDiscover(h);
  else if(page==='/messages')await showMessages(h);
  else if(page==='/subscribe')await showSubscription(h);
- else if(page==='/admin'){await showBankAdmin(h);await showEventPricing(h);}
+ else if(page==='/admin'){await showBankAdmin(h);await showEventPricing(h);await showAllPricing(h);}
  else if(page==='/groups')paragraph(h,'지역 공동체·소그룹 기능을 준비하고 있습니다. 행사 목록을 먼저 확인해 주세요.');
  else {paragraph(h,'반갑습니다. 나의 프로필, 공개 행사, 동행 찾기를 살펴보세요.');const row=text('div','','actions');for(const [name,href] of [['프로필 등록','/singles/my'],['공개 행사','/singles/events'],['동행 찾기','/singles/discover']]){const a=text('a',name,'outline');a.href=href;row.append(a)}h.append(row)}
 }
