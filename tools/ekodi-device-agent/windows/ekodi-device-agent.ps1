@@ -970,8 +970,71 @@ function Get-BackgroundBrowserCanaryState {
   }
 }
 
+function Invoke-EkodiNativeCdpCanary {
+  $nodeCommand = Get-Command node.exe -ErrorAction SilentlyContinue
+  if (-not $nodeCommand) { throw 'CDP_NODE_RUNTIME_REQUIRED' }
+  $nodeExe = [string]$nodeCommand.Source
+  $nodeVersionText = & $nodeExe --version
+  if ($LASTEXITCODE -ne 0 -or $nodeVersionText -notmatch '^v(\d+)\.') { throw 'CDP_NODE_VERSION_UNAVAILABLE' }
+  if ([int]$Matches[1] -lt 22) { throw 'CDP_NODE_22_REQUIRED' }
+  $workerRoot = Join-Path $Root 'browser-worker'
+  New-Item -ItemType Directory -Path $workerRoot -Force | Out-Null
+  $workerPath = Join-Path $workerRoot 'ekodi-native-browser-cdp.mjs'
+  # Immutable, reviewed source commit: never execute a URL supplied by a job payload.
+  $workerUrl = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/c58143ffdd956011023708eb11f8940beca8cfe5/tools/ekodi-device-agent/windows/ekodi-native-browser-cdp.mjs'
+  $download = Join-Path $workerRoot ('candidate-' + [Guid]::NewGuid().ToString('N') + '.mjs')
+  try {
+    Invoke-WebRequest -UseBasicParsing -Uri $workerUrl -OutFile $download -TimeoutSec 20 -ErrorAction Stop
+    $candidate = Get-Content -LiteralPath $download -Raw -Encoding UTF8
+    if ($candidate -notmatch 'CDP_DOM_EVIDENCE_MISSING' -or $candidate -notmatch 'CDP_TARGET_FORBIDDEN') { throw 'CDP_WORKER_SOURCE_INVALID' }
+    Move-Item -LiteralPath $download -Destination $workerPath -Force
+  } finally {
+    Remove-Item -LiteralPath $download -Force -ErrorAction SilentlyContinue
+  }
+  $process = [Diagnostics.Process]::new()
+  $process.StartInfo = [Diagnostics.ProcessStartInfo]@{
+    FileName = $nodeExe
+    Arguments = ('"' + $workerPath + '"')
+    UseShellExecute = $false
+    CreateNoWindow = $true
+    RedirectStandardOutput = $true
+    RedirectStandardError = $true
+  }
+  [void]$process.Start()
+  $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+  $stderrTask = $process.StandardError.ReadToEndAsync()
+  if (-not $process.WaitForExit(35000)) {
+    try { $process.Kill() } catch {}
+    throw 'CDP_WORKER_TIMEOUT'
+  }
+  $stdout = $stdoutTask.GetAwaiter().GetResult()
+  $stderr = $stderrTask.GetAwaiter().GetResult()
+  if ($process.ExitCode -ne 0) { throw ('CDP_WORKER_FAILED: ' + $stderr.Substring(0,[Math]::Min(260,$stderr.Length))) }
+  try { $receipt = $stdout.Trim() | ConvertFrom-Json -ErrorAction Stop } catch { throw 'CDP_WORKER_INVALID_RECEIPT' }
+  if ($receipt.ok -ne $true -or [int]$receipt.domBytes -le 0 -or [string]$receipt.url -ne $BrowserCanaryUrl -or [string]$receipt.mode -ne 'native-cdp') {
+    throw 'CDP_WORKER_EVIDENCE_INVALID'
+  }
+  $proof = @{
+    ok = $true
+    mode = 'native-cdp'
+    agentVersion = $AgentVersion
+    browser = [string]$receipt.browser
+    url = $BrowserCanaryUrl
+    contentBytes = [int]$receipt.domBytes
+    dedicatedAutomationProfile = $true
+    offscreenOrHeadless = $true
+    focusIsolated = $true
+    clipboardShared = $false
+    userInputInjection = $false
+    checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+  }
+  $proof | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $BrowserCanaryStatePath -Encoding UTF8
+  return @{ message = 'EKODI Native CDP Browser Worker DOM verification completed.'; browserCanary = $proof }
+}
+
 function Invoke-BackgroundBrowserCanary([bool]$PreferEdge = $false) {
   Remove-Item -LiteralPath $BrowserCanaryStatePath -Force -ErrorAction SilentlyContinue
+  if (-not $PreferEdge) { return Invoke-EkodiNativeCdpCanary }
   $browser = if ($PreferEdge) { Resolve-EkodiEdgeBrowser } else { Resolve-EkodiBrowser }
   if (-not $browser) { throw 'supported_browser_not_found' }
   $canaryProfile = Join-Path $BrowserCanaryProfileRoot ([Guid]::NewGuid().ToString('N'))
