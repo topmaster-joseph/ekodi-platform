@@ -413,6 +413,7 @@ async function showEventPricing(h){
 }
 async function signedIn(status){
  document.querySelectorAll('[data-member-nav]').forEach(link=>{link.hidden=false});
+ document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.hidden=true});
  $('serviceStage').textContent='로그인 완료';
  await readSubscription();
  const h=holder();
