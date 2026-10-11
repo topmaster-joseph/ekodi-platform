@@ -99,23 +99,6 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   if(error)return reply(req,{error:action==='report'?'report_not_allowed':'acknowledgment_not_allowed'},409);
   return reply(req,{reference,status:data});
  }
- if(path==='/bank/admin/brokerage-checklist'&&method==='GET'){
-  const role=await operator(admin,userId);
-  if(!role||role.can_configure!==true)return reply(req,{error:'admin_capability_required'},403);
-  const items=await many(admin.from('singles_brokerage_application_checklist').select('regime,requirement,completed,evidence_reference,checked_at').order('regime').order('requirement'));
-  return reply(req,{items,brokerage_enabled:false});
- }
- if(path==='/bank/admin/brokerage-checklist'&&method==='PUT'){
-  const role=await operator(admin,userId);
-  if(!role||role.can_configure!==true)return reply(req,{error:'admin_capability_required'},403);
-  const v=await payload(req);
-  if(!v||!['domestic','international'].includes(v.regime)||typeof v.requirement!=='string'||v.requirement.length>75||typeof v.completed!=='boolean'||
-   typeof v.evidence_reference!=='string'||v.evidence_reference.length>500||Object.keys(v).some(k=>!['regime','requirement','completed','evidence_reference'].includes(k)))
-   return reply(req,{error:'invalid_checklist'},400);
-  const {data,error}=await admin.from('singles_brokerage_application_checklist').update({completed:v.completed,evidence_reference:v.evidence_reference||null,checked_by:userId,checked_at:new Date().toISOString()}).eq('regime',v.regime).eq('requirement',v.requirement).select('regime,requirement,completed,checked_at').maybeSingle();
-  if(error)throw error;
-  return data?reply(req,{saved:true,item:data,brokerage_enabled:false}):reply(req,{error:'not_found'},404);
- }
  if(path==='/bank/admin/catalog'&&method==='GET'){
   const role=await operator(admin,userId);
   if(!role||role.can_configure!==true)return reply(req,{error:'price_admin_required'},403);
