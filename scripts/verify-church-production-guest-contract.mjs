@@ -21,12 +21,12 @@ function bodyAsJson(body,label){
 }
 const worshipUrl=API+'?scope=worship-access';
 const financeUrl=API+'?scope=finance-access';
-const guest=await request('worship guest',worshipUrl,{headers:{Origin:HOME.slice(0,-1)}});
+const guest=await request('worship guest',worshipUrl,{headers:{Origin:new URL(HOME).origin}});
 assert.equal(guest.response.status,401,'guest worship route must deny');
 assert.equal(bodyAsJson(guest.body,'worship guest').error,'AUTH_REQUIRED');
 assert.equal(guest.response.headers.get('cache-control'),'no-store');
 
-const finance=await request('finance guest',financeUrl,{headers:{Origin:HOME.slice(0,-1)}});
+const finance=await request('finance guest',financeUrl,{headers:{Origin:new URL(HOME).origin}});
 assert.equal(finance.response.status,401,'guest finance route must deny');
 assert.equal(bodyAsJson(finance.body,'finance guest').error,'AUTH_REQUIRED');
 
