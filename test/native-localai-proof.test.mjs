@@ -85,7 +85,9 @@ test('USER2 mode remains protected by the orchestration release receipt',()=>{
   const workflow=readFileSync(new URL('../.github/workflows/device-agent-production-verification.yml',import.meta.url),'utf8');
   assert.ok(workflow.includes('- user2-localai'));
   assert.ok(workflow.includes("inputs.execution_mode == 'user2-localai'"));
-  assert.match(workflow,/Verify USER2 native Ollama loopback inference[\\s\\S]*?DEVICE_TARGET_HOSTNAME: 'user2'[\\s\\S]*?node scripts\\/verify-native-localai\\.mjs/);
+  const user2Step=workflow.slice(workflow.indexOf('Verify USER2 native Ollama'),workflow.indexOf('Verify USER4 native CDP'));
+  assert.ok(user2Step.includes("DEVICE_TARGET_HOSTNAME: 'user2'"));
+  assert.ok(user2Step.includes('run: node scripts/verify-native-localai.mjs'));
   assert.ok(workflow.includes('node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release'));
 });
 
