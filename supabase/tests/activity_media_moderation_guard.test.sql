@@ -15,7 +15,7 @@ insert into public.activity_media_links(
   storage_provider,content_sha256
 ) values
   ('dededede-3333-4333-8333-000000000003','dededede-2222-4222-8222-000000000002',
-   'video','Moderator Hidden Link','https://media.invalid/hide','https://media.invalid/hide',
+   'video','Moderator Hidden Link','https://media.invalid/Hide','https://media.invalid/hide',
    'public',now(),'ready','external_link',null),
   ('dededede-4444-4444-8444-000000000004','dededede-2222-4222-8222-000000000002',
    'photo','Moderator Hidden Photo','https://media.invalid/hidden-photo','https://media.invalid/hidden-photo',
@@ -43,7 +43,7 @@ set local role anon;
 select is(
   public.activity_public_submit_media_link(
     'moderation-guard-fixture','test-past-activity','video','Safe new link',
-    'https://media.invalid/allowed','https://media.invalid/allowed','manual','Anonymous') ->> 'ok',
+    'https://media.invalid/Allowed','https://media.invalid/allowed','manual','Anonymous') ->> 'ok',
   'true','unmoderated public submissions still work');
 select is(
   public.activity_public_submit_media_link(
