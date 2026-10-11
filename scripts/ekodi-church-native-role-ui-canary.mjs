@@ -16,6 +16,9 @@ await fs.mkdir(artifactDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
 const checks=[],errors=[],httpErrors=[],blockedMethods=[];
 let intercepted=0;
+let preflights=0;
+let assetStatus=null;
+const consoleErrors=[],requestFailures=[];
 let decision='allowed';
 try{
   const context=await browser.newContext({
@@ -25,8 +28,19 @@ try{
     permissions:[]
   });
   const page=await context.newPage();
+  await page.addInitScript(()=>{
+    const initial=window.addEventListener;
+    window.__ekodiNativeFocusRegistrations=0;
+    window.addEventListener=function(type,listener,...rest){
+      if(type==='focus')window.__ekodiNativeFocusRegistrations++;
+      return initial.call(this,type,listener,...rest);
+    };
+  });
+  page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text().slice(0,200))});
+  page.on('requestfailed',req=>{const url=new URL(req.url());requestFailures.push({path:url.pathname.slice(0,100),failure:req.failure()?.errorText?.slice(0,70)})});
   page.on('pageerror',e=>errors.push(String(e.message||e).slice(0,180)));
   page.on('response',response=>{
+    if(new URL(response.url()).pathname.endsWith('/church-worship-admin.js'))assetStatus=response.status();
     if(response.status()>=400){
       const url=new URL(response.url());
       httpErrors.push({status:response.status(),path:url.pathname.slice(0,100)});
@@ -36,6 +50,10 @@ try{
   // catch-all and guarantees the fake token never reaches the real API.
   await page.route('**/*',async route=>{
     const method=route.request().method().toUpperCase();
+    if(route.request().headers().authorization?.includes(FAKE_TOKEN)){
+      blockedMethods.push('fixture-leak-blocked');
+      return route.abort('blockedbyclient');
+    }
     if(!['GET','HEAD','OPTIONS'].includes(method)){
       blockedMethods.push(method);
       return route.abort('blockedbyclient');
@@ -47,6 +65,7 @@ try{
     // A cross-origin request can require a CORS OPTIONS preflight.
     // Both requests are isolated to this allowlisted capability endpoint.
     if(req.method()==='OPTIONS'){
+      preflights++;
       return route.fulfill({status:204,headers:{
         'access-control-allow-origin':ORIGIN,
         'access-control-allow-methods':'GET, OPTIONS',
@@ -90,7 +109,14 @@ try{
       adminHidden:document.querySelector('[data-church-worship-admin]')?.hidden??null,
       adminScriptLoaded:!![...document.scripts].find(x=>x.src.endsWith('/church-worship-admin.js'))
     }));
-    console.error('EKODI_NATIVE_CHURCH_ROLE_DIAGNOSTIC='+JSON.stringify({intercepted,state,pageErrorCount:errors.length,requestHttpStatus:httpErrors.map(x=>x.status).slice(0,12)}));
+    const clientState=await page.evaluate(()=>({
+      focusRegistrations:window.__ekodiNativeFocusRegistrations,
+      scriptUrl:[...document.scripts].find(x=>x.src.endsWith('/church-worship-admin.js'))?.src||'',
+      permissionRequestOrigin:'https://renzehysxirjilvdxacv.supabase.co',
+      tokenCondition:!!(JSON.parse(sessionStorage.getItem('ekodi-church-pastor-session')||'null')?.accessToken),
+      scriptResources:performance.getEntriesByType('resource').filter(x=>x.name.includes('church-worship-admin.js')).map(x=>({transferSize:x.transferSize,responseStatus:x.responseStatus}))
+    }));
+    console.error('EKODI_NATIVE_CHURCH_ROLE_DIAGNOSTIC='+JSON.stringify({intercepted,preflights,assetStatus,state,clientState,scriptErrors:errors,consoleErrors,requestFailures,httpErrors:httpErrors.slice(0,10)}));
     throw error;
   }
   assert.equal(await admin.evaluate(el=>el.hidden),false);
