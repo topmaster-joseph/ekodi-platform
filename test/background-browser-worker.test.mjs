@@ -81,6 +81,9 @@ test('shared-site guarded release invokes native browser verification after prod
   assert.match(workerWorkflow,/group:\s*ekodi-background-browser-worker-\$\{\{ github\.ref \}\}-\$\{\{ inputs\.device_profile \|\| 'desktop' \}\}/);
   assert.match(sharedRelease,/native_surface_verification_desktop:/);
   assert.match(sharedRelease,/native_surface_verification_mobile:/);
+  assert.match(sharedRelease,/native_surface_verification_mobile:[\s\S]*?needs:\s*\[deploy, native_surface_verification_desktop, authenticated_admin_surface_verification\]/);
+  assert.match(sharedRelease,/native_surface_verification_mobile:[\s\S]*?if:\s*\$\{\{ always\(\) && needs\.deploy\.result == 'success' \}\}/);
+  assert.match(sharedRelease,/native_surface_verification_mobile:[\s\S]*?uses:\s*\.\/\.github\/workflows\/ekodi-background-browser-worker\.yml/);
   assert.match(sharedRelease,/uses:\s*\.\/\.github\/workflows\/ekodi-background-browser-worker\.yml/);
   assert.match(sharedRelease,/device_profile:\s*desktop/);
   assert.match(sharedRelease,/device_profile:\s*mobile-portrait/);
