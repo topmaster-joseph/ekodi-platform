@@ -1,0 +1,41 @@
+// Authenticated admin-to-Orchestrator handoff contract. No tokens or deploy rights issued here.
+const clean=(v,max=1200)=>String(v??'').trim().slice(0,max);
+const KEY=/^[a-zA-Z0-9_-]{16,100}$/;
+const TARGET=/^[a-z0-9][a-z0-9._-]{0,79}$/;
+
+export function isSameOriginAdminMutation(request){
+  if(!request||typeof request.url!=='string')return false;
+  const origin=request.headers?.get?.('origin')||'';
+  const fetchSite=request.headers?.get?.('sec-fetch-site')||'';
+  let expected;
+  try { expected=new URL(request.url).origin; } catch { return false; }
+  return origin===expected && !['cross-site','same-site'].includes(fetchSite);
+}
+
+export async function trustedAdminOrchestratorIdentity(session={}){
+  const email=clean(session.email,320).toLowerCase();
+  if(!email||!email.includes('@'))throw new Error('verified_admin_email_required');
+  // Never accept a caller-supplied requester id. Scope a deterministic pseudonym
+  // to the authenticated server session, so retries can be idempotent.
+  const buffer=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('ekodi:platform-admin:v1:'+email));
+  const digest=Array.from(new Uint8Array(buffer)).map(byte=>byte.toString(16).padStart(2,'0')).join('');
+  return Object.freeze({personId:'admin_'+digest.slice(0,40),email});
+}
+
+export function prepareAdminOrchestratorSubmission(body={}){
+  if(!body||typeof body!=='object'||Array.isArray(body))throw new Error('invalid_request');
+  const intent=clean(body.intent||body.goal,1201);
+  if(intent.length<10||intent.length>1200)throw new Error('intent_length_out_of_range');
+  const key=clean(body.idempotencyKey,101);
+  if(!KEY.test(key))throw new Error('idempotency_key_required');
+  if(body.deploymentRequested!==true)throw new Error('explicit_deployment_request_required');
+  const service=clean(body.service,80).toLowerCase();
+  if(!TARGET.test(service))throw new Error('invalid_target_service');
+  const risk=clean(body.risk,20).toLowerCase();
+  if(!['high','critical'].includes(risk))throw new Error('release_requires_high_risk_gate');
+  return Object.freeze({
+    intent, risk, deploymentRequested:true,
+    agent:'ekodi-admin', idempotencyKey:key,
+    target:Object.freeze({service}),
+  });
+}
