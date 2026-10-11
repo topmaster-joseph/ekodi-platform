@@ -32,3 +32,121 @@
 .suggestions button{box-shadow:0 8px 25px rgba(35,79,160,.06);border-color:#dce7f6;padding:12px 16px;color:#152543}
 .composer-wrap{left:var(--rail);right:0;background:transparent;padding:10px 36px 15px}.composer{max-width:1150px;box-shadow:0 10px 26px rgba(21,54,101,.1);border-color:#d8e4f3}.composer-note{max-width:1150px}.send{background:#2862ee}
 @media(max-width:760px){:root{--rail:86vw}.control-main{margin:0;padding:7px 0 150px}.topbar{margin:0 8px;border-radius:12px 12px 0}.control-tabs{margin:0 8px;padding:6px;overflow-x:auto}.control-tabs button{flex-shrink:0}.view.active{margin:0 8px}.conversation{min-height:calc(100vh - 180px);padding:32px 12px 170px}.composer-wrap{left:0;padding:12px 10px}.admin-tree{max-height:calc(100vh - 230px)}}
+
+
+/* Same-origin administrator embed: the outer admin shell owns navigation.
+   The Control retains its own task history and secure server-side session check. */
+html[data-control-embed="admin"]{color-scheme:dark;--bg:#0b1626;--text:#f3f7ff;--muted:#a9b9ce;--line:#29405d;--rail:0px}
+html[data-control-embed="admin"],html[data-control-embed="admin"] body,
+html[data-control-embed="admin"] .control-shell {background:#0b1626!important;color:#f3f7ff!important;min-height:100%}
+html[data-control-embed="admin"] .control-rail {display:none!important}
+html[data-control-embed="admin"] .control-main {
+  margin:0!important;min-height:100dvh!important;padding:0!important;
+  background:linear-gradient(150deg,#111f34 0%,#091626 74%)!important;
+  display:flex;flex-direction:column;overflow-x:hidden;
+}
+html[data-control-embed="admin"] .topbar {
+  flex:0 0 auto;width:100%;max-width:none;min-height:76px;height:auto;
+  margin:0!important;padding:16px 26px!important;border:0!important;
+  border-bottom:1px solid #273a50!important;border-radius:0!important;
+  background:#0e1c30!important;color:#f7faff!important;position:relative;
+}
+html[data-control-embed="admin"] .topbar strong{color:#f7faff!important;font-size:17px}
+html[data-control-embed="admin"] .topbar small{color:#b8c8d9!important}
+html[data-control-embed="admin"] .status-dot{color:#c5d5eb!important;background:transparent!important}
+html[data-control-embed="admin"] .status-dot.ok:before{background:#38c68b}
+html[data-control-embed="admin"] .top-actions .ghost-link {display:none!important}
+html[data-control-embed="admin"] .control-tabs {
+  width:100%;max-width:none;flex:0 0 auto;margin:0!important;
+  border:0!important;gap:4px;padding:9px 21px;
+  background:#0e1c30!important;border-bottom:1px solid #253950!important;
+}
+html[data-control-embed="admin"] .control-tabs button{
+  background:transparent!important;color:#b9c9dc!important;
+  border:0!important;padding:8px 13px;
+}
+html[data-control-embed="admin"] .control-tabs button:hover,
+html[data-control-embed="admin"] .control-tabs button.active{
+  background:#263f62!important;color:#fff!important;
+}
+html[data-control-embed="admin"] .control-tabs #newTask{margin-left:auto;border:1px solid #526984!important}
+html[data-control-embed="admin"] .view.active{
+  width:100%;max-width:none;margin:0!important;padding:0!important;
+  border:0!important;border-radius:0!important;min-height:0!important;
+  flex:1 1 auto;background:transparent!important;color:#f3f7ff!important;
+}
+html[data-control-embed="admin"] #viewChat.active{display:flex;flex-direction:column;min-height:0!important}
+html[data-control-embed="admin"] .conversation{
+  flex:1 1 auto;min-height:0!important;max-width:1120px;width:100%;
+  padding:36px 30px 175px!important;color:#f3f7ff!important;
+  background:transparent!important;overflow-y:auto;overscroll-behavior:contain;
+}
+html[data-control-embed="admin"] .empty-state{padding-top:clamp(45px,11vh,126px)}
+html[data-control-embed="admin"] .empty-state h1{
+  font-size:clamp(28px,3.2vw,43px);color:#fff!important;letter-spacing:-.04em;
+}
+html[data-control-embed="admin"] .empty-state p{color:#bbc8d8!important;font-size:14px;line-height:1.6}
+html[data-control-embed="admin"] .suggestions button{
+  color:#15243a!important;background:#fff!important;
+  border:1px solid #fff!important;border-radius:10px!important;
+  padding:12px 17px!important;font-weight:700;
+}
+html[data-control-embed="admin"] .suggestions button:hover{background:#e7eefc!important}
+html[data-control-embed="admin"] .turn .meta{color:#afc0d6!important}
+html[data-control-embed="admin"] .turn.user .bubble{background:#25405e!important;color:#fff!important}
+html[data-control-embed="admin"] .turn.assistant .bubble{color:#f8fbff!important}
+html[data-control-embed="admin"] .execution-card,
+html[data-control-embed="admin"] .card{
+  border-color:#334d6b!important;background:#142840!important;color:#fff!important
+}
+html[data-control-embed="admin"] .card p{color:#bac8d8!important}
+html[data-control-embed="admin"] .badge{border-color:#56708b!important}
+html[data-control-embed="admin"] .composer-wrap {
+  left:0!important;right:0!important;bottom:0!important;
+  position:sticky!important;z-index:8;
+  width:100%;padding:8px 24px 14px!important;
+  background:linear-gradient(180deg,rgba(10,23,40,0),#0a192b 29%,#0a192b)!important;
+}
+html[data-control-embed="admin"] .composer{
+  max-width:1080px!important;background:#182a41!important;
+  border:1px solid #7890af!important;border-radius:16px!important;
+  box-shadow:0 14px 40px rgba(0,0,0,.24)!important;
+}
+html[data-control-embed="admin"] .composer textarea{
+  background:transparent!important;color:#fff!important;
+  min-height:38px;max-height:125px;
+}
+html[data-control-embed="admin"] .composer textarea::placeholder{color:#b7c5d7!important;opacity:1}
+html[data-control-embed="admin"] .target-label,
+html[data-control-embed="admin"] .target-label select{
+  background:#101f34!important;color:#fff!important;border-color:#5c708e!important;
+}
+html[data-control-embed="admin"] .toggle{color:#dce6f4!important}
+html[data-control-embed="admin"] .send{background:#396dec!important;color:#fff!important}
+html[data-control-embed="admin"] .composer-note{color:#b7c6d9!important}
+html[data-control-embed="admin"] .panel-head{
+  border-color:#30445f!important;color:#fff!important;padding:18px 24px!important;
+}
+html[data-control-embed="admin"] .panel-head p{color:#b8c8de!important}
+html[data-control-embed="admin"] .cards{max-width:none}
+html[data-control-embed="admin"] .auth-banner{
+  background:#263951!important;color:#fff!important;
+  border-color:#6b819b!important;max-width:none;
+  margin:8px 20px!important;flex:0 0 auto;
+}
+html[data-control-embed="admin"] .auth-banner a{color:#fff!important}
+@media(max-width:760px){
+ html[data-control-embed="admin"] .topbar{padding:11px 14px!important;min-height:62px!important}
+ html[data-control-embed="admin"] .topbar small{display:block;font-size:11px}
+ html[data-control-embed="admin"] .topbar .mobile-only{display:none!important}
+ html[data-control-embed="admin"] .control-tabs{padding:7px 9px!important;overflow-x:auto}
+ html[data-control-embed="admin"] .control-tabs button{padding:7px 9px!important;flex-shrink:0}
+ html[data-control-embed="admin"] .conversation{padding:15px 13px 115px!important}
+ html[data-control-embed="admin"] .empty-state{padding-top:40px}
+ html[data-control-embed="admin"] .empty-state p{font-size:12px}
+ html[data-control-embed="admin"] .suggestions button{padding:9px 11px!important}
+ html[data-control-embed="admin"] .composer-wrap{padding:7px 10px 12px!important}
+ html[data-control-embed="admin"] .composer textarea{font-size:14px}
+ html[data-control-embed="admin"] .target-label select{max-width:165px}
+ html[data-control-embed="admin"] .toggle{display:flex!important}
+}
