@@ -60,6 +60,8 @@ jobs:
     timeout-minutes: 10
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      # Optional analytics-only token for every authorized zone; no deploy rights.
+      CLOUDFLARE_ANALYTICS_READ_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_READ_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v7
