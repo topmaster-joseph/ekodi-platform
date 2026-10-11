@@ -102,6 +102,78 @@ export async function verifyUser4Browser({token,fetchImpl=fetch,clock=()=>Date.n
   throw new Error('user4_native_browser_timeout');
 }
 
+// Latest pinned, bounded Chrome/Edge CDP worker was merged on October 11 at 09:00 UTC.
+// Never infer that an older USER4 Agent has loaded it from an earlier heartbeat.
+export const USER4_CDP_FIX_FLOOR = Date.parse('2026-10-11T09:00:12.000Z');
+const UPDATE='agent.self_update';
+export async function ensureUser4AgentUpdated({
+  token,fetchImpl=fetch,clock=()=>Date.now(),sleepFn=wait,pollMs=4000,maxPoll=65
+}={}){
+  if(typeof token!=='string'||token.trim().length<20)throw new Error('trusted_admin_session_required');
+  const request=async(method='GET',endpoint='',body)=>{
+    const response=await fetchImpl(BASE+ROOT+endpoint,{
+      method,redirect:'error',cache:'no-store',
+      headers:{authorization:'Bearer '+token,accept:'application/json',
+        ...(body?{'content-type':'application/json'}:{})},
+      ...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(15000)
+    });
+    if(!response.ok)throw new Error('user4_native_upgrade_http_'+response.status);
+    return response.json().catch(()=>({}));
+  };
+  const list=async()=>{
+    const data=await request();
+    if(!Array.isArray(data.devices))throw new Error('user4_native_upgrade_devices_invalid');
+    return data.devices;
+  };
+  const initial=(await list()).filter(d=>eligibleUser4Agent(d,{now:clock()}))
+    .sort((a,b)=>when(b.lastSeenAt)-when(a.lastSeenAt))[0];
+  if(!initial?.id || initial.capabilities?.agentStatus!==true)
+    throw new Error('user4_native_agent_not_ready_to_update');
+  const deviceId=initial.id;
+  const existing=(initial.recentCommands||[]).filter(c=>
+    c.type===UPDATE && c.status==='succeeded' &&
+    Number.isFinite(when(c.completedAt)) && when(c.completedAt)>=USER4_CDP_FIX_FLOOR &&
+    when(initial.lastSeenAt)>=when(c.completedAt)
+  ).sort((a,b)=>when(b.completedAt)-when(a.completedAt))[0];
+  if(existing)return {targetAlias:'user4',commandType:UPDATE,
+    updateCommandId:existing.id,updatePerformed:false,
+    recentOfficialUpdateVerified:true};
+  const inFlight=(initial.recentCommands||[]).filter(c=>['queued','claimed'].includes(c.status));
+  const already=inFlight.find(c=>c.type===UPDATE && Number.isFinite(when(c.issuedAt)) &&
+    clock()-when(c.issuedAt)>=0 && clock()-when(c.issuedAt)<120000);
+  if(inFlight.some(c=>c!==already))throw new Error('user4_agent_busy_no_interruption');
+  let command=already;
+  if(!command){
+    const result=await request('POST','/'+encodeURIComponent(deviceId)+'/commands',{
+      type:UPDATE,confirmed:true
+    });
+    command=result.command;
+    if(command?.type!==UPDATE||!command.id||command.status!=='queued')
+      throw new Error('user4_official_update_enqueue_invalid');
+  }
+  let doneAt=NaN;
+  for(let n=0;n<maxPoll;n++){
+    if(n>0)await sleepFn(pollMs);
+    const current=(await list()).find(d=>d.id===deviceId);
+    if(!current || current.revokedAt!=null)throw new Error('user4_agent_registration_lost');
+    const receipt=(current.recentCommands||[]).find(c=>c.id===command.id);
+    if(receipt && ['failed','cancelled'].includes(receipt.status))
+      throw new Error('user4_agent_official_update_'+receipt.status);
+    if(receipt?.status==='succeeded'){
+      const completedAt=when(receipt.completedAt);
+      if(!Number.isFinite(completedAt)||completedAt<USER4_CDP_FIX_FLOOR)
+        throw new Error('user4_agent_update_receipt_stale');
+      doneAt=completedAt;
+    }
+    if(Number.isFinite(doneAt) && eligibleUser4Agent(current,{now:clock()}) &&
+      when(current.lastSeenAt)>=doneAt){
+      return {targetAlias:'user4',commandType:UPDATE,updateCommandId:command.id,
+        updatePerformed:true,recentOfficialUpdateVerified:true};
+    }
+  }
+  throw new Error('user4_agent_update_reconnect_timeout');
+}
+
 export async function verifyUser4Acceptance(options={}){
   // Dispatch both independent canaries while the exact USER4 Agent heartbeat is
   // fresh; a slow browser task must not delay Ollama eligibility discovery.
@@ -135,7 +207,12 @@ export async function verifyUser4Acceptance(options={}){
 }
 
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
-  verifyUser4Acceptance({token:process.env.E2E_ADMIN_TOKEN})
+  const token=process.env.E2E_ADMIN_TOKEN;
+  ensureUser4AgentUpdated({token})
+    .then(async update=>{
+      const result=await verifyUser4Acceptance({token});
+      return {...result,agentUpdate:update};
+    })
     .then(result=>{
       console.log('[EKODI][USER4-NATIVE-ACCEPTANCE] '+JSON.stringify(result));
       if(!result.ok)process.exitCode=1;
