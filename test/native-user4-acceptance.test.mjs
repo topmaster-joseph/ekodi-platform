@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {eligibleUser4Agent,verifyUser4Browser,verifyUser4Acceptance}
+import {classifyUser4BrowserFailure,eligibleUser4Agent,verifyUser4Browser,verifyUser4Acceptance}
   from '../scripts/verify-native-user4-acceptance.mjs';
 const now=Date.parse('2026-10-11T06:30:00.000Z');
 const good={id:'device-4',hostname:'USER4',status:'online',revokedAt:null,
@@ -77,4 +77,58 @@ test('aggregate outcome is not successful if both live receipts are absent',asyn
   assert.equal(result.browserVerified,false);
   assert.equal(result.localAiVerified,false);
   assert.equal(result.mode,'ekodi-native-receipt-gated');
+});
+
+test('USER4 CDP and Ollama commands are both queued before either waits for completion',async()=>{
+  const posted=new Set();
+  const browserType='computer.browser.canary';
+  const aiType='software.localai.verify';
+  const fetchImpl=async(url,init)=>{
+    if(init.method==='POST'){
+      const {type}=JSON.parse(init.body);
+      assert([browserType,aiType].includes(type));
+      posted.add(type);
+      return new Response(JSON.stringify({command:{type,id:type,status:'queued'}}),{status:200});
+    }
+    const recentCommands=posted.size===2?[
+      {id:browserType,type:browserType,status:'succeeded',completedAt:new Date(now).toISOString(),
+        result:{browserCanary:{ok:true,mode:'native-cdp',url:'https://ekodi.kr/',
+          contentBytes:3700,dedicatedAutomationProfile:true,focusIsolated:true,
+          clipboardShared:false,userInputInjection:false}}},
+      {id:aiType,type:aiType,status:'succeeded',completedAt:new Date(now).toISOString(),
+        result:{localAiProof:{ollamaApi:'ready',inference:'passed',
+          credentialCollection:false,executionMode:'fixed_loopback_api',
+          selectedModel:'qwen3:0.6b',claudeCli:'not_visible_to_agent'}}}
+    ]:[];
+    const device={...good,capabilities:{localAiVerify:true},recentCommands};
+    return new Response(JSON.stringify({devices:[device]}),{status:200});
+  };
+  const result=await verifyUser4Acceptance({token:'authorized-admin-session-token-abcdef',
+    clock:()=>now,fetchImpl,sleepFn:async()=>{},maxPoll:4});
+  assert.deepEqual([...posted].sort(),[browserType,aiType].sort());
+  assert.equal(result.ok,true);
+  assert.equal(result.browserVerified,true);
+  assert.equal(result.localAiVerified,true);
+  assert.equal(result.browser.targetAlias,'user4');
+  assert.equal(result.localAi.targetAlias,'user4');
+});
+
+
+test('USER4 browser failure diagnostics are an allowlisted category without raw data',()=>{
+  assert.equal(classifyUser4BrowserFailure('CDP_NODE_RUNTIME_REQUIRED'),'CDP_NODE_RUNTIME_REQUIRED');
+  assert.equal(classifyUser4BrowserFailure('CDP_WORKER_FAILED: {"code":"CDP_PORT_TIMEOUT","file":"C:/private"}'),'CDP_PORT_TIMEOUT');
+  assert.equal(classifyUser4BrowserFailure('CDP_WORKER_FAILED: {"code":"CDP_BROWSER_NOT_FOUND"}'),'CDP_BROWSER_NOT_FOUND');
+  assert.equal(classifyUser4BrowserFailure('CDP_WORKER_FAILED: {"code":"UNEXPECTED_SECRET=abc"}'),'CDP_WORKER_FAILED');
+  assert.equal(classifyUser4BrowserFailure('C:/private/profile token=abc'),'BROWSER_FAILURE_UNCLASSIFIED');
+});
+test('failed USER4 browser receipt returns classified failure only',async()=>{
+  const fetchImpl=async(url,init)=>{
+    if(init.method==='POST')return new Response(JSON.stringify({command:{id:'fail-4',type:'computer.browser.canary',status:'queued'}}),{status:200});
+    return new Response(JSON.stringify({devices:[{...good,recentCommands:[{
+      id:'fail-4',type:'computer.browser.canary',status:'failed',
+      result:{message:'CDP_WORKER_FAILED: {"code":"CDP_PORT_TIMEOUT","token":"secret-123"}'}}]}]}),{status:200});
+  };
+  await assert.rejects(()=>verifyUser4Browser({token:'authorized-admin-session-token-abcdef',
+    clock:()=>now,fetchImpl,sleepFn:async()=>{},maxPoll:3}),
+    error=>error.message==='user4_browser_failed:CDP_PORT_TIMEOUT'&&!error.message.includes('secret-123'));
 });

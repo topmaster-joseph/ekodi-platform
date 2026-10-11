@@ -13,7 +13,9 @@ on:
           - verify
           - status
           - localai
+          - user3-upgrade-localai
           - user2-localai
+          - user2-upgrade-localai
           - user4-acceptance
       release_branch_ref:
         description: 'Orchestrator release branch, required in verify mode'
@@ -40,6 +42,8 @@ on:
       - 'scripts/verify-native-agent-status.mjs'
       - 'test/native-agent-status-canary.test.mjs'
       - 'scripts/verify-native-localai.mjs'
+      - 'scripts/recover-native-user3-localai.mjs'
+      - 'test/native-user3-localai-recovery.test.mjs'
       - 'scripts/verify-native-user4-acceptance.mjs'
       - 'test/native-user4-acceptance.test.mjs'
       - 'test/native-localai-proof.test.mjs'
@@ -60,6 +64,8 @@ on:
       - 'scripts/verify-native-agent-status.mjs'
       - 'test/native-agent-status-canary.test.mjs'
       - 'scripts/verify-native-localai.mjs'
+      - 'scripts/recover-native-user3-localai.mjs'
+      - 'test/native-user3-localai-recovery.test.mjs'
       - 'test/native-localai-proof.test.mjs'
       - 'test/native-device-readiness-observe.test.mjs'
       - 'test/device-agent-production-verification.test.mjs'
@@ -91,6 +97,8 @@ jobs:
           node --check scripts/observe-native-device-readiness.mjs
           node --check scripts/verify-native-agent-status.mjs
           node --check scripts/verify-native-localai.mjs
+          node --check scripts/recover-native-user3-localai.mjs
+          node --test test/native-user3-localai-recovery.test.mjs
           node --check scripts/verify-native-user4-acceptance.mjs
           node --test test/native-device-readiness-observe.test.mjs test/native-agent-status-canary.test.mjs test/native-localai-proof.test.mjs test/native-user4-acceptance.test.mjs
           node --test test/device-agent-production-verification.test.mjs test/non-disruptive-device-agent-contract.test.mjs test/background-browser-canary-contract.test.mjs test/isolated-desktop-backend.test.mjs test/isolated-guest-agent.test.mjs
@@ -140,7 +148,7 @@ jobs:
           node-version: '24'
 
       - name: EKODI AI Orchestration Gate for mutating verification
-        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user2-localai' || inputs.execution_mode == 'user4-acceptance')
+        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user3-upgrade-localai' || inputs.execution_mode == 'user2-localai' || inputs.execution_mode == 'user2-upgrade-localai' || inputs.execution_mode == 'user4-acceptance')
         env:
           EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
           EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
@@ -229,11 +237,23 @@ jobs:
           DEVICE_TARGET_HOSTNAME: 'user3'
         run: node scripts/verify-native-localai.mjs
 
+      - name: Safely upgrade USER3 Agent and verify real native Ollama inference
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user3-upgrade-localai'
+        env:
+          DEVICE_TARGET_HOSTNAME: 'user3'
+        run: node scripts/recover-native-user3-localai.mjs
+
+      - name: Safely upgrade USER2 Agent and verify native Ollama inference
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-upgrade-localai'
+        env:
+          DEVICE_TARGET_HOSTNAME: 'user2'
+        run: node scripts/recover-native-user2-localai.mjs
+
       - name: Verify USER2 native Ollama loopback inference with real Windows receipt
         if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-localai'
         env:
           DEVICE_TARGET_HOSTNAME: 'user2'
-        run: node scripts/verify-native-localai.mjs
+        run: node scripts/verify-native-user2-localai.mjs
 
       - name: Verify USER4 native CDP and Ollama receipts through EKODI Device Agent
         if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user4-acceptance'
