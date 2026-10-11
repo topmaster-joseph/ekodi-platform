@@ -42,9 +42,12 @@ export async function verifyNativeLocalAi({token,hostname='user3',fetchImpl=fetc
     return data.devices;
   };
   const devices=await getDevices();
-  const eligible=devices.filter(d=>eligibleNativeLocalAiDevice(d,{hostname:target,now:clock()}))
-    .sort((a,b)=>when(b.lastSeenAt)-when(a.lastSeenAt))[0];
-  if(!eligible||typeof eligible.id!=='string'||!eligible.id)throw new Error('no_healthy_localai_verify_user3_agent');
+  const matches=devices.filter(d=>eligibleNativeLocalAiDevice(d,{hostname:target,now:clock()}));
+  if(matches.length===0)throw new Error('no_healthy_localai_verify_'+target+'_agent');
+  // Identical hostnames are not device identities. Never guess which Windows PC to command.
+  if(matches.length!==1)throw new Error('ambiguous_localai_target_hostname');
+  const eligible=matches[0];
+  if(typeof eligible.id!=='string'||!eligible.id)throw new Error('localai_device_identity_missing');
   const existing=(eligible.recentCommands||[]).find(c=>c.type===COMMAND &&
     ['queued','claimed'].includes(c.status) && Number.isFinite(when(c.issuedAt)) &&
     clock()-when(c.issuedAt)>=0 && clock()-when(c.issuedAt)<120000);
