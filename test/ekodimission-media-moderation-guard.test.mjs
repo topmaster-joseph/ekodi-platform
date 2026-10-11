@@ -1,0 +1,40 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+const read=name=>readFileSync(new URL('../supabase/migrations/'+name,import.meta.url),'utf8');
+const link=read('20261012060200_activity_media_moderation_guard.sql');
+const reserve=read('20261012060300_activity_photo_reservation_moderation_guard.sql');
+const finalize=read('20261012060400_activity_photo_finalize_moderation_guard.sql');
+
+test('canonical link collision does not reverse operator hide',()=>{
+  assert.match(link,/on conflict\(activity_id,canonical_url\) do update set[\s\S]*?where public\.activity_media_links\.hidden_at is null/);
+  assert.match(link,/if v_id is null then\s*return jsonb_build_object\('ok',false,'error','media_moderated'\)/);
+  assert.doesNotMatch(link,/hidden_at\s*=\s*null/);
+});
+
+test('duplicate photo re-reservation blocks moderation, including update races',()=>{
+  assert.equal((reserve.match(/v_existing\.hidden_at is not null/g)||[]).length,2);
+  assert.match(reserve,/where id=v_existing\.id and hidden_at is null/);
+  assert.match(reserve,/if not found then\s*return jsonb_build_object\('ok',false,'error','media_moderated'\)/);
+  assert.doesNotMatch(reserve,/hidden_at\s*=\s*null|hidden_by\s*=\s*null/);
+});
+
+test('photo finalization is not allowed for moderated uploading media',()=>{
+  assert.match(finalize,/and upload_token=coalesce\(p_upload_token,''\) and hidden_at is null/);
+});
+
+test('reviewed public privileged RPC grants are explicit',()=>{
+  for(const [sql,name] of [
+    [link,'activity_public_submit_media_link'],
+    [reserve,'activity_public_reserve_media_upload'],
+    [finalize,'activity_public_finalize_media_upload']
+  ]){
+    assert.ok(sql.includes('revoke all on function public.'+name+'('));
+    assert.ok(sql.includes('grant execute on function public.'+name+'('));
+    assert.ok(sql.includes('comment on function public.'+name+'('));
+  }
+  for(const name of ['activity_public_fail_media_upload','activity_public_media_file_ref','activity_public_registration_status']){
+    assert.ok(finalize.includes('comment on function public.'+name+'('));
+  }
+});
