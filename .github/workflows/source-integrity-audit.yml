@@ -47,7 +47,7 @@ jobs:
               if str(run.get('id') or '') == current: continue
               if str(run.get('status') or '') != 'completed': continue
               sha=str(run.get('head_sha') or '').strip()
-              if sha and sha != head:
+              if sha:
                   print(sha); break
           PY
           )"
