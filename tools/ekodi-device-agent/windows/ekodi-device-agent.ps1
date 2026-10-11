@@ -928,6 +928,15 @@ function Resolve-EkodiBrowser {
   return ($candidates | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1)
 }
 
+function Resolve-EkodiEdgeBrowser {
+  $candidates = @(
+    "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
+    "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
+    "$env:LOCALAPPDATA\Microsoft\Edge\Application\msedge.exe"
+  )
+  return ($candidates | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1)
+}
+
 function Get-BackgroundBrowserCanaryState {
   if (-not (Test-Path -LiteralPath $BrowserCanaryStatePath)) {
     return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion }
@@ -961,9 +970,9 @@ function Get-BackgroundBrowserCanaryState {
   }
 }
 
-function Invoke-BackgroundBrowserCanary {
+function Invoke-BackgroundBrowserCanary([bool]$PreferEdge = $false) {
   Remove-Item -LiteralPath $BrowserCanaryStatePath -Force -ErrorAction SilentlyContinue
-  $browser = Resolve-EkodiBrowser
+  $browser = if ($PreferEdge) { Resolve-EkodiEdgeBrowser } else { Resolve-EkodiBrowser }
   if (-not $browser) { throw 'supported_browser_not_found' }
   $canaryProfile = Join-Path $BrowserCanaryProfileRoot ([Guid]::NewGuid().ToString('N'))
   New-Item -ItemType Directory -Path $canaryProfile -Force | Out-Null
@@ -1017,6 +1026,9 @@ function Invoke-BackgroundBrowserCanary {
     stderrSummary = $(if ($stderr) { $stderr.Substring(0, [Math]::Min(300, $stderr.Length)) } else { '' })
   }
   if (-not $ok) {
+    if (-not $PreferEdge -and [IO.Path]::GetFileName($browser) -eq 'chrome.exe' -and (Resolve-EkodiEdgeBrowser)) {
+      return Invoke-BackgroundBrowserCanary -PreferEdge $true
+    }
     $exitDescription = [string]$process.ExitCode
     $stderrDescription = ([string]$proof.stderrSummary -replace '[\r\n]+', ' ').Trim()
     if (-not $stderrDescription) { $stderrDescription = 'no-stderr' }
