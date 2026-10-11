@@ -40,5 +40,9 @@ test('multi-period price plans require verified bank grants and paid event fee d
  assert.match(bank,/\.in\('plan_code',codes\)/);
  assert.match(bank,/can_configure/);
  assert.match(social,/event_fee_verification_not_configured/);
+ assert.match(social,/event_pricing_capability_required/);
+ assert.match(social,/fee_locked_after_registration/);
+ assert.match(router,/\/api\/admin\/events/);
+ assert.match(ui,/showEventPricing/);
  assert.match(ui,/tier_prices:\{community_90:amount\(tier90\),community_365:amount\(tier365\)\}/);
 });
