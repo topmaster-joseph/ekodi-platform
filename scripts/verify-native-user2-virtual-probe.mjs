@@ -51,7 +51,7 @@ async function run(){
   const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
   const dir=path.join(root,'artifacts');
   await fs.mkdir(dir,{recursive:true});
-  await fs.writeFile(path.join(dir,'native-user2-virtual-probe.json'),JSON.stringify(evidence,null,2)+'\\n','utf8');
+  await fs.writeFile(path.join(dir,'native-user2-virtual-probe.json'),JSON.stringify(evidence,null,2)+'\n','utf8');
   console.log('[EKODI][USER2-NATIVE-VIRTUAL-PROBE] '+JSON.stringify(evidence));
   if(proof.headlessBackendReady!==true)throw Error('user2_hyperv_backend_not_ready');
   return;
