@@ -109,3 +109,5 @@ test('installer file checksum is pinned in device agent',()=>{
 });
 
 // EKODI release convergence: retain the verified bounded local AI contract.
+
+// EKODI: validate refreshed integration head after protected base update.
