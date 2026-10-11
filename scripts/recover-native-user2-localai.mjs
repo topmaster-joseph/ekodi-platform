@@ -111,3 +111,5 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
 }
 
 // Protected owner-triggered convergence following related-change review.
+
+// Recheck after official Orchestrator base update; authorized USER2 only.
