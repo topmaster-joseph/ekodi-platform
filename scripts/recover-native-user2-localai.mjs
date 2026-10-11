@@ -109,3 +109,5 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
       process.exitCode=1;
     });
 }
+
+// Protected owner-triggered convergence following related-change review.
