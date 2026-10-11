@@ -23,8 +23,11 @@ async function operator(admin:Admin,userId:string){
 export async function hasBankPlan(admin:Admin,userId:string,planCode:string){
  if(!bankOn())return false;
  const codes=planCode==='community'?['community','community_90','community_365']:[planCode];
- const rows=await many(admin.from('singles_bank_grants').select('expires_at').eq('user_id',userId).in('plan_code',codes));
- return rows.some((row:any)=>Boolean(row.expires_at&&Date.parse(row.expires_at)>Date.now()));
+ for(const code of codes){
+  const row=await one(admin.from('singles_bank_grants').select('expires_at').eq('user_id',userId).eq('plan_code',code));
+  if(row?.expires_at&&Date.parse(row.expires_at)>Date.now())return true;
+ }
+ return false;
 }
 export async function bankPlanSnapshot(admin:Admin,userId:string){
  const community=await hasBankPlan(admin,userId,'community'),consulting=await hasBankPlan(admin,userId,'consulting');
