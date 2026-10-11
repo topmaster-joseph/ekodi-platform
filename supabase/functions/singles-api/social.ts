@@ -29,7 +29,7 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   const events=await many(admin.from('singles_events').select('id,title,state,starts_at,fee_krw').order('starts_at',{ascending:false}).limit(50));
   return reply(req,{events});
  }
- const priceEventId=match(p,/^\\/admin\\/events\\/([0-9a-f-]{36})\\/fee$/i);
+ const priceEventId=match(p,new RegExp('^/admin/events/([0-9a-f-]{36})/fee$','i'));
  if(priceEventId&&method==='PUT'){
   const role=await one(admin.from('singles_event_pricing_operators').select('enabled,can_price').eq('user_id',userId));
   if(!role?.enabled||!role?.can_price)return reply(req,{error:'event_pricing_capability_required'},403);
