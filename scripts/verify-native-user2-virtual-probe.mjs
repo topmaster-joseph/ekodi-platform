@@ -53,3 +53,5 @@ async function run(){
 run().catch(e=>{console.error('[EKODI][USER2-NATIVE-VIRTUAL-PROBE] '+String(e.message).slice(0,110));process.exitCode=1;});
 
 // Canonical Orchestrator owner-authored protected validation trigger.
+
+// Owner-authorized canonical CI and protected merge convergence trigger.
