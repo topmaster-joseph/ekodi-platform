@@ -2,6 +2,7 @@
 import { chooseEkodiExecution, sanitizeAiConnectionStatus } from './ekodi-ai-sovereignty-gate.js';
 import { providerStatus } from './ai-control-provider-router.js';
 import { findReusableComposition } from './ekodi-capability-ecosystem.js';
+import { isSameOriginAdminMutation, trustedAdminOrchestratorIdentity, prepareAdminOrchestratorSubmission } from './ekodi-ai-orchestrator-admin-handoff.js';
 import { getCoreAiGatewayStatus } from './core-ai-gateway.js';
 import { adminAuthorityForRole, hasEkodiCapability } from './ekodi-authorization.js';
 import {
@@ -23,6 +24,7 @@ import {
   approveOrchestratorTaskForPlatformAdmin,
   getOrchestratorTaskStatusForPlatformAdmin,
   listOrchestratorHumanGatesForPlatformAdmin,
+  submitOrchestratorTask,
 } from './ekodi-orchestrator-task-adapter.js';
 import { collectPlatformRuntimeObservations } from './ekodi-platform-observer.js';
 import { runRuntimeAutonomicControlPlane } from './ekodi-autonomic-control-plane.js';
@@ -191,6 +193,39 @@ export async function handleEkodiV8CommandControl(request, env) {
       notice:'Suggestions are unverified matches, not authority to execute. Local provider verification is not yet wired.' });
   }
 
+  // Official first-party task submission; creates a genuine Orchestrator task/branch
+  // but never authorizes a merge, deployment, payment, or human-gate bypass.
+  if (request.method === 'POST' && url.pathname === `${PREFIX}/orchestrator/submit`) {
+    const denied = requirePlatformSuperAdmin('ai:operate'); if (denied) return denied;
+    if (!isSameOriginAdminMutation(request)) {
+      return json(request, env, { ok:false, code:'ORCHESTRATOR_SAME_ORIGIN_REQUIRED' }, 403);
+    }
+    if (!(request.headers.get('content-type') || '').toLowerCase().startsWith('application/json')) {
+      return json(request, env, { ok:false, code:'JSON_CONTENT_TYPE_REQUIRED' }, 415);
+    }
+    const body = await readJson(request);
+    let input;
+    try {
+      input = prepareAdminOrchestratorSubmission(body);
+    } catch (error) {
+      return json(request, env, { ok:false, code:text(error?.message || 'INVALID_ORCHESTRATOR_SUBMISSION',100) }, 400);
+    }
+    try {
+      const identity = await trustedAdminOrchestratorIdentity(auth.session);
+      const task = await submitOrchestratorTask(env, identity, input);
+      return json(request, env, {
+        ok:true, code:'EKODI_ORCHESTRATOR_TASK_SUBMITTED',
+        taskId:task.taskId, branchRef:task.branchRef, state:task.state,
+        stateVersion:task.stateVersion, humanGate:task.humanGate || null,
+        executionAuthorized:false, deploymentAuthorized:false,
+        notice:'A real task was submitted; release still requires independently verified Orchestrator receipt and protected gates.',
+      }, 202);
+    } catch (error) {
+      console.error('EKODI admin Orchestrator submission failed', error?.message || 'error');
+      return json(request, env, { ok:false, code:'ORCHESTRATOR_SUBMISSION_UNAVAILABLE' }, 503);
+    }
+  }
+
   if (request.method === 'GET' && url.pathname === `${PREFIX}/orchestrator/human-gates`) {
     const denied = requirePlatformSuperAdmin('ai:read'); if (denied) return denied;
     const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 20, 1), 50);
@@ -339,5 +374,5 @@ export async function handleEkodiV8CommandControl(request, env) {
 export const EKODI_V8_COMMAND_CONTROL = Object.freeze({
   version: '1.3.0',
   prefix: PREFIX,
-  surfaces: Object.freeze(['status', 'tasks', 'tasks/:taskId/consultation', 'orchestrator/human-gates', 'orchestrator/tasks/:taskId', 'orchestrator/tasks/:taskId/approve', 'pulse', 'drain', 'collaboration-settings', 'collaboration-settings/audit', 'sovereignty/preview']),
+  surfaces: Object.freeze(['status', 'tasks', 'tasks/:taskId/consultation', 'orchestrator/human-gates', 'orchestrator/tasks/:taskId', 'orchestrator/tasks/:taskId/approve', 'pulse', 'drain', 'collaboration-settings', 'collaboration-settings/audit', 'sovereignty/preview', 'orchestrator/submit']),
 });
