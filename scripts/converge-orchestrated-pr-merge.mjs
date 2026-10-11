@@ -34,7 +34,7 @@ for(let i=0;i<20&&!pr;i++){
   if(!pr)await sleep(3000);
 }
 if(!pr)fail('open PR not found');
-// A draft PR is intentionally unpublished: no merge, status synthesis or deployment dispatch.
+// Draft PRs remain unpublished and must not be merged or deployed.
 if(pr.draft===true){console.log('[EKODI][ORCH-AUTO-MERGE] draft PR; unpublished hold, no merge');process.exit(0)}
 const filesLookup=await api('/pulls/'+pr.number+'/files?per_page=100');
 if(!filesLookup.r.ok)fail('PR file lookup failed '+filesLookup.r.status);
@@ -124,6 +124,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='workspace-admin-page.js'||
   // AI Provider administrator bundle and shared provider client are owned by the Site Core.
   file==='admin-provider-control.js'||
+  // AI membership is compiled into the shared ai-ops-admin.js bundle.
+  file==='user-ai-tier-panel.js'||
   file==='common-services-admin.js'||
   file==='ai-provider-control.js'||
   file==='mall-social-setup.js'||
@@ -168,12 +170,26 @@ const churchPagesTouched=changedFiles.some(file=>
 const nativeAgentStatusTouched=changedFiles.some(file=>file==='scripts/verify-native-agent-status.mjs');
 // Single allowlisted local AI loopback diagnostic; independent from the status acceptance canary.
 const nativeLocalAiVerifyTouched=changedFiles.some(file=>file==='scripts/verify-native-localai.mjs');
+const nativeUser4AcceptanceTouched=changedFiles.some(file=>file==='scripts/verify-native-user4-acceptance.mjs');
 // Supabase Church API is an independent guarded release boundary, not a Site Core asset.
 const churchApiTouched=changedFiles.some(file=>
   file.startsWith('supabase/functions/church-pastor-api/')||
   file==='.github/workflows/deploy-church-pastor-api.yml'
 );
 async function dispatchPostMergeDeploys(){
+  if(nativeUser4AcceptanceTouched){
+    const dispatch=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{
+        execution_mode:'user4-acceptance',
+        release_branch_ref:branch,release_task_id:taskId
+      }})
+    });
+    if(!dispatch.r.ok)fail('Native USER4 acceptance dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,300));
+    console.log(JSON.stringify({ok:true,action:'native-user4-acceptance-dispatched',
+      workflow:'device-agent-production-verification.yml',pr:pr.number,taskId,branch,
+      authority:'ekodi-orchestrator'}));
+  }
   if(nativeLocalAiVerifyTouched){
     const dispatch=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{
       method:'POST',

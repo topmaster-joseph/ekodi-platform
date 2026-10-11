@@ -38,7 +38,7 @@ export function renderMallSocialSetup({ platform = {}, connections = [], registe
     active.length ? 'OAuth는 연결됐지만 실제 발행 채널이 비활성화돼 있습니다. 아래 연결 채널 상세 설정을 확인하세요.' :
     youtubeReady ? '첫 작업: YouTube Google 계정의 OAuth 연결을 완료하세요. Meta·Threads는 앱 등록이 추가로 필요합니다.' :
     '첫 작업: 플랫폼 앱을 등록한 다음 공식 OAuth로 계정을 연결하세요.';
-  const oauthReasons = {YOUTUBE_CHANNEL_NOT_FOUND:'Google 인증은 완료됐지만 YouTube 채널이 없습니다. 채널을 선택하거나 생성한 후 다시 연결하세요.',YOUTUBE_REFRESH_TOKEN_MISSING:'Google 장기 접근 권한을 받지 못했습니다. Google 계정에서 에코디 앱 권한을 확인한 뒤 다시 승인하세요.',YOUTUBE_TARGET_ACCOUNT_MISMATCH:'입력한 Google 이메일과 실제 승인한 Google 계정이 다릅니다. 같은 계정을 선택하세요.',GOOGLE_OAUTH_TICKET_REQUIRED:'Google 인증 결과를 서버에서 확인하지 못했습니다. 새 창을 닫은 뒤 연결 상태부터 확인하세요.'};
+  const oauthReasons = {YOUTUBE_CHANNEL_NOT_FOUND:'Google 인증은 완료됐지만 YouTube 채널이 없습니다. 채널을 선택하거나 생성한 후 다시 연결하세요.',YOUTUBE_REFRESH_TOKEN_MISSING:'Google 장기 접근 권한을 받지 못했습니다. Google 계정에서 에코디 앱 권한을 확인한 뒤 다시 승인하세요.',YOUTUBE_TARGET_ACCOUNT_MISMATCH:'입력한 Google 이메일과 실제 승인한 Google 계정이 다릅니다. 같은 계정을 선택하세요.',GOOGLE_OAUTH_TICKET_REQUIRED:'Google 인증 결과를 서버에서 확인하지 못했습니다. 새 창을 닫은 뒤 연결 상태부터 확인하세요.',GOOGLE_OAUTH_EXCHANGE_FAILED:'Google 인증 응답을 처리하지 못했습니다. 연결 상태를 먼저 확인하고 잠시 후 다시 시도하세요.'};
   const noticeLine = oauthNotice ? `<div class="mall-social-next ${oauthNotice.status==='success'?'ready':''}" role="status">${oauthNotice.status==='success'?'인증 결과가 접수됐습니다. OAuth 연결 수치를 확인하세요.':esc(oauthReasons[oauthNotice.reason]||oauthNotice.reason||'인증이 완료되지 않았습니다. 기존 연결 상태를 확인하고 필요한 경우에만 다시 승인하세요.')}</div>` : '';
   const youtubeStart = youtubeReady && !youtubeConnected ? `<form id="mallSocialYoutubeConnectForm" class="mall-social-start" aria-label="YouTube 최초 연결">
     <label for="mallSocialYoutubeEmail">YouTube Google 계정 이메일</label>

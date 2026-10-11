@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {observeNativeDeviceReadiness,summarizeNativeDeviceReadiness} from '../scripts/observe-native-device-readiness.mjs';
+import {observeNativeDeviceReadiness,observeNativeDeviceReadinessFleet,summarizeNativeDeviceReadiness} from '../scripts/observe-native-device-readiness.mjs';
 
 const now=Date.parse('2026-10-10T14:00:00.000Z');
 const online={hostname:'USER3',platform:'Windows 11',management:{source:'agent',type:'pc'},
   revokedAt:null,status:'online',lastSeenAt:new Date(now-12000).toISOString(),
-  capabilities:{backgroundBrowser:true,backgroundBrowserCanary:true,isolatedDesktop:false,isolatedDesktopProbe:true,agentStatus:true,localAiInstall:true},
+  capabilities:{backgroundBrowser:true,backgroundBrowserCanary:true,isolatedDesktop:false,isolatedDesktopProbe:true,agentStatus:true,localAiInstall:true,localAiVerify:true},
   id:'do-not-expose-device-id',deviceToken:'do-not-expose-token'};
 test('native observer verifies only a recent enrolled agent heartbeat and publishes no identifiers',()=>{
   const a=summarizeNativeDeviceReadiness([online],{now,hostname:'user3'});
@@ -16,6 +16,7 @@ test('native observer verifies only a recent enrolled agent heartbeat and publis
   assert.equal(a.capabilities.isolatedDesktop,false);
   assert.equal(a.capabilities.agentStatus,true);
   assert.equal(a.capabilities.localAiInstall,true);
+  assert.equal(a.capabilities.localAiVerify,true);
   assert.equal(a.capabilities.isolatedDesktopProbe,true);
   assert.equal(a.capabilities.backgroundBrowserCanary,true);
   assert.equal('localAI' in a.capabilities,false,'unsupported legacy alias must not be projected');
@@ -78,7 +79,7 @@ test('production native heartbeat endpoint is an authenticated SELECT-only snaps
   assert.match(route,/WHERE LOWER\(r.hostname\) = \?/);
   assert.match(route,/mode:'observe-only'/);
   assert.doesNotMatch(route,/reconcileJobs|UPDATE\s+|INSERT\s+|DELETE\s+|\.run\(|\.batch\(|\.first\(/i);
-  assert.doesNotMatch(route,/token_hash|command_type|issued_by|device_id:/i);
+  assert.doesNotMatch(route,/token_hash|issued_by|device_id:/i);
   assert.match(source.slice(end,end+145),/reconcileJobs\(env\)/);
 });
 test('untrusted hostnames are blocked before querying production API',async()=>{
@@ -128,4 +129,81 @@ test('post-production Control API completion triggers only safe native heartbeat
   assert.ok(w.includes('node scripts/observe-native-device-readiness.mjs'));
   assert.ok(w.includes('test -n "$EKODI_RELEASE_BRANCH_REF"'));
   assert.ok(w.includes('test -n "$EKODI_RELEASE_TASK_ID"'));
+});
+
+test('scheduled read-only fleet observation independently classifies USER4 rather than replacing it with USER3',async()=>{
+  const requests=[];
+  const fetchImpl=async(url,init)=>{
+    requests.push({url,method:init.method});
+    const target=new URL(url).searchParams.get('hostname');
+    const devices=target==='user3'?[online]:[
+      {...online,hostname:'USER4',status:'offline',lastSeenAt:new Date(now-600000).toISOString()}
+    ];
+    return new Response(JSON.stringify({devices}),{status:200});
+  };
+  const fleet=await observeNativeDeviceReadinessFleet({
+    token:'temporary-session-token-long-enough',
+    hostnames:['user3','user4'],now,fetchImpl
+  });
+  assert.equal(fleet.targets[0].heartbeatHealthy,true);
+  assert.equal(fleet.targets[1].targetAlias,'user4');
+  assert.equal(fleet.targets[1].heartbeatHealthy,false);
+  assert.equal(fleet.targets[1].verificationState,'NATIVE_AGENT_REGISTERED_NOT_ONLINE');
+  assert.equal(fleet.remoteCommandIssued,false);
+  assert.deepEqual(requests.map(x=>x.method),['GET','GET']);
+  assert.equal(requests[1].url,'https://ekodi.kr/api/control/devices/readiness?hostname=user4');
+  assert.doesNotMatch(JSON.stringify(fleet),/do-not-expose/);
+});
+test('USER4 readiness failure is explicit; healthy USER3 never substitutes its proof',async()=>{
+  const fetchImpl=async(url)=>{
+    if(new URL(url).searchParams.get('hostname')==='user4')return new Response('{}',{status:503});
+    return new Response(JSON.stringify({devices:[online]}),{status:200});
+  };
+  const fleet=await observeNativeDeviceReadinessFleet({
+    token:'temporary-session-token-long-enough',now,fetchImpl
+  });
+  assert.equal(fleet.targets[0].heartbeatHealthy,true);
+  assert.equal(fleet.targets[1].heartbeatHealthy,false);
+  assert.equal(fleet.targets[1].verificationState,'NATIVE_AGENT_OBSERVATION_UNAVAILABLE');
+  assert.equal(fleet.targets[1].remoteCommandIssued,false);
+});
+test('fleet observation fails closed for untrusted token or duplicated/invalid target',async()=>{
+  let called=0;
+  const fetchImpl=async()=>{called++;throw Error('unexpected');};
+  await assert.rejects(()=>observeNativeDeviceReadinessFleet({token:'',fetchImpl}),/trusted_admin_session_required/);
+  await assert.rejects(()=>observeNativeDeviceReadinessFleet({
+    token:'temporary-session-token-long-enough',hostnames:['user3','user3'],fetchImpl
+  }),/invalid_fleet_targets/);
+  assert.equal(called,0);
+});
+
+test('scheduled native USER4 observation projects only bounded results, never raw command metadata',async()=>{
+  const token='temporary-session-token-long-enough';
+  const fakeFetch=async(url,init)=>{
+    assert.equal(init.method,'GET');
+    assert.match(url,/hostname=user4$/);
+    return new Response(JSON.stringify({
+      devices:[{...online,hostname:'USER4'}],
+      proofs:{
+        browser:{status:'succeeded',verified:true,fresh:true,completedAt:new Date(now-1000).toISOString(),secret:'never-share'},
+        localAi:{status:'failed',verified:false,fresh:true,completedAt:new Date(now-2000).toISOString(),result:'sensitive-output'}
+      }
+    }),{status:200});
+  };
+  const result=await observeNativeDeviceReadiness({token,hostname:'user4',now,fetchImpl:fakeFetch});
+  assert.equal(result.targetAlias,'user4');
+  assert.equal(result.proofs.browser.verified,true);
+  assert.equal(result.proofs.localAi.verified,false);
+  assert.doesNotMatch(JSON.stringify(result),/never-share|sensitive-output|deviceToken/);
+});
+
+test('readiness response includes USER4 local AI capability and only SELECT-backed redacted proof',()=>{
+  const api=readFileSync(new URL('../device-control.js',import.meta.url),'utf8');
+  const start=api.indexOf("if (request.method === 'GET' && path === \`\${ADMIN_PREFIX}/readiness\`)");
+  const end=api.indexOf("if (request.method === 'GET' && path === ADMIN_PREFIX)",start);
+  const route=api.slice(start,end);
+  assert.match(route,/localAiVerify: capabilities\.localAiVerify === true/);
+  assert.match(route,/proofs:projectNativeDeviceProofs/);
+  assert.match(route,/c\.command_type IN \('computer\.browser\.canary', 'software\.localai\.verify'\)/);
+  assert.doesNotMatch(route,/INSERT\s+INTO|UPDATE\s+device_commands|DELETE\s+FROM|token_hash/i);
 });
