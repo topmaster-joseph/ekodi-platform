@@ -1,0 +1,97 @@
+name: EKODI Mission Media Moderation Release Reconciler
+
+on:
+  push:
+    branches:
+      - 'ai/*/orch_*'
+    paths:
+      - 'supabase/migrations/20261012060200_activity_media_moderation_guard.sql'
+      - 'supabase/migrations/20261012060300_activity_photo_reservation_moderation_guard.sql'
+      - 'supabase/migrations/20261012060400_activity_photo_finalize_moderation_guard.sql'
+      - '.github/workflows/reconcile-mission-media-moderation-release.yml'
+      - '.github/workflows/deploy-activity-public-share-schema.yml'
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Official EKODI orchestrator branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Official EKODI orchestrator task ID'
+        required: true
+        type: string
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: mission-media-guard-reconcile-${{ github.event_name == 'workflow_dispatch' && inputs.release_branch_ref || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_BRANCH: ${{ github.event_name == 'workflow_dispatch' && inputs.release_branch_ref || github.ref_name }}
+      RELEASE_TASK: ${{ github.event_name == 'workflow_dispatch' && inputs.release_task_id || '' }}
+    steps:
+      - name: Verify official EKODI receipt, protected merge and identical guard files
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch="$RELEASE_BRANCH"
+          task="$RELEASE_TASK"
+          if [ -z "$task" ]; then task="${branch##*/}"; fi
+          [[ "$branch" =~ ^ai/[a-zA-Z0-9._-]+/orch_[a-zA-Z0-9_-]+$ ]] || exit 1
+          [[ "$task" =~ ^orch_[a-zA-Z0-9_-]+$ ]] || exit 1
+          [ "${branch##*/}" = "$task" ] || exit 1
+          repo="$GITHUB_REPOSITORY"
+          api="https://api.github.com/repos/$repo"
+          authorization=(-H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28')
+          encoded_branch="$(printf '%s' "$branch" | jq -sRr @uri)"
+          encoded_task="$(printf '%s' "$task" | jq -sRr @uri)"
+          curl --fail-with-body -fsS --retry 3 --max-time 15             "https://ekodi.kr/api/orchestrator/release-receipt?taskId=$encoded_task&branchRef=$encoded_branch"             | jq -e --arg task "$task" --arg branch "$branch"                 '.ok == true and .authorized == true and .authority == "ekodi-orchestrator" and .taskId == $task and .branchRef == $branch' >/dev/null
+
+          owner="${repo%%/*}"
+          encoded_head="$(printf '%s' "$owner:$branch" | jq -sRr @uri)"
+          migrations=(
+            'supabase/migrations/20261012060200_activity_media_moderation_guard.sql'
+            'supabase/migrations/20261012060300_activity_photo_reservation_moderation_guard.sql'
+            'supabase/migrations/20261012060400_activity_photo_finalize_moderation_guard.sql'
+          )
+          # Wait for the repository's protected convergence workflow, not just CI on the head.
+          for attempt in $(seq 1 80); do
+            pulls="$(curl --fail-with-body -fsS --retry 2 --max-time 15 "${authorization[@]}"               "$api/pulls?state=all&base=main&head=$encoded_head&per_page=30")"
+            pr="$(jq -c --arg branch "$branch" '[.[] | select(.head.ref==$branch and .base.ref=="main")][0] // empty' <<< "$pulls")"
+            if [ -n "$pr" ]; then
+              merged_at="$(jq -r '.merged_at // empty' <<< "$pr")"
+              state="$(jq -r '.state' <<< "$pr")"
+              if [ -n "$merged_at" ]; then
+                number="$(jq -r '.number' <<< "$pr")"
+                head_sha="$(jq -r '.head.sha' <<< "$pr")"
+                files="$(curl --fail-with-body -fsS --retry 2 --max-time 15 "${authorization[@]}" "$api/pulls/$number/files?per_page=100")"
+                for file in "${migrations[@]}"; do
+                  jq -e --arg name "$file" 'any(.[]; .filename == $name)' <<< "$files" >/dev/null || {
+                    echo "Not a Mission media security release: $file missing; no deploy"
+                    exit 0
+                  }
+                  # Refuse deployment if another commit replaced a reviewed migration on main.
+                  encoded_file="$(printf '%s' "$file" | jq -sRr @uri)"
+                  source_sha="$(curl --fail-with-body -fsS "${authorization[@]}" "$api/contents/$file?ref=$head_sha" | jq -r '.sha')"
+                  main_sha="$(curl --fail-with-body -fsS "${authorization[@]}" "$api/contents/$file?ref=main" | jq -r '.sha')"
+                  [ "$source_sha" = "$main_sha" ] || { echo "Guard file changed after merge: $file"; exit 1; }
+                done
+                curl --fail-with-body -fsS -X POST "${authorization[@]}"                   -H 'Content-Type: application/json'                   "$api/actions/workflows/deploy-activity-public-share-schema.yml/dispatches"                   --data "$(jq -n --arg branch "$branch" --arg task "$task"                     '{ref:"main",inputs:{release_branch_ref:$branch,release_task_id:$task}}')"
+                echo "EKODI Mission guarded moderation deployment dispatched for merged PR #$number"
+                exit 0
+              fi
+              [ "$state" != closed ] || { echo 'Recovery PR closed without merge'; exit 1; }
+            fi
+            sleep 10
+          done
+          echo 'No verified protected merge within lease; production left unchanged.'
+          exit 1
