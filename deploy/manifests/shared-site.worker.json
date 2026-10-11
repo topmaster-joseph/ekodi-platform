@@ -58,20 +58,99 @@
       {
         "url": "https://ekodi.kr/control",
         "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/admin/control",
+          "x-ekodi-route: control-canonical-redirect",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/control/",
+        "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/admin/control",
+          "x-ekodi-route: control-canonical-redirect"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/admin/control",
+        "statuses": [
           200
         ],
         "redirect": "manual",
         "expect": [
           "EKODI Control",
-          "무엇을 수행할까요?",
-          "/control.css",
-          "/control.js"
+          "id=\"commandForm\""
         ],
         "headerExpect": [
-          "x-ekodi-canonical-surface: control",
           "x-ekodi-route: control-surface",
-          "cache-control: no-store",
-          "x-robots-tag: noindex, nofollow, noarchive"
+          "x-frame-options: DENY",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/admin/control/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKODI Control",
+          "id=\"commandForm\""
+        ],
+        "headerExpect": [
+          "x-ekodi-route: control-surface",
+          "x-frame-options: DENY"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/admin/control?embed=admin",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKODI Control",
+          "id=\"commandForm\""
+        ],
+        "headerExpect": [
+          "x-ekodi-route: control-surface",
+          "x-frame-options: SAMEORIGIN",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/admin/admin-control-integration.css",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "#adminControlHome",
+          "#adminControlFrameNotice"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/admin/admin-control-frame.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "adminControlFrameNotice",
+          "getElementById('commandForm')"
         ],
         "rollbackVerify": false
       },
@@ -1094,7 +1173,10 @@
           "admin-authenticated-shell.js?v=",
           "admin-direct-google.js?v=20260924-v1",
           "admin-compact.js admin-menu-layout.js admin-demand-loader.js",
-          "https://ekodi.kr/auth/?site=admin"
+          "https://ekodi.kr/auth/?site=admin",
+          "id=\"adminControlFrame\"",
+          "data-src=\"/admin/control?embed=admin\"",
+          "admin-control-frame.js"
         ],
         "headerExpect": [
           "x-ekodi-route: admin-shell",
