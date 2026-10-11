@@ -1,0 +1,44 @@
+/* One administrator shell, one central EKODI Control panel. */
+#adminControlHome.admin-control-home {
+  display:flex; flex-direction:column; overflow:hidden;
+  width:min(100%,1380px); max-width:1380px;
+  height:clamp(560px,calc(100dvh - 155px),900px);
+  margin:54px auto 12px; padding:0; border-radius:22px;
+  border:1px solid #dae3ef; background:#0b1626;
+  box-shadow:0 14px 42px rgba(13,35,65,.09);
+}
+#adminControlHome[hidden] { display:none!important; }
+#adminControlFrame {
+  display:block; flex:1 1 auto; min-height:0; width:100%;
+  border:0; background:#0b1626;
+}
+#adminControlHome .admin-control-home-foot {
+  display:flex; flex:0 0 auto; align-items:center;
+  justify-content:space-between; gap:16px;
+  padding:10px 17px; font-size:11px; line-height:1.4;
+  background:#fff; color:#506076;
+}
+#adminControlHome .admin-control-home-foot a {
+  color:#174ea6; font-weight:700; text-decoration:none;
+  white-space:nowrap;
+}
+#adminControlHome .admin-control-home-foot a:hover { text-decoration:underline; }
+/* The embedded command form replaces the global floating composer only
+   while the integrated Control panel is visible. Other admin pages retain it. */
+html body:has(#adminControlHome:not([hidden])) .ekodi-assist,
+html body:has(#adminControlHome:not([hidden])) .ekodi-assist-bootstrap,
+html body:has(#adminControlHome:not([hidden])) .ekodi-assist-dock,
+html body:has(#adminControlHome:not([hidden])) .admin-command-workbench {
+  display:none!important;
+}
+@media(max-width:760px){
+  #adminControlHome.admin-control-home {
+    height:clamp(510px,calc(100dvh - 145px),850px);
+    width:calc(100% - 8px);margin:14px auto 8px;
+    border-radius:14px;
+  }
+  #adminControlHome .admin-control-home-foot {
+    padding:9px 12px;gap:8px;
+  }
+  #adminControlHome .admin-control-home-foot span { max-width:64%; }
+}
