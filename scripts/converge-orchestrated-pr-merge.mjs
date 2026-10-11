@@ -68,6 +68,9 @@ const controlApiTouched=changedFiles.some(file=>[
   'mission-control-entry-worker.js',
   // PC Agent registry and heartbeat handlers are deployed by the Control API.
   'device-control.js',
+  // EKODI hybrid-job API and Google Slides fixed-scope policy are owned by Control API.
+  'hybrid-execution.js',
+  'google-workspace-slides-audio-policy.js',
   // AI Provider API runtime ownership; release-automation changes also repair missed deployments.
   'ai-provider-control.js',
   // Telemetry reader and site classifier run inside the Control API.
@@ -136,6 +139,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='scripts/verify-admin-production-ui-e2e.mjs'||
   file==='device-control-admin.js'||
   file==='device-control-admin.css'||
+  // Hybrid execution console is packaged into the shared administrator UI.
+  file==='hybrid-execution-admin.js'||
   // Keep all Device Control/Remote Power/Wake static assets in a single orchestrated deploy boundary.
   ['remote-power-admin.js','remote-power-admin.css','device-wake-admin.js'].includes(file)||
   file==='ekodi-device-bootstrap.cmd'||
