@@ -598,7 +598,11 @@ export function mountAdminSidebar(root = document, options = {}) {
   const observer = new MutationObserver(schedule);
   observer.observe(nav, { childList: true, subtree: false });
 
+  // Every real sidebar selection invalidates stale bounded audit-click recovery.
+  // Never override a newer administrator navigation or a direct URL transition.
+  let detailClickSerial = 0;
   nav.addEventListener('click', event => {
+    const serial = ++detailClickSerial;
     const more = event.target.closest('[data-admin-detail-more]');
     if (more) {
       event.preventDefault();
@@ -611,10 +615,28 @@ export function mountAdminSidebar(root = document, options = {}) {
     const detail = event.target.closest('[data-admin-detail-section]');
     if (detail) {
       event.preventDefault();
+      // Detail selection is one atomic navigation. No other bubbling handler
+      // may react to its click as a selection of the enclosing work area.
+      event.stopImmediatePropagation();
+      const section = String(detail.dataset.adminDetailSection || '');
       delete nav.dataset.adminFocusedGroup;
-      activateSection(nav, detail.dataset.adminDetailSection);
+      const accepted = activateSection(nav, section);
       closeDrawer();
       schedule();
+      if (section === 'audit-records' && accepted) {
+        // The Security group's default section can finish mounting after a
+        // deliberate audit-records click. Repair only that stale *same-group*
+        // fallback, twice at most; do not alter auth or force a hidden panel.
+        for (const delay of [0, 650]) window.setTimeout(() => {
+          if (serial !== detailClickSerial || !nav.isConnected) return;
+          const current = window.EKODIAdminPanels?.current?.();
+          const routed = window.EKODIAdminRoutes?.sectionFromLocation?.(window.location);
+          const fallback = getAdminMenuGroupDefault('security-audit');
+          if (current === fallback && routed === fallback) {
+            activateSection(nav, section);
+          }
+        }, delay);
+      }
       return;
     }
     const global = event.target.closest('[data-admin-global-group]');
