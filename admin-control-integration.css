@@ -47,3 +47,18 @@ html body:has(#adminControlHome:not([hidden])) .admin-command-workbench {
 html body:has(#adminControlHome:not([hidden])) [data-ekodi-control-entry]{
   background:#eaf1ff!important;color:#174ea6!important;font-weight:750!important;
 }
+
+/* Never leave an empty center when a deployed frame is blocked or unavailable. */
+#adminControlFrame.admin-control-frame-unavailable{display:none}
+#adminControlFrameNotice.admin-control-frame-notice{
+  flex:1 1 auto;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:12px;padding:34px 26px;
+  color:#f2f7ff;background:#0b1626;text-align:center;
+}
+#adminControlFrameNotice[hidden]{display:none!important}
+#adminControlFrameNotice strong{font-size:18px;color:#fff}
+#adminControlFrameNotice p{max-width:480px;font-size:13px;color:#aebfd3;line-height:1.6}
+#adminControlFrameNotice a{
+  display:inline-block;border-radius:9px;padding:10px 15px;
+  background:#fff;color:#1f3960;font-size:13px;font-weight:700;
+}
