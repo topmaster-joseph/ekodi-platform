@@ -15,6 +15,7 @@ on:
           - localai
           - user3-upgrade-localai
           - user2-localai
+          - user2-upgrade-localai
           - user4-acceptance
           - user4-browser-recovery
       release_branch_ref:
@@ -152,7 +153,7 @@ jobs:
           node-version: '24'
 
       - name: EKODI AI Orchestration Gate for mutating verification
-        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user3-upgrade-localai' || inputs.execution_mode == 'user2-localai' || inputs.execution_mode == 'user4-acceptance' || inputs.execution_mode == 'user4-browser-recovery')
+        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user3-upgrade-localai' || inputs.execution_mode == 'user2-localai' || inputs.execution_mode == 'user2-upgrade-localai' || inputs.execution_mode == 'user4-acceptance' || inputs.execution_mode == 'user4-browser-recovery')
         env:
           EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
           EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
@@ -246,6 +247,12 @@ jobs:
         env:
           DEVICE_TARGET_HOSTNAME: 'user3'
         run: node scripts/recover-native-user3-localai.mjs
+
+      - name: Safely upgrade USER2 Agent and verify native Ollama inference
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-upgrade-localai'
+        env:
+          DEVICE_TARGET_HOSTNAME: 'user2'
+        run: node scripts/recover-native-user2-localai.mjs
 
       - name: Verify USER2 native Ollama loopback inference with real Windows receipt
         if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-localai'
