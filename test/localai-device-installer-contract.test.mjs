@@ -107,3 +107,5 @@ test('installer file checksum is pinned in device agent',()=>{
  assert.ok(agent.includes(hash));
  assert.ok(agent.includes('LOCALAI_INSTALLER_HASH_MISMATCH'));
 });
+
+// EKODI release convergence: retain the verified bounded local AI contract.
