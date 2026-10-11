@@ -12,7 +12,7 @@ test('scheduled backup and availability monitoring validate orchestration policy
   for(const workflow of [backup,watch]){
     assert.match(workflow,/validate-ekodi-ai-change-orchestration\.mjs/);
     assert.doesNotMatch(workflow,/validate-ekodi-ai-change-orchestration\.mjs["']?\s+--release/);
-    assert.match(workflow,/EKODI Operational Orchestration Policy Gate/);
+    assert.match(workflow,/EKODI AI Orchestration Gate/);
   }
 });
 
