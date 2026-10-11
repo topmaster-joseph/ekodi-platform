@@ -4,8 +4,8 @@
 create table if not exists public.singles_product_catalog (
  code text primary key check(code ~ '^[a-z][a-z0-9_]{2,49}$'),
  title text not null check(char_length(title) between 2 and 90),
- category text not null check(category in ('message_credit','message_contact','message_period','community_event','coaching')),
- scope text not null check(scope in ('per_message','per_contact','per_period','per_event','session')),
+ category text not null check(category in ('message_credit','message_contact','message_period','event_application','coaching')),
+ scope text not null check(scope in ('per_message','per_contact','per_period','per_application','session')),
  amount_krw integer not null check(amount_krw between 4900 and 200000),
  message_credits integer check(message_credits is null or message_credits between 1 and 10000),
  contact_credits integer check(contact_credits is null or contact_credits between 1 and 1000),
@@ -19,7 +19,7 @@ create table if not exists public.singles_product_catalog (
   (scope='per_message' and message_credits is not null and contact_credits is null and period_days is null) or
   (scope='per_contact' and contact_credits is not null and message_credits is null and period_days is null) or
   (scope='per_period' and period_days is not null and message_credits is null and contact_credits is null) or
-  (scope in ('per_event','session') and message_credits is null and contact_credits is null and period_days is null)
+  (scope in ('per_application','session') and message_credits is null and contact_credits is null and period_days is null)
  ),
  check(not active or (legal_reviewed and published_at is not null))
 );
@@ -60,8 +60,8 @@ values
 ('coaching_30','소통 방법 안내 30분','coaching','session',49000,null,null,null,30),
 ('coaching_60','커뮤니티 참여·소통 안내 60분','coaching','session',99000,null,null,null,60),
 ('coaching_120','대화·갈등 관리 워크숍 120분','coaching','session',199000,null,null,null,120),
-('event_basic','행사 기본 참가권','community_event','per_event',9900,null,null,null,null),
-('event_plus','행사 특별 참가권','community_event','per_event',29900,null,null,null,null)
+('event_basic','행사 기본 신청료','event_application','per_application',9900,null,null,null,null),
+('event_plus','행사 특별 신청료','event_application','per_application',29900,null,null,null,null)
 on conflict(code) do nothing;
 -- Consent-based charging must happen once and only after verified receiver acceptance.
 -- Credits are pre-funded, but an outgoing request merely reserves a right;
