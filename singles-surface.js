@@ -47,6 +47,8 @@ function allowApi(path,method){
  const adminCheck=path.match(/^\/api\/bank\/admin\/orders\/(EDH-[A-F0-9]{32})\/review$/);
  if(adminCheck&&method==='POST')return [path.slice(4),true];
  if(path==='/api/events'&&method==='GET')return ['/events',true];
+ if(path==='/api/admin/events'&&method==='GET')return ['/admin/events',true];
+ if(/^\/api\/admin\/events\/[0-9a-f-]{36}\/fee$/i.test(path)&&method==='PUT')return [path.slice(4),true];
  if(path==='/api/requests'&&method==='GET')return ['/requests',true];
  const patterns=[
   [/^\/api\/events\/([0-9a-f-]{36})$/i,['GET'],'/events/'],
