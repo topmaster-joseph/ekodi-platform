@@ -79,14 +79,25 @@ export async function verifyUser4Browser({token,fetchImpl=fetch,clock=()=>Date.n
 }
 
 export async function verifyUser4Acceptance(options={}){
+  // Dispatch both independent canaries while the exact USER4 Agent heartbeat is
+  // fresh; a slow browser task must not delay Ollama eligibility discovery.
+  // EKODI Device Agent owns scheduling and may execute commands sequentially.
+  const outcomes=await Promise.allSettled([
+    verifyUser4Browser(options),
+    verifyNativeLocalAi({...options,hostname:'user4'})
+  ]);
+  const browser=outcomes[0].status==='fulfilled'?outcomes[0].value:null;
+  const localAi=outcomes[1].status==='fulfilled'?outcomes[1].value:null;
   const failures=[];
-  let browser=null,localAi=null;
-  try{browser=await verifyUser4Browser(options);}
-  catch(error){failures.push('browser:'+String(error?.message||'failed').slice(0,100));}
-  try{localAi=await verifyNativeLocalAi({...options,hostname:'user4'});}
-  catch(error){failures.push('localAi:'+String(error?.message||'failed').slice(0,100));}
-  // Two independent, host-matched execution receipts are mandatory. An empty
-  // error list is not enough if one of the command verifiers returns no proof.
+  for(let i=0;i<outcomes.length;i++){
+    const result=outcomes[i];
+    if(result.status!=='rejected')continue;
+    const label=i===0?'browser':'localAi';
+    const raw=String(result.reason?.message||'failed');
+    const code=label==='localAi'&&raw==='no_healthy_localai_verify_user3_agent'
+      ? 'user4_agent_heartbeat_or_verify_capability_unavailable' : raw;
+    failures.push(label+':'+code.slice(0,100));
+  }
   const browserVerified=browser?.targetAlias==='user4' &&
     browser.receiptStatus==='succeeded' && browser.mode==='native-cdp' &&
     Number.isFinite(browser.domBytes) && browser.domBytes>0;
