@@ -15,6 +15,9 @@ const SAFE_BROWSER_FAILURE_CODES=new Set([
   'CDP_WORKER_SOURCE_INVALID','CDP_WORKER_TIMEOUT','CDP_WORKER_INVALID_RECEIPT',
   'CDP_WORKER_EVIDENCE_INVALID','CDP_TARGET_FORBIDDEN','CDP_BROWSER_NOT_FOUND',
   'CDP_BROWSER_REQUIRED','CDP_BROWSER_EARLY_EXIT','CDP_BROWSER_SPAWN',
+  'CDP_BROWSER_EARLY_EXIT_ACCESS','CDP_BROWSER_EARLY_EXIT_DEPENDENCY',
+  'CDP_BROWSER_EARLY_EXIT_POLICY','CDP_BROWSER_EARLY_EXIT_SANDBOX',
+  'CDP_BROWSER_EARLY_EXIT_ZERO','CDP_BROWSER_EARLY_EXIT_UNKNOWN',
   'CDP_PORT_TIMEOUT','CDP_PORT_INVALID','CDP_SOCKET_ERROR','CDP_SOCKET_TIMEOUT',
   'CDP_COMMAND_TIMEOUT','CDP_DOM_EVIDENCE_MISSING'
 ]);
@@ -102,9 +105,9 @@ export async function verifyUser4Browser({token,fetchImpl=fetch,clock=()=>Date.n
   throw new Error('user4_native_browser_timeout');
 }
 
-// Latest pinned, bounded Chrome/Edge CDP worker was merged on October 11 at 09:00 UTC.
+// Latest diagnostics-capable Chrome/Edge CDP worker requires a new official USER4 Agent update after 11:29 UTC.
 // Never infer that an older USER4 Agent has loaded it from an earlier heartbeat.
-export const USER4_CDP_FIX_FLOOR = Date.parse('2026-10-11T09:00:12.000Z');
+export const USER4_CDP_FIX_FLOOR = Date.parse('2026-10-11T11:29:00.000Z');
 const UPDATE='agent.self_update';
 export async function ensureUser4AgentUpdated({
   token,fetchImpl=fetch,clock=()=>Date.now(),sleepFn=wait,pollMs=4000,maxPoll=65

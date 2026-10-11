@@ -39,6 +39,11 @@ async function run(){
     targetAlias:'user2',commandId:out.id,receiptStatus:'succeeded',
     backendReady:proof.headlessBackendReady===true,
     backend:'hyper-v-ekodi-base',userDesktopAttached:false,
+    virtualizationFirmwareEnabled:proof.virtualizationFirmwareEnabled===true,
+    hyperVState:['Enabled','Disabled','EnablePending','DisablePending'].includes(proof.hyperVState)?proof.hyperVState:'unknown',
+    hyperVPowerShellAvailable:proof.hyperVPowerShellAvailable===true,
+    baseVmPresent:proof.baseVmPresent===true,
+    gapReason:['native-capability-unavailable','native-capability-not-production-ready','required-capability-not-yet-implemented','native-capacity-or-runtime-failure'].includes(proof.gapReason)?proof.gapReason:'unknown',
     completedAt:c.completedAt||null,observedAt:new Date().toISOString()}));
   if(proof.headlessBackendReady!==true)throw Error('user2_hyperv_backend_not_ready');
   return;
@@ -48,3 +53,9 @@ async function run(){
 run().catch(e=>{console.error('[EKODI][USER2-NATIVE-VIRTUAL-PROBE] '+String(e.message).slice(0,110));process.exitCode=1;});
 
 // Canonical Orchestrator owner-authored protected validation trigger.
+
+// Owner-authorized canonical CI and protected merge convergence trigger.
+
+// Revalidate after official protected base synchronization.
+
+// Owner-authored CI following protected base refresh.
