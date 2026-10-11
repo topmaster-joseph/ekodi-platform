@@ -13,6 +13,11 @@ on:
           - verify
           - status
           - localai
+          - user3-upgrade-localai
+          - user2-localai
+          - user2-virtual-probe
+          - user4-virtual-probe
+          - user2-upgrade-localai
           - user4-acceptance
       release_branch_ref:
         description: 'Orchestrator release branch, required in verify mode'
@@ -39,8 +44,13 @@ on:
       - 'scripts/verify-native-agent-status.mjs'
       - 'test/native-agent-status-canary.test.mjs'
       - 'scripts/verify-native-localai.mjs'
+      - 'scripts/recover-native-user3-localai.mjs'
+      - 'test/native-user3-localai-recovery.test.mjs'
       - 'scripts/verify-native-user4-acceptance.mjs'
+      - 'scripts/verify-native-user4-virtual-probe.mjs'
+      - 'scripts/select-native-user4-execution-route.mjs'
       - 'test/native-user4-acceptance.test.mjs'
+      - 'test/native-user4-execution-route.test.mjs'
       - 'test/native-localai-proof.test.mjs'
       - 'test/native-device-readiness-observe.test.mjs'
       - 'test/device-agent-production-verification.test.mjs'
@@ -56,9 +66,14 @@ on:
       - 'device-control-admin.js'
       - 'scripts/verify-device-agent-production.mjs'
       - 'scripts/observe-native-device-readiness.mjs'
+      - 'scripts/verify-native-user4-virtual-probe.mjs'
+      - 'scripts/select-native-user4-execution-route.mjs'
+      - 'test/native-user4-execution-route.test.mjs'
       - 'scripts/verify-native-agent-status.mjs'
       - 'test/native-agent-status-canary.test.mjs'
       - 'scripts/verify-native-localai.mjs'
+      - 'scripts/recover-native-user3-localai.mjs'
+      - 'test/native-user3-localai-recovery.test.mjs'
       - 'test/native-localai-proof.test.mjs'
       - 'test/native-device-readiness-observe.test.mjs'
       - 'test/device-agent-production-verification.test.mjs'
@@ -90,8 +105,11 @@ jobs:
           node --check scripts/observe-native-device-readiness.mjs
           node --check scripts/verify-native-agent-status.mjs
           node --check scripts/verify-native-localai.mjs
+          node --check scripts/recover-native-user3-localai.mjs
+          node --test test/native-user3-localai-recovery.test.mjs
           node --check scripts/verify-native-user4-acceptance.mjs
-          node --test test/native-device-readiness-observe.test.mjs test/native-agent-status-canary.test.mjs test/native-localai-proof.test.mjs test/native-user4-acceptance.test.mjs
+          node --check scripts/select-native-user4-execution-route.mjs
+          node --test test/native-device-readiness-observe.test.mjs test/native-agent-status-canary.test.mjs test/native-localai-proof.test.mjs test/native-user4-acceptance.test.mjs test/native-user4-execution-route.test.mjs
           node --test test/device-agent-production-verification.test.mjs test/non-disruptive-device-agent-contract.test.mjs test/background-browser-canary-contract.test.mjs test/isolated-desktop-backend.test.mjs test/isolated-guest-agent.test.mjs
           grep -Fq "agent.self_update" scripts/verify-device-agent-production.mjs
           grep -Fq "computer.browser.canary" scripts/verify-device-agent-production.mjs
@@ -139,7 +157,7 @@ jobs:
           node-version: '24'
 
       - name: EKODI AI Orchestration Gate for mutating verification
-        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user4-acceptance')
+        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user3-upgrade-localai' || inputs.execution_mode == 'user2-localai' || inputs.execution_mode == 'user2-virtual-probe' || inputs.execution_mode == 'user4-virtual-probe' || inputs.execution_mode == 'user2-upgrade-localai' || inputs.execution_mode == 'user4-acceptance')
         env:
           EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
           EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
@@ -228,6 +246,42 @@ jobs:
           DEVICE_TARGET_HOSTNAME: 'user3'
         run: node scripts/verify-native-localai.mjs
 
+      - name: Safely upgrade USER3 Agent and verify real native Ollama inference
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user3-upgrade-localai'
+        env:
+          DEVICE_TARGET_HOSTNAME: 'user3'
+        run: node scripts/recover-native-user3-localai.mjs
+
+      - name: Safely upgrade USER2 Agent and verify native Ollama inference
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-upgrade-localai'
+        env:
+          DEVICE_TARGET_HOSTNAME: 'user2'
+        run: node scripts/recover-native-user2-localai.mjs
+
+      - name: Verify USER4 native isolated Hyper-V backend readiness
+        id: user4_virtual_probe
+        continue-on-error: true
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user4-virtual-probe'
+        env:
+          DEVICE_TARGET_HOSTNAME: 'user4'
+        run: node scripts/verify-native-user4-virtual-probe.mjs
+
+      - name: Select USER4 safe native execution route
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user4-virtual-probe'
+        run: node scripts/select-native-user4-execution-route.mjs
+
+      - name: Verify USER2 native isolated Hyper-V backend readiness
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-virtual-probe'
+        env:
+          DEVICE_TARGET_HOSTNAME: 'user2'
+        run: node scripts/verify-native-user2-virtual-probe.mjs
+
+      - name: Verify USER2 native Ollama loopback inference with real Windows receipt
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-localai'
+        env:
+          DEVICE_TARGET_HOSTNAME: 'user2'
+        run: node scripts/verify-native-user2-localai.mjs
+
       - name: Verify USER4 native CDP and Ollama receipts through EKODI Device Agent
         if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user4-acceptance'
         run: node scripts/verify-native-user4-acceptance.mjs
@@ -245,6 +299,11 @@ jobs:
         if: always()
         shell: bash
         run: |
+          if [ -f artifacts/native-user4-execution-route.json ]; then
+            echo '## USER4 Safe Native Execution Route' >> "$GITHUB_STEP_SUMMARY"
+            jq -r '"- Route: \(.route)\n- Kind: \(.routeKind)\n- Hyper-V ready: \(.desktopBackendReady)\n- Browser alternative ready: \(.browserAlternativeReady)\n- Gap: \(.gapReason // "-")\n- External provider used: \(.externalProviderUsed // false)"' artifacts/native-user4-execution-route.json >> "$GITHUB_STEP_SUMMARY"
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+          fi
           if [ -f artifacts/native-device-readiness.json ]; then
             echo '## EKODI PC3 Native Agent Observation (no device commands)' >> "$GITHUB_STEP_SUMMARY"
             jq -r '"- Mode: \(.mode)\n- Registered: \(.registered)\n- Heartbeat healthy: \(.heartbeatHealthy)\n- State: \(.verificationState)\n- Browser capability projected: \(.capabilities.backgroundBrowser)\n- Native cutover verified: \(.nativeCutoverVerified)\n- Observed at: \(.observedAt)"' artifacts/native-device-readiness.json >> "$GITHUB_STEP_SUMMARY"
@@ -256,6 +315,19 @@ jobs:
             echo '## EKODI real-device Native Virtualization Verification' >> "$GITHUB_STEP_SUMMARY"
             echo '- Verification artifact was not produced because a non-deferrable verification error occurred.' >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Preserve USER4 route evidence
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user4-virtual-probe'
+        uses: actions/upload-artifact@v7
+        with:
+          name: user4-native-route-${{ github.run_id }}
+          path: |
+            artifacts/native-user4-readiness.json
+            artifacts/native-user4-virtual-probe.json
+            artifacts/native-user4-execution-route.json
+          if-no-files-found: warn
+          include-hidden-files: true
+          retention-days: 14
 
       - name: Revoke short-lived verification session
         if: always() && env.E2E_AUTH_DB_ID != '' && env.E2E_TOKEN_HASH != ''
@@ -270,3 +342,7 @@ jobs:
             --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')" \
             | jq -e '.success == true' >/dev/null
           echo 'Short-lived Device Agent verification session revoked.'
+
+# Trigger existing guarded Orchestrator convergence for USER2 acceptance.
+
+# Owner-authored CI recheck after guarded base synchronization.

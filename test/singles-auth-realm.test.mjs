@@ -24,7 +24,7 @@ test('one-time auth fragment is removed before onboarding status fetch or disabl
  const start=app.indexOf('async function main(){');
  const scrub=app.indexOf("if(tokenHash)history.replaceState(null,'',location.pathname+location.search)",start);
  const status=app.indexOf("await fetch('/singles/api/status'",start);
- const disabled=app.indexOf('if(!status?.onboarding_enabled',start);
+ const disabled=app.indexOf('if((!status?.onboarding_enabled&&!prelaunchAdmin)',start);
  assert.ok(start>=0&&scrub>start&&status>scrub&&disabled>status,'scrub must happen before feature flag and network await');
  assert.match(app,/verifyOtp\(\{token_hash:tokenHash,type:tokenType\}\)/);
 });
