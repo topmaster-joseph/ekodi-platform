@@ -10,6 +10,8 @@ import {
 
 const outputPath = process.argv[2] || '/tmp/ekodi-traffic-intelligence.sql';
 const apiToken = String(process.env.CLOUDFLARE_API_TOKEN || '').trim();
+// Independent read-only Analytics credential; legacy deploy-token fallback until configured.
+const analyticsReadToken = String(process.env.CLOUDFLARE_ANALYTICS_API_TOKEN || '').trim();
 const accountId = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
 const zoneAllowlist = new Set(String(process.env.EKODI_TRAFFIC_ZONE_ALLOWLIST || '')
   .split(',').map(value => value.trim().toLowerCase()).filter(Boolean));
@@ -48,10 +50,11 @@ CREATE TABLE IF NOT EXISTS traffic_intelligence_state (
 );`;
 }
 
-async function cloudflare(path, init = {}) {
+async function cloudflare(path, { analytics = false, ...init } = {}) {
+  const credential = analytics ? (analyticsReadToken || apiToken) : apiToken;
   const response = await fetch(`${cfApi}${path}`, {
     ...init,
-    headers:{ authorization:`Bearer ${apiToken}`, accept:'application/json',
+    headers:{ authorization:`Bearer ${credential}`, accept:'application/json',
       ...(init.body ? { 'content-type':'application/json' } : {}), ...(init.headers || {}) }
   });
   const payload = await response.json().catch(() => null);
@@ -72,7 +75,7 @@ async function resolveZones() {
 }
 
 async function graphQlRows(query, field) {
-  const payload = await cloudflare('/graphql', { method:'POST', body:JSON.stringify({ query }) });
+  const payload = await cloudflare('/graphql', { analytics:true, method:'POST', body:JSON.stringify({ query }) });
   if (payload.errors?.length) throw new Error(payload.errors[0]?.message || 'Cloudflare GraphQL Analytics 조회 오류');
   const zone = payload.data?.viewer?.zones?.[0];
   if (!zone) throw new Error('viewer.zones.empty');
@@ -193,6 +196,7 @@ async function main() {
   }
 
   try {
+    console.log(`[EKODI][TRAFFIC-CREDENTIAL] GraphQL credential mode: ${analyticsReadToken ? 'dedicated-readonly' : 'legacy-deployment-token'}; permissions are zone-scoped.`);
     const zones = await resolveZones();
     const window = dailyWindow();
     const collectedAt = now.toISOString();
