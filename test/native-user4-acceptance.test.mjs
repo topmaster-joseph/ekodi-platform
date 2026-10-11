@@ -78,3 +78,37 @@ test('aggregate outcome is not successful if both live receipts are absent',asyn
   assert.equal(result.localAiVerified,false);
   assert.equal(result.mode,'ekodi-native-receipt-gated');
 });
+
+test('USER4 CDP and Ollama commands are both queued before either waits for completion',async()=>{
+  const posted=new Set();
+  const browserType='computer.browser.canary';
+  const aiType='software.localai.verify';
+  const fetchImpl=async(url,init)=>{
+    if(init.method==='POST'){
+      const {type}=JSON.parse(init.body);
+      assert([browserType,aiType].includes(type));
+      posted.add(type);
+      return new Response(JSON.stringify({command:{type,id:type,status:'queued'}}),{status:200});
+    }
+    const recentCommands=posted.size===2?[
+      {id:browserType,type:browserType,status:'succeeded',completedAt:new Date(now).toISOString(),
+        result:{browserCanary:{ok:true,mode:'native-cdp',url:'https://ekodi.kr/',
+          contentBytes:3700,dedicatedAutomationProfile:true,focusIsolated:true,
+          clipboardShared:false,userInputInjection:false}}},
+      {id:aiType,type:aiType,status:'succeeded',completedAt:new Date(now).toISOString(),
+        result:{localAiProof:{ollamaApi:'ready',inference:'passed',
+          credentialCollection:false,executionMode:'fixed_loopback_api',
+          selectedModel:'qwen3:0.6b',claudeCli:'not_visible_to_agent'}}}
+    ]:[];
+    const device={...good,capabilities:{localAiVerify:true},recentCommands};
+    return new Response(JSON.stringify({devices:[device]}),{status:200});
+  };
+  const result=await verifyUser4Acceptance({token:'authorized-admin-session-token-abcdef',
+    clock:()=>now,fetchImpl,sleepFn:async()=>{},maxPoll:4});
+  assert.deepEqual([...posted].sort(),[browserType,aiType].sort());
+  assert.equal(result.ok,true);
+  assert.equal(result.browserVerified,true);
+  assert.equal(result.localAiVerified,true);
+  assert.equal(result.browser.targetAlias,'user4');
+  assert.equal(result.localAi.targetAlias,'user4');
+});
