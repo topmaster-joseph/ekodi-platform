@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.5.3'
+$AgentVersion = '2.5.4'
 # Some remote/managed Windows sessions omit ProgramData from the process environment.
 # Resolve the canonical system data directory without changing machine-wide settings.
 if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
@@ -2475,6 +2475,56 @@ function Invoke-IsolatedDesktopSessionExecute($Payload) {
   }
 }
 
+function Invoke-EkodiLocalAiPairing($payload) {
+  # Only the admin-issued ten-minute pairing code reaches this allowlisted
+  # device operation; never return or log a pairing code or node token.
+  $pair = [string]$payload.pairingCode
+  if ($pair -cnotmatch '^[A-HJ-NP-Z2-9]{10}$') { throw 'LOCALAI_PAIRING_CODE_INVALID' }
+  if ([string]::IsNullOrWhiteSpace($env:APPDATA)) { throw 'LOCALAI_USER_PROFILE_REQUIRED' }
+  $root = Join-Path $env:APPDATA 'EKODI\ollama-node'
+  $configPath = Join-Path $root 'config.json'
+  $secretPath = Join-Path $root 'node-token.dpapi'
+  $machine = ([Environment]::MachineName -replace '[^a-zA-Z0-9-]','-').ToLowerInvariant()
+  if (!$machine) { throw 'LOCALAI_HOSTNAME_INVALID' }
+  $nodeId = 'ollama-' + $machine.Substring(0,[Math]::Min($machine.Length,30)) + '-' + [guid]::NewGuid().ToString('N').Substring(0,8)
+  if (Test-Path -LiteralPath $configPath) {
+    try {
+      $current = Get-Content -LiteralPath $configPath -Raw -ErrorAction Stop | ConvertFrom-Json
+      if ([string]$current.nodeId -match '^[a-z0-9][a-z0-9._-]{2,79}$') { $nodeId = [string]$current.nodeId }
+    } catch { }
+  }
+  $body = @{code=$pair;nodeId=$nodeId;name=$nodeId;providers=@('ollama-local')} | ConvertTo-Json -Depth 4 -Compress
+  $pair = $null
+  try {
+    $result = Invoke-RestMethod -Uri 'https://ekodi.kr/ai/api/node/enroll' -Method Post -ContentType 'application/json' -Body $body -TimeoutSec 20 -ErrorAction Stop
+  } catch { throw 'LOCALAI_NODE_ENROLLMENT_REJECTED' }
+  $body = $null
+  if ($result.ok -ne $true -or !$result.nodeToken -or [string]$result.nodeId -ne $nodeId) {
+    throw 'LOCALAI_NODE_ENROLLMENT_INVALID_RESPONSE'
+  }
+  New-Item -ItemType Directory -Force -Path $root | Out-Null
+  $secret = ConvertTo-SecureString -String ([string]$result.nodeToken) -AsPlainText -Force
+  $protected = ConvertFrom-SecureString -SecureString $secret
+  $temp = Join-Path $root ('node-token-'+[guid]::NewGuid().ToString('N')+'.tmp')
+  try {
+    Set-Content -LiteralPath $temp -Value $protected -Encoding UTF8 -ErrorAction Stop
+    Move-Item -LiteralPath $temp -Destination $secretPath -Force -ErrorAction Stop
+    @{nodeId=$nodeId;provider='ollama-local';endpoint='https://ekodi.kr/ai'} |
+      ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $configPath -Encoding UTF8 -ErrorAction Stop
+  } finally {
+    Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue
+    $secret=$null;$protected=$null;$result=$null
+  }
+  return @{
+    message = 'EKODI AI node officially enrolled with Windows DPAPI'
+    nodeId = $nodeId
+    pairingMode = 'admin_one_time_code'
+    secretStorage = 'windows_user_dpapi'
+    credentialCollection = $false
+    cloudAiNodePaired = $true
+  }
+}
+
 function Get-EkodiLocalAiVerification {
   # Bounded native diagnostic: no arbitrary command arguments, no credentials.
   # VM UI canaries do not establish local host AI readiness.
@@ -2761,6 +2811,7 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'agent.self_update' { return Update-AgentFromOfficialSource }
     'software.localai.install' { return Install-EkodiLocalAI }
     'software.localai.verify' { return Get-EkodiLocalAiVerification }
+    'software.localai.pair' { return Invoke-EkodiLocalAiPairing $payload }
     'computer.browser.canary' { return Invoke-BackgroundBrowserCanary }
     'computer.browser.execute' { return Invoke-BackgroundBrowserWorker $payload }
     'computer.workspace.slides.audio.insert' { return Invoke-WorkspaceSlidesAudioTask $payload }
@@ -2849,7 +2900,7 @@ function Send-Heartbeat($Config) {
     capabilities = @{
       powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
-      networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true
+      networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true; localAiPair = $true
       computerRead = $true; processRead = $true; agentStatus = $true
       isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified; isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified; isolatedDesktopSessionCanary = [bool](Get-IsolatedDesktopSessionCanaryState).verified; isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified
       workspaceSlidesAudio = [bool](Get-WorkspaceSlidesAudioState).verified
@@ -2953,7 +3004,7 @@ function Install-Agent {
       capabilities = @{
         powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
         diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
-        networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true
+        networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true; localAiPair = $true
         arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
       }
     } | ConvertTo-Json -Depth 8
