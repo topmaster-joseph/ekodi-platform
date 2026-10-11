@@ -22,6 +22,7 @@ test('admin root reuses one sidebar and loads Control only after auth navigation
   const sidebar=read('admin-sidebar.js');
   const css=read('admin-control-integration.css');
   const build=read('scripts/build.mjs');
+  const frameJs=read('admin-control-frame.js');
   assert.match(html,/<section class="admin-control-home" id="adminControlHome" data-panel="command-home"/);
   assert.match(html,/<iframe id="adminControlFrame"/);
   assert.match(html,/data-src="\/admin\/control\?embed=admin"/);
@@ -32,8 +33,16 @@ test('admin root reuses one sidebar and loads Control only after auth navigation
   assert.match(compact,/e\.hasAttribute\("src"\)/);
   assert.match(sidebar,/window\.EKODIAdminPanels\.activate\('command-home'\)/);
   assert.match(css,/#adminControlFrame/);
+  assert.match(html,/id="adminControlFrameNotice" role="status" hidden/);
+  assert.match(html,/src="\/admin\/admin-control-frame\.js" defer/);
+  assert.match(frameJs,/frame\.addEventListener\('error'/);
+  assert.match(frameJs,/frame\.addEventListener\('load'/);
+  assert.match(frameJs,/documentRoot\?\.getElementById\('commandForm'\)/);
+  assert.match(frameJs,/reportFailure\(\)/);
+  assert.match(css,/#adminControlFrameNotice\.admin-control-frame-notice/);
   assert.match(css,/body:has\(#adminControlHome:not\(\[hidden\]\)\) \.ekodi-assist-bootstrap/);
   assert.match(build,/'admin-control-integration\.css'/);
+  assert.match(build,/'admin-control-frame\.js'/);
   assert.equal((html.match(/<aside class="sidebar"/g)||[]).length,1);
 });
 
@@ -74,4 +83,14 @@ test('guarded deployment checks a frameable same-origin admin Control endpoint',
   assert.deepEqual(probe.statuses,[200]);
   assert.ok(probe.headerExpect.includes('x-frame-options: SAMEORIGIN'));
   assert.ok(probe.headerExpect.includes('x-ekodi-route: control-surface'));
+  const byUrl=url=>manifest.worker.requests.find(r=>r.url===url);
+  const home=byUrl('https://ekodi.kr/admin/');
+  assert.ok(home.expect.includes('id="adminControlFrame"'));
+  assert.ok(home.expect.includes('admin-control-frame.js'));
+  for(const url of [
+    'https://ekodi.kr/admin/admin-control-integration.css',
+    'https://ekodi.kr/admin/admin-control-frame.js',
+  ]){
+    assert.deepEqual(byUrl(url)?.statuses,[200]);
+  }
 });
