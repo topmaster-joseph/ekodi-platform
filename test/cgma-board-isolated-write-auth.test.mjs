@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { handleSiteBoardRequest } from '../site-board-control.js';
 
 const BOARD='site:cgma:main';
-const URL='https://board.internal.ekodi/cgma/board';
+const BOARD_URL='https://board.internal.ekodi/cgma/board';
 
 function fixture(){
   const instance={board_id:BOARD,site_id:'cgma',tenant_slug:'cheonggye',status:'active',
@@ -15,8 +15,6 @@ function fixture(){
     ['admin:other@local.invalid',{role:'member',status:'active'}],
   ]);
   const mutations=[];
-  let authCalls=0;
-  let lastAuthRequest=null;
   const db={
     async batch(){return [];},
     prepare(sql){
@@ -72,13 +70,10 @@ function fixture(){
     DB:db,
     CONTROL_API:{
       async fetch(request){
-        authCalls++;
         const path=new URL(request.url).pathname;
         if(path==='/api/reauth/verify')return Response.json({verified:false},{status:403});
         if(path!=='/api/session')return new Response('not found',{status:404});
         const token=request.headers.get('authorization')?.replace(/^Bearer /,'')||'';
-        // Test-only diagnostic: never print bearer values or real account details.
-        lastAuthRequest={sessionPath:path,bearerPresent:!!token,recognized:['owner','member','other','outsider'].includes(token),method:request.method};
         if(!['owner','member','other','outsider'].includes(token))return Response.json({authenticated:false},{status:401});
         return Response.json({authenticated:true,role:'admin',email:token+'@local.invalid'});
       },
@@ -87,11 +82,11 @@ function fixture(){
   async function call(method,path='',{token,body,headers={}}={}){
     const h={'content-type':'application/json',...headers};
     if(token)h.authorization='Bearer '+token;
-    const request=new Request(URL+path,{method,headers:h,
+    const request=new Request(BOARD_URL+path,{method,headers:h,
       ...(['GET','HEAD'].includes(method)?{}:{body:JSON.stringify(body??{})})});
     const response=await handleSiteBoardRequest(request,env);
     const data=await response.json();
-    return {status:response.status,body:data,headers:response.headers,debug:{bearerPresent:request.headers.has('authorization'),authCalls,lastAuthRequest}};
+    return {status:response.status,body:data,headers:response.headers};
   }
   return {call,posts,members,mutations,env};
 }
@@ -110,7 +105,7 @@ test('anonymous cannot create posts and cannot gain board manager role by forged
 test('member creates and edits own isolated post; non-owner cannot edit another user post',async()=>{
   const f=fixture();
   const create=await f.call('POST','/api/posts',{token:'member',body:{title:'fixture-only',body:'original'}});
-  assert.equal(create.status,201,JSON.stringify({response:create.body,debug:create.debug}));
+  assert.equal(create.status,201);
   assert.equal(create.body.id,1);
   assert.equal(create.headers.get('x-ekodi-board-id'),BOARD);
   const blocked=await f.call('PATCH','/api/posts/1',{token:'other',body:{title:'tamper'}});
