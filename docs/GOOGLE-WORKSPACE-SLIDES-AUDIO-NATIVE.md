@@ -61,3 +61,12 @@ to `POST https://ekodi.kr/api/control/hybrid-execution/jobs`, after reviewing an
 
 ## Release status
 This implementation is a **candidate** until CI, Orchestrator task provenance, protected merge, staged canary, authenticated Windows dedicated browser and the actual editable Google Slides UI all pass. The deployment must not lower EKODI's general external-URL or authentication boundaries. Playwright's accessible menu selectors may need localized UI calibration in isolated staging before live mutation.
+
+## 2026-10-11 formal Orchestrator release handoff
+
+- Source: PR #4106, owner-approved exact commit `6c1194005f117e37adefc2a72ae55b8f52e5fac9`.
+- EKODI-issued task: `orch_recovery_6c1194005f117e37adefc2a72ae55b8f`.
+- Orchestrator-owned branch: `ai/gworkspace/orch_recovery_6c1194005f117e37adefc2a72ae55b8f`.
+- Protected recovery PR: #4122; official server release receipt returned `authorized:true`, `authority:ekodi-orchestrator`.
+- All required CI and Control API staging checks passed on original recovered commit. The recovery lane must still run strict base sync and all checks on the new head before merging.
+- Do not mark native audio complete without a local authenticated Windows canary and 8/8 real embedded audio playback evidence. Desktop Commander remote quota is currently exhausted, and no authorized local browser session has been verified.
