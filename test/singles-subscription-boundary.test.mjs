@@ -8,7 +8,7 @@ const [social,schema,worker,ui]=await Promise.all([
  load('../supabase/migrations/20261009121000_singles_social_subscription_skeleton.sql'),
  load('../singles-surface.js'),load('../sites/ekodi-singles/public/app.js')
 ]);
-const env={ASSETS:{fetch:async()=>new Response('asset')}};
+const env={SINGLES_PUBLIC_PREVIEW_ENABLED:'true',ASSETS:{fetch:async()=>new Response('asset')}};
 const request=(p,method='GET')=>new Request('https://ekodi.kr'+p,{method});
 test('guest cannot list events or see profiles; only descriptions are public',async()=>{
  const x=await routeSinglesSurface(request('/singles/api/public'),env);
