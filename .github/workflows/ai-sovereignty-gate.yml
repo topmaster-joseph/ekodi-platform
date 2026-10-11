@@ -5,6 +5,8 @@ on:
       - 'ekodi-ai-sovereignty-gate.js'
       - 'ekodi-ai-orchestrator-admin-handoff.js'
       - 'ai-command-control.js'
+      - 'control.js'
+      - 'control.html'
       - 'scripts/validate-ai-sovereignty-gate.mjs'
       - '.github/workflows/ai-sovereignty-gate.yml'
   workflow_dispatch:
@@ -26,5 +28,6 @@ jobs:
           node --check ekodi-ai-sovereignty-gate.js
           node --check ekodi-ai-orchestrator-admin-handoff.js
           node --check ai-command-control.js
+          node --check control.js
       - name: Run fail-closed policy assertions
         run: node scripts/validate-ai-sovereignty-gate.mjs
