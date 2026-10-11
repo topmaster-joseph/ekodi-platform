@@ -12,3 +12,7 @@ This release integrates only first-party EKODI Chromium diagnostics.
 - EKODI official Orchestrator release receipt: `orch_recovery_185f1a7328233c9c41d0847a75e262ae`.
 
 Any future failure must be captured rather than bypassed, and no external browser provider is required to run this task.
+
+## Post-convergence protected checks
+
+After EKODI Convergent Merge synchronized this candidate with protected main, the resulting bot-authored commit required owner-triggered checks. The current owner-authored record requests full required CI and first-party browser worker verification on the synchronized source, without changing its runtime scope.
