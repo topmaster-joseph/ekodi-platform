@@ -29,8 +29,6 @@ test('only receiver consent can authorize a charged contact request',()=>{
  assert.match(sql,/charged_at is not null and accepted_at is not null/);
  assert.match(sql,/status not in \('declined','cancelled','expired'\) or charged_units=0/);
 });
-test('domestic and international license paperwork are admin-only and do not turn on brokerage',()=>{
- assert.match(sql,/singles_brokerage_application_checklist/);
- assert.match(sql,/regime in \('domestic','international'\)/);
- assert.match(sql,/revoke all on public.singles_brokerage_application_checklist/);
+test('current release has no marriage brokerage workflow or checklist',()=>{
+ assert.doesNotMatch(sql,/singles_brokerage_application_checklist|domestic_marriage_brokerage|international_marriage_brokerage/);
 });
