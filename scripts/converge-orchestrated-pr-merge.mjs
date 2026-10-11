@@ -164,12 +164,22 @@ const churchPagesTouched=changedFiles.some(file=>
 // One-time, receipt-bound native agent status canary is permitted only when its
 // audited command runner is introduced or updated in a merged source PR.
 const nativeAgentStatusTouched=changedFiles.some(file=>file==='scripts/verify-native-agent-status.mjs');
+// Single allowlisted local AI loopback diagnostic; independent from the status acceptance canary.
+const nativeLocalAiVerifyTouched=changedFiles.some(file=>file==='scripts/verify-native-localai.mjs');
 // Supabase Church API is an independent guarded release boundary, not a Site Core asset.
 const churchApiTouched=changedFiles.some(file=>
   file.startsWith('supabase/functions/church-pastor-api/')||
   file==='.github/workflows/deploy-church-pastor-api.yml'
 );
 async function dispatchPostMergeDeploys(){
+  if(nativeLocalAiVerifyTouched){
+    const dispatch=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{execution_mode:'localai',release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Native LocalAI loopback proof dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'native-localai-dispatched',workflow:'device-agent-production-verification.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
   if(nativeAgentStatusTouched){
     const dispatch=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{
       method:'POST',
