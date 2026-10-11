@@ -28,3 +28,19 @@ test('one-time auth fragment is removed before onboarding status fetch or disabl
  assert.ok(start>=0&&scrub>start&&status>scrub&&disabled>status,'scrub must happen before feature flag and network await');
  assert.match(app,/verifyOtp\(\{token_hash:tokenHash,type:tokenType\}\)/);
 });
+
+test('token fragment is synchronously scrubbed even before a disabled onboarding response',async()=>{
+ const start=app.indexOf('async function main(){')+'async function main(){'.length;
+ const end=app.indexOf('\n showGuest();',start);
+ assert.ok(end>start,'startup token-scrub code exists');
+ const setup=app.slice(start,end);
+ const observed=[];
+ const location={hash:'#ekodi_token=fixture-only&ekodi_type=email',pathname:'/singles/my',search:'?source=return'};
+ const history={replaceState:(_state,_title,url)=>observed.push(url)};
+ const execute=new Function('location','history','URLSearchParams',setup+'\nreturn {tokenHash,tokenType};');
+ const out=execute(location,history,URLSearchParams);
+ assert.deepEqual(observed,['/singles/my?source=return']);
+ assert.equal(out.tokenHash,'fixture-only');
+ assert.equal(out.tokenType,'email');
+ assert.doesNotMatch(observed[0],/ekodi_token|fixture-only/);
+});
