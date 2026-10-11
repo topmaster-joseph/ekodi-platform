@@ -1,0 +1,51 @@
+name: EKODI Native Church Role UI Canary
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/ekodi-church-native-role-ui-canary.mjs'
+      - 'test/ekodi-church-native-role-ui-canary.test.mjs'
+      - '.github/workflows/ekodi-native-church-role-ui-canary.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-native-church-role-ui-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  native-chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify zero-credential native browser contract
+        run: |
+          node --check scripts/ekodi-church-native-role-ui-canary.mjs
+          node --test test/ekodi-church-native-role-ui-canary.test.mjs
+      - name: Install EKODI isolated Chromium runtime
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Read actual production Church UI; synthesize only capability response locally
+        run: node scripts/ekodi-church-native-role-ui-canary.mjs
+      - name: Verify artifact truthfulness
+        run: |
+          set -euo pipefail
+          file='artifacts/ekodi-church-native-ui/result.json'
+          test -s "$file"
+          jq -e '.ok == true and .mode == "ekodi-owned-headless-chromium" and .realUserAuthenticated == false and .serverRoleResponsesSimulated == true and .origin == "https://ekodi.kr" and (.checks | length == 5)' "$file" >/dev/null
+          test -s artifacts/ekodi-church-native-ui/guest.png
+          test -s artifacts/ekodi-church-native-ui/synthetic-allowed.png
+          test -s artifacts/ekodi-church-native-ui/synthetic-revoked.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ekodi-church-native-role-ui-evidence
+          path: artifacts/ekodi-church-native-ui/
+          retention-days: 7
