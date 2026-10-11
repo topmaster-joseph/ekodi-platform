@@ -16,6 +16,7 @@ on:
           - user3-upgrade-localai
           - user2-localai
           - user2-virtual-probe
+          - user4-virtual-probe
           - user2-upgrade-localai
           - user4-acceptance
       release_branch_ref:
@@ -46,6 +47,7 @@ on:
       - 'scripts/recover-native-user3-localai.mjs'
       - 'test/native-user3-localai-recovery.test.mjs'
       - 'scripts/verify-native-user4-acceptance.mjs'
+      - 'scripts/verify-native-user4-virtual-probe.mjs'
       - 'test/native-user4-acceptance.test.mjs'
       - 'test/native-localai-proof.test.mjs'
       - 'test/native-device-readiness-observe.test.mjs'
@@ -149,7 +151,7 @@ jobs:
           node-version: '24'
 
       - name: EKODI AI Orchestration Gate for mutating verification
-        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user3-upgrade-localai' || inputs.execution_mode == 'user2-localai' || inputs.execution_mode == 'user2-virtual-probe' || inputs.execution_mode == 'user2-upgrade-localai' || inputs.execution_mode == 'user4-acceptance')
+        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user3-upgrade-localai' || inputs.execution_mode == 'user2-localai' || inputs.execution_mode == 'user2-virtual-probe' || inputs.execution_mode == 'user4-virtual-probe' || inputs.execution_mode == 'user2-upgrade-localai' || inputs.execution_mode == 'user4-acceptance')
         env:
           EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
           EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
@@ -249,6 +251,12 @@ jobs:
         env:
           DEVICE_TARGET_HOSTNAME: 'user2'
         run: node scripts/recover-native-user2-localai.mjs
+
+      - name: Verify USER4 native isolated Hyper-V backend readiness
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user4-virtual-probe'
+        env:
+          DEVICE_TARGET_HOSTNAME: 'user4'
+        run: node scripts/verify-native-user4-virtual-probe.mjs
 
       - name: Verify USER2 native isolated Hyper-V backend readiness
         if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-virtual-probe'
