@@ -453,10 +453,33 @@ for (const [id, group] of menus) {
     continue;
   }
 
-  await page.waitForFunction(section => {
-    const panels = [...document.querySelectorAll('.content [data-panel]')].filter(panel => String(panel.dataset.panel || '').split(/\s+/).includes(section));
-    return panels.some(panel => !panel.hidden && !panel.classList.contains('hidden-panel'));
-  }, id, { timeout: 12000 });
+  try {
+    await page.waitForFunction(section => {
+      const panels = [...document.querySelectorAll('.content [data-panel]')].filter(panel => String(panel.dataset.panel || '').split(/\s+/).includes(section));
+      return panels.some(panel => !panel.hidden && !panel.classList.contains('hidden-panel'));
+    }, id, { timeout: 12000 });
+  } catch (error) {
+    // Preserve the hard UI assertion: report evidence, never skip the menu.
+    const state = await page.evaluate(section => ({
+      section,
+      current: window.EKODIAdminPanels?.current?.() || '',
+      route: location.pathname + location.hash,
+      panels: [...document.querySelectorAll('.content [data-panel]')]
+        .filter(node => String(node.dataset.panel || '').split(/\s+/).includes(section))
+        .map(node => ({
+          id: node.id || '',
+          hidden: node.hidden,
+          hiddenClass: node.classList.contains('hidden-panel'),
+          display: getComputedStyle(node).display,
+          visibility: getComputedStyle(node).visibility,
+          textLength: String(node.textContent || '').trim().length,
+          width: node.getBoundingClientRect().width,
+          height: node.getBoundingClientRect().height,
+        })),
+    }), id);
+    console.error(`[PROD-E2E] ${id}: panel visibility timeout ${JSON.stringify(state)}`);
+    throw new Error(`${id}: panel visibility did not stabilize: ${JSON.stringify(state)}`, { cause: error });
+  }
 
   await page.waitForFunction(section => {
     const panel = [...document.querySelectorAll('.content [data-panel]')].find(node => String(node.dataset.panel || '').split(/\s+/).includes(section) && !node.hidden && !node.classList.contains('hidden-panel'));
