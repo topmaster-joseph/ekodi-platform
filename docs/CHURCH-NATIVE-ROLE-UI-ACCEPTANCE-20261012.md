@@ -26,3 +26,7 @@ Captured artifacts describe `realUserAuthenticated=false` and `serverRoleRespons
 ## Owner revalidation after official branch synchronization
 
 The official EKODI Convergent Merge rebased this candidate onto protected current main. GitHub classified the bot-authored synchronization SHA as `action_required`, requiring new owner-authored checks on the current head. This documentation-only follow-up does not change executable logic, authentication, permission grants, or release gates. The first-party Chromium result #38184758537 was a passing *synthetic* server-permission UI proof and is not evidence of real Google sign-in.
+
+## Second protected-main refresh
+
+With other EKODI releases landing concurrently, the official Orchestrator synchronized the branch again. The owner-triggered CI completed successfully on the preceding revision, but GitHub marked the latest bot-authored head as `action_required`. This revision requests new required checks on the exact synchronized head without changing browser or service runtime code. No status checks are bypassed.
