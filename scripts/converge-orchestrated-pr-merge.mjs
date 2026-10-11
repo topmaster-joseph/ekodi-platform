@@ -175,12 +175,26 @@ const nativeUser2LocalAiTouched=changedFiles.some(file=>file==='scripts/verify-n
 // USER3 only: one-time transactional official Agent update, then fixed loopback Ollama proof.
 const nativeUser3RecoveryTouched=changedFiles.some(file=>file==='scripts/recover-native-user3-localai.mjs');
 const nativeUser4AcceptanceTouched=changedFiles.some(file=>file==='scripts/verify-native-user4-acceptance.mjs');
+const nativeUser4BrowserRecoveryTouched=changedFiles.some(file=>file==='scripts/recover-native-user4-browser.mjs');
 // Supabase Church API is an independent guarded release boundary, not a Site Core asset.
 const churchApiTouched=changedFiles.some(file=>
   file.startsWith('supabase/functions/church-pastor-api/')||
   file==='.github/workflows/deploy-church-pastor-api.yml'
 );
 async function dispatchPostMergeDeploys(){
+  if(nativeUser4BrowserRecoveryTouched){
+    const dispatch=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{
+        execution_mode:'user4-browser-recovery',
+        release_branch_ref:branch,release_task_id:taskId
+      }})
+    });
+    if(!dispatch.r.ok)fail('Native USER4 Agent refresh dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,300));
+    console.log(JSON.stringify({ok:true,action:'native-user4-browser-recovery-dispatched',
+      workflow:'device-agent-production-verification.yml',pr:pr.number,
+      taskId,branch,authority:'ekodi-orchestrator'}));
+  }
   if(nativeUser4AcceptanceTouched){
     const dispatch=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{
       method:'POST',
