@@ -208,6 +208,9 @@ begin
        where a.tenant_id=v_tenant and a.session_id=v_session),'[]'::jsonb),
     'pending',coalesce((select jsonb_agg(jsonb_build_object('id',o.id,'label',o.provisional_label,'observed_at',o.observed_at) order by o.observed_at desc)
        from presence_private.observations o where o.tenant_id=v_tenant and o.session_id=v_session and o.state='pending'),'[]'::jsonb),
+    'linked',coalesce((select jsonb_agg(jsonb_build_object('id',o.id,'label',o.provisional_label,'name',p.display_name,'observed_at',o.observed_at) order by o.observed_at desc)
+       from presence_private.observations o join presence_private.people p on p.id=o.person_id and p.tenant_id=o.tenant_id
+       where o.tenant_id=v_tenant and o.session_id=v_session and o.state='linked'),'[]'::jsonb),
     'headcount', (select jsonb_build_object('estimate',h.count_estimate,'method',h.method,'observed_at',h.observed_at)
        from presence_private.headcounts h where h.tenant_id=v_tenant and h.session_id=v_session order by observed_at desc limit 1)
   );
