@@ -101,9 +101,9 @@ function page(active='처음'){
 }
 export async function routeSinglesSurface(request,env){
  const url=new URL(request.url),sub=pathAfterSingles(url.pathname);if(sub===null)return null;
- // Before formal launch, the whole member-facing site is private by default.
- // A deliberate preview opt-in can expose only informational HTML/assets, never APIs or paid actions.
- if(!enabled(env)&&env?.SINGLES_PUBLIC_PREVIEW_ENABLED!=='true'&&
+ // Public launch: informational introduction is visible by default.
+ // Explicit preview=false is an emergency unpublished lock, and personal/paid API gates remain separate.
+ if(!enabled(env)&&env?.SINGLES_PUBLIC_PREVIEW_ENABLED==='false'&&
     (sub==='/api/public'||!sub.startsWith('/api/'))){
   return json({error:'singles_unpublished'},404);
  }
