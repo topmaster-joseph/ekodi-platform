@@ -431,3 +431,19 @@ jobs:
           if ($bootstrap -match "'-Install','-RunNow'") { throw 'Bootstrap still auto-installs the Boot/WOL task.' }
           if ($bootstrap -notmatch 'EKB-130') { throw 'Bootstrap does not expose structured install error codes.' }
           Write-Host 'Bootstrap elevation and Agent/Boot separation OK.'
+
+  native-cdp-smoke:
+    name: Native CDP Windows Browser Smoke
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate EKODI-native CDP worker with actual installed Windows browser
+        shell: pwsh
+        run: |
+          node --check tools/ekodi-device-agent/windows/ekodi-native-browser-cdp.mjs
+          node --test test/native-cdp-browser-worker.test.mjs test/native-cdp-agent-integration.test.mjs
+          node tools/ekodi-device-agent/windows/ekodi-native-browser-cdp.mjs
