@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {isSinglesRoute,routeSinglesSurface} from '../singles-surface.js';
 
-const env={ASSETS:{fetch:async()=>new Response('asset',{headers:{'content-type':'text/plain'}})}};
+const env={SINGLES_PUBLIC_PREVIEW_ENABLED:'true',ASSETS:{fetch:async()=>new Response('asset',{headers:{'content-type':'text/plain'}})}};
 const req=(path,method='GET',headers={})=>new Request('https://ekodi.kr'+path,{method,headers});
 test('singles route is isolated from legacy Connect and workspaces',()=>{
   assert.equal(isSinglesRoute('/singles'),true);
@@ -54,4 +54,16 @@ test('M1 public assets keep static serving path and reject non-safe methods',asy
   assert.equal(await css.text(),'asset');
   const denied=await routeSinglesSurface(req('/singles/groups','POST'),env);
   assert.equal(denied.status,405);
+});
+
+test('unpublished site fails closed across HTML, assets and public listings',async()=>{
+ const locked={ASSETS:env.ASSETS};
+ for(const path of ['/singles','/singles/','/singles/my','/singles/events','/singles/admin','/singles/app.js','/singles/styles.css','/singles/api/public']){
+  const response=await routeSinglesSurface(req(path),locked);
+  assert.equal(response.status,404,path);
+  assert.match(response.headers.get('cache-control'),/no-store/);
+ }
+ const status=await (await routeSinglesSurface(req('/singles/api/status'),locked)).json();
+ assert.equal(status.onboarding_enabled,false);
+ assert.equal((await routeSinglesSurface(req('/singles/api/me','PUT'),locked)).status,503);
 });
