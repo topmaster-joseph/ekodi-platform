@@ -38,3 +38,22 @@ test('reviewed public privileged RPC grants are explicit',()=>{
     assert.ok(finalize.includes('comment on function public.'+name+'('));
   }
 });
+
+test('moderation deployment is orchestrator-authorized and never replays vulnerable RPC definitions',()=>{
+  const workflow=readFileSync(new URL('../.github/workflows/deploy-activity-public-share-schema.yml',import.meta.url),'utf8');
+  const paths=[
+    '20261012060200_activity_media_moderation_guard.sql',
+    '20261012060300_activity_photo_reservation_moderation_guard.sql',
+    '20261012060400_activity_photo_finalize_moderation_guard.sql'
+  ];
+  for(const path of paths)assert.ok(workflow.includes(path),'Deployment must register '+path);
+  assert.match(workflow,/github.event_name == 'workflow_dispatch'/);
+  assert.match(workflow,/release_task_id:/);
+  assert.match(workflow,/release_branch_ref:/);
+  assert.match(workflow,/release-receipt/);
+  assert.match(workflow,/\.authorized == true/);
+  assert.match(workflow,/for migration in "\$LINK_GUARD_MIGRATION" "\$RESERVE_GUARD_MIGRATION" "\$FINALIZE_GUARD_MIGRATION"/);
+  assert.doesNotMatch(workflow,/for migration in "\$BASE_MIGRATION" "\$PRIVACY_GUARD_MIGRATION"/);
+  assert.match(workflow,/credential unavailable: failing closed/);
+  assert.match(workflow,/Verify that security guards are installed in production/);
+});
