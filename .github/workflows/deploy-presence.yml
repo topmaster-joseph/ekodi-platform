@@ -28,8 +28,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
-  actions: write
 
 concurrency:
   group: ekodi-presence-guarded-production
@@ -38,10 +36,6 @@ concurrency:
 env:
   PRODUCTION_PROJECT_REF: renzehysxirjilvdxacv
   STAGING_PROJECT_REF: lxcxwbdwwojjkgybbqii
-  TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-  TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
-  TOKEN_C: ${{ secrets.SUPABASE_PAT }}
-  TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
 
 jobs:
   validate:
@@ -65,12 +59,20 @@ jobs:
 
   release:
     if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: write
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 25
     environment: production
     env:
       GH_TOKEN: ${{ github.token }}
+    TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+    TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+    TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
     steps:
       - uses: actions/checkout@v7
         with:
