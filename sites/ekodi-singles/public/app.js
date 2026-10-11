@@ -58,16 +58,38 @@ function profileForm(h){
   if(!multi)el.type='text';el.name=key;el.maxLength=max;el.autocomplete='off';el.placeholder=caption;label.append(el);form.append(label);return el;
  };
  const nickname=input('표시 이름','display_name',32),region=input('지역(광역 단위)','broad_region',40),intro=input('나를 소개하는 한마디','intro',400,true);
+ const profileLink=input('공개할 명함·프로필 HTTPS 링크 (선택)','public_link',300);
+ const importLabel=text('label','디지털 명함(.vcf)에서 초안 가져오기 · 브라우저 내 처리','field');
+ const importFile=document.createElement('input');importFile.type='file';importFile.accept='.vcf,text/vcard,text/x-vcard';
+ const imported=text('p','가져온 항목을 직접 확인한 후 저장할 수 있습니다. 연락처와 이메일은 가져오거나 공개하지 않습니다.','muted');
+ importFile.addEventListener('change',async()=>{
+  const file=importFile.files?.[0];if(!file)return;
+  if(file.size>65536){imported.textContent='64KB 이하의 명함 파일만 허용합니다.';return}
+  try{
+   const card=(await file.text()).replace(/\\r?\\n[ \\t]/g,'').split(/\\r?\\n/);
+   if(!card.some(line=>/^BEGIN:VCARD$/i.test(line.trim()))){imported.textContent='올바른 vCard 명함 파일이 아닙니다.';return}
+   const field=key=>card.find(line=>line.split(':',1)[0].split(';',1)[0].toUpperCase()===key)?.slice(card.find(line=>line.split(':',1)[0].split(';',1)[0].toUpperCase()===key).indexOf(':')+1).replace(/\\\\n/gi,' ').trim()||'';
+   const name=field('FN'),organization=field('ORG'),title=field('TITLE'),link=field('URL');
+   if(name)nickname.value=name.slice(0,32);
+   if(organization||title)intro.value=[organization,title].filter(Boolean).join(' · ').slice(0,400);
+   if(link&&/^https:\\/\\//i.test(link))profileLink.value=link.slice(0,300);
+   discover.checked=false;
+   imported.textContent='표시 이름·소속·직함·링크만 초안으로 입력했습니다. 공개 여부는 직접 선택하세요.';
+  }catch{imported.textContent='명함 파일을 읽을 수 없습니다.'}
+ });
+ importLabel.append(importFile);form.append(importLabel,imported);
+ const verifiedInfo=text('p','Google 로그인은 계정 확인 수단입니다. 만 19세 이상 본인확인은 승인된 본인확인기관 연동이 완료된 뒤 별도로 진행하며, 정부 공공 마이데이터 조회에는 명시적 동의와 기관 연동이 필요합니다.','muted');
+ form.append(verifiedInfo);
  const discoverLabel=text('label','성인 본인확인 및 민감정보 동의 후 공개하고 싶습니다.','field'),discover=document.createElement('input');
  discover.type='checkbox';discover.name='discoverable';discoverLabel.prepend(discover);form.append(discoverLabel);
  form.append(text('p','공개를 체크하더라도 본인확인과 운영 검증 전에는 검색에 표시되지 않습니다.','muted'));
  const message=text('p','','status-text');form.append(button('프로필 저장',async()=>{
-  try{const result=await api('/profile',{method:'PUT',body:{display_name:nickname.value.trim(),broad_region:region.value.trim(),intro:intro.value.trim(),discoverable:discover.checked}});
+  try{const result=await api('/profile',{method:'PUT',body:{display_name:nickname.value.trim(),broad_region:region.value.trim(),intro:intro.value.trim(),public_link:profileLink.value.trim(),discoverable:discover.checked}});
    message.textContent=result.discoverable?'프로필이 저장되고 공개 설정이 적용됐습니다.':'프로필 초안을 저장했습니다. 공개는 본인확인 후 가능합니다.';
   }catch(e){message.textContent=errorText(e)}
  },'primary'));
  form.append(message);box.append(form);h.append(box);
- api('/profile').then(d=>{if(d.profile){nickname.value=d.profile.display_name||'';region.value=d.profile.broad_region||'';intro.value=d.profile.intro||'';discover.checked=d.profile.discoverable===true}}).catch(()=>{});
+ api('/profile').then(d=>{if(d.profile){nickname.value=d.profile.display_name||'';region.value=d.profile.broad_region||'';intro.value=d.profile.intro||'';profileLink.value=d.profile.public_link||'';discover.checked=d.profile.discoverable===true}}).catch(()=>{});
 }
 function startConsent(h){
  const p=$('enrollmentPanel');p.hidden=false;p.querySelector('#loginButton').hidden=true;
@@ -356,6 +378,7 @@ async function showBankAdmin(h){
  }catch(e){notice(p,e?.status===403?'운영 권한이 없습니다.':errorText(e))}
 }
 async function signedIn(status){
+ document.querySelectorAll('[data-member-nav]').forEach(link=>{link.hidden=false});
  $('serviceStage').textContent='로그인 완료';
  await readSubscription();
  const h=holder();
