@@ -219,5 +219,6 @@ test('Cloudflare GraphQL can use a dedicated zone-scoped read token without broa
   assert.match(collector,/const payload = await cloudflare\('\/graphql'/);
   assert.match(workflow,/CLOUDFLARE_TRAFFIC_ANALYTICS_TOKEN: \$\{\{ secrets\.CLOUDFLARE_TRAFFIC_ANALYTICS_TOKEN \}\}/);
   assert.match(workflow,/CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
+  assert.match(workflow,/unset CLOUDFLARE_TRAFFIC_ANALYTICS_TOKEN/);
   assert.match(workflow,/wrangler@4\.[\d.]+ d1 execute ekodi-auth/);
 });
