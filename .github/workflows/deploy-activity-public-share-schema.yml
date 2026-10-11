@@ -128,18 +128,6 @@ jobs:
           encoded_task="$(printf '%s' "$RELEASE_TASK" | jq -sRr @uri)"
           curl --fail-with-body -fsS --retry 3 --max-time 15             "https://ekodi.kr/api/orchestrator/release-receipt?taskId=${encoded_task}&branchRef=${encoded_branch}"             | jq -e --arg task "$RELEASE_TASK" --arg branch "$RELEASE_BRANCH"                 '.ok == true and .authorized == true and .taskId == $task and .branchRef == $branch and .authority == "ekodi-orchestrator"' >/dev/null
 
-      - name: Verify production baseline exists before security-only migration
-        shell: bash
-        env:
-          SUPABASE_URL: https://${{ env.PROJECT_REF }}.supabase.co
-        run: |
-          set -euo pipefail
-          [ -n "${PUBLISHABLE_KEY:-}" ] || exit 1
-          for fn in activity_public_submit_media_link activity_public_reserve_media_upload activity_public_finalize_media_upload; do
-            code="$(curl -sS -o /tmp/ekodi-mission-schema-preflight.json -w '%{http_code}'               -X POST "$SUPABASE_URL/rest/v1/rpc/$fn"               -H "apikey: $PUBLISHABLE_KEY" -H 'Content-Type: application/json' --data '{}')"
-            [ "$code" != "404" ] || { echo "Required production baseline RPC absent: $fn"; exit 1; }
-          done
-
       - name: Select Supabase deployment credential
         id: credential
         shell: bash
@@ -157,7 +145,28 @@ jobs:
           echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
           echo 'available=true' >> "$GITHUB_OUTPUT"
 
-      - name: Apply schema and privacy guard before UI promotion
+      - name: Verify installed production baseline without modifying data
+        if: steps.credential.outputs.available == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/ekodi-mission-baseline-proof.sql <<'SQL'
+          select
+            to_regclass('public.activities') is not null as activities,
+            to_regclass('public.activity_media_links') is not null as media,
+            to_regprocedure('public.activity_public_submit_media_link(text,text,text,text,text,text,text,text)') is not null as link_submit,
+            to_regprocedure('public.activity_public_reserve_media_upload(text,text,text,text,text,text,bigint,text,text)') is not null as reserve_photo,
+            to_regprocedure('public.activity_public_finalize_media_upload(text,text,uuid,text,text)') is not null as finalize_photo;
+          SQL
+          jq -Rs '{query:.,read_only:true}' /tmp/ekodi-mission-baseline-proof.sql > /tmp/ekodi-mission-baseline-proof.json
+          code="$(curl -sS -o /tmp/ekodi-mission-baseline-proof-result.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' --data-binary @/tmp/ekodi-mission-baseline-proof.json)"
+          [ "$code" = 201 ]
+          jq -e '.[0] | .activities and .media and .link_submit and .reserve_photo and .finalize_photo' /tmp/ekodi-mission-baseline-proof-result.json >/dev/null
+
+      - name: Apply ordered moderation guards only (never replay vulnerable legacy definitions)
         if: steps.credential.outputs.available == 'true'
         shell: bash
         run: |
