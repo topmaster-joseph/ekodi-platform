@@ -52,3 +52,25 @@ test('compact Admin entrypoint applies the same newest-selection and native-hand
   assert.match(compact, /v=i,!\(t\.matches\("a\.nav\[href\]"\)&&!L\(i\)\)&&window\.setTimeout\(\(\)=>\{v===i&&\(q\(i\)\|\|x\(i\)\)\},0\)/);
   assert.doesNotMatch(compact, /v=i,window\.setTimeout\(\(\)=>\{q\(i\)\|\|x\(i\)\},0\)/);
 });
+
+
+test('shared sidebar invalidates stale asynchronous demand activations', () => {
+  const sidebar = readFileSync(new URL('../admin-sidebar.js', import.meta.url), 'utf8');
+  assert.match(sidebar, /const activationEpoch = new WeakMap\(\)/);
+  assert.match(sidebar, /function beginActivation\(nav\)/);
+  assert.match(sidebar, /const epoch = beginActivation\(nav\)/);
+  assert.match(sidebar, /if \(!isLatestActivation\(nav, epoch\)\) return/);
+
+  // Model the production race: selecting the security-audit group starts a
+  // lazy default Security load; Audit Records is selected before Security
+  // finishes. The stale Security completion must not become visible later.
+  let epoch = 0;
+  let current = '';
+  const begin = () => ++epoch;
+  const finish = (token, section) => { if (token === epoch) current = section; };
+  const security = begin();
+  const auditRecords = begin();
+  finish(auditRecords, 'audit-records');
+  finish(security, 'security');
+  assert.equal(current, 'audit-records');
+});

@@ -131,9 +131,10 @@ Deno.serve(async req=>{
   if(url.searchParams.get('scope')==='worship-access'){
     if(req.method!=='GET')return json({error:'METHOD_NOT_ALLOWED'},405,origin);
     let permitted=Boolean(staff&&WORSHIP_ACCESS_ROLES.has(staff.role));
-    // Dedicated worship administrators are assigned to the church tenant registry,
-    // not necessarily church_staff. Reuse the existing user-scoped RLS projection.
-    if(!permitted&&!staff){
+    // Tenant administration is a distinct role source from church_staff. Users
+    // may have both a read-only staff role and an active church tenant-admin
+    // grant. Check the user-scoped registry only if staff did not permit access.
+    if(!permitted){
       const lookup=new URL(CENTRAL_SUPABASE_URL+'/rest/v1/site_access_registry');
       lookup.search=new URLSearchParams({site_key:'eq.church',role:'eq.tenant_admin',status:'eq.active',select:'site_key,role',limit:'1'}).toString();
       const proof=await fetch(lookup,{headers:{apikey:CENTRAL_PUBLISHABLE_KEY,authorization:'Bearer '+bearer(req),accept:'application/json'},cache:'no-store'}).catch(()=>null);
