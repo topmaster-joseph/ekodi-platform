@@ -246,10 +246,8 @@ test('stale lazy demand completion cannot override a newer sidebar choice', () =
   const source = sidebar.slice(activateStart, activateEnd);
   assert.match(source, /const epoch = beginActivation\(nav\)/);
   assert.match(source, /Promise\.resolve\(window\.EKODIAdminDemand\.activate\(section\)\)/);
-  assert.match(source, /if \(!isLatestActivation\(nav, epoch\)\) return/);
-  assert.ok(
-    source.indexOf('if (!isLatestActivation(nav, epoch)) return') <
-    source.indexOf('window.EKODIAdminPanels.activate(section)'),
-    'stale demand activation must be rejected before panel activation',
+  assert.match(
+    source,
+    /if \(demandTarget && window\.EKODIAdminDemand\?\.activate\) \{[\s\S]*?Promise\.resolve\(window\.EKODIAdminDemand\.activate\(section\)\)\.then\(\(\) => \{[\s\S]*?if \(!isLatestActivation\(nav, epoch\)\) return;[\s\S]*?window\.EKODIAdminPanels\.activate\(section\)/,
   );
 });
