@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {classifyUser4BrowserFailure,eligibleUser4Agent,verifyUser4Browser,verifyUser4Acceptance}
+import {classifyUser4BrowserFailure,eligibleUser4Agent,verifyUser4Browser,verifyUser4Acceptance,ensureUser4AgentUpdated,USER4_CDP_FIX_FLOOR}
   from '../scripts/verify-native-user4-acceptance.mjs';
 const now=Date.parse('2026-10-11T06:30:00.000Z');
 const good={id:'device-4',hostname:'USER4',status:'online',revokedAt:null,
