@@ -4,6 +4,7 @@
   const API = 'https://ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const PANEL_ID = 'adminDeviceWakeControl';
+  // Build compatibility marker for the existing power-recovery module: 원격 전원 · 작업 자동복귀
 
   function token() { try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } }
   function esc(value) {
