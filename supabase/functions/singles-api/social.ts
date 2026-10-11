@@ -23,6 +23,29 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
  const m=await membership(admin,userId);
  const method=req.method;
  if(p==='/subscription'&&method==='GET')return reply(req,await bankPlanSnapshot(admin,userId));
+ if(p==='/admin/events'&&method==='GET'){
+  const role=await one(admin.from('singles_event_pricing_operators').select('enabled,can_price').eq('user_id',userId));
+  if(!role?.enabled||!role?.can_price)return reply(req,{error:'event_pricing_capability_required'},403);
+  const events=await many(admin.from('singles_events').select('id,title,state,starts_at,fee_krw').order('starts_at',{ascending:false}).limit(50));
+  return reply(req,{events});
+ }
+ const priceEventId=match(p,/^\\/admin\\/events\\/([0-9a-f-]{36})\\/fee$/i);
+ if(priceEventId&&method==='PUT'){
+  const role=await one(admin.from('singles_event_pricing_operators').select('enabled,can_price').eq('user_id',userId));
+  if(!role?.enabled||!role?.can_price)return reply(req,{error:'event_pricing_capability_required'},403);
+  const v=await body(req);
+  if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>k!=='fee_krw')||!Number.isInteger(v.fee_krw)||v.fee_krw<0||v.fee_krw>1000000)
+   return reply(req,{error:'invalid_event_fee'},400);
+  const event=await one(admin.from('singles_events').select('id,state,fee_krw').eq('id',priceEventId));
+  if(!event||event.state==='cancelled')return reply(req,{error:'event_not_available'},404);
+  if(event.state==='published'&&event.fee_krw!==v.fee_krw){
+   const existing=await many(admin.from('singles_event_rsvps').select('user_id').eq('event_id',priceEventId).limit(1));
+   if(existing.length)return reply(req,{error:'fee_locked_after_registration'},409);
+  }
+  const {error:saveError}=await admin.from('singles_events').update({fee_krw:v.fee_krw}).eq('id',priceEventId);
+  if(saveError)throw saveError;
+  return reply(req,{saved:true,fee_krw:v.fee_krw,paid_registration_ready:v.fee_krw===0});
+ }
  if(p==='/profile'&&method==='GET'){
   const record=await one(admin.from('singles_profiles').select('display_name,broad_region,intro,public_link').eq('user_id',userId));
   return reply(req,{profile:record?{...record,discoverable:m?.discoverable===true}:null});
