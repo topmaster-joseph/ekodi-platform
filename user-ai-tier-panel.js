@@ -169,7 +169,12 @@
   function showSection() {
     document.querySelectorAll('[data-panel]').forEach(node => {
       const targets = String(node.dataset.panel || '').split(' ');
-      node.classList.toggle('hidden-panel', !targets.includes(SECTION));
+      const visible = targets.includes(SECTION);
+      node.classList.toggle('hidden-panel', !visible);
+      // Keep native hidden and CSS visibility aligned with Shared Admin
+      // navigation; a lazy mount must not leave a real panel invisible.
+      node.hidden = !visible;
+      if (visible) node.dataset.adminListLayout = 'single';
     });
     document.querySelectorAll('.sidebar .nav[data-section]').forEach(item => item.classList.toggle('active', item.dataset.section === SECTION));
     const title = document.querySelector('#pageTitle');
@@ -211,6 +216,7 @@
     section.id = PANEL_ID;
     section.className = 'section hidden-panel';
     section.dataset.panel = SECTION;
+    section.hidden = true;
     section.innerHTML = `
       <div class="uam-head">
         <div><div class="uam-kicker">AI MEMBERSHIP OPERATIONS</div><h2>AI 회원운영</h2><p>Core를 기본 실행층으로 두고, AI가 필요한 경우에만 회원단계와 연결상태에 따라 적절한 AI 경로를 선택합니다.</p></div>
