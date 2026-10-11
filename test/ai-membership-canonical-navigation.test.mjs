@@ -31,8 +31,8 @@ test('membership nav still offers a direct visible click and an actual panel',()
 });
 
 test('AI membership lazy loader waits for the actual panel before signaling readiness',()=>{
-  assert.match(loader,/aimembers:\\s*\\{/);
+  assert.match(loader,/aimembers:\s*\{/);
   assert.match(loader,/ready: '#userAiMembershipPanel'/);
-  assert.match(loader,/real: '\\[data-section="ai-membership"\\]'/);
-  assert.match(panel,/section\\.id = PANEL_ID/);
+  assert.match(loader,/real: '\[data-section="ai-membership"\]'/);
+  assert.match(panel,/section\.id = PANEL_ID/);
 });
