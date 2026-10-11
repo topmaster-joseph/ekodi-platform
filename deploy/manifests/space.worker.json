@@ -150,9 +150,7 @@
       },
       {
         "url": "https://ekodi.kr/yogurtpurple",
-        "statuses": [
-          410
-        ],
+        "statuses": [410],
         "redirect": "manual",
         "expect": [
           "삭제된 주소입니다."
