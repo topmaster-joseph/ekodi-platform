@@ -36,7 +36,7 @@ jobs:
         with:
           node-version: '24'
 
-      - name: EKODI Operational Orchestration Policy Gate
+      - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs"
 
       - name: Inspect canonical Worker attachment without user traffic
