@@ -34,7 +34,7 @@ const PUBLIC_ASSETS = new Set([
   '/pizzamaru-mokpodae.js',
 ]);
 const PUBLIC_ADMIN_ALIASES = new Set(['/admin', '/admin/']);
-const CONTROL_ASSETS = new Set(['/control.css','/control.js']);
+const CONTROL_ASSETS = new Set(['/control.css','/control.js','/control-admin-nav.js']);
 const WORKSPACE_ADMIN_ASSET_ALIASES = new Map([
   ['/cgma/admin/assets/cgma-member-admin.js','/cgma-member-admin.js'],
   ['/cgma/admin/assets/cgma-member-admin.css','/cgma-member-admin.css'],
@@ -672,8 +672,24 @@ export default {
         return response;
       }
       if (url.pathname === '/control' || url.pathname === '/control/') {
+        const target = new URL(request.url);
+        target.pathname = '/admin/control';
+        const response = new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store'}});
+        applyBaseSecurityHeaders(response.headers);
+        response.headers.set('X-EKODI-Route','control-canonical-redirect');
+        response.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+        return response;
+      }
+      if (url.pathname === '/admin/control' || url.pathname === '/admin/control/') {
+        if (!['GET','HEAD'].includes(request.method)) return new Response(null,{status:405,headers:{allow:'GET, HEAD','cache-control':'no-store'}});
         const response = await env.ASSETS.fetch(assetRequest(request, '/control'));
         const secured = withHostSecurity(response, ADMIN_CSP, 'no-store', 'control-surface');
+        // Only the explicit admin embed URL is allowed within the same-origin
+        // administrator shell. All other Control views remain non-frameable.
+        if (url.searchParams.get('embed') === 'admin') {
+          secured.headers.set('Content-Security-Policy',ADMIN_CSP.replace("frame-ancestors 'none'","frame-ancestors 'self'"));
+          secured.headers.set('X-Frame-Options','SAMEORIGIN');
+        }
         secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
         return secured;
       }
