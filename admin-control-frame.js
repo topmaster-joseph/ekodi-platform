@@ -17,6 +17,25 @@
     frame.removeAttribute('aria-hidden');
     document.documentElement.dataset.ekodiControlEmbedded='ready';
   }
+  // Keep the compact administrator menu under its performance budget:
+  // the existing navigation emits section events, and this small module
+  // owns only the integrated Control panel's visibility and iframe lifecycle.
+  const panel=document.getElementById('adminControlHome');
+  const activateSection=section=>{
+    if(!panel)return;
+    const home=section==='command-home';
+    panel.classList.toggle('hidden-panel',!home);
+    panel.hidden=!home;
+    if(home&&frame.dataset.src&&!frame.hasAttribute('src')){
+      frame.setAttribute('src',frame.dataset.src);
+    }
+  };
+  window.addEventListener('ekodi-admin-section-changed',event=>{
+    activateSection(event?.detail?.section);
+  });
+  window.addEventListener('ekodi-admin-ready',()=>{
+    activateSection(window.EKODIAdminPanels?.current?.()||'command-home');
+  });
   frame.addEventListener('error',()=>{
     if(frame.getAttribute('src'))reportFailure();
   });
