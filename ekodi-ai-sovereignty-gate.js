@@ -2,8 +2,6 @@
 const COST = Object.freeze({ local: 0, free: 1, paid: 2 });
 const safeText = (value, max = 160) => String(value ?? '').trim().slice(0, max);
 const freeze = value => Object.freeze(value);
-const SECRET_FIELD = /(secret|token|api[_-]?key|authorization|cookie|password|credential|refresh)/i;
-const VALID_STATES = new Set(['active', 'verified', 'staged']);
 
 export function sanitizeAiConnectionStatus(connection = {}) {
   // Never echo arbitrary provider metadata or credentials.
@@ -29,7 +27,7 @@ export function chooseEkodiExecution(input = {}) {
     item?.providerIndependent === true &&
     item?.verified === true &&
     item?.enabled === true &&
-    VALID_STATES.has(item?.state) && item?.state === 'active' &&
+    item?.state === 'active' &&
     item?.executionContractVerified === true);
   if (reusable) return freeze({
     path: 'ekodi-capability',
@@ -43,7 +41,9 @@ export function chooseEkodiExecution(input = {}) {
     .filter(item => item && item.available === true && item.automationAllowed === true)
     .filter(item => !sensitive || item.trustClass === 'local')
     .filter(item => !['high', 'critical'].includes(risk) || item.trustClass === 'local')
-    .filter(item => item.costClass !== 'paid-opt-in' || input.paidApproved === true)
+    .filter(item => item.trustClass === 'local' ||
+      ['free-preferred', 'shared-free', 'paid-opt-in'].includes(item.costClass))
+    .filter(item => item.trustClass === 'local' || item.costClass !== 'paid-opt-in' || input.paidApproved === true)
     .map(item => ({
       id: safeText(item.id, 80),
       tier: item.trustClass === 'local' ? 'local' :
