@@ -127,6 +127,7 @@ async function showEvents(h){
  try{const d=await api('/events');appendList(h,d.events||[],(card,event)=>{
   card.append(text('h3',event.title));card.append(text('p',event.summary||'', 'muted'));
   card.append(text('small',[event.starts_at?.slice(0,16),event.region].filter(Boolean).join(' · ')));
+  card.append(text('p',event.fee_krw>0?'참가비 '+money(event.fee_krw)+' · 별도 입금 검증 후 신청 가능':'참가비 무료','muted'));
   const row=text('div','','action-row');
   row.append(button('행사 상세',async()=>{
    try{const detail=await api('/events/'+encodeURIComponent(event.id));
@@ -135,6 +136,7 @@ async function showEvents(h){
    }catch(e){notice(card,errorText(e))}
   }));
   row.append(button('참가 신청',async()=>{
+   if(event.fee_krw>0){notice(card,'유료 행사는 별도 입금 확인 절차 준비 후 신청할 수 있습니다.');return}
    if(!state.subscription.active){paywall(card,'행사 참가 신청');return}
    if(!confirm('이 행사에 참가 신청하시겠습니까?'))return;
    try{await api('/events/'+event.id+'/rsvp',{method:'POST',body:{}});notice(card,'참가 신청을 접수했습니다.')}
@@ -300,12 +302,15 @@ async function showBankAdmin(h){
     holder=field('예금주',bank.account_holder),
     community=field('행사 참여 구독 금액(원)',prices.get('community'),'number'),
     consulting=field('선택형 컨설팅 구독 금액(원)',prices.get('consulting'),'number');
+   const tier90=field('동행 90일 구독 금액(원)',prices.get('community_90'),'number');
+   const tier365=field('동행 연간 구독 금액(원)',prices.get('community_365'),'number');
    const msg=text('p','','status-text');
    form.append(button('설정 저장(결제접수 비활성)',async()=>{
     const amount=input=>input.value.trim()===''?null:Number(input.value);
     const request={
       bank_name:bankName.value.trim(),account_number:number.value.trim(),account_holder:holder.value.trim(),
-      community_amount_krw:amount(community),consulting_amount_krw:amount(consulting)
+      community_amount_krw:amount(community),consulting_amount_krw:amount(consulting),
+      tier_prices:{community_90:amount(tier90),community_365:amount(tier365)}
     };
     if(!confirm('은행 계좌·요금 설정을 저장합니까? 결제 접수는 별도 승인이 있을 때까지 비활성 상태로 유지됩니다.'))return;
     try{await api('/bank/admin/config',{method:'PUT',body:request});
