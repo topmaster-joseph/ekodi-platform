@@ -353,6 +353,7 @@ async function routeEkodiMission(request,env){
   const isPage=EKODIMISSION_PAGES.has(pathname);let served=asset;
   if(isPage){const headers=new Headers(asset.headers);headers.set('content-type','text/html; charset=utf-8');headers.delete('content-length');const html=publishMissionHtml(await asset.text());const rendered=pathname==='/ekodimission/presence'?html.replace('content="index,follow"','content="noindex,nofollow,noarchive"'):html;served=new Response(request.method==='HEAD'?null:rendered,{status:asset.status,statusText:asset.statusText,headers});}
   const branded=brandSiteResponse(withHeaders(env,served,EKODIMISSION_ASSETS.has(pathname)?'ekodimission-asset':EKODIMISSION_PUBLIC_ROUTE));
+  if(pathname==='/ekodimission/presence')branded.headers.set('x-robots-tag','noindex, nofollow, noarchive');
   if(isPage&&MISSION_PUBLIC_ADMIN_PATHS.has(pathname)&&typeof HTMLRewriter==='function'){
     return injectEkodiShell(branded,'mission','public',{existingHeader:true,memberGate:'service-owned'});
   }
