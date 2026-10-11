@@ -58,16 +58,43 @@ function profileForm(h){
   if(!multi)el.type='text';el.name=key;el.maxLength=max;el.autocomplete='off';el.placeholder=caption;label.append(el);form.append(label);return el;
  };
  const nickname=input('표시 이름','display_name',32),region=input('지역(광역 단위)','broad_region',40),intro=input('나를 소개하는 한마디','intro',400,true);
+ const suggestedName=state.session?.user?.user_metadata?.full_name||state.session?.user?.user_metadata?.name;
+ if(typeof suggestedName==='string'&&suggestedName.trim())nickname.value=suggestedName.trim().slice(0,32);
+ const profileLink=input('공개할 명함·프로필 HTTPS 링크 (선택)','public_link',300);
+ const importLabel=text('label','디지털 명함(.vcf)에서 초안 가져오기 · 브라우저 내 처리','field');
+ const importFile=document.createElement('input');importFile.type='file';importFile.accept='.vcf,text/vcard,text/x-vcard';
+ const imported=text('p','가져온 항목을 직접 확인한 후 저장할 수 있습니다. 연락처와 이메일은 가져오거나 공개하지 않습니다.','muted');
+ importFile.addEventListener('change',async()=>{
+  const file=importFile.files?.[0];if(!file)return;
+  if(file.size>65536){imported.textContent='64KB 이하의 명함 파일만 허용합니다.';return}
+  try{
+   const card=(await file.text()).replace(/\r?\n[ \t]/g,'').split(/\r?\n/);
+   if(!card.some(line=>/^BEGIN:VCARD$/i.test(line.trim()))){imported.textContent='올바른 vCard 명함 파일이 아닙니다.';return}
+   const field=key=>{
+    const row=card.find(line=>line.split(':',1)[0].split(';',1)[0].toUpperCase()===key);
+    return row?row.slice(row.indexOf(':')+1).replace(/\\n/gi,' ').trim():'';
+   };
+   const name=field('FN'),organization=field('ORG'),title=field('TITLE'),link=field('URL');
+   if(name)nickname.value=name.slice(0,32);
+   if(organization||title)intro.value=[organization,title].filter(Boolean).join(' · ').slice(0,400);
+   if(link&&link.startsWith('https://'))profileLink.value=link.slice(0,300);
+   discover.checked=false;
+   imported.textContent='표시 이름·소속·직함·링크만 초안으로 입력했습니다. 공개 여부는 직접 선택하세요.';
+  }catch{imported.textContent='명함 파일을 읽을 수 없습니다.'}
+ });
+ importLabel.append(importFile);form.append(importLabel,imported);
+ const verifiedInfo=text('p','Google 로그인은 계정 확인 수단입니다. 만 19세 이상 본인확인은 승인된 본인확인기관 연동이 완료된 뒤 별도로 진행하며, 정부 공공 마이데이터 조회에는 명시적 동의와 기관 연동이 필요합니다.','muted');
+ form.append(verifiedInfo);
  const discoverLabel=text('label','성인 본인확인 및 민감정보 동의 후 공개하고 싶습니다.','field'),discover=document.createElement('input');
  discover.type='checkbox';discover.name='discoverable';discoverLabel.prepend(discover);form.append(discoverLabel);
  form.append(text('p','공개를 체크하더라도 본인확인과 운영 검증 전에는 검색에 표시되지 않습니다.','muted'));
  const message=text('p','','status-text');form.append(button('프로필 저장',async()=>{
-  try{const result=await api('/profile',{method:'PUT',body:{display_name:nickname.value.trim(),broad_region:region.value.trim(),intro:intro.value.trim(),discoverable:discover.checked}});
+  try{const result=await api('/profile',{method:'PUT',body:{display_name:nickname.value.trim(),broad_region:region.value.trim(),intro:intro.value.trim(),public_link:profileLink.value.trim(),discoverable:discover.checked}});
    message.textContent=result.discoverable?'프로필이 저장되고 공개 설정이 적용됐습니다.':'프로필 초안을 저장했습니다. 공개는 본인확인 후 가능합니다.';
   }catch(e){message.textContent=errorText(e)}
  },'primary'));
  form.append(message);box.append(form);h.append(box);
- api('/profile').then(d=>{if(d.profile){nickname.value=d.profile.display_name||'';region.value=d.profile.broad_region||'';intro.value=d.profile.intro||'';discover.checked=d.profile.discoverable===true}}).catch(()=>{});
+ api('/profile').then(d=>{if(d.profile){nickname.value=d.profile.display_name||'';region.value=d.profile.broad_region||'';intro.value=d.profile.intro||'';profileLink.value=d.profile.public_link||'';discover.checked=d.profile.discoverable===true}}).catch(()=>{});
 }
 function startConsent(h){
  const p=$('enrollmentPanel');p.hidden=false;p.querySelector('#loginButton').hidden=true;
@@ -102,6 +129,7 @@ async function showEvents(h){
  try{const d=await api('/events');appendList(h,d.events||[],(card,event)=>{
   card.append(text('h3',event.title));card.append(text('p',event.summary||'', 'muted'));
   card.append(text('small',[event.starts_at?.slice(0,16),event.region].filter(Boolean).join(' · ')));
+  card.append(text('p',event.fee_krw>0?'참가비 '+money(event.fee_krw)+' · 별도 입금 검증 후 신청 가능':'참가비 무료','muted'));
   const row=text('div','','action-row');
   row.append(button('행사 상세',async()=>{
    try{const detail=await api('/events/'+encodeURIComponent(event.id));
@@ -110,6 +138,7 @@ async function showEvents(h){
    }catch(e){notice(card,errorText(e))}
   }));
   row.append(button('참가 신청',async()=>{
+   if(event.fee_krw>0){notice(card,'유료 행사는 별도 입금 확인 절차 준비 후 신청할 수 있습니다.');return}
    if(!state.subscription.active){paywall(card,'행사 참가 신청');return}
    if(!confirm('이 행사에 참가 신청하시겠습니까?'))return;
    try{await api('/events/'+event.id+'/rsvp',{method:'POST',body:{}});notice(card,'참가 신청을 접수했습니다.')}
@@ -121,6 +150,10 @@ async function showDiscover(h){
  notice(h,'서로 공개를 선택하고 본인확인을 완료한 회원만 표시합니다. 호감 수락·거절은 언제나 무료입니다.');
  try{const d=await api('/discover');appendList(h,d.profiles||[],(card,p)=>{
   card.append(text('span',p.broad_region||'지역 비공개','pill'));card.append(text('h3',p.display_name||'동행 회원'));paragraph(card,p.intro||'');
+  if(typeof p.public_link==='string'&&p.public_link.startsWith('https://')){
+   const link=text('a','회원이 공유한 명함·프로필 링크 (공식 인증 아님)','outline');
+   link.href=p.public_link;link.target='_blank';link.rel='noopener noreferrer';link.referrerPolicy='no-referrer';card.append(link);
+  }
   card.append(button('호감 보내기',async()=>{
    try{await api('/interests/'+p.id,{method:'POST',body:{}});notice(card,'호감을 전했습니다. 상대가 동의하면 대화를 열 수 있습니다.')}
    catch(e){notice(card,errorText(e))}
@@ -275,12 +308,15 @@ async function showBankAdmin(h){
     holder=field('예금주',bank.account_holder),
     community=field('행사 참여 구독 금액(원)',prices.get('community'),'number'),
     consulting=field('선택형 컨설팅 구독 금액(원)',prices.get('consulting'),'number');
+   const tier90=field('동행 90일 구독 금액(원)',prices.get('community_90'),'number');
+   const tier365=field('동행 연간 구독 금액(원)',prices.get('community_365'),'number');
    const msg=text('p','','status-text');
    form.append(button('설정 저장(결제접수 비활성)',async()=>{
     const amount=input=>input.value.trim()===''?null:Number(input.value);
     const request={
       bank_name:bankName.value.trim(),account_number:number.value.trim(),account_holder:holder.value.trim(),
-      community_amount_krw:amount(community),consulting_amount_krw:amount(consulting)
+      community_amount_krw:amount(community),consulting_amount_krw:amount(consulting),
+      tier_prices:{community_90:amount(tier90),community_365:amount(tier365)}
     };
     if(!confirm('은행 계좌·요금 설정을 저장합니까? 결제 접수는 별도 승인이 있을 때까지 비활성 상태로 유지됩니다.'))return;
     try{await api('/bank/admin/config',{method:'PUT',body:request});
@@ -355,7 +391,31 @@ async function showBankAdmin(h){
   }
  }catch(e){notice(p,e?.status===403?'운영 권한이 없습니다.':errorText(e))}
 }
+async function showEventPricing(h){
+ try{
+  const result=await api('/admin/events');
+  const panel=text('section','','member-card');panel.append(text('h3','행사별 참가비 정책'));
+  paragraph(panel,'행사 참가비는 무료 또는 개별 금액으로 설정할 수 있습니다. 유료 참가비 입금 검증 기능을 개통하기 전까지 유료 신청은 차단됩니다.');
+  if(!(result.events||[]).length)paragraph(panel,'가격을 설정할 등록 행사가 없습니다.');
+  for(const event of result.events||[]){
+   const row=text('article','','mini-card');row.append(text('h4',event.title));
+   const label=text('label','참가비(원)','field'),input=document.createElement('input');
+   input.type='number';input.min='0';input.max='1000000';input.step='100';input.value=String(event.fee_krw||0);label.append(input);
+   const noticeText=text('p','','status-text');
+   row.append(label,button('참가비 저장',async()=>{
+    const price=Number(input.value);
+    if(!Number.isInteger(price)||price<0||price>1000000){noticeText.textContent='0원부터 100만원까지 입력하세요.';return}
+    if(!confirm('해당 행사의 참가비를 변경합니까? 기존 참가 신청자가 있으면 변경되지 않습니다.'))return;
+    try{await api('/admin/events/'+event.id+'/fee',{method:'PUT',body:{fee_krw:price}});noticeText.textContent='행사 참가비를 저장했습니다.'}
+    catch(e){noticeText.textContent=errorText(e)}
+   },'outline'),noticeText);panel.append(row);
+  }
+  h.append(panel);
+ }catch(e){if(e?.status!==403)notice(h,'행사 참가비 관리 연결을 확인해 주세요.')}
+}
 async function signedIn(status){
+ document.querySelectorAll('[data-member-nav]').forEach(link=>{link.hidden=false});
+ document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.hidden=true});
  $('serviceStage').textContent='로그인 완료';
  await readSubscription();
  const h=holder();
@@ -365,7 +425,7 @@ async function signedIn(status){
  else if(page==='/discover')await showDiscover(h);
  else if(page==='/messages')await showMessages(h);
  else if(page==='/subscribe')await showSubscription(h);
- else if(page==='/admin')await showBankAdmin(h);
+ else if(page==='/admin'){await showBankAdmin(h);await showEventPricing(h);}
  else if(page==='/groups')paragraph(h,'지역 공동체·소그룹 기능을 준비하고 있습니다. 행사 목록을 먼저 확인해 주세요.');
  else {paragraph(h,'반갑습니다. 나의 프로필, 공개 행사, 동행 찾기를 살펴보세요.');const row=text('div','','actions');for(const [name,href] of [['프로필 등록','/singles/my'],['공개 행사','/singles/events'],['동행 찾기','/singles/discover']]){const a=text('a',name,'outline');a.href=href;row.append(a)}h.append(row)}
 }
