@@ -10,6 +10,9 @@ import {
 
 const outputPath = process.argv[2] || '/tmp/ekodi-traffic-intelligence.sql';
 const apiToken = String(process.env.CLOUDFLARE_API_TOKEN || '').trim();
+// Analytics Read is a separate least-privilege credential; D1/zone discovery keeps
+// the existing deploy token. Absent secret preserves existing deployments.
+const analyticsToken = String(process.env.CLOUDFLARE_ANALYTICS_API_TOKEN || apiToken).trim();
 const accountId = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
 const zoneAllowlist = new Set(String(process.env.EKODI_TRAFFIC_ZONE_ALLOWLIST || '')
   .split(',').map(value => value.trim().toLowerCase()).filter(Boolean));
@@ -51,7 +54,7 @@ CREATE TABLE IF NOT EXISTS traffic_intelligence_state (
 async function cloudflare(path, init = {}) {
   const response = await fetch(`${cfApi}${path}`, {
     ...init,
-    headers:{ authorization:`Bearer ${apiToken}`, accept:'application/json',
+    headers:{ authorization:`Bearer ${path === '/graphql' ? analyticsToken : apiToken}`, accept:'application/json',
       ...(init.body ? { 'content-type':'application/json' } : {}), ...(init.headers || {}) }
   });
   const payload = await response.json().catch(() => null);
