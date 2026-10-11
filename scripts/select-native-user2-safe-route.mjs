@@ -44,3 +44,5 @@ async function main(){
 }
 if(process.argv[1] && path.resolve(process.argv[1])===fileURLToPath(import.meta.url))
  main().catch(e=>{console.error('[EKODI][USER2-NATIVE-SAFE-ROUTE] '+String(e.message||e).slice(0,120));process.exitCode=1;});
+
+// Owner-triggered canonical protected CI convergence; no runtime behavior changed.
