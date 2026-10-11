@@ -24,7 +24,7 @@
   function saveState(){try{sessionStorage.setItem(CONTROL_STATE,JSON.stringify({tasks:state.tasks.slice(0,40),results:state.results.slice(0,40)}))}catch{}}
   function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
   function title(text){const v=String(text||'').replace(/\s+/g,' ').trim();return v.length>46?v.slice(0,46)+'…':v||'새 작업'}
-  function statusLabel(v){return ({queued:'대기',running:'실행 중',verified:'완료',resolved:'완료',failed:'실패',blocked:'차단',core_only:'Core 처리',human_gate:'확인 필요',assist_only:'검토',ready_for_executor:'실행 대기',approved_pending_executor:'승인됨'})[v]||v||'진행'}
+  function statusLabel(v){return ({queued:'대기',running:'실행 중',verified:'완료',resolved:'완료',failed:'실패',blocked:'차단',core_only:'Core 처리',human_gate:'확인 필요',assigned:'배정됨',executing:'실행 중',production_verifying:'운영 검증 중',assist_only:'검토',ready_for_executor:'실행 대기',approved_pending_executor:'승인됨'})[v]||v||'진행'}
   function headers(json=false){const h={accept:'application/json'};if(token())h.authorization='Bearer '+token();if(json)h['content-type']='application/json';return h}
   async function api(path,options={}){
     const response=await fetch(API+path,{cache:'no-store',...options,headers:{...headers(Boolean(options.body)),...(options.headers||{})}});
@@ -54,10 +54,31 @@
   function historyForAssist(){const s=state.sessions.find(x=>x.id===state.activeId);return (s?.messages||[]).filter(m=>m.role==='user'||m.role==='assistant').slice(-8).map(m=>({role:m.role,text:m.text}))}
   async function submitCommand(value){
     if(state.busy)return;const message=String(value||'').trim();if(!message)return;
-    state.busy=true;$('#sendButton').disabled=true;const target=$('#executionTarget').value;const executeNow=$('#executeNow').checked;
+    state.busy=true;$('#sendButton').disabled=true;const target=$('#executionTarget').value;const executeNow=$('#executeNow').checked;const releaseMode=$('#orchestratorRelease')?.checked===true;
     const prior=historyForAssist();pushMessage('user',message,{target});$('#commandInput').value='';resizeInput();
     let queued=null;
     try{
+      if(releaseMode){
+        // Stable per conversation/message to prevent duplicate task creation on retries.
+        let hash=2166136261;for(const ch of message){hash^=ch.charCodeAt(0);hash=Math.imul(hash,16777619)}
+        const idempotencyKey=('control-'+String(state.activeId||'session').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,55)+'-'+(hash>>>0).toString(36)).slice(0,100);
+        const submitted=await api('/api/control/ai/v8/orchestrator/submit',{method:'POST',body:JSON.stringify({
+          intent:message,risk:'high',deploymentRequested:true,idempotencyKey,service:'control'
+        })});
+        const taskId=String(submitted.taskId||'');
+        const taskStatus=String(submitted.state||'queued');
+        const reply='EKODI 공식 오케스트레이터 작업 접수: '+taskId+
+          '\n작업 브랜치: '+String(submitted.branchRef||'없음')+
+          '\n현재 상태: '+statusLabel(taskStatus)+
+          '\n보호된 승인·CI·스테이징·운영 검증이 끝나기 전에는 배포 완료가 아닙니다.';
+        state.tasks.unshift({id:taskId,title:title(message),status:taskStatus,target:'EKODI Orchestrator',at:now()});
+        state.tasks=state.tasks.slice(0,40);
+        state.results.unshift({title:title(message),summary:reply,provider:'EKODI Orchestrator',taskId,status:taskStatus,at:now()});
+        state.results=state.results.slice(0,40);saveState();
+        pushMessage('assistant',reply,{provider:'EKODI Orchestrator',target:'ekodi',status:taskStatus,taskId});
+        renderPanels();
+        return;
+      }
       if(executeNow){
         queued=await api('/api/control/ai/v8/pulse',{method:'POST',body:JSON.stringify({
           goal:message,risk:'normal',
