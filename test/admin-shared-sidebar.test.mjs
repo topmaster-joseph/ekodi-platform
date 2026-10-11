@@ -237,3 +237,16 @@ test('redundant new-task and top context navigation cannot be recreated', () => 
   assert.doesNotMatch(sidebar, /shell = document\.createElement/);
   assert.doesNotMatch(sidebar, /dataset\.adminCommandHome/);
 });
+
+
+test('stale lazy demand completion cannot override a newer sidebar choice', () => {
+  const activateStart = sidebar.indexOf('function activateSection(nav, section)');
+  const activateEnd = sidebar.indexOf('export function createAdminSidebarItem', activateStart);
+  const source = sidebar.slice(activateStart, activateEnd);
+  assert.match(source, /const epoch = beginActivation\(nav\)/);
+  assert.match(source, /Promise\.resolve\(window\.EKODIAdminDemand\.activate\(section\)\)/);
+  assert.match(
+    source,
+    /if \(demandTarget && window\.EKODIAdminDemand\?\.activate\) \{[\s\S]*?Promise\.resolve\(window\.EKODIAdminDemand\.activate\(section\)\)\.then\(\(\) => \{[\s\S]*?if \(!isLatestActivation\(nav, epoch\)\) return;[\s\S]*?window\.EKODIAdminPanels\.activate\(section\)/,
+  );
+});
