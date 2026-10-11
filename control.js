@@ -4,6 +4,11 @@
   const TOKEN_KEY='ekodi-auth-token';
   const HISTORY_KEY='ekodi-admin-command-history-v1';
   const CONTROL_STATE='ekodi-control-state-v1';
+  // Only a same-origin administrator iframe requests this presentation mode.
+  // Authentication and authority checks still execute on the server.
+  if(new URLSearchParams(location.search).get('embed')==='admin'){
+    document.documentElement.dataset.controlEmbed='admin';
+  }
   const AGENTS=[
     ['ekodi','EKODI Core','orchestrator'],
     ['chatgpt','ChatGPT','AI'],
