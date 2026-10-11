@@ -240,7 +240,6 @@ test('redundant new-task and top context navigation cannot be recreated', () => 
 
 
 test('stale lazy demand completion cannot override a newer sidebar choice', () => {
-  const sidebar = readFileSync(new URL('../admin-sidebar.js', import.meta.url), 'utf8');
   const activateStart = sidebar.indexOf('function activateSection(nav, section)');
   const activateEnd = sidebar.indexOf('export function createAdminSidebarItem', activateStart);
   const source = sidebar.slice(activateStart, activateEnd);
