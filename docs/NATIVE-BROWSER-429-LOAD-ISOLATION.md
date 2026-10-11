@@ -13,3 +13,7 @@ The standard background browser worker stays read-only and fail-closed on HTTP 4
 Protected CI, EKODI Orchestrator receipt verification, related-change review, official merge and live own-browser regression are required. A Cloudflare 429 remains a failure record. This change is **not** permission to bypass or lower traffic limits.
 
 The newest protected `main` was integrated concurrently. Revalidate this synchronized release branch using all required checks; no stale head status may be treated as fresh evidence.
+
+## Current protected-branch synchronization
+
+The official Convergent Merge updated the PR head to the most recent protected main; the bot-generated merge commit was marked `action_required` for GitHub Actions. This owner-authored follow-up requests new CI and native Chromium evidence for the synchronized head. Cloudflare 429 stays fail-closed and unrelated sources remain unchanged.
