@@ -15,7 +15,7 @@ test('source integrity audit advances from the previous completed run, not the p
 
 test('same-head repeat becomes no-change and hidden report remains durable evidence',()=>{
   assert.match(source,/if \(!changedFiles\.length\)/);
-  assert.match(source,/status: 'incremental-diff'/);
+  assert.match(source,/name: 'incremental-diff'/);
   assert.match(workflow,/include-hidden-files: true/);
   assert.match(workflow,/\.source-integrity-report\.json/);
 });
