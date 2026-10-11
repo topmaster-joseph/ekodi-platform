@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {sanitizeAiConnectionStatus, chooseEkodiExecution, publicAiJobReceipt} from '../ekodi-ai-sovereignty-gate.js';
+const key='sk-not-for-output';
+assert.deepEqual(Object.keys(sanitizeAiConnectionStatus({id:'openai',available:true,apiKey:key,authMethod:'api-key'})).sort(), ['authMethod','connected','expiresAt','id','reauthenticationRequired'].sort());
+assert.equal(JSON.stringify(sanitizeAiConnectionStatus({id:'openai',apiKey:key})).includes(key),false);
+const cap={id:'reports',providerIndependent:true,verified:true,enabled:true,state:'active',executionContractVerified:true};
+assert.equal(chooseEkodiExecution({capabilityId:'reports',capabilities:[cap]}).path,'ekodi-capability');
+assert.equal(chooseEkodiExecution({capabilityId:'reports',capabilities:[{...cap,verified:false}]}).path,'blocked');
+const providers=[{id:'gpt',available:true,automationAllowed:true,costClass:'paid-opt-in',trustClass:'external',priority:1},{id:'ollama',available:true,automationAllowed:true,costClass:'free',trustClass:'local',priority:5}];
+assert.equal(chooseEkodiExecution({providers}).providerId,'ollama');
+assert.equal(chooseEkodiExecution({providers:providers.slice(0,1)}).path,'blocked');
+assert.equal(chooseEkodiExecution({providers:providers.slice(0,1),paidApproved:true}).providerId,'gpt');
+assert.equal(chooseEkodiExecution({providers:providers.slice(0,1),paidApproved:true,sensitive:true}).path,'blocked');
+assert.equal(chooseEkodiExecution({providers:providers.slice(0,1),paidApproved:true,risk:'critical'}).path,'blocked');
+assert.equal(chooseEkodiExecution({providers:providers.slice(0,1),paidApproved:true}).executionAuthorized,false);
+assert.equal(JSON.stringify(publicAiJobReceipt({taskId:'t1',status:'verified',apiKey:key,prompt:key,productionVerified:false})).includes(key),false);
+assert.equal(publicAiJobReceipt({status:'verified',productionVerified:false}).productionVerified,false);
+console.log('EKODI reuse-first gate: 11 assertions passed');
