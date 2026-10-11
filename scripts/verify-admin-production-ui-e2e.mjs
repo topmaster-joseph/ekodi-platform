@@ -204,6 +204,10 @@ async function resolveMenuTrigger(id, group) {
   // fabricate a passing panel, or silently ignore an unavailable target.
   for (let attempt = 0; attempt < 3; attempt += 1) {
     if (await detail.isVisible().catch(() => false)) return detail;
+    // The production sidebar exposes an idempotent sync API. Use it as a
+    // bounded self-heal when lazy panel activation temporarily races the menu.
+    await page.evaluate(() => window.EKODIAdminSidebar?.sync?.(document)).catch(() => false);
+    if (await detail.isVisible().catch(() => false)) return detail;
     if (await more.isVisible().catch(() => false)) {
       const expanded = await page.locator('.sidebar nav').first()
         .getAttribute('data-admin-more-group').then(value => value === group).catch(() => false);

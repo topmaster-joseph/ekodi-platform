@@ -74,6 +74,9 @@ async function finish() {
   report.finishedAt = new Date().toISOString();
   report.status = report.errors.length ? 'failed' : (changedFiles.length ? 'passed' : 'no_changes');
   await writeFile(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+  for (const error of report.errors) {
+    console.error('[EKODI][SOURCE-INTEGRITY] ' + JSON.stringify(error));
+  }
   console.log(JSON.stringify({ status: report.status, changedFiles: changedFiles.length, checks: report.checks.length, tests: report.tests.length, probes: report.probes.length, warnings: report.warnings.length, errors: report.errors.length }));
   if (report.errors.length) process.exitCode = 1;
 }
