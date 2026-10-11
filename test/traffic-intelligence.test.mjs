@@ -209,3 +209,16 @@ test('Cloudflare host totals survive unavailable per-zone classifier without dis
   assert.doesNotMatch(collector,/console\.warn\([^\n]*error\.message/);
   assert.doesNotMatch(collector,/skippedZones\.push\(\{ zone:zone.name, message:/);
 });
+
+
+test('Analytics GraphQL uses isolated read token while zone discovery retains deployment token',async()=>{
+  const collector = await readFile('scripts/collect-traffic-intelligence.mjs','utf8');
+  const workflow = await readFile('.github/workflows/traffic-intelligence-analytics.yml','utf8');
+  assert.match(collector,/const apiToken = String\(process\.env\.CLOUDFLARE_API_TOKEN/);
+  assert.match(collector,/const analyticsToken = String\(process\.env\.CLOUDFLARE_ANALYTICS_API_TOKEN \|\| apiToken\)/);
+  assert.match(collector,/path === '\/graphql' \? analyticsToken : apiToken/);
+  assert.match(collector,/cloudflare\(\`\/zones\?per_page=50/);
+  assert.match(workflow,/CLOUDFLARE_ANALYTICS_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_ANALYTICS_API_TOKEN \}\}/);
+  assert.match(workflow,/CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
+  assert.doesNotMatch(collector,/console\.(?:log|warn|error)\([^\n]*(?:analyticsToken|apiToken)\b/);
+});
