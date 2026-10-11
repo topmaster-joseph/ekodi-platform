@@ -148,6 +148,10 @@ async function showDiscover(h){
  notice(h,'서로 공개를 선택하고 본인확인을 완료한 회원만 표시합니다. 호감 수락·거절은 언제나 무료입니다.');
  try{const d=await api('/discover');appendList(h,d.profiles||[],(card,p)=>{
   card.append(text('span',p.broad_region||'지역 비공개','pill'));card.append(text('h3',p.display_name||'동행 회원'));paragraph(card,p.intro||'');
+  if(typeof p.public_link==='string'&&p.public_link.startsWith('https://')){
+   const link=text('a','회원이 공유한 명함·프로필 링크 (공식 인증 아님)','outline');
+   link.href=p.public_link;link.target='_blank';link.rel='noopener noreferrer';link.referrerPolicy='no-referrer';card.append(link);
+  }
   card.append(button('호감 보내기',async()=>{
    try{await api('/interests/'+p.id,{method:'POST',body:{}});notice(card,'호감을 전했습니다. 상대가 동의하면 대화를 열 수 있습니다.')}
    catch(e){notice(card,errorText(e))}
