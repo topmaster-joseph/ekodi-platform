@@ -50,6 +50,11 @@
           <iframe id="adminControlFrame" title="EKODI Control 명령 및 작업 화면"
             data-src="/admin/control?embed=admin" loading="lazy"
             referrerpolicy="same-origin" allow="clipboard-write"></iframe>
+          <div class="admin-control-frame-notice" id="adminControlFrameNotice" role="status" hidden>
+            <strong>명령 화면을 표시할 수 없습니다.</strong>
+            <p>브라우저 또는 사이트 배포 상태를 확인해 주세요. 관리자 인증과 권한 규칙은 그대로 유지됩니다.</p>
+            <a href="/admin/control">EKODI Control 전체 화면으로 이동</a>
+          </div>
           <div class="admin-control-home-foot">
             <span>최고관리자 권한과 실행 승인 규칙은 EKODI 서버에서 검증합니다.</span>
             <a href="/admin/control">전체 화면 보기 <span aria-hidden="true">↗</span></a>
@@ -143,6 +148,7 @@
       </div>
     </main>
   </div>
+  <script src="/admin/admin-control-frame.js" defer></script>
   <script src="/admin/admin-canonical-routes.js"></script>
   <script src="/admin/admin-surface-labels.js"></script>
   <script src="/admin-direct-google.js?v=20260924-v1" defer data-ekodi-admin-direct-google="v1"></script>
