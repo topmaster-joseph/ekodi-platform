@@ -47,10 +47,12 @@ jobs:
       - name: Verify backup credentials
         run: |
           set -euo pipefail
-          test -n "$CLOUDFLARE_API_TOKEN"
-          test -n "$CLOUDFLARE_ACCOUNT_ID"
-          test -n "$PRODUCTION_BACKUP_DATABASE"
-          test -n "$R2_BACKUP_BUCKET"
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+            test -n "$CLOUDFLARE_API_TOKEN"
+            test -n "$CLOUDFLARE_ACCOUNT_ID"
+            test -n "$PRODUCTION_BACKUP_DATABASE"
+            test -n "$R2_BACKUP_BUCKET"
+          fi
 
       - name: Prepare isolated backup source
         id: backup_source
