@@ -69,10 +69,10 @@ jobs:
     environment: production
     env:
       GH_TOKEN: ${{ github.token }}
-    TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-    TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
-    TOKEN_C: ${{ secrets.SUPABASE_PAT }}
-    TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
     steps:
       - uses: actions/checkout@v7
         with:
