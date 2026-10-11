@@ -40,6 +40,28 @@ export function normalizeSlidesAudioPilot(input) {
   });
 }
 
+// Job admission only accepts the three public fields above. The database holds
+// their server-expanded canonical scope; reclaim must verify the FULL stored
+// scope rather than mistakenly treating it as a new API request.
+function exactJsonStructure(a,b) {
+  if (a === b) return true;
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  const left=Object.keys(a), right=Object.keys(b);
+  if (left.length !== right.length) return false;
+  return left.every(key => Object.prototype.hasOwnProperty.call(b,key) && exactJsonStructure(a[key],b[key]));
+}
+export function restoreStoredSlidesAudioPilot(stored) {
+  if (!stored || typeof stored !== 'object' || Array.isArray(stored)) {
+    throw new Error('GOOGLE_WORKSPACE_STORED_PAYLOAD_INVALID');
+  }
+  const canonical=normalizeSlidesAudioPilot({
+    presentationId:stored.presentationId, operation:stored.operation, pilotId:stored.pilotId,
+  });
+  if (!exactJsonStructure(stored,canonical)) throw new Error('GOOGLE_WORKSPACE_STORED_PAYLOAD_TAMPERED');
+  return canonical;
+}
+
 // Results are acceptance evidence only if a dedicated-profile browser actually
 // reports the native audio control and playable media for each exact slide/ID.
 // A hyperlink, URL preview or copied text is NOT equivalent to embedded audio.
