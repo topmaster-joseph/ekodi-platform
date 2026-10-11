@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
-  normalizeSlidesAudioPilot, validateSlidesAudioPilotReceipt,
+  normalizeSlidesAudioPilot, restoreStoredSlidesAudioPilot, validateSlidesAudioPilotReceipt,
   SLIDES_AUDIO_ITEMS, SLIDES_AUDIO_PILOT_ID, SLIDES_AUDIO_PRESENTATION_ID,
   SLIDES_AUDIO_OPERATION, SLIDES_AUDIO_SECURITY
 } from '../google-workspace-slides-audio-policy.js';
@@ -93,4 +93,34 @@ test('queue, admin UI and Windows Agent are wired but default closed',()=>{
  assert.match(agent, /workspace_audio_canary_required/);
  assert.match(agent, /Invoke-WorkspaceSlidesAudioTask \$payload/);
  assert.match(agent, /\$AgentVersion = '2\.5\.3'/);
+});
+
+test('stored expanded Google Slides audio task survives queue-to-agent claim verification',()=>{
+ const compact=input();
+ const canonical=normalizeSlidesAudioPilot(compact);
+ const persisted=JSON.parse(JSON.stringify(canonical));
+ assert.deepEqual(restoreStoredSlidesAudioPilot(persisted),canonical);
+ // User-facing task admission must still reject the expanded shape.
+ assert.throws(()=>normalizeSlidesAudioPilot(persisted),/GOOGLE_WORKSPACE_PILOT_SCOPE_DENIED/);
+ const queue=readFileSync(new URL('../hybrid-execution.js',import.meta.url),'utf8');
+ assert.match(queue,/restoreStoredSlidesAudioPilot\(storedPayload\)/);
+});
+test('stored task cannot add, change, remove, or reorder native MP3 mappings',()=>{
+ const canonical=normalizeSlidesAudioPilot(input());
+ for(const mutate of [
+  p=>p.items[0].fileId='foreign-drive-file',
+  p=>p.items[0].slideId='wrong-slide-id',
+  p=>p.items.reverse(),
+  p=>p.items.pop(),
+  p=>p.items.push({...p.items[0]}),
+  p=>p.presentationId='foreign-presentation',
+  p=>p.canaryVerified=true,
+  p=>p.maxAttempts=3,
+  p=>p.items[0].name='evil.mp3'
+ ]) {
+   const tampered=JSON.parse(JSON.stringify(canonical));
+   mutate(tampered);
+   assert.throws(()=>restoreStoredSlidesAudioPilot(tampered),/GOOGLE_WORKSPACE_(STORED_PAYLOAD_TAMPERED|PILOT_SCOPE_DENIED)/);
+ }
+ assert.throws(()=>restoreStoredSlidesAudioPilot(null),/GOOGLE_WORKSPACE_STORED_PAYLOAD_INVALID/);
 });

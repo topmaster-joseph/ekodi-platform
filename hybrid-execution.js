@@ -1,5 +1,5 @@
 import authWorker from './auth-worker.js';
-import { normalizeSlidesAudioPilot, validateSlidesAudioPilotReceipt, SLIDES_AUDIO_ITEMS, SLIDES_AUDIO_PRESENTATION_ID } from './google-workspace-slides-audio-policy.js';
+import { normalizeSlidesAudioPilot, restoreStoredSlidesAudioPilot, validateSlidesAudioPilotReceipt, SLIDES_AUDIO_ITEMS, SLIDES_AUDIO_PRESENTATION_ID } from './google-workspace-slides-audio-policy.js';
 import { compareLocalExecutionCandidates, localExecutionPolicySnapshot, localExecutionScore, normalizeLocalResource } from './local-execution-policy.js';
 
 const ADMIN_PREFIX = '/api/control/hybrid-execution';
@@ -390,7 +390,12 @@ async function claimAssigned(env, deviceId) {
   if (!claim.meta?.changes) return null;
   await event(env, job.id, deviceId, 'leased', { leaseExpiresAt, attempt:Number(job.attempt_count) + 1 });
   let claimedPayload;
-  try { claimedPayload=sanitizePayload(job.task_type, parseJson(job.payload_json, {})); }
+  try {
+    const storedPayload=parseJson(job.payload_json, {});
+    claimedPayload=job.task_type === 'computer.workspace.slides.audio.insert'
+      ? restoreStoredSlidesAudioPilot(storedPayload)
+      : sanitizePayload(job.task_type,storedPayload);
+  }
   catch {
     await env.DB.prepare(`UPDATE hybrid_execution_jobs
       SET status='failed', last_error='stored_payload_invalid', completed_at=?, updated_at=?
