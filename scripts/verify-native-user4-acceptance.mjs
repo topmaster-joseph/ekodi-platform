@@ -111,7 +111,7 @@ export async function ensureUser4AgentUpdated({
 }={}){
   if(typeof token!=='string'||token.trim().length<20)throw new Error('trusted_admin_session_required');
   const request=async(method='GET',endpoint='',body)=>{
-    const response=await fetchImpl(ROOT&&BASE+ROOT+endpoint,{
+    const response=await fetchImpl(BASE+ROOT+endpoint,{
       method,redirect:'error',cache:'no-store',
       headers:{authorization:'Bearer '+token,accept:'application/json',
         ...(body?{'content-type':'application/json'}:{})},
