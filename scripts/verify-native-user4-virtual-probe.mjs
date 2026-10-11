@@ -1,8 +1,18 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+
 // Receipt-gated, read-only USER4 native Hyper-V readiness probe; never touches user desktop.
 const API='https://ekodi.kr/api/control/devices';
 const COMMAND='computer.desktop.probe';
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const parse=t=>Date.parse(String(t||''));
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+async function persistProbeEvidence(value){
+  const dir=path.join(root,'artifacts');
+  await fs.mkdir(dir,{recursive:true});
+  await fs.writeFile(path.join(dir,'native-user4-virtual-probe.json'),JSON.stringify(value,null,2)+'\n','utf8');
+}
 async function run(){
  const token=String(process.env.E2E_ADMIN_TOKEN||'');
  if(token.length<20)throw Error('trusted_admin_session_required');
@@ -35,7 +45,7 @@ async function run(){
   if(c?.status!=='succeeded')continue;
   const proof=c.result?.desktopProbe;
   if(!proof)throw Error('missing_native_hyperv_probe');
-  console.log('[EKODI][USER4-NATIVE-VIRTUAL-PROBE] '+JSON.stringify({
+  const evidence={
     targetAlias:'user4',commandId:out.id,receiptStatus:'succeeded',
     backendReady:proof.headlessBackendReady===true,
     backend:'hyper-v-ekodi-base',userDesktopAttached:false,
@@ -44,7 +54,10 @@ async function run(){
     hyperVPowerShellAvailable:proof.hyperVPowerShellAvailable===true,
     baseVmPresent:proof.baseVmPresent===true,
     gapReason:['native-capability-unavailable','native-capability-not-production-ready','required-capability-not-yet-implemented','native-capacity-or-runtime-failure'].includes(proof.gapReason)?proof.gapReason:'unknown',
-    completedAt:c.completedAt||null,observedAt:new Date().toISOString()}));
+    completedAt:c.completedAt||null,observedAt:new Date().toISOString()
+  };
+  await persistProbeEvidence(evidence);
+  console.log('[EKODI][USER4-NATIVE-VIRTUAL-PROBE] '+JSON.stringify(evidence));
   if(proof.headlessBackendReady!==true)throw Error('user4_hyperv_backend_not_ready');
   return;
  }
