@@ -209,3 +209,16 @@ test('Cloudflare host totals survive unavailable per-zone classifier without dis
   assert.doesNotMatch(collector,/console\.warn\([^\n]*error\.message/);
   assert.doesNotMatch(collector,/skippedZones\.push\(\{ zone:zone.name, message:/);
 });
+
+test('GraphQL Analytics has a separate read-only secret without granting it D1/deploy privileges',async()=>{
+  const collector=await readFile('scripts/collect-traffic-intelligence.mjs','utf8');
+  const workflow=await readFile('.github/workflows/traffic-intelligence-analytics.yml','utf8');
+  assert.ok(collector.includes("process.env.CLOUDFLARE_ANALYTICS_API_TOKEN"));
+  assert.ok(collector.includes("const credential = analytics ? (analyticsReadToken || apiToken) : apiToken"));
+  assert.ok(collector.includes("cloudflare('/graphql', { analytics:true"));
+  assert.ok(collector.includes("cloudflare(`/zones?per_page=50&status=active&account.id="));
+  assert.ok(collector.includes("GraphQL credential mode:"));
+  assert.ok(!collector.includes("console.log(analyticsReadToken)"));
+  assert.ok(workflow.includes("CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_API_TOKEN }}"));
+  assert.ok(workflow.includes("CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}"));
+});
