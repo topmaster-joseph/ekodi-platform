@@ -12,3 +12,5 @@ verifyNativeLocalAi({
 });
 
 // Owner-initiated revalidation after related-change integration approval.
+
+// Recheck protected checks after Orchestrator base synchronization.
