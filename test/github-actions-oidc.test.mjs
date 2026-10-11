@@ -72,7 +72,12 @@ for(const [name,claim,value,reason] of [
 test('rejects modified signature',async()=>{
   const {token,fetchImpl}=fixture();
   const [a,b,c]=token.split('.');
-  const modified=`${a}.${b}.${c.slice(0,-2)}aa`;
+  // Always mutate a signed byte. Replacing the final characters with a
+  // constant can accidentally reproduce the original valid signature.
+  const changed=Buffer.from(c,'base64url');
+  changed[0]^=0x01;
+  const modified=`${a}.${b}.${changed.toString('base64url')}`;
+  assert.notEqual(modified,token);
   const result=await verifyGitHubActionsOidc(modified,{fetchImpl});
   assert.equal(result.ok,false);
   assert.equal(result.reason,'signature_invalid');

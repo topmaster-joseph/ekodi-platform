@@ -1,0 +1,61 @@
+name: CGMA Board Independent Health Watch
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: cgma-independent-board-health-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Check the read-only CGMA board and authorization boundaries
+        id: probe
+        continue-on-error: true
+        shell: bash
+        run: |
+          node scripts/monitor-cgma-board.mjs > cgma-board-probe.json
+      - name: Open one incident on persistent failure, resolve it after recovery
+        if: always()
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        with:
+          script: |
+            const fs=require('fs');
+            const marker='<!-- EKODI_CGMA_BOARD_WATCH_V1 -->';
+            const issueTitle='[운영감시] CGMA 독립 게시판 상태 이상';
+            let result;
+            try {
+              result=JSON.parse(fs.readFileSync('cgma-board-probe.json','utf8'));
+            } catch {
+              result={ok:false,results:[{path:'CGMA_PROBE',ok:false,reason:'probe_process_failed'}]};
+            }
+            const {owner,repo}=context.repo;
+            const issues=await github.paginate(github.rest.issues.listForRepo,{owner,repo,state:'open',per_page:100});
+            const previous=issues.find(issue=>!issue.pull_request && issue.title===issueTitle && (issue.body||'').includes(marker));
+            if(result.ok===true){
+              if(previous){
+                await github.rest.issues.createComment({owner,repo,issue_number:previous.number,body:'CGMA board and authorization read-only checks have recovered. Automated watch resolved this incident.'});
+                await github.rest.issues.update({owner,repo,issue_number:previous.number,state:'closed',state_reason:'completed'});
+              }
+            } else if(!previous) {
+              const problems=(result.results||[]).filter(r=>r.ok!==true).map(r=>'- '+String(r.path).slice(0,90)+': '+String(r.reason).slice(0,90)).join('\n');
+              await github.rest.issues.create({owner,repo,title:issueTitle,body:marker+'\nAutomated hourly read-only CGMA board check failed after bounded retries.\n'+problems+'\n\nWorkflow: '+context.serverUrl+'/'+owner+'/'+repo+'/actions/runs/'+context.runId+'\n\nNo production mutations, elevated permissions, or private data inspection were used.'});
+            }
+      - name: Fail workflow visibly if any check is still unhealthy
+        if: steps.probe.outcome != 'success'
+        run: exit 1

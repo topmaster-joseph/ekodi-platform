@@ -525,6 +525,8 @@ async function proxyPublicAi(request, env) {
   const upstream=await env.AI.fetch(new Request(target.toString(),{method:request.method,headers,body,redirect:'manual'}));
   const response=new Response(upstream.body,upstream);
   response.headers.set('X-EKODI-AI-Entry','commons-v1');
+  response.headers.set('X-EKODI-Canonical-Surface','ai');
+  response.headers.set('X-EKODI-Canonical-Path','/ai');
   return response;
 }
 
@@ -681,15 +683,7 @@ export default {
         secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
         return secured;
       }
-      if (url.pathname === '/ai') {
-        const target = new URL(request.url);
-        target.pathname = '/ai/';
-        const response = new Response(null, {status:308, headers:{location:target.toString(),'cache-control':'no-store'}});
-        applyBaseSecurityHeaders(response.headers);
-        response.headers.set('X-EKODI-AI-Canonical','/ai/');
-        return response;
-      }
-      if (url.pathname.startsWith('/ai/')) return proxyPublicAi(request, env);
+      if (url.pathname === '/ai' || url.pathname.startsWith('/ai/')) return proxyPublicAi(request, env);
       if (url.pathname === '/' || url.pathname === '/index.html') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/'));
         return withHostSecurity(response, PUBLIC_CSP, 'public, max-age=0', 'public-home');

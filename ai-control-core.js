@@ -19,6 +19,7 @@ export const AI_CONTROL_POLICY = Object.freeze({
     'node:codex',
     'node:gemini-cli',
     'node:claude-code',
+    'node:ollama-local',
     'openai-api',
     'anthropic-api',
     'worker:claude',
@@ -147,6 +148,7 @@ function providerCostClassForTask(providerId, capabilities = {}) {
   return clean(override).toLowerCase() || canonical;
 }
 function providerAllowedForTask(providerId, task = {}, capabilities = {}) {
+  if (providerId === 'node:ollama-local' && (task.needsCodeBranch === true || !task.requestedProviders?.includes('node:ollama-local'))) return false;
   const quota = capabilities.providerQuotas?.[providerId];
   return evaluateAiCostEligibility({ costClass:providerCostClassForTask(providerId, capabilities), freeQuotaRemaining:quota?.remaining }, task).eligible;
 }

@@ -22,14 +22,32 @@ function legacyRecorder(){
 }
 
 test('public execution surface roots canonicalize slashless URLs to the same trailing-slash route',async()=>{
-  const publicRoots=PLATFORM_EXECUTION_SURFACES.filter(spec=>!spec.exact&&!spec.id.endsWith('-api')&&!spec.prefix.includes('/api/'));
-  assert.ok(publicRoots.some(spec=>spec.id==='ai'));
+  const publicRoots=PLATFORM_EXECUTION_SURFACES.filter(spec=>spec.id!=='ai'&&!spec.exact&&!spec.id.endsWith('-api')&&!spec.prefix.includes('/api/'));
+  assert.ok(PLATFORM_EXECUTION_SURFACES.some(spec=>spec.id==='ai'));
   for(const spec of publicRoots){
     const response=await routeCanonicalSurface(new Request(`https://ekodi.kr${spec.prefix}`),{});
     assert.equal(response.status,308,`${spec.id} slashless root must redirect`);
     const location=new URL(response.headers.get('location'));
     assert.equal(location.pathname,`${spec.prefix}/`,`${spec.id} must preserve the canonical service root`);
     assert.equal(location.hostname,'ekodi.kr');
+  }
+});
+
+test('AI slashless and trailing slash paths both serve directly without a redirect',async()=>{
+  for(const entry of ['canonical','site']){
+    const service=binding('EKODI AI direct root','text/html');
+    for(const path of ['/ai','/ai/']){
+      const request=new Request('https://ekodi.kr'+path+'?source=test');
+      const response=entry==='canonical'
+        ? await routeCanonicalSurface(request,{AI:service})
+        : await siteWorker.fetch(request,{AI:service});
+      assert.equal(response.status,200,entry+' '+path);
+      assert.equal(response.headers.get('location'),null,entry+' '+path);
+      assert.equal(response.headers.get('x-ekodi-canonical-surface'),'ai',entry+' '+path);
+      assert.equal(response.headers.get('x-ekodi-canonical-path'),'/ai',entry+' '+path);
+      assert.equal(await response.text(),'EKODI AI direct root',entry+' '+path);
+    }
+    assert.deepEqual(service.calls.map(item=>item.pathname),['/','/']);
   }
 });
 
@@ -198,7 +216,7 @@ test('legacy Admin entry host still converges while Auth has no legacy host cont
   assert.equal(response.status,308);const target=new URL(response.headers.get('location'));assert.equal(target.pathname,'/admin/');assert.equal(target.searchParams.get('route'),'books');
 });
 
-test('Admin canonical route registry mirrors the seven management areas and migrates legacy groups',()=>{
+test('Admin canonical route registry mirrors the eleven management areas and migrates legacy groups',()=>{
   const source=fs.readFileSync(new URL('../admin-canonical-routes.js',import.meta.url),'utf8');
   const location={href:'https://ekodi.kr/admin/',hostname:'ekodi.kr',pathname:'/admin/',search:'',hash:''};
   const window={location};vm.runInNewContext(source,{window,URL,URLSearchParams,Object,Set,String});
@@ -212,7 +230,7 @@ test('Admin canonical route registry mirrors the seven management areas and migr
   assert.equal(routes.pathFor('devotional'),'/admin/content/devotional');
   assert.equal(routes.pathFor('workspace'),'/admin/sites/workspace');
   assert.equal(routes.pathFor('clients'),'/admin/sites/clients');
-  assert.equal(routes.pathFor('aiops'),'/admin/status/aiops');
+  assert.equal(routes.pathFor('aiops'),'/admin/releases/aiops');
   assert.equal(routes.sectionFromPath('/admin/system/security'),'security');
   assert.equal(routes.sectionFromPath('/admin/home/campus'),'campus');
   assert.equal(routes.sectionFromPath('/admin/system/campus'),'campus');

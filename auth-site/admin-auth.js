@@ -85,6 +85,10 @@ async function completeGoogleLogin(credential,challenge){
   notice('관리자 Google 계정과 허용목록을 확인하고 있습니다.');
   const result=await request('/api/google/login',{method:'POST',body:JSON.stringify({credential,nonce:challenge.nonce})});
   if(!result.token)throw new Error('admin_session_missing');
+  // Verify the issued token against the canonical auth API before returning to Admin.
+  // This prevents a silent login loop when session persistence or routing has failed.
+  const verified=await request('/api/session',{headers:{authorization:`Bearer ${result.token}`}});
+  if(verified.authenticated!==true)throw new Error('admin_session_not_ready');
   navigateToAdmin(result);
 }
 function renderOriginBridgeButton(host,config,challenge){
@@ -95,6 +99,7 @@ function renderOriginBridgeButton(host,config,challenge){
   }});host.append(button);
 }
 function loginFailureMessage(error){
+  if(error?.status===401||error?.message==='admin_session_not_ready')return 'Google 인증 후 관리자 세션 검증에 실패했습니다 (HTTP 401). 인증 서버 상태를 확인해 주세요.';
   if(error?.status===403&&error?.data?.code==='GOOGLE_ACCOUNT_NOT_ALLOWED')return'이 Google 계정은 EKODI 관리자 허용목록에 없습니다. 등록된 관리자 계정을 선택해 주세요.';
   if(error?.status===403)return error?.data?.error||'이 Google 계정은 EKODI 관리자 권한이 없습니다.';
   if(error?.status===503)return'Google 관리자 인증 서버가 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.';

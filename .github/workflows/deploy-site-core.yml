@@ -25,7 +25,13 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/deploy-site-core.yml'
+      - 'scripts/converge-orchestrated-pr-merge.mjs'
       - 'site-worker.js'
+      - 'singles-surface.js'
+      - 'sites/ekodi-singles/public/**'
+      - 'supabase/functions/singles-api/**'
+      - 'supabase/migrations/*_singles_*.sql'
+      - 'test/singles-*.test.mjs'
       - 'test/admin-subdomain-redirect-runtime.test.mjs'
       - 'cgmurrc.html'
       - 'test/ekodi-connect-route.test.mjs'
@@ -64,6 +70,10 @@ on:
       - 'platform-router-entry-worker.js'
       - 'site-publication-runtime.js'
       - 'platform-security-policy.js'
+      - 'public-edge-cache.js'
+      - 'turnstile-abuse-guard.js'
+      - 'test/public-edge-cache.test.mjs'
+      - 'test/turnstile-abuse-guard.test.mjs'
       - 'traffic-governor.js'
       - 'config/concurrent-traffic-policy.json'
       - 'scripts/validate-concurrent-traffic-policy.mjs'
@@ -125,6 +135,9 @@ on:
       - 'marketing-canonical-projection.js'
       - 'workspace-route-policy.js'
       - 'workspace-admin-page.js'
+      - 'mall-social-setup.js'
+      - 'test/ekodimall-sns-oauth-loop.test.mjs'
+      - 'test/ekodimall-one-screen-sns.test.mjs'
       - 'tenant-finance-admin.js'
       - 'finance-monitor.js'
       - 'test/finance-banking.test.mjs'
@@ -245,6 +258,9 @@ on:
       - 'ADMIN_UI_PRINCIPLES.md'
       - 'device-control-admin.js'
       - 'device-control-admin.css'
+      - 'remote-power-admin.js'
+      - 'remote-power-admin.css'
+      - 'device-wake-admin.js'
       - 'tapo-device-admin.js'
       - 'tapo-device-admin.css'
       - 'test/tapo-admin-asset-boundary.test.mjs'
@@ -544,6 +560,7 @@ jobs:
           node --test test/discovery-layer.test.mjs test/preview-page.test.mjs test/mail-contact.test.mjs test/learning-page.test.mjs test/learning-routing-contract.test.mjs test/ekodi-connect-route.test.mjs test/seonammedi-site.test.mjs
           node --test test/store-admin-systems.test.mjs test/store-user-site-admin.test.mjs test/tenant-admin-policy.test.mjs test/workspace-admin-marketing-channels-route.test.mjs test/workspace-admin-two-level-shell.test.mjs test/mall-v83-workspace-admin.test.mjs test/personal-finance-admin-control.test.mjs test/admin-finance-render-performance.test.mjs test/admin-authenticated-e2e-retry.test.mjs test/admin-assist-command-delivery.test.mjs test/ekodimission-admin-production-e2e-contract.test.mjs test/finance-banking.test.mjs
           node --test test/cloudflare-quota-guard.test.mjs test/production-gate-transport-resilience.test.mjs test/concurrent-traffic-runtime.test.mjs
+          node --test test/ekodimall-sns-oauth-loop.test.mjs test/ekodimall-one-screen-sns.test.mjs
           node --test test/shared-site-release-ownership.test.mjs
           node --test test/hub-apex-routing.test.mjs
           node --test test/admin-subdomain-redirect-runtime.test.mjs
@@ -896,6 +913,38 @@ jobs:
           npx --yes wrangler@4.119.0 queues list | grep -Fq 'ekodi-write-ingress-dlq'
           echo 'durableWriteQueueConsumer=attached'
 
+      - name: Verify public edge cache absorbs repeated SeonamMedi reads
+        if: steps.quota.outputs.skip_nonessential != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://ekodi.kr/api/seonammedi/timeline'
+          hit=false
+          for attempt in $(seq 1 6); do
+            curl -fsS -D /tmp/seonam-cache.headers -o /tmp/seonam-cache.json \
+              --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 20 "$url"
+            grep -Fq '"ok":true' /tmp/seonam-cache.json
+            grep -Fiq 'x-ekodi-cache-policy: public-edge-v1;seonammedi-timeline' /tmp/seonam-cache.headers
+            state=$(awk 'BEGIN{IGNORECASE=1} /^x-ekodi-edge-cache:/ {gsub("\\r",""); print $2; exit}' /tmp/seonam-cache.headers)
+            echo "SeonamMedi edge cache attempt $attempt: ${state:-missing}"
+            if [ "$state" = 'HIT' ]; then hit=true; break; fi
+            sleep 1
+          done
+          [ "$hit" = true ] || { echo 'Repeated safe public read never produced a Cloudflare Cache API HIT.' >&2; cat /tmp/seonam-cache.headers; exit 1; }
+          echo 'seonamMediPublicEdgeCache=HIT' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report adaptive Turnstile readiness without exposing secrets
+        if: steps.quota.outputs.skip_nonessential != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.119.0 secret list --config wrangler.site.toml > /tmp/shared-site-secrets.json
+          if grep -Fq '"TURNSTILE_SECRET_KEY"' /tmp/shared-site-secrets.json; then
+            echo 'adaptiveTurnstile=secret-configured' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'adaptiveTurnstile=staged-inert-no-secret' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          rm -f /tmp/shared-site-secrets.json
       - name: Verify EKODI Mission LIVE production shell contract
         if: steps.quota.outputs.skip_nonessential != 'true'
         env:
@@ -935,9 +984,17 @@ jobs:
 
           echo 'canonicalAdminRouteOwnership=verified'
 
+      - name: Verify Device Admin production release artifact parity
+        if: steps.quota.outputs.skip_nonessential != 'true'
+        run: node scripts/verify-device-admin-live.mjs --origin=https://ekodi.kr --expectedDir=dist --attempts=12 --delayMs=5000
+
       - name: Verify canonical AI Provider Control production surface
         if: steps.quota.outputs.skip_nonessential != 'true'
         run: node scripts/verify-admin-provider-control-production.mjs
+
+      - name: Verify independent board subpages and Singles gated access live
+        if: steps.quota.outputs.skip_nonessential != 'true'
+        run: node scripts/verify-independent-board-live.mjs
 
       - name: Verify admin assets and every registered production service
         if: steps.quota.outputs.skip_nonessential != 'true'
@@ -1060,6 +1117,33 @@ jobs:
             'https://ekodi.kr/auth/auth-workspace-target.js'; do
             check "$asset" || failed=1
           done
+
+          # A successful Worker deploy is not complete until the user-visible Device Control bundle is fresh.
+          # These are public static admin scripts only; no authenticated device metadata is fetched here.
+          device_assets_verified=0
+          for attempt in $(seq 1 12); do
+            if curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 20 \
+                'https://ekodi.kr/device-control-admin.js' -o /tmp/ekodi-device-roster.js \
+              && grep -Fq 'function rosterGroupKey(device)' /tmp/ekodi-device-roster.js \
+              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 20 \
+                'https://ekodi.kr/device-control-admin.css' -o /tmp/ekodi-device-roster.css \
+              && grep -Fq '.device-roster-group' /tmp/ekodi-device-roster.css \
+              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 20 \
+                'https://ekodi.kr/remote-power-admin.js' -o /tmp/ekodi-remote-power.js \
+              && grep -Fq 'selectedAgentId' /tmp/ekodi-remote-power.js \
+              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 20 \
+                'https://ekodi.kr/device-browser-diagnostics.js' -o /tmp/ekodi-device-browser.js \
+              && grep -Fq 'device-wake-group' /tmp/ekodi-device-browser.js; then
+              device_assets_verified=1
+              echo 'EKODI Device Control roster, power and Wake production static assets verified.'
+              break
+            fi
+            if [ "$attempt" -lt 12 ]; then sleep 5; fi
+          done
+          if [ "$device_assets_verified" -ne 1 ]; then
+            echo '[EKODI][DEVICE-UI-RELEASE] production assets are stale after site-core deployment' >&2
+            failed=1
+          fi
 
           exit "$failed"
 

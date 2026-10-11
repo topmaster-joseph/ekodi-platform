@@ -35,6 +35,13 @@
           "Validate CGMA edge contract"
         ],
         "scope": "cgma-edge-only"
+      },
+      "Deploy Independent Board": {
+        "job": "validate",
+        "requiredSteps": [
+          "Validate standalone board contract"
+        ],
+        "scope": "independent-board-only"
       }
     }
   },
@@ -60,7 +67,8 @@
       "Deploy Control API",
       "Deploy EKODI Shared Site Core",
       "Deploy CGMA Apex Edge",
-      "Deploy Business OS"
+      "Deploy Business OS",
+      "Deploy Independent Board"
     ]
   },
   "oidcBoundary": {

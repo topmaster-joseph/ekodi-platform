@@ -31,7 +31,10 @@ for(const item of ADMIN_MENU_REGISTRY.filter(item=>!item.href)){
   seen.add(path);
 }
 const deep=routes.pathFor('finance',['transactions','txn-123','edit']);
-if(deep!=='/admin/content/finance/transactions/txn-123/edit')fail.push('platform deep admin route generation drifted');
+if(deep!=='/admin/finance/finance/transactions/txn-123/edit')fail.push('platform deep admin route generation drifted');
+for (const [legacy,section] of [['/admin/content/finance','finance'],['/admin/status/devices','devices'],['/admin/status/aiops','aiops'],['/admin/people/security','security'],['/admin/settings-records/audit-records','audit-records']]) {
+  if (routes.routeFromPath(legacy)?.section!==section) fail.push('prior admin deep link stopped resolving: '+legacy);
+}
 const parsed=routes.routeFromPath(deep);
 if(parsed?.section!=='finance'||JSON.stringify(parsed.detailSegments)!==JSON.stringify(['transactions','txn-123','edit']))fail.push('platform deep admin route parsing drifted');
 if(!isWorkspaceAdminPathShape('/sample-workspace/admin/members/member-123/edit'))fail.push('workspace admin router must accept deep detail routes');

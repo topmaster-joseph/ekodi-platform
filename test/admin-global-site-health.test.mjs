@@ -14,7 +14,7 @@ test('platform super admin owns global site health with static and dynamic tabs'
     read('sites/seonammedi/public/admin/index.html')
   ]);
   assert.match(registry,/id: 'site-health'[^\n]*group: 'status'[^\n]*superAdminOnly: true/);
-  assert.match(sidebar,/status: \['health', 'site-health', 'deployments'/);
+  assert.match(sidebar,/status: \['health', 'site-health', 'architecture'/);
   assert.match(shell,/deferredPostAuthScripts[\s\S]*site-health-admin\.js/);
   assert.match(js,/section\.dataset\.panel=SECTION/);
   assert.match(js,/data-site-health-tab="dynamic"/);

@@ -13,6 +13,10 @@ test('AI membership operations is a separate lazy admin menu', async () => {
   assert.match(loader, /real: '\[data-section="ai-membership"\]'/);
   assert.match(loader, /hashes: \['#ai-membership'\]/);
   assert.match(loader, /scripts: \['ai-ops-admin\.js'\]/);
+  assert.match(loader, /ready: '#userAiMembershipPanel'/);
+  assert.match(panel, /node\.hidden = !visible/);
+  assert.match(panel, /if \(visible\) node\.dataset\.adminListLayout = 'single'/);
+  assert.match(panel, /section\.hidden = true/);
 
   assert.match(panel, /button\.dataset\.section = SECTION/);
   assert.doesNotMatch(panel, /data-demand-feature=\"aimembers\"[^\n]*\.remove\(\)/);
@@ -32,5 +36,18 @@ test('AI membership operations is a separate lazy admin menu', async () => {
 
   assert.match(build, /readFile\(`\$\{root\}user-ai-tier-panel\.js`/);
   assert.match(build, /writeFile\(`\$\{output\}ai-ops-admin\.js`/);
+  assert.match(deploy, /- 'user-ai-tier-panel\.js'/);
+});
+
+test('production AI membership lazy module keeps native visibility and guarded Site Core dispatch', async () => {
+  const loader = await readFile(new URL('../admin-demand-loader.js', import.meta.url), 'utf8');
+  const panel = await readFile(new URL('../user-ai-tier-panel.js', import.meta.url), 'utf8');
+  const convergence = await readFile(new URL('../scripts/converge-orchestrated-pr-merge.mjs', import.meta.url), 'utf8');
+  const deploy = await readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8');
+  assert.match(loader, /if\(feature\.ready\)await waitFor\(feature\.ready,1e4\)/);
+  assert.match(loader, /ready: '#userAiMembershipPanel'/);
+  assert.match(panel, /node\.hidden = !visible/);
+  assert.match(panel, /section\.hidden = true/);
+  assert.match(convergence, /'admin-demand-loader\.js'/);
   assert.match(deploy, /- 'user-ai-tier-panel\.js'/);
 });

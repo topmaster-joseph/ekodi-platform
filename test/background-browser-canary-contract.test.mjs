@@ -23,3 +23,28 @@ test('background browser canary rejects local and non-http targets', () => {
   assert.match(worker, /loopback_target_forbidden/);
   assert.match(worker, /url_userinfo_forbidden/);
 });
+
+const deviceAgent = await readFile(new URL('../tools/ekodi-device-agent/windows/ekodi-device-agent.ps1', import.meta.url), 'utf8');
+test('device agent canary covers Windows x86 browser locations and emits actionable failure evidence', () => {
+  assert.match(deviceAgent, /ProgramFiles\(x86\)/);
+  assert.match(deviceAgent, /background_browser_canary_failed: browser=/);
+  assert.match(deviceAgent, /stdoutBytes=/);
+  assert.match(deviceAgent, /stderr=/);
+  assert.match(deviceAgent, /--headless=new/);
+  assert.match(deviceAgent, /CreateNoWindow = \$true/);
+});
+
+test('device canary uses a fresh unique profile and cleans it even when the browser fails', () => {
+  assert.match(deviceAgent, /\$canaryProfile = Join-Path \$BrowserCanaryProfileRoot \(\[Guid\]::NewGuid\(\)\.ToString\('N'\)\)/);
+  assert.match(deviceAgent, /--user-data-dir=.*\$canaryProfile/);
+  assert.match(deviceAgent, /Remove-Item -LiteralPath \$canaryProfile -Recurse -Force -ErrorAction SilentlyContinue/);
+  assert.match(deviceAgent, /\$process\.ExitCode -eq 0 -and \$stdout\.Length -gt 0/);
+});
+
+test('device canary retries empty Chrome DOM on Edge with an isolated profile and remains fail closed', () => {
+  assert.match(deviceAgent, /function Resolve-EkodiEdgeBrowser/);
+  assert.match(deviceAgent, /function Invoke-BackgroundBrowserCanary\(\[bool\]\$PreferEdge = \$false\)/);
+  assert.match(deviceAgent, /-not \$PreferEdge -and \[IO.Path\]::GetFileName\(\$browser\) -eq 'chrome.exe'/);
+  assert.match(deviceAgent, /Invoke-BackgroundBrowserCanary -PreferEdge \$true/);
+  assert.match(deviceAgent, /\$process\.ExitCode -eq 0 -and \$stdout\.Length -gt 0/);
+});

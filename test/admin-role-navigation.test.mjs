@@ -13,12 +13,8 @@ test('platform super admin owns explicit platform control navigation', () => {
   const profile = policy.profiles['platform-super-admin'];
   assert.equal(profile.surface, '/admin');
   assert.equal(profile.maySeeControlPlane, true);
-  assert.deepEqual(profile.groups.map(group => group.id), [
-    'summary','sites','people','services','content','status','settings-records',
-  ]);
-  assert.deepEqual(profile.groups.map(group => group.labelKo), [
-    '플랫폼 전체현황','사이트·브랜드','사용자·관리자·권한','서비스·AI','콘텐츠·행사·소통','운영·배포·장애','설정·보안·감사',
-  ]);
+  assert.deepEqual(profile.groups.map(group => group.id), ['summary', 'sites', 'people', 'services', 'content', 'finance', 'status', 'releases', 'devices-agent', 'settings-records', 'security-audit']);
+  assert.deepEqual(profile.groups.map(group => group.labelKo), ['전체 대시보드', '사이트·브랜드', '회원·관리자·권한', '서비스·AI', '콘텐츠·행사·소통', '결제·회계·비용', '상태·성능·점검', '배포·장애', '기기·에이전트', '설정·연동·저장소', '보안·감사']);
   for (const label of profile.groups.map(group => group.labelKo)) assert.match(registry, new RegExp(label));
   assert.match(sidebar, /isPlatformSuperAdminSurface/);
   assert.match(sidebar, /renderSidebarDetails\(nav, globals, group, displayedSection \|\| section, locale\)/);

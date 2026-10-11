@@ -5,9 +5,9 @@ import { getAdminMenuItem } from '../admin-menu-registry.js';
 
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 
-test('POS Agent install management remains a native super-admin status panel',async()=>{
+test('POS Agent install management remains a native super-admin device panel',async()=>{
   const item=getAdminMenuItem('pos-agent');
-  assert.equal(item?.group,'status');
+  assert.equal(item?.group,'devices-agent');
   assert.equal(item?.superAdminOnly,true);
   assert.equal(item?.href,undefined);
   assert.equal(item?.adminHandoff,undefined);

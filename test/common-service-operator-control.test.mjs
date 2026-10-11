@@ -50,7 +50,8 @@ test('Admin menu mounts the common-service operator module', () => {
 test('common-service Admin UI consumes the central admin session and has no service login UI', () => {
   const source = read('common-services-admin.js');
   assert.match(source, /TOKEN_KEY='ekodi-auth-token'/);
-  assert.match(source, /\/api\/control\/common-services\/\$\{path\}/);
+  assert.match(source, /\/ai\/api\/\$\{String\(path\)\.replace/);
+  assert.doesNotMatch(source, /jsonFetch\(`\/api\/control\/common-services\/\$\{path\}`/);
   assert.match(source, /Person \+ Workspace \+ Role \+ Capability/);
   assert.match(source, /AI Control Runtime/);
   assert.match(source, /routeButton\('ai-settings','AI 설정 관리'\)/);

@@ -5,6 +5,7 @@ import path from 'node:path';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 export const REQUIRED_MISSION_LINKS=Object.freeze([
   '/ekodimission/activities',
+  '/ekodimission/history',
   '/ekodimission/live',
   '/ekodimission/participate',
   '/ekodimission/partners',

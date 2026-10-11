@@ -1,4 +1,4 @@
-param(
+﻿param(
   [switch]$Install,
   [switch]$Run,
   [switch]$RegisterProtocol,
@@ -19,7 +19,15 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.5.2'
+$AgentVersion = '2.5.3'
+# Some remote/managed Windows sessions omit ProgramData from the process environment.
+# Resolve the canonical system data directory without changing machine-wide settings.
+if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
+  $env:ProgramData = [Environment]::GetFolderPath([Environment+SpecialFolder]::CommonApplicationData)
+}
+if ([string]::IsNullOrWhiteSpace($env:ProgramData) -or -not [System.IO.Path]::IsPathRooted($env:ProgramData)) {
+  throw '[EKODI:EKA-298][environment] Windows ProgramData path is unavailable.'
+}
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -37,6 +45,12 @@ $script:RestartAfterCommand = $false
 $BrowserCanaryStatePath = Join-Path $Root 'background-browser-canary.json'
 $BrowserCanaryProfileRoot = Join-Path $env:ProgramData 'EKODI\BrowserWorker\CanaryProfile'
 $BrowserWorkerProfileRoot = Join-Path $env:ProgramData 'EKODI\BrowserWorker\Tasks'
+$WorkspaceAudioRoot = Join-Path $env:ProgramData 'EKODI\GoogleWorkspace'
+$WorkspaceAudioScript = Join-Path $WorkspaceAudioRoot 'tools\ekodi-device-agent\windows\google-workspace-slides-audio.mjs'
+$WorkspaceAudioPolicy = Join-Path $WorkspaceAudioRoot 'google-workspace-slides-audio-policy.js'
+$WorkspaceAudioConsent = Join-Path $WorkspaceAudioRoot 'consent.json'
+$WorkspaceAudioCanary = Join-Path $WorkspaceAudioRoot 'canary.json'
+$WorkspaceAudioProfile = Join-Path $WorkspaceAudioRoot 'automation-profile'
 $BrowserCanaryUrl = 'https://ekodi.kr/'
 $IsolatedDesktopCanaryStatePath = Join-Path $Root 'isolated-desktop-canary.json'
 $IsolatedDesktopGuestCanaryStatePath = Join-Path $Root 'isolated-desktop-guest-canary.json'
@@ -819,6 +833,48 @@ function Invoke-AgentUpgradeTransaction([string]$CandidatePath, [switch]$DeferRe
   }
 }
 
+function Install-EkodiLocalAI {
+  # Fixed, versioned source. Never execute a command supplied by a cloud payload.
+  $uri = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/tools/ekodi-device-agent/windows/ekodi-localai-installer.ps1'
+  $expectedSha256 = 'B1BEEA46AFED286EF73947A7A8B52331C1E95FCA13D7A9107B4A3B190AE9500D'
+  $download = Join-Path $env:TEMP ('ekodi-localai-installer-' + [guid]::NewGuid().ToString('N') + '.ps1')
+  try {
+    Invoke-WebRequest -UseBasicParsing -Uri $uri -OutFile $download -TimeoutSec 90
+    $actual = (Get-FileHash -LiteralPath $download -Algorithm SHA256).Hash
+    if ($actual -ne $expectedSha256) { throw 'LOCALAI_INSTALLER_HASH_MISMATCH' }
+    $tokens = $null
+    $errors = $null
+    [void][System.Management.Automation.Language.Parser]::ParseFile($download,[ref]$tokens,[ref]$errors)
+    if ($errors.Count -gt 0) { throw 'LOCALAI_INSTALLER_SYNTAX_INVALID' }
+    $process = Start-Process -FilePath 'powershell.exe' -ArgumentList @(
+      '-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',('"'+$download+'"')
+    ) -WindowStyle Hidden -PassThru
+    if (!$process.WaitForExit(1800000)) {
+      try { $process.Kill() } catch {}
+      throw 'LOCALAI_INSTALL_TIMEOUT'
+    }
+    $receiptPath = Join-Path $env:LOCALAPPDATA 'EKODI\LocalAI\last-install-result.json'
+    $receipt = $null
+    if (Test-Path -LiteralPath $receiptPath) {
+      try { $receipt = Get-Content -LiteralPath $receiptPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch {}
+    }
+    $outcome = @{
+      exitCode = [int]$process.ExitCode
+      result = [string]$receipt.result
+      ollama = [string]$receipt.ollama
+      claude = [string]$receipt.claude
+      model = [string]$receipt.model
+      inference = [string]$receipt.inference
+      claudeAuthenticated = [string]$receipt.claudeAuthenticated
+      logAvailable = (Test-Path -LiteralPath $receiptPath)
+    }
+    if ($process.ExitCode -ne 0) { throw ('LOCALAI_INSTALL_PARTIAL_OR_FAILED: '+$outcome.result) }
+    return $outcome
+  } finally {
+    Remove-Item -LiteralPath $download -Force -ErrorAction SilentlyContinue
+  }
+}
+
 function Update-AgentFromOfficialSource {
   $temp = Join-Path $env:TEMP 'ekodi-device-agent-update.ps1'
   Invoke-WebRequest -UseBasicParsing $AgentSourceUrl -OutFile $temp
@@ -865,6 +921,17 @@ function Resolve-EkodiBrowser {
     "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
     "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe",
     "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
+    "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
+    "$env:LOCALAPPDATA\Microsoft\Edge\Application\msedge.exe",
+    "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe"
+  )
+  return ($candidates | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1)
+}
+
+function Resolve-EkodiEdgeBrowser {
+  $candidates = @(
+    "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
+    "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
     "$env:LOCALAPPDATA\Microsoft\Edge\Application\msedge.exe"
   )
   return ($candidates | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1)
@@ -903,11 +970,75 @@ function Get-BackgroundBrowserCanaryState {
   }
 }
 
-function Invoke-BackgroundBrowserCanary {
+function Invoke-EkodiNativeCdpCanary {
+  $nodeCommand = Get-Command node.exe -ErrorAction SilentlyContinue
+  if (-not $nodeCommand) { throw 'CDP_NODE_RUNTIME_REQUIRED' }
+  $nodeExe = [string]$nodeCommand.Source
+  $nodeVersionText = & $nodeExe --version
+  if ($LASTEXITCODE -ne 0 -or $nodeVersionText -notmatch '^v(\d+)\.') { throw 'CDP_NODE_VERSION_UNAVAILABLE' }
+  if ([int]$Matches[1] -lt 22) { throw 'CDP_NODE_22_REQUIRED' }
+  $workerRoot = Join-Path $Root 'browser-worker'
+  New-Item -ItemType Directory -Path $workerRoot -Force | Out-Null
+  $workerPath = Join-Path $workerRoot 'ekodi-native-browser-cdp.mjs'
+  # Immutable, reviewed source commit: never execute a URL supplied by a job payload.
+  $workerUrl = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/9787f9d5b531e8d30764502aba4f0f2a045ccf43/tools/ekodi-device-agent/windows/ekodi-native-browser-cdp.mjs'
+  $download = Join-Path $workerRoot ('candidate-' + [Guid]::NewGuid().ToString('N') + '.mjs')
+  try {
+    Invoke-WebRequest -UseBasicParsing -Uri $workerUrl -OutFile $download -TimeoutSec 20 -ErrorAction Stop
+    $candidate = Get-Content -LiteralPath $download -Raw -Encoding UTF8
+    if ($candidate -notmatch 'CDP_DOM_EVIDENCE_MISSING' -or $candidate -notmatch 'CDP_TARGET_FORBIDDEN') { throw 'CDP_WORKER_SOURCE_INVALID' }
+    Move-Item -LiteralPath $download -Destination $workerPath -Force
+  } finally {
+    Remove-Item -LiteralPath $download -Force -ErrorAction SilentlyContinue
+  }
+  $process = [Diagnostics.Process]::new()
+  $process.StartInfo = [Diagnostics.ProcessStartInfo]@{
+    FileName = $nodeExe
+    Arguments = ('"' + $workerPath + '"')
+    UseShellExecute = $false
+    CreateNoWindow = $true
+    RedirectStandardOutput = $true
+    RedirectStandardError = $true
+  }
+  [void]$process.Start()
+  $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+  $stderrTask = $process.StandardError.ReadToEndAsync()
+  if (-not $process.WaitForExit(35000)) {
+    try { $process.Kill() } catch {}
+    throw 'CDP_WORKER_TIMEOUT'
+  }
+  $stdout = $stdoutTask.GetAwaiter().GetResult()
+  $stderr = $stderrTask.GetAwaiter().GetResult()
+  if ($process.ExitCode -ne 0) { throw ('CDP_WORKER_FAILED: ' + $stderr.Substring(0,[Math]::Min(260,$stderr.Length))) }
+  try { $receipt = $stdout.Trim() | ConvertFrom-Json -ErrorAction Stop } catch { throw 'CDP_WORKER_INVALID_RECEIPT' }
+  if ($receipt.ok -ne $true -or [int]$receipt.domBytes -le 0 -or [string]$receipt.url -ne $BrowserCanaryUrl -or [string]$receipt.mode -ne 'native-cdp') {
+    throw 'CDP_WORKER_EVIDENCE_INVALID'
+  }
+  $proof = @{
+    ok = $true
+    mode = 'native-cdp'
+    agentVersion = $AgentVersion
+    browser = [string]$receipt.browser
+    url = $BrowserCanaryUrl
+    contentBytes = [int]$receipt.domBytes
+    dedicatedAutomationProfile = $true
+    offscreenOrHeadless = $true
+    focusIsolated = $true
+    clipboardShared = $false
+    userInputInjection = $false
+    checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+  }
+  $proof | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $BrowserCanaryStatePath -Encoding UTF8
+  return @{ message = 'EKODI Native CDP Browser Worker DOM verification completed.'; browserCanary = $proof }
+}
+
+function Invoke-BackgroundBrowserCanary([bool]$PreferEdge = $false) {
   Remove-Item -LiteralPath $BrowserCanaryStatePath -Force -ErrorAction SilentlyContinue
-  $browser = Resolve-EkodiBrowser
+  if (-not $PreferEdge) { return Invoke-EkodiNativeCdpCanary }
+  $browser = if ($PreferEdge) { Resolve-EkodiEdgeBrowser } else { Resolve-EkodiBrowser }
   if (-not $browser) { throw 'supported_browser_not_found' }
-  New-Item -ItemType Directory -Path $BrowserCanaryProfileRoot -Force | Out-Null
+  $canaryProfile = Join-Path $BrowserCanaryProfileRoot ([Guid]::NewGuid().ToString('N'))
+  New-Item -ItemType Directory -Path $canaryProfile -Force | Out-Null
 
   $arguments = @(
     '--headless=new',
@@ -916,7 +1047,7 @@ function Invoke-BackgroundBrowserCanary {
     '--disable-sync',
     '--no-first-run',
     '--no-default-browser-check',
-    "--user-data-dir=`"$BrowserCanaryProfileRoot`"",
+    "--user-data-dir=`"$canaryProfile`"",
     '--dump-dom',
     "`"$BrowserCanaryUrl`""
   ) -join ' '
@@ -930,6 +1061,7 @@ function Invoke-BackgroundBrowserCanary {
     RedirectStandardOutput = $true
     RedirectStandardError = $true
   }
+  try {
   [void]$process.Start()
   $stdoutTask = $process.StandardOutput.ReadToEndAsync()
   $stderrTask = $process.StandardError.ReadToEndAsync()
@@ -956,10 +1088,85 @@ function Invoke-BackgroundBrowserCanary {
     checkedAt = (Get-Date).ToUniversalTime().ToString('o')
     stderrSummary = $(if ($stderr) { $stderr.Substring(0, [Math]::Min(300, $stderr.Length)) } else { '' })
   }
-  if (-not $ok) { throw 'background_browser_canary_failed' }
+  if (-not $ok) {
+    if (-not $PreferEdge -and [IO.Path]::GetFileName($browser) -eq 'chrome.exe' -and (Resolve-EkodiEdgeBrowser)) {
+      return Invoke-BackgroundBrowserCanary -PreferEdge $true
+    }
+    $exitDescription = [string]$process.ExitCode
+    $stderrDescription = ([string]$proof.stderrSummary -replace '[\r\n]+', ' ').Trim()
+    if (-not $stderrDescription) { $stderrDescription = 'no-stderr' }
+    throw ('background_browser_canary_failed: browser=' + $proof.browser + '; exit=' + $exitDescription + '; stdoutBytes=' + $proof.contentBytes + '; stderr=' + $stderrDescription)
+  }
   New-Item -ItemType Directory -Path $Root -Force | Out-Null
   $proof | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $BrowserCanaryStatePath -Encoding UTF8
   return @{ message = 'Background Browser canary를 사용자 화면 개입 없이 검증했습니다. 검증된 버전에서만 EKODI 자체 Browser Worker를 사용할 수 있습니다.'; browserCanary = $proof }
+  } finally {
+    Remove-Item -LiteralPath $canaryProfile -Recurse -Force -ErrorAction SilentlyContinue
+  }
+}
+
+function Get-WorkspaceSlidesAudioState {
+  $state = @{ verified = $false; reason = 'runtime_not_ready'; pilotId = '261011-ekodi-sunday-service-8-mp3' }
+  if (-not (Test-Path -LiteralPath $WorkspaceAudioScript) -or -not (Test-Path -LiteralPath $WorkspaceAudioPolicy)) {
+    $state.reason = 'workspace_audio_runtime_missing'; return $state
+  }
+  if (-not (Test-Path -LiteralPath $WorkspaceAudioProfile)) {
+    $state.reason = 'dedicated_workspace_profile_missing'; return $state
+  }
+  if (-not (Get-Command 'node.exe' -ErrorAction SilentlyContinue)) {
+    $state.reason = 'node_runtime_unavailable'; return $state
+  }
+  try {
+    $consent = Get-Content -LiteralPath $WorkspaceAudioConsent -Raw -Encoding UTF8 | ConvertFrom-Json
+    $canary = Get-Content -LiteralPath $WorkspaceAudioCanary -Raw -Encoding UTF8 | ConvertFrom-Json
+    $now = [DateTime]::UtcNow
+    $expiry = [DateTime]::Parse([string]$consent.expiresAt).ToUniversalTime()
+    $verifiedAt = [DateTime]::Parse([string]$canary.verifiedAt).ToUniversalTime()
+    if ($consent.operatorConsented -ne $true -or $consent.dedicatedProfileVerified -ne $true -or
+        [string]$consent.pilotId -ne '261011-ekodi-sunday-service-8-mp3' -or
+        [string]$consent.presentationId -ne '1wJhndsrFK7GrwnJsmWMvarivlNCfgTE97RGQTRJ3CfI' -or
+        $expiry -le $now -or $expiry -gt $now.AddDays(7)) {
+      $state.reason = 'workspace_google_consent_required'; return $state
+    }
+    if ($canary.verified -ne $true -or [string]$canary.pilotId -ne '261011-ekodi-sunday-service-8-mp3' -or
+        [string]$canary.presentationId -ne '1wJhndsrFK7GrwnJsmWMvarivlNCfgTE97RGQTRJ3CfI' -or
+        [string]$canary.agentVersion -ne $AgentVersion -or $verifiedAt -lt $now.AddHours(-24) -or $verifiedAt -gt $now.AddMinutes(2)) {
+      $state.reason = 'workspace_audio_canary_required'; return $state
+    }
+    return @{ verified = $true; reason = ''; pilotId = '261011-ekodi-sunday-service-8-mp3' }
+  } catch {
+    $state.reason = 'workspace_audio_consent_or_canary_unreadable'; return $state
+  }
+}
+
+function Invoke-WorkspaceSlidesAudioTask($Payload) {
+  $readiness = Get-WorkspaceSlidesAudioState
+  if (-not $readiness.verified) { throw ('workspace_audio_not_ready:' + $readiness.reason) }
+  if ([string]$Payload.pilotId -ne '261011-ekodi-sunday-service-8-mp3' -or
+      [string]$Payload.presentationId -ne '1wJhndsrFK7GrwnJsmWMvarivlNCfgTE97RGQTRJ3CfI' -or
+      [string]$Payload.operation -ne 'insert-native-audio' -or
+      @($Payload.items).Count -ne 8 -or
+      $Payload.interactiveLoginAllowed -ne $false -or
+      $Payload.reuseActiveUserBrowserProfile -ne $false) {
+    throw 'workspace_audio_scope_invalid'
+  }
+  $node = (Get-Command 'node.exe' -ErrorAction Stop).Source
+  $previousProfile = $env:EKODI_WORKSPACE_AUTOMATION_PROFILE
+  $previousConsent = $env:EKODI_WORKSPACE_CONSENT_FILE
+  $previousResult = $env:EKODI_WORKSPACE_RESULT_FILE
+  try {
+    $env:EKODI_WORKSPACE_AUTOMATION_PROFILE = $WorkspaceAudioProfile
+    $env:EKODI_WORKSPACE_CONSENT_FILE = $WorkspaceAudioConsent
+    $env:EKODI_WORKSPACE_RESULT_FILE = ''
+    $raw = & $node $WorkspaceAudioScript 2>$null
+    if (-not $raw) { throw 'workspace_audio_worker_no_result' }
+    $report = ($raw | Select-Object -Last 1) | ConvertFrom-Json
+    return @{ message = 'Google Workspace 전용 음성 삽입 작업 결과를 제출합니다.'; workspaceSlidesAudio = $report }
+  } finally {
+    $env:EKODI_WORKSPACE_AUTOMATION_PROFILE = $previousProfile
+    $env:EKODI_WORKSPACE_CONSENT_FILE = $previousConsent
+    $env:EKODI_WORKSPACE_RESULT_FILE = $previousResult
+  }
 }
 
 function Resolve-EkodiBrowserTaskUrl([string]$Path) {
@@ -2268,6 +2475,53 @@ function Invoke-IsolatedDesktopSessionExecute($Payload) {
   }
 }
 
+function Get-EkodiLocalAiVerification {
+  # Bounded native diagnostic: no arbitrary command arguments, no credentials.
+  # VM UI canaries do not establish local host AI readiness.
+  $proof = [ordered]@{
+    checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+    ollamaApi = 'unavailable'
+    ollamaVersion = ''
+    selectedModel = ''
+    inference = 'not_checked'
+    claudeCli = 'not_visible_to_agent'
+    claudeAuth = 'requires_interactive_user_verification'
+    executionMode = 'fixed_loopback_api'
+    credentialCollection = $false
+  }
+  try {
+    $version = Invoke-RestMethod -Method Get -Uri 'http://127.0.0.1:11434/api/version' -TimeoutSec 5 -ErrorAction Stop
+    if ($version.version) {
+      $proof.ollamaApi = 'ready'
+      $proof.ollamaVersion = [string]$version.version
+    }
+  } catch { }
+  if ($proof.ollamaApi -eq 'ready') {
+    try {
+      $tags = Invoke-RestMethod -Method Get -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 8 -ErrorAction Stop
+      $available = @($tags.models | ForEach-Object { [string]$_.name })
+      $model = @('qwen2.5-coder:1.5b', 'qwen3:0.6b') | Where-Object { $available -contains $_ } | Select-Object -First 1
+      if ($model) {
+        $proof.selectedModel = [string]$model
+        $body = @{
+          model = [string]$model
+          prompt = 'Reply exactly OK'
+          stream = $false
+          think = $false
+          options = @{ num_predict = 64; num_ctx = 512; temperature = 0 }
+        } | ConvertTo-Json -Depth 5 -Compress
+        $reply = Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:11434/api/generate' -Body $body -ContentType 'application/json' -TimeoutSec 45 -ErrorAction Stop
+        if ([string]$reply.response -match '^\s*OK[.!]?\s*$') { $proof.inference = 'passed' }
+        else { $proof.inference = 'nonmatching_response' }
+      } else { $proof.inference = 'approved_model_missing' }
+    } catch { $proof.inference = 'api_error_or_timeout' }
+  }
+  try {
+    if (Get-Command -Name 'claude' -ErrorAction Stop) { $proof.claudeCli = 'visible_in_agent_context' }
+  } catch { }
+  return @{ message = 'EKODI native local AI verification completed'; localAiProof = $proof }
+}
+
 function Get-RemoteAgentStatus {
   $taskState = 'unknown'
   try {
@@ -2505,8 +2759,11 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'profile.workstation.apply' { return Apply-WorkstationProfile }
     'profile.workstation.restore' { return Restore-WorkstationProfile }
     'agent.self_update' { return Update-AgentFromOfficialSource }
+    'software.localai.install' { return Install-EkodiLocalAI }
+    'software.localai.verify' { return Get-EkodiLocalAiVerification }
     'computer.browser.canary' { return Invoke-BackgroundBrowserCanary }
     'computer.browser.execute' { return Invoke-BackgroundBrowserWorker $payload }
+    'computer.workspace.slides.audio.insert' { return Invoke-WorkspaceSlidesAudioTask $payload }
     'remote_desktop.recovery.enable' { return Set-DesktopCommanderRecovery $true }
     'remote_desktop.recovery.disable' { return Set-DesktopCommanderRecovery $false }
     'remote_desktop.recovery.run' { return Ensure-DesktopCommanderRunning $true }
@@ -2592,9 +2849,10 @@ function Send-Heartbeat($Config) {
     capabilities = @{
       powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
-      networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true
+      networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true
       computerRead = $true; processRead = $true; agentStatus = $true
       isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified; isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified; isolatedDesktopSessionCanary = [bool](Get-IsolatedDesktopSessionCanaryState).verified; isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified
+      workspaceSlidesAudio = [bool](Get-WorkspaceSlidesAudioState).verified
       desktopCapture = $false; desktopInput = $false
       arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
     }
@@ -2695,7 +2953,7 @@ function Install-Agent {
       capabilities = @{
         powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
         diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
-        networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true
+        networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true
         arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
       }
     } | ConvertTo-Json -Depth 8

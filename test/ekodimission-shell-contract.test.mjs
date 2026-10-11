@@ -20,6 +20,8 @@ test('mission registry discovery is automatic for current and future page routes
   const result=await validateMissionShellContract();
   assert.ok(result.pageCount>=11);
   assert.ok(result.routes.includes('/ekodimission/live'));
+  assert.ok(result.routes.includes('/ekodimission/history'));
+  assert.ok(result.pageCount>=14);
   assert.ok(result.routes.includes('/ekodimission/contact'));
   assert.ok(result.routes.includes('/ekodimission/apply/260926-open-table'));
   assert.ok(!result.routes.includes('/ekodimission/activities/260926-chuseok-open-table'));

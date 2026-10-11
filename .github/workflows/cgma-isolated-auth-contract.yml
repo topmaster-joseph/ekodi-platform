@@ -1,0 +1,33 @@
+name: CGMA Isolated Board Authorization Contract
+
+on:
+  pull_request:
+    paths:
+      - 'test/cgma-board-isolated-write-auth.test.mjs'
+      - 'site-board-control.js'
+      - 'cgma-board-service-worker.js'
+      - '.github/workflows/cgma-isolated-auth-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'test/cgma-board-isolated-write-auth.test.mjs'
+      - 'site-board-control.js'
+      - 'cgma-board-service-worker.js'
+      - '.github/workflows/cgma-isolated-auth-contract.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-board-authorization:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Exercise isolated D1, identity, board-local permissions and soft-delete
+        run: node --test test/cgma-board-isolated-write-auth.test.mjs

@@ -184,11 +184,28 @@ jobs:
             grep -q '자료의 성격과 출처를 구분해 보존합니다' <<<"$html"
           done
       - name: Production queue-create-list-reply canary and cleanup
+        env:
+          BOARD_CANARY_GOOGLE_TOKEN: ${{ secrets.SEONAMMEDI_BOARD_CANARY_GOOGLE_TOKEN }}
         run: |
           set -euo pipefail
+          # The public-read / authenticated-write boundary is always mandatory.
+          probe_body="$(mktemp)"
+          trap 'rm -f "$probe_body"' EXIT
+          for path in /board/api/posts /board/api/posts/1/replies; do
+            status="$(curl -sS -o "$probe_body" -w '%{http_code}' -X POST "https://seonammedi.kr$path" -H 'content-type: application/json' --data '{}')"
+            if [[ "$status" != "401" ]]; then echo "Anonymous board write must return 401 at $path; got $status" >&2; exit 1; fi
+            jq -e '.error=="google_login_required"' "$probe_body" >/dev/null
+          done
+          # Authorized CRUD canary requires a dedicated real Google session token.
+          # Never revert to anonymous writes or mint a synthetic production user.
+          if [[ -z "${BOARD_CANARY_GOOGLE_TOKEN:-}" ]]; then
+            echo "::notice::Anonymous post/reply gate 401 passed. Authenticated CRUD canary not configured; positive-path probe not executed."
+            echo "Independent Board: anonymous write 401 PASS; authenticated production CRUD canary SKIPPED (no scoped test user token)." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           marker="EKODI-BOARD-CANARY-${GITHUB_RUN_ID}"
           payload="$(jq -nc --arg marker "$marker" '{name:"EKODI 검증",category:"other",message:$marker,privacyConsent:true}')"
-          created="$(curl -fsS -X POST https://seonammedi.kr/board/api/posts -H 'content-type: application/json' --data "$payload")"
+          created="$(curl -fsS -X POST https://seonammedi.kr/board/api/posts -H 'content-type: application/json' -H "authorization: Bearer $BOARD_CANARY_GOOGLE_TOKEN" --data "$payload")"
           jq -e '.ok==true and .queued==true and (.submissionId|length)==36' <<<"$created" >/dev/null
           post_id=0
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
@@ -200,7 +217,7 @@ jobs:
           test "$post_id" -gt 0
           reply_marker="reply-canary-${GITHUB_RUN_ID}"
           reply_payload="$(jq -nc --arg message "$reply_marker" '{name:"EKODI 검증",message:$message}')"
-          reply="$(curl -fsS -X POST "https://seonammedi.kr/board/api/posts/$post_id/replies" -H 'content-type: application/json' --data "$reply_payload")"
+          reply="$(curl -fsS -X POST "https://seonammedi.kr/board/api/posts/$post_id/replies" -H 'content-type: application/json' -H "authorization: Bearer $BOARD_CANARY_GOOGLE_TOKEN" --data "$reply_payload")"
           jq -e '.ok==true and .queued==true and (.submissionId|length)==36' <<<"$reply" >/dev/null
           reply_seen=false
           for attempt in 1 2 3 4 5 6 7 8 9 10; do

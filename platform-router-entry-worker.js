@@ -10,6 +10,7 @@ import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
 import { investUserPage, investUiScript } from './invest-user-page.js';
 import { investSubjectUiScript } from './invest-subject-ui.js';
 import { routeInvestSite } from './invest-site-system.js';
+import { isSinglesRoute, routeSinglesSurface } from './singles-surface.js';
 import { investIntroPage, investAnalysisPage, investAnalysisScript } from './invest-access-ui.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
@@ -56,6 +57,7 @@ import { localRegionOperationsAdminScript } from './local-region-operations-admi
 import { regionalCommerceProgramFromLocalRoute, regionalCommerceProgramFromPath } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
+import { withPublicEdgeCache } from './public-edge-cache.js';
 import { applyTrafficResponsePolicy, assessTrafficTier, recordTrafficOutcome, trafficRequestGuard } from './traffic-governor.js';
 import { handleSeonamMediCivicApi, consumeSeonamMediVoiceMessage } from './seonammedi-civic-control.js';
 import { handleSeonamMediAdminApi } from './seonammedi-admin-control.js';
@@ -389,15 +391,34 @@ async function routeMallApiApex(request,env){
   return response;
 }
 
+async function routeSeonamMediApi(request,env,ctx){
+  return withPublicEdgeCache(request,ctx,async()=>{
+    const admin=await handleSeonamMediAdminApi(request,env);if(admin)return admin;
+    const monitor=await handleSeonamMediMonitorApi(request,env);if(monitor)return monitor;
+    const civic=await handleSeonamMediCivicApi(request,env);if(civic)return civic;
+    return null;
+  });
+}
+
 async function routePlatform(request,env,ctx){
     const url=new URL(request.url);
     const host=resolvedHost(request,env);
+    // Retired short aliases must never fall through to a different workspace storefront.
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
+      const legacySite=url.pathname.match(/^\/(ekodibooks|pgm)(\/.*)?$/i);
+      if(legacySite){
+        const target=new URL(request.url);
+        target.pathname=(legacySite[1].toLowerCase()==='ekodibooks'?'/books':'/pyeonggongmok')+(legacySite[2]||'/');
+        return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'legacy-service-canonical'}});
+      }
+    }
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
     const seonamBoard=legacySeonamBoardRedirect(request);if(seonamBoard)return seonamBoard;
+    if(host===PUBLIC_HOST&&isSinglesRoute(url.pathname))return routeSinglesSurface(request,env);
     const siteBoard=await handleSiteBoardRequest(request,env);if(siteBoard)return siteBoard;
     if(host===PUBLIC_HOST&&url.pathname.startsWith(MALL_API_APEX_PREFIX)){const mallApi=await routeMallApiApex(request,env);if(mallApi)return mallApi;}
-    if((host===PUBLIC_HOST||SEONAMMEDI_HOSTS.has(host))&&url.pathname.startsWith('/api/seonammedi/')){const admin=await handleSeonamMediAdminApi(request,env);if(admin)return admin;const monitor=await handleSeonamMediMonitorApi(request,env);if(monitor)return monitor;const civic=await handleSeonamMediCivicApi(request,env);if(civic)return civic;}
+    if((host===PUBLIC_HOST||SEONAMMEDI_HOSTS.has(host))&&url.pathname.startsWith('/api/seonammedi/')){const seonamApi=await routeSeonamMediApi(request,env,ctx);if(seonamApi)return seonamApi;}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isDeletedSeonamPath(url.pathname))return deletedSeonamResponse();
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isSeonamMediPath(url.pathname))return routeSeonamMediStatic(request,env);
     if(SEONAMMEDI_HOSTS.has(host)&&['GET','HEAD'].includes(request.method))return routeSeonamMediDomain(request,env);

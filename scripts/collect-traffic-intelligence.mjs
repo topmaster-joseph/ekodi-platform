@@ -1,4 +1,5 @@
 import { writeFile } from 'node:fs/promises';
+import { trafficAnalyticsFailureCategory, canKeepTrafficHostTotalsWithMissingUserAgent, trafficZoneCollectionStatus } from '../traffic-collector-quality.js';
 import {
   TRAFFIC_CLASSIFIER_VERSION,
   classifyTrafficUserAgent,
@@ -56,7 +57,9 @@ async function cloudflare(path, init = {}) {
   const payload = await response.json().catch(() => null);
   if (!response.ok || payload?.success === false) {
     const detail = payload?.errors?.[0]?.message || `Cloudflare API HTTP ${response.status}`;
-    throw new Error(detail);
+    const error = new Error(detail);
+    error.status = response.status;
+    throw error;
   }
   return payload;
 }
@@ -71,8 +74,10 @@ async function resolveZones() {
 async function graphQlRows(query, field) {
   const payload = await cloudflare('/graphql', { method:'POST', body:JSON.stringify({ query }) });
   if (payload.errors?.length) throw new Error(payload.errors[0]?.message || 'Cloudflare GraphQL Analytics 조회 오류');
-  const rows = payload.data?.viewer?.zones?.[0]?.[field];
-  if (!Array.isArray(rows)) throw new Error(`Cloudflare GraphQL 응답에 ${field} 데이터가 없습니다.`);
+  const zone = payload.data?.viewer?.zones?.[0];
+  if (!zone) throw new Error('viewer.zones.empty');
+  const rows = zone[field];
+  if (!Array.isArray(rows)) throw new Error('missing.analytics.rows');
   return rows;
 }
 
@@ -150,10 +155,21 @@ ON CONFLICT(source) DO UPDATE SET
 }
 
 async function collectZone(zone, window) {
-  const [hostRows, uaRows] = await Promise.all([
-    queryHostTotals(zone.id, window.start, window.end),
-    queryUserAgents(zone.id, window.start, window.end),
-  ]);
+  // Host totals are authoritative even if User-Agent grouping is unavailable.
+  // A missing classifier must never discard measured host requests for this zone.
+  const hostRows = await queryHostTotals(zone.id, window.start, window.end);
+  let uaRows = [];
+  let degraded = false;
+  let classificationIssue = '';
+  try {
+    uaRows = await queryUserAgents(zone.id, window.start, window.end);
+  } catch (error) {
+    const category = trafficAnalyticsFailureCategory(error);
+    if (!canKeepTrafficHostTotalsWithMissingUserAgent(error)) throw error;
+    degraded = true;
+    classificationIssue = category;
+    console.warn(`Traffic Intelligence zone ${zone.name}: host totals preserved, classifier ${category}; remaining requests marked unclassified`);
+  }
   const buckets = new Map();
   for (const row of hostRows) {
     const host = normalizeTrafficHost(row?.dimensions?.clientRequestHTTPHost || zone.name);
@@ -168,7 +184,7 @@ async function collectZone(zone, window) {
     addKnown(bucket, row?.count, classification.category);
   }
   for (const [host, bucket] of buckets) reconcileBucket(bucket, bucket.requestTotal);
-  return buckets;
+  return { buckets, degraded, classificationIssue };
 }
 async function main() {
   if (!apiToken || !accountId) {
@@ -183,18 +199,23 @@ async function main() {
     const statements = [supportSchemaSql()];
     let hostCount = 0;
     let collectedZoneCount = 0;
+    let degradedZoneCount = 0;
     const skippedZones = [];
 
     for (const zone of zones) {
-      let buckets;
+      let result;
       try {
-        buckets = await collectZone(zone, window);
+        result = await collectZone(zone, window);
         collectedZoneCount += 1;
+        if (result.degraded) degradedZoneCount += 1;
       } catch (error) {
-        skippedZones.push({ zone:zone.name, message:String(error?.message || error).slice(0, 200) });
-        console.warn(`Skipping Traffic Intelligence zone ${zone.name}: analytics unavailable`);
+        const category = trafficAnalyticsFailureCategory(error);
+        if (category === 'rate_limited') throw new Error('Cloudflare Analytics rate_limited circuit open; collection stopped');
+        skippedZones.push({ zone:zone.name, category });
+        console.warn(`Skipping Traffic Intelligence zone ${zone.name}: ${category}`);
         continue;
       }
+      const buckets = result.buckets;
       hostCount += buckets.size;
       for (const [host, bucket] of buckets) {
         const siteId = trafficSiteIdForHost(host);
@@ -218,13 +239,14 @@ ON CONFLICT(day, zone_name, host) DO UPDATE SET
       }
     }
     if (collectedZoneCount === 0) {
-      const denied = skippedZones.some(item => item.message.includes('zone.analytics.read'));
+      const denied = skippedZones.some(item => item.category === 'permission_denied');
       throw new Error(denied
         ? 'Cloudflare Analytics Read 권한이 있는 Zone이 없어 Traffic Intelligence를 수집하지 못했습니다.'
         : '수집 가능한 Cloudflare Zone Analytics가 없습니다.');
     }
-    const stateStatus = skippedZones.length ? 'partial' : 'ok';
-    const stateMessage = `${window.day} · ${collectedZoneCount}/${zones.length}개 Zone · ${hostCount}개 Host 분류 완료${skippedZones.length ? ` · ${skippedZones.length}개 Zone 권한/분석 제외` : ''}`;
+    const stateStatus = trafficZoneCollectionStatus(collectedZoneCount, zones.length, degradedZoneCount);
+    const categories = [...new Set(skippedZones.map(item => item.category))].sort();
+    const stateMessage = `${window.day} · ${collectedZoneCount}/${zones.length}개 Zone · ${hostCount}개 Host 호스트 집계${degradedZoneCount ? ` · ${degradedZoneCount}개 Zone 분류 제한` : ''}${skippedZones.length ? ` · ${skippedZones.length}개 Zone 제외 (${categories.join(',')})` : ''}`;
     statements.push(`INSERT INTO traffic_intelligence_state
   (source, status, last_attempt_at, last_success_at, zone_count, host_count, message, classifier_version)
 VALUES ('cloudflare', ${sqlText(stateStatus)}, ${sqlText(collectedAt)}, ${sqlText(collectedAt)}, ${collectedZoneCount}, ${hostCount},
@@ -237,7 +259,7 @@ ON CONFLICT(source) DO UPDATE SET
     statements.push("DELETE FROM traffic_intelligence_daily WHERE day < date('now', '-90 day');");
     statements.push("DELETE FROM traffic_human_sessions WHERE day < date('now', '-35 day');");
     await writeFile(outputPath, `${statements.join('\n')}\n`, 'utf8');
-    console.log(`Prepared Traffic Intelligence for ${collectedZoneCount}/${zones.length} zones / ${hostCount} hosts (${window.day}, ${stateStatus}).`);
+    console.log(`Prepared Traffic Intelligence for ${collectedZoneCount}/${zones.length} zones / ${hostCount} hosts (${window.day}, ${stateStatus}); classifier-degraded: ${degradedZoneCount}; skipped: ${skippedZones.length}.`);
   } catch (error) {
     const rawMessage = String(error?.message || error).slice(0, 400);
     const message = rawMessage.includes('zone.analytics.read')

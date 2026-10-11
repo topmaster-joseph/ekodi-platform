@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {resolveCommonScripture,commonScriptureSnapshot} from '../common-scripture-registry.js';
+test('October 2026 EKODI common scripture is canonical and complete',()=>{const month=commonScriptureSnapshot('2026-10');assert.equal(month.readings.length,31);assert.equal(resolveCommonScripture('2026-10-01').passage,'신명기 28:27-37');assert.equal(resolveCommonScripture('2026-10-20').passage,'신명기 34:1-12');assert.equal(resolveCommonScripture('2026-10-31').passage,'고린도전서 2:6-16');});

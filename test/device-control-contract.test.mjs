@@ -153,7 +153,7 @@ test('admin quick connect downloads one bounded enrollment connector without req
 });
 
 test('existing registered devices upgrade transactionally and preserve registration', () => {
-  assert.match(agent, /\$AgentVersion = '2\.5\.2'/);
+  assert.match(agent, /\$AgentVersion = '2\.5\.3'/);
   assert.match(agent, /Invoke-AgentUpgradeTransaction/);
   assert.match(agent, /Assert-AgentCandidate/);
   assert.match(agent, /New-AgentUpgradeSnapshot/);
@@ -245,6 +245,32 @@ test('device Admin and bootstrap changes automatically dispatch guarded shared-s
   assert.ok(release.includes('if(sharedSiteTouched)'));
   assert.ok(release.includes('/actions/workflows/deploy-site-core.yml/dispatches'));
   assert.ok(release.includes('release_branch_ref:branch,release_task_id:taskId'));
+});
+
+test('guarded shared-site candidate smoke verifies the deployed device connection assets', async () => {
+  const manifest = JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'));
+  const requests = new Map(manifest.worker.requests.map(request => [request.url, request]));
+  const redirect = requests.get('https://ekodi.kr/admin/desktop/bootstrap/');
+  assert.deepEqual(redirect?.statuses, [307]);
+  assert.ok(redirect?.headerExpect?.includes('location: /admin/status/devices'));
+  assert.ok(redirect?.headerExpect?.includes('x-ekodi-route: desktop-bootstrap-canonical'));
+  const expected = [
+    ['device-control-admin.css','DEVICE-BOOTSTRAP-WIDE-CANONICAL-20261009'],
+    ['device-control-admin.js','EKB-219'],
+    ['ekodi-device-bootstrap.cmd','EKB-011'],
+  ];
+  for (const [file, marker] of expected) {
+    const entry = requests.get('https://ekodi.kr/' + file);
+    assert.deepEqual(entry?.statuses, [200], file + ' missing from candidate and promoted Worker smoke');
+    assert.ok(entry?.expect?.includes(marker), file + ' missing essential live version marker');
+    const source = await readFile(new URL('../' + file, import.meta.url), 'utf8');
+    assert.ok(source.includes(marker), file + ' test marker must exist in the built source');
+  }
+  const js = requests.get('https://ekodi.kr/device-control-admin.js');
+  assert.ok(js.expect.includes('function groupRosterDevices'), 'grouped enrolled-device roster must remain included');
+  const cmd = requests.get('https://ekodi.kr/ekodi-device-bootstrap.cmd');
+  assert.ok(cmd.expect.includes('ekodi-device-agent-bootstrap-'), 'GUID temp filename must be present');
+  assert.equal(redirect.rollbackVerify, false);
 });
 
 test('bootstrap elevates only when needed and keeps Boot/WOL separate', () => {

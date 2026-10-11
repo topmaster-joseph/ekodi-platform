@@ -65,3 +65,11 @@ test('shared-site manual release propagates exact orchestrator provenance into s
   assert.match(stagingWorkflow,/EKODI_RELEASE_TASK_ID=\$\{requested_task:-\$derived_task\}/);
   assert.match(stagingWorkflow,/GITHUB_TOKEN: \$\{\{ github\.token \}\}/);
 });
+
+test('SNS admin UI changes trigger guarded Shared Site release and run OAuth regression tests', () => {
+  for (const file of ['workspace-admin-page.js', 'mall-social-setup.js', 'test/ekodimall-sns-oauth-loop.test.mjs', 'test/ekodimall-one-screen-sns.test.mjs']) {
+    assert.ok(workflow.includes("      - '"+file+"'"), 'Shared Site workflow must watch '+file);
+  }
+  assert.match(workflow,/node --test test\/ekodimall-sns-oauth-loop\.test\.mjs test\/ekodimall-one-screen-sns\.test\.mjs/);
+  assert.match(workflow,/Refuse stale rerun production promotion/);
+});

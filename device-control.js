@@ -93,6 +93,8 @@ const COMMAND_POLICIES = Object.freeze({
   'profile.workstation.apply': { risk: 'maintain', confirm: true },
   'profile.workstation.restore': { risk: 'maintain', confirm: true },
   'agent.self_update': { risk: 'maintain', confirm: true },
+  'software.localai.install': { risk: 'maintain', confirm: true },
+  'software.localai.verify': { risk: 'observe' },
   'computer.browser.canary': { risk: 'maintain', confirm: true },
   'computer.browser.execute': { risk: 'maintain', confirm: true, payload: 'background-browser-task' },
   'remote_desktop.recovery.enable': { risk: 'maintain', confirm: true },
@@ -113,6 +115,8 @@ const COMMAND_CAPABILITIES = Object.freeze({
   'computer.system.read': 'computerRead',
   'computer.process.list': 'processRead',
   'computer.agent.status': 'agentStatus',
+  'software.localai.install': 'localAiInstall',
+  'software.localai.verify': 'localAiVerify',
   'computer.desktop.probe': 'isolatedDesktopProbe',
   'computer.desktop.canary': 'isolatedDesktopProbe',
   'computer.desktop.guest.canary': 'isolatedDesktopCanary',
@@ -523,6 +527,23 @@ function summarizeCommandResult(result = {}) {
     : (Number.isFinite(Number(value)) ? Number(value) : null);
   for (const key of ['message', 'freedMB', 'pendingCount', 'installedCount', 'failedCount', 'rebootRequired', 'profile']) {
     if (result[key] !== undefined) summary[key] = result[key];
+  }
+  // Explicitly project only bounded proof fields. Never expose the full
+  // Device Agent result, host environment, provider credentials, or model output.
+  if (result.localAiProof && typeof result.localAiProof === 'object') {
+    const proof = result.localAiProof;
+    const oneOf = (value, values, fallback) => values.includes(value) ? value : fallback;
+    summary.localAiProof = {
+      checkedAt: safeText(proof.checkedAt, 45),
+      ollamaApi: oneOf(proof.ollamaApi, ['ready', 'unavailable'], 'unknown'),
+      ollamaVersion: safeText(proof.ollamaVersion, 70),
+      selectedModel: oneOf(proof.selectedModel, ['qwen2.5-coder:1.5b', 'qwen3:0.6b', ''], ''),
+      inference: oneOf(proof.inference, ['passed', 'not_checked', 'nonmatching_response', 'approved_model_missing', 'api_error_or_timeout'], 'unknown'),
+      claudeCli: oneOf(proof.claudeCli, ['visible_in_agent_context', 'not_visible_to_agent'], 'unknown'),
+      claudeAuth: 'requires_interactive_user_verification',
+      credentialCollection: proof.credentialCollection === true,
+      executionMode: 'fixed_loopback_api',
+    };
   }
   if (result.desktopSessionCanary && typeof result.desktopSessionCanary === 'object') {
     summary.desktopSessionCanary = {
@@ -1053,10 +1074,97 @@ async function reconcileJobs(env) {
   }
 }
 
+// Read-only, redacted projection. A successful command is NOT proof until the
+// matching native receipt, strict target, isolation and freshness are verified.
+export function projectNativeDeviceProofs(rows = [], now = Date.now()) {
+  const output = { browser: null, localAi: null };
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const browser = row.command_type === 'computer.browser.canary';
+    const localAi = row.command_type === 'software.localai.verify';
+    const key = browser ? 'browser' : localAi ? 'localAi' : '';
+    if (!key || output[key]) continue; // The most recent command is authoritative.
+    const completedMs = Date.parse(String(row.completed_at || ''));
+    const fresh = Number.isFinite(completedMs) && completedMs <= now + 5000 &&
+      now - completedMs >= 0 && now - completedMs <= 24 * 3600 * 1000;
+    const receipt = parseJson(row.result_json);
+    const status = ['queued','claimed','succeeded','failed','cancelled'].includes(row.status) ? row.status : 'unknown';
+    const completedAt = Number.isFinite(completedMs) ? new Date(completedMs).toISOString() : null;
+    if (browser) {
+      const proof = receipt?.browserCanary || {};
+      const bytes = Number(proof.contentBytes);
+      output[key] = {
+        status, completedAt, fresh,
+        mode: proof.mode === 'native-cdp' ? 'native-cdp' : 'unverified',
+        contentBytes: Number.isSafeInteger(bytes) && bytes > 0 ? Math.min(bytes, 10_000_000) : 0,
+        verified: status === 'succeeded' && fresh && proof.ok === true &&
+          proof.mode === 'native-cdp' && proof.url === 'https://ekodi.kr/' &&
+          Number.isSafeInteger(bytes) && bytes > 0 && proof.dedicatedAutomationProfile === true &&
+          proof.focusIsolated === true && proof.clipboardShared === false &&
+          proof.userInputInjection === false,
+      };
+    } else {
+      const proof = receipt?.localAiProof || {};
+      output[key] = {
+        status, completedAt, fresh,
+        ollamaApi: proof.ollamaApi === 'ready' ? 'ready' : 'unverified',
+        inference: proof.inference === 'passed' ? 'passed' : 'unverified',
+        verified: status === 'succeeded' && fresh && proof.ollamaApi === 'ready' &&
+          proof.inference === 'passed' && proof.credentialCollection === false &&
+          proof.executionMode === 'fixed_loopback_api',
+      };
+    }
+  }
+  return output;
+}
+
 async function handleAdmin(request, env) {
   const auth = await adminSession(request, env);
   if (!auth.session) return auth.response;
   const path = new URL(request.url).pathname;
+
+  // Observe an enrolled Windows agent without reconciling jobs, claiming work, or exposing device credentials.
+  // Unlike GET /api/control/devices, this endpoint is strictly read-only.
+  if (request.method === 'GET' && path === `${ADMIN_PREFIX}/readiness`) {
+    const hostname = safeText(new URL(request.url).searchParams.get('hostname'), 48).toLowerCase();
+    if (!/^[a-z0-9-]{2,48}$/.test(hostname)) {
+      return json({ error:'Invalid device hostname', code:'DEVICE_HOSTNAME_INVALID' }, 400, request, env);
+    }
+    const rows = await env.DB.prepare(`SELECT r.hostname, r.platform, r.last_seen_at,
+      r.capabilities_json, m.device_type
+      FROM device_registry r
+      LEFT JOIN device_management_profiles m ON m.device_id = r.id
+      WHERE LOWER(r.hostname) = ? AND r.revoked_at IS NULL
+      ORDER BY r.last_seen_at DESC LIMIT 10`).bind(hostname).all();
+    // SELECT-only: bind exact hostname, inspect the newest active enrollment only,
+    // never return device IDs, command IDs, raw results or provider credentials.
+    const proofRows = await env.DB.prepare(`SELECT c.command_type, c.status, c.completed_at, c.result_json
+      FROM device_commands c WHERE c.device_id = (
+        SELECT id FROM device_registry WHERE LOWER(hostname) = ? AND revoked_at IS NULL
+        ORDER BY last_seen_at DESC LIMIT 1
+      ) AND c.command_type IN ('computer.browser.canary', 'software.localai.verify')
+      ORDER BY c.issued_at DESC LIMIT 12`).bind(hostname).all();
+    const devices = (rows.results || []).map(row => {
+      const capabilities = parseJson(row.capabilities_json);
+      return {
+        hostname: row.hostname,
+        platform: row.platform,
+        lastSeenAt: row.last_seen_at,
+        status: statusFor(row.last_seen_at, null),
+        revokedAt: null,
+        management: { source:'agent', type:normalizeDeviceType(row.device_type || 'pc') },
+        capabilities: {
+          backgroundBrowser: capabilities.backgroundBrowser === true,
+          backgroundBrowserCanary: capabilities.backgroundBrowserCanary === true,
+          isolatedDesktop: capabilities.isolatedDesktop === true,
+          isolatedDesktopProbe: capabilities.isolatedDesktopProbe === true,
+          agentStatus: capabilities.agentStatus === true,
+          localAiInstall: capabilities.localAiInstall === true,
+          localAiVerify: capabilities.localAiVerify === true
+        }
+      };
+    });
+    return json({ devices, proofs:projectNativeDeviceProofs(proofRows.results || []), generatedAt:new Date().toISOString(), mode:'observe-only' }, 200, request, env);
+  }
 
   if (request.method === 'GET' && path === ADMIN_PREFIX) {
     await reconcileJobs(env);
@@ -1413,9 +1521,19 @@ async function nextCommand(request, env, device) {
 
 function mergeDiagnosticResult(device, commandType, result) {
   if (commandType === 'diagnostics.collect' && result.diagnostics && typeof result.diagnostics === 'object') {
-    return result.diagnostics;
+    const previous = parseJson(device.diagnostics_json);
+    const latest = { ...result.diagnostics };
+    // Full diagnostics refresh must not erase an independently verified
+    // local AI receipt that was already projected through the safe allowlist.
+    if (previous.localAiProof) latest.localAiProof = previous.localAiProof;
+    return latest;
   }
   const current = parseJson(device.diagnostics_json);
+  // Keep the latest successful native AI verification receipt visible even
+  // after this device's recentCommands window has rotated out.
+  if (commandType === 'software.localai.verify' && result.localAiProof && typeof result.localAiProof === 'object') {
+    current.localAiProof = summarizeCommandResult(result).localAiProof;
+  }
   const section = DIAGNOSTIC_SECTIONS[commandType];
   if (section && result[section] && typeof result[section] === 'object') current[section] = result[section];
   if (result.storage && typeof result.storage === 'object') current.storage = result.storage;
@@ -1495,6 +1613,8 @@ export async function handleDeviceControl(request, env) {
   if (!path.startsWith(ADMIN_PREFIX) && !path.startsWith(AGENT_PREFIX)) return null;
   if (!env.DB) return json({ error: 'Device Control 데이터베이스가 연결되지 않았습니다.' }, 503, request, env);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(request, env) });
+  // The heartbeat observer must never trigger schema DDL or job reconciliation.
+  if (request.method === 'GET' && path === `${ADMIN_PREFIX}/readiness`) return handleAdmin(request, env);
   await ensureSchema(env.DB);
   if (path.startsWith(ADMIN_PREFIX)) return handleAdmin(request, env);
   return handleAgent(request, env);

@@ -1,0 +1,32 @@
+name: EKODI Church Production Guest Contract
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/verify-church-production-guest-contract.mjs'
+      - '.github/workflows/verify-church-production-guest-contract.yml'
+      - 'test/church-production-guest-contract.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-church-guest-contract-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  production-read-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Static fail-closed contract
+        run: |
+          node --check scripts/verify-church-production-guest-contract.mjs
+          node --test test/church-production-guest-contract.test.mjs
+      - name: Real read-only canonical EKODI Church negative auth checks
+        run: node scripts/verify-church-production-guest-contract.mjs
