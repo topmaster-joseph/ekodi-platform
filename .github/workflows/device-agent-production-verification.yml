@@ -246,7 +246,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-localai'
         env:
           DEVICE_TARGET_HOSTNAME: 'user2'
-        run: node scripts/verify-native-localai.mjs
+        run: node scripts/verify-native-user2-localai.mjs
 
       - name: Verify USER4 native CDP and Ollama receipts through EKODI Device Agent
         if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user4-acceptance'
