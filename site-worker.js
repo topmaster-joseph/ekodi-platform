@@ -683,6 +683,12 @@ export default {
         if (!['GET','HEAD'].includes(request.method)) return new Response(null,{status:405,headers:{allow:'GET, HEAD','cache-control':'no-store'}});
         const response = await env.ASSETS.fetch(assetRequest(request, '/control'));
         const secured = withHostSecurity(response, ADMIN_CSP, 'no-store', 'control-surface');
+        // Only the explicit admin embed URL is allowed within the same-origin
+        // administrator shell. All other Control views remain non-frameable.
+        if (url.searchParams.get('embed') === 'admin') {
+          secured.headers.set('Content-Security-Policy',ADMIN_CSP.replace("frame-ancestors 'none'","frame-ancestors 'self'"));
+          secured.headers.set('X-Frame-Options','SAMEORIGIN');
+        }
         secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
         return secured;
       }
