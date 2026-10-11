@@ -16,6 +16,13 @@ test('AI membership panel edits dispatch guarded Shared Site Core deployment',()
   assert.ok(dispatcher.includes("'deploy-site-core.yml'"));
 });
 
+test('membership UI does not trigger the Control API worker unnecessarily',()=>{
+  const start=dispatcher.indexOf('const controlApiTouched=');
+  const end=dispatcher.indexOf('const marketingGrowthTouched=',start);
+  assert.ok(start>=0&&end>start);
+  assert.ok(!dispatcher.slice(start,end).includes("file==='user-ai-tier-panel.js'"));
+});
+
 test('AI membership panel is included in administrator bundle build',()=>{
   assert.ok(build.includes('user-ai-tier-panel.js'));
   assert.ok(build.includes('ai-ops-admin.js'));
