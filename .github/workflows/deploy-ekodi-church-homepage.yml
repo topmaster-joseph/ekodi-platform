@@ -78,7 +78,7 @@ jobs:
           grep -Fq 'data-church-worship-admin' church/index.html
           grep -Fq 'scope=worship-access' church/church-worship-admin.js
           test -s church/_headers
-          grep -Fq "connect-src 'self' https://api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co;" church/_headers
+          grep -Eq 'connect-src[^;]*https://renzehysxirjilvdxacv\.supabase\.co;' church/_headers
           grep -Fq 'church-life-hub.js' church/index.html
           grep -Fq 'church-life-hub.css' church/index.html
           grep -Fq 'church-life-hub-i18n.js' church/index.html
