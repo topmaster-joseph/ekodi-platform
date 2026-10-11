@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {classifyUser4BrowserFailure,eligibleUser4Agent,verifyUser4Browser,verifyUser4Acceptance}
+import {classifyUser4BrowserFailure,eligibleUser4Agent,verifyUser4Browser,verifyUser4Acceptance,ensureUser4AgentUpdated,USER4_CDP_FIX_FLOOR}
   from '../scripts/verify-native-user4-acceptance.mjs';
 const now=Date.parse('2026-10-11T06:30:00.000Z');
 const good={id:'device-4',hostname:'USER4',status:'online',revokedAt:null,
@@ -131,4 +131,77 @@ test('failed USER4 browser receipt returns classified failure only',async()=>{
   await assert.rejects(()=>verifyUser4Browser({token:'authorized-admin-session-token-abcdef',
     clock:()=>now,fetchImpl,sleepFn:async()=>{},maxPoll:3}),
     error=>error.message==='user4_browser_failed:CDP_PORT_TIMEOUT'&&!error.message.includes('secret-123'));
+});
+
+test('USER4 official update only when current pinned CDP worker has not been received',async()=>{
+  const at=USER4_CDP_FIX_FLOOR+600000;
+  let issued=false;const methods=[];
+  const fetchImpl=async(url,init)=>{
+    methods.push(init.method);
+    assert.equal(new URL(url).hostname,'ekodi.kr');
+    if(init.method==='POST'){
+      issued=true;
+      assert.equal(JSON.parse(init.body).type,'agent.self_update');
+      assert.equal(JSON.parse(init.body).confirmed,true);
+      return new Response(JSON.stringify({command:{type:'agent.self_update',id:'update-user4',status:'queued'}}),{status:200});
+    }
+    const recentCommands=issued?[{
+      id:'update-user4',type:'agent.self_update',status:'succeeded',
+      completedAt:new Date(at-1000).toISOString()
+    }]:[];
+    const device={...good,capabilities:{agentStatus:true,localAiVerify:true},
+      lastSeenAt:new Date(at-100).toISOString(),recentCommands};
+    return new Response(JSON.stringify({devices:[device]}),{status:200});
+  };
+  const result=await ensureUser4AgentUpdated({token:'authorized-admin-session-token-abcdef',
+    clock:()=>at,fetchImpl,sleepFn:async()=>{},maxPoll:3});
+  assert.equal(result.recentOfficialUpdateVerified,true);
+  assert.equal(result.updatePerformed,true);
+  assert.equal(methods.filter(x=>x==='POST').length,1);
+});
+test('USER4 previous successful official update after fixed CDP patch prevents reinstall loop',async()=>{
+  const at=USER4_CDP_FIX_FLOOR+1800000;
+  let writes=0;
+  const fetchImpl=async(url,init)=>{
+    if(init.method==='POST')writes++;
+    return new Response(JSON.stringify({devices:[{...good,
+      lastSeenAt:new Date(at-1000).toISOString(),
+      capabilities:{agentStatus:true},recentCommands:[{
+        id:'already-installed',type:'agent.self_update',status:'succeeded',
+        completedAt:new Date(at-5000).toISOString()
+      }]}]}),{status:200});
+  };
+  const proof=await ensureUser4AgentUpdated({token:'authorized-admin-session-token-abcdef',
+    clock:()=>at,fetchImpl});
+  assert.equal(proof.updatePerformed,false);
+  assert.equal(proof.recentOfficialUpdateVerified,true);
+  assert.equal(writes,0);
+});
+test('USER4 official update refuses offline, other host, and concurrent commands',async()=>{
+  const at=USER4_CDP_FIX_FLOOR+600000;let writes=0;
+  const invalid=[
+    {...good,hostname:'USER3',lastSeenAt:new Date(at-1000).toISOString(),capabilities:{agentStatus:true}},
+    {...good,status:'offline',lastSeenAt:new Date(at-1000).toISOString(),capabilities:{agentStatus:true}},
+    {...good,lastSeenAt:new Date(at-1000).toISOString(),capabilities:{agentStatus:true},
+      recentCommands:[{id:'busy',type:'computer.browser.canary',status:'claimed'}]}
+  ];
+  for(const device of invalid){
+    const fetchImpl=async(url,init)=>{
+      if(init.method==='POST')writes++;
+      return new Response(JSON.stringify({devices:[device]}),{status:200});
+    };
+    await assert.rejects(()=>ensureUser4AgentUpdated({token:'authorized-admin-session-token-abcdef',
+      clock:()=>at,fetchImpl,maxPoll:1}),/user4_native_agent_not_ready_to_update|user4_agent_busy_no_interruption/);
+  }
+  assert.equal(writes,0);
+});
+
+test('USER4 browser error classifier accepts only bounded diagnostic categories',()=>{
+  assert.equal(classifyUser4BrowserFailure('CDP_WORKER_FAILED: {"code":"CDP_BROWSER_EARLY_EXIT_ACCESS"}'), 'CDP_BROWSER_EARLY_EXIT_ACCESS');
+  assert.equal(classifyUser4BrowserFailure('CDP_BROWSER_EARLY_EXIT_DEPENDENCY C:\\Users\\Sensitive\\chrome.exe'), 'CDP_BROWSER_EARLY_EXIT_DEPENDENCY');
+  assert.equal(classifyUser4BrowserFailure('CDP_BROWSER_EARLY_EXIT_POLICY'), 'CDP_BROWSER_EARLY_EXIT_POLICY');
+  assert.equal(classifyUser4BrowserFailure('CDP_BROWSER_EARLY_EXIT_SANDBOX'), 'CDP_BROWSER_EARLY_EXIT_SANDBOX');
+  assert.equal(classifyUser4BrowserFailure('CDP_BROWSER_EARLY_EXIT_ZERO'), 'CDP_BROWSER_EARLY_EXIT_ZERO');
+  assert.equal(classifyUser4BrowserFailure('CDP_BROWSER_EARLY_EXIT_UNKNOWN'), 'CDP_BROWSER_EARLY_EXIT_UNKNOWN');
+  assert.equal(classifyUser4BrowserFailure('C:\\Users\\Sensitive\\private.log'), 'BROWSER_FAILURE_UNCLASSIFIED');
 });

@@ -77,6 +77,8 @@ jobs:
           grep -Fq 'data-ekodi-life-hub' church/index.html
           grep -Fq 'data-church-worship-admin' church/index.html
           grep -Fq 'scope=worship-access' church/church-worship-admin.js
+          test -s church/_headers
+          grep -Eq 'connect-src[^;]*https://renzehysxirjilvdxacv\.supabase\.co;' church/_headers
           grep -Fq 'church-life-hub.js' church/index.html
           grep -Fq 'church-life-hub.css' church/index.html
           grep -Fq 'church-life-hub-i18n.js' church/index.html
@@ -182,7 +184,7 @@ jobs:
           set -euo pipefail
           release="$CHURCH_SOURCE_SHA"
           for attempt in $(seq 1 18); do
-            root=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/?release=${release}" || true)
+            root=$(curl -L -sS -D /tmp/church-csp-headers -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/?release=${release}" || true)
             member=$(curl -L -sS -o /tmp/church-my.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/my/?release=${release}" || true)
             giving_member=$(curl -L -sS -o /tmp/church-my-giving.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/my/giving/?release=${release}" || true)
             giving_member_js=$(curl -L -sS -o /tmp/church-my-giving.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/my/giving/app.js?release=${release}" || true)
@@ -201,6 +203,7 @@ jobs:
               && grep -Fq 'data-ekodi-life-hub' /tmp/church.html \
               && grep -Fq 'data-church-worship-admin' /tmp/church.html \
               && grep -Fq 'scope=worship-access' /tmp/church-worship-admin.js \
+              && grep -Eiq '^content-security-policy:.*connect-src[^;]*https://renzehysxirjilvdxacv\.supabase\.co' /tmp/church-csp-headers \
               && ! grep -Fq 'data-ekodi-operating-space-label' /tmp/church.html \
               && ! grep -Fq '운영공간' /tmp/church.html \
               && ! grep -Fq '<em class="operating-space-label"' /tmp/church.html \
