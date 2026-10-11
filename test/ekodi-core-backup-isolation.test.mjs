@@ -26,3 +26,9 @@ test('backup keeps orchestration policy validation without requiring a productio
   assert.match(workflow,/validate-ekodi-ai-change-orchestration\.mjs/);
   assert.doesNotMatch(workflow,/validate-ekodi-ai-change-orchestration\.mjs["']?\s+--release/);
 });
+
+
+test('backup concurrency discards stale PR heads without overlapping operating backups',()=>{
+  assert.match(workflow,/group: ekodi-core-backup-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref_name \|\| github\.event_name \}\}/);
+  assert.match(workflow,/cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}/);
+});
