@@ -40,8 +40,12 @@
     aimembers: {
       label: 'AI 회원운영', icon: '◈',
       styles: ['ai-ops-admin.css'],
+      // The production build appends user-ai-tier-panel.js into ai-ops-admin.js.
+      // Wait for the actual panel, not just the left-nav button, before
+      // signaling the lazy feature as ready.
       scripts: ['ai-ops-admin.js'],
       real: '[data-section="ai-membership"]',
+      ready: '#userAiMembershipPanel',
       hashes: ['#ai-membership'],
       insert: 'after-deployments',
     },
