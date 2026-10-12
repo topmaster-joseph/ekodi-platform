@@ -30,7 +30,8 @@ export function decideContinuityReplay(pr, runs = [], now = Date.now(), reposito
   if (dispatchCount >= MAX_DISPATCH_ATTEMPTS_PER_SHA) {
     return { replay: false, reason: 'replay-budget-exhausted' };
   }
-  const checkpoint = newest?.created_at || pr?.updated_at;
+  // A run cancelled moments ago must not be replayed simply because it was queued long ago.
+  const checkpoint = newest?.updated_at || newest?.created_at || pr?.updated_at;
   const checkpointMs = Date.parse(checkpoint || '');
   if (!Number.isFinite(checkpointMs) || now - checkpointMs < REPLAY_MIN_AGE_MS) {
     return { replay: false, reason: 'within-event-grace-period' };
