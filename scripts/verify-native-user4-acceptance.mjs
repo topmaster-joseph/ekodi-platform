@@ -109,7 +109,8 @@ export async function verifyUser4Browser({token,fetchImpl=fetch,clock=()=>Date.n
 // Never infer that an older USER4 Agent has loaded it from an earlier heartbeat.
 // Owner-requested USER4 safe Agent refresh (2026-10-12 22:18 KST). A prior
 // successful update does not satisfy this one-time release floor.
-export const USER4_CDP_FIX_FLOOR = Date.parse('2026-10-12T13:18:00.000Z');
+export const USER4_CDP_WORKER_AGENT_VERSION = '2.5.4';
+export const USER4_CDP_FIX_FLOOR = Date.parse('2026-10-12T15:58:48.000Z');
 const UPDATE='agent.self_update';
 export async function ensureUser4AgentUpdated({
   token,fetchImpl=fetch,clock=()=>Date.now(),sleepFn=wait,pollMs=4000,maxPoll=65
@@ -137,6 +138,7 @@ export async function ensureUser4AgentUpdated({
   const deviceId=initial.id;
   const existing=(initial.recentCommands||[]).filter(c=>
     c.type===UPDATE && c.status==='succeeded' &&
+    c.result?.version===USER4_CDP_WORKER_AGENT_VERSION &&
     Number.isFinite(when(c.completedAt)) && when(c.completedAt)>=USER4_CDP_FIX_FLOOR &&
     when(initial.lastSeenAt)>=when(c.completedAt)
   ).sort((a,b)=>when(b.completedAt)-when(a.completedAt))[0];
@@ -157,6 +159,7 @@ export async function ensureUser4AgentUpdated({
       throw new Error('user4_official_update_enqueue_invalid');
   }
   let doneAt=NaN;
+  let versionProjectionUnavailable=false;
   for(let n=0;n<maxPoll;n++){
     if(n>0)await sleepFn(pollMs);
     const current=(await list()).find(d=>d.id===deviceId);
@@ -165,6 +168,14 @@ export async function ensureUser4AgentUpdated({
     if(receipt && ['failed','cancelled'].includes(receipt.status))
       throw new Error('user4_agent_official_update_'+receipt.status);
     if(receipt?.status==='succeeded'){
+      // The official Control API may still be promoting the scoped version
+      // projection when this command finishes. Wait, but never infer success.
+      if(receipt.result?.version===undefined || receipt.result?.version===null){
+        versionProjectionUnavailable=true;
+        continue;
+      }
+      if(receipt.result.version!==USER4_CDP_WORKER_AGENT_VERSION)
+        throw new Error('user4_agent_update_version_mismatch');
       const completedAt=when(receipt.completedAt);
       if(!Number.isFinite(completedAt)||completedAt<USER4_CDP_FIX_FLOOR)
         throw new Error('user4_agent_update_receipt_stale');
@@ -176,7 +187,9 @@ export async function ensureUser4AgentUpdated({
         updatePerformed:true,recentOfficialUpdateVerified:true};
     }
   }
-  throw new Error('user4_agent_update_reconnect_timeout');
+  throw new Error(versionProjectionUnavailable
+    ? 'user4_agent_update_version_projection_unavailable'
+    : 'user4_agent_update_reconnect_timeout');
 }
 
 // A one-time retry is permitted only for a browser launcher that exited zero
