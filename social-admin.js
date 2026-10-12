@@ -202,6 +202,16 @@
     const publishingConnections = el('div','','social-publishing-connections');
     const publishingChannels = el('div','','social-publishing-channels');
     publishingPanel.append(publishingHead,publishingActions,publishingStatus,publishingConnections,publishingChannels);
+    // Read-only Mall data: publication authorization and profit authority stay in their existing services.
+    const growthPanel = el('section','','social-mall-growth');
+    const growthHead = el('div','','social-channel-head');
+    growthHead.append(el('h3','성과'),el('span','에코디몰 · 최근 30일 · 제휴 보고서 기준'));
+    const growthReload = el('button','조회','secondary'); growthReload.type='button';
+    const growthStatus = el('p','에코디몰 운영공간을 선택하면 연결·판매 성과를 확인할 수 있습니다.','social-admin-status');
+    const growthMetrics = el('div','','social-connection-metrics');
+    const growthChannels = el('div','','social-publishing-channels');
+    const growthAdvice = el('div','','social-growth-advice');
+    growthPanel.append(growthHead,growthReload,growthStatus,growthMetrics,growthChannels,growthAdvice);
     const initialIntent = initialConnectionIntent();
     if (initialIntent.type !== 'person' && initialIntent.key) {
       scopeType.value = initialIntent.type;
@@ -224,7 +234,7 @@
     const directoryHelp = el('p','채널 주소 등록은 자동게시 승인이 아닙니다. 직접 운영 채널도 공식 OAuth 연결·사이트 매핑·발행 정책 확인 후에만 게시됩니다. 외부·제휴 링크는 등록·공개·분석 용도로만 사용합니다.','social-admin-status');
     const directoryHead = el('div','','social-channel-head');
     directoryHead.append(el('h3','채널 등록·공개 관리'),el('span','검색 노출·외부 제휴 채널은 링크 관리, 실제 게시 계정은 하단에서 연결'));
-    section.append(head, directoryHead, summary, directoryFilters, addMall, directoryHelp, status, list, addOrg, siteDirectoryPanel, connectionPanel, publishingPanel); content.append(section);
+    section.append(head, directoryHead, summary, directoryFilters, addMall, directoryHelp, status, list, addOrg, siteDirectoryPanel, connectionPanel, publishingPanel, growthPanel); content.append(section);
 
     function renderSummary() {
       const orgs = registry.organizations || [];
@@ -427,6 +437,54 @@
       }
     }
 
+    async function loadMallGrowth() {
+      growthMetrics.replaceChildren(); growthChannels.replaceChildren(); growthAdvice.replaceChildren();
+      if (connectionScope.type !== 'tenant' || connectionScope.key !== 'ekodimall') {
+        growthStatus.textContent='관리 범위를 에코디몰(운영공간)로 선택하면 성과가 표시됩니다.';
+        growthStatus.dataset.state='ready'; return;
+      }
+      growthStatus.textContent='실제 제휴 보고서와 발행 원장을 조회하고 있습니다.';
+      growthStatus.dataset.state='loading';
+      try {
+        const data = await connectApi('/v1/mall/dashboard');
+        if (!data?.ok || !data?.schemaReady) throw new Error('성과 원장이 아직 준비되지 않았습니다.');
+        const perf=data.performance30d||{};
+        const number=value=>new Intl.NumberFormat('ko-KR').format(Number.isFinite(Number(value))?Number(value):0);
+        const rows=[
+          ['활성 상품',data.inventory?.activeProducts],
+          ['제휴 클릭',perf.productClicks],
+          ['보고 주문',perf.orders],
+          ['보고 수수료',`${number(perf.observedCommissionKrw)}원`],
+          ['홍보 방문',perf.campaignVisits],
+          ['외부 이동',perf.outboundAffiliateClicks],
+        ];
+        for (const [label,value] of rows) {
+          const item=el('article');
+          item.append(el('small',label),el('strong',typeof value==='string'?value:number(value)));
+          growthMetrics.append(item);
+        }
+        const channels=Array.isArray(data.channels)?data.channels:[];
+        for (const channel of channels) {
+          const card=el('article','','social-publishing-selection');
+          card.append(el('strong',`${providerLabel(channel.provider)} · 발행 ${number(channel.published30d)} · 실패 ${number(channel.failed30d)}`));
+          card.append(el('small',channel.lastPublishedAt?`마지막 발행 ${formatDate(channel.lastPublishedAt)}`:'최근 발행 기록 없음'));
+          growthChannels.append(card);
+        }
+        const notes=[];
+        if (!perf.reportReady) notes.push('상품별 제휴 실적 보고서가 확인되지 않았습니다. 수익 추정이나 자동 확대를 보류하세요.');
+        if (channels.some(ch=>Number(ch.failed30d)>0)) notes.push('발행 오류가 있습니다. 채널 연결 상태와 승인 원장을 점검하세요.');
+        if ((data.decisions||[]).length) notes.push('기존 수익 엔진의 후보 판단을 참고하되, 실제 정산과 비용을 확인한 뒤 콘텐츠 변경을 승인하세요.');
+        if (Number(perf.campaignVisits)>0 && !Number(perf.outboundAffiliateClicks)) notes.push('홍보 방문은 있으나 외부 판매처 이동 집계가 없습니다. 랜딩 페이지·추적 연동을 확인하세요.');
+        notes.push('채널별 매출 귀속은 추정치입니다. 표시된 수수료는 공급자 보고값이며 정산 완료 수익이나 순이익이 아닙니다.');
+        notes.push('SEO·AEO·GEO 실제 검색 노출·AI 답변 인용은 Search Console 등 별도의 검증 데이터가 필요합니다.');
+        for (const note of notes) growthAdvice.append(el('p',note,'social-growth-advice-item'));
+        growthStatus.textContent=`보고 기준 ${perf.latestMetricDate||'미확인'} · 조회 ${formatDate(data.generatedAt)} · 읽기 전용`;
+        growthStatus.dataset.state='ready';
+      } catch (error) {
+        growthStatus.textContent=`성과 조회 불가: ${error.message}`;growthStatus.dataset.state='error';
+      }
+    }
+
     async function loadConnections() {
       connectionStatus.textContent='OAuth 연결상태를 확인하는 중입니다.'; connectionStatus.dataset.state='loading';
       try { renderConnections(await connectApi('/v1/connections')); }
@@ -458,7 +516,7 @@
       document.querySelectorAll('[data-panel]').forEach(panel=>{ const targets=String(panel.dataset.panel||'').split(' '); panel.classList.toggle('hidden-panel',!targets.includes('social')); });
       document.querySelectorAll('.sidebar .nav[data-section]').forEach(item=>item.classList.toggle('active',item.dataset.section==='social'));
       const pageTitle=document.querySelector('#pageTitle'); if(pageTitle) pageTitle.textContent='채널'; document.querySelector('.sidebar')?.classList.remove('open');
-      await Promise.all([renderSiteDirectory(), registry.organizations.length ? Promise.resolve() : load(), loadConnections(), loadPublishingChannels()]);
+      await Promise.all([renderSiteDirectory(), registry.organizations.length ? Promise.resolve() : load(), loadConnections(), loadPublishingChannels(), loadMallGrowth()]);
     }
 
     navButton.addEventListener('click',activate);
@@ -471,7 +529,7 @@
     scopeApply.addEventListener('click',async()=>{
       const type=scopeType.value; const key=scopeKey.value.trim();
       if(type!=='person'&&!key){connectionStatus.textContent='운영공간 slug 또는 매장 ID를 입력해 주세요.';connectionStatus.dataset.state='error';return;}
-      connectionScope={type,key:type==='person'?'':key}; await Promise.all([loadConnections(),loadPublishingChannels()]);
+      connectionScope={type,key:type==='person'?'':key}; await Promise.all([loadConnections(),loadPublishingChannels(),loadMallGrowth()]);
     });
     siteDirectoryList.addEventListener('click',async event=>{
       const button=event.target.closest('[data-central-channel-subject]');
@@ -480,12 +538,13 @@
       if(!key)return;
       scopeType.value='tenant';scopeKey.disabled=false;scopeKey.value=key;connectionScope={type:'tenant',key};
       siteDirectoryStatus.textContent=`${button.dataset.centralChannelName||key} 채널센터를 최고관리자 권한으로 불러오는 중입니다.`;siteDirectoryStatus.dataset.state='loading';
-      await Promise.all([loadConnections(),loadPublishingChannels()]);
+      await Promise.all([loadConnections(),loadPublishingChannels(),loadMallGrowth()]);
       siteDirectoryStatus.textContent=`${button.dataset.centralChannelName||key} 채널센터 · 사이트 관리자와 동일 원장`;siteDirectoryStatus.dataset.state='ready';
       publishingPanel.scrollIntoView({behavior:'smooth',block:'start'});
     });
     publishingAddYoutube.addEventListener('click',async()=>{publishingAddYoutube.disabled=true;publishingStatus.textContent='EKODI 공식 YouTube 연결 인증을 준비하는 중입니다.';publishingStatus.dataset.state='loading';try{await startConnection('youtube')}catch(error){publishingStatus.textContent=error.message;publishingStatus.dataset.state='error';publishingAddYoutube.disabled=false}});
     publishingReload.addEventListener('click',loadPublishingChannels);
+    growthReload.addEventListener('click',loadMallGrowth);
         connectionActions.addEventListener('click', async event => {
       const button = event.target.closest('[data-connect-provider]'); if (!button) return;
       button.disabled=true; connectionStatus.textContent=`${button.textContent} 준비 중입니다.`; connectionStatus.dataset.state='loading';
