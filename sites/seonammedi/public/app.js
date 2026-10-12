@@ -1057,7 +1057,7 @@ function bindPublicMonitorContentAdmin(){
     const id=Number(control.dataset.monitorHide);if(!id||!confirm('이 자동수집 자료를 공개 화면에서 삭제할까요? 앞으로 재수집되어도 다시 공개하지 않습니다.'))return;
     control.disabled=true;
     try{
-      await publicAdminJson('/api/seonammedi/admin/content/'+id,{method:'PUT',body:JSON.stringify({state:'rejected',category:'news'})});
+      await publicAdminJson('/api/seonammedi/admin/timeline/auto-source/'+id,{method:'DELETE'});
       await loadMonitor();
     }catch(error){control.disabled=false;alert(error.message)}
   });
@@ -1155,7 +1155,7 @@ function renderPublicAdminControls(){
   if(admin.has('pages'))bindPublicOrganizationAdmin();
   if(admin.has('timeline'))bindPublicTimelineAdmin();
   if(admin.has('timeline'))bindPublicTimelineLinkImport();
-  if(admin.has('content'))bindPublicMonitorContentAdmin();
+  if(admin.has('timeline')||admin.has('content'))bindPublicMonitorContentAdmin();
   if(admin.has('channels'))bindPublicChannelAdmin();
   if(admin.has('voices'))window.dispatchEvent(new CustomEvent('seonammedi:voice-inline-admin-authorized'));
   if(admin.has('finance'))bindPublicFinanceAdmin();
