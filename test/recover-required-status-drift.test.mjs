@@ -48,3 +48,12 @@ test('recovery checks current PR identity, base, state, head and merge SHA',()=>
   assert.throws(()=>verifiedHeadPr({...valid,head:{sha:'c'.repeat(40)}},head),/head changed/);
   assert.throws(()=>verifiedHeadPr({...valid,merge_commit_sha:null},head),/merge sha unavailable/);
 });
+
+test('late CI failures must revoke a prior success status and never leave required test green', async () => {
+  const { readFileSync } = await import('node:fs');
+  const workflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /Revoke premature legacy success if late recovery step fails/);
+  assert.match(workflow, /github\.event_name == 'pull_request' && failure\(\)/);
+  assert.match(workflow, /--arg state failure --arg context test/);
+  assert.match(workflow, /statuses\/\$\{sha\}/);
+});
