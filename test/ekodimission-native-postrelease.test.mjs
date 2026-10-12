@@ -1,3 +1,4 @@
+import { runInNewContext } from 'node:vm';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -18,9 +19,30 @@ test('Mission postrelease canary uses EKODI-owned browser on both phone and desk
   assert.deepEqual(onlyMission.surfaces,[],'Avoid unrelated board endpoints in Mission release canary');
   for(const route of ['/ekodimission','/ekodimission/activities','/ekodimission/history','/ekodimission/stories','/ekodimission/partners','/ekodimission/activities/260926-chuseok-open-table/archive'])
     assert.ok(workflow.includes(route),'Missing canonical route '+route);
+  assert.equal((workflow.match(/      - Deploy Activity Public Share Schema/g)||[]).length,1,'Mission schema deployment is the unique event source');
+  assert.equal((workflow.match(/      - Deploy EKODI Operating Space/g)||[]).length,1,'Space deployment is the unique event source');
   assert.match(workflow,/Deploy Activity Public Share Schema/);
   assert.match(workflow,/Deploy EKODI Operating Space/);
   assert.match(workflow,/workflow_run.conclusion == 'success'/);
+  assert.equal((workflow.match(/workflow_run.event == 'workflow_dispatch'/g)||[]).length,2,'Both device canaries must require actual dispatch for release workflow runs');
+  assert.equal((workflow.match(/if: github.event_name == 'workflow_dispatch' \|\| \(github.event_name == 'workflow_run'/g)||[]).length,2,'PR validation must not spawn live public browser canaries');
+  assert.doesNotMatch(workflow,/if: github.event_name != 'workflow_run'/,'All native canaries must require an explicit release event');
+
+  assert.equal((workflow.match(/workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'/g)||[]).length,2,'Only protected main push releases may trigger the native canary');
+  assert.doesNotMatch(workflow,/if: github.event_name != 'workflow_run' \|\| github.event.workflow_run.conclusion == 'success'/);
+
+});
+
+test('Each native canary job itself refuses PR schema-validation completions',()=>{
+  const jobs=['native-mobile','native-desktop'];
+  const desired="github.event.workflow_run.event == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')";
+  for(const job of jobs){
+    const section=workflow.split('  '+job+':\n')[1]?.split(/\n  [a-z][a-z-]*:\n/)[0]||'';
+    assert.ok(section,'Native job not present: '+job);
+    assert.ok(section.includes(desired),'No production trigger guard inside '+job);
+    assert.ok(section.includes("if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run'"),'PR-only contract job must never execute the native browser: '+job);
+    assert.ok(!section.includes("github.event.workflow_run.event == 'pull_request'"),'PR-only validation cannot trigger '+job);
+  }
 });
 
 test('Mission live browser smoke is bounded read-only and does not expose user credentials',()=>{
@@ -36,4 +58,30 @@ test('Mission live browser smoke is bounded read-only and does not expose user c
   assert.match(native,/\.pageErrors \| length == 0/);
   assert.match(native,/artifacts\/background-browser-worker/);
   assert.doesNotMatch(workflow,/(?:SUPABASE_ACCESS_TOKEN|CLOUDFLARE_API_TOKEN|permissions: write|Desktop_Commander|curl.*POST|allowMutation: true)/);
+});
+
+
+test('mission native gate truth table rejects PR validation, feature push and failed deployments',()=>{
+  for(const job of ['native-mobile','native-desktop']){
+    const section=workflow.split('  '+job+':\n')[1]?.split(/\n  [a-z][a-z-]*:\n/)[0]||'';
+    const condition=section.match(/^\s+if: (.+)$/m)?.[1];
+    assert.ok(condition,'Missing native job condition for '+job);
+    const cases=[
+      {name:'explicit native dispatch',eventName:'workflow_dispatch',event:'',branch:'',result:'',expected:true},
+      {name:'guarded schema dispatch success',eventName:'workflow_run',event:'workflow_dispatch',branch:'main',result:'success',expected:true},
+      {name:'unprotected feature dispatch success',eventName:'workflow_run',event:'workflow_dispatch',branch:'feature',result:'success',expected:false},
+      {name:'protected main push success',eventName:'workflow_run',event:'push',branch:'main',result:'success',expected:true},
+      {name:'PR-only successful validation',eventName:'workflow_run',event:'pull_request',branch:'main',result:'success',expected:false},
+      {name:'feature branch push',eventName:'workflow_run',event:'push',branch:'feature',result:'success',expected:false},
+      {name:'failed guarded deploy',eventName:'workflow_run',event:'workflow_dispatch',branch:'main',result:'failure',expected:false},
+      {name:'cancelled guarded deploy',eventName:'workflow_run',event:'workflow_dispatch',branch:'main',result:'cancelled',expected:false},
+      {name:'successful scheduled validation',eventName:'workflow_run',event:'schedule',branch:'main',result:'success',expected:false},
+      {name:'PR source validation',eventName:'pull_request',event:'',branch:'',result:'success',expected:false},
+      {name:'unrelated direct push',eventName:'push',event:'',branch:'main',result:'success',expected:false},
+    ];
+    for(const c of cases){
+      const got=Boolean(runInNewContext(condition,{github:{event_name:c.eventName,event:{workflow_run:{conclusion:c.result,event:c.event,head_branch:c.branch}}}}));
+      assert.equal(got,c.expected,job+': '+c.name);
+    }
+  }
 });
