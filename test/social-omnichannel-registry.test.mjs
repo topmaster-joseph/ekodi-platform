@@ -63,4 +63,7 @@ test('central UI distinguishes directory entries from OAuth connections and offe
   assert.match(ui,/공식 OAuth 연결/);
   assert.match(ui,/channel\.publicationMode=publicationMode\.value/);
   assert.match(ui,/publicationMode\.disabled = kind\.value !== 'owned'/);
+  assert.match(ui,/function applyDirectoryFilters\(\)/);
+  assert.match(ui,/channelSearch\.addEventListener\('input',applyDirectoryFilters\)/);
+  assert.match(ui,/kindFilter\.addEventListener\('change',applyDirectoryFilters\)/);
 });
