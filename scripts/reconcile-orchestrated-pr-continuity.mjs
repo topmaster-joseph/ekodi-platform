@@ -71,7 +71,11 @@ async function hasAuthorizedReceipt(taskId, branch) {
     });
     if (!response.ok) return false;
     const result = await response.json().catch(() => ({}));
-    return result.authorized === true;
+    return result.authorized === true
+      && result.taskId === taskId
+      && result.branchRef === branch
+      && result.authority === 'ekodi-orchestrator'
+      && !['blocked', 'failed', 'cancelled'].includes(String(result.state || '').toLowerCase());
   } finally {
     clearTimeout(timeout);
   }
