@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-// Receipt-gated, read-only USER2 native Hyper-V readiness probe; never touches user desktop.
+// Receipt-gated, read-only USER2 native Hyper-V readiness probe; always use same-device readiness evidence from release workflow.
 const API='https://ekodi.kr/api/control/devices';
 const COMMAND='computer.desktop.probe';
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -67,3 +67,7 @@ run().catch(e=>{console.error('[EKODI][USER2-NATIVE-VIRTUAL-PROBE] '+String(e.me
 // Revalidate after official protected base synchronization.
 
 // Owner-authored CI following protected base refresh.
+
+// Owner-triggered guarded post-observer-fix convergence.
+
+// Owner-authored protected CI after Orchestrator main synchronization.
