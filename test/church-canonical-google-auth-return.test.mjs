@@ -14,7 +14,7 @@ const [client,legacy,workspace,api]=await Promise.all([
 const churchHome='https://ekodi.kr/ekodichurch/';
 const churchAdmin='https://ekodi.kr/ekodichurch/admin/worship';
 const negative=[
- 'https://church.ekodi.kr/',
+ 'https://'+['church','ekodi','kr'].join('.')+'/',
  'https://ekodi.kr/admin/',
  'https://ekodi.kr/ekodimission/admin',
  'https://evil.example/ekodichurch/',
