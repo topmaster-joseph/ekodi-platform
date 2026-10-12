@@ -35,3 +35,5 @@ if($moduleAvailable){try{$vmPresent=$null -ne (Get-VM -Name 'EKODI-Isolated-Base
 } | ConvertTo-Json -Compress
 
 # Owner-authored protected release validation trigger; not executed on USER2.
+
+# Owner-authored required checks after guarded base synchronization.
