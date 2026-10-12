@@ -48,7 +48,7 @@ export function extractSeonamMediArticle(html,sourceUrl){
   const description=strip(meta(html,'og:description')||meta(html,'description')||meta(html,'twitter:description'));
   const articleHtml=(String(html).match(/<article\b[^>]*>([\s\S]*?)<\/article>/i)||[])[1]||'';
   const body=strip(articleHtml);
-  const articleEvidence=body.length>=60?body:description;
+  const articleEvidence=hasRegionalMedicalContext(body)?body:body.length>=60?'':description;
   const evidence=hasRegionalMedicalContext(articleEvidence)?articleEvidence:'';
   const date=getDate(meta(html,'article:published_time')||meta(html,'datePublished')||meta(html,'date')||(String(html).match(/["']datePublished["']\s*:\s*["']([^"']+)["']/i)||[])[1]||'');
   const url=new URL(sourceUrl);
