@@ -227,11 +227,16 @@ async function refreshRuntimeReadiness(){
   try{
     const url=`${I18N_API}/status?service=${encodeURIComponent(currentServiceId())}`;
     const response=await fetch(url,{headers:{accept:'application/json'},cache:'no-store',credentials:'omit'});
-    if(!response.ok)return;
+    if(!response.ok)throw new Error('language_readiness_http_error');
     const data=await response.json();
-    if(Array.isArray(data?.publishedLocales)&&data.publishedLocales.length)setReadyLocales(data.publishedLocales);
+    if(!Array.isArray(data?.publishedLocales))throw new Error('language_readiness_invalid');
+    setReadyLocales(data.publishedLocales);
     if(activeLocale!==FALLBACK_LOCALE)await refreshActiveCatalog(activeLocale);
-  }catch{}
+  }catch{
+    // LANG-UI-001: never retain stale published choices after readiness becomes unavailable.
+    // Keep Korean readable and let the next scheduled refresh restore validated languages.
+    setReadyLocales([FALLBACK_LOCALE]);
+  }
 }
 function header(){
   return document.querySelector('[data-ekodi-user-header-root]:not([data-ekodi-user-header-fallback]):not([data-ekodi-language-ignore])')||
