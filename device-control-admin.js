@@ -118,7 +118,7 @@
       'startup.disable': '시작프로그램 해제', 'startup.restore': '시작프로그램 복원', 'maintenance.temp_cleanup': '임시파일 정리',
       'updates.scan': '업데이트 확인', 'updates.install': '업데이트 설치', 'profile.workstation.apply': 'EKODI 업무환경',
       'profile.workstation.restore': '업무환경 복원', 'agent.self_update': 'Agent 업데이트', 'software.localai.install': 'Ollama·Claude 설치', 'software.localai.verify': '로컬 AI 실증', 'computer.browser.canary': 'BG Browser Canary',
-      'computer.agent.status': 'Agent 상태', 'filesystem.inventory': 'EKODI 폴더 조사', 'computer.system.read': '시스템 상태', 'computer.process.list': '프로세스 보기', 'computer.desktop.probe': '격리 데스크톱 점검', 'computer.desktop.canary': '격리 VM Canary', 'computer.desktop.guest.canary': 'Guest 실행 Canary', 'computer.desktop.ui.canary': 'Guest UI Canary', 'computer.desktop.session.canary': 'Session Canary', 'computer.desktop.session.execute': '격리 Session 실행',
+      'computer.agent.status': 'Agent 상태', 'filesystem.inventory': 'EKODI 폴더 조사', 'filesystem.organization.plan': '폴더 정리 미리보기', 'computer.system.read': '시스템 상태', 'computer.process.list': '프로세스 보기', 'computer.desktop.probe': '격리 데스크톱 점검', 'computer.desktop.canary': '격리 VM Canary', 'computer.desktop.guest.canary': 'Guest 실행 Canary', 'computer.desktop.ui.canary': 'Guest UI Canary', 'computer.desktop.session.canary': 'Session Canary', 'computer.desktop.session.execute': '격리 Session 실행',
     };
     return labels[type] || type;
   }
@@ -371,6 +371,7 @@
     actions.append(
       makeActionButton(device, 'computer.agent.status', 'Agent 상태', 'ghost', {}, !capability(device, 'agentStatus')),
       makeActionButton(device, 'filesystem.inventory', 'EKODI 폴더 조사', 'ghost', {}, !capability(device, 'filesystemInventory')),
+      makeActionButton(device, 'filesystem.organization.plan', '폴더 정리 미리보기', 'ghost', {}, !capability(device, 'filesystemInventory')),
       makeActionButton(device, 'computer.desktop.probe', '격리 데스크톱 점검', 'ghost', {}, !capability(device, 'isolatedDesktopProbe')),
       makeActionButton(device, 'computer.desktop.canary', '격리 VM Canary', 'ghost', {}, !capability(device, 'isolatedDesktopProbe')),
       makeActionButton(device, 'computer.desktop.guest.canary', 'Guest 실행 Canary', 'ghost', {}, !capability(device, 'isolatedDesktopCanary')),
@@ -386,6 +387,25 @@
     const agentCommand = latestCommandByType(device, 'computer.agent.status');
     const systemCommand = latestCommandByType(device, 'computer.system.read');
     const processCommand = latestCommandByType(device, 'computer.process.list');
+    const plan = latestCommandByType(device, 'filesystem.organization.plan')?.result;
+    if (plan?.mode === 'dry-run') {
+      const planCard = document.createElement('section');
+      planCard.className = 'device-remote-inventory';
+      const title = document.createElement('strong');
+      title.textContent = '통합관리 정리 미리보기 — 이동·삭제 없음';
+      planCard.append(title);
+      const note = document.createElement('p');
+      note.textContent = plan.status === 'requires-user-context' ? '사용자 세션 확인 필요' : `정리 검토 후보 ${Number(plan.candidateCount || 0)}개 (실행된 변경 0건)`;
+      planCard.append(note);
+      const listing = document.createElement('ul');
+      for (const item of Array.isArray(plan.candidates) ? plan.candidates.slice(0, 100) : []) {
+        const li = document.createElement('li');
+        li.textContent = `${item.name || '이름 없음'} · ${item.classification || '검토 필요'}`;
+        listing.append(li);
+      }
+      planCard.append(listing);
+      result.append(planCard);
+    }
     const inventoryCommand = latestCommandByType(device, 'filesystem.inventory');
     const inventory = inventoryCommand?.result;
     if (inventory && (inventory.mode === 'read-only' || inventory.status === 'requires-user-context')) {
