@@ -49,7 +49,7 @@ jobs:
                 printf '%s\n' "$output"
                 return 0
               fi
-              if [[ "$attempt" -ge 4 ]] || ! grep -Eqi 'rate limit|secondary rate|abuse detection' <<< "$output"; then
+              if [[ "$attempt" -ge 4 ]] || ! grep -Eqi 'rate limit|secondary rate|abuse detection|HTTP 50[234]|Gateway Timeout|temporarily unavailable|connection reset' <<< "$output"; then
                 printf '%s\n' "$output" >&2
                 return "$status"
               fi
@@ -59,16 +59,15 @@ jobs:
             done
           }
 
-          # Snapshot open PR metadata through GitHub CLI GraphQL instead of issuing
-          # one REST file-list request for every open PR. Only non-draft PRs
-          # based on the same current base commit participate in integration
-          # ordering; stale PRs must refresh/rebase before they can block newer
-          # work. Large current-base PRs fall back to REST file pagination only
-          # when the GraphQL file snapshot is incomplete.
+          # Snapshot lightweight PR metadata via GraphQL, but never request all open
+          # PR file arrays in one gigantic query (GitHub GraphQL HTTP 504).
+          # Complete file lists are retrieved through paginated REST only for
+          # non-draft PRs sharing the current base SHA. Incomplete/missing
+          # file evidence remains a hard failure, never a pass.
           gh_retry pr list --repo "$REPOSITORY" --state open --base "$BASE_REF" --limit 500 \
-            --json number,headRefName,isDraft,baseRefOid,changedFiles,files,labels > "$open_pr_snapshot"
+            --json number,headRefName,isDraft,baseRefOid,changedFiles,labels > "$open_pr_snapshot"
           gh_retry pr view "$PR_NUMBER" --repo "$REPOSITORY" \
-            --json number,baseRefOid,changedFiles,files,labels,comments,reviews,mergeable,mergeStateStatus > "$governance_snapshot"
+            --json number,baseRefOid,changedFiles,labels,comments,reviews,mergeable,mergeStateStatus > "$governance_snapshot"
 
           current_base_oid=$(jq -r '.baseRefOid // empty' "$governance_snapshot")
           if [[ -z "$current_base_oid" ]]; then
