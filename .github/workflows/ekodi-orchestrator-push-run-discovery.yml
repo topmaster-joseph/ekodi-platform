@@ -1,0 +1,58 @@
+name: EKODI Existing Orchestrator Push-Run Discovery (One Shot)
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - '.github/workflows/ekodi-orchestrator-push-run-discovery.yml'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  read-only:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Query existing orchestrator push runs without mutation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          const repo='topmaster-joseph/ekodi-platform';
+          const branches=[
+            'ai/chatgpt/orch_recovery_cabfdca6e30df1342cd860643744edd7',
+            'ai/gpt6/orch_recovery_064475876aa6891cda5e381096e018ad',
+            'ai/chatgpt/orch_recovery_c89617811c25c5cb3755252850f55298',
+            'ai/chatgpt/orch_recovery_8f734df1e46a9852650c311ef8f95c82'
+          ];
+          const token=process.env.GH_TOKEN;
+          if(!token)throw Error('token_missing');
+          const base='https://api.github.com/repos/'+repo;
+          async function get(path){
+            const r=await fetch(base+path,{headers:{
+              authorization:'Bearer '+token,
+              accept:'application/vnd.github+json',
+              'x-github-api-version':'2022-11-28'
+            }});
+            const d=await r.json().catch(()=>({}));
+            return {http:r.status,body:r.ok?d:{}};
+          }
+          for(const branch of branches){
+            const params=new URLSearchParams({event:'push',branch,per_page:'20'});
+            const r=await get('/actions/workflows/converge-orchestrated-pr-merge.yml/runs?'+params);
+            const runs=Array.isArray(r.body?.workflow_runs)?r.body.workflow_runs:[];
+            const evidence=[];
+            for(const run of runs.slice(0,5)){
+              const jobs=await get('/actions/runs/'+run.id+'/jobs?per_page=20');
+              evidence.push({runId:run.id,headSha:run.head_sha,
+                status:run.status,conclusion:run.conclusion,
+                jobsHttp:jobs.http,
+                jobs:(jobs.body?.jobs||[]).map(j=>({
+                  id:j.id,name:j.name,status:j.status,conclusion:j.conclusion
+                }))});
+            }
+            console.log('EKODI_OFFICIAL_CONVERGENCE_HISTORY '+
+              JSON.stringify({branch,http:r.http,reportedTotal:r.body?.total_count||0,runs:evidence}));
+          }
+          NODE
