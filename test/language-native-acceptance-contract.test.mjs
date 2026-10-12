@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {assessLanguageDOM,ORIGIN,LOCALE_SELECTOR} from '../scripts/verify-language-selector-native.mjs';
+import {assessLanguageDOM,assessIndependentKoreanHeader,ORIGIN,LOCALE_SELECTOR} from '../scripts/verify-language-selector-native.mjs';
 
 const workflow=readFileSync(new URL('../.github/workflows/verify-language-selector-native.yml',import.meta.url),'utf8');
 const script=readFileSync(new URL('../scripts/verify-language-selector-native.mjs',import.meta.url),'utf8');
@@ -31,6 +31,26 @@ test('production must never render an un-published homepage locale',()=>{
   assert.equal(assessLanguageDOM({...good,documentLocale:'en',homepageLocale:'en'},['ko-KR','en']).status,'pass');
 });
 
+test('LANG-UI-001: document and homepage locale must independently agree with publication',()=>{
+  const hidden={...good,headerControls:0,visibleHeaderControls:0,documentLocale:'ko',homepageLocale:'ko-KR'};
+  assert.equal(assessLanguageDOM(hidden,['ko-KR']).status,'pass');
+  assert.equal(assessLanguageDOM({...hidden,documentLocale:'en'},['ko-KR']).reason,'document_locale_not_published');
+  assert.equal(assessLanguageDOM({...hidden,homepageLocale:'en'},['ko-KR']).reason,'document_locale_not_published');
+  assert.equal(assessLanguageDOM({...good,documentLocale:'en',homepageLocale:'en'},['ko-KR','en']).status,'pass');
+  assert.equal(assessLanguageDOM({...hidden,documentLocale:'en',homepageLocale:'en'},['ko-KR','en']).status,'fail');
+  assert.equal(assessLanguageDOM({...hidden,documentLocale:'ko-KR'},[]).status,'pass');
+});
+
+test('standalone SeonamMedi Korean header is assessed separately from shared Shell',()=>{
+  const s={independentHeader:true,shellLoaded:false,documentLocale:'ko',headerControls:0,
+    visibleHeaderControls:0,standaloneHeaderLanguageControls:0,footerControls:0};
+  assert.deepEqual(assessIndependentKoreanHeader(s),{status:'pass',reason:'independent_korean_only_header'});
+  assert.equal(assessIndependentKoreanHeader({...s,documentLocale:'en'}).status,'fail');
+  assert.equal(assessIndependentKoreanHeader({...s,standaloneHeaderLanguageControls:1}).status,'fail');
+  assert.equal(assessIndependentKoreanHeader({...s,footerControls:1}).status,'fail');
+  assert.equal(assessIndependentKoreanHeader({...s,shellLoaded:true}).status,'inconclusive');
+  assert.equal(assessIndependentKoreanHeader({...s,independentHeader:false}).status,'inconclusive');
+});
 test('unavailable live status cannot certify a deployed selector',()=>{
   assert.equal(assessLanguageDOM(good,null).status,'inconclusive');
   assert.equal(assessLanguageDOM({...good,shellLoaded:false},['ko-KR','en']).status,'inconclusive');
@@ -52,5 +72,7 @@ test('native workflow is PR executable with isolated Playwright evidence',()=>{
   assert.match(script,/readOnly:true/);
   assert.match(script,/realProductionAndSyntheticSeparated:true/);
   assert.match(script,/cloudflare_429_stop/);
+  assert.match(script,/liveMultiPublishedObserved/);
+  assert.match(script,/independent_korean_only_header/);
   assert.doesNotMatch(script,/GH_TOKEN|CLOUDFLARE_API_TOKEN|userDataDir/);
 });

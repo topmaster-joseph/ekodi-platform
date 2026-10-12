@@ -16,9 +16,12 @@ export function assessLanguageDOM(snapshot, publishedLocales){
   const count=snapshot.visibleHeaderControls;
   // The effective text/document locale must be among the actually published languages.
   // An English homepage with Korean-only publication is not a successful hidden-selector result.
-  const effectiveLocale=String(snapshot.homepageLocale||snapshot.documentLocale||'').trim();
-  if(effectiveLocale && !unique.some(locale=>locale.toLowerCase()===effectiveLocale.toLowerCase()||locale==='ko-KR'&&effectiveLocale==='ko'))
-    return {status:'fail',reason:'document_locale_not_published'};
+  const allowed=unique.length?unique:['ko-KR']; // An empty published set still has the Korean source fallback.
+  for(const current of [snapshot.documentLocale,snapshot.homepageLocale]){
+    const locale=String(current||'').trim();
+    if(locale&&!allowed.some(code=>code.toLowerCase()===locale.toLowerCase()||(code==='ko-KR'&&locale==='ko')))
+      return {status:'fail',reason:'document_locale_not_published'};
+  }
   if(snapshot.footerControls>0||snapshot.headerControls>1)return {status:'fail',reason:'duplicate_or_footer_language_controls'};
   if(mustShow && (count!==1||!snapshot.pill||!snapshot.accessible||!snapshot.optionsMatchPublished)){
     return {status:'fail',reason:'published_multilocale_selector_contract'};
@@ -27,6 +30,17 @@ export function assessLanguageDOM(snapshot, publishedLocales){
     return {status:'fail',reason:'single_locale_selector_leaked'};
   }
   return {status:'pass',reason:mustShow?'published_multilocale_pill':'single_locale_hidden'};
+}
+export function assessIndependentKoreanHeader(snapshot){
+  // This separately owned service intentionally does not boot the shared Shell.
+  // Validate its Korean-only contract rather than fabricating an i18n API status.
+  if(!snapshot?.independentHeader||snapshot.shellLoaded)return {status:'inconclusive',reason:'independent_header_not_observed'};
+  if(!['ko','ko-KR'].includes(String(snapshot.documentLocale||'')))return {status:'fail',reason:'independent_header_not_korean'};
+  if(snapshot.headerControls>0||snapshot.visibleHeaderControls>0||
+    snapshot.standaloneHeaderLanguageControls>0||snapshot.footerControls>0){
+    return {status:'fail',reason:'independent_korean_header_language_control_leaked'};
+  }
+  return {status:'pass',reason:'independent_korean_only_header'};
 }
 function toArray(value){return Array.isArray(value)?value:[];}
 async function inspect(page){
@@ -48,6 +62,10 @@ async function inspect(page){
       url:location.href,documentLocale:document.documentElement.lang,
       homepageLocale:document.documentElement.dataset.locale||null,
       shellLoaded:!!window.EKODIUserLanguage,headerReady:!!document.querySelector('[data-ekodi-user-header-root]'),
+      independentHeader:!!document.querySelector('header.site-header'),
+      standaloneHeaderLanguageControls:document.querySelectorAll(
+        'header.site-header select,header.site-header [data-language-control],header.site-header [data-ekodi-language-control],header.site-header [data-language-selector]'
+      ).length,
       headerControls:all.length,visibleHeaderControls:all.filter(displayed).length,footerControls:footer.length,
       options:opts,readyLocales:ready,datasetReady:document.documentElement.dataset.ekodiReadyLocales||'',
       pill:!!control&&parseFloat(getComputedStyle(control).borderRadius)>=16,
@@ -182,8 +200,12 @@ async function live(run,chromium){
       const matched=api.filter(r=>{
         try{return new URL(r.url).searchParams.get('service')===service}catch{return false}
       }).at(-1);
-      const assessment=assessLanguageDOM(snapshot,matched?.status===200&&!matched.malformed?matched.publishedLocales:null);
-      const result={service,path:surface,device,status:assessment.status,reason:assessment.reason,apiStatus:matched?.status||null,apiPublished:matched?.publishedLocales||null,snapshot,blockedMutations:mutations.length};
+      const independent=service==='seonammedi';
+      const assessment=independent?assessIndependentKoreanHeader(snapshot):
+        assessLanguageDOM(snapshot,matched?.status===200&&!matched.malformed?matched.publishedLocales:null);
+      const result={service,path:surface,device,headerMode:independent?'independent':'shared',
+        status:assessment.status,reason:assessment.reason,apiStatus:matched?.status||null,
+        apiPublished:matched?.publishedLocales||null,snapshot,blockedMutations:mutations.length};
       run.production.push(result);
       if(api.some(x=>x.status===429)){result.status='inconclusive';result.reason='cloudflare_429_stop';stopped=true;}
       if(run.production.length===1)await page.screenshot({path:outputFile.replace(/report\.json$/,'root-desktop.png'),fullPage:false}).catch(()=>{});
@@ -204,7 +226,9 @@ export async function runNativeAcceptance(){
   await fs.mkdir(path.dirname(outputFile),{recursive:true});
   try{await fixture(report,chromium)}catch(e){report.synthetic={status:'inconclusive',reason:String(e.message||e).slice(0,250)}}
   try{await live(report,chromium)}catch(e){report.production.push({status:'inconclusive',reason:String(e.message||e).slice(0,250)})}
-  report.liveCertified=report.production.length===3&&report.production.every(x=>x.status==='pass');
+  report.liveMultiPublishedObserved=report.production.some(x=>x.headerMode==='shared'&&x.status==='pass'&&x.apiPublished?.length>=2);
+  // Korean-only standalone sites can be compliant without implying a live multilingual release.
+  report.liveCertified=report.production.length===3&&report.production.every(x=>x.status==='pass')&&report.liveMultiPublishedObserved;
   report.completedAt=new Date().toISOString();
   // A source PR must first fix the live-production mismatch; production is still
   // running the previous release until protected merge/deploy. Surface that drift
