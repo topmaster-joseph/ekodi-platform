@@ -28,6 +28,7 @@ function fixture(){
     contentDocument:null,
   };
   const notice={hidden:true};
+  const app={hidden:false};
   const panel={
     hidden:true,
     classList:{
@@ -46,6 +47,7 @@ function fixture(){
       if(id==='adminControlFrame')return frame;
       if(id==='adminControlFrameNotice')return notice;
       if(id==='adminControlHome')return panel;
+      if(id==='app')return app;
       return null;
     },
   };
@@ -64,7 +66,7 @@ function fixture(){
   }
   runInNewContext(source,{document,window,MutationObserver});
   return {
-    frame,notice,panel,root,listeners,navListeners,window,
+    frame,notice,panel,root,app,listeners,navListeners,window,
     notifyPanelMutation:()=>observers.forEach(observer=>observer.callback()),
   };
 }
@@ -244,4 +246,19 @@ test('pre-auth and logged-out navigation never auto-loads the privileged iframe'
   root.dataset.ekodiAdminReady='loading';
   notifyPanelMutation();
   assert.equal(frame.hasAttribute('src'),false);
+});
+
+test('hidden or signed-out admin shell does not reopen the embedded Control panel',()=>{
+  const {panel,app,root,notifyPanelMutation}=fixture();
+  root.dataset.ekodiAdminReady='true';
+  app.hidden=true;
+  panel.hidden=true;
+  panel.classList.add('hidden-panel');
+  notifyPanelMutation();
+  assert.equal(panel.hidden,true);
+  assert.equal(panel.classList.contains('hidden-panel'),true);
+  app.hidden=false;
+  notifyPanelMutation();
+  assert.equal(panel.hidden,false);
+  assert.equal(panel.classList.contains('hidden-panel'),false);
 });
