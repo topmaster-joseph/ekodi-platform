@@ -5,6 +5,7 @@ on:
       - 'ekodi-ai-sovereignty-gate.js'
       - 'ekodi-ai-orchestrator-admin-handoff.js'
       - 'ai-command-control.js'
+      - 'ekodi-orchestrator-task-adapter.js'
       - 'control.js'
       - 'control.html'
       - 'scripts/validate-ai-sovereignty-gate.mjs'
@@ -28,6 +29,7 @@ jobs:
           node --check ekodi-ai-sovereignty-gate.js
           node --check ekodi-ai-orchestrator-admin-handoff.js
           node --check ai-command-control.js
+          node --check ekodi-orchestrator-task-adapter.js
           node --check control.js
       - name: Run fail-closed policy assertions
         run: node scripts/validate-ai-sovereignty-gate.mjs
