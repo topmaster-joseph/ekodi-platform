@@ -1518,6 +1518,48 @@ function Get-WindowsOptionalFeatureStateSafe([string]$Name) {
   }
 }
 
+function Invoke-EkodiUser2HyperVFeature {
+  param([bool]$Enable = $false)
+  if ([Environment]::MachineName -ine 'user2') { throw 'EKODI_HYPERV_USER2_ONLY' }
+  $firmware = @(Get-CimInstance Win32_Processor | Where-Object { $_.VirtualizationFirmwareEnabled -eq $true }).Count -gt 0
+  $feature = Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -ErrorAction SilentlyContinue
+  $state = if ($null -ne $feature) { [string]$feature.State } else { 'Unavailable' }
+  $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
+    [Security.Principal.WindowsBuiltInRole]::Administrator)
+  $changed = $false
+  if ($Enable) {
+    if (-not $admin) { throw 'EKODI_HYPERV_ELEVATION_REQUIRED' }
+    if (-not $firmware) { throw 'EKODI_HYPERV_FIRMWARE_NOT_READY' }
+    if ($state -eq 'Unavailable') { throw 'EKODI_HYPERV_FEATURE_NOT_AVAILABLE' }
+    if ($state -eq 'Disabled') {
+      # Explicitly approved USER2 feature enable only. No restart or base VM provisioning.
+      Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -All -NoRestart -ErrorAction Stop | Out-Null
+      $changed = $true
+      $feature = Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -ErrorAction Stop
+      $state = [string]$feature.State
+    } elseif ($state -notin @('Enabled','EnablePending')) {
+      throw 'EKODI_HYPERV_FEATURE_STATE_NOT_ELIGIBLE'
+    }
+  }
+  $module = [bool](Get-Command Get-VM -ErrorAction SilentlyContinue)
+  $base = $false
+  if ($module) {
+    try { $base = $null -ne (Get-VM -Name 'EKODI-Isolated-Base' -ErrorAction Stop) } catch {}
+  }
+  return @{
+    message = 'EKODI USER2 Hyper-V feature state inspected.'
+    hyperVPreparation = @{
+      schemaVersion = 1; targetAlias = 'user2'; firmwareVirtualizationEnabled = [bool]$firmware
+      hyperVState = $state; hyperVModuleAvailable = $module; baseVmPresent = $base
+      administrator = [bool]$admin; featureEnableRequested = [bool]$Enable
+      featureChanged = $changed; rebootPerformed = $false
+      rebootMayBeRequired = ($state -eq 'EnablePending')
+      guestExecutionAuthorized = $false
+      checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+    }
+  }
+}
+
 function Get-IsolatedDesktopBackendProbe {
   # Edition and build are allowlisted; never export computer name, identity or OS keys.
   $windowsEditionClass = 'unknown'
@@ -1620,48 +1662,6 @@ function Get-IsolatedDesktopBackendProbe {
     credentialCollection = $false
     gapReason = $gapReason
     checkedAt = (Get-Date).ToUniversalTime().ToString('o')
-  }
-}
-
-function Invoke-EkodiUser2HyperVFeature {
-  param([bool]$Enable = $false)
-  if ([Environment]::MachineName -ine 'user2') { throw 'EKODI_HYPERV_USER2_ONLY' }
-  $firmware = @(Get-CimInstance Win32_Processor | Where-Object { $_.VirtualizationFirmwareEnabled -eq $true }).Count -gt 0
-  $feature = Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -ErrorAction SilentlyContinue
-  $state = if ($null -ne $feature) { [string]$feature.State } else { 'Unavailable' }
-  $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
-    [Security.Principal.WindowsBuiltInRole]::Administrator)
-  $changed = $false
-  if ($Enable) {
-    if (-not $admin) { throw 'EKODI_HYPERV_ELEVATION_REQUIRED' }
-    if (-not $firmware) { throw 'EKODI_HYPERV_FIRMWARE_NOT_READY' }
-    if ($state -eq 'Unavailable') { throw 'EKODI_HYPERV_FEATURE_NOT_AVAILABLE' }
-    if ($state -eq 'Disabled') {
-      # Explicitly approved USER2 feature enable only. No restart or base VM provisioning.
-      Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -All -NoRestart -ErrorAction Stop | Out-Null
-      $changed = $true
-      $feature = Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -ErrorAction Stop
-      $state = [string]$feature.State
-    } elseif ($state -notin @('Enabled','EnablePending')) {
-      throw 'EKODI_HYPERV_FEATURE_STATE_NOT_ELIGIBLE'
-    }
-  }
-  $module = [bool](Get-Command Get-VM -ErrorAction SilentlyContinue)
-  $base = $false
-  if ($module) {
-    try { $base = $null -ne (Get-VM -Name 'EKODI-Isolated-Base' -ErrorAction Stop) } catch {}
-  }
-  return @{
-    message = 'EKODI USER2 Hyper-V feature state inspected.'
-    hyperVPreparation = @{
-      schemaVersion = 1; targetAlias = 'user2'; firmwareVirtualizationEnabled = [bool]$firmware
-      hyperVState = $state; hyperVModuleAvailable = $module; baseVmPresent = $base
-      administrator = [bool]$admin; featureEnableRequested = [bool]$Enable
-      featureChanged = $changed; rebootPerformed = $false
-      rebootMayBeRequired = ($state -eq 'EnablePending')
-      guestExecutionAuthorized = $false
-      checkedAt = (Get-Date).ToUniversalTime().ToString('o')
-    }
   }
 }
 
