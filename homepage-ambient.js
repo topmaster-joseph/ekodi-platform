@@ -75,16 +75,17 @@
     return 'ko-KR';
   };
 
+  // LANG-UI-001: the homepage must never select an un-published language
+  // independently from the authoritative shared Shell readiness decision.
+  // Until Shell is ready (or if it is unavailable), preserve Korean source text.
+  function publishedHomepageLocale(value) {
+    const locale = normalizeLocale(value);
+    if (locale === 'ko-KR') return 'ko-KR';
+    return window.EKODIUserLanguage?.isLocaleReady?.(locale) === true ? locale : 'ko-KR';
+  }
   function getLocale() {
-    try {
-      const item = String(document.cookie || '').split(';').map(v => v.trim()).find(v => v.startsWith('ekodi_locale='));
-      if (item) return normalizeLocale(decodeURIComponent(item.slice('ekodi_locale='.length)));
-    } catch {}
-    try {
-      const saved = localStorage.getItem('ekodi_user_locale') || localStorage.getItem('ekodi.locale');
-      if (saved) return normalizeLocale(saved);
-    } catch {}
-    return normalizeLocale(navigator.language);
+    const shared = window.EKODIUserLanguage;
+    return shared?.getLocale ? publishedHomepageLocale(shared.getLocale()) : 'ko-KR';
   }
 
   const copy = (locale, key) => localeCopy[locale]?.[key] ?? localeCopy['ko-KR'][key];
@@ -557,7 +558,7 @@
   }
 
   function renderHomepageLocale(locale) {
-    const next=normalizeLocale(locale);
+    const next=publishedHomepageLocale(locale);
     setHookFirstHero(next);
     applyPageLocale(next);
     installSecondaryLinks(next);
@@ -585,7 +586,8 @@
 
     const allCards = [...document.querySelectorAll('.service-card[data-service-status][data-service-id]')];
     await applyHomepagePresentation(allCards);
-    renderHomepageLocale(locale);
+    // The async presentation phase may outlive the shared language boot.
+    renderHomepageLocale(getLocale());
   }
 
   window.addEventListener('ekodi:locale-change', event => renderHomepageLocale(event.detail?.locale || getLocale()));
