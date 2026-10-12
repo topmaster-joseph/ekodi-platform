@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {classifyUser4BrowserFailure,eligibleUser4Agent,verifyUser4Browser,verifyUser4Acceptance,ensureUser4AgentUpdated,USER4_CDP_FIX_FLOOR}
+import {classifyUser4BrowserFailure,eligibleUser4Agent,verifyUser4Browser,verifyUser4BrowserWithRetry,verifyUser4Acceptance,ensureUser4AgentUpdated,USER4_CDP_FIX_FLOOR}
   from '../scripts/verify-native-user4-acceptance.mjs';
 const now=Date.parse('2026-10-11T06:30:00.000Z');
 const good={id:'device-4',hostname:'USER4',status:'online',revokedAt:null,
@@ -234,4 +234,39 @@ test('USER4 prior-day Agent update cannot satisfy 2026-10-12 owner refresh reque
   assert.equal(posts,1);
   assert.equal(proof.updatePerformed,true);
   assert.equal(proof.recentOfficialUpdateVerified,true);
+});
+
+test('exact transient CDP early-exit zero permits one fresh USER4 canary retry',async()=>{
+  let attempts=0;
+  const verify=async()=>{
+    attempts++;
+    if(attempts===1)throw Error('user4_browser_failed:CDP_BROWSER_EARLY_EXIT_ZERO');
+    return {targetAlias:'user4',receiptStatus:'succeeded',mode:'native-cdp',domBytes:512};
+  };
+  const proof=await verifyUser4BrowserWithRetry({},verify);
+  assert.equal(attempts,2);
+  assert.equal(proof.transientBrowserRetryUsed,true);
+  assert.equal(proof.targetAlias,'user4');
+});
+test('security, policy or auth browser failure never triggers another attempt',async()=>{
+  for(const reason of [
+    'user4_browser_failed:CDP_BROWSER_EARLY_EXIT_ACCESS',
+    'user4_browser_failed:CDP_BROWSER_EARLY_EXIT_POLICY',
+    'user4_browser_failed:CDP_BROWSER_EARLY_EXIT_SANDBOX',
+    'trusted_admin_session_required',
+    'user4_native_agent_not_healthy'
+  ]){
+    let attempts=0;
+    await assert.rejects(()=>verifyUser4BrowserWithRetry({},async()=>{
+      attempts++;throw Error(reason);
+    }),e=>e.message===reason);
+    assert.equal(attempts,1,reason);
+  }
+});
+test('repeat early exit remains failure and never produces an artificial success',async()=>{
+  let attempts=0;
+  await assert.rejects(()=>verifyUser4BrowserWithRetry({},async()=>{
+    attempts++;throw Error('user4_browser_failed:CDP_BROWSER_EARLY_EXIT_ZERO');
+  }),/CDP_BROWSER_EARLY_EXIT_ZERO/);
+  assert.equal(attempts,2);
 });

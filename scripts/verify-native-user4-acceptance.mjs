@@ -179,12 +179,25 @@ export async function ensureUser4AgentUpdated({
   throw new Error('user4_agent_update_reconnect_timeout');
 }
 
+// A one-time retry is permitted only for a browser launcher that exited zero
+// before producing a CDP session. Never retry policy/access/credential failures.
+// Each attempt still needs an independent exact-USER4 successful command receipt.
+export async function verifyUser4BrowserWithRetry(options={}, verify=verifyUser4Browser) {
+  try { return await verify(options); }
+  catch(error) {
+    if(String(error?.message||'')!=='user4_browser_failed:CDP_BROWSER_EARLY_EXIT_ZERO')
+      throw error;
+    const result=await verify(options);
+    return {...result,transientBrowserRetryUsed:true};
+  }
+}
+
 export async function verifyUser4Acceptance(options={}){
   // Dispatch both independent canaries while the exact USER4 Agent heartbeat is
   // fresh; a slow browser task must not delay Ollama eligibility discovery.
   // EKODI Device Agent owns scheduling and may execute commands sequentially.
   const outcomes=await Promise.allSettled([
-    verifyUser4Browser(options),
+    verifyUser4BrowserWithRetry(options),
     verifyNativeLocalAi({...options,hostname:'user4'})
   ]);
   const browser=outcomes[0].status==='fulfilled'?outcomes[0].value:null;
