@@ -5,12 +5,18 @@ on:
     paths:
       - 'scripts/verify-board-write-gate-production.mjs'
       - 'test/board-write-gate-production.test.mjs'
+      - 'board-public-catalog.js'
+      - 'test/board-public-catalog.test.mjs'
+      - 'platform-router-entry-worker.js'
       - '.github/workflows/board-anonymous-write-live-canary.yml'
   push:
     branches: [main]
     paths:
       - 'scripts/verify-board-write-gate-production.mjs'
       - 'test/board-write-gate-production.test.mjs'
+      - 'board-public-catalog.js'
+      - 'test/board-public-catalog.test.mjs'
+      - 'platform-router-entry-worker.js'
       - '.github/workflows/board-anonymous-write-live-canary.yml'
   workflow_dispatch:
   schedule:
@@ -35,7 +41,7 @@ jobs:
         with:
           node-version: '24'
       - name: Verify anonymous 401 probe stays non-persistent and credential-free
-        run: node --test test/board-write-gate-production.test.mjs
+        run: node --test test/board-write-gate-production.test.mjs test/board-public-catalog.test.mjs
       - name: Require real public boards to reject unauthenticated post and comment requests
         run: node scripts/verify-board-write-gate-production.mjs
       - name: Record tested boundaries
@@ -43,7 +49,8 @@ jobs:
         run: |
           {
             echo '## EKODI Board Anonymous Write Live Canary'
-            echo '- Common boards: cgma, cheonggye, ekodimission, ekodichurch'
+            echo '- Known common boards: cgma, cheonggye, ekodimission, ekodichurch
+            echo '- Additional boards: discovered via existing-public-instance database catalog on ekodi.kr; no speculative URLs''
             echo '- Standalone board: seonammedi.kr'
             echo '- Expected: HTTP 401 for enabled post/comment/reply endpoints; HTTP 409 for disabled comments'
             echo '- Requests use only invalid empty JSON objects and no credentials'
