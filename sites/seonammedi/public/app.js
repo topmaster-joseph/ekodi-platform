@@ -96,6 +96,7 @@ const TIMELINE_FILTERS=['전체','신문','잡지','방송','통신사','유튜�
 const COMMITTEE_FILTERS=['전체','회의·의결','성명·입장 발표','기자회견','집회·캠페인','면담·협의','공문·요청','행사·연대활동','기타 활동'];
 let selectedCommitteeFilter='전체';let committeeSearchText='';
 let basePublicTimelineEntries=[];
+let publicChannels=[];
 let publicTimelineEntries=[];
 let publicTimelineAdminMode=false;
 let publicContentInlineMode=false;
@@ -111,6 +112,7 @@ function relatedNewsCategory(item){
   const type=String(item?.sourceType||item?.source_type||'').toLowerCase();
   const source=[item?.evidence||'',item?.publisher||'',...(item?.links||[]).map(link=>[link.source,link.url].filter(Boolean).join(' '))].join(' ').toLowerCase();
   const category=String(item?.category||'');
+  if(TIMELINE_FILTERS.includes(category)&&category!=='전체')return category;
   if(type==='blog'||/blog\.naver\.com|brunch\.co\.kr|tistory\.com|블로그/.test(source))return'블로그';
   if(/youtube\.com|youtu\.be|유튜브|youtube/i.test(source))return'유튜브';
   if(/instagram\.com|인스타그램/.test(source))return'인스타그램';
@@ -141,7 +143,7 @@ const monitorTimelineCategory=item=>{
   const corpus=[item.title,item.summary_text].filter(Boolean).join(' ');
   if(/후보대학|후보 대학|공모|평가위원|선정 결과|선정 절차/.test(corpus))return'후보대학 선정';
   if(/장기현안|숙원|30년|수십년|연혁|역사|장기간/.test(corpus))return'장기현안';
-  if(/비대위|대책위|시민대회|상경투쟁|차량행진|기자회견|집회|호소문|서명|결의대회/.test(corpus))return'비대위 활동이력';
+  if(/비대위|대책위|시민대회|상경투쟁|차량행진|기자회견|집회|호소문|서명|결의대회/.test(corpus))return'시민·단체';
   if(/정부|교육부|보건복지부|복지부|국회|대통령|전라남도|전남도|목포대|순천대|대학교|대학|법원|지자체/.test(corpus))return'정부·대학';
   return'정부·대학';
 };
@@ -738,7 +740,6 @@ const channelPreviewEmbedUrl=(policy,data={})=>{
   if(policy==='provider-embed')return safeUrl(data.embedUrl||'');
   return '#';
 };
-let publicChannels=[];
 let channelPreviewSeq=0;
 let activeChannelPlatform='all';
 function channelRouteFromHash(){
@@ -1019,7 +1020,7 @@ function bindPublicOrganizationAdmin(){
 
 function resetPublicTimelineEditor(){
   const form=el('timelineManageForm');if(!form)return;
-  form.reset();form.elements.id.value='';form.elements.status.value='published';form.elements.sortOrder.value=String(publicTimelineEntries.length);
+  form.reset();form.elements.id.value='';form.elements.status.value='published';form.elements.recordScope.value='news';form.elements.sortOrder.value=String(publicTimelineEntries.length);
   if(el('timelineManageTitle'))el('timelineManageTitle').textContent='활동이력 추가';
   if(el('timelineManageMessage'))el('timelineManageMessage').textContent='';
 }
@@ -1028,7 +1029,7 @@ function setPublicTimelineEditor(open,item=null){
   if(!open){resetPublicTimelineEditor();form.hidden=true;toggle.setAttribute('aria-expanded','false');toggle.textContent='활동이력 바로 수정';return}
   resetPublicTimelineEditor();
   if(item){
-    form.elements.id.value=item.id;form.elements.date.value=item.date||'';form.elements.category.value=item.category||'';form.elements.title.value=item.title||'';form.elements.summary.value=item.summary||'';form.elements.evidence.value=item.evidence||'';form.elements.sortOrder.value=String(item.sortOrder??0);form.elements.status.value=item.status||'draft';
+    form.elements.id.value=item.id;form.elements.date.value=item.date||'';form.elements.category.value=item.category||'';form.elements.recordScope.value=item.recordScope||'news';form.elements.title.value=item.title||'';form.elements.summary.value=item.summary||'';form.elements.evidence.value=item.evidence||'';form.elements.sortOrder.value=String(item.sortOrder??0);form.elements.status.value=item.status||'draft';
     if(el('timelineManageTitle'))el('timelineManageTitle').textContent='활동이력 수정';
   }
   form.hidden=false;toggle.setAttribute('aria-expanded','true');toggle.textContent='편집 닫기';form.querySelector('input:not([type="hidden"]),textarea')?.focus();
@@ -1103,7 +1104,7 @@ function bindPublicTimelineAdmin(){
   toggle.hidden=false;toggle.onclick=()=>setPublicTimelineEditor(form.hidden);cancel.onclick=()=>setPublicTimelineEditor(false);
   form.onsubmit=async event=>{
     event.preventDefault();const id=Number(form.elements.id.value||0),message=el('timelineManageMessage');
-    const payload={date:form.elements.date.value,category:form.elements.category.value,title:form.elements.title.value,summary:form.elements.summary.value,evidence:form.elements.evidence.value,sortOrder:Number(form.elements.sortOrder.value||0),status:form.elements.status.value};
+    const payload={date:form.elements.date.value,category:form.elements.category.value,recordScope:form.elements.recordScope.value,title:form.elements.title.value,summary:form.elements.summary.value,evidence:form.elements.evidence.value,sortOrder:Number(form.elements.sortOrder.value||0),status:form.elements.status.value};
     try{if(message)message.textContent='저장 중…';await publicAdminJson(id?'/api/seonammedi/admin/timeline/'+id:'/api/seonammedi/admin/timeline',{method:id?'PUT':'POST',body:JSON.stringify(payload)});setPublicTimelineEditor(false);await loadPublicTimelineAdmin()}catch(error){if(message)message.textContent=error.message}
   };
   host.addEventListener('click',async event=>{
