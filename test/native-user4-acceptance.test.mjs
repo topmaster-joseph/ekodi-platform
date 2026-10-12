@@ -322,3 +322,14 @@ test('USER4 refuses to infer updated Agent version while Control API projection 
   }),/user4_agent_update_version_projection_unavailable/);
   assert.equal(posted,1);
 });
+
+
+test('Windows native CDP worker propagates allowlisted receipt categories without raw stderr',()=>{
+  const source=readFileSync(new URL('../tools/ekodi-device-agent/windows/ekodi-device-agent.ps1',import.meta.url),'utf8');
+  assert.match(source,/\$stderr\.Trim\(\) \| ConvertFrom-Json -ErrorAction Stop/);
+  assert.match(source,/if \(\$allowedCodes -ccontains \$candidate\) \{ \$failureCode = \$candidate \}/);
+  assert.match(source,/throw \$failureCode/);
+  assert.doesNotMatch(source,/throw \('CDP_WORKER_FAILED: ' \+ \$stderr/);
+  for(const code of ['CDP_BROWSER_EARLY_EXIT_ZERO','CDP_BROWSER_EARLY_EXIT_POLICY','CDP_PORT_TIMEOUT','CDP_WORKER_WATCHDOG_TIMEOUT'])
+    assert(source.includes(\u0022'\u0022+code+\u0022'\u0022),code);
+});
