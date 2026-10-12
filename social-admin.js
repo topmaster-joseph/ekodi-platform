@@ -504,6 +504,7 @@
     });
     addOrg.addEventListener('click',()=>{ const id=`org-${Date.now().toString(36)}`; registry.organizations.push({id,name:'새 그룹',shortName:'Group',description:'',website:'https://',isActive:false,order:(registry.organizations.length+1)*10,socialPolicy:'inherit_org',channels:[]}); markDirty(save,status); render(); });
     addMall.addEventListener('click',()=>{
+      channelSearch.value=''; kindFilter.value='all'; purposeFilter.value='all'; applyDirectoryFilters();
       if ((registry.organizations||[]).some(org=>org.id==='mall')) {
         status.textContent='에코디몰 채널 그룹이 이미 등록되어 있습니다.'; status.dataset.state='ready';
         list.querySelector('[data-social-org="mall"]')?.scrollIntoView({behavior:'smooth',block:'center'}); return;
