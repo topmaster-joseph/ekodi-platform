@@ -592,7 +592,7 @@ test('current status exposes non-overlapping immediate subcategory tabs',async()
     readFile(new URL('index.html',root),'utf8'),
     readFile(new URL('app.js',root),'utf8')
   ]);
-  assert.match(html,/활동이력 세부 분류/);
+  assert.match(html,/관련소식 출처별 세부 분류/);
   assert.match(html,/id="statusMaterialFilterLabel">관련보도 세부 분류/);
   assert.match(html,/id="materialFilters" aria-label="관련보도 세부 분류"/);
   assert.doesNotMatch(html,/id="materialFilters"[^>]*hidden/);
@@ -634,7 +634,7 @@ test('seonammedi public site uses shared authenticated inline admin without dupl
   assert.match(app,/authEndpoint:'\/api\/seonammedi\/admin\/me'/);
   assert.match(app,/await admin\.authorize\(\)/);
   assert.doesNotMatch(app,/admin\.attach/);
-  for(const label of ['조직 바로 수정','활동이력 바로 수정','소통채널 바로 수정'])assert.match(html,new RegExp(label));
+  for(const label of ['조직 바로 수정','활동이력 바로 수정','연결채널 바로 수정'])assert.match(html,new RegExp(label));
   assert.match(app,/공지 작성/);
   assert.match(app,/bindPublicFinanceAdmin/);
   assert.match(app,/if\(admin\.has\('notices'\)\).*loadNotices\(\)/);
@@ -872,7 +872,8 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.match(css,/footer{margin-top:auto/);
   assert.match(html,/href="board\/finance">회계<\/a>/);
   assert.match(app,/financeLink=event\.target\.closest\('a\[href="board\/finance"\]\'\)/);
-  assert.match(html,/ACTIVITY HISTORY<\/p><h2>활동이력<\/h2>/);
+  assert.match(html,/COMMITTEE ACTIVITIES<\/p><h2>활동이력<\/h2>/);
+  assert.match(html,/RELATED NEWS &amp; SOURCES<\/p><h2>관련소식<\/h2>/);
   assert.doesNotMatch(html,/세부 메뉴 준비중/);
   assert.match(html,/전체 회계내역/);
   assert.match(html,/financeManageToggle[^>]*hidden/);
