@@ -22,3 +22,9 @@
 Do not mark resolved until Cloudflare production Site Core confirms new release and a post-deploy EKODI-native Chromium session observes root document and content locale as `ko-KR` when real API `publishedLocales` is Korean only. Journal must remain correct. SeonamMedi independent header and genuinely published multi-language positive acceptance remain separately tracked in #4365.
 
 This evidence-only owner-authored commit activates the official `converge-orchestrated-pr-merge.yml` on an EKODI-issued branch. No security policy, authorization, Cloudflare quota, or publication gate is bypassed.
+
+## Owner CI revalidation after protected-main synchronization
+
+EKODI Convergent Merge run [#38278592733](https://github.com/topmaster-joseph/ekodi-platform/actions/runs/38278592733) returned `action:branch-updated` after validating official task provenance, synchronizing integration candidate to protected main at `6eaea9047135d06d99f7240026268e61eab14560`. GitHub can classify GitHub Actions-authored synchronization commits as `action_required` rather than passing required CI.
+
+This repository owner-authored **documentation-only** change starts fresh protected CI on the synchronized tree and does not weaken branch protection, force Cloudflare deployment, expand homepage translations, or modify runtime behavior beyond the exact source repair. Retain the original exact-SHA Human Gate and issue #4365's independent live acceptance.
