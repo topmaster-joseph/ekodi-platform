@@ -48,13 +48,14 @@ export function extractSeonamMediArticle(html,sourceUrl){
   const description=strip(meta(html,'og:description')||meta(html,'description')||meta(html,'twitter:description'));
   const articleHtml=(String(html).match(/<article\b[^>]*>([\s\S]*?)<\/article>/i)||[])[1]||'';
   const body=strip(articleHtml);
-  const evidence=[body,description].find(hasRegionalMedicalContext)||'';
+  const articleEvidence=body.length>=60?body:description;
+  const evidence=hasRegionalMedicalContext(articleEvidence)?articleEvidence:'';
   const date=getDate(meta(html,'article:published_time')||meta(html,'datePublished')||meta(html,'date')||(String(html).match(/["']datePublished["']\s*:\s*["']([^"']+)["']/i)||[])[1]||'');
   const url=new URL(sourceUrl);
   const publisher=clean(meta(html,'og:site_name')||url.hostname,160);
   const relevant=hasRegionalMedicalContext(title)&&Boolean(evidence);
   const category=/후보대학|후보 대학|선정 절차|심사자료/.test(title+' '+evidence)?'후보대학 선정':/비대위|대책위|시민대회|상경투쟁|기자회견|집회|결의대회/.test(title+' '+evidence)?'비대위 활동이력':'정부·대학';
-  return {title,summary:clean(evidence,1100),publisher,date,category,sourceUrl,relevant,ready:relevant&&Boolean(date)};
+  return {title,summary:clean(evidence,240),publisher,date,category,sourceUrl,relevant,ready:relevant&&Boolean(date)};
 }
 export async function fetchSeonamMediLinkPreview(input,{fetchImpl=fetch}={}){
   let target=safeImportUrl(input);
