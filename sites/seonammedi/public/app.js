@@ -9,15 +9,19 @@ const evidenceBlock=item=>{
 };
 const escapeHtml=value=>String(value??'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
 const kstDate=value=>{try{return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value)).replaceAll('-','.')}catch{return''}};
+// A public result must arrive with an explicit server-side publication decision.
+// Legacy raw search hits are not promoted by the browser.
+const monitorPubliclyVisible=item=>item?.content_match==='source_confirmed'||(item?.content_match==='editor_verified'&&item?.review_state==='verified');
 const genericWords=new Set(['국립의대','의과대학','관련','활동','일정','발표','추진','서남권','전남','광주','의대']);
 const keywordsFor=event=>{
   if(Array.isArray(event.monitorKeywords)&&event.monitorKeywords.length)return event.monitorKeywords.map(v=>String(v).trim()).filter(Boolean);
   return [...new Set(String(event.title||'').match(/[가-힣A-Za-z0-9]{2,}/g)||[])].filter(word=>!genericWords.has(word)).slice(0,6);
 };
 const monitorMatches=(event,item)=>{
+  if(!monitorPubliclyVisible(item))return false;
   if(!/^\d{4}\.\d{2}\.\d{2}$/.test(event.date||''))return false;
   if(kstDate(item.published_at||item.media_published_at||item.first_seen_at)!==event.date)return false;
-  const corpus=(String(item.title||'')+' '+String(item.query_label||'')+' '+String(item.publisher||'')).toLowerCase();
+  const corpus=(String(item.title||'')+' '+String(item.summary_text||'')).toLowerCase();
   const keywords=keywordsFor(event);if(!keywords.length)return false;
   const hits=keywords.filter(keyword=>corpus.includes(String(keyword).toLowerCase())).length;
   return hits>=(Array.isArray(event.monitorKeywords)&&event.monitorKeywords.length?1:Math.min(2,keywords.length));
@@ -109,7 +113,7 @@ const timelineNormalizeUrl=value=>{try{const u=new URL(String(value||''),locatio
 const timelineTitleTokens=value=>[...new Set(String(value||'').toLowerCase().replace(/[^가-힣a-z0-9\s]/g,' ').split(/\s+/).filter(token=>token.length>1&&!genericWords.has(token)))];
 const timelineTitleSimilarity=(a,b)=>{const left=timelineTitleTokens(a),right=timelineTitleTokens(b);if(!left.length||!right.length)return 0;const r=new Set(right),hits=left.filter(token=>r.has(token)).length;return hits/Math.max(left.length,right.length)};
 const monitorTimelineCategory=item=>{
-  const corpus=[item.query_label,item.title,item.summary_text,item.publisher].filter(Boolean).join(' ');
+  const corpus=[item.title,item.summary_text].filter(Boolean).join(' ');
   if(/후보대학|후보 대학|공모|평가위원|선정 결과|선정 절차/.test(corpus))return'후보대학 선정';
   if(/장기현안|숙원|30년|수십년|연혁|역사|장기간/.test(corpus))return'장기현안';
   if(/비대위|대책위|시민대회|상경투쟁|차량행진|기자회견|집회|호소문|서명|결의대회/.test(corpus))return'비대위 활동이력';
@@ -121,7 +125,7 @@ const monitorTimelineEvidence=item=>item.review_state==='verified'?'최신 업�
 function mergeMonitorTimelineItems(baseRows,monitorItems){
   const rows=(Array.isArray(baseRows)?baseRows:[]).map(item=>({...item,links:[...(item.links||[])],media:[...(item.media||[])]}));
   const candidates=(Array.isArray(monitorItems)?monitorItems:[])
-    .filter(item=>item&&item.title&&monitorTimelineDate(item)&&(item.source_type!=='blog'||item.review_state==='verified'))
+    .filter(item=>monitorPubliclyVisible(item)&&item.title&&monitorTimelineDate(item)&&(item.source_type!=='blog'||item.review_state==='verified'))
     .slice().sort((a,b)=>String(b.published_at||b.first_seen_at||'').localeCompare(String(a.published_at||a.first_seen_at||'')));
   const seenAuto=[];
   for(const item of candidates){
@@ -314,7 +318,7 @@ updatePublicFinanceSummary(publicFinanceEntries);
 
 const siteReady=load().catch(error=>{console.error('[seonammedi] data load failed',error)});
 function monitorHomeRows(items=[]){
-  const candidates=items.filter(item=>item&&item.source_type!=='blog'&&safeUrl(item.resolved_url||item.url)!=='#')
+  const candidates=items.filter(item=>monitorPubliclyVisible(item)&&item.source_type!=='blog'&&safeUrl(item.resolved_url||item.url)!=='#')
     .sort((a,b)=>String(b.published_at||b.first_seen_at||'').localeCompare(String(a.published_at||a.first_seen_at||'')));
   const selected=[];
   for(const item of candidates){
@@ -345,15 +349,16 @@ async function loadMonitor(){
   try{
     const response=await fetch('/api/seonammedi/monitor',{cache:'no-store'});
     const data=await response.json().catch(()=>({}));
-    latestMonitorData=data;
     if(!response.ok||!data.ok)throw new Error(data.message||'점검 상태를 불러오지 못했습니다.');
+    const publicItems=(Array.isArray(data.items)?data.items:[]).filter(monitorPubliclyVisible);
+    latestMonitorData={...data,items:publicItems};
     const run=data.lastRun;
     const runText=run?.completed_at?new Date(run.completed_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'첫 실행 대기';
     if(badge)badge.textContent='사이트 자동점검: '+runText;
     if(summary)summary.textContent=run?('최근 점검 '+(run.status==='ok'?'정상':run.status==='partial'?'일부 확인':'확인 필요')+' · 출처 '+run.sources_checked+'개 · 신규 '+run.new_items+'건 · 사진·영상 근거 후보 '+Number(data.mediaCandidateCount||0)+'건'):'자동점검은 매시간 실행됩니다.';
-    const rows=(data.items||[]).slice(0,18);window.__SEONAM_MONITOR_ITEMS=data.items||[];applyMonitorTimelineUpdates(window.__SEONAM_MONITOR_ITEMS);attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS);
+    const rows=publicItems.slice(0,18);window.__SEONAM_MONITOR_ITEMS=publicItems;applyMonitorTimelineUpdates(window.__SEONAM_MONITOR_ITEMS);attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS);
     if(list)list.innerHTML=rows.length?rows.map(item=>`<article class="source"><a href="${safeUrl(item.resolved_url||item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title||'')}</a>${item.summary_text?'<p>'+escapeHtml(item.summary_text)+'</p>':''}<small>${escapeHtml(item.publisher||'출처 확인 중')} · 자동수집 ${item.source_type==='blog'?'블로그':'보도'}${item.media_type?' · '+(item.media_type==='video'?'영상 근거 후보':'사진 근거 후보'):''} · ${item.source_type==='blog'?'개인·온라인 게시물 / 공식자료 교차확인 필요':'원문 확인 필요'}</small></article>`).join(''):'<p class="muted">최근 7일 내 새로 수집된 공개 자료가 없습니다.</p>';
-    renderHomeMonitorUpdates(data);
+    renderHomeMonitorUpdates(latestMonitorData);
     refreshStatusDetail();
   }catch(error){
     latestMonitorData=null;
