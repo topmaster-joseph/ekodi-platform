@@ -1,0 +1,57 @@
+name: EKODI Native Browser Windows Canary (One Shot)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/native-browser-windows-canary.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  native-browser:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout owner-reviewed exact SHA
+        uses: actions/checkout@v7
+        with:
+          ref: c89617811c25c5cb3755252850f55298df3aed2c
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Verify approved first-party connector tests
+        shell: pwsh
+        run: node --test test/ekodi-owned-browser-connector.test.mjs
+      - name: Execute actual isolated browser canary and bounded external observations
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $worker='tools/ekodi-device-agent/windows/ekodi-owned-browser-connector.mjs'
+          $raw = (& node $worker --canary 2>&1 | Out-String).Trim()
+          $exit = $LASTEXITCODE
+          Write-Host ('EKODI_NATIVE_CANARY_RECEIPT ' + $raw)
+          if ($exit -ne 0 -or -not $raw) { throw 'native_browser_canary_execution_failed' }
+          $receipt = $raw | ConvertFrom-Json -ErrorAction Stop
+          if ($receipt.ok -ne $true -or $receipt.mode -ne 'runtime-canary' -or
+              $receipt.existingProfileReused -ne $false -or
+              $receipt.mutationsAllowed -ne $false -or
+              $receipt.isolatedProfile -ne $true -or
+              $receipt.profileLifetime -ne 'one-shot' -or
+              $receipt.domObserved -ne $true) {
+            throw 'native_browser_canary_evidence_invalid'
+          }
+          Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value 'EKODI native Chromium/CDP Windows isolated runtime canary: PASS.'
+          # External observations may be blocked by site WAF/auth; classify, never bypass.
+          foreach ($probe in @(@('--pr','4441'),@('--site','/singles'))) {
+            $result = (& node $worker $probe[0] $probe[1] 2>&1 | Out-String).Trim()
+            $status = $LASTEXITCODE
+            Write-Host ('EKODI_NATIVE_READONLY_OBSERVATION ' + $probe[0] + '=' + $probe[1] +
+              ' exit=' + $status + ' receipt=' + $result)
+            Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value (
+              'Read-only observation ' + $probe[0] + ' ' + $probe[1] + ': exit=' + $status
+            )
+          }
