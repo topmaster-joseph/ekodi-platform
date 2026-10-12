@@ -18,7 +18,7 @@
     ['qwen','Qwen','AI'],
   ];
   const WORKERS=[['cloud','Cloud Worker'],['browser','Browser Worker'],['local','Local Worker Pool']];
-  const state={sessions:loadHistory(),activeId:null,view:'chat',busy:false,authenticated:false,authPromise:null,tasks:loadState().tasks||[],results:loadState().results||[]};
+  const state={sessions:loadHistory(),activeId:null,view:'chat',busy:false,authenticated:false,authPromise:null,tasks:loadState().tasks||[],results:loadState().results||[],liveTasks:[],taskSource:'local',taskCheckedAt:'',taskRefreshing:false,taskNotice:''};
   const $=s=>document.querySelector(s);
   const $$=s=>[...document.querySelectorAll(s)];
   const now=()=>new Date().toISOString();
@@ -49,7 +49,7 @@
     const s=ensureSession(text);s.messages=s.messages||[];s.messages.push({role,text:String(text||'').slice(0,12000),at:now(),...extra});s.updatedAt=now();if(extra.status)s.status=extra.status;
     state.sessions=[s,...state.sessions.filter(x=>x.id!==s.id)].slice(0,24);saveHistory();renderRecent();renderMessages();
   }
-  function setView(view){state.view=view;$$('[data-view]').forEach(n=>n.classList.toggle('active',n.dataset.view===view));$$('[data-view-panel]').forEach(n=>n.classList.toggle('active',n.dataset.viewPanel===view));if(view!=='chat')renderPanels();closeRail()}
+  function setView(view){state.view=view;$$('[data-view]').forEach(n=>n.classList.toggle('active',n.dataset.view===view));$$('[data-view-panel]').forEach(n=>n.classList.toggle('active',n.dataset.viewPanel===view));if(view!=='chat')renderPanels();if(view==='tasks')void refreshTasks();closeRail()}
   function renderRecent(){const root=$('#recentTasks');const items=state.sessions.slice(0,14);root.innerHTML=items.length?items.map(s=>'<button type="button" class="recent-item" data-session="'+esc(s.id)+'">'+esc(s.title||'새 작업')+'</button>').join(''):'<div class="section-title">아직 작업이 없습니다.</div>';root.querySelectorAll('[data-session]').forEach(b=>b.onclick=()=>{state.activeId=b.dataset.session;setView('chat');renderMessages()})}
   function renderMessages(){const s=state.sessions.find(x=>x.id===state.activeId);const messages=s?.messages||[];$('#emptyState').hidden=messages.length>0;$('#messages').innerHTML=messages.map(m=>{
     const meta=[m.provider,m.target,m.status&&statusLabel(m.status)].filter(Boolean).join(' · ');
@@ -148,8 +148,44 @@
     }
   }
   function card(titleText,status,description){return '<article class="card"><div class="card-head"><strong>'+esc(titleText)+'</strong><span class="badge">'+esc(status)+'</span></div><p>'+esc(description||'')+'</p></article>'}
+  // Read-only, authenticated task status. Browser history is never evidence of a
+  // current server outcome, and errors must not be labeled as verified completion.
+  async function refreshTasks(){
+    if(state.taskRefreshing)return;
+    state.taskRefreshing=true;
+    state.taskSource='pending';
+    renderPanels();
+    try{
+      if(!(await verifySession()))throw new Error('최고관리자 인증을 확인할 수 없습니다.');
+      const snapshot=await api('/api/control/ai/v8/tasks?limit=40');
+      if(snapshot?.ok!==true||!Array.isArray(snapshot.tasks))throw new Error('작업 목록 응답을 확인할 수 없습니다.');
+      state.liveTasks=snapshot.tasks.slice(0,40).filter(task=>task&&typeof task==='object').map(task=>({
+        id:String(task.id||'').slice(0,160),
+        title:title(task.goal||task.id),
+        status:String(task.state||'unknown').slice(0,80),
+        target:'EKODI 작업장부',
+        at:task.updatedAt||task.createdAt||''
+      }));
+      state.taskCheckedAt=now();
+      state.taskSource='server';
+      state.taskNotice='';
+    }catch(error){
+      state.taskSource='error';
+      state.taskNotice=error?.auth?'관리자 인증이 만료됐습니다. 다시 로그인해 주세요.':'서버 작업 상태를 확인할 수 없습니다. 아래 목록은 현재 브라우저에 기록된 내용입니다.';
+    }finally{
+      state.taskRefreshing=false;
+      renderPanels();
+    }
+  }
   function renderPanels(){
-    $('#taskCards').innerHTML=state.tasks.length?state.tasks.map(t=>card(t.title,statusLabel(t.status),(t.id||'')+' · '+(t.target||'auto'))).join(''):card('아직 실행 작업이 없습니다','대기','대화에서 실행을 시작하면 Task가 표시됩니다.');
+    const serverVerified=state.taskSource==='server';
+    const visibleTasks=serverVerified?state.liveTasks:state.tasks;
+    const sourceCard=state.taskSource==='pending'
+      ?card('EKODI 작업장부 조회','확인 중','서버에서 최신 작업 상태를 확인하고 있습니다.')
+      :serverVerified
+        ?card('EKODI 서버 작업장부','서버 확인',state.taskCheckedAt+' 확인 · 최근 '+visibleTasks.length+'건 (최대 40건)')
+        :card('브라우저 임시 기록','서버 미확인',state.taskNotice||'이 목록은 서버에서 현재 실행 상태를 확인한 결과가 아닙니다. 새로고침으로 확인하세요.');
+    $('#taskCards').innerHTML=sourceCard+(visibleTasks.length?visibleTasks.map(t=>card(t.title,statusLabel(t.status),(t.id||'')+' · '+(t.target||'auto'))).join(''):card(serverVerified?'서버 작업장부가 비어 있습니다':'저장된 작업이 없습니다',serverVerified?'서버 확인':'미확인',serverVerified?'최근 40개 범위에서 표시할 작업이 없습니다.':'명령 기록이 없거나 최신 서버 상태를 조회하지 못했습니다.'));
     $('#agentCards').innerHTML=AGENTS.map(([id,name,kind])=>card(name,id==='ekodi'?'최종 통제':'연결 대상',kind+' · EKODI 라우팅/권한 정책 적용')).join('');
     $('#workerCards').innerHTML=WORKERS.map(([id,name])=>card(name,'상태는 실행 시 확인',id+' 실행계층')).join('');
     $('#resultCards').innerHTML=state.results.length?state.results.map(r=>card(r.title,statusLabel(r.status),(r.provider||'EKODI')+(r.taskId?' · '+r.taskId:'')+'\n'+r.summary)).join(''):card('아직 결과가 없습니다','대기','명령 처리 후 검증된 결과가 이곳에 누적됩니다.');
@@ -164,7 +200,7 @@
     $('#commandInput').addEventListener('input',resizeInput);
     $('#commandInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#commandForm').requestSubmit()}});
     $$('[data-prompt]').forEach(b=>b.onclick=()=>{$('#commandInput').value=b.dataset.prompt;resizeInput();$('#commandInput').focus()});
-    $$('[data-refresh]').forEach(b=>b.onclick=()=>{renderPanels();toast('현재 Control 기록을 새로 표시했습니다.')});
+    $$('[data-refresh]').forEach(b=>b.onclick=()=>{if(b.closest('#viewTasks')){void refreshTasks();return}renderPanels();toast('브라우저에 저장된 기록을 다시 표시했습니다.')});
   }
   async function boot(){
     bind();renderRecent();renderMessages();renderPanels();
