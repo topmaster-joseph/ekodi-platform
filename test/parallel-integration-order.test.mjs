@@ -76,7 +76,7 @@ test('stale PRs must refresh onto the same base commit before they participate i
   assert.match(workflow,/baseRefOid/);
   assert.match(workflow,/current_base_oid/);
   assert.match(workflow,/\.baseRefOid == \$base/);
-  assert.match(workflow,/stale PRs must refresh\/rebase/);
+  assert.match(workflow,/stale PRs must refresh\/rebase/i);
   assert.match(workflow,/current-base ready PRs/);
 });
 
