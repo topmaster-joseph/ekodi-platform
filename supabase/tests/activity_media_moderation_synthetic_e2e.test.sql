@@ -41,8 +41,9 @@ select set_config('request.jwt.claim.sub','cacacaca-9999-4999-8999-000000000009'
 select set_config('request.jwt.claims',
  '{"sub":"cacacaca-9999-4999-8999-000000000009","email":"moderator@ekodi-test.invalid","role":"authenticated"}',true);
 
-select ok(public.activity_is_workspace_operator('cacacaca-1111-4111-8111-000000000001'::uuid),
- 'synthetic authenticated moderator has tenant-local operator authority');
+select ok(has_function_privilege('authenticated',
+ 'public.activity_admin_hide_media_link(text,text,uuid,boolean)','EXECUTE'),
+ 'synthetic authenticated moderator may invoke protected tenant-local hide RPC');
 select is(public.activity_admin_hide_media_link(
  'ekodi-synthetic-moderation','completed-synthetic-event',
  'cacacaca-3333-4333-8333-000000000003',true)->>'hidden','true','operator hides public link');
