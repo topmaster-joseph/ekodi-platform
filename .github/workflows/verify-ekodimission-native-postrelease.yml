@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/verify-ekodimission-native-postrelease.yml'
       - 'test/ekodimission-native-postrelease.test.mjs'
+      - 'config/ekodimission-native-postrelease-surfaces.json'
   workflow_dispatch: {}
   workflow_run:
     workflows:
@@ -26,6 +27,7 @@ jobs:
     with:
       surface_paths: '/ekodimission,/ekodimission/activities,/ekodimission/history,/ekodimission/stories,/ekodimission/partners,/ekodimission/activities/260926-chuseok-open-table/archive'
       device_profile: mobile-portrait
+      surface_registry: config/ekodimission-native-postrelease-surfaces.json
 
   native-desktop:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
@@ -33,6 +35,7 @@ jobs:
     with:
       surface_paths: '/ekodimission,/ekodimission/activities,/ekodimission/history,/ekodimission/stories,/ekodimission/partners,/ekodimission/activities/260926-chuseok-open-table/archive'
       device_profile: desktop
+      surface_registry: config/ekodimission-native-postrelease-surfaces.json
 
   verify-contract:
     if: github.event_name == 'pull_request'
