@@ -1,6 +1,7 @@
 name: EKODI Orchestrated PR Convergent Merge
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - 'ai/*/orch_*'
