@@ -97,10 +97,14 @@ export function normalizeRegistry(input) {
       if (channelIds.has(channelId)) throw new Error(`duplicate channel id: ${channelId}`);
       channelIds.add(channelId);
       const label = text(raw.label, 60) || provider;
-      const kind = CHANNEL_KINDS.has(raw.kind) ? raw.kind : 'owned';
-      const purpose = CHANNEL_PURPOSES.has(raw.purpose) ? raw.purpose : 'general';
-      const visibility = CHANNEL_VISIBILITIES.has(raw.visibility) ? raw.visibility : 'public';
-      const publicationMode = raw.publicationMode === 'manual' ? 'manual' : 'link_only';
+      if (raw.kind != null && !CHANNEL_KINDS.has(raw.kind)) throw new Error(`unsupported channel kind: ${raw.kind}`);
+      if (raw.purpose != null && !CHANNEL_PURPOSES.has(raw.purpose)) throw new Error(`unsupported channel purpose: ${raw.purpose}`);
+      if (raw.visibility != null && !CHANNEL_VISIBILITIES.has(raw.visibility)) throw new Error(`unsupported visibility: ${raw.visibility}`);
+      if (raw.publicationMode != null && !['link_only','manual'].includes(raw.publicationMode)) throw new Error('automatic posting cannot be granted by the directory');
+      const kind = raw.kind || 'owned';
+      const purpose = raw.purpose || 'general';
+      const visibility = raw.visibility || 'public';
+      const publicationMode = raw.publicationMode || 'link_only';
       if (kind !== 'owned' && publicationMode !== 'link_only') {
         throw new Error(`channel ${channelId} requires link-only distribution for partner or external URLs`);
       }
