@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "policyId": "EKODI-NATIVE-MONITORING-HANDOFF-001",
-  "status": "source-pr-pending-protected-release",
+  "status": "native-workflow-active-first-observe-evidence-pending",
   "operator": "ekodi-orchestrator",
   "principle": "EKODI owns scheduled health, deployment and completion monitoring; ChatGPT automations have no authority or operational dependency",
   "externalChatgptAutomations": {
@@ -18,7 +18,7 @@
         ".github/workflows/ekodi-native-operations-watch.yml"
       ],
       "responsibility": "read-only D1/topology, canonical health and release evidence",
-      "handoffState": "native-workflow-added"
+      "handoffState": "native-workflow-active-observe-evidence-pending"
     },
     {
       "formerTask": "EKODI 게시판 PR 감시",
@@ -27,7 +27,7 @@
         ".github/workflows/ekodi-native-operations-watch.yml"
       ],
       "responsibility": "PR #3794 state with server-verified GitHub metadata; no auto-merge bypass",
-      "handoffState": "native-workflow-added"
+      "handoffState": "native-workflow-active-observe-evidence-pending"
     },
     {
       "formerTask": "에코디 시스템 일일보고",
@@ -69,6 +69,8 @@
     "nativeWorkflowCI": true,
     "schedulerActivationAfterMerge": true,
     "liveRunEvidenceRequired": true,
-    "reportWithoutSourceDataForbidden": true
+    "reportWithoutSourceDataForbidden": true,
+    "nativeWorkflowRunVerified": false,
+    "firstPostMergeObserveRequired": true
   }
 }
