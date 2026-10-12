@@ -18,6 +18,8 @@ test('Mission postrelease canary uses EKODI-owned browser on both phone and desk
   assert.deepEqual(onlyMission.surfaces,[],'Avoid unrelated board endpoints in Mission release canary');
   for(const route of ['/ekodimission','/ekodimission/activities','/ekodimission/history','/ekodimission/stories','/ekodimission/partners','/ekodimission/activities/260926-chuseok-open-table/archive'])
     assert.ok(workflow.includes(route),'Missing canonical route '+route);
+  assert.equal((workflow.match(/      - Deploy Activity Public Share Schema/g)||[]).length,1,'Mission schema deployment is the unique event source');
+  assert.equal((workflow.match(/      - Deploy EKODI Operating Space/g)||[]).length,1,'Space deployment is the unique event source');
   assert.match(workflow,/Deploy Activity Public Share Schema/);
   assert.match(workflow,/Deploy EKODI Operating Space/);
   assert.match(workflow,/workflow_run.conclusion == 'success'/);
