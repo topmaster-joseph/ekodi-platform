@@ -24,10 +24,10 @@ test('Windows inventory is read-only and does not traverse folders',()=>{
 test('remote inventory command is allowlisted, capacity-gated and read-only',()=>{
   const api=readFileSync(new URL('device-control.js',base),'utf8');
   const agent=readFileSync(new URL('tools/ekodi-device-agent/windows/ekodi-device-agent.ps1',base),'utf8');
-  assert.match(api, /'filesystem\\.inventory': \\{ risk: 'observe' \\}/);
-  assert.match(api, /'filesystem\\.inventory': 'filesystemInventory'/);
-  assert.match(agent, /filesystemInventory = \\$true/);
-  assert.match(agent, /'filesystem\\.inventory' \\{/);
-  assert.match(agent, /suggestedAction = 'review-only'/);
-  assert.match(agent, /Select-Object -First 100/);
+  assert.ok(api.includes("'filesystem.inventory': { risk: 'observe' }"));
+  assert.ok(api.includes("'filesystem.inventory': 'filesystemInventory'"));
+  assert.ok(agent.includes('filesystemInventory = $true'));
+  assert.ok(agent.includes("'filesystem.inventory' {"));
+  assert.ok(agent.includes("suggestedAction = 'review-only'"));
+  assert.ok(agent.includes('Select-Object -First 100'));
 });
