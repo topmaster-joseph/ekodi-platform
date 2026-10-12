@@ -27,7 +27,7 @@ test('delegated admins use task-first navigation without changing authority',asy
   assert.match(store,/label:'주문 · 배달'/);
   assert.match(store,/label:'메뉴 · 재고'/);
   assert.match(store,/label:'고객 · 리뷰'/);
-  assert.match(store,/label:'홍보 · 채널'/);
+  assert.match(store,/label:'홍보'/);
   assert.match(store,/label:'매장 관리'/);
   assert.match(store,/admin-nav-group-label/);assert.match(store,/admin-nav-head/);assert.match(store,/overflow-y:auto!important/);
   assert.match(store,/dataset\.adminSection=key/);
