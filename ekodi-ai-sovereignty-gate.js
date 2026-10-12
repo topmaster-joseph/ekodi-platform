@@ -9,7 +9,9 @@ export function sanitizeAiConnectionStatus(connection = {}) {
   if (!/^[a-z0-9][a-z0-9._-]{1,79}$/.test(id)) throw new Error('invalid_provider_id');
   return freeze({
     id,
-    connected: connection.available === true,
+    configured: connection.configured === true,
+    healthVerified: connection.healthVerified === true,
+    connected: connection.configured === true && connection.healthVerified === true && connection.available === true,
     authMethod: ['api-key', 'oauth', 'local', 'official-cli', 'service-account'].includes(connection.authMethod)
       ? connection.authMethod : 'unconfigured',
     expiresAt: /^\d{4}-\d\d-\d\dT/.test(String(connection.expiresAt || ''))
