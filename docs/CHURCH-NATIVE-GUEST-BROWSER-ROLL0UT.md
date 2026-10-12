@@ -21,3 +21,7 @@ This PR changes only a first-party test script, an ephemeral browser workflow, a
 - Remaining authenticated end-to-end requirement is tracked in issue #4092 and requires a legitimate EKODI/Google administrator session.
 
 This owner-authored release document is the official post-source evidence record and requests checks on the current Orchestrator branch head.
+
+## Protected main synchronization — owner-triggered verification
+
+The official EKODI Convergent Merge updated the recovery branch to current protected main and returned `branch-updated` for PR #4432. GitHub marked the resulting bot-authored PR checks `action_required`. This owner-authored documentation-only commit requests fresh mandatory CI, native Chromium, Cloudflare boundary and Orchestrator checks for the **new synchronized SHA**. No execution contract, production route, role or secret is changed and no check is bypassed.
