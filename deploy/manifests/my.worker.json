@@ -80,6 +80,7 @@
           "documentVersionHistory",
           "digitalCard",
           "digitalCardPath",
+          "digitalCardShortPath",
           "digitalCardQrCenter",
           "identityShareContexts",
           "messengerContactSharing",
