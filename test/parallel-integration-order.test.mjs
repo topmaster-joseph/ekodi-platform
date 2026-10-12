@@ -57,9 +57,10 @@ test('integration order never bypasses actual GitHub merge conflicts',()=>{
   assert.match(docs,/do not waive tests, reviews, branch protection, authorization or deployment safeguards/);
 });
 
-test('parallel conflict guard snapshots open PR metadata and uses REST only as a fail-closed large-PR fallback',()=>{
+test('parallel conflict guard snapshots lightweight open PR metadata and pages complete related PR file lists via REST',()=>{
   assert.match(workflow,/gh_retry pr list --repo "\$REPOSITORY" --state open --base "\$BASE_REF" --limit 500/);
-  assert.match(workflow,/--json number,headRefName,isDraft,baseRefOid,changedFiles,files,labels/);
+  assert.match(workflow,/--json number,headRefName,isDraft,baseRefOid,changedFiles,labels/);
+  assert.doesNotMatch(workflow,/changedFiles,files,labels/);
   assert.match(workflow,/gh_retry pr view "\$PR_NUMBER" --repo "\$REPOSITORY"/);
   assert.match(workflow,/select\(\.number != \$current and \.isDraft == false and \.baseRefOid == \$base\)/);
   assert.match(workflow,/Current PR file evidence is missing; refusing to infer independence/);
@@ -75,7 +76,7 @@ test('stale PRs must refresh onto the same base commit before they participate i
   assert.match(workflow,/baseRefOid/);
   assert.match(workflow,/current_base_oid/);
   assert.match(workflow,/\.baseRefOid == \$base/);
-  assert.match(workflow,/stale PRs must refresh\/rebase/);
+  assert.match(workflow,/stale PRs must refresh\/rebase/i);
   assert.match(workflow,/current-base ready PRs/);
 });
 
