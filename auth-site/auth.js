@@ -13,7 +13,7 @@ const services={
   mall:{name:'에코디몰',tenant:null,role:'member',returnTo:'https://ekodi.kr/ekodimall',origins:['https://ekodi.kr'],requestable:true},
   pay:{name:'에코디결제',tenant:null,role:'member',returnTo:'https://pay.ekodi.kr',origins:['https://pay.ekodi.kr'],requestable:false},
   books:{name:'에코디북스',tenant:null,role:'member',returnTo:'https://books.ekodi.kr',origins:['https://books.ekodi.kr'],requestable:true},
-  church:{name:'에코디교회',tenant:null,role:'member',returnTo:'https://church.ekodi.kr',origins:['https://church.ekodi.kr'],requestable:true},
+  church:{name:'에코디교회',tenant:null,role:'member',returnTo:'https://ekodi.kr/ekodichurch/',origins:['https://ekodi.kr'],requestable:true},
   lab:{name:'에코디연구소',tenant:null,role:'member',returnTo:'https://lab.ekodi.kr',origins:['https://lab.ekodi.kr'],requestable:true},
   mission:{name:'에코디선교회',tenant:'ekodimission',role:'member',returnTo:'https://ekodi.kr/ekodimission',origins:['https://ekodi.kr'],requestable:true},
   community:{name:'커뮤니티',tenant:null,role:'member',returnTo:'https://ekodi.kr/community',origins:['https://ekodi.kr'],requestable:true},
@@ -40,7 +40,7 @@ function isMarketingReturnOrigin(origin){
   if(config.origins.includes(origin))return true;
   try{const u=new URL(origin);return u.protocol==='https:'&&/^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(u.hostname)&&u.origin===origin}catch{return false}
 }
-const safeReturn=raw=>{try{const target=new URL(raw||config.returnTo);if(target.protocol!=='https:'||target.username||target.password)return config.returnTo;const platformPath=target.origin==='https://ekodi.kr'&&((site==='cgma'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/')))||(site==='mission'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')))||(site==='portal'&&((target.pathname==='/seonammedi/admin'||target.pathname.startsWith('/seonammedi/admin/'))||(target.pathname==='/seonammedi'||target.pathname.startsWith('/seonammedi/')))));return ((config.origins.includes(target.origin)&&target.origin!=='https://ekodi.kr')||platformPath||(marketing&&isMarketingReturnOrigin(target.origin)))?target.href:config.returnTo}catch{return config.returnTo}};
+const safeReturn=raw=>{try{const target=new URL(raw||config.returnTo);if(target.protocol!=='https:'||target.username||target.password)return config.returnTo;const platformPath=target.origin==='https://ekodi.kr'&&((site==='cgma'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/')))||(site==='mission'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')))||(site==='church'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/')))||(site==='portal'&&((target.pathname==='/seonammedi/admin'||target.pathname.startsWith('/seonammedi/admin/'))||(target.pathname==='/seonammedi'||target.pathname.startsWith('/seonammedi/')))));return ((config.origins.includes(target.origin)&&target.origin!=='https://ekodi.kr')||platformPath||(marketing&&isMarketingReturnOrigin(target.origin)))?target.href:config.returnTo}catch{return config.returnTo}};
 const returnTo=safeReturn(params.get('return_to'));
 const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
 const $=id=>document.getElementById(id);
