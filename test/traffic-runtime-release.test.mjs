@@ -49,3 +49,27 @@ test('Control API production validates anonymous telemetry version via no-write 
   const handler=await read('traffic-intelligence-control.js');
   assert.match(handler,/'x-ekodi-traffic-telemetry':'site-scoped-v2'/);
 });
+
+test('traffic collector replay is dispatched only after a signed merge, never via unguarded PR staging',async()=>{
+  const script=await read('scripts/converge-orchestrated-pr-merge.mjs');
+  const source=script.slice(script.indexOf('const trafficCollectorTouched='),script.indexOf('const marketingGrowthTouched='));
+  for(const file of ['scripts/collect-traffic-intelligence.mjs','traffic-collector-quality.js','.github/workflows/traffic-intelligence-analytics.yml']){
+    assert.ok(source.includes("'"+file+"'"),'collector release ownership missing '+file);
+  }
+  assert.doesNotMatch(source,/traffic-intelligence-control\.js/);
+  assert.match(script,/if\(trafficCollectorTouched\)\{/);
+  assert.match(script,/actions\/workflows\/traffic-intelligence-analytics\.yml\/dispatches/);
+  assert.match(script,/action:'collector-dispatched'/);
+  const dispatch=script.slice(script.indexOf('if(trafficCollectorTouched)'),script.indexOf('if(marketingGrowthTouched)'));
+  assert.match(dispatch,/method:'POST', body:JSON\.stringify\(\{ref:'main'\}\)/);
+  assert.match(dispatch,/if\(!dispatch\.r\.ok\)fail\('Traffic Intelligence analytics dispatch failed '/);
+  assert.ok(script.indexOf('if(trafficCollectorTouched)')>script.indexOf('function dispatchPostMergeDeploys()'));
+  assert.ok(script.indexOf('if(trafficCollectorTouched)')<script.indexOf("for(let cycle=0;cycle<180;cycle++"));
+  const workflow=await read('.github/workflows/traffic-intelligence-analytics.yml');
+  assert.match(workflow,/workflow_dispatch:/);
+  assert.match(workflow,/cancel-in-progress: false/);
+  assert.match(workflow,/collect:\s+if: github\.event_name != 'pull_request'/);
+  assert.match(workflow,/--remote/);
+  const collector=await read('scripts/collect-traffic-intelligence.mjs');
+  assert.match(collector,/ON CONFLICT\(day, zone_name, host\) DO UPDATE SET/);
+});
