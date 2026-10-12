@@ -388,7 +388,7 @@ export async function handleSiteBoardRequest(request,env){
   }
 
   if(method==='POST'&&sub==='/api/posts'){
-    if(!who.authenticated&&Number(instance.allow_anonymous_write)!==1)return boardJson(instance,{error:'authentication_required'},401);
+    if(!who.authenticated)return boardJson(instance,{error:'authentication_required'},401);
     const body=await parseBody(request),title=clean(body?.title,200),textBody=clean(body?.body,20000);
     if(!title||!textBody)return boardJson(instance,{error:'title_and_body_required'},400);
     const stamp=now();
@@ -437,7 +437,7 @@ export async function handleSiteBoardRequest(request,env){
   }
   if(method==='POST'&&commentsMatch){
     if(Number(instance.comments_enabled)!==1)return boardJson(instance,{error:'comments_disabled'},409);
-    if(!who.authenticated&&Number(instance.allow_anonymous_write)!==1)return boardJson(instance,{error:'authentication_required'},401);
+    if(!who.authenticated)return boardJson(instance,{error:'authentication_required'},401);
     const id=Number(commentsMatch[1]);
     const exists=await env.DB.prepare(`SELECT id FROM ekodi_board_posts WHERE board_id=? AND id=? AND status='published' LIMIT 1`).bind(instance.board_id,id).first();
     if(!exists)return boardJson(instance,{error:'not_found'},404);
