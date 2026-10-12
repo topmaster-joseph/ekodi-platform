@@ -996,6 +996,10 @@ jobs:
         if: steps.quota.outputs.skip_nonessential != 'true'
         run: node scripts/verify-independent-board-live.mjs
 
+      - name: Verify registered public board catalog and anonymous write denial live
+        # Mandatory production authorization check: never skipped by quota optimization.
+        run: node scripts/verify-board-write-gate-production.mjs
+
       - name: Verify admin assets and every registered production service
         if: steps.quota.outputs.skip_nonessential != 'true'
         shell: bash

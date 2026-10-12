@@ -63,6 +63,7 @@ import { handleSeonamMediCivicApi, consumeSeonamMediVoiceMessage } from './seona
 import { handleSeonamMediAdminApi } from './seonammedi-admin-control.js';
 import { handleSeonamMediMonitorApi } from './seonammedi-monitor.js';
 import { handleSiteBoardRequest } from './site-board-control.js';
+import { handlePublicBoardCatalog } from './board-public-catalog.js';
 import { injectSitePublicationAdmin, resolvePublicationSiteForRequest, sitePublicationAdminAsset, sitePublicationGuard } from './site-publication-runtime.js';
 
 const PUBLIC_HOST='ekodi.kr';
@@ -416,6 +417,7 @@ async function routePlatform(request,env,ctx){
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
     const seonamBoard=legacySeonamBoardRedirect(request);if(seonamBoard)return seonamBoard;
     if(host===PUBLIC_HOST&&isSinglesRoute(url.pathname))return routeSinglesSurface(request,env);
+    if(host===PUBLIC_HOST&&url.pathname==='/api/boards/public-catalog')return handlePublicBoardCatalog(request,env);
     const siteBoard=await handleSiteBoardRequest(request,env);if(siteBoard)return siteBoard;
     if(host===PUBLIC_HOST&&url.pathname.startsWith(MALL_API_APEX_PREFIX)){const mallApi=await routeMallApiApex(request,env);if(mallApi)return mallApi;}
     if((host===PUBLIC_HOST||SEONAMMEDI_HOSTS.has(host))&&url.pathname.startsWith('/api/seonammedi/')){const seonamApi=await routeSeonamMediApi(request,env,ctx);if(seonamApi)return seonamApi;}
