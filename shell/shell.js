@@ -17,6 +17,19 @@ function cleanTrackingQueryFromAddressBar(){
 cleanTrackingQueryFromAddressBar();
 
 const script=document.currentScript;
+// EKODI-PUBLIC-BOARD-SITE-CHROME-001: future user-facing /board routes
+// inherit the parent site's header/footer automatically, without one-off copies.
+function autoInheritPublicBoardChrome(){
+  const path=location.pathname;
+  if(!/(?:^|\/)board(?:\/|$)/i.test(path)||/(?:^|\/)admin(?:\/|$)/i.test(path))return;
+  if(document.querySelector('script[src*="board-site-chrome.js"]'))return;
+  const chrome=document.createElement('script');
+  chrome.src='https://ekodi.kr/shell/board-site-chrome.js';
+  chrome.defer=true;
+  chrome.setAttribute('data-ekodi-board-inheritance','automatic');
+  document.head.append(chrome);
+}
+autoInheritPublicBoardChrome();
 if(window.__EKODI_SHELL_BOOTED)return;
 window.__EKODI_SHELL_BOOTED=true;
 
