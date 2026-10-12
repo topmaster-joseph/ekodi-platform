@@ -49,8 +49,8 @@ jobs:
         run: |
           {
             echo '## EKODI Board Anonymous Write Live Canary'
-            echo '- Known common boards: cgma, cheonggye, ekodimission, ekodichurch
-            echo '- Additional boards: discovered via existing-public-instance database catalog on ekodi.kr; no speculative URLs''
+            echo '- Known common boards: cgma, cheonggye, ekodimission, ekodichurch'
+            echo '- Additional boards: discovered via existing-public-instance database catalog on ekodi.kr; no speculative URLs'
             echo '- Standalone board: seonammedi.kr'
             echo '- Expected: HTTP 401 for enabled post/comment/reply endpoints; HTTP 409 for disabled comments'
             echo '- Requests use only invalid empty JSON objects and no credentials'
