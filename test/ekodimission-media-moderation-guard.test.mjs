@@ -73,3 +73,9 @@ test('protected merge reconciler only dispatches reviewed guards after official 
   assert.match(runner,/ref:"main"/);
   assert.doesNotMatch(runner,/supabase\.com\/v1\/projects\/.*\/database\/query/);
 });
+
+test('security-only migrations never drop or truncate persistent activity data',()=>{
+  for(const sql of [link,reserve,finalize]){
+    assert.doesNotMatch(sql,/\bdrop\s+table\b|\btruncate\s+table\b/i);
+  }
+});
