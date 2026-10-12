@@ -32,7 +32,7 @@ test('native list and post pages inherit the same owning-site chrome',async()=>{
 });
 test('all Seonam independent voices/finance/notices plus standalone boards inherit site chrome',async()=>{
  const s=await read('services/independent-board/worker.js');
- for(const m of ['shell/board-site-chrome.js','data-ekodi-board-parent-path','data-ekodi-board-chrome-placeholder="header"','data-ekodi-board-chrome-placeholder="footer"','footer a[href]'])assert.ok(s.includes(m),m);
+ for(const m of ['shell/board-site-chrome.js','data-ekodi-board-parent-path','site-header independent-board-header','footer-shell','footer a[href]'])assert.ok(s.includes(m),m);
  for(const f of ['sites/seonammedi/public/notices/index.html','sites/seonammedi/public/finance/index.html']){const html=await read(f);for(const m of ['shell/board-site-chrome.js','data-ekodi-board-chrome-placeholder="header"','data-ekodi-board-chrome-placeholder="footer"'])assert.ok(html.includes(m),f+':'+m)}
 });
 test('common adapter is a Shell asset and guarded orchestrator releases every board owner',async()=>{
