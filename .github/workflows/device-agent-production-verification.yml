@@ -231,7 +231,7 @@ jobs:
       - name: Observe production native PC Agent heartbeat without issuing commands
         if: github.event_name != 'workflow_dispatch' || inputs.execution_mode != 'verify'
         env:
-          DEVICE_TARGET_HOSTNAME: 'user3'
+          DEVICE_TARGET_HOSTNAME: ${{ github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-virtual-probe' && 'user2' || 'user3' }}
         run: node scripts/observe-native-device-readiness.mjs
 
       - name: Verify bounded USER3 native agent status command with real receipt
