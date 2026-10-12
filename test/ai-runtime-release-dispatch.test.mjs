@@ -38,3 +38,24 @@ test('orchestrator-dispatched Control API deployment owns PC Agent heartbeat han
   assert.ok(source.includes('/actions/workflows/deploy-control-api.yml/dispatches'));
   assert.ok(source.includes('inputs:{release_branch_ref:branch,release_task_id:taskId}'));
 });
+
+test('native CGMA canary policy and hybrid queue always dispatch guarded Control API production',()=>{
+  const orchestrator=text('scripts/converge-orchestrated-pr-merge.mjs');
+  const workflow=text('.github/workflows/deploy-control-api.yml');
+  const block=orchestrator.slice(
+    orchestrator.indexOf('const controlApiTouched=changedFiles.some'),
+    orchestrator.indexOf('const marketingGrowthTouched=')
+  );
+  assert.ok(block.startsWith('const controlApiTouched='));
+  for(const path of ['hybrid-execution.js','cgma-native-canary-policy.js']){
+    assert.ok(block.includes("'"+path+"'"), 'Orchestrator missing Control API ownership '+path);
+    const occurrences=workflow.split("      - '"+path+"'").length-1;
+    assert.equal(occurrences,2,'CGMA Control API source must be in both PR and push paths: '+path);
+  }
+  assert.match(orchestrator,/if\(controlApiTouched\)\{/);
+  assert.match(orchestrator,/\/actions\/workflows\/deploy-control-api\.yml\/dispatches/);
+  assert.match(orchestrator,/release_branch_ref:branch,release_task_id:taskId/);
+  assert.match(workflow,/EKODI_RELEASE_BRANCH_REF:/);
+  assert.match(workflow,/EKODI_RELEASE_TASK_ID:/);
+  assert.match(workflow,/EKODI AI Orchestration Gate/);
+});
