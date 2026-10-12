@@ -134,7 +134,8 @@ test('a subsequent valid reload clears a previous fallback',()=>{
 });
 
 test('admin navigation reveals central Control and hides it outside the command home',()=>{
-  const {frame,panel,navListeners}=fixture();
+  const {frame,panel,root,navListeners}=fixture();
+  root.dataset.ekodiAdminReady='true';
   const activate=navListeners.get('ekodi-admin-section-changed');
   assert.equal(typeof activate,'function');
   assert.equal(panel.hidden,true);
@@ -150,7 +151,8 @@ test('admin navigation reveals central Control and hides it outside the command 
 });
 
 test('authenticated admin ready event restores home panel without reloading the iframe',()=>{
-  const {frame,panel,navListeners}=fixture();
+  const {frame,panel,root,navListeners}=fixture();
+  root.dataset.ekodiAdminReady='true';
   const ready=navListeners.get('ekodi-admin-ready');
   assert.equal(typeof ready,'function');
   ready();
@@ -161,7 +163,8 @@ test('authenticated admin ready event restores home panel without reloading the 
 });
 
 test('clicking the same Control sidebar entry twice keeps the center panel visible',()=>{
-  const {frame,panel,window,navListeners}=fixture();
+  const {frame,panel,root,window,navListeners}=fixture();
+  root.dataset.ekodiAdminReady='true';
   const match=sidebarSource.match(/  control\.onclick=event=>\{[\s\S]*?\n  \};/);
   assert.ok(match,'single Control navigation handler must exist');
   const control={onclick:null};
@@ -237,13 +240,20 @@ test('reconciliation respects other selected sections and never forces Control o
 });
 
 test('pre-auth and logged-out navigation never auto-loads the privileged iframe',()=>{
-  const {frame,panel,root,navListeners,notifyPanelMutation}=fixture();
+  const {frame,panel,root,app,navListeners,notifyPanelMutation}=fixture();
   panel.hidden=true;
   panel.classList.add('hidden-panel');
   notifyPanelMutation();
   assert.equal(frame.hasAttribute('src'),false);
   assert.equal(panel.hidden,true);
   root.dataset.ekodiAdminReady='loading';
+  navListeners.get('ekodi-admin-section-changed')({detail:{section:'command-home'}});
+  assert.equal(frame.hasAttribute('src'),false);
+  navListeners.get('ekodi-admin-ready')();
+  assert.equal(frame.hasAttribute('src'),false);
+  root.dataset.ekodiAdminReady='true';
+  app.hidden=true;
+  navListeners.get('ekodi-admin-section-changed')({detail:{section:'command-home'}});
   notifyPanelMutation();
   assert.equal(frame.hasAttribute('src'),false);
 });
@@ -261,4 +271,18 @@ test('hidden or signed-out admin shell does not reopen the embedded Control pane
   notifyPanelMutation();
   assert.equal(panel.hidden,false);
   assert.equal(panel.classList.contains('hidden-panel'),false);
+});
+
+test('authenticated navigation loads Control only after visible admin ready state',()=>{
+  const {frame,root,app,navListeners}=fixture();
+  const section=navListeners.get('ekodi-admin-section-changed');
+  section({detail:{section:'command-home'}});
+  assert.equal(frame.hasAttribute('src'),false);
+  root.dataset.ekodiAdminReady='true';
+  app.hidden=true;
+  section({detail:{section:'command-home'}});
+  assert.equal(frame.hasAttribute('src'),false);
+  app.hidden=false;
+  section({detail:{section:'command-home'}});
+  assert.equal(frame.getAttribute('src'),'/admin/control?embed=admin');
 });
