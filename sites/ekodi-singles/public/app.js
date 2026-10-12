@@ -462,6 +462,22 @@ async function showBrokerageReadiness(h){
   h.append(panel);
  }catch(e){if(e?.status===403)notice(h,'인허가 관리 권한이 없습니다. 검증된 EKODI 계정에 운영자 역할이 필요합니다.');else notice(h,'인허가 준비자료를 조회하지 못했습니다.')}
 }
+async function showBrokerageReadiness(h){
+ try{
+  const data=await api('/bank/admin/brokerage-checklist');
+  const section=text('section','','member-card');section.append(text('h3','국내·국제결혼중개업 신고·등록 준비'));
+  paragraph(section,'현재 결혼중개업 영업은 비활성입니다. 증빙을 확인해도 등록이나 신고가 자동 완료되지는 않습니다.');
+  const official=text('a','정부24 공식 민원 검색 ↗','outline');official.href='https://www.gov.kr/portal/main';official.target='_blank';official.rel='noopener noreferrer';section.append(official);
+  for(const item of data.items||[]){
+   const label=text('label',(item.regime==='domestic'?'국내: ':'국제: ')+item.requirement,'field');
+   const tick=document.createElement('input');tick.type='checkbox';tick.checked=item.completed===true;label.prepend(tick);
+   const evidence=document.createElement('input');evidence.type='text';evidence.maxLength=500;evidence.value=item.evidence_reference||'';evidence.placeholder='증빙문서 식별번호 (개인정보 입력 금지)';
+   const result=text('p','','status-text');
+   label.append(evidence,button('진행상태 저장',async()=>{try{await api('/bank/admin/brokerage-checklist',{method:'PUT',body:{regime:item.regime,requirement:item.requirement,completed:tick.checked,evidence_reference:evidence.value.trim()}});result.textContent='저장했습니다. 인허가 완료와는 별개입니다.'}catch(err){result.textContent=errorText(err)}}),result);section.append(label);
+  }
+  h.append(section);
+ }catch(err){if(err?.status!==403)notice(h,'인허가 준비 상태 조회 실패: '+errorText(err))}
+}
 async function signedIn(status){
  document.querySelectorAll('[data-member-nav]').forEach(link=>{link.hidden=false});
  document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.hidden=true});
@@ -474,7 +490,7 @@ async function signedIn(status){
  else if(page==='/discover')await showDiscover(h);
  else if(page==='/messages')await showMessages(h);
  else if(page==='/subscribe')await showSubscription(h);
- else if(page==='/admin'){await showBankAdmin(h);await showEventPricing(h);await showAllPricing(h);await showBrokerageReadiness(h);}
+ else if(page==='/admin'){await showBankAdmin(h);await showEventPricing(h);await showAllPricing(h);await showBrokerageReadiness(h);await showBrokerageReadiness(h);}
  else if(page==='/groups')paragraph(h,'지역 공동체·소그룹 기능을 준비하고 있습니다. 행사 목록을 먼저 확인해 주세요.');
  else {paragraph(h,'반갑습니다. 나의 프로필, 공개 행사, 동행 찾기를 살펴보세요.');const row=text('div','','actions');for(const [name,href] of [['프로필 등록','/singles/my'],['공개 행사','/singles/events'],['동행 찾기','/singles/discover']]){const a=text('a',name,'outline');a.href=href;row.append(a)}h.append(row)}
 }
