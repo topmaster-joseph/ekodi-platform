@@ -66,8 +66,9 @@ async function enrichMedia(item){
     const articleHtml=(html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i)||[])[1]||'';
     const articleText=articleHtml?stripMarkup(articleHtml.replace(/<(?:script|style|nav|aside|footer)\b[^>]*>[\s\S]*?<\/(?:script|style|nav|aside|footer)>/gi,' ')):'';
     const articleDescription=stripMarkup(metaValue(html,'og:description')||metaValue(html,'description')||metaValue(html,'twitter:description'));
-    const articleEvidence=hasRegionalMedicalContext(item.title)&&hasRegionalMedicalContext(originalTitle)
-      ?[articleText,articleDescription].find(hasRegionalMedicalContext)||'':'';
+    const authoritativeContent=articleText.length>=60?articleText:articleDescription;
+    const articleEvidence=hasRegionalMedicalContext(item.title)&&hasRegionalMedicalContext(originalTitle)&&hasRegionalMedicalContext(authoritativeContent)
+      ?authoritativeContent:'';
     const verifiedSummary=articleEvidence?clean(articleEvidence,900):'';
     const video=metaValue(html,'og:video:secure_url')||metaValue(html,'og:video:url')||metaValue(html,'og:video')||metaValue(html,'twitter:player');
     const image=metaValue(html,'og:image:secure_url')||metaValue(html,'og:image')||metaValue(html,'twitter:image');
