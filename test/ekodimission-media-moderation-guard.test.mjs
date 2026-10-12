@@ -107,4 +107,6 @@ test('one-time guarded postmerge replay requires two real orchestrator receipts 
   assert.doesNotMatch(flow,/api\.supabase\.com\/v1\/projects/);
   assert.doesNotMatch(flow,/curl --fail-with-body -fsS/);
   assert.match(flow,/GH_TOKEN: \$\{\{ github\.token \}\}/);
+  assert.match(flow,/release_task_id/,'Schema replay must keep official release task association');
+  assert.match(flow,/issues\/4265/,'Replay must remain restricted to pending security tracker');
 });
