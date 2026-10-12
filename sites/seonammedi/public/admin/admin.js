@@ -431,6 +431,42 @@ function renderChannels(){
 }
 async function loadChannels(){if(!state.me?.permissions?.channels)return;const data=await api('/api/seonammedi/admin/channels');state.channels=data.items||[];renderChannels();updateDashboard()}
 
+function bindAdminTimelineLinkImport(){
+  const form=$('adminTimelineLinkForm'),preview=$('adminTimelineLinkPreview');
+  const message=$('adminTimelineLinkMessage'),check=$('adminTimelineLinkPreviewButton'),save=$('adminTimelineLinkSaveButton');
+  if(!form||!preview)return;
+  let verifiedUrl='';
+  const reset=()=>{verifiedUrl='';save.disabled=true;preview.replaceChildren();preview.hidden=true;text(message,'')};
+  form.elements.url.addEventListener('input',reset);
+  check.addEventListener('click',async()=>{
+    const url=String(form.elements.url.value||'').trim();reset();
+    if(!url||!form.elements.url.checkValidity()){text(message,'유효한 HTTPS 기사 링크를 넣어주세요.');return}
+    check.disabled=true;text(message,'기사 원문을 확인하는 중입니다…');
+    try{
+      const result=await api('/api/seonammedi/admin/timeline/link-preview',{method:'POST',body:JSON.stringify({url})});
+      if(url!==String(form.elements.url.value||'').trim())return;
+      const item=result.item||{},heading=document.createElement('strong'),metadata=document.createElement('small'),body=document.createElement('p');
+      heading.textContent=item.title||'제목 추출 실패';metadata.textContent=[item.publisher,item.date||'발행일 확인 불가',item.category].filter(Boolean).join(' · ');
+      body.textContent=item.summary||'본문 근거를 확인하지 못했습니다.';
+      preview.replaceChildren(heading,metadata,body);preview.hidden=false;
+      if(item.ready){verifiedUrl=url;save.disabled=false;text(message,'관련성·발행일 확인 완료. 등록할 수 있습니다.')}
+      else text(message,item.relevant?'발행일이 확인되지 않아 자동등록할 수 없습니다. 수동 등록을 이용하세요.':'제목과 본문의 국립의대 관련성이 확인되지 않아 자동등록할 수 없습니다.');
+    }catch(error){text(message,'링크 확인 실패: '+error.message)}
+    finally{check.disabled=false}
+  });
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();const url=String(form.elements.url.value||'').trim();
+    if(url!==verifiedUrl){text(message,'링크 미리보기를 먼저 확인해주세요.');return}
+    save.disabled=true;text(message,'원문 재검증 후 저장 중…');
+    try{
+      const result=await api('/api/seonammedi/admin/timeline/link-import',{method:'POST',body:JSON.stringify({url,status:form.elements.status.value})});
+      form.reset();reset();await loadTimeline();
+      text(message,result.duplicate?'이미 등록되어 있습니다.':'링크만으로 활동이력을 등록했습니다.');
+    }catch(error){text(message,'등록 실패: '+error.message);save.disabled=false}
+  });
+}
+bindAdminTimelineLinkImport();
+
 $('timelineForm').addEventListener('submit',async event=>{
   event.preventDefault();const form=event.currentTarget,id=form.elements.id.value;const payload={date:form.elements.date.value,category:form.elements.category.value,title:form.elements.title.value,summary:form.elements.summary.value,evidence:form.elements.evidence.value,sortOrder:Number(form.elements.sortOrder.value||0),status:form.elements.status.value};
   const msg=$('timelineMessage');msg.classList.remove('error');text(msg,'저장 중…');
