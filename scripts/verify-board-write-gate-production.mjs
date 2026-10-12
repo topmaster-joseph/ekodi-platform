@@ -39,13 +39,68 @@ function requireDenied(result, url, expectedError, expectedBoardId = '') {
   }
 }
 
+
+// Public catalog reports only existing public database records. Every URL is
+// rebuilt from a validated site identifier, never fetched from the payload.
+const CATALOG_PATH='/api/boards/public-catalog';
+const CATALOG_PAGE_SIZE=40;
+const MAX_CATALOG_BOARDS=160;
+const SITE_SLUG=/^[a-z0-9][a-z0-9-]{0,79}$/;
+
+export async function discoverRegisteredPublicBoards({fetcher=fetch,origin='https://ekodi.kr'}={}){
+  const catalog=[];
+  let cursor='',pages=0;
+  const seenCursors=new Set();
+  while(true){
+    if(++pages>6)throw new Error('board_catalog_pagination_limit');
+    const pageUrl=new URL(CATALOG_PATH,origin);
+    pageUrl.searchParams.set('limit',String(CATALOG_PAGE_SIZE));
+    if(cursor)pageUrl.searchParams.set('cursor',cursor);
+    const result=await fetchJson(fetcher,pageUrl.toString());
+    assert.equal(result.status,200,'public board catalog must be accessible without login');
+    assert.equal(result.headers.get('x-ekodi-board-catalog'),'public-v1','public board catalog identity');
+    const data=result.payload||{};
+    assert.equal(data.ok,true,'catalog API must affirm a successful query');
+    assert.equal(data.schemaVersion,1,'unsupported board catalog schema');
+    assert.equal(data.source,'existing_public_board_instances','catalog must originate from existing public DB records');
+    assert.ok(Array.isArray(data.boards),'catalog items required');
+    assert.ok(data.boards.length<=CATALOG_PAGE_SIZE,'catalog page limit');
+    for(const item of data.boards){
+      const site=String(item?.siteId||'');
+      assert.match(site,SITE_SLUG,'catalog site identifier');
+      assert.equal(item.boardId,'site:'+site+':main','catalog board identity');
+      assert.equal(item.prefix,'/'+site+'/board','catalog canonical path');
+      catalog.push({site,prefix:item.prefix});
+      assert.ok(catalog.length<=MAX_CATALOG_BOARDS,'public board catalog exceeds safe traffic budget');
+    }
+    if(data.complete===true){
+      assert.equal(data.nextCursor,null,'complete catalog must not have cursor');
+      break;
+    }
+    assert.equal(data.complete,false,'unrecognized catalog completion state');
+    const next=String(data.nextCursor||'');
+    assert.match(next,/^site:[a-z0-9][a-z0-9-]{0,79}:main$/,'invalid continuation cursor');
+    assert.ok(!seenCursors.has(next),'catalog pagination loop');
+    seenCursors.add(next);
+    cursor=next;
+  }
+  const dedup=new Map();
+  for(const board of [...LIVE_BOARDS,...catalog]){
+    const previous=dedup.get(board.site);
+    if(previous&&previous.prefix!==board.prefix)throw new Error('board_identity_conflict: '+board.site);
+    dedup.set(board.site,{site:board.site,prefix:board.prefix});
+  }
+  return [...dedup.values()].sort((a,b)=>a.site.localeCompare(b.site));
+}
+
 export async function verifyBoardWriteGateProduction({
   fetcher = fetch,
   origin = 'https://ekodi.kr',
   seonamOrigin = SEONAM_BOARD_ORIGIN,
 } = {}) {
   const passed = [];
-  for (const board of LIVE_BOARDS) {
+  const allBoards = await discoverRegisteredPublicBoards({fetcher,origin});
+  for (const board of allBoards) {
     const boardId = 'site:' + board.site + ':main';
     const configPath = board.prefix + '/api/config';
     const listPath = board.prefix + '/api/posts';
@@ -83,7 +138,7 @@ export async function verifyBoardWriteGateProduction({
   return {
     ok: true,
     contract: BOARD_WRITE_GATE_CONTRACT,
-    publicBoards: LIVE_BOARDS.map(x => x.site),
+    publicBoards: allBoards.map(x => x.site),
     standaloneBoard: 'seonammedi',
     negativeChecks: passed.length,
     checks: passed,
