@@ -12,16 +12,6 @@ export function isSameOriginAdminMutation(request){
   return origin===expected && !['cross-site','same-site'].includes(fetchSite);
 }
 
-export async function trustedAdminOrchestratorIdentity(session={}){
-  const email=clean(session.email,320).toLowerCase();
-  if(!email||!email.includes('@'))throw new Error('verified_admin_email_required');
-  // Never accept a caller-supplied requester id. Scope a deterministic pseudonym
-  // to the authenticated server session, so retries can be idempotent.
-  const buffer=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('ekodi:platform-admin:v1:'+email));
-  const digest=Array.from(new Uint8Array(buffer)).map(byte=>byte.toString(16).padStart(2,'0')).join('');
-  return Object.freeze({personId:'admin_'+digest.slice(0,40),email});
-}
-
 export function prepareAdminOrchestratorSubmission(body={}){
   if(!body||typeof body!=='object'||Array.isArray(body))throw new Error('invalid_request');
   const intent=clean(body.intent||body.goal,1201);
