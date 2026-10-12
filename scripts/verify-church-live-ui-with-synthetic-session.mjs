@@ -49,6 +49,10 @@ try {
   assert.ok(loaded,'canonical Church site did not load');
   const link=page.locator('[data-church-worship-admin]');
   await link.waitFor({state:'attached',timeout:10000});
+  // Real visitors scroll to the worship section; IntersectionObserver reveals
+  // the parent .schedule.reveal only after it intersects the viewport.
+  await page.evaluate(()=>document.querySelector('[data-church-worship-admin]')?.scrollIntoView({block:'center'}));
+  await page.waitForFunction(()=>document.querySelector('.schedule.reveal')?.classList.contains('visible'),null,{timeout:9000});
   assert.equal(await link.isVisible(),false,'guest must never see management link');
   evidence.steps.push({name:'guest-hidden-on-real-site',pass:true});
 
@@ -62,7 +66,17 @@ try {
   await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
   await page.waitForFunction(()=>document.querySelector('[data-church-worship-admin]')?.hidden===false,
     null,{timeout:10000});
-  assert.equal(await link.isVisible(),true,'allowed synthetic UI capability should reveal link');
+  if(!await link.isVisible()){
+    const style=await link.evaluate(el=>({
+      hidden:el.hidden,cssDisplay:getComputedStyle(el).display,
+      visibility:getComputedStyle(el).visibility,
+      parentDisplay:getComputedStyle(el.parentElement).display,
+      parentVisibility:getComputedStyle(el.parentElement).visibility,
+      rect:el.getBoundingClientRect().toJSON()
+    }));
+    evidence.renderingDiagnostic=style;
+    throw Error('Permitted link remains visually hidden '+JSON.stringify(style));
+  }
   assert.equal(await link.getAttribute('href'),'/ekodichurch/admin/worship');
   evidence.steps.push({name:'mocked-allowed-capability-shows-control',pass:true});
 
