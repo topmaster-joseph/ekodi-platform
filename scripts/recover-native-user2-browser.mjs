@@ -1,6 +1,7 @@
 // Receipt-gated one-shot USER2 native Agent browser recovery.
 // It never enables Hyper-V, reboots Windows, creates a VM, attaches to the user desktop,
 // shares clipboard, injects foreground input, or uses an external browser provider.
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -162,6 +163,11 @@ export async function recoverUser2NativeBrowser({
 
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   recoverUser2NativeBrowser({token:process.env.E2E_ADMIN_TOKEN})
-    .then(result=>console.log('[EKODI][USER2-NATIVE-BROWSER-RECOVERY] '+JSON.stringify(result)))
+    .then(async result=>{
+      const dir=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..','artifacts');
+      await fs.mkdir(dir,{recursive:true});
+      await fs.writeFile(path.join(dir,'native-user2-browser-recovery.json'),JSON.stringify(result,null,2)+'\n','utf8');
+      console.log('[EKODI][USER2-NATIVE-BROWSER-RECOVERY] '+JSON.stringify(result));
+    })
     .catch(error=>{console.error('[EKODI][USER2-NATIVE-BROWSER-RECOVERY] '+String(error?.message||'failed').slice(0,120));process.exitCode=1;});
 }
