@@ -1,0 +1,70 @@
+name: EKODI Mission Media Security Owner Release Request
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+  actions: write
+
+concurrency:
+  group: mission-media-security-owner-release-4265
+  cancel-in-progress: false
+
+jobs:
+  request:
+    if: >-
+      github.event.issue.number == 4265 &&
+      github.event.issue.state == 'open' &&
+      github.event.issue.user.login == 'topmaster-joseph' &&
+      github.actor == 'topmaster-joseph' &&
+      github.event.label.name == 'ekodi-mission-media-security-release'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Authorize an already protected and reviewed EKODI release
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo="$GITHUB_REPOSITORY"
+          [ "$repo" = 'topmaster-joseph/ekodi-platform' ]
+          source_pr="$(gh api "repos/$repo/pulls/4336")"
+          repair_pr="$(gh api "repos/$repo/pulls/4361")"
+          jq -e '.merged == true and .base.ref == "main" and .head.ref == "ai/chatgpt/orch_recovery_bf8d63dc228111cfafed79133a0aae57"' <<< "$source_pr" >/dev/null
+          jq -e '.merged == true and .base.ref == "main" and (.head.ref | startswith("ai/chatgpt/orch_recovery_"))' <<< "$repair_pr" >/dev/null
+          source_branch="$(jq -r '.head.ref' <<< "$source_pr")"
+          source_sha="$(jq -r '.head.sha' <<< "$source_pr")"
+          task="${source_branch##*/}"
+          [[ "$task" =~ ^orch_[a-zA-Z0-9_-]+$ ]]
+          branch_encoded="$(printf '%s' "$source_branch" | jq -sRr @uri)"
+          task_encoded="$(printf '%s' "$task" | jq -sRr @uri)"
+          curl --fail-with-body -sS --retry 3 --max-time 15 \
+            "https://ekodi.kr/api/orchestrator/release-receipt?taskId=$task_encoded&branchRef=$branch_encoded" \
+            | jq -e --arg branch "$source_branch" --arg task "$task" \
+                '.ok == true and .authorized == true and .authority == "ekodi-orchestrator" and .taskId == $task and .branchRef == $branch' >/dev/null
+          reviewed_files="$(gh api "repos/$repo/pulls/4336/files?per_page=100")"
+          for filename in \
+            supabase/migrations/20261012060200_activity_media_moderation_guard.sql \
+            supabase/migrations/20261012060300_activity_photo_reservation_moderation_guard.sql \
+            supabase/migrations/20261012060400_activity_photo_finalize_moderation_guard.sql; do
+            jq -e --arg path "$filename" 'any(.[]; .filename == $path)' <<< "$reviewed_files" >/dev/null
+            reviewed_sha="$(gh api "repos/$repo/contents/$filename?ref=$source_sha" --jq .sha)"
+            main_sha="$(gh api "repos/$repo/contents/$filename?ref=main" --jq .sha)"
+            [ "$reviewed_sha" = "$main_sha" ] || {
+              echo "Mission guard changed after protected review: $filename"
+              exit 1
+            }
+          done
+          state="$(gh api "repos/$repo/issues/4265" --jq .state)"
+          [ "$state" = open ] || { echo 'Release tracker is closed; refusing dispatch.'; exit 1; }
+          # This job NEVER updates Supabase or grants privileges. The separately
+          # protected workflow rechecks authority, merge and SQL identity before
+          # dispatching the existing secret-scoped SQL-only deployment.
+          gh api --method POST "repos/$repo/actions/workflows/reconcile-mission-media-moderation-release.yml/dispatches" \
+            -f ref=main -f "inputs[release_branch_ref]=$source_branch" -f "inputs[release_task_id]=$task"
+          echo "Requested official EKODI Mission media security release through protected main workflow."

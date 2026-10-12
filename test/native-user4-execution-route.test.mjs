@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { selectUser4ExecutionRoute } from '../scripts/select-native-user4-execution-route.mjs';
+import { selectUser4ExecutionRoute,planUser4VirtualDesktopRecovery } from '../scripts/select-native-user4-execution-route.mjs';
 
 const now=Date.parse('2026-10-12T00:00:00.000Z');
 const stamp=new Date(now-20_000).toISOString();
@@ -79,4 +79,74 @@ test('Orchestrator auto-dispatches virtual backend route verification after rout
   const code=readFileSync(new URL('../scripts/converge-orchestrated-pr-merge.mjs',import.meta.url),'utf8');
   assert.match(code,/nativeUser4VirtualProbeTouched=changedFiles.some\(file=>[\s\S]*?'scripts\/select-native-user4-execution-route\.mjs'/);
   assert.match(code,/execution_mode:'user4-virtual-probe'/);
+});
+
+test('USER4 native Hyper-V probe records all actual prerequisites and a safe maintenance next step',()=>{
+  const probe={...verifiedHyperV,backendReady:false,hyperVState:'Disabled',
+    hyperVPowerShellAvailable:false,baseVmPresent:false};
+  const result=selectUser4ExecutionRoute({readiness:healthyBrowser,probe,now});
+  assert.equal(result.route,'ekodi-background-browser-worker');
+  assert.equal(result.recoveryPlan.state,'REQUIRES_MAINTENANCE');
+  assert.deepEqual(result.recoveryPlan.missing,[
+    'hyper-v-windows-feature','hyper-v-powershell-management','ekodi-isolated-base-vm'
+  ]);
+  assert.equal(result.recoveryPlan.nextAction,'verify-windows-edition-and-plan-admin-maintenance');
+  assert.equal(result.recoveryPlan.automaticHostChanges,false);
+  assert.equal(result.recoveryPlan.automaticReboot,false);
+  assert.equal(result.recoveryPlan.requiresSeparateAdminApproval,true);
+  assert.equal(result.preservesUserDesktop,true);
+  assert.equal(result.desktopBackendReady,false);
+});
+test('USER4 does not invent Windows recovery actions from stale or another device proof',()=>{
+  const other=planUser4VirtualDesktopRecovery({probe:{...verifiedHyperV,targetAlias:'user2'},now});
+  assert.equal(other.state,'PROBE_REQUIRED');
+  const stale=planUser4VirtualDesktopRecovery({
+    probe:{...verifiedHyperV,completedAt:new Date(now-900000).toISOString()},now
+  });
+  assert.equal(stale.state,'PROBE_STALE');
+  assert.equal(stale.automaticHostChanges,false);
+  assert.equal(other.automaticReboot,false);
+});
+test('USER4 ready Hyper-V canary is only suggested when firmware, management and VM are proven',()=>{
+  const result=selectUser4ExecutionRoute({readiness:healthyBrowser,probe:verifiedHyperV,now});
+  assert.equal(result.routeKind,'isolated-desktop');
+  assert.equal(result.recoveryPlan.state,'READY');
+  assert.equal(result.recoveryPlan.nextAction,'run-native-isolated-desktop-canary');
+  assert.deepEqual(result.recoveryPlan.missing,[]);
+});
+
+test('Windows Home USER4 does not attempt unsupported Hyper-V activation',()=>{
+  const probe={...verifiedHyperV,windowsEditionClass:'home',windowsBuild:26100,
+    backendReady:false,hyperVState:'Disabled',hyperVPowerShellAvailable:false,baseVmPresent:false};
+  const result=selectUser4ExecutionRoute({readiness:healthyBrowser,probe,now});
+  assert.equal(result.route,'ekodi-background-browser-worker');
+  assert.equal(result.recoveryPlan.state,'UNSUPPORTED_WINDOWS_EDITION');
+  assert.equal(result.recoveryPlan.windowsEditionClass,'home');
+  assert.equal(result.recoveryPlan.nextAction,'use-ekodi-native-browser-or-authorize-compatible-host');
+  assert.equal(result.recoveryPlan.automaticHostChanges,false);
+  assert.equal(result.recoveryPlan.automaticReboot,false);
+  assert.equal(result.desktopBackendReady,false);
+});
+test('Pro USER4 can plan a separate approved Hyper-V maintenance window without mutation',()=>{
+  const probe={...verifiedHyperV,windowsEditionClass:'pro',windowsBuild:26100,
+    backendReady:false,hyperVState:'Disabled',hyperVPowerShellAvailable:false,baseVmPresent:false};
+  const result=planUser4VirtualDesktopRecovery({probe,now});
+  assert.equal(result.state,'REQUIRES_MAINTENANCE');
+  assert.equal(result.windowsEditionClass,'pro');
+  assert.equal(result.windowsBuild,26100);
+  assert.equal(result.nextAction,'verify-windows-edition-and-plan-admin-maintenance');
+  assert.equal(result.requiresSeparateAdminApproval,true);
+  assert.equal(result.automaticReboot,false);
+});
+test('Windows OS classification stays privacy-limited and read-only',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const agent=readFileSync(new URL('../tools/ekodi-device-agent/windows/ekodi-device-agent.ps1',import.meta.url),'utf8');
+  const main=agent.slice(agent.indexOf('function Get-IsolatedDesktopBackendProbe'),agent.indexOf('function Invoke-IsolatedDesktopBackendProbe'));
+  assert.match(main,/Get-CimInstance Win32_OperatingSystem/);
+  assert.match(main,/windowsEditionClass = \$windowsEditionClass/);
+  assert.match(main,/windowsBuild = \$windowsBuild/);
+  assert.doesNotMatch(main,/Enable-WindowsOptionalFeature|Enable-ComputerRestore|Restart-Computer|Set-VM|New-VM/);
+  const probe=readFileSync(new URL('../scripts/verify-native-user4-virtual-probe.mjs',import.meta.url),'utf8');
+  assert.match(probe,/windowsEditionClass:\['home','pro','enterprise','education','server'\]/);
+  assert.match(probe,/windowsBuild:Number.isSafeInteger/);
 });

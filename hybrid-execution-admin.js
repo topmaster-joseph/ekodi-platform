@@ -194,6 +194,14 @@
         </form>
         <small class="hybrid-native-feedback" id="hybridNativeFeedback" role="status">온라인 자체 노드와 BG Browser Canary가 필요합니다. CGMA 버튼은 /cgma/board 공개 화면만 읽기 전용으로 점검합니다. 관리자 로그인·글쓰기·수정·삭제 성공을 뜻하지 않습니다.</small>
       </section>
+      <section class="hybrid-native-browser" id="hybridCgmaAuthenticatedCrud" aria-label="CGMA 로그인 관리자 시험글 실증">
+        <div class="hybrid-row"><div><h4>CGMA 로그인 관리자 · 1회성 글쓰기 실증</h4>
+        <p>현재 EKODI 관리자 로그인 세션으로 <strong>시험글 한 건만</strong> 등록→수정→소프트삭제합니다. 기존 게시글이나 회원권한은 변경하지 않습니다. 자체 격리 브라우저의 공개 점검과 별개이며, 실제 쓰기 전 반드시 확인을 받습니다.</p>
+        </div><span class="hybrid-pill" id="hybridCgmaCrudReadiness" role="status">관리자 인증 확인 중</span></div>
+        <div class="hybrid-controls"><button type="button" class="secondary" id="runCgmaAuthenticatedCrud" disabled>관리자 권한 글쓰기 실증</button>
+        <a href="https://ekodi.kr/cgma/board" target="_blank" rel="noopener noreferrer">CGMA 게시판 확인</a></div>
+        <small class="hybrid-native-feedback" id="hybridCgmaCrudFeedback" role="status">인증된 관리자에서만 실행합니다. 실패한 시험글은 확인된 ID에 한해 정리하며, 작업 접수와 실제 완료는 구분합니다.</small>
+      </section>
       <section class="hybrid-native-browser" id="hybridGoogleWorkspaceAudio" aria-label="Google Workspace 전용 오디오 실행">
         <div class="hybrid-row"><div><h4>Google Workspace · 주일예배 오디오 삽입</h4>
         <p>기존 261011 주일예배 Google Slides 42장 중 주기도문 5장, 다국어 설교 제목 3장에 등록된 MP3만 삽입합니다. EKODI 격리 전용 프로필의 실제 Google 로그인과 사전 Canary가 필요합니다.</p>
@@ -253,6 +261,7 @@
     panel.querySelector('#enqueueHybridDiagnostic')?.addEventListener('click', enqueueDiagnostic);
     panel.querySelector('#hybridNativeBrowserForm')?.addEventListener('submit', enqueueNativeBrowser);
     panel.querySelector('#enqueueHybridCgmaBoard')?.addEventListener('click', enqueueNativeCgmaBoard);
+    panel.querySelector('#runCgmaAuthenticatedCrud')?.addEventListener('click', runCgmaAuthenticatedCrud);
     panel.querySelector('#enqueueWorkspaceAudio')?.addEventListener('click', enqueueWorkspaceAudio);
     panel.querySelector('#hybridStatusFilter')?.addEventListener('change', renderJobs);
     panel.querySelector('#hybridJobSearch')?.addEventListener('input', renderJobs);
@@ -356,6 +365,12 @@
     button.disabled = ready.length === 0;
     const cgmaButton = panel.querySelector('#enqueueHybridCgmaBoard');
     if (cgmaButton) cgmaButton.disabled = ready.length === 0 || lastDashboard.fabric?.canManage !== true;
+    const crudButton = document.querySelector('#runCgmaAuthenticatedCrud');
+    if (crudButton && !crudButton.dataset.running) crudButton.disabled =
+      !sessionStorage.getItem(TOKEN_KEY) || lastDashboard.fabric?.canManage !== true;
+    const crudBadge = document.querySelector('#hybridCgmaCrudReadiness');
+    if (crudBadge) crudBadge.textContent = lastDashboard.fabric?.canManage === true && sessionStorage.getItem(TOKEN_KEY)
+      ? '관리자 세션 준비' : '로그인·최고관리자 권한 필요';
     panel.querySelector('#hybridNativeReadiness').textContent = ready.length
       ? `실행 가능 후보 ${ready.length}대`
       : lastDashboard.fabric?.enabled === false ? '실행망 일시중지' : '실행 가능 노드 없음';
@@ -577,6 +592,102 @@
       feedback.textContent=`작업 등록 실패: ${error.message}`;
     } finally {
       renderWorkspaceAudioStatus();
+    }
+  }
+
+
+  // This is intentionally NOT an isolated-agent browser job: that profile cannot
+  // borrow the user's Google cookies. Only the current authenticated admin page
+  // can perform this consented, single-post production smoke without impersonation.
+  async function cgmaAuthenticatedApi(path, method = 'GET', data, expected = 200) {
+    if (!/^\/cgma\/board\/api\/(?:health|posts(?:\/[1-9]\d*)?)$/.test(path))
+      throw new Error('허용된 CGMA 시험글 API 경로가 아닙니다.');
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    if (!token) throw new Error('관리자 로그인 세션이 만료됐습니다.');
+    const response = await fetch(API_BASE + path, {
+      method,
+      headers: {
+        authorization:'Bearer ' + token,
+        accept:'application/json',
+        ...(data === undefined ? {} : {'content-type':'application/json'}),
+      },
+      ...(data === undefined ? {} : {body:JSON.stringify(data)}),
+      credentials:'same-origin',
+      cache:'no-store',
+      redirect:'error',
+      signal:AbortSignal.timeout(18000),
+    });
+    // No tokens, usernames, response body or private data are logged.
+    const payload = await response.json().catch(() => ({}));
+    if (response.status !== expected)
+      throw new Error('CGMA ' + method + ' ' + path.split('/').slice(0,5).join('/') +
+        ' HTTP ' + response.status + ' (필요 ' + expected + ')');
+    return payload;
+  }
+
+  async function runCgmaAuthenticatedCrud() {
+    const button = document.querySelector('#runCgmaAuthenticatedCrud');
+    const feedback = document.querySelector('#hybridCgmaCrudFeedback');
+    if (!button || !feedback || button.disabled || button.dataset.running) return;
+    if (lastDashboard.fabric?.canManage !== true || !sessionStorage.getItem(TOKEN_KEY)) {
+      feedback.textContent = '실제 EKODI 관리자 인증과 실행 권한이 필요합니다.';
+      return;
+    }
+    if (!confirm('CGMA 운영 게시판에 [EKODI 점검용] 글 한 건을 실제 등록한 뒤, 해당 글만 수정·소프트삭제하고 공개 목록 미노출까지 검사합니다. 기존 글은 변경하지 않습니다. 실행할까요?')) return;
+    button.dataset.running = 'true';
+    button.disabled = true;
+    let createdId = null;
+    let verifiedOwnPost = false;
+    let deleted = false;
+    const nonce = Date.now() + '-' + Math.random().toString(36).slice(2,10);
+    const title = '[EKODI 점검용] ' + nonce;
+    const body = 'EKODI 관리자 권한 1회성 자동 검증 글입니다. 시험 후 즉시 소프트삭제합니다.';
+    try {
+      feedback.textContent = '게시판 신원 및 현재 로그인 권한을 확인하고 있습니다.';
+      const health = await cgmaAuthenticatedApi('/cgma/board/api/health');
+      if (!health.ok || health.boardId !== 'site:cgma:main' || health.siteId !== 'cgma' || health.independent !== true)
+        throw new Error('CGMA 독립 게시판 신원 확인에 실패했습니다.');
+      const created = await cgmaAuthenticatedApi('/cgma/board/api/posts','POST',{title,body},201);
+      createdId = Number(created.id);
+      if (!Number.isSafeInteger(createdId) || createdId <= 0) {
+        createdId = null;
+        throw new Error('시험글 생성 ID 검증에 실패했습니다. 게시판 관리자 확인이 필요합니다.');
+      }
+      const itemPath = '/cgma/board/api/posts/' + createdId;
+      const read = await cgmaAuthenticatedApi(itemPath);
+      verifiedOwnPost = read.title === title && read.body === body;
+      if (!verifiedOwnPost) throw new Error('생성한 시험글의 신원 불일치로 후속 변경을 중지했습니다.');
+      feedback.textContent = '등록 확인 완료 · 시험글 수정 중 (' + createdId + ')';
+      const updatedTitle = title + ' / 수정 검증';
+      await cgmaAuthenticatedApi(itemPath, 'PATCH', {title:updatedTitle,body});
+      const updated = await cgmaAuthenticatedApi(itemPath);
+      if (updated.title !== updatedTitle || updated.body !== body)
+        throw new Error('시험글 수정 결과 검증에 실패했습니다.');
+      feedback.textContent = '수정 확인 완료 · 같은 시험글만 소프트삭제 중 (' + createdId + ')';
+      await cgmaAuthenticatedApi(itemPath,'DELETE');
+      deleted = true;
+      const removed = await cgmaAuthenticatedApi(itemPath, 'GET', undefined, 404);
+      if (removed.error !== 'not_found') throw new Error('시험글 삭제 뒤 404 검증에 실패했습니다.');
+      const list = await cgmaAuthenticatedApi('/cgma/board/api/posts');
+      if (!Array.isArray(list.items) || list.items.some(post => Number(post.id) === createdId))
+        throw new Error('소프트삭제한 시험글이 공개 목록에 남아 있습니다.');
+      feedback.textContent = '실서비스 검증 통과 · 시험글 #' + createdId +
+        ' 등록→수정→소프트삭제→공개 미노출 확인. 서버 감사기록은 별도 확인이 필요합니다.';
+    } catch(error) {
+      let cleanup = createdId ? '시험글 #' + createdId + ' 상태 확인 필요' : '시험글 ID 없음';
+      if (createdId && verifiedOwnPost && !deleted) {
+        try {
+          await cgmaAuthenticatedApi('/cgma/board/api/posts/' + createdId,'DELETE');
+          deleted = true;
+          cleanup = '시험글 #' + createdId + ' 정리 성공';
+        } catch {
+          cleanup = '시험글 #' + createdId + ' 정리 실패 — 관리자 수동 확인 필요';
+        }
+      }
+      feedback.textContent = '실증 실패: ' + (error?.message || '알 수 없는 오류') + ' · ' + cleanup;
+    } finally {
+      delete button.dataset.running;
+      renderNativeBrowserStatus();
     }
   }
 

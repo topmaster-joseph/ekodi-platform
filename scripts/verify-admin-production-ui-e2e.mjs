@@ -72,7 +72,7 @@ await page.route('**/api/control/overview', async route => {
   if (route.request().method() === 'OPTIONS') return route.fulfill(syntheticJson({ ok:true }));
   await route.fulfill(syntheticJson({ ok:true, services:[] }));
 });
-await page.route('https://ekodi.kr/api/control/common-services/ai/status', async route => {
+await page.route('https://ekodi.kr/ai/api/status', async route => {
   await route.fulfill(syntheticJson({
     ok:true,
     config:{ architectureVersion:'1.10.0', taskExecutionEnabled:false, branchAllocationEnabled:false },
@@ -80,10 +80,10 @@ await page.route('https://ekodi.kr/api/control/common-services/ai/status', async
     providers:[],
   }));
 });
-await page.route('https://ekodi.kr/api/control/common-services/ai/tasks', async route => {
+await page.route('https://ekodi.kr/ai/api/tasks', async route => {
   await route.fulfill(syntheticJson({ tasks:[] }));
 });
-await page.route('https://ekodi.kr/api/control/common-services/ai/nodes', async route => {
+await page.route('https://ekodi.kr/ai/api/nodes', async route => {
   await route.fulfill(syntheticJson({ nodes:[] }));
 });
 await page.route('https://ekodi.kr/api/control/messenger/inbox', async route => {
@@ -91,6 +91,9 @@ await page.route('https://ekodi.kr/api/control/messenger/inbox', async route => 
 });
 await page.route('https://ekodi.kr/api/control/ai/actions?limit=20', async route => {
   await route.fulfill(syntheticJson({ actions:[] }));
+});
+await page.route('https://ekodi.kr/api/control/ai/v8/orchestrator/human-gates?limit=20', async route => {
+  await route.fulfill(syntheticJson({ tasks:[] }));
 });
 // This synthetic UI-only session cannot access the real directory API. Mock only
 // its read-only response; production authorization rules stay completely intact.
@@ -115,6 +118,26 @@ async function waitForAdminShell() {
   await page.waitForFunction(expected => document.querySelectorAll('button[data-admin-global-group]').length >= expected, workAreas.length, { timeout: 30000 });
   await page.waitForFunction(() => document.querySelectorAll('.admin-context-source .nav').length >= 1, null, { timeout: 30000 });
   await page.waitForFunction(() => Boolean(document.documentElement.dataset.ekodiDesignEngine) && document.documentElement.dataset.ekodiDesignAudit === 'pass', null, { timeout: 30000 });
+}
+
+async function resetAdminShellIfPoisoned() {
+  const state = await page.evaluate(() => {
+    const app = document.querySelector('#app');
+    const style = app ? getComputedStyle(app) : null;
+    const rect = app?.getBoundingClientRect();
+    return {
+      ready: document.documentElement.dataset.ekodiAdminReady === 'true',
+      panels: Boolean(window.EKODIAdminPanels),
+      sidebar: Boolean(window.EKODIAdminSidebar),
+      token: Boolean(sessionStorage.getItem('ekodi-auth-token')),
+      visible: Boolean(app && !app.hidden && style?.display !== 'none' && style?.visibility !== 'hidden' && (rect?.width || 0) > 0 && (rect?.height || 0) > 0),
+    };
+  });
+  if (state.ready && state.panels && state.sidebar && state.token && state.visible) return false;
+  console.warn(`[PROD-E2E] Admin shell degraded; bounded reload recovery ${JSON.stringify(state)}`);
+  await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
+  await waitForAdminShell();
+  return true;
 }
 
 const response = await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
@@ -509,11 +532,11 @@ for (const [id, group] of menus) {
   console.log(`[PROD-E2E] ${id}: ok ${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}`);
   await page.screenshot({ path:path.join(artifactsDir,`menu-${id}.png`), fullPage:false });
 
-  // This verifier uses a synthetic UI-only token. Reload after each menu so a
-  // backend 401 from one lazy module cannot hide the shell and poison later UI checks.
-  await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
-  await waitForAdminShell();
-  selectedWorkArea = null;
+  // Keep menu verification on one authenticated shell. Full-page reloads are
+  // reserved for actual shell degradation so synthetic E2E cannot self-trigger
+  // Cloudflare 429 throttling or turn an optional service outage into shell failure.
+  const recoveredShell = await resetAdminShellIfPoisoned();
+  if (recoveredShell) selectedWorkArea = null;
 }
 
 const activeCount = results.filter(result => result.ok).length;

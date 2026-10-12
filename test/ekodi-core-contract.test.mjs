@@ -48,3 +48,16 @@ test('EKODI Core completion requires production, isolation, resilience, recovery
     'security-baseline-is-enforced',
   ]) assert.ok(gates.has(gate), `missing completion gate: ${gate}`);
 });
+
+
+test('MCP is optional and internal Core execution remains authoritative', async () => {
+  const core = await readJson('config/ekodi-core-contract.json');
+  assert.equal(core.connectionInterfaces.mcp.role, 'optional-external-control-interface');
+  assert.equal(core.connectionInterfaces.mcp.requiredForCoreExecution, false);
+  assert.equal(core.connectionInterfaces.mcp.unavailableBehavior, 'internal-execution-continues');
+  assert.equal(core.connectionInterfaces.mcp.canonicalPath, '/mcp');
+  assert.equal(core.connectionInterfaces.internalExecution.role, 'authoritative-core-execution-path');
+  assert.equal(core.connectionInterfaces.internalExecution.remainsAvailableWithoutMcp, true);
+  assert.ok(core.corePrinciples.includes('mcp-optional'));
+  assert.ok(core.completionGates.includes('mcp-outage-does-not-break-core-execution'));
+});

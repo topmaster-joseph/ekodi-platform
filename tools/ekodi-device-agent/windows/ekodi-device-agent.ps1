@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.5.3'
+$AgentVersion = '2.5.4'
 # Some remote/managed Windows sessions omit ProgramData from the process environment.
 # Resolve the canonical system data directory without changing machine-wide settings.
 if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
@@ -981,7 +981,7 @@ function Invoke-EkodiNativeCdpCanary {
   New-Item -ItemType Directory -Path $workerRoot -Force | Out-Null
   $workerPath = Join-Path $workerRoot 'ekodi-native-browser-cdp.mjs'
   # Immutable, reviewed source commit: never execute a URL supplied by a job payload.
-  $workerUrl = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/9787f9d5b531e8d30764502aba4f0f2a045ccf43/tools/ekodi-device-agent/windows/ekodi-native-browser-cdp.mjs'
+  $workerUrl = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/f6200d33031d7bfc42c8284e2ffa156cb51859da/tools/ekodi-device-agent/windows/ekodi-native-browser-cdp.mjs'
   $download = Join-Path $workerRoot ('candidate-' + [Guid]::NewGuid().ToString('N') + '.mjs')
   try {
     Invoke-WebRequest -UseBasicParsing -Uri $workerUrl -OutFile $download -TimeoutSec 20 -ErrorAction Stop
@@ -1009,7 +1009,26 @@ function Invoke-EkodiNativeCdpCanary {
   }
   $stdout = $stdoutTask.GetAwaiter().GetResult()
   $stderr = $stderrTask.GetAwaiter().GetResult()
-  if ($process.ExitCode -ne 0) { throw ('CDP_WORKER_FAILED: ' + $stderr.Substring(0,[Math]::Min(260,$stderr.Length))) }
+  if ($process.ExitCode -ne 0) {
+    # The native worker emits a fixed-category JSON receipt. Never forward raw
+    # stderr (which may contain local paths or private browser diagnostics).
+    $failureCode = 'CDP_WORKER_FAILED'
+    try {
+      $failure = $stderr.Trim() | ConvertFrom-Json -ErrorAction Stop
+      $candidate = [string]$failure.code
+      $allowedCodes = @(
+        'CDP_BROWSER_NOT_FOUND','CDP_BROWSER_EARLY_EXIT_ZERO',
+        'CDP_BROWSER_EARLY_EXIT_ACCESS','CDP_BROWSER_EARLY_EXIT_DEPENDENCY',
+        'CDP_BROWSER_EARLY_EXIT_POLICY','CDP_BROWSER_EARLY_EXIT_SANDBOX',
+        'CDP_BROWSER_EARLY_EXIT_UNKNOWN','CDP_PORT_TIMEOUT',
+        'CDP_PORT_INVALID','CDP_SOCKET_ERROR','CDP_SOCKET_TIMEOUT',
+        'CDP_COMMAND_TIMEOUT','CDP_DOM_EVIDENCE_MISSING',
+        'CDP_WORKER_WATCHDOG_TIMEOUT','CDP_BROWSER_UNEXPECTED_ERROR'
+      )
+      if ($allowedCodes -ccontains $candidate) { $failureCode = $candidate }
+    } catch { }
+    throw $failureCode
+  }
   try { $receipt = $stdout.Trim() | ConvertFrom-Json -ErrorAction Stop } catch { throw 'CDP_WORKER_INVALID_RECEIPT' }
   if ($receipt.ok -ne $true -or [int]$receipt.domBytes -le 0 -or [string]$receipt.url -ne $BrowserCanaryUrl -or [string]$receipt.mode -ne 'native-cdp') {
     throw 'CDP_WORKER_EVIDENCE_INVALID'
@@ -1518,7 +1537,73 @@ function Get-WindowsOptionalFeatureStateSafe([string]$Name) {
   }
 }
 
+function Invoke-EkodiUser2HyperVFeature {
+  param([bool]$Enable = $false)
+  if ([Environment]::MachineName -ine 'user2') { throw 'EKODI_HYPERV_USER2_ONLY' }
+  $firmware = @(Get-CimInstance Win32_Processor | Where-Object { $_.VirtualizationFirmwareEnabled -eq $true }).Count -gt 0
+  $feature = Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -ErrorAction SilentlyContinue
+  $state = if ($null -ne $feature) { [string]$feature.State } else { 'Unavailable' }
+  $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
+    [Security.Principal.WindowsBuiltInRole]::Administrator)
+  $changed = $false
+  if ($Enable) {
+    if (-not $admin) { throw 'EKODI_HYPERV_ELEVATION_REQUIRED' }
+    if (-not $firmware) { throw 'EKODI_HYPERV_FIRMWARE_NOT_READY' }
+    if ($state -eq 'Unavailable') { throw 'EKODI_HYPERV_FEATURE_NOT_AVAILABLE' }
+    if ($state -eq 'Disabled') {
+      # Explicitly approved USER2 feature enable only. No restart or base VM provisioning.
+      Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -All -NoRestart -ErrorAction Stop | Out-Null
+      $changed = $true
+      $feature = Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -ErrorAction Stop
+      $state = [string]$feature.State
+    } elseif ($state -notin @('Enabled','EnablePending')) {
+      throw 'EKODI_HYPERV_FEATURE_STATE_NOT_ELIGIBLE'
+    }
+  }
+  $module = [bool](Get-Command Get-VM -ErrorAction SilentlyContinue)
+  $base = $false
+  if ($module) {
+    try { $base = $null -ne (Get-VM -Name 'EKODI-Isolated-Base' -ErrorAction Stop) } catch {}
+  }
+  return @{
+    message = 'EKODI USER2 Hyper-V feature state inspected.'
+    hyperVPreparation = @{
+      schemaVersion = 1; targetAlias = 'user2'; firmwareVirtualizationEnabled = [bool]$firmware
+      hyperVState = $state; hyperVModuleAvailable = $module; baseVmPresent = $base
+      administrator = [bool]$admin; featureEnableRequested = [bool]$Enable
+      featureChanged = $changed; rebootPerformed = $false
+      rebootMayBeRequired = ($state -eq 'EnablePending')
+      guestExecutionAuthorized = $false
+      checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+    }
+  }
+}
+
 function Get-IsolatedDesktopBackendProbe {
+  # Edition and build are allowlisted; never export computer name, identity or OS keys.
+  $windowsEditionClass = 'unknown'
+  $windowsBuild = 0
+  try {
+    $windowsOs = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
+    $caption = [string]$windowsOs.Caption
+    if ($caption -match 'Server') {
+      $windowsEditionClass = 'server'
+    } elseif ($caption -match 'Enterprise') {
+      $windowsEditionClass = 'enterprise'
+    } elseif ($caption -match 'Education') {
+      $windowsEditionClass = 'education'
+    } elseif ($caption -match 'Pro(fessional)?') {
+      $windowsEditionClass = 'pro'
+    } elseif ($caption -match '(Home|Core)') {
+      $windowsEditionClass = 'home'
+    }
+    $parsedBuild = 0
+    if ([int]::TryParse([string]$windowsOs.BuildNumber, [ref]$parsedBuild)) {
+      if ($parsedBuild -gt 0 -and $parsedBuild -le 99999) {
+        $windowsBuild = $parsedBuild
+      }
+    }
+  } catch { }
   $virtualizationFirmwareEnabled = $false
   try {
     $processors = @(Get-CimInstance Win32_Processor -ErrorAction Stop)
@@ -1576,6 +1661,8 @@ function Get-IsolatedDesktopBackendProbe {
     routingPolicy = 'EKODI-VIRTUALIZATION-ROUTING-001'
     backendPolicy = 'EKODI-ISOLATED-DESKTOP-BACKEND-001'
     agentVersion = $AgentVersion
+    windowsEditionClass = $windowsEditionClass
+    windowsBuild = $windowsBuild
     virtualizationFirmwareEnabled = [bool]$virtualizationFirmwareEnabled
     hyperVState = $hyperVState
     hyperVPowerShellAvailable = [bool]$hyperVPowerShellAvailable
@@ -2739,6 +2826,8 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'computer.system.read' { return @{ message = '원격 컴퓨터 시스템 상태를 읽었습니다.'; system = Get-SystemSnapshot } }
     'computer.process.list' { return @{ message = '원격 컴퓨터 프로세스 목록을 읽었습니다.'; processes = Get-RemoteProcessList } }
     'computer.agent.status' { return @{ message = 'EKODI Native Remote Agent 상태를 읽었습니다.'; agent = Get-RemoteAgentStatus } }
+    'computer.hyperv.preflight' { return Invoke-EkodiUser2HyperVFeature -Enable $false }
+    'computer.hyperv.enable' { return Invoke-EkodiUser2HyperVFeature -Enable $true }
     'computer.desktop.probe' { return Invoke-IsolatedDesktopBackendProbe }
     'computer.desktop.canary' { return Invoke-IsolatedDesktopHyperVCanary }
     'computer.desktop.guest.canary' { return Invoke-IsolatedDesktopGuestRuntimeCanary }
@@ -2858,7 +2947,7 @@ function Send-Heartbeat($Config) {
     }
     settings = $settings
   } | ConvertTo-Json -Depth 10
-  Invoke-RestMethod -Method Post -Uri "$($Config.apiBase)/api/device-agent/heartbeat" -Headers (Get-AgentHeaders $Config) -ContentType 'application/json' -Body $body | Out-Null
+  Invoke-RestMethod -Method Post -Uri "$($Config.apiBase)/api/device-agent/heartbeat" -TimeoutSec 15 -Headers (Get-AgentHeaders $Config) -ContentType 'application/json' -Body $body | Out-Null
 }
 
 function Complete-Command($Config, [string]$CommandId, [bool]$Success, $Result) {
@@ -2867,7 +2956,7 @@ function Complete-Command($Config, [string]$CommandId, [bool]$Success, $Result) 
 }
 
 function Poll-Command($Config) {
-  $response = Invoke-RestMethod -Method Get -Uri "$($Config.apiBase)/api/device-agent/commands/next" -Headers (Get-AgentHeaders $Config)
+  $response = Invoke-RestMethod -Method Get -Uri "$($Config.apiBase)/api/device-agent/commands/next" -TimeoutSec 15 -Headers (Get-AgentHeaders $Config)
   if (-not $response.command) { return }
   try {
     $result = Invoke-DeviceCommand $response.command
@@ -2899,9 +2988,13 @@ function Stop-ExistingAgentProcesses {
 function Ensure-AgentTask {
   $userId = [Security.Principal.WindowsIdentity]::GetCurrent().Name
   $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$AgentPath`" -Run"
-  $trigger = New-ScheduledTaskTrigger -AtLogOn -User $userId
+  # Recover after an Agent process exit while the operator remains signed in.
+  # The existing global mutex prevents a second Agent instance from running.
+  $logonTrigger = New-ScheduledTaskTrigger -AtLogOn -User $userId
+  $recoveryTrigger = New-ScheduledTaskTrigger -Once -At ((Get-Date).AddMinutes(5)) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 3650)
   $principal = New-ScheduledTaskPrincipal -UserId $userId -LogonType Interactive -RunLevel Highest
-  Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Force | Out-Null
+  $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero)
+  Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger @($logonTrigger, $recoveryTrigger) -Principal $principal -Settings $settings -Force | Out-Null
 }
 
 function Copy-SelfToAgentPath {
@@ -3074,3 +3167,7 @@ try {
     $script:InstallMutex.Dispose()
   }
 }
+
+# EKODI protected USER2 Hyper-V release convergence; no implicit device mutation.
+
+# Owner-authored required CI after Orchestrator main synchronization.

@@ -16,6 +16,8 @@ on:
           - user3-upgrade-localai
           - user2-localai
           - user2-virtual-probe
+          - user2-browser-acceptance
+          - user2-hyperv-enable
           - user4-virtual-probe
           - user2-upgrade-localai
           - user4-acceptance
@@ -86,8 +88,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: device-agent-production-verification-${{ github.ref }}
-  cancel-in-progress: true
+  # Passive post-deploy observation must never cancel an owner-authorized USER4
+  # update or real-device acceptance dispatched by the EKODI Orchestrator.
+  group: device-agent-production-verification-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && inputs.execution_mode || 'passive' }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 jobs:
   contract:
@@ -157,7 +161,7 @@ jobs:
           node-version: '24'
 
       - name: EKODI AI Orchestration Gate for mutating verification
-        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user3-upgrade-localai' || inputs.execution_mode == 'user2-localai' || inputs.execution_mode == 'user2-virtual-probe' || inputs.execution_mode == 'user4-virtual-probe' || inputs.execution_mode == 'user2-upgrade-localai' || inputs.execution_mode == 'user4-acceptance')
+        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user3-upgrade-localai' || inputs.execution_mode == 'user2-localai' || inputs.execution_mode == 'user2-virtual-probe' || inputs.execution_mode == 'user2-browser-acceptance' || inputs.execution_mode == 'user2-hyperv-enable' || inputs.execution_mode == 'user4-virtual-probe' || inputs.execution_mode == 'user2-upgrade-localai' || inputs.execution_mode == 'user4-acceptance')
         env:
           EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
           EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
@@ -231,7 +235,7 @@ jobs:
       - name: Observe production native PC Agent heartbeat without issuing commands
         if: github.event_name != 'workflow_dispatch' || inputs.execution_mode != 'verify'
         env:
-          DEVICE_TARGET_HOSTNAME: 'user3'
+          DEVICE_TARGET_HOSTNAME: ${{ github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-virtual-probe' && 'user2' || 'user3' }}
         run: node scripts/observe-native-device-readiness.mjs
 
       - name: Verify bounded USER3 native agent status command with real receipt
@@ -279,6 +283,18 @@ jobs:
       - name: Select USER2 native safe alternative without authorizing guest desktop
         if: always() && github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-virtual-probe'
         run: node scripts/select-native-user2-safe-route.mjs
+
+      - name: Activate USER2 Hyper-V feature through native Agent without reboot
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-hyperv-enable'
+        env:
+          DEVICE_TARGET_HOSTNAME: 'user2'
+        run: node scripts/activate-native-user2-hyperv.mjs
+
+      - name: Verify USER2 native browser with real bounded CDP receipt
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-browser-acceptance'
+        env:
+          DEVICE_TARGET_HOSTNAME: 'user2'
+        run: node scripts/verify-native-user2-browser.mjs
 
       - name: Verify USER2 native Ollama loopback inference with real Windows receipt
         if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-localai'
@@ -362,3 +378,5 @@ jobs:
 # Trigger existing guarded Orchestrator convergence for USER2 acceptance.
 
 # Owner-authored CI recheck after guarded base synchronization.
+
+# Owner-authorized protected USER2 observation-target release convergence.

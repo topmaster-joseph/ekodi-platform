@@ -67,6 +67,9 @@ jobs:
         with:
           node-version: '24'
       - name: Collect previous UTC day by zone, host and traffic class
+        # Avoid exposing the independent GraphQL credential to any unrelated job.
+        env:
+          CLOUDFLARE_TRAFFIC_ANALYTICS_TOKEN: ${{ secrets.CLOUDFLARE_TRAFFIC_ANALYTICS_TOKEN }}
         shell: bash
         run: |
           set -uo pipefail
@@ -74,6 +77,8 @@ jobs:
           set +e
           node scripts/collect-traffic-intelligence.mjs "$sql_file"
           collector_status=$?
+          # Wrangler only needs the existing scoped deployment/D1 credential.
+          unset CLOUDFLARE_TRAFFIC_ANALYTICS_TOKEN
           set -e
           test -s "$sql_file" || { echo 'Traffic Intelligence SQL was not generated.'; exit 1; }
           npx --yes wrangler@4.127.1 d1 execute ekodi-auth \

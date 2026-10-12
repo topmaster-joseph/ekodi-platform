@@ -28,6 +28,7 @@ let observer=null;
 let scheduled=false;
 let noticeTimer=null;
 let readinessTimer=null;
+let readinessResolved=false;
 let catalogRequest=0;
 const translatedTextNodes=new Map();
 const translatedAttributes=new Map();
@@ -50,7 +51,7 @@ function parseLocales(value){
 function readyLocales(){return parseLocales(document.documentElement.dataset.ekodiReadyLocales||FALLBACK_LOCALE);}
 function isLocaleReady(locale){return readyLocales().includes(normalize(locale)||FALLBACK_LOCALE);}
 function visibleLanguages(){const ready=new Set(readyLocales());return SUPPORTED.filter(item=>ready.has(item.locale));}
-function languageChoiceAvailable(){return visibleLanguages().length>1;}
+function languageChoiceAvailable(){return readinessResolved&&visibleLanguages().length>1;}
 function readCookie(){
   try{
     const prefix=`${COOKIE_KEY}=`;
@@ -156,6 +157,7 @@ function apply(locale,{save=true,emit=true,notify=true,source='shared-user-shell
 }
 function setReadyLocales(locales){
   const ready=parseLocales(Array.isArray(locales)?locales.join(' '):locales);
+  readinessResolved=true;
   document.documentElement.dataset.ekodiReadyLocales=ready.join(' ');
   if(activeLocale!==FALLBACK_LOCALE&&!ready.includes(activeLocale))apply(activeLocale,{save:true,emit:true,notify:true,source:'readiness-change'});
   syncControls();
@@ -227,11 +229,16 @@ async function refreshRuntimeReadiness(){
   try{
     const url=`${I18N_API}/status?service=${encodeURIComponent(currentServiceId())}`;
     const response=await fetch(url,{headers:{accept:'application/json'},cache:'no-store',credentials:'omit'});
-    if(!response.ok)return;
+    if(!response.ok)throw new Error('language_readiness_http_error');
     const data=await response.json();
-    if(Array.isArray(data?.publishedLocales)&&data.publishedLocales.length)setReadyLocales(data.publishedLocales);
+    if(!Array.isArray(data?.publishedLocales))throw new Error('language_readiness_invalid');
+    setReadyLocales(data.publishedLocales);
     if(activeLocale!==FALLBACK_LOCALE)await refreshActiveCatalog(activeLocale);
-  }catch{}
+  }catch{
+    // LANG-UI-001: never retain stale published choices after readiness becomes unavailable.
+    // Keep Korean readable and let the next scheduled refresh restore validated languages.
+    setReadyLocales([FALLBACK_LOCALE]);
+  }
 }
 function header(){
   return document.querySelector('[data-ekodi-user-header-root]:not([data-ekodi-user-header-fallback]):not([data-ekodi-language-ignore])')||

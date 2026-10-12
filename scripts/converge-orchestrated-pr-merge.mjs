@@ -123,6 +123,9 @@ const shellRuntimeTouched=changedFiles.some(file=>
    'scripts/converge-orchestrated-pr-merge.mjs'].includes(file)
 );
 const sharedSiteTouched=changedFiles.some(file=>
+  // The EKODI public homepage is compiled into the shared Site Core. GITHUB_TOKEN
+  // merges do not trigger main push workflows: dispatch its guarded release here.
+  ['index.html','homepage-ambient.js','homepage-ambient.css'].includes(file)||
   // Shared administrator menu, canonical route registry and design contracts are production Site Core assets.
   ['admin-menu-registry.js','admin-sidebar.js','admin-canonical-routes.js','admin-menu-layout.js','admin-menu-layout.compact.js','admin-menu-runtime.js','admin-demand-loader.js','release-control-admin.js','system-health-admin.js','admin-design-engine.js','config/design-engine.json','config/admin-role-navigation.json'].includes(file)||
   file==='workspace-admin-page.js'||
@@ -185,6 +188,8 @@ const nativeUser2LocalAiTouched=changedFiles.some(file=>file==='scripts/verify-n
 const nativeUser3RecoveryTouched=changedFiles.some(file=>file==='scripts/recover-native-user3-localai.mjs');
 const nativeUser2RecoveryTouched=changedFiles.some(file=>file==='scripts/recover-native-user2-localai.mjs');
 const nativeUser2VirtualProbeTouched=changedFiles.some(file=>file==='scripts/verify-native-user2-virtual-probe.mjs');
+const nativeUser2BrowserTouched=changedFiles.some(file=>file==='scripts/verify-native-user2-browser.mjs');
+const nativeUser2HyperVEnableTouched=changedFiles.some(file=>file==='scripts/activate-native-user2-hyperv.mjs');
 const nativeUser4VirtualProbeTouched=changedFiles.some(file=>
   file==='scripts/verify-native-user4-virtual-probe.mjs' ||
   file==='scripts/select-native-user4-execution-route.mjs');
@@ -218,6 +223,24 @@ async function dispatchPostMergeDeploys(){
     console.log(JSON.stringify({ok:true,action:'native-user4-virtual-probe-dispatched',
       workflow:'device-agent-production-verification.yml',pr:pr.number,taskId,branch,
       authority:'ekodi-orchestrator'}));
+  }
+  if(nativeUser2HyperVEnableTouched){
+    const dispatched=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{
+      method:'POST',body:JSON.stringify({ref:'main',inputs:{
+        execution_mode:'user2-hyperv-enable',release_branch_ref:branch,release_task_id:taskId
+      }})
+    });
+    if(!dispatched.r.ok)fail('USER2 Hyper-V no-restart activation dispatch failed '+dispatched.r.status+' '+JSON.stringify(dispatched.data).slice(0,350));
+    console.log(JSON.stringify({ok:true,action:'native-user2-hyperv-enable-dispatched',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(nativeUser2BrowserTouched){
+    const dispatched=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{
+      method:'POST',body:JSON.stringify({ref:'main',inputs:{
+        execution_mode:'user2-browser-acceptance',release_branch_ref:branch,release_task_id:taskId
+      }})
+    });
+    if(!dispatched.r.ok)fail('USER2 native browser acceptance dispatch failed '+dispatched.r.status+' '+JSON.stringify(dispatched.data).slice(0,350));
+    console.log(JSON.stringify({ok:true,action:'native-user2-browser-dispatched',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(nativeUser2VirtualProbeTouched){
     const dispatched=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{

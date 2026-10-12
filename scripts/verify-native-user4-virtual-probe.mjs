@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {ensureUser4EditionProbeAgent} from './ensure-user4-edition-probe-agent.mjs';
 
 // Receipt-gated, read-only USER4 native Hyper-V readiness probe; never touches user desktop.
 const API='https://ekodi.kr/api/control/devices';
@@ -16,6 +17,10 @@ async function persistProbeEvidence(value){
 async function run(){
  const token=String(process.env.E2E_ADMIN_TOKEN||'');
  if(token.length<20)throw Error('trusted_admin_session_required');
+ // Agent-only official signed update, guarded by actual USER4 heartbeat, release
+ // cutover and command receipt. No Windows OS feature change or reboot is issued.
+ const update=await ensureUser4EditionProbeAgent({token});
+ console.log('[EKODI][USER4-EDITION-AGENT-UPDATE] '+JSON.stringify(update));
  async function req(path,method='GET',body){
   const r=await fetch(API+path,{method,redirect:'error',cache:'no-store',
    headers:{authorization:'Bearer '+token,accept:'application/json',...(body?{'content-type':'application/json'}:{})},
@@ -49,6 +54,10 @@ async function run(){
     targetAlias:'user4',commandId:out.id,receiptStatus:'succeeded',
     backendReady:proof.headlessBackendReady===true,
     backend:'hyper-v-ekodi-base',userDesktopAttached:false,
+    windowsEditionClass:['home','pro','enterprise','education','server'].includes(proof.windowsEditionClass)
+      ? proof.windowsEditionClass : 'unknown',
+    windowsBuild:Number.isSafeInteger(proof.windowsBuild) && proof.windowsBuild>0 && proof.windowsBuild<=99999
+      ? proof.windowsBuild : 0,
     virtualizationFirmwareEnabled:proof.virtualizationFirmwareEnabled===true,
     hyperVState:['Enabled','Disabled','EnablePending','DisablePending'].includes(proof.hyperVState)?proof.hyperVState:'unknown',
     hyperVPowerShellAvailable:proof.hyperVPowerShellAvailable===true,
