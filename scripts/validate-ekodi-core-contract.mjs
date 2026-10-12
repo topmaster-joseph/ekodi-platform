@@ -21,6 +21,12 @@ if (core.canonicalHost !== 'ekodi.kr') fail('canonical host must be ekodi.kr');
 if (core.canonicalPaths?.api !== '/api') fail('canonical API path must be /api');
 if (core.canonicalApiBase !== 'https://ekodi.kr/api') fail('canonical API base must be https://ekodi.kr/api');
 if (core.controlPlane?.platformId !== 'control-api') fail('control plane must be control-api');
+if (core.connectionInterfaces?.mcp?.role !== 'optional-external-control-interface') fail('MCP role must remain optional external control interface');
+if (core.connectionInterfaces?.mcp?.requiredForCoreExecution !== false) fail('MCP must never be required for Core execution');
+if (core.connectionInterfaces?.mcp?.unavailableBehavior !== 'internal-execution-continues') fail('MCP outage must preserve internal execution');
+if (core.connectionInterfaces?.mcp?.canonicalPath !== '/mcp') fail('MCP canonical path must remain /mcp');
+if (core.connectionInterfaces?.internalExecution?.role !== 'authoritative-core-execution-path') fail('internal execution must remain the authoritative Core execution path');
+if (core.connectionInterfaces?.internalExecution?.remainsAvailableWithoutMcp !== true) fail('internal execution must remain available without MCP');
 
 const controlApi = boundaries.platforms?.[core.controlPlane?.platformId];
 if (!controlApi) fail('control-api platform boundary is missing');
@@ -45,7 +51,8 @@ const requiredPrinciples = [
   'data-portability',
   'graceful-degradation',
   'observable-operations',
-  'human-agency'
+  'human-agency',
+  'mcp-optional'
 ];
 for (const principle of requiredPrinciples) {
   if (!core.corePrinciples?.includes(principle)) fail(`required Core principle is missing: ${principle}`);
@@ -58,7 +65,8 @@ const requiredCompletionGates = [
   'production-core-api-contract-is-live',
   'bounded-production-load-test-passes',
   'automatic-worker-rollback-contract-is-enforced',
-  'security-baseline-is-enforced'
+  'security-baseline-is-enforced',
+  'mcp-outage-does-not-break-core-execution'
 ];
 for (const gate of requiredCompletionGates) {
   if (!core.completionGates?.includes(gate)) fail(`required completion gate is missing: ${gate}`);
