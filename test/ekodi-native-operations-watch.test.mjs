@@ -24,6 +24,7 @@ function fakeFetch({monitor=okMonitor,failHealth=false,rateLimit=false}={}){
   const fetchImpl=async (url,options)=>{
     calls.push({url:String(url),options});
     if(rateLimit)return new Response('',{status:429});
+    if(url.endsWith('/cgma/board/api/health'))return json({ok:true,boardId:'site:cgma:main',siteId:'cgma',independent:true});
     if(url.endsWith('/api/health'))return failHealth?new Response('',{status:503}):json({ok:true});
     if(url.includes('/api/seonammedi/monitor'))return json(monitor);
     if(url.includes('/release-receipt?'))return json({ok:true,authorized:true,state:'completed'});
@@ -60,7 +61,9 @@ test('read-only EKODI watch calls only GET and retains no article bodies or toke
   const {fetchImpl,calls}=fakeFetch();
   const result=await collectEkodiNativeWatch({fetchImpl,githubToken:'secret-not-in-output',nowMs:now,mode:'daily'});
   assert.equal(result.result,'ok');
-  assert.equal(result.checks.length,7);
+  assert.equal(result.checks.length,9);
+  assert.ok(result.checks.some(x=>x.name==='cgma-independent-board'&&x.status==='ok'));
+  assert.ok(result.checks.some(x=>x.name==='cgma-board-health-watch.yml'&&x.status==='ok'));
   assert.equal(result.chatgptAutomationRequired,false);
   assert.equal(result.mutatesProduction,false);
   assert.equal(result.evidenceOnly.trafficNumbersRetrieved,false);
@@ -69,6 +72,29 @@ test('read-only EKODI watch calls only GET and retains no article bodies or toke
   assert.ok(calls.every(x=>x.options.redirect==='error'));
   assert.ok(!JSON.stringify(result).includes('secret-not-in-output'));
   assert.ok(!renderEkodiWatchSummary(result).includes('PRIVATE ARTICLE'));
+});
+
+test('CGMA scheduled watch missing or delayed beyond four hours is a real alert',()=>{
+  const noRuns=classifyWorkflow('cgma-board-health-watch.yml',{workflow_runs:[]},now);
+  assert.equal(noRuns.status,'alert');
+  const stale=classifyWorkflow('cgma-board-health-watch.yml',{
+    workflow_runs:[{id:300,event:'schedule',status:'completed',conclusion:'success',created_at:'2026-10-12T08:13:00Z'}]
+  },now);
+  assert.equal(stale.status,'alert');
+  assert.equal(stale.reason,'scheduled_run_stale');
+  assert.equal(stale.ageHours,4);
+  const running=classifyWorkflow('cgma-board-health-watch.yml',workflowRuns,now);
+  assert.equal(running.status,'ok');
+  assert.equal(classifyWorkflow('system-health-analytics.yml',{workflow_runs:[]},now).status,'warning');
+});
+
+test('CGMA board health verifies identity, not just a misleading ok flag',async()=>{
+  const {fetchImpl}=fakeFetch();
+  const bogus=async(url,options)=>url.endsWith('/cgma/board/api/health')?
+    json({ok:true,boardId:'site:another:main',siteId:'another',independent:true}):fetchImpl(url,options);
+  const report=await collectEkodiNativeWatch({fetchImpl:bogus,nowMs:now});
+  assert.equal(report.result,'attention');
+  assert.equal(report.checks.find(x=>x.name==='cgma-independent-board').reason,'board_identity_invalid');
 });
 
 test('provider 429 stops all further reads and preserves a deferred state',async()=>{
