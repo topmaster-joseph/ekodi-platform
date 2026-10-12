@@ -65,7 +65,7 @@ test('device browser diagnostics are mirrored under canonical /admin and verifie
   assert.match(workerFirst, /"!\/admin\/\*\.css"/);
   assert.match(diagnostics, /CACHE_ALLOWLIST/);
   assert.match(diagnostics, /registration\.update\(\)/);
-  assert.match(diagnostics, /현재 관리자 브라우저 진단/);
+  assert.match(diagnostics, /이 컴퓨터의 브라우저 점검/);
 
   for (const suffix of ['device-browser-diagnostics.js?v=device-v28','device-browser-diagnostics.css?v=device-v28']) {
     const request = manifest.worker.requests.find(item => item.url === `https://ekodi.kr/admin/${suffix}`);
