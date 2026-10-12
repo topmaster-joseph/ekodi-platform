@@ -89,3 +89,29 @@ test('Chrome then Edge failures remain categorically visible without raw stderr'
     }
   }),/CDP_BROWSER_EARLY_EXIT_POLICY/);
 });
+
+test('clean early exit retries once with a fresh compatible headless launch',async()=>{
+  const attempts=[];
+  const proof={ok:true,mode:'native-cdp',url:'https://ekodi.kr/',domBytes:333};
+  const result=await attemptNativeCanaryBrowsers({
+    browsers:['chrome.exe','msedge.exe'],
+    probe:async({browser,headlessMode})=>{
+      attempts.push({browser,headlessMode:headlessMode||'new'});
+      if(attempts.length===1)throw Error('CDP_BROWSER_EARLY_EXIT_ZERO');
+      return proof;
+    }
+  });
+  assert.deepEqual(result,proof);
+  assert.deepEqual(attempts,[{browser:'chrome.exe',headlessMode:'new'},{browser:'chrome.exe',headlessMode:'legacy'}]);
+});
+test('policy failure cannot be bypassed through alternate headless switch',async()=>{
+  const modes=[];
+  await assert.rejects(()=>attemptNativeCanaryBrowsers({
+    browsers:['chrome.exe'],
+    probe:async({headlessMode})=>{modes.push(headlessMode||'new');throw Error('CDP_BROWSER_EARLY_EXIT_POLICY');}
+  }),/CDP_BROWSER_EARLY_EXIT_POLICY/);
+  assert.deepEqual(modes,['new']);
+});
+test('unsupported CDP headless mode is refused before browser launch',async()=>{
+  await assert.rejects(()=>probeCdp({browser:'missing.exe',headlessMode:'untrusted'}),/CDP_HEADLESS_MODE_INVALID/);
+});
