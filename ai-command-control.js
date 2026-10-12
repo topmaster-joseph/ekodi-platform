@@ -169,8 +169,13 @@ export async function handleEkodiV8CommandControl(request, env) {
       return json(request, env, { ok:false, code:'INVALID_SOVEREIGNTY_PREVIEW' }, 400);
     }
     const statuses = providerStatus(env).filter(item => item?.id && item?.kind === 'official-api');
+    const readiness = await getEkodiProviderOperationalReadiness(env);
+    const idAliases = { 'openai-api':'openai', 'anthropic-api':'anthropic', 'gemini-free':'gemini' };
+    const healthById = new Map((readiness.providers || []).map(item => [item.id, item]));
+    const healthy = id => readiness.readinessBasis === 'verified-provider-health'
+      && healthById.get(idAliases[id] || id)?.operational === true;
     const providers = statuses.map(item => ({
-      id:item.id, available:item.available === true, automationAllowed:true,
+      id:item.id, available:item.available === true && healthy(item.id), automationAllowed:true,
       trustClass:'external', costClass:item.costClass, priority:100,
     }));
     const suggestions = findReusableComposition(text(body.goal || body.capabilityId, 500), 5)
@@ -185,12 +190,13 @@ export async function handleEkodiV8CommandControl(request, env) {
       providers,
     });
     const connections = statuses.map(item => sanitizeAiConnectionStatus({
-      id:item.id, available:item.available === true,
+      id:item.id, available:item.available === true, configured:item.configured === true,
+      healthVerified:healthy(item.id),
       authMethod:item.configured ? 'api-key' : 'unconfigured',
     }));
     return json(request, env, { ok:true, previewOnly:true, executionAuthorized:false,
       decision, connections, reusableSuggestions:suggestions,
-      notice:'Suggestions are unverified matches, not authority to execute. Local provider verification is not yet wired.' });
+      notice:'Provider configured status is not proof of healthy connection. Reuse suggestions are not execution authority. Local provider verification is not yet wired.' });
   }
 
   // Official first-party task submission; creates a genuine Orchestrator task/branch
