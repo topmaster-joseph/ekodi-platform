@@ -434,7 +434,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  WRANGLER_VERSION: '4.127.1'
+  WRANGLER_VERSION: '4.149.0'
 
 jobs:
   validate:
@@ -587,7 +587,27 @@ jobs:
       - name: Apply all migrations to isolated Control staging
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.api.staging.runtime.toml
       - name: Deploy isolated Control staging
-        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.api.staging.runtime.toml
+        shell: bash
+        run: |
+          set -euo pipefail
+          max_attempts=3
+          for attempt in $(seq 1 "$max_attempts"); do
+            set +e
+            output=$(npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.api.staging.runtime.toml 2>&1)
+            rc=$?
+            set -e
+            printf '%s\n' "$output"
+            if [[ "$rc" -eq 0 ]]; then
+              break
+            fi
+            if [[ "$attempt" -ge "$max_attempts" ]]; then
+              exit "$rc"
+            fi
+            if ! grep -Eiq 'malformed response|internal server error|HTTP (5[0-9][0-9])|status code (5[0-9][0-9])|network|socket|timed out|timeout|ECONNRESET|EAI_AGAIN' <<< "$output"; then
+              exit "$rc"
+            fi
+            sleep $((attempt * 15))
+          done
       - name: Verify Personal Finance Control service binding in staging
         shell: bash
         run: |
