@@ -63,7 +63,8 @@
       "Core business functions must remain usable when every external AI provider is unavailable.",
       "Browser clients must not depend on direct provider credentials.",
       "AI providers are replaceable adapters, not system-of-record dependencies.",
-      "Privileged AI actions remain governed, observable and reversible where feasible."
+      "Privileged AI actions remain governed, observable and reversible where feasible.",
+      "MCP is an optional external control interface and must never be a runtime prerequisite for EKODI Core execution, recovery, deployment handoff, or native browser execution."
     ]
   },
   "providerIndependence": {
@@ -85,7 +86,8 @@
     "graceful-degradation",
     "observable-operations",
     "human-agency",
-    "standardized-connections"
+    "standardized-connections",
+    "mcp-optional"
   ],
   "completionGates": [
     "core-contract-validation-passes",
@@ -101,7 +103,8 @@
     "bounded-production-load-test-passes",
     "automatic-worker-rollback-contract-is-enforced",
     "d1-recovery-point-is-captured-before-control-release",
-    "security-baseline-is-enforced"
+    "security-baseline-is-enforced",
+    "mcp-outage-does-not-break-core-execution"
   ],
   "canonicalHost": "ekodi.kr",
   "canonicalPaths": {
@@ -110,5 +113,17 @@
     "auth": "/auth",
     "mcp": "/mcp"
   },
-  "canonicalApiBase": "https://ekodi.kr/api"
+  "canonicalApiBase": "https://ekodi.kr/api",
+  "connectionInterfaces": {
+    "mcp": {
+      "role": "optional-external-control-interface",
+      "requiredForCoreExecution": false,
+      "unavailableBehavior": "internal-execution-continues",
+      "canonicalPath": "/mcp"
+    },
+    "internalExecution": {
+      "role": "authoritative-core-execution-path",
+      "remainsAvailableWithoutMcp": true
+    }
+  }
 }

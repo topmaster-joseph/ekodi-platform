@@ -47,3 +47,10 @@ test('generated administrator JS remains parseable',async()=>{
   const script=await workspaceAdminScript().text();
   assert.doesNotThrow(()=>new Function(script));
 });
+
+test('same Google email belonging to unrelated registry must not mark the account OAuth-linked',()=>{
+  const cross={...authorized,metadata:{registryConnectionId:'other',authorizedEmail:account.loginHint}};
+  const html=renderAccountRows([account],[cross]);
+  assert.match(html,/OAuth 확인 필요/);
+  assert.doesNotMatch(html,/관리자 로그인으로 사용/);
+});
