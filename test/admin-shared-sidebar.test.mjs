@@ -166,14 +166,18 @@ test('site-management workbench keeps operational text above miniature-preview d
   assert.match(sidebar, /#campusSiteGroups \.campus-homepage-state small\{[^}]*font-size:11px!important/);
 });
 
-test('menu labels and tab state are repaired when features are installed or sections change', () => {
-  assert.match(sidebar, /MutationObserver\(schedule\)/);
-  assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: false \}\)/);
+test('menu labels and nested detail drift are repaired without observer recursion', () => {
+  assert.match(sidebar, /function sidebarDetailsDrifted\(nav\)/);
+  assert.match(sidebar, /expected\.some\(id => !rendered\.has\(id\)\)/);
+  assert.match(sidebar, /const directNavChanged = mutations\.some\(mutation => mutation\.target === nav\)/);
+  assert.match(sidebar, /const nestedDetailChanged = mutations\.some/);
+  assert.match(sidebar, /nestedDetailChanged && sidebarDetailsDrifted\(nav\)/);
+  assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: true \}\)/);
+  assert.match(sidebar, /if \(queued \|\| syncing\) return/);
   assert.match(sidebar, /ekodi-nav-changed/);
   assert.match(sidebar, /ekodi-feature-installed/);
   assert.match(sidebar, /ekodi-admin-section-changed/);
   assert.match(sidebar, /window\.EKODIAdminMenu\?\.locale\?\.\(\)/);
-  assert.doesNotMatch(sidebar, /subtree: true/);
 });
 
 
@@ -261,4 +265,16 @@ test('focused work area renders its submenu synchronously before lazy panel acti
   const sync=click.indexOf('syncWorkbenchState(nav, readAdminSidebarLocale(), currentSection)');
   const activate=click.indexOf('activateSection(nav, defaultSection)');
   assert.ok(focus>=0&&sync>focus&&activate>sync);
+});
+
+
+test('services aliases remain expected during nested drift repair', () => {
+  const helper = sidebar.slice(
+    sidebar.indexOf('function sidebarDetailsDrifted(nav)'),
+    sidebar.indexOf('function syncWorkbenchState', sidebar.indexOf('function sidebarDetailsDrifted(nav)')),
+  );
+  assert.match(helper, /const ids = availableIds\(nav, group\)/);
+  assert.match(helper, /const primaryOrder = PRIMARY_SECTIONS\[group\] \|\| \[\]/);
+  assert.match(helper, /const expected = expanded \? ids : primary/);
+  assert.match(sidebar, /services: \['engine-all', 'engine-core', 'engine-common'/);
 });
