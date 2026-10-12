@@ -1006,9 +1006,9 @@ async function importTimelineFromLink(request,env,auth,{preview=false}={}){
   if(previous)return json({ok:true,id:Number(previous.id),duplicate:true,status:previous.status,item},200);
   const now=new Date().toISOString();
   const links=[{url:item.sourceUrl,label:item.publisher+' 원문',source:item.publisher}];
-  const result=await env.DB.prepare(\`INSERT OR IGNORE INTO seonammedi_timeline
+  const result=await env.DB.prepare(`INSERT OR IGNORE INTO seonammedi_timeline
     (legacy_key,event_date,category,title,summary,evidence,links_json,media_json,monitor_keywords_json,status,sort_order,created_by,created_at,updated_at)
-    VALUES(?,?,?,?,?,?,?,'[]','[]',?,0,?,?,?)\`)
+    VALUES(?,?,?,?,?,?,?,'[]','[]',?,0,?,?,?)`)
     .bind(legacyKey,item.date,item.category,item.title,item.summary,item.publisher+' · 원문 내용 확인',JSON.stringify(links),status,auth.email,now,now).run();
   const id=Number(result?.meta?.last_row_id||0);
   if(!id){
