@@ -65,8 +65,13 @@
         const submitted=await api('/api/control/ai/v8/orchestrator/submit',{method:'POST',body:JSON.stringify({
           intent:message,risk:'high',deploymentRequested:true,idempotencyKey,service:'control'
         })});
+        if(submitted?.accepted!==true || submitted?.deploymentAuthorized===true){
+          throw new Error('공식 오케스트레이터 접수 상태를 검증하지 못했습니다.');
+        }
         const taskId=String(submitted.taskId||'');
         const taskStatus=String(submitted.state||'queued');
+        // This opt-in applies to one submitted command only.
+        if($('#orchestratorRelease'))$('#orchestratorRelease').checked=false;
         const reply='EKODI 공식 오케스트레이터 작업 접수: '+taskId+
           '\n작업 브랜치: '+String(submitted.branchRef||'없음')+
           '\n현재 상태: '+statusLabel(taskStatus)+
