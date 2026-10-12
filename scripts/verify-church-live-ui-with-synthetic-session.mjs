@@ -58,7 +58,17 @@ try {
     return {scheduleExists:!!s,classes:s?.className||'',scheduleRect:s?.getBoundingClientRect().toJSON(),
       linkHidden:el?.hidden,linkDisplay:el?getComputedStyle(el).display:'',
       scriptLoaded:[...document.scripts].some(x=>x.src.includes('script.js')),
-      readyState:document.readyState,scrollY,viewportHeight:innerHeight};
+      readyState:document.readyState,scrollY,viewportHeight:innerHeight,
+      ancestors:(()=>{
+        const out=[];let p=el;
+        while(p&&out.length<9){
+          const cs=getComputedStyle(p);
+          out.push({node:p.tagName,classes:p.className,display:cs.display,visibility:cs.visibility,
+            opacity:cs.opacity,rect:p.getBoundingClientRect().toJSON()});
+          p=p.parentElement;
+        }
+        return out;
+      })()};
   });
   console.log('EKODI_CHURCH_SCHEDULE_DIAGNOSTIC='+JSON.stringify({schedule:evidence.worshipSchedule,pageErrors:evidence.pageErrors}));
   assert.equal(await link.isVisible(),false,'guest must never see management link');
