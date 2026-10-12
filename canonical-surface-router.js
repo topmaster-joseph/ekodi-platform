@@ -9,6 +9,15 @@ const PUBLIC_EXECUTION_SURFACES=PLATFORM_EXECUTION_SURFACES;
 const CANONICAL_HOST_PATHS=PLATFORM_LEGACY_HOST_PATHS;
 const PUBLIC_PERSON_PATH_RE=/^\/@[a-z0-9][a-z0-9._-]{2,39}\/?$/;
 const PERSON_DIGITAL_CARD_PATH_RE=/^\/[a-z0-9][a-z0-9._-]{2,39}\/(?:card(?:\.vcf|\/exchange)?|qr)\/?$/;
+const PERSON_DIGITAL_CARD_SHORT_PATH_RE=/^\/([a-z0-9][a-z0-9_-]{2,39})\/?$/;
+// Top-level personal aliases are opt-in so existing/future EKODI service slugs can
+// never be shadowed by a public-profile handle. Add aliases only after collision review.
+const PERSON_DIGITAL_CARD_SHORT_HANDLES=new Set(['joseph']);
+function shortDigitalCardHandle(pathname){
+  const match=String(pathname||'').match(PERSON_DIGITAL_CARD_SHORT_PATH_RE);
+  const handle=match?.[1]||'';
+  return PERSON_DIGITAL_CARD_SHORT_HANDLES.has(handle)?handle:'';
+}
 const PERSONAL_FINANCE_CONTROL_PATH='/api/control/personal-finance';
 const PUBLIC_CONTROL_PREVIEW_PATH='/api/public/preview/map';
 const PUBLIC_CONTROL_PREVIEW_CACHE='public, max-age=15, s-maxage=30, stale-while-revalidate=60';
@@ -311,6 +320,9 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
   if(path==='/mcp'||path.startsWith('/api/')||path==='/api'||path.startsWith('/webhooks/')||path==='/health'||path==='/.well-known/oauth-protected-resource'){
     return proxyBinding(request,env?.CONTROL_API,'','system');
   }
+  // Human-readable digital-card alias. Known EKODI services and system paths are
+  // resolved above this point, so a short personal handle cannot shadow them.
+  if(shortDigitalCardHandle(path))return proxyBinding(request,env?.MY,'','person-digital-card-short');
   return null;
 }
 export const EKODI_CANONICAL_SURFACES=Object.freeze({

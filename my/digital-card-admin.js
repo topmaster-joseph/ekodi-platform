@@ -248,8 +248,8 @@ function showCardLinks(profile={}){
   const handle=String(profile.handle||''),visible=profile.visibility==='public'&&handle;
   for(const el of [fields.link,fields.qrLink])if(el)el.hidden=!visible;
   if(visible){
-    fields.link.href=`https://ekodi.kr/${handle}/card`;
-    fields.link.textContent=`공유 페이지 · ekodi.kr/${handle}/card →`;
+    fields.link.href=`https://ekodi.kr/${handle}`;
+    fields.link.textContent=`대표 공유주소 · ekodi.kr/${handle} →`;
     fields.qrLink.href=`https://ekodi.kr/${handle}/qr`;
     fields.qrLink.textContent=`QR 공유센터 · ekodi.kr/${handle}/qr →`;
   }
