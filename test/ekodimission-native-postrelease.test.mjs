@@ -27,6 +27,17 @@ test('Mission postrelease canary uses EKODI-owned browser on both phone and desk
 
 });
 
+test('Each native canary job itself refuses PR schema-validation completions',()=>{
+  const jobs=['native-mobile','native-desktop'];
+  const desired="github.event.workflow_run.event == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')";
+  for(const job of jobs){
+    const section=workflow.split('  '+job+':\\n')[1]?.split(/\\n  [a-z][a-z-]*:\\n/)[0]||'';
+    assert.ok(section,'Native job not present: '+job);
+    assert.ok(section.includes(desired),'No production trigger guard inside '+job);
+    assert.ok(!section.includes("github.event.workflow_run.event == 'pull_request'"),'PR-only validation cannot trigger '+job);
+  }
+});
+
 test('Mission live browser smoke is bounded read-only and does not expose user credentials',()=>{
   assert.equal(policy.status,'enforced');
   assert.equal(policy.owner,'ekodi-orchestrator');
