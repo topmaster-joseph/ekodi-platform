@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  allowedDocumentUrl, normalizeConnectionRequest, safeEvidenceUrl,
+  allowedDocumentUrl, allowedSubresourceUrl, normalizeConnectionRequest, safeEvidenceUrl,
   classifyPage, browserPaths, runBrowserConnection,
 } from '../tools/ekodi-device-agent/windows/ekodi-owned-browser-connector.mjs';
 
@@ -39,6 +39,19 @@ test('browser documents remain within canonical site or owned GitHub repo', () =
   ]) assert.equal(allowedDocumentUrl(url, 'github-pr'), false, url);
   assert.equal(allowedDocumentUrl('https://ekodi.kr/admin/control', 'ekodi-site'), true);
   assert.equal(allowedDocumentUrl('https://ekodi.kr.evil.tld/admin', 'ekodi-site'), false);
+});
+
+test('subresource requests cannot hit localhost or unrelated accounts', () => {
+  assert.equal(allowedSubresourceUrl('https://github.githubassets.com/assets/app.js', 'github-pr'), true);
+  assert.equal(allowedSubresourceUrl('https://avatars.githubusercontent.com/u/123', 'github-pr'), true);
+  assert.equal(allowedSubresourceUrl('https://fonts.gstatic.com/s/font.woff2', 'ekodi-site'), true);
+  for (const url of [
+    'http://127.0.0.1:8000/', 'http://169.254.169.254/latest/meta-data',
+    'https://localhost/admin', 'https://github.githubassets.com.evil.tld/file',
+    'https://attacker.example/receive',
+    'file:///C:/Users/secret.txt',
+  ]) assert.equal(allowedSubresourceUrl(url, 'github-pr'), false, url);
+  assert.equal(allowedSubresourceUrl('https://github.com/topmaster-joseph/ekodi-platform', 'ekodi-site'), false);
 });
 
 test('browser receipts never publish URL query credentials', () => {
