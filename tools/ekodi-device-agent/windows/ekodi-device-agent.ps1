@@ -2947,7 +2947,7 @@ function Send-Heartbeat($Config) {
     }
     settings = $settings
   } | ConvertTo-Json -Depth 10
-  Invoke-RestMethod -Method Post -Uri "$($Config.apiBase)/api/device-agent/heartbeat" -Headers (Get-AgentHeaders $Config) -ContentType 'application/json' -Body $body | Out-Null
+  Invoke-RestMethod -Method Post -Uri "$($Config.apiBase)/api/device-agent/heartbeat" -TimeoutSec 15 -Headers (Get-AgentHeaders $Config) -ContentType 'application/json' -Body $body | Out-Null
 }
 
 function Complete-Command($Config, [string]$CommandId, [bool]$Success, $Result) {
@@ -2956,7 +2956,7 @@ function Complete-Command($Config, [string]$CommandId, [bool]$Success, $Result) 
 }
 
 function Poll-Command($Config) {
-  $response = Invoke-RestMethod -Method Get -Uri "$($Config.apiBase)/api/device-agent/commands/next" -Headers (Get-AgentHeaders $Config)
+  $response = Invoke-RestMethod -Method Get -Uri "$($Config.apiBase)/api/device-agent/commands/next" -TimeoutSec 15 -Headers (Get-AgentHeaders $Config)
   if (-not $response.command) { return }
   try {
     $result = Invoke-DeviceCommand $response.command
@@ -2988,9 +2988,13 @@ function Stop-ExistingAgentProcesses {
 function Ensure-AgentTask {
   $userId = [Security.Principal.WindowsIdentity]::GetCurrent().Name
   $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$AgentPath`" -Run"
-  $trigger = New-ScheduledTaskTrigger -AtLogOn -User $userId
+  # Recover after an Agent process exit while the operator remains signed in.
+  # The existing global mutex prevents a second Agent instance from running.
+  $logonTrigger = New-ScheduledTaskTrigger -AtLogOn -User $userId
+  $recoveryTrigger = New-ScheduledTaskTrigger -Once -At ((Get-Date).AddMinutes(5)) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 3650)
   $principal = New-ScheduledTaskPrincipal -UserId $userId -LogonType Interactive -RunLevel Highest
-  Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Force | Out-Null
+  $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero)
+  Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger @($logonTrigger, $recoveryTrigger) -Principal $principal -Settings $settings -Force | Out-Null
 }
 
 function Copy-SelfToAgentPath {
