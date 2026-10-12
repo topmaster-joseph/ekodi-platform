@@ -75,3 +75,14 @@ test('continuity workflow is receipt-gated, bounded, and never bypasses guarded 
   assert.doesNotMatch(script, /\/pulls\/.*\/merge/);
   assert.doesNotMatch(script, /guarded-worker-release|guarded-pages-release|wrangler deploy/);
 });
+
+test('replay grace period is measured from job completion rather than initial queue time', () => {
+  const justCompleted = {
+    ...run('cancelled', 'push', '2026-10-12T07:00:00Z'),
+    updated_at: '2026-10-12T08:55:00Z',
+  };
+  assert.equal(decideContinuityReplay(original(), [justCompleted], now, repo).reason, 'within-event-grace-period');
+  assert.equal(decideContinuityReplay(original(), [
+    { ...justCompleted, updated_at: '2026-10-12T08:00:00Z' },
+  ], now, repo).reason, 'recover-transient-run');
+});
