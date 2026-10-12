@@ -206,13 +206,22 @@ export async function verifyUser4BrowserWithRetry(options={}, verify=verifyUser4
 }
 
 export async function verifyUser4Acceptance(options={}){
-  // Dispatch both independent canaries while the exact USER4 Agent heartbeat is
-  // fresh; a slow browser task must not delay Ollama eligibility discovery.
-  // EKODI Device Agent owns scheduling and may execute commands sequentially.
-  const outcomes=await Promise.allSettled([
-    verifyUser4BrowserWithRetry(options),
-    verifyNativeLocalAi({...options,hostname:'user4'})
-  ]);
+  // USER4's small Ollama model was ready before two simultaneous Browser/AI
+  // runs returned native_localai_inference_not_ready. Avoid competing for memory
+  // and CPU: finish local inference first, then run the independently validated
+  // CDP browser. Even on AI failure, collect the browser receipt fail-closed.
+  const outcomes=[null,null];
+  try {
+    outcomes[1]={status:'fulfilled',
+      value:await verifyNativeLocalAi({...options,hostname:'user4'})};
+  } catch (reason) {
+    outcomes[1]={status:'rejected',reason};
+  }
+  try {
+    outcomes[0]={status:'fulfilled',value:await verifyUser4BrowserWithRetry(options)};
+  } catch (reason) {
+    outcomes[0]={status:'rejected',reason};
+  }
   const browser=outcomes[0].status==='fulfilled'?outcomes[0].value:null;
   const localAi=outcomes[1].status==='fulfilled'?outcomes[1].value:null;
   const failures=[];
