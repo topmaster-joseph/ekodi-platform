@@ -11,6 +11,7 @@ const REPO='ekodi-platform';
 const BASE='https://api.github.com/repos/'+OWNER+'/'+REPO;
 const MONITOR='https://seonammedi.kr/api/seonammedi/monitor';
 const HEALTH='https://ekodi.kr/api/health';
+const CGMA_BOARD_HEALTH='https://ekodi.kr/cgma/board/api/health';
 const RELEASE_TASK='orch_recovery_f4624c3042fe9cd7054e31586f4613f2';
 const RELEASE_BRANCH='ai/gpt6/'+RELEASE_TASK;
 const RECEIPT='https://ekodi.kr/api/orchestrator/release-receipt?taskId='+RELEASE_TASK+'&branchRef='+encodeURIComponent(RELEASE_BRANCH);
@@ -18,6 +19,7 @@ const WORKFLOWS=Object.freeze([
   'data-store-readonly-watch.yml',
   'reconcile-orchestrator-completions.yml',
   'system-health-analytics.yml',
+  'cgma-board-health-watch.yml',
 ]);
 const compact=value=>String(value??'').slice(0,120);
 const check=(name,status,reason='',details={})=>({name,status,...(reason?{reason}:{}),...details});
@@ -42,17 +44,19 @@ export function classifySeonamMediMonitor(payload,nowMs=Date.now()){
 export function classifyWorkflow(name,data,nowMs=Date.now()){
   const all=Array.isArray(data?.workflow_runs)?data.workflow_runs:[];
   const recent=all.find(x=>x.event==='schedule'||x.event==='workflow_dispatch'||x.event==='workflow_run');
-  if(!recent)return check(name,'warning','no_confirmed_execution');
+  const cgmaHourly=name==='cgma-board-health-watch.yml';
+  if(!recent)return check(name,cgmaHourly?'alert':'warning','no_confirmed_execution');
   const stamp=Date.parse(recent.created_at||'');
   const details={runId:Number(recent.id)||null,conclusion:compact(recent.conclusion||recent.status),
     event:compact(recent.event),url:compact(recent.html_url)};
   // Skipped workflow_run invocations can be intentionally filtered; only
   // the authoritative scheduled/workflow_dispatch jobs count as evidence.
   const authoritative=all.find(x=>['schedule','workflow_dispatch'].includes(x.event));
-  if(!authoritative)return check(name,'warning','no_scheduled_run_evidence',details);
+  if(!authoritative)return check(name,cgmaHourly?'alert':'warning','no_scheduled_run_evidence',details);
   const age=nowMs-Date.parse(authoritative.created_at||'');
-  if(!Number.isFinite(age)||age>36*3600000)return check(name,'warning','scheduled_run_stale',
-    {runId:Number(authoritative.id)||null});
+  const maximumAgeMs=cgmaHourly?4*3600000:36*3600000;
+  if(!Number.isFinite(age)||age>maximumAgeMs)return check(name,cgmaHourly?'alert':'warning','scheduled_run_stale',
+    {runId:Number(authoritative.id)||null,ageHours:Number.isFinite(age)?Math.floor(age/3600000):null});
   if(authoritative.status==='completed'&&authoritative.conclusion==='failure')
     return check(name,'alert','scheduled_workflow_failed',{runId:Number(authoritative.id)||null});
   if(authoritative.status!=='completed')return check(name,'warning','scheduled_workflow_in_progress',
@@ -92,6 +96,14 @@ export async function collectEkodiNativeWatch({
     check('canonical-ekodi-health','ok'):check('canonical-ekodi-health','alert',
       health.reason||'invalid_health_contract'));
   if(health.circuitOpen){report.circuitOpen=true;report.result='deferred';return report}
+  // Independent CGMA board identity must be checked even if GitHub's schedule stalls.
+  // This is a public GET-only health read; no administrator credentials are used.
+  const cgma=await get(CGMA_BOARD_HEALTH);
+  const cgmaHealthy=cgma.ok&&cgma.data?.ok===true&&cgma.data?.boardId==='site:cgma:main'&&
+    cgma.data?.siteId==='cgma'&&cgma.data?.independent===true;
+  report.checks.push(cgmaHealthy?check('cgma-independent-board','ok'):
+    check('cgma-independent-board','alert',cgma.reason||'board_identity_invalid'));
+  if(cgma.circuitOpen){report.circuitOpen=true;report.result='deferred';return report}
   const feed=await get(MONITOR);
   report.checks.push(feed.ok?classifySeonamMediMonitor(feed.data,nowMs):
     check('seonammedi-hourly','alert',feed.reason));
