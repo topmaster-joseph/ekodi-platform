@@ -201,7 +201,7 @@
     $('#commandInput').addEventListener('input',resizeInput);
     $('#commandInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#commandForm').requestSubmit()}});
     $$('[data-prompt]').forEach(b=>b.onclick=()=>{$('#commandInput').value=b.dataset.prompt;resizeInput();$('#commandInput').focus()});
-    $('[data-refresh]').forEach(b=>b.onclick=()=>{if(b.closest('#viewTasks')){void refreshTasks();return}renderPanels();toast('브라우저에 저장된 기록을 다시 표시했습니다.')});
+    $$('[data-refresh]').forEach(b=>b.onclick=()=>{if(b.closest('#viewTasks')){void refreshTasks();return}renderPanels();toast('브라우저에 저장된 기록을 다시 표시했습니다.')});
     // Avoid continuous polling: reconcile durable task states only when the
     // operator returns to a visible Tasks view. No request runs in background.
     document.addEventListener('visibilitychange',()=>{
