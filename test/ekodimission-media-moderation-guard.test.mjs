@@ -112,3 +112,12 @@ test('one-time guarded postmerge replay requires two real orchestrator receipts 
   assert.match(flow,/\.merged_at != null/,'Follow-up release must be merged before replay');
   assert.match(flow,/ -f ref=main/,'Only the reviewed main workflow may deploy schema');
 });
+
+test('production receipt verifier uses mutually exclusive curl flags',()=>{
+  const workflow=readFileSync(new URL('../.github/workflows/deploy-activity-public-share-schema.yml',import.meta.url),'utf8');
+  assert.match(workflow,/curl --fail-with-body -sS --retry 3 --max-time 15/);
+  assert.equal((workflow.match(/curl --fail-with-body -sS/g)||[]).length,1,'Only one receipt curl uses the verified flag combination');
+  assert.doesNotMatch(workflow,/curl --fail-with-body\s+-f(?:s|S|\b)/);
+  assert.doesNotMatch(workflow,/--fail-with-body[^\n]*\s-fsS/,'Receipt command must not combine two curl failure modes');
+  assert.match(workflow,/\.authorized == true and \.taskId == \$task and \.branchRef == \$branch/);
+});
