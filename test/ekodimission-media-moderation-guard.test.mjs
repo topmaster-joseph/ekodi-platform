@@ -116,6 +116,7 @@ test('one-time guarded postmerge replay requires two real orchestrator receipts 
 test('production receipt verifier uses mutually exclusive curl flags',()=>{
   const workflow=readFileSync(new URL('../.github/workflows/deploy-activity-public-share-schema.yml',import.meta.url),'utf8');
   assert.match(workflow,/curl --fail-with-body -sS --retry 3 --max-time 15/);
+  assert.equal((workflow.match(/curl --fail-with-body -sS/g)||[]).length,1,'Only one receipt curl uses the verified flag combination');
   assert.doesNotMatch(workflow,/curl --fail-with-body\s+-f(?:s|S|\b)/);
   assert.match(workflow,/\.authorized == true and \.taskId == \$task and \.branchRef == \$branch/);
 });
