@@ -1,3 +1,4 @@
+import { renderProductDiscoveryJsonLd } from './product-discovery.mjs';
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -206,6 +207,7 @@ for (const product of products) {
     PRODUCT_NAME: esc(product.name),
     PRODUCT_DESCRIPTION: esc(product.description),
     PRODUCT_URL: esc(productUrl),
+    PRODUCT_DISCOVERY_JSON_LD: renderProductDiscoveryJsonLd({site,product,store,productUrl}),
     PRODUCT_CATEGORY: esc(product.category),
     PRODUCT_BADGE: esc(product.badge),
     PRODUCT_STATUS: esc(product.status),
