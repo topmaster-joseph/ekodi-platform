@@ -20,3 +20,10 @@
 .social-directory-filters{display:grid;grid-template-columns:minmax(220px,2fr) minmax(135px,1fr) minmax(135px,1fr);gap:8px;align-items:end}
 .social-directory-filters .social-field.wide{grid-column:auto}
 @media(max-width:760px){.social-directory-filters{grid-template-columns:1fr 1fr}.social-directory-filters .social-field.wide{grid-column:1/-1}}
+
+.social-mall-growth{display:grid;gap:10px;padding:13px;border:1px solid var(--line,#d9dee8);border-radius:14px;background:var(--panel,#fff)}
+.social-mall-growth .social-connection-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
+.social-mall-growth>button{justify-self:start}
+.social-growth-advice{display:grid;gap:6px}
+.social-growth-advice-item{margin:0;padding:9px 11px;background:rgba(100,116,139,.06);border-radius:9px;line-height:1.55}
+@media(max-width:760px){.social-mall-growth .social-connection-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
