@@ -30,6 +30,8 @@ test('Mission live browser smoke is bounded read-only and does not expose user c
   assert.equal(policy.evidence.machineReadableResultRequired,true);
   assert.match(native,/allowMutation:false/);
   assert.match(native,/\.horizontalOverflow == true/);
+  assert.match(native,/\.httpErrorResponses \| type == \"array\"/,'Native worker must retain network error evidence');
+  assert.match(native,/\.screenshots \| length >= 1/,'Native worker must retain visual screenshot evidence');
   assert.match(native,/\.pageErrors \| length == 0/);
   assert.match(native,/artifacts\/background-browser-worker/);
   assert.doesNotMatch(workflow,/(?:SUPABASE_ACCESS_TOKEN|CLOUDFLARE_API_TOKEN|permissions: write|Desktop_Commander|curl.*POST|allowMutation: true)/);
