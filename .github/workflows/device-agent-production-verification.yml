@@ -49,6 +49,8 @@ on:
       - 'scripts/verify-native-user4-acceptance.mjs'
       - 'scripts/verify-native-user4-virtual-probe.mjs'
       - 'scripts/select-native-user4-execution-route.mjs'
+      - 'scripts/plan-native-fleet-execution.mjs'
+      - 'test/native-fleet-route.test.mjs'
       - 'test/native-user4-acceptance.test.mjs'
       - 'test/native-user4-execution-route.test.mjs'
       - 'test/native-localai-proof.test.mjs'
@@ -68,6 +70,8 @@ on:
       - 'scripts/observe-native-device-readiness.mjs'
       - 'scripts/verify-native-user4-virtual-probe.mjs'
       - 'scripts/select-native-user4-execution-route.mjs'
+      - 'scripts/plan-native-fleet-execution.mjs'
+      - 'test/native-fleet-route.test.mjs'
       - 'test/native-user4-execution-route.test.mjs'
       - 'scripts/verify-native-agent-status.mjs'
       - 'test/native-agent-status-canary.test.mjs'
@@ -109,6 +113,8 @@ jobs:
           node --test test/native-user3-localai-recovery.test.mjs
           node --check scripts/verify-native-user4-acceptance.mjs
           node --check scripts/select-native-user4-execution-route.mjs
+          node --check scripts/plan-native-fleet-execution.mjs
+          node --test test/native-fleet-route.test.mjs
           node --test test/native-device-readiness-observe.test.mjs test/native-agent-status-canary.test.mjs test/native-localai-proof.test.mjs test/native-user4-acceptance.test.mjs test/native-user4-execution-route.test.mjs
           node --test test/device-agent-production-verification.test.mjs test/non-disruptive-device-agent-contract.test.mjs test/background-browser-canary-contract.test.mjs test/isolated-desktop-backend.test.mjs test/isolated-guest-agent.test.mjs
           grep -Fq "agent.self_update" scripts/verify-device-agent-production.mjs
@@ -233,6 +239,10 @@ jobs:
         env:
           DEVICE_TARGET_HOSTNAME: ${{ github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-virtual-probe' && 'user2' || 'user3' }}
         run: node scripts/observe-native-device-readiness.mjs
+
+      - name: Plan separate USER3 local AI and USER4 background browser lanes from receipts
+        if: github.event_name != 'workflow_dispatch' || inputs.execution_mode != 'verify'
+        run: node scripts/plan-native-fleet-execution.mjs
 
       - name: Verify bounded USER3 native agent status command with real receipt
         if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'status'
