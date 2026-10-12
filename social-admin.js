@@ -3,7 +3,9 @@
   const CONNECT_API = '/marketing-connect-api';
   const TOKEN_KEY = 'ekodi-auth-token';
   const token = () => sessionStorage.getItem(TOKEN_KEY) || '';
-  const providers = ['youtube','instagram','facebook','kakao','blog','threads','live','tiktok','linkedin','other'];
+  const providers = ['youtube','instagram','facebook','kakao','blog','naver_blog','brunch','threads','live','tiktok','linkedin','x','pinterest','band','telegram','discord','podcast','newsletter','rss','marketplace','website','other'];
+  const channelKinds = [['owned','직접 운영'],['partner','제휴·협력'],['external','외부 참고']];
+  const channelPurposes = [['general','일반·소개'],['commerce','상품·판매'],['community','커뮤니티'],['ministry','교회·사역'],['support','고객지원'],['news','뉴스·정보']];
   let revision = 0;
   let registry = { version:3, organizations:[] };
   let dirty = false;
@@ -62,7 +64,7 @@
     if (!response.ok) { const error=new Error(data.detail || data.error || `게시 채널 요청 실패 (${response.status})`); error.code=data.error||''; throw error; }
     return data;
   }
-  function providerLabel(value) { return ({youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',threads:'Threads',facebook_ads:'Meta 광고',kakao:'Kakao',blog:'Blog',tiktok:'TikTok',linkedin:'LinkedIn'})[String(value||'').toLowerCase()] || String(value || '채널'); }
+  function providerLabel(value) { return ({youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',threads:'Threads',facebook_ads:'Meta 광고',kakao:'Kakao',blog:'Blog',naver_blog:'네이버 블로그',brunch:'브런치',tiktok:'TikTok',linkedin:'LinkedIn',x:'X',pinterest:'Pinterest',band:'네이버 밴드',telegram:'Telegram',discord:'Discord',podcast:'팟캐스트',newsletter:'뉴스레터',rss:'RSS',marketplace:'외부 판매처',website:'웹사이트',live:'라이브'})[String(value||'').toLowerCase()] || String(value || '채널'); }
   function reconnectProvider(value) { const provider=String(value||'').toLowerCase(); return provider==='youtube'?'youtube':provider==='threads'?'threads':['facebook','instagram','facebook_ads','meta'].includes(provider)?'meta':''; }
   function formatDate(value) { const parsed=Date.parse(String(value||'')); return Number.isFinite(parsed)?new Date(parsed).toLocaleString('ko-KR'):'-'; }
   function connectionState(value) { return ({active:'연결됨',expired:'만료',revoked:'해제',error:'오류',paused:'중지'})[String(value||'').toLowerCase()] || String(value || '확인중'); }
@@ -120,7 +122,7 @@
     section.dataset.panel = 'social'; section.id = 'socialAdmin';
     const head = el('div', '', 'social-admin-head');
     const copy = el('div');
-    copy.append(el('p','MULTI-CHANNEL CONTROL CENTER','kicker'), el('h2','사이트·서비스 Social Hub'), el('p','모든 현재·미래 EKODI 사이트와 서비스는 중앙 Social Hub 정책을 자동 상속합니다. 게시 기능이 준비된 사이트는 자체 채널센터에서 같은 원장을 사용하고, 그 외 서비스는 중앙 허브로 자동 폴백합니다. 비밀번호는 저장하지 않으며 OAuth 비밀값은 암호화 Vault에만 보관됩니다.','operations-copy'));
+    copy.append(el('p','MULTI-CHANNEL CONTROL CENTER','kicker'), el('h2','내부·외부 채널 통합관리'), el('p','모든 현재·미래 EKODI 사이트와 서비스는 중앙 Social Hub 정책을 자동 상속합니다. 공개 채널 링크와 외부 제휴처를 등록·분류하고, 실제 게시 권한은 별도 공식 계정 연결 원장에서 관리합니다. 비밀번호는 저장하지 않으며 OAuth 비밀값은 암호화 Vault에만 보관됩니다.','operations-copy'));
     const actions = el('div','','social-admin-actions');
     const open = el('a','Open Social ↗','secondary'); open.href='https://social.ekodi.kr'; open.target='_blank'; open.rel='noopener';
     const refresh = el('button','↻ Refresh','secondary'); refresh.type='button';
@@ -213,13 +215,15 @@
     const status = el('p','Registry를 불러오지 않았습니다.','social-admin-status'); status.setAttribute('role','status');
     const list = el('div','','social-org-list');
     const addOrg = el('button','＋ 기관 추가','ghost social-add-org'); addOrg.type='button';
-    section.append(head, siteDirectoryPanel, connectionPanel, publishingPanel, summary, status, list, addOrg); content.append(section);
+    const addMall = el('button','＋ 에코디몰 채널 그룹','secondary social-add-mall'); addMall.type='button';
+    const directoryHelp = el('p','채널 주소 등록은 자동게시 승인이 아닙니다. 직접 운영 채널도 공식 OAuth 연결·사이트 매핑·발행 정책 확인 후에만 게시됩니다. 외부·제휴 링크는 등록·공개·분석 용도로만 사용합니다.','social-admin-status');
+    section.append(head, siteDirectoryPanel, connectionPanel, publishingPanel, summary, directoryHelp, status, list, addOrg, addMall); content.append(section);
 
     function renderSummary() {
       const orgs = registry.organizations || [];
       const channels = orgs.flatMap(org => org.channels || []);
       summary.replaceChildren();
-      [['Organizations',orgs.length],['Active orgs',orgs.filter(o=>o.isActive!==false).length],['Channels',channels.length],['Active channels',channels.filter(c=>c.isActive!==false).length]].forEach(([label,value]) => {
+      [['그룹',orgs.length],['공개 그룹',orgs.filter(o=>o.isActive!==false && o.socialPolicy!=='none').length],['전체 채널',channels.length],['공개 채널',channels.filter(c=>c.isActive!==false && c.visibility!=='internal').length],['외부·제휴',channels.filter(c=>['external','partner'].includes(c.kind)).length],['관리 전용',channels.filter(c=>c.visibility==='internal').length]].forEach(([label,value]) => {
         const card = el('article'); card.append(el('small',label),el('strong',String(value))); summary.append(card);
       });
     }
@@ -229,24 +233,35 @@
       const provider = select(channel.provider || 'other', providers.map(v => [v, v]));
       const label = input(channel.label || '');
       const url = input(channel.url || '', 'url', 'https://…');
+      const description = input(channel.description || '', 'text', '채널 소개');
+      const kind = select(channel.kind || 'owned',channelKinds);
+      const purpose = select(channel.purpose || 'general',channelPurposes);
+      const visibility = select(channel.visibility || 'public',[['public','공개'],['internal','관리 전용']]);
+      const publicationMode = select(channel.publicationMode || 'link_only',[['link_only','링크 관리'],['manual','수동 게시 준비']]);
       const handle = input(channel.handle || '', 'text', '@handle');
       const channelId = input(channel.channelId || '', 'text', 'YouTube channel ID');
       const orderInput = input(channel.order ?? (index+1)*10, 'number'); orderInput.min='0'; orderInput.max='9999';
       const active = document.createElement('input'); active.type='checkbox'; active.checked=channel.isActive!==false;
       const remove = el('button','Delete','ghost danger'); remove.type='button';
-      row.append(field('Provider',provider),field('Label',label),field('URL',url,'wide'),field('Handle',handle),field('Channel ID',channelId),field('Order',orderInput),field('Active',active,'check'),remove);
+      row.append(field('플랫폼',provider),field('채널명',label),field('링크',url,'wide'),field('소개',description,'wide'),field('소유관계',kind),field('목적',purpose),field('노출',visibility),field('발행 방식',publicationMode),field('Handle',handle),field('Channel ID',channelId),field('순서',orderInput),field('활성',active,'check'),remove);
       const sync = () => {
-        channel.provider=provider.value; channel.label=label.value; channel.url=url.value; channel.handle=handle.value; channel.channelId=channelId.value; channel.order=Number(orderInput.value||0); channel.isActive=active.checked;
+        if (kind.value !== 'owned') publicationMode.value = 'link_only';
+        publicationMode.disabled = kind.value !== 'owned';
+        channel.provider=provider.value; channel.label=label.value; channel.url=url.value;
+        channel.description=description.value; channel.kind=kind.value; channel.purpose=purpose.value;
+        channel.visibility=visibility.value; channel.publicationMode=publicationMode.value;
+        channel.handle=handle.value; channel.channelId=channelId.value; channel.order=Number(orderInput.value||0); channel.isActive=active.checked;
         if (!channel.id) channel.id = `${org.id || 'org'}-${provider.value}-${Date.now().toString(36)}`;
         markDirty(save,status); renderSummary();
       };
-      [provider,label,url,handle,channelId,orderInput,active].forEach(control => control.addEventListener(control.tagName==='SELECT'||control.type==='checkbox'?'change':'input',sync));
+      publicationMode.disabled = kind.value !== 'owned';
+      [provider,label,url,description,kind,purpose,visibility,publicationMode,handle,channelId,orderInput,active].forEach(control => control.addEventListener(control.tagName==='SELECT'||control.type==='checkbox'?'change':'input',sync));
       remove.addEventListener('click',()=>{ org.channels.splice(index,1); markDirty(save,status); render(); });
       return row;
     }
 
     function orgCard(org, index) {
-      const card = el('article','','social-org-card');
+      const card = el('article','','social-org-card'); card.dataset.socialOrg=org.id;
       const top = el('div','','social-org-card-head');
       const title = el('div'); title.append(el('strong',org.name || 'New organization'),el('small',org.id || 'new-org'));
       const remove = el('button','Delete organization','ghost danger'); remove.type='button';
@@ -262,18 +277,25 @@
       const active = document.createElement('input'); active.type='checkbox'; active.checked=org.isActive!==false;
       fields.append(field('Name',name),field('ID',id),field('Short name',shortName),field('Website',website,'wide'),field('Description',description,'wide'),field('Order',orderInput),field('Policy',policy),field('Active',active,'check'));
       const channelHead = el('div','','social-channel-head');
-      channelHead.append(el('h3','Channels'),el('span',`${(org.channels||[]).length} registered`));
+      channelHead.append(el('h3','공개·내부·외부 채널'),el('span',`${(org.channels||[]).length}개 등록 · 실제 게시 계정은 별도 OAuth 원장`));
       const channelList = el('div','','social-channel-list');
       (org.channels||[]).forEach((channel,channelIndex)=>channelList.append(channelRow(org,channel,channelIndex)));
-      const addChannel = el('button','＋ Add channel','ghost'); addChannel.type='button';
-      addChannel.addEventListener('click',()=>{ org.channels ||= []; org.channels.push({ id:`${org.id||'org'}-other-${Date.now().toString(36)}`,provider:'other',label:'New channel',url:'https://',description:'',isActive:true,order:(org.channels.length+1)*10 }); markDirty(save,status); render(); });
+      const addChannel = el('button','＋ 운영 채널 등록','ghost'); addChannel.type='button';
+      const addExternal = el('button','＋ 외부·제휴 채널 등록','secondary'); addExternal.type='button';
+      const newChannel = kind => {
+        org.channels ||= [];
+        org.channels.push({ id:`${org.id||'org'}-other-${Date.now().toString(36)}`,provider:'other',label:'새 채널',url:'https://',description:'',kind,purpose:'general',visibility:'internal',publicationMode:'link_only',isActive:false,order:(org.channels.length+1)*10 });
+        markDirty(save,status); render();
+      };
+      addChannel.addEventListener('click',()=>newChannel('owned'));
+      addExternal.addEventListener('click',()=>newChannel('external'));
       const sync = () => {
         org.name=name.value; org.id=slug(id.value)||id.value.trim(); org.shortName=shortName.value; org.website=website.value; org.description=description.value; org.order=Number(orderInput.value||0); org.socialPolicy=policy.value; org.isActive=active.checked;
         title.querySelector('strong').textContent=org.name||'New organization'; title.querySelector('small').textContent=org.id||'new-org'; markDirty(save,status); renderSummary();
       };
       [name,id,shortName,website,description,orderInput,policy,active].forEach(control=>control.addEventListener(control.tagName==='SELECT'||control.type==='checkbox'?'change':'input',sync));
       remove.addEventListener('click',()=>{ if ((registry.organizations||[]).length<=1) { status.textContent='최소 한 개 기관은 남아 있어야 합니다.'; status.dataset.state='error'; return; } registry.organizations.splice(index,1); markDirty(save,status); render(); });
-      card.append(top,fields,channelHead,channelList,addChannel); return card;
+      card.append(top,fields,channelHead,channelList,addChannel,addExternal); return card;
     }
 
     function render() {
@@ -457,7 +479,16 @@
       const reconnect=event.target.closest('[data-reconnect-provider]');
       if(reconnect){try{await startConnection(reconnect.dataset.reconnectProvider);}catch(error){connectionStatus.textContent=error.message;connectionStatus.dataset.state='error';}}
     });
-    addOrg.addEventListener('click',()=>{ const id=`org-${Date.now().toString(36)}`; registry.organizations.push({id,name:'New organization',shortName:'Organization',description:'',website:'https://',isActive:true,order:(registry.organizations.length+1)*10,socialPolicy:'inherit_org',channels:[]}); markDirty(save,status); render(); });
+    addOrg.addEventListener('click',()=>{ const id=`org-${Date.now().toString(36)}`; registry.organizations.push({id,name:'새 그룹',shortName:'Group',description:'',website:'https://',isActive:false,order:(registry.organizations.length+1)*10,socialPolicy:'inherit_org',channels:[]}); markDirty(save,status); render(); });
+    addMall.addEventListener('click',()=>{
+      if ((registry.organizations||[]).some(org=>org.id==='mall')) {
+        status.textContent='에코디몰 채널 그룹이 이미 등록되어 있습니다.'; status.dataset.state='ready';
+        list.querySelector('[data-social-org="mall"]')?.scrollIntoView({behavior:'smooth',block:'center'}); return;
+      }
+      registry.organizations.push({id:'mall',name:'에코디몰',shortName:'Mall',description:'상품 검색·판매자 협업·외부 채널 유입을 관리합니다.',website:'https://ekodi.kr/ekodimall/',isActive:true,order:35,socialPolicy:'custom',channels:[]});
+      markDirty(save,status); render();
+      list.querySelector('[data-social-org="mall"]')?.scrollIntoView({behavior:'smooth',block:'center'});
+    });
     if (initialIntent.provider && (initialIntent.type === 'person' || initialIntent.key)) {
       consumeConnectionIntent();
       queueMicrotask(async()=>{
