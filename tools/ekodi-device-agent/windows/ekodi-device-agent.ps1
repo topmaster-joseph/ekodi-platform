@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.5.3'
+$AgentVersion = '2.5.4'
 # Some remote/managed Windows sessions omit ProgramData from the process environment.
 # Resolve the canonical system data directory without changing machine-wide settings.
 if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
@@ -981,7 +981,7 @@ function Invoke-EkodiNativeCdpCanary {
   New-Item -ItemType Directory -Path $workerRoot -Force | Out-Null
   $workerPath = Join-Path $workerRoot 'ekodi-native-browser-cdp.mjs'
   # Immutable, reviewed source commit: never execute a URL supplied by a job payload.
-  $workerUrl = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/9787f9d5b531e8d30764502aba4f0f2a045ccf43/tools/ekodi-device-agent/windows/ekodi-native-browser-cdp.mjs'
+  $workerUrl = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/f6200d33031d7bfc42c8284e2ffa156cb51859da/tools/ekodi-device-agent/windows/ekodi-native-browser-cdp.mjs'
   $download = Join-Path $workerRoot ('candidate-' + [Guid]::NewGuid().ToString('N') + '.mjs')
   try {
     Invoke-WebRequest -UseBasicParsing -Uri $workerUrl -OutFile $download -TimeoutSec 20 -ErrorAction Stop
@@ -1009,7 +1009,26 @@ function Invoke-EkodiNativeCdpCanary {
   }
   $stdout = $stdoutTask.GetAwaiter().GetResult()
   $stderr = $stderrTask.GetAwaiter().GetResult()
-  if ($process.ExitCode -ne 0) { throw ('CDP_WORKER_FAILED: ' + $stderr.Substring(0,[Math]::Min(260,$stderr.Length))) }
+  if ($process.ExitCode -ne 0) {
+    # The native worker emits a fixed-category JSON receipt. Never forward raw
+    # stderr (which may contain local paths or private browser diagnostics).
+    $failureCode = 'CDP_WORKER_FAILED'
+    try {
+      $failure = $stderr.Trim() | ConvertFrom-Json -ErrorAction Stop
+      $candidate = [string]$failure.code
+      $allowedCodes = @(
+        'CDP_BROWSER_NOT_FOUND','CDP_BROWSER_EARLY_EXIT_ZERO',
+        'CDP_BROWSER_EARLY_EXIT_ACCESS','CDP_BROWSER_EARLY_EXIT_DEPENDENCY',
+        'CDP_BROWSER_EARLY_EXIT_POLICY','CDP_BROWSER_EARLY_EXIT_SANDBOX',
+        'CDP_BROWSER_EARLY_EXIT_UNKNOWN','CDP_PORT_TIMEOUT',
+        'CDP_PORT_INVALID','CDP_SOCKET_ERROR','CDP_SOCKET_TIMEOUT',
+        'CDP_COMMAND_TIMEOUT','CDP_DOM_EVIDENCE_MISSING',
+        'CDP_WORKER_WATCHDOG_TIMEOUT','CDP_BROWSER_UNEXPECTED_ERROR'
+      )
+      if ($allowedCodes -ccontains $candidate) { $failureCode = $candidate }
+    } catch { }
+    throw $failureCode
+  }
   try { $receipt = $stdout.Trim() | ConvertFrom-Json -ErrorAction Stop } catch { throw 'CDP_WORKER_INVALID_RECEIPT' }
   if ($receipt.ok -ne $true -or [int]$receipt.domBytes -le 0 -or [string]$receipt.url -ne $BrowserCanaryUrl -or [string]$receipt.mode -ne 'native-cdp') {
     throw 'CDP_WORKER_EVIDENCE_INVALID'
@@ -2928,7 +2947,7 @@ function Send-Heartbeat($Config) {
     }
     settings = $settings
   } | ConvertTo-Json -Depth 10
-  Invoke-RestMethod -Method Post -Uri "$($Config.apiBase)/api/device-agent/heartbeat" -Headers (Get-AgentHeaders $Config) -ContentType 'application/json' -Body $body | Out-Null
+  Invoke-RestMethod -Method Post -Uri "$($Config.apiBase)/api/device-agent/heartbeat" -TimeoutSec 15 -Headers (Get-AgentHeaders $Config) -ContentType 'application/json' -Body $body | Out-Null
 }
 
 function Complete-Command($Config, [string]$CommandId, [bool]$Success, $Result) {
@@ -2937,7 +2956,7 @@ function Complete-Command($Config, [string]$CommandId, [bool]$Success, $Result) 
 }
 
 function Poll-Command($Config) {
-  $response = Invoke-RestMethod -Method Get -Uri "$($Config.apiBase)/api/device-agent/commands/next" -Headers (Get-AgentHeaders $Config)
+  $response = Invoke-RestMethod -Method Get -Uri "$($Config.apiBase)/api/device-agent/commands/next" -TimeoutSec 15 -Headers (Get-AgentHeaders $Config)
   if (-not $response.command) { return }
   try {
     $result = Invoke-DeviceCommand $response.command
@@ -2969,9 +2988,13 @@ function Stop-ExistingAgentProcesses {
 function Ensure-AgentTask {
   $userId = [Security.Principal.WindowsIdentity]::GetCurrent().Name
   $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$AgentPath`" -Run"
-  $trigger = New-ScheduledTaskTrigger -AtLogOn -User $userId
+  # Recover after an Agent process exit while the operator remains signed in.
+  # The existing global mutex prevents a second Agent instance from running.
+  $logonTrigger = New-ScheduledTaskTrigger -AtLogOn -User $userId
+  $recoveryTrigger = New-ScheduledTaskTrigger -Once -At ((Get-Date).AddMinutes(5)) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 3650)
   $principal = New-ScheduledTaskPrincipal -UserId $userId -LogonType Interactive -RunLevel Highest
-  Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Force | Out-Null
+  $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero)
+  Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger @($logonTrigger, $recoveryTrigger) -Principal $principal -Settings $settings -Force | Out-Null
 }
 
 function Copy-SelfToAgentPath {

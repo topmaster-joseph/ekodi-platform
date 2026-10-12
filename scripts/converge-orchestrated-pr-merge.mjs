@@ -128,6 +128,9 @@ const shellRuntimeTouched=changedFiles.some(file=>
    'scripts/converge-orchestrated-pr-merge.mjs'].includes(file)
 );
 const sharedSiteTouched=changedFiles.some(file=>
+  // The EKODI public homepage is compiled into the shared Site Core. GITHUB_TOKEN
+  // merges do not trigger main push workflows: dispatch its guarded release here.
+  ['index.html','homepage-ambient.js','homepage-ambient.css'].includes(file)||
   // Shared administrator menu, canonical route registry and design contracts are production Site Core assets.
   ['admin-menu-registry.js','admin-sidebar.js','admin-canonical-routes.js','admin-menu-layout.js','admin-menu-layout.compact.js','admin-menu-runtime.js','admin-demand-loader.js','release-control-admin.js','system-health-admin.js','admin-design-engine.js','config/design-engine.json','config/admin-role-navigation.json'].includes(file)||
   file==='workspace-admin-page.js'||

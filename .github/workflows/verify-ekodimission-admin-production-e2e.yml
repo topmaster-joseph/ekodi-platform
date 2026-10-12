@@ -47,6 +47,9 @@ jobs:
       - name: Verify EKODI Mission tenant admin production surface
         if: steps.quota.outputs.skip_nonessential != 'true'
         run: node scripts/verify-ekodimission-admin-production-e2e.mjs
+      - name: Verify synthetic Mission media moderation through EKODI-owned Chromium
+        if: steps.quota.outputs.skip_nonessential != 'true'
+        run: node scripts/verify-ekodimission-media-moderation-native-ui-e2e.mjs
       - name: Record quota-protected Mission E2E skip
         if: steps.quota.outputs.skip_nonessential == 'true'
         run: |
@@ -61,6 +64,22 @@ jobs:
             echo '## EKODI Mission tenant-admin production UI E2E' >> "$GITHUB_STEP_SUMMARY"
             jq -r '"- Passed: \(.passed)\n- Target: \(.targetUrl)\n- Mode: \(.mode)\n- Checks: \([.checks|to_entries[]|select(.value==true)]|length)/\(.checks|length)\n- Mutations exercised: \(.mutationCalls|length)\n- Page errors: \(.diagnostics.pageErrors|length)"' artifacts/ekodimission-admin-production-e2e/report.json >> "$GITHUB_STEP_SUMMARY"
           fi
+      - name: Publish synthetic Mission media E2E evidence
+        if: always()
+        shell: bash
+        run: |
+          if [ -f artifacts/ekodimission-media-native-ui-e2e/report.json ]; then
+            echo '## EKODI Mission synthetic media moderation browser UI' >> "$GITHUB_STEP_SUMMARY"
+            jq -r '"- Passed: \\(.passed)\\n- Mode: production GET assets + mocked identity/data changes"' artifacts/ekodimission-media-native-ui-e2e/report.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload synthetic Mission media E2E evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodimission-media-native-ui-e2e
+          path: artifacts/ekodimission-media-native-ui-e2e/
+          if-no-files-found: warn
+          retention-days: 7
       - name: Upload Mission E2E evidence
         if: always()
         uses: actions/upload-artifact@v4

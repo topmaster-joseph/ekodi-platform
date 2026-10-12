@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {renderMallSocialSetup} from '../mall-social-setup.js';
 import {workspaceAdminScript,workspaceAdminCss} from '../workspace-admin-page.js';
+import { youtubeDataApiDisabledProject, youtubeDataApiCloudUrl } from '../youtube-data-api-readiness.js';
 
 const script=readFileSync(new URL('../workspace-admin-page.js',import.meta.url),'utf8');
 test('Mall setup is a compact three-step flow; account records do not prove OAuth',()=>{
@@ -104,4 +105,35 @@ test('Google access denied callback is displayed as actionable failure without c
   const html=renderMallSocialSetup({oauthNotice:{status:'error',reason:'GOOGLE_OAUTH_ACCESS_DENIED'}});
   assert.match(html,/권한 동의가 완료되지 않았습니다/);
   assert.doesNotMatch(html,/계정 연결이 서버에서 확인됐습니다/);
+});
+
+test('YouTube Data API disabled is a Google project blocker not another OAuth permission request',()=>{
+  const error='YouTube Data API v3 has not been used in project 483044030492 before or it is disabled';
+  assert.deepEqual(youtubeDataApiDisabledProject(error),{code:'YOUTUBE_DATA_API_DISABLED',projectId:'483044030492'});
+  assert.equal(youtubeDataApiCloudUrl(error),'https://console.cloud.google.com/apis/library/youtube.googleapis.com?project=483044030492');
+  assert.equal(youtubeDataApiDisabledProject('invalid_grant'),null);
+  const html=renderMallSocialSetup({platform:{youtubeConfigured:true},registeredAccounts:[{provider:'youtube',status:'error',lastError:error}]});
+  assert.match(html,/Google Cloud API 사용 설정 필요/);
+  assert.match(html,/project=483044030492/);
+  assert.match(html,/재연결보다 API 활성화를 먼저 확인/);
+  assert.doesNotMatch(html,/has not been used in project/);
+});
+test('no YouTube project setup warning if an actual active OAuth channel is connected',()=>{
+  const html=renderMallSocialSetup({platform:{youtubeConfigured:true},registeredAccounts:[{provider:'youtube',status:'error',lastError:'YOUTUBE_DATA_API_DISABLED:483044030492'}],connections:[{provider:'youtube',status:'active',external_id:'UC-live'}]});
+  assert.doesNotMatch(html,/Google Cloud API 사용 설정 필요/);
+});
+
+test('OAuth popup distinguishes failed Google callback from connected account',async()=>{
+  assert.match(script,/const callbackOk=initialChannelOAuthResult\.status==='success'/);
+  assert.match(script,/채널 인증 실패 · 연결되지 않음/);
+  assert.match(script,/Google 인증 응답 접수 · 연결 확인 중/);
+  assert.doesNotMatch(script,/<h1 style="font-size:20px">채널 인증 처리 완료<\/h1>/);
+});
+
+test('Brand Account choice survives manual OAuth ledger refresh and remains synchronized',()=>{
+  assert.match(script,/const previousBrandSelection=service==='mall'/);
+  assert.match(script,/brandModeInputs\.forEach\(box=>/);
+  assert.match(script,/box\.checked=Boolean\(previousBrandSelection\)/);
+  assert.match(script,/other\.checked=box\.checked/);
+  assert.match(script,/youtubeBrandAccountMode:btn\.dataset\.provider==='youtube'&&Boolean\(brandModeInputs\.some\(box=>box\.checked\)\)/);
 });
