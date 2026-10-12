@@ -36,6 +36,16 @@
   window.addEventListener('ekodi-admin-ready',()=>{
     activateSection(window.EKODIAdminPanels?.current?.()||'command-home');
   });
+  // Navigation reconciliation can hide the current panel without emitting a
+  // second section event. Heal that single panel only after admin auth is ready.
+  const restoreCurrentHome=()=>{
+    if(document.documentElement.dataset.ekodiAdminReady!=='true')return;
+    if(window.EKODIAdminPanels?.current?.()!=='command-home')return;
+    if(panel.hidden||panel.classList.contains('hidden-panel'))activateSection('command-home');
+  };
+  new MutationObserver(restoreCurrentHome).observe(panel,{
+    attributes:true,attributeFilter:['hidden','class']
+  });
   frame.addEventListener('error',()=>{
     if(frame.getAttribute('src'))reportFailure();
   });
