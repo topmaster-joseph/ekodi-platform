@@ -43,7 +43,7 @@ test('committee manager can search, filter, add, update, hide, delete, and recla
   assert.match(adminJs,/recordScope:form\.elements\.recordScope\.value/);
   assert.match(api,/record_scope TEXT NOT NULL DEFAULT 'news'/);
   assert.match(api,/committee_kind TEXT NOT NULL DEFAULT ''/);
-  assert.match(api,/recordScope:row\.record_scope==='committee'\?'committee':'news'/);
+  assert.match(api,/recordScope:row\.record_scope==='committee'\|\|confirmedSeed\?'committee':'news'/);
   assert.match(api,/if\(!can\(auth,TIMELINE_CAP\)\)return json/);
   assert.match(api,/record_scope=\?,committee_kind=\?/);
   assert.match(api,/record_scope,committee_kind,status,sort_order/);
