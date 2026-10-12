@@ -16,6 +16,17 @@ async function statusMap(sha){
   if(!r.ok)fail('status lookup failed '+r.status);
   return new Map((data.statuses||[]).map(s=>[s.context,s]));
 }
+async function verifiedCheckRuns(sha){
+  const {r,data}=await api('/commits/'+sha+'/check-runs?per_page=100');
+  if(!r.ok)fail('check-runs lookup failed '+r.status);
+  const runs=Array.isArray(data.check_runs)?data.check_runs:[];
+  return required.every(name=>runs.some(run=>
+    run.name===name &&
+    run.app?.slug==='github-actions' &&
+    run.status==='completed' &&
+    ['success','neutral','skipped'].includes(run.conclusion)
+  ));
+}
 if(!repo||!token||!branch||!headSha)fail('missing runtime input');
 const match=branch.match(/^ai\/([a-z0-9][a-z0-9._-]{0,31})\/(orch_[a-z0-9][a-z0-9_-]{15,120})$/i);
 if(!match){console.log('[EKODI][ORCH-AUTO-MERGE] non-orchestrator branch; noop');process.exit(0)}
@@ -154,6 +165,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   // AI membership is compiled into the shared ai-ops-admin.js bundle.
   file==='user-ai-tier-panel.js'||
   file==='common-services-admin.js'||
+  // Admin Google handoff is bundled in Site Core; never skip its post-merge release.
+  file==='admin-central-handoff.js'||
   file==='ai-provider-control.js'||
   file==='mall-social-setup.js'||
   file.startsWith('sites/')||
@@ -453,6 +466,9 @@ for(let cycle=0;cycle<180;cycle++){
   const headStatuses=await statusMap(headSha);
   const pending=required.filter(k=>headStatuses.get(k)?.state!=='success');
   if(pending.length){await sleep(3000);continue}
+  // Commit statuses are compatibility signals. Before any protected merge
+  // reconciliation, require the real GitHub Actions jobs on this exact head.
+  if(!await verifiedCheckRuns(headSha)){await sleep(3000);continue}
 
   // First converge the real PR head with the current protected base. This avoids
   // chasing GitHub's ephemeral test-merge SHA while main is actively changing.
