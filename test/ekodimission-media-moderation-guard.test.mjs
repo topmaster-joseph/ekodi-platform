@@ -91,3 +91,20 @@ test('guarded release reconciler uses valid non-conflicting curl failure flags',
   assert.match(workflow,/\$source_sha" = "\$main_sha/);
   assert.match(workflow,/deploy-activity-public-share-schema\.yml\/dispatches/);
 });
+
+test('one-time guarded postmerge replay requires two real orchestrator receipts and immutable media SQL',()=>{
+  const flow=readFileSync(new URL('../.github/workflows/retry-mission-media-security-release.yml',import.meta.url),'utf8');
+  assert.match(flow,/workflow_run:/);
+  assert.match(flow,/github\.event\.workflow_run\.conclusion == 'success'/);
+  assert.match(flow,/\.merged == true/);
+  assert.match(flow,/pulls\/4336/);
+  assert.match(flow,/pulls\/\$\{repair_number\}/);
+  assert.match(flow,/release-receipt/);
+  assert.match(flow,/\.authorized == true/);
+  assert.match(flow,/original" = "\$current"/);
+  assert.match(flow,/issues\/4265/);
+  assert.match(flow,/reconcile-mission-media-moderation-release\.yml\/dispatches/);
+  assert.doesNotMatch(flow,/api\.supabase\.com\/v1\/projects/);
+  assert.doesNotMatch(flow,/curl --fail-with-body -fsS/);
+  assert.match(flow,/GH_TOKEN: \$\{\{ github\.token \}\}/);
+});
