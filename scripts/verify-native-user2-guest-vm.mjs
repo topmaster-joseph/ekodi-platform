@@ -70,3 +70,5 @@ if(process.argv[1]&&process.argv[1].endsWith('verify-native-user2-guest-vm.mjs')
 // Canonical protected CI trigger; isolated Guest VM remains disabled until real probe is ready.
 
 // Owner-authored required check rerun after canonical base synchronization.
+
+// Fresh owner-authored protected validation after base refresh.
