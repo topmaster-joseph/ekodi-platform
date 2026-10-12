@@ -35,7 +35,7 @@ export async function handlePublicBoardCatalog(request,env){
     // membership, visibility=private rows or customer identifiers are exposed.
     const rows=await env.DB.prepare(`SELECT b.board_id,b.site_id
       FROM ekodi_board_instances b
-      WHERE b.status='active' AND b.visibility='public' AND b.board_id>?
+      WHERE b.status='active' AND b.visibility='public' AND b.site_id<>'seonammedi' AND b.board_id>?
         AND (
           b.site_id IN ('cgma','cheonggye','ekodimission','ekodichurch')
           OR EXISTS (SELECT 1 FROM customer_tenants t
