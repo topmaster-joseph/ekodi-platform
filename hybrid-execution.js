@@ -93,7 +93,7 @@ function sanitizePayload(type, rawPayload) {
   if (policy.payload === 'cgma-native-grant') {
     const grant=inspectCgmaCanaryPayload(rawPayload);
     if(!grant.ok) throw new Error(grant.code);
-    return {origin:CGMA_NATIVE_CANARY.origin,boardId:CGMA_NATIVE_CANARY.boardId,...grant,operations:CGMA_NATIVE_CANARY.operations};
+    return {origin:CGMA_NATIVE_CANARY.origin,boardId:CGMA_NATIVE_CANARY.boardId,grantRef:grant.grantRef,nonce:grant.nonce,confirmed:true};
   }
   if (policy.payload === 'google-workspace-slides-audio') return normalizeSlidesAudioPilot(rawPayload);
   if (policy.payload === 'background-browser-task') {
