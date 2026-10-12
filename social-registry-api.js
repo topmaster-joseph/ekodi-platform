@@ -4,7 +4,8 @@ import authWorker from './auth-worker.js';
 export const SOCIAL_CHANNEL_PROVIDERS = Object.freeze([
   'youtube','instagram','facebook','kakao','blog','naver_blog','brunch','threads','live',
   'tiktok','linkedin','x','pinterest','band','telegram','discord','podcast',
-  'newsletter','rss','marketplace','website','other'
+  'newsletter','rss','marketplace','naver_store','coupang','kakao_channel','daangn',
+  'google_business','wordpress','medium','substack','website','other'
 ]);
 const PROVIDERS = new Set(SOCIAL_CHANNEL_PROVIDERS);
 const CHANNEL_KINDS = new Set(['owned','partner','external']);
