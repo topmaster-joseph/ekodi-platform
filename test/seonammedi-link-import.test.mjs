@@ -82,6 +82,7 @@ test('registered administrator public page has all three operations and fail-clo
   assert.match(api,/\/admin\/timeline\/link-import/);
   assert.match(api,/CREATE TABLE IF NOT EXISTS seonammedi_timeline_deleted/);
   assert.match(api,/if\(suppressed\)continue/);
+  assert.match(api,/created_by=CASE WHEN created_by='system-seed' THEN \? ELSE created_by END/);
   assert.match(monitor,/SELECT id,title,url,resolved_url/);
   assert.equal((publicHtml.match(/id="timelineManageForm"/g)||[]).length,1);
 });
