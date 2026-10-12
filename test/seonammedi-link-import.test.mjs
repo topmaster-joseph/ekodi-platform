@@ -29,6 +29,11 @@ test('misleading search hit, missing article date, and unrelated article body mu
   const bodyWrong=goodArticle.replace('전라남도가 목포대와 순천대의 국립의과대학 설립에 관한 협의를 진행하고 있다.','캐나다 스포츠 경기 분석 자료다.')
     .replace('전남 국립의대 신설 관련 대학통합 협의는 목포대와 순천대를 중심으로 진행 중이다.','새로운 아이스하키 시즌 분석이다.');
   assert.equal(extractSeonamMediArticle(bodyWrong,'https://news.example.kr/1').ready,false);
+  const seoOnly=goodArticle.replace(
+    '전남 국립의대 신설 관련 대학통합 협의는 목포대와 순천대를 중심으로 진행 중이다.',
+    '캐나다 프로 스포츠 리그 선수 등록과 경기 운영 일정이 변경되어 구단들이 시즌 준비를 이어가고 있다. 이번 발표에는 대학교 의학 교육이나 지역 의료 정책 관련 사항이 전혀 포함되지 않았다.'
+  );
+  assert.equal(extractSeonamMediArticle(seoOnly,'https://news.example.kr/1').ready,false);
 });
 
 test('only safe public HTTPS addresses pass (incl. redirect targets)',async()=>{
