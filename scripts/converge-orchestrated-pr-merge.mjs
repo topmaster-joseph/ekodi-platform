@@ -74,6 +74,10 @@ const controlApiTouched=changedFiles.some(file=>[
   'seonammedi-relevance.js',
   // PC Agent registry and heartbeat handlers are deployed by the Control API.
   'device-control.js',
+  // Native hybrid queue and its native CGMA fail-closed canary contract
+  // execute within Control API and require production dispatch after merge.
+  'hybrid-execution.js',
+  'cgma-native-canary-policy.js',
   // AI Provider API runtime ownership; release-automation changes also repair missed deployments.
   'ai-provider-control.js',
   // Telemetry reader and site classifier run inside the Control API.
