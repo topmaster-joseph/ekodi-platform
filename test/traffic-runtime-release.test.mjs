@@ -49,3 +49,34 @@ test('Control API production validates anonymous telemetry version via no-write 
   const handler=await read('traffic-intelligence-control.js');
   assert.match(handler,/'x-ekodi-traffic-telemetry':'site-scoped-v2'/);
 });
+
+test('post-merge collector dispatch is scoped, receipt-guarded, and idempotent at storage',async()=>{
+  const script=await read('scripts/converge-orchestrated-pr-merge.mjs');
+  const selection=script.match(/const trafficCollectorTouched=changedFiles\\.some\\(file=>\\[([\\s\\S]*?)\\]\\.includes\\(file\\)\\);/);
+  assert.ok(selection,'collector change selection missing');
+  for(const path of [
+    'traffic-intelligence.js',
+    'traffic-collector-quality.js',
+    'scripts/collect-traffic-intelligence.mjs',
+    '.github/workflows/traffic-intelligence-analytics.yml',
+    'migrations/0059_traffic_intelligence.sql',
+  ]) assert.ok(selection[1].includes("'"+path+"'"),'not collector-scoped: '+path);
+  for(const unrelated of [
+    'test/traffic-runtime-release.test.mjs',
+    'scripts/converge-orchestrated-pr-merge.mjs',
+    'system-health-admin.js',
+  ]) assert.ok(!selection[1].includes("'"+unrelated+"'"),'unexpected collector trigger: '+unrelated);
+  const postMerge=script.slice(script.indexOf('async function dispatchPostMergeDeploys()'));
+  assert.match(postMerge,/if\\(trafficCollectorTouched\\)/);
+  assert.match(postMerge,/actions\\/workflows\\/traffic-intelligence-analytics\\.yml\\/dispatches/);
+  assert.match(postMerge,/JSON\\.stringify\\(\\{ref:'main'\\}\\)/);
+  assert.match(postMerge,/if\\(!dispatch\\.r\\.ok\\)fail\\('Traffic Intelligence collector dispatch failed/);
+  assert.match(postMerge,/if\\(p\\?\\.merged===true\\)\\{await dispatchPostMergeDeploys\\(\\)/);
+  assert.match(postMerge,/if\\(merged\\.r\\.ok&&merged\\.data\\?\\.merged===true\\)\\{[\\s\\S]*?await dispatchPostMergeDeploys\\(\\)/);
+  const workflow=await read('.github/workflows/traffic-intelligence-analytics.yml');
+  assert.match(workflow,/workflow_dispatch:/);
+  assert.match(workflow,/cancel-in-progress: false/);
+  const collector=await read('scripts/collect-traffic-intelligence.mjs');
+  assert.match(collector,/ON CONFLICT\\(day, zone_name, host\\) DO UPDATE SET/);
+  assert.match(collector,/if \\(category === 'rate_limited'\\) throw new Error/);
+});
