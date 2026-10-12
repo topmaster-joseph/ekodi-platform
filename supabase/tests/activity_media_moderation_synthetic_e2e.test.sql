@@ -3,7 +3,7 @@
 -- BEGIN/ROLLBACK prohibit persistence; do not target DEV/PROD or copy real user data.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(21);
 
 insert into public.tenants(id,slug,name,kind,settings)
 values ('cacacaca-1111-4111-8111-000000000001','ekodi-synthetic-moderation','EKODI Synthetic Moderation','association',
@@ -121,6 +121,12 @@ select ok((select hidden_at is null from public.activity_media_links
  'successful moderator unhide is reflected in durable media state');
 select ok(not has_table_privilege('anon','public.activity_media_links','SELECT'),
  'anonymous role cannot read private media table directly');
+
+-- Regression: hiding one item must not implicitly restore other operator-hidden photos.
+select ok((select count(*)::integer from public.activity_media_links
+ where activity_id='cacacaca-2222-4222-8222-000000000002'
+   and hidden_at is not null)>=2,
+ 'hidden photo and moderated pending upload stay hidden after unrelated link unhide');
 
 select * from finish();
 rollback;
