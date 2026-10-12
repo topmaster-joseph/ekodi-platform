@@ -568,9 +568,17 @@ test('seonammedi site admin delegates automatic checks to the platform super adm
 
 test('seonammedi monitor D1 insert keeps column and value arity aligned',async()=>{
   const monitor=await readFile(new URL('../seonammedi-monitor.js',import.meta.url),'utf8');
-  assert.match(monitor,/INSERT INTO seonammedi_monitor_items \(fingerprint,title,url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,resolved_url,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text\) VALUES \(\?,\?,\?,\?,\?,\?,\?,'source_only',\?,\?,\?,\?,\?,\?,\?,\?,\?,\?\)/);
+  const sql=monitor.match(/INSERT INTO seonammedi_monitor_items \(([^)]+)\) VALUES \(([^)]+)\)/);
+  assert.ok(sql,'canonical monitor insert must be present');
+  const columns=sql[1].split(',').map(s=>s.trim());
+  const values=sql[2].split(',').map(s=>s.trim());
+  assert.equal(columns.length,19);
+  assert.equal(values.length,columns.length);
+  assert.equal(values.filter(v=>v==='?').length,18);
+  assert.equal(columns.at(-1),'source_verified');
+  assert.equal(values[7],"'source_only'");
+  assert.match(monitor,/\.bind\(fingerprint,item\.title,item\.url,item\.publisher,item\.publishedAt,item\.queryKey,item\.queryLabel,seenAt,seenAt,item\.resolvedUrl,item\.mediaType,item\.mediaUrl,item\.mediaSource,item\.mediaPublishedAt,item\.mediaState,item\.sourceType\|\|'web',item\.summaryText\|\|'',item\.sourceVerified\?1:0\)\.run\(\)/);
 });
-
 
 
 test('seonammedi notices are an authenticated public board with image and sharing support',async()=>{
