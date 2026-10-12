@@ -159,6 +159,7 @@ export async function ensureUser4AgentUpdated({
       throw new Error('user4_official_update_enqueue_invalid');
   }
   let doneAt=NaN;
+  let versionProjectionUnavailable=false;
   for(let n=0;n<maxPoll;n++){
     if(n>0)await sleepFn(pollMs);
     const current=(await list()).find(d=>d.id===deviceId);
@@ -167,7 +168,13 @@ export async function ensureUser4AgentUpdated({
     if(receipt && ['failed','cancelled'].includes(receipt.status))
       throw new Error('user4_agent_official_update_'+receipt.status);
     if(receipt?.status==='succeeded'){
-      if(receipt.result?.version!==USER4_CDP_WORKER_AGENT_VERSION)
+      // The official Control API may still be promoting the scoped version
+      // projection when this command finishes. Wait, but never infer success.
+      if(receipt.result?.version===undefined || receipt.result?.version===null){
+        versionProjectionUnavailable=true;
+        continue;
+      }
+      if(receipt.result.version!==USER4_CDP_WORKER_AGENT_VERSION)
         throw new Error('user4_agent_update_version_mismatch');
       const completedAt=when(receipt.completedAt);
       if(!Number.isFinite(completedAt)||completedAt<USER4_CDP_FIX_FLOOR)
@@ -180,7 +187,9 @@ export async function ensureUser4AgentUpdated({
         updatePerformed:true,recentOfficialUpdateVerified:true};
     }
   }
-  throw new Error('user4_agent_update_reconnect_timeout');
+  throw new Error(versionProjectionUnavailable
+    ? 'user4_agent_update_version_projection_unavailable'
+    : 'user4_agent_update_reconnect_timeout');
 }
 
 // A one-time retry is permitted only for a browser launcher that exited zero
