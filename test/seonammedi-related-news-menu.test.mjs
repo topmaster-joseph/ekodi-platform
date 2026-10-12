@@ -61,3 +61,16 @@ test('related news cannot silently claim committee acts based on search headline
   assert.match(api,/'news','',\?,0/);
   assert.match(monitor,/isPublicSeonamMediSource/);
 });
+
+test('only four unambiguous original committee actions are seeded to activity ledger',async()=>{
+  const [api,raw]=await Promise.all([read('seonammedi-admin-control.js'),read('sites/seonammedi/public/data.json')]);
+  const data=JSON.parse(raw);
+  const verified=data.timeline.filter(item=>item.recordScope==='committee');
+  assert.deepEqual(verified.map(item=>item.date),['2026.09.08','2026.09.09','2026.09.21','2026.09.22']);
+  assert.match(api,/VERIFIED_COMMITTEE_SEEDS=Object\.freeze/);
+  assert.match(api,/record_scope=\?,committee_kind=\?,status='published'/);
+  assert.match(api,/row\.created_by==='system-seed'\?VERIFIED_COMMITTEE_SEEDS\[row\.legacy_key\]/);
+  const studentOnly=data.timeline.find(item=>item.date==='2026.09.14');
+  assert.notEqual(studentOnly?.recordScope,'committee');
+  assert.ok(verified.every(item=>item.committeeKind));
+});
