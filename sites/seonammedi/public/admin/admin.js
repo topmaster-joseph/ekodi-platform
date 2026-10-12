@@ -315,10 +315,10 @@ async function loadVoices(){
 
 
 function resetTimeline(){
-  const form=$('timelineForm');form.reset();form.elements.id.value='';form.elements.status.value='published';form.elements.sortOrder.value=String(state.timeline.length);text($('timelineFormTitle'),'활동이력 추가');text($('timelineMessage'),'');
+  const form=$('timelineForm');form.reset();form.elements.id.value='';form.elements.recordScope.value='news';form.elements.status.value='published';form.elements.sortOrder.value=String(state.timeline.length);text($('timelineFormTitle'),'활동이력 추가');text($('timelineMessage'),'');
 }
 function editTimeline(item){
-  const form=$('timelineForm');form.elements.id.value=item.id;form.elements.date.value=item.date||'';form.elements.category.value=item.category||'';form.elements.title.value=item.title||'';form.elements.summary.value=item.summary||'';form.elements.evidence.value=item.evidence||'';form.elements.sortOrder.value=String(item.sortOrder??0);form.elements.status.value=item.status||'draft';text($('timelineFormTitle'),'활동이력 수정');showPanel('status');selectRecordsAdminTab('timeline');form.elements.title.focus();
+  const form=$('timelineForm');form.elements.id.value=item.id;form.elements.date.value=item.date||'';form.elements.category.value=item.category||'';form.elements.recordScope.value=item.recordScope||'news';form.elements.title.value=item.title||'';form.elements.summary.value=item.summary||'';form.elements.evidence.value=item.evidence||'';form.elements.sortOrder.value=String(item.sortOrder??0);form.elements.status.value=item.status||'draft';text($('timelineFormTitle'),'활동이력 수정');showPanel('status');selectRecordsAdminTab('timeline');form.elements.title.focus();
 }
 async function deleteTimeline(item){
   if(!confirm('이 활동이력을 삭제할까요?'))return;
@@ -468,7 +468,7 @@ function bindAdminTimelineLinkImport(){
 bindAdminTimelineLinkImport();
 
 $('timelineForm').addEventListener('submit',async event=>{
-  event.preventDefault();const form=event.currentTarget,id=form.elements.id.value;const payload={date:form.elements.date.value,category:form.elements.category.value,title:form.elements.title.value,summary:form.elements.summary.value,evidence:form.elements.evidence.value,sortOrder:Number(form.elements.sortOrder.value||0),status:form.elements.status.value};
+  event.preventDefault();const form=event.currentTarget,id=form.elements.id.value;const payload={date:form.elements.date.value,category:form.elements.category.value,recordScope:form.elements.recordScope.value,title:form.elements.title.value,summary:form.elements.summary.value,evidence:form.elements.evidence.value,sortOrder:Number(form.elements.sortOrder.value||0),status:form.elements.status.value};
   const msg=$('timelineMessage');msg.classList.remove('error');text(msg,'저장 중…');
   try{await api(id?'/api/seonammedi/admin/timeline/'+id:'/api/seonammedi/admin/timeline',{method:id?'PUT':'POST',body:JSON.stringify(payload)});text(msg,'저장했습니다.');resetTimeline();await loadTimeline()}catch(error){msg.classList.add('error');text(msg,error.message)}
 });
