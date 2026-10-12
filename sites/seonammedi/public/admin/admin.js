@@ -152,7 +152,7 @@ async function loadSiteHealth(){
   const staticHost=$('staticHealthList'),dynamicHost=$('dynamicHealthList');if(!staticHost||!dynamicHost)return;
   staticHost.innerHTML='<p class="empty">정적 상태를 확인 중입니다.</p>';dynamicHost.innerHTML='<p class="empty">동적 상태를 확인 중입니다.</p>';
   const [home,css,script,data,monitor,pageData,notices,channels]=await Promise.all([
-    healthFetch('/seonammedi/',{inspect:body=>body.includes('<link rel="canonical" href="https://ekodi.kr/seonammedi/">')&&!body.includes('id="monitorBadge"')?'사용자 화면과 관리자 점검 분리됨':false}),
+    healthFetch('/seonammedi/',{inspect:body=>body.includes('<link rel="canonical" href="https://seonammedi.kr/">')&&!body.includes('id="monitorBadge"')?'사용자 화면과 관리자 점검 분리됨':false}),
     healthFetch('/seonammedi/app.css'),healthFetch('/seonammedi/app.js'),
     healthFetch('/seonammedi/data.json',{inspect:body=>{try{return Boolean(JSON.parse(body)?.updatedAt)}catch{return false}}}),
     healthFetch('/api/seonammedi/monitor'),healthFetch('/api/seonammedi/page-data'),healthFetch('/api/seonammedi/notices'),healthFetch('/api/seonammedi/channels')
