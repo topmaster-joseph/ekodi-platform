@@ -71,6 +71,7 @@ const COMMAND_POLICIES = Object.freeze({
   'autologon.open': { risk: 'privileged', confirm: true },
   'diagnostics.collect': { risk: 'observe' },
   'computer.system.read': { risk: 'observe' },
+  'filesystem.inventory': { risk: 'observe' },
   'computer.process.list': { risk: 'observe' },
   'computer.agent.status': { risk: 'observe' },
   'computer.desktop.probe': { risk: 'observe' },
@@ -113,6 +114,7 @@ const DIAGNOSTIC_SECTIONS = Object.freeze({
 const COMMAND_CAPABILITIES = Object.freeze({
   'diagnostics.collect': 'diagnostics',
   'computer.system.read': 'computerRead',
+  'filesystem.inventory': 'filesystemInventory',
   'computer.process.list': 'processRead',
   'computer.agent.status': 'agentStatus',
   'software.localai.install': 'localAiInstall',
