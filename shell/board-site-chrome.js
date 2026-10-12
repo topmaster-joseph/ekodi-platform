@@ -8,7 +8,7 @@
   'use strict';
   const script=document.currentScript;
   const VERSION='v1';
-  if(document.documentElement.dataset.ekodiBoardChrome===VERSION)return;
+  if(['loading',VERSION].includes(document.documentElement.dataset.ekodiBoardChrome))return;
   const path=location.pathname;
   if(!/(?:^|\/)board(?:\/|$)|\/(?:notices|finance)(?:\/|$)/i.test(path))return;
   document.documentElement.dataset.ekodiBoardChrome='loading';
