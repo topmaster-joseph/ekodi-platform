@@ -61,7 +61,7 @@ function fixture(){
     observe(target,options){
       assert.equal(target,panel);
       assert.equal(options.attributes,true);
-      assert.deepEqual(options.attributeFilter,['hidden','class']);
+      assert.deepEqual([...options.attributeFilter],['hidden','class']);
     }
   }
   runInNewContext(source,{document,window,MutationObserver});
