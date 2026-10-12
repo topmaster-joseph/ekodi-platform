@@ -36,7 +36,8 @@ test('LANG-UI-001: document and homepage locale must independently agree with pu
   assert.equal(assessLanguageDOM(hidden,['ko-KR']).status,'pass');
   assert.equal(assessLanguageDOM({...hidden,documentLocale:'en'},['ko-KR']).reason,'document_locale_not_published');
   assert.equal(assessLanguageDOM({...hidden,homepageLocale:'en'},['ko-KR']).reason,'document_locale_not_published');
-  assert.equal(assessLanguageDOM({...hidden,documentLocale:'en',homepageLocale:'en'},['ko-KR','en']).status,'pass');
+  assert.equal(assessLanguageDOM({...good,documentLocale:'en',homepageLocale:'en'},['ko-KR','en']).status,'pass');
+  assert.equal(assessLanguageDOM({...hidden,documentLocale:'en',homepageLocale:'en'},['ko-KR','en']).status,'fail');
   assert.equal(assessLanguageDOM({...hidden,documentLocale:'ko-KR'},[]).status,'pass');
 });
 
