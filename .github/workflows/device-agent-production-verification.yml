@@ -16,6 +16,7 @@ on:
           - user3-upgrade-localai
           - user2-localai
           - user2-virtual-probe
+          - user2-browser-recovery
           - user4-virtual-probe
           - user2-upgrade-localai
           - user4-acceptance
@@ -46,6 +47,8 @@ on:
       - 'scripts/verify-native-localai.mjs'
       - 'scripts/recover-native-user3-localai.mjs'
       - 'test/native-user3-localai-recovery.test.mjs'
+      - 'scripts/recover-native-user2-browser.mjs'
+      - 'test/native-user2-browser-recovery.test.mjs'
       - 'scripts/verify-native-user4-acceptance.mjs'
       - 'scripts/verify-native-user4-virtual-probe.mjs'
       - 'scripts/select-native-user4-execution-route.mjs'
@@ -69,6 +72,8 @@ on:
       - 'scripts/verify-native-user4-virtual-probe.mjs'
       - 'scripts/select-native-user4-execution-route.mjs'
       - 'test/native-user4-execution-route.test.mjs'
+      - 'scripts/recover-native-user2-browser.mjs'
+      - 'test/native-user2-browser-recovery.test.mjs'
       - 'scripts/verify-native-agent-status.mjs'
       - 'test/native-agent-status-canary.test.mjs'
       - 'scripts/verify-native-localai.mjs'
@@ -108,8 +113,9 @@ jobs:
           node --check scripts/recover-native-user3-localai.mjs
           node --test test/native-user3-localai-recovery.test.mjs
           node --check scripts/verify-native-user4-acceptance.mjs
+          node --check scripts/recover-native-user2-browser.mjs
           node --check scripts/select-native-user4-execution-route.mjs
-          node --test test/native-device-readiness-observe.test.mjs test/native-agent-status-canary.test.mjs test/native-localai-proof.test.mjs test/native-user4-acceptance.test.mjs test/native-user4-execution-route.test.mjs
+          node --test test/native-device-readiness-observe.test.mjs test/native-agent-status-canary.test.mjs test/native-localai-proof.test.mjs test/native-user4-acceptance.test.mjs test/native-user4-execution-route.test.mjs test/native-user2-browser-recovery.test.mjs
           node --test test/device-agent-production-verification.test.mjs test/non-disruptive-device-agent-contract.test.mjs test/background-browser-canary-contract.test.mjs test/isolated-desktop-backend.test.mjs test/isolated-guest-agent.test.mjs
           grep -Fq "agent.self_update" scripts/verify-device-agent-production.mjs
           grep -Fq "computer.browser.canary" scripts/verify-device-agent-production.mjs
@@ -157,7 +163,7 @@ jobs:
           node-version: '24'
 
       - name: EKODI AI Orchestration Gate for mutating verification
-        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user3-upgrade-localai' || inputs.execution_mode == 'user2-localai' || inputs.execution_mode == 'user2-virtual-probe' || inputs.execution_mode == 'user4-virtual-probe' || inputs.execution_mode == 'user2-upgrade-localai' || inputs.execution_mode == 'user4-acceptance')
+        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user3-upgrade-localai' || inputs.execution_mode == 'user2-localai' || inputs.execution_mode == 'user2-virtual-probe' || inputs.execution_mode == 'user2-browser-recovery' || inputs.execution_mode == 'user4-virtual-probe' || inputs.execution_mode == 'user2-upgrade-localai' || inputs.execution_mode == 'user4-acceptance')
         env:
           EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
           EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
@@ -231,7 +237,7 @@ jobs:
       - name: Observe production native PC Agent heartbeat without issuing commands
         if: github.event_name != 'workflow_dispatch' || inputs.execution_mode != 'verify'
         env:
-          DEVICE_TARGET_HOSTNAME: ${{ github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-virtual-probe' && 'user2' || 'user3' }}
+          DEVICE_TARGET_HOSTNAME: ${{ github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'user2-virtual-probe' || inputs.execution_mode == 'user2-browser-recovery') && 'user2' || 'user3' }}
         run: node scripts/observe-native-device-readiness.mjs
 
       - name: Verify bounded USER3 native agent status command with real receipt
@@ -280,6 +286,12 @@ jobs:
         if: always() && github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-virtual-probe'
         run: node scripts/select-native-user2-safe-route.mjs
 
+      - name: Safely update USER2 Agent and verify native background browser
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-browser-recovery'
+        env:
+          DEVICE_TARGET_HOSTNAME: 'user2'
+        run: node scripts/recover-native-user2-browser.mjs
+
       - name: Verify USER2 native Ollama loopback inference with real Windows receipt
         if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-localai'
         env:
@@ -303,6 +315,11 @@ jobs:
         if: always()
         shell: bash
         run: |
+          if [ -f artifacts/native-user2-browser-recovery.json ]; then
+            echo '## USER2 Native Browser Recovery' >> "$GITHUB_STEP_SUMMARY"
+            jq -r '"- Passed: \(.ok)\n- Agent update performed: \(.agentUpdate.performed)\n- Browser mode: \(.browser.mode)\n- Browser receipt: \(.browser.receiptStatus)\n- External provider used: \(.externalProviderUsed)\n- User desktop attached: \(.userDesktopAttached)\n- Verified at: \(.verifiedAt)"' artifacts/native-user2-browser-recovery.json >> "$GITHUB_STEP_SUMMARY"
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+          fi
           if [ -f artifacts/native-user4-execution-route.json ]; then
             echo '## USER4 Safe Native Execution Route' >> "$GITHUB_STEP_SUMMARY"
             jq -r '"- Route: \(.route)\n- Kind: \(.routeKind)\n- Hyper-V ready: \(.desktopBackendReady)\n- Browser alternative ready: \(.browserAlternativeReady)\n- Gap: \(.gapReason // "-")\n- External provider used: \(.externalProviderUsed // false)"' artifacts/native-user4-execution-route.json >> "$GITHUB_STEP_SUMMARY"
@@ -319,6 +336,15 @@ jobs:
             echo '## EKODI real-device Native Virtualization Verification' >> "$GITHUB_STEP_SUMMARY"
             echo '- Verification artifact was not produced because a non-deferrable verification error occurred.' >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Preserve USER2 native browser recovery evidence
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-browser-recovery'
+        uses: actions/upload-artifact@v7
+        with:
+          name: user2-native-browser-recovery-${{ github.run_id }}
+          path: artifacts/native-user2-browser-recovery.json
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Preserve USER2 native probe and safe route evidence
         if: always() && github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-virtual-probe'
