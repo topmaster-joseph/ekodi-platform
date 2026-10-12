@@ -34,6 +34,7 @@ test('only transient cancellation or timeout may be replayed', () => {
   assert.equal(decideContinuityReplay(original(), [run('timed_out')], now, repo).replay, true);
   assert.equal(decideContinuityReplay(original(), [run('failure')], now, repo).replay, false);
   assert.equal(decideContinuityReplay(original(), [run('success')], now, repo).replay, false);
+  assert.equal(decideContinuityReplay(original(), [run('action_required')], now, repo).reason, 'not-a-transient-run-conclusion');
 });
 
 test('does not interfere with running jobs or replay more than twice per SHA', () => {
