@@ -41,3 +41,10 @@ EKODI 자체 브라우저 실행기의 **CGMA 게시판 자체 점검**은 공�
 EKODI Orchestrated PR Convergent Merge가 이 release branch를 최신 보호된 `main`과 동기화한 뒤, GitHub가 bot-authored 동기화 commit의 pull-request workflow를 `action_required`로 분류했습니다. 이 문서 전용 owner-authored 변경은 동기화된 현재 head에서 필수 CI와 Orchestration Gate를 다시 실행하기 위한 검증 트리거입니다.
 
 실행 코드, 권한, Human Gate, 배포 범위, MCP 선택성 계약 값은 변경하지 않습니다. 필수 검증을 우회하거나 성공으로 간주하지 않으며, 새 head에서 실제 required checks가 통과하고 보호 병합이 완료되기 전에는 운영 완료로 판정하지 않습니다.
+
+
+### 두 번째 protected-main refresh
+
+첫 owner-authored 재검증 이후 다른 EKODI release가 `main`에 병합되어 Orchestrator가 이 branch를 다시 최신 보호 기준으로 동기화했습니다. GitHub가 생성한 동기화 commit은 다시 bot-authored 상태이므로, 이 문서 전용 owner-authored 기록으로 현재 head에서 필수 PR 검증을 재실행합니다.
+
+기능 코드와 MCP 선택성 계약은 그대로이며, 이전 검증 결과를 새 head의 성공으로 재사용하지 않습니다. 현재 head의 실제 CI와 Orchestration Gate가 새로 통과한 뒤에만 보호 병합을 허용합니다.
